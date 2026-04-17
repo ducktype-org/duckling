@@ -48,7 +48,8 @@ namespace compiler::helios::code {
 		 * if we know where they are generated from.
 		 * The position is empty if they do not have position in the code.
 		 */
-		[[nodiscard]] base::Optional<dia::SourcePosition> getSourcePosition() const;
+		[[nodiscard]] base::Optional<dia::SourcePosition> getSourcePosition(query::Context& ctx
+		) const;
 
 		/**
 		 * @brief Get the stable source position of the origin, if it is available.
@@ -72,15 +73,17 @@ namespace compiler::helios::code {
 
 		[[nodiscard]] bool isGenerated() const { return is_generated; }
 
-		friend ElementOrigin multiplePstOrigin(
-			const std::vector<pst::Access<pst::LangElement>>& pst_elements
-		);
-		friend ElementOrigin pstOrigin(
+		friend ElementOrigin generatedOrigin();
+		friend ElementOrigin pstOrigin(pst::Access<pst::LangElement> pst_element);
+		friend ElementOrigin pstOriginOrdered(
 			const ElementOrigin& origin, pst::Access<pst::LangElement> pst_element
 		);
-		friend ElementOrigin pstOrigin(pst::Access<pst::LangElement> pst_element);
-		friend ElementOrigin elementOrigin(const ElementOrigin& left, const ElementOrigin& right);
-		friend ElementOrigin generatedOrigin();
+		friend ElementOrigin multiplePstOriginOrdered(
+			const std::vector<pst::Access<pst::LangElement>>& pst_elements
+		);
+		friend ElementOrigin elementOriginOrdered(
+			const ElementOrigin& left, const ElementOrigin& right
+		);
 	};
 
 	/**
@@ -95,16 +98,23 @@ namespace compiler::helios::code {
 
 	/**
 	 * @brief Creates a non-generated ElementOrigin from some existing origin and pst element.
+	 * @warning The order of the elements should be the same in every compilation.
 	 */
-	ElementOrigin pstOrigin(const ElementOrigin& origin, pst::Access<pst::LangElement> pst_element);
+	ElementOrigin pstOriginOrdered(
+		const ElementOrigin& origin, pst::Access<pst::LangElement> element_to_the_right
+	);
 
 	/**
 	 * @brief Creates an ElementOrigin from two existing origins.
+	 * @warning The order of the elements should be the same in every compilation.
 	 */
-	ElementOrigin elementOrigin(const ElementOrigin& left, const ElementOrigin& right);
+	ElementOrigin elementOriginOrdered(const ElementOrigin& left, const ElementOrigin& right);
 
 	/**
 	 * @brief Creates a non-generated ElementOrigin from multiple PST elements.
+	 * @warning The order of the elements should be the same in every compilation.
 	 */
-	ElementOrigin multiplePstOrigin(const std::vector<pst::Access<pst::LangElement>>& pst_elements);
+	ElementOrigin multiplePstOriginOrdered(
+		const std::vector<pst::Access<pst::LangElement>>& ordered_pst_elements
+	);
 }

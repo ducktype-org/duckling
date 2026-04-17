@@ -12,7 +12,7 @@ use crate::{
 };
 use clap::{Arg, ArgMatches, Command, builder::ValueParser, value_parser};
 
-use crate::duck::driver::cli_ext::{CommandExt, multi, subcommand};
+use crate::duck::driver::cli_ext::{CommandExt, subcommand};
 
 pub const DUCKLING_SCRIPT_EXT: &str = "ds";
 
@@ -47,9 +47,10 @@ pub fn get_parser() -> Command {
                 .required(true),
         )
         .arg(
-            multi("args", "Arguments passed to the script")
+            Arg::new("args")
+                .help("Arguments passed to the script")
                 .trailing_var_arg(true)
-                //.action(ArgAction::Append)
+                .num_args(0..)
                 .value_parser(value_parser!(OsString)),
         )
 }

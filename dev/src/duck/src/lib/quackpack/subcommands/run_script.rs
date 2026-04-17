@@ -4,6 +4,7 @@ use std::{
 };
 
 use clap::ArgMatches;
+use tracing::debug;
 
 use crate::{
     DuckContext, QuackResult, QuackResultContext, qp_bail_internal,
@@ -55,6 +56,7 @@ impl<'duck> RunScriptOptions<'duck> {
             .get_many::<OsString>("args")
             .map(|values| values.cloned().collect())
             .unwrap_or_default();
+        debug!(?args);
         Ok(Self {
             ctx,
             script_name,
@@ -81,6 +83,7 @@ impl<'duck> RunScriptOptions<'duck> {
         let folder_path = path
             .parent()
             .context_internal("we assured that the path points to a file")?;
+        debug!(?args);
         Ok(Self {
             ctx,
             script_name,

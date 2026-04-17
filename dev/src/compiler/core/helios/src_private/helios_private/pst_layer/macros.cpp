@@ -38,7 +38,7 @@ namespace compiler::helios {
 				std::cerr << "Macro expansion with string: " << *string << "\n";
 
 				auto pst = pst::PST<pst::Stmt>::fromExpand(
-					expand->getSourcePosition(),
+					expand->getSourcePosition().unlock(ctx),
 					// @TODO: #2471 change to strView, once it is fixed
 					*string,
 					makeBox<pst::LangParserContext>(expand->getContext()),
