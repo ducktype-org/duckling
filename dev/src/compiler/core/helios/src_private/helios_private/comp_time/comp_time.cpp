@@ -629,7 +629,7 @@ namespace compiler::helios {
 				if (!numeric) {
 					ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 						"Casts of non-numeric compile-time values are not yet implemented.",
-						cast.origin.getSourcePosition()
+						cast.origin.getSourcePosition(ctx)
 					));
 					result = query::Failed();
 					return;

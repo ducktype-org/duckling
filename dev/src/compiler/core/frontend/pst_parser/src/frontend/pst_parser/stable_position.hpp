@@ -21,11 +21,18 @@ namespace pst {
 	 * So it is safe to have elements like `<AccessExpr>, <CallExpr> in .a(x)`,
 	 * but not safe to have like range from one `<FunDecl>` to another in the same file `<FunDecl>`.
 	 */
-	class StablePosition {
+	class StablePosition final {
 	public:
 		using HashType = base::Bit256;
 
 	private:
+		StablePosition(HashType begin_scope_node, base::Optional<HashType> end_scope_node):
+			  begin_scope_node(begin_scope_node),
+			  end_scope_node(end_scope_node) {}
+
+		friend LangElement;
+
+	public:
 		/**
 		 * @brief Node hash that defines start of the position range.
 		 */
@@ -37,13 +44,6 @@ namespace pst {
 		 */
 		base::Optional<HashType> end_scope_node;
 
-		StablePosition(HashType begin_scope_node, base::Optional<HashType> end_scope_node):
-			  begin_scope_node(begin_scope_node),
-			  end_scope_node(end_scope_node) {}
-
-		friend LangElement;
-
-	public:
 		/**
 		 * @brief Get the source position from
 		 * the most recently parsed nodes.
@@ -71,5 +71,4 @@ namespace pst {
 		 */
 		[[nodiscard]] StablePosition extendedWithSubsequentPos(const StablePosition& other) const;
 	};
-
 }

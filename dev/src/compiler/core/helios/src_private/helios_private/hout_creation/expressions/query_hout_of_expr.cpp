@@ -624,7 +624,8 @@ namespace compiler::helios::code {
 				auto location_mutability = location_type.getMutability();
 				if (location_mutability == tsh::Mutability::Immutable) {
 					ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
-						"Left side of assignment can't be immutable.", stmt->getSourcePosition()
+						"Left side of assignment can't be immutable.",
+						stmt->getSourcePosition().unlock(ctx)
 					));
 					return;
 				}
@@ -676,7 +677,7 @@ namespace compiler::helios::code {
 					base::strConcat(
 						"'", op, "' assignment for type: '", location_type.toString(), "'."
 					),
-					stmt->getSourcePosition()
+					stmt->getSourcePosition().unlock(ctx)
 				));
 			}
 		};

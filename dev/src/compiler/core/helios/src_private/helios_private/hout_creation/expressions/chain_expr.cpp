@@ -882,7 +882,7 @@ namespace compiler::helios::code {
 						variant_case_novalue(errors::SymbolNotFound) {
 							ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
 								"Method call without `self` argument.",
-								call_expr->getSourcePosition().unlock(query_ctx)
+								call_expr->getSourcePosition().unlock(ctx)
 							));
 							return query::Failed();
 						}
@@ -890,7 +890,7 @@ namespace compiler::helios::code {
 							ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
 								"Multiple candidates for `self` argument found which should be "
 								"impossible.",
-								call_expr->getSourcePosition().unlock(query_ctx)
+								call_expr->getSourcePosition().unlock(ctx)
 							));
 							return query::Failed();
 						}
@@ -904,7 +904,7 @@ namespace compiler::helios::code {
 				// Filter candidates for which the self argument is different than the found one
 				auto self_type = self_expr->expression_type;
 
-				auto methods = self_type.getType().getInterface(query_ctx)->getMethodsView();
+				auto methods = self_type.getType().getInterface(ctx)->getMethodsView();
 
 				std::vector<SymID> filtered_candidates;
 				for (const auto& method: methods)

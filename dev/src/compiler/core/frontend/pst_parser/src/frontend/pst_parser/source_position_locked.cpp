@@ -30,4 +30,24 @@ namespace pst {
 	}
 
 	dia::SourcePosition SourcePositionLocked::illegalAccess() const { return source_position; }
+
+	void markDependencyOnSourcePosition(query::Context& ctx, dia::SourcePosition) {
+		ctx.query<FileSourcePositionsSideInput>(KeyOf_FileSourcePositions{});
+	}
+
+	dia::SourcePosition ResolvesToPosition::resolve(query::Context& ctx) const {
+		if (std::holds_alternative<StablePosition>(data))
+			return std::get<StablePosition>(data).getActiveSourcePosition(ctx);
+		else
+			return std::get<std::function<dia::SourcePosition(query::Context&)>>(data)(ctx);
+	}
+
+	ResolvesToPosition::ResolverFunction ResolvesToPosition::fromSourcePosition(
+		dia::SourcePosition position
+	) {
+		return [position](query::Context& ctx) {
+			markDependencyOnSourcePosition(ctx, position);
+			return position;
+		};
+	}
 }
