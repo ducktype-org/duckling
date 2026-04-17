@@ -1,6 +1,6 @@
 
 #include <query_framework/internal/query_errors.hpp>
-#include <base/types/ok_bad.hpp>
+#include <base/types/checked_okbad.hpp>
 
 namespace query {
 
@@ -10,7 +10,7 @@ namespace query {
      * @return base::OK if QueryFailedException is not thrown, base::BAD otherwise.
      */
     template<typename FuncT>
-    base::OkBad runFuncWithQueryFailedHandling(FuncT&& func) {
+    base::CheckedOkBad runFuncWithQueryFailedHandling(FuncT&& func) {
         try {
             std::forward<FuncT>(func)();
             return base::OK;

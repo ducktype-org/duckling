@@ -125,7 +125,6 @@ namespace compiler::helios {
 		const tsh::SymbolType<> to,
 		bool                    bypass_trivial_copyability_check
 	) {
-
 		// First check that the type is even coercible to provide a invalid coercion error first.
 		const bool coercible = ctx.query<tsh::QueryImplicitCoercibilityOnSymbolType>({ from, to });
 		if (!coercible) return InvalidCoercion{};

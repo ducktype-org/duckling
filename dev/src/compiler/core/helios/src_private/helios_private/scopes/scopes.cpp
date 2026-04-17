@@ -386,11 +386,8 @@ namespace compiler::helios {
 					out->scopes.emplace_back(ctx.query<QueryPrimaryCodeScopeFor>(element));
 			};
 			
-			auto for_all_ok = query::runFuncWithQueryFailedHandling([&]() {
-					pstForAll(ctx, root_unlocked.value(), grab_scopes_function);
-				}
-			);
-			if (for_all_ok.isBad()) {
+			auto for_all_ok = pstForAll(ctx, root_unlocked.value(), grab_scopes_function);
+			if (for_all_ok.status().isBad()) {
 				// if the pstForAll failed, we mark the whole query as failed, but we still return the scopes that we managed to obtain.
 				out->failed = true;
 			}

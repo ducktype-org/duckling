@@ -39,7 +39,7 @@ namespace compiler::helios {
 			// as then we might not await some of the scheduled queries, which is currently a bug.
 			auto run_no_interrupt = [&is_failed]<typename Func>(Func&& func) {
 				auto ok = query::runFuncWithQueryFailedHandling(std::forward<Func>(func));
-				if (ok.isBad()) {
+				if (ok.status().isBad()) {
 					is_failed = true;
 				}
 			};
@@ -106,11 +106,9 @@ namespace compiler::helios {
 
 					// grab constants:
 					if (kind(sym) == SymbolKind::Const) {
-						// Note: emplace back has strong exception guarantee
 						run_no_interrupt([&] { out.glob_data.emplace_back(ctx, sym, HOUTGlobalDataType::Constant); });
 					}
 					if (kind(sym) == SymbolKind::Variable and isGlobalVar(ctx, sym)) {
-						// Note: emplace back has strong exception guarantee
 						run_no_interrupt([&] { out.glob_data.emplace_back(ctx, sym, HOUTGlobalDataType::Variable); });
 					}
 
