@@ -1,6 +1,6 @@
 #include "stable_position.hpp"
 
-#include "diagnostic/source_position.hpp"
+#include <diagnostic/source_position.hpp>
 
 namespace dia_int {
 
