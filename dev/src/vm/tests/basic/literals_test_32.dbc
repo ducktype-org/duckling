@@ -41,20 +41,20 @@ function foo {} -> { i32 } {
     cmpEq_l32_imm       a, 3242721280;
 	jmpIfNot_label 	fail;
 
-	mov_l32_imm 		ret_val_0, 1;
+	mov_l32_imm 		ret0, 1;
 	ret;
 
 	label fail;
 	init_lany_type		tmp, i32;
 	mov_l32_imm 		tmp, 1235;
 	output_l32  		tmp;
-	mov_l32_l32 		ret_val_0, a;
+	mov_l32_l32 		ret0, a;
 
 	ret;
 }
 
 function main { i64, ptr_argv } -> { i64 } {
-    # ret_val_0 -> main ret_val_0
+    # ret0 -> main ret0
     # arg0 -> argc
     # arg1 -> *argv
 

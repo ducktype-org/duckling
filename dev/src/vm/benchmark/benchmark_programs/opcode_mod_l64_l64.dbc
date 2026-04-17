@@ -1,5 +1,5 @@
 function main { i64, ptr_argv } -> { i64 } {
-    # [0, 8) main ret_val_0
+    # [0, 8) main ret0
     # [8, 16) argc
     # [16, 32) *argv
     init_type       i64;  # [32, 40) i

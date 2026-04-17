@@ -2,7 +2,7 @@ type primitive: my_i64 8
 
 function foo {} -> { my_i64, i64 } {
 	init_lany_type		x, i64;
-	mov_l64_imm			ret_val_0, 21;
+	mov_l64_imm			ret0, 21;
 	deinit;
 	deinit;
 	ret;

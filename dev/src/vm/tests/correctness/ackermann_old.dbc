@@ -15,7 +15,7 @@ function ackermann { i64, ptr_i64 } -> { i64 } {
 
 	# m, n > 0
 	# return A(m-1, A(m, n-1))
-	init_lany_type          new_ret_val, i64;       # A(m, n-1) ret_val_0
+	init_lany_type          new_ret_val, i64;       # A(m, n-1) ret0
 	init_lany_type          n1_arg0, i64;           # A(m, n-1) arg0 -> m
 	init_lany_type          n1_arg1, ptr_i64;       # A(m, n-1) arg1 -> nPtr
 
@@ -40,14 +40,14 @@ function ackermann { i64, ptr_i64 } -> { i64 } {
 
 	# m1_arg0 and m1_arg1 are deinitialized here
 
-	mov_l64_l64             ret_val_0, new_ret_val;   # ret_val_0 = A(m-1, A(m, n-1))
+	mov_l64_l64             ret0, new_ret_val;   # ret0 = A(m-1, A(m, n-1))
 	deinit; # new_ret_val
 	free_lptr               arg1;
 	ret;
 
 	label N0;
 	# return A(m-1, 1)
-	init_lany_type          n0_ret_val, i64;        # A(m-1, 1) ret_val_0
+	init_lany_type          n0_ret_val, i64;        # A(m-1, 1) ret0
 	init_lany_type          n0_arg0, i64;           # A(m-1, 1) arg0 -> m
 	init_lany_type          n0_arg1, ptr_i64;       # A(m-1, 1) arg1 -> nPtr
 
@@ -60,7 +60,7 @@ function ackermann { i64, ptr_i64 } -> { i64 } {
 
 	# n0_arg0 and n0_arg1 are deinitialized here
 
-	mov_l64_l64             ret_val_0, n0_ret_val;    # ret_val_0 = A(m-1, A(m, n-1))
+	mov_l64_l64             ret0, n0_ret_val;    # ret0 = A(m-1, A(m, n-1))
 
 	deinit; # n0_ret_val
 	free_lptr               arg1;
@@ -69,7 +69,7 @@ function ackermann { i64, ptr_i64 } -> { i64 } {
 	label M0;
 	# return n+1
 	add_l64_imm             n, 1;                   # n := n+1
-	mov_l64_l64             ret_val_0, n;             # ret := n
+	mov_l64_l64             ret0, n;             # ret := n
 
 	free_lptr               arg1;
 	deinit; # n
@@ -79,7 +79,7 @@ function ackermann { i64, ptr_i64 } -> { i64 } {
 }
 
 function main { i64, ptr_argv } -> { i64 } {
-	# ret_val_0 -> main ret_val_0
+	# ret0 -> main ret0
 	# arg0 -> argc
 	# arg1 -> *argv
 
@@ -99,7 +99,7 @@ function main { i64, ptr_argv } -> { i64 } {
 
 	output_l64              ack_ret_val;
 
-	deinit; # A() ret_val_0
+	deinit; # A() ret0
 	deinit; # temp
 	deinit; # *argv
 	deinit; # argc

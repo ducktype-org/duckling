@@ -103,11 +103,11 @@ function integers {} -> { i32 } {
 	ucmpLe_l8_imm	b, 10;		# 255 <= 10
 	jmpIf_label		fail;
 
-	mov_l32_imm 	ret_val_0, 1;
+	mov_l32_imm 	ret0, 1;
 	ret;
 
 	label fail;
-	mov_l32_imm 	ret_val_0, 1234;
+	mov_l32_imm 	ret0, 1234;
 
 	ret;
 }

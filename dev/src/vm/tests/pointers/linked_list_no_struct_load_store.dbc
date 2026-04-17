@@ -7,40 +7,40 @@ type data: Node {
 }
 
 function cons { i64, LinkedList } -> { LinkedList } {
-    # ret_val_0: result
+    # ret0: result
     # arg0: head
     # arg1: tail
 
     # using LinkedList = *Node
 
-    # ret_val_0 = new Node()
-    alloc_lptr_type ret_val_0, Node;
+    # ret0 = new Node()
+    alloc_lptr_type ret0, Node;
 
-    # head_ptr = &(ret_val_0->head)
+    # head_ptr = &(ret0->head)
     init_lany_type head_ptr, ptr_i64;
-    structLea_lptr_lptr_field head_ptr, ret_val_0, Node.head;
+    structLea_lptr_lptr_field head_ptr, ret0, Node.head;
 
     # *head_ptr = head
     store_lptr_lany head_ptr, arg0;
     deinit;  # head_ptr
 
-    # ret_val_0->tail = arg1
+    # ret0->tail = arg1
     init_lany_type tail_ptr, LinkedListPtr;
-    structLea_lptr_lptr_field tail_ptr, ret_val_0, Node.tail;
+    structLea_lptr_lptr_field tail_ptr, ret0, Node.tail;
 
     store_lptr_lany tail_ptr, arg1;
     deinit;  # tail_ptr
 
-    # return ret_val_0
+    # return ret0
     ret;
 }
 
 # OPTIMISED!!!
 function tail {} -> { LinkedList } {
     init_lany_type ptr_ptr_node, LinkedListPtr;
-    structLea_lptr_lptr_field ptr_ptr_node, ret_val_0, Node.tail;
+    structLea_lptr_lptr_field ptr_ptr_node, ret0, Node.tail;
 
-    load_lany_lptr ret_val_0, ptr_ptr_node;
+    load_lany_lptr ret0, ptr_ptr_node;
 
     ret;
 }

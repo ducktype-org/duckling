@@ -47,11 +47,11 @@ function sext_test {} -> { i32 } {
 	cmpEq_l64_imm i64_val, -1;
 	jmpIfNot_label fail;
 
-	mov_l32_imm ret_val_0, 1;
+	mov_l32_imm ret0, 1;
 	ret;
 
 	label fail;
-	mov_l32_imm ret_val_0, 0;
+	mov_l32_imm ret0, 0;
 	ret;
 }
 
@@ -96,11 +96,11 @@ function zext_test {} -> { i32 } {
 	cmpEq_l64_imm u64_val, 4294967295;
 	jmpIfNot_label fail;
 
-	mov_l32_imm ret_val_0, 1;
+	mov_l32_imm ret0, 1;
 	ret;
 
 	label fail;
-	mov_l32_imm ret_val_0, 0;
+	mov_l32_imm ret0, 0;
 	ret;
 }
 
@@ -146,11 +146,11 @@ function trunc_test {} -> { i32 } {
 	cmpEq_l32_imm u32_val, 0x9ABCDEF0;
 	jmpIfNot_label fail;
 
-	mov_l32_imm ret_val_0, 1;
+	mov_l32_imm ret0, 1;
 	ret;
 
 	label fail;
-	mov_l32_imm ret_val_0, 0; 
+	mov_l32_imm ret0, 0; 
 	ret;
 }
 
@@ -168,11 +168,11 @@ function sitofp_test {} -> { i32 } {
 	fcmpEq_l64_imm f64_val, -10.0;
 	jmpIfNot_label fail;
 
-	mov_l32_imm ret_val_0, 1;
+	mov_l32_imm ret0, 1;
 	ret;
 
 	label fail;
-	mov_l32_imm ret_val_0, 0;
+	mov_l32_imm ret0, 0;
 	ret;
 }
 
@@ -190,11 +190,11 @@ function uitofp_test {} -> { i32 } {
 	fcmpEq_l64_imm f64_val, 10.0;
 	jmpIfNot_label fail;
 
-	mov_l32_imm ret_val_0, 1;
+	mov_l32_imm ret0, 1;
 	ret;
 	
 	label fail;
-	mov_l32_imm ret_val_0, 0;
+	mov_l32_imm ret0, 0;
 	ret;
 }
 
@@ -214,11 +214,11 @@ function fptosi_test {} -> { i32 } {
 	cmpEq_l32_imm i32_val, -20;
 	jmpIfNot_label fail;
 
-	mov_l32_imm ret_val_0, 1;
+	mov_l32_imm ret0, 1;
 	ret;
 	
 	label fail;
-	mov_l32_imm ret_val_0, 0;
+	mov_l32_imm ret0, 0;
 	ret;
 }
 
@@ -237,11 +237,11 @@ function fptoui_test {} -> { i32 } {
 	cmpEq_l32_imm u32_val, 20;
 	jmpIfNot_label fail;
 
-	mov_l32_imm ret_val_0, 1;
+	mov_l32_imm ret0, 1;
 	ret;
 	
 	label fail;
-	mov_l32_imm ret_val_0, 0;
+	mov_l32_imm ret0, 0;
 	ret;
 }
 
@@ -254,11 +254,11 @@ function fptrunc_test {} -> { i32 } {
 	fcmpEq_l32_imm f32_val, 123456790.0f32;
 	jmpIfNot_label fail;
 	
-	mov_l32_imm ret_val_0, 1;
+	mov_l32_imm ret0, 1;
 	ret;
 
 	label fail;
-	mov_l32_imm ret_val_0, 0;
+	mov_l32_imm ret0, 0;
 	ret;
 }
 
@@ -271,11 +271,11 @@ function fpext_test {} -> { i32 } {
 	fcmpEq_l64_imm f64_val, 1234.5;
 	jmpIfNot_label fail;
 
-	mov_l32_imm ret_val_0, 1;
+	mov_l32_imm ret0, 1;
 	ret;
 
 	label fail;
-	mov_l32_imm ret_val_0, 0;
+	mov_l32_imm ret0, 0;
 	ret;
 }
 
@@ -288,11 +288,11 @@ function sitofp_rounding_test {} -> { i32 } {
 	fcmpEq_l32_imm f32_val, 123456790.0f32;
 	jmpIfNot_label fail;
 
-	mov_l32_imm ret_val_0, 1;
+	mov_l32_imm ret0, 1;
 	ret;
 
 	label fail;
-	mov_l32_imm ret_val_0, 0;
+	mov_l32_imm ret0, 0;
 	ret;
 }
 
@@ -400,11 +400,11 @@ function fptosi_saturation_test {} -> { i32 } {
 	cmpEq_l8_imm u8_val, 255;
 	jmpIfNot_label fail;
 
-	mov_l32_imm ret_val_0, 1;
+	mov_l32_imm ret0, 1;
 	ret;
 	
 	label fail;
-	mov_l32_imm ret_val_0, 0;
+	mov_l32_imm ret0, 0;
 	ret;
 }
 

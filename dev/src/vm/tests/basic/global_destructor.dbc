@@ -13,6 +13,6 @@ function g_dtor {} -> {} {
 }
 
 function main { i64, ptr_argv } -> { i64 } {
-    mov_l64_g64 ret_val_0, g;
+    mov_l64_g64 ret0, g;
     ret;
 }

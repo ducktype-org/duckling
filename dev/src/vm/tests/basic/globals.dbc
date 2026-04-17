@@ -22,13 +22,13 @@ function for_coverage {} -> {} {
 
 function main { i64, ptr_argv } -> { i64 } {
 	mov_g64_imm counter, 5;
-	mov_l64_g64 ret_val_0, counter;
-	output_l64 ret_val_0;
+	mov_l64_g64 ret0, counter;
+	output_l64 ret0;
 
 	call_func for_coverage;
 	init_lany_type ptr, ptr_i64;
 	mov_lptr_gptr ptr, global_ptr;
-	load_lany_lptr ret_val_0, ptr;
+	load_lany_lptr ret0, ptr;
 	free_lptr ptr;
 
 

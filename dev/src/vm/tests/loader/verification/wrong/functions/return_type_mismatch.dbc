@@ -1,8 +1,8 @@
 type primitive: my_i64 8
 
 function foo {} -> { my_i64, i64 } {
-	mov_l64_imm          ret_val_0, 21;
-	mov_l64_imm          ret_val_1, 37;
+	mov_l64_imm          ret0, 21;
+	mov_l64_imm          ret1, 37;
 	ret;
 }
 

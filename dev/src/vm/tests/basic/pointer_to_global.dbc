@@ -36,7 +36,7 @@ function main { i64, ptr_argv } -> { i64 } {
 	load_lany_lptr verifier_val, l_ptr_from_global;
 	output_l64 verifier_val;                          # 1337
 
-	mov_l64_l64 ret_val_0, verifier_val;
+	mov_l64_l64 ret0, verifier_val;
 
 	ret;
 }

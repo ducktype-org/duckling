@@ -6,25 +6,25 @@ type data: Node {
 }
 
 function cons { i64, LinkedList } -> { LinkedList } {
-    # ret_val_0: result
+    # ret0: result
     # arg0: head
     # arg1: tail
 
     # using LinkedList = *Node
 
-    # ret_val_0 = new Node()
-    alloc_lptr_type ret_val_0, Node;
+    # ret0 = new Node()
+    alloc_lptr_type ret0, Node;
 
-    structStore_lptr_lany_field ret_val_0, arg0, Node.head;
+    structStore_lptr_lany_field ret0, arg0, Node.head;
 
-    structStore_lptr_lany_field ret_val_0, arg1, Node.tail;
+    structStore_lptr_lany_field ret0, arg1, Node.tail;
 
     ret;
 }
 
 # OPTIMISED!!!
 function tail {} -> { LinkedList } {
-    structLoad_lany_lptr_field ret_val_0, ret_val_0, Node.tail;
+    structLoad_lany_lptr_field ret0, ret0, Node.tail;
 
     ret;
 }

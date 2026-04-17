@@ -1,10 +1,10 @@
-# tetsing if `void` can be used as any other type name
+# Testing if `void` can be used as any other type name
 
 type primitive: void 8  
 
 function norm_div { void, void } -> { void } {
-	mov_l64_l64			ret_val_0, arg1;
-	div_l64_l64 		ret_val_0, arg0;
+	mov_l64_l64			ret0, arg1;
+	div_l64_l64 		ret0, arg0;
 	ret;
 }
 

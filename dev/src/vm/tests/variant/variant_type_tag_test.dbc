@@ -781,10 +781,10 @@ type pointer: ptr_CustomInt1 CustomInt1
 type pointer: ptr_CustomInt256 CustomInt256
 
 function getCustomVariant8TypeTag0 { i64 } -> { CustomVariant8 } {
-    variantSetInner_lvnt_type ret_val_0, CustomInt0;
+    variantSetInner_lvnt_type ret0, CustomInt0;
 
     init_lany_type ptr, ptr_CustomInt0;
-    variantGetInner_lptr_lvnt_type ptr, ret_val_0, CustomInt0;
+    variantGetInner_lptr_lvnt_type ptr, ret0, CustomInt0;
 
     cast_l64_type arg0, CustomInt0;
     store_lptr_lany ptr, arg0;
@@ -793,10 +793,10 @@ function getCustomVariant8TypeTag0 { i64 } -> { CustomVariant8 } {
 }
 
 function getCustomVariant8TypeTag1 { i64 } -> { CustomVariant8 } {
-    variantSetInner_lvnt_type ret_val_0, CustomInt1;
+    variantSetInner_lvnt_type ret0, CustomInt1;
 
     init_lany_type ptr, ptr_CustomInt1;
-    variantGetInner_lptr_lvnt_type ptr, ret_val_0, CustomInt1;
+    variantGetInner_lptr_lvnt_type ptr, ret0, CustomInt1;
 
     cast_l64_type arg0, CustomInt1;
     store_lptr_lany ptr, arg0;
@@ -804,10 +804,10 @@ function getCustomVariant8TypeTag1 { i64 } -> { CustomVariant8 } {
 }
 
 function getCustomVariant16TypeTag0 { i64 } -> { CustomVariant16 } {
-    variantSetInner_lvnt_type ret_val_0, CustomInt0;
+    variantSetInner_lvnt_type ret0, CustomInt0;
 
     init_lany_type ptr, ptr_CustomInt0;
-    variantGetInner_lptr_lvnt_type ptr, ret_val_0, CustomInt0;
+    variantGetInner_lptr_lvnt_type ptr, ret0, CustomInt0;
 
     cast_l64_type arg0, CustomInt0;
     store_lptr_lany ptr, arg0;
@@ -817,10 +817,10 @@ function getCustomVariant16TypeTag0 { i64 } -> { CustomVariant16 } {
 
 
 function getCustomVariant16TypeTag1 { i64 } -> { CustomVariant16 } {
-    variantSetInner_lvnt_type ret_val_0, CustomInt1;
+    variantSetInner_lvnt_type ret0, CustomInt1;
 
     init_lany_type ptr, ptr_CustomInt1;
-    variantGetInner_lptr_lvnt_type ptr, ret_val_0, CustomInt1;
+    variantGetInner_lptr_lvnt_type ptr, ret0, CustomInt1;
 
     cast_l64_type arg0, CustomInt1;
     store_lptr_lany ptr, arg0;
@@ -829,10 +829,10 @@ function getCustomVariant16TypeTag1 { i64 } -> { CustomVariant16 } {
 }
 
 function getCustomVariant16TypeTag256 { i64 } -> { CustomVariant16 } {
-    variantSetInner_lvnt_type ret_val_0, CustomInt256;
+    variantSetInner_lvnt_type ret0, CustomInt256;
 
     init_lany_type ptr, ptr_CustomInt256;
-    variantGetInner_lptr_lvnt_type ptr, ret_val_0, CustomInt256;
+    variantGetInner_lptr_lvnt_type ptr, ret0, CustomInt256;
 
     cast_l64_type arg0, CustomInt256;
     store_lptr_lany ptr, arg0;

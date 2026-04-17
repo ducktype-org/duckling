@@ -1,8 +1,8 @@
 # Test if previously injected functions are present in program state.
 
 function summer { i64, i64 } -> { i64 } {
-	mov_l64_l64 ret_val_0, arg0;
-	add_l64_l64 ret_val_0, arg1;
+	mov_l64_l64 ret0, arg0;
+	add_l64_l64 ret0, arg1;
 
 	deinit;
 	deinit;

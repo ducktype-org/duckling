@@ -3,14 +3,14 @@
 function spring { i64, i64 } -> { i64 } {
 	# For given a, b calculates a * (a+b)
 	
-	mov_l64_l64 ret_val_0, arg0;
+	mov_l64_l64 ret0, arg0;
 	init_lany_type sum_ret_val, i64;
 	init_lany_type sum_a0, i64;
 	init_lany_type sum_a1, i64;
 	mov_l64_l64 sum_a0, arg0;
 	mov_l64_l64 sum_a1, arg1;
 	call_func summer;
-	mul_l64_l64 ret_val_0, sum_ret_val;
+	mul_l64_l64 ret0, sum_ret_val;
 	deinit; # sum_ret_val
 	deinit; # arg1
 	deinit; # arg0 
