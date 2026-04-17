@@ -25,10 +25,21 @@ namespace vm::debugger {
 
 		// Event handlers for the debugger:
 
-		/**		 *
+		/**		 
 		 * @brief Emits current VM status when VM changes status
 		 */
-		events::Emitter<vm::api::ProcStatus> on_vm_status_change;
+		events::Emitter<std::string> on_vm_changes_status;
+		
+		/**
+		 * @brief Emits return vale when VM completes execution
+		 */
+		events::Emitter<std::string> on_vm_completes_execution;
+
+		/**
+		 * @brief Emits error message on any error
+		 */
+		events::Emitter<std::string> on_error;
+
 
 	public:
 		Debugger(const fs::File& filepath, const std::vector<std::string>& main_args = {});
@@ -43,12 +54,32 @@ namespace vm::debugger {
 		/**
 		 * @brief Attach Listener to Emitter that emits current VM status when VM changes status
 		 */
-		void attachOnVMStatusChangeListener(Ref<events::Listener<vm::api::ProcStatus>> listener);
+		void attachOnVMChangesStatusListener(Ref<events::Listener<std::string>> listener);
 
 		/**
 		 * @brief Attach Listener to Emitter that emits current VM status when VM changes status
 		 */
-		void attachOnVMStatusChangeListener(events::Listener<vm::api::ProcStatus>& listener);
+		void attachOnVMChangesStatusListener(events::Listener<std::string>& listener);
+
+		/**
+		 * @brief Attach Listener to Emitter that emits return value when VM completes execution
+		 */
+		void attachOnVMCompletesExecutionListener(Ref<events::Listener<std::string>> listener);
+		
+		/**
+		 * @brief Attach Listener to Emitter that emits return value when VM completes execution
+		 */
+		void attachOnVMCompletesExecutionListener(events::Listener<std::string>& listener);
+
+		/**
+		 * @brief Attach Listener to Emitter that emits error message when any error raises
+		 */
+		void attachOnErrorListener(Ref<events::Listener<std::string>> listener);
+
+		/**
+		 * @brief Attach Listener to Emitter that emits error message when any error raises
+		 */
+		void attachOnErrorListener(events::Listener<std::string>& listener);
 
 		// Methods to control the debugging session:
 
@@ -61,6 +92,6 @@ namespace vm::debugger {
 		 * @brief Gets the current status of the VM.
 		 * @return The current status of the VM.
 		 */
-		[[nodiscard]] std::string getStatus() const;
+		[[nodiscard]] std::string getStatus();
 	};
 }
