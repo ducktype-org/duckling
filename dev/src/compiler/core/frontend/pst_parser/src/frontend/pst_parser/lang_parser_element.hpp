@@ -122,6 +122,10 @@ namespace pst {
 			const dia_int::StablePosition& pos
 		);
 
+		static dia::SourcePosition getActiveSourcePosition(
+			query::Context& ctx, const dia_int::StablePosition& pos
+		);
+
 		/**
 		 * @brief Get pst node the by stable hash. Throws on non-existent hash.
 		 * @note should not be used in query, currently used by by `queryPositionDependencies`

@@ -28,6 +28,7 @@ namespace lsp {
 		dia_int::HashCodeLocation hash_code_location
 	) {
 		dia_int::StablePosition stable_position(
+			pst::LangElement::getActiveSourcePosition,
 			pst::LangElement::getActiveSourcePositionIllegalAccess,
 			hash_code_location.begin_node,
 			hash_code_location.end_node

@@ -28,7 +28,7 @@ namespace dia_int {
 		/**
 		 * @brief Node hash that defines start of the position range.
 		 */
-		HashType                 begin_node;
+		HashType begin_node;
 
 		/**
 		 * @brief Node hash that defines the end of the position range.
@@ -38,16 +38,15 @@ namespace dia_int {
 
 		using ToSourcePosIllegalAccessFunc = dia::SourcePosition (*)(const StablePosition&);
 		ToSourcePosIllegalAccessFunc to_source_pos_illegal_access_fn;
-
-		using ToSourcePosFuncWithContexFunc
+		using ToSourcePosFuncWithContextFunc
 			= dia::SourcePosition (*)(query::Context&, const StablePosition&);
-		ToSourcePosFuncWithContexFunc to_source_pos_with_context_fn;
+		ToSourcePosFuncWithContextFunc to_source_pos_with_context_fn;
 
 		StablePosition(
-			ToSourcePosIllegalAccessFunc  to_source_pos_illegal_access_fn,
-			ToSourcePosFuncWithContexFunc to_source_pos_with_context_fn,
-			HashType                      begin_node,
-			base::Optional<HashType>      end_node = {}
+			ToSourcePosFuncWithContextFunc to_source_pos_with_context_fn,
+			ToSourcePosIllegalAccessFunc   to_source_pos_illegal_access_fn,
+			HashType                       begin_node,
+			base::Optional<HashType>       end_node = {}
 		):
 			  begin_node(begin_node),
 			  end_node(end_node),
@@ -78,8 +77,8 @@ namespace dia_int {
 		}
 
 		/**
-		 * @brief Get the active source position corresponding to this stable position, with access to the
-		 * query context.
+		 * @brief Get the active source position corresponding to this stable position, with access
+		 * to the query context.
 		 */
 		[[nodiscard]] dia::SourcePosition getActiveSourcePosition(query::Context& ctx) const {
 			return to_source_pos_with_context_fn(ctx, *this);

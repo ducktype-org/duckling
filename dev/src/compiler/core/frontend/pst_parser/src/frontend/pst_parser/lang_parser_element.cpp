@@ -205,7 +205,12 @@ namespace pst {
 	}
 
 	dia_int::StablePosition LangElement::getStablePosition() const {
-		return { LangElement::getActiveSourcePositionIllegalAccess, getHash(), {} };
+		return {
+			LangElement::getActiveSourcePosition,
+			LangElement::getActiveSourcePositionIllegalAccess,
+			getHash(),
+			{},
+		};
 	}
 
 	dia::SourcePosition LangElement::getActiveSourcePositionIllegalAccess(
@@ -214,13 +219,34 @@ namespace pst {
 		auto first_pos = LangElement::getByStableHash(pos.begin_node)
 		                     .illegalAccess()
 		                     .value()
-		                     ->getSourcePosition();
+		                     ->getSourcePosition()
+		                     .illegalAccess();
 
 		if (pos.end_node.has_value()) {
 			auto last_pos = LangElement::getByStableHash(pos.end_node.value())
 			                    .illegalAccess()
 			                    .value()
-			                    ->getSourcePosition();
+			                    ->getSourcePosition()
+			                    .illegalAccess();
+			return dia::SourcePosition::merge(first_pos, last_pos);
+		} else {
+			return first_pos;
+		}
+	}
+
+	dia::SourcePosition LangElement::getActiveSourcePosition(
+		query::Context& ctx, const dia_int::StablePosition& pos
+	) {
+		auto first_pos = LangElement::getByStableHash(pos.begin_node)
+		                     .unlock(ctx)
+		                     ->getSourcePosition()
+		                     .unlock(ctx);
+
+		if (pos.end_node.has_value()) {
+			auto last_pos = LangElement::getByStableHash(pos.end_node.value())
+			                    .unlock(ctx)
+			                    ->getSourcePosition()
+			                    .unlock(ctx);
 			return dia::SourcePosition::merge(first_pos, last_pos);
 		} else {
 			return first_pos;

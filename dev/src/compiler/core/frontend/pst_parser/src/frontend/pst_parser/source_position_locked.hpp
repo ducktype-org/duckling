@@ -2,8 +2,8 @@
 
 #include <diagnostic_interactive/stable_position.hpp>
 
-#include <query_framework/external/api.hpp>
 #include <diagnostic/source_position.hpp>
+#include <query_framework/external/api.hpp>
 
 namespace query {
 	struct Context;
