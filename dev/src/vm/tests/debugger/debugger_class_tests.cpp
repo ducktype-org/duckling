@@ -41,7 +41,7 @@ private:
 			ret_val_counter++;
 		});
 
-		events::Listener<std::string> error_listener([&](const std::string err) { fail(err); });
+		events::Listener<std::string> error_listener([&](const std::string& err) { fail(err); });
 
 		vm::debugger::Debugger debugger{ fs::File(path(std::string(path_name))) };
 		debugger.attachOnVMChangesStatusListener(status_listener);
@@ -87,7 +87,7 @@ private:
 			ret_val_counter++;
 		});
 
-		events::Listener<std::string> error_listener([&](const std::string err) { fail(err); });
+		events::Listener<std::string> error_listener([&](const std::string& err) { fail(err); });
 
 		vm::debugger::Debugger debugger{ fs::File(path("debugger_test.dbc")) };
 

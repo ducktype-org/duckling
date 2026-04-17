@@ -4,7 +4,7 @@
 
 #include <vm/api/vm.hpp>
 
-inline std::string status_to_string(const vm::api::ProcStatus& status) {
+inline std::string statusToString(const vm::api::ProcStatus& status) {
 	return std::visit(
 		[](auto&& arg) {
 			using T = std::decay_t<decltype(arg)>;
@@ -35,7 +35,7 @@ namespace vm::debugger {
 					  on_error.emitEvent(panicked.error_message);
 				  }
 			  }
-			  on_vm_changes_status.emitEvent(status_to_string(status));
+			  on_vm_changes_status.emitEvent(statusToString(status));
 		  }) {
 		vm::api::spawn()
 			.and_then([&](const vm::api::ProcessInfo& info) {
@@ -101,7 +101,7 @@ namespace vm::debugger {
 	std::string Debugger::getStatus() {
 		auto result
 			= vm::api::getExecutionStatus(pid).transform([&](const vm::api::ProcStatus& status) {
-				  return status_to_string(status);
+				  return statusToString(status);
 			  });
 
 		if (result.has_value())
