@@ -167,11 +167,13 @@ namespace compiler::helios::code {
 	) {
 		variant_match(failure_reason) {
 			variant_case(PositionalAfterNamedArgument, data) {
-				auto source_pos = arguments_origin[data.argument_index].getSourcePosition().value();
+				auto source_pos
+					= arguments_origin[data.argument_index].getSourcePosition(ctx).value();
 				return makeBox<PositionalAfterNamedArgumentError>(source_pos);
 			}
 			variant_case(RepeatedNamedArgument, data) {
-				auto source_pos = arguments_origin[data.argument_index].getSourcePosition().value();
+				auto source_pos
+					= arguments_origin[data.argument_index].getSourcePosition(ctx).value();
 				return makeBox<RepeatedNamedArgumentError>(source_pos);
 			}
 			variant_case(FunctionMatchFailure, data) {
@@ -185,9 +187,10 @@ namespace compiler::helios::code {
 				variant_match(data) {
 					variant_case(TooManyCallArguments, data) {
 						auto first_arg_pos
-							= arguments_origin[data.valid_arguments].getSourcePosition().value();
-						auto last_arg_pos
-							= arguments_origin[data.total_arguments - 1].getSourcePosition().value();
+							= arguments_origin[data.valid_arguments].getSourcePosition(ctx).value();
+						auto last_arg_pos = arguments_origin[data.total_arguments - 1]
+						                        .getSourcePosition(ctx)
+						                        .value();
 
 						base::Optional<Box<InteractiveFunction>> function
 							= get_interactive_function(data.function);
@@ -196,7 +199,7 @@ namespace compiler::helios::code {
 					}
 					variant_case(UnknownNamedArgument, data) {
 						auto arg_pos
-							= arguments_origin[data.argument_index].getSourcePosition().value();
+							= arguments_origin[data.argument_index].getSourcePosition(ctx).value();
 						base::Optional<Box<InteractiveFunction>> function_name
 							= get_interactive_function(data.function);
 						return makeBox<UnknownNamedArgumentError>(
@@ -206,11 +209,11 @@ namespace compiler::helios::code {
 					variant_case(TypeMismatch, data) {
 						dia::SourcePosition pos = [&] {
 							if_opt_some(
-								arguments_origin[data.argument_index].getSourcePosition(), pos
+								arguments_origin[data.argument_index].getSourcePosition(ctx), pos
 							) {
 								return pos;
 							}
-							return whole_call_origin.getSourcePosition().value();
+							return whole_call_origin.getSourcePosition(ctx).value();
 						}();
 
 						base::Optional<Box<InteractiveFunction>> function_name
@@ -226,21 +229,21 @@ namespace compiler::helios::code {
 						auto& decl = ctx.query<QueryDeclOfFun>(data.function)->valueOrThrow();
 
 						if_opt_some(
-							decl.parameters[data.parameter_index].origin.getSourcePosition(),
+							decl.parameters[data.parameter_index].origin.getSourcePosition(ctx),
 							param_pos
 						) {
 							return makeBox<CallMissingArgumentError>(
-								whole_call_origin.getSourcePosition().value(), param_pos
+								whole_call_origin.getSourcePosition(ctx).value(), param_pos
 							);
 						}
 
 						return makeBox<CallMissingArgumentError>(
-							whole_call_origin.getSourcePosition().value(), std::nullopt
+							whole_call_origin.getSourcePosition(ctx).value(), std::nullopt
 						);
 					}
 					variant_case(NamedArgumentProvidedByPositional, data) {
 						auto arg_pos
-							= arguments_origin[data.argument_index].getSourcePosition().value();
+							= arguments_origin[data.argument_index].getSourcePosition(ctx).value();
 						base::Optional<Box<InteractiveFunction>> function_name
 							= get_interactive_function(data.function);
 						return makeBox<NamedArgumentProvidedByPositionalError>(
@@ -249,7 +252,7 @@ namespace compiler::helios::code {
 					}
 					variant_case(TypeNotTriviallyCopyable, data) {
 						auto source_pos
-							= arguments_origin[data.argument_index].getSourcePosition().value();
+							= arguments_origin[data.argument_index].getSourcePosition(ctx).value();
 						if (data.given_type.getRefKind() != tsh::ReferenceKind::Direct
 						    && data.expected_type.getRefKind() == tsh::ReferenceKind::Direct) {
 							return makeBox<dia_int::NotYetImplementedCodeError>(

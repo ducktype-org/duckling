@@ -454,7 +454,7 @@ namespace compiler::helios {
 				// @TODO: #2087 remove this branch, when non-class statements will be properly supported.
 				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 					"Non-class statements inside classes are not supported yet.",
-					key.element.unlock(ctx)->getSourcePosition(),
+					key.element.unlock(ctx)->getSourcePosition().unlock(ctx),
 					"",
 					"here"
 				));
@@ -744,7 +744,7 @@ namespace compiler::helios {
 
 				if (!maybe_imported_module.has_value()) {
 					ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
-						"Module not found.", import_stmt->getSourcePosition()
+						"Module not found.", import_stmt->getSourcePosition().unlock(ctx)
 					));
 					output(query::Failed());
 					return;
@@ -777,7 +777,7 @@ namespace compiler::helios {
 						"Linked scope for this symbol kind is not implemented yet: ",
 						key.ref->common.kind
 					),
-					stmt(ctx, key.ref).value()->getSourcePosition()
+					stmt(ctx, key.ref).value()->getSourcePosition().unlock(ctx)
 				));
 				return query::Failed();
 			}
