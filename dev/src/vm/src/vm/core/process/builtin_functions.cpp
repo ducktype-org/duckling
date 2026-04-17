@@ -132,12 +132,12 @@ namespace vm::builtins {
 		thread.acquireGil();
 	}
 
-	u64 FunctionHandlers::builtinCreateMutex(SafeSafeVMThread& thread) {
-		return thread.safe_safe_process.getSynchronizationPrimitives().addMutex();
+	u64 FunctionHandlers::builtinCreateMutex(SafeVMThread& thread) {
+		return thread.safe_process.getSynchronizationPrimitives().addMutex();
 	}
 
-	void FunctionHandlers::builtinLockMutex(SafeSafeVMThread& thread, u64 mutex_id) {
-		auto mutex = thread.safe_safe_process.getSynchronizationPrimitives().getMutex(mutex_id);
+	void FunctionHandlers::builtinLockMutex(SafeVMThread& thread, u64 mutex_id) {
+		auto mutex = thread.safe_process.getSynchronizationPrimitives().getMutex(mutex_id);
 
 		if (!mutex->try_lock()) {
 			thread.releaseGil();
@@ -146,22 +146,22 @@ namespace vm::builtins {
 		}
 	}
 
-	void FunctionHandlers::builtinUnlockMutex(SafeSafeVMThread& thread, u64 mutex_id) {
-		auto mutex = thread.safe_safe_process.getSynchronizationPrimitives().getMutex(mutex_id);
+	void FunctionHandlers::builtinUnlockMutex(SafeVMThread& thread, u64 mutex_id) {
+		auto mutex = thread.safe_process.getSynchronizationPrimitives().getMutex(mutex_id);
 		mutex->unlock();
 	}
 
-	void FunctionHandlers::builtinDestroyMutex(SafeSafeVMThread& thread, u64 mutex_id) {
-		thread.safe_safe_process.getSynchronizationPrimitives().removeMutex(mutex_id);
+	void FunctionHandlers::builtinDestroyMutex(SafeVMThread& thread, u64 mutex_id) {
+		thread.safe_process.getSynchronizationPrimitives().removeMutex(mutex_id);
 	}
 
 	u64 FunctionHandlers::builtinCreateCV(SafeVMThread& thread) {
 		return thread.safe_process.getSynchronizationPrimitives().addCV();
 	}
 
-	void FunctionHandlers::builtinWaitCV(SafeSafeVMThread& thread, u64 cv_id, u64 mutex_id) {
-		auto cv    = thread.safe_safe_process.getSynchronizationPrimitives().getCV(cv_id);
-		auto mutex = thread.safe_safe_process.getSynchronizationPrimitives().getMutex(mutex_id);
+	void FunctionHandlers::builtinWaitCV(SafeVMThread& thread, u64 cv_id, u64 mutex_id) {
+		auto cv    = thread.safe_process.getSynchronizationPrimitives().getCV(cv_id);
+		auto mutex = thread.safe_process.getSynchronizationPrimitives().getMutex(mutex_id);
 
 		thread.releaseGil();
 		try {
@@ -186,18 +186,18 @@ namespace vm::builtins {
 		thread.acquireGil();
 	}
 
-	void FunctionHandlers::builtinNotifyCV(SafeSafeVMThread& thread, u64 cv_id) {
-		auto cv = thread.safe_safe_process.getSynchronizationPrimitives().getCV(cv_id);
+	void FunctionHandlers::builtinNotifyCV(SafeVMThread& thread, u64 cv_id) {
+		auto cv = thread.safe_process.getSynchronizationPrimitives().getCV(cv_id);
 		cv->notifyOne();
 	}
 
-	void FunctionHandlers::builtinNotifyAllCV(SafeSafeVMThread& thread, u64 cv_id) {
-		auto cv = thread.safe_safe_process.getSynchronizationPrimitives().getCV(cv_id);
+	void FunctionHandlers::builtinNotifyAllCV(SafeVMThread& thread, u64 cv_id) {
+		auto cv = thread.safe_process.getSynchronizationPrimitives().getCV(cv_id);
 		cv->notifyAll();
 	}
 
-	void FunctionHandlers::builtinDestroyCV(SafeSafeVMThread& thread, u64 cv_id) {
-		thread.safe_safe_process.getSynchronizationPrimitives().removeCV(cv_id);
+	void FunctionHandlers::builtinDestroyCV(SafeVMThread& thread, u64 cv_id) {
+		thread.safe_process.getSynchronizationPrimitives().removeCV(cv_id);
 	}
 
 	base::Optional<Box<VmValue>> callBuiltinFunction(

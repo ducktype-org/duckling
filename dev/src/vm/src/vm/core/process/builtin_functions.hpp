@@ -31,7 +31,7 @@
 #include <vm/core/thread/vmvalue.hpp>
 
 namespace vm {
-	class SafeSafeVMThread;
+	class SafeVMThread;
 	class IIVMProcess;
 }
 
