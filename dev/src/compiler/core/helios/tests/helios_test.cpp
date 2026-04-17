@@ -2954,6 +2954,13 @@ private:
 			return {};
 		};
 
+		auto get_source_pos_from_origin
+			= [](const compiler::helios::code::ElementOrigin& origin) -> dia::SourcePosition {
+			return std::any_cast<dia::SourcePosition>(query::utils::withContextCompute(
+				[&](query::Context& ctx) { return origin.getSourcePosition(ctx).value(); }
+			));
+		};
+
 		/**
 		 * Check if the source position of the origin of initial value expression
 		 * calculated from HOUT is the same as the source position of the whole PST init expression.
@@ -2970,11 +2977,10 @@ private:
 			auto initial_value_expr
 				= std::get<compiler::helios::HOUTGlobalVariable>(glob->value).initial_value.ref();
 
-			dia::SourcePosition expr_pos_from_origin
-				= initial_value_expr->origin.getSourcePosition().value();
+			auto expr_pos_from_origin = get_source_pos_from_origin(initial_value_expr->origin);
 			assertEqual(
 				expr_pos_from_origin,
-				initial_value_pst->getSourcePosition(),
+				initial_value_pst->getSourcePosition().illegalAccess(),
 				base::strConcat(
 					"The initial value expression PST node does not match for variable ",
 					name.strView()
@@ -3025,8 +3031,8 @@ private:
 
 			auto pst_fun = pst_fun_opt.value();
 			assertEqual(
-				fun->origin.getSourcePosition(),
-				pst_fun->getSourcePosition(),
+				get_source_pos_from_origin(fun->origin),
+				pst_fun->getSourcePosition().illegalAccess(),
 				base::strConcat("The function origin is not the PST of the function", name.strView())
 			);
 			assertEqual(
