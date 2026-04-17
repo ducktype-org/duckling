@@ -32,8 +32,8 @@ namespace compiler::helios::code {
 		) {
 			if (auto expr_kind = current_expr->expression_type.getSymbolType().getType().getKind();
 			    expr_kind != tsh::Kind::StaticArray && expr_kind != tsh::Kind::DynamicArray) {
-				auto error_pos = current_expr->origin.getSourcePosition().copyValueOr(
-					index_pst.unlock(ctx)->getSourcePosition()
+				auto error_pos = current_expr->origin.getSourcePosition(ctx).copyValueOr(
+					index_pst.unlock(ctx)->getSourcePosition().unlock(ctx)
 				);
 				ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
 					"Index operator base must be indexable.", error_pos
@@ -59,7 +59,7 @@ namespace compiler::helios::code {
 
 			return makeBox<IndexExpr>(
 				ctx,
-				pstOrigin(current_expr->origin, index_pst.unlock(ctx)),
+				pstOriginOrdered(current_expr->origin, index_pst.unlock(ctx)),
 				std::move(current_expr),
 				std::move(index_expr)
 			);
@@ -107,7 +107,7 @@ namespace compiler::helios::code {
 			auto arg_res = subExprFromPSTWithType(ctx, arg_pst, expected_index_arg_type);
 			UNPACK_QRESULT_MOVE(Box<Expr> arg_expr =, arg_res);
 
-			auto total_origin = pstOrigin(base->origin, arg_pst.unlock(ctx));
+			auto total_origin = pstOriginOrdered(base->origin, arg_pst.unlock(ctx));
 			return makeBox<IndexExpr>(ctx, total_origin, std::move(base), std::move(arg_expr));
 		}
 	}
@@ -125,7 +125,8 @@ namespace compiler::helios::code {
 		auto args = call_expr->getArgs().unlock(ctx);
 		if (args->size() != 1) {
 			ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
-				"Array index/size must be exactly one expression.", call_expr->getSourcePosition()
+				"Array index/size must be exactly one expression.",
+				call_expr->getSourcePosition().unlock(ctx)
 			));
 			return query::Failed();
 		}

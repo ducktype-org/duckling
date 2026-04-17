@@ -1,9 +1,9 @@
-#include "script_helpers.hpp"
+#include "script_dvm_helpers.hpp"
 
 #include <base/str/str_utils.hpp>
 
 namespace compiler::repl {
-	std::expected<ScriptExecutableCall, std::string> getExecutableCallMetadata(
+	std::expected<ScriptExecutableCall, std::string> getDvmExecutableCallMetadata(
 		const vm::code::CodeCollection& chunk, std::string_view wrapper_func_name
 	) {
 		// Statement wrappers compile to exactly one function per chunk
@@ -35,7 +35,7 @@ namespace compiler::repl {
 		};
 	}
 
-	vm::code::Function makeScriptMainFunction(const std::vector<ScriptExecutableCall>& calls) {
+	vm::code::Function makeDvmScriptMainFunction(const std::vector<ScriptExecutableCall>& calls) {
 		using namespace vm;
 		using namespace vm::code;
 		using namespace vm::code::instructions;

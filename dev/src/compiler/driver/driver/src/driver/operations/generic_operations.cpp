@@ -12,7 +12,8 @@
 #include <driver/repl_utils/repl_dvm_helpers.hpp>
 #include <driver/repl_utils/repl_split_helpers.hpp>
 #include <driver/repl_utils/repl_statement_helpers.hpp>
-#include <driver/repl_utils/script_helpers.hpp>
+#include <driver/repl_utils/script_dvm_helpers.hpp>
+#include <driver/repl_utils/script_llvm_helpers.hpp>
 #include <driver_private/backend_operations/compile_dvm.hpp>
 #include <driver_private/backend_operations/compile_llvm.hpp>
 #include <driver_private/operations.hpp>
@@ -24,6 +25,7 @@
 #include <global_state/script_context.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/queries/queries.hpp>
+#include <helios/repl_utils/script_helpers.hpp>
 #include <linker/link.hpp>
 #include <time_stats/time_stats.hpp>
 
@@ -342,6 +344,7 @@ namespace compiler::driver {
 				};
 
 				u64 statement_counter = 0;
+
 				for (const auto& statement_source: *split_result) {
 					auto module_ref = repl::createEphemeralChainedStatementModule(
 						statement_source, parent_module_id, statement_counter, "script_"
@@ -400,7 +403,7 @@ namespace compiler::driver {
 							return;
 						}
 
-						auto call_meta = repl::getExecutableCallMetadata(
+						auto call_meta = repl::getDvmExecutableCallMetadata(
 							chunk_result.value(), wrapper_result->wrapper_func_name
 						);
 						if (!call_meta.has_value()) {
@@ -420,7 +423,8 @@ namespace compiler::driver {
 				vm::code::CodeCollection main_collection;
 				// Generate the main entry point that calls all statement wrappers in order.
 				// executable_calls contains the wrapper names + return types collected above.
-				main_collection.functions.push_back(repl::makeScriptMainFunction(executable_calls));
+				main_collection.functions.push_back(repl::makeDvmScriptMainFunction(executable_calls
+				));
 				if (!try_insert_chunk(main_collection)) return;
 
 				compiled_script = validated_program.produceValidCodeCollection();
@@ -429,21 +433,262 @@ namespace compiler::driver {
 			if (!compiled_script.has_value()) return std::unexpected(compiled_script.error());
 			return compiled_script.value();
 		}
+
+		// @TODO: #2246 Unify backend-neutral script pipeline stages
+		// (HOUT -> MIR -> LIR orchestration) with regular module compilation paths.
+		// Backend selection should happen only after shared LIR is produced.
+		std::expected<LIRModuleData, std::string> compileScriptToLLVMLIRModuleData(query::Context& ctx
+		) {
+			auto& script_context = global_state::getScriptContext();
+			auto  script_source  = script_context.script_file.getContent().view().stdString();
+			// Use the context-aware overload to avoid nesting withContextDo() while
+			// the LLVM pipeline already owns a query context.
+			auto split_result = repl::splitInputIntoStatements(ctx, script_source);
+			if (!split_result.has_value())
+				return std::unexpected(
+					base::strConcat("Script parsing failed: ", split_result.error())
+				);
+
+			CORE_DEV_LOG(
+				REPL, "compile_script_llvm: split into ", split_result->size(), " statement(s)\n"
+			);
+
+			LIRModuleData merged{
+				.module_id = repl::getLLVMScriptModuleID(script_context.script_file),
+				.functions = {},
+				.globals   = {},
+			};
+			// Track wrapper symbols to build the synthetic main that runs them in order.
+			// We preserve the original statement order to match script semantics.
+			std::vector<helios::SymID>         wrapper_symbols;
+			base::Optional<frontend::ModuleID> parent_module_id;
+			u64                                statement_counter = 0;
+
+			for (const auto& statement_source: *split_result) {
+				auto module_ref = repl::createEphemeralChainedStatementModule(
+					statement_source, parent_module_id, statement_counter, "script_"
+				);
+				auto module_id   = module_ref->getModuleID();
+				parent_module_id = module_id;
+
+				CORE_DEV_LOG(
+					REPL,
+					"compile_script: statement #",
+					statement_counter + 1,
+					", module #",
+					module_id.queryUnstablePerfectHash(),
+					"\n"
+				);
+
+				auto statement_info_result = repl::classifySingleStatement(ctx, module_id);
+				if (!statement_info_result.has_value())
+					return std::unexpected(statement_info_result.error());
+
+				auto module_name    = repl::getStatementModuleName(module_id, "script_module_");
+				auto module_name_id = base::StrID(module_name.c_str());
+
+				if (std::holds_alternative<repl::DefinitionSingleStatementInfo>(
+						statement_info_result.value()
+					)) {
+					CORE_DEV_LOG(REPL, "compile_script_llvm: classified as definition\n");
+					const auto& hout_unit  = repl::getDefinitionHOUTUnit(ctx, module_id);
+					auto        lir_result = ctx.query<CompileHOUTUnitToLIRModuleData>({
+                        &hout_unit,
+                        module_name_id,
+                    });
+					if (lir_result->hasFailed())
+						return std::unexpected("Failed to compile definition statement to LIR");
+					repl::appendLLVMLIRModuleData(merged, lir_result->valueOrPanic());
+				} else {
+					// Executable statements are wrapped into functions so we can sequence them
+					// under a synthetic main while still lowering via the normal pipeline.
+					// This is the same wrapper strategy used by the DVM script path.
+					CORE_DEV_LOG(REPL, "compile_script_llvm: classified as executable statement\n");
+					auto wrapper_result = repl::buildStatementWrapper(
+						ctx, statement_info_result.value(), statement_counter
+					);
+					if (!wrapper_result.has_value()) return std::unexpected(wrapper_result.error());
+
+					wrapper_symbols.push_back(
+						wrapper_result->wrapper_function.declaration->original_symbol
+					);
+
+					auto hout_unit = repl::makeExecutableHOUTUnit(wrapper_result->wrapper_function);
+					auto lir_result = ctx.query<CompileHOUTUnitToLIRModuleData>({
+						&hout_unit,
+						module_name_id,
+					});
+					if (lir_result->hasFailed())
+						return std::unexpected("Failed to compile executable statement to LIR");
+					repl::appendLLVMLIRModuleData(merged, lir_result->valueOrPanic());
+				}
+
+				++statement_counter;
+			}
+
+			if (!parent_module_id.has_value())
+				return std::unexpected("Script has no statements to compile");
+
+			// We use the last statement's module (parent_module_id) because it sits at the
+			// end of the REPL-style chain and has a main-file root scope that represents
+			// the full script context.
+			auto main_scope = repl::queryScriptMainRootScope(ctx, parent_module_id.value());
+			auto main_fun
+				= repl::buildScriptMainWrapper(ctx, merged.module_id, main_scope, wrapper_symbols);
+			helios::HOUTUnit main_unit;
+			main_unit.functions.emplace_back(&main_fun);
+			auto main_lir = ctx.query<CompileHOUTUnitToLIRModuleData>({
+				&main_unit,
+				merged.module_id,
+			});
+			if (main_lir->hasFailed())
+				return std::unexpected("Failed to compile script main to LIR");
+			repl::appendLLVMLIRModuleData(merged, main_lir->valueOrPanic());
+
+			return merged;
+		}
+
+		// @TODO: #2246 After HOUT/MIR/LIR flow is unified, keep this function as
+		// LLVM-only backend emission (object + link) while reusing shared pipeline output.
+		base::OkBad compileScriptToLLVMExecutable(const linker::LinkingOptions& linking_options) {
+			auto& script_context = global_state::getScriptContext();
+
+			base::Optional<std::string> error_message;
+			query::utils::withContextDo([&](query::Context& ctx) {
+				auto script_lir = compileScriptToLLVMLIRModuleData(ctx);
+				if (!script_lir.has_value()) {
+					error_message = script_lir.error();
+					return;
+				}
+
+				// Single object file for the whole script.
+				auto object_name     = base::strConcat(script_lir->module_id.strView(), ".o");
+				auto object_artifact = global_state::getRootCollection()->fileArtifactAtOrNew(
+					base::StrID(object_name.c_str())
+				);
+
+				auto llvm_module = compileLIRModuleToLLVM(ctx, &script_lir.value());
+				{
+					time_stats::TrackCategoryTime _(time_stats::TimeCategories::BackendCompilation);
+					llvm_module.compile(
+						object_artifact.file.getFilePath(),
+						backend_llvm::CompilationOutputType::Object
+					);
+				}
+
+				if (driver::llvm_dump_ir) {
+					auto llvm_ir_path = base::StrID(
+						base::strConcat(script_lir->module_id.strView(), ".ll").c_str()
+					);
+					llvm_module.dumpLLVMToFile(llvm_ir_path);
+				}
+				if (driver::llvm_dump_asm) {
+					auto asm_path
+						= base::StrID(base::strConcat(script_lir->module_id.strView(), ".s").c_str()
+					    );
+					llvm_module.compile(
+						asm_path.strView(), backend_llvm::CompilationOutputType::Assembly
+					);
+				}
+
+				// Link the script object with builtins to produce a runnable executable.
+				auto output_name     = base::strConcat(script_context.script_file.stem(), ".exe");
+				auto output_artifact = global_state::getRootCollection()->fileArtifactAtOrNew(
+					base::StrID(output_name.c_str())
+				);
+
+				std::vector<artifacts::FileArtifact> objects;
+				objects.push_back(object_artifact);
+				objects.push_back(emitBuiltinLLVMObjectFile());
+
+				auto linking_result = linker::link(output_artifact, objects, linking_options);
+				if (linking_result.isBad()) {
+					error_message = "Linking failed";
+					return;
+				}
+
+				CORE_USER_LOG(
+					"Script executable written to: ",
+					output_artifact.file.getFilePath().string(),
+					"\n"
+				);
+			});
+
+			if (error_message.has_value()) {
+				CORE_USER_LOG(error_message.value(), "\n");
+				return base::BAD;
+			}
+			return base::OK;
+		}
+
+		base::OkBad compileScriptToDVMBytecode() {
+			auto compiled_script = compileScriptToDVMCollection();
+			if (!compiled_script.has_value()) {
+				CORE_USER_LOG(compiled_script.error(), "\n");
+				return base::BAD;
+			}
+
+			auto& script_context  = global_state::getScriptContext();
+			auto  output_artifact = global_state::getRootCollection()->fileArtifactAtOrNew(
+                base::StrID(base::strConcat(script_context.script_file.stem(), ".dbc").c_str())
+            );
+			std::ofstream output_file(
+				output_artifact.file.getFilePath().getPath(), std::ios::binary
+			);
+			if (!output_file.is_open()) {
+				CORE_USER_LOG(
+					"Failed to open output file for script bytecode: ",
+					output_artifact.file.getFilePath().string(),
+					"\n"
+				);
+				return base::BAD;
+			}
+
+			vm::code::serializeCode(compiled_script.value(), output_file);
+			output_file.close();
+
+			CORE_USER_LOG(
+				"Script bytecode written to: ", output_artifact.file.getFilePath().string(), "\n"
+			);
+			return base::OK;
+		}
+
 	}
 
 	base::OkBad compileScript(
-		[[maybe_unused]] const CompilerModeOfOperationAndOptions::ScriptMode& mode,
-		[[maybe_unused]] BackendType                                          backend_type,
-		[[maybe_unused]] const linker::LinkingOptions&                        linking_options
+		BackendType backend_type, [[maybe_unused]] const linker::LinkingOptions& linking_options
 	) {
-		// Steps:
-		// 1. Read mode.script_file content
-		// 2. Call repl::splitInputIntoStatements() to split into individual statement strings
-		// 3. For each statement: create a chained REPL module (ReplData with parent link)
-		// 4. For each module: compile and collect .dbc/.o artifacts
-		// 5. DVM:  merge CodeCollections and serialize to mode.output_path as .dbc
-		//    LLVM: compile entry-point module + link all .o files somehow (not yet sure how)
-		throw base::NotYetImplemented("compileScript");
+		switch (backend_type) {
+		case BackendType::LLVM:
+			return compileScriptToLLVMExecutable(linking_options);
+		case BackendType::DVM:
+			return compileScriptToDVMBytecode();
+		default:
+			CORE_PANIC("bad backend type");
+		}
+	}
+
+	std::expected<RunOutput, std::string> runScriptOnDVM() {
+		auto compiled_script = compileScriptToDVMCollection();
+		if (!compiled_script.has_value()) return std::unexpected(compiled_script.error());
+
+		vm::PID pid{};
+
+		return vm::api::spawn()
+		    .and_then([&](vm::api::ProcessInfo process) {
+				pid = process.pid;
+				return std::expected<void, vm::api::ApiError>{};
+			})
+		    .and_then([&] { return vm::api::loadCode(pid, compiled_script.value()); })
+		    .and_then([&] { return vm::api::attach(pid, std::cin, std::cout); })
+		    .and_then([&] { return vm::api::run(pid); })
+		    .and_then([&] { return vm::api::join(pid); })
+		    .and_then([&] { return vm::api::getExitValue(pid); })
+		    .transform_error(vm::api::errorToString)
+		    .transform([](Ref<vm::VmValue> exit_value) {
+				return RunOutput{ .exit_code
+				                  = base::safeIntConv<int>(exit_value->readBytes<i64>()) };
+			});
 	}
 
 	base::OkBad compileEntirePackage(

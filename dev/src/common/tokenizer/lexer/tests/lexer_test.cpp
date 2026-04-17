@@ -1,5 +1,4 @@
 #include <filesystem/file.hpp>
-#include <lexer/lexer.hpp>
 #include <tester/tester.hpp>
 #include <token_source/source.hpp>
 
@@ -32,7 +31,8 @@ protected:
 		lang_def::setKeywordMode(lang_def::KeywordMode::DucklingSource);
 
 		fs::File file(path("token_code.duck"));
-		td = lexer::tokenizeFile(file);
+		td = tokenizer::makeTokenSource(file);
+		td->tokenize();
 	}
 
 private:
