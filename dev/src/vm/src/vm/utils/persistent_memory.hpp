@@ -294,22 +294,23 @@ namespace vm::persistent::detail {
 		}
 
 		bool pathForward(Path& path, usize skip = 0) const {
-			if (path.trace.size() <= 1) return false;
+			CORE_ASSERT(path.trace.size(), "there must be a leaf on the path");
 
-			const auto orig_size = path.trace.size();
-			const auto orig_idx  = path.idx;
-			usize      mask      = 1;
+			const auto orig_path_size = path.trace.size();
+			const auto orig_idx       = path.idx;
+			usize      mask           = 1;
 
 			path.trace.pop_back();
 
 			for (; path.trace.size(); path.trace.pop_back(), mask <<= 1) {
 				MemoryStateID node_id = path.trace.back();
-				auto [_, right]       = child_entries.atRight(node_id);
 
-				if (path.idx & mask) path.idx ^= mask;
+				if (path.idx & mask) {
+					path.idx ^= mask;
+					continue;
+				}
 
-				if (!right) continue;
-
+				auto right = getChild(node_id, Dir::Right);
 				if (auto amount = getSize(right); amount <= skip)
 					skip -= amount;
 				else
@@ -324,26 +325,35 @@ namespace vm::persistent::detail {
 			while (mask > 0) {
 				Dir dir = (path.idx & mask) ? Dir::Right : Dir::Left;
 
-				MemoryStateID son     = getChild(path.trace.back(), dir);
-				Dir           dir_son = getChild(son, Dir::Left) ? Dir::Left : Dir::Right;
-
+				MemoryStateID son = getChild(path.trace.back(), dir);
 				path.trace.emplace_back(son);
 
 				mask >>= 1;
 				CORE_ASSERT((path.idx & mask) == 0, "None of the bits should be on by default");
-				if (dir_son == Dir::Right) path.idx ^= mask;
+
+				MemoryStateID grandchild = getChild(son, Dir::Left);
+				if (usize size = getSize(grandchild); size <= skip) {
+					skip -= size;
+					grandchild = getChild(son, Dir::Right);
+					path.idx ^= mask;
+				}
+
+				CORE_ASSERT(
+					(grandchild || !mask),
+					"the only case when grandchild is empty id for last iteeration"
+				);
 			}
 
-			CORE_ASSERT(path.trace.size() == orig_size, "path should remain the same length");
+			CORE_ASSERT(path.trace.size() == orig_path_size, "path should remain the same length");
 			CORE_ASSERT(path.idx > orig_idx, "idx should increas");
 
 			return true;
 		}
 
-		bool pathBackward(Path& path) const {
-			if (path.trace.size() <= 1) return false;
+		bool pathBackward(Path& path, usize skip = 0) const {
+			CORE_ASSERT(path.trace.size(), "there must be a leaf on the path");
 
-			const auto orig_size = path.trace.size();
+			const auto orig_path_size = path.trace.size();
 			const auto orig_idx  = path.idx;
 			usize      mask      = 1;
 
@@ -351,32 +361,48 @@ namespace vm::persistent::detail {
 
 			for (; path.trace.size(); path.trace.pop_back(), mask <<= 1) {
 				MemoryStateID node_id = path.trace.back();
-				NodeEntry     entry   = child_entries.atRight(node_id);
 
 				if ((path.idx & mask) == 0) continue;
-
 				path.idx ^= mask;
-				if (entry.left) break;
+
+				auto left = getChild(node_id, Dir::Left);
+
+				if (auto amount = getSize(left); amount <= skip)
+					skip -= amount;
+				else
+					break;
 			}
 
 			if (path.trace.size() == 0) return false;
 
-			CORE_ASSERT((path.idx & mask) == 0, "This bit has to be off");
+			CORE_ASSERT(
+				(path.idx & mask) == 0,
+				"This bit has to be off (it was turned by last iteration in previous loop)"
+			);
 
 			while (mask > 0) {
 				Dir dir = (path.idx & mask) ? Dir::Right : Dir::Left;
 
 				MemoryStateID son     = getChild(path.trace.back(), dir);
-				Dir           dir_son = getChild(son, Dir::Right) ? Dir::Right : Dir::Left;
-
 				path.trace.emplace_back(son);
-
+				
 				mask >>= 1;
 				CORE_ASSERT((path.idx & mask) == 0, "Trailing bits should be off");
-				if (dir_son == Dir::Right) path.idx ^= mask;
+
+				MemoryStateID grandchild = getChild(son, Dir::Right);
+				if (usize size = getSize(grandchild); size <= skip) {
+					skip -= size;
+					grandchild = getChild(son, Dir::Left);
+					path.idx ^= mask;
+				}
+
+				CORE_ASSERT(
+					(grandchild || !mask),
+					"the only case when grandchild is empty id for last iteeration"
+				);
 			}
 
-			CORE_ASSERT(path.trace.size() == orig_size, "path should remain the same length");
+			CORE_ASSERT(path.trace.size() == orig_path_size, "path should remain the same length");
 			CORE_ASSERT(path.idx > orig_idx, "idx should increas");
 
 			return true;
