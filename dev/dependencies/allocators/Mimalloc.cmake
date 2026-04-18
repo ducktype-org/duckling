@@ -1,6 +1,7 @@
 # mimalloc - Microsoft's high-performance allocator
 include(FetchContent)
 
+
 if(${ALLOCATOR} STREQUAL "MIMALLOC")
     message(STATUS "Using mimalloc allocator")
 
@@ -11,11 +12,10 @@ if(${ALLOCATOR} STREQUAL "MIMALLOC")
         GIT_SHALLOW TRUE
     )
 
-    # set(MI_BUILD_STATIC ON CACHE INTERNAL "" FORCE)
-    # set(MI_BUILD_SHARED OFF CACHE BOOL "" FORCE)
+    set(MI_BUILD_STATIC ON CACHE INTERNAL "" FORCE)
+    set(MI_BUILD_SHARED OFF CACHE BOOL "" FORCE)
+    set(MI_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 
-    # set(MI_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-    
     set(MI_NO_OPT_ARCH OFF CACHE INTERNAL "" FORCE)
     set(MI_USE_CXX OFF CACHE INTERNAL "" FORCE)
     
@@ -33,10 +33,9 @@ if(${ALLOCATOR} STREQUAL "MIMALLOC")
 
     
     # allow LINK_LIBRARIES_ONLY_TARGETS to work with mimalloc, which is needed for allocator_library to work as an interface library.
+    # add compile options to mimalloc to disable some warnings that we treat as errors in our project, but mimalloc doesn't.
     set_target_properties(mimalloc-static PROPERTIES LINK_LIBRARIES_ONLY_TARGETS OFF)
     target_compile_options(mimalloc-static PRIVATE "-O3" "-DNDEBUG" "-w" "-DMI_BUILD_RELEASE" "-DMI_CMAKE_BUILD_TYPE=release -DMI_BUILD_RELEASE")
-
-    # add compile options to mimalloc to disable some warnings that we treat as errors in our project, but mimalloc doesn't.
 
 
     target_link_libraries(allocator_library INTERFACE mimalloc-static)
