@@ -1,0 +1,104 @@
+type pointer: pointer_I1 I1
+type pointer: pointer_Parent Parent
+type pointer: pointer_Child Child
+
+type fun: method_I1_void {pointer_I1} void
+type fun: method_parent_void {pointer_Parent} void
+type fun: method_child_void {pointer_Child} void
+
+type interface: I1 {
+    virtual_methods: { 
+        foo: method_I1_void, 
+        bar: method_I1_void,
+    };
+    implementations: { 
+        foo: I1_foo_default_impl_type,
+    };
+}
+
+type class: Parent {
+    virtual_methods: { 
+        getAge: method_parent_void,
+    };
+    abstract: true;
+    implements: {I1};
+    implementations: {
+        getAge: Parent_getAge_impl_type, 
+    };
+}
+
+type class: Child {
+    extends: Parent;
+    abstract: false;
+    implementations: {
+        getAge: Child_getAge_impl_type,
+        bar: Child_I1_bar_impl_type, 
+    };
+}
+
+# ============ METHODS IMPLEMENTATION ============ 
+function I1_foo_default_impl_type {pointer_I1} -> void {
+    init_lany_type res, i64; mov_l64_imm res, 11; output_l64 res; deinit; deinit; ret;
+}
+function Child_I1_bar_impl_type {pointer_Child} -> void {
+    init_lany_type res, i64; mov_l64_imm res, 22; output_l64 res; deinit; deinit; ret;
+}
+function Parent_getAge_impl_type {pointer_Parent} -> void {
+    init_lany_type res, i64; mov_l64_imm res, 33; output_l64 res; deinit; ret;
+}
+function Child_getAge_impl_type {pointer_Child} -> void {
+    init_lany_type res, i64; mov_l64_imm res, 44; output_l64 res; deinit; deinit; ret;
+}
+
+function to_jit { pointer_Parent } -> void {
+    init_lany_type           sub_arg, pointer_I1;
+    upcast_lptr_lptr         sub_arg, arg0;
+    virtual_call_lptr_method sub_arg, foo;
+
+    init_lany_type           sub_arg, pointer_I1;
+    upcast_lptr_lptr         sub_arg, arg0;
+    virtual_call_lptr_method sub_arg, bar;
+
+    virtual_call_lptr_method arg0, getAge;
+    ret;
+}
+
+function main { i64, ptr_argv } -> i64 {
+    # ret_val -> main ret_val
+    # arg0 -> argc
+    # arg1 -> *argv
+
+    init_lany_type ptr_child, pointer_Child;
+
+    init_lany_type actual_child, pointer_Child;
+    alloc_lptr_type actual_child, Child;
+    setVTable_lptr_type actual_child, Child;
+
+    # Read counter from STDIN
+    init_lany_type counter, i64;
+    input_l64 counter;
+
+# Loop until counter equals 0
+label loop_start;
+    cmpEq_l64_imm counter, 0;
+    jmpIf_label loop_end;
+
+    init_lany_type      ptr_i1, pointer_Parent;
+    upcast_lptr_lptr    ptr_i1, actual_child;
+    call_func to_jit;
+
+    add_l64_imm counter, -1;
+    jmp_label loop_start;
+label loop_end;
+    
+    free_lptr actual_child;
+    deinit; # actual_child
+
+    # Return 0
+    mov_l64_imm ret_val, 0;
+    
+    deinit; # counter
+    deinit; # *argv
+    deinit; # argc
+    ret;
+}

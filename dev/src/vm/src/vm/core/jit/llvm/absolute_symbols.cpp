@@ -16,13 +16,16 @@ LLVM_INCLUDE_BEGIN()
 
 LLVM_INCLUDE_END()
 
-static constexpr usize UNJITABLE_OPCODES_COUNT = 10;
+#include "../jit_helper.hpp"
+
+static constexpr usize UNJITABLE_OPCODES_COUNT = 11;
 
 void registerAbsoluteJITSymbols(llvm::orc::LLJIT& lljit) {
     auto& jd = lljit.getMainJITDylib();
     llvm::orc::SymbolMap host_symbols;
 
-    std::array<std::string_view, UNJITABLE_OPCODES_COUNT> hard_symbols = {"jmp_label",
+    std::array<std::string_view, UNJITABLE_OPCODES_COUNT> hard_symbols = {
+        "jmp_label",
         "jmpIfNot_label",
         "jmpIf_label",
         "jit_call_entrypoint",
@@ -31,7 +34,9 @@ void registerAbsoluteJITSymbols(llvm::orc::LLJIT& lljit) {
         "virtual_call_lptr_method",
         "ret_tailcall_func",
         "breakpoint",
-        "ret"};
+        "ret",
+        "trampoline",
+    };
     
     std::array<vm::OpFun*, UNJITABLE_OPCODES_COUNT> addresses = {
         &vm::OpFuns::op_jmp_label,
@@ -43,7 +48,8 @@ void registerAbsoluteJITSymbols(llvm::orc::LLJIT& lljit) {
         &vm::OpFuns::op_virtual_call_lptr_method,
         &vm::OpFuns::op_ret_tailcall_func,
         &vm::OpFuns::op_breakpoint,
-        &vm::OpFuns::op_ret
+        &vm::OpFuns::op_ret,
+        &vm::jit::helpers::trampoline,
     };
 
     // Once Clang 21 is compatible with Ubuntu, this can (and should) be changed

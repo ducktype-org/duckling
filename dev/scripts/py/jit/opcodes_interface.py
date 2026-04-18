@@ -31,7 +31,7 @@ def nonjitable(func_name: str) -> bool:
 
     return any(op in func_name for op in unjitable_opfuncs)
 
-special_functions = {"externalTrampoline": False}
+special_functions = {}
 def is_special_function(func_name: str) -> bool:
     global special_functions
 

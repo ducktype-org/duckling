@@ -127,15 +127,10 @@ namespace vm::jit {
 				case vm::low::MicroOpcode::jit_call_entrypoint:
 				case vm::low::MicroOpcode::call_func:
 				case vm::low::MicroOpcode::virtual_call_lptr_method:{
-					auto            trampoline = "externalTrampoline";
-					llvm::Function* callee     = module->getFunction(trampoline);
-					if (!callee) {
-						callee = llvm::Function::Create(
-							opfun_ty, llvm::Function::ExternalLinkage, trampoline, module
-						);
-					}
 					ir_builder.CreateCall(
-						opfun_ty, callee, { instr_arg, locals_arg, frame_arg, thread_arg }
+						opfun_ty,
+						getOrCreateOpcodeFunction("trampoline"),
+						{ instr_arg, locals_arg, frame_arg, thread_arg }
 					);
 				} break;
 				default:
