@@ -121,18 +121,19 @@ namespace compiler::helios {
 
 				  // Get the initial value and type of the variable.
 				  const auto variable_type = ctx.query<QueryTypeOfSymbol>(symbol)->valueOrThrow();
-				  auto       initial_value = [&]() -> BoxOrCRef<code::Expr> {
+				  auto       get_initial_value = [&]() -> BoxOrCRef<code::Expr> {
                       if (auto maybe_initial_pst = var_decl->getValue()) {
                           auto initial_value_pst = maybe_initial_pst.value().unlock(ctx)->getExpr();
                           return getHoutOfExprWithExpectedType(ctx, initial_value_pst, variable_type)
                               .valueOrThrow();
                       } else {
                           return defgen::getDefaultInitializerExpr(
-                                     ctx, variable_type, origin.getSourcePosition().value()
+                                     ctx, variable_type, origin.getSourcePosition(ctx).value()
                           )
                               .valueOrThrow();
                       }
-				  }();
+				  };
+				  auto initial_value = get_initial_value();
 
 				  return HOUTGlobalVariable{ std::move(initial_value) };
 			  }
