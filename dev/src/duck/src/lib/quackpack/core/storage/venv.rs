@@ -50,28 +50,20 @@
 //! to exist after reboot even if it has been used before. The problem affects
 //! however only relatively new virtual environments.
 
-use std::{
-    fmt,
-    io::Write,
-    path::{Path, PathBuf},
-    time::SystemTime,
-};
+use std::fmt;
+use std::io::Write;
+use std::path::{Path, PathBuf};
+use std::time::SystemTime;
 
 use serde::{Deserialize, Serialize};
 use tracing::debug;
 
-use crate::{
-    QuackError, QuackResult, QuackResultContext,
-    quackpack::core::storage::{
-        freeze::{self, VenvFreeze},
-        paths::Storage,
-        venv_id::VenvId,
-    },
-    util::{
-        hash,
-        path_ops_ext::{MkdirOptions, PathOpsExt, ShouldBlock},
-    },
-};
+use crate::quackpack::core::storage::freeze::{self, VenvFreeze};
+use crate::quackpack::core::storage::paths::Storage;
+use crate::quackpack::core::storage::venv_id::VenvId;
+use crate::util::hash;
+use crate::util::path_ops_ext::{MkdirOptions, PathOpsExt, ShouldBlock};
+use crate::{QuackError, QuackResult, QuackResultContext};
 
 #[derive(Debug)]
 pub enum CorruptedVenvReason {

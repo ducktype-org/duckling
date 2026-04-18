@@ -6,14 +6,11 @@
 //! - [`duckc`][]: executing the compiler itself, it handles different compiler execution modes.
 use tracing::debug;
 
-use crate::{
-    QuackResult,
-    quackpack::core::{
-        FeatureName, PackageContext,
-        compile::profiles::Profile,
-        storage::{freeze::VenvFreeze, paths::Storage},
-    },
-};
+use crate::QuackResult;
+use crate::quackpack::core::compile::profiles::Profile;
+use crate::quackpack::core::storage::freeze::VenvFreeze;
+use crate::quackpack::core::storage::paths::Storage;
+use crate::quackpack::core::{FeatureName, PackageContext};
 
 pub mod compiler_package;
 pub mod duckc;

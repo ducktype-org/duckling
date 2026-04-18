@@ -1,11 +1,7 @@
 //! `sync` subcommand execution logic.
-use crate::{
-    DuckContext, QuackResult,
-    quackpack::core::{
-        AllowGlobalPackage, PackageLoader,
-        storage::{self, StorageSyncOptions},
-    },
-};
+use crate::quackpack::core::storage::{self, StorageSyncOptions};
+use crate::quackpack::core::{AllowGlobalPackage, PackageLoader};
+use crate::{DuckContext, QuackResult};
 
 #[derive(Debug, Default, Clone, Copy)]
 /// All options that can be passed to sync.
