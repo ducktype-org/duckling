@@ -5,9 +5,8 @@ use std::path::{Path, PathBuf};
 use std::sync::{Mutex, OnceLock};
 
 use git2::FetchOptions;
-use url::Url;
-
 use serde::{Deserialize, Serialize};
+use url::Url;
 
 use crate::quackpack::schemas::registry;
 use crate::{QuackError, StrId, qp_bail};

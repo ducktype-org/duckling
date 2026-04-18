@@ -1,9 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::quackpack::core::{
-    FeatureName, Manifest, Version,
-    types_common::{ExpandedPackage, InternedLocation},
-};
+use crate::quackpack::core::solver::types_common::{ExpandedPackage, InternedLocation};
+use crate::quackpack::core::{FeatureName, Manifest, Version};
 
 /// Type representing a request to get manifests for a single/multiple packages.
 #[derive(Clone, Debug, PartialEq, Eq)]
