@@ -24,8 +24,7 @@ impl SolverFreeze {
             .context_internal("Main package without manifest")?
             .features()
             .all_features()
-            .values()
-            .flatten()
+            .keys()
             .copied()
             .collect();
         self.find_minimal_dep_solution(manifests, main_features)
@@ -630,5 +629,85 @@ metadata:
         assert!(freeze_b.features.is_empty());
         assert!(freeze_c.dependencies_realization.is_empty());
         assert!(freeze_c.features.is_empty());
+    }
+
+    #[test]
+    fn root_feature() {
+        let (_dir_a, path_a) = prepare_manifest(
+            r#"
+metadata:
+  name: a
+  version: '1'
+
+dependencies:
+  b:
+    version: '2'
+    conditions:
+      package-features: ['xd']
+
+features:
+  xd: []
+"#,
+        );
+        let (_dir_b, path_b) = prepare_manifest(
+            r#"
+metadata:
+  name: b
+  version: '2'
+"#,
+        );
+        let ctx = DuckContext::default();
+        let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
+        let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
+        let exp_location_a = ExpandedLocation::Registry {
+            url: Url::parse("http://localhost:9001").unwrap(),
+            real_name: StrId::from("a"),
+        }
+        .into();
+        let exp_location_b = ExpandedLocation::Registry {
+            url: Url::parse("http://localhost:9001").unwrap(),
+            real_name: StrId::from("b"),
+        }
+        .into();
+        let exp_pkg_a = ExpandedPackage {
+            location: exp_location_a,
+            version: Some(Version::new(1, 0, 0)),
+        };
+        let exp_pkg_b = ExpandedPackage {
+            location: exp_location_b,
+            version: Some(Version::new(2, 0, 0)),
+        };
+        let manifests = HashMap::from([
+            (exp_pkg_a, Box::new(manifest_a.manifest().clone())),
+            (exp_pkg_b, Box::new(manifest_b.manifest().clone())),
+        ]);
+        let prev_a_freeze = SolverPackageFreeze {
+            dependencies_realization: HashMap::from([(StrId::new("b"), exp_pkg_b)]),
+            features: HashSet::new(),
+        };
+        let prev_b_freeze = SolverPackageFreeze {
+            dependencies_realization: HashMap::new(),
+            features: HashSet::new(),
+        };
+        let prev_freeze = SolverFreeze {
+            package_freezes: HashMap::from([
+                (exp_pkg_a, prev_a_freeze),
+                (exp_pkg_b, prev_b_freeze),
+            ]),
+            main_pkg: exp_pkg_a,
+        };
+
+        let solver_output = FoundSolution {
+            new_packages: HashSet::new(),
+            new_features: HashMap::new(),
+            new_edges: HashMap::new(),
+        };
+        let new_freeze = prev_freeze.new_freeze(&manifests, solver_output).unwrap();
+        let freeze_a = new_freeze.package_freezes.get(&exp_pkg_a).unwrap();
+        let freeze_b = new_freeze.package_freezes.get(&exp_pkg_b).unwrap();
+        assert!(freeze_a.dependencies_realization == HashMap::from([(StrId::new("b"), exp_pkg_b)]));
+        assert!(freeze_a.features == ["xd".into()].into());
+        assert!(freeze_b.dependencies_realization.is_empty());
+        assert!(freeze_b.features.is_empty());
     }
 }

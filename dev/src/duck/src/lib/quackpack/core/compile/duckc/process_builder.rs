@@ -88,7 +88,7 @@ impl DuckcProcessBuilder {
 
     /// Set LLVM optimization level.
     fn set_opt_level(&mut self, opt_level: OptLevel) -> &mut Self {
-        self.inner.arg("-0").arg(opt_level.to_string());
+        self.inner.arg("-O").arg(opt_level.to_string());
         self
     }
 

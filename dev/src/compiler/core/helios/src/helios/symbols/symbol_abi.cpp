@@ -49,7 +49,7 @@ namespace compiler::helios {
 			opt_none {
 				ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
 					"Expected string literal in extern() call argument",
-					arg.unlock(ctx)->getSourcePosition()
+					arg.unlock(ctx)->getSourcePosition().unlock(ctx)
 				));
 				return query::Failed();
 			}
@@ -67,7 +67,7 @@ namespace compiler::helios {
 		if (args.empty()) {
 			ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
 				"extern() requires at least one argument specifying the ABI",
-				extern_args.unlock(ctx)->getSourcePosition()
+				extern_args.unlock(ctx)->getSourcePosition().unlock(ctx)
 			));
 			return query::Failed();
 		}
@@ -83,13 +83,14 @@ namespace compiler::helios {
 			} else {
 				ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
 					"Too many arguments for C ABI in extern()",
-					extern_args.unlock(ctx)->getSourcePosition()
+					extern_args.unlock(ctx)->getSourcePosition().unlock(ctx)
 				));
 				return query::Failed();
 			}
 		} else {
 			ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
-				"Unsupported ABI specified in extern()", extern_args.unlock(ctx)->getSourcePosition()
+				"Unsupported ABI specified in extern()",
+				extern_args.unlock(ctx)->getSourcePosition().unlock(ctx)
 			));
 			return query::Failed();
 		}
@@ -125,7 +126,7 @@ namespace compiler::helios {
 						opt_none {
 							ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
 								"extern symbol requires ABI specification passed as an argument",
-								specifier.unlock(ctx)->getSourcePosition()
+								specifier.unlock(ctx)->getSourcePosition().unlock(ctx)
 							));
 							return query::Failed();
 						}

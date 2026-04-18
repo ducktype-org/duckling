@@ -1,16 +1,19 @@
-#include "decode.hpp"
+#include "source.hpp"
 
 #include <diagnostic_interactive/core/diagnostic_arguments.hpp>
+#include <diagnostic_interactive/logger.hpp>
 #include <diagnostic_interactive/message.hpp>
 
 #include <base/misc/convert.hpp>
 #include <base/misc/int_conv.hpp>
 
 #include <diagnostic/source_position.hpp>
+#include <filesystem/encoding.hpp>
+#include <lexer/char.hpp>
 #include <token_source/source.hpp>
 #include <unicode_classification/classifications.hpp>
 
-namespace lexer {
+namespace tokenizer {
 
 	class AsciiByteError final: public dia_int::MessageBase {
 		dia_int::Metadata getMetadata() const final {
@@ -134,13 +137,14 @@ namespace lexer {
 	};
 
 	template<>
-	CharArray decode<fs::UsAscii>(Ref<tokenizer::TokenSource> file, Ref<dia_int::Logger> log) {
-		auto      bytes = file->getContent().view();
-		CharArray out;
+	lexer::CharArray TokenSource::internalDecode<fs::UsAscii>() {
+		auto             log   = getIntLogger();
+		auto             bytes = getContent().view();
+		lexer::CharArray out;
 		for (usize i = 0; i < bytes.size(); i++) {
 			// Check if valid ascii byte
 			if ((bytes[i] & byte{ 0b10000000u }) != byte{ 0 }) {
-				log->log(makeBox<AsciiByteError>(file, i + 1, (usize) bytes[i]));
+				log->log(makeBox<AsciiByteError>(this, i + 1, (usize) bytes[i]));
 				continue;
 			}
 			out.emplace_back(UChar32(bytes[i]), u8{ 1 }, i);
@@ -151,15 +155,16 @@ namespace lexer {
 	}
 
 	template<>
-	CharArray decode<fs::UTF8>(Ref<tokenizer::TokenSource> file, Ref<dia_int::Logger> log) {
-		auto      bytes = file->getContent().view();
-		CharArray out;
+	lexer::CharArray TokenSource::internalDecode<fs::UTF8>() {
+		auto             log   = this->getIntLogger();
+		auto             bytes = this->getContent().view();
+		lexer::CharArray out;
 
 		usize pos = 0;
 		while (pos < bytes.size()) {
 			// Check if current byte is not a continuation byte
 			if (((bytes[pos] ^ byte{ 0b10000000u }) & byte{ 0b11000000u }) == byte{ 0 }) {
-				log->log(makeBox<Utf8UnexpectedContinuationError>(file, pos + 1, (usize) bytes[pos])
+				log->log(makeBox<Utf8UnexpectedContinuationError>(this, pos + 1, (usize) bytes[pos])
 				);
 				pos++;
 				continue;
@@ -180,7 +185,7 @@ namespace lexer {
 				size = 4;
 				value &= 0b00000111;
 			} else {
-				log->log(makeBox<Utf8BadByteStartError>(file, pos + 1, (usize) bytes[pos]));
+				log->log(makeBox<Utf8BadByteStartError>(this, pos + 1, (usize) bytes[pos]));
 				pos++;
 				continue;
 			}
@@ -192,7 +197,7 @@ namespace lexer {
 				if ((bytes[new_pos] & byte{ 0b11000000u }) != byte{ 0b10000000 }) {
 					are_bytes_ok = false;
 					log->log(makeBox<Utf8BadNonContinuationError>(
-						file, new_pos + 1, (usize) bytes[new_pos], pos + 1
+						this, new_pos + 1, (usize) bytes[new_pos], pos + 1
 					));
 					size = new_pos - pos;
 					break;
@@ -207,7 +212,7 @@ namespace lexer {
 			}
 
 			if (pos + size - 1 >= bytes.size()) {
-				log->log(makeBox<Utf8BadEofError>(file, bytes.size(), pos + 1));
+				log->log(makeBox<Utf8BadEofError>(this, bytes.size(), pos + 1));
 				pos = bytes.size();
 				continue;
 			}
@@ -215,7 +220,7 @@ namespace lexer {
 			// Check if value is a valid unicode code point
 			if (!U_IS_UNICODE_CHAR(value)
 			    || (U_GET_GC_MASK(value) & (U_GC_CN_MASK | U_GC_CO_MASK | U_GC_CS_MASK))) {
-				log->log(makeBox<Utf8UndefinedCodepointError>(file, pos + 1, value));
+				log->log(makeBox<Utf8UndefinedCodepointError>(this, pos + 1, value));
 				pos += size;
 				continue;
 			}

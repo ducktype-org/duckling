@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use clap::builder::ValueParser;
 use clap::{Arg, ArgMatches, Command, value_parser};
 
-use crate::duck::driver::cli_ext::{CommandExt, flag, multi, optional, subcommand};
+use crate::duck::driver::cli_ext::{CommandExt, flag, optional, subcommand};
 use crate::quackpack::subcommands::run_script::{RunScriptOptions, run_script};
 use crate::util::error::MessageError;
 use crate::{DuckContext, QuackError, QuackResult, qp_bail};
@@ -42,9 +42,10 @@ pub fn get_parser() -> Command {
                 .required(true),
         )
         .arg(
-            multi("args", "Arguments passed to the script")
+            Arg::new("args")
+                .help("Arguments passed to the script")
                 .trailing_var_arg(true)
-                //.action(ArgAction::Append)
+                .num_args(0..)
                 .value_parser(value_parser!(OsString)),
         )
 }

@@ -2,6 +2,7 @@ use std::ffi::{OsStr, OsString};
 use std::path::Path;
 
 use clap::ArgMatches;
+use tracing::debug;
 
 use crate::quackpack::core::storage::venv_id::{ToVenvId, VenvId};
 use crate::quackpack::core::storage::{StorageSyncOptions, sync};
@@ -47,6 +48,7 @@ impl<'duck> RunScriptOptions<'duck> {
             .get_many::<OsString>("args")
             .map(|values| values.cloned().collect())
             .unwrap_or_default();
+        debug!(?args);
         Ok(Self {
             ctx,
             script_name,
@@ -73,6 +75,7 @@ impl<'duck> RunScriptOptions<'duck> {
         let folder_path = path
             .parent()
             .context_internal("we assured that the path points to a file")?;
+        debug!(?args);
         Ok(Self {
             ctx,
             script_name,
