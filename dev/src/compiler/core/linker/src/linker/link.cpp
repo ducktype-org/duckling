@@ -1,6 +1,9 @@
 
 #include "link.hpp"
 
+#include <diagnostic_interactive/logger.hpp>
+#include <diagnostic_interactive/placeholder.hpp>
+#include <global_state/global_logger.hpp>
 #include <time_stats/time_stats.hpp>
 
 #include <logger/logger.hpp>
@@ -36,7 +39,17 @@ namespace compiler::linker {
 		CORE_USER_LOG("Linking executable: ", output.file.getFilePath().name(), "\n");
 
 		auto exit_code = command.execute(system_command::SystemCommand::ExitCodeHandling::Warn);
+		auto linking_result = exit_code == 0 ? base::OK : base::BAD;
 
-		return exit_code == 0 ? base::OK : base::BAD;
+		if (linking_result.isBad()) {
+			global_state::getGlobalLogger()->log(makeBox<dia_int::PlaceholderHeaderError>(
+				"Linking of the final executable failed. See the linker output above. ",
+				"The common reasons for this error may include missing main function (temporary "
+				"feature), missing linker options related to external libraries or duplicated "
+				"declaration not detected by the compiler."
+			));
+		}
+
+		return linking_result;
 	}
 }
