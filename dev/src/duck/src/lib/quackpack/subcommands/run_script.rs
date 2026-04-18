@@ -4,10 +4,11 @@ use std::path::Path;
 use clap::ArgMatches;
 use tracing::debug;
 
+use crate::quackpack::core::compile::profiles::DEFAULT_SCRIPT_PROFILE_NAME;
 use crate::quackpack::core::storage::venv_id::{ToVenvId, VenvId};
 use crate::quackpack::core::storage::{StorageSyncOptions, sync};
 use crate::quackpack::core::{AllowGlobalPackage, PackageLoader};
-use crate::{DuckContext, QuackResult, QuackResultContext, qp_bail_internal};
+use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail_internal};
 
 pub struct RunScriptOptions<'duck> {
     /// Current [`DuckContext`].
@@ -20,6 +21,8 @@ pub struct RunScriptOptions<'duck> {
     pub venv_id: Option<VenvId>,
     /// Force the script to be run in the global venv.
     pub global: bool,
+    /// Profile to run the script in.
+    pub profile: StrId,
     /// Artefact from [`StorageSyncOptions`].
     pub overwrite: bool,
     /// Artefact from [`StorageSyncOptions`].
@@ -44,6 +47,7 @@ impl<'duck> RunScriptOptions<'duck> {
             .parent()
             .context_internal("we assured that the path points to a file")?;
         let venv_id = matches.get_one::<String>("venv").map(ToVenvId::to_venv_id);
+        let profile = matches.get_one::<String>("profile").map(Into::into).unwrap_or(DEFAULT_SCRIPT_PROFILE_NAME.into());
         let args: Vec<OsString> = matches
             .get_many::<OsString>("args")
             .map(|values| values.cloned().collect())
@@ -55,6 +59,7 @@ impl<'duck> RunScriptOptions<'duck> {
             folder_path,
             venv_id,
             global: matches.get_flag("global"),
+            profile,
             overwrite: matches.get_flag("overwrite"),
             frozen: matches.get_flag("frozen"),
             strict_errors: matches.get_flag("external-errors"),
@@ -75,6 +80,7 @@ impl<'duck> RunScriptOptions<'duck> {
         let folder_path = path
             .parent()
             .context_internal("we assured that the path points to a file")?;
+        let profile = DEFAULT_SCRIPT_PROFILE_NAME.into();
         debug!(?args);
         Ok(Self {
             ctx,
@@ -82,6 +88,7 @@ impl<'duck> RunScriptOptions<'duck> {
             folder_path,
             venv_id: None,
             global: false,
+            profile,
             overwrite: false,
             frozen: false,
             strict_errors: false,

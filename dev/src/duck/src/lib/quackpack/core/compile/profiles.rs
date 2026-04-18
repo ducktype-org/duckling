@@ -50,11 +50,23 @@ pub static PREDEFINED_PROFILES: LazyLock<HashMap<StrId, Profile>> = LazyLock::ne
                 c_std: true,
             },
         ),
+        (
+            "script".into(),
+            Profile {
+                name: "script".into(),
+                opt_level: OptLevel::Three,
+                dvm_bytecode: true,
+                incremental: false, // The build artifacts are cleared, so incremental does not make sense.
+                c_std: true,
+            }
+        )
     ]
     .into()
 });
 
 pub static DEFAULT_PROFILE: LazyLock<Profile> = LazyLock::new(Profile::default);
+pub static DEFAULT_SCRIPT_PROFILE_NAME: &str = "script";
+pub static DEFAULT_SCRIPT_PROFILE: LazyLock<Profile> = LazyLock::new(|| *PREDEFINED_PROFILES.get(DEFAULT_SCRIPT_PROFILE_NAME).unwrap());
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 /// List of specific options which should be passed to the compiler.
