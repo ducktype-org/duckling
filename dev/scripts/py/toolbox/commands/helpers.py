@@ -115,7 +115,7 @@ def llvm_version(*args, **kwargs):
         "llvm_version",
         prompt="LLVM Version",
         type=str,
-        default="20.1.7",
+        default="20.1.2",
     )(*args, **kwargs)
 
 

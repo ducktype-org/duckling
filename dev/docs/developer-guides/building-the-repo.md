@@ -128,7 +128,7 @@ to install the latest supported version of LLVM for your system
 But the most reliable way is to download the LLVM locally using toolbox with this command.
 
 After using this command, LLVM is **NOT installed system-wide**, but only for this project.
-Using version `20.1.7` should work for most platforms.
+Using version `20.1.2` should work for most platforms.
 
 The installed library is placed in the `scripts/downloads` directory.
 

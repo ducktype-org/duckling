@@ -7,7 +7,7 @@ from click import command, option, Choice
 
 @command()
 @llvm_version(
-    help="Version of LLVM release to compile, ex. 20.1.7",
+    help="Version of LLVM release to compile, ex. 20.1.2",
 )
 @option(
     "-a",
