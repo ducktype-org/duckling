@@ -217,7 +217,6 @@ jobs:
       - name: Configure CMake
         working-directory: ${{ env.WORKSPACE }}
         run: |
-          CTEST_PARALLEL_LEVEL=${{ steps.set-jobs.outputs.jobs }} \
           cmake \
               -B ${{ env.BUILD_DIR }} \
               -G ${{ env.BUILD_SYSTEM }} \
@@ -305,8 +304,9 @@ jobs:
           key: ${{ steps.restore-build-cache.outputs.cache-primary-key }}
 
       - name: Test
-        working-directory: ${{ env.BUILD_DIR }}
-        run: ctest -j ${{ steps.set-jobs.outputs.jobs }} --output-on-failure --timeout 60
+        working-directory: ${{ env.WORKSPACE }}
+        run: ./toolbox.py test -b ${{ env.BUILD_DIR }} -j ${{ steps.set-jobs.outputs.jobs }} --output-on-failure --timeout 60
+      
 
       - name: Test Coverage
         id: test-coverage
