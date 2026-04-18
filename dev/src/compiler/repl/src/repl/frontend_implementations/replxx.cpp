@@ -11,6 +11,7 @@
 #include <vector>
 
 namespace compiler::repl {
+	static constexpr std::string_view TAB_SPACES = "    ";
 
 	// ─── Duckling language keywords ──────────────────────────────────────────────
 
@@ -109,6 +110,37 @@ namespace compiler::repl {
 
 		// ── Enter → commit
 		m_replxx.bind_key_internal(Replxx::KEY::ENTER, "commit_line");
+		m_replxx.bind_key(Replxx::KEY::TAB, [this](char32_t code) {
+			auto        state      = m_replxx.get_state();
+			std::string line       = (state.text() != nullptr) ? state.text() : "";
+			int         cursor_pos = state.cursor_position();
+
+			if (cursor_pos < 0) cursor_pos = static_cast<int>(line.size());
+			if (cursor_pos > static_cast<int>(line.size()))
+				cursor_pos = static_cast<int>(line.size());
+
+			std::string input_to_cursor = line.substr(0, static_cast<size_t>(cursor_pos));
+			std::string prefix = extractWordEndingAt(input_to_cursor, input_to_cursor.size());
+
+			bool has_completions = false;
+			if (!prefix.empty()) {
+				auto can_complete = [&prefix](const std::string& candidate) {
+					return candidate.size() > prefix.size() && candidate.starts_with(prefix);
+				};
+
+				has_completions = std::ranges::any_of(DUCKLING_KEYWORDS, can_complete)
+				               || std::ranges::any_of(DUCKLING_TYPES, can_complete)
+				               || std::ranges::any_of(m_user_words, can_complete);
+			}
+
+			if (has_completions) return m_replxx.invoke(Replxx::ACTION::COMPLETE_LINE, code);
+
+			line.insert(static_cast<size_t>(cursor_pos), TAB_SPACES);
+			m_replxx.set_state(
+				Replxx::State(line.c_str(), cursor_pos + static_cast<int>(TAB_SPACES.size()))
+			);
+			return Replxx::ACTION_RESULT::CONTINUE;
+		});
 
 		// ── Alt+Enter → newline ──
 		m_replxx.bind_key_internal(Replxx::KEY::BASE_META | '\r', "new_line");
@@ -370,7 +402,7 @@ namespace compiler::repl {
 		std::cout << "\n=== Editing ===\n";
 		std::cout << "  Enter               - Submit\n";
 		std::cout << "  Alt + Enter         - Insert a new line\n";
-		std::cout << "  Tab                 - Autocomplete keywords / identifiers\n";
+		std::cout << "  Tab                 - Complete if available, else insert indentation\n";
 		std::cout << "  Up / Down           - Navigate input history\n";
 		std::cout << "  Ctrl+R              - Reverse search history\n";
 		std::cout << "  Ctrl+D              - Exit (on empty line)\n";
