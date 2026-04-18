@@ -68,6 +68,89 @@ namespace compiler::repl {
 		return tokens;
 	}
 
+	/// Compute indentation depth from unmatched braces up to \p cursor_pos.
+	/// Braces inside strings or line comments are ignored.
+	static int computeBraceIndentDepth(const std::string& input, size_t cursor_pos) {
+		int  depth           = 0;
+		bool in_single_quote = false;
+		bool in_double_quote = false;
+		bool escape_next     = false;
+
+		bool in_single_line_comment  = false;
+		int  multiline_comment_depth = 0;
+
+		for (size_t i = 0; i < cursor_pos && i < input.size(); ++i) {
+			const char ch = input[i];
+
+			if (escape_next) {
+				escape_next = false;
+				continue;
+			}
+
+			if (in_single_line_comment) {
+				if (ch == '\n') in_single_line_comment = false;
+				continue;
+			}
+
+			if (in_single_quote) {
+				if (ch == '\\')
+					escape_next = true;
+				else if (ch == '\'')
+					in_single_quote = false;
+				continue;
+			}
+
+			if (in_double_quote) {
+				if (ch == '\\')
+					escape_next = true;
+				else if (ch == '"')
+					in_double_quote = false;
+				continue;
+			}
+
+			bool has_next = (i + 1 < cursor_pos && i + 1 < input.size());
+			char next_ch  = has_next ? input[i + 1] : '\0';
+
+			if (ch == '#' && next_ch == '{') {
+				multiline_comment_depth++;
+				++i;  // Skip the '{'
+				continue;
+			}
+
+			if (ch == '#' && next_ch == '}') {
+				if (multiline_comment_depth > 0) {
+					multiline_comment_depth--;
+					++i;  // Skip the '}'
+					continue;
+				}
+			}
+
+			if (ch == '#') {
+				in_single_line_comment = true;
+				continue;
+			}
+
+			if (multiline_comment_depth > 0) continue;
+
+			if (ch == '\'') {
+				in_single_quote = true;
+				continue;
+			}
+
+			if (ch == '"') {
+				in_double_quote = true;
+				continue;
+			}
+
+			if (ch == '{')
+				++depth;
+			else if (ch == '}')
+				depth = std::max(0, depth - 1);
+		}
+
+		return depth;
+	}
+
 	// ─── History file path ───────────────────────────────────────────────────────
 
 	std::string FrontendReplxxImplementation::getHistoryFilePath() {
@@ -142,12 +225,37 @@ namespace compiler::repl {
 			return Replxx::ACTION_RESULT::CONTINUE;
 		});
 
+		auto insert_newline_with_auto_indent = [this](char32_t /*code*/) {
+			auto        state      = m_replxx.get_state();
+			std::string line       = (state.text() != nullptr) ? state.text() : "";
+			int         cursor_pos = state.cursor_position();
+
+			if (cursor_pos < 0) cursor_pos = static_cast<int>(line.size());
+			if (cursor_pos > static_cast<int>(line.size()))
+				cursor_pos = static_cast<int>(line.size());
+
+			const int indent_depth = computeBraceIndentDepth(line, static_cast<size_t>(cursor_pos));
+
+			std::string indentation;
+			indentation.reserve(static_cast<size_t>(indent_depth) * TAB_SPACES.size());
+			for (int i = 0; i < indent_depth; ++i) indentation += TAB_SPACES;
+
+			const std::string insertion = "\n" + indentation;
+			line.insert(static_cast<size_t>(cursor_pos), insertion);
+
+			m_replxx.set_state(
+				Replxx::State(line.c_str(), cursor_pos + static_cast<int>(insertion.size()))
+			);
+
+			return Replxx::ACTION_RESULT::CONTINUE;
+		};
+
 		// ── Alt+Enter → newline ──
-		m_replxx.bind_key_internal(Replxx::KEY::BASE_META | '\r', "new_line");
-		m_replxx.bind_key_internal(Replxx::KEY::meta(Replxx::KEY::ENTER), "new_line");
+		m_replxx.bind_key(Replxx::KEY::BASE_META | '\r', insert_newline_with_auto_indent);
+		m_replxx.bind_key(Replxx::KEY::meta(Replxx::KEY::ENTER), insert_newline_with_auto_indent);
 
 		// ── F2 → new line (fallback for weird terminals) ──
-		m_replxx.bind_key_internal(Replxx::KEY::F2, "new_line");
+		m_replxx.bind_key(Replxx::KEY::F2, insert_newline_with_auto_indent);
 	}
 
 	// ─── Syntax highlighting ─────────────────────────────────────────────────────
