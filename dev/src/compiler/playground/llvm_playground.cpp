@@ -51,10 +51,10 @@ int main(int argc, const char* argv[]) {
 
 	for (auto& hout_glob: top_level.glob_data) {
 		query::utils::withContextDo([&](query::Context& ctx) {
-			lir::LIRGlobal lir_glob = lir::LIRGlobal::fromHOUT(ctx, hout_glob);
+			lir::LIRGlobal lir_glob = lir::LIRGlobal::fromHOUT(ctx, *hout_glob);
 			llvm_module.addGlobalToModule(lir_glob);
 
-			variant_match(hout_glob.value) {
+			variant_match(hout_glob->value) {
 				variant_case(helios::HOUTGlobalVariable, var) {
 					CRef mir_func
 						= &ctx.query<mir::LowerGlobalDataToMIRCtor>({ hout_glob })->valueOrThrow();
