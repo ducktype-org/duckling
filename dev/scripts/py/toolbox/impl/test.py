@@ -42,6 +42,7 @@ def test_impl(
     output_on_failure: bool = True,
     stop_on_failure: bool = False,
     rerun_failed: bool = False,
+    timeout: int | None = None,
     quiet: bool = False,
 ):
     # Determine which tests to build
@@ -77,15 +78,15 @@ def test_impl(
     ctest_cmd += f" -j {int(thread_count)}"
 
     # Add label filtering
-    if label_regex:
+    if label_regex is not None:
         ctest_cmd += f' -L "{label_regex}"'
 
     # Add test name filtering
-    if tests_regex:
+    if tests_regex is not None:
         ctest_cmd += f' -R "{tests_regex}"'
 
     # Add test name exclusion
-    if exclude_regex:
+    if exclude_regex is not None:
         ctest_cmd += f' -E "{exclude_regex}"'
 
     # Add verbose output
@@ -103,6 +104,10 @@ def test_impl(
     # Add rerun failed
     if rerun_failed:
         ctest_cmd += " --rerun-failed"
+
+    # Add timeout if specified
+    if timeout is not None:
+        ctest_cmd += f" --timeout {int(timeout)}"
 
     # Add quiet mode
     if quiet:

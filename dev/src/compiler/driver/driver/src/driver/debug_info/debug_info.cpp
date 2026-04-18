@@ -18,36 +18,20 @@
 namespace compiler::driver {
 	constexpr std::string_view DEBUG_INFO_FINAL_EXTENSION = ".di.json";
 
-	struct ModuleSourceCodeHash {
-		[[nodiscard]]
-		query::QueryStableHash queryStablePerfectHash() const {
-			// 4 random numbers
-			return { 62'680'354, 72'959'470, 8'833'575, 82'097'363 };
-		}
-	};
-
-	/**
-	 * @brief This is a placeholder for future input query,
-	 * that will track the hash of the source code of the module, so when the source code changes,
-	 * the debug info positions will be recalculated.
-	 * @TODO: #2329 Change this.
-	 *
-	 * @note It will always be invalidated, which is for now what we want.
-	 */
-	DECLARE_QUERY_SIDE_INPUT(SourcePositions, ModuleSourceCodeHash);
-	IMPLEMENT_QUERY_SIDE_INPUT(SourcePositions);
-
 	namespace {
 		debug_info::FilePosition calculateSourcePosition(
 			query::Context& ctx, const debug_info::PstHashPostion& pos
 		) {
 			auto source_position = pst::LangElement::getByStableHash(pos.postion_scope_begin)
 			                           .unlock(ctx)
-			                           ->getSourcePosition();
+			                           ->getSourcePosition()
+			                           .unlock(ctx);
 
 			if_opt_some(pos.postion_scope_end, end_hash) {
-				auto end_position
-					= pst::LangElement::getByStableHash(end_hash).unlock(ctx)->getSourcePosition();
+				auto end_position = pst::LangElement::getByStableHash(end_hash)
+				                        .unlock(ctx)
+				                        ->getSourcePosition()
+				                        .unlock(ctx);
 				source_position = dia::SourcePosition::merge(source_position, end_position);
 			}
 
@@ -97,8 +81,6 @@ namespace compiler::driver {
 					return calculateSourcePosition(ctx, pos);
 				}
 			);
-
-			ctx.query<SourcePositions>({});  // We depend on source positions.
 
 			auto output = getQueryArtifactsCollection()->fileArtifactAtOrNew(
 				base::StrID(outputArtifactName(key).c_str())
