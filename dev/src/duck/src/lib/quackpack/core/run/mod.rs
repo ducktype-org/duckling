@@ -14,8 +14,3 @@ pub fn run_exe(path: &Path, args: Vec<OsString>) -> QuackResult<()> {
     }
     Ok(())
 }
-
-/// Execute a .dvm file.
-pub fn run_dvm() {
-    todo!("TODO: #2443")
-}
