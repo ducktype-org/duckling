@@ -149,10 +149,6 @@ namespace compiler::helios {
 
 		HOUTGlobalVariable(BoxOrCRef<code::Expr> initial_value):
 			  initial_value(std::move(initial_value)) {}
-
-		// @TODO: #1958 remove this when we have a query for global values
-		HOUTGlobalVariable(const HOUTGlobalVariable& other):
-			  initial_value(other.initial_value->clone()) {}
 	};
 
 	/**
@@ -184,10 +180,6 @@ namespace compiler::helios {
 
 		tsh::SymbolType<> type;
 
-		// @TODO: #1958 move this to separate query (or function)
-		// so we can continue compiling module even if the global value has not compiled
-		explicit HOUTGlobalData(query::Context& ctx, SymID symbol, HOUTGlobalDataType data_type);
-
 		void debugPrint(query::Context& ctx, std::ostream& out) const;
 	};
 
@@ -203,7 +195,7 @@ namespace compiler::helios {
 		// * vector/references to hout of submodules? -- not necessarily needed
 		// * what else?
 
-		std::vector<HOUTGlobalData> glob_data;
+		std::vector<CRef<HOUTGlobalData>> glob_data;
 
 		std::vector<CRef<HOUTFunction>> functions;
 
