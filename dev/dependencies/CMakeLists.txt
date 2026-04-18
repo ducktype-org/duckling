@@ -9,7 +9,8 @@ include(Replxx.cmake)
 include(StdCxxExp.cmake)
 include(TreeSitter.cmake)
 include(YamlCpp.cmake)
-include(Mimalloc.cmake)
+
+add_subdirectory(allocators)
 
 # These dependencies should be handled in main CMakeLists (for correct context)
 macro (insertDependencies)
