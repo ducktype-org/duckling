@@ -5,8 +5,8 @@ use clap::ArgMatches;
 use tracing::debug;
 
 use crate::quackpack::core::compile::duckc::{ArtifactsDir, CompilationType};
-use crate::quackpack::core::compile::{self, BuildContext};
 use crate::quackpack::core::compile::profiles::{DEFAULT_SCRIPT_PROFILE_NAME, Profile};
+use crate::quackpack::core::compile::{self, BuildContext};
 use crate::quackpack::core::storage::venv_id::{ToVenvId, VenvId};
 use crate::quackpack::core::storage::{StorageSyncOptions, sync};
 use crate::quackpack::core::{AllowGlobalPackage, PackageLoader, run};
