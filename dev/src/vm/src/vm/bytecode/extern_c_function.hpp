@@ -76,8 +76,8 @@
 #include <vm/utils/interpret.hpp>
 
 namespace vm::detail {
-	// Helper trait to safely get size of types including void (as 1)
-	// @TODO: #656 Change this when we have proper voids in the VM
+	// Helper trait to safely get size of types
+	// @TODO: #656 Change this when we figure out how to handle C voids in the VM
 	template<typename T>
 	struct safe_sizeof {
 		static constexpr usize VALUE = sizeof(T);
