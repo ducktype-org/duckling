@@ -36,12 +36,12 @@ artifacts::ArtifactCollection::ArtifactCollection(std::filesystem::path root):
 }
 
 void artifacts::ArtifactCollection::validateOrWipeBuildId() {
-	const auto  build_id_path = PATH / BUILD_ID_FILE;
-	std::string stored_id;
-	bool        has_file = std::filesystem::exists(build_id_path);
+	const fs::FilePath build_id_path = PATH / BUILD_ID_FILE;
+	std::string        stored_id;
+	const bool         has_file = build_id_path.exists();
 	if (has_file) {
-		std::ifstream in(build_id_path);
-		std::getline(in, stored_id);
+		const auto content = fs::File(build_id_path).getContent();
+		stored_id          = std::string(content.view().stringView());
 	}
 
 	if (has_file && stored_id == BUILD_ID) return;
@@ -83,10 +83,10 @@ void artifacts::ArtifactCollection::validateOrWipeBuildId() {
 	}
 }
 
-void artifacts::ArtifactCollection::writeBuildIdFile() const {
-	const auto    build_id_path = PATH / BUILD_ID_FILE;
-	std::ofstream out(build_id_path, std::ios::trunc);
-	out << BUILD_ID;
+void artifacts::ArtifactCollection::writeBuildIdFile() {
+	const auto name     = base::StrID(std::string(BUILD_ID_FILE).c_str());
+	const auto artifact = fileArtifactAtOrNewNoLock(name);
+	artifact.file.writeToFile(BUILD_ID);
 }
 
 void artifacts::ArtifactCollection::flush() {
@@ -247,8 +247,7 @@ void artifacts::ArtifactCollection::loadData() {
 		// Read file artifacts and other sub-collections.
 		for (const auto& inner_path: std::filesystem::directory_iterator(PATH)) {
 			const auto filename = inner_path.path().filename().string();
-			if (filename == BUILD_ID_FILE) continue;
-			auto name = base::StrID(filename.c_str());
+			const auto name     = base::StrID(filename.c_str());
 			if (inner_path.is_directory())
 				subCollectionNew(name);
 			else if (inner_path.is_regular_file())

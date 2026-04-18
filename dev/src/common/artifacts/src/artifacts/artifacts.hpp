@@ -313,9 +313,9 @@ namespace artifacts {
 
 		/**
 		 * @brief Writes the current `artifacts::BUILD_ID` to `<PATH>/.build_id`.
-		 * Only meaningful on the root collection.
+		 * This function should be called only on the root collection.
 		 */
-		void writeBuildIdFile() const;
+		void writeBuildIdFile();
 
 		/**
 		 * @brief Parses blobs from `content` and inserts them to the collection.
