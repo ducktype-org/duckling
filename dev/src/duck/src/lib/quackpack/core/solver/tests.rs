@@ -1,26 +1,21 @@
-use std::{collections::HashMap, path::PathBuf};
+use std::collections::HashMap;
+use std::path::PathBuf;
 
 use httpmock::prelude::*;
 use tempfile::{TempDir, tempdir};
-
-use crate::{
-    DuckContext,
-    quackpack::{
-        core::{PackageLoader, Version, fetcher::types, git_access::GitAccess},
-        schemas::registry,
-    },
-    util::{path_ops_ext::PathOpsExt, test_utils::setup_test},
-};
-
 use url::Url;
 
-use crate::quackpack::core::{
-    PackageContext, ShouldRunSolverEngine, SolverGathererData,
-    fetcher::Fetcher,
-    solver_freeze::{SolverFreeze, SolverPackageFreeze},
-    solver_mode::SolverMode,
-    types_common::{ExpandedLocation, ExpandedPackage, InternedExpandedLocation},
-};
+use crate::DuckContext;
+use crate::quackpack::core::fetcher::{Fetcher, types};
+use crate::quackpack::core::solver::git_access::GitAccess;
+use crate::quackpack::core::solver::solver_freeze::{SolverFreeze, SolverPackageFreeze};
+use crate::quackpack::core::solver::solver_mode::SolverMode;
+use crate::quackpack::core::solver::types_common::{ExpandedLocation, ExpandedPackage};
+use crate::quackpack::core::solver::{ShouldRunSolverEngine, SolverGathererData};
+use crate::quackpack::core::{PackageContext, PackageLoader, Version};
+use crate::quackpack::schemas::registry;
+use crate::util::path_ops_ext::PathOpsExt;
+use crate::util::test_utils::setup_test;
 
 struct MockGitAccess();
 impl GitAccess for MockGitAccess {
@@ -174,27 +169,30 @@ dependencies:
     let root_path = manifest_path.parent().unwrap().to_path_buf();
     let pcx = PackageContext::new(root_path.clone(), &ctx).unwrap();
 
-    let loc_root = InternedExpandedLocation::new(ExpandedLocation::Local {
+    let loc_root = ExpandedLocation::Local {
         absolute_path: root_path.clone(),
-    });
+    }
+    .into();
     let root_pkg = ExpandedPackage {
         location: loc_root,
         version: None,
     };
 
-    let loc_a = InternedExpandedLocation::new(ExpandedLocation::Registry {
+    let loc_a = ExpandedLocation::Registry {
         url: url.clone(),
         real_name: "a".into(),
-    });
+    }
+    .into();
     let a_pkg = ExpandedPackage {
         location: loc_a,
         version: Some(1.into()),
     };
 
-    let loc_b = InternedExpandedLocation::new(ExpandedLocation::Registry {
+    let loc_b = ExpandedLocation::Registry {
         url: url.clone(),
         real_name: "b".into(),
-    });
+    }
+    .into();
     let b_pkg = ExpandedPackage {
         location: loc_b,
         version: Some(2.into()),
@@ -285,27 +283,30 @@ dependencies:
     let root_path = manifest_path.parent().unwrap().to_path_buf();
     let pcx = PackageContext::new(root_path.clone(), &ctx).unwrap();
 
-    let loc_root = InternedExpandedLocation::new(ExpandedLocation::Local {
+    let loc_root = ExpandedLocation::Local {
         absolute_path: root_path.clone(),
-    });
+    }
+    .into();
     let root_pkg = ExpandedPackage {
         location: loc_root,
         version: None,
     };
 
-    let loc_a = InternedExpandedLocation::new(ExpandedLocation::Registry {
+    let loc_a = ExpandedLocation::Registry {
         url: url.clone(),
         real_name: "a".into(),
-    });
+    }
+    .into();
     let a_pkg = ExpandedPackage {
         location: loc_a,
         version: Some(1.into()),
     };
 
-    let loc_b = InternedExpandedLocation::new(ExpandedLocation::Registry {
+    let loc_b = ExpandedLocation::Registry {
         url: url.clone(),
         real_name: "b".into(),
-    });
+    }
+    .into();
     let b_pkg = ExpandedPackage {
         location: loc_b,
         version: Some(2.into()),
@@ -401,18 +402,20 @@ dependencies:
     let root_path = manifest_path.parent().unwrap().to_path_buf();
     let pcx = PackageContext::new(root_path.clone(), &ctx).unwrap();
 
-    let loc_root = InternedExpandedLocation::new(ExpandedLocation::Local {
+    let loc_root = ExpandedLocation::Local {
         absolute_path: root_path.clone(),
-    });
+    }
+    .into();
     let root_pkg = ExpandedPackage {
         location: loc_root,
         version: None,
     };
 
-    let loc_a = InternedExpandedLocation::new(ExpandedLocation::Registry {
+    let loc_a = ExpandedLocation::Registry {
         url: url.clone(),
         real_name: "a".into(),
-    });
+    }
+    .into();
     let a1_pkg = ExpandedPackage {
         location: loc_a,
         version: Some(1.into()),

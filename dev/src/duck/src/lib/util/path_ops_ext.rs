@@ -1,12 +1,10 @@
-use std::{
-    fs::{
-        File, OpenOptions, Permissions, copy, create_dir, create_dir_all, hard_link, read,
-        read_to_string, remove_dir, remove_file, rename, write,
-    },
-    io::{self, Read, Write},
-    ops::{Deref, DerefMut},
-    path::{Path, PathBuf},
+use std::fs::{
+    File, OpenOptions, Permissions, copy, create_dir, create_dir_all, hard_link, read,
+    read_to_string, remove_dir, remove_file, rename, write,
 };
+use std::io::{self, Read, Write};
+use std::ops::{Deref, DerefMut};
+use std::path::{Path, PathBuf};
 
 use crate::{QuackResult, QuackResultContext, qp_bail};
 

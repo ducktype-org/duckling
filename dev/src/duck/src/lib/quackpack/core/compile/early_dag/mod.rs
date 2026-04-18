@@ -4,14 +4,11 @@ use std::collections::{HashMap, HashSet};
 
 use itertools::Itertools;
 
-use crate::{
-    QuackError, QuackResult,
-    quackpack::core::{
-        compile::{MISSING_DEPENDENCY_IN_DAG_MESSAGE, compiler_package::CompilerPackage},
-        storage::freeze::FreezeDep,
-    },
-    util::error::MessageError,
-};
+use crate::quackpack::core::compile::MISSING_DEPENDENCY_IN_DAG_MESSAGE;
+use crate::quackpack::core::compile::compiler_package::CompilerPackage;
+use crate::quackpack::core::storage::freeze::FreezeDep;
+use crate::util::error::MessageError;
+use crate::{QuackError, QuackResult};
 
 pub mod creating_dag;
 pub mod modifying_dag;

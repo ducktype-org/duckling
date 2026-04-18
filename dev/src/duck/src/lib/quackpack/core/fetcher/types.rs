@@ -1,14 +1,11 @@
 //! Common types used in network communication.
-use crate::{
-    StrId,
-    quackpack::{core::Version, schemas::registry},
-};
-
 use serde::{Deserialize, Serialize};
-
 use url::Url;
 
+use crate::StrId;
 use crate::quackpack::core;
+use crate::quackpack::core::Version;
+use crate::quackpack::schemas::registry;
 
 #[derive(Clone, Deserialize, Serialize)]
 /// Represents exact informations required to fetch some data of a package `id` in version
