@@ -1,4 +1,5 @@
 # mimalloc - Microsoft's high-performance allocator
+include(FetchContent)
 
 if(${ALLOCATOR} STREQUAL "MIMALLOC")
     message(STATUS "Using mimalloc allocator")
@@ -15,8 +16,8 @@ if(${ALLOCATOR} STREQUAL "MIMALLOC")
 
     # set(MI_BUILD_TESTS OFF CACHE BOOL "" FORCE)
     
-    # set(MI_NO_OPT_ARCH ON CACHE INTERNAL "" FORCE)
-    # set(MI_USE_CXX ON CACHE INTERNAL "" FORCE)
+    set(MI_NO_OPT_ARCH OFF CACHE INTERNAL "" FORCE)
+    set(MI_USE_CXX OFF CACHE INTERNAL "" FORCE)
     
     # This should override the default allocator globally, so we don't have to worry about it.
     # Note that this might not work on all platforms.
@@ -33,7 +34,7 @@ if(${ALLOCATOR} STREQUAL "MIMALLOC")
     
     # allow LINK_LIBRARIES_ONLY_TARGETS to work with mimalloc, which is needed for allocator_library to work as an interface library.
     set_target_properties(mimalloc-static PROPERTIES LINK_LIBRARIES_ONLY_TARGETS OFF)
-    target_compile_options(mimalloc-static PRIVATE "-w")
+    target_compile_options(mimalloc-static PRIVATE "-O3" "-DNDEBUG" "-w" "-DMI_BUILD_RELEASE" "-DMI_CMAKE_BUILD_TYPE=release -DMI_BUILD_RELEASE")
 
     # add compile options to mimalloc to disable some warnings that we treat as errors in our project, but mimalloc doesn't.
 
