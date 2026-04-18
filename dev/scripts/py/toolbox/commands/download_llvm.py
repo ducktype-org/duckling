@@ -7,7 +7,7 @@ from click import command, option, Choice
 
 @command()
 @llvm_version(
-    help="Version of LLVM release to compile, ex. 20.1.2",
+    help="Version of LLVM release to compile, ex. 19.1.7",
 )
 @option(
     "-a",
@@ -22,7 +22,7 @@ from click import command, option, Choice
     "--confirm",
     prompt=(
         "From LLVM 19 onwards, the releases are compiled with unfavourable compile options, so it is recommended to either:\n"
-        " - use the LLVM from your distribution (e.g. apt install llvm-20)\n"
+        " - use the LLVM from your distribution (e.g. apt install llvm-19)\n"
         " - build LLVM from source (see `install-llvm` command)\n"
         "Do you want to continue with the download?"
     ),

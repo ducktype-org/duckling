@@ -36,7 +36,7 @@ jobs:
           submodules: true
 
       - name: Install dependencies
-        run: sudo apt -y install doxygen graphviz llvm-20 llvm-20-dev clang-20
+        run: sudo apt -y install doxygen graphviz llvm-19 llvm-19-dev clang-19
 
       - name: Create Python virtual environment
         working-directory: ${{ env.DEV_DIR }}

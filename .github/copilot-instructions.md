@@ -9,9 +9,9 @@ Duckling is a C++23 programming language project with a comprehensive build syst
 ### Bootstrap and Dependencies
 - Install system dependencies:
   ```bash
-  sudo apt update -y && sudo apt install python3 python3-click doxygen graphviz-dev cmake ninja-build g++-14 gcc-14 lcov llvm-20 llvm-20-dev clang-tidy-20 clang-format-20 libzstd-dev zlib1g-dev -y
+  sudo apt update -y && sudo apt install python3 python3-click doxygen graphviz-dev cmake ninja-build g++-14 gcc-14 lcov llvm-19 llvm-19-dev clang-tidy-19 clang-format-19 libzstd-dev zlib1g-dev -y
   ```
-- **CRITICAL**: Always use g++-14 and gcc-14 compilers. LLVM 20.1.0+ is required.
+- **CRITICAL**: Always use g++-14 and gcc-14 compilers. LLVM 19.1.0+ is required.
 - Enter the development directory: `cd dev/`
 - Initialize repository:
   ```bash
@@ -137,7 +137,7 @@ python3 toolbox.py test                # Run unit tests
 python3 toolbox.py itest               # Run integration tests
 python3 toolbox.py coverage            # Run coverage analysis
 python3 toolbox.py docs                # Build documentation
-python3 toolbox.py cpp-linter           # Run clang-tidy-20 and clang-format-20
+python3 toolbox.py cpp-linter           # Run clang-tidy-19 and clang-format-19
 python3 toolbox.py duck-linter          # Run custom C++ linting
 python3 toolbox.py pr-validate          # Validate branch for PR
 python3 toolbox.py clean-init           # Clean initialization artifacts
@@ -147,7 +147,7 @@ python3 toolbox.py clean-init           # Clean initialization artifacts
 **ALWAYS run these commands before committing changes:**
 ```bash
 cd dev
-python3 toolbox.py cpp-linter    # C++ linting and formatting with clang-tidy-20 and clang-format-20
+python3 toolbox.py cpp-linter    # C++ linting and formatting with clang-tidy-19 and clang-format-19
 python3 toolbox.py duck-linter   # Custom linting rules
 python3 toolbox.py test          # Run tests
 ```
@@ -160,7 +160,7 @@ python3 toolbox.py pr-validate   # Comprehensive PR validation
 ```
 - **What it does**: Runs a complete validation suite including build, tests, linting, duck-linter, and issue-checker
 - **When to use**: Before creating a pull request to ensure all checks pass
-- **Options**: Can specify custom clang-tidy-20 and clang-format-20 paths using `-t` and `-f` flags
+- **Options**: Can specify custom clang-tidy-19 and clang-format-19 paths using `-t` and `-f` flags
 - **TIMING**: Takes 20-30 minutes to complete all validations. NEVER CANCEL. Set timeout to 45+ minutes.
 
 ### CI Workflow Compatibility
@@ -180,7 +180,7 @@ python3 toolbox.py pr-validate   # Comprehensive PR validation
 
 ### Build Issues
 - **Linker killed (signal 9)**: Use `ninja -j1` or `ninja -j2` to reduce memory usage
-- **LLVM not found**: Ensure `llvm-20-dev` is installed: `sudo apt install llvm-20 llvm-20-dev`
+- **LLVM not found**: Ensure `llvm-19-dev` is installed: `sudo apt install llvm-19 llvm-19-dev`
 - **Compiler errors**: Verify g++-14 is installed and specified in setup-build
 
 ### Test Issues

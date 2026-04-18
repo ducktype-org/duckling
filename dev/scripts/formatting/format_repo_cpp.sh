@@ -14,7 +14,7 @@ if [[ -z "${files}" ]]; then
 fi
 
 # Find binary
-clang_format=clang-format-20
+clang_format=clang-format-19
 if [[ $1 ]]; then
     clang_format=$1
 fi

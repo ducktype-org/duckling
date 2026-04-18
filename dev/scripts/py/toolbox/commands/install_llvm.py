@@ -23,7 +23,7 @@ from click import command, option, Choice
     type=str,
 )
 @llvm_version(
-    help="Version of LLVM release to compile, ex. 20.1.2",
+    help="Version of LLVM release to compile, ex. 19.1.7",
 )
 @option(
     "-l",
@@ -72,6 +72,6 @@ def install_llvm(*args, **kwargs):
     This command will download LLVM source code, build it with the specified options,
     and install it to the 'scripts/downloads/installed' directory.
     Important! It is advised to try to use the LLVM and clang from your
-    distribution (e.g. apt install llvm-20 clang-20) first.
+    distribution (e.g. apt install llvm-19 clang-19) first.
     """
     install_llvm_impl(*args, **kwargs)

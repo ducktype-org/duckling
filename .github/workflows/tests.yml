@@ -133,12 +133,12 @@ jobs:
         run: sudo apt -y install libgraphviz-dev
 
       - name: Install LLVM
-        run: sudo apt -y install llvm-20 llvm-20-dev
+        run: sudo apt -y install llvm-19 llvm-19-dev
 
       - name: Install clang
         # Note that it is also necessary to compile Duckling builtins to LLVM bitcode
         # Must be the same version as llvm
-        run: sudo apt -y install clang-20 clang-tools-20
+        run: sudo apt -y install clang-19 clang-tools-19
 
       - name: Install xxd
         # Necessary to embed LLVM bitcode into duckc source files.

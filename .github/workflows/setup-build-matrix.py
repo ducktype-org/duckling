@@ -18,8 +18,8 @@ FULL_MATRIX: dict[str, list[Any]] = {
         },
         {
             "name": "clang",
-            "cxx": "clang++-20",
-            "cc": "clang-20",
+            "cxx": "clang++-19",
+            "cc": "clang-19",
             "linker": "mold",
             "cache-prefix": "clang-build",
         },

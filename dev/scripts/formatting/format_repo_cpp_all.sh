@@ -7,7 +7,7 @@ cd "$(dirname "$0")"/../../ || exit 1
 # Gather C++ files
 files=$(python3 toolbox.py list-files --extensions .cpp --extensions .hpp --extensions .cc --extensions .cxx --extensions .h)
 # Find binary
-clang_format=clang-format-20
+clang_format=clang-format-19
 if [[ $1 ]]; then
     clang_format=$1
 fi

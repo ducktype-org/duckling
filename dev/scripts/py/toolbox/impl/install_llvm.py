@@ -32,7 +32,7 @@ def install_llvm_impl(
         "A single target build with lld and Ninja takes about 8 minutes on a 10-thread machine"
     )
     log_info(
-        "You can also use LLVM from your distribution (e.g. apt install llvm-20) instead."
+        "You can also use LLVM from your distribution (e.g. apt install llvm-19) instead."
     )
     log_info("==========================")
     log_new_line()

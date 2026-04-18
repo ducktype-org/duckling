@@ -9,9 +9,9 @@
 - **Graphviz** is dependency used for generating diagrams by the compiler.
 - **CMake** and **Ninja** are used for building the project.
 - **g++** with version 14 or higher is required for building the project.
-- [alternatively to g++] **clang++** with version 20 or higher is required for building the project.
+- [alternatively to g++] **clang++** with version 19 or higher is required for building the project.
 - **lcov** is used for generating coverage reports.
-- **LLVM** with version 20 is required for building the project.
+- **LLVM** with version 19 is required for building the project.
 
 
 #### Debian/Ubuntu
@@ -42,14 +42,14 @@ Secondly, there are two ways of installing clang on MacOS:
 1. using official Apple clang provided by Xcode,
 2. installing it from the Homebrew.
 
-You need to have at least Xcode 16.3 (clang version string `17.0.0`, run `clang --version` to check), so that it corresponds to the upstream clang 20.
+You need to have at least Xcode 16.3 (clang version string `17.0.0`, run `clang --version` to check), so that it corresponds to the upstream clang 19.
 You can check the mapping between Apple and LLVM versions [on the English Xcode Wikipedia page](https://en.wikipedia.org/wiki/Xcode#Toolchain_versions).
 ```bash
 # For macOS clang
 xcode-select --install
 
 # For LLVM clang
-brew install llvm@20
+brew install llvm@19
 ```
 
 ```bash
@@ -128,7 +128,7 @@ to install the latest supported version of LLVM for your system
 But the most reliable way is to download the LLVM locally using toolbox with this command.
 
 After using this command, LLVM is **NOT installed system-wide**, but only for this project.
-Using version `20.1.2` should work for most platforms.
+Using version `19.1.7` should work for most platforms.
 
 The installed library is placed in the `scripts/downloads` directory.
 
@@ -153,7 +153,7 @@ CMake may not found LLVM installed from the Homebrew.
 To prevent that set the LLVM directory **before** executing the above command.
 
 ```bash
-export LLVM_DIR=${HOMEBREW_PREFIX}/opt/llvm@20
+export LLVM_DIR=${HOMEBREW_PREFIX}/opt/llvm@19
 ```
 
 It's also possible to add it to the `$CMAKE_PREFIX_PATH` variable, but this can resolve in compiling with the upstream clang instead of the Apple one.
