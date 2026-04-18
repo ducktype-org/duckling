@@ -6,8 +6,7 @@ use tracing::debug;
 use url::Url;
 
 use crate::quackpack::core::fetcher::http::handlers::{FileWriter, ResponseCollector};
-use crate::{DuckContext, qp_bail};
-use crate::{QuackResult, QuackResultContext};
+use crate::{DuckContext, QuackResult, QuackResultContext, qp_bail};
 
 mod defaults;
 mod handlers;

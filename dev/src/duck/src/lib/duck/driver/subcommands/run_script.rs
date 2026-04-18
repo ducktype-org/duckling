@@ -1,18 +1,13 @@
-use std::{
-    ffi::{OsStr, OsString},
-    path::{Path, PathBuf},
-};
+use std::ffi::{OsStr, OsString};
+use std::path::{Path, PathBuf};
 
-use crate::{
-    DuckContext, QuackError, QuackResult,
-    duck::driver::cli_ext::{flag, optional},
-    qp_bail,
-    quackpack::subcommands::run_script::{RunScriptOptions, run_script},
-    util::error::MessageError,
-};
-use clap::{Arg, ArgMatches, Command, builder::ValueParser, value_parser};
+use clap::builder::ValueParser;
+use clap::{Arg, ArgMatches, Command, value_parser};
 
-use crate::duck::driver::cli_ext::{CommandExt, subcommand};
+use crate::duck::driver::cli_ext::{CommandExt, flag, optional, subcommand};
+use crate::quackpack::subcommands::run_script::{RunScriptOptions, run_script};
+use crate::util::error::MessageError;
+use crate::{DuckContext, QuackError, QuackResult, qp_bail};
 
 pub const DUCKLING_SCRIPT_EXT: &str = "ds";
 

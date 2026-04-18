@@ -14,6 +14,5 @@ pub use manifest::*;
 pub use package::*;
 pub use package_context::*;
 pub use package_loader::*;
-pub use solver::*;
 pub use venv_config::*;
 pub use version::Version;

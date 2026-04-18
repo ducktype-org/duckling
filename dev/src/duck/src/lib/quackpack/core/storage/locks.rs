@@ -77,14 +77,10 @@ use std::fs::ReadDir;
 use std::io;
 use std::path::Path;
 
-use crate::QuackResult;
-use crate::QuackResultContext;
 use crate::quackpack::core::storage::paths::Storage;
-use crate::quackpack::core::storage::venv_id::ToVenvId;
-use crate::quackpack::core::storage::venv_id::VenvId;
-use crate::util::path_ops_ext::FileLockGuard;
-use crate::util::path_ops_ext::PathOpsExt;
-use crate::util::path_ops_ext::ShouldBlock;
+use crate::quackpack::core::storage::venv_id::{ToVenvId, VenvId};
+use crate::util::path_ops_ext::{FileLockGuard, PathOpsExt, ShouldBlock};
+use crate::{QuackResult, QuackResultContext};
 
 #[derive(Debug)]
 /// A lock that guarantees no virtual environment data mutations are in progress.

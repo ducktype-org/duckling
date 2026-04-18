@@ -1,12 +1,10 @@
 //! `build` subcommand execution logic.
-use crate::{
-    QuackResult, QuackResultContext, StrId,
-    quackpack::core::{
-        FeatureName, PackageContext,
-        compile::{self, BuildContext, profiles::Profile},
-        storage::{StorageSyncOptions, sync, venv_id::ToVenvId},
-    },
-};
+use crate::quackpack::core::compile::profiles::Profile;
+use crate::quackpack::core::compile::{self, BuildContext};
+use crate::quackpack::core::storage::venv_id::ToVenvId;
+use crate::quackpack::core::storage::{StorageSyncOptions, sync};
+use crate::quackpack::core::{FeatureName, PackageContext};
+use crate::{QuackResult, QuackResultContext, StrId};
 
 #[derive(Debug)]
 /// Options for compiling a project.

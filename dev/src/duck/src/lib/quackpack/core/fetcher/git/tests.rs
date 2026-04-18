@@ -1,13 +1,11 @@
-use tempfile::{TempDir, tempdir};
-
 use git2::{DescribeOptions, IndexAddOption, Repository, Signature};
+use tempfile::{TempDir, tempdir};
 use url::Url;
 
-use crate::{
-    DuckContext,
-    quackpack::core::{BranchOrTag, Git, PackageLoader, fetcher::git::GitClient},
-    util::path_ops_ext::PathOpsExt,
-};
+use crate::DuckContext;
+use crate::quackpack::core::fetcher::git::GitClient;
+use crate::quackpack::core::{BranchOrTag, Git, PackageLoader};
+use crate::util::path_ops_ext::PathOpsExt;
 
 fn generate_local_git_repo() -> TempDir {
     let tmpdir = tempdir().unwrap();
@@ -20,9 +18,10 @@ fn generate_local_git_repo() -> TempDir {
     manifest
         .as_path()
         .write(
-            "metadata:
+            "\
+metadata:
   name: fixtured_git_dependency
-  version: 1",
+  version: '1'",
         )
         .unwrap();
 
