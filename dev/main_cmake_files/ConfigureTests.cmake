@@ -104,6 +104,4 @@ function(add_custom_test_pack NAME)
 	set_property(TEST ${BUILD_PACK_TARGET} PROPERTY LABELS "${NAME}")
 
 	add_dependencies(build_all_tests ${BUILD_PACK_TARGET})
-
-	set_target_properties("test_${NAME}" PROPERTIES EXCLUDE_FROM_ALL true)
 endfunction()
