@@ -142,6 +142,7 @@ private:
 			});
 			ASSERT_EQUAL_PRINT(expected_statuses.size(), status_counter);
 		}
+		ASSERT_TRUE(std::holds_alternative<vm::api::ExecutionCompleted>(debugger.getStatus()));
 		ASSERT_EQUAL_PRINT(ret_val_limit, ret_val_counter);
 	}
 
@@ -166,6 +167,7 @@ private:
 		cv.wait_for(lk, std::chrono::milliseconds(100), [&] {
 			return error_counter == expected_errors;
 		});
+		ASSERT_TRUE(std::holds_alternative<vm::api::Running>(debugger.getStatus()));
 		ASSERT_EQUAL_PRINT(expected_errors, error_counter);
 	}
 };
