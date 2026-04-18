@@ -38,6 +38,7 @@ namespace dia_int {
 
 		using ToSourcePosIllegalAccessFunc = dia::SourcePosition (*)(const StablePosition&);
 		ToSourcePosIllegalAccessFunc to_source_pos_illegal_access_fn;
+
 		using ToSourcePosFuncWithContextFunc
 			= dia::SourcePosition (*)(query::Context&, const StablePosition&);
 		ToSourcePosFuncWithContextFunc to_source_pos_with_context_fn;

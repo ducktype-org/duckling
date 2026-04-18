@@ -149,9 +149,6 @@ namespace dia_int::dia_args {
 	}
 
 	void CodeLocationComponent::updatePosition(const UpdatePositionFunc& func) {
-		std::cerr << "Updating position for code location: " << location.file << ":"
-				  << location.line << ":" << location.column << "\n";
-		std::cerr << "Has hash location: " << (hash_location.has_value() ? "yes" : "no") << "\n";
 		if (hash_location.has_value()) location = func(hash_location.value());
 	}
 
