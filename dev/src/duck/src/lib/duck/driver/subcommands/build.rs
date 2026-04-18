@@ -3,7 +3,7 @@ use crate::{DuckContext, QuackResult};
 use clap::{ArgMatches, Command};
 
 use crate::duck::driver::cli_ext::{
-    CommandExt, features_from_matches, flag, profile_from_matches, subcommand,
+    CommandExt, features_from_matches, flag, multi, profile_from_matches, subcommand,
 };
 
 use crate::quackpack::subcommands::build::{BuildOptions, compile};
@@ -14,9 +14,10 @@ pub fn get_parser() -> Command {
         .about("Build the current package")
         .add_profile()
         .add_release()
-        .add_features_conflicting(
-            "Build the current package with these features",
-            "all-features",
+        .arg(
+            multi("features", "Build the current package with these features")
+                .short('F')
+                .conflicts_with("all-features"),
         )
         .arg(
             flag(

@@ -19,6 +19,14 @@
 
 namespace vm {
 	/**
+	 * @brief Helper structure that holds pointers to the global data buffer and global blocks buffer.
+	 */
+	struct GlobalBufferPointers {
+		std::byte* data_buffer_base;    /// Base pointer to the global data buffer.
+		Block**    blocks_buffer_base;  /// Base pointer to the global blocks buffer.
+	};
+
+	/**
 	 * @brief A memory module for a process.
 	 * @note Memory is single threaded!
 	 * All of process'es memory - thread stacks (thread local data) and global data is stored here.
@@ -30,8 +38,15 @@ namespace vm {
 
 		std::deque<ThreadStack> threads_frame_stacks;
 
-		base::HashMap<GlobalDataID, base::OwningView> global_data;
-		base::HashMap<GlobalDataID, Ref<Block>>       global_blocks;
+		/// Buffer for the global data
+		std::vector<std::byte> global_data_buffer{};
+
+		/// Buffer for the global blocks
+		std::vector<Block*> global_data_blocks{};
+
+		/// If the global has been initialized (constructor has been called), then it is in this
+		/// set. Otherwise, it is not.
+		std::unordered_set<BlockID> initialized_globals{};
 
 		// Here we use a simple recycling mechanism for blocks to avoid unnecessary allocations.
 		// After the block is destroyed and the reference count drops to zero, instead of freeing
@@ -75,6 +90,16 @@ namespace vm {
 		 * @note These blocks must be of a dynamic table type.
 		 */
 		void moveBlockDataAndEraseSuffix(Ref<Block> dst, Ref<Block> src, usize byte_count);
+
+
+		/**
+		 * @brief Replaces the block data memory view with the new one,
+		 * taking care of the children blocks.
+		 *
+		 * @param block The block to update the data view for.
+		 * @param new_view The new view to set for the block.
+		 */
+		void updateBlockDataView(Ref<Block> block, base::ModRawView new_view);
 
 		/**
 		 * @brief Executes destructors on individual objects that are in the block.
@@ -141,6 +166,8 @@ namespace vm {
 	public:
 		Memory() = default;
 
+		// =================== Used by the process ===================
+
 		/**
 		 * @brief Validates the memory state.
 		 * It can be thought of as a check that is executed after program's exit
@@ -152,9 +179,45 @@ namespace vm {
 		 */
 		bool validateMemoryState() const;
 
+		/**
+		 * @brief Frees all the global data
+		 */
+		void deinitGlobals();
+
+		struct GlobalBlocksConfig {
+			std::vector<usize>    global_data_offsets;
+			std::vector<usize>    global_blocks_idxs;
+			std::vector<TypeCRef> global_types;
+			Bytes                 total_global_data_size;
+			usize                 global_count;
+		};
+
+		/**
+		 * @brief Allocates the memory for the global variables based on the provided configuration
+		 * and creates the blocks for them. Works in the incremental setting, so only the new global
+		 * variables are created, and the existing ones are left unchanged. The VMProcess can call
+		 * this function when new global variables are added to the program.
+		 *
+		 * Does not support shrinking of the global buffer or decreasing the global count,
+		 * meaning it can only be used to add new global variables.
+		 *
+		 * @warning It may invalidate the pointers to the global buffer, after calling this function
+		 * always update the obtained pointers.
+		 *
+		 * @param global_blocks The configuration for the global blocks to initialize.
+		 * @return The new pointers to the global data buffer and global blocks buffer.
+		 */
+		GlobalBufferPointers initializeNewGlobalBlocks(const GlobalBlocksConfig& global_blocks);
+
 		// =================== Used by executor ===================
 
 		auto initializeFrameStack() -> Ref<ThreadStack>;
+
+		/**
+		 * @brief Get the pointers to the global data buffer and global blocks buffer, that can be
+		 * used by the threads.
+		 */
+		GlobalBufferPointers getGlobalDataMemory();
 
 		auto allocateHeap(TypeCRef type) -> Ref<Block>;
 
@@ -183,30 +246,26 @@ namespace vm {
 		void freeBlockData(Ref<Block> block);
 
 		/**
-		 * @brief Attempts to insert global data associated with the given ID.
+		 * @brief Checks if the global variable in the block has been initialized (constructor has
+		 * been called).
 		 *
-		 * @param id The unique identifier for the global data.
-		 * @param type The type reference to associate with the global data.
-		 * @return true if the global data was inserted successfully (i.e., it did not already
-		 * exist); false otherwise.
+		 * Should be called from a place where the runtime initialization is happening.
+		 * If the global variable has no constructor this function shouldn't be called.
+		 *
+		 * @param global_block The block of the global variable to check.
+		 * @return True if the global variable has been initialized, false otherwise.
 		 */
-		bool tryInsertGlobalData(GlobalDataID id, TypeCRef type);
+		bool isGlobalInitialized(Ref<Block> global_block);
 
 		/**
-		 * @brief Frees all the global data
+		 * @brief Set the global as initialized (the constructor has been called).
+		 *
+		 * Should be called from a place where the runtime initialization is happening.
+		 * If the global variable has no constructor this function shouldn't be called.
+		 *
+		 * @param global_block The block of the global variable to set as initialized.
 		 */
-		void deinitGlobals();
-
-		/**
-		 * @brief Returns a view of global data by the id.
-		 */
-		[[nodiscard]] constexpr __attribute__((always_inline)) auto getGlobalViewUnsafe(
-			GlobalDataID id
-		) -> base::ModRawView {
-			// @TODO: #1431 remove custom exception
-			return global_data.atMaybe(id).expect<exceptions::VMGlobalNotFoundException>()->modView(
-			);
-		}
+		void setGlobalInitialized(Ref<Block> global_block);
 
 		/**
 		 * @brief Returns a view of block's data
@@ -215,15 +274,6 @@ namespace vm {
 			Ref<Block> block
 		) -> base::ModRawView {
 			return block->data.view;
-		}
-
-		/**
-		 * @brief Returns a reference to the block appropriate for the global data by id.
-		 * @note This should be the preferred method of accessing global data, if applicable.
-		 */
-		[[nodiscard]] constexpr __attribute__((always_inline)) auto getGlobalData(GlobalDataID id)
-			-> Ref<Block> {
-			return *global_blocks.atMaybe(id).expect("Id not stored!");
 		}
 
 		// =================== Variant operations ===================
