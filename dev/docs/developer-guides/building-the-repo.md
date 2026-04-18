@@ -259,8 +259,15 @@ ninja lexer_test_simple
 ./bin/lexer_test_simple
 ```
 
+It's often useful to run a bundle of tests, for example all the tests in the `compiler` test bundle, to do that
+you can use `-L` (label filter) on `ctest`:
+
+```bash
+ctest -L compiler
+```
+
 > **Note**  
-> You can also use the `ctest` command to run the tests, for example with regex name filter:  
+> You can also use the `ctest` command to run the tests with other configurations:  
 > ```bash  
 > ctest -R vm_  -j 4
 > ```  
