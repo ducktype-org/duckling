@@ -35,7 +35,7 @@ namespace vm::debugger {
 					  on_error.emitEvent(panicked.error_message);
 				  }
 			  }
-			  on_vm_changes_status.emitEvent(statusToString(status));
+			  on_vm_changes_status.emitEvent(status);
 		  }) {
 		vm::api::spawn()
 			.and_then([&](const vm::api::ProcessInfo& info) {
@@ -59,11 +59,12 @@ namespace vm::debugger {
 		});
 	}
 
-	void Debugger::attachOnVMChangesStatusListener(Ref<events::Listener<std::string>> listener) {
+	void Debugger::attachOnVMChangesStatusListener(Ref<events::Listener<vm::api::ProcStatus>> listener
+	) {
 		on_vm_changes_status.attachListener(listener);
 	}
 
-	void Debugger::attachOnVMChangesStatusListener(events::Listener<std::string>& listener) {
+	void Debugger::attachOnVMChangesStatusListener(events::Listener<vm::api::ProcStatus>& listener) {
 		on_vm_changes_status.attachListener(listener);
 	}
 
@@ -98,19 +99,13 @@ namespace vm::debugger {
 			});
 	}
 
-	std::string Debugger::getStatus() {
-		auto result
-			= vm::api::getExecutionStatus(pid).transform([&](const vm::api::ProcStatus& status) {
-				  return statusToString(status);
-			  });
-
-		if (result.has_value())
-			return result.value();
-		else {
-			auto err = vm::api::errorToString(result.error());
-			on_error.emitEvent(err);
-			return err;
-		}
+	vm::api::ProcStatus Debugger::getStatus() {
+		return vm::api::getExecutionStatus(pid)
+		    .transform_error([&](const vm::api::ApiError& api_error) {
+				on_error.emitEvent(vm::api::errorToString(api_error));
+				return api_error;
+			})
+		    .value();
 	}
 
 }

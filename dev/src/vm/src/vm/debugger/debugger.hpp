@@ -28,7 +28,7 @@ namespace vm::debugger {
 		/**
 		 * @brief Emits current VM status when VM changes status
 		 */
-		events::Emitter<std::string> on_vm_changes_status;
+		events::Emitter<vm::api::ProcStatus> on_vm_changes_status;
 
 		/**
 		 * @brief Emits return vale when VM completes execution
@@ -54,12 +54,12 @@ namespace vm::debugger {
 		/**
 		 * @brief Attach Listener to Emitter that emits current VM status when VM changes status
 		 */
-		void attachOnVMChangesStatusListener(Ref<events::Listener<std::string>> listener);
+		void attachOnVMChangesStatusListener(Ref<events::Listener<vm::api::ProcStatus>> listener);
 
 		/**
 		 * @brief Attach Listener to Emitter that emits current VM status when VM changes status
 		 */
-		void attachOnVMChangesStatusListener(events::Listener<std::string>& listener);
+		void attachOnVMChangesStatusListener(events::Listener<vm::api::ProcStatus>& listener);
 
 		/**
 		 * @brief Attach Listener to Emitter that emits return value when VM completes execution
@@ -92,6 +92,6 @@ namespace vm::debugger {
 		 * @brief Gets the current status of the VM.
 		 * @return The current status of the VM.
 		 */
-		[[nodiscard]] std::string getStatus();
+		[[nodiscard]] vm::api::ProcStatus getStatus();
 	};
 }

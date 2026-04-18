@@ -5,6 +5,8 @@
 #include <condition_variable>
 #include <mutex>
 
+#define altIndex(t) base::internal::alternativeIndex<vm::api::ProcStatus, t>()
+
 class VmDebuggerTest: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS VmDebuggerTest
@@ -19,18 +21,19 @@ public:
 
 private:
 	void testTemplate(
-		std::string_view                path_name,
-		const size_t                    ret_val_limit,
-		const std::vector<std::string>& expected_statuses
+		std::string_view          path_name,
+		const size_t              ret_val_limit,
+		const std::vector<usize>& expected_statuses
 	) {
 		size_t                  status_counter  = 0;
 		size_t                  ret_val_counter = 0;
 		std::mutex              m;
 		std::condition_variable cv;
 
-		events::Listener<std::string> status_listener([&](const std::string& status) {
+		events::Listener<vm::api::ProcStatus> status_listener([&](const vm::api::ProcStatus& status
+		                                                      ) {
 			ASSERT_TRUE(status_counter < expected_statuses.size());
-			ASSERT_EQUAL_PRINT(expected_statuses[status_counter], status);
+			ASSERT_EQUAL_PRINT(expected_statuses[status_counter], status.index());
 			status_counter++;
 			if (status_counter == expected_statuses.size()) cv.notify_one();
 		});
@@ -58,12 +61,39 @@ private:
 	}
 
 	void runAndGetStatus() {
-		{ testTemplate("debugger_test.dbc", 1, { "Running", "ExecutionCompleted" }); }
+		{
+			testTemplate(
+				"debugger_test.dbc",
+				1,
+				{
+					altIndex(vm::api::Running),
+					altIndex(vm::api::ExecutionCompleted),
+				}
+			);
+		}
 	}
 
-	void getStatusWait() { testTemplate("vm_api_tests.dbc", 0, { "Running", "Sleeping" }); }
+	void getStatusWait() {
+		testTemplate(
+			"vm_api_tests.dbc",
+			0,
+			{
+				altIndex(vm::api::Running),
+				altIndex(vm::api::Sleeping),
+			}
+		);
+	}
 
-	void getStatusBreakpoint() { testTemplate("breakpoint.dbc", 0, { "Running", "Paused" }); }
+	void getStatusBreakpoint() {
+		testTemplate(
+			"breakpoint.dbc",
+			0,
+			{
+				altIndex(vm::api::Running),
+				altIndex(vm::api::Paused),
+			}
+		);
+	}
 
 	void rerunTest() {
 		size_t                  ret_val_limit   = 3;
@@ -72,11 +102,15 @@ private:
 		std::mutex              m;
 		std::condition_variable cv;
 
-		const std::vector<std::string> expected_statuses = { "Running", "ExecutionCompleted" };
+		const std::vector<usize> expected_statuses = {
+			altIndex(vm::api::Running),
+			altIndex(vm::api::ExecutionCompleted),
+		};
 
-		events::Listener<std::string> status_listener([&](const std::string& status) {
+		events::Listener<vm::api::ProcStatus> status_listener([&](const vm::api::ProcStatus& status
+		                                                      ) {
 			ASSERT_TRUE(status_counter < expected_statuses.size());
-			ASSERT_EQUAL_PRINT(expected_statuses[status_counter], status);
+			ASSERT_EQUAL_PRINT(expected_statuses[status_counter], status.index());
 			status_counter++;
 			if (status_counter == expected_statuses.size()) cv.notify_one();
 		});
@@ -91,9 +125,9 @@ private:
 
 		vm::debugger::Debugger debugger{ fs::File(path("debugger_test.dbc")) };
 
-		debugger.attachOnVMChangesStatusListener(status_listener);
-		debugger.attachOnVMCompletesExecutionListener(execution_completed_listener);
-		debugger.attachOnErrorListener(error_listener);
+		debugger.attachOnVMChangesStatusListener(Ref(&status_listener));
+		debugger.attachOnVMCompletesExecutionListener(Ref(&execution_completed_listener));
+		debugger.attachOnErrorListener(Ref(&error_listener));
 
 		int loop = 3;
 
