@@ -7,9 +7,8 @@ include(FetchContent)
 set(ICU_VERSION_MAJOR "74")
 set(ICU_VERSION_MINOR "2")
 set(ICU_VERSION_REQUIRED "${ICU_VERSION_MAJOR}.${ICU_VERSION_MINOR}")
-set(ICU_RELEASE_PREFIX "https://github.com/unicode-org/icu/releases/download/release-${ICU_VERSION_REQUIRED}/icu4c-${ICU_VERSION_REQUIRED}-")
-set(ICU_RELEASE "${ICU_RELEASE_PREFIX}sources.tgz")
-set(ICU_CONTROL "SHA512=92feddfe81c57336f386c7cbc9f6d976bf349db148a77a247c4559676f51116115c8c52c4d907feb50933f72ab75fd8e48be092bf9c8ca33a3e8fabc9372a5d6")
+set(ICU_RELEASE "https://github.com/unicode-org/icu/releases/download/release-${ICU_VERSION_MAJOR}-${ICU_VERSION_MINOR}/icu4c-${ICU_VERSION_MAJOR}_${ICU_VERSION_MINOR}-src.tgz")
+set(ICU_CONTROL "SHA512=e6c7876c0f3d756f3a6969cad9a8909e535eeaac352f3a721338b9cbd56864bf7414469d29ec843462997815d2ca9d0dab06d38c37cdd4d8feb28ad04d8781b0")
 
 # Based on: https://github.com/meta-toolkit/meta-cmake/blob/master/FindOrBuildICU.cmake
 # Windows building is removed because it's very version-dependent
