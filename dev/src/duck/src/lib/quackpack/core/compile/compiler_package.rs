@@ -4,10 +4,8 @@
 use std::collections::HashSet;
 use std::fmt;
 
-use crate::{
-    QuackResult, QuackResultContext,
-    quackpack::core::{FeatureName, Package},
-};
+use crate::quackpack::core::{FeatureName, Package};
+use crate::{QuackResult, QuackResultContext};
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 /// Describes what type dependency type, in respect to the root, is this package.

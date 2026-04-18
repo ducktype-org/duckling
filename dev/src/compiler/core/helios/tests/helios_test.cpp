@@ -956,9 +956,9 @@ private:
 		auto test_value = [&](auto str, i64 exp_val) {
 			auto name = base::StrID(str);
 			for (auto& gb: hout.glob_data) {
-				if (gb.original_name == name) {
-					if (std::holds_alternative<compiler::helios::HOUTGlobalConst>(gb.value)) {
-						auto ctv = std::get<compiler::helios::HOUTGlobalConst>(gb.value).value;
+				if (gb->original_name == name) {
+					if (std::holds_alternative<compiler::helios::HOUTGlobalConst>(gb->value)) {
+						auto ctv = std::get<compiler::helios::HOUTGlobalConst>(gb->value).value;
 						auto val = ctv.get<compiler::numeric_value::NumericValue>()->get<i64>();
 						if (!val.has_value()) {
 							this->fail(base::strConcat(
@@ -2119,9 +2119,9 @@ private:
 		};
 
 		auto find_global = [&](const compiler::helios::HOUTUnit& unit, const base::StrID& name
-		                   ) -> base::Optional<compiler::helios::HOUTGlobalData> {
+		                   ) -> base::Optional<CRef<compiler::helios::HOUTGlobalData>> {
 			for (const auto& glob: unit.glob_data)
-				if (glob.original_name == name) return glob;
+				if (glob->original_name == name) return glob;
 			assertTrue(false, base::strConcat("Global ", name.strView(), " not found"));
 			return {};
 		};
@@ -2137,9 +2137,9 @@ private:
 		std::cerr << "Mangled symbol: " << mangled_goo.strView() << '\n';
 
 		auto glob_a = find_global(hout_unit, base::StrID("A")).value();
-		std::cerr << "\nGlobal variable name: " << glob_a.original_name.strView() << '\n';
+		std::cerr << "\nGlobal variable name: " << glob_a->original_name.strView() << '\n';
 		auto mangled_glob_a = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
-			{ .symbol_key              = glob_a.helios_symbol,
+			{ .symbol_key              = glob_a->helios_symbol,
 		      .kind                    = compiler::helios::mangler::ManglingSymbolKind::Standard,
 		      .mangling_scheme_version = 0,
 		      .additional_metadata     = std::nullopt }
@@ -2148,9 +2148,9 @@ private:
 		ASSERT_EQUAL("_Q_M8manglingG1A", mangled_glob_a.str());
 
 		auto glob_b = find_global(hout_unit, base::StrID("B")).value();
-		std::cerr << "\nGlobal Variable name: " << glob_b.original_name.strView() << '\n';
+		std::cerr << "\nGlobal Variable name: " << glob_b->original_name.strView() << '\n';
 		auto mangled_glob_b = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
-			{ .symbol_key              = glob_b.helios_symbol,
+			{ .symbol_key              = glob_b->helios_symbol,
 		      .kind                    = compiler::helios::mangler::ManglingSymbolKind::Standard,
 		      .mangling_scheme_version = 321,
 		      .additional_metadata     = "metadata_v321" }
@@ -2159,9 +2159,9 @@ private:
 		ASSERT_EQUAL("_Q5a_M8manglingN5Nmspc1BE$metadata_v321", mangled_glob_b.str());
 
 		auto g_const = find_global(hout_unit, base::StrID("Cnst")).value();
-		std::cerr << "\nConst name: " << g_const.original_name.strView() << '\n';
+		std::cerr << "\nConst name: " << g_const->original_name.strView() << '\n';
 		auto mangled_g_const = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
-			{ .symbol_key              = g_const.helios_symbol,
+			{ .symbol_key              = g_const->helios_symbol,
 		      .kind                    = compiler::helios::mangler::ManglingSymbolKind::Standard,
 		      .mangling_scheme_version = 321,
 		      .additional_metadata     = "metadata_v321" }
@@ -2193,9 +2193,9 @@ private:
 		std::cerr << "Mangled symbol: " << mangled_sub_fun.strView() << '\n';
 
 		auto sub_cnst = find_global(sub_hout_unit, base::StrID("subConst")).value();
-		std::cerr << "\nSub constant name: " << sub_cnst.original_name.strView() << '\n';
+		std::cerr << "\nSub constant name: " << sub_cnst->original_name.strView() << '\n';
 		auto mangled_sub_cnst = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
-			{ .symbol_key              = sub_cnst.helios_symbol,
+			{ .symbol_key              = sub_cnst->helios_symbol,
 		      .kind                    = compiler::helios::mangler::ManglingSymbolKind::Standard,
 		      .mangling_scheme_version = 5,
 		      .additional_metadata     = "metadata_v5" }
@@ -2263,9 +2263,9 @@ private:
 		};
 
 		auto find_global = [&](const compiler::helios::HOUTUnit& unit, const base::StrID& name
-		                   ) -> base::Optional<compiler::helios::HOUTGlobalData> {
+		                   ) -> base::Optional<CRef<compiler::helios::HOUTGlobalData>> {
 			for (const auto& glob: unit.glob_data)
-				if (glob.original_name == name) return glob;
+				if (glob->original_name == name) return glob;
 			assertTrue(false, base::strConcat("Global ", name.strView(), " not found"));
 			return {};
 		};
@@ -2282,9 +2282,9 @@ private:
 			auto glob2 = find_global(hout_unit, base::StrID("XB")).value();
 
 			CRef<compiler::helios::code::Expr> expr1
-				= std::get<compiler::helios::HOUTGlobalVariable>(glob1.value).initial_value.ref();
+				= std::get<compiler::helios::HOUTGlobalVariable>(glob1->value).initial_value.ref();
 			CRef<compiler::helios::code::Expr> expr2
-				= std::get<compiler::helios::HOUTGlobalVariable>(glob2.value).initial_value.ref();
+				= std::get<compiler::helios::HOUTGlobalVariable>(glob2->value).initial_value.ref();
 
 			ASSERT_EQUAL(
 				compiler::helios::code::BuiltinBinary::IntegerAdd,
@@ -2312,7 +2312,7 @@ private:
 			query::utils::withContextDo([&](query::Context& ctx) {
 				for (const auto& name: globals)
 					ASSERT_TRUE(compiler::helios::isGlobalVar(
-						ctx, find_global(hout_unit, base::StrID(name))->helios_symbol
+						ctx, find_global(hout_unit, base::StrID(name)).value()->helios_symbol
 					));
 
 				for (const auto& fun: hout_unit.functions) {
@@ -2936,7 +2936,7 @@ private:
 		auto get_global_by_name
 			= [&](base::StrID name) -> base::Optional<CRef<compiler::helios::HOUTGlobalData>> {
 			for (const auto& glob: hout.glob_data)
-				if (glob.original_name == name) return &glob;
+				if (glob->original_name == name) return glob;
 			return {};
 		};
 
@@ -2952,6 +2952,13 @@ private:
 			for (const auto& var: all_variables)
 				if (var.illegalAccess().value()->getName() == name) return var.illegalAccess();
 			return {};
+		};
+
+		auto get_source_pos_from_origin
+			= [](const compiler::helios::code::ElementOrigin& origin) -> dia::SourcePosition {
+			return std::any_cast<dia::SourcePosition>(query::utils::withContextCompute(
+				[&](query::Context& ctx) { return origin.getSourcePosition(ctx).value(); }
+			));
 		};
 
 		/**
@@ -2970,11 +2977,10 @@ private:
 			auto initial_value_expr
 				= std::get<compiler::helios::HOUTGlobalVariable>(glob->value).initial_value.ref();
 
-			dia::SourcePosition expr_pos_from_origin
-				= initial_value_expr->origin.getSourcePosition().value();
+			auto expr_pos_from_origin = get_source_pos_from_origin(initial_value_expr->origin);
 			assertEqual(
 				expr_pos_from_origin,
-				initial_value_pst->getSourcePosition(),
+				initial_value_pst->getSourcePosition().illegalAccess(),
 				base::strConcat(
 					"The initial value expression PST node does not match for variable ",
 					name.strView()
@@ -3025,8 +3031,8 @@ private:
 
 			auto pst_fun = pst_fun_opt.value();
 			assertEqual(
-				fun->origin.getSourcePosition(),
-				pst_fun->getSourcePosition(),
+				get_source_pos_from_origin(fun->origin),
+				pst_fun->getSourcePosition().illegalAccess(),
 				base::strConcat("The function origin is not the PST of the function", name.strView())
 			);
 			assertEqual(

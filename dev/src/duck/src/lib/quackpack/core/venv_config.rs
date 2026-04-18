@@ -1,7 +1,8 @@
 //! Local venv's configuration.
 use std::path::{Path, PathBuf};
 
-use crate::{QuackResult, util::yaml_config::YamlConfig};
+use crate::QuackResult;
+use crate::util::yaml_config::YamlConfig;
 
 #[derive(Debug, Default)]
 /// Configuration of a package's venv.

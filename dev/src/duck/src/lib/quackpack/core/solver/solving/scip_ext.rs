@@ -1,6 +1,7 @@
 use std::rc::Rc;
 
-use russcip::{Model, ProblemCreated, Variable, prelude::cons};
+use russcip::prelude::cons;
+use russcip::{Model, ProblemCreated, Variable};
 
 /// An extension of [`Model`] with functions for representing binary variable implications as constraints.
 pub trait BinModelExt {

@@ -1,17 +1,14 @@
 //! [`Command`]-based backend communicating with the compiler.
 
-use std::{convert::Infallible, fmt, process::Command};
-
-use crate::{
-    QuackResult, QuackResultContext, qp_bail,
-    quackpack::core::{
-        Package,
-        compile::profiles::{OptLevel, Profile},
-    },
-    util::command_ext::CommandExt,
-};
+use std::convert::Infallible;
+use std::fmt;
+use std::process::Command;
 
 use super::Duckc;
+use crate::quackpack::core::Package;
+use crate::quackpack::core::compile::profiles::{OptLevel, Profile};
+use crate::util::command_ext::CommandExt;
+use crate::{QuackResult, QuackResultContext, qp_bail};
 
 #[non_exhaustive]
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
@@ -91,7 +88,7 @@ impl DuckcProcessBuilder {
 
     /// Set LLVM optimization level.
     fn set_opt_level(&mut self, opt_level: OptLevel) -> &mut Self {
-        self.inner.arg("-0").arg(opt_level.to_string());
+        self.inner.arg("-O").arg(opt_level.to_string());
         self
     }
 

@@ -1,10 +1,9 @@
 //! Initialize a new project.
 use std::path::{Path, PathBuf};
 
-use crate::{
-    DuckContext, QuackResult, QuackResultContext, StrId, qp_bail, quackpack::core::PackageLoader,
-    util::path_ops_ext::PathOpsExt,
-};
+use crate::quackpack::core::PackageLoader;
+use crate::util::path_ops_ext::PathOpsExt;
+use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail};
 
 /// Options for initializing a new project.
 pub struct InitOptions<'duck> {
