@@ -49,8 +49,7 @@ namespace vm::code {
 	}
 
 	const std::vector<TypeOfData>& getBuiltinTypes() {
-		static const std::vector<TypeOfData> types
-			= [] { return rawBuiltins() | std::views::values | std::ranges::to<std::vector>(); }();
+		static const std::vector<TypeOfData> types = rawBuiltins().values();
 		return types;
 	}
 

@@ -15,6 +15,7 @@
 #include <queue>
 #include <ranges>
 #include <set>
+#include <map>
 #include <unordered_set>
 #include <vector>
 
@@ -172,11 +173,10 @@ namespace query::internal {
 		std::vector<NodeID> nodes;
 		nodes.reserve(node_deps->size());
 		base::StableHashMap<NodeID, usize> node_to_index;
-		node_to_index.reserve(node_deps->size());
 
 		usize next_index = 0;
 		for (const auto& [node, _]: *node_deps) {
-			node_to_index.emplace(node, next_index++);
+			node_to_index.put(node, next_index++);
 			nodes.push_back(node);
 		}
 

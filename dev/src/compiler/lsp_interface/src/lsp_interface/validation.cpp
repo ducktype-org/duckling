@@ -91,8 +91,8 @@ namespace lsp {
 		base::StableHashMap<base::StrID, std::vector<Box<dia_int::lsp::Diagnostic>>> diagnostics_by_file;
 
 		// We always want to have at least an entry for the queried file for better experience
-		diagnostics_by_file.emplace(
-			ctx.queried_file_uri, std::vector<Box<dia_int::lsp::Diagnostic>>{}
+		diagnostics_by_file.put(
+			base::StrID(ctx.queried_file_uri), std::vector<Box<dia_int::lsp::Diagnostic>>{}
 		);
 
 		// Iterate over diagnostics and group them by file URI
@@ -102,7 +102,7 @@ namespace lsp {
 			auto file_uri = base::StrID(lsp_diag.file_uri);
 
 			if (not diagnostics_by_file.contains(file_uri))
-				diagnostics_by_file.emplace(file_uri, std::vector<Box<dia_int::lsp::Diagnostic>>{});
+				diagnostics_by_file.put(file_uri, std::vector<Box<dia_int::lsp::Diagnostic>>{});
 			diagnostics_by_file.at(file_uri).push_back(std::move(lsp_diag.diagnostic));
 		}
 

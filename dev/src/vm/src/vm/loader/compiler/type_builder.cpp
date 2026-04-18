@@ -38,10 +38,10 @@ namespace {
 
 				base::StableHashMap<base::StrID, vm::TypeCRef> virtual_methods;
 				for (auto& method: prev_imd.available_methods)
-					virtual_methods.put(method.first, get_type_cref(method.second));
+					virtual_methods.put(method.key, get_type_cref(method.value));
 
 				base::StableHashMap<base::StrID, base::StrID> vtable;
-				for (auto& impl: prev_imd.vtable) vtable.put(impl.first, impl.second);
+				for (auto& impl: prev_imd.vtable) vtable.put(impl.key, impl.value);
 
 				vm::InheritanceMetadata::Kind kind;
 				variant_match(prev_imd.kind) {

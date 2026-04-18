@@ -233,7 +233,7 @@ namespace {
 		for (const auto& implementation: inh.implementations) {
 			if (implementations.contains(implementation.name))
 				throw DuplicatedVirtualMethodImplementationError(inh, implementation.name);
-			implementations.put(implementation.name);
+			implementations.put(implementation.name, base::StrID());
 
 			if (!virtual_methods.contains(implementation.name))
 				throw InvalidVirtualMethodImplementationError(inh, implementation.name);
@@ -292,7 +292,7 @@ namespace {
 		base::StableHashMap<base::StrID, base::StrID> interfaces;
 		for (const auto& impl: inh.implements) {
 			if (interfaces.contains(impl)) throw DuplicatedImplementsError(inh, impl);
-			interfaces.put(impl);
+			interfaces.put(impl, base::StrID());
 		}
 	}
 

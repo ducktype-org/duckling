@@ -694,9 +694,8 @@ namespace compiler::frontend {
 		// remove this module from its parent's submodules
 		auto  parent     = module->m_parent.value();
 		auto& submodules = parent->m_submodules;
-		auto  it         = std::ranges::find_if(submodules, [module](const auto& pair) {
-            return pair.second == module;
-        });
+		auto  it = submodules.findIf([&module](const auto& kv) { return kv.value == module; });
+
 		CORE_ASSERT(
 			it != submodules.end(),
 			base::strConcat(
@@ -706,7 +705,7 @@ namespace compiler::frontend {
 				parent->getName().strView()
 			)
 		);
-		submodules.erase(it);
+		submodules.erase(it->key);
 
 		module->m_parent = {};
 
@@ -754,9 +753,8 @@ namespace compiler::frontend {
 		if (parent.has_value()) {
 			// Remove the submodule from the parent's submodules
 			auto& submodules = parent.value()->m_submodules;
-			auto  it         = std::ranges::find_if(submodules, [module](const auto& pair) {
-                return pair.second == module;
-            });
+			auto  it = submodules.findIf([&module](const auto& kv) { return kv.value == module; });
+
 			CORE_ASSERT(
 				it != submodules.end(),
 				base::strConcat(
@@ -768,7 +766,7 @@ namespace compiler::frontend {
 					parent.value()->getName().strView()
 				)
 			);
-			submodules.erase(it);
+			submodules.erase(it->key);
 		}
 
 		// Change the parent of all submodules to the parent of the removed module
@@ -807,9 +805,8 @@ namespace compiler::frontend {
 
 		if (parent.has_value()) {
 			auto& submodules = parent.value()->m_submodules;
-			auto  it         = std::ranges::find_if(submodules, [module](const auto& pair) {
-                return pair.second == module;
-            });
+			auto  it = submodules.findIf([&module](const auto& kv) { return kv.value == module; });
+
 			CORE_ASSERT(
 				it != submodules.end(),
 				base::strConcat(
@@ -821,7 +818,7 @@ namespace compiler::frontend {
 					parent.value()->getName().strView()
 				)
 			);
-			submodules.erase(it);
+			submodules.erase(it->key);
 			parent.value()->updateModuleHash();
 		}
 

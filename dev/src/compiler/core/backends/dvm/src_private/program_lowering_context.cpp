@@ -194,7 +194,7 @@ std::expected<vm::code::CodeCollection, std::string> ProgramLoweringContext::val
 		collection.functions.end(), extra_bytecode_functions.begin(), extra_bytecode_functions.end()
 	);
 	collection.global_data = std::ranges::to<std::vector>(
-		global_name_to_dvm_data | std::views::values
+		global_name_to_dvm_data.values()
 		| std::views::transform([](const auto& tuple) { return tuple; })
 	);
 	collection.types = std::ranges::to<std::vector>(tsl_type_to_dvm | std::views::values);

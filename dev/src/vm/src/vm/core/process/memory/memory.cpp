@@ -119,9 +119,9 @@ namespace vm {
 			// and if we were to free them and decrease the refcount in the wrong order we might
 			// throw a false-positive exception. This solution avoids this problem.
 
-			for (const auto& block: global_blocks | std::views::values) freeBlockData(block);
-
-			for (const auto& block: global_blocks | std::views::values)
+			const auto global_block_refs = global_blocks.values();
+			for (const auto& block: global_block_refs) freeBlockData(block);
+			for (const auto& block: global_block_refs)
 				decreaseBlockRefcount(block);
 		} catch (exceptions::VMFoundMemoryLeakException&) {
 			std::cerr

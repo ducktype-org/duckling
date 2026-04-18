@@ -236,7 +236,7 @@ namespace base {
 	public:
 		StableHashMap(): buckets(INITIAL_BUCKETS) {}
 
-		StableHashMap(const StableHashMap& other) {
+		StableHashMap(const StableHashMap& other): buckets(INITIAL_BUCKETS) {
 			for (const auto& [k, v]: other) put(k, v);
 		}
 
@@ -264,7 +264,8 @@ namespace base {
 		}
 
 		// Braced initializer list constructor
-		StableHashMap(std::initializer_list<std::pair<const KEY_T, DATA_T>> init) {
+		StableHashMap(std::initializer_list<std::pair<const KEY_T, DATA_T>> init):
+			  buckets(INITIAL_BUCKETS) {
 			for (const auto& [k, v]: init) put(k, v);
 		}
 
@@ -399,20 +400,21 @@ namespace base {
 		}
 
 		/**
-		 * If key is not in the container, inserts key->value into the container.
+		 * If the key is not in the container, inserts key->value into the container.
+		 * Otherwise, updates the value as specified by the given function object.
 		 * @param key Data key
 		 * @param value The data
-		 * @returns Optional reference to the inserted key-value pair. Reference is empty if key
-		 * already existed.
+		 * @param update_fun A function object which acts on the reference to the found value,
+		 * if it was already in the container.
+		 * @returns Reference to the inserted or updated key-value pair.
 		 */
 		template<typename K = KEY_T, typename D = DATA_T, typename UpdateFunT>
-		Ref<KeyValuePair> putOrUpdate(
-			K&& key, D&& value, UpdateFunT update_fun
-		) {
-			if (auto mapping_exists = atMaybe(std::forward<K>(key))) {
-				auto ref = mapping_exists.value();
-				update_fun(*ref);
-				return ref;
+		Ref<KeyValuePair> putOrUpdate(K&& key, D&& value, UpdateFunT update_fun) {
+			IteratorT kv_pair = find(key);
+			if (kv_pair != end()) {
+				auto& v = kv_pair->value;
+				update_fun(v);
+				return kv_pair.ref();
 			}
 			// Mapping doesn't exist.
 			return put(std::forward<K>(key), std::forward<D>(value));
@@ -552,22 +554,49 @@ namespace base {
 			return ConstIteratorT(buckets.size(), nullptr, buckets.data(), buckets.size());
 		}
 
-		IteratorT find(KEY_T key) RELEASE_NOEXCEPT {
-			IteratorT it = begin();
-			while (it != end()) {
-				if (it->key == key) break;
-				++it;
+		IteratorT find(const KEY_T& key) RELEASE_NOEXCEPT {
+			auto bucket_index = keyToBucket(key);
+			auto current_node = buckets.at(bucket_index);
+			while (current_node) {
+				if (current_node->key_value.key == key) break;
+				current_node = current_node->next;
 			}
-			return it;
+			if (not current_node) return end();
+			return IteratorT(bucket_index, current_node, buckets.data(), buckets.size());
 		}
 
 		ConstIteratorT find(KEY_T key) const RELEASE_NOEXCEPT {
-			ConstIteratorT it = begin();
-			while (it != end()) {
-				if (it->key == key) break;
-				++it;
+			auto bucket_index = keyToBucket(key);
+			auto current_node = buckets.at(bucket_index);
+			while (current_node) {
+				if (current_node->key_value.key == key) break;
+				current_node = current_node->next;
 			}
+			if (not current_node) return end();
+			return IteratorT(bucket_index, current_node, buckets.data(), buckets.size());
+		}
+
+		template<typename KVPredicate>
+		IteratorT findIf(KVPredicate pred) RELEASE_NOEXCEPT {
+			auto it = begin();
+			for (; it != end(); it++)
+				if (pred(*it)) break;
 			return it;
+		}
+
+		template<typename KVPredicate>
+		ConstIteratorT findIf(KVPredicate pred) const RELEASE_NOEXCEPT {
+			auto it = begin();
+			for (; it != end(); it++)
+				if (pred(*it)) break;
+			return it;
+		}
+
+		std::vector<DATA_T> values() const RELEASE_NOEXCEPT {
+			std::vector<DATA_T> result;
+			result.reserve(element_count);
+			for (auto [_, v]: *this) result.push_back(v);
+			return result;
 		}
 
 	private:

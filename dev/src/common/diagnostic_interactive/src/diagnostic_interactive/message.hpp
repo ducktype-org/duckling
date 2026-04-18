@@ -2,6 +2,7 @@
 
 #include <diagnostic_interactive/core/diagnostic_arguments_forward.hpp>
 
+#include <base/collections/stable_hashmap.hpp>
 #include <diagnostic/location.hpp>
 #include <diagnostic/source_position.hpp>
 #include <token_source/source.hpp>

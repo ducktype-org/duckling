@@ -105,13 +105,13 @@ private:
 			base::StableHashMap<query::internal::NodeID, std::vector<query::internal::NodeID>> parents;
 
 			for (const auto& node: graph.getAllNodes())
-				parents.emplace(node, std::vector<query::internal::NodeID>{});
+				parents.put(node, std::vector<query::internal::NodeID>{});
 
 			for (const auto& node: graph.getAllNodes()) {
 				for (const auto& child: graph.getDirectDependencies(node)) {
 					auto it = parents.find(child);
 					CORE_ASSERT(it != parents.end(), "Node not it the map, graph is inconsistent");
-					it->second.push_back(node);
+					it->value.push_back(node);
 				}
 			}
 

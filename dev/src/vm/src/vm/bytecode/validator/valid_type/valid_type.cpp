@@ -252,10 +252,10 @@ valid_type::finalized::Structure valid_type::ValidType::finalizeStructureData(
 						);
 						// Virtual methods
 						for (const auto& method: super_imd.available_methods)
-							imd.available_methods.put(method.first, method.second);
+							imd.available_methods.put(method.key, method.value);
 						// Vtable
 						for (const auto& impl: super_imd.vtable)
-							imd.vtable.put(impl.first, impl.second);
+							imd.vtable.put(impl.key, impl.value);
 					}
 
 
@@ -286,9 +286,9 @@ valid_type::finalized::Structure valid_type::ValidType::finalizeStructureData(
 			);
 			// Virtual methods
 			for (const auto& method: interface_imd.available_methods)
-				imd.available_methods.put(method.first, method.second);
+				imd.available_methods.put(method.key, method.value);
 			// Vtable
-			for (const auto& impl: interface_imd.vtable) imd.vtable.put(impl.first, impl.second);
+			for (const auto& impl: interface_imd.vtable) imd.vtable.put(impl.key, impl.value);
 		}
 
 		// 3. Add fields from this class and build inheritance metadata for this class.
@@ -297,11 +297,16 @@ valid_type::finalized::Structure valid_type::ValidType::finalizeStructureData(
 			fields.emplace_back(new_field.name, new_field.type);
 		// Virtual methods
 		for (const auto& new_virtual_method: new_virtual_methods)
-			imd.available_methods.insertOrAssign(
-				new_virtual_method.first, new_virtual_method.second
+			imd.available_methods.putOrUpdate(
+				new_virtual_method.key,
+				new_virtual_method.value,
+				[&](auto& value_ref) { value_ref = new_virtual_method.value; }
 			);
 		// Vtable
-		for (const auto& impl: implementations) imd.vtable.insertOrAssign(impl.first, impl.second);
+		for (const auto& impl: implementations)
+			imd.vtable.putOrUpdate(impl.key, impl.value, [&](auto& value_ref) {
+				value_ref = impl.value;
+			});
 
 		inheritance_metadata = std::move(imd);
 	}

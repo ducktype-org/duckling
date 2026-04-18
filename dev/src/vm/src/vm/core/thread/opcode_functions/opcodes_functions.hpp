@@ -87,6 +87,8 @@ namespace vm {
 			static std::unordered_map<OpFun*, low::MicroOpcode> map{
 #define HANDLE_MICRO_INSTR(instr) { op_##instr, low::instruction_tags::Op_##instr::OPCODE },
 #include <vm/core/thread/low_program/micro_instruction_definitions.hpp>
+
+
 #undef HANDLE_MICRO_INSTR
 			};
 			return map.at(fun);
@@ -206,11 +208,15 @@ namespace vm {
 			// local_offset mappings from the frame when we call a function. In the call, we just
 			// move the local_stack_head and new inits (which will happen after we return from a
 			// called function) will overwrite the old mappings.
-			frame->local_offset_to_block_idx.insert_or_assign(
-				frame->local_stack_head, frame->block_stack.size()
+			frame->local_offset_to_block_idx.putOrUpdate(
+				frame->local_stack_head,
+				frame->block_stack.size(),
+				[&](auto& v) { v = frame->block_stack.size(); }
 			);
-			frame->block_idx_to_local_offset.insert_or_assign(
-				frame->block_stack.size(), frame->local_stack_head
+			frame->block_idx_to_local_offset.putOrUpdate(
+				frame->block_stack.size(),
+				frame->local_stack_head,
+				[&](auto& v) { v = frame->local_stack_head; }
 			);
 			frame->block_stack.push_back(block);
 			frame->local_stack_head += type->getSize().asInt();

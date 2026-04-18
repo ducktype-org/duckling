@@ -16,7 +16,7 @@ namespace query::internal {
 		  num_workers(worker_manager.getAllWorkers().size()) {
 		// Initialize per-worker pools
 		for (auto worker: worker_manager.getAllWorkers())
-			worker_pools.emplace(worker, std::deque<Task>());
+			worker_pools.put(worker, std::deque<Task>());
 
 		for (auto worker: worker_manager.getAllWorkers()) is_worker_free_map.put(worker, true);
 
