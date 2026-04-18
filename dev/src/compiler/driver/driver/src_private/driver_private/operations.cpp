@@ -37,11 +37,11 @@ namespace compiler::driver {
 
 			for (const auto& hout_global: hout_unit.glob_data) {
 				// Discard information-less globals.
-				if (not hout_global.type.getType().carriesInformation(ctx)) continue;
+				if (not hout_global->type.getType().carriesInformation(ctx)) continue;
 
-				auto lir_global = lir::LIRGlobal::fromHOUT(ctx, hout_global);
+				auto lir_global = lir::LIRGlobal::fromHOUT(ctx, *hout_global);
 
-				variant_match(hout_global.value) {
+				variant_match(hout_global->value) {
 					variant_case(helios::HOUTGlobalVariable, var) {
 						CRef mir_function
 							= &ctx.query<mir::LowerGlobalDataToMIRCtor>({ hout_global })
@@ -68,7 +68,7 @@ namespace compiler::driver {
 					variant_default {
 						CORE_PANIC(base::strConcat(
 							"Unexpected global data type in module: ",
-							hout_global.original_name.strView()
+							hout_global->original_name.strView()
 						));
 					}
 				}

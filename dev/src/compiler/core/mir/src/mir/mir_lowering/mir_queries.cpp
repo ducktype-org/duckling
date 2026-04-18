@@ -30,7 +30,7 @@ namespace compiler::mir {
 	}
 
 	u64 KeyOf_LowerGlobalDataToMIRFunction::queryUnstablePerfectHash() const {
-		return global_data.helios_symbol.queryUnstablePerfectHash();
+		return global_data->helios_symbol.queryUnstablePerfectHash();
 	}
 
 	/**
@@ -206,11 +206,11 @@ namespace compiler::mir {
 
 	struct IMPLEMENT_QUERY(LowerGlobalDataToMIRCtor, LowerGlobalDataToMIRFunctionResult) {
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
-			if (std::holds_alternative<helios::HOUTGlobalConst>(key.global_data.value))
+			if (std::holds_alternative<helios::HOUTGlobalConst>(key.global_data->value))
 				CORE_PANIC("Creating ctors for constant variables are not implemented yet.");
 
 			auto global_init_expr
-				= std::get<helios::HOUTGlobalVariable>(key.global_data.value).initial_value.ref();
+				= std::get<helios::HOUTGlobalVariable>(key.global_data->value).initial_value.ref();
 
 			auto function_type = ctx.query<tsh::QueryFunctionType>({
 				{},
@@ -224,10 +224,10 @@ namespace compiler::mir {
 			// first step: lowering to pre-mir (cfg+quad)
 			// create function builder
 			FunctionBuilder function_builder{ ctx,
-				                              GlobalVariableCTOR{ key.global_data.helios_symbol },
+				                              GlobalVariableCTOR{ key.global_data->helios_symbol },
 				                              function_type };
 			function_builder.setName(base::StrID(
-				base::strConcat("constructor_of_", key.global_data.original_name.strView()).c_str()
+				base::strConcat("constructor_of_", key.global_data->original_name.strView()).c_str()
 			));
 
 			auto last_block = function_builder.newBlock();
@@ -246,7 +246,7 @@ namespace compiler::mir {
 
 			assign_instr.fill(Instruction{
 				Operation::Assign,
-				{ MIRGlobal({ key.global_data.helios_symbol, key.global_data.type }) },
+				{ MIRGlobal({ key.global_data->helios_symbol, key.global_data->type }) },
 				{ lowerexpr_res.getResult(function_builder) },
 				{},
 				function_builder.getTopLevelScope(),
