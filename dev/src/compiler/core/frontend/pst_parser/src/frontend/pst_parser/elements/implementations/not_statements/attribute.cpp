@@ -13,7 +13,9 @@ namespace pst {
 
 		// @TODO: Make a more general solution to dotted names that can't have stars
 		if (out->name.internal() && out->name.internal()->getStar())
-			state.logSafeError(makeBox<AttrStarError>(out->name.internal()->getSourcePosition()));
+			state.logSafeError(
+				makeBox<AttrStarError>(out->name.internal()->getSourcePosition().illegalAccess())
+			);
 		if (state[0].isBracketGroup(Token::BracketType::Round)) PARSE().one(&out->args);
 
 		PST_RETURN out;

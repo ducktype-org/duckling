@@ -33,7 +33,7 @@ namespace compiler::helios {
 				case HOUTGlobalDataType::Variable: {
 					auto var_decl = stmt(ctx, symbol)->dynamicCast<pst::Variable>().value();
 
-					auto initial_value = [&]() -> BoxOrCRef<code::Expr> {
+					auto get_initial_value = [&]() -> BoxOrCRef<code::Expr> {
 						if (auto maybe_initial_pst = var_decl->getValue()) {
 							auto initial_value_pst
 								= maybe_initial_pst.value().unlock(ctx)->getExpr();
@@ -42,10 +42,11 @@ namespace compiler::helios {
 						}
 
 						return defgen::getDefaultInitializerExpr(
-								   ctx, symbol_type, origin.getSourcePosition().value()
+								   ctx, symbol_type, origin.getSourcePosition(ctx).value()
 						)
 						    .valueOrThrow();
-					}();
+					};
+					auto initial_value = get_initial_value();
 
 					return HOUTGlobalVariable{ std::move(initial_value) };
 				}

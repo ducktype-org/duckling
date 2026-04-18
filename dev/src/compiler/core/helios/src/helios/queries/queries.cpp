@@ -248,7 +248,7 @@ namespace compiler::helios {
 						"Methods of zero-sized classes are not yet implemented due to ZST not "
 						"being properly supported yet.",
 						symbolPst(method.getSymbol()).map([&](auto pst) {
-							return pst.unlock(ctx)->getSourcePosition();
+							return pst.unlock(ctx)->getSourcePosition().unlock(ctx);
 						})
 					));
 					return true;  // failed
