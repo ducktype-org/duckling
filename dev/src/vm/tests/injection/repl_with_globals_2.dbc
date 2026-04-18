@@ -1,14 +1,14 @@
 function globaler_reader {} -> void {
-	init_lany_type  x, i64;
-	mov_l64_g64     x, counter;
-	output_l64      x;
+	init_pany_type  x, i64;
+	mov_p64_p64     x, counter;
+	output_p64      x;
 
-	init_lany_type ptr, ptr_i64;
-	mov_lptr_gptr ptr, global_ptr;
-	load_lany_lptr x, ptr;
-	output_l64      x;
+	init_pany_type ptr, ptr_i64;
+	mov_pptr_pptr ptr, global_ptr;
+	load_pany_pptr x, ptr;
+	output_p64      x;
 
-	free_lptr ptr;
+	free_pptr ptr;
 
 	deinit; # ptr
 	deinit; # x

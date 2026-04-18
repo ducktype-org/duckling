@@ -27,9 +27,9 @@ type pointer:          dog_table_ptr dog_table
 
 # Implementation for Dog.
 function dog_year_to_human_years {pointer_Dog} -> void {
-    init_lany_type         call_res,      i64;
-    init_lany_type         call_arg0,     i64;
-    mov_l64_imm            call_arg0,       0;
+    init_pany_type         call_res,      i64;
+    init_pany_type         call_arg0,     i64;
+    mov_p64_imm            call_arg0,       0;
     call_builtinfunc      builtin_output_i64;
     deinit;
     ret;
@@ -37,19 +37,19 @@ function dog_year_to_human_years {pointer_Dog} -> void {
 
 function main { i64, ptr_argv } -> i64 {
     # Dog array[2];
-    init_lany_type                  array, dog_table_ptr;
-    alloc_lptr_type                 array, dog_table;
+    init_pany_type                  array, dog_table_ptr;
+    alloc_pptr_type                 array, dog_table;
 
     # Dog* dog_ptr = &array[0]
-    init_lany_type                  index, i64;
-    mov_l64_imm                     index, 0;
+    init_pany_type                  index, i64;
+    mov_p64_imm                     index, 0;
 
-    init_lany_type                  dog_ptr, pointer_Dog;
-    fixedSizeTableLea_lptr_lptr_l64     dog_ptr, array, index;
+    init_pany_type                  dog_ptr, pointer_Dog;
+    fixedSizeTableLea_pptr_pptr_p64     dog_ptr, array, index;
 
     # dog_ptr->toHumanYears
-    # unset vtable: setVTable_lptr_type dog_ptr, Dog;
-    virtual_call_lptr_method dog_ptr, toHumanYears;
+    # unset vtable: setVTable_pptr_type dog_ptr, Dog;
+    virtual_call_pptr_method dog_ptr, toHumanYears;
 
     ret;
 }

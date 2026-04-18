@@ -34,9 +34,9 @@ type class: Chiuaua {
 
 # Implementation for Dog.
 function dog_year_to_human_years {pointer_Dog} -> void {
-    init_lany_type         call_res,      i64;
-    init_lany_type         call_arg,      i64;
-    mov_l64_imm            call_arg,        0;
+    init_pany_type         call_res,      i64;
+    init_pany_type         call_arg,      i64;
+    mov_p64_imm            call_arg,        0;
     call_builtinfunc      builtin_output_i64;
     deinit;
     ret;
@@ -44,30 +44,30 @@ function dog_year_to_human_years {pointer_Dog} -> void {
 
 # Implementation for Chiuaua.
 function chiuaua_year_to_human_years {pointer_Chiuaua} -> void {
-    init_lany_type         call_res,      i64;
-    init_lany_type         call_arg,      i64;
-    mov_l64_imm            call_arg,        1;
+    init_pany_type         call_res,      i64;
+    init_pany_type         call_arg,      i64;
+    mov_p64_imm            call_arg,        1;
     call_builtinfunc      builtin_output_i64;
     deinit;
     ret;
 }
 
 function main { i64, ptr_argv } -> i64 {
-    init_lany_type  chiuaua_ptr, pointer_Chiuaua;
-    alloc_lptr_type chiuaua_ptr, Chiuaua;
-    setVTable_lptr_type  chiuaua_ptr, Chiuaua;
+    init_pany_type  chiuaua_ptr, pointer_Chiuaua;
+    alloc_pptr_type chiuaua_ptr, Chiuaua;
+    setVTable_pptr_type  chiuaua_ptr, Chiuaua;
 
-    init_lany_type temp1, pointer_Chiuaua;
-    mov_lptr_lptr temp1, chiuaua_ptr;
-    virtual_call_lptr_method  temp1, toHumanYears;
+    init_pany_type temp1, pointer_Chiuaua;
+    mov_pptr_pptr temp1, chiuaua_ptr;
+    virtual_call_pptr_method  temp1, toHumanYears;
 
-    init_lany_type  dog_ptr, pointer_Dog;
-	upcast_lptr_lptr dog_ptr, chiuaua_ptr;
+    init_pany_type  dog_ptr, pointer_Dog;
+	upcast_pptr_pptr dog_ptr, chiuaua_ptr;
 
-    setVTable_lptr_type  dog_ptr, Dog;
-    virtual_call_lptr_method  dog_ptr, toHumanYears;
+    setVTable_pptr_type  dog_ptr, Dog;
+    virtual_call_pptr_method  dog_ptr, toHumanYears;
 
-    free_lptr chiuaua_ptr;
+    free_pptr chiuaua_ptr;
 
     ret;
 }

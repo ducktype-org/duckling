@@ -1,16 +1,16 @@
 function main { i64, ptr_argv } -> i64 {
-    init_lany_type vec_ptr, opaque_ptr;
-    init_lany_type vec_ptr2, opaque_ptr;
+    init_pany_type vec_ptr, opaque_ptr;
+    init_pany_type vec_ptr2, opaque_ptr;
     call_cfunc vecSpawn;
 
-    init_lany_type val, i64;
-    input_l64 val;
+    init_pany_type val, i64;
+    input_p64 val;
     call_cfunc vecPushBack;
 
-    init_lany_type vec_size, i64;
-    init_lany_type vec_ptr3, opaque_ptr;
-    mov_lopq_lopq vec_ptr3, vec_ptr;
+    init_pany_type vec_size, i64;
+    init_pany_type vec_ptr3, opaque_ptr;
+    mov_popq_popq vec_ptr3, vec_ptr;
     call_cfunc vecSize;
-    output_l64 vec_size;
+    output_p64 vec_size;
     ret;
 }

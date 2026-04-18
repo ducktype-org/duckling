@@ -3,7 +3,7 @@
 # output = n
 
 function check {} -> i32 {
-	input_l32       ret_val;
+	input_p32       ret_val;
 	ret;
 }
 
@@ -12,9 +12,9 @@ function main { i64, ptr_argv } -> i64 {
 	# arg0 -> argc
 	# arg1 -> *argv
 
-	init_lany_type 			check_ret_val, i32;
+	init_pany_type 			check_ret_val, i32;
 	call_func          	check;
-	output_l32 			check_ret_val;
+	output_p32 			check_ret_val;
 
 	deinit;
 	deinit; # *argv

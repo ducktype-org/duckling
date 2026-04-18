@@ -38,8 +38,8 @@ private:
 	}
 
 	void testReturnL32() {
-		runTestOnVm("return_l32.dbc", "18", "18", {});
-		runTestOnVm("return_l32.dbc", "1234", "1234", {});
+		runTestOnVm("return_p32.dbc", "18", "18", {});
+		runTestOnVm("return_p32.dbc", "1234", "1234", {});
 	}
 
 	void testDifferentSizedParams() {
