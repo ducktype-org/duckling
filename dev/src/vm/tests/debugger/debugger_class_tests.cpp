@@ -17,6 +17,7 @@ public:
 		TESTER_ADD_TEST(getStatusWait);
 		TESTER_ADD_TEST(getStatusBreakpoint);
 		TESTER_ADD_TEST(rerunTest);
+		TESTER_ADD_TEST(errorTest);
 	}
 
 private:
@@ -142,6 +143,30 @@ private:
 			ASSERT_EQUAL_PRINT(expected_statuses.size(), status_counter);
 		}
 		ASSERT_EQUAL_PRINT(ret_val_limit, ret_val_counter);
+	}
+
+	void errorTest() {
+		size_t                  error_counter   = 0;
+		size_t                  expected_errors = 1;
+		std::mutex              m;
+		std::condition_variable cv;
+		vm::debugger::Debugger  debugger{ fs::File(path("while_true_no_breakpoint.dbc")) };
+
+		events::Listener<std::string> error_listener([&](const std::string&) {
+			error_counter++;
+			cv.notify_one();
+		});
+
+		debugger.attachOnErrorListener(error_listener);
+
+		debugger.runMain();
+		debugger.runMain();
+
+		std::unique_lock lk(m);
+		cv.wait_for(lk, std::chrono::milliseconds(100), [&] {
+			return error_counter == expected_errors;
+		});
+		ASSERT_EQUAL_PRINT(expected_errors, error_counter);
 	}
 };
 
