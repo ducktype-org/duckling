@@ -11,6 +11,7 @@
 #include <deque>
 #include <functional>
 #include <optional>
+#include <stdexcept>
 #include <tuple>
 #include <vector>
 
@@ -29,14 +30,17 @@ namespace vm::persistent::detail {
 		friend MemoryStateView;
 		friend MemoryIterator;
 
-		struct NodeEntry {
+		constexpr static usize ROOT_MASK = (usize(-1) >> 1);
+		constexpr static usize LEAF_MASK = ~ROOT_MASK;
+
+		struct ChildEntry {
 			MemoryStateID left;
 			MemoryStateID right;
 
-			bool operator==(const NodeEntry&) const = default;
+			bool operator==(const ChildEntry&) const = default;
 		};
 
-		using NodeEntryH = decltype([](const NodeEntry& h) -> usize {
+		using ChildEntryH = decltype([](const ChildEntry& h) -> usize {
 			return (std::hash<MemoryStateID>{}(h.left) << 1) ^ std::hash<MemoryStateID>{}(h.right);
 		});
 
@@ -53,87 +57,127 @@ namespace vm::persistent::detail {
 
 		struct RootEntry {
 			usize size;
-			usize height;
-			usize offset;
+			usize position;
 		};
 
 		enum class Dir { Left, Right };
 
+		static constexpr Dir othDir(Dir dir) { return dir == Dir::Left ? Dir::Right : Dir::Left; }
+
 		struct Path {
 			usize                      idx;
 			std::vector<MemoryStateID> trace;
+			base::CRef<Memory>         mem;
+
+			[[nodiscard]]
+			MemoryStateID at(usize height) const;
+
+			bool move(Dir move_dir, usize skip = 0);
 		};
 
-		detail::BijectiveMap<NodeEntry, MemoryStateID, NodeEntryH> child_entries{};
-		detail::BijectiveMap<LeafEntry, MemoryStateID, LeafEntryH> leaf_entries{};
+		using _ConflictPolicy = std::function<base::Optional<usize>(usize, usize, usize)>;
+
+		struct ReconstructPolicy {
+			std::function<MemoryStateID(MemoryStateID)> only_left
+				= [](MemoryStateID id) -> MemoryStateID { return id; };
+
+			std::function<MemoryStateID(MemoryStateID)> only_right
+				= [](MemoryStateID id) -> MemoryStateID { return id; };
+
+			std::function<MemoryStateID(MemoryStateID)> the_same
+				= [](MemoryStateID id) -> MemoryStateID { return id; };
+
+			_ConflictPolicy confilicts = [](usize, usize, usize) -> base::Optional<usize> {
+				throw std::invalid_argument("conflicts present");
+			};
+		};
+
+		detail::BijectiveMap<ChildEntry, MemoryStateID, ChildEntryH> child_entries{};
+		detail::BijectiveMap<LeafEntry, MemoryStateID, LeafEntryH>   leaf_entries{};
 
 		base::HashMap<MemoryStateID, RootEntry> root_info{};
 		MemoryStateID                           next_node_id = MemoryStateID{ 1 };
 
 		std::pair<usize, usize> getHeightOffset(MemoryStateID state) const;
 		usize                   getSize(MemoryStateID state) const;
+		usize                   getPos(MemoryStateID state) const;
 
-		void validateState(MemoryStateID state) const;
-		void validateIdx(MemoryStateID state, usize idx) const;
+		void validateRoot(MemoryStateID root) const;
+		void validateIdx(MemoryStateID root, usize idx) const;
 
 		MemoryStateID nodeFromChildren(MemoryStateID left, MemoryStateID right);
 		MemoryStateID nodeFromIdxVar(usize idx, usize var_id);
 
 		[[nodiscard]]
-		MemoryStateID getChild(MemoryStateID state, Dir dir) const;
+		MemoryStateID getChild(Dir dir, MemoryStateID root) const;
+		[[nodiscard]]
+		MemoryStateID getLeaf(MemoryStateID root, usize idx) const;
 
 		[[nodiscard]]
-		Path getPathTo(MemoryStateID state, usize idx) const;
+		Path getPathTo(MemoryStateID root, usize idx) const;
 		[[nodiscard]]
-		Path getLeftMostPath(MemoryStateID state) const;
-		[[nodiscard]]
-		Path getRightMostPath(MemoryStateID state) const;
-		[[nodiscard]]
-		MemoryStateID nodeAtHeight(const Path& path, usize height) const;
+		Path getEndPath(Dir end_dir, MemoryStateID root) const;
 
-		bool pathForward(Path& path, usize skip = 0) const;
-		bool pathBackward(Path& path, usize skip = 0) const;
-
-		[[nodiscard]]
-		MemoryStateID getLeaf(MemoryStateID state, usize idx) const;
-
-		MemoryStateID combineStates(std::deque<std::pair<usize, MemoryStateID>> states);
-		MemoryStateID ensureHeightAtLeast(MemoryStateID state, usize height);
+		MemoryStateID buildCommonRoot(std::deque<std::pair<usize, MemoryStateID>> states);
+		MemoryStateID elevateRoot(MemoryStateID root, usize height);
 		std::pair<MemoryStateID, usize> getLCA(const Path& path_1, const Path& path_2);
-		[[nodiscard]]
-		std::vector<MemoryStateID> getSubNodesAtHeight(
-			MemoryStateID state, usize desired_height
+
+		MemoryStateID combineStates(
+			MemoryStateID root_1, MemoryStateID root_2, ReconstructPolicy policy
+		);
+
+		[[nodiscard]] std::deque<MemoryStateID> getSubNodesAtHeight(
+			MemoryStateID root, usize desired_height
 		) const;
 
 	public:
-		using diffResT
-			= std::vector<std::tuple<usize, base::Optional<usize>, base::Optional<usize>>>;
+		using ConflictPolicy = _ConflictPolicy;
 
-		MemoryStateID setMultiple(MemoryStateID state, std::deque<std::pair<usize, usize>> vals);
-		MemoryStateID eraseMultiple(MemoryStateID state, std::deque<usize> idxs);
+		MemoryStateID setMultiple(MemoryStateID root, std::deque<std::pair<usize, usize>> vals);
+		MemoryStateID eraseMultiple(MemoryStateID root, std::deque<usize> idxs);
 
 		void pruneHistory(std::vector<MemoryStateID> desired);
 
-		[[nodiscard]]
-		std::vector<std::pair<usize, usize>> toVec(MemoryStateID state) const;
-		[[nodiscard]]
-		diffResT getDiff(MemoryStateID stateL, MemoryStateID stateR) const;
+		using diffResT
+			= std::vector<std::tuple<usize, base::Optional<usize>, base::Optional<usize>>>;
 
-		MemoryStateID slice(MemoryStateID state, usize left_bound, usize right_bound);
+		struct MergePolicy {
+			std::function<MemoryStateID(MemoryStateID)> only_left
+				= [](MemoryStateID id) -> MemoryStateID { return id; };
+
+			std::function<MemoryStateID(MemoryStateID)> only_right
+				= [](MemoryStateID id) -> MemoryStateID { return id; };
+
+			std::function<MemoryStateID(MemoryStateID)> the_same
+				= [](MemoryStateID id) -> MemoryStateID { return id; };
+
+			ConflictPolicy confilicts = [](usize, usize, usize) -> base::Optional<usize> {
+				throw std::invalid_argument("conflicts present");
+			};
+		};
+
+		[[nodiscard]]
+		std::vector<std::pair<usize, usize>> toVec(MemoryStateID root) const;
+
+		[[nodiscard]]
+		diffResT      getDiff(MemoryStateID root_1, MemoryStateID root_2) const;
+		MemoryStateID merge(MemoryStateID root_1, MemoryStateID root_2, ConflictPolicy policy);
+
+		MemoryStateID slice(MemoryStateID root, usize left_idx, usize right_idx);
 		/**
 		 * @brief deallocate lements from [left, right) interval
 		 */
-		MemoryStateID eraseRange(MemoryStateID state, usize left, usize right);
+		MemoryStateID eraseRange(MemoryStateID root, usize left_idx, usize right_idx);
 
-		MemoryStateID erase(MemoryStateID state, usize idx);
-		MemoryStateID set(MemoryStateID state, usize idx, usize val);
+		MemoryStateID erase(MemoryStateID root, usize idx);
+		MemoryStateID set(MemoryStateID root, usize idx, usize val);
 
 		[[nodiscard]]
-		usize size(MemoryStateID state) const;
+		usize size(MemoryStateID root) const;
 		[[nodiscard]]
-		bool active(MemoryStateID state, usize idx) const;
+		bool active(MemoryStateID root, usize idx) const;
 		[[nodiscard]]
-		base::Optional<usize> access(MemoryStateID state, usize idx) const;
+		base::Optional<usize> access(MemoryStateID root, usize idx) const;
 
 		[[nodiscard]]
 		MemoryStateID getEmpty() const;
@@ -152,6 +196,7 @@ namespace vm::persistent::detail {
 		MemoryIterator  operator--(int);
 
 		MemoryIterator();
+		MemoryIterator(const Memory& mem, MemoryStateID state, usize idx);
 	};
 
 	class MemoryStateView {

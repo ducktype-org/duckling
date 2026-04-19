@@ -17,6 +17,7 @@ class PersistentStlTester: public tester::TestSuite {
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(testBijective);
+		TESTER_ADD_TEST(testMemory);
 		TESTER_ADD_TEST(testVector);
 		TESTER_ADD_TEST(testArray);
 		TESTER_ADD_TEST(testHashMap);
@@ -58,7 +59,7 @@ public:
 		ASSERT_TRUE(inserted);
 	}
 
-	void testMemoy() {
+	void testMemory() {
 		using namespace vm::persistent::detail;
 		Memory mem{};
 
@@ -200,26 +201,7 @@ public:
 		ASSERT_EQUAL(op02, op12);
 	}
 
-	void testHashMap() {
-		using namespace vm::persistent;
-
-		using act_t = std::map<std::string, char>;
-
-		HashMap<std::string, char> map{ 5 };
-
-		auto checker = [&](HashMapStateID state, act_t expected) -> void {
-			static constexpr usize SIZE = (1 << 5);
-
-
-			for (auto [k, _]: expected) ASSERT_TRUE(map.contains(state, k));
-
-			for (usize idx = 1; idx <= SIZE; idx++)
-				if (expected.contains(idx))
-					ASSERT_EQUAL(expected[idx], array.access(state, idx));
-				else
-					ASSERT_TRUE(!array.active(state, idx));
-		};
-	}
+	void testHashMap() {}
 };
 
 TESTER_COMMON_MAIN("/src/vm/tests/utils/");
