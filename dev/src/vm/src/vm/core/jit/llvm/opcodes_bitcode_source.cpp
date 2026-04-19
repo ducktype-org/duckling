@@ -99,16 +99,14 @@ namespace {
 	}
 
 	constexpr auto constructNonExecOpcodeArray() {
-		auto non_executable_opcodes
-			= vm::low::OPCODE_NAMES
-		    | std::views::filter([](auto name) { return name.starts_with("ext_"); })
-		    | std::views::enumerate | std::views::transform([](auto pair) {
-				  return static_cast<vm::low::MicroOpcode>(std::get<0>(pair));
-			  });
-		std::array<vm::low::MicroOpcode, vm::low::nonExecutableMicroInstrCount()> output{};
-		std::ranges::copy(non_executable_opcodes, output.begin());
-
-		return output;
+		std::array<vm::low::MicroOpcode, vm::low::nonExecutableMicroInstrCount()> non_exec_opcodes;
+		size_t j = 0;
+		for (size_t i = 0; i < vm::low::OPCODE_NAMES.size(); ++i) {
+			if (vm::low::OPCODE_NAMES[i].starts_with("ext_")) {
+				non_exec_opcodes[j++] = static_cast<vm::low::MicroOpcode>(i);
+			}
+		}
+		return non_exec_opcodes;
 	}
 
 	/**
