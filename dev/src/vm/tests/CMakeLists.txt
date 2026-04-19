@@ -40,6 +40,9 @@ function(duck_add_vm_tests suffix)
                 USES ${libvm} Tester ${vmtester})
         duck_disable_tc_when_not_opt(correctness_test ${test_set})
 
+        duck_add_test_custom(vm ${test_set}_debug_adapter_test debugger/debug_adapter_tests.cpp
+                USES ${libvm} Tester ${vmtester})
+
         duck_add_test_custom(vm ${test_set}_debugger_test debugger/debugger_tests.cpp
                 USES ${libvm} Tester ${vmtester})
 
