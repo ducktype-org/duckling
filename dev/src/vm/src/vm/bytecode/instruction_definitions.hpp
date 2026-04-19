@@ -400,7 +400,7 @@ DEF_INSTR(resetVTable_pptr, (vm::opargs::PlacePtr, object_ptr))
 // casts pointed object to its superclass
 DEF_INSTR(upcast_pptr_pptr, (vm::opargs::PlacePtr, dst), (vm::opargs::PlacePtr, src))
 // tries to cast pointed object to its subclass
-DEF_INSTR(downcast_pptr_pptr, (vm::opargs::PlacePtr, dst), (vm::opargs::PlacePtr, src), )
+DEF_INSTR(downcast_pptr_pptr, (vm::opargs::PlacePtr, dst), (vm::opargs::PlacePtr, src))
 // calls a method of specified name on an a pointer. Performs the dynamic dispatch.
 DEF_INSTR(
 	virtual_call_pptr_method, (vm::opargs::PlacePtr, object_ptr), (vm::opargs::MethodName, method)
