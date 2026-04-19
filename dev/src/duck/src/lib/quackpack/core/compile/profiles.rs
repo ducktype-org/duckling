@@ -51,12 +51,12 @@ pub static PREDEFINED_PROFILES: LazyLock<HashMap<StrId, Profile>> = LazyLock::ne
             },
         ),
         (
-            "script".into(),
+            DEFAULT_SCRIPT_PROFILE_NAME.into(),
             Profile {
-                name: "script".into(),
+                name: DEFAULT_SCRIPT_PROFILE_NAME.into(),
                 opt_level: OptLevel::Three,
                 dvm_bytecode: true,
-                incremental: false, // The build artifacts are cleared, so incremental does not make sense.
+                incremental: true, // This does not effect how the script is compiled, but still affects the dependencies.
                 c_std: true,
             },
         ),
