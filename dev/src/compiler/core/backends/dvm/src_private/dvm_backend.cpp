@@ -12,11 +12,7 @@ namespace compiler::backend_vm {
 		  build_debug_info(build_debug_info) {}
 
 	vm::code::CodeCollection DVMCodeBuilder::build() const {
-		match_optional(program_context->validateAndProduceProgram()) {
-			opt_some(program) return program;
-			opt_err(error) CORE_PANIC("Failed to validate DVM module: ", error);
-		}
-		CORE_UNREACHABLE();
+		return program_context->produceCodeCollection();
 	}
 
 	base::Optional<debug_info::DebugInfo> DVMCodeBuilder::buildDebugInfo() {

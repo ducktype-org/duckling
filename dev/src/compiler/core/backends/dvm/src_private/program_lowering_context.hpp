@@ -113,10 +113,16 @@ namespace compiler::backend_vm::internal {
 		void insertRawBytecodeDefinitions(const vm::code::CodeCollection& bytecode);
 
 		/**
-		 * @brief Produces the final bytecode program.
+		 * @brief Produces the per-module bytecode collection.
+		 *
+		 * Assembles all lowered functions, globals, types, and extern C functions into a
+		 * CodeCollection. No cross-module validation is performed here because a module may
+		 * reference symbols defined in other modules; full validation is deferred to the DVM
+		 * link step in compileEntirePackage after all modules are merged.
+		 *
 		 * @note It does not consume internal state and can be called multiple times.
 		 */
-		std::expected<vm::code::CodeCollection, std::string> validateAndProduceProgram();
+		vm::code::CodeCollection produceCodeCollection();
 
 		/**
 		 * @brief Builds the debug info for the module

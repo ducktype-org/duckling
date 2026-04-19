@@ -42,6 +42,7 @@
 
 #include <vm/api/vm.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
+#include <vm/bytecode/validator/errors.hpp>
 #include <vm/bytecode/validator/valid_program.hpp>
 #include <vm/loader/loader.hpp>
 
@@ -691,6 +692,90 @@ namespace compiler::driver {
 			});
 	}
 
+	/**
+	 * @brief Links all per-module DVM .dbc files into a single merged package .dbc,
+	 * validates the merged collection, and optionally merges per-module debug info files.
+	 *
+	 * This is the DVM analogue of linking .o object files for LLVM.
+	 */
+	base::OkBad linkDVMPackage(
+		const std::vector<artifacts::FileArtifact>& objects,
+		const std::vector<artifacts::FileArtifact>& debug_info_artifacts,
+		const std::string&                          backend_str
+	) {
+		vm::loader::Loader       dvm_linker;
+		vm::code::CodeCollection merged_code;
+
+		for (const auto& obj : objects) {
+			auto parse_result = dvm_linker.parseCodeCollectionFromFiles({ obj.file });
+			if (!parse_result.has_value()) {
+				CORE_USER_LOG("DVM linking failed: could not parse module bytecode file\n");
+				return base::BAD;
+			}
+			merged_code.mergeFrom(std::move(*parse_result));
+		}
+
+		// Validate the fully merged collection — this catches cross-module reference errors
+		// (unknown functions, globals, etc.) that were intentionally deferred from per-module
+		// compilation.
+		try {
+			auto valid = vm::code::ValidProgram::withBuiltins();
+			valid      = valid.tryInsertCode(merged_code);
+			merged_code = valid.produceValidCodeCollection();
+		} catch (vm::code::ValidationError& e) {
+			CORE_USER_LOG("DVM linking failed: ", e.what(), "\n");
+			return base::BAD;
+		}
+
+		auto output_file = global_state::getRootCollection()->fileArtifactAtOrNew(
+			base::StrID(base::strConcat("package_", backend_str, ".dbc").c_str())
+		);
+		std::ofstream out(output_file.file.getFilePath().getPath(), std::ios::binary);
+		if (!out.is_open()) CORE_PANIC("Failed to open DVM package output file for writing");
+		vm::code::serializeCode(merged_code, out);
+
+		// Merge per-module debug info files into a single package debug info file.
+		if (!debug_info_artifacts.empty()) {
+			base::Optional<debug_info::DebugInfo> merged_debug_info;
+
+			for (const auto& di_art : debug_info_artifacts) {
+				std::ifstream in(di_art.file.getFilePath().getPath(), std::ios::binary);
+				if (!in.is_open()) {
+					CORE_USER_LOG("DVM: failed to open debug info artifact for merging\n");
+					return base::BAD;
+				}
+				auto di_or_error = debug_info::loadFromStream(in);
+				if (!di_or_error.has_value()) {
+					CORE_USER_LOG(
+						"DVM: failed to parse debug info file: ", di_or_error.error(), "\n"
+					);
+					return base::BAD;
+				}
+				if (!merged_debug_info.has_value()) {
+					merged_debug_info.emplace(std::move(di_or_error.value()));
+				} else {
+					merged_debug_info->mergeFrom(std::move(di_or_error.value()));
+				}
+			}
+
+			if (merged_debug_info.has_value()) {
+				merged_debug_info->module_path = output_file.file.getFilePath().string();
+
+				auto di_output = global_state::getRootCollection()->fileArtifactAtOrNew(
+					base::StrID(
+						base::strConcat("package_", backend_str, ".di.json").c_str()
+					)
+				);
+				std::ofstream di_out(di_output.file.getFilePath().getPath(), std::ios::binary);
+				if (!di_out.is_open())
+					CORE_PANIC("Failed to open DVM package debug info output file for writing");
+				debug_info::saveToStream(*merged_debug_info, di_out);
+			}
+		}
+
+		return base::OK;
+	}
+
 	base::OkBad compileEntirePackage(
 		const global_state::PackageInfo& package_info,
 		BackendType                      backend,
@@ -780,72 +865,8 @@ namespace compiler::driver {
 		}
 
 		if (backend == BackendType::DVM) {
-			// Link all per-module .dbc files into a single merged CodeCollection (analogous to
-			// linking .o object files for LLVM). This resolves cross-module function and global
-			// references that were intentionally left unvalidated during per-module compilation.
-			vm::loader::Loader dvm_linker;
-			vm::code::CodeCollection merged_code;
-
-			for (const auto& obj : objects) {
-				auto parse_result = dvm_linker.parseCodeCollectionFromFiles({ obj.file });
-				if (!parse_result.has_value()) {
-					CORE_USER_LOG("DVM linking failed: could not parse module bytecode file\n");
-					return base::BAD;
-				}
-				merged_code.mergeFrom(std::move(*parse_result));
-			}
-
-			auto output_file = global_state::getRootCollection()->fileArtifactAtOrNew(
-				base::StrID(
-					base::strConcat("package_", backendTypeToStr(backend), ".dbc").c_str()
-				)
-			);
-			std::ofstream out(output_file.file.getFilePath().getPath(), std::ios::binary);
-			if (!out.is_open())
-				CORE_PANIC("Failed to open DVM package output file for writing");
-			vm::code::serializeCode(merged_code, out);
-
-			// Merge per-module debug info files into a single package debug info file.
-			if (!debug_info_artifacts.empty()) {
-				base::Optional<debug_info::DebugInfo> merged_debug_info;
-
-				for (const auto& di_art : debug_info_artifacts) {
-					std::ifstream in(di_art.file.getFilePath().getPath(), std::ios::binary);
-					if (!in.is_open()) {
-						CORE_USER_LOG("DVM: failed to open debug info artifact for merging\n");
-						return base::BAD;
-					}
-					auto di_or_error = debug_info::loadFromStream(in);
-					if (!di_or_error.has_value()) {
-						CORE_USER_LOG(
-							"DVM: failed to parse debug info file: ", di_or_error.error(), "\n"
-						);
-						return base::BAD;
-					}
-					if (!merged_debug_info.has_value()) {
-						merged_debug_info.emplace(std::move(di_or_error.value()));
-					} else {
-						merged_debug_info->mergeFrom(std::move(di_or_error.value()));
-					}
-				}
-
-				if (merged_debug_info.has_value()) {
-					merged_debug_info->module_path = output_file.file.getFilePath().string();
-
-					auto di_output = global_state::getRootCollection()->fileArtifactAtOrNew(
-						base::StrID(
-							base::strConcat("package_", backendTypeToStr(backend), ".di.json")
-								.c_str()
-						)
-					);
-					std::ofstream di_out(
-						di_output.file.getFilePath().getPath(), std::ios::binary
-					);
-					if (!di_out.is_open())
-						CORE_PANIC("Failed to open DVM package debug info output file for writing");
-					debug_info::saveToStream(*merged_debug_info, di_out);
-				}
-			}
+			if (linkDVMPackage(objects, debug_info_artifacts, backendTypeToStr(backend)).isBad())
+				return base::BAD;
 		}
 
 		return result;

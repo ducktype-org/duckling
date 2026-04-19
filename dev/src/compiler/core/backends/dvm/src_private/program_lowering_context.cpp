@@ -265,7 +265,7 @@ vm::code::TypeOfData ProgramLoweringContext::lowerTslTypeInternal(CRef<tsl::Type
 	CORE_UNREACHABLE();
 }
 
-std::expected<vm::code::CodeCollection, std::string> ProgramLoweringContext::validateAndProduceProgram(
+vm::code::CodeCollection ProgramLoweringContext::produceCodeCollection(
 ) {
 	auto collection      = vm::code::CodeCollection();
 	collection.functions = std::ranges::to<std::vector>(lir_function_to_dvm | std::views::values);
@@ -311,11 +311,10 @@ std::expected<vm::code::CodeCollection, std::string> ProgramLoweringContext::val
 	collection.external_c_functions
 		= std::ranges::to<std::vector>(extern_c_functions | std::views::values);
 
-	// Per-module DVM validation via ValidProgram is skipped because a module may reference
-	// functions and globals defined in other modules, which are not known at per-module compile
-	// time. Cross-module references are resolved at link time in compileEntirePackage (DVM backend),
-	// where all .dbc files are merged into a single CodeCollection.
-	// The VM validates the fully merged collection when it loads the final package .dbc file.
+	// Per-module validation is intentionally skipped: a module may reference functions and
+	// globals defined in other modules, which are unknown at per-module compile time.
+	// Cross-module references are resolved and validated at link time in compileEntirePackage
+	// (DVM backend), after all .dbc module files are merged into a single CodeCollection.
 	return collection;
 }
 

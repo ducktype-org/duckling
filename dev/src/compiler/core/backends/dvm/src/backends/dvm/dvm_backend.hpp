@@ -44,7 +44,8 @@ namespace compiler::backend_vm {
 		void insertRawBytecodeDefinitions(const vm::code::CodeCollection& bytecode);
 
 		/**
-		 * @brief Validates and builds module's representation as DVM program.
+		 * @brief Produces the per-module bytecode collection without cross-module validation.
+		 * Full validation is performed at link time after all modules are merged.
 		 */
 		[[nodiscard]] vm::code::CodeCollection build() const;
 
