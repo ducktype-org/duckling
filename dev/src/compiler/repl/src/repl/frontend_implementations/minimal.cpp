@@ -184,7 +184,7 @@ namespace compiler::repl {
 		return *this;
 	}
 
-	FrontendMinImplementation::FrontendMinImplementation():
+	FrontendMinImplementation::FrontendMinImplementation(bool /*completions_enabled*/):
 		  m_hist_idx(0),
 		  m_sequence_to_align_cursor_to_multiline_start(
 			  std::format("{}[{}C", ESC, ReplConfig::CONTINUATION.size())

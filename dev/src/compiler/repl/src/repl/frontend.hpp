@@ -38,7 +38,7 @@ namespace compiler::repl {
 	 */
 	class ReplFrontend final {
 	public:
-		ReplFrontend();
+		explicit ReplFrontend(bool completions_enabled = true);
 		~ReplFrontend() = default;
 
 		/**

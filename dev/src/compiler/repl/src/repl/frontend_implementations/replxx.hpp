@@ -10,7 +10,7 @@
 namespace compiler::repl {
 	class FrontendReplxxImplementation final {
 	public:
-		FrontendReplxxImplementation();
+		explicit FrontendReplxxImplementation(bool completions_enabled = true);
 		~FrontendReplxxImplementation();
 
 		void        printWelcome() const;
@@ -34,6 +34,7 @@ namespace compiler::repl {
 		static std::string getHistoryFilePath();
 
 		replxx::Replxx m_replxx;
+		bool           m_completions_enabled;
 
 		/// Set of user-defined identifiers collected from previous inputs (for completion).
 		std::set<std::string> m_user_words;

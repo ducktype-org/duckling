@@ -44,11 +44,11 @@ namespace compiler::repl {
 		CORE_DEV_LOG(REPL, "DVM initialized with PID ", m_dvm_pid, "\n");
 	}
 
-	ReplSession::ReplSession():
+	ReplSession::ReplSession(bool completions_enabled):
 		  m_should_exit(false),
 		  m_line_counter(0),
 		  m_dvm_pid(0),
-		  m_frontend(),
+		  m_frontend(completions_enabled),
 		  m_lowering_context() {
 		initDVM();
 	}

@@ -161,7 +161,8 @@ namespace compiler::repl {
 
 	// ─── Construction / destruction ──────────────────────────────────────────────
 
-	FrontendReplxxImplementation::FrontendReplxxImplementation() {
+	FrontendReplxxImplementation::FrontendReplxxImplementation(bool completions_enabled):
+		  m_completions_enabled(completions_enabled) {
 		m_replxx.set_max_history_size(1'000);
 		m_replxx.set_word_break_characters(" \t\n;,+-/*%^&|~<>=!?@#$:(){}[]");
 		m_replxx.set_indent_multiline(true);
@@ -177,8 +178,10 @@ namespace compiler::repl {
 
 		setupKeyBindings();
 		setupHighlighter();
-		setupCompletion();
-		setupHints();
+		if (m_completions_enabled) {
+			setupCompletion();
+			setupHints();
+		}
 	}
 
 	FrontendReplxxImplementation::~FrontendReplxxImplementation() {
@@ -202,21 +205,23 @@ namespace compiler::repl {
 			if (cursor_pos > static_cast<int>(line.size()))
 				cursor_pos = static_cast<int>(line.size());
 
-			std::string input_to_cursor = line.substr(0, static_cast<size_t>(cursor_pos));
-			std::string prefix = extractWordEndingAt(input_to_cursor, input_to_cursor.size());
+			if (m_completions_enabled) {
+				std::string input_to_cursor = line.substr(0, static_cast<size_t>(cursor_pos));
+				std::string prefix = extractWordEndingAt(input_to_cursor, input_to_cursor.size());
 
-			bool has_completions = false;
-			if (!prefix.empty()) {
-				auto can_complete = [&prefix](const std::string& candidate) {
-					return candidate.size() > prefix.size() && candidate.starts_with(prefix);
-				};
+				bool has_completions = false;
+				if (!prefix.empty()) {
+					auto can_complete = [&prefix](const std::string& candidate) {
+						return candidate.size() > prefix.size() && candidate.starts_with(prefix);
+					};
 
-				has_completions = std::ranges::any_of(DUCKLING_KEYWORDS, can_complete)
-				               || std::ranges::any_of(DUCKLING_TYPES, can_complete)
-				               || std::ranges::any_of(m_user_words, can_complete);
+					has_completions = std::ranges::any_of(DUCKLING_KEYWORDS, can_complete)
+					               || std::ranges::any_of(DUCKLING_TYPES, can_complete)
+					               || std::ranges::any_of(m_user_words, can_complete);
+				}
+
+				if (has_completions) return m_replxx.invoke(Replxx::ACTION::COMPLETE_LINE, code);
 			}
-
-			if (has_completions) return m_replxx.invoke(Replxx::ACTION::COMPLETE_LINE, code);
 
 			line.insert(static_cast<size_t>(cursor_pos), TAB_SPACES);
 			m_replxx.set_state(
