@@ -331,11 +331,8 @@ class FunctionValidator {
 				PLACE_CASE(64);
 
 				variant_case(CRef<opargs::PlacePtr>, place) {
-					bool                        is_local = current_stack.contains(place->var_name);
-					CRef<valid_type::ValidType> type     = validatePlaceType(*place, current_stack);
-					if (is_local && !type->isKind<valid_type::finalized::Pointer>())
-						throw InvalidArgumentTypeError(*place);
-					if (!is_local && type->isKind<valid_type::finalized::Primitive>())
+					CRef<valid_type::ValidType> type = validatePlaceType(*place, current_stack);
+					if (!type->isKind<valid_type::finalized::Pointer>())
 						throw InvalidArgumentTypeError(*place);
 				}
 				variant_case(CRef<opargs::PlaceAny>, place) {
