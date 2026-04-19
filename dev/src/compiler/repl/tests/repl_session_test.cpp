@@ -27,6 +27,8 @@ namespace compiler::repl {
 		TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 			TESTER_ADD_TEST(testReplSessionInitialization);
 			TESTER_ADD_TEST(testReplProcessLineWithCommand);
+			TESTER_ADD_TEST(testReplCommandAliasesThroughProcessLine);
+			TESTER_ADD_TEST(testReplClearCommandDoesNotResetSessionState);
 			TESTER_ADD_TEST(testReplProcessLineWithCode);
 			TESTER_ADD_TEST(testReplCommandDetection);
 			TESTER_ADD_TEST(testReplHistoryTracking);
@@ -74,6 +76,44 @@ namespace compiler::repl {
 			);
 		}
 
+		void testReplCommandAliasesThroughProcessLine() {
+			ReplSession session;
+
+			std::vector<std::string_view> aliases = { "/h", "/help", "/clear", "/c" };
+
+			for (auto alias: aliases) {
+				auto result = session.processLine(alias);
+				assertTrue(
+					result.status == ReplResult::Status::Success,
+					std::string("Alias command should return success: ") + std::string(alias)
+				);
+			}
+		}
+
+		void testReplClearCommandDoesNotResetSessionState() {
+			ReplSession session;
+
+			session.processLine("var x: i32 = 10;");
+
+			auto history_size_before_clear = session.m_history.size();
+			auto line_counter_before_clear = session.m_line_counter;
+
+			auto clear_result = session.processLine("/clear");
+
+			assertTrue(
+				clear_result.status == ReplResult::Status::Success,
+				"/clear should be processed as a successful command"
+			);
+			assertTrue(
+				session.m_history.size() == history_size_before_clear,
+				"/clear should not modify REPL statement history"
+			);
+			assertTrue(
+				session.m_line_counter == line_counter_before_clear,
+				"/clear should not reset REPL line counter"
+			);
+		}
+
 		/**
 		 * @brief Test that ReplSession can process code input.
 		 *
@@ -104,7 +144,8 @@ namespace compiler::repl {
 			ReplSession session;
 
 			// Test various inputs to verify command detection
-			std::vector<std::string_view> commands = { "/exit", "/help", "/history" };
+			std::vector<std::string_view> commands
+				= { "/exit", "/help", "/h", "/history", "/hist", "/clear", "/c" };
 
 			std::vector<std::string_view> code_snippets = { "var x = 4;", "x;", "" };
 
