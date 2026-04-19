@@ -2039,9 +2039,38 @@ private:
 		auto& hout
 			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
 
+		auto i32_type = getIntegralTypeNoContext(32, Signed);
 		auto i64_type = getIntegralTypeNoContext(64, Signed);
 
 		for (auto& function: hout.functions) {
+			if (function->declaration->original_name == base::StrID("tuples")) {
+				ASSERT_EQUAL(
+					query::entryPoint<compiler::tsh::QueryTupleType>({ { st(i32_type), st(i64_type) } }),
+					function->declaration->return_type.getType());
+
+				auto ret_stmt = function->body->statements.back().ref();
+				auto ret_stmt_casted
+					= dynamic_cast<const compiler::helios::code::ReturnStmt*>(&*ret_stmt);
+				assertTrue(ret_stmt_casted != nullptr, "Return statement expected.");
+
+				auto ret_type = ret_stmt_casted->value->expression_type.getType();
+				ASSERT_EQUAL(function->declaration->return_type.getType(), ret_type);
+
+				auto tuple_expr
+					= dynamic_cast<const compiler::helios::code::TupleExpr*>(ret_stmt_casted->value.get()
+					);
+				assertTrue(tuple_expr != nullptr, "Tuple expression expected.");
+				
+				int casts_found = 0;
+				for (const auto& el: tuple_expr->elements) {
+					auto cast_expr = dynamic_cast<const compiler::helios::code::CastExpr*>(&*el);
+					if (cast_expr != nullptr) casts_found++;
+				}
+				assertEqual(1, casts_found, "Expected one cast to happen in tuple coercion.");
+
+				continue;
+			}
+
 			ASSERT_EQUAL(i64_type, function->declaration->return_type.getType());
 
 			if (function->declaration->original_name == base::StrID("big_example")) {
