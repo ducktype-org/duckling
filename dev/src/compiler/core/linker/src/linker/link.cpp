@@ -5,9 +5,9 @@
 #include <diagnostic_interactive/placeholder.hpp>
 #include <global_state/global_logger.hpp>
 #include <time_stats/time_stats.hpp>
-#include <query_framework/context/context.hpp>
 
 #include <logger/logger.hpp>
+#include <query_framework/context/context.hpp>
 #include <system_command/system_command.hpp>
 
 namespace compiler::linker {
@@ -46,18 +46,25 @@ namespace compiler::linker {
 			if ((not query::Context::areWeInsideQuery()) and global_state::hasGlobalLogger()) {
 				global_state::getGlobalLogger()->log(makeBox<dia_int::PlaceholderHeaderError>(
 					"Linking of the final executable failed. See the linker output above. ",
-					"The common reasons for this error may include missing main function (temporary "
+					"The common reasons for this error may include missing main function "
+				    "(temporary "
 					"feature), missing linker options related to external libraries or duplicated "
 					"declaration not detected by the compiler."
 				));
+			} else {
+				CORE_USER_LOG(
+					"\nWARNING: linker called inside a query or the global logger is not "
+				    "available. Falling back to the user logs for diagnostics.\n"
+				);
+				CORE_USER_LOG(
+					"\nERROR: Linking of the final executable failed. See the linker output "
+				    "above. ",
+					"The common reasons for this error may include missing main function "
+				    "(temporary "
+					"feature), missing linker options related to external libraries or duplicated "
+					"declaration not detected by the compiler.\n"
+				);
 			}
-			else {
-				CORE_USER_LOG("Linking of the final executable failed. See the linker output above. ",
-				              "The common reasons for this error may include missing main function (temporary "
-				              "feature), missing linker options related to external libraries or duplicated "
-				              "declaration not detected by the compiler.\n");
-			}
-			
 		}
 
 		return linking_result;
