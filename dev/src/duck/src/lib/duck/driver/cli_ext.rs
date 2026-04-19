@@ -71,7 +71,7 @@ pub fn subcommand(name: &'static str) -> Command {
 /// Get selected profile from `args`.
 /// Note:
 /// -----
-/// This function is only for selecting the profile for packages building/running.
+/// This function is only for selecting the profile for building/running packages.
 /// Running scripts uses different logic.
 pub fn profile_from_matches(args: &ArgMatches) -> StrId {
     if args.get_flag("release") {
