@@ -133,8 +133,7 @@ impl Duckc {
             .set_script_path(script_path)
             .set_artifacts_dir(artifacts_dir.path())
             .update_with_script_profile(&bcx.profile);
-        builder
-            .execute(|| format!("failed to compile script `{}`", script_path.display()))?;
+        builder.execute(|| format!("failed to compile script `{}`", script_path.display()))?;
         Ok(ArtifactsDir::TempDir(artifacts_dir))
     }
 }

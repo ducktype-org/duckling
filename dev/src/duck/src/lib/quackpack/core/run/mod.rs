@@ -1,16 +1,16 @@
-use std::{ffi::OsString, path::Path, process::Command};
+use std::{
+    ffi::OsString,
+    path::Path,
+    process::{Command, ExitStatus},
+};
 
-use crate::{QuackResult, QuackResultContext, qp_bail};
+use crate::{QuackResult, QuackResultContext};
 
 /// Execute a .exe file.
-pub fn run_exe(path: &Path, args: Vec<OsString>) -> QuackResult<()> {
+pub fn run_exe(path: &Path, args: Vec<OsString>) -> QuackResult<ExitStatus> {
     let mut command = Command::new(path);
     command.args(args);
-    let code = command
+    command
         .status()
-        .context("failed to run the produced binary")?;
-    if !code.success() {
-        qp_bail!("binary did not finish successfully")
-    }
-    Ok(())
+        .context("failed to run the produced binary")
 }
