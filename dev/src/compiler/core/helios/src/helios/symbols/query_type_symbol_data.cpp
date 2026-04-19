@@ -104,8 +104,7 @@ namespace compiler::helios {
 
 			const auto& components = key.getComponents();
 			tuple_info.members.reserve(components.size());
-			u32 order = 0;
-			for (const auto& component: components) {
+			for (usize order = 0; order < components.size(); order++) {
 				tuple_info.members.push_back(ctx.query<defgen::QueryGeneratedSymbol>(
 					{ // Tuple field names are _1, _2, ...
 				      // Starting from 1, not 0!
@@ -114,7 +113,6 @@ namespace compiler::helios {
 				      = defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::Field{
 						  .parent_type = key, .index = order } } }
 				));
-				order++;
 			}
 
 			return tuple_info;

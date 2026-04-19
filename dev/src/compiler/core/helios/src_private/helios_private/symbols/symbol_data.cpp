@@ -1,13 +1,12 @@
 #include "symbol_data.hpp"
 
-#include "helios/tsh/types.hpp"
-
 #include <helios/scope_id.hpp>
 #include <helios/symbols/query_class_of_member.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/tsh/queries/types.hpp>
+#include <helios/tsh/types.hpp>
 
 #include <base/except/exceptions.hpp>
 #include <base/str/str_utils.hpp>
