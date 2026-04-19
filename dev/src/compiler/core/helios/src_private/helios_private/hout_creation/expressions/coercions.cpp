@@ -61,86 +61,48 @@ namespace compiler::helios {
 		}
 
 		// Performs element by element coercion.
-		struct TupleCoercionHandler final: public code::HoutExprVisitorPanicky {
-			query::Context&                 ctx;
-			const tsh::SymbolType<>         to;
-			base::Optional<Box<code::Expr>> out;
+		Box<code::Expr> handleTupleCoercion(
+			query::Context& ctx, Box<code::Expr> expr, const tsh::SymbolType<>& to
+		) {
+			auto source_type = expr->expression_type.getType().as<tsh::TupleAbstractType>();
+			auto to_type     = to.getType().as<tsh::TupleAbstractType>();
 
-			TupleCoercionHandler(query::Context& ctx, const tsh::SymbolType<>& to):
-				  ctx(ctx),
-				  to(to) {}
+			auto tuple = makeBox<code::ReusableExpr>(ctx, std::move(expr));
 
-			static Box<code::TupleExpr> makeTupleExpr(query::Context& ctx, const code::Expr& expr) {
-				auto source_type = expr.expression_type.getType().as<tsh::TupleAbstractType>();
-				std::vector<Box<code::Expr>> elements;
-				elements.reserve(source_type.getComponents().size());
-				u32 order = 0;
-				for (const auto& component: source_type.getComponents()) {
-					// We create a tuple expression with the correct type, and then let the
-					// TupleExpr coercion handler handle the coercion to the target tuple type.
-					elements.emplace_back(makeBox<code::AccessExpr>(
-						ctx,
-						expr.origin.generatedFrom(),
-						expr.clone(),
-						ctx.query<defgen::QueryGeneratedSymbol>(
-							{ .name = base::StrID{ base::strConcat("_", order + 1) },
-					          .generated_symbol_data
-					          = defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::Field{
-								  .parent_type = source_type,
-								  .index       = order } } }
-						)
-					));
-					order++;
-				}
+			std::vector<Box<code::Expr>> elements;
+			elements.reserve(source_type.getComponents().size());
 
-				return makeBox<code::TupleExpr>(
-					ctx, expr.origin.generatedFrom(), std::move(elements)
+			for (usize i = 0; i < source_type.getComponents().size(); i++) {
+				// We create a tuple expression with the correct type, and then let the
+				// TupleExpr coercion handler handle the coercion to the target tuple type.
+				auto element = makeBox<code::AccessExpr>(
+					ctx,
+					tuple->origin.generatedFrom(),
+					tuple->clone(),
+					ctx.query<defgen::QueryGeneratedSymbol>(
+						{ .name = base::StrID{ base::strConcat("_", i + 1) },
+							.generated_symbol_data
+							= defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::Field{
+								.parent_type = source_type,
+								.index       = i } } }
+					)
 				);
-			}
 
-			void output(Box<code::Expr> lowering_result) {
-				CORE_ASSERT(out.empty(), "Output already set.");
-				out.emplace(std::move(lowering_result));
-			}
+				const auto& source_element_type = source_type.getComponents()[i];
+				const auto& to_element_type     = to_type.getComponents()[i];
 
-			void visitParenthesisExpr(const code::ParenthesisExpr& expr) override {
-				expr.inner->acceptVisitor(*this);
-			}
-
-			void visitTupleExpr(const code::TupleExpr& expr) override {
-				auto source_type = expr.expression_type.getType().as<tsh::TupleAbstractType>();
-				auto to_type     = to.getType().as<tsh::TupleAbstractType>();
-
-				std::vector<Box<code::Expr>> coerced_elements;
-				coerced_elements.reserve(source_type.getComponents().size());
-
-				for (usize i = 0; i < expr.elements.size(); i++) {
-					const auto& source_element_type = source_type.getComponents()[i];
-					const auto& to_element_type     = to_type.getComponents()[i];
-
-					auto element_coercion
+				auto element_coercion
 						= canCoerce(ctx, source_element_type, to_element_type).valueOrThrow();
-					if (element_coercion.isInvalid())
-						CORE_PANIC("Coercion should always be valid at this point.");
+				if (element_coercion.isInvalid())
+					CORE_PANIC("Coercion should always be valid at this point.");
 
-					coerced_elements.emplace_back(
-						element_coercion.getCoercion().coerce(ctx, expr.elements[i]->clone())
-					);
-				}
-
-				output(makeBox<code::TupleExpr>(
-					ctx, expr.origin.generatedFrom(), std::move(coerced_elements)
-				));
+				elements.emplace_back(element_coercion.getCoercion().coerce(ctx, element->clone()));
 			}
 
-			void visitIdentifierExpr(const code::IdentifierExpr& expr) override {
-				makeTupleExpr(ctx, expr)->acceptVisitor(*this);
-			}
-
-			void visitAccessExpr(const code::AccessExpr& expr) override {
-				makeTupleExpr(ctx, expr)->acceptVisitor(*this);
-			}
-		};
+			return makeBox<code::TupleExpr>(
+				ctx, tuple->origin.generatedFrom(), std::move(elements)
+			);
+		}
 	}
 
 	IncompatibleTypesError::IncompatibleTypesError(
@@ -203,9 +165,7 @@ namespace compiler::helios {
 			);
 		} else if (source_type.getKind() == tsh::Kind::Tuple
 		           and to.getType().getKind() == tsh::Kind::Tuple) {
-			auto visitor = TupleCoercionHandler(ctx, to);
-			current_expr->acceptVisitor(visitor);
-			return std::move(visitor.out.value());
+			return handleTupleCoercion(ctx, std::move(current_expr), to);
 		} else {
 			CORE_PANIC("Coercion should always be valid at this point.");
 		}
