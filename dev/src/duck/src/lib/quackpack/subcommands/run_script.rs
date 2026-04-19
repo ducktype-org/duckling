@@ -161,6 +161,7 @@ fn execute_script(
         let exe_name = Path::new(script_name).with_extension("exe");
         let exe_path = artifacts_dir.path().join(exe_name);
         let exit_status = run::run_exe(&exe_path, args)?;
+        drop(artifacts_dir);
         std::process::exit(exit_status.code().unwrap_or(0))
     }
 }
