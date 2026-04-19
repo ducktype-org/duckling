@@ -8,9 +8,6 @@
 #include <query_framework/query_result.hpp>
 
 namespace compiler::tsh {
-	class ClassAbstractTypeImpl;
-	class TupleAbstractTypeImpl;
-
 	/**
 	 * @brief A "stupid" key, containing only a pointer value and defining hashing.
 	 */
@@ -22,7 +19,7 @@ namespace compiler::tsh {
 
 		[[nodiscard]]
 		u64 queryUnstablePerfectHash() const {
-			return value->toAbstractType().queryUnstablePerfectHash();
+			return value->toAbstractType().as<ClassAbstractType>().queryUnstablePerfectHash();
 		}
 	};
 
@@ -55,7 +52,7 @@ namespace compiler::tsh {
 
 		[[nodiscard]]
 		u64 queryUnstablePerfectHash() const {
-			return value->toAbstractType().queryUnstablePerfectHash();
+			return value->toAbstractType().as<TupleAbstractType>().queryUnstablePerfectHash();
 		}
 	};
 
