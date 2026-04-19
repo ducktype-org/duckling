@@ -352,8 +352,8 @@ namespace compiler::helios {
 					= GeneratedSymbolData{ Parameter{ ctor_symbol, argument_index } },
 				});
 
-				base::Optional<Box<code::Expr>> init_expr_coerced_opt = std::nullopt;
-				code::ElementOrigin             field_origin          = code::generatedOrigin();
+				base::Optional<BoxOrCRef<code::Expr>> init_expr_coerced_opt = std::nullopt;
+				code::ElementOrigin                   field_origin = code::generatedOrigin();
 				if (symbolPst(field.getSymbol()).has_value()) {
 					// Get the initial value for the field from the PST.
 					const auto field_pst_data = symbolPst(field.getSymbol())
