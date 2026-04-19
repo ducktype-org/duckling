@@ -297,10 +297,9 @@ class FunctionValidator {
 	}
 
 	template<typename PlaceT>
-	CRef<valid_type::ValidType> getPlaceType(
-		const PlaceT& place, const LocalStack& current_stack
-	) const {
-		bool is_local  = current_stack.contains(place.var_name);
+	CRef<valid_type::ValidType> getPlaceType(const PlaceT& place, const LocalStack& current_stack)
+		const {
+		bool is_local = current_stack.contains(place.var_name);
 		return is_local ? current_stack.at(place.var_name)
 		                : types_ctx.at(globals.at(place.var_name)->type);
 	}
@@ -315,16 +314,16 @@ class FunctionValidator {
 	void validateArgTypes(const Instruction& instruction, const LocalStack& current_stack) const {
 		for (auto arg: instruction.args()) {
 			variant_match(arg) {
-#define PLACE_CASE(BIT_COUNT)                                                       \
-	variant_case(CRef<opargs::Place##BIT_COUNT>, place) {                           \
+#define PLACE_CASE(BIT_COUNT)                                                        \
+	variant_case(CRef<opargs::Place##BIT_COUNT>, place) {                            \
 		CRef<valid_type::ValidType> type = validatePlaceType(*place, current_stack); \
-		variant_match(type->getKind()) {                                            \
-			variant_case(valid_type::finalized::Primitive, primitive_type) {        \
-				if (base::bytes2bits(primitive_type.size).asInt() != BIT_COUNT)     \
-					throw InvalidArgumentSizeError(*place);                         \
-			}                                                                       \
-			variant_default { throw InvalidArgumentTypeError(*place); }             \
-		}                                                                           \
+		variant_match(type->getKind()) {                                             \
+			variant_case(valid_type::finalized::Primitive, primitive_type) {         \
+				if (base::bytes2bits(primitive_type.size).asInt() != BIT_COUNT)      \
+					throw InvalidArgumentSizeError(*place);                          \
+			}                                                                        \
+			variant_default { throw InvalidArgumentTypeError(*place); }              \
+		}                                                                            \
 	}
 				PLACE_CASE(8);
 				PLACE_CASE(16);
@@ -455,8 +454,8 @@ class FunctionValidator {
 
 		for (auto arg: instruction.args()) {
 			variant_match(arg) {
-#define PLACE_CASE_PRIMITIVE_VALIDATION(BIT_COUNT)                                  \
-	variant_case(CRef<opargs::Place##BIT_COUNT>, place) {                           \
+#define PLACE_CASE_PRIMITIVE_VALIDATION(BIT_COUNT)                              \
+	variant_case(CRef<opargs::Place##BIT_COUNT>, place) {                       \
 		primitive_args.push_back(getPlaceType(*place, current_stack)->getID()); \
 	}
 

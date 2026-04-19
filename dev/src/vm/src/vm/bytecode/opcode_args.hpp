@@ -61,9 +61,8 @@ namespace vm::opargs {
 	 */
 	DEFINE_PLACE(Vnt, "pvnt");
 
-#define VM_OPARG_PLACE_TYPES                                                             \
-	Place8, Place16, Place32, Place64, PlaceAny, PlacePtr, \
-		PlaceVnt, PlaceOpq, PlaceStructure
+#define VM_OPARG_PLACE_TYPES \
+	Place8, Place16, Place32, Place64, PlaceAny, PlacePtr, PlaceVnt, PlaceOpq, PlaceStructure
 
 	/**
 	 * @brief Represents type name argument.

@@ -90,9 +90,7 @@ namespace vm::low::opargs {
 	);
 	/** @brief Stores index of local variant storage in Frame::block_ref_stack (not a byte offset)
 	 * or the global blocks buffer. */
-	DEFINE_MICRO_ARG_TYPE(
-		PlaceBlockVariant, "bvnt", vm::opargs::PlaceVnt, vm::opargs::PlaceVnt
-	);
+	DEFINE_MICRO_ARG_TYPE(PlaceBlockVariant, "bvnt", vm::opargs::PlaceVnt, vm::opargs::PlaceVnt);
 
 #define VM_MICRO_INSTR_ARG_BLOCK_PLACE_TYPES PlaceBlockAny, PlaceBlockStructure, PlaceBlockVariant
 

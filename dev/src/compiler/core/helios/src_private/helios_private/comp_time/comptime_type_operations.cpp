@@ -209,8 +209,7 @@ namespace compiler::helios::comptime_ops {
 		// 		ret;
 		// }
 		vm::code::Instruction mov_popq_popq = vm::code::instructions::Op_mov_popq_popq(
-			vm::opargs::PlaceOpq(context_global.name),
-			vm::opargs::PlaceOpq(base::StrID("arg0"))
+			vm::opargs::PlaceOpq(context_global.name), vm::opargs::PlaceOpq(base::StrID("arg0"))
 		);
 		vm::code::Instruction ret = vm::code::instructions::Op_ret{};
 
