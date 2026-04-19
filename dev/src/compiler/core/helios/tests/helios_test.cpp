@@ -565,15 +565,17 @@ private:
 	void testGeneratedInterface() {
 		auto [module_id, root_scope] = getModule(fs::File(path("test_modules/tuples")));
 
-		const auto tup = getChain("tup", root_scope).back();
-		const auto tup_abstract_type
-			= query::entryPoint<compiler::helios::QueryTypeOfSymbol>(tup)
-		          ->valueOrThrow()
-		          .getType()
-		          .as<compiler::tsh::TupleAbstractType>();
+		const auto tup               = getChain("tup", root_scope).back();
+		const auto tup_abstract_type = query::entryPoint<compiler::helios::QueryTypeOfSymbol>(tup)
+		                                   ->valueOrThrow()
+		                                   .getType()
+		                                   .as<compiler::tsh::TupleAbstractType>();
 
-		const auto h_interface
-			= compiler::helios::HInterface::ofTypeInstance(tup_abstract_type);
+		const auto h_interface = compiler::helios::HInterface::ofTypeInstance(tup_abstract_type);
+
+		auto i32 = st(getIntegralTypeNoContext(32, Signed));
+		auto f32 = st(getFloatTypeNoContext(32));
+		auto str = st(compiler::tsh::getStringType());
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			using compiler::helios::LookupResult;
@@ -583,18 +585,21 @@ private:
 			ASSERT_TRUE(first_result->isSingle());
 			auto first_symbol = first_result->leaves.at(0);
 			ASSERT_EQUAL(kind(first_symbol), compiler::helios::SymbolKind::Field);
+			ASSERT_EQUAL(ctx.query<compiler::helios::QueryTypeOfSymbol>(first_symbol)->valueOrThrow(), i32);
 
 			CRef<LookupResult> second_result
 				= &h_interface.lookup(ctx, base::StrID("_2"))->valueOrPanic();
 			ASSERT_TRUE(second_result->isSingle());
 			auto second_symbol = second_result->leaves.at(0);
 			ASSERT_EQUAL(kind(second_symbol), compiler::helios::SymbolKind::Field);
+			ASSERT_EQUAL(ctx.query<compiler::helios::QueryTypeOfSymbol>(second_symbol)->valueOrThrow(), f32);
 
 			CRef<LookupResult> third_result
 				= &h_interface.lookup(ctx, base::StrID("_3"))->valueOrPanic();
 			ASSERT_TRUE(third_result->isSingle());
 			auto third_symbol = third_result->leaves.at(0);
 			ASSERT_EQUAL(kind(third_symbol), compiler::helios::SymbolKind::Field);
+			ASSERT_EQUAL(ctx.query<compiler::helios::QueryTypeOfSymbol>(third_symbol)->valueOrThrow(), str);
 
 			CRef<LookupResult> empty_result
 				= &h_interface.lookup(ctx, base::StrID("_0"))->valueOrPanic();
