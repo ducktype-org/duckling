@@ -5,9 +5,8 @@ pub mod registry;
 use std::hash::Hash;
 use std::marker::PhantomData;
 
-use serde::de;
-use serde::ser;
 use serde::ser::SerializeMap;
+use serde::{de, ser};
 
 #[derive(Debug, Eq, PartialEq, Hash, Clone, Copy)]
 /// A map with exactly one entry.

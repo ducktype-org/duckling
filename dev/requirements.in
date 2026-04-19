@@ -1,0 +1,6 @@
+# These are the actual direct dependecies needed by toolbox.
+# Use this file to generate `requirements.txt` when updating.
+
+click
+PyYAML
+requests

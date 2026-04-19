@@ -3,15 +3,11 @@ use std::collections::{HashMap, HashSet};
 
 use setup::*;
 
-use crate::quackpack::core::{
-    PackageLoader,
-    compile::{
-        BuildContext,
-        early_dag::{DependencyNode, EarlyDag},
-        profiles::Profile,
-    },
-    storage::paths::Storage,
-};
+use crate::quackpack::core::PackageLoader;
+use crate::quackpack::core::compile::BuildContext;
+use crate::quackpack::core::compile::early_dag::{DependencyNode, EarlyDag};
+use crate::quackpack::core::compile::profiles::Profile;
+use crate::quackpack::core::storage::paths::Storage;
 
 #[test]
 fn creates_valid_initial_graph() {

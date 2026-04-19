@@ -1,21 +1,13 @@
-use std::{
-    ffi::{OsStr, OsString},
-    path::Path,
-};
+use std::ffi::{OsStr, OsString};
+use std::path::Path;
 
 use clap::ArgMatches;
 use tracing::debug;
 
-use crate::{
-    DuckContext, QuackResult, QuackResultContext, qp_bail_internal,
-    quackpack::core::{
-        AllowGlobalPackage, PackageLoader,
-        storage::{
-            StorageSyncOptions, sync,
-            venv_id::{ToVenvId, VenvId},
-        },
-    },
-};
+use crate::quackpack::core::storage::venv_id::{ToVenvId, VenvId};
+use crate::quackpack::core::storage::{StorageSyncOptions, sync};
+use crate::quackpack::core::{AllowGlobalPackage, PackageLoader};
+use crate::{DuckContext, QuackResult, QuackResultContext, qp_bail_internal};
 
 pub struct RunScriptOptions<'duck> {
     /// Current [`DuckContext`].

@@ -2,7 +2,8 @@ use std::any::Any;
 
 use clap::{Arg, ArgAction, ArgMatches, Command};
 
-use crate::{StrId, quackpack::core::Package};
+use crate::StrId;
+use crate::quackpack::core::Package;
 
 const DEFAULT_PROFILE: &str = "dev";
 

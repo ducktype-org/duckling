@@ -1,18 +1,16 @@
 use std::path::Path;
 
-use crate::{
-    StrId,
-    quackpack::core::{
-        Version,
-        fetcher::Fetcher,
-        storage::{self, freeze::FreezePackage, paths::Storage, venv::Venv, venv_id::ToVenvId},
-        types_common::{ExpandedLocation, InternedExpandedLocation},
-    },
-    util::path_ops_ext::PathOpsExt,
-};
-
-use super::registry_url_hash;
-use super::setup_mock_storage;
+use super::{registry_url_hash, setup_mock_storage};
+use crate::StrId;
+use crate::quackpack::core::Version;
+use crate::quackpack::core::fetcher::Fetcher;
+use crate::quackpack::core::solver::types_common::ExpandedLocation;
+use crate::quackpack::core::storage::freeze::FreezePackage;
+use crate::quackpack::core::storage::paths::Storage;
+use crate::quackpack::core::storage::venv::Venv;
+use crate::quackpack::core::storage::venv_id::ToVenvId;
+use crate::quackpack::core::storage::{self};
+use crate::util::path_ops_ext::PathOpsExt;
 
 fn check_venvs_exist(root: &Path, names: &[&str]) {
     for name in names {
@@ -261,10 +259,11 @@ fn save_trims_files() {
             Version::new(1, 0, 0),
             vec![],
             vec![],
-            InternedExpandedLocation::new(ExpandedLocation::Registry {
+            ExpandedLocation::Registry {
                 url: Fetcher::DEFAULT_REGISTRY_URL.parse().unwrap(),
                 real_name: "dep".into(),
-            }),
+            }
+            .into(),
         );
         venv.data_mut()
             .freeze_mut()

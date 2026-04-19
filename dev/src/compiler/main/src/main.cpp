@@ -30,7 +30,6 @@
 #include <filesystem/file.hpp>
 #include <filesystem/file_path.hpp>
 #include <init/init.hpp>
-#include <lexer/lexer.hpp>
 #include <printer/stream_printer.hpp>
 #include <query_framework/entry/query_entry_point.hpp>
 #include <query_framework/entry/with_context_do.hpp>
@@ -575,7 +574,9 @@ clah::Clah getClahForMain() {
 					return result.isOk() ? 0 : 1;
 				})
 		)
-	    // For now run works only for DVM backend.
+	    // Scripts can only be "run" on DVM for now, since compiling with LLVM would produce
+	    // artifacts. To compile to native executable, the compile_script command can be used.
+	    // This may change in the future.
 	    .addSubcommand(clah::Clah("run", "Compile a .ds script file and run it on DVM.")
 	                       .addPositional(clah::FileParser::make("script"))
 	                       .add(clah::ParamBuilder::ofValue(clah::IntParser::make("worker count"))

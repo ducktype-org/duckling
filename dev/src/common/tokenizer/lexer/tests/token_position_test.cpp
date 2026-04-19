@@ -1,5 +1,4 @@
 #include <filesystem/file.hpp>
-#include <lexer/lexer.hpp>
 #include <tester/tester.hpp>
 #include <tester/testing_utils.hpp>
 #include <token_source/source.hpp>
@@ -47,7 +46,8 @@ public:
 private:
 	void simplePositionTest() {
 		fs::File file(path("fun.duck"));
-		td = lexer::tokenizeFile(file);
+		td = tokenizer::makeTokenSource(file);
+		td->tokenize();
 
 		std::stringstream result_stream;
 		print(td->getTokenData().tokens, result_stream);
@@ -64,8 +64,10 @@ private:
 		auto file1   = fs::FileManager::createRandomVirtualFile(content);
 		auto file2   = fs::FileManager::createRandomVirtualFile(content);
 
-		auto td1 = lexer::tokenizeFile(file1);
-		auto td2 = lexer::tokenizeFile(file2);
+		auto td1 = tokenizer::makeTokenSource(file1);
+		td1->tokenize();
+		auto td2 = tokenizer::makeTokenSource(file2);
+		td2->tokenize();
 
 		auto loc1 = td1->getLocation();
 		auto loc2 = td2->getLocation();
