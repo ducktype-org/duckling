@@ -460,5 +460,38 @@ namespace compiler::repl {
 		m_editor_state.prev_state_col = m_editor_state.col;
 	}
 
-	void FrontendMinImplementation::clearScreen() { writeStr(CLEAR_ENTIRE_SCREEN_SEQ); }
+	void FrontendMinImplementation::clearScreen() {
+#ifndef _WIN32
+		writeStr(CLEAR_ENTIRE_SCREEN_SEQ);
+#else
+		HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+		if (hOut == INVALID_HANDLE_VALUE || hOut == nullptr) {
+			writeStr(CLEAR_ENTIRE_SCREEN_SEQ);
+			return;
+		}
+
+		CONSOLE_SCREEN_BUFFER_INFO buffer_info{};
+		if (!GetConsoleScreenBufferInfo(hOut, &buffer_info)) {
+			writeStr(CLEAR_ENTIRE_SCREEN_SEQ);
+			return;
+		}
+
+		const DWORD cells_count
+			= static_cast<DWORD>(buffer_info.dwSize.X) * static_cast<DWORD>(buffer_info.dwSize.Y);
+		const COORD home{ 0, 0 };
+		DWORD       written = 0;
+
+		if (!FillConsoleOutputCharacterA(hOut, ' ', cells_count, home, &written)) {
+			writeStr(CLEAR_ENTIRE_SCREEN_SEQ);
+			return;
+		}
+
+		if (!FillConsoleOutputAttribute(hOut, buffer_info.wAttributes, cells_count, home, &written)) {
+			writeStr(CLEAR_ENTIRE_SCREEN_SEQ);
+			return;
+		}
+
+		SetConsoleCursorPosition(hOut, home);
+#endif
+	}
 }  // namespace compiler::repl
