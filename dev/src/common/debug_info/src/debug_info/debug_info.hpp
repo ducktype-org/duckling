@@ -71,5 +71,11 @@ namespace debug_info {
 		 * @param resolver A callable that maps PstHashPostion → FilePosition.
 		 */
 		void resolvePositions(const std::function<FilePosition(const PstHashPostion&)>& resolver);
+
+		/**
+		 * @brief Merges another DebugInfo into this one by inserting all its functions and types.
+		 * In dev builds, asserts there are no duplicate function or type names.
+		 */
+		void mergeFrom(DebugInfo&& other);
 	};
 }

@@ -1,5 +1,8 @@
 #include "debug_info.hpp"
 
+#include <base/config/build_type.hpp>
+#include <base/except/exceptions.hpp>
+
 #include <variant>
 
 namespace debug_info {
@@ -38,4 +41,27 @@ namespace debug_info {
 		}
 	}
 
+	void DebugInfo::mergeFrom(DebugInfo&& other) {
+		IF_BUILD_TYPE_DEV({
+			for (const auto& [name, _] : other.functions) {
+				CORE_ASSERT(
+					!functions.contains(name),
+					"Duplicate function during DVM debug info merge: ",
+					name
+				);
+			}
+			for (const auto& [name, _] : other.types) {
+				CORE_ASSERT(
+					!types.contains(name), "Duplicate type during DVM debug info merge: ", name
+				);
+			}
+		});
+
+		for (auto& [name, metadata] : other.functions)
+			functions.emplace(std::move(name), std::move(metadata));
+		for (auto& [name, metadata] : other.types)
+			types.emplace(std::move(name), std::move(metadata));
+	}
+
 }  // namespace debug_info
+

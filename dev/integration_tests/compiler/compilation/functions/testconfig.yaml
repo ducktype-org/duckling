@@ -55,18 +55,20 @@ Tests:
         ExitCode: 0
 
   overloading_between_modules:
+    # @TODO: #2476 The merged package .dbc file is not currently used for deterministic checks;
+    # skip the conc deterministic test for this test case.
+    enable_conc_deterministic_tests: "false"
     Cases:
       llvm:
         backend: llvm
         Output:
           String: "1000\n200\n500\n30\n60\n4\n7\n"
         ExitCode: 0
-      # @TODO: #2476 Enable DVM case.
-      # dvm:
-      #   backend: dvm
-      #   Output:
-      #     String: "1000\n200\n500\n30\n60\n4\n7\n"
-      #   ExitCode: 0
+      dvm:
+        backend: dvm
+        Output:
+          String: "1000\n200\n500\n30\n60\n4\n7\n"
+        ExitCode: 0
 
   simple:
     Cases: 

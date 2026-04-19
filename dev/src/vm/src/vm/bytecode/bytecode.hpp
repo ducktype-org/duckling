@@ -86,5 +86,11 @@ namespace vm::code {
 		std::vector<TypeOfData>        types;
 		std::vector<GlobalData>        global_data;
 		std::vector<ExternalCFunction> external_c_functions;
+
+		/**
+		 * @brief Merges another CodeCollection into this one by appending all its elements.
+		 * In dev builds, asserts that there are no duplicate function or global names.
+		 */
+		void mergeFrom(CodeCollection&& other);
 	};
 }
