@@ -224,7 +224,7 @@ namespace compiler::repl {
 		std::cout << "  /help, /?, /h       - Show this help message\n";
 		std::cout << "  /exit, /quit, /q    - Exit the REPL\n";
 		std::cout << "  /history, /hist     - Show all executed statements\n";
-		std::cout << "  /clear, /c          - Clear statement history\n";
+		std::cout << "  /clear, /c          - Clear terminal\n";
 		std::cout << "\n=== Editing ===\n";
 		std::cout << "  Alt + Enter         - Insert a new line\n";
 		std::cout << "  Alt + Up / Down     - Navigate input history\n";
