@@ -1,0 +1,4 @@
+Run: "@{build_dir}/bin/VM debug_adapter simple.dmf"
+
+SubDirs:
+  - basic

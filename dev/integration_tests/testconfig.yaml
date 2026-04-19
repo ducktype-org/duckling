@@ -2,3 +2,4 @@ SubDirs:
     - compiler
     - duck
     - repl
+    - debug_adapter

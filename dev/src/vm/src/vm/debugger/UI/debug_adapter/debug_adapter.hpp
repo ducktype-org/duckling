@@ -9,6 +9,7 @@ public:
     // TODO: when load program will be available in debugger
     // change it that filepath will be get from dap message
 	DebugAdapter(const fs::File& filepath);
+	static DebugAdapter get(const fs::File& filepath);
 	~DebugAdapter() = default;
 	void run();
 

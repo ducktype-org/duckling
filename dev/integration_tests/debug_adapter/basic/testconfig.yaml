@@ -1,0 +1,13 @@
+expected_dap_output: "aaa"
+
+Tests:
+  debug_adapter_lifecycle:
+    TimeOut: 2 
+    
+    Cases:
+      initialize_launch_disconnect:
+        Input:
+          File: "dap.txt"
+        
+        Output:
+          String: "@{expected_dap_output}"

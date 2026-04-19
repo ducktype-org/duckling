@@ -5,6 +5,11 @@
 constexpr std::string_view HEADER_PREFIX = "Content-Length: ";
 
 DebugAdapter::DebugAdapter(const fs::File& filepath): debugger(filepath) { setupVmListeners(); }
+DebugAdapter DebugAdapter::get(
+			const fs::File& filepath
+		){
+			return {filepath};
+		}
 
 void DebugAdapter::setupVmListeners() {
     events::Listener<vm::api::ProcStatus> status_change_listener([&](const vm::api::ProcStatus& status) {
