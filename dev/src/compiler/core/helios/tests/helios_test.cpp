@@ -604,6 +604,10 @@ private:
 			CRef<LookupResult> empty_result
 				= &h_interface.lookup(ctx, base::StrID("_0"))->valueOrPanic();
 			ASSERT_TRUE(empty_result->isEmpty());
+
+			const auto& hout = ctx.query<compiler::helios::QueryModuleHOUT>(module_id)->valueOrThrow();
+			// Tuple ctor
+			assertEqual(1, hout.functions.size(), "Expected one function to be present");
 		});
 	}
 
