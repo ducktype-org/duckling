@@ -98,7 +98,7 @@ namespace compiler::helios::defgen {
 		struct Field final {
 			tsh::AbstractType parent_type;  // The type that the field belongs to
 			// @TODO: #2515 Remove this
-			u64               index;        // The index of the generated field
+			u64 index;  // The index of the generated field
 
 			[[nodiscard]]
 			base::Bit256 queryUnstablePerfectHash() const;
@@ -109,8 +109,8 @@ namespace compiler::helios::defgen {
 		 * itself be compiler-generated, such as the `ImplicitConstructor`.
 		 */
 		struct Variable final {
-			SymID function_symbol;   // The symbol of the function this variable belongs to.
-			u64   variable_index;    // The index of the variable in the function's body.
+			SymID function_symbol;  // The symbol of the function this variable belongs to.
+			u64   variable_index;   // The index of the variable in the function's body.
 			// @TODO: #2515 Remove this
 			tsh::SymbolType<> type;  // The type of the variable.
 

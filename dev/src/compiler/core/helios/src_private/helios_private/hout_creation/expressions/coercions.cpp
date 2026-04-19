@@ -81,10 +81,9 @@ namespace compiler::helios {
 					tuple->clone(),
 					ctx.query<defgen::QueryGeneratedSymbol>(
 						{ .name = base::StrID{ base::strConcat("_", i + 1) },
-							.generated_symbol_data
-							= defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::Field{
-								.parent_type = source_type,
-								.index       = i } } }
+				          .generated_symbol_data
+				          = defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::Field{
+							  .parent_type = source_type, .index = i } } }
 					)
 				);
 
@@ -92,16 +91,14 @@ namespace compiler::helios {
 				const auto& to_element_type     = to_type.getComponents()[i];
 
 				auto element_coercion
-						= canCoerce(ctx, source_element_type, to_element_type).valueOrThrow();
+					= canCoerce(ctx, source_element_type, to_element_type).valueOrThrow();
 				if (element_coercion.isInvalid())
 					CORE_PANIC("Coercion should always be valid at this point.");
 
 				elements.emplace_back(element_coercion.getCoercion().coerce(ctx, element->clone()));
 			}
 
-			return makeBox<code::TupleExpr>(
-				ctx, tuple->origin.generatedFrom(), std::move(elements)
-			);
+			return makeBox<code::TupleExpr>(ctx, tuple->origin.generatedFrom(), std::move(elements));
 		}
 	}
 

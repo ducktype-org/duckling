@@ -1,5 +1,7 @@
 #include "symbol_data.hpp"
 
+#include "helios/tsh/types.hpp"
+
 #include <helios/scope_id.hpp>
 #include <helios/symbols/query_class_of_member.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
@@ -9,7 +11,6 @@
 
 #include "base/str/str_utils.hpp"
 #include <base/except/exceptions.hpp>
-#include "helios/tsh/types.hpp"
 
 namespace compiler::helios {
 	namespace defgen {
@@ -166,11 +167,13 @@ namespace compiler::helios {
 					};
 					return param_symbol_type;
 				}
-				variant_case(Field, field) { 
+				variant_case(Field, field) {
 					// @TODO: #2515 Implament other cases
 					switch (field.parent_type.getKind()) {
 					case tsh::Kind::Tuple:
-						return field.parent_type.as<tsh::TupleAbstractType>().getComponents().at(field.index);
+						return field.parent_type.as<tsh::TupleAbstractType>().getComponents().at(
+							field.index
+						);
 					default:
 						throw base::NotYetImplemented(base::strConcat(
 							"Can not get the type of a member of the ",

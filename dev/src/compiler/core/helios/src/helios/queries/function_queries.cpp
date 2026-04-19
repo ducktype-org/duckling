@@ -364,7 +364,8 @@ namespace compiler::helios {
 					field_origin          = code::pstOrigin(field_pst_data).generatedFrom();
 					auto init_expr_opt    = field_pst_data->getInit();
 					init_expr_coerced_opt = init_expr_opt.map(
-						[&](pst::AccessLocked<pst::ExprHolder> expr_holder) -> BoxOrCRef<code::Expr> {
+						[&](pst::AccessLocked<pst::ExprHolder> expr_holder
+					    ) -> BoxOrCRef<code::Expr> {
 							const auto field_type = field.getType(ctx);
 							auto       expr
 								= getHoutOfExprWithExpectedType(
