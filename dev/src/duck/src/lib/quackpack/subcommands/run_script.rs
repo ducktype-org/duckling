@@ -43,8 +43,9 @@ impl<'duck> RunScriptOptions<'duck> {
         let venv_id = matches.get_one::<String>("venv").map(ToVenvId::to_venv_id);
         let profile = matches
             .get_one::<String>("profile")
-            .map(Into::into)
-            .unwrap_or(DEFAULT_SCRIPT_PROFILE_NAME.into());
+            .map(String::as_str)
+            .unwrap_or(DEFAULT_SCRIPT_PROFILE_NAME)
+            .into();
         let args: Vec<OsString> = matches
             .get_many::<OsString>("args")
             .map(|values| values.cloned().collect())
