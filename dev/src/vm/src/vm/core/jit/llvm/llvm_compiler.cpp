@@ -1,8 +1,8 @@
 #include "../cf_analyzer.hpp"
 #include "../jit_compiler.hpp"
+#include "jit_utils.hpp"
 #include "llvm_lowering.hpp"
 #include "opcodes_bitcode_source.hpp"
-#include "jit_utils.hpp"
 
 #include <llvm_helpers/llvm_helpers.hpp>
 
@@ -10,6 +10,7 @@
 
 LLVM_INCLUDE_BEGIN()
 
+#include <llvm/Demangle/Demangle.h>
 #include <llvm/ExecutionEngine/Orc/LLJIT.h>
 #include <llvm/ExecutionEngine/Orc/ThreadSafeModule.h>
 #include <llvm/IR/DerivedTypes.h>
@@ -19,7 +20,6 @@ LLVM_INCLUDE_BEGIN()
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Type.h>
 #include <llvm/IR/Verifier.h>
-#include <llvm/Demangle/Demangle.h>
 
 LLVM_INCLUDE_END()
 
@@ -30,8 +30,7 @@ namespace vm::jit {
 		llvm::LLVMContext& ctx = *tsctx.getContext();
 
 
-		auto new_module
-			= setupModule(base::toString(function_to_compile.name), ctx);
+		auto new_module = setupModule(base::toString(function_to_compile.name), ctx);
 
 		LLVMBuilder(new_module.get(), ctx).lowerFunction(function_to_compile);
 

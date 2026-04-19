@@ -126,7 +126,7 @@ namespace vm::jit {
 				switch (opcode) {
 				case vm::low::MicroOpcode::jit_call_entrypoint:
 				case vm::low::MicroOpcode::call_func:
-				case vm::low::MicroOpcode::virtual_call_lptr_method:{
+				case vm::low::MicroOpcode::virtual_call_lptr_method: {
 					ir_builder.CreateCall(
 						opfun_ty,
 						getOrCreateOpcodeFunction("trampoline"),
@@ -199,11 +199,8 @@ namespace vm::jit {
 			}
 		}
 
-
 		// Debug function to print IR - remove.
-		void printModuleIR(llvm::Module& M) {
-			M.print(llvm::errs(), nullptr);
-		}
+		void printModuleIR(llvm::Module& module) { module.print(llvm::errs(), nullptr); }
 
 		void lowerFunction(const low::LowFuncData& function_to_compile) {
 			cf::ControlFlowAnalyzer cf_analyzer{};
@@ -233,8 +230,8 @@ namespace vm::jit {
 					function_to_compile, cfg.getBlock(block_idx), used_opfuns
 				);  // lowerBlock(function_to_compile, block_idx, used_opfuns);
 
-			auto used_opfuns_filter = [&](const llvm::GlobalValue* GV) -> bool {
-				return used_opfuns.contains(GV->getName().str());
+			auto used_opfuns_filter = [&](const llvm::GlobalValue* gv) -> bool {
+				return used_opfuns.contains(gv->getName().str());
 			};
 
 			// At this point, `used_opfuns` contains all used opfunctions' names, so we can clone
@@ -246,12 +243,12 @@ namespace vm::jit {
 			llvm::Linker::linkModules(
 				*module, std::move(used_opfuns_module), llvm::Linker::Flags::LinkOnlyNeeded
 			);
-			for (auto& F: module->functions()) {
-				if (!F.isDeclaration()
-				    && F.getName().str() != base::toString(function_to_compile.name)) {
+			for (auto& f: module->functions()) {
+				if (!f.isDeclaration()
+				    && f.getName().str() != base::toString(function_to_compile.name)) {
 					// Set cloned opfuns' linkage to AvailableExternally to avoid double compilation
 					// and symbol conflicts.
-					F.setLinkage(llvm::GlobalValue::AvailableExternallyLinkage);
+					f.setLinkage(llvm::GlobalValue::AvailableExternallyLinkage);
 				}
 			}
 		}

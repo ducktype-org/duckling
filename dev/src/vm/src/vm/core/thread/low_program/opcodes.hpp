@@ -38,7 +38,7 @@ namespace vm::low {
 #include "micro_instruction_definitions.hpp"
 #undef HANDLE_MICRO_INSTR
 		return count;
-	};
+	}
 
 	constexpr std::array<std::string_view, microInstrCount()> OPCODE_NAMES = {
 #define HANDLE_MICRO_INSTR(opcode) #opcode,
@@ -48,9 +48,10 @@ namespace vm::low {
 
 	constexpr usize nonExecutableMicroInstrCount() {
 		usize count = 0;
-#define HANDLE_MICRO_INSTR(opcode) if constexpr ((std::string_view(#opcode).starts_with("ext_"))) { ++count; }
+#define HANDLE_MICRO_INSTR(opcode) \
+	if constexpr ((std::string_view(#opcode).starts_with("ext_"))) { ++count; }
 #include "micro_instruction_definitions.hpp"
 #undef HANDLE_MICRO_INSTR
 		return count;
-	};
+	}
 }

@@ -1,4 +1,5 @@
 #include <vm/core/thread/low_program/instruction.hpp>
+#include <vm/core/thread/opcode_functions/opcodes_functions.hpp>
 #include <vm/core/thread/vmthread.hpp>
 
 #include <array>

@@ -1,150 +1,123 @@
 #pragma once
 
+#include <vm/bytecode/bytecode.hpp>
+#include <vm/core/thread/low_program/low_program.hpp>
+
 #include <algorithm>
 #include <functional>
 #include <vector>
 
-#include <vm/bytecode/bytecode.hpp>
-#include <vm/core/thread/low_program/low_program.hpp>
-
 namespace vm::jit::cf {
-    using BlockID = usize;
+	using BlockID = usize;
 
-    class OutEdges {
-      public:
-        enum class Kind {
-            End,        // No outgoing edges (e.g., return)
-            Default,    // Jmp or fallthrough
-            JmpIf,
-            JmpIfNot,
-        };
+	class OutEdges {
+	public:
+		enum class Kind {
+			End,      // No outgoing edges (e.g., return)
+			Default,  // Jmp or fallthrough
+			JmpIf,
+			JmpIfNot,
+		};
 
-        OutEdges(): to{0, 0}, size_(0), kind_(Kind::End) {}
+		OutEdges(): to{ 0, 0 } {}
 
-        usize size() const {
-            return size_;
-        }
+		[[nodiscard]] usize size() const { return no_edges; }
 
-        Kind kind() const {
-            return kind_;
-        }
+		[[nodiscard]] Kind kind() const { return op_type; }
 
-        void setCond(Kind kind, BlockID target1, BlockID target2) {
-            if (size_ != 0) {
-                throw std::runtime_error("Outgoing edges already set for this basic block");
-            }
-            this->kind_ = kind;
-            to[0] = target1;
-            to[1] = target2;
-            size_ = 2;
-        }
+		void setCond(Kind kind, BlockID target1, BlockID target2) {
+			if (no_edges != 0)
+				throw std::runtime_error("Outgoing edges already set for this basic block");
+			this->op_type = kind;
+			to[0]         = target1;
+			to[1]         = target2;
+			no_edges      = 2;
+		}
 
-        void setDefault(BlockID target) {
-            if (size_ != 0) {
-                throw std::runtime_error("Outgoing edges already set for this basic block");
-            }
-            this->kind_ = Kind::Default;
-            to[0] = target;
-            size_ = 1;
-        }
+		void setDefault(BlockID target) {
+			if (no_edges != 0)
+				throw std::runtime_error("Outgoing edges already set for this basic block");
+			this->op_type = Kind::Default;
+			to[0]         = target;
+			no_edges      = 1;
+		}
 
-        BlockID next() const {
-            if (kind_ != Kind::Default) {
-                throw std::runtime_error("This block has no default outgoing edge.");
-            }
-            return to[0];
-        }
+		[[nodiscard]] BlockID next() const {
+			if (op_type != Kind::Default)
+				throw std::runtime_error("This block has no default outgoing edge.");
+			return to[0];
+		}
 
-        BlockID successTarget() const {
-            if (kind_ == Kind::JmpIf || kind_ == Kind::JmpIfNot) {
-                return to[0];
-            }
-            throw std::runtime_error("This block does not have conditional outgoing edges.");
-        }
+		[[nodiscard]] BlockID successTarget() const {
+			if (op_type == Kind::JmpIf || op_type == Kind::JmpIfNot) return to[0];
+			throw std::runtime_error("This block does not have conditional outgoing edges.");
+		}
 
-        BlockID failTarget() const {
-            if (kind_ == Kind::JmpIf || kind_ == Kind::JmpIfNot) {
-                return to[1];
-            }
-            throw std::runtime_error("This block does not have conditional outgoing edges.");
-        }
+		[[nodiscard]] BlockID failTarget() const {
+			if (op_type == Kind::JmpIf || op_type == Kind::JmpIfNot) return to[1];
+			throw std::runtime_error("This block does not have conditional outgoing edges.");
+		}
 
-        BlockID operator[](usize index) const {
-            return to[index];
-        }
+		BlockID operator[](usize index) const { return to.at(index); }
 
-      private:
-        std::array<BlockID, 2> to;
-        usize size_;
-        Kind  kind_;
-    };
+	private:
+		std::array<BlockID, 2> to;
+		usize                  no_edges{ 0 };
+		Kind                   op_type{ Kind::End };
+	};
 
-    struct BasicBlock {
-      private:
-        OutEdges succ;
+	struct BasicBlock {
+	private:
+		OutEdges succ;
 
-      public:
-        const BlockID id;
-        const usize start;
-        const usize end;
+	public:
+		const BlockID id;
+		const usize   start;
+		const usize   end;
 
-        BasicBlock(BlockID id, usize start, usize end)
-            : succ(), id(id), start(start), end(end) {}
-        BasicBlock() = delete;
+		BasicBlock(BlockID id, usize start, usize end): succ(), id(id), start(start), end(end) {}
 
-        OutEdges::Kind edgeKind() const {
-            return succ.kind();
-        }
+		BasicBlock() = delete;
 
-        BlockID next() const {
-            return succ.next();
-        }
+		[[nodiscard]] OutEdges::Kind edgeKind() const { return succ.kind(); }
 
-        BlockID successTarget() const {
-            return succ.successTarget();
-        }
+		[[nodiscard]] BlockID next() const { return succ.next(); }
 
-        BlockID failTarget() const {
-            return succ.failTarget();
-        }
+		[[nodiscard]] BlockID successTarget() const { return succ.successTarget(); }
 
-        void setCondEdge(OutEdges::Kind kind, BlockID target1, BlockID target2) {
-            succ.setCond(kind, target1, target2);
-        }
+		[[nodiscard]] BlockID failTarget() const { return succ.failTarget(); }
 
-        void setDefaultEdge(BlockID target) {
-            succ.setDefault(target);
-        }
+		void setCondEdge(OutEdges::Kind kind, BlockID target1, BlockID target2) {
+			succ.setCond(kind, target1, target2);
+		}
 
-        BlockID edge(usize index) const {
-            return succ[index];
-        }
+		void setDefaultEdge(BlockID target) { succ.setDefault(target); }
 
-        usize edgeCount() const {
-            return succ.size();
-        }
-    };
+		[[nodiscard]] BlockID edge(usize index) const { return succ[index]; }
 
-    class ControlFlowGraph {
-      private:
-        std::vector<BasicBlock> blocks;
+		[[nodiscard]] usize edgeCount() const { return succ.size(); }
+	};
 
-        void createCFG(const low::LowFuncData& function, const std::vector<usize>& block_beginnings);
+	class ControlFlowGraph {
+	private:
+		std::vector<BasicBlock> blocks;
 
-      public:
-        ControlFlowGraph() = default;
+		void createCFG(const low::LowFuncData& function, const std::vector<usize>& block_beginnings);
 
-        ControlFlowGraph(const low::LowFuncData& function, std::vector<usize> block_beginnings) {
-            createCFG(function, block_beginnings);
-        }
+	public:
+		ControlFlowGraph() = default;
 
-        usize size() const {
-            return blocks.size();
-        }
+		ControlFlowGraph(
+			const low::LowFuncData& function, const std::vector<usize>& block_beginnings
+		) {
+			createCFG(function, block_beginnings);
+		}
 
-        const BasicBlock& getBlock(BlockID id) const {
-            CORE_ASSERT(id < blocks.size(), "Invalid block ID");
-            return blocks[id];
-        }
-    };
-} // vm::jit::cf
+		[[nodiscard]] usize size() const { return blocks.size(); }
+
+		[[nodiscard]] const BasicBlock& getBlock(BlockID id) const {
+			CORE_ASSERT(id < blocks.size(), "Invalid block ID");
+			return blocks[id];
+		}
+	};
+}  // vm::jit::cf

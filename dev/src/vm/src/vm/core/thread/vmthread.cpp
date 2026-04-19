@@ -642,19 +642,15 @@ namespace vm {
 				for (size_t index = 0; index < executing_program->getFunctions().size(); ++index) {
 					const auto& func = executing_program->getFunctions()[index];
 					if (func.bc.data() <= instr && instr < func.bc.data() + func.bc.size()) {
-						return api::Response(
-							api::response::CodePosition{
-								.function_id  = index,  // Assuming function_id is int
-								.instr_number = static_cast<u64>(instr - func.bc.data()) }
-						);
+						return api::Response(api::response::CodePosition{
+							.function_id  = index,  // Assuming function_id is int
+							.instr_number = static_cast<u64>(instr - func.bc.data()) });
 					}
 				}
 			}
 			variant_default {
-				return std::unexpected(
-					api::ApiError{
-						api::OtherError{ "wrong execution status while reading current position" } }
-				);
+				return std::unexpected(api::ApiError{
+					api::OtherError{ "wrong execution status while reading current position" } });
 			}
 		}
 		CORE_UNREACHABLE();

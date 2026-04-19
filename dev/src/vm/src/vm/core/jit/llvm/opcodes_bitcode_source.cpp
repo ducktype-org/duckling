@@ -3,36 +3,36 @@
  * @note Tis file does not depend on execution style.
  */
 
-#ifdef ENABLE_JIT  // @TODO: #2312 Remove the #ifdef
-	#include "opcodes_bitcode_source.hpp"
-	#include "absolute_symbols.hpp"
+#include "opcodes_bitcode_source.hpp"
 
-	#include "llvm_init.hpp"
+#include "absolute_symbols.hpp"
+#include "llvm_init.hpp"
 
-	#include <llvm_helpers/llvm_helpers.hpp>
+#include <llvm_helpers/llvm_helpers.hpp>
 
-	#include <vm/core/thread/low_program/opcodes.hpp>
+#include <vm/core/thread/low_program/opcodes.hpp>
 
-	#include <cstddef>
-	#include <cstring>
-	#include <unordered_set>
-	#include <array>
+#include <array>
+#include <cstddef>
+#include <cstring>
+#include <ranges>
+#include <unordered_set>
 
 LLVM_INCLUDE_BEGIN()
-	#include <llvm/Bitcode/BitcodeReader.h>
-	#include <llvm/Demangle/Demangle.h>
-	#include <llvm/ExecutionEngine/Orc/ExecutionUtils.h>
-	#include <llvm/ExecutionEngine/Orc/LLJIT.h>
-	#include <llvm/ExecutionEngine/Orc/Core.h>
-	#include <llvm/ExecutionEngine/JITSymbol.h>
-	#include <llvm/IR/Function.h>
-	#include <llvm/IR/LLVMContext.h>
-	#include <llvm/IR/Module.h>
-	#include <llvm/Support/Error.h>
-	#include <llvm/Support/MemoryBuffer.h>
-	#include <llvm/Support/TargetSelect.h>
-	#include <llvm/Transforms/Utils/Cloning.h>
-	#include <llvm/Transforms/Utils/ValueMapper.h>
+#include <llvm/Bitcode/BitcodeReader.h>
+#include <llvm/Demangle/Demangle.h>
+#include <llvm/ExecutionEngine/JITSymbol.h>
+#include <llvm/ExecutionEngine/Orc/Core.h>
+#include <llvm/ExecutionEngine/Orc/ExecutionUtils.h>
+#include <llvm/ExecutionEngine/Orc/LLJIT.h>
+#include <llvm/IR/Function.h>
+#include <llvm/IR/LLVMContext.h>
+#include <llvm/IR/Module.h>
+#include <llvm/Support/Error.h>
+#include <llvm/Support/MemoryBuffer.h>
+#include <llvm/Support/TargetSelect.h>
+#include <llvm/Transforms/Utils/Cloning.h>
+#include <llvm/Transforms/Utils/ValueMapper.h>
 LLVM_INCLUDE_END()
 
 using namespace llvm;
@@ -45,13 +45,18 @@ using namespace llvm::orc;
  */
 // NOLINTBEGIN
 PUSH_DIAGNOSTIC ALLOW_EXTENSIONS inline constexpr char OPCODES[] = {
+#if __has_embed("common_sc.bc")
 	#embed "common_sc.bc"
+#else
+	0
+#endif
 };
 POP_DIAGNOSTIC
 // NOLINTEND
 
 /// @brief Context of llvmInit.
-/// @note We need to use ThreadSafeContext instead of LLVMContext to be able to use a single shared context for the JIT instance.
+/// @note We need to use ThreadSafeContext instead of LLVMContext to be able to use a single shared
+/// context for the JIT instance.
 static std::unique_ptr<ThreadSafeContext> g_context;
 
 /**
@@ -88,67 +93,70 @@ namespace {
 	 * @brief For microinstruction name, returns corresponding MicroOpcode.
 	 */
 	vm::low::MicroOpcode getOpcode(const std::string& func_name) {
-		for (size_t i = 0; i < vm::low::OPCODE_NAMES.size(); ++i)
-			if (func_name == vm::low::OPCODE_NAMES[i]) return static_cast<vm::low::MicroOpcode>(i);
+		for (auto [opcode, name]: std::views::enumerate(vm::low::OPCODE_NAMES))
+			if (func_name == name) return static_cast<vm::low::MicroOpcode>(opcode);
 		CORE_PANIC("Function name does not correspond to any MicroOpcode", func_name);
 	}
 
 	constexpr auto constructNonExecOpcodeArray() {
-		std::array<vm::low::MicroOpcode, vm::low::nonExecutableMicroInstrCount()> non_exec_opcodes;
-		size_t j = 0;
-		for (size_t i = 0; i < vm::low::OPCODE_NAMES.size(); ++i) {
-			if (vm::low::OPCODE_NAMES[i].starts_with("ext_")) {
-				non_exec_opcodes[j++] = static_cast<vm::low::MicroOpcode>(i);
-			}
-		}
-		return non_exec_opcodes;
+		auto non_executable_opcodes
+			= vm::low::OPCODE_NAMES
+		    | std::views::filter([](auto name) { return name.starts_with("ext_"); })
+		    | std::views::enumerate | std::views::transform([](auto pair) {
+				  return static_cast<vm::low::MicroOpcode>(std::get<0>(pair));
+			  });
+		std::array<vm::low::MicroOpcode, vm::low::nonExecutableMicroInstrCount()> output{};
+		std::ranges::copy(non_executable_opcodes, output.begin());
+
+		return output;
 	}
 
 	/**
-	 * @brief "Exports" an LLVM global value so it is visible to other modules. 
+	 * @brief "Exports" an LLVM global value so it is visible to other modules.
 	 */
-	void externalizeGlobalValue(llvm::GlobalValue& GV) {
-		if (!GV.isDeclaration()) {
-			GV.setLinkage(llvm::GlobalValue::ExternalLinkage);
-			GV.setVisibility(llvm::GlobalValue::DefaultVisibility);
+	void externalizeGlobalValue(llvm::GlobalValue& gv) {
+		if (!gv.isDeclaration()) {
+			gv.setLinkage(llvm::GlobalValue::ExternalLinkage);
+			gv.setVisibility(llvm::GlobalValue::DefaultVisibility);
 		}
 	}
 
 	/**
-	 * @brief "Exports" all LLVM global values in a module (functions, global vars, metadata etc.) to make them visible to other modules.
+	 * @brief "Exports" all LLVM global values in a module (functions, global vars, metadata etc.)
+	 * to make them visible to other modules.
 	 * @note This is necessary for proper linking of the user function module with opfunction modules.
 	 */
 	void externalizeAllGlobalValues(llvm::Module& module) {
-		for (auto& GV: module.globals()) {
-			externalizeGlobalValue(GV);
-		}
+		for (auto& gv: module.globals()) externalizeGlobalValue(gv);
 
-		for (auto& GA: module.aliases()) {
-			externalizeGlobalValue(GA);
-		}
+		for (auto& ga: module.aliases()) externalizeGlobalValue(ga);
 
-		for (auto& IF: module.ifuncs()) {
-			externalizeGlobalValue(IF);
-		}
+		for (auto& ifunc: module.ifuncs()) externalizeGlobalValue(ifunc);
 
-		for (auto& F: module.functions()) {
-			externalizeGlobalValue(F);
-		}
+		for (auto& f: module.functions()) externalizeGlobalValue(f);
 	}
 
 	/**
-	 * @brief Creates a new module that contains cloned definitions from `src` based on `filter` and adds it to `lljit`.
-	 * @details ValueToValueMapTy indicates which values had already been cloned earlier - it is here just to satisfy LLVM's API.
+	 * @brief Creates a new module that contains cloned definitions from `src` based on `filter` and
+	 * adds it to `lljit`.
+	 * @details ValueToValueMapTy indicates which values had already been cloned earlier - it is
+	 * here just to satisfy LLVM's API.
 	 */
-	void cloneAndRegisterModule(llvm::Module& src, llvm::orc::LLJIT& lljit, const auto& filter, llvm::orc::ThreadSafeContext& tsctx) {
-		llvm::ValueToValueMapTy vmap;
-		auto dest = llvm::CloneModule(src, vmap, filter);
+	void cloneAndRegisterModule(
+		llvm::Module&                 src,
+		llvm::orc::LLJIT&             lljit,
+		const auto&                   filter,
+		llvm::orc::ThreadSafeContext& tsctx
+	) {
+		llvm::ValueToValueMapTy     vmap;
+		auto                        dest = llvm::CloneModule(src, vmap, filter);
 		llvm::orc::ThreadSafeModule tsm(std::move(dest), tsctx);
 		exit_on_err(lljit.addIRModule(std::move(tsm)));
 	}
 }
 
-static constexpr std::array<vm::low::MicroOpcode, vm::low::nonExecutableMicroInstrCount()> NON_EXEC_OPCODES = constructNonExecOpcodeArray();
+static constexpr std::array<vm::low::MicroOpcode, vm::low::nonExecutableMicroInstrCount()>
+	NON_EXEC_OPCODES = constructNonExecOpcodeArray();
 
 void llvmInit() {
 	llvm::InitializeNativeTarget();
@@ -168,7 +176,9 @@ void llvmInit() {
 	registerAbsoluteJITSymbols(*lljit_instance);
 
 	// Load embedded BC into module
-	auto buffer = MemoryBuffer::getMemBuffer(StringRef(OPCODES, sizeof(OPCODES)), "", false);
+	auto buffer = MemoryBuffer::getMemBuffer(
+		StringRef(static_cast<const char*>(OPCODES), sizeof(OPCODES)), "", false
+	);
 
 	auto mod_or_err = parseBitcodeFile(buffer->getMemBufferRef(), *initial_context);
 	if (!mod_or_err) llvm::report_fatal_error("Aborting due to parse error");
@@ -182,16 +192,16 @@ void llvmInit() {
 
 	externalizeAllGlobalValues(*g_module);
 
-	for (auto& F: g_module->functions()) {
-		if (!F.isDeclaration()) {
-			auto func_name = F.getName().str();
+	for (auto& f: g_module->functions()) {
+		if (!f.isDeclaration()) {
+			auto func_name = f.getName().str();
 			auto demangled = llvm::demangle(func_name);
 			if (demangled.starts_with("vm::OpFuns::op_")
 			    and !demangled.starts_with("vm::OpFuns::op_debug")) {
 				name_set.insert(func_name);
-				auto name        = extractFunctionName(demangled);
-				name             = name.substr(3);  // delete op_
-				auto opcode      = getOpcode(name);
+				auto name              = extractFunctionName(demangled);
+				name                   = name.substr(3);  // delete op_
+				auto opcode            = getOpcode(name);
 				lfunc_name_map[opcode] = func_name;
 			}
 		}
@@ -202,15 +212,15 @@ void llvmInit() {
 
 	// We need to clone module definitions to preserve them for future cloning.
 
-	auto globals_filter = [&](llvm::GlobalValue const* GV) -> bool {
-		return !name_set.contains(GV->getName().str());
+	auto globals_filter = [&](const llvm::GlobalValue* gv) -> bool {
+		return !name_set.contains(gv->getName().str());
 	};
 
 	cloneAndRegisterModule(*g_module, *lljit_instance, globals_filter, *g_context);
 
-	for (auto const& opfun_name: name_set) {
-		auto opfun_filter = [&](llvm::GlobalValue const* GV) -> bool {
-			return GV->getName().str() == opfun_name;
+	for (const auto& opfun_name: name_set) {
+		auto opfun_filter = [&](const llvm::GlobalValue* gv) -> bool {
+			return gv->getName().str() == opfun_name;
 		};
 
 		cloneAndRegisterModule(*g_module, *lljit_instance, opfun_filter, *g_context);
@@ -219,11 +229,8 @@ void llvmInit() {
 
 base::Optional<std::string> llvmGetFunName(const vm::low::MicroOpcode& fun) {
 	auto fun_name_iter = lfunc_name_map.find(fun);
-	if (fun_name_iter != lfunc_name_map.end()) {
-		return fun_name_iter->second;
-	}
+	if (fun_name_iter != lfunc_name_map.end()) return fun_name_iter->second;
 	return {};
-	
 }
 
 llvm::orc::ThreadSafeContext* llvmGetTSCtx() { return g_context.get(); }
@@ -231,13 +238,9 @@ llvm::orc::ThreadSafeContext* llvmGetTSCtx() { return g_context.get(); }
 llvm::orc::LLJIT* llvmGetLljit() { return lljit_instance.get(); }
 
 llvm::Module* llvmGetMasterModule() { return g_module.get(); }
+
 bool isOpcodeNonExecutable(const vm::low::MicroOpcode& opcode) {
-	for (const auto& mo: NON_EXEC_OPCODES) {
-		if (mo == opcode) {
-			return true;
-		}
-	}
+	for (const auto& mo: NON_EXEC_OPCODES)
+		if (mo == opcode) return true;
 	return false;
 }
-
-#endif

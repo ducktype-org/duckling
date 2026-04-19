@@ -1,7 +1,5 @@
 add_subdirectory(llvm/)
-
-# TODO: lower copy&patch compilation time
-# add_subdirectory(copy-and-patch)
+add_subdirectory(copy-and-patch/)
 
 add_files(
     cf_analyzer.cpp

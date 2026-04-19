@@ -23,7 +23,8 @@ namespace vm {
 	}
 
 	struct FlagData {
-		// CRITICAL: Field flag must be defined first due to rules of field accessing in LLVM (used for JIT purposes)
+		// CRITICAL: Field flag must be defined first due to rules of field accessing in LLVM (used
+		// for JIT purposes)
 		bool flag;
 	};
 
@@ -33,7 +34,8 @@ namespace vm {
 	 * It stores the state of the one function call during the program execution.
 	 */
 	struct Frame {
-		// CRITICAL: Field flags must be defined first due to rules of field accessing in LLVM (used for JIT purposes)
+		// CRITICAL: Field flags must be defined first due to rules of field accessing in LLVM (used
+		// for JIT purposes)
 		FlagData flags{};
 
 		/**

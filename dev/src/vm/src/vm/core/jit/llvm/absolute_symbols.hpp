@@ -9,4 +9,4 @@ LLVM_INCLUDE_END()
 /**
  * @brief Registers absolute symbols for unjitable opfunctions to work.
  */
-void registerAbsoluteJITSymbols(llvm::orc::LLJIT &lljit);
+void registerAbsoluteJITSymbols(llvm::orc::LLJIT& lljit);

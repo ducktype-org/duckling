@@ -363,7 +363,7 @@ namespace vm {
 		FUNCTION_CONT_CHECK_STRATEGY(0);
 	}
 #ifdef ENABLE_JIT
-#ifndef IGNORE_NOT_JITABLE
+	#ifndef IGNORE_NOT_JITABLE
 	RETURN_TYPE OpFuns::OPCODE_NAME(jit_call_entrypoint)(FUNCTION_ARGS) {
 		{
 			auto& jit_data = thread.jit_data;
@@ -401,7 +401,7 @@ namespace vm {
 		}
 		FUNCTION_CONT_CHECK_STRATEGY(0);
 	}
-#endif
+	#endif
 #endif
 #ifndef IGNORE_NOT_JITABLE
 	RETURN_TYPE OpFuns::OPCODE_NAME(call_builtinfunc)(FUNCTION_ARGS) {

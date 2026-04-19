@@ -11,6 +11,7 @@ LLVM_INCLUDE_BEGIN()
 LLVM_INCLUDE_END()
 
 /**
- * @brief Creates a new empty llvm::Module with the same data layout and target triple as in the master module.
+ * @brief Creates a new empty llvm::Module with the same data layout and target triple as in the
+ * master module.
  */
-std::unique_ptr<llvm::Module> setupModule(const std::string& module_name, llvm::LLVMContext &ctx);
+std::unique_ptr<llvm::Module> setupModule(const std::string& module_name, llvm::LLVMContext& ctx);
