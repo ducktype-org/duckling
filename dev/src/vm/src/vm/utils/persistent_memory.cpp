@@ -29,7 +29,7 @@ namespace vm::persistent::detail {
 
 			return {
 				height,
-				pos & ROOT_MASK,
+				(pos << height) & ROOT_MASK,
 			};
 		}
 
@@ -55,6 +55,16 @@ namespace vm::persistent::detail {
 		if_opt_some(root_info.atMaybeCopy(state), entry) { return entry.position; }
 
 		if_opt_some(leaf_entries.atRightOpt(state), entry) { return LEAF_MASK | entry.idx; }
+
+		CORE_UNREACHABLE();
+	}
+
+	std::pair<usize, usize> Memory::getRange(MemoryStateID state) const {
+		if_opt_some(root_info.atMaybeCopy(state), entry) {
+			return { entry.left_bound, entry.right_bound };
+		}
+
+		if_opt_some(leaf_entries.atRightOpt(state), entry) { return { entry.idx, entry.idx + 1 }; }
 
 		CORE_UNREACHABLE();
 	}
@@ -102,11 +112,16 @@ namespace vm::persistent::detail {
 		auto new_pos  = (pos_left | pos_right) >> 1;
 		auto new_size = size_left + size_right;
 
+		auto [new_left, _1]  = getRange(left);
+		auto [_2, new_right] = getRange(right);
+
 		root_info.emplace(
 			node,
 			RootEntry{
-				.size     = new_size,
-				.position = new_pos,
+				.size        = new_size,
+				.position    = new_pos,
+				.left_bound  = new_left,
+				.right_bound = new_right,
 			}
 		);
 		next_node_id++;
@@ -137,6 +152,13 @@ namespace vm::persistent::detail {
 			leaf_entries.atRightOpt(root).has_value(), "if not a root, node, has to be a leaf"
 		);
 
+		return EMPTY;
+	}
+
+	MemoryStateID Memory::rebuildFromIdxs(
+		MemoryStateID root, std::deque<usize> idxs, std::function<MemoryStateID(usize)> func
+	) {
+		auto [left_idx, right_idx] = getRange(root);
 		return EMPTY;
 	}
 
@@ -704,9 +726,7 @@ namespace vm::persistent::detail {
 		return ans;
 	}
 
-	MemoryStateID Memory::merge(
-		MemoryStateID root_1, MemoryStateID root_2, ConflictPolicy policy
-	) {
+	MemoryStateID Memory::merge(MemoryStateID root_1, MemoryStateID root_2, ConflictPolicy policy) {
 		validateRoot(root_1);
 		validateRoot(root_2);
 
@@ -947,8 +967,10 @@ namespace vm::persistent::detail {
 		root_info.put(
 			EMPTY,
 			RootEntry{
-				.size     = 0,
-				.position = 0,
+				.size        = 0,
+				.position    = 0,
+				.left_bound  = 0,
+				.right_bound = 0,
 			}
 		);
 		child_entries.emplaceByLeft(ChildEntry{ .left = EMPTY, .right = EMPTY }, EMPTY);

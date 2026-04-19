@@ -58,6 +58,8 @@ namespace vm::persistent::detail {
 		struct RootEntry {
 			usize size;
 			usize position;
+			usize left_bound;
+			usize right_bound;
 		};
 
 		enum class Dir { Left, Right };
@@ -101,12 +103,17 @@ namespace vm::persistent::detail {
 		std::pair<usize, usize> getHeightOffset(MemoryStateID state) const;
 		usize                   getSize(MemoryStateID state) const;
 		usize                   getPos(MemoryStateID state) const;
+		std::pair<usize, usize> getRange(MemoryStateID state) const;
 
 		void validateRoot(MemoryStateID root) const;
 		void validateIdx(MemoryStateID root, usize idx) const;
 
 		MemoryStateID nodeFromChildren(MemoryStateID left, MemoryStateID right);
 		MemoryStateID nodeFromIdxVar(usize idx, usize var_id);
+
+		MemoryStateID rebuildFromIdxs(
+			MemoryStateID root, std::deque<usize> idxs, std::function<MemoryStateID(usize)>
+		);
 
 		[[nodiscard]]
 		MemoryStateID getChild(Dir dir, MemoryStateID root) const;
