@@ -99,13 +99,13 @@ namespace compiler::repl {
 			return true;
 		}
 
-		if (line == "/history" || line == "/h") {
-			m_frontend.printHistory();
+		if (line == "/help" || line == "/?" || line == "/h") {
+			m_frontend.printHelp();
 			return true;
 		}
 
-		if (line == "/help" || line == "/?") {
-			m_frontend.printHelp();
+		if (line == "/history" || line == "/hist") {
+			m_frontend.printHistory();
 			return true;
 		}
 

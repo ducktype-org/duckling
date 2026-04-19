@@ -508,9 +508,9 @@ namespace compiler::repl {
 
 	void FrontendReplxxImplementation::printHelp() const {
 		std::cout << "\n=== REPL Commands ===\n";
-		std::cout << "  /help, /?           - Show this help message\n";
+		std::cout << "  /help, /?, /h       - Show this help message\n";
 		std::cout << "  /exit, /quit, /q    - Exit the REPL\n";
-		std::cout << "  /history, /h        - Show all executed statements\n";
+		std::cout << "  /history, /hist     - Show all executed statements\n";
 		std::cout << "  /clear, /c          - Clear terminal\n";
 		std::cout << "\n=== Editing ===\n";
 		std::cout << "  Enter               - Submit\n";
