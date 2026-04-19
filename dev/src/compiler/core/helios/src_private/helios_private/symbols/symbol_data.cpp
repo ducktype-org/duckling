@@ -9,8 +9,8 @@
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/tsh/queries/types.hpp>
 
-#include "base/str/str_utils.hpp"
 #include <base/except/exceptions.hpp>
+#include <base/str/str_utils.hpp>
 
 namespace compiler::helios {
 	namespace defgen {
