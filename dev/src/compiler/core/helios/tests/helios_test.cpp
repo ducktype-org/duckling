@@ -64,6 +64,7 @@ public:
 		TESTER_ADD_TEST(testClassSymbolData);
 		TESTER_ADD_TEST(testClassInteractions);
 		TESTER_ADD_TEST(testTypeInstanceInterface);
+		TESTER_ADD_TEST(testGeneratedInterface);
 		TESTER_ADD_TEST(testHoutVariables);
 		TESTER_ADD_TEST(testReferences);
 		TESTER_ADD_TEST(testBoxes);
@@ -557,6 +558,46 @@ private:
 
 			CRef<LookupResult> empty_result
 				= &h_interface.lookup(ctx, base::StrID("non_existent_symbol"))->valueOrPanic();
+			ASSERT_TRUE(empty_result->isEmpty());
+		});
+	}
+
+	void testGeneratedInterface() {
+		auto [module_id, root_scope] = getModule(fs::File(path("test_modules/tuples")));
+
+		const auto tup = getChain("tup", root_scope).back();
+		const auto tup_abstract_type
+			= query::entryPoint<compiler::helios::QueryTypeOfSymbol>(tup)
+		          ->valueOrThrow()
+		          .getType()
+		          .as<compiler::tsh::TupleAbstractType>();
+
+		const auto h_interface
+			= compiler::helios::HInterface::ofTypeInstance(tup_abstract_type);
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			using compiler::helios::LookupResult;
+
+			CRef<LookupResult> first_result
+				= &h_interface.lookup(ctx, base::StrID("_1"))->valueOrPanic();
+			ASSERT_TRUE(first_result->isSingle());
+			auto first_symbol = first_result->leaves.at(0);
+			ASSERT_EQUAL(kind(first_symbol), compiler::helios::SymbolKind::Field);
+
+			CRef<LookupResult> second_result
+				= &h_interface.lookup(ctx, base::StrID("_2"))->valueOrPanic();
+			ASSERT_TRUE(second_result->isSingle());
+			auto second_symbol = second_result->leaves.at(0);
+			ASSERT_EQUAL(kind(second_symbol), compiler::helios::SymbolKind::Field);
+
+			CRef<LookupResult> third_result
+				= &h_interface.lookup(ctx, base::StrID("_3"))->valueOrPanic();
+			ASSERT_TRUE(third_result->isSingle());
+			auto third_symbol = third_result->leaves.at(0);
+			ASSERT_EQUAL(kind(third_symbol), compiler::helios::SymbolKind::Field);
+
+			CRef<LookupResult> empty_result
+				= &h_interface.lookup(ctx, base::StrID("_0"))->valueOrPanic();
 			ASSERT_TRUE(empty_result->isEmpty());
 		});
 	}
