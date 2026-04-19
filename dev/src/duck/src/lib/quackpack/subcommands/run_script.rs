@@ -158,11 +158,7 @@ fn execute_script(
     if dvm_backend {
         panic!("@TODO: #2443 Implement run")
     } else {
-        let mut exe_name = Path::new(script_name)
-            .file_stem()
-            .unwrap_or_default()
-            .to_os_string();
-        exe_name.push(".exe");
+        let exe_name = Path::new(script_name).with_extension("exe");
         let exe_path = artifacts_dir.path().join(exe_name);
         let exit_status = run::run_exe(&exe_path, args)?;
         std::process::exit(exit_status.code().unwrap_or(0))
