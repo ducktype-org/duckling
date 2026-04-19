@@ -47,20 +47,20 @@ namespace compiler::linker {
 				global_state::getGlobalLogger()->log(makeBox<dia_int::PlaceholderHeaderError>(
 					"Linking of the final executable failed. See the linker output above. ",
 					"The common reasons for this error may include missing main function "
-				    "(temporary "
+					"(temporary "
 					"feature), missing linker options related to external libraries or duplicated "
 					"declaration not detected by the compiler."
 				));
 			} else {
 				CORE_USER_LOG(
 					"\nWARNING: linker called inside a query or the global logger is not "
-				    "available. Falling back to the user logs for diagnostics.\n"
+					"available. Falling back to the user logs for diagnostics.\n"
 				);
 				CORE_USER_LOG(
 					"\nERROR: Linking of the final executable failed. See the linker output "
-				    "above. ",
+					"above. ",
 					"The common reasons for this error may include missing main function "
-				    "(temporary "
+					"(temporary "
 					"feature), missing linker options related to external libraries or duplicated "
 					"declaration not detected by the compiler.\n"
 				);
