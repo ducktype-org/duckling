@@ -21,9 +21,16 @@ public:
 	}
 
 private:
+	/**
+	 * @brief template function to reuse in the tests
+	 *
+	 * @param path_name Path to dbc file that will be run
+	 * @param expected_values Vector of expected return values
+	 * @param expected_statuses Vector of expected status types (using altIndex(type))
+	 */
 	void testTemplate(
 		std::string_view          path_name,
-		const size_t              ret_val_limit,
+		const std::vector<int>&   expected_values,
 		const std::vector<usize>& expected_statuses
 	) {
 		size_t                  status_counter  = 0;
@@ -33,17 +40,24 @@ private:
 
 		events::Listener<vm::api::ProcStatus> status_listener([&](const vm::api::ProcStatus& status
 		                                                      ) {
-			ASSERT_TRUE(status_counter < expected_statuses.size());
-			ASSERT_EQUAL_PRINT(expected_statuses[status_counter], status.index());
-			status_counter++;
+			{
+				std::lock_guard lk(m);
+				ASSERT_TRUE(status_counter < expected_statuses.size());
+				ASSERT_EQUAL_PRINT(expected_statuses[status_counter], status.index());
+				status_counter++;
+			}
 			if (status_counter == expected_statuses.size()) cv.notify_one();
 		});
 
-		events::Listener<std::string> execution_completed_listener([&](const std::string& str) {
-			ASSERT_TRUE(ret_val_counter < ret_val_limit);
-			ASSERT_EQUAL_PRINT("0", str);
-			ret_val_counter++;
-		});
+		events::Listener<vm::api::ExitValue> execution_completed_listener(
+			[&](const vm::api::ExitValue& exit_value) {
+				std::lock_guard lk(m);
+				ASSERT_TRUE(ret_val_counter < expected_values.size());
+				ASSERT_EQUAL_PRINT("i64", exit_value->type->getName());
+				ASSERT_EQUAL_PRINT(expected_values[ret_val_counter], exit_value->readBytes<i64>());
+				ret_val_counter++;
+			}
+		);
 
 		events::Listener<std::string> error_listener([&](const std::string& err) { fail(err); });
 
@@ -54,17 +68,17 @@ private:
 		debugger.runMain();
 		std::unique_lock lk(m);
 		// timeout for the test
-		cv.wait_for(lk, std::chrono::milliseconds(100), [&] {
+		ASSERT_TRUE(cv.wait_for(lk, std::chrono::milliseconds(100), [&] {
 			return status_counter == expected_statuses.size();
-		});
+		}));
 		ASSERT_EQUAL_PRINT(expected_statuses.size(), status_counter);
-		ASSERT_EQUAL_PRINT(ret_val_limit, ret_val_counter);
+		ASSERT_EQUAL_PRINT(expected_values.size(), ret_val_counter);
 	}
 
 	void runAndGetStatus() {
 		testTemplate(
 			"debugger_test.dbc",
-			1,
+			{ 0 },
 			{
 				altIndex(vm::api::Running),
 				altIndex(vm::api::ExecutionCompleted),
@@ -75,7 +89,7 @@ private:
 	void getStatusWait() {
 		testTemplate(
 			"vm_api_tests.dbc",
-			0,
+			{},
 			{
 				altIndex(vm::api::Running),
 				altIndex(vm::api::Sleeping),
@@ -86,7 +100,7 @@ private:
 	void getStatusBreakpoint() {
 		testTemplate(
 			"breakpoint.dbc",
-			0,
+			{},
 			{
 				altIndex(vm::api::Running),
 				altIndex(vm::api::Paused),
@@ -95,7 +109,6 @@ private:
 	}
 
 	void rerunTest() {
-		size_t                  ret_val_limit   = 3;
 		size_t                  status_counter  = 0;
 		size_t                  ret_val_counter = 0;
 		std::mutex              m;
@@ -106,20 +119,28 @@ private:
 			altIndex(vm::api::ExecutionCompleted),
 		};
 
+		const std::vector<int> expected_values = { 0, 0, 0 };
+
 		events::Listener<vm::api::ProcStatus> status_listener([&](const vm::api::ProcStatus& status
 		                                                      ) {
-			ASSERT_TRUE(status_counter < expected_statuses.size());
-			ASSERT_EQUAL_PRINT(expected_statuses[status_counter], status.index());
-			status_counter++;
+			{
+				std::lock_guard lk(m);
+				ASSERT_TRUE(status_counter < expected_statuses.size());
+				ASSERT_EQUAL_PRINT(expected_statuses[status_counter], status.index());
+				status_counter++;
+			}
 			if (status_counter == expected_statuses.size()) cv.notify_one();
 		});
 
-		events::Listener<std::string> execution_completed_listener([&](const std::string& str) {
-			ASSERT_TRUE(ret_val_counter < ret_val_limit);
-			ASSERT_EQUAL_PRINT("0", str);
-			ret_val_counter++;
-		});
-
+		events::Listener<vm::api::ExitValue> execution_completed_listener(
+			[&](const vm::api::ExitValue& exit_value) {
+				std::lock_guard lk(m);
+				ASSERT_TRUE(ret_val_counter < expected_values.size());
+				ASSERT_EQUAL_PRINT("i64", exit_value->type->getName());
+				ASSERT_EQUAL_PRINT(expected_values[ret_val_counter], exit_value->readBytes<i64>());
+				ret_val_counter++;
+			}
+		);
 		events::Listener<std::string> error_listener([&](const std::string& err) { fail(err); });
 
 		vm::debugger::Debugger debugger{ fs::File(path("debugger_test.dbc")) };
@@ -135,13 +156,14 @@ private:
 			debugger.runMain();
 			std::unique_lock lk(m);
 			// Test timeout
-			cv.wait_for(lk, std::chrono::milliseconds(100), [&] {
+			ASSERT_TRUE(cv.wait_for(lk, std::chrono::milliseconds(100), [&] {
 				return status_counter == expected_statuses.size();
-			});
+			}));
 			ASSERT_EQUAL_PRINT(expected_statuses.size(), status_counter);
 		}
 		ASSERT_TRUE(std::holds_alternative<vm::api::ExecutionCompleted>(debugger.getStatus()));
-		ASSERT_EQUAL_PRINT(ret_val_limit, ret_val_counter);
+		std::lock_guard lk(m);
+		ASSERT_EQUAL_PRINT(expected_values.size(), ret_val_counter);
 	}
 
 	void errorTest() {
@@ -152,7 +174,10 @@ private:
 		vm::debugger::Debugger  debugger{ fs::File(path("while_true_no_breakpoint.dbc")) };
 
 		events::Listener<std::string> error_listener([&](const std::string&) {
-			error_counter++;
+			{
+				std::lock_guard lk(m);
+				error_counter++;
+			}
 			cv.notify_one();
 		});
 
@@ -162,9 +187,9 @@ private:
 		debugger.runMain();
 
 		std::unique_lock lk(m);
-		cv.wait_for(lk, std::chrono::milliseconds(100), [&] {
+		ASSERT_TRUE(cv.wait_for(lk, std::chrono::milliseconds(100), [&] {
 			return error_counter == expected_errors;
-		});
+		}));
 		ASSERT_TRUE(std::holds_alternative<vm::api::Running>(debugger.getStatus()));
 		ASSERT_EQUAL_PRINT(expected_errors, error_counter);
 	}

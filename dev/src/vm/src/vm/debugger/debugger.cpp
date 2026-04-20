@@ -20,16 +20,7 @@ namespace vm::debugger {
 		  updater([&](const vm::api::ProcStatus& status) {
 			  variant_match(status) {
 				  variant_case(vm::api::ExecutionCompleted, completed) {
-					  std::stringstream out;
-					  const auto        type_name = completed.exit_value->type->getName();
-
-					  if (type_name == base::StrID("i64"))
-						  out << completed.exit_value->readBytes<i64>();
-					  else {
-						  on_error.emitEvent("Unsupported return type error");
-						  out << "<unsupported type>";
-					  }
-					  on_vm_completes_execution.emitEvent(out.str());
+					  on_vm_completes_execution.emitEvent(completed.exit_value);
 				  }
 				  variant_case(vm::api::ExecutionPanicked, panicked) {
 					  on_error.emitEvent(panicked.error_message);
@@ -63,7 +54,8 @@ namespace vm::debugger {
 		on_vm_changes_status.attachListener(listener);
 	}
 
-	void Debugger::attachOnVMCompletesExecutionListener(events::Listener<std::string>& listener) {
+	void Debugger::attachOnVMCompletesExecutionListener(events::Listener<vm::api::ExitValue>& listener
+	) {
 		on_vm_completes_execution.attachListener(listener);
 	}
 

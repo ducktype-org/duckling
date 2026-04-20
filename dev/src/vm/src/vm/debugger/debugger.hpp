@@ -31,12 +31,12 @@ namespace vm::debugger {
 		events::Emitter<vm::api::ProcStatus> on_vm_changes_status;
 
 		/**
-		 * @brief Emits return value when VM completes execution
+		 * @brief Emits exit value as VMValue when VM completes execution
 		 */
-		events::Emitter<std::string> on_vm_completes_execution;
+		events::Emitter<vm::api::ExitValue> on_vm_completes_execution;
 
 		/**
-		 * @brief Emits error message on any error
+		 * @brief Emits error message in human readable format on any error
 		 */
 		events::Emitter<std::string> on_error;
 
@@ -59,7 +59,7 @@ namespace vm::debugger {
 		/**
 		 * @brief Attach Listener to Emitter that emits return value when VM completes execution
 		 */
-		void attachOnVMCompletesExecutionListener(events::Listener<std::string>& listener);
+		void attachOnVMCompletesExecutionListener(events::Listener<vm::api::ExitValue>& listener);
 
 		/**
 		 * @brief Attach Listener to Emitter that emits error message when any error raises
