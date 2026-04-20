@@ -1,6 +1,6 @@
 Tests:
   build:
-    Description: can build a new project
+    Description: can build a project with features
     Cases:
       build_with_feature:
         test_cmd: -C foo build --verbose --features foo

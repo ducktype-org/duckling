@@ -1,6 +1,6 @@
 Tests:
   sync:
-    Description: can sync a new project
+    Description: cannot sync a project with malformed manifest (missing feature flags)
     Cases:
       sync:
         test_cmd: -C foo sync

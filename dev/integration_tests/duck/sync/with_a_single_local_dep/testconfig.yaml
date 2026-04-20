@@ -2,7 +2,7 @@ PostCase: python3 check.py
 
 Tests:
   sync:
-    Description: can sync a new project
+    Description: can sync a project with a single local dep
     Cases:
       sync:
         test_cmd: -C foo sync

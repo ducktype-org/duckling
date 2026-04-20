@@ -1,6 +1,6 @@
 Tests:
   sync:
-    Description: can sync a new project
+    Description: cannot sync a project with a nonexistent dependency
     Cases:
       sync:
         test_cmd: -C foo sync

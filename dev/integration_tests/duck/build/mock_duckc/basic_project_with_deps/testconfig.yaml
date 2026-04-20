@@ -1,6 +1,6 @@
 Tests:
   build:
-    Description: can build a new project
+    Description: can build a project with dependencies
     Cases:
       build:
         test_cmd: -C foo build
