@@ -1,27 +1,27 @@
 type primitive: i8 1
 type variant: simple_variant { i64, i8 }
 
-function main { i64, ptr_argv } -> { i64 } {
-    init_lany_type v1, simple_variant;
-    variantSetInner_lvnt_type v1, i64;
+function main { i64, ptr_argv } -> i64 {
+    init_pany_type v1, simple_variant;
+    variantSetInner_pvnt_type v1, i64;
 
-    init_lany_type value, i64;
-    input_l64 value;
+    init_pany_type value, i64;
+    input_p64 value;
 
-    init_lany_type ptr, ptr_i64;
-    variantGetInner_lptr_lvnt_type ptr, v1, i64;
+    init_pany_type ptr, ptr_i64;
+    variantGetInner_pptr_pvnt_type ptr, v1, i64;
 
-    store_lptr_lany ptr, value;
+    store_pptr_pany ptr, value;
 
     deinit; # ptr
 
-    init_lany_type new_ptr, ptr_i64;
-    variantGetInner_lptr_lvnt_type new_ptr, v1, i64;
+    init_pany_type new_ptr, ptr_i64;
+    variantGetInner_pptr_pvnt_type new_ptr, v1, i64;
 
-    mov_l64_imm value, 0;
-    load_lany_lptr value, new_ptr;
+    mov_p64_imm value, 0;
+    load_pany_pptr value, new_ptr;
 
-    output_l64 value;
+    output_p64 value;
 
     ret;
 }

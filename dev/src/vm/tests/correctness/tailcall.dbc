@@ -1,34 +1,34 @@
-function dummy { i64 } -> { i64 } {
+function dummy { i64 } -> i64 {
 	# if arg0 == 0: end
-	cmpEq_l64_imm     arg0, 0;
+	cmpEq_p64_imm     arg0, 0;
 	jmpIf_label    End;
 
-	sub_l64_imm       arg0, 1;
+	sub_p64_imm       arg0, 1;
 	ret_tailcall_func      dummy;
 
 	label End;
 
-	mov_l64_l64       ret0, arg0;
+	mov_p64_p64       ret_val, arg0;
 
 	deinit; # arg0
 	ret;
 }
 
 
-function main { i64, ptr_argv } -> { i64 } {
-	# ret0 -> main ret0
+function main { i64, ptr_argv } -> i64 {
+	# ret_val -> main ret_val
 	# arg0 -> argc
 	# arg1 -> *argv
 
-	init_lany_type dummy_ret_val, i64;
-	init_lany_type dummy_arg0, i64;
+	init_pany_type dummy_ret_val, i64;
+	init_pany_type dummy_arg0, i64;
 
-	input_l64          dummy_arg0; # arg0 := input
+	input_p64          dummy_arg0; # arg0 := input
 	call_func          dummy;
 
-	output_l64         dummy_ret_val;
+	output_p64         dummy_ret_val;
 
-	deinit;       # dummy ret0
+	deinit;       # dummy ret_val
 	deinit;       # *argv
 	deinit;       # argc
 	ret;

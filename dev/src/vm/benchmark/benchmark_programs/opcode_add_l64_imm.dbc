@@ -5,38 +5,38 @@ function main { i64, ptr_argv } -> { i64 } {
 
     init_type       i64;  # [32, 40) i
     init_type       i64;  # [40, 48) temp
-    input_l64       32;      # i := input
-    mov_l64_imm     40, 0;
+    input_p64       32;      # i := input
+    mov_p64_imm     40, 0;
 
     label Loop;
-        add_l64_imm   40, 0;
-        add_l64_imm   40, 0;
-        add_l64_imm   40, 0;
-        add_l64_imm   40, 0;
-        add_l64_imm   40, 0;
-        add_l64_imm   40, 0;
-        add_l64_imm   40, 0;
-        add_l64_imm   40, 0;
-        add_l64_imm   40, 0;
-        add_l64_imm   40, 0;
-        add_l64_imm   40, 0;
-        add_l64_imm   40, 0;
-        add_l64_imm   40, 0;
-        add_l64_imm   40, 0;
-        add_l64_imm   40, 0;
-        add_l64_imm   40, 0;
-        add_l64_imm   40, 0;
-        add_l64_imm   40, 0;
-        add_l64_imm   40, 0;
-        add_l64_imm   40, 0;
-        add_l64_imm   40, 0;
-        add_l64_imm   40, 0;
-        add_l64_imm   40, 0;
-        add_l64_imm   40, 0;
-        add_l64_imm   40, 0;
+        add_p64_imm   40, 0;
+        add_p64_imm   40, 0;
+        add_p64_imm   40, 0;
+        add_p64_imm   40, 0;
+        add_p64_imm   40, 0;
+        add_p64_imm   40, 0;
+        add_p64_imm   40, 0;
+        add_p64_imm   40, 0;
+        add_p64_imm   40, 0;
+        add_p64_imm   40, 0;
+        add_p64_imm   40, 0;
+        add_p64_imm   40, 0;
+        add_p64_imm   40, 0;
+        add_p64_imm   40, 0;
+        add_p64_imm   40, 0;
+        add_p64_imm   40, 0;
+        add_p64_imm   40, 0;
+        add_p64_imm   40, 0;
+        add_p64_imm   40, 0;
+        add_p64_imm   40, 0;
+        add_p64_imm   40, 0;
+        add_p64_imm   40, 0;
+        add_p64_imm   40, 0;
+        add_p64_imm   40, 0;
+        add_p64_imm   40, 0;
 
-        sub_l64_imm     32, 1; # i := i-1
-        cmpEq_l64_imm   32, 0; # if i == 0
+        sub_p64_imm     32, 1; # i := i-1
+        cmpEq_p64_imm   32, 0; # if i == 0
         jmpIfNot_label Loop;
 
     deinit; # temp

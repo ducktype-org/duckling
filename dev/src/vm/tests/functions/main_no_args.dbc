@@ -1,6 +1,6 @@
-function main {} -> { i64 } {
-    init_lany_type x, i64;
-	mov_l64_imm x, 42;
-	output_l64 x;
+function main {} -> i64 {
+    init_pany_type x, i64;
+	mov_p64_imm x, 42;
+	output_p64 x;
     ret;
 }

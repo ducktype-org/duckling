@@ -6,29 +6,29 @@ type variant: simple_variant { i64, A, i32 }
 
 function main { i64, ptr_argv } -> { i64 } {
     # let v0: variant<i64, A, i32>;
-    init_lany_type v0, simple_variant;
+    init_pany_type v0, simple_variant;
 
     # v0.setType<i64>();
-    variantSetInner_lvnt_type v0, i64;
+    variantSetInner_pvnt_type v0, i64;
 
     # let ptr: ptr<i64>;
-    init_lany_type ptr, ptr_i64;
+    init_pany_type ptr, ptr_i64;
 
     # ptr = v0.getData<i64>();
-    variantGetInner_lptr_lvnt_type ptr, v0, i64;
+    variantGetInner_pptr_pvnt_type ptr, v0, i64;
 
     # let value: i64 = input();
-    init_lany_type value, i64;
-    input_l64 value;
+    init_pany_type value, i64;
+    input_p64 value;
 
     # *ptr = value;
-    store_lptr_lany ptr, value;
+    store_pptr_pany ptr, value;
 
     # let read_val: i64 = *ptr;
-    init_lany_type read_val, i64;
-    load_lany_lptr read_val, ptr;
+    init_pany_type read_val, i64;
+    load_pany_pptr read_val, ptr;
 
-    output_l64 read_val;
+    output_p64 read_val;
 
     ret;
 }

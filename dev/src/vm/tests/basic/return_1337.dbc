@@ -1,11 +1,11 @@
 type primitive: int64 8
 
-function main { i64, ptr_argv } -> { i64 } {
-	# ret0 -> main ret0
+function main { i64, ptr_argv } -> i64 {
+	# ret_val -> main ret_val
 	# arg0 -> argc
 	# arg1 -> *argv
 
-	mov_l64_imm ret0, 1337;
+	mov_p64_imm ret_val, 1337;
 
 	deinit;
 	deinit;

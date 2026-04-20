@@ -2,14 +2,10 @@ use std::time::Duration;
 
 use tracing::debug;
 
-use crate::{
-    QuackResult, QuackResultContext,
-    duck::{
-        driver::cli_args_preprocessing::aliases_expansion::{Alias, Aliases},
-        util::duck_home::DuckHome,
-    },
-    util::yaml_config::YamlConfig,
-};
+use crate::duck::driver::cli_args_preprocessing::aliases_expansion::{Alias, Aliases};
+use crate::duck::util::duck_home::DuckHome;
+use crate::util::yaml_config::YamlConfig;
+use crate::{QuackResult, QuackResultContext};
 
 #[derive(Debug, Default)]
 pub struct DuckCfg {

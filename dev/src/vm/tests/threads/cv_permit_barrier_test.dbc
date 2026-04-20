@@ -21,201 +21,201 @@ global_data phase i64 {};
 global_data lock mutex {};
 global_data cv condition_variable {};
 
-function worker {} -> {} {
-	init_lany_type          lock1, mutex;
-	mov_lopq_gopq           lock1, lock;
+function worker {} -> void {
+	init_pany_type          lock1, mutex;
+	mov_popq_popq           lock1, lock;
 	call_builtinfunc        builtin_lock_mutex;
 
-	init_lany_type          r1, i64;
-	mov_l64_g64             r1, ready;
-	add_l64_imm             r1, 1;
-	mov_g64_l64             ready, r1;
+	init_pany_type          r1, i64;
+	mov_p64_p64             r1, ready;
+	add_p64_imm             r1, 1;
+	mov_p64_p64             ready, r1;
 
-	init_lany_type          cv_notify_ready, condition_variable;
-	mov_lopq_gopq           cv_notify_ready, cv;
+	init_pany_type          cv_notify_ready, condition_variable;
+	mov_popq_popq           cv_notify_ready, cv;
 	call_builtinfunc        builtin_notify_all_cv;
 
 	label   WaitPhaseOneInit;
-		init_lany_type      p1, i64;
-		init_lany_type      cv_wait1, condition_variable;
-		init_lany_type      wait_lock1, mutex;
+		init_pany_type      p1, i64;
+		init_pany_type      cv_wait1, condition_variable;
+		init_pany_type      wait_lock1, mutex;
 
 	label   WaitPhaseOne;
-		mov_l64_g64         p1, phase;
-		cmpEq_l64_imm       p1, 1;
+		mov_p64_p64         p1, phase;
+		cmpEq_p64_imm       p1, 1;
 		jmpIf_label         PhaseOneStarted;
 
-		mov_lopq_gopq       cv_wait1, cv;
-		mov_lopq_gopq       wait_lock1, lock;
+		mov_popq_popq       cv_wait1, cv;
+		mov_popq_popq       wait_lock1, lock;
 		call_builtinfunc    builtin_wait_cv;
 		deinit;
 		jmp_label           WaitPhaseOneInit;
 
 	label   PhaseOneStarted;
 	deinit;
-	init_lany_type          lock2, mutex;
-	mov_lopq_gopq           lock2, lock;
+	init_pany_type          lock2, mutex;
+	mov_popq_popq           lock2, lock;
 	call_builtinfunc        builtin_unlock_mutex;
 
-	init_lany_type          i, i64;
-	mov_l64_imm             i, 10000;
+	init_pany_type          i, i64;
+	mov_p64_imm             i, 10000;
 
 	label   LoopInc;
-		cmpGt_l64_imm       i, 0;
+		cmpGt_p64_imm       i, 0;
 		jmpIfNot_label      DoneIncrements;
 
-		init_lany_type      loop_lock, mutex;
-		mov_lopq_gopq       loop_lock, lock;
+		init_pany_type      loop_lock, mutex;
+		mov_popq_popq       loop_lock, lock;
 		call_builtinfunc    builtin_lock_mutex;
 
-		init_lany_type      temp, i64;
-		mov_l64_g64         temp, counter;
-		add_l64_imm         temp, 1;
-		mov_g64_l64         counter, temp;
+		init_pany_type      temp, i64;
+		mov_p64_p64         temp, counter;
+		add_p64_imm         temp, 1;
+		mov_p64_p64         counter, temp;
 
-		init_lany_type      unlock_loop_lock, mutex;
-		mov_lopq_gopq       unlock_loop_lock, lock;
+		init_pany_type      unlock_loop_lock, mutex;
+		mov_popq_popq       unlock_loop_lock, lock;
 		call_builtinfunc    builtin_unlock_mutex;
 
 		deinit;
-		sub_l64_imm         i, 1;
+		sub_p64_imm         i, 1;
 		jmp_label           LoopInc;
 
 	label   DoneIncrements;
-	init_lany_type          lock5, mutex;
-	mov_lopq_gopq           lock5, lock;
+	init_pany_type          lock5, mutex;
+	mov_popq_popq           lock5, lock;
 	call_builtinfunc        builtin_lock_mutex;
 
-	init_lany_type          d1, i64;
-	mov_l64_g64             d1, done;
-	add_l64_imm             d1, 1;
-	mov_g64_l64             done, d1;
+	init_pany_type          d1, i64;
+	mov_p64_p64             d1, done;
+	add_p64_imm             d1, 1;
+	mov_p64_p64             done, d1;
 
-	init_lany_type          cv_notify_done, condition_variable;
-	mov_lopq_gopq           cv_notify_done, cv;
+	init_pany_type          cv_notify_done, condition_variable;
+	mov_popq_popq           cv_notify_done, cv;
 	call_builtinfunc        builtin_notify_all_cv;
 
-	init_lany_type          lock6, mutex;
-	mov_lopq_gopq           lock6, lock;
+	init_pany_type          lock6, mutex;
+	mov_popq_popq           lock6, lock;
 	call_builtinfunc        builtin_unlock_mutex;
 
 	ret;
 }
 
-function main { i64, ptr_argv } -> { i64 } {
-	init_lany_type          m, mutex;
+function main { i64, ptr_argv } -> i64 {
+	init_pany_type          m, mutex;
 	call_builtinfunc        builtin_create_mutex;
-	mov_gopq_lopq           lock, m;
+	mov_popq_popq           lock, m;
 
-	init_lany_type          c, condition_variable;
+	init_pany_type          c, condition_variable;
 	call_builtinfunc        builtin_create_cv;
-	mov_gopq_lopq           cv, c;
+	mov_popq_popq           cv, c;
 
-	mov_g64_imm             counter, 0;
-	mov_g64_imm             ready, 0;
-	mov_g64_imm             done, 0;
-	mov_g64_imm             phase, 0;
+	mov_p64_imm             counter, 0;
+	mov_p64_imm             ready, 0;
+	mov_p64_imm             done, 0;
+	mov_p64_imm             phase, 0;
 
-	init_lany_type          t1_id, i64;
+	init_pany_type          t1_id, i64;
 	set_threadctx           worker;
 	call_builtinfunc        builtin_start_thread;
 
-	init_lany_type          t2_id, i64;
+	init_pany_type          t2_id, i64;
 	set_threadctx           worker;
 	call_builtinfunc        builtin_start_thread;
 
-	init_lany_type          lockm1, mutex;
-	mov_lopq_gopq           lockm1, lock;
+	init_pany_type          lockm1, mutex;
+	mov_popq_popq           lockm1, lock;
 	call_builtinfunc        builtin_lock_mutex;
 
 	label   WaitReadyInit;
-		init_lany_type      rv, i64;
-		init_lany_type      cv_wait_ready, condition_variable;
-		init_lany_type      wait_lock_ready, mutex;
+		init_pany_type      rv, i64;
+		init_pany_type      cv_wait_ready, condition_variable;
+		init_pany_type      wait_lock_ready, mutex;
 
 	label   WaitReady;
-		mov_l64_g64         rv, ready;
-		cmpEq_l64_imm       rv, 2;
+		mov_p64_p64         rv, ready;
+		cmpEq_p64_imm       rv, 2;
 		jmpIf_label         StartWorkers;
 
-		mov_lopq_gopq       cv_wait_ready, cv;
-		mov_lopq_gopq       wait_lock_ready, lock;
+		mov_popq_popq       cv_wait_ready, cv;
+		mov_popq_popq       wait_lock_ready, lock;
 		call_builtinfunc    builtin_wait_cv;
 		deinit;
 		jmp_label           WaitReadyInit;
 
 	label   StartWorkers;
 	deinit;
-	mov_g64_imm             phase, 1;
+	mov_p64_imm             phase, 1;
 
-	init_lany_type          cv_release, condition_variable;
-	mov_lopq_gopq           cv_release, cv;
+	init_pany_type          cv_release, condition_variable;
+	mov_popq_popq           cv_release, cv;
 	call_builtinfunc        builtin_notify_all_cv;
 
 	label   WaitDoneInit;
-		init_lany_type      dv, i64;
-		init_lany_type      cv_wait_done, condition_variable;
-		init_lany_type      wait_lock_done, mutex;
+		init_pany_type      dv, i64;
+		init_pany_type      cv_wait_done, condition_variable;
+		init_pany_type      wait_lock_done, mutex;
 
 	label   WaitDone;
-		mov_l64_g64         dv, done;
-		cmpEq_l64_imm       dv, 2;
+		mov_p64_p64         dv, done;
+		cmpEq_p64_imm       dv, 2;
 		jmpIf_label         CheckResult;
 
-		mov_lopq_gopq       cv_wait_done, cv;
-		mov_lopq_gopq       wait_lock_done, lock;
+		mov_popq_popq       cv_wait_done, cv;
+		mov_popq_popq       wait_lock_done, lock;
 		call_builtinfunc    builtin_wait_cv;
 		deinit;
 		jmp_label           WaitDoneInit;
 
 	label   CheckResult;
 	deinit;
-	init_lany_type          out_counter, i64;
-	mov_l64_g64             out_counter, counter;
-	output_l64              out_counter;
+	init_pany_type          out_counter, i64;
+	mov_p64_p64             out_counter, counter;
+	output_p64              out_counter;
 
-	init_lany_type          out_ready, i64;
-	mov_l64_g64             out_ready, ready;
-	output_l64              out_ready;
+	init_pany_type          out_ready, i64;
+	mov_p64_p64             out_ready, ready;
+	output_p64              out_ready;
 
-	init_lany_type          out_done, i64;
-	mov_l64_g64             out_done, done;
-	output_l64              out_done;
+	init_pany_type          out_done, i64;
+	mov_p64_p64             out_done, done;
+	output_p64              out_done;
 
-	init_lany_type          ok, i64;
-	mov_l64_imm             ok, 0;
+	init_pany_type          ok, i64;
+	mov_p64_imm             ok, 0;
 
-	cmpEq_l64_imm           out_counter, 20000;
+	cmpEq_p64_imm           out_counter, 20000;
 	jmpIfNot_label          EndCheck;
-	cmpEq_l64_imm           out_ready, 2;
+	cmpEq_p64_imm           out_ready, 2;
 	jmpIfNot_label          EndCheck;
-	cmpEq_l64_imm           out_done, 2;
+	cmpEq_p64_imm           out_done, 2;
 	jmpIfNot_label          EndCheck;
-	mov_l64_imm             ok, 1;
+	mov_p64_imm             ok, 1;
 
 	label   EndCheck;
-	output_l64              ok;
+	output_p64              ok;
 
-	init_lany_type          lockm2, mutex;
-	mov_lopq_gopq           lockm2, lock;
+	init_pany_type          lockm2, mutex;
+	mov_popq_popq           lockm2, lock;
 	call_builtinfunc        builtin_unlock_mutex;
 
-	init_lany_type          t1_ret, i64;
-	init_lany_type          j1_id, i64;
-	mov_l64_l64             j1_id, t1_id;
+	init_pany_type          t1_ret, i64;
+	init_pany_type          j1_id, i64;
+	mov_p64_p64             j1_id, t1_id;
 	call_builtinfunc        builtin_join_thread;
 
-	init_lany_type          t2_ret, i64;
-	init_lany_type          j2_id, i64;
-	mov_l64_l64             j2_id, t2_id;
+	init_pany_type          t2_ret, i64;
+	init_pany_type          j2_id, i64;
+	mov_p64_p64             j2_id, t2_id;
 	call_builtinfunc        builtin_join_thread;
 
-	init_lany_type          destroy_cv1, condition_variable;
-	mov_lopq_gopq           destroy_cv1, cv;
+	init_pany_type          destroy_cv1, condition_variable;
+	mov_popq_popq           destroy_cv1, cv;
 	call_builtinfunc        builtin_destroy_cv;
 
-	init_lany_type          destroy_m, mutex;
-	mov_lopq_gopq           destroy_m, lock;
+	init_pany_type          destroy_m, mutex;
+	mov_popq_popq           destroy_m, lock;
 	call_builtinfunc        builtin_destroy_mutex;
 
 	ret;

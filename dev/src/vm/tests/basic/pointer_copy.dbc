@@ -3,23 +3,23 @@ function main { i64, ptr_argv } -> { i64 } {
 	# arg0 -> argc
 	# arg1 -> *argv
 
-	init_lany_type           x, i64;
-	init_lany_type           y, i64;
-	init_lany_type           p, ptr_i64;
-	init_lany_type           q, ptr_i64;
-	init_lany_type           r, ptr_i64;
+	init_pany_type           x, i64;
+	init_pany_type           y, i64;
+	init_pany_type           p, ptr_i64;
+	init_pany_type           q, ptr_i64;
+	init_pany_type           r, ptr_i64;
 
-	ref_lptr_lany        p, x;      # p := &x
+	ref_pptr_pany        p, x;      # p := &x
 
 	# from null to non-null
-	mov_lptr_lptr       q, p;      # q = p
+	mov_pptr_pptr       q, p;      # q = p
 
-	mov_l64_imm         y, 42;     # y = 42
-	store_lptr_lany  q, y;      # *q := y
-	output_l64          x;         # print(x)
+	mov_p64_imm         y, 42;     # y = 42
+	store_pptr_pany  q, y;      # *q := y
+	output_p64          x;         # print(x)
 
 	# from non-null to null
-	mov_lptr_lptr       p, r;      # p = r
+	mov_pptr_pptr       p, r;      # p = r
 
 	deinit; # r
 	deinit; # q

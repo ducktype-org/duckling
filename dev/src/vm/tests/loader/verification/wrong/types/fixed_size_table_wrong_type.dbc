@@ -6,18 +6,18 @@ function main { i64, ptr_argv } -> { i64 } {
 	# arg0 -> argc
 	# arg1 -> *argv
 
-	init_lany_type      x, i32;
-	init_lany_type      i, i64;
-	init_lany_type      arr_ptr, ptr_tablei64;
+	init_pany_type      x, i32;
+	init_pany_type      i, i64;
+	init_pany_type      arr_ptr, ptr_tablei64;
 
-	alloc_lptr_type     arr_ptr, tablei64; # arr_ptr := alloc *int[]
-	mov_l64_imm         i, 0;        # i := 0
-	mov_l32_imm         x, 3;        # x := 3
+	alloc_pptr_type     arr_ptr, tablei64; # arr_ptr := alloc *int[]
+	mov_p64_imm         i, 0;        # i := 0
+	mov_p32_imm         x, 3;        # x := 3
 
 	# t[i] := x (by i)
-	fixedSizeTableStore_lptr_lany_l64  arr_ptr, x, i;       # t[i] := x
+	fixedSizeTableStore_pptr_pany_p64  arr_ptr, x, i;       # t[i] := x
 
-	free_lptr           arr_ptr;
+	free_pptr           arr_ptr;
 
 	deinit;
 	deinit;

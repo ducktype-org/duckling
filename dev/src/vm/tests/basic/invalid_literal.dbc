@@ -1,12 +1,12 @@
-function main { i64, ptr_argv } -> { i64 } {
-    init_lany_type a, i32;
+function main { i64, ptr_argv } -> i64 {
+    init_pany_type a, i32;
 
-    mov_l32_imm a, 2147483648i32;
-    mov_l32_imm a, -2147483649i32;
-    mov_l32_imm a, 4294967296u32;
-    mov_l32_imm a, 9223372036854775808i64;
-    mov_l32_imm a, -9223372036854775809i64;
-    mov_l32_imm a, -100u64;
-    mov_l32_imm a, 0b1f32;
+    mov_p32_imm a, 2147483648i32;
+    mov_p32_imm a, -2147483649i32;
+    mov_p32_imm a, 4294967296u32;
+    mov_p32_imm a, 9223372036854775808i64;
+    mov_p32_imm a, -9223372036854775809i64;
+    mov_p32_imm a, -100u64;
+    mov_p32_imm a, 0b1f32;
     ret;
 }

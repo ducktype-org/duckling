@@ -5,444 +5,444 @@ type primitive: u32 4
 type primitive: u16 2
 type primitive: u8 1
 
-function sext_test {} -> { i32 } {
-	init_lany_type i8_val, i8;
-	init_lany_type i16_val, i16;
-	init_lany_type i32_val, i32;
-	init_lany_type i64_val, i64;
+function sext_test {} -> i32 {
+	init_pany_type i8_val, i8;
+	init_pany_type i16_val, i16;
+	init_pany_type i32_val, i32;
+	init_pany_type i64_val, i64;
 
-	mov_l8_imm i8_val, -1; # 0xFF
+	mov_p8_imm i8_val, -1; # 0xFF
 	
 	# i8 -> i16
-	sext_l16_l8 i16_val, i8_val;
-	cmpEq_l16_imm i16_val, -1;
+	sext_p16_p8 i16_val, i8_val;
+	cmpEq_p16_imm i16_val, -1;
 	jmpIfNot_label fail;
 
 	# i8 -> i32
-	sext_l32_l8 i32_val, i8_val;
-	cmpEq_l32_imm i32_val, -1;
+	sext_p32_p8 i32_val, i8_val;
+	cmpEq_p32_imm i32_val, -1;
 	jmpIfNot_label fail;
 	
 	# i8 -> i64
-	sext_l64_l8 i64_val, i8_val;
-	cmpEq_l64_imm i64_val, -1;
+	sext_p64_p8 i64_val, i8_val;
+	cmpEq_p64_imm i64_val, -1;
 	jmpIfNot_label fail;
 
-	mov_l16_imm i16_val, -1; # 0xFFFF
+	mov_p16_imm i16_val, -1; # 0xFFFF
 	
 	# i16 -> i32
-	sext_l32_l16 i32_val, i16_val;
-	cmpEq_l32_imm i32_val, -1;
+	sext_p32_p16 i32_val, i16_val;
+	cmpEq_p32_imm i32_val, -1;
 	jmpIfNot_label fail;
 
 	# i16 -> i64
-	sext_l64_l16 i64_val, i16_val;
-	cmpEq_l64_imm i64_val, -1;
+	sext_p64_p16 i64_val, i16_val;
+	cmpEq_p64_imm i64_val, -1;
 	jmpIfNot_label fail;
 
-	mov_l32_imm i32_val, -1; # 0xFFFFFFFF
+	mov_p32_imm i32_val, -1; # 0xFFFFFFFF
 	
 	# i32 -> i64
-	sext_l64_l32 i64_val, i32_val;
-	cmpEq_l64_imm i64_val, -1;
+	sext_p64_p32 i64_val, i32_val;
+	cmpEq_p64_imm i64_val, -1;
 	jmpIfNot_label fail;
 
-	mov_l32_imm ret0, 1;
+	mov_p32_imm ret_val, 1;
 	ret;
 
 	label fail;
-	mov_l32_imm ret0, 0;
+	mov_p32_imm ret_val, 0;
 	ret;
 }
 
-function zext_test {} -> { i32 } {
-	init_lany_type u8_val, u8;
-	init_lany_type u16_val, u16;
-	init_lany_type u32_val, u32;
-	init_lany_type u64_val, u64;
+function zext_test {} -> i32 {
+	init_pany_type u8_val, u8;
+	init_pany_type u16_val, u16;
+	init_pany_type u32_val, u32;
+	init_pany_type u64_val, u64;
 
-	mov_l8_imm u8_val, 0xFF; 
+	mov_p8_imm u8_val, 0xFF; 
 	
 	# u8 -> u16
-	zext_l16_l8 u16_val, u8_val;
-	cmpEq_l16_imm u16_val, 255;
+	zext_p16_p8 u16_val, u8_val;
+	cmpEq_p16_imm u16_val, 255;
 	jmpIfNot_label fail;
 
 	# u8 -> u32
-	zext_l32_l8 u32_val, u8_val;
-	cmpEq_l32_imm u32_val, 255;
+	zext_p32_p8 u32_val, u8_val;
+	cmpEq_p32_imm u32_val, 255;
 	jmpIfNot_label fail;
 	
 	# u8 -> u64
-	zext_l64_l8 u64_val, u8_val;
-	cmpEq_l64_imm u64_val, 255;
+	zext_p64_p8 u64_val, u8_val;
+	cmpEq_p64_imm u64_val, 255;
 	jmpIfNot_label fail;
 
-	mov_l16_imm u16_val, 0xFFFF;
+	mov_p16_imm u16_val, 0xFFFF;
 	
 	# u16 -> u32
-	zext_l32_l16 u32_val, u16_val;
-	cmpEq_l32_imm u32_val, 65535;
+	zext_p32_p16 u32_val, u16_val;
+	cmpEq_p32_imm u32_val, 65535;
 	jmpIfNot_label fail;
 	
 	# u16 -> u64
-	zext_l64_l16 u64_val, u16_val;
-	cmpEq_l64_imm u64_val, 65535;
+	zext_p64_p16 u64_val, u16_val;
+	cmpEq_p64_imm u64_val, 65535;
 	jmpIfNot_label fail;
 	
 	# u32 -> u64
-	mov_l32_imm u32_val, -1; # Max u32
-	zext_l64_l32 u64_val, u32_val;
-	cmpEq_l64_imm u64_val, 4294967295;
+	mov_p32_imm u32_val, -1; # Max u32
+	zext_p64_p32 u64_val, u32_val;
+	cmpEq_p64_imm u64_val, 4294967295;
 	jmpIfNot_label fail;
 
-	mov_l32_imm ret0, 1;
+	mov_p32_imm ret_val, 1;
 	ret;
 
 	label fail;
-	mov_l32_imm ret0, 0;
+	mov_p32_imm ret_val, 0;
 	ret;
 }
 
-function trunc_test {} -> { i32 } {
-	init_lany_type u8_val, u8;
-	init_lany_type u16_val, u16;
-	init_lany_type u32_val, u32;
-	init_lany_type u64_val, u64;
+function trunc_test {} -> i32 {
+	init_pany_type u8_val, u8;
+	init_pany_type u16_val, u16;
+	init_pany_type u32_val, u32;
+	init_pany_type u64_val, u64;
 
 	# u16 -> u8
-	mov_l16_imm u16_val, 0x1234;
-	trunc_l8_l16 u8_val, u16_val;
-	cmpEq_l8_imm u8_val, 0x34;
+	mov_p16_imm u16_val, 0x1234;
+	trunc_p8_p16 u8_val, u16_val;
+	cmpEq_p8_imm u8_val, 0x34;
 	jmpIfNot_label fail;
 
 	# u32 -> u8
-	mov_l32_imm u32_val, 0x12345678;
-	trunc_l8_l32 u8_val, u32_val;
-	cmpEq_l8_imm u8_val, 0x78;
+	mov_p32_imm u32_val, 0x12345678;
+	trunc_p8_p32 u8_val, u32_val;
+	cmpEq_p8_imm u8_val, 0x78;
 	jmpIfNot_label fail;
 
 	# u64 -> u8
-	mov_l64_imm u64_val, 0x123456789ABCDEF0;
-	trunc_l8_l64 u8_val, u64_val;
-	cmpEq_l8_imm u8_val, 0xF0;
+	mov_p64_imm u64_val, 0x123456789ABCDEF0;
+	trunc_p8_p64 u8_val, u64_val;
+	cmpEq_p8_imm u8_val, 0xF0;
 	jmpIfNot_label fail;
 
 	# u32 -> u16
-	mov_l32_imm u32_val, 0x12345678;
-	trunc_l16_l32 u16_val, u32_val;
-	cmpEq_l16_imm u16_val, 0x5678;
+	mov_p32_imm u32_val, 0x12345678;
+	trunc_p16_p32 u16_val, u32_val;
+	cmpEq_p16_imm u16_val, 0x5678;
 	jmpIfNot_label fail;
 
 	# u64 -> u16
-	mov_l64_imm u64_val, 0x123456789ABCDEF0;
-	trunc_l16_l64 u16_val, u64_val;
-	cmpEq_l16_imm u16_val, 0xDEF0;
+	mov_p64_imm u64_val, 0x123456789ABCDEF0;
+	trunc_p16_p64 u16_val, u64_val;
+	cmpEq_p16_imm u16_val, 0xDEF0;
 	jmpIfNot_label fail;
 
 	# u64 -> u32
-	mov_l64_imm u64_val, 0x123456789ABCDEF0;
-	trunc_l32_l64 u32_val, u64_val;
-	cmpEq_l32_imm u32_val, 0x9ABCDEF0;
+	mov_p64_imm u64_val, 0x123456789ABCDEF0;
+	trunc_p32_p64 u32_val, u64_val;
+	cmpEq_p32_imm u32_val, 0x9ABCDEF0;
 	jmpIfNot_label fail;
 
-	mov_l32_imm ret0, 1;
+	mov_p32_imm ret_val, 1;
 	ret;
 
 	label fail;
-	mov_l32_imm ret0, 0; 
+	mov_p32_imm ret_val, 0; 
 	ret;
 }
 
-function sitofp_test {} -> { i32 } {
-	init_lany_type i32_val, i32;
-	init_lany_type f32_val, f32;
-	init_lany_type f64_val, f64;
+function sitofp_test {} -> i32 {
+	init_pany_type i32_val, i32;
+	init_pany_type f32_val, f32;
+	init_pany_type f64_val, f64;
 
-	mov_l32_imm i32_val, -10;
-	sitofp_l32_l32 f32_val, i32_val;
-	fcmpEq_l32_imm f32_val, -10.0f32;
+	mov_p32_imm i32_val, -10;
+	sitofp_p32_p32 f32_val, i32_val;
+	fcmpEq_p32_imm f32_val, -10.0f32;
 	jmpIfNot_label fail;
 
-	sitofp_l64_l32 f64_val, i32_val;
-	fcmpEq_l64_imm f64_val, -10.0;
+	sitofp_p64_p32 f64_val, i32_val;
+	fcmpEq_p64_imm f64_val, -10.0;
 	jmpIfNot_label fail;
 
-	mov_l32_imm ret0, 1;
+	mov_p32_imm ret_val, 1;
 	ret;
 
 	label fail;
-	mov_l32_imm ret0, 0;
+	mov_p32_imm ret_val, 0;
 	ret;
 }
 
-function uitofp_test {} -> { i32 } {
-	init_lany_type u32_val, u32;
-	init_lany_type f32_val, f32;
-	init_lany_type f64_val, f64;
+function uitofp_test {} -> i32 {
+	init_pany_type u32_val, u32;
+	init_pany_type f32_val, f32;
+	init_pany_type f64_val, f64;
 
-	mov_l32_imm u32_val, 10;
-	uitofp_l32_l32 f32_val, u32_val;
-	fcmpEq_l32_imm f32_val, 10.0f32;
+	mov_p32_imm u32_val, 10;
+	uitofp_p32_p32 f32_val, u32_val;
+	fcmpEq_p32_imm f32_val, 10.0f32;
 	jmpIfNot_label fail;
 
-	uitofp_l64_l32 f64_val, u32_val;
-	fcmpEq_l64_imm f64_val, 10.0;
+	uitofp_p64_p32 f64_val, u32_val;
+	fcmpEq_p64_imm f64_val, 10.0;
 	jmpIfNot_label fail;
 
-	mov_l32_imm ret0, 1;
+	mov_p32_imm ret_val, 1;
 	ret;
 	
 	label fail;
-	mov_l32_imm ret0, 0;
+	mov_p32_imm ret_val, 0;
 	ret;
 }
 
-function fptosi_test {} -> { i32 } {
-	init_lany_type f32_val, f32;
-	init_lany_type f64_val, f64;
-	init_lany_type i32_val, i32;
-	init_lany_type i64_val, i64;
+function fptosi_test {} -> i32 {
+	init_pany_type f32_val, f32;
+	init_pany_type f64_val, f64;
+	init_pany_type i32_val, i32;
+	init_pany_type i64_val, i64;
 	
-	mov_l32_imm f32_val, -10.5f32;
-	fptosi_l32_l32 i32_val, f32_val;
-	cmpEq_l32_imm i32_val, -10;
+	mov_p32_imm f32_val, -10.5f32;
+	fptosi_p32_p32 i32_val, f32_val;
+	cmpEq_p32_imm i32_val, -10;
 	jmpIfNot_label fail;
 
-	mov_l64_imm f64_val, -20.9;
-	fptosi_l32_l64 i32_val, f64_val;
-	cmpEq_l32_imm i32_val, -20;
+	mov_p64_imm f64_val, -20.9;
+	fptosi_p32_p64 i32_val, f64_val;
+	cmpEq_p32_imm i32_val, -20;
 	jmpIfNot_label fail;
 
-	mov_l32_imm ret0, 1;
-	ret;
-	
-	label fail;
-	mov_l32_imm ret0, 0;
-	ret;
-}
-
-function fptoui_test {} -> { i32 } {
-	init_lany_type f32_val, f32;
-	init_lany_type f64_val, f64;
-	init_lany_type u32_val, u32;
-	
-	mov_l32_imm f32_val, 10.5f32;
-	fptoui_l32_l32 u32_val, f32_val;
-	cmpEq_l32_imm u32_val, 10;
-	jmpIfNot_label fail;
-
-	mov_l64_imm f64_val, 20.9;
-	fptoui_l32_l64 u32_val, f64_val;
-	cmpEq_l32_imm u32_val, 20;
-	jmpIfNot_label fail;
-
-	mov_l32_imm ret0, 1;
+	mov_p32_imm ret_val, 1;
 	ret;
 	
 	label fail;
-	mov_l32_imm ret0, 0;
+	mov_p32_imm ret_val, 0;
 	ret;
 }
 
-function fptrunc_test {} -> { i32 } {
-	init_lany_type f64_val, f64;
-	init_lany_type f32_val, f32;
+function fptoui_test {} -> i32 {
+	init_pany_type f32_val, f32;
+	init_pany_type f64_val, f64;
+	init_pany_type u32_val, u32;
+	
+	mov_p32_imm f32_val, 10.5f32;
+	fptoui_p32_p32 u32_val, f32_val;
+	cmpEq_p32_imm u32_val, 10;
+	jmpIfNot_label fail;
 
-	mov_l64_imm f64_val, 123456789.0f64;
-	fptrunc_l32_l64 f32_val, f64_val;
-	fcmpEq_l32_imm f32_val, 123456790.0f32;
+	mov_p64_imm f64_val, 20.9;
+	fptoui_p32_p64 u32_val, f64_val;
+	cmpEq_p32_imm u32_val, 20;
+	jmpIfNot_label fail;
+
+	mov_p32_imm ret_val, 1;
+	ret;
+	
+	label fail;
+	mov_p32_imm ret_val, 0;
+	ret;
+}
+
+function fptrunc_test {} -> i32 {
+	init_pany_type f64_val, f64;
+	init_pany_type f32_val, f32;
+
+	mov_p64_imm f64_val, 123456789.0f64;
+	fptrunc_p32_p64 f32_val, f64_val;
+	fcmpEq_p32_imm f32_val, 123456790.0f32;
 	jmpIfNot_label fail;
 	
-	mov_l32_imm ret0, 1;
+	mov_p32_imm ret_val, 1;
 	ret;
 
 	label fail;
-	mov_l32_imm ret0, 0;
+	mov_p32_imm ret_val, 0;
 	ret;
 }
 
-function fpext_test {} -> { i32 } {
-	init_lany_type f32_val, f32;
-	init_lany_type f64_val, f64;
+function fpext_test {} -> i32 {
+	init_pany_type f32_val, f32;
+	init_pany_type f64_val, f64;
 
-	mov_l32_imm f32_val, 1234.5f32;
-	fpext_l64_l32 f64_val, f32_val;
-	fcmpEq_l64_imm f64_val, 1234.5;
+	mov_p32_imm f32_val, 1234.5f32;
+	fpext_p64_p32 f64_val, f32_val;
+	fcmpEq_p64_imm f64_val, 1234.5;
 	jmpIfNot_label fail;
 
-	mov_l32_imm ret0, 1;
+	mov_p32_imm ret_val, 1;
 	ret;
 
 	label fail;
-	mov_l32_imm ret0, 0;
+	mov_p32_imm ret_val, 0;
 	ret;
 }
 
-function sitofp_rounding_test {} -> { i32 } {
-	init_lany_type i32_val, i32;
-	init_lany_type f32_val, f32;
+function sitofp_rounding_test {} -> i32 {
+	init_pany_type i32_val, i32;
+	init_pany_type f32_val, f32;
 
-	mov_l32_imm i32_val, 123456789;
-	sitofp_l32_l32 f32_val, i32_val;
-	fcmpEq_l32_imm f32_val, 123456790.0f32;
+	mov_p32_imm i32_val, 123456789;
+	sitofp_p32_p32 f32_val, i32_val;
+	fcmpEq_p32_imm f32_val, 123456790.0f32;
 	jmpIfNot_label fail;
 
-	mov_l32_imm ret0, 1;
+	mov_p32_imm ret_val, 1;
 	ret;
 
 	label fail;
-	mov_l32_imm ret0, 0;
+	mov_p32_imm ret_val, 0;
 	ret;
 }
 
-function fptosi_saturation_test {} -> { i32 } {
-	init_lany_type f64_val, f64;
-	init_lany_type i32_val, i32;
-	init_lany_type f32_val, f32;
-	init_lany_type i8_val, i8;
-	init_lany_type i16_val, i16;
-	init_lany_type i64_val, i64;
-	init_lany_type u8_val, u8;
+function fptosi_saturation_test {} -> i32 {
+	init_pany_type f64_val, f64;
+	init_pany_type i32_val, i32;
+	init_pany_type f32_val, f32;
+	init_pany_type i8_val, i8;
+	init_pany_type i16_val, i16;
+	init_pany_type i64_val, i64;
+	init_pany_type u8_val, u8;
 
 	# > MAX_INT (2147483647)
-	mov_l64_imm f64_val, 3000000000.0;
-	fptosi_l32_l64 i32_val, f64_val;
-	cmpEq_l32_imm i32_val, 2147483647;
+	mov_p64_imm f64_val, 3000000000.0;
+	fptosi_p32_p64 i32_val, f64_val;
+	cmpEq_p32_imm i32_val, 2147483647;
 	jmpIfNot_label fail;
 
 	# < MIN_INT (-2147483648)
-	mov_l64_imm f64_val, -3000000000.0;
-	fptosi_l32_l64 i32_val, f64_val;
-	cmpEq_l32_imm i32_val, -2147483648;
+	mov_p64_imm f64_val, -3000000000.0;
+	fptosi_p32_p64 i32_val, f64_val;
+	cmpEq_p32_imm i32_val, -2147483648;
 	jmpIfNot_label fail;
 
 	# NaN -> 0
-	mov_l32_imm f32_val, 0b01111111110000000000000000000000;
-	fptosi_l32_l32 i32_val, f32_val;
-	cmpEq_l32_imm i32_val, 0;
+	mov_p32_imm f32_val, 0b01111111110000000000000000000000;
+	fptosi_p32_p32 i32_val, f32_val;
+	cmpEq_p32_imm i32_val, 0;
 	jmpIfNot_label fail;
 
 	# Inf -> MAX_INT
-	mov_l32_imm f32_val, 0b01111111100000000000000000000000;
-	fptosi_l32_l32 i32_val, f32_val;
-	cmpEq_l32_imm i32_val, 2147483647;
+	mov_p32_imm f32_val, 0b01111111100000000000000000000000;
+	fptosi_p32_p32 i32_val, f32_val;
+	cmpEq_p32_imm i32_val, 2147483647;
 	jmpIfNot_label fail;
 
 	# -Inf -> MIN_INT
-	mov_l32_imm f32_val, 0b11111111100000000000000000000000;
-	fptosi_l32_l32 i32_val, f32_val;
-	cmpEq_l32_imm i32_val, -2147483648;
+	mov_p32_imm f32_val, 0b11111111100000000000000000000000;
+	fptosi_p32_p32 i32_val, f32_val;
+	cmpEq_p32_imm i32_val, -2147483648;
 	jmpIfNot_label fail;
 
 	# f32 -> i8 saturation
 	# > MAX_I8 (127)
-	mov_l32_imm f32_val, 200.0f32;
-	fptosi_l8_l32 i8_val, f32_val;
-	cmpEq_l8_imm i8_val, 127;
+	mov_p32_imm f32_val, 200.0f32;
+	fptosi_p8_p32 i8_val, f32_val;
+	cmpEq_p8_imm i8_val, 127;
 	jmpIfNot_label fail;
 
 	# < 0
-	mov_l32_imm f32_val, -10.0f32;
-	fptoui_l8_l32 u8_val, f32_val;
-	cmpEq_l8_imm u8_val, 0;
+	mov_p32_imm f32_val, -10.0f32;
+	fptoui_p8_p32 u8_val, f32_val;
+	cmpEq_p8_imm u8_val, 0;
 	jmpIfNot_label fail;
 
 	# < MIN_I8 (-128)
-	mov_l32_imm f32_val, -200.0f32;
-	fptosi_l8_l32 i8_val, f32_val;
-	cmpEq_l8_imm i8_val, -128;
+	mov_p32_imm f32_val, -200.0f32;
+	fptosi_p8_p32 i8_val, f32_val;
+	cmpEq_p8_imm i8_val, -128;
 	jmpIfNot_label fail;
 
 	# f32 -> i16 saturation
 	# > MAX_I16 (32767)
-	mov_l32_imm f32_val, 40000.0f32;
-	fptosi_l16_l32 i16_val, f32_val;
-	cmpEq_l16_imm i16_val, 32767;
+	mov_p32_imm f32_val, 40000.0f32;
+	fptosi_p16_p32 i16_val, f32_val;
+	cmpEq_p16_imm i16_val, 32767;
 	jmpIfNot_label fail;
 
 	# < MIN_I16 (-32768)
-	mov_l32_imm f32_val, -40000.0f32;
-	fptosi_l16_l32 i16_val, f32_val;
-	cmpEq_l16_imm i16_val, -32768;
+	mov_p32_imm f32_val, -40000.0f32;
+	fptosi_p16_p32 i16_val, f32_val;
+	cmpEq_p16_imm i16_val, -32768;
 	jmpIfNot_label fail;
 
 	# f32 -> i32 saturation
 	# > MAX_I32 (2147483647)
-	mov_l32_imm f32_val, 3000000000.0f32;
-	fptosi_l32_l32 i32_val, f32_val;
-	cmpEq_l32_imm i32_val, 2147483647;
+	mov_p32_imm f32_val, 3000000000.0f32;
+	fptosi_p32_p32 i32_val, f32_val;
+	cmpEq_p32_imm i32_val, 2147483647;
 	jmpIfNot_label fail;
 
 	# < MIN_I32 (-2147483648)
-	mov_l32_imm f32_val, -3000000000.0f32;
-	fptosi_l32_l32 i32_val, f32_val;
-	cmpEq_l32_imm i32_val, -2147483648;
+	mov_p32_imm f32_val, -3000000000.0f32;
+	fptosi_p32_p32 i32_val, f32_val;
+	cmpEq_p32_imm i32_val, -2147483648;
 	jmpIfNot_label fail;
 
 	# f32 -> i64 saturation
 	# > MAX_I64
-	mov_l32_imm f32_val, 10000000000000000000.0f32;
-	fptosi_l64_l32 i64_val, f32_val;
-	cmpEq_l64_imm i64_val, 0x7FFFFFFFFFFFFFFF;
+	mov_p32_imm f32_val, 10000000000000000000.0f32;
+	fptosi_p64_p32 i64_val, f32_val;
+	cmpEq_p64_imm i64_val, 0x7FFFFFFFFFFFFFFF;
 	jmpIfNot_label fail;
 
 	# < MIN_I64
-	mov_l32_imm f32_val, -10000000000000000000.0f32;
-	fptosi_l64_l32 i64_val, f32_val;
-	cmpEq_l64_imm i64_val, 0x8000000000000000;
+	mov_p32_imm f32_val, -10000000000000000000.0f32;
+	fptosi_p64_p32 i64_val, f32_val;
+	cmpEq_p64_imm i64_val, 0x8000000000000000;
 	jmpIfNot_label fail;
 
 	# f32 -> u8 saturation
 	# > MAX_U8 (255)
-	mov_l32_imm f32_val, 300.0f32;
-	fptoui_l8_l32 u8_val, f32_val;
-	cmpEq_l8_imm u8_val, 255;
+	mov_p32_imm f32_val, 300.0f32;
+	fptoui_p8_p32 u8_val, f32_val;
+	cmpEq_p8_imm u8_val, 255;
 	jmpIfNot_label fail;
 
-	mov_l32_imm ret0, 1;
+	mov_p32_imm ret_val, 1;
 	ret;
 	
 	label fail;
-	mov_l32_imm ret0, 0;
+	mov_p32_imm ret_val, 0;
 	ret;
 }
 
-function main { i64, ptr_argv } -> { i64 } {
-	init_lany_type test_ret, i32;
+function main { i64, ptr_argv } -> i64 {
+	init_pany_type test_ret, i32;
 	
 	call_func sext_test;
-	output_l32 test_ret;
+	output_p32 test_ret;
 	
 	call_func zext_test;
-	output_l32 test_ret;
+	output_p32 test_ret;
 
 	call_func trunc_test;
-	output_l32 test_ret;
+	output_p32 test_ret;
 
 	call_func sitofp_test;
-	output_l32 test_ret;
+	output_p32 test_ret;
 
 	call_func uitofp_test;
-	output_l32 test_ret;
+	output_p32 test_ret;
 
 	call_func fptosi_test;
-	output_l32 test_ret;
+	output_p32 test_ret;
 
 	call_func fptoui_test;
-	output_l32 test_ret;
+	output_p32 test_ret;
 
 	call_func fptrunc_test;
-	output_l32 test_ret;
+	output_p32 test_ret;
 
 	call_func fpext_test;
-	output_l32 test_ret;
+	output_p32 test_ret;
 
 	call_func sitofp_rounding_test;
-	output_l32 test_ret;
+	output_p32 test_ret;
 
 	call_func fptosi_saturation_test;
-	output_l32 test_ret;
+	output_p32 test_ret;
 
 	deinit;
 	deinit;

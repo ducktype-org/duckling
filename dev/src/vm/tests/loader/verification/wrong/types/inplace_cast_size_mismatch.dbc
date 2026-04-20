@@ -1,13 +1,13 @@
-function main { i64, ptr_argv } -> { i64 } {
-    init_lany_type a, i64;
-    mov_l64_imm a, 30;
+function main { i64, ptr_argv } -> i64 {
+    init_pany_type a, i64;
+    mov_p64_imm a, 30;
 
-    init_lany_type b, i32;
-    mov_l32_imm b, 12;
+    init_pany_type b, i32;
+    mov_p32_imm b, 12;
 
-    cast_l32_type b, i64;
-    add_l64_l64 a, b;
-    output_l64 a;
+    cast_p32_type b, i64;
+    add_p64_p64 a, b;
+    output_p64 a;
 
     ret;
 }

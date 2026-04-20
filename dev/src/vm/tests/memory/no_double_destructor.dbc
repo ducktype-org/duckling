@@ -7,7 +7,7 @@
 #     field1: ptr_i64 | i64
 # }
 # table = MyStruct[3];
-# table[0].field1 = &ret0;
+# table[0].field1 = &ret_val;
 
 type variant: MyVariant { ptr_i64, i64 }
 
@@ -22,34 +22,34 @@ type pointer: MyStructPtr MyStruct
 type pointer: MyVariantPtr MyVariant
 type pointer: ptr_ptr_i64 ptr_i64
 
-function main { i64, ptr_argv } -> { i64 } {
-    init_lany_type int_ptr, ptr_i64;
-    ref_lptr_lany int_ptr, ret0;
-    # int_ptr = &ret0;
+function main { i64, ptr_argv } -> i64 {
+    init_pany_type int_ptr, ptr_i64;
+    ref_pptr_pany int_ptr, ret_val;
+    # int_ptr = &ret_val;
 
-    init_lany_type int_ptr_ptr, ptr_ptr_i64;
-    init_lany_type table, MyTable;
+    init_pany_type int_ptr_ptr, ptr_ptr_i64;
+    init_pany_type table, MyTable;
     # table = MyStruct[3];
 
-    init_lany_type table_ptr, MyTablePtr;
-    ref_lptr_lany table_ptr, table;
+    init_pany_type table_ptr, MyTablePtr;
+    ref_pptr_pany table_ptr, table;
     # table_ptr = &MyStruct[0];
 
-    init_lany_type struct_ptr, MyStructPtr;
-    fixedSizeTableLea_lptr_lptr_l64 struct_ptr, table_ptr, ret0;  # ret0 == 0
+    init_pany_type struct_ptr, MyStructPtr;
+    fixedSizeTableLea_pptr_pptr_p64 struct_ptr, table_ptr, ret_val;  # ret_val == 0
     # struct_ptr = &MyStruct[0];
 
-    init_lany_type variant_ptr, MyVariantPtr;
-    structLea_lptr_lptr_field variant_ptr, struct_ptr, MyStruct.field1;
+    init_pany_type variant_ptr, MyVariantPtr;
+    structLea_pptr_pptr_field variant_ptr, struct_ptr, MyStruct.field1;
     # variant_ptr = &struct_ptr->field1;
 
-    variantSetInner_lptr_type variant_ptr, ptr_i64;
+    variantSetInner_pptr_type variant_ptr, ptr_i64;
     # (*variant_ptr).setType<ptr_i64>();
 
-    variantGetInner_lptr_lptr_type int_ptr_ptr, variant_ptr, ptr_i64;
+    variantGetInner_pptr_pptr_type int_ptr_ptr, variant_ptr, ptr_i64;
     # int_ptr_ptr = variant_ptr->asPtr<ptr_i64>();
 
-    store_lptr_lany int_ptr_ptr, int_ptr;
+    store_pptr_pany int_ptr_ptr, int_ptr;
     # *int_ptr_ptr = int_ptr;
 
 	ret;

@@ -1,5 +1,5 @@
-function check { i64 } -> {} {
-	output_l64          arg0;
+function check { i64 } -> void {
+	output_p64          arg0;
 	deinit;
 	ret;
 }

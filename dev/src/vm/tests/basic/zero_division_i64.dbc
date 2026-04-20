@@ -1,8 +1,8 @@
-function main { i64, ptr_argv } -> { i64 } {
-    init_lany_type a, i64;
-    init_lany_type b, i64;
-    mov_l64_imm a, 13;
-    mov_l64_imm b, 0;
-    div_l64_l64 a, b;
+function main { i64, ptr_argv } -> i64 {
+    init_pany_type a, i64;
+    init_pany_type b, i64;
+    mov_p64_imm a, 13;
+    mov_p64_imm b, 0;
+    div_p64_p64 a, b;
     ret;
 }

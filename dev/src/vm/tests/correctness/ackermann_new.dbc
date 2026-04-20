@@ -1,85 +1,85 @@
-function ackermann { i64, i64 } -> { i64 } {
+function ackermann { i64, i64 } -> i64 {
 	# arg0 -> m
 	# arg1 -> n
 
 
 	# if m == 0
-	cmpEq_l64_imm       arg0, 0;
+	cmpEq_p64_imm       arg0, 0;
 	jmpIf_label      M0;
 
 	# if n == 0
-	cmpEq_l64_imm       arg1, 0;
+	cmpEq_p64_imm       arg1, 0;
 	jmpIf_label      N0;
 
 	# m, n > 0
 	# return A(m-1, A(m, n-1))
-	init_lany_type           new_ret_val, i64;      # A(m, n-1) ret0
-	init_lany_type           n1_arg0, i64;      # A(m, n-1) arg0
-	init_lany_type           n1_arg1, i64;      # A(m, n-1) arg1
-	mov_l64_l64         n1_arg0, arg0;      # arg0 := m
-	mov_l64_l64         n1_arg1, arg1;     # arg1 := n
-	sub_l64_imm         n1_arg1, 1;      # arg1 := n-1
+	init_pany_type           new_ret_val, i64;      # A(m, n-1) ret_val
+	init_pany_type           n1_arg0, i64;      # A(m, n-1) arg0
+	init_pany_type           n1_arg1, i64;      # A(m, n-1) arg1
+	mov_p64_p64         n1_arg0, arg0;      # arg0 := m
+	mov_p64_p64         n1_arg1, arg1;     # arg1 := n
+	sub_p64_imm         n1_arg1, 1;      # arg1 := n-1
 	call_func           ackermann;  # A(m, n-1)
 
 	# n1_arg0 and n1_arg1 are deinitialized here
 
-	init_lany_type           m1_arg0, i64;      # A(m-1, A(m, n-1)) arg0
-	init_lany_type           m1_arg1, i64;      # A(m-1, A(m, n-1)) arg1
-	mov_l64_l64         m1_arg0, arg0;      # arg0 := m
-	sub_l64_imm         m1_arg0, 1;      # arg0 := m-1
-	mov_l64_l64         m1_arg1, new_ret_val;     # arg1 := A(m, n-1)
+	init_pany_type           m1_arg0, i64;      # A(m-1, A(m, n-1)) arg0
+	init_pany_type           m1_arg1, i64;      # A(m-1, A(m, n-1)) arg1
+	mov_p64_p64         m1_arg0, arg0;      # arg0 := m
+	sub_p64_imm         m1_arg0, 1;      # arg0 := m-1
+	mov_p64_p64         m1_arg1, new_ret_val;     # arg1 := A(m, n-1)
 	call_func           ackermann;  # A(m-1, A(m, n-1))
 
 	# m1_arg0 and m1_arg1 are deinitialized here
 
-	mov_l64_l64         ret0, new_ret_val;
+	mov_p64_p64         ret_val, new_ret_val;
 	deinit; # new_ret_val
 	ret;
 
 	label N0;
 	# return A(m-1, 1)
-	init_lany_type           n0_ret_val, i64;      # A(m-1, 1) ret0
-	init_lany_type           n0_arg0, i64;      # A(m-1, 1) arg0
-	init_lany_type           n0_arg1, i64;      # A(m-1, 1) arg1
-	mov_l64_l64         n0_arg0, arg0;      # arg0 := m
-	sub_l64_imm         n0_arg0, 1;      # arg0 := m-1
-	mov_l64_imm         n0_arg1, 1;      # arg1 := 1
+	init_pany_type           n0_ret_val, i64;      # A(m-1, 1) ret_val
+	init_pany_type           n0_arg0, i64;      # A(m-1, 1) arg0
+	init_pany_type           n0_arg1, i64;      # A(m-1, 1) arg1
+	mov_p64_p64         n0_arg0, arg0;      # arg0 := m
+	sub_p64_imm         n0_arg0, 1;      # arg0 := m-1
+	mov_p64_imm         n0_arg1, 1;      # arg1 := 1
 	call_func           ackermann;  # (m-1, 1)
 
 	# n0_arg0 and n0_arg1 are deinitialized here
 
-	mov_l64_l64         ret0, n0_ret_val;
+	mov_p64_p64         ret_val, n0_ret_val;
 	deinit; # n0_ret_val
 	ret;
 
 	label M0;
 	# return n+1
-	mov_l64_l64         ret0, arg1;  # ret := n
-	add_l64_imm         ret0, 1;   # ret := n+1
+	mov_p64_p64         ret_val, arg1;  # ret := n
+	add_p64_imm         ret_val, 1;   # ret := n+1
 
 	deinit; # arg1
 	deinit; # arg0
 	ret;
 }
 
-function main { i64, ptr_argv } -> { i64 } {
-	# ret0 -> main ret0
+function main { i64, ptr_argv } -> i64 {
+	# ret_val -> main ret_val
 	# arg0 -> argc
 	# arg1 -> *argv
 
-	init_lany_type           ack_ret_val, i64;
-	init_lany_type           ack_arg0, i64;
-	init_lany_type           ack_arg1, i64;
+	init_pany_type           ack_ret_val, i64;
+	init_pany_type           ack_arg0, i64;
+	init_pany_type           ack_arg1, i64;
 
-	input_l64           ack_arg0;
-	input_l64           ack_arg1;
+	input_p64           ack_arg0;
+	input_p64           ack_arg1;
 	call_func           ackermann;
 
 	# ack_arg0 and ack_arg1 are deinitialized here
 
-	output_l64          ack_ret_val;
+	output_p64          ack_ret_val;
 
-	deinit;         # ackermann ret0
+	deinit;         # ackermann ret_val
 	deinit;         # *argv
 	deinit;         # argc
 	ret;

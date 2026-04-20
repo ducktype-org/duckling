@@ -2,13 +2,13 @@ type primitive: byte 1
 type dynamic_table: byte_array byte
 type pointer: ptr_b_a byte_array
 
-function main { i64, ptr_argv } -> { i64 } {
-    init_lany_type size, i64;
-    mov_l64_imm size, 9223372036854775808u64;  # 2^63
-    output_l64 size;
+function main { i64, ptr_argv } -> i64 {
+    init_pany_type size, i64;
+    mov_p64_imm size, 9223372036854775808u64;  # 2^63
+    output_p64 size;
 
-    init_lany_type ptr, ptr_b_a;
-    dynTableReAlloc_lptr_type_l64 ptr, byte_array, size;  # alloc 2^63 bytes
+    init_pany_type ptr, ptr_b_a;
+    dynTableReAlloc_pptr_type_p64 ptr, byte_array, size;  # alloc 2^63 bytes
 
     ret;
 }

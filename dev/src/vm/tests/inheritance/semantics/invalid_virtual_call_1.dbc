@@ -1,8 +1,8 @@
 type pointer: pointer_Parent Parent
 type pointer: pointer_Child Child
 
-type fun: method_parent_void {pointer_Parent} {}
-type fun: method_child_void {pointer_Child} {}
+type fun: method_parent_void {pointer_Parent} void
+type fun: method_child_void {pointer_Child} void
 
 type class: Parent {
     virtual_methods: { 
@@ -23,21 +23,21 @@ type class: Child {
 }
 
 # ============ METHODS IMPLEMENTATION ============ 
-function Parent_getAge_impl_type {pointer_Parent} -> {} {
-    init_lany_type res, i64; mov_l64_imm res, 33; output_l64 res; deinit; ret;
+function Parent_getAge_impl_type {pointer_Parent} -> void {
+    init_pany_type res, i64; mov_p64_imm res, 33; output_p64 res; deinit; ret;
 }
-function Child_cry_impl_type {pointer_Child} -> {} {
-    init_lany_type res, i64; mov_l64_imm res, 55; output_l64 res; deinit; deinit; ret;
+function Child_cry_impl_type {pointer_Child} -> void {
+    init_pany_type res, i64; mov_p64_imm res, 55; output_p64 res; deinit; deinit; ret;
 }
 
-function main { i64, ptr_argv } -> { i64 } {
-    init_lany_type actual_child, pointer_Child;
-    alloc_lptr_type actual_child, Child;
-    setVTable_lptr_type actual_child, Child;
+function main { i64, ptr_argv } -> i64 {
+    init_pany_type actual_child, pointer_Child;
+    alloc_pptr_type actual_child, Child;
+    setVTable_pptr_type actual_child, Child;
 
-    init_lany_type temp_child, pointer_Child;
-    mov_lptr_lptr temp_child, actual_child;
-    virtual_call_lptr_method actual_child, getAge; # Calling getAge, which is a parent method.
+    init_pany_type temp_child, pointer_Child;
+    mov_pptr_pptr temp_child, actual_child;
+    virtual_call_pptr_method actual_child, getAge; # Calling getAge, which is a parent method.
 
     deinit;
     deinit;

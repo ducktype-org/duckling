@@ -1,5 +1,5 @@
-function main {} -> { ptr_i32 } {
-	init_lany_type x, i32;
+function main {} -> ptr_i32 {
+	init_pany_type x, i32;
 	deinit; # x
 	ret;
 }

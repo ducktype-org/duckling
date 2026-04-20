@@ -6,8 +6,7 @@ use std::process::Command;
 
 use itertools::Itertools;
 
-use crate::QuackResult;
-use crate::QuackResultContext;
+use crate::{QuackResult, QuackResultContext};
 
 /// Adds a portable [`exec_replace`](CommandExt::exec_replace) method to the [`Command`].
 pub trait CommandExt {
@@ -19,6 +18,7 @@ pub trait CommandExt {
     /// Otherwise this function shall never return.
     fn exec_replace(&mut self) -> QuackResult<Infallible>;
 
+    /// Return a wrapper struct for displaying this [`Command`].
     fn display(&self) -> impl fmt::Display;
 }
 
@@ -52,9 +52,7 @@ impl CommandExt for Command {
 
     #[cfg(not(any(unix, windows)))]
     fn exec_replace(&mut self) -> QuackResult<Infallible> {
-        use crate::qp_bail_internal;
-
-        qp_bail_internal!("implement `exec_replace`")
+        compile_error!("implement `exec_replace`")
     }
 }
 

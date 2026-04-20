@@ -305,8 +305,7 @@ namespace vm::loader::parser {
 			ExtCFunctionName,
 			MethodName,
 			Label,
-			VM_OPARG_GLOBAL_TYPES,
-			VM_OPARG_LOCAL_TYPES
+			VM_OPARG_PLACE_TYPES
 		)
 
 #undef HANDLE_STR_ARG
@@ -948,7 +947,7 @@ namespace vm::loader::parser {
 #define HANDLE_LOCAL(Type) \
 	variant_case(vm::opargs::Type, local_type) { out << local_type.var_name.strView() << " "; }
 
-				FOR_EACH(HANDLE_LOCAL, VM_OPARG_LOCAL_TYPES);
+				FOR_EACH(HANDLE_LOCAL, VM_OPARG_PLACE_TYPES);
 
 #undef HANDLE_LOCAL
 

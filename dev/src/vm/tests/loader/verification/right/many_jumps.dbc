@@ -5,7 +5,7 @@ function main { i64, ptr_argv } -> { i64 } {
 
 	jmp_label           A;
 
-	init_lany_type      x, i64;
+	init_pany_type      x, i64;
 	label               B;
 	jmp_label           B;
 	deinit; # x
@@ -13,7 +13,7 @@ function main { i64, ptr_argv } -> { i64 } {
 
 	label               A;
 
-	init_lany_type      y, i64;
+	init_pany_type      y, i64;
 
 	jmp_label           C;
 	label               C;

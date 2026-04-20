@@ -5,17 +5,17 @@ global_data _Q_M22globals_initializationG1g i64 {
     constructor: _Q_M22globals_initializationG1ggc,
 };
 
-function _Q_M22globals_initializationG1ggc {  } -> {} {
+function _Q_M22globals_initializationG1ggc {  } -> void {
     label                   label_0;
     # Operation: Assign
-    mov_g64_imm            _Q_M22globals_initializationG1g,       5;
+    mov_p64_imm            _Q_M22globals_initializationG1g,       5;
     # Terminator: ReturnVoid
     ret;
 }
 
-function main { i64, ptr_argv } -> { i64 } {
+function main { i64, ptr_argv } -> i64 {
     label                   label_0;
     # Terminator: ReturnValue
-    mov_l64_g64             ret0,_Q_M22globals_initializationG1g;
+    mov_p64_p64             ret_val,_Q_M22globals_initializationG1g;
     ret;
 }
