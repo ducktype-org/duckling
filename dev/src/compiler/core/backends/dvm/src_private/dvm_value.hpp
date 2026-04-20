@@ -101,7 +101,7 @@ namespace compiler::backend_vm::internal {
 	 *
 	 * If the access kind is set to `Direct`, a load into the place will be performed by `mov_X_X`.
 	 * If the access kind is set to `Pointer`, a load into the place will be performed by
-	 * `store_lptr_lany`.
+	 * `store_pptr_pany`.
 	 */
 	class DVMPlace {
 	private:

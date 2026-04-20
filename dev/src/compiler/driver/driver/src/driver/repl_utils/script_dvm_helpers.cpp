@@ -56,8 +56,8 @@ namespace compiler::repl {
 			// allocate temp slot -> call_func -> deinit temp slot.
 			if (call.result_type_name != base::StrID("void")) {
 				auto tmp_name = base::StrID(base::strConcat("__script_call_tmp_", i).c_str());
-				script_main.body.emplace_back(Op_init_lany_type(
-					opargs::StackLocalAny(tmp_name), opargs::Type(call.result_type_name)
+				script_main.body.emplace_back(Op_init_pany_type(
+					opargs::PlaceAny(tmp_name), opargs::Type(call.result_type_name)
 				));
 			}
 
@@ -71,7 +71,7 @@ namespace compiler::repl {
 
 		// In lowered DVM code, function returns are written to a dedicated local named ret_val
 		script_main.body.emplace_back(
-			Op_mov_l64_imm(opargs::StackLocal64(base::StrID("ret_val")), opargs::Immediate(0))
+			Op_mov_p64_imm(opargs::Place64(base::StrID("ret_val")), opargs::Immediate(0))
 		);
 		script_main.body.emplace_back(Op_ret());
 

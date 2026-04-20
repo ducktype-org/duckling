@@ -1,12 +1,12 @@
 function main { i64, ptr_argv } -> i64 {
-    init_lany_type ptr, ptr_i64;
-    init_lany_type value, i64;
-    alloc_lptr_type ptr, i64;
-    mov_l64_imm value, 5;
-    store_lptr_lany ptr, value;
+    init_pany_type ptr, ptr_i64;
+    init_pany_type value, i64;
+    alloc_pptr_type ptr, i64;
+    mov_p64_imm value, 5;
+    store_pptr_pany ptr, value;
 
     # We are not freeing the memory...
-    # free_lptr ptr;
+    # free_pptr ptr;
 
 	ret;
 }

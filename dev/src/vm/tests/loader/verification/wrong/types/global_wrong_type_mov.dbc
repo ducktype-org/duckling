@@ -8,8 +8,8 @@ function main { i64, ptr_argv } -> i64 {
 	# arg0 -> argc
 	# arg1 -> *argv
 
-	mov_g64_imm     global_x, 1;
-	mov_g64_g64     global_y, global_x;
+	mov_p64_imm     global_x, 1;
+	mov_p64_p64     global_y, global_x;
 
 	deinit; # *argv
 	deinit; # argc

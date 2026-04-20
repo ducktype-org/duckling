@@ -7,6 +7,6 @@ type data: Wrapper {
 }
 
 function main { i64, ptr_argv } -> i64 {
-	init_lany_type w, Wrapper;
+	init_pany_type w, Wrapper;
 	ret;
 }
