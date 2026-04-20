@@ -1,26 +1,16 @@
 //! Module containing a wrapper over [`Model`], with utilities related to dependency resolving.
 //! By `child` in the context of a given dependency relation we mean the package realising that dependency.
-use std::{
-    collections::{HashMap, HashSet},
-    rc::Rc,
-};
+use std::collections::{HashMap, HashSet};
+use std::rc::Rc;
 
-use russcip::{
-    Model, ProblemCreated, Solution, Variable, WithSolutions,
-    prelude::{cons, var},
-};
+use russcip::prelude::{cons, var};
+use russcip::{Model, ProblemCreated, Solution, Variable, WithSolutions};
 use tracing::debug;
 
-use crate::{
-    QuackResult, QuackResultContext, StrId,
-    quackpack::core::{
-        FeatureName, Version,
-        solver::{
-            solving::scip_ext::BinModelExt,
-            types_common::{DependencyEdge, ExpandedPackage},
-        },
-    },
-};
+use crate::quackpack::core::solver::solving::scip_ext::BinModelExt;
+use crate::quackpack::core::solver::types_common::{DependencyEdge, ExpandedPackage};
+use crate::quackpack::core::{FeatureName, Version};
+use crate::{QuackResult, QuackResultContext, StrId};
 
 type PresentFeature<'a> = Option<&'a FeatureName>;
 

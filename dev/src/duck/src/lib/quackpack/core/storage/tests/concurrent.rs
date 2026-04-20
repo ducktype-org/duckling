@@ -1,15 +1,10 @@
-use std::sync::{
-    Barrier,
-    atomic::{AtomicUsize, Ordering},
-};
+use std::sync::Barrier;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
-use crate::{
-    StrId,
-    quackpack::core::storage::{self, venv_id::ToVenvId},
-};
-
-use super::registry_url_hash;
-use super::setup_mock_storage;
+use super::{registry_url_hash, setup_mock_storage};
+use crate::StrId;
+use crate::quackpack::core::storage::venv_id::ToVenvId;
+use crate::quackpack::core::storage::{self};
 
 #[test]
 /// Only one thread should be able to delete a given venv.
