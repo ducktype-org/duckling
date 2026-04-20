@@ -298,7 +298,7 @@ namespace query {
 
 		/**
 		 * @brief Collect all diagnostics from the main query state into the provided output vector.
-		 * @warning This method is not thread safe.
+		 * @warning @non_thread_safe
 		 * It must not be called concurrently with any method that modifies the underlying collection.
 		 */
 		static void collectAllDiagnostic(std::vector<CRef<dia_int::dia_args::Diagnostic>>& output);
@@ -306,7 +306,7 @@ namespace query {
 		/**
 		 * @brief Collect all diagnostics from the main query state into the provided output vector,
 		 * while also applying the provided position update function.
-		 * @warning This method is not thread safe.
+		 * @warning @non_thread_safe
 		 * It must not be called concurrently with any method that modifies the underlying collection.
 		 */
 		static void collectAndUpdateAllDiagnostic(
@@ -316,7 +316,7 @@ namespace query {
 
 		/**
 		 * @brief Dump all loggers from all nodes into a single logger and clear them from the state.
-		 * @warning This method is not thread safe.
+		 * @warning @non_thread_safe
 		 * It must not be called concurrently with any method that modifies the underlying collection.
 		 */
 		static Box<dia_int::Logger> dumpToOneLoggerAndClear();

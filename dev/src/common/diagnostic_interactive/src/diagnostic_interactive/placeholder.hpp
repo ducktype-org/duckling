@@ -17,8 +17,6 @@
 
 #include "message.hpp"
 
-#include <diagnostic_interactive/stable_position.hpp>
-
 namespace dia_int {
 	/**
 	 * @brief A Placeholder message with a header only and no code snippet.

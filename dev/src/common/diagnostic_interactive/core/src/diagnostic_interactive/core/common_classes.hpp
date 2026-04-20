@@ -4,6 +4,9 @@
 #include <base/types/bit256.hpp>
 #include <base/types/ints.hpp>
 
+#include <functional>
+#include <string>
+
 namespace dia_int {
 	struct CodeLocation {
 		std::string         file;

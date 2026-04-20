@@ -118,12 +118,19 @@ namespace pst {
 		[[nodiscard]]
 		dia_int::StablePosition getStablePosition() const;
 
-		static dia::SourcePosition getActiveSourcePositionIllegalAccess(
-			const dia_int::StablePosition& pos
-		);
-
+		/**
+		 * @brief Given a StablePosition of an element, returns the source position of the element.
+		 */
 		static dia::SourcePosition getActiveSourcePosition(
 			query::Context& ctx, const dia_int::StablePosition& pos
+		);
+
+		/**
+		 * @brief Given a StablePosition of an element, returns the source position of the element,
+		 * bypasses the query graph.
+		 */
+		static dia::SourcePosition getActiveSourcePositionIllegalAccess(
+			const dia_int::StablePosition& pos
 		);
 
 		/**

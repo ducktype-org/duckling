@@ -4,9 +4,6 @@
 #include "diagnostic_component_traversal.hpp"
 
 #include <base/pointers/box.hpp>
-
-#include <iostream>
-
 DEFAULT_BOX_PTR_DELETER_DEFINITION(dia_int::dia_args::Component);
 DEFAULT_BOX_PTR_DELETER_DEFINITION(dia_int::dia_args::Diagnostic);
 
@@ -93,8 +90,6 @@ namespace dia_int::dia_args {
 		ASSUME_UINT(elem, "column");
 
 		CodeLocation                     location;
-		base::Optional<u64>              end_line{};
-		base::Optional<u64>              end_column{};
 		base::Optional<HashCodeLocation> hash_location{};
 
 		location.file   = elem["file"];
@@ -102,14 +97,12 @@ namespace dia_int::dia_args {
 		location.column = elem["column"];
 		if (elem.contains("end_line")) {
 			ASSUME_UINT(elem, "end_line");
-			end_line = elem["end_line"];
+			location.end_line = elem["end_line"];
 		}
 		if (elem.contains("end_column")) {
 			ASSUME_UINT(elem, "end_column");
-			end_column = elem["end_column"];
+			location.end_column = elem["end_column"];
 		}
-		location.end_line   = end_line;
-		location.end_column = end_column;
 		if (elem.contains("hash_location")) {
 			const json& hash_location_json = elem["hash_location"];
 			ASSUME_OBJ(hash_location_json);

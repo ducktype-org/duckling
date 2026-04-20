@@ -37,10 +37,23 @@ namespace dia_int {
 		base::Optional<HashType> end_node;
 
 		using ToSourcePosIllegalAccessFunc = dia::SourcePosition (*)(const StablePosition&);
+		/**
+		 * @brief Pointer to the function that converts this StablePosition to a
+		 * SourcePosition without access to the query context.
+		 *
+		 * This is a pointer because I don't want to add the depedency on the PST from the
+		 * DiagnosticInteractive module, but the module has to be able to call the conversion
+		 * function.
+		 */
 		ToSourcePosIllegalAccessFunc to_source_pos_illegal_access_fn;
 
 		using ToSourcePosFuncWithContextFunc
 			= dia::SourcePosition (*)(query::Context&, const StablePosition&);
+
+		/**
+		 * @brief Pointer to the function that converts this StablePosition to a
+		 * SourcePosition with access to the query context.
+		 */
 		ToSourcePosFuncWithContextFunc to_source_pos_with_context_fn;
 
 		StablePosition(

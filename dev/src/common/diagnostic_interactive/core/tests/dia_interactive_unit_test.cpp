@@ -363,13 +363,13 @@ private:
 		auto  component     = dia_args::Component::fromJson(j);
 		auto* code_location = dynamic_cast<dia_args::CodeLocationComponent*>(component.get());
 
-		ASSERT_EQUAL(false, code_location == nullptr);
-		ASSERT_EQUAL(true, code_location->hash_location.has_value());
+		ASSERT_TRUE(code_location != nullptr);
+		ASSERT_TRUE(code_location->hash_location.has_value());
 		ASSERT_EQUAL(1, code_location->hash_location->begin_node.data[0]);
 		ASSERT_EQUAL(2, code_location->hash_location->begin_node.data[1]);
 		ASSERT_EQUAL(3, code_location->hash_location->begin_node.data[2]);
 		ASSERT_EQUAL(4, code_location->hash_location->begin_node.data[3]);
-		ASSERT_EQUAL(true, code_location->hash_location->end_node.has_value());
+		ASSERT_TRUE(code_location->hash_location->end_node.has_value());
 		ASSERT_EQUAL(5, code_location->hash_location->end_node->data[0]);
 		ASSERT_EQUAL(6, code_location->hash_location->end_node->data[1]);
 		ASSERT_EQUAL(7, code_location->hash_location->end_node->data[2]);
