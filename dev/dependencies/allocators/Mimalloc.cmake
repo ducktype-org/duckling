@@ -1,6 +1,6 @@
 # This file includes the necessary CMake code to use
 # mimalloc – Microsoft's high-performance allocator – as a custom
-# project-wide allocator.
+# binary-wide allocator.
 # 
 # For more information about mimalloc, see:
 # * https://github.com/microsoft/mimalloc
