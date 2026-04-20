@@ -48,10 +48,10 @@ Tests:
         test_cmd: -C foo build --profile=nonexistent
         ExitCode: 1
         Err:
-          Run: |+
-            echo "error: Unknown profile \`nonexistent\`
+          String: |+
+            error: Unknown profile \`nonexistent\`
 
-            hint: In order to use a profile you have to define it in the manifest first"
+            hint: In order to use a profile you have to define it in the manifest first
       build_custom_profile:
         test_cmd: -C foo build --profile my-profile --verbose
         Output:
