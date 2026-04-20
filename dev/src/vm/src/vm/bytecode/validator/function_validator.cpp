@@ -285,7 +285,7 @@ class FunctionValidator {
 	}
 
 	template<typename PlaceT>
-	CRef<valid_type::ValidType> validatePlaceType(
+	CRef<valid_type::ValidType> validateAndGetPlaceType(
 		const PlaceT& place, const LocalStack& current_stack
 	) const {
 		bool is_local  = current_stack.contains(place.var_name);
@@ -314,16 +314,16 @@ class FunctionValidator {
 	void validateArgTypes(const Instruction& instruction, const LocalStack& current_stack) const {
 		for (auto arg: instruction.args()) {
 			variant_match(arg) {
-#define PLACE_CASE(BIT_COUNT)                                                        \
-	variant_case(CRef<opargs::Place##BIT_COUNT>, place) {                            \
-		CRef<valid_type::ValidType> type = validatePlaceType(*place, current_stack); \
-		variant_match(type->getKind()) {                                             \
-			variant_case(valid_type::finalized::Primitive, primitive_type) {         \
-				if (base::bytes2bits(primitive_type.size).asInt() != BIT_COUNT)      \
-					throw InvalidArgumentSizeError(*place);                          \
-			}                                                                        \
-			variant_default { throw InvalidArgumentTypeError(*place); }              \
-		}                                                                            \
+#define PLACE_CASE(BIT_COUNT)                                                              \
+	variant_case(CRef<opargs::Place##BIT_COUNT>, place) {                                  \
+		CRef<valid_type::ValidType> type = validateAndGetPlaceType(*place, current_stack); \
+		variant_match(type->getKind()) {                                                   \
+			variant_case(valid_type::finalized::Primitive, primitive_type) {               \
+				if (base::bytes2bits(primitive_type.size).asInt() != BIT_COUNT)            \
+					throw InvalidArgumentSizeError(*place);                                \
+			}                                                                              \
+			variant_default { throw InvalidArgumentTypeError(*place); }                    \
+		}                                                                                  \
 	}
 				PLACE_CASE(8);
 				PLACE_CASE(16);
@@ -331,7 +331,8 @@ class FunctionValidator {
 				PLACE_CASE(64);
 
 				variant_case(CRef<opargs::PlacePtr>, place) {
-					CRef<valid_type::ValidType> type = validatePlaceType(*place, current_stack);
+					CRef<valid_type::ValidType> type
+						= validateAndGetPlaceType(*place, current_stack);
 					if (!type->isKind<valid_type::finalized::Pointer>())
 						throw InvalidArgumentTypeError(*place);
 				}
@@ -349,7 +350,8 @@ class FunctionValidator {
 					}
 				}
 				variant_case(CRef<opargs::PlaceOpq>, place) {
-					CRef<valid_type::ValidType> type = validatePlaceType(*place, current_stack);
+					CRef<valid_type::ValidType> type
+						= validateAndGetPlaceType(*place, current_stack);
 					if (!type->isKind<valid_type::finalized::Opaque>())
 						throw InvalidArgumentTypeError(*place);
 				}
@@ -403,7 +405,8 @@ class FunctionValidator {
 				}
 
 				variant_case(CRef<opargs::PlaceVnt>, place) {
-					CRef<valid_type::ValidType> type = validatePlaceType(*place, current_stack);
+					CRef<valid_type::ValidType> type
+						= validateAndGetPlaceType(*place, current_stack);
 					if (!type->isKind<valid_type::finalized::Variant>())
 						throw InvalidArgumentTypeError(*place);
 				}
@@ -425,7 +428,8 @@ class FunctionValidator {
 				}
 
 				variant_case(CRef<opargs::PlaceStructure>, place) {
-					CRef<valid_type::ValidType> type = validatePlaceType(*place, current_stack);
+					CRef<valid_type::ValidType> type
+						= validateAndGetPlaceType(*place, current_stack);
 					if (!type->isKind<valid_type::finalized::Structure>())
 						throw InvalidArgumentTypeError(*place);
 				}
@@ -504,12 +508,28 @@ class FunctionValidator {
 			}
 
 			instr_case_novalue(Comment) {}
-			instr_case(Op_mov_p8_imm, instr) {}
+			instr_case(Op_mov_p8_imm, instr) {
+				if (instr.dst.var_name == base::StrID("ret_val")
+				    && function.signature.result_type.str == base::StrID("void"))
+					throw VoidRetValAssignmentError(instr);
+			}
 			instr_case(Op_mov_p8_p8, instr) {
+				if (instr.dst.var_name == base::StrID("ret_val")
+				    && function.signature.result_type.str == base::StrID("void"))
+					throw VoidRetValAssignmentError(instr);
+
 				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case(Op_cmov_p8_p8, instr) {}
-			instr_case(Op_cmov_p8_imm, instr) { ; }
+			instr_case(Op_cmov_p8_p8, instr) {
+				if (instr.dst.var_name == base::StrID("ret_val")
+				    && function.signature.result_type.str == base::StrID("void"))
+					throw VoidRetValAssignmentError(instr);
+			}
+			instr_case(Op_cmov_p8_imm, instr) {
+				if (instr.dst.var_name == base::StrID("ret_val")
+				    && function.signature.result_type.str == base::StrID("void"))
+					throw VoidRetValAssignmentError(instr);
+			}
 			instr_case_novalue(Op_mov_p16_imm) {}
 			instr_case_novalue(Op_mov_p16_p16) {
 				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
