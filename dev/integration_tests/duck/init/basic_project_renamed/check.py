@@ -10,7 +10,7 @@ from utilities import *
 root = Path.cwd() / "foo"
 
 quackconfig = """metadata:
-  name: foo
+  name: bar
   version: '1.0.0'
 """
 
