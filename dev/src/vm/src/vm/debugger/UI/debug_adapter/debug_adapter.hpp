@@ -14,6 +14,7 @@ public:
 	void run();
 
 private:
+    events::Listener<vm::api::ProcStatus> status_change_listener;
 	vm::debugger::Debugger debugger;
 	std::string                   input_buffer;
 

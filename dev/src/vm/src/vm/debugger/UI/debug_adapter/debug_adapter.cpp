@@ -4,27 +4,27 @@
 
 constexpr std::string_view HEADER_PREFIX = "Content-Length: ";
 
-DebugAdapter::DebugAdapter(const fs::File& filepath): debugger(filepath) { setupVmListeners(); }
+DebugAdapter::DebugAdapter(const fs::File& filepath)
+    : debugger(filepath),
+      status_change_listener([this](const vm::api::ProcStatus& status) {
+          std::string message = "";
+          std::visit([&message](auto&& arg) {
+              using T = std::decay_t<decltype(arg)>;
+              message += TypeParseTraits<T>::NAME.data();
+          }, status);
+          
+          message += "\n";
+          this->sendEvent("output", { {"category", "console"}, {"output", message} });
+      }) 
+{
+    debugger.attachOnVMStatusChangeListener(status_change_listener);
+}
+
 DebugAdapter DebugAdapter::get(
 			const fs::File& filepath
 		){
 			return {filepath};
 		}
-
-void DebugAdapter::setupVmListeners() {
-    events::Listener<vm::api::ProcStatus> status_change_listener([&](const vm::api::ProcStatus& status) {
-            std::string message = "";
-			std::visit(
-                [&message](auto&& arg) -> void {
-                    using T = std::decay_t<decltype(arg)>;
-                    message += TypeParseTraits<T>::NAME.data();
-                },
-                status
-            );
-            sendEvent("output", { { "category", "console" }, { "output", message } });
-		});
-	debugger.attachOnVMStatusChangeListener(status_change_listener);
-}
 
 void DebugAdapter::run() {
     std::cerr << "[DEBUG] Adapter run() started\n";
