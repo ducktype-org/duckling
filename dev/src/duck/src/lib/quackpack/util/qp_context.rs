@@ -1,7 +1,8 @@
 //! Trait extension used in parsing manifests.
 use url::Url;
 
-use crate::{DuckContext, QuackResult, QuackResultContext, quackpack::core::fetcher};
+use crate::quackpack::core::fetcher;
+use crate::{DuckContext, QuackResult, QuackResultContext};
 
 /// Trait extension for methods used while parsing manifests.
 pub trait QpContext {

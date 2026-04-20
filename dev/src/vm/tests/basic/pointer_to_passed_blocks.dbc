@@ -3,22 +3,22 @@
 # on the local stack
 
 function check { i64 } -> i64 {
-	init_lany_type      p, ptr_i64;
+	init_pany_type      p, ptr_i64;
 
 	# This will panic if arg0 block doesn't exist in the block stack.
-	ref_lptr_lany       p, arg0;
+	ref_pptr_pany       p, arg0;
 
 	# This will panic if ret_val block doesn't exist in the block stack.
-	ref_lptr_lany       p, ret_val;
+	ref_pptr_pany       p, ret_val;
 
-	init_lany_type      x, i64;
-	mov_l64_imm         x, 42;
-	store_lptr_lany 	p, x;
+	init_pany_type      x, i64;
+	mov_p64_imm         x, 42;
+	store_pptr_pany 	p, x;
 	deinit; # x
 
-	init_lany_type      x, i64;
-	load_lany_lptr   	x, p;
-	mov_l64_l64         ret_val, x;
+	init_pany_type      x, i64;
+	load_pany_pptr   	x, p;
+	mov_p64_p64         ret_val, x;
 
 	deinit; # arg0
 	deinit; # x
@@ -31,10 +31,10 @@ function main { i64, ptr_argv } -> i64 {
 	# arg0 -> argc
 	# arg1 -> *argv
 
-	init_lany_type  check_ret_val, i64;
-	init_lany_type  check_arg, i64;
+	init_pany_type  check_ret_val, i64;
+	init_pany_type  check_arg, i64;
 	call_func       check;
-	output_l64      check_ret_val;
+	output_p64      check_ret_val;
 
 	deinit; # check_ret_val
 	deinit; # *argv

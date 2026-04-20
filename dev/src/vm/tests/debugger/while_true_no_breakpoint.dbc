@@ -1,8 +1,8 @@
 function main {} -> i64 {
-	init_lany_type			tmp, i64;
-	mov_l64_imm         	tmp, 0;
+	init_pany_type			tmp, i64;
+	mov_p64_imm         	tmp, 0;
 	label Loop;
-		cmpEq_l64_imm		tmp, 0;
+		cmpEq_p64_imm		tmp, 0;
 		jmpIf_label 	  	Loop;
 
 	ret;

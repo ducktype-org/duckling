@@ -15,13 +15,13 @@ function main { i64, ptr_argv } -> i64 {
 	# ret_val -> main ret_val
 	# arg0 -> argc
 	# arg1 -> *argv
-	init_lany_type dog, DogPtr;
-	init_lany_type animal, AnimalPtr;
-	alloc_lptr_type dog, Dog;
-	setVTable_lptr_type dog, Dog;
-	upcast_lptr_lptr animal, dog;  # animal := static_cast<AnimalPtr>(dog)
+	init_pany_type dog, DogPtr;
+	init_pany_type animal, AnimalPtr;
+	alloc_pptr_type dog, Dog;
+	setVTable_pptr_type dog, Dog;
+	upcast_pptr_pptr animal, dog;  # animal := static_cast<AnimalPtr>(dog)
 
-	free_lptr dog;
+	free_pptr dog;
 	
 	ret;
 }
