@@ -1,5 +1,5 @@
 function main { i64, ptr_argv } -> i64 {
 	label foo;
-	output_l64 ret_val;
+	output_p64 ret_val;
 	jmp_label foo;
 }

@@ -2,76 +2,76 @@ function ackermann { i64, ptr_i64 } -> i64 {
 	# arg0 -> m
 	# arg1 -> nPtr
 
-	init_lany_type          n, i64;      # [24, 32) n
-	load_lany_lptr       	n, arg1;     # n = *nPtr
+	init_pany_type          n, i64;      # [24, 32) n
+	load_pany_pptr       	n, arg1;     # n = *nPtr
 
 	# if m == 0
-	cmpEq_l64_imm           arg0, 0;
+	cmpEq_p64_imm           arg0, 0;
 	jmpIf_label             M0;
 
 	# if n == 0
-	cmpEq_l64_imm           n, 0;
+	cmpEq_p64_imm           n, 0;
 	jmpIf_label             N0;
 
 	# m, n > 0
 	# return A(m-1, A(m, n-1))
-	init_lany_type          new_ret_val, i64;       # A(m, n-1) ret_val
-	init_lany_type          n1_arg0, i64;           # A(m, n-1) arg0 -> m
-	init_lany_type          n1_arg1, ptr_i64;       # A(m, n-1) arg1 -> nPtr
+	init_pany_type          new_ret_val, i64;       # A(m, n-1) ret_val
+	init_pany_type          n1_arg0, i64;           # A(m, n-1) arg0 -> m
+	init_pany_type          n1_arg1, ptr_i64;       # A(m, n-1) arg1 -> nPtr
 
-	mov_l64_l64             n1_arg0, arg0;          # arg0 := m
-	sub_l64_imm             n, 1;                   # n := n-1
-	alloc_lptr_type         n1_arg1, i64;           # arg1 := alloc *i64
-	store_lptr_lany      	n1_arg1, n;             # *arg1 := n
+	mov_p64_p64             n1_arg0, arg0;          # arg0 := m
+	sub_p64_imm             n, 1;                   # n := n-1
+	alloc_pptr_type         n1_arg1, i64;           # arg1 := alloc *i64
+	store_pptr_pany      	n1_arg1, n;             # *arg1 := n
 
 	call_func               ackermann;              # A(m, n-1)
 
 	# n1_arg0 and n1_arg1 are deinitialized here
 
-	mov_l64_l64             n, new_ret_val;         # n := A(m, n-1) (n used as a temp store)
+	mov_p64_p64             n, new_ret_val;         # n := A(m, n-1) (n used as a temp store)
 
-	init_lany_type          m1_arg0, i64;           # A(m-1, A(m, n-1)) arg0 -> m
-	init_lany_type          m1_arg1, ptr_i64;       # A(m-1, A(m, n-1)) arg1 -> nPtr
-	sub_l64_imm             arg0, 1;                # m := m-1
-	mov_l64_l64             m1_arg0, arg0;          # arg0 := m
-	alloc_lptr_type         m1_arg1, i64;           # arg1 := alloc *i64
-	store_lptr_lany      	m1_arg1, n;             # *arg1 := A(m, n-1)
+	init_pany_type          m1_arg0, i64;           # A(m-1, A(m, n-1)) arg0 -> m
+	init_pany_type          m1_arg1, ptr_i64;       # A(m-1, A(m, n-1)) arg1 -> nPtr
+	sub_p64_imm             arg0, 1;                # m := m-1
+	mov_p64_p64             m1_arg0, arg0;          # arg0 := m
+	alloc_pptr_type         m1_arg1, i64;           # arg1 := alloc *i64
+	store_pptr_pany      	m1_arg1, n;             # *arg1 := A(m, n-1)
 	call_func               ackermann;              # A(m-1, A(m, n-1))
 
 	# m1_arg0 and m1_arg1 are deinitialized here
 
-	mov_l64_l64             ret_val, new_ret_val;   # ret_val = A(m-1, A(m, n-1))
+	mov_p64_p64             ret_val, new_ret_val;   # ret_val = A(m-1, A(m, n-1))
 	deinit; # new_ret_val
-	free_lptr               arg1;
+	free_pptr               arg1;
 	ret;
 
 	label N0;
 	# return A(m-1, 1)
-	init_lany_type          n0_ret_val, i64;        # A(m-1, 1) ret_val
-	init_lany_type          n0_arg0, i64;           # A(m-1, 1) arg0 -> m
-	init_lany_type          n0_arg1, ptr_i64;       # A(m-1, 1) arg1 -> nPtr
+	init_pany_type          n0_ret_val, i64;        # A(m-1, 1) ret_val
+	init_pany_type          n0_arg0, i64;           # A(m-1, 1) arg0 -> m
+	init_pany_type          n0_arg1, ptr_i64;       # A(m-1, 1) arg1 -> nPtr
 
-	sub_l64_imm             arg0, 1;                # m := m-1
-	mov_l64_l64             n0_arg0, arg0;          # arg0 := m
-	mov_l64_imm             n, 1;                   # n := 1
-	alloc_lptr_type         n0_arg1, i64;           # arg1 := alloc *i64
-	store_lptr_lany      	n0_arg1, n;             # *arg1 := n
+	sub_p64_imm             arg0, 1;                # m := m-1
+	mov_p64_p64             n0_arg0, arg0;          # arg0 := m
+	mov_p64_imm             n, 1;                   # n := 1
+	alloc_pptr_type         n0_arg1, i64;           # arg1 := alloc *i64
+	store_pptr_pany      	n0_arg1, n;             # *arg1 := n
 	call_func               ackermann;              # A(m-1, 1)
 
 	# n0_arg0 and n0_arg1 are deinitialized here
 
-	mov_l64_l64             ret_val, n0_ret_val;    # ret_val = A(m-1, A(m, n-1))
+	mov_p64_p64             ret_val, n0_ret_val;    # ret_val = A(m-1, A(m, n-1))
 
 	deinit; # n0_ret_val
-	free_lptr               arg1;
+	free_pptr               arg1;
 	ret;
 
 	label M0;
 	# return n+1
-	add_l64_imm             n, 1;                   # n := n+1
-	mov_l64_l64             ret_val, n;             # ret := n
+	add_p64_imm             n, 1;                   # n := n+1
+	mov_p64_p64             ret_val, n;             # ret := n
 
-	free_lptr               arg1;
+	free_pptr               arg1;
 	deinit; # n
 	deinit; # arg1
 	deinit; # arg0
@@ -83,21 +83,21 @@ function main { i64, ptr_argv } -> i64 {
 	# arg0 -> argc
 	# arg1 -> *argv
 
-	init_lany_type          n, i64;
-	init_lany_type          ack_ret_val, i64;
-	init_lany_type          ack_arg0, i64;
-	init_lany_type          ack_arg1, ptr_i64;
+	init_pany_type          n, i64;
+	init_pany_type          ack_ret_val, i64;
+	init_pany_type          ack_arg0, i64;
+	init_pany_type          ack_arg1, ptr_i64;
 
-	input_l64               ack_arg0;
-	input_l64               n;
-	alloc_lptr_type         ack_arg1, i64;          # arg1 := alloc *int
-	store_lptr_lany      	ack_arg1, n;            # *arg1 = n
+	input_p64               ack_arg0;
+	input_p64               n;
+	alloc_pptr_type         ack_arg1, i64;          # arg1 := alloc *int
+	store_pptr_pany      	ack_arg1, n;            # *arg1 = n
 
 	call_func               ackermann;  # A(m, n, nPtr)
 
 	# ack_arg0 and ack_arg1 are deinitialized here
 
-	output_l64              ack_ret_val;
+	output_p64              ack_ret_val;
 
 	deinit; # A() ret_val
 	deinit; # temp

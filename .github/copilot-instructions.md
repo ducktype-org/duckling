@@ -9,7 +9,7 @@ Duckling is a C++23 programming language project with a comprehensive build syst
 ### Bootstrap and Dependencies
 - Install system dependencies:
   ```bash
-  sudo apt update -y && sudo apt install python3 python3-click doxygen graphviz-dev cmake ninja-build g++-14 gcc-14 lcov llvm-19 llvm-19-dev clang-tidy-19 clang-format-19 libzstd-dev zlib1g-dev -y
+  sudo apt update -y && sudo apt install python3 python3-click doxygen libgraphviz-dev cmake ninja-build g++-14 gcc-14 lcov llvm-19 llvm-19-dev clang-tidy-19 clang-format-19 libzstd-dev zlib1g-dev mold -y
   ```
 - **CRITICAL**: Always use g++-14 and gcc-14 compilers. LLVM 19.1.0+ is required.
 - Enter the development directory: `cd dev/`
@@ -19,11 +19,17 @@ Duckling is a C++23 programming language project with a comprehensive build syst
   ```
   - Downloads dependencies, sets up git submodules, creates Python virtual environment
   - **NOTE**: Binary downloads may fail in restricted environments - this is expected
-- Setup build directory:
+- Setup build directory (fully non-interactive):
   ```bash
-  python3 toolbox.py setup-build -x g++-14 -c gcc-14 --gcov-version gcov-14
+  yes '' | python3 toolbox.py setup-build \
+    -b build \
+    -s Ninja \
+    -t Dev \
+    -x g++-14 -c gcc-14 \
+    --gcov-version gcov-14
   ```
-  - Press ENTER for all prompts to use defaults
+  - The explicit flags cover all string/choice prompts (build directory, build system, build type, C/C++ compilers, gcov version).
+  - The three remaining prompts (`Use ccache`, `Enable coverage`, `Enable JIT`) are boolean flags with no `--no-*` counterpart, so `yes ''` is piped in to accept their defaults (all disabled). To *enable* any of them, pass `--ccache`, `--coverage` or `--enable-jit` instead.
   - Takes ~10 seconds to configure
 
 ### Building the Project
@@ -39,9 +45,14 @@ Duckling is a C++23 programming language project with a comprehensive build syst
 ### Running Tests
 - Run all tests:
   ```bash
-  python3 toolbox.py test
+  python3 toolbox.py test -b build
   ```
   - **TIMING**: Test suite takes 5-15 minutes. NEVER CANCEL. Set timeout to 30+ minutes.
+- Run tests matching a label regex (e.g. only VM tests):
+  ```bash
+  python3 toolbox.py test -b build -L vm
+  ```
+  - Use `-L <regex>` to filter by CTest label. For example, if you changed VM code, run `-L vm` to test only the VM portion instead of the full suite.
 - Run specific test suites:
   ```bash
   cd build
@@ -54,27 +65,35 @@ Duckling is a C++23 programming language project with a comprehensive build syst
 ### Integration Tests
 - Run integration tests:
   ```bash
-  python3 toolbox.py itest
+  python3 toolbox.py itest -b build
   ```
   - **TIMING**: Integration tests take 10-20 minutes. NEVER CANCEL. Set timeout to 40+ minutes.
 
 ### Coverage Analysis
-- Setup build with coverage enabled:
+- Setup build with coverage enabled (fully non-interactive):
   ```bash
-  python3 toolbox.py setup-build --coverage -x g++-14 -c gcc-14
+  yes '' | python3 toolbox.py setup-build \
+    -b build-cov \
+    -s Ninja \
+    -t Dev \
+    -x g++-14 -c gcc-14 \
+    --gcov-version gcov-14 \
+    --coverage
   ```
+  - Passing `--coverage` skips its prompt; `yes ''` still handles `Use ccache` and `Enable JIT`.
 - Run coverage:
   ```bash
-  python3 toolbox.py coverage
+  python3 toolbox.py coverage -b build-cov
   ```
   - **TIMING**: Coverage analysis takes 15-25 minutes. NEVER CANCEL. Set timeout to 45+ minutes.
 
 ### Documentation
 - Build documentation:
   ```bash
-  python3 toolbox.py docs
+  python3 toolbox.py docs -b build
   ```
   - Builds Sphinx and Doxygen documentation
+  - The build directory passed to `-b` must have been configured with `--docs`, e.g. `setup-build ... --docs -b build-docs`.
   - **TIMING**: Documentation build takes 5-10 minutes. Set timeout to 20+ minutes.
 - Direct CMake targets:
   ```bash
@@ -99,18 +118,17 @@ Duckling is a C++23 programming language project with a comprehensive build syst
    ```
 3. **Simple Test Run**: Run a subset of tests:
    ```bash
-   cd dev && python3 toolbox.py test
-   # Let it prompt for build directory, press ENTER for defaults
+   cd dev && python3 toolbox.py test -b build
    ```
 
 ### Advanced Validation
 1. **Integration Test**: Validate end-to-end functionality:
    ```bash
-   cd dev && python3 toolbox.py itest
+   cd dev && python3 toolbox.py itest -b build
    ```
 2. **Documentation Generation**: Ensure docs build:
    ```bash
-   cd dev && python3 toolbox.py docs
+   cd dev && python3 toolbox.py docs -b build
    ```
 
 ## Common Tasks and Locations
@@ -131,43 +149,65 @@ Duckling is a C++23 programming language project with a comprehensive build syst
 ### Toolbox Commands Reference
 ```bash
 python3 toolbox.py --help              # Show all available commands
-python3 toolbox.py init                # Initialize repository
+python3 toolbox.py init                # Initialize repository (submodules, venv, binaries)
 python3 toolbox.py setup-build         # Create build directory
+python3 toolbox.py setup-venv          # Set up Python virtual environment only
 python3 toolbox.py test                # Run unit tests
 python3 toolbox.py itest               # Run integration tests
 python3 toolbox.py coverage            # Run coverage analysis
+python3 toolbox.py fix-coverage        # Fix stale coverage data issues
 python3 toolbox.py docs                # Build documentation
-python3 toolbox.py cpp-linter           # Run clang-tidy-19 and clang-format-19
-python3 toolbox.py duck-linter          # Run custom C++ linting
-python3 toolbox.py pr-validate          # Validate branch for PR
-python3 toolbox.py clean-init           # Clean initialization artifacts
+python3 toolbox.py cpp-linter          # Run clang-tidy-19 and clang-format-19
+python3 toolbox.py duck-linter         # Run custom C++ linting
+python3 toolbox.py issue-checker       # Check for #issue_number references in source
+python3 toolbox.py todo-counter        # Print counts of TODO comments in the code
+python3 toolbox.py todo-validate       # Validate TODO comments in source files
+python3 toolbox.py list-files          # List files in the repository
+python3 toolbox.py run-preprocessor    # Run the C preprocessor on a file via CMake
+python3 toolbox.py download-binaries   # Download necessary binary files (e.g. ccache)
+python3 toolbox.py download-llvm       # Download a specific version of LLVM
+python3 toolbox.py install-llvm        # Compile and install LLVM from source
+python3 toolbox.py pr-validate         # Validate branch for PR
+python3 toolbox.py clean-init          # Clean initialization artifacts
 ```
+
+> **IMPORTANT — non-interactive usage**: Most toolbox commands prompt for input (e.g. build directory, compilers, build type, linter paths).
+> When running these commands, **always pass the required values as CLI flags** so the command does not hang waiting for interactive input.
+> Run `python3 toolbox.py <command> --help` to see available flags for any command.
+> Commands with **no** prompts (safe to run as-is): `init`, `setup-venv`, `duck-linter`, `issue-checker`, `todo-validate`, `todo-counter`, `list-files`, `download-binaries`.
 
 ### Pre-commit Validation
 **ALWAYS run these commands before committing changes:**
 ```bash
 cd dev
-python3 toolbox.py cpp-linter    # C++ linting and formatting with clang-tidy-19 and clang-format-19
-python3 toolbox.py duck-linter   # Custom linting rules
-python3 toolbox.py test          # Run tests
+python3 toolbox.py cpp-linter -b build -f clang-format-19 -t clang-tidy-19 --auto-fix   # C++ linting and formatting
+python3 toolbox.py duck-linter --auto-fix                                                # Custom linting rules
+python3 toolbox.py test -b build                                                         # Run tests
 ```
 
 ### PR Validation
 **Use `pr-validate` for comprehensive validation before creating a pull request:**
 ```bash
 cd dev
-python3 toolbox.py pr-validate   # Comprehensive PR validation
+python3 toolbox.py pr-validate \
+  -b build \
+  -f /usr/bin/clang-format-19 \
+  -t /usr/bin/clang-tidy-19 \
+  --auto-fix
 ```
-- **What it does**: Runs a complete validation suite including build, tests, linting, duck-linter, and issue-checker
+- **What it does**: Runs a complete validation suite including build, tests, linting, duck-linter, todo-validate, and issue-checker
 - **When to use**: Before creating a pull request to ensure all checks pass
-- **Options**: Can specify custom clang-tidy-19 and clang-format-19 paths using `-t` and `-f` flags
+- **`--auto-fix`**: Automatically applies clang-format and clang-tidy fixes — **highly recommended**. Use `--no-fix` to only report issues without changing files.
+- **Tool paths**: `-f` sets the clang-format path and `-t` sets the clang-tidy path. The paths above (`/usr/bin/clang-format-19`, `/usr/bin/clang-tidy-19`) are typical on Ubuntu with `llvm-19` installed, but may differ on your system (e.g. `/usr/lib/llvm-19/bin/clang-format`). Run `which clang-format-19` to find the correct path.
+- **`-b`**: Path to the build directory containing `compile_commands.json` (e.g. `build`).
 - **TIMING**: Takes 20-30 minutes to complete all validations. NEVER CANCEL. Set timeout to 45+ minutes.
 
 ### CI Workflow Compatibility
-- The project uses GitHub Actions with 25-minute timeout for build+test
+- The project uses GitHub Actions with 40-minute timeout per matrix run
 - Self-hosted runners use 6 threads for Dev builds, 3 for DevOpt builds
 - GitHub runners use 2 threads
 - CI validates: build, test, integration tests, linting, documentation
+- On PRs, only Dev/gcc runs by default; full matrix (Dev+DevOpt, gcc+clang) runs on main/dev branches, non-PR events, PR labeled "Run All Workflows", or PR with an approved review
 
 ## Memory and Performance Notes
 

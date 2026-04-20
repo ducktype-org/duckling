@@ -10,12 +10,14 @@ use std::fmt;
 /// Right now we only support compiling the root package, but in future there'll be more options.
 pub enum CompilationType {
     OnlyRootPackage,
+    StandaloneScript,
 }
 
 impl fmt::Display for CompilationType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::OnlyRootPackage => write!(f, "only root package"),
+            Self::StandaloneScript => write!(f, "standalone script"),
         }
     }
 }
