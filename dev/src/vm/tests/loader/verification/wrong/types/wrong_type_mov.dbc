@@ -5,11 +5,11 @@ function main { i64, ptr_argv } -> i64 {
 	# arg0 -> argc
 	# arg1 -> *argv
 
-	init_lany_type       x, i64;
-	init_lany_type       y, ui64;
+	init_pany_type       x, i64;
+	init_pany_type       y, ui64;
 
-	mov_l64_imm     x, 1;
-	mov_l64_l64     x, y;
+	mov_p64_imm     x, 1;
+	mov_p64_p64     x, y;
 
 	deinit; # y
 	deinit; # x

@@ -15,17 +15,17 @@ global_data g i64 {
 };
 
 function f_ctor {} -> void {
-    mov_g64_imm f, 7;
+    mov_p64_imm f, 7;
     ret;
 }
 
 function g_ctor {} -> void {
-    mov_g64_imm g, 5;
+    mov_p64_imm g, 5;
     ret;
 }
 
 function main { i64, ptr_argv } -> i64 {
-    mov_g64_g64 g, f;
-    mov_l64_g64 ret_val, g;
+    mov_p64_p64 g, f;
+    mov_p64_p64 ret_val, g;
     ret;
 }

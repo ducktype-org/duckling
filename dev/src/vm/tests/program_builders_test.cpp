@@ -34,15 +34,15 @@ private:
 
 		InstructionBuilder instr_builder;
 
-		// Test `mov_l32_l32`
+		// Test `mov_p32_p32`
 		instr_builder.setKind(OpKind::mov);
-		const auto arg0 = vm::opargs::StackLocal32{ base::StrID("arg0") };
-		const auto arg1 = vm::opargs::StackLocal32{ base::StrID("arg1") };
+		const auto arg0 = vm::opargs::Place32{ base::StrID("arg0") };
+		const auto arg1 = vm::opargs::Place32{ base::StrID("arg1") };
 		instr_builder.pushArgs(arg0, arg1);
 		Instruction instr = instr_builder.build();
-		assertInstructionsEqual(instr, Op_mov_l32_l32{ arg0, arg1 });
+		assertInstructionsEqual(instr, Op_mov_p32_p32{ arg0, arg1 });
 
-		// Test `ret_l32_l32` does not exist
+		// Test `ret_p32_p32` does not exist
 		instr_builder.setKind(vm::code::builders::OpKind::ret);
 		assertThrows<base::Panic>(
 			[] { auto _ = InstructionBuilder().build(); }, "Built an invalid instruction"
