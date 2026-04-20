@@ -1,15 +1,15 @@
 global_data another_global i64 {};
 
 function read_global_variant_value {} -> void {
-    init_lany_type variant_ptr, ptr_PersistVariant;
-    ref_lptr_gvnt variant_ptr, persisted_variant;
+    init_pany_type variant_ptr, ptr_PersistVariant;
+    ref_pptr_pvnt variant_ptr, persisted_variant;
 
-    init_lany_type value_ptr, ptr_i64;
-    variantGetInner_lptr_lptr_type value_ptr, variant_ptr, i64;
+    init_pany_type value_ptr, ptr_i64;
+    variantGetInner_pptr_pptr_type value_ptr, variant_ptr, i64;
 
-    init_lany_type value, i64;
-    load_lany_lptr value, value_ptr;
-    output_l64 value;
+    init_pany_type value, i64;
+    load_pany_pptr value, value_ptr;
+    output_p64 value;
 
     deinit; # value
     deinit; # value_ptr

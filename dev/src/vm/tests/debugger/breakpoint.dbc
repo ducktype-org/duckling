@@ -3,15 +3,15 @@ function main { i64, ptr_argv } -> i64 {
 	# arg0 -> argc
 	# arg1 -> *argv
 
-	init_lany_type 		a, i64;
-	init_lany_type 		b, i64;
-	init_lany_type 		c, i64;
-	mov_l64_imm  	a, 0;
-	mov_l64_imm  	b, 0;
+	init_pany_type 		a, i64;
+	init_pany_type 		b, i64;
+	init_pany_type 		c, i64;
+	mov_p64_imm  	a, 0;
+	mov_p64_imm  	b, 0;
 	breakpoint;
-	mov_l64_imm  	a, 0;
-	mov_l64_imm  	b, 0;
-	mov_l64_imm 	c, 0;
+	mov_p64_imm  	a, 0;
+	mov_p64_imm  	b, 0;
+	mov_p64_imm 	c, 0;
 	breakpoint;
 
 	deinit; # c

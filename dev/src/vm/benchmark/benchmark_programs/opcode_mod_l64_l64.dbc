@@ -4,37 +4,37 @@ function main { i64, ptr_argv } -> i64 {
     # [16, 32) *argv
     init_type       i64;  # [32, 40) i
     init_type       i64;  # [40, 48) tmp
-    input_l64       32;      # i := input
-    mov_l64_imm     40, 0;
+    input_p64       32;      # i := input
+    mov_p64_imm     40, 0;
 
     label Loop;
-        mod_l64_l64   40, 0;
-        mod_l64_l64   40, 0;
-        mod_l64_l64   40, 0;
-        mod_l64_l64   40, 0;
-        mod_l64_l64   40, 0;
-        mod_l64_l64   40, 0;
-        mod_l64_l64   40, 0;
-        mod_l64_l64   40, 0;
-        mod_l64_l64   40, 0;
-        mod_l64_l64   40, 0;
-        mod_l64_l64   40, 0;
-        mod_l64_l64   40, 0;
-        mod_l64_l64   40, 0;
-        mod_l64_l64   40, 0;
-        mod_l64_l64   40, 0;
-        mod_l64_l64   40, 0;
-        mod_l64_l64   40, 0;
-        mod_l64_l64   40, 0;
-        mod_l64_l64   40, 0;
-        mod_l64_l64   40, 0;
-        mod_l64_l64   40, 0;
-        mod_l64_l64   40, 0;
-        mod_l64_l64   40, 0;
-        mod_l64_l64   40, 0;
+        mod_p64_p64   40, 0;
+        mod_p64_p64   40, 0;
+        mod_p64_p64   40, 0;
+        mod_p64_p64   40, 0;
+        mod_p64_p64   40, 0;
+        mod_p64_p64   40, 0;
+        mod_p64_p64   40, 0;
+        mod_p64_p64   40, 0;
+        mod_p64_p64   40, 0;
+        mod_p64_p64   40, 0;
+        mod_p64_p64   40, 0;
+        mod_p64_p64   40, 0;
+        mod_p64_p64   40, 0;
+        mod_p64_p64   40, 0;
+        mod_p64_p64   40, 0;
+        mod_p64_p64   40, 0;
+        mod_p64_p64   40, 0;
+        mod_p64_p64   40, 0;
+        mod_p64_p64   40, 0;
+        mod_p64_p64   40, 0;
+        mod_p64_p64   40, 0;
+        mod_p64_p64   40, 0;
+        mod_p64_p64   40, 0;
+        mod_p64_p64   40, 0;
 
-        sub_l64_imm     16, 1; # i := i - 1
-        cmpEq_l64_imm   16, 0; # if i == 0
+        sub_p64_imm     16, 1; # i := i - 1
+        cmpEq_p64_imm   16, 0; # if i == 0
         jmpIfNot_label Loop;
 
     deinit; # tmp
