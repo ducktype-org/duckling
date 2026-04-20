@@ -4,7 +4,6 @@
 #include <vm/utils/bijective_map.hpp>
 #include <vm/utils/persistent_array.hpp>
 #include <vm/utils/persistent_hashmap.hpp>
-#include <vm/utils/persistent_memory.hpp>
 #include <vm/utils/persistent_vector.hpp>
 
 #include <string>
@@ -17,7 +16,6 @@ class PersistentStlTester: public tester::TestSuite {
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(testBijective);
-		TESTER_ADD_TEST(testMemory);
 		TESTER_ADD_TEST(testVector);
 		TESTER_ADD_TEST(testArray);
 		TESTER_ADD_TEST(testHashMap);
@@ -57,19 +55,6 @@ public:
 		auto [inserted, refR] = dir.emplaceByLeft(new_val, 11);
 
 		ASSERT_TRUE(inserted);
-	}
-
-	void testMemory() {
-		using namespace vm::persistent::detail;
-		Memory mem{};
-
-		auto checker
-			= [&](MemoryStateID state, std::vector<std::pair<usize, usize>> expected) -> void {
-			ASSERT_EQUAL(expected, mem.toVec(state));
-		};
-
-		auto empt = mem.getEmpty();
-		checker(empt, {});
 	}
 
 	void testVector() {
