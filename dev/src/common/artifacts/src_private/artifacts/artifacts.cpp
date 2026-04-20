@@ -41,7 +41,7 @@ void artifacts::ArtifactCollection::validateOrWipeBuildId() {
 	const bool         has_file = build_id_path.exists();
 	if (has_file) {
 		const auto content = fs::File(build_id_path).getContent();
-		stored_id          = std::string(content.view().stringView());
+		stored_id          = content.view().stdString();
 	}
 
 	if (has_file && stored_id == BUILD_ID) return;
@@ -54,7 +54,13 @@ void artifacts::ArtifactCollection::validateOrWipeBuildId() {
 			stored_id.empty() ? std::string("<empty>") : stored_id.substr(0, 12) + "...",
 			", current build id: ",
 			std::string(BUILD_ID).substr(0, 12),
-			"...). Clearing cache and starting fresh.\n"
+			"...). Clearing whole cache folder and starting fresh.\n"
+		);
+	} else if (fs::File(PATH).listFilePaths().size() > 0) {
+		CORE_USER_LOG(
+			"Artifacts at '",
+			PATH.string(),
+			"' do not contain a build-id marker. Clearing whole cache folder and starting fresh.\n"
 		);
 	}
 
@@ -84,7 +90,7 @@ void artifacts::ArtifactCollection::validateOrWipeBuildId() {
 }
 
 void artifacts::ArtifactCollection::writeBuildIdFile() {
-	const auto name     = base::StrID(std::string(BUILD_ID_FILE).c_str());
+	const auto name     = base::StrID(std::string(BUILD_ID_FILE));
 	const auto artifact = fileArtifactAtOrNewNoLock(name);
 	artifact.file.writeToFile(BUILD_ID);
 }
@@ -247,7 +253,7 @@ void artifacts::ArtifactCollection::loadData() {
 		// Read file artifacts and other sub-collections.
 		for (const auto& inner_path: std::filesystem::directory_iterator(PATH)) {
 			const auto filename = inner_path.path().filename().string();
-			const auto name     = base::StrID(filename.c_str());
+			const auto name     = base::StrID(filename);
 			if (inner_path.is_directory())
 				subCollectionNew(name);
 			else if (inner_path.is_regular_file())
