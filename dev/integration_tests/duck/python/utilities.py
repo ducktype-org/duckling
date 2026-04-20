@@ -88,6 +88,6 @@ def assert_eq(lhs: Any, rhs: Any, msg: str | None = None) -> None:
         return
     if msg != None:
         print(msg)
-    print(f"{lhs} != {rhs}")
+    print(f"`{lhs}` != `{rhs}`")
     sys.exit(1)
 
