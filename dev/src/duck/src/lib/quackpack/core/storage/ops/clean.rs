@@ -1,19 +1,19 @@
 //! Removing files from a storage.
+use std::collections::HashSet;
+use std::fs::DirEntry;
+use std::io;
+use std::path::{Path, PathBuf};
+use std::time::{Duration, SystemTime};
+
+use storage::paths::Storage;
+use storage::{locks, paths};
 use tracing::debug;
 
 use crate::quackpack::core::storage;
-
 use crate::quackpack::core::storage::venv::Venv;
 use crate::quackpack::core::storage::venv_id::{ToVenvId, VenvId};
 use crate::util::path_ops_ext::{PathOpsExt, ShouldBlock};
 use crate::{DuckContext, QuackResult, QuackResultContext, StrId};
-use std::collections::HashSet;
-use std::fs::DirEntry;
-use std::path::Path;
-use std::time::{Duration, SystemTime};
-use std::{io, path::PathBuf};
-use storage::paths::Storage;
-use storage::{locks, paths};
 
 #[derive(Debug)]
 /// An output of a [`clean_storage`].

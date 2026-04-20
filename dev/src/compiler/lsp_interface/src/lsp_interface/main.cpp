@@ -31,7 +31,6 @@ POP_DIAGNOSTIC;
 #include <filesystem/file.hpp>
 #include <filesystem/file_path.hpp>
 #include <init/init.hpp>
-#include <lexer/lexer.hpp>
 #include <query_framework/entry/with_context_do.hpp>
 #include <query_framework/module_flags/module_flags.hpp>
 

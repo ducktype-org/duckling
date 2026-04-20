@@ -1,9 +1,10 @@
 use std::str::FromStr;
 
-use crate::{QuackResult, duck::driver::cli_ext::ArgMatchesExt, qp_bail, qp_internal};
 use clap::ArgMatches;
 
-use crate::{DuckContext, duck::util::terminal::Verbosity};
+use crate::duck::driver::cli_ext::ArgMatchesExt;
+use crate::duck::util::terminal::Verbosity;
+use crate::{DuckContext, QuackResult, qp_bail, qp_internal};
 
 /// Struct containing all global duck options, adjustable from cli.
 #[derive(Debug)]

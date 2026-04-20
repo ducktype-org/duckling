@@ -1,6 +1,5 @@
 //! Required features of a dependency.
 use super::Conditions;
-
 use crate::QuackError;
 use crate::quackpack::core::FeatureName;
 use crate::quackpack::schemas::{OneEntryMap, registry};

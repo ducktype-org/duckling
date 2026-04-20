@@ -12,7 +12,7 @@ namespace pst {
 
 	base::Optional<AccessLocked<LangElement>> LangElement::getParent() const { return parent; }
 
-	const dia::SourcePosition& LangElement::getSourcePosition() const { return source_position; }
+	SourcePositionLocked LangElement::getSourcePosition() const { return { source_position }; }
 
 	void LangElement::calcElementPathHashRecursive() {
 		for (auto& el: sub_elements) {
@@ -165,7 +165,7 @@ namespace pst {
 		auto opt = el.toOpt();
 		if (opt) {
 			sub_elements.emplace_back(opt.value());
-			setLastToken(el->getSourcePosition());
+			setLastToken(el->getSourcePosition().illegalAccess());
 		}
 	}
 
@@ -173,7 +173,7 @@ namespace pst {
 		auto opt = el.toOpt();
 		if (opt) {
 			sub_elements.emplace_back(InternalNamedChild{ .name = name, .element = opt.value() });
-			setLastToken(el->getSourcePosition());
+			setLastToken(el->getSourcePosition().illegalAccess());
 		}
 	}
 

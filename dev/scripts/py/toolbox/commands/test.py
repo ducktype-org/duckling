@@ -61,6 +61,12 @@ from click import command, option, INT
     default=False,
 )
 @option(
+    "--timeout",
+    help="Set a timeout for each test in seconds",
+    type=int,
+    default=None,
+)
+@option(
     "-Q",
     "--quiet",
     help="Make ctest quiet",

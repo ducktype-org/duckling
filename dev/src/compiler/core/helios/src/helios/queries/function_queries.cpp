@@ -167,7 +167,7 @@ namespace compiler::helios {
 				ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
 					"Function declared with no explicit return type and inconsistent return "
 					"statements.",
-					fun->getSourcePosition()
+					fun->getSourcePosition().unlock(ctx)
 				));
 				return query::Failed();
 			}
@@ -206,8 +206,8 @@ namespace compiler::helios {
 					const auto ret_type_ctv
 						= getTypeCTVFromPST(ctx, ret.value().unlock(ctx)->getExpr()).valueOrThrow();
 					ret_type = ret_type_ctv.get<tsh::SymbolType<>>().value();
-					origin   = code::multiplePstOrigin({ param_list.unlock(ctx),
-					                                     ret.value().unlock(ctx) });
+					origin   = code::multiplePstOriginOrdered({ param_list.unlock(ctx),
+					                                            ret.value().unlock(ctx) });
 				}
 				// Deduce return type if not provided.
 				else {
@@ -345,7 +345,7 @@ namespace compiler::helios {
 				                                .value();
 				auto init_expr_opt         = field_pst_data->getInit();
 				auto init_expr_coerced_opt = init_expr_opt.map(
-					[&](pst::AccessLocked<pst::ExprHolder> expr_holder) -> Box<code::Expr> {
+					[&](pst::AccessLocked<pst::ExprHolder> expr_holder) -> BoxOrCRef<code::Expr> {
 						const auto field_type = field.getType(ctx);
 						auto       expr
 							= getHoutOfExprWithExpectedType(
@@ -503,6 +503,21 @@ namespace compiler::helios {
 									code::generatedOrigin(),
 								};
 							}
+							variant_case_novalue(defgen::GeneratedSymbolData::ScriptMainWrapper) {
+								// Script main is a generated symbol with a regular function
+								// signature, so it needs a normal HOUT declaration for the backend
+								// pipeline.
+								auto function_type = ctx.query<QueryTypeOfSymbol>({ key })
+								                         ->valueOrThrow()
+								                         .getType()
+								                         .as<tsh::FunctionAbstractType>();
+								return HOUTFunctionDeclaration{
+									key,
+									function_type.getResultType(),
+									{},
+									code::generatedOrigin(),
+								};
+							}
 							variant_default {
 								// Other generated symbols are not functions.
 								CORE_UNREACHABLE();
@@ -555,7 +570,9 @@ namespace compiler::helios {
 				));
 				return block;
 			} else {
-				ctx.logInt(makeBox<SingleStmtFunctionMustBeExprError>(stmt->getSourcePosition()));
+				ctx.logInt(makeBox<SingleStmtFunctionMustBeExprError>(
+					stmt->getSourcePosition().unlock(ctx)
+				));
 				CORE_PANIC("Not handling errors here yet... (single stmt function body)");
 			}
 		}
