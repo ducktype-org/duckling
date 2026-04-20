@@ -10,10 +10,6 @@
 #include <vm/api/data/request.hpp>
 #include <vm/api/data/status.hpp>
 #include <vm/core/process/proc_io.hpp>
-#include <vm/core/safe/concurrency/gil.hpp>
-#include <vm/core/safe/concurrency/synchronization_primitives.hpp>
-#include <vm/core/safe/memory/pointer.hpp>
-#include <vm/core/safe/type_metadata/definitions.hpp>
 
 #include <expected>
 #include <shared_mutex>

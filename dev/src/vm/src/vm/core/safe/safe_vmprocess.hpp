@@ -9,11 +9,12 @@
 #include <vm/api/data/status.hpp>
 #include <vm/core/process/interface_types.hpp>
 #include <vm/core/process/vmprocess.hpp>
+#include <vm/core/safe/concurrency/gil.hpp>
+#include <vm/core/safe/concurrency/synchronization_primitives.hpp>
 #include <vm/core/safe/low_program/low_program.hpp>
 #include <vm/core/safe/safe_vmthread.hpp>
 #include <vm/loader/loader.hpp>
 
-#include <deque>
 #include <expected>
 #include <string>
 #include <variant>

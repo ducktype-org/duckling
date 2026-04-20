@@ -1,7 +1,7 @@
 #define USE_SWITCH_CASE 1
 #undef USE_TAIL_CALLS
 
-#include <vm/core/thread/opcode_functions/opcodes_functions.hpp>
+#include <vm/core/safe/opcode_functions/opcodes_functions.hpp>
 
 namespace vm::jit::cnp {
 
