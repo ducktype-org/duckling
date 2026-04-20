@@ -1,4 +1,5 @@
 //! `build` subcommand execution logic.
+use crate::quackpack::core::compile::duckc::CompilationType;
 use crate::quackpack::core::compile::profiles::Profile;
 use crate::quackpack::core::compile::{self, BuildContext};
 use crate::quackpack::core::storage::venv_id::ToVenvId;
@@ -51,7 +52,8 @@ pub fn compile(options: BuildOptions<'_>) -> QuackResult<()> {
         storage,
         used_features,
         profile,
+        script_path: None,
     };
-    compile::compile(bcx)?;
+    compile::compile(bcx, CompilationType::OnlyRootPackage)?;
     Ok(())
 }
