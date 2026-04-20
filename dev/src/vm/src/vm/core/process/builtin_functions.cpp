@@ -239,13 +239,13 @@ namespace vm::builtins {
 			},
 			{
 				BuiltinFunctionID::OutputString,
-				{ base::StrID("builtin_strOutput_lptr"),
+				{ base::StrID("builtin_strOutput_pptr"),
 			      code::FuncSignature(base::StrID("void"), { base::StrID("ptr_string") }) },
 			},
 			{
 				BuiltinFunctionID::Stoi,
 				{
-					base::StrID("builtin_stoi_lptr"),
+					base::StrID("builtin_stoi_pptr"),
 					code::FuncSignature(base::StrID("i64"), { base::StrID("ptr_string") }),
 				},
 			},

@@ -5,41 +5,41 @@ type pointer: ptr_sv simple_variant
 
 function main { i64, ptr_argv } -> i64 {
     # let v0: variant<variant<i64, i8>, i64>;
-    init_lany_type v0, nested;
+    init_pany_type v0, nested;
 
     # v0.setType<variant<i64, i8>>();
-    variantSetInner_lvnt_type v0, simple_variant;
+    variantSetInner_pvnt_type v0, simple_variant;
 
     # let inner_ptr: ptr<variant<i64, i8>>;
-    init_lany_type inner_ptr, ptr_sv;
+    init_pany_type inner_ptr, ptr_sv;
 
     # inner_ptr = v0.getData<variant<i64, i8>>();
-    variantGetInner_lptr_lvnt_type inner_ptr, v0, simple_variant;
+    variantGetInner_pptr_pvnt_type inner_ptr, v0, simple_variant;
 
     # inner_ptr->setType<i64>();
-    variantSetInner_lptr_type inner_ptr, i64;
+    variantSetInner_pptr_type inner_ptr, i64;
 
     # let ptr: ptr<i64>;
-    init_lany_type ptr, ptr_i64;
+    init_pany_type ptr, ptr_i64;
 
     # ptr = inner_ptr->getData<i64>();
-    variantGetInner_lptr_lptr_type ptr, inner_ptr, i64;
+    variantGetInner_pptr_pptr_type ptr, inner_ptr, i64;
 
     # let value: i64 = input();
-    init_lany_type value, i64;
-    input_l64 value;
+    init_pany_type value, i64;
+    input_p64 value;
 
     # *ptr = value;
-    store_lptr_lany ptr, value;
+    store_pptr_pany ptr, value;
 
     # v0.setType<i64>();
-    variantSetInner_lvnt_type v0, i64;
+    variantSetInner_pvnt_type v0, i64;
 
     # let read_val: i64 = *ptr;
-    init_lany_type read_val, i64;
-    load_lany_lptr read_val, ptr;
+    init_pany_type read_val, i64;
+    load_pany_pptr read_val, ptr;
 
-    output_l64 read_val;
+    output_p64 read_val;
 
     ret;
 }

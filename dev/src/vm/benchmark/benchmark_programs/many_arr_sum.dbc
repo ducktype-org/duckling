@@ -11,65 +11,65 @@ function main { i64, ptr_argv } -> i64 {
     init_type i64; # [56, 64) reps
     init_type i64; # [64, 72) t
 
-    input_l64           56; # reps := input
-    div_l64_imm         56, 8000000;
+    input_p64           56; # reps := input
+    div_p64_imm         56, 8000000;
 
     # alloc t[42]
-    alloc_lptr_type 64, tablei64;
+    alloc_pptr_type 64, tablei64;
     label LoopMain;
 
       # i := 8000000
-      mov_l64_imm         40, 8000000;
+      mov_p64_imm         40, 8000000;
 
       # x := 1
-      mov_l64_imm         32, 1;
+      mov_p64_imm         32, 1;
 
       # populate table t with 1..2000000 sequence
       # while(x > 0)
       label Loop1;
         # i--
-        sub_l64_imm         40, 1;
+        sub_p64_imm         40, 1;
 
         # t[i] := x (by idx)
-        store_lptr_l64_ofs  64, 32, 40;
+        store_pptr_p64_ofs  64, 32, 40;
 
         # x++
-        add_l64_imm         32, 1;
+        add_p64_imm         32, 1;
 
         # if i > 0 : end
-        cmpGt_l64_imm        40, 0;
+        cmpGt_p64_imm        40, 0;
         jmpIf_label      Loop1;
 
       # sum the sequence
 
       # i := 41
-      mov_l64_imm         40, 8000000;
+      mov_p64_imm         40, 8000000;
 
       # y := 0
-      mov_l64_imm         48, 0;
+      mov_p64_imm         48, 0;
 
       label Loop2;
         # i--
-        sub_l64_imm         40, 1;
+        sub_p64_imm         40, 1;
 
-        load_l64_lptr_ofs   32, 64, 40;
+        load_p64_pptr_ofs   32, 64, 40;
 
         # y += x
-        add_l64_l64         48, 32;
+        add_p64_p64         48, 32;
 
         # if i > 0 : end
-        cmpGt_l64_imm        40, 0;
+        cmpGt_p64_imm        40, 0;
         jmpIf_label      Loop2;
 
-      sub_l64_imm     56, 1;
-      cmpEq_l64_imm   56, 0;
+      sub_p64_imm     56, 1;
+      cmpEq_p64_imm   56, 0;
       jmpIfNot_label LoopMain;
 
     # should return 42*(42+1)/2=903
-    output_l64          48;
+    output_p64          48;
 
     # free t
-    free_lptr           64;
+    free_pptr           64;
 
     deinit; # t
     deinit; # reps

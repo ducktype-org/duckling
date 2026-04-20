@@ -2,14 +2,13 @@
 
 use std::path::Path;
 
-use crate::{
-    DuckContext, QuackResult, QuackResultContext, StrId,
-    quackpack::core::{BranchOrTag, Git, PackageLoader, fetcher::types::GitCloneResponse},
-};
-
-use git2::Oid;
-use git2::{Repository, build::RepoBuilder};
+use git2::build::RepoBuilder;
+use git2::{Oid, Repository};
 use tracing::debug;
+
+use crate::quackpack::core::fetcher::types::GitCloneResponse;
+use crate::quackpack::core::{BranchOrTag, Git, PackageLoader};
+use crate::{DuckContext, QuackResult, QuackResultContext, StrId};
 
 #[cfg(test)]
 mod tests;

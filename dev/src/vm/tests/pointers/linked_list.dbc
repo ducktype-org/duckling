@@ -13,18 +13,18 @@ function cons { i64, LinkedList } -> LinkedList {
     # using LinkedList = *Node
 
     # ret_val = new Node()
-    alloc_lptr_type ret_val, Node;
+    alloc_pptr_type ret_val, Node;
 
-    structStore_lptr_lany_field ret_val, arg0, Node.head;
+    structStore_pptr_pany_field ret_val, arg0, Node.head;
 
-    structStore_lptr_lany_field ret_val, arg1, Node.tail;
+    structStore_pptr_pany_field ret_val, arg1, Node.tail;
 
     ret;
 }
 
 # OPTIMISED!!!
 function tail {} -> LinkedList {
-    structLoad_lany_lptr_field ret_val, ret_val, Node.tail;
+    structLoad_pany_pptr_field ret_val, ret_val, Node.tail;
 
     ret;
 }
@@ -32,17 +32,17 @@ function tail {} -> LinkedList {
 function print_list {LinkedList} -> void {
     # arg0: LinkedList
 
-    cmpNull_lptr arg0;
+    cmpNull_pptr arg0;
     jmpIfNot_label non_empty;
     ret;
 label non_empty;
 
-    init_lany_type curr, i64;
+    init_pany_type curr, i64;
 
     # curr = arg0->x
-    structLoad_lany_lptr_field curr, arg0, Node.head;
+    structLoad_pany_pptr_field curr, arg0, Node.head;
 
-    output_l64 curr;
+    output_p64 curr;
 
     deinit;  # curr
     call_func tail;
@@ -53,17 +53,17 @@ label non_empty;
 function free_list {LinkedList} -> void {
     # arg0: LinkedList
 
-    cmpNull_lptr arg0;
+    cmpNull_pptr arg0;
     jmpIfNot_label non_empty;
     ret;
 label non_empty;
 
-    init_lany_type next, LinkedList;
-    mov_lptr_lptr next, arg0;
+    init_pany_type next, LinkedList;
+    mov_pptr_pptr next, arg0;
     call_func tail;
 
     call_func free_list;
-    free_lptr arg0;
+    free_pptr arg0;
 
     ret;
 }
@@ -73,32 +73,32 @@ function main { i64, ptr_argv } -> i64 {
     #        x1 x2 ... xn - list elements
     # OUTPUT: Inverted and concatenated elements
 
-    init_lany_type length, i64;
-    input_l64 length;
+    init_pany_type length, i64;
+    input_p64 length;
 
     # list = []  # aka NULL
-    init_lany_type list, LinkedList;
+    init_pany_type list, LinkedList;
 
 label loop_begin;
-    cmpEq_l64_imm length, 0;
+    cmpEq_p64_imm length, 0;
     jmpIf_label loop_end;
 
     # curr = input()
-    init_lany_type curr, i64;
-    input_l64 curr;
+    init_pany_type curr, i64;
+    input_p64 curr;
 
     # list = cons(curr, list)
-    init_lany_type tail, LinkedList;
-    mov_lptr_lptr tail, list;
+    init_pany_type tail, LinkedList;
+    mov_pptr_pptr tail, list;
     call_func cons;
 
-    sub_l64_imm length, 1;
+    sub_p64_imm length, 1;
 
     jmp_label loop_begin;
 label loop_end;
 
-    init_lany_type list2, LinkedList;
-    mov_lptr_lptr list2, list;
+    init_pany_type list2, LinkedList;
+    mov_pptr_pptr list2, list;
 
     call_func print_list;
     call_func free_list;

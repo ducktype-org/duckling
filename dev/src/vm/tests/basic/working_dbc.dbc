@@ -3,20 +3,20 @@ function main { i64, ptr_argv } -> i64 {
 	# arg0 -> argc
 	# arg1 -> *argv
 
-	init_lany_type 		a, i64;
-	init_lany_type 		b, i64;
-	init_lany_type 		c, i64;
+	init_pany_type 		a, i64;
+	init_pany_type 		b, i64;
+	init_pany_type 		c, i64;
 
-	mov_l64_imm   a, 10;
-	mov_l64_imm   b, 0;
-	mov_l64_imm   c, 1;
+	mov_p64_imm   a, 10;
+	mov_p64_imm   b, 0;
+	mov_p64_imm   c, 1;
 
 	label Loop;
 
-	output_l64       b;
-	add_l64_l64      b, c;
+	output_p64       b;
+	add_p64_p64      b, c;
 
-	cmpEq_l64_l64    b, a;
+	cmpEq_p64_p64    b, a;
 	jmpIfNot_label Loop;
 
 	deinit; # c

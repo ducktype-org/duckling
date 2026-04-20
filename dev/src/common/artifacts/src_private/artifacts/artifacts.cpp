@@ -3,6 +3,8 @@
 #include <base/misc/int_conv.hpp>
 
 #include <artifacts/artifacts.hpp>
+#include <artifacts/build_id.hpp>
+#include <artifacts/module_flags/module_flags.hpp>
 #include <filesystem/file.hpp>
 #include <logger/logger.hpp>
 
@@ -29,7 +31,68 @@ artifacts::ArtifactCollection::ArtifactCollection(std::filesystem::path root):
 	  PATH(std::move(root)) {
 	CORE_ASSERT(std::filesystem::exists(PATH), "ArtifactCollection path does not exist");
 	CORE_ASSERT(std::filesystem::is_directory(PATH), "ArtifactCollection path is not a directory");
+	if constexpr (CHECK_BUILD_ID) validateOrWipeBuildId();
 	loadData();
+}
+
+void artifacts::ArtifactCollection::validateOrWipeBuildId() {
+	const fs::FilePath build_id_path = PATH / BUILD_ID_FILE;
+	std::string        stored_id;
+	const bool         has_file = build_id_path.exists();
+	if (has_file) {
+		const auto content = fs::File(build_id_path).getContent();
+		stored_id          = content.view().stdString();
+	}
+
+	if (has_file && stored_id == BUILD_ID) return;
+
+	if (has_file) {
+		CORE_USER_LOG(
+			"Artifacts at '",
+			PATH.string(),
+			"' were produced by a different build of the compiler (stored build id: ",
+			stored_id.empty() ? std::string("<empty>") : stored_id.substr(0, 12) + "...",
+			", current build id: ",
+			std::string(BUILD_ID).substr(0, 12),
+			"...). Clearing whole cache folder and starting fresh.\n"
+		);
+	} else if (fs::File(PATH).listFilePaths().size() > 0) {
+		CORE_USER_LOG(
+			"Artifacts at '",
+			PATH.string(),
+			"' do not contain a build-id marker. Clearing whole cache folder and starting fresh.\n"
+		);
+	}
+
+	std::error_code iter_ec;
+	for (const auto& entry: std::filesystem::directory_iterator(PATH, iter_ec)) {
+		std::error_code remove_ec;
+		std::filesystem::remove_all(entry.path(), remove_ec);
+		if (remove_ec) {
+			CORE_USER_LOG(
+				"Warning: failed to remove stale artifact entry '",
+				entry.path().string(),
+				"': ",
+				remove_ec.message(),
+				"\n"
+			);
+		}
+	}
+	if (iter_ec) {
+		CORE_USER_LOG(
+			"Warning: failed to iterate artifacts directory '",
+			PATH.string(),
+			"' while clearing cache: ",
+			iter_ec.message(),
+			"\n"
+		);
+	}
+}
+
+void artifacts::ArtifactCollection::writeBuildIdFile() {
+	const auto name     = base::StrID(std::string(BUILD_ID_FILE));
+	const auto artifact = fileArtifactAtOrNewNoLock(name);
+	artifact.file.writeToFile(BUILD_ID);
 }
 
 void artifacts::ArtifactCollection::flush() {
@@ -189,7 +252,8 @@ void artifacts::ArtifactCollection::loadData() {
 
 		// Read file artifacts and other sub-collections.
 		for (const auto& inner_path: std::filesystem::directory_iterator(PATH)) {
-			auto name = base::StrID(inner_path.path().filename().c_str());
+			const auto filename = inner_path.path().filename().string();
+			const auto name     = base::StrID(filename);
 			if (inner_path.is_directory())
 				subCollectionNew(name);
 			else if (inner_path.is_regular_file())
@@ -229,10 +293,12 @@ fs::FilePath artifacts::ArtifactCollection::getArtcFile() const {
 }
 
 void artifacts::ArtifactCollection::flushNoLock() {
-	if (PARENT)
+	if (PARENT) {
 		PARENT.value()->flush();
-	else
+	} else {
 		flushDown();
+		if constexpr (CHECK_BUILD_ID) writeBuildIdFile();
+	}
 }
 
 Ref<artifacts::ArtifactCollection> artifacts::ArtifactCollection::subCollectionNewNoLock(

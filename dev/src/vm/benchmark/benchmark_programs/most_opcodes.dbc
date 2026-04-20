@@ -5,23 +5,23 @@ function run_every_opcode {
     init_type i64; # [8, 16) tmp2
     init_type i64; # [16, 24) tmp3
 
-    mov_l64_imm            0, 0;
-    mov_l64_l64            8, 0;
-    cmov_l64_l64           8, 0;
-    mov_l64_r0               0;
-    mov_r0_l64               0;
-    add_l64_l64  0, 8;
-    add_l64_imm  8, 10;
-    sub_l64_l64  0, 8;
-    sub_l64_imm  0, 0;
-    mul_l64_imm  0, 0;
-    mod_l64_imm  0, 1;
-    mod_l64_l64  0, 8;
-    div_l64_imm  0, 1;
-    cmpEq_l64_l64 0, 8;
-    cmpEq_l64_imm 0, 0;
-    cmpGt_l64_l64  0, 8;
-    cmpGt_l64_imm  0, 0;
+    mov_p64_imm            0, 0;
+    mov_p64_p64            8, 0;
+    cmov_p64_p64           8, 0;
+    mov_p64_r0               0;
+    mov_r0_p64               0;
+    add_p64_p64  0, 8;
+    add_p64_imm  8, 10;
+    sub_p64_p64  0, 8;
+    sub_p64_imm  0, 0;
+    mul_p64_imm  0, 0;
+    mod_p64_imm  0, 1;
+    mod_p64_p64  0, 8;
+    div_p64_imm  0, 1;
+    cmpEq_p64_p64 0, 8;
+    cmpEq_p64_imm 0, 0;
+    cmpGt_p64_p64  0, 8;
+    cmpGt_p64_imm  0, 0;
     jmp_label Here;
     label Here;
     jmpIf_label Here2;
@@ -43,7 +43,7 @@ function main { i64, ptr_argv } -> i64 {
     # [16, 32) *argv
     init_type       i64; # [32, 40) x
 
-    input_l64       32;
+    input_p64       32;
     label Loop;
         call_func           run_every_opcode;
         call_func           run_every_opcode;
@@ -51,8 +51,8 @@ function main { i64, ptr_argv } -> i64 {
         call_func           run_every_opcode;
         call_func           run_every_opcode;
 
-        sub_l64_imm         32, 1;
-        cmpEq_l64_imm       32, 0;
+        sub_p64_imm         32, 1;
+        cmpEq_p64_imm       32, 0;
         jmpIfNot_label   Loop;
 
     deinit; # x

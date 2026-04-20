@@ -1,113 +1,113 @@
 function integers {} -> i32 {
-	init_lany_type	a, i16;
-	init_lany_type	b, i16;
-	init_lany_type	c, i16;
+	init_pany_type	a, i16;
+	init_pany_type	b, i16;
+	init_pany_type	c, i16;
 
 	# ======== Arithmetic =========
-	mov_l16_imm 	b, 3;
-	mov_l16_l16 	a, b;
+	mov_p16_imm 	b, 3;
+	mov_p16_p16 	a, b;
 	# a = 3, b = 3
 
-	cmov_l16_l16 	a, a;
-	add_l16_l16 	a, b;
-	add_l16_imm 	b, 1;
+	cmov_p16_p16 	a, a;
+	add_p16_p16 	a, b;
+	add_p16_imm 	b, 1;
 	# a = 6, b = 4
 
-	sub_l16_l16 	a, b;
-	sub_l16_imm 	b, 1;
+	sub_p16_p16 	a, b;
+	sub_p16_imm 	b, 1;
 	# a = 2, b = 3
 
-	mul_l16_l16 	a, b;
-	mul_l16_imm 	b, 3;
+	mul_p16_p16 	a, b;
+	mul_p16_imm 	b, 3;
 	# a = 6, b = 9
 
-	mod_l16_l16 	a, b;
-	mod_l16_imm 	b, 7;
+	mod_p16_p16 	a, b;
+	mod_p16_imm 	b, 7;
 	# a = 6, b = 2;
 
-	div_l16_l16 	a, b;
-	div_l16_imm 	b, 2;
+	div_p16_p16 	a, b;
+	div_p16_imm 	b, 2;
 	# a = 3, b = 1
 
-	cmpEq_l16_imm 	a, 3;
+	cmpEq_p16_imm 	a, 3;
 	jmpIfNot_label 	fail;
 
-	cmpEq_l16_imm 	b, 1;
+	cmpEq_p16_imm 	b, 1;
 	jmpIfNot_label 	fail;
 
 	# ======== Signed Comparisons =========
-	mov_l16_imm		a, 20; 			# a = 20
-	mov_l16_imm		b, 10; 			# b = 10
-	mov_l16_l16		c, a; 			# c = 20
+	mov_p16_imm		a, 20; 			# a = 20
+	mov_p16_imm		b, 10; 			# b = 10
+	mov_p16_p16		c, a; 			# c = 20
 
-	cmpEq_l16_l16 	a, b; 		# 20 == 10
+	cmpEq_p16_p16 	a, b; 		# 20 == 10
 	jmpIf_label 	fail;
-	cmpEq_l16_imm 	b, 10;		# 10 == 10
+	cmpEq_p16_imm 	b, 10;		# 10 == 10
 	jmpIfNot_label 	fail;
 
-	cmpNeq_l16_l16	a, b;		# 20 != 10
+	cmpNeq_p16_p16	a, b;		# 20 != 10
 	jmpIfNot_label	fail;
-	cmpNeq_l16_imm	a, 20;		# 20 != 20
+	cmpNeq_p16_imm	a, 20;		# 20 != 20
 	jmpIf_label		fail;
 
-	cmpGt_l16_l16 	a, b;		# 20 > 10
+	cmpGt_p16_p16 	a, b;		# 20 > 10
 	jmpIfNot_label 	fail;
-	cmpGt_l16_imm 	b, 2;		# 10 > 2
+	cmpGt_p16_imm 	b, 2;		# 10 > 2
 	jmpIfNot_label 	fail;
 
-	cmpGe_l16_l16	a, b;		# 20 >= 10
+	cmpGe_p16_p16	a, b;		# 20 >= 10
 	jmpIfNot_label	fail;
-	cmpGe_l16_l16	a, c;		# 20 >= 20
+	cmpGe_p16_p16	a, c;		# 20 >= 20
 	jmpIfNot_label	fail;
-	cmpGe_l16_imm	b, 20;		# 10 >= 20
+	cmpGe_p16_imm	b, 20;		# 10 >= 20
 	jmpIf_label		fail;
 
-	cmpLt_l16_l16	b, a;		# 10 < 20
+	cmpLt_p16_p16	b, a;		# 10 < 20
 	jmpIfNot_label	fail;
-	cmpLt_l16_imm	a, 10;		# 20 < 10
+	cmpLt_p16_imm	a, 10;		# 20 < 10
 	jmpIf_label		fail;
 
-	cmpLe_l16_l16	b, a;		# 10 <= 20
+	cmpLe_p16_p16	b, a;		# 10 <= 20
 	jmpIfNot_label	fail;
-	cmpLe_l16_l16	a, c;		# 20 <= 20
+	cmpLe_p16_p16	a, c;		# 20 <= 20
 	jmpIfNot_label	fail;
-	cmpLe_l16_imm	a, 10;		# 20 <= 10
+	cmpLe_p16_imm	a, 10;		# 20 <= 10
 	jmpIf_label		fail;
 
 	# ======== Unsigned Comparisons =========
-	mov_l16_imm		a, 10; 			# a = 10
-	mov_l16_imm		b, -1; 			# b = -1 (MAX_U16) 
-	mov_l16_l16		c, a;
+	mov_p16_imm		a, 10; 			# a = 10
+	mov_p16_imm		b, -1; 			# b = -1 (MAX_U16) 
+	mov_p16_p16		c, a;
 
-	ucmpGt_l16_l16	b, a;		# MAX_U32 > 10
+	ucmpGt_p16_p16	b, a;		# MAX_U32 > 10
 	jmpIfNot_label	fail;
-	ucmpGt_l16_imm	a, -1;		# 10 > MAX_U32
+	ucmpGt_p16_imm	a, -1;		# 10 > MAX_U32
 	jmpIf_label		fail;
 
-	ucmpGe_l16_l16	b, a;		# MAX_U32 >= 10
+	ucmpGe_p16_p16	b, a;		# MAX_U32 >= 10
 	jmpIfNot_label	fail;
-	ucmpGe_l16_l16	a, c;		# 10 >= 10
+	ucmpGe_p16_p16	a, c;		# 10 >= 10
 	jmpIfNot_label	fail;
-	ucmpGe_l16_imm	a, -1;		# 10 >= MAX_U32
+	ucmpGe_p16_imm	a, -1;		# 10 >= MAX_U32
 	jmpIf_label		fail;
 	
-	ucmpLt_l16_l16	a, b;		# 10 < MAX_U32
+	ucmpLt_p16_p16	a, b;		# 10 < MAX_U32
 	jmpIfNot_label	fail;
-	ucmpLt_l16_imm	b, 10;		# MAX_U32 < 10
+	ucmpLt_p16_imm	b, 10;		# MAX_U32 < 10
 	jmpIf_label		fail;
 
-	ucmpLe_l16_l16	a, b;		# 10 <= MAX_U32
+	ucmpLe_p16_p16	a, b;		# 10 <= MAX_U32
 	jmpIfNot_label	fail;
-	ucmpLe_l16_l16	a, c;		# 10 <= 10
+	ucmpLe_p16_p16	a, c;		# 10 <= 10
 	jmpIfNot_label	fail;
-	ucmpLe_l16_imm	b, 10;		# MAX_U32 <= 10
+	ucmpLe_p16_imm	b, 10;		# MAX_U32 <= 10
 	jmpIf_label		fail;
 
-	mov_l32_imm 	ret_val, 1;
+	mov_p32_imm 	ret_val, 1;
 	ret;
 
 	label fail;
-	mov_l32_imm 	ret_val, 1234;
+	mov_p32_imm 	ret_val, 1234;
 
 	ret;
 }
@@ -117,10 +117,10 @@ function main { i64, ptr_argv } -> i64 {
     # arg0 -> argc
     # arg1 -> *argv
 
-	init_lany_type 	test_ret_val, i32;
+	init_pany_type 	test_ret_val, i32;
 
 	call_func 	integers;
-	output_l32 	test_ret_val;
+	output_p32 	test_ret_val;
 
 	deinit;
     deinit; # *argv

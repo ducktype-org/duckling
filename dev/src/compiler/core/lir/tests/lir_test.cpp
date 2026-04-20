@@ -60,7 +60,7 @@ private:
 			funcs{};
 		base::Map<
 			base::StrID,
-			std::tuple<helios::HOUTGlobalData, CRef<mir::Function>, CRef<lir::Function>>>
+			std::tuple<CRef<helios::HOUTGlobalData>, CRef<mir::Function>, CRef<lir::Function>>>
 			ctors{};
 
 		[[nodiscard]] CRef<helios::HOUTFunction> houtFunc(std::string_view name) const {
@@ -75,8 +75,8 @@ private:
 			return std::get<CRef<lir::Function>>(funcs.at(base::StrID(name.data())));
 		}
 
-		[[nodiscard]] helios::HOUTGlobalData houtGlobal(std::string_view name) const {
-			return std::get<helios::HOUTGlobalData>(ctors.at(base::StrID(name.data())));
+		[[nodiscard]] CRef<helios::HOUTGlobalData> houtGlobal(std::string_view name) const {
+			return std::get<CRef<helios::HOUTGlobalData>>(ctors.at(base::StrID(name.data())));
 		}
 
 		[[nodiscard]] CRef<mir::Function> mirGlobalCtor(std::string_view name) const {
@@ -111,13 +111,13 @@ private:
 				);
 			}
 			for (const auto& hout_glob: unit.glob_data) {
-				variant_match(hout_glob.value) {
+				variant_match(hout_glob->value) {
 					variant_case(helios::HOUTGlobalVariable, var) {
 						CRef mir_func = &ctx.query<mir::LowerGlobalDataToMIRCtor>({ hout_glob })
 						                     ->valueOrThrow();
 						auto lir_func = ctx.query<lir::LowerToLIRFunction>({ mir_func });
 						result.ctors.put(
-							hout_glob.original_name, std::make_tuple(hout_glob, mir_func, lir_func)
+							hout_glob->original_name, std::make_tuple(hout_glob, mir_func, lir_func)
 						);
 					}
 					variant_case(helios::HOUTGlobalConst, cnst) {
@@ -126,7 +126,7 @@ private:
 					variant_default {
 						fail(base::strConcat(
 							"Unexpected global data type in module: ",
-							hout_glob.original_name.strView()
+							hout_glob->original_name.strView()
 						));
 					}
 				}
@@ -426,8 +426,8 @@ private:
 		auto some_global = module.houtGlobal("some_global");
 
 		withContextDo([&](query::Context& ctx) {
-			auto g_lir           = lir::LIRGlobal::fromHOUT(ctx, g);
-			auto some_global_lir = lir::LIRGlobal::fromHOUT(ctx, some_global);
+			auto g_lir           = lir::LIRGlobal::fromHOUT(ctx, *g);
+			auto some_global_lir = lir::LIRGlobal::fromHOUT(ctx, *some_global);
 			ASSERT_EQUAL(lir::LIRGlobalType::Variable, some_global_lir.type);
 			ASSERT_EQUAL(lir::LIRGlobalType::Variable, g_lir.type);
 			ASSERT_EQUAL(false, g_lir.initial_value.has_value());
@@ -441,13 +441,13 @@ private:
 		ASSERT_EQUAL(3, module.ctors.size());
 
 		auto my_int = module.houtGlobal("my_int");
-		ASSERT_TRUE(my_int.type.hasNoOpDestructor());
+		ASSERT_TRUE(my_int->type.hasNoOpDestructor());
 
 		auto my_bool = module.houtGlobal("my_bool");
-		ASSERT_TRUE(my_bool.type.hasNoOpDestructor());
+		ASSERT_TRUE(my_bool->type.hasNoOpDestructor());
 
 		auto my_float = module.houtGlobal("my_float");
-		ASSERT_TRUE(my_float.type.hasNoOpDestructor());
+		ASSERT_TRUE(my_float->type.hasNoOpDestructor());
 	}
 
 	void simpleConstant() {
@@ -458,10 +458,10 @@ private:
 		assertTrue(hout_unit.glob_data.size() == 1, "Expected one global data FIB_10");
 
 		auto fib_const_global_data = hout_unit.glob_data.at(0);
-		ASSERT_EQUAL(fib_const_global_data.original_name, base::StrID("FIB_10"));
+		ASSERT_EQUAL(fib_const_global_data->original_name, base::StrID("FIB_10"));
 
 		withContextDo([&](query::Context& ctx) {
-			auto lir_global = lir::LIRGlobal::fromHOUT(ctx, fib_const_global_data);
+			auto lir_global = lir::LIRGlobal::fromHOUT(ctx, *fib_const_global_data);
 			ASSERT_EQUAL(helios::name(lir_global.helios_id), base::StrID("FIB_10"));
 
 
