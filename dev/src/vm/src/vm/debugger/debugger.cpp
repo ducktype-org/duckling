@@ -59,26 +59,12 @@ namespace vm::debugger {
 		});
 	}
 
-	void Debugger::attachOnVMChangesStatusListener(Ref<events::Listener<vm::api::ProcStatus>> listener
-	) {
-		on_vm_changes_status.attachListener(listener);
-	}
-
 	void Debugger::attachOnVMChangesStatusListener(events::Listener<vm::api::ProcStatus>& listener) {
 		on_vm_changes_status.attachListener(listener);
 	}
 
-	void Debugger::attachOnVMCompletesExecutionListener(Ref<events::Listener<std::string>> listener
-	) {
-		on_vm_completes_execution.attachListener(listener);
-	}
-
 	void Debugger::attachOnVMCompletesExecutionListener(events::Listener<std::string>& listener) {
 		on_vm_completes_execution.attachListener(listener);
-	}
-
-	void Debugger::attachOnErrorListener(Ref<events::Listener<std::string>> listener) {
-		on_error.attachListener(listener);
 	}
 
 	void Debugger::attachOnErrorListener(events::Listener<std::string>& listener) {
@@ -96,11 +82,13 @@ namespace vm::debugger {
 				}
 
 				return std::expected<void, vm::api::ApiError>{ std::unexpected(vm::api::ApiError{
-					vm::api::OtherError{ "Wrong VM state to run" } }) };
+					vm::api::OtherError{
+						"Wrong VM state to run: got " + statusToString(status)
+						+ ", allowed states are NotStarted and ExecutionCompleted." } }) };
 			})
 			.and_then([&] { return vm::api::run(pid, main_args); })
 			.transform_error([&](const vm::api::ApiError& api_error) {
-				on_error.emitEvent(api::errorToString(api_error));
+				on_error.emitEvent(vm::api::errorToString(api_error));
 				return api_error;
 			});
 	}

@@ -62,16 +62,14 @@ private:
 	}
 
 	void runAndGetStatus() {
-		{
-			testTemplate(
-				"debugger_test.dbc",
-				1,
-				{
-					altIndex(vm::api::Running),
-					altIndex(vm::api::ExecutionCompleted),
-				}
-			);
-		}
+		testTemplate(
+			"debugger_test.dbc",
+			1,
+			{
+				altIndex(vm::api::Running),
+				altIndex(vm::api::ExecutionCompleted),
+			}
+		);
 	}
 
 	void getStatusWait() {
@@ -126,9 +124,9 @@ private:
 
 		vm::debugger::Debugger debugger{ fs::File(path("debugger_test.dbc")) };
 
-		debugger.attachOnVMChangesStatusListener(Ref(&status_listener));
-		debugger.attachOnVMCompletesExecutionListener(Ref(&execution_completed_listener));
-		debugger.attachOnErrorListener(Ref(&error_listener));
+		debugger.attachOnVMChangesStatusListener(status_listener);
+		debugger.attachOnVMCompletesExecutionListener(execution_completed_listener);
+		debugger.attachOnErrorListener(error_listener);
 
 		int loop = 3;
 
