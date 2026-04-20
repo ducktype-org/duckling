@@ -4,7 +4,7 @@ prompt: "duckling> "
 begining: |
   Duckling REPL
   Type /help for available commands, /exit to quit.
-  Press Enter for new line, Alt+Enter to submit.
+  Press Enter to submit. Press Alt+Enter for new line.
 
 end: "\nGoodbye!\n"
 
