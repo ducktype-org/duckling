@@ -1,122 +1,122 @@
 function integers {} -> i32 {
-	init_lany_type	a, i8;
-	init_lany_type	b, i8;
-	init_lany_type	c, i8;
+	init_pany_type	a, i8;
+	init_pany_type	b, i8;
+	init_pany_type	c, i8;
 
 	# ======== Arithmetic =========
-	mov_l8_imm 	b, 3;
-	mov_l8_l8 	a, b;
+	mov_p8_imm 	b, 3;
+	mov_p8_p8 	a, b;
 	# a = 3, b = 3
 
-	cmov_l8_l8 	a, a;
-	add_l8_l8 	a, b;
-	add_l8_imm 	b, 1;
+	cmov_p8_p8 	a, a;
+	add_p8_p8 	a, b;
+	add_p8_imm 	b, 1;
 	# a = 6, b = 4
 
-	sub_l8_l8 	a, b;
-	sub_l8_imm 	b, 1;
+	sub_p8_p8 	a, b;
+	sub_p8_imm 	b, 1;
 	# a = 2, b = 3
 
-	mul_l8_l8 	a, b;
-	mul_l8_imm 	b, 3;
+	mul_p8_p8 	a, b;
+	mul_p8_imm 	b, 3;
 	# a = 6, b = 9
 
-	mod_l8_l8 	a, b;
-	mod_l8_imm 	b, 7;
+	mod_p8_p8 	a, b;
+	mod_p8_imm 	b, 7;
 	# a = 6, b = 2;
 
-	div_l8_l8 	a, b;
-	div_l8_imm 	b, 2;
+	div_p8_p8 	a, b;
+	div_p8_imm 	b, 2;
 	# a = 3, b = 1
 
-	cmpEq_l8_imm 	a, 3;
+	cmpEq_p8_imm 	a, 3;
 	jmpIfNot_label 	fail;
 
-	cmpEq_l8_imm 	b, 1;
+	cmpEq_p8_imm 	b, 1;
 	jmpIfNot_label 	fail;
 
 	# ======== Signed Comparisons =========
-	mov_l8_imm		a, 20; 			# a = 20
-	mov_l8_imm		b, 10; 			# b = 10
-	mov_l8_l8		c, a; 			# c = 20
+	mov_p8_imm		a, 20; 			# a = 20
+	mov_p8_imm		b, 10; 			# b = 10
+	mov_p8_p8		c, a; 			# c = 20
 
-	cmpEq_l8_l8 	a, b; 		# 20 == 10
+	cmpEq_p8_p8 	a, b; 		# 20 == 10
 	jmpIf_label 	fail;
-	cmpEq_l8_imm 	b, 10;		# 10 == 10
+	cmpEq_p8_imm 	b, 10;		# 10 == 10
 	jmpIfNot_label 	fail;
 
-	cmpNeq_l8_l8	a, b;		# 20 != 10
+	cmpNeq_p8_p8	a, b;		# 20 != 10
 	jmpIfNot_label	fail;
-	cmpNeq_l8_imm	a, 20;		# 20 != 20
+	cmpNeq_p8_imm	a, 20;		# 20 != 20
 	jmpIf_label		fail;
 
-	cmpGt_l8_l8 	a, b;		# 20 > 10
+	cmpGt_p8_p8 	a, b;		# 20 > 10
 	jmpIfNot_label 	fail;
-	cmpGt_l8_imm 	b, 2;		# 10 > 2
+	cmpGt_p8_imm 	b, 2;		# 10 > 2
 	jmpIfNot_label 	fail;
 
-	cmpGe_l8_l8	a, b;		# 20 >= 10
+	cmpGe_p8_p8	a, b;		# 20 >= 10
 	jmpIfNot_label	fail;
-	cmpGe_l8_l8	a, c;		# 20 >= 20
+	cmpGe_p8_p8	a, c;		# 20 >= 20
 	jmpIfNot_label	fail;
-	cmpGe_l8_imm	b, 20;		# 10 >= 20
+	cmpGe_p8_imm	b, 20;		# 10 >= 20
 	jmpIf_label		fail;
 
-	cmpLt_l8_l8	b, a;		# 10 < 20
+	cmpLt_p8_p8	b, a;		# 10 < 20
 	jmpIfNot_label	fail;
-	cmpLt_l8_imm	a, 10;		# 20 < 10
+	cmpLt_p8_imm	a, 10;		# 20 < 10
 	jmpIf_label		fail;
 
-	cmpLe_l8_l8	b, a;		# 10 <= 20
+	cmpLe_p8_p8	b, a;		# 10 <= 20
 	jmpIfNot_label	fail;
-	cmpLe_l8_l8	a, c;		# 20 <= 20
+	cmpLe_p8_p8	a, c;		# 20 <= 20
 	jmpIfNot_label	fail;
-	cmpLe_l8_imm	a, 10;		# 20 <= 10
+	cmpLe_p8_imm	a, 10;		# 20 <= 10
 	jmpIf_label		fail;
 
 	# ======== Unsigned Comparisons =========
-	mov_l8_imm		a, 10; 			# a = 10
-	mov_l8_imm		b, -1; 			# b = -1 (W i8 to 255 / MAX_U8) 
-	mov_l8_l8		c, a;
+	mov_p8_imm		a, 10; 			# a = 10
+	mov_p8_imm		b, -1; 			# b = -1 (W i8 to 255 / MAX_U8) 
+	mov_p8_p8		c, a;
 
-	ucmpGt_l8_l8	b, a;		# 255 > 10
+	ucmpGt_p8_p8	b, a;		# 255 > 10
 	jmpIfNot_label	fail;
-	ucmpGt_l8_imm	a, -1;		# 10 > 255
+	ucmpGt_p8_imm	a, -1;		# 10 > 255
 	jmpIf_label		fail;
 
-	ucmpGe_l8_l8	b, a;		# 255 >= 10
+	ucmpGe_p8_p8	b, a;		# 255 >= 10
 	jmpIfNot_label	fail;
-	ucmpGe_l8_l8	a, c;		# 10 >= 10
+	ucmpGe_p8_p8	a, c;		# 10 >= 10
 	jmpIfNot_label	fail;
-	ucmpGe_l8_imm	a, -1;		# 10 >= 255
+	ucmpGe_p8_imm	a, -1;		# 10 >= 255
 	jmpIf_label		fail;
 	
-	ucmpLt_l8_l8	a, b;		# 10 < 255
+	ucmpLt_p8_p8	a, b;		# 10 < 255
 	jmpIfNot_label	fail;
-	ucmpLt_l8_imm	b, 10;		# 255 < 10
+	ucmpLt_p8_imm	b, 10;		# 255 < 10
 	jmpIf_label		fail;
 
-	ucmpLe_l8_l8	a, b;		# 10 <= 255
+	ucmpLe_p8_p8	a, b;		# 10 <= 255
 	jmpIfNot_label	fail;
-	ucmpLe_l8_l8	a, c;		# 10 <= 10
+	ucmpLe_p8_p8	a, c;		# 10 <= 10
 	jmpIfNot_label	fail;
-	ucmpLe_l8_imm	b, 10;		# 255 <= 10
+	ucmpLe_p8_imm	b, 10;		# 255 <= 10
 	jmpIf_label		fail;
 
-	mov_l32_imm 	ret_val, 1;
+	mov_p32_imm 	ret_val, 1;
 	ret;
 
 	label fail;
-	mov_l32_imm 	ret_val, 1234;
+	mov_p32_imm 	ret_val, 1234;
 
 	ret;
 }
 
 function main { i64, ptr_argv } -> i64 {
-	init_lany_type 	test_ret_val, i32;
+	init_pany_type 	test_ret_val, i32;
 
 	call_func 	integers;
-	output_l32 	test_ret_val;
+	output_p32 	test_ret_val;
 
 	deinit;
     deinit; 

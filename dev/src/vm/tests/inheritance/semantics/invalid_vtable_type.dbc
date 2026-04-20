@@ -11,13 +11,13 @@ type class: Child {
 }
 
 function Child_cry_impl_type {pointer_Child} -> void {
-    init_lany_type res, i64; mov_l64_imm res, 55; output_l64 res; deinit; deinit; ret;
+    init_pany_type res, i64; mov_p64_imm res, 55; output_p64 res; deinit; deinit; ret;
 }
 
 function main { i64, ptr_argv } -> i64 {
-    init_lany_type actual_child, pointer_Child;
-    alloc_lptr_type actual_child, Child;
-    setVTable_lptr_type actual_child, i64;
+    init_pany_type actual_child, pointer_Child;
+    alloc_pptr_type actual_child, Child;
+    setVTable_pptr_type actual_child, i64;
 
     deinit;
     ret;

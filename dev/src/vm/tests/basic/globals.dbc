@@ -3,33 +3,33 @@ global_data counter i64 {};
 global_data global_ptr ptr_i64 {};
 
 function for_coverage {} -> void {
-	init_lany_type ptr, ptr_i64;
-	alloc_lptr_type ptr, i64;
-	mov_gptr_lptr global_ptr, ptr;
+	init_pany_type ptr, ptr_i64;
+	alloc_pptr_type ptr, i64;
+	mov_pptr_pptr global_ptr, ptr;
 
-	init_lany_type ptr2, ptr_i64;
-	mov_lptr_lptr ptr, ptr2;  # clear
+	init_pany_type ptr2, ptr_i64;
+	mov_pptr_pptr ptr, ptr2;  # clear
 	deinit;
 
-	mov_lptr_gptr ptr, global_ptr;
-	init_lany_type int, i64;
-	mov_l64_imm int, 5;
-	store_lptr_lany ptr, int;
+	mov_pptr_pptr ptr, global_ptr;
+	init_pany_type int, i64;
+	mov_p64_imm int, 5;
+	store_pptr_pany ptr, int;
 
 	deinit;
 	ret;
 }
 
 function main { i64, ptr_argv } -> i64 {
-	mov_g64_imm counter, 5;
-	mov_l64_g64 ret_val, counter;
-	output_l64 ret_val;
+	mov_p64_imm counter, 5;
+	mov_p64_p64 ret_val, counter;
+	output_p64 ret_val;
 
 	call_func for_coverage;
-	init_lany_type ptr, ptr_i64;
-	mov_lptr_gptr ptr, global_ptr;
-	load_lany_lptr ret_val, ptr;
-	free_lptr ptr;
+	init_pany_type ptr, ptr_i64;
+	mov_pptr_pptr ptr, global_ptr;
+	load_pany_pptr ret_val, ptr;
+	free_pptr ptr;
 
 
 	deinit; # ptr

@@ -6,63 +6,63 @@ function main { i64, ptr_argv } -> i64 {
 	# arg0 -> argc
 	# arg1 -> *argv
 
-	init_lany_type 		x, i64;
-	init_lany_type 		i, i64;
-	init_lany_type 		y, i64;
-	init_lany_type 		t, ptr_tablei64;
+	init_pany_type 		x, i64;
+	init_pany_type 		i, i64;
+	init_pany_type 		y, i64;
+	init_pany_type 		t, ptr_tablei64;
 
 	# alloc t[42]
-	alloc_lptr_type 	t, tablei64;
+	alloc_pptr_type 	t, tablei64;
 
 	# i := 41
-	mov_l64_imm         i, 42;
+	mov_p64_imm         i, 42;
 
 	# x := 1
-	mov_l64_imm         x, 1;
+	mov_p64_imm         x, 1;
 
 	# populate table t with 1..42 sequence
 	# while(x > 0)
 	label Loop1;
 		# i--
-		sub_l64_imm         i, 1;
+		sub_p64_imm         i, 1;
 
 		# t[i] := x (by idx)
-		fixedSizeTableStore_lptr_lany_l64  t, x, i;
+		fixedSizeTableStore_pptr_pany_p64  t, x, i;
 
 		# x++
-		add_l64_imm         x, 1;
+		add_p64_imm         x, 1;
 
 		# if i > 0 : end
-		cmpGt_l64_imm        i, 0;
+		cmpGt_p64_imm        i, 0;
 		jmpIf_label      Loop1;
 
 	# sum the sequence
 
 	# i := 41
-	mov_l64_imm         i, 42;
+	mov_p64_imm         i, 42;
 
 	# y := 0
-	mov_l64_imm         y, 0;
+	mov_p64_imm         y, 0;
 
 	label Loop2;
 		# i--
-		sub_l64_imm         i, 1;
+		sub_p64_imm         i, 1;
 
-		fixedSizeTableLoad_lany_lptr_l64   x, t, i;
+		fixedSizeTableLoad_pany_pptr_p64   x, t, i;
 
 		# y += x
-		add_l64_l64         y, x;
+		add_p64_p64         y, x;
 
 		# if i > 0 : end
-		cmpGt_l64_imm        i, 0;
+		cmpGt_p64_imm        i, 0;
 		jmpIf_label      Loop2;
 
 
 	# should return 42*(42+1)/2=903
-	output_l64          y;
+	output_p64          y;
 
 	# free t
-	free_lptr           t;
+	free_pptr           t;
 
 	deinit; # t
 	deinit; # y

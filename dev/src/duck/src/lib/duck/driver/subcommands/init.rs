@@ -1,13 +1,12 @@
 use std::path::PathBuf;
 
-use crate::{
-    DuckContext, QuackResult, qp_bail_internal,
-    quackpack::subcommands::init::{InitOptions, init},
-    util::path_ops_ext::PathOpsExt,
-};
-use clap::{Arg, ArgAction, ArgMatches, Command, builder::ValueParser};
+use clap::builder::ValueParser;
+use clap::{Arg, ArgAction, ArgMatches, Command};
 
 use crate::duck::driver::cli_ext::{flag, optional, subcommand};
+use crate::quackpack::subcommands::init::{InitOptions, init};
+use crate::util::path_ops_ext::PathOpsExt;
+use crate::{DuckContext, QuackResult, qp_bail_internal};
 
 /// Creates parser for the `init` subcommand.
 pub fn get_parser() -> Command {

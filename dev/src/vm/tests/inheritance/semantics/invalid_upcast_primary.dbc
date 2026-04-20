@@ -4,12 +4,12 @@ type pointer: CatPtr Cat
 
 function main { i64, ptr_argv } -> i64 {
     # ptr: ptr<i32>
-	init_lany_type ptr, ptr_i32;
+	init_pany_type ptr, ptr_i32;
 	# cat: ptr<Cat>
-	init_lany_type cat, CatPtr;
+	init_pany_type cat, CatPtr;
 
 	# ptr = new i32
-	alloc_lptr_type ptr, i32;
-	upcast_lptr_lptr cat, ptr;  # cat := static_cast<CatPtr>(dog)
+	alloc_pptr_type ptr, i32;
+	upcast_pptr_pptr cat, ptr;  # cat := static_cast<CatPtr>(dog)
 	ret;
 }

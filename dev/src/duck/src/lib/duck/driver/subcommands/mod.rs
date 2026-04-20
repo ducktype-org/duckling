@@ -1,5 +1,6 @@
-use crate::{DuckContext, QuackResult};
 use clap::{ArgMatches, Command};
+
+use crate::{DuckContext, QuackResult};
 
 // @TODO: #1650 Restore removed subcommands once they are implemented.
 mod build;
