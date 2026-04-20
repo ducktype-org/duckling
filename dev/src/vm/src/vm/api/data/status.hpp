@@ -1,6 +1,6 @@
 #pragma once
 
-#include <vm/core/thread/vmvalue.hpp>
+#include <vm/core/vmvalue/vmvalue.hpp>
 
 #include <json/json.hpp>
 

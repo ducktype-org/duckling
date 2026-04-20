@@ -3,7 +3,7 @@
 
 #include <tester/tester.hpp>
 
-#include <vm/core/process/exceptions.hpp>
+#include <vm/core/safe/exceptions.hpp>
 
 class VmThreadTest: public VmTestSuite {
 #undef TESTER_CLASS

@@ -3,8 +3,8 @@
 	#include "memory/memory.hpp"
 	#include "stencils/import_stencils.hpp"
 
+	#include <vm/core/safe/low_program/low_program.hpp>
 	#include <vm/core/thread/low_program/instruction.hpp>
-	#include <vm/core/thread/low_program/low_program.hpp>
 
 namespace vm::jit::cnp {
 	using JitOpFun = void(const vm::MicroInstruction**, byte**, vm::Frame**, vm::SafeVMThread*);

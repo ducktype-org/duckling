@@ -18,7 +18,7 @@ namespace vm::jit::cnp {
 		vm::OpFuns::op_##opcode_name(instr_ptr, local_stack, frame, thread);          \
 		CORE_ASSERT(instr_ptr == &instr + 1, "An unexpected jumping opcode");         \
 	}
-#include <vm/core/thread/low_program/micro_instruction_definitions.hpp>
+#include <vm/core/safe/low_program/micro_instruction_definitions.hpp>
 #undef HANDLE_MICRO_INSTR
 
 }

@@ -6,8 +6,8 @@
 #include <vm/bytecode/validator/valid_type/type_context.hpp>
 #include <vm/bytecode/validator/valid_type/type_map.hpp>
 #include <vm/bytecode/validator/valid_type/valid_type.hpp>
-#include <vm/core/process/type_metadata/inheritance_metadata.hpp>
-#include <vm/core/process/type_metadata/type_metadata.hpp>
+#include <vm/core/safe/type_metadata/inheritance_metadata.hpp>
+#include <vm/core/safe/type_metadata/type_metadata.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
 
 #include <ranges>

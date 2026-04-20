@@ -9,11 +9,11 @@
 #include <vm/api/data/api_error.hpp>
 #include <vm/api/data/request.hpp>
 #include <vm/api/data/status.hpp>
-#include <vm/core/process/concurrency/gil.hpp>
-#include <vm/core/process/concurrency/synchronization_primitives.hpp>
-#include <vm/core/process/memory/pointer.hpp>
 #include <vm/core/process/proc_io.hpp>
-#include <vm/core/process/type_metadata/definitions.hpp>
+#include <vm/core/safe/concurrency/gil.hpp>
+#include <vm/core/safe/concurrency/synchronization_primitives.hpp>
+#include <vm/core/safe/memory/pointer.hpp>
+#include <vm/core/safe/type_metadata/definitions.hpp>
 
 #include <expected>
 #include <shared_mutex>
@@ -46,8 +46,6 @@ namespace vm {
 		// See: https://en.cppreference.com/w/cpp/io/ios_base/Init
 		std::ios_base::Init cin_cout_init;
 
-		GIL                         gil;
-		SynchronizationPrimitives   synchronization_primitives;
 		api::ProcStatus             status;
 		std::shared_mutex           rw_status;
 		std::condition_variable_any status_cv;
@@ -196,15 +194,6 @@ namespace vm {
 		 * @brief Get the PID of the process.
 		 */
 		[[nodiscard]] PID getPID() const;
-		/**
-		 * @brief Get the GIL of the process.
-		 */
-		GIL& getGIL();
-
-		/**
-		 * @brief Get the synchronization primitives of the process.
-		 */
-		SynchronizationPrimitives& getSynchronizationPrimitives();
 
 		// @TODO: #2400 Remove this
 		void setStatus(const api::ProcStatus& new_status) noexcept;
@@ -221,7 +210,6 @@ namespace vm {
 		 */
 		virtual Ref<VmValue> createVmValue(TypeCRef type)              = 0;
 		virtual Ref<VmValue> createVmValue(TypeCRef type, Pointer src) = 0;
-
 
 		/**
 		 * @brief Creates a VmValue of a given type and transfers ownership to the caller.
