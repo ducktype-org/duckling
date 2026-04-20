@@ -79,7 +79,7 @@ if(${ALLOCATOR} STREQUAL "MIMALLOC")
     FetchContent_MakeAvailable(mimalloc)
 
     
-    # Turn off LINK_LIBRARIES_ONLY_TARGETS for mimalloc, which is needed for allocator_proxy_library to work as an interface library.
+    # Turn off LINK_LIBRARIES_ONLY_TARGETS for mimalloc, otherwise the build fails as mimalloc links to -lpthread.
     set_target_properties(mimalloc-static PROPERTIES LINK_LIBRARIES_ONLY_TARGETS OFF)
 
     # Add custom compile options to mimalloc.
