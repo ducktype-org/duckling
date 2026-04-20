@@ -1,0 +1,18 @@
+Tests:
+  sync:
+    Description: can sync a new project
+    Cases:
+      sync:
+        test_cmd: -C foo sync
+        ExitCode: 1
+        Err:
+          Run: |+
+            echo "error: when trying to parse the user manifest at \`$(pwd)/foo/quackconfig.yaml\`
+            
+              Caused by:
+                when parsing the field \`features\`
+            
+              Caused by:
+                the feature \`flag\` requires an absent feature \`absent\`
+
+            hint: every feature needs to pull in some features, try adding \`absent: []\` to your manifest"

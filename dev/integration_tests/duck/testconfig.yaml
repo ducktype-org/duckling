@@ -19,3 +19,4 @@ Run: bash -c "@{before_cmd} && @{duck_exe_path} --color=@{color} @{test_cmd}"
 
 SubDirs:
   - cli
+  - sync
