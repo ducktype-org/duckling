@@ -1,7 +1,5 @@
 #include "persistent_memory.hpp"
 
-#include "base/collections/optional.hpp"
-#include "base/except/exceptions.hpp"
 #include <base/collections/maps.hpp>
 #include <base/extend_cpp/strongly_typed_int.hpp>
 
@@ -80,12 +78,6 @@ namespace vm::persistent::detail {
 		CORE_ASSERT(height >= 64 || offset % (1 << height) == 0, "offset is not on multiple of 2^k");
 	}
 
-	void Memory::validateIdx(MemoryStateID root, usize idx) const {
-		auto [height, offset] = getHeightOffset(root);
-
-		if (idx < offset || idx >= offset + (1 << height))
-			throw std::invalid_argument("got idx out of state bounds");
-	}
 
 	MemoryStateID Memory::nodeFromChildren(MemoryStateID left, MemoryStateID right) {
 		auto pos_left  = getPos(left);
@@ -93,7 +85,7 @@ namespace vm::persistent::detail {
 
 		CORE_ASSERT(pos_right != 1 && pos_left != 1, "top node cannot be ever passed");
 
-		auto children       = ChildEntry{ .left = left, .right = right };
+		auto children       = ChildEntry{ .left_child = left, .right_child = right };
 		auto [is_new, node] = child_entries.emplaceByLeft(children, next_node_id);
 
 		if (!is_new) return node;
@@ -130,12 +122,12 @@ namespace vm::persistent::detail {
 	}
 
 	MemoryStateID Memory::nodeFromIdxVar(usize idx, usize var_id) {
-		auto leaf = LeafEntry{
+		auto leaf_entry = LeafEntry{
 			.idx   = idx,
 			.value = var_id,
 		};
 
-		auto [is_new, node] = leaf_entries.emplaceByLeft(leaf, next_node_id);
+		auto [is_new, node] = leaf_entries.emplaceByLeft(leaf_entry, next_node_id);
 
 		if (is_new) next_node_id++;
 
@@ -156,10 +148,81 @@ namespace vm::persistent::detail {
 	}
 
 	MemoryStateID Memory::rebuildFromIdxs(
-		MemoryStateID root, std::deque<usize> idxs, std::function<MemoryStateID(usize)> func
+		MemoryStateID root, std::deque<usize> idxs, std::function<MemoryStateID(usize)> constructor
 	) {
-		auto [left_idx, right_idx] = getRange(root);
+		if (!idxs.size()) return root;
+
+		std::ranges::sort(idxs);
+
+		usize left_most_idx = 0;
+		Path  iter          = getPathTo(root, idxs.front());
+
+		std::deque<MemoryStateID> on_left = {};
+		for (usize i = 1; i < iter.trace.size(); i++)
+			on_left.emplace_back(getChild(Dir::Left, iter.trace[i]));
+
+		MemoryStateID prev_node = EMPTY;
+		usize         prev_idx  = idxs.front();
+
+		bool was_first = false;
+
+		for (auto idx: idxs) {
+			if (on_left.size()) {
+				for (usize required_height = getLCAHeight(left_most_idx, idx);
+				     on_left.size() < required_height;
+				     on_left.emplace_back(EMPTY));
+			}
+
+			auto leaf = constructor(idx);
+
+			if (!was_first) {
+				if (on_left.empty() && !leaf) {
+					continue;
+					// there was nothing on the left side, this is our first element, it evaluated
+					// to zero, we don't do shit
+				}
+				was_first = true;
+				prev_node = leaf;
+				prev_idx  = idx;
+			} else {
+				auto height = getLCAHeight(prev_idx, idx);  // we get the first em
+				CORE_ASSERT(
+					height < on_left.size(), "paranoid assert - path of nodes is long enough"
+				);
+
+				CORE_ASSERT(
+					height < iter.trace.size(),
+					"paranoid assert - trace of iter should be long enough"
+				);
+
+				for (usize i = 0; i + 1 < height; i++) {
+					MemoryStateID left = on_left[i], right = on_left[i];
+
+					if (prev_idx & (1 << i)) {
+						right = prev_node;
+						left  = elevateRoot(left, i);
+					} else {
+						left  = prev_node;
+						right = EMPTY;
+					}
+
+					prev_node = nodeFromChildren(left, right);
+
+					on_left[i] = getChild(Dir::Left, iter.trace.at(i));
+				}
+
+				on_left[height] = prev_node;
+
+				prev_node = leaf;
+				prev_idx  = idx;
+			}
+		}
+
 		return EMPTY;
+	}
+
+	usize Memory::getLCAHeight(usize idx_1, usize idx_2) {
+		return (usize) std::bit_width(idx_1 ^ idx_2);
 	}
 
 	MemoryStateID Memory::getLeaf(MemoryStateID root, usize idx) const {
@@ -180,77 +243,62 @@ namespace vm::persistent::detail {
 	Memory::Path Memory::getPathTo(MemoryStateID root, usize idx) const {
 		auto [height, offset] = getHeightOffset(root);
 
-		CORE_ASSERT(
-			height >= 64 || offset % (1 << height) == 0, "The offset is not multple of power 2^k"
-		);
 		CORE_ASSERT(idx >= offset && idx < offset + (1 << height), "The idx was out of bounds!");
 
-		std::vector<MemoryStateID> ans  = { root };
-		auto                       node = root;
-		usize                      mask = (1 << height);
+		if (idx < offset || idx >= offset + (1 << height))
+			return Path{
+				.idx   = idx,
+				.trace = {},
+				.mem   = this,
+				.root  = root,
+			};
+
+		std::deque<MemoryStateID> ans  = { root };
+		MemoryStateID             node = root;
+		usize                     mask = (1 << height);
 
 		for (usize i = 0; i < height; i++) {
 			mask >>= 1;
 			Dir dir = (idx & mask) ? Dir::Right : Dir::Left;
 			node    = getChild(dir, node);
-			ans.emplace_back(node);
+			ans.emplace_front(node);
 		}
 
 		return Path{
 			.idx   = idx,
 			.trace = ans,
 			.mem   = this,
+			.root  = root,
 		};
-	}
-
-	[[nodiscard]]
-	MemoryStateID Memory::Path::at(usize height) const {
-		return trace.at(trace.size() - 1 - height);
 	}
 
 	[[nodiscard]]
 	Memory::Path Memory::getEndPath(Dir end_dir, MemoryStateID root) const {
-		auto [height, offset] = getHeightOffset(root);
 		CORE_ASSERT(root != EMPTY, "Tryig to get path in empty state");
 
-		usize                      idx   = offset;
-		auto                       node  = root;
-		std::vector<MemoryStateID> trace = { root };
+		auto [l, r] = getRange(root);
+		CORE_ASSERT(
+			r > 0, "paranod assert - unless root is empty, no state will have right bound equal 0"
+		);
 
-		for (usize i = 0; i < height; i++) {
-			auto& [left, right] = child_entries.atRight(node);
-			CORE_ASSERT(
-				left || right, "when going down to the leaves, at least one of children is not empty"
-			);
+		if (end_dir == Dir::Left) return getPathTo(root, l);
 
-			if (left) idx += (1 << (height - 1 - i));
+		if (end_dir == Dir::Right) return getPathTo(root, r - 1);
 
-			if (getChild(end_dir, node))
-				node = getChild(end_dir, node);
-			else
-				node = getChild(othDir(end_dir), node);
-
-			trace.emplace_back(node);
-		}
-
-		return Path{
-			.idx   = idx,
-			.trace = trace,
-			.mem   = this,
-		};
+		CORE_UNREACHABLE();
 	}
 
-	bool Memory::Path::move(Dir move_dir, usize skip) {
+	bool Memory::Path::moveToValid(Dir move_dir, usize skip) {
 		CORE_ASSERT(trace.size(), "there must be a leaf on the path");
 
 		const auto orig_path_size = trace.size();
 		const auto orig_idx       = idx;
 		usize      mask           = 1;
 
-		trace.pop_back();
+		trace.pop_front();
 
-		for (; trace.size(); trace.pop_back(), mask <<= 1) {
-			MemoryStateID node_id = trace.back();
+		for (; trace.size(); trace.pop_front(), mask <<= 1) {
+			MemoryStateID node_id = trace.front();
 
 			if (idx & mask) idx ^= mask;
 			if ((idx & mask) == (move_dir == Dir::Right)) continue;
@@ -269,8 +317,8 @@ namespace vm::persistent::detail {
 		while (mask > 0) {
 			Dir dir = (idx & mask) ? Dir::Right : Dir::Left;
 
-			MemoryStateID son = mem->getChild(dir, trace.back());
-			trace.emplace_back(son);
+			MemoryStateID son = mem->getChild(dir, trace.front());
+			trace.emplace_front(son);
 
 			mask >>= 1;
 			CORE_ASSERT((idx & mask) == 0, "Trailing bits should be off");
@@ -292,6 +340,43 @@ namespace vm::persistent::detail {
 		CORE_ASSERT(idx > orig_idx, "idx should increas");
 
 		return true;
+	}
+
+	void Memory::Path::moveBy(usize by) {
+		auto [height, offset] = mem->getHeightOffset(root);
+		auto new_idx          = idx + by;
+		auto to_change        = (usize) std::bit_width(idx ^ new_idx);
+
+		while (trace.size() < to_change) trace.emplace_back(EMPTY);
+
+		if (new_idx < offset || new_idx >= offset + (1 << height)) {
+			if (trace.size() > height)
+				for (usize i = height; i > 0 && trace.at(i - 1) != EMPTY; i--)
+					trace.at(i - 1) = EMPTY;
+
+			idx = new_idx;
+			return;
+		}
+
+		if (idx < offset || idx >= offset + (1 << height)) {
+			auto path = mem->getPathTo(root, new_idx);
+			for (usize i = 0; i < path.trace.size(); i++) trace[i] = path.trace[i];
+			idx = new_idx;
+			return;
+		}
+
+		for (usize i = 0; i < to_change; i++) trace.pop_front();
+
+		CORE_ASSERT(trace.size(), "paranoid assert - The root must be at the path");
+
+		for (usize height = to_change; height > 0; height--) {
+			usize mask = (1 << (height - 1));
+			Dir   dir  = (new_idx & mask) ? Dir::Right : Dir::Left;
+			auto  root = trace.front();
+
+			trace.emplace_front(mem->getChild(dir, root));
+		}
+		idx = new_idx;
 	}
 
 	MemoryStateID Memory::buildCommonRoot(std::deque<std::pair<usize, MemoryStateID>> states) {
@@ -362,15 +447,15 @@ namespace vm::persistent::detail {
 		CORE_ASSERT(path_1.trace.size() == path_2.trace.size(), "This should always be the case");
 		auto height = path_1.trace.size();
 
-		auto new_height = (usize) std::bit_width(path_1.idx ^ path_2.idx);
+		usize new_height = getLCAHeight(path_1.idx, path_2.idx);
 		CORE_ASSERT(new_height < height, "new heihgt is a valid idx for the paths");
 
-		MemoryStateID common = path_1.at(new_height);
+		MemoryStateID common = path_1.trace.at(new_height);
 
-		CORE_ASSERT(common == path_2.at(new_height), "the element must be common");
+		CORE_ASSERT(common == path_2.trace.at(new_height), "the element must be common");
 
 		CORE_ASSERT(
-			new_height == 0 || (path_1.at(new_height - 1) != path_2.at(new_height - 1)),
+			new_height == 0 || (path_1.trace.at(new_height - 1) != path_2.trace.at(new_height - 1)),
 			"paths diverge"
 		);
 
@@ -510,11 +595,11 @@ namespace vm::persistent::detail {
 		auto work_copy = idxs;
 
 		for (; !work_copy.empty() && work_copy.front() == path_left.idx; work_copy.pop_front())
-			if (!path_left.move(Dir::Right)) return EMPTY;
+			if (!path_left.moveToValid(Dir::Right)) return EMPTY;
 
 		for (; !work_copy.empty() && work_copy.back() == path_right.idx; work_copy.pop_back())
 			CORE_ASSERT(
-				!path_right.move(Dir::Left), "there must be at least one el oustide of idxs"
+				!path_right.moveToValid(Dir::Left), "there must be at least one el oustide of idxs"
 			);
 
 		auto [common, _] = getLCA(path_left, path_right);
@@ -842,13 +927,13 @@ namespace vm::persistent::detail {
 		auto left_path  = getPathTo(root, left_idx);
 		auto right_path = getPathTo(root, right_idx - 1);
 
-		if (!right_path.at(0)) {
-			bool decrement = right_path.move(Dir::Left);
+		if (!right_path.trace.at(0)) {
+			bool decrement = right_path.moveToValid(Dir::Left);
 			if (!decrement) return EMPTY;
 		}
 
-		if (!left_path.at(0)) {
-			bool advanced = left_path.move(Dir::Right);
+		if (!left_path.trace.at(0)) {
+			bool advanced = left_path.moveToValid(Dir::Right);
 			if (!advanced) return EMPTY;
 		}
 
@@ -858,8 +943,8 @@ namespace vm::persistent::detail {
 
 		if (lca_height == 0) return lca;
 
-		MemoryStateID left_node  = left_path.at(0);
-		MemoryStateID right_node = right_path.at(0);
+		MemoryStateID left_node  = left_path.trace.at(0);
+		MemoryStateID right_node = right_path.trace.at(0);
 
 		for (usize curr_height = 1; curr_height < lca_height; curr_height++) {
 			MemoryStateID left{}, right{};
@@ -870,14 +955,14 @@ namespace vm::persistent::detail {
 			if (left_path.idx & mask)
 				left = EMPTY;
 			else
-				right = getChild(Dir::Right, left_path.at(curr_height));
+				right = getChild(Dir::Right, left_path.trace.at(curr_height));
 
 			left_node = nodeFromChildren(left, right);
 
 			left  = right_node;
 			right = right_node;
 			if (right_path.idx & mask)
-				left = getChild(Dir::Left, right_path.at(curr_height));
+				left = getChild(Dir::Left, right_path.trace.at(curr_height));
 			else
 				right = EMPTY;
 
@@ -934,7 +1019,6 @@ namespace vm::persistent::detail {
 
 	base::Optional<usize> Memory::access(MemoryStateID root, usize idx) const {
 		validateRoot(root);
-		validateIdx(root, idx);
 
 		auto node = getLeaf(root, idx);
 
@@ -973,12 +1057,12 @@ namespace vm::persistent::detail {
 				.right_bound = 0,
 			}
 		);
-		child_entries.emplaceByLeft(ChildEntry{ .left = EMPTY, .right = EMPTY }, EMPTY);
+		child_entries.emplaceByLeft(ChildEntry{ .left_child = EMPTY, .right_child = EMPTY }, EMPTY);
 	}
 
 	MemoryIterator& MemoryIterator::operator++() {
 		if_opt_some(maybe_path, path) {
-			bool success = path.move(Memory::Dir::Right);
+			bool success = path.moveToValid(Memory::Dir::Right);
 			if (!success) maybe_path = std::nullopt;
 		}
 		return *this;
@@ -992,7 +1076,7 @@ namespace vm::persistent::detail {
 
 	MemoryIterator& MemoryIterator::operator--() {
 		if_opt_some(maybe_path, path) {
-			bool success = path.move(Memory::Dir::Left);
+			bool success = path.moveToValid(Memory::Dir::Left);
 			if (!success) maybe_path = std::nullopt;
 		}
 		return *this;
@@ -1006,9 +1090,11 @@ namespace vm::persistent::detail {
 
 	MemoryIterator::MemoryIterator(const Memory& mem, MemoryStateID root, usize idx) {
 		mem.validateRoot(root);
-		mem.validateIdx(root, idx);
+		auto path = mem.getPathTo(root, idx);
 
-		maybe_path = mem.getPathTo(root, idx);
+		if (path.trace.size() && path.trace.at(0) != Memory::EMPTY) {
+			maybe_path = path;
+		}
 	}
 
 	MemoryStateView::MemoryStateView(const Memory& mem, MemoryStateID id): id{ id }, mem{ mem } {}
