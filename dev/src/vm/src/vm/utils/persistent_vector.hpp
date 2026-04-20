@@ -145,7 +145,9 @@ namespace vm::persistent {
 
 			while (path.size() && path.back().first == Dir::Right) path.pop_back();
 
-			if (path.size() && path.back().first == Dir::Left) return false;
+			if (path.empty()) return false;
+
+			CORE_ASSERT(path.back().first == Dir::Left, "The only way for us to sep out of prev func");
 
 			NodeID node       = path.back().second;
 			path.back().first = Dir::Right;
@@ -265,9 +267,8 @@ namespace vm::persistent {
 			auto path = getNodePath(prev_root, left);
 
 			for (usize idx = left; idx <= right; idx++) {
-				NodeID leaf;
 				auto [dir, last] = path.back();
-				leaf             = getChild(last, dir);
+				NodeID leaf      = getChild(last, dir);
 
 				ans.emplace_back(getLeafValue(leaf));
 
