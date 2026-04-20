@@ -21,3 +21,4 @@ SubDirs:
   - cli
   - sync
   - init
+  - build
