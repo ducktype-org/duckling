@@ -5,6 +5,7 @@
 #include "elements/includes/basic.hpp"  // IWYU pragma: keep
 #include "lang_parser_context.hpp"
 #include "pst_state_forward.hpp"
+#include "source_position_locked.hpp"
 
 #include <diagnostic_interactive/logger.hpp>
 #include <time_stats/time_stats.hpp>
@@ -261,6 +262,19 @@ namespace pst {
 				makeParserContext(std::move(pst_ctx)),
 				std::move(hash_ctx),
 				std::forward<Args>(args)...
+			);
+		}
+
+		/** @brief Create a PST from an expanded (macro) text, with correct query dependency
+		 * tracking. */
+		static PST fromExpand(
+			SourcePositionLocked     pos,
+			std::string_view         contents,
+			Box<LangParserContext>&& parsing_ctx,
+			hashing::ComponentHash   hash_ctx = {}
+		) {
+			return fromExpandWithArgs(
+				pos.illegalAccess(), contents, std::move(parsing_ctx), hash_ctx
 			);
 		}
 
