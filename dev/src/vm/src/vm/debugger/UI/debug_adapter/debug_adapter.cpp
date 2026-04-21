@@ -89,7 +89,7 @@ void DebugAdapter::sendEvent(const std::string& event, const nlohmann::json& bod
 void DebugAdapter::handleInitialize(const nlohmann::json& req) {
 	nlohmann::json capabilities = {
 		{ "supportsConfigurationDoneRequest", true },
-		// TODO: support set variable (generally memory part of debugger)
+		// @TODO: #2558 support set variable (generally memory part of debugger)
 		{ "supportsSetVariable", false },
 	};
 
@@ -103,7 +103,7 @@ void DebugAdapter::handleConfigurationDone(const nlohmann::json& req) { sendResp
 void DebugAdapter::handleLaunch(const nlohmann::json& req) {
 	std::string program = req["arguments"]["program"];
 
-	// TODO: add load program in debugger
+	// @TODO: #2559 add load program in debugger
 	// for now we load program at the beggining, while constructing adapter
 
 	sendResponse(req, true);
