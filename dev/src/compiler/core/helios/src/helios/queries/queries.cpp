@@ -116,9 +116,9 @@ namespace compiler::helios {
 
 					// grab constants:
 					if (kind(sym) == SymbolKind::Const)
-						run_no_interrupt([&] { try_append_global_data(sym); });
+						try_append_global_data(sym);
 					if (kind(sym) == SymbolKind::Variable and isGlobalVar(ctx, sym))
-						run_no_interrupt([&] { try_append_global_data(sym); });
+						try_append_global_data(sym);
 
 					// grab functions:
 					if (kind(sym) == SymbolKind::Function)

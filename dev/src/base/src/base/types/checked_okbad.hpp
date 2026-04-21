@@ -5,8 +5,7 @@
 namespace base {
 	/**
 	 * Utility type wraping the base::OkBad,
-	 * in a way that forces the value to be checked. the caller to check it (to avoid silent
-	 * failures).
+	 * in a way that forces the value to be checked.
 	 *
 	 * If status method is never called, the destructor will panic.
 	 *

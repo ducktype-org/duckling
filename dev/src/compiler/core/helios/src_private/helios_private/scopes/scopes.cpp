@@ -607,8 +607,9 @@ namespace compiler::helios {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			auto output = getSymbols(ctx, key);
 
-			auto validate_output_symbols = [&](const std::vector<SymID>& symbols) {
-				for (auto sym: symbols) {
+			// Sanity check that the output symbols have correct scope.
+			if (output.hasValue()) {
+				for (auto sym: output.valueOrPanic()) {
 					CORE_ASSERT(
 						scope(sym) == key,
 						base::strConcat(
@@ -630,11 +631,8 @@ namespace compiler::helios {
 					);
 				}
 				if (key.ref->is_root)
-					CORE_ASSERT(symbols.empty(), "Root scope should not have any symbols.");
-			};
-
-			// Sanity check that the output symbols have correct scope. :
-			if (output.hasValue()) validate_output_symbols(output.valueOrPanic());
+					CORE_ASSERT(output.valueOrPanic().empty(), "Root scope should not have any symbols.");
+			}
 
 			return output;
 		}
