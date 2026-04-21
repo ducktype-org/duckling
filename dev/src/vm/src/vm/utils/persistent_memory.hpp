@@ -77,16 +77,23 @@ namespace vm::persistent::detail {
 		enum class Dir { Left, Right };
 
 		static constexpr Dir othDir(Dir dir) { return dir == Dir::Left ? Dir::Right : Dir::Left; }
-
-		// method for determining height of LCA for two leaves at idx_1 and idx_2. Used for readability
 		static constexpr usize heightFromPos(usize pos) { return usize(64 - std::bit_width(pos)); }
-
 		static constexpr usize offsetFromPos(usize pos) {
 			return (pos << heightFromPos(pos)) & ROOT_MASK;
 		}
 
-		static constexpr usize getLCAHeight(usize idx_1, usize idx_2) {
-			return (usize) std::bit_width(idx_1 ^ idx_2);
+		static constexpr usize getLCAHeight(usize pos_1, usize pos_2) {
+			if (pos_1 > pos_2) std::swap(pos_1, pos_2);
+			if (pos_1 == 0) return pos_2;
+			auto h_1 = heightFromPos(pos_1), h_2 = heightFromPos(pos_2);
+			CORE_ASSERT(h_1 >= h_2, "pos_1 should be higher tahn pos_2");
+			pos_2 >>= (h_1 - h_2);
+			return h_1 + (usize) std::bit_width(pos_1 ^ pos_2);
+		}
+
+		static constexpr usize getLCAPos(usize pos_1, usize pos_2) {
+			if (pos_1 == 0) std::swap(pos_1, pos_2);
+			return pos_1 >> (getLCAHeight(pos_1, pos_2) - heightFromPos(pos_1));
 		}
 
 		struct SurroundingNeigh {
@@ -174,14 +181,17 @@ namespace vm::persistent::detail {
 		 * @brief Helper struct for keeping reconstruction when merging two memory states
 		 */
 		struct MergeBuilder {
-			std::function<MemoryStateID(MemoryStateID)> only_1
-				= [](MemoryStateID id) -> MemoryStateID { return id; };
+			std::function<MemoryStateID(MemoryStateID, usize)> only_1
+				= []([[maybe_unused]] MemoryStateID id,
+			         [[maybe_unused]] usize         pos) -> MemoryStateID { return id; };
 
-			std::function<MemoryStateID(MemoryStateID)> only_2
-				= [](MemoryStateID id) -> MemoryStateID { return id; };
+			std::function<MemoryStateID(MemoryStateID, usize)> only_2
+				= []([[maybe_unused]] MemoryStateID id,
+			         [[maybe_unused]] usize         pos) -> MemoryStateID { return id; };
 
-			std::function<MemoryStateID(MemoryStateID)> the_same
-				= [](MemoryStateID id) -> MemoryStateID { return id; };
+			std::function<MemoryStateID(MemoryStateID, usize)> the_same
+				= []([[maybe_unused]] MemoryStateID id,
+			         [[maybe_unused]] usize         pos) -> MemoryStateID { return id; };
 
 			_ConflictPolicy confilicts = [](usize, usize, usize) -> MemoryStateID {
 				throw std::invalid_argument("conflicts present");

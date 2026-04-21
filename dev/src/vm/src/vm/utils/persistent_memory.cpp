@@ -24,7 +24,7 @@ namespace vm::persistent::detail {
 
 	std::pair<usize, usize> Memory::getHeightOffset(MemoryStateID state) const {
 		if_opt_some(root_info.atMaybeCopy(state), entry) {
-			auto pos    = entry.position;
+			auto pos = entry.position;
 			CORE_ASSERT(!(pos & LEAF_MASK), "top bit would imply that node is leaf");
 
 			return {
@@ -129,138 +129,140 @@ namespace vm::persistent::detail {
 	MemoryStateID Memory::reconstructIdxs(
 		MemoryStateID root, std::deque<usize> idxs, LeafBuilder constructor
 	) {
-		if (!idxs.size()) return root;
-		std::ranges::sort(idxs);
-		Path iter = getPathTo(root, idxs.front());
+		// if (!idxs.size()) return root;
+		// std::ranges::sort(idxs);
+		// Path iter = getPathTo(root, idxs.front());
 
-		bool  found_diff = false;
-		auto  curr_leaf = EMPTY, prev_leaf = EMPTY;
-		usize curr_idx = 0, prev_idx = idxs.front();
+		// bool  found_diff = false;
+		// auto  curr_leaf = EMPTY, prev_leaf = EMPTY;
+		// usize curr_idx = 0, prev_idx = idxs.front();
 
-		auto get_first_diff = [&](std::deque<usize>& dq) {
-			usize last_idx = prev_idx;
-			for (; dq.size(); dq.pop_front()) {
-				curr_idx = dq.front();
-				iter.moveBy(curr_idx - last_idx);
-				CORE_ASSERT(iter.trace.size(), "trace must be non-empty");
-				auto old_leaf = iter.trace.at(0);
-				auto new_leaf = constructor(curr_idx, getValue(old_leaf));
-				if (new_leaf != old_leaf) {
-					curr_leaf = new_leaf;
-					break;
-				}
-				last_idx = curr_idx;
-			}
-			CORE_ASSERT(found_diff || dq.empty(), "when we didn't find anything dq is empty");
-		};
+		// auto get_first_diff = [&](std::deque<usize>& dq) {
+		// 	usize last_idx = prev_idx;
+		// 	for (; dq.size(); dq.pop_front()) {
+		// 		curr_idx = dq.front();
+		// 		iter.moveBy(curr_idx - last_idx);
+		// 		CORE_ASSERT(iter.trace.size(), "trace must be non-empty");
+		// 		auto old_leaf = iter.trace.at(0);
+		// 		auto new_leaf = constructor(curr_idx, getValue(old_leaf));
+		// 		if (new_leaf != old_leaf) {
+		// 			curr_leaf = new_leaf;
+		// 			break;
+		// 		}
+		// 		last_idx = curr_idx;
+		// 	}
+		// 	CORE_ASSERT(found_diff || dq.empty(), "when we didn't find anything dq is empty");
+		// };
 
-		get_first_diff(idxs);
-		if (!found_diff) return root;
-		prev_leaf = curr_leaf;
-		prev_idx  = idxs.front();
-		idxs.pop_front();
+		// get_first_diff(idxs);
+		// if (!found_diff) return root;
+		// prev_leaf = curr_leaf;
+		// prev_idx  = idxs.front();
+		// idxs.pop_front();
 
-		std::deque<MemoryStateID> on_left = {}, on_right = {};
+		// std::deque<MemoryStateID> on_left = {}, on_right = {};
 
-		auto extend_neighs = [&](usize height) {
-			CORE_ASSERT(on_left.size() == on_right.size(), "paranoid assert this is required");
-			while (on_left.size() <= height) on_left.emplace_back(EMPTY);
-			while (on_right.size() <= height) on_right.emplace_back(EMPTY);
-		};
+		// auto extend_neighs = [&](usize height) {
+		// 	CORE_ASSERT(on_left.size() == on_right.size(), "paranoid assert this is required");
+		// 	while (on_left.size() <= height) on_left.emplace_back(EMPTY);
+		// 	while (on_right.size() <= height) on_right.emplace_back(EMPTY);
+		// };
 
-		auto reconstruct_local_neighs = [&](usize height) {
-			CORE_ASSERT(on_left.size() == on_right.size(), "paranoid assert this is required");
-			CORE_ASSERT(height + 1 <= iter.trace.size(), "paranoid assertion");
-			CORE_ASSERT(height <= on_left.size() && height <= on_right.size(), "paranoid assertion");
+		// auto reconstruct_local_neighs = [&](usize height) {
+		// 	CORE_ASSERT(on_left.size() == on_right.size(), "paranoid assert this is required");
+		// 	CORE_ASSERT(height + 1 <= iter.trace.size(), "paranoid assertion");
+		// 	CORE_ASSERT(height <= on_left.size() && height <= on_right.size(), "paranoid assertion");
 
-			for (usize i = 0; i < height; i++) {
-				auto state  = iter.trace.at(i + 1);
-				on_left[i]  = EMPTY;
-				on_right[i] = EMPTY;
+		// 	for (usize i = 0; i < height; i++) {
+		// 		auto state  = iter.trace.at(i + 1);
+		// 		on_left[i]  = EMPTY;
+		// 		on_right[i] = EMPTY;
 
-				usize mask = (1 << i);
-				if (iter.idx & mask)
-					on_left[i] = getChild(Dir::Left, state);
-				else
-					on_right[i] = getChild(Dir::Right, state);
-			}
-		};
+		// 		usize mask = (1 << i);
+		// 		if (iter.idx & mask)
+		// 			on_left[i] = getChild(Dir::Left, state);
+		// 		else
+		// 			on_right[i] = getChild(Dir::Right, state);
+		// 	}
+		// };
 
-		extend_neighs(iter.trace.size());
-		reconstruct_local_neighs(iter.trace.size());
+		// extend_neighs(iter.trace.size());
+		// reconstruct_local_neighs(iter.trace.size());
 
-		std::deque<usize> before = {}, after = {};
-		auto [root_offset, root_height] = getHeightOffset(root);
+		// std::deque<usize> before = {}, after = {};
+		// auto [root_offset, root_height] = getHeightOffset(root);
 
-		for (; idxs.size() && idxs.front() < root_offset + (1 << root_height); idxs.pop_front())
-			before.emplace_back(idxs.front());
-		for (; idxs.size(); idxs.pop_front()) after.emplace_back(idxs.front());
+		// for (; idxs.size() && idxs.front() < root_offset + (1 << root_height); idxs.pop_front())
+		// 	before.emplace_back(idxs.front());
+		// for (; idxs.size(); idxs.pop_front()) after.emplace_back(idxs.front());
 
-		auto elevate_node
-			= [&](MemoryStateID node, usize idx, usize height, usize start_height = 0) {
-				  CORE_ASSERT(
-					  start_height == getHeightOffset(node).first,
-					  "sanity assert - we always use the right node"
-				  );
-				  for (usize i = start_height; i < height; i++)
-					  if (idx & (1 << i))
-						  node = nodeFromChildren(on_left[i], node);
-					  else
-						  node = nodeFromChildren(node, on_right[i]);
+		// auto elevate_node
+		// 	= [&](MemoryStateID node, usize idx, usize height, usize start_height = 0) {
+		// 		  CORE_ASSERT(
+		// 			  start_height == getHeightOffset(node).first,
+		// 			  "sanity assert - we always use the right node"
+		// 		  );
+		// 		  for (usize i = start_height; i < height; i++)
+		// 			  if (idx & (1 << i))
+		// 				  node = nodeFromChildren(on_left[i], node);
+		// 			  else
+		// 				  node = nodeFromChildren(node, on_right[i]);
 
-				  return node;
-			  };
+		// 		  return node;
+		// 	  };
 
-		auto update_next_diff = [&](std::deque<usize>& dq) {
-			found_diff = false;
-			get_first_diff(dq);
-			if (!found_diff) return;
+		// auto update_next_diff = [&](std::deque<usize>& dq) {
+		// 	found_diff = false;
+		// 	get_first_diff(dq);
+		// 	if (!found_diff) return;
 
-			auto new_idx = dq.front();
-			dq.pop_front();
+		// 	auto new_idx = dq.front();
+		// 	dq.pop_front();
 
-			usize height = getLCAHeight(new_idx, prev_idx);
-			extend_neighs(height);
-			on_left[height] = elevate_node(curr_leaf, prev_idx, height);
-			reconstruct_local_neighs(height);
+		// 	usize height = getLCAHeight(new_idx, prev_idx);
+		// 	extend_neighs(height);
+		// 	on_left[height] = elevate_node(curr_leaf, prev_idx, height);
+		// 	reconstruct_local_neighs(height);
 
-			prev_leaf = curr_leaf;
-			prev_idx  = curr_idx;
-		};
+		// 	prev_leaf = curr_leaf;
+		// 	prev_idx  = curr_idx;
+		// };
 
-		auto process_queue = [&](std::deque<usize>& dq) {
-			while (dq.size()) update_next_diff(dq);
-		};
+		// auto process_queue = [&](std::deque<usize>& dq) {
+		// 	while (dq.size()) update_next_diff(dq);
+		// };
 
-		process_queue(before);
+		// process_queue(before);
 
-		if (!root && prev_idx < root_offset) {
-			update_next_diff(after);
+		// if (!root && prev_idx < root_offset) {
+		// 	update_next_diff(after);
 
-			if (found_diff) {
-				usize height = getLCAHeight(root_offset, prev_idx);
-				CORE_ASSERT(root_height < height, "We need to go outsude current scope");
-				CORE_ASSERT(
-					on_left.size() == on_right.size() && on_left.size() <= height,
-					"we neet to have high enough neighs"
-				);
-				for (usize i = root_height; i < height; i++)
-					CORE_ASSERT(
-						on_left[i] == EMPTY && on_right[i] == EMPTY,
-						"This is expected outside the root's scopr"
-					);
-				on_left[height - 1] = elevate_node(root, root_offset, height - 1, root_height);
-			}
-		}
+		// 	if (found_diff) {
+		// 		usize height = getLCAHeight(root_offset, prev_idx);
+		// 		CORE_ASSERT(root_height < height, "We need to go outsude current scope");
+		// 		CORE_ASSERT(
+		// 			on_left.size() == on_right.size() && on_left.size() <= height,
+		// 			"we neet to have high enough neighs"
+		// 		);
+		// 		for (usize i = root_height; i < height; i++)
+		// 			CORE_ASSERT(
+		// 				on_left[i] == EMPTY && on_right[i] == EMPTY,
+		// 				"This is expected outside the root's scopr"
+		// 			);
+		// 		on_left[height - 1] = elevate_node(root, root_offset, height - 1, root_height);
+		// 	}
+		// }
 
-		process_queue(after);
+		// process_queue(after);
 
-		while (on_left.size() && !on_left.back() && !on_right.back()) {
-			on_left.pop_back();
-			on_right.pop_back();
-		}
+		// while (on_left.size() && !on_left.back() && !on_right.back()) {
+		// 	on_left.pop_back();
+		// 	on_right.pop_back();
+		// }
 
-		return elevate_node(prev_leaf, prev_idx, on_left.size());
+		// return elevate_node(prev_leaf, prev_idx, on_left.size());
+
+		return EMPTY;
 	}
 
 	MemoryStateID Memory::rebuildFromTwo(
@@ -281,17 +283,18 @@ namespace vm::persistent::detail {
 			};
 		}
 
-		auto detail_merge = [&, mem = this](
-							   this auto&& self, MemoryStateID node_1, MemoryStateID node_2
-						   ) -> MemoryStateID {
+		auto detail_merge
+			= [&, mem = this](
+				  this auto&& self, usize pos, MemoryStateID node_1, MemoryStateID node_2
+			  ) -> MemoryStateID {
 			CORE_ASSERT(
 				mem->getPos(node_1) == mem->getPos(node_2) || !node_1 || !node_2,
 				"both nodes are responsible for the same memory region"
 			);
 
-			if (node_1 == node_2) return merge_policy.the_same(node_1);
-			if (!node_1) return merge_policy.only_2(node_2);
-			if (!node_2) return merge_policy.only_1(node_1);
+			if (node_1 == node_2) return merge_policy.the_same(node_1, pos);
+			if (!node_1) return merge_policy.only_2(node_2, pos);
+			if (!node_2) return merge_policy.only_1(node_1, pos);
 
 			if_opt_some(mem->leaf_entries.atRightOpt(node_1), leaf_entry1) {
 				auto maybe_entry2 = mem->leaf_entries.atRightOpt(node_2);
@@ -317,11 +320,14 @@ namespace vm::persistent::detail {
 			);
 			auto [left_1, right_1] = mem->child_entries.atRight(node_1);
 			auto [left_2, right_2] = mem->child_entries.atRight(node_2);
+			auto pos_left = pos << 1, pos_right = ((pos << 1) | 1);
 
-			return mem->nodeFromChildren(self(left_1, left_2), self(right_1, right_2));
+			return mem->nodeFromChildren(
+				self(pos_left, left_1, left_2), self(pos_right, right_1, right_2)
+			);
 		};
 
-		return detail_merge(root_1, root_2);
+		return detail_merge(getPos(root_1), root_1, root_2);
 	}
 
 	MemoryStateID Memory::getLeaf(MemoryStateID root, usize idx) const {
@@ -485,9 +491,9 @@ namespace vm::persistent::detail {
 				auto [idx_first, state_first] = states.front();
 				states.pop_front();
 
-				usize         next_idx = idx_first / 2;
-				auto left     = (idx_first % 2) ? EMPTY : state_first;
-				auto right    = (idx_first % 2) ? state_first : EMPTY;
+				usize next_idx = idx_first / 2;
+				auto  left     = (idx_first % 2) ? EMPTY : state_first;
+				auto  right    = (idx_first % 2) ? state_first : EMPTY;
 
 				if (!states.size() || (idx_first % 2) == 1) {
 					next_layer.emplace_back(next_idx, nodeFromChildren(left, right));
@@ -825,8 +831,8 @@ namespace vm::persistent::detail {
 		}
 
 		auto detail_merge = [&, mem = this](
-							   this auto&& self, MemoryStateID node_1, MemoryStateID node_2
-						   ) -> MemoryStateID {
+								this auto&& self, MemoryStateID node_1, MemoryStateID node_2
+							) -> MemoryStateID {
 			auto [_height_1, _offset_1] = mem->getHeightOffset(node_1);
 			auto [_height_2, _offset_2] = mem->getHeightOffset(node_2);
 
