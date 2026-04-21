@@ -47,7 +47,7 @@ namespace vm::code {
 	};
 
 	struct FuncSignature final {
-		Identifier              result_type;
+		std::vector<Identifier> result_types;
 		std::vector<Identifier> parameters;
 
 		bool operator==(const FuncSignature& other) const noexcept = default;

@@ -120,21 +120,24 @@ namespace vm {
 			                             .bc               = {},
 			                             .local_stack_size = 0,
 			                             .local_block_count
-			                             = (func.result_type->getName() == "void" ? 0 : 1)
-			                             + func.parameters.size(),
-			                             .arg_size    = 0,
-			                             .ret_size    = func.result_type->getSize().asInt(),
-			                             .parameters  = {},
-			                             .result_type = func.result_type };
+			                             = func.result_types.size() + func.parameters.size(),
+			                             .arg_size     = 0,
+			                             .ret_size     = func.ret_size,
+			                             .parameters   = {},
+			                             .result_types = func.result_types };
 
-		u64       result_type_arg    = safeReadObjectBytes<u64>(func.result_type);
 		const u64 called_function_id = process_program->getFunctions().idOf(func.name).value();
 
-		// Initialize an exit code/return value spot. In case of non-void functions the exit_code is
-		// the return value of the function. Void functions always return with the exit_code = 0.
-		start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(init_bany_type, 0, result_type_arg));
+		for (auto [idx, res]: std::views::enumerate(func.result_types)) {
+			// Initialize an exit code/return value spot. In case of non-void functions the
+			// exit_code is the return value of the function. Void functions always return with the
+			// exit_code = 0.
+			start_function.bc.push_back(
+				MAKE_BYTECODE_INSTRUCTION(init_bany_type, (u64) idx, safeReadObjectBytes<u64>(res))
+			);
+		}
 
-		start_function.local_stack_size += func.result_type->getSize().asInt();
+		start_function.local_stack_size += func.ret_size;
 
 		for (u64 i = 0; i < func_args.size(); i++) {
 			const auto& arg_value = func_args[i];
@@ -202,7 +205,7 @@ namespace vm {
 		// @note: All the following are guaranteed to exist or their existence was checked
 		// during code loading.
 
-		auto        main_return_type = func.result_type;
+		auto        main_return_type = func.result_types;
 		const auto& types            = process_program->getTypes();
 		auto        argv_type        = types.at(base::StrID("argv"));
 		auto        argv_ptr_type    = types.at(base::StrID("ptr_argv"));
@@ -216,9 +219,9 @@ namespace vm {
 			                             .local_stack_size  = 72,
 			                             .local_block_count = 7,
 			                             .arg_size          = 0,
-			                             .ret_size          = main_return_type->getSize().asInt(),
+			                             .ret_size          = func.ret_size,
 			                             .parameters        = {},
-			                             .result_type       = func.result_type };
+			                             .result_types      = func.result_types };
 
 		// TypeIDs to pass to opcodes.
 		u64 argv_type_arg     = safeReadObjectBytes<u64>(argv_type);
@@ -393,13 +396,18 @@ namespace vm {
 #endif
 	// NOLINTBEGIN(cppcoreguidelines-avoid-goto)
 	// NOLINTBEGIN(cppcoreguidelines-pro-bounds-constant-array-index)
-	Ref<VmValue> SafeVMThread::executeFunction(
+	std::vector<Ref<VmValue>> SafeVMThread::executeFunction(
 		const low::LowFuncData& start_function, const low::LowFuncData& func
 	) {
 		acquireGil();
 		// Frame of the called function.
-		Frame*     frame       = runtime_data.frame_stack_base;
-		std::byte* local_stack = runtime_data.local_stack_base;
+		Frame*     frame          = runtime_data.frame_stack_current;
+		Frame*     orig_frame_ptr = frame;
+		Frame      orig_frame_cpy = *runtime_data.frame_stack_current;
+		std::byte* local_stack    = frame->local_stack;
+		if (local_stack == nullptr) local_stack = runtime_data.local_stack_base;
+		auto orig_block_stack_size
+			= usize(frame->local_block_ref_stack_end - frame->local_block_ref_stack_base);
 
 		frame->current_function           = &start_function;
 		frame->local_block_ref_stack_base = runtime_data.block_ref_stack_base;
@@ -434,16 +442,36 @@ namespace vm {
 		}
 	End:
 #endif
+
+		CORE_ASSERT(
+			frame == orig_frame_ptr,
+			"After executing function we have to return to original place in call stack"
+		);
 		// @note: The return value is the only block left on the block stack.
 		CORE_ASSERT(
-			frame->local_block_ref_stack_end - frame->local_block_ref_stack_base == 1,
-			"After function execution, there should be exactly one block on the block stack."
+			frame->local_block_ref_stack_end - frame->local_block_ref_stack_base
+				>= orig_block_stack_size + func.result_types.size(),
+			"After function execution, there should be enough blocks on the stack to retrieve "
+			"result."
 		);
-		auto block         = Ref(frame->local_block_ref_stack_base[0]);
-		exit_value_storage = safe_process.createVmValue(func.result_type, Pointer(block, 0));
-		process_memory.freeBlockData(block);
-		process_memory.decreaseBlockRefcount(block);
-		frame->resetFrameData();
+
+		exit_value_storage = { std::vector<Ref<VmValue>>{} };
+		for (u64 idx = 0; idx < func.result_types.size(); idx++) {
+			exit_value_storage.value().emplace_back(safe_process.createVmValue(
+				func.result_types[idx],
+				Pointer(frame->local_block_ref_stack_base[orig_block_stack_size + idx], 0)
+			));
+		}
+
+		for (auto block_ptr = frame->local_block_ref_stack_base + orig_block_stack_size;
+		     block_ptr < frame->local_block_ref_stack_end;
+		     block_ptr++) {
+			auto& block = *block_ptr;
+			process_memory.freeBlockData(block);
+			process_memory.decreaseBlockRefcount(block);
+		}
+		*orig_frame_ptr = orig_frame_cpy;
+
 		releaseGil();
 
 		return exit_value_storage.value();

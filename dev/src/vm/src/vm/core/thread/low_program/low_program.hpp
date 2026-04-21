@@ -31,10 +31,11 @@ namespace vm::low {
 		/// The maximum count of blocks required by the function frame.
 		usize local_block_count;
 
-		usize                 arg_size;
+		usize arg_size;
+		// The total summed size of all return values.
 		usize                 ret_size;
 		std::vector<TypeCRef> parameters;
-		TypeCRef              result_type;
+		std::vector<TypeCRef> result_types;
 	};
 
 	/**
@@ -65,7 +66,7 @@ namespace vm::low {
 		void (*function_pointer)(std::byte*, std::byte*) = nullptr;
 		usize                 parameter_size_sum;
 		std::vector<TypeCRef> parameters;
-		TypeCRef              result_type;
+		std::vector<TypeCRef> result_types;
 	};
 
 	class ILowVMProgram {

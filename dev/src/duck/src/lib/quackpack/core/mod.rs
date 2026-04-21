@@ -5,6 +5,7 @@ mod manifest;
 mod package;
 mod package_context;
 mod package_loader;
+pub mod run;
 pub mod solver;
 pub mod storage;
 mod venv_config;

@@ -113,7 +113,9 @@ auto VmTestSuite::runTestOnVmGetResult(
 		EXPECT_VOID(program_output);
 		ASSERT_EQUAL_PRINT(wanted_output, program_output->output);
 	}
-	const auto exit_value = vm::api::getExitValue(pid).transform([&](Ref<vm::VmValue> value) {
+	const auto exit_value = vm::api::getExitValue(pid).transform([&](vm::api::ExitValue values) {
+		ASSERT_TRUE(values.size() == 1);
+		auto& value = values.at(0);
 		ASSERT_TRUE(value->type->getName().str() == "i64");
 		auto exit_code = value->readBytes<i64>();
 		return exit_code;
@@ -177,13 +179,14 @@ void VmTestSuite::runFunctionSynchronouslyAsTest(
 		ASSERT_EQUAL(output, output_response->output);
 	}
 
-	auto exit_value = run_result.value();
-	if (expected_exit_code.has_value())
-		ASSERT_EQUAL_PRINT(expected_exit_code.value(), exit_value->readBytes<i64>());
-	else
+	const auto& exit_value = run_result.value();
+	if (expected_exit_code.has_value()) {
+		ASSERT_EQUAL(exit_value.size(), 1);
+		ASSERT_EQUAL_PRINT(expected_exit_code.value(), exit_value.at(0)->readBytes<i64>());
+	} else
 		// @note: If expected_exit_code is an empty optional, it's expected that a called
-		// function is void.
-		ASSERT_TRUE(exit_value->type->getName() == base::StrID("void"));
+		// function doesn't return any values
+		ASSERT_TRUE(exit_value.size() == 0);
 }
 
 auto VmTestSuite::runFunctionExpectPanic(

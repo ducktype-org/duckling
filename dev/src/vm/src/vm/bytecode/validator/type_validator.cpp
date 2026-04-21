@@ -195,8 +195,12 @@ namespace {
 		const FuncSignature&   impl_signature,
 		base::StrID            impl_type_name
 	) {
-		if (vmethod_type.result != impl_signature.result_type.str)
+		if (vmethod_type.result.size() != impl_signature.result_types.size())
 			throw MethodTypeError(inh, impl_type_name);
+		for (u64 i = 0; i < impl_signature.result_types.size(); i++)
+			if (vmethod_type.result[i] != impl_signature.result_types[i].str)
+				throw MethodTypeError(inh, impl_type_name);
+
 		if (vmethod_type.parameters.size() != impl_signature.parameters.size())
 			throw MethodTypeError(inh, impl_type_name);
 		for (u64 i = 1; i < impl_signature.parameters.size(); i++)
@@ -323,8 +327,9 @@ namespace {
 			variant_case(FunctionType, function) {
 				for (auto& param: function.parameters)
 					if (!tod_types.contains(param)) throw UnknownSubtypeError(function, param);
-				if (!tod_types.contains(function.result))
-					throw UnknownSubtypeError(function, function.result);
+
+				for (auto& reslt: function.result)
+					if (!tod_types.contains(reslt)) throw UnknownSubtypeError(function, reslt);
 			}
 			variant_case(VariantType, variant) {
 				if (variant.variant_alternatives.size() < 2)
@@ -455,10 +460,10 @@ namespace {
 				variant_case(FunctionType, function) {
 					for (auto& param: function.parameters)
 						if (!tod_types.contains(param)) throw UnknownSubtypeError(function, param);
-					if (!tod_types.contains(function.result))
-						throw UnknownSubtypeError(function, function.result);
+					for (auto& reslt: function.result)
+						if (!tod_types.contains(reslt)) throw UnknownSubtypeError(function, reslt);
 					for (auto& param: function.parameters) self(*tod_types.at(param));
-					self(*tod_types.at(function.result));
+					for (auto& reslt: function.result) self(*tod_types.at(reslt));
 				}
 				variant_case(VariantType, variant) {
 					for (auto& alternative: variant.variant_alternatives)
