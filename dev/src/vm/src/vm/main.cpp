@@ -78,7 +78,7 @@ clah::Clah getVmClah() {
 	                       .setHandler([](const clah::ParsingResult& options) -> int {
 							   vm::Supervisor::get();
 							   auto file = options.getPositional<fs::File>(0);
-							   DebugAdapter::get(file).run();
+							   vm::debug_adapter::DebugAdapter::get(file).run();
 							   return 0;
 						   }))
 	    .addSubcommand(clah::Clah("repl", "Start the VM in REPL mode.")
