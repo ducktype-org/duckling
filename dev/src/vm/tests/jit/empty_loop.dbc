@@ -1,33 +1,33 @@
-function f {} -> void {
+function f {} -> { } {
     # Empty function - does nothing
     ret;
 }
 
-function main { i64, ptr_argv } -> i64 {
-    # ret_val -> main ret_val
+function main { i64, ptr_argv }-> { i64 } {
+    # ret0 -> main ret0
     # arg0 -> argc
     # arg1 -> *argv
 
     # Read counter limit from STDIN
-    init_lany_type counter_limit, i64;
-    input_l64 counter_limit;
+    init_pany_type counter_limit, i64;
+    input_p64 counter_limit;
 
     # Initialize loop counter
-    init_lany_type counter, i64;
-    mov_l64_imm counter, 0;
+    init_pany_type counter, i64;
+    mov_p64_imm counter, 0;
 
     # Loop until counter equals counter_limit
     label loop_start;
     
     # Check if counter == counter_limit
-    cmpEq_l64_l64 counter, counter_limit;
+    cmpEq_p64_p64 counter, counter_limit;
     jmpIf_label loop_end;
 
     # Call function f
     call_func f;
 
     # Increment counter
-    add_l64_imm counter, 1;
+    add_p64_imm counter, 1;
 
     # Jump back to loop start
     jmp_label loop_start;
@@ -35,7 +35,7 @@ function main { i64, ptr_argv } -> i64 {
     label loop_end;
     
     # Return 0
-    mov_l64_imm ret_val, 0;
+    mov_p64_imm ret0, 0;
     
     deinit; # counter
     deinit; # counter_limit

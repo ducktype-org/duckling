@@ -2,70 +2,70 @@
 # Function f performs ~40 arithmetic instructions sequentially (no branches, no calls)
 # Main reads n from STDIN and calls f n times
 
-function f {} -> void {
+function f {} -> { } {
     # Declare local variables
-    init_lany_type a, i64;
-    init_lany_type b, i64;
-    init_lany_type c, i64;
-    init_lany_type d, i64;
-    init_lany_type e, i64;
+    init_pany_type a, i64;
+    init_pany_type b, i64;
+    init_pany_type c, i64;
+    init_pany_type d, i64;
+    init_pany_type e, i64;
     
     # Initialize variables
-    mov_l64_imm a, 100;
-    mov_l64_imm b, 50;
-    mov_l64_imm c, 25;
-    mov_l64_imm d, 10;
-    mov_l64_imm e, 5;
+    mov_p64_imm a, 100;
+    mov_p64_imm b, 50;
+    mov_p64_imm c, 25;
+    mov_p64_imm d, 10;
+    mov_p64_imm e, 5;
     
     # Arithmetic sequence 1: operations on a
-    add_l64_imm a, 15;
-    sub_l64_imm a, 7;
-    mul_l64_imm a, 2;
-    add_l64_imm a, 33;
-    sub_l64_imm a, 11;
-    mul_l64_imm a, 3;
-    add_l64_imm a, 17;
-    sub_l64_imm a, 9;
+    add_p64_imm a, 15;
+    sub_p64_imm a, 7;
+    mul_p64_imm a, 2;
+    add_p64_imm a, 33;
+    sub_p64_imm a, 11;
+    mul_p64_imm a, 3;
+    add_p64_imm a, 17;
+    sub_p64_imm a, 9;
     
     # Arithmetic sequence 2: operations on b
-    add_l64_imm b, 22;
-    sub_l64_imm b, 8;
-    mul_l64_imm b, 2;
-    add_l64_imm b, 14;
-    sub_l64_imm b, 6;
-    mul_l64_imm b, 2;
-    add_l64_imm b, 19;
-    sub_l64_imm b, 3;
+    add_p64_imm b, 22;
+    sub_p64_imm b, 8;
+    mul_p64_imm b, 2;
+    add_p64_imm b, 14;
+    sub_p64_imm b, 6;
+    mul_p64_imm b, 2;
+    add_p64_imm b, 19;
+    sub_p64_imm b, 3;
     
     # Arithmetic sequence 3: operations on c
-    add_l64_imm c, 30;
-    sub_l64_imm c, 12;
-    mul_l64_imm c, 3;
-    add_l64_imm c, 21;
-    sub_l64_imm c, 7;
-    mul_l64_imm c, 2;
-    add_l64_imm c, 13;
-    sub_l64_imm c, 5;
+    add_p64_imm c, 30;
+    sub_p64_imm c, 12;
+    mul_p64_imm c, 3;
+    add_p64_imm c, 21;
+    sub_p64_imm c, 7;
+    mul_p64_imm c, 2;
+    add_p64_imm c, 13;
+    sub_p64_imm c, 5;
     
     # Arithmetic sequence 4: operations on d
-    add_l64_imm d, 45;
-    sub_l64_imm d, 15;
-    mul_l64_imm d, 2;
-    add_l64_imm d, 28;
-    sub_l64_imm d, 10;
-    mul_l64_imm d, 3;
-    add_l64_imm d, 16;
-    sub_l64_imm d, 4;
+    add_p64_imm d, 45;
+    sub_p64_imm d, 15;
+    mul_p64_imm d, 2;
+    add_p64_imm d, 28;
+    sub_p64_imm d, 10;
+    mul_p64_imm d, 3;
+    add_p64_imm d, 16;
+    sub_p64_imm d, 4;
     
     # Arithmetic sequence 5: operations on e
-    add_l64_imm e, 55;
-    sub_l64_imm e, 20;
-    mul_l64_imm e, 2;
-    add_l64_imm e, 35;
-    sub_l64_imm e, 13;
-    mul_l64_imm e, 2;
-    add_l64_imm e, 11;
-    sub_l64_imm e, 2;
+    add_p64_imm e, 55;
+    sub_p64_imm e, 20;
+    mul_p64_imm e, 2;
+    add_p64_imm e, 35;
+    sub_p64_imm e, 13;
+    mul_p64_imm e, 2;
+    add_p64_imm e, 11;
+    sub_p64_imm e, 2;
     
     # Cleanup
     deinit; # e
@@ -77,31 +77,31 @@ function f {} -> void {
     ret;
 }
 
-function main { i64, ptr_argv } -> i64 {
-    # ret_val -> main ret_val
+function main { i64, ptr_argv }-> { i64 } {
+    # ret0 -> main ret0
     # arg0 -> argc
     # arg1 -> *argv
 
     # Read counter limit from STDIN
-    init_lany_type counter_limit, i64;
-    input_l64 counter_limit;
+    init_pany_type counter_limit, i64;
+    input_p64 counter_limit;
 
     # Initialize loop counter
-    init_lany_type counter, i64;
-    mov_l64_imm counter, 0;
+    init_pany_type counter, i64;
+    mov_p64_imm counter, 0;
 
     # Loop until counter equals counter_limit
     label loop_start;
     
     # Check if counter == counter_limit
-    cmpEq_l64_l64 counter, counter_limit;
+    cmpEq_p64_p64 counter, counter_limit;
     jmpIf_label loop_end;
 
     # Call function f
     call_func f;
 
     # Increment counter
-    add_l64_imm counter, 1;
+    add_p64_imm counter, 1;
 
     # Jump back to loop start
     jmp_label loop_start;
@@ -109,7 +109,7 @@ function main { i64, ptr_argv } -> i64 {
     label loop_end;
     
     # Return 0
-    mov_l64_imm ret_val, 0;
+    mov_p64_imm ret0, 0;
     
     deinit; # counter
     deinit; # counter_limit

@@ -6,79 +6,79 @@ type primitive: i8 1
 type variant: var_i64_i8 { i64, i8 }
 type pointer: ptr_var var_i64_i8
 
-function f {} -> void {
+function f {} -> { } {
     # Declare local variables - multiple variants
-    init_lany_type v1, var_i64_i8;
-    init_lany_type v2, var_i64_i8;
-    init_lany_type v3, var_i64_i8;
-    init_lany_type v4, var_i64_i8;
-    init_lany_type ptr1, ptr_i64;
-    init_lany_type ptr2, ptr_i64;
-    init_lany_type ptr3, ptr_i64;
-    init_lany_type ptr4, ptr_i64;
-    init_lany_type val, i64;
-    init_lany_type tmp, i64;
+    init_pany_type v1, var_i64_i8;
+    init_pany_type v2, var_i64_i8;
+    init_pany_type v3, var_i64_i8;
+    init_pany_type v4, var_i64_i8;
+    init_pany_type ptr1, ptr_i64;
+    init_pany_type ptr2, ptr_i64;
+    init_pany_type ptr3, ptr_i64;
+    init_pany_type ptr4, ptr_i64;
+    init_pany_type val, i64;
+    init_pany_type tmp, i64;
     
     # Initialize value
-    mov_l64_imm val, 1000;
+    mov_p64_imm val, 1000;
     
     # Set v1 to hold i64
     variantSetInner_lvnt_type v1, i64;
     variantGetInner_lptr_lvnt_type ptr1, v1, i64;
-    store_lptr_lany ptr1, val;
-    add_l64_imm val, 100;
+    store_lptr_pany ptr1, val;
+    add_p64_imm val, 100;
     
     # Set v2 to hold i64
     variantSetInner_lvnt_type v2, i64;
     variantGetInner_lptr_lvnt_type ptr2, v2, i64;
-    store_lptr_lany ptr2, val;
-    add_l64_imm val, 100;
+    store_lptr_pany ptr2, val;
+    add_p64_imm val, 100;
     
     # Set v3 to hold i64
     variantSetInner_lvnt_type v3, i64;
     variantGetInner_lptr_lvnt_type ptr3, v3, i64;
-    store_lptr_lany ptr3, val;
-    add_l64_imm val, 100;
+    store_lptr_pany ptr3, val;
+    add_p64_imm val, 100;
     
     # Set v4 to hold i64
     variantSetInner_lvnt_type v4, i64;
     variantGetInner_lptr_lvnt_type ptr4, v4, i64;
-    store_lptr_lany ptr4, val;
-    add_l64_imm val, 100;
+    store_lptr_pany ptr4, val;
+    add_p64_imm val, 100;
     
     # Load values and modify
-    load_lany_lptr tmp, ptr1;
-    add_l64_imm tmp, 50;
-    store_lptr_lany ptr1, tmp;
+    load_pany_lptr tmp, ptr1;
+    add_p64_imm tmp, 50;
+    store_lptr_pany ptr1, tmp;
     
-    load_lany_lptr tmp, ptr2;
-    add_l64_imm tmp, 60;
-    store_lptr_lany ptr2, tmp;
+    load_pany_lptr tmp, ptr2;
+    add_p64_imm tmp, 60;
+    store_lptr_pany ptr2, tmp;
     
-    load_lany_lptr tmp, ptr3;
-    add_l64_imm tmp, 70;
-    store_lptr_lany ptr3, tmp;
+    load_pany_lptr tmp, ptr3;
+    add_p64_imm tmp, 70;
+    store_lptr_pany ptr3, tmp;
     
-    load_lany_lptr tmp, ptr4;
-    add_l64_imm tmp, 80;
-    store_lptr_lany ptr4, tmp;
+    load_pany_lptr tmp, ptr4;
+    add_p64_imm tmp, 80;
+    store_lptr_pany ptr4, tmp;
     
     # More load/store operations
-    load_lany_lptr tmp, ptr1;
-    mul_l64_imm tmp, 2;
-    store_lptr_lany ptr1, tmp;
+    load_pany_lptr tmp, ptr1;
+    mul_p64_imm tmp, 2;
+    store_lptr_pany ptr1, tmp;
     
-    load_lany_lptr tmp, ptr2;
-    mul_l64_imm tmp, 2;
-    store_lptr_lany ptr2, tmp;
+    load_pany_lptr tmp, ptr2;
+    mul_p64_imm tmp, 2;
+    store_lptr_pany ptr2, tmp;
     
-    load_lany_lptr tmp, ptr3;
-    mul_l64_imm tmp, 2;
-    store_lptr_lany ptr3, tmp;
+    load_pany_lptr tmp, ptr3;
+    mul_p64_imm tmp, 2;
+    store_lptr_pany ptr3, tmp;
     
-    load_lany_lptr tmp, ptr4;
-    mul_l64_imm tmp, 2;
-    store_lptr_lany ptr4, tmp;
+    load_pany_lptr tmp, ptr4;
+    mul_p64_imm tmp, 2;
+    store_lptr_pany ptr4, tmp;
     
     # Cleanup
     deinit; # tmp
@@ -95,31 +95,31 @@ function f {} -> void {
     ret;
 }
 
-function main { i64, ptr_argv } -> i64 {
-    # ret_val -> main ret_val
+function main { i64, ptr_argv }-> { i64 } {
+    # ret0 -> main ret0
     # arg0 -> argc
     # arg1 -> *argv
 
     # Read counter limit from STDIN
-    init_lany_type counter_limit, i64;
-    input_l64 counter_limit;
+    init_pany_type counter_limit, i64;
+    input_p64 counter_limit;
 
     # Initialize loop counter
-    init_lany_type counter, i64;
-    mov_l64_imm counter, 0;
+    init_pany_type counter, i64;
+    mov_p64_imm counter, 0;
 
     # Loop until counter equals counter_limit
     label loop_start;
     
     # Check if counter == counter_limit
-    cmpEq_l64_l64 counter, counter_limit;
+    cmpEq_p64_p64 counter, counter_limit;
     jmpIf_label loop_end;
 
     # Call function f
     call_func f;
 
     # Increment counter
-    add_l64_imm counter, 1;
+    add_p64_imm counter, 1;
 
     # Jump back to loop start
     jmp_label loop_start;
@@ -127,7 +127,7 @@ function main { i64, ptr_argv } -> i64 {
     label loop_end;
     
     # Return 0
-    mov_l64_imm ret_val, 0;
+    mov_p64_imm ret0, 0;
     
     deinit; # counter
     deinit; # counter_limit
