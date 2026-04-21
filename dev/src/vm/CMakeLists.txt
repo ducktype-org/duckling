@@ -56,7 +56,7 @@ if (JIT_ENABLED) # Setup JitDep - opcode definitions and all of its dependencies
     set(vm_dep_bc_targets "") # Targets for dependency.
     set(vm_dep_objects_bc "") # Actuall list.
     foreach(dep ${vm_internal_deps})
-        if(TARGET ${dep})
+        if(TARGET ${dep} AND $<TARGET_OBJECTS:${dep}>)
             add_library(${dep}_bc OBJECT $<TARGET_OBJECTS:${dep}>)
             target_compile_options(${dep}_bc PRIVATE -emit-llvm)
 
