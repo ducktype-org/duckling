@@ -1,9 +1,12 @@
-use std::{collections::HashMap, fmt::Display, sync::LazyLock};
-
-use crate::util::error::MessageError;
-use crate::{QuackError, QuackResult, QuackResultContext, StrId, quackpack::core::manifest};
+use std::collections::HashMap;
+use std::fmt::Display;
+use std::sync::LazyLock;
 
 use tracing::debug;
+
+use crate::quackpack::core::manifest;
+use crate::util::error::MessageError;
+use crate::{QuackError, QuackResult, QuackResultContext, StrId};
 
 pub static PREDEFINED_PROFILES: LazyLock<HashMap<StrId, Profile>> = LazyLock::new(|| {
     [
@@ -47,11 +50,27 @@ pub static PREDEFINED_PROFILES: LazyLock<HashMap<StrId, Profile>> = LazyLock::ne
                 c_std: true,
             },
         ),
+        (
+            DEFAULT_SCRIPT_PROFILE_NAME.into(),
+            Profile {
+                name: DEFAULT_SCRIPT_PROFILE_NAME.into(),
+                opt_level: OptLevel::Three,
+                dvm_bytecode: true,
+                incremental: true, // This does not effect how the script is compiled, but still affects the dependencies.
+                c_std: true,
+            },
+        ),
     ]
     .into()
 });
 
 pub static DEFAULT_PROFILE: LazyLock<Profile> = LazyLock::new(Profile::default);
+pub const DEFAULT_SCRIPT_PROFILE_NAME: &str = "script";
+pub static DEFAULT_SCRIPT_PROFILE: LazyLock<Profile> = LazyLock::new(|| {
+    *PREDEFINED_PROFILES
+        .get(DEFAULT_SCRIPT_PROFILE_NAME)
+        .unwrap()
+});
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 /// List of specific options which should be passed to the compiler.

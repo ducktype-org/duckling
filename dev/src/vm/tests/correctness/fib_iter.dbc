@@ -1,5 +1,5 @@
-function main { i64, ptr_argv } -> i64 {
-	# ret_val -> main ret_val
+function main { i64, ptr_argv } -> { i64 } {
+	# ret0 -> main ret0
 	# arg0 -> argc
 	# arg1 -> *argv
 
@@ -9,41 +9,41 @@ function main { i64, ptr_argv } -> i64 {
 	# b - 56
 	# c - 64
 
-	init_lany_type       n, i64;
-	init_lany_type       m, i64;
+	init_pany_type       n, i64;
+	init_pany_type       m, i64;
 
-	input_l64       n; # argument
-	input_l64       m; # modulo
+	input_p64       n; # argument
+	input_p64       m; # modulo
 
-	init_lany_type       a, i64;
-	init_lany_type       b, i64;
+	init_pany_type       a, i64;
+	init_pany_type       b, i64;
 
-	mov_l64_imm     a, 0; # a = 0
-	mov_l64_imm     b, 1; # b = 1
+	mov_p64_imm     a, 0; # a = 0
+	mov_p64_imm     b, 1; # b = 1
 
 	# while(x > 0)
 	label Loop;
 		# c = (a + b) % m
-		init_lany_type       c, i64;
+		init_pany_type       c, i64;
 
-		mov_l64_l64     c, a;
-		add_l64_l64     c, b;
-		mod_l64_l64     c, m;
+		mov_p64_p64     c, a;
+		add_p64_p64     c, b;
+		mod_p64_p64     c, m;
 		# a = b
-		mov_l64_l64     a, b;
+		mov_p64_p64     a, b;
 		# b = c
-		mov_l64_l64     b, c;
+		mov_p64_p64     b, c;
 
 		# n--;
-		sub_l64_imm    n, 1;
+		sub_p64_imm    n, 1;
 
 		deinit; # c
 
 		# if n > 0 : end
-		cmpGt_l64_imm    n, 0;
+		cmpGt_p64_imm    n, 0;
 		jmpIf_label  Loop;
 
-	output_l64      a;
+	output_p64      a;
 
 	deinit; # b
 	deinit; # a

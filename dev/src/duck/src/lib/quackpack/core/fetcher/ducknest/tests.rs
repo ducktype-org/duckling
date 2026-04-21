@@ -1,13 +1,13 @@
 use std::collections::HashMap;
 
-use crate::quackpack::core::fetcher::types;
-use crate::util::path_ops_ext::PathOpsExt;
+use httpmock::prelude::*;
+use tempfile::tempdir;
 
 use super::*;
 use crate::quackpack::core::Version;
+use crate::quackpack::core::fetcher::types;
 use crate::quackpack::schemas::registry;
-use httpmock::prelude::*;
-use tempfile::tempdir;
+use crate::util::path_ops_ext::PathOpsExt;
 
 fn create_mock_server() -> (MockServer, DuckContext) {
     let pkg1 = registry::Dependency {

@@ -1,16 +1,15 @@
 //! Managing a single dependency abstraction.
-use crate::{
-    QuackError, QuackResult, StrId, qp_bail,
-    quackpack::core::{FeatureName, InternedSource, Source, Version},
-};
+use crate::quackpack::core::{FeatureName, InternedSource, Source, Version};
+use crate::{QuackError, QuackResult, StrId, qp_bail};
 
 mod conditions;
 mod dependencies;
 mod dependency_feature;
-use crate::quackpack::schemas::registry;
 pub use conditions::*;
 pub use dependencies::*;
 pub use dependency_feature::*;
+
+use crate::quackpack::schemas::registry;
 
 #[derive(Clone, Debug)]
 /// High level abstraction on a package's dependency.

@@ -9,17 +9,11 @@ use tempfile::TempDir;
 use tracing::debug;
 use url::Url;
 
-use crate::{
-    DuckContext, QuackResult, QuackResultContext, StrId, qp_bail_internal,
-    quackpack::{
-        core::{
-            Git,
-            fetcher::types::{FetcherResponse, PackageWithUrl},
-        },
-        schemas::registry,
-    },
-    util::path_ops_ext::{MkdirOptions, PathOpsExt},
-};
+use crate::quackpack::core::Git;
+use crate::quackpack::core::fetcher::types::{FetcherResponse, PackageWithUrl};
+use crate::quackpack::schemas::registry;
+use crate::util::path_ops_ext::{MkdirOptions, PathOpsExt};
+use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail_internal};
 
 pub mod cache;
 pub mod ducknest;

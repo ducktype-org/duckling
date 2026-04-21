@@ -1,26 +1,17 @@
 //! Parsing of the {dev-,}dependencies fields in a manifest.
 use std::path::Path;
 
-use super::source;
-use tracing::debug;
-use tracing::trace;
+use tracing::{debug, trace};
 
-use super::Scope;
-
-use crate::DuckContext;
-use crate::StrId;
-use crate::quackpack::core::Conditions;
-use crate::quackpack::core::Dependency;
-use crate::quackpack::core::DependencyFeature;
+use super::{ScopeGuard, source};
+use crate::quackpack::core::{Conditions, Dependencies, Dependency, DependencyFeature};
 use crate::quackpack::schemas::OneEntryMap;
-use crate::quackpack::schemas::manifest::Dependencies as DependenciesSchema;
-use crate::quackpack::schemas::manifest::Dependency as DependencySchema;
-use crate::quackpack::schemas::manifest::DependencyCondition as ConditionSchema;
-use crate::quackpack::schemas::manifest::DependencyFeature as FeatureSchema;
-use crate::quackpack::schemas::manifest::DependencySource;
+use crate::quackpack::schemas::manifest::{
+    Dependencies as DependenciesSchema, Dependency as DependencySchema,
+    DependencyCondition as ConditionSchema, DependencyFeature as FeatureSchema, DependencySource,
+};
 use crate::util::error::QuackResultContext;
-
-use crate::{QuackResult, quackpack::core::Dependencies};
+use crate::{DuckContext, QuackResult, StrId};
 
 /// Parse [`Dependencies`] from the [`DependenciesSchema`].
 #[tracing::instrument(skip_all)]
@@ -28,23 +19,21 @@ pub(crate) fn parse(
     schema: Option<&DependenciesSchema>,
     package_root: &Path,
     ctx: &DuckContext,
-    scope: &mut Scope,
+    mut scope: ScopeGuard<'_>,
 ) -> QuackResult<Dependencies> {
     let Some(schema) = schema else {
         return Dependencies::new(Vec::new());
     };
     let mut dependencies = Vec::new();
     for (name, dep_schema) in schema {
-        let name = name.into();
-        scope.push(name);
+        let guard = scope.push(name.into());
         dependencies.push(parse_single_dependency(
-            name,
+            name.into(),
             dep_schema,
             package_root,
             ctx,
-            scope,
+            guard,
         )?);
-        scope.pop();
     }
     Dependencies::new(dependencies).with_context(|| scope.make_context_string())
 }
@@ -56,12 +45,11 @@ fn parse_single_dependency(
     schema: &DependencySchema,
     package_root: &Path,
     ctx: &DuckContext,
-    scope: &mut Scope,
+    mut scope: ScopeGuard<'_>,
 ) -> QuackResult<Dependency> {
     trace!(?schema, "parsing a dependency");
-    scope.push("source".into());
-    let source = source::parse(schema, package_root, ctx, scope)?;
-    scope.pop();
+    let guard = scope.push("source".into());
+    let source = source::parse(schema, package_root, ctx, guard)?;
 
     let versions = schema
         .version
@@ -69,19 +57,17 @@ fn parse_single_dependency(
         .map(|ored| ored.0.clone())
         .unwrap_or_default();
 
-    scope.push("features".into());
-    let features = parse_features(schema.features.as_ref(), scope)?;
-    scope.pop();
+    let guard = scope.push("features".into());
+    let features = parse_features(schema.features.as_ref(), guard)?;
     let pinned = schema.pinned.unwrap_or(false);
     let name = parse_name(schema).unwrap_or(manifest_name);
 
-    scope.push("conditions".into());
+    let guard = scope.push("conditions".into());
     let conditions = schema
         .conditions
         .as_ref()
-        .map(|conditions| parse_conditions(conditions, scope))
+        .map(|conditions| parse_conditions(conditions, guard))
         .transpose()?;
-    scope.pop();
     let explicit_name_in_manifest = if name == manifest_name {
         None
     } else {
@@ -103,7 +89,7 @@ fn parse_single_dependency(
 #[tracing::instrument(skip_all)]
 fn parse_features(
     schema: Option<&Vec<FeatureSchema>>,
-    scope: &mut Scope,
+    mut scope: ScopeGuard<'_>,
 ) -> QuackResult<Vec<DependencyFeature>> {
     let Some(schema) = schema else {
         return Ok(vec![]);
@@ -121,15 +107,12 @@ fn parse_features(
                     key: ref name,
                     value: ref conditions,
                 } = detailed_feature.0;
-                let name = name.into();
-                scope.push(name);
-                scope.push("conditions".into());
+                let mut name_guard = scope.push(name.into());
+                let guard = name_guard.push("conditions".into());
                 result.push(DependencyFeature::new(
-                    name,
-                    Some(parse_conditions(conditions, scope)?),
+                    name.into(),
+                    Some(parse_conditions(conditions, guard)?),
                 ));
-                scope.pop();
-                scope.pop();
             }
         }
     }
@@ -137,7 +120,7 @@ fn parse_features(
 }
 
 /// Parse [`Conditions`] from [`ConditionSchema`]
-fn parse_conditions(schema: &ConditionSchema, scope: &Scope) -> QuackResult<Conditions> {
+fn parse_conditions(schema: &ConditionSchema, scope: ScopeGuard<'_>) -> QuackResult<Conditions> {
     Conditions::new(
         schema
             .package_features

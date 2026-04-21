@@ -65,10 +65,10 @@ private:
 			auto& module_hout = ctx.query<helios::QueryModuleHOUT>(module)->valueOrPanic();
 
 			for (auto& hout_glob: module_hout.glob_data) {
-				if (!hout_glob.type.getType().carriesInformation(ctx)) continue;
-				lir::LIRGlobal lir_glob = lir::LIRGlobal::fromHOUT(ctx, hout_glob);
+				if (!hout_glob->type.getType().carriesInformation(ctx)) continue;
+				lir::LIRGlobal lir_glob = lir::LIRGlobal::fromHOUT(ctx, *hout_glob);
 				llvm_module.addGlobalToModule(lir_glob);
-				variant_match(hout_glob.value) {
+				variant_match(hout_glob->value) {
 					variant_case(helios::HOUTGlobalVariable, var) {
 						CRef mir_func = &ctx.query<mir::LowerGlobalDataToMIRCtor>({ hout_glob })
 						                     ->valueOrThrow();
@@ -85,7 +85,7 @@ private:
 					}
 					variant_default {
 						fail(base::strConcat(
-							"Unexpected global data type of: ", hout_glob.original_name
+							"Unexpected global data type of: ", hout_glob->original_name
 						));
 					}
 				}

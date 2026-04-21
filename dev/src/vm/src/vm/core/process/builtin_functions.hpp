@@ -27,12 +27,8 @@
 #include <string_id/string_id.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
+#include <vm/core/thread/safe_vmthread.hpp>
 #include <vm/core/thread/vmvalue.hpp>
-
-namespace vm {
-	class SafeVMThread;
-	class IVMProcess;
-}
 
 namespace vm::builtins {
 
@@ -98,7 +94,7 @@ namespace vm::builtins {
 	 */
 	base::Optional<Box<VmValue>> callBuiltinFunction(
 		BuiltinFunctionID                id,
-		TypeCRef                         result_type,
+		const std::vector<TypeCRef>&     result_types,
 		IVMProcess&                      process,
 		SafeVMThread&                    thread,
 		const std::vector<Box<VmValue>>& arguments
@@ -108,7 +104,7 @@ namespace vm::builtins {
 	 * @brief Returns the map of builtin functions types with lazy initialization.
 	 * @note Function types here should match HELIOS types.
 	 * The types used for the parameters and the return value are defined in the @file
-	 * bytecode/builtin_types.hpp file (like "i64", "i32", "void").
+	 * bytecode/builtin_types.hpp file (like "i64", "i32").
 	 */
 	auto getBuiltinFunctions()
 		-> CRef<std::unordered_map<BuiltinFunctionID, std::pair<base::StrID, code::FuncSignature>>>;
