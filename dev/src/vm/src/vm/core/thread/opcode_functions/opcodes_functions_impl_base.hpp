@@ -511,7 +511,7 @@ namespace vm {
                 );
 
 				// We're returning from a non-void function, so the last `ret_count` blocks on the
-				// stack are the return values. It's being used by the caller so we don't free it.
+				// stack are the return values. They are being used by the caller so we don't free them.
 				if (block_ref_count > ret_count) {
 					thread.process_memory.freeBlockData(block);
 					thread.process_memory.decreaseBlockRefcount(block);

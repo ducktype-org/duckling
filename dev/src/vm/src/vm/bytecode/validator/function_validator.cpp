@@ -1540,9 +1540,9 @@ class FunctionValidator {
 	void validateSignature() {
 		if (function.name.str == base::StrID("main")) {
 			if (function.signature.result_types.size() != 1)
-				throw InvalidMainReturnType(function.signature, {});
+				throw InvalidMainReturnType(function.signature, false);
 			if (function.signature.result_types[0].str != base::StrID("i64"))
-				throw InvalidMainReturnType(function.signature, {});
+				throw InvalidMainReturnType(function.signature, true);
 		}
 		for (const auto& param_type: function.signature.parameters)
 			if (!types_ctx.contains(param_type)) throw UnknownTypeError(opargs::Type{ param_type });
