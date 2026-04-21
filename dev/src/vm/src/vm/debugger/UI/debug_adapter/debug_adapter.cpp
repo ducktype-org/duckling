@@ -32,7 +32,7 @@ void DebugAdapter::run() {
 			int length = std::stoi(line.substr(HEADER_PREFIX.length()));
 			std::getline(std::cin, line);  // DAP empty line
 
-			std::string body(length, ' ');
+			std::string body((size_t) length, ' ');
 			std::cin.read(&body[0], length);
 
 			try {
