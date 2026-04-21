@@ -1011,7 +1011,7 @@ private:
 		);
 
 
-		// ======= ERRORS REALTED TO EXPANDED CODE =======
+		// ======= ERRORS RELATED TO EXPANDED CODE =======
 
 		checkForErrorOnCompileModule(
 			R"(
