@@ -1,12 +1,12 @@
-# Checks verifying the type of ret_val space initialized by the caller on call.
+# Checks verifying the type of ret0 space initialized by the caller on call.
 
-function check { i64 } -> i32 {
-	mov_p32_imm     ret_val, 42;
+function check { i64 } -> { i32 } {
+	mov_p32_imm     ret0, 42;
 	ret;
 }
 
-function main { i64, ptr_argv } -> i64 {
-	# ret_val -> main ret_val
+function main { i64, ptr_argv } -> { i64 } {
+	# ret0 -> main ret0
 	# arg0 -> argc
 	# arg1 -> *argv
 	
@@ -14,7 +14,7 @@ function main { i64, ptr_argv } -> i64 {
 	mov_p64_imm         check_arg0, 30;
 	call_func           check;
 
-	mov_p64_imm         ret_val, 42;
+	mov_p64_imm         ret0, 42;
 	
 	deinit;             # *argv
 	deinit;             # argc

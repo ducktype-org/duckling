@@ -1,4 +1,4 @@
-function foo {} -> void {
+function foo {} -> {} {
     init_pany_type          z, i64;
 	mov_p64_imm             z, 42;
     output_p64 z;
@@ -6,7 +6,7 @@ function foo {} -> void {
     ret;
 }
 
-function main { i64, ptr_argv } -> i64 {
+function main { i64, ptr_argv } -> { i64 } {
     call_builtinfunc foo;
     ret;
 }

@@ -8,6 +8,7 @@
 #include <debug_info/debug_info_io.hpp>
 #include <driver/debug_info/debug_info.hpp>
 #include <driver/module_flags/module_flags.hpp>
+#include <driver/options.hpp>
 #include <driver/repl_utils/repl_dvm_helpers.hpp>
 #include <driver/repl_utils/repl_split_helpers.hpp>
 #include <driver/repl_utils/repl_statement_helpers.hpp>
@@ -684,9 +685,10 @@ namespace compiler::driver {
 		    .and_then([&] { return vm::api::join(pid); })
 		    .and_then([&] { return vm::api::getExitValue(pid); })
 		    .transform_error(vm::api::errorToString)
-		    .transform([](Ref<vm::VmValue> exit_value) {
+		    .transform([](vm::api::ExitValue exit_values) {
+				CORE_ASSERT(exit_values.size() == 1, "Expected single exit value");
 				return RunOutput{ .exit_code
-				                  = base::safeIntConv<int>(exit_value->readBytes<i64>()) };
+				                  = base::safeIntConv<int>(exit_values.at(0)->readBytes<i64>()) };
 			});
 	}
 
@@ -793,9 +795,13 @@ namespace compiler::driver {
 		    .and_then([&] { return vm::api::join(pid); })
 		    .and_then([&] { return vm::api::getExitValue(pid); })
 		    .transform_error(vm::api::errorToString)
-		    .transform([](Ref<vm::VmValue> exit_value) {
+		    .transform([](vm::api::ExitValue exit_values) {
+				CORE_ASSERT(
+					exit_values.size() == 1,
+					"Support for multiple return values in compiler not implemented"
+				);
 				return RunOutput{ .exit_code
-				                  = base::safeIntConv<int>(exit_value->readBytes<i64>()) };
+				                  = base::safeIntConv<int>(exit_values.at(0)->readBytes<i64>()) };
 			});
 	}
 }

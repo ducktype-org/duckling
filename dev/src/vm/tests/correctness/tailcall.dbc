@@ -1,4 +1,4 @@
-function dummy { i64 } -> i64 {
+function dummy { i64 } -> { i64 } {
 	# if arg0 == 0: end
 	cmpEq_p64_imm     arg0, 0;
 	jmpIf_label    End;
@@ -8,27 +8,27 @@ function dummy { i64 } -> i64 {
 
 	label End;
 
-	mov_p64_p64       ret_val, arg0;
+	mov_p64_p64       ret0, arg0;
 
 	deinit; # arg0
 	ret;
 }
 
 
-function main { i64, ptr_argv } -> i64 {
-	# ret_val -> main ret_val
+function main { i64, ptr_argv } -> { i64 } {
+	# ret0 -> main ret0
 	# arg0 -> argc
 	# arg1 -> *argv
 
-	init_pany_type dummy_ret_val, i64;
+	init_pany_type dummy_ret0, i64;
 	init_pany_type dummy_arg0, i64;
 
 	input_p64          dummy_arg0; # arg0 := input
 	call_func          dummy;
 
-	output_p64         dummy_ret_val;
+	output_p64         dummy_ret0;
 
-	deinit;       # dummy ret_val
+	deinit;       # dummy ret0
 	deinit;       # *argv
 	deinit;       # argc
 	ret;
