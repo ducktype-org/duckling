@@ -55,8 +55,8 @@ while True:
         sys.stderr.flush()
         break
 
-send_msg = format_dap('{"seq":3,"type":"request","command":"disconnect","arguments":{}}')
-vm_process.stdin.write(send_msg)
+vm_process.stdin.write(format_dap('{"seq":3,"type":"request","command":"threads","arguments":{}}'))
+vm_process.stdin.write(format_dap('{"seq":4,"type":"request","command":"disconnect","arguments":{}}'))
 vm_process.stdin.flush()
 
 # waiting for terminated event

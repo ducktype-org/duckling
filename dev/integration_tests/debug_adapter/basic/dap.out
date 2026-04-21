@@ -3,5 +3,6 @@
 {"body":null,"command":"launch","request_seq":2,"success":true,"type":"response"}
 {"body":{"category":"console","output":"Running\n"},"event":"output","type":"event"}
 {"body":{"category":"console","output":"ExecutionCompleted\n"},"event":"output","type":"event"}
-{"body":null,"command":"disconnect","request_seq":3,"success":true,"type":"response"}
+{"body":{"threads":[{"id":1,"name":"Main Thread"}]},"command":"threads","request_seq":3,"success":true,"type":"response"}
+{"body":null,"command":"disconnect","request_seq":4,"success":true,"type":"response"}
 {"body":null,"event":"terminated","type":"event"}
