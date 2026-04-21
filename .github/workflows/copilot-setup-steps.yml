@@ -50,7 +50,7 @@ jobs:
         # bypassed by passing their CLI flags explicitly below. The three remaining
         # boolean prompts (ccache, coverage, JIT) cannot be set to `false` via flags
         # (only `--ccache`, `--coverage`, `--enable-jit` enable them), so we provide
-        # three newline answers to accept their defaults (all disabled).
+        # newline answers to accept their defaults (all disabled).
         run: |
           printf '\n\n\n\n\n' | python3 toolbox.py setup-build \
             -b build \
