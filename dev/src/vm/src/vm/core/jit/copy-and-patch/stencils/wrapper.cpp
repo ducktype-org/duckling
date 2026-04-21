@@ -1,7 +1,7 @@
 #define USE_SWITCH_CASE 1
 #undef USE_TAIL_CALLS
 
-#include <vm/core/thread/opcode_functions/opcodes_functions.hpp>
+#include <vm/core/safe/opcode_functions/opcodes_functions.hpp>
 
 namespace vm::jit::cnp {
 
@@ -18,7 +18,7 @@ namespace vm::jit::cnp {
 		vm::OpFuns::op_##opcode_name(instr_ptr, local_stack, frame, thread);          \
 		CORE_ASSERT(instr_ptr == &instr + 1, "An unexpected jumping opcode");         \
 	}
-#include <vm/core/thread/low_program/micro_instruction_definitions.hpp>
+#include <vm/core/safe/low_program/micro_instruction_definitions.hpp>
 #undef HANDLE_MICRO_INSTR
 
 }

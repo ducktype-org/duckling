@@ -16,7 +16,7 @@
 #include <vm/bytecode/serializer/serializer.hpp>
 #include <vm/bytecode/validator/valid_type/type_context.hpp>
 #include <vm/bytecode/validator/valid_type/valid_type.hpp>
-#include <vm/core/process/builtin_functions.hpp>
+#include <vm/core/builtin_functions.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
 
 #include <ranges>
