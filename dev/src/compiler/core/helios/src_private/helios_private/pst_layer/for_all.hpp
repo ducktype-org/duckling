@@ -29,7 +29,9 @@ namespace compiler::helios {
 
 				if (expansion_result.hasFailed()) return base::BAD;
 
-				auto inner_result = internal::pstForAllAux(ctx, expansion_result.valueOrPanic().unlock(ctx), function);
+				auto inner_result = internal::pstForAllAux(
+					ctx, expansion_result.valueOrPanic().unlock(ctx), function
+				);
 
 				return inner_result;
 			}
@@ -49,9 +51,7 @@ namespace compiler::helios {
 				);
 
 				auto inner_result = internal::pstForAllAux(ctx, child_unlocked.value(), function);
-				if (inner_result.isBad()) {
-					result = base::BAD;
-				}
+				if (inner_result.isBad()) result = base::BAD;
 			}
 
 			return result;
