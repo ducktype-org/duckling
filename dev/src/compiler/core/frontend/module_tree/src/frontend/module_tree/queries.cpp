@@ -14,6 +14,15 @@
 
 namespace compiler::frontend {
 
+	namespace {
+		ModuleID getRootAncestorModuleID(query::Context& ctx, ModuleID module_id) {
+			auto current = module_id;
+			while (auto parent = ctx.query<QueryParentModule>(current))
+				current = parent.value();
+			return current;
+		}
+	}
+
 	base::Optional<ModuleID> getRelativeModule(
 		query::Context& ctx, ModuleID from, const std::vector<base::StrID>& path
 	) {
@@ -43,12 +52,11 @@ namespace compiler::frontend {
 		}
 
 		if (not current_module.has_value()) {
-			auto& packages = global_state::getPackages();
-			// This includes the main package it will never be selected, cos we already checked the
-			// root podule in previous loop
-			for (const auto& package: packages) {
-				if (frontend::getModuleRef(package.root_module)->getPackageID() == path.at(0)) {
-					current_module = package.root_module;
+			auto package_owner = getRootAncestorModuleID(ctx, from);
+			auto& current_package_info = global_state::getCurrentPackageInfo(package_owner);
+			for (const auto dependency_module_id: current_package_info.dependencies) {
+				if (frontend::getModuleRef(dependency_module_id)->getPackageID() == path.at(0)) {
+					current_module = dependency_module_id;
 					break;
 				}
 			}

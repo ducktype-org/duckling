@@ -11,22 +11,35 @@ namespace global_state {
 	 */
 	struct PackageInfo {
 		compiler::frontend::ModuleID root_module;
+		std::vector<compiler::frontend::ModuleID> dependencies;
 	};
 
 	/**
-	 * Returns the list of registered packages. Included the main package.
-	 * @note The main package is always the first element in the returned vector.
+	 * Returns the list of registered top-level packages.
 	 */
 	const std::vector<PackageInfo>& getPackages();
 
 	/**
-	 * Returns the main package info.
+	 * @brief Returns package info that owns the given module.
+	 * Finds a package only in the top-level packages vector by package-id.
 	 */
-	const PackageInfo& getMainPackage();
+	const PackageInfo& getCurrentPackageInfo(compiler::frontend::ModuleID module_id);
+
+	/**
+	 * @brief Returns all registered package root module IDs, including dependencies,
+	 * sorted and deduplicated.
+	 */
+	std::vector<compiler::frontend::ModuleID>
+	getAllPackagesWithDependenciesRootModulesSortedDeduplicated();
 
 	namespace setters {
 		/**
 		 * Adds a package to the global state.
+		 */
+		void addPackage(const PackageInfo& package_info);
+
+		/**
+		 * Adds a package with no dependencies to the global state.
 		 */
 		void addPackage(compiler::frontend::ModuleID root_module);
 
@@ -34,8 +47,5 @@ namespace global_state {
 		 * Removes a package from the global state by its root module ID.
 		 */
 		void removePackage(compiler::frontend::ModuleID root_module);
-
-		/** Adds the main package to the global state. */
-		void addMainPackage(compiler::frontend::ModuleID root_module);
 	}
 }

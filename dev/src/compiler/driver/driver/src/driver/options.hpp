@@ -13,6 +13,8 @@ namespace compiler::driver {
 	 * Definition of options that are used by the compiler to control its behavior.
 	 */
 	namespace options_types {
+		struct DependencyInfo;
+
 		/**
 		 * Options used to control debug related behavior like
 		 * logging, dump of intermediate representations, etc.
@@ -60,6 +62,7 @@ namespace compiler::driver {
 		struct PackageInfo final {
 			std::string  package_name;
 			fs::FilePath package_path;
+			std::vector<DependencyInfo> dependencies;
 		};
 
 		/**
@@ -112,13 +115,12 @@ namespace compiler::driver {
 		 * and its dependencies.
 		 */
 		struct PackageCompilationMode final {
-			options_types::PackageInfo                 main_package_info;
-			options_types::ArtifactsOptions            compilation_artifacts;
-			std::vector<options_types::DependencyInfo> dependencies;
-			global_state::BackendOptions               backend_options;
-			options_types::DebugOptions                debug_options;
-			options_types::IncrementalOptions          incremental;
-			options_types::ExecutionOptions            execution_options;
+			std::vector<options_types::PackageInfo> main_packages_info;
+			options_types::ArtifactsOptions         compilation_artifacts;
+			global_state::BackendOptions            backend_options;
+			options_types::DebugOptions             debug_options;
+			options_types::IncrementalOptions       incremental;
+			options_types::ExecutionOptions         execution_options;
 		};
 
 		/**

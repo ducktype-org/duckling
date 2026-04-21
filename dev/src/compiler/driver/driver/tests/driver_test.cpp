@@ -58,14 +58,16 @@ protected:
 	void beforeAll() override {
 		auto init_result = compiler::driver::initializeTheCompiler(
 			compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
-				.main_package_info = {
-					.package_name = package_name,
-					.package_path = fs::FilePath(path("modules/functions_1")),
+				.main_packages_info = {
+					{
+						.package_name  = package_name,
+						.package_path  = fs::FilePath(path("modules/functions_1")),
+						.dependencies = {},
+					},
 				},
 				.compilation_artifacts = {
 					.artifacts_path = artifacts_path,
 				},
-				.dependencies = {},
 				.backend_options = {
 					.llvm_backend = global_state::BackendOptions::LLVMBackend{},
 				},

@@ -269,7 +269,7 @@ namespace compiler::helios {
 				}
 
 				auto initial_value_qresult = defgen::getDefaultInitializerExpr(
-					ctx, symbol_type, stmt->getSourcePosition()
+					ctx, symbol_type, stmt->getSourcePosition().unlock(ctx)
 				);
 				if (initial_value_qresult.hasFailed()) {
 					is_failed = true;

@@ -295,14 +295,16 @@ clah::Clah getClahForMain() {
 
 					auto init_result = compiler::driver::initializeTheCompiler(
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
-							.main_package_info = {
-								.package_name = package_name,
-								.package_path = path_to_compile.getFilePath(),
+							.main_packages_info = {
+								{
+									.package_name  = package_name,
+									.package_path  = path_to_compile.getFilePath(),
+									.dependencies = {},
+								},
 							},
 							.compilation_artifacts = {
 								.artifacts_path = fs::FilePath("./duck_build/"),
 							},
-							.dependencies     = {},
 							.backend_options  = getBackendOptionsFromClap(options),
 							.debug_options    = getDebugOptionsFromClap(options),
 							.incremental      = { .enabled = !options.isFlag("no-incremental") },
@@ -323,7 +325,8 @@ clah::Clah getClahForMain() {
 					auto backend_type = options.isFlag("dvm-backend") ? driver::BackendType::DVM
 		                                                              : driver::BackendType::LLVM;
 
-					auto root = global_state::getMainPackage().root_module;
+					CORE_ASSERT(!global_state::getPackages().empty(), "No packages registered");
+					auto root = global_state::getPackages().front().root_module;
 
 					(void) query::entryPoint<driver::CompileModule>({ root, backend_type, false });
 
@@ -394,11 +397,6 @@ clah::Clah getClahForMain() {
 	                     .addShortDesc("Worker count.")
 	                     .optional()
 	                     .build())
-				.add(clah::ParamBuilder::ofValue(clah::FilePathParser::make("manifest"))
-	                     .addLongName("externs-manifest")
-	                     .addShortDesc("JSON manifest of external package dependencies.")
-	                     .optional()
-	                     .build())
 				.add(clah::ParamBuilder::ofValue(clah::StringParser::make("output-file-name"))
 	                     .addShortName('o')
 	                     .addLongName("output-file-name")
@@ -414,16 +412,6 @@ clah::Clah getClahForMain() {
 					CORE_ASSERT(package_name != "", "Package name must be specified");
 
 					auto worker_count = options.getValue<i64>("workers").copyValueOr(1);
-
-					std::vector<compiler::driver::options_types::DependencyInfo> dependencies;
-					if (auto manifest_path = options.getValue<fs::FilePath>("externs-manifest")) {
-						auto loaded = compiler::driver::loadExternsManifest(manifest_path.value());
-						if (!loaded.has_value()) {
-							compiler::driver::exit();
-							return 1;
-						}
-						dependencies = std::move(loaded.value());
-					}
 
 					if (options.isFlag("dvm-backend")) {
 						if (options.isFlag("emit-static-lib")) {
@@ -443,15 +431,17 @@ clah::Clah getClahForMain() {
 
 					auto init_result = compiler::driver::initializeTheCompiler(
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
-							.main_package_info = {
-								.package_name = package_name,
-								.package_path = path_to_compile.getFilePath(),
+							.main_packages_info = {
+								{
+									.package_name  = package_name,
+									.package_path  = path_to_compile.getFilePath(),
+									.dependencies = {},
+								},
 							},
 							.compilation_artifacts = {
 								.artifacts_path =
 									options.getValue<fs::FilePath>("artifact-location").copyValueOr("./duck_build/"),
 							},
-							.dependencies     = dependencies,
 							.backend_options  = getBackendOptionsFromClap(options),
 							.debug_options    = getDebugOptionsFromClap(options),
 							.incremental      = { .enabled = !options.isFlag("no-incremental") },
@@ -487,8 +477,9 @@ clah::Clah getClahForMain() {
 						time_stats::TimeCategories::TotalCompilationTime
 					);
 
+					CORE_ASSERT(!global_state::getPackages().empty(), "No packages registered");
 					base::OkBad result = compiler::driver::compileEntirePackage(
-						global_state::getMainPackage(), build_target
+						global_state::getPackages().front(), build_target
 					);
 
 					total_compilation_time.end();
@@ -507,6 +498,113 @@ clah::Clah getClahForMain() {
 					if (options.isFlag("print-graph"))
 						query::Context::getState().getGraph().debugPrintForDrawing(std::cerr);
 
+
+					return result.isOk() ? 0 : 1;
+				})
+		)
+	    .addSubcommand(
+			clah::Clah("compile_packages", "Compile package(s) described by a JSON manifest.")
+				.addPositional(clah::FileParser::make("manifest"))
+				.add(getLlvmOptLevelParam())
+				.add(clah::ParamBuilder::ofValue(clah::FilePathParser::make("filepath"))
+	                     .addShortName('a')
+	                     .addLongName("artifact-location")
+	                     .addShortDesc("Path to the top-level folder with build artifacts")
+	                     .optional()
+	                     .build())
+				.add(clah::ParamBuilder::ofFlag()
+	                     .addLongName("print-statistics")
+	                     .addShortDesc("Print execution time statistics.")
+	                     .build())
+				.add(clah::ParamBuilder::ofFlag()
+	                     .addLongName("print-graph")
+	                     .addShortDesc("Print the query graph after the compilation.")
+	                     .build())
+				.add(clah::ParamBuilder::ofFlag()
+	                     .addLongName("no-incremental")
+	                     .addShortDesc(
+							 "Disable incremental compilation (do not load previous query graph)."
+						 )
+	                     .build())
+				.add(clah::ParamBuilder::ofValue(clah::IntParser::make("worker count"))
+	                     .addShortName('w')
+	                     .addLongName("workers")
+	                     .addShortDesc("Worker count.")
+	                     .optional()
+	                     .build())
+				.setHandler([](const clah::ParsingResult& options) -> int {
+					auto manifest_file = options.getPositional<fs::File>(0);
+					auto worker_count  = options.getValue<i64>("workers").copyValueOr(1);
+
+					auto loaded = compiler::driver::loadPackagesManifest(manifest_file.getFilePath());
+					if (!loaded.has_value()) {
+						compiler::driver::exit();
+						return 1;
+					}
+
+					if (loaded->empty()) {
+						std::cerr << "Error: packages manifest does not contain any package entries.\n";
+						compiler::driver::exit();
+						return 1;
+					}
+
+					if (loaded->size() > 1)
+						throw base::NotYetImplemented(
+							"Compilation of multiple packages as a single compilation unit"
+						);
+
+					std::vector<compiler::driver::options_types::PackageInfo> packages_info;
+					packages_info.reserve(loaded->size());
+					for (const auto& package_request: *loaded)
+						packages_info.push_back(package_request.package_info);
+
+					const auto& package_request = loaded->front();
+
+					auto init_result = compiler::driver::initializeTheCompiler(
+						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
+							.main_packages_info = std::move(packages_info),
+							.compilation_artifacts = {
+								.artifacts_path =
+									options.getValue<fs::FilePath>("artifact-location").copyValueOr("./duck_build/"),
+							},
+							.backend_options  = getBackendOptionsFromClap(options),
+							.debug_options    = getDebugOptionsFromClap(options),
+							.incremental      = { .enabled = !options.isFlag("no-incremental") },
+							.execution_options = {
+								.worker_count = base::safeIntConv<u64>(worker_count),
+							},
+						}
+					);
+
+					if (init_result.status().isBad()) {
+						compiler::driver::exit();
+						return 1;
+					}
+
+					time_stats::TrackCategoryTime total_compilation_time(
+						time_stats::TimeCategories::TotalCompilationTime
+					);
+
+					CORE_ASSERT(!global_state::getPackages().empty(), "No packages registered");
+					base::OkBad result = compiler::driver::compileEntirePackage(
+						global_state::getPackages().front(), package_request.build_target
+					);
+
+					total_compilation_time.end();
+
+					compiler::driver::exit();
+
+					if (options.isFlag("print-statistics")) {
+						if (not query::USE_STATS) {
+							std::cerr << "Warning: Query statistics are disabled at compile time. "
+									 "No query statistics will be printed.\n";
+						}
+						query::printStats();
+						time_stats::prettyPrintTimeStatistics();
+					}
+
+					if (options.isFlag("print-graph"))
+						query::Context::getState().getGraph().debugPrintForDrawing(std::cerr);
 
 					return result.isOk() ? 0 : 1;
 				})
@@ -539,14 +637,16 @@ clah::Clah getClahForMain() {
 
 					auto init_result = compiler::driver::initializeTheCompiler(
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
-									.main_package_info = {
-										.package_name = package_name,
-										.package_path = path_to_compile.getFilePath(),
+									.main_packages_info = {
+										{
+											.package_name  = package_name,
+											.package_path  = path_to_compile.getFilePath(),
+											.dependencies = {},
+										},
 									},
 									.compilation_artifacts = {
 										.artifacts_path = fs::FilePath("./duck_build/"),
 									},
-									.dependencies = {},
 									.backend_options = {},
 									.debug_options = getDebugOptionsFromClap(options),
 									.incremental = {.enabled = !options.isFlag("no-incremental") },

@@ -87,49 +87,51 @@ namespace compiler::driver {
 			);
 		}
 
-		base::OkBad handlePackageOptions(const options_types::PackageInfo& package_info) {
-			// Create the module tree for the main package and add it to global state
+		base::Optional<global_state::PackageInfo> createPackageInfo(
+			const options_types::PackageInfo& package_info
+		) {
 			auto root_module = compiler::frontend::createModuleTree(
 				package_info.package_path, package_info.package_name
 			);
+
 			if (!getModuleRef(root_module)->hasMainSourceFile()) {
 				auto module_name = getModuleRef(root_module)->getName();
 				global_state::getGlobalLogger()->log(makeBox<dia_int::PlaceholderHeaderError>(
-					"Main package does not have a main source file.",
+					"Package does not have a main source file.",
 					base::strConcat(
-						"The main source file is required for compilation. Please add a ",
+						"The main source file is required for package ",
+						package_info.package_name,
+						". Please add a ",
 						module_name,
-						".dmf file to the main module directory."
+						".dmf file to the package module directory."
 					)
 				));
-				return base::BAD;
+				return {};
 			}
-			global_state::setters::addMainPackage(root_module);
-			return base::OK;
+
+			global_state::PackageInfo global_package_info{
+				.root_module  = root_module,
+				.dependencies = {},
+			};
+
+			for (const auto& dependency: package_info.dependencies) {
+				auto dependency_package_info = createPackageInfo(dependency.package_info);
+				if (!dependency_package_info.has_value()) return {};
+				global_package_info.dependencies.push_back(
+					dependency_package_info.value().root_module
+				);
+			}
+
+			return global_package_info;
 		}
 
-		/**
-		 * @brief Register external dependencies as non-main packages in global state.
-		 */
-		base::OkBad handleDependencies(const std::vector<options_types::DependencyInfo>& dependencies) {
-			for (const auto& dep: dependencies) {
-				auto root_module = compiler::frontend::createModuleTree(
-					dep.package_info.package_path, dep.package_info.package_name
-				);
-				if (!getModuleRef(root_module)->hasMainSourceFile()) {
-					auto module_name = getModuleRef(root_module)->getName();
-					global_state::getGlobalLogger()->log(makeBox<dia_int::PlaceholderHeaderError>(
-						"Main package does not have a main source file.",
-						base::strConcat(
-							"The main source file of external package ", dep.package_info.package_name,
-							" is required for compilation. Please add a ",
-							module_name,
-							".dmf file to the main module directory."
-						)
-					));
-					return base::BAD;
-				}
-				global_state::setters::addPackage(root_module);
+		base::OkBad handlePackageOptions(
+			const std::vector<options_types::PackageInfo>& package_infos
+		) {
+			for (const auto& package_info: package_infos) {
+				auto global_package_info = createPackageInfo(package_info);
+				if (!global_package_info.has_value()) return base::BAD;
+				global_state::setters::addPackage(global_package_info.value());
 			}
 			return base::OK;
 		}
@@ -176,8 +178,10 @@ namespace compiler::driver {
 				query::external::setPreviousMetadataFromRawBytes(span);
 
 				// We need to parse all files before compilation to collect all PST elements.
-				for (auto mid: global_state::getPackages())
-					compiler::frontend::parseAllFilesInModuleTree(mid.root_module);
+				auto module_ids
+					= global_state::getAllPackagesWithDependenciesRootModulesSortedDeduplicated();
+				for (const auto module_id: module_ids)
+					compiler::frontend::parseAllFilesInModuleTree(module_id);
 
 				// Collect all Inputs and Side inputs and perform red-green sweep.
 				// This must be called after loading both the graph and metadata, as metadata
@@ -243,12 +247,10 @@ namespace compiler::driver {
 				handleExecutionOptions(package_compilation_options.execution_options);
 				handleArtifactsOptions(package_compilation_options.compilation_artifacts);
 
-				auto package_success
-					= handlePackageOptions(package_compilation_options.main_package_info);
+					auto package_success
+						= handlePackageOptions(package_compilation_options.main_packages_info);
 
-				auto dependencies_success = handleDependencies(package_compilation_options.dependencies);
-
-				if (package_success.isBad() || dependencies_success.isBad()) return base::BAD;
+					if (package_success.isBad()) return base::BAD;
 
 				handleBackendOptions(package_compilation_options.backend_options);
 				handleIncrementalOptions(package_compilation_options.incremental);
