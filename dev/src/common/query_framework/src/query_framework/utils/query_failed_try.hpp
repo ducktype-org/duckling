@@ -1,10 +1,10 @@
 #pragma once
 
-#include <utility>
-
 #include <base/types/checked_okbad.hpp>
 
 #include <query_framework/internal/query_errors.hpp>
+
+#include <utility>
 
 namespace query {
 
