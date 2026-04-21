@@ -70,40 +70,26 @@ namespace {
 	 * @brief Gets the opposite direction of a comparison operation, e.g `a < b` becomes `b > a`.
 	 */
 	OpKind getComparisonOppositeDirection(OpKind operation) {
+		// clang-format off
 		switch (operation) {
-		case OpKind::cmpEq:
-			return OpKind::cmpEq;
-		case OpKind::cmpNeq:
-			return OpKind::cmpNeq;
-		case OpKind::fcmpEq:
-			return OpKind::fcmpEq;
-		case OpKind::fcmpNeq:
-			return OpKind::fcmpNeq;
-		case OpKind::cmpGt:
-			return OpKind::cmpLt;
-		case OpKind::cmpGe:
-			return OpKind::cmpLe;
-		case OpKind::ucmpGt:
-			return OpKind::ucmpLt;
-		case OpKind::ucmpGe:
-			return OpKind::ucmpLe;
-		case OpKind::cmpLt:
-			return OpKind::cmpGt;
-		case OpKind::cmpLe:
-			return OpKind::cmpGe;
-		case OpKind::fcmpGt:
-			return OpKind::fcmpLt;
-		case OpKind::fcmpGe:
-			return OpKind::fcmpLe;
-		case OpKind::fcmpLt:
-			return OpKind::fcmpGt;
-		case OpKind::fcmpLe:
-			return OpKind::fcmpGe;
-		default:
-			CORE_PANIC("Unhandled comparison operation");
+		case OpKind::cmpEq: 	return OpKind::cmpEq;
+		case OpKind::cmpNeq: 	return OpKind::cmpNeq;
+		case OpKind::fcmpEq: 	return OpKind::fcmpEq;
+		case OpKind::fcmpNeq: 	return OpKind::fcmpNeq;
+		case OpKind::cmpGt: 	return OpKind::cmpLt;
+		case OpKind::cmpGe: 	return OpKind::cmpLe;
+		case OpKind::ucmpGt: 	return OpKind::ucmpLt;
+		case OpKind::ucmpGe: 	return OpKind::ucmpLe;
+		case OpKind::cmpLt: 	return OpKind::cmpGt;
+		case OpKind::cmpLe: 	return OpKind::cmpGe;
+		case OpKind::fcmpGt: 	return OpKind::fcmpLt;
+		case OpKind::fcmpGe: 	return OpKind::fcmpLe;
+		case OpKind::fcmpLt: 	return OpKind::fcmpGt;
+		case OpKind::fcmpLe: 	return OpKind::fcmpGe;
+		default: 				CORE_PANIC("Unhandled comparison operation");
 		}
+		// clang-format on
 	}
-
 }
 
 namespace compiler::backend_vm::internal {
@@ -142,5 +128,4 @@ namespace compiler::backend_vm::internal {
 
 		ctx->storeResult(op.dest, result_val);
 	}
-
 }

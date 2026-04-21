@@ -15,6 +15,5 @@ namespace compiler::backend_vm::internal {
 			ctx->pushInstruction({ OpKind::mov, addr_temp.asArgument(), op.src.asArgument() });
 		}
 		ctx->storeResult(op.dest, { addr_temp, DVMPlace::AccessKind::Direct });
-		return;
 	}
 }

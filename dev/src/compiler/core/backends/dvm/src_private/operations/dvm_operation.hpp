@@ -81,7 +81,7 @@ namespace compiler::backend_vm::internal {
 	 */
 	struct MoveOperation {
 		DVMValue src;
-		DVMPlace dest;
+		DVMPlace dest;  ///< MoveOperation always has a destination.
 	};
 
 	/**

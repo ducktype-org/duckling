@@ -21,7 +21,6 @@ namespace compiler::backend_vm::internal {
 	class FunctionLoweringContext {
 	public:
 		friend class InstructionLowerer;
-		// TODOP: Remove the friend somehow
 		friend DVMOperation lirInstrToDVMOperation(FunctionLoweringContext&, const lir::Instruction&);
 
 		FunctionLoweringContext(
@@ -49,6 +48,19 @@ namespace compiler::backend_vm::internal {
 		void pushInit(lir::LIRLocalRef lir_local);
 
 		/**
+		 * @brief Translates a LIRPlace to a DVMPlace. In case of direct values returns a place
+		 * representing a local/global variable, for references and projection chains (like
+		 * a.field[3].*) returns a pointer to final calculated place.
+		 */
+		DVMPlace resolveLirPlace(const lir::LIRPlace& place);
+
+		/**
+		 * @brief Translates a LIRValue to a DVMValue. Performs all needed operations to retrieve
+		 * the value.
+		 */
+		DVMValue lowerLirValue(const lir::LIRValue& lir_value);
+
+		/**
 		 * @brief Registers LIR function parameter as a DVM function parameter.
 		 * @param lir_func_param LIR local representing a function parameter.
 		 * In reality this just means we can use this "already present" local.
@@ -70,15 +82,6 @@ namespace compiler::backend_vm::internal {
 
 		const DVMLocal&               insertLirLocal(lir::LIRLocalRef local);
 		[[nodiscard]] const DVMLocal& getLirLocal(lir::LIRLocalRef local) const;
-
-		/**
-		 * @brief Translates a LIRPlace to a DVMPlace. In case of direct values returns a place
-		 * representing a local/global variable, for references and projection chains (like
-		 * a.field[3].*) returns a pointer to final calculated place.
-		 */
-		DVMPlace resolveLirPlace(const lir::LIRPlace& place);
-
-		DVMValue lowerLirValue(const lir::LIRValue& lir_value);
 
 		DVMLocal forceToLocal(const DVMValue& value, base::Optional<std::string_view> name_hint = {});
 

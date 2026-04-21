@@ -7,7 +7,6 @@ namespace compiler::backend_vm::internal {
 	void InstructionLowerer::lower(const MoveOperation& op) {
 		// Otherwise, it's a simple assignment.
 		ctx->storeResult(op.dest, op.src);
-		return;
 	}
 
 	void InstructionLowerer::lower(const UnaryOperation& op) {
@@ -27,7 +26,6 @@ namespace compiler::backend_vm::internal {
 			ctx->pushInstruction({ op.op, tmp });
 			ctx->storeResult(op.dest, { tmp, DVMPlace::AccessKind::Direct });
 		}
-		return;
 	}
 
 	void InstructionLowerer::lower(const BinaryOperation& op) {
@@ -52,6 +50,5 @@ namespace compiler::backend_vm::internal {
 			ctx->pushInstruction({ op.op, tmp, rhs });
 			ctx->storeResult(op.dest, { tmp, DVMPlace::AccessKind::Direct });
 		}
-		return;
 	}
 }
