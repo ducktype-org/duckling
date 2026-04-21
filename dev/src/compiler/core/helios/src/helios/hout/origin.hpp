@@ -52,6 +52,17 @@ namespace compiler::helios::code {
 		) const;
 
 		/**
+		 * @brief Get the source position of the origin, if it is available.
+		 * Note that the generated elements can have the source position,
+		 * if we know where they are generated from.
+		 * The position is empty if they do not have position in the code.
+		 * Return SourcePositionLocked, so it can be used outside of query.
+		 */
+		[[nodiscard]] base::Optional<pst::SourcePositionLocked> getSourcePositionLocked(
+			query::Context& ctx
+		) const;
+
+		/**
 		 * @brief Get the stable source position of the origin, if it is available.
 		 * Same as @p getSourcePosition, but returns the stable position instead of the active
 		 * position.

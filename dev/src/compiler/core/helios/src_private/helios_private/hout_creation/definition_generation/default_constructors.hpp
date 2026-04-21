@@ -1,6 +1,7 @@
 #pragma once
 
 
+#include <frontend/pst_parser/source_position_locked.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/tsh/types.hpp>
 
@@ -74,6 +75,6 @@ namespace compiler::helios::defgen {
 	 * default constructible.
 	 */
 	query::QResult<CRef<code::Expr>> getDefaultInitializerExpr(
-		query::Context& ctx, const tsh::SymbolType<>& type, dia::SourcePosition pos
+		query::Context& ctx, const tsh::SymbolType<>& type, pst::SourcePositionLocked pos
 	);
 }

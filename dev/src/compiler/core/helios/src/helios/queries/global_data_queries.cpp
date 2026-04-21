@@ -42,7 +42,7 @@ namespace compiler::helios {
 						}
 
 						return defgen::getDefaultInitializerExpr(
-								   ctx, symbol_type, origin.getSourcePosition(ctx).value()
+								   ctx, symbol_type, origin.getSourcePositionLocked(ctx).value()
 						)
 						    .valueOrThrow();
 					};

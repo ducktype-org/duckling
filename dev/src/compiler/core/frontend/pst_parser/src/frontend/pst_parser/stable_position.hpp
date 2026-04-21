@@ -8,6 +8,8 @@
 namespace pst {
 	class LangElement;
 
+	class SourcePositionLocked;
+
 	/**
 	 * @brief Class that represents a position in the source code that
 	 * that is stable across re-parses, if the order of the elements
@@ -49,6 +51,12 @@ namespace pst {
 		 * the most recently parsed nodes.
 		 */
 		[[nodiscard]] dia::SourcePosition getActiveSourcePosition(query::Context& ctx) const;
+
+		/**
+		 * @brief Get the source position access locked
+		 * the most recently parsed nodes.
+		 */
+		[[nodiscard]] SourcePositionLocked getActiveSourcePositionLocked(query::Context& ctx) const;
 
 		/**
 		 * @brief Same as  `getActiveSourcePosition` but uses illegalAccess, so only to be used
