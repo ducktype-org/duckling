@@ -209,6 +209,7 @@ private:
 			global_state::PackageInfo package_info{
 				.root_module
 				= frontend::createModuleTree(fs::File(path(info.module_path)), package_id),
+				.dependencies = {},
 			};
 
 			driver::compileEntirePackage(
@@ -511,6 +512,7 @@ package_info,
 		global_state::PackageInfo package_info{
 			.root_module
 			= frontend::createModuleTree(fs::File(path("modules/functions_5")), package_name),
+			.dependencies = {},
 		};
 
 		driver::compileEntirePackage(
@@ -622,6 +624,7 @@ package_info,
 		global_state::PackageInfo package_info{
 			.root_module
 			= frontend::createModuleTree(fs::File(path("modules/import_simple")), "import_simple"),
+			.dependencies = {},
 		};
 
 		driver::compileEntirePackage(
@@ -744,6 +747,7 @@ package_info,
 			.root_module = frontend::createModuleTree(
 				fs::File(path("modules/imports_complicated")), "imports_complicated_test"
 			),
+			.dependencies = {},
 		};
 
 		driver::compileEntirePackage(
@@ -1027,6 +1031,7 @@ package_info,
 		global_state::PackageInfo dvm_package_info{
 			.root_module
 			= frontend::createModuleTree(fs::File(path("modules/functions_2")), "src_pos_dvm"),
+			.dependencies = {},
 		};
 
 		driver::compileEntirePackage(dvm_package_info, driver::BuildTargetDVM{});
