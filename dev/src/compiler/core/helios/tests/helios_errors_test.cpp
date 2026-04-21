@@ -982,6 +982,93 @@ private:
 	 * Test error logging related to errors in expanded statements or inside the expanded code.
 	 */
 	void testErrorLoggingExpandStatements() {
+		// @TODO: #2213 Update the values in the test cases below.
+
+		// ======= PARSE ERRORS IN EXPAND STATEMENTS =======
+
+		checkForErrorOnCompileModule(
+			R"(
+				expand "fun foo";
+			)",
+			{ "Macro", "expansion" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				expand " expand \" fun a \"  ";
+			)",
+			{ "Macro", "expansion" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				expand " namespace N { fun a }  ";
+			)",
+			{ "Macro", "expansion" },
+			1
+		);
+
+
+		// ======= ERRORS REALTED TO EXPANDED CODE =======
+
+		checkForErrorOnCompileModule(
+			R"(
+				expand "fun bar() = 10;";
+				expand "fun bar(x: i64 = 0) = 10;";
+
+				fun main() -> i64 = {
+					bar(); # ambiguous call, both overloads match
+					return 0;
+				}
+			)",
+			{},
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				expand "fun foo(x: i64) = 10 + y;"; # error: `y` is not defined
+			)",
+			{"y", "not found"},
+			1
+		);
+
+		// ======= ERRORS IN EXPANSION EXPRESSION =======
+
+		checkForErrorOnCompileModule(
+			R"(
+				expand 1;
+			)",
+			{"i32", "string"},
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				expand y;
+			)",
+			{"y", "not found"},
+			1
+		);
+
+		// ======= ERRORS IN EXPANDED CODE DOES NOT PREVENT OTHER DIAGNOSTICS =======
+
+		checkForErrorOnCompileModule(
+			R"(
+				expand "fun foo(x: i64) -> i64 = 10 + y;";
+
+				fun bar() = {
+					return foo(1, 1);
+				}
+
+			)",
+			{ },
+			2
+		);
+
+		// checkForErrorOnCompileModule();
 
 	}
 
