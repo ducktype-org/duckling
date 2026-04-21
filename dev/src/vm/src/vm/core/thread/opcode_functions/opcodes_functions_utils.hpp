@@ -9,7 +9,7 @@
 #include <vm/utils/interpret.hpp>
 
 namespace vm {
-	struct Block;
+	class Block;
 }
 
 /**
