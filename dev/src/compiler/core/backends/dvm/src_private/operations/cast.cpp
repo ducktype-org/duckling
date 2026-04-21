@@ -1,6 +1,11 @@
+#include "function_lowering_context.hpp"
 #include "instruction_lowerer.hpp"
+#include "program_lowering_context.hpp"
 
 namespace {
+	using namespace compiler;
+	using namespace vm::code::builders;
+
 	vm::code::builders::OpKind getOpKindFromLIRLayouts(const lir::CastParameters& cast_params) {
 		const auto  target_layout = cast_params.target_layout;
 		const auto  source_layout = cast_params.source_layout;
@@ -84,7 +89,7 @@ namespace compiler::backend_vm::internal {
 	void InstructionLowerer::lower(const CastOperation& op) {
 		// Operation in form a = OP b (like mov)
 		auto operation   = getOpKindFromLIRLayouts(op.cast_params);
-		auto target_type = ctx.program_context.lowerAndKeepTslType(op.cast_params.target_layout);
+		auto target_type = ctx->program_context.lowerAndKeepTslType(op.cast_params.target_layout);
 
 		// The cast operations are only supported between local stack values.
 		// So if we have a non-local source (like immediate value or global),
@@ -92,20 +97,20 @@ namespace compiler::backend_vm::internal {
 
 		// If the destination is non-local, we put the result in a temporary local
 		// and then move the result to the final destination.
-		DVMLocal src_arg = ctx.forceToLocal(op.src, "cast_src_tmp");
+		DVMLocal src_arg = ctx->forceToLocal(op.src, "cast_src_tmp");
 
-		if (op.dest.isDirect() && op.dest.is<DVMLocal>()) {
+		if (op.dest && op.dest->isDirect() && op.dest->is<DVMLocal>()) {
 			// If output is a direct (not a local storing a pointer to the output place) local,
 			// we optimize the cast to work directly on the local.
-			auto dst_local = op.dest.get<DVMLocal>();
-			ctx.pushInstruction({ operation, dst_local, src_arg });
+			auto dst_local = op.dest->get<DVMLocal>();
+			ctx->pushInstruction({ operation, dst_local, src_arg });
 		} else {
 			// Otherwise, if the output place is not direct or a global we have to create a
 			// temporary to perform the operation on.
-			DVMLocal dst_temp = ctx.pushTempLocal(target_type, "cast_dst_tmp");
+			DVMLocal dst_temp = ctx->pushTempLocal(target_type, "cast_dst_tmp");
 
-			ctx.pushInstruction({ operation, dst_temp, src_arg });
-			ctx.storeResult(op.dest, { dst_temp, DVMPlace::AccessKind::Direct });
+			ctx->pushInstruction({ operation, dst_temp, src_arg });
+			ctx->storeResult(op.dest, { dst_temp, DVMPlace::AccessKind::Direct });
 		}
 	}
 }

@@ -1,4 +1,4 @@
-#include "function_lowering_context.hpp"
+#include "../function_lowering_context.hpp"
 #include "instruction_lowerer.hpp"
 #include "operations/dvm_operation.hpp"
 
@@ -16,10 +16,10 @@ namespace compiler::backend_vm::internal {
 		// a = b;
 		// a = OP a;
 
-		if (op.dest.isDirect() && op.dest.is<DVMLocal>()) {
+		if (op.dest && op.dest->isDirect() && op.dest->is<DVMLocal>()) {
 			// If output is a direct place we just use it.
 			ctx->storeResult(op.dest, op.src);
-			ctx->pushInstruction({ op.op, op.dest });
+			ctx->pushInstruction({ op.op, *op.dest });
 		} else {
 			// Otherwise it's a global or indirect. We perform the operations on the
 			// temporary and then store it in the indirect place.
@@ -39,13 +39,13 @@ namespace compiler::backend_vm::internal {
 			                                              DVMPlace::AccessKind::Direct }
 		                                      : op.rhs;
 
-		if (op.dest.isDirect() && op.dest.is<DVMLocal>()) {
+		if (op.dest && op.dest->isDirect() && op.dest->is<DVMLocal>()) {
 			// If instruction is of the form: a = b OP c, then
 			// we transform it to:
 			// a = b;
 			// a = a OP c;
 			ctx->storeResult(op.dest, op.lhs);
-			ctx->pushInstruction({ op.op, op.dest, rhs });
+			ctx->pushInstruction({ op.op, *op.dest, rhs });
 		} else {
 			// Force globals into locals if needed.
 			auto tmp = ctx->forceToLocal(op.lhs, "bin_tmp");

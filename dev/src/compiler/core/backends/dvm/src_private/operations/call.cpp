@@ -1,7 +1,8 @@
-
-#include "function_lowering_context.hpp"
+#include "../function_lowering_context.hpp"
 #include "instruction_lowerer.hpp"
 #include "operations/dvm_operation.hpp"
+
+#include <logger/logger.hpp>
 
 namespace compiler::backend_vm::internal {
 	void InstructionLowerer::lower(const CallOperation& op) {
@@ -24,7 +25,7 @@ namespace compiler::backend_vm::internal {
 
 			auto arg_name = base::strConcat("call", "_arg", arg_idx, "_");
 			auto temp_arg = ctx->pushTempLocal(arg_type, arg_name, false);
-			pushInstruction({ OpKind::mov, temp_arg.asArgument(), func_arg });
+			ctx->pushInstruction({ OpKind::mov, temp_arg.asArgument(), func_arg });
 		}
 
 		ctx->pushInstruction(

@@ -119,8 +119,6 @@ namespace base {
 
 	StrID::StrID(const std::string& data): StrID(data.c_str()) {}
 
-	StrID::StrID(std::string_view data): StrID(data.data()) {}
-
 	StrID::StrID(char character): StrID(std::string(1, character).c_str()) {}
 
 	base::RawView StrID::view() const {
