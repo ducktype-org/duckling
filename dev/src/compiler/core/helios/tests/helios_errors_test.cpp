@@ -1068,7 +1068,38 @@ private:
 			2
 		);
 
-		// checkForErrorOnCompileModule();
+		checkForErrorOnCompileModule(
+			R"(	
+				namespace N { expand y; }
+
+				fun foo() = z;
+			)",
+			{ "y", "z", "not found" },
+			2
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				class T {
+					x: i64 = 1;
+
+					fun m1() = {
+						expand "return y";
+					}
+
+					fun m2() = {
+						expand "return z";
+					}
+				}
+
+				fun main() = {
+					return w;
+				}
+
+			)",
+			{ "y", "z", "w", "not found" },
+			3
+		);
 
 	}
 
