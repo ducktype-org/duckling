@@ -1,10 +1,10 @@
 function main {} -> { i64 } {
 
-	init_lany_type     x, i64;
-	mov_l64_imm        x, 1;
+	init_pany_type     x, i64;
+	mov_p64_imm        x, 1;
 	deinit; # x
 	
-	init_lany_type     y, i64;
+	init_pany_type     y, i64;
 	deinit; # y
 
 
