@@ -395,6 +395,14 @@ namespace vm {
 		const low::LowFuncData& start_function, const low::LowFuncData& func
 	) {
 		acquireGil();
+
+		struct GilReleaser {
+			SafeVMThread& thread;
+			~GilReleaser() {
+				if (thread.has_gil) thread.releaseGil();
+			}
+		} gil_releaser{*this};
+
 		// Frame of the called function.
 		Frame*     frame       = runtime_data.frame_stack_base;
 		std::byte* local_stack = runtime_data.local_stack_base;

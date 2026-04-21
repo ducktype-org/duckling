@@ -195,29 +195,15 @@ function main { i64, ptr_argv } -> i64 {
     mov_lopq_gopq       unlock_gate_main, gate;
     call_builtinfunc    builtin_unlock_mutex;
 
-    init_lany_type      j1, i64;
-    mov_l64_l64         j1, t1_id;
-    call_builtinfunc    builtin_join_thread;
+    # Keep main alive briefly so worker threads can reach the 2-thread deadlock,
+    # but avoid an infinite loop that may block stop/kill.
+    init_lany_type      spin, i64;
+    mov_l64_imm         spin, 3000000;
 
-    init_lany_type      j2, i64;
-    mov_l64_l64         j2, t2_id;
-    call_builtinfunc    builtin_join_thread;
-
-    init_lany_type      destroy_cv, condition_variable;
-    mov_lopq_gopq       destroy_cv, cv;
-    call_builtinfunc    builtin_destroy_cv;
-
-    init_lany_type      destroy_gate, mutex;
-    mov_lopq_gopq       destroy_gate, gate;
-    call_builtinfunc    builtin_destroy_mutex;
-
-    init_lany_type      destroy_m1, mutex;
-    mov_lopq_gopq       destroy_m1, m1;
-    call_builtinfunc    builtin_destroy_mutex;
-
-    init_lany_type      destroy_m2, mutex;
-    mov_lopq_gopq       destroy_m2, m2;
-    call_builtinfunc    builtin_destroy_mutex;
+    label KeepAliveWindow;
+        sub_l64_imm     spin, 1;
+        cmpGt_l64_imm   spin, 0;
+        jmpIf_label     KeepAliveWindow;
 
     ret;
 }

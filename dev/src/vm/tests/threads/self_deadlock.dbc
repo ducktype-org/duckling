@@ -1,0 +1,27 @@
+global_data m1 mutex {};
+
+function main { i64, ptr_argv } -> i64 {
+    init_lany_type      init_m1, mutex;
+    call_builtinfunc    builtin_create_mutex;
+    mov_gopq_lopq       m1, init_m1;
+
+    init_lany_type      lock_m1_first, mutex;
+    mov_lopq_gopq       lock_m1_first, m1;
+    call_builtinfunc    builtin_lock_mutex;
+
+    # Second lock on the same mutex by the same thread should panic with deadlock detection.
+    init_lany_type      lock_m1_second, mutex;
+    mov_lopq_gopq       lock_m1_second, m1;
+    call_builtinfunc    builtin_lock_mutex;
+
+    # Unreachable when deadlock detection works, but kept for VM program completeness.
+    init_lany_type      unlock_m1, mutex;
+    mov_lopq_gopq       unlock_m1, m1;
+    call_builtinfunc    builtin_unlock_mutex;
+
+    init_lany_type      destroy_m1, mutex;
+    mov_lopq_gopq       destroy_m1, m1;
+    call_builtinfunc    builtin_destroy_mutex;
+
+    ret;
+}
