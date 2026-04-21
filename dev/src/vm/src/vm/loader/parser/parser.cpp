@@ -9,7 +9,6 @@
 namespace vm::loader::parser {
 
 	Box<tokenizer::TokenSource> tokenizeFile(const fs::File& path) {
-		lang_def::setKeywordMode(lang_def::KeywordMode::DuckBC);
 		auto source = tokenizer::makeTokenSource(path);
 		source->tokenize();
 		return source;

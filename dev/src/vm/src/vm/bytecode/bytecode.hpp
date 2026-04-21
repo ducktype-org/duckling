@@ -89,7 +89,7 @@ namespace vm::code {
 
 		/**
 		 * @brief Merges another CodeCollection into this one by appending all its elements.
-		 * In dev builds, asserts that there are no duplicate function or global names.
+		 * Does not perform any assertions.
 		 */
 		void mergeFrom(CodeCollection&& other);
 	};

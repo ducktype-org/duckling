@@ -116,7 +116,7 @@ namespace compiler::backend_vm::internal {
 		 * @brief Produces the per-module bytecode collection.
 		 *
 		 * Assembles all lowered functions, globals, types, and extern C functions into a
-		 * CodeCollection. No cross-module validation is performed here.
+		 * CodeCollection. No validation is performed here.
 		 *
 		 * @note It does not consume internal state and can be called multiple times.
 		 */

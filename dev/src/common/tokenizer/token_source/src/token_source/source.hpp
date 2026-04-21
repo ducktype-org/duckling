@@ -8,6 +8,7 @@
 #include <diagnostic/logger.hpp>
 #include <filesystem/encoding.hpp>
 #include <filesystem/file.hpp>
+#include <lang_definitions/key_spec_op.hpp>
 #include <lexer/char.hpp>
 #include <lexer/token.hpp>
 #include <token_source/forward.hpp>  // IWYU pragma: keep
@@ -128,6 +129,11 @@ namespace tokenizer {
 		 */
 		template<fs::Encoding encoding = fs::Encoding::UTF8>
 		bool tokenize() {
+			if (getFile().extension() == ".dbc")
+				lang_def::setKeywordMode(lang_def::KeywordMode::DuckBC);
+			else
+				lang_def::setKeywordMode(lang_def::KeywordMode::DucklingSource);
+
 			decode<encoding>();
 			if (int_log.hasErrors()) return false;
 			countLines();

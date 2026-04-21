@@ -696,16 +696,17 @@ namespace compiler::driver {
 
 	/**
 	 * @brief Links all per-module DVM .dbc files into a single merged package .dbc,
-	 * validates the merged collection, and optionally merges per-module debug info files.
+	 * and merges per-module debug info files if provided.
 	 *
 	 * This is the DVM analogue of linking .o object files for LLVM.
 	 */
 	base::OkBad linkDVMPackage(
 		const std::vector<artifacts::FileArtifact>& objects,
 		const std::vector<artifacts::FileArtifact>& debug_info_artifacts,
-		const std::string&                          output_file_name
+		const std::string&                          output_file_stem
 	) {
 		vm::loader::Loader dvm_linker;
+		std::string        output_file_name = base::strConcat(output_file_stem, ".dbc");
 
 		using std::ranges::to;
 		using std::ranges::views::transform;
@@ -757,7 +758,7 @@ namespace compiler::driver {
 				merged_debug_info->module_path = output_file.file.getFilePath().string();
 
 				auto di_output = global_state::getRootCollection()->fileArtifactAtOrNew(
-					base::StrID(base::strConcat(output_file_name, ".di.json").c_str())
+					base::StrID(base::strConcat(output_file_stem, ".di.json").c_str())
 				);
 				std::ofstream di_out(di_output.file.getFilePath().getPath(), std::ios::binary);
 				if (!di_out.is_open())
@@ -834,8 +835,12 @@ namespace compiler::driver {
 		if (build_debug_info) debug_info_artifacts.reserve(debug_info_handles.size());
 		for (auto handle: debug_info_handles) {
 			auto di_result = query::awaitEntryPoint<DebugInfoForModule>(handle);
-			if (build_debug_info && di_result.hasValue())
+			if (di_result.hasValue())
 				debug_info_artifacts.emplace_back(di_result.valueOrPanic());
+			else {
+				CORE_USER_LOG("Debug info generation failed for a module.");
+				result = base::BAD;
+			}
 		}
 
 		if (result.isBad()) return result;
@@ -857,7 +862,7 @@ namespace compiler::driver {
 		}
 
 		if (backend == BackendType::DVM) {
-			if (linkDVMPackage(objects, debug_info_artifacts, "package_dvm.dbc").isBad())
+			if (linkDVMPackage(objects, debug_info_artifacts, "package_dvm").isBad())
 				return base::BAD;
 		}
 

@@ -74,7 +74,7 @@ namespace debug_info {
 
 		/**
 		 * @brief Merges another DebugInfo into this one by inserting all its functions and types.
-		 * In dev builds, asserts there are no duplicate function or type names.
+		 * Does not perform any assertions.
 		 */
 		void mergeFrom(DebugInfo&& other);
 	};
