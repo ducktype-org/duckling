@@ -41,7 +41,9 @@ int cli(const fs::File& filepath, const std::vector<std::string>& args) {
 	          .and_then([&] { return vm::api::run(pid, args); })
 	          .and_then([&] { return vm::api::join(pid); })
 	          .and_then([&] { return vm::api::getExitValue(pid); })
-	          .transform([&](Ref<vm::VmValue> vm_value) {
+	          .transform([&](vm::api::ExitValue vm_values) {
+				  CORE_ASSERT(vm_values.size() == 1, "Program returned more than one return value");
+				  auto& vm_value = vm_values.at(0);
 				  CORE_ASSERT(
 					  vm_value->type->getName() == base::StrID("i64"),
 					  "DVM program returned and exit value different than i64"

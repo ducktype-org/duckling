@@ -1,6 +1,6 @@
-function foo {} -> i64 {
-    mov_p64_imm ret_val, 120;
-    output_p64 ret_val;
-    add_p64_imm ret_val, 3;
+function foo {} -> { i64 } {
+    mov_p64_imm ret0, 120;
+    output_p64 ret0;
+    add_p64_imm ret0, 3;
     ret;
 }

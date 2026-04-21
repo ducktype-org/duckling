@@ -3,12 +3,12 @@
 
 global_data vector opaque_ptr {}; # cpp vector pointer.
 
-function initialize_vector { opaque_ptr } -> void {
+function initialize_vector { opaque_ptr } -> {} {
     mov_popq_popq vector, arg0;
     ret;
 }
 
-function main { i64, ptr_argv } -> i64 {
+function main { i64, ptr_argv } -> { i64 } {
 	init_pany_type vector_ptr_1, opaque_ptr;
 	mov_popq_popq vector_ptr_1, vector;
 	init_pany_type val_1, i64;

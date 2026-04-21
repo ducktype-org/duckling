@@ -1,6 +1,6 @@
 # Tests if globals declared in other files are visible.
 
-function globaler_setter {} -> void {
+function globaler_setter {} -> {} {
 	init_pany_type  x, i64;
 	input_p64       x;
 	mov_p64_p64     counter, x;

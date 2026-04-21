@@ -31,7 +31,7 @@ namespace compiler::repl {
 
 		return ScriptExecutableCall{
 			.function_name    = std::string(wrapper_func_name),
-			.result_type_name = function.signature.result_type.str,
+			.result_type_name = function.signature.result_types.at(0).str,
 		};
 	}
 
@@ -44,8 +44,8 @@ namespace compiler::repl {
 		// -> runFunction("main", ...), so scripts must synthesize a callable "main" entry.
 		// The bytecode validator also enforces that "main" returns i64.
 		Function script_main;
-		script_main.name                  = Identifier(base::StrID("main"));
-		script_main.signature.result_type = Identifier(base::StrID("i64"));
+		script_main.name                   = Identifier(base::StrID("main"));
+		script_main.signature.result_types = { Identifier(base::StrID("i64")) };
 
 		for (usize i = 0; i < calls.size(); ++i) {
 			const auto& call = calls[i];
@@ -71,7 +71,7 @@ namespace compiler::repl {
 
 		// In lowered DVM code, function returns are written to a dedicated local named ret_val
 		script_main.body.emplace_back(
-			Op_mov_p64_imm(opargs::Place64(base::StrID("ret_val")), opargs::Immediate(0))
+			Op_mov_p64_imm(opargs::Place64(base::StrID("ret0")), opargs::Immediate(0))
 		);
 		script_main.body.emplace_back(Op_ret());
 

@@ -90,15 +90,7 @@ namespace vm {
 	// within the function, but we have to add some instructions on the outside of it. Hence we use
 	// the `OP_CASE_END` macro that adds `goto End` instruction, residing after opcode function,
 	// inside interpreter loop.
-	RETURN_TYPE OpFuns::OPCODE_NAME(exit)(FUNCTION_ARGS) {
-		{
-			CORE_ASSERT(
-				frame->local_block_ref_stack_end - frame->local_block_ref_stack_base == 1,
-				"Invalid start function."
-			);
-		}
-		IF_TC(return;)
-	}
+	RETURN_TYPE OpFuns::OPCODE_NAME(exit)(FUNCTION_ARGS) { IF_TC(return;) }
 
 #define DEFINE_MOVE_OPS(BITS_SIZE, TYPE)                                                       \
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_p##BITS_SIZE##_imm)(FUNCTION_ARGS) {                   \
@@ -373,12 +365,17 @@ namespace vm {
 				args.push_back(thread.safe_process.createOwnedVmValue(real_type, Pointer(block, 0)));
 			}
 
+			std::vector<TypeCRef> result_types = {};
+			auto                  ret_count    = function_signature->result_types.size();
+			result_types.reserve(ret_count);
+			for (u64 i = 0; i < ret_count; i++) {
+				result_types.emplace_back(
+					thread.process_program->getTypes().at(function_signature->result_types[i])
+				);
+			}
+
 			base::Optional<Box<VmValue>> return_value = builtins::callBuiltinFunction(
-				builtin_id,
-				thread.process_program->getTypes().at(function_signature->result_type),
-				thread.safe_process,
-				thread,
-				args
+				builtin_id, result_types, thread.safe_process, thread, args
 			);
 
 			if (return_value.has_value()) {
@@ -403,7 +400,10 @@ namespace vm {
 			auto ext_func = safeReadObjectBytes<CRef<low::LowExternCFunction>>(instr->arg0);
 
 			auto arg_count = ext_func->parameters.size();
-			bool is_void   = ext_func->result_type->getName() == "void";
+			bool is_void   = ext_func->result_types.size() == 0;
+			CORE_ASSERT(
+				ext_func->result_types.size() <= 1, "C function cannot return more than 1 type"
+			);
 
 			if (arg_count == 0 && is_void) {
 				// Special case: void function with no arguments.
@@ -432,7 +432,8 @@ namespace vm {
 				// Prepare arguments and call the function.
 				byte* result_pointer = result_view.getBegin();
 				byte* args_pointer
-					= result_pointer + (is_void ? 0 : ext_func->result_type->getSize().asInt());
+					= result_pointer
+				    + (is_void ? 0 : ext_func->result_types.at(0)->getSize().asInt());
 
 				ext_func->function_pointer(result_pointer, args_pointer);
 
@@ -491,8 +492,8 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(ret)(FUNCTION_ARGS) {
 		{
 			// Frame of the function we're returning from.
-			auto*      callee_frame = frame;
-			const bool void_func    = frame->current_function->result_type->getName() == "void";
+			auto* callee_frame = frame;
+			u64   ret_count    = frame->current_function->result_types.size();
 
 			// We have to update values passed in arguments.
 			// Old `instr` and `local_stack` are stored on the previous frame.
@@ -510,9 +511,9 @@ namespace vm {
                     - callee_frame->local_block_ref_stack_base
                 );
 
-				// We're returning from a non-void function, so the last block on the stack is the
-				// return value. It's being used by the caller so we don't free it.
-				if (void_func || block_ref_count != 1) {
+				// We're returning from a non-void function, so the last `ret_count` blocks on the
+				// stack are the return values. They are being used by the caller so we don't free them.
+				if (block_ref_count > ret_count) {
 					thread.process_memory.freeBlockData(block);
 					thread.process_memory.decreaseBlockRefcount(block);
 				}
