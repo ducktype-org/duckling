@@ -2,7 +2,9 @@
 
 #include "base/collections/optional.hpp"
 #include "base/except/exceptions.hpp"
+#include "base/types/ints.hpp"
 #include <base/collections/maps.hpp>
+#include <base/extend_cpp/defer.hpp>
 #include <base/extend_cpp/strongly_typed_int.hpp>
 
 #include <vm/utils/bijective_map.hpp>
@@ -32,30 +34,24 @@ namespace vm::persistent::detail {
 				(pos << height) & ROOT_MASK,
 			};
 		}
-
 		if_opt_some(leaf_entries.atRightOpt(state), val) {
 			return {
 				0UL,
 				val.idx,
 			};
 		}
-
 		CORE_UNREACHABLE();
 	}
 
 	usize Memory::getSize(MemoryStateID state) const {
 		if_opt_some(root_info.atMaybeCopy(state), entry) { return entry.size; }
-
 		if_opt_some(leaf_entries.atRightOpt(state), _) { return 1UL; }
-
 		CORE_UNREACHABLE();
 	}
 
 	usize Memory::getPos(MemoryStateID state) const {
 		if_opt_some(root_info.atMaybeCopy(state), entry) { return entry.position; }
-
 		if_opt_some(leaf_entries.atRightOpt(state), entry) { return LEAF_MASK | entry.idx; }
-
 		CORE_UNREACHABLE();
 	}
 
@@ -63,15 +59,12 @@ namespace vm::persistent::detail {
 		if_opt_some(root_info.atMaybeCopy(state), entry) {
 			return { entry.left_bound, entry.right_bound };
 		}
-
 		if_opt_some(leaf_entries.atRightOpt(state), entry) { return { entry.idx, entry.idx + 1 }; }
-
 		CORE_UNREACHABLE();
 	}
 
 	usize Memory::getValue(MemoryStateID leaf) const {
 		if_opt_some(leaf_entries.atRightOpt(leaf), entry) { return entry.value; }
-
 		CORE_UNREACHABLE();
 	}
 
@@ -81,49 +74,32 @@ namespace vm::persistent::detail {
 
 		auto size             = getSize(root);
 		auto [height, offset] = getHeightOffset(root);
-
 		CORE_ASSERT(size <= (1 << height), "root's size is too large");
-		CORE_ASSERT(height >= 64 || offset % (1 << height) == 0, "offset is not on multiple of 2^k");
 	}
 
 	MemoryStateID Memory::nodeFromChildren(MemoryStateID left, MemoryStateID right) {
-		auto pos_left  = getPos(left);
-		auto pos_right = getPos(right);
-
+		auto pos_left = getPos(left), pos_right = getPos(right);
 		CORE_ASSERT(pos_right != 1 && pos_left != 1, "top node cannot be ever passed");
-
-		auto children       = ChildEntry{ .left_child = left, .right_child = right };
-		auto [is_new, node] = child_entries.emplaceByLeft(children, next_node_id);
-
-		if (!is_new) return node;
-
-		pos_left &= ROOT_MASK;
-		pos_right &= ROOT_MASK;
-
-		auto size_left  = getSize(left);
-		auto size_right = getSize(right);
-
 		CORE_ASSERT(
 			(pos_left >> 1) == (pos_right >> 1) || left == EMPTY || right == EMPTY,
 			"Children are of different hights"
 		);
 
-		auto new_pos  = (pos_left | pos_right) >> 1;
-		auto new_size = size_left + size_right;
+		auto children       = ChildEntry{ .left_child = left, .right_child = right };
+		auto [is_new, node] = child_entries.emplaceByLeft(children, next_node_id);
 
-		auto [new_left, _1]  = getRange(left);
-		auto [_2, new_right] = getRange(right);
-
-		root_info.emplace(
-			node,
-			RootEntry{
-				.size        = new_size,
-				.position    = new_pos,
-				.left_bound  = new_left,
-				.right_bound = new_right,
-			}
-		);
-		next_node_id++;
+		if (is_new) {
+			root_info.emplace(
+				node,
+				RootEntry{
+					.size        = getSize(left) + getSize(right),
+					.position    = (pos_left | pos_right) >> 1,
+					.left_bound  = getRange(left).first,
+					.right_bound = getRange(right).second,
+				}
+			);
+			next_node_id++;
+		}
 
 		return node;
 	}
@@ -135,7 +111,6 @@ namespace vm::persistent::detail {
 		};
 
 		auto [is_new, node] = leaf_entries.emplaceByLeft(leaf_entry, next_node_id);
-
 		if (is_new) next_node_id++;
 
 		return node;
@@ -150,7 +125,6 @@ namespace vm::persistent::detail {
 		CORE_ASSERT(
 			leaf_entries.atRightOpt(root).has_value(), "if not a root, node, has to be a leaf"
 		);
-
 		return EMPTY;
 	}
 
@@ -161,18 +135,16 @@ namespace vm::persistent::detail {
 		std::ranges::sort(idxs);
 		Path iter = getPathTo(root, idxs.front());
 
-		bool          found_different = false;
-		MemoryStateID curr_leaf       = EMPTY;
-		usize         curr_idx        = 0;
-
-		MemoryStateID prev_leaf = EMPTY;
-		usize         prev_idx  = idxs.front();
+		bool  found_diff = false;
+		auto  curr_leaf = EMPTY, prev_leaf = EMPTY;
+		usize curr_idx = 0, prev_idx = idxs.front();
 
 		auto takeUntilDiffefent = [&](std::deque<usize>& dq) {
 			usize last_idx = prev_idx;
 			for (; dq.size(); dq.pop_front()) {
 				curr_idx = dq.front();
 				iter.moveBy(curr_idx - last_idx);
+				CORE_ASSERT(iter.trace.size(), "trace must be non-empty");
 				auto old_leaf = iter.trace.at(0);
 				auto new_leaf = constructor(curr_idx, getValue(old_leaf));
 				if (new_leaf != old_leaf) {
@@ -181,11 +153,11 @@ namespace vm::persistent::detail {
 				}
 				last_idx = curr_idx;
 			}
-			CORE_ASSERT(found_different || dq.empty(), "when we didn't find anything dq is empty");
+			CORE_ASSERT(found_diff || dq.empty(), "when we didn't find anything dq is empty");
 		};
 
 		takeUntilDiffefent(idxs);
-		if (!found_different) return root;
+		if (!found_diff) return root;
 		prev_leaf = curr_leaf;
 		prev_idx  = idxs.front();
 		idxs.pop_front();
@@ -210,24 +182,21 @@ namespace vm::persistent::detail {
 
 				usize mask = (1 << i);
 				if (iter.idx & mask)
-					on_left[i] = state;
+					on_left[i] = getChild(Dir::Left, state);
 				else
-					on_right[i] = state;
+					on_right[i] = getChild(Dir::Right, state);
 			}
 		};
 
 		extendNeighs(iter.trace.size());
 		reconstructLocalNeighs(iter.trace.size());
 
-		std::deque<usize> before = {}, in = {}, after = {};
+		std::deque<usize> before = {}, after = {};
 		auto [root_offset, root_height] = getHeightOffset(root);
 
-		for (; idxs.size() && idxs.front() < root_offset; idxs.pop_front())
-			before.emplace_back(idxs.front());
 		for (; idxs.size() && idxs.front() < root_offset + (1 << root_height); idxs.pop_front())
-			in.emplace_back(idxs.front());
+			before.emplace_back(idxs.front());
 		for (; idxs.size(); idxs.pop_front()) after.emplace_back(idxs.front());
-
 
 		auto elevateNode
 			= [&](MemoryStateID node, usize idx, usize height, usize start_height = 0) {
@@ -245,9 +214,9 @@ namespace vm::persistent::detail {
 			  };
 
 		auto updateNextDiff = [&](std::deque<usize>& dq) {
-			found_different = false;
+			found_diff = false;
 			takeUntilDiffefent(dq);
-			if (!found_different) return;
+			if (!found_diff) return;
 
 			auto new_idx = dq.front();
 			dq.pop_front();
@@ -266,14 +235,17 @@ namespace vm::persistent::detail {
 		};
 
 		processQueue(before);
-		processQueue(in);
 
 		if (!root && prev_idx < root_offset) {
 			updateNextDiff(after);
 
-			if (found_different) {
+			if (found_diff) {
 				usize height = getLCAHeight(root_offset, prev_idx);
 				CORE_ASSERT(root_height < height, "We need to go outsude current scope");
+				CORE_ASSERT(
+					on_left.size() == on_right.size() && on_left.size() <= height,
+					"we neet to have high enough neighs"
+				);
 				for (usize i = root_height; i < height; i++)
 					CORE_ASSERT(
 						on_left[i] == EMPTY && on_right[i] == EMPTY,
@@ -285,13 +257,73 @@ namespace vm::persistent::detail {
 
 		processQueue(after);
 
-		CORE_ASSERT(on_left.size() == on_right.size(), "when is ");
 		while (on_left.size() && !on_left.back() && !on_right.back()) {
 			on_left.pop_back();
 			on_right.pop_back();
 		}
 
 		return elevateNode(prev_leaf, prev_idx, on_left.size());
+	}
+
+	MemoryStateID Memory::rebuildFromTwo(
+		MemoryStateID root_1, MemoryStateID root_2, MergeBuilder merge_policy
+	) {
+		auto [height_1, offset_1] = getHeightOffset(root_1);
+		auto [height_2, offset_2] = getHeightOffset(root_2);
+
+		bool change = (height_1 < height_2);
+
+		if (change) {
+			std::swap(
+				std::tie(height_1, offset_1, root_1, merge_policy.only_1),
+				std::tie(height_2, offset_2, root_2, merge_policy.only_2)
+			);
+			merge_policy.confilicts = [&](usize idx, usize val_1, usize val_2) {
+				return merge_policy.confilicts(idx, val_2, val_1);
+			};
+		}
+
+		auto detailMerge = [&, mem = this](
+							   this auto&& self, MemoryStateID node_1, MemoryStateID node_2
+						   ) -> MemoryStateID {
+			CORE_ASSERT(
+				mem->getPos(node_1) == mem->getPos(node_2) || !node_1 || !node_2,
+				"both nodes are responsible for the same memory region"
+			);
+
+			if (node_1 == node_2) return merge_policy.the_same(node_1);
+			if (!node_1) return merge_policy.only_2(node_2);
+			if (!node_2) return merge_policy.only_1(node_1);
+
+			if_opt_some(mem->leaf_entries.atRightOpt(node_1), leaf_entry1) {
+				auto maybe_entry2 = mem->leaf_entries.atRightOpt(node_2);
+				CORE_ASSERT(maybe_entry2.has_value(), "both must be leaves");
+				auto leaf_entry2    = *maybe_entry2;
+				auto [idx_1, val_1] = leaf_entry1;
+				auto [idx_2, val_2] = leaf_entry2;
+				CORE_ASSERT(idx_1 == idx_2, "leaves must be of the same index");
+				CORE_ASSERT(
+					val_1 != val_2, "if values were the same, we would handle this in diff edgecase"
+				);
+
+				return merge_policy.confilicts(idx_1, val_1, val_2);
+			}
+
+			CORE_ASSERT(
+				!mem->leaf_entries.atRightOpt(node_1).has_value(), "both nodes must be leaves or not"
+			);
+			CORE_ASSERT(
+				mem->child_entries.atRightOpt(node_1).has_value()
+					&& mem->child_entries.atRightOpt(node_2).has_value(),
+				"both nodes need to have children"
+			);
+			auto [left_1, right_1] = mem->child_entries.atRight(node_1);
+			auto [left_2, right_2] = mem->child_entries.atRight(node_2);
+
+			return mem->nodeFromChildren(self(left_1, left_2), self(right_1, right_2));
+		};
+
+		return EMPTY;
 	}
 
 	usize Memory::getLCAHeight(usize idx_1, usize idx_2) {
@@ -316,30 +348,25 @@ namespace vm::persistent::detail {
 	Memory::Path Memory::getPathTo(MemoryStateID root, usize idx) const {
 		auto [height, offset] = getHeightOffset(root);
 
-		CORE_ASSERT(idx >= offset && idx < offset + (1 << height), "The idx was out of bounds!");
+		std::deque<MemoryStateID> trace = { root };
 
 		if (idx < offset || idx >= offset + (1 << height))
-			return Path{
-				.idx   = idx,
-				.trace = {},
-				.mem   = this,
-				.root  = root,
-			};
+			trace = { EMPTY };
+		else {
+			MemoryStateID node = root;
+			usize         mask = (1 << height);
 
-		std::deque<MemoryStateID> ans  = { root };
-		MemoryStateID             node = root;
-		usize                     mask = (1 << height);
-
-		for (usize i = 0; i < height; i++) {
-			mask >>= 1;
-			Dir dir = (idx & mask) ? Dir::Right : Dir::Left;
-			node    = getChild(dir, node);
-			ans.emplace_front(node);
+			for (usize i = 0; i < height; i++) {
+				mask >>= 1;
+				Dir dir = (idx & mask) ? Dir::Right : Dir::Left;
+				node    = getChild(dir, node);
+				trace.emplace_front(node);
+			}
 		}
 
 		return Path{
 			.idx   = idx,
-			.trace = ans,
+			.trace = trace,
 			.mem   = this,
 			.root  = root,
 		};
@@ -355,19 +382,14 @@ namespace vm::persistent::detail {
 		);
 
 		if (end_dir == Dir::Left) return getPathTo(root, l);
-
 		if (end_dir == Dir::Right) return getPathTo(root, r - 1);
-
 		CORE_UNREACHABLE();
 	}
 
 	bool Memory::Path::moveToValid(Dir move_dir, usize skip) {
 		CORE_ASSERT(trace.size(), "there must be a leaf on the path");
 
-		const auto orig_path_size = trace.size();
-		const auto orig_idx       = idx;
-		usize      mask           = 1;
-
+		usize mask = 1;
 		trace.pop_front();
 
 		for (; trace.size(); trace.pop_front(), mask <<= 1) {
@@ -390,13 +412,13 @@ namespace vm::persistent::detail {
 		while (mask > 0) {
 			Dir dir = (idx & mask) ? Dir::Right : Dir::Left;
 
-			MemoryStateID son = mem->getChild(dir, trace.front());
+			auto son = mem->getChild(dir, trace.front());
 			trace.emplace_front(son);
 
 			mask >>= 1;
 			CORE_ASSERT((idx & mask) == 0, "Trailing bits should be off");
 
-			MemoryStateID grandchild = mem->getChild(othDir(move_dir), son);
+			auto grandchild = mem->getChild(othDir(move_dir), son);
 			if (usize size = mem->getSize(grandchild); size <= skip) {
 				skip -= size;
 				grandchild = mem->getChild(move_dir, son);
@@ -408,9 +430,6 @@ namespace vm::persistent::detail {
 				"the only case when grandchild is empty id for last iteeration"
 			);
 		}
-
-		CORE_ASSERT(trace.size() == orig_path_size, "path should remain the same length");
-		CORE_ASSERT(idx > orig_idx, "idx should increas");
 
 		return true;
 	}
@@ -473,8 +492,8 @@ namespace vm::persistent::detail {
 				states.pop_front();
 
 				usize         next_idx = idx_first / 2;
-				MemoryStateID left     = (idx_first % 2) ? EMPTY : state_first;
-				MemoryStateID right    = (idx_first % 2) ? state_first : EMPTY;
+				auto left     = (idx_first % 2) ? EMPTY : state_first;
+				auto right    = (idx_first % 2) ? state_first : EMPTY;
 
 				if (!states.size() || (idx_first % 2) == 1) {
 					next_layer.emplace_back(next_idx, nodeFromChildren(left, right));
@@ -507,8 +526,8 @@ namespace vm::persistent::detail {
 		CORE_ASSERT(root, "paranoid assert - EMPTY should fail on first assertion");
 
 		for (; curr_height < height; curr_height++) {
-			MemoryStateID right = (offset & (1 << height)) ? root : EMPTY;
-			MemoryStateID left  = (offset & (1 << height)) ? EMPTY : root;
+			auto right = (offset & (1 << height)) ? root : EMPTY;
+			auto left  = (offset & (1 << height)) ? EMPTY : root;
 
 			root = nodeFromChildren(left, right);
 		}
@@ -524,9 +543,7 @@ namespace vm::persistent::detail {
 		CORE_ASSERT(new_height < height, "new heihgt is a valid idx for the paths");
 
 		MemoryStateID common = path_1.trace.at(new_height);
-
 		CORE_ASSERT(common == path_2.trace.at(new_height), "the element must be common");
-
 		CORE_ASSERT(
 			new_height == 0 || (path_1.trace.at(new_height - 1) != path_2.trace.at(new_height - 1)),
 			"paths diverge"
@@ -574,75 +591,17 @@ namespace vm::persistent::detail {
 			if (vals[i].first == vals[i + 1].first)
 				throw std::invalid_argument("repeating idx at vals to set");
 
-		if (root == EMPTY) {
-			std::deque<std::pair<usize, MemoryStateID>> all = {};
-			for (auto [idx, var_id]: vals) all.emplace_back(idx, nodeFromIdxVar(idx, var_id));
-			return buildCommonRoot(all);
-		}
+		std::deque<usize> idxs = {};
 
-		usize orig_offset = root_offset >> root_height;
+		for (auto [idx, val]: vals) idxs.emplace_back(idx);
 
-		auto getGroup = [&](usize offset_prefix) {
-			std::deque<std::pair<usize, MemoryStateID>> group = {};
-			for (auto [idx, var_id]: vals)
-				if (idx >> root_height == offset_prefix)
-					group.emplace_back(idx, nodeFromIdxVar(idx, var_id));
-				else
-					break;
-
-			for (usize i = 0; i < group.size(); i++) vals.pop_front();
-
-			return group;
-		};
-
-		std::deque<std::pair<usize, MemoryStateID>> to_merge = {};
-
-		while (vals.size()) {
-			usize curr_offset = (vals.front().first >> root_height);
-			if (curr_offset >= orig_offset) break;
-
-			to_merge.emplace_back(curr_offset, buildCommonRoot(getGroup(curr_offset)));
-		}
-
-		auto in_bounds = getGroup(orig_offset);
-
-		auto lambda = [&, mem = this](this auto&& self, MemoryStateID state) -> MemoryStateID {
-			auto [height, offset] = mem->getHeightOffset(state);
-			CORE_ASSERT(height == root_height && root_offset == offset, "sth went terribly wrong");
-
-			while (in_bounds.size() && in_bounds.front().first < offset) in_bounds.pop_front();
-
-			if (!in_bounds.size()) return state;
-			if (in_bounds.front().first >= offset + (1 << height)) return state;
-
-			if (height == 0) {
-				auto [idx, maybe_leaf] = in_bounds.front();
-				CORE_ASSERT(idx == offset, "Deduction has failed me, dear Watson");
-				return maybe_leaf;
-			}
-
-			auto [left, right] = mem->child_entries.atRight(state);
-			left               = self(left);
-			right              = self(right);
-
-			CORE_ASSERT(left || right, "One path down is required");
-			return mem->nodeFromChildren(left, right);
-		};
-
-		to_merge.emplace_back(orig_offset, lambda(root));
-
-		while (vals.size()) {
-			usize curr_offset = (vals.front().first >> root_height);
-			to_merge.emplace_back(curr_offset, buildCommonRoot(getGroup(curr_offset)));
-		}
-
-		for (auto& [idx, state]: to_merge) {
-			auto [height, offset] = getHeightOffset(state);
-			CORE_ASSERT(height <= root_height, "We should never go past the hight of original");
-			state = elevateRoot(state, root_height);
-		}
-
-		return buildCommonRoot(to_merge);
+		return reconstructIdxs(root, idxs, LeafBuilder{ [&](usize idx, base::Optional<usize>) {
+								   CORE_ASSERT(vals.size(), "vals cannot suddenly get empty");
+								   auto [_idx, val] = vals.front();
+								   vals.pop_front();
+								   CORE_ASSERT(_idx == idx, "sth got weird at reconstruction level");
+								   return nodeFromIdxVar(idx, val);
+							   } });
 	}
 
 	MemoryStateID Memory::eraseMultiple(MemoryStateID root, std::deque<usize> idxs) {
@@ -653,51 +612,14 @@ namespace vm::persistent::detail {
 
 		std::ranges::sort(idxs);
 
-		auto path_left  = getEndPath(Dir::Left, root);
-		auto path_right = getEndPath(Dir::Right, root);
+		auto [left, right] = getRange(root);
 
-		CORE_ASSERT(
-			path_left.trace.size() == path_right.trace.size()
-				&& path_left.trace.size() == root_height && path_left.idx <= path_right.idx,
-			"This should always be the case"
-		);
+		for (; !idxs.empty() && idxs.front() < left; idxs.pop_front());
+		for (; !idxs.empty() && idxs.back() >= right; idxs.pop_back());
 
-		for (; !idxs.empty() && idxs.front() < path_left.idx; idxs.pop_front());
-		for (; !idxs.empty() && idxs.back() > path_right.idx; idxs.pop_back());
-
-		auto work_copy = idxs;
-
-		for (; !work_copy.empty() && work_copy.front() == path_left.idx; work_copy.pop_front())
-			if (!path_left.moveToValid(Dir::Right)) return EMPTY;
-
-		for (; !work_copy.empty() && work_copy.back() == path_right.idx; work_copy.pop_back())
-			CORE_ASSERT(
-				!path_right.moveToValid(Dir::Left), "there must be at least one el oustide of idxs"
-			);
-
-		auto [common, _] = getLCA(path_left, path_right);
-
-		auto lambda = [&, mem = this](this auto&& self, MemoryStateID state) -> MemoryStateID {
-			auto [height, offset] = mem->getHeightOffset(state);
-
-			while (!idxs.empty() && idxs.front() < offset) idxs.pop_front();
-
-			if (idxs.empty()) return state;
-			if (idxs.front() >= offset + (1 << height)) return state;
-			if (height == 0) return EMPTY;
-
-			if_opt_some(mem->child_entries.atRightOpt(state), children) {
-				auto [left, right] = children;
-				left               = self(left);
-				right              = self(right);
-
-				return mem->nodeFromChildren(left, right);
-			}
-
-			CORE_UNREACHABLE();
-		};
-
-		return lambda(common);
+		return reconstructIdxs(root, idxs, LeafBuilder{ [&](usize, base::Optional<usize>) {
+								   return EMPTY;
+							   } });
 	}
 
 	void Memory::pruneHistory(std::vector<MemoryStateID> desired) {
@@ -948,14 +870,7 @@ namespace vm::persistent::detail {
 
 						CORE_ASSERT(idx_1 == idx_2, "leaves must be of the same index");
 
-						auto ans = policy(idx_1, val_1, val_2);
-
-						match_optional(ans) {
-							opt_some(val) { return mem->nodeFromIdxVar(idx_1, val); }
-							opt_none { return EMPTY; }
-						}
-
-						CORE_UNREACHABLE();
+						return policy(idx_1, val_1, val_2);
 					}
 
 					CORE_UNREACHABLE();

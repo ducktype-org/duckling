@@ -106,7 +106,7 @@ namespace vm::persistent::detail {
 			void moveBy(usize step);
 		};
 
-		using _ConflictPolicy = std::function<base::Optional<usize>(usize, usize, usize)>;
+		using _ConflictPolicy = std::function<MemoryStateID(usize, usize, usize)>;
 
 		detail::BijectiveMap<ChildEntry, MemoryStateID, ChildEntryH> child_entries{};
 		detail::BijectiveMap<LeafEntry, MemoryStateID, LeafEntryH>   leaf_entries{};
@@ -155,22 +155,23 @@ namespace vm::persistent::detail {
 		/**
 		 * @brief Helper struct for keeping reconstruction when merging two memory states
 		 */
-		struct ReconstructPolicy {
-			std::function<MemoryStateID(MemoryStateID)> only_left
+		struct MergeBuilder {
+			std::function<MemoryStateID(MemoryStateID)> only_1
 				= [](MemoryStateID id) -> MemoryStateID { return id; };
 
-			std::function<MemoryStateID(MemoryStateID)> only_right
+			std::function<MemoryStateID(MemoryStateID)> only_2
 				= [](MemoryStateID id) -> MemoryStateID { return id; };
 
 			std::function<MemoryStateID(MemoryStateID)> the_same
 				= [](MemoryStateID id) -> MemoryStateID { return id; };
 
-			_ConflictPolicy confilicts = [](usize, usize, usize) -> base::Optional<usize> {
+			_ConflictPolicy confilicts = [](usize, usize, usize) -> MemoryStateID {
 				throw std::invalid_argument("conflicts present");
 			};
 		};
 
-		using LeafBuilder = std::function<MemoryStateID(usize, base::Optional<usize>)>;
+		using LeafBuilder  = std::function<MemoryStateID(usize, base::Optional<usize>)>;
+		using RangeBuilder = std::function<MemoryStateID(MemoryStateID)>;
 
 		/**
 		 * @brief abstract methods which implement atomic reconstruction of  memory, either by
@@ -182,13 +183,10 @@ namespace vm::persistent::detail {
 			MemoryStateID root, std::deque<usize> idxs, LeafBuilder leaf_constructor
 		);
 		MemoryStateID rebuildFromTwo(
-			MemoryStateID root_1, MemoryStateID root_2, ReconstructPolicy reconstruction_policy
+			MemoryStateID root_1, MemoryStateID root_2, MergeBuilder merge_policy
 		);
 		MemoryStateID rebuildWithRange(
-			MemoryStateID                               root,
-			usize                                       left_idx,
-			usize                                       right_idx,
-			std::function<MemoryStateID(MemoryStateID)> rebuilder
+			MemoryStateID root, usize left_idx, usize right_idx, RangeBuilder range_constructor
 		);
 
 		/**
