@@ -59,7 +59,9 @@ base::StrID FunctionLoweringContext::getBlockLabel(lir::BlockRef block) {
 
 namespace {
 	constexpr DVMImmediate lirConstantToImmediate(
-		const compiler::lir::LIRConstant& constant, const vm::code::TypeOfData& type, bool lower_type_meta = true
+		const compiler::lir::LIRConstant& constant,
+		const vm::code::TypeOfData&       type,
+		bool                              lower_type_meta = true
 	) {
 		variant_match(constant.value.getStorage()) {
 			variant_case(compiler::numeric_value::NumericValue, numeric) {
@@ -101,7 +103,7 @@ vm::code::Function compiler::backend_vm::internal::createMiniGlobalCtorFromCTV(
 	const auto immediate = lirConstantToImmediate(global_lir_constant, lowered_global_type, false);
 
 	vm::code::Function mini_ctor;
-	mini_ctor.name                  = vm::code::Identifier(mini_ctor_name);
+	mini_ctor.name                   = vm::code::Identifier(mini_ctor_name);
 	mini_ctor.signature.result_types = { vm::code::Identifier(base::StrID("void")) };
 	mini_ctor.body.push_back(
 		vm::code::builders::InstructionBuilder(

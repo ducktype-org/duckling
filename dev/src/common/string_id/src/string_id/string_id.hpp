@@ -142,9 +142,7 @@ namespace base {
 			return !id.isBad();
 		}
 
-		auto operator<=>(const StrID& oth) const {
-			return strView() <=> oth.strView();
-		}
+		auto operator<=>(const StrID& oth) const = default;
 
 		/**
 		 * Due to the operator==(RawView) definition, implicit operator==(StrID) is deleted.

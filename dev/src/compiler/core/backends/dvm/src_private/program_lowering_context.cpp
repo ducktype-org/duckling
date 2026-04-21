@@ -278,14 +278,13 @@ vm::code::TypeOfData ProgramLoweringContext::lowerTslTypeInternal(CRef<tsl::Type
 	CORE_UNREACHABLE();
 }
 
-vm::code::CodeCollection ProgramLoweringContext::produceCodeCollection(
-) {
+vm::code::CodeCollection ProgramLoweringContext::produceCodeCollection() {
 	auto collection      = vm::code::CodeCollection();
 	collection.functions = std::ranges::to<std::vector>(lir_function_to_dvm | std::views::values);
 	collection.functions.insert(
 		collection.functions.end(), extra_bytecode_functions.begin(), extra_bytecode_functions.end()
 	);
-	
+
 	// Sort globals and functions by their mangled names to ensure deterministic output, which is
 	// important for reproducibility. This also should guarantee that the order of functions and
 	// globals in the resulting DVM module is deterministic, which can be important for debugging
@@ -309,7 +308,7 @@ vm::code::CodeCollection ProgramLoweringContext::produceCodeCollection(
 	std::ranges::sort(
 		collection.global_data,
 		[](const vm::code::GlobalData& lhs, const vm::code::GlobalData& rhs) {
-			return lhs.name.str < rhs.name.str;
+			return lhs.name.str.getInnerID() < rhs.name.str.getInnerID();
 		}
 	);
 

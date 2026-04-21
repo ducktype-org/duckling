@@ -26,11 +26,11 @@ namespace compiler::backend_vm::internal {
 	 * @TODO: #1849 Remove this
 	 */
 	vm::code::Function createMiniGlobalCtorFromCTV(
-		CRef<tsl::TypeLayout>          global_layout,
-		const vm::code::TypeOfData&    lowered_global_type,
-		const ctv::CompileTimeValue&   global_ctv_value,
-		base::StrID                    mini_ctor_name,
-		const DVMGlobal&               dvm_global
+		CRef<tsl::TypeLayout>        global_layout,
+		const vm::code::TypeOfData&  lowered_global_type,
+		const ctv::CompileTimeValue& global_ctv_value,
+		base::StrID                  mini_ctor_name,
+		const DVMGlobal&             dvm_global
 	);
 
 	class FunctionLoweringContext {
