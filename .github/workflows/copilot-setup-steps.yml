@@ -49,10 +49,10 @@ jobs:
         # Non-boolean prompts (build dir, build system, build type, compilers) are
         # bypassed by passing their CLI flags explicitly below. The three remaining
         # boolean prompts (ccache, coverage, JIT) cannot be set to `false` via flags
-        # (only `--ccache`, `--coverage`, `--enable-jit` enable them), so we pipe
-        # `yes ''` to accept their defaults (all disabled).
+        # (only `--ccache`, `--coverage`, `--enable-jit` enable them), so we provide
+        # newline answers to accept their defaults (all disabled).
         run: |
-          yes '' | python3 toolbox.py setup-build \
+          printf '\n\n\n\n\n' | python3 toolbox.py setup-build \
             -b build \
             -s Ninja \
             -t Dev \
