@@ -1,13 +1,10 @@
-expected_dap_output: "aaa"
-
 Tests:
   debug_adapter_lifecycle:
-    TimeOut: 2 
-    
+    Run: "python3 dap_runner.py"
+    TimeOut: 5 
     Cases:
       initialize_launch_disconnect:
         Input:
-          File: "dap.txt"
-        
+          String: "" 
         Output:
-          String: "@{expected_dap_output}"
+          File: "dap.out"

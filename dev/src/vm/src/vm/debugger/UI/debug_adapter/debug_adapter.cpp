@@ -27,37 +27,28 @@ DebugAdapter DebugAdapter::get(
 		}
 
 void DebugAdapter::run() {
-    std::cerr << "[DEBUG] Adapter run() started\n";
     std::string line;
-    
+
     while (std::getline(std::cin, line)) {
-        std::cerr << "[DEBUG] Read header line...\n";
-        
         if (line.starts_with(HEADER_PREFIX)) {
             int length = std::stoi(line.substr(HEADER_PREFIX.length()));
             std::getline(std::cin, line); // DAP empty line
-            
+
             std::string body(length, ' ');
             std::cin.read(&body[0], length);
-            
-            std::cerr << "[DEBUG] Parsed body. Length: " << length << "\n";
-            
+
             try {
                 nlohmann::json req = nlohmann::json::parse(body);
                 if (req.value("type", "") == "request") {
                     std::string cmd = req.value("command", "unknown");
-                    std::cerr << "[DEBUG] ---> Handling request: " << cmd << "\n";
                     
-                    handleRequest(req); // IS IT HANGING HERE?
-                    
-                    std::cerr << "[DEBUG] <--- Finished handling: " << cmd << "\n";
+                    handleRequest(req);
                 }
             } catch (const std::exception& e) {
                 std::cerr << "[DEBUG] Exception: " << e.what() << "\n";
             }
         }
     }
-    std::cerr << "[DEBUG] Adapter run() loop finished. Exiting run()...\n";
 }
 
 void DebugAdapter::handleRequest(const nlohmann::json& req) {
