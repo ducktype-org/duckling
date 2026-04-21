@@ -7,13 +7,15 @@
 //! [^flutter]: <https://pub.dev/packages/flutter_bloc>
 
 use std::collections::{BTreeMap, HashSet};
+use std::sync::RwLock;
 
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
 use itertools::Itertools;
-use std::sync::RwLock;
 use tracing::debug;
 
-use crate::{StrId, duck::util::terminal::Terminal, quackpack::util::PANIC_MESSAGE};
+use crate::StrId;
+use crate::duck::util::terminal::Terminal;
+use crate::quackpack::util::PANIC_MESSAGE;
 
 const DEFAULT_REFRESH_RATE_HZ: u8 = 20;
 

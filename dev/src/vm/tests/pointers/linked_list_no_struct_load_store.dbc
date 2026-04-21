@@ -6,62 +6,62 @@ type data: Node {
     tail: LinkedList
 }
 
-function cons { i64, LinkedList } -> LinkedList {
-    # ret_val: result
+function cons { i64, LinkedList } -> { LinkedList } {
+    # ret0: result
     # arg0: head
     # arg1: tail
 
     # using LinkedList = *Node
 
-    # ret_val = new Node()
-    alloc_lptr_type ret_val, Node;
+    # ret0 = new Node()
+    alloc_pptr_type ret0, Node;
 
-    # head_ptr = &(ret_val->head)
-    init_lany_type head_ptr, ptr_i64;
-    structLea_lptr_lptr_field head_ptr, ret_val, Node.head;
+    # head_ptr = &(ret0->head)
+    init_pany_type head_ptr, ptr_i64;
+    structLea_pptr_pptr_field head_ptr, ret0, Node.head;
 
     # *head_ptr = head
-    store_lptr_lany head_ptr, arg0;
+    store_pptr_pany head_ptr, arg0;
     deinit;  # head_ptr
 
-    # ret_val->tail = arg1
-    init_lany_type tail_ptr, LinkedListPtr;
-    structLea_lptr_lptr_field tail_ptr, ret_val, Node.tail;
+    # ret0->tail = arg1
+    init_pany_type tail_ptr, LinkedListPtr;
+    structLea_pptr_pptr_field tail_ptr, ret0, Node.tail;
 
-    store_lptr_lany tail_ptr, arg1;
+    store_pptr_pany tail_ptr, arg1;
     deinit;  # tail_ptr
 
-    # return ret_val
+    # return ret0
     ret;
 }
 
 # OPTIMISED!!!
-function tail {} -> LinkedList {
-    init_lany_type ptr_ptr_node, LinkedListPtr;
-    structLea_lptr_lptr_field ptr_ptr_node, ret_val, Node.tail;
+function tail {} -> { LinkedList } {
+    init_pany_type ptr_ptr_node, LinkedListPtr;
+    structLea_pptr_pptr_field ptr_ptr_node, ret0, Node.tail;
 
-    load_lany_lptr ret_val, ptr_ptr_node;
+    load_pany_pptr ret0, ptr_ptr_node;
 
     ret;
 }
 
-function print_list { LinkedList } -> void {
+function print_list { LinkedList } -> {} {
     # arg0: LinkedList
 
-    cmpNull_lptr arg0;
+    cmpNull_pptr arg0;
     jmpIfNot_label non_empty;
     ret;
 label non_empty;
 
-    init_lany_type curr, i64;
-    init_lany_type x_ptr, ptr_i64;
+    init_pany_type curr, i64;
+    init_pany_type x_ptr, ptr_i64;
 
     # curr = arg0->x
-    structLea_lptr_lptr_field x_ptr, arg0, Node.head;
-    load_lany_lptr curr, x_ptr;
+    structLea_pptr_pptr_field x_ptr, arg0, Node.head;
+    load_pany_pptr curr, x_ptr;
     deinit;  # x_ptr
 
-    output_l64 curr;
+    output_p64 curr;
 
     deinit;  # curr
     call_func tail;
@@ -70,55 +70,55 @@ label non_empty;
 }
 
 
-function free_list {LinkedList} -> void {
+function free_list {LinkedList} -> {} {
     # arg0: LinkedList
 
-    cmpNull_lptr arg0;
+    cmpNull_pptr arg0;
     jmpIfNot_label non_empty;
     ret;
 label non_empty;
 
-    init_lany_type next, LinkedList;
-    mov_lptr_lptr next, arg0;
+    init_pany_type next, LinkedList;
+    mov_pptr_pptr next, arg0;
     call_func tail;
 
     call_func free_list;
-    free_lptr arg0;
+    free_pptr arg0;
 
     ret;
 }
 
-function main { i64, ptr_argv } -> i64 {
+function main { i64, ptr_argv } -> { i64 } {
     # INPUT: n - list_length
     #        x1 x2 ... xn - list elements
     # OUTPUT: Inverted and concatenated elements
 
-    init_lany_type length, i64;
-    input_l64 length;
+    init_pany_type length, i64;
+    input_p64 length;
 
     # list = []  # aka NULL
-    init_lany_type list, LinkedList;
+    init_pany_type list, LinkedList;
 
 label loop_begin;
-    cmpEq_l64_imm length, 0;
+    cmpEq_p64_imm length, 0;
     jmpIf_label loop_end;
 
     # curr = input()
-    init_lany_type curr, i64;
-    input_l64 curr;
+    init_pany_type curr, i64;
+    input_p64 curr;
 
     # list = cons(curr, list)
-    init_lany_type tail, LinkedList;
-    mov_lptr_lptr tail, list;
+    init_pany_type tail, LinkedList;
+    mov_pptr_pptr tail, list;
     call_func cons;
 
-    sub_l64_imm length, 1;
+    sub_p64_imm length, 1;
 
     jmp_label loop_begin;
 label loop_end;
 
-    init_lany_type list2, LinkedList;
-    mov_lptr_lptr list2, list;
+    init_pany_type list2, LinkedList;
+    mov_pptr_pptr list2, list;
     call_func print_list;
     call_func free_list;
 

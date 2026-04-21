@@ -1,9 +1,9 @@
-function summer {} -> void {
-	init_lany_type  x, i64; # [0, 8)
-	mov_l64_imm     x, 700;
-	add_l64_imm     x, 30;
-	add_l64_imm     x, 5;
-	output_l64      x;
+function summer {} -> {} {
+	init_pany_type  x, i64; # [0, 8)
+	mov_p64_imm     x, 700;
+	add_p64_imm     x, 30;
+	add_p64_imm     x, 5;
+	output_p64      x;
 
 	deinit;
 	ret;

@@ -205,20 +205,19 @@ namespace compiler::helios::comptime_ops {
 		// follows:
 		//
 		// function comptime_set_ctx { opaque_ptr } -> void {
-		// 		mov_gopq_lopq comptime_query_ctx, arg0;
+		// 		mov_popq_popq comptime_query_ctx, arg0;
 		// 		ret;
 		// }
-		vm::code::Instruction mov_gopq_lopq = vm::code::instructions::Op_mov_gopq_lopq(
-			vm::opargs::GlobalOpq(context_global.name),
-			vm::opargs::StackLocalOpq(base::StrID("arg0"))
+		vm::code::Instruction mov_popq_popq = vm::code::instructions::Op_mov_popq_popq(
+			vm::opargs::PlaceOpq(context_global.name), vm::opargs::PlaceOpq(base::StrID("arg0"))
 		);
 		vm::code::Instruction ret = vm::code::instructions::Op_ret{};
 
 		vm::code::Function init_global_context;
 		init_global_context.name = base::StrID("comptime_set_ctx");
-		init_global_context.body = { mov_gopq_lopq, ret };
+		init_global_context.body = { mov_popq_popq, ret };
 		init_global_context.signature
-			= { .result_type = base::StrID("void"), .parameters = { base::StrID("opaque_ptr") } };
+			= { .result_types = {}, .parameters = { base::StrID("opaque_ptr") } };
 
 		return {
 			.functions            = { init_global_context },

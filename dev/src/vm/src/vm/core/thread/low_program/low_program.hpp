@@ -31,19 +31,31 @@ namespace vm::low {
 		/// The maximum count of blocks required by the function frame.
 		usize local_block_count;
 
-		usize                 arg_size;
+		usize arg_size;
+		// The total summed size of all return values.
 		usize                 ret_size;
 		std::vector<TypeCRef> parameters;
-		TypeCRef              result_type;
+		std::vector<TypeCRef> result_types;
 	};
 
 	/**
 	 * @brief Micro bytecode representation of global data.
 	 */
 	struct LowGlobalData {
-		TypeCRef                    type;
+		/// Type
+		TypeCRef type;
+
+		/// Optional constructor name.
 		base::Optional<base::StrID> ctor_name;
+
+		/// Optional destructor name.
 		base::Optional<base::StrID> dtor_name;
+
+		/// The offset of the global variable's data in the global buffer.
+		usize global_buffer_offset;
+
+		/// The index of the global block ref in the global block array.
+		usize global_block_idx;
 	};
 
 	/**
@@ -54,7 +66,7 @@ namespace vm::low {
 		void (*function_pointer)(std::byte*, std::byte*) = nullptr;
 		usize                 parameter_size_sum;
 		std::vector<TypeCRef> parameters;
-		TypeCRef              result_type;
+		std::vector<TypeCRef> result_types;
 	};
 
 	class ILowVMProgram {
@@ -77,6 +89,24 @@ namespace vm::low {
 
 		[[nodiscard]]
 		virtual const base::HashMap<u64, base::StrID>& getMethodNamePool() const
+			= 0;
+
+		/**
+		 * @brief Helper structure with the configuration for the global buffer in the program.
+		 * Global buffer is the contiguous memory area where the data of global variables is stored.
+		 *
+		 * Used mainly by the VMProcess to determine the amount of memory to allocate for the globals.
+		 */
+		struct GlobalBufferConfig {
+			Bytes buffer_size;   /// The sum of sizes of all the global variables in the program.
+			usize global_count;  /// The count of global variables in the program
+		};
+
+		/**
+		 * @brief Get the global buffer configuration.
+		 */
+		[[nodiscard]]
+		virtual GlobalBufferConfig getGlobalBufferConfig() const
 			= 0;
 
 		virtual ~ILowVMProgram() = default;
@@ -116,12 +146,19 @@ namespace vm::low {
 			return method_name_pool;
 		}
 
+		GlobalBufferConfig getGlobalBufferConfig() const override {
+			return { .buffer_size = global_buffer_size, .global_count = global_count };
+		}
+
 	private:
 		LowVMProgram()                                  = default;
 		Box<TypeMetadata>                         types = makeBox<TypeMetadata>();
 		ObjIdNameMap<LowFuncData, usize>          functions{};
 		StableObjIdNameMap<LowExternCFunction>    extern_c_functions{};
 		ObjIdNameMap<LowGlobalData, GlobalDataID> global_data{};
+		Bytes                                     global_buffer_size = Bytes(0);
+		usize                                     global_count       = 0;
+
 		// Contains all method names in the program. It's used by the executor to determine the
 		// names of called functions.
 		base::HashMap<u64, base::StrID> method_name_pool{};
@@ -158,6 +195,10 @@ namespace vm::low {
 
 		const base::HashMap<u64, base::StrID>& getMethodNamePool() const override {
 			return original_program->getMethodNamePool();
+		}
+
+		GlobalBufferConfig getGlobalBufferConfig() const override {
+			return original_program->getGlobalBufferConfig();
 		}
 
 		CRef<LowVMProgram> getOriginalProgram() const { return original_program; }

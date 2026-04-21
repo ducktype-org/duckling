@@ -1,11 +1,11 @@
-function main { i64, ptr_argv } -> i64 {
-	# ret_val -> main ret_val
+function main { i64, ptr_argv } -> { i64 } {
+	# ret0 -> main ret0
 	# arg0 -> argc
 	# arg1 -> *argv
 
 	jmp_label  After;
 
-	init_lany_type  x, i64;
+	init_pany_type  x, i64;
 	deinit; # x
 
 	label           After;

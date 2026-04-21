@@ -1,32 +1,28 @@
-use std::{
-    ffi::{OsStr, OsString},
-    path::Path,
-};
+use std::ffi::{OsStr, OsString};
+use std::path::Path;
 
 use clap::ArgMatches;
+use tracing::debug;
 
-use crate::{
-    DuckContext, QuackResult, QuackResultContext, qp_bail_internal,
-    quackpack::core::{
-        AllowGlobalPackage, PackageLoader,
-        storage::{
-            StorageSyncOptions, sync,
-            venv_id::{ToVenvId, VenvId},
-        },
-    },
-};
+use crate::quackpack::core::compile::duckc::{ArtifactsDir, CompilationType};
+use crate::quackpack::core::compile::profiles::{DEFAULT_SCRIPT_PROFILE_NAME, Profile};
+use crate::quackpack::core::compile::{self, BuildContext};
+use crate::quackpack::core::storage::venv_id::{ToVenvId, VenvId};
+use crate::quackpack::core::storage::{StorageSyncOptions, sync};
+use crate::quackpack::core::{AllowGlobalPackage, PackageLoader, run};
+use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail_internal};
 
 pub struct RunScriptOptions<'duck> {
     /// Current [`DuckContext`].
     pub ctx: &'duck DuckContext,
-    /// Name of the script to run.
-    pub script_name: &'duck OsStr,
-    /// Path to the folder where the script is located.
-    pub folder_path: &'duck Path,
+    /// Path the script to run.
+    pub path: &'duck Path,
     /// Optional name of the venv to run the script in.
     pub venv_id: Option<VenvId>,
     /// Force the script to be run in the global venv.
     pub global: bool,
+    /// Profile to run the script in.
+    pub profile: StrId,
     /// Artefact from [`StorageSyncOptions`].
     pub overwrite: bool,
     /// Artefact from [`StorageSyncOptions`].
@@ -44,23 +40,23 @@ impl<'duck> RunScriptOptions<'duck> {
         path: &'duck Path,
         matches: &ArgMatches,
     ) -> QuackResult<Self> {
-        let script_name = path
-            .file_name()
-            .context_internal("we assured that the path points to a file")?;
-        let folder_path = path
-            .parent()
-            .context_internal("we assured that the path points to a file")?;
         let venv_id = matches.get_one::<String>("venv").map(ToVenvId::to_venv_id);
+        let profile = matches
+            .get_one::<String>("profile")
+            .map(String::as_str)
+            .unwrap_or(DEFAULT_SCRIPT_PROFILE_NAME)
+            .into();
         let args: Vec<OsString> = matches
             .get_many::<OsString>("args")
             .map(|values| values.cloned().collect())
             .unwrap_or_default();
+        debug!(?args);
         Ok(Self {
             ctx,
-            script_name,
-            folder_path,
+            path,
             venv_id,
             global: matches.get_flag("global"),
+            profile,
             overwrite: matches.get_flag("overwrite"),
             frozen: matches.get_flag("frozen"),
             strict_errors: matches.get_flag("external-errors"),
@@ -75,18 +71,14 @@ impl<'duck> RunScriptOptions<'duck> {
         path: &'duck Path,
         args: Vec<OsString>,
     ) -> QuackResult<Self> {
-        let script_name = path
-            .file_name()
-            .context_internal("we assured that the path points to a file")?;
-        let folder_path = path
-            .parent()
-            .context_internal("we assured that the path points to a file")?;
+        let profile = DEFAULT_SCRIPT_PROFILE_NAME.into();
+        debug!(?args);
         Ok(Self {
             ctx,
-            script_name,
-            folder_path,
+            path,
             venv_id: None,
             global: false,
+            profile,
             overwrite: false,
             frozen: false,
             strict_errors: false,
@@ -97,30 +89,79 @@ impl<'duck> RunScriptOptions<'duck> {
 
 /// Run script given options.
 pub fn run_script<'duck>(rs_options: RunScriptOptions<'duck>) -> QuackResult<()> {
-    let package = match rs_options.venv_id {
+    let RunScriptOptions {
+        ctx,
+        path,
+        venv_id,
+        global,
+        profile,
+        overwrite,
+        frozen,
+        strict_errors,
+        args,
+    } = rs_options;
+    let script_name = path
+        .file_name()
+        .context_internal("we assured that the path points to a file")?;
+    let folder_path = path
+        .parent()
+        .context_internal("we assured that the path points to a file")?;
+    let package = match venv_id {
         Some(venv_id) => {
-            debug_assert!(!rs_options.global, "should be guarded by the parser");
-            PackageLoader::find_venv_by_name(rs_options.ctx, venv_id)?
+            debug_assert!(!global, "should be guarded by the parser");
+            PackageLoader::find_venv_by_name(ctx, venv_id)?
         }
         None => {
-            if rs_options.global {
-                PackageLoader::global_package(rs_options.ctx)?
+            if global {
+                PackageLoader::global_package(ctx)?
             } else {
-                PackageLoader::find_from_directory(
-                    rs_options.folder_path,
-                    rs_options.ctx,
-                    AllowGlobalPackage::Yes,
-                )?
+                PackageLoader::find_from_directory(folder_path, ctx, AllowGlobalPackage::Yes)?
             }
         }
     };
-    let (_lock, _venv, _storage) = sync(
+    let (lock, venv, storage) = sync(
         &package,
         StorageSyncOptions {
-            overwrite: rs_options.overwrite,
-            frozen: rs_options.frozen,
-            strict_errors: rs_options.strict_errors,
+            overwrite,
+            frozen,
+            strict_errors,
         },
     )?;
-    qp_bail_internal!("Implement compiling and running scripts")
+    let compile_lock = lock
+        .to_compile_lock(&storage, package.to_venv_id())
+        .context("failed to acquire a compile lock")?;
+    let profile = Profile::construct_profile(profile, package.package().manifest().profiles())?;
+    let bcx = BuildContext {
+        pcx: &package,
+        freeze: venv.into(),
+        storage,
+        used_features: vec![],
+        profile,
+        script_path: Some(folder_path.join(script_name)),
+    };
+    let artifacts_dir = compile::compile(bcx, CompilationType::StandaloneScript)?;
+    drop(compile_lock);
+    execute_script(artifacts_dir, script_name, profile.dvm_bytecode, args)
+}
+
+/// Run the created script binary.
+fn execute_script(
+    artifacts_dir: ArtifactsDir,
+    script_name: &OsStr,
+    dvm_backend: bool,
+    args: Vec<OsString>,
+) -> QuackResult<()> {
+    let artifacts_dir = match artifacts_dir {
+        ArtifactsDir::TempDir(dir) => dir,
+        _ => qp_bail_internal!("script compilation did not produce a tempdir"),
+    };
+    if dvm_backend {
+        panic!("@TODO: #2443 Implement run")
+    } else {
+        let exe_name = Path::new(script_name).with_extension("exe");
+        let exe_path = artifacts_dir.path().join(exe_name);
+        let exit_status = run::run_exe(&exe_path, args)?;
+        drop(artifacts_dir);
+        std::process::exit(exit_status.code().unwrap_or(0))
+    }
 }

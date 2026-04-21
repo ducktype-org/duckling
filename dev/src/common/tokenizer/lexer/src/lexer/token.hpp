@@ -28,10 +28,8 @@ namespace lexer {
 	/**
 	 * @brief Class representing a single token and providing methods of accessing information about
 	 * it
-	 *
-	 * @todo Implement formatted string support
 	 */
-	class Token {
+	class Token final {
 	public:
 		enum class Type {
 			Keyword,
@@ -104,8 +102,7 @@ namespace lexer {
 		[[nodiscard]]
 		Token asSentinel() const;
 
-		virtual ~Token() = default;
-		Token()          = delete;
+		Token() = delete;
 
 		Token(const Token& other) = default;
 		Token(Token&& other) noexcept;

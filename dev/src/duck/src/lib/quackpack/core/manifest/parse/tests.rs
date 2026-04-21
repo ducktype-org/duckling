@@ -1,13 +1,13 @@
-use std::{collections::HashMap, env::home_dir, path::PathBuf};
+use std::collections::HashMap;
+use std::env::home_dir;
+use std::path::PathBuf;
 
 use tempfile::{TempDir, tempdir};
 
 use super::parse_manifest;
-use crate::{
-    DuckContext, QpContext, StrId,
-    quackpack::core::{BranchOrTag, OptLevel, Profile, Source, Version},
-    util::path_ops_ext::PathOpsExt,
-};
+use crate::quackpack::core::{BranchOrTag, OptLevel, Profile, Source, Version};
+use crate::util::path_ops_ext::PathOpsExt;
+use crate::{DuckContext, QpContext, StrId};
 
 fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {
     let dir = tempdir().unwrap();
@@ -791,7 +791,7 @@ fn git_url_points_to_local_dir() {
         r#"
 metadata:
   name: xd
-  version: 0.1
+  version: '0.1'
 
 dependencies:
   a:
@@ -827,7 +827,7 @@ fn valid_git_url_points_to_local_dir() {
         r#"
 metadata:
   name: xd
-  version: 0.1
+  version: '0.1'
 
 dependencies:
   a:
@@ -842,8 +842,8 @@ dependencies:
 }
 
 #[test]
-fn floats_explicit_string_work() {
-    let (_dir, manifest_path) = prepare_manifest(
+fn floats_explicit_string_dont_work() {
+    let (dir, manifest_path) = prepare_manifest(
         r#"
 metadata:
   name: xd
@@ -857,25 +857,15 @@ dependencies:
 "#,
     );
     let ctx = DuckContext::default();
-    let manifest = parse_manifest(&manifest_path, &ctx).unwrap();
-    let summary = manifest.manifest();
-    assert_eq!(summary.version(), Version::new(0, 10, 0));
+    let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
     assert_eq!(
-        summary
-            .dependencies()
-            .get_by_name("a".into())
-            .unwrap()
-            .versions()[0],
-        Version::new(0, 10, 0)
-    );
-
-    assert_eq!(
-        summary
-            .dependencies()
-            .get_by_name("b".into())
-            .unwrap()
-            .versions(),
-        [Version::new(0, 10, 0), Version::new(0, 10, 0)]
+        err.to_string(),
+        make_errors_message(
+            &dir,
+            [
+                "dependencies.b.version[1]: invalid type: floating point `0.1`, expected a semver string at line 10 column 23"
+            ]
+        )
     );
 }
 
@@ -911,7 +901,7 @@ fn floats_root_version_parses() {
         r#"
 metadata:
   name: xd
-  version: 0.10
+  version: '0.10'
 "#,
     );
     let ctx = DuckContext::default();
@@ -926,7 +916,7 @@ fn profiles_parse() {
         r#"
 metadata:
   name: xd
-  version: 0.10
+  version: '0.10'
 
 profiles:
   prof1:
@@ -973,7 +963,7 @@ fn unknown_opt_level() {
         r#"
 metadata:
   name: xd
-  version: 0.10
+  version: '0.10'
 
 profiles:
   prof1:
@@ -1001,7 +991,7 @@ fn duplicated_names() {
         r#"
 metadata:
   name: xd
-  version: 0.10
+  version: '0.10'
 
 dependencies:
   a:
@@ -1032,7 +1022,7 @@ fn duplicated_names_in_aliases() {
         r#"
 metadata:
   name: xd
-  version: 0.10
+  version: '0.10'
 
 dependencies:
   a:

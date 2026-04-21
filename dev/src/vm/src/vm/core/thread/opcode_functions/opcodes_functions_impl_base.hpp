@@ -90,71 +90,32 @@ namespace vm {
 	// within the function, but we have to add some instructions on the outside of it. Hence we use
 	// the `OP_CASE_END` macro that adds `goto End` instruction, residing after opcode function,
 	// inside interpreter loop.
-	RETURN_TYPE OpFuns::OPCODE_NAME(exit)(FUNCTION_ARGS) {
-		{
-			CORE_ASSERT(
-				frame->local_block_ref_stack_end - frame->local_block_ref_stack_base == 1,
-				"Invalid start function."
-			);
-		}
-		IF_TC(return;)
-	}
+	RETURN_TYPE OpFuns::OPCODE_NAME(exit)(FUNCTION_ARGS) { IF_TC(return;) }
 
-#define DEFINE_MOVE_OPS(BITS_SIZE, TYPE)                                                          \
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {                      \
-		{ writeToStack<TYPE>(local_stack, instr->arg0, safeReadObjectBytes<TYPE>(instr->arg1)); } \
-		FUNCTION_CONT(1);                                                                         \
-	}                                                                                             \
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_g##BITS_SIZE##_imm)(FUNCTION_ARGS) {                      \
-		{ WRITE_TO_GLOBAL(TYPE, instr->arg0, safeReadObjectBytes<TYPE>(instr->arg1)); }           \
-		FUNCTION_CONT(1);                                                                         \
-	}                                                                                             \
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {             \
-		{                                                                                         \
-			safeWriteBytes<TYPE>(                                                                 \
-				local_stack, readFromStack<TYPE>(local_stack, instr->arg1), instr->arg0           \
-			);                                                                                    \
-		}                                                                                         \
-		FUNCTION_CONT(1);                                                                         \
-	}                                                                                             \
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_g##BITS_SIZE##_g##BITS_SIZE)(FUNCTION_ARGS) {             \
-		{                                                                                         \
-			const auto value = READ_FROM_GLOBAL(TYPE, instr->arg1);                               \
-			WRITE_TO_GLOBAL(TYPE, instr->arg0, value);                                            \
-		}                                                                                         \
-		FUNCTION_CONT(1);                                                                         \
-	}                                                                                             \
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_g##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {             \
-		{                                                                                         \
-			const auto value = readFromStack<TYPE>(local_stack, instr->arg1);                     \
-			WRITE_TO_GLOBAL(TYPE, instr->arg0, value);                                            \
-		}                                                                                         \
-		FUNCTION_CONT(1);                                                                         \
-	}                                                                                             \
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l##BITS_SIZE##_g##BITS_SIZE)(FUNCTION_ARGS) {             \
-		{                                                                                         \
-			const auto value = READ_FROM_GLOBAL(TYPE, instr->arg1);                               \
-			writeToStack<TYPE>(local_stack, instr->arg0, value);                                  \
-		}                                                                                         \
-		FUNCTION_CONT(1);                                                                         \
-	}                                                                                             \
-	RETURN_TYPE OpFuns::OPCODE_NAME(cmov_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {            \
-		{                                                                                         \
-			if (frame->flags.flag) {                                                              \
-				const auto value = readFromStack<TYPE>(local_stack, instr->arg1);                 \
-				writeToStack<TYPE>(local_stack, instr->arg0, value);                              \
-			}                                                                                     \
-		}                                                                                         \
-		FUNCTION_CONT(1);                                                                         \
-	}                                                                                             \
-	RETURN_TYPE OpFuns::OPCODE_NAME(cmov_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {                     \
-		{                                                                                         \
-			if (frame->flags.flag)                                                                \
-				writeToStack<TYPE>(                                                               \
-					local_stack, instr->arg0, vm::safeReadObjectBytes<TYPE>(instr->arg1)          \
-				);                                                                                \
-		}                                                                                         \
-		FUNCTION_CONT(1);                                                                         \
+#define DEFINE_MOVE_OPS(BITS_SIZE, TYPE)                                                       \
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_p##BITS_SIZE##_imm)(FUNCTION_ARGS) {                   \
+		{ WRITE_TO_PLACE_ARG(TYPE, instr->arg0, safeReadObjectBytes<TYPE>(instr->arg1)); }     \
+		FUNCTION_CONT(1);                                                                      \
+	}                                                                                          \
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_p##BITS_SIZE##_p##BITS_SIZE)(FUNCTION_ARGS) {          \
+		{ WRITE_TO_PLACE_ARG(TYPE, instr->arg0, READ_FROM_PLACE_ARG(TYPE, instr->arg1)); }     \
+		FUNCTION_CONT(1);                                                                      \
+	}                                                                                          \
+	RETURN_TYPE OpFuns::OPCODE_NAME(cmov_p##BITS_SIZE##_p##BITS_SIZE)(FUNCTION_ARGS) {         \
+		{                                                                                      \
+			if (frame->flags.flag) {                                                           \
+				const auto value = READ_FROM_PLACE_ARG(TYPE, instr->arg1);                     \
+				WRITE_TO_PLACE_ARG(TYPE, instr->arg0, value);                                  \
+			}                                                                                  \
+		}                                                                                      \
+		FUNCTION_CONT(1);                                                                      \
+	}                                                                                          \
+	RETURN_TYPE OpFuns::OPCODE_NAME(cmov_p##BITS_SIZE##_imm)(FUNCTION_ARGS) {                  \
+		{                                                                                      \
+			if (frame->flags.flag)                                                             \
+				WRITE_TO_PLACE_ARG(TYPE, instr->arg0, safeReadObjectBytes<TYPE>(instr->arg1)); \
+		}                                                                                      \
+		FUNCTION_CONT(1);                                                                      \
 	}
 
 	DEFINE_MOVE_OPS(64, u64)
@@ -162,75 +123,55 @@ namespace vm {
 	DEFINE_MOVE_OPS(16, u16)
 	DEFINE_MOVE_OPS(8, u8)
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_lptr_gptr)(FUNCTION_ARGS) {
-		{
-			const auto dst     = readFromStack<Pointer>(local_stack, instr->arg0);
-			auto       src     = READ_FROM_GLOBAL(Pointer, instr->arg1);
-			const auto new_dst = thread.process_memory.updatePointerAssignment(dst, src);
-			writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
-		}
-		FUNCTION_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_gptr_lptr)(FUNCTION_ARGS) {
-		{
-			const auto dst     = READ_FROM_GLOBAL(Pointer, instr->arg0);
-			auto       src     = readFromStack<Pointer>(local_stack, instr->arg1);
-			const auto new_dst = thread.process_memory.updatePointerAssignment(dst, src);
-			WRITE_TO_GLOBAL(Pointer, instr->arg0, new_dst);
-		}
-		FUNCTION_CONT(1);
-	}
-
 #define DEFINE_ARITHMETIC_OP(NAME, BITS_SIZE, TYPE, OP)                                  \
-	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) { \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_p##BITS_SIZE##_p##BITS_SIZE)(FUNCTION_ARGS) { \
 		{                                                                                \
-			auto       lhs = readFromStack<TYPE>(local_stack, instr->arg0);              \
-			const auto rhs = readFromStack<TYPE>(local_stack, instr->arg1);              \
+			auto       lhs = READ_FROM_PLACE_ARG(TYPE, instr->arg0);                     \
+			const auto rhs = READ_FROM_PLACE_ARG(TYPE, instr->arg1);                     \
 			lhs OP     rhs;                                                              \
-			writeToStack<TYPE>(local_stack, instr->arg0, lhs);                           \
+			WRITE_TO_PLACE_ARG(TYPE, instr->arg0, lhs);                                  \
 		}                                                                                \
 		FUNCTION_CONT(1);                                                                \
 	}                                                                                    \
-	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {          \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_p##BITS_SIZE##_imm)(FUNCTION_ARGS) {          \
 		{                                                                                \
-			auto       lhs = readFromStack<TYPE>(local_stack, instr->arg0);              \
+			auto       lhs = READ_FROM_PLACE_ARG(TYPE, instr->arg0);                     \
 			const auto rhs = safeReadObjectBytes<TYPE>(instr->arg1);                     \
 			lhs        OP static_cast<TYPE>(rhs);                                        \
-			writeToStack<TYPE>(local_stack, instr->arg0, lhs);                           \
+			WRITE_TO_PLACE_ARG(TYPE, instr->arg0, lhs);                                  \
 		}                                                                                \
 		FUNCTION_CONT(1);                                                                \
 	}
 
 #define DEFINE_DIVISION_LIKE_OP(NAME, BITS_SIZE, TYPE, OP)                                \
-	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {  \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_p##BITS_SIZE##_p##BITS_SIZE)(FUNCTION_ARGS) {  \
 		{                                                                                 \
-			auto       lhs = readFromStack<TYPE>(local_stack, instr->arg0);               \
-			const auto rhs = readFromStack<TYPE>(local_stack, instr->arg1);               \
+			auto       lhs = READ_FROM_PLACE_ARG(TYPE, instr->arg0);                      \
+			const auto rhs = READ_FROM_PLACE_ARG(TYPE, instr->arg1);                      \
 			if (rhs == static_cast<TYPE>(0)) throw exceptions::VMZeroDivisionException(); \
 			lhs = static_cast<TYPE>(lhs OP rhs);                                          \
-			writeToStack<TYPE>(local_stack, instr->arg0, lhs);                            \
+			WRITE_TO_PLACE_ARG(TYPE, instr->arg0, lhs);                                   \
 		}                                                                                 \
 		FUNCTION_CONT(1);                                                                 \
 	}                                                                                     \
-	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {           \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_p##BITS_SIZE##_imm)(FUNCTION_ARGS) {           \
 		{                                                                                 \
-			auto lhs = readFromStack<TYPE>(local_stack, instr->arg0);                     \
+			auto lhs = READ_FROM_PLACE_ARG(TYPE, instr->arg0);                            \
 			auto rhs = safeReadObjectBytes<TYPE>(instr->arg1);                            \
 			if (rhs == static_cast<TYPE>(0)) throw exceptions::VMZeroDivisionException(); \
 			lhs = static_cast<TYPE>(lhs OP rhs);                                          \
-			writeToStack<TYPE>(local_stack, instr->arg0, lhs);                            \
+			WRITE_TO_PLACE_ARG(TYPE, instr->arg0, lhs);                                   \
 		}                                                                                 \
 		FUNCTION_CONT(1);                                                                 \
 	}
 
-#define DEFINE_NEGATION_OP(NAME, BITS_SIZE, TYPE)                                        \
-	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE)(FUNCTION_ARGS) {                \
-		{                                                                                \
-			auto value = readFromStack<TYPE>(local_stack, instr->arg0);                  \
-			writeToStack<TYPE>(local_stack, instr->arg0, value * static_cast<TYPE>(-1)); \
-		}                                                                                \
-		FUNCTION_CONT(1);                                                                \
+#define DEFINE_NEGATION_OP(NAME, BITS_SIZE, TYPE)                                \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_p##BITS_SIZE)(FUNCTION_ARGS) {        \
+		{                                                                        \
+			auto value = READ_FROM_PLACE_ARG(TYPE, instr->arg0);                 \
+			WRITE_TO_PLACE_ARG(TYPE, instr->arg0, value* static_cast<TYPE>(-1)); \
+		}                                                                        \
+		FUNCTION_CONT(1);                                                        \
 	}
 
 // @TODO: #1216 Check for over/under flows.
@@ -259,47 +200,47 @@ namespace vm {
 	FOR_EACH(DEFINE_FLOAT_N_ARITHMETIC, 64, 32)
 
 
-#define DEFINE_BOOLEAN_OP(NAME, OP)                                                    \
-	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l8##_l8)(FUNCTION_ARGS) {                   \
-		{                                                                              \
-			const bool lhs = (readFromStack<u8>(local_stack, instr->arg0) != u8{ 0 }); \
-			const bool rhs = (readFromStack<u8>(local_stack, instr->arg1) != u8{ 0 }); \
-			writeToStack<u8>(local_stack, instr->arg0, static_cast<u8>(lhs OP rhs));   \
-		}                                                                              \
-		FUNCTION_CONT(1);                                                              \
-	}                                                                                  \
-	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l8##_imm)(FUNCTION_ARGS) {                  \
-		{                                                                              \
-			const bool lhs = (readFromStack<u8>(local_stack, instr->arg0) != u8{ 0 }); \
-			const bool rhs = (safeReadObjectBytes<u8>(instr->arg1) != u8{ 0 });        \
-			writeToStack<u8>(local_stack, instr->arg0, static_cast<u8>(lhs OP rhs));   \
-		}                                                                              \
-		FUNCTION_CONT(1);                                                              \
+#define DEFINE_BOOLEAN_OP(NAME, OP)                                             \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_p8##_p8)(FUNCTION_ARGS) {            \
+		{                                                                       \
+			const bool lhs = (READ_FROM_PLACE_ARG(u8, instr->arg0) != u8{ 0 }); \
+			const bool rhs = (READ_FROM_PLACE_ARG(u8, instr->arg1) != u8{ 0 }); \
+			WRITE_TO_PLACE_ARG(u8, instr->arg0, static_cast<u8>(lhs OP rhs));   \
+		}                                                                       \
+		FUNCTION_CONT(1);                                                       \
+	}                                                                           \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_p8##_imm)(FUNCTION_ARGS) {           \
+		{                                                                       \
+			const bool lhs = (READ_FROM_PLACE_ARG(u8, instr->arg0) != u8{ 0 }); \
+			const bool rhs = (safeReadObjectBytes<u8>(instr->arg1) != u8{ 0 }); \
+			WRITE_TO_PLACE_ARG(u8, instr->arg0, static_cast<u8>(lhs OP rhs));   \
+		}                                                                       \
+		FUNCTION_CONT(1);                                                       \
 	}
 
 	DEFINE_BOOLEAN_OP(log_and, &&)
 	DEFINE_BOOLEAN_OP(log_or, ||)
 	DEFINE_BOOLEAN_OP(log_xor, !=)
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(log_not_l8)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(log_not_p8)(FUNCTION_ARGS) {
 		{
-			bool result = (readFromStack<u8>(local_stack, instr->arg0) == u8{ 0 });
-			writeToStack<u8>(local_stack, instr->arg0, (result ? u8{ 1 } : u8{ 0 }));
+			bool result = (READ_FROM_PLACE_ARG(u8, instr->arg0) == u8{ 0 });
+			WRITE_TO_PLACE_ARG(u8, instr->arg0, (result ? u8{ 1 } : u8{ 0 }));
 		}
 		FUNCTION_CONT(1);
 	}
 
 #define DEFINE_COMPARISON_OP(NAME, BITS_SIZE, TYPE, OP)                                  \
-	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) { \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_p##BITS_SIZE##_p##BITS_SIZE)(FUNCTION_ARGS) { \
 		{                                                                                \
-			frame->flags.flag = readFromStack<TYPE>(local_stack, instr->arg0)            \
-				OP readFromStack<TYPE>(local_stack, instr->arg1);                        \
+			frame->flags.flag = READ_FROM_PLACE_ARG(TYPE, instr->arg0)                   \
+				OP READ_FROM_PLACE_ARG(TYPE, instr->arg1);                               \
 		}                                                                                \
 		FUNCTION_CONT(1);                                                                \
 	}                                                                                    \
-	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {          \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_p##BITS_SIZE##_imm)(FUNCTION_ARGS) {          \
 		{                                                                                \
-			frame->flags.flag = readFromStack<TYPE>(local_stack, instr->arg0)            \
+			frame->flags.flag = READ_FROM_PLACE_ARG(TYPE, instr->arg0)                   \
 				OP safeReadObjectBytes<TYPE>(instr->arg1);                               \
 		}                                                                                \
 		FUNCTION_CONT(1);                                                                \
@@ -329,9 +270,9 @@ namespace vm {
 
 	FOR_EACH(DEFINE_FLOAT_N_COMPARISONS, 64, 32)
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(cmpNull_lptr)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(cmpNull_pptr)(FUNCTION_ARGS) {
 		{
-			auto pointer      = readFromStack<Pointer>(local_stack, instr->arg0);
+			auto pointer      = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
 			frame->flags.flag = pointer.isNull();
 		}
 		FUNCTION_CONT(1);
@@ -424,12 +365,17 @@ namespace vm {
 				args.push_back(thread.safe_process.createOwnedVmValue(real_type, Pointer(block, 0)));
 			}
 
+			std::vector<TypeCRef> result_types = {};
+			auto                  ret_count    = function_signature->result_types.size();
+			result_types.reserve(ret_count);
+			for (u64 i = 0; i < ret_count; i++) {
+				result_types.emplace_back(
+					thread.process_program->getTypes().at(function_signature->result_types[i])
+				);
+			}
+
 			base::Optional<Box<VmValue>> return_value = builtins::callBuiltinFunction(
-				builtin_id,
-				thread.process_program->getTypes().at(function_signature->result_type),
-				thread.safe_process,
-				thread,
-				args
+				builtin_id, result_types, thread.safe_process, thread, args
 			);
 
 			if (return_value.has_value()) {
@@ -454,7 +400,10 @@ namespace vm {
 			auto ext_func = safeReadObjectBytes<CRef<low::LowExternCFunction>>(instr->arg0);
 
 			auto arg_count = ext_func->parameters.size();
-			bool is_void   = ext_func->result_type->getName() == "void";
+			bool is_void   = ext_func->result_types.size() == 0;
+			CORE_ASSERT(
+				ext_func->result_types.size() <= 1, "C function cannot return more than 1 type"
+			);
 
 			if (arg_count == 0 && is_void) {
 				// Special case: void function with no arguments.
@@ -483,7 +432,8 @@ namespace vm {
 				// Prepare arguments and call the function.
 				byte* result_pointer = result_view.getBegin();
 				byte* args_pointer
-					= result_pointer + (is_void ? 0 : ext_func->result_type->getSize().asInt());
+					= result_pointer
+				    + (is_void ? 0 : ext_func->result_types.at(0)->getSize().asInt());
 
 				ext_func->function_pointer(result_pointer, args_pointer);
 
@@ -502,9 +452,9 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(virtual_call_lptr_method)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(virtual_call_pptr_method)(FUNCTION_ARGS) {
 		{
-			const auto pointer = readFromStack<Pointer>(local_stack, instr->arg0);
+			const auto pointer = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
 
 			// Objects are guaranteed to hold inheritance metadata pointers as their first field.
 			// This is verified by static verification.
@@ -542,8 +492,8 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(ret)(FUNCTION_ARGS) {
 		{
 			// Frame of the function we're returning from.
-			auto*      callee_frame = frame;
-			const bool void_func    = frame->current_function->result_type->getName() == "void";
+			auto* callee_frame = frame;
+			u64   ret_count    = frame->current_function->result_types.size();
 
 			// We have to update values passed in arguments.
 			// Old `instr` and `local_stack` are stored on the previous frame.
@@ -561,9 +511,9 @@ namespace vm {
                     - callee_frame->local_block_ref_stack_base
                 );
 
-				// We're returning from a non-void function, so the last block on the stack is the
-				// return value. It's being used by the caller so we don't free it.
-				if (void_func || block_ref_count != 1) {
+				// We're returning from a non-void function, so the last `ret_count` blocks on the
+				// stack are the return values. They are being used by the caller so we don't free them.
+				if (block_ref_count > ret_count) {
 					thread.process_memory.freeBlockData(block);
 					thread.process_memory.decreaseBlockRefcount(block);
 				}
@@ -580,7 +530,7 @@ namespace vm {
 		FUNCTION_CONT_CHECK_STRATEGY(0);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(init_blany_type)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(init_bany_type)(FUNCTION_ARGS) {
 		{
 			performInit(
 				instr, local_stack, frame, thread, safeReadObjectBytes<TypeCRef>(instr->arg1)
@@ -594,39 +544,39 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(input_l64)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(input_p64)(FUNCTION_ARGS) {
 		{
 			thread.setProcessStatus(api::Sleeping{});
 			i64 io_value = thread.safe_process.getIO().getInput<i64>(thread);
-			writeToStack<i64>(local_stack, instr->arg0, io_value);
+			WRITE_TO_PLACE_ARG(i64, instr->arg0, io_value);
 			thread.setProcessStatus(api::Running{});
 		}
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(output_l64)(FUNCTION_ARGS) {
-		{ thread.safe_process.getIO().writeOutput(readFromStack<u64>(local_stack, instr->arg0)); }
+	RETURN_TYPE OpFuns::OPCODE_NAME(output_p64)(FUNCTION_ARGS) {
+		{ thread.safe_process.getIO().writeOutput(READ_FROM_PLACE_ARG(u64, instr->arg0)); }
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(input_l32)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(input_p32)(FUNCTION_ARGS) {
 		{
 			thread.setProcessStatus(api::Sleeping{});
 			i32 io_value = thread.safe_process.getIO().getInput<i32>(thread);
-			writeToStack<i32>(local_stack, instr->arg0, io_value);
+			WRITE_TO_PLACE_ARG(i32, instr->arg0, io_value);
 			thread.setProcessStatus(api::Running{});
 		}
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(output_l32)(FUNCTION_ARGS) {
-		{ thread.safe_process.getIO().writeOutput(readFromStack<u32>(local_stack, instr->arg0)); }
+	RETURN_TYPE OpFuns::OPCODE_NAME(output_p32)(FUNCTION_ARGS) {
+		{ thread.safe_process.getIO().writeOutput(READ_FROM_PLACE_ARG(u32, instr->arg0)); }
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(strOutput_lptr)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(strOutput_pptr)(FUNCTION_ARGS) {
 		{
-			auto ptr = readFromStack<Pointer>(local_stack, instr->arg0);
+			auto ptr = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
 
 			auto block      = ptr.getBlock();
 			auto block_id   = thread.process_memory.requestBlockID(block);
@@ -639,8 +589,8 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(nop)(FUNCTION_ARGS) { FUNCTION_CONT(1); }
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(ext_l64)(FUNCTION_ARGS) {
-		CORE_PANIC("ext_l64 not consumed by previous instruction");
+	RETURN_TYPE OpFuns::OPCODE_NAME(ext_p64)(FUNCTION_ARGS) {
+		CORE_PANIC("ext_p64 not consumed by previous instruction");
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(ext_imm)(FUNCTION_ARGS) {
@@ -659,109 +609,80 @@ namespace vm {
 		CORE_PANIC("ext_type_field not consumed by previous instruction");
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(ext_type_l64)(FUNCTION_ARGS) {
-		CORE_PANIC("ext_type_l64 not consumed by previous instruction");
+	RETURN_TYPE OpFuns::OPCODE_NAME(ext_type_p64)(FUNCTION_ARGS) {
+		CORE_PANIC("ext_type_p64 not consumed by previous instruction");
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(ext_type_type)(FUNCTION_ARGS) {
 		CORE_PANIC("ext_type_type not consumed by previous instruction");
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(alloc_lptr_type)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(alloc_pptr_type)(FUNCTION_ARGS) {
 		{
-			const auto dst     = readFromStack<Pointer>(local_stack, instr->arg0);
+			const auto dst     = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
 			auto       type    = safeReadObjectBytes<TypeCRef>(instr->arg1);
 			auto       block   = thread.process_memory.allocateHeap(type);
 			const auto new_dst = thread.process_memory.updatePointerAssignment(dst, { block, 0 });
-			writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
+			WRITE_TO_PLACE_ARG(Pointer, instr->arg0, new_dst);
 		}
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(free_lptr)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(free_pptr)(FUNCTION_ARGS) {
 		{
-			if (auto ptr = readFromStack<Pointer>(local_stack, instr->arg0))
+			if (auto ptr = READ_FROM_PLACE_ARG(Pointer, instr->arg0))
 				thread.process_memory.freeBlockData(ptr.getBlock());
 		}
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(ref_lptr_blany)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(ref_pptr_bany)(FUNCTION_ARGS) {
 		{
-			const auto dst     = readFromStack<Pointer>(local_stack, instr->arg0);
-			auto       block   = Ref(frame->local_block_ref_stack_base[instr->arg1]);
+			const auto dst     = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
+			auto       block   = READ_BLOCK_REF_FROM_ARG(instr->arg1);
 			const auto new_dst = thread.process_memory.updatePointerAssignment(dst, { block, 0 });
-			writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
+			WRITE_TO_PLACE_ARG(Pointer, instr->arg0, new_dst);
 		}
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(ref_lptr_gany)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_pptr_pptr)(FUNCTION_ARGS) {
 		{
-			const auto dst       = readFromStack<Pointer>(local_stack, instr->arg0);
-			auto       src_block = GET_GLOBAL_BLOCK(instr->arg1);
-			const auto new_dst
-				= thread.process_memory.updatePointerAssignment(dst, { src_block, 0 });
-			writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
-		}
-		FUNCTION_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_lptr_lptr)(FUNCTION_ARGS) {
-		{
-			const auto    dst     = readFromStack<Pointer>(local_stack, instr->arg0);
-			const auto    src     = readFromStack<Pointer>(local_stack, instr->arg1);
+			const auto    dst     = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
+			const auto    src     = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
 			const Pointer new_dst = thread.process_memory.updatePointerAssignment(dst, src);
-			writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
+			WRITE_TO_PLACE_ARG(Pointer, instr->arg0, new_dst);
 		}
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_lopq_lopq)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_popq_popq)(FUNCTION_ARGS) {
 		{
 			const auto type_size = instr[1].arg0;
-			std::memcpy(local_stack + instr->arg0, local_stack + instr->arg1, type_size);
+			auto       dst       = getBytePtrFromPlaceArg(
+                local_stack, thread.runtime_data.global_data_buffer_base, instr->arg0
+            );
+			auto src = getBytePtrFromPlaceArg(
+				local_stack, thread.runtime_data.global_data_buffer_base, instr->arg1
+			);
+			std::memcpy(dst, src, type_size);
 		}
 		FUNCTION_CONT(2);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_gopq_lopq)(FUNCTION_ARGS) {
-		{
-			auto dst_block = GET_GLOBAL_BLOCK(instr->arg0);
-			std::memcpy(
-				thread.process_memory.getBlockViewUnsafe(dst_block).getBegin(),
-				local_stack + instr->arg1,
-				thread.process_memory.getBlockType(dst_block)->getSize().asInt()
-			);
-		}
-		FUNCTION_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_lopq_gopq)(FUNCTION_ARGS) {
-		{
-			auto src_block = GET_GLOBAL_BLOCK(instr->arg1);
-			std::memcpy(
-				local_stack + instr->arg0,
-				thread.process_memory.getBlockViewUnsafe(src_block).getBegin(),
-				thread.process_memory.getBlockType(src_block)->getSize().asInt()
-			);
-		}
-		FUNCTION_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_lopq_imm)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_popq_imm)(FUNCTION_ARGS) {
 		{
 			// @TODO: #1728 remove this evil instruction
-			const void* value = safeReadObjectBytes<void*>(instr->arg1);
-			writeToStack(local_stack, instr->arg0, value);
+			void* value = safeReadObjectBytes<void*>(instr->arg1);
+			WRITE_TO_PLACE_ARG(void*, instr->arg0, value);
 		}
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_blste_blste)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_bste_bste)(FUNCTION_ARGS) {
 		{
-			auto dst_block = Ref(frame->local_block_ref_stack_base[instr->arg0]);
-			auto src_block = Ref(frame->local_block_ref_stack_base[instr->arg1]);
+			auto dst_block = READ_BLOCK_REF_FROM_ARG(instr->arg0);
+			auto src_block = READ_BLOCK_REF_FROM_ARG(instr->arg1);
 			thread.process_memory.copyPointedData(
 				{ dst_block, 0 }, { src_block, 0 }, thread.process_memory.getBlockType(dst_block)
 			);
@@ -769,52 +690,19 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_gste_gste)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(setNull_pptr)(FUNCTION_ARGS) {
 		{
-			auto dst_block = GET_GLOBAL_BLOCK(instr->arg0);
-			auto src_block = GET_GLOBAL_BLOCK(instr->arg1);
-			thread.process_memory.copyPointedData(
-				{ dst_block, 0 }, { src_block, 0 }, thread.process_memory.getBlockType(dst_block)
-			);
-		}
-		FUNCTION_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_blste_gste)(FUNCTION_ARGS) {
-		{
-			auto dst_block = Ref(frame->local_block_ref_stack_base[instr->arg0]);
-			auto src_block = GET_GLOBAL_BLOCK(instr->arg1);
-			thread.process_memory.copyPointedData(
-				{ dst_block, 0 }, { src_block, 0 }, thread.process_memory.getBlockType(dst_block)
-			);
-		}
-		FUNCTION_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_gste_blste)(FUNCTION_ARGS) {
-		{
-			auto dst_block = GET_GLOBAL_BLOCK(instr->arg0);
-			auto src_block = Ref(frame->local_block_ref_stack_base[instr->arg1]);
-			thread.process_memory.copyPointedData(
-				{ dst_block, 0 }, { src_block, 0 }, thread.process_memory.getBlockType(dst_block)
-			);
-		}
-		FUNCTION_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(setNull_lptr)(FUNCTION_ARGS) {
-		{
-			const auto    dst = readFromStack<Pointer>(local_stack, instr->arg0);
+			const auto    dst = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
 			const Pointer new_dst
 				= thread.process_memory.updatePointerAssignment(dst, Pointer::null());
-			writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
+			WRITE_TO_PLACE_ARG(Pointer, instr->arg0, new_dst);
 		}
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(setVTable_lptr_type)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(setVTable_pptr_type)(FUNCTION_ARGS) {
 		{
-			auto pointer = readFromStack<Pointer>(local_stack, instr->arg0);
+			auto pointer = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
 			auto type    = safeReadObjectBytes<TypeCRef>(instr->arg1);
 
 			// Objects hold vtable pointer as their first field.
@@ -825,18 +713,18 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(resetVTable_lptr)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(resetVTable_pptr)(FUNCTION_ARGS) {
 		{
-			auto pointer = readFromStack<Pointer>(local_stack, instr->arg0);
+			auto pointer = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
 			auto view    = thread.process_memory.getPointerData(pointer, sizeof(Type*));
 			writeToView<const Type*>(view, nullptr);
 		}
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(variantSetInner_blvnt_type)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(variantSetInner_bvnt_type)(FUNCTION_ARGS) {
 		{
-			auto variant_block = Ref(frame->local_block_ref_stack_base[instr->arg0]);
+			auto variant_block = READ_BLOCK_REF_FROM_ARG(instr->arg0);
 			auto alt_type      = safeReadObjectBytes<TypeCRef>(instr->arg1);
 			auto variant_type  = safeReadObjectBytes<TypeCRef>(instr[1].arg0);
 			OpFuns::setVariantType(thread, Pointer(variant_block, 0), alt_type, variant_type);
@@ -844,24 +732,24 @@ namespace vm {
 		FUNCTION_CONT(2);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(variantGetInner_lptr_blvnt)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(variantGetInner_pptr_bvnt)(FUNCTION_ARGS) {
 		{
-			const auto dst           = readFromStack<Pointer>(local_stack, instr->arg0);
-			auto       variant_block = Ref(frame->local_block_ref_stack_base[instr->arg1]);
+			const auto dst           = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
+			auto       variant_block = READ_BLOCK_REF_FROM_ARG(instr->arg1);
 			auto       alt_type      = safeReadObjectBytes<TypeCRef>(instr[1].arg0);
 			auto       variant_type  = safeReadObjectBytes<TypeCRef>(instr[1].arg1);
 
 			const auto new_dst = thread.process_memory.updatePointerAssignment(
 				dst, OpFuns::getVariantPtr(thread, Pointer(variant_block, 0), alt_type, variant_type)
 			);
-			writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
+			WRITE_TO_PLACE_ARG(Pointer, instr->arg0, new_dst);
 		}
 		FUNCTION_CONT(2);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(variantSetInner_lptr_type)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(variantSetInner_pptr_type)(FUNCTION_ARGS) {
 		{
-			auto variant_pointer = readFromStack<Pointer>(local_stack, instr->arg0);
+			auto variant_pointer = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
 			auto alt_type        = safeReadObjectBytes<TypeCRef>(instr->arg1);
 			auto variant_type    = safeReadObjectBytes<TypeCRef>(instr[1].arg0);
 			OpFuns::setVariantType(thread, variant_pointer, alt_type, variant_type);
@@ -869,37 +757,37 @@ namespace vm {
 		FUNCTION_CONT(2);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(variantGetInner_lptr_lptr)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(variantGetInner_pptr_pptr)(FUNCTION_ARGS) {
 		{
-			const auto dst             = readFromStack<Pointer>(local_stack, instr->arg0);
-			auto       variant_pointer = readFromStack<Pointer>(local_stack, instr->arg1);
+			const auto dst             = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
+			auto       variant_pointer = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
 			auto       alt_type        = safeReadObjectBytes<TypeCRef>(instr[1].arg0);
 			auto       variant_type    = safeReadObjectBytes<TypeCRef>(instr[1].arg1);
 
 			const auto new_dst = thread.process_memory.updatePointerAssignment(
 				dst, OpFuns::getVariantPtr(thread, variant_pointer, alt_type, variant_type)
 			);
-			writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
+			WRITE_TO_PLACE_ARG(Pointer, instr->arg0, new_dst);
 		}
 
 		FUNCTION_CONT(2);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(upcast_lptr_lptr)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(upcast_pptr_pptr)(FUNCTION_ARGS) {
 		{
-			// Same as move_lptr_lptr, treated differently by static analysis.
-			const auto    dst     = readFromStack<Pointer>(local_stack, instr->arg0);
-			const auto    src     = readFromStack<Pointer>(local_stack, instr->arg1);
+			// Same as move_pptr_pptr, treated differently by static analysis.
+			const auto    dst     = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
+			const auto    src     = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
 			const Pointer new_dst = thread.process_memory.updatePointerAssignment(dst, src);
-			writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
+			WRITE_TO_PLACE_ARG(Pointer, instr->arg0, new_dst);
 		}
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(downcast_lptr_lptr)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(downcast_pptr_pptr)(FUNCTION_ARGS) {
 		{
-			const auto dst = readFromStack<Pointer>(local_stack, instr->arg0);
-			const auto src = readFromStack<Pointer>(local_stack, instr->arg1);
+			const auto dst = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
+			const auto src = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
 
 			auto dst_type = safeReadObjectBytes<TypeCRef>(instr[1].arg0);
 
@@ -911,15 +799,15 @@ namespace vm {
 			const Pointer new_dst = thread.process_memory.updatePointerAssignment(
 				dst, cast_allowed ? src : Pointer::null()
 			);
-			writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
+			WRITE_TO_PLACE_ARG(Pointer, instr->arg0, new_dst);
 		}
 		FUNCTION_CONT(2);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(store_lptr_blany)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(store_pptr_bany)(FUNCTION_ARGS) {
 		{
-			auto dst_pointer = readFromStack<Pointer>(local_stack, instr->arg0);
-			auto src_block   = Ref(frame->local_block_ref_stack_base[instr->arg1]);
+			auto dst_pointer = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
+			auto src_block   = READ_BLOCK_REF_FROM_ARG(instr->arg1);
 			auto src_pointer = Pointer(src_block, 0);
 
 			auto type = Memory::getBlockType(src_block);
@@ -929,12 +817,12 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(load_blany_lptr)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(load_bany_pptr)(FUNCTION_ARGS) {
 		{
-			auto dst_block   = Ref(frame->local_block_ref_stack_base[instr->arg0]);
+			auto dst_block   = READ_BLOCK_REF_FROM_ARG(instr->arg0);
 			auto dst_pointer = Pointer(dst_block, 0);
 
-			auto src_pointer = readFromStack<Pointer>(local_stack, instr->arg1);
+			auto src_pointer = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
 
 			auto type = Memory::getBlockType(dst_block);
 
@@ -943,27 +831,27 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(structLea_lptr_lptr)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(structLea_pptr_pptr)(FUNCTION_ARGS) {
 		{
-			const auto dst    = readFromStack<Pointer>(local_stack, instr->arg0);
-			auto       src    = readFromStack<Pointer>(local_stack, instr->arg1);
+			const auto dst    = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
+			auto       src    = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
 			auto       offset = static_cast<usize>(instr[1].arg0);
 
 			const Pointer new_dst = thread.process_memory.updatePointerAssignment(
 				dst, { src.getBlock(), src.getOffset() + offset }
 			);
-			writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
+			WRITE_TO_PLACE_ARG(Pointer, instr->arg0, new_dst);
 		}
 		FUNCTION_CONT(2);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(structStore_lptr_blany)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(structStore_pptr_bany)(FUNCTION_ARGS) {
 		{
-			auto dst_pointer  = readFromStack<Pointer>(local_stack, instr->arg0);
+			auto dst_pointer  = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
 			auto field_offset = safeReadObjectBytes<i64>(instr[1].arg0);
 			dst_pointer.movePointer(field_offset);
 
-			auto src_block   = Ref(frame->local_block_ref_stack_base[instr->arg1]);
+			auto src_block   = READ_BLOCK_REF_FROM_ARG(instr->arg1);
 			auto src_pointer = Pointer(src_block, 0);
 
 			auto type = Memory::getBlockType(src_block);
@@ -973,12 +861,12 @@ namespace vm {
 		FUNCTION_CONT(2);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(structLoad_blany_lptr)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(structLoad_bany_pptr)(FUNCTION_ARGS) {
 		{
-			auto dst_block   = Ref(frame->local_block_ref_stack_base[instr->arg0]);
+			auto dst_block   = READ_BLOCK_REF_FROM_ARG(instr->arg0);
 			auto dst_pointer = Pointer(dst_block, 0);
 
-			auto src_pointer  = readFromStack<Pointer>(local_stack, instr->arg1);
+			auto src_pointer  = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
 			auto field_offset = safeReadObjectBytes<i64>(instr[1].arg0);
 			src_pointer.movePointer(field_offset);
 
@@ -989,28 +877,28 @@ namespace vm {
 		FUNCTION_CONT(2);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(structLea_lptr_blste)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(structLea_pptr_bste)(FUNCTION_ARGS) {
 		{
-			const auto dst       = readFromStack<Pointer>(local_stack, instr->arg0);
-			const auto src_block = Ref(frame->local_block_ref_stack_base[instr->arg1]);
+			const auto dst       = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
+			const auto src_block = READ_BLOCK_REF_FROM_ARG(instr->arg1);
 			auto       offset    = static_cast<usize>(instr[1].arg0);
 
 			const Pointer new_dst
 				= thread.process_memory.updatePointerAssignment(dst, { src_block, offset });
-			writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
+			WRITE_TO_PLACE_ARG(Pointer, instr->arg0, new_dst);
 		}
 		FUNCTION_CONT(2);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(structStore_blste_blany)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(structStore_bste_bany)(FUNCTION_ARGS) {
 		{
-			auto dst_block   = Ref(frame->local_block_ref_stack_base[instr->arg0]);
+			auto dst_block   = READ_BLOCK_REF_FROM_ARG(instr->arg0);
 			auto dst_pointer = Pointer(dst_block, 0);
 
 			auto field_offset = safeReadObjectBytes<i64>(instr[1].arg0);
 			dst_pointer.movePointer(field_offset);
 
-			auto src_block   = Ref(frame->local_block_ref_stack_base[instr->arg1]);
+			auto src_block   = READ_BLOCK_REF_FROM_ARG(instr->arg1);
 			auto src_pointer = Pointer(src_block, 0);
 
 			auto type = Memory::getBlockType(src_block);
@@ -1020,12 +908,12 @@ namespace vm {
 		FUNCTION_CONT(2);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(structLoad_blany_blste)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(structLoad_bany_bste)(FUNCTION_ARGS) {
 		{
-			auto dst_block   = Ref(frame->local_block_ref_stack_base[instr->arg0]);
+			auto dst_block   = READ_BLOCK_REF_FROM_ARG(instr->arg0);
 			auto dst_pointer = Pointer(dst_block, 0);
 
-			auto src_block   = Ref(frame->local_block_ref_stack_base[instr->arg1]);
+			auto src_block   = READ_BLOCK_REF_FROM_ARG(instr->arg1);
 			auto src_pointer = Pointer(src_block, 0);
 
 			auto field_offset = safeReadObjectBytes<i64>(instr[1].arg0);
@@ -1038,47 +926,47 @@ namespace vm {
 		FUNCTION_CONT(2);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(dynTableLea_lptr_lptr)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(dynTableLea_pptr_pptr)(FUNCTION_ARGS) {
 		{
-			auto dst          = readFromStack<Pointer>(local_stack, instr->arg0);
-			auto tbl_pointer  = readFromStack<Pointer>(local_stack, instr->arg1);
+			auto dst          = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
+			auto tbl_pointer  = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
 			auto element_type = *Memory::getBlockType(tbl_pointer.getBlock())->getInnerType();
-			auto index        = readFromStack<u64>(local_stack, instr[1].arg0);
+			auto index        = READ_FROM_PLACE_ARG(u64, instr[1].arg0);
 			auto data_offset  = usize(element_type->getSize() * index);
 
 			const Pointer new_dst = thread.process_memory.updatePointerAssignment(
 				dst, { tbl_pointer.getBlock(), tbl_pointer.getOffset() + data_offset }
 			);
-			writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
+			WRITE_TO_PLACE_ARG(Pointer, instr->arg0, new_dst);
 		}
 		FUNCTION_CONT(2);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(fixedSizeTableLea_lptr_lptr)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(fixedSizeTableLea_pptr_pptr)(FUNCTION_ARGS) {
 		{
-			auto dst          = readFromStack<Pointer>(local_stack, instr->arg0);
-			auto tbl_pointer  = readFromStack<Pointer>(local_stack, instr->arg1);
+			auto dst          = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
+			auto tbl_pointer  = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
 			auto element_type = *Memory::getBlockType(tbl_pointer.getBlock())->getInnerType();
-			auto index        = readFromStack<u64>(local_stack, instr[1].arg0);
+			auto index        = READ_FROM_PLACE_ARG(u64, instr[1].arg0);
 			auto data_offset  = usize(element_type->getSize() * index);
 
 			const Pointer new_dst = thread.process_memory.updatePointerAssignment(
 				dst, { tbl_pointer.getBlock(), tbl_pointer.getOffset() + data_offset }
 			);
-			writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
+			WRITE_TO_PLACE_ARG(Pointer, instr->arg0, new_dst);
 		}
 		FUNCTION_CONT(2);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(dynTableStore_lptr_blany)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(dynTableStore_pptr_bany)(FUNCTION_ARGS) {
 		{
-			auto tbl_pointer  = readFromStack<Pointer>(local_stack, instr->arg0);
-			auto index        = readFromStack<i64>(local_stack, instr[1].arg0);
+			auto tbl_pointer  = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
+			auto index        = READ_FROM_PLACE_ARG(i64, instr[1].arg0);
 			auto element_type = *Memory::getBlockType(tbl_pointer.getBlock())->getInnerType();
 			auto data_offset  = index * static_cast<i64>(element_type->getSize());
 			tbl_pointer.movePointer(data_offset);
 
-			auto src_block   = Ref(frame->local_block_ref_stack_base[instr->arg1]);
+			auto src_block   = READ_BLOCK_REF_FROM_ARG(instr->arg1);
 			auto src_pointer = Pointer{ src_block, 0 };
 
 			thread.process_memory.copyPointedData(tbl_pointer, src_pointer, element_type);
@@ -1086,15 +974,15 @@ namespace vm {
 		FUNCTION_CONT(2);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(fixedSizeTableStore_lptr_blany)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(fixedSizeTableStore_pptr_bany)(FUNCTION_ARGS) {
 		{
-			auto tbl_pointer  = readFromStack<Pointer>(local_stack, instr->arg0);
+			auto tbl_pointer  = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
 			auto element_type = *Memory::getBlockType(tbl_pointer.getBlock())->getInnerType();
-			auto index        = readFromStack<i64>(local_stack, instr[1].arg0);
+			auto index        = READ_FROM_PLACE_ARG(i64, instr[1].arg0);
 			auto data_offset  = index * static_cast<i64>(element_type->getSize());
 			tbl_pointer.movePointer(data_offset);
 
-			auto src_block   = Ref(frame->local_block_ref_stack_base[instr->arg1]);
+			auto src_block   = READ_BLOCK_REF_FROM_ARG(instr->arg1);
 			auto src_pointer = Pointer(src_block, 0);
 
 			thread.process_memory.copyPointedData(tbl_pointer, src_pointer, element_type);
@@ -1102,14 +990,14 @@ namespace vm {
 		FUNCTION_CONT(2);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(dynTableLoad_blany_lptr)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(dynTableLoad_bany_pptr)(FUNCTION_ARGS) {
 		{
-			auto dst_block   = Ref(frame->local_block_ref_stack_base[instr->arg0]);
+			auto dst_block   = READ_BLOCK_REF_FROM_ARG(instr->arg0);
 			auto dst_pointer = Pointer(dst_block, 0);
 
-			auto tbl_pointer = readFromStack<Pointer>(local_stack, instr->arg1);
+			auto tbl_pointer = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
 
-			auto index        = readFromStack<i64>(local_stack, instr[1].arg0);
+			auto index        = READ_FROM_PLACE_ARG(i64, instr[1].arg0);
 			auto element_type = *Memory::getBlockType(tbl_pointer.getBlock())->getInnerType();
 			tbl_pointer.movePointer(index * static_cast<i64>(element_type->getSize()));
 
@@ -1118,14 +1006,14 @@ namespace vm {
 		FUNCTION_CONT(2);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(fixedSizeTableLoad_blany_lptr)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(fixedSizeTableLoad_bany_pptr)(FUNCTION_ARGS) {
 		{
-			auto dst_block   = Ref(frame->local_block_ref_stack_base[instr->arg0]);
+			auto dst_block   = READ_BLOCK_REF_FROM_ARG(instr->arg0);
 			auto dst_pointer = Pointer(dst_block, 0);
 
-			auto tbl_pointer = readFromStack<Pointer>(local_stack, instr->arg1);
+			auto tbl_pointer = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
 
-			auto index        = readFromStack<i64>(local_stack, instr[1].arg0);
+			auto index        = READ_FROM_PLACE_ARG(i64, instr[1].arg0);
 			auto element_type = *Memory::getBlockType(tbl_pointer.getBlock())->getInnerType();
 			tbl_pointer.movePointer(index * static_cast<i64>(element_type->getSize()));
 
@@ -1134,11 +1022,11 @@ namespace vm {
 		FUNCTION_CONT(2);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(dynTableReAlloc_lptr_type)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(dynTableReAlloc_pptr_type)(FUNCTION_ARGS) {
 		{
-			auto tbl_pointer    = readFromStack<Pointer>(local_stack, instr->arg0);
+			auto tbl_pointer    = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
 			auto pointed_type   = safeReadObjectBytes<TypeCRef>(instr->arg1);
-			auto new_elem_count = readFromStack<u64>(local_stack, instr[1].arg0);
+			auto new_elem_count = READ_FROM_PLACE_ARG(u64, instr[1].arg0);
 
 			if (new_elem_count == 0) {
 				// When reallocating dynamic data to 0 elements, we free the data and set pointer to
@@ -1157,14 +1045,14 @@ namespace vm {
 					const Pointer new_dst = thread.process_memory.updatePointerAssignment(
 						tbl_pointer, Pointer::null()
 					);
-					writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
+					WRITE_TO_PLACE_ARG(Pointer, instr->arg0, new_dst);
 				}
 			} else if (tbl_pointer.isNull()) {
 				auto new_block
 					= thread.process_memory.dynTableAllocateHeapN(pointed_type, new_elem_count);
 				const Pointer new_dst
 					= thread.process_memory.updatePointerAssignment(tbl_pointer, { new_block, 0 });
-				writeToStack<Pointer>(local_stack, instr->arg0, new_dst);
+				WRITE_TO_PLACE_ARG(Pointer, instr->arg0, new_dst);
 			} else {
 				auto tbl_block = tbl_pointer.getBlock();
 				thread.process_memory.dynTableReallocateBlockDataN(tbl_block, new_elem_count);
@@ -1173,13 +1061,13 @@ namespace vm {
 		FUNCTION_CONT(2);
 	}
 
-#define DEFINE_STATIC_CAST_CONVERSION_OP(NAME, DST_SIZE, SRC_SIZE, DST_TYPE, SRC_TYPE)    \
-	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##DST_SIZE##_l##SRC_SIZE)(FUNCTION_ARGS) {    \
-		{                                                                                 \
-			auto val = readFromStack<SRC_TYPE>(local_stack, instr->arg1);                 \
-			writeToStack<DST_TYPE>(local_stack, instr->arg0, static_cast<DST_TYPE>(val)); \
-		}                                                                                 \
-		FUNCTION_CONT(1);                                                                 \
+#define DEFINE_STATIC_CAST_CONVERSION_OP(NAME, DST_SIZE, SRC_SIZE, DST_TYPE, SRC_TYPE) \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_p##DST_SIZE##_p##SRC_SIZE)(FUNCTION_ARGS) { \
+		{                                                                              \
+			auto val = READ_FROM_PLACE_ARG(SRC_TYPE, instr->arg1);                     \
+			WRITE_TO_PLACE_ARG(DST_TYPE, instr->arg0, static_cast<DST_TYPE>(val));     \
+		}                                                                              \
+		FUNCTION_CONT(1);                                                              \
 	}
 
 	// Sign Extension
@@ -1222,11 +1110,11 @@ namespace vm {
 
 
 #define DEFINE_FPTOSI_OP(NAME, DST_SIZE, SRC_SIZE, DST_TYPE, SRC_TYPE)                        \
-	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##DST_SIZE##_l##SRC_SIZE)(FUNCTION_ARGS) {        \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_p##DST_SIZE##_p##SRC_SIZE)(FUNCTION_ARGS) {        \
 		{                                                                                     \
 			using IntT   = DST_TYPE;                                                          \
 			using FloatT = SRC_TYPE;                                                          \
-			auto x       = readFromStack<FloatT>(local_stack, instr->arg1);                   \
+			auto x       = READ_FROM_PLACE_ARG(FloatT, instr->arg1);                          \
 			IntT res;                                                                         \
 			if (std::isnan(x)) {                                                              \
 				res = IntT{ 0 };                                                              \
@@ -1241,17 +1129,17 @@ namespace vm {
 					res = static_cast<IntT>(x);                                               \
 				}                                                                             \
 			}                                                                                 \
-			writeToStack<IntT>(local_stack, instr->arg0, res);                                \
+			WRITE_TO_PLACE_ARG(IntT, instr->arg0, res);                                       \
 		}                                                                                     \
 		FUNCTION_CONT(1);                                                                     \
 	}
 
 #define DEFINE_FPTOUI_OP(NAME, DST_SIZE, SRC_SIZE, DST_TYPE, SRC_TYPE)                         \
-	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##DST_SIZE##_l##SRC_SIZE)(FUNCTION_ARGS) {         \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_p##DST_SIZE##_p##SRC_SIZE)(FUNCTION_ARGS) {         \
 		{                                                                                      \
 			using UIntT  = DST_TYPE;                                                           \
 			using FloatT = SRC_TYPE;                                                           \
-			auto  x      = readFromStack<FloatT>(local_stack, instr->arg1);                    \
+			auto  x      = READ_FROM_PLACE_ARG(FloatT, instr->arg1);                           \
 			UIntT res;                                                                         \
 			if (std::isnan(x)) {                                                               \
 				res = UIntT{ 0 };                                                              \
@@ -1265,7 +1153,7 @@ namespace vm {
 					res = static_cast<UIntT>(x);                                               \
 				}                                                                              \
 			}                                                                                  \
-			writeToStack<UIntT>(local_stack, instr->arg0, res);                                \
+			WRITE_TO_PLACE_ARG(UIntT, instr->arg0, res);                                       \
 		}                                                                                      \
 		FUNCTION_CONT(1);                                                                      \
 	}

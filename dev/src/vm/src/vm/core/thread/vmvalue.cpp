@@ -78,9 +78,7 @@ void vm::VmValue::dprint(std::ostream& out, const std::string& indent) const {
 
 	const auto type_name = type->getName();
 
-	if (type_name == base::StrID("void"))
-		out << " <void>\n";
-	else if (type_name == base::StrID("i64"))
+	if (type_name == base::StrID("i64"))
 		out << " " << readBytes<i64>() << " (as i64)\n";
 	else if (type_name == base::StrID("i32"))
 		out << " " << readBytes<i32>() << " (as i32)\n";
