@@ -1031,7 +1031,7 @@ private:
 			R"(
 				expand "fun foo(x: i64) = 10 + y;"; # error: `y` is not defined
 			)",
-			{"y", "not found"},
+			{ "y", "not found" },
 			1
 		);
 
@@ -1041,7 +1041,7 @@ private:
 			R"(
 				expand 1;
 			)",
-			{"i32", "string"},
+			{ "i32", "string" },
 			1
 		);
 
@@ -1049,7 +1049,7 @@ private:
 			R"(
 				expand y;
 			)",
-			{"y", "not found"},
+			{ "y", "not found" },
 			1
 		);
 
@@ -1064,7 +1064,7 @@ private:
 				}
 
 			)",
-			{ },
+			{},
 			2
 		);
 
@@ -1100,7 +1100,6 @@ private:
 			{ "y", "z", "w", "not found" },
 			3
 		);
-
 	}
 
 	void testErrorBadExpr() {
