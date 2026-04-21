@@ -14,7 +14,6 @@
 #include <deque>
 #include <functional>
 #include <optional>
-#include <ranges>
 #include <tuple>
 #include <unordered_set>
 #include <utility>
@@ -26,12 +25,11 @@ namespace vm::persistent::detail {
 	std::pair<usize, usize> Memory::getHeightOffset(MemoryStateID state) const {
 		if_opt_some(root_info.atMaybeCopy(state), entry) {
 			auto pos    = entry.position;
-			auto height = usize(64 - std::bit_width(pos));
 			CORE_ASSERT(!(pos & LEAF_MASK), "top bit would imply that node is leaf");
 
 			return {
-				height,
-				(pos << height) & ROOT_MASK,
+				heightFromPos(pos),
+				offsetFromPos(pos),
 			};
 		}
 		if_opt_some(leaf_entries.atRightOpt(state), val) {
@@ -139,7 +137,7 @@ namespace vm::persistent::detail {
 		auto  curr_leaf = EMPTY, prev_leaf = EMPTY;
 		usize curr_idx = 0, prev_idx = idxs.front();
 
-		auto takeUntilDiffefent = [&](std::deque<usize>& dq) {
+		auto get_first_diff = [&](std::deque<usize>& dq) {
 			usize last_idx = prev_idx;
 			for (; dq.size(); dq.pop_front()) {
 				curr_idx = dq.front();
@@ -156,7 +154,7 @@ namespace vm::persistent::detail {
 			CORE_ASSERT(found_diff || dq.empty(), "when we didn't find anything dq is empty");
 		};
 
-		takeUntilDiffefent(idxs);
+		get_first_diff(idxs);
 		if (!found_diff) return root;
 		prev_leaf = curr_leaf;
 		prev_idx  = idxs.front();
@@ -164,13 +162,13 @@ namespace vm::persistent::detail {
 
 		std::deque<MemoryStateID> on_left = {}, on_right = {};
 
-		auto extendNeighs = [&](usize height) {
+		auto extend_neighs = [&](usize height) {
 			CORE_ASSERT(on_left.size() == on_right.size(), "paranoid assert this is required");
 			while (on_left.size() <= height) on_left.emplace_back(EMPTY);
 			while (on_right.size() <= height) on_right.emplace_back(EMPTY);
 		};
 
-		auto reconstructLocalNeighs = [&](usize height) {
+		auto reconstruct_local_neighs = [&](usize height) {
 			CORE_ASSERT(on_left.size() == on_right.size(), "paranoid assert this is required");
 			CORE_ASSERT(height + 1 <= iter.trace.size(), "paranoid assertion");
 			CORE_ASSERT(height <= on_left.size() && height <= on_right.size(), "paranoid assertion");
@@ -188,8 +186,8 @@ namespace vm::persistent::detail {
 			}
 		};
 
-		extendNeighs(iter.trace.size());
-		reconstructLocalNeighs(iter.trace.size());
+		extend_neighs(iter.trace.size());
+		reconstruct_local_neighs(iter.trace.size());
 
 		std::deque<usize> before = {}, after = {};
 		auto [root_offset, root_height] = getHeightOffset(root);
@@ -198,7 +196,7 @@ namespace vm::persistent::detail {
 			before.emplace_back(idxs.front());
 		for (; idxs.size(); idxs.pop_front()) after.emplace_back(idxs.front());
 
-		auto elevateNode
+		auto elevate_node
 			= [&](MemoryStateID node, usize idx, usize height, usize start_height = 0) {
 				  CORE_ASSERT(
 					  start_height == getHeightOffset(node).first,
@@ -213,31 +211,31 @@ namespace vm::persistent::detail {
 				  return node;
 			  };
 
-		auto updateNextDiff = [&](std::deque<usize>& dq) {
+		auto update_next_diff = [&](std::deque<usize>& dq) {
 			found_diff = false;
-			takeUntilDiffefent(dq);
+			get_first_diff(dq);
 			if (!found_diff) return;
 
 			auto new_idx = dq.front();
 			dq.pop_front();
 
 			usize height = getLCAHeight(new_idx, prev_idx);
-			extendNeighs(height);
-			on_left[height] = elevateNode(curr_leaf, prev_idx, height);
-			reconstructLocalNeighs(height);
+			extend_neighs(height);
+			on_left[height] = elevate_node(curr_leaf, prev_idx, height);
+			reconstruct_local_neighs(height);
 
 			prev_leaf = curr_leaf;
 			prev_idx  = curr_idx;
 		};
 
-		auto processQueue = [&](std::deque<usize>& dq) {
-			while (dq.size()) updateNextDiff(dq);
+		auto process_queue = [&](std::deque<usize>& dq) {
+			while (dq.size()) update_next_diff(dq);
 		};
 
-		processQueue(before);
+		process_queue(before);
 
 		if (!root && prev_idx < root_offset) {
-			updateNextDiff(after);
+			update_next_diff(after);
 
 			if (found_diff) {
 				usize height = getLCAHeight(root_offset, prev_idx);
@@ -251,18 +249,18 @@ namespace vm::persistent::detail {
 						on_left[i] == EMPTY && on_right[i] == EMPTY,
 						"This is expected outside the root's scopr"
 					);
-				on_left[height - 1] = elevateNode(root, root_offset, height - 1, root_height);
+				on_left[height - 1] = elevate_node(root, root_offset, height - 1, root_height);
 			}
 		}
 
-		processQueue(after);
+		process_queue(after);
 
 		while (on_left.size() && !on_left.back() && !on_right.back()) {
 			on_left.pop_back();
 			on_right.pop_back();
 		}
 
-		return elevateNode(prev_leaf, prev_idx, on_left.size());
+		return elevate_node(prev_leaf, prev_idx, on_left.size());
 	}
 
 	MemoryStateID Memory::rebuildFromTwo(
@@ -283,7 +281,7 @@ namespace vm::persistent::detail {
 			};
 		}
 
-		auto detailMerge = [&, mem = this](
+		auto detail_merge = [&, mem = this](
 							   this auto&& self, MemoryStateID node_1, MemoryStateID node_2
 						   ) -> MemoryStateID {
 			CORE_ASSERT(
@@ -323,11 +321,7 @@ namespace vm::persistent::detail {
 			return mem->nodeFromChildren(self(left_1, left_2), self(right_1, right_2));
 		};
 
-		return EMPTY;
-	}
-
-	usize Memory::getLCAHeight(usize idx_1, usize idx_2) {
-		return (usize) std::bit_width(idx_1 ^ idx_2);
+		return detail_merge(root_1, root_2);
 	}
 
 	MemoryStateID Memory::getLeaf(MemoryStateID root, usize idx) const {
@@ -582,7 +576,6 @@ namespace vm::persistent::detail {
 	MemoryStateID Memory::setMultiple(MemoryStateID root, std::deque<std::pair<usize, usize>> vals) {
 		validateRoot(root);
 
-		auto [root_height, root_offset] = getHeightOffset(root);
 		if (!vals.size()) return root;
 
 		std::ranges::sort(vals);
@@ -607,7 +600,6 @@ namespace vm::persistent::detail {
 	MemoryStateID Memory::eraseMultiple(MemoryStateID root, std::deque<usize> idxs) {
 		validateRoot(root);
 
-		auto [root_height, root_offset] = getHeightOffset(root);
 		if (idxs.empty()) return root;
 
 		std::ranges::sort(idxs);
@@ -726,7 +718,7 @@ namespace vm::persistent::detail {
 			add_left(node);
 		}
 
-		auto detailDiff =
+		auto detail_diff =
 			[&, mem = this](this auto&& self, MemoryStateID node_1, MemoryStateID node_2) -> void {
 			auto [_height_1, _offset_1] = mem->getHeightOffset(node_1);
 			auto [_height_2, _offset_2] = mem->getHeightOffset(node_2);
@@ -784,7 +776,7 @@ namespace vm::persistent::detail {
 		};
 
 		if (equiv.size() && getHeightOffset(equiv.front()).second == offset_2) {
-			detailDiff(equiv.front(), root_2);
+			detail_diff(equiv.front(), root_2);
 			equiv.pop_front();
 		} else {
 			add_right(root_2);
@@ -832,7 +824,7 @@ namespace vm::persistent::detail {
 			to_merge.emplace_back(offset >> height_2, node);
 		}
 
-		auto detailMerge = [&, mem = this](
+		auto detail_merge = [&, mem = this](
 							   this auto&& self, MemoryStateID node_1, MemoryStateID node_2
 						   ) -> MemoryStateID {
 			auto [_height_1, _offset_1] = mem->getHeightOffset(node_1);
@@ -884,7 +876,7 @@ namespace vm::persistent::detail {
 			auto counterpart = equiv.front();
 			equiv.pop_front();
 			if (change) std::swap(counterpart, root_2);
-			to_merge.emplace_back(offset_2 >> height_2, detailMerge(counterpart, root_2));
+			to_merge.emplace_back(offset_2 >> height_2, detail_merge(counterpart, root_2));
 		} else {
 			to_merge.emplace_back(offset_2 >> height_2, root_2);
 		}

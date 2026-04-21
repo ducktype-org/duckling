@@ -78,10 +78,32 @@ namespace vm::persistent::detail {
 
 		static constexpr Dir othDir(Dir dir) { return dir == Dir::Left ? Dir::Right : Dir::Left; }
 
+		// method for determining height of LCA for two leaves at idx_1 and idx_2. Used for readability
+		static constexpr usize heightFromPos(usize pos) { return usize(64 - std::bit_width(pos)); }
+
+		static constexpr usize offsetFromPos(usize pos) {
+			return (pos << heightFromPos(pos)) & ROOT_MASK;
+		}
+
+		static constexpr usize getLCAHeight(usize idx_1, usize idx_2) {
+			return (usize) std::bit_width(idx_1 ^ idx_2);
+		}
+
+		struct SurroundingNeigh {
+			base::CRef<Memory> mem;
+			usize              root_pos;
+			usize              node_pos;
+
+			std::deque<std::pair<MemoryStateID, MemoryStateID>> neighs;
+
+			void          elevateRoot(usize height);
+			void          moveNodeTo(usize desired_pos);
+			void          trimRoot();
+			MemoryStateID finalize();
+		};
+
 		/**
 		 * @brief struture used to iterate over the MemoryStateView
-		 * @note might be used in internal workings of the class Memory
-		 * @warning DO NOT TOUCH!
 		 */
 		struct Path {
 			usize                     idx;
@@ -137,10 +159,6 @@ namespace vm::persistent::detail {
 		MemoryStateID getLeaf(MemoryStateID root, usize idx) const;
 		[[nodiscard]]
 		std::deque<MemoryStateID> getSubNodesAtHeight(MemoryStateID root, usize desired_height) const;
-
-
-		// method for determining height of LCA for two leaves at idx_1 and idx_2. Used for readability
-		static usize getLCAHeight(usize idx_1, usize idx_2);
 
 		// checks if root is a valid state of memory
 		void validateRoot(MemoryStateID root) const;
