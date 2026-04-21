@@ -123,6 +123,7 @@ namespace vm::persistent::detail {
 		usize                   getSize(MemoryStateID state) const;
 		usize                   getPos(MemoryStateID state) const;
 		std::pair<usize, usize> getRange(MemoryStateID state) const;
+		usize                   getValue(MemoryStateID state) const;
 
 		/**
 		 * @brief meethods for getting descendants of given root, either a direct child  or
@@ -169,16 +170,16 @@ namespace vm::persistent::detail {
 			};
 		};
 
+		using LeafBuilder = std::function<MemoryStateID(usize, base::Optional<usize>)>;
+
 		/**
 		 * @brief abstract methods which implement atomic reconstruction of  memory, either by
 		 * modifying indexes, merging two trees or changing given range
 		 * @note in the long run all of methods which construct new states of memory will be
 		 * wrappers for those functions
 		 */
-		MemoryStateID rebuildFromIdxs(
-			MemoryStateID                       root,
-			std::deque<usize>                   idxs,
-			std::function<MemoryStateID(usize)> leaf_constructor
+		MemoryStateID reconstructIdxs(
+			MemoryStateID root, std::deque<usize> idxs, LeafBuilder leaf_constructor
 		);
 		MemoryStateID rebuildFromTwo(
 			MemoryStateID root_1, MemoryStateID root_2, ReconstructPolicy reconstruction_policy
@@ -242,7 +243,8 @@ namespace vm::persistent::detail {
 		MemoryStateID merge(MemoryStateID root_1, MemoryStateID root_2, ConflictPolicy policy);
 
 		/**
-		 * @brief methods to operate on [left, right) interval. Either removes the leaves at given range or filters them out
+		 * @brief methods to operate on [left, right) interval. Either removes the leaves at given
+		 * range or filters them out
 		 */
 		MemoryStateID slice(MemoryStateID root, usize left_idx, usize right_idx);
 		MemoryStateID eraseRange(MemoryStateID root, usize left_idx, usize right_idx);

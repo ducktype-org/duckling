@@ -1,5 +1,7 @@
 #include "persistent_memory.hpp"
 
+#include "base/collections/optional.hpp"
+#include "base/except/exceptions.hpp"
 #include <base/collections/maps.hpp>
 #include <base/extend_cpp/strongly_typed_int.hpp>
 
@@ -67,6 +69,12 @@ namespace vm::persistent::detail {
 		CORE_UNREACHABLE();
 	}
 
+	usize Memory::getValue(MemoryStateID leaf) const {
+		if_opt_some(leaf_entries.atRightOpt(leaf), entry) { return entry.value; }
+
+		CORE_UNREACHABLE();
+	}
+
 	void Memory::validateRoot(MemoryStateID root) const {
 		if (!root_info.contains(root) && !leaf_entries.atRightOpt(root))
 			throw std::invalid_argument("got invalid state");
@@ -77,7 +85,6 @@ namespace vm::persistent::detail {
 		CORE_ASSERT(size <= (1 << height), "root's size is too large");
 		CORE_ASSERT(height >= 64 || offset % (1 << height) == 0, "offset is not on multiple of 2^k");
 	}
-
 
 	MemoryStateID Memory::nodeFromChildren(MemoryStateID left, MemoryStateID right) {
 		auto pos_left  = getPos(left);
@@ -147,78 +154,144 @@ namespace vm::persistent::detail {
 		return EMPTY;
 	}
 
-	MemoryStateID Memory::rebuildFromIdxs(
-		MemoryStateID root, std::deque<usize> idxs, std::function<MemoryStateID(usize)> constructor
+	MemoryStateID Memory::reconstructIdxs(
+		MemoryStateID root, std::deque<usize> idxs, LeafBuilder constructor
 	) {
 		if (!idxs.size()) return root;
-
 		std::ranges::sort(idxs);
+		Path iter = getPathTo(root, idxs.front());
 
-		usize left_most_idx = 0;
-		Path  iter          = getPathTo(root, idxs.front());
+		bool          found_different = false;
+		MemoryStateID curr_leaf       = EMPTY;
+		usize         curr_idx        = 0;
 
-		std::deque<MemoryStateID> on_left = {};
-		for (usize i = 1; i < iter.trace.size(); i++)
-			on_left.emplace_back(getChild(Dir::Left, iter.trace[i]));
-
-		MemoryStateID prev_node = EMPTY;
+		MemoryStateID prev_leaf = EMPTY;
 		usize         prev_idx  = idxs.front();
 
-		bool was_first = false;
-
-		for (auto idx: idxs) {
-			if (on_left.size()) {
-				for (usize required_height = getLCAHeight(left_most_idx, idx);
-				     on_left.size() < required_height;
-				     on_left.emplace_back(EMPTY));
+		auto takeUntilDiffefent = [&](std::deque<usize>& dq) {
+			usize last_idx = prev_idx;
+			for (; dq.size(); dq.pop_front()) {
+				curr_idx = dq.front();
+				iter.moveBy(curr_idx - last_idx);
+				auto old_leaf = iter.trace.at(0);
+				auto new_leaf = constructor(curr_idx, getValue(old_leaf));
+				if (new_leaf != old_leaf) {
+					curr_leaf = new_leaf;
+					break;
+				}
+				last_idx = curr_idx;
 			}
+			CORE_ASSERT(found_different || dq.empty(), "when we didn't find anything dq is empty");
+		};
 
-			auto leaf = constructor(idx);
+		takeUntilDiffefent(idxs);
+		if (!found_different) return root;
+		prev_leaf = curr_leaf;
+		prev_idx  = idxs.front();
+		idxs.pop_front();
 
-			if (!was_first) {
-				if (on_left.empty() && !leaf) {
-					continue;
-					// there was nothing on the left side, this is our first element, it evaluated
-					// to zero, we don't do shit
-				}
-				was_first = true;
-				prev_node = leaf;
-				prev_idx  = idx;
-			} else {
-				auto height = getLCAHeight(prev_idx, idx);  // we get the first em
-				CORE_ASSERT(
-					height < on_left.size(), "paranoid assert - path of nodes is long enough"
-				);
+		std::deque<MemoryStateID> on_left = {}, on_right = {};
 
-				CORE_ASSERT(
-					height < iter.trace.size(),
-					"paranoid assert - trace of iter should be long enough"
-				);
+		auto extendNeighs = [&](usize height) {
+			CORE_ASSERT(on_left.size() == on_right.size(), "paranoid assert this is required");
+			while (on_left.size() <= height) on_left.emplace_back(EMPTY);
+			while (on_right.size() <= height) on_right.emplace_back(EMPTY);
+		};
 
-				for (usize i = 0; i + 1 < height; i++) {
-					MemoryStateID left = on_left[i], right = on_left[i];
+		auto reconstructLocalNeighs = [&](usize height) {
+			CORE_ASSERT(on_left.size() == on_right.size(), "paranoid assert this is required");
+			CORE_ASSERT(height + 1 <= iter.trace.size(), "paranoid assertion");
+			CORE_ASSERT(height <= on_left.size() && height <= on_right.size(), "paranoid assertion");
 
-					if (prev_idx & (1 << i)) {
-						right = prev_node;
-						left  = elevateRoot(left, i);
-					} else {
-						left  = prev_node;
-						right = EMPTY;
-					}
+			for (usize i = 0; i < height; i++) {
+				auto state  = iter.trace.at(i + 1);
+				on_left[i]  = EMPTY;
+				on_right[i] = EMPTY;
 
-					prev_node = nodeFromChildren(left, right);
+				usize mask = (1 << i);
+				if (iter.idx & mask)
+					on_left[i] = state;
+				else
+					on_right[i] = state;
+			}
+		};
 
-					on_left[i] = getChild(Dir::Left, iter.trace.at(i));
-				}
+		extendNeighs(iter.trace.size());
+		reconstructLocalNeighs(iter.trace.size());
 
-				on_left[height] = prev_node;
+		std::deque<usize> before = {}, in = {}, after = {};
+		auto [root_offset, root_height] = getHeightOffset(root);
 
-				prev_node = leaf;
-				prev_idx  = idx;
+		for (; idxs.size() && idxs.front() < root_offset; idxs.pop_front())
+			before.emplace_back(idxs.front());
+		for (; idxs.size() && idxs.front() < root_offset + (1 << root_height); idxs.pop_front())
+			in.emplace_back(idxs.front());
+		for (; idxs.size(); idxs.pop_front()) after.emplace_back(idxs.front());
+
+
+		auto elevateNode
+			= [&](MemoryStateID node, usize idx, usize height, usize start_height = 0) {
+				  CORE_ASSERT(
+					  start_height == getHeightOffset(node).first,
+					  "sanity assert - we always use the right node"
+				  );
+				  for (usize i = start_height; i < height; i++)
+					  if (idx & (1 << i))
+						  node = nodeFromChildren(on_left[i], node);
+					  else
+						  node = nodeFromChildren(node, on_right[i]);
+
+				  return node;
+			  };
+
+		auto updateNextDiff = [&](std::deque<usize>& dq) {
+			found_different = false;
+			takeUntilDiffefent(dq);
+			if (!found_different) return;
+
+			auto new_idx = dq.front();
+			dq.pop_front();
+
+			usize height = getLCAHeight(new_idx, prev_idx);
+			extendNeighs(height);
+			on_left[height] = elevateNode(curr_leaf, prev_idx, height);
+			reconstructLocalNeighs(height);
+
+			prev_leaf = curr_leaf;
+			prev_idx  = curr_idx;
+		};
+
+		auto processQueue = [&](std::deque<usize>& dq) {
+			while (dq.size()) updateNextDiff(dq);
+		};
+
+		processQueue(before);
+		processQueue(in);
+
+		if (!root && prev_idx < root_offset) {
+			updateNextDiff(after);
+
+			if (found_different) {
+				usize height = getLCAHeight(root_offset, prev_idx);
+				CORE_ASSERT(root_height < height, "We need to go outsude current scope");
+				for (usize i = root_height; i < height; i++)
+					CORE_ASSERT(
+						on_left[i] == EMPTY && on_right[i] == EMPTY,
+						"This is expected outside the root's scopr"
+					);
+				on_left[height - 1] = elevateNode(root, root_offset, height - 1, root_height);
 			}
 		}
 
-		return EMPTY;
+		processQueue(after);
+
+		CORE_ASSERT(on_left.size() == on_right.size(), "when is ");
+		while (on_left.size() && !on_left.back() && !on_right.back()) {
+			on_left.pop_back();
+			on_right.pop_back();
+		}
+
+		return elevateNode(prev_leaf, prev_idx, on_left.size());
 	}
 
 	usize Memory::getLCAHeight(usize idx_1, usize idx_2) {
@@ -1092,9 +1165,7 @@ namespace vm::persistent::detail {
 		mem.validateRoot(root);
 		auto path = mem.getPathTo(root, idx);
 
-		if (path.trace.size() && path.trace.at(0) != Memory::EMPTY) {
-			maybe_path = path;
-		}
+		if (path.trace.size() && path.trace.at(0) != Memory::EMPTY) maybe_path = path;
 	}
 
 	MemoryStateView::MemoryStateView(const Memory& mem, MemoryStateID id): id{ id }, mem{ mem } {}
