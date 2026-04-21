@@ -10,6 +10,8 @@
 
 #include <base/collections/optional.hpp>
 
+#include <vm/bytecode/builtin_types.hpp>
+
 #include <ranges>
 
 namespace {

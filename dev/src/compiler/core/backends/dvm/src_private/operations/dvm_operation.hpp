@@ -3,6 +3,7 @@
 #include "../dvm_value.hpp"
 
 #include <ctv/ctv.hpp>
+#include <lir/lir_structure/lir_structure.hpp>
 
 #include <base/collections/optional.hpp>
 
