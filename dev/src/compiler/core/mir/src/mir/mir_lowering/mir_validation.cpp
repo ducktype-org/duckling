@@ -179,7 +179,8 @@ namespace compiler::mir {
 								return helios::symbolPst(local_ref->helios_id.value())
 								    .value()
 								    .unlock(ctx)
-								    ->getSourcePosition();
+								    ->getSourcePosition()
+								    .unlock(ctx);
 							};
 							auto msg = makeBox<VariableShadowingError>(get_pos(shadowing));
 							msg->addAttachedMessage(

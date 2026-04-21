@@ -1,9 +1,9 @@
 type primitive: i8 1
 type variant: simple_variant { i64, i8 }
 
-function main { i64, ptr_argv } -> i64 {
-    init_lany_type v1, simple_variant;  # var v1: variant<i64, i8>;
-    variantSetInner_lvnt_type v1, i32;
+function main { i64, ptr_argv } -> { i64 } {
+    init_pany_type v1, simple_variant;  # var v1: variant<i64, i8>;
+    variantSetInner_pvnt_type v1, i32;
     deinit;
     ret;
 }

@@ -1,35 +1,35 @@
 type primitive: MyInt64 8
 
-function main { i64, ptr_argv } -> i64 {
-    init_lany_type a, MyInt64;
+function main { i64, ptr_argv } -> { i64 } {
+    init_pany_type a, MyInt64;
 
-    init_lany_type i, i64;
-    mov_l64_imm i, 5;  # i = 5;
+    init_pany_type i, i64;
+    mov_p64_imm i, 5;  # i = 5;
 
 label START;           # while (i > 0)
-    cmpEq_l64_imm i, 0;
+    cmpEq_p64_imm i, 0;
     jmpIf_label END;
 
-    init_lany_type c, MyInt64;
-    mov_l64_imm c, 1;
+    init_pany_type c, MyInt64;
+    mov_p64_imm c, 1;
 
     # In second loop iteration types of those variables are not equal *
-    add_l64_l64 a, c;
+    add_p64_p64 a, c;
 
-    init_lany_type b, i64;
-    mov_l64_imm b, 1;
+    init_pany_type b, i64;
+    mov_p64_imm b, 1;
 
     # * because of this in-place cast.
-    cast_l64_type a, i64;
-    add_l64_l64 a, b;
+    cast_p64_type a, i64;
+    add_p64_p64 a, b;
 
-    sub_l64_imm i, 1;  # i--;
+    sub_p64_imm i, 1;  # i--;
 
     deinit;  # b
     deinit;  # c
     jmp_label START;
  label END;
-    output_l64 a;
+    output_p64 a;
 
     ret;
 }

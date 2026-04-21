@@ -1,10 +1,12 @@
 # Integration tests for scripts in Duckling.
 
+# As described in PR #2352, scripts can be run in two ways: directly with duckc or compiled to DVM bytecode and executed on the DVM.
+# The tests in this folder are run in both modes. Bytecode files are stored in dedicated duck_build folders, created separately for each test.
+# The tests are run in direct mode by default, but one can switch to VM mode by setting the "mode" variable to "vm". Variable "folder" make 
+# executing tests in different folders simply more cenvenient.
 mode: "direct"
 folder: "."
 
-duckc_path: "@{build_dir}/bin/duckc"
-dvm_path: "@{build_dir}/bin/VM"
 clean_cmd: "rm -rf @{folder}/duck_build"
 
 Clean: "@{clean_cmd}"

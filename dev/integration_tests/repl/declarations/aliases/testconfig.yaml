@@ -1,5 +1,7 @@
 # Aliases tests for Duckling REPL
 
+# @TODO: #2569 Enable the tests after making usage of aliases in REPL possible.
+
 Tests:
   basic_declarations:
     Enabled: "false"

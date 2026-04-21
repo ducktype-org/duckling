@@ -1,3 +1,6 @@
+duckc_path: "@{build_dir}/bin/duckc"
+dvm_path: "@{build_dir}/bin/VM"
+
 SubDirs:
     - compiler
     - duck

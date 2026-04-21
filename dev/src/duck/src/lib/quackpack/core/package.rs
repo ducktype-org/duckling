@@ -1,13 +1,11 @@
 //! A general package abstraction.
-use crate::quackpack::{
-    core::{Manifest, storage::freeze::FreezeDep},
-    schemas::manifest::Manifest as ManifestSchema,
-};
-use std::{
-    fmt,
-    path::{Path, PathBuf},
-    sync::Arc,
-};
+use std::fmt;
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
+
+use crate::quackpack::core::Manifest;
+use crate::quackpack::core::storage::freeze::FreezeDep;
+use crate::quackpack::schemas::manifest::Manifest as ManifestSchema;
 
 #[derive(Clone)]
 /// High-level abstraction over a package we are currently working on.

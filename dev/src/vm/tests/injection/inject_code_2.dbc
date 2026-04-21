@@ -1,6 +1,6 @@
-function check {} -> void {
-	init_lany_type      x, i64;
-	mov_l64_imm x, 735;
+function check {} -> {} {
+	init_pany_type      x, i64;
+	mov_p64_imm x, 735;
 	deinit; # x
 
 	ret;

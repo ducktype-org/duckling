@@ -1,5 +1,6 @@
-use crate::{QuackError, QuackResult};
 use std::error::Error;
+
+use crate::{QuackError, QuackResult};
 
 /// Represents a type with a list of surpressed errors, which occured during some computation.
 #[derive(Debug)]

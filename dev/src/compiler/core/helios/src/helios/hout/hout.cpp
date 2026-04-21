@@ -2,15 +2,8 @@
 
 #include "elements.hpp"
 
-#include <frontend/pst_parser/elements/hierarchy/declarations/variable.hpp>
 #include <frontend/pst_parser/elements/includes/basic.hpp>
-#include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
-#include <helios/symbols/symbol_kind.hpp>
-#include <helios_private/hout_creation/definition_generation/default_constructors.hpp>
-#include <helios_private/hout_creation/expressions/coercions.hpp>
-#include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
-#include <helios_private/symbols/symbols.hpp>
 
 #include <query_framework/context/context.hpp>
 
@@ -21,7 +14,7 @@ namespace compiler::helios {
 		out << "HOUT UNIT:\n\n";
 
 		out << "Constants:\n";
-		for (auto& const_gd: glob_data) const_gd.debugPrint(ctx, out);
+		for (auto& const_gd: glob_data) const_gd->debugPrint(ctx, out);
 
 		out << "\nFunctions:\n";
 		for (auto& func: functions) {
@@ -101,49 +94,10 @@ namespace compiler::helios {
 			variant_case(HOUTGlobalVariable, val) {
 				out << (type.getMutability() == tsh::Mutability::Mutable ? "var   " : "let   ");
 				out << prettyDebugPrint(helios_symbol, ctx) << " : " << type.toString() << " = ";
-				val.initial_value.get()->ref()->debugPrint(out);
+				val.initial_value.ref()->debugPrint(out);
 				out << '\n';
 			}
 		}
 	}
 
-	HOUTGlobalData::HOUTGlobalData(
-		query::Context& ctx, const SymID symbol, const HOUTGlobalDataType data_type
-	):
-		  helios_symbol(symbol),
-		  origin(code::pstOrigin(stmt(ctx, symbol).value())),
-		  original_name(name(symbol)),
-		  data_type(data_type),
-		  value([&]() -> std::variant<HOUTGlobalConst, HOUTGlobalVariable> {
-			  switch (data_type) {
-			  case HOUTGlobalDataType::Variable: {
-				  auto var_decl = stmt(ctx, symbol)->dynamicCast<pst::Variable>().value();
-
-				  // Get the initial value and type of the variable.
-				  const auto variable_type = ctx.query<QueryTypeOfSymbol>(symbol)->valueOrThrow();
-				  auto       get_initial_value = [&]() -> Box<code::Expr> {
-                      if (auto maybe_initial_pst = var_decl->getValue()) {
-                          auto initial_value_pst = maybe_initial_pst.value().unlock(ctx)->getExpr();
-                          return getHoutOfExprWithExpectedType(ctx, initial_value_pst, variable_type)
-                              .valueOrThrow();
-                      } else {
-                          return defgen::getDefaultInitializerExpr(
-                                     ctx, variable_type, origin.getSourcePosition().value()
-                          )
-                              .valueOrThrow();
-                      }
-				  };
-				  auto initial_value = get_initial_value();
-
-				  return HOUTGlobalVariable{
-					  std::make_shared<Box<code::Expr>>(std::move(initial_value))
-				  };
-			  }
-			  case HOUTGlobalDataType::Constant:
-				  return HOUTGlobalConst{ ctx.query<QueryConstValueOf>(symbol).valueOrThrow() };
-			  default:
-				  CORE_PANIC("Unhandled HOUTGlobalDataType");
-			  }
-		  }()),
-		  type(ctx.query<QueryTypeOfSymbol>(symbol)->valueOrThrow()) {}
 }

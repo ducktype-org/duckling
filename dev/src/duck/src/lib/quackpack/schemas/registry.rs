@@ -1,8 +1,10 @@
 //! Schemas used when communicating with a registry.
-use crate::quackpack::{core::Version, schemas::OneEntryMap};
 use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
+
+use crate::quackpack::core::Version;
+use crate::quackpack::schemas::OneEntryMap;
 
 pub type Dependencies = Vec<Dependency>;
 

@@ -1,10 +1,11 @@
 use std::backtrace::Backtrace;
 
-use crate::duck::util::indent::indent;
-use crate::util::error::{DisplayPlace, ErrorExt, ErrorType, InternalError};
-use crate::{DuckContext, duck::util::terminal::Terminal};
-use crate::{QuackError, QuackResult, qp_bail_internal};
 use tracing::debug;
+
+use crate::duck::util::indent::indent;
+use crate::duck::util::terminal::Terminal;
+use crate::util::error::{DisplayPlace, ErrorExt, ErrorType, InternalError};
+use crate::{DuckContext, QuackError, QuackResult, qp_bail_internal};
 
 /// Actual main entry point for the duck-binary.
 pub fn main() {
@@ -24,12 +25,10 @@ pub fn main() {
 
 /// Setup [`tracing`] loggers.
 pub fn setup_logger() {
-    use tracing_subscriber::{
-        EnvFilter, Layer,
-        fmt::{layer, time::Uptime},
-        prelude::*,
-        registry,
-    };
+    use tracing_subscriber::fmt::layer;
+    use tracing_subscriber::fmt::time::Uptime;
+    use tracing_subscriber::prelude::*;
+    use tracing_subscriber::{EnvFilter, Layer, registry};
     let subscriber = EnvFilter::from_env("DUCK_DEBUG");
     let layer = layer()
         .with_timer(Uptime::default())
