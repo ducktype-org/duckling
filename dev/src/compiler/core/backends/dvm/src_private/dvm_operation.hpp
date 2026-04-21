@@ -122,6 +122,20 @@ namespace compiler::backend_vm::internal {
 		DVMPlace            dest;
 	};
 
+	struct JumpOperation {
+		DVMLabel target;
+	};
+
+	struct BranchOperation {
+		DVMValue condition;
+		DVMLabel true_target;
+		DVMLabel false_target;
+	};
+
+	struct ReturnOperation {
+		base::Optional<DVMValue> value;
+	};
+
 	using DVMOperation = std::variant<
 		NoOpOperation,
 		UnaryOperation,
@@ -131,7 +145,10 @@ namespace compiler::backend_vm::internal {
 		CallOperation,
 		AddressOfOperation,
 		CastOperation,
-		MetaOperation>;
+		MetaOperation,
+		JumpOperation,
+		BranchOperation,
+		ReturnOperation>;
 
 
 	/**

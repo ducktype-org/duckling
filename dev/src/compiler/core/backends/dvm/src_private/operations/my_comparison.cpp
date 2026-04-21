@@ -1,9 +1,8 @@
-#include "comparison_operation_lowering.hpp"
+#include "instruction_lowerer.hpp"
 
 #include "dvm_operation.hpp"
 #include "dvm_value.hpp"
 #include "function_lowering_context.hpp"
-#include "lir/lir_structure/lir_structure.hpp"
 
 namespace {
 	using namespace compiler;
@@ -109,34 +108,34 @@ namespace {
 }
 
 namespace compiler::backend_vm::internal {
-	void ComparisonOperationLowerer::lower(
-		FunctionLoweringContext& ctx, ComparisonOperation& comparison_operation
+	void InstructionLowerer::lower(
+		ComparisonOperation& op
 	) {
-		OpKind operation = comparison_operation.op;
+		OpKind operation = op.op;
 
 		DVMValue result_val = [&]() -> DVMValue {
 			// Shortcut for comparing immediates to keep the same semantics as comp-time.
 			// TODOP: Expand comment.
-			if (comparison_operation.lhs.is<DVMImmediate>()
-			    && comparison_operation.rhs.is<DVMImmediate>()) {
+			if (op.lhs.is<DVMImmediate>()
+			    && op.rhs.is<DVMImmediate>()) {
 				bool const_result = compTimeEvaluateComparison(
-					operation, *comparison_operation.lhs_const, *comparison_operation.rhs_const
+					operation, *op.lhs_const, *op.rhs_const
 				);
 				return { DVMImmediate::boolean(const_result) };
 			}
 
-			if (comparison_operation.lhs.is<DVMImmediate>()) {
+			if (op.lhs.is<DVMImmediate>()) {
 				// Swap arguments to place immediate on the right side.
-				std::swap(comparison_operation.lhs, comparison_operation.rhs);
-				comparison_operation.op = getComparisonOppositeDirection(comparison_operation.op);
+				std::swap(op.lhs, op.rhs);
+				op.op = getComparisonOppositeDirection(op.op);
 			}
 
 			// Force globals into locals if needed.
-			auto lhs = ctx.forceToLocal(comparison_operation.lhs, "lhs_temp");
-			auto rhs = comparison_operation.rhs.is<DVMGlobal>()
-			             ? DVMValue{ ctx.forceToLocal(comparison_operation.rhs, "rhs_temp"),
+			auto lhs = ctx.forceToLocal(op.lhs, "lhs_temp");
+			auto rhs = op.rhs.is<DVMGlobal>()
+			             ? DVMValue{ ctx.forceToLocal(op.rhs, "rhs_temp"),
 				                     DVMPlace::AccessKind::Direct }
-			             : comparison_operation.rhs;
+			             : op.rhs;
 
 			// This resolves e.g. `x = a CMP b;`
 			// by splitting it into three instructions:
@@ -151,7 +150,7 @@ namespace compiler::backend_vm::internal {
 			return { tmp_res, DVMPlace::AccessKind::Direct };
 		}();
 
-		ctx.storeResult(comparison_operation.dest, result_val);
+		ctx.storeResult(op.dest, result_val);
 	}
 
 }

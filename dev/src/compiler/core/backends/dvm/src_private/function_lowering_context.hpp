@@ -20,10 +20,8 @@ namespace compiler::backend_vm::internal {
 
 	class FunctionLoweringContext {
 	public:
-		friend class MetaOperationLowerer;
-		friend class CastOperationLowerer;
-		friend class ComparisonOperationLowerer;
-		friend class ArithmeticOperationLowerer;
+		friend class InstructionLowerer;
+		// TODOP: Remove the friend
 		friend DVMOperation lirInstrToDVMOperation(FunctionLoweringContext&, const lir::Instruction&);
 
 		FunctionLoweringContext(
@@ -100,12 +98,6 @@ namespace compiler::backend_vm::internal {
 		 * lowering LIRPlace, temps created for comparison operations, etc.
 		 */
 		void cleanUpRegisteredTemps();
-
-		void handleCall(
-			const FunctionCallInfo&     call_info,
-			const std::deque<DVMValue>& func_args,
-			base::Optional<DVMPlace>    output
-		);
 
 		usize next_temp_id = 0;
 		/**

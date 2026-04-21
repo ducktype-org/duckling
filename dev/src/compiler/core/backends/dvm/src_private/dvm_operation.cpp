@@ -1,6 +1,7 @@
 #include "dvm_operation.hpp"
 
 #include "ctv/ctv.hpp"
+#include "dvm_value.hpp"
 #include "function_lowering_context.hpp"
 #include "program_lowering_context.hpp"
 
@@ -172,7 +173,6 @@ namespace compiler::backend_vm::internal {
 		case Call: {
 			CORE_ASSERT(!instr.arguments.empty(), "Call expects at least 1 argument (the callable)");
 			auto func_literal = instr.arguments[0].get<lir::FunctionLiteral>();
-			// TODOP: Probably move FunctionCallInfo out of FunctionLoweringContextt
 			auto dvm_call_info
 				= FunctionCallInfo::fromLirFunction(func_literal, ctx.program_context);
 
@@ -295,6 +295,42 @@ namespace compiler::backend_vm::internal {
 			};
 		}
 
+		/// Terminator operations ///
+		case Jump: {
+			CORE_ASSERT(
+				instr.arguments.size() == 1,
+				"Jump operation expects 1 argument, got: ",
+				instr.arguments.size()
+			);
+			return JumpOperation{
+				.target = lower_arg(instr.arguments[0]).get<DVMLabel>(),
+			};
+		}
+		case Branch: {
+			CORE_ASSERT(
+				instr.arguments.size() == 3,
+				"Branch operation expects 3 arguments, got: ",
+				instr.arguments.size()
+			);
+			return BranchOperation{
+				.condition    = lower_arg(instr.arguments[0]),
+				.true_target  = lower_arg(instr.arguments[1]).get<DVMLabel>(),
+				.false_target = lower_arg(instr.arguments[2]).get<DVMLabel>(),
+			};
+		}
+		case ReturnValue:
+		case ReturnVoid: {
+			CORE_ASSERT(
+				instr.arguments.size() <= 1,
+				"ReturnValue expects at most 1 argument, got: ",
+				instr.arguments.size()
+			);
+
+			return ReturnOperation{
+				.value = instr.arguments.size() == 1 ? lower_arg(instr.arguments[0])
+				                                     : base::Optional<DVMValue>(),
+			};
+		}
 		default:
 			CORE_PANIC("Invalid operation: ", base::enumToStr(operation));
 		}
