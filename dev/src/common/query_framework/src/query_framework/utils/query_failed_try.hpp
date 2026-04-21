@@ -1,3 +1,4 @@
+#pragma once
 
 #include <base/types/checked_okbad.hpp>
 

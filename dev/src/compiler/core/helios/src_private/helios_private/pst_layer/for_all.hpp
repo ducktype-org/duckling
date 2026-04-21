@@ -29,10 +29,12 @@ namespace compiler::helios {
 
 				if (expansion_result.hasFailed()) return base::BAD;
 
-				pstForAll(ctx, expansion_result.valueOrPanic().unlock(ctx), function);
+				auto inner_result = internal::pstForAllAux(ctx, expansion_result.valueOrPanic().unlock(ctx), function);
 
-				return base::OK;
+				return inner_result;
 			}
+
+			base::OkBad result = base::OK;
 
 			// Run the function
 			function(element);
@@ -46,8 +48,13 @@ namespace compiler::helios {
 					"View children should only contain valid element (no null ptrs)"
 				);
 
-				pstForAllAux(ctx, child_unlocked.value(), function);
+				auto inner_result = internal::pstForAllAux(ctx, child_unlocked.value(), function);
+				if (inner_result.isBad()) {
+					result = base::BAD;
+				}
 			}
+
+			return result;
 		}
 
 	}

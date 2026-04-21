@@ -53,7 +53,7 @@ namespace compiler::helios {
 					ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
 						"Macro expansion produced code with parsing errors (see other diagnostics "
 					    "for details)",
-						expand->getSourcePosition()
+						expand->getSourcePosition().unlock(ctx)
 					));
 
 					return query::Failed();
@@ -68,7 +68,7 @@ namespace compiler::helios {
 			} else {
 				ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
 					"The expresion in expand statements did not evaluate to a string value.",
-					expand->getValue().unlock(ctx)->getExpr().unlock(ctx)->getSourcePosition()
+					expand->getValue().unlock(ctx)->getExpr().unlock(ctx)->getSourcePosition().unlock(ctx)
 				));
 				return query::Failed();
 			}
