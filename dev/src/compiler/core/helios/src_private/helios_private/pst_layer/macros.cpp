@@ -50,7 +50,8 @@ namespace compiler::helios {
 				if (not pst.getLogger()->good()) {
 					// Note that PST diagnostics are logged eagerly, so if the PST did not parse
 					// correctly, the diagnostics should already be logged at this point.
-					// @TODO: #2438 remove this diagnostic and rely on PST diagnostics only, once they properly show their origin.
+					// @TODO: #2438 remove this diagnostic and rely on PST diagnostics only, once
+					// they properly show their origin.
 					ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
 						"Macro expansion produced code with parsing errors (see other diagnostics "
 						"for details)",

@@ -631,7 +631,9 @@ namespace compiler::helios {
 					);
 				}
 				if (key.ref->is_root)
-					CORE_ASSERT(output.valueOrPanic().empty(), "Root scope should not have any symbols.");
+					CORE_ASSERT(
+						output.valueOrPanic().empty(), "Root scope should not have any symbols."
+					);
 			}
 
 			return output;

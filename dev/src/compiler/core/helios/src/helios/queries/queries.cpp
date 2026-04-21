@@ -115,8 +115,7 @@ namespace compiler::helios {
 						register_ctor_if_needed_no_interrupt(sym);
 
 					// grab constants:
-					if (kind(sym) == SymbolKind::Const)
-						try_append_global_data(sym);
+					if (kind(sym) == SymbolKind::Const) try_append_global_data(sym);
 					if (kind(sym) == SymbolKind::Variable and isGlobalVar(ctx, sym))
 						try_append_global_data(sym);
 

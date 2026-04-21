@@ -107,7 +107,8 @@ namespace compiler::driver {
 			.can_be_loaded_from_disk = true,
 			.preserve_in_graph       = true,
 
-			// We expect compile module query to not fail with query failed exception during its execution.
+			// We expect compile module query to not fail with query failed exception during its
+	        // execution.
 			.catch_exceptions_if_using_qresult = false,
 		})
 	);
