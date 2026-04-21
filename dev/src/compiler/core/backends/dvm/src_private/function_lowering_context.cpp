@@ -59,7 +59,7 @@ base::StrID FunctionLoweringContext::getBlockLabel(lir::BlockRef block) {
 
 namespace {
 	constexpr DVMImmediate lirConstantToImmediate(
-		const compiler::lir::LIRConstant& constant, const vm::code::TypeOfData& type
+		const compiler::lir::LIRConstant& constant, const vm::code::TypeOfData& type, bool lower_type_meta = true
 	) {
 		variant_match(constant.value.getStorage()) {
 			variant_case(compiler::numeric_value::NumericValue, numeric) {
@@ -75,7 +75,8 @@ namespace {
 			variant_case(compiler::tsh::SymbolType<>, type_val) {
 				// @TODO: #1728 remove this evil bit_cast
 				// Representation of a meta type in DVM is a pointer to the symbol type.
-				return DVMImmediate{ std::bit_cast<u64>(&type_val), type };
+				u64 type_val_u64 = lower_type_meta ? std::bit_cast<u64>(&type_val) : 0;
+				return DVMImmediate{ type_val_u64, type };
 			}
 			variant_default {
 				CORE_PANIC("Unsupported CompileTimeValue type for a VM constant operand");
@@ -97,11 +98,11 @@ vm::code::Function compiler::backend_vm::internal::createMiniGlobalCtorFromCTV(
 		.layout = global_layout,
 	};
 
-	const auto immediate = lirConstantToImmediate(global_lir_constant, lowered_global_type);
+	const auto immediate = lirConstantToImmediate(global_lir_constant, lowered_global_type, false);
 
 	vm::code::Function mini_ctor;
 	mini_ctor.name                  = vm::code::Identifier(mini_ctor_name);
-	mini_ctor.signature.result_type = vm::code::Identifier(base::StrID("void"));
+	mini_ctor.signature.result_types = { vm::code::Identifier(base::StrID("void")) };
 	mini_ctor.body.push_back(
 		vm::code::builders::InstructionBuilder(
 			vm::code::builders::OpKind::mov, dvm_global.asArgument(), immediate.asArgument()
@@ -278,7 +279,7 @@ DVMValue FunctionLoweringContext::lowerLirValue(const lir::LIRValue& lir_value) 
 	variant_match(lir_value.getVariant()) {
 		variant_case(lir::LIRConstant, value) {
 			auto dvm_type = program_context.lowerAndKeepTslType(value.layout);
-			return { lirConstantToImmediate(value, dvm_type) };
+			return { lirConstantToImmediate(value, dvm_type, true) };
 		}
 		variant_case(lir::LIRPlace, place) {
 			DVMPlace resolved = resolveLirPlace(place);
