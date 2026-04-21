@@ -118,19 +118,18 @@ namespace vm {
 				SafeVMThread&            thread,
 				usize                    function_id
 			) {
-			auto&      runtime_data     = thread.runtime_data;
-			auto&      called_func      = thread.process_program->getFunctions()[function_id];
-			const bool called_rets_void = called_func.result_type->getName() == "void";
+			auto& runtime_data = thread.runtime_data;
+			auto& called_func  = thread.process_program->getFunctions()[function_id];
 
 			if constexpr (ENABLE_VM_DETAIL_LOGGING)
 				CORE_DEV_LOG(DVMDetails, "Calling function: ", called_func.name.str());
 
 			// Size of the shared stack space between called functions.
-			auto shared_stack_space_size
-				= called_func.arg_size + !called_rets_void * called_func.ret_size;
+			auto shared_stack_space_size = called_func.arg_size + called_func.ret_size;
 
 			auto arg_count           = called_func.parameters.size();
-			auto shared_blocks_count = arg_count + !called_rets_void;
+			auto ret_count           = called_func.result_types.size();
+			auto shared_blocks_count = arg_count + ret_count;
 			u64  prev_frame_block_ref_count
 				= u64(frame->local_block_ref_stack_end - frame->local_block_ref_stack_base);
 
@@ -150,7 +149,7 @@ namespace vm {
 			// Update values passed as arguments.
 			instr = called_func.bc.data();
 			// New local_stack address is the local_stack_head (all typed initialized by the caller
-			// up to this point) - the size of ret_val and arguments passed to callee.
+			// up to this point) - the size of ret_vals and arguments passed to callee.
 			local_stack += prev_frame->local_stack_head - shared_stack_space_size;
 			frame->local_block_ref_stack_base = prev_frame->local_block_ref_stack_base
 			                                  + (prev_frame_block_ref_count - shared_blocks_count);

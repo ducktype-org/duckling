@@ -1,4 +1,4 @@
-function integers {} -> i32 {
+function integers {} -> { i32 } {
 	init_pany_type	a, i16;
 	init_pany_type	b, i16;
 	init_pany_type	c, i16;
@@ -103,24 +103,24 @@ function integers {} -> i32 {
 	ucmpLe_p16_imm	b, 10;		# MAX_U32 <= 10
 	jmpIf_label		fail;
 
-	mov_p32_imm 	ret_val, 1;
+	mov_p32_imm 	ret0, 1;
 	ret;
 
 	label fail;
-	mov_p32_imm 	ret_val, 1234;
+	mov_p32_imm 	ret0, 1234;
 
 	ret;
 }
 
-function main { i64, ptr_argv } -> i64 {
-    # ret_val -> main ret_val
+function main { i64, ptr_argv } -> { i64 } {
+    # ret0 -> main ret0
     # arg0 -> argc
     # arg1 -> *argv
 
-	init_pany_type 	test_ret_val, i32;
+	init_pany_type 	test_ret0, i32;
 
 	call_func 	integers;
-	output_p32 	test_ret_val;
+	output_p32 	test_ret0;
 
 	deinit;
     deinit; # *argv

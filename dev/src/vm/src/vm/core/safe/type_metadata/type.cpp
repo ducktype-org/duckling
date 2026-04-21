@@ -11,6 +11,7 @@
 #include <algorithm>
 
 namespace vm {
+	using base::Optional;
 
 	void Type::isInstantiableImpl(kind::Data& data) {
 		auto is_concrete_class = [](const InheritanceMetadata& imd) {
@@ -134,13 +135,14 @@ namespace vm {
 		kind                  = variant;
 	}
 
-	void Type::defineFunction(std::vector<TypeCRef> parameters, TypeCRef result) {
+	void Type::defineFunction(std::vector<TypeCRef> parameters, std::vector<TypeCRef> result) {
 		CORE_ASSERT(state == State::Declared, "Bad type define");
 		state = State::Defined;
 
 		size      = POINTER_SIZE;
 		kind_type = Kind::Function;
-		kind      = kind::Function{ .parameters = std::move(parameters), .result = result };
+		kind      = kind::Function{ .parameters   = std::move(parameters),
+			                        .result_types = std::move(result) };
 	}
 
 	void Type::defineOpaque(TypeSize pass_size) {
@@ -281,10 +283,27 @@ namespace vm {
 		});
 	}
 
-	base::Optional<TypeCRef> Type::getResultType() const {
+	base::Optional<u64> Type::getResultTypeCount() const {
 		return get<kind::Function>().map([](CRef<kind::Function> function) {
-			return function->result;
+			return function->result_types.size();
 		});
+	}
+
+	base::Optional<Bytes> Type::getResultTypeSize() const {
+		return get<kind::Function>().map([](CRef<kind::Function> function) {
+			Bytes size(0);
+			for (const auto& reslt: function->result_types) size += reslt->getSize();
+			return size;
+		});
+	}
+
+	base::Optional<TypeCRef> Type::getNthResultType(u64 parameter_id) const {
+		return get<kind::Function>().flatMap(
+			[parameter_id](CRef<kind::Function> function) -> base::Optional<TypeCRef> {
+				if (parameter_id >= function->result_types.size()) return std::nullopt;
+				return { function->result_types[parameter_id] };
+			}
+		);
 	}
 
 	base::Optional<Bytes> Type::getTypeTagSizeBytes() const {

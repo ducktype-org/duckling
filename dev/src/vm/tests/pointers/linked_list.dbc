@@ -5,31 +5,31 @@ type data: Node {
     tail: LinkedList
 }
 
-function cons { i64, LinkedList } -> LinkedList {
-    # ret_val: result
+function cons { i64, LinkedList } -> { LinkedList } {
+    # ret0: result
     # arg0: head
     # arg1: tail
 
     # using LinkedList = *Node
 
-    # ret_val = new Node()
-    alloc_pptr_type ret_val, Node;
+    # ret0 = new Node()
+    alloc_pptr_type ret0, Node;
 
-    structStore_pptr_pany_field ret_val, arg0, Node.head;
+    structStore_pptr_pany_field ret0, arg0, Node.head;
 
-    structStore_pptr_pany_field ret_val, arg1, Node.tail;
+    structStore_pptr_pany_field ret0, arg1, Node.tail;
 
     ret;
 }
 
 # OPTIMISED!!!
-function tail {} -> LinkedList {
-    structLoad_pany_pptr_field ret_val, ret_val, Node.tail;
+function tail {} -> { LinkedList } {
+    structLoad_pany_pptr_field ret0, ret0, Node.tail;
 
     ret;
 }
 
-function print_list {LinkedList} -> void {
+function print_list {LinkedList} -> {} {
     # arg0: LinkedList
 
     cmpNull_pptr arg0;
@@ -50,7 +50,7 @@ label non_empty;
     ret_tailcall_func print_list;
 }
 
-function free_list {LinkedList} -> void {
+function free_list {LinkedList} -> {} {
     # arg0: LinkedList
 
     cmpNull_pptr arg0;
@@ -68,7 +68,7 @@ label non_empty;
     ret;
 }
 
-function main { i64, ptr_argv } -> i64 {
+function main { i64, ptr_argv } -> { i64 } {
     # INPUT: n - list_length
     #        x1 x2 ... xn - list elements
     # OUTPUT: Inverted and concatenated elements

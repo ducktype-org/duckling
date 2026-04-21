@@ -1,5 +1,5 @@
-type fun: method_foo {i64} void
-function method_foo_impl {i64} -> void {
+type fun: method_foo {i64} {}
+function method_foo_impl {i64} -> {} {
     ret;
 }
 

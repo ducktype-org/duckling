@@ -54,17 +54,6 @@ namespace vm::code {
 			  func_name(func_name) {}
 	};
 
-	class VoidTypeArgumentError: public ValidationError {
-	public:
-		constexpr static std::string_view ERR_MSG
-			= "Void type cannot be used as argument in function: ";
-		const base::StrID func_name;
-
-		VoidTypeArgumentError(base::StrID func_name):
-			  ValidationError(base::strConcat(ERR_MSG, func_name)),
-			  func_name(func_name) {}
-	};
-
 	/**
 	 * @brief position-less error for function definitions.
 	 * For function name arguments, like in call instructions, use UnknownFunctionError.
@@ -167,15 +156,19 @@ namespace vm::code {
 	class InvalidMainReturnType: public ValidationError {
 	public:
 		constexpr static std::string_view ERR_MSG
-			= "It's required for the `main` function to return a value of type `i64`";
+			= "It's required for the `main` function to return a single value of type `i64`";
 		const code::FuncSignature main_signature;
 
-		InvalidMainReturnType(code::FuncSignature main_signature):
+		const bool type_mismatch;
+
+		InvalidMainReturnType(code::FuncSignature main_signature, bool type_mismatch):
 			  ValidationError(ERR_MSG.data()),
-			  main_signature(std::move(main_signature)) {}
+			  main_signature(std::move(main_signature)),
+			  type_mismatch(type_mismatch) {}
 
 		[[nodiscard]] base::Optional<CRef<ElementBase>> maybeElement() const override {
-			return static_cast<CRef<ElementBase>>(&main_signature.result_type);
+			return type_mismatch ? static_cast<CRef<ElementBase>>(&main_signature.result_types[0])
+			                     : base::Optional<CRef<ElementBase>>{};
 		}
 	};
 
@@ -374,8 +367,8 @@ namespace vm::code {
 	);
 	DEFINE_ARGUMENT_ERROR(
 		InvalidTailcallArgumentsError,
-		"Invalid tailcall arguments. The stack should contain exactly ret_val and arguments for "
-		"calling: "
+		"Invalid tailcall arguments. The stack should contain exactly return values and arguments "
+		"for calling: "
 	);
 	DEFINE_ARGUMENT_ERROR(UninstantiableValueError, "Cannot instantiate a value of type: ");
 	DEFINE_ARGUMENT_ERROR(InvalidArgumentSizeError, "Invalid instruction argument size: ");
@@ -411,5 +404,4 @@ namespace vm::code {
 	DEFINE_INSTRUCTION_ERROR(
 		OpaqueTypeMismatchError, "The opaque type does not match the expected type."
 	);
-	DEFINE_INSTRUCTION_ERROR(VoidRetValAssignmentError, "Cannot assign to 'ret_val' of type void.");
 }

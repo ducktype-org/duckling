@@ -90,6 +90,9 @@ namespace {
 		const vm::code::valid_type::ValidTypeMap&             types_ctx,
 		const std::vector<vm::code::valid_type::ValidTypeID>& new_types
 	) {
+		using std::ranges::to;
+		using std::views::transform;
+
 		for (const auto& type_id: new_types) {
 			const auto& type             = types_ctx.at(type_id);
 			const auto& type_at_metadata = type_metadata->at(type->getName());
@@ -114,31 +117,37 @@ namespace {
 					);
 				}
 				variant_case(vm::code::valid_type::finalized::Structure, data) {
-					std::vector<std::pair<base::StrID, vm::TypeRef>> fields;
-					fields.reserve(data.fields.size());
-					for (auto& field: data.fields)
-						fields.emplace_back(
-							field.name, type_metadata->at(vm::TypeID(field.type.asInt()))
-						);
+					std::vector<std::pair<base::StrID, vm::TypeRef>> fields
+						= data.fields
+					    | transform([&](auto& field) -> std::pair<base::StrID, vm::TypeRef> {
+							  return { field.name,
+							           type_metadata->at(vm::TypeID(field.type.asInt())) };
+						  })
+					    | to<std::vector>();
 					base::Optional<vm::InheritanceMetadata> inh_metadata
 						= buildInheritanceMetadata(*type_metadata, *type, data);
 					type_at_metadata->defineData(fields, inh_metadata);
 				}
 				variant_case(vm::code::valid_type::finalized::Variant, data) {
-					std::vector<vm::TypeRef> variants;
-					variants.reserve(data.alternatives_ordered.size());
-					for (auto& variant: data.alternatives_ordered)
-						variants.emplace_back(type_metadata->at(vm::TypeID(variant.asInt())));
+					std::vector<vm::TypeRef> variants
+						= data.alternatives_ordered | transform([&](auto& variant) -> vm::TypeRef {
+							  return type_metadata->at(vm::TypeID(variant.asInt()));
+						  })
+					    | to<std::vector>();
 					type_at_metadata->defineVariant(data.type_tag_size, variants);
 				}
 				variant_case(vm::code::valid_type::finalized::Function, data) {
-					std::vector<vm::TypeCRef> parameters;
-					parameters.reserve(data.parameters.size());
-					for (auto& param: data.parameters)
-						parameters.emplace_back(type_metadata->at(vm::TypeID(param.asInt())));
-					type_at_metadata->defineFunction(
-						parameters, type_metadata->at(vm::TypeID(data.result.asInt()))
-					);
+					std::vector<vm::TypeCRef> parameters
+						= data.parameters | transform([&](auto& param) -> vm::TypeCRef {
+							  return type_metadata->at(vm::TypeID(param.asInt()));
+						  })
+					    | to<std::vector>();
+					std::vector<vm::TypeCRef> result_types
+						= data.result_types | transform([&](auto& res) -> vm::TypeCRef {
+							  return type_metadata->at(vm::TypeID(res.asInt()));
+						  })
+					    | to<std::vector>();
+					type_at_metadata->defineFunction(parameters, result_types);
 				}
 				variant_case(vm::code::valid_type::finalized::Opaque, opaque) {
 					type_at_metadata->defineOpaque(opaque.size);

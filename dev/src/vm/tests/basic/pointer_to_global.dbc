@@ -1,7 +1,7 @@
 global_data global_data_val i64 {};
 global_data global_data_ptr ptr_i64 {};
 
-function main { i64, ptr_argv } -> i64 {
+function main { i64, ptr_argv } -> { i64 } {
 	init_pany_type l_ptr_to_global, ptr_i64;
 	init_pany_type local_val, i64;
 	init_pany_type verifier_val, i64;
@@ -36,7 +36,7 @@ function main { i64, ptr_argv } -> i64 {
 	load_pany_pptr verifier_val, l_ptr_from_global;
 	output_p64 verifier_val;                          # 1337
 
-	mov_p64_p64 ret_val, verifier_val;
+	mov_p64_p64 ret0, verifier_val;
 
 	ret;
 }

@@ -1,15 +1,15 @@
-# Tests if it's possible to take pointer to ret_val/argument passed to a function, thus
-# it tests whether ret_val and arg0 blocks exist in the called function block stack or only
+# Tests if it's possible to take pointer to ret0/argument passed to a function, thus
+# it tests whether ret0 and arg0 blocks exist in the called function block stack or only
 # on the local stack
 
-function check { i64 } -> i64 {
+function check { i64 } -> { i64 } {
 	init_pany_type      p, ptr_i64;
 
 	# This will panic if arg0 block doesn't exist in the block stack.
 	ref_pptr_pany       p, arg0;
 
-	# This will panic if ret_val block doesn't exist in the block stack.
-	ref_pptr_pany       p, ret_val;
+	# This will panic if ret0 block doesn't exist in the block stack.
+	ref_pptr_pany       p, ret0;
 
 	init_pany_type      x, i64;
 	mov_p64_imm         x, 42;
@@ -18,7 +18,7 @@ function check { i64 } -> i64 {
 
 	init_pany_type      x, i64;
 	load_pany_pptr   	x, p;
-	mov_p64_p64         ret_val, x;
+	mov_p64_p64         ret0, x;
 
 	deinit; # arg0
 	deinit; # x
@@ -26,17 +26,17 @@ function check { i64 } -> i64 {
 	ret;
 }
 
-function main { i64, ptr_argv } -> i64 {
-	# ret_val -> main ret_val
+function main { i64, ptr_argv } -> { i64 } {
+	# ret0 -> main ret0
 	# arg0 -> argc
 	# arg1 -> *argv
 
-	init_pany_type  check_ret_val, i64;
+	init_pany_type  check_ret0, i64;
 	init_pany_type  check_arg, i64;
 	call_func       check;
-	output_p64      check_ret_val;
+	output_p64      check_ret0;
 
-	deinit; # check_ret_val
+	deinit; # check_ret0
 	deinit; # *argv
 	deinit; # argc
 	ret;

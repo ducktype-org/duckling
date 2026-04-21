@@ -1,4 +1,4 @@
-function main { i64, ptr_argv } -> i64 {
+function main { i64, ptr_argv } -> { i64 } {
     # testing on i64 because u64 variables are not supported yet
     init_pany_type tmp, i64;
     init_pany_type tmp2, i64;
