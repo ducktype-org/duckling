@@ -13,12 +13,11 @@ class VmDebugTest: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		// @TODO: #1222 Re-enable the tests after fixing the API.
-		// TESTER_ADD_TEST(stopTest);
-		// TESTER_ADD_TEST(killTest);
-		// TESTER_ADD_TEST(pausesOnBreakpointAndResumes);
-		// TESTER_ADD_TEST(executesStepByStep);
-		// TESTER_ADD_TEST(vmApiMemoryAllTypes);
+		TESTER_ADD_TEST(stopTest);
+		TESTER_ADD_TEST(killTest);
+		TESTER_ADD_TEST(pausesOnBreakpointAndResumes);
+		TESTER_ADD_TEST(executesStepByStep);
+		TESTER_ADD_TEST(vmApiMemoryAllTypes);
 	}
 
 
