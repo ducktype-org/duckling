@@ -52,7 +52,7 @@ jobs:
         # (only `--ccache`, `--coverage`, `--enable-jit` enable them), so we provide
         # three newline answers to accept their defaults (all disabled).
         run: |
-          printf '\n\n\n' | python3 toolbox.py setup-build \
+          printf '\n\n\n\n\n' | python3 toolbox.py setup-build \
             -b build \
             -s Ninja \
             -t Dev \
