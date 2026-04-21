@@ -4,44 +4,44 @@ type pointer: pointer_I1 I1
 type pointer: pointer_I2 I2
 type pointer: pointer_B B
 
-type fun: method_aaa {pointer_I1} void
-type fun: method_bbb {pointer_I1} void
+type fun: method_aaa {pointer_I1} {}
+type fun: method_bbb {pointer_I1} {}
 
-function method_aaa_impl {pointer_I1} -> void {
+function method_aaa_impl {pointer_I1} -> {} {
     ret;
 }
 
-type fun: method_ccc {pointer_I2} void
-type fun: method_ddd {pointer_I2} void
+type fun: method_ccc {pointer_I2} {}
+type fun: method_ddd {pointer_I2} {}
 
-function method_ccc_impl {pointer_I2} -> void {
+function method_ccc_impl {pointer_I2} -> {} {
     ret;
 }
 
-type fun: method_eee {pointer_A} void
-type fun: method_fff {pointer_A} void
+type fun: method_eee {pointer_A} {}
+type fun: method_fff {pointer_A} {}
 
-function method_eee_impl {pointer_A} -> void {
+function method_eee_impl {pointer_A} -> {} {
     ret;
 }
 
-type fun: method_ggg {pointer_B} void
+type fun: method_ggg {pointer_B} {}
 
-function method_aaa_impl_B {pointer_B} -> void {
+function method_aaa_impl_B {pointer_B} -> {} {
     ret;
 }
 
-type fun: method_bbb_impl {pointer_B} void
+type fun: method_bbb_impl {pointer_B} {}
 
-function method_ddd_impl {pointer_B} -> void {
+function method_ddd_impl {pointer_B} -> {} {
     ret;
 }
 
-function method_fff_impl {pointer_B} -> void {
+function method_fff_impl {pointer_B} -> {} {
     ret;
 }
 
-function method_ggg_impl {pointer_B} -> void {
+function method_ggg_impl {pointer_B} -> {} {
     ret;
 }
 

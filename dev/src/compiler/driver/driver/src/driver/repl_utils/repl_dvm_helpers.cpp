@@ -180,7 +180,12 @@ namespace compiler::repl {
 		    .and_then([&] { return vm::api::getExitValue(pid); })
 		    .transform_error(vm::api::errorToString)
 		    .and_then(
-				[&type_str](Ref<vm::VmValue> exit_value) -> std::expected<std::string, std::string> {
+				[&type_str](vm::api::ExitValue exit_values
+		        ) -> std::expected<std::string, std::string> {
+					CORE_ASSERT(
+						exit_values.size() == 1, "Expecting only one return value from the DVM"
+					);
+					auto& exit_value = exit_values.at(0);
 					if (type_str == "i32")
 						return std::to_string(exit_value->readBytes<i32>());
 					else if (type_str == "i64")

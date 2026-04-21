@@ -16,9 +16,10 @@
 #include <vm/bytecode/serializer/serializer.hpp>
 #include <vm/bytecode/validator/valid_type/type_context.hpp>
 #include <vm/bytecode/validator/valid_type/valid_type.hpp>
-#include <vm/core/process/builtin_functions.hpp>
+#include <vm/core/builtin_functions.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
 
+#include <ranges>
 #include <variant>
 
 using namespace vm;
@@ -98,6 +99,7 @@ class LocalStack {
 
 	CRef<valid_type::ValidTypeMap>                          types_ctx;
 	base::HashMap<base::StrID, CRef<valid_type::ValidType>> local_name_to_type;
+	usize                                                   number_of_ret_vals = 0;
 
 public:
 	LocalStack(const LocalStack&)            = default;
@@ -106,9 +108,13 @@ public:
 	LocalStack& operator=(LocalStack&&)      = default;
 
 	LocalStack(const FuncSignature& signature, const valid_type::ValidTypeMap& types_ctx):
-		  types_ctx(&types_ctx) {
-		push(base::StrID("ret_val"), signature.result_type.str);
-		for (auto [idx, param]: std::views::enumerate(signature.parameters))
+		  types_ctx(&types_ctx),
+		  number_of_ret_vals(signature.result_types.size()) {
+		using namespace std::views;
+		for (auto [idx, ret]: enumerate(signature.result_types))
+			push(base::StrID(base::strConcat("ret", idx).c_str()), ret.str);
+
+		for (auto [idx, param]: enumerate(signature.parameters))
 			push(base::StrID(base::strConcat("arg", idx).c_str()), param.str);
 	}
 
@@ -130,7 +136,7 @@ public:
 	 */
 	template<DeinitializingInstruction InstructionType>
 	void pop(const InstructionType& cause) {
-		if (stack_state.size() == 1) throw RetValDeinitError(cause);
+		if (stack_state.size() == number_of_ret_vals) throw RetValDeinitError(cause);
 		const auto& top = stack_state.back();
 		local_name_to_type.erase(top.local_name);
 		stack_state.pop_back();
@@ -138,9 +144,11 @@ public:
 
 	usize size() const { return stack_state.size(); }
 
-	const LocalStackEntry& back() const { return stack_state.back(); }
+	const LocalStackEntry& back(usize i = 0) const {
+		return stack_state.at(stack_state.size() - 1 - i);
+	}
 
-	const LocalStackEntry& front() const { return stack_state.front(); }
+	const LocalStackEntry& front(usize i = 0) const { return stack_state.at(i); }
 
 	void castPrimitive(const opargs::OpCodePrimitiveArg& local, const opargs::Type& type) {
 		auto  local_name = VISIT(local, l, return l.var_name);
@@ -187,17 +195,22 @@ class FunctionValidator {
             return &signatures.at(instr.function.function_name);
 		}();
 
-		bool check_ret_val = signature->result_type.str != base::StrID("void");
+		auto& params = signature->parameters;
+		auto& reslts = signature->result_types;
 
-		if (signature->parameters.size() > local_stack.size() + check_ret_val)
+		if (params.size() + reslts.size() > local_stack.size())
 			throw InvalidFunctionCallArgumentsError(generic_arg);
-		for (auto param: signature->parameters | std::views::reverse) {
+
+		using namespace std::views;
+		for (auto param: params | reverse) {
 			if (local_stack.back().type->getName() != param.str)
 				throw InvalidFunctionCallArgumentsError(generic_arg);
 			local_stack.pop(instr);
 		}
-		if (check_ret_val && local_stack.back().type->getName() != signature->result_type.str)
-			throw InvalidFunctionCallArgumentsError(generic_arg);
+
+		for (auto [idx, reslt]: zip(iota(0u), reslts | reverse))
+			if (local_stack.back(idx).type->getName() != reslt.str)
+				throw InvalidFunctionCallArgumentsError(generic_arg);
 	}
 
 	/**
@@ -228,17 +241,19 @@ class FunctionValidator {
 			return function_type->getKindAs<valid_type::finalized::Function>();
 		}();
 
-		auto generic_arg   = opargs::OpCodeArg{ instr.method };
-		bool check_ret_val = types_ctx.at(method_signature->result)->getName() != "void";
+		auto generic_arg = opargs::OpCodeArg{ instr.method };
+
+		auto& params = method_signature->parameters;
+		auto& reslts = method_signature->result_types;
 
 		// Too many parameters.
-		if (method_signature->parameters.size() > local_stack.size() + check_ret_val)
+		if (params.size() + reslts.size() > local_stack.size())
 			throw InvalidFunctionCallArgumentsError(generic_arg);
 
+		using namespace std::views;
 		// Check individual parameter's types. The first parameter is special, because it should be
 		// a pointer to the same type as the pointer passed as `obj_ptr`.
-		for (auto param_id:
-		     method_signature->parameters | std::views::drop(1) | std::views::reverse) {
+		for (auto param_id: params | drop(1) | reverse) {
 			if (local_stack.back().type->getID() != param_id)
 				throw InvalidFunctionCallArgumentsError(generic_arg);
 			local_stack.pop(instr);
@@ -253,8 +268,9 @@ class FunctionValidator {
 			throw InvalidFunctionCallArgumentsError(generic_arg);
 		local_stack.pop(instr);
 
-		if (check_ret_val && local_stack.back().type->getID() != method_signature->result)
-			throw InvalidFunctionCallArgumentsError(generic_arg);
+		for (auto [idx, reslt]: zip(iota(0u), reslts | reverse))
+			if (local_stack.back(idx).type->getID() != reslt)
+				throw InvalidFunctionCallArgumentsError(generic_arg);
 	}
 
 	void validateTailcall(
@@ -268,18 +284,25 @@ class FunctionValidator {
 		auto generic_arg = VISIT(func_arg, f, return opargs::OpCodeArg{ f });
 		auto signature   = signatures.at(fun_name);
 
-		if (!(signature.result_type.str == current_signature.result_type.str
+		if (!(signature.result_types == current_signature.result_types
 		      && signature.parameters == current_signature.parameters))
 			throw InvalidTailcallSignatureError(generic_arg);
 
-		if (signature.parameters.size() + 1 != local_stack.size())
+		auto& params = signature.parameters;
+		auto& reslts = signature.result_types;
+
+		if (params.size() + reslts.size() != local_stack.size())
 			throw InvalidTailcallArgumentsError(generic_arg);
 
-		if (local_stack.front().type->getName() != signature.result_type.str)
-			throw InvalidTailcallArgumentsError(generic_arg);
-		for (auto [param, stack_elem]: std::views::zip(
-				 signature.parameters, local_stack.getStackState() | std::views::drop(1)
-			 ))
+		using namespace std::views;
+		for (auto [reslt, stack_elem]:
+		     zip(reslts, local_stack.getStackState() | take(reslts.size())))
+
+			if (stack_elem.type->getName() != reslt.str)
+				throw InvalidTailcallArgumentsError(generic_arg);
+
+		for (auto [param, stack_elem]:
+		     zip(params, local_stack.getStackState() | drop(reslts.size())))
 			if (stack_elem.type->getName() != param.str)
 				throw InvalidTailcallArgumentsError(generic_arg);
 	}
@@ -506,30 +529,15 @@ class FunctionValidator {
 			instr_case(Op_cast_p64_type, instr) {
 				validatePrimitiveCast(instr.value, instr.target_type, instruction, current_stack);
 			}
-
 			instr_case_novalue(Comment) {}
-			instr_case(Op_mov_p8_imm, instr) {
-				if (instr.dst.var_name == base::StrID("ret_val")
-				    && function.signature.result_type.str == base::StrID("void"))
-					throw VoidRetValAssignmentError(instr);
-			}
+			instr_case_novalue(Op_mov_p8_imm) {}
 			instr_case(Op_mov_p8_p8, instr) {
-				if (instr.dst.var_name == base::StrID("ret_val")
-				    && function.signature.result_type.str == base::StrID("void"))
-					throw VoidRetValAssignmentError(instr);
-
 				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
 			instr_case(Op_cmov_p8_p8, instr) {
-				if (instr.dst.var_name == base::StrID("ret_val")
-				    && function.signature.result_type.str == base::StrID("void"))
-					throw VoidRetValAssignmentError(instr);
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case(Op_cmov_p8_imm, instr) {
-				if (instr.dst.var_name == base::StrID("ret_val")
-				    && function.signature.result_type.str == base::StrID("void"))
-					throw VoidRetValAssignmentError(instr);
-			}
+			instr_case_novalue(Op_cmov_p8_imm) {}
 			instr_case_novalue(Op_mov_p16_imm) {}
 			instr_case_novalue(Op_mov_p16_p16) {
 				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
@@ -1531,16 +1539,17 @@ class FunctionValidator {
 	}
 
 	void validateSignature() {
-		if (function.name.str == base::StrID("main")
-		    && function.signature.result_type.str != base::StrID("i64")) {
-			throw InvalidMainReturnType(function.signature);
+		if (function.name.str == base::StrID("main")) {
+			if (function.signature.result_types.size() != 1)
+				throw InvalidMainReturnType(function.signature, false);
+			if (function.signature.result_types[0].str != base::StrID("i64"))
+				throw InvalidMainReturnType(function.signature, true);
 		}
-		for (const auto& param_type: function.signature.parameters) {
+		for (const auto& param_type: function.signature.parameters)
 			if (!types_ctx.contains(param_type)) throw UnknownTypeError(opargs::Type{ param_type });
-			if (param_type.str == base::StrID("void")) throw VoidTypeArgumentError(function.name);
-		}
-		if (!types_ctx.contains(function.signature.result_type.str))
-			throw UnknownTypeError(opargs::Type{ function.signature.result_type.str });
+
+		for (const auto& reslts: function.signature.result_types)
+			if (!types_ctx.contains(reslts)) throw UnknownTypeError(opargs::Type{ reslts });
 	}
 
 public:

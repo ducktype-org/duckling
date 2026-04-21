@@ -1,7 +1,7 @@
 type dynamic_table: tablei64 i64
 type pointer: ptr_tablei64 tablei64
 
-function main { i64, ptr_argv } -> i64 {
+function main { i64, ptr_argv } -> { i64 } {
     
     init_pany_type aggr, i64;
     init_pany_type iter, i64;

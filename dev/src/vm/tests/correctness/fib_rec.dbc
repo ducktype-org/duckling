@@ -1,7 +1,7 @@
-function fib { i64 } -> i64 {
+function fib { i64 } -> { i64 } {
 	# arg0 -> n
 
-	mov_p64_p64         ret_val, arg0;
+	mov_p64_p64         ret0, arg0;
 
 	# if !(n > 1): end
 	cmpGt_p64_imm        arg0, 1;
@@ -14,7 +14,7 @@ function fib { i64 } -> i64 {
 	sub_p64_imm         n1, 1;
 	call_func           fib;
 
-	mov_p64_p64         ret_val, rec_result;
+	mov_p64_p64         ret0, rec_result;
 
 	# fib(n - 2)
 	init_pany_type      n2, i64;
@@ -25,8 +25,8 @@ function fib { i64 } -> i64 {
 
 
 	# (fib(n - 1) + fib(n - 2)) % mod
-	add_p64_p64         ret_val, rec_result;
-	mod_p64_imm         ret_val, 8388449;
+	add_p64_p64         ret0, rec_result;
+	mod_p64_imm         ret0, 8388449;
 
 	deinit;  # rec_result
 	label               End;
@@ -35,8 +35,8 @@ function fib { i64 } -> i64 {
 	ret;
 }
 
-function main { i64, ptr_argv } -> i64 {
-	# ret_val -> main ret_val
+function main { i64, ptr_argv } -> { i64 } {
+	# ret0 -> main ret0
 	# arg0 -> argc
 	# arg1 -> *argv
 
