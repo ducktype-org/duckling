@@ -83,7 +83,11 @@ namespace compiler::backend_vm::internal {
 		const DVMPlace&               insertLirLocal(lir::LIRLocalRef local);
 		[[nodiscard]] const DVMPlace& getLirLocal(lir::LIRLocalRef local) const;
 
-		// TODOP: Rename?
+		/**
+		 * @brief Makes sure a given @p value is a place and places it in a temporary if needed
+		 * (e.g. the value is an Immediate). If the given value is already a place, it does nothing
+		 * and just returns the inner place.
+		 */
 		DVMPlace forceToPlace(const DVMValue& value, base::Optional<std::string_view> name_hint = {});
 
 		/**
@@ -114,7 +118,6 @@ namespace compiler::backend_vm::internal {
 		 * @p tracked Used in special cases when we don't want the temporaries to be automatically
 		 * deinitialized, e.g. when pushing temporaries to pass as arguments to a call opcode.
 		 * These temporaries have to be deinitialized manually.
-		 * TODOP: Doc
 		 */
 		DVMPlace pushTempLocal(
 			const vm::code::TypeOfData&      type,
