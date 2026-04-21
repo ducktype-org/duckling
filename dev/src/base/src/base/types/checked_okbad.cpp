@@ -6,7 +6,7 @@ namespace base {
 	CheckedOkBad::CheckedOkBad(base::OkBad result): result(result) {}
 
 	CheckedOkBad::~CheckedOkBad() {
-		CORE_ASSERT_NOEXCEPT(checked, "Initialization status was not checked, use status method!");
+		CORE_ASSERT_NOEXCEPT(checked, "CheckedOkBad status was not checked, use status method!");
 	}
 
 	[[nodiscard]]

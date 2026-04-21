@@ -60,7 +60,7 @@ namespace compiler::helios {
 	}
 
 	/**
-	 * Runs given function for a PST element and all its subelements.`
+	 * Runs given function for a PST element and all its subelements.
 	 * Performs recursive calls into macro expansions.
 	 *
 	 * @return If any query failed during the traversal, returns base::BAD. Otherwise, returns
