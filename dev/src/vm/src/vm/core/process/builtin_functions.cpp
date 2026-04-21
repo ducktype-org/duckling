@@ -296,9 +296,11 @@ namespace vm::builtins {
 				{ BuiltinFunctionID::NotifyAllCV,
 			      { base::StrID("builtin_notify_all_cv"),
 			        code::FuncSignature({}, { base::StrID("condition_variable") }) } },
-				{ BuiltinFunctionID::DestroyCV,
-			      { base::StrID("builtin_destroy_cv"),
-			        code::FuncSignature({}, { base::StrID("condition_variable") }) } },
+				{
+					BuiltinFunctionID::DestroyCV,
+					{ base::StrID("builtin_destroy_cv"),
+			          code::FuncSignature({}, { base::StrID("condition_variable") }) },
+				},
 			};
 
 		return &map;

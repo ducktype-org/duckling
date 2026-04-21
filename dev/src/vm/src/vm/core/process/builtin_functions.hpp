@@ -30,11 +30,6 @@
 #include <vm/core/thread/safe_vmthread.hpp>
 #include <vm/core/thread/vmvalue.hpp>
 
-namespace vm {
-	class SafeVMThread;
-	class IIVMProcess;
-}
-
 namespace vm::builtins {
 
 	struct NoValue {};
