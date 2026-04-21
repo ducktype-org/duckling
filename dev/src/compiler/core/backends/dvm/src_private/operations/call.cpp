@@ -1,7 +1,7 @@
 
-#include "dvm_operation.hpp"
 #include "function_lowering_context.hpp"
 #include "instruction_lowerer.hpp"
+#include "operations/dvm_operation.hpp"
 
 namespace compiler::backend_vm::internal {
 	void InstructionLowerer::lower(const CallOperation& op) {
@@ -31,6 +31,6 @@ namespace compiler::backend_vm::internal {
 			{ OpKind::call, VISIT(op.call_info.call_target, callable, return callable.asArgument()) }
 		);
 
-		storeResult(op.dest, { call_result_storage.value(), DVMPlace::AccessKind::Direct });
+		ctx->storeResult(op.dest, { call_result_storage.value(), DVMPlace::AccessKind::Direct });
 	}
 }

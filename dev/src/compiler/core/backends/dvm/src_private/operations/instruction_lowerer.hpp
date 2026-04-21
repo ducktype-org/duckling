@@ -1,6 +1,6 @@
 #pragma once
 
-#include "dvm_operation.hpp"
+#include "operations/dvm_operation.hpp"
 
 namespace compiler::backend_vm::internal {
 

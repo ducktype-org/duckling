@@ -83,9 +83,8 @@ namespace {
 namespace compiler::backend_vm::internal {
 	void InstructionLowerer::lower(const CastOperation& op) {
 		// Operation in form a = OP b (like mov)
-		auto operation = getOpKindFromLIRLayouts(op.cast_params);
-		auto target_type
-			= ctx.program_context.lowerAndKeepTslType(op.cast_params.target_layout);
+		auto operation   = getOpKindFromLIRLayouts(op.cast_params);
+		auto target_type = ctx.program_context.lowerAndKeepTslType(op.cast_params.target_layout);
 
 		// The cast operations are only supported between local stack values.
 		// So if we have a non-local source (like immediate value or global),
@@ -108,5 +107,5 @@ namespace compiler::backend_vm::internal {
 			ctx.pushInstruction({ operation, dst_temp, src_arg });
 			ctx.storeResult(op.dest, { dst_temp, DVMPlace::AccessKind::Direct });
 		}
-    }
+	}
 }

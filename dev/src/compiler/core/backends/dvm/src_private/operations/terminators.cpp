@@ -8,13 +8,10 @@ namespace compiler::backend_vm::internal {
 	using namespace vm::code;
 
 	void InstructionLowerer::lower(const JumpOperation& op) {
-		ctx->pushInstruction(instructions::Comment(base::StrID("Terminator: Jump")));
 		ctx->pushInstruction({ OpKind::jmp, op.target.asArgument() });
 	}
 
 	void InstructionLowerer::lower(const BranchOperation& op) {
-		ctx->pushInstruction(instructions::Comment(base::StrID("Terminator: Branch")));
-
 		if (op.condition.is<DVMImmediate>()) {
 			auto cond = op.condition.get<DVMImmediate>();
 			ctx->cleanUpRegisteredTemps();
@@ -31,8 +28,6 @@ namespace compiler::backend_vm::internal {
 	}
 
 	void InstructionLowerer::lower(const ReturnOperation& op) {
-		ctx->pushInstruction(instructions::Comment(base::StrID("Terminator: Return")));
-
 		if_opt_some(op.value, ret_val) {
 			// Since VM does not support `return X;` operation, we must move the value to
 			// the ret_val local and then return.

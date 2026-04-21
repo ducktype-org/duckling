@@ -1,10 +1,10 @@
 #include "debug_info_utils.hpp"
-#include "dvm_operation.hpp"
 #include "dvm_value.hpp"
 #include "function_lowering_context.hpp"
 #include "operations/arithmetic_operation_lowering.hpp"
 #include "operations/cast_operation_lowering.hpp"
 #include "operations/comparison_operation_lowering.hpp"
+#include "operations/dvm_operation.hpp"
 #include "operations/instruction_lowerer.hpp"
 #include "operations/meta_operation_lowering.hpp"
 
@@ -34,13 +34,11 @@ void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instru
 		}
 	}
 
-	// TODOP: All of the outputs should be optional.
-	auto               dvm_operation = lirInstrToDVMOperation(*this, lir_instruction);
+	DVMOperation       dvm_operation = lirInstrToDVMOperation(*this, lir_instruction);
 	InstructionLowerer lowerer{ this };
 	VISIT(dvm_operation, op, lowerer.lower(op));
 }
 
-// TODOP: Mov to TerminatorOperationLowering
 void FunctionLoweringContext::pushTerminator(const lir::Instruction& lir_terminator) {
 	pushInstruction(instructions::Comment(base::StrID(
 		base::strConcat("Terminator: ", base::enumToStr(lir_terminator.operation)).data()
@@ -52,7 +50,7 @@ void FunctionLoweringContext::pushTerminator(const lir::Instruction& lir_termina
 		}
 	}
 
-	auto               dvm_operation = lirInstrToDVMOperation(*this, lir_terminator);
+	DVMOperation       dvm_operation = lirInstrToDVMOperation(*this, lir_terminator);
 	InstructionLowerer lowerer{ this };
 	VISIT(dvm_operation, op, lowerer.lower(op));
 }

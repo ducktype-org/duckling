@@ -1,15 +1,15 @@
 #include "function_lowering_context.hpp"
 #include "instruction_lowerer.hpp"
-#include "dvm_operation.hpp"
+#include "operations/dvm_operation.hpp"
 
 namespace compiler::backend_vm::internal {
-	
+
 	void InstructionLowerer::lower(const MoveOperation& op) {
 		// Otherwise, it's a simple assignment.
 		ctx->storeResult(op.dest, op.src);
 		return;
 	}
-	
+
 	void InstructionLowerer::lower(const UnaryOperation& op) {
 		// If instruction is of the form: a = OP b, then
 		// we transform it to:

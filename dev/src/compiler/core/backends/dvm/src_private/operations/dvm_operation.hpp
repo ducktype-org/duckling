@@ -15,6 +15,10 @@ namespace compiler::backend_vm::internal {
 	class ProgramLoweringContext;
 	class FunctionLoweringContext;
 
+	/**
+	 * @brief POD struct storing all needed info for generating a function call in the DVM bytecode
+	 * for both LIR and ExternCFunctions.
+	 */
 	struct FunctionCallInfo {
 		DVMCallable                          call_target;
 		base::Optional<vm::code::TypeOfData> return_type;
@@ -37,8 +41,6 @@ namespace compiler::backend_vm::internal {
 			const base::StrID& func_name, ProgramLoweringContext& program_context
 		);
 	};
-
-	// TODOP: Comment about what is the concept of that.
 
 	/**
 	 * @brief Represents a DVM operation which is a NoOp and is skipped in bytecode lowering.
@@ -65,7 +67,7 @@ namespace compiler::backend_vm::internal {
 	};
 
 	/**
-	 * @brief Represents a comparison DVM operation.
+	 * @brief Represents a call DVM operation.
 	 */
 	struct CallOperation {
 		FunctionCallInfo         call_info;
@@ -73,7 +75,9 @@ namespace compiler::backend_vm::internal {
 		base::Optional<DVMPlace> dest;
 	};
 
-	// TODOP: Probably remove.
+	/**
+	 * @brief Represents a simple move operation.
+	 */
 	struct MoveOperation {
 		DVMValue src;
 		DVMPlace dest;
@@ -96,12 +100,12 @@ namespace compiler::backend_vm::internal {
 	 * @brief Represents an AddressOf DVM operation.
 	 */
 	struct AddressOfOperation {
-		DVMPlace                 src;  // TODOP: Comment
+		DVMPlace                 src;
 		base::Optional<DVMPlace> dest;
 	};
 
 	/**
-	 * @brief Represents a meta-type operation that requires special handling.
+	 * @brief Represents a meta-type operations that require special handling.
 	 * These operations don't map directly to DVM opcodes but are lowered
 	 * to a series of extern C function calls.
 	 */
@@ -122,20 +126,35 @@ namespace compiler::backend_vm::internal {
 		base::Optional<DVMPlace> dest;
 	};
 
+	/**
+	 * @brief Represents a jump terminator.
+	 */
 	struct JumpOperation {
 		DVMLabel target;
 	};
 
+	/**
+	 * @brief Represents a branch terminator.
+	 */
 	struct BranchOperation {
 		DVMValue condition;
 		DVMLabel true_target;
 		DVMLabel false_target;
 	};
 
+	/**
+	 * @brief Represents a return terminator.
+	 */
 	struct ReturnOperation {
-		base::Optional<DVMValue> value;
+		base::Optional<DVMValue> value;  /// Empty optional on void returns.
 	};
 
+	/**
+	 * @brief DVMOperation is a more generalised abstraction over lir::Instruction which allows to
+	 * bundle up the instruction lowering logic for similar instructions.
+	 *
+	 * It works purely in the DVM world working on DVMValues, DVMPlace etc.
+	 */
 	using DVMOperation = std::variant<
 		NoOpOperation,
 		UnaryOperation,
@@ -152,12 +171,9 @@ namespace compiler::backend_vm::internal {
 
 
 	/**
-	 * @brief Converts a LIR operation to DVM operation.
-	 * // TODOP: Better comment.
+	 * @brief Converts a LIR instruction to DVM operation.
 	 */
 	[[nodiscard]] DVMOperation lirInstrToDVMOperation(
 		FunctionLoweringContext& ctx, const lir::Instruction& instr
 	);
-
-
 }

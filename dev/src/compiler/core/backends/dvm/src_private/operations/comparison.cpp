@@ -1,8 +1,7 @@
-#include "instruction_lowerer.hpp"
-
-#include "dvm_operation.hpp"
 #include "dvm_value.hpp"
 #include "function_lowering_context.hpp"
+#include "instruction_lowerer.hpp"
+#include "operations/dvm_operation.hpp"
 
 namespace {
 	using namespace compiler;
@@ -108,19 +107,16 @@ namespace {
 }
 
 namespace compiler::backend_vm::internal {
-	void InstructionLowerer::lower(
-		ComparisonOperation& op // TODOP: Make this const.
+	void InstructionLowerer::lower(ComparisonOperation& op  // TODOP: Make this const.
 	) {
 		OpKind operation = op.op;
 
 		DVMValue result_val = [&]() -> DVMValue {
 			// Shortcut for comparing immediates to keep the same semantics as comp-time.
 			// TODOP: Expand comment.
-			if (op.lhs.is<DVMImmediate>()
-			    && op.rhs.is<DVMImmediate>()) {
-				bool const_result = compTimeEvaluateComparison(
-					operation, *op.lhs_const, *op.rhs_const
-				);
+			if (op.lhs.is<DVMImmediate>() && op.rhs.is<DVMImmediate>()) {
+				bool const_result
+					= compTimeEvaluateComparison(operation, *op.lhs_const, *op.rhs_const);
 				return { DVMImmediate::boolean(const_result) };
 			}
 
@@ -132,10 +128,9 @@ namespace compiler::backend_vm::internal {
 
 			// Force globals into locals if needed.
 			auto lhs = ctx->forceToLocal(op.lhs, "lhs_temp");
-			auto rhs = op.rhs.is<DVMGlobal>()
-			             ? DVMValue{ ctx->forceToLocal(op.rhs, "rhs_temp"),
-				                     DVMPlace::AccessKind::Direct }
-			             : op.rhs;
+			auto rhs = op.rhs.is<DVMGlobal>() ? DVMValue{ ctx->forceToLocal(op.rhs, "rhs_temp"),
+				                                          DVMPlace::AccessKind::Direct }
+			                                  : op.rhs;
 
 			// This resolves e.g. `x = a CMP b;`
 			// by splitting it into three instructions:
