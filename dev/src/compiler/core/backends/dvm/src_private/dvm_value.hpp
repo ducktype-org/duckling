@@ -10,28 +10,6 @@
 #include <utility>
 
 namespace compiler::backend_vm::internal {
-	struct DVMLocal {
-		base::StrID          name;
-		vm::code::TypeOfData type;
-
-		bool operator==(const DVMLocal& other) const = default;
-		operator vm::opargs::OpCodeArg() const;
-
-		[[nodiscard]] vm::opargs::OpCodeArg asArgument() const;
-		[[nodiscard]] vm::opargs::OpCodeArg asAnyArgument() const;
-	};
-
-	struct DVMGlobal {
-		base::StrID          name;
-		vm::code::TypeOfData type;
-
-		bool operator==(const DVMGlobal& other) const = default;
-		operator vm::opargs::OpCodeArg() const;
-
-		[[nodiscard]] vm::opargs::OpCodeArg asArgument() const;
-		[[nodiscard]] vm::opargs::OpCodeArg asAnyArgument() const;
-	};
-
 	struct DVMImmediate {
 		DVMImmediate(::u64 value, vm::code::TypeOfData type);
 		// @TODO: #2451 Make DVMImmediate string based
@@ -102,16 +80,15 @@ namespace compiler::backend_vm::internal {
 	 * If the access kind is set to `Direct`, a load into the place will be performed by `mov_X_X`.
 	 * If the access kind is set to `Pointer`, a load into the place will be performed by
 	 * `store_pptr_pany`.
+	 * TODOP: Update doc
 	 */
 	class DVMPlace {
-	private:
-		using StoredValueVariant = std::variant<DVMLocal, DVMGlobal>;
-
 	public:
 		enum class AccessKind : uint8_t { Direct, Pointer };
 
-		DVMPlace(StoredValueVariant value, AccessKind access_kind):
-			  stored_place(std::move(value)),
+		DVMPlace(base::StrID name, vm::code::TypeOfData type, AccessKind access_kind):
+			  name(name),
+			  type(std::move(type)),
 			  access_kind(access_kind) {}
 
 		bool operator==(const DVMPlace& other) const = default;
@@ -119,26 +96,17 @@ namespace compiler::backend_vm::internal {
 
 		[[nodiscard]] bool isDirect() const { return access_kind == AccessKind::Direct; }
 
-		[[nodiscard]] vm::code::TypeOfData getType() const;
+		[[nodiscard]] const vm::code::TypeOfData& getType() const;
 
-		void setAccessKind(AccessKind kind) { access_kind = kind; }
-
-		template<class T>
-		[[nodiscard]] bool is() const {
-			return std::holds_alternative<T>(stored_place);
-		}
-
-		template<class T>
-		[[nodiscard]] T get() const {
-			return std::get<T>(stored_place);
-		}
+		DVMPlace withAccessKind(AccessKind kind) { return DVMPlace(name, type, kind); }
 
 		[[nodiscard]] vm::opargs::OpCodeArg asArgument() const;
 		[[nodiscard]] vm::opargs::OpCodeArg asAnyArgument() const;
 
 	private:
-		StoredValueVariant stored_place;
-		AccessKind         access_kind;
+		base::StrID          name;
+		vm::code::TypeOfData type;
+		AccessKind           access_kind;
 	};
 
 	class DVMValue {
@@ -149,12 +117,6 @@ namespace compiler::backend_vm::internal {
 
 	public:
 		DVMValue(StoredValueVariant value): stored_value(std::move(value)) {}
-
-		DVMValue(DVMLocal local, DVMPlace::AccessKind access_kind):
-			  stored_value(DVMPlace(local, access_kind)) {}
-
-		DVMValue(DVMGlobal global, DVMPlace::AccessKind access_kind):
-			  stored_value(DVMPlace(global, access_kind)) {}
 
 		bool operator==(const DVMValue& other) const = default;
 
@@ -168,40 +130,21 @@ namespace compiler::backend_vm::internal {
 		[[nodiscard]] vm::opargs::OpCodeArg asArgument() const;
 
 		/**
-		 * @brief Converts the DVMValue into it's untyped local/global argument
-		 * representation(`lany`, `gany`). Should be used only when working with `store_X_X`,
-		 * `load_X_X`, `ref_X_X` instructions.
-		 * Panics if the DVMValue can't be converted into an any argument, e.g. Is an Immediate,
-		 * Label or a Function.
+		 * @brief Converts the DVMValue into it's untyped argument representation(`pany`). Should be
+		 * used only when working with `store_X_X`, `load_X_X`, `ref_X_X` instructions. Panics if
+		 * the DVMValue can't be converted into an any argument, e.g. Is an Immediate, Label or a
+		 * Function.
 		 */
 		[[nodiscard]] vm::opargs::OpCodeArg asAnyArgument() const;
 
 		template<class T>
 		[[nodiscard]] bool is() const {
-			using Tp = std::decay_t<T>;
-			// Simple forward to check if the DVMValue stores a DVMPlace and it's a DVMLocal/DVMGlobal.
-			if constexpr (base::IsOneOf<Tp, DVMLocal, DVMGlobal>) {
-				variant_match(stored_value) {
-					variant_case(DVMPlace, place) return place.is<T>();
-					variant_default return false;
-				}
-			} else {
-				return std::holds_alternative<T>(stored_value);
-			}
+			return std::holds_alternative<T>(stored_value);
 		}
 
 		template<class T>
 		[[nodiscard]] T get() const {
-			using Tp = std::decay_t<T>;
-			// Simple forward to check if the DVMValue stores a DVMPlace and it's a DVMLocal/DVMGlobal.
-			if constexpr (base::IsOneOf<Tp, DVMLocal, DVMGlobal>) {
-				variant_match(stored_value) {
-					variant_case(DVMPlace, place) return place.get<T>();
-					variant_default CORE_PANIC("Bad type in DVMValue");
-				}
-			} else {
-				return std::get<T>(stored_value);
-			}
+			return std::get<T>(stored_value);
 		}
 	};
 }

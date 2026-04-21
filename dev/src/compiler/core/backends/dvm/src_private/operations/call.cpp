@@ -12,7 +12,7 @@ namespace compiler::backend_vm::internal {
 			VISIT(op.call_info.call_target, callable, return callable.name)
 		);
 
-		auto call_result_storage = [&] -> base::Optional<DVMLocal> {
+		auto call_result_storage = [&] -> base::Optional<DVMPlace> {
 			if (op.call_info.return_type)
 				return ctx->pushTempLocal(op.call_info.return_type.value(), "call_result");
 			else
@@ -36,9 +36,7 @@ namespace compiler::backend_vm::internal {
 			CORE_ASSERT(
 				call_result_storage.has_value(), "Call with destination must have a return value"
 			);
-			ctx->maybeStoreResult(
-				op.dest, { call_result_storage.value(), DVMPlace::AccessKind::Direct }
-			);
+			ctx->maybeStoreResult(op.dest, { call_result_storage.value() });
 		}
 	}
 }
