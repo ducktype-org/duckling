@@ -42,26 +42,15 @@ namespace debug_info {
 	}
 
 	void DebugInfo::mergeFrom(DebugInfo&& other) {
-		IF_BUILD_TYPE_DEV({
-			for (const auto& [name, _] : other.functions) {
-				CORE_ASSERT(
-					!functions.contains(name),
-					"Duplicate function during DVM debug info merge: ",
-					name
-				);
-			}
-			for (const auto& [name, _] : other.types) {
-				CORE_ASSERT(
-					!types.contains(name), "Duplicate type during DVM debug info merge: ", name
-				);
-			}
-		});
+		CORE_ASSERT(target == other.target, "Cannot merge debug info with different targets");
+		CORE_ASSERT(
+			source_positions_type == other.source_positions_type,
+			"Cannot merge debug info with different source position types"
+		);
 
-		for (auto& [name, metadata] : other.functions)
-			functions.emplace(std::move(name), std::move(metadata));
-		for (auto& [name, metadata] : other.types)
-			types.emplace(std::move(name), std::move(metadata));
+		for (auto& [name, metadata]: other.functions) functions.emplace(name, std::move(metadata));
+		for (auto& [name, metadata]: other.types) types.emplace(name, std::move(metadata));
+		auto _ = std::move(other);
 	}
 
 }  // namespace debug_info
-

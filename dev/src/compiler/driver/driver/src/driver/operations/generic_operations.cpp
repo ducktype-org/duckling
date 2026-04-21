@@ -701,35 +701,29 @@ namespace compiler::driver {
 	base::OkBad linkDVMPackage(
 		const std::vector<artifacts::FileArtifact>& objects,
 		const std::vector<artifacts::FileArtifact>& debug_info_artifacts,
-		const std::string&                          backend_str
+		const std::string&                          output_file_name
 	) {
-		vm::loader::Loader       dvm_linker;
-		vm::code::CodeCollection merged_code;
+		vm::loader::Loader dvm_linker;
 
-		for (const auto& obj : objects) {
-			auto parse_result = dvm_linker.parseCodeCollectionFromFiles({ obj.file });
-			if (!parse_result.has_value()) {
-				CORE_USER_LOG("DVM linking failed: could not parse module bytecode file\n");
-				return base::BAD;
-			}
-			merged_code.mergeFrom(std::move(*parse_result));
-		}
+		using std::ranges::to;
+		using std::ranges::views::transform;
+		auto parse_result = dvm_linker.parseCodeCollectionFromFiles(
+			objects | transform(&artifacts::FileArtifact::file) | to<std::vector>()
+		);
 
-		// Validate the fully merged collection — this catches cross-module reference errors
-		// (unknown functions, globals, etc.) that were intentionally deferred from per-module
-		// compilation.
-		try {
-			auto valid = vm::code::ValidProgram::withBuiltins();
-			valid      = valid.tryInsertCode(merged_code);
-			merged_code = valid.produceValidCodeCollection();
-		} catch (vm::code::ValidationError& e) {
-			CORE_USER_LOG("DVM linking failed: ", e.what(), "\n");
+		if (!parse_result.has_value()) {
+			CORE_USER_LOG(
+				"DVM linking failed: could not parse compiler-generated module bytecode file.\n"
+				"Reason: ",
+				parse_result.error(),
+				"\n"
+			);
 			return base::BAD;
 		}
+		vm::code::CodeCollection merged_code = std::move(parse_result.value());
 
-		auto output_file = global_state::getRootCollection()->fileArtifactAtOrNew(
-			base::StrID(base::strConcat("package_", backend_str, ".dbc").c_str())
-		);
+		auto output_file
+			= global_state::getRootCollection()->fileArtifactAtOrNew(base::StrID(output_file_name));
 		std::ofstream out(output_file.file.getFilePath().getPath(), std::ios::binary);
 		if (!out.is_open()) CORE_PANIC("Failed to open DVM package output file for writing");
 		vm::code::serializeCode(merged_code, out);
@@ -738,7 +732,7 @@ namespace compiler::driver {
 		if (!debug_info_artifacts.empty()) {
 			base::Optional<debug_info::DebugInfo> merged_debug_info;
 
-			for (const auto& di_art : debug_info_artifacts) {
+			for (const auto& di_art: debug_info_artifacts) {
 				std::ifstream in(di_art.file.getFilePath().getPath(), std::ios::binary);
 				if (!in.is_open()) {
 					CORE_USER_LOG("DVM: failed to open debug info artifact for merging\n");
@@ -751,20 +745,17 @@ namespace compiler::driver {
 					);
 					return base::BAD;
 				}
-				if (!merged_debug_info.has_value()) {
+				if (!merged_debug_info.has_value())
 					merged_debug_info.emplace(std::move(di_or_error.value()));
-				} else {
+				else
 					merged_debug_info->mergeFrom(std::move(di_or_error.value()));
-				}
 			}
 
 			if (merged_debug_info.has_value()) {
 				merged_debug_info->module_path = output_file.file.getFilePath().string();
 
 				auto di_output = global_state::getRootCollection()->fileArtifactAtOrNew(
-					base::StrID(
-						base::strConcat("package_", backend_str, ".di.json").c_str()
-					)
+					base::StrID(base::strConcat(output_file_name, ".di.json").c_str())
 				);
 				std::ofstream di_out(di_output.file.getFilePath().getPath(), std::ios::binary);
 				if (!di_out.is_open())
@@ -841,9 +832,8 @@ namespace compiler::driver {
 		if (build_debug_info) debug_info_artifacts.reserve(debug_info_handles.size());
 		for (auto handle: debug_info_handles) {
 			auto di_result = query::awaitEntryPoint<DebugInfoForModule>(handle);
-			if (build_debug_info && di_result.hasValue()) {
+			if (build_debug_info && di_result.hasValue())
 				debug_info_artifacts.emplace_back(di_result.valueOrPanic());
-			}
 		}
 
 		if (result.isBad()) return result;
@@ -865,7 +855,7 @@ namespace compiler::driver {
 		}
 
 		if (backend == BackendType::DVM) {
-			if (linkDVMPackage(objects, debug_info_artifacts, backendTypeToStr(backend)).isBad())
+			if (linkDVMPackage(objects, debug_info_artifacts, "package_dvm.dbc").isBad())
 				return base::BAD;
 		}
 

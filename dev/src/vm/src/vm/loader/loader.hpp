@@ -39,7 +39,7 @@ namespace vm::loader {
 		 * @return Either the parsed `CodeCollection` on success, or a `LoaderLogger` with parsing
 		 * errors on failure.
 		 */
-		std::expected<code::CodeCollection, LoaderLogger> parseFiles(
+		static std::expected<code::CodeCollection, LoaderLogger> parseFiles(
 			const std::vector<fs::File>& files
 		);
 
@@ -68,19 +68,14 @@ namespace vm::loader {
 		CRef<code::ValidProgram> getHighProgram() const;
 
 		/**
-		 * @brief Parses .dbc files and returns the combined CodeCollection without validation.
-		 *
-		 * This can be used to implement a DVM linking step: parse individual per-module .dbc
-		 * files and merge them with CodeCollection::mergeFrom before writing the final package
-		 * .dbc artifact.
+		 * @brief Parses .dbc files and returns the combined CodeCollection without validation,
+		 * or a string error message on failure. Main user is the compiler driver.
 		 *
 		 * @return Either the parsed `CodeCollection` on success, or a `LoaderLogger` with parsing
 		 * errors on failure.
 		 */
-		std::expected<code::CodeCollection, LoaderLogger> parseCodeCollectionFromFiles(
+		static std::expected<code::CodeCollection, std::string> parseCodeCollectionFromFiles(
 			const std::vector<fs::File>& files
-		) {
-			return parseFiles(files);
-		}
+		);
 	};
 }

@@ -21,12 +21,11 @@ Tests:
         Output:
           String: "42\n7\n43\n54\n108\n6\n3\n5\n11\n7\n13\n"
         ExitCode: 54
-      # @TODO: #2476 Enable DVM case.
-      # dvm:
-      #   backend: dvm
-      #   Output:
-      #     String: "42\n7\n43\n54\n108\n6\n3\n5\n11\n7\n13\n"
-      #   ExitCode: 54
+      dvm:
+        backend: dvm
+        Output:
+          String: "42\n7\n43\n54\n108\n6\n3\n5\n11\n7\n13\n"
+        ExitCode: 54
 
   named_default_args:
     Cases:
@@ -55,9 +54,6 @@ Tests:
         ExitCode: 0
 
   overloading_between_modules:
-    # @TODO: #2476 The merged package .dbc file is not currently used for deterministic checks;
-    # skip the conc deterministic test for this test case.
-    enable_conc_deterministic_tests: "false"
     Cases:
       llvm:
         backend: llvm

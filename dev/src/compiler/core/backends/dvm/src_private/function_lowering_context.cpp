@@ -83,6 +83,36 @@ namespace {
 	}
 }
 
+vm::code::Function compiler::backend_vm::internal::createMiniGlobalCtorFromCTV(
+	CRef<tsl::TypeLayout>        global_layout,
+	const vm::code::TypeOfData&  lowered_global_type,
+	const ctv::CompileTimeValue& global_ctv_value,
+	base::StrID                  mini_ctor_name,
+	const DVMGlobal&             dvm_global
+) {
+	const lir::LIRConstant global_lir_constant{
+		.value  = global_ctv_value,
+		.layout = global_layout,
+	};
+
+	const auto immediate = lirConstantToImmediate(global_lir_constant, lowered_global_type);
+
+	vm::code::Function mini_ctor;
+	mini_ctor.name                  = vm::code::Identifier(mini_ctor_name);
+	mini_ctor.signature.result_type = vm::code::Identifier(base::StrID("void"));
+	mini_ctor.body.push_back(
+		vm::code::builders::InstructionBuilder(
+			vm::code::builders::OpKind::mov, dvm_global.asArgument(), immediate.asArgument()
+		)
+			.build()
+	);
+	mini_ctor.body.push_back(
+		vm::code::builders::InstructionBuilder(vm::code::builders::OpKind::ret).build()
+	);
+
+	return mini_ctor;
+}
+
 DVMLocal FunctionLoweringContext::forceToLocal(
 	const DVMValue& value, base::Optional<std::string_view> name_hint
 ) {

@@ -118,6 +118,19 @@ const vm::code::GlobalData& ProgramLoweringContext::lowerAndKeepLirGlobal(
 	if (global_ctor.has_value()) {
 		lowerAndKeepLirFunction(global_ctor.value());
 		ctor_name = Identifier(global_ctor.value()->mangled_name);
+	} else if (lir_global.initial_value.has_value()) {
+		auto mini_ctor_name
+			= base::StrID(base::strConcat(lir_global.mangled_name.strView(), "_ctv_ctor"));
+
+		auto mini_ctor = createMiniGlobalCtorFromCTV(
+			lir_global.layout,
+			global_type,
+			lir_global.initial_value.value(),
+			mini_ctor_name,
+			global_name_to_dvm.at(lir_global.mangled_name)
+		);
+		extra_bytecode_functions.push_back(std::move(mini_ctor));
+		ctor_name = Identifier(mini_ctor_name);
 	}
 	if (global_dtor.has_value()) {
 		lowerAndKeepLirFunction(global_dtor.value());
@@ -311,10 +324,6 @@ vm::code::CodeCollection ProgramLoweringContext::produceCodeCollection(
 	collection.external_c_functions
 		= std::ranges::to<std::vector>(extern_c_functions | std::views::values);
 
-	// Per-module validation is intentionally skipped: a module may reference functions and
-	// globals defined in other modules, which are unknown at per-module compile time.
-	// Cross-module references are resolved and validated at link time in compileEntirePackage
-	// (DVM backend), after all .dbc module files are merged into a single CodeCollection.
 	return collection;
 }
 
