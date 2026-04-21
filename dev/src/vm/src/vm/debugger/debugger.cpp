@@ -24,11 +24,9 @@ namespace vm::debugger {
 
 	Debugger::~Debugger() {
 		updater.detach();
-		if (!std::holds_alternative<vm::api::NotStarted>(getStatus())) {
 		vm::api::stop(pid).transform_error([](const vm::api::ApiError& api_error) -> void* {
 			throw std::runtime_error(vm::api::errorToString(api_error));
 		});
-	}
 	}
 
 	void Debugger::attachOnVMStatusChangeListener(Ref<events::Listener<vm::api::ProcStatus>> listener

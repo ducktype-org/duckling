@@ -1,7 +1,6 @@
 #include "cli.hpp"
 #include "server.hpp"
 #include "vm_repl.hpp"
-#include <vm/debugger/UI/debug_adapter/debug_adapter.hpp>
 
 #include <clah/clah.hpp>
 #include <init/init.hpp>
@@ -10,6 +9,7 @@
 
 #include <vm/core/supervisor/supervisor.hpp>
 #include <vm/core/thread/low_program/instruction.hpp>
+#include <vm/debugger/UI/debug_adapter/debug_adapter.hpp>
 
 #include <exception>
 
@@ -73,11 +73,11 @@ clah::Clah getVmClah() {
 
 							   return cli(file, args);
 						   }))
-		.addSubcommand(clah::Clah("debug_adapter", "Start the VM debug adapter.")
+	    .addSubcommand(clah::Clah("debug_adapter", "Start the VM debug adapter.")
 	                       .addPositional(clah::FileParser::make("file"))
 	                       .setHandler([](const clah::ParsingResult& options) -> int {
 							   vm::Supervisor::get();
-							   auto                     file = options.getPositional<fs::File>(0);
+							   auto file = options.getPositional<fs::File>(0);
 							   DebugAdapter::get(file).run();
 							   return 0;
 						   }))

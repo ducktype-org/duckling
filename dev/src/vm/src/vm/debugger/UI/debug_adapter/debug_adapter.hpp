@@ -6,17 +6,17 @@
 
 class DebugAdapter {
 public:
-    // TODO: when load program will be available in debugger
-    // change it that filepath will be get from dap message
+	// TODO: when load program will be available in debugger
+	// change it that filepath will be get from dap message
 	DebugAdapter(const fs::File& filepath);
 	static DebugAdapter get(const fs::File& filepath);
 	~DebugAdapter() = default;
 	void run();
 
 private:
-    events::Listener<vm::api::ProcStatus> status_change_listener;
-	vm::debugger::Debugger debugger;
-	std::string                   input_buffer;
+	events::Listener<vm::api::ProcStatus> status_change_listener;
+	vm::debugger::Debugger                debugger;
+	std::string                           input_buffer;
 
 	// DAP I/O
 	void send(const nlohmann::json& msg);
@@ -30,7 +30,4 @@ private:
 	void handleLaunch(const nlohmann::json& req);
 	void handleThreads(const nlohmann::json& req);
 	void handleDisconnect(const nlohmann::json& req);
-
-	// VM event handlers
-	void setupVmListeners();
 };
