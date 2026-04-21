@@ -2,7 +2,7 @@ global_data counter i64 {};
 
 global_data global_ptr ptr_i64 {};
 
-function for_coverage {} -> void {
+function for_coverage {} -> {} {
 	init_pany_type ptr, ptr_i64;
 	alloc_pptr_type ptr, i64;
 	mov_pptr_pptr global_ptr, ptr;
@@ -20,15 +20,15 @@ function for_coverage {} -> void {
 	ret;
 }
 
-function main { i64, ptr_argv } -> i64 {
+function main { i64, ptr_argv } -> { i64 } {
 	mov_p64_imm counter, 5;
-	mov_p64_p64 ret_val, counter;
-	output_p64 ret_val;
+	mov_p64_p64 ret0, counter;
+	output_p64 ret0;
 
 	call_func for_coverage;
 	init_pany_type ptr, ptr_i64;
 	mov_pptr_pptr ptr, global_ptr;
-	load_pany_pptr ret_val, ptr;
+	load_pany_pptr ret0, ptr;
 	free_pptr ptr;
 
 

@@ -3,8 +3,8 @@
 # input = n
 # output = n
 
-function main { i64, ptr_argv } -> i64 {
-	# [0, 8) main ret_val
+function main { i64, ptr_argv } -> { i64 } {
+	# [0, 8) main ret0
 	# [8, 16) argc
 	# [16, 32) *argv
 
@@ -23,7 +23,7 @@ function main { i64, ptr_argv } -> i64 {
 
 	call_builtinfunc  builtin_output_i64; # should output the size of outputed value
 
-	deinit; # [8, 16) ret_val
+	deinit; # [8, 16) ret0
 	deinit; # *argv
 	deinit; # argc
 	ret;

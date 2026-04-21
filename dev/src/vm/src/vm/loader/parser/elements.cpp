@@ -491,7 +491,30 @@ namespace vm::loader::parser {
 			return nullptr;
 		}
 
-		state.parse().one(&out->result_type);
+		if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
+			state.logInt(makeBox<dia_int::PlaceholderCodeError>(
+				"Expected `{` after here `->`.", state.getPosition(-1)
+			));
+			return nullptr;
+		}
+
+		state.goDown();
+		while (state.notEmpty()) {
+			tpc::Identifier field_type;
+			state.parse().one(&field_type);
+			out->result_types.emplace_back(field_type);
+
+			if (state.empty()) break;
+			if (state[0].is(lang_def::Special::Comma)) {
+				state.parse().one(lang_def::Special::Comma);
+			} else {
+				state.logInt(makeBox<dia_int::PlaceholderCodeError>(
+					"Expected comma or `}` after here.", state.getPosition()
+				));
+				state.tokens().skip();
+			}
+		}
+		state.goUpAndSkip();
 
 		if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
 			state.logInt(makeBox<dia_int::PlaceholderCodeError>(
@@ -680,9 +703,34 @@ namespace vm::loader::parser {
 				}
 			}
 			state.goUpAndSkip();
-			tpc::Identifier result;
-			state.parse().one(&result);
-			auto tp         = FunctionType{ name, arguments, result };
+
+			if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
+				state.logInt(makeBox<dia_int::PlaceholderCodeError>(
+					"Expected `{` after here.", state.getPosition(-1)
+				));
+				return nullptr;
+			}
+
+			std::vector<base::StrID> returned;
+			state.goDown();
+			while (state.notEmpty()) {
+				tpc::Identifier field_type;
+				state.parse().one(&field_type);
+				returned.emplace_back(field_type.value);
+
+				if (state.empty()) break;
+				if (state[0].is(lang_def::Special::Comma)) {
+					state.parse().one(lang_def::Special::Comma);
+				} else {
+					state.logInt(makeBox<dia_int::PlaceholderCodeError>(
+						"Expected comma or `}` after here.", state.getPosition()
+					));
+					state.tokens().skip();
+				}
+			}
+			state.goUpAndSkip();
+
+			auto tp         = FunctionType{ name, arguments, returned };
 			tp.bytecode_pos = out->position;
 			out->datatype   = std::move(tp);
 			break;
@@ -936,7 +984,14 @@ namespace vm::loader::parser {
 			out << param.value.strView();
 			first = false;
 		}
-		out << "} -> " << result_type.value.strView() << "{\n";
+		out << "} -> { ";
+		first = true;
+		for (const auto& param: result_types) {
+			if (!first) out << ", ";
+			out << param.value.strView();
+			first = false;
+		}
+		out << " } {\n";
 		code->dprint(out);
 		out << "}\n";
 	}

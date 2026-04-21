@@ -3,7 +3,7 @@ type pointer: pointer_Dog Dog
 type pointer: pointer_Chiuaua Chiuaua
 
 # ========== VIRTUAL METHOD DECLARATIONS ==============
-type fun: method_toHumanYears {pointer_Animal} void
+type fun: method_toHumanYears {pointer_Animal} {}
 
 # ============ CLASSES DEFINITIONS ============
 type class: Animal {
@@ -33,7 +33,7 @@ type class: Chiuaua {
 # ============ METHODS IMPLEMENTATION ============
 
 # Implementation for Dog.
-function dog_year_to_human_years {pointer_Dog} -> void {
+function dog_year_to_human_years {pointer_Dog} -> {} {
     init_pany_type         call_res,      i64;
     init_pany_type         call_arg,      i64;
     mov_p64_imm            call_arg,        0;
@@ -43,7 +43,7 @@ function dog_year_to_human_years {pointer_Dog} -> void {
 }
 
 # Implementation for Chiuaua.
-function chiuaua_year_to_human_years {pointer_Chiuaua} -> void {
+function chiuaua_year_to_human_years {pointer_Chiuaua} -> {} {
     init_pany_type         call_res,      i64;
     init_pany_type         call_arg,      i64;
     mov_p64_imm            call_arg,        1;
@@ -52,7 +52,7 @@ function chiuaua_year_to_human_years {pointer_Chiuaua} -> void {
     ret;
 }
 
-function main { i64, ptr_argv } -> i64 {
+function main { i64, ptr_argv } -> { i64 } {
     init_pany_type  chiuaua_ptr, pointer_Chiuaua;
     alloc_pptr_type chiuaua_ptr, Chiuaua;
     setVTable_pptr_type  chiuaua_ptr, Chiuaua;
