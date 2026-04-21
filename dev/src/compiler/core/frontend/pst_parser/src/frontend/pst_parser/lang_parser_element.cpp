@@ -12,7 +12,7 @@ namespace pst {
 
 	base::Optional<AccessLocked<LangElement>> LangElement::getParent() const { return parent; }
 
-	const dia::SourcePosition& LangElement::getSourcePosition() const { return source_position; }
+	SourcePositionLocked LangElement::getSourcePosition() const { return { source_position }; }
 
 	void LangElement::calcElementPathHashRecursive() {
 		for (auto& el: sub_elements) {
@@ -92,10 +92,24 @@ namespace pst {
 	void LangElement::calcHash() {
 		auto partial_hash = calcStableHash();
 		addToHash(partial_hash, context_hash);
-		hash = calcStableHash().finalize();
-		pst_hash_map.putOrAssign(hash.value(), AccessLocked<LangElement>(CRef<LangElement>(this)));
+		hash = partial_hash.finalize();
+
 		// Can be used to turn on unstable hashing for testing purposes.
 		// hash = getID().asInt();
+	}
+
+	void LangElement::putInPSTHashHashMapRecursive() {
+		putInPSTHashHashMap();
+		for (auto& sub_el: sub_elements) {
+			variant_match(sub_el) {
+				variant_case(InternalChild, el) { el->putInPSTHashHashMapRecursive(); }
+				variant_case(InternalNamedChild, el) { el.element->putInPSTHashHashMapRecursive(); }
+			}
+		}
+	}
+
+	void LangElement::putInPSTHashHashMap() {
+		pst_hash_map.putOrAssign(hash.value(), AccessLocked<LangElement>(CRef<LangElement>(this)));
 	}
 
 	HashAlg LangElement::calcStableHash() const {
@@ -151,7 +165,7 @@ namespace pst {
 		auto opt = el.toOpt();
 		if (opt) {
 			sub_elements.emplace_back(opt.value());
-			setLastToken(el->getSourcePosition());
+			setLastToken(el->getSourcePosition().illegalAccess());
 		}
 	}
 
@@ -159,7 +173,7 @@ namespace pst {
 		auto opt = el.toOpt();
 		if (opt) {
 			sub_elements.emplace_back(InternalNamedChild{ .name = name, .element = opt.value() });
-			setLastToken(el->getSourcePosition());
+			setLastToken(el->getSourcePosition().illegalAccess());
 		}
 	}
 
@@ -171,6 +185,12 @@ namespace pst {
 	void LangElement::setLastToken(dia::SourcePosition pos) {
 		if (not pos.isFileEnd() && pos.getEnd() > source_position.getEnd())
 			source_position = dia::SourcePosition(source_position, pos.getEnd());
+	}
+
+	void LangElement::setAdditionalRootData(AdditionalRootData data) {
+		CORE_ASSERT(!additional_root_data.has_value(), "Additional root data already set");
+		CORE_ASSERT(!parent.has_value(), "Only root elements can have additional root data");
+		additional_root_data.emplace(std::move(data));
 	}
 
 	void LangElement::acceptVisitor(PstVisitor&) const {

@@ -126,7 +126,7 @@ namespace vm::jit {
 				switch (opcode) {
 				case vm::low::MicroOpcode::jit_call_entrypoint:
 				case vm::low::MicroOpcode::call_func:
-				case vm::low::MicroOpcode::virtual_call_lptr_method: {
+				case vm::low::MicroOpcode::virtual_call_pptr_method: {
 					ir_builder.CreateCall(
 						opfun_ty,
 						getOrCreateOpcodeFunction("trampoline"),

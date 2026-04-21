@@ -5,6 +5,7 @@
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/pst_query/pst_access_side_input.hpp>
+#include <frontend/pst_parser/source_position_locked.hpp>
 #include <frontend/pst_parser/test_utils/pst_test_utils.hpp>
 #include <global_state/packages.hpp>
 
@@ -353,6 +354,7 @@ namespace lsp {
 
 
 		std::vector<query::external::InputData> previous_inputs;
+		previous_inputs.push_back(pst::SourcePositionLocked::getQueryInputNode());
 
 		for (auto& source_file: source_files) {
 			auto pst = source_file->getPST();

@@ -11,9 +11,14 @@
 namespace lexer {
 
 	/**
-	 * @brief Class used to manage lexing
+	 * @brief Class used to manage lexing.
 	 *
-	 * @todo Add format string lexing
+	 * Takes a reference to a source in constructor for ease of use, it only uses the logger and
+	 * decoding data.
+	 *
+	 * Usage: Construct using the TokenSource then use tokenize() to get back the token data. It is
+	 * meant to only be used by TokenSource.
+	 *
 	 * @todo Improve unicode support(soon: identifier normalization, at some point: ignorable format
 	 * controls)
 	 */
@@ -26,11 +31,6 @@ namespace lexer {
 
 		[[nodiscard]]
 		TokenData tokenize();
-
-		[[nodiscard]]
-		const Ref<dia_int::Logger> getLogger() const {
-			return logger;
-		}
 
 	private:
 		/**
@@ -66,6 +66,8 @@ namespace lexer {
 		void operatorHandler(Tokens& output);
 		void nameHandler(Tokens& output);
 		void stringHandler(Tokens& output);
+		void formatStringHandler(Tokens& output);
+		void formatSubStringHandler(Tokens& output);
 		void charHandler(Tokens& output);
 		void specialHandler(Tokens& output);
 
@@ -101,6 +103,8 @@ namespace lexer {
 		bool isBlockCommentEnd() const;
 		[[nodiscard]]
 		bool isStringBegin() const;
+		[[nodiscard]]
+		bool isFormatStringBegin() const;
 		[[nodiscard]]
 		bool isCharBegin() const;
 		/**@}*/

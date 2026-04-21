@@ -3,14 +3,12 @@ mod new_freeze_generation;
 
 use std::collections::{HashMap, HashSet};
 
-use crate::{
-    QuackResult, QuackResultContext, StrId,
-    quackpack::core::{
-        FeatureName, Manifest,
-        storage::freeze::{FreezeDep, FreezePackage, RootPackage, VenvFreeze},
-        types_common::ExpandedPackage,
-    },
-};
+use tracing::debug;
+
+use crate::quackpack::core::solver::types_common::ExpandedPackage;
+use crate::quackpack::core::storage::freeze::{FreezeDep, FreezePackage, RootPackage, VenvFreeze};
+use crate::quackpack::core::{FeatureName, Manifest};
+use crate::{QuackResult, QuackResultContext, StrId};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct SolverFreeze {
@@ -41,7 +39,9 @@ impl Default for SolverPackageFreeze {
 
 impl SolverFreeze {
     // @TODO: #2076 Fix issues with storage's freeze.
+    #[tracing::instrument(skip_all)]
     pub fn try_from_venv_freeze(root: ExpandedPackage, value: &VenvFreeze) -> QuackResult<Self> {
+        debug!(root = ?root, freeze = ?value);
         let mut expanded_pkgs_by_name = HashMap::new();
         for pkg_freeze in value.dependencies() {
             let pkg = ExpandedPackage {
@@ -100,17 +100,21 @@ impl SolverFreeze {
 }
 
 impl SolverFreeze {
+    #[tracing::instrument(skip_all)]
     pub fn empty_with_root(root: ExpandedPackage) -> QuackResult<Self> {
+        debug!(?root);
         Ok(Self {
             main_pkg: root,
             package_freezes: [(root, SolverPackageFreeze::default())].into(),
         })
     }
 
+    #[tracing::instrument(skip_all)]
     pub fn generate_storage_freeze(
         self,
         manifests: &HashMap<ExpandedPackage, Box<Manifest>>,
     ) -> QuackResult<VenvFreeze> {
+        debug!(root = ?self.main_pkg, freeze = ?self.package_freezes);
         let mut pkg_freezes = vec![];
         let root_freeze = self
             .package_freezes
@@ -128,14 +132,14 @@ impl SolverFreeze {
                     .get(&realization)
                     .context_internal("No manifest for realization")?;
                 dependencies.push(FreezeDep::new(
-                    realization_manifest.root_description().name(),
-                    realization_manifest.root_description().version(),
+                    realization_manifest.name(),
+                    realization_manifest.version(),
                 ));
             }
             pkg_freezes.push(FreezePackage::new(
-                package_manifest.root_description().name(),
-                package_manifest.root_description().version(),
-                freeze.features.into_iter().collect(),
+                package_manifest.name(),
+                package_manifest.version(),
+                freeze.features.into_iter().collect::<Vec<_>>(),
                 dependencies,
                 pkg.location,
             ));
@@ -149,14 +153,14 @@ impl SolverFreeze {
                 .get(&realization)
                 .context_internal("No manifest for realization")?;
             root_deps.push(FreezeDep::new(
-                realization_manifest.root_description().name(),
-                realization_manifest.root_description().version(),
+                realization_manifest.name(),
+                realization_manifest.version(),
             ));
         }
         let root = RootPackage::new(
-            root_manifest.root_description().name(),
-            root_manifest.root_description().version(),
-            root_freeze.features.into_iter().collect(),
+            root_manifest.name(),
+            root_manifest.version(),
+            root_freeze.features.into_iter().collect::<Vec<_>>(),
             root_deps,
         );
         Ok(VenvFreeze::new(root, pkg_freezes))
@@ -167,22 +171,18 @@ impl SolverFreeze {
 mod test {
     use std::path::PathBuf;
 
-    use crate::{
-        DuckCtx,
-        quackpack::core::{
-            parse_manifest,
-            types_common::{ExpandedLocation, InternedExpandedLocation},
-        },
-        util_common::path_ops_ext::PathOpsExt,
-    };
     use tempfile::{TempDir, tempdir};
     use url::Url;
 
     use super::*;
+    use crate::DuckContext;
+    use crate::quackpack::core::solver::types_common::ExpandedLocation;
+    use crate::quackpack::core::{PackageLoader, parse_manifest};
+    use crate::util::path_ops_ext::PathOpsExt;
 
     fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {
         let dir = tempdir().unwrap();
-        let manifest = dir.path().join("quackconfig.yml");
+        let manifest = dir.path().join(PackageLoader::MANIFEST_NAME);
         manifest.touch().unwrap();
         manifest.write(contents).unwrap();
         dir.path().try_fsync_dir().unwrap();
@@ -191,13 +191,15 @@ mod test {
 
     #[test]
     fn storage_to_solver_freeze() {
-        let loc_a = InternedExpandedLocation::new(ExpandedLocation::Registry {
+        let loc_a = ExpandedLocation::Registry {
             url: Url::parse("https://example.net").unwrap(),
             real_name: "a".into(),
-        });
-        let loc_b = InternedExpandedLocation::new(ExpandedLocation::Local {
+        }
+        .into();
+        let loc_b = ExpandedLocation::Local {
             absolute_path: PathBuf::new().join("xdd"),
-        });
+        }
+        .into();
         let pkg_a = ExpandedPackage {
             location: loc_a,
             version: Some(1.into()),
@@ -225,9 +227,10 @@ mod test {
             ],
         );
         let root_pkg = ExpandedPackage {
-            location: InternedExpandedLocation::new(ExpandedLocation::Local {
+            location: ExpandedLocation::Local {
                 absolute_path: PathBuf::new(),
-            }),
+            }
+            .into(),
             version: None,
         };
         let storage_freeze = VenvFreeze::new(root, vec![freeze_pkg_a, freeze_pkg_b]);
@@ -310,20 +313,23 @@ features:
   f_a: []
 "#,
         );
-        let ctx = DuckCtx::default();
+        let ctx = DuckContext::default();
         let manifest_root = parse_manifest(&path_root, &ctx).unwrap();
         let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
         let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
-        let exp_location_root = InternedExpandedLocation::new(ExpandedLocation::Local {
+        let exp_location_root = ExpandedLocation::Local {
             absolute_path: PathBuf::new().join("./root_path"),
-        });
-        let exp_location_a = InternedExpandedLocation::new(ExpandedLocation::Registry {
+        }
+        .into();
+        let exp_location_a = ExpandedLocation::Registry {
             url: Url::parse("https://example.net").unwrap(),
             real_name: StrId::from("a"),
-        });
-        let exp_location_b = InternedExpandedLocation::new(ExpandedLocation::Local {
+        }
+        .into();
+        let exp_location_b = ExpandedLocation::Local {
             absolute_path: PathBuf::new().join("./sialalala"),
-        });
+        }
+        .into();
         let exp_pkg_root = ExpandedPackage {
             location: exp_location_root,
             version: None,
@@ -391,14 +397,14 @@ features:
         let pkg_freeze_a = FreezePackage::new(
             "a".into(),
             1.into(),
-            ["f_a".into()].into(),
+            vec!["f_a".into()],
             vec![],
             exp_location_a,
         );
         let pkg_freeze_b = FreezePackage::new(
             "b".into(),
             2.into(),
-            ["f_b".into()].into(),
+            vec!["f_b".into()],
             vec![FreezeDep::new("a".into(), 1.into())],
             exp_location_b,
         );

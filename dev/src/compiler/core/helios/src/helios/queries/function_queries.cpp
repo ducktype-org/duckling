@@ -6,7 +6,6 @@
 #include <frontend/pst_parser/elements/hierarchy/class_elements/field.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/method.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
-#include <frontend/pst_parser/elements/hierarchy/expressions/assignment.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/expr_stmt.hpp>
@@ -16,22 +15,21 @@
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
+#include <helios/tsh/expression_type.hpp>
+#include <helios/tsh/queries/types.hpp>
+#include <helios/tsh/symbol_type.hpp>
+#include <helios/tsh/type_interface.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/errors/dia_interactive_elements.hpp>
 #include <helios_private/errors/errors.hpp>
-#include <helios_private/expressions/coercions.hpp>
-#include <helios_private/expressions/query_hout_of_expr.hpp>
-#include <helios_private/hout_code_generation/class_constructors.hpp>
-#include <helios_private/hout_code_generation/default_constructors.hpp>
-#include <helios_private/hout_code_generation/hout_stmt_compilation.hpp>
+#include <helios_private/hout_creation/definition_generation/class_constructors.hpp>
+#include <helios_private/hout_creation/definition_generation/default_constructors.hpp>
+#include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
+#include <helios_private/hout_creation/hout_stmt_compilation.hpp>
+#include <helios_private/pst_layer/stmts_from_aggregate.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
-#include <helios_private/utils/pst_walkers.hpp>
-#include <typesystem/higher/expression_type.hpp>
-#include <typesystem/higher/queries/types.hpp>
-#include <typesystem/higher/symbol_type.hpp>
-#include <typesystem/higher/type_interface.hpp>
 
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
@@ -169,7 +167,7 @@ namespace compiler::helios {
 				ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
 					"Function declared with no explicit return type and inconsistent return "
 					"statements.",
-					fun->getSourcePosition()
+					fun->getSourcePosition().unlock(ctx)
 				));
 				return query::Failed();
 			}
@@ -208,8 +206,8 @@ namespace compiler::helios {
 					const auto ret_type_ctv
 						= getTypeCTVFromPST(ctx, ret.value().unlock(ctx)->getExpr()).valueOrThrow();
 					ret_type = ret_type_ctv.get<tsh::SymbolType<>>().value();
-					origin   = code::multiplePstOrigin({ param_list.unlock(ctx),
-					                                     ret.value().unlock(ctx) });
+					origin   = code::multiplePstOriginOrdered({ param_list.unlock(ctx),
+					                                            ret.value().unlock(ctx) });
 				}
 				// Deduce return type if not provided.
 				else {
@@ -272,10 +270,10 @@ namespace compiler::helios {
 				emplaceDeclaration(stmt->getParams(), stmt->getRet());
 
 				const auto  self_scope  = ctx.query<QueryPrimaryCodeScopeFor>(stmt);
-				const SymID self_symbol = ctx.query<houtgen::QueryGeneratedSymbol>({
+				const SymID self_symbol = ctx.query<defgen::QueryGeneratedSymbol>({
 					.name = base::StrID("self"),
 					.generated_symbol_data
-					= houtgen::GeneratedSymbolData{ houtgen::GeneratedSymbolData::SelfParameter{
+					= defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::SelfParameter{
 						.method_symbol = this->original_symbol, .scope = self_scope } },
 				});
 
@@ -295,10 +293,10 @@ namespace compiler::helios {
 		 * @brief Get the declaration of an implicit class constructor.
 		 */
 		static PResult getImplicitCtorDecl(
-			Context& ctx, const houtgen::GeneratedSymbolData::ImplicitConstructor& ctor_data
+			Context& ctx, const defgen::GeneratedSymbolData::ImplicitConstructor& ctor_data
 		) {
 			// Preamble
-			using GeneratedSymbolData = houtgen::GeneratedSymbolData;
+			using GeneratedSymbolData = defgen::GeneratedSymbolData;
 			using ImplicitConstructor = GeneratedSymbolData::ImplicitConstructor;
 			using Parameter           = GeneratedSymbolData::Parameter;
 			using std::ranges::to;
@@ -318,7 +316,7 @@ namespace compiler::helios {
 			const u64 num_fields = fields.size();
 
 			// Prepare the necessary symbols (of the constructor and its parameters).
-			const SymID ctor_symbol        = ctx.query<houtgen::QueryGeneratedSymbol>({
+			const SymID ctor_symbol        = ctx.query<defgen::QueryGeneratedSymbol>({
 					   .name                  = name(class_type.getSymbol()),
 					   .generated_symbol_data = GeneratedSymbolData{ ImplicitConstructor{ class_symbol } },
             });
@@ -334,7 +332,7 @@ namespace compiler::helios {
 			u64 argument_index = 0;
 			for (const auto& field: fields) {
 				// Get the symbol of the constructor parameter corresponding to this field.
-				const SymID argument_symbol = ctx.query<houtgen::QueryGeneratedSymbol>({
+				const SymID argument_symbol = ctx.query<defgen::QueryGeneratedSymbol>({
 					.name = base::StrID(name(field.getSymbol())),
 					.generated_symbol_data
 					= GeneratedSymbolData{ Parameter{ ctor_symbol, argument_index } },
@@ -347,7 +345,7 @@ namespace compiler::helios {
 				                                .value();
 				auto init_expr_opt         = field_pst_data->getInit();
 				auto init_expr_coerced_opt = init_expr_opt.map(
-					[&](pst::AccessLocked<pst::ExprHolder> expr_holder) -> Box<code::Expr> {
+					[&](pst::AccessLocked<pst::ExprHolder> expr_holder) -> BoxOrCRef<code::Expr> {
 						const auto field_type = field.getType(ctx);
 						auto       expr
 							= getHoutOfExprWithExpectedType(
@@ -404,10 +402,10 @@ namespace compiler::helios {
 			const auto return_type = builtin_type.getResultType();
 			auto       parameters  = std::vector<code::Parameter>{};
 			for (u32 i = 0; const auto& param_type: builtin_type.getParameterTypes()) {
-				const auto param_symbol = ctx.query<houtgen::QueryGeneratedSymbol>({
+				const auto param_symbol = ctx.query<defgen::QueryGeneratedSymbol>({
 					base::StrID(base::strConcat("_", i).c_str()),
-					houtgen::GeneratedSymbolData{
-						houtgen::GeneratedSymbolData::Parameter{
+					defgen::GeneratedSymbolData{
+						defgen::GeneratedSymbolData::Parameter{
 							.function_symbol = fun,
 							.parameter_index = i,
 						},
@@ -440,15 +438,15 @@ namespace compiler::helios {
 						stmt(ctx, key).value()->acceptVisitor(decl_maker);
 						return std::move(decl_maker.out).value();
 					}
-					variant_case(houtgen::GeneratedSymbolData, generated_data) {
+					variant_case(defgen::GeneratedSymbolData, generated_data) {
 						variant_match(generated_data.data) {
 							variant_case(
-								houtgen::GeneratedSymbolData::ImplicitConstructor, ctor_data
+								defgen::GeneratedSymbolData::ImplicitConstructor, ctor_data
 							) {
 								return getImplicitCtorDecl(ctx, ctor_data);
 							}
 							variant_case(
-								houtgen::GeneratedSymbolData::DefaultClassConstructor, ctor_data
+								defgen::GeneratedSymbolData::DefaultClassConstructor, ctor_data
 							) {
 								const auto class_type
 									= ctx.query<QueryTypeFromDefinition>({ ctor_data.class_symbol })
@@ -465,8 +463,7 @@ namespace compiler::helios {
 								};
 							}
 							variant_case(
-								houtgen::GeneratedSymbolData::DefaultStaticArrayConstructor,
-								ctor_data
+								defgen::GeneratedSymbolData::DefaultStaticArrayConstructor, ctor_data
 							) {
 								const auto return_type
 									= tsh::SymbolType<>{ ctor_data.array_type,
@@ -477,10 +474,10 @@ namespace compiler::helios {
 									key, return_type, {}, code::generatedOrigin()
 								};
 							}
-							variant_case_novalue(houtgen::GeneratedSymbolData::BuiltinOperator) {
+							variant_case_novalue(defgen::GeneratedSymbolData::BuiltinOperator) {
 								return getBuiltinDecl(ctx, key);
 							}
-							variant_case_novalue(houtgen::GeneratedSymbolData::ReplExpressionWrapper
+							variant_case_novalue(defgen::GeneratedSymbolData::ReplExpressionWrapper
 							) {
 								auto function_type = ctx.query<QueryTypeOfSymbol>({ key })
 								                         ->valueOrThrow()
@@ -493,8 +490,23 @@ namespace compiler::helios {
 									code::generatedOrigin(),
 								};
 							}
-							variant_case_novalue(houtgen::GeneratedSymbolData::ReplInstructionWrapper
+							variant_case_novalue(defgen::GeneratedSymbolData::ReplInstructionWrapper
 							) {
+								auto function_type = ctx.query<QueryTypeOfSymbol>({ key })
+								                         ->valueOrThrow()
+								                         .getType()
+								                         .as<tsh::FunctionAbstractType>();
+								return HOUTFunctionDeclaration{
+									key,
+									function_type.getResultType(),
+									{},
+									code::generatedOrigin(),
+								};
+							}
+							variant_case_novalue(defgen::GeneratedSymbolData::ScriptMainWrapper) {
+								// Script main is a generated symbol with a regular function
+								// signature, so it needs a normal HOUT declaration for the backend
+								// pipeline.
 								auto function_type = ctx.query<QueryTypeOfSymbol>({ key })
 								                         ->valueOrThrow()
 								                         .getType()
@@ -558,7 +570,9 @@ namespace compiler::helios {
 				));
 				return block;
 			} else {
-				ctx.logInt(makeBox<SingleStmtFunctionMustBeExprError>(stmt->getSourcePosition()));
+				ctx.logInt(makeBox<SingleStmtFunctionMustBeExprError>(
+					stmt->getSourcePosition().unlock(ctx)
+				));
 				CORE_PANIC("Not handling errors here yet... (single stmt function body)");
 			}
 		}
@@ -589,7 +603,7 @@ namespace compiler::helios {
 						body.unlock(ctx)->getType() == pst::CodeBlockOrStmt::Type::CodeBlock,
 						"This should not happen"
 					);
-					output_body = houtgen::compileCodeOfCodeBlock(ctx, body, decl.return_type);
+					output_body = compileCodeOfCodeBlock(ctx, body, decl.return_type);
 				}
 				CORE_ASSERT(output_body != nullptr, "Function declaration must be present here");
 
@@ -636,29 +650,29 @@ namespace compiler::helios {
 
 			// Generated symbol data.
 			variant_match(sym_ref->other) {
-				variant_case(houtgen::GeneratedSymbolData, gsd_data) {
+				variant_case(defgen::GeneratedSymbolData, gsd_data) {
 					variant_match(gsd_data.data) {
-						variant_case(houtgen::GeneratedSymbolData::ImplicitConstructor, ctor) {
+						variant_case(defgen::GeneratedSymbolData::ImplicitConstructor, ctor) {
 							const auto& type = ctx.query<QueryTypeFromDefinition>(ctor.class_symbol)
 							                       ->valueOrThrow()
 							                       .getType()
 							                       .as<tsh::ClassAbstractType>();
-							return ctx.query<houtgen::QueryImplicitClassConstructor>(type)
+							return ctx.query<defgen::QueryImplicitClassConstructor>(type)
 							    ->valueOrThrow();
 						}
-						variant_case(houtgen::GeneratedSymbolData::DefaultClassConstructor, ctor) {
+						variant_case(defgen::GeneratedSymbolData::DefaultClassConstructor, ctor) {
 							const auto& type = ctx.query<QueryTypeFromDefinition>(ctor.class_symbol)
 							                       ->valueOrThrow()
 							                       .getType()
 							                       .as<tsh::ClassAbstractType>();
-							return ctx.query<houtgen::QueryDefaultClassConstructor>(type)
+							return ctx.query<defgen::QueryDefaultClassConstructor>(type)
 							    ->valueOrThrow();
 						}
 						variant_case(
-							houtgen::GeneratedSymbolData::DefaultStaticArrayConstructor, ctor
+							defgen::GeneratedSymbolData::DefaultStaticArrayConstructor, ctor
 						) {
 							return ctx
-							    .query<houtgen::QueryDefaultStaticArrayConstructor>(ctor.array_type)
+							    .query<defgen::QueryDefaultStaticArrayConstructor>(ctor.array_type)
 							    ->valueOrThrow();
 						}
 						variant_default {

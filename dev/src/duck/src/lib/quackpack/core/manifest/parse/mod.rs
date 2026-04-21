@@ -1,14 +1,15 @@
 //! Main entry to parsing a manifest at the given path.
+use std::ops::{Deref, DerefMut};
 use std::path::Path;
 
 use itertools::Itertools;
 use serde::Deserialize;
-use tracing::{Level, debug, span};
+use tracing::debug;
 
+use crate::quackpack::core::Package;
 use crate::quackpack::schemas::manifest::Manifest as ManifestSchema;
-use crate::util_common::path_ops_ext::PathOpsExt;
-use crate::{DuckCtx, QuackResultContext, StrId, qp_internal};
-use crate::{QuackResult, quackpack::core::Package};
+use crate::util::path_ops_ext::PathOpsExt;
+use crate::{DuckContext, QuackResult, QuackResultContext, qp_internal};
 
 mod dependency;
 mod manifest;
@@ -25,9 +26,8 @@ mod tests;
 /// 1. Read the entire YAML string.
 /// 2. Turn that string into [`ManifestSchema`].
 /// 3. Parse [`ManifestSchema`] into [`Manifest`].
-pub fn parse_manifest(path: &Path, ctx: &DuckCtx) -> QuackResult<Package> {
-    let span = span!(Level::DEBUG, "manifest", path = %path.display());
-    let _guard = span.enter();
+#[tracing::instrument(skip(ctx))]
+pub fn parse_manifest(path: &Path, ctx: &DuckContext) -> QuackResult<Package> {
     debug!("starting parsing...");
     parse_inner(path, ctx).with_context(|| {
         format!(
@@ -40,7 +40,7 @@ pub fn parse_manifest(path: &Path, ctx: &DuckCtx) -> QuackResult<Package> {
 #[derive(Debug)]
 /// Scope representing, which item in [`ManifestSchema`] we are currently working on.
 pub(crate) struct Scope {
-    inner: Vec<StrId>,
+    inner: Vec<String>,
 }
 
 impl Scope {
@@ -50,23 +50,76 @@ impl Scope {
     }
 
     /// Push a `name` onto this [`Scope`].
-    pub fn push(&mut self, name: StrId) {
-        self.inner.push(name)
+    pub fn push(&mut self, name: String) -> ScopeGuard<'_> {
+        ScopeGuard::new(self, name)
     }
 
     /// Pop last item from this [`Scope`].
-    pub fn pop(&mut self) -> Option<StrId> {
-        self.inner.pop()
+    pub fn pop(&mut self) -> String {
+        self.inner.pop().unwrap()
     }
 
     /// Turn this [`Scope`] into a human friendly [`String`].
     pub fn format(&self) -> String {
         self.inner.iter().join(".")
     }
+
+    /// A helper for creating common context messages.
+    pub fn make_context_string(&self) -> String {
+        format!("when parsing the field `{}`", self.format())
+    }
+}
+
+/// A [`Scope`] guard.
+/// Will automatically `pop` when going out of scope, unless disarmed.
+pub(crate) struct ScopeGuard<'scope> {
+    scope: &'scope mut Scope,
+    armed: bool,
+}
+
+impl<'scope> ScopeGuard<'scope> {
+    pub fn new(scope: &'scope mut Scope, name: String) -> Self {
+        scope.inner.push(name);
+        Self { scope, armed: true }
+    }
+
+    /// Disarm this guard.
+    /// Droping it will have no effect.
+    pub fn disarm(&mut self) {
+        self.armed = false;
+    }
+
+    /// Disarm this guard, and return a result of a manual pop.
+    pub fn disarm_and_pop(&mut self) -> String {
+        self.disarm();
+        self.pop()
+    }
+}
+
+impl Drop for ScopeGuard<'_> {
+    fn drop(&mut self) {
+        if self.armed {
+            self.scope.inner.pop();
+        }
+    }
+}
+
+impl Deref for ScopeGuard<'_> {
+    type Target = Scope;
+
+    fn deref(&self) -> &Self::Target {
+        self.scope
+    }
+}
+
+impl DerefMut for ScopeGuard<'_> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.scope
+    }
 }
 
 /// Helper for [`parse_manifest`].
-fn parse_inner(path: &Path, ctx: &DuckCtx) -> QuackResult<Package> {
+fn parse_inner(path: &Path, ctx: &DuckContext) -> QuackResult<Package> {
     let package_root = path
         .parent()
         .ok_or_else(|| qp_internal!("the manifest path has no parent"))?;

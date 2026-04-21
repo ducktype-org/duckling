@@ -43,9 +43,15 @@ function(duck_add_vm_tests suffix)
         duck_add_test_custom(vm ${test_set}_debugger_test debugger/debugger_tests.cpp
                 USES ${libvm} Tester ${vmtester})
 
+        duck_add_test_custom(vm ${test_set}_debugger_class_test debugger/debugger_class_tests.cpp
+                USES ${libvm} Tester ${vmtester})
+
         duck_add_test_custom(vm ${test_set}_debugger_infinite_test debugger/debugger_infinite_tests.cpp
                 USES ${libvm} Tester ${vmtester})
         duck_disable_tc_when_not_opt("debugger_infinite_test" ${test_set})
+
+        duck_add_test_custom(vm ${test_set}_LowVMProgramCopy_test debugger/LowVMProgramCopy_tests.cpp
+                USES ${libvm} Tester ${vmtester})
 
         duck_add_test_custom(vm ${test_set}_building_test loader/assembly/bc_building.cpp
                 USES ${libvm} Tester ${vmtester})

@@ -8,7 +8,7 @@
 #include <frontend/pst_parser/elements/includes/basic.hpp>
 #include <helios/symbols/symbol_id.hpp>
 #include <helios/symbols/symbol_kind.hpp>
-#include <typesystem/higher/type_interface.hpp>
+#include <helios/tsh/type_interface.hpp>
 
 #include <base/except/exceptions.hpp>
 
@@ -16,6 +16,16 @@
 #include <string_id/string_id.hpp>
 
 namespace compiler::helios {
+	/**
+	 * @brief The unique ID of a symbol that is always increasing.
+	 *
+	 * The SymbolID should use this ID to implement its queryUnstablePerfectHash  so that it always
+	 * generates a unique ID for each symbol. The previous approach of using the pointer to the
+	 * SymbolData in cache was not working, because when we deallocate a SymbolData (LS can do that)
+	 * some new SymbolData can be allocated at the same address.
+	 */
+	STRONG_TYPEDEF_ID(SymbolDataID);
+
 	/**
 	 * Symbol data shared by all symbols.
 	 */
@@ -64,10 +74,13 @@ namespace compiler::helios {
 	 */
 	struct SymbolData final {
 		using OtherData
-			= std::variant<PstSymbolData, builtin::BuiltinFunctionData, houtgen::GeneratedSymbolData>;
+			= std::variant<PstSymbolData, builtin::BuiltinFunctionData, defgen::GeneratedSymbolData>;
+
+		SymbolData(CommonSymbolData common, OtherData other);
 
 		CommonSymbolData common;
 		OtherData        other;
+		SymbolDataID     id;
 
 		static SymbolData makePSTSymbolData(CommonSymbolData common_data, PstSymbolData pst_data);
 
@@ -76,7 +89,7 @@ namespace compiler::helios {
 		);
 
 		static SymbolData makeGeneratedSymbol(
-			base::StrID name, houtgen::GeneratedSymbolData generated_data
+			base::StrID name, defgen::GeneratedSymbolData generated_data
 		);
 
 		[[nodiscard]]
@@ -86,7 +99,7 @@ namespace compiler::helios {
 				variant_case_novalue(builtin::BuiltinFunctionData) {
 					base::NotYetImplemented("Can't get scope of builtin function.");
 				}
-				variant_case(houtgen::GeneratedSymbolData, gen_data) { return gen_data.getScope(); }
+				variant_case(defgen::GeneratedSymbolData, gen_data) { return gen_data.getScope(); }
 				variant_default { CORE_UNREACHABLE(); }
 			}
 			CORE_UNREACHABLE();

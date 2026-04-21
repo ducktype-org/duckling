@@ -1,4 +1,5 @@
 #include <diagnostic_interactive/logger.hpp>
+#include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/function.hpp>
@@ -20,21 +21,18 @@
 #include <helios/symbols/symbol_abi.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
+#include <helios/tsh/mutability.hpp>
+#include <helios/tsh/queries/types.hpp>
+#include <helios/tsh/type_interface.hpp>
 #include <helios/utils/get_expr_symid.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/errors/dia_interactive_elements.hpp>
-#include <helios_private/errors/errors.hpp>
-#include <helios_private/expressions/coercions.hpp>
-#include <helios_private/expressions/errors.hpp>
-#include <helios_private/hout_code_generation/class_constructors.hpp>
-#include <helios_private/hout_code_generation/default_constructors.hpp>
+#include <helios_private/hout_creation/definition_generation/class_constructors.hpp>
+#include <helios_private/hout_creation/definition_generation/default_constructors.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
-#include <typesystem/higher/mutability.hpp>
-#include <typesystem/higher/queries/types.hpp>
-#include <typesystem/higher/type_interface.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
@@ -83,6 +81,7 @@ public:
 		TESTER_ADD_TEST(testExprScopes);
 		TESTER_ADD_TEST(testFunctionCallExpr);
 		TESTER_ADD_TEST(testFunctions);
+		TESTER_ADD_TEST(testStrings);
 		TESTER_ADD_TEST(testStaticArrays);
 		TESTER_ADD_TEST(testDynamicArrays);
 		TESTER_ADD_TEST(testBuiltinFunctions);
@@ -436,7 +435,7 @@ private:
 		ASSERT_EQUAL("FirstClassEver", first_class_info.name);
 
 		const auto& first_ctor
-			= query::entryPoint<compiler::helios::houtgen::QueryImplicitClassConstructor>(
+			= query::entryPoint<compiler::helios::defgen::QueryImplicitClassConstructor>(
 				  first_class_abstract_type
 			)
 		          ->valueOrPanic();
@@ -468,7 +467,7 @@ private:
 		ASSERT_EQUAL(1, class_with_member_info.methods.size());
 
 		const auto& class_with_members_ctor
-			= query::entryPoint<compiler::helios::houtgen::QueryImplicitClassConstructor>(
+			= query::entryPoint<compiler::helios::defgen::QueryImplicitClassConstructor>(
 				  class_with_member_abstract_type
 			)
 		          ->valueOrPanic();
@@ -781,7 +780,8 @@ private:
 
 		// just for cov and to see if it does not throw:
 		query::utils::withContextDo([&](query::Context& ctx) {
-			[[maybe_unused]] auto debug_print_out = hout.debugPrint(ctx);
+			std::stringstream ss;
+			hout.debugPrint(ctx, ss);
 		});
 	}
 
@@ -948,15 +948,17 @@ private:
 	void testImport() {
 		auto [module, _] = getModule(fs::File(path("test_modules/import_tests")));
 
+		(void) query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>(module);
+
 		const auto& hout
 			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
 
 		auto test_value = [&](auto str, i64 exp_val) {
 			auto name = base::StrID(str);
 			for (auto& gb: hout.glob_data) {
-				if (gb.original_name == name) {
-					if (std::holds_alternative<compiler::helios::HOUTGlobalConst>(gb.value)) {
-						auto ctv = std::get<compiler::helios::HOUTGlobalConst>(gb.value).value;
+				if (gb->original_name == name) {
+					if (std::holds_alternative<compiler::helios::HOUTGlobalConst>(gb->value)) {
+						auto ctv = std::get<compiler::helios::HOUTGlobalConst>(gb->value).value;
 						auto val = ctv.get<compiler::numeric_value::NumericValue>()->get<i64>();
 						if (!val.has_value()) {
 							this->fail(base::strConcat(
@@ -1196,7 +1198,8 @@ private:
 
 		// debug print test just for cov and to see if it does not throw:
 		query::utils::withContextDo([&](query::Context& ctx) {
-			[[maybe_unused]] auto debug_print_out = hout.debugPrint(ctx);
+			std::stringstream ss;
+			hout.debugPrint(ctx, ss);
 		});
 	}
 
@@ -1220,7 +1223,7 @@ private:
 				*function->body->statements.at(1)
 			);
 			auto make_ref_expr = dynamic_cast<const compiler::helios::code::RefOfExpr*>(
-				var_stmt.initial_value->get()
+				var_stmt.initial_value.get()
 			);
 			ASSERT_TRUE(make_ref_expr != nullptr);
 		}
@@ -1240,7 +1243,7 @@ private:
 				*function->body->statements.at(3)
 			);
 			auto deref_expr = dynamic_cast<const compiler::helios::code::DerefExpr*>(
-				var_stmt.initial_value->get()
+				var_stmt.initial_value.get()
 			);
 			ASSERT_TRUE(deref_expr != nullptr);
 		}
@@ -1294,7 +1297,7 @@ private:
 				*function->body->statements.at(8)
 			);
 			auto un_expr = dynamic_cast<const compiler::helios::code::UnaryOperatorExpr*>(
-				var_stmt.initial_value->get()
+				var_stmt.initial_value.get()
 			);
 			ASSERT_TRUE(un_expr != nullptr);
 
@@ -1309,7 +1312,7 @@ private:
 				*function->body->statements.at(9)
 			);
 			auto bin_expr = dynamic_cast<const compiler::helios::code::BinaryOperatorExpr*>(
-				var_stmt.initial_value->get()
+				var_stmt.initial_value.get()
 			);
 			ASSERT_TRUE(bin_expr != nullptr);
 
@@ -1328,7 +1331,7 @@ private:
 				*function->body->statements.at(12)
 			);
 			auto outer_deref = dynamic_cast<const compiler::helios::code::DerefExpr*>(
-				var_stmt.initial_value->get()
+				var_stmt.initial_value.get()
 			);
 			ASSERT_TRUE(outer_deref != nullptr);
 			auto access_expr
@@ -1368,7 +1371,7 @@ private:
 			auto* var_stmt = dynamic_cast<const VariableStmt*>(body.statements[0].get());
 			ASSERT_TRUE(var_stmt != nullptr);
 
-			auto* make_box_expr = dynamic_cast<const BoxOfExpr*>(var_stmt->initial_value->get());
+			auto* make_box_expr = dynamic_cast<const BoxOfExpr*>(var_stmt->initial_value.get());
 			ASSERT_TRUE(make_box_expr != nullptr);
 
 			auto* literal_expr
@@ -1399,7 +1402,7 @@ private:
 			auto* var_stmt = dynamic_cast<const VariableStmt*>(body.statements[4].get());
 			ASSERT_TRUE(var_stmt != nullptr);
 
-			auto* access_expr = dynamic_cast<const AccessExpr*>(var_stmt->initial_value->get());
+			auto* access_expr = dynamic_cast<const AccessExpr*>(var_stmt->initial_value.get());
 			ASSERT_TRUE(access_expr != nullptr);
 			ASSERT_EQUAL(compiler::helios::name(access_expr->field), "x");
 
@@ -1491,14 +1494,14 @@ private:
 			ASSERT_EQUAL(var_stmt.type, ref_i32);
 			// `&ref_a` should just copy the pointer, which is a simple assignment.
 			// The explicit `&` creates a RefOfExpr, and type system collapses the type.
-			auto* ref_of = dynamic_cast<const RefOfExpr*>(var_stmt.initial_value->get());
+			auto* ref_of = dynamic_cast<const RefOfExpr*>(var_stmt.initial_value.get());
 			ASSERT_TRUE(ref_of != nullptr);
 		}
 		// var ref_box_a: ref i32 = &box_a; (Box -> Ref)
 		{
 			const auto& var_stmt = get_var_stmt(4);
 			ASSERT_EQUAL(var_stmt.type, ref_i32);
-			auto* ref_of = dynamic_cast<const RefOfExpr*>(var_stmt.initial_value->get());
+			auto* ref_of = dynamic_cast<const RefOfExpr*>(var_stmt.initial_value.get());
 			ASSERT_TRUE(ref_of != nullptr);
 		}
 		// var box_ref_a: box i32 = ref_a; (Ref -> Box)
@@ -1506,7 +1509,7 @@ private:
 			const auto& var_stmt = get_var_stmt(5);
 			ASSERT_EQUAL(var_stmt.type, box_i32);
 			// This should create a copy. `BoxOfExpr(DerefExpr(...))`
-			auto* box_of = dynamic_cast<const BoxOfExpr*>(var_stmt.initial_value->get());
+			auto* box_of = dynamic_cast<const BoxOfExpr*>(var_stmt.initial_value.get());
 			ASSERT_TRUE(box_of != nullptr);
 			auto* deref = dynamic_cast<const DerefExpr*>(box_of->inner.get());
 			ASSERT_TRUE(deref != nullptr);
@@ -1516,7 +1519,7 @@ private:
 			const auto& var_stmt = get_var_stmt(6);
 			ASSERT_EQUAL(var_stmt.type, box_i32);
 			// This is just a move, should be a noop
-			auto* ident = dynamic_cast<const IdentifierExpr*>(var_stmt.initial_value->get());
+			auto* ident = dynamic_cast<const IdentifierExpr*>(var_stmt.initial_value.get());
 			ASSERT_TRUE(ident != nullptr);
 		}
 	}
@@ -1731,9 +1734,8 @@ private:
 			function->body->statements.at(0).ref().get()
 		);
 		ASSERT_TRUE(variable != nullptr);
-		auto call_expr = dynamic_cast<const compiler::helios::code::CallExpr*>(
-			variable->initial_value->ref().get()
-		);
+		auto call_expr
+			= dynamic_cast<const compiler::helios::code::CallExpr*>(variable->initial_value.get());
 		ASSERT_TRUE(call_expr != nullptr);
 		auto square_symbol = getChain("square", scope).back();
 		ASSERT_EQUAL(
@@ -1742,7 +1744,8 @@ private:
 
 		// just for cov and to see if it does not throw:
 		query::utils::withContextDo([&](query::Context& ctx) {
-			[[maybe_unused]] auto debug_print_out = hout.debugPrint(ctx);
+			std::stringstream ss;
+			hout.debugPrint(ctx, ss);
 		});
 	}
 
@@ -1765,6 +1768,56 @@ private:
 				          .valueOrThrow();
 				ASSERT_EQUAL(1, ctv.get<compiler::numeric_value::NumericValue>()->get<i64>());
 			}
+		}
+	}
+
+	void testStrings() {
+		auto [module, top_scope] = getModule(fs::File(path("test_modules/strings")));
+		auto& hout
+			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+		auto& function   = hout.functions.at(0);
+		auto& statements = function->body->statements;
+		using namespace compiler::helios::code;
+
+		{
+			// let ab = 'a' +: b;
+			const auto& prepended_stmt = dynamic_cast<const VariableStmt&>(*statements.at(1));
+			const auto  prepended_expr
+				= dynamic_cast<const CallExpr*>(prepended_stmt.initial_value.get());
+			const auto prepended_callee
+				= dynamic_cast<IdentifierExpr*>(prepended_expr->callee.get());
+			assertEqual(
+				compiler::helios::name(prepended_callee->symbol),
+				base::StrID("builtin_string_prepended"),
+				"The prepended expression should call builtin_string_prepended"
+			);
+		}
+
+		{
+			// let bcd = b :+ 'c' :+ 'd';
+			const auto& appended_stmt = dynamic_cast<const VariableStmt&>(*statements.at(2));
+			const auto  appended_expr
+				= dynamic_cast<const CallExpr*>(appended_stmt.initial_value.get());
+			const auto appended_callee = dynamic_cast<IdentifierExpr*>(appended_expr->callee.get());
+			assertEqual(
+				compiler::helios::name(appended_callee->symbol),
+				base::StrID("builtin_string_appended"),
+				"The appended expression should call builtin_string_appended"
+			);
+		}
+
+		{
+			// let helloWorld = hello ++ world;
+			const auto& concatenated_stmt = dynamic_cast<const VariableStmt&>(*statements.at(5));
+			const auto  concatenated_expr
+				= dynamic_cast<const CallExpr*>(concatenated_stmt.initial_value.get());
+			const auto concatenated_callee
+				= dynamic_cast<IdentifierExpr*>(concatenated_expr->callee.get());
+			assertEqual(
+				compiler::helios::name(concatenated_callee->symbol),
+				base::StrID("builtin_string_concatenated"),
+				"The prepended expression should call builtin_string_concatenated"
+			);
 		}
 	}
 
@@ -1848,8 +1901,7 @@ private:
             );
 			ASSERT_EQUAL(dyn_array_type.getElementType().getType(), i64_type);
 
-			auto* default_val
-				= dynamic_cast<const DefaultValueExpr*>(var_decl.initial_value->get());
+			auto* default_val = dynamic_cast<const DefaultValueExpr*>(var_decl.initial_value.get());
 			ASSERT_TRUE(default_val != nullptr);
 		}
 		{
@@ -1867,7 +1919,7 @@ private:
 		{
 			// let l_len = len l;
 			auto& var_decl = dynamic_cast<const VariableStmt&>(*statements.at(3));
-			auto* len_expr = dynamic_cast<const UnaryOperatorExpr*>(var_decl.initial_value->get());
+			auto* len_expr = dynamic_cast<const UnaryOperatorExpr*>(var_decl.initial_value.get());
 			ASSERT_TRUE(len_expr != nullptr);
 			ASSERT_EQUAL(len_expr->operation, BuiltinUnary::Len);
 		}
@@ -1880,7 +1932,7 @@ private:
 		{
 			// let x = l[0];
 			auto& var_decl   = dynamic_cast<const VariableStmt&>(*statements.at(5));
-			auto* index_expr = dynamic_cast<const IndexExpr*>(var_decl.initial_value->get());
+			auto* index_expr = dynamic_cast<const IndexExpr*>(var_decl.initial_value.get());
 			ASSERT_TRUE(index_expr != nullptr);
 		}
 	}
@@ -1898,7 +1950,7 @@ private:
 			function->body->statements.at(0).ref().get()
 		);
 		Ref call_expr_1 = dynamic_cast<const compiler::helios::code::CallExpr*>(
-			variable_stmt->initial_value->ref().get()
+			variable_stmt->initial_value.get()
 		);
 		auto call_expr_1_callee
 			= compiler::helios::getIdentifierExprSymID(call_expr_1->callee.ref()).value();
@@ -2067,9 +2119,9 @@ private:
 		};
 
 		auto find_global = [&](const compiler::helios::HOUTUnit& unit, const base::StrID& name
-		                   ) -> base::Optional<compiler::helios::HOUTGlobalData> {
+		                   ) -> base::Optional<CRef<compiler::helios::HOUTGlobalData>> {
 			for (const auto& glob: unit.glob_data)
-				if (glob.original_name == name) return glob;
+				if (glob->original_name == name) return glob;
 			assertTrue(false, base::strConcat("Global ", name.strView(), " not found"));
 			return {};
 		};
@@ -2085,9 +2137,9 @@ private:
 		std::cerr << "Mangled symbol: " << mangled_goo.strView() << '\n';
 
 		auto glob_a = find_global(hout_unit, base::StrID("A")).value();
-		std::cerr << "\nGlobal variable name: " << glob_a.original_name.strView() << '\n';
+		std::cerr << "\nGlobal variable name: " << glob_a->original_name.strView() << '\n';
 		auto mangled_glob_a = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
-			{ .symbol_key              = glob_a.helios_symbol,
+			{ .symbol_key              = glob_a->helios_symbol,
 		      .kind                    = compiler::helios::mangler::ManglingSymbolKind::Standard,
 		      .mangling_scheme_version = 0,
 		      .additional_metadata     = std::nullopt }
@@ -2096,9 +2148,9 @@ private:
 		ASSERT_EQUAL("_Q_M8manglingG1A", mangled_glob_a.str());
 
 		auto glob_b = find_global(hout_unit, base::StrID("B")).value();
-		std::cerr << "\nGlobal Variable name: " << glob_b.original_name.strView() << '\n';
+		std::cerr << "\nGlobal Variable name: " << glob_b->original_name.strView() << '\n';
 		auto mangled_glob_b = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
-			{ .symbol_key              = glob_b.helios_symbol,
+			{ .symbol_key              = glob_b->helios_symbol,
 		      .kind                    = compiler::helios::mangler::ManglingSymbolKind::Standard,
 		      .mangling_scheme_version = 321,
 		      .additional_metadata     = "metadata_v321" }
@@ -2107,18 +2159,27 @@ private:
 		ASSERT_EQUAL("_Q5a_M8manglingN5Nmspc1BE$metadata_v321", mangled_glob_b.str());
 
 		auto g_const = find_global(hout_unit, base::StrID("Cnst")).value();
-		std::cerr << "\nConst name: " << g_const.original_name.strView() << '\n';
+		std::cerr << "\nConst name: " << g_const->original_name.strView() << '\n';
 		auto mangled_g_const = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
-			{ .symbol_key              = g_const.helios_symbol,
+			{ .symbol_key              = g_const->helios_symbol,
 		      .kind                    = compiler::helios::mangler::ManglingSymbolKind::Standard,
 		      .mangling_scheme_version = 321,
 		      .additional_metadata     = "metadata_v321" }
 		);
 		std::cerr << "Mangled symbol: " << mangled_g_const.strView() << '\n';
 
-		auto        sub_module = getModule(fs::File(path("test_modules/mangling/sub")));
+
+		auto sub_module_a = query::utils::withContextCompute([&](query::Context& ctx) {
+			return compiler::frontend::getModuleRef(module)
+			    ->getSubmoduleByName(base::StrID{ "sub" })
+			    .unlock(ctx)
+			    ->unlock(ctx)
+			    .getID();
+		});
+		auto sub_module   = std::any_cast<compiler::frontend::ModuleID>(sub_module_a);
+
 		const auto& sub_hout_unit
-			= query::entryPoint<compiler::helios::QueryModuleHOUT>(sub_module.first)->valueOrPanic();
+			= query::entryPoint<compiler::helios::QueryModuleHOUT>(sub_module)->valueOrPanic();
 
 		auto sub_fun = find_function(sub_hout_unit, base::StrID("subFun")).value();
 		std::cerr << "\nSub function name: " << sub_fun->declaration->original_name.strView()
@@ -2132,9 +2193,9 @@ private:
 		std::cerr << "Mangled symbol: " << mangled_sub_fun.strView() << '\n';
 
 		auto sub_cnst = find_global(sub_hout_unit, base::StrID("subConst")).value();
-		std::cerr << "\nSub constant name: " << sub_cnst.original_name.strView() << '\n';
+		std::cerr << "\nSub constant name: " << sub_cnst->original_name.strView() << '\n';
 		auto mangled_sub_cnst = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
-			{ .symbol_key              = sub_cnst.helios_symbol,
+			{ .symbol_key              = sub_cnst->helios_symbol,
 		      .kind                    = compiler::helios::mangler::ManglingSymbolKind::Standard,
 		      .mangling_scheme_version = 5,
 		      .additional_metadata     = "metadata_v5" }
@@ -2142,7 +2203,7 @@ private:
 		std::cerr << "Mangled symbol: " << mangled_sub_cnst.strView() << '\n';
 
 		ASSERT_EQUAL(
-			"_Q1Y_M8manglingN4Mspc3Ooo5gooooEFi32i321af641bE$metadata_v123", mangled_goo.str()
+			"_Q1Y_M8manglingN4Mspc3Ooo5gooooEFi32i32f64E1a1bE$metadata_v123", mangled_goo.str()
 		);
 		ASSERT_EQUAL("_Q5a_M8manglingN5Nmspc1BE$metadata_v321", mangled_glob_b.str());
 
@@ -2150,8 +2211,8 @@ private:
 
 		ASSERT_EQUAL("_Q5a_M8manglingN4Mspc3Ooo4CnstE$metadata_v321", mangled_g_const.str());
 
-		ASSERT_EQUAL("_Q4_M3subN5inSub6subFunEFi32E$metadata_v5", mangled_sub_fun.str());
-		ASSERT_EQUAL("_Q4_M3subN5inSub8subConstE$metadata_v5", mangled_sub_cnst.str());
+		ASSERT_EQUAL("_Q4_M8mangling3subN5inSub6subFunEFi32EE$metadata_v5", mangled_sub_fun.str());
+		ASSERT_EQUAL("_Q4_M8mangling3subN5inSub8subConstE$metadata_v5", mangled_sub_cnst.str());
 	}
 
 	void testManglerSpecialMembers() {
@@ -2202,9 +2263,9 @@ private:
 		};
 
 		auto find_global = [&](const compiler::helios::HOUTUnit& unit, const base::StrID& name
-		                   ) -> base::Optional<compiler::helios::HOUTGlobalData> {
+		                   ) -> base::Optional<CRef<compiler::helios::HOUTGlobalData>> {
 			for (const auto& glob: unit.glob_data)
-				if (glob.original_name == name) return glob;
+				if (glob->original_name == name) return glob;
 			assertTrue(false, base::strConcat("Global ", name.strView(), " not found"));
 			return {};
 		};
@@ -2220,14 +2281,10 @@ private:
 			auto glob1 = find_global(hout_unit, base::StrID("B")).value();
 			auto glob2 = find_global(hout_unit, base::StrID("XB")).value();
 
-			Ref<const compiler::helios::code::Expr> expr1
-				= std::get<compiler::helios::HOUTGlobalVariable>(glob1.value)
-			          .initial_value.get()
-			          ->ref();
-			Ref<const compiler::helios::code::Expr> expr2
-				= std::get<compiler::helios::HOUTGlobalVariable>(glob2.value)
-			          .initial_value.get()
-			          ->ref();
+			CRef<compiler::helios::code::Expr> expr1
+				= std::get<compiler::helios::HOUTGlobalVariable>(glob1->value).initial_value.ref();
+			CRef<compiler::helios::code::Expr> expr2
+				= std::get<compiler::helios::HOUTGlobalVariable>(glob2->value).initial_value.ref();
 
 			ASSERT_EQUAL(
 				compiler::helios::code::BuiltinBinary::IntegerAdd,
@@ -2249,13 +2306,13 @@ private:
 			const auto& hout_unit
 				= query::entryPoint<compiler::helios::QueryModuleHOUT>(module)->valueOrPanic();
 
-			ASSERT_EQUAL(hout_unit.glob_data.size(), 3);
+			ASSERT_EQUAL(hout_unit.glob_data.size(), 4);
 
-			std::vector<char> globals = { 'A', 'B', 'C' };
+			std::vector<std::string> globals = { "A", "B", "C", "A_in_expand" };
 			query::utils::withContextDo([&](query::Context& ctx) {
 				for (const auto& name: globals)
 					ASSERT_TRUE(compiler::helios::isGlobalVar(
-						ctx, find_global(hout_unit, base::StrID(name))->helios_symbol
+						ctx, find_global(hout_unit, base::StrID(name)).value()->helios_symbol
 					));
 
 				for (const auto& fun: hout_unit.functions) {
@@ -2589,7 +2646,7 @@ private:
 	void testDefaultInitializers() {
 		using namespace compiler::helios;
 		using namespace compiler::helios::code;
-		using namespace compiler::helios::houtgen;
+		using namespace compiler::helios::defgen;
 
 		auto [module, root_scope] = getModule(fs::File(path("test_modules/default_constructors")));
 
@@ -2742,10 +2799,8 @@ private:
 			for (const auto& st_box: function->body->statements) {
 				if (auto var_ptr
 				    = dynamic_cast<const compiler::helios::code::VariableStmt*>(st_box.get())) {
-					if (compiler::helios::name(var_ptr->helios_symbol) == varname) {
-						CORE_ASSERT(var_ptr->initial_value.has_value(), "Expected initializer");
-						return var_ptr->initial_value->ref();
-					}
+					if (compiler::helios::name(var_ptr->helios_symbol) == varname)
+						return var_ptr->initial_value.ref();
 				}
 			}
 			CORE_PANIC("Variable not found in function body");
@@ -2881,7 +2936,7 @@ private:
 		auto get_global_by_name
 			= [&](base::StrID name) -> base::Optional<CRef<compiler::helios::HOUTGlobalData>> {
 			for (const auto& glob: hout.glob_data)
-				if (glob.original_name == name) return &glob;
+				if (glob->original_name == name) return glob;
 			return {};
 		};
 
@@ -2899,6 +2954,13 @@ private:
 			return {};
 		};
 
+		auto get_source_pos_from_origin
+			= [](const compiler::helios::code::ElementOrigin& origin) -> dia::SourcePosition {
+			return std::any_cast<dia::SourcePosition>(query::utils::withContextCompute(
+				[&](query::Context& ctx) { return origin.getSourcePosition(ctx).value(); }
+			));
+		};
+
 		/**
 		 * Check if the source position of the origin of initial value expression
 		 * calculated from HOUT is the same as the source position of the whole PST init expression.
@@ -2913,13 +2975,12 @@ private:
 			auto var_pst           = var_opt.value();
 			auto initial_value_pst = var_pst->getValue().value().illegalAccess().value();
 			auto initial_value_expr
-				= std::get<compiler::helios::HOUTGlobalVariable>(glob->value).initial_value->ref();
+				= std::get<compiler::helios::HOUTGlobalVariable>(glob->value).initial_value.ref();
 
-			dia::SourcePosition expr_pos_from_origin
-				= initial_value_expr->origin.getSourcePosition().value();
+			auto expr_pos_from_origin = get_source_pos_from_origin(initial_value_expr->origin);
 			assertEqual(
 				expr_pos_from_origin,
-				initial_value_pst->getSourcePosition(),
+				initial_value_pst->getSourcePosition().illegalAccess(),
 				base::strConcat(
 					"The initial value expression PST node does not match for variable ",
 					name.strView()
@@ -2970,8 +3031,8 @@ private:
 
 			auto pst_fun = pst_fun_opt.value();
 			assertEqual(
-				fun->origin.getSourcePosition(),
-				pst_fun->getSourcePosition(),
+				get_source_pos_from_origin(fun->origin),
+				pst_fun->getSourcePosition().illegalAccess(),
 				base::strConcat("The function origin is not the PST of the function", name.strView())
 			);
 			assertEqual(
@@ -2987,7 +3048,7 @@ private:
 		check_function_origin(base::StrID("a"));
 		check_function_origin(base::StrID("b"));
 
-		query::utils::withContextDo([&](query::Context& ctx) { std::cout << hout.debugPrint(ctx); });
+		query::utils::withContextDo([&](query::Context& ctx) { hout.debugPrint(ctx, std::cout); });
 	}
 
 	void testScopeParentsAndDepth() {

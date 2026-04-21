@@ -77,8 +77,8 @@ export class CompilerDaemonClient {
 		const logPath = path.join(__dirname, 'daemon.log');
 		const logStream = fs.createWriteStream(logPath);
 		if (!fs.existsSync(this.binaryPath)) {
-			connection.window.showErrorMessage(`DucklingLS daemon binary not found at "${this.binaryPath}". ` +
-			`Install it with comp-copy.py or set DucklingLanguageServer.executablePath in VS Code settings.`);
+			connection.window.showErrorMessage(`duck_ls daemon binary not found at "${this.binaryPath}". ` +
+			`Install it with comp-copy.py or set DucklingLanguageSupport.executablePath in VS Code settings.`);
 			throw new Error(`[DucklingLS] duck_ls binary not found at "${this.binaryPath}".`);
 		}
 		const childProcess = spawn(

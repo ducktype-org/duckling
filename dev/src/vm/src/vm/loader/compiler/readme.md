@@ -28,7 +28,7 @@ a new function is injected.
     memory blocks to hold dangling references.
     - This step also checks for any new methods which may have been declared in object types or
     interfaces. It stores them in the `method_name_pool`. The mappings in this map are needed to
-    translate the method names to their IDs when lowering `virtual_call_lptr_method` instructions
+    translate the method names to their IDs when lowering `virtual_call_pptr_method` instructions
     to micro bytecode.
 
 2.  **"Compiling" new globals:**

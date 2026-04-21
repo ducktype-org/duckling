@@ -1,7 +1,7 @@
-function test { } -> not_defined {
+function test { } -> { not_defined } {
     ret;
 }
 
-function main { i64, ptr_argv } -> i64 {
+function main { i64, ptr_argv } -> { i64 } {
     ret;
 }

@@ -1,17 +1,24 @@
-use std::fmt::Display;
-use std::io::Read;
-use std::io::Write;
+use std::fmt::{self, Display};
+use std::io::{Read, Write};
 
 use console::{Term, WithoutAnsi, colors_enabled, colors_enabled_stderr, style};
 
 use crate::duck::util::indent::indent;
 
-#[derive(Debug)]
 /// A struct which is responsible for printing to stdout/stderr.
 pub struct Terminal {
     term: Term,
     verbosity: Verbosity,
     colors_enabled: bool,
+}
+
+impl fmt::Debug for Terminal {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Terminal")
+            .field("verbosity", &self.verbosity)
+            .field("colors_enabled", &self.colors_enabled)
+            .finish_non_exhaustive()
+    }
 }
 
 #[derive(Debug, Default)]
@@ -125,42 +132,42 @@ impl Terminal {
     delegate_styles! {
         FunctionName: error,
         VerboseName: error_verbose,
-        Prefix: "Error:",
+        Prefix: "error:",
         OptionalStyles: red + bold,
     }
 
     delegate_styles! {
         FunctionName: warning,
         VerboseName: warning_verbose,
-        Prefix: "Warning:",
+        Prefix: "warning:",
         OptionalStyles: yellow + bold,
     }
 
     delegate_styles! {
         FunctionName: info,
         VerboseName: info_verbose,
-        Prefix: "Info:",
+        Prefix: "info:",
         OptionalStyles: cyan + bold,
     }
 
     delegate_styles! {
         FunctionName: note,
         VerboseName: note_verbose,
-        Prefix: "Note:",
+        Prefix: "note:",
         OptionalStyles: cyan + bold,
     }
 
     delegate_styles! {
         FunctionName: hint,
         VerboseName: hint_verbose,
-        Prefix: "Hint:",
+        Prefix: "hint:",
         OptionalStyles: cyan + bold,
     }
 
     delegate_styles! {
         FunctionName: critical,
         VerboseName: critical_verbose,
-        Prefix: "Critical:",
+        Prefix: "critical:",
         OptionalStyles: red + bold + reverse,
     }
 

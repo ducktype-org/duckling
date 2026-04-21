@@ -1,18 +1,16 @@
 //! A [`StrId`], an interned version of a string (also known as a fly string).
 //!
 //! It's trivially copyable.
-use std::{
-    borrow::{Borrow, Cow},
-    collections::HashSet,
-    convert::Infallible,
-    ffi::{OsStr, OsString},
-    fmt::{Debug, Display},
-    hash::Hash,
-    ops::Deref,
-    path::{Path, PathBuf},
-    str::FromStr,
-    sync::{Mutex, OnceLock},
-};
+use std::borrow::{Borrow, Cow};
+use std::collections::HashSet;
+use std::convert::Infallible;
+use std::ffi::{OsStr, OsString};
+use std::fmt::{Debug, Display};
+use std::hash::Hash;
+use std::ops::Deref;
+use std::path::{Path, PathBuf};
+use std::str::FromStr;
+use std::sync::{Mutex, OnceLock};
 
 use serde::{Deserialize, Serialize};
 
@@ -82,6 +80,12 @@ impl From<&OsStr> for StrId {
 
 impl From<OsString> for StrId {
     fn from(value: OsString) -> Self {
+        Self::from(value.to_string_lossy())
+    }
+}
+
+impl From<&OsString> for StrId {
+    fn from(value: &OsString) -> Self {
         Self::from(value.to_string_lossy())
     }
 }

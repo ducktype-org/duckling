@@ -43,7 +43,7 @@ void registerAbsoluteJITSymbols(llvm::orc::LLJIT& lljit) {
 		&vm::OpFuns::op_jit_call_entrypoint,
 		&vm::OpFuns::op_call_func,
 		&vm::OpFuns::op_call_builtinfunc,
-		&vm::OpFuns::op_virtual_call_lptr_method,
+		&vm::OpFuns::op_virtual_call_pptr_method,
 		&vm::OpFuns::op_ret_tailcall_func,
 		&vm::OpFuns::op_breakpoint,
 		&vm::OpFuns::op_ret,

@@ -1,0 +1,10 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 915d80d..00e03bb 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -1,4 +1,4 @@
+-cmake_minimum_required(VERSION 3.5)
++cmake_minimum_required(VERSION 3.25)
+ project(
+ 	replxx
+ 	# HOMEPAGE_URL "https://github.com/AmokHuginnsson/replxx"

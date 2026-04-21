@@ -56,3 +56,5 @@ namespace vm {
 		Block(BlockID id, BlockData data): id(id), data(data) {}
 	};
 }
+
+ID_STD_HASH(vm::BlockID);

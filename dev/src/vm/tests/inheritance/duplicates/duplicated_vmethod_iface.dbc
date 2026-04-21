@@ -1,5 +1,5 @@
 type pointer: pointer_I1 I1
-type fun: method_I1_int {pointer_I1} i64
+type fun: method_I1_int {pointer_I1} { i64 }
 
 type interface: I1 {
     virtual_methods: {

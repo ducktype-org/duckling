@@ -27,28 +27,26 @@ pub mod util;
 #[cfg(test)]
 mod tests;
 
-use std::{
-    collections::{HashMap, HashSet},
-    path::PathBuf,
-};
+use core::fmt;
+use std::collections::{HashMap, HashSet};
+use std::path::PathBuf;
 
-use crate::{
-    QuackResult, qp_bail, qp_bail_internal,
-    quackpack::core::{
-        FeatureName, Manifest, PackageCtx,
-        fetcher::Fetcher,
-        gathering::{gatherer::Gatherer, gatherer_state::GatheredInfo},
-        git_access::GitAccess,
-        solver_freeze::SolverFreeze,
-        solver_mode::SolverMode,
-        solving::solver_engine::{SolverEngine, SolverInput},
-        types_common::{ExpandedLocation, ExpandedPackage, InternedExpandedLocation},
-    },
-};
+use tracing::debug;
+
+use crate::quackpack::core::fetcher::Fetcher;
+use crate::quackpack::core::solver::gathering::gatherer::Gatherer;
+use crate::quackpack::core::solver::gathering::gatherer_state::GatheredInfo;
+use crate::quackpack::core::solver::git_access::GitAccess;
+use crate::quackpack::core::solver::solver_freeze::SolverFreeze;
+use crate::quackpack::core::solver::solver_mode::SolverMode;
+use crate::quackpack::core::solver::solving::solver_engine::{SolverEngine, SolverInput};
+use crate::quackpack::core::solver::types_common::{ExpandedLocation, ExpandedPackage};
+use crate::quackpack::core::{FeatureName, Manifest, PackageContext};
+use crate::{QuackResult, qp_bail, qp_bail_internal};
 
 /// A struct designated to finding the full dependency graph of a given package.
 pub struct SolverGathererData<'duck, 'ctx> {
-    root_package_ctx: &'ctx PackageCtx<'duck>,
+    root_pcx: &'ctx PackageContext<'duck>,
     root_pkg: ExpandedPackage,
     root_pkg_features: HashSet<FeatureName>,
     current_freeze: SolverFreeze,
@@ -70,22 +68,33 @@ pub enum ShouldRunSolverEngine {
     Yes(Box<SolverEngineData>),
 }
 
+impl fmt::Display for ShouldRunSolverEngine {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let text = match self {
+            Self::No(..) => "no",
+            Self::Yes(..) => "yes",
+        };
+        f.write_str(text)
+    }
+}
+
 impl<'duck, 'ctx> SolverGathererData<'duck, 'ctx> {
     /// Creates a new [`SolverGathererData`] instance.
     pub fn new(
-        package_ctx: &'ctx PackageCtx<'duck>,
+        pcx: &'ctx PackageContext<'duck>,
         current_freeze: SolverFreeze,
         mode: SolverMode,
     ) -> Self {
         Self {
-            root_package_ctx: package_ctx,
+            root_pcx: pcx,
             root_pkg: ExpandedPackage {
-                location: InternedExpandedLocation::new(ExpandedLocation::Local {
-                    absolute_path: package_ctx.package().root_directory().to_path_buf(),
-                }),
+                location: ExpandedLocation::Local {
+                    absolute_path: pcx.package().root_directory().to_path_buf(),
+                }
+                .into(),
                 version: None,
             },
-            root_pkg_features: package_ctx
+            root_pkg_features: pcx
                 .package()
                 .manifest()
                 .features()
@@ -100,6 +109,7 @@ impl<'duck, 'ctx> SolverGathererData<'duck, 'ctx> {
 
     /// Determines if all the transitive dependencies of the root package are satisfied.
     /// If not, prepares the [`SolverEngineData`] for running the engine by constructing [`SolverInput`].
+    #[tracing::instrument(skip_all)]
     pub fn prepare_solving<Access: GitAccess>(
         self,
         fetcher: &mut Fetcher<'_>,
@@ -107,7 +117,7 @@ impl<'duck, 'ctx> SolverGathererData<'duck, 'ctx> {
     ) -> QuackResult<ShouldRunSolverEngine> {
         let mut gatherer = Gatherer::new(fetcher, git_access);
 
-        let root_manifest = self.root_package_ctx.package().manifest().clone();
+        let root_manifest = self.root_pcx.package().manifest().clone();
         let root_features = root_manifest
             .features()
             .all_features()
@@ -123,6 +133,7 @@ impl<'duck, 'ctx> SolverGathererData<'duck, 'ctx> {
             .find_maximal_correct_dep_solution(&prev_freeze_manifests)?;
 
         if is_root_satisfied {
+            debug!("root has been satisfied");
             let trimmed = maximal_valid_freeze
                 .find_minimal_dep_solution(&prev_freeze_manifests, root_features)?;
             return Ok(ShouldRunSolverEngine::No(SolverAnswer {
@@ -135,7 +146,7 @@ impl<'duck, 'ctx> SolverGathererData<'duck, 'ctx> {
             )
         }
 
-        let root_path = self.root_package_ctx.package().root_directory().into();
+        let root_path = self.root_pcx.package().root_directory().into();
         let gathered_info = Self::run_solver_gatherer(
             &mut gatherer,
             root_manifest,
@@ -144,6 +155,7 @@ impl<'duck, 'ctx> SolverGathererData<'duck, 'ctx> {
             &maximal_valid_freeze,
             self.mode,
         )?;
+        debug!("gathered {gathered_info:?}");
         let solver_input = SolverInput::from_freeze_and_gathered_info(
             &maximal_valid_freeze,
             prev_freeze_manifests,
@@ -159,6 +171,7 @@ impl<'duck, 'ctx> SolverGathererData<'duck, 'ctx> {
 
     /// Helper for [`Self::prepare_solving`].
     /// Runs the [`Gatherer`], to fetch all potentially necessary manifests.
+    #[tracing::instrument(skip_all)]
     fn run_solver_gatherer<Access: GitAccess>(
         gatherer: &mut Gatherer<'_, '_, '_, Access>,
         root_manifest: Manifest,
@@ -181,12 +194,14 @@ impl<'duck, 'ctx> SolverGathererData<'duck, 'ctx> {
         let Some(root_freeze) = freeze.package_freezes.get(&freeze.main_pkg) else {
             qp_bail_internal!("Maximal valid freeze without main package freeze")
         };
-        for dep in root_freeze.dependencies_realization.keys() {
-            root_manifest
-                .dependencies_mut()
-                .all_dependencies_mut()
-                .remove(dep);
-        }
+        root_manifest
+            .dependencies_mut()
+            .all_dependencies_mut()
+            .retain(|dep| {
+                !root_freeze
+                    .dependencies_realization
+                    .contains_key(&dep.effective_name())
+            });
         Ok(root_manifest)
     }
 }
@@ -205,10 +220,12 @@ pub struct SolverEngineData {
 impl SolverEngineData {
     /// Finds dependency resolution of a given package.
     /// Returns a [`SolverAnswer`].
+    #[tracing::instrument(skip_all)]
     pub fn solve(self) -> QuackResult<SolverAnswer> {
         let manifests = self.input.gathered_manifests.clone();
         let solver_output =
             SolverEngine::run_engine(self.input, &(self.root_pkg, self.root_pkg_features))?;
+        debug!(?solver_output);
         let new_freeze = self.current_freeze.new_freeze(&manifests, solver_output)?;
         Ok(SolverAnswer {
             new_freeze,

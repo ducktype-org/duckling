@@ -27,11 +27,8 @@
 #include <string_id/string_id.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
+#include <vm/core/thread/safe_vmthread.hpp>
 #include <vm/core/thread/vmvalue.hpp>
-
-namespace vm {
-	class VMThread;
-}
 
 namespace vm::builtins {
 
@@ -57,7 +54,12 @@ namespace vm::builtins {
 		CreateMutex,
 		LockMutex,
 		UnlockMutex,
-		DestroyMutex
+		DestroyMutex,
+		CreateCV,
+		WaitCV,
+		NotifyCV,
+		NotifyAllCV,
+		DestroyCV
 	};
 
 	/**
@@ -70,16 +72,21 @@ namespace vm::builtins {
 	 */
 	class FunctionHandlers {
 	public:
-		static i64  builtinInputI64(VMThread& process);
-		static i64  builtinOutputI64(VMThread& process, i64 arg);
-		static void builtinOutputString(VMThread& process, Pointer ptr);
-		static i64  builtinStoi(VMThread& process, Pointer ptr);
-		static i64  builtinStartThread(VMThread& process);
-		static void builtinJoinThread(VMThread& process, i64 thread_id);
-		static u64  builtinCreateMutex(VMThread& process);
-		static void builtinLockMutex(VMThread& process, u64 mutex_id);
-		static void builtinUnlockMutex(VMThread& process, u64 mutex_id);
-		static void builtinDestroyMutex(VMThread& process, u64 mutex_id);
+		static i64  builtinInputI64(SafeVMThread& process);
+		static i64  builtinOutputI64(SafeVMThread& process, i64 arg);
+		static void builtinOutputString(SafeVMThread& process, Pointer ptr);
+		static i64  builtinStoi(SafeVMThread& process, Pointer ptr);
+		static u64  builtinStartThread(SafeVMThread& process);
+		static void builtinJoinThread(SafeVMThread& process, u64 thread_id);
+		static u64  builtinCreateMutex(SafeVMThread& process);
+		static void builtinLockMutex(SafeVMThread& process, u64 mutex_id);
+		static void builtinUnlockMutex(SafeVMThread& process, u64 mutex_id);
+		static void builtinDestroyMutex(SafeVMThread& process, u64 mutex_id);
+		static u64  builtinCreateCV(SafeVMThread& process);
+		static void builtinWaitCV(SafeVMThread& process, u64 cv_id, u64 mutex_id);
+		static void builtinNotifyCV(SafeVMThread& process, u64 cv_id);
+		static void builtinNotifyAllCV(SafeVMThread& process, u64 cv_id);
+		static void builtinDestroyCV(SafeVMThread& process, u64 cv_id);
 	};
 
 	/**
@@ -87,9 +94,9 @@ namespace vm::builtins {
 	 */
 	base::Optional<Box<VmValue>> callBuiltinFunction(
 		BuiltinFunctionID                id,
-		TypeCRef                         result_type,
-		VMProcess&                       process,
-		VMThread&                        thread,
+		const std::vector<TypeCRef>&     result_types,
+		IVMProcess&                      process,
+		SafeVMThread&                    thread,
 		const std::vector<Box<VmValue>>& arguments
 	);
 
@@ -97,7 +104,7 @@ namespace vm::builtins {
 	 * @brief Returns the map of builtin functions types with lazy initialization.
 	 * @note Function types here should match HELIOS types.
 	 * The types used for the parameters and the return value are defined in the @file
-	 * bytecode/builtin_types.hpp file (like "i64", "i32", "void").
+	 * bytecode/builtin_types.hpp file (like "i64", "i32").
 	 */
 	auto getBuiltinFunctions()
 		-> CRef<std::unordered_map<BuiltinFunctionID, std::pair<base::StrID, code::FuncSignature>>>;

@@ -10,18 +10,18 @@
 #include <unordered_map>
 
 namespace vm {
-	class VMProcess;
+	class IVMProcess;
 
 	class Supervisor final {
 	private:
 		Supervisor() = default;
 		~Supervisor();
 
-		std::shared_mutex                       rw_process_table;
-		PID                                     next = 0;
-		std::unordered_map<PID, Box<VMProcess>> process_table;
+		std::shared_mutex                        rw_process_table;
+		PID                                      next = 0;
+		std::unordered_map<PID, Box<IVMProcess>> process_table;
 
-		std::expected<Ref<VMProcess>, api::ApiError> getProcess(PID pid);
+		std::expected<Ref<IVMProcess>, api::ApiError> getProcess(PID pid);
 
 
 	public:

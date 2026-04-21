@@ -1,33 +1,24 @@
-use std::{collections::HashMap, path::PathBuf, time::Duration};
+use std::collections::{HashMap, HashSet};
+use std::path::PathBuf;
+use std::time::Duration;
 
 use httpmock::prelude::*;
 use tempfile::{TempDir, tempdir};
-
-use crate::{
-    DuckCtx,
-    quackpack::{
-        core::{Version, fetcher::types, git_access::GitAccess},
-        schemas::{
-            OneEntryMap,
-            registry::{self, DependencyCondition, DependencyFeature},
-        },
-    },
-    util_common::{path_ops_ext::PathOpsExt, test_utils::setup_test},
-};
-
-use std::collections::HashSet;
-
 use url::Url;
 
-use crate::quackpack::core::{
-    fetcher::Fetcher,
-    gathering::gatherer::Gatherer,
-    parse_manifest,
-    solver_mode::SolverMode,
-    types_common::{
-        ExpandedLocation, ExpandedPackage, InternedExpandedLocation, InternedLocation, Location,
-    },
+use crate::DuckContext;
+use crate::quackpack::core::fetcher::{Fetcher, types};
+use crate::quackpack::core::solver::gathering::gatherer::Gatherer;
+use crate::quackpack::core::solver::git_access::GitAccess;
+use crate::quackpack::core::solver::solver_mode::SolverMode;
+use crate::quackpack::core::solver::types_common::{
+    ExpandedLocation, ExpandedPackage, InternedLocation, Location,
 };
+use crate::quackpack::core::{Version, parse_manifest};
+use crate::quackpack::schemas::OneEntryMap;
+use crate::quackpack::schemas::registry::{self, DependencyCondition, DependencyFeature};
+use crate::util::path_ops_ext::PathOpsExt;
+use crate::util::test_utils::setup_test;
 
 struct MockGitAccess();
 impl GitAccess for MockGitAccess {
@@ -49,17 +40,17 @@ impl GitAccess for MockGitAccess {
     }
 }
 
-fn setup_duck_ctx() -> (DuckCtx, TempDir) {
+fn setup_duck_ctx() -> (DuckContext, TempDir) {
     let setup = || {
         // We set cache directory to a temporary directory, so we can use `Fetcher` without
         // worrying about leaving traces of tests in FS.
         let dir = tempdir().unwrap();
-        // SAFETY: Setup is single threaded, and `Env` in `DuckCtx`, copies all envs.
+        // SAFETY: Setup is single threaded, and `Env` in `DuckContext`, copies all envs.
         unsafe {
             std::env::set_var("DUCK_CACHE_DIR", dir.path());
         }
-        let ctx = DuckCtx::default();
-        // SAFETY: Setup is single threaded, and `Env` in `DuckCtx`, copies all envs.
+        let ctx = DuckContext::default();
+        // SAFETY: Setup is single threaded, and `Env` in `DuckContext`, copies all envs.
         unsafe {
             std::env::remove_var("DUCK_CACHE_DIR");
         }
@@ -81,6 +72,7 @@ fn create_mock_server() -> MockServer {
 
     // Assets for not_pinned_registry test.
     let foo_bar_dep = registry::Dependency {
+        name: "bar".into(),
         version: vec![Version::new(3, 0, 0), Version::new(4, 0, 0)],
         source: registry::DependencySource {
             inner: registry::SourceInner::Registry {
@@ -92,7 +84,7 @@ fn create_mock_server() -> MockServer {
         conditions: registry::DependencyCondition {
             package_features: None,
         },
-        is_alias_for: None,
+        alias: None,
     };
 
     let foo1 = registry::Manifest {
@@ -103,7 +95,7 @@ fn create_mock_server() -> MockServer {
             name: "foo".into(),
             description: "".into(),
         },
-        dependencies: [("bar".into(), foo_bar_dep)].into(),
+        dependencies: vec![foo_bar_dep],
         dev_dependencies: registry::Dependencies::new(),
         features: HashMap::new(),
         profiles: HashMap::new(),
@@ -153,6 +145,7 @@ fn create_mock_server() -> MockServer {
 
     // Assets for pinned_registry and features tests.
     let dx_xd_dep = registry::Dependency {
+        name: "xd".into(),
         version: vec![Version::new(1, 0, 0)],
         source: registry::DependencySource {
             inner: registry::SourceInner::Registry {
@@ -169,7 +162,7 @@ fn create_mock_server() -> MockServer {
         conditions: registry::DependencyCondition {
             package_features: None,
         },
-        is_alias_for: None,
+        alias: None,
     };
 
     let xd1 = registry::Manifest {
@@ -194,7 +187,7 @@ fn create_mock_server() -> MockServer {
             name: "dx".into(),
             description: "".into(),
         },
-        dependencies: [("xd".into(), dx_xd_dep)].into(),
+        dependencies: vec![dx_xd_dep],
         dev_dependencies: registry::Dependencies::new(),
         features: [("root".into(), vec![])].into(),
         profiles: HashMap::new(),
@@ -202,6 +195,7 @@ fn create_mock_server() -> MockServer {
 
     // Assets for pinned_request_while_pending_not_pinned test.
     let b_a_dep = registry::Dependency {
+        name: "a".into(),
         version: vec![Version::new(1, 0, 0)],
         source: registry::DependencySource {
             inner: registry::SourceInner::Registry {
@@ -213,10 +207,11 @@ fn create_mock_server() -> MockServer {
         conditions: registry::DependencyCondition {
             package_features: None,
         },
-        is_alias_for: None,
+        alias: None,
     };
 
     let a_c_dep = registry::Dependency {
+        name: "c".into(),
         version: vec![Version::new(1, 0, 0)],
         source: registry::DependencySource {
             inner: registry::SourceInner::Registry {
@@ -228,7 +223,7 @@ fn create_mock_server() -> MockServer {
         conditions: registry::DependencyCondition {
             package_features: Some(vec!["f".into()]),
         },
-        is_alias_for: None,
+        alias: None,
     };
 
     let a1 = registry::Manifest {
@@ -239,7 +234,7 @@ fn create_mock_server() -> MockServer {
             name: "a".into(),
             description: "".into(),
         },
-        dependencies: [("c".into(), a_c_dep)].into(),
+        dependencies: vec![a_c_dep],
         dev_dependencies: registry::Dependencies::new(),
         features: [("f".into(), vec![])].into(),
         profiles: HashMap::new(),
@@ -267,7 +262,7 @@ fn create_mock_server() -> MockServer {
             name: "b".into(),
             description: "".into(),
         },
-        dependencies: [("a".into(), b_a_dep)].into(),
+        dependencies: vec![b_a_dep],
         dev_dependencies: registry::Dependencies::new(),
         features: [].into(),
         profiles: HashMap::new(),
@@ -387,7 +382,7 @@ metadata:
 dependencies:
   foo:
     source:
-      registry_url: {}
+      registry-url: {}
     version: 1 or 2
 "#,
         &url
@@ -403,17 +398,20 @@ dependencies:
             SolverMode::default(),
         )
         .unwrap();
-    let loc_root = InternedExpandedLocation::new(ExpandedLocation::Local {
+    let loc_root = ExpandedLocation::Local {
         absolute_path: root_path.clone(),
-    });
-    let loc_foo = InternedExpandedLocation::new(ExpandedLocation::Registry {
+    }
+    .into();
+    let loc_foo = ExpandedLocation::Registry {
         url: url.clone(),
         real_name: "foo".into(),
-    });
-    let loc_bar = InternedExpandedLocation::new(ExpandedLocation::Registry {
+    }
+    .into();
+    let loc_bar = ExpandedLocation::Registry {
         url: url.clone(),
         real_name: "bar".into(),
-    });
+    }
+    .into();
     assert!(
         gathered_info.versions_for_location
             == HashMap::from([
@@ -515,12 +513,12 @@ metadata:
 dependencies:
   xd:
     source:
-      registry_url: {}
+      registry-url: {}
     version: '1'
     pinned: true
   dx:
     source:
-      registry_url: {}
+      registry-url: {}
     version: '2'
     pinned: true
 "#,
@@ -537,17 +535,20 @@ dependencies:
             SolverMode::default(),
         )
         .unwrap();
-    let loc_root = InternedExpandedLocation::new(ExpandedLocation::Local {
+    let loc_root = ExpandedLocation::Local {
         absolute_path: root_path.clone(),
-    });
-    let loc_xd = InternedExpandedLocation::new(ExpandedLocation::Registry {
+    }
+    .into();
+    let loc_xd = ExpandedLocation::Registry {
         url: url.clone(),
         real_name: "xd".into(),
-    });
-    let loc_dx = InternedExpandedLocation::new(ExpandedLocation::Registry {
+    }
+    .into();
+    let loc_dx = ExpandedLocation::Registry {
         url: url.clone(),
         real_name: "dx".into(),
-    });
+    }
+    .into();
     assert!(
         gathered_info.versions_for_location
             == HashMap::from([
@@ -579,15 +580,15 @@ metadata:
 dependencies:
   xd:
     source:
-      registry_url: {}
+      registry-url: {}
     version: '1'
     pinned: true
   dx:
     source:
-      registry_url: {}
+      registry-url: {}
     features:
     - root:
-        package_features: [my_feature] 
+        package-features: [my_feature] 
     version: '2'
     pinned: true
 
@@ -607,17 +608,20 @@ features:
             SolverMode::default(),
         )
         .unwrap();
-    let loc_root = InternedExpandedLocation::new(ExpandedLocation::Local {
+    let loc_root = ExpandedLocation::Local {
         absolute_path: root_path.clone(),
-    });
-    let loc_xd = InternedExpandedLocation::new(ExpandedLocation::Registry {
+    }
+    .into();
+    let loc_xd = ExpandedLocation::Registry {
         url: url.clone(),
         real_name: "xd".into(),
-    });
-    let loc_dx = InternedExpandedLocation::new(ExpandedLocation::Registry {
+    }
+    .into();
+    let loc_dx = ExpandedLocation::Registry {
         url: url.clone(),
         real_name: "dx".into(),
-    });
+    }
+    .into();
     assert!(
         gathered_info.possible_features
             == HashMap::from([
@@ -676,11 +680,11 @@ metadata:
 dependencies:
   a:
     source:
-      registry_url: {}
+      registry-url: {}
     version: 1 or 2
   b:
     source:
-      registry_url: {}
+      registry-url: {}
     version: '1'
 "#,
         &url, &url,
@@ -696,21 +700,25 @@ dependencies:
             SolverMode::default(),
         )
         .unwrap();
-    let loc_root = InternedExpandedLocation::new(ExpandedLocation::Local {
+    let loc_root = ExpandedLocation::Local {
         absolute_path: root_path.clone(),
-    });
-    let loc_a = InternedExpandedLocation::new(ExpandedLocation::Registry {
+    }
+    .into();
+    let loc_a = ExpandedLocation::Registry {
         url: url.clone(),
         real_name: "a".into(),
-    });
-    let loc_b = InternedExpandedLocation::new(ExpandedLocation::Registry {
+    }
+    .into();
+    let loc_b = ExpandedLocation::Registry {
         url: url.clone(),
         real_name: "b".into(),
-    });
-    let loc_c = InternedExpandedLocation::new(ExpandedLocation::Registry {
+    }
+    .into();
+    let loc_c = ExpandedLocation::Registry {
         url: url.clone(),
         real_name: "c".into(),
-    });
+    }
+    .into();
     assert!(
         gathered_info.versions_for_location
             == HashMap::from([

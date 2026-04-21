@@ -1,0 +1,26 @@
+class A {
+    a: i64 = 0;
+}
+namespace N {
+    class A {
+        a: i64 = 0;
+    }
+}
+
+fun foo(a: A) -> i64 = {
+    return a.a + 1;
+}
+
+fun foo(a: N.A) -> i64 = {
+    return a.a + 2;
+}
+
+fun main() -> i64 = {
+    let x = A();
+    let y = N.A();
+
+    builtin_output_i64(foo(x));
+    builtin_output_i64(foo(y));
+
+    return 0;
+}

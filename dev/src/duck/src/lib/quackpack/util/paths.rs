@@ -1,10 +1,9 @@
 //! Various path helpers.
 use std::path::{Path, PathBuf};
 
-use crate::{
-    QuackResult,
-    util_common::{env::Env, path_ops_ext::PathOpsExt},
-};
+use crate::QuackResult;
+use crate::util::env::Env;
+use crate::util::path_ops_ext::PathOpsExt;
 
 /// Environmental variable overriding duck home root.
 const DUCK_HOME_ENV: &str = "DUCK_HOME";

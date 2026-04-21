@@ -89,7 +89,7 @@ namespace vm {
 			base::Optional<InheritanceMetadata>                 inheritance_metadata
 		);
 		void defineVariant(Bytes type_tag_size, const std::vector<TypeRef>& variants_definitions);
-		void defineFunction(std::vector<TypeCRef> parameters, TypeCRef result);
+		void defineFunction(std::vector<TypeCRef> parameters, std::vector<TypeCRef> result);
 		void defineOpaque(TypeSize size);
 
 		// Type finalization:
@@ -121,6 +121,11 @@ namespace vm {
 		[[nodiscard]]
 		Kind getKind() const {
 			return kind_type;
+		}
+
+		[[nodiscard]]
+		auto getKindVariant() const {
+			return kind;
 		}
 
 		// @todo: Interface below may change
@@ -165,7 +170,11 @@ namespace vm {
 		[[nodiscard]]
 		base::Optional<TypeCRef> getNthParameterType(u64 parameter_id) const;
 		[[nodiscard]]
-		base::Optional<TypeCRef> getResultType() const;
+		base::Optional<u64> getResultTypeCount() const;
+		[[nodiscard]]
+		base::Optional<Bytes> getResultTypeSize() const;
+		[[nodiscard]]
+		base::Optional<TypeCRef> getNthResultType(u64 parameter_id) const;
 
 		friend class TypeMetadata;
 
