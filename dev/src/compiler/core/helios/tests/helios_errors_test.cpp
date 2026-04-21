@@ -31,6 +31,7 @@ class HeliosErrorsTests: public tester::TestSuite {
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(testErrorLogging);
+		TESTER_ADD_TEST(testErrorLoggingExpandStatements);
 		TESTER_ADD_TEST(testErrorBadExpr);
 		TESTER_ADD_TEST(testDiagnosticErrorsCorrectness);
 	}
@@ -87,6 +88,10 @@ private:
 		});
 	}
 
+	/**
+	 * Generic error logging tests.
+	 * Add additional test cases for more specific categories.
+	 */
 	void testErrorLogging() {
 		// ============================ No operator found ============================
 		checkForErrorOnCompileModule(
@@ -971,6 +976,13 @@ private:
 			{ "Copy constructor for non-trivially-copyable type `List[i32]`" },
 			1
 		);
+	}
+
+	/**
+	 * Test error logging related to errors in expanded statements or inside the expanded code.
+	 */
+	void testErrorLoggingExpandStatements() {
+
 	}
 
 	void testErrorBadExpr() {
