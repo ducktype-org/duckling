@@ -8,6 +8,7 @@
 
 #include "../backend_type.hpp"
 
+#include <archiver/archive.hpp>
 #include <debug_info/debug_info.hpp>
 #include <frontend/module_tree/module_id.hpp>
 #include <global_state/packages.hpp>
@@ -17,21 +18,21 @@
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_result.hpp>
 
+#include <string>
+
 namespace compiler::driver {
 
 	/**
 	 * Temporary interface for compiling the entire package into a single binary.
 	 * It compiler every module into the .o/.dbc files (via queries),
-	 * and also for LLVM backend it links them into a single binary.
+	 * and for LLVM backend it links or archives them into a final artifact.
 	 *
-	 * @brief The final link step for creating the package executable.
+	 * @brief The final link/archive step for producing the package artifact.
 	 * \parallel Must be serialized or guarded to avoid overwriting/colliding outputs when packaging
 	 * concurrently.
 	 */
 	base::OkBad compileEntirePackage(
-		const global_state::PackageInfo& package_info,
-		BackendType                      backend,
-		const linker::LinkingOptions&    linking_options
+		const global_state::PackageInfo& package_info, BuildTarget build_target
 	);
 
 	struct RunOutput final {

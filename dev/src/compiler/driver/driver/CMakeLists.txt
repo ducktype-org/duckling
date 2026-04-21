@@ -16,6 +16,7 @@ add_library(Driver
 	src/driver/debug_info/debug_info.cpp
 	src/driver/operations/generic_operations.cpp
 	src/driver/initialize.cpp
+	src/driver/externs_manifest.cpp
 	src/driver/exit.cpp
 	src/driver/repl_utils/repl_dvm_helpers.cpp
 	src/driver/repl_utils/script_llvm_helpers.cpp
@@ -28,7 +29,7 @@ add_library(Driver
 
 add_dependencies(Driver builtins_embeds)
 
-make_module(Driver USES Base QueryFramework SystemCommand HELIOS MIR LIR LLVMBackend DVMBackend LibVM Artifacts GlobalState Lexer Diagnostic Linker ModuleTree CompilerTimeStats Repl)
+make_module(Driver USES Base QueryFramework SystemCommand HELIOS MIR LIR LLVMBackend DVMBackend LibVM Artifacts GlobalState Lexer Diagnostic Linker Archiver ModuleTree CompilerTimeStats Repl JSON)
 
 duck_add_test(compiler driver tests/driver_test.cpp USES Driver Artifacts)
 duck_add_test_custom(compiler incremental_mark_nodes_test1 tests/incremental_mark_nodes_test1.cpp USES Driver Artifacts)

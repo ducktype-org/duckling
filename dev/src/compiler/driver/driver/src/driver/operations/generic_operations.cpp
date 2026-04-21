@@ -600,7 +600,8 @@ namespace compiler::driver {
 				objects.push_back(object_artifact);
 				objects.push_back(emitBuiltinLLVMObjectFile());
 
-				auto linking_result = linker::link(output_artifact, objects, linking_options);
+				auto linking_result
+					= linker::linkExecutable(output_artifact, objects, linking_options);
 				if (linking_result.isBad()) {
 					error_message = "Linking failed";
 					return;
@@ -691,11 +692,11 @@ namespace compiler::driver {
 	}
 
 	base::OkBad compileEntirePackage(
-		const global_state::PackageInfo& package_info,
-		BackendType                      backend,
-		const linker::LinkingOptions&    linking_options
+		const global_state::PackageInfo& package_info, BuildTarget build_target
 	) {
-		auto        root   = package_info.root_module;
+		auto root          = package_info.root_module;
+		auto backend       = std::holds_alternative<BuildTargetDVM>(build_target) ? BackendType::DVM
+		                                                                          : BackendType::LLVM;
 		base::OkBad result = base::OK;
 
 		std::vector<artifacts::FileArtifact> objects;
@@ -713,7 +714,7 @@ namespace compiler::driver {
 		ImplementationOf_CompileModule::total_module_count.store(modules_to_compile.size());
 
 		// @TODO: #2354 This is temporary.
-		const bool build_debug_info = backend == BackendType::DVM;
+		const bool build_debug_info = std::holds_alternative<BuildTargetDVM>(build_target);
 
 		// Schedule compilation of every module up front so worker threads can run
 		// them concurrently, then collect the results in a second pass.
@@ -736,7 +737,6 @@ namespace compiler::driver {
 
 		for (auto& [module_id, handle]: compile_handles) {
 			auto module_result = query::awaitEntryPoint<CompileModule>(handle);
-
 			if (module_result->hasValue()) {
 				objects.emplace_back(module_result->valueOrPanic().object_art);
 
@@ -755,20 +755,36 @@ namespace compiler::driver {
 
 		if (result.isBad()) return result;
 
-		if (backend == BackendType::LLVM) {
-			// Link all outputs into a single binary.
-			auto output_file = global_state::getRootCollection()->fileArtifactAtOrNew(
-				base::StrID(base::strConcat("package_", backendTypeToStr(backend), ".exe").c_str())
-			);
+		variant_match(build_target) {
+			variant_case(BuildTargetLLVMExecutable, target_exe) {
+				auto output_file = global_state::getRootCollection()->fileArtifactAtOrNew(
+					base::StrID(base::strConcat(target_exe.output_file_name, ".exe").c_str())
+				);
 
-			objects.push_back(emitBuiltinLLVMObjectFile());
+				objects.push_back(emitBuiltinLLVMObjectFile());
 
-			auto linking_result = linker::link(output_file, objects, linking_options);
+				auto linking_result
+					= linker::linkExecutable(output_file, objects, target_exe.linking_options);
 
-			if (linking_result.isBad()) {
-				CORE_USER_LOG("Linking failed!\n");
-				return base::BAD;
+				if (linking_result.isBad()) {
+					CORE_USER_LOG("Linking failed!\n");
+					return base::BAD;
+				}
 			}
+			variant_case(BuildTargetLLVMStaticLibrary, target_lib) {
+				auto output_file = global_state::getRootCollection()->fileArtifactAtOrNew(
+					base::StrID(base::strConcat(target_lib.output_file_name, ".a").c_str())
+				);
+
+				auto archive_result
+					= archiver::createArchive(output_file, objects, target_lib.archiving_options);
+
+				if (archive_result.isBad()) {
+					CORE_USER_LOG("Archiving failed!\n");
+					return base::BAD;
+				}
+			}
+			variant_case_novalue(BuildTargetDVM) {}
 		}
 
 		return result;

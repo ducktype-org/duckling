@@ -6,7 +6,9 @@
  * @note: The ideas from here might be one day separated into a framework.
  */
 
+#include <archiver/archive.hpp>
 #include <driver/exit.hpp>
+#include <driver/externs_manifest.hpp>
 #include <driver/initialize.hpp>
 #include <driver/operations/generic_operations.hpp>
 #include <frontend/module_tree/module_tree.hpp>
@@ -106,6 +108,17 @@ compiler::linker::LinkingOptions getLinkingOptionsFromClap(const clah::ParsingRe
 	linking_options.link_c_standard_library = not parsing_result.isFlag("no-c-standard-library");
 
 	return linking_options;
+}
+
+/**
+ * Helper function to extract archiving options from clah parsing result.
+ */
+compiler::archiver::ArchivingOptions getArchivingOptionsFromClap(
+	const clah::ParsingResult& parsing_result
+) {
+	compiler::archiver::ArchivingOptions archiving_options;
+	archiving_options.archiver_path = parsing_result.getValue<std::string>("archiver");
+	return archiving_options;
 }
 
 compiler::driver::options_types::DebugOptions getDebugOptionsFromClap(
@@ -289,9 +302,10 @@ clah::Clah getClahForMain() {
 							.compilation_artifacts = {
 								.artifacts_path = fs::FilePath("./duck_build/"),
 							},
-							.backend_options = getBackendOptionsFromClap(options),
-							.debug_options = getDebugOptionsFromClap(options),
-							.incremental   = { .enabled = !options.isFlag("no-incremental") },
+							.dependencies     = {},
+							.backend_options  = getBackendOptionsFromClap(options),
+							.debug_options    = getDebugOptionsFromClap(options),
+							.incremental      = { .enabled = !options.isFlag("no-incremental") },
 							.execution_options = {
 								.worker_count = 1,
 							},
@@ -357,6 +371,11 @@ clah::Clah getClahForMain() {
 	                     .addShortDesc("Path to the linker executable.")
 	                     .optional()
 	                     .build())
+				.add(clah::ParamBuilder::ofValue(clah::StringParser::make("archiver"))
+	                     .addLongName("archiver")
+	                     .addShortDesc("Path to the archiver executable.")
+	                     .optional()
+	                     .build())
 				.add(clah::ParamBuilder::ofFlag()
 	                     .addLongName("no-c-standard-library")
 	                     .addShortDesc(
@@ -375,12 +394,52 @@ clah::Clah getClahForMain() {
 	                     .addShortDesc("Worker count.")
 	                     .optional()
 	                     .build())
+				.add(clah::ParamBuilder::ofValue(clah::FilePathParser::make("manifest"))
+	                     .addLongName("externs-manifest")
+	                     .addShortDesc("JSON manifest of external package dependencies.")
+	                     .optional()
+	                     .build())
+				.add(clah::ParamBuilder::ofValue(clah::StringParser::make("output-file-name"))
+	                     .addShortName('o')
+	                     .addLongName("output-file-name")
+	                     .addShortDesc("Output artifact file name (without extension).")
+	                     .build())
+				.add(clah::ParamBuilder::ofFlag()
+	                     .addLongName("emit-static-lib")
+	                     .addShortDesc("Emit a static library (.a) instead of an executable.")
+	                     .build())
 				.setHandler([](const clah::ParsingResult& options) -> int {
 					auto path_to_compile = options.getPositional<fs::File>(0);
 					auto package_name    = options.getValue<std::string>("name").copyValueOr("");
 					CORE_ASSERT(package_name != "", "Package name must be specified");
 
 					auto worker_count = options.getValue<i64>("workers").copyValueOr(1);
+
+					std::vector<compiler::driver::options_types::DependencyInfo> dependencies;
+					if (auto manifest_path = options.getValue<fs::FilePath>("externs-manifest")) {
+						auto loaded = compiler::driver::loadExternsManifest(manifest_path.value());
+						if (!loaded.has_value()) {
+							compiler::driver::exit();
+							return 1;
+						}
+						dependencies = std::move(loaded.value());
+					}
+
+					if (options.isFlag("dvm-backend")) {
+						if (options.isFlag("emit-static-lib")) {
+							std::cerr << "Error: --dvm-backend and --emit-static-lib flags cannot "
+										 "be used together.\n";
+							return 1;
+						}
+						if (options.isParam("output-file-name")) {
+							std::cerr << "Error: --dvm-backend does not support custom output file "
+										 "names.\n";
+							return 1;
+						}
+					}
+
+					auto output_file_name = options.getValue<std::string>("output-file-name")
+		                                        .copyValueOr("package_llvm");
 
 					auto init_result = compiler::driver::initializeTheCompiler(
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
@@ -392,9 +451,10 @@ clah::Clah getClahForMain() {
 								.artifacts_path =
 									options.getValue<fs::FilePath>("artifact-location").copyValueOr("./duck_build/"),
 							},
-							.backend_options = getBackendOptionsFromClap(options),
-							.debug_options = getDebugOptionsFromClap(options),
-							.incremental   = { .enabled = !options.isFlag("no-incremental") },
+							.dependencies     = dependencies,
+							.backend_options  = getBackendOptionsFromClap(options),
+							.debug_options    = getDebugOptionsFromClap(options),
+							.incremental      = { .enabled = !options.isFlag("no-incremental") },
 							.execution_options = {
 								.worker_count = base::safeIntConv<u64>(worker_count),
 							},
@@ -406,19 +466,29 @@ clah::Clah getClahForMain() {
 						return 1;
 					}
 
-					const auto& linking_options = getLinkingOptionsFromClap(options);
+					const auto& linking_options   = getLinkingOptionsFromClap(options);
+					const auto& archiving_options = getArchivingOptionsFromClap(options);
 
+					compiler::driver::BuildTarget build_target;
+					if (options.isFlag("dvm-backend")) {
+						build_target = compiler::driver::BuildTargetDVM{};
+					} else if (options.isFlag("emit-static-lib")) {
+						build_target = compiler::driver::BuildTargetLLVMStaticLibrary{
+							.output_file_name  = output_file_name,
+							.archiving_options = archiving_options
+						};
+					} else {
+						build_target = compiler::driver::BuildTargetLLVMExecutable{
+							.output_file_name = output_file_name, .linking_options = linking_options
+						};
+					}
 
 					time_stats::TrackCategoryTime total_compilation_time(
 						time_stats::TimeCategories::TotalCompilationTime
 					);
 
-					auto backend_type = options.isFlag("dvm-backend")
-		                                  ? compiler::driver::BackendType::DVM
-		                                  : compiler::driver::BackendType::LLVM;
-
 					base::OkBad result = compiler::driver::compileEntirePackage(
-						global_state::getMainPackage(), backend_type, linking_options
+						global_state::getMainPackage(), build_target
 					);
 
 					total_compilation_time.end();
@@ -476,6 +546,7 @@ clah::Clah getClahForMain() {
 									.compilation_artifacts = {
 										.artifacts_path = fs::FilePath("./duck_build/"),
 									},
+									.dependencies = {},
 									.backend_options = {},
 									.debug_options = getDebugOptionsFromClap(options),
 									.incremental = {.enabled = !options.isFlag("no-incremental") },
@@ -659,6 +730,8 @@ clah::Clah getClahForMain() {
 
 int main(int argc, const char* argv[]) {
 	init::InitObject _;
+
+	compiler::driver::initializeGlobalLogger();
 	auto             clah = getClahForMain();
 
 	try {

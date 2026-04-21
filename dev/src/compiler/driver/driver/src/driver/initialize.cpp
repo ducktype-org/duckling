@@ -1,4 +1,5 @@
 #include "initialize.hpp"
+#include <iostream>
 
 #include "options.hpp"
 
@@ -108,6 +109,32 @@ namespace compiler::driver {
 		}
 
 		/**
+		 * @brief Register external dependencies as non-main packages in global state.
+		 */
+		base::OkBad handleDependencies(const std::vector<options_types::DependencyInfo>& dependencies) {
+			for (const auto& dep: dependencies) {
+				auto root_module = compiler::frontend::createModuleTree(
+					dep.package_info.package_path, dep.package_info.package_name
+				);
+				if (!getModuleRef(root_module)->hasMainSourceFile()) {
+					auto module_name = getModuleRef(root_module)->getName();
+					global_state::getGlobalLogger()->log(makeBox<dia_int::PlaceholderHeaderError>(
+						"Main package does not have a main source file.",
+						base::strConcat(
+							"The main source file of external package ", dep.package_info.package_name,
+							" is required for compilation. Please add a ",
+							module_name,
+							".dmf file to the main module directory."
+						)
+					));
+					return base::BAD;
+				}
+				global_state::setters::addPackage(root_module);
+			}
+			return base::OK;
+		}
+
+		/**
 		 * Checks if a previous query graph exists in Artifacts,
 		 * and if so, loads it into the query framework for incremental compilation.
 		 * This function is using query framework external API.
@@ -202,7 +229,6 @@ namespace compiler::driver {
 
 		variant_match(options.mode) {
 			variant_case(CompilerModeOfOperationAndOptions::BareMode, bare_options) {
-				handleLoggerInitialization();
 				handleDebugOptions(bare_options.debug_options);
 			}
 			variant_case(
@@ -213,8 +239,6 @@ namespace compiler::driver {
 				// in places where the compiler is left in a state
 				// that could result in panics/errors during exit.
 
-				handleLoggerInitialization();
-
 				handleDebugOptions(package_compilation_options.debug_options);
 				handleExecutionOptions(package_compilation_options.execution_options);
 				handleArtifactsOptions(package_compilation_options.compilation_artifacts);
@@ -222,18 +246,18 @@ namespace compiler::driver {
 				auto package_success
 					= handlePackageOptions(package_compilation_options.main_package_info);
 
-				if (package_success.isBad()) return base::BAD;
+				auto dependencies_success = handleDependencies(package_compilation_options.dependencies);
+
+				if (package_success.isBad() || dependencies_success.isBad()) return base::BAD;
 
 				handleBackendOptions(package_compilation_options.backend_options);
 				handleIncrementalOptions(package_compilation_options.incremental);
 			}
 			variant_case(CompilerModeOfOperationAndOptions::ReplMode, repl_options) {
-				handleLoggerInitialization();
 				handleDebugOptions(repl_options.debug_options);
 				handleExecutionOptions(repl_options.execution_options);
 			}
 			variant_case(CompilerModeOfOperationAndOptions::ScriptMode, script_options) {
-				handleLoggerInitialization();
 				handleDebugOptions(script_options.debug_options);
 				handleExecutionOptions(script_options.execution_options);
 				handleArtifactsOptions(script_options.compilation_artifacts);
@@ -243,5 +267,9 @@ namespace compiler::driver {
 			variant_default { CORE_PANIC("Unknown compiler mode of operation"); }
 		}
 		return base::OK;
+	}
+
+	void initializeGlobalLogger() {
+		handleLoggerInitialization();
 	}
 }

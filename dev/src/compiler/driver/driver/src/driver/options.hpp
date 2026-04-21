@@ -62,18 +62,30 @@ namespace compiler::driver {
 			fs::FilePath package_path;
 		};
 
-		// struct DependencyInfo {
-		//     struct CompilationStrategy {
-		//         struct InlineCompilation { };
-		//         struct Precompiled {
-		//             // this might be inlined or not:
-		//             std::string precompilation_path;
-		//         };
-		//         std::variant<InlineCompilation, Precompiled> strategy;
-		//     };
-		//     PackageInfo package_info;
-		//     CompilationStrategy compilation_strategy;
-		// };
+		/**
+		 * @brief Describes a single external dependency of the main package.
+		 */
+		struct DependencyInfo final {
+			struct CompilationStrategy final {
+				/**
+				 * @brief Dependency to be compiled from source within the same duckc
+				 * invocation.
+				 */
+				struct InlineCompilation final {};
+
+				/**
+				 * @brief Dependency is already compiled.
+				 * If compiling to executable, the resulting .a/.o must be passed to the linker via
+				 * --additional-link-options.
+				 */
+				struct Precompiled final {};
+
+				std::variant<InlineCompilation, Precompiled> strategy;
+			};
+
+			PackageInfo         package_info;
+			CompilationStrategy compilation_strategy;
+		};
 	};
 
 	/**
@@ -100,13 +112,13 @@ namespace compiler::driver {
 		 * and its dependencies.
 		 */
 		struct PackageCompilationMode final {
-			options_types::PackageInfo      main_package_info;
-			options_types::ArtifactsOptions compilation_artifacts;
-			// std::vector<options_types::DependencyInfo> dependencies;
-			global_state::BackendOptions      backend_options;
-			options_types::DebugOptions       debug_options;
-			options_types::IncrementalOptions incremental;
-			options_types::ExecutionOptions   execution_options;
+			options_types::PackageInfo                 main_package_info;
+			options_types::ArtifactsOptions            compilation_artifacts;
+			std::vector<options_types::DependencyInfo> dependencies;
+			global_state::BackendOptions               backend_options;
+			options_types::DebugOptions                debug_options;
+			options_types::IncrementalOptions          incremental;
+			options_types::ExecutionOptions            execution_options;
 		};
 
 		/**

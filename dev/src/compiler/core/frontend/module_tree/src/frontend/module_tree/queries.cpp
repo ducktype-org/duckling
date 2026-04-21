@@ -4,15 +4,13 @@
 #include "module_tree.hpp"
 
 #include <frontend/module_tree/access.hpp>
+#include <global_state/packages.hpp>
 
 #include <base/types/bit256.hpp>
 #include <base/types/ints.hpp>
 
 #include <query_framework/standard_query/query_impl.hpp>
 #include <string_id/string_id.hpp>
-
-#include <cstddef>
-#include <iterator>
 
 namespace compiler::frontend {
 
@@ -26,6 +24,7 @@ namespace compiler::frontend {
 		// first step (in priority):
 		// * check children
 		// * check ancestors
+		// * check external packages
 
 		base::Optional<ModuleID> current_module;
 
@@ -40,6 +39,18 @@ namespace compiler::frontend {
 					break;
 				}
 				ancestor = ctx.query<QueryParentModule>(ancestor.value());
+			}
+		}
+
+		if (not current_module.has_value()) {
+			auto& packages = global_state::getPackages();
+			// This includes the main package it will never be selected, cos we already checked the
+			// root podule in previous loop
+			for (const auto& package: packages) {
+				if (frontend::getModuleRef(package.root_module)->getPackageID() == path.at(0)) {
+					current_module = package.root_module;
+					break;
+				}
 			}
 		}
 

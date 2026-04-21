@@ -342,11 +342,11 @@ namespace compiler::helios::defgen {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDefaultInitializerExpr);
 
 	query::QResult<CRef<code::Expr>> getDefaultInitializerExpr(
-		query::Context& ctx, const tsh::SymbolType<>& type, dia::SourcePosition pos
+		query::Context& ctx, const tsh::SymbolType<>& type, pst::SourcePositionLocked pos
 	) {
 		if (!type.isDefaultConstructible(ctx)) {
 			ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
-				base::strConcat("Type `", type.toString(), "` cannot be default initialized"), pos
+				base::strConcat("Type `", type.toString(), "` cannot be default initialized"), pos.unlock(ctx)
 			));
 			return query::Failed();
 		}

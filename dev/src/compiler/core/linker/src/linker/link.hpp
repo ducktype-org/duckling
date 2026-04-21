@@ -28,12 +28,12 @@ namespace compiler::linker {
 	};
 
 	/**
-	 * Links given files (assumed to be object files) into a single executable file.
+	 * @brief Link given object files into a single executable.
 	 * In the future it will be changed to a query, to automatically support caching.
-	 * @note: we can add additional object/library files here when needed.
+	 * @note we can add additional object/library files here when needed.
 	 */
 	[[nodiscard]]
-	base::OkBad link(
+	base::OkBad linkExecutable(
 		const artifacts::FileArtifact&              output,
 		const std::vector<artifacts::FileArtifact>& inputs,
 		const LinkingOptions&                       options

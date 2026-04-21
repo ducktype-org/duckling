@@ -65,6 +65,7 @@ protected:
 				.compilation_artifacts = {
 					.artifacts_path = artifacts_path,
 				},
+				.dependencies = {},
 				.backend_options = {
 					.llvm_backend = global_state::BackendOptions::LLVMBackend{},
 				},
@@ -209,14 +210,16 @@ private:
 			};
 
 			driver::compileEntirePackage(
-				package_info,
-				driver::BackendType::LLVM,
-				{
+package_info,
+			driver::BuildTargetLLVMExecutable{
+				.output_file_name = "package_llvm",
+				.linking_options = {
 					.linker_path             = {},
 					.additional_link_options = {},
 					.link_c_standard_library = true,
 				}
-			);
+			}
+		);
 		}
 
 		// ================================================================================
@@ -509,12 +512,14 @@ private:
 		};
 
 		driver::compileEntirePackage(
-			package_info,
-			driver::BackendType::LLVM,
-			{
-				.linker_path             = {},
-				.additional_link_options = {},
-				.link_c_standard_library = true,
+package_info,
+			driver::BuildTargetLLVMExecutable{
+				.output_file_name = "package_llvm",
+				.linking_options = {
+					.linker_path             = {},
+					.additional_link_options = {},
+					.link_c_standard_library = true,
+				}
 			}
 		);
 
@@ -524,15 +529,7 @@ private:
 			base::strConcat("Executable file does not exist: ", exe_path.native())
 		);
 
-		driver::compileEntirePackage(
-			package_info,
-			driver::BackendType::DVM,
-			{
-				.linker_path             = {},
-				.additional_link_options = {},
-				.link_c_standard_library = true,
-			}
-		);
+		driver::compileEntirePackage(package_info, driver::BuildTargetDVM{});
 	}
 
 	void globalsTest() {
@@ -626,12 +623,14 @@ private:
 		};
 
 		driver::compileEntirePackage(
-			package_info,
-			driver::BackendType::LLVM,
-			{
-				.linker_path             = {},
-				.additional_link_options = {},
-				.link_c_standard_library = true,
+package_info,
+			driver::BuildTargetLLVMExecutable{
+				.output_file_name = "package_llvm",
+				.linking_options = {
+					.linker_path             = {},
+					.additional_link_options = {},
+					.link_c_standard_library = true,
+				}
 			}
 		);
 
@@ -746,12 +745,14 @@ private:
 		};
 
 		driver::compileEntirePackage(
-			package_info,
-			driver::BackendType::LLVM,
-			{
-				.linker_path             = {},
-				.additional_link_options = {},
-				.link_c_standard_library = true,
+package_info,
+			driver::BuildTargetLLVMExecutable{
+				.output_file_name = "package_llvm",
+				.linking_options = {
+					.linker_path             = {},
+					.additional_link_options = {},
+					.link_c_standard_library = true,
+				}
 			}
 		);
 
@@ -1026,15 +1027,7 @@ private:
 			= frontend::createModuleTree(fs::File(path("modules/functions_2")), "src_pos_dvm"),
 		};
 
-		driver::compileEntirePackage(
-			dvm_package_info,
-			driver::BackendType::DVM,
-			{
-				.linker_path             = {},
-				.additional_link_options = {},
-				.link_c_standard_library = true,
-			}
-		);
+		driver::compileEntirePackage(dvm_package_info, driver::BuildTargetDVM{});
 		auto dvm_compile_node
 			= query::internal::makeNodeID<driver::CompileModule>(driver::KeyOf_CompileModule{
 				.module_id        = dvm_package_info.root_module,
