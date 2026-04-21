@@ -8,6 +8,7 @@
 #include <iostream>
 #include <mutex>
 #include <shared_mutex>
+#include <string_view>
 
 namespace base {
 	/**
@@ -117,6 +118,8 @@ namespace base {
 	StrID::StrID(const char* data): StrID(base::RawView(data)) {}
 
 	StrID::StrID(const std::string& data): StrID(data.c_str()) {}
+
+	StrID::StrID(std::string_view data): StrID(data.data()) {}
 
 	StrID::StrID(char character): StrID(std::string(1, character).c_str()) {}
 

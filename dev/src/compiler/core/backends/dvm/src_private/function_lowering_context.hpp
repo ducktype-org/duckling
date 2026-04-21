@@ -83,11 +83,11 @@ namespace compiler::backend_vm::internal {
 		DVMLocal forceToLocal(const DVMValue& value, base::Optional<std::string_view> name_hint = {});
 
 		/**
-		 * @brief Stores a given @p src_value in @p dest_place.
-		 * Depending on the place type, performs a `mov_X_X` or a `store_X_X`.
-		 * Loads immediates to temporaries if needed.
+		 * @brief Stores a given @p src_value in @p maybe_dest_place, if the destination was given.
+		 * If @p maybe_dest_place is an empty optional it does nothing. Depending on the place type,
+		 * performs a `mov_X_X` or a `store_X_X`. Loads immediates to temporaries if needed.
 		 */
-		void storeResult(const DVMPlace& dest_place, const DVMValue& src_value);
+		void storeResult(const base::Optional<DVMPlace>& maybe_dest_place, const DVMValue& src_value);
 
 		void pushInstruction(const vm::code::Instruction& instruction);
 

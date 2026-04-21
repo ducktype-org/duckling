@@ -109,7 +109,7 @@ namespace {
 
 namespace compiler::backend_vm::internal {
 	void InstructionLowerer::lower(
-		ComparisonOperation& op
+		ComparisonOperation& op // TODOP: Make this const.
 	) {
 		OpKind operation = op.op;
 
@@ -131,9 +131,9 @@ namespace compiler::backend_vm::internal {
 			}
 
 			// Force globals into locals if needed.
-			auto lhs = ctx.forceToLocal(op.lhs, "lhs_temp");
+			auto lhs = ctx->forceToLocal(op.lhs, "lhs_temp");
 			auto rhs = op.rhs.is<DVMGlobal>()
-			             ? DVMValue{ ctx.forceToLocal(op.rhs, "rhs_temp"),
+			             ? DVMValue{ ctx->forceToLocal(op.rhs, "rhs_temp"),
 				                     DVMPlace::AccessKind::Direct }
 			             : op.rhs;
 
@@ -143,14 +143,14 @@ namespace compiler::backend_vm::internal {
 			// mov x, 0;
 			// cmov x, 1;
 			auto tmp_res
-				= ctx.pushTempLocal(vm::code::PrimitiveType(base::StrID("i8"), 1), "cmp_tmp");
-			ctx.pushInstruction({ operation, lhs, rhs });
-			ctx.pushInstruction({ OpKind::mov, tmp_res, DVMImmediate::u8(u8(0)) });
-			ctx.pushInstruction({ OpKind::cmov, tmp_res, DVMImmediate::u8(u8(1)) });
+				= ctx->pushTempLocal(vm::code::PrimitiveType(base::StrID("i8"), 1), "cmp_tmp");
+			ctx->pushInstruction({ operation, lhs, rhs });
+			ctx->pushInstruction({ OpKind::mov, tmp_res, DVMImmediate::u8(u8(0)) });
+			ctx->pushInstruction({ OpKind::cmov, tmp_res, DVMImmediate::u8(u8(1)) });
 			return { tmp_res, DVMPlace::AccessKind::Direct };
 		}();
 
-		ctx.storeResult(op.dest, result_val);
+		ctx->storeResult(op.dest, result_val);
 	}
 
 }

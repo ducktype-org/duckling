@@ -49,19 +49,19 @@ namespace compiler::backend_vm::internal {
 	 * @brief Represents a unary DVM operation.
 	 */
 	struct UnaryOperation {
-		OpKind   op;
-		DVMValue src;
-		DVMPlace dest;  // TODOP: This should be optional
+		OpKind                   op;
+		DVMValue                 src;
+		base::Optional<DVMPlace> dest;
 	};
 
 	/**
 	 * @brief Represents a binary DVM operation.
 	 */
 	struct BinaryOperation {
-		OpKind   op;
-		DVMValue lhs;
-		DVMValue rhs;
-		DVMPlace dest;
+		OpKind                   op;
+		DVMValue                 lhs;
+		DVMValue                 rhs;
+		base::Optional<DVMPlace> dest;
 	};
 
 	/**
@@ -70,7 +70,7 @@ namespace compiler::backend_vm::internal {
 	struct CallOperation {
 		FunctionCallInfo         call_info;
 		std::deque<DVMValue>     args;
-		base::Optional<DVMPlace> dest;  // TODOP: Add test for that.
+		base::Optional<DVMPlace> dest;
 	};
 
 	// TODOP: Probably remove.
@@ -83,10 +83,10 @@ namespace compiler::backend_vm::internal {
 	 * @brief Represents a comparison DVM operation.
 	 */
 	struct ComparisonOperation {
-		OpKind   op;
-		DVMValue lhs;
-		DVMValue rhs;
-		DVMPlace dest;
+		OpKind                   op;
+		DVMValue                 lhs;
+		DVMValue                 rhs;
+		base::Optional<DVMPlace> dest;
 		// TODOP: Ugly
 		base::Optional<ctv::CompileTimeValue> lhs_const;
 		base::Optional<ctv::CompileTimeValue> rhs_const;
@@ -96,8 +96,8 @@ namespace compiler::backend_vm::internal {
 	 * @brief Represents an AddressOf DVM operation.
 	 */
 	struct AddressOfOperation {
-		DVMPlace src;  // TODOP: Comment
-		DVMPlace dest;
+		DVMPlace                 src;  // TODOP: Comment
+		base::Optional<DVMPlace> dest;
 	};
 
 	/**
@@ -106,9 +106,9 @@ namespace compiler::backend_vm::internal {
 	 * to a series of extern C function calls.
 	 */
 	struct MetaOperation {
-		lir::Operation       meta_op;
-		std::deque<DVMValue> args;
-		DVMPlace             dest;
+		lir::Operation           meta_op;
+		std::deque<DVMValue>     args;
+		base::Optional<DVMPlace> dest;
 	};
 
 	/**
@@ -117,9 +117,9 @@ namespace compiler::backend_vm::internal {
 	 * different DVM operations are chosen.
 	 */
 	struct CastOperation {
-		lir::CastParameters cast_params;
-		DVMValue            src;
-		DVMPlace            dest;
+		lir::CastParameters      cast_params;
+		DVMValue                 src;
+		base::Optional<DVMPlace> dest;
 	};
 
 	struct JumpOperation {

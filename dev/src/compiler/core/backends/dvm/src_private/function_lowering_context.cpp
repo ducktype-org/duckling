@@ -7,6 +7,8 @@
 
 #include <lir/lir_structure/lir_structure.hpp>
 
+#include "base/collections/optional.hpp"
+
 #include <string_id/string_id.hpp>
 
 #include <vm/bytecode/builtin_types.hpp>
@@ -93,7 +95,13 @@ DVMLocal FunctionLoweringContext::forceToLocal(
 	return temp;
 }
 
-void FunctionLoweringContext::storeResult(const DVMPlace& dest_place, const DVMValue& src_value) {
+void FunctionLoweringContext::storeResult(
+	const base::Optional<DVMPlace>& maybe_dest_place, const DVMValue& src_value
+) {
+	// Do nothing, if the dest_place is empty.
+	if_opt_none(maybe_dest_place) return;
+	const DVMPlace& dest_place = maybe_dest_place.value();
+
 	// If a place is direct we just move the value into it.
 	if (dest_place.isDirect()) {
 		pushInstruction(
