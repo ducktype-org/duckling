@@ -108,13 +108,10 @@ namespace {
 
 namespace compiler::backend_vm::internal {
 	void InstructionLowerer::lower(ComparisonOperation& op) {
-		OpKind operation = op.op;
-
 		DVMValue result_val = [&]() -> DVMValue {
 			// Shortcut for comparing immediates to keep the same semantics as comp-time comparisons.
 			if (op.lhs.is<DVMImmediate>() && op.rhs.is<DVMImmediate>()) {
-				bool const_result
-					= compTimeEvaluateComparison(operation, *op.lhs_const, *op.rhs_const);
+				bool const_result = compTimeEvaluateComparison(op.op, *op.lhs_const, *op.rhs_const);
 				return { DVMImmediate::boolean(const_result) };
 			}
 
@@ -137,7 +134,7 @@ namespace compiler::backend_vm::internal {
 			// cmov x, 1;
 			auto tmp_res
 				= ctx->pushTempLocal(vm::code::PrimitiveType(base::StrID("i8"), 1), "cmp_tmp");
-			ctx->pushInstruction({ operation, lhs, rhs });
+			ctx->pushInstruction({ op.op, lhs, rhs });
 			ctx->pushInstruction({ OpKind::mov, tmp_res, DVMImmediate::u8(u8(0)) });
 			ctx->pushInstruction({ OpKind::cmov, tmp_res, DVMImmediate::u8(u8(1)) });
 			return { tmp_res, DVMPlace::AccessKind::Direct };

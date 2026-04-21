@@ -8,7 +8,6 @@
 #include "string_id/string_id.hpp"
 
 #include <deque>
-#include <string_view>
 
 /**
  * @brief Names of comptime type operation functions in DVM.
@@ -56,15 +55,13 @@ namespace compiler::backend_vm::internal {
 	void InstructionLowerer::lower(const MetaOperation& op) {
 		// These two helpers are defined here since they use private FunctionLoweringContext members
 		// and we don't want to friend.
-		auto lower_single_call = [&](const char*                     func_name,
+		auto lower_single_call = [&](base::StrID                     func_name,
 		                             const std::deque<DVMValue>&     args,
 		                             const base::Optional<DVMPlace>& output) {
 			CallOperation call_op{
-				.call_info = FunctionCallInfo::fromExternCFunction(
-					base::StrID(func_name), ctx->program_context
-				),
-				.args = args,
-				.dest = output,
+				.call_info = FunctionCallInfo::fromExternCFunction(func_name, ctx->program_context),
+				.args      = args,
+				.dest      = output,
 
 			};
 			lower(call_op);
@@ -76,35 +73,30 @@ namespace compiler::backend_vm::internal {
 			);
 			DVMPlace builder_place = { builder, DVMPlace::AccessKind::Direct };
 
-			lower_single_call(
-				builder_sequence.new_func.data(), std::deque<DVMValue>(), builder_place
-			);
+			lower_single_call(builder_sequence.new_func, std::deque<DVMValue>(), builder_place);
 
 			DVMValue builder_value = { builder, DVMPlace::AccessKind::Direct };
-			for (const auto& type_arg: op.args) {
-				lower_single_call(
-					builder_sequence.push_func.data(), { builder_value, type_arg }, {}
-				);
-			}
+			for (const auto& type_arg: op.args)
+				lower_single_call(builder_sequence.push_func, { builder_value, type_arg }, {});
 
 			auto query_ctx_val = getQueryContext();
 			lower_single_call(
-				builder_sequence.finalize_func.data(), { query_ctx_val, builder_value }, op.dest
+				builder_sequence.finalize_func, { query_ctx_val, builder_value }, op.dest
 			);
 		};
 
 		switch (op.meta_op) {
 		case lir::Operation::MetaCreateBox:
 			CORE_ASSERT(op.args.size() == 1, "MetaCreateBox expects 1 argument");
-			lower_single_call(comptime_func_names::CREATE_BOX, op.args, op.dest);
+			lower_single_call(base::StrID(comptime_func_names::CREATE_BOX), op.args, op.dest);
 			break;
 		case lir::Operation::MetaCreateRef:
 			CORE_ASSERT(op.args.size() == 1, "MetaCreateRef expects 1 argument");
-			lower_single_call(comptime_func_names::CREATE_REF, op.args, op.dest);
+			lower_single_call(base::StrID(comptime_func_names::CREATE_REF), op.args, op.dest);
 			break;
 		case lir::Operation::MetaCreateConst:
 			CORE_ASSERT(op.args.size() == 1, "MetaCreateConst expects 1 argument");
-			lower_single_call(comptime_func_names::CREATE_CONST, op.args, op.dest);
+			lower_single_call(base::StrID(comptime_func_names::CREATE_CONST), op.args, op.dest);
 			break;
 		case lir::Operation::MetaCreateTuple: {
 			auto builder = BuilderSequence{
@@ -125,10 +117,10 @@ namespace compiler::backend_vm::internal {
 			break;
 		}
 		case lir::Operation::MetaEq:
-			lower_single_call(comptime_func_names::TYPES_EQUAL, op.args, op.dest);
+			lower_single_call(base::StrID(comptime_func_names::TYPES_EQUAL), op.args, op.dest);
 			break;
 		case lir::Operation::MetaNeq:
-			lower_single_call(comptime_func_names::TYPES_NOT_EQUAL, op.args, op.dest);
+			lower_single_call(base::StrID(comptime_func_names::TYPES_NOT_EQUAL), op.args, op.dest);
 			break;
 		default:
 			CORE_PANIC("Unknown meta operation: ", base::enumToStr(op.meta_op));

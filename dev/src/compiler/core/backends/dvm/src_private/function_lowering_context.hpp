@@ -84,8 +84,9 @@ namespace compiler::backend_vm::internal {
 
 		/**
 		 * @brief Stores a given @p src_value in @p maybe_dest_place, if the destination was given.
-		 * If @p maybe_dest_place is an empty optional it does nothing. Depending on the place type,
-		 * performs a `mov_X_X` or a `store_X_X`. Loads immediates to temporaries if needed.
+		 * If @p maybe_dest_place is an empty optional it does nothing.
+		 * Depending on the place type, performs a `mov_X_X` or a `store_X_X`. Loads immediates to
+		 * temporaries if needed.
 		 */
 		void storeResult(const base::Optional<DVMPlace>& maybe_dest_place, const DVMValue& src_value);
 
@@ -99,7 +100,6 @@ namespace compiler::backend_vm::internal {
 		 */
 		void cleanUpRegisteredTemps();
 
-		usize next_temp_id = 0;
 		/**
 		 * @brief Pushes a temporary local and based on the @p tracked parameter saves it in the
 		 * `current_temp_count`. This temporary local will be automatically deinitialized after
@@ -126,6 +126,8 @@ namespace compiler::backend_vm::internal {
 		std::vector<vm::code::TypeOfData>  function_parameter_types;
 		base::StrID                        function_name;
 		std::vector<vm::code::Instruction> function_body;
+
+		usize next_temp_id = 0;
 
 		/**
 		 * @brief Number of temporaries created by the currently lowered instruction.

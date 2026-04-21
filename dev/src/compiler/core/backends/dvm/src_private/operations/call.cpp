@@ -2,6 +2,8 @@
 #include "instruction_lowerer.hpp"
 #include "operations/dvm_operation.hpp"
 
+#include "base/except/exceptions.hpp"
+
 #include <logger/logger.hpp>
 
 namespace compiler::backend_vm::internal {
@@ -32,6 +34,11 @@ namespace compiler::backend_vm::internal {
 			{ OpKind::call, VISIT(op.call_info.call_target, callable, return callable.asArgument()) }
 		);
 
-		ctx->storeResult(op.dest, { call_result_storage.value(), DVMPlace::AccessKind::Direct });
+		if (op.dest) {
+			CORE_ASSERT(
+				call_result_storage.has_value(), "Call with destination must have a return value"
+			);
+			ctx->storeResult(op.dest, { call_result_storage.value(), DVMPlace::AccessKind::Direct });
+		}
 	}
 }
