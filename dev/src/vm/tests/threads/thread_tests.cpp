@@ -11,7 +11,7 @@ class VmThreadTest: public VmTestSuite {
 
 public:
 	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		// @TODO: #2563: Fix the tests and re-enable them. For now they are disabled because of the
+		// @TODO: #2563 Fix the tests and re-enable them. For now they are disabled because of the
 		// instability of multithreading tests, which is expected due to the nature of
 		// multithreading, but we need to fix it eventually. The main issue is that the tests are
 		// not deterministic, and they can fail randomly.
