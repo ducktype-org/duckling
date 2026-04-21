@@ -2,8 +2,6 @@
 
 #include <base/collections/optional.hpp>
 
-#include "tester/tester.hpp"
-
 #include <ranges>
 #include <string>
 #include <vector>
@@ -50,28 +48,6 @@ private:
 	 * function's return value is asserted to be equal to it. If not provided, the function asserts
 	 * that the return type was `void`.
 	 */
-
-
-	void runAndCheckReturnValue(
-		vm::PID                            pid,
-		const base::Optional<std::string>& func_name             = {},
-		const vm::RunArguments&            args                  = {},
-		const base::Optional<std::string>& optional_input        = {},
-		const base::Optional<std::string>& optional_output       = {},
-		const base::Optional<i64>&         expected_return_value = {}
-	) {
-		runAndCheckReturnValues(
-			pid,
-			func_name,
-			args,
-			optional_input,
-			optional_output,
-			expected_return_value.has_value()
-				? base::Optional<std::vector<i64>>{ { expected_return_value.value() } }
-				: std::nullopt
-		);
-	}
-
 	void runAndCheckReturnValues(
 		vm::PID                                 pid,
 		const base::Optional<std::string>&      func_name              = {},
@@ -119,6 +95,29 @@ private:
 				ASSERT_TRUE(exit_value.size() == 0);
 			}
 		}
+	}
+
+	/**
+	 * @brief Utility for a more generalised runAndCheckReturnValues.
+	 */
+	void runAndCheckReturnValue(
+		vm::PID                            pid,
+		const base::Optional<std::string>& func_name             = {},
+		const vm::RunArguments&            args                  = {},
+		const base::Optional<std::string>& optional_input        = {},
+		const base::Optional<std::string>& optional_output       = {},
+		const base::Optional<i64>&         expected_return_value = {}
+	) {
+		runAndCheckReturnValues(
+			pid,
+			func_name,
+			args,
+			optional_input,
+			optional_output,
+			expected_return_value.has_value()
+				? base::Optional<std::vector<i64>>{ { expected_return_value.value() } }
+				: std::nullopt
+		);
 	}
 
 	/**

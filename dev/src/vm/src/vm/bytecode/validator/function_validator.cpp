@@ -19,6 +19,7 @@
 #include <vm/core/process/builtin_functions.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
 
+#include <ranges>
 #include <variant>
 
 using namespace vm;
@@ -207,7 +208,7 @@ class FunctionValidator {
 			local_stack.pop(instr);
 		}
 
-		for (auto [idx, reslt]: enumerate(reslts | reverse))
+		for (auto [idx, reslt]: zip(iota(0u), reslts | reverse))
 			if (local_stack.back(idx).type->getName() != reslt.str)
 				throw InvalidFunctionCallArgumentsError(generic_arg);
 	}
@@ -267,7 +268,7 @@ class FunctionValidator {
 			throw InvalidFunctionCallArgumentsError(generic_arg);
 		local_stack.pop(instr);
 
-		for (auto [idx, reslt]: enumerate(reslts | reverse))
+		for (auto [idx, reslt]: zip(iota(0u), reslts | reverse))
 			if (local_stack.back(idx).type->getID() != reslt)
 				throw InvalidFunctionCallArgumentsError(generic_arg);
 	}

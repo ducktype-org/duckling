@@ -11,6 +11,7 @@
 #include <algorithm>
 
 namespace vm {
+	using base::Optional;
 
 	void Type::isInstantiableImpl(kind::Data& data) {
 		auto is_concrete_class = [](const InheritanceMetadata& imd) {
@@ -300,7 +301,7 @@ namespace vm {
 		return get<kind::Function>().flatMap(
 			[parameter_id](CRef<kind::Function> function) -> base::Optional<TypeCRef> {
 				if (parameter_id >= function->result_types.size()) return std::nullopt;
-				return base::Optional<TypeCRef>(function->result_types[parameter_id]);
+				return { function->result_types[parameter_id] };
 			}
 		);
 	}

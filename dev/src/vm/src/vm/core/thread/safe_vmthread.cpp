@@ -406,7 +406,7 @@ namespace vm {
 		Frame      orig_frame_cpy = *runtime_data.frame_stack_current;
 		std::byte* local_stack    = frame->local_stack;
 		if (local_stack == nullptr) local_stack = runtime_data.local_stack_base;
-		usize orig_block_stack_size
+		auto orig_block_stack_size
 			= usize(frame->local_block_ref_stack_end - frame->local_block_ref_stack_base);
 
 		frame->current_function           = &start_function;

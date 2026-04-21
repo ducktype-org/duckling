@@ -367,6 +367,7 @@ namespace vm {
 
 			std::vector<TypeCRef> result_types = {};
 			auto                  ret_count    = function_signature->result_types.size();
+			result_types.reserve(ret_count);
 			for (u64 i = 0; i < ret_count; i++) {
 				result_types.emplace_back(
 					thread.process_program->getTypes().at(function_signature->result_types[i])
