@@ -2,9 +2,9 @@ type pointer: pointer_A A
 type fun: method_foo_void_A {pointer_A} {}
 
 function method_foo_void_impl_A {pointer_A} -> {} {
-    init_lany_type x, i64;
-    mov_l64_imm x, 421;
-    output_l64 x;
+    init_pany_type x, i64;
+    mov_p64_imm x, 421;
+    output_p64 x;
     deinit; # x
     deinit; # arg0
     ret;
@@ -23,14 +23,14 @@ type class: A {
 }
 
 function main { i64, ptr_argv } -> { i64 } {
-    init_lany_type a_obj, pointer_A;
-    alloc_lptr_type a_obj, A;
-    setVTable_lptr_type a_obj, A;
-    init_lany_type a_ptr, pointer_A;
-    mov_lptr_lptr a_ptr, a_obj;
-    virtual_call_lptr_method a_obj, foo;
+    init_pany_type a_obj, pointer_A;
+    alloc_pptr_type a_obj, A;
+    setVTable_pptr_type a_obj, A;
+    init_pany_type a_ptr, pointer_A;
+    mov_pptr_pptr a_ptr, a_obj;
+    virtual_call_pptr_method a_obj, foo;
 
-    free_lptr a_obj;
+    free_pptr a_obj;
 
     deinit; # a_obj
     ret;

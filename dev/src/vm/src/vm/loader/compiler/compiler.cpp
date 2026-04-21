@@ -57,30 +57,18 @@ namespace vm::loader::compiler {
 
 		DEFINE_LOWER_ARGUMENT_IMPL_FOR_FAMILY(
 			low::opargs::PlaceDataArgumentType,
-			if constexpr (opargs::LocalArgumentType<FromType>) {
-				return ctx.locals_map.at(opcode_arg.var_name).offset;
+			if(auto maybe_val = ctx.locals_map.atMaybe(opcode_arg.var_name)) {
+				return maybe_val.value()->offset;
 			}
-			else if constexpr (opargs::GlobalArgumentType<FromType>) {
-				// Global offsets are stored in the same place as local offsets, but with the highest bit set to 1.
-				return compiler.low_program.getGlobals().at(opcode_arg.global_data_name)->global_buffer_offset | (1ULL << 63);
-			}
-			else {
-				CORE_PANIC("Invalid argument type for PlaceDataArgumentType");
-			}
+			return compiler.low_program.getGlobals().at(opcode_arg.var_name)->global_buffer_offset | (1ULL << 63);
 		);
 
 		DEFINE_LOWER_ARGUMENT_IMPL_FOR_FAMILY(
 			low::opargs::PlaceBlockArgumentType,
-			if constexpr (opargs::LocalArgumentType<FromType>) {
-				return ctx.locals_map.at(opcode_arg.var_name).block_idx;
+			if(auto maybe_val = ctx.locals_map.atMaybe(opcode_arg.var_name)) {
+				return maybe_val.value()->block_idx;
 			}
-			else if constexpr (opargs::GlobalArgumentType<FromType>) {
-				// Global offsets are stored in the same place as local offsets, but with the highest bit set to 1.
-				return compiler.low_program.getGlobals().at(opcode_arg.global_data_name)->global_block_idx | (1ULL << 63);
-			}
-			else {
-				CORE_PANIC("Invalid argument type for PlaceBlockArgumentType");
-			}
+			return compiler.low_program.getGlobals().at(opcode_arg.var_name)->global_block_idx | (1ULL << 63);
 		);
 
 		DEFINE_LOWER_ARGUMENT_IMPL(
@@ -182,7 +170,7 @@ namespace vm::loader::compiler {
 		usize                    max_stack_size  = 0;
 		usize                    max_block_count = 0;
 
-		auto push = [&](opargs::StackLocalAny local, opargs::Type type) {
+		auto push = [&](opargs::PlaceAny local, opargs::Type type) {
 			if_opt_some(result.atMaybe(local.var_name), entry) {
 				if (entry->offset != curr_stack_size) {
 					CORE_PANIC(
@@ -260,7 +248,7 @@ namespace vm::loader::compiler {
 
 			instr_match(ctx.function.body[index]) {
 				using namespace code::instructions;
-				instr_case(Op_init_lany_type, instr) {
+				instr_case(Op_init_pany_type, instr) {
 					push(instr.var, instr.type);
 					index++;
 				}
@@ -311,7 +299,7 @@ namespace vm::loader::compiler {
 					}
 					index++;
 				}
-				instr_case(Op_virtual_call_lptr_method, instr) {
+				instr_case(Op_virtual_call_pptr_method, instr) {
 					for (usize i = 0; i < *seek_method_param_count(instr.method.method_name); i++)
 						pop();
 					index++;

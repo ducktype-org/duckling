@@ -1,18 +1,17 @@
 //! Loading packages from the disk.
-use std::{io, marker::PhantomData, path::Path};
+use std::io;
+use std::marker::PhantomData;
+use std::path::Path;
 
 use tracing::{debug, trace};
 
-use crate::{
-    DuckContext, QuackResult, QuackResultContext,
-    duck::util::duck_home::DuckHome,
-    qp_bail, qp_err,
-    quackpack::core::{
-        PackageContext,
-        storage::{paths::Storage, venv::Venv, venv_id::VenvId},
-    },
-    util::path_ops_ext::PathOpsExt,
-};
+use crate::duck::util::duck_home::DuckHome;
+use crate::quackpack::core::PackageContext;
+use crate::quackpack::core::storage::paths::Storage;
+use crate::quackpack::core::storage::venv::Venv;
+use crate::quackpack::core::storage::venv_id::VenvId;
+use crate::util::path_ops_ext::PathOpsExt;
+use crate::{DuckContext, QuackResult, QuackResultContext, qp_bail, qp_err};
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 /// Is [`PackageLoader`] allowed to return a global package, if it doesn't find any package.
@@ -144,16 +143,14 @@ impl PackageLoader {
 mod tests {
     use tempfile::tempdir;
 
-    use crate::{
-        DuckContext,
-        quackpack::core::PackageLoader,
-        util::path_ops_ext::{MkdirOptions, PathOpsExt},
-    };
+    use crate::DuckContext;
+    use crate::quackpack::core::PackageLoader;
+    use crate::util::path_ops_ext::{MkdirOptions, PathOpsExt};
 
     const BASIC_MANIFEST: &str = r"
 metadata:
   name: foo
-  version: 0.1
+  version: '0.1'
 ";
 
     #[test]

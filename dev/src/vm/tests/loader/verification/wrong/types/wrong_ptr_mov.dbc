@@ -4,5 +4,5 @@ type pointer: ptr_foo Foo
 type pointer: ptr_bar Bar
 
 function foo { ptr_foo } -> { ptr_bar } {
-    mov_lptr_lptr ret0, arg0;
+    mov_pptr_pptr ret0, arg0;
 }

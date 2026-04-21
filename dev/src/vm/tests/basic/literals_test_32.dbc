@@ -1,54 +1,54 @@
 function foo {} -> { i32 } {
-	init_lany_type		a, i32;
+	init_pany_type		a, i32;
 
-	mov_l32_imm 		a, 123i32;
-	cmpEq_l32_imm 		a, 123;
+	mov_p32_imm 		a, 123i32;
+	cmpEq_p32_imm 		a, 123;
 	jmpIfNot_label 	fail;
 
-	mov_l32_imm 		a, -123i32;
-	cmpEq_l32_imm 		a, -123;
+	mov_p32_imm 		a, -123i32;
+	cmpEq_p32_imm 		a, -123;
 	jmpIfNot_label 	fail;
 
-	mov_l32_imm			a, 0b11;
-	cmpEq_l32_imm 		a, 3;
+	mov_p32_imm			a, 0b11;
+	cmpEq_p32_imm 		a, 3;
 	jmpIfNot_label 	fail;
 
-	mov_l32_imm			a, 0o071;
-	cmpEq_l32_imm 		a, 57;
+	mov_p32_imm			a, 0o071;
+	cmpEq_p32_imm 		a, 57;
 	jmpIfNot_label 	fail;
 
-	mov_l32_imm			a, 0o71;
-	cmpEq_l32_imm 		a, 57;
+	mov_p32_imm			a, 0o71;
+	cmpEq_p32_imm 		a, 57;
 	jmpIfNot_label 	fail;
 
-	mov_l32_imm			a, 0x00000001;
-	cmpEq_l32_imm 		a, 1;
+	mov_p32_imm			a, 0x00000001;
+	cmpEq_p32_imm 		a, 1;
 	jmpIfNot_label 	fail;
 
-	mov_l32_imm 		a, 1u32;
-	cmpEq_l32_imm 		a, 1;
+	mov_p32_imm 		a, 1u32;
+	cmpEq_p32_imm 		a, 1;
 	jmpIfNot_label 	fail;
 
-	mov_l32_imm			a, 4294967295u32;
-	cmpEq_l32_imm 		a, -1;
+	mov_p32_imm			a, 4294967295u32;
+	cmpEq_p32_imm 		a, -1;
 	jmpIfNot_label 	fail;
 
-	mov_l32_imm 		a, 0.5f32;			# b = 0.5    
-    cmpEq_l32_imm       a, 1056964608i32; 	# 1056964608 as int has same bits as 0.5f 
+	mov_p32_imm 		a, 0.5f32;			# b = 0.5    
+    cmpEq_p32_imm       a, 1056964608i32; 	# 1056964608 as int has same bits as 0.5f 
 	jmpIfNot_label 	fail;
 
-	mov_l32_imm 		a, -1.25e1f32;
-    cmpEq_l32_imm       a, 3242721280;
+	mov_p32_imm 		a, -1.25e1f32;
+    cmpEq_p32_imm       a, 3242721280;
 	jmpIfNot_label 	fail;
 
-	mov_l32_imm 		ret0, 1;
+	mov_p32_imm 		ret0, 1;
 	ret;
 
 	label fail;
-	init_lany_type		tmp, i32;
-	mov_l32_imm 		tmp, 1235;
-	output_l32  		tmp;
-	mov_l32_l32 		ret0, a;
+	init_pany_type		tmp, i32;
+	mov_p32_imm 		tmp, 1235;
+	output_p32  		tmp;
+	mov_p32_p32 		ret0, a;
 
 	ret;
 }
@@ -58,10 +58,10 @@ function main { i64, ptr_argv } -> { i64 } {
     # arg0 -> argc
     # arg1 -> *argv
 
-	init_lany_type 	foo_ret_val, i32;
+	init_pany_type 	foo_ret0, i32;
 
 	call_func 	foo;
-	output_l32 	foo_ret_val;
+	output_p32 	foo_ret0;
 
 	deinit;
     deinit; # *argv

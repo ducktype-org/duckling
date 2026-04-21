@@ -3,8 +3,8 @@
 # output = a + b + c + d
 
 function foo { i64, i64 } -> { i64 } {
-	mov_l64_l64     ret0, arg0;
-	add_l64_l64     ret0, arg1;
+	mov_p64_p64     ret0, arg0;
+	add_p64_p64     ret0, arg1;
 	deinit; # arg1
 	deinit; # arg0
 	ret;
@@ -15,29 +15,29 @@ function main { i64, ptr_argv } -> { i64 } {
 	# arg0 -> argc
 	# arg1 -> *argv
 
-	init_lany_type       acc, i64;
-	init_lany_type       foo_ret_val, i64;
-	init_lany_type       foo_arg0, i64;
-	init_lany_type       foo_arg1, i64;
+	init_pany_type       acc, i64;
+	init_pany_type       foo_ret0, i64;
+	init_pany_type       foo_arg0, i64;
+	init_pany_type       foo_arg1, i64;
 
-	input_l64       foo_arg0;
-	input_l64       foo_arg1;
+	input_p64       foo_arg0;
+	input_p64       foo_arg1;
 	call_func       foo;
 
 	# Here foo_arg0 and foo_arg1 are deinitialized
-	add_l64_l64     acc, foo_ret_val; # acc := a + b
+	add_p64_p64     acc, foo_ret0; # acc := a + b
 
-	init_lany_type       foo2_arg0, i64;
-	init_lany_type       foo2_arg1, i64;
+	init_pany_type       foo2_arg0, i64;
+	init_pany_type       foo2_arg1, i64;
 
-	input_l64       foo2_arg0;
-	input_l64       foo2_arg1;
+	input_p64       foo2_arg0;
+	input_p64       foo2_arg1;
 	call_func       foo;
 	# Here foo2_arg0 and foo2_arg1 are deinitialized
 
-	add_l64_l64     acc, foo_ret_val; # acc += c + d
+	add_p64_p64     acc, foo_ret0; # acc += c + d
 
-	output_l64      acc;
+	output_p64      acc;
 
 	deinit; # foo ret0
 	deinit; # accumulator

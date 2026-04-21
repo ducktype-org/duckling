@@ -6,17 +6,17 @@ type pointer: ptr_PersistVariant PersistVariant
 global_data persisted_variant PersistVariant {};
 
 function set_global_variant_value {} -> {} {
-    init_lany_type variant_ptr, ptr_PersistVariant;
-    ref_lptr_gvnt variant_ptr, persisted_variant;
+    init_pany_type variant_ptr, ptr_PersistVariant;
+    ref_pptr_pvnt variant_ptr, persisted_variant;
 
-    variantSetInner_lptr_type variant_ptr, i64;
+    variantSetInner_pptr_type variant_ptr, i64;
 
-    init_lany_type value_ptr, ptr_i64;
-    variantGetInner_lptr_lptr_type value_ptr, variant_ptr, i64;
+    init_pany_type value_ptr, ptr_i64;
+    variantGetInner_pptr_pptr_type value_ptr, variant_ptr, i64;
 
-    init_lany_type value, i64;
-    mov_l64_imm value, 735;
-    store_lptr_lany value_ptr, value;
+    init_pany_type value, i64;
+    mov_p64_imm value, 735;
+    store_pptr_pany value_ptr, value;
 
     deinit; # value
     deinit; # value_ptr

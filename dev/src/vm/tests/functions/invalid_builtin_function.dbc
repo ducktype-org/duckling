@@ -1,7 +1,7 @@
 function foo {} -> {} {
-    init_lany_type          z, i64;
-	mov_l64_imm             z, 42;
-    output_l64 z;
+    init_pany_type          z, i64;
+	mov_p64_imm             z, 42;
+    output_p64 z;
     deinit;
     ret;
 }

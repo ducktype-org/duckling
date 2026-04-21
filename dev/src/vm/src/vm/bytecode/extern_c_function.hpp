@@ -47,13 +47,13 @@
  *
  * ```
  * ...
- * init_lany_type res, i64;
- * init_lany_type a,   i64;
- * init_lany_type b,   i64;
- * input_l64 a;
- * input_l64 b;
+ * init_pany_type res, i64;
+ * init_pany_type a,   i64;
+ * init_pany_type b,   i64;
+ * input_p64 a;
+ * input_p64 b;
  * call_cfunc add;
- * output_l64 res;
+ * output_p64 res;
  * ...
  * ```
  *

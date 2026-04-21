@@ -3,8 +3,8 @@ function spring { i64, i64 } -> { i64 } {
 	# [8, 16) arg0
 	# [16, 24) arg1
 
-	mov_l64_l64 ret0, arg0;
-	mul_l64_l64 ret0, arg1;
+	mov_p64_p64 ret0, arg0;
+	mul_p64_p64 ret0, arg1;
 
 	deinit; # arg1
 	deinit; # arg0 

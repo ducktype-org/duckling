@@ -4,12 +4,12 @@
 
 function check { i64, i32, i64 } -> {} {
 
-	init_lany_type 		acc, i64;
-	mov_l64_imm			acc, 1; 	# acc := 1
-	mul_l64_l64			acc, arg0; 	# acc *= a
-	mul_l64_l64			acc, arg2;  # acc *= c
+	init_pany_type 		acc, i64;
+	mov_p64_imm			acc, 1; 	# acc := 1
+	mul_p64_p64			acc, arg0; 	# acc *= a
+	mul_p64_p64			acc, arg2;  # acc *= c
 
-	output_l64			acc;
+	output_p64			acc;
 
 	deinit; # acc
 	deinit; # arg2
@@ -23,13 +23,13 @@ function main { i64, ptr_argv } -> { i64 } {
 	# arg0 -> argc
 	# arg1 -> *argv
 
-	init_lany_type a, i64;
-	init_lany_type b, i32;
-	init_lany_type c, i64;
+	init_pany_type a, i64;
+	init_pany_type b, i32;
+	init_pany_type c, i64;
 
-	input_l64	a;
-	input_l32	b;
-	input_l64	c;
+	input_p64	a;
+	input_p32	b;
+	input_p64	c;
 	call_func          	check;
 
 	deinit; # *argv

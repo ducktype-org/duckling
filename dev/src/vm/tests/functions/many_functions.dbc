@@ -3,33 +3,33 @@
 # output = input + 1110
 
 function add1000 { i64 } -> { i64 } {
-	mov_l64_imm    ret0, 1000;
-	add_l64_l64    ret0, arg0;
+	mov_p64_imm    ret0, 1000;
+	add_p64_p64    ret0, arg0;
 	ret;
 }
 
 function add1100 { i64 } -> { i64 } {
-	mov_l64_imm    		ret0, 100;
+	mov_p64_imm    		ret0, 100;
 
-	init_lany_type 			add1000_ret_val, i64; # [16, 24) add1000 ret0
-	init_lany_type 			add1000_arg0, i64; # [24, 32) add1000 arg0
-	mov_l64_l64			add1000_arg0, arg0;
+	init_pany_type 			add1000_ret0, i64; # [16, 24) add1000 ret0
+	init_pany_type 			add1000_arg0, i64; # [24, 32) add1000 arg0
+	mov_p64_p64			add1000_arg0, arg0;
 	call_func           add1000;
 
-	add_l64_l64    ret0,   add1000_ret_val;
+	add_p64_p64    ret0,   add1000_ret0;
 	ret;
 }
 
 function add1110 { i64 } -> { i64 } {
-	mov_l64_imm    		ret0, 10;
+	mov_p64_imm    		ret0, 10;
 
-	init_lany_type 			add1100_ret_val, i64;
-	init_lany_type 			add1100_arg0, i64;
-	mov_l64_l64			add1100_arg0, arg0;
+	init_pany_type 			add1100_ret0, i64;
+	init_pany_type 			add1100_arg0, i64;
+	mov_p64_p64			add1100_arg0, arg0;
 
 	call_func           add1100;
 
-	add_l64_l64    		ret0, add1100_ret_val; # += add1100()
+	add_p64_p64    		ret0, add1100_ret0; # += add1100()
 
 	deinit; # add1100 ret0
 	deinit; # arg0
@@ -41,12 +41,12 @@ function main { i64, ptr_argv } -> { i64 } {
 	# arg0 -> argc
 	# arg1 -> *argv
 
-	init_lany_type 			add1110_ret_val, i64;
-	init_lany_type 			add1110_arg0, i64;
-	input_l64           add1110_arg0;
+	init_pany_type 			add1110_ret0, i64;
+	init_pany_type 			add1110_arg0, i64;
+	input_p64           add1110_arg0;
 
 	call_func          	add1110;
-	output_l64          add1110_ret_val;
+	output_p64          add1110_ret0;
 
 	deinit; # add1110 ret0, arg0 is deinitialized by the call.
 	deinit; # argv*

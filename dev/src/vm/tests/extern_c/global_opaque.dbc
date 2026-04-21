@@ -4,34 +4,34 @@
 global_data vector opaque_ptr {}; # cpp vector pointer.
 
 function initialize_vector { opaque_ptr } -> {} {
-    mov_gopq_lopq vector, arg0;
+    mov_popq_popq vector, arg0;
     ret;
 }
 
 function main { i64, ptr_argv } -> { i64 } {
-	init_lany_type vector_ptr_1, opaque_ptr;
-	mov_lopq_gopq vector_ptr_1, vector;
-	init_lany_type val_1, i64;
-	input_l64 val_1;
+	init_pany_type vector_ptr_1, opaque_ptr;
+	mov_popq_popq vector_ptr_1, vector;
+	init_pany_type val_1, i64;
+	input_p64 val_1;
     call_cfunc vecPushBack;
 
-	init_lany_type vector_ptr_2, opaque_ptr;
-	mov_lopq_gopq vector_ptr_2, vector;
-	init_lany_type val_2, i64;
-	input_l64 val_2;
+	init_pany_type vector_ptr_2, opaque_ptr;
+	mov_popq_popq vector_ptr_2, vector;
+	init_pany_type val_2, i64;
+	input_p64 val_2;
     call_cfunc vecPushBack;
 
-	init_lany_type vector_ptr_3, opaque_ptr;
-	mov_lopq_gopq vector_ptr_3, vector;
-	init_lany_type val_3, i64;
-	input_l64 val_3;
+	init_pany_type vector_ptr_3, opaque_ptr;
+	mov_popq_popq vector_ptr_3, vector;
+	init_pany_type val_3, i64;
+	input_p64 val_3;
     call_cfunc vecPushBack;
 
-	init_lany_type vec_size, i64;
-	init_lany_type vector_ptr_4, opaque_ptr;
-	mov_lopq_gopq vector_ptr_4, vector;
+	init_pany_type vec_size, i64;
+	init_pany_type vector_ptr_4, opaque_ptr;
+	mov_popq_popq vector_ptr_4, vector;
 	call_cfunc vecSize;
-	output_l64 vec_size; # 3
+	output_p64 vec_size; # 3
 
 	ret;
 }

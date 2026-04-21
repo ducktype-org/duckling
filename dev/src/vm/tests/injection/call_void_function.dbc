@@ -2,10 +2,10 @@ function summer { i64, i64 } -> {} {
 	# [0, 8) arg0
 	# [8, 16) arg1
 	
-	init_lany_type      x, i64; # [16, 24)
-	add_l64_l64 x, arg0;
-	add_l64_l64 x, arg1;
-	output_l64 x;
+	init_pany_type      x, i64; # [16, 24)
+	add_p64_p64 x, arg0;
+	add_p64_p64 x, arg1;
+	output_p64 x;
 
 	deinit; # x
 	deinit; # arg1

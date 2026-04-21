@@ -1,32 +1,32 @@
 function fib { i64 } -> { i64 } {
 	# arg0 -> n
 
-	mov_l64_l64         ret0, arg0;
+	mov_p64_p64         ret0, arg0;
 
 	# if !(n > 1): end
-	cmpGt_l64_imm        arg0, 1;
+	cmpGt_p64_imm        arg0, 1;
 	jmpIfNot_label      End;
 
 	# fib(n - 1)
-	init_lany_type      rec_result, i64;
-	init_lany_type      n1, i64;
-	mov_l64_l64         n1, arg0;
-	sub_l64_imm         n1, 1;
+	init_pany_type      rec_result, i64;
+	init_pany_type      n1, i64;
+	mov_p64_p64         n1, arg0;
+	sub_p64_imm         n1, 1;
 	call_func           fib;
 
-	mov_l64_l64         ret0, rec_result;
+	mov_p64_p64         ret0, rec_result;
 
 	# fib(n - 2)
-	init_lany_type      n2, i64;
-	mov_l64_imm         rec_result, 0;
-	mov_l64_l64         n2, arg0;
-	sub_l64_imm         n2, 2;
+	init_pany_type      n2, i64;
+	mov_p64_imm         rec_result, 0;
+	mov_p64_p64         n2, arg0;
+	sub_p64_imm         n2, 2;
 	call_func           fib;
 
 
 	# (fib(n - 1) + fib(n - 2)) % mod
-	add_l64_l64         ret0, rec_result;
-	mod_l64_imm         ret0, 8388449;
+	add_p64_p64         ret0, rec_result;
+	mod_p64_imm         ret0, 8388449;
 
 	deinit;  # rec_result
 	label               End;
@@ -40,13 +40,13 @@ function main { i64, ptr_argv } -> { i64 } {
 	# arg0 -> argc
 	# arg1 -> *argv
 
-	init_lany_type  result, i64;
-	init_lany_type  n, i64;
-	input_l64       n;
+	init_pany_type  result, i64;
+	init_pany_type  n, i64;
+	input_p64       n;
 
 	call_func       fib;
 
-	output_l64      result;
+	output_p64      result;
 
 	deinit;  # result
 	deinit;  # *argv

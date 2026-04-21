@@ -1,16 +1,16 @@
 type primitive: my_i64 8
 
 function foo {} -> { my_i64, i64 } {
-	init_lany_type		x, i64;
-	mov_l64_imm			ret0, 21;
+	init_pany_type		x, i64;
+	mov_p64_imm			ret0, 21;
 	deinit;
 	deinit;
 	ret;
 }
 
 function main {} -> { i64 } {
-	init_lany_type 	x, i64;
-	init_lany_type 	y, i64;
+	init_pany_type 	x, i64;
+	init_pany_type 	y, i64;
 	call_func 		foo;
 
 	ret;

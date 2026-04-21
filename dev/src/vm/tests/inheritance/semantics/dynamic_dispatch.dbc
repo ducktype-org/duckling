@@ -39,9 +39,9 @@ type class: Cat {
 # ============ METHODS IMPLEMENTATION ============ 
 # Implementation for Animal.
 function Animal_makeSound_impl {pointer_Animal} -> {} {
-    init_lany_type x, i64;
-    mov_l64_imm x, 1;
-    output_l64 x; 
+    init_pany_type x, i64;
+    mov_p64_imm x, 1;
+    output_p64 x; 
     deinit;
     deinit;
     ret;
@@ -49,9 +49,9 @@ function Animal_makeSound_impl {pointer_Animal} -> {} {
 
 # Override for Feline
 function Feline_makeSound_impl {pointer_Feline} -> {} { 
-    init_lany_type x, i64;
-    mov_l64_imm x, 2;
-    output_l64 x; 
+    init_pany_type x, i64;
+    mov_p64_imm x, 2;
+    output_p64 x; 
     deinit;
     deinit;
     ret;
@@ -59,9 +59,9 @@ function Feline_makeSound_impl {pointer_Feline} -> {} {
 
 # Implementation for Feline.
 function Feline_hunt_impl {pointer_Feline} -> {} { 
-    init_lany_type x, i64;
-    mov_l64_imm x, 3;
-    output_l64 x; 
+    init_pany_type x, i64;
+    mov_p64_imm x, 3;
+    output_p64 x; 
     deinit;
     deinit;
     ret;
@@ -69,9 +69,9 @@ function Feline_hunt_impl {pointer_Feline} -> {} {
 
 # Override for Cat.
 function Cat_makeSound_impl {pointer_Cat} -> {} { 
-    init_lany_type x, i64;
-    mov_l64_imm x, 4;
-    output_l64 x; 
+    init_pany_type x, i64;
+    mov_p64_imm x, 4;
+    output_p64 x; 
     deinit;
     deinit;
     ret;
@@ -79,92 +79,92 @@ function Cat_makeSound_impl {pointer_Cat} -> {} {
 
 # Override for Cat.
 function Cat_hunt_impl {pointer_Cat} -> {} { 
-    init_lany_type x, i64;
-    mov_l64_imm x, 5;
-    output_l64 x; 
+    init_pany_type x, i64;
+    mov_p64_imm x, 5;
+    output_p64 x; 
     deinit;
     deinit;
     ret;
 }
 
 function main { i64, ptr_argv } -> { i64 } {
-    init_lany_type ptr_a, pointer_Animal;
-    init_lany_type ptr_f, pointer_Feline;
-    init_lany_type ptr_c, pointer_Cat;
+    init_pany_type ptr_a, pointer_Animal;
+    init_pany_type ptr_f, pointer_Feline;
+    init_pany_type ptr_c, pointer_Cat;
 
-    init_lany_type temp_a, pointer_Animal;
-    init_lany_type temp_f, pointer_Feline;
-    init_lany_type temp_c, pointer_Cat;
+    init_pany_type temp_a, pointer_Animal;
+    init_pany_type temp_f, pointer_Feline;
+    init_pany_type temp_c, pointer_Cat;
 
-    init_lany_type actual_animal_obj, pointer_Animal;
-    init_lany_type actual_feline_obj, pointer_Feline;
-    init_lany_type actual_cat_obj, pointer_Cat;
+    init_pany_type actual_animal_obj, pointer_Animal;
+    init_pany_type actual_feline_obj, pointer_Feline;
+    init_pany_type actual_cat_obj, pointer_Cat;
 
     # --------------------- Cat object, Cat* pointer --------------------------
-    alloc_lptr_type actual_cat_obj, Cat;
-    setVTable_lptr_type actual_cat_obj, Cat;        
-    upcast_lptr_lptr ptr_c, actual_cat_obj;     # ptr_c = (Cat*)actual_cat_obj;
+    alloc_pptr_type actual_cat_obj, Cat;
+    setVTable_pptr_type actual_cat_obj, Cat;        
+    upcast_pptr_pptr ptr_c, actual_cat_obj;     # ptr_c = (Cat*)actual_cat_obj;
 
-    init_lany_type temp_c_1, pointer_Cat;
-    mov_lptr_lptr temp_c_1, ptr_c;
-    virtual_call_lptr_method ptr_c, makeSound; # Expected output: 4.
+    init_pany_type temp_c_1, pointer_Cat;
+    mov_pptr_pptr temp_c_1, ptr_c;
+    virtual_call_pptr_method ptr_c, makeSound; # Expected output: 4.
 
     # ---------------------- Cat object, Feline* pointer ------------------
-    upcast_lptr_lptr ptr_f, actual_cat_obj;                     # ptr_f = (Feline*)actual_cat_obj;
+    upcast_pptr_pptr ptr_f, actual_cat_obj;                     # ptr_f = (Feline*)actual_cat_obj;
     
-    init_lany_type temp_f_1, pointer_Feline;
-    mov_lptr_lptr temp_f_1, ptr_f;
-    virtual_call_lptr_method ptr_f, makeSound;   # Expected output: 4
+    init_pany_type temp_f_1, pointer_Feline;
+    mov_pptr_pptr temp_f_1, ptr_f;
+    virtual_call_pptr_method ptr_f, makeSound;   # Expected output: 4
 
-    init_lany_type temp_f_2, pointer_Feline;
-    mov_lptr_lptr temp_f_2, ptr_f;
-    virtual_call_lptr_method ptr_f, hunt;         # Expected output: 5
+    init_pany_type temp_f_2, pointer_Feline;
+    mov_pptr_pptr temp_f_2, ptr_f;
+    virtual_call_pptr_method ptr_f, hunt;         # Expected output: 5
 
-    free_lptr actual_cat_obj;
+    free_pptr actual_cat_obj;
 
     # --------------------- Cat object, Animal* pointer --------------------------
-    alloc_lptr_type actual_cat_obj, Cat;
-    setVTable_lptr_type actual_cat_obj, Cat;        
-    upcast_lptr_lptr ptr_a, actual_cat_obj;     # ptr_a = (Animal*)actual_cat_obj;
+    alloc_pptr_type actual_cat_obj, Cat;
+    setVTable_pptr_type actual_cat_obj, Cat;        
+    upcast_pptr_pptr ptr_a, actual_cat_obj;     # ptr_a = (Animal*)actual_cat_obj;
 
-    init_lany_type temp_a_1, pointer_Animal;
-    mov_lptr_lptr temp_a_1, ptr_a;
-    virtual_call_lptr_method ptr_a, makeSound; # Expected output: 4.
+    init_pany_type temp_a_1, pointer_Animal;
+    mov_pptr_pptr temp_a_1, ptr_a;
+    virtual_call_pptr_method ptr_a, makeSound; # Expected output: 4.
 
-    free_lptr actual_cat_obj;
+    free_pptr actual_cat_obj;
 
     # ---------------------- Feline object, Feline* pointer ------------------
-    alloc_lptr_type actual_feline_obj, Feline;
-    setVTable_lptr_type actual_feline_obj, Feline;        
-    upcast_lptr_lptr ptr_f, actual_feline_obj;
+    alloc_pptr_type actual_feline_obj, Feline;
+    setVTable_pptr_type actual_feline_obj, Feline;        
+    upcast_pptr_pptr ptr_f, actual_feline_obj;
 
-    init_lany_type temp_f_3, pointer_Feline;
-    mov_lptr_lptr temp_f_3, ptr_f;
-    virtual_call_lptr_method ptr_f, makeSound;   # Expected output: 2
+    init_pany_type temp_f_3, pointer_Feline;
+    mov_pptr_pptr temp_f_3, ptr_f;
+    virtual_call_pptr_method ptr_f, makeSound;   # Expected output: 2
 
-    init_lany_type temp_f_4, pointer_Feline;
-    mov_lptr_lptr temp_f_4, ptr_f;
-    virtual_call_lptr_method ptr_f, hunt;   # Expected output: 3
+    init_pany_type temp_f_4, pointer_Feline;
+    mov_pptr_pptr temp_f_4, ptr_f;
+    virtual_call_pptr_method ptr_f, hunt;   # Expected output: 3
 
     # ---------------------- Feline object, Animal* pointer ------------------
-    upcast_lptr_lptr ptr_a, actual_feline_obj;      # ptr_a = (Animal*)actual_feline_obj;
+    upcast_pptr_pptr ptr_a, actual_feline_obj;      # ptr_a = (Animal*)actual_feline_obj;
 
-    init_lany_type temp_a_2, pointer_Animal;
-    mov_lptr_lptr temp_a_2, ptr_a;
-    virtual_call_lptr_method ptr_a, makeSound;   # Expected output: 2
+    init_pany_type temp_a_2, pointer_Animal;
+    mov_pptr_pptr temp_a_2, ptr_a;
+    virtual_call_pptr_method ptr_a, makeSound;   # Expected output: 2
 
-    free_lptr actual_feline_obj;
+    free_pptr actual_feline_obj;
 
     # ---------------------- Animal object, Animal* pointer ------------------
-    alloc_lptr_type actual_animal_obj, Animal;
-    setVTable_lptr_type actual_animal_obj, Animal;   
-    upcast_lptr_lptr ptr_a, actual_animal_obj;
+    alloc_pptr_type actual_animal_obj, Animal;
+    setVTable_pptr_type actual_animal_obj, Animal;   
+    upcast_pptr_pptr ptr_a, actual_animal_obj;
 
-    init_lany_type temp_a_3, pointer_Animal;
-    mov_lptr_lptr temp_a_3, ptr_a;
-    virtual_call_lptr_method ptr_a, makeSound; # Expected output: 1
+    init_pany_type temp_a_3, pointer_Animal;
+    mov_pptr_pptr temp_a_3, ptr_a;
+    virtual_call_pptr_method ptr_a, makeSound; # Expected output: 1
 
-    free_lptr actual_animal_obj;
+    free_pptr actual_animal_obj;
 
     deinit; # ptr_a
     deinit; # ptr_f

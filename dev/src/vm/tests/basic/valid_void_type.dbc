@@ -3,23 +3,23 @@
 type primitive: void 8  
 
 function norm_div { void, void } -> { void } {
-	mov_l64_l64			ret0, arg1;
-	div_l64_l64 		ret0, arg0;
+	mov_p64_p64			ret0, arg1;
+	div_p64_p64 		ret0, arg0;
 	ret;
 }
 
 function main {} -> { i64 } {
-	init_lany_type 	norm_div_ret_val, void;
+	init_pany_type 	norm_div_ret0, void;
 
-	init_lany_type 	div_ret_val_0, void;
-	init_lany_type 	div_ret_val_1, void;
+	init_pany_type 	div_ret0_0, void;
+	init_pany_type 	div_ret0_1, void;
 
-	mov_l64_imm		div_ret_val_0, 20;
-	mov_l64_imm		div_ret_val_1, 54;
+	mov_p64_imm		div_ret0_0, 20;
+	mov_p64_imm		div_ret0_1, 54;
 
 	call_func		norm_div;
 
-	output_l64		norm_div_ret_val;
+	output_p64		norm_div_ret0;
 
 	ret;
 }

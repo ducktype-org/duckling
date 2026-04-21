@@ -2,15 +2,15 @@ function main { i64, ptr_argv } -> { i64 } {
 	# ret0 -> main ret0
 	# arg0 -> argc
 	# arg1 -> *argv
-	init_lany_type 	x, i32;
+	init_pany_type 	x, i32;
 
-	mov_l32_imm x, 5;
+	mov_p32_imm x, 5;
 
 	jmp_label end;
 
 	label end;
 
-	output_l32 	x;
+	output_p32 	x;
 
 	deinit; # x
 	deinit; # *argv

@@ -5,7 +5,7 @@ function main { i64, ptr_argv } -> { i64 } {
 
 	jmp_label  After;
 
-	init_lany_type  x, i64;
+	init_pany_type  x, i64;
 	deinit; # x
 
 	label           After;

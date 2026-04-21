@@ -3,9 +3,9 @@ function main { i64, ptr_argv } -> { i64 } {
 	# [8, 16) argc
 	# [16, 32) *argv	
 
-	init_lany_type      x, i64; # [32, 40) check() arg0
-	input_l64			x;
-	output_l64			x;
+	init_pany_type      x, i64; # [32, 40) check() arg0
+	input_p64			x;
+	output_p64			x;
 
 	deinit; # x
 	deinit; # *argv

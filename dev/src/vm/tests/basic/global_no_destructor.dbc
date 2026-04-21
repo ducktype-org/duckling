@@ -3,6 +3,6 @@ global_data g i64 {
 };
 
 function main { i64, ptr_argv } -> { i64 } {
-    mov_l64_g64 ret0, g;
+    mov_p64_p64 ret0, g;
     ret;
 }

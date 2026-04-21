@@ -11,47 +11,47 @@ type pointer: ptr_variant simple_variant
 
 function main { i64, ptr_argv } -> { i64 } {
     # let a = VariantStruct();
-    init_lany_type a, VariantStruct;
+    init_pany_type a, VariantStruct;
 
     # let ptr_a = &a;
-    init_lany_type ptr_a, ptr_vs;
-    ref_lptr_lany ptr_a, a;
+    init_pany_type ptr_a, ptr_vs;
+    ref_pptr_pany ptr_a, a;
 
     # let ptr_second: ptr<variant<i64, i8>> = &ptr_a->second;
-    init_lany_type ptr_second, ptr_variant;
-    structLea_lptr_lptr_field ptr_second, ptr_a, VariantStruct.second;
+    init_pany_type ptr_second, ptr_variant;
+    structLea_pptr_pptr_field ptr_second, ptr_a, VariantStruct.second;
 
     # ptr_second->setType<i64>();
-    variantSetInner_lptr_type ptr_second, i64;
+    variantSetInner_pptr_type ptr_second, i64;
 
     # let int_ptr: ptr<i64> = ptr_second->getData<i64>();
-    init_lany_type int_ptr, ptr_i64;
-    variantGetInner_lptr_lptr_type int_ptr, ptr_second, i64;
+    init_pany_type int_ptr, ptr_i64;
+    variantGetInner_pptr_pptr_type int_ptr, ptr_second, i64;
 
     # let value: i64 = 5;
-    init_lany_type value, i64;
-    mov_l64_imm value, 5;
+    init_pany_type value, i64;
+    mov_p64_imm value, 5;
 
     # *int_ptr = value;
-    store_lptr_lany int_ptr, value;
+    store_pptr_pany int_ptr, value;
 
     # let var = ptr_a->second;
-    init_lany_type var, simple_variant;
-    structLoad_lany_lptr_field var, ptr_a, VariantStruct.second;
+    init_pany_type var, simple_variant;
+    structLoad_pany_pptr_field var, ptr_a, VariantStruct.second;
 
     # let var_ptr: ptr<variant<i64, i8>> = &var;
-    init_lany_type var_ptr, ptr_variant;
-    ref_lptr_lany var_ptr, var;
+    init_pany_type var_ptr, ptr_variant;
+    ref_pptr_pany var_ptr, var;
 
     # let read_ptr: ptr<i64> = var_ptr->getData<i64>();
-    init_lany_type read_ptr, ptr_i64;
-    variantGetInner_lptr_lptr_type read_ptr, var_ptr, i64;           # <- This sets read_ptr to null
+    init_pany_type read_ptr, ptr_i64;
+    variantGetInner_pptr_pptr_type read_ptr, var_ptr, i64;           # <- This sets read_ptr to null
 
     # let read_value: i64 = *read_ptr;
-    init_lany_type read_value, i64;
-    load_lany_lptr read_value, read_ptr;
+    init_pany_type read_value, i64;
+    load_pany_pptr read_value, read_ptr;
 
-    output_l64 read_value;
+    output_p64 read_value;
 
     ret;
 }

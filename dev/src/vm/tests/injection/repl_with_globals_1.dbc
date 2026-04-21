@@ -2,15 +2,15 @@ global_data counter i64 {};
 global_data global_ptr ptr_i64 {};
 
 function globaler_setter {} -> {} {
-	init_lany_type  x, i64;
-	input_l64       x;
-	mov_g64_l64     counter, x;
+	init_pany_type  x, i64;
+	input_p64       x;
+	mov_p64_p64     counter, x;
 
-	input_l64           x;
-	init_lany_type      ptr, ptr_i64;
-	alloc_lptr_type     ptr, i64;
-	store_lptr_lany  	ptr, x;
-	mov_gptr_lptr       global_ptr, ptr;
+	input_p64           x;
+	init_pany_type      ptr, ptr_i64;
+	alloc_pptr_type     ptr, i64;
+	store_pptr_pany  	ptr, x;
+	mov_pptr_pptr       global_ptr, ptr;
 
 	deinit; # ptr
 	deinit; # x

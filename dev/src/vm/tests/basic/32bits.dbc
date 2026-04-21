@@ -1,198 +1,198 @@
 function integers {} -> { i32 } {
-	init_lany_type	a, i32;
-	init_lany_type	b, i32;
-	init_lany_type	c, i32;
+	init_pany_type	a, i32;
+	init_pany_type	b, i32;
+	init_pany_type	c, i32;
 
 	# ======== Arithmetic =========
-	mov_l32_imm 	b, 3;
-	mov_l32_l32 	a, b;
+	mov_p32_imm 	b, 3;
+	mov_p32_p32 	a, b;
 	# a = 3, b = 3
 
-	cmov_l32_l32 	a, a;
-	add_l32_l32 	a, b;
-	add_l32_imm 	b, 1;
+	cmov_p32_p32 	a, a;
+	add_p32_p32 	a, b;
+	add_p32_imm 	b, 1;
 	# a = 6, b = 4
 
-	sub_l32_l32 	a, b;
-	sub_l32_imm 	b, 1;
+	sub_p32_p32 	a, b;
+	sub_p32_imm 	b, 1;
 	# a = 2, b = 3
 
-	mul_l32_l32 	a, b;
-	mul_l32_imm 	b, 3;
+	mul_p32_p32 	a, b;
+	mul_p32_imm 	b, 3;
 	# a = 6, b = 9
 
-	mod_l32_l32 	a, b;
-	mod_l32_imm 	b, 7;
+	mod_p32_p32 	a, b;
+	mod_p32_imm 	b, 7;
 	# a = 6, b = 2;
 
-	div_l32_l32 	a, b;
-	div_l32_imm 	b, 2;
+	div_p32_p32 	a, b;
+	div_p32_imm 	b, 2;
 	# a = 3, b = 1
 
-	cmpEq_l32_imm 	a, 3;
+	cmpEq_p32_imm 	a, 3;
 	jmpIfNot_label 	fail;
 
-	cmpEq_l32_imm 	b, 1;
+	cmpEq_p32_imm 	b, 1;
 	jmpIfNot_label 	fail;
 
 	# ======== Signed Comparisons =========
-	mov_l32_imm		a, 20; 			# a = 20
-	mov_l32_imm		b, 10; 			# b = 10
-	mov_l32_l32		c, a; 			# c = 20
+	mov_p32_imm		a, 20; 			# a = 20
+	mov_p32_imm		b, 10; 			# b = 10
+	mov_p32_p32		c, a; 			# c = 20
 
-	cmpEq_l32_l32 	a, b; 		# 20 == 10
+	cmpEq_p32_p32 	a, b; 		# 20 == 10
 	jmpIf_label 	fail;
-	cmpEq_l32_imm 	b, 10;		# 10 == 10
+	cmpEq_p32_imm 	b, 10;		# 10 == 10
 	jmpIfNot_label 	fail;
 
-	cmpNeq_l32_l32	a, b;		# 20 != 10
+	cmpNeq_p32_p32	a, b;		# 20 != 10
 	jmpIfNot_label	fail;
-	cmpNeq_l32_imm	a, 20;		# 20 != 20
+	cmpNeq_p32_imm	a, 20;		# 20 != 20
 	jmpIf_label		fail;
 
-	cmpGt_l32_l32 	a, b;		# 20 > 10
+	cmpGt_p32_p32 	a, b;		# 20 > 10
 	jmpIfNot_label 	fail;
-	cmpGt_l32_imm 	b, 2;		# 10 > 2
+	cmpGt_p32_imm 	b, 2;		# 10 > 2
 	jmpIfNot_label 	fail;
 
-	cmpGe_l32_l32	a, b;		# 20 >= 10
+	cmpGe_p32_p32	a, b;		# 20 >= 10
 	jmpIfNot_label	fail;
-	cmpGe_l32_l32	a, c;		# 20 >= 20
+	cmpGe_p32_p32	a, c;		# 20 >= 20
 	jmpIfNot_label	fail;
-	cmpGe_l32_imm	b, 20;		# 10 >= 20
+	cmpGe_p32_imm	b, 20;		# 10 >= 20
 	jmpIf_label		fail;
 
-	cmpLt_l32_l32	b, a;		# 10 < 20
+	cmpLt_p32_p32	b, a;		# 10 < 20
 	jmpIfNot_label	fail;
-	cmpLt_l32_imm	a, 10;		# 20 < 10
+	cmpLt_p32_imm	a, 10;		# 20 < 10
 	jmpIf_label		fail;
 
-	cmpLe_l32_l32	b, a;		# 10 <= 20
+	cmpLe_p32_p32	b, a;		# 10 <= 20
 	jmpIfNot_label	fail;
-	cmpLe_l32_l32	a, c;		# 20 <= 20
+	cmpLe_p32_p32	a, c;		# 20 <= 20
 	jmpIfNot_label	fail;
-	cmpLe_l32_imm	a, 10;		# 20 <= 10
+	cmpLe_p32_imm	a, 10;		# 20 <= 10
 	jmpIf_label		fail;
 
 	# ======== Unsigned Comparisons =========
-	mov_l32_imm		a, 10; 			# a = 10
-	mov_l32_imm		b, -1; 			# b = -1 (MAX_U32) 
-	mov_l32_l32		c, a;
+	mov_p32_imm		a, 10; 			# a = 10
+	mov_p32_imm		b, -1; 			# b = -1 (MAX_U32) 
+	mov_p32_p32		c, a;
 
-	ucmpGt_l32_l32	b, a;		# MAX_U32 > 10
+	ucmpGt_p32_p32	b, a;		# MAX_U32 > 10
 	jmpIfNot_label	fail;
-	ucmpGt_l32_imm	a, -1;		# 10 > MAX_U32
+	ucmpGt_p32_imm	a, -1;		# 10 > MAX_U32
 	jmpIf_label		fail;
 
-	ucmpGe_l32_l32	b, a;		# MAX_U32 >= 10
+	ucmpGe_p32_p32	b, a;		# MAX_U32 >= 10
 	jmpIfNot_label	fail;
-	ucmpGe_l32_l32	a, c;		# 10 >= 10
+	ucmpGe_p32_p32	a, c;		# 10 >= 10
 	jmpIfNot_label	fail;
-	ucmpGe_l32_imm	a, -1;		# 10 >= MAX_U32
+	ucmpGe_p32_imm	a, -1;		# 10 >= MAX_U32
 	jmpIf_label		fail;
 	
-	ucmpLt_l32_l32	a, b;		# 10 < MAX_U32
+	ucmpLt_p32_p32	a, b;		# 10 < MAX_U32
 	jmpIfNot_label	fail;
-	ucmpLt_l32_imm	b, 10;		# MAX_U32 < 10
+	ucmpLt_p32_imm	b, 10;		# MAX_U32 < 10
 	jmpIf_label		fail;
 
-	ucmpLe_l32_l32	a, b;		# 10 <= MAX_U32
+	ucmpLe_p32_p32	a, b;		# 10 <= MAX_U32
 	jmpIfNot_label	fail;
-	ucmpLe_l32_l32	a, c;		# 10 <= 10
+	ucmpLe_p32_p32	a, c;		# 10 <= 10
 	jmpIfNot_label	fail;
-	ucmpLe_l32_imm	b, 10;		# MAX_U32 <= 10
+	ucmpLe_p32_imm	b, 10;		# MAX_U32 <= 10
 	jmpIf_label		fail;
 
-	mov_l32_imm 	ret0, 1;
+	mov_p32_imm 	ret0, 1;
 	ret;
 
 	label fail;
-	mov_l32_imm 	ret0, 1234;
+	mov_p32_imm 	ret0, 1234;
 
 	ret;
 }
 
 function floats {} -> { i32 } {
-	init_lany_type	a, i32;
-	init_lany_type	b, i32;
-	init_lany_type	c, i32;
+	init_pany_type	a, i32;
+	init_pany_type	b, i32;
+	init_pany_type	c, i32;
 
 	# ======== Arithmetic =========
-	mov_l32_imm 	b, 0.5f32;	# b = 0.5
-	mov_l32_l32 	a, b;		# a = 0.5
+	mov_p32_imm 	b, 0.5f32;	# b = 0.5
+	mov_p32_p32 	a, b;		# a = 0.5
 
-	fadd_l32_l32 	a, b;		# a = 1.0
-	fadd_l32_imm	a, 1.0f32;	# a = 2.0
+	fadd_p32_p32 	a, b;		# a = 1.0
+	fadd_p32_imm	a, 1.0f32;	# a = 2.0
 
-	fcmpEq_l32_imm 	a, 2.0f32;	# a == 2.0
+	fcmpEq_p32_imm 	a, 2.0f32;	# a == 2.0
 	jmpIfNot_label 	fail;
 
-	fsub_l32_l32 	a, b;		# a = 1.5
-	fsub_l32_imm 	a, 0.5f32;	# a = 1.0
+	fsub_p32_p32 	a, b;		# a = 1.5
+	fsub_p32_imm 	a, 0.5f32;	# a = 1.0
 
-	fcmpEq_l32_imm 	a, 1.0f32;	# a == 1.0
+	fcmpEq_p32_imm 	a, 1.0f32;	# a == 1.0
 	jmpIfNot_label 	fail;
 
-	fmul_l32_l32 	a, b;		# a = 0.5
-	fmul_l32_imm 	a, 0.5f32;	# a = 0.25
+	fmul_p32_p32 	a, b;		# a = 0.5
+	fmul_p32_imm 	a, 0.5f32;	# a = 0.25
 
-	fcmpEq_l32_imm 	a, 0.25f32;	# a == 0.25
+	fcmpEq_p32_imm 	a, 0.25f32;	# a == 0.25
 	jmpIfNot_label 	fail;
 
-	fdiv_l32_l32 	a, b;		# a = 0.5
-	fdiv_l32_imm 	a, 1.0f32;	# a = 0.5
+	fdiv_p32_p32 	a, b;		# a = 0.5
+	fdiv_p32_imm 	a, 1.0f32;	# a = 0.5
 
-	fneg_l32 		a;			# a = -0.5
-	fneg_l32		b;			# b = -0.5
+	fneg_p32 		a;			# a = -0.5
+	fneg_p32		b;			# b = -0.5
 
-	fcmpEq_l32_l32 	a, b;
+	fcmpEq_p32_p32 	a, b;
 	jmpIfNot_label 	fail;
 
 	
 	# ======== Comparison tests =========
-	mov_l32_imm		a, 20.0f32;		# a = 20.0
-	mov_l32_imm		b, 10.0f32;		# b = 10.0
-	mov_l32_l32		c, b;			# c = 10.0
+	mov_p32_imm		a, 20.0f32;		# a = 20.0
+	mov_p32_imm		b, 10.0f32;		# b = 10.0
+	mov_p32_p32		c, b;			# c = 10.0
 
-	fcmpGt_l32_l32	a, b;			# 20.0 > 10.0
+	fcmpGt_p32_p32	a, b;			# 20.0 > 10.0
 	jmpIfNot_label	fail;
-	fcmpGt_l32_imm	b, 20.0f32;		# 10.0 > 20.0
+	fcmpGt_p32_imm	b, 20.0f32;		# 10.0 > 20.0
 	jmpIf_label		fail;
 
-	fcmpLt_l32_l32	b, a;			# 10.0 < 20.0
+	fcmpLt_p32_p32	b, a;			# 10.0 < 20.0
 	jmpIfNot_label	fail;
-	fcmpLt_l32_imm	a, 10.0f32;		# 20.0 < 10.0
+	fcmpLt_p32_imm	a, 10.0f32;		# 20.0 < 10.0
 	jmpIf_label		fail;
 
-	fcmpGe_l32_l32	a, b;			# 20.0 >= 10.0
+	fcmpGe_p32_p32	a, b;			# 20.0 >= 10.0
 	jmpIfNot_label	fail;
-	fcmpGe_l32_l32	b, c;			# 10.0 >= 10.0
+	fcmpGe_p32_p32	b, c;			# 10.0 >= 10.0
 	jmpIfNot_label	fail;
-	fcmpGe_l32_imm	b, 20.0f32;		# 10.0 >= 20.0
+	fcmpGe_p32_imm	b, 20.0f32;		# 10.0 >= 20.0
 	jmpIf_label		fail;
 
-	fcmpLe_l32_l32	b, a;			# 10.0 <= 20.0
+	fcmpLe_p32_p32	b, a;			# 10.0 <= 20.0
 	jmpIfNot_label	fail;
-	fcmpLe_l32_l32	b, c;			# 10.0 <= 10.0
+	fcmpLe_p32_p32	b, c;			# 10.0 <= 10.0
 	jmpIfNot_label	fail;
-	fcmpLe_l32_imm	a, 10.0f32;		# 20.0 <= 10.0
+	fcmpLe_p32_imm	a, 10.0f32;		# 20.0 <= 10.0
 	jmpIf_label		fail;
 
-	fcmpNeq_l32_l32	a, b;			# 20.0 != 10.0
+	fcmpNeq_p32_p32	a, b;			# 20.0 != 10.0
 	jmpIfNot_label	fail;
-	fcmpNeq_l32_imm	b, 10.0f32;		# 10.0 != 10.0
+	fcmpNeq_p32_imm	b, 10.0f32;		# 10.0 != 10.0
 	jmpIf_label		fail;
 
-	fcmpEq_l32_l32	b, c;			# 10.0 == 10.0
+	fcmpEq_p32_p32	b, c;			# 10.0 == 10.0
 	jmpIfNot_label	fail;
-	fcmpEq_l32_imm	a, 10.0f32;		# 20.0 == 10.0
+	fcmpEq_p32_imm	a, 10.0f32;		# 20.0 == 10.0
 	jmpIf_label		fail;
 
-	mov_l32_imm 	ret0, 1;
+	mov_p32_imm 	ret0, 1;
 	ret;
 
 	label fail;
-	mov_l32_imm 	ret0, 1234;
+	mov_p32_imm 	ret0, 1234;
 	ret;
 }
 
@@ -201,13 +201,13 @@ function main { i64, ptr_argv } -> { i64 } {
     # arg0 -> argc
     # arg1 -> *argv
 
-	init_lany_type 	test_ret_val, i32;
+	init_pany_type 	test_ret0, i32;
 
 	call_func 	integers;
-	output_l32 	test_ret_val;
+	output_p32 	test_ret0;
 
 	call_func 	floats;
-	output_l32 	test_ret_val;
+	output_p32 	test_ret0;
 
 	deinit;
     deinit; # *argv

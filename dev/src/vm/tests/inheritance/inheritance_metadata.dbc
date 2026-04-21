@@ -15,35 +15,35 @@ function Child_cry_impl {pointer_child, i64} -> {} {
 }
 
 function Parent_getAge_impl {pointer_parent, i64} -> {} {
-    init_lany_type age, i64;
-    mov_l64_imm age, 50;
-    output_l64 age;
+    init_pany_type age, i64;
+    mov_p64_imm age, 50;
+    output_p64 age;
     deinit; # age
     deinit; # arg0
     ret;
 }
 
 function Child_getAge_impl {pointer_child, i64} -> {} {
-    init_lany_type age, i64;
-    mov_l64_imm age, 15;
-    output_l64 age;
+    init_pany_type age, i64;
+    mov_p64_imm age, 15;
+    output_p64 age;
     deinit; # age
     deinit; # arg0
     ret;
 }
 
-function I1_foo_impl {pointer_I1} -> { i64 }  {
-    init_lany_type x, i64;
-    mov_l64_imm x, 0;
-    output_l64 x;
+function I1_foo_impl {pointer_I1} -> { i64 } {
+    init_pany_type x, i64;
+    mov_p64_imm x, 0;
+    output_p64 x;
     deinit;
     ret;
 }
 
 function Child_I1_impl {pointer_child} -> { i64 } {
-    init_lany_type x, i64;
-    mov_l64_imm x, 1;
-    output_l64 x;
+    init_pany_type x, i64;
+    mov_p64_imm x, 1;
+    output_p64 x;
     deinit;
     ret;
 }

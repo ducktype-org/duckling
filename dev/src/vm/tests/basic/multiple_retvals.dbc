@@ -1,71 +1,71 @@
 function foo {} -> { i64, i64 } {
-	mov_l64_imm 		ret0, 21;
-	mov_l64_imm 		ret1, 37;
+	mov_p64_imm 		ret0, 21;
+	mov_p64_imm 		ret1, 37;
 
 	ret;
 }
 
 function safe_div{ i64, i64 } -> { i8, i64 } {
-	mov_l8_imm		ret0, 0;
-	mov_l64_l64		ret1, arg1;
+	mov_p8_imm		ret0, 0;
+	mov_p64_p64		ret1, arg1;
 	
-	cmpEq_l64_imm	arg0, 0;
+	cmpEq_p64_imm	arg0, 0;
 	jmpIf_label 	got_zero;
 
-	div_l64_l64 		ret1, arg0;
+	div_p64_p64 		ret1, arg0;
 	ret;
 
 	label got_zero;
-	mov_l8_imm		ret0, 1;
+	mov_p8_imm		ret0, 1;
 	ret;
 }
 
 function unsafe_div { i64, i64 } -> { i64, i64 } {
-	mov_l64_l64			ret0, arg1;
-	mov_l64_l64			ret1, arg1;
+	mov_p64_p64			ret0, arg1;
+	mov_p64_p64			ret1, arg1;
 	
-	div_l64_l64 		ret0, arg0;
-	mod_l64_l64 		ret1, arg0;
+	div_p64_p64 		ret0, arg0;
+	mod_p64_p64 		ret1, arg0;
 
 	ret;
 }
 
 function main { i64, ptr_argv } -> { i64 } {
-	init_lany_type 	foo_ret_val_0, i64;
-	init_lany_type 	foo_ret_val_1, i64;
+	init_pany_type 	foo_ret0_0, i64;
+	init_pany_type 	foo_ret0_1, i64;
 
 	call_func 	foo;
-	output_l64 	foo_ret_val_0;
-	output_l64 	foo_ret_val_1;
+	output_p64 	foo_ret0_0;
+	output_p64 	foo_ret0_1;
 	deinit;
 	deinit;
 
-	init_lany_type 	div_ret_val_0, i64;
-	init_lany_type 	div_ret_val_1, i64;
+	init_pany_type 	div_ret0_0, i64;
+	init_pany_type 	div_ret0_1, i64;
 	
-	init_lany_type 	div_arg_0, i64;
-	init_lany_type 	div_arg_1, i64;
+	init_pany_type 	div_arg_0, i64;
+	init_pany_type 	div_arg_1, i64;
 
-	mov_l64_imm		div_arg_0, 4;
-	mov_l64_imm		div_arg_1, 15;
+	mov_p64_imm		div_arg_0, 4;
+	mov_p64_imm		div_arg_1, 15;
 
 	call_func	unsafe_div;
-	output_l64 	div_ret_val_0;
-	output_l64 	div_ret_val_1;
+	output_p64 	div_ret0_0;
+	output_p64 	div_ret0_1;
 	deinit;
 	deinit;
 
-	init_lany_type 	sdiv_ret_val_0, i8;
-	init_lany_type 	sdiv_ret_val_1, i64;
+	init_pany_type 	sdiv_ret0_0, i8;
+	init_pany_type 	sdiv_ret0_1, i64;
 	
-	init_lany_type 	sdiv_arg_0, i64;
-	init_lany_type 	sdiv_arg_1, i64;
+	init_pany_type 	sdiv_arg_0, i64;
+	init_pany_type 	sdiv_arg_1, i64;
 
-	mov_l64_imm		sdiv_arg_0, 0;
-	mov_l64_imm		sdiv_arg_1, 15;
+	mov_p64_imm		sdiv_arg_0, 0;
+	mov_p64_imm		sdiv_arg_1, 15;
 
 	call_func	safe_div;
-	output_l64 	sdiv_ret_val_1;
+	output_p64 	sdiv_ret0_1;
 	deinit;
 	deinit;
 

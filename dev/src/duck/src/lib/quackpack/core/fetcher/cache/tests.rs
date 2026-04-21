@@ -1,12 +1,11 @@
 use std::path::PathBuf;
 
-use super::*;
 use tempfile::{TempDir, tempdir};
 
-use crate::{
-    quackpack::core::{Version, fetcher::types::PackageWithUrl},
-    quackpack::schemas::registry,
-};
+use super::*;
+use crate::quackpack::core::Version;
+use crate::quackpack::core::fetcher::types::PackageWithUrl;
+use crate::quackpack::schemas::registry;
 
 fn create_sample_metadata() -> registry::Manifest {
     const JSON: &str = r#"{

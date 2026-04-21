@@ -29,6 +29,7 @@ add_library(HELIOS STATIC
 
 	src/helios/queries/queries.cpp
 	src/helios/queries/function_queries.cpp
+	src/helios/queries/global_data_queries.cpp
     src/helios/scope_id.cpp
 	src/helios/hout/hout.cpp
 	src/helios/hout/elements/stmt.cpp

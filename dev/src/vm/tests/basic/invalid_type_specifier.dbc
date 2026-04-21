@@ -1,5 +1,5 @@
 function main { i64, ptr_argv } -> { i64 } {
-    init_lany_type a, i32;
-    mov_l32_imm a, 13JakToJestBycSkrybaDobrze?;
+    init_pany_type a, i32;
+    mov_p32_imm a, 13JakToJestBycSkrybaDobrze?;
     ret;
 }

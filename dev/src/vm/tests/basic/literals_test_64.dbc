@@ -1,58 +1,58 @@
 function foo {} -> { i64 } {
-	init_lany_type		a, i64;
+	init_pany_type		a, i64;
 
-	mov_l64_imm 		a, 123i64;
-	cmpEq_l64_imm 		a, 123;
+	mov_p64_imm 		a, 123i64;
+	cmpEq_p64_imm 		a, 123;
 	jmpIfNot_label 	fail;
 
-	mov_l64_imm 		a, -123i64;
-	cmpEq_l64_imm 		a, -123;
+	mov_p64_imm 		a, -123i64;
+	cmpEq_p64_imm 		a, -123;
 	jmpIfNot_label 	fail;
 
-	mov_l64_imm			a, 0b11;
-	cmpEq_l64_imm 		a, 3;
+	mov_p64_imm			a, 0b11;
+	cmpEq_p64_imm 		a, 3;
 	jmpIfNot_label 	fail;
 
-	mov_l64_imm			a, 0o071;
-	cmpEq_l64_imm 		a, 57;
+	mov_p64_imm			a, 0o071;
+	cmpEq_p64_imm 		a, 57;
 	jmpIfNot_label 	fail;
 
-	mov_l64_imm			a, 0o71;
-	cmpEq_l64_imm 		a, 57;
+	mov_p64_imm			a, 0o71;
+	cmpEq_p64_imm 		a, 57;
 	jmpIfNot_label 	fail;
 
-	mov_l64_imm			a, 0x00000001;
-	cmpEq_l64_imm 		a, 1;
+	mov_p64_imm			a, 0x00000001;
+	cmpEq_p64_imm 		a, 1;
 	jmpIfNot_label 	fail;
 
-	mov_l64_imm 		a, 1u64;
-	cmpEq_l64_imm 		a, 1;
+	mov_p64_imm 		a, 1u64;
+	cmpEq_p64_imm 		a, 1;
 	jmpIfNot_label 	fail;
 
-	mov_l64_imm			a, 18446744073709551615u64;
-	cmpEq_l64_imm 		a, -1;
+	mov_p64_imm			a, 18446744073709551615u64;
+	cmpEq_p64_imm 		a, -1;
 	jmpIfNot_label 	fail;
 
-	mov_l64_imm 		a, +0.5;		# a = 0.5    
-    cmpEq_l64_imm       a, 4602678819172646912u64;
+	mov_p64_imm 		a, +0.5;		# a = 0.5    
+    cmpEq_p64_imm       a, 4602678819172646912u64;
 	jmpIfNot_label 	fail;
 
-    mov_l64_imm 		a, 0.5f64;		# a = 0.5    
-    cmpEq_l64_imm       a, 4602678819172646912u64;
+    mov_p64_imm 		a, 0.5f64;		# a = 0.5    
+    cmpEq_p64_imm       a, 4602678819172646912u64;
 	jmpIfNot_label 	fail;
 
-	mov_l64_imm			a, 0xffffffffffffffff;
-	cmpEq_l64_imm 		a, -1;
+	mov_p64_imm			a, 0xffffffffffffffff;
+	cmpEq_p64_imm 		a, -1;
 	jmpIfNot_label 	fail;
 
-	mov_l64_imm 		ret0, 1;
+	mov_p64_imm 		ret0, 1;
 	ret;
 
 	label fail;
-	init_lany_type		tmp, i64;
-	mov_l64_imm 		tmp, 1235;
-	output_l64  		tmp;
-	mov_l64_l64 		ret0, a;
+	init_pany_type		tmp, i64;
+	mov_p64_imm 		tmp, 1235;
+	output_p64  		tmp;
+	mov_p64_p64 		ret0, a;
 
 	ret;
 }
@@ -62,10 +62,10 @@ function main { i64, ptr_argv } -> { i64 } {
     # arg0 -> argc
     # arg1 -> *argv
 
-	init_lany_type 	foo_ret_val, i64;
+	init_pany_type 	foo_ret0, i64;
 
 	call_func 	foo;
-	output_l64 	foo_ret_val;
+	output_p64 	foo_ret0;
 
 	deinit;
     deinit; # *argv

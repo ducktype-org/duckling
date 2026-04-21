@@ -19,13 +19,8 @@ namespace vm::code {
 #define LOCAL_TO_STRING(Tp) \
 	std::string toString(vm::opargs::Tp arg) { return arg.var_name.str(); }
 
-	FOR_EACH(LOCAL_TO_STRING, VM_OPARG_LOCAL_TYPES);
+	FOR_EACH(LOCAL_TO_STRING, VM_OPARG_PLACE_TYPES);
 #undef LOCAL_TO_STRING
-
-#define GLOBAL_TO_STRING(Tp) \
-	std::string toString(vm::opargs::Tp arg) { return arg.global_data_name.str(); }
-
-	FOR_EACH(GLOBAL_TO_STRING, VM_OPARG_GLOBAL_TYPES);
 
 	std::string toString(opargs::Type arg) { return arg.type_name.str(); }
 

@@ -224,7 +224,7 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 				DVMLocal field_ptr_tmp = pushTempLocal(ptr_to_field_type, "field_addr");
 
 				// Emit the pointer move instruction. Based on the `current_place` type,
-				// `structLea_lptr_lptr_field` or `structLea_lptr_lste_field` will be picked.
+				// `structLea_pptr_pptr_field` or `structLea_pptr_pste_field` will be picked.
 				pushInstruction({ vm::code::builders::OpKind::structLea,
 				                  field_ptr_tmp,
 				                  current_place,

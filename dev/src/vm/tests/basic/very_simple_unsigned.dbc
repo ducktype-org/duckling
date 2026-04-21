@@ -1,57 +1,57 @@
 function main { i64, ptr_argv } -> { i64 } {
     # testing on i64 because u64 variables are not supported yet
-    init_lany_type tmp, i64;
-    init_lany_type tmp2, i64;
-    init_lany_type tmp3, i32;
-    init_lany_type tmp4, i32;
+    init_pany_type tmp, i64;
+    init_pany_type tmp2, i64;
+    init_pany_type tmp3, i32;
+    init_pany_type tmp4, i32;
 
-    mov_l64_imm tmp2, 3;
-    mov_l64_imm tmp, 2130;
-    umul_l64_imm tmp, 2;
-    udiv_l64_imm tmp, 2;
-    umul_l64_l64 tmp, tmp2;
-    udiv_l64_l64 tmp, tmp2;
-    mov_l64_imm tmp2, 1;
-    umod_l64_l64 tmp, tmp2;
-    umod_l64_imm tmp, 9999999;
-    cmpEq_l64_imm tmp, 0;
+    mov_p64_imm tmp2, 3;
+    mov_p64_imm tmp, 2130;
+    umul_p64_imm tmp, 2;
+    udiv_p64_imm tmp, 2;
+    umul_p64_p64 tmp, tmp2;
+    udiv_p64_p64 tmp, tmp2;
+    mov_p64_imm tmp2, 1;
+    umod_p64_p64 tmp, tmp2;
+    umod_p64_imm tmp, 9999999;
+    cmpEq_p64_imm tmp, 0;
     jmpIfNot_label Finish;
-    add_l64_imm tmp, 1;
-    ucmpGt_l64_l64 tmp, tmp2;
-    ucmpGt_l64_imm tmp, 0;
+    add_p64_imm tmp, 1;
+    ucmpGt_p64_p64 tmp, tmp2;
+    ucmpGt_p64_imm tmp, 0;
     jmpIfNot_label Finish;
-    mov_l64_imm tmp, 1228;
+    mov_p64_imm tmp, 1228;
 
     label Loop;
-    add_l64_l64 tmp, tmp2;
-    cmpEq_l64_imm tmp, 1235;
+    add_p64_p64 tmp, tmp2;
+    cmpEq_p64_imm tmp, 1235;
     jmpIfNot_label Loop;
-    umod_l64_imm tmp, 999999;
+    umod_p64_imm tmp, 999999;
 
-    mov_l32_imm tmp3, 0;
-    sub_l32_imm tmp3, 1;
-    umul_l32_imm tmp3, 2;
-    udiv_l32_imm tmp3, 2;
-    ucmpGt_l32_imm tmp3, 0;
+    mov_p32_imm tmp3, 0;
+    sub_p32_imm tmp3, 1;
+    umul_p32_imm tmp3, 2;
+    udiv_p32_imm tmp3, 2;
+    ucmpGt_p32_imm tmp3, 0;
     jmpIfNot_label Finish;
 
-    mov_l32_imm tmp4, 2;
-    mov_l32_imm tmp3, 5;
-    umul_l32_l32 tmp3, tmp4;
-    udiv_l32_l32 tmp3, tmp4;
-    mov_l32_imm tmp4, 1231231;
-    umod_l32_l32 tmp3, tmp4;
-    umod_l32_imm tmp3, 1231231;
-    mov_l32_imm tmp4, 1;
-    ucmpGt_l32_l32 tmp3, tmp4;
+    mov_p32_imm tmp4, 2;
+    mov_p32_imm tmp3, 5;
+    umul_p32_p32 tmp3, tmp4;
+    udiv_p32_p32 tmp3, tmp4;
+    mov_p32_imm tmp4, 1231231;
+    umod_p32_p32 tmp3, tmp4;
+    umod_p32_imm tmp3, 1231231;
+    mov_p32_imm tmp4, 1;
+    ucmpGt_p32_p32 tmp3, tmp4;
     jmpIfNot_label Finish;
 
-    output_l64 tmp;
+    output_p64 tmp;
 
     label Finish;
-    init_lany_type bajt, byte;
-    ucmpGt_l8_l8 bajt, bajt;
-    ucmpGt_l8_imm bajt, 1;
+    init_pany_type bajt, byte;
+    ucmpGt_p8_p8 bajt, bajt;
+    ucmpGt_p8_imm bajt, 1;
     deinit;
     deinit; # tmp4
     deinit; # tmp3

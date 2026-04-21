@@ -1,5 +1,5 @@
 function check { i64 } -> {} {
-	output_l64          arg0;
+	output_p64          arg0;
 	ret;
 }
 
@@ -8,14 +8,14 @@ function main { i64, ptr_argv } -> { i64 } {
 	# arg0 -> argc
 	# arg1 -> *argv
 
-	init_lany_type 		check_arg0, i64;
-	input_l64           check_arg0;
+	init_pany_type 		check_arg0, i64;
+	input_p64           check_arg0;
 	call_func          	check;
 
-	mov_l64_imm         check_arg0, 41;
-	output_l64          check_arg0;
+	mov_p64_imm         check_arg0, 41;
+	output_p64          check_arg0;
 
-	mov_l64_imm			ret0, 42;
+	mov_p64_imm			ret0, 42;
 	deinit; # *argv
 	deinit; # argc
 	ret;
