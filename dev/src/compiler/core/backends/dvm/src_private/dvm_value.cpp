@@ -3,7 +3,7 @@
 #include "common.hpp"
 
 #include <vm/bytecode/opcode_args.hpp>
-#include <vm/core/process/builtin_functions.hpp>
+#include <vm/core/builtin_functions.hpp>
 #include <vm/utils/interpret.hpp>
 
 using namespace compiler::backend_vm::internal;

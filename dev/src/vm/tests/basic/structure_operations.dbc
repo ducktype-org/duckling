@@ -3,7 +3,7 @@ type data: Foo {
     b: i64
 }
 
-function main { i64, ptr_argv } -> i64 {
+function main { i64, ptr_argv } -> { i64 } {
     init_pany_type s1, Foo;
     init_pany_type a_ptr, ptr_i64;
     init_pany_type val, i64;

@@ -32,6 +32,7 @@ namespace compiler::repl {
 			TESTER_ADD_TEST(testReplHistoryTracking);
 			TESTER_ADD_TEST(testReplArithmeticExpressions);
 			TESTER_ADD_TEST(testReplVariableLookup);
+			TESTER_ADD_TEST(testReplUnsupportedActionClassification);
 		}
 
 	private:
@@ -257,6 +258,36 @@ namespace compiler::repl {
 				session.m_history.size() == expected_history_size,
 				"REPL session history should track all variable operations"
 			);
+		}
+
+		/**
+		 * @brief Test that unsupported action statements return explicit classification errors.
+		 */
+		void testReplUnsupportedActionClassification() {
+			ReplSession session;
+
+			auto assert_unsupported_action = [&](std::string_view input) {
+				auto result = session.processLine(input);
+				assertTrue(
+					result.status == ReplResult::Status::Error,
+					"Unsupported action should produce an error status"
+				);
+				assertTrue(
+					result.message.find("Unsupported single statement kind for REPL classification")
+						!= std::string::npos,
+					"Expected explicit unsupported classification error"
+				);
+				assertTrue(
+					result.message.find("Action") != std::string::npos,
+					"Expected error to include statement kind"
+				);
+			};
+
+			assert_unsupported_action("continue;");
+			assert_unsupported_action("return 5;");
+			assert_unsupported_action("break;");
+			assert_unsupported_action("throw 5;");
+			assert_unsupported_action("return;");
 		}
 
 	public:

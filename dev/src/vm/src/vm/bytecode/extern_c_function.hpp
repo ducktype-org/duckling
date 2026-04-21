@@ -76,8 +76,8 @@
 #include <vm/utils/interpret.hpp>
 
 namespace vm::detail {
-	// Helper trait to safely get size of types including void (as 1)
-	// @TODO: #656 Change this when we have proper voids in the VM
+	// Helper trait to safely get size of types
+	// @TODO: #656 Change this when we figure out how to handle C voids in the VM
 	template<typename T>
 	struct safe_sizeof {
 		static constexpr usize VALUE = sizeof(T);
@@ -160,12 +160,16 @@ namespace vm::detail {
 		}                                                                                               \
 		static vm::code::FuncSignature getSignature(vm::PID pid) {                                      \
 			Bytes vm_arg_type_size_sum(0);                                                              \
-			VM_EXT_C_PLACE_VALIDATION(ResCType, ResVmType, result)                                      \
-			vm_arg_type_size_sum                                                                        \
-				-= tp_result->type->getSize(); /* undo what we've done to the sum */                    \
+			if (base::StrID(VM_EXT_C_VM_TYPE_NAME(ResVmType)) != "void") {                              \
+				VM_EXT_C_PLACE_VALIDATION(ResCType, ResVmType, result)                                  \
+				vm_arg_type_size_sum                                                                    \
+					-= tp_result->type->getSize(); /* undo what we've done to the sum */                \
+			}                                                                                           \
 			FOR_EACH_ARG(VM_EXT_C_PUT2, VM_EXT_C_PLACE_VALIDATION, __VA_ARGS__);                        \
 			vm::code::FuncSignature signature;                                                          \
-			signature.result_type = VM_EXT_C_VM_TYPE_NAME(ResVmType);                                   \
+			signature.result_types = {};                                                                \
+			if (base::StrID(VM_EXT_C_VM_TYPE_NAME(ResVmType)) != "void")                                \
+				signature.result_types.emplace_back(VM_EXT_C_VM_TYPE_NAME(ResVmType));                  \
 			signature.parameters                                                                        \
 				= { FOR_EACH_ARG(VM_EXT_C_PUT2, VM_EXT_C_INTO_VM_TYPE_NAME, __VA_ARGS__) };             \
 			CORE_ASSERT(                                                                                \

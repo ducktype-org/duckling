@@ -217,7 +217,7 @@ namespace compiler::helios::comptime_ops {
 		init_global_context.name = base::StrID("comptime_set_ctx");
 		init_global_context.body = { mov_popq_popq, ret };
 		init_global_context.signature
-			= { .result_type = base::StrID("void"), .parameters = { base::StrID("opaque_ptr") } };
+			= { .result_types = {}, .parameters = { base::StrID("opaque_ptr") } };
 
 		return {
 			.functions            = { init_global_context },

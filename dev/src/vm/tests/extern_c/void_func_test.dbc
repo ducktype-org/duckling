@@ -1,5 +1,4 @@
-
-function main { i64, ptr_argv } -> i64 {
+function main { i64, ptr_argv } -> { i64 } {
     init_pany_type arg, i64;
     mov_p64_imm arg, 456;
     call_cfunc void_tester;

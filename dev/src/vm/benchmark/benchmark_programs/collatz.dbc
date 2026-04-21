@@ -7,15 +7,15 @@
 # collatz(3) -> [3, 10, 5, 16, 8, 4, 2, 1], max is 16.
 # Thus, the program should output 16.
 
-type fun: collatz { i64 } i64
+type fun: collatz { i64 } { i64 }
 
 function collatz {
-	# ret_val - 0
+	# ret0 - 0
 	# n - 8 (value for which the collatz sequence is calculated)
 	# max - 16 (maximum value in the calculated collatz sequence)
 	# tmp - 24
 
-	# [0, 8) ret_val
+	# [0, 8) ret0
 	# [8, 16) arg0 -> n
 
 	init_type		i64; # [16, 24) max
@@ -66,7 +66,7 @@ function collatz {
 	label End;
 
 	# return max
-	mov_p64_p64 	0, 16; # ret_val := max
+	mov_p64_p64 	0, 16; # ret0 := max
 
 	deinit; # tmp
 	deinit; # max
@@ -75,8 +75,8 @@ function collatz {
 }
 
 
-function main { i64, ptr_argv } -> i64 {
-	# [0, 8) -> main ret_val
+function main { i64, ptr_argv } -> { i64 } {
+	# [0, 8) -> main ret0
     # [8, 16) -> argc
     # [16, 32) -> *argv
 
@@ -97,13 +97,13 @@ function main { i64, ptr_argv } -> i64 {
 	# do-for (i < x; i++)
 	label Loop;
 		# tmp := collatz(i)
-		init_type 			i64; 		# [40, 48) collatz(i) ret_val
+		init_type 			i64; 		# [40, 48) collatz(i) ret0
 		init_type 			i64; 		# [48, 56) collatz(i) arg0
 
 		mov_p64_p64 		72, 48;		# arg0 := i
 		call_func          	collatz;
 		mov_p64_p64 		56, 64; 	# tmp := collatz(i)
-		deinit; 						# deinit collatz(i) ret_val
+		deinit; 						# deinit collatz(i) ret0
 
 		# if tmp > max:
 		cmpGt_p64_p64       	56, 40;

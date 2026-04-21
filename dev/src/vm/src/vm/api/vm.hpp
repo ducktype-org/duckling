@@ -9,7 +9,7 @@
 #include <vm/api/data/response.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/core/process/interface_types.hpp>
-#include <vm/core/thread/vmvalue.hpp>
+#include <vm/core/vmvalue/vmvalue.hpp>
 
 namespace vm::api {
 	/**

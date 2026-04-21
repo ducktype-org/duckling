@@ -1,6 +1,6 @@
 global_data counter i64 {};
 
-function inc {} -> void {
+function inc {} -> {} {
     init_pany_type			temp, i64;
 	init_pany_type			i, i64;
 	mov_p64_imm				i, 10000;
@@ -22,7 +22,7 @@ function inc {} -> void {
     ret;
 }
 
-function main { i64, ptr_argv } -> i64 {
+function main { i64, ptr_argv } -> { i64 } {
 	init_pany_type			thread_inc1_id, i64;
 	set_threadctx			inc;
     call_builtinfunc		builtin_start_thread;
