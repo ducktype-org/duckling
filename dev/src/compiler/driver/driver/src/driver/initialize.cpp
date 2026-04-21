@@ -1,5 +1,4 @@
 #include "initialize.hpp"
-#include <iostream>
 
 #include "options.hpp"
 
@@ -26,6 +25,8 @@
 #include <lexer/lexer_class.hpp>
 #include <logger/logger.hpp>
 #include <query_framework/external/api.hpp>
+
+#include <iostream>
 
 namespace compiler::driver {
 
@@ -125,8 +126,7 @@ namespace compiler::driver {
 			return global_package_info;
 		}
 
-		base::OkBad handlePackageOptions(
-			const std::vector<options_types::PackageInfo>& package_infos
+		base::OkBad handlePackageOptions(const std::vector<options_types::PackageInfo>& package_infos
 		) {
 			for (const auto& package_info: package_infos) {
 				auto global_package_info = createPackageInfo(package_info);
@@ -247,10 +247,10 @@ namespace compiler::driver {
 				handleExecutionOptions(package_compilation_options.execution_options);
 				handleArtifactsOptions(package_compilation_options.compilation_artifacts);
 
-					auto package_success
-						= handlePackageOptions(package_compilation_options.main_packages_info);
+				auto package_success
+					= handlePackageOptions(package_compilation_options.main_packages_info);
 
-					if (package_success.isBad()) return base::BAD;
+				if (package_success.isBad()) return base::BAD;
 
 				handleBackendOptions(package_compilation_options.backend_options);
 				handleIncrementalOptions(package_compilation_options.incremental);
@@ -271,7 +271,5 @@ namespace compiler::driver {
 		return base::OK;
 	}
 
-	void initializeGlobalLogger() {
-		handleLoggerInitialization();
-	}
+	void initializeGlobalLogger() { handleLoggerInitialization(); }
 }

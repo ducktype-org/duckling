@@ -47,8 +47,9 @@ namespace compiler::driver {
 	InitializationResult initializeTheCompiler(CompilerModeOfOperationAndOptions options);
 
 	/**
-	 * @brief initialize the global dia-int logger, used for reporting diagnostics during initialization phase and in other places outside of queries.
-	 * This should be called at the very beginning of the initialization phase, before reporting any diagnostics
+	 * @brief initialize the global dia-int logger, used for reporting diagnostics during
+	 * initialization phase and in other places outside of queries. This should be called at the
+	 * very beginning of the initialization phase, before reporting any diagnostics
 	 */
 	void initializeGlobalLogger();
 }

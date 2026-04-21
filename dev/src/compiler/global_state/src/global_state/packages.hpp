@@ -10,7 +10,7 @@ namespace global_state {
 	 * Global state for managing package information.
 	 */
 	struct PackageInfo {
-		compiler::frontend::ModuleID root_module;
+		compiler::frontend::ModuleID              root_module;
 		std::vector<compiler::frontend::ModuleID> dependencies;
 	};
 
@@ -29,8 +29,8 @@ namespace global_state {
 	 * @brief Returns all registered package root module IDs, including dependencies,
 	 * sorted and deduplicated.
 	 */
-	std::vector<compiler::frontend::ModuleID>
-	getAllPackagesWithDependenciesRootModulesSortedDeduplicated();
+	std::vector<compiler::frontend::ModuleID> getAllPackagesWithDependenciesRootModulesSortedDeduplicated(
+	);
 
 	namespace setters {
 		/**

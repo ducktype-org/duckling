@@ -1,12 +1,12 @@
 #pragma once
 
 
+#include <frontend/pst_parser/source_position_locked.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/tsh/types.hpp>
 
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_result.hpp>
-#include <frontend/pst_parser/source_position_locked.hpp>
 
 namespace compiler::helios::defgen {
 	/**

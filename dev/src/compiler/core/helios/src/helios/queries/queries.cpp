@@ -161,7 +161,6 @@ namespace compiler::helios {
 			// are no symbols in scope of type `T[3]`, thus we retrieve it by checking transitive
 			// functions calls of the top-level default constructor.
 			for (SymID ctor_sym: ctors) {
-				
 				auto transitive = ctx.query<QueryTransitiveFunctionCalls>(ctor_sym)->valueOrThrow();
 				for (SymID dependency: transitive) {
 					auto sym_ref = getSymRef(dependency);

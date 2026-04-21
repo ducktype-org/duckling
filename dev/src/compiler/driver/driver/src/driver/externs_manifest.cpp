@@ -28,15 +28,18 @@ namespace compiler::driver {
 		 */
 		class ManifestNode {
 		public:
-			ManifestNode(const nlohmann::json& json, std::string ctx) :
-				  json_(json), ctx_(std::move(ctx)) {}
+			ManifestNode(const nlohmann::json& json, std::string ctx):
+				  json_(json),
+				  ctx_(std::move(ctx)) {}
 
 			/** @brief Requires a string field; logs and returns {} if missing or not a string. */
 			base::Optional<std::string> requireString(std::string_view key) const {
 				const std::string k(key);
 				if (!json_.contains(k) || !json_[k].is_string()) {
 					logManifestError(
-						base::strConcat("Packages manifest: `", key, "` is required and must be a string."),
+						base::strConcat(
+							"Packages manifest: `", key, "` is required and must be a string."
+						),
 						base::strConcat(ctx_, " must have a valid string `", key, "`.")
 					);
 					return {};
@@ -108,8 +111,8 @@ namespace compiler::driver {
 				return &json_[k];
 			}
 
-			/** @brief Optional string field into Optional<string>. Returns false (+ logs) if present
-			 * but not a string. */
+			/** @brief Optional string field into Optional<string>. Returns false (+ logs) if
+			 * present but not a string. */
 			bool optionalString(std::string_view key, base::Optional<std::string>& out) const {
 				const std::string k(key);
 				if (!json_.contains(k)) return true;
@@ -126,8 +129,8 @@ namespace compiler::driver {
 				return true;
 			}
 
-			/** @brief Optional string field into string. Returns false (+ logs) if present but not a
-			 * string. */
+			/** @brief Optional string field into string. Returns false (+ logs) if present but not
+			 * a string. */
 			bool optionalString(std::string_view key, std::string& out) const {
 				const std::string k(key);
 				if (!json_.contains(k)) return true;
@@ -192,13 +195,13 @@ namespace compiler::driver {
 		}
 
 		base::Optional<options_types::DependencyInfo> parseDependency(const ManifestNode& node) {
-			auto name       = node.requireNonEmptyString("name");
+			auto name = node.requireNonEmptyString("name");
 			if (!name) return {};
-			auto source     = node.requireExistingPath("source");
+			auto source = node.requireExistingPath("source");
 			if (!source) return {};
 			auto strat_node = node.requireObject("strategy");
 			if (!strat_node) return {};
-			auto strategy   = parseStrategy(*strat_node);
+			auto strategy = parseStrategy(*strat_node);
 			if (!strategy) return {};
 
 			return options_types::DependencyInfo{
@@ -212,8 +215,7 @@ namespace compiler::driver {
 		}
 
 		base::Optional<BuildTarget> parseBuildTarget(
-			const ManifestNode& node,
-			const std::string&  output_file_name
+			const ManifestNode& node, const std::string& output_file_name
 		) {
 			auto type = node.requireString("type");
 			if (!type) return {};
@@ -286,8 +288,7 @@ namespace compiler::driver {
 			input >> root;
 		} catch (const nlohmann::json::parse_error& e) {
 			logManifestError(
-				"Packages manifest: malformed JSON.",
-				base::strConcat("Parser message: ", e.what())
+				"Packages manifest: malformed JSON.", base::strConcat("Parser message: ", e.what())
 			);
 			return {};
 		}
@@ -307,7 +308,7 @@ namespace compiler::driver {
 		std::vector<PackageCompilationManifestEntry> packages;
 		std::unordered_set<std::string>              seen_package_names;
 
-		for (const auto& pkg_entry : *pkgs) {
+		for (const auto& pkg_entry: *pkgs) {
 			if (!pkg_entry.is_object()) {
 				logManifestError(
 					"Packages manifest: each `packages` item must be an object.",
@@ -331,13 +332,13 @@ namespace compiler::driver {
 
 			ManifestNode pkg(pkg_entry, base::strConcat("package \"", *package_name, "\""));
 
-			auto source           = pkg.requireExistingPath("source");
+			auto source = pkg.requireExistingPath("source");
 			if (!source) return {};
 			auto output_file_name = pkg.requireNonEmptyString("output-file-name");
 			if (!output_file_name) return {};
 			auto build_target_node = pkg.requireObject("build-target");
 			if (!build_target_node) return {};
-			auto build_target     = parseBuildTarget(*build_target_node, *output_file_name);
+			auto build_target = parseBuildTarget(*build_target_node, *output_file_name);
 			if (!build_target) return {};
 
 			const nlohmann::json* deps_array = pkg.requireArray("dependencies");
@@ -346,7 +347,7 @@ namespace compiler::driver {
 			std::vector<options_types::DependencyInfo> dependencies;
 			std::unordered_set<std::string>            seen_dep_names;
 
-			for (const auto& dep_entry : *deps_array) {
+			for (const auto& dep_entry: *deps_array) {
 				if (!dep_entry.is_object()) {
 					logManifestError(
 						"Packages manifest: each dependency item must be an object.",

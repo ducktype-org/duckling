@@ -536,14 +536,16 @@ clah::Clah getClahForMain() {
 					auto manifest_file = options.getPositional<fs::File>(0);
 					auto worker_count  = options.getValue<i64>("workers").copyValueOr(1);
 
-					auto loaded = compiler::driver::loadPackagesManifest(manifest_file.getFilePath());
+					auto loaded
+						= compiler::driver::loadPackagesManifest(manifest_file.getFilePath());
 					if (!loaded.has_value()) {
 						compiler::driver::exit();
 						return 1;
 					}
 
 					if (loaded->empty()) {
-						std::cerr << "Error: packages manifest does not contain any package entries.\n";
+						std::cerr
+							<< "Error: packages manifest does not contain any package entries.\n";
 						compiler::driver::exit();
 						return 1;
 					}
@@ -597,7 +599,7 @@ clah::Clah getClahForMain() {
 					if (options.isFlag("print-statistics")) {
 						if (not query::USE_STATS) {
 							std::cerr << "Warning: Query statistics are disabled at compile time. "
-									 "No query statistics will be printed.\n";
+										 "No query statistics will be printed.\n";
 						}
 						query::printStats();
 						time_stats::prettyPrintTimeStatistics();
@@ -832,7 +834,7 @@ int main(int argc, const char* argv[]) {
 	init::InitObject _;
 
 	compiler::driver::initializeGlobalLogger();
-	auto             clah = getClahForMain();
+	auto clah = getClahForMain();
 
 	try {
 		return clah.execute(base::safeIntConv<usize>(argc), argv);

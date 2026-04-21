@@ -60,8 +60,8 @@ namespace compiler::driver {
 		};
 
 		struct PackageInfo final {
-			std::string  package_name;
-			fs::FilePath package_path;
+			std::string                 package_name;
+			fs::FilePath                package_path;
 			std::vector<DependencyInfo> dependencies;
 		};
 

@@ -4,7 +4,6 @@
 
 #include <algorithm>
 
-
 namespace global_state {
 
 	namespace {
@@ -18,7 +17,8 @@ namespace global_state {
 
 		auto module_package_id = compiler::frontend::getModuleRef(module_id)->getPackageID();
 		for (const auto& package_info: packages) {
-			auto package_id = compiler::frontend::getModuleRef(package_info.root_module)->getPackageID();
+			auto package_id
+				= compiler::frontend::getModuleRef(package_info.root_module)->getPackageID();
 			if (package_id == module_package_id) return package_info;
 		}
 
@@ -26,8 +26,8 @@ namespace global_state {
 		return packages.front();
 	}
 
-	std::vector<compiler::frontend::ModuleID>
-	getAllPackagesWithDependenciesRootModulesSortedDeduplicated() {
+	std::vector<compiler::frontend::ModuleID> getAllPackagesWithDependenciesRootModulesSortedDeduplicated(
+	) {
 		std::vector<compiler::frontend::ModuleID> module_ids;
 		for (const auto& package_info: packages) {
 			module_ids.push_back(package_info.root_module);
@@ -40,18 +40,20 @@ namespace global_state {
 			return lhs.queryUnstablePerfectHash() < rhs.queryUnstablePerfectHash();
 		});
 		module_ids.erase(
-			std::unique(module_ids.begin(), module_ids.end(), [](auto lhs, auto rhs) {
-				return lhs.queryUnstablePerfectHash() == rhs.queryUnstablePerfectHash();
-			}),
+			std::unique(
+				module_ids.begin(),
+				module_ids.end(),
+				[](auto lhs, auto rhs) {
+					return lhs.queryUnstablePerfectHash() == rhs.queryUnstablePerfectHash();
+				}
+			),
 			module_ids.end()
 		);
 		return module_ids;
 	}
 
 	namespace setters {
-		void addPackage(const PackageInfo& package_info) {
-			packages.push_back(package_info);
-		}
+		void addPackage(const PackageInfo& package_info) { packages.push_back(package_info); }
 
 		void addPackage(compiler::frontend::ModuleID root_module) {
 			packages.push_back({ .root_module = root_module, .dependencies = {} });

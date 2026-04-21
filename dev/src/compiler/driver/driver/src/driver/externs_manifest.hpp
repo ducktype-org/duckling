@@ -13,8 +13,8 @@ namespace compiler::driver {
 
 	struct PackageCompilationManifestEntry final {
 		options_types::PackageInfo package_info;
-		std::string               output_file_name;
-		BuildTarget               build_target;
+		std::string                output_file_name;
+		BuildTarget                build_target;
 	};
 
 	/**
