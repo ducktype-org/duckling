@@ -1,0 +1,9 @@
+import beta as b;
+
+fun root_value() -> i64 = {
+    return 111;
+}
+
+fun beta_value() -> i64 = {
+    return b.value();
+}

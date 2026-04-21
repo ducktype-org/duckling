@@ -1,0 +1,37 @@
+# Integration tests for package-aware script `run` support.
+
+folder: "."
+script_rel_path: "script_package/main.ds"
+good_root_short: "-p @{folder}/script_package"
+good_root_long: "--package-root @{folder}/script_package"
+bad_root_short: "-p @{folder}/script_package/does_not_exist"
+bad_root_long: "--package-root @{folder}/script_package/does_not_exist"
+strip_compile_logs: 'sed -E "/^\[[0-9]+\/[0-9?]+\]  Compiling .*: .*$/d"'
+expected_output: "10\n21\n22\n"
+
+clean_cmd: "rm -rf @{folder}/duck_build"
+
+Clean: "@{clean_cmd}"
+PreCase: "@{clean_cmd}"
+
+Tests:
+  run_with_package_root:
+    Cases:
+      short_flag:
+        Run: "set -o pipefail; @{duckc_path} run @{folder}/@{script_rel_path} @{good_root_short} | @{strip_compile_logs}"
+        Output:
+          String: "@{expected_output}"
+
+      long_flag:
+        Run: "set -o pipefail; @{duckc_path} run @{folder}/@{script_rel_path} @{good_root_long} | @{strip_compile_logs}"
+        Output:
+          String: "@{expected_output}"
+
+  invalid_package_root:
+    Cases:
+      run_short_flag:
+        Run: "@{duckc_path} run @{folder}/@{script_rel_path} @{bad_root_short}"
+        ExitCode: 1
+
+SubDirs:
+  - complex_cases

@@ -691,8 +691,12 @@ namespace compiler::repl {
 						CORE_DEV_LOG(REPL, "First REPL module, no parent\n");
 					}
 
-					auto module_ref = createEphemeralChainedStatementModule(
-						stmt_source, parent_module_id, m_line_counter, "repl_"
+					auto module_ref = createSyntheticChainedStatementModule(
+						stmt_source,
+						parent_module_id,
+						m_line_counter,
+						"repl_",
+						base::StrID("repl_session")
 					);
 					auto module_id = module_ref->getModuleID();
 

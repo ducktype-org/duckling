@@ -153,7 +153,14 @@ namespace compiler::frontend {
 		else
 			output << indent << getName().strView() << "/ [name: " << getName().strView() << "]\n";
 
-		if (hasMainSourceFile())
+		if (isScriptModule()) {
+			if (hasScriptSourceFile())
+				output << indent << "├> [script] "
+					   << getFileRef(getScriptSourceFile().illegalAccess().getID())->file.name();
+			else
+				output << indent << "├> [script] Missing script file!";
+			output << " (" << getScriptStatementModules().size() << " statement module(s))\n";
+		} else if (hasMainSourceFile())
 			output << indent << "├> "
 				   << getFileRef(getMainSourceFile().illegalAccess().getID())->file.name() << '\n';
 		else
@@ -184,16 +191,32 @@ namespace compiler::frontend {
 					!m_main_source_file.value()->component_hash.has_value(),
 					"Child component hash have value!"
 				);
+			if (m_script_data.has_value() && m_script_data->m_script_source_file.has_value())
+				CORE_ASSERT(
+					!m_script_data->m_script_source_file.value()->component_hash.has_value(),
+					"Child component hash have value!"
+				);
 			for (auto& [_, submodule]: m_submodules)
 				CORE_ASSERT(
 					!submodule->m_path_component_hash.has_value(), "Child component hash have value!"
 				);
+			if (m_script_data.has_value())
+				for (auto& statement_module: m_script_data->m_statement_modules)
+					CORE_ASSERT(
+						!statement_module->m_path_component_hash.has_value(),
+						"Child component hash have value!"
+					);
 			return;
 		}
 		m_path_component_hash.reset();
 		m_hash.reset();
 		if (m_main_source_file.has_value()) m_main_source_file.value()->invalidateComponentHash();
+		if (m_script_data.has_value() && m_script_data->m_script_source_file.has_value())
+			m_script_data->m_script_source_file.value()->invalidateComponentHash();
 		for (auto& [_, submodule]: m_submodules) submodule->invalidateHash();
+		if (m_script_data.has_value())
+			for (auto& statement_module: m_script_data->m_statement_modules)
+				statement_module->invalidateHash();
 	}
 
 	void ModuleTree::updateModuleHash() {
@@ -228,6 +251,10 @@ namespace compiler::frontend {
 
 		// If a Module has a main source file
 		hashing::addToHash(partial, hasMainSourceFile());
+
+		hashing::addToHash(
+			partial, m_script_data.has_value() && m_script_data->m_script_source_file.has_value()
+		);
 
 		// REPL metadata affects module semantics and therefore must affect module hash.
 		hashing::addToHash(partial, m_repl_data.has_value());
@@ -322,9 +349,10 @@ namespace compiler::frontend {
 					submodule->getName() == base::StrID(file.name()), "Submodule name does not match"
 				);
 
-				// Discards directories without main module file:
-				// @TODO: decide if this behavior is desirable
-				if (submodule->hasMainSourceFile()) addSubmodule(submodule);
+				// Keep directories that carry submodules (including scripts), even without a main file.
+				if (submodule->hasMainSourceFile()
+				    || !submodule->getSubmodules().illegalAccess().empty())
+					addSubmodule(submodule);
 			} else {
 				// Handle regular file
 				if (!isFileNameValid(base::StrID(file.name()), file_reject)) continue;
@@ -366,6 +394,18 @@ namespace compiler::frontend {
 				CORE_ASSERT(submodule->getName() == stem_id, "Submodule name does not match");
 				addSubmodule(base::Ref<ModuleTree>(submodule));
 			}
+		} else if (extension == LANG_SCRIPT_FILE) {
+			// Package script: one submodule per `.ds` file (sibling of `.dmf` modules).
+			auto stem_id = base::StrID(stem);
+
+			base::Box<ModuleTreeBuilder> script_builder = ModuleTreeBuilder::create();
+			script_builder->setPackageID(m_package_id);
+			script_builder->setName(stem_id);
+			script_builder->setScriptModule(ScriptData{});
+			script_builder->setScriptSourceFile(file);
+			auto script_module = script_builder->finalize();
+			CORE_ASSERT(script_module->getName() == stem_id, "Script submodule name does not match");
+			addSubmodule(script_module);
 		} else {
 			// Other file
 			addOtherFile(file);
@@ -425,7 +465,21 @@ namespace compiler::frontend {
 
 	void ModuleTreeBuilder::setReplModule(const ReplData& repl_data) {
 		CORE_ASSERT(!m_finalized, "Builder already finalized");
+		CORE_ASSERT(!m_script_data.has_value(), "Module cannot be both REPL and script");
 		m_repl_data = repl_data;
+	}
+
+	void ModuleTreeBuilder::setScriptModule(ScriptData script_data) {
+		CORE_ASSERT(!m_finalized, "Builder already finalized");
+		CORE_ASSERT(!m_repl_data.has_value(), "Module cannot be both REPL and script");
+		m_script_data = std::move(script_data);
+	}
+
+	void ModuleTreeBuilder::setScriptSourceFile(const fs::File& file) {
+		CORE_ASSERT(!m_finalized, "Builder already finalized");
+		CORE_ASSERT(m_script_data.has_value(), "Script source file requires script module data");
+		CORE_ASSERT(!m_script_source_file_path.has_value(), "Script source file is already set");
+		m_script_source_file_path = file;
 	}
 
 	void ModuleTreeBuilder::setPackageID(base::StrID package_id) {
@@ -458,7 +512,8 @@ namespace compiler::frontend {
 		module_ref->m_package_id = m_package_id;
 
 		// Set REPL-specific attributes
-		module_ref->m_repl_data = m_repl_data;
+		module_ref->m_repl_data   = m_repl_data;
+		module_ref->m_script_data = std::move(m_script_data);
 
 		if (m_parent.has_value()) ModuleTreeModifier::setParent(module_ref, m_parent);
 
@@ -466,6 +521,13 @@ namespace compiler::frontend {
 		if (m_main_source_file_path.has_value()) {
 			module_ref->m_main_source_file
 				= SourceFile::create(m_main_source_file_path.value(), mod_id);
+		}
+		if (m_script_source_file_path.has_value()) {
+			CORE_ASSERT(
+				module_ref->m_script_data.has_value(), "Script source file requires script data"
+			);
+			module_ref->m_script_data->m_script_source_file
+				= SourceFile::create(m_script_source_file_path.value(), mod_id);
 		}
 
 		for (const auto& [name, submodule]: m_submodules)
@@ -716,6 +778,11 @@ namespace compiler::frontend {
 		// Remove main source file. This will invalidate the SourceFile instance!
 		if (module->m_main_source_file.has_value())
 			SourceFile::removeSourceFileFromStorage(module->m_main_source_file.value());
+		if (module->m_script_data.has_value()
+		    && module->m_script_data->m_script_source_file.has_value())
+			SourceFile::removeSourceFileFromStorage(
+				module->m_script_data->m_script_source_file.value()
+			);
 
 		// Remove the module from storage. This will invalidate the ModuleTree instance!
 		ModuleTree::removeModuleFromStorage(module);
@@ -751,6 +818,11 @@ namespace compiler::frontend {
 
 			if (current->m_main_source_file.has_value())
 				SourceFile::removeSourceFileFromStorage(current->m_main_source_file.value());
+			if (current->m_script_data.has_value()
+			    && current->m_script_data->m_script_source_file.has_value())
+				SourceFile::removeSourceFileFromStorage(
+					current->m_script_data->m_script_source_file.value()
+				);
 
 			ModuleTree::removeModuleFromStorage(current);
 		};
@@ -761,6 +833,14 @@ namespace compiler::frontend {
 	void ModuleTreeModifier::fileModified(const fs::File& file) {
 		std::vector<Ref<SourceFile>> source_files = SourceFile::getSourceFilesFromFile(file);
 		for (auto& source_file: source_files) source_file->update();
+	}
+
+	void ModuleTreeModifier::setScriptStatementModules(
+		base::Ref<ModuleTree> module, std::vector<base::Ref<ModuleTree>> statement_modules
+	) {
+		CORE_ASSERT(module->isScriptModule(), "setScriptStatementModules requires a script module");
+		module->m_script_data->m_statement_modules = std::move(statement_modules);
+		module->updateModuleHashFromRootToThis();
 	}
 
 	// ----------------------
@@ -787,6 +867,8 @@ namespace compiler::frontend {
             auto module_tree = GetModuleID_Functor::get(mid);
             if (module_tree->hasMainSourceFile())
                 files_to_parse.push_back(module_tree->getMainSourceFile().illegalAccess().getID());
+            if (module_tree->isScriptModule() && module_tree->hasScriptSourceFile())
+                files_to_parse.push_back(module_tree->getScriptSourceFile().illegalAccess().getID());
             for (const auto& submodule: module_tree->getSubmodules().illegalAccess())
                 self(submodule.illegalAccess().getID());
 		};
@@ -952,4 +1034,42 @@ namespace compiler::frontend {
 		return file->getPST();
 	}
 
+	/***********************
+	 * QueryIsScriptModule *
+	 ***********************/
+	struct IMPLEMENT_QUERY(QueryIsScriptModule, bool) {
+		static auto provide(Context&, QKey key) -> PResult {
+			return GetModuleID_Functor::get(key)->isScriptModule();
+		}
+
+		QUERY_AUTO_CACHE_COPY
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryIsScriptModule);
+
+	// Walks package submodules depth-first; matches script nodes by absolute `.ds` path.
+	base::Optional<ModuleID> findScriptModuleByScriptSourceFile(
+		ModuleID root_module, const fs::FilePath& script_path
+	) {
+		const auto target_path = script_path.absolute().getPath();
+
+		std::function<base::Optional<ModuleID>(ModuleID)> visit
+			= [&](ModuleID module_id) -> base::Optional<ModuleID> {
+			auto module_tree = GetModuleID_Functor::get(module_id);
+
+			if (module_tree->isScriptModule() && module_tree->hasScriptSourceFile()) {
+				const auto script_file
+					= getFileRef(module_tree->getScriptSourceFile().illegalAccess().getID())
+				          ->getFileIllegalAccess();
+				if (script_file.getFilePath().absolute().getPath() == target_path) return module_id;
+			}
+
+			for (const auto& submodule: module_tree->getSubmodules().illegalAccess())
+				if (auto found = visit(submodule.illegalAccess().getID())) return found;
+
+			return {};
+		};
+
+		return visit(root_module);
+	}
 }

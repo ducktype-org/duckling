@@ -151,6 +151,21 @@ namespace compiler::driver {
 			collectQueryInputsFromPst(pst, *out);
 		}
 
+		// Process script source file if present, similarly as above
+		if (module_ref->isScriptModule() && module_ref->hasScriptSourceFile()) {
+			auto sf = module_ref->getScriptSourceFile();
+
+			auto sf_mut
+				= GetFileID_Functor::getFileRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
+					sf.illegalAccess().getID()
+				);
+
+			out->emplace_back(QueryFileSideInput::getID(), sf_mut->getComponentHash().hash);
+
+			auto pst = sf_mut->getPST();
+			collectQueryInputsFromPst(pst, *out);
+		}
+
 		// Recurse into submodules
 		for (const auto& submodule: module_ref->getSubmodules().illegalAccess())
 			collectFromModule(lookups_map, submodule.illegalAccess().getID(), out);

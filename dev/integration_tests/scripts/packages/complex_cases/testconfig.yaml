@@ -1,0 +1,49 @@
+Tests:
+  deep_dotted_transitive_imports:
+    folder: "deep_dotted_transitive"
+    script_rel_path: "main.ds"
+    expected_output: "111\n312\n212\n414\n"
+    Cases:
+      run_long_flag:
+        Run: "set -o pipefail; @{duckc_path} run @{folder}/@{script_rel_path} --package-root @{folder} | @{strip_compile_logs}"
+        Output:
+          String: "@{expected_output}"
+
+  star_imports:
+    Enabled: "false"
+    folder: "star_imports"
+    script_rel_path: "main.ds"
+    expected_output: "10\n20\n30\n"
+    Cases:
+      run_long_flag:
+        Run: "set -o pipefail; @{duckc_path} run @{folder}/@{script_rel_path} --package-root @{folder} | @{strip_compile_logs}"
+        Output:
+          String: "@{expected_output}"
+
+  nested_imports:
+    Enabled: "false"
+    folder: "nested_imports"
+    script_rel_path: "main.ds"
+    expected_output: "100\n200\n300\n"
+    Cases:
+      run_long_flag:
+        Run: "set -o pipefail; @{duckc_path} run @{folder}/@{script_rel_path} --package-root @{folder} | @{strip_compile_logs}"
+        Output:
+          String: "@{expected_output}"
+
+  unresolved_import_fails:
+    folder: "missing_import"
+    script_rel_path: "main.ds"
+    Cases:
+      run_fails:
+        Run: "@{duckc_path} run @{folder}/@{script_rel_path} --package-root @{folder}"
+        ExitCode: 1
+
+  script_only_package_without_main_module_file:
+    folder: "invalid_root_without_main"
+    script_rel_path: "main.ds"
+    Cases:
+      run_succeeds:
+        Run: "@{duckc_path} run @{folder}/@{script_rel_path} --package-root @{folder}"
+        Output:
+          String: "1\n"

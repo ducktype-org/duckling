@@ -103,9 +103,11 @@ namespace compiler::frontend {
 		if (parse_tree && component_hash.has_value()) {
 			return &parse_tree.value();
 		} else {
-			// @TODO: #1879 Program chosen as default type for non_REPL
-			auto pst_type = getModuleRef(linked_module)->isReplModule() ? pst::PSTType::Script
-			                                                            : pst::PSTType::Program;
+			// @TODO: #1879 Program chosen as default type for non-REPL and non-script.
+			const auto& module   = getModuleRef(linked_module);
+			auto        pst_type = module->isReplModule() || module->isScriptModule()
+			                         ? pst::PSTType::Script
+			                         : pst::PSTType::Program;
 
 			auto parsed_pst = pst::PST(file, pst_type, getComponentHash());
 

@@ -1,0 +1,6 @@
+import alpha as A;
+import alpha.(beta, gamma.delta);
+
+builtin_output_i64(A.alpha_value());
+builtin_output_i64(beta_value());
+builtin_output_i64(delta_value());

@@ -1,0 +1,5 @@
+import sub as s;
+
+builtin_output_i64(10);
+builtin_output_i64(s.from_sub());
+builtin_output_i64(s.from_nested());

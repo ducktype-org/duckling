@@ -21,6 +21,9 @@
 #include <frontend/module_tree/module_id.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
+#include <frontend/pst_parser/elements/hierarchy/not_statements/import_chains/import_identifier_as.hpp>
+#include <frontend/pst_parser/elements/hierarchy/not_statements/import_chains/import_nested.hpp>
+#include <frontend/pst_parser/elements/hierarchy/statements/import.hpp>
 #include <global_state/artifacts_location.hpp>
 #include <global_state/global_logger.hpp>
 #include <global_state/packages.hpp>
@@ -34,6 +37,7 @@
 #include <base/collections/maps.hpp>
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
+#include <base/extend_cpp/defer.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/types/ok_bad.hpp>
 
@@ -54,7 +58,9 @@
 
 #include <algorithm>
 #include <fstream>
+#include <functional>
 #include <iostream>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -317,46 +323,138 @@ namespace compiler::driver {
 	QUERY_IMPLEMENTATION_BOILERPLATE(CompileModule);
 
 	namespace {
+		/**
+		 * @brief Collect module dependencies from all import statements.
+		 *
+		 * Extracts module IDs by recursively flattening import chains. Handles all import types
+		 * (ImportIdentifierAs, ImportStarHides, ImportNested) and their nested combinations.
+		 */
+		static std::vector<frontend::ModuleID> collectImportedModulesFromModule(
+			query::Context& ctx, frontend::ModuleID module_id
+		) {
+			std::vector<frontend::ModuleID> out;
+
+			auto main_file = ctx.query<frontend::QueryMainSourceFile>(module_id);
+			auto pst       = frontend::getFilePST(ctx, main_file);
+
+			for (const auto& import_ref: pst->getImports()) {
+				auto chain_locked   = import_ref->getImportChain();
+				auto chain_opt_base = chain_locked.unlockOpt(ctx);
+				if (!chain_opt_base.has_value()) continue;
+
+				// Use base ImportChain class to work with all variants:
+				// - ImportIdentifierAs: `import A.B.C` or `import A.B.C as X`
+				// - ImportStarHides: `import A.B.*` (optionally with `hide X, Y`)
+				// - ImportNested: `import A.(B, C.D, ...)`
+				const auto* chain_ptr
+					= dynamic_cast<const pst::ImportChain*>(&*chain_opt_base.value());
+				if (!chain_ptr) continue;
+
+				std::vector<base::StrID> prefix;
+
+				// Recursively flatten nested imports by accumulating paths.
+				// Example: `import A.(B, C.*)` -> resolves modules A.B and A.C
+				auto flatten = [&](auto&                           self,
+				                   const pst::ImportChain&         chain,
+				                   const std::vector<base::StrID>& current_prefix) -> void {
+					std::vector<base::StrID> path = current_prefix;
+					for (usize i = 0; i < chain.numberOfNames(); ++i)
+						path.emplace_back(chain.getNameByIndex(i).unlock(ctx)->unwrap());
+
+					auto maybe_module = frontend::getRelativeModule(ctx, module_id, path);
+					if (maybe_module.has_value()) out.push_back(maybe_module.value());
+
+					// For nested imports, recurse on child chains with accumulated path.
+					if (auto nested = dynamic_cast<const pst::ImportNested*>(&chain)) {
+						auto list_locked = nested->getNestedImportList();
+						if (auto list_opt = list_locked.unlockOpt(ctx)) {
+							const auto& list_val = *list_opt.value();
+
+							for (auto nested_chain_locked: list_val) {
+								if (auto child_opt = nested_chain_locked.unlockOpt(ctx)) {
+									const auto* child_ptr
+										= dynamic_cast<const pst::ImportChain*>(&*child_opt.value());
+									if (child_ptr) self(self, *child_ptr, path);
+								}
+							}
+						}
+					}
+				};
+
+				flatten(flatten, *chain_ptr, prefix);
+			}
+
+			return out;
+		}
+
+		/**
+		 * @brief Collect a topologically ordered list of transitive imports.
+		 *
+		 * Returns a post-order DFS list so every dependency appears before the module that imports
+		 * it. This ordering is required for incremental VM loading with `loadFiles`.
+		 *
+		 * @note This gives us correct order, because we go kind of backwards here,
+		 * from modules importing other modules, so we are sure that if A imports B, then B is
+		 * visited before A and thus appears before A in the resulting list.
+		 */
+		static std::vector<frontend::ModuleID> collectTransitiveImportsTopologically(
+			query::Context& ctx, const std::vector<frontend::ModuleID>& seed_modules
+		) {
+			std::vector<frontend::ModuleID>        order;
+			std::unordered_set<frontend::ModuleID> visited;
+
+			// Post-order DFS so dependencies come before their users.
+			std::function<void(frontend::ModuleID)> visit = [&](frontend::ModuleID module_id) {
+				if (visited.contains(module_id)) return;
+				visited.insert(module_id);
+				for (auto dep: collectImportedModulesFromModule(ctx, module_id)) visit(dep);
+				order.push_back(module_id);
+			};
+
+			for (auto module_id: seed_modules) visit(module_id);
+			return order;
+		}
+
 		std::expected<LIRUnitWithBackendName, std::string> compileScriptToLIRModuleData(
-			query::Context& ctx
+			query::Context& ctx, std::vector<frontend::ModuleID>* imported_modules_out = nullptr
 		) {
 			auto& script_context = global_state::getScriptContext();
-			auto  script_source  = script_context.script_file.getContent().view().stdString();
-			auto  split_result   = repl::splitInputIntoStatements(ctx, script_source);
-			if (!split_result.has_value())
-				return std::unexpected(
-					base::strConcat("Script parsing failed: ", split_result.error())
-				);
+
+			// Scripts always resolve through their package tree node.
+			const auto script_module_result
+				= repl::buildScriptModuleFromTreeNode(ctx, script_context.script_module_id);
+			if (!script_module_result.has_value())
+				return std::unexpected(script_module_result.error());
+
+			const auto& script_module = script_module_result.value();
 
 			CORE_DEV_LOG(
-				REPL, "compile_script: split into ", split_result->size(), " statement(s)\n"
+				REPL,
+				"compile_script: split into ",
+				script_module.statementModules().size(),
+				" statement(s)\n"
 			);
 
 			LIRUnitWithBackendName merged{
-				.module_id = repl::getScriptModuleID(script_context.script_file),
+				.module_id = script_module.scriptID(),
 				.lir_unit  = lir::LIRUnit{},
 			};
 
 			// Track wrapper symbols to build the synthetic main that runs them in order.
 			// We preserve the original statement order to match script semantics.
-			std::vector<helios::SymID>         wrapper_symbols;
-			base::Optional<frontend::ModuleID> parent_module_id;
-			u64                                statement_counter = 0;
+			std::vector<helios::SymID> wrapper_symbols;
 
-			if (split_result->empty()) {
-				// Empty input should still produce a valid synthetic script main wrapper with no
-				// statement calls.
-				auto empty_script_module
-					= repl::createEphemeralChainedStatementModule("", {}, 0, "script_");
-				parent_module_id = empty_script_module->getModuleID();
-			}
-
-			for (const auto& statement_source: *split_result) {
-				auto module_ref = repl::createEphemeralChainedStatementModule(
-					statement_source, parent_module_id, statement_counter, "script_"
-				);
-				auto module_id   = module_ref->getModuleID();
-				parent_module_id = module_id;
+			u64 statement_counter = 0;
+			for (const auto& module_ref: script_module.statementModules()) {
+				auto module_id = module_ref->getModuleID();
+				// Optional output for run mode: we collect imports per statement to compile
+				// them into .dbc artifacts.
+				if (imported_modules_out) {
+					auto imported_now = collectImportedModulesFromModule(ctx, module_id);
+					imported_modules_out->insert(
+						imported_modules_out->end(), imported_now.begin(), imported_now.end()
+					);
+				}
 
 				CORE_DEV_LOG(
 					REPL,
@@ -408,13 +506,10 @@ namespace compiler::driver {
 				++statement_counter;
 			}
 
-			if (!parent_module_id.has_value())
-				return std::unexpected("Script has no parent module for synthetic main");
-
 			// We use the last (or empty one when script is empty) statement's module
-			// (parent_module_id) because it sits at the end of the REPL-style chain and has a
+			// because it sits at the end of the REPL-style chain and has a
 			// main-file root scope that represents the full script context.
-			auto main_scope = repl::queryScriptMainRootScope(ctx, parent_module_id.value());
+			auto main_scope = repl::queryScriptMainRootScope(ctx, script_module.terminalModuleID());
 			auto main_fun
 				= repl::buildScriptMainWrapper(ctx, merged.module_id, main_scope, wrapper_symbols);
 			helios::HOUTUnit main_unit;
@@ -570,13 +665,45 @@ namespace compiler::driver {
 		base::Optional<RunOutput>   output;
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			auto script_lir = compileScriptToLIRModuleData(ctx);
+			// Compile script statements to a single LIR module and collect imports separately.
+			std::vector<frontend::ModuleID> imported_seed_modules;
+			auto script_lir = compileScriptToLIRModuleData(ctx, &imported_seed_modules);
 			if (!script_lir.has_value()) {
 				error_message = script_lir.error();
 				return;
 			}
 
 			auto dvm_module = compileLIRModuleToDVM(&script_lir.value(), ctx, false);
+			// Order imports so dependencies load before their users inside the VM.
+			auto imports_in_order
+				= collectTransitiveImportsTopologically(ctx, imported_seed_modules);
+			std::vector<artifacts::FileArtifact> imported_artifacts;
+			imported_artifacts.reserve(imports_in_order.size());
+			auto cleanup_artifacts = [&]() {
+				// Temporary artifacts are scoped to duckc run and should be removed after execution.
+				for (const auto& artifact: imported_artifacts)
+					artifact.parent->deleteFileArtifact(artifact.name);
+			};
+			defer(cleanup_artifacts());
+
+			for (auto module_id: imports_in_order) {
+				const auto package_id
+					= frontend::getModuleRef(module_id)->getPackage().unlock(ctx).getID();
+				if (package_id == base::StrID("core")) continue;
+
+				auto compiled = ctx.query<CompileModule>(KeyOf_CompileModule{
+					.module_id        = module_id,
+					.backend_type     = BackendType::DVM,
+					.build_debug_info = false,
+				});
+				if (!compiled->hasValue()) {
+					error_message = base::strConcat(
+						"Failed to compile imported module: ", frontend::moduleName(module_id)
+					);
+					return;
+				}
+				imported_artifacts.push_back(compiled->valueOrPanic().object_art);
+			}
 
 			vm::PID pid{};
 			auto    run_result
@@ -585,7 +712,18 @@ namespace compiler::driver {
 						  pid = process.pid;
 						  return std::expected<void, vm::api::ApiError>{};
 					  })
-			          .and_then([&] { return vm::api::loadCode(pid, { dvm_module.code }); })
+			          .and_then([&] {
+						  // Load each compiled .dbc into the same VM process.
+						  for (const auto& artifact: imported_artifacts) {
+							  auto load_result = vm::api::loadFiles(pid, { artifact.file });
+							  if (!load_result.has_value()) return load_result;
+						  }
+						  return std::expected<void, vm::api::ApiError>{};
+					  })
+			          .and_then([&] {
+						  // Load the script code last so its main resolves against loaded imports.
+						  return vm::api::loadCode(pid, dvm_module.code);
+					  })
 			          .and_then([&] { return vm::api::attach(pid, std::cin, std::cout); })
 			          .and_then([&] { return vm::api::run(pid); })
 			          .and_then([&] { return vm::api::join(pid); })
@@ -732,6 +870,15 @@ namespace compiler::driver {
 		          frontend::ModuleID package_root_module) -> void {
 			// @TODO: #2354 This is temporary.
 			const bool build_debug_info = backend == BackendType::DVM;
+
+			if (getModuleRef(module_id)->isScriptModule()) {
+				// Script nodes have no `.dmf` HOUT; they are built via compileScript / duckc run.
+				// Still recurse into normal submodules nested under a script directory, if any.
+				auto sub_modules = query::entryPoint<frontend::QuerySubmodules>(module_id);
+				for (const auto& [_, sub_module]: *sub_modules)
+					collect_modules(sub_module, backend, package_root_module);
+				return;
+			}
 
 			modules_to_compile.push_back(
 				{ package_root_module, module_id, backend, build_debug_info }

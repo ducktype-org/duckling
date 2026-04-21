@@ -1,0 +1,3 @@
+fun value() -> i64 = {
+    return 212;
+}

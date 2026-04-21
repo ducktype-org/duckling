@@ -34,7 +34,7 @@ namespace compiler::repl {
 	}
 
 	/**
-	 * @brief Create a minimal ephemeral REPL module for statement splitting.
+	 * @brief Create a minimal temporary REPL module for statement splitting.
 	 *
 	 * Marked as a REPL module (no parent) so that SourceFile::getPST() selects
 	 * PSTType::Script, guaranteeing ordered top-level statement parsing.

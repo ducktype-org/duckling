@@ -28,6 +28,11 @@ namespace compiler::frontend {
 	 * it is a single file module.
 	 */
 	constexpr std::string_view LANG_MODULE_FILE = ".dmf";
+	/**
+	 * If a file's extension is equal to this constant, it is discovered as a package script
+	 * during module tree construction and represented as a script node (not an "other" file).
+	 */
+	constexpr std::string_view LANG_SCRIPT_FILE = ".ds";
 
 	// Regexes to reject files/directories starting with '.' or '$'
 	const std::regex DEFAULT_REJECT_FILE_REGEX      = std::regex(R"((\$.*|\..*))");
@@ -48,6 +53,31 @@ namespace compiler::frontend {
 		 * Optional - only empty for first REPL module.
 		 */
 		base::Optional<ModuleID> m_repl_module_parent;
+	};
+
+	/**
+	 * @brief Package script metadata stored on a script node in the module tree.
+	 *
+	 * A script node is created for each `.ds` file found while building a package tree. It stores
+	 * that `.ds` file as a script source and appears as a package submodule, but its executable
+	 * body is lowered from a chain of synthetic REPL-style modules stored here.
+	 *
+	 * Those statement modules are intentionally not added to `m_submodules`, so tooling sees one
+	 * script unit per file while the driver still reuses the REPL statement pipeline internally.
+	 * The chain is populated during script compilation via `ModuleTreeModifier`, because building
+	 * it is a driver-level execution detail rather than package discovery.
+	 */
+	struct ScriptData final {
+		/**
+		 * Source file represented by this package script node.
+		 */
+		base::Optional<base::Ref<SourceFile>> m_script_source_file;
+
+		/**
+		 * REPL-style modules for each top-level statement, in source order.
+		 * Empty until the script is compiled for the first time.
+		 */
+		std::vector<base::Ref<ModuleTree>> m_statement_modules;
 	};
 
 	/**
@@ -156,6 +186,52 @@ namespace compiler::frontend {
 		[[nodiscard]]
 		bool isReplModule() const {
 			return m_repl_data.has_value();
+		}
+
+		/**
+		 * @brief Whether this module node represents a package script (`.ds` file).
+		 *
+		 * Script nodes are mutually exclusive with REPL modules (`m_repl_data`).
+		 */
+		[[nodiscard]]
+		bool isScriptModule() const {
+			return m_script_data.has_value();
+		}
+
+		/**
+		 * @brief Whether this script node has a `.ds` source file.
+		 *
+		 * Only valid for script modules.
+		 */
+		[[nodiscard]]
+		bool hasScriptSourceFile() const {
+			CORE_ASSERT(m_script_data.has_value(), "Not a script module");
+			return m_script_data->m_script_source_file.has_value();
+		}
+
+		/**
+		 * @brief Source file represented by this package script node.
+		 *
+		 * Only valid for script modules.
+		 */
+		[[nodiscard]]
+		FileAccessLocked getScriptSourceFile() const {
+			CORE_ASSERT(m_script_data.has_value(), "Not a script module");
+			CORE_ASSERT(
+				m_script_data->m_script_source_file.has_value(), "Script source file does not exist!"
+			);
+			return FileAccessLocked(m_script_data->m_script_source_file.value()->getFileID());
+		}
+
+		/**
+		 * @brief Internal REPL-style modules produced by splitting the script source.
+		 *
+		 * Only valid for script modules. Not exposed as package submodules.
+		 */
+		[[nodiscard]]
+		const std::vector<base::Ref<ModuleTree>>& getScriptStatementModules() const {
+			CORE_ASSERT(m_script_data.has_value(), "Not a script module");
+			return m_script_data->m_statement_modules;
 		}
 
 		/**
@@ -280,11 +356,20 @@ namespace compiler::frontend {
 		base::StrID m_package_id;
 
 		/**
-		 * REPL-specific data.
-		 * Optional - only set for modules created in REPL sessions.
-		 * Presence of this optional indicates the module is a REPL module.
+		 * REPL-style statement data.
+		 *
+		 * Set on synthetic statement modules used by interactive REPL execution and by
+		 * script statement chains stored in ScriptData. Not set on package script nodes
+		 * themselves.
 		 */
 		base::Optional<ReplData> m_repl_data;
+
+		/**
+		 * Script-specific data.
+		 * Optional - only set for package script nodes discovered from `.ds` files.
+		 * Presence of this optional indicates the module is a script module.
+		 */
+		base::Optional<ScriptData> m_script_data;
 	};
 
 	/**
@@ -380,6 +465,20 @@ namespace compiler::frontend {
 		void setReplModule(const ReplData& repl_data);
 
 		/**
+		 * Marks the module under construction as a package script node.
+		 * Mutually exclusive with `setReplModule`.
+		 *
+		 * @param script_data Initial script metadata (usually empty until compile time).
+		 */
+		void setScriptModule(ScriptData script_data);
+
+		/**
+		 * Sets the `.ds` source file for a script module under construction.
+		 * @param file The script source file.
+		 */
+		void setScriptSourceFile(const fs::File& file);
+
+		/**
 		 * Builds the module tree from a single file (single-file module).
 		 * @param file The file to build from.
 		 */
@@ -428,6 +527,7 @@ namespace compiler::frontend {
 
 		base::Optional<base::Ref<ModuleTree>>             m_parent;
 		base::Optional<fs::File>                          m_main_source_file_path;
+		base::Optional<fs::File>                          m_script_source_file_path;
 		base::StrID                                       m_package_id;
 		base::HashMap<base::StrID, base::Ref<ModuleTree>> m_submodules;
 		base::HashMap<base::StrID, std::vector<fs::File>> m_other_files;
@@ -435,7 +535,8 @@ namespace compiler::frontend {
 		base::StrID m_name;
 		bool        m_finalized;
 
-		base::Optional<ReplData> m_repl_data;
+		base::Optional<ReplData>   m_repl_data;
+		base::Optional<ScriptData> m_script_data;
 	};
 
 	/**
@@ -530,6 +631,19 @@ namespace compiler::frontend {
 		 * @param file The file that was modified.
 		 */
 		static void fileModified(const fs::File& file);
+
+		/**
+		 * Stores the REPL-style statement modules for a script node.
+		 *
+		 * Called after splitting the script source during compilation. Replaces any previous chain
+		 * and refreshes module hashes from the package root.
+		 *
+		 * @param module Must be a script module (`isScriptModule()`).
+		 * @param statement_modules Per-statement REPL modules in source order.
+		 */
+		static void setScriptStatementModules(
+			base::Ref<ModuleTree> module, std::vector<base::Ref<ModuleTree>> statement_modules
+		);
 
 	private:
 		/**

@@ -3,6 +3,8 @@
 #include <frontend/packages/packages.hpp>
 #include <global_state/backend_options.hpp>
 
+#include <base/collections/optional.hpp>
+
 #include <filesystem/file.hpp>
 #include <filesystem/file_path.hpp>
 
@@ -132,9 +134,13 @@ namespace compiler::driver {
 		 *
 		 * Like ReplMode, does not set up a main package or incremental compilation.
 		 * The script file is extracted to global_state::ScriptContext during initialization.
+		 *
+		 * If package_root is provided, script statement modules are anchored into the module tree
+		 * created from that root.
 		 */
 		struct ScriptMode final {
 			fs::File                        script_file;
+			base::Optional<fs::FilePath>    package_root;
 			global_state::BackendOptions    backend_options;
 			options_types::ArtifactsOptions compilation_artifacts;
 			options_types::DebugOptions     debug_options;

@@ -1,0 +1,9 @@
+import nested as n;
+
+fun from_sub() -> i64 = {
+    return 21;
+}
+
+fun from_nested() -> i64 = {
+    return n.value();
+}

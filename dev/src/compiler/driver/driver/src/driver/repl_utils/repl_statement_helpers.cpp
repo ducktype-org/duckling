@@ -1,7 +1,9 @@
 #include "repl_statement_helpers.hpp"
 
+#include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
+#include <frontend/packages/packages.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/assignment.hpp>
 #include <frontend/pst_parser/utility.hpp>
 #include <helios/mangler/mangler.hpp>
@@ -14,14 +16,26 @@
 
 namespace compiler::repl {
 
-	base::Ref<frontend::ModuleTree> createEphemeralChainedStatementModule(
+	base::Ref<frontend::ModuleTree> createSyntheticChainedStatementModule(
 		std::string_view                          input,
 		const base::Optional<frontend::ModuleID>& parent_module_id,
 		u64                                       line_counter,
-		std::string_view                          module_name_prefix
+		std::string_view                          module_name_prefix,
+		const base::Optional<base::StrID>&        package_id
 	) {
 		auto builder = frontend::ModuleTreeBuilder::create();
-		builder->setPackageID(base::StrID("repl_session"));
+		if (package_id.has_value()) {
+			builder->setPackageID(package_id.value());
+		} else if (parent_module_id.has_value()) {
+			// Keep package identity across the chain when extending existing context
+			// (REPL history or package-aware script entry).
+			builder->setPackageID(
+				frontend::getModuleRef(parent_module_id.value())->getPackage().illegalAccess().getID()
+			);
+		} else {
+			// Standalone chains get an isolated synthetic package namespace.
+			builder->setPackageID(base::StrID(base::generateRandomString(32)));
+		}
 		builder->setMainSourceFile(fs::FileManager::createRandomVirtualFile(input));
 
 		auto module_name = base::strConcat(module_name_prefix, std::to_string(line_counter));

@@ -16,6 +16,13 @@ namespace global_state {
 	}
 
 	namespace setters {
-		void setScriptContext(const fs::File& script_file) { script_context.emplace(script_file); }
+		void setScriptContext(
+			const fs::File& script_file, compiler::frontend::ModuleID script_module_id
+		) {
+			script_context.emplace(ScriptContext{
+				.script_file      = script_file,
+				.script_module_id = script_module_id,
+			});
+		}
 	}
 }

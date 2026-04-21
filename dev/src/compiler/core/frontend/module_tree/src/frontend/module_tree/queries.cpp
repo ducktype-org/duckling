@@ -24,24 +24,52 @@ namespace compiler::frontend {
 
 		// @TODO: ambiguities
 
-		// first step (in priority):
-		// * check children
-		// * check ancestors
-		// * check package dependencies
+		// Resolve imports in two stages:
+		// 1) Resolve path[0] in nearest scope order:
+		//    local children -> (REPL/script only) ancestor children -> ancestor itself.
+		// 2) Resolve path[1..] by descending through children only.
 
 		base::Optional<ModuleID> current_module;
 
-		auto maybe_child = getModuleRef(from)->getSubmoduleByName(path.at(0)).unlock(ctx);
-		if (maybe_child.has_value()) current_module = maybe_child.value().unlock(ctx).getID();
+		auto get_next_ancestor = [&](ModuleID module_id) -> base::Optional<ModuleID> {
+			auto parent = ctx.query<QueryParentModule>(module_id);
+			if (parent.has_value()) return parent;
+
+			// Synthetic REPL/script modules expose ancestry through REPL parent links.
+			if (ctx.query<QueryIsReplModule>(module_id))
+				return ctx.query<QueryReplModuleParent>(module_id);
+
+			return {};
+		};
+
+		auto try_find_child
+			= [&](ModuleID module_id, base::StrID child_name) -> base::Optional<ModuleID> {
+			auto maybe_child = getModuleRef(module_id)->getSubmoduleByName(child_name).unlock(ctx);
+			if (!maybe_child.has_value()) return {};
+			return maybe_child.value().unlock(ctx).getID();
+		};
+
+		// 1) Try local child first.
+		current_module = try_find_child(from, path.at(0));
+
+		if (not current_module.has_value() && ctx.query<QueryIsReplModule>(from)) {
+			// 2) Try ancestor children.
+			base::Optional<ModuleID> ancestor = get_next_ancestor(from);
+			while (ancestor.has_value() && !current_module.has_value()) {
+				current_module = try_find_child(ancestor.value(), path.at(0));
+				ancestor       = get_next_ancestor(ancestor.value());
+			}
+		}
 
 		if (not current_module.has_value()) {
-			base::Optional<ModuleID> ancestor = ctx.query<QueryParentModule>(from);
-			while (ancestor) {
+			// 3) Legacy fallback: allow matching an ancestor by name.
+			base::Optional<ModuleID> ancestor = get_next_ancestor(from);
+			while (ancestor.has_value()) {
 				if (frontend::moduleName(ancestor.value()) == path.at(0)) {
 					current_module = ancestor.value();
 					break;
 				}
-				ancestor = ctx.query<QueryParentModule>(ancestor.value());
+				ancestor = get_next_ancestor(ancestor.value());
 			}
 		}
 
@@ -69,7 +97,7 @@ namespace compiler::frontend {
 			}
 		}
 
-		// second step: follow children
+		// Resolve remaining components only through descendants.
 		for (usize i = 1; i < path.size() and current_module.has_value(); i++) {
 			auto maybe_child2
 				= getModuleRef(current_module.value())->getSubmoduleByName(path.at(i)).unlock(ctx);

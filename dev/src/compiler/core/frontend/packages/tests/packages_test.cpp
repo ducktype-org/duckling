@@ -1,3 +1,5 @@
+#include <frontend/module_tree/functors.hpp>
+#include <frontend/module_tree/queries.hpp>
 #include <frontend/packages/packages.hpp>
 
 #include <base/pointers/box.hpp>
@@ -48,6 +50,7 @@ public:
 		TESTER_ADD_TEST(filterUndeclaredDependenciesDropsMissing);
 		TESTER_ADD_TEST(createPackageInfoSuccess);
 		TESTER_ADD_TEST(createPackageInfoMissingMainFails);
+		TESTER_ADD_TEST(createPackageInfoScriptOnlyPackageSucceeds);
 	}
 
 private:
@@ -327,6 +330,34 @@ private:
 		ASSERT_TRUE(reporter.errors > 0);
 
 		fs::FileManager::deleteFolder(empty_dir, true);
+	}
+
+	void createPackageInfoScriptOnlyPackageSucceeds() {
+		TestReporter   reporter;
+		auto           package_dir = fs::FileManager::createRandomVirtualDirectory();
+		auto           script_file = package_dir.createSubFile("entry", "entry.ds");
+		RawPackageInfo raw{
+			.package_name = base::StrID("script_pkg"),
+			.version      = base::StrID("1.0.0"),
+			.package_path = package_dir.getFilePath(),
+			.features     = {},
+			.dependencies = {},
+		};
+
+		auto pkg_info = createPackageInfo(raw, reporter.callback());
+		ASSERT_TRUE(pkg_info.has_value());
+		ASSERT_EQUAL(reporter.errors, 0);
+		ASSERT_EQUAL(pkg_info->getPackageID().str(), std::string("script_pkg"));
+
+		auto root_module = pkg_info->getRootModule().illegalAccess().getID();
+		auto root_ref    = compiler::frontend::getModuleRef(root_module);
+		ASSERT_TRUE(!root_ref->hasMainSourceFile());
+		auto script_module = compiler::frontend::findScriptModuleByScriptSourceFile(
+			root_module, script_file.getFilePath()
+		);
+		ASSERT_TRUE(script_module.has_value());
+
+		fs::FileManager::deleteFolder(package_dir, true);
 	}
 
 public:

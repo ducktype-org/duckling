@@ -1,0 +1,8 @@
+import alpha as A;
+import alpha.beta.gamma as G;
+import util;
+
+builtin_output_i64(A.root_value());
+builtin_output_i64(A.beta_value());
+builtin_output_i64(G.value());
+builtin_output_i64(util.value());

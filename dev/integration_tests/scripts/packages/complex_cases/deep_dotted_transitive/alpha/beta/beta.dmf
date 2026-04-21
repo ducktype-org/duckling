@@ -1,0 +1,5 @@
+import gamma as g;
+
+fun value() -> i64 = {
+    return g.value() + 100;
+}

@@ -47,6 +47,13 @@ namespace compiler::frontend {
 	)
 
 	/**
+	 * @brief Query whether the module is a package script node (`.ds` in the module tree).
+	 *
+	 * \query_thread_safe
+	 */
+	DECLARE_QUERY(QueryIsScriptModule, ModuleID, bool, ({ .uses_qresult = false }))
+
+	/**
 	 * @brief Query main source file of a module.
 	 *
 	 * \query_thread_safe
@@ -132,5 +139,16 @@ namespace compiler::frontend {
 	 */
 	base::Optional<ModuleID> getRelativeModule(
 		query::Context&, ModuleID from, const std::vector<base::StrID>& path
+	);
+
+	/**
+	 * @brief Find a script module under @p root_module whose `.ds` source file matches @p
+	 * script_path.
+	 *
+	 * Used by `duckc run -p` to bind a script file path to its script node in the package tree.
+	 * Compares absolute filesystem paths of each script node's script source file.
+	 */
+	base::Optional<ModuleID> findScriptModuleByScriptSourceFile(
+		ModuleID root_module, const fs::FilePath& script_path
 	);
 }

@@ -70,6 +70,11 @@ public:
 		TESTER_ADD_TEST(testModuleRecursiveRemoval);
 		TESTER_ADD_TEST(testComponentHash);
 		TESTER_ADD_TEST(testPrintModuleTree);
+		TESTER_ADD_TEST(testScriptModuleInPackageTree);
+		TESTER_ADD_TEST(testScriptOnlyPackageDirectory);
+		TESTER_ADD_TEST(testNestedScriptLookupByPath);
+		TESTER_ADD_TEST(testScriptStatementModulesUpdateHashAndPrint);
+		TESTER_ADD_TEST(testEmptyDirectoryWithoutScriptsIsDropped);
 	}
 
 protected:
@@ -754,6 +759,156 @@ private:
 			     == std::vector<std::string>{ "root_package_id11e4", "root" })
 			);
 		});
+	}
+
+	/** `.ds` files become script submodules; lookup finds them by script source path. */
+	void testScriptModuleInPackageTree() {
+		auto root_dir = fs::FileManager::createRandomVirtualDirectory();
+		auto pkg      = root_dir.createSubDirectory("script_pkg");
+		(void) pkg.createSubFile("script_pkg", "script_pkg.dmf");
+		auto script_file = pkg.createSubFile("entry", "entry.ds");
+
+		auto root_module = ModuleTreeBuilder::create(pkg, base::StrID("script_pkg"));
+		assertTrue(root_module->hasMainSourceFile(), "Package root should have main module");
+
+		auto submodules = root_module->getSubmodules().illegalAccess();
+		assertTrue(hasSubmodule(submodules, base::StrID("entry")), "Script should be a submodule");
+
+		auto script_module
+			= getSubmoduleIllegal(root_module->getSubmodules(), base::StrID("entry"));
+		assertTrue(
+			getRef(script_module)->isScriptModule(), "entry.ds should create a script module node"
+		);
+		assertTrue(
+			!getRef(script_module)->hasMainSourceFile(),
+			"Script nodes should not use module main source files"
+		);
+		assertTrue(
+			getRef(script_module)->hasScriptSourceFile(), "Script node should store .ds source file"
+		);
+		ASSERT_EQUAL(
+			"entry.ds",
+			getRef(getRef(script_module)->getScriptSourceFile())->getFileIllegalAccess().name()
+		);
+
+		auto found = findScriptModuleByScriptSourceFile(
+			root_module->getModuleID(), script_file.getFilePath()
+		);
+		assertTrue(found.has_value(), "Script lookup should find the script module by file path");
+		ASSERT_EQUAL(getRef(script_module)->getModuleID(), found.value());
+	}
+
+	/** Script-only package directories are kept and expose their `.ds` entries. */
+	void testScriptOnlyPackageDirectory() {
+		auto root_dir = fs::FileManager::createRandomVirtualDirectory();
+		auto pkg      = root_dir.createSubDirectory("script_only_pkg");
+		(void) pkg.createSubFile("entry", "entry.ds");
+
+		auto root_module = ModuleTreeBuilder::create(root_dir, base::StrID("root_pkg"));
+		assertTrue(
+			hasSubmodule(
+				root_module->getSubmodules().illegalAccess(), base::StrID("script_only_pkg")
+			),
+			"Script-only package directory should be kept in module tree"
+		);
+
+		auto pkg_module = getSubmodule(
+			root_module->getSubmodules().illegalAccess(), base::StrID("script_only_pkg")
+		);
+		assertTrue(
+			!getRef(pkg_module)->hasMainSourceFile(), "Script-only package has no main module"
+		);
+		assertTrue(
+			hasSubmodule(getRef(pkg_module)->getSubmodules().illegalAccess(), base::StrID("entry")),
+			"Script-only package should expose entry.ds as a script submodule"
+		);
+
+		auto script_module
+			= getSubmoduleIllegal(getRef(pkg_module)->getSubmodules(), base::StrID("entry"));
+		assertTrue(
+			getRef(script_module)->isScriptModule(), "entry.ds should create a script module node"
+		);
+		assertTrue(
+			getRef(script_module)->hasScriptSourceFile(), "Script node should store .ds source file"
+		);
+	}
+
+	void testNestedScriptLookupByPath() {
+		auto root_dir = fs::FileManager::createRandomVirtualDirectory();
+		auto pkg      = root_dir.createSubDirectory("nested_script_pkg");
+		(void) pkg.createSubFile("nested_script_pkg", "nested_script_pkg.dmf");
+		auto tools       = pkg.createSubDirectory("tools");
+		auto script_file = tools.createSubFile("runner", "runner.ds");
+
+		auto root_module  = ModuleTreeBuilder::create(pkg, base::StrID("nested_script_pkg"));
+		auto tools_module = getSubmoduleIllegal(root_module->getSubmodules(), base::StrID("tools"));
+		auto script_module
+			= getSubmoduleIllegal(getRef(tools_module)->getSubmodules(), base::StrID("runner"));
+
+		assertTrue(
+			getRef(script_module)->isScriptModule(), "Nested .ds file should create script module"
+		);
+
+		auto found = findScriptModuleByScriptSourceFile(
+			root_module->getModuleID(), script_file.getFilePath()
+		);
+		assertTrue(found.has_value(), "Nested script lookup should find the script module");
+		ASSERT_EQUAL(getRef(script_module)->getModuleID(), found.value());
+
+		auto missing_file = tools.createSubFile("missing", "missing.txt");
+		auto missing      = findScriptModuleByScriptSourceFile(
+            root_module->getModuleID(), missing_file.getFilePath()
+        );
+		assertTrue(!missing.has_value(), "Lookup should ignore non-script paths");
+	}
+
+	void testScriptStatementModulesUpdateHashAndPrint() {
+		auto root_dir = fs::FileManager::createRandomVirtualDirectory();
+		auto pkg      = root_dir.createSubDirectory("script_state_pkg");
+		(void) pkg.createSubFile("script_state_pkg", "script_state_pkg.dmf");
+		auto script_file = pkg.createSubFile("entry", "entry.ds");
+
+		auto root_module = ModuleTreeBuilder::create(pkg, base::StrID("script_state_pkg"));
+		auto script_module
+			= getRef(getSubmoduleIllegal(root_module->getSubmodules(), base::StrID("entry")));
+
+		auto statement_a = ModuleTreeBuilder::create();
+		statement_a->setPackageID(base::StrID("script_state_pkg"));
+		statement_a->setName(base::StrID("script_0"));
+		statement_a->setMainSourceFile(fs::FileManager::createRandomVirtualFile("1;"));
+		statement_a->setReplModule(ReplData{});
+		auto statement_ref_a = statement_a->finalize();
+
+		auto statement_b = ModuleTreeBuilder::create();
+		statement_b->setPackageID(base::StrID("script_state_pkg"));
+		statement_b->setName(base::StrID("script_1"));
+		statement_b->setMainSourceFile(fs::FileManager::createRandomVirtualFile("2;"));
+		statement_b->setReplModule(ReplData{});
+		auto statement_ref_b = statement_b->finalize();
+
+		ModuleTreeModifier::setScriptStatementModules(
+			script_module, { statement_ref_a, statement_ref_b }
+		);
+
+		ASSERT_EQUAL(2u, script_module->getScriptStatementModules().size());
+		(void) ModuleTree::getModuleHash(script_module->getModuleID());
+
+		auto printed = printModuleTree(script_module->getModuleID());
+		ASSERT_TRUE(printed.find("[script] entry.ds (2 statement module(s))") != std::string::npos);
+		ASSERT_TRUE(printed.find(script_file.name()) != std::string::npos);
+	}
+
+	void testEmptyDirectoryWithoutScriptsIsDropped() {
+		auto root_dir = fs::FileManager::createRandomVirtualDirectory();
+		auto pkg      = root_dir.createSubDirectory("drop_empty_pkg");
+		(void) pkg.createSubFile("drop_empty_pkg", "drop_empty_pkg.dmf");
+		(void) pkg.createSubDirectory("empty_child");
+
+		auto root_module = ModuleTreeBuilder::create(pkg, base::StrID("drop_empty_pkg"));
+		assertTrue(
+			!hasSubmodule(root_module->getSubmodules().illegalAccess(), base::StrID("empty_child")),
+			"Directories without a main module or script descendants should still be dropped"
+		);
 	}
 };
 

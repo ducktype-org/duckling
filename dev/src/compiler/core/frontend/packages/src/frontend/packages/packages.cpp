@@ -20,6 +20,21 @@
 
 namespace compiler::frontend::packages {
 
+	namespace {
+		/** Package is valid if it has a root `.dmf` or at least one top-level `.ds` script. */
+		bool packageRootHasMainModuleOrScript(compiler::frontend::ModuleID root_module) {
+			const auto& root = *compiler::frontend::getModuleRef(root_module);
+			if (root.hasMainSourceFile()) return true;
+
+			for (const auto& submodule: root.getSubmodules().illegalAccess())
+				if (compiler::frontend::getModuleRef(submodule.illegalAccess().getID())
+				        ->isScriptModule())
+					return true;
+
+			return false;
+		}
+	}  // namespace
+
 	hashing::ComponentHash::HashType PackageInfo::computeHash(base::StrID package_id) {
 		// @TODO: #2668 version and features are not included in the hash yet; they need
 		// dedicated side inputs before generated code can depend on them.
@@ -196,16 +211,16 @@ namespace compiler::frontend::packages {
 			package_info.package_path, package_info.package_id
 		);
 
-		if (!getModuleRef(root_module)->hasMainSourceFile()) {
+		if (!packageRootHasMainModuleOrScript(root_module)) {
 			auto module_name = getModuleRef(root_module)->getName();
 			report(
-				"Package does not have a main source file.",
+				"Package does not have a main source file or script.",
 				base::strConcat(
-					"The main source file is required for package ",
+					"Package ",
 					module_name,
-					". Please add a ",
+					" must contain either a ",
 					module_name,
-					".dmf file to the package module directory."
+					".dmf main module file or at least one .ds script at the package root."
 				),
 				true
 			);

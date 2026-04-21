@@ -12,6 +12,7 @@
 #include <driver_private/standard_library/standard_library.hpp>
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
+#include <frontend/module_tree/queries.hpp>
 #include <global_state/artifacts_location.hpp>
 #include <global_state/backend_options.hpp>
 #include <global_state/global_logger.hpp>
@@ -23,15 +24,16 @@
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <artifacts/artifacts.hpp>
+#include <filesystem/file.hpp>
 #include <lexer/lexer_class.hpp>
 #include <logger/logger.hpp>
+#include <query_framework/entry/query_entry_point.hpp>
 #include <query_framework/external/api.hpp>
 #include <query_framework/module_flags/module_flags.hpp>
 
 #include <iostream>
 
 namespace compiler::driver {
-
 
 	namespace {
 		constinit bool is_initialized = false;
@@ -103,6 +105,20 @@ namespace compiler::driver {
 					had_failure = true;
 			}
 			return had_failure ? base::BAD : base::OK;
+		}
+
+		frontend::packages::PackageInfo makeScriptPackageInfo(frontend::ModuleID root_module) {
+			std::vector<frontend::packages::PackageDependencyInfo> dependencies;
+			dependencies.reserve(STD_PACKAGES_CONFIG.size());
+			for (const auto& config: STD_PACKAGES_CONFIG) {
+				dependencies.push_back(frontend::packages::PackageDependencyInfo{
+					.package_id = base::StrID(config.name),
+					.alias      = base::StrID(config.name),
+				});
+			}
+
+			// version is not relevant for script packages
+			return { root_module, base::StrID("not_supported"), {}, std::move(dependencies) };
 		}
 
 		/**
@@ -184,8 +200,89 @@ namespace compiler::driver {
 			concurrent::worker::setWorkerCount(execution_options.worker_count);
 		}
 
-		void handleScriptContext(const fs::File& script_file) {
-			global_state::setters::setScriptContext(script_file);
+		/**
+		 * @brief Initialize script context for ScriptMode (`duckc run`, `compile_script`).
+		 *
+		 * Scripts always live in a package module tree. When @p package_root is absent, we treat
+		 * the script's parent directory as a script-only package root.
+		 */
+		base::OkBad handleScriptContext(
+			const fs::File& script_file, const base::Optional<fs::FilePath>& package_root
+		) {
+			base::Optional<fs::File> package_root_file;
+			if (package_root.has_value()) {
+				auto normalized_package_root = package_root.value().absolute();
+				if (!normalized_package_root.exists()) {
+					global_state::getGlobalLogger()->log(makeBox<dia_int::PlaceholderError>(
+						"Invalid script package root.",
+						base::strConcat(
+							"Provided --package-root path does not exist or is not a directory: ",
+							normalized_package_root.string()
+						)
+					));
+					return base::BAD;
+				}
+
+				package_root_file.emplace(normalized_package_root);
+				if (!package_root_file->isDirectory()) {
+					global_state::getGlobalLogger()->log(makeBox<dia_int::PlaceholderError>(
+						"Invalid script package root.",
+						base::strConcat(
+							"Provided --package-root path does not exist or is not a directory: ",
+							normalized_package_root.string()
+						)
+					));
+					return base::BAD;
+				}
+			} else {
+				// No explicit package root: treat the script's directory as a script-only package.
+				package_root_file.emplace(script_file.getFilePath().absolute().parentPath());
+				if (!package_root_file->exists() || !package_root_file->isDirectory()) {
+					global_state::getGlobalLogger()->log(makeBox<dia_int::PlaceholderError>(
+						"Invalid script package root.",
+						base::strConcat(
+							"Script parent directory does not exist or is not a directory: ",
+							package_root_file->getFilePath().string()
+						)
+					));
+					return base::BAD;
+				}
+			}
+
+			auto root_module = frontend::createModuleTree(
+				package_root_file.value(), base::StrID(package_root_file->name())
+			);
+			auto root_module_ref
+				= frontend::GetModuleID_Functor::getModRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
+					root_module
+				);
+			if (!root_module_ref->hasMainSourceFile()) {
+				// Script-only package roots lack a main file, but scope queries assume one exists.
+				// We create a synthetic main here, in the future scope lookup might be refactored.
+				auto synthetic_main = fs::FileManager::createRandomVirtualFile("");
+				frontend::ModuleTreeModifier::setMainSourceFile(root_module_ref, synthetic_main);
+			}
+
+			auto script_module = frontend::findScriptModuleByScriptSourceFile(
+				root_module, script_file.getFilePath()
+			);
+			if (!script_module.has_value()) {
+				global_state::getGlobalLogger()->log(makeBox<dia_int::PlaceholderError>(
+					"Script file not found in package module tree.",
+					base::strConcat(
+						"The script must be a .ds file under the package root. script=",
+						script_file.getFilePath().string(),
+						", package_root=",
+						package_root_file->getFilePath().string()
+					)
+				));
+				return base::BAD;
+			}
+
+			global_state::setters::addPackage(makeScriptPackageInfo(root_module));
+
+			global_state::setters::setScriptContext(script_file, script_module.value());
+			return base::OK;
 		}
 	}
 
@@ -265,20 +362,22 @@ namespace compiler::driver {
 				handleExecutionOptions(repl_options.execution_options);
 			}
 			variant_case(CompilerModeOfOperationAndOptions::ScriptMode, script_options) {
-				auto                         repl_packages_info = getScriptStubPackage();
 				options_types::StdLibOptions repl_linking_options{
 					.std_lib_type = options_types::StdLibOptions::DefaultStd{},
 				};
+				std::vector<compiler::frontend::packages::RawPackageInfo> empty_packages_info;
 
 
 				handleDebugOptions(script_options.debug_options);
 				handleExecutionOptions(script_options.execution_options);
 				handleArtifactsOptions(script_options.compilation_artifacts);
 				auto package_success
-					= handlePackageOptions(repl_packages_info, repl_linking_options);
+					= handlePackageOptions(empty_packages_info, repl_linking_options);
 				if (package_success.isBad()) return base::BAD;
 				handleBackendOptions(script_options.backend_options);
-				handleScriptContext(script_options.script_file);
+				if (handleScriptContext(script_options.script_file, script_options.package_root)
+				        .isBad())
+					return base::BAD;
 			}
 			variant_default { CORE_PANIC("Unknown compiler mode of operation"); }
 		}

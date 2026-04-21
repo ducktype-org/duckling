@@ -1,6 +1,8 @@
 #include <driver/repl_utils/repl_statement_helpers.hpp>
+#include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
+#include <frontend/packages/packages.hpp>
 #include <frontend/pst_parser/utility.hpp>
 #include <helios/mangler/mangler.hpp>
 
@@ -25,7 +27,11 @@ public:
 		TESTER_ADD_TEST(testBuildInstructionWrapper);
 		TESTER_ADD_TEST(testBuildWrapperRejectsDefinition);
 		TESTER_ADD_TEST(testMakeExecutableHOUTUnit);
-		TESTER_ADD_TEST(testCreateEphemeralChainedStatementModule);
+		TESTER_ADD_TEST(testCreateSyntheticChainedStatementModule);
+		TESTER_ADD_TEST(testCreateSyntheticChainedStatementModulePreservesPackageID);
+		TESTER_ADD_TEST(testGetRelativeModuleFromScriptChain);
+		TESTER_ADD_TEST(testGetRelativeModuleFromScriptChainWithoutFixtures);
+		TESTER_ADD_TEST(testGetRelativeModuleLegacyAncestorFallbackFromScriptChain);
 		TESTER_ADD_TEST(testGetStatementModuleName);
 		TESTER_ADD_TEST(testGetDefinitionHOUTUnit);
 	}
@@ -33,6 +39,18 @@ public:
 private:
 	static frontend::ModuleID createModule(std::string_view code) {
 		return frontend::createModuleTreeFromContents(code, "test_pkg");
+	}
+
+	static base::Ref<frontend::ModuleTree> createNamedModule(
+		std::string_view package_id,
+		std::string_view module_name,
+		std::string_view source = "fun x() = {}"
+	) {
+		auto builder = frontend::ModuleTreeBuilder::create();
+		builder->setPackageID(base::StrID(std::string(package_id).c_str()));
+		builder->setName(base::StrID(std::string(module_name).c_str()));
+		builder->setMainSourceFile(fs::FileManager::createRandomVirtualFile(source));
+		return builder->finalize();
 	}
 
 	void testClassifySingleExpression() {
@@ -200,8 +218,8 @@ private:
 		});
 	}
 
-	void testCreateEphemeralChainedStatementModule() {
-		auto first_ref = repl::createEphemeralChainedStatementModule("1 + 2;", {}, 7, "repl_");
+	void testCreateSyntheticChainedStatementModule() {
+		auto first_ref = repl::createSyntheticChainedStatementModule("1 + 2;", {}, 7, "repl_");
 		assertTrue(first_ref->isReplModule(), "Chained module should be marked as a REPL module");
 		ASSERT_EQUAL("repl_7", first_ref->getName().strView());
 		assertTrue(
@@ -210,7 +228,7 @@ private:
 		);
 		assertTrue(first_ref->hasMainSourceFile(), "Chained module should have main source file");
 
-		auto second_ref = repl::createEphemeralChainedStatementModule(
+		auto second_ref = repl::createSyntheticChainedStatementModule(
 			"3 + 4;", first_ref->getModuleID(), 8, "script_"
 		);
 		assertTrue(second_ref->isReplModule(), "Second module should be marked as a REPL module");
@@ -220,6 +238,116 @@ private:
 			"Second chained module should have REPL parent"
 		);
 		ASSERT_EQUAL(second_ref->getReplModuleParent().value(), first_ref->getModuleID());
+	}
+
+	void testCreateSyntheticChainedStatementModulePreservesPackageID() {
+		auto root_module     = createModule("fun root_value() = {};");
+		auto root_package_id = getModuleRef(root_module)->getPackage().illegalAccess().getID();
+
+		auto first_ref
+			= repl::createSyntheticChainedStatementModule("1 + 2;", root_module, 7, "script_");
+		ASSERT_EQUAL(root_package_id, first_ref->getPackage().illegalAccess().getID());
+
+		auto second_ref = repl::createSyntheticChainedStatementModule(
+			"3 + 4;", first_ref->getModuleID(), 8, "script_"
+		);
+		ASSERT_EQUAL(
+			first_ref->getPackage().illegalAccess().getID(),
+			second_ref->getPackage().illegalAccess().getID()
+		);
+	}
+
+	void testGetRelativeModuleFromScriptChain() {
+		auto root = compiler::frontend::createModuleTreeWithRandomPackageID(
+			fs::File(path("../../core/frontend/module_tree/tests/test_module"))
+		);
+		auto script_module
+			= repl::createSyntheticChainedStatementModule("import awe as a;", root, 1, "script_");
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			auto direct_child = frontend::getRelativeModule(
+				ctx, script_module->getModuleID(), { base::StrID("awe") }
+			);
+			assertTrue(
+				direct_child.has_value(), "Script chain should resolve direct package children"
+			);
+			ASSERT_EQUAL("awe", frontend::moduleName(direct_child.value()).strView());
+
+			auto nested_child = frontend::getRelativeModule(
+				ctx,
+				script_module->getModuleID(),
+				{ base::StrID("another"), base::StrID("awesome_module") }
+			);
+			assertTrue(
+				nested_child.has_value(), "Script chain should resolve nested package children"
+			);
+			ASSERT_EQUAL("awesome_module", frontend::moduleName(nested_child.value()).strView());
+		});
+	}
+
+	void testGetRelativeModuleFromScriptChainWithoutFixtures() {
+		auto root = createNamedModule("pkg_lookup", "pkgroot");
+
+		auto alpha = createNamedModule("pkg_lookup", "alpha");
+		auto beta  = createNamedModule("pkg_lookup", "beta");
+		auto gamma = createNamedModule("pkg_lookup", "gamma");
+
+		frontend::ModuleTreeModifier::addSubmodule(beta, gamma);
+		frontend::ModuleTreeModifier::addSubmodule(alpha, beta);
+		frontend::ModuleTreeModifier::addSubmodule(root, alpha);
+
+		auto chain_1 = repl::createSyntheticChainedStatementModule(
+			"1 + 2;", root->getModuleID(), 1, "script_"
+		);
+		auto chain_2 = repl::createSyntheticChainedStatementModule(
+			"3 + 4;", chain_1->getModuleID(), 2, "script_"
+		);
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			auto resolved_alpha
+				= frontend::getRelativeModule(ctx, chain_2->getModuleID(), { base::StrID("alpha") });
+			assertTrue(
+				resolved_alpha.has_value(),
+				"Script chain should resolve ancestor child module from in-memory package tree"
+			);
+			ASSERT_EQUAL("alpha", frontend::moduleName(resolved_alpha.value()).strView());
+
+			auto resolved_gamma = frontend::getRelativeModule(
+				ctx,
+				chain_2->getModuleID(),
+				{ base::StrID("alpha"), base::StrID("beta"), base::StrID("gamma") }
+			);
+			assertTrue(
+				resolved_gamma.has_value(),
+				"Script chain should resolve nested descendant path from ancestor child"
+			);
+			ASSERT_EQUAL("gamma", frontend::moduleName(resolved_gamma.value()).strView());
+
+			auto missing = frontend::getRelativeModule(
+				ctx, chain_2->getModuleID(), { base::StrID("does_not_exist") }
+			);
+			assertTrue(!missing.has_value(), "Missing module path should not resolve");
+		});
+	}
+
+	void testGetRelativeModuleLegacyAncestorFallbackFromScriptChain() {
+		auto root = createNamedModule("pkg_lookup_fallback", "pkgroot");
+		auto chain_1
+			= repl::createSyntheticChainedStatementModule("1;", root->getModuleID(), 1, "script_");
+		auto chain_2 = repl::createSyntheticChainedStatementModule(
+			"2;", chain_1->getModuleID(), 2, "script_"
+		);
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			auto resolved_root = frontend::getRelativeModule(
+				ctx, chain_2->getModuleID(), { base::StrID("pkgroot") }
+			);
+			assertTrue(
+				resolved_root.has_value(),
+				"Script chain should resolve an ancestor by name via legacy fallback"
+			);
+			ASSERT_EQUAL(root->getModuleID(), resolved_root.value());
+		});
 	}
 
 	void testGetStatementModuleName() {

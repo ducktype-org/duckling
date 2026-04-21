@@ -28,6 +28,7 @@
 #include <time_stats/time_stats.hpp>
 
 #include <base/except/exceptions.hpp>
+#include <base/extend_cpp/defer.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/misc/int_conv.hpp>
 #include <base/str/str_utils.hpp>
@@ -922,8 +923,10 @@ clah::Clah getClahForMain() {
 
 					auto worker_count = options.getValue<i64>("workers").copyValueOr(1);
 
+					// For now compile_script does not support package imports.
 					auto mode = compiler::driver::CompilerModeOfOperationAndOptions::ScriptMode{
 						.script_file     = script_file,
+						.package_root   = std::nullopt,
 						.backend_options = getBackendOptionsFromClah(options),
 						.compilation_artifacts = {
 							.artifacts_path = options.getValue<fs::FilePath>("artifact-location")
@@ -951,33 +954,38 @@ clah::Clah getClahForMain() {
 	    // Scripts can only be "run" on DVM for now, since compiling with LLVM would produce
 	    // artifacts. To compile to native executable, the compile_script command can be used.
 	    // This may change in the future.
-	    .addSubcommand(clah::Clah("run", "Compile a .ds script file and run it on DVM.")
-	                       .addPositional(clah::FileParser::make("script"))
-	                       .add(clah::ParamBuilder::ofValue(clah::IntParser::make("worker count"))
-	                                .addShortName('w')
-	                                .addLongName("workers")
-	                                .addShortDesc("Worker count.")
-	                                .optional()
-	                                .build())
-	                       .add(getClahStdLibOptions())
-	                       .addCustomVerification(verifyStdLibOptions)
-	                       .setHandler([](const clah::ParsingResult& options) -> int {
-							   using namespace compiler;
+	    .addSubcommand(
+			clah::Clah("run", "Compile a .ds script file and run it on DVM.")
+				.addPositional(clah::FileParser::make("script"))
+				.add(clah::ParamBuilder::ofValue(clah::FilePathParser::make("path"))
+	                     .addShortName('p')
+	                     .addLongName("package-root")
+	                     .addShortDesc("Package root directory used for script import resolution.")
+	                     .optional()
+	                     .build())
+				.add(clah::ParamBuilder::ofValue(clah::IntParser::make("worker count"))
+	                     .addShortName('w')
+	                     .addLongName("workers")
+	                     .addShortDesc("Worker count.")
+	                     .optional()
+	                     .build())
+				.setHandler([](const clah::ParsingResult& options) -> int {
+					using namespace compiler;
 
-							   auto script_file  = options.getPositional<fs::File>(0);
-							   auto worker_count = options.getValue<i64>("workers").copyValueOr(1);
-							   // duckc run doesn't produce any artifacts for now, but this may be
-		                       // changed later by for example adding option to save compiled
-		                       // bytecode. Also, ScriptMode requires artifacts path, maybe this
-		                       // will be refactored later.
-							   auto run_temp_artifacts_path
-								   = fs::FileManager::createRandomTempDirectory().getFilePath();
+					auto script_file  = options.getPositional<fs::File>(0);
+					auto worker_count = options.getValue<i64>("workers").copyValueOr(1);
+					// duckc run doesn't produce any artifacts for now, but this may be
+		            // changed later by for example adding option to save compiled
+		            // bytecode.
+					auto run_temp_artifacts_dir = fs::FileManager::createRandomTempDirectory();
+					defer({ (void) fs::FileManager::deleteFolder(run_temp_artifacts_dir, true); });
 
-							   auto mode = compiler::driver::CompilerModeOfOperationAndOptions::ScriptMode{
+					auto mode = compiler::driver::CompilerModeOfOperationAndOptions::ScriptMode{
 						.script_file     = script_file,
+						.package_root   = options.getValue<fs::FilePath>("package-root"),
 						.backend_options = {}, // only dvm for now.
 						.compilation_artifacts = {
-							.artifacts_path = run_temp_artifacts_path,
+							.artifacts_path = run_temp_artifacts_dir.getFilePath(),
 						},
 						.debug_options     = debug_options::getDebugOptionsFromClah(options),
 						.execution_options = {
@@ -985,21 +993,22 @@ clah::Clah getClahForMain() {
 						},
 					};
 
-							   auto init_result = compiler::driver::initializeTheCompiler(mode);
-							   if (init_result.status().isBad()) {
-								   compiler::driver::exit();
-								   return 1;
-							   }
+					auto init_result = compiler::driver::initializeTheCompiler(mode);
+					if (init_result.status().isBad()) {
+						compiler::driver::exit();
+						return 1;
+					}
 
-							   auto run_result = driver::runScriptOnDVM();
+					auto run_result = driver::runScriptOnDVM();
 
-							   compiler::driver::exit();
-							   if (!run_result.has_value()) {
-								   std::cerr << "Error: " << run_result.error() << "\n";
-								   return 1;
-							   }
-							   return run_result->exit_code;
-						   }))
+					compiler::driver::exit();
+					if (!run_result.has_value()) {
+						std::cerr << "Error: " << run_result.error() << "\n";
+						return 1;
+					}
+					return run_result->exit_code;
+				})
+		)
 	    .addSubcommand(
 			clah::Clah("repl", "Start an interactive REPL session")
 				.add(clah::ParamBuilder::ofFlag()

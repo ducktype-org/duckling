@@ -1,0 +1,7 @@
+import util.*;
+import alpha.*;
+import alpha.beta.*;
+
+builtin_output_i64(util_value());
+builtin_output_i64(alpha_value());
+builtin_output_i64(beta_value());

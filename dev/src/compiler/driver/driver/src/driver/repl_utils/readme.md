@@ -7,7 +7,7 @@ For REPL session overview, see: [REPL Module](../../../../../repl/readme.md)
 The primary components in this flow are:
 
 1. **[`repl_split_helpers`](./repl_split_helpers.hpp):** Splits raw input into top-level statement source slices in source order.
-2. **[`repl_statement_helpers`](./repl_statement_helpers.hpp):** Creates ephemeral chained modules, classifies single statements, and builds executable wrappers for expression/instruction statements.
+2. **[`repl_statement_helpers`](./repl_statement_helpers.hpp):** Creates synthetic chained modules, classifies single statements, and builds executable wrappers for expression/instruction statements.
 3. **[`repl_dvm_helpers`](./repl_dvm_helpers.hpp):** Compiles HOUT to DVM code, loads code into a running VM process, and captures expression return values for supported types.
 4. **[`script_helpers`](./script_helpers.hpp):** Script-specific helpers for stable synthetic script module IDs and merging per-statement LIR chunks.
 
@@ -28,10 +28,10 @@ The same helper stack also powers `.ds` script handling.
 
 Script execution reuses the REPL-style statement chain, but treats the full file as a single compilation input:
 
-1. Driver initialization stores the active script in `ScriptContext`.
-2. If a package root is provided, the first synthetic script statement is anchored into that package tree so the script can resolve modules from the same package.
+1. Driver initialization stores the active script in `ScriptContext` (and the package script `ModuleID` when using `--package-root`).
+2. Package scripts are discovered as `.ds` nodes in the package `ModuleTree`; the first statement is anchored to the script node's parent `.dmf` module for import resolution.
 3. The script source is split into top-level statements using the same statement splitter as REPL input.
-4. Each statement is compiled in source order into an ephemeral chained module.
+4. Each statement is compiled in source order into a synthetic REPL-style chained module (stored on the script tree node, or held only for the standalone script compilation).
 5. Definitions are lowered directly from module HOUT.
 6. Executable statements are wrapped, lowered, and sequenced under a synthetic script `main`.
 7. When running on DVM, imported modules are compiled and loaded before the script bytecode, so dependencies are available when the script starts.
