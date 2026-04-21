@@ -1,9 +1,9 @@
 //! Managing all dependencies of the root package.
 use std::collections::HashSet;
 
+use crate::quackpack::core::Dependency;
 use crate::quackpack::schemas::registry;
-use crate::{QuackError, QuackResult, qp_bail};
-use crate::{StrId, quackpack::core::Dependency};
+use crate::{QuackError, QuackResult, StrId, qp_bail};
 
 #[derive(Clone, Debug)]
 /// Map of all of the dependencies.

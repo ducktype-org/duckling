@@ -1,12 +1,12 @@
-function main { i64, ptr_argv } -> i64 {
-    init_lany_type str_ptr, ptr_string;
-    init_lany_type ix, i64;
-    mov_l64_imm ix, 0;
-    dynTableLoad_lany_lptr_l64 str_ptr, arg1, ix;
-    init_lany_type builtin_arg, ptr_string;
-    mov_lptr_lptr builtin_arg, str_ptr;
-    call_builtinfunc builtin_strOutput_lptr;
-    strOutput_lptr str_ptr;
+function main { i64, ptr_argv } -> { i64 } {
+    init_pany_type str_ptr, ptr_string;
+    init_pany_type ix, i64;
+    mov_p64_imm ix, 0;
+    dynTableLoad_pany_pptr_p64 str_ptr, arg1, ix;
+    init_pany_type builtin_arg, ptr_string;
+    mov_pptr_pptr builtin_arg, str_ptr;
+    call_builtinfunc builtin_strOutput_pptr;
+    strOutput_pptr str_ptr;
     deinit;
     deinit;
     deinit;

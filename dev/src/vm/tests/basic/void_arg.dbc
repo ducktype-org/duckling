@@ -1,7 +1,0 @@
-function foo { void } -> void {
-    ret;
-}
-
-function main { i64, ptr_argv } -> i64 {
-    ret;
-}

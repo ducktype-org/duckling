@@ -3,6 +3,7 @@
 #include "dvm_value.hpp"
 #include "function_lowering_context.hpp"
 #include "program_lowering_context.hpp"
+#include "tsl/type_layout.hpp"
 
 #include <ctv/ctv.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
@@ -73,7 +74,7 @@ namespace compiler::backend_vm::internal {
 		const lir::FunctionLiteral& func_literal, ProgramLoweringContext& program_context
 	) {
 		base::Optional<vm::code::TypeOfData> called_result_type = {};
-		if (func_literal.return_type_layout->getSize() != Bits{ 0 })
+		if (!func_literal.return_type_layout->is<tsl::EmptyTypeLayout>())
 			called_result_type
 				= program_context.lowerAndKeepTslType(func_literal.return_type_layout);
 
@@ -96,9 +97,15 @@ namespace compiler::backend_vm::internal {
 	) {
 		const auto& ext_func = program_context.getExternCFunction(ext_func_name);
 
+		CORE_ASSERT(
+			ext_func.signature.result_types.size() <= 1, "Functions should return one value at most"
+		);
+
 		base::Optional<vm::code::TypeOfData> called_result_type = {};
-		if (ext_func.signature.result_type.str != base::StrID("void"))
-			called_result_type = vm::code::getBuiltinTypeByName(ext_func.signature.result_type);
+		if (ext_func.signature.result_types.size()) {
+			auto reslt         = ext_func.signature.result_types.at(0);
+			called_result_type = vm::code::getBuiltinTypeByName(reslt).value();
+		}
 
 		std::vector<vm::code::TypeOfData> param_types
 			= ext_func.signature.parameters | std::views::transform([&](const auto& type_name) {

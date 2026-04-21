@@ -2,9 +2,9 @@
 
 use tracing::debug;
 
-use crate::quackpack::core::{FeatureName, compile::MISSING_DEPENDENCY_IN_MANIFEST_MESSAGE};
-
 use super::*;
+use crate::quackpack::core::FeatureName;
+use crate::quackpack::core::compile::MISSING_DEPENDENCY_IN_MANIFEST_MESSAGE;
 
 impl DependencyDag {
     /// Same as [`EarlyDag::remove_disabled_dependencies`].

@@ -136,14 +136,16 @@ namespace vm::code {
 	 * likely to change.
 	 */
 	struct FunctionType final: ElementBase {
-		FunctionType(base::StrID name, std::vector<base::StrID> parameters, base::StrID result):
+		FunctionType(
+			base::StrID name, std::vector<base::StrID> parameters, std::vector<base::StrID> result
+		):
 			  name(name),
 			  parameters(std::move(parameters)),
-			  result(result) {}
+			  result(std::move(result)) {}
 
 		base::StrID              name;
 		std::vector<base::StrID> parameters;
-		base::StrID              result;
+		std::vector<base::StrID> result;
 
 		bool operator==(const FunctionType& other) const {
 			return name == other.name && parameters == other.parameters && result == other.result;

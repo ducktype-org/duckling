@@ -56,18 +56,19 @@ namespace vm::loader::compiler {
 		// clang-format off
 
 		DEFINE_LOWER_ARGUMENT_IMPL_FOR_FAMILY(
-			low::opargs::LocalStackArgumentType,
-			return static_cast<u64>(ctx.locals_map.at(opcode_arg.var_name).offset);
+			low::opargs::PlaceDataArgumentType,
+			if(auto maybe_val = ctx.locals_map.atMaybe(opcode_arg.var_name)) {
+				return maybe_val.value()->offset;
+			}
+			return compiler.low_program.getGlobals().at(opcode_arg.var_name)->global_buffer_offset | (1ULL << 63);
 		);
 
 		DEFINE_LOWER_ARGUMENT_IMPL_FOR_FAMILY(
-			low::opargs::GlobalArgumentType,
-			return u64(usize(*compiler.low_program.getGlobals().idOf(opcode_arg.global_data_name)));
-		);
-
-		DEFINE_LOWER_ARGUMENT_IMPL_FOR_FAMILY(
-			low::opargs::LocalBlockStackArgumentType,
-			return static_cast<u64>(ctx.locals_map.at(opcode_arg.var_name).block_idx);
+			low::opargs::PlaceBlockArgumentType,
+			if(auto maybe_val = ctx.locals_map.atMaybe(opcode_arg.var_name)) {
+				return maybe_val.value()->block_idx;
+			}
+			return compiler.low_program.getGlobals().at(opcode_arg.var_name)->global_block_idx | (1ULL << 63);
 		);
 
 		DEFINE_LOWER_ARGUMENT_IMPL(
@@ -169,7 +170,7 @@ namespace vm::loader::compiler {
 		usize                    max_stack_size  = 0;
 		usize                    max_block_count = 0;
 
-		auto push = [&](opargs::StackLocalAny local, opargs::Type type) {
+		auto push = [&](opargs::PlaceAny local, opargs::Type type) {
 			if_opt_some(result.atMaybe(local.var_name), entry) {
 				if (entry->offset != curr_stack_size) {
 					CORE_PANIC(
@@ -185,7 +186,6 @@ namespace vm::loader::compiler {
 				{ .offset = curr_stack_size, .block_idx = type_size_stack.size(), .type = type_ref }
 			);
 			auto type_size = type_ref->getSize().asInt();
-			if (type.type_name == "void") return;
 			type_size_stack.push_back(type_size);
 			curr_stack_size += type_size;
 			max_stack_size  = std::max(max_stack_size, curr_stack_size);
@@ -226,8 +226,10 @@ namespace vm::loader::compiler {
 		}
 
 		code::FuncSignature func_signature = ctx.function.signature;
-		push(base::StrID("ret_val"), func_signature.result_type.str);
-		for (auto [idx, param_type]: std::views::enumerate(func_signature.parameters))
+		using namespace std::views;
+		for (auto [idx, ret_type]: enumerate(func_signature.result_types))
+			push(base::StrID(base::strConcat("ret", idx).c_str()), ret_type.str);
+		for (auto [idx, param_type]: enumerate(func_signature.parameters))
 			push(base::StrID(base::strConcat("arg", idx).c_str()), param_type.str);
 		// instruction index, stack state, stack size
 		std::vector<std::tuple<usize, decltype(type_size_stack), usize>> dfs_stack{
@@ -246,7 +248,7 @@ namespace vm::loader::compiler {
 
 			instr_match(ctx.function.body[index]) {
 				using namespace code::instructions;
-				instr_case(Op_init_lany_type, instr) {
+				instr_case(Op_init_pany_type, instr) {
 					push(instr.var, instr.type);
 					index++;
 				}
@@ -297,7 +299,7 @@ namespace vm::loader::compiler {
 					}
 					index++;
 				}
-				instr_case(Op_virtual_call_lptr_method, instr) {
+				instr_case(Op_virtual_call_pptr_method, instr) {
 					for (usize i = 0; i < *seek_method_param_count(instr.method.method_name); i++)
 						pop();
 					index++;
@@ -338,18 +340,23 @@ namespace vm::loader::compiler {
 
 			low::MicroBytecode bytecode = lowerInstructions(ctx);
 
+			u64                   ret_type_sum = 0;
+			std::vector<TypeCRef> result_types = {};
+			for (auto& ret: signature.result_types) {
+				ret_type_sum += low_program.types->at(ret)->getSize().asInt();
+				result_types.emplace_back(low_program.types->at(ret));
+			}
+
 			low_program.functions.insert(
 				low::LowFuncData{ .name              = function.name,
 			                      .bc                = std::move(bytecode),
 			                      .local_stack_size  = ctx.local_stack_size,
 			                      .local_block_count = ctx.local_block_count,
 			                      .arg_size          = parameters_size,
-			                      .ret_size
-			                      = low_program.types->at(signature.result_type)->getSize().asInt(),
-			                      .parameters  = std::move(parameters),
-			                      .result_type = low_program.types->at(signature.result_type) },
+			                      .ret_size          = ret_type_sum,
+			                      .parameters        = std::move(parameters),
+			                      .result_types      = std::move(result_types) },
 				function.name
-
 			);
 		}
 	}
@@ -361,12 +368,20 @@ namespace vm::loader::compiler {
 			if (global.dtor_name.has_value()) dtor_name = global.dtor_name->str;
 
 			low::LowGlobalData data{
-				.type      = low_program.types->at(global.type),
-				.ctor_name = ctor_name,
-				.dtor_name = dtor_name,
+				.type                 = low_program.types->at(global.type),
+				.ctor_name            = ctor_name,
+				.dtor_name            = dtor_name,
+				.global_buffer_offset = program_ctx.global_buffer_size.asInt(),
+				.global_block_idx     = program_ctx.global_count,
 			};
 			low_program.global_data.insert(data, global.name);
+
+			program_ctx.global_count += 1;
+			program_ctx.global_buffer_size += Bytes(data.type->getSize().asInt());
 		}
+
+		low_program.global_buffer_size = program_ctx.global_buffer_size;
+		low_program.global_count       = program_ctx.global_count;
 	}
 
 	void Compiler::compileNewTypes(const code::TypeContext& ctx) {
@@ -408,13 +423,20 @@ namespace vm::loader::compiler {
 				0,
 				std::plus()
 			);
+
+			std::vector<TypeCRef> rets = new_func.signature.result_types
+			                           | std::views::transform([this](const auto& param_name) {
+											 return low_program.types->at(param_name);
+										 })
+			                           | std::ranges::to<std::vector<TypeCRef>>();
+
 			low_program.extern_c_functions.insert(
 				low::LowExternCFunction{
 					.name               = new_func.name,
 					.function_pointer   = new_func.function_pointer,
 					.parameter_size_sum = param_size_sum,
 					.parameters         = std::move(params),
-					.result_type        = low_program.types->at(new_func.signature.result_type),
+					.result_types       = std::move(rets),
 				},
 				new_func.name
 			);

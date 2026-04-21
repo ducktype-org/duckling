@@ -14,6 +14,8 @@
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 
+#include <ranges>
+
 using namespace compiler::backend_vm::internal;
 
 #define INVALID_CASE(tp, reason)                                                    \
@@ -228,7 +230,7 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 				DVMLocal field_ptr_tmp = pushTempLocal(ptr_to_field_type, "field_addr");
 
 				// Emit the pointer move instruction. Based on the `current_place` type,
-				// `structLea_lptr_lptr_field` or `structLea_lptr_lste_field` will be picked.
+				// `structLea_pptr_pptr_field` or `structLea_pptr_pste_field` will be picked.
 				pushInstruction({ vm::code::builders::OpKind::structLea,
 				                  field_ptr_tmp,
 				                  current_place,
@@ -338,8 +340,11 @@ vm::code::Function compiler::backend_vm::internal::FunctionLoweringContext::fini
 	function.name = function_name;
 	for (const auto& param_type: function_parameter_types)
 		function.signature.parameters.emplace_back(vm::code::typeName(param_type));
-	function.signature.result_type = vm::code::Identifier(vm::code::typeName(function_return_type));
-	function.body                  = std::move(function_body);
+	function.signature.result_types = {};
+	// @TODO: #2499 Make lowerAndKeepTslType return an optional and remove the void type from here
+	if (auto type_name = vm::code::typeName(function_return_type); type_name != "void")
+		function.signature.result_types.emplace_back(type_name);
+	function.body = std::move(function_body);
 
 	if_opt_some(fun_di_builder_opt, builder) { builder.end(); }
 
@@ -355,7 +360,7 @@ DVMLocal FunctionLoweringContext::getFunctionReturnValueLocal() {
 		);
 	}
 	return DVMLocal{
-		.name = base::StrID("ret_val"),
+		.name = base::StrID("ret0"),
 		.type = function_return_type,
 	};
 }

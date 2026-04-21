@@ -4,9 +4,9 @@
 #include <query_framework/entry/with_context_do.hpp>
 #include <tester/tester.hpp>
 
-class ExtractSingleTopLevelStatementTest: public tester::TestSuite {
+class ExtractSingleDefinitionTest: public tester::TestSuite {
 #undef TESTER_CLASS
-#define TESTER_CLASS ExtractSingleTopLevelStatementTest
+#define TESTER_CLASS ExtractSingleDefinitionTest
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
@@ -27,7 +27,7 @@ private:
 
 		base::Optional<pst::AccessLocked<pst::Stmt>> result;
 		query::utils::withContextDo([&](query::Context& ctx) {
-			result = pst::extractSingleTopLevelStatement(ctx, pst.getRootElement());
+			result = pst::extractSingleDefinition(ctx, pst.getRootElement());
 		});
 		return result;
 	}
@@ -131,7 +131,7 @@ private:
 	}
 
 public:
-	~ExtractSingleTopLevelStatementTest() override = default;
+	~ExtractSingleDefinitionTest() override = default;
 };
 
 TESTER_COMMON_MAIN("/src/compiler/core/frontend/pst_parser/tests/");

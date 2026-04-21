@@ -74,9 +74,9 @@ private:
 	static constexpr std::string_view FORMAT_GLOBAL_OUTPUT_FUNC
 		= "type fun: step_{0} {{}} void\n"
 		  "function step_{0} {{\n"
-		  "     init_lany_type x, i64;\n"
-		  "     mov_l64_g64 x, {1};\n"
-		  "     output_l64 x;\n"
+		  "     init_pany_type x, i64;\n"
+		  "     mov_p64_p64 x, {1};\n"
+		  "     output_p64 x;\n"
 		  "     deinit;\n"
 		  "     ret;\n"
 		  "}}";
