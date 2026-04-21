@@ -1,11 +1,12 @@
 #include "../dvm_value.hpp"
-#include "function_lowering_context.hpp"
+#include "dvm_operation.hpp"
 #include "instruction_lowerer.hpp"
-#include "operations/dvm_operation.hpp"
 
-#include "base/collections/optional.hpp"
+#include <function_lowering_context.hpp>
 
-#include "string_id/string_id.hpp"
+#include <base/collections/optional.hpp>
+
+#include <string_id/string_id.hpp>
 
 #include <deque>
 

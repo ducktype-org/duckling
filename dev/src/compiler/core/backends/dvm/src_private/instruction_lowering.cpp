@@ -7,9 +7,6 @@
 #include <lir/lir_structure/lir_structure.hpp>
 #include <program_lowering_context.hpp>
 
-#include "base/except/exceptions.hpp"
-#include "base/extend_cpp/variant_match.hpp"
-
 #include <logger/logger.hpp>
 
 #include <vm/bytecode/builders/instruction_builder.hpp>

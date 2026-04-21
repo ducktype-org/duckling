@@ -1,18 +1,14 @@
 #include "dvm_operation.hpp"
 
-#include "dvm_value.hpp"
-#include "function_lowering_context.hpp"
-#include "program_lowering_context.hpp"
-#include "tsl/type_layout.hpp"
+#include "../dvm_value.hpp"
+#include "../function_lowering_context.hpp"
+#include "../program_lowering_context.hpp"
 
 #include <ctv/ctv.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
+#include <tsl/type_layout.hpp>
 
-#include "base/collections/optional.hpp"
-#include "base/except/exceptions.hpp"
-#include "base/extend_cpp/stringifyable_enum.hpp"
-
-#include "vm/bytecode/builtin_types.hpp"
+#include <base/collections/optional.hpp>
 
 #include <ranges>
 

@@ -1,11 +1,10 @@
 #pragma once
 
 #include "../dvm_value.hpp"
-#include "lir/lir_structure/lir_structure.hpp"
 
 #include <ctv/ctv.hpp>
 
-#include "base/collections/optional.hpp"
+#include <base/collections/optional.hpp>
 
 #include <vm/bytecode/builders/instruction_builder.hpp>
 

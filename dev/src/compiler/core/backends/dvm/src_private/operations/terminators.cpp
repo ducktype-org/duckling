@@ -1,8 +1,8 @@
 #include "../dvm_value.hpp"
-#include "function_lowering_context.hpp"
+#include "../function_lowering_context.hpp"
 #include "instruction_lowerer.hpp"
 
-#include "base/collections/optional.hpp"
+#include <base/collections/optional.hpp>
 
 namespace compiler::backend_vm::internal {
 	using namespace vm::code;

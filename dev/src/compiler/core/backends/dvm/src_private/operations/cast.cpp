@@ -1,6 +1,6 @@
-#include "function_lowering_context.hpp"
+#include "../function_lowering_context.hpp"
+#include "../program_lowering_context.hpp"
 #include "instruction_lowerer.hpp"
-#include "program_lowering_context.hpp"
 
 namespace {
 	using namespace compiler;
