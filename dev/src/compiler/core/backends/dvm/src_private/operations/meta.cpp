@@ -1,4 +1,4 @@
-#include "dvm_value.hpp"
+#include "../dvm_value.hpp"
 #include "function_lowering_context.hpp"
 #include "instruction_lowerer.hpp"
 #include "operations/dvm_operation.hpp"

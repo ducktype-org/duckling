@@ -1,10 +1,10 @@
-#include "operations/dvm_operation.hpp"
+#include "dvm_operation.hpp"
 
-#include "ctv/ctv.hpp"
 #include "dvm_value.hpp"
 #include "function_lowering_context.hpp"
 #include "program_lowering_context.hpp"
 
+#include <ctv/ctv.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 
 #include "base/collections/optional.hpp"
@@ -23,6 +23,48 @@ namespace {
 		    || op == lir::Operation::MetaCreateConst || op == lir::Operation::MetaCreateTuple
 		    || op == lir::Operation::MetaCreateVariant || op == lir::Operation::MetaEq
 		    || op == lir::Operation::MetaNeq;
+	}
+
+	vm::code::builders::OpKind lirOperationToDVMOpKind(const lir::Operation& op) {
+		using enum lir::Operation;
+		using namespace vm::code::builders;
+		// clang-format off
+		switch (op) {
+		case IntegerNeg: return OpKind::neg;
+		case FloatNeg:   return OpKind::fneg;
+		case BooleanNot: return OpKind::log_not;
+		case IntegerAdd:  return OpKind::add;
+		case IntegerSub:  return OpKind::sub;
+		case IntegerMul:  return OpKind::mul;
+		case IntegerSDiv: return OpKind::div;
+		case IntegerSMod: return OpKind::mod;
+		case IntegerUDiv: return OpKind::udiv;
+		case IntegerUMod: return OpKind::umod;
+		case FloatAdd:    return OpKind::fadd;
+		case FloatSub:    return OpKind::fsub;
+		case FloatMul:    return OpKind::fmul;
+		case FloatDiv:    return OpKind::fdiv;
+		case BooleanAnd:  return OpKind::log_and;
+		case BooleanOr:   return OpKind::log_or;
+		case IntegerEq:    return OpKind::cmpEq;
+		case IntegerNeq:   return OpKind::cmpNeq;
+		case IntegerSLt:   return OpKind::cmpLt;
+		case IntegerSLteq: return OpKind::cmpLe;
+		case IntegerSGt:   return OpKind::cmpGt;
+		case IntegerSGteq: return OpKind::cmpGe;
+		case IntegerULt:   return OpKind::ucmpLt;
+		case IntegerULteq: return OpKind::ucmpLe;
+		case IntegerUGt:   return OpKind::ucmpGt;
+		case IntegerUGteq: return OpKind::ucmpGe;
+		case FloatLt:      return OpKind::fcmpLt;
+		case FloatGt:      return OpKind::fcmpGt;
+		case FloatLteq:    return OpKind::fcmpLe;
+		case FloatGteq:    return OpKind::fcmpGe;
+		case FloatEq:      return OpKind::fcmpEq;
+		case FloatNeq:     return OpKind::fcmpNeq;
+		default:         CORE_UNREACHABLE();
+		}
+		// clang-format on
 	}
 }
 
@@ -102,52 +144,11 @@ namespace compiler::backend_vm::internal {
 			return {};
 		};
 
-		auto map_lir_op_to_dvm = [](lir::Operation op) {
-			// clang-format off
-            switch (op) {
-            case IntegerNeg: return OpKind::neg;
-            case FloatNeg:   return OpKind::fneg;
-            case BooleanNot: return OpKind::log_not;
-			case IntegerAdd:  return OpKind::add;
-            case IntegerSub:  return OpKind::sub;
-            case IntegerMul:  return OpKind::mul;
-            case IntegerSDiv: return OpKind::div;
-            case IntegerSMod: return OpKind::mod;
-            case IntegerUDiv: return OpKind::udiv;
-            case IntegerUMod: return OpKind::umod;
-            case FloatAdd:    return OpKind::fadd;
-            case FloatSub:    return OpKind::fsub;
-            case FloatMul:    return OpKind::fmul;
-            case FloatDiv:    return OpKind::fdiv;
-            case BooleanAnd:  return OpKind::log_and;
-            case BooleanOr:   return OpKind::log_or;
-            case IntegerEq:    return OpKind::cmpEq;
-            case IntegerNeq:   return OpKind::cmpNeq;
-            case IntegerSLt:   return OpKind::cmpLt;
-            case IntegerSLteq: return OpKind::cmpLe;
-            case IntegerSGt:   return OpKind::cmpGt;
-            case IntegerSGteq: return OpKind::cmpGe;
-            case IntegerULt:   return OpKind::ucmpLt;
-            case IntegerULteq: return OpKind::ucmpLe;
-            case IntegerUGt:   return OpKind::ucmpGt;
-            case IntegerUGteq: return OpKind::ucmpGe;
-            case FloatLt:      return OpKind::fcmpLt;
-            case FloatGt:      return OpKind::fcmpGt;
-            case FloatLteq:    return OpKind::fcmpLe;
-            case FloatGteq:    return OpKind::fcmpGe;
-            case FloatEq:      return OpKind::fcmpEq;
-            case FloatNeq:     return OpKind::fcmpNeq;
-            default:         CORE_UNREACHABLE();
-            }
-			// clang-format on
-		};
-
-
 		if (isMetaTypeOperation(operation))
 			return MetaOperation{
 				.meta_op = operation,
 				.args    = lower_all_args(),
-				.dest    = lower_dest(),
+				.dest    = lower_opt_dest(),
 			};
 
 
@@ -167,7 +168,7 @@ namespace compiler::backend_vm::internal {
 			return CastOperation{
 				.cast_params = *cast_params,
 				.src         = lower_arg(instr.arguments[0]),
-				.dest        = lower_dest(),
+				.dest        = lower_opt_dest(),
 			};
 		}
 		case Call: {
@@ -204,10 +205,9 @@ namespace compiler::backend_vm::internal {
 			// address is the pointer returned by `resolveLirPlace`.
 			return AddressOfOperation{
 				.src  = ctx.resolveLirPlace(instr.arguments[0].get<lir::LIRPlace>()),
-				.dest = lower_dest(),
+				.dest = lower_opt_dest(),
 			};
 		}
-		// TODOP: Special operation?
 		case Assign: {
 			CORE_ASSERT(
 				instr.arguments.size() == 1,
@@ -230,9 +230,9 @@ namespace compiler::backend_vm::internal {
 				instr.arguments.size()
 			);
 			return UnaryOperation{
-				.op   = map_lir_op_to_dvm(operation),
+				.op   = lirOperationToDVMOpKind(operation),
 				.src  = lower_arg(instr.arguments[0]),
-				.dest = lower_dest(),
+				.dest = lower_opt_dest(),
 			};
 		}
 
@@ -256,10 +256,10 @@ namespace compiler::backend_vm::internal {
 				instr.arguments.size()
 			);
 			return BinaryOperation{
-				.op   = map_lir_op_to_dvm(operation),
+				.op   = lirOperationToDVMOpKind(operation),
 				.lhs  = lower_arg(instr.arguments[0]),
 				.rhs  = lower_arg(instr.arguments[1]),
-				.dest = lower_dest(),
+				.dest = lower_opt_dest(),
 			};
 		}
 
@@ -286,10 +286,10 @@ namespace compiler::backend_vm::internal {
 				instr.arguments.size()
 			);
 			return ComparisonOperation{
-				.op        = map_lir_op_to_dvm(operation),
+				.op        = lirOperationToDVMOpKind(operation),
 				.lhs       = lower_arg(instr.arguments[0]),
 				.rhs       = lower_arg(instr.arguments[1]),
-				.dest      = lower_dest(),
+				.dest      = lower_opt_dest(),
 				.lhs_const = get_opt_ctv(instr.arguments[0]),
 				.rhs_const = get_opt_ctv(instr.arguments[1]),
 			};

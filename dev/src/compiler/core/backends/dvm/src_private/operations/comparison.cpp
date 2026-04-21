@@ -107,13 +107,11 @@ namespace {
 }
 
 namespace compiler::backend_vm::internal {
-	void InstructionLowerer::lower(ComparisonOperation& op  // TODOP: Make this const.
-	) {
+	void InstructionLowerer::lower(ComparisonOperation& op) {
 		OpKind operation = op.op;
 
 		DVMValue result_val = [&]() -> DVMValue {
-			// Shortcut for comparing immediates to keep the same semantics as comp-time.
-			// TODOP: Expand comment.
+			// Shortcut for comparing immediates to keep the same semantics as comp-time comparisons.
 			if (op.lhs.is<DVMImmediate>() && op.rhs.is<DVMImmediate>()) {
 				bool const_result
 					= compTimeEvaluateComparison(operation, *op.lhs_const, *op.rhs_const);

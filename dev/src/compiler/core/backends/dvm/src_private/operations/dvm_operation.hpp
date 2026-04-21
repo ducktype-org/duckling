@@ -1,8 +1,9 @@
 #pragma once
 
-#include "ctv/ctv.hpp"
-#include "dvm_value.hpp"
+#include "../dvm_value.hpp"
 #include "lir/lir_structure/lir_structure.hpp"
+
+#include <ctv/ctv.hpp>
 
 #include "base/collections/optional.hpp"
 
@@ -91,7 +92,8 @@ namespace compiler::backend_vm::internal {
 		DVMValue                 lhs;
 		DVMValue                 rhs;
 		base::Optional<DVMPlace> dest;
-		// TODOP: Ugly
+		// 'lhs_const' and `rhs_const` are needed for lowering comparisons between two immediates to
+		// keep the same semantics as in comp-time evaluation.
 		base::Optional<ctv::CompileTimeValue> lhs_const;
 		base::Optional<ctv::CompileTimeValue> rhs_const;
 	};
@@ -146,7 +148,7 @@ namespace compiler::backend_vm::internal {
 	 * @brief Represents a return terminator.
 	 */
 	struct ReturnOperation {
-		base::Optional<DVMValue> value;  /// Empty optional on void returns.
+		base::Optional<DVMValue> value;  ///< Empty optional on void returns.
 	};
 
 	/**

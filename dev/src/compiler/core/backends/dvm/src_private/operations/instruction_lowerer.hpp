@@ -1,20 +1,21 @@
 #pragma once
 
-#include "operations/dvm_operation.hpp"
+#include "dvm_operation.hpp"
 
 namespace compiler::backend_vm::internal {
-
 	class FunctionLoweringContext;
 
 	/**
-	 * @brief A stateful visitor that lowers a DVMOperation into a series of
+	 * @brief Visitor that lowers a DVMOperation into a series of
 	 * DVM instructions within a given FunctionLoweringContext.
+	 *
+	 * @note This is a class for all FunctionLoweringContext methods to be usable when lowering the
+	 * instructions and friend only one class.
 	 */
 	class InstructionLowerer {
 	public:
 		explicit InstructionLowerer(Ref<FunctionLoweringContext> ctx): ctx(ctx) {}
 
-		// Normal instructions
 		void lower(const NoOpOperation&) {}
 
 		void lower(const UnaryOperation& op);
