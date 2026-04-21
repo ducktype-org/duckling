@@ -12,8 +12,13 @@ namespace global_state {
 
 	const std::vector<PackageInfo>& getPackages() { return packages; }
 
-	const PackageInfo& getCurrentPackageInfo(compiler::frontend::ModuleID module_id) {
-		CORE_ASSERT(!packages.empty(), "No packages have been registered!");
+	base::Optional<PackageInfo> getPackageInfoForRootModule(compiler::frontend::ModuleID module_id) {
+		CORE_ASSERT(
+			!compiler::frontend::getModuleRef(module_id)->getParentModule().has_value(),
+			"Expected root package module in getPackageInfoForRootModule, but module has parent"
+		);
+
+		if (packages.empty()) return {};
 
 		auto module_package_id = compiler::frontend::getModuleRef(module_id)->getPackageID();
 		for (const auto& package_info: packages) {
@@ -22,8 +27,7 @@ namespace global_state {
 			if (package_id == module_package_id) return package_info;
 		}
 
-		CORE_ASSERT_STRONG(false, "No top-level package info found for provided module id");
-		return packages.front();
+		return {};
 	}
 
 	std::vector<compiler::frontend::ModuleID> getAllPackagesWithDependenciesRootModulesSortedDeduplicated(
@@ -36,19 +40,13 @@ namespace global_state {
 			);
 		}
 
-		std::sort(module_ids.begin(), module_ids.end(), [](auto lhs, auto rhs) {
+		std::ranges::sort(module_ids, [](auto lhs, auto rhs) {
 			return lhs.queryUnstablePerfectHash() < rhs.queryUnstablePerfectHash();
 		});
-		module_ids.erase(
-			std::unique(
-				module_ids.begin(),
-				module_ids.end(),
-				[](auto lhs, auto rhs) {
-					return lhs.queryUnstablePerfectHash() == rhs.queryUnstablePerfectHash();
-				}
-			),
-			module_ids.end()
-		);
+		auto tail = std::ranges::unique(module_ids, [](auto lhs, auto rhs) {
+			return lhs.queryUnstablePerfectHash() == rhs.queryUnstablePerfectHash();
+		});
+		module_ids.erase(tail.begin(), tail.end());
 		return module_ids;
 	}
 

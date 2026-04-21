@@ -2,6 +2,8 @@
 
 #include <frontend/module_tree/module_id.hpp>
 
+#include <base/collections/optional.hpp>
+
 #include <vector>
 
 namespace global_state {
@@ -20,10 +22,11 @@ namespace global_state {
 	const std::vector<PackageInfo>& getPackages();
 
 	/**
-	 * @brief Returns package info that owns the given module.
-	 * Finds a package only in the top-level packages vector by package-id.
+	 * @brief Returns package info for a package identified by its root module.
+	 * The provided module id must point to a root module (module without a parent).
+	 * If there are no packages or the root module is not found, returns empty optional (null).
 	 */
-	const PackageInfo& getCurrentPackageInfo(compiler::frontend::ModuleID module_id);
+	base::Optional<PackageInfo> getPackageInfoForRootModule(compiler::frontend::ModuleID module_id);
 
 	/**
 	 * @brief Returns all registered package root module IDs, including dependencies,

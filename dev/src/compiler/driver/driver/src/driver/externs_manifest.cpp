@@ -3,6 +3,7 @@
 #include <diagnostic_interactive/placeholder.hpp>
 #include <global_state/global_logger.hpp>
 
+#include <base/except/exceptions.hpp>
 #include <base/str/str_utils.hpp>
 
 #include <json/json.hpp>
@@ -29,32 +30,33 @@ namespace compiler::driver {
 		class ManifestNode {
 		public:
 			ManifestNode(const nlohmann::json& json, std::string ctx):
-				  json_(json),
-				  ctx_(std::move(ctx)) {}
+				  json(json),
+				  ctx(std::move(ctx)) {}
 
 			/** @brief Requires a string field; logs and returns {} if missing or not a string. */
-			base::Optional<std::string> requireString(std::string_view key) const {
+			[[nodiscard]] base::Optional<std::string> requireString(std::string_view key) const {
 				const std::string k(key);
-				if (!json_.contains(k) || !json_[k].is_string()) {
+				if (!json.contains(k) || !json[k].is_string()) {
 					logManifestError(
 						base::strConcat(
 							"Packages manifest: `", key, "` is required and must be a string."
 						),
-						base::strConcat(ctx_, " must have a valid string `", key, "`.")
+						base::strConcat(ctx, " must have a valid string `", key, "`.")
 					);
 					return {};
 				}
-				return json_[k].get<std::string>();
+				return json[k].get<std::string>();
 			}
 
 			/** @brief Like requireString, but also rejects empty values. */
-			base::Optional<std::string> requireNonEmptyString(std::string_view key) const {
+			[[nodiscard]] base::Optional<std::string> requireNonEmptyString(std::string_view key
+			) const {
 				auto val = requireString(key);
 				if (!val.has_value()) return {};
 				if (val->empty()) {
 					logManifestError(
 						base::strConcat("Packages manifest: `", key, "` must be non-empty."),
-						base::strConcat(ctx_, " has an empty `", key, "`.")
+						base::strConcat(ctx, " has an empty `", key, "`.")
 					);
 					return {};
 				}
@@ -62,22 +64,23 @@ namespace compiler::driver {
 			}
 
 			/** @brief Requires a sub-object field; returns a ManifestNode for it. */
-			base::Optional<ManifestNode> requireObject(std::string_view key) const {
+			[[nodiscard]] base::Optional<ManifestNode> requireObject(std::string_view key) const {
 				const std::string k(key);
-				if (!json_.contains(k) || !json_[k].is_object()) {
+				if (!json.contains(k) || !json[k].is_object()) {
 					logManifestError(
 						base::strConcat(
 							"Packages manifest: `", key, "` is required and must be an object."
 						),
-						base::strConcat(ctx_, " must have a `", key, "` object.")
+						base::strConcat(ctx, " must have a `", key, "` object.")
 					);
 					return {};
 				}
-				return ManifestNode(json_[k], base::strConcat(ctx_, " `", key, "`"));
+				return ManifestNode(json[k], base::strConcat(ctx, " `", key, "`"));
 			}
 
 			/** @brief Requires a string field and validates the resulting path exists on disk. */
-			base::Optional<fs::FilePath> requireExistingPath(std::string_view key) const {
+			[[nodiscard]] base::Optional<fs::FilePath> requireExistingPath(std::string_view key
+			) const {
 				auto str = requireString(key);
 				if (!str.has_value()) return {};
 				fs::FilePath path(*str);
@@ -85,7 +88,7 @@ namespace compiler::driver {
 					logManifestError(
 						base::strConcat("Packages manifest: `", key, "` path does not exist."),
 						base::strConcat(
-							ctx_, " has `", key, "` = \"", *str, "\" which does not exist."
+							ctx, " has `", key, "` = \"", *str, "\" which does not exist."
 						)
 					);
 					return {};
@@ -97,35 +100,35 @@ namespace compiler::driver {
 			 * @brief Requires an array field; returns null on error (missing or wrong type).
 			 * The returned pointer is valid as long as this node's underlying JSON is alive.
 			 */
-			const nlohmann::json* requireArray(std::string_view key) const {
+			[[nodiscard]] const nlohmann::json* requireArray(std::string_view key) const {
 				const std::string k(key);
-				if (!json_.contains(k) || !json_[k].is_array()) {
+				if (!json.contains(k) || !json[k].is_array()) {
 					logManifestError(
 						base::strConcat(
 							"Packages manifest: `", key, "` is required and must be an array."
 						),
-						base::strConcat(ctx_, " must have a `", key, "` array.")
+						base::strConcat(ctx, " must have a `", key, "` array.")
 					);
 					return nullptr;
 				}
-				return &json_[k];
+				return &json[k];
 			}
 
 			/** @brief Optional string field into Optional<string>. Returns false (+ logs) if
 			 * present but not a string. */
 			bool optionalString(std::string_view key, base::Optional<std::string>& out) const {
 				const std::string k(key);
-				if (!json_.contains(k)) return true;
-				if (!json_[k].is_string()) {
+				if (!json.contains(k)) return true;
+				if (!json[k].is_string()) {
 					logManifestError(
 						base::strConcat(
 							"Packages manifest: `", key, "` must be a string when provided."
 						),
-						base::strConcat(ctx_, " has invalid `", key, "`.")
+						base::strConcat(ctx, " has invalid `", key, "`.")
 					);
 					return false;
 				}
-				out = json_[k].get<std::string>();
+				out = json[k].get<std::string>();
 				return true;
 			}
 
@@ -133,42 +136,42 @@ namespace compiler::driver {
 			 * a string. */
 			bool optionalString(std::string_view key, std::string& out) const {
 				const std::string k(key);
-				if (!json_.contains(k)) return true;
-				if (!json_[k].is_string()) {
+				if (!json.contains(k)) return true;
+				if (!json[k].is_string()) {
 					logManifestError(
 						base::strConcat(
 							"Packages manifest: `", key, "` must be a string when provided."
 						),
-						base::strConcat(ctx_, " has invalid `", key, "`.")
+						base::strConcat(ctx, " has invalid `", key, "`.")
 					);
 					return false;
 				}
-				out = json_[k].get<std::string>();
+				out = json[k].get<std::string>();
 				return true;
 			}
 
 			/** @brief Optional bool field. Returns false (+ logs) if present but not a boolean. */
 			bool optionalBool(std::string_view key, bool& out) const {
 				const std::string k(key);
-				if (!json_.contains(k)) return true;
-				if (!json_[k].is_boolean()) {
+				if (!json.contains(k)) return true;
+				if (!json[k].is_boolean()) {
 					logManifestError(
 						base::strConcat(
 							"Packages manifest: `", key, "` must be a boolean when provided."
 						),
-						base::strConcat(ctx_, " has invalid `", key, "`.")
+						base::strConcat(ctx, " has invalid `", key, "`.")
 					);
 					return false;
 				}
-				out = json_[k].get<bool>();
+				out = json[k].get<bool>();
 				return true;
 			}
 
-			const std::string& context() const { return ctx_; }
+			[[nodiscard]] const std::string& context() const { return ctx; }
 
 		private:
-			const nlohmann::json& json_;
-			std::string           ctx_;
+			const nlohmann::json& json;
+			std::string           ctx;
 		};
 
 		base::Optional<options_types::DependencyInfo::CompilationStrategy> parseStrategy(

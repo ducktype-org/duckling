@@ -555,6 +555,20 @@ clah::Clah getClahForMain() {
 							"Compilation of multiple packages as a single compilation unit"
 						);
 
+					// check if any of the dependencies has unsupported inline compilation strategy.
+					for (const auto& entry: *loaded) {
+						for (const auto& dep: entry.package_info.dependencies) {
+							using Strategy
+								= compiler::driver::options_types::DependencyInfo::CompilationStrategy;
+							if (std::holds_alternative<Strategy::InlineCompilation>(
+									dep.compilation_strategy.strategy
+								))
+								throw base::NotYetImplemented(
+									"Dependency compilation strategy `InPlace` is not supported yet"
+								);
+						}
+					}
+
 					std::vector<compiler::driver::options_types::PackageInfo> packages_info;
 					packages_info.reserve(loaded->size());
 					for (const auto& package_request: *loaded)

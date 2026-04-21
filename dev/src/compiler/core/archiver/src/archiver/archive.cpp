@@ -32,7 +32,7 @@ namespace compiler::archiver {
 				} else {
 					CORE_USER_LOG(
 						"\nERROR: Could not remove existing output file before invoking the "
-					    "archiver. "
+						"archiver. "
 						"Check filesystem permissions for the artifacts directory.\n"
 					);
 				}

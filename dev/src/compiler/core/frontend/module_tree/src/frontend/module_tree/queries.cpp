@@ -51,12 +51,16 @@ namespace compiler::frontend {
 		}
 
 		if (not current_module.has_value()) {
-			auto  package_owner        = getRootAncestorModuleID(ctx, from);
-			auto& current_package_info = global_state::getCurrentPackageInfo(package_owner);
-			for (const auto dependency_module_id: current_package_info.dependencies) {
-				if (frontend::getModuleRef(dependency_module_id)->getPackageID() == path.at(0)) {
-					current_module = dependency_module_id;
-					break;
+			auto package_owner = getRootAncestorModuleID(ctx, from);
+			auto current_package_info_opt
+				= global_state::getPackageInfoForRootModule(package_owner);
+
+			if_opt_some(current_package_info_opt, current_package_info) {
+				for (const auto dependency_module_id: current_package_info.dependencies) {
+					if (frontend::getModuleRef(dependency_module_id)->getPackageID() == path.at(0)) {
+						current_module = dependency_module_id;
+						break;
+					}
 				}
 			}
 		}
