@@ -86,6 +86,13 @@ function(duck_add_vm_tests suffix)
         duck_add_test_custom(vm ${test_set}_threads_test threads/thread_tests.cpp
                 USES ${libvm} Tester ${vmtester})
         duck_disable_tc_when_not_opt("threads_test" ${test_set})
+
+        duck_add_test_custom(vm ${test_set}_jit_test jit/jit.cpp
+                USES ${libvm} Tester ${vmtester})
+
+        if (test_set STREQUAL "vm_tc")
+                set_property(TEST ${test_set}_jit_test PROPERTY DISABLED TRUE)
+        endif()
 endfunction()
 
 duck_add_vm_tests("tc")
