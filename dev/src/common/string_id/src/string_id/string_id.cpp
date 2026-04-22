@@ -27,6 +27,12 @@ namespace base {
 			return &to_id_map;
 		}
 
+		// Ref<ToIDType> getToIDMap() {
+		// 	// This does not have a constinit constructor
+		// 	static ToIDType to_id_map;
+		// 	return &to_id_map;
+		// }
+
 		constinit BufferList buffer_list;
 
 		constinit ToDataType to_data_map;
@@ -72,9 +78,8 @@ namespace base {
 	StrID::StrID(const base::RawView& data) {
 		CORE_ASSERT(data.getBegin() != nullptr, "StrID received null string");
 
-		// Fast path: check if string already exists under shared lock
+		// Fast path: check if string already exists using just the concurrent map without local locking
 		{
-			// std::shared_lock lock(mutex);
 			if (auto id = getToIDMap()->atMaybe(data)) {
 				this->id = **id;
 				return;
@@ -123,6 +128,7 @@ namespace base {
 
 	base::RawView StrID::view() const {
 		CORE_ASSERT(id.isGood(), "StrID is bad");
+		// std::scoped_lock lock(mutex);
 		return to_data_map[id];
 	}
 
