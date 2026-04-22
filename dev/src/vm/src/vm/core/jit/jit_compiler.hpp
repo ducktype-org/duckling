@@ -7,7 +7,7 @@
 
 #include <base/pointers/ref.hpp>
 
-#include <vm/core/thread/low_program/low_program.hpp>
+#include <vm/core/safe/low_program/low_program.hpp>
 
 namespace vm::jit {
 	using JitOpFun

@@ -7,8 +7,8 @@
 #include <logger/logger.hpp>
 #include <printer/stream_printer.hpp>
 
+#include <vm/core/safe/low_program/instruction.hpp>
 #include <vm/core/supervisor/supervisor.hpp>
-#include <vm/core/thread/low_program/instruction.hpp>
 
 #include <exception>
 
