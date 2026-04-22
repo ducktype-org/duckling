@@ -28,7 +28,8 @@ add_library(HELIOS STATIC
 	src_private/helios_private/tsh/queries.cpp
 
 	src/helios/queries/queries.cpp
-	src/helios/queries/function_queries.cpp
+	src/helios/queries/query_code_of_fun.cpp
+	src/helios/queries/query_decl_of_fun.cpp
 	src/helios/queries/global_data_queries.cpp
     src/helios/scope_id.cpp
 	src/helios/hout/hout.cpp

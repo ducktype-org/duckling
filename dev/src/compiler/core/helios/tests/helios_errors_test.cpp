@@ -31,6 +31,7 @@ class HeliosErrorsTests: public tester::TestSuite {
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(testErrorLogging);
+		TESTER_ADD_TEST(testErrorLoggingExpandStatements);
 		TESTER_ADD_TEST(testErrorBadExpr);
 		TESTER_ADD_TEST(testDiagnosticErrorsCorrectness);
 	}
@@ -87,6 +88,10 @@ private:
 		});
 	}
 
+	/**
+	 * Generic error logging tests.
+	 * Add additional test cases for more specific categories.
+	 */
 	void testErrorLogging() {
 		// ============================ No operator found ============================
 		checkForErrorOnCompileModule(
@@ -970,6 +975,130 @@ private:
 			)",
 			{ "Copy constructor for non-trivially-copyable type `List[i32]`" },
 			1
+		);
+	}
+
+	/**
+	 * Test error logging related to errors in expanded statements or inside the expanded code.
+	 */
+	void testErrorLoggingExpandStatements() {
+		// @TODO: #2213 Update the values in the test cases below.
+
+		// ======= PARSE ERRORS IN EXPAND STATEMENTS =======
+
+		checkForErrorOnCompileModule(
+			R"(
+				expand "fun foo";
+			)",
+			{ "Macro", "expansion" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				expand " expand \" fun a \"  ";
+			)",
+			{ "Macro", "expansion" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				expand " namespace N { fun a }  ";
+			)",
+			{ "Macro", "expansion" },
+			1
+		);
+
+
+		// ======= ERRORS RELATED TO EXPANDED CODE =======
+
+		checkForErrorOnCompileModule(
+			R"(
+				expand "fun bar() = 10;";
+				expand "fun bar(x: i64 = 0) = 10;";
+
+				fun main() -> i64 = {
+					bar(); # ambiguous call, both overloads match
+					return 0;
+				}
+			)",
+			{},
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				expand "fun foo(x: i64) = 10 + y;"; # error: `y` is not defined
+			)",
+			{ "y", "not found" },
+			1
+		);
+
+		// ======= ERRORS IN EXPANSION EXPRESSION =======
+
+		checkForErrorOnCompileModule(
+			R"(
+				expand 1;
+			)",
+			{ "i32", "string" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				expand y;
+			)",
+			{ "y", "not found" },
+			1
+		);
+
+		// ======= ERRORS IN EXPANDED CODE DOES NOT PREVENT OTHER DIAGNOSTICS =======
+
+		checkForErrorOnCompileModule(
+			R"(
+				expand "fun foo(x: i64) -> i64 = 10 + y;";
+
+				fun bar() = {
+					return foo(1, 1);
+				}
+
+			)",
+			{},
+			2
+		);
+
+		checkForErrorOnCompileModule(
+			R"(	
+				namespace N { expand y; }
+
+				fun foo() = z;
+			)",
+			{ "y", "z", "not found" },
+			2
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				class T {
+					x: i64 = 1;
+
+					fun m1() = {
+						expand "return y";
+					}
+
+					fun m2() = {
+						expand "return z";
+					}
+				}
+
+				fun main() = {
+					return w;
+				}
+
+			)",
+			{ "y", "z", "w", "not found" },
+			3
 		);
 	}
 
