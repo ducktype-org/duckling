@@ -83,7 +83,7 @@ private:
 	) {
 		// Locate the function symbol
 		auto root_scope = queryRootScopeOfMainModuleFile(ctx, module_id);
-		auto symbols    = *ctx.query<QuerySymbolsInScope>(root_scope);
+		auto symbols    = ctx.query<QuerySymbolsInScope>(root_scope)->valueOrPanic();
 
 		base::Optional<SymID> fun_sym_opt;
 		for (auto sym: symbols) {
