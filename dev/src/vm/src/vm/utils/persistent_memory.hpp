@@ -100,13 +100,12 @@ namespace vm::persistent::detail {
 			base::CRef<Memory> mem;
 			usize              root_pos;
 			usize              node_pos;
+			MemoryStateID      leaf;
 
-			std::deque<std::pair<MemoryStateID, MemoryStateID>> neighs;
+			std::deque<MemoryStateID> siblings;
 
-			void          elevateRoot(usize height);
-			void          moveNodeTo(usize desired_pos);
-			void          trimRoot();
-			MemoryStateID finalize();
+			void moveNodeTo(usize desired_pos);
+			std::pair<usize, std::deque<std::pair<usize, MemoryStateID>>> inOrder();
 		};
 
 		/**
