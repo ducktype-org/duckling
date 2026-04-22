@@ -17,6 +17,7 @@ public:
 		TESTER_ADD_TEST(multipleFunctions);
 		TESTER_ADD_TEST(useArgumentAfterCall);
 		TESTER_ADD_TEST(mainVerification);
+		TESTER_ADD_TEST(multipleRetVals);
 
 		// Jump verification
 		TESTER_ADD_TEST(jumpBetween);
@@ -92,6 +93,16 @@ private:
 		);
 		loadInvalidDbc(
 			"wrong/functions/invalid_main_ret_size.dbc", { vm::code::InvalidMainReturnType::ERR_MSG }
+		);
+	}
+
+	void multipleRetVals() {
+		loadInvalidDbc(
+			"wrong/functions/return_type_mismatch.dbc",
+			{ vm::code::InvalidFunctionCallArgumentsError::ERR_MSG }
+		);
+		loadInvalidDbc(
+			"wrong/functions/deinit_ret_val.dbc", { vm::code::RetValDeinitError::ERR_MSG }
 		);
 	}
 

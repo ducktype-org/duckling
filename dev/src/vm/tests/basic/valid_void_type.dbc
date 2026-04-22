@@ -1,0 +1,25 @@
+# Testing if `void` can be used as any other type name
+
+type primitive: void 8  
+
+function norm_div { void, void } -> { void } {
+	mov_p64_p64			ret0, arg1;
+	div_p64_p64 		ret0, arg0;
+	ret;
+}
+
+function main {} -> { i64 } {
+	init_pany_type 	norm_div_ret0, void;
+
+	init_pany_type 	div_ret0_0, void;
+	init_pany_type 	div_ret0_1, void;
+
+	mov_p64_imm		div_ret0_0, 20;
+	mov_p64_imm		div_ret0_1, 54;
+
+	call_func		norm_div;
+
+	output_p64		norm_div_ret0;
+
+	ret;
+}

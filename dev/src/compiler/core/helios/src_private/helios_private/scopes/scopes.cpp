@@ -28,6 +28,7 @@
 
 #include <query_framework/query_result.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
+#include <query_framework/utils/query_failed_try.hpp>
 #include <string_id/string_id.hpp>
 
 #include <algorithm>
@@ -385,7 +386,12 @@ namespace compiler::helios {
 					out->scopes.emplace_back(ctx.query<QueryPrimaryCodeScopeFor>(element));
 			};
 
-			pstForAll(ctx, root_unlocked.value(), grab_scopes_function);
+			auto for_all_ok = pstForAll(ctx, root_unlocked.value(), grab_scopes_function);
+			if (for_all_ok.status().isBad()) {
+				// if the pstForAll failed, we mark the whole query as failed, but we still return
+				// the scopes that we managed to obtain.
+				out->failed = true;
+			}
 		}
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
@@ -422,7 +428,7 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryScopesInModule);
 
-	struct IMPLEMENT_QUERY(QuerySymbolsInScope, std::vector<SymID>) {
+	struct IMPLEMENT_QUERY(QuerySymbolsInScope, query::QResult<std::vector<SymID>>) {
 		/**
 		 * @brief Makes symbols from pst::Stmt and filters out non declarations from the StmtList.
 		 */
@@ -601,31 +607,34 @@ namespace compiler::helios {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			auto output = getSymbols(ctx, key);
 
-			// validate output:
-			for (auto sym: output) {
-				CORE_ASSERT(
-					scope(sym) == key,
-					base::strConcat(
-						"Scope mismatch in QuerySymbolsInScope and QuerySymbolOfSTMT\n",
-						" for symbol: ",
-						name(sym),
-						"\n\n"
-						" considered scope : ",
-						key.ref->relatedPSTElement().value().unlock(ctx)->elementType(),
-						", ID: ",
-						key.ref->relatedPSTElement().value().unlock(ctx)->getID().asInt(),
-						"\n\n",
-						" scope of symbol: ",
-						scope(sym).ref->relatedPSTElement().value().unlock(ctx)->elementType(),
-						", ID: ",
-						scope(sym).ref->relatedPSTElement().value().unlock(ctx)->getID().asInt(),
-						"\n"
-					)
-				);
+			// Sanity check that the output symbols have correct scope.
+			if (output.hasValue()) {
+				for (auto sym: output.valueOrPanic()) {
+					CORE_ASSERT(
+						scope(sym) == key,
+						base::strConcat(
+							"Scope mismatch in QuerySymbolsInScope and QuerySymbolOfSTMT\n",
+							" for symbol: ",
+							name(sym),
+							"\n\n"
+							" considered scope : ",
+							key.ref->relatedPSTElement().value().unlock(ctx)->elementType(),
+							", ID: ",
+							key.ref->relatedPSTElement().value().unlock(ctx)->getID().asInt(),
+							"\n\n",
+							" scope of symbol: ",
+							scope(sym).ref->relatedPSTElement().value().unlock(ctx)->elementType(),
+							", ID: ",
+							scope(sym).ref->relatedPSTElement().value().unlock(ctx)->getID().asInt(),
+							"\n"
+						)
+					);
+				}
+				if (key.ref->is_root)
+					CORE_ASSERT(
+						output.valueOrPanic().empty(), "Root scope should not have any symbols."
+					);
 			}
-
-			if (key.ref->is_root)
-				CORE_ASSERT(output.empty(), "Root scope should not have any symbols.");
 
 			return output;
 		}
@@ -637,7 +646,7 @@ namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QueryLookupInScope, query::QResult<LookupResult>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			auto symbol_list = ctx.query<QuerySymbolsInScope>(key.scope);
+			Ref symbol_list = &ctx.query<QuerySymbolsInScope>(key.scope)->valueOrThrow();
 
 			// here if the scope is the root scope
 			// we pass the lookup to

@@ -5,7 +5,7 @@ type primitive: u32 4
 type primitive: u16 2
 type primitive: u8 1
 
-function sext_test {} -> i32 {
+function sext_test {} -> { i32 } {
 	init_pany_type i8_val, i8;
 	init_pany_type i16_val, i16;
 	init_pany_type i32_val, i32;
@@ -47,15 +47,15 @@ function sext_test {} -> i32 {
 	cmpEq_p64_imm i64_val, -1;
 	jmpIfNot_label fail;
 
-	mov_p32_imm ret_val, 1;
+	mov_p32_imm ret0, 1;
 	ret;
 
 	label fail;
-	mov_p32_imm ret_val, 0;
+	mov_p32_imm ret0, 0;
 	ret;
 }
 
-function zext_test {} -> i32 {
+function zext_test {} -> { i32 } {
 	init_pany_type u8_val, u8;
 	init_pany_type u16_val, u16;
 	init_pany_type u32_val, u32;
@@ -96,15 +96,15 @@ function zext_test {} -> i32 {
 	cmpEq_p64_imm u64_val, 4294967295;
 	jmpIfNot_label fail;
 
-	mov_p32_imm ret_val, 1;
+	mov_p32_imm ret0, 1;
 	ret;
 
 	label fail;
-	mov_p32_imm ret_val, 0;
+	mov_p32_imm ret0, 0;
 	ret;
 }
 
-function trunc_test {} -> i32 {
+function trunc_test {} -> { i32 } {
 	init_pany_type u8_val, u8;
 	init_pany_type u16_val, u16;
 	init_pany_type u32_val, u32;
@@ -146,15 +146,15 @@ function trunc_test {} -> i32 {
 	cmpEq_p32_imm u32_val, 0x9ABCDEF0;
 	jmpIfNot_label fail;
 
-	mov_p32_imm ret_val, 1;
+	mov_p32_imm ret0, 1;
 	ret;
 
 	label fail;
-	mov_p32_imm ret_val, 0; 
+	mov_p32_imm ret0, 0; 
 	ret;
 }
 
-function sitofp_test {} -> i32 {
+function sitofp_test {} -> { i32 } {
 	init_pany_type i32_val, i32;
 	init_pany_type f32_val, f32;
 	init_pany_type f64_val, f64;
@@ -168,15 +168,15 @@ function sitofp_test {} -> i32 {
 	fcmpEq_p64_imm f64_val, -10.0;
 	jmpIfNot_label fail;
 
-	mov_p32_imm ret_val, 1;
+	mov_p32_imm ret0, 1;
 	ret;
 
 	label fail;
-	mov_p32_imm ret_val, 0;
+	mov_p32_imm ret0, 0;
 	ret;
 }
 
-function uitofp_test {} -> i32 {
+function uitofp_test {} -> { i32 } {
 	init_pany_type u32_val, u32;
 	init_pany_type f32_val, f32;
 	init_pany_type f64_val, f64;
@@ -190,15 +190,15 @@ function uitofp_test {} -> i32 {
 	fcmpEq_p64_imm f64_val, 10.0;
 	jmpIfNot_label fail;
 
-	mov_p32_imm ret_val, 1;
+	mov_p32_imm ret0, 1;
 	ret;
 	
 	label fail;
-	mov_p32_imm ret_val, 0;
+	mov_p32_imm ret0, 0;
 	ret;
 }
 
-function fptosi_test {} -> i32 {
+function fptosi_test {} -> { i32 } {
 	init_pany_type f32_val, f32;
 	init_pany_type f64_val, f64;
 	init_pany_type i32_val, i32;
@@ -214,15 +214,15 @@ function fptosi_test {} -> i32 {
 	cmpEq_p32_imm i32_val, -20;
 	jmpIfNot_label fail;
 
-	mov_p32_imm ret_val, 1;
+	mov_p32_imm ret0, 1;
 	ret;
 	
 	label fail;
-	mov_p32_imm ret_val, 0;
+	mov_p32_imm ret0, 0;
 	ret;
 }
 
-function fptoui_test {} -> i32 {
+function fptoui_test {} -> { i32 } {
 	init_pany_type f32_val, f32;
 	init_pany_type f64_val, f64;
 	init_pany_type u32_val, u32;
@@ -237,15 +237,15 @@ function fptoui_test {} -> i32 {
 	cmpEq_p32_imm u32_val, 20;
 	jmpIfNot_label fail;
 
-	mov_p32_imm ret_val, 1;
+	mov_p32_imm ret0, 1;
 	ret;
 	
 	label fail;
-	mov_p32_imm ret_val, 0;
+	mov_p32_imm ret0, 0;
 	ret;
 }
 
-function fptrunc_test {} -> i32 {
+function fptrunc_test {} -> { i32 } {
 	init_pany_type f64_val, f64;
 	init_pany_type f32_val, f32;
 
@@ -254,15 +254,15 @@ function fptrunc_test {} -> i32 {
 	fcmpEq_p32_imm f32_val, 123456790.0f32;
 	jmpIfNot_label fail;
 	
-	mov_p32_imm ret_val, 1;
+	mov_p32_imm ret0, 1;
 	ret;
 
 	label fail;
-	mov_p32_imm ret_val, 0;
+	mov_p32_imm ret0, 0;
 	ret;
 }
 
-function fpext_test {} -> i32 {
+function fpext_test {} -> { i32 } {
 	init_pany_type f32_val, f32;
 	init_pany_type f64_val, f64;
 
@@ -271,15 +271,15 @@ function fpext_test {} -> i32 {
 	fcmpEq_p64_imm f64_val, 1234.5;
 	jmpIfNot_label fail;
 
-	mov_p32_imm ret_val, 1;
+	mov_p32_imm ret0, 1;
 	ret;
 
 	label fail;
-	mov_p32_imm ret_val, 0;
+	mov_p32_imm ret0, 0;
 	ret;
 }
 
-function sitofp_rounding_test {} -> i32 {
+function sitofp_rounding_test {} -> { i32 } {
 	init_pany_type i32_val, i32;
 	init_pany_type f32_val, f32;
 
@@ -288,15 +288,15 @@ function sitofp_rounding_test {} -> i32 {
 	fcmpEq_p32_imm f32_val, 123456790.0f32;
 	jmpIfNot_label fail;
 
-	mov_p32_imm ret_val, 1;
+	mov_p32_imm ret0, 1;
 	ret;
 
 	label fail;
-	mov_p32_imm ret_val, 0;
+	mov_p32_imm ret0, 0;
 	ret;
 }
 
-function fptosi_saturation_test {} -> i32 {
+function fptosi_saturation_test {} -> { i32 } {
 	init_pany_type f64_val, f64;
 	init_pany_type i32_val, i32;
 	init_pany_type f32_val, f32;
@@ -400,15 +400,15 @@ function fptosi_saturation_test {} -> i32 {
 	cmpEq_p8_imm u8_val, 255;
 	jmpIfNot_label fail;
 
-	mov_p32_imm ret_val, 1;
+	mov_p32_imm ret0, 1;
 	ret;
 	
 	label fail;
-	mov_p32_imm ret_val, 0;
+	mov_p32_imm ret0, 0;
 	ret;
 }
 
-function main { i64, ptr_argv } -> i64 {
+function main { i64, ptr_argv } -> { i64 } {
 	init_pany_type test_ret, i32;
 	
 	call_func sext_test;

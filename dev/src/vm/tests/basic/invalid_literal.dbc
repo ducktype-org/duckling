@@ -1,4 +1,4 @@
-function main { i64, ptr_argv } -> i64 {
+function main { i64, ptr_argv } -> { i64 } {
     init_pany_type a, i32;
 
     mov_p32_imm a, 2147483648i32;
