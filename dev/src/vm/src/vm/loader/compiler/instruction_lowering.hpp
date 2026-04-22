@@ -8,7 +8,7 @@
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
-#include <vm/core/thread/low_program/utils.hpp>
+#include <vm/core/safe/low_program/utils.hpp>
 
 #include <tuple>
 #include <type_traits>
