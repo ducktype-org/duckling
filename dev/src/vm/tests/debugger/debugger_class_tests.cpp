@@ -14,10 +14,10 @@ class VmDebuggerTest: public tester::TestSuite {
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		// @TODO: #1222 Re-enable the tests after fixing the API.
-		// TESTER_ADD_TEST(runAndGetStatus);
-		// TESTER_ADD_TEST(getStatusWait);
-		// TESTER_ADD_TEST(getStatusBreakpoint);
-		// TESTER_ADD_TEST(rerunTest);
+		TESTER_ADD_TEST(runAndGetStatus);
+		TESTER_ADD_TEST(getStatusWait);
+		TESTER_ADD_TEST(getStatusBreakpoint);
+		TESTER_ADD_TEST(rerunTest);
 		TESTER_ADD_TEST(errorTest);
 	}
 
@@ -54,8 +54,9 @@ private:
 			[&](const vm::api::ExitValue& exit_value) {
 				std::lock_guard lk(m);
 				ASSERT_TRUE(ret_val_counter < expected_values.size());
-				ASSERT_EQUAL_PRINT("i64", exit_value->type->getName());
-				ASSERT_EQUAL_PRINT(expected_values[ret_val_counter], exit_value->readBytes<i64>());
+				ASSERT_EQUAL_PRINT(1, exit_value.size());
+				ASSERT_EQUAL_PRINT("i64", exit_value[0]->type->getName());
+				ASSERT_EQUAL_PRINT(expected_values[ret_val_counter], exit_value[0]->readBytes<i64>());
 				ret_val_counter++;
 			}
 		);
@@ -137,8 +138,9 @@ private:
 			[&](const vm::api::ExitValue& exit_value) {
 				std::lock_guard lk(m);
 				ASSERT_TRUE(ret_val_counter < expected_values.size());
-				ASSERT_EQUAL_PRINT("i64", exit_value->type->getName());
-				ASSERT_EQUAL_PRINT(expected_values[ret_val_counter], exit_value->readBytes<i64>());
+				ASSERT_EQUAL_PRINT(1, exit_value.size());
+				ASSERT_EQUAL_PRINT("i64", exit_value[0]->type->getName());
+				ASSERT_EQUAL_PRINT(expected_values[ret_val_counter], exit_value[0]->readBytes<i64>());
 				ret_val_counter++;
 			}
 		);
