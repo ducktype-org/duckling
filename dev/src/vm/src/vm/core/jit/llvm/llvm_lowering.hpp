@@ -8,7 +8,7 @@
 
 #include <base/collections/optional.hpp>
 
-#include <vm/core/thread/low_program/instruction.hpp>
+#include <vm/core/safe/low_program/instruction.hpp>
 
 #include <algorithm>
 #include <string>

@@ -3,7 +3,7 @@
 #include <base/pointers/box.hpp>
 
 #include <vm/bytecode/validator/valid_type/type_map.hpp>
-#include <vm/core/process/type_metadata/type_metadata.hpp>
+#include <vm/core/safe/type_metadata/type_metadata.hpp>
 
 namespace vm::code::detail {
 	/**

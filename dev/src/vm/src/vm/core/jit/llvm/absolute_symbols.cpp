@@ -2,7 +2,7 @@
 
 #include <llvm_helpers/llvm_helpers.hpp>
 
-#include <vm/core/thread/opcode_functions/opcodes_functions.hpp>
+#include <vm/core/safe/opcode_functions/opcodes_functions.hpp>
 
 #include <ranges>
 

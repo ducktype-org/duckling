@@ -9,7 +9,7 @@
 
 #include <base/collections/optional.hpp>
 
-#include <vm/core/thread/low_program/opcodes.hpp>
+#include <vm/core/safe/low_program/opcodes.hpp>
 
 LLVM_INCLUDE_BEGIN()
 #include <llvm/ExecutionEngine/Orc/LLJIT.h>

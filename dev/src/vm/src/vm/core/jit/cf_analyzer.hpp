@@ -2,7 +2,7 @@
 
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/core/jit/cf_graph.hpp>
-#include <vm/core/thread/low_program/low_program.hpp>
+#include <vm/core/safe/low_program/low_program.hpp>
 
 #include <functional>
 #include <vector>

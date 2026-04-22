@@ -6,7 +6,7 @@
 
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/validator/valid_program.hpp>
-#include <vm/core/thread/low_program/low_program.hpp>
+#include <vm/core/safe/low_program/low_program.hpp>
 #include <vm/loader/compiler/compiler.hpp>
 
 #include <expected>
