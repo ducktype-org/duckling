@@ -127,13 +127,11 @@ namespace tokenizer {
 		 * @brief Run the whole lexer.
 		 * @return If tokenizing process run without errors.
 		 */
-		template<fs::Encoding encoding = fs::Encoding::UTF8>
+		template<
+			lang_def::KeywordMode keyword_mode = lang_def::KeywordMode::DucklingSource,
+			fs::Encoding          encoding     = fs::Encoding::UTF8>
 		bool tokenize() {
-			if (getFile().extension() == ".dbc")
-				lang_def::setKeywordMode(lang_def::KeywordMode::DuckBC);
-			else
-				lang_def::setKeywordMode(lang_def::KeywordMode::DucklingSource);
-
+			lang_def::setKeywordMode(keyword_mode);
 			decode<encoding>();
 			if (int_log.hasErrors()) return false;
 			countLines();

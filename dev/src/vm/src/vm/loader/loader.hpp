@@ -71,7 +71,8 @@ namespace vm::loader {
 		 * @brief Parses .dbc files and returns the combined CodeCollection without validation,
 		 * or a string error message on failure. Main user is the compiler driver.
 		 *
-		 * @return Either the parsed `CodeCollection` on success, or a string error message on failure.
+		 * @return Either the parsed `CodeCollection` on success, or a string error message on
+		 * failure.
 		 */
 		static std::expected<code::CodeCollection, std::string> parseCodeCollectionFromFiles(
 			const std::vector<fs::File>& files

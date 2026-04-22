@@ -1,5 +1,4 @@
 # Tests for imports
-# @TODO: #2476 Enable DVM cases.
 
 Tests:
   named_simple_imports:

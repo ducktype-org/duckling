@@ -1,5 +1,6 @@
 #include <diagnostic_interactive/logger.hpp>
 
+#include <lang_definitions/key_spec_op.hpp>
 #include <token_source/source.hpp>
 
 #include <vm/loader/parser/elements.hpp>
@@ -10,7 +11,7 @@ namespace vm::loader::parser {
 
 	Box<tokenizer::TokenSource> tokenizeFile(const fs::File& path) {
 		auto source = tokenizer::makeTokenSource(path);
-		source->tokenize();
+		source->tokenize<lang_def::KeywordMode::DuckBC>();
 		return source;
 	}
 
