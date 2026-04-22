@@ -2,7 +2,6 @@
 
 #include <concurrent/base/collections/hash_map.hpp>
 
-#include <base/collections/maps.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/pointers/ref.hpp>
 
@@ -13,8 +12,6 @@
 ID_STD_HASH(base::internal::StrInnerID);
 
 namespace base {
-
-	
 	/**
 	 * Size of memory buffers used to store byte-strings represented by StrID
 	 */
