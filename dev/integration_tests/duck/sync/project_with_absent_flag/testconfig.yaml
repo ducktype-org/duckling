@@ -13,6 +13,6 @@ Tests:
                 when parsing the field \`features\`
             
               Caused by:
-                the feature \`flag\` requires an absent feature \`absent\`
+                the feature \`flag\` requires a feature \`absent\` which is not declared
 
             hint: every feature needs to pull in some features, try adding \`absent: []\` to your manifest"

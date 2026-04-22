@@ -30,7 +30,7 @@ impl Features {
                         `{pulled_feature}: []` to your manifest"
                     )))
                     .context(format!(
-                        "the feature `{feature}` requires an absent feature `{pulled_feature}`"
+                        "the feature `{feature}` requires a feature `{pulled_feature}` which is not declared"
                     ));
                 }
             }
@@ -207,7 +207,7 @@ mod tests {
     fn invalid_features() {
         assert_eq!(
             Features::new(make_invalid_map()).unwrap_err().to_string(),
-            "the feature `a` requires an absent feature `b`
+            "the feature `a` requires a feature `b` which is not declared
 every feature needs to pull in some features, try adding `b: []` to your manifest"
         );
     }
