@@ -15,7 +15,7 @@
  */
 #pragma once
 
-#include "diagnostic_interactive/stable_position.hpp"
+#include <diagnostic_interactive/stable_position.hpp>
 #include "message.hpp"
 
 namespace dia_int {
