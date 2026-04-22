@@ -79,5 +79,4 @@ namespace compiler::helios {
 		if (with_failed_exception.status().isBad()) return base::BAD;
 		return result;
 	}
-
 }
