@@ -17,8 +17,8 @@
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/lookup/lookup_result.hpp>
 #include <helios_private/pst_layer/for_all.hpp>
-#include <helios_private/pst_layer/stmts_from_aggregate.hpp>
 #include <helios_private/pst_layer/pst_parent.hpp>
+#include <helios_private/pst_layer/stmts_from_aggregate.hpp>
 #include <helios_private/scopes/scope_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
@@ -252,11 +252,10 @@ namespace compiler::helios {
 			ScopeID parent = [&]() -> ScopeID {
 				auto pst_parent = getPSTElementParent(ctx, element);
 
-				if (pst_parent.isLangElement()) {
+				if (pst_parent.isLangElement())
 					return ctx.query<QueryPrimaryCodeScopeFor>(pst_parent.getAsLangElement());
-				} else {
+				else
 					return ctx.query<QueryRootScopeOf>(pst_parent.getAsModuleID());
-				}
 			}();
 
 

@@ -15,8 +15,10 @@ namespace compiler::helios {
 	struct PSTParentResult final {
 		std::variant<pst::AccessLocked<pst::LangElement>, frontend::ModuleID> state;
 
-        [[nodiscard]]
-        bool isLangElement() const { return std::holds_alternative<pst::AccessLocked<pst::LangElement>>(state); }
+		[[nodiscard]]
+		bool isLangElement() const {
+			return std::holds_alternative<pst::AccessLocked<pst::LangElement>>(state);
+		}
 
 		[[nodiscard]]
 		pst::AccessLocked<pst::LangElement> getAsLangElement() const {
@@ -46,8 +48,9 @@ namespace compiler::helios {
 	 * @note This is a common operation that is used in multiple places in the compiler, and it has
 	 * some non-trivial logic to handle macro expansions and modules, so we provide this helper
 	 * function to unify this logic in one place.
-     *
-     * @TODO: #2407 use AccessMaybeLocked here? I left Access for now, since this function always has to unlock the element anyway.
+	 *
+	 * @TODO: #2407 use AccessMaybeLocked here? I left Access for now, since this function always
+	 * has to unlock the element anyway.
 	 */
 	PSTParentResult getPSTElementParent(query::Context& ctx, pst::Access<pst::LangElement> element);
 

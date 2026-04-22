@@ -18,9 +18,9 @@
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/lookup/lookup_chain.hpp>
+#include <helios_private/pst_layer/pst_parent.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
-#include <helios_private/pst_layer/pst_parent.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
@@ -105,7 +105,7 @@ namespace compiler::helios {
 				case pst::ElementKind::Expand:
 				case pst::ElementKind::StmtSpecifier: {
 					auto pst_parent = getPSTElementParent(ctx, el);
-					
+
 					CORE_ASSERT(
 						pst_parent.isLangElement(),
 						"Non TopLevel elements should always have a pst or an expand parent"
@@ -427,11 +427,14 @@ namespace compiler::helios {
 			// @TODO: #2397 maybe move it into a single place
 
 			auto unlocked = element.unlock(ctx);
-			auto parent = getPSTElementParent(ctx, unlocked);
+			auto parent   = getPSTElementParent(ctx, unlocked);
 
-			// We should never hit an element without PST parent here, 
-			// since it would be a non-expand root element (i.e. TopLevel element), and those don't have symbols.
-			CORE_ASSERT(parent.isLangElement(), "PST element without LangElement parent in QuerySymbolOfSTMT");
+			// We should never hit an element without PST parent here,
+			// since it would be a non-expand root element (i.e. TopLevel element), and those don't
+			// have symbols.
+			CORE_ASSERT(
+				parent.isLangElement(), "PST element without LangElement parent in QuerySymbolOfSTMT"
+			);
 			return ctx.query<QueryPrimaryCodeScopeFor>(parent.getAsLangElement());
 		}
 

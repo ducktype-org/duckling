@@ -2,7 +2,9 @@
 
 namespace compiler::helios {
 
-	PSTParentResult getPSTElementParent([[maybe_unused]] query::Context& ctx, pst::Access<pst::LangElement> element) {
+	PSTParentResult getPSTElementParent(
+		[[maybe_unused]] query::Context& ctx, pst::Access<pst::LangElement> element
+	) {
 		auto maybe_element_parent = element->getParent();
 		if (maybe_element_parent.has_value()) {
 			return PSTParentResult{ maybe_element_parent.value() };
