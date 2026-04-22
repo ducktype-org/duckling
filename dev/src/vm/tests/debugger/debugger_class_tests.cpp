@@ -14,6 +14,7 @@ class VmDebuggerTest: public tester::TestSuite {
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		// @TODO: #1222 Re-enable the tests after fixing the API.
+		// TESTER_ADD_TEST(noRunTest);
 		TESTER_ADD_TEST(runAndGetStatus);
 		TESTER_ADD_TEST(getStatusWait);
 		TESTER_ADD_TEST(getStatusBreakpoint);
@@ -22,6 +23,11 @@ public:
 	}
 
 private:
+	void noRunTest() {
+		vm::debugger::Debugger debugger{ fs::File(path("debugger_test.dbc")) };
+		ASSERT_TRUE(std::holds_alternative<vm::api::NotStarted>(debugger.getStatus()));
+	}
+
 	/**
 	 * @brief template function to reuse in the tests
 	 *
