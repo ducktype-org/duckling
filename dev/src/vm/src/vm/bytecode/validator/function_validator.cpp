@@ -10,7 +10,6 @@
 #include <base/preproc/for_each.hpp>
 #include <base/types/bits_and_bytes.hpp>
 
-#include "vm/bytecode/validator/valid_type/finalized_kinds.hpp"
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
