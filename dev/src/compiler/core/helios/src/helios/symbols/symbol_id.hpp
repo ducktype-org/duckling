@@ -7,11 +7,13 @@
 
 #include <base/pointers/ref.hpp>
 
+#include <hashing/add_to_hash.hpp>
+
 namespace compiler::helios {
 	// Forwards:
 	struct SymbolData;
 
-	namespace houtgen {
+	namespace defgen {
 		struct ImplementationOf_QueryGeneratedSymbol;
 	}
 
@@ -19,15 +21,16 @@ namespace compiler::helios {
 	 * @brief Symbol Identifier. Used to represent HELIOS Symbol across the compiler.
 	 */
 	struct SymID final {
-		// @FUTURE: add some mangling, so valgrind will not get confused
 		[[nodiscard]]
-		u64 queryUnstablePerfectHash() const {
-			return reinterpret_cast<u64>(ref.get());
-		}
+		u64 queryUnstablePerfectHash() const;
 
 		bool operator==(const SymID&) const = default;
 
 		auto operator<=>(const SymID& other) const { return ref.get() <=> other.ref.get(); }
+
+		friend constexpr void addToHash(hashing::hash_algorithm auto& hash_alg, const SymID& id) {
+			hashing::addToHash(hash_alg, id.queryUnstablePerfectHash());
+		}
 
 	private:
 		CRef<SymbolData> ref;
@@ -35,7 +38,7 @@ namespace compiler::helios {
 		SymID(const CRef<SymbolData> ref): ref(ref) {}
 		friend struct GetSymRef_Functor;
 		friend struct ImplementationOf_QuerySymbolOfSTMT;
-		friend struct houtgen::ImplementationOf_QueryGeneratedSymbol;
+		friend struct defgen::ImplementationOf_QueryGeneratedSymbol;
 		friend struct ImplementationOf_QueryLookupInSymbol;
 		friend struct ImplementationOf_QueryLinkedScope;
 		friend struct ImplementationOf_QueryClassSymbolData;

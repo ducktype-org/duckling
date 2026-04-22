@@ -6,17 +6,17 @@
 namespace vm::jit::cnp {
 
 // for now only a single(ext-less) instruction
-#define HANDLE_MICRO_INSTR(opcode_name)                                           \
-	void stencil_##opcode_name(                                                   \
-		MicroInstruction instr, byte* local_stack, Frame* frame, VMThread& thread \
-	) {                                                                           \
-		CORE_ASSERT(                                                              \
-			getInstructionOpcode(instr) == low::MicroOpcode::opcode_name,         \
-			"Expected a different opcode"                                         \
-		);                                                                        \
-		const MicroInstruction* instr_ptr = &instr;                               \
-		vm::OpFuns::op_##opcode_name(instr_ptr, local_stack, frame, thread);      \
-		CORE_ASSERT(instr_ptr == &instr + 1, "An unexpected jumping opcode");     \
+#define HANDLE_MICRO_INSTR(opcode_name)                                               \
+	void stencil_##opcode_name(                                                       \
+		MicroInstruction instr, byte* local_stack, Frame* frame, SafeVMThread& thread \
+	) {                                                                               \
+		CORE_ASSERT(                                                                  \
+			getInstructionOpcode(instr) == low::MicroOpcode::opcode_name,             \
+			"Expected a different opcode"                                             \
+		);                                                                            \
+		const MicroInstruction* instr_ptr = &instr;                                   \
+		vm::OpFuns::op_##opcode_name(instr_ptr, local_stack, frame, thread);          \
+		CORE_ASSERT(instr_ptr == &instr + 1, "An unexpected jumping opcode");         \
 	}
 #include <vm/core/thread/low_program/micro_instruction_definitions.hpp>
 #undef HANDLE_MICRO_INSTR

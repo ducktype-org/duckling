@@ -5,7 +5,7 @@
 #include <vm/core/thread/low_program/low_program.hpp>
 
 namespace vm::jit::cnp {
-	using JitOpFun = void(const vm::MicroInstruction**, byte**, vm::Frame**, vm::VMThread*);
+	using JitOpFun = void(const vm::MicroInstruction**, byte**, vm::Frame**, vm::SafeVMThread*);
 
 	JitOpFun* compileCP(const vm::low::LowFuncData& func_data) {
 		PUSH_DIAGNOSTIC

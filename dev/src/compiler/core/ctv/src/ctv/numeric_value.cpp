@@ -1,7 +1,7 @@
 #include "numeric_value.hpp"
 
-#include <typesystem/higher/queries/types.hpp>
-#include <typesystem/higher/symbol_type.hpp>
+#include <helios/tsh/queries/types.hpp>
+#include <helios/tsh/symbol_type.hpp>
 
 #include <base/comptime/type_traits.hpp>
 #include <base/extend_cpp/variant_match.hpp>

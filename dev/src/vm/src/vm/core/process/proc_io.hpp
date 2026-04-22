@@ -1,6 +1,6 @@
 #pragma once
 
-#include <vm/core/thread/vmthread.hpp>
+#include <vm/core/thread/ivmthread.hpp>
 
 #include <condition_variable>
 #include <functional>
@@ -25,7 +25,7 @@ namespace vm {
 		 * For thread use only
 		 */
 		template<class T>
-		T getInput(VMThread& thread) {
+		T getInput(IVMThread& thread) {
 			T    v{};
 			auto lck = lock();
 

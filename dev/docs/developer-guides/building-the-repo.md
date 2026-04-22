@@ -28,7 +28,7 @@ sudo apt install python3 python3-click doxygen graphviz-dev cmake ninja-build g+
 #### Arch linux
 
 ```bash
-sudo pacman -Sy python python-pip python-click doxygen graphviz lcov --noconfirm
+sudo pacman -S python python-pip python-click doxygen graphviz lcov --noconfirm
 ```
 
 > **Note**  
@@ -244,14 +244,11 @@ To compile and run tests, you can use the toolbox script:
 
 It's useful to be aware of more direct methods for running the tests.
 We use the CTest tool from CMake to manage the test files. 
-There is also a CMake command to compile 
-and run tests:
+There is also a CMake command to compile tests:
 
 ```bash
 ninja build_all_tests          # to compile all tests
-ninja test                     # to compile and run
 ninja build_<test_suite>_tests # to compile a specific test suite
-ninja test_<test_suite>        # to compile and run a specific test suite
 ```
 
 You can compile a specific test. For example, if you want to run the `lexer_test_simple` test, 
@@ -262,12 +259,19 @@ ninja lexer_test_simple
 ./bin/lexer_test_simple
 ```
 
+It's often useful to run a bundle of tests, for example all the tests in the `compiler` test bundle, to do that
+you can use `-L` (label filter) on `ctest`:
+
+```bash
+ctest -L compiler
+```
+
 > **Note**  
-> You can also use the `ctest` command to run the tests, for example with regex name filter:  
+> You can also use the `ctest` command to run the tests with other configurations:  
 > ```bash  
-> ctest -R vm_  
+> ctest -R vm_  -j 4
 > ```  
-> This will run all tests that have `vm_` in their name at the beggining.
+> This will run all tests with 4 threads that have `vm_` in their name at the beginning.
 
 
 ## Testing coverage

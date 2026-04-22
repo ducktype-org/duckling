@@ -1,12 +1,11 @@
-use crate::quackpack::core::{AllowGlobalPackage, PackageLoader};
-use crate::{DuckCtx, QuackResult};
 use clap::{ArgMatches, Command};
 
 use crate::duck::driver::cli_ext::{
-    CommandExt, features_from_matches, flag, profile_from_matches, subcommand,
+    CommandExt, features_from_matches, flag, multi, profile_from_matches, subcommand,
 };
-
+use crate::quackpack::core::{AllowGlobalPackage, PackageLoader};
 use crate::quackpack::subcommands::build::{BuildOptions, compile};
+use crate::{DuckContext, QuackResult};
 
 /// Creates parser for the `build` subcommand.
 pub fn get_parser() -> Command {
@@ -14,9 +13,10 @@ pub fn get_parser() -> Command {
         .about("Build the current package")
         .add_profile()
         .add_release()
-        .add_features_conflicting(
-            "Build the current package with these features",
-            "all-features",
+        .arg(
+            multi("features", "Build the current package with these features")
+                .short('F')
+                .conflicts_with("all-features"),
         )
         .arg(
             flag(
@@ -27,17 +27,10 @@ pub fn get_parser() -> Command {
         )
         .add_jobs()
         .arg(flag("frozen", "Don't update the freezefile"))
-        .arg(
-            flag(
-                "overwrite",
-                "Overwrite any existing virtual environments with the same name",
-            )
-            .conflicts_with("global"),
-        )
-        .arg(
-            flag("global", "Synchronize the global virtual environment")
-                .conflicts_with("overwrite"),
-        )
+        .arg(flag(
+            "overwrite",
+            "Overwrite any existing virtual environments with the same name",
+        ))
         .arg(flag(
             "external-errors",
             "Halt computation after encountering errors in foreign manifests",
@@ -45,20 +38,16 @@ pub fn get_parser() -> Command {
 }
 
 /// Logic for executing the `build` subcommand.
-pub fn execute(ctx: &DuckCtx, matches: &ArgMatches) -> QuackResult<()> {
-    let global = matches.get_flag("global");
-    let package = if global {
-        PackageLoader::global_package(ctx)?
-    } else {
-        PackageLoader::find_from_cwd(ctx, AllowGlobalPackage::No)?
-    };
+pub fn execute(ctx: &DuckContext, matches: &ArgMatches) -> QuackResult<()> {
+    // We do not allow to build the global package.
+    // It has no src folder and is purely for running scripts.
+    let package = PackageLoader::find_from_cwd(ctx, AllowGlobalPackage::No)?;
     let features = features_from_matches(matches, package.package());
     let profile = profile_from_matches(matches);
     let opts = BuildOptions {
         package,
         used_features: features,
         profile,
-        global,
         overwrite: matches.get_flag("overwrite"),
         frozen: matches.get_flag("frozen"),
         strict_errors: matches.get_flag("external-errors"),

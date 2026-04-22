@@ -1,79 +1,79 @@
-function fibonacci{ i64, i64 } -> i64 {
-    cmpGt_l64_imm           arg0, 1;
+function fibonacci{ i64, i64 }-> { i64 } {
+    cmpGt_p64_imm           arg0, 1;
     jmpIf_label             continue;
-    mov_l64_l64             ret_val, arg1;
-    add_l64_l64             ret_val, arg0;
+    mov_p64_p64             ret0, arg1;
+    add_p64_p64             ret0, arg0;
     ret;
     
 label continue;
-    init_lany_type          sub_res, i64;
+    init_pany_type          sub_res, i64;
 
-    init_lany_type          sub_arg0, i64;
-    mov_l64_l64             sub_arg0, arg0;
-    add_l64_imm             sub_arg0, -1;
+    init_pany_type          sub_arg0, i64;
+    mov_p64_p64             sub_arg0, arg0;
+    add_p64_imm             sub_arg0, -1;
 
-    init_lany_type          sub_arg1, i64;
-    mov_l64_l64             sub_arg1, arg1;
+    init_pany_type          sub_arg1, i64;
+    mov_p64_p64             sub_arg1, arg1;
     call_func               fibonacci;
 
-    mov_l64_l64             arg1, sub_res;
+    mov_p64_p64             arg1, sub_res;
     deinit;               # sub_res1
 
-    add_l64_imm             arg0, -2;
+    add_p64_imm             arg0, -2;
     ret_tailcall_func       fibonacci;
 
-    init_lany_type          trol, i64;
-    mov_l64_imm             trol, 9;
-    output_l64              trol;
-    output_l64              trol;
-    output_l64              trol;
-    output_l64              trol;
-    output_l64              trol;
-    output_l64              trol;
-    output_l64              trol;
-    output_l64              trol;
-    output_l64              trol;
-    output_l64              trol;
+    init_pany_type          trol, i64;
+    mov_p64_imm             trol, 9;
+    output_p64              trol;
+    output_p64              trol;
+    output_p64              trol;
+    output_p64              trol;
+    output_p64              trol;
+    output_p64              trol;
+    output_p64              trol;
+    output_p64              trol;
+    output_p64              trol;
+    output_p64              trol;
     ret;    
 }
 
-function main { i64, ptr_argv } -> i64 {
-    # ret_val -> main ret_val
+function main { i64, ptr_argv }-> { i64 } {
+    # ret0 -> main ret0
     # arg0 -> argc
     # arg1 -> *argv
 
     # Read counter from STDIN
-    init_lany_type counter, i64;
-    input_l64 counter;
+    init_pany_type counter, i64;
+    input_p64 counter;
 
 # Loop until counter equals 0
 label loop_start;
     
-    cmpEq_l64_imm counter, 0;
+    cmpEq_p64_imm counter, 0;
     jmpIf_label loop_end;
 
-	init_lany_type 			fibo_ret, i64;
-    mov_l64_imm             fibo_ret, 0;
+	init_pany_type 			fibo_ret, i64;
+    mov_p64_imm             fibo_ret, 0;
 
-    init_lany_type          fibo_arg0, i64;
-	mov_l64_l64             fibo_arg0, counter;
+    init_pany_type          fibo_arg0, i64;
+	mov_p64_p64             fibo_arg0, counter;
 
 
-	init_lany_type 			fibo_arg1, i64;
-    mov_l64_imm             fibo_arg1, 0;
+	init_pany_type 			fibo_arg1, i64;
+    mov_p64_imm             fibo_arg1, 0;
 
 	call_func          		fibonacci;
 
-    output_l64              fibo_ret;
+    output_p64              fibo_ret;
     deinit;               # fibo_ret
 
-    add_l64_imm counter, -1;
+    add_p64_imm counter, -1;
     jmp_label loop_start;
 
 label loop_end;
     
     # Return 0
-    mov_l64_imm ret_val, 0;
+    mov_p64_imm ret0, 0;
     
     deinit; # counter
     deinit; # *argv

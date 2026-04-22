@@ -30,7 +30,6 @@
 #include <filesystem/file.hpp>
 #include <filesystem/file_path.hpp>
 #include <init/init.hpp>
-#include <lexer/lexer.hpp>
 #include <printer/stream_printer.hpp>
 #include <query_framework/entry/query_entry_point.hpp>
 #include <query_framework/entry/with_context_do.hpp>
@@ -240,7 +239,7 @@ clah::Clah getClahForMain() {
 		                                 .valueOrPanicMsg("The hout creation failed");
 							   query::utils::withContextDo([&](query::Context& ctx) {
 								   for (const auto& hout_unit: hout_units)
-									   std::cout << hout_unit->debugPrint(ctx);
+									   hout_unit->debugPrint(ctx, std::cout);
 							   });
 
 							   return exit_code;
@@ -312,8 +311,7 @@ clah::Clah getClahForMain() {
 
 					auto root = global_state::getMainPackage().root_module;
 
-					auto output_artifact
-						= query::entryPoint<driver::CompileModule>({ root, backend_type });
+					(void) query::entryPoint<driver::CompileModule>({ root, backend_type, false });
 
 
 					compiler::driver::exit();
@@ -570,12 +568,64 @@ clah::Clah getClahForMain() {
 					}
 
 					const auto& linking_options = getLinkingOptionsFromClap(options);
-					auto        result = driver::compileScript(mode, backend_type, linking_options);
+					auto        result = driver::compileScript(backend_type, linking_options);
 
 					compiler::driver::exit();
 					return result.isOk() ? 0 : 1;
 				})
 		)
+	    // Scripts can only be "run" on DVM for now, since compiling with LLVM would produce
+	    // artifacts. To compile to native executable, the compile_script command can be used.
+	    // This may change in the future.
+	    .addSubcommand(clah::Clah("run", "Compile a .ds script file and run it on DVM.")
+	                       .addPositional(clah::FileParser::make("script"))
+	                       .add(clah::ParamBuilder::ofValue(clah::IntParser::make("worker count"))
+	                                .addShortName('w')
+	                                .addLongName("workers")
+	                                .addShortDesc("Worker count.")
+	                                .optional()
+	                                .build())
+	                       .setHandler([](const clah::ParsingResult& options) -> int {
+							   using namespace compiler;
+
+							   auto script_file  = options.getPositional<fs::File>(0);
+							   auto worker_count = options.getValue<i64>("workers").copyValueOr(1);
+							   // duckc run doesn't produce any artifacts for now, but this may be
+		                       // changed later by for example adding option to save compiled
+		                       // bytecode. Also, ScriptMode requires artifacts path, maybe this
+		                       // will be refactored later.
+							   auto run_temp_artifacts_path = fs::FilePath(
+								   fs::FilePath::getDefaultTempDirectoryPath().getPath()
+								   / "duckling_script_run_artifacts"
+							   );
+
+							   auto mode = compiler::driver::CompilerModeOfOperationAndOptions::ScriptMode{
+						.script_file     = script_file,
+						.backend_options = {}, // only dvm for now.
+						.compilation_artifacts = {
+							.artifacts_path = run_temp_artifacts_path,
+						},
+						.debug_options     = getDebugOptionsFromClap(options),
+						.execution_options = {
+							.worker_count = base::safeIntConv<u64>(worker_count),
+						},
+					};
+
+							   auto init_result = compiler::driver::initializeTheCompiler(mode);
+							   if (init_result.status().isBad()) {
+								   compiler::driver::exit();
+								   return 1;
+							   }
+
+							   auto run_result = driver::runScriptOnDVM();
+
+							   compiler::driver::exit();
+							   if (!run_result.has_value()) {
+								   std::cerr << "Error: " << run_result.error() << "\n";
+								   return 1;
+							   }
+							   return run_result->exit_code;
+						   }))
 	    .addSubcommand(clah::Clah("repl", "Start an interactive REPL session")
 	                       .setHandler([](const clah::ParsingResult& options) -> int {
 							   auto init_result = compiler::driver::initializeTheCompiler(

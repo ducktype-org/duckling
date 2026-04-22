@@ -3,15 +3,14 @@
 #include <frontend/module_tree/module_tree.hpp>
 #include <helios/queries/queries.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
+#include <helios/tsh/queries/types.hpp>
+#include <helios/tsh/types.hpp>
 #include <helios_private/errors/errors.hpp>
-#include <helios_private/expressions/errors.hpp>
+#include <helios_private/hout_creation/expressions/errors.hpp>
 #include <helios_private/symbols/symbols.hpp>
-#include <typesystem/higher/queries/types.hpp>
-#include <typesystem/higher/types.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
-#include <base/extend_cpp/variant_match.hpp>
 #include <base/pointers/box.hpp>
 
 #include <diagnostic/highlight_positions.hpp>
@@ -426,7 +425,7 @@ private:
 
 		// ========================== Lexer errors ==========================
 
-		// // We don't see errors here, because they are produced by the lexer, not query:
+		// We don't see errors here, because they are produced by the lexer, not query:
 		checkForErrorOnCompileModule(
 			R"(
 				fun main() -> i64 = {
@@ -438,6 +437,20 @@ private:
 			0
 		);
 
+		// ========================== Parsing errors ==========================
+
+		// We don't see errors here, because they are produced by the parser, not query:
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() = {
+					if Loop <= 1 { # no parenthesis around condition
+					
+					}
+				}
+			)",
+			{},
+			0
+		);
 
 		// ========================== Comp time errors ==========================
 
@@ -803,21 +816,6 @@ private:
 				}
 			)",
 			{ "Feature not implemented" },
-			1
-		);
-
-		checkForErrorOnCompileModule(
-			R"(
-				fun foo() = {
-					var a: i64 = 0;
-					&a;
-
-					return a;
-				}
-
-				const bar = foo();
-			)",
-			{ "Feature not implemented", "pointer types" },
 			1
 		);
 

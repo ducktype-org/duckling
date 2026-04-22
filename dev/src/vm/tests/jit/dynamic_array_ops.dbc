@@ -5,96 +5,96 @@
 type dynamic_table: table_i64 i64
 type pointer: ptr_table_i64 table_i64
 
-function f {} -> void {
+function f {} -> { } {
     # Declare local variables
-    init_lany_type arr, ptr_table_i64;
-    init_lany_type idx, i64;
-    init_lany_type val, i64;
-    init_lany_type tmp, i64;
-    init_lany_type size, i64;
+    init_pany_type arr, ptr_table_i64;
+    init_pany_type idx, i64;
+    init_pany_type val, i64;
+    init_pany_type tmp, i64;
+    init_pany_type size, i64;
     
     # Allocate dynamic array with initial size 10
-    mov_l64_imm size, 10;
-    dynTableReAlloc_lptr_type_l64 arr, table_i64, size;
+    mov_p64_imm size, 10;
+    dynTableReAlloc_pptr_type_p64 arr, table_i64, size;
     
     # Initialize value
-    mov_l64_imm val, 200;
+    mov_p64_imm val, 200;
     
     # Store sequence: arr[0] = 200, arr[1] = 201, ...
-    mov_l64_imm idx, 0;
-    dynTableStore_lptr_lany_l64 arr, val, idx;
-    add_l64_imm val, 1;
+    mov_p64_imm idx, 0;
+    dynTableStore_pptr_pany_p64 arr, val, idx;
+    add_p64_imm val, 1;
     
-    mov_l64_imm idx, 1;
-    dynTableStore_lptr_lany_l64 arr, val, idx;
-    add_l64_imm val, 1;
+    mov_p64_imm idx, 1;
+    dynTableStore_pptr_pany_p64 arr, val, idx;
+    add_p64_imm val, 1;
     
-    mov_l64_imm idx, 2;
-    dynTableStore_lptr_lany_l64 arr, val, idx;
-    add_l64_imm val, 1;
+    mov_p64_imm idx, 2;
+    dynTableStore_pptr_pany_p64 arr, val, idx;
+    add_p64_imm val, 1;
     
-    mov_l64_imm idx, 3;
-    dynTableStore_lptr_lany_l64 arr, val, idx;
-    add_l64_imm val, 1;
+    mov_p64_imm idx, 3;
+    dynTableStore_pptr_pany_p64 arr, val, idx;
+    add_p64_imm val, 1;
     
-    mov_l64_imm idx, 4;
-    dynTableStore_lptr_lany_l64 arr, val, idx;
-    add_l64_imm val, 1;
+    mov_p64_imm idx, 4;
+    dynTableStore_pptr_pany_p64 arr, val, idx;
+    add_p64_imm val, 1;
     
-    mov_l64_imm idx, 5;
-    dynTableStore_lptr_lany_l64 arr, val, idx;
-    add_l64_imm val, 1;
+    mov_p64_imm idx, 5;
+    dynTableStore_pptr_pany_p64 arr, val, idx;
+    add_p64_imm val, 1;
     
-    mov_l64_imm idx, 6;
-    dynTableStore_lptr_lany_l64 arr, val, idx;
-    add_l64_imm val, 1;
+    mov_p64_imm idx, 6;
+    dynTableStore_pptr_pany_p64 arr, val, idx;
+    add_p64_imm val, 1;
     
-    mov_l64_imm idx, 7;
-    dynTableStore_lptr_lany_l64 arr, val, idx;
-    add_l64_imm val, 1;
+    mov_p64_imm idx, 7;
+    dynTableStore_pptr_pany_p64 arr, val, idx;
+    add_p64_imm val, 1;
     
-    mov_l64_imm idx, 8;
-    dynTableStore_lptr_lany_l64 arr, val, idx;
-    add_l64_imm val, 1;
+    mov_p64_imm idx, 8;
+    dynTableStore_pptr_pany_p64 arr, val, idx;
+    add_p64_imm val, 1;
     
-    mov_l64_imm idx, 9;
-    dynTableStore_lptr_lany_l64 arr, val, idx;
+    mov_p64_imm idx, 9;
+    dynTableStore_pptr_pany_p64 arr, val, idx;
     
     # Reallocate to larger size
-    mov_l64_imm size, 15;
-    dynTableReAlloc_lptr_type_l64 arr, table_i64, size;
+    mov_p64_imm size, 15;
+    dynTableReAlloc_pptr_type_p64 arr, table_i64, size;
     
     # Store more values
-    mov_l64_imm val, 300;
-    mov_l64_imm idx, 10;
-    dynTableStore_lptr_lany_l64 arr, val, idx;
-    add_l64_imm val, 1;
+    mov_p64_imm val, 300;
+    mov_p64_imm idx, 10;
+    dynTableStore_pptr_pany_p64 arr, val, idx;
+    add_p64_imm val, 1;
     
-    mov_l64_imm idx, 11;
-    dynTableStore_lptr_lany_l64 arr, val, idx;
-    add_l64_imm val, 1;
+    mov_p64_imm idx, 11;
+    dynTableStore_pptr_pany_p64 arr, val, idx;
+    add_p64_imm val, 1;
     
-    mov_l64_imm idx, 12;
-    dynTableStore_lptr_lany_l64 arr, val, idx;
+    mov_p64_imm idx, 12;
+    dynTableStore_pptr_pany_p64 arr, val, idx;
     
     # Load and modify some values
-    mov_l64_imm idx, 0;
-    dynTableLoad_lany_lptr_l64 tmp, arr, idx;
-    add_l64_imm tmp, 100;
-    dynTableStore_lptr_lany_l64 arr, tmp, idx;
+    mov_p64_imm idx, 0;
+    dynTableLoad_pany_pptr_p64 tmp, arr, idx;
+    add_p64_imm tmp, 100;
+    dynTableStore_pptr_pany_p64 arr, tmp, idx;
     
-    mov_l64_imm idx, 1;
-    dynTableLoad_lany_lptr_l64 tmp, arr, idx;
-    add_l64_imm tmp, 100;
-    dynTableStore_lptr_lany_l64 arr, tmp, idx;
+    mov_p64_imm idx, 1;
+    dynTableLoad_pany_pptr_p64 tmp, arr, idx;
+    add_p64_imm tmp, 100;
+    dynTableStore_pptr_pany_p64 arr, tmp, idx;
     
-    mov_l64_imm idx, 2;
-    dynTableLoad_lany_lptr_l64 tmp, arr, idx;
-    add_l64_imm tmp, 100;
-    dynTableStore_lptr_lany_l64 arr, tmp, idx;
+    mov_p64_imm idx, 2;
+    dynTableLoad_pany_pptr_p64 tmp, arr, idx;
+    add_p64_imm tmp, 100;
+    dynTableStore_pptr_pany_p64 arr, tmp, idx;
     
     # Free array
-    free_lptr arr;
+    free_pptr arr;
     
     # Cleanup
     deinit; # size
@@ -106,31 +106,31 @@ function f {} -> void {
     ret;
 }
 
-function main { i64, ptr_argv } -> i64 {
-    # ret_val -> main ret_val
+function main { i64, ptr_argv }-> { i64 } {
+    # ret0 -> main ret0
     # arg0 -> argc
     # arg1 -> *argv
 
     # Read counter limit from STDIN
-    init_lany_type counter_limit, i64;
-    input_l64 counter_limit;
+    init_pany_type counter_limit, i64;
+    input_p64 counter_limit;
 
     # Initialize loop counter
-    init_lany_type counter, i64;
-    mov_l64_imm counter, 0;
+    init_pany_type counter, i64;
+    mov_p64_imm counter, 0;
 
     # Loop until counter equals counter_limit
     label loop_start;
     
     # Check if counter == counter_limit
-    cmpEq_l64_l64 counter, counter_limit;
+    cmpEq_p64_p64 counter, counter_limit;
     jmpIf_label loop_end;
 
     # Call function f
     call_func f;
 
     # Increment counter
-    add_l64_imm counter, 1;
+    add_p64_imm counter, 1;
 
     # Jump back to loop start
     jmp_label loop_start;
@@ -138,7 +138,7 @@ function main { i64, ptr_argv } -> i64 {
     label loop_end;
     
     # Return 0
-    mov_l64_imm ret_val, 0;
+    mov_p64_imm ret0, 0;
     
     deinit; # counter
     deinit; # counter_limit

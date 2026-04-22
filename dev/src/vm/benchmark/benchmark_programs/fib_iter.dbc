@@ -1,5 +1,5 @@
-function main { i64, ptr_argv } -> i64 {
-    # [0, 8) main ret_val
+function main { i64, ptr_argv } -> { i64 } {
+    # [0, 8) main ret0
     # [8, 16) -> argc
     # [16, 32) -> *argv
 
@@ -12,38 +12,38 @@ function main { i64, ptr_argv } -> i64 {
     init_type       i64; # [32, 40)
     init_type       i64; # [40, 48)
 
-    input_l64       32; # n := argument
-    input_l64       40; # m (modulo)
+    input_p64       32; # n := argument
+    input_p64       40; # m (modulo)
 
     init_type       i64; # [48, 56) a
     init_type       i64; # [56, 64) b
 
-    mov_l64_imm     48, 0; # a = 0
-    mov_l64_imm     56, 1; # b = 1
+    mov_p64_imm     48, 0; # a = 0
+    mov_p64_imm     56, 1; # b = 1
 
     # while(x > 0)
     label Loop;
         # c = (a + b) % m
         init_type       i64; # [64, 72) c
 
-        mov_l64_l64     64, 48;
-        add_l64_l64     64, 56;
-        mod_l64_l64     64, 40;
+        mov_p64_p64     64, 48;
+        add_p64_p64     64, 56;
+        mod_p64_p64     64, 40;
         # a = b
-        mov_l64_l64     48, 56;
+        mov_p64_p64     48, 56;
         # b = c
-        mov_l64_l64     56, 64;
+        mov_p64_p64     56, 64;
 
         # n--;
-        sub_l64_imm    32, 1;
+        sub_p64_imm    32, 1;
 
         deinit; # c
 
         # if n > 0 : end
-        cmpGt_l64_imm    32, 0;
+        cmpGt_p64_imm    32, 0;
         jmpIf_label  Loop;
 
-    output_l64      48;
+    output_p64      48;
 
     deinit; # b
     deinit; # a

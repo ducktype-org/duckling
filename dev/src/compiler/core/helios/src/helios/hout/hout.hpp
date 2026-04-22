@@ -14,10 +14,12 @@
 #include <helios/symbols/symbol_id.hpp>
 
 #include <base/pointers/box.hpp>
+#include <base/pointers/box_or_ref.hpp>
 
 #include <string_id/string_id.hpp>
 
 #include <memory>
+#include <ostream>
 #include <variant>
 #include <vector>
 
@@ -25,6 +27,7 @@ namespace compiler::repl {
 	// for friend:
 	struct ImplementationOf_QueryReplExpressionWrapper;
 	struct ImplementationOf_QueryReplInstructionWrapper;
+	struct ScriptMainWrapperBuilder;
 }
 
 namespace compiler::helios {
@@ -32,7 +35,7 @@ namespace compiler::helios {
 	// for friend:
 	struct ImplementationOf_QueryDeclOfFun;
 
-	namespace houtgen {
+	namespace defgen {
 		struct ImplementationOf_QueryImplicitClassConstructor;
 		struct ImplementationOf_QueryDefaultClassConstructor;
 		struct ImplementationOf_QueryDefaultStaticArrayConstructor;
@@ -75,8 +78,7 @@ namespace compiler::helios {
 		[[nodiscard]]
 		u64 queryUnstablePerfectHash() const;
 
-		[[nodiscard]]
-		std::string debugPrint() const;
+		void debugPrint(std::ostream& out) const;
 
 	private:
 		HOUTFunctionDeclaration(
@@ -102,11 +104,12 @@ namespace compiler::helios {
 			const std::shared_ptr<const code::CodeBlock>& body
 		);
 		friend struct ImplementationOf_QueryCodeOfFun;
-		friend houtgen::ImplementationOf_QueryImplicitClassConstructor;
-		friend houtgen::ImplementationOf_QueryDefaultClassConstructor;
-		friend houtgen::ImplementationOf_QueryDefaultStaticArrayConstructor;
+		friend defgen::ImplementationOf_QueryImplicitClassConstructor;
+		friend defgen::ImplementationOf_QueryDefaultClassConstructor;
+		friend defgen::ImplementationOf_QueryDefaultStaticArrayConstructor;
 		friend compiler::repl::ImplementationOf_QueryReplExpressionWrapper;
 		friend compiler::repl::ImplementationOf_QueryReplInstructionWrapper;
+		friend compiler::repl::ScriptMainWrapperBuilder;
 
 	public:
 		HOUTFunction() = delete;
@@ -131,8 +134,7 @@ namespace compiler::helios {
 		[[nodiscard]]
 		u64 queryUnstablePerfectHash() const;
 
-		[[nodiscard]]
-		std::string debugPrint() const;
+		void debugPrint(std::ostream& out) const;
 	};
 
 	enum class HOUTGlobalDataType { Constant, Variable };
@@ -141,13 +143,12 @@ namespace compiler::helios {
 		ctv::CompileTimeValue value;
 	};
 
-	struct HOUTGlobalVariable final {
-		// We cannot use Box<code::Expr> here because we use AUTO_CACHE_COPY,
-		// and the HOUTUnit is copied during runtime. Also, the problem with the
-		// copy constructor will go away once we pass HOUT expressions around as
-		// references.
-		// @TODO: Make this better.
-		std::shared_ptr<Box<code::Expr>> initial_value;  ///< The initial value of the variable.
+	class HOUTGlobalVariable final {
+	public:
+		BoxOrCRef<code::Expr> initial_value;  ///< The initial value of the variable.
+
+		HOUTGlobalVariable(BoxOrCRef<code::Expr> initial_value):
+			  initial_value(std::move(initial_value)) {}
 	};
 
 	/**
@@ -179,12 +180,7 @@ namespace compiler::helios {
 
 		tsh::SymbolType<> type;
 
-		// @TODO: #1958 move this to separate query (or function)
-		// so we can continue compiling module even if the global value has not compiled
-		explicit HOUTGlobalData(query::Context& ctx, SymID symbol, HOUTGlobalDataType data_type);
-
-		[[nodiscard]]
-		std::string debugPrint(query::Context& ctx) const;
+		void debugPrint(query::Context& ctx, std::ostream& out) const;
 	};
 
 	/**
@@ -199,12 +195,11 @@ namespace compiler::helios {
 		// * vector/references to hout of submodules? -- not necessarily needed
 		// * what else?
 
-		std::vector<HOUTGlobalData> glob_data;
+		std::vector<CRef<HOUTGlobalData>> glob_data;
 
 		std::vector<CRef<HOUTFunction>> functions;
 
-		[[nodiscard]]
-		std::string debugPrint(query::Context& ctx) const;
+		void debugPrint(query::Context& ctx, std::ostream& out) const;
 
 		HOUTUnit()                          = default;
 		HOUTUnit(const HOUTUnit&)           = delete;

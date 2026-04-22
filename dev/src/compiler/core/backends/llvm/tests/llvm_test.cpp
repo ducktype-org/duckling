@@ -65,10 +65,10 @@ private:
 			auto& module_hout = ctx.query<helios::QueryModuleHOUT>(module)->valueOrPanic();
 
 			for (auto& hout_glob: module_hout.glob_data) {
-				if (!hout_glob.type.getType().carriesInformation(ctx)) continue;
-				lir::LIRGlobal lir_glob = lir::LIRGlobal::fromHOUT(ctx, hout_glob);
+				if (!hout_glob->type.getType().carriesInformation(ctx)) continue;
+				lir::LIRGlobal lir_glob = lir::LIRGlobal::fromHOUT(ctx, *hout_glob);
 				llvm_module.addGlobalToModule(lir_glob);
-				variant_match(hout_glob.value) {
+				variant_match(hout_glob->value) {
 					variant_case(helios::HOUTGlobalVariable, var) {
 						CRef mir_func = &ctx.query<mir::LowerGlobalDataToMIRCtor>({ hout_glob })
 						                     ->valueOrThrow();
@@ -85,7 +85,7 @@ private:
 					}
 					variant_default {
 						fail(base::strConcat(
-							"Unexpected global data type of: ", hout_glob.original_name
+							"Unexpected global data type of: ", hout_glob->original_name
 						));
 					}
 				}
@@ -308,7 +308,7 @@ private:
 
 		// Is List[i64] defined.
 		assertTrue(
-			std::regex_search(ir, std::regex{ R"(%"list\.i64:64b"\s*=\s*type\s*\{)" }),
+			std::regex_search(ir, std::regex{ R"(%Di64E\s*=\s*type\s*\{)" }),
 			"Expected list struct definition for i64"
 		);
 
@@ -334,7 +334,7 @@ private:
 		const std::regex access_pattern(
 			// GEP to 'data' field (0th index).
 		    // %(\w+) captures the GEP result as group 1.
-			R"(%(\w+)\s*=\s*getelementptr\s+%"list\.i64:64b",\s+ptr\s+%\w+,\s+i32\s+0,\s+i32\s+0\s*)"
+			R"(%(\w+)\s*=\s*getelementptr\s+%Di64E,\s+ptr\s+%\w+,\s+i32\s+0,\s+i32\s+0\s*)"
 			// Accept newlines.
 			R"(\s*)"
 			// Now we expect load from the pointer returned by GEP (group 1) and store the result in

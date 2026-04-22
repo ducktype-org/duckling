@@ -87,6 +87,9 @@ namespace pst {
 		CallArgument,
 		NestedImportList,
 
+		FormatSubExpression,
+		FormatSubString,
+
 		// patterns:
 		FlowPattern,
 		AnalysisPattern,

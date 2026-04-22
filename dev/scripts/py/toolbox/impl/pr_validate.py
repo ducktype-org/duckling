@@ -59,7 +59,7 @@ def pr_validate_impl(
     # Step 6 - test
     test_impl(build_dir=build_dir, thread_count=thread_count)
 
-    # Step 7 - integration tests with 1 thread
+    # Step 7 - integration tests
     tester_impl(
         clean=False,
         dry=False,
@@ -68,22 +68,9 @@ def pr_validate_impl(
         verbose=False,
         log_file=DEFAULT_LOG_FILE_PATH,
         build_dir=build_dir,
-        duckc_worker_count=1,
     )
 
-    # Step 8 - integration tests with 4 thread
-    tester_impl(
-        clean=False,
-        dry=False,
-        filter="",
-        fail_fast=False,
-        verbose=False,
-        log_file=DEFAULT_LOG_FILE_PATH,
-        build_dir=build_dir,
-        duckc_worker_count=4,
-    )
-
-    # Step 9 - clang-tidy
+    # Step 8 - clang-tidy
     clang_tidy_failed, _ = cpp_linter_impl(
         clang_tidy_path=clang_tidy_path,
         clang_format_path=None,
