@@ -15,6 +15,9 @@ namespace compiler::helios {
 	struct PSTParentResult final {
 		std::variant<pst::AccessLocked<pst::LangElement>, frontend::ModuleID> state;
 
+        [[nodiscard]]
+        bool isLangElement() const { return std::holds_alternative<pst::AccessLocked<pst::LangElement>>(state); }
+
 		[[nodiscard]]
 		pst::AccessLocked<pst::LangElement> getAsLangElement() const {
 			if (std::holds_alternative<pst::AccessLocked<pst::LangElement>>(state))
