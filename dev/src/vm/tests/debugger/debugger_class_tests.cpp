@@ -40,8 +40,8 @@ private:
 		const std::vector<int>&   expected_values,
 		const std::vector<usize>& expected_statuses
 	) {
-		size_t                  status_counter  = 0;
-		size_t                  ret_val_counter = 0;
+		std::atomic<size_t>     status_counter  = 0;
+		std::atomic<size_t>     ret_val_counter = 0;
 		std::mutex              m;
 		std::condition_variable cv;
 
@@ -81,8 +81,8 @@ private:
 		ASSERT_TRUE(cv.wait_for(lk, std::chrono::milliseconds(100), [&] {
 			return status_counter == expected_statuses.size();
 		}));
-		ASSERT_EQUAL_PRINT(expected_statuses.size(), status_counter);
-		ASSERT_EQUAL_PRINT(expected_values.size(), ret_val_counter);
+		ASSERT_EQUAL_PRINT(expected_statuses.size(), status_counter.load());
+		ASSERT_EQUAL_PRINT(expected_values.size(), ret_val_counter.load());
 	}
 
 	void runAndGetStatus() {
@@ -119,8 +119,9 @@ private:
 	}
 
 	void rerunTest() {
-		size_t                  status_counter  = 0;
-		size_t                  ret_val_counter = 0;
+		std::atomic<size_t> status_counter  = 0;
+		std::atomic<size_t> ret_val_counter = 0;
+		;
 		std::mutex              m;
 		std::condition_variable cv;
 
@@ -172,16 +173,16 @@ private:
 			ASSERT_TRUE(cv.wait_for(lk, std::chrono::milliseconds(100), [&] {
 				return status_counter == expected_statuses.size();
 			}));
-			ASSERT_EQUAL_PRINT(expected_statuses.size(), status_counter);
+			ASSERT_EQUAL_PRINT(expected_statuses.size(), status_counter.load());
 		}
 		ASSERT_TRUE(std::holds_alternative<vm::api::ExecutionCompleted>(debugger.getStatus()));
 		std::lock_guard lk(m);
-		ASSERT_EQUAL_PRINT(expected_values.size(), ret_val_counter);
+		ASSERT_EQUAL_PRINT(expected_values.size(), ret_val_counter.load());
 	}
 
 	void errorTest() {
-		size_t                  error_counter   = 0;
-		size_t                  expected_errors = 1;
+		std::atomic<size_t>     error_counter   = 0;
+		const size_t            expected_errors = 1;
 		std::mutex              m;
 		std::condition_variable cv;
 		vm::debugger::Debugger  debugger{ fs::File(path("while_true_no_breakpoint.dbc")) };
@@ -204,7 +205,7 @@ private:
 			return error_counter == expected_errors;
 		}));
 		ASSERT_TRUE(std::holds_alternative<vm::api::Running>(debugger.getStatus()));
-		ASSERT_EQUAL_PRINT(expected_errors, error_counter);
+		ASSERT_EQUAL_PRINT(expected_errors, error_counter.load());
 	}
 };
 
