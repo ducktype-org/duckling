@@ -62,7 +62,9 @@ private:
 				ASSERT_TRUE(ret_val_counter < expected_values.size());
 				ASSERT_EQUAL_PRINT(1, exit_value.size());
 				ASSERT_EQUAL_PRINT("i64", exit_value[0]->type->getName());
-				ASSERT_EQUAL_PRINT(expected_values[ret_val_counter], exit_value[0]->readBytes<i64>());
+				ASSERT_EQUAL_PRINT(
+					expected_values[ret_val_counter], exit_value[0]->readBytes<i64>()
+				);
 				ret_val_counter++;
 			}
 		);
@@ -146,7 +148,9 @@ private:
 				ASSERT_TRUE(ret_val_counter < expected_values.size());
 				ASSERT_EQUAL_PRINT(1, exit_value.size());
 				ASSERT_EQUAL_PRINT("i64", exit_value[0]->type->getName());
-				ASSERT_EQUAL_PRINT(expected_values[ret_val_counter], exit_value[0]->readBytes<i64>());
+				ASSERT_EQUAL_PRINT(
+					expected_values[ret_val_counter], exit_value[0]->readBytes<i64>()
+				);
 				ret_val_counter++;
 			}
 		);
