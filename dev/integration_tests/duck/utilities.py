@@ -6,10 +6,19 @@ import json
 from typing import Any, Iterable
 
 
+DEFAULT_SRC: Final[str] = """fun main() = {
+    # !TODO: On macOS, builtin_output_string segfaults :^);
+    # builtin_output_string("Hello, world!");
+    return 0;
+}
+"""
+
+
 def check_file_exists(file: Path) -> None:
     if not file.is_file():
         print(f"file {file} does not exist")
         sys.exit(1)
+
 
 def check_dir_is_empty(directory: Path) -> None:
     if not directory.is_dir():
@@ -69,9 +78,11 @@ def check_empty_files(files: Iterable[Path]) -> None:
     for file in files:
         check_file_is_empty(file)
 
+
 def check_files_exist(files: Iterable[Path]) -> None:
     for file in files:
         check_file_exists(file)
+
 
 def check_empty_dirs(dirs: Iterable[Path]) -> None:
     for dir in dirs:
@@ -83,6 +94,7 @@ def get_exposed_freeze(root: Path) -> dict[str, Any]:
     data = file.read_text()
     return json.loads(data)
 
+
 def assert_eq(lhs: Any, rhs: Any, msg: str | None = None) -> None:
     if lhs == rhs:
         return
@@ -91,12 +103,6 @@ def assert_eq(lhs: Any, rhs: Any, msg: str | None = None) -> None:
     print(f"`{lhs}` != `{rhs}`")
     sys.exit(1)
 
-DEFAULT_SRC = """fun main() = {
-    # !TODO: On macOS, builtin_output_string segfaults :^);
-    # builtin_output_string("Hello, world!");
-    return 0;
-}
-"""
 
 def check_src_from_root(root: Path):
     src = (root / "src" / "src.dmf").read_text()
