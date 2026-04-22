@@ -1,7 +1,7 @@
 type pointer: pointer_A A
 type pointer: pointer_B B
-type fun: method_foo_A {pointer_A} void
-type fun: method_foo_B {pointer_B} void
+type fun: method_foo_A {pointer_A} {}
+type fun: method_foo_B {pointer_B} {}
 
 type class: A {
     abstract: true;

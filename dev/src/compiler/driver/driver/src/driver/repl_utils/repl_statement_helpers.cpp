@@ -81,11 +81,25 @@ namespace compiler::repl {
 			};
 		}
 
-		auto top_level_stmt_opt = pst::extractSingleTopLevelStatement(ctx, root);
-		if (top_level_stmt_opt.has_value())
-			return DefinitionSingleStatementInfo{ .definition_stmt = top_level_stmt_opt.value() };
+		auto definition_stmt_opt = pst::extractSingleDefinition(ctx, root);
+		if (definition_stmt_opt.has_value())
+			return DefinitionSingleStatementInfo{ .definition_stmt = definition_stmt_opt.value() };
 
-		return std::unexpected("Expected exactly one top-level statement");
+		auto single_stmt_opt = pst::extractSingleStatement(ctx, root);
+		if (single_stmt_opt.has_value()) {
+			auto stmt = single_stmt_opt.value().unlock(ctx);
+			return std::unexpected(base::strConcat(
+				"Unsupported single statement kind for REPL classification: ",
+				stmt->elementType(),
+				". Expected expression, instruction (if/while/for/block), or "
+				"definition/declaration."
+			));
+		}
+
+		return std::unexpected(
+			"Expected exactly one classified statement (expression, instruction, or "
+			"definition/declaration)"
+		);
 	}
 
 	std::expected<StatementWrapperBuildResult, std::string> buildStatementWrapper(

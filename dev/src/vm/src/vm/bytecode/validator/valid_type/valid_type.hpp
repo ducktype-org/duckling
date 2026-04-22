@@ -60,7 +60,9 @@ namespace vm::code::valid_type {
 
 		void defineVariant(const std::vector<ValidTypeID>& variant_types);
 
-		void defineFunction(const std::vector<ValidTypeID>& parameters, ValidTypeID result);
+		void defineFunction(
+			const std::vector<ValidTypeID>& parameters, const std::vector<ValidTypeID>& result
+		);
 
 		void defineOpaque(Bytes size);
 

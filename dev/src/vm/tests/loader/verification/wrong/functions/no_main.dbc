@@ -1,4 +1,4 @@
-function foo {} -> void {
+function foo {} -> {} {
 	init_pany_type       x, i64;
 	mov_p64_imm          x, 5;
 	ret;

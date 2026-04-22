@@ -1,7 +1,7 @@
 global_data counter i64 {};
 global_data global_ptr ptr_i64 {};
 
-function globaler_setter {} -> void {
+function globaler_setter {} -> {} {
 	init_pany_type  x, i64;
 	input_p64       x;
 	mov_p64_p64     counter, x;
