@@ -3,7 +3,7 @@ import sys
 import filecmp
 from pathlib import Path
 import json
-from typing import Any, Iterable
+from typing import Any, Iterable, Final
 
 
 DEFAULT_SRC: Final[str] = """fun main() = {
