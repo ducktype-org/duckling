@@ -120,7 +120,7 @@ std::expected<void, LoaderLogger> Loader::loadAndCompile(const code::CodeCollect
 	} catch (code::StackStructureMismatchError& e) {
 		log.logMap(
 			e.label,
-			[&](Box<dia_int::PlaceholderCodeError>& err) {
+			[&](Box<dia_int::PlaceholderError>& err) {
 				for (const auto& instruction: e.jumps)
 					instruction.visit([&](auto&& i) {
 						log.addNote(

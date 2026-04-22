@@ -109,6 +109,12 @@ namespace dia {
 		[[nodiscard]]
 		std::string genStr(std::string_view reason) const;
 
+		/**
+		 * @brief Get the content of the source position as a string.
+		 */
+		[[nodiscard]]
+		std::string content() const;
+
 		void printPosition(printer::PrinterOStream&) const;
 
 		[[nodiscard]]

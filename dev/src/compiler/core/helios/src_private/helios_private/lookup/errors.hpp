@@ -14,6 +14,7 @@ namespace compiler::helios {
 		}
 
 	public:
+		// @TODO: #2521 change this to stable position after fix
 		ShadowedVariableLookupError(dia::SourcePosition source_position):
 			  MessageWithCodeFragmentAndCause(source_position) {}
 	};
@@ -27,7 +28,7 @@ namespace compiler::helios {
 		}
 
 	public:
-		ShadowingDeclarationNote(dia::SourcePosition source_position):
+		ShadowingDeclarationNote(dia_int::StablePosition source_position):
 			  MessageWithCodeFragmentAndCause(source_position) {}
 	};
 }

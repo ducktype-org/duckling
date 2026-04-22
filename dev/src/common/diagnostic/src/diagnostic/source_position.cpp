@@ -183,4 +183,8 @@ namespace dia {
 		return getLocation() == other.getLocation() && getStart() == other.getStart()
 		    && getEnd() == other.getEnd();
 	}
+
+	std::string SourcePosition::content() const {
+		return getSource()->getCharRange(getStart(), getEnd() + 1).stdString();
+	}
 }

@@ -606,7 +606,7 @@ namespace compiler::helios::mangler {
 				return mangle(ctx, type.as<tsh::MetaAbstractType>());
 			default:
 				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-					base::strConcat("Cannot mangle type of kind: ", type.getKind()), std::nullopt
+					base::strConcat("Cannot mangle type of kind: ", type.getKind()), ""
 				));
 				return query::Failed();
 			}
