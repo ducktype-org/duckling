@@ -35,9 +35,10 @@ special_functions = {}
 def is_special_function(func_name: str) -> bool:
     global special_functions
 
-    if func_name in special_functions:
-        special_functions[func_name] = True
-        return True
+    for special_function in special_functions:
+        if special_function in func_name:
+            special_functions[special_function] = True
+            return True
     else:
         return False
 
@@ -63,8 +64,7 @@ def should_remain(func_name: str) -> bool:
 )
 @llvm_version_options
 def main(llvm_nm, llvm_cxxfilt, input_path, output_file, **kwargs):
-    def write(what):
-        output_file.write(what)
+    write = lambda what: output_file.write(what + "\n")
 
     nm_flags = ["--portability", input_path]
     functions = run_llvm(llvm_nm, nm_flags)
