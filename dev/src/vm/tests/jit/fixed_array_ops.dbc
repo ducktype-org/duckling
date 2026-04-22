@@ -13,80 +13,80 @@ function f {} -> { } {
     init_pany_type tmp, i64;
     
     # Allocate fixed-size array
-    alloc_lptr_type arr, table_i64;
+    alloc_pptr_type arr, table_i64;
     
     # Initialize values
     mov_p64_imm val, 100;
     
     # Store sequence: arr[0] = 100, arr[1] = 101, ...
     mov_p64_imm idx, 0;
-    fixedSizeTableStore_lptr_pany_p64 arr, val, idx;
+    fixedSizeTableStore_pptr_pany_p64 arr, val, idx;
     add_p64_imm val, 1;
     
     mov_p64_imm idx, 1;
-    fixedSizeTableStore_lptr_pany_p64 arr, val, idx;
+    fixedSizeTableStore_pptr_pany_p64 arr, val, idx;
     add_p64_imm val, 1;
     
     mov_p64_imm idx, 2;
-    fixedSizeTableStore_lptr_pany_p64 arr, val, idx;
+    fixedSizeTableStore_pptr_pany_p64 arr, val, idx;
     add_p64_imm val, 1;
     
     mov_p64_imm idx, 3;
-    fixedSizeTableStore_lptr_pany_p64 arr, val, idx;
+    fixedSizeTableStore_pptr_pany_p64 arr, val, idx;
     add_p64_imm val, 1;
     
     mov_p64_imm idx, 4;
-    fixedSizeTableStore_lptr_pany_p64 arr, val, idx;
+    fixedSizeTableStore_pptr_pany_p64 arr, val, idx;
     add_p64_imm val, 1;
     
     mov_p64_imm idx, 5;
-    fixedSizeTableStore_lptr_pany_p64 arr, val, idx;
+    fixedSizeTableStore_pptr_pany_p64 arr, val, idx;
     add_p64_imm val, 1;
     
     mov_p64_imm idx, 6;
-    fixedSizeTableStore_lptr_pany_p64 arr, val, idx;
+    fixedSizeTableStore_pptr_pany_p64 arr, val, idx;
     add_p64_imm val, 1;
     
     mov_p64_imm idx, 7;
-    fixedSizeTableStore_lptr_pany_p64 arr, val, idx;
+    fixedSizeTableStore_pptr_pany_p64 arr, val, idx;
     add_p64_imm val, 1;
     
     mov_p64_imm idx, 8;
-    fixedSizeTableStore_lptr_pany_p64 arr, val, idx;
+    fixedSizeTableStore_pptr_pany_p64 arr, val, idx;
     add_p64_imm val, 1;
     
     mov_p64_imm idx, 9;
-    fixedSizeTableStore_lptr_pany_p64 arr, val, idx;
+    fixedSizeTableStore_pptr_pany_p64 arr, val, idx;
     add_p64_imm val, 1;
     
     # Load and modify sequence
     mov_p64_imm idx, 0;
-    fixedSizeTableLoad_pany_lptr_p64 tmp, arr, idx;
+    fixedSizeTableLoad_pany_pptr_p64 tmp, arr, idx;
     add_p64_imm tmp, 10;
-    fixedSizeTableStore_lptr_pany_p64 arr, tmp, idx;
+    fixedSizeTableStore_pptr_pany_p64 arr, tmp, idx;
     
     mov_p64_imm idx, 1;
-    fixedSizeTableLoad_pany_lptr_p64 tmp, arr, idx;
+    fixedSizeTableLoad_pany_pptr_p64 tmp, arr, idx;
     add_p64_imm tmp, 20;
-    fixedSizeTableStore_lptr_pany_p64 arr, tmp, idx;
+    fixedSizeTableStore_pptr_pany_p64 arr, tmp, idx;
     
     mov_p64_imm idx, 2;
-    fixedSizeTableLoad_pany_lptr_p64 tmp, arr, idx;
+    fixedSizeTableLoad_pany_pptr_p64 tmp, arr, idx;
     add_p64_imm tmp, 30;
-    fixedSizeTableStore_lptr_pany_p64 arr, tmp, idx;
+    fixedSizeTableStore_pptr_pany_p64 arr, tmp, idx;
     
     mov_p64_imm idx, 3;
-    fixedSizeTableLoad_pany_lptr_p64 tmp, arr, idx;
+    fixedSizeTableLoad_pany_pptr_p64 tmp, arr, idx;
     add_p64_imm tmp, 40;
-    fixedSizeTableStore_lptr_pany_p64 arr, tmp, idx;
+    fixedSizeTableStore_pptr_pany_p64 arr, tmp, idx;
     
     mov_p64_imm idx, 4;
-    fixedSizeTableLoad_pany_lptr_p64 tmp, arr, idx;
+    fixedSizeTableLoad_pany_pptr_p64 tmp, arr, idx;
     add_p64_imm tmp, 50;
-    fixedSizeTableStore_lptr_pany_p64 arr, tmp, idx;
+    fixedSizeTableStore_pptr_pany_p64 arr, tmp, idx;
     
     # Free array
-    free_lptr arr;
+    free_pptr arr;
     
     # Cleanup
     deinit; # tmp

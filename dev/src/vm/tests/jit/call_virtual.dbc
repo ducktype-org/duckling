@@ -2,9 +2,9 @@ type pointer: pointer_I1 I1
 type pointer: pointer_Parent Parent
 type pointer: pointer_Child Child
 
-type fun: method_I1_void {pointer_I1} void
-type fun: method_parent_void {pointer_Parent} void
-type fun: method_child_void {pointer_Child} void
+type fun: method_I1_void {pointer_I1} {}
+type fun: method_parent_void {pointer_Parent} {}
+type fun: method_child_void {pointer_Child} {}
 
 type interface: I1 {
     virtual_methods: { 
@@ -52,14 +52,14 @@ function Child_getAge_impl_type {pointer_Child} -> { } {
 
 function to_jit { pointer_Parent } -> { } {
     init_pany_type           sub_arg, pointer_I1;
-    upcast_lptr_lptr         sub_arg, arg0;
-    virtual_call_lptr_method sub_arg, foo;
+    upcast_pptr_pptr         sub_arg, arg0;
+    virtual_call_pptr_method sub_arg, foo;
 
     init_pany_type           sub_arg, pointer_I1;
-    upcast_lptr_lptr         sub_arg, arg0;
-    virtual_call_lptr_method sub_arg, bar;
+    upcast_pptr_pptr         sub_arg, arg0;
+    virtual_call_pptr_method sub_arg, bar;
 
-    virtual_call_lptr_method arg0, getAge;
+    virtual_call_pptr_method arg0, getAge;
     ret;
 }
 
@@ -71,8 +71,8 @@ function main { i64, ptr_argv }-> { i64 } {
     init_pany_type ptr_child, pointer_Child;
 
     init_pany_type actual_child, pointer_Child;
-    alloc_lptr_type actual_child, Child;
-    setVTable_lptr_type actual_child, Child;
+    alloc_pptr_type actual_child, Child;
+    setVTable_pptr_type actual_child, Child;
 
     # Read counter from STDIN
     init_pany_type counter, i64;
@@ -84,14 +84,14 @@ label loop_start;
     jmpIf_label loop_end;
 
     init_pany_type      ptr_i1, pointer_Parent;
-    upcast_lptr_lptr    ptr_i1, actual_child;
+    upcast_pptr_pptr    ptr_i1, actual_child;
     call_func to_jit;
 
     add_p64_imm counter, -1;
     jmp_label loop_start;
 label loop_end;
     
-    free_lptr actual_child;
+    free_pptr actual_child;
     deinit; # actual_child
 
     # Return 0

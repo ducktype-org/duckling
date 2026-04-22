@@ -23,62 +23,62 @@ function f {} -> { } {
     mov_p64_imm val, 1000;
     
     # Set v1 to hold i64
-    variantSetInner_lvnt_type v1, i64;
-    variantGetInner_lptr_lvnt_type ptr1, v1, i64;
-    store_lptr_pany ptr1, val;
+    variantSetInner_pvnt_type v1, i64;
+    variantGetInner_pptr_pvnt_type ptr1, v1, i64;
+    store_pptr_pany ptr1, val;
     add_p64_imm val, 100;
     
     # Set v2 to hold i64
-    variantSetInner_lvnt_type v2, i64;
-    variantGetInner_lptr_lvnt_type ptr2, v2, i64;
-    store_lptr_pany ptr2, val;
+    variantSetInner_pvnt_type v2, i64;
+    variantGetInner_pptr_pvnt_type ptr2, v2, i64;
+    store_pptr_pany ptr2, val;
     add_p64_imm val, 100;
     
     # Set v3 to hold i64
-    variantSetInner_lvnt_type v3, i64;
-    variantGetInner_lptr_lvnt_type ptr3, v3, i64;
-    store_lptr_pany ptr3, val;
+    variantSetInner_pvnt_type v3, i64;
+    variantGetInner_pptr_pvnt_type ptr3, v3, i64;
+    store_pptr_pany ptr3, val;
     add_p64_imm val, 100;
     
     # Set v4 to hold i64
-    variantSetInner_lvnt_type v4, i64;
-    variantGetInner_lptr_lvnt_type ptr4, v4, i64;
-    store_lptr_pany ptr4, val;
+    variantSetInner_pvnt_type v4, i64;
+    variantGetInner_pptr_pvnt_type ptr4, v4, i64;
+    store_pptr_pany ptr4, val;
     add_p64_imm val, 100;
     
     # Load values and modify
-    load_pany_lptr tmp, ptr1;
+    load_pany_pptr tmp, ptr1;
     add_p64_imm tmp, 50;
-    store_lptr_pany ptr1, tmp;
+    store_pptr_pany ptr1, tmp;
     
-    load_pany_lptr tmp, ptr2;
+    load_pany_pptr tmp, ptr2;
     add_p64_imm tmp, 60;
-    store_lptr_pany ptr2, tmp;
+    store_pptr_pany ptr2, tmp;
     
-    load_pany_lptr tmp, ptr3;
+    load_pany_pptr tmp, ptr3;
     add_p64_imm tmp, 70;
-    store_lptr_pany ptr3, tmp;
+    store_pptr_pany ptr3, tmp;
     
-    load_pany_lptr tmp, ptr4;
+    load_pany_pptr tmp, ptr4;
     add_p64_imm tmp, 80;
-    store_lptr_pany ptr4, tmp;
+    store_pptr_pany ptr4, tmp;
     
     # More load/store operations
-    load_pany_lptr tmp, ptr1;
+    load_pany_pptr tmp, ptr1;
     mul_p64_imm tmp, 2;
-    store_lptr_pany ptr1, tmp;
+    store_pptr_pany ptr1, tmp;
     
-    load_pany_lptr tmp, ptr2;
+    load_pany_pptr tmp, ptr2;
     mul_p64_imm tmp, 2;
-    store_lptr_pany ptr2, tmp;
+    store_pptr_pany ptr2, tmp;
     
-    load_pany_lptr tmp, ptr3;
+    load_pany_pptr tmp, ptr3;
     mul_p64_imm tmp, 2;
-    store_lptr_pany ptr3, tmp;
+    store_pptr_pany ptr3, tmp;
     
-    load_pany_lptr tmp, ptr4;
+    load_pany_pptr tmp, ptr4;
     mul_p64_imm tmp, 2;
-    store_lptr_pany ptr4, tmp;
+    store_pptr_pany ptr4, tmp;
     
     # Cleanup
     deinit; # tmp

@@ -15,86 +15,86 @@ function f {} -> { } {
     
     # Allocate dynamic array with initial size 10
     mov_p64_imm size, 10;
-    dynTableReAlloc_lptr_type_p64 arr, table_i64, size;
+    dynTableReAlloc_pptr_type_p64 arr, table_i64, size;
     
     # Initialize value
     mov_p64_imm val, 200;
     
     # Store sequence: arr[0] = 200, arr[1] = 201, ...
     mov_p64_imm idx, 0;
-    dynTableStore_lptr_pany_p64 arr, val, idx;
+    dynTableStore_pptr_pany_p64 arr, val, idx;
     add_p64_imm val, 1;
     
     mov_p64_imm idx, 1;
-    dynTableStore_lptr_pany_p64 arr, val, idx;
+    dynTableStore_pptr_pany_p64 arr, val, idx;
     add_p64_imm val, 1;
     
     mov_p64_imm idx, 2;
-    dynTableStore_lptr_pany_p64 arr, val, idx;
+    dynTableStore_pptr_pany_p64 arr, val, idx;
     add_p64_imm val, 1;
     
     mov_p64_imm idx, 3;
-    dynTableStore_lptr_pany_p64 arr, val, idx;
+    dynTableStore_pptr_pany_p64 arr, val, idx;
     add_p64_imm val, 1;
     
     mov_p64_imm idx, 4;
-    dynTableStore_lptr_pany_p64 arr, val, idx;
+    dynTableStore_pptr_pany_p64 arr, val, idx;
     add_p64_imm val, 1;
     
     mov_p64_imm idx, 5;
-    dynTableStore_lptr_pany_p64 arr, val, idx;
+    dynTableStore_pptr_pany_p64 arr, val, idx;
     add_p64_imm val, 1;
     
     mov_p64_imm idx, 6;
-    dynTableStore_lptr_pany_p64 arr, val, idx;
+    dynTableStore_pptr_pany_p64 arr, val, idx;
     add_p64_imm val, 1;
     
     mov_p64_imm idx, 7;
-    dynTableStore_lptr_pany_p64 arr, val, idx;
+    dynTableStore_pptr_pany_p64 arr, val, idx;
     add_p64_imm val, 1;
     
     mov_p64_imm idx, 8;
-    dynTableStore_lptr_pany_p64 arr, val, idx;
+    dynTableStore_pptr_pany_p64 arr, val, idx;
     add_p64_imm val, 1;
     
     mov_p64_imm idx, 9;
-    dynTableStore_lptr_pany_p64 arr, val, idx;
+    dynTableStore_pptr_pany_p64 arr, val, idx;
     
     # Reallocate to larger size
     mov_p64_imm size, 15;
-    dynTableReAlloc_lptr_type_p64 arr, table_i64, size;
+    dynTableReAlloc_pptr_type_p64 arr, table_i64, size;
     
     # Store more values
     mov_p64_imm val, 300;
     mov_p64_imm idx, 10;
-    dynTableStore_lptr_pany_p64 arr, val, idx;
+    dynTableStore_pptr_pany_p64 arr, val, idx;
     add_p64_imm val, 1;
     
     mov_p64_imm idx, 11;
-    dynTableStore_lptr_pany_p64 arr, val, idx;
+    dynTableStore_pptr_pany_p64 arr, val, idx;
     add_p64_imm val, 1;
     
     mov_p64_imm idx, 12;
-    dynTableStore_lptr_pany_p64 arr, val, idx;
+    dynTableStore_pptr_pany_p64 arr, val, idx;
     
     # Load and modify some values
     mov_p64_imm idx, 0;
-    dynTableLoad_pany_lptr_p64 tmp, arr, idx;
+    dynTableLoad_pany_pptr_p64 tmp, arr, idx;
     add_p64_imm tmp, 100;
-    dynTableStore_lptr_pany_p64 arr, tmp, idx;
+    dynTableStore_pptr_pany_p64 arr, tmp, idx;
     
     mov_p64_imm idx, 1;
-    dynTableLoad_pany_lptr_p64 tmp, arr, idx;
+    dynTableLoad_pany_pptr_p64 tmp, arr, idx;
     add_p64_imm tmp, 100;
-    dynTableStore_lptr_pany_p64 arr, tmp, idx;
+    dynTableStore_pptr_pany_p64 arr, tmp, idx;
     
     mov_p64_imm idx, 2;
-    dynTableLoad_pany_lptr_p64 tmp, arr, idx;
+    dynTableLoad_pany_pptr_p64 tmp, arr, idx;
     add_p64_imm tmp, 100;
-    dynTableStore_lptr_pany_p64 arr, tmp, idx;
+    dynTableStore_pptr_pany_p64 arr, tmp, idx;
     
     # Free array
-    free_lptr arr;
+    free_pptr arr;
     
     # Cleanup
     deinit; # size
