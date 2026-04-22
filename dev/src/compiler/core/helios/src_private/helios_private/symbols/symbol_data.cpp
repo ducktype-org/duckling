@@ -138,14 +138,20 @@ namespace compiler::helios {
 					};
 				}
 				variant_case(ToStringMethod, to_string) {
-					const tsh::SymbolType<> return_type{
+					const tsh::SymbolType<> self_type{
 						to_string.owner_type,
 						tsh::ReferenceKind::Ref,
 						tsh::Mutability::Immutable,
 					};
 
+					const tsh::SymbolType<> return_type{
+						tsh::getStringType(),
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Mutable,
+					};
+
 					const auto to_string_abstract_type
-						= ctx.query<tsh::QueryFunctionType>({ {}, return_type });
+						= ctx.query<tsh::QueryFunctionType>({ {self_type}, return_type });
 
 					return tsh::SymbolType<>{
 						to_string_abstract_type,
@@ -313,6 +319,9 @@ namespace compiler::helios {
 			}
 			variant_case_novalue(defgen::GeneratedSymbolData::DefaultStaticArrayConstructor) {
 				kind = SymbolKind::Function;
+			}
+			variant_case_novalue(defgen::GeneratedSymbolData::ToStringMethod) {
+				kind = SymbolKind::Method;
 			}
 			variant_case_novalue(defgen::GeneratedSymbolData::BuiltinOperator) {
 				kind = SymbolKind::Function;

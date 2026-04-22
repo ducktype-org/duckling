@@ -9,12 +9,60 @@
 #include <helios/symbols/query_class_symbol_data.hpp>
 #include <helios/tsh/queries/implicit_coercibility.hpp>
 #include <helios/tsh/queries/types.hpp>
+#include <helios_private/symbols/generated_symbol_data.hpp>
+#include <helios_private/symbols/symbols.hpp>
 
 #include <query_framework/context/context.hpp>
+#include <query_framework/standard_query/query_impl.hpp>
 
 #include <utility>
 
 namespace compiler::tsh {
+	/**
+	 * @brief Gets the default interface for a type, i.e. the methods which should be defined for
+	 * every type, such as `toString`.
+	 * @param ctx Query context for generating symbols.
+	 * @param type The type for which to get the default interface, needed e.g. for method types.
+	 * @return The default interface for the given type.
+	 */
+	TypeInterface getDefaultTypeInterfaceForType(query::Context& ctx, const AbstractType type) {
+		using namespace helios::defgen;
+		auto get_generated_symbol
+			= [&](const base::StrID                                      name,
+		          const GeneratedSymbolData::GeneratedSymbolDataVariant& data) -> helios::SymID {
+			return ctx.query<QueryGeneratedSymbol>({ name, GeneratedSymbolData(data) });
+		};
+
+		return TypeInterface({ InterfaceElement(
+			get_generated_symbol(base::StrID("toString"), GeneratedSymbolData::ToStringMethod(type)),
+			type,
+			0,
+			InterfaceElement::InterfaceElementKind::Method,
+			ClassMemberVisibility::Public
+		) });
+	}
+
+	/**
+	 * Internal query for caching type interfaces.
+	 */
+	DECLARE_QUERY(QueryTypeInterface, AbstractType, CRef<TypeInterface>, ({ .uses_qresult = false }));
+
+	CRef<TypeInterface> AbstractTypeImpl::getInterface(query::Context& ctx) const {
+		return ctx.query<QueryTypeInterface>(AbstractType(this));
+	}
+
+	struct IMPLEMENT_QUERY(QueryTypeInterface, TypeInterface) {
+		static auto provide(Context& ctx, const QKey key) -> PResult {
+			return getDefaultTypeInterfaceForType(ctx, key).combine(
+				key.getPimpl()->getDeclaredInterface(ctx)
+			);
+		}
+
+		QUERY_AUTO_CACHE_CREF
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTypeInterface)
+
 	/**
 	 * @brief Creates a human-readable string representation of a vector of symbol types.
 	 * @param types Vector of symbol types to stringify.
@@ -37,7 +85,7 @@ namespace compiler::tsh {
 		return target.getKind() == Kind::Meta;
 	}
 
-	CRef<TypeInterface> UnitAbstractTypeImpl::getInterface(query::Context&) const {
+	CRef<TypeInterface> UnitAbstractTypeImpl::getDeclaredInterface(query::Context&) const {
 		// note: we can extend interface later if needed
 		static TypeInterface empty{};
 		return &empty;
@@ -46,7 +94,6 @@ namespace compiler::tsh {
 	bool PointerAbstractTypeImpl::isImplicitlyCoercible(
 		const AbstractType target, query::Context& ctx
 	) const {
-		// Explicit override without change in implementation to add comment.
 		// Implicit coercions allow checking against null pointer.
 		// We do not allow casting to another (raw) pointer type,
 		// because we forbid implicit type (de)specification in this context.
@@ -165,99 +212,99 @@ namespace compiler::tsh {
 		representation = "Class " + name(symbol).str();
 	}
 
-	CRef<TypeInterface> ClassAbstractTypeImpl::getInterface(query::Context& ctx) const {
+	CRef<TypeInterface> ClassAbstractTypeImpl::getDeclaredInterface(query::Context& ctx) const {
 		return &ctx.query<QueryInterfaceOfClass>(this)->valueOrThrow();
 	}
 
-	CRef<TypeInterface> VoidAbstractTypeImpl::getInterface(query::Context&) const {
+	CRef<TypeInterface> VoidAbstractTypeImpl::getDeclaredInterface(query::Context&) const {
 		// note: we can extend interface later if needed
 		static TypeInterface empty{};
 		return &empty;
 	}
 
-	CRef<TypeInterface> ByteAbstractTypeImpl::getInterface(query::Context&) const {
+	CRef<TypeInterface> ByteAbstractTypeImpl::getDeclaredInterface(query::Context&) const {
 		// note: we can extend interface later if needed
 		static TypeInterface empty{};
 		return &empty;
 	}
 
-	CRef<TypeInterface> BoolAbstractTypeImpl::getInterface(query::Context&) const {
+	CRef<TypeInterface> BoolAbstractTypeImpl::getDeclaredInterface(query::Context&) const {
 		// note: we can extend interface later if needed
 		static TypeInterface empty{};
 		return &empty;
 	}
 
-	CRef<TypeInterface> CharAbstractTypeImpl::getInterface(query::Context&) const {
+	CRef<TypeInterface> CharAbstractTypeImpl::getDeclaredInterface(query::Context&) const {
 		// note: we can extend interface later if needed
 		static TypeInterface empty{};
 		return &empty;
 	}
 
-	CRef<TypeInterface> IntegralAbstractTypeImpl::getInterface(query::Context&) const {
+	CRef<TypeInterface> IntegralAbstractTypeImpl::getDeclaredInterface(query::Context&) const {
 		// note: we can extend interface later if needed
 		static TypeInterface empty{};
 		return &empty;
 	}
 
-	CRef<TypeInterface> FloatAbstractTypeImpl::getInterface(query::Context&) const {
+	CRef<TypeInterface> FloatAbstractTypeImpl::getDeclaredInterface(query::Context&) const {
 		// note: we can extend interface later if needed
 		static TypeInterface empty{};
 		return &empty;
 	}
 
-	CRef<TypeInterface> RawPointerAbstractTypeImpl::getInterface(query::Context&) const {
+	CRef<TypeInterface> RawPointerAbstractTypeImpl::getDeclaredInterface(query::Context&) const {
 		// note: we can extend interface later if needed
 		static TypeInterface empty{};
 		return &empty;
 	}
 
-	CRef<TypeInterface> PointerAbstractTypeImpl::getInterface(query::Context&) const {
+	CRef<TypeInterface> PointerAbstractTypeImpl::getDeclaredInterface(query::Context&) const {
 		// note: we can extend interface later if needed
 		static TypeInterface empty{};
 		return &empty;
 	}
 
-	CRef<TypeInterface> StringAbstractTypeImpl::getInterface(query::Context&) const {
+	CRef<TypeInterface> StringAbstractTypeImpl::getDeclaredInterface(query::Context&) const {
 		throw base::NotYetImplemented("String type interface not yet implemented");
 	}
 
-	CRef<TypeInterface> DynamicArrayAbstractTypeImpl::getInterface(query::Context&) const {
+	CRef<TypeInterface> DynamicArrayAbstractTypeImpl::getDeclaredInterface(query::Context&) const {
 		throw base::NotYetImplemented("Dynamic array type interface not yet implemented");
 	}
 
-	CRef<TypeInterface> StaticArrayAbstractTypeImpl::getInterface(query::Context&) const {
+	CRef<TypeInterface> StaticArrayAbstractTypeImpl::getDeclaredInterface(query::Context&) const {
 		throw base::NotYetImplemented("Static array type interface not yet implemented");
 	}
 
-	CRef<TypeInterface> TupleAbstractTypeImpl::getInterface(query::Context&) const {
+	CRef<TypeInterface> TupleAbstractTypeImpl::getDeclaredInterface(query::Context&) const {
 		throw base::NotYetImplemented("Tuple type interface not yet implemented");
 	}
 
-	CRef<TypeInterface> FunctionAbstractTypeImpl::getInterface(query::Context&) const {
+	CRef<TypeInterface> FunctionAbstractTypeImpl::getDeclaredInterface(query::Context&) const {
 		throw base::NotYetImplemented("Function type interface not yet implemented");
 	}
 
-	CRef<TypeInterface> VariantAbstractTypeImpl::getInterface(query::Context&) const {
+	CRef<TypeInterface> VariantAbstractTypeImpl::getDeclaredInterface(query::Context&) const {
 		throw base::NotYetImplemented("Variant type interface not yet implemented");
 	}
 
-	CRef<TypeInterface> NamespaceAbstractTypeImpl::getInterface(query::Context&) const {
+	CRef<TypeInterface> NamespaceAbstractTypeImpl::getDeclaredInterface(query::Context&) const {
 		CORE_PANIC("Namespace type interface does not exist (we can add it if we find a use case).");
 	}
 
-	CRef<TypeInterface> ModuleAbstractTypeImpl::getInterface(query::Context&) const {
+	CRef<TypeInterface> ModuleAbstractTypeImpl::getDeclaredInterface(query::Context&) const {
 		CORE_PANIC("Module type interface does not exist (we can add it if we find a use case).");
 	}
 
-	CRef<TypeInterface> MetaAbstractTypeImpl::getInterface(query::Context&) const {
+	CRef<TypeInterface> MetaAbstractTypeImpl::getDeclaredInterface(query::Context&) const {
 		throw base::NotYetImplemented("Meta type interface not yet implemented");
 	}
 
-	CRef<TypeInterface> ImportAbstractTypeImpl::getInterface(query::Context&) const {
+	CRef<TypeInterface> ImportAbstractTypeImpl::getDeclaredInterface(query::Context&) const {
 		CORE_PANIC("Import type interface does not exist (we can add it if we find a use case).");
 	}
 
-	CRef<TypeInterface> TypeTemplateAbstractTypeImpl::getInterface(query::Context&) const {
+	CRef<TypeInterface> TypeTemplateAbstractTypeImpl::getDeclaredInterface(query::Context&) const {
 		throw base::NotYetImplemented("Type template interface not yet implemented");
 	}
 
@@ -315,7 +362,7 @@ namespace compiler::tsh {
 	}
 
 	bool ClassAbstractTypeImpl::isDefaultConstructible(query::Context& ctx) const {
-		auto fields = getInterface(ctx)->getFieldsView();
+		auto fields = getDeclaredInterface(ctx)->getFieldsView();
 		for (const auto& field: fields) {
 			// @TODO: #2331 Move this logic out of TSH.
 			auto field_pst = helios::symbolPst(field.getSymbol())
@@ -332,7 +379,7 @@ namespace compiler::tsh {
 	}
 
 	bool ClassAbstractTypeImpl::isTriviallyZeroInitializable(query::Context& ctx) const {
-		auto fields = getInterface(ctx)->getFieldsView();
+		auto fields = getDeclaredInterface(ctx)->getFieldsView();
 		for (const auto& field: fields) {
 			// @TODO: #2331 Move this logic out of TSH.
 			auto field_pst = helios::symbolPst(field.getSymbol())
@@ -350,7 +397,7 @@ namespace compiler::tsh {
 	}
 
 	bool ClassAbstractTypeImpl::isCopyable(query::Context& ctx) const {
-		auto fields = getInterface(ctx)->getFieldsView();
+		auto fields = getDeclaredInterface(ctx)->getFieldsView();
 		// All component types have to be copyable.
 		return std::ranges::all_of(fields, [&](const auto& field) {
 			return field.getType(ctx).isCopyable(ctx);
@@ -358,7 +405,7 @@ namespace compiler::tsh {
 	}
 
 	bool ClassAbstractTypeImpl::isTriviallyCopyable(query::Context& ctx) const {
-		auto fields = getInterface(ctx)->getFieldsView();
+		auto fields = getDeclaredInterface(ctx)->getFieldsView();
 		// All component types have to be trivially copyable.
 		return std::ranges::all_of(fields, [&](const auto& field) {
 			return field.getType(ctx).isTriviallyCopyable(ctx);
