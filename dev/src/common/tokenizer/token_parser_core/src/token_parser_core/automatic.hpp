@@ -270,6 +270,20 @@ namespace tpc {
 		NoKeywordError(dia::SourcePosition pos, std::string but_got);
 	};
 
+	class NoOperatorError final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return {
+				.template_type = "message",
+				.type          = "error",
+				.family        = "parser",
+				.name          = "no_operator",
+			};
+		}
+
+	public:
+		NoOperatorError(dia::SourcePosition pos, std::string but_got);
+	};
+
 	class NoStringError final: public dia_int::MessageWithCodeFragmentAndCause {
 		dia_int::Metadata getMetadata() const final {
 			return { .template_type = "message",
