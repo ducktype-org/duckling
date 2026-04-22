@@ -1,5 +1,7 @@
 #include "placeholder.hpp"
 
+#include <diagnostic_interactive/stable_position.hpp>
+
 #include <logger/logger.hpp>
 
 namespace dia_int {

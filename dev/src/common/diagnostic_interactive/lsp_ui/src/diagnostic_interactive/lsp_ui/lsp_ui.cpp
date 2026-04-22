@@ -182,16 +182,17 @@ namespace dia_int::lsp {
 	Location extractLocation(const dia_int::term_ui_view::CodeSection& section) {
 		Range range;
 
-		range.start.line      = section.line - 1;
-		range.start.character = section.col - 1;
+		range.start.line      = section.location.line - 1;
+		range.start.character = section.location.column - 1;
 
-		if (section.end_line.has_value() && section.end_col.has_value()) {
-			range.end.line      = section.end_line.value() - 1;
-			range.end.character = section.end_col.value();
+		if (section.location.end_line.has_value() && section.location.end_column.has_value()) {
+			range.end.line      = section.location.end_line.value() - 1;
+			range.end.character = section.location.end_column.value();
 		} else {
 			range.end = range.start;
 		}
-		return Location{ .uri = fs::FilePath(section.file).toPhysicalPath().uri(), .range = range };
+		return Location{ .uri   = fs::FilePath(section.location.file).toPhysicalPath().uri(),
+			             .range = range };
 	}
 
 	/**
