@@ -9,10 +9,10 @@
 
 #include <vm/core/safe/low_program/low_program.hpp>
 
-#ifdef COMPILATION_THRESHOLD
-constexpr inline uint compilation_threshold = COMPILATION_THRESHOLD;
+#ifdef BUILD_TYPE_RELEASE
+constexpr inline uint compilation_threshold = 10;
 #else
-constexpr inline uint compilation_threshold = 1;
+constexpr inline uint compilation_threshold = 0;
 #endif
 
 namespace vm::jit {
