@@ -34,8 +34,6 @@
 #include <base/preproc/for_each.hpp>
 #include <base/types/ints.hpp>
 
-#include "vm/core/safe/memory/pointer.hpp"
-
 #include <cstring>
 #ifdef ENABLE_JIT
 	#include <vm/core/jit/jit_compiler.hpp>
