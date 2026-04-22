@@ -172,7 +172,7 @@ namespace vm::loader::compiler::detail {
 			}
 			instr_case(high::Op_mov_popq_imm, i) { addLow<Op_mov_popq_imm>(i.dst, i.src); }
 			instr_case(high::Op_mov_pste_pste, i) { addLow<Op_mov_bste_bste>(i.dst, i.src); }
-			instr_case(high::Op_mov_parr_parr, i) { addLow<Op_mov_barr_barr>(i.dst, i.src); }
+			instr_case(high::Op_mov_pfst_pfst, i) { addLow<Op_mov_bfst_bfst>(i.dst, i.src); }
 			instr_case(high::Op_add_p64_p64, i) { addLow<Op_add_p64_p64>(i.dst, i.src); }
 			instr_case(high::Op_add_p64_imm, i) { addLow<Op_add_p64_imm>(i.dst, i.src); }
 			instr_case(high::Op_add_p32_p32, i) { addLow<Op_add_p32_p32>(i.dst, i.src); }
@@ -476,16 +476,16 @@ namespace vm::loader::compiler::detail {
 				addLow<Op_fixedSizeTableStore_pptr_bany>(i.dst_table_ptr, i.src);
 				addLow<Op_ext_p64>(i.index);
 			}
-			instr_case(high::Op_fixedSizeTableLea_pptr_parr_p64, i) {
-				addLow<Op_fixedSizeTableLea_pptr_barr>(i.dst_ptr, i.src_table);
+			instr_case(high::Op_fixedSizeTableLea_pptr_pfst_p64, i) {
+				addLow<Op_fixedSizeTableLea_pptr_bfst>(i.dst_ptr, i.src_table);
 				addLow<Op_ext_p64>(i.index);
 			}
-			instr_case(high::Op_fixedSizeTableLoad_pany_parr_p64, i) {
-				addLow<Op_fixedSizeTableLoad_bany_barr>(i.dst, i.src_table);
+			instr_case(high::Op_fixedSizeTableLoad_pany_pfst_p64, i) {
+				addLow<Op_fixedSizeTableLoad_bany_bfst>(i.dst, i.src_table);
 				addLow<Op_ext_p64>(i.index);
 			}
-			instr_case(high::Op_fixedSizeTableStore_parr_pany_p64, i) {
-				addLow<Op_fixedSizeTableStore_barr_bany>(i.dst_table, i.src);
+			instr_case(high::Op_fixedSizeTableStore_pfst_pany_p64, i) {
+				addLow<Op_fixedSizeTableStore_bfst_bany>(i.dst_table, i.src);
 				addLow<Op_ext_p64>(i.index);
 			}
 			instr_case(high::Op_dynTableLea_pptr_pptr_p64, i) {

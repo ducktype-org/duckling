@@ -86,7 +86,7 @@ DEF_MICRO_INSTR(cmov_p64_imm, vm::low::opargs::Place64, vm::low::opargs::Immedia
 DEF_MICRO_INSTR(
 	mov_bste_bste, vm::low::opargs::PlaceBlockStructure, vm::low::opargs::PlaceBlockStructure
 )
-DEF_MICRO_INSTR(mov_barr_barr, vm::low::opargs::PlaceBlockSArray, vm::low::opargs::PlaceBlockSArray)
+DEF_MICRO_INSTR(mov_bfst_bfst, vm::low::opargs::PlaceBlockFSTable, vm::low::opargs::PlaceBlockFSTable)
 // does a shallow pointer copy
 DEF_MICRO_INSTR(mov_pptr_pptr, vm::low::opargs::PlacePtr, vm::low::opargs::PlacePtr)
 
@@ -531,23 +531,23 @@ DEF_MICRO_INSTR(
 
 // expects `ext_p64` to be the next instruction
 DEF_MICRO_INSTR(
-	fixedSizeTableLea_pptr_barr,
+	fixedSizeTableLea_pptr_bfst,
 	vm::low::opargs::PlacePtr /* destination */,
-	vm::low::opargs::PlaceBlockSArray /* table_ptr,
+	vm::low::opargs::PlaceBlockFSTable /* table_ptr,
     vm::low::opargs::Place64 	 index */
 )
 // expects `ext_p64` to be the next instruction
 DEF_MICRO_INSTR(
-	fixedSizeTableLoad_bany_barr,
+	fixedSizeTableLoad_bany_bfst,
 	vm::low::opargs::PlaceBlockAny /* destination */,
-	vm::low::opargs::PlaceBlockSArray /* table_ptr,
+	vm::low::opargs::PlaceBlockFSTable /* table_ptr,
     vm::low::opargs::Place64 	 index */
 )
 
 // expects `ext_p64` to be the next instruction
 DEF_MICRO_INSTR(
-	fixedSizeTableStore_barr_bany,
-	vm::low::opargs::PlaceBlockSArray /* table_ptr */,
+	fixedSizeTableStore_bfst_bany,
+	vm::low::opargs::PlaceBlockFSTable /* table_ptr */,
 	vm::low::opargs::PlaceBlockAny /* source,
     vm::low::opargs::Place64 	 index */
 )

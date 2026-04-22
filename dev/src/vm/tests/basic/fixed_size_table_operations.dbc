@@ -8,31 +8,31 @@ function main { i64, ptr_argv } -> { i64 } {
 
     mov_p64_imm val, 1;
     mov_p64_imm idx, 0;
-    fixedSizeTableStore_parr_pany_p64 arr1, val, idx; # arr1[0] = 1
+    fixedSizeTableStore_pfst_pany_p64 arr1, val, idx; # arr1[0] = 1
 
     mov_p64_imm val, 2;
     mov_p64_imm idx, 1;
-    fixedSizeTableStore_parr_pany_p64 arr1, val, idx; # arr1[1] = 2
+    fixedSizeTableStore_pfst_pany_p64 arr1, val, idx; # arr1[1] = 2
 
     init_pany_type arr2, IntArray4;
-    mov_parr_parr arr2, arr1;
+    mov_pfst_pfst arr2, arr1;
 
     mov_p64_imm idx, 0;
-    fixedSizeTableLoad_pany_parr_p64 res, arr2, idx;
+    fixedSizeTableLoad_pany_pfst_p64 res, arr2, idx;
     output_p64 res; # 1
 
     mov_p64_imm idx, 1;
-    fixedSizeTableLoad_pany_parr_p64 res, arr2, idx;
+    fixedSizeTableLoad_pany_pfst_p64 res, arr2, idx;
     output_p64 res; # 2
 
     init_pany_type item_ptr, ptr_i64;
     mov_p64_imm idx, 2;
-    fixedSizeTableLea_pptr_parr_p64 item_ptr, arr2, idx; # item_ptr = &arr2[2]
+    fixedSizeTableLea_pptr_pfst_p64 item_ptr, arr2, idx; # item_ptr = &arr2[2]
 
     mov_p64_imm val, 3;
     store_pptr_pany item_ptr, val; # *item_ptr = 3
 
-    fixedSizeTableLoad_pany_parr_p64 res, arr2, idx;
+    fixedSizeTableLoad_pany_pfst_p64 res, arr2, idx;
     output_p64 res; # 3
 
     ret;

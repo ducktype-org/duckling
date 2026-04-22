@@ -55,7 +55,7 @@ namespace vm::opargs {
 	DEFINE_PLACE(Ptr, "pptr");
 	DEFINE_PLACE(Opq, "popq");
 	DEFINE_PLACE(Structure, "pste");
-	DEFINE_PLACE(SArray, "parr");
+	DEFINE_PLACE(FSTable, "pfst");
 
 	/**
 	 * @brief Represents place variant argument.
@@ -64,7 +64,7 @@ namespace vm::opargs {
 
 #define VM_OPARG_PLACE_TYPES                                                                   \
 	Place8, Place16, Place32, Place64, PlaceAny, PlacePtr, PlaceVnt, PlaceOpq, PlaceStructure, \
-		PlaceSArray
+		PlaceFSTable
 
 	/**
 	 * @brief Represents type name argument.

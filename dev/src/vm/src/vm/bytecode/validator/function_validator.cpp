@@ -457,7 +457,7 @@ class FunctionValidator {
 						throw InvalidArgumentTypeError(*place);
 				}
 
-				variant_case(CRef<opargs::PlaceSArray>, place) {
+				variant_case(CRef<opargs::PlaceFSTable>, place) {
 					CRef<valid_type::ValidType> type
 						= validateAndGetPlaceType(*place, current_stack);
 					if (!type->isKind<valid_type::finalized::FixedSizeTable>())
@@ -582,7 +582,7 @@ class FunctionValidator {
 			instr_case(Op_mov_pste_pste, instr) {
 				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case(Op_mov_parr_parr, instr) {
+			instr_case(Op_mov_pfst_pfst, instr) {
 				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
 
@@ -1309,7 +1309,7 @@ class FunctionValidator {
 				if (table_type->inner != source->getID())
 					throw FixedSizeTableTypeMismatchError(instr);
 			}
-			instr_case(Op_fixedSizeTableLea_pptr_parr_p64, instr) {
+			instr_case(Op_fixedSizeTableLea_pptr_pfst_p64, instr) {
 				const auto destination = getPlaceType(instr.dst_ptr, current_stack)
 				                             ->getKindAs<valid_type::finalized::Pointer>();
 				const auto table_type = getPlaceType(instr.src_table, current_stack)
@@ -1318,7 +1318,7 @@ class FunctionValidator {
 				if (destination->inner != table_type->inner)
 					throw FixedSizeTableTypeMismatchError(instr);
 			}
-			instr_case(Op_fixedSizeTableLoad_pany_parr_p64, instr) {
+			instr_case(Op_fixedSizeTableLoad_pany_pfst_p64, instr) {
 				const auto& destination = getPlaceType(instr.dst, current_stack);
 				const auto  table_type  = getPlaceType(instr.src_table, current_stack)
 				                            ->getKindAs<valid_type::finalized::FixedSizeTable>();
@@ -1326,7 +1326,7 @@ class FunctionValidator {
 				if (destination->getID() != table_type->inner)
 					throw FixedSizeTableTypeMismatchError(instr);
 			}
-			instr_case(Op_fixedSizeTableStore_parr_pany_p64, instr) {
+			instr_case(Op_fixedSizeTableStore_pfst_pany_p64, instr) {
 				const auto& source     = getPlaceType(instr.src, current_stack);
 				const auto  table_type = getPlaceType(instr.dst_table, current_stack)
 				                            ->getKindAs<valid_type::finalized::FixedSizeTable>();

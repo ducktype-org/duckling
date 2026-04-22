@@ -65,7 +65,7 @@ DEF_INSTR(cmov_p64_p64, (vm::opargs::Place64, dst), (vm::opargs::Place64, src))
 DEF_INSTR(cmov_p64_imm, (vm::opargs::Place64, dst), (vm::opargs::Immediate, src))
 DEF_INSTR(mov_pptr_pptr, (vm::opargs::PlacePtr, dst), (vm::opargs::PlacePtr, src))
 DEF_INSTR(mov_pste_pste, (vm::opargs::PlaceStructure, dst), (vm::opargs::PlaceStructure, src))
-DEF_INSTR(mov_parr_parr, (vm::opargs::PlaceSArray, dst), (vm::opargs::PlaceSArray, src))
+DEF_INSTR(mov_pfst_pfst, (vm::opargs::PlaceFSTable, dst), (vm::opargs::PlaceFSTable, src))
 
 // does a shallow pointer copy
 
@@ -493,21 +493,21 @@ DEF_INSTR(
 
 // These are the same as above, but for arrays referenced directly.
 DEF_INSTR(
-	fixedSizeTableLea_pptr_parr_p64,
+	fixedSizeTableLea_pptr_pfst_p64,
 	(vm::opargs::PlacePtr, dst_ptr),
-	(vm::opargs::PlaceSArray, src_table),
+	(vm::opargs::PlaceFSTable, src_table),
 	(vm::opargs::Place64, index)
 )
 DEF_INSTR(
-	fixedSizeTableLoad_pany_parr_p64,
+	fixedSizeTableLoad_pany_pfst_p64,
 	(vm::opargs::PlaceAny, dst),
-	(vm::opargs::PlaceSArray, src_table),
+	(vm::opargs::PlaceFSTable, src_table),
 	(vm::opargs::Place64, index)
 )
 
 DEF_INSTR(
-	fixedSizeTableStore_parr_pany_p64,
-	(vm::opargs::PlaceSArray, dst_table),
+	fixedSizeTableStore_pfst_pany_p64,
+	(vm::opargs::PlaceFSTable, dst_table),
 	(vm::opargs::PlaceAny, src),
 	(vm::opargs::Place64, index)
 )
