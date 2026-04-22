@@ -1,8 +1,8 @@
 import sys
 from pathlib import Path
 
-# Make ../../../python/utilities.py import work
-sys.path.append(str(Path(__file__).resolve().parents[3] / "python"))
+# Make ../../../utilities.py import work
+sys.path.append(str(Path(__file__).resolve().parents[3]))
 
 from utilities import *
 

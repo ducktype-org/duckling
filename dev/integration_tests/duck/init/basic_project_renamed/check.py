@@ -2,8 +2,8 @@ import sys
 import shutil
 from pathlib import Path
 
-# Make ../../python/utilities.py import work
-sys.path.append(str(Path(__file__).resolve().parents[2] / "python"))
+# Make ../../utilities.py import work
+sys.path.append(str(Path(__file__).resolve().parents[2]))
 
 from utilities import *
 
