@@ -1,9 +1,6 @@
 #include "memory/memory.hpp"
 #include "stencils/import_stencils.hpp"
 
-#include "memory/memory.hpp"
-#include "stencils/import_stencils.hpp"
-
 #include <vm/core/safe/low_program/instruction.hpp>
 #include <vm/core/safe/low_program/low_program.hpp>
 
