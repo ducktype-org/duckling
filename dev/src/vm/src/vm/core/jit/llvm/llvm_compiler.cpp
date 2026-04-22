@@ -6,7 +6,7 @@
 
 #include <llvm_helpers/llvm_helpers.hpp>
 
-#include <vm/core/thread/low_program/instruction.hpp>
+#include <vm/core/safe/low_program/instruction.hpp>
 
 LLVM_INCLUDE_BEGIN()
 

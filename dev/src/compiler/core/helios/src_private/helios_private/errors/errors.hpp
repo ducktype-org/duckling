@@ -1,6 +1,7 @@
 #pragma once
 
 #include <diagnostic_interactive/message.hpp>
+#include <diagnostic_interactive/stable_position.hpp>
 
 namespace compiler::helios {
 	class SingleStmtFunctionMustBeExprError final: public dia_int::MessageWithCodeFragmentAndCause {
@@ -25,7 +26,7 @@ namespace compiler::helios {
 		}
 
 	public:
-		ImmutableVariableNoInitError(dia::SourcePosition source_position):
+		ImmutableVariableNoInitError(dia_int::StablePosition source_position):
 			  MessageWithCodeFragmentAndCause(source_position) {}
 	};
 }

@@ -8,7 +8,7 @@
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
-#include <vm/core/thread/low_program/utils.hpp>
+#include <vm/core/safe/low_program/utils.hpp>
 
 #include <tuple>
 #include <type_traits>
@@ -172,6 +172,7 @@ namespace vm::loader::compiler::detail {
 			}
 			instr_case(high::Op_mov_popq_imm, i) { addLow<Op_mov_popq_imm>(i.dst, i.src); }
 			instr_case(high::Op_mov_pste_pste, i) { addLow<Op_mov_bste_bste>(i.dst, i.src); }
+			instr_case(high::Op_mov_pfst_pfst, i) { addLow<Op_mov_bfst_bfst>(i.dst, i.src); }
 			instr_case(high::Op_add_p64_p64, i) { addLow<Op_add_p64_p64>(i.dst, i.src); }
 			instr_case(high::Op_add_p64_imm, i) { addLow<Op_add_p64_imm>(i.dst, i.src); }
 			instr_case(high::Op_add_p32_p32, i) { addLow<Op_add_p32_p32>(i.dst, i.src); }
@@ -464,27 +465,39 @@ namespace vm::loader::compiler::detail {
 				addLow<Op_ext_field>(i.field);
 			}
 			instr_case(high::Op_fixedSizeTableLea_pptr_pptr_p64, i) {
-				addLow<Op_fixedSizeTableLea_pptr_pptr>(i.dst_ptr, i.src_table_ptr);
+				addLow<Op_anyArrayLea_pptr_pptr>(i.dst_ptr, i.src_table_ptr);
 				addLow<Op_ext_p64>(i.index);
 			}
 			instr_case(high::Op_fixedSizeTableLoad_pany_pptr_p64, i) {
-				addLow<Op_fixedSizeTableLoad_bany_pptr>(i.dst, i.src_table_ptr);
+				addLow<Op_anyArrayLoad_bany_pptr>(i.dst, i.src_table_ptr);
 				addLow<Op_ext_p64>(i.index);
 			}
 			instr_case(high::Op_fixedSizeTableStore_pptr_pany_p64, i) {
-				addLow<Op_fixedSizeTableStore_pptr_bany>(i.dst_table_ptr, i.src);
+				addLow<Op_anyArrayStore_pptr_bany>(i.dst_table_ptr, i.src);
+				addLow<Op_ext_p64>(i.index);
+			}
+			instr_case(high::Op_fixedSizeTableLea_pptr_pfst_p64, i) {
+				addLow<Op_fixedSizeTableLea_pptr_bfst>(i.dst_ptr, i.src_table);
+				addLow<Op_ext_p64>(i.index);
+			}
+			instr_case(high::Op_fixedSizeTableLoad_pany_pfst_p64, i) {
+				addLow<Op_fixedSizeTableLoad_bany_bfst>(i.dst, i.src_table);
+				addLow<Op_ext_p64>(i.index);
+			}
+			instr_case(high::Op_fixedSizeTableStore_pfst_pany_p64, i) {
+				addLow<Op_fixedSizeTableStore_bfst_bany>(i.dst_table, i.src);
 				addLow<Op_ext_p64>(i.index);
 			}
 			instr_case(high::Op_dynTableLea_pptr_pptr_p64, i) {
-				addLow<Op_dynTableLea_pptr_pptr>(i.dst_ptr, i.src_table_ptr);
+				addLow<Op_anyArrayLea_pptr_pptr>(i.dst_ptr, i.src_table_ptr);
 				addLow<Op_ext_p64>(i.index);
 			}
 			instr_case(high::Op_dynTableLoad_pany_pptr_p64, i) {
-				addLow<Op_dynTableLoad_bany_pptr>(i.dst, i.src_table_ptr);
+				addLow<Op_anyArrayLoad_bany_pptr>(i.dst, i.src_table_ptr);
 				addLow<Op_ext_p64>(i.index);
 			}
 			instr_case(high::Op_dynTableStore_pptr_pany_p64, i) {
-				addLow<Op_dynTableStore_pptr_bany>(i.dst_table_ptr, i.src);
+				addLow<Op_anyArrayStore_pptr_bany>(i.dst_table_ptr, i.src);
 				addLow<Op_ext_p64>(i.index);
 			}
 			instr_case(high::Op_dynTableReAlloc_pptr_type_p64, i) {
