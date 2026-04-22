@@ -504,18 +504,18 @@ DEF_MICRO_INSTR(
     vm::low::opargs::Field 			 field */
 )
 
-// ========= STATIC ARRAY OPERATIONS ========
+// ========= ARRAY OPERATIONS ========
 
 // expects `ext_p64` to be the next instruction
 DEF_MICRO_INSTR(
-	fixedSizeTableLea_pptr_pptr,
+	anyArrayLea_pptr_pptr,
 	vm::low::opargs::PlacePtr /* destination */,
 	vm::low::opargs::PlacePtr /* table_ptr,
     vm::low::opargs::Place64 	 index */
 )
 // expects `ext_p64` to be the next instruction
 DEF_MICRO_INSTR(
-	fixedSizeTableLoad_bany_pptr,
+	anyArrayLoad_bany_pptr,
 	vm::low::opargs::PlaceBlockAny /* destination */,
 	vm::low::opargs::PlacePtr /* table_ptr,
     vm::low::opargs::Place64 	 index */
@@ -523,7 +523,7 @@ DEF_MICRO_INSTR(
 
 // expects `ext_p64` to be the next instruction
 DEF_MICRO_INSTR(
-	fixedSizeTableStore_pptr_bany,
+	anyArrayStore_pptr_bany,
 	vm::low::opargs::PlacePtr /* table_ptr */,
 	vm::low::opargs::PlaceBlockAny /* source,
     vm::low::opargs::Place64 	 index */
@@ -548,30 +548,6 @@ DEF_MICRO_INSTR(
 DEF_MICRO_INSTR(
 	fixedSizeTableStore_bfst_bany,
 	vm::low::opargs::PlaceBlockFSTable /* table_ptr */,
-	vm::low::opargs::PlaceBlockAny /* source,
-    vm::low::opargs::Place64 	 index */
-)
-
-// ========= DYNAMIC ARRAY OPERATIONS ========
-// expects `ext_p64` to be the next instruction
-DEF_MICRO_INSTR(
-	dynTableLea_pptr_pptr,
-	vm::low::opargs::PlacePtr /* destination */,
-	vm::low::opargs::PlacePtr /* table_ptr,
-    vm::low::opargs::Place64 	 index */
-)
-// expects `ext_p64` to be the next instruction
-DEF_MICRO_INSTR(
-	dynTableLoad_bany_pptr,
-	vm::low::opargs::PlaceBlockAny /* destination */,
-	vm::low::opargs::PlacePtr /* table_ptr,
-    vm::low::opargs::Place64 	 index */
-)
-
-// expects `ext_p64` to be the next instruction
-DEF_MICRO_INSTR(
-	dynTableStore_pptr_bany,
-	vm::low::opargs::PlacePtr /* table_ptr */,
 	vm::low::opargs::PlaceBlockAny /* source,
     vm::low::opargs::Place64 	 index */
 )
