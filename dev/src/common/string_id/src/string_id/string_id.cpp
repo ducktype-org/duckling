@@ -1,5 +1,7 @@
 #include "string_id.hpp"
 
+#include <concurrent/base/collections/hash_map.hpp>
+
 #include <base/collections/maps.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/pointers/ref.hpp>
@@ -7,7 +9,6 @@
 #include <cstring>
 #include <iostream>
 #include <mutex>
-#include <shared_mutex>
 
 namespace base {
 	/**
@@ -18,7 +19,7 @@ namespace base {
 	namespace {
 		using BufferList = std::vector<base::OwningView>;
 		using ToDataType = VectorMap<StrID::InnerID, RawView>;
-		using ToIDType   = HashMap<RawView, StrID::InnerID>;
+		using ToIDType   = concurrent::ConHashMap<RawView, StrID::InnerID>;
 
 		Ref<ToIDType> getToIDMap() {
 			// This does not have a constinit constructor
@@ -38,7 +39,7 @@ namespace base {
 
 		constinit bool any_buffer_exits = false;
 
-		constinit std::shared_mutex mutex;
+		constinit std::mutex mutex;
 	}
 
 	/**
@@ -73,14 +74,14 @@ namespace base {
 
 		// Fast path: check if string already exists under shared lock
 		{
-			std::shared_lock lock(mutex);
+			// std::shared_lock lock(mutex);
 			if (auto id = getToIDMap()->atMaybe(data)) {
 				this->id = **id;
 				return;
 			}
 		}
 
-		std::unique_lock lock(mutex);
+		std::scoped_lock lock(mutex);
 
 		if (auto id = getToIDMap()->atMaybe(data)) {
 			this->id = **id;
@@ -122,13 +123,12 @@ namespace base {
 
 	base::RawView StrID::view() const {
 		CORE_ASSERT(id.isGood(), "StrID is bad");
-		std::shared_lock lock(mutex);
 		return to_data_map[id];
 	}
 
 	void StrID::dumpData(std::ostream& out) {
 		i32              i = 0;
-		std::shared_lock lock(mutex);
+		std::scoped_lock lock(mutex);
 		for (auto v: to_data_map) {
 			if (v) out << i << ": " << v->stringView() << "\n";
 			i++;
