@@ -390,7 +390,7 @@ namespace vm {
 	}
 
 #if defined(__clang__)
-// @TODO: suppress code deduplication in Clang
+// @TODO: #2582 suppress code deduplication in Clang
 #elif defined(__GNUG__)
 	#pragma GCC push_options
 	#pragma GCC optimize("-fno-crossjumping")
@@ -432,7 +432,7 @@ namespace vm {
 	// NOLINTEND(cppcoreguidelines-avoid-goto)
 
 #if defined(__clang__)
-// @TODO: suppress code deduplication in Clang
+// @TODO: #2582 suppress code deduplication in Clang
 #elif defined(__GNUG__)
 	#pragma GCC pop_options
 #endif

@@ -74,7 +74,7 @@ static ExitOnError exit_on_err;
 /// @brief For each MicroOpcode stores the name of its corresponding llvm::Function*.
 static std::unordered_map<vm::low::MicroOpcode, std::string> lfunc_name_map;
 
-/// @brief pointers to LLVM types used in opcode function definitions. TODO move to a better place.
+/// @brief pointers to LLVM types used in opcode function definitions.
 static llvm::StructType*   frame_ty;
 static llvm::StructType*   flag_data_ty;
 static llvm::StructType*   microinstruction_ty;
@@ -165,8 +165,6 @@ namespace {
 
 	/**
 	 * @brief Sets up LLVM types used in opcode function definitions.
-	 * @note Not the best place for this function. types, context, module etc should be stored in
-	 * a separate class. TODO change this.
 	 */
 	void setupLLVMTypes() {
 		// Flag data and Frame don't exist in the module, so we create it manually.
