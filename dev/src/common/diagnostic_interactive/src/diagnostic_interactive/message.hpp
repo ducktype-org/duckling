@@ -88,6 +88,11 @@ namespace dia_int {
 			  Argument(std::move(name)),
 			  position(position) {}
 
+		/**
+		 * @brief Here we use illegalAccess which would not mark the dependency on the position and
+		 * recompilaction. If we would like to cache the errors between the recompilation or show
+		 * the code snippets in the LS, then this would need to be refactored.
+		 */
 		CodeArgument(std::string name, dia_int::StablePosition position):
 			  Argument(std::move(name)),
 			  position(position.getActiveSourcePositionIllegalAccess()) {}

@@ -128,7 +128,7 @@ namespace dia_int::dia_args {
 						));
 					data.at(i) = hash_json[field_name][i].get<u64>();
 				}
-				return base::Bit256(data);
+				return { data };
 			};
 
 			HashCodeLocation hash_location_value;
