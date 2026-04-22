@@ -53,19 +53,19 @@ namespace vm::jit {
 		LLVMBuilder(llvm::Module* module, llvm::LLVMContext& ctx):
 			  llvm_ctx(ctx),
 			  module(module),
-			  frame_ty{ llvm::StructType::getTypeByName(llvm_ctx, "struct.vm::Frame") },
+			  frame_ty{ llvm::StructType::create(llvm_ctx, "struct.vm::FlagData") },
 			  frame_ptr_ty{ llvm::PointerType::getUnqual(frame_ty) },
-			  flag_data_ty{ llvm::StructType::getTypeByName(llvm_ctx, "struct.vm::FlagData") } {
-			if (!flag_data_ty) {
-				// Define FlagData struct type if it hasn't been defined yet
-				flag_data_ty = llvm::StructType::create(llvm_ctx, "struct.vm::FlagData");
-				flag_data_ty->setBody(
-					{
-						llvm::IntegerType::get(llvm_ctx, 1)  // bool flag
-					},
-					/*isPacked=*/false
-				);
-			}
+			  flag_data_ty{ llvm::StructType::create(llvm_ctx, "struct.vm::FlagData") } {
+			flag_data_ty->setBody(
+				{
+					llvm::IntegerType::get(llvm_ctx, 1)  // bool flag
+				},
+				/*isPacked=*/false
+			);
+			frame_ty->setBody(
+				{ flag_data_ty },
+				/*isPacked=*/false
+			);
 
 			llvm::Type*       void_ty = llvm::Type::getVoidTy(llvm_ctx);
 			llvm::StructType* mi_ty   = llvm::StructType::create(llvm_ctx, "vm::MicroInstruction");
