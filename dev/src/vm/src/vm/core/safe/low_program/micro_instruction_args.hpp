@@ -84,11 +84,15 @@ namespace vm::low::opargs {
 	/** @brief Stores index of local struct storage in Frame::block_ref_stack (not a byte offset) or
 	 * the global blocks buffer. */
 	DEFINE_MICRO_ARG_TYPE(PlaceBlockStructure, "bste", vm::opargs::PlaceStructure);
+	/** @brief Stores index of local struct storage in Frame::block_ref_stack (not a byte offset) or
+	 * the global blocks buffer. */
+	DEFINE_MICRO_ARG_TYPE(PlaceBlockSArray, "barr", vm::opargs::PlaceSArray);
 	/** @brief Stores index of local variant storage in Frame::block_ref_stack (not a byte offset)
 	 * or the global blocks buffer. */
 	DEFINE_MICRO_ARG_TYPE(PlaceBlockVariant, "bvnt", vm::opargs::PlaceVnt);
 
-#define VM_MICRO_INSTR_ARG_BLOCK_PLACE_TYPES PlaceBlockAny, PlaceBlockStructure, PlaceBlockVariant
+#define VM_MICRO_INSTR_ARG_BLOCK_PLACE_TYPES \
+	PlaceBlockAny, PlaceBlockStructure, PlaceBlockVariant, PlaceBlockSArray
 
 	/** @brief Stores TypeCRef (pointer) from type metadata. */
 	DEFINE_MICRO_ARG_TYPE(Type, "type", vm::opargs::Type);

@@ -477,7 +477,7 @@ DEF_MICRO_INSTR(
     vm::low::opargs::Field 			 field */
 )
 
-// Same as above, but using struct from local stack
+// Same as above, but using a struct directly.
 
 // expects `ext_field` to be the next instruction
 DEF_MICRO_INSTR(
@@ -503,7 +503,7 @@ DEF_MICRO_INSTR(
     vm::low::opargs::Field 			 field */
 )
 
-// ========= TABLE OPERATIONS ========
+// ========= STATIC ARRAY OPERATIONS ========
 
 // expects `ext_p64` to be the next instruction
 DEF_MICRO_INSTR(
@@ -528,6 +528,30 @@ DEF_MICRO_INSTR(
     vm::low::opargs::Place64 	 index */
 )
 
+// expects `ext_p64` to be the next instruction
+DEF_MICRO_INSTR(
+	fixedSizeTableLea_pptr_barr,
+	vm::low::opargs::PlacePtr /* destination */,
+	vm::low::opargs::PlaceBlockSArray /* table_ptr,
+    vm::low::opargs::Place64 	 index */
+)
+// expects `ext_p64` to be the next instruction
+DEF_MICRO_INSTR(
+	fixedSizeTableLoad_bany_barr,
+	vm::low::opargs::PlaceBlockAny /* destination */,
+	vm::low::opargs::PlaceBlockSArray /* table_ptr,
+    vm::low::opargs::Place64 	 index */
+)
+
+// expects `ext_p64` to be the next instruction
+DEF_MICRO_INSTR(
+	fixedSizeTableStore_barr_bany,
+	vm::low::opargs::PlaceBlockSArray /* table_ptr */,
+	vm::low::opargs::PlaceBlockAny /* source,
+    vm::low::opargs::Place64 	 index */
+)
+
+// ========= DYNAMIC ARRAY OPERATIONS ========
 // expects `ext_p64` to be the next instruction
 DEF_MICRO_INSTR(
 	dynTableLea_pptr_pptr,

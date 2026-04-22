@@ -475,6 +475,18 @@ namespace vm::loader::compiler::detail {
 				addLow<Op_fixedSizeTableStore_pptr_bany>(i.dst_table_ptr, i.src);
 				addLow<Op_ext_p64>(i.index);
 			}
+			instr_case(high::Op_fixedSizeTableLea_pptr_parr_p64, i) {
+				addLow<Op_fixedSizeTableLea_pptr_barr>(i.dst_ptr, i.src_table);
+				addLow<Op_ext_p64>(i.index);
+			}
+			instr_case(high::Op_fixedSizeTableLoad_pany_parr_p64, i) {
+				addLow<Op_fixedSizeTableLoad_bany_barr>(i.dst, i.src_table);
+				addLow<Op_ext_p64>(i.index);
+			}
+			instr_case(high::Op_fixedSizeTableStore_parr_pany_p64, i) {
+				addLow<Op_fixedSizeTableStore_barr_bany>(i.dst_table, i.src);
+				addLow<Op_ext_p64>(i.index);
+			}
 			instr_case(high::Op_dynTableLea_pptr_pptr_p64, i) {
 				addLow<Op_dynTableLea_pptr_pptr>(i.dst_ptr, i.src_table_ptr);
 				addLow<Op_ext_p64>(i.index);

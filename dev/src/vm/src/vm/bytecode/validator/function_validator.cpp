@@ -10,6 +10,7 @@
 #include <base/preproc/for_each.hpp>
 #include <base/types/bits_and_bytes.hpp>
 
+#include "vm/bytecode/validator/valid_type/finalized_kinds.hpp"
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
@@ -1262,7 +1263,6 @@ class FunctionValidator {
 					instr
 				);
 			}
-
 			instr_case(Op_fixedSizeTableLea_pptr_pptr_p64, instr) {
 				const auto destination = getPlaceType(instr.dst_ptr, current_stack)
 				                             ->getKindAs<valid_type::finalized::Pointer>();
@@ -1274,6 +1274,55 @@ class FunctionValidator {
 				);
 
 				if (destination->inner != table_type->inner)
+					throw FixedSizeTableTypeMismatchError(instr);
+			}
+			instr_case(Op_fixedSizeTableLoad_pany_pptr_p64, instr) {
+				const auto& destination = getPlaceType(instr.dst, current_stack);
+
+				const auto table_pointer = getPlaceType(instr.src_table_ptr, current_stack)
+				                               ->getKindAs<valid_type::finalized::Pointer>();
+				const auto table_type = expectPointerType<valid_type::finalized::FixedSizeTable>(
+					table_pointer, types_ctx, instr
+				);
+
+				if (destination->getID() != table_type->inner)
+					throw FixedSizeTableTypeMismatchError(instr);
+			}
+			instr_case(Op_fixedSizeTableStore_pptr_pany_p64, instr) {
+				const auto& source = getPlaceType(instr.src, current_stack);
+
+				const auto table_pointer = getPlaceType(instr.dst_table_ptr, current_stack)
+				                               ->getKindAs<valid_type::finalized::Pointer>();
+				const auto table_type = expectPointerType<valid_type::finalized::FixedSizeTable>(
+					table_pointer, types_ctx, instr
+				);
+
+				if (table_type->inner != source->getID())
+					throw FixedSizeTableTypeMismatchError(instr);
+			}
+			instr_case(Op_fixedSizeTableLea_pptr_parr_p64, instr) {
+				const auto destination = getPlaceType(instr.dst_ptr, current_stack)
+				                             ->getKindAs<valid_type::finalized::Pointer>();
+				const auto table_type = getPlaceType(instr.src_table, current_stack)
+				                            ->getKindAs<valid_type::finalized::FixedSizeTable>();
+
+				if (destination->inner != table_type->inner)
+					throw FixedSizeTableTypeMismatchError(instr);
+			}
+			instr_case(Op_fixedSizeTableLoad_pany_parr_p64, instr) {
+				const auto& destination = getPlaceType(instr.dst, current_stack);
+				const auto  table_type  = getPlaceType(instr.src_table, current_stack)
+				                            ->getKindAs<valid_type::finalized::FixedSizeTable>();
+
+				if (destination->getID() != table_type->inner)
+					throw FixedSizeTableTypeMismatchError(instr);
+			}
+			instr_case(Op_fixedSizeTableStore_parr_pany_p64, instr) {
+				const auto& source     = getPlaceType(instr.src, current_stack);
+				const auto  table_type = getPlaceType(instr.dst_table, current_stack)
+				                            ->getKindAs<valid_type::finalized::FixedSizeTable>();
+
+				if (table_type->inner != source->getID())
 					throw FixedSizeTableTypeMismatchError(instr);
 			}
 			instr_case(Op_dynTableLea_pptr_pptr_p64, instr) {
@@ -1289,18 +1338,6 @@ class FunctionValidator {
 				if (destination->inner != table_type->inner)
 					throw DynamicTableTypeMismatchError(instr);
 			}
-			instr_case(Op_fixedSizeTableLoad_pany_pptr_p64, instr) {
-				const auto& destination = getPlaceType(instr.dst, current_stack);
-
-				const auto table_pointer = getPlaceType(instr.src_table_ptr, current_stack)
-				                               ->getKindAs<valid_type::finalized::Pointer>();
-				const auto table_type = expectPointerType<valid_type::finalized::FixedSizeTable>(
-					table_pointer, types_ctx, instr
-				);
-
-				if (destination->getID() != table_type->inner)
-					throw FixedSizeTableTypeMismatchError(instr);
-			}
 			instr_case(Op_dynTableLoad_pany_pptr_p64, instr) {
 				const auto& destination   = getPlaceType(instr.dst, current_stack);
 				const auto  table_pointer = getPlaceType(instr.src_table_ptr, current_stack)
@@ -1310,18 +1347,6 @@ class FunctionValidator {
 				);
 				if (destination->getID() != table_type->inner)
 					throw DynamicTableTypeMismatchError(instr);
-			}
-			instr_case(Op_fixedSizeTableStore_pptr_pany_p64, instr) {
-				const auto& source = getPlaceType(instr.src, current_stack);
-
-				const auto table_pointer = getPlaceType(instr.dst_table_ptr, current_stack)
-				                               ->getKindAs<valid_type::finalized::Pointer>();
-				const auto table_type = expectPointerType<valid_type::finalized::FixedSizeTable>(
-					table_pointer, types_ctx, instr
-				);
-
-				if (table_type->inner != source->getID())
-					throw FixedSizeTableTypeMismatchError(instr);
 			}
 			instr_case(Op_dynTableStore_pptr_pany_p64, instr) {
 				const auto& source        = getPlaceType(instr.src, current_stack);

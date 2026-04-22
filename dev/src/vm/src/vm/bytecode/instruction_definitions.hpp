@@ -447,7 +447,7 @@ DEF_INSTR(
 	(vm::opargs::Field, field)
 )
 
-// These are the same as above, but for structs referenced via local stack
+// These are the same as above, but for structs referenced directly.
 
 DEF_INSTR(
 	structLea_pptr_pste_field,
@@ -468,7 +468,7 @@ DEF_INSTR(
 	(vm::opargs::Field, field)
 )
 
-// ========= TABLE OPERATIONS ========
+// ========= STATIC ARRAY OPERATIONS ========
 
 DEF_INSTR(
 	fixedSizeTableLea_pptr_pptr_p64,
@@ -489,6 +489,29 @@ DEF_INSTR(
 	(vm::opargs::PlaceAny, src),
 	(vm::opargs::Place64, index)
 )
+
+// These are the same as above, but for arrays referenced directly.
+DEF_INSTR(
+	fixedSizeTableLea_pptr_parr_p64,
+	(vm::opargs::PlacePtr, dst_ptr),
+	(vm::opargs::PlaceSArray, src_table),
+	(vm::opargs::Place64, index)
+)
+DEF_INSTR(
+	fixedSizeTableLoad_pany_parr_p64,
+	(vm::opargs::PlaceAny, dst),
+	(vm::opargs::PlaceSArray, src_table),
+	(vm::opargs::Place64, index)
+)
+
+DEF_INSTR(
+	fixedSizeTableStore_parr_pany_p64,
+	(vm::opargs::PlaceSArray, dst_table),
+	(vm::opargs::PlaceAny, src),
+	(vm::opargs::Place64, index)
+)
+
+// ========= DYNAMIC ARRAY OPERATIONS ========
 
 DEF_INSTR(
 	dynTableLea_pptr_pptr_p64,
