@@ -53,7 +53,7 @@ namespace vm::jit {
 		LLVMBuilder(llvm::Module* module, llvm::LLVMContext& ctx):
 			  llvm_ctx(ctx),
 			  module(module),
-			  frame_ty{ llvm::StructType::create(llvm_ctx, "struct.vm::FlagData") },
+			  frame_ty{ llvm::StructType::create(llvm_ctx, "struct.vm::Frame") },
 			  frame_ptr_ty{ llvm::PointerType::getUnqual(frame_ty) },
 			  flag_data_ty{ llvm::StructType::create(llvm_ctx, "struct.vm::FlagData") } {
 			flag_data_ty->setBody(
