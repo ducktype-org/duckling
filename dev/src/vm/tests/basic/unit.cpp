@@ -38,6 +38,7 @@ public:
 		TESTER_ADD_TEST(checkCastingInstructions);
 		TESTER_ADD_TEST(testSyncRun);
 		TESTER_ADD_TEST(structureOperations);
+		TESTER_ADD_TEST(fixedSizeTableOperations);
 	}
 
 private:
@@ -142,6 +143,10 @@ private:
 	}
 
 	void structureOperations() { runTestOnVm("structure_operations.dbc", "", "506", {}); }
+
+	void fixedSizeTableOperations() {
+		runTestOnVm("fixed_size_table_operations.dbc", "", "123", {});
+	}
 
 	void testSyncRun() {
 		vm::PID pid = initProcess();
