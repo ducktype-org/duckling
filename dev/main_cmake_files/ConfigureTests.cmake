@@ -69,6 +69,9 @@ function(duck_add_test_custom test_pack test_name test_source)
 	add_executable(${test_name} ${CMAKE_CURRENT_LIST_DIR}/${test_source})
 	target_link_libraries(${test_name} Tester ${duck_add_test_custom_USES})
 	target_include_directories(${test_name} PUBLIC ${duck_add_test_custom_INCLUDE})
+	if(JIT_ENABLED)
+		target_link_options(${test_name} PRIVATE -Wl,--export-dynamic)
+	endif()
 
 	add_test(NAME "${test_name}" COMMAND ${test_name})
 

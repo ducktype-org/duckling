@@ -437,7 +437,7 @@ namespace vm {
 	#pragma GCC pop_options
 #endif
 
-	std::vector<Ref<VmValue>>  SafeVMThread::executeFunction(
+	std::vector<Ref<VmValue>> SafeVMThread::executeFunction(
 		const low::LowFuncData& start_function, const low::LowFuncData& func
 	) {
 		acquireGil();

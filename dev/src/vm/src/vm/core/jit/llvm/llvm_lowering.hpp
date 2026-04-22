@@ -32,15 +32,12 @@ LLVM_INCLUDE_BEGIN()
 LLVM_INCLUDE_END()
 
 namespace vm::jit {
+
 	struct LLVMBuilder {
 		llvm::LLVMContext& llvm_ctx;
 		llvm::Module*      module;
 
-		llvm::StructType*   frame_ty;
-		llvm::PointerType*  frame_ptr_ty;
-		llvm::StructType*   flag_data_ty;
-		llvm::FunctionType* opfun_ty;
-		llvm::Function*     user_func_wrapper;
+		llvm::Function* user_func_wrapper = nullptr;
 
 		llvm::Value* instr_arg;
 		llvm::Value* locals_arg;
@@ -50,44 +47,9 @@ namespace vm::jit {
 		cf::ControlFlowGraph           cfg;
 		std::vector<llvm::BasicBlock*> llvm_blocks;
 
-		LLVMBuilder(llvm::Module* module, llvm::LLVMContext& ctx):
-			  llvm_ctx(ctx),
-			  module(module),
-			  frame_ty{ llvm::StructType::create(llvm_ctx, "struct.vm::Frame") },
-			  frame_ptr_ty{ llvm::PointerType::getUnqual(frame_ty) },
-			  flag_data_ty{ llvm::StructType::create(llvm_ctx, "struct.vm::FlagData") } {
-			flag_data_ty->setBody(
-				{
-					llvm::IntegerType::get(llvm_ctx, 1)  // bool flag
-				},
-				/*isPacked=*/false
-			);
-			frame_ty->setBody(
-				{ flag_data_ty },
-				/*isPacked=*/false
-			);
-
-			llvm::Type*       void_ty = llvm::Type::getVoidTy(llvm_ctx);
-			llvm::StructType* mi_ty   = llvm::StructType::create(llvm_ctx, "vm::MicroInstruction");
-			llvm::StructType* vm_thread_ty = llvm::StructType::create(llvm_ctx, "vm::VMThread");
-
-			llvm::PointerType* mi_ptr_ptr_ty
-				= llvm::PointerType::getUnqual(llvm::PointerType::getUnqual(mi_ty));
-			llvm::PointerType* byte_ptr_ptr_ty = llvm::PointerType::getUnqual(
-				llvm::PointerType::getUnqual(llvm::Type::getInt8Ty(llvm_ctx))
-			);
-
-			llvm::PointerType* frame_ptr_ptr_ty = llvm::PointerType::getUnqual(frame_ptr_ty);
-			llvm::PointerType* vm_thread_ptr_ty = llvm::PointerType::getUnqual(vm_thread_ty);
-
-			opfun_ty = llvm::FunctionType::get(
-				void_ty,
-				{ mi_ptr_ptr_ty, byte_ptr_ptr_ty, frame_ptr_ptr_ty, vm_thread_ptr_ty },
-				false
-			);
-
+		LLVMBuilder(llvm::Module* module, llvm::LLVMContext& ctx): llvm_ctx(ctx), module(module) {
 			user_func_wrapper = llvm::Function::Create(
-				opfun_ty, llvm::Function::ExternalLinkage, module->getName(), module
+				llvmGetOpFunType().get(), llvm::Function::ExternalLinkage, module->getName(), module
 			);
 
 			auto arg_it = user_func_wrapper->arg_begin();
@@ -106,7 +68,7 @@ namespace vm::jit {
 			llvm::Function* callee = module->getFunction(opfun_name.data());
 			if (!callee) {
 				callee = llvm::Function::Create(
-					opfun_ty, llvm::Function::ExternalLinkage, opfun_name, module
+					llvmGetOpFunType().get(), llvm::Function::ExternalLinkage, opfun_name, module
 				);
 			}
 
@@ -128,7 +90,7 @@ namespace vm::jit {
 				case vm::low::MicroOpcode::call_func:
 				case vm::low::MicroOpcode::virtual_call_pptr_method: {
 					ir_builder.CreateCall(
-						opfun_ty,
+						llvmGetOpFunType().get(),
 						getOrCreateOpcodeFunction("trampoline"),
 						{ instr_arg, locals_arg, frame_arg, thread_arg }
 					);
@@ -144,7 +106,7 @@ namespace vm::jit {
 						opt_none { opfun_name = low::OPCODE_NAMES.at(static_cast<u64>(opcode)); }
 					}
 					ir_builder.CreateCall(
-						opfun_ty,
+						llvmGetOpFunType().get(),
 						getOrCreateOpcodeFunction(opfun_name),
 						{ instr_arg, locals_arg, frame_arg, thread_arg }
 					);
@@ -153,16 +115,16 @@ namespace vm::jit {
 		}
 
 		void lowerConditionalJump(const cf::BasicBlock& block, llvm::IRBuilder<>& ir_builder) {
-			CORE_ASSERT(frame_ty, "Frame struct type should be defined in the module");
-			CORE_ASSERT(!flag_data_ty->isOpaque(), "FlagData struct type should be defined by now");
-
 			u32 flags_field_index = 0;
 
-			llvm::Value* frame_ptr = ir_builder.CreateLoad(frame_ptr_ty, frame_arg);
+			llvm::Value* frame_ptr = ir_builder.CreateLoad(
+				llvm::PointerType::getUnqual(llvmGetFrameType().get()), frame_arg
+			);
 			llvm::Value* flags_ptr
-				= ir_builder.CreateStructGEP(frame_ty, frame_ptr, flags_field_index);
+				= ir_builder.CreateStructGEP(llvmGetFrameType().get(), frame_ptr, flags_field_index);
 
-			llvm::Value* flag_ptr   = ir_builder.CreateStructGEP(flag_data_ty, flags_ptr, 0);
+			llvm::Value* flag_ptr
+				= ir_builder.CreateStructGEP(llvmGetFlagDataType().get(), flags_ptr, 0);
 			llvm::Value* flag_value = ir_builder.CreateLoad(ir_builder.getInt1Ty(), flag_ptr);
 
 			if (block.edgeKind() == cf::OutEdges::Kind::JmpIfNot)
@@ -244,8 +206,7 @@ namespace vm::jit {
 				*module, std::move(used_opfuns_module), llvm::Linker::Flags::LinkOnlyNeeded
 			);
 			for (auto& f: module->functions()) {
-				if (!f.isDeclaration()
-				    && f.getName().str() != base::toString(function_to_compile.name)) {
+				if (!f.isDeclaration() && &f != user_func_wrapper) {
 					// Set cloned opfuns' linkage to AvailableExternally to avoid double compilation
 					// and symbol conflicts.
 					f.setLinkage(llvm::GlobalValue::AvailableExternallyLinkage);

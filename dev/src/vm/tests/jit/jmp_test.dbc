@@ -11,6 +11,42 @@ label loop_cond;
 
     ret;
 }
+function pow1 { i64 } -> { i64 } {
+    mov_p64_imm     ret0, 3;
+
+    jmp_label loop_cond;
+label loop_start;
+    add_p64_p64     ret0, ret0;
+label loop_cond;
+    cmpLt_p64_p64   ret0, arg0;
+    jmpIf_label loop_start;
+
+    ret;
+}
+function pow2 { i64 } -> { i64 } {
+    mov_p64_imm     ret0, 3;
+
+    jmp_label loop_cond;
+label loop_start;
+    add_p64_p64     ret0, ret0;
+label loop_cond;
+    cmpLt_p64_p64   ret0, arg0;
+    jmpIf_label loop_start;
+
+    ret;
+}
+function pow3 { i64 } -> { i64 } {
+    mov_p64_imm     ret0, 3;
+
+    jmp_label loop_cond;
+label loop_start;
+    add_p64_p64     ret0, ret0;
+label loop_cond;
+    cmpLt_p64_p64   ret0, arg0;
+    jmpIf_label loop_start;
+
+    ret;
+}
 
 function main { i64, ptr_argv }-> { i64 } {
     # ret0 -> main ret0
@@ -39,6 +75,32 @@ function main { i64, ptr_argv }-> { i64 } {
     call_func       pow;
     output_p64      pow_ret;
     deinit;       # pow_ret
+
+
+    # Call function pow
+	init_pany_type 	pow_ret1, i64;
+    init_pany_type  pow_arg1, i64;
+    mov_p64_p64     pow_arg1, counter;
+    call_func       pow1;
+    output_p64      pow_ret1;
+    deinit;       # pow_ret1
+
+
+    # Call function pow
+	init_pany_type 	pow_ret2, i64;
+    init_pany_type  pow_arg2, i64;
+    mov_p64_p64     pow_arg2, counter;
+    call_func       pow2;
+    output_p64      pow_ret2;
+    deinit;       # pow_ret2
+
+    # Call function pow
+	init_pany_type 	pow_ret3, i64;
+    init_pany_type  pow_arg3, i64;
+    mov_p64_p64     pow_arg3, counter;
+    call_func       pow3;
+    output_p64      pow_ret3;
+    deinit;       # pow_ret3
 
     # Increment counter
     add_p64_imm counter, 1;

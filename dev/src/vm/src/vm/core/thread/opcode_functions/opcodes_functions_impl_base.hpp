@@ -312,6 +312,9 @@ namespace vm {
 	#ifndef IGNORE_NOT_JITABLE
 	RETURN_TYPE OpFuns::OPCODE_NAME(jit_call_entrypoint)(FUNCTION_ARGS) {
 		{
+		#ifdef USE_TAIL_CALLS
+			CORE_PANIC("Jit doesn't work with tail calls.");
+		#endif
 			auto& jit_data = thread.jit_data;
 			auto  func_id  = instr->arg0;
 			auto& func_obj = thread.process_program->getFunctions()[func_id];

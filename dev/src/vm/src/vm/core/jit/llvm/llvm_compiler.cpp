@@ -23,14 +23,21 @@ LLVM_INCLUDE_BEGIN()
 
 LLVM_INCLUDE_END()
 
+#include <string>
+
 namespace vm::jit {
+
 	MRef<JitOpFun> compileLLVM(const low::LowFuncData& function_to_compile) {
-		llvm::orc::ThreadSafeContext& tsctx = *llvmGetTSCtx();
+		llvm::orc::ThreadSafeContext& tsctx          = *llvmGetTSCtx();
+		static u64                    compile_serial = 0;
+		const std::string             symbol_name
+			= std::to_string(function_to_compile.name.getInnerID().asInt()) + "."
+		    + std::to_string(compile_serial++);
+		std::unique_ptr<llvm::Module> new_module;
 
 		llvm::LLVMContext& ctx = *tsctx.getContext();
 
-
-		auto new_module = setupModule(base::toString(function_to_compile.name), ctx);
+		new_module = setupModule(symbol_name, ctx);
 
 		LLVMBuilder(new_module.get(), ctx).lowerFunction(function_to_compile);
 
@@ -40,7 +47,8 @@ namespace vm::jit {
 			llvm::logAllUnhandledErrors(
 				std::move(err), llvm::errs(), "Error adding module to JIT: "
 			);
-		auto addr_or_err = lljit.lookup(base::toString(function_to_compile.name));
+
+		auto addr_or_err = lljit.lookup(symbol_name);
 		if (!addr_or_err) {
 			llvm::handleAllErrors(addr_or_err.takeError(), [&](const llvm::ErrorInfoBase& eib) {
 				llvm::errs() << "JIT lookup failed: " << eib.message() << '\n';

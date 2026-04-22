@@ -74,6 +74,13 @@ static ExitOnError exit_on_err;
 /// @brief For each MicroOpcode stores the name of its corresponding llvm::Function*.
 static std::unordered_map<vm::low::MicroOpcode, std::string> lfunc_name_map;
 
+/// @brief pointers to LLVM types used in opcode function definitions. TODO move to a better place.
+static llvm::StructType*   frame_ty;
+static llvm::StructType*   flag_data_ty;
+static llvm::StructType*   microinstruction_ty;
+static llvm::StructType*   vm_thread_ty;
+static llvm::FunctionType* opfun_ty;
+
 namespace {
 	/**
 	 * @brief Extracts function name from its mangled version. It should be string
@@ -155,6 +162,52 @@ namespace {
 		llvm::orc::ThreadSafeModule tsm(std::move(dest), tsctx);
 		exit_on_err(lljit.addIRModule(std::move(tsm)));
 	}
+
+	/**
+	 * @brief Sets up LLVM types used in opcode function definitions.
+	 * @note Not the best place for this function. types, context, module etc should be stored in
+	 * a separate class. TODO change this.
+	 */
+	void setupLLVMTypes() {
+		// Flag data and Frame don't exist in the module, so we create it manually.
+		flag_data_ty = llvm::StructType::create(*g_context->getContext(), "struct.vm::FlagData");
+		flag_data_ty->setBody(
+			{
+				llvm::IntegerType::get(*g_context->getContext(), 1)  // bool flag
+			},
+			/*isPacked=*/false
+		);
+
+		frame_ty = llvm::StructType::create(*g_context->getContext(), "struct.vm::Frame");
+		frame_ty->setBody(
+			{ flag_data_ty },
+			/*isPacked=*/false
+		);
+		CORE_ASSERT(frame_ty, "Frame type not found in module.");
+
+		microinstruction_ty
+			= llvm::StructType::create(*g_context->getContext(), "vm::MicroInstruction");
+		CORE_ASSERT(microinstruction_ty, "MicroInstruction type not found in module.");
+
+		vm_thread_ty = llvm::StructType::create(*g_context->getContext(), "vm::VMThread");
+		CORE_ASSERT(vm_thread_ty, "VMThread type not found in module.");
+
+		llvm::PointerType* mi_ptr_ptr_ty
+			= llvm::PointerType::getUnqual(llvm::PointerType::getUnqual(microinstruction_ty));
+		llvm::PointerType* byte_ptr_ptr_ty = llvm::PointerType::getUnqual(
+			llvm::PointerType::getUnqual(llvm::Type::getInt8Ty(*g_context->getContext()))
+		);
+		llvm::PointerType* frame_ptr_ptr_ty
+			= llvm::PointerType::getUnqual(llvm::PointerType::getUnqual(frame_ty));
+		llvm::PointerType* vm_thread_ptr_ty = llvm::PointerType::getUnqual(vm_thread_ty);
+
+		opfun_ty = llvm::FunctionType::get(
+			llvm::Type::getVoidTy(*g_context->getContext()),
+			{ mi_ptr_ptr_ty, byte_ptr_ptr_ty, frame_ptr_ptr_ty, vm_thread_ptr_ty },
+			false
+		);
+		CORE_ASSERT(opfun_ty, "Failed to create opcode function type.");
+	}
 }
 
 static constexpr std::array<vm::low::MicroOpcode, vm::low::nonExecutableMicroInstrCount()>
@@ -227,6 +280,8 @@ void llvmInit() {
 
 		cloneAndRegisterModule(*g_module, *lljit_instance, opfun_filter, *g_context);
 	}
+
+	setupLLVMTypes();
 }
 
 base::Optional<std::string> llvmGetFunName(const vm::low::MicroOpcode& fun) {
@@ -235,14 +290,20 @@ base::Optional<std::string> llvmGetFunName(const vm::low::MicroOpcode& fun) {
 	return {};
 }
 
-llvm::orc::ThreadSafeContext* llvmGetTSCtx() { return g_context.get(); }
+Ref<llvm::orc::ThreadSafeContext> llvmGetTSCtx() { return g_context.get(); }
 
-llvm::orc::LLJIT* llvmGetLljit() { return lljit_instance.get(); }
+Ref<llvm::orc::LLJIT> llvmGetLljit() { return lljit_instance.get(); }
 
-llvm::Module* llvmGetMasterModule() { return g_module.get(); }
+Ref<llvm::Module> llvmGetMasterModule() { return g_module.get(); }
 
 bool isOpcodeNonExecutable(const vm::low::MicroOpcode& opcode) {
 	for (const auto& mo: NON_EXEC_OPCODES)
 		if (mo == opcode) return true;
 	return false;
 }
+
+Ref<llvm::StructType> llvmGetFrameType() { return frame_ty; }
+
+Ref<llvm::StructType> llvmGetFlagDataType() { return flag_data_ty; }
+
+Ref<llvm::FunctionType> llvmGetOpFunType() { return opfun_ty; }

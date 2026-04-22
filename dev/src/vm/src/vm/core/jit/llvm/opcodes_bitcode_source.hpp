@@ -30,15 +30,21 @@ bool isOpcodeNonExecutable(const vm::low::MicroOpcode& fun);
 /**
  * @brief Returns the ThreadSafeContext instance.
  */
-llvm::orc::ThreadSafeContext* llvmGetTSCtx();
+Ref<llvm::orc::ThreadSafeContext> llvmGetTSCtx();
 
 /**
  * @brief Returns LLJIT instance.
  * @note For now it is stored in opcodes_bitcode_source but it will change.
  */
-llvm::orc::LLJIT* llvmGetLljit();
+Ref<llvm::orc::LLJIT> llvmGetLljit();
 
 /**
  * @brief Returns a pointer to the master IR cache module.
  */
-llvm::Module* llvmGetMasterModule();
+Ref<llvm::Module> llvmGetMasterModule();
+
+Ref<llvm::StructType> llvmGetFrameType();
+
+Ref<llvm::StructType> llvmGetFlagDataType();
+
+Ref<llvm::FunctionType> llvmGetOpFunType();
