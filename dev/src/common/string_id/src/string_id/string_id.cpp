@@ -10,7 +10,11 @@
 #include <iostream>
 #include <mutex>
 
+ID_STD_HASH(base::internal::StrInnerID);
+
 namespace base {
+
+	
 	/**
 	 * Size of memory buffers used to store byte-strings represented by StrID
 	 */
@@ -18,7 +22,7 @@ namespace base {
 
 	namespace {
 		using BufferList = std::vector<base::OwningView>;
-		using ToDataType = VectorMap<StrID::InnerID, RawView>;
+		using ToDataType = concurrent::ConHashMap<StrID::InnerID, RawView>;
 		using ToIDType   = concurrent::ConHashMap<RawView, StrID::InnerID>;
 
 		Ref<ToIDType> getToIDMap() {
@@ -27,15 +31,13 @@ namespace base {
 			return &to_id_map;
 		}
 
-		// Ref<ToIDType> getToIDMap() {
-		// 	// This does not have a constinit constructor
-		// 	static ToIDType to_id_map;
-		// 	return &to_id_map;
-		// }
+		Ref<ToDataType> getToDataMap() {
+			// This does not have a constinit constructor
+			static ToDataType to_data_map;
+			return &to_data_map;
+		}
 
 		constinit BufferList buffer_list;
-
-		constinit ToDataType to_data_map;
 
 		// remaining size of last buffer (equals default_buffer_size - next_pos)
 		constinit usize size_left = 0;
@@ -116,7 +118,7 @@ namespace base {
 			next_pos += data.size();
 		}
 
-		to_data_map.put(id, actual_data);
+		getToDataMap()->put(id, actual_data);
 		getToIDMap()->put(actual_data, id);
 	}
 
@@ -128,15 +130,14 @@ namespace base {
 
 	base::RawView StrID::view() const {
 		CORE_ASSERT(id.isGood(), "StrID is bad");
-		// std::scoped_lock lock(mutex);
-		return to_data_map[id];
+		return *getToDataMap()->at(id);
 	}
 
 	void StrID::dumpData(std::ostream& out) {
 		i32              i = 0;
 		std::scoped_lock lock(mutex);
-		for (auto v: to_data_map) {
-			if (v) out << i << ": " << v->stringView() << "\n";
+		for (auto v: *getToDataMap()) {
+			out << i << ": " << v.value.stringView() << "\n";
 			i++;
 		}
 	}
