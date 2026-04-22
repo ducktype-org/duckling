@@ -84,3 +84,17 @@ Tests:
       #     String: "42\n1\n"
       #   ExitCode: 0
 
+
+  mangling_in_expand:
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: "1\n2\n"
+        ExitCode: 0
+
+      dvm:
+        backend: dvm
+        Output:
+          String: "1\n2\n"
+        ExitCode: 0
