@@ -694,6 +694,17 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_barr_barr)(FUNCTION_ARGS) {
+		{
+			auto dst_block = READ_BLOCK_REF_FROM_ARG(instr->arg0);
+			auto src_block = READ_BLOCK_REF_FROM_ARG(instr->arg1);
+			thread.process_memory.copyPointedData(
+				{ dst_block, 0 }, { src_block, 0 }, thread.process_memory.getBlockType(dst_block)
+			);
+		}
+		FUNCTION_CONT(1);
+	}
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(setNull_pptr)(FUNCTION_ARGS) {
 		{
 			const auto    dst = READ_FROM_PLACE_ARG(Pointer, instr->arg0);

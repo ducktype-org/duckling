@@ -65,6 +65,7 @@ DEF_INSTR(cmov_p64_p64, (vm::opargs::Place64, dst), (vm::opargs::Place64, src))
 DEF_INSTR(cmov_p64_imm, (vm::opargs::Place64, dst), (vm::opargs::Immediate, src))
 DEF_INSTR(mov_pptr_pptr, (vm::opargs::PlacePtr, dst), (vm::opargs::PlacePtr, src))
 DEF_INSTR(mov_pste_pste, (vm::opargs::PlaceStructure, dst), (vm::opargs::PlaceStructure, src))
+DEF_INSTR(mov_parr_parr, (vm::opargs::PlaceSArray, dst), (vm::opargs::PlaceSArray, src))
 
 // does a shallow pointer copy
 

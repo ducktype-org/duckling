@@ -458,6 +458,13 @@ class FunctionValidator {
 						throw InvalidArgumentTypeError(*place);
 				}
 
+				variant_case(CRef<opargs::PlaceSArray>, place) {
+					CRef<valid_type::ValidType> type
+						= validateAndGetPlaceType(*place, current_stack);
+					if (!type->isKind<valid_type::finalized::FixedSizeTable>())
+						throw InvalidArgumentTypeError(*place);
+				}
+
 				// All possible opargs must be handled. Unhandled opargs panic.
 				variant_default {
 					CORE_PANIC("Unhandled argument case during validation: ", argumentToString(arg));
@@ -574,6 +581,9 @@ class FunctionValidator {
 			instr_case_novalue(Op_mov_popq_imm) {}
 
 			instr_case(Op_mov_pste_pste, instr) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
+			}
+			instr_case(Op_mov_parr_parr, instr) {
 				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
 

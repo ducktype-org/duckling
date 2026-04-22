@@ -172,6 +172,7 @@ namespace vm::loader::compiler::detail {
 			}
 			instr_case(high::Op_mov_popq_imm, i) { addLow<Op_mov_popq_imm>(i.dst, i.src); }
 			instr_case(high::Op_mov_pste_pste, i) { addLow<Op_mov_bste_bste>(i.dst, i.src); }
+			instr_case(high::Op_mov_parr_parr, i) { addLow<Op_mov_barr_barr>(i.dst, i.src); }
 			instr_case(high::Op_add_p64_p64, i) { addLow<Op_add_p64_p64>(i.dst, i.src); }
 			instr_case(high::Op_add_p64_imm, i) { addLow<Op_add_p64_imm>(i.dst, i.src); }
 			instr_case(high::Op_add_p32_p32, i) { addLow<Op_add_p32_p32>(i.dst, i.src); }
