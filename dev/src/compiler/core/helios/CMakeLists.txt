@@ -6,6 +6,7 @@ add_library(HELIOS STATIC
 	src_private/helios_private/scopes/scope_data.cpp
 	src_private/helios_private/pst_layer/stmts_from_aggregate.cpp
 	src_private/helios_private/pst_layer/macros.cpp
+	src_private/helios_private/pst_layer/pst_parent.cpp
 	src_private/helios_private/lookup/lookup_result.cpp
 	src_private/helios_private/lookup/interface.cpp
 	src_private/helios_private/lookup/lookup_chain.cpp
