@@ -91,3 +91,13 @@ def assert_eq(lhs: Any, rhs: Any, msg: str | None = None) -> None:
     print(f"`{lhs}` != `{rhs}`")
     sys.exit(1)
 
+DEFAULT_SRC = """fun main() = {
+    # !TODO: On macOS, builtin_output_string segfaults :^);
+    # builtin_output_string("Hello, world!");
+    return 0;
+}
+"""
+
+def check_src_from_root(root: Path):
+    src = (root / "src" / "src.dmf").read_text()
+    assert_eq(src, DEFAULT_SRC)
