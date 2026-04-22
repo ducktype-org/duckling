@@ -1,9 +1,10 @@
 #include "builtin_types.hpp"
 
+#include <base/collections/maps.hpp>
+
 #include <string_id/string_id.hpp>
 
 #include <vm/bytecode/type_of_data.hpp>
-#include <vm/core/process/type_metadata/type.hpp>
 
 namespace vm::code {
 	// Use an ordered map instead of a hash map to preserve deterministic iteration order
@@ -12,7 +13,7 @@ namespace vm::code {
 
 	const SpecialTypes& SpecialTypes::get() {
 		static_assert(
-			sizeof(Type*) == 8, "Sanity assert, that the size of VTablePtr can be equal to 8"
+			sizeof(void*) == 8, "Sanity assert, that the size of VTablePtr can be equal to 8"
 		);
 		static const SpecialTypes instance = {
 			.vtable_ptr = TypeOfData(OpaqueType(base::StrID("VTablePtr"), 8)),
@@ -33,8 +34,6 @@ namespace vm::code {
 			  TypeOfData(PointerType(base::StrID("ptr_i32"), base::StrID("i32"))) },
 			{ base::StrID("ptr_i64"),
 			  TypeOfData(PointerType(base::StrID("ptr_i64"), base::StrID("i64"))) },
-			// @TODO: #656 void size is a thing to discuss.
-			{ base::StrID("void"), TypeOfData(PrimitiveType(base::StrID("void"), 1)) },
 			{ base::StrID("string"),
 			  TypeOfData(DynamicTableType(base::StrID("string"), base::StrID("byte"))) },
 			{ base::StrID("ptr_string"),

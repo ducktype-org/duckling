@@ -3,6 +3,7 @@
 #include <vm/bytecode/bytecode.hpp>
 
 #include <expected>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -14,8 +15,8 @@ namespace compiler::repl {
 	 * correct call instructions (Op_init_pany_type for non-void returns).
 	 */
 	struct ScriptExecutableCall final {
-		std::string function_name;
-		base::StrID result_type_name;
+		std::string                function_name;
+		std::optional<base::StrID> result_type_name;
 	};
 
 	/**

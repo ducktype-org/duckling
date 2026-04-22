@@ -1,7 +1,7 @@
 #include <vm_tester_utils.hpp>
 
 #include <vm/bytecode/validator/errors.hpp>
-#include <vm/core/process/exceptions.hpp>
+#include <vm/core/safe/exceptions.hpp>
 
 class DynamicTableVmTest: public VmTestSuite {
 #undef TESTER_CLASS

@@ -23,6 +23,7 @@
 
 #include <query_framework/query_errors.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
+#include <query_framework/utils/query_failed_try.hpp>
 
 namespace compiler::helios {
 
@@ -33,6 +34,15 @@ namespace compiler::helios {
 			// so we store in this variable whether any failure occurred,
 			// and return failure at the end if so.
 			bool is_failed = false;
+
+			// @TODO: #2496 maybe remove the following machinery.
+			// This query schedules other queries, so we can't interrupt it in the middle of
+			// execution, as then we might not await some of the scheduled queries, which is
+			// currently a bug.
+			auto run_no_interrupt = [&is_failed]<typename Func>(Func&& func) {
+				auto ok = query::runFuncWithQueryFailedHandling(std::forward<Func>(func));
+				if (ok.status().isBad()) is_failed = true;
+			};
 
 			MCRef<std::vector<ScopeID>> scopes_to_process;
 
@@ -77,6 +87,10 @@ namespace compiler::helios {
 					default_ctors.insert(class_ctor.declaration->original_symbol);
 				}
 			};
+			auto register_ctor_if_needed_no_interrupt
+				= [&run_no_interrupt, &register_ctor_if_needed](SymID sym) {
+					  run_no_interrupt([&] { register_ctor_if_needed(sym); });
+				  };
 
 			auto try_append_global_data = [&](SymID sym) {
 				auto hout_global = ctx.query<QueryHOUTGlobalData>(sym);
@@ -88,13 +102,17 @@ namespace compiler::helios {
 			};
 
 			for (auto scope: *scopes_to_process) {
-				auto symbols_in_scope = ctx.query<QuerySymbolsInScope>(scope);
+				Ref symbols_in_scope = ctx.query<QuerySymbolsInScope>(scope);
+				if (symbols_in_scope->hasFailed()) {
+					is_failed = true;
+					continue;
+				}
 
-				for (auto sym: *symbols_in_scope) {
+				for (auto sym: symbols_in_scope->valueOrPanic()) {
 					// Register default constructors for all symbols that need them.
 					const auto sym_kind = kind(sym);
 					if (sym_kind == SymbolKind::Variable || sym_kind == SymbolKind::Const)
-						register_ctor_if_needed(sym);
+						register_ctor_if_needed_no_interrupt(sym);
 
 					// grab constants:
 					if (kind(sym) == SymbolKind::Const) try_append_global_data(sym);
@@ -111,16 +129,15 @@ namespace compiler::helios {
 			for (auto class_sym: class_symbols) {
 				// we postpone this past function scheduling, as
 				// appendClassConstructors may be time consuming.
-				appendImplicitClassConstructors(out.functions, class_sym, ctx);
-				auto append_methods_result
-					= appendClassMethodsWithFail(out.functions, class_sym, ctx);
-				if (append_methods_result) {
-					is_failed = true;
-					continue;
-				}
+				run_no_interrupt([&] {
+					appendImplicitClassConstructors(out.functions, class_sym, ctx);
+					auto append_methods_result
+						= appendClassMethodsWithFail(out.functions, class_sym, ctx);
+					if (append_methods_result) is_failed = true;
+				});
 			}
 
-			appendDefaultConstructors(out.functions, default_ctors, ctx);
+			run_no_interrupt([&] { appendDefaultConstructors(out.functions, default_ctors, ctx); });
 
 			for (auto handler: scheduled_tasks) {
 				// we "catch" failure here to continue gathering other functions:
@@ -316,7 +333,8 @@ namespace compiler::helios {
 
 			auto main_file_root_scope = queryRootScopeOfMainModuleFile(ctx, key);
 
-			auto symbols_in_module_root = ctx.query<QuerySymbolsInScope>(main_file_root_scope);
+			Ref symbols_in_module_root
+				= &ctx.query<QuerySymbolsInScope>(main_file_root_scope)->valueOrThrow();
 
 			HOUTUnit out;
 
