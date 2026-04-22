@@ -1023,14 +1023,14 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(fixedSizeTableStore_bfst_bany)(FUNCTION_ARGS) {
 		{
 			Ref<Block> dst_block = READ_BLOCK_REF_FROM_ARG(instr->arg0);
+			Ref<Block> src_block = READ_BLOCK_REF_FROM_ARG(instr->arg1);
 
-			TypeCRef element_type = Memory::getBlockType(dst_block);
+			TypeCRef element_type = Memory::getBlockType(src_block);
 			u64      index        = READ_FROM_PLACE_ARG(u64, instr[1].arg0);
 			auto     dst_pointer
 				= Pointer(dst_block, index * static_cast<u64>(element_type->getSize()));
 
-			Ref<Block> src_block   = READ_BLOCK_REF_FROM_ARG(instr->arg1);
-			auto       src_pointer = Pointer(src_block, 0);
+			auto src_pointer = Pointer(src_block, 0);
 
 			thread.process_memory.copyPointedData(dst_pointer, src_pointer, element_type);
 		}
