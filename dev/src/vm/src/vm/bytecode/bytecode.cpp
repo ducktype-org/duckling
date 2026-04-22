@@ -23,6 +23,7 @@ namespace vm::code {
 			std::make_move_iterator(other.external_c_functions.begin()),
 			std::make_move_iterator(other.external_c_functions.end())
 		);
+		auto _ = std::move(other);
 	}
 
 }  // namespace vm::code
