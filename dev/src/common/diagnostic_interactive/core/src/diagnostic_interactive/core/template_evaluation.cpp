@@ -336,7 +336,7 @@ namespace dia_int {
 		if (!content.has_value())
 			throw TemplateEvaluationException("CodeBlock evaluation returned no component.");
 
-		base::Optional<state::CodeLocation> location;
+		base::Optional<CodeLocation> location;
 		if (el.location.ref().toOpt().has_value()) {
 			el.location.ref().toOpt().value()->acceptVisitor(*this);
 			if (auto loc_res = std::move(res).toOptBox(); loc_res.has_value()) {
@@ -416,12 +416,7 @@ namespace dia_int {
 	void EvaluateDiagnosticFileVisitor::visitCodeLocationComponent(
 		const dia_args::CodeLocationComponent& el
 	) {
-		res = base::makeBox<state::CodeLocationComponent>(state::CodeLocation{
-			.file       = el.file,
-			.line       = el.line,
-			.column     = el.column,
-			.end_line   = el.end_line,
-			.end_column = el.end_column });
+		res = base::makeBox<state::CodeLocationComponent>(el.location);
 	}
 
 	void EvaluateDiagnosticFileVisitor::visitStartLineComponent(const dia_args::StartLineComponent& el

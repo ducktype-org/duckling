@@ -1,8 +1,8 @@
 type pointer: pointer_A A
-type fun: method_foo {pointer_A} void
-type fun: method_bar {pointer_A} void
+type fun: method_foo {pointer_A} {}
+type fun: method_bar {pointer_A} {}
 
-function method_foo_impl {pointer_A} -> void {
+function method_foo_impl {pointer_A} -> {} {
     init_pany_type x, i64;
     mov_p64_imm x, 0;
     output_p64 x;

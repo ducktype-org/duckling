@@ -22,6 +22,8 @@ public:
 		TESTER_ADD_TEST(check16BitsInstructions);
 		TESTER_ADD_TEST(check32BitsInstructions);
 		TESTER_ADD_TEST(check64BitsInstructions);
+		TESTER_ADD_TEST(checkMultipleRetVals);
+		TESTER_ADD_TEST(checkVoidTypeValid);
 		TESTER_ADD_TEST(pointerTest);
 		TESTER_ADD_TEST(globalsInitializationTest);
 		TESTER_ADD_TEST(globalDestructorTest);
@@ -36,6 +38,7 @@ public:
 		TESTER_ADD_TEST(checkCastingInstructions);
 		TESTER_ADD_TEST(testSyncRun);
 		TESTER_ADD_TEST(structureOperations);
+		TESTER_ADD_TEST(fixedSizeTableOperations);
 	}
 
 private:
@@ -54,6 +57,10 @@ private:
 	void check32BitsInstructions() { runTestOnVm("32bits.dbc", "", "11", {}); }
 
 	void check64BitsInstructions() { runTestOnVm("64bits.dbc", "", "11", {}); }
+
+	void checkMultipleRetVals() { runTestOnVm("multiple_retvals.dbc", "", "21373315", {}); }
+
+	void checkVoidTypeValid() { runTestOnVm("valid_void_type.dbc", "", "2", {}); }
 
 	void pointerTest() {
 		for (auto filename:
@@ -128,26 +135,18 @@ private:
 
 	void invalidPrimitiveTypes() {
 		loadInvalidDbc(
-			"void_instantiation.dbc",
-			{
-				vm::code::UninstantiableValueError::ERR_MSG,
-			}
-		);
-		loadInvalidDbc(
 			"size_zero_primitive.dbc",
 			{
 				vm::code::InvalidPrimitiveSizeError::ERR_MSG,
 			}
 		);
-		loadInvalidDbc(
-			"void_arg.dbc",
-			{
-				vm::code::VoidTypeArgumentError::ERR_MSG,
-			}
-		);
 	}
 
 	void structureOperations() { runTestOnVm("structure_operations.dbc", "", "506", {}); }
+
+	void fixedSizeTableOperations() {
+		runTestOnVm("fixed_size_table_operations.dbc", "", "123", {});
+	}
 
 	void testSyncRun() {
 		vm::PID pid = initProcess();

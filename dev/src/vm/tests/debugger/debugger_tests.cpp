@@ -259,7 +259,8 @@ private:
 		{
 			auto exit_code_response = vm::api::getExitValue(pid);
 			ASSERT_TRUE(exit_code_response.has_value());
-			ASSERT_EQUAL_PRINT(exit_code_response.value()->readBytes<i64>(), 0);
+			ASSERT_EQUAL(exit_code_response.value().size(), 1);
+			ASSERT_EQUAL_PRINT(exit_code_response.value().at(0)->readBytes<i64>(), 0);
 		}
 	}
 };

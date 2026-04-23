@@ -1,10 +1,10 @@
-type fun: g_ctor { } void
+type fun: g_ctor { } {}
 
 global_data g i64 {
     constructor: g_ctor,
 };
 
-function main { i64, ptr_argv } -> i64 {
-    mov_p64_p64 ret_val, g;
+function main { i64, ptr_argv } -> { i64 } {
+    mov_p64_p64 ret0, g;
     ret;
 }

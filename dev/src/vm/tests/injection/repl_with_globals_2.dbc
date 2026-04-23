@@ -1,4 +1,4 @@
-function globaler_reader {} -> void {
+function globaler_reader {} -> {} {
 	init_pany_type  x, i64;
 	mov_p64_p64     x, counter;
 	output_p64      x;

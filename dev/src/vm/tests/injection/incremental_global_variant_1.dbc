@@ -5,7 +5,7 @@ type pointer: ptr_PersistVariant PersistVariant
 
 global_data persisted_variant PersistVariant {};
 
-function set_global_variant_value {} -> void {
+function set_global_variant_value {} -> {} {
     init_pany_type variant_ptr, ptr_PersistVariant;
     ref_pptr_pvnt variant_ptr, persisted_variant;
 

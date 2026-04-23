@@ -11,6 +11,18 @@
 #include <query_framework/entry/with_context_do.hpp>
 
 namespace compiler::repl {
+	std::vector<std::string> extractStatementSources(query::Context& ctx, const pst::TopLevel& root) {
+		std::vector<std::string> sources;
+		for (auto stmt_locked: root.getStatements()) {
+			auto stmt = stmt_locked.unlock(ctx);
+			auto pos  = stmt->getSourcePosition().unlock(ctx);
+			sources.emplace_back(
+				pos.getSource()->getCharRange(pos.getStart(), pos.getEnd() + 1).stdString()
+			);
+		}
+
+		return sources;
+	}
 
 	std::vector<std::string> extractStatementSources(
 		query::Context& ctx, frontend::ModuleID module_id
@@ -18,16 +30,7 @@ namespace compiler::repl {
 		auto main_file = ctx.query<frontend::QueryMainSourceFile>(module_id);
 		auto pst       = getFilePST(ctx, main_file);
 		auto root      = pst->getRootElement().unlock(ctx);
-
-		std::vector<std::string> sources;
-		for (auto stmt_locked: root->getStatements()) {
-			auto stmt = stmt_locked.unlock(ctx);
-			auto pos  = stmt->getSourcePosition().unlock(ctx);
-			sources.emplace_back(
-				pos.getSource()->getCharRange(pos.getStart(), pos.getEnd() + 1).stdString()
-			);
-		}
-		return sources;
+		return extractStatementSources(ctx, *root);
 	}
 
 	/**
@@ -69,7 +72,8 @@ namespace compiler::repl {
 			return std::unexpected(std::string("Parse error"));
 		}
 
-		return extractStatementSources(ctx, probe_module_id);
+		auto root = pst->getRootElement().unlock(ctx);
+		return extractStatementSources(ctx, *root);
 	}
 
 	std::expected<std::vector<std::string>, std::string> splitInputIntoStatements(
