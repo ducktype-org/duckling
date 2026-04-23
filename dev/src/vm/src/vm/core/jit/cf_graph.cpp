@@ -67,4 +67,43 @@ namespace vm::jit::cf {
 			}
 		}
 	}
+
+	[[nodiscard]] ControlFlowGraph ControlFlowGraph::subgraph(const std::vector<BlockID>& block_ids) const {
+		ControlFlowGraph subgraph;
+		subgraph.blocks.reserve(block_ids.size());
+
+		BlockID dummy_block_id = static_cast<BlockID>(subgraph.blocks.size());
+
+		std::vector<BlockID> old_to_new(blocks.size() + 1, dummy_block_id);
+
+		for (BlockID old_id: block_ids) {
+			CORE_ASSERT(old_id < blocks.size(), "Invalid block ID in subgraph request");
+			CORE_ASSERT(old_to_new[old_id] == dummy_block_id, "Duplicate block ID in subgraph request");
+
+			const BlockID new_id = static_cast<BlockID>(subgraph.blocks.size());
+			old_to_new[old_id]   = new_id;
+
+			const BasicBlock& src = blocks[old_id];
+			subgraph.blocks.emplace_back(new_id, src.start, src.end);
+		}
+		// Add dummy block to redirect edges that go outside the selected subset
+		// PLACEHOLDER: replace with logic which creates a different dummy for each jmp or smth
+		auto ret_instr_pos = blocks.back().end - 1;
+		subgraph.blocks.emplace_back(dummy_block_id, ret_instr_pos, ret_instr_pos + 1);
+
+		for (BlockID old_id: block_ids) {
+			const BlockID  new_id = old_to_new[old_id];
+			const BasicBlock& src = blocks[old_id];
+			BasicBlock&       dst = subgraph.blocks[new_id];
+
+			dst.succ = src.succ;
+			for (usize i = 0; i < src.edgeCount(); ++i) {
+				BlockID old_target_id = src.edge(i);
+				BlockID new_target_id = old_to_new[old_target_id];
+				dst.succ[i]           = new_target_id;
+			}
+		}
+
+		return subgraph;
+	}
 }  // vm::jit::cf

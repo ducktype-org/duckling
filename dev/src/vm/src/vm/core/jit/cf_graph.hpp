@@ -20,6 +20,8 @@ namespace vm::jit::cf {
 		};
 
 		OutEdges(): to{ 0, 0 } {}
+		OutEdges(const OutEdges&) = default;
+		OutEdges& operator=(const OutEdges&) = default;
 
 		[[nodiscard]] usize size() const { return no_edges; }
 
@@ -58,7 +60,8 @@ namespace vm::jit::cf {
 			throw std::runtime_error("This block does not have conditional outgoing edges.");
 		}
 
-		BlockID operator[](usize index) const { return to.at(index); }
+		BlockID& operator[](usize index) { return to[index]; }
+		const BlockID& operator[](usize index) const { return to[index]; }
 
 	private:
 		std::array<BlockID, 2> to;
@@ -67,10 +70,7 @@ namespace vm::jit::cf {
 	};
 
 	struct BasicBlock {
-	private:
 		OutEdges succ;
-
-	public:
 		const BlockID id;
 		const usize   start;
 		const usize   end;
@@ -119,5 +119,7 @@ namespace vm::jit::cf {
 			CORE_ASSERT(id < blocks.size(), "Invalid block ID");
 			return blocks[id];
 		}
+
+		[[nodiscard]] ControlFlowGraph subgraph(const std::vector<BlockID>& block_ids) const;
 	};
 }  // vm::jit::cf
