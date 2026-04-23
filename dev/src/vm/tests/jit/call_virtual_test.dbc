@@ -38,16 +38,16 @@ type class: Child {
 
 # ============ METHODS IMPLEMENTATION ============ 
 function I1_foo_default_impl_type {pointer_I1} -> { } {
-    init_pany_type res, i64; mov_p64_imm res, 11; output_p64 res; deinit; deinit; ret;
+    init_pany_type res, i64; mov_p64_imm res, 1; output_p64 res; deinit; deinit; ret;
 }
 function Child_I1_bar_impl_type {pointer_Child} -> { } {
-    init_pany_type res, i64; mov_p64_imm res, 22; output_p64 res; deinit; deinit; ret;
+    init_pany_type res, i64; mov_p64_imm res, 2; output_p64 res; deinit; deinit; ret;
 }
 function Parent_getAge_impl_type {pointer_Parent} -> { } {
-    init_pany_type res, i64; mov_p64_imm res, 33; output_p64 res; deinit; ret;
+    init_pany_type res, i64; mov_p64_imm res, 3; output_p64 res; deinit; ret;
 }
 function Child_getAge_impl_type {pointer_Child} -> { } {
-    init_pany_type res, i64; mov_p64_imm res, 44; output_p64 res; deinit; deinit; ret;
+    init_pany_type res, i64; mov_p64_imm res, 4; output_p64 res; deinit; deinit; ret;
 }
 
 function to_jit { pointer_Parent } -> { } {
