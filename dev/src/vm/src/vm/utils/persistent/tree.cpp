@@ -1,4 +1,4 @@
-#include "persistent_tree.hpp"
+#include "tree.hpp"
 
 #include "base/collections/optional.hpp"
 #include "base/except/exceptions.hpp"
@@ -293,8 +293,14 @@ namespace vm::persistent::detail {
 	NodeID SegmentTree::rebuildFromTwo(NodeID root_1, NodeID root_2, MergeBuilder merge_policy) {
 		CORE_ASSERT(root_1 || root_2, "One of the states must be non-empty");
 
-		if (getHeightOffset(root_2).second < getHeightOffset(root_1).second) {
-			std::swap(std::tie(root_1, merge_policy.only_1), std::tie(root_2, merge_policy.only_2));
+		auto pos_1 = getPos(root_1);
+		auto pos_2 = getPos(root_2);
+
+		if (offsetFromPos(pos_2) < offsetFromPos(pos_1)) {
+			std::swap(
+				std::tie(pos_1, root_1, merge_policy.only_1),
+				std::tie(pos_2, root_2, merge_policy.only_2)
+			);
 			merge_policy.confilicts
 				= [orig_strat = merge_policy.confilicts](usize idx, usize val_1, usize val_2) {
 					  return orig_strat(idx, val_2, val_1);
@@ -342,14 +348,11 @@ namespace vm::persistent::detail {
 			auto rec_left  = self(pos_left, left_1, left_2);
 			auto rec_right = self(pos_right, right_1, right_2);
 
-			CORE_ASSERT(!rec_left || inSubtree(getPos(rec_left), pos_left), "stay in subtree");
-			CORE_ASSERT(!rec_right || inSubtree(getPos(rec_right), pos_right), "stay in subtree");
+			CORE_ASSERT(!rec_left || inSubtree(mem->getPos(rec_left), pos_left), "stay in subtree");
+			CORE_ASSERT(!rec_right || inSubtree(mem->getPos(rec_right), pos_right), "stay in subtree");
 
 			return mem->mergeTwoRoots(rec_left, rec_right);
 		};
-
-		auto pos_1 = getPos(root_1);
-		auto pos_2 = getPos(root_2);
 
 		auto lca = getLCAPos(pos_1, pos_2);
 
@@ -406,10 +409,12 @@ namespace vm::persistent::detail {
 				detail_merge(pos, node_1, EMPTY);
 			}
 
-			auto [pos, node_1] = in_order.front();
-			in_order.pop_front();
-			CORE_ASSERT(pos == pos_2, "This is our node");
-			detail_merge(pos, node_1, root_2);
+			{
+				auto [pos, node_1] = in_order.front();
+				in_order.pop_front();
+				CORE_ASSERT(pos == pos_2, "This is our node");
+				detail_merge(pos, node_1, root_2);
+			}
 
 			for (; in_order.size(); in_order.pop_front()) {
 				auto [pos, node_1] = in_order.front();
@@ -418,7 +423,6 @@ namespace vm::persistent::detail {
 		}
 
 		neigh.moveNodeTo(lca);
-
 		return neigh.node;
 	}
 
@@ -501,40 +505,49 @@ namespace vm::persistent::detail {
 		NodeID root, usize left_idx, usize right_idx, RangeBuilder range_constructor
 	) {
 		CORE_ASSERT(left_idx < right_idx, "Interval must be non-empty");
-		auto left_pos = left_idx | LEAF_MASK, right_pos = (right_idx - 1) | LEAF_MASK;
+		CORE_ASSERT(
+			(left_idx & LEAF_MASK) == 0 && ((right_idx - 1) & LEAF_MASK) == 0,
+			"idxs must be small enough"
+		);
+		auto left_pos = left_idx, right_pos = (right_idx - 1);
 
 		if (root) {
 			auto [offset, height] = getHeightOffset(root);
 
-			left_pos  = offset | LEAF_MASK;
-			right_pos = (offset + (1 << height) - 1) | LEAF_MASK;
+			left_pos  = std::min(left_pos, offset);
+			right_pos = std::max(right_pos, (offset + (1 << height) - 1));
 		}
 
-		auto lca = getLCAPos(left_pos, right_pos);
+		left_pos |= LEAF_MASK;
+		right_pos |= LEAF_MASK;
+
+		auto lca_pos = getLCAPos(left_pos, right_pos);
 
 		SurroundingNeigh neigh = {
 			.mem      = this,
-			.root_pos = lca,
-			.node_pos = lca,
+			.root_pos = lca_pos,
+			.node_pos = lca_pos,
 			.node     = EMPTY,
 			.siblings = {},
 		};
 
-		auto root_pos = getPos(root);
-		neigh.moveNodeTo(root_pos);
-
+		neigh.moveNodeTo(getPos(root));
 		neigh.node = root;
 
 		auto range_nodes = getPosInRange(left_idx, right_idx);
 		CORE_ASSERT(range_nodes.size(), "when range non-empty, there must be some nodes");
 
+		usize first_height = heightFromPos(range_nodes.front());
+		usize last_height  = heightFromPos(range_nodes.back());
+
 		neigh.moveNodeTo(range_nodes.front());
 		{
-			auto [idx, list] = neigh.inOrder(root_pos);
+			auto [idx, list] = neigh.inOrder(lca_pos);
 			for (usize i = 0; i < idx; i++) {
 				auto [pos, node] = list.front();
 				list.pop_front();
-				auto relative_h = heightFromPos(pos) - heightFromPos(range_nodes.front());
+				CORE_ASSERT(heightFromPos(pos) >= first_height, "All the siblings are above");
+				auto relative_h = heightFromPos(pos) - first_height;
 				CORE_ASSERT(relative_h < neigh.siblings.size(), "We can in fact change the node");
 				neigh.siblings[relative_h] = range_constructor.out_of_range(node, pos);
 			}
@@ -547,19 +560,20 @@ namespace vm::persistent::detail {
 		}
 
 		{
-			auto [idx, list] = neigh.inOrder(root_pos);
+			auto [idx, list] = neigh.inOrder(lca_pos);
 			for (usize i = 0; i <= idx; i++) list.pop_front();
 
 			for (; list.size(); list.pop_front()) {
 				auto [pos, node] = list.front();
 				list.pop_front();
-				auto relative_h = heightFromPos(pos) - heightFromPos(range_nodes.front());
+				CORE_ASSERT(heightFromPos(pos) >= last_height, "All the siblings are above");
+				auto relative_h = heightFromPos(pos) - last_height;
 				CORE_ASSERT(relative_h < neigh.siblings.size(), "We can in fact change the node");
 				neigh.siblings[relative_h] = range_constructor.out_of_range(node, pos);
 			}
 		}
 
-		neigh.moveNodeTo(lca);
+		neigh.moveNodeTo(lca_pos);
 		return neigh.node;
 	}
 

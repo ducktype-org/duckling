@@ -2,10 +2,10 @@
 #include <tester/tester.hpp>
 
 #include <vm/utils/bijective_map.hpp>
-#include <vm/utils/persistent_array.hpp>
-#include <vm/utils/persistent_hashmap.hpp>
-#include <vm/utils/persistent_memory.hpp>
-#include <vm/utils/persistent_vector.hpp>
+#include <vm/utils/persistent/array.hpp>
+#include <vm/utils/persistent/hashmap.hpp>
+#include <vm/utils/persistent/memory.hpp>
+#include <vm/utils/persistent/vector.hpp>
 
 #include <string>
 #include <utility>

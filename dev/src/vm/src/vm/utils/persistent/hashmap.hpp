@@ -4,7 +4,7 @@
 #include <base/types/ints.hpp>
 
 #include <vm/utils/bijective_map.hpp>
-#include <vm/utils/persistent_array.hpp>
+#include <vm/utils/persistent/array.hpp>
 
 namespace vm::persistent {
 	STRONG_TYPEDEF_INT(HashMapStateID, u64);

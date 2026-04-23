@@ -155,8 +155,8 @@ namespace vm::persistent::detail {
 
 		using _ConflictPolicy = std::function<NodeID(usize, usize, usize)>;
 
-		detail::BijectiveMap<ChildEntry, NodeID, ChildEntryH> child_entries{};
-		detail::BijectiveMap<LeafEntry, NodeID, LeafEntryH>   leaf_entries{};
+		BijectiveMap<ChildEntry, NodeID, ChildEntryH> child_entries{};
+		BijectiveMap<LeafEntry, NodeID, LeafEntryH>   leaf_entries{};
 
 		base::HashMap<NodeID, RootEntry> root_info{};
 		NodeID                           next_node_id = NodeID{ 1 };
