@@ -6,7 +6,11 @@
 
 /**
  * @brief Tests here invoke another function multiple times, inducing the 
- * necessary call-count, and allowing for it to be jit-compiled.
+ * necessary threshold, and allowing for it to be jit-compiled.
+ * 
+ * @details Tests are listed in the order of ascending difficulty. All other
+ * tests should also invoke jit-compilation, as when not build with release
+ * every function (including main) gets compiled on first invocation.
  */
 class JitTests: public VmTestSuite {
 #undef TESTER_CLASS
