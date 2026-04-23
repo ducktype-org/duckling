@@ -9,16 +9,15 @@
 //! ├── global_venv/ <root of the global shared virtual environment>
 //! └── storage/ <root of the storage internal files>
 
-use crate::{
-    QuackResult,
-    quackpack::core::PackageLoader,
-    util::{env::Env, path_ops_ext::PathOpsExt},
-};
-use std::{
-    fmt,
-    path::{Path, PathBuf},
-};
+use std::fmt;
+use std::path::{Path, PathBuf};
+
 use tracing::debug;
+
+use crate::QuackResult;
+use crate::quackpack::core::PackageLoader;
+use crate::util::env::Env;
+use crate::util::path_ops_ext::PathOpsExt;
 
 macro_rules! getter {
     (

@@ -1,7 +1,7 @@
 type pointer: pointer_I1 I1
-type fun: method_I1_int {pointer_I1} i64
+type fun: method_I1_int {pointer_I1} { i64 }
 
-function I1_foo_impl {pointer_I1} -> i64 {
+function I1_foo_impl {pointer_I1} -> { i64 } {
     ret;
 } 
 

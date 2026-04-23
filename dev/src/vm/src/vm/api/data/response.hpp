@@ -5,7 +5,7 @@
 
 #include <base/pointers/box.hpp>
 
-#include <vm/core/thread/vmvalueref.hpp>
+#include <vm/core/vmvalue/vmvalueref.hpp>
 
 // NOLINTBEGIN(readability-identifier-naming)
 template<>

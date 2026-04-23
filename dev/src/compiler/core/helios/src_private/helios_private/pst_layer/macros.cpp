@@ -1,6 +1,7 @@
 
 #include "macros.hpp"
 
+#include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/expand.hpp>
@@ -16,7 +17,7 @@
 
 namespace compiler::helios {
 
-	struct IMPLEMENT_QUERY(QueryMacroExpansion, pst::PST<pst::Stmt>) {
+	struct IMPLEMENT_QUERY(QueryMacroExpansion, query::QResult<pst::PST<pst::Stmt>>) {
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
 			auto expand = key.element.unlock(ctx);
 
@@ -33,7 +34,7 @@ namespace compiler::helios {
 				auto expand_str = expand_ctv.get<base::StrID>().value();
 
 				auto pst = pst::PST<pst::Stmt>::fromExpand(
-					expand->getSourcePosition(),
+					expand->getSourcePosition().unlock(ctx),
 					// @TODO: #2471 change to strView, once it is fixed
 					expand_str.str(),
 					makeBox<pst::LangParserContext>(expand->getContext()),
@@ -46,6 +47,20 @@ namespace compiler::helios {
 					hashing::ComponentHash({}, expand->getHash().toStringHex())
 				);
 
+				if (not pst.getLogger()->good()) {
+					// Note that PST diagnostics are logged eagerly, so if the PST did not parse
+					// correctly, the diagnostics should already be logged at this point.
+					// @TODO: #2438 remove this diagnostic and rely on PST diagnostics only, once
+					// they properly show their origin.
+					ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+						"Macro expansion produced code with parsing errors (see other diagnostics "
+						"for details)",
+						expand->getSourcePosition().unlock(ctx)
+					));
+
+					return query::Failed();
+				}
+
 				if (pst.getRootElement().unlockOpt(ctx).has_value()) {
 					pst.setAdditionalRootData(pst::AdditionalRootData{
 						pst::AdditionalRootData::MacroExpansionParent{ .expand_element = expand } });
@@ -53,15 +68,27 @@ namespace compiler::helios {
 
 				return pst;
 			} else {
-				CORE_PANIC("Expand argument is not exactly a single string.");
+				ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+					"The expression in expand statements did not evaluate to a string value.",
+					expand->getValue().unlock(ctx)->getExpr().unlock(ctx)->getSourcePosition().unlock(
+						ctx
+					)
+				));
+				return query::Failed();
 			}
 		}
 
-		static auto extractResult(CRef<pst::PST<pst::Stmt>> pst_ref) -> QResult {
-			if (pst_ref->getLogger()->good())
+		static auto extractResult(CRef<query::QResult<pst::PST<pst::Stmt>>> p_result) -> QResult {
+			if (p_result->hasFailed())
+				return query::Failed{};
+			else {
+				Ref pst_ref = &p_result->valueOrPanic();
+				CORE_ASSERT(
+					pst_ref->getLogger()->good(),
+					"PST from macro expansion should have been checked for errors in provide()"
+				);
 				return { pst_ref->getRootElement() };
-			else
-				return ExpansionError<pst::Stmt>(pst_ref->getRootElement(), pst_ref->getLogger());
+			}
 		}
 
 

@@ -1,10 +1,8 @@
-use crate::{
-    DuckContext, QuackResult,
-    quackpack::subcommands::sync::{SyncOptions, sync},
-};
 use clap::{ArgMatches, Command};
 
 use crate::duck::driver::cli_ext::{flag, subcommand};
+use crate::quackpack::subcommands::sync::{SyncOptions, sync};
+use crate::{DuckContext, QuackResult};
 
 /// Creates parser for the `sync` subcommand.
 pub fn get_parser() -> Command {

@@ -1,6 +1,6 @@
 include(FetchContent)
 
-set(BASE64_COMMIT "387b32f337b83d358ac1ffe574e596ba99c41d31")
+set(BASE64_COMMIT "8d96a2a737ac1396304b1de289beb3a5ea0cb752")  # main, commited 2025-11-23
 
 FetchContent_Declare(base64)
 FetchContent_GetProperties(base64)
