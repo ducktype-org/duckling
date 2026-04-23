@@ -12,6 +12,7 @@
 #include <deque>
 #include <functional>
 #include <stdexcept>
+#include <type_traits>
 #include <vector>
 
 namespace vm::persistent::detail {
@@ -21,9 +22,20 @@ namespace vm::persistent::detail {
 STRONGLY_TYPED_INT_STD_HASH(vm::persistent::detail::NodeID)
 
 namespace vm::persistent::detail {
+	class SegmentTree;
 
+	template<typename T>
+	concept RebuildRes = std::is_same_v<T, void> || std::is_same_v<T, NodeID>;
+
+	template<typename SelfT, typename ResT>
+	concept ValidSignature =  RebuildRes<ResT> && (std::is_same_v<void, ResT> || !std::is_const_v<SelfT>);
 	class SegmentTree {
-		constexpr static auto  EMPTY     = NodeID{ 0 };
+	public:
+		constexpr static auto EMPTY = NodeID{ 0 };
+
+		enum class Dir { Left, Right };
+
+	private:
 		constexpr static usize ROOT_MASK = (usize(-1) >> 1);
 		constexpr static usize LEAF_MASK = ~ROOT_MASK;
 
@@ -58,11 +70,6 @@ namespace vm::persistent::detail {
 			usize right_bound;
 		};
 
-		/**
-		 * @brief Helper class for determining directions. Used for readability
-		 */
-		enum class Dir { Left, Right };
-
 		static constexpr Dir othDir(Dir dir) { return dir == Dir::Left ? Dir::Right : Dir::Left; }
 
 		static constexpr usize heightFromPos(usize pos) { return usize(64 - std::bit_width(pos)); }
@@ -92,8 +99,7 @@ namespace vm::persistent::detail {
 		static constexpr std::deque<usize> getPosInRange(usize left_idx, usize right_idx) {
 			CORE_ASSERT(left_idx <= right_idx, "Received wrong interval");
 			CORE_ASSERT(
-				(left_idx & LEAF_MASK) == 0 && (right_idx & LEAF_MASK) == 0,
-				"leaf bit must be off"
+				(left_idx & LEAF_MASK) == 0 && (right_idx & LEAF_MASK) == 0, "leaf bit must be off"
 			);
 
 			left_idx |= LEAF_MASK;
@@ -133,6 +139,13 @@ namespace vm::persistent::detail {
 			std::pair<usize, std::deque<std::pair<usize, NodeID>>> inOrder(usize upto_here) const;
 		};
 
+		BijectiveMap<ChildEntry, NodeID, ChildEntryH> child_entries{};
+		BijectiveMap<LeafEntry, NodeID, LeafEntryH>   leaf_entries{};
+
+		base::HashMap<NodeID, RootEntry> root_info{};
+		NodeID                           next_node_id = NodeID{ 1 };
+
+	protected:
 		/**
 		 * @brief struture used to iterate over the MemoryStateView
 		 */
@@ -153,15 +166,6 @@ namespace vm::persistent::detail {
 			bool moveToValid(Dir move_dir, usize skip = 0);
 		};
 
-		using _ConflictPolicy = std::function<NodeID(usize, usize, usize)>;
-
-		BijectiveMap<ChildEntry, NodeID, ChildEntryH> child_entries{};
-		BijectiveMap<LeafEntry, NodeID, LeafEntryH>   leaf_entries{};
-
-		base::HashMap<NodeID, RootEntry> root_info{};
-		NodeID                           next_node_id = NodeID{ 1 };
-
-	protected:
 		std::pair<usize, usize> getHeightOffset(NodeID state) const;
 		usize                   getSize(NodeID state) const;
 		usize                   getPos(NodeID state) const;
@@ -174,36 +178,49 @@ namespace vm::persistent::detail {
 		NodeID nodeFromChildren(NodeID left, NodeID right);
 		NodeID nodeFromIdxVar(usize idx, usize var_id);
 
+		template<RebuildRes ResT>
 		struct MergeBuilder {
-			std::function<NodeID(NodeID, usize)> only_1 =
-				[]([[maybe_unused]] NodeID id, [[maybe_unused]] usize pos) -> NodeID { return id; };
+			std::function<ResT(NodeID, usize)> only_1 = [](NodeID id, usize) -> ResT {
+				if constexpr (std::is_same_v<ResT, NodeID>) return id;
+			};
 
-			std::function<NodeID(NodeID, usize)> only_2 =
-				[]([[maybe_unused]] NodeID id, [[maybe_unused]] usize pos) -> NodeID { return id; };
+			std::function<ResT(NodeID, usize)> only_2 = [](NodeID id, usize) -> ResT {
+				if constexpr (std::is_same_v<ResT, NodeID>) return id;
+			};
 
-			std::function<NodeID(NodeID, usize)> the_same =
-				[]([[maybe_unused]] NodeID id, [[maybe_unused]] usize pos) -> NodeID { return id; };
+			std::function<ResT(NodeID, usize)> the_same = [](NodeID id, usize) -> ResT {
+				if constexpr (std::is_same_v<ResT, NodeID>) return id;
+			};
 
-			_ConflictPolicy confilicts = [](usize, usize, usize) -> NodeID {
+			std::function<ResT(usize, usize, usize)> confilicts = [](usize, usize, usize) -> ResT {
 				throw std::invalid_argument("conflicts present");
 			};
 		};
 
+		template<RebuildRes ResT>
 		struct RangeBuilder {
-			std::function<NodeID(NodeID, usize)> in_range =
-				[]([[maybe_unused]] NodeID id, [[maybe_unused]] usize pos) -> NodeID { return id; };
+			std::function<ResT(NodeID, usize)> in_range = [](NodeID id, usize) -> ResT {
+				if constexpr (std::is_same_v<ResT, NodeID>) return id;
+			};
 
-			std::function<NodeID(NodeID, usize)> out_of_range =
-				[]([[maybe_unused]] NodeID id, [[maybe_unused]] usize pos) -> NodeID { return id; };
-			
+			std::function<ResT(NodeID, usize)> out_of_range = [](NodeID id, usize) -> ResT {
+				if constexpr (std::is_same_v<ResT, NodeID>) return id;
+			};
 		};
-		using LeafBuilder  = std::function<NodeID(usize, base::Optional<usize>)>;
+
+		using LeafBuilder = std::function<NodeID(usize, base::Optional<usize>)>;
 
 		NodeID reconstructIdxs(NodeID root, std::deque<usize> idxs, LeafBuilder leaf_constructor);
-		NodeID rebuildFromTwo(NodeID root_1, NodeID root_2, MergeBuilder merge_policy);
+
+		template<typename ResT, typename SelfT>
+		NodeID rebuildFromTwo(
+			this SelfT&& self, NodeID root_1, NodeID root_2, MergeBuilder<ResT> merge_policy
+		) requires ValidSignature<SelfT,ResT>;
+
+		template<typename ResT, typename SelfT>
 		NodeID rebuildWithRange(
-			NodeID root, usize left_idx, usize right_idx, RangeBuilder range_constructor
-		);
+			this SelfT&& self, NodeID root, usize left_idx, usize right_idx, RangeBuilder<ResT> range_constructor
+		) requires ValidSignature<SelfT,ResT>;
 
 		[[nodiscard]]
 		NodeID getChild(Dir dir, NodeID root) const;
@@ -216,8 +233,6 @@ namespace vm::persistent::detail {
 		NodeID mergeTwoRoots(NodeID root_1, NodeID root_2);
 
 	public:
-		using ConflictPolicy = _ConflictPolicy;
-
 		SegmentTree();
 	};
 }

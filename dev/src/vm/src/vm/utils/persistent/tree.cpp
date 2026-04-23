@@ -14,6 +14,7 @@
 #include <functional>
 #include <optional>
 #include <tuple>
+#include <type_traits>
 #include <unordered_set>
 #include <utility>
 #include <vector>
@@ -296,24 +297,28 @@ namespace vm::persistent::detail {
 		return neigh.node;
 	}
 
-	NodeID SegmentTree::rebuildFromTwo(NodeID root_1, NodeID root_2, MergeBuilder merge_policy) {
+	template<typename ResT, typename SelfT>
+	NodeID SegmentTree::rebuildFromTwo(
+		this SelfT&& st, NodeID root_1, NodeID root_2, MergeBuilder<ResT> merge_policy
+	) requires ValidSignature<SelfT, ResT> {
+		static constexpr bool RECONSTRUCT = std::is_same_v<ResT, NodeID>;
+
 		CORE_ASSERT(root_1 && root_2, "Both of the states must be non-empty");
 
-		auto pos_1 = getPos(root_1);
-		auto pos_2 = getPos(root_2);
+		auto pos_1 = st.getPos(root_1);
+		auto pos_2 = st.getPos(root_2);
 
 		if (offsetFromPos(pos_2) < offsetFromPos(pos_1)) {
 			std::swap(pos_1, pos_2);
 			std::swap(root_1, root_2);
 			std::swap(merge_policy.only_1, merge_policy.only_1);
-			merge_policy.confilicts
-				= [orig_strat = merge_policy.confilicts](usize idx, usize val_1, usize val_2) {
-					  return orig_strat(idx, val_2, val_1);
-				  };
+			merge_policy.confilicts = [orig_strat = merge_policy.confilicts](
+										  usize idx, usize val_1, usize val_2
+									  ) -> ResT { return orig_strat(idx, val_2, val_1); };
 		}
 
 		auto detail_merge
-			= [&, mem = this](this auto&& self, usize pos, NodeID node_1, NodeID node_2) -> NodeID {
+			= [&, mem = &st](this auto&& self, usize pos, NodeID node_1, NodeID node_2) -> ResT {
 			CORE_ASSERT(
 				mem->getPos(node_1) == mem->getPos(node_2) || !node_1 || !node_2,
 				"both nodes are responsible for the same memory region"
@@ -350,21 +355,29 @@ namespace vm::persistent::detail {
 			auto [left_2, right_2] = mem->child_entries.atRight(node_2);
 			auto pos_left = pos << 1, pos_right = ((pos << 1) | 1);
 
-			auto rec_left  = self(pos_left, left_1, left_2);
-			auto rec_right = self(pos_right, right_1, right_2);
+			if constexpr (RECONSTRUCT) {
+				auto rec_left  = self(pos_left, left_1, left_2);
+				auto rec_right = self(pos_right, right_1, right_2);
 
-			CORE_ASSERT(!rec_left || inSubtree(mem->getPos(rec_left), pos_left), "stay in subtree");
-			CORE_ASSERT(
-				!rec_right || inSubtree(mem->getPos(rec_right), pos_right), "stay in subtree"
-			);
+				CORE_ASSERT(
+					!rec_left || inSubtree(mem->getPos(rec_left), pos_left), "stay in subtree"
+				);
+				CORE_ASSERT(
+					!rec_right || inSubtree(mem->getPos(rec_right), pos_right), "stay in subtree"
+				);
 
-			return mem->mergeTwoRoots(rec_left, rec_right);
+				return mem->mergeTwoRoots(rec_left, rec_right);
+			} else {
+				self(pos_left, left_1, left_2);
+				self(pos_right, right_1, right_2);
+				return;
+			}
 		};
 
 		auto lca = getLCAPos(pos_1, pos_2);
 
 		SurroundingNeigh neigh = {
-			.mem      = this,
+			.mem      = &st,
 			.root_pos = lca,
 			.node_pos = lca,
 			.node     = EMPTY,
@@ -376,25 +389,42 @@ namespace vm::persistent::detail {
 			neigh.node                  = root_1;
 			auto [node_1_idx, in_order] = neigh.inOrder(lca);
 			in_order.pop_back();
+			usize height_1 = heightFromPos(pos_1);
 
 			for (usize i = 0; i < node_1_idx; i++) {
 				auto [pos, node_1] = in_order.front();
 				in_order.pop_front();
+
 				CORE_ASSERT(node_1 == EMPTY, "all before the leftmost must be empty");
-				detail_merge(pos, EMPTY, EMPTY);
+
+				if constexpr (RECONSTRUCT)
+					neigh.siblings.at(heightFromPos(pos) - height_1)
+						= detail_merge(pos, EMPTY, EMPTY);
+				else
+					detail_merge(pos, EMPTY, EMPTY);
 			}
 
 			if (!inSubtree(pos_2, pos_1)) {
 				CORE_ASSERT(in_order.size(), "There must be node on the list");
 				auto [pos, node_1] = in_order.front();
 				in_order.pop_front();
-				detail_merge(pos, node_1, EMPTY);
+
+				if constexpr (RECONSTRUCT)
+					neigh.node = detail_merge(pos, node_1, EMPTY);
+				else
+					detail_merge(pos, node_1, EMPTY);
 			}
 
 			for (; in_order.size(); in_order.pop_front()) {
 				auto [pos, node_1] = in_order.front();
 				CORE_ASSERT(node_1 == EMPTY, "all between two roots must be empty");
-				detail_merge(pos, EMPTY, EMPTY);
+
+
+				if constexpr (RECONSTRUCT)
+					neigh.siblings.at(heightFromPos(pos) - height_1)
+						= detail_merge(pos, EMPTY, EMPTY);
+				else
+					detail_merge(pos, EMPTY, EMPTY);
 			}
 		}
 
@@ -402,6 +432,7 @@ namespace vm::persistent::detail {
 			neigh.moveNodeTo(pos_2);
 			neigh.node                  = root_2;
 			auto [node_2_idx, in_order] = neigh.inOrder(lca);
+			usize height_2              = heightFromPos(pos_2);
 
 			if (!inSubtree(pos_2, pos_1)) {
 				CORE_ASSERT(in_order.size() >= 2, "There must be sth going on");
@@ -413,19 +444,33 @@ namespace vm::persistent::detail {
 			for (usize i = 0; i < node_2_idx; i++) {
 				auto [pos, node_1] = in_order.front();
 				in_order.pop_front();
-				detail_merge(pos, node_1, EMPTY);
+
+				if constexpr (RECONSTRUCT)
+					neigh.siblings.at(heightFromPos(pos) - height_2)
+						= detail_merge(pos, node_1, EMPTY);
+				else
+					detail_merge(pos, node_1, EMPTY);
 			}
 
 			{
 				auto [pos, node_1] = in_order.front();
 				in_order.pop_front();
 				CORE_ASSERT(pos == pos_2, "This is our node");
-				detail_merge(pos, node_1, root_2);
+
+				if constexpr (RECONSTRUCT)
+					neigh.node = detail_merge(pos, node_1, root_2);
+				else
+					detail_merge(pos, node_1, root_2);
 			}
 
 			for (; in_order.size(); in_order.pop_front()) {
 				auto [pos, node_1] = in_order.front();
-				detail_merge(pos, node_1, EMPTY);
+
+				if constexpr (RECONSTRUCT)
+					neigh.siblings.at(heightFromPos(pos) - height_2)
+						= detail_merge(pos, node_1, EMPTY);
+				else
+					detail_merge(pos, node_1, EMPTY);
 			}
 		}
 
@@ -508,9 +553,12 @@ namespace vm::persistent::detail {
 		return true;
 	}
 
+	template<typename ResT, typename SelfT>
 	NodeID SegmentTree::rebuildWithRange(
-		NodeID root, usize left_idx, usize right_idx, RangeBuilder range_constructor
-	) {
+		this SelfT&& self, NodeID root, usize left_idx, usize right_idx, RangeBuilder<ResT> range_constructor
+	) requires ValidSignature<SelfT, ResT> {
+		static constexpr bool RECONSTRUCT = std::is_same_v<ResT, NodeID>;
+
 		CORE_ASSERT(left_idx < right_idx, "Interval must be non-empty");
 		CORE_ASSERT(
 			(left_idx & LEAF_MASK) == 0 && ((right_idx - 1) & LEAF_MASK) == 0,
@@ -519,7 +567,7 @@ namespace vm::persistent::detail {
 		auto left_pos = left_idx, right_pos = (right_idx - 1);
 
 		if (root) {
-			auto [offset, height] = getHeightOffset(root);
+			auto [offset, height] = self.getHeightOffset(root);
 
 			left_pos  = std::min(left_pos, offset);
 			right_pos = std::max(right_pos, (offset + (1 << height) - 1));
@@ -531,14 +579,14 @@ namespace vm::persistent::detail {
 		auto lca_pos = getLCAPos(left_pos, right_pos);
 
 		SurroundingNeigh neigh = {
-			.mem      = this,
+			.mem      = &self,
 			.root_pos = lca_pos,
 			.node_pos = lca_pos,
 			.node     = EMPTY,
 			.siblings = {},
 		};
 
-		neigh.moveNodeTo(getPos(root));
+		neigh.moveNodeTo(self.getPos(root));
 		neigh.node = root;
 
 		auto range_nodes = getPosInRange(left_idx, right_idx);
@@ -554,16 +602,23 @@ namespace vm::persistent::detail {
 				auto [pos, node] = list.front();
 				list.pop_front();
 				CORE_ASSERT(heightFromPos(pos) >= first_height, "All the siblings are above");
-				auto relative_h = heightFromPos(pos) - first_height;
-				CORE_ASSERT(relative_h < neigh.siblings.size(), "We can in fact change the node");
-				neigh.siblings[relative_h] = range_constructor.out_of_range(node, pos);
+
+				if constexpr (RECONSTRUCT)
+					neigh.siblings.at(heightFromPos(pos) - first_height)
+						= range_constructor.out_of_range(node, pos);
+				else
+					range_constructor.out_of_range(node, pos);
 			}
 		}
 
 		for (; range_nodes.size(); range_nodes.pop_front()) {
 			auto pos = range_nodes.front();
 			neigh.moveNodeTo(pos);
-			neigh.node = range_constructor.in_range(neigh.node, pos);
+
+			if constexpr (RECONSTRUCT)
+				neigh.node = range_constructor.in_range(neigh.node, pos);
+			else
+				range_constructor.in_range(neigh.node, pos);
 		}
 
 		{
@@ -574,14 +629,18 @@ namespace vm::persistent::detail {
 				auto [pos, node] = list.front();
 				list.pop_front();
 				CORE_ASSERT(heightFromPos(pos) >= last_height, "All the siblings are above");
-				auto relative_h = heightFromPos(pos) - last_height;
-				CORE_ASSERT(relative_h < neigh.siblings.size(), "We can in fact change the node");
-				neigh.siblings[relative_h] = range_constructor.out_of_range(node, pos);
+
+				if constexpr (RECONSTRUCT)
+					neigh.siblings.at(heightFromPos(pos) - last_height)
+						= range_constructor.out_of_range(node, pos);
+				else
+					range_constructor.out_of_range(node, pos);
 			}
 		}
 
 		neigh.moveNodeTo(lca_pos);
-		return neigh.node;
+
+		if constexpr (RECONSTRUCT) return neigh.node;
 	}
 
 	void SegmentTree::pruneHistory(std::vector<NodeID> desired) {
