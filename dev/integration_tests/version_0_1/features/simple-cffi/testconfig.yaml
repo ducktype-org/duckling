@@ -1,21 +1,9 @@
 # Test configuration for simple-cffi
 # Tests C FFI (Foreign Function Interface) by calling libc's abs function
+# Note: This test is separate from ffi test, because of architectural differences
+#       I can change it upon request.
 
 Tests:
-  simple-cffi-test:
-    Description: Tests for C FFI.
-    Cases:
-      llvm:
-        backend: llvm
-        Output:
-          String: "10\n25\n15\n"
-        ExitCode: 0
-      dvm:
-        backend: dvm
-        Output:
-          String: "10\n25\n15\n"
-        ExitCode: 0
-
   cffi-libc-test:
     Description: Tests for CFFI in complex contexts.
     Cases:

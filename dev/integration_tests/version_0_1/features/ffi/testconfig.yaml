@@ -1,3 +1,8 @@
+# This test is moved from coimpiler/compilation itests where it wasn't connected to the testing framework
+# Note: This test is separate from simple-cffi test, because of architectural differences
+#       I can change it upon request.
+
+
 clean_cmd: "rm -rf build && rm -rf build_c"
 compile_gcc_sample: "gcc -c -o build_c/c_lib.o c_lib.c"
 create_dirs: "mkdir build && mkdir build_c"
