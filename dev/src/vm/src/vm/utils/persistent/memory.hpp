@@ -1,27 +1,23 @@
 #pragma once
 
-#include "base/collections/optional.hpp"
-#include "base/except/exceptions.hpp"
-#include "base/pointers/ref.hpp"
-#include <base/collections/maps.hpp>
 #include <base/extend_cpp/strongly_typed_int.hpp>
 
+#include <vm/utils/persistent/tree.hpp>
 #include <vm/utils/bijective_map.hpp>
 
 #include <deque>
 #include <functional>
 #include <optional>
-#include <stdexcept>
 #include <tuple>
 #include <vector>
 
-namespace vm::persistent::detail {
-	STRONG_TYPEDEF_INT(MemoryStateID, usize);
+namespace vm::persistent {
+	STRONG_TYPEDEF_INT(MemoryStateID, u64);
 }
 
-STRONGLY_TYPED_INT_STD_HASH(vm::persistent::detail::MemoryStateID)
+STRONGLY_TYPED_INT_STD_HASH(vm::persistent::MemoryStateID)
 
-namespace vm::persistent::detail {
+namespace vm::persistent {
 	class MemoryStateView;
 	class MemoryIterator;
 
@@ -31,222 +27,25 @@ namespace vm::persistent::detail {
 	 * @note Implementation is based on persistent segement tree
 	 * @note can be thought of as unordered_map<MemoryStateID, MemoryStateView>
 	 */
-	class Memory {
-		constexpr static auto EMPTY = MemoryStateID{ 0 };
+	class Memory: protected detail::SegmentTree {
 		friend MemoryStateView;
 		friend MemoryIterator;
 
-		constexpr static usize ROOT_MASK = (usize(-1) >> 1);
-		constexpr static usize LEAF_MASK = ~ROOT_MASK;
+		using Path = detail::SegmentTree::Path;
 
-		struct ChildEntry {
-			MemoryStateID left_child;
-			MemoryStateID right_child;
-
-			bool operator==(const ChildEntry&) const = default;
-		};
-
-		// required for use of BijectiveMap (both sides mus be hashable)
-		using ChildEntryH = decltype([](const ChildEntry& h) -> usize {
-			return (std::hash<MemoryStateID>{}(h.left_child) << 1)
-			     ^ std::hash<MemoryStateID>{}(h.right_child);
-		});
-
-		struct LeafEntry {
-			usize idx;
-			usize value;
-
-			bool operator==(const LeafEntry&) const = default;
-		};
-
-		// required for use of BijectiveMap (both sides mus be hashable)
-		using LeafEntryH = decltype([](const LeafEntry& h) -> usize {
-			return (std::hash<usize>{}(h.idx) << 1) ^ std::hash<usize>{}(h.value);
-		});
-
-		struct RootEntry {
-			usize size;
-			usize position;
-			usize left_bound;
-			usize right_bound;
-		};
-
-		/**
-		 * @brief Helper class for determining directions. Used for readability
-		 */
-		enum class Dir { Left, Right };
-
-		static constexpr Dir othDir(Dir dir) { return dir == Dir::Left ? Dir::Right : Dir::Left; }
-		static constexpr usize heightFromPos(usize pos) { return usize(64 - std::bit_width(pos)); }
-		static constexpr usize offsetFromPos(usize pos) {
-			return (pos << heightFromPos(pos)) & ROOT_MASK;
+		constexpr static MemoryStateID toState(detail::NodeID node) {
+			return MemoryStateID{ u64(node) };
 		}
 
-		static constexpr usize getLCAHeight(usize pos_1, usize pos_2) {
-			if (pos_1 > pos_2) std::swap(pos_1, pos_2);
-			if (pos_1 == 0) return pos_2;
-			auto h_1 = heightFromPos(pos_1), h_2 = heightFromPos(pos_2);
-			CORE_ASSERT(h_1 >= h_2, "pos_1 should be higher tahn pos_2");
-			pos_2 >>= (h_1 - h_2);
-			return h_1 + (usize) std::bit_width(pos_1 ^ pos_2);
+		constexpr static detail::NodeID fromState(MemoryStateID state) {
+			return detail::NodeID{ u64(state) };
 		}
-
-		static constexpr usize getLCAPos(usize pos_1, usize pos_2) {
-			if (pos_1 == 0) std::swap(pos_1, pos_2);
-			return pos_1 >> (getLCAHeight(pos_1, pos_2) - heightFromPos(pos_1));
-		}
-
-		struct SurroundingNeigh {
-			base::CRef<Memory> mem;
-			usize              root_pos;
-			usize              node_pos;
-			MemoryStateID      leaf;
-
-			std::deque<MemoryStateID> siblings;
-
-			void moveNodeTo(usize desired_pos);
-			std::pair<usize, std::deque<std::pair<usize, MemoryStateID>>> inOrder();
-		};
-
-		/**
-		 * @brief struture used to iterate over the MemoryStateView
-		 */
-		struct Path {
-			usize                     idx;
-			std::deque<MemoryStateID> trace;
-			base::CRef<Memory>        mem;
-			MemoryStateID             root;
-
-			/**
-			 * @brief moves Path to the leaf, which is present in Memory
-			 * @param move_dir the direction in which we seek the leaf
-			 * @param skip number of leaves to skip
-			 * @return boolean, if the was successful (whethter leaf was found)
-			 * @note works even if Path was pointing to idx which wasn't active in `root` state of
-			 * Memory
-			 */
-			bool moveToValid(Dir move_dir, usize skip = 0);
-
-			/**
-			 * @brief moves iterator to the right by `step`. Doesn't care if the position is valid
-			 * or not
-			 */
-			void moveBy(usize step);
-		};
-
-		using _ConflictPolicy = std::function<MemoryStateID(usize, usize, usize)>;
-
-		detail::BijectiveMap<ChildEntry, MemoryStateID, ChildEntryH> child_entries{};
-		detail::BijectiveMap<LeafEntry, MemoryStateID, LeafEntryH>   leaf_entries{};
-
-		base::HashMap<MemoryStateID, RootEntry> root_info{};
-		MemoryStateID                           next_node_id = MemoryStateID{ 1 };
-
-		/**
-		 * @brief Getters, allow to get information about the root of subtree representing `state`,
-		 * such as it's height, position in tree overall, offset of subtree in leaf layer, number of
-		 * active leaves and min, max idx of acative leaves
-		 */
-		std::pair<usize, usize> getHeightOffset(MemoryStateID state) const;
-		usize                   getSize(MemoryStateID state) const;
-		usize                   getPos(MemoryStateID state) const;
-		std::pair<usize, usize> getRange(MemoryStateID state) const;
-		usize                   getValue(MemoryStateID state) const;
-
-		/**
-		 * @brief meethods for getting descendants of given root, either a direct child  or
-		 * the leaf at given idx or all the descendants at particular height
-		 * @note when root doesn't have a particular descendant, `getChild` and `getLeaf` methods
-		 * will return EMPTY
-		 */
-		[[nodiscard]]
-		MemoryStateID getChild(Dir dir, MemoryStateID root) const;
-		[[nodiscard]]
-		MemoryStateID getLeaf(MemoryStateID root, usize idx) const;
-		[[nodiscard]]
-		std::deque<MemoryStateID> getSubNodesAtHeight(MemoryStateID root, usize desired_height) const;
-
-		// checks if root is a valid state of memory
-		void validateRoot(MemoryStateID root) const;
-
-		/**
-		 * @brief basic constuctors for the nodes in the tree. Node can be constructed as a leaf,
-		 * via `nodeFromIdxVar` or as a node with children via `nodeFromChildren`
-		 */
-		MemoryStateID nodeFromChildren(MemoryStateID left, MemoryStateID right);
-		MemoryStateID nodeFromIdxVar(usize idx, usize var_id);
-
-		/**
-		 * @brief Helper struct for keeping reconstruction when merging two memory states
-		 */
-		struct MergeBuilder {
-			std::function<MemoryStateID(MemoryStateID, usize)> only_1
-				= []([[maybe_unused]] MemoryStateID id,
-			         [[maybe_unused]] usize         pos) -> MemoryStateID { return id; };
-
-			std::function<MemoryStateID(MemoryStateID, usize)> only_2
-				= []([[maybe_unused]] MemoryStateID id,
-			         [[maybe_unused]] usize         pos) -> MemoryStateID { return id; };
-
-			std::function<MemoryStateID(MemoryStateID, usize)> the_same
-				= []([[maybe_unused]] MemoryStateID id,
-			         [[maybe_unused]] usize         pos) -> MemoryStateID { return id; };
-
-			_ConflictPolicy confilicts = [](usize, usize, usize) -> MemoryStateID {
-				throw std::invalid_argument("conflicts present");
-			};
-		};
-
-		using LeafBuilder  = std::function<MemoryStateID(usize, base::Optional<usize>)>;
-		using RangeBuilder = std::function<MemoryStateID(MemoryStateID)>;
-
-		/**
-		 * @brief abstract methods which implement atomic reconstruction of  memory, either by
-		 * modifying indexes, merging two trees or changing given range
-		 * @note in the long run all of methods which construct new states of memory will be
-		 * wrappers for those functions
-		 */
-		MemoryStateID reconstructIdxs(
-			MemoryStateID root, std::deque<usize> idxs, LeafBuilder leaf_constructor
-		);
-		MemoryStateID rebuildFromTwo(
-			MemoryStateID root_1, MemoryStateID root_2, MergeBuilder merge_policy
-		);
-		MemoryStateID rebuildWithRange(
-			MemoryStateID root, usize left_idx, usize right_idx, RangeBuilder range_constructor
-		);
-
-		/**
-		 * @brief methods for getting paths for given memory state, either to a particular idx or to
-		 * the first active leaf at given directio
-		 */
-		[[nodiscard]]
-		Path getPathTo(MemoryStateID root, usize idx) const;
-		[[nodiscard]]
-		Path getEndPath(Dir end_dir, MemoryStateID root) const;
-
-		/**
-		 * @brief internal helper functions for modifying state of the class
-		 */
-		MemoryStateID buildCommonRoot(std::deque<std::pair<usize, MemoryStateID>> states);
-		MemoryStateID elevateRoot(MemoryStateID root, usize height);
-		std::pair<MemoryStateID, usize> getLCA(const Path& path_1, const Path& path_2);
 
 	public:
-		using ConflictPolicy = _ConflictPolicy;
-		/**
-		 * @brief method to prune the history of structure, and keeping only desired states and
-		 * their children
-		 * @note this method is for memory efficiency purposes - we don't want to remamber states in
-		 * which we are uninterested
-		 * @warning this method will invalidate states, causing UB when trying to get
-		 */
-		void pruneHistory(std::vector<MemoryStateID> desired);
+		constexpr static MemoryStateID EMPTY = MemoryStateID{ u64(detail::SegmentTree::EMPTY) };
 
-		/**
-		 * @brief methods for atomic modification of memory. Either to erase or set the values at
-		 * given indexes
-		 */
+		using ConflictPolicy = std::function<base::Optional<usize>(usize, usize, usize)>;
+
 		MemoryStateID setMultiple(MemoryStateID root, std::deque<std::pair<usize, usize>> vals);
 		MemoryStateID eraseMultiple(MemoryStateID root, std::deque<usize> idxs);
 		MemoryStateID erase(MemoryStateID root, usize idx);
@@ -255,11 +54,6 @@ namespace vm::persistent::detail {
 		using diffResT
 			= std::vector<std::tuple<usize, base::Optional<usize>, base::Optional<usize>>>;
 
-		/**
-		 * @brief methods to construct representation of memort states - either a vector of (idx,
-		 * val) or difference between two states
-		 * @note this method will be made more universal with develepent of `rebuild` functions
-		 */
 		[[nodiscard]]
 		std::vector<std::pair<usize, usize>> toVec(MemoryStateID root) const;
 		[[nodiscard]]
@@ -267,10 +61,6 @@ namespace vm::persistent::detail {
 
 		MemoryStateID merge(MemoryStateID root_1, MemoryStateID root_2, ConflictPolicy policy);
 
-		/**
-		 * @brief methods to operate on [left, right) interval. Either removes the leaves at given
-		 * range or filters them out
-		 */
 		MemoryStateID slice(MemoryStateID root, usize left_idx, usize right_idx);
 		MemoryStateID eraseRange(MemoryStateID root, usize left_idx, usize right_idx);
 
@@ -280,9 +70,6 @@ namespace vm::persistent::detail {
 		bool active(MemoryStateID root, usize idx) const;
 		[[nodiscard]]
 		base::Optional<usize> access(MemoryStateID root, usize idx) const;
-
-		[[nodiscard]]
-		MemoryStateID getEmpty() const;
 
 		Memory();
 	};
