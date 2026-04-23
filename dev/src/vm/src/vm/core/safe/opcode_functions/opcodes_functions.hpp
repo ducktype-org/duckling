@@ -122,7 +122,14 @@ namespace vm {
 			auto& called_func  = thread.process_program->getFunctions()[function_id];
 
 			if constexpr (ENABLE_VM_DETAIL_LOGGING)
-				CORE_DEV_LOG(DVMDetails, "Calling function: ", called_func.name.str());
+				CORE_DEV_LOG(
+					DVMDetails,
+					"function, ",
+					called_func.name.str(),
+					", ",
+					thread.getThreadID().asInt(),
+					";\n"
+				);
 
 			// Size of the shared stack space between called functions.
 			auto shared_stack_space_size = called_func.arg_size + called_func.ret_size;
