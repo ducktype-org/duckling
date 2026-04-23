@@ -42,9 +42,10 @@ SubDirs:
 #################################
 #         WORKING FULLY
 #################################
-  - comparison-operators-on-integers
-  - float-literals
-  - unit-type
+  # - comparison-operators-on-integers
+  # - float-literals
+  # - unit-type
+  - ffi
 #################################
 #         ONLY LLVM WORKING
 #################################

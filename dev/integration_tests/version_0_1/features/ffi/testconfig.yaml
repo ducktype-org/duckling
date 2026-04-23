@@ -1,0 +1,14 @@
+clean_cmd: "rm -rf build && rm -rf build_c"
+compile_gcc_sample: "gcc -c -o build_c/c_lib.o c_lib.c"
+create_dirs: "mkdir build && mkdir build_c"
+Clean: "@{clean_cmd}"
+PreCase: "@{clean_cmd} && @{create_dirs} && @{compile_gcc_sample} && @{duckc_path} compile_package duck_modules/ffi -a build -n duck_modules/package_ffi --additional-link-options build_c/c_lib.o"
+Run: "./build/package_llvm.exe"
+
+Tests:
+  ffi:
+    Cases:
+      default:
+        Output:
+          String: "Hello from C!\nHello from C!\n1\nHello from C!\n"
+        ExitCode: 0

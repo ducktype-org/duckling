@@ -1,5 +1,4 @@
-# Test C FFI with more complex usage patterns
-# Focus: CFFI in expressions, loops, conditionals
+# Test C FFI with a builtin function
 
 extern("C") fundecl abs(x: i32) -> i32;
 
