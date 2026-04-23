@@ -119,15 +119,17 @@ namespace vm {
 		const low::LowFuncData& func, const FunctionRunArguments& func_args
 	) const {
 		if (func_args.size() != func.parameters.size()) {
-			throw exceptions::VMRuntimeException(base::strConcat(
-				"Function '",
-				func.name.str(),
-				"' expects ",
-				func.parameters.size(),
-				" arguments, but ",
-				func_args.size(),
-				" were provided."
-			));
+			throw exceptions::VMRuntimeException(
+				base::strConcat(
+					"Function '",
+					func.name.str(),
+					"' expects ",
+					func.parameters.size(),
+					" arguments, but ",
+					func_args.size(),
+					" were provided."
+				)
+			);
 		}
 
 		low::LowFuncData start_function{ .name             = base::StrID("vm_start_function"),
@@ -164,16 +166,18 @@ namespace vm {
 			}
 
 			if (arg_value->type != arg_type) {
-				throw exceptions::VMRuntimeException(base::strConcat(
-					"Type mismatch for argument ",
-					i,
-					" of function '",
-					func.name.str(),
-					"': expected ",
-					arg_type->getName().str(),
-					", got ",
-					arg_value->type->getName().str()
-				));
+				throw exceptions::VMRuntimeException(
+					base::strConcat(
+						"Type mismatch for argument ",
+						i,
+						" of function '",
+						func.name.str(),
+						"': expected ",
+						arg_type->getName().str(),
+						", got ",
+						arg_value->type->getName().str()
+					)
+				);
 			}
 
 			start_function.bc.push_back(
@@ -423,7 +427,7 @@ namespace vm {
 	case low::MicroOpcode::opcode_name: {                                                           \
 		vm::OpFuns::op_##opcode_name(instr, local_stack, frame, thread);                            \
 		if constexpr (::vm::ENABLE_VM_DETAIL_LOGGING)                                               \
-			CORE_DEV_LOG(DVMDetails, "Executed opcode: ", #opcode_name);                            \
+			CORE_DEV_LOG(DVMDetails, "opcode, ", #opcode_name, ", ", thread.getThreadID().asInt(), ";\n"); \
 		if constexpr (constexpr std::string_view opcode_str = #opcode_name; opcode_str == "exit") { \
 			goto End;                                                                               \
 		} else {                                                                                    \
@@ -433,8 +437,9 @@ namespace vm {
 	#include <vm/core/safe/low_program/micro_instruction_definitions.hpp>
 	#undef HANDLE_MICRO_INSTR
 
-			default:
+			default: {
 				CORE_PANIC("Unknown operator: ", u64(instr->nontc_opcode));
+			}
 			}
 		}
 	End:
@@ -534,8 +539,10 @@ namespace vm {
 			const auto& maybe_func
 				= process_program->getFunctions().atMaybe(base::StrID(func_name.data()));
 			if (!maybe_func.has_value()) {
-				respondExecutionRequest(api::ExecutionPanicked{
-					base::strConcat("Called function '", func_name, "' does not exist.") });
+				respondExecutionRequest(
+					api::ExecutionPanicked{
+						base::strConcat("Called function '", func_name, "' does not exist.") }
+				);
 				return;
 			}
 			const auto& func = *maybe_func.value();
@@ -568,12 +575,12 @@ namespace vm {
 		for (const auto& [global, id, name]: std::ranges::reverse_view(globals)) {
 			if (global->dtor_name.has_value()) {
 				try {
-					const auto& func = *executing_program->getFunctions()
-					                        .atMaybe(base::StrID(global->dtor_name.value()))
-					                        .expect(
-												"Called function does not exist: "
-												+ global->dtor_name.value().str()
-											);
+					const auto&      func = *executing_program->getFunctions()
+					                             .atMaybe(base::StrID(global->dtor_name.value()))
+					                             .expect(
+													 "Called function does not exist: "
+													 + global->dtor_name.value().str()
+												 );
 					low::LowFuncData start_function = createStartFunctionFor(func, {});
 					executeFunction(start_function, func);
 				} catch (const KillProcessException& e) {
@@ -592,15 +599,20 @@ namespace vm {
 				for (const auto& [idx, func]:
 				     std::views::enumerate(process_program->getFunctions())) {
 					if (func.bc.data() <= instr && instr < func.bc.data() + func.bc.size()) {
-						return api::Response(api::response::CodePosition{
-							.function_id  = static_cast<u64>(idx),  // Assuming function_id is int
-							.instr_number = static_cast<u64>(instr - func.bc.data()) });
+						return api::Response(
+							api::response::CodePosition{
+								.function_id
+								= static_cast<u64>(idx),  // Assuming function_id is int
+								.instr_number = static_cast<u64>(instr - func.bc.data()) }
+						);
 					}
 				}
 			}
 			variant_default {
-				return std::unexpected(api::ApiError{
-					api::OtherError{ "wrong execution status while reading current position" } });
+				return std::unexpected(
+					api::ApiError{
+						api::OtherError{ "wrong execution status while reading current position" } }
+				);
 			}
 		}
 		CORE_UNREACHABLE();
