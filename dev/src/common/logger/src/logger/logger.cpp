@@ -2,6 +2,7 @@
 
 #include <base/pointers/box.hpp>
 #include <base/pointers/ref.hpp>
+
 #include <filesystem/file.hpp>
 
 #include <chrono>
@@ -22,10 +23,10 @@ namespace logger {
 			return current_stream;
 		}
 
-        std::ofstream& getGlobalOfstream(){
-            static std::ofstream file_stream;
-            return file_stream;
-        }
+		std::ofstream& getGlobalOfstream() {
+			static std::ofstream file_stream;
+			return file_stream;
+		}
 	}
 
 	bool isCategoryEnabled(DevLogCategories category) {
@@ -48,12 +49,10 @@ namespace logger {
 
 	void setDevLogOutputFile(const std::string& path) {
 		std::ofstream& fs = getGlobalOfstream();
-        if(fs.is_open()){
-            fs.close();
-        }
+		if (fs.is_open()) fs.close();
 
-        fs.open(path, std::ios::out);
-        setDevLogOutputStream(&fs);
+		fs.open(path, std::ios::out);
+		setDevLogOutputStream(&fs);
 	}
 
 	void setDevLogOutputStreamCurrentDate() {
