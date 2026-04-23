@@ -1,11 +1,11 @@
 type pointer: pointer_A A
-type fun: method_foo {pointer_A} void
+type fun: method_foo {pointer_A} {}
 
-function method_foo_impl_1 {pointer_A} -> void {
+function method_foo_impl_1 {pointer_A} -> {} {
     ret;
 }
 
-function method_foo_impl_2 {pointer_A} -> void {
+function method_foo_impl_2 {pointer_A} -> {} {
     ret;
 }
 

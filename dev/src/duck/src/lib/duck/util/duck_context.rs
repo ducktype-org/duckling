@@ -1,14 +1,12 @@
-use std::{
-    env::{current_dir, home_dir},
-    path::{Path, PathBuf},
-};
+use std::env::{current_dir, home_dir};
+use std::path::{Path, PathBuf};
 
-use crate::{
-    QuackResult, QuackResultContext,
-    duck::util::{duck_cfg::DuckCfg, duck_home::DuckHome, terminal::Terminal},
-    quackpack::util::paths::duck_home_path,
-    util::env::Env,
-};
+use crate::duck::util::duck_cfg::DuckCfg;
+use crate::duck::util::duck_home::DuckHome;
+use crate::duck::util::terminal::Terminal;
+use crate::quackpack::util::paths::duck_home_path;
+use crate::util::env::Env;
+use crate::{QuackResult, QuackResultContext};
 
 #[derive(Debug)]
 pub struct DuckContext {

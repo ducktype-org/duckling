@@ -3,9 +3,9 @@ use std::collections::HashMap;
 use httpmock::prelude::*;
 use tempfile::{TempDir, tempdir};
 
-use crate::{quackpack::core::Version, util::test_utils::setup_test};
-
 use super::*;
+use crate::quackpack::core::Version;
+use crate::util::test_utils::setup_test;
 
 fn setup_duck_ctx() -> (DuckContext, TempDir) {
     let setup = || {

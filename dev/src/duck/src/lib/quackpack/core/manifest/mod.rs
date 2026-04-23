@@ -10,19 +10,17 @@ mod parse;
 mod profiles;
 mod source;
 
-pub use parse::*;
-
 pub use dependency::*;
 pub use features::*;
 pub use metadata::*;
+pub use parse::*;
 pub use profiles::*;
 pub use source::*;
 
-use crate::{
-    QuackError, StrId,
-    duck::util::duck_home::DuckHome,
-    quackpack::{core::Version, schemas::registry},
-};
+use crate::duck::util::duck_home::DuckHome;
+use crate::quackpack::core::Version;
+use crate::quackpack::schemas::registry;
+use crate::{QuackError, StrId};
 
 #[derive(Clone, Debug)]
 /// Machine friendly abstraction over a manifest.

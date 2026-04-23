@@ -116,11 +116,11 @@ one can define additional types and end up with many primitive types
 of the same size. Each type however offers the same operations, there are
 no special types, the builtin `i64` type is not any more "inty" than
 a custom-defined `float64` type. The names however do matter, each operation
-working on two primitive variables of the same size, like `add_l64_l64`
+working on two primitive variables of the same size, like `add_p64_p64`
 requires that both arguments are of the same type.
 
 This is also where more detailed checks happen, as an example let's look at the
-`structLea_lptr_lptr` instruction extended by `ext_field`. Let's call
+`structLea_pptr_pptr` instruction extended by `ext_field`. Let's call
 the (three) arguments `target`, `src` and `field` respectively.
 This instruction roughly corresponds to the following C code: `target = &src->field`.
 Since this is the third step of verification we already know that variables

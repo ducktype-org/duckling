@@ -1,6 +1,5 @@
 use std::fmt::{self, Display};
-use std::io::Read;
-use std::io::Write;
+use std::io::{Read, Write};
 
 use console::{Term, WithoutAnsi, colors_enabled, colors_enabled_stderr, style};
 

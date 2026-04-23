@@ -1,16 +1,17 @@
-use std::{collections::HashMap, ffi::OsString, path::PathBuf};
+use std::collections::HashMap;
+use std::ffi::OsString;
+use std::path::PathBuf;
 
-use serde::{Deserialize, de};
-
-use crate::{DuckContext, QuackResult, qp_bail};
 use clap::ArgMatches;
 use itertools::chain;
+use serde::{Deserialize, de};
 use tracing::debug;
 
-use crate::duck::driver::{
-    cli,
-    cli_args_preprocessing::builtin::{get_builtin_alias_expansion, is_builtin_subcommand},
+use crate::duck::driver::cli;
+use crate::duck::driver::cli_args_preprocessing::builtin::{
+    get_builtin_alias_expansion, is_builtin_subcommand,
 };
+use crate::{DuckContext, QuackResult, qp_bail};
 
 /// A single configuration alias.
 /// Can be a string ("build --release"), or a list (["build", "--release"]).
@@ -186,10 +187,9 @@ fn check_alias_cycle(current: &str, next: &str, visited: &[String]) -> QuackResu
 mod tests {
     use std::collections::HashMap;
 
-    use crate::{
-        DuckContext,
-        duck::driver::{cli, cli_args_preprocessing::aliases_expansion::expand_aliases},
-    };
+    use crate::DuckContext;
+    use crate::duck::driver::cli;
+    use crate::duck::driver::cli_args_preprocessing::aliases_expansion::expand_aliases;
 
     #[test]
     fn test_cycles() {

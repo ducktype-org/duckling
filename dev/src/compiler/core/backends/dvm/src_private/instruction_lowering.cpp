@@ -157,7 +157,7 @@ void FunctionLoweringContext::handleCall(
 	);
 
 	auto call_result_storage = [&] -> base::Optional<DVMLocal> {
-		if (call_info.return_type)
+		if (call_info.return_type.has_value())
 			return pushTempLocal(call_info.return_type.value(), "call_result");
 		else
 			return {};

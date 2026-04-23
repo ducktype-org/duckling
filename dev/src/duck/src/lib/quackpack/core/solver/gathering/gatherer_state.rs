@@ -1,12 +1,14 @@
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
 
-use crate::quackpack::core::gathering::error_surpression::{GathererComputation, GathererResult};
-use crate::quackpack::core::gathering::fetch_types::{
+use crate::quackpack::core::solver::gathering::error_surpression::{
+    GathererComputation, GathererResult,
+};
+use crate::quackpack::core::solver::gathering::fetch_types::{
     FetchFailure, FetchResponse, FetchSuccess, ManifestsRequest, NotPinnedFailure,
     NotPinnedRequest, NotPinnedSuccess, PinnedFailure, PinnedRequest, PinnedSuccess,
 };
-use crate::quackpack::core::types_common::{
+use crate::quackpack::core::solver::types_common::{
     ExpandedPackage, InternedExpandedLocation, InternedLocation, Location, Package,
 };
 use crate::quackpack::core::version::CompatibilityCheck;

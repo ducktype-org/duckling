@@ -2,7 +2,7 @@ type pointer: pointer_Animal Animal
 type pointer: pointer_Dog Dog
 
 # ========== VIRTUAL METHOD DECLARATIONS ==============
-type fun: method_toHumanYears {pointer_Animal} void
+type fun: method_toHumanYears {pointer_Animal} {}
 
 # ============ CLASSES DEFINITIONS ============
 type class: Animal {
@@ -23,30 +23,30 @@ type class: Dog {
 # ============ METHODS IMPLEMENTATION ============
 
 # Implementation for Dog.
-function dog_year_to_human_years {pointer_Dog} -> void {
-    init_lany_type         call_res,      i64;
-    init_lany_type         call_arg0,     i64;
-    mov_l64_imm            call_arg0,       0;
+function dog_year_to_human_years {pointer_Dog} -> {} {
+    init_pany_type         call_res,      i64;
+    init_pany_type         call_arg0,     i64;
+    mov_p64_imm            call_arg0,       0;
     call_builtinfunc      builtin_output_i64;
     deinit;
     ret;
 }
 
-function main { i64, ptr_argv } -> i64 {
-    init_lany_type  dog_ptr, pointer_Dog;
-    alloc_lptr_type dog_ptr, Dog;
-    setVTable_lptr_type  dog_ptr, Dog;
+function main { i64, ptr_argv } -> { i64 } {
+    init_pany_type  dog_ptr, pointer_Dog;
+    alloc_pptr_type dog_ptr, Dog;
+    setVTable_pptr_type  dog_ptr, Dog;
 
-    init_lany_type temp, pointer_Dog;
-    mov_lptr_lptr temp, dog_ptr;
-    virtual_call_lptr_method  temp, toHumanYears;
+    init_pany_type temp, pointer_Dog;
+    mov_pptr_pptr temp, dog_ptr;
+    virtual_call_pptr_method  temp, toHumanYears;
 
-    resetVTable_lptr dog_ptr;
-    init_lany_type temp, pointer_Dog;
-    mov_lptr_lptr temp, dog_ptr;
-    virtual_call_lptr_method  temp, toHumanYears;  # this should fail
+    resetVTable_pptr dog_ptr;
+    init_pany_type temp, pointer_Dog;
+    mov_pptr_pptr temp, dog_ptr;
+    virtual_call_pptr_method  temp, toHumanYears;  # this should fail
 
-    free_lptr dog_ptr;
+    free_pptr dog_ptr;
 
     ret;
 }
