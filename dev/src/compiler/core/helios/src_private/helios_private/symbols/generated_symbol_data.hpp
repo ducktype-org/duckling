@@ -179,7 +179,7 @@ namespace compiler::helios::defgen {
 		[[nodiscard]]
 		base::Bit256                          queryUnstablePerfectHash() const;
 		tsh::SymbolType<>                     getType(query::Context& ctx) const;
-		[[nodiscard]] ScopeID                 getScope() const;
+		[[nodiscard]] ScopeID                 getScope(query::Context& ctx) const;
 		[[nodiscard]] base::Optional<ScopeID> maybeScope() const;
 
 		/**

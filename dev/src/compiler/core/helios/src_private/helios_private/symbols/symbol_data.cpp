@@ -210,7 +210,7 @@ namespace compiler::helios {
 			CORE_UNREACHABLE();
 		}
 
-		ScopeID GeneratedSymbolData::getScope() const {
+		ScopeID GeneratedSymbolData::getScope(query::Context& ctx) const {
 			variant_match(data) {
 				variant_case(ImplicitConstructor, ctor) {
 					CORE_PANIC("Can't get scope of implicit constructor yet.");

@@ -62,14 +62,14 @@ namespace compiler::helios {
 	base::StrID name(SymID id) { return getSymRef(id)->common.name; }
 
 	// @TODO: #895 Reevaluate this helper when entry points become explicit.
-	bool isGlobalFun(SymID id) {
+	bool isGlobalFun(query::Context& ctx, SymID id) {
 		CORE_ASSERT(
 			getSymRef(id)->common.kind == SymbolKind::FunctionDeclaration
 				|| getSymRef(id)->common.kind == SymbolKind::Function,
 			"Not a function."
 		);
 
-		return scopeDepth(scope(id)) == 1;
+		return scopeDepth(scope(ctx, id)) == 1;
 	}
 
 	bool isGlobalVar(query::Context& ctx, SymID id) {
@@ -128,7 +128,7 @@ namespace compiler::helios {
 
 	SymbolKind kind(SymID id) { return getSymRef(id)->common.kind; }
 
-	ScopeID scope(SymID id) { return getSymRef(id)->getScope(); }
+	ScopeID scope(query::Context& ctx, SymID id) { return getSymRef(id)->getScope(ctx); }
 
 	base::Optional<ScopeID> maybeScope(SymID id) {
 		variant_match(getSymRef(id)->other) {
@@ -182,7 +182,7 @@ namespace compiler::helios {
 
 			// Get the parent of the current pst element
 		} while ((pst = pst.value().unlock(ctx)->getParent()));
-		auto module_name = compiler::frontend::moduleName(module(scope(sym)));
+		auto module_name = compiler::frontend::moduleName(module(scope(ctx, sym)));
 		out              = base::strConcat(module_name.str(), " -> ", out);
 
 		return out;
@@ -717,7 +717,7 @@ namespace compiler::helios {
 				auto lookup_res = lookupChain(
 					ctx,
 					LookupChainKey{ .names       = names,
-				                    .begin_scope = scope(key),
+				                    .begin_scope = scope(ctx, key),
 				                    .params      = { .with_wildcards = false } }
 				);
 				CORE_ASSERT(
@@ -740,7 +740,7 @@ namespace compiler::helios {
 				std::vector<base::StrID> module_path{ names.begin(), names.end() };
 
 				auto maybe_imported_module
-					= frontend::getRelativeModule(ctx, module(scope(key)), module_path);
+					= frontend::getRelativeModule(ctx, module(scope(ctx, key)), module_path);
 
 				if (!maybe_imported_module.has_value()) {
 					ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
@@ -822,7 +822,7 @@ namespace compiler::helios {
 			UNPACK_QRESULT_MOVE(
 				auto lookup_chain =,
 				lookupChain(
-					ctx, LookupChainKey{ pointed_chain, scope(key), { .with_wildcards = false } }
+					ctx, LookupChainKey{ pointed_chain, scope(ctx, key), { .with_wildcards = false } }
 				)
 			);
 

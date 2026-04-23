@@ -93,13 +93,13 @@ namespace compiler::helios {
 		);
 
 		[[nodiscard]]
-		ScopeID getScope() const {
+		ScopeID getScope(query::Context& ctx) const {
 			variant_match(other) {
 				variant_case(PstSymbolData, pst_data) { return pst_data.scope; }
 				variant_case_novalue(builtin::BuiltinFunctionData) {
 					base::NotYetImplemented("Can't get scope of builtin function.");
 				}
-				variant_case(defgen::GeneratedSymbolData, gen_data) { return gen_data.getScope(); }
+				variant_case(defgen::GeneratedSymbolData, gen_data) { return gen_data.getScope(ctx); }
 				variant_default { CORE_UNREACHABLE(); }
 			}
 			CORE_UNREACHABLE();

@@ -24,7 +24,7 @@ namespace compiler::helios {
 					or kind(key) == SymbolKind::Field or kind(key) == SymbolKind::Method,
 				"Expected a member of a class symbol."
 			);
-			auto scope_id = scope(key);
+			auto scope_id = scope(ctx, key);
 			auto pst_element
 				= scope_id.ref->relatedPSTElement()->unlock(ctx)->getParent().value().unlock(ctx);
 			auto class_symbol = ctx.query<QuerySymbolOfSTMT>(pst_element).valueOrThrow();

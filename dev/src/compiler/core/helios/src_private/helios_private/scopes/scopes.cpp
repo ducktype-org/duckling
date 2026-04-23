@@ -611,7 +611,7 @@ namespace compiler::helios {
 			if (output.hasValue()) {
 				for (auto sym: output.valueOrPanic()) {
 					CORE_ASSERT(
-						scope(sym) == key,
+						scope(ctx, sym) == key,
 						base::strConcat(
 							"Scope mismatch in QuerySymbolsInScope and QuerySymbolOfSTMT\n",
 							" for symbol: ",
@@ -623,9 +623,9 @@ namespace compiler::helios {
 							key.ref->relatedPSTElement().value().unlock(ctx)->getID().asInt(),
 							"\n\n",
 							" scope of symbol: ",
-							scope(sym).ref->relatedPSTElement().value().unlock(ctx)->elementType(),
+							scope(ctx, sym).ref->relatedPSTElement().value().unlock(ctx)->elementType(),
 							", ID: ",
-							scope(sym).ref->relatedPSTElement().value().unlock(ctx)->getID().asInt(),
+							scope(ctx, sym).ref->relatedPSTElement().value().unlock(ctx)->getID().asInt(),
 							"\n"
 						)
 					);

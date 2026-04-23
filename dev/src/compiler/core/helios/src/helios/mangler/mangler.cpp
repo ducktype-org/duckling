@@ -144,7 +144,7 @@ namespace compiler::helios::mangler {
 			// "M" <module-name>+                                // standalone module
 			// @future: templated modules
 			if (/* standalone module */ true) {
-				auto enclosing_scope = scope(symbol_id);
+				auto enclosing_scope = scope(ctx, symbol_id);
 
 				std::vector<std::string_view> modules;
 				auto                          curr = module(enclosing_scope);
@@ -194,7 +194,7 @@ namespace compiler::helios::mangler {
 		 * create scopes.
 		 */
 		std::string symbolName(query::Context& ctx, SymID symbol_id) {
-			auto scope_id = scope(symbol_id);
+			auto scope_id = scope(ctx, symbol_id);
 
 			if (scopeDepth(scope_id) == 1) {
 				return "G" + unscopedName(symbol_id);

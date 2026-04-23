@@ -37,7 +37,7 @@ namespace compiler::helios {
 	 * @return whether SymID is a global function.
 	 * @note This function iterates through parents of the PST elements of the symbol.
 	 */
-	bool isGlobalFun(SymID);
+	bool isGlobalFun(query::Context&, SymID);
 
 	/**
 	 * @return whether SymID is a global variable.
@@ -56,7 +56,7 @@ namespace compiler::helios {
 	 * @return scope that given symbol was defined within.
 	 * Throws in symbol doesn't have a scope.
 	 */
-	ScopeID scope(SymID);
+	ScopeID scope(query::Context&, SymID);
 
 	/**
 	 * Gets scope that given symbol was defined within.
