@@ -9,7 +9,6 @@
 
 #include <vm/core/safe/low_program/instruction.hpp>
 #include <vm/core/supervisor/supervisor.hpp>
-#include <vm/core/thread/low_program/instruction.hpp>
 #include <vm/debugger/UI/debug_adapter/debug_adapter.hpp>
 
 #include <exception>
