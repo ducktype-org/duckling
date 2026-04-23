@@ -90,7 +90,9 @@ function(duck_add_vm_tests suffix)
         duck_add_test_custom(vm ${test_set}_jit_test jit/jit.cpp
                 USES ${libvm} Tester ${vmtester})
 
-        if (test_set STREQUAL "vm_tc")
+        if (NOT JIT_ENABLED)
+                # This test does not directly invoke jit.
+                # When jit IS enabled it helps test it.
                 set_property(TEST ${test_set}_jit_test PROPERTY DISABLED TRUE)
         endif()
 endfunction()
