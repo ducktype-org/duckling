@@ -8,6 +8,7 @@
 #include <cstring>
 #include <iostream>
 #include <mutex>
+#include <vector>
 
 ID_STD_HASH(base::internal::StrInnerID);
 
@@ -60,7 +61,7 @@ namespace base {
 
 	/**
 	 * @brief Returns a view to the last buffer.
-	 * @note It is required to be called under read-lock.
+	 * @note It is required to be called under lock.
 	 */
 	base::RawView lastBuffer() { return buffer_list.back().view(); }
 
@@ -79,16 +80,16 @@ namespace base {
 
 		// Fast path: check if string already exists using just the concurrent map without local locking
 		{
-			if (auto id = getToIDMap()->atMaybe(data)) {
-				this->id = **id;
+			if (auto id = getToIDMap()->atMaybeCopy(data)) {
+				this->id = *id;
 				return;
 			}
 		}
 
 		std::scoped_lock lock(mutex);
 
-		if (auto id = getToIDMap()->atMaybe(data)) {
-			this->id = **id;
+		if (auto id = getToIDMap()->atMaybeCopy(data)) {
+			this->id = *id;
 			return;
 		}
 
@@ -127,7 +128,7 @@ namespace base {
 
 	base::RawView StrID::view() const {
 		CORE_ASSERT(id.isGood(), "StrID is bad");
-		return *getToDataMap()->at(id);
+		return getToDataMap()->getCopy(id);
 	}
 
 	void StrID::dumpData(std::ostream& out) {
