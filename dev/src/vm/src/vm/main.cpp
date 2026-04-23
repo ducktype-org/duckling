@@ -7,10 +7,11 @@
 #include <logger/logger.hpp>
 #include <printer/stream_printer.hpp>
 
+#include <vm/core/safe/low_program/instruction.hpp>
 #include <vm/core/supervisor/supervisor.hpp>
-#include <vm/core/thread/low_program/instruction.hpp>
 
 #include <exception>
+#include <fstream>
 
 void showVersion() {
 	std::cout << "VM version 0.0.\n";
@@ -43,6 +44,7 @@ clah::Clah getVmClah() {
 				logger::enable_dev_logs = true;
 				logger::enableDevCategory(logger::DevLogCategories::DVM);
 				logger::enableDevCategory(logger::DevLogCategories::DVMDetails);
+                logger::setDevLogOutputStreamCurrentDate();
 			}
 		})
 #endif

@@ -6,7 +6,7 @@
 
 #include <vm/api/vm.hpp>
 #include <vm/bytecode/validator/errors.hpp>
-#include <vm/core/thread/vmvalue.hpp>
+#include <vm/core/vmvalue/vmvalue.hpp>
 
 #include <expected>
 #include <mutex>
