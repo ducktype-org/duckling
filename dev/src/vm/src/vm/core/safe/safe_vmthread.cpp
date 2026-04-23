@@ -425,7 +425,7 @@ namespace vm {
 	case low::MicroOpcode::opcode_name: {                                                           \
 		vm::OpFuns::op_##opcode_name(instr, local_stack, frame, *this);                             \
 		if constexpr (::vm::ENABLE_VM_DETAIL_LOGGING)                                               \
-			CORE_DEV_LOG(DVMDetails, "Executed opcode: ", #opcode_name);                            \
+			CORE_DEV_LOG(DVMDetails, "opcode, ", #opcode_name, ", ", getThreadID().asInt(), ";\n"); \
 		if constexpr (constexpr std::string_view opcode_str = #opcode_name; opcode_str == "exit") { \
 			goto End;                                                                               \
 		} else {                                                                                    \
