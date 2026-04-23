@@ -8,23 +8,12 @@
 namespace vm::jit::cf {
 	class LoopDetector;
 
-	class Loop {
-	public:
-		Loop(const BasicBlock& start_block, const BasicBlock& end_block):
-			  start_block(start_block),
-			  end_block(end_block) {}
-
-		Loop() = delete;
-
-		[[nodiscard]] usize start() const { return start_block.start; }
-
-		[[nodiscard]] usize end() const { return end_block.end; }
-
-	private:
-		const BasicBlock& start_block;
-		const BasicBlock& end_block;
-
-		friend class LoopDetector;
+	struct Loop {
+		Loop(BlockID start_block, BlockID end_block, ControlFlowGraph cfg, std::vector<BlockID> members):
+			  start_block(start_block), end_block(end_block), loop_cfg(cfg.subgraph(members)) {}
+		BlockID		  start_block;
+		BlockID 		end_block;
+		ControlFlowGraph loop_cfg;
 	};
 
 	class LoopDetector {
@@ -37,11 +26,34 @@ namespace vm::jit::cf {
 			calcPredecessors(cfg);
 			calcDominators(cfg);
 
+			std::vector<u32> last_visited(cfg.size(), 0);
+			u32 timestamp = 0;
+			std::vector<BlockID> stack;
+			usize stack_ptr;
+
 			for (BlockID bid = 0; bid < cfg.size(); ++bid) {
-				// PLACEHOLDER IMPLEMENTATION
-				for (BlockID pred: predecessors[bid])
-					if (isDominatedBy(pred, bid))
-						loops.emplace_back(cfg.getBlock(bid), cfg.getBlock(pred));
+				for (BlockID pred: predecessors[bid]) {
+					if (!isDominatedBy(pred, bid))
+						continue;
+
+					last_visited[bid] = ++timestamp;
+					stack = { bid };
+					stack_ptr = 1;
+					while (stack_ptr < stack.size()) {
+						BlockID current = stack[stack_ptr++];
+						if (current == pred)
+							continue; // This is a stop condition, because pred dominates bid
+
+						for (usize i = 0; i < predecessors[current].size(); ++i) {
+							BlockID next = predecessors[current][i];
+							if (last_visited[next] < bid) {
+								stack.push_back(next);
+								last_visited[next] = timestamp;
+							}
+						}
+					}
+					loops.emplace_back(pred, bid, cfg, std::move(stack));
+				}
 			}
 
 			return loops;
