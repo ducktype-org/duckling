@@ -292,7 +292,7 @@ namespace vm {
 							  mov_p8_imm, 56, static_cast<u64>(c)
 						  ),  // char_tmp_store := c
 					      MAKE_BYTECODE_INSTRUCTION(
-							  dynTableStore_pptr_bany, 40, 5
+							  anyArrayStore_pptr_bany, 40, 5
 						  ),  // ptr_tmp_store[ix] := char_tmp_store
 					      MAKE_BYTECODE_INSTRUCTION(ext_p64, 32, 0),
 					      MAKE_BYTECODE_INSTRUCTION(add_p64_imm, 32, 1) }
@@ -304,14 +304,14 @@ namespace vm {
 						// At this point ix == arg.size().
 						MAKE_BYTECODE_INSTRUCTION(mov_p8_imm, 56, 0),  // char_tmp_store := \0
 						MAKE_BYTECODE_INSTRUCTION(
-							dynTableStore_pptr_bany, 40, 5
+							anyArrayStore_pptr_bany, 40, 5
 						),  // ptr_tmp_store[ix] := char_tmp_store
 						MAKE_BYTECODE_INSTRUCTION(ext_p64, 32, 0),
 						MAKE_BYTECODE_INSTRUCTION(
 							mov_p64_imm, 32, base::safeIntConv<u64>(argv_index)
 						),  // ix := argv_index
 						MAKE_BYTECODE_INSTRUCTION(
-							dynTableStore_pptr_bany, 8, 4
+							anyArrayStore_pptr_bany, 8, 4
 						),  // argv_internal[ix] := ptr_tmp_store
 						MAKE_BYTECODE_INSTRUCTION(ext_p64, 32, 0),
 						MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),  // deinit char_tmp_store
@@ -361,7 +361,7 @@ namespace vm {
 				start_function.bc.end(),
 				{
 					MAKE_BYTECODE_INSTRUCTION(
-						dynTableLoad_bany_pptr, 5, 8
+						anyArrayLoad_bany_pptr, 5, 8
 					),  // ptr_tmp_store := argv_internal[ix]
 					MAKE_BYTECODE_INSTRUCTION(ext_p64, 32, 0),
 					MAKE_BYTECODE_INSTRUCTION(free_pptr, 48, 0),    // free ptr_tmp_store
@@ -425,7 +425,7 @@ namespace vm {
 	case low::MicroOpcode::opcode_name: {                                                           \
 		vm::OpFuns::op_##opcode_name(instr, local_stack, frame, *this);                             \
 		if constexpr (::vm::ENABLE_VM_DETAIL_LOGGING)                                               \
-			CORE_DEV_LOG(DVMDetails, "Executed opcode: ", #opcode_name);                            \
+			CORE_DEV_LOG(DVMDetails, "opcode, ", #opcode_name, ", ", getThreadID().asInt(), ";\n"); \
 		if constexpr (constexpr std::string_view opcode_str = #opcode_name; opcode_str == "exit") { \
 			goto End;                                                                               \
 		} else {                                                                                    \

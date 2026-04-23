@@ -224,78 +224,76 @@ private:
 		auto module  = getLIROfModule(path("modules/function_calls"));
 		auto foo_lir = module.lirFunc("foo");
 
-		withContextDo([&](query::Context& ctx) {
-			auto print_stable_position
-				= [&](const base::Optional<pst::StablePosition>& stable, std::string_view label) {
-					  if (!stable.has_value()) {
-						  std::cerr << "[LIR metadata] " << label << ": <none>\n";
-						  return;
-					  }
+		auto print_stable_position
+			= [&](const base::Optional<dia_int::StablePosition>& stable, std::string_view label) {
+				  if (!stable.has_value()) {
+					  std::cerr << "[LIR metadata] " << label << ": <none>\n";
+					  return;
+				  }
 
-					  auto position                   = stable.value().getActiveSourcePosition(ctx);
-					  auto [start_line, start_column] = position.getStartLineColumn();
-					  auto [end_line, end_column]     = position.getEndLineColumn();
-					  auto source_start               = position.getStart();
-					  auto source_end                 = position.getEnd();
+				  auto position = stable.value().getActiveSourcePositionIllegalAccess();
+				  auto [start_line, start_column] = position.getStartLineColumn();
+				  auto [end_line, end_column]     = position.getEndLineColumn();
+				  auto source_start               = position.getStart();
+				  auto source_end                 = position.getEnd();
 
-					  std::cerr << "[LIR metadata] " << label << ": " << start_line << ":"
-								<< start_column << " -> " << end_line << ":" << end_column << " ["
-								<< source_start << ", " << source_end << "]\n";
-				  };
+				  std::cerr << "[LIR metadata] " << label << ": " << start_line << ":"
+							<< start_column << " -> " << end_line << ":" << end_column << " ["
+							<< source_start << ", " << source_end << "]\n";
+			  };
 
-			assertTrue(
-				foo_lir->metadata.position.has_value(),
-				"Expected function metadata position in LIR foo"
-			);
-			print_stable_position(foo_lir->metadata.position, "foo.function");
-			ASSERT_EQUAL(foo_lir->metadata.source_code_name.value(), base::StrID("foo"));
+		assertTrue(
+			foo_lir->metadata.position.has_value(), "Expected function metadata position in LIR foo"
+		);
+		print_stable_position(foo_lir->metadata.position, "foo.function");
+		ASSERT_EQUAL(foo_lir->metadata.source_code_name.value(), base::StrID("foo"));
 
-			assertTrue(!foo_lir->block_order.empty(), "Expected at least one LIR block");
-			const auto& block0 = *foo_lir->block_order[0];
-			assertTrue(
-				block0.instructions.size() >= 4, "Expected at least 4 instructions in block 0"
-			);
+		assertTrue(!foo_lir->block_order.empty(), "Expected at least one LIR block");
+		const auto& block0 = *foo_lir->block_order[0];
+		assertTrue(block0.instructions.size() >= 4, "Expected at least 4 instructions in block 0");
 
-			const auto& first_instr  = block0.instructions[0];
-			const auto& second_instr = block0.instructions[1];
-			const auto& fourth_instr = block0.instructions[3];
+		const auto& first_instr  = block0.instructions[0];
+		const auto& second_instr = block0.instructions[1];
+		const auto& fourth_instr = block0.instructions[3];
 
-			print_stable_position(first_instr.metadata.position, "foo.block_0.instr_0");
-			print_stable_position(second_instr.metadata.position, "foo.block_0.instr_1");
-			print_stable_position(fourth_instr.metadata.position, "foo.block_0.instr_3");
+		print_stable_position(first_instr.metadata.position, "foo.block_0.instr_0");
+		print_stable_position(second_instr.metadata.position, "foo.block_0.instr_1");
+		print_stable_position(fourth_instr.metadata.position, "foo.block_0.instr_3");
 
-			auto first_pos  = first_instr.metadata.position.value().getActiveSourcePosition(ctx);
-			auto second_pos = second_instr.metadata.position.value().getActiveSourcePosition(ctx);
-			auto fourth_pos = fourth_instr.metadata.position.value().getActiveSourcePosition(ctx);
+		auto first_pos
+			= first_instr.metadata.position.value().getActiveSourcePositionIllegalAccess();
+		auto second_pos
+			= second_instr.metadata.position.value().getActiveSourcePositionIllegalAccess();
+		auto fourth_pos
+			= fourth_instr.metadata.position.value().getActiveSourcePositionIllegalAccess();
 
-			auto [first_start_line, first_start_col] = first_pos.getStartLineColumn();
-			auto [first_end_line, first_end_col]     = first_pos.getEndLineColumn();
-			ASSERT_EQUAL(first_start_line, 5);
-			ASSERT_EQUAL(first_start_col, 5);
-			ASSERT_EQUAL(first_end_line, 5);
-			ASSERT_EQUAL(first_end_col, 21);
+		auto [first_start_line, first_start_col] = first_pos.getStartLineColumn();
+		auto [first_end_line, first_end_col]     = first_pos.getEndLineColumn();
+		ASSERT_EQUAL(first_start_line, 5);
+		ASSERT_EQUAL(first_start_col, 5);
+		ASSERT_EQUAL(first_end_line, 5);
+		ASSERT_EQUAL(first_end_col, 21);
 
-			ASSERT_POSITION(second_pos, 7, 18, 7, 24);
-			ASSERT_POSITION(fourth_pos, 7, 5, 7, 30);
+		ASSERT_POSITION(second_pos, 7, 18, 7, 24);
+		ASSERT_POSITION(fourth_pos, 7, 5, 7, 30);
 
-			// Test local variable metadata
-			bool found_y = false;
-			for (const auto& local: foo_lir->local_list) {
-				if (!local.helios_id.has_value()) continue;
+		// Test local variable metadata
+		bool found_y = false;
+		for (const auto& local: foo_lir->local_list) {
+			if (!local.helios_id.has_value()) continue;
 
-				auto name = helios::name(local.helios_id.value());
-				if (name == base::StrID("y")) {
-					found_y = true;
-					ASSERT_EQUAL(local.metadata.source_code_name.value(), name);
+			auto name = helios::name(local.helios_id.value());
+			if (name == base::StrID("y")) {
+				found_y = true;
+				ASSERT_EQUAL(local.metadata.source_code_name.value(), name);
 
-					// Verify source position matches variable declaration on line 7
-					ASSERT_POSITION(
-						local.metadata.position.value().getActiveSourcePosition(ctx), 7, 5, 7, 30
-					);
-				}
+				// Verify source position matches variable declaration on line 7
+				ASSERT_POSITION(
+					local.metadata.position.value().getActiveSourcePositionIllegalAccess(), 7, 5, 7, 30
+				);
 			}
-			ASSERT_TRUE(found_y);
-		});
+		}
+		ASSERT_TRUE(found_y);
 	}
 
 	void functionParametersTest() {
