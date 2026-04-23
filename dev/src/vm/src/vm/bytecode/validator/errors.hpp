@@ -11,7 +11,7 @@
 #include <vm/bytecode/serializer/serializer.hpp>
 #include <vm/bytecode/type_of_data.hpp>
 #include <vm/bytecode/validator/valid_type/valid_type.hpp>
-#include <vm/core/process/type_metadata/type_metadata.hpp>
+#include <vm/core/safe/type_metadata/type_metadata.hpp>
 
 #include <string_view>
 #include <utility>

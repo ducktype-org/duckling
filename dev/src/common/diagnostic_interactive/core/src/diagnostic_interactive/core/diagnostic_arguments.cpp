@@ -1,9 +1,9 @@
 #include "diagnostic_arguments.hpp"
 
 #include "diagnostic_arguments_forward.hpp"
+#include "diagnostic_component_traversal.hpp"
 
 #include <base/pointers/box.hpp>
-
 DEFAULT_BOX_PTR_DELETER_DEFINITION(dia_int::dia_args::Component);
 DEFAULT_BOX_PTR_DELETER_DEFINITION(dia_int::dia_args::Diagnostic);
 
@@ -65,11 +65,22 @@ namespace dia_int::dia_args {
 	json CodeLocationComponent::toJson() const {
 		json result;
 		result["type"]   = typeName();
-		result["file"]   = file;
-		result["line"]   = line;
-		result["column"] = column;
-		if (end_line.has_value()) result["end_line"] = end_line.value();
-		if (end_column.has_value()) result["end_column"] = end_column.value();
+		result["file"]   = location.file;
+		result["line"]   = location.line;
+		result["column"] = location.column;
+		if (location.end_line.has_value()) result["end_line"] = location.end_line.value();
+		if (location.end_column.has_value()) result["end_column"] = location.end_column.value();
+		if (hash_location.has_value()) {
+			auto serialize_bit256 = [](const base::Bit256& bit) {
+				return json::array({ bit.data[0], bit.data[1], bit.data[2], bit.data[3] });
+			};
+
+			json hash_location_json;
+			hash_location_json["begin_node"] = serialize_bit256(hash_location->begin_node);
+			if (hash_location->end_node.has_value())
+				hash_location_json["end_node"] = serialize_bit256(hash_location->end_node.value());
+			result["hash_location"] = std::move(hash_location_json);
+		}
 		return result;
 	}
 
@@ -78,22 +89,60 @@ namespace dia_int::dia_args {
 		ASSUME_UINT(elem, "line");
 		ASSUME_UINT(elem, "column");
 
-		std::string         file   = elem["file"];
-		u64                 line   = elem["line"];
-		u64                 column = elem["column"];
-		base::Optional<u64> end_line{};
-		base::Optional<u64> end_column{};
+		CodeLocation                     location;
+		base::Optional<HashCodeLocation> hash_location{};
+
+		location.file   = elem["file"];
+		location.line   = elem["line"];
+		location.column = elem["column"];
 		if (elem.contains("end_line")) {
 			ASSUME_UINT(elem, "end_line");
-			end_line = elem["end_line"];
+			location.end_line = elem["end_line"];
 		}
 		if (elem.contains("end_column")) {
 			ASSUME_UINT(elem, "end_column");
-			end_column = elem["end_column"];
+			location.end_column = elem["end_column"];
 		}
-		return base::makeBox<CodeLocationComponent>(
-			std::move(file), line, column, end_line, end_column
-		);
+		if (elem.contains("hash_location")) {
+			const json& hash_location_json = elem["hash_location"];
+			ASSUME_OBJ(hash_location_json);
+
+			auto deserialize_bit256
+				= [](const json& hash_json, const char* field_name) -> base::Bit256 {
+				ASSUME_HAS(hash_json, field_name);
+				ASSUME_ARR(hash_json, field_name);
+				if (hash_json[field_name].size() != 4)
+					throw ParsingDiagnosticFileError(base::strConcat(
+						"hash_location[ ", field_name, " ] must be an array of 4 unsigned integers"
+					));
+
+				std::array<u64, 4> data = {};
+				for (usize i = 0; i < 4; ++i) {
+					if (!hash_json[field_name][i].is_number_unsigned())
+						throw ParsingDiagnosticFileError(base::strConcat(
+							"hash_location[ ",
+							field_name,
+							" ][ ",
+							std::to_string(i),
+							" ] is not an unsigned integer"
+						));
+					data.at(i) = hash_json[field_name][i].get<u64>();
+				}
+				return { data };
+			};
+
+			HashCodeLocation hash_location_value;
+			hash_location_value.begin_node = deserialize_bit256(hash_location_json, "begin_node");
+			if (hash_location_json.contains("end_node"))
+				hash_location_value.end_node = deserialize_bit256(hash_location_json, "end_node");
+
+			hash_location = hash_location_value;
+		}
+		return base::makeBox<CodeLocationComponent>(std::move(location), hash_location);
+	}
+
+	void CodeLocationComponent::updatePosition(const UpdatePositionFunc& func) {
+		if (hash_location.has_value()) location = func(hash_location.value());
 	}
 
 	json StartLineComponent::toJson() const {
@@ -314,6 +363,12 @@ namespace dia_int::dia_args {
 			result.linked_messages.put(info_id, Message::fromJson(msg_json));
 
 		return result;
+	}
+
+	void Diagnostic::updateCodeLocationComponents(const UpdatePositionFunc& func) {
+		forEachComponentInDiagnostic<CodeLocationComponent>(
+			*this, [&func](CodeLocationComponent& component) { component.updatePosition(func); }
+		);
 	}
 
 	PointerMessage PointerMessage::fromJson(const json& elem) {

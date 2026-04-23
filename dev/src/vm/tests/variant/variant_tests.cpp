@@ -6,8 +6,8 @@
 #include <tester/tester.hpp>
 
 #include <vm/bytecode/validator/errors.hpp>
-#include <vm/core/process/exceptions.hpp>
-#include <vm/core/thread/vmvalue.hpp>
+#include <vm/core/safe/exceptions.hpp>
+#include <vm/core/vmvalue/vmvalue.hpp>
 #include <vm/utils/interpret.hpp>
 
 #include <limits>
