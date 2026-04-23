@@ -4,6 +4,10 @@
 
 #include <vm/bytecode/validator/errors.hpp>
 
+/**
+ * @brief Tests here invoke another function multiple times, inducing the 
+ * necessary call-count, and allowing for it to be jit-compiled.
+ */
 class JitTests: public VmTestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS JitTests
@@ -16,7 +20,7 @@ public:
 
 private:
 	void testArithmetic() {
-		runTestOnVm("arithmetic_ops.dbc", "5");
+		runTestOnVm("arithmetic_ops.dbc", "100");
 	}
 
 	void testJumps() {
