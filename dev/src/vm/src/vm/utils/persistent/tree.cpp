@@ -164,11 +164,9 @@ namespace vm::persistent::detail {
 
 	void SegmentTree::SurroundingNeigh::moveNodeTo(usize desired_pos) {
 		if (!desired_pos || desired_pos == node_pos) return;
-
 		CORE_ASSERT(inSubtree(desired_pos, root_pos), "we are within root's subtree");
 
 		usize height_diff = getLCAHeight(desired_pos, node_pos) - heightFromPos(node_pos);
-
 		for (usize i = (desired_pos == root_pos ? 0 : 1); i < height_diff; i++) {
 			node = mem->mergeTwoRoots(siblings.back(), node);
 			siblings.pop_back();
@@ -184,20 +182,28 @@ namespace vm::persistent::detail {
 		CORE_ASSERT(inSubtree(desired_pos, node_pos), "we are above desired pos");
 
 		while (node_pos != desired_pos) {
-			auto left      = mem->getChild(Dir::Left, node);
-			auto right     = mem->getChild(Dir::Right, node);
 			auto left_pos  = node_pos << 1;
 			auto right_pos = (node_pos << 1 | 1);
 
-			if (inSubtree(desired_pos, left_pos)) {
-				CORE_ASSERT(!inSubtree(desired_pos, right_pos), "We cannot be in both");
+			NodeID left = EMPTY, right = EMPTY;
+			CORE_ASSERT(
+				inSubtree(desired_pos, left_pos) != inSubtree(desired_pos, right_pos),
+				"one of children can handle desired pos"
+			);
 
+			if (node_pos == mem->getPos(node)) {
+				left  = mem->getChild(Dir::Left, node);
+				right = mem->getChild(Dir::Right, node);
+			} else if (inSubtree(desired_pos, left_pos))
+				left = node;
+			else
+				right = node;
+
+			if (inSubtree(desired_pos, left_pos)) {
 				node_pos = left_pos;
 				node     = left;
 				siblings.emplace_back(right);
 			} else {
-				CORE_ASSERT(inSubtree(desired_pos, right_pos), "We have to be in one");
-
 				node_pos = right_pos;
 				node     = right;
 				siblings.emplace_back(left);
@@ -291,16 +297,15 @@ namespace vm::persistent::detail {
 	}
 
 	NodeID SegmentTree::rebuildFromTwo(NodeID root_1, NodeID root_2, MergeBuilder merge_policy) {
-		CORE_ASSERT(root_1 || root_2, "One of the states must be non-empty");
+		CORE_ASSERT(root_1 && root_2, "Both of the states must be non-empty");
 
 		auto pos_1 = getPos(root_1);
 		auto pos_2 = getPos(root_2);
 
 		if (offsetFromPos(pos_2) < offsetFromPos(pos_1)) {
-			std::swap(
-				std::tie(pos_1, root_1, merge_policy.only_1),
-				std::tie(pos_2, root_2, merge_policy.only_2)
-			);
+			std::swap(pos_1, pos_2);
+			std::swap(root_1, root_2);
+			std::swap(merge_policy.only_1, merge_policy.only_1);
 			merge_policy.confilicts
 				= [orig_strat = merge_policy.confilicts](usize idx, usize val_1, usize val_2) {
 					  return orig_strat(idx, val_2, val_1);
@@ -349,7 +354,9 @@ namespace vm::persistent::detail {
 			auto rec_right = self(pos_right, right_1, right_2);
 
 			CORE_ASSERT(!rec_left || inSubtree(mem->getPos(rec_left), pos_left), "stay in subtree");
-			CORE_ASSERT(!rec_right || inSubtree(mem->getPos(rec_right), pos_right), "stay in subtree");
+			CORE_ASSERT(
+				!rec_right || inSubtree(mem->getPos(rec_right), pos_right), "stay in subtree"
+			);
 
 			return mem->mergeTwoRoots(rec_left, rec_right);
 		};
