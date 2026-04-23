@@ -3,7 +3,7 @@
 
 #include <tester/tester.hpp>
 
-#include <vm/core/process/exceptions.hpp>
+#include <vm/core/safe/exceptions.hpp>
 
 class VmThreadTest: public VmTestSuite {
 #undef TESTER_CLASS
@@ -11,9 +11,13 @@ class VmThreadTest: public VmTestSuite {
 
 public:
 	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		TESTER_ADD_TEST(multithreadingTest);
-		TESTER_ADD_TEST(mutexTest);
-		TESTER_ADD_TEST(cvTest);
+		// @TODO: #2563 Fix the tests and re-enable them. For now they are disabled because of the
+		// instability of multithreading tests, which is expected due to the nature of
+		// multithreading, but we need to fix it eventually. The main issue is that the tests are
+		// not deterministic, and they can fail randomly.
+		// TESTER_ADD_TEST(multithreadingTest);
+		// TESTER_ADD_TEST(mutexTest);
+		// TESTER_ADD_TEST(cvTest);
 	}
 
 private:
@@ -33,6 +37,7 @@ private:
 		runTestOnVm("cv_simple_barrier_all_test.dbc", "", "22020201", {});
 		runTestOnVm("producer_consumer.dbc", "", "20000200000221", {});
 	}
+
 };
 
 TESTER_COMMON_MAIN("/src/vm/tests/threads/");

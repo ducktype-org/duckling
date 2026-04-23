@@ -1,0 +1,14 @@
+#pragma once
+
+#include <string_view>
+
+namespace artifacts {
+	/**
+	 * @brief Unique identifier of the current compiler build.
+	 *
+	 * Computed at build time as a SHA256 of the compiler source tree
+	 * (see compute_build_id.cmake). Used by ArtifactCollection to detect and
+	 * discard artifacts produced by a different build of the compiler.
+	 */
+	inline constexpr std::string_view BUILD_ID = "@ARTIFACTS_BUILD_ID@";
+}

@@ -1,12 +1,15 @@
 include(FetchContent)
+find_package(Git)
 
-set(REPLXX_TAG "release-0.0.4")
+set(REPLXX_TAG "release-0.0.4")  # released 2021-10-21
 
 FetchContent_Declare(
 	replxx
 	GIT_REPOSITORY https://github.com/AmokHuginnsson/replxx.git
 	GIT_TAG        ${REPLXX_TAG}
 	SYSTEM
+    PATCH_COMMAND "${GIT_EXECUTABLE}" reset --hard HEAD
+          COMMAND "${GIT_EXECUTABLE}" apply "${CMAKE_CURRENT_LIST_DIR}/patches/replxx-cmake-version.patch"
 )
 
 # Build replxx based on the selected mode

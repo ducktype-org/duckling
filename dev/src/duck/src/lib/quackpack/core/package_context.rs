@@ -1,12 +1,11 @@
 //! A context of a package  parsed from the disk.
 use std::path::PathBuf;
 
-use crate::{
-    DuckContext, QuackResult,
-    duck::util::duck_home::DuckHome,
-    qp_bail,
-    quackpack::core::{self, Package, package_loader::PackageLoader, venv_config::VenvConfig},
-};
+use crate::duck::util::duck_home::DuckHome;
+use crate::quackpack::core::package_loader::PackageLoader;
+use crate::quackpack::core::venv_config::VenvConfig;
+use crate::quackpack::core::{self, Package};
+use crate::{DuckContext, QuackResult, qp_bail};
 
 #[derive(Debug)]
 /// A context of a package  parsed from the disk.

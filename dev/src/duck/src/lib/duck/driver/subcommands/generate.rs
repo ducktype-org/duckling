@@ -1,15 +1,10 @@
-use clap::{Arg, ArgAction, Command, crate_name, value_parser};
+use clap::{Arg, ArgAction, ArgMatches, Command, crate_name, value_parser};
 use clap_complete::{Generator, Shell, generate};
 
-use crate::{
-    DuckContext, QuackResult,
-    duck::{
-        driver::{cli, cli_ext::subcommand},
-        util::terminal::Terminal,
-    },
-    qp_bail_internal,
-};
-use clap::ArgMatches;
+use crate::duck::driver::cli;
+use crate::duck::driver::cli_ext::subcommand;
+use crate::duck::util::terminal::Terminal;
+use crate::{DuckContext, QuackResult, qp_bail_internal};
 
 /// Creates parser for the `generate` subcommand.
 pub fn get_parser() -> Command {

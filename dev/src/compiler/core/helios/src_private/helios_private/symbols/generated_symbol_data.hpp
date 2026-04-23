@@ -9,6 +9,8 @@
 #include <base/types/bit256.hpp>
 #include <base/types/ints.hpp>
 
+#include <string_id/string_id.hpp>
+
 #include <variant>
 
 namespace compiler::helios::defgen {
@@ -127,6 +129,39 @@ namespace compiler::helios::defgen {
 			base::Bit256 queryUnstablePerfectHash() const;
 		};
 
+		/**
+		 * Represents a compiler-generated entry point for script execution.
+		 * This symbol is synthetic and exists only to orchestrate script statements.
+		 */
+		struct ScriptMainWrapper final {
+			/**
+			 * Stable per-script identity used as one component of QueryGeneratedSymbol key hashing.
+			 *
+			 * @note Full ScriptMainWrapper unstable hash also includes `scope` (via
+			 * `scope.queryUnstablePerfectHash()`), so final unstable identity is scope-dependent.
+			 *
+			 * @note This does NOT define the emitted linker symbol name.
+			 * The emitted entry name is still `main` (set separately as symbol name).
+			 */
+			base::StrID script_id;
+
+			/**
+			 * Root scope assigned to the generated script `main` symbol.
+			 *
+			 * This scope is required so `isGlobalFun` recognizes the symbol as global.
+			 *
+			 * @note For detailed explanation see docs for the buildScriptMainWrapper function in
+			 * helios/repl_utils/script_helpers.hpp.
+			 *
+			 * @TODO: #895 When entry points become explicit (not inferred from global `main`),
+			 * reevaluate whether this stored scope is still required for ScriptMainWrapper.
+			 */
+			ScopeID scope;
+
+			[[nodiscard]]
+			base::Bit256 queryUnstablePerfectHash() const;
+		};
+
 		using GeneratedSymbolDataVariant = std::variant<
 			ImplicitConstructor,
 			DefaultClassConstructor,
@@ -136,7 +171,8 @@ namespace compiler::helios::defgen {
 			SelfParameter,
 			Variable,
 			ReplExpressionWrapper,
-			ReplInstructionWrapper>;
+			ReplInstructionWrapper,
+			ScriptMainWrapper>;
 		GeneratedSymbolDataVariant data;
 
 		explicit GeneratedSymbolData(const GeneratedSymbolDataVariant& data);

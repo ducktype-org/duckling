@@ -1,13 +1,13 @@
-function main { i64, ptr_argv } -> i64 {
-	# ret_val -> main ret_val
+function main { i64, ptr_argv } -> { i64 } {
+	# ret0 -> main ret0
 	# arg0 -> argc
 	# arg1 -> *argv
 
-	init_lany_type      x, i64;
-	output_l64          x;
+	init_pany_type      x, i64;
+	output_p64          x;
 	deinit;             # x
 
-	mov_l64_imm         x, 1;
+	mov_p64_imm         x, 1;
 
 	deinit;             # *argv
 	deinit;             # argc

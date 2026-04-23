@@ -3,7 +3,7 @@
 #include "common.hpp"
 
 #include <vm/bytecode/opcode_args.hpp>
-#include <vm/core/process/builtin_functions.hpp>
+#include <vm/core/builtin_functions.hpp>
 #include <vm/utils/interpret.hpp>
 
 using namespace compiler::backend_vm::internal;
@@ -11,14 +11,14 @@ using namespace compiler::backend_vm::internal;
 [[nodiscard]] vm::opargs::OpCodeArg DVMLocal::asArgument() const {
 	variant_match(type) {
 		variant_case(vm::code::PrimitiveType, primitive) {
-			if (primitive.size == 8) return vm::opargs::StackLocal64{ name };
-			if (primitive.size == 4) return vm::opargs::StackLocal32{ name };
-			if (primitive.size == 2) return vm::opargs::StackLocal16{ name };
-			if (primitive.size == 1) return vm::opargs::StackLocal8{ name };
+			if (primitive.size == 8) return vm::opargs::Place64{ name };
+			if (primitive.size == 4) return vm::opargs::Place32{ name };
+			if (primitive.size == 2) return vm::opargs::Place16{ name };
+			if (primitive.size == 1) return vm::opargs::Place8{ name };
 		}
-		variant_case(vm::code::PointerType, pointer) { return vm::opargs::StackLocalPtr(name); }
-		variant_case(vm::code::DataType, data) { return vm::opargs::StackLocalStructure(name); }
-		variant_case(vm::code::OpaqueType, opaque) { return vm::opargs::StackLocalOpq(name); }
+		variant_case(vm::code::PointerType, pointer) { return vm::opargs::PlacePtr(name); }
+		variant_case(vm::code::DataType, data) { return vm::opargs::PlaceStructure(name); }
+		variant_case(vm::code::OpaqueType, opaque) { return vm::opargs::PlaceOpq(name); }
 		variant_default {
 			CORE_PANIC("DVMLocal type not supported for argument: ", typeName(type));
 		}
@@ -27,7 +27,7 @@ using namespace compiler::backend_vm::internal;
 }
 
 [[nodiscard]] vm::opargs::OpCodeArg DVMLocal::asAnyArgument() const {
-	return vm::opargs::StackLocalAny{ name };
+	return vm::opargs::PlaceAny{ name };
 }
 
 DVMLocal::operator vm::opargs::OpCodeArg() const { return asArgument(); }
@@ -35,14 +35,14 @@ DVMLocal::operator vm::opargs::OpCodeArg() const { return asArgument(); }
 [[nodiscard]] vm::opargs::OpCodeArg DVMGlobal::asArgument() const {
 	variant_match(type) {
 		variant_case(vm::code::PrimitiveType, primitive) {
-			if (primitive.size == 8) return vm::opargs::Global64{ name };
-			if (primitive.size == 4) return vm::opargs::Global32{ name };
-			if (primitive.size == 2) return vm::opargs::Global16{ name };
-			if (primitive.size == 1) return vm::opargs::Global8{ name };
+			if (primitive.size == 8) return vm::opargs::Place64{ name };
+			if (primitive.size == 4) return vm::opargs::Place32{ name };
+			if (primitive.size == 2) return vm::opargs::Place16{ name };
+			if (primitive.size == 1) return vm::opargs::Place8{ name };
 		}
-		variant_case(vm::code::PointerType, pointer) { return vm::opargs::GlobalPtr(name); }
-		variant_case(vm::code::DataType, data) { return vm::opargs::GlobalStructure(name); }
-		variant_case(vm::code::OpaqueType, opaque) { return vm::opargs::GlobalOpq(name); }
+		variant_case(vm::code::PointerType, pointer) { return vm::opargs::PlacePtr(name); }
+		variant_case(vm::code::DataType, data) { return vm::opargs::PlaceStructure(name); }
+		variant_case(vm::code::OpaqueType, opaque) { return vm::opargs::PlaceOpq(name); }
 		variant_default {
 			CORE_PANIC("DVMGlobal type not supported for argument: ", typeName(type));
 		}
@@ -53,7 +53,7 @@ DVMLocal::operator vm::opargs::OpCodeArg() const { return asArgument(); }
 DVMGlobal::operator vm::opargs::OpCodeArg() const { return asArgument(); }
 
 [[nodiscard]] vm::opargs::OpCodeArg DVMGlobal::asAnyArgument() const {
-	return vm::opargs::GlobalAny{ name };
+	return vm::opargs::PlaceAny{ name };
 }
 
 [[nodiscard]] vm::opargs::OpCodeArg DVMValue::asArgument() const {

@@ -10,12 +10,6 @@ namespace vm {
 
 	ProcIO& IVMProcess::getIO() { return io; }
 
-	GIL& IVMProcess::getGIL() { return gil; }
-
-	SynchronizationPrimitives& IVMProcess::getSynchronizationPrimitives() {
-		return synchronization_primitives;
-	}
-
 	PID IVMProcess::getPID() const { return my_pid; }
 
 	std::expected<api::Response, api::ApiError> IVMProcess::doRequest(

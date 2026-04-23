@@ -103,31 +103,5 @@ function(add_custom_test_pack NAME)
 	add_test(NAME ${BUILD_PACK_TARGET} COMMAND "${CMAKE_COMMAND}" --build ${CMAKE_BINARY_DIR} --target ${BUILD_PACK_TARGET} -j ${CMAKE_BUILD_PARALLEL_LEVEL})
 	set_property(TEST ${BUILD_PACK_TARGET} PROPERTY LABELS "${NAME}")
 
-	add_custom_target("test_${NAME}"
-		COMMAND ${CMAKE_CTEST_COMMAND} -L ${NAME} --output-on-failure
-		WORKING_DIRECTORY "${CMAKE_BINARY_DIR}")
-
-	add_custom_target("memcheck_test_${NAME}"
-		COMMAND ${CMAKE_CTEST_COMMAND} -L ${NAME}
-		--force-new-ctest-process --test-action memcheck --output-on-failure
-		WORKING_DIRECTORY "${CMAKE_BINARY_DIR}")
-
 	add_dependencies(build_all_tests ${BUILD_PACK_TARGET})
-
-	set_target_properties("test_${NAME}" PROPERTIES EXCLUDE_FROM_ALL true)
 endfunction()
-
-# note:
-# We use custom CTEST_PARALLEL_LEVEL environment variable to control parallelism in tests.
-# This works only when this variable is set during the cmake configuration step.
-# To run tests in parallel locally, you can invoke ctest -j <num_jobs> [options] directly.
-add_custom_target(memcheck_test
-	COMMAND ${CMAKE_CTEST_COMMAND}
-	--force-new-ctest-process --test-action memcheck -j $ENV{CTEST_PARALLEL_LEVEL} --output-on-failure
-	WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
-	USES_TERMINAL)
-
-add_custom_target(test_parallel
-	COMMAND ${CMAKE_CTEST_COMMAND} -j $ENV{CTEST_PARALLEL_LEVEL} --output-on-failure
-	WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
-	USES_TERMINAL)

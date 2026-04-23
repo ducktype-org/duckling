@@ -2,19 +2,13 @@ use std::collections::{HashMap, HashSet};
 
 use tracing::debug;
 
-use crate::{
-    QuackResult, QuackResultContext,
-    quackpack::core::{
-        Dependency, FeatureName, Manifest,
-        gathering::{
-            fetch_types::{FetchResponse, FetchSuccess},
-            gatherer::Gatherer,
-        },
-        git_access::GitAccess,
-        solver_freeze::{SolverFreeze, SolverPackageFreeze},
-        types_common::ExpandedPackage,
-    },
-};
+use crate::quackpack::core::solver::gathering::fetch_types::{FetchResponse, FetchSuccess};
+use crate::quackpack::core::solver::gathering::gatherer::Gatherer;
+use crate::quackpack::core::solver::git_access::GitAccess;
+use crate::quackpack::core::solver::solver_freeze::{SolverFreeze, SolverPackageFreeze};
+use crate::quackpack::core::solver::types_common::ExpandedPackage;
+use crate::quackpack::core::{Dependency, FeatureName, Manifest};
+use crate::{QuackResult, QuackResultContext};
 
 impl SolverFreeze {
     /// Fetches manifests of the packages mentioned in the freeze (but not the root package),
@@ -275,23 +269,17 @@ impl SolverFreeze {
 
 #[cfg(test)]
 mod test {
-    use std::{
-        collections::{HashMap, HashSet},
-        path::PathBuf,
-    };
+    use std::collections::{HashMap, HashSet};
+    use std::path::PathBuf;
 
     use tempfile::{TempDir, tempdir};
     use url::Url;
 
-    use crate::{
-        DuckContext, StrId,
-        quackpack::core::{
-            FeatureName, Version, parse_manifest,
-            solver_freeze::{SolverFreeze, SolverPackageFreeze},
-            types_common::{ExpandedLocation, ExpandedPackage, InternedExpandedLocation},
-        },
-        util::path_ops_ext::PathOpsExt,
-    };
+    use crate::quackpack::core::solver::solver_freeze::{SolverFreeze, SolverPackageFreeze};
+    use crate::quackpack::core::solver::types_common::{ExpandedLocation, ExpandedPackage};
+    use crate::quackpack::core::{FeatureName, Version, parse_manifest};
+    use crate::util::path_ops_ext::PathOpsExt;
+    use crate::{DuckContext, StrId};
 
     fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {
         let dir = tempdir().unwrap();
@@ -335,14 +323,16 @@ features:
         let ctx = DuckContext::default();
         let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
         let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
-        let exp_location_a = InternedExpandedLocation::new(ExpandedLocation::Registry {
+        let exp_location_a = ExpandedLocation::Registry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("a"),
-        });
-        let exp_location_b = InternedExpandedLocation::new(ExpandedLocation::Registry {
+        }
+        .into();
+        let exp_location_b = ExpandedLocation::Registry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("b"),
-        });
+        }
+        .into();
         let exp_pkg_a = ExpandedPackage {
             location: exp_location_a,
             version: Some(Version::new(1, 0, 0)),
@@ -407,14 +397,16 @@ metadata:
         let ctx = DuckContext::default();
         let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
         let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
-        let exp_location_a = InternedExpandedLocation::new(ExpandedLocation::Registry {
+        let exp_location_a = ExpandedLocation::Registry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("a"),
-        });
-        let exp_location_b = InternedExpandedLocation::new(ExpandedLocation::Registry {
+        }
+        .into();
+        let exp_location_b = ExpandedLocation::Registry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("b"),
-        });
+        }
+        .into();
         let exp_pkg_a = ExpandedPackage {
             location: exp_location_a,
             version: Some(Version::new(1, 0, 0)),
@@ -487,18 +479,21 @@ metadata:
         let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
         let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
         let manifest_c = parse_manifest(&path_c, &ctx).unwrap();
-        let exp_location_a = InternedExpandedLocation::new(ExpandedLocation::Registry {
+        let exp_location_a = ExpandedLocation::Registry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("a"),
-        });
-        let exp_location_b = InternedExpandedLocation::new(ExpandedLocation::Registry {
+        }
+        .into();
+        let exp_location_b = ExpandedLocation::Registry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("b"),
-        });
-        let exp_location_c = InternedExpandedLocation::new(ExpandedLocation::Registry {
+        }
+        .into();
+        let exp_location_c = ExpandedLocation::Registry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("c"),
-        });
+        }
+        .into();
         let exp_pkg_a = ExpandedPackage {
             location: exp_location_a,
             version: Some(Version::new(1, 0, 0)),
@@ -590,22 +585,26 @@ metadata:
         let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
         let manifest_c = parse_manifest(&path_c, &ctx).unwrap();
         let manifest_d = parse_manifest(&path_d, &ctx).unwrap();
-        let exp_location_a = InternedExpandedLocation::new(ExpandedLocation::Registry {
+        let exp_location_a = ExpandedLocation::Registry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("a"),
-        });
-        let exp_location_b = InternedExpandedLocation::new(ExpandedLocation::Registry {
+        }
+        .into();
+        let exp_location_b = ExpandedLocation::Registry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("b"),
-        });
-        let exp_location_c = InternedExpandedLocation::new(ExpandedLocation::Registry {
+        }
+        .into();
+        let exp_location_c = ExpandedLocation::Registry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("c"),
-        });
-        let exp_location_d = InternedExpandedLocation::new(ExpandedLocation::Registry {
+        }
+        .into();
+        let exp_location_d = ExpandedLocation::Registry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("d"),
-        });
+        }
+        .into();
         let exp_pkg_a = ExpandedPackage {
             location: exp_location_a,
             version: Some(Version::new(1, 0, 0)),

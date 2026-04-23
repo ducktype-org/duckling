@@ -119,8 +119,18 @@ namespace artifacts {
 	class ArtifactCollection final {
 	public:
 		/**
+		 * @brief Name of the file (stored inside the root collection's directory) that holds the
+		 * compiler build id that produced the artifacts.
+		 */
+		static constexpr std::string_view BUILD_ID_FILE = ".build_id";
+
+		/**
 		 * @brief Constructs ArtifactCollection, looks into `root` and restores previously saved
 		 * `ArtifactCollection`s at `root` (if any).
+		 *
+		 * If a stored build id exists at `root/.build_id` and it does not match the current
+		 * compiler's build id, the directory contents are wiped before loading (controlled by
+		 * the compile-time flag `artifacts::CHECK_BUILD_ID`).
 		 */
 		ArtifactCollection(std::filesystem::path root);
 
@@ -293,6 +303,19 @@ namespace artifacts {
 		 * @brief Construct a new ArtifactCollection and sets the parent variable.
 		 */
 		ArtifactCollection(std::filesystem::path path, Ref<ArtifactCollection> parent);
+
+		/**
+		 * @brief If the stored build id at `<PATH>/.build_id` differs from the current
+		 * compiler's `artifacts::BUILD_ID`, or the file is missing entirely, wipes
+		 * `PATH`'s contents (but not `PATH` itself) and logs a user-visible message.
+		 */
+		void validateOrWipeBuildId();
+
+		/**
+		 * @brief Writes the current `artifacts::BUILD_ID` to `<PATH>/.build_id`.
+		 * This function should be called only on the root collection.
+		 */
+		void writeBuildIdFile();
 
 		/**
 		 * @brief Parses blobs from `content` and inserts them to the collection.
