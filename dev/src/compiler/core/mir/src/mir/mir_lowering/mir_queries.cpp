@@ -8,6 +8,9 @@
 #include <helios/hout/hout.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/mangler/mangler.hpp>
+#include <helios/queries/function_queries.hpp>
+#include <helios/symbols/symbol_id.hpp>
+#include <helios/symbols/symbol_kind.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <mir_private/expr_lowering.hpp>
 #include <mir_private/mir_builders.hpp>
@@ -24,6 +27,7 @@
 
 namespace compiler::mir {
 	namespace hc = helios::code;
+	thread_local std::unordered_set<helios::SymID> visiting_stack;
 
 	u64 KeyOf_LowerToMIRFunction::queryUnstablePerfectHash() const {
 		return function->queryUnstablePerfectHash();
@@ -109,6 +113,59 @@ namespace compiler::mir {
 		void visitAssignmentStmt(const hc::AssignmentStmt&) override {}
 	};
 
+	struct StackGuard {
+		std::unordered_set<helios::SymID>& stack;
+		helios::SymID                      id;
+
+		StackGuard(std::unordered_set<helios::SymID>& s, helios::SymID i): stack(s), id(i) {
+			stack.insert(id);
+		}
+
+		~StackGuard() { stack.erase(id); }
+	};
+
+	ComptimeStatusResult computeIsComptimeOnly(query::Context& ctx, helios::SymID id) {
+		visiting_stack.clear();
+		return *ctx.query<ComptimeStatusRecursive>(id);
+	}
+
+	ComptimeStatusResult ComputeComptimeStatusRecursive(query::Context& ctx, helios::SymID id) {
+		if (visiting_stack.contains(id)) return ComptimeStatus::Runtime;
+
+		auto hout_res = ctx.query<helios::QueryCodeOfFun>(id);
+		if (!hout_res->hasValue()) return ComptimeStatus::Runtime;
+		const auto& hout_fun = hout_res->valueOrPanic();
+
+		if (isComptimeOnlyType(hout_fun.declaration->return_type.getType()))
+			return ComptimeStatus::ComptimeOnly;
+		for (const auto& param: hout_fun.declaration->parameters)
+			if (isComptimeOnlyType(param.type.getType())) return ComptimeStatus::ComptimeOnly;
+
+		const Function& pre_mir = ctx.query<LowerToPreMIRFunction>(id)->valueOrPanic();
+
+		StackGuard guard(visiting_stack, id);
+
+		for (const auto& [_, block]: pre_mir.blocks) {
+			auto check_instr = [&](const Instruction& inst) -> bool {
+				if (isMetaOp(inst.operation)) return true;
+
+				if (inst.operation == Operation::Call) {
+					auto callee_id = inst.arguments.at(0).get<MIRFunctionLiteral>().helios_id;
+					auto res       = ctx.query<ComptimeStatusRecursive>(callee_id);
+					if (res->hasValue() && res->valueOrPanic() == ComptimeStatus::ComptimeOnly)
+						return true;
+				}
+				return false;
+			};
+
+			for (const auto& inst: block.instructions)
+				if (check_instr(inst)) return ComptimeStatus::ComptimeOnly;
+			if (check_instr(block.terminator)) return ComptimeStatus::ComptimeOnly;
+		}
+
+		return ComptimeStatus::Runtime;
+	}
+
 	Function lowerToPreMIRFunction(query::Context& ctx, CRef<helios::HOUTFunction> function) {
 		FunctionBuilder function_builder{
 			ctx,
@@ -130,7 +187,6 @@ namespace compiler::mir {
 		);
 
 		function_builder.setEntry(first_block.begin);
-
 		return function_builder.build();
 	}
 
@@ -279,6 +335,36 @@ namespace compiler::mir {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(LowerGlobalDataToMIRCtor)
+
+	struct IMPLEMENT_QUERY(IsComptimeOnly, ComptimeStatusResult) {
+		static auto provide(Context& ctx, const QKey& key) -> PResult {
+			return computeIsComptimeOnly(ctx, key);
+		}
+
+		QUERY_AUTO_CACHE_CREF
+	};
+	QUERY_IMPLEMENTATION_BOILERPLATE(IsComptimeOnly)
+
+	struct IMPLEMENT_QUERY(ComptimeStatusRecursive, ComptimeStatusResult) {
+		static auto provide(Context& ctx, const QKey& key) -> PResult {
+			return ComputeComptimeStatusRecursive(ctx, key);
+		}
+
+		QUERY_AUTO_CACHE_CREF
+	};
+	QUERY_IMPLEMENTATION_BOILERPLATE(ComptimeStatusRecursive)
+
+	struct IMPLEMENT_QUERY(LowerToPreMIRFunction, LowerToMIRFunctionResult) {
+		static auto provide(Context& ctx, const QKey& key) -> PResult {
+			auto hout_res = ctx.query<helios::QueryCodeOfFun>(key);
+			if (!hout_res->hasValue()) return query::Failed();
+
+			return lowerToPreMIRFunction(ctx, base::Ref(&hout_res->valueOrPanic()));
+		}
+
+		QUERY_AUTO_CACHE_CREF
+	};
+	QUERY_IMPLEMENTATION_BOILERPLATE(LowerToPreMIRFunction)
 
 	struct IMPLEMENT_QUERY(LowerToMIRFunction, LowerToMIRFunctionResult) {
 		static auto provide(Context& ctx, const QKey& key) -> PResult {

@@ -59,10 +59,22 @@ private:
 			ASSERT_EQUAL(base::StrID("foo3"), functions.at(2)->declaration->original_name);
 			ASSERT_EQUAL(base::StrID("foo4"), functions.at(3)->declaration->original_name);
 
-			auto foo1_mir = compiler::mir::lowerToPreMIRFunction(ctx, functions.at(0));
-			auto foo2_mir = compiler::mir::lowerToPreMIRFunction(ctx, functions.at(1));
-			auto foo3_mir = compiler::mir::lowerToPreMIRFunction(ctx, functions.at(2));
-			auto foo4_mir = compiler::mir::lowerToPreMIRFunction(ctx, functions.at(3));
+			const auto& foo1_mir = ctx.query<compiler::mir::LowerToPreMIRFunction>(
+										  functions.at(0)->declaration->original_symbol
+			)
+			                           ->valueOrPanic();
+			const auto& foo2_mir = ctx.query<compiler::mir::LowerToPreMIRFunction>(
+										  functions.at(1)->declaration->original_symbol
+			)
+			                           ->valueOrPanic();
+			const auto& foo3_mir = ctx.query<compiler::mir::LowerToPreMIRFunction>(
+										  functions.at(2)->declaration->original_symbol
+			)
+			                           ->valueOrPanic();
+			const auto& foo4_mir = ctx.query<compiler::mir::LowerToPreMIRFunction>(
+										  functions.at(3)->declaration->original_symbol
+			)
+			                           ->valueOrPanic();
 
 			ASSERT_EQUAL(foo1_mir.name, base::StrID("foo1"));
 			ASSERT_EQUAL(foo2_mir.name, base::StrID("foo2"));
@@ -105,7 +117,10 @@ private:
 			                   ->valueOrThrow();
 			ASSERT_TRUE(c_ctor.name.strView() == "constructor_of_c");
 
-			auto foo_mir = compiler::mir::lowerToPreMIRFunction(ctx, functions.at(0));
+			const auto& foo_mir = ctx.query<compiler::mir::LowerToPreMIRFunction>(
+										 functions.at(0)->declaration->original_symbol
+			)
+			                          ->valueOrPanic();
 			ASSERT_EQUAL(foo_mir.name, base::StrID("foo"));
 
 			// Test locals:
@@ -166,7 +181,10 @@ private:
 			ASSERT_TRUE(foo_mir.validateBlockIDs().isOk());
 
 			// Simple assignment tests
-			auto goo_mir = compiler::mir::lowerToPreMIRFunction(ctx, functions.at(1));
+			const auto& goo_mir = ctx.query<compiler::mir::LowerToPreMIRFunction>(
+										 functions.at(1)->declaration->original_symbol
+			)
+			                          ->valueOrPanic();
 			ASSERT_EQUAL(goo_mir.name, base::StrID("goo"));
 
 			ASSERT_EQUAL(goo_mir.local_list.size(), 2);

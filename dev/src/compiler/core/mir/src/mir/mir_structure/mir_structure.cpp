@@ -27,6 +27,7 @@ namespace compiler::mir {
 		  name(name),
 		  return_type(return_type),
 		  parameter_types(std::move(parameter_types)),
+		  comptime_status(ComptimeStatus::Uncomputed),
 		  blocks(std::move(blocks)),
 		  block_order(std::move(block_order)),
 		  local_list(std::move(local_list)),
@@ -327,8 +328,16 @@ namespace compiler::mir {
 		return base::OK;
 	}
 
+<<<<<<< HEAD
 	Instruction& Block::firstInstruction() {
 		if (instructions.empty()) return terminator;
 		return instructions.front();
+=======
+	bool isComptimeOnlyType(const tsh::AbstractType& type) {
+		using Kind = tsh::Kind;
+		auto k     = type.getKind();
+		return k == Kind::Meta || k == Kind::Namespace || k == Kind::Module
+		    || k == Kind::TypeTemplate;
+>>>>>>> cb535aa2d (added query for calculating comptime status)
 	}
 }

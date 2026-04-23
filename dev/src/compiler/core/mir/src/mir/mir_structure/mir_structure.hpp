@@ -161,6 +161,22 @@ MAKE_FLAG_TYPE(compiler::mir, LifetimeFlag, LifetimeFlags,
 )
 
 namespace compiler::mir {
+	enum class ComptimeStatus : uint32_t { Uncomputed = 0, Runtime = 1, ComptimeOnly = 2 };
+
+	inline bool isMetaOp(Operation op) {
+		switch (op) {
+		case Operation::MetaCreateBox:
+		case Operation::MetaCreateRef:
+		case Operation::MetaCreateConst:
+		case Operation::MetaCreateTuple:
+		case Operation::MetaCreateVariant:
+		case Operation::MetaEq:
+		case Operation::MetaNeq:
+			return true;
+		default:
+			return false;
+		}
+	}
 	struct MIRValue;
 
 	/**
@@ -737,6 +753,8 @@ namespace compiler::mir {
 	/**
 	 * @brief Function in MIR.
 	 */
+	bool isComptimeOnlyType(const tsh::AbstractType& type);
+
 	struct Function final {
 		/**
 		 * This name is only used for debugging and error logging and is not mangled (and is not
@@ -746,7 +764,7 @@ namespace compiler::mir {
 
 		tsh::SymbolType<>              return_type;
 		std::vector<tsh::SymbolType<>> parameter_types;
-
+		ComptimeStatus                 comptime_status = ComptimeStatus::Uncomputed;
 		/**
 		 * @brief Map from BlockID to the Block.
 		 * The block's content is stored here.
@@ -813,7 +831,6 @@ namespace compiler::mir {
 		u64 queryUnstablePerfectHash() const;
 
 		void debugPrint(std::ostream& os) const;
-
 		/**
 		 * @brief Checks if the id's from the HashMap match the id's in the blocks,
 		 * if all block_order elements are present in the HashMap and

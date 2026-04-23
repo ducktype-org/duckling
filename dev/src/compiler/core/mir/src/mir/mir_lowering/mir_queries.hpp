@@ -3,6 +3,7 @@
 #include "../mir_structure/mir_structure.hpp"
 
 #include <helios/hout/hout.hpp>
+#include <helios/symbols/symbol_id.hpp>
 
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_result.hpp>
@@ -48,11 +49,21 @@ namespace compiler::mir {
 		CRef<LowerGlobalDataToMIRFunctionResult>,
 		({})
 	)
+	using ComptimeStatusResult = query::QResult<ComptimeStatus>;
 
+	/**
+	 * @brief Entry point for comptime status analysis.
+	 */
+	DECLARE_QUERY(IsComptimeOnly, helios::SymID, CRef<ComptimeStatusResult>, ({}))
+
+	/**
+	 * @brief Internal recursive query for call graph analysis.
+	 */
+	DECLARE_QUERY(ComptimeStatusRecursive, helios::SymID, CRef<ComptimeStatusResult>, ({}))
 	/**
 	 * @brief Lower a HOUTFunction to a "Pre" MIRFunction.
 	 * It creates MIR function, but does not perform lifetime analysis and or any checks.
 	 * @note Exposed in the interface mostly for tests
 	 */
-	Function lowerToPreMIRFunction(query::Context&, CRef<helios::HOUTFunction> function);
+	DECLARE_QUERY(LowerToPreMIRFunction, helios::SymID, CRef<LowerToMIRFunctionResult>, ({}))
 }
