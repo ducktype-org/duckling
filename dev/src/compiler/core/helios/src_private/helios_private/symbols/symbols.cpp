@@ -130,11 +130,11 @@ namespace compiler::helios {
 
 	ScopeID scope(query::Context& ctx, SymID id) { return getSymRef(id)->getScope(ctx); }
 
-	base::Optional<ScopeID> maybeScope(SymID id) {
+	base::Optional<ScopeID> maybeScope(query::Context& ctx, SymID id) {
 		variant_match(getSymRef(id)->other) {
 			variant_case(PstSymbolData, pst_data) { return pst_data.scope; }
 			variant_case_novalue(builtin::BuiltinFunctionData) { return {}; }
-			variant_case(defgen::GeneratedSymbolData, gen_data) { return gen_data.maybeScope(); }
+			variant_case(defgen::GeneratedSymbolData, gen_data) { return gen_data.maybeScope(ctx); }
 			variant_default { CORE_PANIC("Unhandled symbol kind"); }
 		}
 		CORE_UNREACHABLE();

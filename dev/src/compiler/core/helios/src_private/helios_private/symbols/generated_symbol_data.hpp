@@ -180,7 +180,7 @@ namespace compiler::helios::defgen {
 		base::Bit256                          queryUnstablePerfectHash() const;
 		tsh::SymbolType<>                     getType(query::Context& ctx) const;
 		[[nodiscard]] ScopeID                 getScope(query::Context& ctx) const;
-		[[nodiscard]] base::Optional<ScopeID> maybeScope() const;
+		[[nodiscard]] base::Optional<ScopeID> maybeScope(query::Context& ctx) const;
 
 		/**
 		 * @brief Whether GeneratedSymbolData stores a generated default constructor.

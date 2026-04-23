@@ -63,7 +63,7 @@ namespace compiler::helios {
 	 * Returns empty optional if the symbol doesn't have a scope.
 	 * E.g. builtin functions don't have a scope.
 	 */
-	base::Optional<ScopeID> maybeScope(SymID);
+	base::Optional<ScopeID> maybeScope(query::Context& ctx, SymID);
 
 	/**
 	 * @return PST Stmt element symbol was created from.

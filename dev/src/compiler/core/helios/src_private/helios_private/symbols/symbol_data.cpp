@@ -243,7 +243,7 @@ namespace compiler::helios {
 		}
 
 		[[nodiscard]]
-		base::Optional<ScopeID> GeneratedSymbolData::maybeScope() const {
+		base::Optional<ScopeID> GeneratedSymbolData::maybeScope(query::Context& ctx) const {
 			variant_match(data) {
 				variant_case(ImplicitConstructor, ctor) { return {}; }
 				variant_case(DefaultClassConstructor, ctor) { return {}; }

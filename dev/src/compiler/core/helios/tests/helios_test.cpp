@@ -3082,7 +3082,11 @@ private:
 		// this is quadratic in theory, if it ever get too slow,
 		// we can optimize it with some maps.
 		for (auto symbol: all_symbols) {
-			auto maybe_scope = compiler::helios::maybeScope(symbol);
+			auto maybe_scope = std::any_cast<base::Optional<compiler::helios::ScopeID>>(
+				query::utils::withContextCompute([&](query::Context& ctx) {
+					return compiler::helios::maybeScope(ctx, symbol);
+				})
+			);
 			if (maybe_scope.empty()) continue;
 			auto scope = maybe_scope.value();
 			Ref  symbols_in_scope
