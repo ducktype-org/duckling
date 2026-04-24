@@ -55,7 +55,7 @@ private:
 	}
 
 	void testUnconditionalJumps() {
-		runTestOnVm("jmp_uncond_test.dbc", "10", "");
+		runTestOnVm("jmp_uncond_test.dbc", "10", "6666666666");
 	}
 
 	void testConditionalJumps() {
