@@ -95,7 +95,13 @@ DVMLocal FunctionLoweringContext::forceToLocal(
 	return temp;
 }
 
-void FunctionLoweringContext::storeResult(const DVMPlace& dest_place, const DVMValue& src_value) {
+void FunctionLoweringContext::maybeStoreResult(
+	const base::Optional<DVMPlace>& maybe_dest_place, const DVMValue& src_value
+) {
+	// Do nothing, if the dest_place is empty.
+	if_opt_none(maybe_dest_place) return;
+	const DVMPlace& dest_place = maybe_dest_place.value();
+
 	// If a place is direct we just move the value into it.
 	if (dest_place.isDirect()) {
 		pushInstruction(
@@ -380,58 +386,6 @@ void compiler::backend_vm::internal::FunctionLoweringContext::pushInit(lir::LIRL
 		dvm_local.asAnyArgument(),
 		vm::opargs::Type(typeName(dvm_local.type)),
 	});
-}
-
-FunctionLoweringContext::FunctionCallInfo FunctionLoweringContext::FunctionCallInfo::fromLirFunction(
-	const lir::FunctionLiteral& func_literal, ProgramLoweringContext& program_context
-) {
-	base::Optional<vm::code::TypeOfData> called_result_type = {};
-	if (!func_literal.return_type_layout->is<tsl::EmptyTypeLayout>())
-		called_result_type.emplace(
-			program_context.lowerAndKeepTslType(func_literal.return_type_layout)
-		);
-
-	std::vector<vm::code::TypeOfData> param_types
-		= *func_literal.parameter_layouts | std::views::transform([&](const auto& layout) {
-			  return program_context.lowerAndKeepTslType(layout);
-		  })
-	    | std::ranges::to<std::vector>();
-
-	return FunctionCallInfo{
-		.call_target = DVMFunctionName{ .name = func_literal.mangled_name },
-		.return_type = called_result_type,
-		.param_types = param_types,
-		.is_extern_c = false,
-	};
-}
-
-FunctionLoweringContext::FunctionCallInfo FunctionLoweringContext::FunctionCallInfo::fromExternCFunction(
-	const base::StrID& ext_func_name, ProgramLoweringContext& program_context
-) {
-	const auto& ext_func = program_context.getExternCFunction(ext_func_name);
-
-	CORE_ASSERT(
-		ext_func.signature.result_types.size() <= 1, "functions should return one value at most"
-	);
-	base::Optional<vm::code::TypeOfData> called_result_type = {};
-
-	if (ext_func.signature.result_types.size()) {
-		auto reslt         = ext_func.signature.result_types.at(0);
-		called_result_type = vm::code::getBuiltinTypeByName(reslt).value();
-	}
-
-	std::vector<vm::code::TypeOfData> param_types
-		= ext_func.signature.parameters | std::views::transform([&](const auto& type_name) {
-			  return vm::code::getBuiltinTypeByName(type_name).value();
-		  })
-	    | std::ranges::to<std::vector>();
-
-	return FunctionCallInfo{
-		.call_target = DVMExternCFunctionName{ .name = ext_func_name },
-		.return_type = called_result_type,
-		.param_types = param_types,
-		.is_extern_c = true,
-	};
 }
 
 usize compiler::backend_vm::internal::FunctionLoweringContext::instructionsCount() const {
