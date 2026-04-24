@@ -31,7 +31,7 @@ namespace concurrent {
 		typename HASH_T          = std::hash<KEY_T>,
 		u64 ALLOCATOR_BLOCK_SIZE = 4'096, 
 		u64 SHARD_COUNT          = 129,
-		usize  INITIAL_BUCKETS   = 32>
+		usize  INITIAL_BUCKETS   = 64>
 	class ConHashMap final {
 		using HashMapType = base::StableHashMap<KEY_T, DATA_T, HASH_T, ALLOCATOR_BLOCK_SIZE, INITIAL_BUCKETS>;
 

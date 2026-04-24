@@ -30,7 +30,7 @@ namespace base {
 		typename DATA_T,
 		typename HASH_T          = std::hash<KEY_T>,
 		u64 ALLOCATOR_BLOCK_SIZE = 4'096ul,
-		usize  INITIAL_BUCKETS = 32>
+		usize  INITIAL_BUCKETS = 64>
 	class StableHashMap final {
 	public:
 		/**
@@ -591,7 +591,7 @@ namespace base {
 		/**
 		 * Memory pool allocator for node storage.
 		 */
-		std::array<AllocatorType, INITIAL_BUCKETS> node_allocators;
+		std::array<AllocatorType, 1> node_allocators;
 
 		/**
 		 * Number of elements stored in the map.
