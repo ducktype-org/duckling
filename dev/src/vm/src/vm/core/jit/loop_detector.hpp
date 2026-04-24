@@ -16,6 +16,12 @@ namespace vm::jit::cf {
 	 * @brief Subgraph of a control-flow graph representing a natural loop.
 	 */
 	struct Loop {
+		/**
+		 * @brief Constructs a loop subgraph from the original CFG and member block IDs.
+		 * @param start_block Loop header block ID.
+		 * @param cfg Original control-flow graph.
+		 * @param members Block IDs that are part of the loop.
+		 */
 		Loop(BlockID start_block, const ControlFlowGraph& cfg, std::vector<BlockID> members):
 			  start_block(start_block), loop_cfg(cfg.subgraph(members)) {}
 		BlockID		  start_block;
@@ -33,7 +39,6 @@ namespace vm::jit::cf {
 		 * @brief Detects loops in function CFG via back edges.
 		 * @param cfg Control-flow graph.
 		 * @return Detected loops represented as subgraphs of the CFG.
-		 * @note Current implementation is marked as placeholder in code.
 		 */
 		std::vector<Loop> findLoops(const ControlFlowGraph& cfg) {
 			std::vector<Loop> loops;

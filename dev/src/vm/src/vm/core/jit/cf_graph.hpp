@@ -223,6 +223,12 @@ namespace vm::jit::cf {
 			return blocks[id];
 		}
 
+		/**
+		 * @brief Builds a CFG containing only selected blocks.
+		 * @param block_ids Block ids to keep in the resulting graph.
+		 * @return A remapped CFG subgraph with out-of-subset edges redirected.
+		 * @note Current implementation redirects external edges to a synthetic dummy block.
+		 */
 		[[nodiscard]] ControlFlowGraph subgraph(const std::vector<BlockID>& block_ids) const;
 	};
 }  // vm::jit::cf
