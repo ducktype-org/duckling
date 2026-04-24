@@ -41,7 +41,7 @@ namespace vm::persistent {
 			return MemoryStateID{ u64(state) };
 		}
 
-		MemoryStateID validaState(VectorStateID vec_state) {
+		MemoryStateID validaState(VectorStateID vec_state) const {
 			auto  state = toMemState(vec_state);
 			usize size{};
 			try {
@@ -67,7 +67,7 @@ namespace vm::persistent {
 	public:
 		const VarT& access(VectorStateID state_id, usize idx) const {
 			auto state  = validaState(state_id);
-			auto val_id = Memory::access(state, idx);
+			auto val_id = *Memory::access(state, idx);
 			return held_values.atRight(val_id);
 		}
 
@@ -112,9 +112,9 @@ namespace vm::persistent {
 				CORE_ASSERT(iter.pointsToValid(), "I have a real value underneath");
 				CORE_ASSERT(iter_valid, "I somehow invalidated iterator");
 
-				auto val_id = iter.getValue();
+				auto val_id = *iter.getValue();
 				ans.emplace_back(held_values.atRight(val_id));
-				iter_valid |= iter.moveToValid();
+				iter_valid |= iter.moveToValid(Dir::Right);
 			}
 
 			return ans;

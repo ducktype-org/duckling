@@ -93,6 +93,10 @@ namespace vm::persistent {
 			return getRange(root);
 		}
 
+		Path const getPathTo(MemoryStateID state, usize idx) const {
+			return detail::SegmentTree::getPathTo(fromState(state), idx);
+		}
+
 		constexpr static MemoryStateID EMPTY = MemoryStateID{ u64(detail::SegmentTree::EMPTY) };
 
 		using ConflictPolicy = std::function<base::Optional<usize>(usize, usize, usize)>;

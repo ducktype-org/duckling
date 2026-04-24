@@ -29,11 +29,11 @@ namespace vm::persistent {
 		std::vector<std::pair<usize, usize>> ans = {};
 
 		auto [left_idx, _] = getRange(root);
-		auto path          = getPathTo(root, left_idx);
+		auto path          = getPathTo(state, left_idx);
 
 		do {
 			auto idx = path.idx;
-			auto val = path.getValue();
+			auto val = *path.getValue();
 			ans.emplace_back(idx, val);
 		} while (path.moveToValid(SegmentTree::Dir::Right, 0));
 
@@ -131,13 +131,7 @@ namespace vm::persistent {
 	}
 
 	base::Optional<usize> Memory::access(MemoryStateID state, usize idx) const {
-		auto root = validateInput(state, idx);
-		auto leaf = getPathTo(root, idx).trace.at(0);
-
-		if (leaf)
-			return getValueOfLeaf(leaf);
-		else
-			return std::nullopt;
+		return getPathTo(state, idx).getValue();
 	}
 
 	MemoryStateID Memory::setMultiple(MemoryStateID state, std::deque<std::pair<usize, usize>> vals) {
@@ -184,10 +178,7 @@ namespace vm::persistent {
 	}
 
 	bool Memory::active(MemoryStateID state, usize idx) const {
-		auto root = validateInput(state, idx);
-		auto leaf = getPathTo(root, idx).trace.at(0);
-
-		return leaf != detail::SegmentTree::EMPTY;
+		return getPathTo(state, idx).pointsToValid();
 	}
 
 	Memory::Memory() = default;
@@ -221,9 +212,8 @@ namespace vm::persistent {
 	}
 
 	MemoryIterator::MemoryIterator(const Memory& mem, MemoryStateID state, usize idx) {
-		maybe_path = mem.getPathTo(Memory::fromState(state), idx);
-		if (maybe_path.value().trace.at(0) == detail::SegmentTree::EMPTY)
-			maybe_path = std::nullopt;
+		maybe_path = mem.getPathTo(state, idx);
+		if (maybe_path->pointsToValid()) maybe_path = std::nullopt;
 	}
 
 	MemoryStateView::MemoryStateView(const Memory& mem, MemoryStateID id): id{ id }, mem{ mem } {}
