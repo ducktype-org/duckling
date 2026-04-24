@@ -229,7 +229,7 @@ namespace vm::persistent::detail {
 			for (auto el: after) ans.emplace_back(el);
 		}
 
-		return {idx, ans};
+		return { idx, ans };
 	}
 
 	std::deque<std::pair<usize, NodeID>> SegmentTree::SurroundingNeigh::beforeNode(
@@ -595,17 +595,17 @@ namespace vm::persistent::detail {
 			(left_idx & LEAF_MASK) == 0 && ((right_idx - 1) & LEAF_MASK) == 0,
 			"idxs must be small enough"
 		);
-		auto left_pos = left_idx, right_pos = (right_idx - 1);
+		auto range_nodes = getPosInRange(left_idx, right_idx);
 
 		if (root) {
 			auto [offset, height] = self.getHeightOffset(root);
 
-			left_pos  = std::min(left_pos, offset);
-			right_pos = std::max(right_pos, (offset + (1 << height) - 1));
+			left_idx = std::min(left_idx, offset);
+			right_idx = std::max(right_idx, offset + (1 << height));
 		}
 
-		left_pos |= LEAF_MASK;
-		right_pos |= LEAF_MASK;
+		usize left_pos  = left_idx | LEAF_MASK;
+		usize right_pos = (right_idx - 1) | LEAF_MASK;
 
 		auto lca_pos = getLCAPos(left_pos, right_pos);
 
@@ -620,7 +620,6 @@ namespace vm::persistent::detail {
 		neigh.moveNodeTo(self.getPos(root));
 		neigh.node = root;
 
-		auto range_nodes = getPosInRange(left_idx, right_idx);
 		CORE_ASSERT(range_nodes.size(), "when range non-empty, there must be some nodes");
 
 		usize first_height = heightFromPos(range_nodes.front());

@@ -34,13 +34,14 @@ namespace vm::persistent::detail {
 	class SegmentTree {
 	public:
 		constexpr static auto  EMPTY   = NodeID{ 0 };
-		constexpr static usize IDX_END = 1UL << 63;
+		constexpr static usize IDX_END = usize(1) << 63;
 
 		enum class Dir { Left, Right };
 
 	private:
-		constexpr static usize ROOT_MASK = (usize(-1) >> 1);
-		constexpr static usize LEAF_MASK = 1UL << 63;
+		constexpr static usize OFFSET_MASK = (usize(-1) >> 1);
+		constexpr static usize LEAF_MASK   = usize(1) << 63;
+		constexpr static usize TOP_BIT     = usize(1) << 63;
 
 		struct ChildEntry {
 			NodeID left_child;
@@ -78,7 +79,7 @@ namespace vm::persistent::detail {
 		static constexpr usize heightFromPos(usize pos) { return usize(64 - std::bit_width(pos)); }
 
 		static constexpr usize offsetFromPos(usize pos) {
-			return (pos << heightFromPos(pos)) & ROOT_MASK;
+			return (pos << heightFromPos(pos)) & OFFSET_MASK;
 		}
 
 		static constexpr usize getLCAHeight(usize pos_1, usize pos_2) {
@@ -100,34 +101,29 @@ namespace vm::persistent::detail {
 		}
 
 		/**
-		 * @brief Get the nodes for range [l, r]
+		 * @brief Get the nodes for range [l, r)
 		 */
 		static constexpr std::deque<usize> getPosInRange(usize left_idx, usize right_idx) {
-			CORE_ASSERT(left_idx <= right_idx, "Received wrong interval");
-			CORE_ASSERT(
-				(left_idx & LEAF_MASK) == 0 && (right_idx & LEAF_MASK) == 0, "leaf bit must be off"
-			);
+			CORE_ASSERT(left_idx < right_idx, "Received wrong interval");
+			CORE_ASSERT(right_idx <= IDX_END, "Expecting a valid interval");
 
-			left_idx |= LEAF_MASK;
-			right_idx |= LEAF_MASK;
+			std::deque<usize> ans = {};
 
-			std::deque<usize> left_ans = {}, right_ans = {}, ans = {};
+			auto right_guard = right_idx & OFFSET_MASK;  // to handle right_idx == IDX_END
 
 			while (left_idx < right_idx) {
-				if (left_idx % 2 == 1) {
-					left_ans.push_back(left_idx);
-					left_idx++;
-				}
-				if (right_idx % 2 == 1) {
-					right_idx--;
-					right_ans.push_front(right_idx);
-				}
-				left_idx /= 2;
-				right_idx /= 2;
-			}
+				auto left_guard = left_idx | TOP_BIT;
 
-			ans.insert(ans.end(), left_ans.begin(), left_ans.end());
-			ans.insert(ans.end(), right_ans.begin(), right_ans.end());
+				// max_height == height of lsb or 64 when left_idx == 0
+				auto max_height     = (usize) std::bit_width(left_guard & (-left_guard));
+				auto height_of_diff = (usize) std::bit_width(left_idx ^ right_guard);
+
+				usize final_height = std::min(height_of_diff, max_height) - 1;
+
+				usize pos = (left_idx >> final_height) | (1 << (63 - final_height));
+				ans.emplace_back(pos);
+				left_idx += (1 << final_height);
+			}
 
 			return ans;
 		}
