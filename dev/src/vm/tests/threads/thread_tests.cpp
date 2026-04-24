@@ -37,6 +37,7 @@ private:
 		runTestOnVm("cv_simple_barrier_all_test.dbc", "", "22020201", {});
 		runTestOnVm("producer_consumer.dbc", "", "20000200000221", {});
 	}
+
 };
 
 TESTER_COMMON_MAIN("/src/vm/tests/threads/");

@@ -1,3 +1,5 @@
+#pragma once
+
 #include <llvm_helpers/llvm_helpers.hpp>
 
 LLVM_INCLUDE_BEGIN()

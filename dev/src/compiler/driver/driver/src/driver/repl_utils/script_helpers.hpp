@@ -6,19 +6,19 @@
 
 namespace compiler::repl {
 	/**
-	 * @brief Build a stable synthetic LLVM module ID for a script file.
+	 * @brief Build a stable synthetic module ID for a script file.
 	 *
-	 * The id is derived from script-file path hash and is used to name generated
+	 * The id is derived from the script-file path hash and is used to name generated
 	 * artifacts and keep naming deterministic across runs.
 	 */
-	base::StrID getLLVMScriptModuleID(const fs::File& script_file);
+	base::StrID getScriptModuleID(const fs::File& script_file);
 
 	/**
 	 * @brief Append all functions and globals from one LIR module chunk into another.
 	 *
-	 * Script LLVM compilation lowers each statement into a chunk and then merges those
+	 * Script compilation lowers each statement into a chunk and then merges those
 	 * chunks into a single synthetic module. This helper performs that merge step.
 	 */
-	void appendLLVMLIRModuleData(driver::LIRModuleData& merged, const driver::LIRModuleData& chunk);
+	void appendScriptLIRModuleData(driver::LIRModuleData& merged, const driver::LIRModuleData& chunk);
 
 }  // namespace compiler::repl

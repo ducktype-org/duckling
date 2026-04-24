@@ -85,6 +85,13 @@ function(duck_add_test_custom test_pack test_name test_source)
 
 	set_target_properties(${test_name} PROPERTIES EXCLUDE_FROM_ALL true)
 	add_to_coverage(${test_name})
+
+	if(JIT_ENABLED)
+		string(FIND "${test_set}" "vm_tc" vm_tc_pos)
+		if (vm_tc_pos EQUAL 0)
+            set_property(TEST ${test_name} PROPERTY DISABLED TRUE)
+		endif()
+	endif()
 endfunction()
 
 function(duck_add_test test_pack test_base_name test_user_source)

@@ -9,7 +9,7 @@ Tests:
         Input:
           File: "basic_declarations/basic_declarations.rtf"
         Output: 
-          String : "@{begining}\n=> 7\n@{end}"
+          String : "@{beginning}\n=> 7\n@{end}"
 
   nested_calls:
     Cases:
@@ -17,9 +17,9 @@ Tests:
         Input:
           File: "interactions/nested_calls.rtf"
         Output:
-          String: "@{begining}\n=> 42\n@{end}"
+          String: "@{beginning}\n=> 42\n@{end}"
       # resilience:
       #   Input:
       #     File: "interactions/resilience.rtf"
       #   Output:
-      #     String: "@{begining}\nduckling> => 4\nduckling> duckling> => 4\n@{end}"
+      #     String: "@{beginning}\nduckling> => 4\nduckling> duckling> => 4\n@{end}"

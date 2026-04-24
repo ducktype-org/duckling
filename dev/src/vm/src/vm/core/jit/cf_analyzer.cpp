@@ -1,3 +1,7 @@
+/**
+ * @file cf_analyzer.cpp
+ * @brief Implementation of basic-block boundary analysis.
+ */
 #include "cf_analyzer.hpp"
 
 #include <vm/bytecode/instructions.hpp>
@@ -9,6 +13,11 @@
 using namespace vm::code::instructions;
 
 namespace vm::jit::cf {
+	/**
+	 * @brief Computes start offsets of all basic blocks in lowered bytecode.
+	 * @param function Lowered function to analyze.
+	 * @return Sorted offsets where each basic block begins.
+	 */
 	std::vector<usize> ControlFlowAnalyzer::basicBlockBeginnings(const low::LowFuncData& function) {
 		std::vector<usize> block_beginnings = { 0 };  // First block always starts at position 0
 
