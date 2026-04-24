@@ -161,7 +161,7 @@ namespace compiler::backend_vm::internal {
 		/// Special operations ///
 		case ZeroInitialize:
 			// Data in DVM is zeroinitialized by default, so this is a NoOp.
-			return NoOpOperation{};
+			return NoOperation{};
 		case Cast: {
 			CORE_ASSERT(
 				instr.arguments.size() == 1,

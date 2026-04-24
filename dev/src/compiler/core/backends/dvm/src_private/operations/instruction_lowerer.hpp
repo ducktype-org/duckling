@@ -16,7 +16,7 @@ namespace compiler::backend_vm::internal {
 	public:
 		explicit InstructionLowerer(Ref<FunctionLoweringContext> ctx): ctx(ctx) {}
 
-		void lower(const NoOpOperation&) {}
+		void lower(const NoOperation&) {}
 
 		void lower(const UnaryOperation& op);
 		void lower(const BinaryOperation& op);

@@ -46,7 +46,7 @@ namespace compiler::backend_vm::internal {
 	/**
 	 * @brief Represents a DVM operation which is a NoOp and is skipped in bytecode lowering.
 	 */
-	struct NoOpOperation {};
+	struct NoOperation {};
 
 	/**
 	 * @brief Represents a unary DVM operation.
@@ -158,7 +158,7 @@ namespace compiler::backend_vm::internal {
 	 * It works purely in the DVM world working on DVMValues, DVMPlace etc.
 	 */
 	using DVMOperation = std::variant<
-		NoOpOperation,
+		NoOperation,
 		UnaryOperation,
 		BinaryOperation,
 		MoveOperation,

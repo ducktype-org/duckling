@@ -11,7 +11,7 @@ namespace compiler::backend_vm::internal {
 			ctx->pushInstruction({ OpKind::ref, addr_temp.asArgument(), op.src.asAnyArgument() });
 		} else {
 			// Otherwise, if the resolved source is accessed through a pointer
-			// (AccessKind::Pointer), than we have the address in hand. We just move it.
+			// (AccessKind::Pointer), then we have the address in hand. We just move it.
 			ctx->pushInstruction({ OpKind::mov, addr_temp.asArgument(), op.src.asArgument() });
 		}
 		ctx->storeResult(op.dest, { addr_temp, DVMPlace::AccessKind::Direct });

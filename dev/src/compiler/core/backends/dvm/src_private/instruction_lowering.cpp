@@ -18,18 +18,16 @@ using namespace compiler;
 using namespace vm::code::builders;
 
 void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instruction) {
-	// Schedule cleaning of all temporaries created by `pushTempLocal` while lowering this instruction.
-	defer(cleanUpRegisteredTemps());
-
 	if_opt_some(fun_di_builder_opt, builder) {
 		if_opt_some(lir_instruction.metadata.position, pos) {
 			builder.addInstruction(instructionsCount(), mapDIPosition(pos));
 		}
 	}
 
-	DVMOperation       dvm_operation = lirInstrToDVMOperation(*this, lir_instruction);
-	InstructionLowerer lowerer{ this };
-	VISIT(dvm_operation, op, lowerer.lower(op));
+	DVMOperation dvm_operation = lirInstrToDVMOperation(*this, lir_instruction);
+	VISIT(dvm_operation, op, InstructionLowerer(this).lower(op));
+	// Clean all of the temporaries created by `pushTempLocal` while lowering this instruction.
+	cleanUpRegisteredTemps();
 }
 
 void FunctionLoweringContext::pushTerminator(const lir::Instruction& lir_terminator) {
@@ -43,9 +41,8 @@ void FunctionLoweringContext::pushTerminator(const lir::Instruction& lir_termina
 		}
 	}
 
-	DVMOperation       dvm_operation = lirInstrToDVMOperation(*this, lir_terminator);
-	InstructionLowerer lowerer{ this };
-	VISIT(dvm_operation, op, lowerer.lower(op));
+	DVMOperation dvm_operation = lirInstrToDVMOperation(*this, lir_terminator);
+	VISIT(dvm_operation, op, InstructionLowerer(this).lower(op));
 }
 
 DVMLocal compiler::backend_vm::internal::FunctionLoweringContext::pushTempLocal(
