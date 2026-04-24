@@ -24,6 +24,10 @@ compile_llvm_backend_deterministically_cmd: "if [ '@{enable_conc_deterministic_t
 compile_dvm_backend_cmd:  "@{compile_dvm_backend_deterministically_cmd} && @{duckc_path} compile_package duck_modules/@{Name} -w @{duckc_worker_count} -a build -n package_@{Name} @{compile_dvm_options} --dvm-backend"
 compile_llvm_backend_cmd: "@{compile_llvm_backend_deterministically_cmd} && @{duckc_path} compile_package duck_modules/@{Name} -w @{duckc_worker_count} -a build -n package_@{Name} @{compile_llvm_options}"
 
+# "compile only" commands used by the all backend (determinism checks run separately before these).
+compile_dvm_only_cmd: "@{duckc_path} compile_package duck_modules/@{Name} -w @{duckc_worker_count} -a build -n package_@{Name} @{compile_dvm_options} --dvm-backend"
+compile_llvm_only_cmd: "@{duckc_path} compile_package duck_modules/@{Name} -w @{duckc_worker_count} -a build -n package_@{Name} @{compile_llvm_options}"
+
 compiled_to_llvm: "./build/package_llvm.exe"
 compiled_to_dvm: "./build/query/query*/*.dbc" # ??
 
@@ -33,11 +37,12 @@ PreNode: ""
 Clean: "@{clean_cmd}"
 PreCase: "@{clean_cmd} && mkdir build;
   case '@{backend}' in
-    dvm)       @{compile_dvm_backend_cmd}                                    ;;
-    llvm)      @{compile_llvm_backend_cmd}                                   ;;
-    all)       @{compile_dvm_backend_cmd} && @{compile_llvm_backend_cmd}    ;;
-    nobackend) echo 'Backend undefined'; exit 1                              ;;
-    *)         echo 'Unknown backend';   exit 1                              ;;
+    dvm)       @{compile_dvm_backend_cmd}                                                                                ;;
+    llvm)      @{compile_llvm_backend_cmd}                                                                               ;;
+    all)       @{compile_dvm_backend_deterministically_cmd} && @{compile_llvm_backend_deterministically_cmd} &&
+               @{compile_dvm_only_cmd} && @{compile_llvm_only_cmd}                                                      ;;
+    nobackend) echo 'Backend undefined'; exit 1                                                                          ;;
+    *)         echo 'Unknown backend';   exit 1                                                                          ;;
   esac;"
 
 Run: "
@@ -52,18 +57,24 @@ Run: "
       ;;
     all)
       _tmpdir=$(mktemp -d) || { echo 'Failed to create temp dir' >&2; exit 1; };
-      @{compiled_to_llvm} > \"$_tmpdir/llvm.out\"; _llvm_exit=$?;
-      @{dvm_path} run @{compiled_to_dvm} > \"$_tmpdir/dvm.out\"; _dvm_exit=$?;
+      @{compiled_to_llvm} > \"$_tmpdir/llvm.out\" 2> \"$_tmpdir/llvm.err\"; _llvm_exit=$?;
+      @{dvm_path} run @{compiled_to_dvm} > \"$_tmpdir/dvm.out\" 2> \"$_tmpdir/dvm.err\"; _dvm_exit=$?;
       if [ \"$_llvm_exit\" != \"$_dvm_exit\" ]; then
         printf 'Exit codes differ! LLVM: %d, DVM: %d\n' \"$_llvm_exit\" \"$_dvm_exit\" >&2;
         rm -rf \"$_tmpdir\"; exit 1;
       fi;
       if ! diff -q \"$_tmpdir/llvm.out\" \"$_tmpdir/dvm.out\" > /dev/null; then
-        printf 'Outputs differ!\nLLVM output (first 50 lines):\n' >&2; head -n 50 \"$_tmpdir/llvm.out\" >&2;
-        printf 'DVM output (first 50 lines):\n' >&2; head -n 50 \"$_tmpdir/dvm.out\" >&2;
+        printf 'Stdouts differ!\nLLVM stdout (first 50 lines):\n' >&2; head -n 50 \"$_tmpdir/llvm.out\" >&2;
+        printf 'DVM stdout (first 50 lines):\n' >&2; head -n 50 \"$_tmpdir/dvm.out\" >&2;
+        rm -rf \"$_tmpdir\"; exit 1;
+      fi;
+      if ! diff -q \"$_tmpdir/llvm.err\" \"$_tmpdir/dvm.err\" > /dev/null; then
+        printf 'Stderrs differ!\nLLVM stderr (first 50 lines):\n' >&2; head -n 50 \"$_tmpdir/llvm.err\" >&2;
+        printf 'DVM stderr (first 50 lines):\n' >&2; head -n 50 \"$_tmpdir/dvm.err\" >&2;
         rm -rf \"$_tmpdir\"; exit 1;
       fi;
       cat \"$_tmpdir/llvm.out\";
+      cat \"$_tmpdir/llvm.err\" >&2;
       rm -rf \"$_tmpdir\";
       exit $_llvm_exit;
       ;;
