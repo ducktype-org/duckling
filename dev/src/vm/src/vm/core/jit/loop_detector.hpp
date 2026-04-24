@@ -16,10 +16,9 @@ namespace vm::jit::cf {
 	 * @brief Subgraph of a control-flow graph representing a natural loop.
 	 */
 	struct Loop {
-		Loop(BlockID start_block, BlockID end_block, ControlFlowGraph cfg, std::vector<BlockID> members):
-			  start_block(start_block), end_block(end_block), loop_cfg(cfg.subgraph(members)) {}
+		Loop(BlockID start_block, const ControlFlowGraph& cfg, std::vector<BlockID> members):
+			  start_block(start_block), loop_cfg(cfg.subgraph(members)) {}
 		BlockID		  start_block;
-		BlockID 		end_block;
 		ControlFlowGraph loop_cfg;
 	};
 
@@ -33,7 +32,7 @@ namespace vm::jit::cf {
 		/**
 		 * @brief Detects loops in function CFG via back edges.
 		 * @param cfg Control-flow graph.
-		 * @return Detected loops represented as instruction ranges.
+		 * @return Detected loops represented as subgraphs of the CFG.
 		 * @note Current implementation is marked as placeholder in code.
 		 */
 		std::vector<Loop> findLoops(const ControlFlowGraph& cfg) {
@@ -48,28 +47,33 @@ namespace vm::jit::cf {
 			usize stack_ptr;
 
 			for (BlockID bid = 0; bid < cfg.size(); ++bid) {
+				stack.clear();
+				stack_ptr = 0;
+				++timestamp;
+
 				for (BlockID pred: predecessors[bid]) {
-					if (!isDominatedBy(pred, bid))
+					if (isDominatedBy(pred, bid)) {
+						last_visited[pred] = timestamp;
+						stack.push_back(pred);
+					}
+				}
+
+				while (stack_ptr < stack.size()) {
+					BlockID current = stack[stack_ptr++];
+					if (current == bid)
 						continue;
 
-					last_visited[bid] = ++timestamp;
-					stack = { bid };
-					stack_ptr = 1;
-					while (stack_ptr < stack.size()) {
-						BlockID current = stack[stack_ptr++];
-						if (current == pred)
-							continue; // This is a stop condition, because pred dominates bid
-
-						for (usize i = 0; i < predecessors[current].size(); ++i) {
-							BlockID next = predecessors[current][i];
-							if (last_visited[next] < bid) {
-								stack.push_back(next);
-								last_visited[next] = timestamp;
-							}
+					for (usize i = 0; i < predecessors[current].size(); ++i) {
+						BlockID next = predecessors[current][i];
+						if (last_visited[next] < timestamp) {
+							stack.push_back(next);
+							last_visited[next] = timestamp;
 						}
 					}
-					loops.emplace_back(pred, bid, cfg, std::move(stack));
 				}
+
+				if (!stack.empty())
+					loops.emplace_back(bid, cfg, std::move(stack));
 			}
 
 			return loops;
@@ -115,6 +119,8 @@ namespace vm::jit::cf {
 		 */
 		void calcPostorder(const ControlFlowGraph& cfg) {
 			visited.assign(cfg.size(), false);
+			postorder.assign(cfg.size(), 0);
+			inv_postorder_map.assign(cfg.size(), 0);
 			u32 ctr = 0;
 			postorderDfs(cfg, 0, ctr);  // Start DFS from the entry block
 		}
@@ -152,6 +158,8 @@ namespace vm::jit::cf {
 		/**
 		 * @brief Computes immediate dominator for each reachable block.
 		 * @param cfg Control-flow graph.
+		 * @note Assumes the only block without a predecessor is the entry block (id 0)
+		 * 		 and that every other block is reachable from it.
 		 */
 		void calcImmediateDominators(const ControlFlowGraph& cfg) {
 			imm_dom.assign(cfg.size(), undefined);
@@ -163,6 +171,7 @@ namespace vm::jit::cf {
 				changed = false;
 				for (usize i = cfg.size() - 1; i > 0; --i) {
 					BlockID b        = inv_postorder_map[i];
+					CORE_ASSERT(!predecessors[b].empty(), "All blocks except entry should have predecessors");
 					BlockID new_idom = predecessors[b][0];
 
 					for (usize j = 1; j < predecessors[b].size(); ++j) {
