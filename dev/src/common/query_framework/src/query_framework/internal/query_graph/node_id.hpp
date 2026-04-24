@@ -49,6 +49,6 @@ struct std::hash<query::internal::NodeID> final {
 		auto r = key.hash.val;
 
 		// This is questionable
-		return l.asInt() * 9'223'372'036'854'775'783UL + std::hash<base::Bit256>{}(r);
+		return l.asInt() * 9'223'372'036'854'775'783UL + std::hash<base::Bit256>{}(r) * 1'000'000'007UL;
 	}
 };
