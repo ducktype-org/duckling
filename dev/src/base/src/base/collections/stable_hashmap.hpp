@@ -30,7 +30,7 @@ namespace base {
 		typename DATA_T,
 		typename HASH_T          = std::hash<KEY_T>,
 		u64 ALLOCATOR_BLOCK_SIZE = 4'096ul,
-		usize  INITIAL_BUCKETS = 64>
+		usize  INITIAL_BUCKETS = 32>
 	class StableHashMap final {
 	public:
 		/**
