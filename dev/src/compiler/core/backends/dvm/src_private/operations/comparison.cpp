@@ -127,6 +127,6 @@ namespace compiler::backend_vm::internal {
 			return { tmp_res, DVMPlace::AccessKind::Direct };
 		}();
 
-		ctx->storeResult(op.dest, result_val);
+		ctx->maybeStoreResult(op.dest, result_val);
 	}
 }

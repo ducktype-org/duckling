@@ -91,7 +91,9 @@ namespace compiler::backend_vm::internal {
 		 * Depending on the place type, performs a `mov_X_X` or a `store_X_X`. Loads immediates to
 		 * temporaries if needed.
 		 */
-		void storeResult(const base::Optional<DVMPlace>& maybe_dest_place, const DVMValue& src_value);
+		void maybeStoreResult(
+			const base::Optional<DVMPlace>& maybe_dest_place, const DVMValue& src_value
+		);
 
 		void pushInstruction(const vm::code::Instruction& instruction);
 

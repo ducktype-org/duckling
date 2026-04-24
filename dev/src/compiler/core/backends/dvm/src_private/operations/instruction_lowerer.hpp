@@ -21,7 +21,10 @@ namespace compiler::backend_vm::internal {
 		void lower(const UnaryOperation& op);
 		void lower(const BinaryOperation& op);
 		void lower(const MoveOperation& op);
+
+		// This is non-const on purpose. We use a `std::swap` trick in the implementation.
 		void lower(ComparisonOperation& op);
+
 		void lower(const CallOperation& op);
 		void lower(const AddressOfOperation& op);
 		void lower(const CastOperation& op);

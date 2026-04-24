@@ -14,6 +14,6 @@ namespace compiler::backend_vm::internal {
 			// (AccessKind::Pointer), then we have the address in hand. We just move it.
 			ctx->pushInstruction({ OpKind::mov, addr_temp.asArgument(), op.src.asArgument() });
 		}
-		ctx->storeResult(op.dest, { addr_temp, DVMPlace::AccessKind::Direct });
+		ctx->maybeStoreResult(op.dest, { addr_temp, DVMPlace::AccessKind::Direct });
 	}
 }

@@ -95,7 +95,7 @@ DVMLocal FunctionLoweringContext::forceToLocal(
 	return temp;
 }
 
-void FunctionLoweringContext::storeResult(
+void FunctionLoweringContext::maybeStoreResult(
 	const base::Optional<DVMPlace>& maybe_dest_place, const DVMValue& src_value
 ) {
 	// Do nothing, if the dest_place is empty.

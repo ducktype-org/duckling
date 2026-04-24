@@ -110,7 +110,7 @@ namespace compiler::backend_vm::internal {
 			DVMLocal dst_temp = ctx->pushTempLocal(target_type, "cast_dst_tmp");
 
 			ctx->pushInstruction({ operation, dst_temp, src_arg });
-			ctx->storeResult(op.dest, { dst_temp, DVMPlace::AccessKind::Direct });
+			ctx->maybeStoreResult(op.dest, { dst_temp, DVMPlace::AccessKind::Direct });
 		}
 	}
 }

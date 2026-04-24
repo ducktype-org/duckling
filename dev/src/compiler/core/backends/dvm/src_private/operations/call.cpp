@@ -36,7 +36,9 @@ namespace compiler::backend_vm::internal {
 			CORE_ASSERT(
 				call_result_storage.has_value(), "Call with destination must have a return value"
 			);
-			ctx->storeResult(op.dest, { call_result_storage.value(), DVMPlace::AccessKind::Direct });
+			ctx->maybeStoreResult(
+				op.dest, { call_result_storage.value(), DVMPlace::AccessKind::Direct }
+			);
 		}
 	}
 }
