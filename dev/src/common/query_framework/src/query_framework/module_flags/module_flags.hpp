@@ -5,7 +5,7 @@ namespace query {
 	 * Whether the query statistics collection is enabled or not.
 	 * This is a compile-time constant for performance reasons.
 	 */
-	constexpr bool USE_STATS = true;
+	constexpr bool USE_STATS = false;
 
 	/**
 	 * @brief This flag is used to track the reverse graph of dependencies in the QueryGraph.
