@@ -11,7 +11,7 @@ Tests:
         backend: llvm
         Output:
           String: "9\n9\n9\n18\n4\n2\n"
-  single-comparison: # Any type of comparison between two values.
+  single_comparison: # Any type of comparison between two values.
     Cases:
       dvm:
         backend: dvm

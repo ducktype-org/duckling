@@ -61,12 +61,11 @@ Tests:
         Output:
           String: "177\n"
         ExitCode: 0
-      # @TODO: #2476 Enable DVM case.
-      # dvm:
-      #   backend: dvm
-      #   Output:
-      #     String: "177\n"
-      #   ExitCode: 0
+      dvm:
+        backend: dvm
+        Output:
+          String: "177\n"
+        ExitCode: 0
 
   expand_comp_time:
     Cases:
