@@ -2,12 +2,13 @@
 
 #include <base/extend_cpp/strongly_typed_int.hpp>
 
-#include <vm/utils/persistent/tree.hpp>
 #include <vm/utils/bijective_map.hpp>
+#include <vm/utils/persistent/tree.hpp>
 
 #include <deque>
 #include <functional>
 #include <optional>
+#include <stdexcept>
 #include <tuple>
 #include <vector>
 
@@ -32,14 +33,58 @@ namespace vm::persistent {
 		friend MemoryIterator;
 
 		using Path = detail::SegmentTree::Path;
+		using ID   = detail::NodeID;
 
-		constexpr static MemoryStateID toState(detail::NodeID node) {
-			return MemoryStateID{ u64(node) };
+		constexpr static MemoryStateID toState(ID node) { return MemoryStateID{ u64(node) }; }
+
+		constexpr static ID fromState(MemoryStateID state) { return ID{ u64(state) }; }
+
+		constexpr static void validateIdx(usize idx) {
+			if (idx >= detail::SegmentTree::IDX_END) throw std::invalid_argument("got too big idx");
 		}
 
-		constexpr static detail::NodeID fromState(MemoryStateID state) {
-			return detail::NodeID{ u64(state) };
+		ID validateInput(MemoryStateID state) const {
+			auto root = fromState(state);
+			validateRoot(root);
+
+			return root;
 		}
+
+		ID validateInput(MemoryStateID state, const std::deque<usize>& idxs) const {
+			auto root = fromState(state);
+			validateRoot(root);
+
+			for (auto idx: idxs) validateIdx(idx);
+			for (usize i = 1; i < idxs.size(); i++) {
+				CORE_ASSERT(idxs[i] > idxs[i - 1], "idxs must be ordered");
+				if (idxs[i] == idxs[i - 1]) throw std::invalid_argument("repeating idx error");
+			}
+
+			return root;
+		}
+
+		ID validateInput(MemoryStateID state, usize idx) const {
+			auto root = fromState(state);
+			validateRoot(root);
+			validateIdx(idx);
+			return root;
+		}
+
+		std::pair<ID, ID> validateInput(MemoryStateID state_1, MemoryStateID state_2) const {
+			auto root_1 = validateInput(state_1);
+			auto root_2 = validateInput(state_2);
+			return { root_1, root_2 };
+		}
+
+		ID validateInput(MemoryStateID state, usize r, usize l) const {
+			auto root = fromState(state);
+			validateRoot(root);
+			if (l >= r) throw std::invalid_argument("left bound is bigger or equal to right bound");
+			if (r > IDX_END) throw std::invalid_argument("right bound is too big");
+
+			return root;
+		}
+
 
 	public:
 		constexpr static MemoryStateID EMPTY = MemoryStateID{ u64(detail::SegmentTree::EMPTY) };

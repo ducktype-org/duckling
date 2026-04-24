@@ -22,8 +22,7 @@
 namespace vm::persistent {
 
 	std::vector<std::pair<usize, usize>> Memory::toVec(MemoryStateID state) const {
-		auto root = detail::NodeID{ u64(state) };
-		validateRoot(root);
+		auto root = validateInput(state);
 
 		if (root == SegmentTree::EMPTY) return {};
 
@@ -42,22 +41,19 @@ namespace vm::persistent {
 	}
 
 	Memory::diffResT Memory::getDiff(MemoryStateID state_1, MemoryStateID state_2) const {
-		auto root_1 = fromState(state_1), root_2 = fromState(state_2);
+		auto [root_1, root_2] = validateInput(state_1, state_2);
 
-		using ID     = detail::NodeID;
 		using helper = std::function<void(ID, usize)>;
 
 		std::vector<std::tuple<usize, base::Optional<usize>, base::Optional<usize>>> ans = {};
 
 		helper add_left = [&, mem = this](ID node, usize) {
 			auto vec = mem->toVec(toState(node));
-
 			for (auto [idx, val]: vec) ans.emplace_back(idx, val, std::nullopt);
 		};
 
 		helper add_right = [&, mem = this](ID node, usize) {
 			auto vec = mem->toVec(toState(node));
-
 			for (auto [idx, val]: vec) ans.emplace_back(idx, std::nullopt, val);
 		};
 
@@ -77,10 +73,7 @@ namespace vm::persistent {
 	}
 
 	MemoryStateID Memory::merge(MemoryStateID state_1, MemoryStateID state_2, ConflictPolicy policy) {
-		auto root_1 = fromState(state_1), root_2 = fromState(state_2);
-
-		using ID     = detail::NodeID;
-		using helper = std::function<void(ID, usize)>;
+		auto [root_1, root_2] = validateInput(state_1, state_2);
 
 		std::vector<std::tuple<usize, base::Optional<usize>, base::Optional<usize>>> ans = {};
 
@@ -105,11 +98,11 @@ namespace vm::persistent {
 		return toState(new_root);
 	}
 
-	MemoryStateID Memory::slice(MemoryStateID root, usize left_idx, usize right_idx) {
-		using ID = detail::NodeID;
+	MemoryStateID Memory::slice(MemoryStateID state, usize left_idx, usize right_idx) {
+		auto root = validateInput(state, left_idx, right_idx);
 
 		auto new_root = detail::SegmentTree::rebuildWithRange(
-			fromState(root),
+			root,
 			left_idx,
 			right_idx,
 			RangeBuilder<ID>{
@@ -121,11 +114,11 @@ namespace vm::persistent {
 		return toState(new_root);
 	}
 
-	MemoryStateID Memory::eraseRange(MemoryStateID root, usize left_idx, usize right_idx) {
-		using ID = detail::NodeID;
+	MemoryStateID Memory::eraseRange(MemoryStateID state, usize left_idx, usize right_idx) {
+		auto root = validateInput(state, left_idx, right_idx);
 
 		auto new_root = detail::SegmentTree::rebuildWithRange(
-			fromState(root),
+			root,
 			left_idx,
 			right_idx,
 			RangeBuilder<ID>{
@@ -138,17 +131,21 @@ namespace vm::persistent {
 	}
 
 	base::Optional<usize> Memory::access(MemoryStateID state, usize idx) const {
-		auto root = fromState(state);
+		auto root = validateInput(state, idx);
 		auto leaf = getPathTo(root, idx).trace.at(0);
 
-		return getValue(leaf);
+		if (leaf)
+			return getValue(leaf);
+		else
+			return std::nullopt;
 	}
 
 	MemoryStateID Memory::setMultiple(MemoryStateID state, std::deque<std::pair<usize, usize>> vals) {
-		auto root = fromState(state);
 		std::ranges::sort(vals);
 		using namespace std::views;
 		auto idxs = vals | keys | std::ranges::to<std::deque>;
+
+		auto root = validateInput(state, idxs);
 
 		auto new_root = detail::SegmentTree::reconstructIdxs(
 			root, idxs, [&](usize cur_idx, base::Optional<usize>) {
@@ -163,8 +160,8 @@ namespace vm::persistent {
 	}
 
 	MemoryStateID Memory::eraseMultiple(MemoryStateID state, std::deque<usize> idxs) {
-		auto root = fromState(state);
 		std::ranges::sort(idxs);
+		auto root = validateInput(state, idxs);
 
 		auto new_root = detail::SegmentTree::reconstructIdxs(
 			root, idxs, [&](usize, base::Optional<usize>) { return detail::SegmentTree::EMPTY; }
@@ -187,7 +184,7 @@ namespace vm::persistent {
 	}
 
 	bool Memory::active(MemoryStateID state, usize idx) const {
-		auto root = fromState(state);
+		auto root = validateInput(state, idx);
 		auto leaf = getPathTo(root, idx).trace.at(0);
 
 		return leaf != detail::SegmentTree::EMPTY;
@@ -223,8 +220,11 @@ namespace vm::persistent {
 		return copy;
 	}
 
-	MemoryIterator::MemoryIterator(const Memory& mem, MemoryStateID state, usize idx):
-		  maybe_path(mem.getPathTo(Memory::fromState(state), idx)) {}
+	MemoryIterator::MemoryIterator(const Memory& mem, MemoryStateID state, usize idx) {
+		maybe_path = mem.getPathTo(Memory::fromState(state), idx);
+		if (maybe_path.value().trace.at(0) == detail::SegmentTree::EMPTY)
+			maybe_path = std::nullopt;
+	}
 
 	MemoryStateView::MemoryStateView(const Memory& mem, MemoryStateID id): id{ id }, mem{ mem } {}
 
