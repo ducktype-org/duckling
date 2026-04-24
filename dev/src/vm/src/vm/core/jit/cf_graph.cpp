@@ -47,17 +47,32 @@ namespace vm::jit::cf {
 
 			switch (last_opcode) {
 			case low::MicroOpcode::jmp_label: {
-				usize target_block_idx = instr_to_block(block.end + last_instr.arg0);
+				const usize jump_target = jumpTarget(block.end, last_instr.arg0);
+				CORE_ASSERT(
+					jump_target < function.bc.size(),
+					"Jump target points past last instruction"
+				);
+				usize target_block_idx = instr_to_block(jump_target);
 				blocks[block.id].setDefaultEdge(target_block_idx);
 				break;
 			}
 			case low::MicroOpcode::jmpIf_label: {
-				usize jmp_target = instr_to_block(block.end + last_instr.arg0);
+				const usize jump_target = jumpTarget(block.end, last_instr.arg0);
+				CORE_ASSERT(
+					jump_target < function.bc.size(),
+					"Jump target points past last instruction"
+				);
+				usize jmp_target = instr_to_block(jump_target);
 				blocks[block.id].setCondEdge(OutEdges::Kind::JmpIf, jmp_target, block.id + 1);
 				break;
 			}
 			case low::MicroOpcode::jmpIfNot_label: {
-				usize jmp_target = instr_to_block(block.end + last_instr.arg0);
+				const usize jump_target = jumpTarget(block.end, last_instr.arg0);
+				CORE_ASSERT(
+					jump_target < function.bc.size(),
+					"Jump target points past last instruction"
+				);
+				usize jmp_target = instr_to_block(jump_target);
 				blocks[block.id].setCondEdge(OutEdges::Kind::JmpIfNot, jmp_target, block.id + 1);
 				break;
 			}
