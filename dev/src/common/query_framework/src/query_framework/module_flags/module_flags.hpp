@@ -7,20 +7,26 @@ namespace query {
 	 */
 	constexpr bool USE_STATS = true;
 
-	/**
-	 * @brief This flag is used to track the reverse graph of dependencies in the QueryGraph.
-	 * It is used by the Language Server to find the dependent nodes of a given node and invalidate
-	 * them without having to traverse the whole graph.
-	 */
-	extern constinit bool track_reverse_graph;
 
 	/**
-	 * If set, incremental compilation is enabled.
-	 * This flag is set during driver initialization based on user options.
-	 * --no-incremental will disable it.
-	 *
-	 * @note This is currently set in initializeTheCompiler functions and used in driver::exit and
-	 * in QueryFramework.
+	 * @brief This flag is used to enable the query graph.
+	 * The query graph is needed for incremental compilation and for the Language Server.
+	 * It is currently enabled by default
 	 */
-	extern constinit bool enable_incremental_compilation;
+	extern constinit bool enable_query_graph;
+
+	/**
+	 * @brief Enables or disables tracking of the reverse graph of dependencies in the QueryGraph.
+	 * This flag is used to track the reverse graph of dependencies in the QueryGraph.
+	 * It is used by the Language Server to find the dependent nodes of a given node and invalidate
+	 * them without having to traverse the whole graph.
+	 * @note the enable_query_graph flag must be enabled when using this
+	 */
+	void setTrackReverseGraph(bool value);
+
+	/**
+	 * @brief Returns whether tracking of the reverse graph of dependencies in the QueryGraph is
+	 * enabled.
+	 */
+	bool getTrackReverseGraph();
 }

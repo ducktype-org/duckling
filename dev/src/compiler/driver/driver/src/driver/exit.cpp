@@ -14,7 +14,7 @@ namespace compiler::driver {
 
 		// For now saveArtifacts() saves the query graph needed for incremental compilation.
 		// In the future, other driver-managed data may be saved here as well.
-		if (!query::enable_incremental_compilation) return;
+		if (!enable_incremental_compilation) return;
 
 		if (global_state::hasRootCollection()) saveArtifacts();
 	}

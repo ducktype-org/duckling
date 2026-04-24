@@ -13,12 +13,12 @@
 #include <base/str/str_utils.hpp>
 #include <base/types/ints.hpp>
 
-#include "query_framework/module_flags/module_flags.hpp"
 #include <logger/logger.hpp>
 #include <query_framework/internal/query_data/query_data.hpp>
 #include <query_framework/internal/query_data/query_id.hpp>
 #include <query_framework/internal/query_graph/node_id.hpp>
 #include <query_framework/internal/query_graph/query_graph.hpp>
+#include <query_framework/module_flags/module_flags.hpp>
 #include <query_framework/q_stats/q_stats.hpp>
 
 #include <algorithm>
@@ -113,7 +113,7 @@ namespace {
 
 namespace query::internal {
 	void QueryState::addGraphNode(NodeID node_id) {
-		if (query::enable_incremental_compilation) {
+		if (query::enable_query_graph) {
 			CORE_ASSERT(
 				!query_graph.node_deps->contains(node_id), "Node already exists in the graph"
 			);
@@ -122,14 +122,14 @@ namespace query::internal {
 	}
 
 	void QueryState::addSideInputNode(NodeID node_id) {
-		if (query::enable_incremental_compilation) {
+		if (query::enable_query_graph) {
 			CORE_ASSERT(node_id.q_id.getData().isInputQuery(), "Node is not an input query");
 			query_graph.node_deps->maybePut(node_id, QueryGraph::ChildrenData{});
 		}
 	}
 
 	void QueryState::addDependency(NodeID from, NodeID to) {
-		if (query::enable_incremental_compilation) query_graph.addDependency(from, to);
+		if (query::enable_query_graph) query_graph.addDependency(from, to);
 	}
 
 	base::Optional<CRef<QueryGraph>> QueryState::getPreviousGraph() const {
