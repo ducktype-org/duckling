@@ -1,6 +1,15 @@
+/**
+ * @file cf_graph.cpp
+ * @brief Implementation of control-flow graph construction.
+ */
 #include "cf_graph.hpp"
 
 namespace vm::jit::cf {
+	/**
+	 * @brief Builds basic blocks and successor edges for a lowered function.
+	 * @param function Lowered function containing bytecode.
+	 * @param block_beginnings Sorted basic-block start offsets.
+	 */
 	void ControlFlowGraph::createCFG(
 		const low::LowFuncData& function, const std::vector<usize>& block_beginnings
 	) {

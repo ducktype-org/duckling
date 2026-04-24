@@ -1,3 +1,7 @@
+/**
+ * @file loop_detector.hpp
+ * @brief Natural loop detection based on CFG dominator analysis.
+ */
 #pragma once
 
 #include "cf_graph.hpp"
@@ -8,16 +12,30 @@
 namespace vm::jit::cf {
 	class LoopDetector;
 
+	/**
+	 * @brief Closed instruction range representing a detected loop.
+	 */
 	class Loop {
 	public:
+		/**
+		 * @brief Creates a loop from start and back-edge source blocks.
+		 * @param start_block Loop header block.
+		 * @param end_block Back-edge source block.
+		 */
 		Loop(const BasicBlock& start_block, const BasicBlock& end_block):
 			  start_block(start_block),
 			  end_block(end_block) {}
 
 		Loop() = delete;
 
+		/**
+		 * @brief Returns inclusive bytecode index where the loop starts.
+		 */
 		[[nodiscard]] usize start() const { return start_block.start; }
 
+		/**
+		 * @brief Returns exclusive bytecode index where the loop ends.
+		 */
 		[[nodiscard]] usize end() const { return end_block.end; }
 
 	private:
@@ -27,10 +45,19 @@ namespace vm::jit::cf {
 		friend class LoopDetector;
 	};
 
+	/**
+	 * @brief Detects loops in control-flow graphs using dominator relations.
+	 */
 	class LoopDetector {
 	public:
 		LoopDetector() = default;
 
+		/**
+		 * @brief Detects loops in function CFG via back edges.
+		 * @param cfg Control-flow graph.
+		 * @return Detected loops represented as instruction ranges.
+		 * @note Current implementation is marked as placeholder in code.
+		 */
 		std::vector<Loop> findLoops(const ControlFlowGraph& cfg) {
 			std::vector<Loop> loops;
 
@@ -48,6 +75,9 @@ namespace vm::jit::cf {
 		}
 
 	private:
+		/**
+		 * @brief Sentinel value for undefined block identifiers.
+		 */
 		const BlockID undefined = std::numeric_limits<BlockID>::max();
 
 		std::vector<bool>                 visited;
@@ -59,6 +89,12 @@ namespace vm::jit::cf {
 		std::vector<std::vector<BlockID>> dom_tree;
 		std::vector<std::pair<u32, u32>>  dom_tree_timestamps;
 
+		/**
+		 * @brief DFS traversal assigning postorder indices.
+		 * @param cfg Control-flow graph.
+		 * @param bid Currently visited block.
+		 * @param ctr Running postorder counter.
+		 */
 		void postorderDfs(const ControlFlowGraph& cfg, BlockID bid, u32& ctr) {
 			visited[bid]            = true;
 			const BasicBlock& block = cfg.getBlock(bid);
@@ -72,12 +108,20 @@ namespace vm::jit::cf {
 			inv_postorder_map[ctr++] = bid;
 		}
 
+		/**
+		 * @brief Computes postorder numbering from the entry block.
+		 * @param cfg Control-flow graph.
+		 */
 		void calcPostorder(const ControlFlowGraph& cfg) {
 			visited.assign(cfg.size(), false);
 			u32 ctr = 0;
 			postorderDfs(cfg, 0, ctr);  // Start DFS from the entry block
 		}
 
+		/**
+		 * @brief Computes predecessor list for every block.
+		 * @param cfg Control-flow graph.
+		 */
 		void calcPredecessors(const ControlFlowGraph& cfg) {
 			predecessors.assign(cfg.size(), std::vector<BlockID>());
 
@@ -90,6 +134,12 @@ namespace vm::jit::cf {
 			}
 		}
 
+		/**
+		 * @brief Intersects two dominator chains.
+		 * @param b1 First block.
+		 * @param b2 Second block.
+		 * @return Nearest common dominator in current idom state.
+		 */
 		[[nodiscard]] BlockID intersect(BlockID b1, BlockID b2) const {
 			while (b1 != b2) {
 				while (postorder[b1] < postorder[b2]) b1 = imm_dom[b1];
@@ -98,6 +148,10 @@ namespace vm::jit::cf {
 			return b1;
 		}
 
+		/**
+		 * @brief Computes immediate dominator for each reachable block.
+		 * @param cfg Control-flow graph.
+		 */
 		void calcImmediateDominators(const ControlFlowGraph& cfg) {
 			imm_dom.assign(cfg.size(), undefined);
 			calcPostorder(cfg);
@@ -123,12 +177,21 @@ namespace vm::jit::cf {
 			}
 		}
 
+		/**
+		 * @brief Timestamps dominator tree with DFS in/out times.
+		 * @param bid Current dominator tree node.
+		 * @param time Running DFS timestamp.
+		 */
 		void domTreeTimestampDfs(BlockID bid, u32& time) {
 			dom_tree_timestamps[bid].first = time++;
 			for (BlockID child_id: dom_tree[bid]) domTreeTimestampDfs(child_id, time);
 			dom_tree_timestamps[bid].second = time++;
 		}
 
+		/**
+		 * @brief Builds dominator tree and dominance query timestamps.
+		 * @param cfg Control-flow graph.
+		 */
 		void calcDominators(const ControlFlowGraph& cfg) {
 			calcImmediateDominators(cfg);
 
@@ -144,7 +207,13 @@ namespace vm::jit::cf {
 			domTreeTimestampDfs(0, time);  // Start DFS from the entry block
 		}
 
-		// Requires that dominators have already been calculated to work correctly
+		/**
+		 * @brief Checks whether one block dominates another.
+		 * @param bid Candidate dominated block.
+		 * @param domid Candidate dominator block.
+		 * @return True if domid dominates bid.
+		 * @note Requires dominator timestamps to be precomputed.
+		 */
 		[[nodiscard]] bool isDominatedBy(BlockID bid, BlockID domid) const {
 			return dom_tree_timestamps[domid].first <= dom_tree_timestamps[bid].first
 			    && dom_tree_timestamps[bid].second <= dom_tree_timestamps[domid].second;
