@@ -85,8 +85,14 @@ namespace vm::persistent {
 			return root;
 		}
 
-
 	public:
+		
+		std::pair<usize, usize> getRangeOf(MemoryStateID state) const {
+			auto root = fromState(state);
+			validateRoot(root);
+			return getRange(root);
+		}
+
 		constexpr static MemoryStateID EMPTY = MemoryStateID{ u64(detail::SegmentTree::EMPTY) };
 
 		using ConflictPolicy = std::function<base::Optional<usize>(usize, usize, usize)>;

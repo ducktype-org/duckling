@@ -33,7 +33,7 @@ namespace vm::persistent {
 
 		do {
 			auto idx = path.idx;
-			auto val = getValue(path.trace.at(0));
+			auto val = path.getValue();
 			ans.emplace_back(idx, val);
 		} while (path.moveToValid(SegmentTree::Dir::Right, 0));
 
@@ -135,7 +135,7 @@ namespace vm::persistent {
 		auto leaf = getPathTo(root, idx).trace.at(0);
 
 		if (leaf)
-			return getValue(leaf);
+			return getValueOfLeaf(leaf);
 		else
 			return std::nullopt;
 	}
