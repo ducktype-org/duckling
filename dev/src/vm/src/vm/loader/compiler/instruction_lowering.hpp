@@ -465,42 +465,103 @@ namespace vm::loader::compiler::detail {
 				addLow<Op_ext_field>(i.field);
 			}
 			instr_case(high::Op_fixedSizeTableLea_pptr_pptr_p64, i) {
+				TypeCRef ptr_type     = getPlaceType(i.src_table_ptr);
+				TypeCRef table_type   = *ptr_type->getInnerType();
+				TypeCRef element_type = *table_type->getInnerType();
+				usize    elem_size    = element_type->getSize().asInt();
+
 				addLow<Op_anyArrayLea_pptr_pptr>(i.dst_ptr, i.src_table_ptr);
 				addLow<Op_ext_p64>(i.index);
+				// TODOP: Opt that to one ext.
+				addLow<Op_ext_imm>(vm::opargs::Immediate{ elem_size });
 			}
 			instr_case(high::Op_fixedSizeTableLoad_pany_pptr_p64, i) {
+				TypeCRef ptr_type     = getPlaceType(i.src_table_ptr);
+				TypeCRef table_type   = *ptr_type->getInnerType();
+				TypeCRef element_type = *table_type->getInnerType();
+				usize    elem_size    = element_type->getSize().asInt();
+
 				addLow<Op_anyArrayLoad_bany_pptr>(i.dst, i.src_table_ptr);
 				addLow<Op_ext_p64>(i.index);
+				// TODOP: Opt that to one ext.
+				addLow<Op_ext_imm>(vm::opargs::Immediate{ elem_size });
 			}
 			instr_case(high::Op_fixedSizeTableStore_pptr_pany_p64, i) {
+				TypeCRef ptr_type     = getPlaceType(i.dst_table_ptr);
+				TypeCRef table_type   = *ptr_type->getInnerType();
+				TypeCRef element_type = *table_type->getInnerType();
+				usize    elem_size    = element_type->getSize().asInt();
+
 				addLow<Op_anyArrayStore_pptr_bany>(i.dst_table_ptr, i.src);
 				addLow<Op_ext_p64>(i.index);
+				// TODOP: Opt that to one ext.
+				addLow<Op_ext_imm>(vm::opargs::Immediate{ elem_size });
 			}
 			instr_case(high::Op_fixedSizeTableLea_pptr_pfst_p64, i) {
+				TypeCRef table_type   = getPlaceType(i.src_table);
+				TypeCRef element_type = *table_type->getInnerType();
+				usize    elem_size    = element_type->getSize().asInt();
+
 				addLow<Op_fixedSizeTableLea_pptr_bfst>(i.dst_ptr, i.src_table);
 				addLow<Op_ext_p64>(i.index);
+				// TODOP: Opt that to one ext.
+				addLow<Op_ext_imm>(vm::opargs::Immediate{ elem_size });
 			}
 			instr_case(high::Op_fixedSizeTableLoad_pany_pfst_p64, i) {
+				TypeCRef table_type   = getPlaceType(i.src_table);
+				TypeCRef element_type = *table_type->getInnerType();
+				usize    elem_size    = element_type->getSize().asInt();
+
 				addLow<Op_fixedSizeTableLoad_bany_bfst>(i.dst, i.src_table);
 				addLow<Op_ext_p64>(i.index);
+				// TODOP: Opt that to one ext.
+				addLow<Op_ext_imm>(vm::opargs::Immediate{ elem_size });
 			}
 			instr_case(high::Op_fixedSizeTableStore_pfst_pany_p64, i) {
+				TypeCRef table_type   = getPlaceType(i.dst_table);
+				TypeCRef element_type = *table_type->getInnerType();
+				usize    elem_size    = element_type->getSize().asInt();
+
 				addLow<Op_fixedSizeTableStore_bfst_bany>(i.dst_table, i.src);
 				addLow<Op_ext_p64>(i.index);
+				// TODOP: Opt that to one ext.
+				addLow<Op_ext_imm>(vm::opargs::Immediate{ elem_size });
 			}
 			instr_case(high::Op_dynTableLea_pptr_pptr_p64, i) {
+				TypeCRef ptr_type     = getPlaceType(i.src_table_ptr);
+				TypeCRef table_type   = *ptr_type->getInnerType();
+				TypeCRef element_type = *table_type->getInnerType();
+				usize    elem_size    = element_type->getSize().asInt();
+
 				addLow<Op_anyArrayLea_pptr_pptr>(i.dst_ptr, i.src_table_ptr);
 				addLow<Op_ext_p64>(i.index);
+				// TODOP: Opt that to one ext.
+				addLow<Op_ext_imm>(vm::opargs::Immediate{ elem_size });
 			}
 			instr_case(high::Op_dynTableLoad_pany_pptr_p64, i) {
+				TypeCRef ptr_type     = getPlaceType(i.src_table_ptr);
+				TypeCRef table_type   = *ptr_type->getInnerType();
+				TypeCRef element_type = *table_type->getInnerType();
+				usize    elem_size    = element_type->getSize().asInt();
+
 				addLow<Op_anyArrayLoad_bany_pptr>(i.dst, i.src_table_ptr);
 				addLow<Op_ext_p64>(i.index);
+				// TODOP: Opt that to one ext.
+				addLow<Op_ext_imm>(vm::opargs::Immediate{ elem_size });
 			}
 			instr_case(high::Op_dynTableStore_pptr_pany_p64, i) {
+				TypeCRef ptr_type     = getPlaceType(i.dst_table_ptr);
+				TypeCRef table_type   = *ptr_type->getInnerType();
+				TypeCRef element_type = *table_type->getInnerType();
+				usize    elem_size    = element_type->getSize().asInt();
+
 				addLow<Op_anyArrayStore_pptr_bany>(i.dst_table_ptr, i.src);
 				addLow<Op_ext_p64>(i.index);
+				// TODOP: Opt that to one ext.
+				addLow<Op_ext_imm>(vm::opargs::Immediate{ elem_size });
 			}
 			instr_case(high::Op_dynTableReAlloc_pptr_type_p64, i) {
+				// TODOP: Here?
 				addLow<Op_dynTableReAlloc_pptr_type>(i.dst_table_ptr, i.table_type);
 				addLow<Op_ext_p64>(i.new_elem_count);
 			}
