@@ -13,8 +13,22 @@
 #include <iterator>
 #include <type_traits>
 #include <utility>
+#include <iostream>
+
+namespace query::internal {
+	struct NodeID;
+}
 
 namespace base {
+
+
+	template<class Key>
+	void printNodeIDKey(const Key& key) {
+		if constexpr (std::is_same_v<std::remove_cvref_t<Key>, query::internal::NodeID>) {
+			key.print();
+			std::cerr << "\n";
+		}
+	}
 
 	/**
 	 * Custom, Stable hash map implementation.
@@ -62,7 +76,7 @@ namespace base {
 		[[nodiscard]]
 		static KeyHash keyHash(const KEY_T& key
 		) noexcept(::base::IS_BUILD_TYPE_RELEASE && noexcept(HASH_T{}(key))) {
-			return HASH_T{}(key);
+			return HASH_T{}(key) * 17;
 		}
 
 		[[nodiscard]]
@@ -194,7 +208,17 @@ namespace base {
 			u64        bucket_index = hashToBucket(key_hash);
 			MRef<Node> current_node = buckets.at(bucket_index);
 
+			u64 iter_count = 0;
 			while (current_node) {
+				iter_count++;
+				if (iter_count == 20) {
+					std::cerr << "Warning: StableHashMap bucket has more than 20 elements for key: " << typeid(key).name() << "\n";
+					printNodeIDKey(key);
+				}
+				if (iter_count == 100) {
+					std::cerr << "Warning: StableHashMap bucket has more than 100 elements for key: " << typeid(key).name() << "\n";
+					printNodeIDKey(key);
+				}
 				if (current_node->key_value.key == key) {
 					std::forward<Func>(f)(Ref<DATA_T>(&current_node->key_value.value));
 					return nullptr;
@@ -223,7 +247,17 @@ namespace base {
 		base::Optional<CRef<DATA_T>> atMaybeAssumingHash(const KEY_T& key, KeyHash key_hash) const
 			RELEASE_NOEXCEPT {
 			auto current_node = buckets.at(hashToBucket(key_hash));
+			u64 iter_count = 0;
 			while (current_node) {
+				iter_count++;
+				if (iter_count == 20) {
+					std::cerr << "Warning: StableHashMap bucket has more than 20 elements for key: " << typeid(key).name() << "\n";
+					printNodeIDKey(key);
+				}
+				if (iter_count == 100) {
+					std::cerr << "Warning: StableHashMap bucket has more than 100 elements for key: " << typeid(key).name() << "\n";
+					printNodeIDKey(key);
+				}
 				if (current_node->key_value.key == key) return &current_node->key_value.value;
 				current_node = current_node->next;
 			}
@@ -238,7 +272,18 @@ namespace base {
 		base::Optional<Ref<DATA_T>> atMaybeAssumingHash(const KEY_T& key, KeyHash key_hash)
 			RELEASE_NOEXCEPT {
 			auto current_node = buckets.at(hashToBucket(key_hash));
+
+			u64 iter_count = 0;
 			while (current_node) {
+				iter_count++;
+				if (iter_count == 20) {
+					std::cerr << "Warning: StableHashMap bucket has more than 20 elements for key: " << typeid(key).name() << "\n";
+					printNodeIDKey(key);
+				}
+				if (iter_count == 100) {
+					std::cerr << "Warning: StableHashMap bucket has more than 100 elements for key: " << typeid(key).name() << "\n";
+					printNodeIDKey(key);
+				}
 				if (current_node->key_value.key == key) return &current_node->key_value.value;
 				current_node = current_node->next;
 			}
@@ -252,8 +297,20 @@ namespace base {
 		[[nodiscard]]
 		base::Optional<DATA_T> atMaybeCopyAssumingHash(const KEY_T& key, KeyHash key_hash) const
 			RELEASE_NOEXCEPT {
+			
+			u64 iter_count = 0;
 			auto current_node = buckets.at(hashToBucket(key_hash));
 			while (current_node) {
+				iter_count++;
+				if (iter_count == 20) {
+					std::cerr << "Warning: StableHashMap bucket has more than 20 elements for key: " << typeid(key).name() << "\n";
+					printNodeIDKey(key);
+				}
+				if (iter_count == 100) {
+					std::cerr << "Warning: StableHashMap bucket has more than 100 elements for key: " << typeid(key).name() << "\n";
+					printNodeIDKey(key);
+				}
+
 				if (current_node->key_value.key == key) return current_node->key_value.value;
 				current_node = current_node->next;
 			}

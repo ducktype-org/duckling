@@ -9,6 +9,7 @@
 #include <query_framework/internal/query_data/query_id.hpp>  // IWYU pragma: export
 
 #include <functional>
+#include <iostream>
 
 namespace query::internal {
 
@@ -38,6 +39,10 @@ namespace query::internal {
 		constexpr bool operator<(const NodeID& r) const {
 			if (this->q_id.asInt() == r.q_id.asInt()) return this->hash.val < r.hash.val;
 			return this->q_id.asInt() < r.q_id.asInt();
+		}
+
+		void print() const {
+			std::cerr << "NodeID(" << q_id.getData().name << ", " << hash.val << ")";
 		}
 	};
 }
