@@ -33,10 +33,11 @@ PreNode: ""
 Clean: "@{clean_cmd}"
 PreCase: "@{clean_cmd} && mkdir build;
   case '@{backend}' in
-    dvm)       @{compile_dvm_backend_cmd}                   ;;
-    llvm)      @{compile_llvm_backend_cmd}                  ;;
-    nobackend) echo 'Backend undefined'; exit 1             ;;
-    *)         echo 'Unknown backend';   exit 1             ;;
+    dvm)       @{compile_dvm_backend_cmd}                                    ;;
+    llvm)      @{compile_llvm_backend_cmd}                                   ;;
+    all)       @{compile_dvm_backend_cmd} && @{compile_llvm_backend_cmd}    ;;
+    nobackend) echo 'Backend undefined'; exit 1                              ;;
+    *)         echo 'Unknown backend';   exit 1                              ;;
   esac;"
 
 Run: "
@@ -49,6 +50,23 @@ Run: "
         @{compiled_to_llvm};
       fi
       ;;
+    all)
+      _tmpdir=$(mktemp -d);
+      @{compiled_to_llvm} > \"$_tmpdir/llvm.out\"; _llvm_exit=$?;
+      @{dvm_path} run @{compiled_to_dvm} > \"$_tmpdir/dvm.out\"; _dvm_exit=$?;
+      if [ \"$_llvm_exit\" != \"$_dvm_exit\" ]; then
+        printf 'Exit codes differ! LLVM: %d, DVM: %d\n' \"$_llvm_exit\" \"$_dvm_exit\" >&2;
+        rm -rf \"$_tmpdir\"; exit 1;
+      fi;
+      if ! diff -q \"$_tmpdir/llvm.out\" \"$_tmpdir/dvm.out\" > /dev/null; then
+        printf 'Outputs differ!\nLLVM output:\n' >&2; cat \"$_tmpdir/llvm.out\" >&2;
+        printf 'DVM output:\n' >&2; cat \"$_tmpdir/dvm.out\" >&2;
+        rm -rf \"$_tmpdir\"; exit 1;
+      fi;
+      cat \"$_tmpdir/llvm.out\";
+      rm -rf \"$_tmpdir\";
+      exit $_llvm_exit;
+      ;;
     nobackend) echo \"Backend undefined\"; exit 1 ;;
     *)         echo \"Unknown backend\";   exit 1 ;;
   esac;"
@@ -56,13 +74,8 @@ Run: "
 Tests:
   base:
     Cases:
-      dvm:
-        backend: dvm
-        Output:
-          String: "4\n1\n23\n4\n1\n4\n4\n8\n4\n8\n76\n"
-        ExitCode: 76
-      llvm:
-        backend: llvm
+      all:
+        backend: all
         Output:
           String: "4\n1\n23\n4\n1\n4\n4\n8\n4\n8\n76\n"
         ExitCode: 76
