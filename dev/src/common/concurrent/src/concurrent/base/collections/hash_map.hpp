@@ -29,7 +29,8 @@ namespace concurrent {
 		typename KEY_T,
 		typename DATA_T,
 		typename HASH_T          = std::hash<KEY_T>,
-		u64 ALLOCATOR_BLOCK_SIZE = 4'096>
+		u64 ALLOCATOR_BLOCK_SIZE = 4'096,
+		u64 SHARD_COUNT          = 129>
 	class ConHashMap final {
 		using HashMapType = base::StableHashMap<KEY_T, DATA_T, HASH_T, ALLOCATOR_BLOCK_SIZE>;
 
@@ -521,9 +522,10 @@ namespace concurrent {
 		 * for "small" use cases and larger where it might matter (e.g. cache of highly concurrent
 		 * queries).
 		 */
-		constexpr static u64 SHARD_COUNT = 129;
+		// constexpr static u64 SHARD_COUNT = 129;
 
 		static_assert(SHARD_COUNT > 0, "Shard count must be positive");
+		static_assert(SHARD_COUNT % 2 == 1, "Shard count must be odd to ensure uniform distribution of keys");
 
 		/**
 		 * The shards of the map.
