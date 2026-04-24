@@ -18,6 +18,23 @@
 namespace compiler::backend_vm::internal {
 	class ProgramLoweringContext;
 
+	/**
+	 * @brief Builds a tiny synthetic global constructor that writes a compile-time value
+	 * into a global variable.
+	 *
+	 * This is a temporary helper used when a LIR global has an initial CTV value but no
+	 * explicit ctor function lowered from LIR.
+	 * @TODO: #1849 Remove this
+	 */
+	vm::code::Function createMiniGlobalCtorFromCTV(
+		ProgramLoweringContext&      program_context,
+		CRef<tsl::TypeLayout>        global_layout,
+		const vm::code::TypeOfData&  lowered_global_type,
+		const ctv::CompileTimeValue& global_ctv_value,
+		base::StrID                  mini_ctor_name,
+		const DVMPlace&              dvm_global
+	);
+
 	class FunctionLoweringContext {
 	public:
 		friend class InstructionLowerer;

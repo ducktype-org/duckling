@@ -51,7 +51,7 @@ private:
 				= frontend::createModuleTreeWithRandomPackageID(fs::File(path(module_path)));
 			auto& top_level = ctx.query<helios::QueryTopLevelEntities>(module)->valueOrPanic();
 
-			backend_vm::DVMCodeBuilder m(ctx, false);
+			backend_vm::DVMCodeBuilder m(ctx, false, false);
 
 			for (auto& hout_glob: top_level.glob_data) {
 				auto lir_glob = lir::LIRGlobal::fromHOUT(ctx, *hout_glob);
