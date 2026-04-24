@@ -46,14 +46,15 @@ namespace compiler::repl {
 	 * - CAbi causes mangling to be skipped, so the linker/runtime sees plain `main`.
 	 *
 	 * Why script_id exists:
-	 * - `script_id` is used for stable generated-symbol identity/hash.
+	 * - `script_id` contributes a stable component of generated-symbol identity/hash.
+	 * - The full unstable hash for ScriptMainWrapper is still scope-dependent.
 	 * - It does not define entrypoint naming; naming comes from `.name = "main"`.
 	 *
 	 * This function expects already-resolved root scope of the script main module.
 	 *
 	 * @param ctx Query context used for symbol generation and declaration queries.
 	 * @param script_id Stable per-script identity stored in generated symbol metadata.
-	 *        It is used for generated-symbol key/hash identity (query/cache stability),
+	 *        It contributes one component of generated-symbol key/hash identity,
 	 *        not for choosing the emitted entrypoint name.
 	 * @param main_scope Root scope where generated `main` should be placed.
 	 * @param wrapper_symbols Ordered wrapper call list to execute from generated `main`.
