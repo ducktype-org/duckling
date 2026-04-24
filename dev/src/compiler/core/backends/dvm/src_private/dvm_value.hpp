@@ -99,7 +99,7 @@ namespace compiler::backend_vm::internal {
 
 		[[nodiscard]] const vm::code::TypeOfData& getType() const;
 
-		DVMPlace withAccessKind(AccessKind kind) { return DVMPlace(name, type, kind); }
+		DVMPlace withAccessKind(AccessKind kind) { return { name, type, kind }; }
 
 		[[nodiscard]] vm::opargs::OpCodeArg asArgument() const;
 		[[nodiscard]] vm::opargs::OpCodeArg asAnyArgument() const;
