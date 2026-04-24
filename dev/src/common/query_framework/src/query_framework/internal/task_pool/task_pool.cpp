@@ -2,6 +2,7 @@
 
 #include <concurrent/worker/worker.hpp>
 #include <concurrent/worker/worker_manager.hpp>
+#include <timer/timer.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
@@ -11,6 +12,7 @@
 #include <algorithm>
 #include <atomic>
 #include <mutex>
+#include <iostream>
 
 namespace query::internal {
 
@@ -65,11 +67,28 @@ namespace query::internal {
 	}
 
 	void TaskPool::waitForTask(NodeID id) {
+		timer::TimeMeasurement tm;
+		tm.startMeasurement();
+
+		// Fast path check without locking
+		// already done in query
+		// if (isTaskDone(id)) {
+		// 	tm.endMeasurement();
+		// 	return;
+		// }
+
 		auto             task_hash  = taskHash(id);
 		auto&            task_mutex = task_completed_mutexes.at(task_hash % TASK_SHARDS);
 		auto&            task_cv    = task_completed_cv.at(task_hash % TASK_SHARDS);
 		std::unique_lock lock(task_mutex);
 		task_cv.wait(lock, [this, id] { return isTaskDone(id); });
+
+		tm.endMeasurement();
+		// if (tm.duration().toNanoseconds() > 1'000) {
+			std::cerr << " waited for task " << id.q_id.getData().name << ": ";
+			timer::printAs(std::cerr, tm.duration(), timer::TimeUnit::Milliseconds);
+			std::cerr << "\n";
+		// }
 	}
 
 	void TaskPool::invalidateTask(NodeID id) {
