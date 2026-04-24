@@ -180,10 +180,10 @@ namespace query {
 			defer({ this->active = true; });
 
 			if constexpr (OthQuery::QUERY_DATA.isInputQuery()) {
-				QueryGraphHandler graph_handler(*this, my_node, dep_id, false);
+				// QueryGraphHandler graph_handler(*this, my_node, dep_id, false);
 				return OthQuery::internal_query(key);
 			} else {
-				QueryGraphHandler graph_handler(*this, my_node, dep_id, true);
+				// QueryGraphHandler graph_handler(*this, my_node, dep_id, true);
 
 				// note that this will block, until the task is completed
 				main_query_state.getTaskPool()->query(internal::Task{
@@ -231,7 +231,7 @@ namespace query {
 				"Task handle query ID does not match the awaited query type."
 			);
 
-			QueryGraphHandler graph_handler(*this, my_node, handle.getID(), true);
+			// QueryGraphHandler graph_handler(*this, my_node, handle.getID(), true);
 
 			this->active = false;
 			defer({ this->active = true; });
