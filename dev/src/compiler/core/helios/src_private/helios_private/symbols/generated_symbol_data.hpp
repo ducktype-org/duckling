@@ -135,9 +135,10 @@ namespace compiler::helios::defgen {
 		 */
 		struct ScriptMainWrapper final {
 			/**
-			 * Stable per-script identity used by QueryGeneratedSymbol key hashing.
-			 * This helps keep generated-symbol identity/cache behavior deterministic
-			 * across script compilation units.
+			 * Stable per-script identity used as one component of QueryGeneratedSymbol key hashing.
+			 *
+			 * @note Full ScriptMainWrapper unstable hash also includes `scope` (via
+			 * `scope.queryUnstablePerfectHash()`), so final unstable identity is scope-dependent.
 			 *
 			 * @note This does NOT define the emitted linker symbol name.
 			 * The emitted entry name is still `main` (set separately as symbol name).

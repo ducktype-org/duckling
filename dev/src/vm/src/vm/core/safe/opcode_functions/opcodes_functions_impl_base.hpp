@@ -33,6 +33,8 @@
 #include <base/misc/int_conv.hpp>
 #include <base/preproc/for_each.hpp>
 #include <base/types/ints.hpp>
+
+#include <cstring>
 #ifdef ENABLE_JIT
 	#include <vm/core/jit/jit_compiler.hpp>
 #endif
@@ -690,6 +692,17 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_bfst_bfst)(FUNCTION_ARGS) {
+		{
+			Ref<vm::Block> dst_block = READ_BLOCK_REF_FROM_ARG(instr->arg0);
+			Ref<vm::Block> src_block = READ_BLOCK_REF_FROM_ARG(instr->arg1);
+			thread.process_memory.copyPointedData(
+				{ dst_block, 0 }, { src_block, 0 }, thread.process_memory.getBlockType(dst_block)
+			);
+		}
+		FUNCTION_CONT(1);
+	}
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(setNull_pptr)(FUNCTION_ARGS) {
 		{
 			const auto    dst = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
@@ -926,13 +939,13 @@ namespace vm {
 		FUNCTION_CONT(2);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(dynTableLea_pptr_pptr)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(anyArrayLea_pptr_pptr)(FUNCTION_ARGS) {
 		{
-			auto dst          = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
-			auto tbl_pointer  = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
-			auto element_type = *Memory::getBlockType(tbl_pointer.getBlock())->getInnerType();
-			auto index        = READ_FROM_PLACE_ARG(u64, instr[1].arg0);
-			auto data_offset  = usize(element_type->getSize() * index);
+			auto     dst          = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
+			auto     tbl_pointer  = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
+			TypeCRef element_type = *Memory::getBlockType(tbl_pointer.getBlock())->getInnerType();
+			u64      index        = READ_FROM_PLACE_ARG(u64, instr[1].arg0);
+			auto     data_offset  = usize(element_type->getSize() * index);
 
 			const Pointer new_dst = thread.process_memory.updatePointerAssignment(
 				dst, { tbl_pointer.getBlock(), tbl_pointer.getOffset() + data_offset }
@@ -942,82 +955,82 @@ namespace vm {
 		FUNCTION_CONT(2);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(fixedSizeTableLea_pptr_pptr)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(anyArrayStore_pptr_bany)(FUNCTION_ARGS) {
 		{
-			auto dst          = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
-			auto tbl_pointer  = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
-			auto element_type = *Memory::getBlockType(tbl_pointer.getBlock())->getInnerType();
-			auto index        = READ_FROM_PLACE_ARG(u64, instr[1].arg0);
-			auto data_offset  = usize(element_type->getSize() * index);
-
-			const Pointer new_dst = thread.process_memory.updatePointerAssignment(
-				dst, { tbl_pointer.getBlock(), tbl_pointer.getOffset() + data_offset }
-			);
-			WRITE_TO_PLACE_ARG(Pointer, instr->arg0, new_dst);
-		}
-		FUNCTION_CONT(2);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(dynTableStore_pptr_bany)(FUNCTION_ARGS) {
-		{
-			auto tbl_pointer  = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
-			auto index        = READ_FROM_PLACE_ARG(i64, instr[1].arg0);
-			auto element_type = *Memory::getBlockType(tbl_pointer.getBlock())->getInnerType();
-			auto data_offset  = index * static_cast<i64>(element_type->getSize());
+			auto     tbl_pointer  = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
+			TypeCRef element_type = *Memory::getBlockType(tbl_pointer.getBlock())->getInnerType();
+			i64      index        = READ_FROM_PLACE_ARG(i64, instr[1].arg0);
+			i64      data_offset  = index * static_cast<i64>(element_type->getSize());
 			tbl_pointer.movePointer(data_offset);
 
-			auto src_block   = READ_BLOCK_REF_FROM_ARG(instr->arg1);
-			auto src_pointer = Pointer{ src_block, 0 };
+			Ref<Block> src_block   = READ_BLOCK_REF_FROM_ARG(instr->arg1);
+			auto       src_pointer = Pointer(src_block, 0);
 
 			thread.process_memory.copyPointedData(tbl_pointer, src_pointer, element_type);
 		}
 		FUNCTION_CONT(2);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(fixedSizeTableStore_pptr_bany)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(anyArrayLoad_bany_pptr)(FUNCTION_ARGS) {
 		{
-			auto tbl_pointer  = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
-			auto element_type = *Memory::getBlockType(tbl_pointer.getBlock())->getInnerType();
-			auto index        = READ_FROM_PLACE_ARG(i64, instr[1].arg0);
-			auto data_offset  = index * static_cast<i64>(element_type->getSize());
-			tbl_pointer.movePointer(data_offset);
+			Ref<Block> dst_block   = READ_BLOCK_REF_FROM_ARG(instr->arg0);
+			Pointer    dst_pointer = Pointer(dst_block, 0);
+			auto       tbl_pointer = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
 
-			auto src_block   = READ_BLOCK_REF_FROM_ARG(instr->arg1);
+			auto     index        = READ_FROM_PLACE_ARG(i64, instr[1].arg0);
+			TypeCRef element_type = *Memory::getBlockType(tbl_pointer.getBlock())->getInnerType();
+			tbl_pointer.movePointer(index * static_cast<i64>(element_type->getSize()));
+
+			thread.process_memory.copyPointedData(dst_pointer, tbl_pointer, element_type);
+		}
+		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(fixedSizeTableLea_pptr_bfst)(FUNCTION_ARGS) {
+		{
+			const auto dst          = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
+			Ref<Block> tbl_block    = READ_BLOCK_REF_FROM_ARG(instr->arg1);
+			TypeCRef   element_type = *Memory::getBlockType(tbl_block)->getInnerType();
+			u64        index        = READ_FROM_PLACE_ARG(u64, instr[1].arg0);
+			u64        data_offset  = index * static_cast<u64>(element_type->getSize());
+
+			const Pointer new_dst
+				= thread.process_memory.updatePointerAssignment(dst, { tbl_block, data_offset });
+			WRITE_TO_PLACE_ARG(Pointer, instr->arg0, new_dst);
+		}
+		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(fixedSizeTableLoad_bany_bfst)(FUNCTION_ARGS) {
+		{
+			Ref<Block> dst_block   = READ_BLOCK_REF_FROM_ARG(instr->arg0);
+			auto       dst_pointer = Pointer(dst_block, 0);
+
+			Ref<Block> tbl_block = READ_BLOCK_REF_FROM_ARG(instr->arg1);
+
+			TypeCRef element_type = Memory::getBlockType(dst_block);
+			u64      index        = READ_FROM_PLACE_ARG(u64, instr[1].arg0);
+			auto     src_pointer
+				= Pointer(tbl_block, index * static_cast<u64>(element_type->getSize()));
+
+			thread.process_memory.copyPointedData(dst_pointer, src_pointer, element_type);
+		}
+		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(fixedSizeTableStore_bfst_bany)(FUNCTION_ARGS) {
+		{
+			Ref<Block> dst_block = READ_BLOCK_REF_FROM_ARG(instr->arg0);
+			Ref<Block> src_block = READ_BLOCK_REF_FROM_ARG(instr->arg1);
+
+			TypeCRef element_type = Memory::getBlockType(src_block);
+			u64      index        = READ_FROM_PLACE_ARG(u64, instr[1].arg0);
+			auto     dst_pointer
+				= Pointer(dst_block, index * static_cast<u64>(element_type->getSize()));
+
 			auto src_pointer = Pointer(src_block, 0);
 
-			thread.process_memory.copyPointedData(tbl_pointer, src_pointer, element_type);
-		}
-		FUNCTION_CONT(2);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(dynTableLoad_bany_pptr)(FUNCTION_ARGS) {
-		{
-			auto dst_block   = READ_BLOCK_REF_FROM_ARG(instr->arg0);
-			auto dst_pointer = Pointer(dst_block, 0);
-
-			auto tbl_pointer = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
-
-			auto index        = READ_FROM_PLACE_ARG(i64, instr[1].arg0);
-			auto element_type = *Memory::getBlockType(tbl_pointer.getBlock())->getInnerType();
-			tbl_pointer.movePointer(index * static_cast<i64>(element_type->getSize()));
-
-			thread.process_memory.copyPointedData(dst_pointer, tbl_pointer, element_type);
-		}
-		FUNCTION_CONT(2);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(fixedSizeTableLoad_bany_pptr)(FUNCTION_ARGS) {
-		{
-			auto dst_block   = READ_BLOCK_REF_FROM_ARG(instr->arg0);
-			auto dst_pointer = Pointer(dst_block, 0);
-
-			auto tbl_pointer = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
-
-			auto index        = READ_FROM_PLACE_ARG(i64, instr[1].arg0);
-			auto element_type = *Memory::getBlockType(tbl_pointer.getBlock())->getInnerType();
-			tbl_pointer.movePointer(index * static_cast<i64>(element_type->getSize()));
-
-			thread.process_memory.copyPointedData(dst_pointer, tbl_pointer, element_type);
+			thread.process_memory.copyPointedData(dst_pointer, src_pointer, element_type);
 		}
 		FUNCTION_CONT(2);
 	}
