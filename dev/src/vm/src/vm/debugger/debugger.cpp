@@ -89,6 +89,7 @@ namespace vm::debugger {
 		return vm::api::getExecutionStatus(pid)
 		    .transform_error([&](const vm::api::ApiError& api_error) {
 				throw std::runtime_error(vm::api::errorToString(api_error));
+				return api_error;
 			})
 		    .value();
 	}
