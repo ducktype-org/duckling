@@ -32,12 +32,13 @@ namespace vm::persistent::detail {
 	class SegmentTree {
 	public:
 		constexpr static auto EMPTY = NodeID{ 0 };
+		constexpr static usize IDX_END = 1UL << 63;
 
 		enum class Dir { Left, Right };
 
 	private:
 		constexpr static usize ROOT_MASK = (usize(-1) >> 1);
-		constexpr static usize LEAF_MASK = ~ROOT_MASK;
+		constexpr static usize LEAF_MASK = 1UL << 63;
 
 		struct ChildEntry {
 			NodeID left_child;
@@ -96,6 +97,9 @@ namespace vm::persistent::detail {
 			return (maybe_child == getLCAPos(root, maybe_child));
 		}
 
+		/**
+		 * @brief Get the nodes for range [l, r] 
+		 */
 		static constexpr std::deque<usize> getPosInRange(usize left_idx, usize right_idx) {
 			CORE_ASSERT(left_idx <= right_idx, "Received wrong interval");
 			CORE_ASSERT(
