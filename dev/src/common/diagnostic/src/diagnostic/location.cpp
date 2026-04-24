@@ -1,5 +1,6 @@
 #include "location.hpp"
 
+#include <lang_definitions/key_spec_op.hpp>
 #include <token_source/source.hpp>
 
 namespace dia {
@@ -69,8 +70,10 @@ namespace dia {
 	FakeLocation::FakeLocation():
 		  virtual_file(fs::FileManager::createRandomVirtualFile("some example content here\n")),
 		  source(tokenizer::makeTokenSource(virtual_file)) {
+		// This is a fix and is needed because the FakeLocation() can executed between the
+		// tokenizing and parsing of some file with different keyword mode.
 		auto previous_mode = lang_def::getKeywordMode();
-		source->tokenize();
+		source->tokenize<lang_def::KeywordMode::DucklingSource>();
 		lang_def::setKeywordMode(previous_mode);
 	}
 }

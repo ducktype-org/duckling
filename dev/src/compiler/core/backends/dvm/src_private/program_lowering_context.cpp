@@ -16,10 +16,10 @@
 using namespace compiler::backend_vm::internal;
 
 compiler::backend_vm::internal::ProgramLoweringContext::ProgramLoweringContext(
-	query::Context& query_ctx, bool build_debug_info
+	query::Context& query_ctx, bool build_debug_info, bool is_comp_time_lowering
 ):
-
 	  query_ctx_for_errors(&query_ctx),
+	  is_comp_time_lowering(is_comp_time_lowering),
 	  debug_info_builder(
 		  (build_debug_info ? debug_info::DebugInfoBuilder(
 								  debug_info::Target::DBC, debug_info::SourcePositionsType::PstHash
@@ -123,6 +123,7 @@ const vm::code::GlobalData& ProgramLoweringContext::lowerAndKeepLirGlobal(
 			= base::StrID(base::strConcat(lir_global.mangled_name.strView(), "_ctv_ctor"));
 
 		auto mini_ctor = createMiniGlobalCtorFromCTV(
+			*this,
 			lir_global.layout,
 			global_type,
 			lir_global.initial_value.value(),
@@ -338,3 +339,7 @@ base::Optional<debug_info::DebugInfo> compiler::backend_vm::internal::ProgramLow
 }
 
 DEFAULT_BOX_PTR_DELETER_DEFINITION(compiler::backend_vm::internal::ProgramLoweringContext);
+
+bool compiler::backend_vm::internal::ProgramLoweringContext::isCompTimeLowering() const {
+	return is_comp_time_lowering;
+}

@@ -124,7 +124,11 @@ namespace tokenizer {
 		void runLexer();
 
 		/**
-		 * @brief Run the whole lexer.
+		 * @brief Run the whole lexer and change the keyword mode
+		 * to the given one. The keyword mode is set until any subsequent
+		 * call to this function, because we need the same keyword mode
+		 * for tokenizing and parsing.
+		 *
 		 * @return If tokenizing process run without errors.
 		 */
 		template<
