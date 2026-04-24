@@ -13,6 +13,7 @@
 #include <iterator>
 #include <type_traits>
 #include <utility>
+#include <algorithm>
 
 namespace base {
 
@@ -28,7 +29,8 @@ namespace base {
 		typename KEY_T,
 		typename DATA_T,
 		typename HASH_T          = std::hash<KEY_T>,
-		u64 ALLOCATOR_BLOCK_SIZE = 4'096>
+		u64 ALLOCATOR_BLOCK_SIZE = 4'096ul,
+		usize  INITIAL_BUCKETS = 64>
 	class StableHashMap final {
 	public:
 		/**
@@ -40,7 +42,7 @@ namespace base {
 		};
 
 	private:
-		static constexpr usize  INITIAL_BUCKETS = 64;
+		// static constexpr usize  INITIAL_BUCKETS = 64;
 		static constexpr double MAX_LOAD_FACTOR = 0.7;
 
 
