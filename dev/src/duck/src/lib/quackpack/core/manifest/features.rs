@@ -1,7 +1,7 @@
 //! Root package features handling.
 use std::collections::{HashMap, HashSet, VecDeque};
 
-use crate::{QuackError, QuackResult, StrId, qp_bail};
+use crate::{QuackError, QuackResult, QuackResultContext, StrId, qp_bail};
 
 /// Name of a feature.
 pub type FeatureName = StrId;
@@ -25,11 +25,13 @@ impl Features {
         for (feature, pulled_features) in features {
             for pulled_feature in pulled_features {
                 if !features.contains_key(pulled_feature) {
-                    qp_bail!(
-                        "the feature `{feature}` requires an absent feature `{pulled_feature}`\n\
-                         help: every feature needs to pull in some features, try adding \
-                         `{pulled_feature}: []` to the your manifest"
-                    )
+                    return Err(QuackError::hint(format!(
+                        "every feature needs to pull in some features, try adding \
+                        `{pulled_feature}: []` to your manifest"
+                    )))
+                    .context(format!(
+                        "the feature `{feature}` requires a feature `{pulled_feature}` which is not declared"
+                    ));
                 }
             }
         }
@@ -205,8 +207,8 @@ mod tests {
     fn invalid_features() {
         assert_eq!(
             Features::new(make_invalid_map()).unwrap_err().to_string(),
-            "the feature `a` requires an absent feature `b`
-help: every feature needs to pull in some features, try adding `b: []` to the your manifest"
+            "the feature `a` requires a feature `b` which is not declared
+every feature needs to pull in some features, try adding `b: []` to your manifest"
         );
     }
 }
