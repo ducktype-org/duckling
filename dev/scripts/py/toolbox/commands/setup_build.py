@@ -84,8 +84,8 @@ from click import Choice, option, command, prompt
 @option(
     "--allocator",
     help="Specify the allocator type to use. Currently supports None (default) and mimalloc.",
-    type=Choice(["mimalloc"], case_sensitive=False),
-    default=None,
+    type=Choice(["default", "mimalloc"], case_sensitive=False),
+    default="default",
 )
 @option(
     "--shared_libs",

@@ -1,4 +1,5 @@
-option(ALLOCATOR "Specify the allocator type to use. Currently supports None (default) and mimalloc." "DEFAULT")
+set(ALLOCATOR "DEFAULT" CACHE STRING "Specify the allocator type to use. Currently supports None (default) and mimalloc.")
+set_property(CACHE ALLOCATOR PROPERTY STRINGS DEFAULT MIMALLOC)
 
 # This is a proxy target for custom allocators, so we can link to it without
 # worrying about the actual target name, if we want to switch allocators

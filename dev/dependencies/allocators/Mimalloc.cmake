@@ -17,9 +17,9 @@
 # Both approaches have their pros and cons related mostly to CMake and ways
 # to override the default allocator (see https://microsoft.github.io/mimalloc/overrides.html for more info on this topic).
 #  
-# The second approach was chosen, mainly because it the simpler one for us currently,
+# The second approach was chosen as the default/fallback, mainly because it is the simpler one for us currently,
 # it is also done this way by other projects and because it is simpler to use by the end user (developer).
-# Nonetheless, the first approach is also viable and can be implemented in the future if needed.
+# However, if a system-installed mimalloc (>= 2.0) is found via find_package, it will be preferred.
 #
 # 
 # Important note about the chosen approach:
@@ -40,62 +40,74 @@
 
 include(FetchContent)
 
-if(${ALLOCATOR} STREQUAL "MIMALLOC")
+if("${ALLOCATOR}" STREQUAL "MIMALLOC")
     message(STATUS "Using mimalloc allocator")
 
-    FetchContent_Declare(
-        mimalloc
-        GIT_REPOSITORY https://github.com/microsoft/mimalloc.git
-        GIT_TAG v3.3.0 # Released 16 April 2026
-        GIT_SHALLOW TRUE
-    )
+    # First, try to find a system-installed mimalloc of a recent-enough version.
+    find_package(mimalloc 2.0 QUIET)
 
-    # Only build the mimalloc as static library.
-    set(MI_BUILD_STATIC  ON  CACHE INTERNAL "" FORCE)
-    set(MI_BUILD_SHARED  OFF CACHE INTERNAL "" FORCE)
-    set(MI_BUILD_TESTS   OFF CACHE INTERNAL "" FORCE)
+    if(mimalloc_FOUND)
+        message(STATUS "Found system mimalloc ${mimalloc_VERSION}, using it.")
 
-    # Turn off any mimmalloc debug features.
-    # Note that mimalloc is capable of providing a lot of statistics information, 
-    # not sure if these options impact its ability to do so, but we can always turn them on in the future if needed.
-    set(MI_DEBUG          OFF CACHE INTERNAL "" FORCE)
-    set(MI_DEBUG_INTERNAL OFF CACHE INTERNAL "" FORCE)
-    set(MI_DEBUG_FULL     OFF CACHE INTERNAL "" FORCE)
+        # Finally, link our proxy library to mimalloc, so we can use it in our project.
+        target_link_libraries(allocator_proxy_library INTERFACE mimalloc::mimalloc-static)
+    else()
+        message(STATUS "System mimalloc not found or too old, building from source.")
 
-    # Do not do any architecture-specific optimizations.
-    set(MI_NO_OPT_ARCH   OFF CACHE INTERNAL "" FORCE)
-    
-    # Compile mimalloc using the C compiler.
-    # Based on my tests, using the C++ compiler also works.
-    set(MI_USE_CXX       OFF CACHE INTERNAL "" FORCE)
-    
-    # Override the default allocator globally, so we don't have to worry about it.
-    # Note that this might not work on all platforms.
-    # See also https://microsoft.github.io/mimalloc/overrides.html
-    set(MI_OVERRIDE ON CACHE INTERNAL "" FORCE)
+        FetchContent_Declare(
+            mimalloc
+            GIT_REPOSITORY https://github.com/microsoft/mimalloc.git
+            GIT_TAG v3.3.0 # Released 16 April 2026
+            GIT_SHALLOW TRUE
+        )
 
+        # Only build the mimalloc as static library.
+        set(MI_BUILD_STATIC  ON  CACHE INTERNAL "" FORCE)
+        set(MI_BUILD_SHARED  OFF CACHE INTERNAL "" FORCE)
+        set(MI_BUILD_TESTS   OFF CACHE INTERNAL "" FORCE)
 
-    
-    FetchContent_MakeAvailable(mimalloc)
+        # Turn off any mimmalloc debug features.
+        # Note that mimalloc is capable of providing a lot of statistics information, 
+        # not sure if these options impact its ability to do so, but we can always turn them on in the future if needed.
+        set(MI_DEBUG          OFF CACHE INTERNAL "" FORCE)
+        set(MI_DEBUG_INTERNAL OFF CACHE INTERNAL "" FORCE)
+        set(MI_DEBUG_FULL     OFF CACHE INTERNAL "" FORCE)
 
-    
-    # Turn off LINK_LIBRARIES_ONLY_TARGETS for mimalloc, otherwise the build fails as mimalloc links to -lpthread.
-    set_target_properties(mimalloc-static PROPERTIES LINK_LIBRARIES_ONLY_TARGETS OFF)
-
-    # Add custom compile options to mimalloc.
-    # Note mimalloc's CMakeLists.txt sets different compile options for different build types,
-    # but our project uses custom build types (DevOpt, Perf, etc.) that do not necessarily match the ones expected by mimalloc (Debug, Release).
-    # For this reason, we have to set the compile options manually here.
-    # See also the note at the top of this file.
-    #
-    # The options:
-    # - -O3 -- always optimize
-    # - -DNDEBUG -- disable debug features 
-    # - -w -- disable warnings for mimalloc, otherwise the build fails with our strict Werror warnings.
-    # - -DMI_BUILD_RELEASE and -DMI_CMAKE_BUILD_TYPE=release -- these are set by mimalloc's CMakeLists.txt for release builds. Not sure how they impact mimalloc's behavior.
-    target_compile_options(mimalloc-static PRIVATE "-O3" "-DNDEBUG" "-w" "-DMI_BUILD_RELEASE" "-DMI_CMAKE_BUILD_TYPE=release")
+        # Keep mimalloc's architecture-specific optimizations enabled.
+        set(MI_NO_OPT_ARCH   OFF CACHE INTERNAL "" FORCE)
+        
+        # Compile mimalloc using the C compiler.
+        # Based on my tests, using the C++ compiler also works.
+        set(MI_USE_CXX       OFF CACHE INTERNAL "" FORCE)
+        
+        # Override the default allocator globally, so we don't have to worry about it.
+        # Note that this might not work on all platforms.
+        # See also https://microsoft.github.io/mimalloc/overrides.html
+        set(MI_OVERRIDE ON CACHE INTERNAL "" FORCE)
 
 
-    # Finally, link our proxy library to mimalloc, so we can use it in our project.
-    target_link_libraries(allocator_proxy_library INTERFACE mimalloc-static)
+        
+        FetchContent_MakeAvailable(mimalloc)
+
+        
+        # Turn off LINK_LIBRARIES_ONLY_TARGETS for mimalloc, otherwise the build fails as mimalloc links to -lpthread.
+        set_target_properties(mimalloc-static PROPERTIES LINK_LIBRARIES_ONLY_TARGETS OFF)
+
+        # Add custom compile options to mimalloc.
+        # Note mimalloc's CMakeLists.txt sets different compile options for different build types,
+        # but our project uses custom build types (DevOpt, Perf, etc.) that do not necessarily match the ones expected by mimalloc (Debug, Release).
+        # For this reason, we have to set the compile options manually here.
+        # See also the note at the top of this file.
+        #
+        # The options:
+        # - -O3 -- always optimize
+        # - -DNDEBUG -- disable debug features 
+        # - -w -- disable warnings for mimalloc, otherwise the build fails with our strict Werror warnings.
+        # - -DMI_BUILD_RELEASE and -DMI_CMAKE_BUILD_TYPE=release -- these are set by mimalloc's CMakeLists.txt for release builds. Not sure how they impact mimalloc's behavior.
+        target_compile_options(mimalloc-static PRIVATE "-O3" "-DNDEBUG" "-w" "-DMI_BUILD_RELEASE" "-DMI_CMAKE_BUILD_TYPE=release")
+
+
+        # Finally, link our proxy library to mimalloc, so we can use it in our project.
+        target_link_libraries(allocator_proxy_library INTERFACE mimalloc-static)
+    endif()
 endif()
