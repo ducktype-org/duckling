@@ -86,7 +86,7 @@ namespace {
 			variant_case(compiler::tsh::SymbolType<>, type_val) {
 				// @TODO: #1728 remove this evil bit_cast
 				// Representation of a meta type in DVM is a pointer to the symbol type.
-				// @TODO: ##1709 RTTI when the is_comp_time_lowering == false
+				// @TODO: #1709 RTTI when the is_comp_time_lowering == false
 				u64 type_val_u64 = is_comp_time_lowering ? std::bit_cast<u64>(&type_val) : 0;
 				return DVMImmediate{ type_val_u64, type };
 			}
