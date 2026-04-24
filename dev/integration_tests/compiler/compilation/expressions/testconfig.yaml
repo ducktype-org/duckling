@@ -147,6 +147,19 @@ Tests:
           String: ""
         ExitCode: 0
 
+  no_output:
+    Cases:
+      dvm:
+        backend: dvm
+        Output:
+          String: ""
+        ExitCode: 0
+      llvm:
+        backend: llvm
+        Output:
+          String: ""
+        ExitCode: 0
+
   zero_init:
     Cases:
       llvm:
