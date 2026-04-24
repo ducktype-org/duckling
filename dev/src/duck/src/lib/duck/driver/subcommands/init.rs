@@ -31,6 +31,7 @@ pub fn get_parser() -> Command {
             Arg::new("path")
                 .help("Path to the new package")
                 .value_parser(ValueParser::path_buf())
+                .required(true)
                 .action(ArgAction::Set),
         )
 }
@@ -47,10 +48,10 @@ pub fn execute(ctx: &DuckContext, matches: &ArgMatches) -> QuackResult<()> {
     for flag in unsupported_flags {
         bail_on_unsupported_flag(matches.get_flag(flag), flag)?;
     }
-    let at = match matches.get_one::<PathBuf>("path") {
-        Some(at) => at.resolve()?,
-        None => ctx.cwd().to_path_buf(),
-    };
+    let at = matches
+        .get_one::<PathBuf>("path")
+        .expect("required by clap")
+        .resolve()?;
     let name = match matches.get_one::<String>("name") {
         Some(name) => name.into(),
         None => at.file_name().expect("file without filename").into(),

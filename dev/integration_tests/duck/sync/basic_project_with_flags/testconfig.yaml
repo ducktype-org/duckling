@@ -1,0 +1,11 @@
+PostCase: python3 check.py
+
+Tests:
+  sync:
+    Description: can sync a project with flags
+    Cases:
+      sync:
+        test_cmd: -C foo sync
+        Output:
+          String: 'info: successfully synchronized venv \`foo\`\n'
+        

@@ -1,7 +1,7 @@
 #include "origin.hpp"
 
+#include <diagnostic_interactive/stable_position.hpp>
 #include <frontend/pst_parser/lang_parser_element.hpp>
-#include <frontend/pst_parser/stable_position.hpp>
 
 #include <base/except/exceptions.hpp>
 
@@ -9,12 +9,12 @@
 
 namespace compiler::helios::code {
 	base::Optional<dia::SourcePosition> ElementOrigin::getSourcePosition(query::Context& ctx) const {
-		return source_position.map([&ctx](const pst::StablePosition& stable_pos) {
-			return stable_pos.getActiveSourcePosition(ctx);
+		return source_position.map([&ctx](const dia_int::StablePosition& pos) {
+			return pos.getActiveSourcePosition(ctx);
 		});
 	}
 
-	base::Optional<pst::StablePosition> ElementOrigin::getStablePosition() const {
+	base::Optional<dia_int::StablePosition> ElementOrigin::getStablePosition() const {
 		return source_position;
 	}
 
