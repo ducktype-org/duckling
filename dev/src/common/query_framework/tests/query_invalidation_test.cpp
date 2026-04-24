@@ -112,7 +112,8 @@ class ActiveGraph: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		query::track_reverse_graph = true;
+		query::enable_incremental_compilation = true;
+		query::track_reverse_graph            = true;
 		TESTER_ADD_TEST(testInvalidation);
 	}
 

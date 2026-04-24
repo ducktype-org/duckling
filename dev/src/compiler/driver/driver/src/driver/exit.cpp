@@ -5,6 +5,8 @@
 #include <global_state/artifacts_location.hpp>
 #include <time_stats/time_stats.hpp>
 
+#include <query_framework/module_flags/module_flags.hpp>
+
 namespace compiler::driver {
 
 	void exit() {
@@ -12,7 +14,7 @@ namespace compiler::driver {
 
 		// For now saveArtifacts() saves the query graph needed for incremental compilation.
 		// In the future, other driver-managed data may be saved here as well.
-		if (!driver::enable_incremental_compilation) return;
+		if (!query::enable_incremental_compilation) return;
 
 		if (global_state::hasRootCollection()) saveArtifacts();
 	}

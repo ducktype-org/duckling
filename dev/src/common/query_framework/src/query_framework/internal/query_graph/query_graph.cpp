@@ -30,6 +30,10 @@ namespace query::internal {
 		);
 
 		if (track_reverse_graph) {
+			CORE_ASSERT(
+				enable_incremental_compilation,
+				"Reverse graph tracking should only be enabled in incremental compilation mode"
+			);
 			node_reverse_deps->maybePutAndUpdate(
 				to,
 				std::vector<NodeID>{},

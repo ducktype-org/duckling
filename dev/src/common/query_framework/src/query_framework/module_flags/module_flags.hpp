@@ -13,4 +13,14 @@ namespace query {
 	 * them without having to traverse the whole graph.
 	 */
 	extern constinit bool track_reverse_graph;
+
+	/**
+	 * If set, incremental compilation is enabled.
+	 * This flag is set during driver initialization based on user options.
+	 * --no-incremental will disable it.
+	 *
+	 * @note This is currently set in initializeTheCompiler functions and used in driver::exit and
+	 * in QueryFramework.
+	 */
+	extern constinit bool enable_incremental_compilation;
 }

@@ -16,13 +16,4 @@ namespace compiler::driver {
 	 * current working directory.
 	 */
 	extern constinit bool llvm_dump_asm;
-
-	/**
-	 * If set, incremental compilation is enabled.
-	 * This flag is set during driver initialization based on user options.
-	 * --no-incremental will disable it.
-	 *
-	 * @note This is currently set in initializeTheCompiler functions and used in driver::exit.
-	 */
-	extern constinit bool enable_incremental_compilation;
 }

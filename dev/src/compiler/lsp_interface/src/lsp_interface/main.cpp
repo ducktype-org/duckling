@@ -289,6 +289,7 @@ int main(int argc, const char** argv) {
 	// Initialize the command-line argument parser with help flag and port parameter
 	auto clah = getLspDaemonCLI();
 
+	query::enable_incremental_compilation          = true;
 	query::track_reverse_graph                     = true;
 	compiler::frontend::use_module_modifier_remove = true;
 

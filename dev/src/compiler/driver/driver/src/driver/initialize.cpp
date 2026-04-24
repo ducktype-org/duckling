@@ -24,6 +24,7 @@
 #include <lexer/lexer_class.hpp>
 #include <logger/logger.hpp>
 #include <query_framework/external/api.hpp>
+#include <query_framework/module_flags/module_flags.hpp>
 
 namespace compiler::driver {
 
@@ -155,10 +156,10 @@ namespace compiler::driver {
 					!global_state::getPackages().empty(),
 					"Main package must be set before handling incremental compilation"
 				);
-				driver::enable_incremental_compilation = true;
+				query::enable_incremental_compilation = true;
 				loadPreviousQueryGraphIfExists();
 			} else {
-				driver::enable_incremental_compilation = false;
+				query::enable_incremental_compilation = false;
 			}
 		}
 
