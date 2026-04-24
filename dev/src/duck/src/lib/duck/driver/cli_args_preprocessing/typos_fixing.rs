@@ -210,7 +210,7 @@ mod tests {
 
     #[test]
     fn test_single_closest_target() {
-        let args_matches = cli().try_get_matches_from(["duck", "ini", "f"]).unwrap();
+        let args_matches = cli().try_get_matches_from(["duck", "ini"]).unwrap();
         let mut ctx = DuckContext::new().unwrap();
         ctx.duck_cfg_mut().set_fixes_enabled(true);
         ctx.duck_cfg_mut().set_max_fix_dist(100);

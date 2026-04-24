@@ -131,10 +131,7 @@ fn parse_dependency(
 ) -> QuackResult<CompilerPackage> {
     debug!(?dep, type = %pkg_type, "parsing dep");
     let storage_id = dep.to_package_id();
-    let directory = match storage_id {
-        PackageId::Local(ref local) => local.path().to_path_buf(),
-        _ => storage.pkg_dir(&storage_id),
-    };
+    let directory = storage.pkg_dir(&storage_id);
     let ctx =
         PackageLoader::find_at_exact_directory(&directory, ctx).with_context(
             || match storage_id {
@@ -148,10 +145,10 @@ fn parse_dependency(
                     dep.as_freeze_dep(),
                     git_id.url()
                 ),
-                PackageId::Local(..) => format!(
+                PackageId::Local(ref local_id) => format!(
                     "malformed local dependency `{}` at `{}`",
                     dep.as_freeze_dep(),
-                    directory.display(),
+                    local_id.path().display()
                 ),
             },
         )?;
@@ -170,9 +167,9 @@ fn parse_dependency(
                 package.as_freeze_dep(),
                 dep.as_freeze_dep(),
             ),
-            PackageId::Local(..) => qp_bail!(
+            PackageId::Local(local_id) => qp_bail!(
                 "malformed local dependency at `{}`: got name `{}`, expected `{}`",
-                directory.display(),
+                local_id.path().display(),
                 package.as_freeze_dep(),
                 dep.as_freeze_dep(),
             ),

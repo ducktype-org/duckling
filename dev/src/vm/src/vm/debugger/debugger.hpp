@@ -25,21 +25,10 @@ namespace vm::debugger {
 
 		// Event handlers for the debugger:
 
-		/**
+		/**		 *
 		 * @brief Emits current VM status when VM changes status
 		 */
-		events::Emitter<vm::api::ProcStatus> on_vm_changes_status;
-
-		/**
-		 * @brief Emits exit value as VMValue when VM completes execution
-		 */
-		events::Emitter<vm::api::ExitValue> on_vm_completes_execution;
-
-		/**
-		 * @brief Emits error message in human readable format on any error
-		 */
-		events::Emitter<std::string> on_error;
-
+		events::Emitter<vm::api::ProcStatus> on_vm_status_change;
 
 	public:
 		Debugger(const fs::File& filepath, const std::vector<std::string>& main_args = {});
@@ -54,17 +43,12 @@ namespace vm::debugger {
 		/**
 		 * @brief Attach Listener to Emitter that emits current VM status when VM changes status
 		 */
-		void attachOnVMChangesStatusListener(events::Listener<vm::api::ProcStatus>& listener);
+		void attachOnVMStatusChangeListener(Ref<events::Listener<vm::api::ProcStatus>> listener);
 
 		/**
-		 * @brief Attach Listener to Emitter that emits return value when VM completes execution
+		 * @brief Attach Listener to Emitter that emits current VM status when VM changes status
 		 */
-		void attachOnVMCompletesExecutionListener(events::Listener<vm::api::ExitValue>& listener);
-
-		/**
-		 * @brief Attach Listener to Emitter that emits error message when any error raises
-		 */
-		void attachOnErrorListener(events::Listener<std::string>& listener);
+		void attachOnVMStatusChangeListener(events::Listener<vm::api::ProcStatus>& listener);
 
 		// Methods to control the debugging session:
 
@@ -77,6 +61,6 @@ namespace vm::debugger {
 		 * @brief Gets the current status of the VM.
 		 * @return The current status of the VM.
 		 */
-		[[nodiscard]] vm::api::ProcStatus getStatus();
+		[[nodiscard]] vm::api::ProcStatus getStatus() const;
 	};
 }

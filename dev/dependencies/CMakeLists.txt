@@ -10,8 +10,6 @@ include(StdCxxExp.cmake)
 include(TreeSitter.cmake)
 include(YamlCpp.cmake)
 
-add_subdirectory(allocators)
-
 # These dependencies should be handled in main CMakeLists (for correct context)
 macro (insertDependencies)
 	include(dependencies/LLVM.cmake)

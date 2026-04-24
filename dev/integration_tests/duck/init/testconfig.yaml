@@ -1,8 +1,0 @@
-PreNode: ""
-
-SubDirs:
-  - basic_project
-  - basic_project_renamed
-  - missing_argument
-  - reinitialization
-  - reinitialization_renamed

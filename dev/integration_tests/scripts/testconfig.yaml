@@ -24,8 +24,5 @@ Run: "
     @{duckc_path} run @{folder}/@{Name}.ds;
   fi"
 
-PostTest: "
-  @{clean_cmd};"
-
 SubDirs:
   - basic_tests
