@@ -120,6 +120,16 @@ namespace vm::persistent {
 			return ans;
 		}
 
+		VectorStateID getPrefix(VectorStateID state_id, usize pref_size) {
+			auto state = validaState(state_id);
+			auto size  = Memory::size(state);
+			if (pref_size > size) throw std::invalid_argument("trying to take too much");
+
+			auto new_state = Memory::slice(state, 0, pref_size);
+			
+			return toVeccState(new_state);
+		}
+
 		VectorStateID pop(VectorStateID state_id, usize how_many_pop = 1) {
 			auto state = validaState(state_id);
 			auto size  = Memory::size(state);
