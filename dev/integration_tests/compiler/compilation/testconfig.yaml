@@ -51,7 +51,7 @@ Run: "
       fi
       ;;
     all)
-      _tmpdir=$(mktemp -d);
+      _tmpdir=$(mktemp -d) || { echo 'Failed to create temp dir' >&2; exit 1; };
       @{compiled_to_llvm} > \"$_tmpdir/llvm.out\"; _llvm_exit=$?;
       @{dvm_path} run @{compiled_to_dvm} > \"$_tmpdir/dvm.out\"; _dvm_exit=$?;
       if [ \"$_llvm_exit\" != \"$_dvm_exit\" ]; then
@@ -59,8 +59,8 @@ Run: "
         rm -rf \"$_tmpdir\"; exit 1;
       fi;
       if ! diff -q \"$_tmpdir/llvm.out\" \"$_tmpdir/dvm.out\" > /dev/null; then
-        printf 'Outputs differ!\nLLVM output:\n' >&2; cat \"$_tmpdir/llvm.out\" >&2;
-        printf 'DVM output:\n' >&2; cat \"$_tmpdir/dvm.out\" >&2;
+        printf 'Outputs differ!\nLLVM output (first 50 lines):\n' >&2; head -n 50 \"$_tmpdir/llvm.out\" >&2;
+        printf 'DVM output (first 50 lines):\n' >&2; head -n 50 \"$_tmpdir/dvm.out\" >&2;
         rm -rf \"$_tmpdir\"; exit 1;
       fi;
       cat \"$_tmpdir/llvm.out\";
