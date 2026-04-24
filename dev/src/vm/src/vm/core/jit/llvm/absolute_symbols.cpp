@@ -36,17 +36,17 @@ void registerAbsoluteJITSymbols(llvm::orc::LLJIT& lljit) {
 		"trampoline",
 	};
 
-	std::array<vm::OpFun*, UNJITABLE_OPCODES_COUNT> addresses = {
-		&vm::OpFuns::op_jmp_label,
-		&vm::OpFuns::op_jmpIfNot_label,
-		&vm::OpFuns::op_jmpIf_label,
-		&vm::OpFuns::op_jit_call_entrypoint,
-		&vm::OpFuns::op_call_func,
-		&vm::OpFuns::op_call_builtinfunc,
-		&vm::OpFuns::op_virtual_call_pptr_method,
-		&vm::OpFuns::op_ret_tailcall_func,
-		&vm::OpFuns::op_breakpoint,
-		&vm::OpFuns::op_ret,
+	std::array<vm::DebugOpFun*, UNJITABLE_OPCODES_COUNT> addresses = {
+		&vm::OpFuns::op_debug_jmp_label,
+		&vm::OpFuns::op_debug_jmpIfNot_label,
+		&vm::OpFuns::op_debug_jmpIf_label,
+		&vm::OpFuns::op_debug_jit_call_entrypoint,
+		&vm::OpFuns::op_debug_call_func,
+		&vm::OpFuns::op_debug_call_builtinfunc,
+		&vm::OpFuns::op_debug_virtual_call_pptr_method,
+		&vm::OpFuns::op_debug_ret_tailcall_func,
+		&vm::OpFuns::op_debug_breakpoint,
+		&vm::OpFuns::op_debug_ret,
 		&vm::jit::helpers::trampoline,
 	};
 
