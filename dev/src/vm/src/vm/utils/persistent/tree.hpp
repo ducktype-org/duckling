@@ -171,13 +171,19 @@ namespace vm::persistent::detail {
 			 * Memory
 			 */
 			bool moveToValid(Dir move_dir, usize skip = 0);
+
+			[[nodiscard]]
+			bool pointsToValid() const { return trace.at(0) != EMPTY; }
+
+			[[nodiscard]]
+			usize getValue() const { return mem->getValueOfLeaf(trace.at(0)); }
 		};
 
 		std::pair<usize, usize> getHeightOffset(NodeID state) const;
 		usize                   getSize(NodeID state) const;
 		usize                   getPos(NodeID state) const;
 		std::pair<usize, usize> getRange(NodeID state) const;
-		usize                   getValue(NodeID state) const;
+		usize                   getValueOfLeaf(NodeID state) const;
 
 
 		void validateRoot(NodeID root) const;

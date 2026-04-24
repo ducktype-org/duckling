@@ -61,7 +61,7 @@ namespace vm::persistent::detail {
 		CORE_UNREACHABLE();
 	}
 
-	usize SegmentTree::getValue(NodeID leaf) const {
+	usize SegmentTree::getValueOfLeaf(NodeID leaf) const {
 		if_opt_some(leaf_entries.atRightOpt(leaf), entry) { return entry.value; }
 		CORE_UNREACHABLE();
 	}
@@ -314,7 +314,7 @@ namespace vm::persistent::detail {
 		for (auto idx: right) {
 			neigh.moveNodeTo(idx | LEAF_MASK);
 			base::Optional<usize> val = std::nullopt;
-			if (neigh.node) val = getValue(neigh.node);
+			if (neigh.node) val = getValueOfLeaf(neigh.node);
 			neigh.node = constructor(offset, val);
 		}
 
