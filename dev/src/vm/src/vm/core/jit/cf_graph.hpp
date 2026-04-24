@@ -4,7 +4,9 @@
 #include <vm/core/safe/low_program/low_program.hpp>
 
 #include <algorithm>
+#include <array>
 #include <functional>
+#include <stdexcept>
 #include <vector>
 
 namespace vm::jit::cf {
