@@ -6,7 +6,6 @@
 #include <algorithm>
 #include <array>
 #include <functional>
-#include <stdexcept>
 #include <vector>
 
 namespace vm::jit::cf {
@@ -28,8 +27,7 @@ namespace vm::jit::cf {
 		[[nodiscard]] Kind kind() const { return op_type; }
 
 		void setCond(Kind kind, BlockID target1, BlockID target2) {
-			if (no_edges != 0)
-				throw std::runtime_error("Outgoing edges already set for this basic block");
+			CORE_ASSERT(no_edges == 0, "Outgoing edges already set for this basic block");
 			this->op_type = kind;
 			to[0]         = target1;
 			to[1]         = target2;
@@ -37,27 +35,25 @@ namespace vm::jit::cf {
 		}
 
 		void setDefault(BlockID target) {
-			if (no_edges != 0)
-				throw std::runtime_error("Outgoing edges already set for this basic block");
+			CORE_ASSERT(no_edges == 0, "Outgoing edges already set for this basic block");
 			this->op_type = Kind::Default;
 			to[0]         = target;
 			no_edges      = 1;
 		}
 
 		[[nodiscard]] BlockID next() const {
-			if (op_type != Kind::Default)
-				throw std::runtime_error("This block has no default outgoing edge.");
+			CORE_ASSERT(op_type == Kind::Default, "This block has no default outgoing edge.");
 			return to[0];
 		}
 
 		[[nodiscard]] BlockID successTarget() const {
-			if (op_type == Kind::JmpIf || op_type == Kind::JmpIfNot) return to[0];
-			throw std::runtime_error("This block does not have conditional outgoing edges.");
+			CORE_ASSERT(op_type == Kind::JmpIf || op_type == Kind::JmpIfNot, "This block does not have conditional outgoing edges.");
+			return to[0];
 		}
 
 		[[nodiscard]] BlockID failTarget() const {
-			if (op_type == Kind::JmpIf || op_type == Kind::JmpIfNot) return to[1];
-			throw std::runtime_error("This block does not have conditional outgoing edges.");
+			CORE_ASSERT(op_type == Kind::JmpIf || op_type == Kind::JmpIfNot, "This block does not have conditional outgoing edges.");
+			return to[1];
 		}
 
 		BlockID operator[](usize index) const { return to.at(index); }
