@@ -225,7 +225,7 @@ jobs:
               -D BUILD_DOCS=OFF \
               -D CMAKE_BUILD_TYPE=${{ matrix.build-type }} \
               -D USE_CCACHE=ON \
-              -D JIT_ENABLED=${{ matrix.jit_enabled }} \
+              -D JIT_ENABLED=${{ matrix.compiler.jit_enabled }} \
               -D STRIP_SYMBOL_INFORMATION=ON \
               ${{ matrix.compiler.name == 'gcc' && format('-D CMAKE_LINKER_TYPE={0}', matrix.compiler.linker) || '' }} \
               ${{ steps.cmake-flags.outputs.flags }}
