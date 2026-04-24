@@ -28,10 +28,12 @@ namespace vm::persistent::detail {
 	concept RebuildRes = std::is_same_v<T, void> || std::is_same_v<T, NodeID>;
 
 	template<typename SelfT, typename ResT>
-	concept ValidSignature =  RebuildRes<ResT> && (std::is_same_v<void, ResT> || !std::is_const_v<SelfT>);
+	concept ValidSignature
+		= RebuildRes<ResT> && (std::is_same_v<void, ResT> || !std::is_const_v<SelfT>);
+
 	class SegmentTree {
 	public:
-		constexpr static auto EMPTY = NodeID{ 0 };
+		constexpr static auto  EMPTY   = NodeID{ 0 };
 		constexpr static usize IDX_END = 1UL << 63;
 
 		enum class Dir { Left, Right };
@@ -98,7 +100,7 @@ namespace vm::persistent::detail {
 		}
 
 		/**
-		 * @brief Get the nodes for range [l, r] 
+		 * @brief Get the nodes for range [l, r]
 		 */
 		static constexpr std::deque<usize> getPosInRange(usize left_idx, usize right_idx) {
 			CORE_ASSERT(left_idx <= right_idx, "Received wrong interval");
@@ -141,6 +143,11 @@ namespace vm::persistent::detail {
 			void moveNodeTo(usize desired_pos);
 			[[nodiscard]]
 			std::pair<usize, std::deque<std::pair<usize, NodeID>>> inOrder(usize upto_here) const;
+
+			[[nodiscard]]
+			std::deque<std::pair<usize, NodeID>> beforeNode(usize upto_here) const;
+			[[nodiscard]]
+			std::deque<std::pair<usize, NodeID>> afterNode(usize upto_here) const;
 		};
 
 		BijectiveMap<ChildEntry, NodeID, ChildEntryH> child_entries{};
@@ -217,14 +224,18 @@ namespace vm::persistent::detail {
 		NodeID reconstructIdxs(NodeID root, std::deque<usize> idxs, LeafBuilder leaf_constructor);
 
 		template<typename ResT, typename SelfT>
-		NodeID rebuildFromTwo(
+		ResT rebuildFromTwo(
 			this SelfT&& self, NodeID root_1, NodeID root_2, MergeBuilder<ResT> merge_policy
-		) requires ValidSignature<SelfT,ResT>;
+		) requires ValidSignature<SelfT, ResT>;
 
 		template<typename ResT, typename SelfT>
-		NodeID rebuildWithRange(
-			this SelfT&& self, NodeID root, usize left_idx, usize right_idx, RangeBuilder<ResT> range_constructor
-		) requires ValidSignature<SelfT,ResT>;
+		ResT rebuildWithRange(
+			this SelfT&&       self,
+			NodeID             root,
+			usize              left_idx,
+			usize              right_idx,
+			RangeBuilder<ResT> range_constructor
+		) requires ValidSignature<SelfT, ResT>;
 
 		[[nodiscard]]
 		NodeID getChild(Dir dir, NodeID root) const;

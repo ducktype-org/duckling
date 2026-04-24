@@ -215,30 +215,57 @@ namespace vm::persistent::detail {
 	std::pair<usize, std::deque<std::pair<usize, NodeID>>> SegmentTree::SurroundingNeigh::inOrder(
 		usize upto_here
 	) const {
-		usize idx     = 0;
-		auto  cur_pos = node_pos;
-
-		std::deque<std::pair<usize, NodeID>> list = { { cur_pos, node } };
-		CORE_ASSERT(inSubtree(upto_here, root_pos), "target root must be my in root subtree");
-
-		for (auto it = siblings.rbegin(); cur_pos != upto_here; it++) {
-			CORE_ASSERT(inSubtree(cur_pos, upto_here), "I need to have a path to the root");
-			CORE_ASSERT(it != siblings.rend(), "there is a sibling on this level");
-
-			std::pair<usize, NodeID> cur_sibling = { cur_pos ^ 1, *it };
-
-			if (cur_pos & 1) {
-				list.emplace_front(cur_sibling);
-				idx++;
-			} else
-				list.emplace_back(cur_sibling);
-
-			cur_pos >>= 1;
+		std::deque<std::pair<usize, NodeID>> ans = {};
+		{
+			auto before = beforeNode(upto_here);
+			for (auto el: before) ans.emplace_back(el);
 		}
 
-		CORE_ASSERT(list.size(), "list must have at least cur node");
+		usize idx = ans.size();
+		ans.emplace_back(node_pos, node);
 
-		return { idx, list };
+		{
+			auto after = afterNode(upto_here);
+			for (auto el: after) ans.emplace_back(el);
+		}
+
+		return {idx, ans};
+	}
+
+	std::deque<std::pair<usize, NodeID>> SegmentTree::SurroundingNeigh::beforeNode(
+		usize upto_here
+	) const {
+		auto cur_pos = node_pos;
+
+		std::deque<std::pair<usize, NodeID>> ans = {};
+		CORE_ASSERT(inSubtree(upto_here, root_pos), "target root must be my in root subtree");
+
+		for (auto it = siblings.rbegin(); cur_pos != upto_here; it++, cur_pos >>= 1) {
+			CORE_ASSERT(inSubtree(cur_pos, upto_here), "I need to have a path to the target root");
+			CORE_ASSERT(it != siblings.rend(), "there is a sibling on this level");
+
+			if (cur_pos & 1) ans.emplace_front(cur_pos ^ 1, *it);
+		}
+
+		return ans;
+	}
+
+	std::deque<std::pair<usize, NodeID>> SegmentTree::SurroundingNeigh::afterNode(
+		usize upto_here
+	) const {
+		auto cur_pos = node_pos;
+
+		std::deque<std::pair<usize, NodeID>> ans = {};
+		CORE_ASSERT(inSubtree(upto_here, root_pos), "target root must be my in root subtree");
+
+		for (auto it = siblings.rbegin(); cur_pos != upto_here; it++, cur_pos >>= 1) {
+			CORE_ASSERT(inSubtree(cur_pos, upto_here), "I need to have a path to the target root");
+			CORE_ASSERT(it != siblings.rend(), "there is a sibling on this level");
+
+			if ((cur_pos & 1) == 0) ans.emplace_back(cur_pos ^ 1, *it);
+		}
+
+		return ans;
 	}
 
 	NodeID SegmentTree::reconstructIdxs(
@@ -298,7 +325,7 @@ namespace vm::persistent::detail {
 	}
 
 	template<typename ResT, typename SelfT>
-	NodeID SegmentTree::rebuildFromTwo(
+	ResT SegmentTree::rebuildFromTwo(
 		this SelfT&& st, NodeID root_1, NodeID root_2, MergeBuilder<ResT> merge_policy
 	) requires ValidSignature<SelfT, ResT> {
 		static constexpr bool RECONSTRUCT = std::is_same_v<ResT, NodeID>;
@@ -554,8 +581,12 @@ namespace vm::persistent::detail {
 	}
 
 	template<typename ResT, typename SelfT>
-	NodeID SegmentTree::rebuildWithRange(
-		this SelfT&& self, NodeID root, usize left_idx, usize right_idx, RangeBuilder<ResT> range_constructor
+	ResT SegmentTree::rebuildWithRange(
+		this SelfT&&       self,
+		NodeID             root,
+		usize              left_idx,
+		usize              right_idx,
+		RangeBuilder<ResT> range_constructor
 	) requires ValidSignature<SelfT, ResT> {
 		static constexpr bool RECONSTRUCT = std::is_same_v<ResT, NodeID>;
 
@@ -702,4 +733,19 @@ namespace vm::persistent::detail {
 		child_entries.emplaceByLeft(ChildEntry{ .left_child = EMPTY, .right_child = EMPTY }, EMPTY);
 	}
 
+	template<>
+	void SegmentTree::rebuildFromTwo<void, SegmentTree&&>(
+		SegmentTree&&, NodeID, NodeID, MergeBuilder<void>
+	);
+
+	template<>
+	void SegmentTree::rebuildFromTwo<void, const SegmentTree&>(
+		const SegmentTree&, NodeID, NodeID, MergeBuilder<void>
+	);
+
+
+	template<>
+	NodeID SegmentTree::rebuildFromTwo<NodeID, SegmentTree&&>(
+		SegmentTree&&, NodeID, NodeID, MergeBuilder<NodeID>
+	);
 }
