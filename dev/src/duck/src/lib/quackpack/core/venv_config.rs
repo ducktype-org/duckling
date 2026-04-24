@@ -1,4 +1,5 @@
 //! Local venv's configuration.
+use std::fmt::Display;
 use std::path::{Path, PathBuf};
 
 use crate::QuackResult;
@@ -46,5 +47,11 @@ impl VenvConfig {
     /// Set whether freezefile should be exposed. Mostly used by `duck init`.
     pub fn set_freezefile_exposed(&mut self, value: bool) -> QuackResult<()> {
         self.config.set_bool("expose_freezefile", value)
+    }
+}
+
+impl Display for VenvConfig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.config.fmt(f)
     }
 }

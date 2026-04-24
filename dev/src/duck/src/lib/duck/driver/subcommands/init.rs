@@ -38,13 +38,7 @@ pub fn get_parser() -> Command {
 
 /// Logic for executing the `init` subcommand.
 pub fn execute(ctx: &DuckContext, matches: &ArgMatches) -> QuackResult<()> {
-    let unsupported_flags = [
-        "venv",
-        "full",
-        "ephemeral",
-        "local-storage",
-        "expose-freezefile",
-    ];
+    let unsupported_flags = ["full"];
     for flag in unsupported_flags {
         bail_on_unsupported_flag(matches.get_flag(flag), flag)?;
     }
@@ -56,7 +50,15 @@ pub fn execute(ctx: &DuckContext, matches: &ArgMatches) -> QuackResult<()> {
         Some(name) => name.into(),
         None => at.file_name().expect("file without filename").into(),
     };
-    init(InitOptions { ctx, at, name })
+    init(InitOptions {
+        ctx,
+        at,
+        name,
+        as_venv: matches.get_flag("venv"),
+        expose_freezefile: matches.get_flag("expose-freezefile"),
+        local_storage: matches.get_flag("local-storage"),
+        ephemeral: matches.get_flag("ephemeral"),
+    })
 }
 
 /// Return an internal error for unsupported flags.
