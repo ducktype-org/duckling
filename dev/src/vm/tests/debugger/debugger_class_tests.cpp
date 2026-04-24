@@ -121,7 +121,7 @@ private:
 	void rerunTest() {
 		std::atomic<size_t> status_counter  = 0;
 		std::atomic<size_t> ret_val_counter = 0;
-		;
+		
 		std::mutex              m;
 		std::condition_variable cv;
 
