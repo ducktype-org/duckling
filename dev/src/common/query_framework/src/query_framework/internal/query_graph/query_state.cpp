@@ -112,6 +112,18 @@ namespace {
 }
 
 namespace query::internal {
+
+
+	const QueryGraph& QueryState::getGraph() const {
+		CORE_ASSERT(query::enable_query_graph, "Query graph must be enabled to access the graph.");
+		return query_graph;
+	}
+
+	QueryGraph& QueryState::getGraphMutable() {
+		CORE_ASSERT(query::enable_query_graph, "Query graph must be enabled to access the graph.");
+		return query_graph;
+	}
+
 	void QueryState::addGraphNode(NodeID node_id) {
 		if (query::enable_query_graph) {
 			CORE_ASSERT(
