@@ -43,6 +43,7 @@ namespace base {
 		static constexpr usize  INITIAL_BUCKETS = 64;
 		static constexpr double MAX_LOAD_FACTOR = 0.7;
 
+
 		/**
 		 * Type used to represent the hash of the key.
 		 */
@@ -58,6 +59,8 @@ namespace base {
 				  next(next),
 				  key_value(std::forward<K>(key), std::forward<D>(value)) {}
 		};
+		using AllocatorType = SingleTypeMemoryPoolAllocator<Node, ALLOCATOR_BLOCK_SIZE>;
+
 
 		[[nodiscard]]
 		static KeyHash keyHash(const KEY_T& key
@@ -71,6 +74,18 @@ namespace base {
 			auto res = hash % buckets.size();
 			CORE_ASSERT(0 <= res and res < buckets.size(), "Bucket index out of bounds");
 			return res;
+		}
+
+		[[nodiscard]]
+		CRef<AllocatorType> getAllocator(KeyHash hash) const RELEASE_NOEXCEPT {
+			auto res = hash % node_allocators.size();
+			return &node_allocators[res];
+		}
+
+		[[nodiscard]]
+		Ref<AllocatorType> getAllocator(KeyHash hash) RELEASE_NOEXCEPT {
+			auto res = hash % node_allocators.size();
+			return &node_allocators[res];
 		}
 
 		[[nodiscard]]
@@ -138,7 +153,7 @@ namespace base {
 		 */
 		template<typename K = KEY_T, typename D = DATA_T>
 		Ref<KeyValuePair> putAssumingHash(K&& key, D&& value, KeyHash key_hash) RELEASE_NOEXCEPT {
-			auto new_node = node_allocator.allocateEmplace(
+			auto new_node = getAllocator(key_hash)->allocateEmplace(
 				nullptr, std::forward<K>(key), std::forward<D>(value)
 			);
 
@@ -171,7 +186,7 @@ namespace base {
 				current_node = current_node->next;
 			}
 
-			auto new_node = node_allocator.allocateEmplace(
+			auto new_node = getAllocator(key_hash)->allocateEmplace(
 				nullptr, std::forward<K>(key), std::forward<D>(value)
 			);
 			addToBucket(bucket_index, new_node);
@@ -202,7 +217,7 @@ namespace base {
 				current_node = current_node->next;
 			}
 
-			auto new_node = node_allocator.allocateEmplace(
+			auto new_node = getAllocator(key_hash)->allocateEmplace(
 				nullptr, std::forward<K>(key), std::forward<D>(value)
 			);
 
@@ -277,21 +292,14 @@ namespace base {
 
 		StableHashMap(StableHashMap&& other) noexcept:
 			  buckets(std::move(other.buckets)),
-			  node_allocator(std::move(other.node_allocator)),
+			  node_allocators(std::move(other.node_allocators)),
 			  element_count(other.element_count) {
 			other.element_count = 0;
 			other.buckets.resize(1, nullptr);
 		}
 
 		~StableHashMap() {
-			for (auto& bucket: buckets) {
-				MRef<Node> current_node = bucket;
-				while (current_node) {
-					MRef<Node> next_node = current_node->next;
-					node_allocator.justDestroy(current_node.toOpt().value());
-					current_node = next_node;
-				}
-			}
+			clear();
 		}
 
 		/**
@@ -474,7 +482,11 @@ namespace base {
 		 * @returns Whether a value was erased.
 		 */
 		bool erase(const KEY_T& key) RELEASE_NOEXCEPT {
-			u64        bucket_index  = keyToBucket(key);
+			auto hash = keyHash(key);
+
+			u64        bucket_index  = hashToBucket(hash);
+			auto 	  node_allocator = getAllocator(hash); // as in clear, this is fragile
+			
 			MRef<Node> current_node  = buckets.at(bucket_index);
 			MRef<Node> previous_node = nullptr;
 
@@ -491,7 +503,7 @@ namespace base {
 						buckets.at(bucket_index) = current_node->next;
 					}
 
-					node_allocator.deallocateDestroy(current_node.toOpt().value());
+					node_allocator->deallocateDestroy(current_node.toOpt().value());
 					element_count--;
 					return true;
 				}
@@ -506,14 +518,19 @@ namespace base {
 		 * @note does not free the memory used to store the elements.
 		 */
 		void clear() RELEASE_NOEXCEPT {
-			for (auto& bucket: buckets) {
-				MRef<Node> current_node = bucket;
+			// This only work, because the count of node allocators is a power of two,
+			// and the bucket count is always a 2-multiple of the node allocator count.
+			for (u64 bucket_index = 0; bucket_index < buckets.size(); bucket_index++) {
+				
+				auto node_allocator = getAllocator(bucket_index);
+
+				MRef<Node> current_node = buckets[bucket_index];
 				while (current_node) {
 					MRef next_node = current_node->next;
-					node_allocator.justDestroy(current_node.toOpt().value());
+					node_allocator->justDestroy(current_node.toOpt().value());
 					current_node = next_node;
 				}
-				bucket = nullptr;
+				buckets[bucket_index] = nullptr;
 			}
 			element_count = 0;
 		}
@@ -562,6 +579,8 @@ namespace base {
 		}
 
 	private:
+
+
 		/**
 		 * Array of bucket beginnings.
 		 */
@@ -570,7 +589,7 @@ namespace base {
 		/**
 		 * Memory pool allocator for node storage.
 		 */
-		SingleTypeMemoryPoolAllocator<Node, ALLOCATOR_BLOCK_SIZE> node_allocator;
+		std::array<AllocatorType, INITIAL_BUCKETS> node_allocators;
 
 		/**
 		 * Number of elements stored in the map.
