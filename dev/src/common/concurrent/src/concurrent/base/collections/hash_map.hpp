@@ -29,7 +29,8 @@ namespace concurrent {
 		typename KEY_T,
 		typename DATA_T,
 		typename HASH_T          = std::hash<KEY_T>,
-		u64 ALLOCATOR_BLOCK_SIZE = 4'096>
+		u64 ALLOCATOR_BLOCK_SIZE = 4'096, 
+		u64 SHARD_COUNT          = 129>
 	class ConHashMap final {
 		using HashMapType = base::StableHashMap<KEY_T, DATA_T, HASH_T, ALLOCATOR_BLOCK_SIZE>;
 
@@ -136,12 +137,12 @@ namespace concurrent {
 			// Linter wants the following line to be placed in init-list. We can't do that, since
 			// we need to lock the source map first.
 			shards = std::move(source.shards);  // NOLINT
-			elements_count.store(source.elements_count.load());
+			// elements_count.store(source.elements_count.load());
 
 			// Leave the source map in an empty but valid state
 			source.shards.clear();
 			source.shards.resize(SHARD_COUNT);
-			source.elements_count.store(0);
+			// source.elements_count.store(0);
 		}
 
 		~ConHashMap() = default;
@@ -158,7 +159,7 @@ namespace concurrent {
 			WithShardLock lock(*this, keyToShard(key));
 			auto          result
 				= shards[lock.shard_index].put(std::forward<K>(key), std::forward<D>(value));
-			elements_count.fetch_add(1, std::memory_order_relaxed);
+			// elements_count.fetch_add(1, std::memory_order_relaxed);
 			return result;
 		}
 
@@ -177,7 +178,7 @@ namespace concurrent {
 
 			auto result
 				= shards.at(lock.shard_index).maybePut(std::forward<K>(key), std::forward<D>(value));
-			if (result != nullptr) elements_count.fetch_add(1, std::memory_order_relaxed);
+			// if (result != nullptr) elements_count.fetch_add(1, std::memory_order_relaxed);
 			return result;
 		}
 
@@ -193,7 +194,7 @@ namespace concurrent {
 				return;
 			}
 			shards[lock.shard_index].maybePut(key, std::forward<D>(value));
-			elements_count.fetch_add(1, std::memory_order_relaxed);
+			// elements_count.fetch_add(1, std::memory_order_relaxed);
 		}
 
 		/**
@@ -211,7 +212,7 @@ namespace concurrent {
 			auto inserted = shards[lock.shard_index].maybePutAndUpdate(
 				std::forward<K>(key), std::forward<D>(value), std::forward<Func>(f)
 			);
-			if (inserted != nullptr) elements_count.fetch_add(1, std::memory_order_relaxed);
+			// if (inserted != nullptr) elements_count.fetch_add(1, std::memory_order_relaxed);
 			return inserted;
 		}
 
@@ -300,7 +301,7 @@ namespace concurrent {
 		auto erase(const KEY_T& key) RELEASE_NOEXCEPT {
 			WithShardLock lock(*this, keyToShard(key));
 			bool          erased = shards[lock.shard_index].erase(key);
-			if (erased) elements_count.fetch_sub(1, std::memory_order_relaxed);
+			// if (erased) elements_count.fetch_sub(1, std::memory_order_relaxed);
 			return erased;
 		}
 
@@ -316,7 +317,7 @@ namespace concurrent {
 			if (opt_ref.has_value()) {
 				if (std::forward<Predicate>(pred)(opt_ref.value())) {
 					if (shard.erase(key)) {
-						elements_count.fetch_sub(1, std::memory_order_relaxed);
+						// elements_count.fetch_sub(1, std::memory_order_relaxed);
 						return true;
 					}
 				}
@@ -339,7 +340,7 @@ namespace concurrent {
 			} else {
 				DATA_T value = std::move(*at_maybe.value());
 				shards[lock.shard_index].erase(key);
-				elements_count.fetch_sub(1, std::memory_order_relaxed);
+				// elements_count.fetch_sub(1, std::memory_order_relaxed);
 				return base::Optional<DATA_T>{ std::move(value) };
 			}
 		}
@@ -353,7 +354,13 @@ namespace concurrent {
 		 */
 		[[nodiscard]]
 		u64 size() const noexcept {
-			return elements_count.load(std::memory_order_seq_cst);
+			// return elements_count.load(std::memory_order_seq_cst);
+			u64 total = 0;
+			for (u64 i = 0; i < SHARD_COUNT; i++) {
+				WithShardLock lock(*this, i);
+				total += shards[i].size();
+			}
+			return total;
 		}
 
 		/**
@@ -521,9 +528,10 @@ namespace concurrent {
 		 * for "small" use cases and larger where it might matter (e.g. cache of highly concurrent
 		 * queries).
 		 */
-		constexpr static u64 SHARD_COUNT = 129;
+		// constexpr static u64 SHARD_COUNT = 129;
 
 		static_assert(SHARD_COUNT > 0, "Shard count must be positive");
+		static_assert(SHARD_COUNT % 2 == 1, "Shard count must be odd to ensure uniform distribution of keys");
 
 		/**
 		 * The shards of the map.
@@ -538,7 +546,7 @@ namespace concurrent {
 		/**
 		 * Atomic counter tracking the number of elements in the map.
 		 */
-		std::atomic<u64> elements_count{ 0 };
+		// std::atomic<u64> elements_count{ 0 };
 	};
 
 }
