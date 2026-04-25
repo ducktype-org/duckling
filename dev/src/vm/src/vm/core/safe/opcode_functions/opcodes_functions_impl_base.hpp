@@ -947,7 +947,7 @@ namespace vm {
 			auto dst         = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
 			auto tbl_pointer = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
 			u64  index       = READ_FROM_PLACE_ARG(u64, instr[1].arg0);
-			u64  elem_size   = READ_FROM_IMMEDIATE_ARG(u64, instr[2].arg0);
+			u64  elem_size   = READ_FROM_IMMEDIATE_ARG(u64, instr[1].arg1);
 			u64  data_offset = elem_size * index;
 
 			std::cout << "Offset: " << data_offset << '\n';
@@ -964,7 +964,7 @@ namespace vm {
 		{
 			auto tbl_pointer = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
 			u64  index       = READ_FROM_PLACE_ARG(u64, instr[1].arg0);
-			u64  elem_size   = READ_FROM_IMMEDIATE_ARG(u64, instr[2].arg0);
+			u64  elem_size   = READ_FROM_IMMEDIATE_ARG(u64, instr[1].arg1);
 			u64  data_offset = index * elem_size;
 			std::cout << "Offset: " << data_offset << '\n';
 
@@ -986,7 +986,7 @@ namespace vm {
 			Pointer    dst_pointer = Pointer(dst_block, 0);
 			auto       tbl_pointer = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
 			u64        index       = READ_FROM_PLACE_ARG(u64, instr[1].arg0);
-			u64        elem_size   = READ_FROM_IMMEDIATE_ARG(u64, instr[2].arg0);
+			u64        elem_size   = READ_FROM_IMMEDIATE_ARG(u64, instr[1].arg1);
 
 			std::cout << "Offset: " << index * elem_size << '\n';
 			tbl_pointer.movePointer(index * elem_size);
@@ -1004,7 +1004,7 @@ namespace vm {
 			Ref<Block> tbl_block = READ_BLOCK_REF_FROM_ARG(instr->arg1);
 
 			u64 index       = READ_FROM_PLACE_ARG(u64, instr[1].arg0);
-			u64 elem_size   = READ_FROM_IMMEDIATE_ARG(u64, instr[2].arg0);
+			u64 elem_size   = READ_FROM_IMMEDIATE_ARG(u64, instr[1].arg1);
 			u64 data_offset = index * elem_size;
 			std::cout << "Offset: " << data_offset << '\n';
 
@@ -1021,7 +1021,7 @@ namespace vm {
 			auto       dst_pointer = Pointer(dst_block, 0);
 			Ref<Block> tbl_block   = READ_BLOCK_REF_FROM_ARG(instr->arg1);
 			u64        index       = READ_FROM_PLACE_ARG(u64, instr[1].arg0);
-			u64        elem_size   = READ_FROM_IMMEDIATE_ARG(u64, instr[2].arg0);
+			u64        elem_size   = READ_FROM_IMMEDIATE_ARG(u64, instr[1].arg1);
 
 			std::cout << "Offset: " << index * elem_size << '\n';
 			auto src_pointer = Pointer(tbl_block, index * elem_size);
@@ -1039,7 +1039,7 @@ namespace vm {
 			Ref<Block> src_block = READ_BLOCK_REF_FROM_ARG(instr->arg1);
 
 			u64 index     = READ_FROM_PLACE_ARG(u64, instr[1].arg0);
-			u64 elem_size = READ_FROM_IMMEDIATE_ARG(u64, instr[2].arg0);
+			u64 elem_size = READ_FROM_IMMEDIATE_ARG(u64, instr[1].arg1);
 
 			std::cout << "Offset: " << index * elem_size << '\n';
 
