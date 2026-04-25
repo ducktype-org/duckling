@@ -48,6 +48,7 @@ const OK_FILENAME: &str = ".ok";
 #[derive(Debug, Clone)]
 /// Provides paths of the storage components, hiding the implementation details of the directory layout.
 pub struct Storage {
+    root: PathBuf,
     packages_dir: PathBuf,
     venvs_dir: PathBuf,
     clean_lock: PathBuf,
@@ -68,6 +69,7 @@ impl Storage {
         let data_lock_base = lock_base.join(VENV_DATA_LOCK_FILENAME);
         let compile_locks_base = lock_base.join(COMPILE_LOCK_FILENAME);
         Self {
+            root,
             packages_dir,
             venvs_dir,
             clean_lock,
@@ -75,6 +77,10 @@ impl Storage {
             data_lock_base,
             compile_locks_base,
         }
+    }
+
+    pub fn root(&self) -> &Path {
+        &self.root
     }
 
     pub fn pkg_dir(&self, package: &PackageId) -> PathBuf {

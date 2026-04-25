@@ -1,0 +1,31 @@
+# Tests for basic operations in REPL
+
+ans:  => 4\n
+
+Tests:
+  simple_numeric:
+    Cases:
+      with_semicolon:
+        Input: 
+          File: "simple_numeric/simple_numeric1.rtf"
+        Output:
+          String: "@{beginning}\n=> 4\n@{end}"
+      without_semicolon:
+        Input:
+          File: "simple_numeric/simple_numeric2.rtf"
+        Output:
+          String: "@{beginning}\n=> 17878\n@{end}"
+      
+      # @TODO: #2245 future test we need to add a flag to ignore errors in checking out.    
+      # resilience:
+      #   Input:
+      #     File: "simple_numeric/resilience.rtf"
+      #   Output:
+      #     String: "@{beginning}\n => 4\n => 42\n@{end}"
+  multiple_numeric:
+    Cases:
+      manymen:
+        Input:
+          File: "multiple_numeric/multiple_numeric.rtf"
+        Output:
+          String: "@{beginning}\n@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{end}"
