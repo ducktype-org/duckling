@@ -227,6 +227,8 @@ jobs:
               -D USE_CCACHE=ON \
               -D JIT_ENABLED=${{ matrix.compiler.jit-enabled }} \
               -D STRIP_SYMBOL_INFORMATION=ON \
+              -D LLVM_TOOLS='--llvm-opt=opt-19 --llvm-link=llvm-link-19 --llvm-nm=llvm-nm-19 --llvm-cxxfilt=llvm-cxxfilt-19 --llvm-extract=llvm-extract-19' \
+              -D LLVM_OPT=opt-19 -D LLVM_LINK=llvm-link-19 -D LLVM_NM=llvm-nm-19 -D LLVM_CXXFILT=llvm-cxxfilt-19 -D LLVM_EXTRACT=llvm-extract-19 \
               ${{ matrix.compiler.name == 'gcc' && format('-D CMAKE_LINKER_TYPE={0}', matrix.compiler.linker) || '' }} \
               ${{ steps.cmake-flags.outputs.flags }}
 
