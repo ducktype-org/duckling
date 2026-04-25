@@ -606,8 +606,8 @@ namespace vm {
 		CORE_PANIC("ext_field not consumed by previous instruction");
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(ext_p64_imm)(FUNCTION_ARGS) {
-		CORE_PANIC("ext_p64_imm not consumed by previous instruction");
+	RETURN_TYPE OpFuns::OPCODE_NAME(ext_p64_type)(FUNCTION_ARGS) {
+		CORE_PANIC("ext_p64_type not consumed by previous instruction");
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(ext_type_field)(FUNCTION_ARGS) {
@@ -897,7 +897,7 @@ namespace vm {
 		{
 			const auto dst       = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
 			const auto src_block = READ_BLOCK_REF_FROM_ARG(instr->arg1);
-			auto       offset    = static_cast<usize>(instr[1].arg0);
+			auto       offset    = READ_FROM_IMMEDIATE_ARG(u64, instr[1].arg0);
 
 			const Pointer new_dst
 				= thread.process_memory.updatePointerAssignment(dst, { src_block, offset });
@@ -947,8 +947,8 @@ namespace vm {
 			auto dst         = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
 			auto tbl_pointer = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
 			u64  index       = READ_FROM_PLACE_ARG(u64, instr[1].arg0);
-			u64  elem_size   = READ_FROM_IMMEDIATE_ARG(u64, instr[1].arg1);
-			u64  data_offset = elem_size * index;
+			auto elem_type   = READ_FROM_IMMEDIATE_ARG(TypeCRef, instr[1].arg1);
+			u64  data_offset = elem_type->getSize().asInt() * index;
 
 			std::cout << "Offset: " << data_offset << '\n';
 
@@ -964,8 +964,9 @@ namespace vm {
 		{
 			auto tbl_pointer = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
 			u64  index       = READ_FROM_PLACE_ARG(u64, instr[1].arg0);
-			u64  elem_size   = READ_FROM_IMMEDIATE_ARG(u64, instr[1].arg1);
-			u64  data_offset = index * elem_size;
+			auto elem_type   = READ_FROM_IMMEDIATE_ARG(TypeCRef, instr[1].arg1);
+			u64  data_offset = index * elem_type->getSize().asInt();
+
 			std::cout << "Offset: " << data_offset << '\n';
 
 			tbl_pointer.movePointer(data_offset);
@@ -973,9 +974,7 @@ namespace vm {
 			Ref<Block> src_block   = READ_BLOCK_REF_FROM_ARG(instr->arg1);
 			auto       src_pointer = Pointer(src_block, 0);
 
-			thread.process_memory.copyPointedData(
-				tbl_pointer, src_pointer, Memory::getBlockType(src_block)
-			);
+			thread.process_memory.copyPointedData(tbl_pointer, src_pointer, elem_type);
 		}
 		FUNCTION_CONT(2);
 	}
@@ -986,26 +985,26 @@ namespace vm {
 			Pointer    dst_pointer = Pointer(dst_block, 0);
 			auto       tbl_pointer = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
 			u64        index       = READ_FROM_PLACE_ARG(u64, instr[1].arg0);
-			u64        elem_size   = READ_FROM_IMMEDIATE_ARG(u64, instr[1].arg1);
+			auto       elem_type   = READ_FROM_IMMEDIATE_ARG(TypeCRef, instr[1].arg1);
+			u64        data_offset = index * elem_type->getSize().asInt();
 
-			std::cout << "Offset: " << index * elem_size << '\n';
-			tbl_pointer.movePointer(index * elem_size);
+			std::cout << "Offset: " << data_offset << '\n';
 
-			thread.process_memory.copyPointedData(
-				dst_pointer, tbl_pointer, Memory::getBlockType(dst_block)
-			);
+			tbl_pointer.movePointer(data_offset);
+
+			thread.process_memory.copyPointedData(dst_pointer, tbl_pointer, elem_type);
 		}
 		FUNCTION_CONT(2);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(fixedSizeTableLea_pptr_bfst)(FUNCTION_ARGS) {
 		{
-			const auto dst       = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
-			Ref<Block> tbl_block = READ_BLOCK_REF_FROM_ARG(instr->arg1);
+			const auto dst         = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
+			Ref<Block> tbl_block   = READ_BLOCK_REF_FROM_ARG(instr->arg1);
+			u64        index       = READ_FROM_PLACE_ARG(u64, instr[1].arg0);
+			auto       elem_type   = READ_FROM_IMMEDIATE_ARG(TypeCRef, instr[1].arg1);
+			u64        data_offset = index * elem_type->getSize().asInt();
 
-			u64 index       = READ_FROM_PLACE_ARG(u64, instr[1].arg0);
-			u64 elem_size   = READ_FROM_IMMEDIATE_ARG(u64, instr[1].arg1);
-			u64 data_offset = index * elem_size;
 			std::cout << "Offset: " << data_offset << '\n';
 
 			const Pointer new_dst
@@ -1021,34 +1020,31 @@ namespace vm {
 			auto       dst_pointer = Pointer(dst_block, 0);
 			Ref<Block> tbl_block   = READ_BLOCK_REF_FROM_ARG(instr->arg1);
 			u64        index       = READ_FROM_PLACE_ARG(u64, instr[1].arg0);
-			u64        elem_size   = READ_FROM_IMMEDIATE_ARG(u64, instr[1].arg1);
+			auto       elem_type   = READ_FROM_IMMEDIATE_ARG(TypeCRef, instr[1].arg1);
+			u64        data_offset = index * elem_type->getSize().asInt();
 
-			std::cout << "Offset: " << index * elem_size << '\n';
-			auto src_pointer = Pointer(tbl_block, index * elem_size);
+			std::cout << "Offset: " << data_offset << '\n';
+			auto src_pointer = Pointer(tbl_block, data_offset);
 
-			thread.process_memory.copyPointedData(
-				dst_pointer, src_pointer, Memory::getBlockType(dst_block)
-			);
+			thread.process_memory.copyPointedData(dst_pointer, src_pointer, elem_type);
 		}
 		FUNCTION_CONT(2);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(fixedSizeTableStore_bfst_bany)(FUNCTION_ARGS) {
 		{
-			Ref<Block> dst_block = READ_BLOCK_REF_FROM_ARG(instr->arg0);
-			Ref<Block> src_block = READ_BLOCK_REF_FROM_ARG(instr->arg1);
+			Ref<Block> dst_block   = READ_BLOCK_REF_FROM_ARG(instr->arg0);
+			Ref<Block> src_block   = READ_BLOCK_REF_FROM_ARG(instr->arg1);
+			u64        index       = READ_FROM_PLACE_ARG(u64, instr[1].arg0);
+			auto       elem_type   = READ_FROM_IMMEDIATE_ARG(TypeCRef, instr[1].arg1);
+			u64        data_offset = index * elem_type->getSize().asInt();
 
-			u64 index     = READ_FROM_PLACE_ARG(u64, instr[1].arg0);
-			u64 elem_size = READ_FROM_IMMEDIATE_ARG(u64, instr[1].arg1);
+			std::cout << "Offset: " << data_offset << '\n';
 
-			std::cout << "Offset: " << index * elem_size << '\n';
-
-			auto dst_pointer = Pointer(dst_block, index * elem_size);
+			auto dst_pointer = Pointer(dst_block, data_offset);
 			auto src_pointer = Pointer(src_block, 0);
 
-			thread.process_memory.copyPointedData(
-				dst_pointer, src_pointer, Memory::getBlockType(src_block)
-			);
+			thread.process_memory.copyPointedData(dst_pointer, src_pointer, elem_type);
 		}
 		FUNCTION_CONT(2);
 	}
