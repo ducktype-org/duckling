@@ -32,6 +32,9 @@ namespace vm::persistent::detail {
 	concept ValidSignature
 		= RebuildRes<ResT> && (std::is_same_v<void, ResT> || !std::is_const_v<SelfT>);
 
+	template<typename T1, typename T2>
+	concept SameWNoQual = std::is_same_v<std::remove_cvref_t<T1>, std::remove_cvref_t<T2>>;
+
 	class SegmentTree {
 	public:
 		constexpr static auto  EMPTY   = NodeID{ 0 };
@@ -129,21 +132,29 @@ namespace vm::persistent::detail {
 			return ans;
 		}
 
-		struct SurroundingNeigh {
-			base::Ref<SegmentTree> mem;
-			usize                  root_pos;
-			usize                  node_pos;
-			NodeID                 node;
+		template<typename segTreeT>
+		requires SameWNoQual<SegmentTree, segTreeT> struct SurroundingNeigh {
+			segTreeT* mem;
+			usize     root_pos{};
+			usize     node_pos{};
+			NodeID    node{};
 
-			std::deque<NodeID> siblings;
+			std::deque<NodeID> siblings{};
+			std::deque<NodeID> ancestors{};
 
 			void moveNodeTo(usize desired_pos) {
+				static constexpr bool RECONSTRUCT = !std::is_const_v<segTreeT>;
 				if (!desired_pos || desired_pos == node_pos) return;
 				CORE_ASSERT(inSubtree(desired_pos, root_pos), "we are within root's subtree");
 
 				usize height_diff = getLCAHeight(desired_pos, node_pos) - heightFromPos(node_pos);
 				for (usize i = (desired_pos == root_pos ? 0 : 1); i < height_diff; i++) {
-					node = mem->mergeTwoRoots(siblings.back(), node);
+					if constexpr (RECONSTRUCT) {
+						node = mem->mergeTwoRoots(siblings.back(), node);
+					} else {
+						node = ancestors.back();
+						ancestors.pop_back();
+					}
 					siblings.pop_back();
 					node_pos >>= 1;
 				}
@@ -173,6 +184,10 @@ namespace vm::persistent::detail {
 						left = node;
 					else
 						right = node;
+
+					if constexpr (RECONSTRUCT) {
+						ancestors.emplace_back(node);
+					}
 
 					if (inSubtree(desired_pos, left_pos)) {
 						node_pos = left_pos;
@@ -481,7 +496,7 @@ namespace vm::persistent::detail {
 			auto old_root_pos = getPos(root);
 			auto new_root_pos = getLCAPos(LEAF_MASK | left_bound, LEAF_MASK | right_bound);
 
-			SurroundingNeigh neigh = {
+			SurroundingNeigh<SegmentTree> neigh = {
 				.mem      = this,
 				.root_pos = new_root_pos,
 				.node_pos = new_root_pos,
@@ -520,12 +535,19 @@ namespace vm::persistent::detail {
 		ResT rebuildFromTwo(
 			this SelfT&& st, NodeID root_1, NodeID root_2, MergeBuilder<ResT> merge_policy
 		) requires ValidSignature<SelfT, ResT> {
+			using BaseT = std::conditional_t<
+				std::is_const_v<std::remove_reference_t<SelfT>>,
+				const SegmentTree,
+				SegmentTree>;
+
+			auto&& obj = static_cast<BaseT&>(st);
+
 			static constexpr bool RECONSTRUCT = std::is_same_v<ResT, NodeID>;
 
 			CORE_ASSERT(root_1 && root_2, "Both of the states must be non-empty");
 
-			auto pos_1 = st.getPos(root_1);
-			auto pos_2 = st.getPos(root_2);
+			auto pos_1 = obj.getPos(root_1);
+			auto pos_2 = obj.getPos(root_2);
 
 			if (offsetFromPos(pos_2) < offsetFromPos(pos_1)) {
 				std::swap(pos_1, pos_2);
@@ -537,7 +559,7 @@ namespace vm::persistent::detail {
 			}
 
 			auto detail_merge =
-				[&, mem = &st](this auto&& self, usize pos, NodeID node_1, NodeID node_2) -> ResT {
+				[&, mem = &obj](this auto&& self, usize pos, NodeID node_1, NodeID node_2) -> ResT {
 				CORE_ASSERT(
 					mem->getPos(node_1) == mem->getPos(node_2) || !node_1 || !node_2,
 					"both nodes are responsible for the same memory region"
@@ -599,8 +621,8 @@ namespace vm::persistent::detail {
 
 			auto lca = getLCAPos(pos_1, pos_2);
 
-			SurroundingNeigh neigh = {
-				.mem      = &st,
+			SurroundingNeigh<BaseT> neigh = {
+				.mem      = &obj,
 				.root_pos = lca,
 				.node_pos = lca,
 				.node     = EMPTY,
@@ -699,18 +721,27 @@ namespace vm::persistent::detail {
 				}
 			}
 
-			neigh.moveNodeTo(lca);
-			return neigh.node;
+			if constexpr (RECONSTRUCT) {
+				neigh.moveNodeTo(lca);
+				return neigh.node;
+			}
 		}
 
 		template<typename ResT, typename SelfT>
 		ResT rebuildWithRange(
-			this SelfT&&       self,
+			this SelfT&&       st,
 			NodeID             root,
 			usize              left_idx,
 			usize              right_idx,
 			RangeBuilder<ResT> range_constructor
 		) requires ValidSignature<SelfT, ResT> {
+			using BaseT = std::conditional_t<
+				std::is_const_v<std::remove_reference_t<SelfT>>,
+				const SegmentTree,
+				SegmentTree>;
+
+			auto&& obj = static_cast<BaseT&>(st);
+
 			static constexpr bool RECONSTRUCT = std::is_same_v<ResT, NodeID>;
 
 			CORE_ASSERT(left_idx < right_idx, "Interval must be non-empty");
@@ -721,7 +752,7 @@ namespace vm::persistent::detail {
 			auto range_nodes = getPosInRange(left_idx, right_idx);
 
 			if (root) {
-				auto [offset, height] = self.getHeightOffset(root);
+				auto [offset, height] = obj.getHeightOffset(root);
 
 				left_idx  = std::min(left_idx, offset);
 				right_idx = std::max(right_idx, offset + (1 << height));
@@ -732,15 +763,15 @@ namespace vm::persistent::detail {
 
 			auto lca_pos = getLCAPos(left_pos, right_pos);
 
-			SurroundingNeigh neigh = {
-				.mem      = &self,
+			SurroundingNeigh<BaseT> neigh = {
+				.mem      = &obj,
 				.root_pos = lca_pos,
 				.node_pos = lca_pos,
 				.node     = EMPTY,
 				.siblings = {},
 			};
 
-			neigh.moveNodeTo(self.getPos(root));
+			neigh.moveNodeTo(obj.getPos(root));
 			neigh.node = root;
 
 			CORE_ASSERT(range_nodes.size(), "when range non-empty, there must be some nodes");

@@ -137,15 +137,17 @@ namespace vm::persistent {
 	MemoryStateID Memory::setMultiple(MemoryStateID state, std::deque<std::pair<usize, usize>> vals) {
 		std::ranges::sort(vals);
 		using namespace std::views;
-		auto idxs = vals | keys | std::ranges::to<std::deque>;
+		std::deque<usize> idxs{};
+		for (auto [idx, _]: vals) idxs.emplace_back(idx);
 
 		auto root = validateInput(state, idxs);
 
 		auto new_root = detail::SegmentTree::reconstructIdxs(
-			root, idxs, [&](usize cur_idx, base::Optional<usize>) {
-				CORE_ASSERT(idxs.size(), "there must be sth");
-				auto [idx, val] = idxs.front();
-				idxs.pop_front();
+			root, idxs, [&](usize cur_idx, base::Optional<usize>) -> ID {
+				CORE_ASSERT(vals.size(), "there must be sth");
+				auto [idx, val] = vals.front();
+				vals.pop_front();
+				CORE_ASSERT(cur_idx == idx, "expected other idx");
 				return nodeFromIdxVar(idx, val);
 			}
 		);

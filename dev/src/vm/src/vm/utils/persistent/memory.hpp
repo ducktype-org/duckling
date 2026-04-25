@@ -28,7 +28,7 @@ namespace vm::persistent {
 	 * @note Implementation is based on persistent segement tree
 	 * @note can be thought of as unordered_map<MemoryStateID, MemoryStateView>
 	 */
-	class Memory: protected detail::SegmentTree {
+	class Memory: public detail::SegmentTree {
 		friend MemoryStateView;
 		friend MemoryIterator;
 
