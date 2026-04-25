@@ -1,10 +1,11 @@
 #pragma once
 
+#include "base/collections/optional.hpp"
 #include <base/extend_cpp/strongly_typed_int.hpp>
 #include <base/types/ints.hpp>
 
 #include <vm/utils/bijective_map.hpp>
-#include <vm/utils/persistent/array.hpp>
+#include <vm/utils/persistent/memory.hpp>
 
 namespace vm::persistent {
 	STRONG_TYPEDEF_INT(HashMapStateID, u64);
@@ -25,70 +26,77 @@ namespace vm::persistent {
 		typename ValT,
 		typename KeyH = std::hash<KeyT>,
 		typename ValH = std::hash<ValT>>
-	class HashMap {
-		using NodeID = u64;
+	class HashMap final: private Memory {
+		detail::BijectiveMap<ValT, usize, ValH> held_values{};
+		detail::BijectiveMap<KeyT, usize, KeyH> held_keys{};
 
-		Array<ValT>                       buffer;
-		detail::BijectiveMap<KeyT, usize> key_binding;
+		usize next_val_id = 0;
+		usize next_key_id = 0;
 
-		NodeID emplaceKey(const KeyT& var) {
-			auto [_, idx] = key_binding.emplaceByLeft(var, key_binding.size());
+		usize emplaceKey(const KeyT& var) {
+			auto [_, idx] = held_keys.emplaceByLeft(var, held_keys.size());
 			return idx;
 		}
 
+		constexpr static HashMapStateID toMapState(MemoryStateID state) {
+			return HashMapStateID{ u64(state) };
+		}
+
+		constexpr static MemoryStateID toMemState(HashMapStateID state) {
+			return MemoryStateID{ u64(state) };
+		}
+
+		usize emplaceNewVal(const ValT& var) {
+			auto [is_new, var_id] = held_values.emplaceByLeft(var, next_val_id);
+			next_val_id += (is_new ? 1 : 0);
+			return var_id;
+		}
+
+		usize emplaceNewKey(const KeyT& key) {
+			auto [is_new, var_id] = held_values.emplaceByLeft(key, next_key_id);
+			next_key_id += (is_new ? 1 : 0);
+			return var_id;
+		}
+
+
 	public:
+		static constexpr auto EMPTY = HashMapStateID(u64(Memory::EMPTY));
+
 		bool contains(HashMapStateID state_id, const KeyT& key) const {
-			auto maybe_idx = key_binding.atLeftOpt(key);
-			if (!maybe_idx) return false;
+			if_opt_some(held_keys.atLeftOpt(key), key_id) {
+				auto state = toMemState(state_id);
+				return Memory::active(state, key_id);
+			}
 
-			auto inner = ArrayStateID{ u64(state_id) };
-
-			return buffer.active(inner, *maybe_idx);
+			return false;
 		}
 
 		const ValT& access(HashMapStateID state_id, const KeyT& key) const {
-			auto inner     = ArrayStateID{ u64(state_id) };
-			auto maybe_idx = key_binding.atLeftOpt(key);
-
-			if (!maybe_idx) throw std::invalid_argument("no such key in map");
-
-			return buffer.access(inner, maybe_idx);
+			auto key_id = *held_keys.atLeftOpt(key);
+			auto state  = toMemState(state_id);
+			return Memory::active(state, key_id);
 		}
 
 		HashMapStateID insert(HashMapStateID state_id, const KeyT& key, const ValT& var) {
-			auto inner     = ArrayStateID{ u64(state_id) };
-			auto idx       = emplaceKey(key);
-			auto new_state = buffer.change(inner, idx, var);
-
-			return HashMapStateID{ u64{ new_state } };
+			auto state  = toMemState(state_id);
+			auto key_id = emplaceKey(key);
+			auto val_id = emplaceNewVal(var);
+			return toMapState(Memory::set(state, key_id, val_id));
 		}
 
 		HashMapStateID erase(HashMapStateID state_id, const KeyT& key) {
-			auto inner     = ArrayStateID{ u64(state_id) };
-			auto maybe_idx = key_binding.atLeftOpt(key);
-
-			if (!maybe_idx) return state_id;
-
-			auto new_state = buffer.erase(inner, *maybe_idx);
-
-			return HashMapStateID{ u64{ new_state } };
+			auto state  = toMemState(state_id);
+			auto key_id = emplaceKey(key);
+			return toMapState(Memory::erase(state, key_id));
 		}
 
 		std::pair<bool, HashMapStateID> emplace(
 			HashMapStateID state_id, const KeyT& key, const ValT& var
 		) {
-			auto inner               = ArrayStateID{ u64(state_id) };
-			auto idx                 = emplaceKey(key);
-			auto [is_new, new_state] = buffer.emplace(inner, idx, var);
+			if (contains(state_id, key)) return { false, state_id };
 
-			return { is_new, HashMapStateID{ u64{ new_state } } };
+			auto ans = insert(state_id, key, var);
+			return { true, ans };
 		}
-
-		[[nodiscard]]
-		HashMapStateID getEmpty() const {
-			return HashMapStateID{ 1 };
-		}
-
-		HashMap(usize buffer_init): buffer{ buffer_init } {}
 	};
 }
