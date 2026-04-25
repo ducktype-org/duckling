@@ -1,0 +1,221 @@
+type fixed_size_table: InnerArray i64 10
+type data: Level2 { pad_l2: i64, arr: InnerArray }
+type data: Level1 { pad_l1: i64, l2: Level2 }
+type data: Root   { pad_root: i64, l1: Level1 }
+
+type pointer: ptr_i64 i64
+type pointer: ptr_InnerArray InnerArray
+type pointer: ptr_Level1 Level1
+type pointer: ptr_Level2 Level2
+
+type data: Element { x: i64, y: i64, z: i64 }
+type fixed_size_table: Table Element 5
+type pointer: ptr_Element Element
+
+type pointer: ptr_i64 i64
+type pointer: ptr_ptr_i64 ptr_i64
+type fixed_size_table: StaticOfDyn ptr_i64 5
+type fixed_size_table: InnerStatic i64 4
+type pointer: ptr_InnerStatic InnerStatic
+
+# ==========================================================
+# Nested Struct Array
+# ==========================================================
+function test_nested {} -> {} {
+    init_pany_type root, Root;
+    init_pany_type p_arr, ptr_InnerArray;
+    init_pany_type p_val, ptr_i64;
+    init_pany_type idx, i64;
+    init_pany_type val, i64;
+
+    init_pany_type p_l1, ptr_Level1;
+    structLea_pptr_pste_field p_l1, root, Root.l1;
+    
+    init_pany_type p_l2, ptr_Level2;
+    structLea_pptr_pptr_field p_l2, p_l1, Level1.l2;
+    
+    structLea_pptr_pptr_field p_arr, p_l2, Level2.arr;
+
+    mov_p64_imm idx, 9;
+    fixedSizeTableLea_pptr_pptr_p64 p_val, p_arr, idx;
+    mov_p64_imm val, 1337;
+    store_pptr_pany p_val, val;
+
+    init_pany_type check, i64;
+    output_p64 val; # 1337
+    
+    # Check if pad was untouched
+    structLoad_pany_pste_field check, root, Root.pad_root;
+    output_p64 check; # 0
+    ret;
+}
+
+# ==========================================================
+# Array of Structs
+# ==========================================================
+function test_struct_array {} -> {} {
+    init_pany_type tbl, Table;
+    init_pany_type p_el, ptr_Element;
+    init_pany_type el, Element;
+    init_pany_type idx, i64;
+    init_pany_type val, i64;
+
+    mov_p64_imm idx, 4;
+    fixedSizeTableLea_pptr_pfst_p64 p_el, tbl, idx;
+    
+    init_pany_type p_y, ptr_i64;
+    structLea_pptr_pptr_field p_y, p_el, Element.y;
+    
+    mov_p64_imm val, 777;
+    store_pptr_pany p_y, val;
+
+    init_pany_type check, i64;
+    fixedSizeTableLoad_pany_pfst_p64 el, tbl, idx;
+    structLoad_pany_pste_field check, el, Element.y;
+    
+    output_p64 check; # 777
+    
+    # Check padding.
+    structLoad_pany_pste_field check, el, Element.x;
+    output_p64 check; # 0
+    ret;
+}
+
+# ==========================================================
+# Static of static
+# ==========================================================
+type fixed_size_table: Row i64 4
+type fixed_size_table: Matrix Row 4
+type pointer: ptr_Row Row 
+
+function test_matrix {} -> {} {
+    init_pany_type m, Matrix;
+    init_pany_type p_row, ptr_Row;
+    init_pany_type p_val, ptr_i64;
+    init_pany_type idx_r, i64;
+    init_pany_type idx_c, i64;
+    init_pany_type val, i64;
+
+    mov_p64_imm idx_r, 2;
+    mov_p64_imm idx_c, 3;
+    mov_p64_imm val, 999;
+
+    fixedSizeTableLea_pptr_pfst_p64 p_row, m, idx_r;
+    fixedSizeTableLea_pptr_pptr_p64 p_val, p_row, idx_c;
+    
+    store_pptr_pany p_val, val;
+
+    init_pany_type check, i64;
+    fixedSizeTableLoad_pany_pptr_p64 check, p_row, idx_c;
+    output_p64 check; # 999
+    ret;
+}
+
+# ==========================================================
+# Dynamic of dynamic
+# ==========================================================
+function test_nested_dynamic {} -> {} {
+    init_pany_type matrix, ptr_ptr_i64;
+    init_pany_type row_ptr, ptr_i64;
+    init_pany_type idx_outer, i64;
+    init_pany_type idx_inner, i64;
+    init_pany_type val, i64;
+
+    mov_p64_imm idx_outer, 3;
+    dynTableReAlloc_pptr_type_p64 matrix, ptr_i64, idx_outer;
+
+    mov_p64_imm idx_outer, 1;
+    dynTableLea_pptr_pptr_p64 row_ptr, matrix, idx_outer;
+    
+    mov_p64_imm idx_inner, 5;
+    dynTableReAlloc_pptr_type_p64 row_ptr, i64, idx_inner;
+
+    mov_p64_imm idx_inner, 4;
+    init_pany_type target_cell, ptr_i64;
+    dynTableLea_pptr_pptr_p64 target_cell, row_ptr, idx_inner;
+    
+    mov_p64_imm val, 111;
+    store_pptr_pany target_cell, val;
+
+    init_pany_type check, i64;
+    dynTableLoad_pany_pptr_p64 check, row_ptr, idx_inner;
+    output_p64 check; # 111
+
+    free_pptr row_ptr;
+    free_pptr matrix;
+    ret;
+}
+
+# ==========================================================
+# Static array of dynamic array
+# ==========================================================
+function test_static_of_dynamic {} -> {} {
+    init_pany_type tbl, StaticOfDyn;
+    init_pany_type row_ptr, ptr_i64;
+    init_pany_type idx_static, i64;
+    init_pany_type idx_dyn, i64;
+    init_pany_type val, i64;
+
+    mov_p64_imm idx_static, 2;
+    fixedSizeTableLea_pptr_pfst_p64 row_ptr, tbl, idx_static;
+
+    mov_p64_imm idx_dyn, 10;
+    dynTableReAlloc_pptr_type_p64 row_ptr, i64, idx_dyn;
+
+    mov_p64_imm idx_dyn, 7;
+    init_pany_type cell, ptr_i64;
+    dynTableLea_pptr_pptr_p64 cell, row_ptr, idx_dyn;
+    
+    mov_p64_imm val, 222;
+    store_pptr_pany cell, val;
+
+    init_pany_type check, i64;
+    dynTableLoad_pany_pptr_p64 check, row_ptr, idx_dyn;
+    output_p64 check; # 222
+
+    free_pptr row_ptr;
+    ret;
+}
+
+# ==========================================================
+# Dynamic array of static array
+# ==========================================================
+function test_dynamic_of_static {} -> {} {
+    init_pany_type dyn_arr, ptr_InnerStatic;
+    init_pany_type idx_dyn, i64;
+    init_pany_type idx_static, i64;
+    init_pany_type val, i64;
+
+    mov_p64_imm idx_dyn, 5;
+    dynTableReAlloc_pptr_type_p64 dyn_arr, InnerStatic, idx_dyn;
+
+    mov_p64_imm idx_dyn, 3;
+    init_pany_type static_row_ptr, ptr_InnerStatic;
+    dynTableLea_pptr_pptr_p64 static_row_ptr, dyn_arr, idx_dyn;
+
+    mov_p64_imm idx_static, 2;
+    init_pany_type final_cell, ptr_i64;
+    fixedSizeTableLea_pptr_pptr_p64 final_cell, static_row_ptr, idx_static;
+
+    mov_p64_imm val, 333;
+    store_pptr_pany final_cell, val;
+
+    init_pany_type check, i64;
+    fixedSizeTableLoad_pany_pptr_p64 check, static_row_ptr, idx_static;
+    output_p64 check; # 333
+
+    free_pptr dyn_arr;
+    ret;
+}
+
+
+function main {} -> { i64 } {
+    call_func test_nested;              # 1337, 0
+    call_func test_struct_array;        # 777, 0
+    call_func test_matrix;              # 999
+    call_func test_nested_dynamic;      # 111
+    call_func test_static_of_dynamic;   # 222
+    call_func test_dynamic_of_static;   # 333
+
+    ret;
+}
