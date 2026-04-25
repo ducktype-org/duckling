@@ -9,9 +9,6 @@ namespace pst::expr {
 
 		i64 length = base::safeIntConv<i64>(state.ctokens().size());
 
-		auto pos = dia::SourcePosition(state.getPosition(), state.getPosition(length - 1).getEnd());
-
-
 		bool or_found = false;
 		i64  or_fwd   = 0;
 

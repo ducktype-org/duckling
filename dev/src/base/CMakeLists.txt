@@ -11,6 +11,7 @@ add_library(Base
         src/base/str/str_utils.cpp
         
         src/base/types/bit256.cpp
+        src/base/types/checked_okbad.cpp
 )
 
 # @TODO: unicode dependency might not be optimal.
