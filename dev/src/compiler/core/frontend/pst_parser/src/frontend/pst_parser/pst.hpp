@@ -5,9 +5,9 @@
 #include "elements/includes/basic.hpp"  // IWYU pragma: keep
 #include "lang_parser_context.hpp"
 #include "pst_state_forward.hpp"
-#include "source_position_locked.hpp"
 
 #include <diagnostic_interactive/logger.hpp>
+#include <diagnostic_interactive/stable_position.hpp>
 #include <time_stats/time_stats.hpp>
 
 #include <token_source/source.hpp>
@@ -173,10 +173,10 @@ namespace pst {
 		 */
 		template<typename... Args>
 		explicit PST(
-			dia::SourcePosition    pos,
-			std::string_view       content,
-			Box<LangParserContext> parsing_ctx,
-			hashing::ComponentHash hash_ctx = {},
+			dia_int::StablePosition pos,
+			std::string_view        content,
+			Box<LangParserContext>  parsing_ctx,
+			hashing::ComponentHash  hash_ctx = {},
 			Args&&... args
 		) requires PARSE_ABLE<Args...>
 			  : file(tokenizer::makeTokenSource(pos, content)), hash_ctx_info(std::move(hash_ctx)) {
@@ -266,20 +266,9 @@ namespace pst {
 		}
 
 		/** @brief Create a PST from an expanded (macro) text, with correct query dependency
-		 * tracking. */
+		 * tracking via unlock(ctx). */
 		static PST fromExpand(
-			SourcePositionLocked     pos,
-			std::string_view         contents,
-			Box<LangParserContext>&& parsing_ctx,
-			hashing::ComponentHash   hash_ctx = {}
-		) {
-			return fromExpandWithArgs(
-				pos.illegalAccess(), contents, std::move(parsing_ctx), hash_ctx
-			);
-		}
-
-		static PST fromExpand(
-			dia::SourcePosition      pos,
+			dia_int::StablePosition  pos,
 			std::string_view         contents,
 			Box<LangParserContext>&& parsing_ctx,
 			hashing::ComponentHash   hash_ctx = {}
@@ -289,10 +278,10 @@ namespace pst {
 
 		template<typename... Args>
 		static PST fromExpandWithArgs(
-			dia::SourcePosition    pos,
-			std::string_view       contents,
-			Box<LangParserContext> parsing_ctx,
-			hashing::ComponentHash hash_ctx = {},
+			dia_int::StablePosition pos,
+			std::string_view        contents,
+			Box<LangParserContext>  parsing_ctx,
+			hashing::ComponentHash  hash_ctx = {},
 			Args&&... args
 		) requires PARSE_ABLE<Args...> {
 			auto out = PST(

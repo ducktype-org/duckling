@@ -91,13 +91,13 @@ namespace dia {
 		 *
 		 * This is given as message contents (multiple) so that
 		 * it can be conveniently decorated before wrapping in a printer::Message.
-		 *
+		 * This should be removed on the feature
 		 * @param reason The reason for the message.
 		 * @return Formatted message contents.
 		 */
 		[[nodiscard]]
 		std::vector<printer::PrinterContent> genPrinterContents(
-			const printer::PrinterContentsSeq& reason
+			[[maybe_unused]] const printer::PrinterContentsSeq& reason
 		) const;
 
 		/**

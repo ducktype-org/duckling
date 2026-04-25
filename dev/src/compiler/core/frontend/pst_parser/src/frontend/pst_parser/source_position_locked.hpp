@@ -23,7 +23,6 @@ namespace pst {
 		[[nodiscard]] dia::SourcePosition illegalAccess() const;
 
 		friend class LangElement;
-		friend class StablePosition;
 
 		static query::external::InputData getQueryInputNode();
 	};
