@@ -11,7 +11,7 @@ from ..impl.helpers import (
     default_linker_from_ctx,
     default_gcov_from_ctx,
 )
-from ...llvm_tools import (LLVM_TOOLS, llvm_version_options)
+from ...jit.llvm_tools import (LLVM_TOOLS, llvm_version_options)
 from click import Choice, option, command, prompt
 
 @command()
