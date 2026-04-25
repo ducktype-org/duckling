@@ -561,7 +561,6 @@ namespace vm::loader::compiler::detail {
 				addLow<Op_ext_imm>(vm::opargs::Immediate{ elem_size });
 			}
 			instr_case(high::Op_dynTableReAlloc_pptr_type_p64, i) {
-				// TODOP: Here?
 				addLow<Op_dynTableReAlloc_pptr_type>(i.dst_table_ptr, i.table_type);
 				addLow<Op_ext_p64>(i.new_elem_count);
 			}

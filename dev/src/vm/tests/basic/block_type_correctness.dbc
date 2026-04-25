@@ -1,117 +1,112 @@
-# ===== Nested Struct Array =====
 type fixed_size_table: InnerArray i64 10
-type data: Level2 { pad: i64, arr: InnerArray }
-type data: Level1 { pad: i64, l2: Level2 }
-type data: Root   { pad: i64, l1: Level1 }
+type data: Level2 { pad_l2: i64, arr: InnerArray }
+type data: Level1 { pad_l1: i64, l2: Level2 }
+type data: Root   { pad_root: i64, l1: Level1 }
 
+type pointer: ptr_i64 i64
 type pointer: ptr_InnerArray InnerArray
 type pointer: ptr_Level1 Level1
 type pointer: ptr_Level2 Level2
 
-function test_nested_struct_array {} -> {} {
-    init_pany_type root, Root;
-    init_pany_type ptr_to_arr, ptr_InnerArray;
-    init_pany_type ptr_to_l1, ptr_Level1;
-    init_pany_type ptr_to_l2, ptr_Level2;
-    init_pany_type ptr_to_element, ptr_i64;
-    init_pany_type idx, i64;
-
-    structLea_pptr_pste_field ptr_to_l1, root, Root.l1;
-    structLea_pptr_pptr_field ptr_to_l2, ptr_to_l1, Level1.l2;
-    structLea_pptr_pptr_field ptr_to_arr, ptr_to_l2, Level2.arr;
-
-    mov_p64_imm idx, 9; # Accessing the last element so the offset gets as big as it can and potentially cause an out of bounds read.
-    # TODOP: This is weird, shouldn't work but it does
-    # mov_p64_imm idx, 200; # Accessing the last element so the offset gets as big as it can and potentially cause an out of bounds read.
-    fixedSizeTableLea_pptr_pptr_p64 ptr_to_element, ptr_to_arr, idx;
-    
-    
-    init_pany_type asd, InnerArray;
-    fixedSizeTableStore_pfst_pany_p64 asd, idx, idx;
-
-    ret;
-}
-
-# ===== Array of Structs=====
+type data: Element { x: i64, y: i64, z: i64 }
 type fixed_size_table: Table Element 5
 type pointer: ptr_Element Element
-type pointer: ptr_Table Table
-type data: Element { x: i64, y: i64, z: i64 }
 
-function test_array_of_structs {} -> {} {
-    init_pany_type tbl, Table;
-    init_pany_type ptr_el, ptr_Element;
-    init_pany_type ptr_tbl, ptr_Table;
+# ===== Nested Struct Array =====
+function test_nested_integration {} -> {} {
+    init_pany_type root, Root;
+    init_pany_type p_arr, ptr_InnerArray;
+    init_pany_type p_val, ptr_i64;
     init_pany_type idx, i64;
-    
-    mov_p64_imm idx, 4;
-    # mov_p64_imm idx, 5; # TODOP: Fishy, this works but shouldn't
-    fixedSizeTableLea_pptr_pfst_p64 ptr_el, tbl, idx;
+    init_pany_type val, i64;
 
+    init_pany_type p_l1, ptr_Level1;
+    structLea_pptr_pste_field p_l1, root, Root.l1;
+    
+    init_pany_type p_l2, ptr_Level2;
+    structLea_pptr_pptr_field p_l2, p_l1, Level1.l2;
+    
+    structLea_pptr_pptr_field p_arr, p_l2, Level2.arr;
+
+    mov_p64_imm idx, 9;
+    fixedSizeTableLea_pptr_pptr_p64 p_val, p_arr, idx;
+    mov_p64_imm val, 1337;
+    store_pptr_pany p_val, val;
+
+    init_pany_type check, i64;
+    output_p64 val; # 1337
+    
+    # Check if pad was untouched
+    structLoad_pany_pste_field check, root, Root.pad_root;
+    output_p64 check; # 0
     ret;
 }
 
-# ===== Array of Arrays =====
+# ==========================================================
+# TEST 2: Array of Structs
+# ==========================================================
+function test_struct_array_integration {} -> {} {
+    init_pany_type tbl, Table;
+    init_pany_type p_el, ptr_Element;
+    init_pany_type el, Element;
+    init_pany_type idx, i64;
+    init_pany_type val, i64;
+
+    mov_p64_imm idx, 4;
+    fixedSizeTableLea_pptr_pfst_p64 p_el, tbl, idx;
+    
+    init_pany_type p_y, ptr_i64;
+    structLea_pptr_pptr_field p_y, p_el, Element.y;
+    
+    mov_p64_imm val, 777;
+    store_pptr_pany p_y, val;
+
+    init_pany_type check, i64;
+    fixedSizeTableLoad_pany_pfst_p64 el, tbl, idx;
+    structLoad_pany_pste_field check, el, Element.y;
+    
+    output_p64 check; # 777
+    
+    # Check padding.
+    structLoad_pany_pste_field check, el, Element.x;
+    output_p64 check; # 0
+    ret;
+}
+
+# ==========================================================
+# TEST 3: Matrix
+# ==========================================================
 type fixed_size_table: Row i64 4
 type fixed_size_table: Matrix Row 4
 type pointer: ptr_Row Row 
-type pointer: ptr_Matrix Matrix
 
-function test_matrix {} -> {} {
+function test_matrix_integration {} -> {} {
     init_pany_type m, Matrix;
-    init_pany_type row_ptr, ptr_Row;
-    init_pany_type val_ptr, ptr_i64;
-    init_pany_type idx, i64;
+    init_pany_type p_row, ptr_Row;
+    init_pany_type p_val, ptr_i64;
+    init_pany_type idx_r, i64;
+    init_pany_type idx_c, i64;
+    init_pany_type val, i64;
 
-    mov_p64_imm idx, 2;
-    fixedSizeTableLea_pptr_pfst_p64 row_ptr, m, idx;
-    fixedSizeTableLea_pptr_pptr_p64 val_ptr, row_ptr, idx;
+    mov_p64_imm idx_r, 2;
+    mov_p64_imm idx_c, 3;
+    mov_p64_imm val, 999;
+
+    fixedSizeTableLea_pptr_pfst_p64 p_row, m, idx_r;
+    fixedSizeTableLea_pptr_pptr_p64 p_val, p_row, idx_c;
+    
+    store_pptr_pany p_val, val;
+
+    init_pany_type check, i64;
+    fixedSizeTableLoad_pany_pptr_p64 check, p_row, idx_c;
+    output_p64 check; # 999
     ret;
 }
-
-# ===== Array of Pointers =====
-type fixed_size_table: PtrArray ptr_i64 5
-type pointer: ptr_ptr_i64 ptr_i64
-
-
-function test_ptr_array {} -> {} {
-    init_pany_type tbl, PtrArray;
-    init_pany_type p_ptr, ptr_ptr_i64;
-    init_pany_type idx, i64;
-
-    mov_p64_imm idx, 1;
-    fixedSizeTableLea_pptr_pfst_p64 p_ptr, tbl, idx;
-
-    ret;
-}
-
-# ===== Mattest =====
-type fixed_size_table: T i64 5
-type pointer: ptr_T T
-type data: F {
-    a: T
-}
-
-function test_mattest {} -> {} {
-    init_pany_type foo, F;
-    init_pany_type ptr, ptr_T;
-    structLea_pptr_pste_field ptr, foo, F.a;
-
-    init_pany_type value_ptr, ptr_i64;
-    init_pany_type idx, i64;
-    mov_p64_imm idx, 1;
-    fixedSizeTableLea_pptr_pptr_p64 value_ptr, ptr, idx;
-    ret;
-}
-
-
 
 function main {} -> { i64 } {
-    call_func test_nested_struct_array;
-    call_func test_array_of_structs;    
-    call_func test_matrix;    
-    call_func test_ptr_array;    
-    call_func test_mattest;    
+    call_func test_nested_integration;          # 1337, 0
+    call_func test_struct_array_integration;    # 777, 0
+    call_func test_matrix_integration;          # 999
 
     ret;
 }

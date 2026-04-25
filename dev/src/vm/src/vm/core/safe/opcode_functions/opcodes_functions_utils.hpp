@@ -87,6 +87,10 @@ inline static void writeToPlace(
 	getBlockRefFromArg(                                                                          \
 		frame->local_block_ref_stack_base, thread.runtime_data.global_block_ref_buffer_base, ARG \
 	)
+/**
+ * @brief Helper macro for reading a value from a immediate argument.
+ */
+#define READ_FROM_IMMEDIATE_ARG(TYPE, ARG) safeReadObjectBytes<TYPE>(ARG)
 
 /**
  * @brief Reads a value of a given TYPE from the beginning of the given view.
