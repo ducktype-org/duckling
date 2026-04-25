@@ -606,6 +606,10 @@ namespace vm {
 		CORE_PANIC("ext_field not consumed by previous instruction");
 	}
 
+	RETURN_TYPE OpFuns::OPCODE_NAME(ext_p64_imm)(FUNCTION_ARGS) {
+		CORE_PANIC("ext_p64_imm not consumed by previous instruction");
+	}
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(ext_type_field)(FUNCTION_ARGS) {
 		CORE_PANIC("ext_type_field not consumed by previous instruction");
 	}
@@ -953,7 +957,7 @@ namespace vm {
 			);
 			WRITE_TO_PLACE_ARG(Pointer, instr->arg0, new_dst);
 		}
-		FUNCTION_CONT(3);
+		FUNCTION_CONT(2);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(anyArrayStore_pptr_bany)(FUNCTION_ARGS) {
@@ -973,7 +977,7 @@ namespace vm {
 				tbl_pointer, src_pointer, Memory::getBlockType(src_block)
 			);
 		}
-		FUNCTION_CONT(3);
+		FUNCTION_CONT(2);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(anyArrayLoad_bany_pptr)(FUNCTION_ARGS) {
@@ -991,7 +995,7 @@ namespace vm {
 				dst_pointer, tbl_pointer, Memory::getBlockType(dst_block)
 			);
 		}
-		FUNCTION_CONT(3);
+		FUNCTION_CONT(2);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(fixedSizeTableLea_pptr_bfst)(FUNCTION_ARGS) {
@@ -1008,7 +1012,7 @@ namespace vm {
 				= thread.process_memory.updatePointerAssignment(dst, { tbl_block, data_offset });
 			WRITE_TO_PLACE_ARG(Pointer, instr->arg0, new_dst);
 		}
-		FUNCTION_CONT(3);
+		FUNCTION_CONT(2);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(fixedSizeTableLoad_bany_bfst)(FUNCTION_ARGS) {
@@ -1026,7 +1030,7 @@ namespace vm {
 				dst_pointer, src_pointer, Memory::getBlockType(dst_block)
 			);
 		}
-		FUNCTION_CONT(3);
+		FUNCTION_CONT(2);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(fixedSizeTableStore_bfst_bany)(FUNCTION_ARGS) {
@@ -1046,7 +1050,7 @@ namespace vm {
 				dst_pointer, src_pointer, Memory::getBlockType(src_block)
 			);
 		}
-		FUNCTION_CONT(3);
+		FUNCTION_CONT(2);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(dynTableReAlloc_pptr_type)(FUNCTION_ARGS) {

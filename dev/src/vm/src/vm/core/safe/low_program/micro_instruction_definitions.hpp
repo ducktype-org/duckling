@@ -507,7 +507,7 @@ DEF_MICRO_INSTR(
 // ========= ARRAY OPERATIONS ========
 
 // generic `lea` for both fixed size and dynamic tables.
-// expects `ext_p64` (index) and `ext_imm` (element size) to be the next instruction
+// expects `ext_p64_imm` (index, element size) to be the next instruction
 DEF_MICRO_INSTR(
 	anyArrayLea_pptr_pptr,
 	vm::low::opargs::PlacePtr /* destination */,
@@ -517,7 +517,7 @@ DEF_MICRO_INSTR(
 )
 
 // generic `load` for both fixed size and dynamic tables.
-// expects `ext_p64` (index) and `ext_imm` (element size) to be the next instruction
+// expects `ext_p64_imm` (index, element size) to be the next instruction
 DEF_MICRO_INSTR(
 	anyArrayLoad_bany_pptr,
 	vm::low::opargs::PlaceBlockAny /* destination */,
@@ -527,7 +527,7 @@ DEF_MICRO_INSTR(
 )
 
 // generic `store` for both fixed size and dynamic tables.
-// expects `ext_p64` (index) and `ext_imm` (element size) to be the next instruction
+// expects `ext_p64_imm` (index, element size) to be the next instruction
 DEF_MICRO_INSTR(
 	anyArrayStore_pptr_bany,
 	vm::low::opargs::PlacePtr /* table_ptr */,
@@ -536,7 +536,7 @@ DEF_MICRO_INSTR(
     vm::low::opargs::Immediate	 element_size */
 )
 
-// expects `ext_p64` (index) and `ext_imm` (element size) to be the next instruction
+// expects `ext_p64_imm` (index, element size) to be the next instruction
 DEF_MICRO_INSTR(
 	fixedSizeTableLea_pptr_bfst,
 	vm::low::opargs::PlacePtr /* destination */,
@@ -545,7 +545,7 @@ DEF_MICRO_INSTR(
     vm::low::opargs::Immediate	 element_size */
 )
 
-// expects `ext_p64` (index) and `ext_imm` (element size) to be the next instruction
+// expects `ext_p64_imm` (index, element size) to be the next instruction
 DEF_MICRO_INSTR(
 	fixedSizeTableLoad_bany_bfst,
 	vm::low::opargs::PlaceBlockAny /* destination */,
@@ -554,7 +554,7 @@ DEF_MICRO_INSTR(
     vm::low::opargs::Immediate	 element_size */
 )
 
-// expects `ext_p64` (index) and `ext_imm` (element size) to be the next instruction
+// expects `ext_p64_imm` (index, element size) to be the next instruction
 DEF_MICRO_INSTR(
 	fixedSizeTableStore_bfst_bany,
 	vm::low::opargs::PlaceBlockFSTable /* table_ptr */,
@@ -659,6 +659,7 @@ DEF_MICRO_INSTR(ext_p64, vm::low::opargs::Place64)
 DEF_MICRO_INSTR(ext_imm, vm::low::opargs::Immediate)
 DEF_MICRO_INSTR(ext_type, vm::low::opargs::Type)
 DEF_MICRO_INSTR(ext_field, vm::low::opargs::Field)
+DEF_MICRO_INSTR(ext_p64_imm, vm::low::opargs::Place64, vm::low::opargs::Immediate)
 DEF_MICRO_INSTR(ext_type_field, vm::low::opargs::Type, vm::low::opargs::Field)
 DEF_MICRO_INSTR(ext_type_p64, vm::low::opargs::Type, vm::low::opargs::Place64)
 DEF_MICRO_INSTR(ext_type_type, vm::low::opargs::Type, vm::low::opargs::Type)
