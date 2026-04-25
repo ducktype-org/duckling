@@ -15,7 +15,9 @@ from click import Choice, option, command, prompt
 
 
 def configure_presets(ctx, param, value):
-    assert param.name == "preset"
+    if param.name != "preset":
+        raise click.BadParameter("Preset configuration can only be applied to the --preset option.")
+
     preset_map = {}
 
     if value is None:
@@ -94,7 +96,7 @@ def configure_presets(ctx, param, value):
     is_flag=True,
 )
 @option(
-    "--coverage",
+    "--coverage/--no-coverage",
     prompt="Enable coverage",
     help="Whether or not to enable coverage",
     type=bool,
@@ -105,7 +107,7 @@ def configure_presets(ctx, param, value):
 )
 @option(
     "-d",
-    "--docs",
+    "--docs/--no-docs",
     help="Whether or not to build the docs.",
     type=bool,
     default=False,
@@ -130,7 +132,7 @@ def configure_presets(ctx, param, value):
     default="default",
 )
 @option(
-    "--shared_libs",
+    "--shared_libs/--no-shared_libs",
     help="Whether to use shared or static libraries.",
     type=bool,
     default=False,
@@ -138,21 +140,21 @@ def configure_presets(ctx, param, value):
 )
 @option(
     "-i",
-    "--strip-symbol-information",
+    "--strip-symbol-information/--no-strip-symbol-information",
     help="Whether to strip all of symbol information from the binaries. It makes the binaries several times smaller, but practically prevents any debugging. Goes well with Release and non-Debug build types.",
     type=bool,
     default=False,
     is_flag=True,
 )
 @option(
-    "--disable-unity-compilation",
+    "--disable-unity-compilation/--no-disable-unity-compilation",
     help="Unity compilation (used only in parser) speeds up the build time significantly, but makes debugging harder (related linker errors lack information).",
     type=bool,
     default=False,
     is_flag=True,
 )
 @option(
-    "--enable-link-time-optimization",
+    "--enable-link-time-optimization/--no-enable-link-time-optimization",
     help="Link time optimization (LTO) can improve performance by optimizing across translation units, but may make debugging more difficult. Requires Clang compiler and LLD linker (auto-configured).",
     type=bool,
     default=False,
@@ -177,7 +179,7 @@ def configure_presets(ctx, param, value):
     is_flag=True,
 )
 @option(
-    "--enable-jit",
+    "--enable-jit/--no-enable-jit",
     prompt="Enable JIT",
     help="Whether or not to enable JIT compilation.",
     type=bool,
@@ -185,14 +187,14 @@ def configure_presets(ctx, param, value):
     is_flag=True,
 )
 @option(
-    "--embed-assets",
+    "--embed-assets/--no-embed-assets",
     help="Whether to embed assets into the binary. This makes binary portable. Currently the assets include diagnostic messages templates",
     type=bool,
     default=False,
     is_flag=True,
 )
 @option(
-    "--build-static-icu",
+    "--build-static-icu/--no-build-static-icu",
     help="Forces building and linking against a custom-built static version of ICU.",
     type=bool,
     default=False,
