@@ -55,9 +55,16 @@ if (JIT_ENABLED) # Setup JitDep - opcode definitions and all of its dependencies
     # Setup list of all bitcode dependencies (from outside of VM).
     set(vm_dep_bc_targets "") # Targets for dependency.
     set(vm_dep_objects_bc "") # Actuall list.
+
+    # Dummy source so header-only libraries (Events) do not fail
+    set(DUMMY_SOURCE "${CMAKE_CURRENT_BINARY_DIR}/dummy.c")
+    if(NOT EXISTS "${DUMMY_SOURCE}")
+        file(WRITE "${DUMMY_SOURCE}" "")
+    endif()
+
     foreach(dep ${vm_internal_deps})
-        if(TARGET ${dep} AND $<TARGET_OBJECTS:${dep}>)
-            add_library(${dep}_bc OBJECT $<TARGET_OBJECTS:${dep}>)
+        if(TARGET ${dep})
+            add_library(${dep}_bc OBJECT "${DUMMY_SOURCE}" $<TARGET_OBJECTS:${dep}>)
             target_compile_options(${dep}_bc PRIVATE -emit-llvm)
 
             list(APPEND vm_dep_bc_targets ${dep}_bc)

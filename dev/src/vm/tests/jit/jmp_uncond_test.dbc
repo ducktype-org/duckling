@@ -3,6 +3,7 @@ function pow { i64 }-> { i64 } {
     mov_p64_imm     ret0, 3;
 
     jmp_label loop_start;
+    add_p64_p64     ret0, ret0;
 label loop_start;
     add_p64_p64     ret0, ret0;
 

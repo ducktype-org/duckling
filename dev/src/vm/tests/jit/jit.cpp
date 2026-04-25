@@ -2,8 +2,6 @@
 
 #include <tester/tester.hpp>
 
-#include <vm/bytecode/validator/errors.hpp>
-
 /**
  * @brief Tests here invoke another function multiple times, inducing the
  * necessary threshold, and allowing for it to be jit-compiled.
@@ -50,7 +48,7 @@ private:
 
 	void testJumps() { runTestOnVm("jmp_test.dbc", "10", "3333666121212"); }
 
-	void testUnconditionalJumps() { runTestOnVm("jmp_cond_test.dbc", "10", ""); }
+	void testUnconditionalJumps() { runTestOnVm("jmp_uncond_test.dbc", "10", "6666666666"); }
 
 	void testConditionalJumps() { runTestOnVm("jmp_cond_test.dbc", "10", ""); }
 
