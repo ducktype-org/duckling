@@ -50,8 +50,6 @@ void registerAbsoluteJITSymbols(llvm::orc::LLJIT& lljit) {
 		&vm::jit::helpers::trampoline,
 	};
 
-	// Once Clang 21 is compatible with Ubuntu, this can (and should) be changed
-	// to use structured bindings and `std::ranges::views::zip`.
 	for (usize i = 0; i < addresses.size(); ++i) {
 		host_symbols[lljit.mangleAndIntern(hard_symbols.at(i))] = llvm::orc::ExecutorSymbolDef(
 			llvm::orc::ExecutorAddr::fromPtr(addresses.at(i)),
