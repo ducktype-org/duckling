@@ -14,7 +14,46 @@ from ..impl.helpers import (
 from click import Choice, option, command, prompt
 
 
+def configure_presets(ctx, param, value):
+    assert param.name == "preset"
+    preset_map = {}
+
+    if value is None:
+        return
+    elif value == "ReleasePreset":
+        preset_map = {
+            "type": "DevOpt", # Note that we use DevOpt for now, as we prefer to have controlled panics, until they are not rare enough
+            "coverage": False,
+            "docs": False,
+            "allocator": "default", # until we are 100% sure other allocators work well
+            "shared_libs": False,
+            "strip_symbol_information": True,
+            "embed_assets": True,
+            "build_static_icu": True, # we want to have a static ICU in release to make the binary portable
+        }
+    elif value == "MaxPerformancePreset":
+        preset_map = {
+            "type": "ReleaseOpt",
+            "coverage": False,
+            "docs": False,
+            "allocator": "mimalloc",
+            "shared_libs": False,
+            "strip_symbol_information": True,
+        }
+    else:
+        raise ValueError(f"Unknown preset: {value}")
+    
+    ctx.default_map = preset_map
+
 @command()
+@option( # The presets logic is implemented based on an article you can find here: https://jwodder.github.io/kbits/posts/click-config/
+    "--preset",
+    help         = "Use a predefined set of default option values for a specific build configuration.",
+    type         = Choice(["ReleasePreset", "MaxPerformancePreset"], case_sensitive=False),
+    callback     = configure_presets,
+    is_eager     = True,
+    expose_value = False,
+)
 @build_dir(help="The name of the directory.")
 @build_system(
     help="Build system to use",
@@ -138,6 +177,20 @@ from click import Choice, option, command, prompt
     "--enable-jit",
     prompt="Enable JIT",
     help="Whether or not to enable JIT compilation.",
+    type=bool,
+    default=False,
+    is_flag=True,
+)
+@option(
+    "--embed-assets",
+    help="Whether to embed assets into the binary. This makes binary portable. Currently the assets include diagnostic messages templates",
+    type=bool,
+    default=False,
+    is_flag=True,
+)
+@option(
+    "--build-static-icu",
+    help="Forces building and linking against a custom-built static version of ICU.",
     type=bool,
     default=False,
     is_flag=True,
