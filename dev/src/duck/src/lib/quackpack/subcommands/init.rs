@@ -2,6 +2,8 @@
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
+use git2::{Repository, RepositoryInitOptions};
+
 use crate::quackpack::core::{PackageLoader, VenvConfig};
 use crate::util::path_ops_ext::PathOpsExt;
 use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail};
@@ -21,6 +23,8 @@ pub struct InitOptions<'duck> {
     pub ephemeral: bool,
     /// Make the project contain a storage and use it.
     pub local_storage: bool,
+    /// Initialize the project as a git repository.
+    pub git: bool,
 }
 
 const DEFAULT_SOURCE_FILENAME: &str = "src.dmf";
@@ -31,6 +35,11 @@ fun main() = {
     # builtin_output_string(\"Hello, world!\");
     return 0;
 }
+";
+
+const DEFAULT_GITIGNORE: &str = "\
+.duck_build
+!src
 ";
 
 /// Initialize a new project with the given options.
@@ -52,6 +61,9 @@ pub fn init(opts: InitOptions<'_>) -> QuackResult<()> {
         opts.name,
         opts.at.display()
     ));
+    if opts.git {
+        init_git(&opts.at)?;
+    }
     Ok(())
 }
 
@@ -156,5 +168,19 @@ fn add_package_structure(root_path: &Path) -> QuackResult<()> {
             .write(DEFAULT_SOURCE_CONTENTS)
             .context("failed to write a default duck file")?;
     }
+    Ok(())
+}
+
+/// Initialize git repository in the project and add `gitignore`.
+fn init_git(root_path: &Path) -> QuackResult<()> {
+    let mut init_opts = RepositoryInitOptions::new();
+    Repository::init_opts(root_path, init_opts.no_reinit(true))?;
+    let gitignore_file = root_path.join(".gitignore");
+    gitignore_file
+        .touch()
+        .context("failed to create a `.gitignore` file")?;
+    gitignore_file
+        .write(DEFAULT_GITIGNORE)
+        .context("failed to write a gitignore file")?;
     Ok(())
 }
