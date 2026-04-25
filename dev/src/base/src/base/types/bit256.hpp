@@ -101,22 +101,22 @@ namespace std {
 	template<>
 	struct hash<base::Bit256> {
 		std::size_t operator()(const base::Bit256& bit256) const noexcept {
-			// std::size_t hash = 0;
-			// for (const auto& value: bit256.data)
-			// 	hash ^= std::hash<u64>{}(value);  // Combine hashes using XOR
-			// return hash;
-			u64 a = bit256.data.at(0);
-			u64 b = bit256.data.at(1);
-			u64 c = bit256.data.at(2);
-			u64 d = bit256.data.at(3);
+			std::size_t hash = 0;
+			for (const auto& value: bit256.data)
+				hash ^= std::hash<u64>{}(value);  // Combine hashes using XOR
+			return hash;
+			// u64 a = bit256.data.at(0);
+			// u64 b = bit256.data.at(1);
+			// u64 c = bit256.data.at(2);
+			// u64 d = bit256.data.at(3);
 
-			// Good hash combine:
-			u64 hash = 0;
-			hash ^= std::hash<u64>{}(a) + 0x9e377 + (hash << 6) + (hash >> 2);
-			hash ^= std::hash<u64>{}(b) + 0x9e377 + (hash << 6) + (hash >> 2);
-			hash ^= std::hash<u64>{}(c) + 0x9e377 + (hash << 6) + (hash >> 2);
-			hash ^= std::hash<u64>{}(d) + 0x9e377 + (hash << 6) + (hash >> 2);
-			return hash;			
+			// // Good hash combine:
+			// u64 hash = 0;
+			// hash ^= std::hash<u64>{}(a) + 0x9e377 + (hash << 6) + (hash >> 2);
+			// hash ^= std::hash<u64>{}(b) + 0x9e377 + (hash << 6) + (hash >> 2);
+			// hash ^= std::hash<u64>{}(c) + 0x9e377 + (hash << 6) + (hash >> 2);
+			// hash ^= std::hash<u64>{}(d) + 0x9e377 + (hash << 6) + (hash >> 2);
+			// return hash;			
 		}
 	};
 }

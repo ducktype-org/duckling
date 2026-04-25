@@ -45,7 +45,7 @@ namespace concurrent {
 
 				if (wait_repetitions > 128) {
 					// std::this_thread::sleep_for(std::chrono::nanoseconds(50));
-					std::this_thread::yield();
+					// std::this_thread::yield();
 					wait_repetitions = 4;
 				} else {
 					concurrent::nopWait(wait_repetitions);
