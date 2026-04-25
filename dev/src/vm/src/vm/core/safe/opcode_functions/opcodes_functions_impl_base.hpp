@@ -864,7 +864,7 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(structStore_pptr_bany)(FUNCTION_ARGS) {
 		{
 			auto dst_pointer  = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
-			auto field_offset = READ_FROM_IMMEDIATE_ARG(i64, instr[1].arg0);
+			auto field_offset = READ_FROM_IMMEDIATE_ARG(u64, instr[1].arg0);
 			dst_pointer.movePointer(field_offset);
 
 			auto src_block   = READ_BLOCK_REF_FROM_ARG(instr->arg1);
@@ -883,7 +883,7 @@ namespace vm {
 			auto dst_pointer = Pointer(dst_block, 0);
 
 			auto src_pointer  = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
-			auto field_offset = READ_FROM_IMMEDIATE_ARG(i64, instr[1].arg0);
+			auto field_offset = READ_FROM_IMMEDIATE_ARG(u64, instr[1].arg0);
 			src_pointer.movePointer(field_offset);
 
 			auto type = Memory::getBlockType(dst_block);
@@ -911,7 +911,7 @@ namespace vm {
 			auto dst_block   = READ_BLOCK_REF_FROM_ARG(instr->arg0);
 			auto dst_pointer = Pointer(dst_block, 0);
 
-			auto field_offset = READ_FROM_IMMEDIATE_ARG(i64, instr[1].arg0);
+			auto field_offset = READ_FROM_IMMEDIATE_ARG(u64, instr[1].arg0);
 			dst_pointer.movePointer(field_offset);
 
 			auto src_block   = READ_BLOCK_REF_FROM_ARG(instr->arg1);
@@ -932,7 +932,7 @@ namespace vm {
 			auto src_block   = READ_BLOCK_REF_FROM_ARG(instr->arg1);
 			auto src_pointer = Pointer(src_block, 0);
 
-			auto field_offset = READ_FROM_IMMEDIATE_ARG(i64, instr[1].arg0);
+			auto field_offset = READ_FROM_IMMEDIATE_ARG(u64, instr[1].arg0);
 			src_pointer.movePointer(field_offset);
 
 			auto type = Memory::getBlockType(dst_block);
@@ -963,9 +963,9 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(anyArrayStore_pptr_bany)(FUNCTION_ARGS) {
 		{
 			auto tbl_pointer = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
-			i64  index       = READ_FROM_PLACE_ARG(i64, instr[1].arg0);
-			i64  elem_size   = READ_FROM_IMMEDIATE_ARG(i64, instr[2].arg0);
-			i64  data_offset = index * static_cast<i64>(elem_size);
+			u64  index       = READ_FROM_PLACE_ARG(u64, instr[1].arg0);
+			u64  elem_size   = READ_FROM_IMMEDIATE_ARG(u64, instr[2].arg0);
+			u64  data_offset = index * elem_size;
 			std::cout << "Offset: " << data_offset << '\n';
 
 			tbl_pointer.movePointer(data_offset);
@@ -989,7 +989,7 @@ namespace vm {
 			u64        elem_size   = READ_FROM_IMMEDIATE_ARG(u64, instr[2].arg0);
 
 			std::cout << "Offset: " << index * elem_size << '\n';
-			tbl_pointer.movePointer(static_cast<i64>(index * elem_size));
+			tbl_pointer.movePointer(index * elem_size);
 
 			thread.process_memory.copyPointedData(
 				dst_pointer, tbl_pointer, Memory::getBlockType(dst_block)
