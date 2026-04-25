@@ -88,7 +88,7 @@ def configure_presets(ctx, param, value):
     cls=default_compiler_from_ctx("cc_compiler"),
 )
 @option(
-    "--ccache",
+    "--ccache/--no-ccache",
     prompt="Use ccache",
     help="Whether or not to use ccache.",
     type=bool,
