@@ -6,6 +6,7 @@ pub mod hash;
 pub mod hex;
 pub mod path_ops_ext;
 pub mod set_once;
+pub mod user_prompts;
 pub mod yaml_config;
 
 #[cfg(test)]
