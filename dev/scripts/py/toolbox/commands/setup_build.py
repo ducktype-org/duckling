@@ -147,12 +147,14 @@ from click import Choice, option, command, prompt
 def setup_build(*args, **kwargs):
     """Makes a build folder"""
 
-    global_version = kwargs["llvm_version"]
+    global_version = kwargs.pop("llvm_version")
+    llvm_tools_list = {}
     for tool in LLVM_TOOLS:
-        if kwargs[tool.param()] == None:
-            kwargs[tool.param()] = tool.default(global_version)
+        given = kwargs.pop(tool.param(), None)
+        llvm_tools_list[tool.param()] = given if given else tool.default(global_version)
 
     setup_build_impl(
         *args,
+        llvm_tools_list=llvm_tools_list,
         **kwargs,
     )
