@@ -14,14 +14,6 @@ namespace compiler::helios::code {
 		});
 	}
 
-	base::Optional<pst::SourcePositionLocked> ElementOrigin::getSourcePositionLocked(
-		query::Context& ctx
-	) const {
-		return source_position.map([&ctx](const pst::StablePosition& stable_pos) {
-			return stable_pos.getActiveSourcePositionLocked(ctx);
-		});
-	}
-
 	base::Optional<pst::StablePosition> ElementOrigin::getStablePosition() const {
 		return source_position;
 	}

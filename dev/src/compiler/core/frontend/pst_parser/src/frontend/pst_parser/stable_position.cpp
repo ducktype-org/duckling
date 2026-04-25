@@ -23,23 +23,6 @@ namespace pst {
 		}
 	}
 
-	SourcePositionLocked StablePosition::getActiveSourcePositionLocked(query::Context& ctx) const {
-		auto first_pos = LangElement::getByStableHash(begin_scope_node)
-		                     .unlock(ctx)
-		                     ->getSourcePosition()
-		                     .illegalAccess();
-
-		if (end_scope_node.has_value()) {
-			auto last_pos = LangElement::getByStableHash(end_scope_node.value())
-			                    .unlock(ctx)
-			                    ->getSourcePosition()
-			                    .illegalAccess();
-			return dia::SourcePosition::merge(first_pos, last_pos);
-		} else {
-			return first_pos;
-		}
-	}
-
 	dia::SourcePosition StablePosition::getActiveSourcePositionIllegalAccess() const {
 		auto first_pos = LangElement::getByStableHash(begin_scope_node)
 		                     .illegalAccess()
