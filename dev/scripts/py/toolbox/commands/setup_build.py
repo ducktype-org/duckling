@@ -49,7 +49,7 @@ def configure_presets(ctx, param, value):
 @option( 
     # The presets logic is implemented based on an article you can find here: https://jwodder.github.io/kbits/posts/click-config/
     # Note: Presets should correctly override default values provided by our custom option classes (set in cls parameters),
-    # but its best to test it per-case, since Python allows to do quite about anything, and there might be some edge cases.
+    # but it's best to test it per-case, since Python allows to do quite about anything, and there might be some edge cases.
     "--preset",
     help         = "Use a predefined set of default option values for a specific build configuration.",
     type         = Choice(["ReleasePreset", "MaxPerformancePreset"], case_sensitive=False),
@@ -186,7 +186,7 @@ def configure_presets(ctx, param, value):
 )
 @option(
     "--embed-assets",
-    help="Whether to embed assets into the binary. This makes binary portable. Currently the assets include diagnostic messages templates",
+    help="Whether to embed assets into the binary. This makes the binary portable. Currently the assets include diagnostic message templates.",
     type=bool,
     default=False,
     is_flag=True,
