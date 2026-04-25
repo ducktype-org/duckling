@@ -140,7 +140,7 @@ function(add_vm_variant suffix compile_def)
             COMMAND_EXPAND_LISTS
         
             # Get all microopcodes names to add them to api later. Heuristic used: contains "OpFuns", "op_" and not "debug"            
-            COMMAND ${CMAKE_SOURCE_DIR}/.venv/bin/python3
+            COMMAND python3
                 ${CMAKE_SOURCE_DIR}/scripts/py/jit/opcodes_interface.py
                 ${LLVM_TOOLS_ARGS}
                 -i ${common_bc}
