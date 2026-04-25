@@ -51,8 +51,7 @@ namespace vm::persistent {
 		}
 
 		ID validateInput(MemoryStateID state, const std::deque<usize>& idxs) const {
-			auto root = fromState(state);
-			validateRoot(root);
+			auto root = validateInput(state);
 
 			for (auto idx: idxs) validateIdx(idx);
 			for (usize i = 1; i < idxs.size(); i++) {
@@ -64,8 +63,7 @@ namespace vm::persistent {
 		}
 
 		ID validateInput(MemoryStateID state, usize idx) const {
-			auto root = fromState(state);
-			validateRoot(root);
+			auto root = validateInput(state);
 			validateIdx(idx);
 			return root;
 		}
@@ -76,9 +74,8 @@ namespace vm::persistent {
 			return { root_1, root_2 };
 		}
 
-		ID validateInput(MemoryStateID state, usize r, usize l) const {
-			auto root = fromState(state);
-			validateRoot(root);
+		ID validateInput(MemoryStateID state, usize l, usize r) const {
+			auto root = validateInput(state);
 			if (l >= r) throw std::invalid_argument("left bound is bigger or equal to right bound");
 			if (r > IDX_END) throw std::invalid_argument("right bound is too big");
 
@@ -88,8 +85,7 @@ namespace vm::persistent {
 	public:
 		
 		std::pair<usize, usize> getRangeOf(MemoryStateID state) const {
-			auto root = fromState(state);
-			validateRoot(root);
+			auto root = validateInput(state);
 			return getRange(root);
 		}
 

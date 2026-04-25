@@ -52,7 +52,7 @@ namespace vm::persistent {
 				std::tie(l, r) = Memory::getRangeOf(state);
 			} catch (...) { CORE_PANIC("I need size"); }
 
-			CORE_ASSERT((r - l) == size, "Size of vector isn't consistent");
+			CORE_ASSERT(r == size, "Size of vector isn't consistent");
 			CORE_ASSERT(l == 0, "left bound starts always on 0");
 
 			return state;
@@ -108,13 +108,13 @@ namespace vm::persistent {
 			bool              iter_valid = iter.pointsToValid();
 
 			for (usize i = 0; i < right - left; i++) {
-				CORE_ASSERT(iter.idx == right + i, "I skipped some fields?!");
+				CORE_ASSERT(iter.idx == left + i, "I skipped some fields?!");
 				CORE_ASSERT(iter.pointsToValid(), "I have a real value underneath");
 				CORE_ASSERT(iter_valid, "I somehow invalidated iterator");
 
 				auto val_id = *iter.getValue();
 				ans.emplace_back(held_values.atRight(val_id));
-				iter_valid |= iter.moveToValid(Dir::Right);
+				iter_valid &= iter.moveToValid(Dir::Right);
 			}
 
 			return ans;

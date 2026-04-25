@@ -101,7 +101,7 @@ namespace vm::persistent::detail {
 		}
 
 		static constexpr bool inSubtree(usize maybe_child, usize root) {
-			return (maybe_child == getLCAPos(root, maybe_child));
+			return (root == getLCAPos(root, maybe_child));
 		}
 
 		/**
@@ -124,7 +124,7 @@ namespace vm::persistent::detail {
 
 				usize final_height = std::min(height_of_diff, max_height) - 1;
 
-				usize pos = (left_idx >> final_height) | (1 << (63 - final_height));
+				usize pos = (left_idx >> final_height) | ((usize(1)) << (63 - final_height));
 				ans.emplace_back(pos);
 				left_idx += (1 << final_height);
 			}
@@ -145,23 +145,25 @@ namespace vm::persistent::detail {
 			void moveNodeTo(usize desired_pos) {
 				static constexpr bool RECONSTRUCT = !std::is_const_v<segTreeT>;
 				if (!desired_pos || desired_pos == node_pos) return;
-				CORE_ASSERT(inSubtree(desired_pos, root_pos), "we are within root's subtree");
+				CORE_ASSERT(inSubtree(desired_pos, root_pos), "we should be within root's subtree");
 
 				usize height_diff = getLCAHeight(desired_pos, node_pos) - heightFromPos(node_pos);
 				for (usize i = (desired_pos == root_pos ? 0 : 1); i < height_diff; i++) {
 					if constexpr (RECONSTRUCT) {
-						node = mem->mergeTwoRoots(siblings.back(), node);
+						auto left = node, right = siblings.front();
+						if (node_pos & 1) std::swap(left, right);
+						node = mem->mergeTwoRoots(left, right);
 					} else {
 						node = ancestors.back();
-						ancestors.pop_back();
+						ancestors.pop_front();
 					}
-					siblings.pop_back();
+					siblings.pop_front();
 					node_pos >>= 1;
 				}
 
-				if (desired_pos != root_pos) {
+				if (!inSubtree(desired_pos, node_pos)) {
 					CORE_ASSERT(siblings.size(), "We need to have at least one sibling");
-					std::swap(node, siblings.back());
+					std::swap(node, siblings.front());
 					node_pos ^= 1;
 				}
 
@@ -185,18 +187,16 @@ namespace vm::persistent::detail {
 					else
 						right = node;
 
-					if constexpr (RECONSTRUCT) {
-						ancestors.emplace_back(node);
-					}
+					if constexpr (!RECONSTRUCT) ancestors.emplace_front(node);
 
 					if (inSubtree(desired_pos, left_pos)) {
 						node_pos = left_pos;
 						node     = left;
-						siblings.emplace_back(right);
+						siblings.emplace_front(right);
 					} else {
 						node_pos = right_pos;
 						node     = right;
-						siblings.emplace_back(left);
+						siblings.emplace_front(left);
 					}
 				}
 			}
@@ -229,11 +229,11 @@ namespace vm::persistent::detail {
 					inSubtree(upto_here, root_pos), "target root must be my in root subtree"
 				);
 
-				for (auto it = siblings.rbegin(); cur_pos != upto_here; it++, cur_pos >>= 1) {
+				for (auto it = siblings.begin(); cur_pos != upto_here; it++, cur_pos >>= 1) {
 					CORE_ASSERT(
 						inSubtree(cur_pos, upto_here), "I need to have a path to the target root"
 					);
-					CORE_ASSERT(it != siblings.rend(), "there is a sibling on this level");
+					CORE_ASSERT(it != siblings.end(), "there is a sibling on this level");
 
 					if (cur_pos & 1) ans.emplace_front(cur_pos ^ 1, *it);
 				}
@@ -250,11 +250,11 @@ namespace vm::persistent::detail {
 					inSubtree(upto_here, root_pos), "target root must be my in root subtree"
 				);
 
-				for (auto it = siblings.rbegin(); cur_pos != upto_here; it++, cur_pos >>= 1) {
+				for (auto it = siblings.begin(); cur_pos != upto_here; it++, cur_pos >>= 1) {
 					CORE_ASSERT(
 						inSubtree(cur_pos, upto_here), "I need to have a path to the target root"
 					);
-					CORE_ASSERT(it != siblings.rend(), "there is a sibling on this level");
+					CORE_ASSERT(it != siblings.end(), "there is a sibling on this level");
 
 					if ((cur_pos & 1) == 0) ans.emplace_back(cur_pos ^ 1, *it);
 				}
@@ -296,8 +296,9 @@ namespace vm::persistent::detail {
 				for (; trace.size(); trace.pop_front(), mask <<= 1) {
 					NodeID node_id = trace.front();
 
+					usize orig_idx = idx;
 					if (idx & mask) idx ^= mask;
-					if ((idx & mask) == (move_dir == Dir::Right)) continue;
+					if (bool(orig_idx & mask) == (move_dir == Dir::Right)) continue;
 
 					auto right = mem->getChild(move_dir, node_id);
 					if (auto amount = mem->getSize(right); amount <= skip)
@@ -342,7 +343,7 @@ namespace vm::persistent::detail {
 
 			[[nodiscard]]
 			base::Optional<usize> getValue() const {
-				if (trace.at(0) != EMPTY)
+				if (trace.at(0) == EMPTY)
 					return std::nullopt;
 				else
 					return mem->getValueOfLeaf(trace.at(0));
@@ -415,14 +416,28 @@ namespace vm::persistent::detail {
 			auto children       = ChildEntry{ .left_child = left, .right_child = right };
 			auto [is_new, node] = child_entries.emplaceByLeft(children, next_node_id);
 
+			usize left_bound = 0, right_bound = 0;
+			if (!left) {
+				auto [l, r] = getRange(right);
+				left_bound  = l;
+				right_bound = r;
+			} else if (!right) {
+				auto [l, r] = getRange(left);
+				left_bound  = l;
+				right_bound = r;
+			} else {
+				left_bound  = getRange(left).first;
+				right_bound = getRange(right).second;
+			}
+
 			if (is_new) {
 				root_info.emplace(
 					node,
 					RootEntry{
 						.size        = getSize(left) + getSize(right),
 						.position    = (pos_left | pos_right) >> 1,
-						.left_bound  = getRange(left).first,
-						.right_bound = getRange(right).second,
+						.left_bound  = left_bound,
+						.right_bound = right_bound,
 					}
 				);
 				next_node_id++;
@@ -493,8 +508,8 @@ namespace vm::persistent::detail {
 				right_bound = std::max(right_bound, offset + (1 << height) - 1);
 			}
 
-			auto old_root_pos = getPos(root);
-			auto new_root_pos = getLCAPos(LEAF_MASK | left_bound, LEAF_MASK | right_bound);
+			const auto old_root_pos = getPos(root);
+			const auto new_root_pos = getLCAPos(LEAF_MASK | left_bound, LEAF_MASK | right_bound);
 
 			SurroundingNeigh<SegmentTree> neigh = {
 				.mem      = this,
@@ -522,7 +537,7 @@ namespace vm::persistent::detail {
 				neigh.moveNodeTo(idx | LEAF_MASK);
 				base::Optional<usize> val = std::nullopt;
 				if (neigh.node) val = getValueOfLeaf(neigh.node);
-				neigh.node = constructor(offset, val);
+				neigh.node = constructor(idx, val);
 			}
 
 			neigh.moveNodeTo(new_root_pos);
@@ -745,14 +760,12 @@ namespace vm::persistent::detail {
 			static constexpr bool RECONSTRUCT = std::is_same_v<ResT, NodeID>;
 
 			CORE_ASSERT(left_idx < right_idx, "Interval must be non-empty");
-			CORE_ASSERT(
-				(left_idx & LEAF_MASK) == 0 && ((right_idx - 1) & LEAF_MASK) == 0,
-				"idxs must be small enough"
-			);
+			CORE_ASSERT(right_idx <= IDX_END, "idxs must be small enough");
 			auto range_nodes = getPosInRange(left_idx, right_idx);
+			CORE_ASSERT(range_nodes.size(), "when range non-empty, there must be some nodes");
 
 			if (root) {
-				auto [offset, height] = obj.getHeightOffset(root);
+				auto [height, offset] = obj.getHeightOffset(root);
 
 				left_idx  = std::min(left_idx, offset);
 				right_idx = std::max(right_idx, offset + (1 << height));
@@ -773,8 +786,6 @@ namespace vm::persistent::detail {
 
 			neigh.moveNodeTo(obj.getPos(root));
 			neigh.node = root;
-
-			CORE_ASSERT(range_nodes.size(), "when range non-empty, there must be some nodes");
 
 			usize first_height = heightFromPos(range_nodes.front());
 			usize last_height  = heightFromPos(range_nodes.back());
@@ -811,13 +822,16 @@ namespace vm::persistent::detail {
 
 				for (; list.size(); list.pop_front()) {
 					auto [pos, node] = list.front();
-					list.pop_front();
 					CORE_ASSERT(heightFromPos(pos) >= last_height, "All the siblings are above");
 
-					if constexpr (RECONSTRUCT)
-						neigh.siblings.at(heightFromPos(pos) - last_height)
-							= range_constructor.out_of_range(node, pos);
-					else
+					if constexpr (RECONSTRUCT) {
+						usize height_diff = heightFromPos(pos) - last_height;
+						CORE_ASSERT(
+							height_diff < neigh.siblings.size(),
+							"Height diff must refer particular sibling"
+						);
+						neigh.siblings.at(height_diff) = range_constructor.out_of_range(node, pos);
+					} else
 						range_constructor.out_of_range(node, pos);
 				}
 			}
@@ -930,6 +944,10 @@ namespace vm::persistent::detail {
 			CORE_ASSERT(
 				inSubtree(pos_1, lca) && inSubtree(pos_2, lca), "Both positions are in LCA's subtree"
 			);
+			CORE_ASSERT(
+				offsetFromPos(pos_1) + (1 << heightFromPos(pos_1)) <= offsetFromPos(pos_2),
+				"pos_1 has to be on the left to pos_2"
+			);
 
 			for (; (pos_1 >> 1) != lca; pos_1 >>= 1)
 				if (pos_1 & 1)
@@ -943,10 +961,7 @@ namespace vm::persistent::detail {
 				else
 					root_2 = nodeFromChildren(root_2, EMPTY);
 
-			CORE_ASSERT(pos_2 == (pos_1 | 1), "after all those operations they should be siblings");
-			CORE_ASSERT(pos_2 != pos_1, "they should be separate");
-			CORE_ASSERT(getPos(root_1) == pos_1, "pos_1 should match");
-			CORE_ASSERT(getPos(root_2) == pos_2, "pos_2 should match");
+			CORE_ASSERT(pos_2 == pos_1 + 1, "after all those operations they should be siblings");
 
 			return nodeFromChildren(root_1, root_2);
 		}
