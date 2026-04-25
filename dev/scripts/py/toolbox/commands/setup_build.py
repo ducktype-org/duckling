@@ -46,7 +46,10 @@ def configure_presets(ctx, param, value):
     ctx.default_map = preset_map
 
 @command()
-@option( # The presets logic is implemented based on an article you can find here: https://jwodder.github.io/kbits/posts/click-config/
+@option( 
+    # The presets logic is implemented based on an article you can find here: https://jwodder.github.io/kbits/posts/click-config/
+    # Note: Presets should correctly override default values provided by our custom option classes (set in cls parameters),
+    # but its best to test it per-case, since Python allows to do quite about anything, and there might be some edge cases.
     "--preset",
     help         = "Use a predefined set of default option values for a specific build configuration.",
     type         = Choice(["ReleasePreset", "MaxPerformancePreset"], case_sensitive=False),
