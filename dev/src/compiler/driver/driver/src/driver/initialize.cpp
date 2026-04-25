@@ -40,7 +40,7 @@ namespace compiler::driver {
 		}
 
 		void handleDebugOptions(const options_types::DebugOptions& debug_options) {
-			if (not debug_options.dev_log_categories.empty()) logger::enable_dev_logs = true;
+			// if (not debug_options.dev_log_categories.empty()) logger::enable_dev_logs = true;
 
 			for (const auto& category_name: debug_options.dev_log_categories)
 				logger::enableDevCategoryByStringName(category_name);

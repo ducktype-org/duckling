@@ -41,7 +41,7 @@ clah::Clah getVmClah() {
 	    .setPreHandler([](const clah::ParsingResult& options) {
 			if (options.isFlag("debug-logs")) {
 				std::cerr << "Debug logs enabled.\n";
-				logger::enable_dev_logs = true;
+				// logger::enable_dev_logs = true;
 				logger::enableDevCategory(logger::DevLogCategories::DVM);
 				logger::enableDevCategory(logger::DevLogCategories::DVMDetails);
                 logger::setDevLogOutputStreamCurrentDate();

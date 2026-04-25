@@ -12,7 +12,7 @@ namespace logger {
 	 * @note When enabled, specific categories can be enabled via enableDevCategory function to
 	 * actually enable logging for those categories.
 	 */
-	extern constinit bool enable_dev_logs;
+	constexpr bool enable_dev_logs = false;
 
 	/**
 	 * If set, user logs are enabled.
