@@ -1,8 +1,7 @@
 #pragma once
 
-#include "diagnostic_interactive/stable_position.hpp"
-
 #include <diagnostic_interactive/logger.hpp>
+#include <diagnostic_interactive/stable_position.hpp>
 
 #include <base/misc/shared_view.hpp>
 

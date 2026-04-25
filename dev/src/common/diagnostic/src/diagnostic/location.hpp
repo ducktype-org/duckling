@@ -1,8 +1,9 @@
 #pragma once
 
-#include "diagnostic_interactive/stable_position.hpp"
 #include "location_types.hpp"
 #include "source_position.hpp"
+
+#include <diagnostic_interactive/stable_position.hpp>
 
 #include <base/pointers/box.hpp>
 
