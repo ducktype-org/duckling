@@ -464,88 +464,69 @@ namespace vm::loader::compiler::detail {
 				addLow<Op_structStore_bste_bany>(i.dst_data_struct, i.src);
 				addLow<Op_ext_field>(i.field);
 			}
+#define TABLE_PTR_ELEM_SIZE(ptr_arg) \
+	(*(*getPlaceType(ptr_arg)->getInnerType())->getInnerType())->getSize().asInt()
+#define TABLE_VAL_ELEM_SIZE(val_arg) (*getPlaceType(val_arg)->getInnerType())->getSize().asInt()
 			instr_case(high::Op_fixedSizeTableLea_pptr_pptr_p64, i) {
-				TypeCRef ptr_type     = getPlaceType(i.src_table_ptr);
-				TypeCRef table_type   = *ptr_type->getInnerType();
-				TypeCRef element_type = *table_type->getInnerType();
-				usize    elem_size    = element_type->getSize().asInt();
-
 				addLow<Op_anyArrayLea_pptr_pptr>(i.dst_ptr, i.src_table_ptr);
-				addLow<Op_ext_p64_imm>(i.index, vm::opargs::Immediate{ elem_size });
+				addLow<Op_ext_p64_imm>(
+					i.index, vm::opargs::Immediate{ TABLE_PTR_ELEM_SIZE(i.src_table_ptr) }
+				);
 			}
 			instr_case(high::Op_fixedSizeTableLoad_pany_pptr_p64, i) {
-				TypeCRef ptr_type     = getPlaceType(i.src_table_ptr);
-				TypeCRef table_type   = *ptr_type->getInnerType();
-				TypeCRef element_type = *table_type->getInnerType();
-				usize    elem_size    = element_type->getSize().asInt();
-
 				addLow<Op_anyArrayLoad_bany_pptr>(i.dst, i.src_table_ptr);
-				addLow<Op_ext_p64_imm>(i.index, vm::opargs::Immediate{ elem_size });
+				addLow<Op_ext_p64_imm>(
+					i.index, vm::opargs::Immediate{ TABLE_PTR_ELEM_SIZE(i.src_table_ptr) }
+				);
 			}
 			instr_case(high::Op_fixedSizeTableStore_pptr_pany_p64, i) {
-				TypeCRef ptr_type     = getPlaceType(i.dst_table_ptr);
-				TypeCRef table_type   = *ptr_type->getInnerType();
-				TypeCRef element_type = *table_type->getInnerType();
-				usize    elem_size    = element_type->getSize().asInt();
-
 				addLow<Op_anyArrayStore_pptr_bany>(i.dst_table_ptr, i.src);
-				addLow<Op_ext_p64_imm>(i.index, vm::opargs::Immediate{ elem_size });
+				addLow<Op_ext_p64_imm>(
+					i.index, vm::opargs::Immediate{ TABLE_PTR_ELEM_SIZE(i.dst_table_ptr) }
+				);
 			}
 			instr_case(high::Op_fixedSizeTableLea_pptr_pfst_p64, i) {
-				TypeCRef table_type   = getPlaceType(i.src_table);
-				TypeCRef element_type = *table_type->getInnerType();
-				usize    elem_size    = element_type->getSize().asInt();
-
 				addLow<Op_fixedSizeTableLea_pptr_bfst>(i.dst_ptr, i.src_table);
-				addLow<Op_ext_p64_imm>(i.index, vm::opargs::Immediate{ elem_size });
+				addLow<Op_ext_p64_imm>(
+					i.index, vm::opargs::Immediate{ TABLE_VAL_ELEM_SIZE(i.src_table) }
+				);
 			}
 			instr_case(high::Op_fixedSizeTableLoad_pany_pfst_p64, i) {
-				TypeCRef table_type   = getPlaceType(i.src_table);
-				TypeCRef element_type = *table_type->getInnerType();
-				usize    elem_size    = element_type->getSize().asInt();
-
 				addLow<Op_fixedSizeTableLoad_bany_bfst>(i.dst, i.src_table);
-				addLow<Op_ext_p64_imm>(i.index, vm::opargs::Immediate{ elem_size });
+				addLow<Op_ext_p64_imm>(
+					i.index, vm::opargs::Immediate{ TABLE_VAL_ELEM_SIZE(i.src_table) }
+				);
 			}
 			instr_case(high::Op_fixedSizeTableStore_pfst_pany_p64, i) {
-				TypeCRef table_type   = getPlaceType(i.dst_table);
-				TypeCRef element_type = *table_type->getInnerType();
-				usize    elem_size    = element_type->getSize().asInt();
-
 				addLow<Op_fixedSizeTableStore_bfst_bany>(i.dst_table, i.src);
-				addLow<Op_ext_p64_imm>(i.index, vm::opargs::Immediate{ elem_size });
+				addLow<Op_ext_p64_imm>(
+					i.index, vm::opargs::Immediate{ TABLE_VAL_ELEM_SIZE(i.dst_table) }
+				);
 			}
 			instr_case(high::Op_dynTableLea_pptr_pptr_p64, i) {
-				TypeCRef ptr_type     = getPlaceType(i.src_table_ptr);
-				TypeCRef table_type   = *ptr_type->getInnerType();
-				TypeCRef element_type = *table_type->getInnerType();
-				usize    elem_size    = element_type->getSize().asInt();
-
 				addLow<Op_anyArrayLea_pptr_pptr>(i.dst_ptr, i.src_table_ptr);
-				addLow<Op_ext_p64_imm>(i.index, vm::opargs::Immediate{ elem_size });
+				addLow<Op_ext_p64_imm>(
+					i.index, vm::opargs::Immediate{ TABLE_PTR_ELEM_SIZE(i.src_table_ptr) }
+				);
 			}
 			instr_case(high::Op_dynTableLoad_pany_pptr_p64, i) {
-				TypeCRef ptr_type     = getPlaceType(i.src_table_ptr);
-				TypeCRef table_type   = *ptr_type->getInnerType();
-				TypeCRef element_type = *table_type->getInnerType();
-				usize    elem_size    = element_type->getSize().asInt();
-
 				addLow<Op_anyArrayLoad_bany_pptr>(i.dst, i.src_table_ptr);
-				addLow<Op_ext_p64_imm>(i.index, vm::opargs::Immediate{ elem_size });
+				addLow<Op_ext_p64_imm>(
+					i.index, vm::opargs::Immediate{ TABLE_PTR_ELEM_SIZE(i.src_table_ptr) }
+				);
 			}
 			instr_case(high::Op_dynTableStore_pptr_pany_p64, i) {
-				TypeCRef ptr_type     = getPlaceType(i.dst_table_ptr);
-				TypeCRef table_type   = *ptr_type->getInnerType();
-				TypeCRef element_type = *table_type->getInnerType();
-				usize    elem_size    = element_type->getSize().asInt();
-
 				addLow<Op_anyArrayStore_pptr_bany>(i.dst_table_ptr, i.src);
-				addLow<Op_ext_p64_imm>(i.index, vm::opargs::Immediate{ elem_size });
+				addLow<Op_ext_p64_imm>(
+					i.index, vm::opargs::Immediate{ TABLE_PTR_ELEM_SIZE(i.dst_table_ptr) }
+				);
 			}
 			instr_case(high::Op_dynTableReAlloc_pptr_type_p64, i) {
 				addLow<Op_dynTableReAlloc_pptr_type>(i.dst_table_ptr, i.table_type);
 				addLow<Op_ext_p64>(i.new_elem_count);
 			}
+#undef TABLE_PTR_ELEM_SIZE
+#undef TABLE_VAL_ELEM_SIZE
 			instr_case(high::Op_strOutput_pptr, i) { addLow<Op_strOutput_pptr>(i.string_ptr); }
 			instr_case(high::Op_cast_p8_type, i) {}
 			instr_case(high::Op_cast_p16_type, i) {}
