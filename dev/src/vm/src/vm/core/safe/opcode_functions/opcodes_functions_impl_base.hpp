@@ -950,8 +950,6 @@ namespace vm {
 			auto elem_type   = READ_FROM_IMMEDIATE_ARG(TypeCRef, instr[1].arg1);
 			u64  data_offset = elem_type->getSize().asInt() * index;
 
-			std::cout << "Offset: " << data_offset << '\n';
-
 			const Pointer new_dst = thread.process_memory.updatePointerAssignment(
 				dst, { tbl_pointer.getBlock(), tbl_pointer.getOffset() + data_offset }
 			);
@@ -966,8 +964,6 @@ namespace vm {
 			u64  index       = READ_FROM_PLACE_ARG(u64, instr[1].arg0);
 			auto elem_type   = READ_FROM_IMMEDIATE_ARG(TypeCRef, instr[1].arg1);
 			u64  data_offset = index * elem_type->getSize().asInt();
-
-			std::cout << "Offset: " << data_offset << '\n';
 
 			tbl_pointer.movePointer(data_offset);
 
