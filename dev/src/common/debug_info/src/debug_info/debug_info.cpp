@@ -1,5 +1,8 @@
 #include "debug_info.hpp"
 
+#include <base/config/build_type.hpp>
+#include <base/except/exceptions.hpp>
+
 #include <variant>
 
 namespace debug_info {
@@ -36,6 +39,18 @@ namespace debug_info {
 				if (variable_meta.position)
 					variable_meta.position = resolvePosition(*variable_meta.position, resolver);
 		}
+	}
+
+	void DebugInfo::mergeFrom(DebugInfo&& other) {
+		CORE_ASSERT(target == other.target, "Cannot merge debug info with different targets");
+		CORE_ASSERT(
+			source_positions_type == other.source_positions_type,
+			"Cannot merge debug info with different source position types"
+		);
+
+		for (auto& [name, metadata]: other.functions) functions.emplace(name, std::move(metadata));
+		for (auto& [name, metadata]: other.types) types.emplace(name, std::move(metadata));
+		auto _ = std::move(other);
 	}
 
 }  // namespace debug_info

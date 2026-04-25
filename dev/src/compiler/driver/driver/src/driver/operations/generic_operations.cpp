@@ -41,6 +41,9 @@
 
 #include <vm/api/vm.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
+#include <vm/bytecode/validator/errors.hpp>
+#include <vm/bytecode/validator/valid_program.hpp>
+#include <vm/loader/loader.hpp>
 
 #include <filesystem>
 #include <fstream>
@@ -589,6 +592,82 @@ namespace compiler::driver {
 		return output.value();
 	}
 
+	/**
+	 * @brief Links all per-module DVM .dbc files into a single merged package .dbc,
+	 * and merges per-module debug info files if provided.
+	 *
+	 * This is the DVM analogue of linking .o object files for LLVM.
+	 */
+	base::OkBad linkDVMPackage(
+		const std::vector<artifacts::FileArtifact>& objects,
+		const std::vector<artifacts::FileArtifact>& debug_info_artifacts,
+		const std::string&                          output_file_stem
+	) {
+		vm::loader::Loader dvm_linker;
+		std::string        output_file_name = base::strConcat(output_file_stem, ".dbc");
+
+		using std::ranges::to;
+		using std::ranges::views::transform;
+		auto parse_result = dvm_linker.parseCodeCollectionFromFiles(
+			objects | transform(&artifacts::FileArtifact::file) | to<std::vector>()
+		);
+
+		if (!parse_result.has_value()) {
+			CORE_USER_LOG(
+				"DVM linking failed: could not parse compiler-generated module bytecode file.\n"
+				"Reason: ",
+				parse_result.error(),
+				"\n"
+			);
+			return base::BAD;
+		}
+		vm::code::CodeCollection merged_code = std::move(parse_result.value());
+
+		auto output_file
+			= global_state::getRootCollection()->fileArtifactAtOrNew(base::StrID(output_file_name));
+		std::ofstream out(output_file.file.getFilePath().getPath(), std::ios::binary);
+		if (!out.is_open()) CORE_PANIC("Failed to open DVM package output file for writing");
+		vm::code::serializeCode(merged_code, out);
+
+		// Merge per-module debug info files into a single package debug info file.
+		if (!debug_info_artifacts.empty()) {
+			base::Optional<debug_info::DebugInfo> merged_debug_info;
+
+			for (const auto& di_art: debug_info_artifacts) {
+				std::ifstream in(di_art.file.getFilePath().getPath(), std::ios::binary);
+				if (!in.is_open()) {
+					CORE_USER_LOG("DVM: failed to open debug info artifact for merging\n");
+					return base::BAD;
+				}
+				auto di_or_error = debug_info::loadFromStream(in);
+				if (!di_or_error.has_value()) {
+					CORE_USER_LOG(
+						"DVM: failed to parse debug info file: ", di_or_error.error(), "\n"
+					);
+					return base::BAD;
+				}
+				if (!merged_debug_info.has_value())
+					merged_debug_info.emplace(std::move(di_or_error.value()));
+				else
+					merged_debug_info->mergeFrom(std::move(di_or_error.value()));
+			}
+
+			if (merged_debug_info.has_value()) {
+				merged_debug_info->module_path = output_file.file.getFilePath().string();
+
+				auto di_output = global_state::getRootCollection()->fileArtifactAtOrNew(
+					base::StrID(base::strConcat(output_file_stem, ".di.json").c_str())
+				);
+				std::ofstream di_out(di_output.file.getFilePath().getPath(), std::ios::binary);
+				if (!di_out.is_open())
+					CORE_PANIC("Failed to open DVM package debug info output file for writing");
+				debug_info::saveToStream(*merged_debug_info, di_out);
+			}
+		}
+
+		return base::OK;
+	}
+
 	base::OkBad compileEntirePackage(
 		const global_state::PackageInfo& package_info,
 		BackendType                      backend,
@@ -650,7 +729,17 @@ namespace compiler::driver {
 			}
 		}
 
-		for (auto handle: debug_info_handles) query::awaitEntryPoint<DebugInfoForModule>(handle);
+		std::vector<artifacts::FileArtifact> debug_info_artifacts;
+		if (build_debug_info) debug_info_artifacts.reserve(debug_info_handles.size());
+		for (auto handle: debug_info_handles) {
+			auto di_result = query::awaitEntryPoint<DebugInfoForModule>(handle);
+			if (di_result.hasValue())
+				debug_info_artifacts.emplace_back(di_result.valueOrPanic());
+			else {
+				CORE_USER_LOG("Debug info generation failed for a module.");
+				result = base::BAD;
+			}
+		}
 
 		if (result.isBad()) return result;
 
@@ -668,6 +757,11 @@ namespace compiler::driver {
 				CORE_USER_LOG("Linking failed!\n");
 				return base::BAD;
 			}
+		}
+
+		if (backend == BackendType::DVM) {
+			if (linkDVMPackage(objects, debug_info_artifacts, "package_dvm").isBad())
+				return base::BAD;
 		}
 
 		return result;
