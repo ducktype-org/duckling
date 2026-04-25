@@ -11,7 +11,7 @@ from .helpers import (
     exit_with_error,
 )
 
-from ...llvm_tools import (LLVMTool, LLVM_TOOLS)
+from ...jit.llvm_tools import (LLVMTool, LLVM_TOOLS)
 
 def setup_build_impl(
     build_dir,

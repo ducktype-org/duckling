@@ -3,7 +3,6 @@ import subprocess
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from llvm_tools import llvm_version_options
 
 def run_llvm(tool: str, args: list[str], input: str | None = None) -> str:
