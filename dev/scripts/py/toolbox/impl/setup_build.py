@@ -24,6 +24,7 @@ def setup_build_impl(
     ccache,
     coverage,
     linker,
+    allocator,
     shared_libs,
     strip_symbol_information,
     disable_unity_compilation,
@@ -80,6 +81,7 @@ def setup_build_impl(
         f"-D JIT_ENABLED={'ON' if enable_jit else 'OFF'}",
         f"-D USE_REPLXX={'ON' if use_replxx else 'OFF'}",
         f"-D LLVM_TOOLS='{LLVMTool.python_args([llvm_tools_list[tool.param()] for tool in LLVM_TOOLS])}'",
+        f"-D ALLOCATOR={allocator.upper()}",
     ]
     if sanitizer:
         cmd_parts.append(f"-D SANITIZER={sanitizer.upper()}")

@@ -1,0 +1,11 @@
+PostCase: python3 check.py
+
+Tests:
+  init:
+    Description: can initialise a new project
+    Cases:
+      init:
+        test_cmd: init foo --name bar
+        Output:
+          Run: |+
+            echo "info: successfully created new project \`bar\` at \`$(pwd)/foo\`"
