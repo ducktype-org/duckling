@@ -25,6 +25,9 @@ class LLVMTool:
         return "--llvm-" + self.name
 
     def python_args(tool_paths):
+        """This full list of options that would be passed to scripts.
+           This makes it possible for any subsequent script to use any
+           of the available tools, in the specified version."""
         option_list = [
             f"{tool.option()}={tool_path}"
             for (tool, tool_path) in zip(LLVM_TOOLS, tool_paths)
