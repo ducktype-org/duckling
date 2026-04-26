@@ -311,7 +311,6 @@ namespace vm {
 		FUNCTION_CONT_CHECK_STRATEGY(0);
 	}
 #ifdef ENABLE_JIT
-	#ifndef IGNORE_NOT_JITABLE
 	RETURN_TYPE OpFuns::OPCODE_NAME(jit_call_entrypoint)(FUNCTION_ARGS) {
 		{
 			auto& jit_data = thread.jit_data;
@@ -347,9 +346,8 @@ namespace vm {
 		}
 		FUNCTION_CONT_CHECK_STRATEGY(0);
 	}
-	#endif
 #endif
-#ifndef IGNORE_NOT_JITABLE
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(call_builtinfunc)(FUNCTION_ARGS) {
 		{
 			auto builtin_id         = static_cast<builtins::BuiltinFunctionID>(instr->arg0);
@@ -398,7 +396,7 @@ namespace vm {
 
 		FUNCTION_CONT(1);
 	}
-#endif
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(call_cfunc)(FUNCTION_ARGS) {
 		{
 			auto ext_func = safeReadObjectBytes<CRef<low::LowExternCFunction>>(instr->arg0);
@@ -1188,7 +1186,7 @@ namespace vm {
 
 	DEFINE_STATIC_CAST_CONVERSION_OP(fptrunc, 32, 64, FLOAT_32_TYPE, FLOAT_64_TYPE)
 	DEFINE_STATIC_CAST_CONVERSION_OP(fpext, 64, 32, FLOAT_64_TYPE, FLOAT_32_TYPE)
-#ifndef IGNORE_NOT_JITABLE
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(breakpoint)(FUNCTION_ARGS) {
 		{
 			instr += 1;
@@ -1204,7 +1202,6 @@ namespace vm {
 		}
 		FUNCTION_CONT(0);
 	}
-#endif
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(stepGil)(FUNCTION_ARGS) {
 		{ thread.stepGil(); }
