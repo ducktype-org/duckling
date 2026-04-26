@@ -5,7 +5,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from llvm_tools import llvm_version_options
+from llvm_tools import llvm_tools_version_options
 
 def run_llvm(tool: str, args) -> str:
     result = subprocess.run([tool] + args, 
@@ -41,7 +41,7 @@ def generate_stencils(llvm_nm: str, binary: str, output_file):
     'binary', 
     type=click.Path(exists=True)
 )
-@llvm_version_options
+@llvm_tools_version_options
 def main(llvm_nm, output, binary, **kwargs):
     generate_stencils(llvm_nm, binary, output)
 

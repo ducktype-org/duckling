@@ -3,7 +3,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from llvm_tools import llvm_version_options
+from llvm_tools import llvm_tools_version_options
 
 def run_llvm(tool: str, args: list[str], input: str | None = None) -> str:
     result = subprocess.run([tool] + args, check=True, capture_output=True, text=True, input=input)
@@ -61,7 +61,7 @@ def should_remain(func_name: str) -> bool:
     type=click.File("w"),
     required=True,
 )
-@llvm_version_options
+@llvm_tools_version_options
 def main(llvm_nm, llvm_cxxfilt, input_path, output_file, **kwargs):
     write = lambda what: output_file.write(what + "\n")
 

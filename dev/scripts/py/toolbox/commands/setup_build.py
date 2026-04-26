@@ -11,7 +11,7 @@ from ..impl.helpers import (
     default_linker_from_ctx,
     default_gcov_from_ctx,
 )
-from ...jit.llvm_tools import (LLVM_TOOLS, llvm_version_options)
+from ...jit.llvm_tools import (LLVM_TOOLS, llvm_tools_version_options)
 from click import Choice, option, command, prompt
 
 @command()
@@ -149,7 +149,7 @@ from click import Choice, option, command, prompt
     metavar="VERSION",
     help="Default version of llvm tools",
 )
-@llvm_version_options
+@llvm_tools_version_options
 def setup_build(*args, **kwargs):
     """Makes a build folder"""
 
