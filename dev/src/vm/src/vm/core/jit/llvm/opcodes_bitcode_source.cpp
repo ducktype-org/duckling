@@ -1,12 +1,6 @@
-/**
- * @file opcodes_bitcode_source.cpp
- * @note Tis file does not depend on execution style.
- */
-
 #include "opcodes_bitcode_source.hpp"
 
 #include "absolute_symbols.hpp"
-#include "llvm_init.hpp"
 
 #include <llvm_helpers/llvm_helpers.hpp>
 
@@ -17,6 +11,7 @@
 #include <cstring>
 #include <ranges>
 #include <unordered_set>
+#include <tuple>
 
 LLVM_INCLUDE_BEGIN()
 #include <llvm/Bitcode/BitcodeReader.h>
@@ -33,11 +28,11 @@ LLVM_INCLUDE_BEGIN()
 #include <llvm/Support/TargetSelect.h>
 #include <llvm/Transforms/Utils/Cloning.h>
 #include <llvm/Transforms/Utils/ValueMapper.h>
-LLVM_INCLUDE_END()
 
 using namespace llvm;
 using namespace llvm::orc;
 
+LLVM_INCLUDE_END()
 /**
  * @brief We can't use std::to_array, because it doesn't compile.
  * If used in lambda uses infinite memory (clang bug).
@@ -53,256 +48,28 @@ PUSH_DIAGNOSTIC ALLOW_EXTENSIONS inline constexpr char OPCODES[] = {
 };
 POP_DIAGNOSTIC
 // NOLINTEND
+#include <iostream>
 
-/// @brief Context of llvmInit.
-/// @note We need to use ThreadSafeContext instead of LLVMContext to be able to use a single shared
-/// context for the JIT instance.
-static std::unique_ptr<ThreadSafeContext> g_context;
-
-/**
- * @brief LLVM master module containing the parsed microinstruction bitcode.
- * @note Acts as an IR cache for opfun body cloning, to enable interprocedural optimizations.
- */
-static std::unique_ptr<Module> g_module;
-
-/// @brief Active LLjit instance.
-static std::unique_ptr<LLJIT> lljit_instance;
-
-/// @brief LLVM helper object used for errors.
-static ExitOnError exit_on_err;
-
-/// @brief For each MicroOpcode stores the name of its corresponding llvm::Function*.
-static std::unordered_map<vm::low::MicroOpcode, std::string> lfunc_name_map;
-
-/// @brief pointers to LLVM types used in opcode function definitions.
-static llvm::StructType*   frame_ty;
-static llvm::StructType*   flag_data_ty;
-static llvm::StructType*   microinstruction_ty;
-static llvm::StructType*   vm_thread_ty;
-static llvm::FunctionType* opfun_ty;
-
-namespace {
-	/**
-	 * @brief Extracts function name from its mangled version. It should be string
-	 * between last "::" (if present) and first "(".
-	 */
-	std::string extractFunctionName(const std::string& full) {
-		size_t paren_pos = full.find('(');
-		if (paren_pos == std::string::npos) paren_pos = full.length();
-
-		size_t colons_pos = full.rfind("::", paren_pos);
-		size_t start      = (colons_pos == std::string::npos) ? 0 : colons_pos + 2;
-
-		return full.substr(start, paren_pos - start);
-	}
-
-	/**
-	 * @brief For microinstruction name, returns corresponding MicroOpcode.
-	 */
-	vm::low::MicroOpcode getOpcode(const std::string& func_name) {
-		for (auto [opcode, name]: std::views::enumerate(vm::low::OPCODE_NAMES))
-			if (func_name == name) return static_cast<vm::low::MicroOpcode>(opcode);
-		CORE_PANIC("Function name does not correspond to any MicroOpcode", func_name);
-	}
-
-	constexpr std::array<vm::low::MicroOpcode, vm::low::nonExecutableMicroInstrCount()> constructNonExecOpcodeArray(
-	) {
-		auto non_executable_opcodes
-			= vm::low::OPCODE_NAMES | std::views::enumerate
-		    | std::views::filter([](auto pair) { return std::get<1>(pair).starts_with("ext_"); })
-		    | std::views::transform([](auto pair) {
-				  return static_cast<vm::low::MicroOpcode>(std::get<0>(pair));
-			  });
-
-		std::array<vm::low::MicroOpcode, vm::low::nonExecutableMicroInstrCount()> output{};
-
-		std::ranges::copy(non_executable_opcodes, output.begin());
-
-		return output;
-	}
-
-	/**
-	 * @brief "Exports" an LLVM global value so it is visible to other modules.
-	 */
-	void externalizeGlobalValue(llvm::GlobalValue& gv) {
-		if (!gv.isDeclaration()) {
-			gv.setLinkage(llvm::GlobalValue::ExternalLinkage);
-			gv.setVisibility(llvm::GlobalValue::DefaultVisibility);
-		}
-	}
-
-	/**
-	 * @brief "Exports" all LLVM global values in a module (functions, global vars, metadata etc.)
-	 * to make them visible to other modules.
-	 * @note This is necessary for proper linking of the user function module with opfunction modules.
-	 */
-	void externalizeAllGlobalValues(llvm::Module& module) {
-		for (auto& gv: module.globals()) externalizeGlobalValue(gv);
-
-		for (auto& ga: module.aliases()) externalizeGlobalValue(ga);
-
-		for (auto& ifunc: module.ifuncs()) externalizeGlobalValue(ifunc);
-
-		for (auto& f: module.functions()) externalizeGlobalValue(f);
-	}
-
-	/**
-	 * @brief Creates a new module that contains cloned definitions from `src` based on `filter` and
-	 * adds it to `lljit`.
-	 * @details ValueToValueMapTy indicates which values had already been cloned earlier - it is
-	 * here just to satisfy LLVM's API.
-	 */
-	void cloneAndRegisterModule(
-		llvm::Module&                 src,
-		llvm::orc::LLJIT&             lljit,
-		const auto&                   filter,
-		llvm::orc::ThreadSafeContext& tsctx
-	) {
-		llvm::ValueToValueMapTy     vmap;
-		auto                        dest = llvm::CloneModule(src, vmap, filter);
-		llvm::orc::ThreadSafeModule tsm(std::move(dest), tsctx);
-		exit_on_err(lljit.addIRModule(std::move(tsm)));
-	}
-
-	/**
-	 * @brief Sets up LLVM types used in opcode function definitions.
-	 */
-	void setupLLVMTypes() {
-		// Flag data and Frame don't exist in the module, so we create it manually.
-		flag_data_ty = llvm::StructType::create(*g_context->getContext(), "struct.vm::FlagData");
-		flag_data_ty->setBody(
-			{
-				llvm::IntegerType::get(*g_context->getContext(), 1)  // bool flag
-			},
-			/*isPacked=*/false
-		);
-
-		frame_ty = llvm::StructType::create(*g_context->getContext(), "struct.vm::Frame");
-		frame_ty->setBody(
-			{ flag_data_ty },
-			/*isPacked=*/false
-		);
-		CORE_ASSERT(frame_ty, "Frame type not found in module.");
-
-		microinstruction_ty
-			= llvm::StructType::create(*g_context->getContext(), "vm::MicroInstruction");
-		CORE_ASSERT(microinstruction_ty, "MicroInstruction type not found in module.");
-
-		vm_thread_ty = llvm::StructType::create(*g_context->getContext(), "vm::VMThread");
-		CORE_ASSERT(vm_thread_ty, "VMThread type not found in module.");
-
-		llvm::PointerType* mi_ptr_ptr_ty
-			= llvm::PointerType::getUnqual(llvm::PointerType::getUnqual(microinstruction_ty));
-		llvm::PointerType* byte_ptr_ptr_ty = llvm::PointerType::getUnqual(
-			llvm::PointerType::getUnqual(llvm::Type::getInt8Ty(*g_context->getContext()))
-		);
-		llvm::PointerType* frame_ptr_ptr_ty
-			= llvm::PointerType::getUnqual(llvm::PointerType::getUnqual(frame_ty));
-		llvm::PointerType* vm_thread_ptr_ty = llvm::PointerType::getUnqual(vm_thread_ty);
-
-		opfun_ty = llvm::FunctionType::get(
-			llvm::Type::getVoidTy(*g_context->getContext()),
-			{ mi_ptr_ptr_ty, byte_ptr_ptr_ty, frame_ptr_ptr_ty, vm_thread_ptr_ty },
-			false
-		);
-		CORE_ASSERT(opfun_ty, "Failed to create opcode function type.");
-	}
-}
-
-static constexpr std::array<vm::low::MicroOpcode, vm::low::nonExecutableMicroInstrCount()>
-	NON_EXEC_OPCODES = constructNonExecOpcodeArray();
-
-void llvmInit() {
-	llvm::InitializeNativeTarget();
+// todo remove auto
+std::pair<std::unique_ptr<LLVMContext>, std::unique_ptr<Module>> parseOpcodesBitcode() {
+    llvm::InitializeNativeTarget();
 	llvm::InitializeNativeTargetAsmPrinter();
 	llvm::InitializeNativeTargetAsmParser();
 
-	if (g_context) return;  // already initialized
-	auto initial_context = std::make_unique<LLVMContext>();
-
-	lljit_instance = exit_on_err(LLJITBuilder().create());
-
-	auto& jd = lljit_instance->getMainJITDylib();
-	jd.addGenerator(cantFail(llvm::orc::DynamicLibrarySearchGenerator::GetForCurrentProcess(
-		lljit_instance->getDataLayout().getGlobalPrefix()
-	)));
-
-	registerAbsoluteJITSymbols(*lljit_instance);
-
+	auto context = std::make_unique<llvm::LLVMContext>();
+	//std::cout<<OPCODES.size()<<std::endl;
 	// Load embedded BC into module
 	auto buffer = MemoryBuffer::getMemBuffer(
 		StringRef(static_cast<const char*>(OPCODES), sizeof(OPCODES)), "", false
 	);
 
-	auto mod_or_err = parseBitcodeFile(buffer->getMemBufferRef(), *initial_context);
+	auto mod_or_err = parseBitcodeFile(buffer->getMemBufferRef(), *context);
 	if (!mod_or_err) llvm::report_fatal_error("Aborting due to parse error");
 
 
-	g_module = std::move(*mod_or_err);
-
-	std::unordered_set<std::string> name_set;
+	auto g_module = std::move(*mod_or_err);
 
 	CORE_ASSERT(g_module->isMaterialized(), "Opfuns module not fully materialized!");
 
-	externalizeAllGlobalValues(*g_module);
-
-	for (auto& f: g_module->functions()) {
-		if (!f.isDeclaration()) {
-			auto func_name = f.getName().str();
-			auto demangled = llvm::demangle(func_name);
-			if (demangled.starts_with("vm::OpFuns::op_")
-			    and !demangled.starts_with("vm::OpFuns::op_debug")) {
-				name_set.insert(func_name);
-				auto name              = extractFunctionName(demangled);
-				name                   = name.substr(3);  // delete op_
-				auto opcode            = getOpcode(name);
-				lfunc_name_map[opcode] = func_name;
-			}
-		}
-	}
-	CORE_ASSERT(!lfunc_name_map.empty(), "Opfuns not found!");
-
-	g_context = std::make_unique<ThreadSafeContext>(std::move(initial_context));
-
-	// We need to clone module definitions to preserve them for future cloning.
-
-	auto globals_filter = [&](const llvm::GlobalValue* gv) -> bool {
-		return !name_set.contains(gv->getName().str());
-	};
-
-	cloneAndRegisterModule(*g_module, *lljit_instance, globals_filter, *g_context);
-
-	for (const auto& opfun_name: name_set) {
-		auto opfun_filter = [&](const llvm::GlobalValue* gv) -> bool {
-			return gv->getName().str() == opfun_name;
-		};
-
-		cloneAndRegisterModule(*g_module, *lljit_instance, opfun_filter, *g_context);
-	}
-
-	setupLLVMTypes();
+	return {std::move(context), std::move(g_module)};
 }
-
-base::Optional<std::string> llvmGetFunName(const vm::low::MicroOpcode& fun) {
-	auto fun_name_iter = lfunc_name_map.find(fun);
-	if (fun_name_iter != lfunc_name_map.end()) return fun_name_iter->second;
-	return {};
-}
-
-Ref<llvm::orc::ThreadSafeContext> llvmGetTSCtx() { return g_context.get(); }
-
-Ref<llvm::orc::LLJIT> llvmGetLljit() { return lljit_instance.get(); }
-
-Ref<llvm::Module> llvmGetMasterModule() { return g_module.get(); }
-
-bool isOpcodeNonExecutable(const vm::low::MicroOpcode& opcode) {
-	for (const auto& mo: NON_EXEC_OPCODES)
-		if (mo == opcode) return true;
-	return false;
-}
-
-Ref<llvm::StructType> llvmGetFrameType() { return frame_ty; }
-
-Ref<llvm::StructType> llvmGetFlagDataType() { return flag_data_ty; }
-
-Ref<llvm::FunctionType> llvmGetOpFunType() { return opfun_ty; }
