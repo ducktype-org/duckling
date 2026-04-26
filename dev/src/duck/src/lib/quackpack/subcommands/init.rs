@@ -17,7 +17,7 @@ pub struct InitOptions<'duck> {
     pub at: PathBuf,
     /// Name of the project.
     pub name: StrId,
-    /// Initialize a venv instead of a project (do not put the `src` folder).
+    /// Initialize a venv instead of a project (do not create the `src` folder).
     pub as_venv: bool,
     /// Make the project expose freezefile.
     pub expose_freezefile: bool,
@@ -43,7 +43,6 @@ fun main() = {
 
 const DEFAULT_GITIGNORE: &str = "\
 .duck_build
-!src
 ";
 
 /// Initialize a new project with the given options.
@@ -60,14 +59,14 @@ pub fn init(opts: InitOptions<'_>) -> QuackResult<()> {
     if !opts.as_venv {
         add_package_structure(&opts.at)?;
     }
-    opts.ctx.console().info(format!(
-        "successfully created new project `{}` at `{}`",
-        opts.name,
-        opts.at.display()
-    ));
     if opts.git {
         init_git(&opts.at)?;
     }
+    opts.ctx.console().info(format!(
+        "successfully created a new project `{}` at `{}`",
+        opts.name,
+        opts.at.display()
+    ));
     Ok(())
 }
 
