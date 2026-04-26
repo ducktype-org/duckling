@@ -1,5 +1,6 @@
 use std::fmt::{self, Display};
 use std::io::{Read, Write};
+use std::str::FromStr;
 
 use console::{Term, WithoutAnsi, colors_enabled, colors_enabled_stderr, style};
 use dialoguer::Input;
@@ -197,48 +198,34 @@ impl Terminal {
     }
 
     /// Prompt user for an input until it can be correctly deserialized.
-    pub fn prompt_until_validated<T, F>(
-        &self,
-        prompt: String,
-        non_valid_msg: Option<String>,
-        validator: F,
-    ) -> QuackResult<T>
+    pub fn prompt_until_valid<T>(&self, prompt: String) -> T
     where
-        F: Fn(String) -> Option<T>,
+        T: ToString + FromStr + Clone,
+        <T as std::str::FromStr>::Err: std::fmt::Display,
     {
         loop {
-            let input: String = Input::new().with_prompt(&prompt).interact_text()?;
-            if let Some(new_result) = validator(input) {
-                return Ok(new_result);
-            }
-            if let Some(non_valid_msg) = non_valid_msg.as_ref() {
-                self.print(non_valid_msg);
+            let input = Input::<'_, T>::new().with_prompt(&prompt).interact_text();
+            match input {
+                Ok(t) => return t,
+                Err(e) => self.print(e),
             }
         }
     }
 
     /// Prompt user for an input until it can be correctly deserialized, with a default value supplied.
-    pub fn prompt_until_validated_with_default<T, F>(
-        &self,
-        prompt: String,
-        default: T,
-        non_valid_msg: Option<String>,
-        validator: F,
-    ) -> QuackResult<T>
+    pub fn prompt_until_valid_with_default<T>(&self, prompt: String, default: T) -> T
     where
-        F: Fn(String) -> Option<T>,
-        T: ToString,
+        T: ToString + FromStr + Clone,
+        <T as std::str::FromStr>::Err: std::fmt::Display,
     {
         loop {
-            let input: String = Input::new()
+            let input = Input::<'_, T>::new()
                 .with_prompt(&prompt)
-                .default(default.to_string())
-                .interact_text()?;
-            if let Some(new_result) = validator(input) {
-                return Ok(new_result);
-            }
-            if let Some(non_valid_msg) = non_valid_msg.as_ref() {
-                self.print(non_valid_msg);
+                .default(default.clone())
+                .interact_text();
+            match input {
+                Ok(t) => return t,
+                Err(e) => self.print(e),
             }
         }
     }

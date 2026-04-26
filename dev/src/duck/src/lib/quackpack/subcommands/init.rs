@@ -1,7 +1,6 @@
 //! Initialize a new project.
 use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::str::FromStr;
 
 use git2::{Repository, RepositoryInitOptions};
 
@@ -119,12 +118,10 @@ metadata:
 fn manifest_with_user_prompts(terminal: &Terminal, name: StrId) -> QuackResult<String> {
     let name = terminal.prompt_once_with_default("Enter the project's name".into(), name.into())?;
     let author = terminal.prompt_once("Enter the project's author".into())?;
-    let version = terminal.prompt_until_validated_with_default(
+    let version = terminal.prompt_until_valid_with_default(
         "Enter the version of the project".into(),
         Version::default(),
-        Some("Please enter a valid version in a format `x`, `x.y` or `x.y.z`".into()),
-        |s| Version::from_str(&s).ok(),
-    )?;
+    );
     Ok(format!(
         "\
 metadata:
