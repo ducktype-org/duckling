@@ -24,8 +24,8 @@ namespace compiler::helios {
 				}
 				variant_default {
 					CORE_PANIC(
-						"Element has no parent and no additional root data, cannot "
-						"determine scope parent."
+						"Element has no PST parent and no PST additional root data, cannot "
+						"determine PST parent."
 					);
 				}
 			}
