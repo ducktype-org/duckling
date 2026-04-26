@@ -15,3 +15,8 @@ LLVM_INCLUDE_END()
  * master module.
  */
 std::unique_ptr<llvm::Module> setupModule(const std::string& module_name, llvm::LLVMContext& ctx);
+
+/**
+ * @brief Returns whether opcode is not executable like ext_*.
+ */
+bool isOpcodeNonExecutable(const vm::low::MicroOpcode& opcode);

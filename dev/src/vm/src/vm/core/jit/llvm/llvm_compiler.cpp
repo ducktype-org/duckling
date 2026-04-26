@@ -1,8 +1,8 @@
 #include "../cf_analyzer.hpp"
 #include "../jit_compiler.hpp"
+#include "jit_data.hpp"
 #include "jit_utils.hpp"
 #include "llvm_lowering.hpp"
-#include "jit_data.hpp"
 #include "opcodes_bitcode_source.hpp"
 
 #include <llvm_helpers/llvm_helpers.hpp>
@@ -29,8 +29,8 @@ LLVM_INCLUDE_END()
 namespace vm::jit {
 
 	MRef<JitOpFun> compileLLVM(const low::LowFuncData& function_to_compile) {
-		auto& llvm_data = llvmData();
-		llvm::orc::ThreadSafeContext& tsctx = *llvm_data.g_context;
+		auto&                         llvm_data = llvmData();
+		llvm::orc::ThreadSafeContext& tsctx     = *llvm_data.g_context;
 
 		// Generate a unique symbol name for the function to compile.
 		// This is necessary to avoid duplicate definitions.

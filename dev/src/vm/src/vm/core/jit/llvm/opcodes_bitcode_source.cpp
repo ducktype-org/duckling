@@ -10,8 +10,8 @@
 #include <cstddef>
 #include <cstring>
 #include <ranges>
-#include <unordered_set>
 #include <tuple>
+#include <unordered_set>
 
 LLVM_INCLUDE_BEGIN()
 #include <llvm/Bitcode/BitcodeReader.h>
@@ -48,28 +48,21 @@ PUSH_DIAGNOSTIC ALLOW_EXTENSIONS inline constexpr char OPCODES[] = {
 };
 POP_DIAGNOSTIC
 // NOLINTEND
-#include <iostream>
 
-// todo remove auto
-std::pair<std::unique_ptr<LLVMContext>, std::unique_ptr<Module>> parseOpcodesBitcode() {
-    llvm::InitializeNativeTarget();
-	llvm::InitializeNativeTargetAsmPrinter();
-	llvm::InitializeNativeTargetAsmParser();
+std::unique_ptr<Module> parseOpcodesBitcode(LLVMContext& context) {
 
-	auto context = std::make_unique<llvm::LLVMContext>();
-	//std::cout<<OPCODES.size()<<std::endl;
-	// Load embedded BC into module
+	// std::cout<<OPCODES.size()<<std::endl;
+	//  Load embedded BC into module
 	auto buffer = MemoryBuffer::getMemBuffer(
 		StringRef(static_cast<const char*>(OPCODES), sizeof(OPCODES)), "", false
 	);
 
-	auto mod_or_err = parseBitcodeFile(buffer->getMemBufferRef(), *context);
+	auto mod_or_err = parseBitcodeFile(buffer->getMemBufferRef(), context);
 	if (!mod_or_err) llvm::report_fatal_error("Aborting due to parse error");
-
 
 	auto g_module = std::move(*mod_or_err);
 
 	CORE_ASSERT(g_module->isMaterialized(), "Opfuns module not fully materialized!");
 
-	return {std::move(context), std::move(g_module)};
+	return g_module;
 }

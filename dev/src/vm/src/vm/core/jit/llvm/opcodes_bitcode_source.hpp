@@ -1,6 +1,6 @@
-#include <tuple>
-
 #include <llvm_helpers/llvm_helpers.hpp>
+
+#include <tuple>
 
 LLVM_INCLUDE_BEGIN()
 #include <llvm/Bitcode/BitcodeReader.h>
@@ -19,4 +19,4 @@ LLVM_INCLUDE_BEGIN()
 #include <llvm/Transforms/Utils/ValueMapper.h>
 LLVM_INCLUDE_END()
 
-std::pair<std::unique_ptr<llvm::LLVMContext>, std::unique_ptr<llvm::Module>> parseOpcodesBitcode();
+std::unique_ptr<llvm::Module> parseOpcodesBitcode(llvm::LLVMContext& context);

@@ -48,9 +48,9 @@ namespace vm::jit {
 		std::vector<llvm::BasicBlock*> llvm_blocks;
 
 		LLVMBuilder(llvm::Module* module, llvm::LLVMContext& ctx): llvm_ctx(ctx), module(module) {
-			auto& llvm_data = llvmData();
+			auto& llvm_data   = llvmData();
 			user_func_wrapper = llvm::Function::Create(
-				llvm_data.opfun_ty, llvm::Function::ExternalLinkage, module->getName(), module
+				llvm_data.types.opfun.get(), llvm::Function::ExternalLinkage, module->getName(), module
 			);
 
 			auto arg_it = user_func_wrapper->arg_begin();
@@ -66,11 +66,11 @@ namespace vm::jit {
 		}
 
 		llvm::Function* getOrCreateOpcodeFunction(std::string_view opfun_name) {
-			auto& llvm_data = llvmData();
-			llvm::Function* callee = module->getFunction(opfun_name.data());
+			auto&           llvm_data = llvmData();
+			llvm::Function* callee    = module->getFunction(opfun_name.data());
 			if (!callee) {
 				callee = llvm::Function::Create(
-					llvm_data.opfun_ty, llvm::Function::ExternalLinkage, opfun_name, module
+					llvm_data.types.opfun.get(), llvm::Function::ExternalLinkage, opfun_name, module
 				);
 			}
 
@@ -93,7 +93,7 @@ namespace vm::jit {
 				case vm::low::MicroOpcode::call_func:
 				case vm::low::MicroOpcode::virtual_call_pptr_method: {
 					ir_builder.CreateCall(
-						llvm_data.opfun_ty,
+						llvm_data.types.opfun.get(),
 						getOrCreateOpcodeFunction("trampoline"),
 						{ instr_arg, locals_arg, frame_arg, thread_arg }
 					);
@@ -109,7 +109,7 @@ namespace vm::jit {
 						opt_none { opfun_name = low::OPCODE_NAMES.at(static_cast<u64>(opcode)); }
 					}
 					ir_builder.CreateCall(
-						llvm_data.opfun_ty,
+						llvm_data.types.opfun.get(),
 						getOrCreateOpcodeFunction(opfun_name),
 						{ instr_arg, locals_arg, frame_arg, thread_arg }
 					);
@@ -118,17 +118,16 @@ namespace vm::jit {
 		}
 
 		void lowerConditionalJump(const cf::BasicBlock& block, llvm::IRBuilder<>& ir_builder) {
-			auto& llvm_data = llvmData();
-			u32 flags_field_index = 0;
+			auto& llvm_data         = llvmData();
+			u32   flags_field_index = 0;
 
-			llvm::Value* frame_ptr = ir_builder.CreateLoad(
-				llvm::PointerType::getUnqual(llvm_data.frame_ty), frame_arg
-			);
+			llvm::Value* frame_ptr
+				= ir_builder.CreateLoad(llvm::PointerType::getUnqual(llvm_data.types.frame.get()), frame_arg);
 			llvm::Value* flags_ptr
-				= ir_builder.CreateStructGEP(llvm_data.frame_ty, frame_ptr, flags_field_index);
+				= ir_builder.CreateStructGEP(llvm_data.types.frame.get(), frame_ptr, flags_field_index);
 
 			llvm::Value* flag_ptr
-				= ir_builder.CreateStructGEP(llvm_data.flag_data_ty, flags_ptr, 0);
+				= ir_builder.CreateStructGEP(llvm_data.types.flag_data.get(), flags_ptr, 0);
 			llvm::Value* flag_value = ir_builder.CreateLoad(ir_builder.getInt1Ty(), flag_ptr);
 
 			if (block.edgeKind() == cf::OutEdges::Kind::JmpIfNot)
@@ -166,7 +165,7 @@ namespace vm::jit {
 		}
 
 		void lowerFunction(const low::LowFuncData& function_to_compile) {
-			auto& llvm_data = llvmData();
+			auto&                   llvm_data = llvmData();
 			cf::ControlFlowAnalyzer cf_analyzer{};
 			cfg = cf_analyzer.controlFlowGraph(function_to_compile);
 
