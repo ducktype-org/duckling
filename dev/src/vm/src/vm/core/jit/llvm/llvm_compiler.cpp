@@ -29,9 +29,13 @@ namespace vm::jit {
 
 	MRef<JitOpFun> compileLLVM(const low::LowFuncData& function_to_compile) {
 		llvm::orc::ThreadSafeContext& tsctx          = *llvmGetTSCtx();
+
+		// Generate a unique symbol name for the function to compile.
+		// This is necessary to avoid duplicate definitions.
 		static u64                    compile_serial = 0;
+
 		const std::string             symbol_name
-			= std::to_string(function_to_compile.name.getInnerID().asInt()) + "."
+			= function_to_compile.name.str() + "."
 		    + std::to_string(compile_serial++);
 		std::unique_ptr<llvm::Module> new_module;
 
