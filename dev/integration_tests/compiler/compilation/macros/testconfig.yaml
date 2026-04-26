@@ -1,5 +1,3 @@
-# @TODO: #2464 reenable it, currently mangling of symbols inside macros is not correct, and it causes tests that duplicate modules to fail.
-enable_conc_deterministic_tests: "false"
 
 Tests:
   simple_expand_1:
@@ -55,6 +53,8 @@ Tests:
         ExitCode: 0
 
   various_statements:
+    # @TODO: #2448 reenable it, it fails because the imports are not handled correctly in determinism tests.
+    enable_conc_deterministic_tests: "false"
     Cases:
       llvm:
         backend: llvm
