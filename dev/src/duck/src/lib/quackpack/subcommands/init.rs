@@ -115,8 +115,14 @@ metadata:
 fn manifest_with_user_prompts(name: StrId) -> QuackResult<String> {
     let authors_regex = Regex::new(r"^\[.*\]$").unwrap();
     let name = user_prompts::string_with_default("Enter the project's name".into(), name)?;
-    let authors = user_prompts::string_no_default_with_regex("Enter the project's authors in a list e.g. `[<author1>, <author2>]`".into(), authors_regex)?;
-    let version = user_prompts::with_default("Enter the version of the project".into(), Version::default())?;
+    let authors = user_prompts::string_no_default_with_regex(
+        "Enter the project's authors in a list e.g. `[<author1>, <author2>]`".into(),
+        authors_regex,
+    )?;
+    let version = user_prompts::with_default(
+        "Enter the version of the project".into(),
+        Version::default(),
+    )?;
     Ok(format!(
         "\
 metadata:

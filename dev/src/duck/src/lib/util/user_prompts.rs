@@ -28,16 +28,11 @@ pub fn string_with_default(prompt: StrId, default: StrId) -> QuackResult<String>
 }
 
 /// Prompt user for a `String` until the result satisfies a regex.
-pub fn string_no_default_with_regex(
-    prompt: StrId,
-    regex: Regex
-) -> QuackResult<String> {
+pub fn string_no_default_with_regex(prompt: StrId, regex: Regex) -> QuackResult<String> {
     loop {
-        let input: String = Input::new()
-            .with_prompt(prompt)
-            .interact_text()?;
+        let input: String = Input::new().with_prompt(prompt).interact_text()?;
         if regex.is_match(&input) {
-            return Ok(input)
+            return Ok(input);
         }
     }
 }
