@@ -2,7 +2,9 @@ use std::fmt::{self, Display};
 use std::io::{Read, Write};
 
 use console::{Term, WithoutAnsi, colors_enabled, colors_enabled_stderr, style};
+use dialoguer::Input;
 
+use crate::QuackResult;
 use crate::duck::util::indent::indent;
 
 /// A struct which is responsible for printing to stdout/stderr.
@@ -179,6 +181,66 @@ impl Terminal {
     /// Get the underlying [`Term`] used for printing.
     pub fn term(&self) -> &Term {
         &self.term
+    }
+
+    /// Get a [`String`] input from the user.
+    pub fn prompt_once(&self, prompt: String) -> QuackResult<String> {
+        Ok(Input::new().with_prompt(prompt).interact_text()?)
+    }
+
+    /// Get a [`String`] input from the user, with a default value supplied.
+    pub fn prompt_once_with_default(&self, prompt: String, default: String) -> QuackResult<String> {
+        Ok(Input::new()
+            .with_prompt(prompt)
+            .default(default)
+            .interact_text()?)
+    }
+
+    /// Prompt user for an input until it can be correctly deserialized.
+    pub fn prompt_until_validated<T, F>(
+        &self,
+        prompt: String,
+        non_valid_msg: Option<String>,
+        validator: F,
+    ) -> QuackResult<T>
+    where
+        F: Fn(String) -> Option<T>,
+    {
+        loop {
+            let input: String = Input::new().with_prompt(&prompt).interact_text()?;
+            if let Some(new_result) = validator(input) {
+                return Ok(new_result);
+            }
+            if let Some(non_valid_msg) = non_valid_msg.as_ref() {
+                self.print(non_valid_msg);
+            }
+        }
+    }
+
+    /// Prompt user for an input until it can be correctly deserialized, with a default value supplied.
+    pub fn prompt_until_validated_with_default<T, F>(
+        &self,
+        prompt: String,
+        default: T,
+        non_valid_msg: Option<String>,
+        validator: F,
+    ) -> QuackResult<T>
+    where
+        F: Fn(String) -> Option<T>,
+        T: ToString,
+    {
+        loop {
+            let input: String = Input::new()
+                .with_prompt(&prompt)
+                .default(default.to_string())
+                .interact_text()?;
+            if let Some(new_result) = validator(input) {
+                return Ok(new_result);
+            }
+            if let Some(non_valid_msg) = non_valid_msg.as_ref() {
+                self.print(non_valid_msg);
+            }
+        }
     }
 }
 

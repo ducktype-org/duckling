@@ -1,13 +1,13 @@
 //! Initialize a new project.
 use std::io::Write;
 use std::path::{Path, PathBuf};
+use std::str::FromStr;
 
 use git2::{Repository, RepositoryInitOptions};
-use regex::Regex;
 
+use crate::duck::util::terminal::Terminal;
 use crate::quackpack::core::{PackageLoader, VenvConfig, Version};
 use crate::util::path_ops_ext::PathOpsExt;
-use crate::util::user_prompts;
 use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail};
 
 /// Options for initializing a new project.
@@ -48,7 +48,7 @@ const DEFAULT_GITIGNORE: &str = "\
 /// Initialize a new project with the given options.
 pub fn init(opts: InitOptions<'_>) -> QuackResult<()> {
     bail_if_would_override_project(opts.ctx, &opts.at)?;
-    create_manifest_file(&opts.at, opts.name, opts.full)?;
+    create_manifest_file(opts.ctx, &opts.at, opts.name, opts.full)?;
     create_venv_config_file(
         opts.ctx,
         &opts.at,
@@ -83,13 +83,18 @@ fn bail_if_would_override_project(ctx: &DuckContext, root: &Path) -> QuackResult
 }
 
 /// Create a file with the manifest of the project.
-fn create_manifest_file(root_path: &Path, name: StrId, full: bool) -> QuackResult<()> {
+fn create_manifest_file(
+    ctx: &DuckContext,
+    root_path: &Path,
+    name: StrId,
+    full: bool,
+) -> QuackResult<()> {
     let manifest_file = root_path.join(PackageLoader::MANIFEST_NAME);
     manifest_file
         .touch()
         .context("failed to create a manifest file")?;
     let manifest_contents = if full {
-        manifest_with_user_prompts(name)?
+        manifest_with_user_prompts(ctx.console(), name)?
     } else {
         make_default_manifest_for_name(&name)
     };
@@ -111,23 +116,21 @@ metadata:
 }
 
 /// Create custom manifest from user prompts.
-fn manifest_with_user_prompts(name: StrId) -> QuackResult<String> {
-    let authors_regex = Regex::new(r"^\[.*\]$").unwrap();
-    let name = user_prompts::string_with_default("Enter the project's name".into(), name)?;
-    let authors = user_prompts::string_no_default_with_regex(
-        "Enter the project's authors in a list e.g. `[<author1>, <author2>]`".into(),
-        authors_regex,
-    )?;
-    let version = user_prompts::with_default(
+fn manifest_with_user_prompts(terminal: &Terminal, name: StrId) -> QuackResult<String> {
+    let name = terminal.prompt_once_with_default("Enter the project's name".into(), name.into())?;
+    let author = terminal.prompt_once("Enter the project's author".into())?;
+    let version = terminal.prompt_until_validated_with_default(
         "Enter the version of the project".into(),
         Version::default(),
+        Some("Please enter a valid version in a format `x`, `x.y` or `x.y.z`".into()),
+        |s| Version::from_str(&s).ok(),
     )?;
     Ok(format!(
         "\
 metadata:
   name: {name}
   version: '{version}'
-  authors: {authors}
+  authors: ['{author}']
 "
     ))
 }

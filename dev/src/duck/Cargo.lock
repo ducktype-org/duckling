@@ -534,7 +534,6 @@ dependencies = [
  "libssh2-sys",
  "openssl",
  "openssl-sys",
- "regex",
  "rusqlite",
  "russcip",
  "scip-sys",
