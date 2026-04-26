@@ -39,7 +39,7 @@ function(process_to_binary binary_file destination_file binary_artifact_prefix)
     # Analyze and generate data from the binary
     add_custom_command(
         OUTPUT ${nm_out}
-        COMMAND ${CMAKE_SOURCE_DIR}/.venv/bin/python3
+        COMMAND "/usr/bin/env python3"
         "${CMAKE_SOURCE_DIR}/scripts/py/jit/analyze_bin.py"
         "${linked_out}"
         "--output=${nm_out}"
