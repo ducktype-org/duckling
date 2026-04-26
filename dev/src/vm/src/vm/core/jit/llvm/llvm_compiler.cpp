@@ -28,15 +28,14 @@ LLVM_INCLUDE_END()
 namespace vm::jit {
 
 	MRef<JitOpFun> compileLLVM(const low::LowFuncData& function_to_compile) {
-		llvm::orc::ThreadSafeContext& tsctx          = *llvmGetTSCtx();
+		llvm::orc::ThreadSafeContext& tsctx = *llvmGetTSCtx();
 
 		// Generate a unique symbol name for the function to compile.
 		// This is necessary to avoid duplicate definitions.
-		static u64                    compile_serial = 0;
+		static u64 compile_serial = 0;
 
-		const std::string             symbol_name
-			= function_to_compile.name.str() + "."
-		    + std::to_string(compile_serial++);
+		const std::string symbol_name
+			= function_to_compile.name.str() + "." + std::to_string(compile_serial++);
 		std::unique_ptr<llvm::Module> new_module;
 
 		llvm::LLVMContext& ctx = *tsctx.getContext();

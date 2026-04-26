@@ -105,7 +105,8 @@ namespace {
 		CORE_PANIC("Function name does not correspond to any MicroOpcode", func_name);
 	}
 
-	constexpr auto constructNonExecOpcodeArray() {
+	constexpr std::array<vm::low::MicroOpcode, vm::low::nonExecutableMicroInstrCount()> constructNonExecOpcodeArray(
+	) {
 		auto non_executable_opcodes
 			= vm::low::OPCODE_NAMES | std::views::enumerate
 		    | std::views::filter([](auto pair) { return std::get<1>(pair).starts_with("ext_"); })

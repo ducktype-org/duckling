@@ -23,8 +23,10 @@ namespace vm::jit::cf {
 		 * @param members Block IDs that are part of the loop.
 		 */
 		Loop(BlockID start_block, const ControlFlowGraph& cfg, std::vector<BlockID> members):
-			  start_block(start_block), loop_cfg(cfg.subgraph(members)) {}
-		BlockID		  start_block;
+			  start_block(start_block),
+			  loop_cfg(cfg.subgraph(members)) {}
+
+		BlockID          start_block;
 		ControlFlowGraph loop_cfg;
 	};
 
@@ -46,10 +48,10 @@ namespace vm::jit::cf {
 			calcPredecessors(cfg);
 			calcDominators(cfg);
 
-			std::vector<u32> last_visited(cfg.size(), 0);
-			u32 timestamp = 0;
+			std::vector<u32>     last_visited(cfg.size(), 0);
+			u32                  timestamp = 0;
 			std::vector<BlockID> stack;
-			usize stack_ptr;
+			usize                stack_ptr;
 
 			for (BlockID bid = 0; bid < cfg.size(); ++bid) {
 				stack.clear();
@@ -65,8 +67,7 @@ namespace vm::jit::cf {
 
 				while (stack_ptr < stack.size()) {
 					BlockID current = stack[stack_ptr++];
-					if (current == bid)
-						continue;
+					if (current == bid) continue;
 
 					for (usize i = 0; i < predecessors[current].size(); ++i) {
 						BlockID next = predecessors[current][i];
@@ -77,8 +78,7 @@ namespace vm::jit::cf {
 					}
 				}
 
-				if (!stack.empty())
-					loops.emplace_back(bid, cfg, std::move(stack));
+				if (!stack.empty()) loops.emplace_back(bid, cfg, std::move(stack));
 			}
 
 			return loops;
@@ -175,8 +175,10 @@ namespace vm::jit::cf {
 			while (changed) {
 				changed = false;
 				for (usize i = cfg.size() - 1; i > 0; --i) {
-					BlockID b        = inv_postorder_map[i];
-					CORE_ASSERT(!predecessors[b].empty(), "All blocks except entry should have predecessors");
+					BlockID b = inv_postorder_map[i];
+					CORE_ASSERT(
+						!predecessors[b].empty(), "All blocks except entry should have predecessors"
+					);
 					BlockID new_idom = predecessors[b][0];
 
 					for (usize j = 1; j < predecessors[b].size(); ++j) {

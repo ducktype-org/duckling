@@ -49,8 +49,7 @@ namespace vm::jit::cf {
 			case low::MicroOpcode::jmp_label: {
 				const usize jump_target = jumpTarget(block.end, last_instr.arg0);
 				CORE_ASSERT(
-					jump_target < function.bc.size(),
-					"Jump target points past last instruction"
+					jump_target < function.bc.size(), "Jump target points past last instruction"
 				);
 				usize target_block_idx = instr_to_block(jump_target);
 				blocks[block.id].setDefaultEdge(target_block_idx);
@@ -59,8 +58,7 @@ namespace vm::jit::cf {
 			case low::MicroOpcode::jmpIf_label: {
 				const usize jump_target = jumpTarget(block.end, last_instr.arg0);
 				CORE_ASSERT(
-					jump_target < function.bc.size(),
-					"Jump target points past last instruction"
+					jump_target < function.bc.size(), "Jump target points past last instruction"
 				);
 				usize jmp_target = instr_to_block(jump_target);
 				blocks[block.id].setCondEdge(OutEdges::Kind::JmpIf, jmp_target, block.id + 1);
@@ -69,8 +67,7 @@ namespace vm::jit::cf {
 			case low::MicroOpcode::jmpIfNot_label: {
 				const usize jump_target = jumpTarget(block.end, last_instr.arg0);
 				CORE_ASSERT(
-					jump_target < function.bc.size(),
-					"Jump target points past last instruction"
+					jump_target < function.bc.size(), "Jump target points past last instruction"
 				);
 				usize jmp_target = instr_to_block(jump_target);
 				blocks[block.id].setCondEdge(OutEdges::Kind::JmpIfNot, jmp_target, block.id + 1);
@@ -98,7 +95,8 @@ namespace vm::jit::cf {
 	 * @return A remapped CFG subgraph with out-of-subset edges redirected.
 	 * @note Current implementation redirects external edges to a synthetic dummy block.
 	 */
-	[[nodiscard]] ControlFlowGraph ControlFlowGraph::subgraph(const std::vector<BlockID>& block_ids) const {
+	[[nodiscard]] ControlFlowGraph ControlFlowGraph::subgraph(const std::vector<BlockID>& block_ids
+	) const {
 		ControlFlowGraph subgraph;
 		subgraph.blocks.reserve(block_ids.size());
 
@@ -108,7 +106,9 @@ namespace vm::jit::cf {
 
 		for (BlockID old_id: block_ids) {
 			CORE_ASSERT(old_id < blocks.size(), "Invalid block ID in subgraph request");
-			CORE_ASSERT(old_to_new[old_id] == dummy_block_id, "Duplicate block ID in subgraph request");
+			CORE_ASSERT(
+				old_to_new[old_id] == dummy_block_id, "Duplicate block ID in subgraph request"
+			);
 
 			const BlockID new_id = static_cast<BlockID>(subgraph.blocks.size());
 			old_to_new[old_id]   = new_id;
@@ -122,9 +122,9 @@ namespace vm::jit::cf {
 		subgraph.blocks.emplace_back(dummy_block_id, ret_instr_pos, ret_instr_pos + 1);
 
 		for (BlockID old_id: block_ids) {
-			const BlockID  new_id = old_to_new[old_id];
-			const BasicBlock& src = blocks[old_id];
-			BasicBlock&       dst = subgraph.blocks[new_id];
+			const BlockID     new_id = old_to_new[old_id];
+			const BasicBlock& src    = blocks[old_id];
+			BasicBlock&       dst    = subgraph.blocks[new_id];
 
 			dst.succ = src.succ;
 			for (usize i = 0; i < src.edgeCount(); ++i) {
