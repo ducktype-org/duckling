@@ -13,12 +13,15 @@ class LLVMTool:
         return f"{prefix}{self.name}{suffix}"
 
     def macro(self):
+        """The name of the parameter passed to CMake"""
         return "LLVM_" + self.name.upper()
 
     def param(self):
+        """The name found in toolbox.py's kwargs"""
         return "llvm_" + self.name
 
     def option(self):
+        """The name of the CLI option setting the tool"""
         return "--llvm-" + self.name
 
     def python_args(tool_paths):
