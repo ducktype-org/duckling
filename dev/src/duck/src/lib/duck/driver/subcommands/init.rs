@@ -26,7 +26,10 @@ pub fn get_parser() -> Command {
             "expose-freezefile",
             "Makes the synchronization export a freezefile and use the provided one",
         ))
-        .arg(flag("git", "Initialize the project as a git repository"))
+        .arg(flag(
+            "no-git",
+            "Do not initialize a git repository in the projects root",
+        ))
         .arg(optional("name", "Override the package name"))
         .arg(
             Arg::new("path")
@@ -55,7 +58,7 @@ pub fn execute(ctx: &DuckContext, matches: &ArgMatches) -> QuackResult<()> {
         expose_freezefile: matches.get_flag("expose-freezefile"),
         local_storage: matches.get_flag("local-storage"),
         ephemeral: matches.get_flag("ephemeral"),
-        git: matches.get_flag("git"),
+        git: !matches.get_flag("git"),
         full: matches.get_flag("full"),
     })
 }
