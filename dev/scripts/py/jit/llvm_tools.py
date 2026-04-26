@@ -33,7 +33,7 @@ LLVM_TOOLS: list[LLVMTool] = [
     LLVMTool(tool_name) for tool_name in ["opt", "link", "nm", "cxxfilt", "extract"]
 ]
 
-def llvm_version_options(func):
+def llvm_tools_version_options(func):
     """Dynamically adds a family of --llvm-<tool>-version options."""
     for tool in LLVM_TOOLS:
         func = option(
