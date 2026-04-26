@@ -188,7 +188,10 @@ namespace compiler::helios::mangler {
 
 		/**
 		 * @brief Returns symbol name prefixed with all enclosing it scopes to uniquely identify it
-		 * @note: See mangling-scheme.md for details
+		 * within a single module.
+		 * @note It does not mangle module/package names, pathPrefix and path functions are
+		 * responsible for that.
+		 * @note See mangling-scheme.md for details
 		 */
 		std::string symbolName(query::Context& ctx, SymID symbol_id) {
 			auto scope_id = scope(symbol_id);
