@@ -22,13 +22,16 @@ namespace compiler::helios {
 
 		[[nodiscard]]
 		pst::AccessLocked<pst::LangElement> getAsLangElement() const {
-			CORE_ASSERT(isLangElement(), "PSTParentResult does not hold a LangElement");		
+			CORE_ASSERT(isLangElement(), "PSTParentResult does not hold a LangElement");
 			return std::get<pst::AccessLocked<pst::LangElement>>(state);
 		}
 
 		[[nodiscard]]
 		frontend::ModuleID getAsModuleID() const {
-			CORE_ASSERT(!std::holds_alternative<pst::AccessLocked<pst::LangElement>>(state), "PSTParentResult does not hold a ModuleID");
+			CORE_ASSERT(
+				!std::holds_alternative<pst::AccessLocked<pst::LangElement>>(state),
+				"PSTParentResult does not hold a ModuleID"
+			);
 			return std::get<frontend::ModuleID>(state);
 		}
 	};
