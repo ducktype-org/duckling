@@ -141,42 +141,42 @@ fn create_venv_config_file(
     local_storage: bool,
 ) -> QuackResult<()> {
     let venv_cfg_file = root_path.join(PackageLoader::VENV_CONFIG_NAME);
-    if let Some(venv_cfg) = generate_venv_config(expose_freezefile, ephemeral, local_storage)? {
+    if let Some(venv_cfg) = generate_venv_config(expose_freezefile, ephemeral, local_storage)
+        .context_internal("failed to generate a VenvConfig")?
+    {
         if venv_cfg_file.exists() {
-            ctx.error_console().warning(format!("init run with non-default venv configuration flags, but venv configuration file already exists at `{}`", venv_cfg_file.to_string_lossy()));
+            ctx.error_console().warning(format!("init run with non-default venv configuration flags, but venv configuration file already exists at `{}`", venv_cfg_file.display()));
             return Ok(());
         }
         let mut venv_cfg_file = venv_cfg_file
             .touch()
             .context("failed to create a venv configuration file")?;
         venv_cfg_file
-            .write_fmt(format_args!("{}", venv_cfg))
-            .context("failed to write a venv configuration file")?;
+            .write(venv_cfg.to_string().as_bytes())
+            .context("failed to write to a venv configuration file")?;
     }
     Ok(())
 }
 
-/// Create a venv config, from the options passed to [`init`].
+/// Create a [`VenvConfig`], from the options passed to [`init`].
+/// If the generated [`VenvConfig`] has only default values, an [`Option::None`] is returned instead.
 fn generate_venv_config(
     expose_freezefile: bool,
     ephemeral: bool,
     local_storage: bool,
 ) -> QuackResult<Option<VenvConfig>> {
     let mut venv_cfg = VenvConfig::default();
-    let mut is_not_default = false;
     if expose_freezefile {
         venv_cfg.set_freezefile_exposed(true)?;
-        is_not_default = true;
     }
     if ephemeral {
         venv_cfg.set_ephemeral(true)?;
-        is_not_default = true;
     }
     if local_storage {
         venv_cfg.set_storage_path(Path::new("storage"))?;
-        is_not_default = true;
     }
-    if is_not_default {
+    let would_create_not_default_venv_config = expose_freezefile || ephemeral || local_storage;
+    if would_create_not_default_venv_config {
         Ok(Some(venv_cfg))
     } else {
         Ok(None)
@@ -204,13 +204,14 @@ fn add_package_structure(root_path: &Path) -> QuackResult<()> {
 /// Initialize git repository in the project and add `gitignore`.
 fn init_git(root_path: &Path) -> QuackResult<()> {
     let mut init_opts = RepositoryInitOptions::new();
-    Repository::init_opts(root_path, init_opts.no_reinit(true))?;
+    Repository::init_opts(root_path, init_opts.no_reinit(true))
+        .context("failed to initialize a git repository")?;
     let gitignore_file = root_path.join(".gitignore");
     gitignore_file
         .touch()
         .context("failed to create a `.gitignore` file")?;
     gitignore_file
         .write(DEFAULT_GITIGNORE)
-        .context("failed to write a gitignore file")?;
+        .context("failed to write to a `.gitignore` file")?;
     Ok(())
 }

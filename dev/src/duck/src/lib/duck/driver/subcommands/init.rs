@@ -58,7 +58,7 @@ pub fn execute(ctx: &DuckContext, matches: &ArgMatches) -> QuackResult<()> {
         expose_freezefile: matches.get_flag("expose-freezefile"),
         local_storage: matches.get_flag("local-storage"),
         ephemeral: matches.get_flag("ephemeral"),
-        git: !matches.get_flag("git"),
+        git: !matches.get_flag("no-git"),
         full: matches.get_flag("full"),
     })
 }
