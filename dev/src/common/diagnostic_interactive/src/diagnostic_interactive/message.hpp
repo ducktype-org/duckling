@@ -1,5 +1,7 @@
 #pragma once
 
+#include "stable_position.hpp"
+
 #include <diagnostic_interactive/core/diagnostic_arguments_forward.hpp>
 
 #include <diagnostic/location.hpp>
@@ -85,16 +87,26 @@ namespace dia_int {
 		CodeArgument(std::string name, dia::SourcePosition position):
 			  Argument(std::move(name)),
 			  position(position) {}
+
+		/**
+		 * @brief Here we use illegalAccess which would not mark the dependency on the position and
+		 * recompilaction. If we would like to cache the errors between the recompilation or show
+		 * the code snippets in the LS, then this would need to be refactored.
+		 */
+		CodeArgument(std::string name, dia_int::StablePosition position):
+			  Argument(std::move(name)),
+			  position(position.getActiveSourcePositionIllegalAccess()) {}
 	};
 
 	class CodeLocationArgument final: public Argument {
 	public:
 		struct FileLocation {
-			std::string         file;
-			u64                 line;
-			u64                 column;
-			base::Optional<u64> end_line{};
-			base::Optional<u64> end_column{};
+			std::string                    file;
+			u64                            line;
+			u64                            column;
+			base::Optional<u64>            end_line{};
+			base::Optional<u64>            end_column{};
+			base::Optional<StablePosition> hash_location{};
 
 			static FileLocation fromSourcePosition(const dia::SourcePosition& pos) {
 				auto [line, column]         = pos.getStartLineColumn();
@@ -102,6 +114,21 @@ namespace dia_int {
 				return { .file       = pos.getSource()->getFile().getFilePath().string(),
 					     .line       = (u64) line,
 					     .column     = (u64) column,
+					     .end_line   = end_line,
+					     .end_column = end_column };
+			}
+
+			static FileLocation fromStablePosition(const StablePosition& pos) {
+				auto source_pos             = pos.getActiveSourcePositionIllegalAccess();
+				auto file_location          = fromSourcePosition(source_pos);
+				file_location.hash_location = pos;
+				return file_location;
+			}
+
+			[[nodiscard]] dia_int::CodeLocation toCodeLocation() const {
+				return { .file       = file,
+					     .line       = line,
+					     .column     = column,
 					     .end_line   = end_line,
 					     .end_column = end_column };
 			}
@@ -118,6 +145,10 @@ namespace dia_int {
 		CodeLocationArgument(std::string name, dia::SourcePosition position):
 			  Argument(std::move(name)),
 			  location(FileLocation::fromSourcePosition(position)) {}
+
+		CodeLocationArgument(std::string name, dia_int::StablePosition position):
+			  Argument(std::move(name)),
+			  location(FileLocation::fromStablePosition(position)) {}
 
 		Box<dia_args::Component> getValue(MessageBase&) override;
 	};
@@ -208,6 +239,15 @@ namespace dia_int {
 			base::Optional<std::string> message_id = {}
 		):
 			  position(position),
+			  pointer_message_id(std::move(name)),
+			  message_id(std::move(message_id)) {}
+
+		PointerMessage(
+			std::string                 name,
+			dia_int::StablePosition     position,
+			base::Optional<std::string> message_id = {}
+		):
+			  position(position.getActiveSourcePositionIllegalAccess()),
 			  pointer_message_id(std::move(name)),
 			  message_id(std::move(message_id)) {}
 	};
@@ -371,6 +411,8 @@ namespace dia_int {
 	class MessageWithCodeFragment: public MessageBase {
 	protected:
 		MessageWithCodeFragment(dia::SourcePosition source_position);
+
+		MessageWithCodeFragment(dia_int::StablePosition source_position);
 	};
 
 	/**
@@ -391,5 +433,7 @@ namespace dia_int {
 	class MessageWithCodeFragmentAndCause: public MessageBase {
 	protected:
 		MessageWithCodeFragmentAndCause(dia::SourcePosition source_position);
+
+		MessageWithCodeFragmentAndCause(dia_int::StablePosition source_position);
 	};
 }

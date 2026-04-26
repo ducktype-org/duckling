@@ -19,8 +19,7 @@ add_library(Driver
 	src/driver/externs_manifest.cpp
 	src/driver/exit.cpp
 	src/driver/repl_utils/repl_dvm_helpers.cpp
-	src/driver/repl_utils/script_llvm_helpers.cpp
-	src/driver/repl_utils/script_dvm_helpers.cpp
+	src/driver/repl_utils/script_helpers.cpp
 	src/driver/repl_utils/repl_split_helpers.cpp
 	src/driver/repl_utils/repl_statement_helpers.cpp
 

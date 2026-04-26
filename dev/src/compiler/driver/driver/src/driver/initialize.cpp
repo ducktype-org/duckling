@@ -18,7 +18,6 @@
 #include <linker/link.hpp>
 #include <time_stats/time_stats.hpp>
 
-#include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <artifacts/artifacts.hpp>
@@ -30,17 +29,6 @@
 
 namespace compiler::driver {
 
-	InitializationResult::InitializationResult(base::OkBad result): result(result) {}
-
-	InitializationResult::~InitializationResult() {
-		CORE_ASSERT_NOEXCEPT(checked, "Initialization status was not checked, use status method!");
-	}
-
-	[[nodiscard]]
-	base::OkBad InitializationResult::status() {
-		checked = true;
-		return result;
-	}
 
 	namespace {
 		constinit bool is_initialized = false;
@@ -218,7 +206,7 @@ namespace compiler::driver {
 		}
 	}
 
-	InitializationResult initializeTheCompiler(CompilerModeOfOperationAndOptions options) {
+	base::CheckedOkBad initializeTheCompiler(CompilerModeOfOperationAndOptions options) {
 		time_stats::TrackCategoryTime driver_initialization_time(
 			time_stats::TimeCategories::DriverInitialization
 		);

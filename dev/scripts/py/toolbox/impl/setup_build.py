@@ -23,6 +23,7 @@ def setup_build_impl(
     ccache,
     coverage,
     linker,
+    allocator,
     shared_libs,
     strip_symbol_information,
     disable_unity_compilation,
@@ -79,6 +80,7 @@ def setup_build_impl(
         f"-D ENABLE_LINK_TIME_OPTIMIZATION={'ON' if enable_link_time_optimization else 'OFF'}",
         f"-D JIT_ENABLED={'ON' if enable_jit else 'OFF'}",
         f"-D USE_REPLXX={'ON' if use_replxx else 'OFF'}",
+        f"-D ALLOCATOR={allocator.upper()}",
     ]
     if sanitizer:
         cmd_parts.append(f"-D SANITIZER={sanitizer.upper()}")

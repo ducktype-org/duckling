@@ -534,6 +534,12 @@ package_info,
 		);
 
 		driver::compileEntirePackage(package_info, driver::BuildTargetDVM{});
+
+		auto dvm_exe_path = artifacts_path / "package_dvm.dbc";
+		assertTrue(
+			std::filesystem::exists(dvm_exe_path),
+			base::strConcat("DVM executable file does not exist: ", dvm_exe_path.native())
+		);
 	}
 
 	void globalsTest() {

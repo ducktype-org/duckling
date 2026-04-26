@@ -7,9 +7,6 @@ namespace pst::expr {
 	MBox<ExprElement> LogicNot::parse(LangParserState& state) {
 		if (!checkNonEmpty(state)) return nullptr;
 
-		i64 length = base::safeIntConv<i64>(state.ctokens().size());
-
-		auto pos = dia::SourcePosition(state.getPosition(), state.getPosition(length - 1).getEnd());
 
 		if (!state[0].is(Keyword::Not)) return Lower::parse(state);
 
