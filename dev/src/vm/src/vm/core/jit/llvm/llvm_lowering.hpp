@@ -161,9 +161,6 @@ namespace vm::jit {
 			}
 		}
 
-		// Debug function to print IR - remove.
-		void printModuleIR(llvm::Module& module) { module.print(llvm::errs(), nullptr); }
-
 		void lowerFunction(const low::LowFuncData& function_to_compile) {
 			cf::ControlFlowAnalyzer cf_analyzer{};
 			cfg = cf_analyzer.controlFlowGraph(function_to_compile);
