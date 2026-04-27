@@ -4,22 +4,18 @@
 
 #include <vm/core/safe/low_program/opcodes.hpp>
 
-// TODO usunac zbedne
+#include <memory>
+#include <string>
+#include <unordered_map>
+
 LLVM_INCLUDE_BEGIN()
-#include <llvm/Bitcode/BitcodeReader.h>
-#include <llvm/Demangle/Demangle.h>
-#include <llvm/ExecutionEngine/JITSymbol.h>
-#include <llvm/ExecutionEngine/Orc/Core.h>
-#include <llvm/ExecutionEngine/Orc/ExecutionUtils.h>
-#include <llvm/ExecutionEngine/Orc/LLJIT.h>
-#include <llvm/IR/Function.h>
-#include <llvm/IR/LLVMContext.h>
+
 #include <llvm/IR/Module.h>
+#include <llvm/IR/LLVMContext.h>
+#include <llvm/IR/DerivedTypes.h>
+#include <llvm/ExecutionEngine/Orc/LLJIT.h>
 #include <llvm/Support/Error.h>
-#include <llvm/Support/MemoryBuffer.h>
-#include <llvm/Support/TargetSelect.h>
-#include <llvm/Transforms/Utils/Cloning.h>
-#include <llvm/Transforms/Utils/ValueMapper.h>
+
 LLVM_INCLUDE_END()
 
 using namespace llvm;
@@ -56,8 +52,14 @@ struct LlvmData {
 
 	/// @brief pointers to LLVM types used in opcode function definitions.
 	LlvmTypes types;
+
+	/**
+	 * @brief Returns mangled name of opcode if it is in module.
+	 */
+	base::Optional<std::string> GetFunName(const vm::low::MicroOpcode& fun) const;
 };
 
-LlvmData& llvmData();
-
-base::Optional<std::string> llvmGetFunName(const vm::low::MicroOpcode& fun);
+/**
+ * @brief Returns LlvmData containing jit constants.
+ */
+const LlvmData& llvmData();

@@ -1,22 +1,9 @@
+#include <memory>
 #include <llvm_helpers/llvm_helpers.hpp>
 
-#include <tuple>
-
 LLVM_INCLUDE_BEGIN()
-#include <llvm/Bitcode/BitcodeReader.h>
-#include <llvm/Demangle/Demangle.h>
-#include <llvm/ExecutionEngine/JITSymbol.h>
-#include <llvm/ExecutionEngine/Orc/Core.h>
-#include <llvm/ExecutionEngine/Orc/ExecutionUtils.h>
-#include <llvm/ExecutionEngine/Orc/LLJIT.h>
-#include <llvm/IR/Function.h>
-#include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
-#include <llvm/Support/Error.h>
-#include <llvm/Support/MemoryBuffer.h>
-#include <llvm/Support/TargetSelect.h>
-#include <llvm/Transforms/Utils/Cloning.h>
-#include <llvm/Transforms/Utils/ValueMapper.h>
+#include <llvm/IR/LLVMContext.h>
 LLVM_INCLUDE_END()
 
 std::unique_ptr<llvm::Module> parseOpcodesBitcode(llvm::LLVMContext& context);

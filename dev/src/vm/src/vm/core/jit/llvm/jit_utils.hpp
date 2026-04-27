@@ -4,25 +4,17 @@
 
 #include <functional>
 #include <memory>
+#include <string>
 
 LLVM_INCLUDE_BEGIN()
 
-#include <llvm/Bitcode/BitcodeReader.h>
-#include <llvm/Demangle/Demangle.h>
-#include <llvm/ExecutionEngine/JITSymbol.h>
-#include <llvm/ExecutionEngine/Orc/Core.h>
-#include <llvm/ExecutionEngine/Orc/ExecutionUtils.h>
-#include <llvm/ExecutionEngine/Orc/LLJIT.h>
-#include <llvm/IR/Function.h>
-#include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
+#include <llvm/IR/LLVMContext.h>
+#include <llvm/IR/GlobalValue.h>
 #include <llvm/Support/Error.h>
-#include <llvm/Support/MemoryBuffer.h>
-#include <llvm/Support/TargetSelect.h>
-#include <llvm/Transforms/Utils/Cloning.h>
-#include <llvm/Transforms/Utils/ValueMapper.h>
-LLVM_INCLUDE_END()
+#include <llvm/ExecutionEngine/Orc/LLJIT.h>
 
+LLVM_INCLUDE_END()
 /**
  * @brief Creates a new empty llvm::Module with the same data layout and target triple as in the
  * master module.
