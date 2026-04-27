@@ -1,5 +1,6 @@
-#include <exception>
+#pragma once
 
+#include <exception>
 
 namespace query::internal {
     
