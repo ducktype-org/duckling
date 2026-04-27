@@ -47,10 +47,10 @@ PUSH_DIAGNOSTIC ALLOW_EXTENSIONS inline constexpr char OPCODES[] = {
 #endif
 };
 POP_DIAGNOSTIC
+
 // NOLINTEND
 
 std::unique_ptr<Module> parseOpcodesBitcode(LLVMContext& context) {
-
 	// std::cout<<OPCODES.size()<<std::endl;
 	//  Load embedded BC into module
 	auto buffer = MemoryBuffer::getMemBuffer(

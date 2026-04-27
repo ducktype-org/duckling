@@ -6,8 +6,20 @@
 
 LLVM_INCLUDE_BEGIN()
 
+#include <llvm/Bitcode/BitcodeReader.h>
+#include <llvm/Demangle/Demangle.h>
+#include <llvm/ExecutionEngine/JITSymbol.h>
+#include <llvm/ExecutionEngine/Orc/Core.h>
+#include <llvm/ExecutionEngine/Orc/ExecutionUtils.h>
+#include <llvm/ExecutionEngine/Orc/LLJIT.h>
+#include <llvm/IR/Function.h>
+#include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
-
+#include <llvm/Support/Error.h>
+#include <llvm/Support/MemoryBuffer.h>
+#include <llvm/Support/TargetSelect.h>
+#include <llvm/Transforms/Utils/Cloning.h>
+#include <llvm/Transforms/Utils/ValueMapper.h>
 LLVM_INCLUDE_END()
 
 std::unique_ptr<llvm::Module> setupModule(const std::string& module_name, llvm::LLVMContext& ctx) {
@@ -19,28 +31,37 @@ std::unique_ptr<llvm::Module> setupModule(const std::string& module_name, llvm::
 	return new_mod;
 }
 
-/**
- * @brief Constructs an array of non-executable opcodes (like ext_*).
- */
-constexpr std::array<vm::low::MicroOpcode, vm::low::nonExecutableMicroInstrCount()> constructNonExecOpcodeArray(
-) {
-	auto non_executable_opcodes
-		= vm::low::OPCODE_NAMES | std::views::enumerate
-	    | std::views::filter([](auto pair) { return std::get<1>(pair).starts_with("ext_"); })
-	    | std::views::transform([](auto pair) {
-			  return static_cast<vm::low::MicroOpcode>(std::get<0>(pair));
-		  });
-
-	std::array<vm::low::MicroOpcode, vm::low::nonExecutableMicroInstrCount()> output{};
-
-	std::ranges::copy(non_executable_opcodes, output.begin());
-
-	return output;
+namespace {
+	/**
+	 * @brief "Exports" an LLVM global value so it is visible to other modules.
+	 */
+	void externalizeGlobalValue(llvm::GlobalValue& gv) {
+		if (!gv.isDeclaration()) {
+			gv.setLinkage(llvm::GlobalValue::ExternalLinkage);
+			gv.setVisibility(llvm::GlobalValue::DefaultVisibility);
+		}
+	}
 }
 
-static constexpr std::array<vm::low::MicroOpcode, vm::low::nonExecutableMicroInstrCount()>
-	NON_EXEC_OPCODES = constructNonExecOpcodeArray();
+void externalizeAllGlobalValues(llvm::Module& module) {
+	for (auto& gv: module.globals()) externalizeGlobalValue(gv);
 
-bool isOpcodeNonExecutable(const vm::low::MicroOpcode& opcode) {
-	return std::find(NON_EXEC_OPCODES.begin(), NON_EXEC_OPCODES.end(), opcode) != NON_EXEC_OPCODES.end();
+	for (auto& ga: module.aliases()) externalizeGlobalValue(ga);
+
+	for (auto& ifunc: module.ifuncs()) externalizeGlobalValue(ifunc);
+
+	for (auto& f: module.functions()) externalizeGlobalValue(f);
+}
+
+void cloneAndRegisterModule(
+	llvm::Module&                                       src,
+	llvm::orc::LLJIT&                                   lljit,
+	const std::function<bool(const llvm::GlobalValue*)> filter,
+	llvm::orc::ThreadSafeContext&                       tsctx,
+	llvm::ExitOnError&                                  exit_on_err
+) {
+	llvm::ValueToValueMapTy     vmap;
+	auto                        dest = llvm::CloneModule(src, vmap, filter);
+	llvm::orc::ThreadSafeModule tsm(std::move(dest), tsctx);
+	exit_on_err(lljit.addIRModule(std::move(tsm)));
 }

@@ -56,19 +56,8 @@ struct LlvmData {
 
 	/// @brief pointers to LLVM types used in opcode function definitions.
 	LlvmTypes types;
-
-	/*llvm::StructType*   frame_ty;
-	llvm::StructType*   flag_data_ty;
-	llvm::StructType*   microinstruction_ty;
-	llvm::StructType*   vm_thread_ty;
-	llvm::FunctionType* opfun_ty;*/
 };
 
 LlvmData& llvmData();
 
-inline base::Optional<std::string> llvmGetFunName(const vm::low::MicroOpcode& fun) {
-	auto& llvm_data     = llvmData();
-	auto  fun_name_iter = llvm_data.lfunc_name_map.find(fun);
-	if (fun_name_iter != llvm_data.lfunc_name_map.end()) return fun_name_iter->second;
-	return {};
-}
+base::Optional<std::string> llvmGetFunName(const vm::low::MicroOpcode& fun);

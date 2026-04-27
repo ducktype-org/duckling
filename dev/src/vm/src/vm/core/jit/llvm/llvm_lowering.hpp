@@ -50,7 +50,10 @@ namespace vm::jit {
 		LLVMBuilder(llvm::Module* module, llvm::LLVMContext& ctx): llvm_ctx(ctx), module(module) {
 			auto& llvm_data   = llvmData();
 			user_func_wrapper = llvm::Function::Create(
-				llvm_data.types.opfun.get(), llvm::Function::ExternalLinkage, module->getName(), module
+				llvm_data.types.opfun.get(),
+				llvm::Function::ExternalLinkage,
+				module->getName(),
+				module
 			);
 
 			auto arg_it = user_func_wrapper->arg_begin();
@@ -121,10 +124,12 @@ namespace vm::jit {
 			auto& llvm_data         = llvmData();
 			u32   flags_field_index = 0;
 
-			llvm::Value* frame_ptr
-				= ir_builder.CreateLoad(llvm::PointerType::getUnqual(llvm_data.types.frame.get()), frame_arg);
-			llvm::Value* flags_ptr
-				= ir_builder.CreateStructGEP(llvm_data.types.frame.get(), frame_ptr, flags_field_index);
+			llvm::Value* frame_ptr = ir_builder.CreateLoad(
+				llvm::PointerType::getUnqual(llvm_data.types.frame.get()), frame_arg
+			);
+			llvm::Value* flags_ptr = ir_builder.CreateStructGEP(
+				llvm_data.types.frame.get(), frame_ptr, flags_field_index
+			);
 
 			llvm::Value* flag_ptr
 				= ir_builder.CreateStructGEP(llvm_data.types.flag_data.get(), flags_ptr, 0);
