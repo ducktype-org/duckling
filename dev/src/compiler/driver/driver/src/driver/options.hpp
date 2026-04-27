@@ -30,9 +30,9 @@ namespace compiler::driver {
 			bool dump_hir  = false;
 
 			// Debug printing to stdout options
-			bool print_lir  = false;
-			bool print_mir  = false;
-			bool print_hir  = false;
+			bool print_lir = false;
+			bool print_mir = false;
+			bool print_hir = false;
 		};
 
 		/**

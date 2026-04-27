@@ -136,9 +136,9 @@ namespace clah {
 			);
 		}
 
-		std::string name = frontWord();
-		size_t name_count = advanceUntilInWord([](char c) { return c == '='; });
-		name = name.substr(0, name_count);
+		std::string name       = frontWord();
+		size_t      name_count = advanceUntilInWord([](char c) { return c == '='; });
+		name                   = name.substr(0, name_count);
 
 		if (not isEnd() && frontChar() == '=') advanceChar();
 

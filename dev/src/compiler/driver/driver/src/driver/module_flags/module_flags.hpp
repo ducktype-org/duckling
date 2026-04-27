@@ -9,13 +9,15 @@ namespace compiler::driver {
 		bool dump_mir  = false;
 		bool dump_hir  = false;
 	};
+
 	extern constinit DumpIROptions dump_ir_options;
 
 	struct PrintIROptions {
-		bool print_lir  = false;
-		bool print_mir  = false;
-		bool print_hir  = false;
+		bool print_lir = false;
+		bool print_mir = false;
+		bool print_hir = false;
 	};
+
 	extern constinit PrintIROptions print_ir_options;
 
 	/**

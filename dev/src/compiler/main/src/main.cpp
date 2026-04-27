@@ -114,10 +114,7 @@ compiler::linker::LinkingOptions getLinkingOptionsFromClah(const clah::ParsingRe
 namespace debug_options {
 	using compiler::driver::options_types::DebugOptions;
 
-	using DebugOptionsMapping
-		= base::HashMap<std::string, bool compiler::driver::options_types::DebugOptions::*>;
-
-	const DebugOptionsMapping& getDebugDumpIROptions() {
+	auto getDebugDumpIROptions() -> const base::HashMap<std::string, bool DebugOptions::*>& {
 		static base::HashMap<std::string, bool DebugOptions::*> dump_field_mapping{
 			{ "asm", &DebugOptions::dump_asm }, { "llvm", &DebugOptions::dump_llvm },
 			{ "lir", &DebugOptions::dump_lir }, { "mir", &DebugOptions::dump_mir },
@@ -126,7 +123,7 @@ namespace debug_options {
 		return dump_field_mapping;
 	}
 
-	const DebugOptionsMapping& getDebugPrintIROptions() {
+	auto getDebugPrintIROptions() -> const base::HashMap<std::string, bool DebugOptions::*>& {
 		static base::HashMap<std::string, bool DebugOptions::*> print_field_mapping{
 			{ "lir", &DebugOptions::print_lir },
 			{ "mir", &DebugOptions::print_mir },
@@ -165,10 +162,10 @@ namespace debug_options {
 			.immediate_print_diagnostics = true,
 		};
 
-		if (auto dump_categories = parsing_result.getValue<std::vector<std::string>>("dump"))
+		if (auto dump_categories = parsing_result.getValue<std::vector<std::string>>("dump-ir"))
 			for (const auto& category: dump_categories.value())
 				debug_options.*(getDebugDumpIROptions().at(category)) = true;
-		if (auto print_categories = parsing_result.getValue<std::vector<std::string>>("print"))
+		if (auto print_categories = parsing_result.getValue<std::vector<std::string>>("print-ir"))
 			for (const auto& category: print_categories.value())
 				debug_options.*(getDebugPrintIROptions().at(category)) = true;
 

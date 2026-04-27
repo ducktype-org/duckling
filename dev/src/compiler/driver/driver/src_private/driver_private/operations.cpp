@@ -146,7 +146,7 @@ namespace compiler::driver {
 				.functions = lir_functions,
 				.globals   = globals,
 			};
-			
+
 			if (driver::print_ir_options.print_lir) lir_module.debugPrint(ctx, std::cout);
 			if (driver::dump_ir_options.dump_lir) {
 				auto ofstream = getDebugDumpArtifact(

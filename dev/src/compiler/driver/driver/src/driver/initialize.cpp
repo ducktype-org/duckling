@@ -1,5 +1,4 @@
 #include "initialize.hpp"
-#include <iostream>
 
 #include "options.hpp"
 
@@ -25,6 +24,8 @@
 #include <lexer/lexer_class.hpp>
 #include <logger/logger.hpp>
 #include <query_framework/external/api.hpp>
+
+#include <iostream>
 
 namespace compiler::driver {
 
@@ -52,9 +53,9 @@ namespace compiler::driver {
 			driver::dump_ir_options.dump_mir  = debug_options.dump_mir;
 			driver::dump_ir_options.dump_hir  = debug_options.dump_hir;
 
-			driver::print_ir_options.print_lir  = debug_options.print_lir;
-			driver::print_ir_options.print_mir  = debug_options.print_mir;
-			driver::print_ir_options.print_hir  = debug_options.print_hir;
+			driver::print_ir_options.print_lir = debug_options.print_lir;
+			driver::print_ir_options.print_mir = debug_options.print_mir;
+			driver::print_ir_options.print_hir = debug_options.print_hir;
 		}
 
 		void handleArtifactsOptions(const options_types::ArtifactsOptions& artifacts_options) {

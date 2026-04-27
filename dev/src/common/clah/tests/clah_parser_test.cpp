@@ -19,7 +19,7 @@ public:
 
 private:
 	static i64 parseInt(const std::string& str) {
-		return std::any_cast<i64>(clah::IntParser::make()->parse(str ).value);
+		return std::any_cast<i64>(clah::IntParser::make()->parse(str).value);
 	}
 
 	static std::string parseString(const std::string& str) {
@@ -30,8 +30,7 @@ private:
 
 	static Range parseRange(const std::string& str) {
 		auto val
-			= std::any_cast<clah::RangeParser::Range>(clah::RangeParser::make()->parse(str).value
-		    );
+			= std::any_cast<clah::RangeParser::Range>(clah::RangeParser::make()->parse(str).value);
 		return { val.begin, val.end };
 	}
 
@@ -70,9 +69,7 @@ private:
 		);
 	}
 
-	void stringParserTest() {
-		ASSERT_EQUAL("str", parseString("str"));
-	}
+	void stringParserTest() { ASSERT_EQUAL("str", parseString("str")); }
 
 	void rangeParserTest() {
 		ASSERT_EQUAL(Range(1, 2), parseRange("1..2"));
@@ -129,8 +126,7 @@ private:
 		);
 
 		ASSERT_EQUAL(
-			(std::vector<std::string>{ "str1", "str2", "str3" }),
-			parseStringList("str1, str2, str3")
+			(std::vector<std::string>{ "str1", "str2", "str3" }), parseStringList("str1, str2, str3")
 		);
 
 		ASSERT_EQUAL(

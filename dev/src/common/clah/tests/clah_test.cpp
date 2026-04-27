@@ -458,9 +458,8 @@ private:
 
 	void categoryParserTest() {
 		auto clah = clah::Clah("prog").add(
-			clah::ParamBuilder::ofValue(
-				clah::CategoryParser::make(std::vector<std::string>{ "low", "medium", "high" })
-			)
+			clah::ParamBuilder::ofValue(clah::CategoryParser::make(std::vector<std::string>{
+											"low", "medium", "high" }))
 				.addLongName("priority")
 				.addShortDesc("Priority level")
 				.required()
@@ -479,9 +478,9 @@ private:
 	}
 
 	void categoryListParserTest() {
-		auto clah = clah::Clah("prog").addPositional(clah::CategoryListParser::make(
-			std::vector<std::string>{ "cpu", "memory", "disk" }
-		));
+		auto clah = clah::Clah("prog").addPositional(
+			clah::CategoryListParser::make(std::vector<std::string>{ "cpu", "memory", "disk" })
+		);
 
 		std::array argv_ok{ "./prog", "cpu, memory,disk" };
 		auto       res_ok = clah.parse(argv_ok.size(), argv_ok.data());
