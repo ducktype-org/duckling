@@ -42,10 +42,10 @@ pub fn get_parser() -> Command {
 
 /// Logic for executing the `init` subcommand.
 pub fn execute(ctx: &DuckContext, matches: &ArgMatches) -> QuackResult<()> {
-    let at = match matches.get_one::<PathBuf>("path") {
-        Some(at) => at.resolve()?,
-        None => ctx.cwd().to_path_buf(),
-    };
+    let at = matches
+        .get_one::<PathBuf>("path")
+        .expect("required by clap")
+        .resolve()?;
     let name = match matches.get_one::<String>("name") {
         Some(name) => name.into(),
         None => at.file_name().expect("file without filename").into(),

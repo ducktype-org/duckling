@@ -116,10 +116,13 @@ metadata:
 
 /// Create custom manifest from user prompts.
 fn manifest_with_user_prompts(terminal: &Terminal, name: StrId) -> QuackResult<String> {
-    let name = terminal.prompt_once_with_default("Enter the project's name".into(), name.into())?;
-    let author = terminal.prompt_once("Enter the project's author".into())?;
+    if terminal.verbosity().is_quiet() {
+        qp_bail!("cannot create manifest from user input on quiet verbosity");
+    }
+    let name = terminal.prompt_once_with_default("Enter the project's name", name.into())?;
+    let author = terminal.prompt_once("Enter the project's author")?;
     let version = terminal.prompt_until_valid_with_default(
-        "Enter the version of the project".into(),
+        "Enter the version of the project",
         Version::default(),
     );
     Ok(format!(
@@ -206,7 +209,8 @@ fn add_package_structure(root_path: &Path) -> QuackResult<()> {
 /// Initialize git repository in the project and add `gitignore`.
 fn init_git(root_path: &Path) -> QuackResult<()> {
     let mut init_opts = RepositoryInitOptions::new();
-    Repository::init_opts(root_path, init_opts.no_reinit(true))
+    init_opts.no_reinit(true);
+    Repository::init_opts(root_path, &init_opts)
         .context("failed to initialize a git repository")?;
     let gitignore_file = root_path.join(".gitignore");
     gitignore_file

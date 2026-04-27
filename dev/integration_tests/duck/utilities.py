@@ -120,4 +120,8 @@ def check_gitignore_from_root(root: Path):
 
 def check_no_gitignore_from_root(root: Path):
     gitignore = root / ".gitignore"
-    assert_eq(os.path.exists(gitignore), False)
+    assert(not gitignore.exists())
+
+def check_not_git_repo(root: Path):
+    git = root / ".git"
+    assert(not git.exists())
