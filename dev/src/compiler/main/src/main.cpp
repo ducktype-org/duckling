@@ -627,6 +627,10 @@ clah::Clah getClahForMain() {
 							   return run_result->exit_code;
 						   }))
 	    .addSubcommand(clah::Clah("repl", "Start an interactive REPL session")
+	                       .add(clah::ParamBuilder::ofFlag()
+	                                .addLongName("no-completions")
+	                                .addShortDesc("Disable REPL autocompletions and hints.")
+	                                .build())
 	                       .setHandler([](const clah::ParsingResult& options) -> int {
 							   auto init_result = compiler::driver::initializeTheCompiler(
 								   compiler::driver::CompilerModeOfOperationAndOptions::ReplMode{
@@ -640,7 +644,8 @@ clah::Clah getClahForMain() {
 								   compiler::driver::exit();
 								   return 1;
 							   }
-							   compiler::repl::ReplSession session;
+							   compiler::repl::ReplSession session(!options.isFlag("no-completions")
+		                       );
 							   int                         result = session.run();
 							   compiler::driver::exit();
 							   return result;

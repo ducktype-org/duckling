@@ -27,7 +27,14 @@ namespace compiler::repl {
 		TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 			TESTER_ADD_TEST(testReplSessionInitialization);
 			TESTER_ADD_TEST(testReplProcessLineWithCommand);
+			TESTER_ADD_TEST(testReplCommandAliasesThroughProcessLine);
+			TESTER_ADD_TEST(testReplExitCommandAliasesThroughProcessLine);
+			TESTER_ADD_TEST(testReplHistoryCommandThroughProcessLine);
+			TESTER_ADD_TEST(testReplUnknownCommandThroughHandleCommand);
+			TESTER_ADD_TEST(testReplClearCommandDoesNotResetSessionState);
+			TESTER_ADD_TEST(testReplClearHistoryResetsSessionState);
 			TESTER_ADD_TEST(testReplProcessLineWithCode);
+			TESTER_ADD_TEST(testReplInstructionExecution);
 			TESTER_ADD_TEST(testReplCommandDetection);
 			TESTER_ADD_TEST(testReplHistoryTracking);
 			TESTER_ADD_TEST(testReplArithmeticExpressions);
@@ -75,6 +82,94 @@ namespace compiler::repl {
 			);
 		}
 
+		void testReplCommandAliasesThroughProcessLine() {
+			ReplSession session;
+
+			std::vector<std::string_view> aliases = { "/h", "/help", "/clear", "/c" };
+
+			for (auto alias: aliases) {
+				auto result = session.processLine(alias);
+				assertTrue(
+					result.status == ReplResult::Status::Success,
+					std::string("Alias command should return success: ") + std::string(alias)
+				);
+			}
+		}
+
+		void testReplExitCommandAliasesThroughProcessLine() {
+			for (auto exit_alias: std::vector<std::string_view>{ "/q", "/quit", "/exit" }) {
+				ReplSession session;
+
+				auto result = session.processLine(exit_alias);
+
+				assertTrue(
+					result.status == ReplResult::Status::Exit,
+					std::string("Exit alias should return exit status: ") + std::string(exit_alias)
+				);
+				assertTrue(session.m_should_exit, "Exit alias should set m_should_exit flag");
+			}
+		}
+
+		void testReplHistoryCommandThroughProcessLine() {
+			ReplSession session;
+
+			auto result = session.processLine("/history");
+
+			assertTrue(
+				result.status == ReplResult::Status::Success,
+				"/history should be processed as a successful command"
+			);
+			assertFalse(session.m_should_exit, "/history should not mark session for exit");
+		}
+
+		void testReplUnknownCommandThroughHandleCommand() {
+			ReplSession session;
+
+			auto handled = session.handleCommand("/does-not-exist");
+
+			assertFalse(handled, "Unknown command should not be reported as handled");
+			assertFalse(session.m_should_exit, "Unknown command should not mark session for exit");
+		}
+
+		void testReplClearCommandDoesNotResetSessionState() {
+			ReplSession session;
+
+			session.processLine("var x: i32 = 10;");
+
+			auto history_size_before_clear = session.m_history.size();
+			auto line_counter_before_clear = session.m_line_counter;
+
+			auto clear_result = session.processLine("/clear");
+
+			assertTrue(
+				clear_result.status == ReplResult::Status::Success,
+				"/clear should be processed as a successful command"
+			);
+			assertTrue(
+				session.m_history.size() == history_size_before_clear,
+				"/clear should not modify REPL statement history"
+			);
+			assertTrue(
+				session.m_line_counter == line_counter_before_clear,
+				"/clear should not reset REPL line counter"
+			);
+		}
+
+		void testReplClearHistoryResetsSessionState() {
+			ReplSession session;
+
+			session.processLine("1 + 2");
+			session.processLine("3 + 4");
+
+			assertTrue(!session.m_history.empty(), "History should contain entries before clear");
+			assertTrue(session.m_line_counter > 0, "Line counter should increase before clear");
+
+			session.clearHistory();
+
+			assertTrue(session.m_history.empty(), "clearHistory should remove all history entries");
+			assertTrue(session.m_line_counter == 0, "clearHistory should reset line counter");
+		}
+
 		/**
 		 * @brief Test that ReplSession can process code input.
 		 *
@@ -95,6 +190,21 @@ namespace compiler::repl {
 			);
 		}
 
+		void testReplInstructionExecution() {
+			ReplSession session;
+
+			auto result = session.processLine("while (0 == 1) {}");
+
+			assertTrue(
+				result.status == ReplResult::Status::Success,
+				"Instruction statement should execute successfully"
+			);
+			assertTrue(
+				session.m_history.size() == 1,
+				"Instruction execution should add one entry to history"
+			);
+		}
+
 		/**
 		 * @brief Test command detection through isCommand.
 		 *
@@ -105,7 +215,8 @@ namespace compiler::repl {
 			ReplSession session;
 
 			// Test various inputs to verify command detection
-			std::vector<std::string_view> commands = { "/exit", "/help", "/history" };
+			std::vector<std::string_view> commands
+				= { "/exit", "/help", "/h", "/history", "/hist", "/clear", "/c" };
 
 			std::vector<std::string_view> code_snippets = { "var x = 4;", "x;", "" };
 
