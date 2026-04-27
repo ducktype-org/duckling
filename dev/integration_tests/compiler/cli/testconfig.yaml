@@ -18,18 +18,15 @@ Tests:
 
   cli-options-dev-logs:
     Cases:
-      empty-dev-logs:
-        run_args: "--dev-logs \\[\\] dummy"
-      
       empty-dev-logs-spaces:
-        run_args: "--dev-logs   \\[   \\]  dummy"
+        run_args: "--dev-logs  \" \"  dummy"
         
       single-dev-logs:
-        run_args: "--dev-logs \\[Query\\]  dummy"
+        run_args: "--dev-logs Query  dummy"
       
       double-dev-logs:
-        run_args: "--dev-logs \\[Query, Lexer\\]  dummy"
+        run_args: "--dev-logs Query, Lexer  dummy"
       
       bad-dev-logs:
-        run_args: "--dev-logs \\[Query, Lexer  dummy "
+        run_args: "--dev-logs \"\"  dummy "
         ExitCode: 1
