@@ -69,8 +69,10 @@ namespace compiler::repl {
 		return tokens;
 	}
 
-	/// Compute indentation depth from unmatched braces up to \p cursor_pos.
-	/// Braces inside strings or line comments are ignored.
+	/**
+	 * Compute indentation depth from unmatched braces up to \p cursor_pos.
+	 * Braces inside strings or line comments are ignored.
+	 */
 	static int computeBraceIndentDepth(const std::string& input, size_t cursor_pos) {
 		int  depth           = 0;
 		bool in_single_quote = false;

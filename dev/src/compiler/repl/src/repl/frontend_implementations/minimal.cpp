@@ -184,11 +184,14 @@ namespace compiler::repl {
 		return *this;
 	}
 
-	FrontendMinImplementation::FrontendMinImplementation(bool /*completions_enabled*/):
+	FrontendMinImplementation::FrontendMinImplementation(bool completions_enabled):
 		  m_hist_idx(0),
 		  m_sequence_to_align_cursor_to_multiline_start(
 			  std::format("{}[{}C", ESC, ReplConfig::CONTINUATION.size())
-		  ) {}
+		  ) {
+		if (completions_enabled)
+			std::cerr << "Warning: minimal REPL frontend does not support completions.\n";
+	}
 
 	void FrontendMinImplementation::printWelcome() const {
 		std::cout << "Duckling REPL (minimal mode)\n";
