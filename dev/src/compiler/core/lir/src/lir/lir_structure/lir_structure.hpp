@@ -261,6 +261,9 @@ namespace compiler::lir {
 		 * value of the global.
 		 */
 		static LIRGlobal fromHOUT(query::Context& ctx, const helios::HOUTGlobalData& helios_id);
+
+
+		void debugPrint(query::Context& ctx, std::ostream& os) const;
 	};
 
 	/**

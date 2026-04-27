@@ -5,6 +5,8 @@
 
 #include "generic_operations.hpp"
 
+#include "driver_private/debug_artifacts.hpp"
+
 #include <debug_info/debug_info_io.hpp>
 #include <driver/debug_info/debug_info.hpp>
 #include <driver/module_flags/module_flags.hpp>
@@ -134,18 +136,17 @@ namespace compiler::driver {
 		}
 
 		struct ModuleOutputNames {
+			std::string                 stem;
 			std::string                 object_file;
 			base::Optional<std::string> debug_info_file;
 		};
 
 		static ModuleOutputNames getModuleOutputName(const QKey& key) {
 			ModuleOutputNames names;
-			names.object_file
-				= key.queryStablePerfectHash().toStringHex() + typeExtension(key.backend_type);
-			if (key.build_debug_info && key.backend_type == BackendType::DVM) {
-				names.debug_info_file
-					= key.queryStablePerfectHash().toStringHex().append(DEBUG_INFO_STABLE_EXTENSION);
-			}
+			names.stem        = key.queryStablePerfectHash().toStringHex();
+			names.object_file = names.stem + typeExtension(key.backend_type);
+			if (key.build_debug_info && key.backend_type == BackendType::DVM)
+				names.debug_info_file = names.stem.append(DEBUG_INFO_STABLE_EXTENSION);
 			return names;
 		}
 
@@ -180,16 +181,21 @@ namespace compiler::driver {
 					);
 				}
 
-				if (driver::llvm_dump_ir) {
-					base::StrID llvm_ir_path
-						= base::StrID(base::strConcat(lir_data->module_id.strView(), ".ll").c_str());
-					llvm_module.dumpLLVMToFile(llvm_ir_path);
+				if (driver::dump_ir_options.dump_llvm) {
+					auto llvm_ir_artifact = getDebugArtifactCollection()->fileArtifactAtOrNew(
+						base::StrID(lir_data->module_id.str() + ".ll")
+					);
+					llvm_module.dumpLLVMToFile(
+						base::StrID(llvm_ir_artifact.file.getFilePath().string())
+					);
 				}
-				if (driver::llvm_dump_asm) {
-					base::StrID assembly_path
-						= base::StrID(base::strConcat(lir_data->module_id.strView(), ".s").c_str());
+				if (driver::dump_ir_options.dump_asm) {
+					auto asm_artifact = getDebugArtifactCollection()->fileArtifactAtOrNew(
+						base::StrID(lir_data->module_id.str() + ".s")
+					);
 					llvm_module.compile(
-						assembly_path.strView(), backend_llvm::CompilationOutputType::Assembly
+						asm_artifact.file.getFilePath().getPath(),
+						backend_llvm::CompilationOutputType::Assembly
 					);
 				}
 				break;
@@ -447,18 +453,21 @@ namespace compiler::driver {
 					);
 				}
 
-				if (driver::llvm_dump_ir) {
-					auto llvm_ir_path = base::StrID(
-						base::strConcat(script_lir->module_id.strView(), ".ll").c_str()
+				if (driver::dump_ir_options.dump_llvm) {
+					auto llvm_ir_artifact = getDebugArtifactCollection()->fileArtifactAtOrNew(
+						base::StrID(base::strConcat(script_lir->module_id.strView(), ".ll"))
 					);
-					llvm_module.dumpLLVMToFile(llvm_ir_path);
+					llvm_module.dumpLLVMToFile(
+						base::StrID(llvm_ir_artifact.file.getFilePath().string())
+					);
 				}
-				if (driver::llvm_dump_asm) {
-					auto asm_path
-						= base::StrID(base::strConcat(script_lir->module_id.strView(), ".s").c_str()
-					    );
+				if (driver::dump_ir_options.dump_asm) {
+					auto asm_artifact = getDebugArtifactCollection()->fileArtifactAtOrNew(
+						base::StrID(base::strConcat(script_lir->module_id.strView(), ".s"))
+					);
 					llvm_module.compile(
-						asm_path.strView(), backend_llvm::CompilationOutputType::Assembly
+						asm_artifact.file.getFilePath().getPath(),
+						backend_llvm::CompilationOutputType::Assembly
 					);
 				}
 

@@ -2,6 +2,8 @@
 
 #include "exceptions.hpp"
 
+#include <iostream>
+
 /**
  * Basic helper functions.
  */
@@ -14,79 +16,80 @@ namespace {
 	 * @param argv Argument vector - the array of C-strings.
 	 * @return Merged vector into a single string.
 	 */
-	std::string mergeArgs(usize argc, const char* const* argv) {
+	std::vector<std::string> fromArgcv(usize argc, const char* const* argv) {
 		// Merge args with spaces between.
-		std::string args;
+		std::vector<std::string> args;
 
 		// if an argv[i] contains a white space, then it must have been added with quotes
 		for (usize i = 1; i < argc; i++) {
 			CORE_ASSERT(argv[i] != nullptr, "Clah received null pointer as one of argv arguments.");
 
-			bool has_whitespace = false;
-			auto arg            = std::string(argv[i]);
-			for (auto c: arg)
-				if (std::isspace(c)) has_whitespace = true;
+			auto arg = std::string(argv[i]);
 
-			base::strReplaceAll(arg, "\"", "\\\"");
-
-			if (has_whitespace)
-				args += "\"" + arg + "\" ";
-			else
-				args += arg + " ";
+			args.push_back(arg);
 		}
-		// The last character is space, so we pop it.
-		if (!args.empty()) args.pop_back();
 		return args;
 	}
 
-	/**
-	 * Moves the index in the string until a whitespace under the index.
-	 * @param position A reference to the position's variable.
-	 * @param str A source of chars.
-	 */
-	void skipWhitespace(usize& position, std::string_view str) {
-		while (position < str.size() && std::isspace(str[position])) position++;
+	std::vector<std::string> fromDirectString(const std::string& args) {
+		std::vector<std::string> result;
+		std::string              current_arg;
+		bool                     in_quotes = false;
+		for (char c: args) {
+			if (c == '"') {
+				in_quotes = !in_quotes;
+			} else if (std::isspace(c) && not in_quotes) {
+				if (!current_arg.empty()) {
+					result.push_back(current_arg);
+					current_arg.clear();
+				}
+			} else {
+				current_arg += c;
+			}
+		}
+		if (!current_arg.empty()) result.push_back(current_arg);
+		return result;
+	}
+
+	std::string mergeArgs(const std::vector<std::string>& args) {
+		std::string merged_args;
+		for (const auto& arg: args) merged_args += arg + ' ';
+		if (!merged_args.empty()) merged_args.pop_back();
+		return merged_args;
 	}
 }
 
 namespace clah {
-	ParsingState::ParsingState(const std::string& args): args(args), result("", args) {
-		skipWhitespace(parsing_position, args);
-	}
+	ParsingState::ParsingState(const std::string& args):
+		  words(fromDirectString(args)),
+		  result("", args) {}
 
 	ParsingState::ParsingState(usize argc, const char* const* argv) {
-		args = mergeArgs(argc, argv);
-		skipWhitespace(parsing_position, args);
+		words = fromArgcv(argc, argv);
 
 		// Check if program is invoked using "./" or by name.
 		std::string program_name = argv[0];
 		if (program_name.starts_with("./")) program_name = program_name.substr(2);
 
-		result = clah::ParsingResult(program_name, args);
+		result = clah::ParsingResult(program_name, mergeArgs(words));
 	}
 
 	void ParsingState::parsePositional(const clah::ValueParser& parser) {
-		match_optional(parseValueWithParser(parser)) {
-			opt_some(value) result.insertPositional(value);
-			opt_none throw clah::exceptions::ClahException(
-				"Cannot continue parsing... Please report this incident."
-			);
-		}
+		clah::ParsedValue value = parseValueWithParser(parser);
+		result.insertPositional(value);
 	}
 
 	void ParsingState::parseExtra(const clah::ValueParser& parser) {
-		match_optional(parseValueWithParser(parser)) {
-			opt_some(value) result.insertExtra(value);
-			opt_none throw clah::exceptions::ClahException(
-				"Cannot continue parsing... Please report this incident."
-			);
-		}
+		clah::ParsedValue value = parseValueWithParser(parser);
+		result.insertExtra(value);
 	}
 
 	void ParsingState::parseParameter(const std::vector<clah::Parameter>& params) {
 		auto [param_name, name_type] = parseName();
 		if (name_type == NameType::EmptyName)
-			throw clah::exceptions::ExpectedParameterIdentifier((i32) parsing_position, args);
+			throw clah::exceptions::ExpectedParameterIdentifier(
+				(i32) currentPosition(), mergedArguments()
+			);
 
 		if (name_type == NameType::LongName) {
 			if (!findParameterAndParse(params, param_name, name_type))
@@ -98,52 +101,49 @@ namespace clah {
 		}
 	}
 
-	std::string ParsingState::peekToken() {
-		if (!hasMoreArgs()) {
+	char ParsingState::frontChar() const {
+		if (isEnd()) {
 			throw exceptions::ClahException(
-				"Parser error: peekToken() called with no more arguments"
+				"Parser error: frontChar() called with no more arguments"
 			);
 		}
-
-		// Skip the whitespace's before the token.
-		skipWhitespace(parsing_position, args);
-		usize start_pos = parsing_position;
-		usize end_pos   = start_pos;
-		while (end_pos < args.size() && !std::isspace(args[end_pos])) end_pos++;
-		return args.substr(start_pos, end_pos - start_pos);
+		return words[current_word][inside_word_position];
 	}
 
-	bool ParsingState::hasMoreArgs() const { return parsing_position < args.size(); }
+	std::string ParsingState::frontWord() const {
+		if (isEnd()) {
+			throw exceptions::ClahException(
+				"Parser error: frontWord() called with no more arguments"
+			);
+		}
+		return words[current_word].substr(inside_word_position);
+	}
 
-	void ParsingState::consumeToken() {
-		if (!hasMoreArgs()) return;
-
-		// Skip whitespaces before the token.
-		skipWhitespace(parsing_position, args);
-		while (parsing_position < args.size() && !std::isspace(args[parsing_position]))
-			parsing_position++;
-		// Skip whitespace's after the token.
-		skipWhitespace(parsing_position, args);
+	bool ParsingState::isEnd() const {
+		bool is_inside
+			= current_word < words.size() && inside_word_position < words[current_word].size();
+		return not is_inside;
 	}
 
 	std::pair<std::string, NameType> ParsingState::parseName() {
-		std::string name;
-		int         counter = 0;
-		while (parsing_position < args.size() && args[parsing_position] == '-') {
-			parsing_position++;
-			counter++;
+		CORE_ASSERT(frontChar() == '-', "parseName expected '-'");
+		size_t hyphen_count = advanceUntilInWord([](char c) { return c != '-'; });
+		if (isEnd()) {
+			// We reached the end of arguments while parsing the name, which means that there is no
+			// name after dashes, which is invalid.
+			throw clah::exceptions::ExpectedParameterIdentifier(
+				(i32) currentPosition(), mergedArguments()
+			);
 		}
-		while (parsing_position < args.size() && !std::isspace(args[parsing_position])
-		       && args[parsing_position] != '=')
-			name += args[parsing_position++];
 
-		if (args[parsing_position] == '=')
-			parsing_position++;
-		else
-			skipWhitespace(parsing_position, args);
+		std::string name = frontWord();
+		size_t name_count = advanceUntilInWord([](char c) { return c == '='; });
+		name = name.substr(0, name_count);
+
+		if (not isEnd() && frontChar() == '=') advanceChar();
 
 		if (name.empty()) return { "", NameType::EmptyName };
-		return { name, counter == 1 ? NameType::ShortName : NameType::LongName };
+		return { name, hyphen_count == 1 ? NameType::ShortName : NameType::LongName };
 	}
 
 	bool ParsingState::findParameterAndParse(
@@ -177,27 +177,50 @@ namespace clah {
 		} else {
 			// Throw if duplicated
 			if (result.hasParam(parameter)) throw clah::exceptions::DuplicatedParameter(name);
-
-			match_optional(parseValueWithParser(*parameter.getValueParser())) {
-				opt_some(parsed) result.insertParameterValue(parameter, parsed);
-				opt_none throw clah::exceptions::ParameterRequiresValue(
+			if (isEnd())
+				throw clah::exceptions::ParameterRequiresValue(
 					name, parameter.getValueParser()->getTypeName()
 				);
-			}
+
+			clah::ParsedValue parsed = parseValueWithParser(*parameter.getValueParser());
+			result.insertParameterValue(parameter, parsed);
 		}
 	}
 
-	base::Optional<clah::ParsedValue> ParsingState::parseValueWithParser(
-		const clah::ValueParser& parser
-	) {
-		clah::ValueParsingResult parsed = parser.parse(parsing_position, args);
-		if (parsed.position > parsing_position) {
-			parsing_position = parsed.position;
-			skipWhitespace(parsing_position, args);
-			return { { .value = parsed.value, .raw_source = parsed.raw_source } };
-		}
-		return {};
+	clah::ParsedValue ParsingState::parseValueWithParser(const clah::ValueParser& parser) {
+		std::string argument = frontWord();
+		advanceWord();
+
+		clah::ValueParsingResult parsed = parser.parse(argument);
+		return clah::ParsedValue{ .value = parsed.value, .raw_source = parsed.raw_source };
 	}
 
+	std::string withQuotes(std::string str) {
+		if (str.find(' ') != std::string::npos)
+			return "\"" + str + "\"";
+		else
+			return str;
+	}
 
+	size_t ParsingState::currentPosition() const {
+		size_t position = 0;
+		for (size_t i = 0; i < current_word; ++i) position += withQuotes(words[i]).size() + 1;
+
+		if (current_word < words.size()) {
+			// We add 1 if the current word requires quotes.
+			position += (withQuotes(words[current_word]).size() - words[current_word].size()) / 2;
+
+			position += inside_word_position;
+		}
+		return position;
+	}
+
+	std::string ParsingState::mergedArguments() const {
+		std::string args;
+		for (size_t i = 0; i < this->words.size(); ++i) {
+			args += withQuotes(this->words[i]);
+			if (i + 1 < this->words.size()) args += ' ';
+		}
+		return args;
+	}
 }

@@ -16,6 +16,8 @@ namespace compiler::driver {
 			global_ctor;  ///< Optional, if the global has a constructor.
 		base::Optional<CRef<lir::Function>>
 			global_dtor;  ///< Optional, if the global has a destructor.
+
+		void debugPrint(query::Context& ctx, std::ostream& os) const;
 	};
 
 	/**
@@ -30,5 +32,7 @@ namespace compiler::driver {
 		std::vector<CRef<lir::Function>> functions;
 		std::vector<LIRModuleGlobal>
 			globals;  ///< Global variables and their constructors/destructors.
+
+		void debugPrint(query::Context& ctx, std::ostream& os) const;
 	};
 }

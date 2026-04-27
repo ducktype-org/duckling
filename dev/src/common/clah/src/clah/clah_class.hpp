@@ -63,6 +63,21 @@ namespace clah {
 		Clah&& add(Parameter&& parameter);
 
 		/**
+		 * @brief Adds a range of named parameters to the command.
+		 * @param parameters A vector of parameters constructed with clah::ParamBuilder.
+		 * @return A reference to self.
+		 */
+		template<std::ranges::input_range Range>
+		Clah&& add(Range&& parameters) {
+			static_assert(
+				!std::is_lvalue_reference_v<Range>, "add(range) requires an rvalue range (temporary)"
+			);
+			for (auto& param: parameters) add(std::move(param));
+			auto _ = std::forward<Range>(parameters);
+			return std::move(*this);
+		}
+
+		/**
 		 * @brief Adds a positional parameter without a name to the Clah.
 		 * @param parameter value parser created like: clah::StringParser::make().
 		 * @return A reference to self.

@@ -28,11 +28,6 @@ namespace clah {
 		 * Source chars from which the value was created.
 		 */
 		std::string raw_source;
-
-		/**
-		 * Position is an index ONE AFTER the last character of the parsed value.
-		 */
-		usize position;
 	};
 
 	/**
@@ -51,10 +46,10 @@ namespace clah {
 
 		/**
 		 * Performs parsing of a value at the start index.
-		 * It is assumed that the raw_input[start] is a non-whitespace character.
+		 * It is assumed that the argument[start] is a non-whitespace character.
 		 */
 		[[nodiscard]]
-		virtual ValueParsingResult parse(usize start, std::string_view raw_input) const
+		virtual ValueParsingResult parse(const std::string& argument) const
 			= 0;
 
 		/**
@@ -88,7 +83,7 @@ namespace clah {
 		}
 
 		[[nodiscard]]
-		ValueParsingResult parse(usize start, std::string_view raw_input) const override;
+		ValueParsingResult parse(const std::string& argument) const override;
 
 		[[nodiscard]]
 		std::string getTypeName() const override {
@@ -110,7 +105,7 @@ namespace clah {
 		}
 
 		[[nodiscard]]
-		ValueParsingResult parse(usize start, std::string_view raw_input) const override;
+		ValueParsingResult parse(const std::string& argument) const override;
 
 		[[nodiscard]]
 		std::string getTypeName() const override {
@@ -136,7 +131,7 @@ namespace clah {
 		}
 
 		[[nodiscard]]
-		ValueParsingResult parse(usize start, std::string_view raw_input) const override;
+		ValueParsingResult parse(const std::string& argument) const override;
 
 		[[nodiscard]]
 		std::string getTypeName() const override {
@@ -167,7 +162,7 @@ namespace clah {
 		}
 
 		[[nodiscard]]
-		ValueParsingResult parse(usize start, std::string_view raw_input) const override;
+		ValueParsingResult parse(const std::string& argument) const override;
 
 		[[nodiscard]]
 		std::string getTypeName() const override {
@@ -198,7 +193,7 @@ namespace clah {
 		}
 
 		[[nodiscard]]
-		ValueParsingResult parse(usize start, std::string_view raw_input) const override;
+		ValueParsingResult parse(const std::string& argument) const override;
 
 		[[nodiscard]]
 		std::string getTypeName() const override {
@@ -207,7 +202,7 @@ namespace clah {
 	};
 
 	/**
-	 * A value parser used for a comma separated list of strings parsing. I.e. "[str1, str2, str3]".
+	 * A value parser used for a comma separated list of strings parsing. I.e. "str1, str2, str3".
 	 * Creates values of type std::vector<std::string>.
 	 */
 	class StringListParser final: public ValueParser {
@@ -220,12 +215,77 @@ namespace clah {
 		}
 
 		[[nodiscard]]
-		ValueParsingResult parse(usize start, std::string_view raw_input) const override;
+		ValueParsingResult parse(const std::string& argument) const override;
 
 		[[nodiscard]]
 		std::string getTypeName() const override {
 			return getCustomValueName().copyValueOr("string-list");
 		}
 	};
+
+	/**
+	 * A value parser used for enum-like category parsing.
+	 * Creates values of type std::string.
+	 */
+	class CategoryParser final: public ValueParser {
+		using ValueParser::ValueParser;
+
+		std::vector<std::string> categories;
+
+	public:
+		explicit CategoryParser(std::vector<std::string> categories):
+			  categories(std::move(categories)) {}
+
+		CategoryParser(const std::string& name, std::vector<std::string> categories):
+			  ValueParser(name),
+			  categories(std::move(categories)) {}
+
+		template<class... Args>
+		static Box<CategoryParser> make(Args&&... args) {
+			return makeBox<CategoryParser>(std::forward<Args>(args)...);
+		}
+
+		[[nodiscard]]
+		ValueParsingResult parse(const std::string& argument) const override;
+
+		[[nodiscard]]
+		std::string getTypeName() const override {
+			return getCustomValueName().copyValueOr("category");
+		}
+
+		static std::string debugPrintCategories(const std::vector<std::string>& categories);
+	};
+
+	/**
+	 * A value parser used for comma separated category list parsing. I.e. "catA, catB".
+	 * Creates values of type std::vector<std::string>.
+	 */
+	class CategoryListParser final: public ValueParser {
+		using ValueParser::ValueParser;
+
+		std::vector<std::string> categories;
+
+	public:
+		explicit CategoryListParser(std::vector<std::string> categories):
+			  categories(std::move(categories)) {}
+
+		CategoryListParser(const std::string& name, std::vector<std::string> categories):
+			  ValueParser(name),
+			  categories(std::move(categories)) {}
+
+		template<class... Args>
+		static Box<CategoryListParser> make(Args&&... args) {
+			return makeBox<CategoryListParser>(std::forward<Args>(args)...);
+		}
+
+		[[nodiscard]]
+		ValueParsingResult parse(const std::string& argument) const override;
+
+		[[nodiscard]]
+		std::string getTypeName() const override {
+			return getCustomValueName().copyValueOr("category-list");
+		}
+	};
+
 
 }

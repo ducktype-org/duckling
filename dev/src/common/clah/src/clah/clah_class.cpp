@@ -154,23 +154,22 @@ namespace clah {
 		// Add `this` command to the result path.
 		st.result.addToCommandList(this);
 
-		while (st.hasMoreArgs()) {
-			const std::string& token              = st.peekToken();
+		while (not st.isEnd()) {
+			const std::string& token              = st.frontWord();
 			bool               is_negative_number = isNegativeNumber(token);
 
 			// Parameter
 			if (token.starts_with('-') && !is_negative_number)
 				st.parseParameter(parameters);
-			else {  // Subcommand or positional.
-				auto maybe_subcmd = getSubcommand(token);
-				if_opt_some(maybe_subcmd, subcmd) {
-					if (st.result.isFlag("help")) throw exceptions::HelpException(st.result);
-					// It's a subcommand, go down the tree.
-					st.consumeToken();
-					subcmd->parse(st);
-					return;
-				}
+			else if (auto maybe_subcmd = getSubcommand(token)) {  // Subcommand or positional.
+				auto subcmd = maybe_subcmd.value();
+				if (st.result.isFlag("help")) throw exceptions::HelpException(st.result);
+				// It's a subcommand, go down the tree.
+				st.advanceWord();
 
+				subcmd->parse(st);
+				return;
+			} else {
 				// If not found a "-" parse using default value parser.
 				// Check if value is positional or extra.
 				usize positional_count = st.result.getPositionalParameterCount();
@@ -180,7 +179,9 @@ namespace clah {
 				} else {                    // To many positional arguments.
 					auto parser = getDefaultValueParser();
 					if (parser == nullptr)  // Extra arguments and no default value parser.
-						throw exceptions::NoDefaultValueParser((i32) st.parsing_position, st.args);
+						throw exceptions::NoDefaultValueParser(
+							(i32) st.currentPosition(), st.mergedArguments()
+						);
 					st.parseExtra(*parser);
 				}
 			}
