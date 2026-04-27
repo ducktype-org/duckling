@@ -178,3 +178,13 @@ vm::loader::Loader::Loader() { compiler.recompile(validated_high_program); }
 base::CRef<vm::code::ValidProgram> vm::loader::Loader::getHighProgram() const {
 	return &validated_high_program;
 }
+
+std::expected<vm::code::CodeCollection, std::string> vm::loader::Loader::parseCodeCollectionFromFiles(
+	const std::vector<fs::File>& files
+) {
+	return parseFiles(files).transform_error([](LoaderLogger logger) {
+		std::stringstream ss;
+		logger.dump(ss);
+		return ss.str();
+	});
+}

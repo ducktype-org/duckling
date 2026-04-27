@@ -34,7 +34,7 @@ namespace compiler::helios {
 				auto expand_str = expand_ctv.get<base::StrID>().value();
 
 				auto pst = pst::PST<pst::Stmt>::fromExpand(
-					expand->getSourcePosition().unlock(ctx),
+					expand->getStablePosition(),
 					// @TODO: #2471 change to strView, once it is fixed
 					expand_str.str(),
 					makeBox<pst::LangParserContext>(expand->getContext()),

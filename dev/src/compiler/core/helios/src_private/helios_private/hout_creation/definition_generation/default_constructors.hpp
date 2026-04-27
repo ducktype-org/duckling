@@ -1,6 +1,7 @@
 #pragma once
 
 
+#include <frontend/pst_parser/source_position_locked.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/tsh/types.hpp>
 

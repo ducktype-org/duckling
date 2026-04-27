@@ -146,7 +146,6 @@ namespace dia {
 		const printer::PrinterContentsSeq& reason
 	) const {
 		printer::PrinterOStream str;
-		location->printMessage(str, *this, reason);
 		return str.getContents();
 	}
 
