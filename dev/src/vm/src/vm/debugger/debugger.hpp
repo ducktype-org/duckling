@@ -78,5 +78,15 @@ namespace vm::debugger {
 		 * @return The current status of the VM.
 		 */
 		[[nodiscard]] vm::api::ProcStatus getStatus();
+
+		/**
+		 * @brief Pauses the VM
+		 */
+		void pause();
+
+		/**
+		 * @brief Resumes the VM
+		 */
+		void resume();
 	};
 }

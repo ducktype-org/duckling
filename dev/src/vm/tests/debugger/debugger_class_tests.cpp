@@ -20,6 +20,7 @@ public:
 		TESTER_ADD_TEST(runAndGetStatus);
 		TESTER_ADD_TEST(getStatusBreakpoint);
 		TESTER_ADD_TEST(rerunTest);
+		TESTER_ADD_TEST(continuePauseTest);
 		TESTER_ADD_TEST(errorTest);
 	}
 
@@ -119,6 +120,82 @@ private:
 		);
 	}
 
+	void continuePauseTest() {
+		std::atomic<size_t> status_counter = 0;
+
+		std::mutex              m;
+		std::condition_variable cv;
+
+		const std::vector<usize> expected_statuses = {
+			altIndex(vm::api::Running),
+			altIndex(vm::api::Paused),  // breakpoint
+			altIndex(vm::api::Running),
+			altIndex(vm::api::Paused),  // pause 1
+			altIndex(vm::api::Running),
+			altIndex(vm::api::Paused),  // pause 2
+		};
+
+		events::Listener<vm::api::ProcStatus> status_listener([&](const vm::api::ProcStatus& status
+		                                                      ) {
+			{
+				std::lock_guard lk(m);
+				ASSERT_TRUE(status_counter < expected_statuses.size());
+				ASSERT_EQUAL_PRINT(expected_statuses[status_counter], status.index());
+				status_counter++;
+			}
+			if (status_counter > 1) cv.notify_one();
+		});
+
+		events::Listener<std::string> error_listener([&](const std::string& err) { fail(err); });
+
+		vm::debugger::Debugger debugger{ fs::File(path("while_true.dbc")) };
+
+		debugger.attachOnVMChangesStatusListener(status_listener);
+		debugger.attachOnErrorListener(error_listener);
+
+		debugger.runMain();
+
+		{
+			std::unique_lock lk(m);
+			ASSERT_TRUE(cv.wait_for(lk, std::chrono::milliseconds(100), [&] {
+				return std::holds_alternative<vm::api::Paused>(debugger.getStatus());
+			}));
+		}
+
+		debugger.resume();
+		{
+			std::unique_lock lk(m);
+			ASSERT_TRUE(cv.wait_for(lk, std::chrono::milliseconds(100), [&] {
+				return std::holds_alternative<vm::api::Running>(debugger.getStatus());
+			}));
+		}
+
+		debugger.pause();
+		{
+			std::unique_lock lk(m);
+			ASSERT_TRUE(cv.wait_for(lk, std::chrono::milliseconds(100), [&] {
+				return std::holds_alternative<vm::api::Paused>(debugger.getStatus());
+			}));
+		}
+
+		debugger.resume();
+		{
+			std::unique_lock lk(m);
+			ASSERT_TRUE(cv.wait_for(lk, std::chrono::milliseconds(100), [&] {
+				return std::holds_alternative<vm::api::Running>(debugger.getStatus());
+			}));
+		}
+
+		debugger.pause();
+		std::unique_lock lk(m);
+		ASSERT_TRUE(cv.wait_for(lk, std::chrono::milliseconds(100), [&] {
+			return status_counter == expected_statuses.size();
+		}));
+
+		ASSERT_TRUE(std::holds_alternative<vm::api::Paused>(debugger.getStatus()));
+		ASSERT_EQUAL_PRINT(expected_statuses.size(), status_counter.load());
+	}
+
 	void rerunTest() {
 		std::atomic<size_t> status_counter  = 0;
 		std::atomic<size_t> ret_val_counter = 0;
@@ -183,7 +260,7 @@ private:
 
 	void errorTest() {
 		std::atomic<size_t>     error_counter   = 0;
-		const size_t            expected_errors = 1;
+		const size_t            expected_errors = 3;
 		std::mutex              m;
 		std::condition_variable cv;
 		vm::debugger::Debugger  debugger{ fs::File(path("while_true_no_breakpoint.dbc")) };
@@ -199,7 +276,14 @@ private:
 		debugger.attachOnErrorListener(error_listener);
 
 		debugger.runMain();
-		debugger.runMain();
+		debugger.runMain();  // 1st error
+
+		debugger.resume();   // 2nd error
+
+		debugger.pause();
+		debugger.pause();  // 3rd error
+
+		debugger.resume();
 
 		std::unique_lock lk(m);
 		ASSERT_TRUE(cv.wait_for(lk, std::chrono::milliseconds(100), [&] {
