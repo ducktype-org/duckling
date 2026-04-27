@@ -1,7 +1,7 @@
 metadata:
   type: "error"
   family: "misc"
-  name: "placeholder_code"
+  name: "placeholder"
   code: "0"
   active_from: "0.0.1"
   active_until: "now"
@@ -17,25 +17,31 @@ params:
   
   code:
     description: "The code snippet where the placeholder is located."
+    optional: true
   
   code_location:
     description: "Location of the code snippet."
-    component_type: "code_location"
+    optional: true
   
   pointer_message_content:
     description: "The pointer message indicating the cause location."
+    optional: true
 
 
 header_message:
   param: "header_message"
 
-
 description:
   - param: "description"
-  - codeblock:
-      param: "code"
-    location:
-      param: "code_location"
+  - case:
+      is_param_provided: "code"
+    of:
+      true:
+        - codeblock:
+            param: "code"
+          location:
+            param: "code_location"
+      false: []
 
 
 pointer_messages:
