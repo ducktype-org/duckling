@@ -144,7 +144,8 @@ namespace query::internal {
 			);
 			CORE_ASSERT(QueryImplType::USES_QRESULT, "Query cycle exception should only be thrown for queries using QResult, as this is the only way to recover from it.");
 
-			
+			// PR TODO: implement it properly
+			return QueryImplType::store(perfect_hash, query::Failed(), acd);
 		}
 		
 		catch (const QueryFailedException& qfe) {
