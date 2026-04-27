@@ -186,11 +186,17 @@ impl Terminal {
 
     /// Get a [`String`] input from the user.
     pub fn prompt_once(&self, prompt: impl Into<String>) -> QuackResult<String> {
-        Ok(Input::new().with_prompt(prompt).interact_text_on(&self.term)?)
+        Ok(Input::new()
+            .with_prompt(prompt)
+            .interact_text_on(&self.term)?)
     }
 
     /// Get a [`String`] input from the user, with a default value supplied.
-    pub fn prompt_once_with_default(&self, prompt: impl Into<String>, default: String) -> QuackResult<String> {
+    pub fn prompt_once_with_default(
+        &self,
+        prompt: impl Into<String>,
+        default: String,
+    ) -> QuackResult<String> {
         Ok(Input::new()
             .with_prompt(prompt)
             .default(default)
@@ -204,7 +210,9 @@ impl Terminal {
         <T as std::str::FromStr>::Err: std::fmt::Display,
     {
         loop {
-            let input = Input::<'_, T>::new().with_prompt(prompt.clone()).interact_text_on(&self.term);
+            let input = Input::<'_, T>::new()
+                .with_prompt(prompt.clone())
+                .interact_text_on(&self.term);
             if let Ok(t) = input {
                 return t;
             }
@@ -212,7 +220,11 @@ impl Terminal {
     }
 
     /// Prompt user for an input until it can be correctly deserialized, with a default value supplied.
-    pub fn prompt_until_valid_with_default<T>(&self, prompt: impl Into<String> + Clone, default: T) -> T
+    pub fn prompt_until_valid_with_default<T>(
+        &self,
+        prompt: impl Into<String> + Clone,
+        default: T,
+    ) -> T
     where
         T: ToString + FromStr + Clone,
         <T as std::str::FromStr>::Err: std::fmt::Display,

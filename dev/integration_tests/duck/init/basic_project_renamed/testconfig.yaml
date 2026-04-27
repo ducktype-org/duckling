@@ -8,4 +8,5 @@ Tests:
         test_cmd: init foo --name bar && cd foo && git rev-parse --show-toplevel 
         Output:
           Run: |+
-            printf "info: successfully created a new project \`bar\` at \`$(pwd)/foo\`\n$(pwd)/foo\n"
+            echo "info: successfully created a new project \`bar\` at \`$(pwd)/foo\`
+            $(pwd)/foo"

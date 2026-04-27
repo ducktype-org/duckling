@@ -12,7 +12,9 @@ Tests:
           cat venvconfig.yaml
         Output:
           Run: |+
-            printf "info: successfully created a new project \`foo\` at \`$(pwd)/foo\`\n$(pwd)/foo\nexpose_freezefile: true\n"
+            echo "info: successfully created a new project \`foo\` at \`$(pwd)/foo\`
+            $(pwd)/foo
+            expose_freezefile: true"
       ephemeral:
         test_cmd: |+
           init --ephemeral foo &&
@@ -21,7 +23,9 @@ Tests:
           cat venvconfig.yaml
         Output:
           Run: |+
-            printf "info: successfully created a new project \`foo\` at \`$(pwd)/foo\`\n$(pwd)/foo\nephemeral: true\n"
+            echo "info: successfully created a new project \`foo\` at \`$(pwd)/foo\`
+            $(pwd)/foo
+            ephemeral: true"
       local_storage:
         test_cmd: |+
           init --local-storage foo &&
@@ -30,4 +34,6 @@ Tests:
           cat venvconfig.yaml
         Output:
           Run: |+
-            printf "info: successfully created a new project \`foo\` at \`$(pwd)/foo\`\n$(pwd)/foo\nlocal_storage: storage\n"
+            echo "info: successfully created a new project \`foo\` at \`$(pwd)/foo\`
+            $(pwd)/foo
+            local_storage: storage"

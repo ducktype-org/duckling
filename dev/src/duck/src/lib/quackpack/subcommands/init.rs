@@ -121,10 +121,8 @@ fn manifest_with_user_prompts(terminal: &Terminal, name: StrId) -> QuackResult<S
     }
     let name = terminal.prompt_once_with_default("Enter the project's name", name.into())?;
     let author = terminal.prompt_once("Enter the project's author")?;
-    let version = terminal.prompt_until_valid_with_default(
-        "Enter the version of the project",
-        Version::default(),
-    );
+    let version = terminal
+        .prompt_until_valid_with_default("Enter the version of the project", Version::default());
     Ok(format!(
         "\
 metadata:
