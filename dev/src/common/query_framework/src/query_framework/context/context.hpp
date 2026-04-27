@@ -127,6 +127,8 @@ namespace query {
 						}
 
 						// Log cyclic diagnostic with cycle information.
+						// PR: move it into some .cpp
+
 						this_context.logInt(makeBox<dia_int::PlaceholderHeaderError>(
 							base::strConcat(
 								"Query cycle detected involving query node:",
@@ -142,7 +144,7 @@ namespace query {
 									for (auto node_info: cycle.cycle_nodes) {
 										result += "  - Query node ";
 										result += base::strConcat(
-											node_info.node_id.q_id.asInt(),
+											node_info.node_id.q_id.getData().name,
 											".",
 											node_info.node_id.hash.val.toStringHex(),
 											"\n"
