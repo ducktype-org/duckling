@@ -1,4 +1,5 @@
 import hashlib
+import os
 import sys
 import filecmp
 from pathlib import Path
@@ -11,6 +12,9 @@ DEFAULT_SRC: Final[str] = """fun main() = {
     # builtin_output_string("Hello, world!");
     return 0;
 }
+"""
+
+DEFAULT_GITIGNORE: Final[str] = """.duck_build
 """
 
 
@@ -107,3 +111,13 @@ def assert_eq(lhs: Any, rhs: Any, msg: str | None = None) -> None:
 def check_src_from_root(root: Path):
     src = (root / "src" / "src.dmf").read_text()
     assert_eq(src, DEFAULT_SRC)
+
+
+def check_gitignore_from_root(root: Path):
+    gitignore = (root / ".gitignore").read_text()
+    assert_eq(gitignore, DEFAULT_GITIGNORE)
+
+
+def check_no_gitignore_from_root(root: Path):
+    gitignore = root / ".gitignore"
+    assert_eq(os.path.exists(gitignore), False)

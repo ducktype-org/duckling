@@ -1,11 +1,11 @@
-PostCase: python3 check.py
+PostCase: "python3 check.py; s1=$?; rm -r foo; s2=$?; [ $s1 -eq 0 ] && [ $s2 -eq 0 ]"
 
 Tests:
   init:
     Description: can initialise a new project
     Cases:
       init:
-        test_cmd: init foo
+        test_cmd: init foo && cd foo && git rev-parse --show-toplevel
         Output:
           Run: |+
-            echo "info: successfully created new project \`foo\` at \`$(pwd)/foo\`"
+            printf "info: successfully created a new project \`foo\` at \`$(pwd)/foo\`\n$(pwd)/foo\n"
