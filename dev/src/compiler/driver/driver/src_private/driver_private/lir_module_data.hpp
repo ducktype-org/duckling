@@ -5,6 +5,8 @@
 
 #include <string_id/string_id.hpp>
 
+#include <ostream>
+
 namespace compiler::driver {
 
 	/**

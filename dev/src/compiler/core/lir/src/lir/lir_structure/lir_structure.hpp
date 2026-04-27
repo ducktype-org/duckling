@@ -20,6 +20,7 @@
 #include <query_framework/context/context_fd.hpp>
 
 #include <memory>
+#include <ostream>
 #include <utility>
 
 // Doc style is intentional, caused by inexplicable funkiness in how Doxygen interacts with macros.

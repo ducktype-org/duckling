@@ -16,6 +16,7 @@
 #include <base/types/ints.hpp>
 
 #include <functional>
+#include <ranges>
 #include <string>
 #include <vector>
 

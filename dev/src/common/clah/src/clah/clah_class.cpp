@@ -155,8 +155,8 @@ namespace clah {
 		st.result.addToCommandList(this);
 
 		while (not st.isEnd()) {
-			const std::string& token              = st.frontWord();
-			bool               is_negative_number = isNegativeNumber(token);
+			std::string token              = st.frontWord();
+			bool        is_negative_number = isNegativeNumber(token);
 
 			// Parameter
 			if (token.starts_with('-') && !is_negative_number)

@@ -17,6 +17,7 @@
 #include <query_framework/standard_query/query_cache_macros.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 
+#include <algorithm>
 #include <fstream>
 
 namespace compiler::driver {
@@ -42,7 +43,7 @@ namespace compiler::driver {
 		}
 		os << "Globals:\n";
 		for (const auto& global: globals) {
-			global.lir_global.debugPrint(ctx, os);
+			global.debugPrint(ctx, os);
 			os << "\n";
 		}
 	}
@@ -77,7 +78,7 @@ namespace compiler::driver {
 
 			if (driver::print_ir_options.print_mir) {
 				std::ranges::for_each(mir_functions, [](CRef<mir::Function> mir_function) {
-					mir_function->debugPrint(std::cerr);
+					mir_function->debugPrint(std::cout);
 				});
 			}
 			if (driver::dump_ir_options.dump_mir) {
@@ -169,13 +170,10 @@ namespace compiler::driver {
 			const auto& hout_unit = ctx.query<helios::QueryModuleHOUT>(module_id)->valueOrThrow();
 
 
-			auto module_name
-				= base::StrID(base::strConcat(
-								  "module_",
-								  compiler::frontend::ModuleTree::getPathComponentHash(module_id)
-									  .hash.toStringHex()
-				)
-			                      .c_str());
+			auto module_name = base::StrID(base::strConcat(
+				"module_",
+				compiler::frontend::ModuleTree::getPathComponentHash(module_id).hash.toStringHex()
+			));
 
 			// we intentially make copy here, to keep the data in the
 			// cache of this query

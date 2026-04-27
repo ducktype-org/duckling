@@ -454,9 +454,16 @@ private:
 	void assemblyAndLLVMGenerated() {
 		using namespace compiler;
 
-		compiler::driver::llvm_dump_ir  = true;
-		compiler::driver::llvm_dump_asm = true;
-		defer(compiler::driver::llvm_dump_ir = false; compiler::driver::llvm_dump_asm = false;);
+		compiler::driver::dump_ir_options.dump_asm  = true;
+		compiler::driver::dump_ir_options.dump_llvm = true;
+		compiler::driver::dump_ir_options.dump_lir  = true;
+		compiler::driver::dump_ir_options.dump_mir  = true;
+		compiler::driver::dump_ir_options.dump_hir  = true;
+		defer(compiler::driver::dump_ir_options.dump_asm  = false;
+		      compiler::driver::dump_ir_options.dump_llvm = false;
+		      compiler::driver::dump_ir_options.dump_lir  = false;
+		      compiler::driver::dump_ir_options.dump_mir  = false;
+		      compiler::driver::dump_ir_options.dump_hir  = false;);
 
 		auto module
 			= frontend::createModuleTree(fs::File(path("modules/functions_3")), package_name);
@@ -465,21 +472,31 @@ private:
 			// This method can fail on module verification
 			ctx.query<driver::CompileModule>({ module, driver::BackendType::LLVM, false });
 
-			auto module_name = base::StrID(
-				base::strConcat(
-					"module_", frontend::ModuleTree::getPathComponentHash(module).hash.toStringHex()
-				)
-					.c_str()
-			);
+			auto                  module_name = base::StrID(base::strConcat(
+                "module_",
+                compiler::frontend::ModuleTree::getPathComponentHash(module).hash.toStringHex()
+            ));
+			std::filesystem::path base_path   = artifacts_path / "debug";
 
-			auto asm_file     = module_name.str() + ".s";
-			auto llvm_ir_file = module_name.str() + ".ll";
 
-			assertTrue(std::filesystem::exists(asm_file), "Assembly file does not exist");
-			assertTrue(std::filesystem::exists(llvm_ir_file), "LLVM IR file does not exist");
+			auto asm_art  = base_path / (module_name.str() + ".s");
+			auto llvm_art = base_path / (module_name.str() + ".ll");
+			auto lir_art  = base_path / (module_name.str() + ".lir");
+			auto mir_art  = base_path / (module_name.str() + ".mir");
+			auto hir_art  = base_path / (module_name.str() + ".hir");
 
-			std::filesystem::remove(asm_file);
-			std::filesystem::remove(llvm_ir_file);
+
+			assertTrue(std::filesystem::exists(asm_art), "Assembly file does not exist");
+			assertTrue(std::filesystem::exists(llvm_art), "LLVM IR file does not exist");
+			assertTrue(std::filesystem::exists(lir_art), "LIR file does not exist");
+			assertTrue(std::filesystem::exists(mir_art), "MIR file does not exist");
+			assertTrue(std::filesystem::exists(hir_art), "HIR file does not exist");
+
+			std::filesystem::remove(asm_art);
+			std::filesystem::remove(llvm_art);
+			std::filesystem::remove(lir_art);
+			std::filesystem::remove(mir_art);
+			std::filesystem::remove(hir_art);
 		});
 	}
 

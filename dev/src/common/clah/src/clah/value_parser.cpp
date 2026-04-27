@@ -42,7 +42,7 @@ namespace clah {
 		bool containsCategory(
 			const std::vector<std::string>& categories, const std::string& candidate
 		) {
-			return std::find(categories.begin(), categories.end(), candidate) != categories.end();
+			return std::ranges::find(categories, candidate) != categories.end();
 		}
 	}
 

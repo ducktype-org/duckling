@@ -36,6 +36,7 @@
 #include <query_framework/q_stats/q_stats.hpp>
 
 #include <iostream>
+#include <ranges>
 
 clah::Clah getStandardDucklingOptions() {
 	return clah::Clah("duckc", "The Duckling compiler")
