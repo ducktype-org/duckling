@@ -141,20 +141,22 @@ fn create_venv_config_file(
     local_storage: bool,
 ) -> QuackResult<()> {
     let venv_cfg_file = root_path.join(PackageLoader::VENV_CONFIG_NAME);
-    if let Some(venv_cfg) = generate_venv_config(expose_freezefile, ephemeral, local_storage)
+    let Some(venv_cfg) = generate_venv_config(expose_freezefile, ephemeral, local_storage)
         .context_internal("failed to generate a VenvConfig")?
-    {
-        if venv_cfg_file.exists() {
-            ctx.error_console().warning(format!("init run with non-default venv configuration flags, but venv configuration file already exists at `{}`", venv_cfg_file.display()));
-            return Ok(());
-        }
-        let mut venv_cfg_file = venv_cfg_file
-            .touch()
-            .context("failed to create a venv configuration file")?;
-        venv_cfg_file
-            .write(venv_cfg.to_string().as_bytes())
-            .context("failed to write to a venv configuration file")?;
+    else {
+        return Ok(());
+    };
+    if venv_cfg_file.exists() {
+        ctx.error_console().warning(format!("init run with non-default venv configuration flags, but venv configuration file already exists at `{}`", venv_cfg_file.display()));
+        return Ok(());
     }
+    let mut venv_cfg_file = venv_cfg_file
+        .touch()
+        .context("failed to create a venv configuration file")?;
+    venv_cfg_file
+        .write(venv_cfg.to_string().as_bytes())
+        .context("failed to write to a venv configuration file")?;
+
     Ok(())
 }
 
