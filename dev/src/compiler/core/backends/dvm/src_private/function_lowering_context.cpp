@@ -14,6 +14,8 @@
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 
+#include <ranges>
+
 using namespace compiler::backend_vm::internal;
 
 #define INVALID_CASE(tp, reason)                                                    \
@@ -56,8 +58,19 @@ base::StrID FunctionLoweringContext::getBlockLabel(lir::BlockRef block) {
 }
 
 namespace {
+	/**
+	 * @brief Translate a compile time value in LIR constant to a DVM immediate.
+	 * @param constant the LIR constant to translate
+	 * @param type the DVM type of the resulting immediate
+	 * @param is_comp_time_lowering if true, pointers to compile time values (e.g. symbol types)
+	 * will be kept as is in the generated code, otherwise they will be replaced with zero value.
+	 * This is useful to have the deterministic codegen (pointers to internal memory is not
+	 * deterministic between runs).
+	 */
 	constexpr DVMImmediate lirConstantToImmediate(
-		const compiler::lir::LIRConstant& constant, const vm::code::TypeOfData& type
+		const compiler::lir::LIRConstant& constant,
+		const vm::code::TypeOfData&       type,
+		bool                              is_comp_time_lowering = true
 	) {
 		variant_match(constant.value.getStorage()) {
 			variant_case(compiler::numeric_value::NumericValue, numeric) {
@@ -73,7 +86,9 @@ namespace {
 			variant_case(compiler::tsh::SymbolType<>, type_val) {
 				// @TODO: #1728 remove this evil bit_cast
 				// Representation of a meta type in DVM is a pointer to the symbol type.
-				return DVMImmediate{ std::bit_cast<u64>(&type_val), type };
+				// @TODO: #1709 RTTI when the is_comp_time_lowering == false
+				u64 type_val_u64 = is_comp_time_lowering ? std::bit_cast<u64>(&type_val) : 0;
+				return DVMImmediate{ type_val_u64, type };
 			}
 			variant_default {
 				CORE_PANIC("Unsupported CompileTimeValue type for a VM constant operand");
@@ -81,6 +96,39 @@ namespace {
 		}
 		CORE_UNREACHABLE();
 	}
+}
+
+vm::code::Function compiler::backend_vm::internal::createMiniGlobalCtorFromCTV(
+	ProgramLoweringContext&      program_context,
+	CRef<tsl::TypeLayout>        global_layout,
+	const vm::code::TypeOfData&  lowered_global_type,
+	const ctv::CompileTimeValue& global_ctv_value,
+	base::StrID                  mini_ctor_name,
+	const DVMGlobal&             dvm_global
+) {
+	const lir::LIRConstant global_lir_constant{
+		.value  = global_ctv_value,
+		.layout = global_layout,
+	};
+
+	const auto immediate = lirConstantToImmediate(
+		global_lir_constant, lowered_global_type, program_context.isCompTimeLowering()
+	);
+
+	vm::code::Function mini_ctor;
+	mini_ctor.name                   = vm::code::Identifier(mini_ctor_name);
+	mini_ctor.signature.result_types = { vm::code::Identifier(base::StrID("void")) };
+	mini_ctor.body.push_back(
+		vm::code::builders::InstructionBuilder(
+			vm::code::builders::OpKind::mov, dvm_global.asArgument(), immediate.asArgument()
+		)
+			.build()
+	);
+	mini_ctor.body.push_back(
+		vm::code::builders::InstructionBuilder(vm::code::builders::OpKind::ret).build()
+	);
+
+	return mini_ctor;
 }
 
 DVMLocal FunctionLoweringContext::forceToLocal(
@@ -93,7 +141,13 @@ DVMLocal FunctionLoweringContext::forceToLocal(
 	return temp;
 }
 
-void FunctionLoweringContext::storeResult(const DVMPlace& dest_place, const DVMValue& src_value) {
+void FunctionLoweringContext::maybeStoreResult(
+	const base::Optional<DVMPlace>& maybe_dest_place, const DVMValue& src_value
+) {
+	// Do nothing, if the dest_place is empty.
+	if_opt_none(maybe_dest_place) return;
+	const DVMPlace& dest_place = maybe_dest_place.value();
+
 	// If a place is direct we just move the value into it.
 	if (dest_place.isDirect()) {
 		pushInstruction(
@@ -246,7 +300,7 @@ DVMValue FunctionLoweringContext::lowerLirValue(const lir::LIRValue& lir_value) 
 	variant_match(lir_value.getVariant()) {
 		variant_case(lir::LIRConstant, value) {
 			auto dvm_type = program_context.lowerAndKeepTslType(value.layout);
-			return { lirConstantToImmediate(value, dvm_type) };
+			return { lirConstantToImmediate(value, dvm_type, program_context.isCompTimeLowering()) };
 		}
 		variant_case(lir::LIRPlace, place) {
 			DVMPlace resolved = resolveLirPlace(place);
@@ -332,8 +386,11 @@ vm::code::Function compiler::backend_vm::internal::FunctionLoweringContext::fini
 	function.name = function_name;
 	for (const auto& param_type: function_parameter_types)
 		function.signature.parameters.emplace_back(vm::code::typeName(param_type));
-	function.signature.result_type = vm::code::Identifier(vm::code::typeName(function_return_type));
-	function.body                  = std::move(function_body);
+	function.signature.result_types = {};
+	// @TODO: #2499 Make lowerAndKeepTslType return an optional and remove the void type from here
+	if (auto type_name = vm::code::typeName(function_return_type); type_name != "void")
+		function.signature.result_types.emplace_back(type_name);
+	function.body = std::move(function_body);
 
 	if_opt_some(fun_di_builder_opt, builder) { builder.end(); }
 
@@ -349,7 +406,7 @@ DVMLocal FunctionLoweringContext::getFunctionReturnValueLocal() {
 		);
 	}
 	return DVMLocal{
-		.name = base::StrID("ret_val"),
+		.name = base::StrID("ret0"),
 		.type = function_return_type,
 	};
 }
@@ -375,50 +432,6 @@ void compiler::backend_vm::internal::FunctionLoweringContext::pushInit(lir::LIRL
 		dvm_local.asAnyArgument(),
 		vm::opargs::Type(typeName(dvm_local.type)),
 	});
-}
-
-FunctionLoweringContext::FunctionCallInfo FunctionLoweringContext::FunctionCallInfo::fromLirFunction(
-	const lir::FunctionLiteral& func_literal, ProgramLoweringContext& program_context
-) {
-	base::Optional<vm::code::TypeOfData> called_result_type = {};
-	if (func_literal.return_type_layout->getSize() != Bits{ 0 })
-		called_result_type = program_context.lowerAndKeepTslType(func_literal.return_type_layout);
-
-	std::vector<vm::code::TypeOfData> param_types
-		= *func_literal.parameter_layouts | std::views::transform([&](const auto& layout) {
-			  return program_context.lowerAndKeepTslType(layout);
-		  })
-	    | std::ranges::to<std::vector>();
-
-	return FunctionCallInfo{
-		.call_target = DVMFunctionName{ .name = func_literal.mangled_name },
-		.return_type = called_result_type,
-		.param_types = param_types,
-		.is_extern_c = false,
-	};
-}
-
-FunctionLoweringContext::FunctionCallInfo FunctionLoweringContext::FunctionCallInfo::fromExternCFunction(
-	const base::StrID& ext_func_name, ProgramLoweringContext& program_context
-) {
-	const auto& ext_func = program_context.getExternCFunction(ext_func_name);
-
-	base::Optional<vm::code::TypeOfData> called_result_type = {};
-	if (ext_func.signature.result_type.str != base::StrID("void"))
-		called_result_type = vm::code::getBuiltinTypeByName(ext_func.signature.result_type);
-
-	std::vector<vm::code::TypeOfData> param_types
-		= ext_func.signature.parameters | std::views::transform([&](const auto& type_name) {
-			  return vm::code::getBuiltinTypeByName(type_name).value();
-		  })
-	    | std::ranges::to<std::vector>();
-
-	return FunctionCallInfo{
-		.call_target = DVMExternCFunctionName{ .name = ext_func_name },
-		.return_type = called_result_type,
-		.param_types = param_types,
-		.is_extern_c = true,
-	};
 }
 
 usize compiler::backend_vm::internal::FunctionLoweringContext::instructionsCount() const {

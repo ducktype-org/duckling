@@ -1,0 +1,8 @@
+class Test {var value = 42; fun test() = { return value; };}
+class TestsRelative {var T = Test(); alias test = T.test;}
+
+var t = TestsRelative();
+builtin_output_i64(t.test());
+
+t.T.value = 100;
+builtin_output_i64(t.test());

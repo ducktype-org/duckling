@@ -15,11 +15,11 @@
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
-#include <vm/core/process/builtin_functions.hpp>
-#include <vm/core/process/type_metadata/definitions.hpp>
-#include <vm/core/process/type_metadata/type.hpp>
-#include <vm/core/thread/low_program/low_program.hpp>
-#include <vm/core/thread/low_program/opcodes.hpp>
+#include <vm/core/builtin_functions.hpp>
+#include <vm/core/safe/low_program/low_program.hpp>
+#include <vm/core/safe/low_program/opcodes.hpp>
+#include <vm/core/safe/type_metadata/definitions.hpp>
+#include <vm/core/safe/type_metadata/type.hpp>
 #include <vm/loader/compiler/type_builder.hpp>
 #include <vm/utils/interpret.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
@@ -186,7 +186,6 @@ namespace vm::loader::compiler {
 				{ .offset = curr_stack_size, .block_idx = type_size_stack.size(), .type = type_ref }
 			);
 			auto type_size = type_ref->getSize().asInt();
-			if (type.type_name == "void") return;
 			type_size_stack.push_back(type_size);
 			curr_stack_size += type_size;
 			max_stack_size  = std::max(max_stack_size, curr_stack_size);
@@ -227,8 +226,10 @@ namespace vm::loader::compiler {
 		}
 
 		code::FuncSignature func_signature = ctx.function.signature;
-		push(base::StrID("ret_val"), func_signature.result_type.str);
-		for (auto [idx, param_type]: std::views::enumerate(func_signature.parameters))
+		using namespace std::views;
+		for (auto [idx, ret_type]: enumerate(func_signature.result_types))
+			push(base::StrID(base::strConcat("ret", idx).c_str()), ret_type.str);
+		for (auto [idx, param_type]: enumerate(func_signature.parameters))
 			push(base::StrID(base::strConcat("arg", idx).c_str()), param_type.str);
 		// instruction index, stack state, stack size
 		std::vector<std::tuple<usize, decltype(type_size_stack), usize>> dfs_stack{
@@ -339,18 +340,23 @@ namespace vm::loader::compiler {
 
 			low::MicroBytecode bytecode = lowerInstructions(ctx);
 
+			u64                   ret_type_sum = 0;
+			std::vector<TypeCRef> result_types = {};
+			for (auto& ret: signature.result_types) {
+				ret_type_sum += low_program.types->at(ret)->getSize().asInt();
+				result_types.emplace_back(low_program.types->at(ret));
+			}
+
 			low_program.functions.insert(
 				low::LowFuncData{ .name              = function.name,
 			                      .bc                = std::move(bytecode),
 			                      .local_stack_size  = ctx.local_stack_size,
 			                      .local_block_count = ctx.local_block_count,
 			                      .arg_size          = parameters_size,
-			                      .ret_size
-			                      = low_program.types->at(signature.result_type)->getSize().asInt(),
-			                      .parameters  = std::move(parameters),
-			                      .result_type = low_program.types->at(signature.result_type) },
+			                      .ret_size          = ret_type_sum,
+			                      .parameters        = std::move(parameters),
+			                      .result_types      = std::move(result_types) },
 				function.name
-
 			);
 		}
 	}
@@ -417,13 +423,20 @@ namespace vm::loader::compiler {
 				0,
 				std::plus()
 			);
+
+			std::vector<TypeCRef> rets = new_func.signature.result_types
+			                           | std::views::transform([this](const auto& param_name) {
+											 return low_program.types->at(param_name);
+										 })
+			                           | std::ranges::to<std::vector<TypeCRef>>();
+
 			low_program.extern_c_functions.insert(
 				low::LowExternCFunction{
 					.name               = new_func.name,
 					.function_pointer   = new_func.function_pointer,
 					.parameter_size_sum = param_size_sum,
 					.parameters         = std::move(params),
-					.result_type        = low_program.types->at(new_func.signature.result_type),
+					.result_types       = std::move(rets),
 				},
 				new_func.name
 			);

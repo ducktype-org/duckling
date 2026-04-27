@@ -107,7 +107,7 @@ namespace query {
 						// for now just panic
 						// @TODO: #1888 change that
 
-						this_context.logInt(makeBox<dia_int::PlaceholderHeaderError>(
+						this_context.logInt(makeBox<dia_int::PlaceholderError>(
 							base::strConcat(
 								"Query cycle detected involving query node:",
 								caller.q_id.asInt(),
@@ -298,14 +298,25 @@ namespace query {
 
 		/**
 		 * @brief Collect all diagnostics from the main query state into the provided output vector.
-		 * @warning This method is not thread safe.
+		 * @warning @non_thread_safe
 		 * It must not be called concurrently with any method that modifies the underlying collection.
 		 */
 		static void collectAllDiagnostic(std::vector<CRef<dia_int::dia_args::Diagnostic>>& output);
 
 		/**
+		 * @brief Collect all diagnostics from the main query state into the provided output vector,
+		 * while also applying the provided position update function.
+		 * @warning @non_thread_safe
+		 * It must not be called concurrently with any method that modifies the underlying collection.
+		 */
+		static void collectAndUpdateAllDiagnostic(
+			std::vector<CRef<dia_int::dia_args::Diagnostic>>& output,
+			const dia_int::UpdatePositionFunc&                update_func
+		);
+
+		/**
 		 * @brief Dump all loggers from all nodes into a single logger and clear them from the state.
-		 * @warning This method is not thread safe.
+		 * @warning @non_thread_safe
 		 * It must not be called concurrently with any method that modifies the underlying collection.
 		 */
 		static Box<dia_int::Logger> dumpToOneLoggerAndClear();

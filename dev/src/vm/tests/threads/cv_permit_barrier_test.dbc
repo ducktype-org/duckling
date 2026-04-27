@@ -21,7 +21,7 @@ global_data phase i64 {};
 global_data lock mutex {};
 global_data cv condition_variable {};
 
-function worker {} -> void {
+function worker {} -> {} {
 	init_pany_type          lock1, mutex;
 	mov_popq_popq           lock1, lock;
 	call_builtinfunc        builtin_lock_mutex;
@@ -102,7 +102,7 @@ function worker {} -> void {
 	ret;
 }
 
-function main { i64, ptr_argv } -> i64 {
+function main { i64, ptr_argv } -> { i64 } {
 	init_pany_type          m, mutex;
 	call_builtinfunc        builtin_create_mutex;
 	mov_popq_popq           lock, m;

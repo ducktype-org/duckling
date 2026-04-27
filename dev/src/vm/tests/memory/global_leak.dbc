@@ -1,6 +1,6 @@
 global_data global_ptr ptr_i64 {};
 
-function main { i64, ptr_argv } -> i64 {
+function main { i64, ptr_argv } -> { i64 } {
     init_pany_type ptr, ptr_i64;
     init_pany_type value, i64;
     alloc_pptr_type ptr, i64;

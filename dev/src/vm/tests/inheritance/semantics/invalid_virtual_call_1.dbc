@@ -1,8 +1,8 @@
 type pointer: pointer_Parent Parent
 type pointer: pointer_Child Child
 
-type fun: method_parent_void {pointer_Parent} void
-type fun: method_child_void {pointer_Child} void
+type fun: method_parent_void {pointer_Parent} {}
+type fun: method_child_void {pointer_Child} {}
 
 type class: Parent {
     virtual_methods: { 
@@ -23,14 +23,14 @@ type class: Child {
 }
 
 # ============ METHODS IMPLEMENTATION ============ 
-function Parent_getAge_impl_type {pointer_Parent} -> void {
+function Parent_getAge_impl_type {pointer_Parent} -> {} {
     init_pany_type res, i64; mov_p64_imm res, 33; output_p64 res; deinit; ret;
 }
-function Child_cry_impl_type {pointer_Child} -> void {
+function Child_cry_impl_type {pointer_Child} -> {} {
     init_pany_type res, i64; mov_p64_imm res, 55; output_p64 res; deinit; deinit; ret;
 }
 
-function main { i64, ptr_argv } -> i64 {
+function main { i64, ptr_argv } -> { i64 } {
     init_pany_type actual_child, pointer_Child;
     alloc_pptr_type actual_child, Child;
     setVTable_pptr_type actual_child, Child;

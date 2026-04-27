@@ -1,7 +1,7 @@
 #include "supervisor.hpp"
 
-#include <vm/core/process/safe_vmprocess.hpp>
 #include <vm/core/process/vmprocess.hpp>
+#include <vm/core/safe/safe_vmprocess.hpp>
 
 #include <mutex>
 

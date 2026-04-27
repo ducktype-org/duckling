@@ -9,14 +9,36 @@
 #include <string_view>
 #include <vector>
 
+namespace pst {
+	class TopLevel;
+}
+
 namespace compiler::repl {
+	/**
+	 * @brief Extract top-level statement source texts from an already-parsed PST root.
+	 *
+	 * Iterates root statements in parser-established order and slices original source text
+	 * using each statement SourcePosition. This overload avoids reparsing/requerying PST
+	 * when the caller already has the root element.
+	 *
+	 * @param ctx Active query context used to unlock PST statement elements.
+	 * @param root Parsed PST top-level element to extract statements from.
+	 * @return One string per top-level statement, in source order.
+	 */
+	std::vector<std::string> extractStatementSources(query::Context& ctx, const pst::TopLevel& root);
 
 	/**
 	 * @brief Extract the source text of each top-level statement from a module.
 	 *
 	 * Iterates the TopLevel PST of the given module and slices the original source text
-	 * using each statement's SourcePosition character range. Returns one string per
-	 * top-level statement in source order.
+	 * using each statement's SourcePosition character range.
+	 *
+	 * This is a convenience overload that resolves module -> main file -> PST root,
+	 * then delegates to the root-taking overload.
+	 *
+	 * @param ctx Active query context used for module/PST queries.
+	 * @param module_id Module whose main file top-level statements should be extracted.
+	 * @return One string per top-level statement, in source order.
 	 */
 	std::vector<std::string> extractStatementSources(
 		query::Context& ctx, frontend::ModuleID module_id

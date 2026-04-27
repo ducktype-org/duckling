@@ -29,7 +29,6 @@
 #include <string_view>
 
 namespace compiler::repl {
-	// @TODO: #1784 decide if we want to do it here or in the main.cpp.
 	void ReplSession::initDVM() {
 		auto spawn_result = vm::api::spawn();
 		CORE_ASSERT(spawn_result.has_value(), "ReplSession::initDVM: Failed to spawn DVM process");
@@ -163,12 +162,10 @@ namespace compiler::repl {
 				CORE_DEV_LOG(REPL, "Wrapper function name: ", wrapper_func_name, "\n");
 			} catch (const base::Panic& e) {
 				error_message = "Expression evaluation failed: " + std::string(e.what());
-				std::cerr << error_message << "\n";
-				had_error = true;
+				had_error     = true;
 			} catch (const std::exception& e) {
 				error_message
 					= "Unexpected error during expression evaluation: " + std::string(e.what());
-				std::cerr << error_message << "\n";
 				had_error = true;
 			}
 		});
@@ -199,8 +196,7 @@ namespace compiler::repl {
                 );
 				if (!load_result.has_value()) {
 					error_message = "DVM load error: " + load_result.error();
-					std::cerr << error_message << "\n";
-					had_error = true;
+					had_error     = true;
 					return;
 				}
 
@@ -216,18 +212,15 @@ namespace compiler::repl {
 						std::cout << "=> " << run_result.value() << "\n";
 				} else {
 					error_message = "Runtime error: " + run_result.error();
-					std::cerr << error_message << "\n";
-					had_error = true;
+					had_error     = true;
 					return;
 				}
 			} catch (const base::Panic& e) {
 				error_message = "Compilation/execution error: " + std::string(e.what());
-				std::cerr << error_message << "\n";
-				had_error = true;
+				had_error     = true;
 			} catch (const std::exception& e) {
 				error_message = "Unexpected error: " + std::string(e.what());
-				std::cerr << error_message << "\n";
-				had_error = true;
+				had_error     = true;
 			}
 		});
 
@@ -265,12 +258,10 @@ namespace compiler::repl {
 				CORE_DEV_LOG(REPL, "Wrapper function name: ", wrapper_func_name, "\n");
 			} catch (const base::Panic& e) {
 				error_message = "Instruction evaluation failed: " + std::string(e.what());
-				std::cerr << error_message << "\n";
-				had_error = true;
+				had_error     = true;
 			} catch (const std::exception& e) {
 				error_message
 					= "Unexpected error during instruction evaluation: " + std::string(e.what());
-				std::cerr << error_message << "\n";
 				had_error = true;
 			}
 		});
@@ -301,8 +292,7 @@ namespace compiler::repl {
                 );
 				if (!load_result.has_value()) {
 					error_message = "DVM load error: " + load_result.error();
-					std::cerr << error_message << "\n";
-					had_error = true;
+					had_error     = true;
 					return;
 				}
 
@@ -316,18 +306,15 @@ namespace compiler::repl {
 					std::cout << "Instruction executed.\n";
 				} else {
 					error_message = "Runtime error: " + run_result.error();
-					std::cerr << error_message << "\n";
-					had_error = true;
+					had_error     = true;
 					return;
 				}
 			} catch (const base::Panic& e) {
 				error_message = "Compilation/execution error: " + std::string(e.what());
-				std::cerr << error_message << "\n";
-				had_error = true;
+				had_error     = true;
 			} catch (const std::exception& e) {
 				error_message = "Unexpected error: " + std::string(e.what());
-				std::cerr << error_message << "\n";
-				had_error = true;
+				had_error     = true;
 			}
 		});
 
@@ -367,20 +354,17 @@ namespace compiler::repl {
 				);
 				if (!load_result.has_value()) {
 					error_message = "DVM load error: " + load_result.error();
-					std::cerr << error_message << "\n";
-					had_error = true;
+					had_error     = true;
 					return;
 				}
 
 				CORE_DEV_LOG(REPL, "Definitions loaded.\n");
 			} catch (const base::Panic& e) {
 				error_message = "Definition compilation error: " + std::string(e.what());
-				std::cerr << error_message << "\n";
-				had_error = true;
+				had_error     = true;
 			} catch (const std::exception& e) {
 				error_message = "Unexpected error: " + std::string(e.what());
-				std::cerr << error_message << "\n";
-				had_error = true;
+				had_error     = true;
 			}
 		});
 
@@ -454,16 +438,13 @@ namespace compiler::repl {
 
 		} catch (const std::out_of_range& e) {
 			std::string error_msg = std::string("REPL map::at error (out_of_range): ") + e.what();
-			std::cerr << error_msg << "\n";
 			CORE_DEV_LOG(REPL, "This typically means a lookup in a map/vector failed\n");
 			return ReplResult::error(error_msg);
 		} catch (const std::exception& e) {
 			std::string error_msg = std::string("Error: ") + e.what();
-			std::cerr << error_msg << "\n";
 			return ReplResult::error(error_msg);
 		} catch (...) {
 			std::string error_msg = "Unknown error occurred";
-			std::cerr << error_msg << "\n";
 			return ReplResult::error(error_msg);
 		}
 	}
@@ -479,6 +460,13 @@ namespace compiler::repl {
 			}
 
 			auto result = processLine(line);
+			if (result.status == ReplResult::Status::Error) {
+				if (!result.message.empty()) std::cerr << result.message << "\n";
+				continue;
+			}
+
+			if (result.status == ReplResult::Status::Success && !result.message.empty())
+				std::cout << result.message << "\n";
 
 			if (result.status == ReplResult::Status::Exit) {
 				std::cout << result.message << "\n";
