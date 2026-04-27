@@ -164,6 +164,7 @@ namespace compiler::helios {
 			return ElementScopeKind::Standard;
 
 		case pst::ElementKind::ExprStmt:
+		case pst::ElementKind::OperatorWrapper:
 			return ElementScopeKind::Transparent;
 
 		case pst::ElementKind::ExprElement:

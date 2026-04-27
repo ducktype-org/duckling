@@ -89,7 +89,8 @@ namespace compiler::helios::code {
 		) {
 			if (auto bin_op_opt = expr.unlock(ctx).dynamicCast<pst::expr::BinaryOperator>()) {
 				auto bin_op = bin_op_opt.value();
-				if (bin_op->getOperator() == lang_def::NamedOperator::Pipe) {
+				if (bin_op->getOperator().unlock(ctx)->getOperator()
+				    == lang_def::NamedOperator::Pipe) {
 					getVariantSubExprsInPlace(ctx, bin_op->getLeftOperand(), sub_exprs_append);
 					getVariantSubExprsInPlace(ctx, bin_op->getRightOperand(), sub_exprs_append);
 				}
@@ -106,7 +107,8 @@ namespace compiler::helios::code {
 			query::Context& ctx, pst::AccessLocked<pst::expr::BinaryOperator> expr
 		) {
 			CORE_ASSERT(
-				expr.unlock(ctx)->getOperator() == lang_def::NamedOperator::Pipe,
+				expr.unlock(ctx)->getOperator().unlock(ctx)->getOperator()
+					== lang_def::NamedOperator::Pipe,
 				"Not a variant operator"
 			);
 			std::vector<pst::AccessLocked<pst::ExprElement>> sub_exprs;
@@ -273,7 +275,7 @@ namespace compiler::helios::code {
 
 			void visitBinaryOperator(pst::Access<pst::expr::BinaryOperator> stmt) override {
 				// handle variants:
-				const auto op = stmt->getOperator();
+				const auto op = stmt->getOperator().unlock(ctx)->getOperator();
 				if (op == lang_def::NamedOperator::Pipe) {
 					auto                   sub_exprs = getVariantSubExprs(ctx, stmt);
 					std::vector<Box<Expr>> all_subtypes;
@@ -497,7 +499,8 @@ namespace compiler::helios::code {
 				auto inner      = std::move(inner_res).valueOrThrow();
 				auto inner_type = inner->expression_type.getSymbolType();
 
-				if (stmt->getOperator() == lang_def::NamedOperator::Ampersand) {
+				if (stmt->getOperator().unlock(ctx)->getOperator()
+				    == lang_def::NamedOperator::Ampersand) {
 					// @TODO: #1956 remove the check bellow.
 					// This is a temporary check to prevent us from taking reference of types that
 					// do not carry information.
@@ -524,14 +527,16 @@ namespace compiler::helios::code {
 					return;
 				}
 
-				auto builtin = unaryBuiltin(stmt->getOperator(), std::move(inner), pstOrigin(stmt));
+				auto builtin = unaryBuiltin(
+					stmt->getOperator().unlock(ctx)->getOperator(), std::move(inner), pstOrigin(stmt)
+				);
 				if (builtin.has_value()) {
 					node = std::move(builtin).value();
 					return;
 				} else {
 					ctx.logInt(makeBox<UndefinedUnaryOperatorError>(
 						stmt->getSourcePosition().unlock(ctx),
-						stmt->getOperator().str(),
+						stmt->getOperator().unlock(ctx)->getOperator().str(),
 						makeBox<InteractiveType>(ctx, inner_type)
 					));
 					// failed
