@@ -43,6 +43,22 @@ namespace query::internal {
 		return edge.value().active_edge;
 	}
 
+	base::Optional<ActiveGraph::QueryCycle::NodeCycleInfo> ActiveGraph::cycleWalk(NodeID node_id) const {\
+		// PR: this is greatly un-performant, change it
+
+		auto node_data = active_nodes.atMaybeCopy(node_id);
+		if (node_data.empty()) return {};
+
+		auto node_edge = node_data.value().active_edge;
+
+		if (node_edge.empty()) return {};
+
+		return QueryCycle::NodeCycleInfo{ 
+			.node_id = node_edge.value(),
+			.node_context_ref = active_nodes.atMaybeCopy(node_edge.value()).value().node_context_ref 
+		};
+	}
+
 	base::Optional<ActiveGraph::QueryCycle> ActiveGraph::cycleCheck(const NodeID node_id) const {
 		auto double_walk = [this](NodeID walk_zero) -> base::Optional<NodeID> {
 			auto walk_one = walk(walk_zero);
