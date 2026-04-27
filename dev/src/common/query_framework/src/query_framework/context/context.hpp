@@ -50,15 +50,9 @@ namespace query {
 		bool             active = true;
 
 		/**
-		 * This is a flag used to determine if it was possible that
-		 * given query invocation was part of a cycle.
-		 * The flag is set to true when:
-		 * - we are calling another query and the cycle-check returns a cycle.
-		 * - we are calling another query and
-		 *
-		 * We use it to only perform heavier cycle checks when it is possible that we are in a cycle.  
+		 * ...  
 		 */
-		bool maybe_cyclic = false;
+		bool is_cyclic_node = false;
 
 		Context(internal::NodeID my_node): my_node(my_node) {}
 		friend struct query::internal::ContextAccess;
