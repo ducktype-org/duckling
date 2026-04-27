@@ -1116,6 +1116,26 @@ private:
 			{ "cycle" },
 			1
 		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun foo() = {
+					return bar();
+				}
+
+				fun bar() = {
+					return foo();
+				}
+			)",
+			{ "cycle" },
+			1
+		);
+
+		// PR:
+		// Add this maybe, there are some qresults lacking
+		// class T {
+		//     var t: T;
+		// }
 	}
 
 	void testErrorBadExpr() {
