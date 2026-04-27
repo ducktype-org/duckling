@@ -86,11 +86,13 @@ namespace compiler::helios {
 				                            .unlock(ctx)
 				                            .dynamicCast<pst::Alias>()
 				                            .value();
-					  auto underlying_chain = alias_stmt->getPointed()
-				                                  .unlock(ctx)
-				                                  ->getSourcePosition()
-				                                  .illegalAccess()
-				                                  .content();
+					  auto underlying_chain
+						  = alias_stmt->getPointed()
+				                .unlock(ctx)
+				                ->getSourcePosition()
+				                .illegalAccess(
+								)  // Here we should use illegalAccess, maybe serialize the PST
+				                .content();
 
 					  auto id = MessageBase::getUniqueID();
 					  linked_messages.put(
@@ -115,7 +117,8 @@ namespace compiler::helios {
 		  symbol_type(symbol_type),
 		  pst_expr(std::move(pst_expr)) {
 		if (pst_expr.has_value()) {
-			this->displayed_name = pst_expr.value()->getSourcePosition().illegalAccess().content();
+			this->displayed_name = pst_expr.value()->getSourcePosition().illegalAccess().content(
+			);  // Here we should use illegalAccess, maybe serialize the PST
 			checkForAliases(ctx, this->linked_messages, pst_expr.value());
 		} else
 			this->displayed_name = symbol_type.toString();
@@ -155,7 +158,7 @@ namespace compiler::helios {
 	/**
 	 * @brief Get source position from a PST element of a function-like character
 	 * (pst of a function, function declaration or class method). We want only the
-	 * name and parameters to be included in the source position.
+	 * name and parameters to be included in the source position. @TODO: #2521 fix this
 	 */
 	dia_int::StablePosition getFunctionLikeSourcePosition(
 		query::Context& ctx, pst::Access<pst::LangElement> function_like
