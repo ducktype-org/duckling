@@ -5,8 +5,6 @@
 
 #include "generic_operations.hpp"
 
-#include "driver_private/debug_artifacts.hpp"
-
 #include <debug_info/debug_info_io.hpp>
 #include <driver/debug_info/debug_info.hpp>
 #include <driver/module_flags/module_flags.hpp>
@@ -17,6 +15,7 @@
 #include <driver/repl_utils/script_helpers.hpp>
 #include <driver_private/backend_operations/compile_dvm.hpp>
 #include <driver_private/backend_operations/compile_llvm.hpp>
+#include <driver_private/debug_artifacts.hpp>
 #include <driver_private/operations.hpp>
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
@@ -136,17 +135,17 @@ namespace compiler::driver {
 		}
 
 		struct ModuleOutputNames {
-			std::string                 stem;
 			std::string                 object_file;
 			base::Optional<std::string> debug_info_file;
 		};
 
 		static ModuleOutputNames getModuleOutputName(const QKey& key) {
 			ModuleOutputNames names;
-			names.stem        = key.queryStablePerfectHash().toStringHex();
-			names.object_file = names.stem + typeExtension(key.backend_type);
+			auto              stem = key.queryStablePerfectHash().toStringHex();
+
+			names.object_file = stem + typeExtension(key.backend_type);
 			if (key.build_debug_info && key.backend_type == BackendType::DVM)
-				names.debug_info_file = names.stem.append(DEBUG_INFO_STABLE_EXTENSION);
+				names.debug_info_file = stem.append(DEBUG_INFO_STABLE_EXTENSION);
 			return names;
 		}
 

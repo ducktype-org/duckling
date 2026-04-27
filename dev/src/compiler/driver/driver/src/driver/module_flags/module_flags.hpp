@@ -10,6 +10,11 @@ namespace compiler::driver {
 		bool dump_hir  = false;
 	};
 
+	/**
+	 * This is a debug option.
+	 * If set, the selected IR output will be dumped to a file in the `debug` directory
+	 * in the `compileModule` query.
+	 */
 	extern constinit DumpIROptions dump_ir_options;
 
 	struct PrintIROptions {
@@ -18,6 +23,11 @@ namespace compiler::driver {
 		bool print_hir = false;
 	};
 
+	/**
+	 * This is a debug option.
+	 * If set, the compiler will print to output the selected IR
+	 * in the `compileModule` query.
+	 */
 	extern constinit PrintIROptions print_ir_options;
 
 	/**

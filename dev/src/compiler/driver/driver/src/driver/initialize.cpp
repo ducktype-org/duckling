@@ -25,8 +25,6 @@
 #include <logger/logger.hpp>
 #include <query_framework/external/api.hpp>
 
-#include <iostream>
-
 namespace compiler::driver {
 
 

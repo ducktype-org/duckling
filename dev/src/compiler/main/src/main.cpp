@@ -20,13 +20,11 @@
 #include <repl/session.hpp>
 #include <time_stats/time_stats.hpp>
 
-#include "base/extend_cpp/stringifyable_enum.hpp"
 #include <base/except/exceptions.hpp>
 #include <base/misc/int_conv.hpp>
 #include <base/str/str_utils.hpp>
 #include <base/types/ok_bad.hpp>
 
-#include "clah/value_parser.hpp"
 #include <clah/clah.hpp>
 #include <diagnostic/logger.hpp>
 #include <filesystem/file.hpp>
@@ -111,6 +109,9 @@ compiler::linker::LinkingOptions getLinkingOptionsFromClah(const clah::ParsingRe
 	return linking_options;
 }
 
+/**
+ * @brief The CLI interface for the DebugOptions part of the driver.
+ */
 namespace debug_options {
 	using compiler::driver::options_types::DebugOptions;
 
@@ -132,6 +133,10 @@ namespace debug_options {
 		return print_field_mapping;
 	}
 
+	/**
+	 * @brief Return the array of clah::Parameter for the debug options of the driver, which can be
+	 * added to a Clah instance.
+	 */
 	auto getClahDebugParameters() {
 		std::vector<std::string> dump_categories = getDebugDumpIROptions() | std::views::keys
 		                                         | std::ranges::to<std::vector<std::string>>();
@@ -155,6 +160,9 @@ namespace debug_options {
 		};
 	}
 
+	/**
+	 * @brief Given parsing result from clah, extract the debug options for the driver.
+	 */
 	DebugOptions getDebugOptionsFromClah(const clah::ParsingResult& parsing_result) {
 		DebugOptions debug_options{
 			.dev_log_categories = parsing_result.getValue<std::vector<std::string>>("dev-logs")
@@ -262,37 +270,6 @@ clah::Clah getClahForMain() {
 					std::cout << "Parsed tree:\n";
 					pst.dprint(std::cout);
 					std::cout << "\n";
-
-					return exit_code;
-				})
-		)
-	    .addSubcommand(
-			clah::Clah("get_hout", "Debug prints hout-unit of a module.")
-				.addPositional(clah::FileParser::make("module"))
-				.setHandler([](const clah::ParsingResult& options) -> int {
-					auto init_result = compiler::driver::initializeTheCompiler(
-						compiler::driver::CompilerModeOfOperationAndOptions::BareMode{
-							.debug_options = debug_options::getDebugOptionsFromClah(options),
-						}
-					);
-					if (init_result.status().isBad()) {
-						compiler::driver::exit();
-						return 1;
-					}
-
-					auto path_to_compile = options.getPositional<fs::File>(0);
-
-					int exit_code = 0;
-
-					// @TODO: error handling
-					using namespace compiler;
-					auto root = frontend::createModuleTreeWithRandomPackageID(path_to_compile);
-					auto hout_units = query::entryPoint<helios::QueryModuleHOUTRecursively>(root)
-		                                  .valueOrPanicMsg("The hout creation failed");
-					query::utils::withContextDo([&](query::Context& ctx) {
-						for (const auto& hout_unit: hout_units)
-							hout_unit->debugPrint(ctx, std::cout);
-					});
 
 					return exit_code;
 				})

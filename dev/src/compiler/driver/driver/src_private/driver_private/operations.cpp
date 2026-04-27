@@ -1,9 +1,8 @@
 #include "operations.hpp"
 
-#include "driver/module_flags/module_flags.hpp"
-#include "driver_private/debug_artifacts.hpp"
-#include "driver_private/lir_module_data.hpp"
-
+#include <driver/module_flags/module_flags.hpp>
+#include <driver_private/debug_artifacts.hpp>
+#include <driver_private/lir_module_data.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/queries/queries.hpp>

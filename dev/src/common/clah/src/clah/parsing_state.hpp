@@ -71,16 +71,11 @@ namespace clah {
 		 * @brief Advance the position by one character. If the end of the current word is reached,
 		 * move to the next word.
 		 */
-		void advanceChar() {
-			inside_word_position++;
-			if (inside_word_position >= words[current_word].size()) {
-				current_word++;
-				inside_word_position = 0;
-			}
-		}
+		void advanceChar();
 
 		/**
-		 * @brief Advances the position until a character satisfying the condition is reached.
+		 * @brief Advances the position until a character satisfying the condition is reached or the
+		 * end of the word is reached.
 		 */
 		size_t advanceUntilInWord(std::predicate<char> auto condition) {
 			size_t count      = 0;
@@ -95,10 +90,7 @@ namespace clah {
 		/**
 		 * @brief Sets the position to the beginning of the next word.
 		 */
-		void advanceWord() {
-			current_word++;
-			inside_word_position = 0;
-		}
+		void advanceWord();
 
 		/**
 		 * @brief Returns the current position in the merged args string. Used for error messages.

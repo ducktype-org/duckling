@@ -2,19 +2,14 @@
 
 #include "exceptions.hpp"
 
-#include <iostream>
-
 /**
  * Basic helper functions.
  */
 namespace {
 	/**
-	 * Merges the arguments provided in a form of C-string array with spaces. If a C-string
-	 * contains a white space, then adds quotes around it.
-	 * @note: It skips first parameter, as it is assumed to be the name of the command.
-	 * @param argc Argument count.
-	 * @param argv Argument vector - the array of C-strings.
-	 * @return Merged vector into a single string.
+	 * Parses command line arguments from argc and argv. Assumes argv[0] is the program name.
+	 * The command line arguments are assumed to be already parsed by the shell,
+	 * so there are no quotes and spaces at the beginning or end of arguments.
 	 */
 	std::vector<std::string> fromArgcv(usize argc, const char* const* argv) {
 		// Merge args with spaces between.
@@ -31,6 +26,11 @@ namespace {
 		return args;
 	}
 
+	/**
+	 * Performs the shell parsing of a command line string. It splits the string by spaces, but
+	 * respects quotes, which is the same parsing as a shell would do. The quotes are not included
+	 * in the resulting arguments.
+	 */
 	std::vector<std::string> fromDirectString(const std::string& args) {
 		std::vector<std::string> result;
 		std::string              current_arg;
@@ -50,19 +50,12 @@ namespace {
 		if (!current_arg.empty()) result.push_back(current_arg);
 		return result;
 	}
-
-	std::string mergeArgs(const std::vector<std::string>& args) {
-		std::string merged_args;
-		for (const auto& arg: args) merged_args += arg + ' ';
-		if (!merged_args.empty()) merged_args.pop_back();
-		return merged_args;
-	}
 }
 
 namespace clah {
 	ParsingState::ParsingState(const std::string& args):
 		  words(fromDirectString(args)),
-		  result("", args) {}
+		  result("", mergedArguments()) {}
 
 	ParsingState::ParsingState(usize argc, const char* const* argv) {
 		words = fromArgcv(argc, argv);
@@ -71,7 +64,7 @@ namespace clah {
 		std::string program_name = argv[0];
 		if (program_name.starts_with("./")) program_name = program_name.substr(2);
 
-		result = clah::ParsingResult(program_name, mergeArgs(words));
+		result = clah::ParsingResult(program_name, mergedArguments());
 	}
 
 	void ParsingState::parsePositional(const clah::ValueParser& parser) {
@@ -99,24 +92,6 @@ namespace clah {
 				if (!findParameterAndParse(params, { c }, name_type))
 					throw clah::exceptions::InvalidParameterName(param_name);
 		}
-	}
-
-	char ParsingState::frontChar() const {
-		if (isEnd()) {
-			throw exceptions::ClahException(
-				"Parser error: frontChar() called with no more arguments"
-			);
-		}
-		return words[current_word][inside_word_position];
-	}
-
-	std::string ParsingState::frontWord() const {
-		if (isEnd()) {
-			throw exceptions::ClahException(
-				"Parser error: frontWord() called with no more arguments"
-			);
-		}
-		return words[current_word].substr(inside_word_position);
 	}
 
 	bool ParsingState::isEnd() const {
@@ -222,5 +197,36 @@ namespace clah {
 			if (i + 1 < this->words.size()) args += ' ';
 		}
 		return args;
+	}
+
+	void ParsingState::advanceChar() {
+		inside_word_position++;
+		if (inside_word_position >= words[current_word].size()) {
+			current_word++;
+			inside_word_position = 0;
+		}
+	}
+
+	void ParsingState::advanceWord() {
+		current_word++;
+		inside_word_position = 0;
+	}
+
+	char ParsingState::frontChar() const {
+		if (isEnd()) {
+			throw exceptions::ClahException(
+				"Parser error: frontChar() called with no more arguments"
+			);
+		}
+		return words[current_word][inside_word_position];
+	}
+
+	std::string ParsingState::frontWord() const {
+		if (isEnd()) {
+			throw exceptions::ClahException(
+				"Parser error: frontWord() called with no more arguments"
+			);
+		}
+		return words[current_word].substr(inside_word_position);
 	}
 }
