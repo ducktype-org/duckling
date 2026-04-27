@@ -2,8 +2,8 @@
 
 namespace query::internal {
 
-	void ActiveGraph::putNode(NodeID node_id) {
-		active_nodes.put(node_id, {});
+	void ActiveGraph::putNode(NodeID node_id, Ref<query::Context> node_context_ref) {
+		active_nodes.put(node_id, { .active_edge = base::Optional<NodeID>(), .node_context_ref = node_context_ref });
 		active_node_count++;
 	}
 
@@ -19,25 +19,22 @@ namespace query::internal {
 	u64 ActiveGraph::size() const { return active_node_count.load(); }
 
 	void ActiveGraph::removeEdge(NodeID node_id) {
-		// Note that there might be some concurrent operations
-		// between following assertion and update,
-		// but the assertion must always pass anyway (when the active graph is used correctly).
-		CORE_ASSERT(
-			!active_nodes.atMaybeCopy(node_id).value().active_edge.empty(),
-			"Removing edge for node that does not have an active edge"
-		);
-		active_nodes.update(node_id, {});
+		// This will panic, on setting edge for node that does not exist, this is the expected behavior.
+		active_nodes.callOn(node_id, [](Ref<ActiveData> data_ref) {
+			CORE_ASSERT(data_ref->active_edge.has_value(), "Removing edge for node that does not have an active edge");
+			data_ref->active_edge.reset();
+		});
 	}
 
 	void ActiveGraph::setEdge(NodeID node_id, NodeID edge) {
-		// Note that there might be some concurrent operations
-		// between following assertion and update,
-		// but the assertion must always pass anyway (when the active graph is used correctly).
-		CORE_ASSERT(
-			active_nodes.atMaybeCopy(node_id).value().active_edge.empty(),
-			"Setting edge for node that already has an active edge"
-		);
-		active_nodes.update(node_id, { edge });
+		// This will panic, on setting edge for node that does not exist, this is the expected behavior.
+		active_nodes.callOn(node_id, [edge](Ref<ActiveData> data_ref) {
+			CORE_ASSERT(
+				data_ref->active_edge.empty(),
+				"Setting edge for node that already has an active edge"
+			);
+			data_ref->active_edge = edge;
+		});
 	}
 
 	base::Optional<NodeID> ActiveGraph::walk(NodeID node_id) const {
@@ -73,18 +70,18 @@ namespace query::internal {
 		// as no nodes can be removed from the graph until their active edges
 		// are "computed" and removed.
 
-		std::vector<NodeID> cycle_nodes;
+		std::vector<QueryCycle::NodeCycleInfo> cycle_nodes;
 		bool                is_the_initial_node_on_the_cycle = false;
 
 		NodeID cycle_start = current_node_slow.value();
-		cycle_nodes.push_back(cycle_start);
+		cycle_nodes.push_back({ .node_id = cycle_start, .node_context_ref = active_nodes.atMaybeCopy(cycle_start).value().node_context_ref });
 		if (cycle_start == node_id) is_the_initial_node_on_the_cycle = true;
 
-		NodeID walker = walk(cycle_start).value();
-		while (walker != cycle_start) {
-			cycle_nodes.push_back(walker);
-			if (walker == node_id) is_the_initial_node_on_the_cycle = true;
-			walker = walk(walker).value();
+		auto walk_data = cycleWalk(cycle_start).value();
+		while (walk_data.node_id != cycle_start) {
+			cycle_nodes.push_back(walk_data);
+			if (walk_data.node_id == node_id) is_the_initial_node_on_the_cycle = true;
+			walk_data = cycleWalk(walk_data.node_id).value();
 		}
 
 		if (!is_the_initial_node_on_the_cycle) return {};
