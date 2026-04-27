@@ -1,6 +1,7 @@
 #pragma once
 
 #include <diagnostic_interactive/logger.hpp>
+#include <diagnostic_interactive/stable_position.hpp>
 
 #include <base/misc/shared_view.hpp>
 
@@ -52,7 +53,7 @@ namespace tokenizer {
 		/**
 		 * @brief Construct a new TokenSource as a macro with parent position.
 		 */
-		explicit TokenSource(dia::SourcePosition parent, std::string_view contents);
+		explicit TokenSource(dia_int::StablePosition parent, std::string_view contents);
 
 		template<class... Ts>
 		friend Box<TokenSource> makeTokenSource(Ts&&... args);

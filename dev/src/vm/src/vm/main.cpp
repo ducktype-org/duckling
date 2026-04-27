@@ -44,7 +44,7 @@ clah::Clah getVmClah() {
 				logger::enable_dev_logs = true;
 				logger::enableDevCategory(logger::DevLogCategories::DVM);
 				logger::enableDevCategory(logger::DevLogCategories::DVMDetails);
-                logger::setDevLogOutputStreamCurrentDate();
+				logger::setDevLogOutputStreamCurrentDate();
 			}
 		})
 #endif
