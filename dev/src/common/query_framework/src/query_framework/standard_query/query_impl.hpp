@@ -111,7 +111,7 @@ namespace query::internal {
 		// actual cycle checks are done in ctx.query
 		// @TODO: #1887 might want to put it under one more layer of abstraction:
 		ContextAccess::getState()->addGraphNode(node_id);
-		ContextAccess::getState()->getActiveGraph()->putNode(node_id);
+		ContextAccess::getState()->getActiveGraph()->putNode(node_id, &context);
 		CORE_DEV_LOG(Query, "[QUERY \"", QueryIntType::QUERY_DATA.name, "\"]: Calculating.\n");
 
 		// EPILOG
@@ -293,7 +293,7 @@ namespace query::internal {
 		std::is_same_v<std::invoke_result_t<decltype(type::load), type::KHash>, type::LoadResult>,                                       \
 		"Bad load result."                                                                                                               \
 	);                                                                                                                                   \
-	static_assert(type::QueryType::QUERY_DATA.verify(), "Query data is inconsistent.");                                                  \
+	static_assert(type::QueryType::QUERY_DATA.verify().isOk(), "Query data is inconsistent.");                                                  \
 	static_assert(                                                                                                                       \
 		LAZY_IMPLIES(type::QueryType::QUERY_DATA.usesUnstableHashing(), ::query::HasUnstablePerfectHash<type::QKey>),                    \
 		"queryUnstablePerfectHash must be implemented and return u64 or Bit256"                                                          \
