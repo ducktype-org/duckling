@@ -10,10 +10,10 @@
 
 LLVM_INCLUDE_BEGIN()
 
-#include <llvm/IR/Module.h>
-#include <llvm/IR/LLVMContext.h>
-#include <llvm/IR/DerivedTypes.h>
 #include <llvm/ExecutionEngine/Orc/LLJIT.h>
+#include <llvm/IR/DerivedTypes.h>
+#include <llvm/IR/LLVMContext.h>
+#include <llvm/IR/Module.h>
 #include <llvm/Support/Error.h>
 
 LLVM_INCLUDE_END()

@@ -13,15 +13,15 @@
 #include <unordered_set>
 
 LLVM_INCLUDE_BEGIN()
-#include <llvm/Support/TargetSelect.h>
 #include <llvm/Demangle/Demangle.h>
-#include <llvm/IR/Module.h>
-#include <llvm/IR/LLVMContext.h>
+#include <llvm/ExecutionEngine/Orc/Core.h>
+#include <llvm/ExecutionEngine/Orc/LLJIT.h>
 #include <llvm/IR/Function.h>
 #include <llvm/IR/GlobalValue.h>
+#include <llvm/IR/LLVMContext.h>
+#include <llvm/IR/Module.h>
 #include <llvm/Support/Error.h>
-#include <llvm/ExecutionEngine/Orc/LLJIT.h>
-#include <llvm/ExecutionEngine/Orc/Core.h>
+#include <llvm/Support/TargetSelect.h>
 #include <llvm/Transforms/Utils/Cloning.h>
 #include <llvm/Transforms/Utils/ValueMapper.h>
 
@@ -40,10 +40,11 @@ std::string extractFunctionName(const std::string& full) {
 
 	return full.substr(start, paren_pos - start);
 }
+
 /**
  * @brief Find all opcodes functions in module and creates map: opcode -> mangled name.
  */
-std::unordered_map<vm::low::MicroOpcode, std::string>FillLfuncNameMap(Module& module){
+std::unordered_map<vm::low::MicroOpcode, std::string> FillLfuncNameMap(Module& module) {
 	std::unordered_map<vm::low::MicroOpcode, std::string> lfunc_name_map;
 
 	for (auto& f: module.functions()) {
@@ -67,7 +68,13 @@ std::unordered_map<vm::low::MicroOpcode, std::string>FillLfuncNameMap(Module& mo
  * @brief Clones module corresponding to each opcodes and one with global data
  * to preserve them for future cloning.
  */
-void cloneOpcodesModules(const std::unordered_set<std::string>& name_set, Module& module, LLJIT& lljit_instance, ThreadSafeContext& g_context, ExitOnError& exit_on_err){
+void cloneOpcodesModules(
+	const std::unordered_set<std::string>& name_set,
+	Module&                                module,
+	LLJIT&                                 lljit_instance,
+	ThreadSafeContext&                     g_context,
+	ExitOnError&                           exit_on_err
+) {
 	auto globals_filter = [&](const llvm::GlobalValue* gv) -> bool {
 		return !name_set.contains(gv->getName().str());
 	};
@@ -157,13 +164,12 @@ LlvmData init_llvm_jit() {
 
 	auto lfunc_name_map = FillLfuncNameMap(*g_module);
 
-	std::unordered_set<std::string> name_set; // Hashset of all mangled names for fast lookup.
-	for (const auto& [k, v] : lfunc_name_map)
-		name_set.insert(v);
+	std::unordered_set<std::string> name_set;  // Hashset of all mangled names for fast lookup.
+	for (const auto& [k, v]: lfunc_name_map) name_set.insert(v);
 
 	auto g_context = std::make_unique<ThreadSafeContext>(std::move(initial_context));
 
-	cloneOpcodesModules(name_set,*g_module, *lljit_instance, *g_context, exit_on_err);
+	cloneOpcodesModules(name_set, *g_module, *lljit_instance, *g_context, exit_on_err);
 
 	auto types = findOrCreateTypes(g_context);
 
@@ -181,7 +187,7 @@ const LlvmData& llvmData() {
 }
 
 base::Optional<std::string> LlvmData::GetFunName(const vm::low::MicroOpcode& fun) const {
-	auto  fun_name_iter = lfunc_name_map.find(fun);
+	auto fun_name_iter = lfunc_name_map.find(fun);
 	if (fun_name_iter != lfunc_name_map.end()) return fun_name_iter->second;
 	return {};
 }

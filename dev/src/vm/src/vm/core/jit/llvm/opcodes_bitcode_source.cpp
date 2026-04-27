@@ -9,12 +9,12 @@
 #include <cstring>
 
 LLVM_INCLUDE_BEGIN()
+#include <llvm/ADT/StringRef.h>
 #include <llvm/Bitcode/BitcodeReader.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
 #include <llvm/Support/Error.h>
 #include <llvm/Support/MemoryBuffer.h>
-#include <llvm/ADT/StringRef.h>
 LLVM_INCLUDE_END()
 
 using namespace llvm;
@@ -33,6 +33,7 @@ PUSH_DIAGNOSTIC ALLOW_EXTENSIONS inline constexpr char OPCODES[] = {
 #endif
 };
 POP_DIAGNOSTIC
+
 // NOLINTEND
 
 std::unique_ptr<Module> parseOpcodesBitcode(LLVMContext& context) {
