@@ -2,38 +2,66 @@
 
 #include <frontend/module_tree/module_id.hpp>
 
+#include "base/except/exceptions.hpp"
 #include <base/collections/optional.hpp>
+#include "string_id/string_id.hpp"
 
 #include <vector>
 
 namespace global_state {
 
+
+	/**
+	 * Information about a package dependency.
+	 */
+	struct PackageDependencyInfo {
+		/**
+		 * The ID of the package.
+		 */
+		base::StrID package_id;
+		/**
+		 * The alias for the package.
+		 * Alias is the actual name used in imports and references to the package. 
+		 * It can be the same as the package ID or different.
+		 */
+		base::StrID alias; 
+	};
+
+
 	/**
 	 * Global state for managing package information.
 	 */
 	struct PackageInfo {
+		/**
+		 * The root module of the package.
+		 * @note The package_id is stored in the root_module ModuleID
+		 */
 		compiler::frontend::ModuleID              root_module;
-		std::vector<compiler::frontend::ModuleID> dependencies;
+
+		/**
+		 * Version of the package. It migh be used in the future as a global define.
+		 * @note This field is currently unused in the actual compilation process.
+		 */
+		base::StrID version;
+
+		/**
+		 * A list of features supported by the package.
+		 * Features are flags that can be used in the code for conditional compilation.
+		 * @note This field is currently unused in the actual compilation process.
+		 */
+		std::vector<base::StrID> package_features;
+
+		/**
+		 * The list of dependencies for the package.
+		 * Dependencies can be imported in a code like other local modules.
+		 */
+		std::vector<PackageDependencyInfo> dependencies;
 	};
 
 	/**
 	 * Returns the list of registered top-level packages.
 	 */
 	const std::vector<PackageInfo>& getPackages();
-
-	/**
-	 * @brief Returns package info for a package identified by its root module.
-	 * The provided module id must point to a root module (module without a parent).
-	 * If there are no packages or the root module is not found, returns empty optional (null).
-	 */
-	base::Optional<PackageInfo> getPackageInfoForRootModule(compiler::frontend::ModuleID module_id);
-
-	/**
-	 * @brief Returns all registered package root module IDs, including dependencies,
-	 * sorted and deduplicated.
-	 */
-	std::vector<compiler::frontend::ModuleID> getAllPackagesWithDependenciesRootModulesSortedDeduplicated(
-	);
 
 	namespace setters {
 		/**

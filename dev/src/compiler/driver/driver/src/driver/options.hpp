@@ -58,37 +58,6 @@ namespace compiler::driver {
 			// bool rm_artifacts_before_compilation = false;
 			// bool rm_artifacts_after_compilation = false;
 		};
-
-		struct PackageInfo final {
-			std::string                 package_name;
-			fs::FilePath                package_path;
-			std::vector<DependencyInfo> dependencies;
-		};
-
-		/**
-		 * @brief Describes a single external dependency of the main package.
-		 */
-		struct DependencyInfo final {
-			struct CompilationStrategy final {
-				/**
-				 * @brief Dependency to be compiled from source within the same duckc
-				 * invocation.
-				 */
-				struct InlineCompilation final {};
-
-				/**
-				 * @brief Dependency is already compiled.
-				 * If compiling to executable, the resulting .a/.o must be passed to the linker via
-				 * --additional-link-options.
-				 */
-				struct Precompiled final {};
-
-				std::variant<InlineCompilation, Precompiled> strategy;
-			};
-
-			PackageInfo         package_info;
-			CompilationStrategy compilation_strategy;
-		};
 	};
 
 	/**
