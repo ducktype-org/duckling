@@ -18,6 +18,7 @@
 #include <query_framework/internal/context_access.hpp>
 #include <query_framework/internal/query_errors.hpp>
 #include <query_framework/internal/query_graph/node_making.hpp>
+#include <query_framework/internal/cycle_handling/cycle_exception.hpp>
 #include <query_framework/q_stats/q_stats.hpp>
 #include <query_framework/query_errors.hpp>
 #include <query_framework/query_int.hpp>
@@ -134,7 +135,19 @@ namespace query::internal {
 			} else {
 				return QueryImplType::store(perfect_hash, QueryImplType::provide(context, key), acd);
 			}
-		} catch (const QueryFailedException& qfe) {
+		} catch (const QueryCycleException& qce) {
+			CORE_DEV_LOG(
+				Query,
+				"[QUERY \"",
+				QueryIntType::QUERY_DATA.name,
+				"\"]: Caught query cycle exception."
+			);
+			CORE_ASSERT(QueryImplType::USES_QRESULT, "Query cycle exception should only be thrown for queries using QResult, as this is the only way to recover from it.");
+
+			
+		}
+		
+		catch (const QueryFailedException& qfe) {
 			CORE_DEV_LOG(
 				Query,
 				"[QUERY \"",

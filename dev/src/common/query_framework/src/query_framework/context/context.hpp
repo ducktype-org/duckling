@@ -49,6 +49,17 @@ namespace query {
 		internal::NodeID my_node;
 		bool             active = true;
 
+		/**
+		 * This is a flag used to determine if it was possible that
+		 * given query invocation was part of a cycle.
+		 * The flag is set to true when:
+		 * - we are calling another query and the cycle-check returns a cycle.
+		 * - we are calling another query and
+		 *
+		 * We use it to only perform heavier cycle checks when it is possible that we are in a cycle.  
+		 */
+		bool maybe_cyclic = false;
+
 		Context(internal::NodeID my_node): my_node(my_node) {}
 		friend struct query::internal::ContextAccess;
 
@@ -176,14 +187,16 @@ namespace query {
 
 			internal::NodeID dep_id = internal::makeNodeID<OthQuery>(key);
 
-			this->active = false;
-			defer({ this->active = true; });
-
 			if constexpr (OthQuery::QUERY_DATA.isInputQuery()) {
 				QueryGraphHandler graph_handler(*this, my_node, dep_id, false);
+				this->active = false;
+				defer({ this->active = true; });
+	
 				return OthQuery::internal_query(key);
 			} else {
 				QueryGraphHandler graph_handler(*this, my_node, dep_id, true);
+				this->active = false;
+				defer({ this->active = true; });
 
 				// note that this will block, until the task is completed
 				main_query_state.getTaskPool()->query(internal::Task{

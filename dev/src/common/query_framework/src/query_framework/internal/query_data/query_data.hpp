@@ -2,6 +2,8 @@
 
 #include <query_framework/utils/query_hash.hpp>
 
+#include <base/types/ok_bad.hpp>
+
 #include <string_view>
 
 namespace query {
@@ -67,9 +69,15 @@ namespace query {
 			/**
 			 * Whether the query implementation should catch  QueryFailedException exception
 			 * thrown from provide() function, and convert it into QResult::Failed() value.
-			 * Relevant only if `uses_qresult` is true, otherwise the tag is ignored.
+			 * Relevant only if `uses_qresult` is true, as otherwise there is no way to recover from the failure.
 			 */
 			bool catch_exceptions_if_using_qresult = true;
+
+			/**
+			 * Whether the query is allowed to be cyclic.
+			 * Relevant only if `uses_qresult` is true, as otherwise there is no way to recover from cycle call.
+			 */
+			bool allow_cycles = true;
 		};
 
 		/**
@@ -137,21 +145,26 @@ namespace query {
 			 * Is run in comptime time in query implementation boilerplate.
 			 */
 			[[nodiscard]]
-			constexpr bool verify() const {
+			constexpr base::OkBad verify() const {
 				if (tags.can_be_loaded_from_disk) {
 					// queries that are cached on disk must use stable hashing:
-					if (tags.used_hashes != UsedHashes::StableHash) return false;
+					if (tags.used_hashes != UsedHashes::StableHash) return base::BAD;
 					// queries that can be loaded from disk must have preserve_in_graph true:
-					if (!tags.preserve_in_graph) return false;
+					if (!tags.preserve_in_graph) return base::BAD;
 				}
 				if (isInputQuery()) {
 					// input queries must use stable hashing:
-					if (tags.used_hashes != UsedHashes::StableHash) return false;
+					if (tags.used_hashes != UsedHashes::StableHash) return base::BAD;
 					// inputs must be preserved on disk:
-					if (!tags.preserve_in_graph) return false;
+					if (!tags.preserve_in_graph) return base::BAD;
 				}
 
-				return true;
+				if (tags.catch_exceptions_if_using_qresult or tags.catch_exceptions_if_using_qresult) {
+					// queries that can fail by an exception must use QResult:
+					if (!tags.uses_qresult) return base::BAD;
+				}
+
+				return base::OK;
 			}
 		};
 	}
