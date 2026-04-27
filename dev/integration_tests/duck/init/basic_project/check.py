@@ -15,7 +15,11 @@ quackconfig = """metadata:
 """
 
 real_qp = (root / "quackconfig.yaml").read_text()
-assert_eq(quackconfig, real_qp)
 
-check_src_from_root(root)
-check_gitignore_from_root(root)
+try:
+  assert_eq(quackconfig, real_qp)
+
+  check_src_from_root(root)
+  check_gitignore_from_root(root)
+finally:
+  shutil.rmtree(root)

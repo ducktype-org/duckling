@@ -1,4 +1,4 @@
-PostCase: "python3 check.py; s1=$?; rm -r foo; s2=$?; [ $s1 -eq 0 ] && [ $s2 -eq 0 ]"
+PostCase: python3 check.py
 
 Tests:
   init:

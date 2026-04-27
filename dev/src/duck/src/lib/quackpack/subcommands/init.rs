@@ -211,6 +211,9 @@ fn init_git(root_path: &Path) -> QuackResult<()> {
     Repository::init_opts(root_path, &init_opts)
         .context("failed to initialize a git repository")?;
     let gitignore_file = root_path.join(".gitignore");
+    if gitignore_file.exists() {
+        return Ok(());
+    }
     gitignore_file
         .touch()
         .context("failed to create a `.gitignore` file")?;
