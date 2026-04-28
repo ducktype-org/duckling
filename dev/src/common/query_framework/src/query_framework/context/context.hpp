@@ -129,7 +129,7 @@ namespace query {
 						// Log cyclic diagnostic with cycle information.
 						// PR: move it into some .cpp
 
-						this_context.logInt(makeBox<dia_int::PlaceholderHeaderError>(
+						this_context.logInt(makeBox<dia_int::PlaceholderError>(
 							base::strConcat(
 								"Query cycle detected involving query node:",
 								caller.q_id.asInt(),

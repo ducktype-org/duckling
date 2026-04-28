@@ -13,7 +13,7 @@ namespace compiler::helios {
 		}
 
 	public:
-		SingleStmtFunctionMustBeExprError(dia::SourcePosition source_position):
+		SingleStmtFunctionMustBeExprError(dia_int::StablePosition source_position):
 			  MessageWithCodeFragmentAndCause(source_position) {}
 	};
 
