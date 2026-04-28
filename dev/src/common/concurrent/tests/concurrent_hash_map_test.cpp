@@ -90,7 +90,7 @@ public:
 		TESTER_ADD_TEST(multiThreadedMaybeCallOnTest<1>);
 		TESTER_ADD_TEST(multiThreadedMaybeCallOnTest<2>);
 		TESTER_ADD_TEST(multiThreadedMaybeCallOnTest<4>);
-		
+
 		TESTER_ADD_TEST(multiThreadedCallOnTest<1>);
 		TESTER_ADD_TEST(multiThreadedCallOnTest<2>);
 		TESTER_ADD_TEST(multiThreadedCallOnTest<4>);

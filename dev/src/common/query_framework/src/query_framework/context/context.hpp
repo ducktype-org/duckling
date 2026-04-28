@@ -12,11 +12,11 @@
 
 #include <base/extend_cpp/defer.hpp>
 
+#include <query_framework/internal/cycle_handling/cycle_exception.hpp>
 #include <query_framework/internal/query_graph/node_id.hpp>
 #include <query_framework/internal/query_graph/node_making.hpp>  // IWYU pragma: export
 #include <query_framework/internal/query_graph/query_state.hpp>
 #include <query_framework/internal/query_metadata/metadata_storage.hpp>
-#include <query_framework/internal/cycle_handling/cycle_exception.hpp>
 
 namespace query {
 
@@ -51,9 +51,9 @@ namespace query {
 		bool             active = true;
 
 		/**
-		 * ...  
-		 * @note This has to be atomic, as multiple workers can catch the cycle at the same time, 
-		 * and write to it concurrently. 
+		 * ...
+		 * @note This has to be atomic, as multiple workers can catch the cycle at the same time,
+		 * and write to it concurrently.
 		 */
 		std::atomic<bool> is_cyclic_node = false;
 
@@ -82,10 +82,7 @@ namespace query {
 			internal::NodeID callee;
 			bool             enable_active_graph_operations;
 
-		
-			void deinitActiveGraph() {
-				main_query_state.getActiveGraph()->removeEdge(caller);
-			}
+			void deinitActiveGraph() { main_query_state.getActiveGraph()->removeEdge(caller); }
 
 
 		public:
@@ -122,7 +119,8 @@ namespace query {
 
 						for (auto node_info: maybe_cycle.value().cycle_nodes) {
 							// This is a critical part of the cycle handling.
-							// We mark all nodes on the cycle as cyclic, so that query implementations can react to that if needed.
+							// We mark all nodes on the cycle as cyclic, so that query
+							// implementations can react to that if needed.
 							node_info.node_context_ref->is_cyclic_node = true;
 						}
 
@@ -159,7 +157,8 @@ namespace query {
 						// after a throw here.
 						deinitActiveGraph();
 
-						// Interrupt the query execution (i.e. provide function) by throwing the cycle exception. 
+						// Interrupt the query execution (i.e. provide function) by throwing the
+						// cycle exception.
 						throw internal::QueryCycleException();
 					}
 				}
@@ -202,7 +201,7 @@ namespace query {
 				QueryGraphHandler graph_handler(*this, my_node, dep_id, false);
 				this->active = false;
 				defer({ this->active = true; });
-	
+
 				return OthQuery::internal_query(key);
 			} else {
 				QueryGraphHandler graph_handler(*this, my_node, dep_id, true);
@@ -217,12 +216,10 @@ namespace query {
 
 				// We would like to "throw" here, after the return.
 				// i.e.: if (is_cyclic_node) throw QueryCycleException();
-				// but we can't do it in destructor, 
+				// but we can't do it in destructor,
 				// For now for testing we just do:
 				auto result = OthQuery::internal_load(dep_id.hash.val);
-				if (is_cyclic_node) {
-					throw internal::QueryCycleException();
-				}
+				if (is_cyclic_node) throw internal::QueryCycleException();
 				return result;
 			}
 		}
@@ -260,7 +257,6 @@ namespace query {
 		 */
 		template<typename OthQuery>
 		auto await(internal::TaskHandle& handle) {
-
 			// @TODO PR: Awaiting issue and interrupts don't go well together.
 
 

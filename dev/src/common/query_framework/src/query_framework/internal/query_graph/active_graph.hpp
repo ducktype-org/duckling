@@ -5,8 +5,8 @@
 #include <concurrent/base/collections/hash_map.hpp>
 
 #include <base/collections/optional.hpp>
-#include <query_framework/context/context_fd.hpp>
 
+#include <query_framework/context/context_fd.hpp>
 
 namespace query::internal {
 	/**
@@ -22,16 +22,16 @@ namespace query::internal {
 	 */
 	class ActiveGraph final {
 	public:
-
 		/**
 		 * Helper struct representing a found query cycle.
 		 * See cycleCheck() for more details.
 		 */
 		struct QueryCycle final {
 			struct NodeCycleInfo final {
-				NodeID node_id;
+				NodeID              node_id;
 				Ref<query::Context> node_context_ref;
 			};
+
 			std::vector<NodeCycleInfo> cycle_nodes;
 		};
 
@@ -61,7 +61,8 @@ namespace query::internal {
 		base::Optional<NodeID> walk(NodeID node_id) const;
 
 		/**
-		 * Same as walk, but return full info needed to construct a QueryCycle in case of cycle detection.
+		 * Same as walk, but return full info needed to construct a QueryCycle in case of cycle
+		 * detection.
 		 */
 		base::Optional<QueryCycle::NodeCycleInfo> cycleWalk(NodeID node_id) const;
 
