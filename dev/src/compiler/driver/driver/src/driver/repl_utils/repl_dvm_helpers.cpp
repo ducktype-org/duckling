@@ -162,6 +162,9 @@ namespace compiler::repl {
 	std::expected<std::string, std::string> executeFunctionAndCaptureResult(
 		vm::PID pid, std::string_view func_name, const tsh::SymbolType<>& return_type
 	) {
+		if (return_type.getRefKind() != tsh::ReferenceKind::Direct)
+			return std::unexpected("Unsupported return type for REPL: " + return_type.toString());
+
 		std::string type_str = return_type.getType().toString();
 
 		if (type_str == "void") {
