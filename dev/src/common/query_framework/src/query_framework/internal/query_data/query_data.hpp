@@ -69,17 +69,13 @@ namespace query {
 			/**
 			 * Whether the query implementation should catch  QueryFailedException exception
 			 * thrown from provide() function, and convert it into QResult::Failed() value.
-			 * Relevant only if `uses_qresult` is true, as otherwise there is no way to recover from
-			 the failure.
-			 // PR ROLLBACK
+			 * Relevant only if `uses_qresult` is true, otherwise the tag is ignored.
 			 */
 			bool catch_exceptions_if_using_qresult = true;
 
 			/**
 			 * Whether the query is allowed to be cyclic.
-			 * Relevant only if `uses_qresult` is true, as otherwise there is no way to recover from
-			 cycle call.
-			 // PR ROLLBACK, we want to ignore, otherwise we have to specify it everywhere
+			 * Relevant only if `uses_qresult` is true, otherwise the tag is ignored.
 			 */
 			bool allow_cycles = true;
 		};
@@ -162,12 +158,6 @@ namespace query {
 					// inputs must be preserved on disk:
 					if (!tags.preserve_in_graph) return base::BAD;
 				}
-
-				// if (tags.catch_exceptions_if_using_qresult or
-				// tags.catch_exceptions_if_using_qresult) {
-				// 	// queries that can fail by an exception must use QResult:
-				// 	if (!tags.uses_qresult) return base::BAD;
-				// }
 
 				return base::OK;
 			}

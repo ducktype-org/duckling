@@ -51,7 +51,9 @@ namespace query {
 		bool             active = true;
 
 		/**
-		 * ...
+		 * A flag indicating that the query node associated with this context is part of a cycle in the query graph.
+		 * This is set by the cycle detection logic in QueryGraphHandler when a cycle is detected, and can be used by query implementations to react to cycles if needed.
+		 *
 		 * @note This has to be atomic, as multiple workers can catch the cycle at the same time,
 		 * and write to it concurrently.
 		 */
@@ -82,8 +84,11 @@ namespace query {
 			internal::NodeID callee;
 			bool             enable_active_graph_operations;
 
+			/** 
+			 * Helper method used to deduplicate logic related to
+			 * active graph operations in the destructor. 
+			 */
 			void deinitActiveGraph() { main_query_state.getActiveGraph()->removeEdge(caller); }
-
 
 		public:
 			QueryGraphHandler(
@@ -113,9 +118,7 @@ namespace query {
 					auto maybe_cycle = main_query_state.getActiveGraph()->cycleCheck(caller);
 
 					if (maybe_cycle.has_value()) {
-						// we hit a cycle!
-						// for now just panic
-						// @TODO: #1888 change that
+						// We hit a cycle!
 
 						for (auto node_info: maybe_cycle.value().cycle_nodes) {
 							// This is a critical part of the cycle handling.
@@ -125,7 +128,7 @@ namespace query {
 						}
 
 						// Log cyclic diagnostic with cycle information.
-						// PR: move it into some .cpp
+						// @TODO: #2615 move and improve this diagnostic.
 
 						this_context.logInt(makeBox<dia_int::PlaceholderError>(
 							base::strConcat(
