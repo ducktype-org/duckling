@@ -1,4 +1,4 @@
-Run: "@{build_dir}/bin//duckc repl"
+Run: "@{duckc_path} repl"
 
 prompt: "duckling> "
 beginning: |
@@ -10,8 +10,8 @@ end: "\nGoodbye!\n"
 instruction_prompt: "Instruction executed.\n"
 
 SubDirs:
-  - declarations
   - fundamentals
   - intermediate_statements
+  - declarations
   - script_loading
   - variable_assignment

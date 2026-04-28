@@ -44,6 +44,10 @@ namespace compiler::repl {
 		 * Statements are executed in source order and become part of the current session state.
 		 * This means loaded definitions and variables can be used by subsequent interactive input.
 		 *
+		 * @note The input is accepted as raw text so `/load` command parsing can report
+		 * missing/invalid arguments consistently; filesystem operations are performed using
+		 * `fs::FilePath` after trimming and validation.
+		 *
 		 * @note Loading is non-transactional: execution stops at the first error and statements
 		 * that finished successfully before that error remain applied in the session.
 		 *
@@ -219,13 +223,16 @@ namespace compiler::repl {
 		 */
 		base::Optional<backend_vm::ReplLoweringContext> m_lowering_context;
 		/**
-		 * Suppresses REPL echo while a preload script is being loaded into the session.
+		 * Suppress per-statement REPL feedback while ingesting a script into session state.
 		 *
-		 * This prevents per-statement REPL echo/bookkeeping output during `/load` and
-		 * `duckc repl <script>`, while still allowing explicit status messages emitted by
-		 * the load flow itself.
+		 * When true, REPL bookkeeping messages like "=> <value>" and
+		 * "Instruction executed." are hidden for statements executed by `loadScriptFile`.
+		 *
+		 * @note This flag is only enabled inside script-loading flow (`/load` and
+		 *       `duckc repl <script>` preload). Standard interactive REPL input keeps
+		 *       normal feedback.
 		 */
-		bool m_suppress_output = false;
+		bool m_suppress_repl_feedback_during_script_load = false;
 	};
 
 }  // namespace compiler::repl

@@ -1,13 +1,14 @@
 # Tests for script loading in REPL via /load and preload argument.
 
-script-basic: "@{build_dir}/../integration_tests/repl/script_loading/scripts/basic_expr.ds"
-script-if-flow: "@{build_dir}/../integration_tests/repl/script_loading/scripts/if_flow.ds"
-script-mixed: "@{build_dir}/../integration_tests/repl/script_loading/scripts/mixed.ds"
-script-print-burst: "@{build_dir}/../integration_tests/repl/script_loading/scripts/print_burst.ds"
-script-nested-functions: "@{build_dir}/../integration_tests/repl/script_loading/scripts/nested_functions.ds"
-script-silent-state: "@{build_dir}/../integration_tests/repl/script_loading/scripts/silent_state.ds"
-script-silent-functions: "@{build_dir}/../integration_tests/repl/script_loading/scripts/silent_functions.ds"
-script-nasty: "@{build_dir}/../integration_tests/repl/script_loading/scripts/nasty.ds"
+# These run from subdirectories of script_loading, hence the "../".
+script-basic: "../scripts/basic_expr.ds"
+script-if-flow: "../scripts/if_flow.ds"
+script-mixed: "../scripts/mixed.ds"
+script-print-burst: "../scripts/print_burst.ds"
+script-nested-functions: "../scripts/nested_functions.ds"
+script-silent-state: "../scripts/silent_state.ds"
+script-silent-functions: "../scripts/silent_functions.ds"
+script-nasty: "../scripts/nasty.ds"
 
 SubDirs:
   - load_command
