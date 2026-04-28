@@ -22,7 +22,7 @@ namespace vm::jit::cf {
 		 * @param cfg Original control-flow graph.
 		 * @param members Block IDs that are part of the loop.
 		 */
-		Loop(BlockID start_block, const ControlFlowGraph& cfg, std::vector<BlockID> members):
+		Loop(BlockID start_block, const ControlFlowGraph& cfg, const std::vector<BlockID>& members):
 			  start_block(start_block),
 			  loop_cfg(cfg.subgraph(members)) {}
 
@@ -51,7 +51,7 @@ namespace vm::jit::cf {
 			std::vector<u32>     last_visited(cfg.size(), 0);
 			u32                  timestamp = 0;
 			std::vector<BlockID> stack;
-			usize                stack_ptr;
+			usize                stack_ptr = 0;
 
 			for (BlockID bid = 0; bid < cfg.size(); ++bid) {
 				stack.clear();
@@ -69,8 +69,7 @@ namespace vm::jit::cf {
 					BlockID current = stack[stack_ptr++];
 					if (current == bid) continue;
 
-					for (usize i = 0; i < predecessors[current].size(); ++i) {
-						BlockID next = predecessors[current][i];
+					for (const auto& next: predecessors[current]) {
 						if (last_visited[next] < timestamp) {
 							stack.push_back(next);
 							last_visited[next] = timestamp;

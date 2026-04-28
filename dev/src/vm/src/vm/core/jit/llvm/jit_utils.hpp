@@ -35,9 +35,9 @@ void externalizeAllGlobalValues(llvm::Module& module);
  * here just to satisfy LLVM's API.
  */
 void cloneAndRegisterModule(
-	llvm::Module&                                       src,
-	llvm::orc::LLJIT&                                   lljit,
-	const std::function<bool(const llvm::GlobalValue*)> filter,
-	llvm::orc::ThreadSafeContext&                       tsctx,
-	llvm::ExitOnError&                                  exit_on_err
+	llvm::Module&                                        src,
+	llvm::orc::LLJIT&                                    lljit,
+	const std::function<bool(const llvm::GlobalValue*)>& filter,
+	llvm::orc::ThreadSafeContext&                        tsctx,
+	llvm::ExitOnError&                                   exit_on_err
 );

@@ -104,7 +104,7 @@ namespace vm::jit {
 				default:
 					if (isOpcodeNonExecutable(opcode)) continue;
 					std::string opfun_name;
-					match_optional(llvm_data.GetFunName(opcode)) {
+					match_optional(llvm_data.getFunName(opcode)) {
 						opt_some(op_name) {
 							opfun_name = op_name;
 							used_opfuns.insert(opfun_name);

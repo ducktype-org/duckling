@@ -100,7 +100,7 @@ namespace vm::jit::cf {
 		ControlFlowGraph subgraph;
 		subgraph.blocks.reserve(block_ids.size());
 
-		BlockID dummy_block_id = static_cast<BlockID>(subgraph.blocks.size());
+		auto dummy_block_id = static_cast<BlockID>(subgraph.blocks.size());
 
 		std::vector<BlockID> old_to_new(blocks.size() + 1, dummy_block_id);
 
@@ -110,8 +110,8 @@ namespace vm::jit::cf {
 				old_to_new[old_id] == dummy_block_id, "Duplicate block ID in subgraph request"
 			);
 
-			const BlockID new_id = static_cast<BlockID>(subgraph.blocks.size());
-			old_to_new[old_id]   = new_id;
+			const auto new_id  = static_cast<BlockID>(subgraph.blocks.size());
+			old_to_new[old_id] = new_id;
 
 			const BasicBlock& src = blocks[old_id];
 			subgraph.blocks.emplace_back(new_id, src.start, src.end);

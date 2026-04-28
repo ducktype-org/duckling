@@ -141,7 +141,7 @@ LlvmData::LlvmTypes findOrCreateTypes(std::unique_ptr<ThreadSafeContext>& g_cont
 		                        .opfun            = opfun_ty };
 }
 
-LlvmData init_llvm_jit() {
+LlvmData initLlvmJit() {
 	llvm::InitializeNativeTarget();
 	llvm::InitializeNativeTargetAsmPrinter();
 	llvm::InitializeNativeTargetAsmParser();
@@ -178,15 +178,15 @@ LlvmData init_llvm_jit() {
 		             .lljit_instance = std::move(lljit_instance),
 		             .exit_on_err    = std::move(exit_on_err),
 		             .lfunc_name_map = std::move(lfunc_name_map),
-		             .types          = std::move(types) };
+		             .types          = types };
 }
 
 const LlvmData& llvmData() {
-	static LlvmData llvm_data = init_llvm_jit();
+	static LlvmData llvm_data = initLlvmJit();
 	return llvm_data;
 }
 
-base::Optional<std::string> LlvmData::GetFunName(const vm::low::MicroOpcode& fun) const {
+base::Optional<std::string> LlvmData::getFunName(const vm::low::MicroOpcode& fun) const {
 	auto fun_name_iter = lfunc_name_map.find(fun);
 	if (fun_name_iter != lfunc_name_map.end()) return fun_name_iter->second;
 	return {};

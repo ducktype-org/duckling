@@ -56,7 +56,7 @@ struct LlvmData {
 	/**
 	 * @brief Returns mangled name of opcode if it is in module.
 	 */
-	base::Optional<std::string> GetFunName(const vm::low::MicroOpcode& fun) const;
+	base::Optional<std::string> getFunName(const vm::low::MicroOpcode& fun) const;
 };
 
 /**
