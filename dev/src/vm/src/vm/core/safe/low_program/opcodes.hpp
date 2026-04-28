@@ -90,7 +90,6 @@ namespace vm::low {
 	 * @brief Returns whether opcode is not executable like ext_*.
 	 */
 	constexpr bool isOpcodeNonExecutable(const vm::low::MicroOpcode& opcode) {
-		return std::find(NON_EXEC_OPCODES.begin(), NON_EXEC_OPCODES.end(), opcode)
-		    != NON_EXEC_OPCODES.end();
+		return std::ranges::find(NON_EXEC_OPCODES, opcode) != NON_EXEC_OPCODES.end();
 	}
 }
