@@ -191,7 +191,7 @@ namespace concurrent {
 			WithShardLock lock(*this, keyToShard(key));
 
 			auto          result
-				= shards[lock.shard_index].insert({std::forward<K>(key), std::forward<D>(value)});
+				= shards[lock.shard_index].try_emplace(std::forward<K>(key), std::forward<D>(value));
             if (!result.second) {
                 return nullptr;
             }
@@ -208,24 +208,26 @@ namespace concurrent {
 			shards[lock.shard_index].insert_or_assign({key, std::forward<D>(value)});
 		}
 
-		// /**
-		//  * Performs atomically a following sequence:
-		//  * 1. Inserts key->value into the container if key does not exist.
-		//  * 2. Calls f with reference to the value associated with the key.
-		//  * @returns Optional reference to the inserted key-value pair. Reference is empty if key
-		//  * already existed.
-		//  */
-		// template<typename K, typename D = DATA_T, typename Func>
-		// requires std::same_as<std::remove_cvref_t<K>, KEY_T>
-		// MRef<KeyValuePair> maybePutAndUpdate(K&& key, D&& value, Func&& f) RELEASE_NOEXCEPT {
-		// 	WithShardLock lock(*this, keyToShard(key));
+		/**
+		 * Performs atomically a following sequence:
+		 * 1. Inserts key->value into the container if key does not exist.
+		 * 2. Calls f with reference to the value associated with the key.
+		 * @returns Optional reference to the inserted key-value pair. Reference is empty if key
+		 * already existed.
+		 */
+		template<typename K, typename D = DATA_T, typename Func>
+		requires std::same_as<std::remove_cvref_t<K>, KEY_T>
+		MRef<KeyValuePair> maybePutAndUpdate(K&& key, D&& value, Func&& f) RELEASE_NOEXCEPT {
+			WithShardLock lock(*this, keyToShard(key));
 
-		// 	auto inserted = shards[lock.shard_index].maybePutAndUpdate(
-		// 		std::forward<K>(key), std::forward<D>(value), std::forward<Func>(f)
-		// 	);
-		// 	// if (inserted != nullptr) elements_count.fetch_add(1, std::memory_order_relaxed);
-		// 	return inserted;
-		// }
+			auto inserted = shards[lock.shard_index].try_emplace(
+				std::forward<K>(key), std::forward<D>(value)
+			);
+            std::forward<Func>(f)(Ref<DATA_T>(&(*inserted.first).second));
+
+			if (!inserted.second) return nullptr;
+			return &*inserted.first;
+		}
 
 		// /**
 		//  * Calls f with reference to the value associated with the key if the key exists.
@@ -269,42 +271,52 @@ namespace concurrent {
 		// 	return shards[lock.shard_index].atMaybeCopy(key);
 		// }
 
-		// /**
-		//  * Atomically retrieves a reference to the value associated with the given key.
-		//  *
-		//  * @important Usage of the reference must be synchronized externally.
-		//  * For example `map.at(key) = ...` may lead to data races on `=` operator.
-		//  */
-		// [[nodiscard]]
-		// auto atMaybe(const KEY_T& key) RELEASE_NOEXCEPT -> base::Optional<Ref<DATA_T>> {
-		// 	WithShardLock lock(*this, keyToShard(key));
-		// 	return shards[lock.shard_index].atMaybe(key);
-		// }
+		/**
+		 * Atomically retrieves a reference to the value associated with the given key.
+		 *
+		 * @important Usage of the reference must be synchronized externally.
+		 * For example `map.at(key) = ...` may lead to data races on `=` operator.
+		 */
+		[[nodiscard]]
+		base::Optional<Ref<DATA_T>> atMaybe(const KEY_T& key) RELEASE_NOEXCEPT {
+			WithShardLock lock(*this, keyToShard(key));
+			auto iter = shards[lock.shard_index].find(key);
+            if (iter == shards[lock.shard_index].end()) {
+                return {};
+            } else {
+                return &(*iter).second;
+            }
+		}
 
-		// auto atMaybe(const KEY_T& key) const RELEASE_NOEXCEPT -> base::Optional<CRef<DATA_T>> {
-		// 	WithShardLock lock(*this, keyToShard(key));
-		// 	return shards[lock.shard_index].atMaybe(key);
-		// }
+		auto atMaybe(const KEY_T& key) const RELEASE_NOEXCEPT -> base::Optional<CRef<DATA_T>> {
+			WithShardLock lock(*this, keyToShard(key));
+			auto iter = shards[lock.shard_index].find(key);
+            if (iter == shards[lock.shard_index].end()) {
+                return {};
+            } else {
+                return &(*iter).second;
+            }
+		}
 
 		// [[nodiscard]]
 		// auto at(const KEY_T& key) RELEASE_NOEXCEPT -> Ref<DATA_T> {
 		// 	return atMaybe(key).value();
 		// }
 
-		// /**
-		//  * Atomically updates the value associated with the given key.
-		//  */
-		// template<typename K = KEY_T, typename D = DATA_T>
-		// void update(K&& key, D&& value) RELEASE_NOEXCEPT {
-		// 	WithShardLock lock(*this, keyToShard(key));
-		// 	shards[lock.shard_index][std::forward<K>(key)] = std::forward<D>(value);
-		// }
+		/**
+		 * Atomically updates the value associated with the given key.
+		 */
+		template<typename K = KEY_T, typename D = DATA_T>
+		void update(K&& key, D&& value) RELEASE_NOEXCEPT {
+			WithShardLock lock(*this, keyToShard(key));
+			shards[lock.shard_index][std::forward<K>(key)] = std::forward<D>(value);
+		}
 
-		// [[nodiscard]]
-		// auto contains(const KEY_T& key) const RELEASE_NOEXCEPT {
-		// 	WithShardLock lock(*this, keyToShard(key));
-		// 	return shards[lock.shard_index].contains(key);
-		// }
+		[[nodiscard]]
+		auto contains(const KEY_T& key) const RELEASE_NOEXCEPT {
+			WithShardLock lock(*this, keyToShard(key));
+			return shards[lock.shard_index].contains(key);
+		}
 
 		// /**
 		//  * Atomically erases the given key->value pair from the map.
@@ -336,25 +348,21 @@ namespace concurrent {
 		// 	return false;
 		// }
 
-		// /**
-		//  * Atomically extracts the given value from the map, that is:
-		//  * 1. Moves out the value associated with the key and returns it.
-		//  * 2. Erases the key->value pair from the map.
-		//  */
-		// base::Optional<DATA_T> extract(const KEY_T& key) RELEASE_NOEXCEPT {
-		// 	WithShardLock lock(*this, keyToShard(key));
+		/**
+		 * Atomically extracts the given value from the map, that is:
+		 * 1. Moves out the value associated with the key and returns it.
+		 * 2. Erases the key->value pair from the map.
+		 */
+		base::Optional<DATA_T> extract(const KEY_T& key) RELEASE_NOEXCEPT {
+			WithShardLock lock(*this, keyToShard(key));
 
-		// 	auto at_maybe = shards[lock.shard_index].atMaybe(key);
-		// 	if (!at_maybe.has_value()) {
-		// 		// data was already not present
-		// 		return base::Optional<DATA_T>{};
-		// 	} else {
-		// 		DATA_T value = std::move(*at_maybe.value());
-		// 		shards[lock.shard_index].erase(key);
-		// 		// elements_count.fetch_sub(1, std::memory_order_relaxed);
-		// 		return base::Optional<DATA_T>{ std::move(value) };
-		// 	}
-		// }
+			auto extracted = shards[lock.shard_index].extract(key);
+            if (extracted.empty()) {
+                return {};
+            } else {
+                return std::move(extracted.mapped());
+            }
+		}
 
 		// /**
 		//  * Returns the number of elements currently stored in the map.

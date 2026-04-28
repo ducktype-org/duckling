@@ -28,9 +28,15 @@ private:
 	void simpl() {
 		concurrent::AbslConHashMap<i64, i64> map;
 		auto x = map.put(1, 10);
+		auto y = map.maybePut(i64(1), 10);
+		auto z = map.maybePutAndUpdate(i64(1), 10, [](base::CRef<i64>) {});
+		auto w = map.contains(1);
+		auto v = map.extract(3);
 
 		absl::node_hash_map<i64, i64> reference;
 		reference.insert({1, 10});
+		auto hm = reference.extract(1);
+		
 	}
 };
 
