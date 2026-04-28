@@ -228,6 +228,8 @@ namespace compiler::repl {
 		std::cout << "  /exit, /quit, /q    - Exit the REPL\n";
 		std::cout << "  /history, /hist     - Show all executed statements\n";
 		std::cout << "  /clear, /c          - Clear terminal\n";
+		std::cout << "  /load <file.ds>     - Load script file (stops on first error; previous\n"
+				  << "                         statements stay applied)\n";
 		std::cout << "\n=== Editing ===\n";
 		std::cout << "  Alt + Enter         - Insert a new line\n";
 		std::cout << "  Alt + Up / Down     - Navigate input history\n";
