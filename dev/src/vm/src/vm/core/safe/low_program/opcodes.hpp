@@ -46,6 +46,15 @@ namespace vm::low {
 #undef HANDLE_MICRO_INSTR
 	};
 
+	/**
+	 * @brief For microinstruction name, returns corresponding MicroOpcode.
+	 */
+	constexpr vm::low::MicroOpcode getOpcode(const std::string& func_name) {
+		for (auto [opcode, name]: std::views::enumerate(vm::low::OPCODE_NAMES))
+			if (func_name == name) return static_cast<vm::low::MicroOpcode>(opcode);
+		CORE_PANIC("Function name does not correspond to any MicroOpcode", func_name);
+	}
+
 	constexpr usize nonExecutableMicroInstrCount() {
 		usize count = 0;
 #define HANDLE_MICRO_INSTR(opcode) \
@@ -53,5 +62,35 @@ namespace vm::low {
 #include "micro_instruction_definitions.hpp"
 #undef HANDLE_MICRO_INSTR
 		return count;
+	}
+
+	/**
+	 * @brief Constructs an array of non-executable opcodes (like ext_*).
+	 */
+	constexpr std::array<vm::low::MicroOpcode, vm::low::nonExecutableMicroInstrCount()> constructNonExecOpcodeArray(
+	) {
+		auto non_executable_opcodes
+			= vm::low::OPCODE_NAMES | std::views::enumerate
+		    | std::views::filter([](auto pair) { return std::get<1>(pair).starts_with("ext_"); })
+		    | std::views::transform([](auto pair) {
+				  return static_cast<vm::low::MicroOpcode>(std::get<0>(pair));
+			  });
+
+		std::array<vm::low::MicroOpcode, vm::low::nonExecutableMicroInstrCount()> output{};
+
+		std::ranges::copy(non_executable_opcodes, output.begin());
+
+		return output;
+	}
+
+	static constexpr std::array<vm::low::MicroOpcode, vm::low::nonExecutableMicroInstrCount()>
+		NON_EXEC_OPCODES = constructNonExecOpcodeArray();
+
+	/**
+	 * @brief Returns whether opcode is not executable like ext_*.
+	 */
+	constexpr bool isOpcodeNonExecutable(const vm::low::MicroOpcode& opcode) {
+		return std::find(NON_EXEC_OPCODES.begin(), NON_EXEC_OPCODES.end(), opcode)
+		    != NON_EXEC_OPCODES.end();
 	}
 }
