@@ -480,14 +480,15 @@ namespace compiler::helios {
 		static std::vector<SymID> getAllCachedSymbols() {
 			// This implementation is fragile, adjust if needed.
 
-			std::vector<SymID> out;
+			// std::vector<SymID> out;
 
-			for (auto& [key, cache_entry]: cache) {
-				if (cache_entry.data.hasFailed()) continue;
+			// for (auto& [key, cache_entry]: cache.getAllKeyValuePairs()) {
+			// 	if (cache_entry.data.hasFailed()) continue;
 
-				out.emplace_back(SymID{ &cache_entry.data.valueOrPanic() });
-			}
-			return out;
+			// 	out.emplace_back(SymID{ &cache_entry.data.valueOrPanic() });
+			// }
+			// return out;
+			CORE_UNREACHABLE();
 		}
 
 		// for getAllCachedSymbols:
@@ -641,11 +642,12 @@ namespace compiler::helios {
 				static std::vector<SymID> getAllCachedSymbols() {
 					// This implementation is fragile, adjust if needed.
 
-					std::vector<SymID> out;
+					// std::vector<SymID> out;
 
-					for (auto& [key, cache_entry]: cache)
-						for (auto sym_id: cache_entry.data.data_refs) out.emplace_back(sym_id);
-					return out;
+					// for (auto& [key, cache_entry]: cache.getAllKeyValuePairs())
+					// 	for (auto sym_id: cache_entry.data.data_refs) out.emplace_back(sym_id);
+					// return out;
+					CORE_UNREACHABLE();
 				}
 
 				// for getAllCachedSymbols:
@@ -977,11 +979,12 @@ namespace compiler::helios {
 			static std::vector<SymID> getAllCachedSymbols() {
 				// This implementation is fragile, adjust if needed.
 
-				std::vector<SymID> out;
+				// std::vector<SymID> out;
 
-				for (auto& [key, cache_entry]: cache)
-					out.emplace_back(QResult{ &cache_entry.data });
-				return out;
+				// for (auto& [key, cache_entry]: cache.getAllKeyValuePairs())
+				// 	out.emplace_back(QResult{ &cache_entry.data });
+				// return out;
+				CORE_UNREACHABLE();
 			}
 
 			// for getAllCachedSymbols:

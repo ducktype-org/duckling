@@ -524,23 +524,23 @@ namespace concurrent {
 		// 	return ConstIterator(nullptr, &shards, SHARD_COUNT);
 		// }
 
-		/**
-		 * Retrieves all key-value pairs from the map.
-		 * Locks WithAllShardsLock underneath to ensure thread safety,
-		 * but locks each shard only for the time needed to copy its elements,
-		 * so it can see elements added during the call, but not necessarily all of them.
-		 */
-		[[nodiscard]]
-		std::vector<CRef<KeyValuePair>> getAllKeyValuePairs() const RELEASE_NOEXCEPT {
-			std::vector<CRef<KeyValuePair>> result;
-			for (u64 i = 0; i < SHARD_COUNT; i++) {
-				WithShardLock lock(*this, i);
-				for (const auto& kv : shards[i]) {
-					result.push_back(kv);
-				}
-			}
-			return result;
-		}
+		// /**
+		//  * Retrieves all key-value pairs from the map.
+		//  * Locks WithAllShardsLock underneath to ensure thread safety,
+		//  * but locks each shard only for the time needed to copy its elements,
+		//  * so it can see elements added during the call, but not necessarily all of them.
+		//  */
+		// [[nodiscard]]
+		// std::vector<std::pair<KEY_T, DATA_T>> getAllKeyValuePairs() const RELEASE_NOEXCEPT {
+		// 	std::vector<std::pair<KEY_T, DATA_T>> result;
+		// 	for (u64 i = 0; i < SHARD_COUNT; i++) {
+		// 		WithShardLock lock(*this, i);
+		// 		for (const auto& [k, v] : shards[i]) {
+		// 			result.emplace_back(std::make_pair(k, v));
+		// 		}
+		// 	}
+		// 	return result;
+		// }
 
 	private:
 

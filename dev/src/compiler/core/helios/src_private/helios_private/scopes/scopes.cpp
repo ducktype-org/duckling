@@ -216,10 +216,11 @@ namespace compiler::helios {
 		static std::vector<ScopeID> getAllCachedScopes() {
 			// This implementation is fragile, adjust if needed.
 
-			std::vector<ScopeID> out;
+			// std::vector<ScopeID> out;
 
-			for (auto& [key, cache_entry]: cache) out.emplace_back(QResult{ &cache_entry.data });
-			return out;
+			// for (auto& [key, cache_entry]: cache.getAllKeyValuePairs()) out.emplace_back(QResult{ &cache_entry.data });
+			// return out;
+			CORE_UNREACHABLE();
 		}
 
 		// for getAllCachedScopes:
@@ -321,10 +322,11 @@ namespace compiler::helios {
 		static std::vector<ScopeID> getAllCachedScopes() {
 			// This implementation is fragile, adjust if needed.
 
-			std::vector<ScopeID> out;
+			// std::vector<ScopeID> out;
 
-			for (auto& [key, cache_entry]: cache) out.emplace_back(QResult{ &cache_entry.data });
-			return out;
+			// for (auto& [key, cache_entry]: cache.getAllKeyValuePairs()) out.emplace_back(QResult{ &cache_entry.data });
+			// return out;
+			CORE_UNREACHABLE();
 		}
 
 		// for getAllCachedScopes:
