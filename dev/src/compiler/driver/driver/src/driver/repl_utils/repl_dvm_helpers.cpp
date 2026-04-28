@@ -162,7 +162,7 @@ namespace compiler::repl {
 	std::expected<std::string, std::string> executeFunctionAndCaptureResult(
 		vm::PID pid, std::string_view func_name, const tsh::SymbolType<>& return_type
 	) {
-		auto type_str = return_type.toString();
+		std::string type_str = return_type.getType().toString();
 
 		if (type_str == "void") {
 			auto run_result = vm::api::runFunction(pid, std::string(func_name), {})
