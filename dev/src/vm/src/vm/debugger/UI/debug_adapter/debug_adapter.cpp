@@ -21,7 +21,7 @@ namespace vm::debug_adapter {
 			  this->sendEvent("output", { { "category", "console" }, { "output", message } });
 		  }),
 		  debugger(filepath) {
-		debugger.attachOnVMStatusChangeListener(status_change_listener);
+		debugger.attachOnVMChangesStatusListener(status_change_listener);
 	}
 
 	DebugAdapter DebugAdapter::get(const fs::File& filepath) { return { filepath }; }
@@ -91,8 +91,8 @@ namespace vm::debug_adapter {
 		// Mutex is needed because events can be sent by listeners from background threads
 		std::lock_guard<std::mutex> lock(output_mutex);
 
-		nlohmann::json              final_msg = msg;
-		final_msg["seq"] = next_seq++;
+		nlohmann::json final_msg = msg;
+		final_msg["seq"]         = next_seq++;
 
 		std::string body = final_msg.dump();
 		std::cout << HEADER_PREFIX << body.size() << "\r\n\r\n" << body;
