@@ -24,6 +24,10 @@ namespace vm::code {
 	const BuiltinTypesMap& rawBuiltins() {
 		const static BuiltinTypesMap types = {
 			{ base::StrID("byte"), TypeOfData(PrimitiveType(base::StrID("byte"), 1)) },
+			// @TODO: #1553 consts and thier types aren't properly handled for purpose on bbuilding
+			// on them we hard-code this type. The line bellow this one must be deleted when this is
+			// resolved.
+			// { base::StrID("void"), TypeOfData(PrimitiveType(base::StrID("void"), 1)) },
 			{ base::StrID("i8"), TypeOfData(PrimitiveType(base::StrID("i8"), 1)) },
 			{ base::StrID("i16"), TypeOfData(PrimitiveType(base::StrID("i16"), 2)) },
 			{ base::StrID("i32"), TypeOfData(PrimitiveType(base::StrID("i32"), 4)) },

@@ -108,6 +108,43 @@ namespace compiler::backend_vm::internal {
 		void insertRawBytecodeDefinitions(const vm::code::CodeCollection& bytecode);
 
 		/**
+		 * @brief Returns how many extra bytecode functions have been accumulated so far.
+		 */
+		[[nodiscard]] usize getExtraBytecodeFunctionCount() const {
+			return extra_bytecode_functions.size();
+		}
+
+		/**
+		 * @brief Returns how many lowered types have been accumulated so far.
+		 */
+		[[nodiscard]] usize getLoweredTypeCount() const { return lowered_type_order.size(); }
+
+		/**
+		 * @brief Returns how many lowered functions have been accumulated so far.
+		 */
+		[[nodiscard]] usize getLoweredFunctionCount() const {
+			return lowered_function_order.size();
+		}
+
+		/**
+		 * @brief Returns the lowered types added since @p start_index.
+		 */
+		[[nodiscard]] std::vector<vm::code::TypeOfData> getLoweredTypesSince(usize start_index
+		) const;
+
+		/**
+		 * @brief Returns the lowered functions added since @p start_index.
+		 */
+		[[nodiscard]] std::vector<vm::code::Function> getLoweredFunctionsSince(usize start_index
+		) const;
+
+		/**
+		 * @brief Returns the extra bytecode functions added since @p start_index.
+		 */
+		[[nodiscard]] std::vector<vm::code::Function> getExtraBytecodeFunctionsSince(usize start_index
+		) const;
+
+		/**
 		 * @brief Produces the per-module bytecode collection.
 		 *
 		 * Assembles all lowered functions, globals, types, and extern C functions into a
@@ -147,6 +184,10 @@ namespace compiler::backend_vm::internal {
 
 		// A set of types allowing for insertion of both TSL types and manual insertion of types.
 		TypeStorage type_storage;
+		// Maintains insertion order for types so REPL can emit only new types.
+		std::vector<base::StrID> lowered_type_order;
+		// Maintains insertion order for functions so REPL can emit only new functions.
+		std::vector<vm::code::Function> lowered_function_order;
 
 		base::Map<CRef<lir::Function>, vm::code::Function> lir_function_to_dvm;
 

@@ -50,4 +50,32 @@ namespace compiler::backend_vm {
 	) {
 		return m_context->lowerAndKeepTslType(layout);
 	}
+
+	usize ReplLoweringContext::getExtraBytecodeFunctionCount() const {
+		return m_context->getExtraBytecodeFunctionCount();
+	}
+
+	usize ReplLoweringContext::getLoweredTypeCount() const {
+		return m_context->getLoweredTypeCount();
+	}
+
+	usize ReplLoweringContext::getLoweredFunctionCount() const {
+		return m_context->getLoweredFunctionCount();
+	}
+
+	std::vector<vm::code::Function> ReplLoweringContext::getExtraBytecodeFunctionsSince(
+		usize start_index
+	) const {
+		return m_context->getExtraBytecodeFunctionsSince(start_index);
+	}
+
+	std::vector<vm::code::TypeOfData> ReplLoweringContext::getLoweredTypesSince(usize start_index
+	) const {
+		return m_context->getLoweredTypesSince(start_index);
+	}
+
+	std::vector<vm::code::Function> ReplLoweringContext::getLoweredFunctionsSince(usize start_index
+	) const {
+		return m_context->getLoweredFunctionsSince(start_index);
+	}
 }

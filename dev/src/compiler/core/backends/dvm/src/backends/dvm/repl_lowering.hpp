@@ -93,6 +93,39 @@ namespace compiler::backend_vm {
 		const vm::code::TypeOfData& lowerAndKeepTslType(base::CRef<tsl::TypeLayout> layout);
 
 		/**
+		 * @brief Returns how many helper functions have been generated for the current REPL state.
+		 */
+		[[nodiscard]] usize getExtraBytecodeFunctionCount() const;
+
+		/**
+		 * @brief Returns how many lowered types have been generated for the current REPL state.
+		 */
+		[[nodiscard]] usize getLoweredTypeCount() const;
+
+		/**
+		 * @brief Returns how many lowered functions have been generated for the current REPL state.
+		 */
+		[[nodiscard]] usize getLoweredFunctionCount() const;
+
+		/**
+		 * @brief Returns helper functions generated after the given snapshot index.
+		 */
+		[[nodiscard]] std::vector<vm::code::Function> getExtraBytecodeFunctionsSince(usize start_index
+		) const;
+
+		/**
+		 * @brief Returns lowered types generated after the given snapshot index.
+		 */
+		[[nodiscard]] std::vector<vm::code::TypeOfData> getLoweredTypesSince(usize start_index
+		) const;
+
+		/**
+		 * @brief Returns lowered functions generated after the given snapshot index.
+		 */
+		[[nodiscard]] std::vector<vm::code::Function> getLoweredFunctionsSince(usize start_index
+		) const;
+
+		/**
 		 * @brief Check if a query context is currently set.
 		 *
 		 * @return true if a query context has been set via setContext() and not yet
