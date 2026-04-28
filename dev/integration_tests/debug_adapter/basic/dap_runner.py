@@ -27,9 +27,15 @@ def read_dap_message(stdout):
     return body
 
 # --- MAIN ---
+if len(sys.argv) < 2:
+    sys.stderr.write("ERROR: Build directory path was not provided as an argument!\n")
+    sys.exit(1)
+
+build_dir = sys.argv[1]
+vm_binary_path = os.path.join(build_dir, "bin", "VM")
 
 vm_process = subprocess.Popen(
-    ["../../../build/bin/VM", "debug_adapter", "simple.dmf"],
+    [vm_binary_path, "debug_adapter", "simple.dmf"],
     stdin=subprocess.PIPE,
     stdout=subprocess.PIPE,
     text=True,
