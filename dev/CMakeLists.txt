@@ -38,6 +38,15 @@ endif()
 # Dependencies
 add_subdirectory(dependencies)
 
+
+# Save your strict flags
+set(OLD_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+# Disable warnings for third-party
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w")
+add_subdirectory(dependencies/abseil)
+# Restore strict flags for your code
+set(CMAKE_CXX_FLAGS "${OLD_CXX_FLAGS}")
+
 include(${CMAKE_CURRENT_LIST_DIR}/main_cmake_files/ConfigureTests.cmake)
 include(${CMAKE_CURRENT_LIST_DIR}/main_cmake_files/ConfigurePlaygrounds.cmake)
 include(${CMAKE_CURRENT_LIST_DIR}/main_cmake_files/ConfigureGlobalCleanTargets.cmake)

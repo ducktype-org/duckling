@@ -1,3 +1,6 @@
 [submodule "dev/docs/config/doxygen-awesome-css"]
 	path = dev/docs/config/doxygen-awesome-css
 	url = https://github.com/jothepro/doxygen-awesome-css.git
+[submodule "dev/dependencies/abseil"]
+	path = dev/dependencies/abseil
+	url = https://github.com/abseil/abseil-cpp.git
