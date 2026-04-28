@@ -32,8 +32,10 @@ namespace vm::debug_adapter {
 		while (std::getline(std::cin, line)) {
 			if (line.starts_with(HEADER_PREFIX)) {
 				int length = std::stoi(line.substr(HEADER_PREFIX.length()));
-				std::getline(std::cin, line);  // DAP empty line
 
+				while (std::getline(std::cin, line)) {
+					if (line.empty()) break;  // DAP header/body separator
+				}
 				std::string body((size_t) length, ' ');
 				std::cin.read(&body[0], length);
 
@@ -110,7 +112,7 @@ namespace vm::debug_adapter {
 		std::string program = req["arguments"]["program"];
 
 		// @TODO: #2559 add load program in debugger
-		// for now we load program at the beggining, while constructing adapter
+		// for now we load program at the beginning, while constructing adapter
 
 		sendResponse(req, true);
 
