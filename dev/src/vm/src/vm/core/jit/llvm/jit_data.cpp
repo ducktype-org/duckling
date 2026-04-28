@@ -44,7 +44,7 @@ std::string extractFunctionName(const std::string& full) {
 /**
  * @brief Find all opcodes functions in module and creates map: opcode -> mangled name.
  */
-std::unordered_map<vm::low::MicroOpcode, std::string> FillLfuncNameMap(Module& module) {
+std::unordered_map<vm::low::MicroOpcode, std::string> fillLfuncNameMap(Module& module) {
 	std::unordered_map<vm::low::MicroOpcode, std::string> lfunc_name_map;
 
 	for (auto& f: module.functions()) {
@@ -162,7 +162,7 @@ LlvmData init_llvm_jit() {
 	CORE_ASSERT(g_module->isMaterialized(), "Opfuns module not fully materialized!");
 	externalizeAllGlobalValues(*g_module);
 
-	auto lfunc_name_map = FillLfuncNameMap(*g_module);
+	auto lfunc_name_map = fillLfuncNameMap(*g_module);
 
 	std::unordered_set<std::string> name_set;  // Hashset of all mangled names for fast lookup.
 	for (const auto& [k, v]: lfunc_name_map) name_set.insert(v);
