@@ -217,7 +217,7 @@ namespace query::internal {
 		/// Map from TaskID to TaskStatus (concurrent, lock-free access).
 		/// @TODO: #1988 hash map per query id? Or even stronger, lock free data structure.
 		// concurrent::AbslConHashMap<NodeID, TaskStatus> task_status_map;
-		concurrent::ConHashMap<NodeID, TaskStatus, std::hash<NodeID>, 4096, 129, 64> task_status_map;
+		concurrent::ConHashMap<NodeID, TaskStatus, std::hash<NodeID>, 4096, 129*3, 64> task_status_map;
 
 		static constexpr usize              TASK_SHARDS = 113;
 		std::array<std::mutex, TASK_SHARDS> task_completed_mutexes;
