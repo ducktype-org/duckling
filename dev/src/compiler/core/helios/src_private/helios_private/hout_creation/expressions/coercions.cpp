@@ -57,9 +57,9 @@ namespace compiler::helios {
 	}
 
 	IncompatibleTypesError::IncompatibleTypesError(
-		dia::SourcePosition  source_position,
-		Box<InteractiveType> actual_type,
-		Box<InteractiveType> expected_type
+		dia_int::StablePosition source_position,
+		Box<InteractiveType>    actual_type,
+		Box<InteractiveType>    expected_type
 	):
 		  MessageWithCodeFragmentAndCause(source_position) {
 		addArgument<dia_int::InteractiveArgument>("given_type", std::move(actual_type));

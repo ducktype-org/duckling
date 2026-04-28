@@ -591,7 +591,7 @@ where {
                 "s"
             };
             return Ok(GathererComputation::only_error(qp_err!(
-                "Package {package}` does not have feature{plural} `{missing_features}`"
+                "package {package} does not have feature{plural} `{missing_features}`"
             )));
         }
         if !requested_features.is_empty() || !pkg_data.referenced_by_requests {

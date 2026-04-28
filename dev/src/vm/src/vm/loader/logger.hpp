@@ -48,7 +48,7 @@ namespace vm::loader {
 			match_optional(elem.bytecode_pos) {
 				opt_none errors.emplace_back(header_message);
 				opt_some(pos) {
-					auto t = makeBox<dia_int::PlaceholderCodeError>(
+					auto t = makeBox<dia_int::PlaceholderError>(
 						std::string(header_message),
 						pos,
 						std::string(description),
@@ -65,16 +65,16 @@ namespace vm::loader {
 		 * position.
 		 */
 		void addNote(
-			Box<dia_int::PlaceholderCodeError>& error,
-			const code::ElementBase&            elem,
-			std::string_view                    header_message,
-			std::string_view                    description             = "",
-			base::Optional<std::string>         pointer_message_content = "here"
+			Box<dia_int::PlaceholderError>& error,
+			const code::ElementBase&        elem,
+			std::string_view                header_message,
+			std::string_view                description             = "",
+			base::Optional<std::string>     pointer_message_content = "here"
 		) {
 			match_optional(elem.bytecode_pos) {
 				opt_none errors.emplace_back(header_message);
 				opt_some(pos) {
-					error->addAttachedMessage(makeBox<dia_int::PlaceholderCodeNote>(
+					error->addAttachedMessage(makeBox<dia_int::PlaceholderNote>(
 						std::string(header_message),
 						pos,
 						std::string(description),
@@ -85,11 +85,11 @@ namespace vm::loader {
 		}
 
 		void addNote(
-			Box<dia_int::PlaceholderCodeError>& error,
-			const IsElementVariant auto&        elem,
-			std::string_view                    header_message,
-			std::string_view                    description             = "",
-			base::Optional<std::string>         pointer_message_content = "here"
+			Box<dia_int::PlaceholderError>& error,
+			const IsElementVariant auto&    elem,
+			std::string_view                header_message,
+			std::string_view                description             = "",
+			base::Optional<std::string>     pointer_message_content = "here"
 		) {
 			addNote(
 				error,
@@ -113,7 +113,7 @@ namespace vm::loader {
 		) {
 			logMap(
 				elem,
-				[](const Box<dia_int::PlaceholderCodeError>&) {},
+				[](const Box<dia_int::PlaceholderError>&) {},
 				header_message,
 				description,
 				std::move(pointer_message_content)
