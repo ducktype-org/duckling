@@ -1130,12 +1130,6 @@ private:
 			{ "cycle" },
 			1
 		);
-
-		// PR:
-		// Add this maybe, there are some qresults lacking
-		// class T {
-		//     var t: T;
-		// }
 	}
 
 	void testErrorBadExpr() {
