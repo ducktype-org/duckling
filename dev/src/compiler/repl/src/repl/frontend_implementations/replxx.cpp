@@ -8,9 +8,11 @@
 #include <iostream>
 #include <set>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace compiler::repl {
+	static constexpr std::string_view TAB_SPACES = "    ";
 
 	// ─── Duckling language keywords ──────────────────────────────────────────────
 
@@ -67,6 +69,91 @@ namespace compiler::repl {
 		return tokens;
 	}
 
+	/**
+	 * Compute indentation depth from unmatched braces up to \p cursor_pos.
+	 * Braces inside strings or line comments are ignored.
+	 */
+	static int computeBraceIndentDepth(const std::string& input, size_t cursor_pos) {
+		int  depth           = 0;
+		bool in_single_quote = false;
+		bool in_double_quote = false;
+		bool escape_next     = false;
+
+		bool in_single_line_comment  = false;
+		int  multiline_comment_depth = 0;
+
+		for (size_t i = 0; i < cursor_pos && i < input.size(); ++i) {
+			const char ch = input[i];
+
+			if (escape_next) {
+				escape_next = false;
+				continue;
+			}
+
+			if (in_single_line_comment) {
+				if (ch == '\n') in_single_line_comment = false;
+				continue;
+			}
+
+			if (in_single_quote) {
+				if (ch == '\\')
+					escape_next = true;
+				else if (ch == '\'')
+					in_single_quote = false;
+				continue;
+			}
+
+			if (in_double_quote) {
+				if (ch == '\\')
+					escape_next = true;
+				else if (ch == '"')
+					in_double_quote = false;
+				continue;
+			}
+
+			bool has_next = (i + 1 < cursor_pos && i + 1 < input.size());
+			char next_ch  = has_next ? input[i + 1] : '\0';
+
+			if (ch == '#' && next_ch == '{') {
+				multiline_comment_depth++;
+				++i;  // Skip the '{'
+				continue;
+			}
+
+			if (ch == '#' && next_ch == '}') {
+				if (multiline_comment_depth > 0) {
+					multiline_comment_depth--;
+					++i;  // Skip the '}'
+					continue;
+				}
+			}
+
+			if (ch == '#') {
+				in_single_line_comment = true;
+				continue;
+			}
+
+			if (multiline_comment_depth > 0) continue;
+
+			if (ch == '\'') {
+				in_single_quote = true;
+				continue;
+			}
+
+			if (ch == '"') {
+				in_double_quote = true;
+				continue;
+			}
+
+			if (ch == '{')
+				++depth;
+			else if (ch == '}')
+				depth = std::max(0, depth - 1);
+		}
+
+		return depth;
+	}
+
 	// ─── History file path ───────────────────────────────────────────────────────
 
 	std::string FrontendReplxxImplementation::getHistoryFilePath() {
@@ -77,7 +164,8 @@ namespace compiler::repl {
 
 	// ─── Construction / destruction ──────────────────────────────────────────────
 
-	FrontendReplxxImplementation::FrontendReplxxImplementation() {
+	FrontendReplxxImplementation::FrontendReplxxImplementation(bool completions_enabled):
+		  m_completions_enabled(completions_enabled) {
 		m_replxx.set_max_history_size(1'000);
 		m_replxx.set_word_break_characters(" \t\n;,+-/*%^&|~<>=!?@#$:(){}[]");
 		m_replxx.set_indent_multiline(true);
@@ -93,8 +181,10 @@ namespace compiler::repl {
 
 		setupKeyBindings();
 		setupHighlighter();
-		setupCompletion();
-		setupHints();
+		if (m_completions_enabled) {
+			setupCompletion();
+			setupHints();
+		}
 	}
 
 	FrontendReplxxImplementation::~FrontendReplxxImplementation() {
@@ -109,13 +199,71 @@ namespace compiler::repl {
 
 		// ── Enter → commit
 		m_replxx.bind_key_internal(Replxx::KEY::ENTER, "commit_line");
+		m_replxx.bind_key(Replxx::KEY::TAB, [this](char32_t code) {
+			auto        state      = m_replxx.get_state();
+			std::string line       = (state.text() != nullptr) ? state.text() : "";
+			int         cursor_pos = state.cursor_position();
+
+			if (cursor_pos < 0) cursor_pos = static_cast<int>(line.size());
+			if (cursor_pos > static_cast<int>(line.size()))
+				cursor_pos = static_cast<int>(line.size());
+
+			if (m_completions_enabled) {
+				std::string input_to_cursor = line.substr(0, static_cast<size_t>(cursor_pos));
+				std::string prefix = extractWordEndingAt(input_to_cursor, input_to_cursor.size());
+
+				bool has_completions = false;
+				if (!prefix.empty()) {
+					auto can_complete = [&prefix](const std::string& candidate) {
+						return candidate.size() > prefix.size() && candidate.starts_with(prefix);
+					};
+
+					has_completions = std::ranges::any_of(DUCKLING_KEYWORDS, can_complete)
+					               || std::ranges::any_of(DUCKLING_TYPES, can_complete)
+					               || std::ranges::any_of(m_user_words, can_complete);
+				}
+
+				if (has_completions) return m_replxx.invoke(Replxx::ACTION::COMPLETE_LINE, code);
+			}
+
+			line.insert(static_cast<size_t>(cursor_pos), TAB_SPACES);
+			m_replxx.set_state(
+				Replxx::State(line.c_str(), cursor_pos + static_cast<int>(TAB_SPACES.size()))
+			);
+			return Replxx::ACTION_RESULT::CONTINUE;
+		});
+
+		auto insert_newline_with_auto_indent = [this](char32_t /*code*/) {
+			auto        state      = m_replxx.get_state();
+			std::string line       = (state.text() != nullptr) ? state.text() : "";
+			int         cursor_pos = state.cursor_position();
+
+			if (cursor_pos < 0) cursor_pos = static_cast<int>(line.size());
+			if (cursor_pos > static_cast<int>(line.size()))
+				cursor_pos = static_cast<int>(line.size());
+
+			const int indent_depth = computeBraceIndentDepth(line, static_cast<size_t>(cursor_pos));
+
+			std::string indentation;
+			indentation.reserve(static_cast<size_t>(indent_depth) * TAB_SPACES.size());
+			for (int i = 0; i < indent_depth; ++i) indentation += TAB_SPACES;
+
+			const std::string insertion = "\n" + indentation;
+			line.insert(static_cast<size_t>(cursor_pos), insertion);
+
+			m_replxx.set_state(
+				Replxx::State(line.c_str(), cursor_pos + static_cast<int>(insertion.size()))
+			);
+
+			return Replxx::ACTION_RESULT::CONTINUE;
+		};
 
 		// ── Alt+Enter → newline ──
-		m_replxx.bind_key_internal(Replxx::KEY::BASE_META | '\r', "new_line");
-		m_replxx.bind_key_internal(Replxx::KEY::meta(Replxx::KEY::ENTER), "new_line");
+		m_replxx.bind_key(Replxx::KEY::BASE_META | '\r', insert_newline_with_auto_indent);
+		m_replxx.bind_key(Replxx::KEY::meta(Replxx::KEY::ENTER), insert_newline_with_auto_indent);
 
 		// ── F2 → new line (fallback for weird terminals) ──
-		m_replxx.bind_key_internal(Replxx::KEY::F2, "new_line");
+		m_replxx.bind_key(Replxx::KEY::F2, insert_newline_with_auto_indent);
 	}
 
 	// ─── Syntax highlighting ─────────────────────────────────────────────────────
@@ -309,7 +457,7 @@ namespace compiler::repl {
 	void FrontendReplxxImplementation::printWelcome() const {
 		std::cout << "Duckling REPL\n";
 		std::cout << "Type /help for available commands, /exit to quit.\n";
-		std::cout << "Press Enter for new line, Alt+Enter to submit.\n\n";
+		std::cout << "Press Enter to submit. Press Alt+Enter for new line.\n\n";
 	}
 
 	std::string FrontendReplxxImplementation::readLine() {
@@ -359,15 +507,18 @@ namespace compiler::repl {
 
 	void FrontendReplxxImplementation::clearHistory() { m_replxx.history_clear(); }
 
+	void FrontendReplxxImplementation::clearScreen() { m_replxx.clear_screen(); }
+
 	void FrontendReplxxImplementation::printHelp() const {
 		std::cout << "\n=== REPL Commands ===\n";
-		std::cout << "  /help, /?           - Show this help message\n";
+		std::cout << "  /help, /?, /h       - Show this help message\n";
 		std::cout << "  /exit, /quit, /q    - Exit the REPL\n";
-		std::cout << "  /history, /h        - Show all executed statements\n";
-		std::cout << "  /clear, /c          - Clear statement history\n";
+		std::cout << "  /history, /hist     - Show all executed statements\n";
+		std::cout << "  /clear, /c          - Clear terminal\n";
 		std::cout << "\n=== Editing ===\n";
+		std::cout << "  Enter               - Submit\n";
 		std::cout << "  Alt + Enter         - Insert a new line\n";
-		std::cout << "  Tab                 - Autocomplete keywords / identifiers\n";
+		std::cout << "  Tab                 - Complete if available, else insert indentation\n";
 		std::cout << "  Up / Down           - Navigate input history\n";
 		std::cout << "  Ctrl+R              - Reverse search history\n";
 		std::cout << "  Ctrl+D              - Exit (on empty line)\n";

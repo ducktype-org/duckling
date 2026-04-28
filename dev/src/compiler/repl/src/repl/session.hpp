@@ -36,7 +36,7 @@ namespace compiler::repl {
 	 */
 	class ReplSession final {
 	public:
-		ReplSession();
+		explicit ReplSession(bool completions_enabled = true);
 
 		/**
 		 * Run the main REPL loop (blocking).

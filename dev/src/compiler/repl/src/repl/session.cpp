@@ -43,11 +43,11 @@ namespace compiler::repl {
 		CORE_DEV_LOG(REPL, "DVM initialized with PID ", m_dvm_pid, "\n");
 	}
 
-	ReplSession::ReplSession():
+	ReplSession::ReplSession(bool completions_enabled):
 		  m_should_exit(false),
 		  m_line_counter(0),
 		  m_dvm_pid(0),
-		  m_frontend(),
+		  m_frontend(completions_enabled),
 		  m_lowering_context() {
 		initDVM();
 	}
@@ -98,19 +98,18 @@ namespace compiler::repl {
 			return true;
 		}
 
-		if (line == "/history" || line == "/h") {
-			m_frontend.printHistory();
-			return true;
-		}
-
-		if (line == "/help" || line == "/?") {
+		if (line == "/help" || line == "/?" || line == "/h") {
 			m_frontend.printHelp();
 			return true;
 		}
 
+		if (line == "/history" || line == "/hist") {
+			m_frontend.printHistory();
+			return true;
+		}
+
 		if (line == "/clear" || line == "/c") {
-			clearHistory();
-			std::cout << "History cleared.\n";
+			m_frontend.clearScreen();
 			return true;
 		}
 
