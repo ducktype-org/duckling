@@ -38,18 +38,20 @@ namespace concurrent {
 		 * Acquires the lock, spinning and/or sleeping if necessary.
 		 */
 		void lock() noexcept {
-			u64 wait_repetitions = 2;
+			// u64 wait_repetitions = 2;
 			while (true) {
 				if (!atomic_flag.test_and_set(std::memory_order_acquire)) return;
-				wait_repetitions *= 2;
+				std::this_thread::yield();
 
-				if (wait_repetitions > 128) {
-					// std::this_thread::sleep_for(std::chrono::nanoseconds(50));
-					// std::this_thread::yield();
-					wait_repetitions = 4;
-				} else {
-					concurrent::nopWait(wait_repetitions);
-				}
+				// wait_repetitions *= 2;
+
+				// if (wait_repetitions > 128) {
+				// 	// std::this_thread::sleep_for(std::chrono::nanoseconds(50));
+				// 	std::this_thread::yield();
+				// 	wait_repetitions = 4;
+				// } else {
+				// 	concurrent::nopWait(wait_repetitions);
+				// }
 			}
 		}
 

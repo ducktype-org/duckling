@@ -33,10 +33,12 @@ private:
 		auto w = map.contains(1);
 		auto v = map.extract(3);
 		map.update(1, 20);
+		map.getAllKeyValuePairs();
 
 		absl::node_hash_map<i64, i64> reference;
 		reference.insert({1, 10});
 		auto hm = reference.extract(1);
+		auto hm2 = reference.erase(1);
 		
 	}
 };

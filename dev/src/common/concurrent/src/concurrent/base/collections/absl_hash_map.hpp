@@ -303,10 +303,10 @@ namespace concurrent {
             }
 		}
 
-		// [[nodiscard]]
-		// auto at(const KEY_T& key) RELEASE_NOEXCEPT -> Ref<DATA_T> {
-		// 	return atMaybe(key).value();
-		// }
+		[[nodiscard]]
+		auto at(const KEY_T& key) RELEASE_NOEXCEPT -> Ref<DATA_T> {
+			return atMaybe(key).value();
+		}
 
 		/**
 		 * Atomically updates the value associated with the given key.
@@ -323,15 +323,14 @@ namespace concurrent {
 			return shards[lock.shard_index].contains(key);
 		}
 
-		// /**
-		//  * Atomically erases the given key->value pair from the map.
-		//  */
-		// auto erase(const KEY_T& key) RELEASE_NOEXCEPT {
-		// 	WithShardLock lock(*this, keyToShard(key));
-		// 	bool          erased = shards[lock.shard_index].erase(key);
-		// 	// if (erased) elements_count.fetch_sub(1, std::memory_order_relaxed);
-		// 	return erased;
-		// }
+		/**
+		 * Atomically erases the given key->value pair from the map.
+		 */
+		bool erase(const KEY_T& key) RELEASE_NOEXCEPT {
+			WithShardLock lock(*this, keyToShard(key));
+			u64          erased_count = shards[lock.shard_index].erase(key);
+			return erased_count > 0;
+		}
 
 		// /**
 		//  * Atomically erases the key-value pair if the key exists and the predicate returns true.
@@ -525,21 +524,23 @@ namespace concurrent {
 		// 	return ConstIterator(nullptr, &shards, SHARD_COUNT);
 		// }
 
-		// /**
-		//  * Retrieves all key-value pairs from the map.
-		//  * Locks WithAllShardsLock underneath to ensure thread safety,
-		//  * but locks each shard only for the time needed to copy its elements,
-		//  * so it can see elements added during the call, but not necessarily all of them.
-		//  */
-		// [[nodiscard]]
-		// std::vector<CRef<KeyValuePair>> getAllKeyValuePairs() const RELEASE_NOEXCEPT {
-		// 	std::vector<CRef<KeyValuePair>> result;
-		// 	result.reserve(size());
-		// 	std::transform(begin(), end(), std::back_inserter(result), [](const auto& pair) {
-		// 		return &pair;
-		// 	});
-		// 	return result;
-		// }
+		/**
+		 * Retrieves all key-value pairs from the map.
+		 * Locks WithAllShardsLock underneath to ensure thread safety,
+		 * but locks each shard only for the time needed to copy its elements,
+		 * so it can see elements added during the call, but not necessarily all of them.
+		 */
+		[[nodiscard]]
+		std::vector<CRef<KeyValuePair>> getAllKeyValuePairs() const RELEASE_NOEXCEPT {
+			std::vector<CRef<KeyValuePair>> result;
+			for (u64 i = 0; i < SHARD_COUNT; i++) {
+				WithShardLock lock(*this, i);
+				for (const auto& kv : shards[i]) {
+					result.push_back(kv);
+				}
+			}
+			return result;
+		}
 
 	private:
 
