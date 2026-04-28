@@ -4,8 +4,21 @@
 
 #include <nlohmann/json.hpp>
 
-namespace vm::debug_adapter {
+#include <mutex>
 
+namespace vm::debug_adapter {
+	/**
+	 * @class DebugAdapter
+	 * @brief Implements the Debug Adapter Protocol (DAP) for the VM.
+	 *
+	 * This class manages the lifecycle of a debugging session initiated by a DAP-compliant
+	 * client (e.g., Visual Studio Code). It parses incoming JSON requests from standard input,
+	 * translates them into core Debugger operations, and manages the execution flow.
+	 *
+	 * It acts as a thread-safe translation layer, safely emitting JSON responses and
+	 * asynchronous VM status events back to the client via standard output.
+	 * * @see Debugger
+	 */
 	class DebugAdapter {
 	public:
 		// @TODO: #2559 when load program will be available in debugger
@@ -19,6 +32,8 @@ namespace vm::debug_adapter {
 		events::Listener<vm::api::ProcStatus> status_change_listener;
 		vm::debugger::Debugger                debugger;
 		std::string                           input_buffer;
+		int                                   next_seq = 1;
+		std::mutex                            output_mutex;
 
 		// DAP I/O
 		void send(const nlohmann::json& msg);

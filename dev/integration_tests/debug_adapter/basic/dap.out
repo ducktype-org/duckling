@@ -1,8 +1,8 @@
-{"body":{"supportsConfigurationDoneRequest":true,"supportsSetVariable":false},"command":"initialize","request_seq":1,"success":true,"type":"response"}
-{"body":{},"event":"initialized","type":"event"}
-{"body":null,"command":"launch","request_seq":2,"success":true,"type":"response"}
-{"body":{"category":"console","output":"Running\n"},"event":"output","type":"event"}
-{"body":{"category":"console","output":"ExecutionCompleted\n"},"event":"output","type":"event"}
-{"body":{"threads":[{"id":1,"name":"Main Thread"}]},"command":"threads","request_seq":3,"success":true,"type":"response"}
-{"body":null,"command":"disconnect","request_seq":4,"success":true,"type":"response"}
-{"body":null,"event":"terminated","type":"event"}
+{"body":{"supportsConfigurationDoneRequest":true,"supportsSetVariable":false},"command":"initialize","request_seq":1,"seq":1,"success":true,"type":"response"}
+{"body":{},"event":"initialized","seq":2,"type":"event"}
+{"body":null,"command":"launch","request_seq":2,"seq":3,"success":true,"type":"response"}
+{"body":{"category":"console","output":"Running\n"},"event":"output","seq":4,"type":"event"}
+{"body":{"category":"console","output":"ExecutionCompleted\n"},"event":"output","seq":5,"type":"event"}
+{"body":{"threads":[{"id":1,"name":"Main Thread"}]},"command":"threads","request_seq":3,"seq":6,"success":true,"type":"response"}
+{"body":null,"command":"disconnect","request_seq":4,"seq":7,"success":true,"type":"response"}
+{"body":null,"event":"terminated","seq":8,"type":"event"}

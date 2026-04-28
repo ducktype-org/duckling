@@ -31,21 +31,38 @@ namespace vm::debug_adapter {
 
 		while (std::getline(std::cin, line)) {
 			if (line.starts_with(HEADER_PREFIX)) {
-				int length = std::stoi(line.substr(HEADER_PREFIX.length()));
-
-				while (std::getline(std::cin, line)) {
-					if (line.empty()) break;  // DAP header/body separator
+				int length = 0;
+				try {
+					length = std::stoi(line.substr(HEADER_PREFIX.length()));
+				} catch (const std::exception& e) {
+					std::cerr << "[DEBUG] ERROR: Invalid Content-Length format. " << e.what()
+							  << "\n";
+					return;
 				}
-				std::string body((size_t) length, ' ');
-				std::cin.read(&body[0], length);
+
+				if (length < 2) {
+					// The body must be valid JSON, meaning it requires at least two characters '{}'
+					std::cerr << "[DEBUG] ERROR: Content-Length out of bounds: " << length << "\n";
+					return;
+				}
+
+				while (std::getline(std::cin, line))
+					if (line.empty() || line == "\r") break;
+
+				std::string body;
+				body.resize(static_cast<size_t>(length));
+
+				std::cin.read(body.data(), length);
+
+				if (std::cin.gcount() != length) {
+					std::cerr
+						<< "[DEBUG] ERROR: Stream ended before reading the full DAP payload.\n";
+					return;
+				}
 
 				try {
 					nlohmann::json req = nlohmann::json::parse(body);
-					if (req.value("type", "") == "request") {
-						std::string cmd = req.value("command", "unknown");
-
-						handleRequest(req);
-					}
+					if (req.value("type", "") == "request") handleRequest(req);
 				} catch (const std::exception& e) {
 					std::cerr << "[DEBUG] Exception: " << e.what() << "\n";
 				}
@@ -71,7 +88,13 @@ namespace vm::debug_adapter {
 	}
 
 	void DebugAdapter::send(const nlohmann::json& msg) {
-		std::string body = msg.dump();
+		// Mutex is needed because events can be sent by listeners from background threads
+		std::lock_guard<std::mutex> lock(output_mutex);
+
+		nlohmann::json              final_msg = msg;
+		final_msg["seq"] = next_seq++;
+
+		std::string body = final_msg.dump();
 		std::cout << HEADER_PREFIX << body.size() << "\r\n\r\n" << body;
 		std::cout.flush();
 	}
@@ -109,8 +132,6 @@ namespace vm::debug_adapter {
 	}
 
 	void DebugAdapter::handleLaunch(const nlohmann::json& req) {
-		std::string program = req["arguments"]["program"];
-
 		// @TODO: #2559 add load program in debugger
 		// for now we load program at the beginning, while constructing adapter
 
