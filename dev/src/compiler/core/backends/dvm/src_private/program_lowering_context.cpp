@@ -46,12 +46,37 @@ const vm::code::TypeOfData& ProgramLoweringContext::lowerAndKeepTslType(CRef<tsl
 
 	type_storage.tsl_type_to_dvm_type_name.put(layout, type_name);
 	type_storage.dvm_types.put(type_name, std::move(dvm_type));
+	lowered_type_order.push_back(type_name);
 
 	if_opt_some(debug_info_builder, builder) {
 		builder.addType(type_name.str(), layout->getSourceType().toString());
 	}
 
 	return type_storage.dvm_types.at(type_name);
+}
+
+std::vector<vm::code::TypeOfData> ProgramLoweringContext::getLoweredTypesSince(usize start_index
+) const {
+	CORE_ASSERT(
+		start_index <= lowered_type_order.size(),
+		"Requested lowered types from an out-of-range start index"
+	);
+	std::vector<vm::code::TypeOfData> result;
+	result.reserve(lowered_type_order.size() - start_index);
+	for (usize i = start_index; i < lowered_type_order.size(); ++i) {
+		const auto& type_name = lowered_type_order[i];
+		result.push_back(type_storage.dvm_types.at(type_name));
+	}
+	return result;
+}
+
+std::vector<vm::code::Function> ProgramLoweringContext::getLoweredFunctionsSince(usize start_index
+) const {
+	CORE_ASSERT(
+		start_index <= lowered_function_order.size(),
+		"Requested lowered functions from an out-of-range start index"
+	);
+	return { lowered_function_order.begin() + start_index, lowered_function_order.end() };
 }
 
 const vm::code::TypeOfData& ProgramLoweringContext::getOrInsertPointerType(
@@ -64,6 +89,7 @@ const vm::code::TypeOfData& ProgramLoweringContext::getOrInsertPointerType(
 
 	vm::code::PointerType pointer_type(pointer_name, pointee_name);
 	type_storage.dvm_types.put(pointer_name, pointer_type);
+	lowered_type_order.push_back(pointer_name);
 	return type_storage.dvm_types.at(pointer_name);
 }
 
@@ -92,6 +118,16 @@ void ProgramLoweringContext::insertRawBytecodeDefinitions(const vm::code::CodeCo
 	extra_bytecode_functions.insert(
 		extra_bytecode_functions.end(), bytecode.functions.begin(), bytecode.functions.end()
 	);
+}
+
+std::vector<vm::code::Function> ProgramLoweringContext::getExtraBytecodeFunctionsSince(
+	usize start_index
+) const {
+	CORE_ASSERT(
+		start_index <= extra_bytecode_functions.size(),
+		"Requested extra bytecode functions from an out-of-range start index"
+	);
+	return { extra_bytecode_functions.begin() + start_index, extra_bytecode_functions.end() };
 }
 
 const vm::code::GlobalData& ProgramLoweringContext::lowerAndKeepLirGlobal(
@@ -197,6 +233,7 @@ const vm::code::Function& ProgramLoweringContext::lowerAndKeepLirFunction(
 
 	auto dvm_function = std::move(func_ctx).finish();
 	lir_function_to_dvm.put(lir_function, dvm_function);
+	lowered_function_order.push_back(lir_function_to_dvm.at(lir_function));
 	return lir_function_to_dvm.at(lir_function);
 }
 
