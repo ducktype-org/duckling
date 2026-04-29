@@ -25,7 +25,7 @@ Tests:
         run_args: "--dev-logs Query  dummy"
       
       double-dev-logs:
-        run_args: "--dev-logs Query, Lexer  dummy"
+        run_args: "--dev-logs \"Query, Lexer\"  dummy"
       
       bad-dev-logs:
         run_args: "--dev-logs \"\"  dummy "
