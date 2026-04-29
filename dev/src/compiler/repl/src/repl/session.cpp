@@ -27,6 +27,8 @@
 
 #include <vm/api/vm.hpp>
 
+#include <algorithm>
+#include <cctype>
 #include <cstdlib>
 #include <cstring>
 #include <fstream>
@@ -34,12 +36,160 @@
 #include <sstream>
 #include <string>
 #include <sstream>
+#include <streambuf>
 #include <string_view>
 
 namespace compiler::repl {
 	namespace {
+		constexpr std::string_view kResetCommand = "/reset";
+
 		std::string getSessionHistoryFilePath() {
 			return ".duckling_repl_session_history";
+		}
+
+		std::string_view trimLeft(std::string_view text) {
+			while (!text.empty() && std::isspace(static_cast<unsigned char>(text.front())))
+				text.remove_prefix(1);
+			return text;
+		}
+
+		std::string_view trim(std::string_view text) {
+			text = trimLeft(text);
+			while (!text.empty() && std::isspace(static_cast<unsigned char>(text.back())))
+				text.remove_suffix(1);
+			return text;
+		}
+
+		std::string_view takeToken(std::string_view& text) {
+			text = trimLeft(text);
+			size_t pos = 0;
+			while (pos < text.size()
+			       && !std::isspace(static_cast<unsigned char>(text[pos])))
+				++pos;
+			std::string_view token = text.substr(0, pos);
+			text.remove_prefix(pos);
+			return token;
+		}
+
+		bool parseResetReplayCount(
+			std::string_view line,
+			size_t&          replay_count,
+			bool&            has_replay_count,
+			std::string&     error_message
+		) {
+			replay_count     = 0;
+			has_replay_count = false;
+			if (!line.starts_with(kResetCommand)) return false;
+
+			std::string_view rest = line;
+			rest.remove_prefix(kResetCommand.size());
+			rest = trim(rest);
+			if (rest.empty()) return true;
+
+			const auto flag = takeToken(rest);
+			if (flag != "-n") {
+				error_message = "Usage: /reset [-n <count>]";
+				return false;
+			}
+
+			const auto value = takeToken(rest);
+			if (value.empty()) {
+				error_message = "Usage: /reset [-n <count>]";
+				return false;
+			}
+
+			rest = trim(rest);
+			if (!rest.empty()) {
+				error_message = "Usage: /reset [-n <count>]";
+				return false;
+			}
+
+			for (char ch : value) {
+				if (ch < '0' || ch > '9') {
+					error_message = "Usage: /reset [-n <count>]";
+					return false;
+				}
+			}
+
+			replay_count     = static_cast<size_t>(std::stoul(std::string(value)));
+			has_replay_count = true;
+			return true;
+		}
+
+		bool parseHistoryHeader(const std::string& line, size_t& entry_index) {
+			if (line.size() < 3 || line.front() != '[' || line.back() != ']') return false;
+			const std::string number = line.substr(1, line.size() - 2);
+			if (number.empty()) return false;
+			for (char ch : number) {
+				if (ch < '0' || ch > '9') return false;
+			}
+			entry_index = static_cast<size_t>(std::stoul(number));
+			return true;
+		}
+
+		class NullBuffer final : public std::streambuf {
+		public:
+			int overflow(int ch) override { return traits_type::not_eof(ch); }
+		};
+
+		class ScopedStreamSilence final {
+		public:
+			explicit ScopedStreamSilence(bool enabled): m_enabled(enabled) {
+				if (!m_enabled) return;
+				m_cout_buf = std::cout.rdbuf(&m_null_buf);
+				m_cerr_buf = std::cerr.rdbuf(&m_null_buf);
+			}
+
+			~ScopedStreamSilence() {
+				if (!m_enabled) return;
+				std::cout.rdbuf(m_cout_buf);
+				std::cerr.rdbuf(m_cerr_buf);
+			}
+
+			ScopedStreamSilence(const ScopedStreamSilence&)            = delete;
+			ScopedStreamSilence& operator=(const ScopedStreamSilence&) = delete;
+
+		private:
+			bool           m_enabled = false;
+			NullBuffer     m_null_buf;
+			std::streambuf* m_cout_buf = nullptr;
+			std::streambuf* m_cerr_buf = nullptr;
+		};
+
+		std::vector<std::string> loadSessionHistoryEntries(size_t max_entries) {
+			std::vector<std::string> entries;
+			if (max_entries == 0) return entries;
+
+			std::ifstream in(getSessionHistoryFilePath());
+			if (!in) return entries;
+
+			std::string current;
+			bool        in_entries = false;
+			std::string line;
+			while (std::getline(in, line)) {
+				size_t entry_index = 0;
+				if (parseHistoryHeader(line, entry_index)) {
+					if (in_entries && !current.empty()) {
+						if (!current.empty() && current.back() == '\n') current.pop_back();
+						entries.push_back(std::move(current));
+						current.clear();
+						if (entries.size() >= max_entries) break;
+					}
+					in_entries = true;
+					continue;
+				}
+
+				if (!in_entries) continue;
+				current += line;
+				current += '\n';
+			}
+
+			if (in_entries && !current.empty() && entries.size() < max_entries) {
+				if (!current.empty() && current.back() == '\n') current.pop_back();
+				entries.push_back(std::move(current));
+			}
+
+			return entries;
 		}
 	}
 
@@ -101,6 +251,7 @@ namespace compiler::repl {
 	ReplSession::ReplSession(bool completions_enabled):
 		  m_should_exit(false),
 		  m_should_reset(false),
+		  m_reset_replay_count(),
 		  m_line_counter(0),
 		  m_dvm_pid(0),
 		  m_frontend(completions_enabled),
@@ -125,6 +276,33 @@ namespace compiler::repl {
 				std::string("Failed to load script file '") + std::string(trimmed_path)
 				+ "': " + e.what()
 			);
+		}
+	}
+
+	void ReplSession::replayHistoryEntries(size_t count, bool silent) {
+		if (count == 0) return;
+
+		ScopedStreamSilence silence(silent);
+
+		const auto entries = loadSessionHistoryEntries(count);
+		if (entries.empty()) {
+			if (!silent)
+				std::cerr << "Warning: no REPL session history entries found to replay.\n";
+			return;
+		}
+
+		const size_t replay_count = std::min(count, entries.size());
+		for (size_t i = 0; i < replay_count; ++i) {
+			m_frontend.addHistoryEntry(entries[i]);
+			auto result = executeInput(entries[i]);
+			if (result.status == ReplResult::Status::Error) {
+				if (!silent) {
+					if (!result.message.empty()) std::cerr << result.message << "\n";
+					std::cerr << "Warning: stopping history replay after entry " << (i + 1)
+							  << " due to error.\n";
+				}
+				break;
+			}
 		}
 	}
 
@@ -180,8 +358,21 @@ namespace compiler::repl {
 			return true;
 		}
 
-		if (line == "/reset") {
+		if (line.starts_with(kResetCommand)) {
+			size_t      replay_count = 0;
+			bool        has_replay_count = false;
+			std::string parse_error;
+			if (!parseResetReplayCount(line, replay_count, has_replay_count, parse_error)) {
+				std::cerr << parse_error << "\n";
+				return true;
+			}
+
 			saveSessionHistoryToFile();
+			if (has_replay_count) {
+				m_reset_replay_count = replay_count;
+			} else {
+				m_reset_replay_count.reset();
+			}
 			m_should_reset = true;
 			return true;
 		}

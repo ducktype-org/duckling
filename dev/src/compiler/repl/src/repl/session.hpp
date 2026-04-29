@@ -64,6 +64,18 @@ namespace compiler::repl {
 		 */
 		int run();
 
+		/**
+		 * @brief Replay the first N entries from the session history file.
+		 */
+		void replayHistoryEntries(size_t count, bool silent);
+
+		/**
+		 * @brief Return replay count requested via /reset -n.
+		 */
+		base::Optional<size_t> getResetReplayCount() const {
+			return m_reset_replay_count;
+		}
+
 	private:
 		/**
 		 * @brief Grant ReplSimulationTest access to private members for testing.
@@ -225,6 +237,7 @@ namespace compiler::repl {
 		bool                       m_should_exit;   ///< Flag to terminate the REPL loop
 		bool                       m_should_reset;  ///< Flag to reset the REPL process
 		std::vector<ReplStatement> m_session_history;       ///< All statements entered in this session
+		base::Optional<size_t>     m_reset_replay_count;    ///< Replay count requested via /reset -n
 		u64          m_line_counter;  ///< Counter for generating unique wrapper function names
 		vm::PID      m_dvm_pid;       ///< Process ID of the running DVM instance
 		ReplFrontend m_frontend;      ///< Frontend for user interaction

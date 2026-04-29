@@ -506,6 +506,13 @@ namespace compiler::repl {
 		std::cout << '\n';
 	}
 
+	void FrontendReplxxImplementation::addHistoryEntry(std::string_view entry) {
+		std::string owned(entry);
+		if (owned.empty()) return;
+		m_replxx.history_add(owned);
+		collectIdentifiers(owned);
+	}
+
 	void FrontendReplxxImplementation::clearHistory() { m_replxx.history_clear(); }
 
 	void FrontendReplxxImplementation::clearScreen() { m_replxx.clear_screen(); }
@@ -514,7 +521,7 @@ namespace compiler::repl {
 		std::cout << "\n=== REPL Commands ===\n";
 		std::cout << "  /help, /?, /h       - Show this help message\n";
 		std::cout << "  /exit, /quit, /q    - Exit the REPL\n";
-		std::cout << "  /reset              - Restart the REPL process\n";
+		std::cout << "  /reset [-n N]       - Restart the REPL process, replay first N entries\n";
 		std::cout << "  /history, /hist     - Show all executed statements\n";
 		std::cout << "  /clear, /c          - Clear terminal\n";
 		std::cout << "  /load <file.ds>     - Load script file (stops on first error; previous\n"

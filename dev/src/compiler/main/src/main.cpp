@@ -54,6 +54,39 @@
 namespace {
 	std::vector<std::string> g_argv;
 
+	void setReplRestartArgs(size_t replay_count, bool silent) {
+		if (g_argv.empty()) return;
+
+		std::vector<std::string> new_args;
+		new_args.reserve(g_argv.size() + 3);
+		new_args.push_back(g_argv[0]);
+
+		bool seen_repl = false;
+		for (size_t i = 1; i < g_argv.size(); ++i) {
+			const auto& arg = g_argv[i];
+			if (!seen_repl) {
+				new_args.push_back(arg);
+				if (arg == "repl") seen_repl = true;
+				continue;
+			}
+
+			if (arg == "-n" || arg == "--history-entries") {
+				if (i + 1 < g_argv.size()) ++i;
+				continue;
+			}
+			if (arg == "--history-entries-silent") continue;
+
+			new_args.push_back(arg);
+		}
+
+		if (!seen_repl) return;
+		new_args.push_back("-n");
+		new_args.push_back(std::to_string(replay_count));
+		if (silent) new_args.push_back("--history-entries-silent");
+
+		g_argv = std::move(new_args);
+	}
+
 	int execSelf() {
 		std::vector<char*> args;
 		args.reserve(g_argv.size() + 1);
@@ -976,6 +1009,16 @@ clah::Clah getClahForMain() {
 	                     .build())
 				.setDefaultValueParser(clah::FileParser::make("script")
 	            )  // for optional script path.
+				.add(clah::ParamBuilder::ofValue(clah::IntParser::make("count"))
+	                     .addShortName('n')
+	                     .addLongName("history-entries")
+	                     .addShortDesc("Replay first N entries from session history.")
+	                     .optional()
+	                     .build())
+				.add(clah::ParamBuilder::ofFlag()
+	                     .addLongName("history-entries-silent")
+	                     .addShortDesc("Replay history without output (internal).")
+	                     .build())
 				.setHandler([](const clah::ParsingResult& options) -> int {
 					auto init_result = compiler::driver::initializeTheCompiler(
 								   compiler::driver::CompilerModeOfOperationAndOptions::ReplMode{
@@ -990,8 +1033,20 @@ clah::Clah getClahForMain() {
 						return 1;
 					}
 					int result = 0;
+					base::Optional<size_t> reset_replay_count;
 					{
 						compiler::repl::ReplSession session(!options.isFlag("no-completions"));
+						auto                 replay_count_opt
+							= options.getValue<i64>("history-entries");
+						i64  replay_count  = replay_count_opt.copyValueOr(0);
+						bool replay_silent = options.isFlag("history-entries-silent");
+						if (replay_count_opt && replay_count < 0) {
+							std::cerr << "Error: history replay count must be non-negative.\n";
+							compiler::driver::exit();
+							return 1;
+						}
+						if (replay_count > 0)
+							session.replayHistoryEntries(static_cast<size_t>(replay_count), replay_silent);
 						if (options.getExtraParameterCount() > 1) {
 						std::cerr << "Error: repl accepts at most one script path. "
 									 "Usage: duckc repl [script.ds]\n";
@@ -1013,9 +1068,14 @@ clah::Clah getClahForMain() {
 						}
 					}
 						result = session.run();
+						reset_replay_count = session.getResetReplayCount();
 					}
 					compiler::driver::exit();
-					if (result == compiler::repl::ReplSession::RESET_EXIT_CODE) return execSelf();
+					if (result == compiler::repl::ReplSession::RESET_EXIT_CODE) {
+						if (reset_replay_count.has_value())
+							setReplRestartArgs(reset_replay_count.value(), true);
+						return execSelf();
+					}
 					return result;
 				})
 		)
