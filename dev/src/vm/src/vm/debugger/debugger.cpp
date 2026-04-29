@@ -101,7 +101,7 @@ namespace vm::debugger {
 					return std::expected<void, vm::api::ApiError>{};
 
 				return std::expected<void, vm::api::ApiError>{ std::unexpected(vm::api::ApiError{
-					vm::api::OtherError{ "Wrong VM state to run: got " + statusToString(status)
+					vm::api::OtherError{ "Wrong VM state to pause: got " + statusToString(status)
 				                         + ", allowed state is Running." } }) };
 			})
 			.and_then([&] { return vm::api::pause(pid); })
@@ -118,7 +118,7 @@ namespace vm::debugger {
 					return std::expected<void, vm::api::ApiError>{};
 
 				return std::expected<void, vm::api::ApiError>{ std::unexpected(vm::api::ApiError{
-					vm::api::OtherError{ "Wrong VM state to run: got " + statusToString(status)
+					vm::api::OtherError{ "Wrong VM state to resume: got " + statusToString(status)
 				                         + ", allowed state is Paused." } }) };
 			})
 			.and_then([&] { return vm::api::resume(pid); })
