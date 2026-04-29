@@ -594,10 +594,8 @@ clah::Clah getClahForMain() {
 		                       // changed later by for example adding option to save compiled
 		                       // bytecode. Also, ScriptMode requires artifacts path, maybe this
 		                       // will be refactored later.
-							   auto run_temp_artifacts_path = fs::FilePath(
-								   fs::FilePath::getDefaultTempDirectoryPath().getPath()
-								   / "duckling_script_run_artifacts"
-							   );
+							   auto run_temp_artifacts_path
+								   = fs::FileManager::createRandomTempDirectory().getFilePath();
 
 							   auto mode = compiler::driver::CompilerModeOfOperationAndOptions::ScriptMode{
 						.script_file     = script_file,
