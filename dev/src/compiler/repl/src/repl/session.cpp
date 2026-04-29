@@ -11,10 +11,10 @@
 #include <helios/queries/function_queries.hpp>
 #include <helios/queries/queries.hpp>
 // @TODO: #1824 Move platform dependent includes to a separate file.
+#include <fcntl.h>
 #include <sys/ioctl.h>
 #include <termios.h>
 #include <unistd.h>
-#include <fcntl.h>
 
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/defer.hpp>
@@ -32,6 +32,7 @@
 #include <cctype>
 #include <cstdlib>
 #include <cstring>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -43,11 +44,10 @@
 namespace compiler::repl {
 	namespace {
 		constexpr std::string_view K_RESET_COMMAND = "/reset";
-		constexpr std::string_view K_RESET_ERROR_MSG = "Usage: /reset [-n <count>] or /reset [-rel <count>]";
+		constexpr std::string_view K_RESET_ERROR_MSG
+			= "Usage: /reset [-n <count>] or /reset [-rel <count>]";
 
-		std::string getSessionHistoryFilePath() {
-			return ".duckling_repl_session_history";
-		}
+		std::string getSessionHistoryFilePath() { return ".duckling_repl_session_history"; }
 
 		std::string_view trimLeft(std::string_view text) {
 			while (!text.empty() && std::isspace(static_cast<unsigned char>(text.front())))
@@ -63,11 +63,9 @@ namespace compiler::repl {
 		}
 
 		std::string_view takeToken(std::string_view& text) {
-			text = trimLeft(text);
+			text       = trimLeft(text);
 			size_t pos = 0;
-			while (pos < text.size()
-			       && !std::isspace(static_cast<unsigned char>(text[pos])))
-				++pos;
+			while (pos < text.size() && !std::isspace(static_cast<unsigned char>(text[pos]))) ++pos;
 			std::string_view token = text.substr(0, pos);
 			text.remove_prefix(pos);
 			return token;
@@ -110,7 +108,7 @@ namespace compiler::repl {
 				return false;
 			}
 
-			for (char ch : value) {
+			for (char ch: value) {
 				if (ch < '0' || ch > '9') {
 					error_message = std::string(K_RESET_ERROR_MSG);
 					return false;
@@ -126,14 +124,13 @@ namespace compiler::repl {
 			if (line.size() < 3 || line.front() != '[' || line.back() != ']') return false;
 			const std::string number = line.substr(1, line.size() - 2);
 			if (number.empty()) return false;
-			for (char ch : number) {
+			for (char ch: number)
 				if (ch < '0' || ch > '9') return false;
-			}
 			entry_index = static_cast<size_t>(std::stoul(number));
 			return true;
 		}
 
-		class NullBuffer final : public std::streambuf {
+		class NullBuffer final: public std::streambuf {
 		public:
 			int overflow(int ch) override { return traits_type::not_eof(ch); }
 		};
@@ -156,11 +153,11 @@ namespace compiler::repl {
 			ScopedStreamSilence& operator=(const ScopedStreamSilence&) = delete;
 
 		private:
-			bool           m_enabled = false;
-			NullBuffer     m_null_buf;
-			std::streambuf* m_cout_buf = nullptr;
-			std::streambuf* m_cerr_buf = nullptr;
-			int m_saved_stdout = -1;
+			bool            m_enabled = false;
+			NullBuffer      m_null_buf;
+			std::streambuf* m_cout_buf     = nullptr;
+			std::streambuf* m_cerr_buf     = nullptr;
+			int             m_saved_stdout = -1;
 
 			void redirectCppStreams() {
 				m_cout_buf = std::cout.rdbuf(&m_null_buf);
@@ -169,13 +166,13 @@ namespace compiler::repl {
 
 			void restoreCppStreams() {
 				std::cout.flush();
-    			std::cerr.flush();
+				std::cerr.flush();
 
 				std::cout.rdbuf(m_cout_buf);
 				std::cerr.rdbuf(m_cerr_buf);
 
 				std::cout.clear();
-        		std::cerr.clear();
+				std::cerr.clear();
 			}
 
 			void redirectStdio() {
@@ -195,7 +192,7 @@ namespace compiler::repl {
 					fflush(stdout);
 					dup2(m_saved_stdout, STDOUT_FILENO);
 					close(m_saved_stdout);
-					
+
 					clearerr(stdout);
 					setvbuf(stdout, nullptr, _IOLBF, BUFSIZ);
 				}
@@ -272,11 +269,10 @@ namespace compiler::repl {
 	}
 
 	void ReplSession::saveSessionHistoryToFile() const {
-		const auto history_path = getSessionHistoryFilePath();
+		const auto    history_path = getSessionHistoryFilePath();
 		std::ofstream out(history_path, std::ios::trunc);
 		if (!out) {
-			std::cerr << "Warning: failed to save REPL session history to " << history_path
-					  << "\n";
+			std::cerr << "Warning: failed to save REPL session history to " << history_path << "\n";
 			return;
 		}
 
@@ -286,10 +282,8 @@ namespace compiler::repl {
 		for (size_t i = 0; i < m_session_history.size(); ++i) {
 			out << "[" << (i + 1) << "]\n";
 			std::istringstream lines(m_session_history[i].source_code);
-			std::string line;
-			while (std::getline(lines, line)) {
-				out << line << "\n";
-			}
+			std::string        line;
+			while (std::getline(lines, line)) out << line << "\n";
 			out << "\n";
 		}
 	}
@@ -352,10 +346,11 @@ namespace compiler::repl {
 
 		ScopedStreamSilence silence(silent);
 
-		const auto entries = loadSessionHistoryEntries(count);
+		const auto      entries = loadSessionHistoryEntries(count);
+		std::error_code remove_error;
+		std::filesystem::remove(getSessionHistoryFilePath(), remove_error);
 		if (entries.empty()) {
-			if (!silent)
-				std::cerr << "Warning: no REPL session history entries found to replay.\n";
+			if (!silent) std::cerr << "Warning: no REPL session history entries found to replay.\n";
 			return;
 		}
 
@@ -426,11 +421,13 @@ namespace compiler::repl {
 		}
 
 		if (line.starts_with(K_RESET_COMMAND)) {
-			size_t      replay_count = 0;
+			size_t      replay_count     = 0;
 			bool        has_replay_count = false;
-			bool        is_relative = false;
+			bool        is_relative      = false;
 			std::string parse_error;
-			if (!parseResetReplayCount(line, replay_count, has_replay_count, is_relative, parse_error)) {
+			if (!parseResetReplayCount(
+					line, replay_count, has_replay_count, is_relative, parse_error
+				)) {
 				std::cerr << parse_error << "\n";
 				return true;
 			}
@@ -439,7 +436,8 @@ namespace compiler::repl {
 			if (has_replay_count) {
 				if (is_relative) {
 					if (replay_count >= m_session_history.size()) {
-						std::cerr << "Error: -rel count cannot be >= total history size (" << m_session_history.size() << ")\n";
+						std::cerr << "Error: -rel count cannot be >= total history size ("
+								  << m_session_history.size() << ")\n";
 						return true;
 					}
 					replay_count = m_session_history.size() - replay_count;

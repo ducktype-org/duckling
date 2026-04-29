@@ -1032,14 +1032,13 @@ clah::Clah getClahForMain() {
 						compiler::driver::exit();
 						return 1;
 					}
-					int result = 0;
+					int                    result = 0;
 					base::Optional<size_t> reset_replay_count;
 					{
 						compiler::repl::ReplSession session(!options.isFlag("no-completions"));
-						auto                 replay_count_opt
-							= options.getValue<i64>("history-entries");
-						i64  replay_count  = replay_count_opt.copyValueOr(0);
-						bool replay_silent = options.isFlag("history-entries-silent");
+						auto replay_count_opt = options.getValue<i64>("history-entries");
+						i64  replay_count     = replay_count_opt.copyValueOr(0);
+						bool replay_silent    = options.isFlag("history-entries-silent");
 						if (replay_count_opt && replay_count < 0) {
 							std::cerr << "Error: history replay count must be non-negative.\n";
 							compiler::driver::exit();

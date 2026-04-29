@@ -72,9 +72,7 @@ namespace compiler::repl {
 		/**
 		 * @brief Return replay count requested via /reset -n.
 		 */
-		base::Optional<size_t> getResetReplayCount() const {
-			return m_reset_replay_count;
-		}
+		base::Optional<size_t> getResetReplayCount() const { return m_reset_replay_count; }
 
 	private:
 		/**
@@ -125,7 +123,6 @@ namespace compiler::repl {
 		bool shouldExit() const {
 			return m_should_exit;
 		}
-
 
 		/**
 		 * @brief Determine if a line of input is a REPL command.
@@ -239,10 +236,10 @@ namespace compiler::repl {
 		 */
 		void printSessionHistory() const;
 
-		bool                       m_should_exit;   ///< Flag to terminate the REPL loop
-		bool                       m_should_reset;  ///< Flag to reset the REPL process
-		std::vector<ReplStatement> m_session_history;       ///< All statements entered in this session
-		base::Optional<size_t>     m_reset_replay_count;    ///< Replay count requested via /reset -n
+		bool                       m_should_exit;      ///< Flag to terminate the REPL loop
+		bool                       m_should_reset;     ///< Flag to reset the REPL process
+		std::vector<ReplStatement> m_session_history;  ///< All statements entered in this session
+		base::Optional<size_t>     m_reset_replay_count;  ///< Replay count requested via /reset -n
 		u64          m_line_counter;  ///< Counter for generating unique wrapper function names
 		vm::PID      m_dvm_pid;       ///< Process ID of the running DVM instance
 		ReplFrontend m_frontend;      ///< Frontend for user interaction

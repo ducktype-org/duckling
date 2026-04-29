@@ -228,15 +228,14 @@ namespace compiler::repl {
 
 		std::istringstream stream(std::string(entry));
 		std::string        line;
-		while (std::getline(stream, line)) {
-			state.lines.push_back(line);
-		}
+		while (std::getline(stream, line)) state.lines.push_back(line);
 		if (state.lines.empty()) state.lines.emplace_back("");
 
 		state.row = state.lines.size() - 1;
 		state.col = state.lines.back().size();
 		state.prev_state_lengths.clear();
-		for (const auto& saved_line: state.lines) state.prev_state_lengths.push_back(saved_line.size());
+		for (const auto& saved_line: state.lines)
+			state.prev_state_lengths.push_back(saved_line.size());
 		state.prev_state_row = state.row;
 		state.prev_state_col = state.col;
 

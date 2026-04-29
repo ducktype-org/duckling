@@ -168,21 +168,6 @@ namespace compiler::repl {
 			);
 		}
 
-		// void testReplClearHistoryResetsSessionState() {
-		// 	ReplSession session;
-
-		// 	session.processLine("1 + 2");
-		// 	session.processLine("3 + 4");
-
-		// 	assertTrue(!session.m_session_history.empty(), "History should contain entries before clear");
-		// 	assertTrue(session.m_line_counter > 0, "Line counter should increase before clear");
-
-		// 	session.clearHistory();
-
-		// 	assertTrue(session.m_session_history.empty(), "clearHistory should remove all history entries");
-		// 	assertTrue(session.m_line_counter == 0, "clearHistory should reset line counter");
-		// }
-
 		/**
 		 * @brief Test that ReplSession can process code input.
 		 *
