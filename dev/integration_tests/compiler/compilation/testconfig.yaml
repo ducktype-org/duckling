@@ -17,6 +17,8 @@ duckc_worker_count: "3"
 
 # Path to the local helper script used by the deterministic pre-check.
 compile_determinism_script: "@{dev_dir}/integration_tests/compiler/compilation/scripts/concurrent_compile_determinism.py"
+# Path to the helper script that runs multiple commands and asserts identical stdout/stderr/exit code.
+compare_runs_script: "@{dev_dir}/integration_tests/compiler/compilation/scripts/compare_runs.py"
 
 compile_dvm_backend_deterministically_cmd: "if [ '@{enable_conc_deterministic_tests}' = 'true' ]; then python3 @{compile_determinism_script} --duckc-path @{duckc_path} --module-name @{Name} --duckc-worker-count @{duckc_worker_count} --compile-options='@{compile_dvm_options}' --backend dvm; else true; fi"
 compile_llvm_backend_deterministically_cmd: "if [ '@{enable_conc_deterministic_tests}' = 'true' ]; then python3 @{compile_determinism_script} --duckc-path @{duckc_path} --module-name @{Name} --duckc-worker-count @{duckc_worker_count} --compile-options='@{compile_llvm_options}' --backend llvm; else true; fi"
@@ -56,27 +58,7 @@ Run: "
       fi
       ;;
     all)
-      _tmpdir=$(mktemp -d) || { echo 'Failed to create temp dir' >&2; exit 1; };
-      @{compiled_to_llvm} > \"$_tmpdir/llvm.out\" 2> \"$_tmpdir/llvm.err\"; _llvm_exit=$?;
-      @{dvm_path} run @{compiled_to_dvm} > \"$_tmpdir/dvm.out\" 2> \"$_tmpdir/dvm.err\"; _dvm_exit=$?;
-      if [ \"$_llvm_exit\" != \"$_dvm_exit\" ]; then
-        printf 'Exit codes differ! LLVM: %d, DVM: %d\n' \"$_llvm_exit\" \"$_dvm_exit\" >&2;
-        rm -rf \"$_tmpdir\"; exit 1;
-      fi;
-      if ! diff -q \"$_tmpdir/llvm.out\" \"$_tmpdir/dvm.out\" > /dev/null; then
-        printf 'Stdouts differ!\nLLVM stdout (first 50 lines):\n' >&2; head -n 50 \"$_tmpdir/llvm.out\" >&2;
-        printf 'DVM stdout (first 50 lines):\n' >&2; head -n 50 \"$_tmpdir/dvm.out\" >&2;
-        rm -rf \"$_tmpdir\"; exit 1;
-      fi;
-      if ! diff -q \"$_tmpdir/llvm.err\" \"$_tmpdir/dvm.err\" > /dev/null; then
-        printf 'Stderrs differ!\nLLVM stderr (first 50 lines):\n' >&2; head -n 50 \"$_tmpdir/llvm.err\" >&2;
-        printf 'DVM stderr (first 50 lines):\n' >&2; head -n 50 \"$_tmpdir/dvm.err\" >&2;
-        rm -rf \"$_tmpdir\"; exit 1;
-      fi;
-      cat \"$_tmpdir/llvm.out\";
-      cat \"$_tmpdir/llvm.err\" >&2;
-      rm -rf \"$_tmpdir\";
-      exit $_llvm_exit;
+      python3 @{compare_runs_script} --cmd llvm '@{compiled_to_llvm}' --cmd dvm '@{dvm_path} run @{compiled_to_dvm}';
       ;;
     nobackend) echo \"Backend undefined\"; exit 1 ;;
     *)         echo \"Unknown backend\";   exit 1 ;;
