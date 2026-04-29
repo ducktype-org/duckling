@@ -52,11 +52,6 @@ namespace compiler::driver {
 		struct ArtifactsOptions final {
 			fs::FilePath artifacts_path;
 
-			// struct IncrementalCompilation {
-			//     bool enabled;
-			//     bool show_stats;
-			// };
-			// IncrementalCompilation incremental_compilation;
 			// bool rm_artifacts_before_compilation = false;
 			// bool rm_artifacts_after_compilation = false;
 		};
