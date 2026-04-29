@@ -88,7 +88,7 @@ namespace compiler::driver {
 			);
 			if (!getModuleRef(root_module)->hasMainSourceFile()) {
 				auto module_name = getModuleRef(root_module)->getName();
-				global_state::getGlobalLogger()->log(makeBox<dia_int::PlaceholderHeaderError>(
+				global_state::getGlobalLogger()->log(makeBox<dia_int::PlaceholderError>(
 					"Main package does not have a main source file.",
 					base::strConcat(
 						"The main source file is required for compilation. Please add a ",

@@ -6,63 +6,76 @@
 
 namespace dia_int {
 
-	PlaceholderHeaderError::PlaceholderHeaderError(
-		std::string header_message, std::string description
+#define ADD_ARGUMENTS()                                                       \
+	addArgument<TextArgument>("header_message", std::move(header_message));   \
+	addArgument<TextArgument>("description", std::move(description));         \
+	if_opt_some(source_position, pos) {                                       \
+		addArgument<CodeArgument>("code", pos);                               \
+		addArgument<CodeLocationArgument>("code_location", pos);              \
+		addPointerMessage("cause", pos);                                      \
+	}                                                                         \
+	if_opt_some(pointer_message_content, val) {                               \
+		addArgument<TextArgument>("pointer_message_content", std::move(val)); \
+	}                                                                         \
+	if_opt_none(pointer_message_content) {                                    \
+		addArgument<TextArgument>("pointer_message_content", "");             \
+	}
+
+	PlaceholderError::PlaceholderError(
+		std::string                         header_message,
+		base::Optional<dia::SourcePosition> source_position,
+		std::string                         description,
+		base::Optional<std::string>         pointer_message_content
 	):
 		  MessageBase() {
-		addArgument<TextArgument>("header_message", std::move(header_message));
-		addArgument<TextArgument>("description", std::move(description));
+		ADD_ARGUMENTS();
 	}
 
-	PlaceholderCodeError::PlaceholderCodeError(
-		std::string                 header_message,
-		dia::SourcePosition         source_position,
-		std::string                 description,
-		base::Optional<std::string> pointer_message_content
+	PlaceholderError::PlaceholderError(
+		std::string                             header_message,
+		base::Optional<dia_int::StablePosition> source_position,
+		std::string                             description,
+		base::Optional<std::string>             pointer_message_content
 	):
 		  MessageBase() {
-		addArgument<TextArgument>("header_message", std::move(header_message));
-		addArgument<TextArgument>("description", std::move(description));
-
-		addArgument<CodeArgument>("code", source_position);
-		addArgument<CodeLocationArgument>("code_location", source_position);
-
-		if_opt_some(pointer_message_content, val) {
-			addArgument<TextArgument>("pointer_message_content", std::move(val));
-		}
-		if_opt_none(pointer_message_content) {
-			addArgument<TextArgument>("pointer_message_content", "");
-		}
-
-		addPointerMessage("cause", source_position);
+		ADD_ARGUMENTS();
 	}
 
-	PlaceholderHeaderNote::PlaceholderHeaderNote(std::string header_message, std::string description):
-		  MessageBase() {
-		addArgument<TextArgument>("header_message", std::move(header_message));
-		addArgument<TextArgument>("description", std::move(description));
-	}
+	PlaceholderError::PlaceholderError(std::string header_message, std::string description):
+		  PlaceholderError(
+			  std::move(header_message),
+			  base::Optional<dia::SourcePosition>{},
+			  std::move(description),
+			  {}
+		  ) {}
 
-	PlaceholderCodeNote::PlaceholderCodeNote(
-		std::string                 header_message,
-		dia::SourcePosition         source_position,
-		std::string                 description,
-		base::Optional<std::string> pointer_message_content
+	PlaceholderNote::PlaceholderNote(
+		std::string                         header_message,
+		base::Optional<dia::SourcePosition> source_position,
+		std::string                         description,
+		base::Optional<std::string>         pointer_message_content
 	):
 		  MessageBase() {
-		addArgument<TextArgument>("header_message", std::move(header_message));
-		addArgument<TextArgument>("description", std::move(description));
-
-		addArgument<CodeArgument>("code", source_position);
-		addArgument<CodeLocationArgument>("code_location", source_position);
-
-		match_optional(pointer_message_content) {
-			opt_some(val) { addArgument<TextArgument>("pointer_message_content", std::move(val)); }
-			opt_none { addArgument<TextArgument>("pointer_message_content", ""); }
-		}
-
-		addPointerMessage("cause", source_position);
+		ADD_ARGUMENTS();
 	}
+
+	PlaceholderNote::PlaceholderNote(
+		std::string                             header_message,
+		base::Optional<dia_int::StablePosition> source_position,
+		std::string                             description,
+		base::Optional<std::string>             pointer_message_content
+	):
+		  MessageBase() {
+		ADD_ARGUMENTS();
+	}
+
+	PlaceholderNote::PlaceholderNote(std::string header_message, std::string description):
+		  PlaceholderNote(
+			  std::move(header_message),
+			  base::Optional<dia::SourcePosition>{},
+			  std::move(description),
+			  {}
+		  ) {}
 
 	NotYetImplementedCodeError::NotYetImplementedCodeError(
 		std::string                         header_message,
@@ -71,22 +84,22 @@ namespace dia_int {
 		base::Optional<std::string>         pointer_message_content
 	):
 		  MessageBase() {
-		addArgument<TextArgument>("header_message", std::move(header_message));
-		addArgument<TextArgument>("description", std::move(description));
+		ADD_ARGUMENTS();
+		addStacktraceArgument();
+	}
 
-		if_opt_some(source_position, pos) {
-			addArgument<CodeArgument>("code", pos);
-			addArgument<CodeLocationArgument>("code_location", pos);
-			addPointerMessage("cause", pos);
-		}
+	NotYetImplementedCodeError::NotYetImplementedCodeError(
+		std::string                             header_message,
+		base::Optional<dia_int::StablePosition> source_position,
+		std::string                             description,
+		base::Optional<std::string>             pointer_message_content
+	):
+		  MessageBase() {
+		ADD_ARGUMENTS();
+		addStacktraceArgument();
+	}
 
-		if_opt_some(pointer_message_content, val) {
-			addArgument<TextArgument>("pointer_message_content", std::move(val));
-		}
-		if_opt_none(pointer_message_content) {
-			addArgument<TextArgument>("pointer_message_content", "");
-		}
-
+	void NotYetImplementedCodeError::addStacktraceArgument() {
 		if (logger::isCategoryEnabled(logger::DevLogCategories::NYIStacktraces)) {
 			addArgument<TextArgument>("stacktrace", base::getCurrentStackTrace());
 		} else {
@@ -97,4 +110,14 @@ namespace dia_int {
 			);
 		}
 	}
+
+	NotYetImplementedCodeError::NotYetImplementedCodeError(
+		std::string header_message, std::string description
+	):
+		  NotYetImplementedCodeError(
+			  std::move(header_message),
+			  base::Optional<dia::SourcePosition>{},
+			  std::move(description),
+			  {}
+		  ) {}
 }
