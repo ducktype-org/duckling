@@ -467,6 +467,12 @@ namespace compiler::repl {
 			return true;
 		}
 
+		if (line == "/commands-reset" || line == "/cmds-reset") {
+			m_frontend.clearHistory();
+			std::cout << "Command history cleared.\n";
+			return true;
+		}
+
 		if (line == "/clear" || line == "/c") {
 			m_frontend.clearScreen();
 			return true;

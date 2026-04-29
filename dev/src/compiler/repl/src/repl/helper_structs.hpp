@@ -6,6 +6,7 @@
 
 #include <base/pointers/ref.hpp>
 
+#include <ostream>
 #include <string>
 #include <utility>
 
@@ -69,4 +70,23 @@ namespace compiler::repl {
 			return ReplResult{ .status = Status::IncompleteInput, .message = "" };
 		}
 	};
+
+	/**
+	 * @brief Print shared REPL commands help section.
+	 *
+	 * This section is frontend-agnostic and should remain identical between
+	 * minimal and replxx implementations.
+	 */
+	inline void printReplCommandsHelp(std::ostream& out) {
+		out << "\n=== REPL Commands ===\n";
+		out << "  /help, /?, /h                   - Show this help message\n";
+		out << "  /exit, /quit, /q                - Exit the REPL\n";
+		out << "  /reset [-n N]                   - Restart the REPL process, replay first N entries\n";
+		out << "  /reset [-rel N]                 - Restart the REPL, replay all except last N entries\n";
+		out << "  /history, /hist                 - Show session history (all statements executed in this repl session)\n";
+		out << "  /commands, /cmds                - Show all input history (editor history)\n";
+		out << "  /commands-reset, /cmds-reset    - Clear input history (editor history)\n";
+		out << "  /clear, /c                      - Clear terminal\n";
+		out << "  /load <file.ds>                 - Load script file (stops on first error; previous statements stay applied)\n";
+	}
 }  // namespace compiler::repl

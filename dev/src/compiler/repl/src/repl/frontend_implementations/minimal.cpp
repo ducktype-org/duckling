@@ -247,16 +247,7 @@ namespace compiler::repl {
 	void FrontendMinImplementation::clearHistory() { m_history.clear(); }
 
 	void FrontendMinImplementation::printHelp() const {
-		std::cout << "\n=== REPL Commands ===\n";
-		std::cout << "  /help, /?, /h       - Show this help message\n";
-		std::cout << "  /exit, /quit, /q    - Exit the REPL\n";
-		std::cout << "  /reset [-n N]       - Restart the REPL process, replay first N entries\n";
-		std::cout << "  /reset [-rel N]     - Restart the REPL, replay all except last N entries\n";
-		std::cout << "  /history, /hist     - Show session history (all statements executed in this repl session)\n";
-		std::cout << "  /commands, /cmds    - Show all input history (editor history)\n";
-		std::cout << "  /clear, /c          - Clear terminal\n";
-		std::cout << "  /load <file.ds>     - Load script file (stops on first error; previous\n"
-				  << "                         statements stay applied)\n";
+		printReplCommandsHelp(std::cout);
 		std::cout << "\n=== Editing ===\n";
 		std::cout << "  Alt + Enter         - Insert a new line\n";
 		std::cout << "  Alt + Up / Down     - Navigate input history\n";
