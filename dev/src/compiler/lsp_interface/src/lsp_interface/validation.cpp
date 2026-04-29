@@ -1,11 +1,15 @@
 #include "validation.hpp"
 
+#include <diagnostic_interactive/core/common_classes.hpp>
 #include <diagnostic_interactive/core/diagnostic_arguments_forward.hpp>
 #include <diagnostic_interactive/lsp_ui/lsp_ui.hpp>
+#include <diagnostic_interactive/message.hpp>
+#include <diagnostic_interactive/stable_position.hpp>
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/source_file.hpp>
-#include <helios/queries.hpp>
+#include <frontend/pst_parser/lang_parser_element.hpp>
+#include <helios/queries/queries.hpp>
 
 #include <query_framework/context/context.hpp>
 #include <query_framework/entry/query_entry_point.hpp>
@@ -18,6 +22,21 @@ namespace lsp {
 		while (auto parent = module->getParentModule())
 			module = getModuleRef(parent.value().illegalAccess().getID());
 		return module;
+	}
+
+	dia_int::CodeLocation updatePositionWithHashCodeLocation(
+		dia_int::HashCodeLocation hash_code_location
+	) {
+		dia_int::StablePosition stable_position(
+			pst::LangElement::getActiveSourcePosition,
+			pst::LangElement::getActiveSourcePositionIllegalAccess,
+			hash_code_location.begin_node,
+			hash_code_location.end_node
+		);
+		auto updated_source_pos = stable_position.getActiveSourcePositionIllegalAccess();
+		auto updated_code_location
+			= dia_int::CodeLocationArgument::FileLocation::fromSourcePosition(updated_source_pos);
+		return updated_code_location.toCodeLocation();
 	}
 
 	void collectErrorsFromModuleTree(
@@ -159,7 +178,9 @@ namespace lsp {
 		if (isModuleTreeParsedSuccessfully(root_module))
 			query::entryPoint<helios::QueryModuleHOUTRecursively>(root_module->getModuleID());
 
-		query::Context::collectAllDiagnostic(diagnostics);
+		query::Context::collectAndUpdateAllDiagnostic(
+			diagnostics, updatePositionWithHashCodeLocation
+		);
 
 		dia_int::lsp::EvaluationContext ctx(main_path.uri(), queried_path.uri());
 

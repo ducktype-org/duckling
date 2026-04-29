@@ -1,5 +1,4 @@
 #include <filesystem/file.hpp>
-#include <lexer/lexer.hpp>
 #include <tester/tester.hpp>
 #include <token_source/source.hpp>
 
@@ -21,6 +20,7 @@ public:
 		TESTER_ADD_TEST(testGroup6);
 		TESTER_ADD_TEST(testGroup7);
 		TESTER_ADD_TEST(testGroup8);
+		TESTER_ADD_TEST(testGroup9);
 		TESTER_ADD_TEST(testSourcePosition);
 	}
 
@@ -31,16 +31,17 @@ protected:
 		lang_def::setKeywordMode(lang_def::KeywordMode::DucklingSource);
 
 		fs::File file(path("token_code.duck"));
-		td = lexer::tokenizeFile(file);
+		td = tokenizer::makeTokenSource(file);
+		td->tokenize();
 	}
 
 private:
-	constexpr static std::array<std::string_view, 9> GROUP_NAMES
+	constexpr static std::array<std::string_view, 10> GROUP_NAMES
 		= { "",        "keyword",    "operator", "identifier", "special",
-		    "comment", "numLiteral", "string",   "char" };
+		    "comment", "numLiteral", "string",   "char",       "formatstring" };
 
 	void testBasicStructure() {
-		assertTrue(td->getTokenData().tokens.size() == 9, "Wrong amount of top-level token groups");
+		assertTrue(td->getTokenData().tokens.size() == 10, "Wrong amount of top-level token groups");
 	}
 
 	void checkTokenIsBracketGroup(usize index) {
@@ -128,6 +129,10 @@ private:
 	void testGroup7() { testTokenGroup<7, lexer::Token::Type::String, &lexer::Token::isString>(); }
 
 	void testGroup8() { testTokenGroup<8, lexer::Token::Type::Char, &lexer::Token::isChar>(); }
+
+	void testGroup9() {
+		testTokenGroup<9, lexer::Token::Type::FormatString, &lexer::Token::isFormatString>();
+	}
 
 	void testSourcePosition() {
 		const auto& position = td->getTokenData().tokens[1].getRecursive().front().getPosition();

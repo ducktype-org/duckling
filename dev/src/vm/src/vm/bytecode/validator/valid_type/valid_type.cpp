@@ -151,12 +151,12 @@ void valid_type::ValidType::defineVariant(const std::vector<ValidTypeID>& varian
 }
 
 void valid_type::ValidType::defineFunction(
-	const std::vector<ValidTypeID>& parameters, ValidTypeID result
+	const std::vector<ValidTypeID>& parameters, const std::vector<ValidTypeID>& results
 ) {
 	variant_match(state) {
 		variant_case_novalue(ValidType::Declared) {
-			state = Defined{ .kind = defined::DefinedFunction{ .parameters = parameters,
-				                                               .result     = result } };
+			state = Defined{ .kind = defined::DefinedFunction{ .parameters   = parameters,
+				                                               .result_types = results } };
 		}
 		variant_default { CORE_PANIC("Bad type define: type already defined or finalized"); }
 	}
@@ -370,9 +370,9 @@ void valid_type::ValidType::finalize(ValidTypeMap& types) {
 			// Function type size is known, so we don't need to do anything here.
 			this->size                  = valid_type::TypeSize::pointer();
 			this->is_trivially_copyable = false;
-			state                       = Finalized{ .kind
-                               = finalized::Function{ .parameters = std::move(function.parameters),
-				                                                            .result     = function.result } };
+			state                       = Finalized{ .kind = finalized::Function{
+														 .parameters   = std::move(function.parameters),
+														 .result_types = std::move(function.result_types) } };
 		}
 		variant_case(defined::DefinedVariant, variant) {
 			CORE_ASSERT(
@@ -398,8 +398,10 @@ void valid_type::ValidType::finalize(ValidTypeMap& types) {
 			this->size = valid_type::TypeSize(type_tag_size, 0) + data_segment_size;
 			this->is_trivially_copyable = false;
 			state                       = Finalized{ .kind = finalized::Variant{
-														 .type_tag_size = type_tag_size,
-														 .alternatives  = std::move(variant.alternatives),
+														 .type_tag_size        = type_tag_size,
+														 .alternatives_ordered = variant.alternatives,
+														 .alternatives_set
+                                   = variant.alternatives | std::ranges::to<std::unordered_set>(),
                                } };
 		}
 		variant_case(defined::DefinedStructure, structure) {
@@ -445,10 +447,8 @@ void valid_type::ValidType::finalizeInstantiability(ValidTypeMap& types) {
 	// This method assumes all dependent types are already finalized, so we can query their
 	// instantiability.
 	variant_match(getKind()) {
-		variant_case(finalized::Primitive, primitive) {
-			if (name == "void") is_instantiable = false;
-		}
-		variant_case(finalized::Pointer, pointer) {
+		variant_case_novalue(finalized::Primitive) { is_instantiable = true; }
+		variant_case_novalue(finalized::Pointer) {
 			// Any pointer is instantiable.
 			is_instantiable = true;
 		}
@@ -482,7 +482,7 @@ void valid_type::ValidType::finalizeInstantiability(ValidTypeMap& types) {
 		}
 		variant_case(finalized::Variant, variant) {
 			is_instantiable
-				= std::ranges::all_of(variant.alternatives, [&](const auto& alternative) {
+				= std::ranges::all_of(variant.alternatives_ordered, [&](const auto& alternative) {
 					  auto alternative_type = types.at(alternative);
 					  return alternative_type->isInstantiable();
 				  });

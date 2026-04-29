@@ -2,9 +2,10 @@
 
 #include "mir_lifetime_scope.hpp"
 #include "mir_local_ref.hpp"
+#include "mir_metadata.hpp"
 
 #include <ctv/ctv.hpp>
-#include <typesystem/higher/types.hpp>
+#include <helios/tsh/types.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/collections/stable_container.hpp>
@@ -61,10 +62,10 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 	IntegerDiv,
 	IntegerMod,
 
-	IntegerLt,    // Less then
-	IntegerGt,    // Greater then
-	IntegerLteq,  // Less then or equal to
-	IntegerGteq,  // Greater then or equal to
+	IntegerLt,    // Less than
+	IntegerGt,    // Greater than
+	IntegerLteq,  // Less than or equal to
+	IntegerGteq,  // Greater than or equal to
 	IntegerEq,    // Equal to
 	IntegerNeq,   // Not equal to
 
@@ -74,10 +75,10 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 	FloatDiv,
 	FloatNeg,
 
-	FloatLt,    // Less then
-	FloatGt,    // Greater then
-	FloatLteq,  // Less then or equal to
-	FloatGteq,  // Greater then or equal to
+	FloatLt,    // Less than
+	FloatGt,    // Greater than
+	FloatLteq,  // Less than or equal to
+	FloatGteq,  // Greater than or equal to
 	FloatEq,    // Equal to
 	FloatNeq,   // Not equal to
 
@@ -604,6 +605,8 @@ namespace compiler::mir {
 
 		InstrParameters extra_params{ NoInstrParameters{} };
 
+		InstructionMetadata metadata;
+
 		// @TODO: each Instruction should have source position reference
 
 		/**
@@ -626,13 +629,15 @@ namespace compiler::mir {
 			std::vector<MIRValue>      arguments,
 			std::vector<OperationFlag> flags,
 			const ScopeRef             scope,
-			InstrParameters            extra_parameters = NoInstrParameters{}
+			InstrParameters            extra_parameters = NoInstrParameters{},
+			InstructionMetadata        metadata         = {}
 		):
 			  operation(operation),
 			  output(std::move(output)),
 			  arguments(std::move(arguments)),
 			  flags(std::move(flags)),
 			  extra_params(extra_parameters),
+			  metadata(metadata),
 			  scope(scope) {}
 
 		void debugPrint(std::ostream& os) const;

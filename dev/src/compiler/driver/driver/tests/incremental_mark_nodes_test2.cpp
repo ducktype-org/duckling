@@ -37,7 +37,7 @@ private:
 			= fs::FilePath(std::filesystem::current_path() / k_artifacts_dir);
 
 		// Re-initialize compiler which will load the previous graph from artifacts
-		compiler::driver::initializeTheCompiler(
+		auto init_result = compiler::driver::initializeTheCompiler(
             compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
                 .main_package_info = {
                     .package_name = std::string("mark_nodes_test_package"),
@@ -52,6 +52,8 @@ private:
 				.execution_options     = { .worker_count = 1 },
             }
         );
+
+		ASSERT_TRUE(init_result.status().isOk());
 
 		// After initialization the previous graph (if present) should be loaded
 		auto prev_opt = query::internal::ContextAccess::getState()->getPreviousGraph();
@@ -102,7 +104,7 @@ private:
 		auto root_deps = prev->getNodeDeps(root_node);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			(void) ctx.query<driver::CompileModule>({ module, driver::BackendType::LLVM });
+			(void) ctx.query<driver::CompileModule>({ module, driver::BackendType::LLVM, false });
 
 			// Trigger metadata merge by calling the same queries
 			(void) ctx.query<MetadataPersistenceTestQuery>({ 42 });

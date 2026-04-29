@@ -55,24 +55,10 @@ namespace tpc {
 
 		StringValue(const std::string& str): value(base::StrID(str.c_str())) {}
 
-		StringValue(const StringValue&) = default;
+		StringValue(const StringValue&)            = default;
+		StringValue& operator=(const StringValue&) = default;
 
 		operator base::StrID() { return value; }
-
-		/**
-		 * @brief Returns the actual unescaped contents
-		 */
-		[[nodiscard]]
-		std::string str() const {
-			std::stringstream ss;
-			ss << value.str();
-			return ss.str();
-		}
-
-		/**
-		 * @note This should probably do something more in the future.
-		 */
-		bool operator==(StringValue& other) { return str() == other.str(); }
 
 		friend constexpr void addToHash(
 			hashing::hash_algorithm auto& h, const StringValue& t

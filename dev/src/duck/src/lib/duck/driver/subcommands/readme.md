@@ -22,7 +22,7 @@ Now the main parser should be aware of the `foo` subcommand, but we still need t
 
 ## Subcommand code execution
 
-Your `foo.rs` file should export one more function — `execute` (`fn(&DuckCtx, &ArgMatches) -> QuackResult<()>`) — which actually executes some code.
+Your `foo.rs` file should export one more function — `execute` (`fn(&DuckContext, &ArgMatches) -> QuackResult<()>`) — which actually executes some code.
 
 First things first, you need to add your `execute` function to the `match` statement in [`mod.rs`](mod.rs).
 It should look like this:

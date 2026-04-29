@@ -2,7 +2,7 @@ add_library(StringID
 	src/string_id/string_id.cpp
 )
 
-make_module(StringID USES Base)
+make_module(StringID USES Base Hashing Concurrent)
 
 add_example(string_id_example examples/string_id_example.cpp USES StringID)
 

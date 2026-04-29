@@ -7,6 +7,7 @@
 #include "pst_state_forward.hpp"
 
 #include <diagnostic_interactive/logger.hpp>
+#include <diagnostic_interactive/stable_position.hpp>
 #include <time_stats/time_stats.hpp>
 
 #include <token_source/source.hpp>
@@ -44,13 +45,19 @@ namespace pst {
 	template<
 		std::derived_from<LangElement> Element = TopLevel,
 		std::derived_from<LangElement> Parser  = Element>
-	class PST {
+	class PST final {
 	public:
 		/**
 		 * @brief Checks if an element is pars-able using given arguments.
 		 */
+		constexpr static bool PARSE_ABLE_EMPTY
+			= tpc::ParseAbleElement<Element, Parser, LangParserState>;
+
+		/**
+		 * @brief Checks if an element is pars-able using given arguments.
+		 */
 		template<typename... Args>
-		constexpr static bool ParseAble
+		constexpr static bool PARSE_ABLE
 			= tpc::ParseAbleElement<Element, Parser, LangParserState, Args...>;
 
 		/**
@@ -63,22 +70,42 @@ namespace pst {
 		 */
 		using PSTContext = std::variant<PSTType, Box<LangParserContext>>;
 
+
 	private:
-		/** Token source backing this PST (tokenized file or virtual input). */
+		/****************\
+		|    PST DATA    |
+		\****************/
+
+		/**
+		 * Token source backing this PST (tokenized file or virtual input).
+		 */
 		Box<tokenizer::TokenSource> file;
-		/** Root element access wrapper for the parsed element tree. */
+
+		/**
+		 * Root element access wrapper for the parsed element tree.
+		 */
 		AccessInternalAnonymous<Element> element;
-		/** Import entries collected during parsing. */
+
+		/**
+		 * Import entries collected during parsing.
+		 */
 		std::vector<ImportType> imports;
-		/** Contextual component path/hash of this PST for hierarchical naming. */
+
+		/**
+		 * Contextual component path/hash of this PST for hierarchical naming.
+		 */
 		hashing::ComponentHash hash_ctx_info;
+
+		/***********************\
+		|    PRIVATE METHODS    |
+		\***********************/
 
 		/**
 		 * @note Requires that the file was successfully tokenized.
 		 */
 		template<typename... Args>
-		void parse(Box<LangParserContext>&& parsing_ctx, Args&&... args) requires ParseAble<Args...>
-		{
+		void parse(Box<LangParserContext>&& parsing_ctx, Args&&... args)
+			requires PARSE_ABLE<Args...> {
 			time_stats::TrackCategoryTime track_time(time_stats::TimeCategories::PSTConstruction);
 
 			const lexer::TokenData& token_data = file->getTokenData();
@@ -97,14 +124,16 @@ namespace pst {
 			internal::finalizeParsing(state_box.refMut());
 			imports = internal::extractState(std::move(state_box));
 
-
 			// Note: hash calculation should work even on errors in PST.
-			// We let it be calculated to don't worry about hash beeing unavailable during the
+			// We let it be calculated to don't worry about hash being unavailable during the
 			// compiler initialization phase, but we generally stop the compilation when there are
 			// errors anyway. if it breaks consider wrapping the lines in `if (not hasErrors())` and
 			// handling it differently.
 			calcElementPathHash();
 			calcHashes();
+
+			// @TODO: #2404 prevent putInPSTHashHashMap before the generated PST is signed
+			putInPSTHashHashMap();
 		}
 
 		static Box<LangParserContext> makeParserContext(PSTContext&& pst_ctx) {
@@ -132,7 +161,7 @@ namespace pst {
 			Box<LangParserContext>&& parsing_ctx,
 			hashing::ComponentHash   hash_ctx = {},
 			Args&&... args
-		) requires ParseAble<Args...>:
+		) requires PARSE_ABLE<Args...>:
 			  file(tokenizer::makeTokenSource(fs::FileManager::createRandomVirtualFile(content))),
 			  hash_ctx_info(std::move(hash_ctx)) {
 			if (!file->tokenize()) return;
@@ -144,12 +173,12 @@ namespace pst {
 		 */
 		template<typename... Args>
 		explicit PST(
-			dia::SourcePosition    pos,
-			std::string_view       content,
-			Box<LangParserContext> parsing_ctx,
-			hashing::ComponentHash hash_ctx = {},
+			dia_int::StablePosition pos,
+			std::string_view        content,
+			Box<LangParserContext>  parsing_ctx,
+			hashing::ComponentHash  hash_ctx = {},
 			Args&&... args
-		) requires ParseAble<Args...>
+		) requires PARSE_ABLE<Args...>
 			  : file(tokenizer::makeTokenSource(pos, content)), hash_ctx_info(std::move(hash_ctx)) {
 			if (!file->tokenize()) return;
 			parse(std::move(parsing_ctx), std::forward<Args>(args)...);
@@ -169,6 +198,10 @@ namespace pst {
 			if (auto ref = element.internalMut()) ref->calcHashRecursive();
 		}
 
+		void putInPSTHashHashMap() {
+			if (auto ref = element.internalMut()) ref->putInPSTHashHashMapRecursive();
+		}
+
 		/**
 		 * @brief Calculates the total signature (Hash of the whole pst) and signs all of the
 		 * elements with it (Adds it to their hash).
@@ -183,6 +216,10 @@ namespace pst {
 		}
 
 	public:
+		/**********************\
+		|    PUBLIC METHODS    |
+		\**********************/
+
 		/**
 		 * @brief Construct a new Pst from tokenized file
 		 */
@@ -190,7 +227,7 @@ namespace pst {
 		    PSTContext&&                pst_ctx,
 		    hashing::ComponentHash      hash_ctx = {})
 
-		requires ParseAble<>: file(std::move(file)), hash_ctx_info(std::move(hash_ctx)) {
+		requires PARSE_ABLE_EMPTY: file(std::move(file)), hash_ctx_info(std::move(hash_ctx)) {
 			if (getLogger()->bad()) return;
 			parse(makeParserContext(std::move(pst_ctx)));
 		}
@@ -200,7 +237,7 @@ namespace pst {
 		 */
 		PST(const fs::File& path, PSTContext&& pst_ctx, hashing::ComponentHash hash_ctx = {})
 
-		requires ParseAble<>:
+		requires PARSE_ABLE_EMPTY:
 			  file(tokenizer::makeTokenSource(path)),
 			  hash_ctx_info(std::move(hash_ctx)) {
 			if (!file->tokenize()) return;
@@ -209,7 +246,7 @@ namespace pst {
 
 		static PST fromContents(
 			std::string_view contents, PSTContext&& pst_ctx, hashing::ComponentHash hash_ctx = {}
-		) requires ParseAble<> {
+		) requires PARSE_ABLE_EMPTY {
 			return PST(contents, makeParserContext(std::move(pst_ctx)), std::move(hash_ctx));
 		}
 
@@ -219,7 +256,7 @@ namespace pst {
 			PSTContext&&           pst_ctx,
 			hashing::ComponentHash hash_ctx = {},
 			Args&&... args
-		) requires ParseAble<Args...> {
+		) requires PARSE_ABLE<Args...> {
 			return PST(
 				contents,
 				makeParserContext(std::move(pst_ctx)),
@@ -228,8 +265,10 @@ namespace pst {
 			);
 		}
 
+		/** @brief Create a PST from an expanded (macro) text, with correct query dependency
+		 * tracking via unlock(ctx). */
 		static PST fromExpand(
-			dia::SourcePosition      pos,
+			dia_int::StablePosition  pos,
 			std::string_view         contents,
 			Box<LangParserContext>&& parsing_ctx,
 			hashing::ComponentHash   hash_ctx = {}
@@ -239,16 +278,23 @@ namespace pst {
 
 		template<typename... Args>
 		static PST fromExpandWithArgs(
-			dia::SourcePosition    pos,
-			std::string_view       contents,
-			Box<LangParserContext> parsing_ctx,
-			hashing::ComponentHash hash_ctx = {},
+			dia_int::StablePosition pos,
+			std::string_view        contents,
+			Box<LangParserContext>  parsing_ctx,
+			hashing::ComponentHash  hash_ctx = {},
 			Args&&... args
-		) requires ParseAble<Args...> {
+		) requires PARSE_ABLE<Args...> {
 			auto out = PST(
 				pos, contents, std::move(parsing_ctx), std::move(hash_ctx), std::forward<Args>(args)...
 			);
+			// @TODO: #2404 Both signing and hashing should be performed in the parse function, it
+			// should receive some kind of "options/PSTContext" struct simillar to the
+			// LangParserContext that will define whether the PST is generated, etc.
+
 			out.signGenerated();
+
+			// we call it again after signing, because signing changes the hash:
+			out.putInPSTHashHashMap();
 			return out;
 		}
 
@@ -281,6 +327,17 @@ namespace pst {
 			  element(std::move(other.element)),
 			  imports(std::move(other.imports)),
 			  hash_ctx_info(std::move(other.hash_ctx_info)) {}
+
+		/**
+		 * @TODO: #2397 Additional root data should just be passed during construction.
+		 */
+		void setAdditionalRootData(AdditionalRootData data) {
+			CORE_ASSERT(
+				element.internalMut().toOpt().has_value(),
+				"Attempted to set additional root data on PST with null root element"
+			);
+			this->element.internalMut()->setAdditionalRootData(std::move(data));
+		}
 
 		void dprint(std::ostream& out) const { nullAwareDprint(element, out); }
 	};

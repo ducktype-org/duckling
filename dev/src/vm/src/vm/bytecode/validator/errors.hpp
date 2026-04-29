@@ -11,7 +11,7 @@
 #include <vm/bytecode/serializer/serializer.hpp>
 #include <vm/bytecode/type_of_data.hpp>
 #include <vm/bytecode/validator/valid_type/valid_type.hpp>
-#include <vm/core/process/type_metadata/type_metadata.hpp>
+#include <vm/core/safe/type_metadata/type_metadata.hpp>
 
 #include <string_view>
 #include <utility>
@@ -50,17 +50,6 @@ namespace vm::code {
 		const base::StrID func_name;
 
 		PathWithoutEndError(base::StrID func_name):
-			  ValidationError(base::strConcat(ERR_MSG, func_name)),
-			  func_name(func_name) {}
-	};
-
-	class VoidTypeArgumentError: public ValidationError {
-	public:
-		constexpr static std::string_view ERR_MSG
-			= "Void type cannot be used as argument in function: ";
-		const base::StrID func_name;
-
-		VoidTypeArgumentError(base::StrID func_name):
 			  ValidationError(base::strConcat(ERR_MSG, func_name)),
 			  func_name(func_name) {}
 	};
@@ -167,15 +156,19 @@ namespace vm::code {
 	class InvalidMainReturnType: public ValidationError {
 	public:
 		constexpr static std::string_view ERR_MSG
-			= "It's required for the `main` function to return a value of type `i64`";
+			= "It's required for the `main` function to return a single value of type `i64`";
 		const code::FuncSignature main_signature;
 
-		InvalidMainReturnType(code::FuncSignature main_signature):
+		const bool type_mismatch;
+
+		InvalidMainReturnType(code::FuncSignature main_signature, bool type_mismatch):
 			  ValidationError(ERR_MSG.data()),
-			  main_signature(std::move(main_signature)) {}
+			  main_signature(std::move(main_signature)),
+			  type_mismatch(type_mismatch) {}
 
 		[[nodiscard]] base::Optional<CRef<ElementBase>> maybeElement() const override {
-			return static_cast<CRef<ElementBase>>(&main_signature.result_type);
+			return type_mismatch ? static_cast<CRef<ElementBase>>(&main_signature.result_types[0])
+			                     : base::Optional<CRef<ElementBase>>{};
 		}
 	};
 
@@ -348,6 +341,9 @@ namespace vm::code {
 		InvalidUpcastError, "The source type does not inherit from the destination type"
 	);
 	DEFINE_INSTRUCTION_ERROR(
+		InvalidDowncastError, "The source type does not inherit from the destination type"
+	);
+	DEFINE_INSTRUCTION_ERROR(
 		InvalidInstructionExtensionError, "The preceding instruction cannot be extended this way"
 	);
 	DEFINE_INSTRUCTION_ERROR(RetValDeinitError, "The return value cannot be deinitialized.");
@@ -371,8 +367,8 @@ namespace vm::code {
 	);
 	DEFINE_ARGUMENT_ERROR(
 		InvalidTailcallArgumentsError,
-		"Invalid tailcall arguments. The stack should contain exactly ret_val and arguments for "
-		"calling: "
+		"Invalid tailcall arguments. The stack should contain exactly return values and arguments "
+		"for calling: "
 	);
 	DEFINE_ARGUMENT_ERROR(UninstantiableValueError, "Cannot instantiate a value of type: ");
 	DEFINE_ARGUMENT_ERROR(InvalidArgumentSizeError, "Invalid instruction argument size: ");
@@ -380,22 +376,23 @@ namespace vm::code {
 	DEFINE_ARGUMENT_ERROR(TypeIsNotDataError, "Invalid instruction argument type: ");
 	DEFINE_INSTRUCTION_ERROR(ArgumentMismatchError, "Instruction arguments have different types.");
 	DEFINE_INSTRUCTION_ERROR(
-		PointerTypeMismatchError, "Inner pointer type does not match expected type."
+		PointerTypeMismatchError, "Pointer type does not match the expected type."
 	);
+	DEFINE_INSTRUCTION_ERROR(FieldTypeMismatchError, "Field type does not match the expected type.");
 	DEFINE_INSTRUCTION_ERROR(
 		InvalidVirtualCallError, "Provided method does not exists for a given argument."
 	);
 	DEFINE_INSTRUCTION_ERROR(
-		FixedSizeTableTypeMismatchError, "Inner fixed size table type does not match expected type."
+		FixedSizeTableTypeMismatchError, "Fixed size table type does not match the expected type."
 	);
 	DEFINE_INSTRUCTION_ERROR(
-		DynamicTableTypeMismatchError, "Inner dynamic table type does not match expected type."
+		DynamicTableTypeMismatchError, "Dynamic table type does not match the expected type."
 	);
 	DEFINE_INSTRUCTION_ERROR(
-		StructTypeMismatchError, "Inner struct type does not match expected type."
+		StructTypeMismatchError, "Struct type does not match the expected type."
 	);
 	DEFINE_INSTRUCTION_ERROR(
-		VariantTypeMismatchError, "Possible variant types do not match expected type."
+		VariantTypeMismatchError, "Possible variant types do not match the expected type."
 	);
 	DEFINE_ARGUMENT_ERROR(UnknownGlobalNameError, "Unknown global name: ");
 	DEFINE_ARGUMENT_ERROR(UnknownFieldError, "Given data does not contain this field: ");
@@ -407,5 +404,4 @@ namespace vm::code {
 	DEFINE_INSTRUCTION_ERROR(
 		OpaqueTypeMismatchError, "The opaque type does not match the expected type."
 	);
-	DEFINE_INSTRUCTION_ERROR(VoidRetValAssignmentError, "Cannot assign to 'ret_val' of type void.");
 }

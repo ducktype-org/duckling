@@ -1,0 +1,706 @@
+{
+	"position": {
+		"sourceStart": 0,
+		"sourceEnd": 135
+	},
+	"Top Level": [
+		{
+			"position": {
+				"sourceStart": 0,
+				"sourceEnd": 22
+			},
+			"Expr Stmt": {
+				"position": {
+					"sourceStart": 0,
+					"sourceEnd": 21
+				},
+				"Top Level Expression": {
+					"expr": {
+						"position": {
+							"sourceStart": 0,
+							"sourceEnd": 21
+						},
+						"Format String Value Expr": {
+							"sub-elements": [
+								{
+									"position": {
+										"sourceStart": 2,
+										"sourceEnd": 4
+									},
+									"Format Sub Expression": {
+										"position": {
+											"sourceStart": 3,
+											"sourceEnd": 3
+										},
+										"Top Level Expression": {
+											"expr": {
+												"position": {
+													"sourceStart": 3,
+													"sourceEnd": 3
+												},
+												"Identifier Expression": {
+													"name": {
+														"Name": "x"
+													}
+												}
+											}
+										}
+									}
+								},
+								{
+									"position": {
+										"sourceStart": 5,
+										"sourceEnd": 7
+									},
+									"Format Sub String": {
+										"string": " + "
+									}
+								},
+								{
+									"position": {
+										"sourceStart": 8,
+										"sourceEnd": 10
+									},
+									"Format Sub Expression": {
+										"position": {
+											"sourceStart": 9,
+											"sourceEnd": 9
+										},
+										"Top Level Expression": {
+											"expr": {
+												"position": {
+													"sourceStart": 9,
+													"sourceEnd": 9
+												},
+												"Identifier Expression": {
+													"name": {
+														"Name": "y"
+													}
+												}
+											}
+										}
+									}
+								},
+								{
+									"position": {
+										"sourceStart": 11,
+										"sourceEnd": 13
+									},
+									"Format Sub String": {
+										"string": " = "
+									}
+								},
+								{
+									"position": {
+										"sourceStart": 14,
+										"sourceEnd": 20
+									},
+									"Format Sub Expression": {
+										"position": {
+											"sourceStart": 15,
+											"sourceEnd": 19
+										},
+										"Top Level Expression": {
+											"expr": {
+												"position": {
+													"sourceStart": 15,
+													"sourceEnd": 19
+												},
+												"Binary Operator": {
+													"left_expr": {
+														"position": {
+															"sourceStart": 15,
+															"sourceEnd": 15
+														},
+														"Identifier Expression": {
+															"name": {
+																"Name": "x"
+															}
+														}
+													},
+													"operator": "+",
+													"right_expr": {
+														"position": {
+															"sourceStart": 19,
+															"sourceEnd": 19
+														},
+														"Identifier Expression": {
+															"name": {
+																"Name": "y"
+															}
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							]
+						}
+					}
+				}
+			}
+		},
+		{
+			"position": {
+				"sourceStart": 24,
+				"sourceEnd": 36
+			},
+			"Expr Stmt": {
+				"position": {
+					"sourceStart": 24,
+					"sourceEnd": 35
+				},
+				"Top Level Expression": {
+					"expr": {
+						"position": {
+							"sourceStart": 24,
+							"sourceEnd": 35
+						},
+						"Format String Value Expr": {
+							"sub-elements": [
+								{
+									"position": {
+										"sourceStart": 26,
+										"sourceEnd": 28
+									},
+									"Format Sub Expression": {
+										"position": {
+											"sourceStart": 27,
+											"sourceEnd": 27
+										},
+										"Top Level Expression": {
+											"expr": {
+												"position": {
+													"sourceStart": 27,
+													"sourceEnd": 27
+												},
+												"Identifier Expression": {
+													"name": {
+														"Name": "x"
+													}
+												}
+											}
+										}
+									}
+								},
+								{
+									"position": {
+										"sourceStart": 29,
+										"sourceEnd": 31
+									},
+									"Format Sub Expression": {
+										"position": {
+											"sourceStart": 30,
+											"sourceEnd": 30
+										},
+										"Top Level Expression": {
+											"expr": {
+												"position": {
+													"sourceStart": 30,
+													"sourceEnd": 30
+												},
+												"Identifier Expression": {
+													"name": {
+														"Name": "y"
+													}
+												}
+											}
+										}
+									}
+								},
+								{
+									"position": {
+										"sourceStart": 32,
+										"sourceEnd": 34
+									},
+									"Format Sub Expression": {
+										"position": {
+											"sourceStart": 33,
+											"sourceEnd": 33
+										},
+										"Top Level Expression": {
+											"expr": {
+												"position": {
+													"sourceStart": 33,
+													"sourceEnd": 33
+												},
+												"Identifier Expression": {
+													"name": {
+														"Name": "z"
+													}
+												}
+											}
+										}
+									}
+								}
+							]
+						}
+					}
+				}
+			}
+		},
+		{
+			"position": {
+				"sourceStart": 38,
+				"sourceEnd": 48
+			},
+			"Expr Stmt": {
+				"position": {
+					"sourceStart": 38,
+					"sourceEnd": 47
+				},
+				"Top Level Expression": {
+					"expr": {
+						"position": {
+							"sourceStart": 38,
+							"sourceEnd": 47
+						},
+						"Format String Value Expr": {
+							"sub-elements": [
+								{
+									"position": {
+										"sourceStart": 40,
+										"sourceEnd": 46
+									},
+									"Format Sub String": {
+										"string": "nothing"
+									}
+								}
+							]
+						}
+					}
+				}
+			}
+		},
+		{
+			"position": {
+				"sourceStart": 50,
+				"sourceEnd": 63
+			},
+			"Expr Stmt": {
+				"position": {
+					"sourceStart": 50,
+					"sourceEnd": 62
+				},
+				"Top Level Expression": {
+					"expr": {
+						"position": {
+							"sourceStart": 50,
+							"sourceEnd": 62
+						},
+						"Format String Value Expr": {
+							"sub-elements": [
+								{
+									"position": {
+										"sourceStart": 52,
+										"sourceEnd": 54
+									},
+									"Format Sub Expression": {
+										"position": {
+											"sourceStart": 53,
+											"sourceEnd": 53
+										},
+										"Top Level Expression": {
+											"expr": {
+												"position": {
+													"sourceStart": 53,
+													"sourceEnd": 53
+												},
+												"Identifier Expression": {
+													"name": {
+														"Name": "x"
+													}
+												}
+											}
+										}
+									}
+								},
+								{
+									"position": {
+										"sourceStart": 55,
+										"sourceEnd": 57
+									},
+									"Format Sub Expression": {
+										"position": {
+											"sourceStart": 56,
+											"sourceEnd": 56
+										},
+										"Top Level Expression": {
+											"expr": {
+												"position": {
+													"sourceStart": 56,
+													"sourceEnd": 56
+												},
+												"Identifier Expression": {
+													"name": {
+														"Name": "y"
+													}
+												}
+											}
+										}
+									}
+								},
+								{
+									"position": {
+										"sourceStart": 58,
+										"sourceEnd": 61
+									},
+									"Format Sub String": {
+										"string": " = z"
+									}
+								}
+							]
+						}
+					}
+				}
+			}
+		},
+		{
+			"position": {
+				"sourceStart": 65,
+				"sourceEnd": 79
+			},
+			"Expr Stmt": {
+				"position": {
+					"sourceStart": 65,
+					"sourceEnd": 78
+				},
+				"Top Level Expression": {
+					"expr": {
+						"position": {
+							"sourceStart": 65,
+							"sourceEnd": 78
+						},
+						"Format String Value Expr": {
+							"sub-elements": [
+								{
+									"position": {
+										"sourceStart": 67,
+										"sourceEnd": 77
+									},
+									"Format Sub Expression": {
+										"position": {
+											"sourceStart": 68,
+											"sourceEnd": 76
+										},
+										"Top Level Expression": {
+											"expr": {
+												"position": {
+													"sourceStart": 68,
+													"sourceEnd": 76
+												},
+												"Comparison Chain": {
+													"sub-expressions": [
+														{
+															"position": {
+																"sourceStart": 68,
+																"sourceEnd": 68
+															},
+															"Identifier Expression": {
+																"name": {
+																	"Name": "a"
+																}
+															}
+														},
+														{
+															"position": {
+																"sourceStart": 72,
+																"sourceEnd": 72
+															},
+															"Identifier Expression": {
+																"name": {
+																	"Name": "b"
+																}
+															}
+														},
+														{
+															"position": {
+																"sourceStart": 76,
+																"sourceEnd": 76
+															},
+															"Identifier Expression": {
+																"name": {
+																	"Name": "c"
+																}
+															}
+														}
+													]
+												}
+											}
+										}
+									}
+								}
+							]
+						}
+					}
+				}
+			}
+		},
+		{
+			"position": {
+				"sourceStart": 81,
+				"sourceEnd": 106
+			},
+			"Expr Stmt": {
+				"position": {
+					"sourceStart": 81,
+					"sourceEnd": 105
+				},
+				"Top Level Expression": {
+					"expr": {
+						"position": {
+							"sourceStart": 81,
+							"sourceEnd": 105
+						},
+						"Format String Value Expr": {
+							"sub-elements": [
+								{
+									"position": {
+										"sourceStart": 83,
+										"sourceEnd": 86
+									},
+									"Format Sub String": {
+										"string": " aa "
+									}
+								},
+								{
+									"position": {
+										"sourceStart": 87,
+										"sourceEnd": 100
+									},
+									"Format Sub Expression": {
+										"position": {
+											"sourceStart": 88,
+											"sourceEnd": 99
+										},
+										"Top Level Expression": {
+											"expr": {
+												"position": {
+													"sourceStart": 88,
+													"sourceEnd": 99
+												},
+												"Binary Operator": {
+													"left_expr": {
+														"position": {
+															"sourceStart": 88,
+															"sourceEnd": 94
+														},
+														"Binary Operator": {
+															"left_expr": {
+																"position": {
+																	"sourceStart": 88,
+																	"sourceEnd": 88
+																},
+																"Identifier Expression": {
+																	"name": {
+																		"Name": "a"
+																	}
+																}
+															},
+															"operator": "and",
+															"right_expr": {
+																"position": {
+																	"sourceStart": 94,
+																	"sourceEnd": 94
+																},
+																"Identifier Expression": {
+																	"name": {
+																		"Name": "b"
+																	}
+																}
+															}
+														}
+													},
+													"operator": "or",
+													"right_expr": {
+														"position": {
+															"sourceStart": 99,
+															"sourceEnd": 99
+														},
+														"Identifier Expression": {
+															"name": {
+																"Name": "c"
+															}
+														}
+													}
+												}
+											}
+										}
+									}
+								},
+								{
+									"position": {
+										"sourceStart": 101,
+										"sourceEnd": 104
+									},
+									"Format Sub String": {
+										"string": " bb "
+									}
+								}
+							]
+						}
+					}
+				}
+			}
+		},
+		{
+			"position": {
+				"sourceStart": 108,
+				"sourceEnd": 135
+			},
+			"Expr Stmt": {
+				"position": {
+					"sourceStart": 108,
+					"sourceEnd": 134
+				},
+				"Top Level Expression": {
+					"expr": {
+						"position": {
+							"sourceStart": 108,
+							"sourceEnd": 134
+						},
+						"Format String Value Expr": {
+							"sub-elements": [
+								{
+									"position": {
+										"sourceStart": 110,
+										"sourceEnd": 113
+									},
+									"Format Sub String": {
+										"string": " aa "
+									}
+								},
+								{
+									"position": {
+										"sourceStart": 114,
+										"sourceEnd": 129
+									},
+									"Format Sub Expression": {
+										"position": {
+											"sourceStart": 115,
+											"sourceEnd": 128
+										},
+										"Top Level Expression": {
+											"expr": {
+												"position": {
+													"sourceStart": 115,
+													"sourceEnd": 128
+												},
+												"Binary Operator": {
+													"left_expr": {
+														"position": {
+															"sourceStart": 115,
+															"sourceEnd": 115
+														},
+														"Identifier Expression": {
+															"name": {
+																"Name": "a"
+															}
+														}
+													},
+													"operator": "+",
+													"right_expr": {
+														"position": {
+															"sourceStart": 119,
+															"sourceEnd": 128
+														},
+														"Chain Expression": {
+															"atom": {
+																"position": {
+																	"sourceStart": 119,
+																	"sourceEnd": 121
+																},
+																"Identifier Expression": {
+																	"name": {
+																		"Name": "foo"
+																	}
+																}
+															},
+															"chain": [
+																{
+																	"position": {
+																		"sourceStart": 122,
+																		"sourceEnd": 128
+																	},
+																	"Call Expression": {
+																		"type": "()",
+																		"arguments": {
+																			"position": {
+																				"sourceStart": 123,
+																				"sourceEnd": 127
+																			},
+																			"call list": [
+																				{
+																					"position": {
+																						"sourceStart": 123,
+																						"sourceEnd": 127
+																					},
+																					"Call argument": {
+																						"name": "<ANONYMOUS>",
+																						"value": {
+																							"position": {
+																								"sourceStart": 123,
+																								"sourceEnd": 127
+																							},
+																							"Expression Holder": {
+																								"expr": {
+																									"position": {
+																										"sourceStart": 123,
+																										"sourceEnd": 127
+																									},
+																									"Binary Operator": {
+																										"left_expr": {
+																											"position": {
+																												"sourceStart": 123,
+																												"sourceEnd": 123
+																											},
+																											"Numeric Value Expr": {
+																												"number": "1"
+																											}
+																										},
+																										"operator": "+",
+																										"right_expr": {
+																											"position": {
+																												"sourceStart": 127,
+																												"sourceEnd": 127
+																											},
+																											"Numeric Value Expr": {
+																												"number": "1"
+																											}
+																										}
+																									}
+																								}
+																							}
+																						}
+																					}
+																				},
+																			]
+																		}
+																	}
+																}
+															]
+														}
+													}
+												}
+											}
+										}
+									}
+								},
+								{
+									"position": {
+										"sourceStart": 130,
+										"sourceEnd": 133
+									},
+									"Format Sub String": {
+										"string": " bb "
+									}
+								}
+							]
+						}
+					}
+				}
+			}
+		},
+	]
+}

@@ -7,10 +7,11 @@
 
 #include <base/pointers/ref.hpp>
 
-#include <vm/core/thread/low_program/low_program.hpp>
+#include <vm/core/safe/low_program/low_program.hpp>
 
 namespace vm::jit {
-	using JitOpFun = void(const vm::MicroInstruction**, std::byte**, vm::Frame**, vm::VMThread*);
+	using JitOpFun
+		= void(const vm::MicroInstruction**, std::byte**, vm::Frame**, vm::SafeVMThread*);
 
 	/**
 	 * @brief The data additionally stored per function, by the JIT compiler.

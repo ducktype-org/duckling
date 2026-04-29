@@ -5,8 +5,6 @@
 #include <utility>
 
 namespace term_ui {
-	bool use_color = true;
-
 	const Style ERROR_STYLE(
 		"error", "E", true, rang::fg::red, rang::style::bold, rang::style::bold, '^', '|', 'Y'
 	);

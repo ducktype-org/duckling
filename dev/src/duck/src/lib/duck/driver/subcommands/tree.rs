@@ -1,8 +1,9 @@
-use crate::{DuckCtx, QuackResult, qp_bail};
+use crate::{DuckContext, QuackResult, qp_bail};
 use clap::{Arg, ArgMatches, Command};
 
 use crate::duck::driver::cli_ext::{flag, subcommand};
 
+/// Creates parser for the `tree` subcommand.
 pub fn get_parser() -> Command {
     subcommand("tree")
         .about("Print the dependency tree of the package")
@@ -17,6 +18,7 @@ pub fn get_parser() -> Command {
         )
 }
 
-pub fn execute(_ctx: &DuckCtx, _matches: &ArgMatches) -> QuackResult<()> {
+/// Logic for executing the `tree` subcommand.
+pub fn execute(_ctx: &DuckContext, _matches: &ArgMatches) -> QuackResult<()> {
     qp_bail!("implement tree")
 }

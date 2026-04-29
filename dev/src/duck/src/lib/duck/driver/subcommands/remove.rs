@@ -1,8 +1,9 @@
-use crate::{DuckCtx, QuackResult, qp_bail};
+use crate::{DuckContext, QuackResult, qp_bail};
 use clap::{ArgMatches, Command};
 
 use crate::duck::driver::cli_ext::{CommandExt, flag, subcommand};
 
+/// Creates parser for the `remove` subcommand.
 pub fn get_parser() -> Command {
     subcommand("remove")
         .about("Remove the packages from the current venv")
@@ -11,6 +12,7 @@ pub fn get_parser() -> Command {
         .add_packages("Packages to remove")
 }
 
-pub fn execute(_ctx: &DuckCtx, _matches: &ArgMatches) -> QuackResult<()> {
+/// Logic for executing the `remove` subcommand.
+pub fn execute(_ctx: &DuckContext, _matches: &ArgMatches) -> QuackResult<()> {
     qp_bail!("implement remove")
 }

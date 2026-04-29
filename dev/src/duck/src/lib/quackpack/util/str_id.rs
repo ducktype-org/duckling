@@ -1,30 +1,36 @@
-use std::{
-    borrow::{Borrow, Cow},
-    collections::HashSet,
-    convert::Infallible,
-    ffi::{OsStr, OsString},
-    fmt::{Debug, Display},
-    hash::Hash,
-    ops::Deref,
-    path::{Path, PathBuf},
-    str::FromStr,
-    sync::{Mutex, OnceLock},
-};
+//! A [`StrId`], an interned version of a string (also known as a fly string).
+//!
+//! It's trivially copyable.
+use std::borrow::{Borrow, Cow};
+use std::collections::HashSet;
+use std::convert::Infallible;
+use std::ffi::{OsStr, OsString};
+use std::fmt::{Debug, Display};
+use std::hash::Hash;
+use std::ops::Deref;
+use std::path::{Path, PathBuf};
+use std::str::FromStr;
+use std::sync::{Mutex, OnceLock};
 
 use serde::{Deserialize, Serialize};
+
+use crate::quackpack::util::PANIC_MESSAGE;
 
 static STRID_CACHE: OnceLock<Mutex<HashSet<&'static str>>> = OnceLock::new();
 
 #[derive(Clone, Copy)]
+/// An interned/cached string.
 pub struct StrId {
     inner: &'static str,
 }
 
 impl StrId {
+    /// Get the inner [`str`] as a static.
     pub fn as_str(&self) -> &'static str {
         self.inner
     }
 
+    /// Construct a new [`StrId`].
     pub fn new<'a>(s: impl Into<Cow<'a, str>>) -> Self {
         Self::from(s.into())
     }
@@ -78,6 +84,12 @@ impl From<OsString> for StrId {
     }
 }
 
+impl From<&OsString> for StrId {
+    fn from(value: &OsString) -> Self {
+        Self::from(value.to_string_lossy())
+    }
+}
+
 impl From<Cow<'_, str>> for StrId {
     fn from(value: Cow<'_, str>) -> Self {
         let mut cache = STRID_CACHE
@@ -93,7 +105,7 @@ impl From<Cow<'_, str>> for StrId {
             // Panics
             //
             // This function might panic when called if the lock is already held by the current thread.
-            .unwrap();
+            .expect(PANIC_MESSAGE);
         let reference = cache.get(value.as_ref()).copied().unwrap_or_else(|| {
             let static_ref = value.into_owned().leak();
             cache.insert(static_ref);

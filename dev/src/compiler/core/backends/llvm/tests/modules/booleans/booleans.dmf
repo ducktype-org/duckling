@@ -28,4 +28,7 @@ fun goo() = {
     let c : bool = a71 or a72;
 
     let t : i64 = if c then 1 + 2 else 3 * 4;
+
+    let eq : bool = a1 == a31;
+    let neq : bool = a1 != a32;
 }

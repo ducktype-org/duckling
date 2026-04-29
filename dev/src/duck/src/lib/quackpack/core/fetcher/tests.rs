@@ -3,21 +3,21 @@ use std::collections::HashMap;
 use httpmock::prelude::*;
 use tempfile::{TempDir, tempdir};
 
-use crate::{quackpack::core::Version, util_common::test_utils::setup_test};
-
 use super::*;
+use crate::quackpack::core::Version;
+use crate::util::test_utils::setup_test;
 
-fn setup_duck_ctx() -> (DuckCtx, TempDir) {
+fn setup_duck_ctx() -> (DuckContext, TempDir) {
     let setup = || {
         // We set cache directory to a temporary directory, so we can use `Fetcher` without
         // worrying about leaving traces of tests in FS.
         let dir = tempdir().unwrap();
-        // SAFETY: Setup is single threaded, and `Env` in `DuckCtx`, copies all envs.
+        // SAFETY: Setup is single threaded, and `Env` in `DuckContext`, copies all envs.
         unsafe {
             std::env::set_var("DUCK_CACHE_DIR", dir.path());
         }
-        let ctx = DuckCtx::default();
-        // SAFETY: Setup is single threaded, and `Env` in `DuckCtx`, copies all envs.
+        let ctx = DuckContext::default();
+        // SAFETY: Setup is single threaded, and `Env` in `DuckContext`, copies all envs.
         unsafe {
             std::env::remove_var("DUCK_CACHE_DIR");
         }
@@ -28,6 +28,7 @@ fn setup_duck_ctx() -> (DuckCtx, TempDir) {
 
 fn create_mock_server() -> MockServer {
     let pkg1 = registry::Dependency {
+        name: "pkg1".into(),
         version: vec![Version::new(2, 3, 6)],
         source: registry::DependencySource {
             inner: registry::SourceInner::Registry {
@@ -39,10 +40,11 @@ fn create_mock_server() -> MockServer {
         conditions: registry::DependencyCondition {
             package_features: None,
         },
-        is_alias_for: None,
+        alias: None,
     };
 
     let pkg2 = registry::Dependency {
+        name: "pkg2".into(),
         version: vec![Version::new(2, 3, 4)],
         source: registry::DependencySource {
             inner: registry::SourceInner::Registry {
@@ -54,10 +56,11 @@ fn create_mock_server() -> MockServer {
         conditions: registry::DependencyCondition {
             package_features: None,
         },
-        is_alias_for: None,
+        alias: None,
     };
 
     let pkg3 = registry::Dependency {
+        name: "pkg3".into(),
         version: vec![Version::new(2, 4, 7)],
         source: registry::DependencySource {
             inner: registry::SourceInner::Registry {
@@ -69,7 +72,7 @@ fn create_mock_server() -> MockServer {
         conditions: registry::DependencyCondition {
             package_features: None,
         },
-        is_alias_for: None,
+        alias: None,
     };
 
     let bar_256 = registry::Manifest {
@@ -80,7 +83,7 @@ fn create_mock_server() -> MockServer {
             name: "bar".into(),
             description: "".into(),
         },
-        dependencies: [("pkg1".into(), pkg1)].into(),
+        dependencies: vec![pkg1],
         dev_dependencies: registry::Dependencies::new(),
         features: HashMap::new(),
         profiles: HashMap::new(),
@@ -94,7 +97,7 @@ fn create_mock_server() -> MockServer {
             name: "foo".into(),
             description: "".into(),
         },
-        dependencies: [("pkg2".into(), pkg2), ("pkg3".into(), pkg3)].into(),
+        dependencies: vec![pkg2, pkg3],
         dev_dependencies: registry::Dependencies::new(),
         features: HashMap::new(),
         profiles: HashMap::new(),
@@ -173,7 +176,7 @@ fn create_mock_server() -> MockServer {
 fn all_metadata_adds_to_cache() {
     let (ctx, _dir) = setup_duck_ctx();
     let server = create_mock_server();
-    let fetcher = Fetcher::new(&ctx).unwrap();
+    let mut fetcher = Fetcher::new(&ctx).unwrap();
     let response = fetcher
         .get_package_all_metadata(&server.base_url().parse().unwrap(), "foo".into())
         .unwrap();

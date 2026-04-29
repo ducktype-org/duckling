@@ -1,11 +1,11 @@
 global_data global_x i32 {};
 
-function main { i64, ptr_argv } -> i64 {
-	# ret_val -> main ret_val
+function main { i64, ptr_argv } -> { i64 } {
+	# ret0 -> main ret0
 	# arg0 -> argc
 	# arg1 -> *argv
 
-	mov_g64_imm     	global_x, 1;
+	mov_p64_imm     	global_x, 1;
 
 	deinit; # *argv
 	deinit; # argc

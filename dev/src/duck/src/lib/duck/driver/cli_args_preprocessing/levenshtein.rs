@@ -1,5 +1,8 @@
+//! An implementation of the [Levenshtein distance](https://en.wikipedia.org/wiki/Levenshtein_distance).
 use std::mem::swap;
 
+/// Get the [Levenshtein distance](https://en.wikipedia.org/wiki/Levenshtein_distance) between `x`
+/// and `y`.
 pub fn distance(x: &str, y: &str) -> u32 {
     let word1: Vec<char> = x.chars().collect();
     let word2: Vec<char> = y.chars().collect();

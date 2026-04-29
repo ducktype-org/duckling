@@ -1,21 +1,11 @@
 #pragma once
 #include <diagnostic_interactive/core/term_ui_view.hpp>
+#include <diagnostic_interactive/term_ui/module_flags/module_flags.hpp>
 #include <rang.hpp>
 
 #include <base/types/ints.hpp>
 
 namespace term_ui {
-
-	/**
-	 * @brief A global flag for using colors when displaying the view.
-	 *
-	 * We decided for such a simple mechanism, since displaying the diagnostic
-	 * view should be an atomic operation anyways and having a global flag
-	 * simplifies the code (there is no need to pass that flag down through
-	 * a multitude of methods).
-	 *
-	 */
-	extern bool use_color;
 
 	using StyleType = dia_int::term_ui_view::StyleType;
 

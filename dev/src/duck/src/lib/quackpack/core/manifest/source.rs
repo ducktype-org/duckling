@@ -1,12 +1,12 @@
+//! Dependencies' sources and interning.
 use std::collections::HashSet;
 use std::ops::Deref;
 use std::path::{Path, PathBuf};
 use std::sync::{Mutex, OnceLock};
 
 use git2::FetchOptions;
-use url::Url;
-
 use serde::{Deserialize, Serialize};
+use url::Url;
 
 use crate::quackpack::schemas::registry;
 use crate::{QuackError, StrId, qp_bail};
@@ -14,12 +14,13 @@ use crate::{QuackError, StrId, qp_bail};
 static INTERNED_SOURCE_CACHE: OnceLock<Mutex<HashSet<&'static Source>>> = OnceLock::new();
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-/// Interned version of [`Source`].
+/// An interned version of [`Source`].
 pub struct InternedSource {
     inner: &'static Source,
 }
 
 impl InternedSource {
+    /// Create a new [`InternedSource`].
     pub fn new(source: Source) -> Self {
         let mut cache = INTERNED_SOURCE_CACHE
             .get_or_init(Default::default)
@@ -129,19 +130,27 @@ impl From<Git> for Source {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 /// Represents a source of a package which should be fetched from a registry.
 pub struct Registry {
     url: Url,
 }
 
+impl std::fmt::Debug for Registry {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Registry")
+            .field("url", &self.url.as_str())
+            .finish()
+    }
+}
+
 impl Registry {
-    /// Create a new registry source.
+    /// Create a new [`Registry`] source.
     pub fn new(url: Url) -> Self {
         Self { url }
     }
 
-    /// Get the registry URL.
+    /// Get the registry [`Url`].
     pub fn url(&self) -> &Url {
         &self.url
     }
@@ -156,7 +165,7 @@ pub struct Local {
 }
 
 impl Local {
-    /// Create a new local source.
+    /// Create a new [`Local`] source.
     pub fn new(
         absolute: PathBuf,
         entry_in_manifest: StrId,
@@ -185,16 +194,26 @@ impl Local {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-/// Represents a source a dependency cloned from git.
+#[derive(Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+/// Represents a source of a dependency cloned from git.
 pub struct Git {
     url: Url,
     branch_or_tag: BranchOrTag,
     rev: Option<StrId>,
 }
 
+impl std::fmt::Debug for Git {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Git")
+            .field("url", &self.url.as_str())
+            .field("branch_or_tag", &self.branch_or_tag)
+            .field("rev", &self.rev)
+            .finish()
+    }
+}
+
 impl Git {
-    /// Create a new git source.
+    /// Create a new [`Git`] source.
     pub fn new(url: Url, branch_or_tag: BranchOrTag, rev: Option<StrId>) -> Self {
         Self {
             url,

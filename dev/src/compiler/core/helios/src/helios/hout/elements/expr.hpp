@@ -3,9 +3,10 @@
 #include <ctv/numeric_value.hpp>
 #include <helios/hout/origin.hpp>
 #include <helios/symbols/symbol_id.hpp>
-#include <typesystem/higher/expression_type.hpp>
+#include <helios/tsh/expression_type.hpp>
 
 #include <base/pointers/box.hpp>
+#include <base/pointers/shared_box.hpp>
 #include <base/types/ints.hpp>
 
 #include <token_parser_core/common_elements.hpp>
@@ -62,6 +63,11 @@ namespace compiler::helios::code {
 		HOUTExprID getID() const {
 			return id;
 		}
+
+		[[nodiscard]] base::Optional<dia_int::StablePosition> getPosition() const {
+			return origin.getStablePosition();
+		}
+
 
 	private:
 		HOUTExprID id = HOUTExprID::next();
@@ -136,6 +142,24 @@ namespace compiler::helios::code {
 		LiteralBoolExpr(tsh::ExpressionType<> expression_type, ElementOrigin origin, bool value);
 	};
 
+	struct LiteralCharExpr final: public Expr {
+		char value;
+
+		LiteralCharExpr(query::Context& ctx, const ElementOrigin& origin, char value);
+
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
+
+	private:
+		FRIEND_MAKEBOX
+
+		LiteralCharExpr(
+			const tsh::ExpressionType<>& expression_type, const ElementOrigin& origin, char value
+		);
+	};
+
 	/**
 	 * @brief Represents a string literal value written in the expression ("Hello world" etc.).
 	 */
@@ -205,6 +229,32 @@ namespace compiler::helios::code {
 	};
 
 	/**
+	 * @brief A special kind of expression which wraps expressions that need to be
+	 * used multiple times without recalculating, such as `b` in `a < b < c`.
+	 * @note One should be very careful not to create a "next use" ReusableExpr which does not
+	 * semantically see the result of the corresponding "first use" ReusableExpr, for example
+	 * if they are in different branches of an if expression.
+	 */
+	struct ReusableExpr final: public Expr {
+		SharedBox<Expr> inner;
+		bool            first_use;
+
+		ReusableExpr(query::Context& ctx, Box<Expr> inner, bool first_use = true);
+
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
+
+		[[nodiscard]] Box<Expr> nextUse() const;
+
+	private:
+		FRIEND_MAKEBOX
+
+		ReusableExpr(const SharedBox<Expr>& inner, bool first_use);
+	};
+
+	/**
 	 * @brief Represents an expression inside "(" and ")".
 	 * @TODO: Decide if this class is needed.
 	 * For:
@@ -256,17 +306,17 @@ namespace compiler::helios::code {
 		FloatPow,
 
 		// Comparison operators
-		IntegerLt,    // Less then
-		IntegerLteq,  // Less then or equal to
-		IntegerGt,    // Greater then
-		IntegerGteq,  // Greater then or equal to
+		IntegerLt,    // Less than
+		IntegerLteq,  // Less than or equal to
+		IntegerGt,    // Greater than
+		IntegerGteq,  // Greater than or equal to
 		IntegerEq,    // Equal
 		IntegerNeq,   // Not equal
 
-		FloatLt,      // Less then
-		FloatLteq,    // Less then or equal to
-		FloatGt,      // Greater then
-		FloatGteq,    // Greater then or equal to
+		FloatLt,      // Less than
+		FloatLteq,    // Less than or equal to
+		FloatGt,      // Greater than
+		FloatGteq,    // Greater than or equal to
 		FloatEq,      // Equal
 		FloatNeq,     // Not equal
 
@@ -562,14 +612,13 @@ namespace compiler::helios::code {
 	 * @TODO: User defined comparison operators.
 	 */
 	struct ChainComparisonExpr final: public Expr {
-		std::vector<base::Box<Expr>> expressions;
-		std::vector<BuiltinBinary>   operators;
+		// A list of all comparison expressions.
+		// E.g. in `a < b < c`, this will contain the expressions for `a < b` and `b < c`.
+		// Note that `b` will typically be reused in both comparisons, via ReusableExpr.
+		std::vector<Box<Expr>> comparisons;
 
 		ChainComparisonExpr(
-			query::Context&              ctx,
-			ElementOrigin                origin,
-			std::vector<base::Box<Expr>> expressions,
-			std::vector<BuiltinBinary>   operators
+			query::Context& ctx, ElementOrigin origin, std::vector<Box<Expr>> comparisons
 		);
 
 		void debugPrint(std::ostream& out) const final;
@@ -581,10 +630,9 @@ namespace compiler::helios::code {
 		FRIEND_MAKEBOX
 
 		ChainComparisonExpr(
-			tsh::ExpressionType<>        expression_type,
-			ElementOrigin                origin,
-			std::vector<base::Box<Expr>> expressions,
-			std::vector<BuiltinBinary>   operators
+			tsh::ExpressionType<>  expression_type,
+			ElementOrigin          origin,
+			std::vector<Box<Expr>> comparisons
 		);
 	};
 
@@ -700,9 +748,9 @@ namespace compiler::helios::code {
 	 * Used for implicit variable initialization. This gets then mapped to `llvm::getNullValue(type)`.
 	 */
 	struct DefaultValueExpr final: public Expr {
-		tsh::SymbolType<> type;
+		tsh::AbstractType type;
 
-		DefaultValueExpr(query::Context& ctx, ElementOrigin origin, tsh::SymbolType<> type);
+		DefaultValueExpr(query::Context& ctx, ElementOrigin origin, tsh::AbstractType type);
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
 
@@ -712,7 +760,7 @@ namespace compiler::helios::code {
 		FRIEND_MAKEBOX
 
 		DefaultValueExpr(
-			tsh::ExpressionType<> expression_type, ElementOrigin origin, tsh::SymbolType<> type
+			tsh::ExpressionType<> expression_type, ElementOrigin origin, tsh::AbstractType type
 		);
 	};
 
@@ -797,3 +845,5 @@ namespace compiler::helios::code {
 		);
 	};
 }
+
+ID_STD_HASH(compiler::helios::code::HOUTExprID);

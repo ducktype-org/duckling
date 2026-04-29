@@ -73,7 +73,8 @@ namespace compiler::mir {
 			const MIRPlace&                   target,
 			BlockBuilder::InstructionHole&    hole,
 			const std::vector<OperationFlag>& flags,
-			ScopeRef                          scope
+			ScopeRef                          scope,
+			InstructionMetadata               metadata
 		);
 	};
 

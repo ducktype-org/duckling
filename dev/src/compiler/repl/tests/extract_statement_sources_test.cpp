@@ -1,5 +1,5 @@
+#include <driver/repl_utils/repl_split_helpers.hpp>
 #include <frontend/module_tree/module_tree.hpp>
-#include <repl/utils.hpp>
 
 #include <filesystem/file.hpp>
 #include <query_framework/entry/with_context_do.hpp>

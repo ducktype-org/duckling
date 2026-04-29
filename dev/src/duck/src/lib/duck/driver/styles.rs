@@ -1,5 +1,6 @@
 use clap::builder::styling::{AnsiColor, Color, Style, Styles};
 
+/// Get default colors (styles) for the `--help` messages.
 pub const fn get_styles() -> Styles {
     Styles::styled()
         .usage(

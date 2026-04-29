@@ -227,7 +227,7 @@ The REPL is integrated into the `duckc` compiler as a subcommand. The integratio
 .addSubcommand(
     clah::Clah("repl", "Start an interactive REPL session")
         .setHandler([](const clah::ParsingResult& options) -> int {
-            compiler::driver::initializeTheCompiler(/* ... */);
+            compiler::driver::initializeTheCompiler(/* ... */).status();
             compiler::repl::ReplSession session;
             return session.run();
         })

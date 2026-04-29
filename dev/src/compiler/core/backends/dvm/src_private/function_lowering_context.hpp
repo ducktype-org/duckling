@@ -1,9 +1,11 @@
 #pragma once
 
 #include "dvm_value.hpp"
+#include "operations/dvm_operation.hpp"
 
+#include <debug_info/debug_info_builder.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
-#include <typesystem/lower/type_layout.hpp>
+#include <tsl/type_layout.hpp>
 
 #include <base/pointers/ref.hpp>
 
@@ -16,16 +18,34 @@
 namespace compiler::backend_vm::internal {
 	class ProgramLoweringContext;
 
+	/**
+	 * @brief Builds a tiny synthetic global constructor that writes a compile-time value
+	 * into a global variable.
+	 *
+	 * This is a temporary helper used when a LIR global has an initial CTV value but no
+	 * explicit ctor function lowered from LIR.
+	 * @TODO: #1849 Remove this
+	 */
+	vm::code::Function createMiniGlobalCtorFromCTV(
+		ProgramLoweringContext&      program_context,
+		CRef<tsl::TypeLayout>        global_layout,
+		const vm::code::TypeOfData&  lowered_global_type,
+		const ctv::CompileTimeValue& global_ctv_value,
+		base::StrID                  mini_ctor_name,
+		const DVMGlobal&             dvm_global
+	);
+
 	class FunctionLoweringContext {
 	public:
-		friend class MetaOperationLowerer;
-		friend class CastOperationLowerer;
+		friend class InstructionLowerer;
+		friend DVMOperation lirInstrToDVMOperation(FunctionLoweringContext&, const lir::Instruction&);
 
 		FunctionLoweringContext(
-			ProgramLoweringContext&                   program_context,
-			base::StrID                               name,
-			CRef<tsl::TypeLayout>                     return_type,
-			const std::vector<CRef<tsl::TypeLayout>>& parameter_types
+			ProgramLoweringContext&                     program_context,
+			base::StrID                                 name,
+			CRef<tsl::TypeLayout>                       return_type,
+			const std::vector<CRef<tsl::TypeLayout>>&   parameter_types,
+			base::Optional<debug_info::FunctionBuilder> fun_di_builder_opt
 		);
 
 		FunctionLoweringContext(const FunctionLoweringContext&)            = delete;
@@ -45,6 +65,19 @@ namespace compiler::backend_vm::internal {
 		void pushInit(lir::LIRLocalRef lir_local);
 
 		/**
+		 * @brief Translates a LIRPlace to a DVMPlace. In case of direct values returns a place
+		 * representing a local/global variable, for references and projection chains (like
+		 * a.field[3].*) returns a pointer to final calculated place.
+		 */
+		DVMPlace resolveLirPlace(const lir::LIRPlace& place);
+
+		/**
+		 * @brief Translates a LIRValue to a DVMValue. Performs all needed operations to retrieve
+		 * the value.
+		 */
+		DVMValue lowerLirValue(const lir::LIRValue& lir_value);
+
+		/**
 		 * @brief Registers LIR function parameter as a DVM function parameter.
 		 * @param lir_func_param LIR local representing a function parameter.
 		 * In reality this just means we can use this "already present" local.
@@ -55,31 +88,11 @@ namespace compiler::backend_vm::internal {
 
 		vm::code::Function finish() &&;
 
+
 	private:
-		struct FunctionCallInfo {
-			DVMCallable                          call_target;
-			base::Optional<vm::code::TypeOfData> return_type;
-			std::vector<vm::code::TypeOfData>    param_types;
-			bool                                 is_extern_c;
-
-			/**
-			 * @brief Created call info for a LIR function.
-			 * Translates TSL type layouts to corresponding DVM types.
-			 */
-			static FunctionCallInfo fromLirFunction(
-				const lir::FunctionLiteral& func_literal, ProgramLoweringContext& program_context
-			);
-
-			/**
-			 * @brief Creates call info for an extern C function.
-			 * Translates type names from extern C function signatures to corresponding DVM types.
-			 */
-			static FunctionCallInfo fromExternCFunction(
-				const base::StrID& func_name, ProgramLoweringContext& program_context
-			);
-		};
-
-		// Creates a mapping between a LIR local and DVM local.
+		/**
+		 * @brief Creates a mapping between a LIR local and DVM local.
+		 */
 		const DVMLocal& createLirLocalToDVMMapping(lir::LIRLocalRef local);
 
 		base::StrID getBlockLabel(lir::BlockRef block);
@@ -87,22 +100,44 @@ namespace compiler::backend_vm::internal {
 		const DVMLocal&               insertLirLocal(lir::LIRLocalRef local);
 		[[nodiscard]] const DVMLocal& getLirLocal(lir::LIRLocalRef local) const;
 
-		DVMValue lowerLirValue(const lir::LIRValue& lir_value);
+		DVMLocal forceToLocal(const DVMValue& value, base::Optional<std::string_view> name_hint = {});
+
+		/**
+		 * @brief Stores a given @p src_value in @p maybe_dest_place, if the destination was given.
+		 * If @p maybe_dest_place is an empty optional it does nothing.
+		 * Depending on the place type, performs a `mov_X_X` or a `store_X_X`. Loads immediates to
+		 * temporaries if needed.
+		 */
+		void maybeStoreResult(
+			const base::Optional<DVMPlace>& maybe_dest_place, const DVMValue& src_value
+		);
 
 		void pushInstruction(const vm::code::Instruction& instruction);
 
 		void pushInstruction(const vm::code::builders::InstructionBuilder& instruction);
 
-		void handleCall(
-			const FunctionCallInfo&     call_info,
-			const std::deque<DVMValue>& func_args,
-			base::Optional<DVMValue>    output
+		/**
+		 * @brief Removes all existing temporaries added by pushTempLocal, e.g. temps created when
+		 * lowering LIRPlace, temps created for comparison operations, etc.
+		 */
+		void cleanUpRegisteredTemps();
+
+		/**
+		 * @brief Pushes a temporary local and based on the @p tracked parameter saves it in the
+		 * `current_temp_count`. This temporary local will be automatically deinitialized after
+		 * `pushInstruction` is executed.
+		 *
+		 * @p tracked Used in special cases when we don't want the temporaries to be automatically
+		 * deinitialized, e.g. when pushing temporaries to pass as arguments to a call opcode.
+		 * These temporaries have to be deinitialized manually.
+		 */
+		DVMLocal pushTempLocal(
+			const vm::code::TypeOfData&      type,
+			base::Optional<std::string_view> name_hint = {},
+			bool                             tracked   = true
 		);
 
-		usize    next_temp_id = 0;
-		DVMLocal pushTempLocal(
-			const vm::code::TypeOfData& type, base::Optional<const char*> name_hint = {}
-		);
+		[[nodiscard]] usize instructionsCount() const;
 
 		ProgramLoweringContext& program_context;
 
@@ -113,5 +148,18 @@ namespace compiler::backend_vm::internal {
 		std::vector<vm::code::TypeOfData>  function_parameter_types;
 		base::StrID                        function_name;
 		std::vector<vm::code::Instruction> function_body;
+
+		usize next_temp_id = 0;
+
+		/**
+		 * @brief Number of temporaries created by the currently lowered instruction.
+		 * Gets cleared by `cleanupInstructionTemps()` after each call of `pushInstruction`.
+		 */
+		usize current_temp_count{ 0 };
+
+		/**
+		 * @brief Optional debug info builder for the function.
+		 */
+		base::Optional<debug_info::FunctionBuilder> fun_di_builder_opt;
 	};
 }

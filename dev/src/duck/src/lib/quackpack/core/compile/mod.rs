@@ -1,42 +1,52 @@
 //! Main entrypoint for compiling an entire project.
 //!
 //! Notable modules are:
-//! - [`compiler_dag`][]: creating and modifying dependency graphs; notably, it checks for cycles,
+//! - [`early_dag`][]: creating and modifying dependency graphs; notably, it checks for cycles,
 //!   expands features, and removes disabled dependencies,
 //! - [`duckc`][]: executing the compiler itself, it handles different compiler execution modes.
+use std::path::PathBuf;
+
 use tracing::debug;
 
-use crate::{
-    QuackResult, StrId,
-    quackpack::core::{
-        FeatureName, PackageCtx,
-        storage::{freeze::VenvFreeze, paths::Storage},
-    },
-};
+use crate::QuackResult;
+use crate::quackpack::core::compile::profiles::Profile;
+use crate::quackpack::core::storage::freeze::VenvFreeze;
+use crate::quackpack::core::storage::paths::Storage;
+use crate::quackpack::core::{FeatureName, PackageContext};
 
-pub mod compiler_dag;
 pub mod compiler_package;
 pub mod duckc;
-use compiler_dag::*;
+pub mod early_dag;
+pub mod profiles;
 use duckc::*;
+use early_dag::*;
+
+const MISSING_DEPENDENCY_IN_DAG_MESSAGE: &str = "missing dependency in the map";
+const MISSING_DEPENDENCY_IN_MANIFEST_MESSAGE: &str =
+    "malformed manifest: missing dependency in the manifest";
 
 #[derive(Debug)]
 /// All informations required to compile a project.
-pub struct BuildContext<'duck> {
-    pub package: &'duck PackageCtx<'duck>,
+pub struct BuildContext<'duck, 'ctx> {
+    /// Package to build or venv of the script.
+    pub pcx: &'ctx PackageContext<'duck>,
     pub freeze: VenvFreeze,
     pub storage: Storage,
     pub used_features: Vec<FeatureName>,
-    pub profile: StrId,
+    pub profile: Profile,
+    pub script_path: Option<PathBuf>,
 }
 
 /// Compile project inside the [`BuildContext`].
-pub fn compile<'duck>(bcx: BuildContext<'duck>) -> QuackResult<()> {
-    debug!("compiling `{bcx:?}`");
-    let mut graph = CompilerDag::new_early(&bcx)?;
+#[tracing::instrument(skip_all)]
+pub fn compile(
+    bcx: BuildContext<'_, '_>,
+    compilation_type: CompilationType,
+) -> QuackResult<ArtifactsDir> {
+    debug!(bcx = ?bcx, "compiling");
+    let mut graph = EarlyDag::new_early(&bcx)?;
     graph.populate_features(&bcx.used_features)?;
-    graph.remove_disabled_dependencies()?;
-    let duckc = Duckc::new(bcx.package.ctx());
-    duckc.compile(&graph, CompilationType::OnlyRootPackage, &bcx)?;
-    Ok(())
+    graph.remove_disabled_dependencies();
+    let duckc = Duckc::new(bcx.pcx.ctx());
+    duckc.compile(&graph, compilation_type, &bcx)
 }

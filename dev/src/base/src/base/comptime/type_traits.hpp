@@ -117,7 +117,7 @@ namespace base {
 	 * @tparam VariantT The `std::variant` type.
 	 */
 	template<typename T, typename VariantT>
-	struct is_variant_member;
+	struct is_variant_member: std::false_type {};
 
 	template<typename T, typename... Types>
 	struct is_variant_member<T, std::variant<Types...>>:
@@ -130,6 +130,12 @@ namespace base {
 	 */
 	template<typename T, typename VariantT>
 	inline constexpr bool IS_VARIANT_MEMBER_V = is_variant_member<T, VariantT>::value;
+
+	/**
+	 * @brief Concept that checks if a type `T` is present in a variant `Var`.
+	 */
+	template<typename T, typename Var>
+	concept IsVariantMember = IS_VARIANT_MEMBER_V<T, Var>;
 
 	/**
 	 * @brief Type trait to check if a type `T` is present in a tuple `Tup`.

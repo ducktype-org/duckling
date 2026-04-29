@@ -11,8 +11,10 @@
 #include "frontend.hpp"
 #include "helper_structs.hpp"
 
+#include <backends/dvm/repl_lowering.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/pst_parser/access.hpp>
+#include <frontend/pst_parser/elements/includes/basic.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/pointers/ref.hpp>
@@ -34,7 +36,25 @@ namespace compiler::repl {
 	 */
 	class ReplSession final {
 	public:
-		ReplSession();
+		explicit ReplSession(bool completions_enabled = true);
+
+		/**
+		 * @brief Load a script file and execute its statements in the current REPL session.
+		 *
+		 * Statements are executed in source order and become part of the current session state.
+		 * This means loaded definitions and variables can be used by subsequent interactive input.
+		 *
+		 * @note The input is accepted as raw text so `/load` command parsing can report
+		 * missing/invalid arguments consistently; filesystem operations are performed using
+		 * `fs::FilePath` after trimming and validation.
+		 *
+		 * @note Loading is non-transactional: execution stops at the first error and statements
+		 * that finished successfully before that error remain applied in the session.
+		 *
+		 * @param file_path Path to a .ds file
+		 * @return ReplResult indicating success or an error message
+		 */
+		ReplResult loadScriptFile(std::string_view file_path);
 
 		/**
 		 * Run the main REPL loop (blocking).
@@ -43,6 +63,13 @@ namespace compiler::repl {
 		int run();
 
 	private:
+		/**
+		 * @brief Grant ReplSimulationTest access to private members for testing.
+		 *
+		 * Allows the test suite to access private methods and members to verify
+		 * internal behavior without exposing them in the public API.
+		 */
+		friend class ReplSimulationTest;
 		/**
 		 * @brief Process a single line of input from the user.
 		 *
@@ -60,6 +87,9 @@ namespace compiler::repl {
 		 * Parses the full input to validate syntax and extract statement boundaries,
 		 * then creates a separate module for each top-level statement and executes
 		 * them in order. Stops at the first error.
+		 *
+		 * @note Execution is intentionally non-transactional: statements executed before
+		 * the failing one remain part of the active REPL state.
 		 *
 		 * @param input The code to execute (may contain multiple statements)
 		 * @return ReplResult with execution outcome and optional message
@@ -147,10 +177,29 @@ namespace compiler::repl {
 		/**
 		 * @brief Compile and load definitions (functions, variables, etc.) into the REPL environment.
 		 *
-		 * @param module_id The module containing the definitions to load
+		 * @param stmt The top-level statement being treated as a definition
 		 * @return ReplResult indicating success or error
 		 */
-		ReplResult handleDefinition(frontend::ModuleID module_id);
+		ReplResult handleDefinition(const pst::AccessLocked<pst::Stmt>& stmt);
+
+		/**
+		 * @brief Compile and execute a single instruction (if/while/for/block) in the REPL.
+		 *
+		 * Wraps the instruction in a synthetic void function, compiles it to DVM bytecode,
+		 * executes it, and reports the outcome.
+		 *
+		 * @param stmt The instruction statement to execute
+		 * @return ReplResult indicating success or error
+		 */
+		ReplResult handleInstruction(const pst::AccessLocked<pst::Stmt>& stmt);
+
+		/**
+		 * @brief Return the currently processed REPL module.
+		 *
+		 * The current module is the most recently created module in REPL history.
+		 * It is later compiled to HOUT and sent to DVM for execution.
+		 */
+		[[nodiscard]] frontend::ModuleID getCurrentModuleID() const;
 
 		/**
 		 * @brief Initialize the DVM process for code execution.
@@ -160,11 +209,30 @@ namespace compiler::repl {
 		 */
 		void initDVM();
 
-		bool                       m_should_exit;  /// Flag to terminate the REPL loop
-		std::vector<ReplStatement> m_history;      /// All statements entered in this session
-		u64          m_inputs_counter;  /// Counter for generating unique wrapper function names
-		vm::PID      m_dvm_pid;         /// Process ID of the running DVM instance
-		ReplFrontend m_frontend;        /// Frontend for user interaction
+		bool                       m_should_exit;  ///< Flag to terminate the REPL loop
+		std::vector<ReplStatement> m_history;      ///< All statements entered in this session
+		u64          m_line_counter;  ///< Counter for generating unique wrapper function names
+		vm::PID      m_dvm_pid;       ///< Process ID of the running DVM instance
+		ReplFrontend m_frontend;      ///< Frontend for user interaction
+		/**
+		 * @brief Persistent lowering context for REPL statement compilation.
+		 *
+		 * Maintains state across multiple REPL statements, allowing accumulated functions,
+		 * globals, and types from previous statements to be referenced in new statements.
+		 * Similar to DVMBuilder but with incremental loading semantics for interactive sessions.
+		 */
+		base::Optional<backend_vm::ReplLoweringContext> m_lowering_context;
+		/**
+		 * Suppress per-statement REPL feedback while ingesting a script into session state.
+		 *
+		 * When true, REPL bookkeeping messages like "=> <value>" and
+		 * "Instruction executed." are hidden for statements executed by `loadScriptFile`.
+		 *
+		 * @note This flag is only enabled inside script-loading flow (`/load` and
+		 *       `duckc repl <script>` preload). Standard interactive REPL input keeps
+		 *       normal feedback.
+		 */
+		bool m_suppress_repl_feedback_during_script_load = false;
 	};
 
 }  // namespace compiler::repl

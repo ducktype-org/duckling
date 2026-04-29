@@ -11,45 +11,62 @@
 #include <printer/stream_printer.hpp>
 
 namespace pst {
-	base::Optional<AccessLocked<ExprStmt>> extractSingleExpression(
+	base::Optional<AccessLocked<Stmt>> extractSingleStatement(
 		query::Context& ctx, const AccessLocked<LangElement>& root
 	) {
 		auto root_elem = root.unlock(ctx);
 		auto children  = root_elem->viewChildren();
 
 		auto it = children.begin();
-		if (it == children.end()) return {};  // root has no children
+		if (it == children.end()) return {};
 
-		auto first_child = (*it).unlock(ctx);
-		++it;  // advance to check whether there is a second child
+		auto first = it;
+		++it;
+		if (it != children.end()) return {};
 
-		// exactly one child and it is an expression statement
-		if (it == children.end() && first_child->getElementKind() == ElementKind::ExprStmt)
-			return (*children.begin()).dynamicCast<ExprStmt>();
+		auto stmt_opt = (*first).unlock(ctx).dynamicCast<Stmt>();
+		if (!stmt_opt.has_value()) return {};
 
-		return {};
+		return stmt_opt.value();
+	}
+
+	base::Optional<AccessLocked<ExprStmt>> extractSingleExpression(
+		query::Context& ctx, const AccessLocked<LangElement>& root
+	) {
+		auto stmt_opt = extractSingleStatement(ctx, root);
+		if (!stmt_opt.has_value()) return {};
+
+		auto stmt = stmt_opt.value().unlock(ctx);
+		if (stmt->getElementKind() != ElementKind::ExprStmt) return {};
+
+		return stmt_opt.value().dynamicCast<ExprStmt>();
 	}
 
 	base::Optional<AccessLocked<Stmt>> extractSingleInstruction(
 		query::Context& ctx, const AccessLocked<LangElement>& root
 	) {
-		auto root_elem = root.unlock(ctx);
-		auto children  = root_elem->viewChildren();
+		auto stmt_opt = extractSingleStatement(ctx, root);
+		if (!stmt_opt.has_value()) return {};
 
-		// same iterator logic as above.
-		auto it = children.begin();
-		if (it == children.end()) return {};
-
-		auto first_child = (*it).unlock(ctx);
-		++it;
-		if (it != children.end()) return {};
+		auto first_child = stmt_opt.value().unlock(ctx);
 
 		auto kind = first_child->getElementKind();
 		if (kind != ElementKind::If && kind != ElementKind::While && kind != ElementKind::For
 		    && kind != ElementKind::Block)
 			return {};
 
-		return (*children.begin()).dynamicCast<Stmt>();
+		return stmt_opt.value();
+	}
+
+	base::Optional<AccessLocked<Stmt>> extractSingleDefinition(
+		query::Context& ctx, const AccessLocked<LangElement>& root
+	) {
+		auto stmt_opt = extractSingleStatement(ctx, root);
+		if (!stmt_opt.has_value()) return {};
+
+		if (stmt_opt.value().unlock(ctx)->isDeclaration() == DeclKind::None) return {};
+
+		return stmt_opt.value();
 	}
 }
 

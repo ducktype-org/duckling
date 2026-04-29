@@ -20,6 +20,8 @@ namespace pst {
 			this->element_kind = ElementKind::CallArgument;
 		}
 
+		void acceptVisitor(PstVisitor& visitor) const override;
+
 		[[nodiscard]]
 		std::string elementType() const override {
 			return "Call argument";

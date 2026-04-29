@@ -1,0 +1,178 @@
+import sub as sub;
+
+# ==================================== UTILS ====================================
+fun printSeparator() -> () = {
+    builtin_output_string("=================\n");
+}
+
+fun printSmallSeparator() -> () = {
+    builtin_output_string("+++++\n");
+}
+
+# ==================================== PRIMITIVES ====================================
+fun printPrimitives(a: ref Primitives) -> () = {
+    builtin_output_i64(a.a);                    # 0
+    builtin_output_f64(a.b);                    # 0.0
+    builtin_output_i64(if a.c then 1 else 0);   # 0
+    builtin_output_char(a.d - '\0' + 'A');      # 'A'
+    builtin_output_string(a.e);                 # ""
+    builtin_output_u64(len a.f);                # empty list -> 0
+}
+
+fun printPrimitives(a: ref Primitives2) -> () = {
+    builtin_output_i64(a.a);                    # 0
+    builtin_output_f64(a.b);                    # 0.0
+    builtin_output_i64(if a.c then 1 else 0);   # 0
+    builtin_output_char(a.d - '\0' + 'A');      # 'A'
+    builtin_output_string(a.e);                 # ""
+    builtin_output_u64(len a.f);                # empty list -> 0
+}
+
+fun printPrimitives(a: ref InitializedPrimitives) -> () = {
+    builtin_output_i64(a.a);                    # 0
+    builtin_output_f64(a.b);                    # 0.0
+    builtin_output_i64(if a.c then 1 else 0);   # 0
+    builtin_output_char(a.d);                   # 'A'
+    builtin_output_char(a.d + 2u8);             # 'C'
+    builtin_output_string(a.e);                 # "kajak"
+}
+
+class Primitives {
+    a: i32;         # 0
+    b: f64;         # 0.0
+    c: bool;        # false
+    d: char;        # '\0'
+    e: str;         # ""
+    f: List[i32];   # empty list
+    g: type;        # Unit
+}
+
+class Primitives2 {
+    a: i32;         # 0
+    b: f64;         # 0.0
+    c: bool;        # false
+    d: char;        # '\0'
+    e: str;         # ""
+    f: List[i32];   # empty list
+    g: type;        # Unit
+}
+
+class InitializedPrimitives {
+    a: i32 = 1;
+    b: f64 = 1.0;
+    c: bool = true;
+    d: char = 'A';
+    e: str = "kajak\n";
+    f: type = i32;
+}
+
+# This intentionally uses a different class to check if the default 
+# constructor was correctly inserted in case of globals (and wasn't 
+# inserted accidentally because it was used by a local).
+var g_a: Primitives2;
+
+fun testPrimitives() -> () = {
+    var a: Primitives; 
+    printPrimitives(&a);
+    # Check that the list is usable after default init.
+    a.f += 1;
+    a.f += 2;
+    a.f += 3;
+    builtin_output_u64(len a.f);
+    printSmallSeparator(); 
+   
+    printPrimitives(&g_a);
+    # Check that the list is usable after default init.
+    g_a.f += 1;
+    g_a.f += 2;
+    g_a.f += 3;
+    builtin_output_u64(len g_a.f);
+    printSmallSeparator(); 
+
+    var b: InitializedPrimitives;
+    printPrimitives(&b);
+    printSmallSeparator(); 
+    
+    # @TODO: #2306 Put a unit typed field in `Primitives`, etc. class once it's possible.
+    var x: (); # This is default initialized by a unit.
+}
+
+# ==================================== NAMING COLLISION ====================================
+class NamingCollision {
+    result: i64;
+    i: i64 = 1;
+    ctor_symbol: i64;
+}
+
+fun testNamingCollision() -> () = {
+    var a: NamingCollision;
+    builtin_output_i64(a.result);       # 0
+    builtin_output_i64(a.i);            # 1 
+    builtin_output_i64(a.ctor_symbol);  # 0
+}
+
+
+# ==================================== MULTI-DIM ARRAYS ====================================
+class Simple { x: i64 = 1; y: i32; }
+class Matrix { matrix: Simple[2][3][2]; }
+
+fun testMultiDimArrays() -> () = {
+    var m: Matrix;
+    builtin_output_i64(m.matrix[0][0][0].x); # 1
+    builtin_output_i64(m.matrix[1][2][0].x); # 1
+    builtin_output_i64(m.matrix[1][2][0].y); # 0
+}
+
+# ==================================== NESTED CLASSES ====================================
+class Deep { val: i64 = 999; val2: i64; }
+class Middle { d: Deep[2]; }
+class Outer { m: Middle[2]; }
+
+fun testDeepNesting() = {
+    var o: Outer;
+
+    builtin_output_i64(o.m[1].d[1].val);    # 999
+    builtin_output_i64(o.m[1].d[1].val2);   # 0
+    builtin_output_i64(o.m[0].d[1].val);    # 999
+    builtin_output_i64(o.m[1].d[0].val);    # 999
+}
+
+# ==================================== FUNCTION FIELD ====================================
+fun foo() = 1;
+class FunField { a: i32 = foo(); }
+
+fun testFunctionField() = {
+    var f: FunField;
+    builtin_output_i64(f.a);    # 1
+}
+
+# ==================================== DIFFERENT MODULE ====================================
+fun testDifferentModule() = {
+    var sub_t: sub.T;
+    builtin_output_i64(sub_t.x);    # 1
+    builtin_output_i64(sub_t.y.x);  # 123
+}
+
+
+fun main() -> i64 = {
+    printSeparator();
+    testPrimitives();
+
+    printSeparator();
+    testNamingCollision();
+    
+    printSeparator();
+    testMultiDimArrays();
+    
+    printSeparator();
+    testDeepNesting();
+
+    printSeparator();
+    testFunctionField();
+
+    printSeparator();
+    testDifferentModule();
+
+    return 0;
+}
+

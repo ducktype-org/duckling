@@ -1,5 +1,5 @@
 #include <frontend/module_tree/module_tree.hpp>
-#include <helios/queries.hpp>
+#include <helios/queries/queries.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <mir/mir_lowering/mir_queries.hpp>
 
@@ -46,7 +46,7 @@ int main(int argc, const char* argv[]) {
 
 	for (const auto& hout_glob: top_level.glob_data) {
 		query::utils::withContextDo([&](query::Context& ctx) {
-			variant_match(hout_glob.value) {
+			variant_match(hout_glob->value) {
 				variant_case(helios::HOUTGlobalVariable, var) {
 					CRef mir_func
 						= &ctx.query<mir::LowerGlobalDataToMIRCtor>({ hout_glob })->valueOrThrow();

@@ -7,13 +7,15 @@
 //! [^flutter]: <https://pub.dev/packages/flutter_bloc>
 
 use std::collections::{BTreeMap, HashSet};
+use std::sync::RwLock;
 
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
 use itertools::Itertools;
-use std::sync::RwLock;
 use tracing::debug;
 
-use crate::{StrId, duck::util::terminal::Terminal};
+use crate::StrId;
+use crate::duck::util::terminal::Terminal;
+use crate::quackpack::util::PANIC_MESSAGE;
 
 const DEFAULT_REFRESH_RATE_HZ: u8 = 20;
 
@@ -32,7 +34,8 @@ enum PrefixChars {
 }
 
 impl PrefixChars {
-    fn as_str(&self) -> &'static str {
+    /// Get [`indicatif`] friendly string for displaying a progress.
+    fn as_indicatif_progress_chars(&self) -> &'static str {
         // These should match https://docs.rs/indicatif/latest/indicatif/style/struct.ProgressStyle.html#method.progress_chars.
         match self {
             PrefixChars::Blocks => "## ",
@@ -81,7 +84,7 @@ impl DownloadingPackagesProgressBarManager {
             );
             return;
         }
-        let mut state = self.state.write().expect("panick'ed");
+        let mut state = self.state.write().expect(PANIC_MESSAGE);
         if state.reverse_map.contains_key(&pkg) {
             debug!("download of package `{pkg}` has already started");
             return;
@@ -110,7 +113,7 @@ impl DownloadingPackagesProgressBarManager {
             );
             return;
         }
-        let mut state = self.state.write().expect("panick'ed");
+        let mut state = self.state.write().expect(PANIC_MESSAGE);
 
         let Some(id) = state.reverse_map.remove(&pkg) else {
             debug!("download of package `{pkg}` hasn't started");
@@ -165,7 +168,7 @@ impl DownloadingPackagesProgressBar {
             "{prefix:>12.cyan.bold} [{bar:57}] {pos}/{len}"
         })
         .expect("We set this statically, it should never fail")
-        .progress_chars(PrefixChars::Pacman.as_str())
+        .progress_chars(PrefixChars::Pacman.as_indicatif_progress_chars())
     }
 }
 

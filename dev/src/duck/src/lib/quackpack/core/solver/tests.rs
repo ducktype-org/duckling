@@ -1,58 +1,53 @@
-use std::{collections::HashMap, path::PathBuf};
+use std::collections::HashMap;
+use std::path::PathBuf;
 
 use httpmock::prelude::*;
 use tempfile::{TempDir, tempdir};
-
-use crate::{
-    DuckCtx,
-    quackpack::{
-        core::{Version, fetcher::types, git_access::GitAccess},
-        schemas::registry,
-    },
-    util_common::{path_ops_ext::PathOpsExt, test_utils::setup_test},
-};
-
 use url::Url;
 
-use crate::quackpack::core::{
-    PackageCtx, ShouldRunSolverEngine, Solver,
-    fetcher::Fetcher,
-    solver_freeze::{SolverFreeze, SolverPackageFreeze},
-    solver_mode::SolverMode,
-    types_common::{ExpandedLocation, ExpandedPackage, InternedExpandedLocation},
-};
+use crate::DuckContext;
+use crate::quackpack::core::fetcher::{Fetcher, types};
+use crate::quackpack::core::solver::git_access::GitAccess;
+use crate::quackpack::core::solver::solver_freeze::{SolverFreeze, SolverPackageFreeze};
+use crate::quackpack::core::solver::solver_mode::SolverMode;
+use crate::quackpack::core::solver::types_common::{ExpandedLocation, ExpandedPackage};
+use crate::quackpack::core::solver::{ShouldRunSolverEngine, SolverGathererData};
+use crate::quackpack::core::{PackageContext, PackageLoader, Version};
+use crate::quackpack::schemas::registry;
+use crate::util::path_ops_ext::PathOpsExt;
+use crate::util::test_utils::setup_test;
 
 struct MockGitAccess();
 impl GitAccess for MockGitAccess {
     fn git_path(&self, _url: url::Url, _commit: crate::StrId) -> PathBuf {
-        panic!("unimplemented")
+        unimplemented!()
     }
 
     fn is_stored(&self, _url: url::Url, _commit: crate::StrId) -> bool {
-        panic!("unimplemented")
+        unimplemented!()
     }
 
     fn store(
-        &self,
+        &mut self,
         _url: url::Url,
         _commit: crate::StrId,
         _source_path: &std::path::Path,
     ) -> crate::QuackResult<()> {
-        panic!("unimplemented")
+        unimplemented!()
     }
 }
 
-fn setup_duck_ctx() -> (DuckCtx, TempDir) {
+fn setup_duck_ctx() -> (DuckContext, TempDir) {
     let setup = || {
         // We set cache directory to a temporary directory, so we can use `Fetcher` without
         // worrying about leaving traces of tests in FS.
         let dir = tempdir().unwrap();
-        // SAFETY: Setup is single threaded, and `Env` in `DuckCtx`, copies all envs.
+        // SAFETY: Setup is single threaded, and `Env` in `DuckContext`, copies all envs.
         unsafe {
             std::env::set_var("DUCK_CACHE_DIR", dir.path());
         }
-        let ctx = DuckCtx::default();
-        // SAFETY: Setup is single threaded, and `Env` in `DuckCtx`, copies all envs.
+        let ctx = DuckContext::default();
+        // SAFETY: Setup is single threaded, and `Env` in `DuckContext`, copies all envs.
         unsafe {
             std::env::remove_var("DUCK_CACHE_DIR");
         }
@@ -63,9 +58,10 @@ fn setup_duck_ctx() -> (DuckCtx, TempDir) {
 
 fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {
     let dir = tempdir().unwrap();
-    let manifest = dir.path().join("quackconfig.yml");
+    let manifest = dir.path().join(PackageLoader::MANIFEST_NAME);
     manifest.touch().unwrap();
     manifest.write(contents).unwrap();
+    dir.path().try_fsync_dir().unwrap();
     (dir, manifest)
 }
 
@@ -151,7 +147,7 @@ fn new_dependency() {
     let server = create_mock_server();
 
     let url: Url = server.base_url().parse().unwrap();
-    let fetcher = Fetcher::new(&ctx).unwrap();
+    let mut fetcher = Fetcher::new(&ctx).unwrap();
     let (_dir, manifest_path) = prepare_manifest(&format!(
         r#"
 metadata:
@@ -161,39 +157,42 @@ metadata:
 dependencies:
   a:
     source:
-      registry_url: {}
+      registry-url: {}
     version: '1'
   b:
     source:
-      registry_url: {}
+      registry-url: {}
     version: '2'
 "#,
         &url, &url,
     ));
     let root_path = manifest_path.parent().unwrap().to_path_buf();
-    let pkg_ctx = PackageCtx::new(root_path.clone(), &ctx).unwrap();
+    let pcx = PackageContext::new(root_path.clone(), &ctx).unwrap();
 
-    let loc_root = InternedExpandedLocation::new(ExpandedLocation::Local {
+    let loc_root = ExpandedLocation::Local {
         absolute_path: root_path.clone(),
-    });
+    }
+    .into();
     let root_pkg = ExpandedPackage {
         location: loc_root,
         version: None,
     };
 
-    let loc_a = InternedExpandedLocation::new(ExpandedLocation::Registry {
+    let loc_a = ExpandedLocation::Registry {
         url: url.clone(),
         real_name: "a".into(),
-    });
+    }
+    .into();
     let a_pkg = ExpandedPackage {
         location: loc_a,
         version: Some(1.into()),
     };
 
-    let loc_b = InternedExpandedLocation::new(ExpandedLocation::Registry {
+    let loc_b = ExpandedLocation::Registry {
         url: url.clone(),
         real_name: "b".into(),
-    });
+    }
+    .into();
     let b_pkg = ExpandedPackage {
         location: loc_b,
         version: Some(2.into()),
@@ -220,8 +219,10 @@ dependencies:
         .into(),
     };
 
-    let solver = Solver::new(&pkg_ctx, &fetcher, previous_freeze, SolverMode::default());
-    let ShouldRunSolverEngine::Yes(solver) = solver.prepare_solving(&MockGitAccess()).unwrap()
+    let solver = SolverGathererData::new(&pcx, previous_freeze, SolverMode::default());
+    let ShouldRunSolverEngine::Yes(solver) = solver
+        .prepare_solving(&mut fetcher, &mut MockGitAccess())
+        .unwrap()
     else {
         panic!()
     };
@@ -264,7 +265,7 @@ fn remove_unnecessary_dependency() {
     let server = create_mock_server();
 
     let url: Url = server.base_url().parse().unwrap();
-    let fetcher = Fetcher::new(&ctx).unwrap();
+    let mut fetcher = Fetcher::new(&ctx).unwrap();
     let (_dir, manifest_path) = prepare_manifest(&format!(
         r#"
 metadata:
@@ -274,35 +275,38 @@ metadata:
 dependencies:
   b:
     source:
-      registry_url: {}
+      registry-url: {}
     version: '2'
 "#,
         &url,
     ));
     let root_path = manifest_path.parent().unwrap().to_path_buf();
-    let pkg_ctx = PackageCtx::new(root_path.clone(), &ctx).unwrap();
+    let pcx = PackageContext::new(root_path.clone(), &ctx).unwrap();
 
-    let loc_root = InternedExpandedLocation::new(ExpandedLocation::Local {
+    let loc_root = ExpandedLocation::Local {
         absolute_path: root_path.clone(),
-    });
+    }
+    .into();
     let root_pkg = ExpandedPackage {
         location: loc_root,
         version: None,
     };
 
-    let loc_a = InternedExpandedLocation::new(ExpandedLocation::Registry {
+    let loc_a = ExpandedLocation::Registry {
         url: url.clone(),
         real_name: "a".into(),
-    });
+    }
+    .into();
     let a_pkg = ExpandedPackage {
         location: loc_a,
         version: Some(1.into()),
     };
 
-    let loc_b = InternedExpandedLocation::new(ExpandedLocation::Registry {
+    let loc_b = ExpandedLocation::Registry {
         url: url.clone(),
         real_name: "b".into(),
-    });
+    }
+    .into();
     let b_pkg = ExpandedPackage {
         location: loc_b,
         version: Some(2.into()),
@@ -336,8 +340,10 @@ dependencies:
         .into(),
     };
 
-    let solver = Solver::new(&pkg_ctx, &fetcher, previous_freeze, SolverMode::default());
-    let ShouldRunSolverEngine::No(answer) = solver.prepare_solving(&MockGitAccess()).unwrap()
+    let solver = SolverGathererData::new(&pcx, previous_freeze, SolverMode::default());
+    let ShouldRunSolverEngine::No(answer) = solver
+        .prepare_solving(&mut fetcher, &mut MockGitAccess())
+        .unwrap()
     else {
         panic!()
     };
@@ -377,7 +383,7 @@ fn no_longer_working_dependency() {
     let server = create_mock_server();
 
     let url: Url = server.base_url().parse().unwrap();
-    let fetcher = Fetcher::new(&ctx).unwrap();
+    let mut fetcher = Fetcher::new(&ctx).unwrap();
     let (_dir, manifest_path) = prepare_manifest(&format!(
         r#"
 metadata:
@@ -387,27 +393,29 @@ metadata:
 dependencies:
   a:
     source:
-      registry_url: {}
+      registry-url: {}
     version: 1 or 2
     features: [a]
 "#,
         &url,
     ));
     let root_path = manifest_path.parent().unwrap().to_path_buf();
-    let pkg_ctx = PackageCtx::new(root_path.clone(), &ctx).unwrap();
+    let pcx = PackageContext::new(root_path.clone(), &ctx).unwrap();
 
-    let loc_root = InternedExpandedLocation::new(ExpandedLocation::Local {
+    let loc_root = ExpandedLocation::Local {
         absolute_path: root_path.clone(),
-    });
+    }
+    .into();
     let root_pkg = ExpandedPackage {
         location: loc_root,
         version: None,
     };
 
-    let loc_a = InternedExpandedLocation::new(ExpandedLocation::Registry {
+    let loc_a = ExpandedLocation::Registry {
         url: url.clone(),
         real_name: "a".into(),
-    });
+    }
+    .into();
     let a1_pkg = ExpandedPackage {
         location: loc_a,
         version: Some(1.into()),
@@ -442,8 +450,10 @@ dependencies:
         supress_foreign_manifests_errors: true,
         frozen: false,
     };
-    let solver = Solver::new(&pkg_ctx, &fetcher, previous_freeze, mode);
-    let ShouldRunSolverEngine::Yes(solver) = solver.prepare_solving(&MockGitAccess()).unwrap()
+    let solver = SolverGathererData::new(&pcx, previous_freeze, mode);
+    let ShouldRunSolverEngine::Yes(solver) = solver
+        .prepare_solving(&mut fetcher, &mut MockGitAccess())
+        .unwrap()
     else {
         panic!()
     };

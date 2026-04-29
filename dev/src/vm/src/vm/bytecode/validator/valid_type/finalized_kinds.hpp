@@ -136,9 +136,11 @@ namespace vm::code::valid_type {
 		 * @brief Variant type representation.
 		 */
 		struct Variant final {
-			Bytes type_tag_size;  /// Number of bytes needed for the type tag - e.g. 1, 2, 4, 8
+			Bytes type_tag_size;       /// Number of bytes needed for the type tag - e.g. 1, 2, 4, 8
 			std::vector<ValidTypeID>
-				alternatives;     /// Order matters, as it determines type tag values.
+				alternatives_ordered;  /// Order matters, as it determines type tag values.
+			std::unordered_set<ValidTypeID>
+				alternatives_set;      /// For easier lookup whether a type is in this variant.
 		};
 
 		/**
@@ -146,7 +148,7 @@ namespace vm::code::valid_type {
 		 */
 		struct Function final {
 			std::vector<ValidTypeID> parameters;
-			ValidTypeID              result;
+			std::vector<ValidTypeID> result_types;
 		};
 
 		/**

@@ -13,6 +13,8 @@
 #include <filesystem/file.hpp>
 
 namespace {
+
+
 	/**
 	 * @brief A value pair storing the information about a file.
 	 */
@@ -36,7 +38,7 @@ namespace {
 namespace compiler::frontend {
 
 	SourceFile::SourceFile(fs::File file, ModuleID linked_module):
-		  state_lock(base::makeBox<concurrent::AtomicFlagSpinlock>()),
+		  state_lock(base::makeBox<std::recursive_mutex>()),
 		  file(std::move(file)),
 		  linked_module(linked_module) {
 		lang_file_name = base::StrID(this->file.getFilePath().stem().c_str());
@@ -71,7 +73,7 @@ namespace compiler::frontend {
 	}
 
 	void SourceFile::update() {
-		std::lock_guard lock(*state_lock);
+		std::scoped_lock lock(*state_lock);
 
 		auto abs_path = this->file.getFilePath().absolute().getPath();
 
@@ -86,6 +88,7 @@ namespace compiler::frontend {
 	}
 
 	const hashing::ComponentHash& SourceFile::getComponentHash() const {
+		std::scoped_lock lock(*state_lock);
 		if (!component_hash.has_value()) {
 			auto m_path_component_hash = ModuleTree::getPathComponentHash(linked_module);
 			component_hash = hashing::ComponentHash(m_path_component_hash, lang_file_name);
@@ -94,7 +97,7 @@ namespace compiler::frontend {
 	}
 
 	CRef<pst::PST<>> SourceFile::getPST() {
-		std::lock_guard lock(*state_lock);
+		std::scoped_lock lock(*state_lock);
 
 		// If component hash changed, reset parse tree
 		if (parse_tree && component_hash.has_value()) {
@@ -103,7 +106,20 @@ namespace compiler::frontend {
 			// @TODO: #1879 Program chosen as default type for non_REPL
 			auto pst_type = getModuleRef(linked_module)->isReplModule() ? pst::PSTType::Script
 			                                                            : pst::PSTType::Program;
-			parse_tree.emplace(pst::PST(file, pst_type, getComponentHash()));
+
+			auto parsed_pst = pst::PST(file, pst_type, getComponentHash());
+
+			// Illegal access is fine here because we are outside of any query and the PST is only
+			// being created.
+			if (parsed_pst.getRootElement().illegalAccess().has_value()) {
+				// @TODO: #2397 we could change it, such that root element is never null.
+				// Set additional root data only if the root element is not null:
+				parsed_pst.setAdditionalRootData(pst::AdditionalRootData{
+					.pst_parent = pst::AdditionalRootData::ModuleParent{ this->linked_module, },
+				});
+			}
+			parse_tree.emplace(std::move(parsed_pst));
+
 			return &parse_tree.value();
 		}
 	}
@@ -135,7 +151,10 @@ namespace compiler::frontend {
 		return *path_registry.at(abs_path)->content;
 	}
 
-	void SourceFile::invalidateComponentHash() { component_hash.reset(); }
+	void SourceFile::invalidateComponentHash() {
+		std::scoped_lock lock(*state_lock);
+		component_hash.reset();
+	}
 
 	void SourceFile::removeSourceFileFromStorage(Ref<SourceFile> source_file) {
 		auto abs_path = source_file->file.getFilePath().absolute().getPath();
@@ -170,4 +189,5 @@ namespace compiler::frontend {
 			if (!is_tracked) CORE_PANIC("dangling reference used after removing SourceFile");
 		});
 	}
+
 }

@@ -1,3 +1,4 @@
+#include <driver/debug_info/debug_info.hpp>
 #include <driver/exit.hpp>
 #include <driver/initialize.hpp>
 #include <driver/module_flags/module_flags.hpp>
@@ -5,9 +6,10 @@
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
+#include <frontend/pst_parser/source_position_locked.hpp>
 #include <global_state/backend_options.hpp>
 #include <global_state/packages.hpp>
-#include <helios/queries.hpp>
+#include <helios/queries/queries.hpp>
 
 #include <artifacts/artifacts.hpp>
 #include <filesystem/file_path.hpp>
@@ -40,6 +42,7 @@ public:
 		// wont test what they are supposed to:
 		TESTER_ADD_TEST(graphConsistencyAfterOptimizationTest);
 		TESTER_ADD_TEST(objFileGenerated);
+		TESTER_ADD_TEST(debugInfoGenerated);
 		TESTER_ADD_TEST(assemblyAndLLVMGenerated);
 		TESTER_ADD_TEST(dvmBackendRuns);
 		TESTER_ADD_TEST(packageCompiles);
@@ -48,11 +51,12 @@ public:
 		TESTER_ADD_TEST(saveArtifactsTest);
 		TESTER_ADD_TEST(sideInputsTest);
 		TESTER_ADD_TEST(moduleChildSideInputsTest);
+		TESTER_ADD_TEST(sourcePositionInputDependencyForDvmDebugInfoInCompileEntirePackageTest);
 	}
 
 protected:
 	void beforeAll() override {
-		compiler::driver::initializeTheCompiler(
+		auto init_result = compiler::driver::initializeTheCompiler(
 			compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
 				.main_package_info = {
 					.package_name = package_name,
@@ -69,6 +73,7 @@ protected:
 				.execution_options     = { .worker_count = 1 },
 			}
 		);
+		ASSERT_TRUE(init_result.status().isOk());
 	}
 
 private:
@@ -413,12 +418,36 @@ private:
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			// This method can fail on module verification
-			auto module_o = ctx.query<driver::CompileModule>({ module, driver::BackendType::LLVM })
-			                    .valueOrPanic();
+			auto artifacts
+				= ctx.query<driver::CompileModule>({ module, driver::BackendType::LLVM, false })
+			          ->valueOrPanic();
 
-			ASSERT_TRUE(module_o.file.exists());
+			ASSERT_TRUE(artifacts.object_art.file.exists());
+			ASSERT_TRUE(artifacts.debug_info.empty());
 
-			fs::FileManager::deleteFile(module_o.file);
+			fs::FileManager::deleteFile(artifacts.object_art.file);
+		});
+	}
+
+	void debugInfoGenerated() {
+		using namespace compiler;
+
+		auto module
+			= frontend::createModuleTree(fs::File(path("modules/functions_2")), package_name);
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			auto artifacts
+				= ctx.query<driver::CompileModule>({ module, driver::BackendType::DVM, true })
+			          ->valueOrPanic();
+
+			ASSERT_TRUE(artifacts.object_art.file.exists());
+			ASSERT_TRUE(artifacts.debug_info.has_value());
+
+			fs::FileManager::deleteFile(artifacts.object_art.file);
+			fs::FileManager::deleteFile(
+				artifacts.object_art.file.getFilePath().parentPath()
+				/ artifacts.object_art.file.stem().append(driver::DEBUG_INFO_STABLE_EXTENSION)
+			);
 		});
 	}
 
@@ -430,11 +459,11 @@ private:
 		defer(compiler::driver::llvm_dump_ir = false; compiler::driver::llvm_dump_asm = false;);
 
 		auto module
-			= frontend::createModuleTree(fs::File(path("modules/functions_2")), package_name);
+			= frontend::createModuleTree(fs::File(path("modules/functions_3")), package_name);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			// This method can fail on module verification
-			auto module_o = ctx.query<driver::CompileModule>({ module, driver::BackendType::LLVM });
+			ctx.query<driver::CompileModule>({ module, driver::BackendType::LLVM, false });
 
 			auto module_name = base::StrID(
 				base::strConcat(
@@ -458,7 +487,7 @@ private:
 		using namespace compiler;
 
 		auto module
-			= frontend::createModuleTree(fs::File(path("modules/functions_3")), package_name);
+			= frontend::createModuleTree(fs::File(path("modules/functions_4")), package_name);
 
 
 		query::utils::withContextDo([&](query::Context& ctx) {
@@ -476,7 +505,7 @@ private:
 
 		global_state::PackageInfo package_info{
 			.root_module
-			= frontend::createModuleTree(fs::File(path("modules/functions_4")), package_name),
+			= frontend::createModuleTree(fs::File(path("modules/functions_5")), package_name),
 		};
 
 		driver::compileEntirePackage(
@@ -504,6 +533,12 @@ private:
 				.link_c_standard_library = true,
 			}
 		);
+
+		auto dvm_exe_path = artifacts_path / "package_dvm.dbc";
+		assertTrue(
+			std::filesystem::exists(dvm_exe_path),
+			base::strConcat("DVM executable file does not exist: ", dvm_exe_path.native())
+		);
 	}
 
 	void globalsTest() {
@@ -513,21 +548,23 @@ private:
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			// This method can fail on module verification
-			auto module_o = ctx.query<driver::CompileModule>({ module, driver::BackendType::LLVM })
-			                    .valueOrPanic();
+			auto artifacts
+				= ctx.query<driver::CompileModule>({ module, driver::BackendType::LLVM, false })
+			          ->valueOrPanic();
 
-			assertTrue(module_o.file.exists(), "Object file does not exist");
+			assertTrue(artifacts.object_art.file.exists(), "Object file does not exist");
 
-			std::filesystem::remove(module_o.file.getFilePath().getPath());
+			std::filesystem::remove(artifacts.object_art.file.getFilePath().getPath());
 		});
 
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			auto module_dbc = ctx.query<driver::CompileModule>({ module, driver::BackendType::DVM })
-			                      .valueOrPanic();
-			assertTrue(module_dbc.file.exists(), "Object file does not exist");
+			auto artifacts
+				= ctx.query<driver::CompileModule>({ module, driver::BackendType::DVM, false })
+			          ->valueOrPanic();
+			assertTrue(artifacts.object_art.file.exists(), "Object file does not exist");
 
-			std::filesystem::remove(module_dbc.file.getFilePath().getPath());
+			std::filesystem::remove(artifacts.object_art.file.getFilePath().getPath());
 
 			auto run_result = driver::runModuleOnDVM(ctx, module);
 			ASSERT_TRUE(run_result.has_value());
@@ -557,7 +594,7 @@ private:
 		);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			(void) ctx.query<driver::CompileModule>({ module, driver::BackendType::LLVM });
+			(void) ctx.query<driver::CompileModule>({ module, driver::BackendType::LLVM, false });
 		});
 
 		// Serialize current graph
@@ -973,6 +1010,51 @@ private:
 		ASSERT_EQUAL_PRINT(0, count_submodule_count_inputs(bar_deps));
 		ASSERT_EQUAL_PRINT(0, count_submodule_count_inputs(c_deps));
 		ASSERT_EQUAL_PRINT(0, count_submodule_count_inputs(d_deps));
+	}
+
+	void sourcePositionInputDependencyForDvmDebugInfoInCompileEntirePackageTest() {
+		using namespace compiler;
+
+		auto source_position_input = pst::SourcePositionLocked::getQueryInputNode();
+		auto source_position_node  = query::internal::NodeID(
+            source_position_input.q_id, query::internal::KeyHash{ source_position_input.hash }
+        );
+
+		auto has_source_position_dep = [&](const query::internal::NodeID& node_id) {
+			auto& graph = query::internal::ContextAccess::getState()->getGraph();
+			if (!graph.nodeExists(node_id)) return false;
+			auto deps = graph.getNodeDeps(node_id);
+			return std::ranges::find(deps, source_position_node) != deps.end();
+		};
+
+		global_state::PackageInfo dvm_package_info{
+			.root_module
+			= frontend::createModuleTree(fs::File(path("modules/functions_2")), "src_pos_dvm"),
+		};
+
+		driver::compileEntirePackage(
+			dvm_package_info,
+			driver::BackendType::DVM,
+			{
+				.linker_path             = {},
+				.additional_link_options = {},
+				.link_c_standard_library = true,
+			}
+		);
+		auto dvm_compile_node
+			= query::internal::makeNodeID<driver::CompileModule>(driver::KeyOf_CompileModule{
+				.module_id        = dvm_package_info.root_module,
+				.backend_type     = driver::BackendType::DVM,
+				.build_debug_info = true,
+			});
+		auto dvm_debug_node = query::internal::makeNodeID<driver::DebugInfoForModule>(
+			driver::KeyOf_DebugInfoForModule{
+				.module_id    = dvm_package_info.root_module,
+				.backend_type = driver::BackendType::DVM,
+			}
+		);
+		ASSERT_TRUE(not has_source_position_dep(dvm_compile_node));
+		ASSERT_TRUE(has_source_position_dep(dvm_debug_node));
 	}
 };
 

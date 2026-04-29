@@ -7,10 +7,12 @@
 #include <logger/logger.hpp>
 #include <printer/stream_printer.hpp>
 
+#include <vm/core/safe/low_program/instruction.hpp>
 #include <vm/core/supervisor/supervisor.hpp>
-#include <vm/core/thread/low_program/instruction.hpp>
+#include <vm/debugger/UI/debug_adapter/debug_adapter.hpp>
 
 #include <exception>
+#include <fstream>
 
 void showVersion() {
 	std::cout << "VM version 0.0.\n";
@@ -43,6 +45,7 @@ clah::Clah getVmClah() {
 				logger::enable_dev_logs = true;
 				logger::enableDevCategory(logger::DevLogCategories::DVM);
 				logger::enableDevCategory(logger::DevLogCategories::DVMDetails);
+				logger::setDevLogOutputStreamCurrentDate();
 			}
 		})
 #endif
@@ -71,6 +74,14 @@ clah::Clah getVmClah() {
 								   args.push_back(*options.getExtra<std::string>(argc));
 
 							   return cli(file, args);
+						   }))
+	    .addSubcommand(clah::Clah("debug_adapter", "Start the VM debug adapter.")
+	                       .addPositional(clah::FileParser::make("file"))
+	                       .setHandler([](const clah::ParsingResult& options) -> int {
+							   vm::Supervisor::get();
+							   auto file = options.getPositional<fs::File>(0);
+							   vm::debug_adapter::DebugAdapter::get(file).run();
+							   return 0;
 						   }))
 	    .addSubcommand(clah::Clah("repl", "Start the VM in REPL mode.")
 	                       .setHandler([](const clah::ParsingResult&) -> int {

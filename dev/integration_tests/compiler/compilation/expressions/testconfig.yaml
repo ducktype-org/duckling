@@ -6,12 +6,12 @@ Tests:
       dvm:
         backend: dvm
         Output:
-          String: "9\n9\n9\n18\n4\n"
+          String: "9\n9\n9\n18\n4\n2\n"
       llvm:
         backend: llvm
         Output:
-          String: "9\n9\n9\n18\n4\n"
-  single-comparison: # Any type of comparison between two values.
+          String: "9\n9\n9\n18\n4\n2\n"
+  single_comparison: # Any type of comparison between two values.
     Cases:
       dvm:
         backend: dvm
@@ -24,7 +24,7 @@ Tests:
           String: ""
         ExitCode: 0
 
-  comparison-chain:
+  comparison_chain:
     Cases:
       dvm:
         backend: dvm
@@ -40,6 +40,11 @@ Tests:
     Cases:
       llvm:
         backend: llvm
+        Output:
+          String: "1\n1\n"
+        ExitCode: 0
+      dvm:
+        backend: dvm
         Output:
           String: "1\n1\n"
         ExitCode: 0
@@ -142,14 +147,17 @@ Tests:
           String: ""
         ExitCode: 0
 
-  default_init:
+  no_output:
     Cases:
-      # @TODO: #1916 When arrays are handled in DVM, add a DVM case.
-      # @TODO: #1560 When records are handled in DVM, add a DVM case.
+      dvm:
+        backend: dvm
+        Output:
+          String: ""
+        ExitCode: 0
       llvm:
         backend: llvm
         Output:
-          String: "0\n0\n0\n0\n0\n0\n"
+          String: ""
         ExitCode: 0
 
   zero_init:
@@ -157,12 +165,12 @@ Tests:
       llvm:
         backend: llvm
         Output:
-          String: "0\n0\n"
+          String: "0\n0\n0\n0\n"
         ExitCode: 0
       dvm:
         backend: dvm
         Output:
-          String: "0\n0\n"
+          String: "0\n0\n0\n0\n"
         ExitCode: 0
 
   strings:
@@ -172,4 +180,14 @@ Tests:
         Input:
           String: "Test"
         Output:
-          String: "Test\nHello, world!\n"
+          String: "Test\nHello, world!\nab\nbcd\nHello, world!\n"
+
+  chars:
+    Cases:
+      llvm:
+        backend: llvm
+        Input:
+          String: "Xd;"
+        Output:
+          String: "Enter a character: The provided character is uppercase.\nIts lowercase counterpart is: x\nEnter a character: The provided character is lowercase.\nIts uppercase counterpart is: D\nEnter a character: The provided character is not a letter.\n"
+          

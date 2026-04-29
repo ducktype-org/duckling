@@ -7,6 +7,7 @@
 #include <query_framework/internal/query_data/query_id.hpp>
 #include <query_framework/internal/query_graph/query_graph.hpp>
 #include <query_framework/internal/query_graph/query_state.hpp>
+#include <query_framework/internal/query_metadata/metadata_storage.hpp>
 #include <query_framework/utils/query_hash.hpp>
 
 #include <cstddef>
@@ -106,6 +107,8 @@ namespace query::external {
 	 */
 	[[nodiscard]] std::vector<byte> serializeMetadata();
 
+	enum class MetadataStorageKind { Current, Previous };
+
 	/**
 	 * @brief Get all metadata of a specific type from all nodes in the previous compilation.
 	 *
@@ -116,14 +119,21 @@ namespace query::external {
 	 *         Returns empty vector if no previous metadata exists
 	 *         or no metadata of this type was found.
 	 */
-	template<typename MetadataT>
+	template<typename MetadataT, MetadataStorageKind Kind>
 	requires std::derived_from<MetadataT, internal::BaseMetadata> [[nodiscard]]
-	std::vector<MetadataInfo<MetadataT>> getMetadataFromAllPrevNodes() {
-		auto state         = ::query::internal::ContextAccess::getState();
-		auto prev_metadata = state->getPreviousMetadataStorage();
-		if (!prev_metadata.has_value()) return {};
+	std::vector<MetadataInfo<MetadataT>> getMetadataFromAllNodesImpl() {
+		auto state = ::query::internal::ContextAccess::getState();
 
-		auto internal_result = prev_metadata.value()->getMetadataFromAllNodes<MetadataT>();
+		base::Optional<CRef<query::internal::MetadataStorage>> storage;
+		if constexpr (Kind == MetadataStorageKind ::Previous)
+			storage = state->getPreviousMetadataStorage();
+		else
+			storage = state->getMetadataStorage();
+
+		if (!storage.has_value()) return {};
+
+		auto internal_result = storage.value()->template getMetadataFromAllNodes<MetadataT>();
+
 		std::vector<MetadataInfo<MetadataT>> result;
 		result.reserve(internal_result.size());
 
@@ -135,6 +145,16 @@ namespace query::external {
 		}
 
 		return result;
+	}
+
+	template<typename MetadataT>
+	auto getMetadataFromAllPrevNodes() {
+		return getMetadataFromAllNodesImpl<MetadataT, MetadataStorageKind::Previous>();
+	}
+
+	template<typename MetadataT>
+	auto getMetadataFromAllCurrentNodes() {
+		return getMetadataFromAllNodesImpl<MetadataT, MetadataStorageKind::Current>();
 	}
 
 	/**

@@ -16,12 +16,13 @@ PUSH_DIAGNOSTIC;  // Our code is included after crow because of errors if pst wa
 POP_DIAGNOSTIC;
 
 #include "export_keywords.hpp"
-#include "file_changed.hpp"
+#include "files_managment.hpp"
 #include "go_to_definition.hpp"
 #include "semantic_tokens.hpp"
 #include "utils.hpp"
 #include "validation.hpp"
 
+#include <frontend/module_tree/module_flags/module_flags.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/pst.hpp>
@@ -30,7 +31,6 @@ POP_DIAGNOSTIC;
 #include <filesystem/file.hpp>
 #include <filesystem/file_path.hpp>
 #include <init/init.hpp>
-#include <lexer/lexer.hpp>
 #include <query_framework/entry/with_context_do.hpp>
 #include <query_framework/module_flags/module_flags.hpp>
 
@@ -40,10 +40,8 @@ POP_DIAGNOSTIC;
  * @param port The port number to run the server on.
  */
 void server(i32 port) {
-	crow::SimpleApp                           app;
-	lsp::ExportKeywords                       lsp;
-	std::unordered_map<std::string, fs::File> files;
-	auto virtual_root = fs::FileManager::getVirtualRootDirectory();
+	crow::SimpleApp     app;
+	lsp::ExportKeywords lsp;
 
 	/**
 	 * @brief Route to check if the server is running.
@@ -62,44 +60,89 @@ void server(i32 port) {
 	([lsp]() { return crow::response(200, lsp.getAllJson()); });
 
 
-	/** @brief Route to init a directory contents recursively in the virtual file system.
-	 * * URL: /init_directory/[base64 path]
-	 * @param base64_path The base64 encoded absolute path of the root directory of the workspace.
+	/** @brief Register a workspace root so openFile knows when to stop walking upward.
+	 * URL: /add_workspace/[base64 absolute path]
+	 */
+	CROW_ROUTE(app, "/add_workspace/<string>")
+	([](const std::string& base64_path) {
+		auto path = fs::FilePath(base64::decode_into<std::string>(base64_path));
+		lsp::addWorkspace(path);
+		return crow::response(200, "OK");
+	});
+
+	/** @brief Lazily initialise the package that owns the opened file.
+	 * URL: /open_file/[base64 absolute path]
+	 */
+	CROW_ROUTE(app, "/open_file/<string>")
+	([](const std::string& base64_path) {
+		auto path = fs::FilePath(base64::decode_into<std::string>(base64_path));
+		lsp::openFile(path);
+		return crow::response(200, "OK");
+	});
+
+	/**
+	 * @brief Route to add or override a file in the virtual file system.
+	 * * URL: /put_file/[base64 absolute path]/[base64 file contents]
+	 * @param base64_path The base64 encoded absolute path of the file.
+	 * @param base64_content The base64 encoded content of the file.
 	 * @return crow::response The HTTP response indicating the result of the operation.
 	 */
-	CROW_ROUTE(app, "/init_directory/<string>")
-	([&virtual_root](const std::string& base64_path) {
-		const auto path = fs::FilePath(base64::decode_into<std::string>(base64_path));
+	CROW_ROUTE(app, "/change_content/<string>/<string>")
+	([](const std::string& base64_path, const std::string& base64_content) {
+		const auto path    = base64::decode_into<std::string>(base64_path);
+		const auto content = base64::decode_into<std::string>(base64_content);
 
-		auto virtual_path = lsp::initFiles(path, virtual_root);
-		lsp::initModules(virtual_path);
-		lsp::initPSTs(virtual_path);
+		// This is because currently the `change_content` request can arrive
+		// before the `open_file` request, so we need to make sure that the file is opened before
+		// we try to change its content.
+		lsp::openFile(path);
+		lsp::updateFileContent(path, content);
+
+		return crow::response(200, "OK");
+	});
+
+	/**
+	 * This path is the extension of the previous one, and it is used when the second argument is
+	 * empty, and the CROW can't handle it on it's own.
+	 */
+	CROW_ROUTE(app, "/change_content/<string>/")
+	([](const std::string& base64_path) {
+		const auto path = base64::decode_into<std::string>(base64_path);
+
+		lsp::openFile(path);
+		lsp::updateFileContent(path, "");
 
 		return crow::response(200, "OK");
 	});
 
 	/**
 	 * @brief Route to add or override a file in the virtual file system.
-	 * * URL: /put_file/[base64 relative path]/[base64 file contents]
-	 * @param base64_path The base64 encoded relative path of the file.
+	 * * URL: /put_file/[base64 absolute path]/[base64 file contents]
+	 * @param base64_path The base64 encoded absolute path of the file.
 	 * @param base64_content The base64 encoded content of the file.
 	 * @return crow::response The HTTP response indicating the result of the operation.
 	 */
-	CROW_ROUTE(app, "/put_file/<string>/<string>")
-	([&virtual_root](const std::string& base64_path, const std::string& base64_content) {
-		const auto path    = base64::decode_into<std::string>(base64_path);
-		const auto content = base64::decode_into<std::string>(base64_content);
+	CROW_ROUTE(app, "/add_file/<string>")
+	([](const std::string& base64_path) {
+		const auto path = base64::decode_into<std::string>(base64_path);
 
-		lsp::updateFileContent(virtual_root, path, content);
+		lsp::addFile(path);
 
 		return crow::response(200, "OK");
 	});
 
-	CROW_ROUTE(app, "/put_file/<string>/")
-	([&virtual_root](const std::string& base64_path) {
+	/**
+	 * @brief Route to add or override a file in the virtual file system.
+	 * * URL: /put_file/[base64 absolute path]/[base64 file contents]
+	 * @param base64_path The base64 encoded absolute path of the file.
+	 * @param base64_content The base64 encoded content of the file.
+	 * @return crow::response The HTTP response indicating the result of the operation.
+	 */
+	CROW_ROUTE(app, "/remove_file_or_dir/<string>")
+	([](const std::string& base64_path) {
 		const auto path = base64::decode_into<std::string>(base64_path);
 
-		lsp::createFileFromVirtualRoot(virtual_root, path, "");
+		lsp::removeFileOrDirectory(path);
 
 		return crow::response(200, "OK");
 	});
@@ -107,14 +150,14 @@ void server(i32 port) {
 	/**
 	 * @brief Route to generate diagnostics for a file under the given path in the virtual file
 	 * system.
-	 * * URL: /get_errors/[base64 relative path]
-	 * @param base64_path The base64 encoded relative path of the file.
+	 * * URL: /get_errors/[base64 absolute path]
+	 * @param base64_path The base64 encoded absolute path of the file.
 	 * @return crow::response The HTTP response containing the diagnostics.
 	 */
 	CROW_ROUTE(app, "/get_errors/<string>")
-	([&virtual_root](const std::string& base64_path) {
-		const auto relative_path = base64::decode_into<std::string>(base64_path);
-		auto       path          = virtual_root.getFilePath().join(relative_path);
+	([](const std::string& base64_path) {
+		const auto path
+			= fs::FilePath(base64::decode_into<std::string>(base64_path)).toVirtualPath();
 		if (not path.exists()) return crow::response(404, "File not found");
 
 		const auto file     = fs::File(path);
@@ -129,14 +172,14 @@ void server(i32 port) {
 	/**
 	 * @brief Route to generate semantic tokens for a file under the given path in the virtual file
 	 * system.
-	 * * URL: /get_semantic_tokens/[base64 relative path]
-	 * @param base64_path The base64 encoded relative path of the file.
+	 * * URL: /get_semantic_tokens/[base64 absolute path]
+	 * @param base64_path The base64 encoded absolute path of the file.
 	 * @return crow::response The HTTP response containing the semantic tokens in JSON format.
 	 */
 	CROW_ROUTE(app, "/get_semantic_tokens/<string>")
-	([&virtual_root](const std::string& base64_path) {
-		const auto relative_path = base64::decode_into<std::string>(base64_path);
-		const auto path          = virtual_root.getFilePath().join(relative_path);
+	([](const std::string& base64_path) {
+		const auto path
+			= fs::FilePath(base64::decode_into<std::string>(base64_path)).toVirtualPath();
 
 		if (!path.exists()) return crow::response(404, "File not found");
 
@@ -148,15 +191,15 @@ void server(i32 port) {
 
 	/**
 	 * @brief Route to get definition location for a symbol defined by a given file and offset.
-	 * * URL: /get_semantic_tokens/[base64 relative path]/[offset]
-	 * @param base64_path The base64 encoded relative path of the file.
+	 * * URL: /get_semantic_tokens/[base64 absolute path]/[offset]
+	 * @param base64_path The base64 encoded absolute path of the file.
 	 * @param offset The offset of the element
 	 * @return crow::response The HTTP response containing the definition range in JSON format.
 	 */
 	CROW_ROUTE(app, "/get_definitions/<string>/<uint>")
-	([&virtual_root](const std::string& base64_path, const uint& offset) {
-		const auto relative_path = base64::decode_into<std::string>(base64_path);
-		const auto path          = virtual_root.getFilePath().join(relative_path);
+	([](const std::string& base64_path, const uint& offset) {
+		const auto path
+			= fs::FilePath(base64::decode_into<std::string>(base64_path)).toVirtualPath();
 
 		if (!path.exists()) return crow::response(404, "File not found");
 
@@ -184,16 +227,14 @@ void server(i32 port) {
 	 * @return whatever you want
 	 */
 	CROW_ROUTE(app, "/debug/<string>")
-	([&virtual_root](const std::string& arg) {
+	([](const std::string& arg) {
 		// put here whatever you want for debugging
-		// use virtual_root to access the virtual file system
 		std::cerr << "Debug arg: " << arg << "\n";
-		std::cerr << "Virtual root path: " << virtual_root.getFilePath().string() << "\n";
 
 		return crow::response(200, "OK");
 	});
 
-	app.port(base::safeIntConv<u16>(port)).run();
+	app.port(base::safeIntConv<u16>(port)).concurrency(1).run();
 }
 
 /**
@@ -248,7 +289,8 @@ int main(int argc, const char** argv) {
 	// Initialize the command-line argument parser with help flag and port parameter
 	auto clah = getLspDaemonCLI();
 
-	query::track_reverse_graph = true;
+	query::track_reverse_graph                     = true;
+	compiler::frontend::use_module_modifier_remove = true;
 
 	init::InitObject _;
 

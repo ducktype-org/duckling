@@ -1,20 +1,23 @@
 //! Our implementations of the [`Handler`] trait.
 
-use std::{fs::File, io::Write, path::Path};
+use std::fs::File;
+use std::io::Write;
+use std::path::Path;
 
 use curl::easy::Handler;
 use serde::Deserialize;
 
-use crate::{QuackResult, util_common::path_ops_ext::PathOpsExt};
+use crate::QuackResult;
+use crate::util::path_ops_ext::PathOpsExt;
 
 #[derive(Clone, Debug, Default)]
-/// Basic collector, which saves the entire HTTP response as a vector of `u8`.
+/// A basic collector which saves the entire HTTP response as a vector of `u8`.
 pub struct ResponseCollector {
     data: Vec<u8>,
 }
 
 impl ResponseCollector {
-    /// Create new [`ResponseCollector`].
+    /// Create a new [`ResponseCollector`].
     pub fn new() -> Self {
         Self::default()
     }
@@ -38,13 +41,13 @@ impl Handler for ResponseCollector {
 }
 
 #[derive(Debug)]
-/// Collector, which writes new bytes into a file.
+/// Collector which writes new bytes into a file.
 pub struct FileWriter {
     file: File,
 }
 
 impl FileWriter {
-    /// Create new [`FileWriter`], which will write to the `path`.
+    /// Create a new [`FileWriter`], which will write to the `path`.
     pub fn new(path: &Path) -> QuackResult<Self> {
         let file = path.touch()?;
         Ok(Self { file })

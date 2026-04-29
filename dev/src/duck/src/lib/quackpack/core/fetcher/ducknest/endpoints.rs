@@ -1,22 +1,31 @@
+//! A helper trait for getting URLs for communicating with a registry instance.
 use url::form_urlencoded::Serializer;
 use url::{Url, UrlQuery};
 
 use crate::quackpack::core::fetcher::types;
-use crate::{QuackResult, QuackResultContext, StrId};
+use crate::{QuackResult, StrId};
 
+/// A helper trait for getting URLs for communicating with a registry instance.
 pub trait UrlExt: Sized {
+    /// An internal method.
     fn _join(&self, path: &str) -> QuackResult<Self>;
 
+    /// An internal method.
     fn _query_pairs_mut(&mut self) -> Serializer<'_, UrlQuery<'_>>;
 
+    /// Get the URL for querying multimetadata of the package `package_name`.
     fn for_multi_metadata(&self, package_name: StrId) -> QuackResult<Self> {
         self._join(&format!("/packages/{package_name}"))
     }
 
+    /// Get the URL for querying exact metadata of the package `package`.
     fn for_exact_metadata(&self, package: &types::Package) -> QuackResult<Self> {
         self._join(&format!("/packages/{}/{}", package.id, package.version))
     }
 
+    /// Get the URL for downloading a blob of the package `package`.
+    ///
+    /// A blob is a tar gunziped directory with a package's source code.
     fn for_blob(&self, package: &types::Package) -> QuackResult<Self> {
         self._join(&format!(
             "/packages/{}/{}/download",
@@ -24,6 +33,7 @@ pub trait UrlExt: Sized {
         ))
     }
 
+    /// Get the URL for searching for the given query.
     fn for_search(&self, query: &str) -> QuackResult<Self> {
         let mut new = self._join("/packages")?;
         new._query_pairs_mut().append_pair("q", query);
@@ -31,12 +41,14 @@ pub trait UrlExt: Sized {
     }
 
     #[allow(dead_code)]
-    fn for_new_package(&self) -> QuackResult<Self> {
+    /// Get the URL for publishing a new package.
+    fn for_new_package(&self) -> Self {
         self._join("/packages")
-            .context_internal("we control queries statically...?")
+            .expect("we control queries statically...?")
     }
 
     #[allow(dead_code)]
+    /// Get the URL for uploading a package's blob.
     fn for_new_blob(&self, package: &types::Package) -> QuackResult<Self> {
         self._join(&format!("/packages/{}/{}", package.id, package.version))
     }
@@ -91,10 +103,7 @@ mod tests {
             format!("{base}/packages?q=foo+bar")
         );
 
-        assert_eq!(
-            url.for_new_package().unwrap().as_str(),
-            format!("{base}/packages")
-        );
+        assert_eq!(url.for_new_package().as_str(), format!("{base}/packages"));
 
         assert_eq!(
             url.for_new_blob(&package).unwrap().as_str(),

@@ -3,13 +3,15 @@
 #include "execution_config.hpp"
 #include "process_info.hpp"
 
+#include <events/emitter.hpp>
+
 #include <filesystem/file.hpp>
 
 #include <vm/api/data/response.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/core/process/interface_types.hpp>
-#include <vm/core/process/memory/pointer.hpp>
-#include <vm/core/thread/vmvalue.hpp>
+#include <vm/core/safe/memory/pointer.hpp>
+#include <vm/core/vmvalue/vmvalue.hpp>
 
 #include <json/json.hpp>
 
@@ -87,6 +89,19 @@ namespace vm::api {
 		struct ExitCodeRequest {};
 
 		struct DeinitAndValidate {};
+
+		struct DebuggerGetNumberOfCurrentStackFrames {
+			ThreadID thread_id;
+		};
+
+		struct DebuggerGetStackFrameData {
+			ThreadID thread_id;
+			u64      frame_index;
+		};
+
+		struct AttachStatusListener {
+			Ref<events::Listener<ProcStatus>> listener;
+		};
 	}
 
 	using RequestVariant = std::variant<
@@ -105,12 +120,15 @@ namespace vm::api {
 		request::TypeMetadata,
 		request::VmValue,
 		request::StatusRequest,
+		request::DebuggerGetNumberOfCurrentStackFrames,
+		request::DebuggerGetStackFrameData,
 		request::Input,
 		request::Output,
 		request::Attach,
 		request::Detach,
 		request::ExitCodeRequest,
-		request::DeinitAndValidate>;
+		request::DeinitAndValidate,
+		request::AttachStatusListener>;
 
 	struct SupervisorRequest {
 		PID             pid;

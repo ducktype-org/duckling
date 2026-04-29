@@ -1,13 +1,16 @@
 #include "string_id.hpp"
 
-#include <base/collections/maps.hpp>
+#include <concurrent/base/collections/hash_map.hpp>
+
 #include <base/except/exceptions.hpp>
 #include <base/pointers/ref.hpp>
 
 #include <cstring>
 #include <iostream>
 #include <mutex>
-#include <shared_mutex>
+#include <vector>
+
+ID_STD_HASH(base::internal::StrInnerID);
 
 namespace base {
 	/**
@@ -17,8 +20,8 @@ namespace base {
 
 	namespace {
 		using BufferList = std::vector<base::OwningView>;
-		using ToDataType = VectorMap<StrID::InnerID, RawView>;
-		using ToIDType   = HashMap<RawView, StrID::InnerID>;
+		using ToDataType = concurrent::ConHashMap<StrID::InnerID, RawView>;
+		using ToIDType   = concurrent::ConHashMap<RawView, StrID::InnerID>;
 
 		Ref<ToIDType> getToIDMap() {
 			// This does not have a constinit constructor
@@ -26,9 +29,13 @@ namespace base {
 			return &to_id_map;
 		}
 
-		constinit BufferList buffer_list;
+		Ref<ToDataType> getToDataMap() {
+			// This does not have a constinit constructor
+			static ToDataType to_data_map;
+			return &to_data_map;
+		}
 
-		constinit ToDataType to_data_map;
+		constinit BufferList buffer_list;
 
 		// remaining size of last buffer (equals default_buffer_size - next_pos)
 		constinit usize size_left = 0;
@@ -38,7 +45,7 @@ namespace base {
 
 		constinit bool any_buffer_exits = false;
 
-		constinit std::shared_mutex mutex;
+		constinit std::mutex mutex;
 	}
 
 	/**
@@ -54,7 +61,7 @@ namespace base {
 
 	/**
 	 * @brief Returns a view to the last buffer.
-	 * @note It is required to be called under read-lock.
+	 * @note It is required to be called under lock.
 	 */
 	base::RawView lastBuffer() { return buffer_list.back().view(); }
 
@@ -63,7 +70,7 @@ namespace base {
 	 * Stores data is vector of buffers of size 32768
 	 * New buffer is created, when new string cannot fit
 	 * in previous one.
-	 * If string has length greater then 32768 it is given its own buffer.
+	 * If string has length greater than 32768 it is given its own buffer.
 	 * Only last buffer is considered
 	 *
 	 * @OPT: better memory/buffers usage
@@ -71,19 +78,18 @@ namespace base {
 	StrID::StrID(const base::RawView& data) {
 		CORE_ASSERT(data.getBegin() != nullptr, "StrID received null string");
 
-		// Fast path: check if string already exists under shared lock
+		// Fast path: check if string already exists using just the concurrent map without local locking
 		{
-			std::shared_lock lock(mutex);
-			if (auto id = getToIDMap()->atMaybe(data)) {
-				this->id = **id;
+			if (auto id = getToIDMap()->atMaybeCopy(data)) {
+				this->id = *id;
 				return;
 			}
 		}
 
-		std::unique_lock lock(mutex);
+		std::scoped_lock lock(mutex);
 
-		if (auto id = getToIDMap()->atMaybe(data)) {
-			this->id = **id;
+		if (auto id = getToIDMap()->atMaybeCopy(data)) {
+			this->id = *id;
 			return;
 		}
 
@@ -110,7 +116,7 @@ namespace base {
 			next_pos += data.size();
 		}
 
-		to_data_map.put(id, actual_data);
+		getToDataMap()->put(id, actual_data);
 		getToIDMap()->put(actual_data, id);
 	}
 
@@ -122,15 +128,14 @@ namespace base {
 
 	base::RawView StrID::view() const {
 		CORE_ASSERT(id.isGood(), "StrID is bad");
-		std::shared_lock lock(mutex);
-		return to_data_map[id];
+		return getToDataMap()->getCopy(id);
 	}
 
 	void StrID::dumpData(std::ostream& out) {
 		i32              i = 0;
-		std::shared_lock lock(mutex);
-		for (auto v: to_data_map) {
-			if (v) out << i << ": " << v->stringView() << "\n";
+		std::scoped_lock lock(mutex);
+		for (auto v: *getToDataMap()) {
+			out << i << ": " << v.value.stringView() << "\n";
 			i++;
 		}
 	}

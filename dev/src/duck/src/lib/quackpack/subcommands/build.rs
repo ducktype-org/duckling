@@ -1,40 +1,42 @@
-use crate::{
-    QuackResult, QuackResultContext, StrId,
-    quackpack::{
-        core::{
-            FeatureName, PackageCtx,
-            compile::{self, BuildContext},
-            storage::{sync, venv_id::ToVenvId},
-        },
-        subcommands::sync::SyncOptions,
-    },
-};
+//! `build` subcommand execution logic.
+use crate::quackpack::core::compile::duckc::CompilationType;
+use crate::quackpack::core::compile::profiles::Profile;
+use crate::quackpack::core::compile::{self, BuildContext};
+use crate::quackpack::core::storage::venv_id::ToVenvId;
+use crate::quackpack::core::storage::{StorageSyncOptions, sync};
+use crate::quackpack::core::{FeatureName, PackageContext};
+use crate::{QuackResult, QuackResultContext, StrId};
 
 #[derive(Debug)]
+/// Options for compiling a project.
 pub struct BuildOptions<'duck> {
-    pub package: PackageCtx<'duck>,
+    /// Package to compile.
+    pub package: PackageContext<'duck>,
+    /// Enabled features from the CLI.
     pub used_features: Vec<FeatureName>,
+    /// Selected build profile.
     pub profile: StrId,
-    pub global: bool,
+    /// Artefact from [`StorageSyncOptions`].
     pub overwrite: bool,
+    /// Artefact from [`StorageSyncOptions`].
     pub frozen: bool,
+    /// Artefact from [`StorageSyncOptions`].
     pub strict_errors: bool,
 }
 
-pub fn compile<'duck>(options: BuildOptions<'duck>) -> QuackResult<()> {
+/// Compile given options.
+pub fn compile(options: BuildOptions<'_>) -> QuackResult<()> {
     let BuildOptions {
         package,
         used_features,
         profile,
-        global,
         overwrite,
         frozen,
         strict_errors,
     } = options;
     let (lock, venv, storage) = sync(
         &package,
-        SyncOptions {
-            global,
+        StorageSyncOptions {
             overwrite,
             frozen,
             strict_errors,
@@ -43,13 +45,15 @@ pub fn compile<'duck>(options: BuildOptions<'duck>) -> QuackResult<()> {
     let _compile_lock = lock
         .to_compile_lock(&storage, package.to_venv_id())
         .context("failed to acquire a compile lock")?;
-    let bctx = BuildContext {
-        package: &package,
+    let profile = Profile::construct_profile(profile, package.package().manifest().profiles())?;
+    let bcx = BuildContext {
+        pcx: &package,
         freeze: venv.into(),
         storage,
         used_features,
         profile,
+        script_path: None,
     };
-    compile::compile(bctx)?;
+    compile::compile(bcx, CompilationType::OnlyRootPackage)?;
     Ok(())
 }

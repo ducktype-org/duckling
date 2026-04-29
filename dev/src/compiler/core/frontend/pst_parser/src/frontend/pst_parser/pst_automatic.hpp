@@ -261,8 +261,11 @@ namespace pst {
 		 * @param sink Place to store the new value(works with optionals).
 		 * @param fun The value.
 		 */
-		template<std::derived_from<LangElement> El, base::TemplateStringLiteral name>
-		PSTAutomatic& assign(AccessInternal<El, name>* sink, MBox<El>&& sub_tree) {
+		template<
+			std::derived_from<LangElement> El,
+			base::TemplateStringLiteral    name,
+			std::derived_from<LangElement> El2>
+		PSTAutomatic& assign(AccessInternal<El, name>* sink, MBox<El2>&& sub_tree) {
 			if (sub_tree) {
 				sub_tree->setParent(el);
 				std::string str_name(name.value);
@@ -278,8 +281,11 @@ namespace pst {
 		 * @param sink Place to store the new value(works with optionals).
 		 * @param fun The value.
 		 */
-		template<std::derived_from<LangElement> El, base::TemplateStringLiteral name>
-		PSTAutomatic& assign(base::Optional<AccessInternal<El, name>>* sink, MBox<El>&& sub_tree) {
+		template<
+			std::derived_from<LangElement> El,
+			base::TemplateStringLiteral    name,
+			std::derived_from<LangElement> El2>
+		PSTAutomatic& assign(base::Optional<AccessInternal<El, name>>* sink, MBox<El2>&& sub_tree) {
 			if (sub_tree) {
 				sub_tree->setParent(el);
 				std::string str_name(name.value);
@@ -295,8 +301,8 @@ namespace pst {
 		 * @param sink Place to store the new value(works with optionals).
 		 * @param fun The value.
 		 */
-		template<std::derived_from<LangElement> El>
-		PSTAutomatic& assign(AccessInternalAnonymous<El>* sink, MBox<El>&& sub_tree) {
+		template<std::derived_from<LangElement> El, std::derived_from<LangElement> El2>
+		PSTAutomatic& assign(AccessInternalAnonymous<El>* sink, MBox<El2>&& sub_tree) {
 			if (sub_tree) {
 				sub_tree->setParent(el);
 				el->addChild(sub_tree);
@@ -311,8 +317,10 @@ namespace pst {
 		 * @param sink Place to store the new value(works with optionals).
 		 * @param fun The value.
 		 */
-		template<std::derived_from<LangElement> El>
-		PSTAutomatic& assign(base::Optional<AccessInternalAnonymous<El>>* sink, MBox<El>&& sub_tree) {
+		template<std::derived_from<LangElement> El, std::derived_from<LangElement> El2>
+		PSTAutomatic& assign(
+			base::Optional<AccessInternalAnonymous<El>>* sink, MBox<El2>&& sub_tree
+		) {
 			if (sub_tree) {
 				sub_tree->setParent(el);
 				el->addChild(sub_tree);

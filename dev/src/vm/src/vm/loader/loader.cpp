@@ -70,16 +70,18 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::parseFiles(
 					func_name.bytecode_pos = func->name.position;
 					function.name          = func_name;
 
-					code::Identifier result_type;
-					result_type.str                = func->result_type.value;
-					result_type.bytecode_pos       = func->result_type.position;
-					function.signature.result_type = result_type;
-
 					for (const auto& param: func->parameters) {
 						code::Identifier param_id;
 						param_id.str          = param.value;
 						param_id.bytecode_pos = param.position;
 						function.signature.parameters.emplace_back(param_id);
+					}
+
+					for (const auto& reslt: func->result_types) {
+						code::Identifier result_type_id;
+						result_type_id.str          = reslt.value;
+						result_type_id.bytecode_pos = reslt.position;
+						function.signature.result_types.emplace_back(result_type_id);
 					}
 
 					for (const auto& instr: func->code->opcodes)
@@ -118,7 +120,7 @@ std::expected<void, LoaderLogger> Loader::loadAndCompile(const code::CodeCollect
 	} catch (code::StackStructureMismatchError& e) {
 		log.logMap(
 			e.label,
-			[&](Box<dia_int::PlaceholderCodeError>& err) {
+			[&](Box<dia_int::PlaceholderError>& err) {
 				for (const auto& instruction: e.jumps)
 					instruction.visit([&](auto&& i) {
 						log.addNote(
@@ -172,3 +174,17 @@ CRef<vm::low::LowVMProgram> vm::loader::Loader::getProgram() const {
 }
 
 vm::loader::Loader::Loader() { compiler.recompile(validated_high_program); }
+
+base::CRef<vm::code::ValidProgram> vm::loader::Loader::getHighProgram() const {
+	return &validated_high_program;
+}
+
+std::expected<vm::code::CodeCollection, std::string> vm::loader::Loader::parseCodeCollectionFromFiles(
+	const std::vector<fs::File>& files
+) {
+	return parseFiles(files).transform_error([](LoaderLogger logger) {
+		std::stringstream ss;
+		logger.dump(ss);
+		return ss.str();
+	});
+}

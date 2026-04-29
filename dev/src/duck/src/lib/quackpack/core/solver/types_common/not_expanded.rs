@@ -1,20 +1,16 @@
-use std::{
-    collections::{HashMap, HashSet},
-    ops::Deref,
-    path::PathBuf,
-    sync::{Mutex, OnceLock},
-};
+use std::collections::{HashMap, HashSet};
+use std::ops::Deref;
+use std::path::PathBuf;
+use std::sync::{Mutex, OnceLock};
 
 use url::Url;
 
-use crate::{
-    QuackResult, StrId, qp_bail_internal,
-    quackpack::core::{
-        BranchOrTag, Dependency, Source, Version,
-        types_common::{ExpandedLocation, ExpandedPackage, expanded::InternedExpandedLocation},
-        version::CompatibilityCheck,
-    },
-};
+use crate::quackpack::core::solver::types_common::expanded::InternedExpandedLocation;
+use crate::quackpack::core::solver::types_common::{ExpandedLocation, ExpandedPackage};
+use crate::quackpack::core::version::CompatibilityCheck;
+use crate::quackpack::core::{BranchOrTag, Dependency, Source, Version};
+use crate::quackpack::util::PANIC_MESSAGE;
+use crate::{QuackResult, StrId, qp_bail_internal};
 
 static INTERNED_LOCATION_CACHE: OnceLock<Mutex<HashSet<&'static Location>>> = OnceLock::new();
 
@@ -39,7 +35,7 @@ impl InternedLocation {
             // Panics
             //
             // This function might panic when called if the lock is already held by the current thread.
-            .unwrap();
+            .expect(PANIC_MESSAGE);
         let reference = cache.get(&source).copied().unwrap_or_else(|| {
             let static_ref = Box::leak(Box::new(source));
             cache.insert(static_ref);
@@ -49,9 +45,9 @@ impl InternedLocation {
     }
 }
 
-impl From<Location> for InternedLocation {
-    fn from(value: Location) -> Self {
-        Self::new(value)
+impl<T: Into<Location>> From<T> for InternedLocation {
+    fn from(value: T) -> Self {
+        Self::new(value.into())
     }
 }
 
@@ -69,7 +65,7 @@ impl AsRef<Location> for InternedLocation {
     }
 }
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Eq, Hash, PartialEq)]
 pub enum Location {
     Registry {
         url: Url,
@@ -85,12 +81,35 @@ pub enum Location {
     },
 }
 
+impl std::fmt::Debug for Location {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Registry { url, real_name } => f
+                .debug_struct("Registry")
+                .field("url", &url.as_str())
+                .field("real_name", real_name)
+                .finish(),
+            Self::Git {
+                url,
+                branch_or_tag,
+                rev,
+            } => f
+                .debug_struct("Git")
+                .field("url", &url.as_str())
+                .field("branch_or_tag", branch_or_tag)
+                .field("rev", rev)
+                .finish(),
+            Self::Local { path } => f.debug_struct("Local").field("path", path).finish(),
+        }
+    }
+}
+
 impl From<&Dependency> for Location {
     fn from(dependency: &Dependency) -> Self {
-        match &dependency.desc().source().as_ref() {
+        match &dependency.source().as_ref() {
             Source::Registry(registry) => Self::Registry {
                 url: registry.url().clone(),
-                real_name: dependency.real_name(),
+                real_name: dependency.name(),
             },
             Source::Local(local) => Self::Local {
                 path: local.absolute().to_path_buf(),
@@ -136,6 +155,10 @@ impl Location {
 }
 
 #[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
+/// Type describing a package from the point of the gathering manifests process.
+/// This contains a [`Location`] and a version.
+/// For git and local dependencies the version field is [`None`] and for registry
+/// dependencies the version field contains the version of the dependency.
 pub struct Package {
     pub location: InternedLocation,
     pub version: Option<Version>,
@@ -167,6 +190,7 @@ impl Package {
         }
     }
 
+    /// Create the appropriate [`ExpandedPackage`] from this [`Package`].
     pub fn resolve(
         self,
         location_resolver: &HashMap<InternedLocation, InternedExpandedLocation>,

@@ -1,9 +1,11 @@
 {
-    "name": "duckling-support",
-    "displayName": "DucklingLS",
-    "description": "Duckling Language Server",
+    "name": "duckling-language-support",
+    "displayName": "Duckling",
+    "description": "Duckling Language Support",
     "version": "0.0.1",
-    "author": "zpp-2.1",
+    "icon": "images/icon.png",
+    "author": "DuckType",
+    "publisher": "DuckType",
     "categories": [
         "Programming Languages"
     ],
@@ -14,11 +16,21 @@
     "activationEvents": [
         "onLanguage:duckling"
     ],
+    "files": [
+        "client/out/",
+        "client/node_modules/",
+        "server/out/",
+        "server/node_modules/",
+        "images/",
+        "syntaxes/",
+        "language-configuration.json",
+        "README.md"
+    ],
     "contributes": {
         "commands": [
             {
                 "command": "duckling.restartServer",
-                "title": "DucklingLS: Restart language server"
+                "title": "Duckling: Restart language server"
             }
         ],
         "languages": [
@@ -29,9 +41,9 @@
                     "duckling"
                 ],
                 "extensions": [
-                    ".rift",
                     ".dl",
-                    ".duckling",
+                    ".duck",
+                    ".🦆",
                     ".dmf"
                 ],
                 "configuration": "./language-configuration.json"
@@ -48,19 +60,19 @@
             "type": "object",
             "title": "Duckling Language Configuration",
             "properties": {
-                "DucklingLanguageServer.maxNumberOfProblems": {
+                "DucklingLanguageSupport.maxNumberOfProblems": {
                     "scope": "resource",
                     "type": "number",
                     "default": 100,
                     "description": "Controls the maximum number of problems produced by the server."
                 },
-                "DucklingLanguageServer.executablePath": {
+                "DucklingLanguageSupport.executablePath": {
                     "scope": "machine",
                     "type": "string",
                     "default": "~/.local/bin/duck_ls",
                     "markdownDescription": "Path to the `duck_ls` binary. Supports `~` for the home directory. Defaults to `~/.local/bin/duck_ls`. Run `comp-copy.py` to install the binary there, or set this to a custom path if you installed it elsewhere."
                 },
-                "DucklingLanguageServer.trace.server": {
+                "DucklingLanguageSupport.trace.server": {
                     "scope": "window",
                     "type": "string",
                     "enum": [
@@ -104,8 +116,5 @@
         "lsp",
         "syntax highlighting"
     ],
-    "dependencies": {
-        "@types/node-fetch": "^2.6.11",
-        "node-fetch": "^3.3.2"
-    }
+    "dependencies": {}
 }

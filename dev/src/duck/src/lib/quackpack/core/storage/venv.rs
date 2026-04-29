@@ -50,133 +50,212 @@
 //! to exist after reboot even if it has been used before. The problem affects
 //! however only relatively new virtual environments.
 
-use std::{
-    io::Write,
-    path::{Path, PathBuf},
-    time::SystemTime,
-};
+use std::fmt;
+use std::io::Write;
+use std::path::{Path, PathBuf};
+use std::time::SystemTime;
 
 use serde::{Deserialize, Serialize};
 use tracing::debug;
 
-use crate::{
-    QuackResult, QuackResultContext,
-    quackpack::core::storage::{
-        freeze::{self, VenvFreeze},
-        paths::Storage,
-        venv_id::VenvId,
-    },
-    util_common::{
-        hash,
-        path_ops_ext::{MkdirOptions, PathOpsExt},
-    },
-};
+use crate::quackpack::core::storage::freeze::{self, VenvFreeze};
+use crate::quackpack::core::storage::paths::Storage;
+use crate::quackpack::core::storage::venv_id::VenvId;
+use crate::util::hash;
+use crate::util::path_ops_ext::{MkdirOptions, PathOpsExt, ShouldBlock};
+use crate::{QuackError, QuackResult, QuackResultContext};
 
 #[derive(Debug)]
-pub struct CorruptedFileError {}
+pub enum CorruptedVenvReason {
+    MissingNewLine,
+    InvalidChecksum { expected: String, actual: String },
+    Other,
+}
 
-#[derive(Debug, Deserialize, Serialize)]
+impl fmt::Display for CorruptedVenvReason {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::MissingNewLine => write!(f, "is missing a newline"),
+            Self::InvalidChecksum { expected, actual } => write!(
+                f,
+                "checksums don't match: expected: {expected}, actual: {actual}"
+            ),
+            Self::Other => write!(f, "unknown reason"),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct CorruptedVenvError {
+    pub path: PathBuf,
+    pub reason: CorruptedVenvReason,
+}
+
+impl fmt::Display for CorruptedVenvError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "venv metadata located at `{}` is malformed, because: {}",
+            self.path.display(),
+            self.reason
+        )
+    }
+}
+
+impl std::error::Error for CorruptedVenvError {}
+
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq, Hash)]
 /// State of virtual environment in the storage. Stores the freeze for the given
 /// virtual environment, copy of manifest's metadata, and additional info
 /// required for storage functioning: last location and access info.
 pub struct VenvData {
     freeze: freeze::VenvFreeze,
     is_ephemeral: bool,
-    last_location: PathBuf,
+    last_known_directory: PathBuf,
+    last_modification: SystemTime,
     last_access: SystemTime,
 }
 
 impl VenvData {
+    /// Create a new [`VenvData`].
     pub fn new(
         freeze: freeze::VenvFreeze,
         is_ephemeral: bool,
-        last_location: PathBuf,
+        last_known_directory: PathBuf,
+        last_modification: SystemTime,
         last_access: SystemTime,
     ) -> Self {
         Self {
             freeze,
             is_ephemeral,
-            last_location,
+            last_known_directory,
+            last_modification,
             last_access,
         }
     }
 
-    pub fn load(path: &Path) -> QuackResult<Result<Self, CorruptedFileError>> {
-        debug!("loading venv data from `{}`", path.display());
+    /// Load [`VenvData`] from the given path.
+    #[tracing::instrument]
+    fn load(path: &Path) -> QuackResult<Self> {
+        debug!("loading venv data");
         let content = path.read_to_string()?;
-        let Some((data, checksum)) = content.rsplit_once("\n") else {
-            debug!("missing newline for venv data at `{}`", path.display());
-            return Ok(Err(CorruptedFileError {}));
+        let Some((data, found_checksum)) = content.rsplit_once("\n") else {
+            debug!("missing a newline");
+            return Err(CorruptedVenvError {
+                reason: CorruptedVenvReason::MissingNewLine,
+                path: path.to_path_buf(),
+            }
+            .into());
         };
-        let current_hash = hash::sha256_string(data);
-        if current_hash != checksum {
+        let expected_checksum = hash::sha256_string(data);
+        if expected_checksum != found_checksum {
             debug!(
-                "invalid checksum (current: `{}`, old: `{}`) for venv data at `{}`",
-                current_hash,
-                checksum,
-                path.display()
+                "invalid checksum (expected: `{}`, got: `{}`)",
+                expected_checksum, found_checksum,
             );
-            return Ok(Err(CorruptedFileError {}));
+            return Err(CorruptedVenvError {
+                reason: CorruptedVenvReason::InvalidChecksum {
+                    actual: found_checksum.to_string(),
+                    expected: expected_checksum,
+                },
+                path: path.to_path_buf(),
+            }
+            .into());
         }
-        Ok(serde_json::from_str(data).map_err(|e| {
-            debug!(
-                "json error `{e}` while deserializing venv data at `{}`",
-                path.display()
-            );
-            CorruptedFileError {}
-        }))
+        serde_json::from_str(data).map_err(|e| {
+            debug!("json error `{e}`");
+            let err = QuackError::from(e);
+            err.context(CorruptedVenvError {
+                reason: CorruptedVenvReason::Other,
+                path: path.to_path_buf(),
+            })
+        })
     }
 
-    pub fn save_to(&self, path: &Path) -> QuackResult<()> {
+    /// Save to the given path.
+    #[tracing::instrument(skip(self))]
+    fn save_to(&self, path: &Path) -> QuackResult<()> {
         let data = serde_json::to_string(self)?;
         let checksum = hash::sha256_string(&data);
         let mut file = path.touch()?;
+        file.set_len(0)
+            .with_context(|| format!("failed to truncate `{}`", path.display()))?;
         let full_data = format!("{data}\n{checksum}");
-        debug!("for data `{data}` calculated checksum `{checksum}`");
+        debug!(%checksum);
         file.write_all(full_data.as_ref())?;
         file.flush()?;
         file.sync_data()?;
         Ok(())
     }
 
+    /// Get a reference to the underlying [`VenvFreeze`].
     pub fn freeze(&self) -> &freeze::VenvFreeze {
         &self.freeze
     }
 
+    /// Get a mutable reference to the underlying [`VenvFreeze`].
     pub fn freeze_mut(&mut self) -> &mut freeze::VenvFreeze {
         &mut self.freeze
     }
 
+    /// Set the [`VenvFreeze`].
     pub fn set_freeze(&mut self, freeze: freeze::VenvFreeze) {
         self.freeze = freeze;
     }
 
+    /// Whether this venv is ephemeral (temporary).
     pub fn is_ephemeral(&self) -> bool {
         self.is_ephemeral
     }
 
+    /// Set the ephemerality (temporality) of this venv.
     pub fn set_ephemeral(&mut self, is_ephemeral: bool) {
         self.is_ephemeral = is_ephemeral;
     }
 
-    pub fn last_location(&self) -> &PathBuf {
-        &self.last_location
+    /// Get the last known directory of this venv.
+    pub fn last_known_directory(&self) -> &Path {
+        &self.last_known_directory
     }
 
-    pub fn last_location_mut(&mut self) -> &mut PathBuf {
-        &mut self.last_location
+    /// A mutable counterpart to the [`last_known_directory`](Self::last_known_directory).
+    pub fn last_known_directory_mut(&mut self) -> &mut PathBuf {
+        &mut self.last_known_directory
     }
 
-    pub fn set_last_location(&mut self, last_location: PathBuf) {
-        self.last_location = last_location;
+    /// Set the last know directory of this venv.
+    pub fn set_last_known_directory(&mut self, last_known_directory: PathBuf) {
+        self.last_known_directory = last_known_directory;
     }
 
+    /// Get the last access time of this venv.
     pub fn last_access(&self) -> SystemTime {
         self.last_access
     }
 
+    /// Set the last access time of this venv.
     pub fn set_last_access(&mut self, last_access: SystemTime) {
         self.last_access = last_access;
+    }
+
+    /// Get the last modification time of this venv.
+    pub fn last_modification(&self) -> SystemTime {
+        self.last_modification
+    }
+
+    /// Set the last modification time of this venv.
+    pub fn set_last_modification(&mut self, last_modification: SystemTime) {
+        self.last_modification = last_modification;
+    }
+
+    /// Update the last access and save this data to the disk.
+    pub fn save_new_last_access(
+        &mut self,
+        last_access: SystemTime,
+        path: &Path,
+    ) -> QuackResult<()> {
+        self.set_last_access(last_access);
+        self.save_to(path)
     }
 }
 
@@ -198,33 +277,40 @@ impl From<Venv> for VenvFreeze {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+/// A virtual environment.
 pub struct Venv {
     id: VenvId,
     data: VenvData,
 }
 
 impl Venv {
+    /// Create a new [`Venv`].
     pub fn new(id: VenvId, data: VenvData) -> Self {
         Self { id, data }
     }
 
+    /// Get the ID of this venv.
     pub fn id(&self) -> VenvId {
         self.id
     }
 
+    /// Set the ID of this venv.
     pub fn set_id(&mut self, id: VenvId) {
         self.id = id;
     }
 
+    /// Get the underlying data of this venv.
     pub fn data(&self) -> &VenvData {
         &self.data
     }
 
+    /// A mutable counterpart to the [`data`](Self::data).
     pub fn data_mut(&mut self) -> &mut VenvData {
         &mut self.data
     }
 
+    /// Set the data of this venv.
     pub fn set_data(&mut self, data: VenvData) {
         self.data = data;
     }
@@ -232,35 +318,80 @@ impl Venv {
     /// Convert the state of a virtual environment into canonical form and return its state.
     ///
     /// If neither the main nor backup file is valid, the environment directory is removed.
+    #[tracing::instrument(skip_all)]
     pub fn fix_and_load(storage: &Storage, venv_id: VenvId) -> QuackResult<Option<Self>> {
+        let _lock = storage
+            .data_lock(venv_id)
+            .lock(ShouldBlock::Yes)
+            .with_context(|| {
+                format!("failed to acquire an exclusive data lock for venv `{venv_id}`")
+            })?;
+        Self::fix_and_load_with_lock_held(storage, venv_id)
+    }
+
+    /// Helper for [`fix_and_load`](Self::fix_and_load).
+    #[tracing::instrument(skip(storage))]
+    fn fix_and_load_with_lock_held(
+        storage: &Storage,
+        venv_id: VenvId,
+    ) -> QuackResult<Option<Self>> {
         // NOTE: when external entity changes the storage disregarding the rules, we have
         // toctou here and an exception might be thrown later. We ignore that to keep sanity.
         if !storage.venv_dir(venv_id).is_dir() {
-            debug!("storage for venv `{venv_id}` is not a directory");
+            debug!("not a directory");
             return Ok(None);
         }
-        let path = storage.vevn_metadata(venv_id);
-        let backup_path = storage.vevn_backup_metadata(venv_id);
-        let existed = path.exists();
-        let backup_existed = backup_path.exists();
+        let metadata = storage.venv_metadata(venv_id);
+        let backup_metadata = storage.venv_backup_metadata(venv_id);
         // if main file is valid, return state held in it
-        if existed {
-            let data = VenvData::load(&path)?;
-            if let Ok(venv) = data {
-                return Ok(Some(Self::new(venv_id, venv)));
+        if metadata.exists() {
+            let data = match VenvData::load(&metadata) {
+                Ok(data) => Some(data),
+                Err(e) => {
+                    if let Some(err) = e.downcast_ref_in_chain::<CorruptedVenvError>() {
+                        debug!("corrupted: {err}");
+                        None
+                    } else {
+                        return Err(e);
+                    }
+                }
+            };
+            if let Some(venv) = data {
+                let mut this = Self::new(venv_id, venv);
+                let previous_now = this.data().last_access();
+                this.data_mut().set_last_access(SystemTime::now());
+                if let Err(e) = this.save_to_with_lock_held(storage) {
+                    debug!("failed to update last access time: {e} ({e:?})");
+                    this.data_mut().set_last_access(previous_now);
+                }
+                return Ok(Some(this));
             }
         }
 
         // otherwise, the state is not canonical, and current state, if it exists,
         // is held in the backup file
-        if backup_existed {
-            let data = VenvData::load(&path)?;
-            if let Ok(venv) = data {
-                backup_path.copy_file_to(&path)?;
-                if !existed {
-                    storage.venv_dir(venv_id).try_fsync_dir()?;
+        if backup_metadata.exists() {
+            let data = match VenvData::load(&backup_metadata) {
+                Ok(data) => Some(data),
+                Err(e) => {
+                    if let Some(err) = e.downcast_ref_in_chain::<CorruptedVenvError>() {
+                        debug!("corrupted: {err}");
+                        None
+                    } else {
+                        return Err(e);
+                    }
                 }
-                return Ok(Some(Self::new(venv_id, venv)));
+            };
+            if let Some(venv) = data {
+                backup_metadata.copy_to(metadata)?;
+                let mut this = Self::new(venv_id, venv);
+                let previous_now = this.data().last_access();
+                this.data_mut().set_last_access(SystemTime::now());
+                if let Err(e) = this.save_to_with_lock_held(storage) {
+                    debug!("failed to update last access time: {e} ({e:?})");
+                    this.data_mut().set_last_access(previous_now);
+                }
+                return Ok(Some(this));
             }
         }
         // both files are not valid, so the venv does not exist,
@@ -272,16 +403,31 @@ impl Venv {
 
     /// Save a new canonical state of the virtual environment to storage.
     ///
-    /// Assumes that the current ``metadata`` file is valid. This is typically ensured
-    /// by calling :func:`fix_and_load_venv` before.
+    /// Assumes that the current `metadata` file is valid. This is typically ensured
+    /// by calling [`fix_and_load`](Self::fix_and_load) before.
+    #[tracing::instrument(skip_all)]
     pub fn save_to(&self, storage: &Storage) -> QuackResult<()> {
-        let path = storage.vevn_metadata(self.id);
-        let backup_path = storage.vevn_backup_metadata(self.id);
-        let existed = path.exists();
-        let backup_existed = backup_path.exists();
-        let parent = path
-            .parent()
-            .with_context_internal(|| format!("`{}` does not have a parent?", path.display()))?;
+        let _lock = storage
+            .data_lock(self.id)
+            .lock(ShouldBlock::Yes)
+            .with_context(|| {
+                format!(
+                    "failed to acquire an exclusive data lock for venv `{}`",
+                    self.id
+                )
+            })?;
+        self.save_to_with_lock_held(storage)
+    }
+
+    /// Helper for [`save_to`](Self::save_to).
+    #[tracing::instrument(skip_all, fields(id = ?self.id))]
+    fn save_to_with_lock_held(&self, storage: &Storage) -> QuackResult<()> {
+        let metadata = storage.venv_metadata(self.id);
+        let backup_metadata = storage.venv_backup_metadata(self.id);
+        let existed = metadata.exists();
+        let parent = metadata.parent().with_context_internal(|| {
+            format!("path `{}` does not have a parent?", metadata.display())
+        })?;
         if !parent.exists() {
             parent.mkdir(MkdirOptions::WithParents)?;
         }
@@ -289,18 +435,13 @@ impl Venv {
             // move old current state to backup file, as when error occurs during
             // overwriting the main file, the invariants will be upkept.
             // (the backup file will be valid)
-            path.copy_file_to(&backup_path)?;
-            if !backup_existed {
-                storage.venv_dir(self.id).try_fsync_dir()?;
-            }
+            metadata.copy_file_to(&backup_metadata)?;
         }
-        self.data.save_to(&path)?;
-        if !existed {
-            // also initialize the `.old` file, such that issues
-            // relating to unavailable directory `fsync` are minimized
-            path.copy_file_to(&backup_path)?;
-            storage.venv_dir(self.id).try_fsync_dir()?;
-        }
+        self.data.save_to(&metadata)?;
+        // also initialize the `.old` file, such that issues
+        // relating to unavailable directory `fsync` are minimized
+        metadata.copy_file_to(&backup_metadata)?;
+        storage.venv_dir(self.id).try_fsync_dir()?;
         Ok(())
     }
 }

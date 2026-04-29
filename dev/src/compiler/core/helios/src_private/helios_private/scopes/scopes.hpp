@@ -59,8 +59,6 @@ namespace compiler::helios {
 	 * @todo: Right now RootScopes are empty, and in order to access proper module
 	 * symbols, one need to get scope of root element of the main module file.
 	 * This should be somehow refactored when multi-file modules will be introduced.
-	 * @todo: Currently root scopes are somewhat problematic.
-	 * See description of "root_element_file_back_map" for details.
 	 *
 	 * \query_thread_safe_if_cache_and_struct
 	 */
@@ -130,9 +128,7 @@ namespace compiler::helios {
 	 *
 	 * \query_thread_safe_if_cache
 	 */
-	DECLARE_QUERY(
-		QuerySymbolsInScope, ScopeID, CRef<std::vector<SymID>>, ({ .uses_qresult = false })
-	);
+	DECLARE_QUERY(QuerySymbolsInScope, ScopeID, CRef<query::QResult<std::vector<SymID>>>, ({}));
 
 	/**
 	 * @brief Value type for the QueryScopesInModule query.
@@ -168,29 +164,6 @@ namespace compiler::helios {
 		({ .uses_qresult = false })
 	);
 
-	template<typename Element>
-	using ExpansionError = std::tuple<pst::AccessLocked<Element>, const Ref<dia_int::Logger>>;
-	template<typename Element>
-	using ExpansionResult
-		= query::QResult<std::variant<pst::AccessLocked<Element>, ExpansionError<Element>>>;
-
-	/**
-	 * @brief Query the expansion of an expand statement.
-	 *
-	 * @note This will have some issues for now. The potential errors from parsed subexpression
-	 * aren't available for now. There needs to be a small rework of errors and position first.
-	 *
-	 * \parallel owns its cache; creates PST via \ref pst::fromExpand (PST creation thread-safe)
-	 * \query_not_thread_safe
-	 */
-	DECLARE_QUERY(
-		QueryMacroExpansion,
-		pst::GenericPSTQueryKey<pst::Expand>,
-		ExpansionResult<pst::Stmt>,
-		({
-			.uses_qresult = false,
-		})
-	)
 
 	/**
 	 * @brief Root scope of main module file.

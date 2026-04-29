@@ -1,0 +1,31 @@
+# Tests for declaration of variables in REPL
+# @TODO: #2245 add option to not print "=>" or the beginning or duckling,
+# add eventual error ignore.
+ans: => 42\n
+ans2: => 30\n
+ans2small: => 30\n
+
+Tests:
+  basic_declarations:
+    Cases:
+      basic_declarations:
+        Input:
+          File: "basic_declarations/basic_declarations.rtf"
+        Output: 
+          String : "@{beginning}\n=> 42\n@{end}"
+
+  interactions:
+    Cases:
+      interactions:
+        Input:
+          File: "interactions/interactions.rtf"
+        Output:
+          String: "@{beginning}\n=> 42\n@{end}"
+
+  multiple_calls:
+    Cases:
+      multiple_calls:
+        Input:
+          File: "multiple_calls/multiple_calls.rtf"
+        Output:
+          String: "@{beginning}\n@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans2}@{ans2}@{ans2small}@{ans2small}@{ans2small}@{end}"

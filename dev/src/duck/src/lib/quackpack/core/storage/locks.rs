@@ -77,14 +77,10 @@ use std::fs::ReadDir;
 use std::io;
 use std::path::Path;
 
-use crate::QuackResult;
-use crate::QuackResultContext;
 use crate::quackpack::core::storage::paths::Storage;
-use crate::quackpack::core::storage::venv_id::VenvId;
-use crate::util_common::path_ops_ext::FileLockGuard;
-use crate::util_common::path_ops_ext::IoErrorWithMsg;
-use crate::util_common::path_ops_ext::PathOpsExt;
-use crate::util_common::path_ops_ext::ShouldBlock;
+use crate::quackpack::core::storage::venv_id::{ToVenvId, VenvId};
+use crate::util::path_ops_ext::{FileLockGuard, PathOpsExt, ShouldBlock};
+use crate::{QuackResult, QuackResultContext};
 
 #[derive(Debug)]
 /// A lock that guarantees no virtual environment data mutations are in progress.
@@ -102,6 +98,7 @@ pub struct CleanLock {
 }
 
 impl CleanLock {
+    /// Create a new [`CleanLock`] for the given storage.
     pub fn new(storage: &Storage) -> QuackResult<Self> {
         let lock = storage.clean_lock().lock(ShouldBlock::Yes)?;
         Ok(Self { _lock: lock })
@@ -130,7 +127,8 @@ pub struct TrySyncLock {
 }
 
 impl TrySyncLock {
-    pub fn new(storage: &Storage, venv_id: VenvId) -> Result<Self, IoErrorWithMsg> {
+    /// Create a new [`TrySyncLock`] for the given venv in the given storage.
+    pub fn new(storage: &Storage, venv_id: VenvId) -> QuackResult<Self> {
         let clean_lock = storage.clean_lock().lock_shared(ShouldBlock::No)?;
         let sync_lock = storage.sync_lock(venv_id).lock(ShouldBlock::No)?;
         Ok(Self {
@@ -139,6 +137,7 @@ impl TrySyncLock {
         })
     }
 
+    /// Upgrade self to a [`CompileLock`].
     pub fn to_compile_lock(self, storage: &Storage, venv_id: VenvId) -> QuackResult<CompileLock> {
         let compile_lock = storage.compile_lock(venv_id).lock(ShouldBlock::Yes)?;
         Ok(CompileLock {
@@ -157,10 +156,12 @@ pub fn cleanup_locks(storage: &Storage) -> QuackResult<()> {
     Ok(())
 }
 
+/// An implementation detail of [`cleanup_locks`].
+/// Removes all venv locks from the given iterator.
 fn cleanup_locks_impl(storage: &Storage, dir_iterator: ReadDir) -> QuackResult<()> {
     for lockfile in dir_iterator {
         let lockfile = lockfile.context("failed to read entry from dir iterator")?;
-        let name = lockfile.file_name().into();
+        let name = lockfile.file_name().to_venv_id();
         let path = lockfile.path();
         if !storage.venv_dir(name).is_dir() {
             try_delete_lock(&path)
@@ -191,16 +192,23 @@ fn try_delete_lock(path: &Path) -> QuackResult<()> {
 fn try_delete_lock(path: &Path) -> QuackResult<()> {
     let _guard = match path.lock(ShouldBlock::No) {
         Ok(guard) => Some(guard),
-        Err(e) if e.source().kind() == io::ErrorKind::NotFound => return Ok(()),
-        Err(e)
+        Err(e) => {
+            let Some(err) = e.downcast_ref_in_chain::<io::Error>() else {
+                return Err(e);
+            };
+            if err.kind() == io::ErrorKind::NotFound {
+                return Ok(());
+            };
             // We only try to delete lock if that is possible, if we would need
             // to block we skip that lock.
-            if e.source().kind() == io::ErrorKind::WouldBlock
-                || e.source().kind() == io::ErrorKind::PermissionDenied =>
-        {
-            None
+            if err.kind() == io::ErrorKind::WouldBlock
+                || err.kind() == io::ErrorKind::PermissionDenied
+            {
+                None
+            } else {
+                return Err(e);
+            }
         }
-        Err(e) => return Err(e.into()),
     };
     // Due to the lock taking mechanism we use, we may simply
     // delete the file if we own it, see `_posix_acquire`.

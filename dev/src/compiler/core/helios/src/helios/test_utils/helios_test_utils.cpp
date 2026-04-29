@@ -9,7 +9,7 @@
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
-#include <helios_private/expressions/query_hout_of_expr.hpp>
+#include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
@@ -96,7 +96,7 @@ namespace compiler::helios::test_utils {
 			}
 		};
 
-		auto            pst_stmt = symbolPst(sym).illegalAccess().value();
+		auto            pst_stmt = symbolPst(sym).value().illegalAccess().value();
 		GetHOUTExprTree visitor;
 		pst_stmt->acceptVisitor(visitor);
 
@@ -119,7 +119,7 @@ namespace compiler::helios::test_utils {
 			}
 		};
 
-		auto            pst_stmt = symbolPst(sym).illegalAccess().value();
+		auto            pst_stmt = symbolPst(sym).value().illegalAccess().value();
 		GetHOUTExprTree visitor;
 		pst_stmt->acceptVisitor(visitor);
 
@@ -129,7 +129,7 @@ namespace compiler::helios::test_utils {
 	ScopeID getFunctionBodyScope(SymID sym) {
 		return base::anyCast<ScopeID>(
 			query::utils::withContextCompute([&](query::Context& ctx) -> std::any {
-				auto func_pst = symbolPst(sym).unlock(ctx).dynamicCast<pst::Fun>().value();
+				auto func_pst = symbolPst(sym).value().unlock(ctx).dynamicCast<pst::Fun>().value();
 				auto fun_body = func_pst->getBody().unlock(ctx);
 				return ctx.query<QueryPrimaryCodeScopeFor>(fun_body);
 			})

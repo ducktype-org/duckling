@@ -16,7 +16,7 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		const std::vector<tpc::Identifier>& getNames() const {
+		const std::vector<tpc::Identifier>& getNames() const final {
 			return names;
 		}
 

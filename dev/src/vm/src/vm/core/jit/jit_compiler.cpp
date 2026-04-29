@@ -1,11 +1,11 @@
-#ifdef ENABLE_JIT
+#ifdef ENABLE_JIT  // @TODO: #2312 Remove the #ifdef
 	#include "jit_compiler.hpp"
 
 	#include "opcodes_bitcode_source.hpp"
 
 	#include <llvm_helpers/llvm_helpers.hpp>
 
-	#include <vm/core/thread/low_program/instruction.hpp>
+	#include <vm/core/safe/low_program/instruction.hpp>
 
 LLVM_INCLUDE_BEGIN()
 
@@ -33,7 +33,7 @@ namespace vm::jit {
 
 		llvm::StructType* mi_ty        = llvm::StructType::create(ctx, "vm::MicroInstruction");
 		llvm::StructType* frame_ty     = llvm::StructType::create(ctx, "vm::Frame");
-		llvm::StructType* vm_thread_ty = llvm::StructType::create(ctx, "vm::VMThread");
+		llvm::StructType* vm_thread_ty = llvm::StructType::create(ctx, "vm::SafeVMThread");
 
 		llvm::PointerType* mi_ptr_ptr_ty
 			= llvm::PointerType::getUnqual(llvm::PointerType::getUnqual(mi_ty));

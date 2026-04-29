@@ -14,7 +14,9 @@ import {
 	CompletionItem,
 	Location,
 	_,
-	_Connection
+	_Connection,
+	FileChangeType,
+	DidChangeWatchedFilesNotification
 } from 'vscode-languageserver/node';
 
 import * as os from 'os';
@@ -41,7 +43,7 @@ const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
 let hasConfigurationCapability = false;
 let hasWorkspaceFolderCapability = false;
 
-let initPromise: Promise<void>;
+let initPromise: Promise<void> = Promise.resolve();
 
 // Storing LSP for documents
 
@@ -52,7 +54,7 @@ const semanticTokensLegend = {
 };
 
 // Initial setup of the language server
-connection.onInitialize((params: InitializeParams) => {
+connection.onInitialize(async (params: InitializeParams) => {
 	const capabilities = params.capabilities;
 
 	// Does the client support the `workspace/configuration` request?
@@ -81,6 +83,7 @@ connection.onInitialize((params: InitializeParams) => {
 		}
 	};
 
+
 	if (hasWorkspaceFolderCapability) {
 		result.capabilities.workspace = {
 			workspaceFolders: {
@@ -95,13 +98,12 @@ connection.onInitialize((params: InitializeParams) => {
 connection.onInitialized(() => {
 	initPromise = (async () => {
 		if (hasConfigurationCapability) {
-			// Register for all configuration changes.
 			connection.client.register(DidChangeConfigurationNotification.type, undefined);
 		}
 
 		// Resolve the duck_ls binary path from configuration, falling back to the default.
 		let executablePath = path.join(os.homedir(), '.local', 'bin', 'duck_ls');
-		const config = await connection.workspace.getConfiguration('DucklingLanguageServer');
+		const config = await connection.workspace.getConfiguration('DucklingLanguageSupport');
 		const rawPath: string = config?.executablePath;
 		if (rawPath) {
 			// Expand leading ~ to the home directory
@@ -112,35 +114,27 @@ connection.onInitialized(() => {
 		// Preload keywords for autocompletion
 		preloadKeywords(compilerDaemonClient, connection);
 
+		await connection.client.register(
+			DidChangeWatchedFilesNotification.type,
+			{
+				watchers: [
+					{ globPattern: "**/*" }
+				]
+			}
+		);
 		if (hasWorkspaceFolderCapability) {
-			await compilerDaemonClient.putWorkspace(connection);
-			
+			// Register workspace roots so the daemon can bound upward search.
+			const folders = (await connection.workspace.getWorkspaceFolders()) ?? [];
+			await compilerDaemonClient.addWorkspace(connection, folders);
+
 			connection.workspace.onDidChangeWorkspaceFolders(async _event => {
-				await compilerDaemonClient.putWorkspace(connection);
+				await initPromise;
+				await compilerDaemonClient.addWorkspace(connection, _event.added);
 				console.log("Workspace folder change event received.");
 			});
-		} else {
-			console.log("NO WORKSPACE CAPABILITY");
 		}
 	})();
 });
-
-// Register the handler for semantic tokens
-connection.onRequest("textDocument/semanticTokens/full", (params) => 
-	handleSemanticTokensFull(params, documents, compilerDaemonClient, connection)
-);
-
-connection.onRequest("duckling/restart", async () => {
-    connection.window.showInformationMessage("Restarting Duckling Daemon...");
-    await compilerDaemonClient.restart(connection);
-    connection.window.showInformationMessage("Duckling Daemon Restarted");
-});
-
-connection.onDefinition(
-	async (params: TextDocumentPositionParams): Promise<Location | Location[] | null> => {
-        return await handleDefinition(params, documents, compilerDaemonClient, connection);
-    }
-);
 
 // The example settings
 interface ExampleSettings {
@@ -155,17 +149,18 @@ let globalSettings: ExampleSettings = defaultSettings;
 const documentSettings: Map<string, Thenable<ExampleSettings>> = new Map();
 
 // Listen for configuration changes
-connection.onDidChangeConfiguration(change => {
+connection.onDidChangeConfiguration(async change => {
+	await initPromise;
 	if (hasConfigurationCapability) {
 		// Reset all cached document settings
 		documentSettings.clear();
 	} else {
 		globalSettings = <ExampleSettings>(
-			(change.settings.DucklingLanguageServer || defaultSettings)
+			(change.settings.DucklingLanguageSupport || defaultSettings)
 		);
 	}
 	// Revalidate all open text documents
-	documents.all().forEach(document => validateDuckling(document, connection, compilerDaemonClient));
+	documents.all().forEach(document => validateDuckling(document.uri, connection, compilerDaemonClient));
 });
 
 export function getDocumentSettings(resource: string): Thenable<ExampleSettings> {
@@ -176,34 +171,90 @@ export function getDocumentSettings(resource: string): Thenable<ExampleSettings>
 	if (!result) {
 		result = connection.workspace.getConfiguration({
 			scopeUri: resource,
-			section: "DucklingLanguageServer"
+			section: "DucklingLanguageSupport"
 		});
 		documentSettings.set(resource, result);
 	}
 	return result;
 }
 
+// Lazily initialise the package when a file is opened, then sync content.
+documents.onDidOpen(async e => {
+	await initPromise;
+	await compilerDaemonClient.openFile(e.document.uri, connection);
+});
+
+// Register the handler for semantic tokens
+connection.onRequest("textDocument/semanticTokens/full", async (params) => {
+	await initPromise;
+	return handleSemanticTokensFull(params, documents, compilerDaemonClient, connection);
+});
+
+connection.onRequest("duckling/restart", async () => {
+	await initPromise;
+    connection.window.showInformationMessage("Restarting Duckling Daemon...");
+    await compilerDaemonClient.restart(connection);
+    connection.window.showInformationMessage("Duckling Daemon Restarted");
+
+	await Promise.all(
+		documents.all().map(document => compilerDaemonClient.openFile(document.uri, connection))
+	);
+	await Promise.all(
+		documents.all().map(document => validateDuckling(document.uri, connection, compilerDaemonClient))
+	);
+});
+
+connection.onDefinition(
+	async (params: TextDocumentPositionParams): Promise<Location | Location[] | null> => {
+		await initPromise;
+        return await handleDefinition(params, documents, compilerDaemonClient, connection);
+    }
+);
+
 // Only keep settings for open documents
-documents.onDidClose(e => {
+documents.onDidClose(async e => {
+	await initPromise;
 	documentSettings.delete(e.document.uri);
 });
 
 // This handler is called when the IDE detects a change in the document
-documents.onDidChangeContent(change => {
+documents.onDidChangeContent(async change => {
+	await initPromise;
 	// The document has changed, so we need to update it in the compiler daemon
-	compilerDaemonClient.putFile(change.document.uri, change.document.getText(), connection).then(() => {
-		// Revalidate the document
-		validateDuckling(change.document, connection, compilerDaemonClient);
-	});
+	await compilerDaemonClient.changeContent(change.document.uri, change.document.getText(), connection);
+	// Revalidate the document
+	validateDuckling(change.document.uri, connection, compilerDaemonClient);
 });
 
-connection.onDidChangeWatchedFiles(_change => {
-	console.log("We received an file change event");
+connection.onDidChangeWatchedFiles(async change => {
+	await initPromise;
+	let isDucklingFile = (uri: string) => {
+		return uri.endsWith(".duck") || uri.endsWith(".dmf")|| uri.endsWith(".ds") || uri.endsWith(".🦆");
+	}
+	for (const fileEvent of change.changes) {
+		console.log("File change event received:", fileEvent.type);
+		switch (fileEvent.type) {
+			case FileChangeType.Created:
+				if (!isDucklingFile(fileEvent.uri)) continue;
+
+				console.log("File created:", fileEvent.uri);
+					await compilerDaemonClient.newFile(fileEvent.uri, connection);
+					validateDuckling(fileEvent.uri, connection, compilerDaemonClient);
+				break;
+
+			case FileChangeType.Deleted:
+				console.log("File deleted:", fileEvent.uri);
+					await compilerDaemonClient.deleteFileOrDir(fileEvent.uri, connection);
+					documents.all().forEach(document => validateDuckling(document.uri, connection, compilerDaemonClient));
+				break;
+		}
+	}
 });
 
 // This handler provides the initial list of the completion items.
 connection.onCompletion(
     async (_textDocumentPosition: TextDocumentPositionParams): Promise<CompletionItem[]> => {
+		await initPromise;
         return await handleCompletion(_textDocumentPosition, documents, compilerDaemonClient, connection);
     }
 );
@@ -212,12 +263,14 @@ connection.onCompletion(
 // connection.onCompletionResolve(onCompletionResolve);
 
 // This handler provides the folding ranges
-connection.onFoldingRanges((params: FoldingRangeParams): FoldingRange[] | null => {
+connection.onFoldingRanges(async (params: FoldingRangeParams): Promise<FoldingRange[] | null> => {
+	await initPromise;
 	return handleFoldingRanges(params, documents);
 });
 
 // Make the compiler daemon client exit when the connection exits
-connection.onExit(() => {
+connection.onExit(async () => {
+	await initPromise;
 	compilerDaemonClient?.exit();
 });
 

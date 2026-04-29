@@ -26,7 +26,7 @@ LLVM_INCLUDE_END()
 #include <ctv/numeric_value.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
-#include <typesystem/lower/type_layout.hpp>
+#include <tsl/type_layout.hpp>
 
 #include <base/collections/maps.hpp>
 #include <base/extend_cpp/variant_match.hpp>
@@ -117,6 +117,9 @@ namespace {
 				// using compile time operations on types to compile. This should never be used in
 				// runtime.
 				return llvm::ConstantInt::get(llvm_type.get(), 0, false);
+			}
+			variant_case(char, c) {
+				return llvm::ConstantInt::get(llvm_type.get(), u64((unsigned char) c));
 			}
 			variant_case(base::StrID, str) {
 				// First, create a global constant for the string data
@@ -254,7 +257,7 @@ namespace compiler::backend_llvm {
 				}
 			}
 			variant_case(tsl::StringTypeLayout, string_layout) {
-				const auto string_type_name = "str";
+				const auto string_type_name = string_layout.getMangledName().strView();
 
 				// Get the string type from the context, if it has been previously defined.
 				if (llvm::StructType* string_type
@@ -283,9 +286,7 @@ namespace compiler::backend_llvm {
 				return string_type;
 			}
 			variant_case(tsl::DynamicArrayTypeLayout, list_layout) {
-				const auto list_type_name = base::strConcat(
-					"list.", list_layout.getElementLayout()->toStringIdentification()
-				);
+				const auto list_type_name = list_layout.getMangledName().strView();
 
 				// Get the list type from the context, if it has been previously defined.
 				if (llvm::StructType* list_type
@@ -327,10 +328,10 @@ namespace compiler::backend_llvm {
 				// - First, create an opaque type.
 				llvm::StructType* struct_type = llvm::StructType::create(llvm_context, class_name);
 				// - Then, collect the member types.
-				const usize              num_fields = class_layout.getNumFields();
+				const usize              num_sub_layouts = class_layout.getNumSubLayouts();
 				std::vector<llvm::Type*> member_types;
-				member_types.reserve(num_fields);
-				for (usize layout_idx = 0; layout_idx < num_fields; layout_idx++) {
+				member_types.reserve(num_sub_layouts);
+				for (usize layout_idx = 0; layout_idx < num_sub_layouts; layout_idx++) {
 					const CRef<tsl::TypeLayout> field_layout
 						= class_layout.getFieldLayoutOfLayoutIndex(layout_idx);
 					member_types.push_back(typeFromLayout(module, field_layout));
@@ -344,11 +345,14 @@ namespace compiler::backend_llvm {
 				const llvm::StructLayout& struct_layout = *data_layout.getStructLayout(struct_type);
 
 				// - Then, check each field's offset.
-				for (usize layout_idx = 0; layout_idx < num_fields; layout_idx++) {
-					const Bytes expected_offset = class_layout.getOffsetOfFieldSymbol(
-						class_layout.getFieldSymbolOfLayoutIndex(layout_idx)
-					);
-					const auto actual_offset = Bytes(
+				for (usize layout_idx = 0; layout_idx < num_sub_layouts; layout_idx++) {
+					[[maybe_unused]] const Bytes expected_offset
+						= class_layout
+					          .getOffsetOfFieldSymbol(
+								  class_layout.getFieldSymbolOfLayoutIndex(layout_idx)
+							  )
+					          .value();
+					[[maybe_unused]] const auto actual_offset = Bytes(
 						struct_layout.getElementOffset(base::safeIntConv<unsigned>(layout_idx))
 					);
 					CORE_ASSERT(
@@ -710,7 +714,8 @@ namespace compiler::backend_llvm {
 						const auto& current_class_layout
 							= std::get<tsl::ClassTypeLayout>(current_layout->getVariant());
 						const auto layout_idx
-							= current_class_layout.getLayoutIndexOfFieldSymbol(field.field_id);
+							= current_class_layout.getLayoutIndexOfFieldSymbol(field.field_id)
+						          .value();
 
 						gep_indices.push_back(
 							llvm::ConstantInt::get(llvm::Type::getInt32Ty(context), layout_idx)

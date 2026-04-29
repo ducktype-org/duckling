@@ -1,20 +1,25 @@
 //! Fetcher cache for a fetched manifest.
-use std::{path::Path, sync::RwLock};
+use std::path::Path;
 
-use crate::quackpack::{schemas::registry, util::PANIC_MESSAGE};
 use tracing::debug;
 use url::Url;
 
 use super::types;
+use crate::quackpack::schemas::registry;
 
 #[cfg(test)]
 mod tests;
 
 use crate::{QuackResult, QuackResultContext};
 
+const SQL_ERROR_MESSAGE: &str = "failed to execute an SQL query";
+
 #[derive(Debug)]
+/// Where should we cache metadata.
 pub enum CacheLocation<'a> {
+    /// Cache metadata in memory.
     Memory,
+    /// Cache metadata in path.
     Path(&'a Path),
 }
 
@@ -28,6 +33,7 @@ impl std::fmt::Display for CacheLocation<'_> {
 }
 
 #[derive(Debug)]
+/// All columns present in the database.
 enum Columns {
     Name,
     Version,
@@ -36,6 +42,7 @@ enum Columns {
 }
 
 impl Columns {
+    /// Get the SQLite column name.
     const fn name(&self) -> &'static str {
         match self {
             Columns::Name => "name",
@@ -45,6 +52,7 @@ impl Columns {
         }
     }
 
+    /// Get the type of the SQLite column.
     const fn sqlite_type(&self) -> &'static str {
         match self {
             Columns::Name => "TEXT NOT NULL",
@@ -55,6 +63,7 @@ impl Columns {
     }
 }
 
+/// Name of the table where we save metadata.
 const TABLE_NAME: &str = "packages_manifests";
 
 #[derive(Debug)]
@@ -93,7 +102,14 @@ pub struct ManifestCache {
     // But [rusqlite::Connection] is `!Sync` (even if it was opened with `SQLITE_OPEN_FULLMUTEX`), so on
     // rust side we would still have to *cheat* and manually implement `Sync`/wrap it with some type
     // which does that.
-    connection: RwLock<rusqlite::Connection>,
+    //
+    // This means, that we either:
+    // 1. use defaults (`SQLITE_OPEN_NOMUTEX`) and mutable references, so borrow checker ensures SQLite safety,
+    // 2. use defaults (`SQLITE_OPEN_NOMUTEX`) and immutable references + runtime borrow checking.
+    //
+    // Unfortunately, `Connection` always requires a mutable reference for creating transactions,
+    // so there's no point in using `FULLMUTEX`, as we'll have to introduce some overhead on the rust side.
+    connection: rusqlite::Connection,
 }
 
 impl ManifestCache {
@@ -108,25 +124,22 @@ impl ManifestCache {
         connection
             .create_table()
             .with_context(|| format!("failed to create a manifest cache table in {}", location))?;
-        Ok(Self {
-            connection: RwLock::new(connection),
-        })
+        Ok(Self { connection })
     }
 
     /// Get a cached manifest of package `package`.
     ///
     /// `Ok(Some)` means that manifest has been fetched successful, `Ok(None)`: we didn't have
     /// `package` in a cache, while `Err` indicates, most likely, internal SQL error.
+    #[tracing::instrument(skip(self))]
     pub fn get_manifest(
         &self,
         package: &types::PackageWithUrl,
     ) -> QuackResult<Option<registry::Manifest>> {
         let maybe_json = self
             .connection
-            .read()
-            .expect(PANIC_MESSAGE)
             .get_single_manifest_json(package)
-            .context_internal("invalid SQL")?;
+            .context(SQL_ERROR_MESSAGE)?;
         maybe_json
             .map(|json| {
                 serde_json::from_str(&json)
@@ -141,16 +154,15 @@ impl ManifestCache {
     ///
     /// Note that `Ok` allows inner `packages_manifest` to be an empty Vec: it means that we don't
     /// have `package` in a cache.
+    #[tracing::instrument(skip(self))]
     pub fn get_all_manifests(
         &self,
         package: &types::PackageWithUrl,
     ) -> QuackResult<Vec<registry::Manifest>> {
         let jsons = self
             .connection
-            .read()
-            .expect(PANIC_MESSAGE)
             .get_all_manifests_json(package)
-            .context_internal("invalid SQL")?;
+            .context(SQL_ERROR_MESSAGE)?;
         jsons
             .into_iter()
             .map(|json| serde_json::from_str(&json))
@@ -161,6 +173,7 @@ impl ManifestCache {
     /// Add or replace manifest for package `package`.
     ///
     /// `Ok` means that manifest has been added successful, while `Err` indicates, most likely, internal SQL error.
+    #[tracing::instrument(skip(self))]
     pub fn add_or_replace_manifest(
         &self,
         package: &types::PackageWithUrl,
@@ -169,10 +182,8 @@ impl ManifestCache {
         let json = serde_json::to_string(&manifest)
             .context_internal("failed to serialize registry schema to JSON")?;
         self.connection
-            .read()
-            .expect(PANIC_MESSAGE)
             .add_or_replace_manifest_json(package, json)
-            .context_internal("invalid SQL")?;
+            .context(SQL_ERROR_MESSAGE)?;
         Ok(())
     }
 
@@ -183,8 +194,9 @@ impl ManifestCache {
     /// to inner SQL locking.
     ///
     /// `Ok` means that manifest has been added successful, while `Err` indicates, most likely, internal SQL error.
+    #[tracing::instrument(skip(self))]
     pub fn add_or_replace_multiple_manifests(
-        &self,
+        &mut self,
         registry_url: Url,
         multi_manifest: Vec<registry::Manifest>,
     ) -> QuackResult<()> {
@@ -202,10 +214,8 @@ impl ManifestCache {
             })
             .collect::<QuackResult<_>>()?;
         self.connection
-            .write()
-            .expect(PANIC_MESSAGE)
             .add_or_replace_mutliple_manifests_jsons(package_manifest_pairs)
-            .context_internal("invalid SQL")?;
+            .context(SQL_ERROR_MESSAGE)?;
         Ok(())
     }
 }
