@@ -16,7 +16,6 @@ add_library(Driver
 	src/driver/debug_info/debug_info.cpp
 	src/driver/operations/generic_operations.cpp
 	src/driver/initialize.cpp
-	src/driver/externs_manifest.cpp
 	src/driver/exit.cpp
 	src/driver/manifest/utils.cpp
 	src/driver/manifest/manifest.cpp

@@ -9,8 +9,11 @@
 #include <base/types/bit256.hpp>
 #include <base/types/ints.hpp>
 
+#include "query_framework/context/context.hpp"
 #include <query_framework/standard_query/query_impl.hpp>
 #include <string_id/string_id.hpp>
+
+#include <query_framework/query_errors.hpp>
 
 namespace compiler::frontend {
 
@@ -19,6 +22,21 @@ namespace compiler::frontend {
 			auto current = module_id;
 			while (auto parent = ctx.query<QueryParentModule>(current)) current = parent.value();
 			return current;
+		}
+
+		const global_state::PackageInfo& getPackageInfo(query::Context& ctx, ModuleID module_id) {
+			auto root_ancestor = getRootAncestorModuleID(ctx, module_id);
+			const auto& all_packages = global_state::getPackages();
+			for (const auto& pkg : all_packages)
+				if (pkg.root_module == root_ancestor) return pkg;
+			CORE_PANIC("Root module does not belong to any package");
+		}
+
+		const global_state::PackageInfo& getPackageInfo(base::StrID package_id) {
+			const auto& all_packages = global_state::getPackages();
+			for (const auto& pkg : all_packages)
+				if (getModuleRef(pkg.root_module)->getPackageID() == package_id) return pkg;
+			CORE_PANIC("Package not found");
 		}
 	}
 
@@ -32,7 +50,7 @@ namespace compiler::frontend {
 		// first step (in priority):
 		// * check children
 		// * check ancestors
-		// * check external packages
+		// * check package dependencies
 
 		base::Optional<ModuleID> current_module;
 
@@ -51,16 +69,12 @@ namespace compiler::frontend {
 		}
 
 		if (not current_module.has_value()) {
-			auto package_owner = getRootAncestorModuleID(ctx, from);
-			auto current_package_info_opt
-				= global_state::getPackageInfoForRootModule(package_owner);
-
-			if_opt_some(current_package_info_opt, current_package_info) {
-				for (const auto dependency_module_id: current_package_info.dependencies) {
-					if (frontend::getModuleRef(dependency_module_id)->getPackageID() == path.at(0)) {
-						current_module = dependency_module_id;
-						break;
-					}
+			// Get the package info of the current module package and look for the dependency with the alias same as imported name.
+			const auto& package_info = getPackageInfo(ctx, from);
+			for (const auto& dep : package_info.dependencies) {
+				if(path.at(0) == dep.alias) {
+					current_module = getPackageInfo(dep.package_id).root_module;
+					break;
 				}
 			}
 		}

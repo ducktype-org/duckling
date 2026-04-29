@@ -734,7 +734,7 @@ namespace compiler::helios {
 
 				if (!maybe_imported_module.has_value()) {
 					ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
-						"Module not found.", import_stmt->getSourcePosition().unlock(ctx)
+						"Module or package not found.", import_stmt->getSourcePosition().unlock(ctx)
 					));
 					output(query::Failed());
 					return;
