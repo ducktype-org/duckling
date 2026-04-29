@@ -19,6 +19,7 @@
 #include <helios_private/errors/errors.hpp>
 #include <helios_private/hout_creation/definition_generation/class_constructors.hpp>
 #include <helios_private/hout_creation/definition_generation/default_constructors.hpp>
+#include <helios_private/hout_creation/definition_generation/to_string_methods.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/hout_creation/hout_stmt_compilation.hpp>
 #include <helios_private/pst_layer/stmts_from_aggregate.hpp>
@@ -164,6 +165,10 @@ namespace compiler::helios {
 						) {
 							return ctx
 							    .query<defgen::QueryDefaultStaticArrayConstructor>(ctor.array_type)
+							    ->valueOrThrow();
+						}
+						variant_case(defgen::GeneratedSymbolData::ToStringMethod, to_string) {
+							return ctx.query<defgen::QueryToStringMethod>(to_string.owner_type)
 							    ->valueOrThrow();
 						}
 						variant_default {

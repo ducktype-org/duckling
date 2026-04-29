@@ -22,6 +22,7 @@ add_library(HELIOS STATIC
 	src_private/helios_private/comp_time/comptime_type_operations.cpp
 	src_private/helios_private/hout_creation/definition_generation/class_constructors.cpp
 	src_private/helios_private/hout_creation/definition_generation/default_constructors.cpp
+	src_private/helios_private/hout_creation/definition_generation/to_string_methods.cpp
 	src_private/helios_private/hout_creation/hout_stmt_compilation.cpp
 	src_private/helios_private/errors/dia_interactive_elements.cpp
 	src_private/helios_private/tsh/abstract_type_impl.cpp

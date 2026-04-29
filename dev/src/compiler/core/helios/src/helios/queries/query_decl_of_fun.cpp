@@ -471,6 +471,16 @@ namespace compiler::helios {
 									key, return_type, {}, code::generatedOrigin()
 								};
 							}
+							variant_case(
+								defgen::GeneratedSymbolData::ToStringMethod, to_string_data
+							) {
+								const auto self_param = ctx.query<defgen::QueryGeneratedSymbol>(
+									{ base::StrID("self"),
+								      defgen::GeneratedSymbolData::SelfParameterNoScope{
+										  .method_symbol = key,
+									  } }
+								);
+							}
 							variant_case_novalue(defgen::GeneratedSymbolData::BuiltinOperator) {
 								return getBuiltinDecl(ctx, key);
 							}
