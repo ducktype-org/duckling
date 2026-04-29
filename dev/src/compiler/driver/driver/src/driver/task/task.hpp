@@ -38,12 +38,21 @@ namespace compiler::driver {
 	};
 
 	struct BuildTargetLLVMStaticLibrary {
+        /**
+         * @brief The output file path for the compiled static library.
+         */
 		fs::FilePath                output;
 	};
 
+    /**
+     * @brief A variant type representing different build targets.
+     */
 	using BuildTarget
 		= std::variant<BuildTargetDVM, BuildTargetLLVM, BuildTargetLLVMExecutable, BuildTargetLLVMStaticLibrary>;
 
+    /**
+     * @brief Represents a task for compiling a package
+     */
     struct PackageCompilationTask final {
         base::StrID package_name;
         BuildTarget build_target;
@@ -51,6 +60,11 @@ namespace compiler::driver {
         static base::Optional<PackageCompilationTask> fromJson(const nlohmann::json& json);
     };
 
+
+    /**
+     * @brief Represents a compilation task in the Duckling compiler.
+     * A task can be of different types, such as package compilation, and contains the relevant data for that task type.
+     */
     struct Task {
         TaskType type;
         std::variant<PackageCompilationTask> task_data;

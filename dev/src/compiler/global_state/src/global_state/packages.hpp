@@ -71,6 +71,7 @@ namespace global_state {
 
 		/**
 		 * Adds a package with no dependencies to the global state.
+		 * This is simple wrapper and should be used only if compiling single package with no dependencies, e.g. for testing purposes.
 		 */
 		void addPackage(compiler::frontend::ModuleID root_module);
 
