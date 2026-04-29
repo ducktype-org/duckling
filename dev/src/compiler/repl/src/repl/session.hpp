@@ -38,6 +38,7 @@ namespace compiler::repl {
 	class ReplSession final {
 	public:
 		explicit ReplSession(bool completions_enabled = true);
+		static constexpr int RESET_EXIT_CODE = 100;
 
 		/**
 		 * @brief Load a script file and execute its statements in the current REPL session.
@@ -224,8 +225,9 @@ namespace compiler::repl {
 			std::string&                                out_error
 		);
 
-		bool                       m_should_exit;  ///< Flag to terminate the REPL loop
-		std::vector<ReplStatement> m_history;      ///< All statements entered in this session
+		bool                       m_should_exit;   ///< Flag to terminate the REPL loop
+		bool                       m_should_reset;  ///< Flag to reset the REPL process
+		std::vector<ReplStatement> m_history;       ///< All statements entered in this session
 		u64          m_line_counter;  ///< Counter for generating unique wrapper function names
 		vm::PID      m_dvm_pid;       ///< Process ID of the running DVM instance
 		ReplFrontend m_frontend;      ///< Frontend for user interaction

@@ -70,6 +70,7 @@ namespace compiler::repl {
 
 	ReplSession::ReplSession(bool completions_enabled):
 		  m_should_exit(false),
+		  m_should_reset(false),
 		  m_line_counter(0),
 		  m_dvm_pid(0),
 		  m_frontend(completions_enabled),
@@ -149,6 +150,11 @@ namespace compiler::repl {
 			return true;
 		}
 
+		if (line == "/reset") {
+			m_should_reset = true;
+			return true;
+		}
+
 		if (line == "/help" || line == "/?" || line == "/h") {
 			m_frontend.printHelp();
 			return true;
@@ -188,6 +194,7 @@ namespace compiler::repl {
 	ReplResult ReplSession::processLine(std::string_view line) {
 		if (isCommand(line)) {
 			handleCommand(line);
+			if (m_should_reset) return ReplResult::reset();
 			if (m_should_exit) return ReplResult::exit();
 			return ReplResult::success();
 		}
@@ -487,13 +494,18 @@ namespace compiler::repl {
 			if (result.status == ReplResult::Status::Success && !result.message.empty())
 				std::cout << result.message << "\n";
 
+			if (result.status == ReplResult::Status::Reset) {
+				if (!result.message.empty()) std::cout << result.message << "\n";
+				break;
+			}
+
 			if (result.status == ReplResult::Status::Exit) {
 				std::cout << result.message << "\n";
 				break;
 			}
 		}
 
-		return 0;
+		return m_should_reset ? RESET_EXIT_CODE : 0;
 	}
 
 }  // namespace compiler::repl

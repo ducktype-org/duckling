@@ -226,6 +226,7 @@ namespace compiler::repl {
 		std::cout << "\n=== REPL Commands ===\n";
 		std::cout << "  /help, /?, /h       - Show this help message\n";
 		std::cout << "  /exit, /quit, /q    - Exit the REPL\n";
+		std::cout << "  /reset              - Restart the REPL process\n";
 		std::cout << "  /history, /hist     - Show all executed statements\n";
 		std::cout << "  /clear, /c          - Clear terminal\n";
 		std::cout << "  /load <file.ds>     - Load script file (stops on first error; previous\n"

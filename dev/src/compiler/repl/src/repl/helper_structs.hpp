@@ -44,7 +44,7 @@ namespace compiler::repl {
 	 * Contains the status of the operation and an optional message.
 	 */
 	struct ReplResult final {
-		enum class Status { Success, Error, Exit, IncompleteInput };
+		enum class Status { Success, Error, Exit, Reset, IncompleteInput };
 
 		Status      status;
 		std::string message;
@@ -59,6 +59,10 @@ namespace compiler::repl {
 
 		static ReplResult exit() {
 			return ReplResult{ .status = Status::Exit, .message = "Goodbye!" };
+		}
+
+		static ReplResult reset(std::string msg = "Restarting REPL...") {
+			return ReplResult{ .status = Status::Reset, .message = std::move(msg) };
 		}
 
 		static ReplResult incomplete() {

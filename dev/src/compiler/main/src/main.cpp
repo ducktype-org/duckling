@@ -24,6 +24,7 @@
 #include <linker/link.hpp>
 #include <repl/session.hpp>
 #include <time_stats/time_stats.hpp>
+#include <unistd.h>
 
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
@@ -44,8 +45,26 @@
 
 #include <nlohmann/json.hpp>
 
+#include <cstdio>
 #include <iostream>
 #include <ranges>
+#include <string>
+#include <vector>
+
+namespace {
+	std::vector<std::string> g_argv;
+
+	int execSelf() {
+		std::vector<char*> args;
+		args.reserve(g_argv.size() + 1);
+		for (auto& arg: g_argv) args.push_back(arg.data());
+		args.push_back(nullptr);
+
+		execv(args[0], args.data());
+		std::perror("execv");
+		return 1;
+	}
+}
 
 clah::Clah getStandardDucklingOptions() {
 	return clah::Clah("duckc", "The Duckling compiler")
@@ -970,9 +989,10 @@ clah::Clah getClahForMain() {
 						compiler::driver::exit();
 						return 1;
 					}
-					compiler::repl::ReplSession session(!options.isFlag("no-completions"));
-
-					if (options.getExtraParameterCount() > 1) {
+					int result = 0;
+					{
+						compiler::repl::ReplSession session(!options.isFlag("no-completions"));
+						if (options.getExtraParameterCount() > 1) {
 						std::cerr << "Error: repl accepts at most one script path. "
 									 "Usage: duckc repl [script.ds]\n";
 						compiler::driver::exit();
@@ -992,9 +1012,10 @@ clah::Clah getClahForMain() {
 							return 1;
 						}
 					}
-
-					int result = session.run();
+						result = session.run();
+					}
 					compiler::driver::exit();
+					if (result == compiler::repl::ReplSession::RESET_EXIT_CODE) return execSelf();
 					return result;
 				})
 		)
@@ -1012,6 +1033,10 @@ clah::Clah getClahForMain() {
 }
 
 int main(int argc, const char* argv[]) {
+	g_argv.clear();
+	g_argv.reserve(static_cast<size_t>(argc));
+	for (int i = 0; i < argc; ++i) g_argv.emplace_back(argv[i]);
+
 	init::InitObject _;
 
 	compiler::driver::initializeGlobalLogger();
