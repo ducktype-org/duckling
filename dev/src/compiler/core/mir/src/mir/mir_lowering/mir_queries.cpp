@@ -195,11 +195,14 @@ namespace compiler::mir {
 			function.blocks[last_block_id].terminator.operation = Operation::ReturnVoid;
 			return function;
 		} else {
-			ctx.logInt(makeBox<dia_int::PlaceholderHeaderError>(base::strConcat(
-				"The function `",
-				function.name,
-				"` is missing a return statement or does not always return."
-			)));
+			ctx.logInt(makeBox<dia_int::PlaceholderError>(
+				base::strConcat(
+					"The function `",
+					function.name,
+					"` is missing a return statement or does not always return."
+				),
+				""
+			));
 			return query::Failed();
 		}
 	}
