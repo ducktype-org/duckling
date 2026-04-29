@@ -137,39 +137,14 @@ namespace compiler::repl {
 		public:
 			explicit ScopedStreamSilence(bool enabled): m_enabled(enabled) {
 				if (!m_enabled) return;
-				m_cout_buf = std::cout.rdbuf(&m_null_buf);
-				m_cerr_buf = std::cerr.rdbuf(&m_null_buf);
-
-				fflush(stdout);
-				m_saved_stdout = dup(STDOUT_FILENO);
-				if (m_saved_stdout != -1) {
-					int dev_null = open("/dev/null", O_WRONLY);
-					if (dev_null != -1) {
-						dup2(dev_null, STDOUT_FILENO);
-						close(dev_null);
-					}
-				}
+				redirectCppStreams();
+				redirectStdio();
 			}
 
 			~ScopedStreamSilence() {
 				if (!m_enabled) return;
-				std::cout.flush();
-    			std::cerr.flush();
-
-				std::cout.rdbuf(m_cout_buf);
-				std::cerr.rdbuf(m_cerr_buf);
-				
-				std::cout.clear();
-        		std::cerr.clear();
-				
-				if (m_saved_stdout != -1) {
-					fflush(stdout);
-					dup2(m_saved_stdout, STDOUT_FILENO);
-					close(m_saved_stdout);
-					
-					clearerr(stdout);
-					setvbuf(stdout, nullptr, _IOLBF, BUFSIZ);
-				}
+				restoreCppStreams();
+				restoreStdio();
 			}
 
 			ScopedStreamSilence(const ScopedStreamSilence&)            = delete;
@@ -181,6 +156,45 @@ namespace compiler::repl {
 			std::streambuf* m_cout_buf = nullptr;
 			std::streambuf* m_cerr_buf = nullptr;
 			int m_saved_stdout = -1;
+
+			void redirectCppStreams() {
+				m_cout_buf = std::cout.rdbuf(&m_null_buf);
+				m_cerr_buf = std::cerr.rdbuf(&m_null_buf);
+			}
+
+			void restoreCppStreams() {
+				std::cout.flush();
+    			std::cerr.flush();
+
+				std::cout.rdbuf(m_cout_buf);
+				std::cerr.rdbuf(m_cerr_buf);
+
+				std::cout.clear();
+        		std::cerr.clear();
+			}
+
+			void redirectStdio() {
+				fflush(stdout);
+				m_saved_stdout = dup(STDOUT_FILENO);
+				if (m_saved_stdout != -1) {
+					int dev_null = open("/dev/null", O_WRONLY);
+					if (dev_null != -1) {
+						dup2(dev_null, STDOUT_FILENO);
+						close(dev_null);
+					}
+				}
+			}
+
+			void restoreStdio() {
+				if (m_saved_stdout != -1) {
+					fflush(stdout);
+					dup2(m_saved_stdout, STDOUT_FILENO);
+					close(m_saved_stdout);
+					
+					clearerr(stdout);
+					setvbuf(stdout, nullptr, _IOLBF, BUFSIZ);
+				}
+			}
 		};
 
 		std::vector<std::string> loadSessionHistoryEntries(size_t max_entries) {
