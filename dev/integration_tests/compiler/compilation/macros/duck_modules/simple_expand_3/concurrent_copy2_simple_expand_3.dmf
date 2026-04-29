@@ -1,0 +1,9 @@
+fun main_copy2() -> i64 = {
+    var a: i64 = 1;
+
+    expand "builtin_output_i64(a);";
+    expand "a = a + 1;";
+    expand "builtin_output_i64(a);";
+
+    return 0;
+}
