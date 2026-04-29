@@ -160,7 +160,7 @@ namespace compiler::driver {
 				loadPreviousQueryGraphIfExists();
 			} else {
 				enable_incremental_compilation = false;
-				// Disable the query graph, cos its not needed and adds overhead.
+				// Disable the query graph because it's not needed and adds overhead.
 				query::enable_query_graph = false;
 			}
 		}
