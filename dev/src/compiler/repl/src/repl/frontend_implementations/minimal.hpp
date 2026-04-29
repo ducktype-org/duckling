@@ -37,13 +37,14 @@ namespace {
 namespace compiler::repl {
 	class FrontendMinImplementation final {
 	public:
-		FrontendMinImplementation();
+		explicit FrontendMinImplementation(bool completions_enabled = true);
 		~FrontendMinImplementation() = default;
 
 		void        printWelcome() const;
 		std::string readLine();
 		void        printHistory() const;
 		void        clearHistory();
+		void        clearScreen();
 		void        printHelp() const;
 
 	private:
@@ -80,8 +81,6 @@ namespace compiler::repl {
 		void historyScrollDown();
 
 		void saveToHistory();
-
-		void clearScreen();
 
 		void refreshLinesFromCursorAndBelow();
 

@@ -16,12 +16,11 @@ Tests:
         Output:
           String: "42\n7\n43\n54\n108\n6\n3\n5\n11\n7\n13\n"
         ExitCode: 54
-      # @TODO: #2476 Enable DVM case.
-      # dvm:
-      #   backend: dvm
-      #   Output:
-      #     String: "42\n7\n43\n54\n108\n6\n3\n5\n11\n7\n13\n"
-      #   ExitCode: 54
+      dvm:
+        backend: dvm
+        Output:
+          String: "42\n7\n43\n54\n108\n6\n3\n5\n11\n7\n13\n"
+        ExitCode: 54
 
   named_default_args:
     Cases:
@@ -46,12 +45,11 @@ Tests:
         Output:
           String: "1000\n200\n500\n30\n60\n4\n7\n"
         ExitCode: 0
-      # @TODO: #2476 Enable DVM case.
-      # dvm:
-      #   backend: dvm
-      #   Output:
-      #     String: "1000\n200\n500\n30\n60\n4\n7\n"
-      #   ExitCode: 0
+      dvm:
+        backend: dvm
+        Output:
+          String: "1000\n200\n500\n30\n60\n4\n7\n"
+        ExitCode: 0
 
   simple:
     Cases: 

@@ -16,10 +16,10 @@
 using namespace compiler::backend_vm::internal;
 
 compiler::backend_vm::internal::ProgramLoweringContext::ProgramLoweringContext(
-	query::Context& query_ctx, bool build_debug_info
+	query::Context& query_ctx, bool build_debug_info, bool is_comp_time_lowering
 ):
-
 	  query_ctx_for_errors(&query_ctx),
+	  is_comp_time_lowering(is_comp_time_lowering),
 	  debug_info_builder(
 		  (build_debug_info ? debug_info::DebugInfoBuilder(
 								  debug_info::Target::DBC, debug_info::SourcePositionsType::PstHash
@@ -118,6 +118,20 @@ const vm::code::GlobalData& ProgramLoweringContext::lowerAndKeepLirGlobal(
 	if (global_ctor.has_value()) {
 		lowerAndKeepLirFunction(global_ctor.value());
 		ctor_name = Identifier(global_ctor.value()->mangled_name);
+	} else if (lir_global.initial_value.has_value()) {
+		auto mini_ctor_name
+			= base::StrID(base::strConcat(lir_global.mangled_name.strView(), "_ctv_ctor"));
+
+		auto mini_ctor = createMiniGlobalCtorFromCTV(
+			*this,
+			lir_global.layout,
+			global_type,
+			lir_global.initial_value.value(),
+			mini_ctor_name,
+			global_name_to_dvm.at(lir_global.mangled_name)
+		);
+		extra_bytecode_functions.push_back(std::move(mini_ctor));
+		ctor_name = Identifier(mini_ctor_name);
 	}
 	if (global_dtor.has_value()) {
 		lowerAndKeepLirFunction(global_dtor.value());
@@ -257,7 +271,7 @@ vm::code::TypeOfData ProgramLoweringContext::lowerTslTypeInternal(CRef<tsl::Type
 					"yet: ",
 					layout->toStringDefinition(*query_ctx_for_errors.value())
 				),
-				base::Optional<dia::SourcePosition>()
+				""
 			));
 			query::throwFailed();
 		}
@@ -265,10 +279,13 @@ vm::code::TypeOfData ProgramLoweringContext::lowerTslTypeInternal(CRef<tsl::Type
 	CORE_UNREACHABLE();
 }
 
-std::expected<vm::code::CodeCollection, std::string> ProgramLoweringContext::validateAndProduceProgram(
-) {
+vm::code::CodeCollection ProgramLoweringContext::produceCodeCollection() {
 	auto collection      = vm::code::CodeCollection();
 	collection.functions = std::ranges::to<std::vector>(lir_function_to_dvm | std::views::values);
+	collection.functions.insert(
+		collection.functions.end(), extra_bytecode_functions.begin(), extra_bytecode_functions.end()
+	);
+
 	// Sort globals and functions by their mangled names to ensure deterministic output, which is
 	// important for reproducibility. This also should guarantee that the order of functions and
 	// globals in the resulting DVM module is deterministic, which can be important for debugging
@@ -278,9 +295,6 @@ std::expected<vm::code::CodeCollection, std::string> ProgramLoweringContext::val
 		[](const vm::code::Function& lhs, const vm::code::Function& rhs) {
 			return lhs.name.str < rhs.name.str;
 		}
-	);
-	collection.functions.insert(
-		collection.functions.end(), extra_bytecode_functions.begin(), extra_bytecode_functions.end()
 	);
 	collection.global_data
 		= std::ranges::to<std::vector>(global_name_to_dvm_data | std::views::values);
@@ -295,7 +309,7 @@ std::expected<vm::code::CodeCollection, std::string> ProgramLoweringContext::val
 	std::ranges::sort(
 		collection.global_data,
 		[](const vm::code::GlobalData& lhs, const vm::code::GlobalData& rhs) {
-			return lhs.name.str < rhs.name.str;
+			return lhs.name.str.getInnerID() < rhs.name.str.getInnerID();
 		}
 	);
 
@@ -311,11 +325,7 @@ std::expected<vm::code::CodeCollection, std::string> ProgramLoweringContext::val
 	collection.external_c_functions
 		= std::ranges::to<std::vector>(extern_c_functions | std::views::values);
 
-	try {
-		auto valid = vm::code::ValidProgram::withBuiltins();
-		valid      = valid.tryInsertCode(collection);
-		return valid.produceValidCodeCollection();
-	} catch (vm::code::ValidationError& e) { return std::unexpected(e.what()); }
+	return collection;
 }
 
 base::Optional<debug_info::DebugInfo> compiler::backend_vm::internal::ProgramLoweringContext::buildDebugInfo(
@@ -329,3 +339,7 @@ base::Optional<debug_info::DebugInfo> compiler::backend_vm::internal::ProgramLow
 }
 
 DEFAULT_BOX_PTR_DELETER_DEFINITION(compiler::backend_vm::internal::ProgramLoweringContext);
+
+bool compiler::backend_vm::internal::ProgramLoweringContext::isCompTimeLowering() const {
+	return is_comp_time_lowering;
+}
