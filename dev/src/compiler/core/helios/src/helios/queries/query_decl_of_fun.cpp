@@ -475,11 +475,65 @@ namespace compiler::helios {
 								defgen::GeneratedSymbolData::ToStringMethod, to_string_data
 							) {
 								const auto self_param = ctx.query<defgen::QueryGeneratedSymbol>(
-									{ base::StrID("self"),
-								      defgen::GeneratedSymbolData::SelfParameterNoScope{
+									{ .name = base::StrID("self"),
+								      .generated_symbol_data
+								      = defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::SelfParameterNoScope{
 										  .method_symbol = key,
-									  } }
+									  } } }
 								);
+
+								const auto self_type
+									= ctx.query<QueryTypeOfSymbol>(self_param)->valueOrThrow();
+
+								const auto method_type = ctx.query<QueryTypeOfSymbol>(key)
+								                             ->valueOrThrow()
+								                             .getType()
+								                             .as<tsh::FunctionAbstractType>();
+								const auto return_type = method_type.getResultType();
+
+								std::vector<code::Parameter> parameters;
+								parameters.emplace_back(
+									base::StrID("self"),
+									self_type,
+									std::nullopt,
+									self_param,
+									code::generatedOrigin()
+								);
+
+								return HOUTFunctionDeclaration{
+									key, return_type, std::move(parameters), code::generatedOrigin()
+								};
+							}
+							variant_case(defgen::GeneratedSymbolData::DefaultDestructor, dtor_data) {
+								const auto self_param = ctx.query<defgen::QueryGeneratedSymbol>(
+									{ .name = base::StrID("self"),
+								      .generated_symbol_data
+								      = defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::SelfParameterNoScope{
+										  .method_symbol = key,
+									  } } }
+								);
+
+								const auto self_type
+									= ctx.query<QueryTypeOfSymbol>(self_param)->valueOrThrow();
+
+								const auto method_type = ctx.query<QueryTypeOfSymbol>(key)
+								                             ->valueOrThrow()
+								                             .getType()
+								                             .as<tsh::FunctionAbstractType>();
+								const auto return_type = method_type.getResultType();
+
+								std::vector<code::Parameter> parameters;
+								parameters.emplace_back(
+									base::StrID("self"),
+									self_type,
+									std::nullopt,
+									self_param,
+									code::generatedOrigin()
+								);
+
+								return HOUTFunctionDeclaration{
+									key, return_type, std::move(parameters), code::generatedOrigin()
+								};
 							}
 							variant_case_novalue(defgen::GeneratedSymbolData::BuiltinOperator) {
 								return getBuiltinDecl(ctx, key);

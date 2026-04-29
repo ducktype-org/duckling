@@ -33,13 +33,31 @@ namespace compiler::tsh {
 			return ctx.query<QueryGeneratedSymbol>({ name, GeneratedSymbolData(data) });
 		};
 
-		return TypeInterface({ InterfaceElement(
+		std::vector<InterfaceElement> elements;
+
+		// Every type has a `toString` method.
+		elements.emplace_back(
 			get_generated_symbol(base::StrID("toString"), GeneratedSymbolData::ToStringMethod(type)),
 			type,
 			0,
 			InterfaceElement::InterfaceElementKind::Method,
 			ClassMemberVisibility::Public
-		) });
+		);
+
+		// Only classes have destructors (for now)
+		if (type.getKind() == Kind::Class) {
+			elements.emplace_back(
+				get_generated_symbol(
+					base::StrID("__destruct"), GeneratedSymbolData::DefaultDestructor(type)
+				),
+				type,
+				0,
+				InterfaceElement::InterfaceElementKind::Method,
+				ClassMemberVisibility::Public
+			);
+		}
+
+		return TypeInterface(elements);
 	}
 
 	/**

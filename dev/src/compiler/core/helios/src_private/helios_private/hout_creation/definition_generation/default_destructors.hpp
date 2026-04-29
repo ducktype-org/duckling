@@ -8,8 +8,8 @@
 
 namespace compiler::helios::defgen {
 	/**
-	 * @brief Get the compiler-generated HOUT representation of the toString method for a type.
+	 * @brief Get the compiler-generated HOUT representation of a type's destructor.
 	 * \query_thread_safe_if_cache
 	 */
-	DECLARE_QUERY(QueryToStringMethod, tsh::AbstractType, CRef<query::QResult<HOUTFunction>>, ({}));
+	DECLARE_QUERY(QueryDefaultDestructor, tsh::AbstractType, CRef<query::QResult<HOUTFunction>>, ({}));
 }

@@ -66,6 +66,13 @@ namespace compiler::helios::defgen {
 			base::Bit256 queryUnstablePerfectHash() const;
 		};
 
+		struct DefaultDestructor final {
+			tsh::AbstractType owner_type;
+
+			[[nodiscard]]
+			base::Bit256 queryUnstablePerfectHash() const;
+		};
+
 		struct BuiltinOperator final {
 			// The type of the builtin operator this symbol represents.
 			tsh::FunctionAbstractType operator_type;
@@ -92,6 +99,17 @@ namespace compiler::helios::defgen {
 		struct SelfParameter final {
 			SymID   method_symbol;
 			ScopeID scope;
+
+			[[nodiscard]]
+			base::Bit256 queryUnstablePerfectHash() const;
+		};
+
+		/**
+		 * Represents a compiler-generated `self` parameter of a class method, when scope is not
+		 * applicable.
+		 */
+		struct SelfParameterNoScope final {
+			SymID method_symbol;
 
 			[[nodiscard]]
 			base::Bit256 queryUnstablePerfectHash() const;
@@ -173,9 +191,11 @@ namespace compiler::helios::defgen {
 			DefaultClassConstructor,
 			DefaultStaticArrayConstructor,
 			ToStringMethod,
+			DefaultDestructor,
 			BuiltinOperator,
 			Parameter,
 			SelfParameter,
+			SelfParameterNoScope,
 			Variable,
 			ReplExpressionWrapper,
 			ReplInstructionWrapper,

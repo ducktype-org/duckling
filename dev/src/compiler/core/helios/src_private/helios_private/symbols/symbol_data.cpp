@@ -28,6 +28,10 @@ namespace compiler::helios {
 			return owner_type.queryUnstablePerfectHash();
 		}
 
+		base::Bit256 GeneratedSymbolData::DefaultDestructor::queryUnstablePerfectHash() const {
+			return owner_type.queryUnstablePerfectHash();
+		}
+
 		base::Bit256 GeneratedSymbolData::BuiltinOperator::queryUnstablePerfectHash() const {
 			return { operator_type.queryUnstablePerfectHash() };
 		}
@@ -38,6 +42,10 @@ namespace compiler::helios {
 
 		base::Bit256 GeneratedSymbolData::SelfParameter::queryUnstablePerfectHash() const {
 			return { method_symbol.queryUnstablePerfectHash(), scope.queryUnstablePerfectHash() };
+		}
+
+		base::Bit256 GeneratedSymbolData::SelfParameterNoScope::queryUnstablePerfectHash() const {
+			return { method_symbol.queryUnstablePerfectHash() };
 		}
 
 		base::Bit256 GeneratedSymbolData::Variable::queryUnstablePerfectHash() const {
@@ -151,10 +159,32 @@ namespace compiler::helios {
 					};
 
 					const auto to_string_abstract_type
-						= ctx.query<tsh::QueryFunctionType>({ {self_type}, return_type });
+						= ctx.query<tsh::QueryFunctionType>({ { self_type }, return_type });
 
 					return tsh::SymbolType<>{
 						to_string_abstract_type,
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Immutable,
+					};
+				}
+				variant_case(DefaultDestructor, dtor) {
+					const tsh::SymbolType<> self_type{
+						dtor.owner_type,
+						tsh::ReferenceKind::Ref,
+						tsh::Mutability::Mutable,
+					};
+
+					const tsh::SymbolType<> return_type{
+						tsh::getUnitType(),
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Immutable,
+					};
+
+					const auto dtor_abstract_type
+						= ctx.query<tsh::QueryFunctionType>({ { self_type }, return_type });
+
+					return tsh::SymbolType<>{
+						dtor_abstract_type,
 						tsh::ReferenceKind::Direct,
 						tsh::Mutability::Immutable,
 					};
@@ -185,6 +215,17 @@ namespace compiler::helios {
 						tsh::Mutability::Mutable,
 					};
 					return param_symbol_type;
+				}
+				variant_case(SelfParameterNoScope, param) {
+					// Don't use QueryClassOfMember (if it even still exists) because methods may be
+					// generated for non-class types, and QueryClassOfMember is a temporary solution anyway.
+					// Reconsidevisit
+					const auto method_type = ctx.query<QueryTypeOfSymbol>({ param.method_symbol })
+					                             ->valueOrThrow()
+					                             .getType()
+					                             .as<tsh::FunctionAbstractType>();
+					const auto& self_type = method_type.getParameterTypes().front();
+					return self_type;
 				}
 				variant_case(Variable, var) { return var.type; }
 				variant_case(ReplExpressionWrapper, repl) {
@@ -250,6 +291,9 @@ namespace compiler::helios {
 					CORE_PANIC("Can't get scope of generated parameter yet.");
 				}
 				variant_case(SelfParameter, param) { return param.scope; }
+				variant_case(SelfParameterNoScope, param) {
+					CORE_PANIC("Can't get scope of generated self parameter without scope.");
+				}
 				variant_case(Variable, var) {
 					CORE_PANIC("Can't get scope of generated variable yet.");
 				}
@@ -273,6 +317,7 @@ namespace compiler::helios {
 				variant_case(BuiltinOperator, op) { return {}; }
 				variant_case(Parameter, param) { return {}; }
 				variant_case(SelfParameter, param) { return param.scope; }
+				variant_case(SelfParameterNoScope, param) { return {}; }
 				variant_case(Variable, var) { return {}; }
 				variant_case(ReplExpressionWrapper, repl) { return {}; }
 				variant_case(ReplInstructionWrapper, repl) { return {}; }
@@ -323,6 +368,9 @@ namespace compiler::helios {
 			variant_case_novalue(defgen::GeneratedSymbolData::ToStringMethod) {
 				kind = SymbolKind::Method;
 			}
+			variant_case_novalue(defgen::GeneratedSymbolData::DefaultDestructor) {
+				kind = SymbolKind::Method;
+			}
 			variant_case_novalue(defgen::GeneratedSymbolData::BuiltinOperator) {
 				kind = SymbolKind::Function;
 			}
@@ -330,6 +378,9 @@ namespace compiler::helios {
 				kind = SymbolKind::Parameter;
 			}
 			variant_case_novalue(defgen::GeneratedSymbolData::SelfParameter) {
+				kind = SymbolKind::Parameter;
+			}
+			variant_case_novalue(defgen::GeneratedSymbolData::SelfParameterNoScope) {
 				kind = SymbolKind::Parameter;
 			}
 			variant_case_novalue(defgen::GeneratedSymbolData::Variable) {
