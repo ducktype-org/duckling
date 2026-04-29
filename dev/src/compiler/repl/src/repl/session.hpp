@@ -234,6 +234,11 @@ namespace compiler::repl {
 		 */
 		void saveSessionHistoryToFile() const;
 
+		/**
+		 * @brief Print session history (executed statements).
+		 */
+		void printSessionHistory() const;
+
 		bool                       m_should_exit;   ///< Flag to terminate the REPL loop
 		bool                       m_should_reset;  ///< Flag to reset the REPL process
 		std::vector<ReplStatement> m_session_history;       ///< All statements entered in this session

@@ -289,6 +289,28 @@ namespace compiler::repl {
 		}
 	}
 
+	void ReplSession::printSessionHistory() const {
+		if (m_session_history.empty()) {
+			std::cout << "No history yet.\n";
+			return;
+		}
+
+		std::cout << "\n=== REPL Session History (" << m_session_history.size()
+				  << (m_session_history.size() == 1 ? " entry" : " entries") << ") ===\n";
+		for (size_t i = 0; i < m_session_history.size(); ++i) {
+			std::istringstream lines(m_session_history[i].source_code);
+			std::string        line;
+			bool               first_line = true;
+			std::cout << "[" << (i + 1) << "] ";
+			while (std::getline(lines, line)) {
+				if (!first_line) std::cout << ReplConfig::HISTORY_MULTILINE_CONTINUATION;
+				std::cout << line << "\n";
+				first_line = false;
+			}
+		}
+		std::cout << "\n";
+	}
+
 	ReplSession::ReplSession(bool completions_enabled):
 		  m_should_exit(false),
 		  m_should_reset(false),
@@ -423,7 +445,7 @@ namespace compiler::repl {
 		}
 
 		if (line == "/history" || line == "/hist") {
-			m_frontend.printHistory();
+			printSessionHistory();
 			return true;
 		}
 
