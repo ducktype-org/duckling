@@ -1,0 +1,7 @@
+var y: i32 = 2;
+
+if (true) {
+    y = 10;
+}
+
+builtin_output_i64(y + 4);

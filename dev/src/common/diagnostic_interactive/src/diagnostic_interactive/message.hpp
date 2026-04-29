@@ -436,4 +436,8 @@ namespace dia_int {
 
 		MessageWithCodeFragmentAndCause(dia_int::StablePosition source_position);
 	};
+
+	template<typename T>
+	concept SourcePositionType
+		= std::same_as<T, dia::SourcePosition> || std::same_as<T, dia_int::StablePosition>;
 }

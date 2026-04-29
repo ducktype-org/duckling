@@ -43,7 +43,7 @@ namespace compiler::helios {
 						}
 
 						return defgen::getDefaultInitializerExpr(
-								   ctx, symbol_type, pst_decl->getSourcePosition()
+								   ctx, symbol_type, pst_decl->getStablePosition()
 						)
 						    .valueOrThrow();
 					};
