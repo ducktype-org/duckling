@@ -153,8 +153,12 @@ namespace compiler::repl {
 
 			~ScopedStreamSilence() {
 				if (!m_enabled) return;
+				std::cout.flush();
+    			std::cerr.flush();
+
 				std::cout.rdbuf(m_cout_buf);
 				std::cerr.rdbuf(m_cerr_buf);
+				
 				std::cout.clear();
         		std::cerr.clear();
 				
@@ -166,7 +170,6 @@ namespace compiler::repl {
 					clearerr(stdout);
 					setvbuf(stdout, nullptr, _IOLBF, BUFSIZ);
 				}
-        		std::cout << std::flush;
 			}
 
 			ScopedStreamSilence(const ScopedStreamSilence&)            = delete;
