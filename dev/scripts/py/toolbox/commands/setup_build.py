@@ -53,7 +53,12 @@ def configure_presets(ctx, param, value):
     # Note: Presets should correctly override default values provided by our custom option classes (set in cls parameters),
     # but it's best to test it per-case, since Python allows to do quite about anything, and there might be some edge cases.
     "--preset",
-    help         = "Use a predefined set of default option values for a specific build configuration.",
+    help         = (
+        "Use a predefined set of default option values for a specific build configuration.\n"
+        "Available presets:\n\n"
+        "  ReleasePreset -- preset used for release builds\n\n"
+        "  MaxPerformancePreset -- preset used for maximum performance builds\n\n"
+    ),
     type         = Choice(["ReleasePreset", "MaxPerformancePreset"], case_sensitive=False),
     callback     = configure_presets,
     is_eager     = True,
