@@ -1,5 +1,8 @@
 #include "symbols.hpp"
 
+#include "diagnostic_interactive/placeholder.hpp"
+#include "frontend/pst_parser/element_kind.hpp"
+
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/all_class_elements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
@@ -26,6 +29,7 @@
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
+#include "query_framework/query_errors.hpp"
 #include <query_framework/standard_query/query_impl.hpp>
 #include <string_id/string_id.hpp>
 
@@ -103,7 +107,10 @@ namespace compiler::helios {
 				case pst::ElementKind::CodeBlockOrStmt:
 				case pst::ElementKind::Variable:
 				case pst::ElementKind::Expand:
-				case pst::ElementKind::StmtSpecifier: {
+				case pst::ElementKind::StmtSpecifier:
+				case pst::ElementKind::SpecifierBlock:
+				case pst::ElementKind::ExprElement:
+				case pst::ElementKind::ExprHolder: {
 					auto pst_parent = getPSTElementParent(ctx, el);
 
 					CORE_ASSERT(
@@ -113,9 +120,13 @@ namespace compiler::helios {
 					return self(pst_parent.getAsLangElement().unlock(ctx));
 				}
 				default:
-					CORE_PANIC(base::strConcat(
-						"Unexpected element kind for variable symbol: ", el->elementType()
-					));
+					ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(base::strConcat(
+						"Global variable detection is not implemented for variables inside "
+				        "elements of kind: ",
+						el->elementType()
+					), el->getStablePosition()));
+					query::throwFailed();
+					CORE_UNREACHABLE();
 				}
 			},
 			getSymRef(id)->getPSTData()->getElement().unlock(ctx)
