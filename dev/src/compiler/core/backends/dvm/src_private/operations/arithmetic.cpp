@@ -15,40 +15,35 @@ namespace compiler::backend_vm::internal {
 		// a = b;
 		// a = OP a;
 
-		if (op.dest && op.dest->isDirect() && op.dest->is<DVMLocal>()) {
+		if (op.dest && op.dest->isDirect()) {
 			// If output is a direct place we just use it.
 			ctx->maybeStoreResult(op.dest, op.src);
 			ctx->pushInstruction({ op.op, *op.dest });
 		} else {
 			// Otherwise it's a global or indirect. We perform the operations on the
 			// temporary and then store it in the indirect place.
-			auto tmp = ctx->forceToLocal(op.src);
+			auto tmp = ctx->forceToPlace(op.src);
 			ctx->pushInstruction({ op.op, tmp });
-			ctx->maybeStoreResult(op.dest, { tmp, DVMPlace::AccessKind::Direct });
+			ctx->maybeStoreResult(op.dest, { tmp });
 		}
 	}
 
 	void InstructionLowerer::lower(const BinaryOperation& op) {
 		// In this case we assume we have a very general quadruple of the form:
 		// output = arg1 OP arg2;
-
-		// Force globals into locals. Immediates are allowed.
-		DVMValue rhs = op.rhs.is<DVMGlobal>() ? DVMValue{ ctx->forceToLocal(op.rhs, "bin_rhs_tmp"),
-			                                              DVMPlace::AccessKind::Direct }
-		                                      : op.rhs;
-
-		if (op.dest && op.dest->isDirect() && op.dest->is<DVMLocal>()) {
+		if (op.dest && op.dest->isDirect()) {
 			// If instruction is of the form: a = b OP c, then
 			// we transform it to:
 			// a = b;
 			// a = a OP c;
 			ctx->maybeStoreResult(op.dest, op.lhs);
-			ctx->pushInstruction({ op.op, *op.dest, rhs });
+			ctx->pushInstruction({ op.op, *op.dest, op.rhs });
 		} else {
-			// Force globals into locals if needed.
-			auto tmp = ctx->forceToLocal(op.lhs, "bin_tmp");
-			ctx->pushInstruction({ op.op, tmp, rhs });
-			ctx->maybeStoreResult(op.dest, { tmp, DVMPlace::AccessKind::Direct });
+			// If the output is accessed through a pointer, or doesn't exist, we perform operations
+			// on the temporary.
+			auto tmp = ctx->forceToPlace(op.lhs, "bin_tmp");
+			ctx->pushInstruction({ op.op, tmp, op.rhs });
+			ctx->maybeStoreResult(op.dest, { tmp });
 		}
 	}
 }
