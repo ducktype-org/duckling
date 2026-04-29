@@ -462,6 +462,11 @@ namespace compiler::repl {
 			return true;
 		}
 
+		if (line == "/commands" || line == "/cmds") {
+			m_frontend.printHistory();
+			return true;
+		}
+
 		if (line == "/clear" || line == "/c") {
 			m_frontend.clearScreen();
 			return true;
