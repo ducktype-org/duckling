@@ -114,14 +114,6 @@ namespace compiler::repl {
 			return m_should_exit;
 		}
 
-		/**
-		 * @brief Clear the REPL session history.
-		 *
-		 * Removes all previously entered statements from the session history
-		 * and resets the line counter.
-		 */
-		void clearHistory();
-
 
 		/**
 		 * @brief Determine if a line of input is a REPL command.
@@ -225,9 +217,14 @@ namespace compiler::repl {
 			std::string&                                out_error
 		);
 
+		/**
+		 * @brief Save session history to a human-readable file.
+		 */
+		void saveSessionHistoryToFile() const;
+
 		bool                       m_should_exit;   ///< Flag to terminate the REPL loop
 		bool                       m_should_reset;  ///< Flag to reset the REPL process
-		std::vector<ReplStatement> m_history;       ///< All statements entered in this session
+		std::vector<ReplStatement> m_session_history;       ///< All statements entered in this session
 		u64          m_line_counter;  ///< Counter for generating unique wrapper function names
 		vm::PID      m_dvm_pid;       ///< Process ID of the running DVM instance
 		ReplFrontend m_frontend;      ///< Frontend for user interaction

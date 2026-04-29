@@ -27,14 +27,21 @@
 
 #include <vm/api/vm.hpp>
 
+#include <cstdlib>
 #include <cstring>
+#include <fstream>
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <sstream>
 #include <string_view>
 
 namespace compiler::repl {
-	namespace {}
+	namespace {
+		std::string getSessionHistoryFilePath() {
+			return ".duckling_repl_session_history";
+		}
+	}
 
 	ReplResult ReplSession::failWithMessage(std::string_view message) {
 		return ReplResult::error(std::string(message));
@@ -66,6 +73,29 @@ namespace compiler::repl {
 		);
 
 		CORE_DEV_LOG(REPL, "DVM initialized with PID ", m_dvm_pid, "\n");
+	}
+
+	void ReplSession::saveSessionHistoryToFile() const {
+		const auto history_path = getSessionHistoryFilePath();
+		std::ofstream out(history_path, std::ios::trunc);
+		if (!out) {
+			std::cerr << "Warning: failed to save REPL session history to " << history_path
+					  << "\n";
+			return;
+		}
+
+		out << "Duckling REPL session history\n";
+		out << "Entries: " << m_session_history.size() << "\n\n";
+
+		for (size_t i = 0; i < m_session_history.size(); ++i) {
+			out << "[" << (i + 1) << "]\n";
+			std::istringstream lines(m_session_history[i].source_code);
+			std::string line;
+			while (std::getline(lines, line)) {
+				out << line << "\n";
+			}
+			out << "\n";
+		}
 	}
 
 	ReplSession::ReplSession(bool completions_enabled):
@@ -103,8 +133,8 @@ namespace compiler::repl {
 	}
 
 	frontend::ModuleID ReplSession::getCurrentModuleID() const {
-		CORE_ASSERT(!m_history.empty(), "No current REPL module available");
-		return m_history.back().module_id;
+		CORE_ASSERT(!m_session_history.empty(), "No current REPL module available");
+		return m_session_history.back().module_id;
 	}
 
 	ReplResult ReplSession::executeSingleStatement(frontend::ModuleID module_id) {
@@ -151,6 +181,7 @@ namespace compiler::repl {
 		}
 
 		if (line == "/reset") {
+			saveSessionHistoryToFile();
 			m_should_reset = true;
 			return true;
 		}
@@ -183,12 +214,6 @@ namespace compiler::repl {
 		std::cerr << "Unknown command: " << line << "\n";
 		std::cerr << "Type /help to see available commands.\n";
 		return false;
-	}
-
-	void ReplSession::clearHistory() {
-		m_frontend.clearHistory();
-		m_history.clear();
-		m_line_counter = 0;
 	}
 
 	ReplResult ReplSession::processLine(std::string_view line) {
@@ -428,21 +453,21 @@ namespace compiler::repl {
 
 				CORE_DEV_LOG(REPL, "Executing ", statement_sources.size(), " statement(s)\n");
 
-				ReplResult last_result = ReplResult::success();
-				for (const auto& stmt_source: statement_sources) {
-					CORE_DEV_LOG(REPL, "Executing statement: \"", stmt_source, "\"\n");
-					base::Optional<frontend::ModuleID> parent_module_id;
-					if (!m_history.empty()) {
-						parent_module_id = m_history.back().module_id;
-						CORE_DEV_LOG(
-							REPL,
-							"Setting REPL parent to module #",
-							m_history.back().module_id.queryUnstablePerfectHash(),
-							"\n"
-						);
-					} else {
-						CORE_DEV_LOG(REPL, "First REPL module, no parent\n");
-					}
+					ReplResult last_result = ReplResult::success();
+					for (const auto& stmt_source: statement_sources) {
+						CORE_DEV_LOG(REPL, "Executing statement: \"", stmt_source, "\"\n");
+						base::Optional<frontend::ModuleID> parent_module_id;
+						if (!m_session_history.empty()) {
+							parent_module_id = m_session_history.back().module_id;
+							CORE_DEV_LOG(
+								REPL,
+								"Setting REPL parent to module #",
+								m_session_history.back().module_id.queryUnstablePerfectHash(),
+								"\n"
+							);
+						} else {
+							CORE_DEV_LOG(REPL, "First REPL module, no parent\n");
+						}
 
 					auto module_ref = createEphemeralChainedStatementModule(
 						stmt_source, parent_module_id, m_line_counter, "repl_"
@@ -460,11 +485,11 @@ namespace compiler::repl {
 						module_ref->getReplModuleParent().has_value(),
 						"\n"
 					);
-					m_history.emplace_back(stmt_source, module_id);
+					m_session_history.emplace_back(stmt_source, module_id);
 					++m_line_counter;
 					last_result = executeSingleStatement(module_id);
 					if (last_result.status == ReplResult::Status::Error) {
-						m_history.pop_back();
+						m_session_history.pop_back();
 						return last_result;
 					}
 				}
