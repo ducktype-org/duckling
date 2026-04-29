@@ -42,7 +42,8 @@
 
 namespace compiler::repl {
 	namespace {
-		constexpr std::string_view kResetCommand = "/reset";
+		constexpr std::string_view k_reset_command = "/reset";
+		constexpr std::string_view k_reset_error_msg = "Usage: /reset [-n <count>] or /reset [-rel <count>]";
 
 		std::string getSessionHistoryFilePath() {
 			return ".duckling_repl_session_history";
@@ -82,16 +83,16 @@ namespace compiler::repl {
 			replay_count     = 0;
 			has_replay_count = false;
 			is_relative      = false;
-			if (!line.starts_with(kResetCommand)) return false;
+			if (!line.starts_with(k_reset_command)) return false;
 
 			std::string_view rest = line;
-			rest.remove_prefix(kResetCommand.size());
+			rest.remove_prefix(k_reset_command.size());
 			rest = trim(rest);
 			if (rest.empty()) return true;
 
 			const auto flag = takeToken(rest);
 			if (flag != "-n" && flag != "-rel") {
-				error_message = "Usage: /reset [-n <count>] or /reset [-rel <count>]";
+				error_message = std::string(k_reset_error_msg);
 				return false;
 			}
 
@@ -99,19 +100,19 @@ namespace compiler::repl {
 
 			const auto value = takeToken(rest);
 			if (value.empty()) {
-				error_message = "Usage: /reset [-n <count>] or /reset [-rel <count>]";
+				error_message = std::string(k_reset_error_msg);
 				return false;
 			}
 
 			rest = trim(rest);
 			if (!rest.empty()) {
-				error_message = "Usage: /reset [-n <count>] or /reset [-rel <count>]";
+				error_message = std::string(k_reset_error_msg);
 				return false;
 			}
 
 			for (char ch : value) {
 				if (ch < '0' || ch > '9') {
-					error_message = "Usage: /reset [-n <count>] or /reset [-rel <count>]";
+					error_message = std::string(k_reset_error_msg);
 					return false;
 				}
 			}
@@ -424,7 +425,7 @@ namespace compiler::repl {
 			return true;
 		}
 
-		if (line.starts_with(kResetCommand)) {
+		if (line.starts_with(k_reset_command)) {
 			size_t      replay_count = 0;
 			bool        has_replay_count = false;
 			bool        is_relative = false;
