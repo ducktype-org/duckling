@@ -428,13 +428,14 @@ namespace pst {
 		/**
 		 * @brief Calculates the signature of the whole PST sub-tree. Assumes the hashes are already
 		 * calculated.
+		 * @param partial_hash partial hash to add the signature to
 		 */
 		void calcSignature(HashAlg& partial_hash) const;
 
 		/**
 		 * @brief Signs the hashes of the whole PST sub-tree with given signature.
 		 */
-		void signGenerated(HashType& signature);
+		void signGenerated(const HashType& signature);
 
 		/**
 		 * @brief Used to add additional data that is generic to multiple elements for example in

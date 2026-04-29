@@ -82,6 +82,12 @@ from click import Choice, option, command, prompt
     cls=default_linker_from_ctx(),
 )
 @option(
+    "--allocator",
+    help="Specify the allocator type to use. Currently supports None (default) and mimalloc.",
+    type=Choice(["default", "mimalloc"], case_sensitive=False),
+    default="default",
+)
+@option(
     "--shared_libs",
     help="Whether to use shared or static libraries.",
     type=bool,

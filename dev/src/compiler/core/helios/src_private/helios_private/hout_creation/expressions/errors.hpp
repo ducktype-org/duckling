@@ -21,10 +21,10 @@ namespace compiler::helios::code {
 
 	public:
 		UndefinedBinaryOperatorError(
-			dia::SourcePosition  source_position,
-			std::string          op,
-			Box<InteractiveType> lhs_type,
-			Box<InteractiveType> rhs_type
+			dia_int::StablePosition source_position,
+			std::string             op,
+			Box<InteractiveType>    lhs_type,
+			Box<InteractiveType>    rhs_type
 		):
 			  MessageWithCodeFragmentAndCause(source_position) {
 			addArgument<dia_int::TextArgument>("operator", std::move(op));
@@ -43,7 +43,7 @@ namespace compiler::helios::code {
 
 	public:
 		UndefinedUnaryOperatorError(
-			dia::SourcePosition source_position, std::string op, Box<InteractiveType> type
+			dia_int::StablePosition source_position, std::string op, Box<InteractiveType> type
 		):
 			  MessageWithCodeFragmentAndCause(source_position) {
 			addArgument<dia_int::TextArgument>("operator", std::move(op));
@@ -60,7 +60,7 @@ namespace compiler::helios::code {
 		}
 
 	public:
-		InvalidNumericLiteralError(dia::SourcePosition source_position):
+		InvalidNumericLiteralError(dia_int::StablePosition source_position):
 			  MessageWithCodeFragmentAndCause(source_position) {}
 	};
 
@@ -73,7 +73,7 @@ namespace compiler::helios::code {
 		}
 
 	public:
-		NumericLiteralTooLargeError(dia::SourcePosition source_position):
+		NumericLiteralTooLargeError(dia_int::StablePosition source_position):
 			  MessageWithCodeFragmentAndCause(source_position) {}
 	};
 
@@ -86,7 +86,7 @@ namespace compiler::helios::code {
 		}
 
 	public:
-		LiteralDoesNotFitError(dia::SourcePosition source_position, std::string type_desc):
+		LiteralDoesNotFitError(dia_int::StablePosition source_position, std::string type_desc):
 			  MessageWithCodeFragmentAndCause(source_position) {
 			addArgument<dia_int::TextArgument>("type_desc", std::move(type_desc));
 		}
