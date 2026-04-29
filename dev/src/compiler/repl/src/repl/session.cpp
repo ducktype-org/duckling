@@ -334,7 +334,6 @@ namespace compiler::repl {
 
 		const size_t replay_count = std::min(count, entries.size());
 		for (size_t i = 0; i < replay_count; ++i) {
-			m_frontend.addHistoryEntry(entries[i]);
 			auto result = executeInput(entries[i]);
 			if (result.status == ReplResult::Status::Error) {
 				if (!silent) {
