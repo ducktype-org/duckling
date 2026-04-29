@@ -43,6 +43,8 @@ def parse_args() -> argparse.Namespace:
 
 
 # Runs a single shell command and returns (stdout, stderr, exit_code).
+# shell=True is intentional: commands may use glob patterns (e.g. build/query*/*.dbc)
+# and shell features that require a shell interpreter to evaluate.
 def run_command(shell_cmd: str) -> tuple[str, str, int]:
     result = subprocess.run(shell_cmd, shell=True, capture_output=True, text=True)
     return result.stdout, result.stderr, result.returncode
