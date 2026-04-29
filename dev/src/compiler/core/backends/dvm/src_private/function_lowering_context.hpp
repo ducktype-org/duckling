@@ -32,7 +32,7 @@ namespace compiler::backend_vm::internal {
 		const vm::code::TypeOfData&  lowered_global_type,
 		const ctv::CompileTimeValue& global_ctv_value,
 		base::StrID                  mini_ctor_name,
-		const DVMGlobal&             dvm_global
+		const DVMPlace&              dvm_global
 	);
 
 	class FunctionLoweringContext {
@@ -84,7 +84,7 @@ namespace compiler::backend_vm::internal {
 		 */
 		void registerFunctionParameter(lir::LIRLocalRef lir_func_param);
 
-		DVMLocal getFunctionReturnValueLocal();
+		DVMPlace getFunctionReturnValueLocal();
 
 		vm::code::Function finish() &&;
 
@@ -93,14 +93,19 @@ namespace compiler::backend_vm::internal {
 		/**
 		 * @brief Creates a mapping between a LIR local and DVM local.
 		 */
-		const DVMLocal& createLirLocalToDVMMapping(lir::LIRLocalRef local);
+		const DVMPlace& createLirLocalToDVMMapping(lir::LIRLocalRef local);
 
 		base::StrID getBlockLabel(lir::BlockRef block);
 
-		const DVMLocal&               insertLirLocal(lir::LIRLocalRef local);
-		[[nodiscard]] const DVMLocal& getLirLocal(lir::LIRLocalRef local) const;
+		const DVMPlace&               insertLirLocal(lir::LIRLocalRef local);
+		[[nodiscard]] const DVMPlace& getLirLocal(lir::LIRLocalRef local) const;
 
-		DVMLocal forceToLocal(const DVMValue& value, base::Optional<std::string_view> name_hint = {});
+		/**
+		 * @brief Makes sure a given @p value is a place and places it in a temporary if needed
+		 * (e.g. the value is an Immediate). If the given value is already a place, it does nothing
+		 * and just returns the inner place.
+		 */
+		DVMPlace forceToPlace(const DVMValue& value, base::Optional<std::string_view> name_hint = {});
 
 		/**
 		 * @brief Stores a given @p src_value in @p maybe_dest_place, if the destination was given.
@@ -131,7 +136,7 @@ namespace compiler::backend_vm::internal {
 		 * deinitialized, e.g. when pushing temporaries to pass as arguments to a call opcode.
 		 * These temporaries have to be deinitialized manually.
 		 */
-		DVMLocal pushTempLocal(
+		DVMPlace pushTempLocal(
 			const vm::code::TypeOfData&      type,
 			base::Optional<std::string_view> name_hint = {},
 			bool                             tracked   = true
@@ -141,7 +146,7 @@ namespace compiler::backend_vm::internal {
 
 		ProgramLoweringContext& program_context;
 
-		base::Map<lir::LIRLocalRef, DVMLocal> lir_local_to_dvm;
+		base::Map<lir::LIRLocalRef, DVMPlace> lir_local_to_dvm;
 		base::Map<lir::BlockRef, base::StrID> block_to_label;
 
 		vm::code::TypeOfData               function_return_type;

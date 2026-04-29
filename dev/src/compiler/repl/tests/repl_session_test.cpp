@@ -37,6 +37,10 @@ namespace compiler::repl {
 			TESTER_ADD_TEST(testReplInstructionExecution);
 			TESTER_ADD_TEST(testReplCommandDetection);
 			TESTER_ADD_TEST(testReplHistoryTracking);
+			TESTER_ADD_TEST(testLoadScriptFileMissingPath);
+			TESTER_ADD_TEST(testLoadScriptFileInvalidContents);
+			TESTER_ADD_TEST(testLoadScriptFileExecutesStatements);
+			TESTER_ADD_TEST(testLoadCommandExecutesScript);
 			TESTER_ADD_TEST(testReplArithmeticExpressions);
 			TESTER_ADD_TEST(testReplVariableLookup);
 			TESTER_ADD_TEST(testReplUnsupportedActionClassification);
@@ -260,6 +264,101 @@ namespace compiler::repl {
 				session.m_lowering_context.has_value(),
 				"Lowering context should be initialized for REPL execution"
 			);
+		}
+
+		void testLoadScriptFileMissingPath() {
+			ReplSession session;
+
+			auto result = session.loadScriptFile("   \t");
+
+			assertTrue(
+				result.status == ReplResult::Status::Error,
+				"Loading script with empty path should fail"
+			);
+			assertTrue(
+				result.message.find("Missing script path") != std::string::npos,
+				"Error should explain that script path is missing"
+			);
+			assertFalse(
+				session.m_suppress_repl_feedback_during_script_load,
+				"Output suppression should be restored"
+			);
+		}
+
+		void testLoadScriptFileInvalidContents() {
+			ReplSession session;
+			auto        script_file = fs::FileManager::createRandomTempFile("var x = ;");
+
+			auto result = session.loadScriptFile(script_file.getFilePath().string());
+
+			fs::FileManager::deleteFile(script_file);
+
+			assertTrue(
+				result.status == ReplResult::Status::Error, "Loading invalid script should fail"
+			);
+			assertTrue(
+				!result.message.empty(), "Invalid script should produce a useful error message"
+			);
+			assertFalse(
+				session.m_suppress_repl_feedback_during_script_load,
+				"Output suppression should be restored"
+			);
+		}
+
+		void testLoadScriptFileExecutesStatements() {
+			ReplSession session;
+
+			auto script_file = fs::FileManager::createRandomTempFile(
+				"var loaded_x: i32 = 1;\nloaded_x = 10;\nbuiltin_output_i64(loaded_x + 3);"
+			);
+			auto script_path = std::string("   ") + script_file.getFilePath().string();
+
+			auto initial_history_size = session.m_history.size();
+
+			auto result = session.loadScriptFile(script_path);
+
+			assertTrue(
+				result.status == ReplResult::Status::Success, "Loading a valid script should succeed"
+			);
+
+			auto updated_history_size = session.m_history.size();
+			ASSERT_EQUAL(3UL, updated_history_size - initial_history_size);
+			assertFalse(
+				session.m_suppress_repl_feedback_during_script_load,
+				"Output suppression should be restored"
+			);
+
+			auto follow_up_result = session.processLine("1 + 1;");
+			assertTrue(
+				follow_up_result.status == ReplResult::Status::Success,
+				"Session should remain usable after script loading"
+			);
+
+			fs::FileManager::deleteFile(script_file);
+		}
+
+		void testLoadCommandExecutesScript() {
+			ReplSession session;
+
+			auto script_file = fs::FileManager::createRandomTempFile(
+				"var cmd_x: i32 = 7;\ncmd_x = cmd_x + 2;\nbuiltin_output_i64(cmd_x);"
+			);
+			auto command = std::string("/load ") + script_file.getFilePath().string();
+
+			auto result = session.processLine(command);
+
+			assertTrue(
+				result.status == ReplResult::Status::Success,
+				"/load command should be handled successfully"
+			);
+
+			auto follow_up_result = session.processLine("2 + 3;");
+			assertTrue(
+				follow_up_result.status == ReplResult::Status::Success,
+				"REPL should continue processing input after /load"
+			);
+
+			fs::FileManager::deleteFile(script_file);
 		}
 
 		/**
