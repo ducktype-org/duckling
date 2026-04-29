@@ -273,7 +273,7 @@ vm::code::TypeOfData ProgramLoweringContext::lowerTslTypeInternal(CRef<tsl::Type
 					"yet: ",
 					layout->toStringDefinition(*query_ctx_for_errors.value())
 				),
-				base::Optional<dia::SourcePosition>()
+				""
 			));
 			query::throwFailed();
 		}

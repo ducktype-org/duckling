@@ -46,7 +46,7 @@ namespace compiler::tsh {
 		};
 
 		if (!cache.contains({ size, signedness })) {
-			ctx.logInt(makeBox<dia_int::PlaceholderHeaderError>(
+			ctx.logInt(makeBox<dia_int::PlaceholderError>(
 				base::strConcat("Invalid size of integral type: ", size, "."),
 				"The only allowed sizes are 8, 16, 32, 64 and 128."
 			));
@@ -69,7 +69,7 @@ namespace compiler::tsh {
 		};
 
 		if (!cache.contains(size)) {
-			ctx.logInt(makeBox<dia_int::PlaceholderHeaderError>(
+			ctx.logInt(makeBox<dia_int::PlaceholderError>(
 				base::strConcat("Invalid size of float type: ", size, "."),
 				"The only allowed sizes are 16, 32, 64, 80, and 128."
 			));

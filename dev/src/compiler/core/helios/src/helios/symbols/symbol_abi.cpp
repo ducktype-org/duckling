@@ -47,9 +47,9 @@ namespace compiler::helios {
 
 		match_optional(str_lit_opt) {
 			opt_none {
-				ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+				ctx.logInt(makeBox<dia_int::PlaceholderError>(
 					"Expected string literal in extern() call argument",
-					arg.unlock(ctx)->getSourcePosition().unlock(ctx)
+					arg.unlock(ctx)->getStablePosition()
 				));
 				return query::Failed();
 			}
@@ -65,9 +65,9 @@ namespace compiler::helios {
 			                                                    extern_args.unlock(ctx)->end() };
 
 		if (args.empty()) {
-			ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+			ctx.logInt(makeBox<dia_int::PlaceholderError>(
 				"extern() requires at least one argument specifying the ABI",
-				extern_args.unlock(ctx)->getSourcePosition().unlock(ctx)
+				extern_args.unlock(ctx)->getStablePosition()
 			));
 			return query::Failed();
 		}
@@ -81,16 +81,15 @@ namespace compiler::helios {
 			} else if (args.size() == 1) {  // `extern("C")` case
 				return CAbi{};
 			} else {
-				ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+				ctx.logInt(makeBox<dia_int::PlaceholderError>(
 					"Too many arguments for C ABI in extern()",
-					extern_args.unlock(ctx)->getSourcePosition().unlock(ctx)
+					extern_args.unlock(ctx)->getStablePosition()
 				));
 				return query::Failed();
 			}
 		} else {
-			ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
-				"Unsupported ABI specified in extern()",
-				extern_args.unlock(ctx)->getSourcePosition().unlock(ctx)
+			ctx.logInt(makeBox<dia_int::PlaceholderError>(
+				"Unsupported ABI specified in extern()", extern_args.unlock(ctx)->getStablePosition()
 			));
 			return query::Failed();
 		}
@@ -124,9 +123,9 @@ namespace compiler::helios {
 					match_optional(specifier.unlock(ctx)->getArgs()) {
 						opt_some(args) { return getSymbolABI(ctx, args); }
 						opt_none {
-							ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+							ctx.logInt(makeBox<dia_int::PlaceholderError>(
 								"extern symbol requires ABI specification passed as an argument",
-								specifier.unlock(ctx)->getSourcePosition().unlock(ctx)
+								specifier.unlock(ctx)->getStablePosition()
 							));
 							return query::Failed();
 						}

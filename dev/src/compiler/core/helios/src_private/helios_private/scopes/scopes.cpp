@@ -17,6 +17,7 @@
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/lookup/lookup_result.hpp>
 #include <helios_private/pst_layer/for_all.hpp>
+#include <helios_private/pst_layer/pst_parent.hpp>
 #include <helios_private/pst_layer/stmts_from_aggregate.hpp>
 #include <helios_private/scopes/scope_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
@@ -249,38 +250,12 @@ namespace compiler::helios {
 			}
 
 			ScopeID parent = [&]() -> ScopeID {
-				// @TODO: #2452 this logic should be unified
+				auto pst_parent = getPSTElementParent(ctx, element);
 
-				auto maybe_element_parent = element->getParent();
-				if (maybe_element_parent.has_value()) {
-					return ctx.query<QueryPrimaryCodeScopeFor>(maybe_element_parent.value());
-				} else {
-					// If there is no parent, we inspect the additional root data,
-					// as we might be in a macro expansion.
-					// @TODO: #2397 revisit and adjust this logic, we could perhaps move it into PST
-					// layer.
-
-					const auto& additional_root_data = element->getAdditionalRootData();
-
-					variant_match(additional_root_data.pst_parent) {
-						variant_case(pst::AdditionalRootData::MacroExpansionParent, macro_parent) {
-							return ctx.query<QueryPrimaryCodeScopeFor>(macro_parent.expand_element);
-						}
-						variant_case(pst::AdditionalRootData::ModuleParent, module_parent) {
-							auto module_id_any = module_parent.module_id;
-							auto module_id     = base::anyCast<frontend::ModuleID>(module_id_any);
-							return ctx.query<QueryRootScopeOf>(module_id);
-						}
-						variant_default {
-							CORE_PANIC(
-								"Element has no parent and no additional root data, cannot "
-								"determine "
-								"scope parent."
-							);
-						}
-					}
-					CORE_UNREACHABLE();
-				}
+				if (pst_parent.isLangElement())
+					return ctx.query<QueryPrimaryCodeScopeFor>(pst_parent.getAsLangElement());
+				else
+					return ctx.query<QueryRootScopeOf>(pst_parent.getAsModuleID());
 			}();
 
 
@@ -574,8 +549,6 @@ namespace compiler::helios {
 		 * `provide` function simply calls it and validates output.
 		 */
 		static auto getSymbols(Context& ctx, QKey key) -> PResult {
-			// @TODO: expand macros?
-
 			if (not key.ref->related_pst_element_hash.has_value()) {
 				CORE_ASSERT(key.ref->is_root, "Non root scope without PST element!");
 				return {};
