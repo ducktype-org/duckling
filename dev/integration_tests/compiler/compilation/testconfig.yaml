@@ -58,7 +58,9 @@ Run: "
       fi
       ;;
     all)
-      python3 @{compare_runs_script} --cmd llvm '@{compiled_to_llvm}' --cmd dvm '@{dvm_path} run @{compiled_to_dvm}';
+      _llvm=@{compiled_to_llvm};
+      _dvm=\"@{dvm_path} run @{compiled_to_dvm}\";
+      python3 @{compare_runs_script} --cmd llvm \"$_llvm\" --cmd dvm \"$_dvm\";
       ;;
     nobackend) echo \"Backend undefined\"; exit 1 ;;
     *)         echo \"Unknown backend\";   exit 1 ;;
