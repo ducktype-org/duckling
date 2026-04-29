@@ -23,9 +23,9 @@ namespace compiler::helios {
 
 	public:
 		IncompatibleTypesError(
-			dia::SourcePosition  source_position,
-			Box<InteractiveType> actual_type,
-			Box<InteractiveType> expected_type
+			dia_int::StablePosition source_position,
+			Box<InteractiveType>    actual_type,
+			Box<InteractiveType>    expected_type
 		);
 	};
 

@@ -36,7 +36,7 @@ DECLARE_QUERY_SIDE_INPUT(SideInput, KeyOf_SideInput);
 
 struct IMPLEMENT_QUERY(DummyQuery1, u64) {
 	static auto provide(Context& ctx, QKey key) -> PResult {
-		ctx.logInt(makeBox<dia_int::PlaceholderHeaderError>("..."));
+		ctx.logInt(makeBox<dia_int::PlaceholderError>("...", ""));
 
 		if (key.value == 1) {
 			ctx.query<DummyQuery2>({ 1 });

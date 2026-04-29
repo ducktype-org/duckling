@@ -1,0 +1,91 @@
+# /load command tests on a bare REPL session.
+
+Tests:
+  # Category: scripts that print during load (builtin_output_* side effects).
+  load-command-side-effect-output:
+    Cases:
+      load-basic-script:
+        Input:
+          String: |
+            /load @{script-basic}
+            x
+        Output:
+          String: "@{beginning}\n13\nScript loaded: @{script-basic}\n=> 10\n@{end}"
+
+      load-if-flow-script:
+        Input:
+          String: |
+            /load @{script-if-flow}
+            y
+        Output:
+          String: "@{beginning}\n14\nScript loaded: @{script-if-flow}\n=> 10\n@{end}"
+
+      load-mixed-script:
+        Input:
+          String: |
+            /load @{script-mixed}
+            add_two()
+        Output:
+          String: "@{beginning}\n4\nScript loaded: @{script-mixed}\n=> 4\n@{end}"
+
+      load-nested-functions-script:
+        Input:
+          String: |
+            /load @{script-nested-functions}
+            g()
+        Output:
+          String: "@{beginning}\n42\nScript loaded: @{script-nested-functions}\n=> 42\n@{end}"
+
+  # Category: scripts with no explicit stdout during load.
+  load-command-silent-load:
+    Cases:
+      load-silent-state-script:
+        Input:
+          String: |
+            /load @{script-silent-state}
+            sx
+        Output:
+          String: "@{beginning}\nScript loaded: @{script-silent-state}\n=> 12\n@{end}"
+
+      load-silent-functions-script:
+        Input:
+          String: |
+            /load @{script-silent-functions}
+            twice_base()
+        Output:
+          String: "@{beginning}\nScript loaded: @{script-silent-functions}\n=> 12\n@{end}"
+
+  # Category: multiple /load commands in a single bare REPL session.
+  load-command-multi-load:
+    Cases:
+      multiple-loads-on-bare-repl:
+        Input:
+          String: |
+            /load @{script-basic}
+            /load @{script-if-flow}
+            x
+            y
+        Output:
+          String: "@{beginning}\n13\nScript loaded: @{script-basic}\n14\nScript loaded: @{script-if-flow}\n=> 10\n=> 10\n@{end}"
+
+      mixed-silent-and-side-effect-loads:
+        Input:
+          String: |
+            /load @{script-silent-state}
+            /load @{script-basic}
+            sx
+            x
+        Output:
+          String: "@{beginning}\nScript loaded: @{script-silent-state}\n13\nScript loaded: @{script-basic}\n=> 12\n=> 10\n@{end}"
+
+  # Category: intentionally complex syntax.
+  load-command-evil-syntax:
+    Cases:
+      load-nasty-script:
+        Input:
+          String: |
+            /load @{script-nasty}
+            nasty_value()
+        Output:
+          String: "@{beginning}\n3\nScript loaded: @{script-nasty}\n=> 3\n@{end}"
+
