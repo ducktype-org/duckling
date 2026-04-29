@@ -313,7 +313,7 @@ namespace compiler::helios::defgen {
 				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 					"Generating default constructors for not trivially zero-initializable "
 					"tuple types.",
-					std::nullopt
+					""
 				));
 				return query::Failed();
 			}
@@ -342,12 +342,11 @@ namespace compiler::helios::defgen {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDefaultInitializerExpr);
 
 	query::QResult<CRef<code::Expr>> getDefaultInitializerExpr(
-		query::Context& ctx, const tsh::SymbolType<>& type, pst::SourcePositionLocked pos
+		query::Context& ctx, const tsh::SymbolType<>& type, dia_int::StablePosition pos
 	) {
 		if (!type.isDefaultConstructible(ctx)) {
-			ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
-				base::strConcat("Type `", type.toString(), "` cannot be default initialized"),
-				pos.unlock(ctx)
+			ctx.logInt(makeBox<dia_int::PlaceholderError>(
+				base::strConcat("Type `", type.toString(), "` cannot be default initialized"), pos
 			));
 			return query::Failed();
 		}

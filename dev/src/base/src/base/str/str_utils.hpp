@@ -166,6 +166,38 @@ namespace base {
 	std::vector<std::string> strSplit(const std::string_view str, const std::string& delimiter = " ");
 
 	/**
+	 * @brief Trims leading whitespace from a string view.
+	 *
+	 * @param text Input string view.
+	 * @param ws_chars Characters treated as whitespace.
+	 * @return String view without leading whitespace.
+	 */
+	[[nodiscard]] constexpr std::string_view strTrimLeft(
+		std::string_view text, std::string_view ws_chars = " \t\r\n\f\v"
+	) {
+		auto first_not_ws = text.find_first_not_of(ws_chars);
+		if (first_not_ws == std::string_view::npos) return {};
+		return text.substr(first_not_ws);
+	}
+
+	/**
+	 * @brief Trims leading and trailing whitespace from a string view.
+	 *
+	 * @param text Input string view.
+	 * @param ws_chars Characters treated as whitespace.
+	 * @return String view without leading/trailing whitespace.
+	 */
+	[[nodiscard]] constexpr std::string_view strTrim(
+		std::string_view text, std::string_view ws_chars = " \t\r\n\f\v"
+	) {
+		auto first_not_ws = text.find_first_not_of(ws_chars);
+		if (first_not_ws == std::string_view::npos) return {};
+
+		auto last_not_ws = text.find_last_not_of(ws_chars);
+		return text.substr(first_not_ws, last_not_ws - first_not_ws + 1);
+	}
+
+	/**
 	 * @brief Generates a random alphanumeric string of the specified length.
 	 * @param length The length of the random string to generate.
 	 * @return A random alphanumeric string.
