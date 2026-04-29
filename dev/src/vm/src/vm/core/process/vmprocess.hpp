@@ -184,7 +184,9 @@ namespace vm {
 		/**
 		 * @brief Entry point to perform requests on the process.
 		 */
-		std::expected<api::Response, api::ApiError> doRequest(const api::RequestVariant& request);
+		virtual std::expected<api::Response, api::ApiError> doRequest(
+			const api::RequestVariant& request
+		);
 
 		/**
 		 * @brief Get the PID of the process.

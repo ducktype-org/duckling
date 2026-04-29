@@ -7,6 +7,7 @@ add_files(
 	safe/safe_vmprocess.cpp
 	process/vmprocess.cpp
 	process/proc_io.cpp
+	thread/ivmthread.cpp
 	builtin_functions.cpp
 	safe/type_metadata/type_metadata.cpp
 	safe/type_metadata/type.cpp
@@ -14,7 +15,8 @@ add_files(
 	safe/concurrency/gil.cpp
 	safe/concurrency/condition_variable.cpp
 	safe/concurrency/synchronization_primitives.cpp
-	thread/ivmthread.cpp
+
+	fast/fast_vmprocess.cpp
 )
 
 set(vm_common_sources ${vm_common_sources} ${files} PARENT_SCOPE)
