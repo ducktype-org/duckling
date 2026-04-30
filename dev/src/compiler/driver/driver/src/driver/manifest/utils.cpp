@@ -102,13 +102,15 @@ namespace compiler::driver::json {
 		return json[key];
 	}
 
-	void verifyNumberOfFields(
+	void checkForUknownFields(
 		const nlohmann::json&   json,
 		const std::vector<Key>& required_keys,
 		const std::vector<Key>& optional_keys,
 		const std::string&      context
 	) {
-		if (!json.is_object()) return;
+		if (!json.is_object()){
+			CORE_PANIC("JSON value is not an object!");
+		}
 
 		std::unordered_set<std::string> known_keys;
 		for (const auto& k : required_keys) known_keys.insert(k);

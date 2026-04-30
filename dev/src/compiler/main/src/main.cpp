@@ -8,7 +8,8 @@
 
 #include <archiver/archive.hpp>
 #include <driver/exit.hpp>
-#include <driver/externs_manifest.hpp>
+#include <driver/manifest/manifest.hpp>
+#include <driver/task/task.hpp>
 #include <driver/initialize.hpp>
 #include <driver/operations/generic_operations.hpp>
 #include <frontend/module_tree/module_tree.hpp>
@@ -292,14 +293,16 @@ clah::Clah getClahForMain() {
 					auto package_name    = options.getValue<std::string>("name").copyValueOr(
                         base::generateRandomString(32)
                     );
-
+					
 					auto init_result = compiler::driver::initializeTheCompiler(
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
-							.main_packages_info = {
-								{
-									.package_name  = package_name,
-									.package_path  = path_to_compile.getFilePath(),
-									.dependencies = {},
+							.packages_info = {
+								compiler::driver::RawPackageInfo{
+									.package_name = base::StrID(package_name.c_str()),
+									.version      = base::StrID("not_supported"),
+									.package_path = fs::FilePath(path_to_compile.getFilePath()),
+									.features     = {},
+									.dependencies  = {},
 								},
 							},
 							.compilation_artifacts = {

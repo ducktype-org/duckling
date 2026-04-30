@@ -7,6 +7,7 @@
 #pragma once
 
 #include "../task/task.hpp"
+#include "driver/backend_type.hpp"
 
 #include <archiver/archive.hpp>
 #include <debug_info/debug_info.hpp>
@@ -14,11 +15,14 @@
 #include <global_state/packages.hpp>
 #include <linker/link.hpp>
 
+#include <driver/task/task.hpp>
+
 #include <artifacts/artifacts.hpp>
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_result.hpp>
 
 #include <string>
+#include <vector>
 
 namespace compiler::driver {
 
@@ -31,8 +35,8 @@ namespace compiler::driver {
 	 * \parallel Must be serialized or guarded to avoid overwriting/colliding outputs when packaging
 	 * concurrently.
 	 */
-	base::OkBad compileEntirePackage(
-		const global_state::PackageInfo& package_info, BuildTarget build_target
+	base::OkBad compilePackages(
+		const std::vector<PackageCompilationTask>& tasks
 	);
 
 	struct RunOutput final {

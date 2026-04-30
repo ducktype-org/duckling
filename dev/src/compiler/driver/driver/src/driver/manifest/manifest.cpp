@@ -26,7 +26,7 @@ namespace compiler::driver {
 			return {};
 		}
 
-		ju::verifyNumberOfFields(json, { "packages", "tasks" }, {}, "manifest");
+		ju::checkForUknownFields(json, { "packages", "tasks" }, {}, "manifest");
 
 		auto packages_array = ju::getArray(json, "packages", "Manifest requires a packages array!");
 		if (!packages_array) return {};

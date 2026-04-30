@@ -16,19 +16,20 @@
 #include <mutex>
 #include <regex>
 #include <string>
+#include <string_view>
 
 namespace compiler::frontend {
 	/**
 	 * If a file's extension is equal to this constant, then it is assumed
 	 * it is a source file of the module.
 	 */
-	constexpr std::string_view LANG_SOURCE_FILE = ".duck";
+	constexpr base::StrID LANG_SOURCE_FILE = ".duck";
 
 	/**
 	 * If a file's extension is equal to this constant, then it is assumed
 	 * it is a single file module.
 	 */
-	constexpr std::string_view LANG_MODULE_FILE = ".dmf";
+	constexpr base::StrID LANG_MODULE_FILE = ".dmf";
 
 	// Regexes to reject files/directories starting with '.' or '$'
 	const std::regex DEFAULT_REJECT_FILE_REGEX      = std::regex(R"((\$.*|\..*))");
@@ -322,7 +323,7 @@ namespace compiler::frontend {
 		 */
 		static Ref<ModuleTree> create(
 			const fs::File&   root,
-			std::string_view  package_id,
+			base::StrID  package_id,
 			const std::regex& file_reject = DEFAULT_REJECT_FILE_REGEX,
 			const std::regex& dir_reject  = DEFAULT_REJECT_DIRECTORY_REGEX
 		);
@@ -376,7 +377,7 @@ namespace compiler::frontend {
 		 * The package ID must be set for every module tree
 		 * @param package_id The package ID to set.
 		 */
-		void setPackageID(std::string_view package_id);
+		void setPackageID(base::StrID package_id);
 
 		/**
 		 * Sets the parent module.
@@ -394,7 +395,7 @@ namespace compiler::frontend {
 		 * Builds the module tree from a single file (single-file module).
 		 * @param file The file to build from.
 		 */
-		void buildFromSingleFile(const fs::File& file, std::string_view package_id);
+		void buildFromSingleFile(const fs::File& file, base::StrID package_id);
 
 		/**
 		 * Checks if the builder is finalized.
@@ -425,7 +426,7 @@ namespace compiler::frontend {
 		 */
 		void buildFromDirectory(
 			const fs::File&   directory,
-			std::string_view  package_id,
+			base::StrID  package_id,
 			const std::regex& file_reject = DEFAULT_REJECT_FILE_REGEX,
 			const std::regex& dir_reject  = DEFAULT_REJECT_DIRECTORY_REGEX
 		);
@@ -532,7 +533,7 @@ namespace compiler::frontend {
 		 * @param module The module to modify.
 		 * @param new_package_id The new package ID to set.
 		 */
-		static void changePackageID(base::Ref<ModuleTree> module, std::string_view new_package_id);
+		static void changePackageID(base::Ref<ModuleTree> module, base::StrID new_package_id);
 
 		/**
 		 * Removes the module with the given ModuleID from the module map.
@@ -571,7 +572,7 @@ namespace compiler::frontend {
 	 * @param package_id The package ID to associate with the module tree
 	 * for more details see ModuleTreeBuilder::create
 	 */
-	ModuleID createModuleTree(const fs::File& file, std::string_view package_id);
+	ModuleID createModuleTree(const fs::File& file, base::StrID package_id);
 
 	/**
 	 * @brief: Concurrently parses all source files in the module tree and their submodules
@@ -603,6 +604,6 @@ namespace compiler::frontend {
 	 * @return The ModuleID of the created module tree
 	 */
 	ModuleID createModuleTreeFromContents(
-		std::string_view contents, base::Optional<std::string_view> package_id = {}
+		std::string_view contents, base::Optional<base::StrID> package_id = {}
 	);
 }

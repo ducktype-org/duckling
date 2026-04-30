@@ -1,7 +1,9 @@
 #pragma once
 #include <nlohmann/json_fwd.hpp>
+#include "base/collections/optional.hpp"
 #include "filesystem/file_path.hpp"
 #include <string_id/string_id.hpp>
+#include "global_state/packages.hpp"
 
 
 namespace compiler::driver {
@@ -73,4 +75,13 @@ namespace compiler::driver {
          */
         static base::Optional<RawPackageInfo> fromJson(const nlohmann::json& json);
 	};
+
+    /**
+     * @brief Creates a global_state::PackageInfo instance from a RawPackageInfo instance.
+     * This involves loading the package's module tree and validating its structure.
+     * @param package_info The RawPackageInfo instance containing the raw package information.
+     * @note This function logs errors to the global logger if the package is invalid.
+     * @return The created global_state::PackageInfo instance or an empty optional if the package is invalid.
+     */
+    base::Optional<global_state::PackageInfo> createGlobalPackageInfo(const RawPackageInfo& package_info);
 }

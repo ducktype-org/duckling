@@ -15,7 +15,7 @@ namespace compiler::driver {
 	base::Optional<PackageCompilationTask> PackageCompilationTask::fromJson(
 		const nlohmann::json& json
 	) {
-		ju::verifyNumberOfFields(
+		ju::checkForUknownFields(
 			json,
 			{ "package", "strategy" },
 			{ "name", "output_file", "linking_options", "archive_options" },

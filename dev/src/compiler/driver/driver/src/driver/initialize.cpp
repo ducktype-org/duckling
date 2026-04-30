@@ -76,48 +76,10 @@ namespace compiler::driver {
 			);
 		}
 
-		base::Optional<global_state::PackageInfo> createPackageInfo(
-			const options_types::PackageInfo& package_info
+		base::OkBad handlePackageOptions(const std::vector<RawPackageInfo>& packages_info
 		) {
-			auto root_module = compiler::frontend::createModuleTree(
-				package_info.package_path, package_info.package_name
-			);
-
-			if (!getModuleRef(root_module)->hasMainSourceFile()) {
-				auto module_name = getModuleRef(root_module)->getName();
-				global_state::getGlobalLogger()->log(makeBox<dia_int::PlaceholderHeaderError>(
-					"Package does not have a main source file.",
-					base::strConcat(
-						"The main source file is required for package ",
-						package_info.package_name,
-						". Please add a ",
-						module_name,
-						".dmf file to the package module directory."
-					)
-				));
-				return {};
-			}
-
-			global_state::PackageInfo global_package_info{
-				.root_module  = root_module,
-				.dependencies = {},
-			};
-
-			for (const auto& dependency: package_info.dependencies) {
-				auto dependency_package_info = createPackageInfo(dependency.package_info);
-				if (!dependency_package_info.has_value()) return {};
-				global_package_info.dependencies.push_back(
-					dependency_package_info.value().root_module
-				);
-			}
-
-			return global_package_info;
-		}
-
-		base::OkBad handlePackageOptions(const std::vector<options_types::PackageInfo>& package_infos
-		) {
-			for (const auto& package_info: package_infos) {
-				auto global_package_info = createPackageInfo(package_info);
+			for (const auto& package_info: packages_info) {
+				auto global_package_info = createGlobalPackageInfo(package_info);
 				if (!global_package_info.has_value()) return base::BAD;
 				global_state::setters::addPackage(global_package_info.value());
 			}
@@ -166,10 +128,9 @@ namespace compiler::driver {
 				query::external::setPreviousMetadataFromRawBytes(span);
 
 				// We need to parse all files before compilation to collect all PST elements.
-				auto module_ids
-					= global_state::getAllPackagesWithDependenciesRootModulesSortedDeduplicated();
-				for (const auto module_id: module_ids)
-					compiler::frontend::parseAllFilesInModuleTree(module_id);
+				for (const auto& package_info : global_state::getPackages()) {
+					compiler::frontend::parseAllFilesInModuleTree(package_info.root_module);
+				}
 
 				// Collect all Inputs and Side inputs and perform red-green sweep.
 				// This must be called after loading both the graph and metadata, as metadata
@@ -236,7 +197,7 @@ namespace compiler::driver {
 				handleArtifactsOptions(package_compilation_options.compilation_artifacts);
 
 				auto package_success
-					= handlePackageOptions(package_compilation_options.main_packages_info);
+					= handlePackageOptions(package_compilation_options.packages_info);
 
 				if (package_success.isBad()) return base::BAD;
 

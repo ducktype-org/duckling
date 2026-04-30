@@ -54,11 +54,13 @@ namespace compiler::driver::json {
     base::Optional<nlohmann::json> getObject(const nlohmann::json& json, const Key& key, const std::string& error_message);
 
     /**
-     * @brief Verifies that a JSON object has the correct number of fields.
-     * @param json The JSON object to verify.
+     * @brief Checks for unknown fields in a JSON object.
+     * This function logs warning to the global logger for any fields that are not in the list of required or optional keys.
+     * This function might br extended in the future.
+     * @param json The JSON object to check.
      * @param required_keys The list of required keys.
      * @param optional_keys The list of optional keys.
-     * @param error_message The error message to log if the verification fails.
+     * @param parent_name The name of the parent object for error messages.
      */
-    void verifyNumberOfFields(const nlohmann::json& json, const std::vector<Key>& required_keys, const std::vector<Key>& optional_keys, const std::string& error_message);
+    void checkForUknownFields(const nlohmann::json& json, const std::vector<Key>& required_keys, const std::vector<Key>& optional_keys, const std::string& parent_name);
 }
