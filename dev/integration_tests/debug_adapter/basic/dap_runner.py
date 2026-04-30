@@ -35,7 +35,7 @@ build_dir = sys.argv[1]
 vm_binary_path = os.path.join(build_dir, "bin", "VM")
 
 vm_process = subprocess.Popen(
-    [vm_binary_path, "debug_adapter", "simple.dmf"],
+    [vm_binary_path, "debug_adapter"],
     stdin=subprocess.PIPE,
     stdout=subprocess.PIPE,
     text=True,
