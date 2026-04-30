@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import json, sys
+import json, os, sys
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn
@@ -24,7 +24,9 @@ print("building dataframe")
 df = pd.DataFrame(
     [
         {
-            "framework": "psac" if "psac" in r["command"] else "query",
+            "framework": "psac"
+                if "psac" in os.path.basename(r["command"])
+                else "query",
             "mean_time": r["mean"],
             **r["parameters"],
         }
