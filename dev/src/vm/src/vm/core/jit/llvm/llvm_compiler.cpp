@@ -1,5 +1,6 @@
 #include "../cf_analyzer.hpp"
 #include "../jit_compiler.hpp"
+#include "jit_data.hpp"
 #include "jit_utils.hpp"
 #include "llvm_lowering.hpp"
 #include "opcodes_bitcode_source.hpp"
@@ -28,11 +29,15 @@ LLVM_INCLUDE_END()
 namespace vm::jit {
 
 	MRef<JitOpFun> compileLLVM(const low::LowFuncData& function_to_compile) {
-		llvm::orc::ThreadSafeContext& tsctx          = *llvmGetTSCtx();
-		static u64                    compile_serial = 0;
-		const std::string             symbol_name
-			= std::to_string(function_to_compile.name.getInnerID().asInt()) + "."
-		    + std::to_string(compile_serial++);
+		auto&                         llvm_data = llvmData();
+		llvm::orc::ThreadSafeContext& tsctx     = *llvm_data.g_context;
+
+		// Generate a unique symbol name for the function to compile.
+		// This is necessary to avoid duplicate definitions.
+		static u64 compile_serial = 0;
+
+		const std::string symbol_name
+			= function_to_compile.name.str() + "." + std::to_string(compile_serial++);
 		std::unique_ptr<llvm::Module> new_module;
 
 		llvm::LLVMContext& ctx = *tsctx.getContext();
@@ -41,7 +46,7 @@ namespace vm::jit {
 
 		LLVMBuilder(new_module.get(), ctx).lowerFunction(function_to_compile);
 
-		auto&                       lljit = *llvmGetLljit();
+		auto&                       lljit = *llvm_data.lljit_instance;
 		llvm::orc::ThreadSafeModule tsm(std::move(new_module), tsctx);
 		if (auto err = lljit.addIRModule(std::move(tsm)))
 			llvm::logAllUnhandledErrors(

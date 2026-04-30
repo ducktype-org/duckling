@@ -6,7 +6,7 @@
 #include <array>
 
 namespace vm::jit::helpers {
-	void trampoline(OPFUN_ARGS) {
+	void trampoline(OPFUN_REF_ARGS) {
 		std::array<vm::MicroInstruction, 2> start_function = {
 			*instr,
 			vm::makeLowInstruction(vm::low::MicroOpcode::exit, 0, 0),

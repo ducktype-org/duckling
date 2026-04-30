@@ -11,7 +11,7 @@ from .helpers import (
     exit_with_error,
 )
 
-from ...llvm_tools import (LLVMTool, LLVM_TOOLS)
+from ...jit.llvm_tools import (LLVMTool, LLVM_TOOLS)
 
 def setup_build_impl(
     build_dir,
@@ -24,6 +24,7 @@ def setup_build_impl(
     ccache,
     coverage,
     linker,
+    allocator,
     shared_libs,
     strip_symbol_information,
     disable_unity_compilation,
@@ -32,7 +33,7 @@ def setup_build_impl(
     sanitizer,
     use_replxx,
     enable_jit,
-    **kwargs,
+    llvm_tools_list,
 ):
 
     check_if_compilers_are_compatible(cxx_compiler, cc_compiler)
@@ -79,7 +80,8 @@ def setup_build_impl(
         f"-D ENABLE_LINK_TIME_OPTIMIZATION={'ON' if enable_link_time_optimization else 'OFF'}",
         f"-D JIT_ENABLED={'ON' if enable_jit else 'OFF'}",
         f"-D USE_REPLXX={'ON' if use_replxx else 'OFF'}",
-        f"-D LLVM_TOOLS='{LLVMTool.python_args([kwargs[tool.param()] for tool in LLVM_TOOLS])}'",
+        f"-D LLVM_TOOLS='{LLVMTool.python_args([llvm_tools_list[tool.param()] for tool in LLVM_TOOLS])}'",
+        f"-D ALLOCATOR={allocator.upper()}",
     ]
     if sanitizer:
         cmd_parts.append(f"-D SANITIZER={sanitizer.upper()}")
@@ -89,7 +91,7 @@ def setup_build_impl(
         cmd_parts.append(f"-D CLANG_BIN={clang_for_builtins}")
 
     for tool in LLVM_TOOLS:
-        cmd_parts.append(f"-D {tool.macro()}={kwargs[tool.param()]}")
+        cmd_parts.append(f"-D {tool.macro()}={llvm_tools_list[tool.param()]}")
 
     if should_add_linker_flags(linker):
         if supports_cmake_linker_type():

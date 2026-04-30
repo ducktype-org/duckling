@@ -2,6 +2,7 @@ add_files(
 	llvm_compiler.cpp
 	jit_utils.cpp
 	absolute_symbols.cpp
+	jit_data.cpp
 )
 set(vm_config_dependent_sources ${vm_config_dependent_sources} ${files} PARENT_SCOPE)
 

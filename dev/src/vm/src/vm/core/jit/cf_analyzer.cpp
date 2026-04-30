@@ -31,12 +31,9 @@ namespace vm::jit::cf {
 			case low::MicroOpcode::jmpIfNot_label: {
 				const usize jump_target = jumpTarget(index + 1, arg0);
 
-				block_beginnings.push_back(index + 1);  // Next block starts after jump
-				if (jump_target < function.bc.size()) {
-					block_beginnings.push_back(
-						jump_target
-					);  // Jump destination starts a new block
-				}
+				block_beginnings.push_back(index + 1);        // Next block starts after jump
+				if (jump_target < function.bc.size())
+					block_beginnings.push_back(jump_target);  // Jump destination starts a new block
 				break;
 			}
 			case low::MicroOpcode::ret:

@@ -2,7 +2,7 @@
 
 #include "../cf_analyzer.hpp"
 #include "../jit_compiler.hpp"
-#include "opcodes_bitcode_source.hpp"
+#include "jit_data.hpp"
 
 #include <llvm_helpers/llvm_helpers.hpp>
 
@@ -48,8 +48,12 @@ namespace vm::jit {
 		std::vector<llvm::BasicBlock*> llvm_blocks;
 
 		LLVMBuilder(llvm::Module* module, llvm::LLVMContext& ctx): llvm_ctx(ctx), module(module) {
+			auto& llvm_data   = llvmData();
 			user_func_wrapper = llvm::Function::Create(
-				llvmGetOpFunType().get(), llvm::Function::ExternalLinkage, module->getName(), module
+				llvm_data.types.opfun.get(),
+				llvm::Function::ExternalLinkage,
+				module->getName(),
+				module
 			);
 
 			auto arg_it = user_func_wrapper->arg_begin();
@@ -65,10 +69,11 @@ namespace vm::jit {
 		}
 
 		llvm::Function* getOrCreateOpcodeFunction(std::string_view opfun_name) {
-			llvm::Function* callee = module->getFunction(opfun_name.data());
+			auto&           llvm_data = llvmData();
+			llvm::Function* callee    = module->getFunction(opfun_name.data());
 			if (!callee) {
 				callee = llvm::Function::Create(
-					llvmGetOpFunType().get(), llvm::Function::ExternalLinkage, opfun_name, module
+					llvm_data.types.opfun.get(), llvm::Function::ExternalLinkage, opfun_name, module
 				);
 			}
 
@@ -82,6 +87,7 @@ namespace vm::jit {
 			usize                            end,
 			std::unordered_set<std::string>& used_opfuns
 		) {
+			auto& llvm_data = llvmData();
 			for (usize instr_idx = start; instr_idx < end; ++instr_idx) {
 				const vm::MicroInstruction& mi     = function_to_compile.bc.at(instr_idx);
 				auto                        opcode = vm::getInstructionOpcode(mi);
@@ -90,7 +96,7 @@ namespace vm::jit {
 				case vm::low::MicroOpcode::call_func:
 				case vm::low::MicroOpcode::virtual_call_pptr_method: {
 					ir_builder.CreateCall(
-						llvmGetOpFunType().get(),
+						llvm_data.types.opfun.get(),
 						getOrCreateOpcodeFunction("trampoline"),
 						{ instr_arg, locals_arg, frame_arg, thread_arg }
 					);
@@ -98,7 +104,7 @@ namespace vm::jit {
 				default:
 					if (isOpcodeNonExecutable(opcode)) continue;
 					std::string opfun_name;
-					match_optional(llvmGetFunName(opcode)) {
+					match_optional(llvm_data.getFunName(opcode)) {
 						opt_some(op_name) {
 							opfun_name = op_name;
 							used_opfuns.insert(opfun_name);
@@ -106,7 +112,7 @@ namespace vm::jit {
 						opt_none { opfun_name = low::OPCODE_NAMES.at(static_cast<u64>(opcode)); }
 					}
 					ir_builder.CreateCall(
-						llvmGetOpFunType().get(),
+						llvm_data.types.opfun.get(),
 						getOrCreateOpcodeFunction(opfun_name),
 						{ instr_arg, locals_arg, frame_arg, thread_arg }
 					);
@@ -115,16 +121,18 @@ namespace vm::jit {
 		}
 
 		void lowerConditionalJump(const cf::BasicBlock& block, llvm::IRBuilder<>& ir_builder) {
-			u32 flags_field_index = 0;
+			auto& llvm_data         = llvmData();
+			u32   flags_field_index = 0;
 
 			llvm::Value* frame_ptr = ir_builder.CreateLoad(
-				llvm::PointerType::getUnqual(llvmGetFrameType().get()), frame_arg
+				llvm::PointerType::getUnqual(llvm_data.types.frame.get()), frame_arg
 			);
-			llvm::Value* flags_ptr
-				= ir_builder.CreateStructGEP(llvmGetFrameType().get(), frame_ptr, flags_field_index);
+			llvm::Value* flags_ptr = ir_builder.CreateStructGEP(
+				llvm_data.types.frame.get(), frame_ptr, flags_field_index
+			);
 
 			llvm::Value* flag_ptr
-				= ir_builder.CreateStructGEP(llvmGetFlagDataType().get(), flags_ptr, 0);
+				= ir_builder.CreateStructGEP(llvm_data.types.flag_data.get(), flags_ptr, 0);
 			llvm::Value* flag_value = ir_builder.CreateLoad(ir_builder.getInt1Ty(), flag_ptr);
 
 			if (block.edgeKind() == cf::OutEdges::Kind::JmpIfNot)
@@ -161,10 +169,8 @@ namespace vm::jit {
 			}
 		}
 
-		// Debug function to print IR - remove.
-		void printModuleIR(llvm::Module& module) { module.print(llvm::errs(), nullptr); }
-
 		void lowerFunction(const low::LowFuncData& function_to_compile) {
+			auto&                   llvm_data = llvmData();
 			cf::ControlFlowAnalyzer cf_analyzer{};
 			cfg = cf_analyzer.controlFlowGraph(function_to_compile);
 
@@ -201,7 +207,7 @@ namespace vm::jit {
 
 			llvm::ValueToValueMapTy       vmap;
 			std::unique_ptr<llvm::Module> used_opfuns_module
-				= llvm::CloneModule(*llvmGetMasterModule(), vmap, used_opfuns_filter);
+				= llvm::CloneModule(*llvm_data.g_module, vmap, used_opfuns_filter);
 			llvm::Linker::linkModules(
 				*module, std::move(used_opfuns_module), llvm::Linker::Flags::LinkOnlyNeeded
 			);

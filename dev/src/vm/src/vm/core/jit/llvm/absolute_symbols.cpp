@@ -16,45 +16,27 @@ LLVM_INCLUDE_END()
 
 #include "../jit_helper.hpp"
 
-static constexpr usize UNJITABLE_OPCODES_COUNT = 11;
-
 void registerAbsoluteJITSymbols(llvm::orc::LLJIT& lljit) {
 	auto&                jd = lljit.getMainJITDylib();
 	llvm::orc::SymbolMap host_symbols;
 
-	std::array<std::string_view, UNJITABLE_OPCODES_COUNT> hard_symbols = {
-		"jmp_label",
-		"jmpIfNot_label",
-		"jmpIf_label",
-		"jit_call_entrypoint",
-		"call_func",
-		"call_builtinfunc",
-		"virtual_call_pptr_method",
-		"ret_tailcall_func",
-		"breakpoint",
-		"ret",
-		"trampoline",
+	std::array hard_symbols = {
+		std::pair{ "jmp_label", &vm::OpFuns::op_debug_jmp_label },
+		std::pair{ "jmpIfNot_label", &vm::OpFuns::op_debug_jmpIfNot_label },
+		std::pair{ "jmpIf_label", &vm::OpFuns::op_debug_jmpIf_label },
+		std::pair{ "jit_call_entrypoint", &vm::OpFuns::op_debug_jit_call_entrypoint },
+		std::pair{ "call_func", &vm::OpFuns::op_debug_call_func },
+		std::pair{ "call_builtinfunc", &vm::OpFuns::op_debug_call_builtinfunc },
+		std::pair{ "virtual_call_pptr_method", &vm::OpFuns::op_debug_virtual_call_pptr_method },
+		std::pair{ "ret_tailcall_func", &vm::OpFuns::op_debug_ret_tailcall_func },
+		std::pair{ "breakpoint", &vm::OpFuns::op_debug_breakpoint },
+		std::pair{ "ret", &vm::OpFuns::op_debug_ret },
+		std::pair{ "trampoline", &vm::jit::helpers::trampoline },
 	};
 
-	std::array<vm::OpFun*, UNJITABLE_OPCODES_COUNT> addresses = {
-		&vm::OpFuns::op_jmp_label,
-		&vm::OpFuns::op_jmpIfNot_label,
-		&vm::OpFuns::op_jmpIf_label,
-		&vm::OpFuns::op_jit_call_entrypoint,
-		&vm::OpFuns::op_call_func,
-		&vm::OpFuns::op_call_builtinfunc,
-		&vm::OpFuns::op_virtual_call_pptr_method,
-		&vm::OpFuns::op_ret_tailcall_func,
-		&vm::OpFuns::op_breakpoint,
-		&vm::OpFuns::op_ret,
-		&vm::jit::helpers::trampoline,
-	};
-
-	// Once Clang 21 is compatible with Ubuntu, this can (and should) be changed
-	// to use structured bindings and `std::ranges::views::zip`.
-	for (usize i = 0; i < addresses.size(); ++i) {
-		host_symbols[lljit.mangleAndIntern(hard_symbols.at(i))] = llvm::orc::ExecutorSymbolDef(
-			llvm::orc::ExecutorAddr::fromPtr(addresses.at(i)),
+	for (auto [name, address]: hard_symbols) {
+		host_symbols[lljit.mangleAndIntern(name)] = llvm::orc::ExecutorSymbolDef(
+			llvm::orc::ExecutorAddr::fromPtr(address),
 			llvm::JITSymbolFlags::Exported | llvm::JITSymbolFlags::Callable
 		);
 	}

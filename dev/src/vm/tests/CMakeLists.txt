@@ -92,7 +92,7 @@ function(duck_add_vm_tests suffix)
 
         if (NOT JIT_ENABLED)
                 # This test does not directly invoke jit.
-                # When jit IS enabled it helps test it.
+                # When jit IS enabled it helps to test it.
                 set_property(TEST ${test_set}_jit_test PROPERTY DISABLED TRUE)
         endif()
 endfunction()

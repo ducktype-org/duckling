@@ -125,10 +125,8 @@ namespace pst {
 		addToHash(partial_hash, hash->data);
 		for (auto& sub_el: sub_elements) {
 			variant_match(sub_el) {
-				variant_case(InternalChild, el) { addToHash(partial_hash, el->getHash().data); }
-				variant_case(InternalNamedChild, el) {
-					addToHash(partial_hash, el.element->getHash().data);
-				}
+				variant_case(InternalChild, el) { el->calcSignature(partial_hash); }
+				variant_case(InternalNamedChild, el) { el.element->calcSignature(partial_hash); }
 				variant_case(SubToken, el) {}
 				variant_default { CORE_PANIC("Unhandled variant case"); }
 			}
@@ -136,7 +134,7 @@ namespace pst {
 		addToHash(partial_hash, "hash_end");
 	}
 
-	void LangElement::signGenerated(HashType& signature) {
+	void LangElement::signGenerated(const HashType& signature) {
 		HashAlg new_hash;
 		addToHash(new_hash, hash->data);
 		addToHash(new_hash, signature.data);

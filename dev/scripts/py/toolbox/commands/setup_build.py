@@ -11,7 +11,7 @@ from ..impl.helpers import (
     default_linker_from_ctx,
     default_gcov_from_ctx,
 )
-from ...llvm_tools import (LLVM_TOOLS, llvm_version_options)
+from ...jit.llvm_tools import (LLVM_TOOLS, llvm_tools_version_options)
 from click import Choice, option, command, prompt
 
 @command()
@@ -90,6 +90,12 @@ from click import Choice, option, command, prompt
     cls=default_linker_from_ctx(),
 )
 @option(
+    "--allocator",
+    help="Specify the allocator type to use. Currently supports None (default) and mimalloc.",
+    type=Choice(["default", "mimalloc"], case_sensitive=False),
+    default="default",
+)
+@option(
     "--shared_libs",
     help="Whether to use shared or static libraries.",
     type=bool,
@@ -143,16 +149,18 @@ from click import Choice, option, command, prompt
     metavar="VERSION",
     help="Default version of llvm tools",
 )
-@llvm_version_options
+@llvm_tools_version_options
 def setup_build(*args, **kwargs):
     """Makes a build folder"""
 
-    global_version = kwargs["llvm_version"]
+    global_version = kwargs.pop("llvm_version")
+    llvm_tools_list = {}
     for tool in LLVM_TOOLS:
-        if kwargs[tool.param()] == None:
-            kwargs[tool.param()] = tool.default(global_version)
+        given = kwargs.pop(tool.param(), None)
+        llvm_tools_list[tool.param()] = given if given else tool.default(global_version)
 
     setup_build_impl(
         *args,
+        llvm_tools_list=llvm_tools_list,
         **kwargs,
     )

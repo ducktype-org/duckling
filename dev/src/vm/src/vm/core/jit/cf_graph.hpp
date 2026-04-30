@@ -7,9 +7,9 @@
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/core/safe/low_program/low_program.hpp>
 
-#include <bit>
 #include <algorithm>
 #include <array>
+#include <bit>
 #include <functional>
 #include <vector>
 
@@ -27,9 +27,7 @@ namespace vm::jit::cf {
 	 */
 	[[nodiscard]] inline usize jumpTarget(usize next_offset, u64 raw_delta) {
 		const i64 target = static_cast<i64>(next_offset) + std::bit_cast<i64>(raw_delta);
-		CORE_ASSERT(
-			target >= 0, "Negative jump target computed, likely due to malformed bytecode"
-		);
+		CORE_ASSERT(target >= 0, "Negative jump target computed, likely due to malformed bytecode");
 		return static_cast<usize>(target);
 	}
 
@@ -49,7 +47,8 @@ namespace vm::jit::cf {
 		};
 
 		OutEdges(): to{ 0, 0 } {}
-		OutEdges(const OutEdges&) = default;
+
+		OutEdges(const OutEdges&)            = default;
 		OutEdges& operator=(const OutEdges&) = default;
 
 		/**
@@ -99,7 +98,10 @@ namespace vm::jit::cf {
 		 * @brief Returns the success successor for conditional branches.
 		 */
 		[[nodiscard]] BlockID successTarget() const {
-			CORE_ASSERT(op_type == Kind::JmpIf || op_type == Kind::JmpIfNot, "This block does not have conditional outgoing edges.");
+			CORE_ASSERT(
+				op_type == Kind::JmpIf || op_type == Kind::JmpIfNot,
+				"This block does not have conditional outgoing edges."
+			);
 			return to[0];
 		}
 
@@ -107,7 +109,10 @@ namespace vm::jit::cf {
 		 * @brief Returns the failure successor for conditional branches.
 		 */
 		[[nodiscard]] BlockID failTarget() const {
-			CORE_ASSERT(op_type == Kind::JmpIf || op_type == Kind::JmpIfNot, "This block does not have conditional outgoing edges.");
+			CORE_ASSERT(
+				op_type == Kind::JmpIf || op_type == Kind::JmpIfNot,
+				"This block does not have conditional outgoing edges."
+			);
 			return to[1];
 		}
 
@@ -133,7 +138,7 @@ namespace vm::jit::cf {
 	 * @brief Basic block metadata used by control-flow analyses.
 	 */
 	struct BasicBlock {
-		OutEdges succ;
+		OutEdges      succ;
 		const BlockID id;
 		const usize   start;
 		const usize   end;

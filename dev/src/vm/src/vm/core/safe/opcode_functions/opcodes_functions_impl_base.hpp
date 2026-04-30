@@ -53,7 +53,7 @@
 #include <cmath>
 #include <limits>
 
-
+// opcodes_interface.py depends on the instructions exact, fully-qualified names
 #ifdef DEBUG_OPCODES
 	#define OPCODE_NAME(name)                  op_debug_##name
 	#define FUNCTION_ARGS                      OPFUN_REF_ARGS
@@ -311,12 +311,8 @@ namespace vm {
 		FUNCTION_CONT_CHECK_STRATEGY(0);
 	}
 #ifdef ENABLE_JIT
-	#ifndef IGNORE_NOT_JITABLE
 	RETURN_TYPE OpFuns::OPCODE_NAME(jit_call_entrypoint)(FUNCTION_ARGS) {
 		{
-		#ifdef USE_TAIL_CALLS
-			CORE_PANIC("Jit doesn't work with tail calls.");
-		#endif
 			auto& jit_data = thread.jit_data;
 			auto  func_id  = instr->arg0;
 			auto& func_obj = thread.process_program->getFunctions()[func_id];
@@ -350,9 +346,8 @@ namespace vm {
 		}
 		FUNCTION_CONT_CHECK_STRATEGY(0);
 	}
-	#endif
 #endif
-#ifndef IGNORE_NOT_JITABLE
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(call_builtinfunc)(FUNCTION_ARGS) {
 		{
 			auto builtin_id         = static_cast<builtins::BuiltinFunctionID>(instr->arg0);
@@ -401,7 +396,7 @@ namespace vm {
 
 		FUNCTION_CONT(1);
 	}
-#endif
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(call_cfunc)(FUNCTION_ARGS) {
 		{
 			auto ext_func = safeReadObjectBytes<CRef<low::LowExternCFunction>>(instr->arg0);
@@ -1191,7 +1186,7 @@ namespace vm {
 
 	DEFINE_STATIC_CAST_CONVERSION_OP(fptrunc, 32, 64, FLOAT_32_TYPE, FLOAT_64_TYPE)
 	DEFINE_STATIC_CAST_CONVERSION_OP(fpext, 64, 32, FLOAT_64_TYPE, FLOAT_32_TYPE)
-#ifndef IGNORE_NOT_JITABLE
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(breakpoint)(FUNCTION_ARGS) {
 		{
 			instr += 1;
@@ -1207,7 +1202,6 @@ namespace vm {
 		}
 		FUNCTION_CONT(0);
 	}
-#endif
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(stepGil)(FUNCTION_ARGS) {
 		{ thread.stepGil(); }

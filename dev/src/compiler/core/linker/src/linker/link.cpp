@@ -44,7 +44,7 @@ namespace compiler::linker {
 
 		if (linking_result.isBad()) {
 			if ((not query::Context::areWeInsideQuery()) and global_state::hasGlobalLogger()) {
-				global_state::getGlobalLogger()->log(makeBox<dia_int::PlaceholderHeaderError>(
+				global_state::getGlobalLogger()->log(makeBox<dia_int::PlaceholderError>(
 					"Linking of the final executable failed. See the linker output above. ",
 					"The common reasons for this error may include missing main function "
 					"(temporary "

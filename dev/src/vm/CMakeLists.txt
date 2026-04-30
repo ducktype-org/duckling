@@ -129,7 +129,7 @@ function(add_vm_variant suffix compile_def)
         target_include_directories(${lib_thread_vm_name}_bc PRIVATE ${LLVM_INCLUDE_DIRS})
         target_link_libraries(${lib_thread_vm_name}_bc ${llvm_libs})
         target_compile_options(${lib_thread_vm_name}_bc PRIVATE -emit-llvm)
-        target_compile_definitions(${lib_thread_vm_name}_bc PRIVATE ${compile_def} IGNORE_NOT_JITABLE)
+        target_compile_definitions(${lib_thread_vm_name}_bc PRIVATE ${compile_def})
 
         set(common_bc ${CMAKE_CURRENT_BINARY_DIR}/common_${suffix}.bc)
         set(extracted_func_file ${CMAKE_CURRENT_BINARY_DIR}/extracted_function_${suffix}.txt)
@@ -147,7 +147,7 @@ function(add_vm_variant suffix compile_def)
             COMMAND_EXPAND_LISTS
         
             # Get all microopcodes names to add them to api later. Heuristic used: contains "OpFuns", "op_" and not "debug"            
-            COMMAND python3
+            COMMAND /usr/bin/env python3
                 ${CMAKE_SOURCE_DIR}/scripts/py/jit/opcodes_interface.py
                 ${LLVM_TOOLS_ARGS}
                 -i ${common_bc}
