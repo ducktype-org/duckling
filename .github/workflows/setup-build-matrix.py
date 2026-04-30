@@ -15,6 +15,7 @@ FULL_MATRIX: dict[str, list[Any]] = {
             "gcov": "gcov-14",
             "linker": "mold",
             "cache-prefix": "gcc-build",
+            "jit-enabled": "FALSE",
         },
         {
             "name": "clang",
@@ -22,6 +23,7 @@ FULL_MATRIX: dict[str, list[Any]] = {
             "cc": "clang-19",
             "linker": "mold",
             "cache-prefix": "clang-build",
+            "jit-enabled": "TRUE",
         },
     ],
 }
@@ -36,6 +38,7 @@ PR_MATRIX: dict[str, list[Any]] = {
             "gcov": "gcov-14",
             "linker": "mold",
             "cache-prefix": "gcc-build",
+            "jit-enabled": "FALSE",
         }
     ],
 }
