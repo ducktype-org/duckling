@@ -25,7 +25,7 @@ compile_dvm_backend_cmd:  "@{compile_dvm_backend_deterministically_cmd} && @{duc
 compile_llvm_backend_cmd: "@{compile_llvm_backend_deterministically_cmd} && @{duckc_path} compile_package duck_modules/@{Name} -w @{duckc_worker_count} -a build -n package_@{Name} @{compile_llvm_options}"
 
 compiled_to_llvm: "./build/package_llvm.exe"
-compiled_to_dvm: "./build/query/query*/*.dbc" # ??
+compiled_to_dvm: "./build/package_dvm.dbc"
 
 # Deliberately empty, so as not to recompile duckc and dvm for each test.
 PreNode: ""

@@ -24,17 +24,13 @@
 //!         ├── <package id>
 //!         └── ...
 
-use std::{
-    fs::ReadDir,
-    path::{Path, PathBuf},
-};
-
-use crate::{
-    QuackResult, qp_bail_internal, quackpack::core::storage::venv_id::VenvId,
-    util::path_ops_ext::PathOpsExt,
-};
+use std::fs::ReadDir;
+use std::path::{Path, PathBuf};
 
 use super::package_id::PackageId;
+use crate::quackpack::core::storage::venv_id::VenvId;
+use crate::util::path_ops_ext::PathOpsExt;
+use crate::{QuackResult, qp_bail_internal};
 
 const LOCKS_DIRECTORY_NAME: &str = "locks";
 const VENV_SYNC_LOCK_FILENAME: &str = "venv_sync";
@@ -52,6 +48,7 @@ const OK_FILENAME: &str = ".ok";
 #[derive(Debug, Clone)]
 /// Provides paths of the storage components, hiding the implementation details of the directory layout.
 pub struct Storage {
+    root: PathBuf,
     packages_dir: PathBuf,
     venvs_dir: PathBuf,
     clean_lock: PathBuf,
@@ -72,6 +69,7 @@ impl Storage {
         let data_lock_base = lock_base.join(VENV_DATA_LOCK_FILENAME);
         let compile_locks_base = lock_base.join(COMPILE_LOCK_FILENAME);
         Self {
+            root,
             packages_dir,
             venvs_dir,
             clean_lock,
@@ -79,6 +77,10 @@ impl Storage {
             data_lock_base,
             compile_locks_base,
         }
+    }
+
+    pub fn root(&self) -> &Path {
+        &self.root
     }
 
     pub fn pkg_dir(&self, package: &PackageId) -> PathBuf {

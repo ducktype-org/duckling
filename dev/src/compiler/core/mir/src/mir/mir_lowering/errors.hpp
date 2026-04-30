@@ -14,7 +14,7 @@ namespace compiler::mir {
 		}
 
 	public:
-		VariableShadowingError(dia::SourcePosition source_position):
+		VariableShadowingError(dia_int::StablePosition source_position):
 			  MessageWithCodeFragmentAndCause(source_position) {}
 	};
 
@@ -27,7 +27,7 @@ namespace compiler::mir {
 		}
 
 	public:
-		ShadowedDeclarationNote(dia::SourcePosition source_position):
+		ShadowedDeclarationNote(dia_int::StablePosition source_position):
 			  MessageWithCodeFragmentAndCause(source_position) {}
 	};
 }

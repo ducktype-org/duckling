@@ -1,13 +1,12 @@
 use std::path::PathBuf;
 
-use crate::{
-    DuckContext, QuackResult, qp_bail_internal,
-    quackpack::subcommands::init::{InitOptions, init},
-    util::path_ops_ext::PathOpsExt,
-};
-use clap::{Arg, ArgAction, ArgMatches, Command, builder::ValueParser};
+use clap::builder::ValueParser;
+use clap::{Arg, ArgAction, ArgMatches, Command};
 
 use crate::duck::driver::cli_ext::{flag, optional, subcommand};
+use crate::quackpack::subcommands::init::{InitOptions, init};
+use crate::util::path_ops_ext::PathOpsExt;
+use crate::{DuckContext, QuackResult, qp_bail_internal};
 
 /// Creates parser for the `init` subcommand.
 pub fn get_parser() -> Command {
@@ -32,6 +31,7 @@ pub fn get_parser() -> Command {
             Arg::new("path")
                 .help("Path to the new package")
                 .value_parser(ValueParser::path_buf())
+                .required(true)
                 .action(ArgAction::Set),
         )
 }
@@ -48,10 +48,10 @@ pub fn execute(ctx: &DuckContext, matches: &ArgMatches) -> QuackResult<()> {
     for flag in unsupported_flags {
         bail_on_unsupported_flag(matches.get_flag(flag), flag)?;
     }
-    let at = match matches.get_one::<PathBuf>("path") {
-        Some(at) => at.resolve()?,
-        None => ctx.cwd().to_path_buf(),
-    };
+    let at = matches
+        .get_one::<PathBuf>("path")
+        .expect("required by clap")
+        .resolve()?;
     let name = match matches.get_one::<String>("name") {
         Some(name) => name.into(),
         None => at.file_name().expect("file without filename").into(),

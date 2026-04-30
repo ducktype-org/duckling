@@ -1,19 +1,19 @@
-function main { i64, ptr_argv } -> i64 {
-	# ret_val -> main ret_val
+function main { i64, ptr_argv } -> { i64 } {
+	# ret0 -> main ret0
 	# arg0 -> argc
 	# arg1 -> *argv
 
 	jmpIf_label         different_init;
-	init_lany_type      x, i64;
+	init_pany_type      x, i64;
 	jmp_label           variable_usage;
 
 	label               different_init;
-	init_lany_type      x, i64;
+	init_pany_type      x, i64;
 	
 	# ---
 	label               variable_usage;
-	mov_l64_imm         x, 42;
-	output_l64          x;
+	mov_p64_imm         x, 42;
+	output_p64          x;
 	# ---
 
 	jmpIf_label         different_deinit;

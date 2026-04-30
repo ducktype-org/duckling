@@ -1,4 +1,5 @@
-use clap::{Command, ValueHint, builder::ValueParser, crate_name, crate_version};
+use clap::builder::ValueParser;
+use clap::{Command, ValueHint, crate_name, crate_version};
 
 pub mod cli_args_preprocessing;
 pub(crate) mod cli_ext;
@@ -7,10 +8,8 @@ pub mod run;
 pub mod styles;
 pub mod subcommands;
 
-use crate::duck::driver::{
-    cli_ext::{flag, optional},
-    styles::get_styles,
-};
+use crate::duck::driver::cli_ext::{flag, optional};
+use crate::duck::driver::styles::get_styles;
 
 /// Create main cli parser.
 fn cli() -> Command {

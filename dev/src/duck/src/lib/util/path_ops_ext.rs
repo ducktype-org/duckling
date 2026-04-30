@@ -1,12 +1,10 @@
-use std::{
-    fs::{
-        File, OpenOptions, Permissions, copy, create_dir, create_dir_all, hard_link, read,
-        read_to_string, remove_dir, remove_file, rename, write,
-    },
-    io::{self, Read, Write},
-    ops::{Deref, DerefMut},
-    path::{Path, PathBuf},
+use std::fs::{
+    File, OpenOptions, Permissions, copy, create_dir, create_dir_all, hard_link, read,
+    read_to_string, remove_dir, remove_file, rename, write,
 };
+use std::io::{self, Read, Write};
+use std::ops::{Deref, DerefMut};
+use std::path::{Path, PathBuf};
 
 use crate::{QuackResult, QuackResultContext, qp_bail};
 
@@ -342,15 +340,17 @@ impl PathOpsExt for Path {
     }
 
     fn rm(&self) -> QuackResult<()> {
-        remove_file(self).with_context(|| format!("failed to remove file `{}`", self.display()))
+        ignore_not_found(remove_file(self))
+            .with_context(|| format!("failed to remove file `{}`", self.display()))
     }
 
     fn rmdir(&self) -> QuackResult<()> {
-        remove_dir(self).with_context(|| format!("failed to remove directory `{}`", self.display()))
+        ignore_not_found(remove_dir(self))
+            .with_context(|| format!("failed to remove directory `{}`", self.display()))
     }
 
     fn rmtree(&self) -> QuackResult<()> {
-        std::fs::remove_dir_all(self)
+        ignore_not_found(std::fs::remove_dir_all(self))
             .with_context(|| format!("failed to remove tree at `{}`", self.display()))
     }
 
@@ -394,4 +394,24 @@ impl PathOpsExt for Path {
             tilde_with_context(as_str, || Some(home())).into_owned(),
         ))
     }
+}
+
+fn ignore_io_kind_error<T: Default>(
+    err: io::Result<T>,
+    to_ignore: &[io::ErrorKind],
+) -> io::Result<T> {
+    match err {
+        x @ Ok(_) => x,
+        Err(e) => {
+            if to_ignore.contains(&e.kind()) {
+                Ok(T::default())
+            } else {
+                Err(e)
+            }
+        }
+    }
+}
+
+fn ignore_not_found<T: Default>(err: io::Result<T>) -> io::Result<T> {
+    ignore_io_kind_error(err, &[io::ErrorKind::NotFound])
 }

@@ -18,7 +18,6 @@
 #include <linker/link.hpp>
 #include <time_stats/time_stats.hpp>
 
-#include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <artifacts/artifacts.hpp>
@@ -28,17 +27,6 @@
 
 namespace compiler::driver {
 
-	InitializationResult::InitializationResult(base::OkBad result): result(result) {}
-
-	InitializationResult::~InitializationResult() {
-		CORE_ASSERT_NOEXCEPT(checked, "Initialization status was not checked, use status method!");
-	}
-
-	[[nodiscard]]
-	base::OkBad InitializationResult::status() {
-		checked = true;
-		return result;
-	}
 
 	namespace {
 		constinit bool is_initialized = false;
@@ -93,7 +81,7 @@ namespace compiler::driver {
 			);
 			if (!getModuleRef(root_module)->hasMainSourceFile()) {
 				auto module_name = getModuleRef(root_module)->getName();
-				global_state::getGlobalLogger()->log(makeBox<dia_int::PlaceholderHeaderError>(
+				global_state::getGlobalLogger()->log(makeBox<dia_int::PlaceholderError>(
 					"Main package does not have a main source file.",
 					base::strConcat(
 						"The main source file is required for compilation. Please add a ",
@@ -187,7 +175,7 @@ namespace compiler::driver {
 		}
 	}
 
-	InitializationResult initializeTheCompiler(CompilerModeOfOperationAndOptions options) {
+	base::CheckedOkBad initializeTheCompiler(CompilerModeOfOperationAndOptions options) {
 		time_stats::TrackCategoryTime driver_initialization_time(
 			time_stats::TimeCategories::DriverInitialization
 		);

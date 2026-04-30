@@ -28,7 +28,7 @@ namespace compiler::helios::code {
 		}
 
 	public:
-		PositionalAfterNamedArgumentError(dia::SourcePosition source_position):
+		PositionalAfterNamedArgumentError(dia_int::StablePosition source_position):
 			  MessageWithCodeFragmentAndCause(source_position) {}
 	};
 
@@ -41,7 +41,7 @@ namespace compiler::helios::code {
 		}
 
 	public:
-		RepeatedNamedArgumentError(dia::SourcePosition source_position):
+		RepeatedNamedArgumentError(dia_int::StablePosition source_position):
 			  MessageWithCodeFragmentAndCause(source_position) {}
 	};
 
@@ -56,7 +56,7 @@ namespace compiler::helios::code {
 
 	public:
 		ArgumentIncompatibleTypeError(
-			dia::SourcePosition                      source_position,
+			dia_int::StablePosition                  source_position,
 			Box<InteractiveType>                     expected_type,
 			Box<InteractiveType>                     actual_type,
 			base::Optional<Box<InteractiveFunction>> function_name
@@ -82,7 +82,7 @@ namespace compiler::helios::code {
 
 	public:
 		NamedArgumentProvidedByPositionalError(
-			dia::SourcePosition                      source_position,
+			dia_int::StablePosition                  source_position,
 			base::Optional<Box<InteractiveFunction>> function_name
 		):
 			  MessageWithCodeFragmentAndCause(source_position) {
@@ -103,8 +103,8 @@ namespace compiler::helios::code {
 
 	public:
 		CallMissingArgumentError(
-			dia::SourcePosition                 call_position,
-			base::Optional<dia::SourcePosition> missing_arg_position_opt
+			dia_int::StablePosition                 call_position,
+			base::Optional<dia_int::StablePosition> missing_arg_position_opt
 		):
 			  MessageWithCodeFragmentAndCause(call_position) {
 			if_opt_some(missing_arg_position_opt, missing_arg_position) {
@@ -125,7 +125,7 @@ namespace compiler::helios::code {
 
 	public:
 		TooManyCallArgumentsError(
-			dia::SourcePosition                      source_position,
+			dia_int::StablePosition                  source_position,
 			base::Optional<Box<InteractiveFunction>> function_name
 		):
 			  MessageWithCodeFragmentAndCause(source_position) {
@@ -146,7 +146,7 @@ namespace compiler::helios::code {
 
 	public:
 		UnknownNamedArgumentError(
-			dia::SourcePosition                      source_position,
+			dia_int::StablePosition                  source_position,
 			std::string                              argument_name,
 			base::Optional<Box<InteractiveFunction>> function_name
 		):
@@ -167,11 +167,11 @@ namespace compiler::helios::code {
 	) {
 		variant_match(failure_reason) {
 			variant_case(PositionalAfterNamedArgument, data) {
-				auto source_pos = arguments_origin[data.argument_index].getSourcePosition().value();
+				auto source_pos = arguments_origin[data.argument_index].getStablePosition().value();
 				return makeBox<PositionalAfterNamedArgumentError>(source_pos);
 			}
 			variant_case(RepeatedNamedArgument, data) {
-				auto source_pos = arguments_origin[data.argument_index].getSourcePosition().value();
+				auto source_pos = arguments_origin[data.argument_index].getStablePosition().value();
 				return makeBox<RepeatedNamedArgumentError>(source_pos);
 			}
 			variant_case(FunctionMatchFailure, data) {
@@ -185,18 +185,18 @@ namespace compiler::helios::code {
 				variant_match(data) {
 					variant_case(TooManyCallArguments, data) {
 						auto first_arg_pos
-							= arguments_origin[data.valid_arguments].getSourcePosition().value();
+							= arguments_origin[data.valid_arguments].getStablePosition().value();
 						auto last_arg_pos
-							= arguments_origin[data.total_arguments - 1].getSourcePosition().value();
+							= arguments_origin[data.total_arguments - 1].getStablePosition().value();
 
 						base::Optional<Box<InteractiveFunction>> function
 							= get_interactive_function(data.function);
-						auto pos = dia::SourcePosition::merge(first_arg_pos, last_arg_pos);
+						auto pos = first_arg_pos.extendedWithSubsequentPos(last_arg_pos);
 						return makeBox<TooManyCallArgumentsError>(pos, std::move(function));
 					}
 					variant_case(UnknownNamedArgument, data) {
 						auto arg_pos
-							= arguments_origin[data.argument_index].getSourcePosition().value();
+							= arguments_origin[data.argument_index].getStablePosition().value();
 						base::Optional<Box<InteractiveFunction>> function_name
 							= get_interactive_function(data.function);
 						return makeBox<UnknownNamedArgumentError>(
@@ -204,13 +204,13 @@ namespace compiler::helios::code {
 						);
 					}
 					variant_case(TypeMismatch, data) {
-						dia::SourcePosition pos = [&] {
+						dia_int::StablePosition pos = [&] {
 							if_opt_some(
-								arguments_origin[data.argument_index].getSourcePosition(), pos
+								arguments_origin[data.argument_index].getStablePosition(), pos
 							) {
 								return pos;
 							}
-							return whole_call_origin.getSourcePosition().value();
+							return whole_call_origin.getStablePosition().value();
 						}();
 
 						base::Optional<Box<InteractiveFunction>> function_name
@@ -226,21 +226,21 @@ namespace compiler::helios::code {
 						auto& decl = ctx.query<QueryDeclOfFun>(data.function)->valueOrThrow();
 
 						if_opt_some(
-							decl.parameters[data.parameter_index].origin.getSourcePosition(),
+							decl.parameters[data.parameter_index].origin.getStablePosition(),
 							param_pos
 						) {
 							return makeBox<CallMissingArgumentError>(
-								whole_call_origin.getSourcePosition().value(), param_pos
+								whole_call_origin.getStablePosition().value(), param_pos
 							);
 						}
 
 						return makeBox<CallMissingArgumentError>(
-							whole_call_origin.getSourcePosition().value(), std::nullopt
+							whole_call_origin.getStablePosition().value(), std::nullopt
 						);
 					}
 					variant_case(NamedArgumentProvidedByPositional, data) {
 						auto arg_pos
-							= arguments_origin[data.argument_index].getSourcePosition().value();
+							= arguments_origin[data.argument_index].getStablePosition().value();
 						base::Optional<Box<InteractiveFunction>> function_name
 							= get_interactive_function(data.function);
 						return makeBox<NamedArgumentProvidedByPositionalError>(
@@ -249,7 +249,7 @@ namespace compiler::helios::code {
 					}
 					variant_case(TypeNotTriviallyCopyable, data) {
 						auto source_pos
-							= arguments_origin[data.argument_index].getSourcePosition().value();
+							= arguments_origin[data.argument_index].getStablePosition().value();
 						if (data.given_type.getRefKind() != tsh::ReferenceKind::Direct
 						    && data.expected_type.getRefKind() == tsh::ReferenceKind::Direct) {
 							return makeBox<dia_int::NotYetImplementedCodeError>(

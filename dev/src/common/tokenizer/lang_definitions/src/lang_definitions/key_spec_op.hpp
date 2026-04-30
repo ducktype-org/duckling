@@ -273,7 +273,8 @@ namespace lang_def {
 		RUN_BEFORE_MAIN(init::registerForInit(key_spec_op::init));
 	}
 
-	void setKeywordMode(KeywordMode mode);
+	void        setKeywordMode(KeywordMode mode);
+	KeywordMode getKeywordMode();
 
 	Special                     strAsSpecial(base::StrID id);
 	Keyword                     strAsKeyword(base::StrID id);

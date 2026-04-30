@@ -8,7 +8,7 @@ type class: Bar {
 }
 type pointer: ptr_bar Bar
 
-function test_downcast { ptr_foo } -> ptr_bar {
-    downcast_lptr_lptr ret_val, arg0;
+function test_downcast { ptr_foo } -> { ptr_bar } {
+    downcast_pptr_pptr ret0, arg0;
     ret;
 }
