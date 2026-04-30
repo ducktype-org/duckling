@@ -14,7 +14,57 @@ from ..impl.helpers import (
 from ...jit.llvm_tools import (LLVM_TOOLS, llvm_tools_version_options)
 from click import Choice, option, command, prompt
 
+
+def configure_presets(ctx, param, value):
+    if param.name != "preset":
+        raise click.BadParameter("Preset configuration can only be applied to the --preset option.")
+
+    preset_map = {}
+
+    if value is None:
+        return
+    elif value == "ReleasePreset":
+        preset_map = {
+            "type": "DevOpt", # Note that we use DevOpt for now, as we prefer to have controlled panics, until they are not rare enough
+            "coverage": False,
+            "docs": False,
+            "allocator": "default", # until we are 100% sure other allocators work well
+            "shared_libs": False,
+            "strip_symbol_information": True,
+            "embed_assets": True,
+            "build_static_icu": True, # we want to have a static ICU in release to make the binary portable
+        }
+    elif value == "MaxPerformancePreset":
+        preset_map = {
+            "type": "ReleaseOpt",
+            "coverage": False,
+            "docs": False,
+            "allocator": "mimalloc",
+            "shared_libs": False,
+            "strip_symbol_information": True,
+        }
+    else:
+        raise ValueError(f"Unknown preset: {value}")
+    
+    ctx.default_map = preset_map
+
 @command()
+@option( 
+    # The presets logic is implemented based on an article you can find here: https://jwodder.github.io/kbits/posts/click-config/
+    # Note: Presets should correctly override default values provided by our custom option classes (set in cls parameters),
+    # but it's best to test it per-case, since Python allows to do quite about anything, and there might be some edge cases.
+    "--preset",
+    help         = (
+        "Use a predefined set of default option values for a specific build configuration.\n"
+        "Available presets:\n\n"
+        "  ReleasePreset -- preset used for release builds\n\n"
+        "  MaxPerformancePreset -- preset used for maximum performance builds\n\n"
+    ),
+    type         = Choice(["ReleasePreset", "MaxPerformancePreset"], case_sensitive=False),
+    callback     = configure_presets,
+    is_eager     = True,
+    expose_value = False,
+)
 @build_dir(help="The name of the directory.")
 @build_system(
     help="Build system to use",
@@ -52,7 +102,7 @@ from click import Choice, option, command, prompt
     cls=default_compiler_from_ctx("cc_compiler"),
 )
 @option(
-    "--ccache",
+    "--ccache/--no-ccache",
     prompt="Use ccache",
     help="Whether or not to use ccache.",
     type=bool,
@@ -60,7 +110,7 @@ from click import Choice, option, command, prompt
     is_flag=True,
 )
 @option(
-    "--coverage",
+    "--coverage/--no-coverage",
     prompt="Enable coverage",
     help="Whether or not to enable coverage",
     type=bool,
@@ -71,7 +121,7 @@ from click import Choice, option, command, prompt
 )
 @option(
     "-d",
-    "--docs",
+    "--docs/--no-docs",
     help="Whether or not to build the docs.",
     type=bool,
     default=False,
@@ -96,7 +146,7 @@ from click import Choice, option, command, prompt
     default="default",
 )
 @option(
-    "--shared_libs",
+    "--shared_libs/--no-shared_libs",
     help="Whether to use shared or static libraries.",
     type=bool,
     default=False,
@@ -104,21 +154,21 @@ from click import Choice, option, command, prompt
 )
 @option(
     "-i",
-    "--strip-symbol-information",
+    "--strip-symbol-information/--no-strip-symbol-information",
     help="Whether to strip all of symbol information from the binaries. It makes the binaries several times smaller, but practically prevents any debugging. Goes well with Release and non-Debug build types.",
     type=bool,
     default=False,
     is_flag=True,
 )
 @option(
-    "--disable-unity-compilation",
+    "--disable-unity-compilation/--no-disable-unity-compilation",
     help="Unity compilation (used only in parser) speeds up the build time significantly, but makes debugging harder (related linker errors lack information).",
     type=bool,
     default=False,
     is_flag=True,
 )
 @option(
-    "--enable-link-time-optimization",
+    "--enable-link-time-optimization/--no-enable-link-time-optimization",
     help="Link time optimization (LTO) can improve performance by optimizing across translation units, but may make debugging more difficult. Requires Clang compiler and LLD linker (auto-configured).",
     type=bool,
     default=False,
@@ -140,6 +190,20 @@ from click import Choice, option, command, prompt
     help="Whether to use replxx library for REPL frontend.",
     type=bool,
     default=True,
+    is_flag=True,
+)
+@option(
+    "--embed-assets/--no-embed-assets",
+    help="Whether to embed assets into the binary. This makes the binary portable. Currently the assets include diagnostic message templates.",
+    type=bool,
+    default=False,
+    is_flag=True,
+)
+@option(
+    "--build-static-icu/--no-build-static-icu",
+    help="Forces building and linking against a custom-built static version of ICU.",
+    type=bool,
+    default=False,
     is_flag=True,
 )
 @option(

@@ -1,0 +1,15 @@
+# Tests for script loading in REPL via /load and preload argument.
+
+# These run from subdirectories of script_loading, hence the "../".
+script-basic: "../scripts/basic_expr.ds"
+script-if-flow: "../scripts/if_flow.ds"
+script-mixed: "../scripts/mixed.ds"
+script-print-burst: "../scripts/print_burst.ds"
+script-nested-functions: "../scripts/nested_functions.ds"
+script-silent-state: "../scripts/silent_state.ds"
+script-silent-functions: "../scripts/silent_functions.ds"
+script-nasty: "../scripts/nasty.ds"
+
+SubDirs:
+  - load_command
+  - preload_script
