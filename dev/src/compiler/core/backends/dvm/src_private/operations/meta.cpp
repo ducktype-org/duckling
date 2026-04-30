@@ -46,9 +46,11 @@ namespace {
 	 * context value in it. Returns the created DVMValue.
 	 */
 	DVMValue getQueryContext() {
-		return DVMValue{ DVMGlobal{ .name = base::StrID(comptime_func_names::GLOBAL_QUERY_CONTEXT),
-			                        .type = vm::code::OpaqueType(base::StrID("opaque_ptr"), 8) },
-			             DVMPlace::AccessKind::Direct };
+		return { DVMPlace(
+			base::StrID(comptime_func_names::GLOBAL_QUERY_CONTEXT),
+			vm::code::OpaqueType(base::StrID("opaque_ptr"), 8),
+			DVMPlace::AccessKind::Direct
+		) };
 	}
 }
 
@@ -72,11 +74,11 @@ namespace compiler::backend_vm::internal {
 			auto builder = ctx->pushTempLocal(
 				vm::code::OpaqueType(base::StrID("opaque_ptr"), 8), "meta_builder"
 			);
-			DVMPlace builder_place = { builder, DVMPlace::AccessKind::Direct };
+			DVMPlace builder_place = builder;
 
 			lower_single_call(builder_sequence.new_func, std::deque<DVMValue>(), builder_place);
 
-			DVMValue builder_value = { builder, DVMPlace::AccessKind::Direct };
+			DVMValue builder_value = { builder };
 			for (const auto& type_arg: op.args)
 				lower_single_call(builder_sequence.push_func, { builder_value, type_arg }, {});
 

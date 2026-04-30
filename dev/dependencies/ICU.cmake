@@ -1,7 +1,6 @@
 include(FetchContent)
 
-# Set it to true, to link ICU statically and force building it from source
-# set (BUILD_STATIC_ICU true)
+option(BUILD_STATIC_ICU "Whether to force building and linking against a custom-built static version of ICU." OFF)
 
 # released 2026-01-09
 set(ICU_VERSION_MAJOR "74")
