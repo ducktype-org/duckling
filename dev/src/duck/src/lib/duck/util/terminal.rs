@@ -233,7 +233,7 @@ impl Terminal {
             let input = Input::<'_, T>::new()
                 .with_prompt(prompt.clone())
                 .default(default.clone())
-                .interact_text();
+                .interact_text_on(self.term());
             if let Ok(t) = input {
                 return t;
             }
