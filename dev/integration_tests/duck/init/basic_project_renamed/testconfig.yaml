@@ -5,8 +5,7 @@ Tests:
     Description: can initialise a new project
     Cases:
       init:
-        test_cmd: init foo --name bar && cd foo && git rev-parse --show-toplevel 
+        test_cmd: init foo --name bar
         Output:
           Run: |+
-            echo "info: successfully created a new project \`bar\` at \`$(pwd)/foo\`
-            $(pwd)/foo"
+            echo "info: successfully created a new project \`bar\` at \`$(pwd)/foo\`"

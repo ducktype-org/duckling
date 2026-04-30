@@ -1,5 +1,6 @@
 import hashlib
 import os
+import subprocess
 import sys
 import filecmp
 from pathlib import Path
@@ -122,6 +123,28 @@ def check_no_gitignore_from_root(root: Path):
     gitignore = root / ".gitignore"
     assert(not gitignore.exists())
 
+
 def check_not_git_repo(root: Path):
     git = root / ".git"
     assert(not git.exists())
+
+
+def get_git_root(path):
+    """Return the git repository root path or None if not in a git repo."""
+    try:
+        result = subprocess.run(
+            ['git', 'rev-parse', '--show-toplevel'],
+            cwd=str(path),
+            capture_output=True,
+            text=True
+        )
+        if result.returncode == 0:
+            return Path(result.stdout.strip())
+    except (subprocess.SubprocessError, OSError):
+        pass
+    return None
+
+
+def is_git_root(path):
+    git_root = get_git_root(path)
+    return git_root is not None and git_root == Path(path).resolve()
