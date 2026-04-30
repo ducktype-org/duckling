@@ -189,6 +189,54 @@ namespace compiler::driver::json {
 		return result;
 	}
 
+	bool checkIsObject(const nlohmann::json& json, const std::string& context_name) {
+		if (json.is_object()) return true;
+		if (global_state::hasGlobalLogger()) {
+			global_state::getGlobalLogger()->log(
+				makeBox<dia_int::PlaceholderHeaderError>(
+					base::strConcat(context_name, " must be a JSON object"),
+					base::strConcat("The value for ", context_name, " is not a JSON object and cannot be parsed.")
+				)
+			);
+		}
+		return false;
+	}
+
+	base::Optional<base::StrID> getStringFromArrayNoError(const nlohmann::json& elem) {
+		if (!elem.is_string()) return {};
+		return base::StrID(elem.get<std::string>());
+	}
+
+	base::Optional<base::StrID> getStringFromArrayWarning(
+		const nlohmann::json& elem,
+		const std::string&    parent_name
+	) {
+		auto result = getStringFromArrayNoError(elem);
+		if (!result.has_value()) {
+			logWarning(
+				base::strConcat("Non-string value in array of ", parent_name),
+				base::strConcat("In ", parent_name, ": a non-string value was found in the array and will be ignored.")
+			);
+		}
+		return result;
+	}
+
+	base::Optional<base::StrID> getStringFromArray(
+		const nlohmann::json& elem,
+		const std::string&    parent_name
+	) {
+		auto result = getStringFromArrayNoError(elem);
+		if (!result.has_value() && global_state::hasGlobalLogger()) {
+			global_state::getGlobalLogger()->log(
+				makeBox<dia_int::PlaceholderHeaderError>(
+					base::strConcat("Non-string value in array of ", parent_name),
+					base::strConcat("In ", parent_name, ": a non-string value was found in the array.")
+				)
+			);
+		}
+		return result;
+	}
+
 	void checkForUknownFields(
 		const nlohmann::json&   json,
 		const std::vector<Key>& required_keys,

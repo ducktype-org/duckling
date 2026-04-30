@@ -122,6 +122,37 @@ namespace compiler::driver::json {
     base::Optional<nlohmann::json> getObject(const nlohmann::json& json, const Key& key, const std::string& error_message);
 
     /**
+     * @brief Verifies that a JSON value is an object, logging an error if not.
+     * @param json The JSON value to check.
+     * @param context_name The name of the value (used for the error message).
+     * @return True if the value is an object, false otherwise.
+     */
+    bool checkIsObject(const nlohmann::json& json, const std::string& context_name);
+
+    /**
+     * @brief Extracts a string from a JSON array element without logging.
+     * @param elem The JSON array element.
+     * @return An optional containing the extracted string, or empty if the element is not a string.
+     */
+    base::Optional<base::StrID> getStringFromArrayNoError(const nlohmann::json& elem);
+
+    /**
+     * @brief Extracts a string from a JSON array element, logging a warning if it is not a string.
+     * @param elem The JSON array element.
+     * @param parent_name The name of the parent object (used for the warning message).
+     * @return An optional containing the extracted string, or empty if the element is not a string.
+     */
+    base::Optional<base::StrID> getStringFromArrayWarning(const nlohmann::json& elem, const std::string& parent_name);
+
+    /**
+     * @brief Extracts a string from a JSON array element, logging an error if it is not a string.
+     * @param elem The JSON array element.
+     * @param parent_name The name of the parent object (used for the error message).
+     * @return An optional containing the extracted string, or empty if the element is not a string.
+     */
+    base::Optional<base::StrID> getStringFromArray(const nlohmann::json& elem, const std::string& parent_name);
+
+    /**
      * @brief Checks for unknown fields in a JSON object.
      * This function logs warning to the global logger for any fields that are not in the list of required or optional keys.
      * This function might br extended in the future.

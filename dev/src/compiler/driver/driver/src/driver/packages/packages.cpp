@@ -19,20 +19,24 @@ namespace compiler::driver {
 	namespace ju = compiler::driver::json;
 
 	base::Optional<RawDependencyInfo> RawDependencyInfo::fromJson(const nlohmann::json& json) {
+		if (!ju::checkIsObject(json, "dependency")) return {};
+
 		ju::checkForUknownFields(json, { "name", }, { "alias", }, "dependency");
 
 		auto name = ju::getString(json, "name", "Dependency requires a package name!");
 		if (!name) return {};
 
-		auto alias = ju::getString(json, "alias", "Dependency requires an alias!");
+		auto alias = ju::getStringNoError(json, "alias");
 
 		return RawDependencyInfo{
 			.package_name = *name,
-			.alias        = alias.has_value() ? *alias : base::StrID(name->str()),
+			.alias        = alias.has_value() ? *alias : base::StrID(),
 		};
 	}
 
 	base::Optional<RawPackageInfo> RawPackageInfo::fromJson(const nlohmann::json& json) {
+		if (!ju::checkIsObject(json, "package")) return {};
+
 		ju::checkForUknownFields(
 			json,
 			{ "name", "path", },
@@ -46,33 +50,28 @@ namespace compiler::driver {
 		auto path = ju::getString(json, "path", "Package requires a path!");
 		if (!path) return {};
 
-		auto version = ju::getString(json, "version", "Package requires a version!");
+		auto version = ju::getStringNoError(json, "version");
 		if (!version){
 			version = base::StrID();
 		}
 
-		auto features_array = ju::getArray(json, "features", "Package requires a features array!");
-		if (!features_array) return {};
+		auto features_array = ju::getArrayNoError(json, "features");
+		if (!features_array) {
+			features_array = std::vector<nlohmann::json>();
+		}
 
 		std::vector<base::StrID> features;
 		features.reserve(features_array->size());
 		for (const auto& feat : *features_array) {
-			if (!feat.is_string()) {
-				if (global_state::hasGlobalLogger()) {
-					global_state::getGlobalLogger()->log(
-						makeBox<dia_int::PlaceholderHeaderError>(
-							"Package features must be strings",
-							base::strConcat("Package \"", name->str(), "\" has a non-string feature.")
-						)
-					);
-				}
-				return {};
-			}
-			features.emplace_back(feat.get<std::string>());
+			auto feat_str = ju::getStringFromArray(feat, base::strConcat("package \"", name->str(), "\" features"));
+			if (!feat_str) return {};
+			features.push_back(*feat_str);
 		}
 
-		auto deps_array = ju::getArray(json, "dependencies", "Package requires a dependencies array!");
-		if (!deps_array) return {};
+		auto deps_array = ju::getArrayNoError(json, "dependencies");
+		if (!deps_array) {
+			deps_array = std::vector<nlohmann::json>();
+		}
 
 		std::vector<RawDependencyInfo> deps;
 		deps.reserve(deps_array->size());

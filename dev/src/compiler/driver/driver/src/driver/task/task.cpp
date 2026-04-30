@@ -15,6 +15,8 @@ namespace compiler::driver {
 	base::Optional<PackageCompilationTask> PackageCompilationTask::fromJson(
 		const nlohmann::json& json
 	) {
+		if (!ju::checkIsObject(json, "task")) return {};
+
 		ju::checkForUknownFields(
 			json,
 			{ "package", "strategy" },

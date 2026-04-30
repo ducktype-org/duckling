@@ -14,17 +14,7 @@ namespace compiler::driver {
 	base::Optional<PackageCompilationManifest> PackageCompilationManifest::fromJson(
 		const nlohmann::json& json
 	) {
-		if (!json.is_object()) {
-			if (global_state::hasGlobalLogger()) {
-				global_state::getGlobalLogger()->log(
-					makeBox<dia_int::PlaceholderHeaderError>(
-						"Manifest must be a JSON object",
-						"The top-level manifest value must be a JSON object."
-					)
-				);
-			}
-			return {};
-		}
+		if (!ju::checkIsObject(json, "manifest")) return {};
 
 		ju::checkForUknownFields(json, { "packages", "tasks" }, {}, "manifest");
 
