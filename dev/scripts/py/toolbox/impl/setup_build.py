@@ -34,6 +34,8 @@ def setup_build_impl(
     use_replxx,
     enable_jit,
     llvm_tools_list,
+    embed_assets,
+    build_static_icu,
 ):
 
     check_if_compilers_are_compatible(cxx_compiler, cc_compiler)
@@ -66,14 +68,15 @@ def setup_build_impl(
 
     cmd_parts = [
         f"cmake",
-        f'-G "{build_system}"',
         f"-B {build_dir}",
+        f'-G "{build_system}"',
         f"-D CMAKE_BUILD_TYPE={type}",
         f"-D BUILD_DOCS={'ON' if docs else 'OFF'}",
         f"-D CMAKE_CXX_COMPILER={cxx_compiler}",
         f"-D CMAKE_C_COMPILER={cc_compiler}",
         f"-D USE_CCACHE={'ON' if ccache else 'OFF'}",
         f"-D ENABLE_COVERAGE={'true' if coverage else 'false'}",
+        f"-D ALLOCATOR={allocator.upper()}",
         f"-D BUILD_SHARED_LIBS={'ON' if shared_libs else 'OFF'}",
         f"-D STRIP_SYMBOL_INFORMATION={'ON' if strip_symbol_information else 'OFF'}",
         f"-D DISABLE_UNITY_COMPILATION={'ON' if disable_unity_compilation else 'OFF'}",
@@ -81,7 +84,8 @@ def setup_build_impl(
         f"-D JIT_ENABLED={'ON' if enable_jit else 'OFF'}",
         f"-D USE_REPLXX={'ON' if use_replxx else 'OFF'}",
         f"-D LLVM_TOOLS='{LLVMTool.python_args([llvm_tools_list[tool.param()] for tool in LLVM_TOOLS])}'",
-        f"-D ALLOCATOR={allocator.upper()}",
+        f"-D EMBED_ASSETS={'ON' if embed_assets else 'OFF'}",
+        f"-D BUILD_STATIC_ICU={'ON' if build_static_icu else 'OFF'}",
     ]
     if sanitizer:
         cmd_parts.append(f"-D SANITIZER={sanitizer.upper()}")
