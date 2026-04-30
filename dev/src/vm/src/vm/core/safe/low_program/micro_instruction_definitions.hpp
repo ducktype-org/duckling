@@ -62,6 +62,7 @@
 
 // ========= MOV OPERATIONS ========
 
+DEF_MICRO_INSTR(check_strategy)
 DEF_MICRO_INSTR(mov_p8_imm, vm::low::opargs::Place8, vm::low::opargs::Immediate)
 DEF_MICRO_INSTR(mov_p8_p8, vm::low::opargs::Place8, vm::low::opargs::Place8)
 DEF_MICRO_INSTR(cmov_p8_p8, vm::low::opargs::Place8, vm::low::opargs::Place8)
