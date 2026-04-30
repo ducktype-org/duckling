@@ -55,16 +55,15 @@
 
 
 #ifdef DEBUG_OPCODES
-	#define OPCODE_NAME(name)                  op_debug_##name
-	#define FUNCTION_ARGS                      OPFUN_REF_ARGS
-	#define FUNCTION_CONT(step)                instr += step;
-	#define FUNCTION_CONT_CHECK_STRATEGY(step) instr += step;
+	#define OPCODE_NAME(name)   op_debug_##name
+	#define FUNCTION_ARGS       OPFUN_REF_ARGS
+	#define FUNCTION_CONT(step) instr += step;
+	#define OP_FUN              vm::DebugOpFun
 #else
-	#define OPCODE_NAME(name)                  op_##name
-	#define FUNCTION_ARGS                      OPFUN_ARGS
-	#define FUNCTION_CONT(step)                OPFUN_CONT(step)
-	#define FUNCTION_CONT_CHECK_STRATEGY(step) OPFUN_CONT_CHECK_STRATEGY(step)
-	#define OP_FUN                             vm::OpFun
+	#define OPCODE_NAME(name)   op_##name
+	#define FUNCTION_ARGS       OPFUN_ARGS
+	#define FUNCTION_CONT(step) OPFUN_CONT(step)
+	#define OP_FUN              vm::OpFun
 #endif
 
 namespace vm {
@@ -84,9 +83,9 @@ namespace vm {
 	// the body after the next tail call, which then becomes a regular function
 	// call and may cause the stack to explode.
 
-	// `op_exit` is the only opcode without the `FUNCTION_CONT` or `FUNCTION_CONT_CHECK_STRATEGY`
-	// macro. This means, every other instruction will jump to the next at the end of it with
-	// `FUNCTION_CONT`/`FUNCTION_CONT_CHECK_STRATEGY`, so the the only way to end execution is to
+	// `op_exit` is the only opcode without the `FUNCTION_CONT` macro. This means,
+	// every other instruction will jump to the next at the end of it with
+	// `FUNCTION_CONT`, so the the only way to end execution is to
 	// use this opcode. It also requires different macro surrounding the function call in the
 	// switch case because in this approach we can't end execution from
 	// within the function, but we have to add some instructions on the outside of it. Hence we use
@@ -282,21 +281,21 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(jmp_label)(FUNCTION_ARGS) {
 		{ instr += instr->arg0; }
-		FUNCTION_CONT_CHECK_STRATEGY(1);
+		FUNCTION_CONT(1);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(jmpIf_label)(FUNCTION_ARGS) {
 		{
 			if (frame->flags.flag) instr += instr->arg0;
 		}
-		FUNCTION_CONT_CHECK_STRATEGY(1);
+		FUNCTION_CONT(1);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(jmpIfNot_label)(FUNCTION_ARGS) {
 		{
 			if (!frame->flags.flag) instr += instr->arg0;
 		}
-		FUNCTION_CONT_CHECK_STRATEGY(1);
+		FUNCTION_CONT(1);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(call_func)(FUNCTION_ARGS) {
@@ -307,7 +306,7 @@ namespace vm {
 		// instructions. For future returns, the first instruction that should be executed after
 		// call is saved on frame so that `op_ret`s have to move forward zero instructions after
 		// restoring `instr` from frame.
-		FUNCTION_CONT_CHECK_STRATEGY(0);
+		FUNCTION_CONT(0);
 	}
 
 #ifdef ENABLE_JIT
@@ -344,7 +343,7 @@ namespace vm {
 				run_compiled();
 			}
 		}
-		FUNCTION_CONT_CHECK_STRATEGY(0);
+		FUNCTION_CONT(0);
 	}
 #endif
 
@@ -475,7 +474,7 @@ namespace vm {
 
 			performFunctionCall(instr, local_stack, frame, thread, function_id);
 		}
-		FUNCTION_CONT_CHECK_STRATEGY(0);
+		FUNCTION_CONT(0);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(ret_tailcall_func)(FUNCTION_ARGS) {
@@ -488,7 +487,7 @@ namespace vm {
 			if (local_stack + function.local_stack_size > thread.runtime_data.local_stack_end)
 				throw exceptions::VMStackOverflowException();
 		}
-		FUNCTION_CONT_CHECK_STRATEGY(0);
+		FUNCTION_CONT(0);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(ret)(FUNCTION_ARGS) {
@@ -529,7 +528,7 @@ namespace vm {
 			local_stack = frame->local_stack;
 		}
 		// Here the argument is `0` because of the convention defined in the op_call_func.
-		FUNCTION_CONT_CHECK_STRATEGY(0);
+		FUNCTION_CONT(0);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(init_bany_type)(FUNCTION_ARGS) {
@@ -1221,4 +1220,4 @@ namespace vm {
 #undef OPCODE_NAME
 #undef FUNCTION_ARGS
 #undef FUNCTION_CONT
-#undef FUNCTION_CONT_CHECK_STRATEGY
+#undef FUNCTION_CONT
