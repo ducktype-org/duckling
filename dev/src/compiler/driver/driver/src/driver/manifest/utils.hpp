@@ -18,6 +18,23 @@ namespace compiler::driver::json {
     using Key = std::string;
 
     /**
+     * @brief Extracts a string value from a JSON object without logging.
+     * @param json The JSON object to extract from.
+     * @param key The key of the value to extract.
+     * @return An optional containing the extracted string, or an empty optional if extraction fails.
+     */
+    base::Optional<base::StrID> getStringNoError(const nlohmann::json& json, const Key& key);
+
+    /**
+     * @brief Extracts a string value from a JSON object, logging a warning on failure.
+     * @param json The JSON object to extract from.
+     * @param key The key of the value to extract.
+     * @param warning_message The warning message to log if the key is missing or has an invalid type.
+     * @return An optional containing the extracted string, or an empty optional if extraction fails.
+     */
+    base::Optional<base::StrID> getStringWarning(const nlohmann::json& json, const Key& key, const std::string& warning_message);
+
+    /**
      * @brief Extracts a string value from a JSON object.
      * @param json The JSON object to extract from.
      * @param key The key of the value to extract.
@@ -25,6 +42,23 @@ namespace compiler::driver::json {
      * @return An optional containing the extracted string, or an empty optional if extraction fails.
      */
     base::Optional<base::StrID> getString(const nlohmann::json& json, const Key& key, const std::string& error_message);
+
+    /**
+     * @brief Extracts a boolean value from a JSON object without logging.
+     * @param json The JSON object to extract from.
+     * @param key The key of the value to extract.
+     * @return An optional containing the extracted boolean, or an empty optional if extraction fails.
+     */
+    base::Optional<bool> getBoolNoError(const nlohmann::json& json, const Key& key);
+
+    /**
+     * @brief Extracts a boolean value from a JSON object, logging a warning on failure.
+     * @param json The JSON object to extract from.
+     * @param key The key of the value to extract.
+     * @param warning_message The warning message to log if the key is missing or has an invalid type.
+     * @return An optional containing the extracted boolean, or an empty optional if extraction fails.
+     */
+    base::Optional<bool> getBoolWarning(const nlohmann::json& json, const Key& key, const std::string& warning_message);
 
     /**
      * @brief Extracts a boolean value from a JSON object.
@@ -36,6 +70,23 @@ namespace compiler::driver::json {
     base::Optional<bool> getBool(const nlohmann::json& json, const Key& key, const std::string& error_message);
 
     /**
+     * @brief Extracts an array value from a JSON object without logging.
+     * @param json The JSON object to extract from.
+     * @param key The key of the value to extract.
+     * @return An optional containing the extracted array, or an empty optional if extraction fails.
+     */
+    base::Optional<std::vector<nlohmann::json>> getArrayNoError(const nlohmann::json& json, const Key& key);
+
+    /**
+     * @brief Extracts an array value from a JSON object, logging a warning on failure.
+     * @param json The JSON object to extract from.
+     * @param key The key of the value to extract.
+     * @param warning_message The warning message to log if the key is missing or has an invalid type.
+     * @return An optional containing the extracted array, or an empty optional if extraction fails.
+     */
+    base::Optional<std::vector<nlohmann::json>> getArrayWarning(const nlohmann::json& json, const Key& key, const std::string& warning_message);
+
+    /**
      * @brief Extracts an array value from a JSON object.
      * @param json The JSON object to extract from.
      * @param key The key of the value to extract.
@@ -43,6 +94,23 @@ namespace compiler::driver::json {
      * @return An optional containing the extracted array, or an empty optional if extraction fails.
      */
     base::Optional<std::vector<nlohmann::json>> getArray(const nlohmann::json& json, const Key& key, const std::string& error_message);
+
+    /**
+     * @brief Extracts an object value from a JSON object without logging.
+     * @param json The JSON object to extract from.
+     * @param key The key of the value to extract.
+     * @return An optional containing the extracted object, or an empty optional if extraction fails.
+     */
+    base::Optional<nlohmann::json> getObjectNoError(const nlohmann::json& json, const Key& key);
+
+    /**
+     * @brief Extracts an object value from a JSON object, logging a warning on failure.
+     * @param json The JSON object to extract from.
+     * @param key The key of the value to extract.
+     * @param warning_message The warning message to log if the key is missing or has an invalid type.
+     * @return An optional containing the extracted object, or an empty optional if extraction fails.
+     */
+    base::Optional<nlohmann::json> getObjectWarning(const nlohmann::json& json, const Key& key, const std::string& warning_message);
 
     /**
      * @brief Extracts an object value from a JSON object.

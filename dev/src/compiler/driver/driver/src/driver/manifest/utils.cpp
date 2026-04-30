@@ -47,18 +47,67 @@ namespace compiler::driver::json {
 			global_state::getGlobalLogger()->log(makeBox<ManifestWarning>(header, description));
 		}
 
+		void logFieldWarning(
+			std::string_view     field_type,
+			const std::string&   key,
+			const std::string&   warning_message
+		) {
+			logWarning(
+				base::strConcat("No ", field_type, " value with key: ", key),
+				warning_message
+			);
+		}
+
 	}  // namespace
+
+	base::Optional<base::StrID> getStringNoError(const nlohmann::json& json, const Key& key) {
+		if (!json.contains(key) || !json[key].is_string()) {
+			return {};
+		}
+		return base::StrID(json[key].get<std::string>());
+	}
+
+	base::Optional<base::StrID> getStringWarning(
+		const nlohmann::json& json,
+		const Key&            key,
+		const std::string&    warning_message
+	) {
+		auto result = getStringNoError(json, key);
+		if (!result.has_value()) {
+			logFieldWarning("string", key, warning_message);
+		}
+		return result;
+	}
 
 	base::Optional<base::StrID> getString(
 		const nlohmann::json& json,
 		const Key&            key,
 		const std::string&    error_message
 	) {
-		if (!json.contains(key) || !json[key].is_string()) {
+		auto result = getStringNoError(json, key);
+		if (!result.has_value()) {
 			logFieldError("string", key, error_message);
+		}
+		return result;
+	}
+
+	base::Optional<bool> getBoolNoError(const nlohmann::json& json, const Key& key) {
+		if (!json.contains(key) || !json[key].is_boolean()) {
 			return {};
 		}
-		return base::StrID(json[key].get<std::string>());
+		return json[key].get<bool>();
+	}
+
+	base::Optional<bool> getBoolWarning(
+		const nlohmann::json& json,
+		const Key&            key,
+		const std::string&    warning_message
+	) {
+		auto result = getBoolNoError(json, key);
+		if (!result.has_value()) {
+			logFieldWarning("bool", key, warning_message);
+		}
+		return result;
 	}
 
 	base::Optional<bool> getBool(
@@ -66,20 +115,15 @@ namespace compiler::driver::json {
 		const Key&            key,
 		const std::string&    error_message
 	) {
-		if (!json.contains(key) || !json[key].is_boolean()) {
+		auto result = getBoolNoError(json, key);
+		if (!result.has_value()) {
 			logFieldError("bool", key, error_message);
-			return {};
 		}
-		return json[key].get<bool>();
+		return result;
 	}
 
-	base::Optional<std::vector<nlohmann::json>> getArray(
-		const nlohmann::json& json,
-		const Key&            key,
-		const std::string&    error_message
-	) {
+	base::Optional<std::vector<nlohmann::json>> getArrayNoError(const nlohmann::json& json, const Key& key) {
 		if (!json.contains(key) || !json[key].is_array()) {
-			logFieldError("array", key, error_message);
 			return {};
 		}
 		std::vector<nlohmann::json> result;
@@ -90,16 +134,59 @@ namespace compiler::driver::json {
 		return result;
 	}
 
+	base::Optional<std::vector<nlohmann::json>> getArrayWarning(
+		const nlohmann::json& json,
+		const Key&            key,
+		const std::string&    warning_message
+	) {
+		auto result = getArrayNoError(json, key);
+		if (!result.has_value()) {
+			logFieldWarning("array", key, warning_message);
+		}
+		return result;
+	}
+
+	base::Optional<std::vector<nlohmann::json>> getArray(
+		const nlohmann::json& json,
+		const Key&            key,
+		const std::string&    error_message
+	) {
+		auto result = getArrayNoError(json, key);
+		if (!result.has_value()) {
+			logFieldError("array", key, error_message);
+		}
+		return result;
+	}
+
+	base::Optional<nlohmann::json> getObjectNoError(const nlohmann::json& json, const Key& key) {
+		if (!json.contains(key) || !json[key].is_object()) {
+			return {};
+		}
+		return json[key];
+	}
+
+	base::Optional<nlohmann::json> getObjectWarning(
+		const nlohmann::json& json,
+		const Key&            key,
+		const std::string&    warning_message
+	) {
+		auto result = getObjectNoError(json, key);
+		if (!result.has_value()) {
+			logFieldWarning("object", key, warning_message);
+		}
+		return result;
+	}
+
 	base::Optional<nlohmann::json> getObject(
 		const nlohmann::json& json,
 		const Key&            key,
 		const std::string&    error_message
 	) {
-		if (!json.contains(key) || !json[key].is_object()) {
+		auto result = getObjectNoError(json, key);
+		if (!result.has_value()) {
 			logFieldError("object", key, error_message);
-			return {};
 		}
-		return json[key];
+		return result;
 	}
 
 	void checkForUknownFields(
