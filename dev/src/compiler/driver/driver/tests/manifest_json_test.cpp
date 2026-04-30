@@ -180,7 +180,7 @@ private:
 		clearLogger();
 
 		auto json = json::parse(R"({ "package": "mylib", "strategy": "dvm" })");
-		auto result = PackageCompilationTask::fromJson(json);
+		auto result = RawPackageCompilationTask::fromJson(json);
 
 		ASSERT_TRUE(result.has_value());
 		ASSERT_TRUE(logger().good());
@@ -194,7 +194,7 @@ private:
 		auto json = json::parse(
 			R"({ "package": "app", "strategy": "native", "output_file": "bin/app", "linking_options": "-lm" })"
 		);
-		auto result = PackageCompilationTask::fromJson(json);
+		auto result = RawPackageCompilationTask::fromJson(json);
 
 		ASSERT_TRUE(result.has_value());
 		ASSERT_TRUE(logger().good());
@@ -207,7 +207,7 @@ private:
 		clearLogger();
 
 		auto json = json::parse(R"({ "package": "app", "strategy": "wasm" })");
-		auto result = PackageCompilationTask::fromJson(json);
+		auto result = RawPackageCompilationTask::fromJson(json);
 
 		ASSERT_FALSE(result.has_value());
 		ASSERT_TRUE(logger().hasErrors());

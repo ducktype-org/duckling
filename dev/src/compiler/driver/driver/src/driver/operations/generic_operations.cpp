@@ -22,6 +22,7 @@
 #include <global_state/artifacts_location.hpp>
 #include <global_state/packages.hpp>
 #include <global_state/script_context.hpp>
+#include <global_state/global_logger.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/queries/queries.hpp>
 #include <helios/repl_utils/script_helpers.hpp>
@@ -32,6 +33,7 @@
 #include <base/except/exceptions.hpp>
 #include <base/types/ok_bad.hpp>
 
+#include "string_id/string_id.hpp"
 #include <hashing/component_hash.hpp>
 #include <logger/logger.hpp>
 #include <query_framework/entry/query_entry_point.hpp>
@@ -44,11 +46,13 @@
 #include <vm/bytecode/validator/errors.hpp>
 #include <vm/bytecode/validator/valid_program.hpp>
 #include <vm/loader/loader.hpp>
+#include "frontend/module_tree/module_id.hpp"
 
 #include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <utility>
+#include <vector>
 
 namespace compiler::driver {
 	base::Bit256 KeyOf_CompileModule::queryUnstablePerfectHash() const {
@@ -534,7 +538,6 @@ namespace compiler::driver {
 
 			return base::OK;
 		}
-
 	}
 
 	base::OkBad compileScript(
@@ -670,16 +673,21 @@ namespace compiler::driver {
 	}
 
 	base::OkBad compileEntirePackage(
-		const global_state::PackageInfo& package_info, BuildTarget build_target
+		const std::vector<PackageCompilationTask>& tasks
 	) {
-		auto root          = package_info.root_module;
-		auto backend       = std::holds_alternative<BuildTargetDVM>(build_target) ? BackendType::DVM
-		                                                                          : BackendType::LLVM;
+
 		base::OkBad result = base::OK;
 
-		std::vector<artifacts::FileArtifact> objects;
+
+		struct ModuleToCompile {
+			frontend::ModuleID module_id;
+			BackendType        backend;
+			bool               build_debug_info;
+		};
 
 		std::vector<frontend::ModuleID> modules_to_compile;
+
+		std::vector<artifacts::FileArtifact> objects;
 
 		std::function<void(frontend::ModuleID)> collect_modules
 			= [&](frontend::ModuleID module_id) -> void {
@@ -687,12 +695,10 @@ namespace compiler::driver {
 			auto sub_modules = query::entryPoint<frontend::QuerySubmodules>(module_id);
 			for (const auto& [id, sub_module]: *sub_modules) collect_modules(sub_module);
 		};
-		collect_modules(root);
+
+		for (const auto& task: tasks) collect_modules(task.root_module);
 
 		ImplementationOf_CompileModule::total_module_count.store(modules_to_compile.size());
-
-		// @TODO: #2354 This is temporary.
-		const bool build_debug_info = std::holds_alternative<BuildTargetDVM>(build_target);
 
 		// Schedule compilation of every module up front so worker threads can run
 		// them concurrently, then collect the results in a second pass.

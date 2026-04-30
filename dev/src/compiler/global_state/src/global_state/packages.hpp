@@ -63,6 +63,21 @@ namespace global_state {
 	 */
 	const std::vector<PackageInfo>& getPackages();
 
+	/**
+	 * Returns the PackageInfo for a given package ID.
+	 * @param package_id The ID of the package to retrieve information for.
+	 * @return The PackageInfo associated with the provided package ID or empty optional if no such package exists.
+	 */
+	base::Optional<base::CRef<global_state::PackageInfo>> getPackageRefOpt(base::StrID package_id);
+
+	/**
+	 * Returns the PackageInfo for a given package name.
+	 * @param package_name The name of the package to retrieve information for.
+	 * @return The PackageInfo associated with the provided package name or empty optional if no such
+	 * @note This function panics if package with give name do not exists.
+	 */
+	base::CRef<global_state::PackageInfo> getPackageRef(base::StrID package_id);
+
 	namespace setters {
 		/**
 		 * Adds a package to the global state.
@@ -79,5 +94,8 @@ namespace global_state {
 		 * Removes a package from the global state by its root module ID.
 		 */
 		void removePackage(compiler::frontend::ModuleID root_module);
+
 	}
+
+	
 }

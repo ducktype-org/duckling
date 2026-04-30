@@ -5,6 +5,7 @@
 #include <base/extend_cpp/stringifyable_enum.hpp>
 #include "filesystem/file_path.hpp"
 #include "string_id/string_id.hpp"
+#include "frontend/module_tree/module_id.hpp"
 
 
 /**
@@ -53,11 +54,16 @@ namespace compiler::driver {
     /**
      * @brief Represents a task for compiling a package
      */
-    struct PackageCompilationTask final {
+    struct RawPackageCompilationTask final {
         base::StrID package_name;
         BuildTarget build_target;
 
-        static base::Optional<PackageCompilationTask> fromJson(const nlohmann::json& json);
+        static base::Optional<RawPackageCompilationTask> fromJson(const nlohmann::json& json);
+    };
+
+    struct PackageCompilationTask final {
+        frontend::ModuleID root_module;
+        BuildTarget build_target;
     };
 
 
@@ -65,10 +71,17 @@ namespace compiler::driver {
      * @brief Represents a compilation task in the Duckling compiler.
      * A task can be of different types, such as package compilation, and contains the relevant data for that task type.
      */
+    struct RawTask {    
+        TaskType type;
+        std::variant<RawPackageCompilationTask> task_data;
+
+        static base::Optional<RawTask> fromJson(const nlohmann::json& json);
+    };
+
     struct Task {
         TaskType type;
         std::variant<PackageCompilationTask> task_data;
-
-        static base::Optional<Task> fromJson(const nlohmann::json& json);
     };
+
+    Task convertRawTaskToTask(const RawTask& raw_task);
 }

@@ -1,8 +1,7 @@
 #include "packages.hpp"
+#include "base/collections/optional.hpp"
 
 #include <frontend/module_tree/functors.hpp>
-
-#include <algorithm>
 
 namespace global_state {
 
@@ -11,6 +10,25 @@ namespace global_state {
 	}
 
 	const std::vector<PackageInfo>& getPackages() { return packages; }
+
+	base::CRef<global_state::PackageInfo> getPackageRef(base::StrID package_id) {
+		for (const auto& pkg : packages) {
+			if (getModuleRef(pkg.root_module)->getPackageID() == package_id) {
+				return &pkg;
+			}
+		}
+		CORE_PANIC("Package with ID ", package_id, " not found in global state!");
+		CORE_UNREACHABLE();
+	}
+
+	base::Optional<base::CRef<global_state::PackageInfo>> getPackageRefOpt(base::StrID package_id) {
+		for (const auto& pkg : packages) {
+			if (getModuleRef(pkg.root_module)->getPackageID() == package_id) {
+				return &pkg;
+			}
+		}
+		return {};
+	}
 
 	namespace setters {
 		void addPackage(const PackageInfo& package_info) { packages.push_back(package_info); }
