@@ -1,5 +1,8 @@
 #include "hout_stmt_compilation.hpp"
 
+#include "frontend/pst_parser/elements/hierarchy/expressions/block_expr.hpp"
+#include "helios/hout/elements/stmt.hpp"
+
 #include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/elements/hierarchy/actions/all_actions.hpp>
 #include <frontend/pst_parser/elements/hierarchy/actions/return.hpp>
@@ -30,10 +33,11 @@
 namespace compiler::helios {
 
 	// Forward declaration for processBlock so HoutStmtMaker can call it.
+	template<class Container>
+	requires std::same_as<Container, pst::CodeBlock>
+	      || std::same_as<Container, pst::CodeBlockOrStmt>
 	static code::CodeBlock processBlock(
-		query::Context&                         ctx,
-		pst::AccessLocked<pst::CodeBlockOrStmt> container,
-		tsh::SymbolType<>                       return_type
+		query::Context& ctx, pst::AccessLocked<Container> container, tsh::SymbolType<> return_type
 	);
 
 	/**
@@ -194,6 +198,11 @@ namespace compiler::helios {
 			// we should create an assignment statement:
 			if (auto assignment_opt = inner_expr.dynamicCast<pst::expr::Assignment>()) {
 				handleAssignmentExpr(assignment_opt.value());
+				return;
+			}
+			if (auto block_opt = inner_expr.dynamicCast<pst::expr::BlockExpr>()) {
+				auto block_body = processBlock(ctx, block_opt.value()->getBlock(), return_type);
+				output(code::BlockStmt(code::pstOrigin(stmt), std::move(block_body)));
 				return;
 			}
 
@@ -358,10 +367,11 @@ namespace compiler::helios {
 	 * resulting CodeBlock by value. Called from the compileCodeOfCodeBlock
 	 * helper and recursively within HoutStmtMaker for nested blocks (if/while bodies).
 	 */
+	template<class Container>
+	requires std::same_as<Container, pst::CodeBlock>
+	      || std::same_as<Container, pst::CodeBlockOrStmt>
 	static code::CodeBlock processBlock(
-		query::Context&                         ctx,
-		pst::AccessLocked<pst::CodeBlockOrStmt> container,
-		tsh::SymbolType<>                       return_type
+		query::Context& ctx, pst::AccessLocked<Container> container, tsh::SymbolType<> return_type
 	) {
 		code::CodeBlock block({});
 		for (const auto& stmt: getStmtsFromStmtAggregate(ctx, container)) {

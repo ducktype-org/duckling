@@ -110,7 +110,8 @@ namespace compiler::helios {
 				case pst::ElementKind::StmtSpecifier:
 				case pst::ElementKind::SpecifierBlock:
 				case pst::ElementKind::ExprElement:
-				case pst::ElementKind::ExprHolder: {
+				case pst::ElementKind::ExprHolder:
+				case pst::ElementKind::ExprStmt: {
 					auto pst_parent = getPSTElementParent(ctx, el);
 
 					CORE_ASSERT(
@@ -120,11 +121,14 @@ namespace compiler::helios {
 					return self(pst_parent.getAsLangElement().unlock(ctx));
 				}
 				default:
-					ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(base::strConcat(
-						"Global variable detection is not implemented for variables inside "
-				        "elements of kind: ",
-						el->elementType()
-					), el->getStablePosition()));
+					ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+						base::strConcat(
+							"Global variable detection is not implemented for variables inside "
+							"elements of kind: ",
+							el->elementType()
+						),
+						el->getStablePosition()
+					));
 					query::throwFailed();
 					CORE_UNREACHABLE();
 				}
@@ -1018,6 +1022,10 @@ namespace compiler::helios {
 
 			void visitWhileStmt(const code::WhileStmt& stmt) override {
 				stmt.condition->acceptVisitor(*this);
+				for (const auto& sub_stmt: stmt.body.statements) sub_stmt->acceptVisitor(*this);
+			}
+
+			void visitBlockStmt(const code::BlockStmt& stmt) override {
 				for (const auto& sub_stmt: stmt.body.statements) sub_stmt->acceptVisitor(*this);
 			}
 

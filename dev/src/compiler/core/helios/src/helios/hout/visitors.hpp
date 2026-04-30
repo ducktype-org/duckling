@@ -12,7 +12,8 @@ namespace compiler::helios::code {
 		IfStmt,
 		WhileStmt,
 		VariableStmt,
-		AssignmentStmt
+		AssignmentStmt,
+		BlockStmt
 	);
 	MAKE_VISITOR(HoutExpr,
 		LiteralUnitExpr,
