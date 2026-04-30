@@ -85,6 +85,14 @@ namespace vm::loader::compiler {
 		                                 ->getFieldOffsetByName(opcode_arg.field_name));
 		);
 
+        DEFINE_LOWER_ARGUMENT_IMPL(
+            low::opargs::ShadowField,
+            opargs::Field,
+            return static_cast<u64>(*compiler.low_program.getTypes()
+                                    .at(opcode_arg.type_name)
+                                    ->getFieldShadowOffsetByName(opcode_arg.field_name));
+        );
+
 		DEFINE_LOWER_ARGUMENT_IMPL(
 			low::opargs::FunctionID,
 		    opargs::FunctionName,

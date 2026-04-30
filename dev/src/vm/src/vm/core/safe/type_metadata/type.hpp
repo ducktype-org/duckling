@@ -144,6 +144,8 @@ namespace vm {
 		// data
 		[[nodiscard]]
 		base::Optional<Offset> getFieldOffsetByName(base::StrID field_name) const;
+        [[nodiscard]]
+        base::Optional<ShadowOffset> getFieldShadowOffsetByName(base::StrID field_name) const;
 		[[nodiscard]]
 		base::Optional<CRef<std::vector<kind::FieldDesc>>> getFields() const;
 

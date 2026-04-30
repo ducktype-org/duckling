@@ -10,6 +10,7 @@ namespace vm {
 	using TypeSize = Bytes;
 
 	using Offset = Bytes;
+    using ShadowOffset = u32;
 
 	class Type;
 

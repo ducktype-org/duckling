@@ -98,6 +98,8 @@ namespace vm::low::opargs {
 	DEFINE_MICRO_ARG_TYPE(Type, "type", vm::opargs::Type);
 	/** @brief Stores byte offset of a field within its containing type layout. */
 	DEFINE_MICRO_ARG_TYPE(Field, "field", vm::opargs::Field);
+	/** @brief Stores variable offset of a field within its containing type layout. */
+	DEFINE_MICRO_ARG_TYPE(ShadowField, "sfield", vm::opargs::Field);
 	/** @brief Stores function ID from LowVMProgram functions map. */
 	DEFINE_MICRO_ARG_TYPE(FunctionID, "func", vm::opargs::FunctionName);
 	/** @brief Stores underlying numeric value of builtins::BuiltinFunctionID. */
@@ -118,6 +120,7 @@ namespace vm::low::opargs {
 		Immediate,
 		Type,
 		Field,
+        ShadowField,
 		FunctionID,
 		BuiltinFunctionID,
 		ExtCFunction,

@@ -116,7 +116,8 @@ namespace vm {
 		for (auto [sub_name, sub_type]: fields_definitions) {
 			data.field_name_map.put(sub_name, data.fields.size());
 			// offset is set during finalization
-			data.fields.emplace_back(kind::FieldDesc{ .offset = Offset(0), .type = sub_type });
+			data.fields.emplace_back(kind::FieldDesc{
+				.offset = Offset(0), .shadow_offset = ShadowOffset(0), .type = sub_type });
 		}
 		data.inheritance_metadata = std::move(inheritance_metadata);
 		kind                      = data;
@@ -170,11 +171,14 @@ namespace vm {
 			}
 			variant_case(kind::Data, data) {
 				// calculate offset and size
-				Offset offset(0);
+				Offset       offset(0);
+				ShadowOffset shadow_offset(0);
 				for (auto& field: data.fields) {
-					field.offset = offset;
+					field.offset        = offset;
+					field.shadow_offset = shadow_offset;
 					field.type->finalize();
 					offset += field.type->getSize();
+					shadow_offset += 1;
 				}
 				this->size = offset;
 				if_opt_some(data.inheritance_metadata, imd) { inheritsFromImpl(imd); }
@@ -220,6 +224,18 @@ namespace vm {
 			}
 		);
 	}
+
+    base::Optional<ShadowOffset> Type::getFieldShadowOffsetByName(base::StrID field_name) const {
+		return get<kind::Data>().flatMap(
+			[field_name](CRef<kind::Data> data) -> base::Optional<ShadowOffset> {
+				if_opt_some(data->field_name_map.atMaybe(field_name), field_index) {
+					return data->fields[*field_index].shadow_offset;
+				}
+				return {};
+			}
+		);
+
+    }
 
 	base::Optional<CRef<std::vector<kind::FieldDesc>>> Type::getFields() const {
 		return get<kind::Data>().map([](CRef<kind::Data> data) { return CRef(&data->fields); });
