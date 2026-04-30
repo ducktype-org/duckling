@@ -94,8 +94,8 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(exit)(FUNCTION_ARGS) { IF_TC(return;) }
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(check_strategy)(FUNCTION_ARGS) {
-		++instr;
 		{
+			++instr;
 			if (thread.getExecutionRequestPendingFlag())
 				return handle_execution_break(instr, local_stack, frame, thread);
 		}
