@@ -9,6 +9,12 @@
 
 #include <vm/core/safe/low_program/low_program.hpp>
 
+#ifdef BUILD_TYPE_RELEASE
+constexpr inline uint compilation_threshold = 10;
+#else
+constexpr inline uint compilation_threshold = 0;
+#endif
+
 namespace vm::jit {
 	using JitOpFun
 		= void(const vm::MicroInstruction**, std::byte**, vm::Frame**, vm::SafeVMThread*);
@@ -18,7 +24,7 @@ namespace vm::jit {
 	 */
 	struct JitFuncData {
 		MRef<JitOpFun> func_ptr          = nullptr;
-		uint           until_compilation = 1;
+		uint           until_compilation = compilation_threshold;
 	};
 
 	/**
