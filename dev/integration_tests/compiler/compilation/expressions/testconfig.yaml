@@ -3,48 +3,29 @@
 Tests:
   ternary:
     Cases:
-      dvm:
-        backend: dvm
-        Output:
-          String: "9\n9\n9\n18\n4\n2\n"
-      llvm:
-        backend: llvm
+      all:
+        backend: all
         Output:
           String: "9\n9\n9\n18\n4\n2\n"
   single_comparison: # Any type of comparison between two values.
     Cases:
-      dvm:
-        backend: dvm
-        Output:
-          String: ""
-        ExitCode: 0
-      llvm:
-        backend: llvm
+      all:
+        backend: all
         Output:
           String: ""
         ExitCode: 0
 
   comparison_chain:
     Cases:
-      dvm:
-        backend: dvm
-        Output:
-          String: ""
-        ExitCode: 0
-      llvm:
-        backend: llvm
+      all:
+        backend: all
         Output:
           String: ""
         ExitCode: 0
   unit_simple:
     Cases:
-      llvm:
-        backend: llvm
-        Output:
-          String: "1\n1\n"
-        ExitCode: 0
-      dvm:
-        backend: dvm
+      all:
+        backend: all
         Output:
           String: "1\n1\n"
         ExitCode: 0
@@ -58,91 +39,56 @@ Tests:
 
   casts:
     Cases:
-      dvm:
-        backend: dvm
-        Output:
-          String: "-1\n255\n-1\n-42\n2147483647\n-2147483648\n7\n9\n1\n"
-        ExitCode: 0
-      llvm:
-        backend: llvm
+      all:
+        backend: all
         Output:
           String: "-1\n255\n-1\n-42\n2147483647\n-2147483648\n7\n9\n1\n"
         ExitCode: 0
 
   floating_point_arithmetic:
     Cases:
-      dvm:
-        backend: dvm
-        Output:
-          String: ""
-        ExitCode: 0
-      llvm:
-        backend: llvm
+      all:
+        backend: all
         Output:
           String: ""
         ExitCode: 0
 
   floating_point_comparisons:
     Cases:
-      dvm:
-        backend: dvm
-        Output:
-          String: ""
-        ExitCode: 0
-      llvm:
-        backend: llvm
+      all:
+        backend: all
         Output:
           String: ""
         ExitCode: 0
 
   unsigned_integers:
     Cases:
-      dvm:
-        backend: dvm
-        Output:
-          String: ""
-        ExitCode: 0
-      llvm:
-        backend: llvm
+      all:
+        backend: all
         Output:
           String: ""
         ExitCode: 0
 
   signed_integers:
     Cases:
-      dvm:
-        backend: dvm
-        Output:
-          String: ""
-        ExitCode: 0
-      llvm:
-        backend: llvm
+      all:
+        backend: all
         Output:
           String: ""
         ExitCode: 0
 
   float_32:
     Cases:
-      dvm:
-        backend: dvm
-        Output:
-          String: ""
-        ExitCode: 0
-      llvm:
-        backend: llvm
+      all:
+        backend: all
         Output:
           String: ""
         ExitCode: 0
 
   coercions:
     Cases:
-      dvm:
-        backend: dvm
-        Output:
-          String: ""
-        ExitCode: 0
-      llvm:
-        backend: llvm
+      all:
+        backend: all
         Output:
           String: ""
         ExitCode: 0
@@ -162,13 +108,8 @@ Tests:
 
   zero_init:
     Cases:
-      llvm:
-        backend: llvm
-        Output:
-          String: "0\n0\n0\n0\n"
-        ExitCode: 0
-      dvm:
-        backend: dvm
+      all:
+        backend: all
         Output:
           String: "0\n0\n0\n0\n"
         ExitCode: 0
