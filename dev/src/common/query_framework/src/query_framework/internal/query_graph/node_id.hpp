@@ -42,13 +42,92 @@ namespace query::internal {
 	};
 }
 
+	class SipHashLowRoundOnlyU64 final {
+	private:
+		u64 v0, v1, v2, v3;
+		u64 k0, k1;
+
+		u64 total_len = 0;
+
+		u64 buffer = 0;
+
+		static constexpr u64 rotl(u64 x, int b) noexcept {
+			return (x << b) | (x >> (64 - b));
+		}
+
+		constexpr void sipRound() noexcept {
+			v0 += v1;
+			v1 = rotl(v1, 13);
+			v1 ^= v0;
+			v0 = rotl(v0, 32);
+
+			v2 += v3;
+			v3 = rotl(v3, 16);
+			v3 ^= v2;
+
+			v0 += v3;
+			v3 = rotl(v3, 21);
+			v3 ^= v0;
+
+			v2 += v1;
+			v1 = rotl(v1, 17);
+			v1 ^= v2;
+			v2 = rotl(v2, 32);
+		}
+
+
+	public:
+		using result_type = u64;
+
+		constexpr SipHashLowRoundOnlyU64(u64 key0 = 0, u64 key1 = 0) noexcept
+			: k0(key0), k1(key1)
+		{
+			v0 = 0x736f6d6570736575ULL ^ k0;
+			v1 = 0x646f72616e646f6dULL ^ k1;
+			v2 = 0x6c7967656e657261ULL ^ k0;
+			v3 = 0x7465646279746573ULL ^ k1;
+		}
+
+		constexpr void operator()(u64 data) noexcept {
+			v3 ^= data;
+			sipRound();
+			// sip_round();
+			v0 ^= data;
+		}
+
+		[[nodiscard]]
+		constexpr result_type finalize() const noexcept {
+			SipHashLowRoundOnlyU64 tmp = *this;
+
+			u64 b = tmp.buffer | (static_cast<u64>(tmp.total_len) << 56);
+
+			tmp.v3 ^= b;
+			tmp.sipRound();
+			// tmp.sip_round();
+			tmp.v0 ^= b;
+
+			tmp.v2 ^= 0xff;
+			tmp.sipRound();
+			tmp.sipRound();
+			// tmp.sip_round();
+			// tmp.sip_round();
+
+			return tmp.v0 ^ tmp.v1 ^ tmp.v2 ^ tmp.v3;
+		}
+	};
+
 template<>
 struct std::hash<query::internal::NodeID> final {
 	std::size_t operator()(const query::internal::NodeID& key) const {
-		auto l = key.q_id;
-		auto r = key.hash.val;
+		// (marginal +)
+		SipHashLowRoundOnlyU64 hasher;
+		hasher(key.q_id.asInt());
+		hasher(key.hash.val.data[0]);
+		hasher(key.hash.val.data[1]);
+		hasher(key.hash.val.data[2]);
+		hasher(key.hash.val.data[3]);
 
-		// This is questionable
-		return l.asInt() * 9'223'372'036'854'775'783UL + std::hash<base::Bit256>{}(r);
+		auto hash_result = hasher.finalize();
+		return hash_result;
 	}
 };

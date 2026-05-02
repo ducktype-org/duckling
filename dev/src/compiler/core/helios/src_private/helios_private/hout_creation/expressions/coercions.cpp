@@ -125,6 +125,16 @@ namespace compiler::helios {
 		const tsh::SymbolType<> to,
 		bool                    bypass_trivial_copyability_check
 	) {
+
+		// FAST PATH FOR Integers: (marginal +)
+		if (
+			from.withMutability(to.getMutability()) == to
+			and from.getType().getKind() == tsh::Kind::Integral
+			and from.getRefKind() == tsh::ReferenceKind::Direct
+		) {
+			return Coercion::emptyCoercion(from);
+		}
+
 		// First check that the type is even coercible to provide a invalid coercion error first.
 		const bool coercible = ctx.query<tsh::QueryImplicitCoercibilityOnSymbolType>({ from, to });
 		if (!coercible) return InvalidCoercion{};

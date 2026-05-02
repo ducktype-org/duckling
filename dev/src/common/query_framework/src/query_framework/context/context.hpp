@@ -102,7 +102,7 @@ namespace query {
 					main_query_state.getActiveGraph()->setEdge(caller, callee);
 					auto maybe_cycle = main_query_state.getActiveGraph()->cycleCheck(caller);
 
-					if (maybe_cycle.has_value()) {
+					if (maybe_cycle.has_value()) [[unlikely]] {
 						// we hit a cycle!
 						// for now just panic
 						// @TODO: #1888 change that
@@ -183,7 +183,7 @@ namespace query {
 				QueryGraphHandler graph_handler(*this, my_node, dep_id, false);
 				return OthQuery::internal_query(key);
 			} else {
-				QueryGraphHandler graph_handler(*this, my_node, dep_id, true);
+				QueryGraphHandler graph_handler(*this, my_node, dep_id, false);
 
 				// note that this will block, until the task is completed
 				main_query_state.getTaskPool()->query(internal::Task{
@@ -231,7 +231,8 @@ namespace query {
 				"Task handle query ID does not match the awaited query type."
 			);
 
-			QueryGraphHandler graph_handler(*this, my_node, handle.getID(), true);
+			// ->FALSE: LARGE improvement, even larger for 1 worker (huh..?????)
+			QueryGraphHandler graph_handler(*this, my_node, handle.getID(), false);
 
 			this->active = false;
 			defer({ this->active = true; });
