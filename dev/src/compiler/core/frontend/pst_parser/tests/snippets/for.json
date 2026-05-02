@@ -133,7 +133,15 @@
 																					}
 																				}
 																			},
-																			"operator": "+",
+																			"operator": {
+																				"position": {
+																					"sourceStart": 21,
+																					"sourceEnd": 21
+																				},
+																				"Operator Wrapper": {
+																					"value": "+"
+																				}
+																			},
 																			"right_expr": {
 																				"position": {
 																					"sourceStart": 23,

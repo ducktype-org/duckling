@@ -124,7 +124,15 @@
 													}
 												}
 											},
-											"operator": "Result",
+											"operator": {
+												"position": {
+													"sourceStart": 55,
+													"sourceEnd": 60
+												},
+												"Operator Wrapper": {
+													"value": "Result"
+												}
+											},
 											"right_expr": {
 												"position": {
 													"sourceStart": 62,

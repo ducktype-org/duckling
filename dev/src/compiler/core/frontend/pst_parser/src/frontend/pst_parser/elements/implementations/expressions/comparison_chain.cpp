@@ -17,25 +17,18 @@ namespace pst::expr {
 	MBox<ExprElement> ComparisonChain::parse(LangParserState& state) {
 		if (!checkNonEmpty(state)) return nullptr;
 
-		i64 length = base::safeIntConv<i64>(state.ctokens().size());
-
 		i64 fwd = skipToOp(state, 0);
-		if (fwd == length) return Lower::parse(state);
+		if (fwd == state.ctokens().size()) return Lower::parse(state);
 
 		auto out = makeBox<ComparisonChain>(state);
 
-		PST_WHILE(fwd < length) {
+		PST_WHILE(fwd < state.ctokens().size()) {
 			out->sub_expr.emplace_back(nullptr);
 			PARSE().autoFallbackLen(fwd).with(&out->sub_expr.back(), Lower::parse);
 
-			MBox<OperatorWrapper> wrap = OperatorWrapper::parse(state);
-			out->operators.emplace_back();
+			out->operators.emplace_back(nullptr);
+			PARSE().autoFallbackLen(1UL).with(&out->operators.back(), OperatorWrapper::parse);
 
-			PARSE().assign(&out->operators.back(), std::move(wrap));
-
-			PARSE().eatOne();
-
-			length -= fwd + 1;
 			fwd = skipToOp(state, 0);
 		}
 
@@ -56,6 +49,17 @@ namespace pst::expr {
 			else
 				first = false;
 			nullAwareDprint(expr, out);
+		}
+		out << "],";
+
+		out << R"("operators": [)";
+		first = true;
+		for (auto& op: operators) {
+			if (!first)
+				out << ", ";
+			else
+				first = false;
+			nullAwareDprint(op, out);
 		}
 		out << "]";
 

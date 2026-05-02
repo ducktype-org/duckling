@@ -46,7 +46,15 @@
 														}
 													}
 												},
-												"operator": "+",
+												"operator": {
+													"position": {
+														"sourceStart": 8,
+														"sourceEnd": 8
+													},
+													"Operator Wrapper": {
+														"value": "+"
+													}
+												},
 												"right_expr": {
 													"position": {
 														"sourceStart": 10,
@@ -75,7 +83,15 @@
 														"number": "4"
 													}
 												},
-												"operator": "+",
+												"operator": {
+													"position": {
+														"sourceStart": 16,
+														"sourceEnd": 16
+													},
+													"Operator Wrapper": {
+														"value": "+"
+													}
+												},
 												"right_expr": {
 													"position": {
 														"sourceStart": 18,
@@ -85,6 +101,17 @@
 														"number": "0.8"
 													}
 												}
+											}
+										}
+									],
+									"operators": [
+										{
+											"position": {
+												"sourceStart": 12,
+												"sourceEnd": 12
+											},
+											"Operator Wrapper": {
+												"value": "<"
 											}
 										}
 									]
@@ -132,7 +159,15 @@
 														}
 													}
 												},
-												"operator": "-",
+												"operator": {
+													"position": {
+														"sourceStart": 30,
+														"sourceEnd": 30
+													},
+													"Operator Wrapper": {
+														"value": "-"
+													}
+												},
 												"right_expr": {
 													"position": {
 														"sourceStart": 32,

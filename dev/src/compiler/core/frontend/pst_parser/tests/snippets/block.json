@@ -81,7 +81,15 @@
 													}
 												}
 											},
-											"operator": "++"
+											"operator": {
+												"position": {
+													"sourceStart": 34,
+													"sourceEnd": 35
+												},
+												"Operator Wrapper": {
+													"value": "++"
+												}
+											}
 										}
 									}
 								}

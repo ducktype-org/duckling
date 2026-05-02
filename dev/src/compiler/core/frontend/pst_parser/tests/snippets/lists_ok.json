@@ -89,7 +89,15 @@
 										"number": "1"
 									}
 								},
-								"operator": "+",
+								"operator": {
+									"position": {
+										"sourceStart": 35,
+										"sourceEnd": 35
+									},
+									"Operator Wrapper": {
+										"value": "+"
+									}
+								},
 								"right_expr": {
 									"position": {
 										"sourceStart": 37,
@@ -238,7 +246,15 @@
 													"number": "1"
 												}
 											},
-											"operator": "+",
+											"operator": {
+												"position": {
+													"sourceStart": 87,
+													"sourceEnd": 87
+												},
+												"Operator Wrapper": {
+													"value": "+"
+												}
+											},
 											"right_expr": {
 												"position": {
 													"sourceStart": 89,
@@ -353,7 +369,15 @@
 													"number": "1"
 												}
 											},
-											"operator": "+",
+											"operator": {
+												"position": {
+													"sourceStart": 124,
+													"sourceEnd": 124
+												},
+												"Operator Wrapper": {
+													"value": "+"
+												}
+											},
 											"right_expr": {
 												"position": {
 													"sourceStart": 126,

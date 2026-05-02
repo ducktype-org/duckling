@@ -568,8 +568,8 @@ namespace compiler::helios::code {
 			void visitComparisonChain(pst::Access<pst::expr::ComparisonChain> stmt) override {
 				using namespace ::std::views;
 
-				auto        operator_count = usize(stmt->numberOfSubExpressions());
-				usize       expr_count     = operator_count + 1;
+				auto       expr_count     = usize(stmt->numberOfSubExpressions());
+				usize        operator_count = expr_count - 1;
 
 				std::vector<Box<Expr>> result_exprs;
 				result_exprs.reserve(expr_count);
