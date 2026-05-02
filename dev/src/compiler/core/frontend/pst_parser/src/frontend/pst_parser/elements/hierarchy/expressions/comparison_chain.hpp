@@ -1,6 +1,7 @@
 #pragma once
 
 #include "expr_common.hpp"
+#include "../not_statements/wrapper_elements/operator_wrapper.hpp"
 
 namespace pst::expr {
 	/**
@@ -13,7 +14,7 @@ namespace pst::expr {
 		using Lower = GeneralBinary;
 
 		std::vector<AccessInternalAnonymous<ExprElement>> sub_expr;
-		std::vector<Operator>                             operators;
+		std::vector<AccessInternalAnonymous<OperatorWrapper>>                             operators;
 
 		static i64 skipToOp(const LangParserState& state, i64 base);
 
@@ -27,9 +28,14 @@ namespace pst::expr {
 
 		static MBox<ExprElement> parse(LangParserState& state);
 
+		[[nodiscard]]		
+		u64 numberOfSubExpressions() const {
+			return sub_expr.size();
+		}
+
 		[[nodiscard]]
-		const auto& getOperators() const {
-			return operators;
+		auto getOperator(u64 index) const {
+			return operators.at(index).give();
 		}
 
 		[[nodiscard]]

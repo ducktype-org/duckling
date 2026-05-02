@@ -568,8 +568,7 @@ namespace compiler::helios::code {
 			void visitComparisonChain(pst::Access<pst::expr::ComparisonChain> stmt) override {
 				using namespace ::std::views;
 
-				const auto& pst_operators  = stmt->getOperators();
-				auto        operator_count = usize(std::ranges::size(pst_operators));
+				auto        operator_count = usize(stmt->numberOfSubExpressions());
 				usize       expr_count     = operator_count + 1;
 
 				std::vector<Box<Expr>> result_exprs;
@@ -596,7 +595,7 @@ namespace compiler::helios::code {
 				// Perform operator resolution for each operator in the chain. Reuse the expressions
 				// which are between two operators. The last expressions is not reused, but that's fine.
 				for (usize op_idx = 0; op_idx < operator_count; op_idx++) {
-					const auto op = pst_operators.at(op_idx);
+					const auto op = stmt->getOperator(op_idx).unlock(ctx)->getOperator();
 					auto rhs = makeBox<ReusableExpr>(ctx, std::move(result_exprs.at(op_idx + 1)));
 					auto next_lhs = rhs->nextUse();
 

@@ -28,7 +28,11 @@ namespace pst::expr {
 			out->sub_expr.emplace_back(nullptr);
 			PARSE().autoFallbackLen(fwd).with(&out->sub_expr.back(), Lower::parse);
 
-			out->operators.push_back(state[0].asBinaryOperator().value());
+			MBox<OperatorWrapper> wrap = OperatorWrapper::parse(state);
+			out->operators.emplace_back();
+
+			PARSE().assign(&out->operators.back(), std::move(wrap));
+
 			PARSE().eatOne();
 
 			length -= fwd + 1;
@@ -60,7 +64,7 @@ namespace pst::expr {
 
 	HashAlg& ComparisonChain::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, sub_expr.size());
-		addToHash(partial_hash, operators);
+		addToHash(partial_hash, operators.size());
 		return partial_hash;
 	}
 
@@ -69,6 +73,10 @@ namespace pst::expr {
 	}
 
 	void ComparisonChain::calcElementPathHashRecursive() {
-		calcIndexedListChildPath<ExprElement>({ sub_expr }, getElementPathHash());
+		auto path = getElementPathHash();
+		auto sub_expr_path = hashing::ComponentHash(path, "value");;
+		calcIndexedListChildPath<ExprElement>({ sub_expr }, sub_expr_path);
+		auto op_path = hashing::ComponentHash(path, "operator");;
+		calcIndexedListChildPath<OperatorWrapper>({ operators }, op_path);
 	}
 }
