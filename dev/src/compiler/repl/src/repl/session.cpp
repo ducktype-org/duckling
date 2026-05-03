@@ -43,9 +43,8 @@
 
 namespace compiler::repl {
 	namespace {
-		constexpr std::string_view K_RESET_COMMAND = "/reset";
-		constexpr std::string_view K_RESET_ERROR_MSG
-			= "Usage: /reset [-n <count>] or /reset [-rel <count>]";
+		constexpr std::string_view K_RESET_COMMAND   = "/reset";
+		constexpr std::string_view K_RESET_ERROR_MSG = "Usage: /reset [<count>|-<relative_count>]";
 
 		std::string getSessionHistoryFilePath() { return ".duckling_repl_session_history"; }
 
@@ -88,14 +87,6 @@ namespace compiler::repl {
 			rest = trim(rest);
 			if (rest.empty()) return true;
 
-			const auto flag = takeToken(rest);
-			if (flag != "-n" && flag != "-rel") {
-				error_message = std::string(K_RESET_ERROR_MSG);
-				return false;
-			}
-
-			is_relative = (flag == "-rel");
-
 			const auto value = takeToken(rest);
 			if (value.empty()) {
 				error_message = std::string(K_RESET_ERROR_MSG);
@@ -108,14 +99,23 @@ namespace compiler::repl {
 				return false;
 			}
 
-			for (char ch: value) {
+			size_t number_abs_val_start = 0;
+			if (value.front() == '-') {
+				is_relative          = true;
+				number_abs_val_start = 1;
+				if (value.size() == 1) return false;
+			}
+
+			for (size_t i = number_abs_val_start; i < value.size(); ++i) {
+				const char ch = value[i];
 				if (ch < '0' || ch > '9') {
 					error_message = std::string(K_RESET_ERROR_MSG);
 					return false;
 				}
 			}
 
-			replay_count     = static_cast<size_t>(std::stoul(std::string(value)));
+			replay_count
+				= static_cast<size_t>(std::stoul(std::string(value.substr(number_abs_val_start))));
 			has_replay_count = true;
 			return true;
 		}
@@ -434,14 +434,14 @@ namespace compiler::repl {
 
 			saveSessionHistoryToFile();
 			if (has_replay_count) {
-				if (is_relative) {
-					if (replay_count >= m_session_history.size()) {
-						std::cerr << "Error: -rel count cannot be >= total history size ("
-								  << m_session_history.size() << ")\n";
-						return true;
-					}
-					replay_count = m_session_history.size() - replay_count;
+				if (replay_count >= m_session_history.size()) {
+					std::cerr
+						<< "Error: value for reset should be smaller than session history size ("
+						<< m_session_history.size() << ")\n";
+					return true;
 				}
+
+				if (is_relative) replay_count = m_session_history.size() - replay_count;
 				m_reset_replay_count = replay_count;
 			} else {
 				m_reset_replay_count.reset();
