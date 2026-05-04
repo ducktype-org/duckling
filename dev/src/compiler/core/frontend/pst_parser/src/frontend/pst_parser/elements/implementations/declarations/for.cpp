@@ -17,7 +17,7 @@ namespace pst {
 
 		if (!assertStmtChoice<For>(state, state[0].is(Keyword::For))) return nullptr;
 
-		PARSE().all(Keyword::For, &out->optional_name);
+		PARSE().all(Keyword::For, &out->name);
 
 		if (!state[0].isBracketGroup(Token::Round)) {
 			state.logInt(makeBox<ForBracketError>(state.getPosition()));
@@ -48,9 +48,12 @@ namespace pst {
 
 	void For::dprint(std::ostream& out) const {
 		out << "{";
-		out << R"("name":)";
-		nullAwareDprint(optional_name, out);
-		out << R"(, "identifier": )";
+		if (name.has_value()) {
+			out << R"("name":)";
+			nullAwareDprint(name.value(), out);
+			out << ",";
+		}
+		out << R"("identifier": )";
 		nullAwareDprint(iterator, out);
 		out << R"(, "type": )";
 		nullAwareDprint(type, out);
@@ -62,8 +65,6 @@ namespace pst {
 	}
 
 	HashAlg& For::addElementDataToStableHash(HashAlg& partial_hash) const {
-		addToHash(partial_hash, optional_name);
-		addToHash(partial_hash, iterator);
 		return partial_hash;
 	}
 

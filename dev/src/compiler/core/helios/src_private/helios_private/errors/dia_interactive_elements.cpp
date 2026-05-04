@@ -164,14 +164,14 @@ namespace compiler::helios {
 		case pst::ElementKind::Fun: {
 			auto fun = function_like.dynamicCast<pst::Fun>().value();
 			return dia::SourcePosition::merge(
-				fun->getNameIdentifier().position,
+				fun->getName().unlock(ctx)->getSourcePosition().unlock(ctx),
 				fun->getParams().unlock(ctx)->getSourcePosition().unlock(ctx)
 			);
 		}
 		case pst::ElementKind::FunDecl: {
 			auto fun_decl = function_like.dynamicCast<pst::FunDecl>().value();
 			return dia::SourcePosition::merge(
-				fun_decl->getNameIdentifier().position,
+				fun_decl->getName().unlock(ctx)->getSourcePosition().unlock(ctx),
 				fun_decl->getParams().unlock(ctx)->getSourcePosition().unlock(ctx)
 			);
 		}

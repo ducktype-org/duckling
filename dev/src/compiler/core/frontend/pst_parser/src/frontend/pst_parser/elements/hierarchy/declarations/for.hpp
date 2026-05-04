@@ -7,8 +7,8 @@ namespace pst {
 	 * @brief For declaration
 	 */
 	class For final: public CodeDecl {
-		tpc::OptionalIdentifier optional_name;
-		tpc::Identifier         iterator;
+		NAMED_CHILD_OPT(name, IdentifierWrapper);
+		NAMED_CHILD(iterator, IdentifierWrapper);
 		NAMED_CHILD(type, ForTypeExprHolder);
 		NAMED_CHILD(iterable, CommaExprHolder);
 		NAMED_CHILD(body, CodeBlockOrStmt);
@@ -32,12 +32,12 @@ namespace pst {
 
 		[[nodiscard]]
 		DeclKind isDeclaration() const final {
-			return (optional_name.value ? DeclKind::Symbol : DeclKind::None);
+			return (name.has_value() ? DeclKind::Symbol : DeclKind::None);
 		}
 
 		[[nodiscard]]
-		base::Optional<base::StrID> getDeclSymbolName() const final {
-			return optional_name.value;
+		base::Optional<AccessLocked<IdentifierWrapper>> getDeclSymbol2() const final {
+			return name.map([](const auto& acc){ return acc.give(); });
 		}
 
 		void acceptVisitor(PstVisitor& visitor) const override;

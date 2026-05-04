@@ -211,7 +211,7 @@ namespace compiler::helios {
 			auto function = stmt.dynamicCast<pst::Fun>().value();
 			return SymbolData::makePSTSymbolData(
 				{
-					.name = function->getName(),
+					.name = function->getName().unlock(ctx)->unwrap(),
 					.kind = SymbolKind::Function,
 				},
 				pst_data
@@ -221,7 +221,7 @@ namespace compiler::helios {
 			auto function = stmt.dynamicCast<pst::FunDecl>().value();
 			return SymbolData::makePSTSymbolData(
 				{
-					.name = function->getName(),
+					.name = function->getName().unlock(ctx)->unwrap(),
 					.kind = SymbolKind::FunctionDeclaration,
 				},
 				pst_data
@@ -231,7 +231,7 @@ namespace compiler::helios {
 			auto namespace_stmt = stmt.dynamicCast<pst::Namespace>().value();
 			return SymbolData::makePSTSymbolData(
 				{
-					.name = namespace_stmt->getName(),
+					.name = namespace_stmt->getName().unlock(ctx)->unwrap(),
 					.kind = SymbolKind::Namespace,
 				},
 				pst_data

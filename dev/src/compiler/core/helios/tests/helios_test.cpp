@@ -3033,7 +3033,7 @@ private:
 		auto get_pst_function_by_name
 			= [&](base::StrID name) -> base::Optional<pst::Access<pst::Fun>> {
 			for (const auto& fun: all_pst_functions)
-				if (fun.illegalAccess().value()->getName() == name) return fun.illegalAccess();
+				if (fun.illegalAccess().value()->getName().illegalAccess().value()->unwrap() == name) return fun.illegalAccess();
 			return {};
 		};
 
