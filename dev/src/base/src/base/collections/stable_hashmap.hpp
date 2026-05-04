@@ -14,6 +14,16 @@
 #include <type_traits>
 #include <utility>
 
+namespace concurrent {
+	// forward declaration of ConHashMap
+	template<
+		typename KEY_T,
+		typename DATA_T,
+		typename HASH_T,
+		u64 ALLOCATOR_BLOCK_SIZE>
+	class ConHashMap;
+}
+
 namespace base {
 
 	/**
@@ -30,6 +40,10 @@ namespace base {
 		typename HASH_T          = std::hash<KEY_T>,
 		u64 ALLOCATOR_BLOCK_SIZE = 4'096>
 	class StableHashMap final {
+
+
+		friend class ::concurrent::ConHashMap<KEY_T, DATA_T, HASH_T, ALLOCATOR_BLOCK_SIZE>;
+
 	public:
 		/**
 		 * Key Value pair stored in the map.

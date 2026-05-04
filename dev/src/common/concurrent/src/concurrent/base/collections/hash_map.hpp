@@ -33,16 +33,22 @@ namespace concurrent {
 	class ConHashMap final {
 		using HashMapType = base::StableHashMap<KEY_T, DATA_T, HASH_T, ALLOCATOR_BLOCK_SIZE>;
 
-		using KeyHash = u64;
 
 		[[nodiscard]]
 		constexpr u64 keyToShard(const KEY_T& key) const
 			noexcept(::base::IS_BUILD_TYPE_RELEASE && noexcept(HASH_T{}(key))) {
-			u64 hash = HASH_T{}(key);
+			u64 hash = HashMapType::keyHash(key);
 
 			u64 result = hash % SHARD_COUNT;
 			CORE_ASSERT(result < SHARD_COUNT, "Shard index out of bounds");
 
+			return result;
+		}
+
+		[[nodiscard]]
+		constexpr u64 hashToShard(u64 hash) const {
+			u64 result = hash % SHARD_COUNT;
+			CORE_ASSERT(result < SHARD_COUNT, "Shard index out of bounds");
 			return result;
 		}
 
@@ -206,10 +212,12 @@ namespace concurrent {
 		template<typename K, typename D = DATA_T, typename Func>
 		requires std::same_as<std::remove_cvref_t<K>, KEY_T>
 		MRef<KeyValuePair> maybePutAndUpdate(K&& key, D&& value, Func&& f) RELEASE_NOEXCEPT {
-			WithShardLock lock(*this, keyToShard(key));
+			auto hash = HashMapType::keyHash(key);
+			WithShardLock lock(*this, hashToShard(hash));
 
-			auto inserted = shards[lock.shard_index].maybePutAndUpdate(
-				std::forward<K>(key), std::forward<D>(value), std::forward<Func>(f)
+			auto inserted = shards[lock.shard_index].maybePutAndUpdateAssumingHash(
+				std::forward<K>(key), std::forward<D>(value), std::forward<Func>(f),
+				hash
 			);
 			if (inserted != nullptr) elements_count.fetch_add(1, std::memory_order_relaxed);
 			return inserted;
