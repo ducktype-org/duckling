@@ -2,7 +2,7 @@
 //! This includes: creating a venv, resolving dependencies, downloading them.
 use std::fs::File;
 use std::io;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
 use flate2::read::GzDecoder;
@@ -24,7 +24,7 @@ use crate::quackpack::core::storage::paths::Storage;
 use crate::quackpack::core::storage::venv::{Venv, VenvData};
 use crate::quackpack::core::storage::venv_id::{ToVenvId, VenvId};
 use crate::quackpack::core::{BranchOrTag, Git, Package, PackageContext, PackageLoader, storage};
-use crate::util::path_ops_ext::{PathOpsExt, ShouldBlock};
+use crate::util::path_ops_ext::PathOpsExt;
 use crate::{QuackResult, QuackResultContext, qp_bail, qp_bail_internal, qp_err};
 
 const MAX_BLOB_RETRY_COUNT: i32 = 3;
@@ -50,7 +50,8 @@ pub fn sync(
     let venv_config = pcx.venv_config();
     let storage_localization = venv_config
         .storage_path()?
-        .unwrap_or(pcx.ctx().default_storage_root());
+        .map(Path::to_path_buf)
+        .unwrap_or_else(|| pcx.ctx().default_storage_root().into_not_locked_path());
     let storage = Storage::new(storage_localization);
     let mut fetcher = Fetcher::new(pcx.ctx())?;
     let mut git_access = StorageGitAccess::new(&storage);
@@ -58,10 +59,11 @@ pub fn sync(
     let user_exposed_freeze = load_external_freezefile(pcx, expose_freezefile)?;
     let id = pcx.to_venv_id();
 
-    let _sync_lock = storage::locks::TrySyncLock::new(&storage, id)
-        .context("failed to acquire try sync lock")?;
+    let _sync_lock = storage::locks::TrySyncLock::new(&storage, id, pcx.ctx())
+        .context("failed to acquire try sync lock")?
+        .with_context(|| format!("another synchronization operation is ongoing in venv `{id}`"))?;
 
-    let venv = Venv::fix_and_load(&storage, id)?;
+    let venv = Venv::fix_and_load(&storage, id, pcx.ctx())?;
 
     if !options.overwrite {
         check_if_overwrites(pcx, venv.as_ref(), id)?;
@@ -108,7 +110,7 @@ pub fn sync(
         );
         Venv::new(id, data)
     };
-    venv.save_to(&storage)?;
+    venv.save_to(&storage, pcx.ctx())?;
 
     if expose_freezefile && !options.frozen {
         let json = serde_json::to_string_pretty(venv.data().freeze())?;
@@ -209,11 +211,7 @@ fn get_solver_answer(
         None => SolverFreeze::empty_with_root(root_pkg)?,
     };
     let solver = SolverGathererData::new(pcx, solver_freeze, mode);
-    let fetcher_lock = pcx
-        .ctx()
-        .duck_home()
-        .ensure_fetcher_lockfile()?
-        .lock(ShouldBlock::Yes)?;
+    let fetcher_lock = pcx.ctx().duck_home().open_fetcher_lockfile(pcx.ctx())?;
     let should_run_engine = solver.prepare_solving(fetcher, git_access)?;
     drop(fetcher_lock);
     debug!("will run solver engine: {should_run_engine}");
@@ -237,8 +235,7 @@ fn fetch_source_codes(
     let fetcher_lock = fetcher
         .ctx()
         .duck_home()
-        .ensure_fetcher_lockfile()?
-        .lock(ShouldBlock::Yes)?;
+        .open_fetcher_lockfile(fetcher.ctx())?;
     for pkg in pkgs {
         was_anything_installed |= fetch_source_code(storage, fetcher, git_access, pkg)?;
     }

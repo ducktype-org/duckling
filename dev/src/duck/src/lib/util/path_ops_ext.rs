@@ -3,45 +3,11 @@ use std::fs::{
     read_to_string, remove_dir, remove_file, rename, write,
 };
 use std::io::{self, Read, Write};
-use std::ops::{Deref, DerefMut};
 use std::path::{Path, PathBuf};
 
 use crate::{QuackResult, QuackResultContext, qp_bail};
 
 const BUFFER_SIZE: usize = 4096;
-
-/// Whether the [`PathOpsExt::lock`]/[`PathOpsExt::lock_shared`] should block the current thread.
-#[derive(Debug, Hash, Clone, Copy, PartialEq, Eq)]
-pub enum ShouldBlock {
-    No,
-    Yes,
-}
-
-/// An RAII guard, which calls [`(*self).unlock()`](std::fs::File::unlock) on a drop.
-#[derive(Debug)]
-pub struct FileLockGuard {
-    file: File,
-}
-
-impl Drop for FileLockGuard {
-    fn drop(&mut self) {
-        drop(self.file.unlock())
-    }
-}
-
-impl Deref for FileLockGuard {
-    type Target = File;
-
-    fn deref(&self) -> &Self::Target {
-        &self.file
-    }
-}
-
-impl DerefMut for FileLockGuard {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.file
-    }
-}
 
 /// Options for controlling the [`PathOpsExt::mkdir`]
 #[derive(Debug, Clone, Copy, Hash, Eq, PartialEq)]
@@ -77,19 +43,6 @@ pub trait PathOpsExt {
     /// Note that this function will return `Ok(())`, if [`create_dir`] returns `Err` with kind
     /// [`ErrorKind::AlreadyExists`](io::ErrorKind::AlreadyExists).
     fn mkdir(&self, opts: MkdirOptions) -> QuackResult<()>;
-
-    /// Locks exclusively `self`, creating a file if needed.
-    ///
-    /// This is essentially [`self.touch()?`](PathOpsExt::touch) followed by [`File::lock`]/[`File::try_lock`], with RAII bloat.
-    fn lock(&self, should_block: ShouldBlock) -> QuackResult<FileLockGuard>;
-
-    /// Locks shared `self`, creating a file if needed.
-    ///
-    /// This is essentially [`self.touch()?`](PathOpsExt::touch) followed by [`File::lock_shared`]/[`File::try_lock_shared`], with RAII bloat.
-    ///
-    /// ## Returns
-    /// [`Ok(FileLockGuard)`](FileLockGuard) on a success.
-    fn lock_shared(&self, should_block: ShouldBlock) -> QuackResult<FileLockGuard>;
 
     /// Resolve `self` fully, as best as possible.
     ///
@@ -244,39 +197,6 @@ impl PathOpsExt for Path {
             _ => result,
         }
         .with_context(|| format!("failed to create {text} `{}`", self.display()))
-    }
-
-    fn lock(&self, should_block: ShouldBlock) -> QuackResult<FileLockGuard> {
-        let file = self.touch()?;
-        let result = if matches!(should_block, ShouldBlock::Yes) {
-            file.lock()
-        } else {
-            file.try_lock().map_err(|err| match err {
-                std::fs::TryLockError::Error(error) => error,
-                std::fs::TryLockError::WouldBlock => io::Error::from(io::ErrorKind::WouldBlock),
-            })
-        };
-        result.map(|_| FileLockGuard { file }).with_context(|| {
-            format!(
-                "failed to acquire an exclusive lock on `{}`",
-                self.display()
-            )
-        })
-    }
-
-    fn lock_shared(&self, should_block: ShouldBlock) -> QuackResult<FileLockGuard> {
-        let file = self.touch()?;
-        let result = if matches!(should_block, ShouldBlock::Yes) {
-            file.lock_shared()
-        } else {
-            file.try_lock_shared().map_err(|err| match err {
-                std::fs::TryLockError::Error(error) => error,
-                std::fs::TryLockError::WouldBlock => io::Error::from(io::ErrorKind::WouldBlock),
-            })
-        };
-        result
-            .map(|_| FileLockGuard { file })
-            .with_context(|| format!("failed to acquire a shared lock on `{}`", self.display()))
     }
 
     #[cfg(unix)]

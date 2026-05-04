@@ -128,7 +128,7 @@ pub fn run_script<'duck>(rs_options: RunScriptOptions<'duck>) -> QuackResult<()>
         },
     )?;
     let compile_lock = lock
-        .to_compile_lock(&storage, package.to_venv_id())
+        .to_compile_lock(&storage, package.to_venv_id(), ctx)
         .context("failed to acquire a compile lock")?;
     let profile = Profile::construct_profile(profile, package.package().manifest().profiles())?;
     let bcx = BuildContext {

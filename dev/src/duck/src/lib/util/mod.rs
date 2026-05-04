@@ -2,6 +2,7 @@
 pub mod command_ext;
 pub mod env;
 pub mod error;
+pub mod filesystem;
 pub mod hash;
 pub mod hex;
 pub mod path_ops_ext;

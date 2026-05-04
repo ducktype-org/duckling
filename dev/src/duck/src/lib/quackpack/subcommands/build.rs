@@ -11,7 +11,7 @@ use crate::{QuackResult, QuackResultContext, StrId};
 /// Options for compiling a project.
 pub struct BuildOptions<'duck> {
     /// Package to compile.
-    pub package: PackageContext<'duck>,
+    pub pcx: PackageContext<'duck>,
     /// Enabled features from the CLI.
     pub used_features: Vec<FeatureName>,
     /// Selected build profile.
@@ -27,7 +27,7 @@ pub struct BuildOptions<'duck> {
 /// Compile given options.
 pub fn compile(options: BuildOptions<'_>) -> QuackResult<()> {
     let BuildOptions {
-        package,
+        pcx,
         used_features,
         profile,
         overwrite,
@@ -35,7 +35,7 @@ pub fn compile(options: BuildOptions<'_>) -> QuackResult<()> {
         strict_errors,
     } = options;
     let (lock, venv, storage) = sync(
-        &package,
+        &pcx,
         StorageSyncOptions {
             overwrite,
             frozen,
@@ -43,11 +43,11 @@ pub fn compile(options: BuildOptions<'_>) -> QuackResult<()> {
         },
     )?;
     let _compile_lock = lock
-        .to_compile_lock(&storage, package.to_venv_id())
+        .to_compile_lock(&storage, pcx.to_venv_id(), pcx.ctx())
         .context("failed to acquire a compile lock")?;
-    let profile = Profile::construct_profile(profile, package.package().manifest().profiles())?;
+    let profile = Profile::construct_profile(profile, pcx.package().manifest().profiles())?;
     let bcx = BuildContext {
-        pcx: &package,
+        pcx: &pcx,
         freeze: venv.into(),
         storage,
         used_features,

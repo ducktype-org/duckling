@@ -75,12 +75,13 @@
 
 use std::fs::ReadDir;
 use std::io;
-use std::path::Path;
 
 use crate::quackpack::core::storage::paths::Storage;
 use crate::quackpack::core::storage::venv_id::{ToVenvId, VenvId};
-use crate::util::path_ops_ext::{FileLockGuard, PathOpsExt, ShouldBlock};
-use crate::{QuackResult, QuackResultContext};
+#[cfg(not(windows))]
+use crate::util::filesystem::Filesystem;
+use crate::util::filesystem::LockedFile;
+use crate::{DuckContext, QuackResult, QuackResultContext};
 
 #[derive(Debug)]
 /// A lock that guarantees no virtual environment data mutations are in progress.
@@ -94,13 +95,13 @@ use crate::{QuackResult, QuackResultContext};
 /// On platforms lacking shared lock support, it also waits for all sync locks
 /// present at the time of acquisition to be released.
 pub struct CleanLock {
-    _lock: FileLockGuard,
+    _lock: LockedFile,
 }
 
 impl CleanLock {
     /// Create a new [`CleanLock`] for the given storage.
-    pub fn new(storage: &Storage) -> QuackResult<Self> {
-        let lock = storage.clean_lock().lock(ShouldBlock::Yes)?;
+    pub fn new(storage: &Storage, ctx: &DuckContext) -> QuackResult<Self> {
+        let lock = storage.exclusive_clean_lock(ctx)?;
         Ok(Self { _lock: lock })
     }
 }
@@ -111,8 +112,8 @@ impl CleanLock {
 ///
 /// Can be constructed from [`TrySyncLock::to_compile_lock`].
 pub struct CompileLock {
-    _compile_lock: FileLockGuard,
-    _clean_lock: FileLockGuard,
+    _compile_lock: LockedFile,
+    _clean_lock: LockedFile,
 }
 
 #[derive(Debug)]
@@ -122,24 +123,33 @@ pub struct CompileLock {
 /// other concurrent synchronization tasks. If it cannot acquire the required
 /// locks, it returns [`WouldBlock`](io::ErrorKind::WouldBlock).
 pub struct TrySyncLock {
-    clean_lock: FileLockGuard,
-    _sync_lock: FileLockGuard,
+    clean_lock: LockedFile,
+    _sync_lock: LockedFile,
 }
 
 impl TrySyncLock {
     /// Create a new [`TrySyncLock`] for the given venv in the given storage.
-    pub fn new(storage: &Storage, venv_id: VenvId) -> QuackResult<Self> {
-        let clean_lock = storage.clean_lock().lock_shared(ShouldBlock::No)?;
-        let sync_lock = storage.sync_lock(venv_id).lock(ShouldBlock::No)?;
-        Ok(Self {
+    /// Returns `Ok(None)`, if locking would block.
+    pub fn new(storage: &Storage, venv_id: VenvId, ctx: &DuckContext) -> QuackResult<Option<Self>> {
+        let clean_lock = storage.shared_clean_lock(ctx)?;
+        let sync_lock = storage.sync_locks().try_open_shared_rw_create(venv_id)?;
+        let Some(sync_lock) = sync_lock else {
+            return Ok(None);
+        };
+        Ok(Some(Self {
             clean_lock,
             _sync_lock: sync_lock,
-        })
+        }))
     }
 
     /// Upgrade self to a [`CompileLock`].
-    pub fn to_compile_lock(self, storage: &Storage, venv_id: VenvId) -> QuackResult<CompileLock> {
-        let compile_lock = storage.compile_lock(venv_id).lock(ShouldBlock::Yes)?;
+    pub fn to_compile_lock(
+        self,
+        storage: &Storage,
+        venv_id: VenvId,
+        ctx: &DuckContext,
+    ) -> QuackResult<CompileLock> {
+        let compile_lock = storage.compile_locks().open_exclusive(venv_id, ctx)?;
         Ok(CompileLock {
             _compile_lock: compile_lock,
             _clean_lock: self.clean_lock,
@@ -150,21 +160,29 @@ impl TrySyncLock {
 /// Cleans up leftover lock files from previously aborted or crashed processes.
 /// Deletes lock files only if the corresponding virtual environment directories no longer exist.
 pub fn cleanup_locks(storage: &Storage) -> QuackResult<()> {
-    cleanup_locks_impl(storage, storage.iter_sync_locks()?)?;
-    cleanup_locks_impl(storage, storage.iter_data_locks()?)?;
-    cleanup_locks_impl(storage, storage.iter_compile_locks()?)?;
+    cleanup_locks_impl(storage, storage.iter_sync_locks()?, storage.sync_locks())?;
+    cleanup_locks_impl(storage, storage.iter_data_locks()?, storage.data_locks())?;
+    cleanup_locks_impl(
+        storage,
+        storage.iter_compile_locks()?,
+        storage.compile_locks(),
+    )?;
     Ok(())
 }
 
 /// An implementation detail of [`cleanup_locks`].
 /// Removes all venv locks from the given iterator.
-fn cleanup_locks_impl(storage: &Storage, dir_iterator: ReadDir) -> QuackResult<()> {
+fn cleanup_locks_impl(
+    storage: &Storage,
+    dir_iterator: ReadDir,
+    root: Filesystem,
+) -> QuackResult<()> {
     for lockfile in dir_iterator {
         let lockfile = lockfile.context("failed to read entry from dir iterator")?;
         let name = lockfile.file_name().to_venv_id();
         let path = lockfile.path();
         if !storage.venv_dir(name).is_dir() {
-            try_delete_lock(&path)
+            try_delete_lock(&root, name)
                 .with_context(|| format!("failed to delete lock `{}`", path.display()))?;
         }
     }
@@ -174,8 +192,9 @@ fn cleanup_locks_impl(storage: &Storage, dir_iterator: ReadDir) -> QuackResult<(
 /// On Windows, trying to delete file opened by another process
 /// leads to an ERROR_SHARING_VIOLATION error.
 #[cfg(windows)]
-fn try_delete_lock(path: &Path) -> QuackResult<()> {
-    match path.rm() {
+fn try_delete_lock(root: &Filesystem, name: VenvId) -> QuackResult<()> {
+    let path = root.not_locked_path().join(name);
+    match path.not_locked_path().rm() {
         Ok(()) => Ok(()),
         Err(e)
             if e.kind() == io::ErrorKind::NotFound
@@ -189,9 +208,11 @@ fn try_delete_lock(path: &Path) -> QuackResult<()> {
 }
 
 #[cfg(not(windows))]
-fn try_delete_lock(path: &Path) -> QuackResult<()> {
-    let _guard = match path.lock(ShouldBlock::No) {
-        Ok(guard) => Some(guard),
+fn try_delete_lock(root: &Filesystem, name: VenvId) -> QuackResult<()> {
+    use crate::util::path_ops_ext::PathOpsExt;
+
+    let guard = match root.try_open_exclusive(name) {
+        Ok(guard) => guard,
         Err(e) => {
             let Some(err) = e.downcast_ref_in_chain::<io::Error>() else {
                 return Err(e);
@@ -212,6 +233,8 @@ fn try_delete_lock(path: &Path) -> QuackResult<()> {
     };
     // Due to the lock taking mechanism we use, we may simply
     // delete the file if we own it, see `_posix_acquire`.
-    path.rm()?;
+    if let Some(ref guard) = guard {
+        guard.path().rm()?;
+    };
     Ok(())
 }
