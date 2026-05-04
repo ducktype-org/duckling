@@ -94,7 +94,7 @@ namespace base {
 		}
 
 		void rehash() RELEASE_NOEXCEPT {
-			usize new_bucket_count = buckets.size() * 2;
+			usize new_bucket_count = buckets.size() * 8;
 
 			std::vector<Ref<Node>> all_nodes;
 			all_nodes.reserve(element_count);
@@ -352,11 +352,11 @@ namespace base {
 			}
 
 			if (element_count != 0 and more_then_one_element > 0) {
-				std::cerr << typeid(KEY_T).name() << " -> " << typeid(DATA_T).name() << ": ";
-				std::cerr << "StableHashMap destroyed. Final bucket count: " << bucket_count
-			          << ", element count: " << element_count
-			          << ", buckets with more than 1 element: " << more_then_one_element
-			          << ", buckets with 0 elements: " << zero_element_buckets << std::endl;
+				// std::cerr << typeid(KEY_T).name() << " -> " << typeid(DATA_T).name() << ": ";
+				// std::cerr << "StableHashMap destroyed. Final bucket count: " << bucket_count
+			    //       << ", element count: " << element_count
+			    //       << ", buckets with more than 1 element: " << more_then_one_element
+			    //       << ", buckets with 0 elements: " << zero_element_buckets << std::endl;
 
 			}
 		}
