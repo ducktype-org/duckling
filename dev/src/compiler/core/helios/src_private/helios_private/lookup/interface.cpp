@@ -81,7 +81,7 @@ namespace compiler::helios {
 			}
 			variant_case(TypeMetaInterface, type) {
 				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-					"Type meta lookups are not implemented yet", std::nullopt
+					"Type meta lookups are not implemented yet", ""
 				));
 				static query::QResult<LookupResult> failed_result = query::Failed();
 				return &failed_result;
@@ -120,8 +120,7 @@ namespace compiler::helios {
 				auto msg = makeBox<ShadowedVariableLookupError>(error_position.resolve(ctx));
 				for (auto& leaf: lookup_result->leaves) {
 					if_opt_some(getSymRef(leaf)->getPSTDataOpt(), pst_data) {
-						auto decl_pos
-							= pst_data->getElement().unlock(ctx)->getSourcePosition().unlock(ctx);
+						auto decl_pos = pst_data->getElement().unlock(ctx)->getStablePosition();
 						msg->addAttachedMessage(makeBox<ShadowingDeclarationNote>(decl_pos));
 					}
 				}
@@ -129,7 +128,7 @@ namespace compiler::helios {
 				return query::Failed();
 			}
 			variant_case(errors::SymbolNotFound, _) {
-				ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+				ctx.logInt(makeBox<dia_int::PlaceholderError>(
 					base::strConcat("Symbol '", name, "' not found in lookup"),
 					error_position.resolve(ctx),
 					"",

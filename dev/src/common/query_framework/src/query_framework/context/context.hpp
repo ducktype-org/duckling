@@ -107,7 +107,7 @@ namespace query {
 						// for now just panic
 						// @TODO: #1888 change that
 
-						this_context.logInt(makeBox<dia_int::PlaceholderHeaderError>(
+						this_context.logInt(makeBox<dia_int::PlaceholderError>(
 							base::strConcat(
 								"Query cycle detected involving query node:",
 								caller.q_id.asInt(),

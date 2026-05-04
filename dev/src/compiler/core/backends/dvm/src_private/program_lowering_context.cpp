@@ -1,6 +1,7 @@
 #include "program_lowering_context.hpp"
 
 #include "debug_info_utils.hpp"
+#include "dvm_value.hpp"
 #include "function_lowering_context.hpp"
 
 #include <backends/dvm/dvm_internal_fwd.hpp>
@@ -67,7 +68,7 @@ const vm::code::TypeOfData& ProgramLoweringContext::getOrInsertPointerType(
 	return type_storage.dvm_types.at(pointer_name);
 }
 
-const DVMGlobal& ProgramLoweringContext::getLirGlobal(CRef<lir::LIRGlobal> global) const {
+const DVMPlace& ProgramLoweringContext::getLirGlobal(CRef<lir::LIRGlobal> global) const {
 	if (auto maybe_global = global_name_to_dvm.atMaybe(global->mangled_name))
 		return **maybe_global;
 	else
@@ -107,7 +108,8 @@ const vm::code::GlobalData& ProgramLoweringContext::lowerAndKeepLirGlobal(
 	// Register the global variable itself before inserting ctor/dtor to handle
 	// recursive references.
 	global_name_to_dvm.put(
-		lir_global.mangled_name, DVMGlobal{ .name = lir_global.mangled_name, .type = global_type }
+		lir_global.mangled_name,
+		DVMPlace(lir_global.mangled_name, global_type, DVMPlace::AccessKind::Direct)
 	);
 
 	using vm::code::Identifier;
@@ -271,7 +273,7 @@ vm::code::TypeOfData ProgramLoweringContext::lowerTslTypeInternal(CRef<tsl::Type
 					"yet: ",
 					layout->toStringDefinition(*query_ctx_for_errors.value())
 				),
-				base::Optional<dia::SourcePosition>()
+				""
 			));
 			query::throwFailed();
 		}
