@@ -13,6 +13,7 @@
 #include <iterator>
 #include <type_traits>
 #include <utility>
+#include <iostream>
 
 namespace concurrent {
 	// forward declaration of ConHashMap
@@ -332,13 +333,31 @@ namespace base {
 		}
 
 		~StableHashMap() {
+			auto bucket_count = buckets.size();
+			u64 more_then_one_element = 0;
+			u64 zero_element_buckets = 0;
+
 			for (auto& bucket: buckets) {
 				MRef<Node> current_node = bucket;
+
+				u64 node_count = 0;
 				while (current_node) {
+					node_count++;
 					MRef<Node> next_node = current_node->next;
 					node_allocator.justDestroy(current_node.toOpt().value());
 					current_node = next_node;
 				}
+				if (node_count > 1) more_then_one_element++;
+				if (node_count == 0) zero_element_buckets++;
+			}
+
+			if (element_count != 0 and more_then_one_element > 0) {
+				std::cerr << typeid(KEY_T).name() << " -> " << typeid(DATA_T).name() << ": ";
+				std::cerr << "StableHashMap destroyed. Final bucket count: " << bucket_count
+			          << ", element count: " << element_count
+			          << ", buckets with more than 1 element: " << more_then_one_element
+			          << ", buckets with 0 elements: " << zero_element_buckets << std::endl;
+
 			}
 		}
 
