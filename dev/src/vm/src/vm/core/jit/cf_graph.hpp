@@ -208,21 +208,11 @@ namespace vm::jit::cf {
 
 		/**
 		 * @brief Creates a control-flow graph from lowered function data.
-		 * @param function Lowered function containing bytecode.
-		 * @param block_beginnings Sorted block start instruction offsets.
-		 */
-		ControlFlowGraph(
-			const low::LowFuncData& function, const std::vector<usize>& block_beginnings
-		) {
-			createCFG(function, block_beginnings);
-		}
-
-		/**
-		 * @brief Creates a control-flow graph from lowered function data.
 		 * @param function Lowered function to analyze.
 		 */
-		ControlFlowGraph(const low::LowFuncData& function):
-			ControlFlowGraph(function, basicBlockBeginnings(function)) {}
+		ControlFlowGraph(const low::LowFuncData& function) {
+			createCFG(function, basicBlockBeginnings(function));
+		}
 
 		/**
 		 * @brief Returns number of blocks in the graph.
