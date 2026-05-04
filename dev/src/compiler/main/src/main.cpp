@@ -51,6 +51,10 @@
 #include <string>
 #include <vector>
 
+#ifdef _WIN32
+	#include <process.h>
+#endif
+
 namespace {
 	std::vector<std::string> g_argv;
 
@@ -93,9 +97,18 @@ namespace {
 		for (auto& arg: g_argv) args.push_back(arg.data());
 		args.push_back(nullptr);
 
+#ifdef _WIN32
+		intptr_t result = _spawnv(_P_WAIT, args[0], args.data());
+		if (result == -1) {
+			std::perror("_spawnv");
+			return 1;
+		}
+		return 0;
+#else
 		execv(args[0], args.data());
 		std::perror("execv");
 		return 1;
+#endif
 	}
 }
 
