@@ -19,6 +19,34 @@
 
 namespace compiler::helios::defgen {
 	struct IMPLEMENT_QUERY(QueryToStringMethod, query::QResult<HOUTFunction>) {
+		static void stringifyBool(
+			Context&                       ctx,
+			const QKey                     owner_type,
+			const HOUTFunctionDeclaration& to_string_decl,
+			std::vector<Box<code::Stmt>>&  body
+		) {
+			const auto self_param = to_string_decl.parameters.at(0).helios_symbol;
+
+			std::vector<Box<code::Stmt>> then_stmts;
+			then_stmts.emplace_back(makeBox<code::ReturnStmt>(
+				code::generatedOrigin(),
+				makeBox<code::LiteralStringExpr>(ctx, code::generatedOrigin(), base::StrID("true"))
+			));
+
+			std::vector<Box<code::Stmt>> else_stmts;
+			else_stmts.emplace_back(makeBox<code::ReturnStmt>(
+				code::generatedOrigin(),
+				makeBox<code::LiteralStringExpr>(ctx, code::generatedOrigin(), base::StrID("false"))
+			));
+
+			body.emplace_back(makeBox<code::IfStmt>(
+				code::generatedOrigin(),
+				makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), self_param),
+				code::CodeBlock{ .statements = std::move(then_stmts) },
+				code::CodeBlock{ .statements = std::move(else_stmts) }
+			));
+		}
+
 		static void stringifyClass(
 			Context&                       ctx,
 			const QKey                     owner_type,
@@ -151,9 +179,12 @@ namespace compiler::helios::defgen {
 			case tsh::Kind::Integral:
 			case tsh::Kind::Float:
 			case tsh::Kind::Char:
-			case tsh::Kind::Bool:
 				// Currently no body logic is generated for the primitive toString methods.
 				break;
+			case tsh::Kind::Bool: {
+				stringifyBool(ctx, owner_type, to_string_decl, body);
+				break;
+			}
 			case tsh::Kind::Class: {
 				stringifyClass(ctx, owner_type, to_string_decl, body);
 				break;
