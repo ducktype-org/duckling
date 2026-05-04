@@ -22,6 +22,7 @@ namespace query::internal {
 	 */
 	class ActiveGraph final {
 	public:
+
 		/**
 		 * Helper struct representing a found query cycle.
 		 * See cycleCheck() for more details.
@@ -37,6 +38,9 @@ namespace query::internal {
 
 
 	private:
+		/**
+		 * Helper struct representing data stored for each active node in the graph.
+		 */
 		struct ActiveData final {
 			base::Optional<NodeID> active_edge;
 
@@ -51,20 +55,6 @@ namespace query::internal {
 		concurrent::ConHashMap<NodeID, ActiveData> active_nodes;
 		std::atomic<u64>                           active_node_count = 0;
 
-		/**
-		 * Performs the following:
-		 * * if node_id is not present in the graph, return empty optional,
-		 * * if node_id does not currently have an active edge, return empty optional,
-		 * * otherwise return the node that the active edge of provided node points to.
-		 // TODO PR: refactor it, we should have one function
-		 */
-		base::Optional<NodeID> walk(NodeID node_id) const;
-
-		/**
-		 * Same as walk, but return full info needed to construct a QueryCycle in case of cycle
-		 * detection.
-		 */
-		base::Optional<QueryCycle::NodeCycleInfo> cycleWalk(NodeID node_id) const;
 
 	public:
 		/**
