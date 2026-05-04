@@ -6,6 +6,7 @@
 #include <vm/utils/persistent/memory.hpp>
 #include <vm/utils/persistent/vector.hpp>
 
+#include <array>
 #include <string>
 #include <utility>
 
@@ -24,30 +25,30 @@ public:
 	void testBijective() {
 		vm::persistent::detail::BijectiveMap<base::StrID, usize> dir{};
 
-		base::StrID vals[10];
-		for (usize i = 0; i < 10; i++) {
-			vals[i] = base::StrID("val" + std::to_string(i));
-			dir.emplaceByLeft(vals[i], i);
+		std::array<base::StrID, 10> vals;
+		for (usize i = 0; i < vals.size(); i++) {
+			vals.at(i) = base::StrID("val" + std::to_string(i));
+			dir.emplaceByLeft(vals.at(i), i);
 		}
 
 		for (usize i = 0; i < 10; i++) {
-			auto& rght = dir.atLeft(vals[i]);
+			auto& rght = dir.atLeft(vals.at(i));
 			auto& left = dir.atRight(i);
 
 
 			ASSERT_EQUAL(i, rght);
-			ASSERT_EQUAL(vals[i], left);
+			ASSERT_EQUAL(vals.at(i), left);
 
-			auto maybe_rght = dir.atLeftOpt(vals[i]);
+			auto maybe_rght = dir.atLeftOpt(vals.at(i));
 			auto maybe_left = dir.atRightOpt(i);
 
 			ASSERT_TRUE(maybe_left.has_value());
 			ASSERT_TRUE(maybe_rght.has_value());
 
 			ASSERT_EQUAL(i, *maybe_rght);
-			ASSERT_EQUAL(vals[i], *maybe_left);
+			ASSERT_EQUAL(vals.at(i), *maybe_left);
 
-			auto [inserted, refR] = dir.emplaceByLeft(vals[i], 11);
+			auto [inserted, refR] = dir.emplaceByLeft(vals.at(i), 11);
 			ASSERT_TRUE(!inserted);
 		}
 
