@@ -3,11 +3,8 @@
 Tests:
   conditional: # if, if-else
     Cases:
-      llvm:
-        backend: llvm
-        ExitCode: 99
-      dvm:
-        backend: dvm
+      all:
+        backend: all
         ExitCode: 99
   declaration_coercions:
     Cases:
@@ -43,13 +40,8 @@ Tests:
 
   named_statements:
     Cases:
-      llvm:
-        backend: llvm
-        Output:
-          String: ""
-        ExitCode: 0
-      dvm:
-        backend: dvm
+      all:
+        backend: all
         Output:
           String: ""
         ExitCode: 0
