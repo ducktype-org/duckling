@@ -12,24 +12,29 @@ namespace pst {
 
 		PST_NEW_CONTEXT({
 			state.setContextBlockOrdering(BlockOrderType::Ordered);
-			PARSE().all(Keyword::While, &out->optional_name, &out->condition, &out->body);
+			PARSE().all(Keyword::While, &out->name, &out->condition, &out->body);
 		})
 
 		PST_RETURN out;
 	}
 
 	void While::dprint(std::ostream& out) const {
-		out << R"({"name":)";
-		nullAwareDprint(optional_name, out);
-		out << ", \"condition\": ";
+		out << "{";
+
+		if (name.has_value()) {
+			out << R"("name":)";
+			nullAwareDprint(name.value(), out);
+			out << ",";
+		}
+		out << "\"condition\": ";
 		nullAwareDprint(condition, out);
 		out << ", \"body\": ";
 		nullAwareDprint(body, out);
+
 		out << "}";
 	}
 
 	HashAlg& While::addElementDataToStableHash(HashAlg& partial_hash) const {
-		addToHash(partial_hash, optional_name);
 		return partial_hash;
 	}
 

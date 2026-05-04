@@ -289,7 +289,7 @@ namespace compiler::helios {
 			auto variable = stmt.dynamicCast<pst::Variable>().value();
 			return SymbolData::makePSTSymbolData(
 				{
-					.name        = variable->getName(),
+					.name        = variable->getName().unlock(ctx)->unwrap(),
 					.kind        = SymbolKind::Variable,
 					.is_wildcard = false,
 					.is_alias    = false,

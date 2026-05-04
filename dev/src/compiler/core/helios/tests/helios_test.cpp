@@ -58,9 +58,6 @@ class HeliosTests: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-
-		enableDevCategory(logger::DevLogCategories::QueryStacktraces);
-
 		TESTER_ADD_TEST(testImport);
 		TESTER_ADD_TEST(testEdgeEvals);
 		TESTER_ADD_TEST(testConstants);
@@ -2970,7 +2967,7 @@ private:
 		auto get_pst_variable_by_name
 			= [&](base::StrID name) -> base::Optional<pst::Access<pst::Variable>> {
 			for (const auto& var: all_variables)
-				if (var.illegalAccess().value()->getName() == name) return var.illegalAccess();
+				if (var.illegalAccess().value()->getName().illegalAccess().value()->unwrap() == name) return var.illegalAccess();
 			return {};
 		};
 
