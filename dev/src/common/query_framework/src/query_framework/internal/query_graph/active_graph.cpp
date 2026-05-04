@@ -43,13 +43,11 @@ namespace query::internal {
 		});
 	}
 
-
 	base::Optional<ActiveGraph::QueryCycle> ActiveGraph::cycleCheck(const NodeID node_id) const {
-
 		/***********************************************************\
 		| Cycle detection algorithm: Floyd's Tortoise and Hare.     |
 		\***********************************************************/
-		
+
 		// Walks a single edge in the active graph.
 		auto walk = [this](NodeID node_id) -> base::Optional<NodeID> {
 			auto edge = active_nodes.atMaybeCopy(node_id);
@@ -88,18 +86,18 @@ namespace query::internal {
 		std::vector<QueryCycle::NodeCycleInfo> cycle_nodes;
 		bool                                   is_the_initial_node_on_the_cycle = false;
 
-		// current_node_slow is guaranteed to be on the cycle, as it is the meeting point of slow and fast pointers.
+		// current_node_slow is guaranteed to be on the cycle, as it is the meeting point of slow
+		// and fast pointers.
 		const NodeID cycle_start = current_node_slow.value();
-		
+
 		NodeID current_node = cycle_start;
 
 		while (true) {
 			if (current_node == node_id) is_the_initial_node_on_the_cycle = true;
-			
+
 			auto node_data = active_nodes.getCopy(current_node);
-			cycle_nodes.push_back(
-				QueryCycle::NodeCycleInfo{ .node_id = current_node, .node_context_ref = node_data.node_context_ref }
-			);
+			cycle_nodes.push_back(QueryCycle::NodeCycleInfo{
+				.node_id = current_node, .node_context_ref = node_data.node_context_ref });
 
 			current_node = node_data.active_edge.value();
 			if (current_node == cycle_start) break;

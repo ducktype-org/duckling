@@ -22,7 +22,6 @@ namespace query::internal {
 	 */
 	class ActiveGraph final {
 	public:
-
 		/**
 		 * Helper struct representing a found query cycle.
 		 * See cycleCheck() for more details.

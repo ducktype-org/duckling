@@ -148,14 +148,14 @@ namespace query::internal {
 
 			} else {
 				CORE_PANIC(
-					"Query cycle detected in a query that does not use QResult or does not allow cycles, and thus cannot "
-				    "recover from it.",
+					"Query cycle detected in a query that does not use QResult or does not allow "
+				    "cycles, and thus cannot "
+					"recover from it.",
 					"Query: ",
 					QueryIntType::QUERY_DATA.name
 				);
 			}
-		}
-		catch (const QueryFailedException& qfe) {
+		} catch (const QueryFailedException& qfe) {
 			CORE_DEV_LOG(
 				Query,
 				"[QUERY \"",
@@ -262,80 +262,80 @@ namespace query::internal {
  * @param type Name of a struct with query implementation
  * @param pretty_name Pretty name of the Query
  */
-#define INTERNAL_QUERY_IMPLEMENTATION_BOILERPLATE(type)                                                                                  \
-	auto type::QueryType::internal_query(const type::QKey& key) -> type::QResult {                                                       \
-		return ::query::internal::standardQueryEntry<type>(key);                                                                         \
-	}                                                                                                                                    \
-	auto type::QueryType::internal_load(::query::QueryStableHash hash) -> type::QResult {                                                \
-		return type::load(type::KHash(hash)).value().data;                                                                               \
-	}                                                                                                                                    \
-	auto type::QueryType::internal_erase(::query::QueryStableHash hash) -> bool {                                                        \
-		return type::erase(type::KHash(hash));                                                                                           \
-	}                                                                                                                                    \
-	static_assert(                                                                                                                       \
-		not std::is_reference_v<type::QResult>,                                                                                          \
-		"Query result type should not be a reference (use CRef instead)"                                                                 \
-	);\
+#define INTERNAL_QUERY_IMPLEMENTATION_BOILERPLATE(type)                                                                                    \
+	auto type::QueryType::internal_query(const type::QKey& key) -> type::QResult {                                                         \
+		return ::query::internal::standardQueryEntry<type>(key);                                                                           \
+	}                                                                                                                                      \
+	auto type::QueryType::internal_load(::query::QueryStableHash hash) -> type::QResult {                                                  \
+		return type::load(type::KHash(hash)).value().data;                                                                                 \
+	}                                                                                                                                      \
+	auto type::QueryType::internal_erase(::query::QueryStableHash hash) -> bool {                                                          \
+		return type::erase(type::KHash(hash));                                                                                             \
+	}                                                                                                                                      \
+	static_assert(                                                                                                                         \
+		not std::is_reference_v<type::QResult>,                                                                                            \
+		"Query result type should not be a reference (use CRef instead)"                                                                   \
+	);                                                                                                                                     \
 	static_assert(                                                                                                                       \
 		std::is_copy_constructible_v<type::QResult>,                                                                                      \    \
 		"Query result type should be copy constructible"                                                                                  \
-	);                                                                                                                                   \
-	static_assert(                                                                                                                       \
-		not std::is_reference_v<type::PResult>,                                                                                          \
-		"Provider result type should not be a reference (use CRef instead)"                                                              \
-	);                                                                                                                                   \
-	static_assert(                                                                                                                       \
-		std::is_same_v<                                                                                                                  \
-			std::invoke_result_t<decltype(type::store), type::KHash, type::PResult, ::query::ACD>,                                       \
-			type::QResult>,                                                                                                              \
-		"Bad store result."                                                                                                              \
-	);                                                                                                                                   \
-	static_assert(                                                                                                                       \
-		std::is_same_v<                                                                                                                  \
-			std::invoke_result_t<decltype(type::provide), ::query::Context&, type::QKey>,                                                \
-			type::PResult>,                                                                                                              \
-		"Bad provide result."                                                                                                            \
-	);                                                                                                                                   \
-	static_assert(                                                                                                                       \
-		not std::is_reference_v<type::QKey>,                                                                                             \
-		"Query key type should not be a reference (use custom struct instead)"                                                           \
-	);                                                                                                                                   \
-                                                                                                                                         \
-	static_assert(                                                                                                                       \
-		std::is_same_v<std::invoke_result_t<decltype(type::load), type::KHash>, type::LoadResult>,                                       \
-		"Bad load result."                                                                                                               \
-	);                                                                                                                                   \
-	static_assert(type::QueryType::QUERY_DATA.verify().isOk(), "Query data is inconsistent.");                                           \
-	static_assert(                                                                                                                       \
-		LAZY_IMPLIES(type::QueryType::QUERY_DATA.usesUnstableHashing(), ::query::HasUnstablePerfectHash<type::QKey>),                    \
-		"queryUnstablePerfectHash must be implemented and return u64 or Bit256"                                                          \
-	);                                                                                                                                   \
-	static_assert(                                                                                                                       \
-		LAZY_IMPLIES(type::QueryType::QUERY_DATA.usesStableHashing(), ::query::HasStablePerfectHash<type::QKey>),                        \
-		"queryStablePerfectHash must be implemented and return QueryStableHash"                                                          \
-	);                                                                                                                                   \
-	static_assert(                                                                                                                       \
-		LAZY_IMPLIES(type::QueryType::QUERY_DATA.tags.can_be_loaded_from_disk, ::query::internal::HasLoadFromDiscWithSignature<type>),   \
-		"loadFromDisk must be implemented for queries that are cached on disk"                                                           \
-	);                                                                                                                                   \
-	static_assert(                                                                                                                       \
-		LAZY_IMPLIES(type::QueryType::QUERY_DATA.tags.can_be_loaded_from_disk, ::query::internal::HasDeleteFromDiscWithSignature<type>), \
-		"deleteFromDisk must be implemented for queries that are cached on disk"                                                         \
-	);                                                                                                                                   \
-	static_assert(                                                                                                                       \
-		LAZY_IMPLIES(                                                                                                                    \
-			type::QueryType::QUERY_DATA.tags.uses_qresult, ::query::IsQResult<type::PResult>::value                                      \
-		),                                                                                                                               \
-		"PResult must be a QResult if uses_qresult is true"                                                                              \
-	);                                                                                                                                   \
-	static_assert(                                                                                                                       \
-		LAZY_IMPLIES(                                                                                                                    \
-			not type::QueryType::QUERY_DATA.tags.uses_qresult,                                                                           \
-			not query::IsQResult<type::PResult>::value                                                                                   \
-		),                                                                                                                               \
-		"PResult must not be a QResult if uses_qresult is false"                                                                         \
-	);                                                                                                                                   \
-	decltype(type::QueryType::id) type::QueryType::id                                                                                    \
+	); \
+	static_assert(                                                                                                                         \
+		not std::is_reference_v<type::PResult>,                                                                                            \
+		"Provider result type should not be a reference (use CRef instead)"                                                                \
+	);                                                                                                                                     \
+	static_assert(                                                                                                                         \
+		std::is_same_v<                                                                                                                    \
+			std::invoke_result_t<decltype(type::store), type::KHash, type::PResult, ::query::ACD>,                                         \
+			type::QResult>,                                                                                                                \
+		"Bad store result."                                                                                                                \
+	);                                                                                                                                     \
+	static_assert(                                                                                                                         \
+		std::is_same_v<                                                                                                                    \
+			std::invoke_result_t<decltype(type::provide), ::query::Context&, type::QKey>,                                                  \
+			type::PResult>,                                                                                                                \
+		"Bad provide result."                                                                                                              \
+	);                                                                                                                                     \
+	static_assert(                                                                                                                         \
+		not std::is_reference_v<type::QKey>,                                                                                               \
+		"Query key type should not be a reference (use custom struct instead)"                                                             \
+	);                                                                                                                                     \
+                                                                                                                                           \
+	static_assert(                                                                                                                         \
+		std::is_same_v<std::invoke_result_t<decltype(type::load), type::KHash>, type::LoadResult>,                                         \
+		"Bad load result."                                                                                                                 \
+	);                                                                                                                                     \
+	static_assert(type::QueryType::QUERY_DATA.verify().isOk(), "Query data is inconsistent.");                                             \
+	static_assert(                                                                                                                         \
+		LAZY_IMPLIES(type::QueryType::QUERY_DATA.usesUnstableHashing(), ::query::HasUnstablePerfectHash<type::QKey>),                      \
+		"queryUnstablePerfectHash must be implemented and return u64 or Bit256"                                                            \
+	);                                                                                                                                     \
+	static_assert(                                                                                                                         \
+		LAZY_IMPLIES(type::QueryType::QUERY_DATA.usesStableHashing(), ::query::HasStablePerfectHash<type::QKey>),                          \
+		"queryStablePerfectHash must be implemented and return QueryStableHash"                                                            \
+	);                                                                                                                                     \
+	static_assert(                                                                                                                         \
+		LAZY_IMPLIES(type::QueryType::QUERY_DATA.tags.can_be_loaded_from_disk, ::query::internal::HasLoadFromDiscWithSignature<type>),     \
+		"loadFromDisk must be implemented for queries that are cached on disk"                                                             \
+	);                                                                                                                                     \
+	static_assert(                                                                                                                         \
+		LAZY_IMPLIES(type::QueryType::QUERY_DATA.tags.can_be_loaded_from_disk, ::query::internal::HasDeleteFromDiscWithSignature<type>),   \
+		"deleteFromDisk must be implemented for queries that are cached on disk"                                                           \
+	);                                                                                                                                     \
+	static_assert(                                                                                                                         \
+		LAZY_IMPLIES(                                                                                                                      \
+			type::QueryType::QUERY_DATA.tags.uses_qresult, ::query::IsQResult<type::PResult>::value                                        \
+		),                                                                                                                                 \
+		"PResult must be a QResult if uses_qresult is true"                                                                                \
+	);                                                                                                                                     \
+	static_assert(                                                                                                                         \
+		LAZY_IMPLIES(                                                                                                                      \
+			not type::QueryType::QUERY_DATA.tags.uses_qresult,                                                                             \
+			not query::IsQResult<type::PResult>::value                                                                                     \
+		),                                                                                                                                 \
+		"PResult must not be a QResult if uses_qresult is false"                                                                           \
+	);                                                                                                                                     \
+	decltype(type::QueryType::id) type::QueryType::id                                                                                      \
 		= ::query::internal::registerQuery(type::QueryType::QUERY_DATA);
 
 /**

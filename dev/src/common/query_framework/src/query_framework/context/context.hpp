@@ -51,8 +51,9 @@ namespace query {
 		bool             active = true;
 
 		/**
-		 * A flag indicating that the query node associated with this context is part of a cycle in the query graph.
-		 * This is set by the cycle detection logic in QueryGraphHandler when a cycle is detected, and can be used by query implementations to react to cycles if needed.
+		 * A flag indicating that the query node associated with this context is part of a cycle in
+		 * the query graph. This is set by the cycle detection logic in QueryGraphHandler when a
+		 * cycle is detected, and can be used by query implementations to react to cycles if needed.
 		 *
 		 * @note This has to be atomic, as multiple workers can catch the cycle at the same time,
 		 * and write to it concurrently.
@@ -84,9 +85,9 @@ namespace query {
 			internal::NodeID callee;
 			bool             enable_active_graph_operations;
 
-			/** 
+			/**
 			 * Helper method used to deduplicate logic related to
-			 * active graph operations in the destructor. 
+			 * active graph operations in the destructor.
 			 */
 			void deinitActiveGraph() { main_query_state.getActiveGraph()->removeEdge(caller); }
 
@@ -218,8 +219,9 @@ namespace query {
 
 				// We would like to throw here, "after the return",
 				// to avoid copy, but that would require throwing in a constructor.
-				// For now we just do this. It should not be a problem since in practice most query results
-				// are trivially copyable anyway, and the compiler should generally use here copy-elision in non-trivial cases, so it should not be a problem.
+				// For now we just do this. It should not be a problem since in practice most query
+				// results are trivially copyable anyway, and the compiler should generally use here
+				// copy-elision in non-trivial cases, so it should not be a problem.
 				auto result = OthQuery::internal_load(dep_id.hash.val);
 				if (is_cyclic_node) throw internal::QueryCycleException();
 				return result;

@@ -12,7 +12,8 @@ namespace query::internal {
 	class QueryCycleException final: public std::exception {
 	public:
 		[[nodiscard]] const char* what() const noexcept final {
-			return "Query cycle detected. This exception is thrown when a cycle is detected in the query graph. Note that this message should not ever be called.";
+			return "Query cycle detected. This exception is thrown when a cycle is detected in the "
+			       "query graph. Note that this message should not ever be called.";
 		}
 	};
 }
