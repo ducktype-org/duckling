@@ -2,7 +2,7 @@ add_subdirectory(llvm/)
 add_subdirectory(copy-and-patch/)
 
 add_files(
-    cf_analyzer.cpp
+    cf_analysis.cpp
     cf_graph.cpp
     jit_helper.cpp
 )

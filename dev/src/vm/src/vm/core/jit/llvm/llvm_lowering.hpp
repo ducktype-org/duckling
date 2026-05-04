@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../cf_analyzer.hpp"
+#include "../cf_analysis.hpp"
 #include "../jit_compiler.hpp"
 #include "jit_data.hpp"
 
@@ -171,8 +171,7 @@ namespace vm::jit {
 
 		void lowerFunction(const low::LowFuncData& function_to_compile) {
 			auto&                   llvm_data = llvmData();
-			cf::ControlFlowAnalyzer cf_analyzer{};
-			cfg = cf_analyzer.controlFlowGraph(function_to_compile);
+			cfg = cf::controlFlowGraph(function_to_compile);
 
 			// Create LLVM basic blocks for each VM block
 			for (usize block_idx = 0; block_idx < cfg.size(); ++block_idx) {
