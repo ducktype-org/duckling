@@ -2,7 +2,6 @@
 #include <tester/tester.hpp>
 
 #include <vm/utils/bijective_map.hpp>
-#include <vm/utils/persistent/array.hpp>
 #include <vm/utils/persistent/hashmap.hpp>
 #include <vm/utils/persistent/memory.hpp>
 #include <vm/utils/persistent/vector.hpp>
@@ -19,7 +18,6 @@ public:
 		TESTER_ADD_TEST(testBijective);
 		TESTER_ADD_TEST(testMemory);
 		TESTER_ADD_TEST(testVector);
-		TESTER_ADD_TEST(testArray);
 		TESTER_ADD_TEST(testHashMap);
 	}
 
@@ -60,7 +58,7 @@ public:
 	}
 
 	void testMemory() {
-		using namespace vm::persistent::detail;
+		using namespace vm::persistent;
 		Memory mem{};
 
 		auto checker
@@ -68,8 +66,32 @@ public:
 			ASSERT_EQUAL(expected, mem.toVec(state));
 		};
 
-		auto empt = mem.getEmpty();
+		auto empt = Memory::EMPTY;
 		checker(empt, {});
+
+		auto op01 = mem.set(empt, 1, 5);
+		checker(op01, { { 1, 5 } });
+
+		auto op02 = mem.set(op01, 2, 7);
+		checker(op02, { { 1, 5 }, { 2, 7 } });
+
+		auto op03 = mem.set(empt, 2, 7);
+		checker(op03, { { 2, 7 } });
+
+		auto op04 = mem.set(op03, 1, 5);
+		checker(op04, { { 1, 5 }, { 2, 7 } });
+
+		auto op05 = mem.setMultiple(op03, { { 1, 5 }, { 2, 7 } });
+		checker(op05, { { 1, 5 }, { 2, 7 } });
+
+		ASSERT_EQUAL(op02, op04);
+		ASSERT_EQUAL(op02, op05);
+
+		auto op06 = mem.set(op05, Memory::IDX_END - 1, 15);
+		checker(op06, { { 1, 5 }, { 2, 7 }, { Memory::IDX_END - 1, 15 } });
+
+		auto op07 = mem.setMultiple(op05, { { 1'410, 512 }, { 2'137, 67 }, { 8'008'135, 69 } });
+		checker(op07, { { 1, 5 }, { 2, 7 }, { 1'410, 512 }, { 2'137, 67 }, { 8'008'135, 69 } });
 	}
 
 	void testVector() {
@@ -82,10 +104,10 @@ public:
 			auto view = vec.view(state, 0, size);
 			ASSERT_EQUAL(expected, view);
 
-			for (usize i = 1; i <= size; i++) ASSERT_EQUAL(expected[i - 1], vec.access(state, i));
+			for (usize i = 0; i < size; i++) ASSERT_EQUAL(expected[i], vec.access(state, i));
 		};
 
-		auto empt = vec.getEmpty();
+		auto empt = Vector<std::string>::EMPTY;
 		checker(empt, {});
 
 		auto op01 = vec.push(empt, std::string("val01"));
@@ -109,10 +131,10 @@ public:
 		auto op07 = vec.push(op06, std::string("val06"));
 		checker(op07, { "val01", "val02", "val03", "val05", "val06" });
 
-		auto op08 = vec.change(op07, 3, std::string("val07"));
+		auto op08 = vec.change(op07, 2, std::string("val07"));
 		checker(op08, { "val01", "val02", "val07", "val05", "val06" });
 
-		auto op09 = vec.change(op08, 2, std::string("val08"));
+		auto op09 = vec.change(op08, 1, std::string("val08"));
 		checker(op09, { "val01", "val08", "val07", "val05", "val06" });
 
 		auto op10 = vec.push(op09, std::string("val09"));
@@ -121,16 +143,16 @@ public:
 		auto op11 = vec.pop(op10, 2);
 		checker(op11, { "val01", "val08", "val07", "val05" });
 
-		auto op12 = vec.change(op11, 1, std::string("val11"));
+		auto op12 = vec.change(op11, 0, std::string("val11"));
 		checker(op12, { "val11", "val08", "val07", "val05" });
 
-		auto op13 = vec.change(op12, 2, std::string("val02"));
+		auto op13 = vec.change(op12, 1, std::string("val02"));
 		checker(op13, { "val11", "val02", "val07", "val05" });
 
-		auto op14 = vec.change(op13, 1, std::string("val01"));
+		auto op14 = vec.change(op13, 0, std::string("val01"));
 		checker(op14, { "val01", "val02", "val07", "val05" });
 
-		auto op15 = vec.change(op14, 3, std::string("val03"));
+		auto op15 = vec.change(op14, 2, std::string("val03"));
 		checker(op15, { "val01", "val02", "val03", "val05" });
 
 		auto op16 = vec.getPrefix(op15, 3);
@@ -141,67 +163,67 @@ public:
 		ASSERT_EQUAL(op05, op04);
 	}
 
-	void testArray() {
+	void testHashMap() {
 		using namespace vm::persistent;
 
-		using act_t = std::map<usize, std::string>;
+		HashMap<std::string, std::string> map;
+		auto                              checker
+			= [&](HashMapStateID state, base::HashMap<std::string, std::string> expected) -> void {
+			ASSERT_EQUAL(expected.size(), map.size(state));
+			auto map_copy = map.toMap(state);
 
-		Array<std::string> array{ 5 };
+			for (auto& [key, val]: expected) {
+				CORE_ASSERT(
+					map_copy.contains(key) && map.contains(state, key),
+					"map should contain all of expected values"
+				);
+				CORE_ASSERT(
+					map_copy.at(key) == val,
+					"values should be equal in both copy and database"
+				);
 
-		auto checker = [&](ArrayStateID state, act_t expected) -> void {
-			static constexpr usize SIZE = (1 << 5);
+				CORE_ASSERT(
+					map.access(state, key) == val,
+					"values should be equal in both copy and database"
+				);
+			}
 
-			for (usize idx = 1; idx <= SIZE; idx++)
-				if (expected.contains(idx))
-					ASSERT_EQUAL(expected[idx], array.access(state, idx));
-				else
-					ASSERT_TRUE(!array.active(state, idx));
+			for (auto& [key, val]: map_copy) {
+				CORE_ASSERT(
+					expected.contains(key) && map.contains(state, key),
+					"map should contain all of expected values"
+				);
+				CORE_ASSERT(
+					expected.at(key) == val && map.access(state, key) == val,
+					"values should be equal in both copy and database"
+				);
+			}
 		};
 
-		auto empty = array.getEmpty();
-		checker(empty, {});
 
-		auto op01 = array.change(empty, 1, "val01");
-		checker(op01, { { 1, "val01" } });
+		auto empt = HashMap<std::string, std::string>::EMPTY;
+		checker(empt, {});
 
-		auto op02 = array.change(op01, 2, "val02");
-		checker(op02, { { 1, "val01" }, { 2, "val02" } });
+		auto op01 = map.insert(empt, "key1", "val1");
+		checker(op01, { { "key1", "val1" } });
 
-		auto op03 = array.change(op02, 1, "val03");
-		checker(op03, { { 1, "val03" }, { 2, "val02" } });
+		auto op02 = map.insert(op01, "key2", "val2");
+		checker(op02, { { "key1", "val1" }, { "key2", "val2" } });
 
-		auto op04 = array.change(op01, 1, "val04");
-		checker(op04, { { 1, "val04" } });
+		auto op03 = map.insert(op02, "key3", "val2");
+		checker(op03, { { "key1", "val1" }, { "key2", "val2" }, { "key3", "val2" } });
 
-		auto op05 = array.change(op04, 4, "val05");
-		checker(op05, { { 1, "val04" }, { 4, "val05" } });
+		auto op04 = map.erase(op03, "key2");
+		checker(op04, { { "key1", "val1" }, { "key3", "val2" } });
 
-		auto op06 = array.change(op05, 27, "val06");
-		checker(op06, { { 1, "val04" }, { 4, "val05" }, { 27, "val06" } });
+		auto [success, op05] = map.emplace(op04, "key2", "val5");
+		ASSERT_EQUAL(success, true);
+		checker(op05, { { "key1", "val1" }, {"key2", "val5"}, { "key3", "val2" } });
 
-		auto op07 = array.change(op06, 31, "val07");
-		checker(op07, { { 1, "val04" }, { 4, "val05" }, { 27, "val06" }, { 31, "val07" } });
-
-		auto op08 = array.erase(op07, 27);
-		checker(op08, { { 1, "val04" }, { 4, "val05" }, { 31, "val07" } });
-
-		auto op09 = array.erase(op08, 1);
-		checker(op09, { { 4, "val05" }, { 31, "val07" } });
-
-		auto op10 = array.erase(op09, 31);
-		checker(op10, { { 4, "val05" } });
-
-		auto op11 = array.erase(op10, 4);
-		checker(op11, { {} });
-
-		auto op12 = array.change(op03, 1, "val01");
-		checker(op12, { { 1, "val01" }, { 2, "val02" } });
-
-		ASSERT_EQUAL(empty, op11);
-		ASSERT_EQUAL(op02, op12);
+		auto [success_2, op06] = map.emplace(op05, "key2", "val6");
+		ASSERT_EQUAL(success_2, false);
+		checker(op06, { { "key1", "val1" }, { "key2", "val5" }, { "key3", "val2" } });
 	}
-
-	void testHashMap() {}
 };
 
 TESTER_COMMON_MAIN("/src/vm/tests/utils/");

@@ -126,7 +126,7 @@ namespace vm::persistent::detail {
 
 				usize pos = (left_idx >> final_height) | ((usize(1)) << (63 - final_height));
 				ans.emplace_back(pos);
-				left_idx += (1 << final_height);
+				left_idx += (usize(1) << final_height);
 			}
 
 			return ans;
@@ -402,7 +402,7 @@ namespace vm::persistent::detail {
 
 			auto size             = getSize(root);
 			auto [height, offset] = getHeightOffset(root);
-			CORE_ASSERT(size <= (1 << height), "root's size is too large");
+			CORE_ASSERT(size <= (usize(1) << height), "root's size is too large");
 		}
 
 		NodeID nodeFromChildren(NodeID left, NodeID right) {
@@ -505,7 +505,7 @@ namespace vm::persistent::detail {
 
 			if (root) {
 				left_bound  = std::min(left_bound, offset);
-				right_bound = std::max(right_bound, offset + (1 << height) - 1);
+				right_bound = std::max(right_bound, offset + (usize(1) << height) - 1);
 			}
 
 			const auto old_root_pos = getPos(root);
@@ -528,7 +528,7 @@ namespace vm::persistent::detail {
 
 			for (auto idx: left) {
 				neigh.moveNodeTo(idx | LEAF_MASK);
-				neigh.node = constructor(offset, std::nullopt);
+				neigh.node = constructor(idx, std::nullopt);
 			}
 			neigh.moveNodeTo(old_root_pos);
 			neigh.node = root;
@@ -768,7 +768,7 @@ namespace vm::persistent::detail {
 				auto [height, offset] = obj.getHeightOffset(root);
 
 				left_idx  = std::min(left_idx, offset);
-				right_idx = std::max(right_idx, offset + (1 << height));
+				right_idx = std::max(right_idx, offset + (usize(1) << height));
 			}
 
 			usize left_pos  = left_idx | LEAF_MASK;
@@ -860,11 +860,11 @@ namespace vm::persistent::detail {
 
 			std::deque<NodeID> trace = { root };
 
-			if (idx < offset || idx >= offset + (1 << height))
+			if (idx < offset || idx >= offset + (usize(1) << height))
 				trace = { EMPTY };
 			else {
 				NodeID node = root;
-				usize  mask = (1 << height);
+				usize  mask = (usize(1) << height);
 
 				for (usize i = 0; i < height; i++) {
 					mask >>= 1;
@@ -945,7 +945,7 @@ namespace vm::persistent::detail {
 				inSubtree(pos_1, lca) && inSubtree(pos_2, lca), "Both positions are in LCA's subtree"
 			);
 			CORE_ASSERT(
-				offsetFromPos(pos_1) + (1 << heightFromPos(pos_1)) <= offsetFromPos(pos_2),
+				offsetFromPos(pos_1) + (usize(1) << heightFromPos(pos_1)) <= offsetFromPos(pos_2),
 				"pos_1 has to be on the left to pos_2"
 			);
 

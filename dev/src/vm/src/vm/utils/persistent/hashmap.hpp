@@ -1,6 +1,5 @@
 #pragma once
 
-#include "base/collections/optional.hpp"
 #include <base/extend_cpp/strongly_typed_int.hpp>
 #include <base/types/ints.hpp>
 
@@ -62,6 +61,38 @@ namespace vm::persistent {
 	public:
 		static constexpr auto EMPTY = HashMapStateID(u64(Memory::EMPTY));
 
+		usize size(HashMapStateID state_id) {
+			auto mem_state = toMemState(state_id);
+			return Memory::size(mem_state);
+		}
+
+		base::HashMap<KeyT, ValT, KeyH> toMap(HashMapStateID state_id) const {
+			if (state_id == EMPTY) return {};
+
+			auto mem_state = toMemState(state_id);
+			auto [l, r]    = getRangeOf(mem_state);
+			auto iter      = getPathTo(mem_state, l);
+
+			base::HashMap<KeyT, ValT, KeyH> ans = {};
+
+			bool keep_going = true;
+
+			while (keep_going) {
+				CORE_ASSERT(iter.pointsToValid(), "this should be a valid path");
+				auto val_id = *iter.getValue();
+				auto idx    = iter.idx;
+
+				auto [_, success]
+					= ans.emplace(held_keys.atRight(idx), held_values.atRight(val_id));
+
+				CORE_ASSERT(success, "I need the value to be successfully emplaced");
+
+				keep_going &= iter.moveToValid(Dir::Right);
+			}
+
+			return ans;
+		}
+
 		bool contains(HashMapStateID state_id, const KeyT& key) const {
 			if_opt_some(held_keys.atLeftOpt(key), key_id) {
 				auto state = toMemState(state_id);
@@ -74,7 +105,8 @@ namespace vm::persistent {
 		const ValT& access(HashMapStateID state_id, const KeyT& key) const {
 			auto key_id = *held_keys.atLeftOpt(key);
 			auto state  = toMemState(state_id);
-			return Memory::active(state, key_id);
+			auto val_id = *Memory::access(state, key_id);
+			return held_values.atRight(val_id);
 		}
 
 		HashMapStateID insert(HashMapStateID state_id, const KeyT& key, const ValT& var) {

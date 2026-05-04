@@ -65,6 +65,8 @@ namespace vm::persistent {
 		}
 
 	public:
+		static constexpr auto EMPTY = VectorStateID{u64{Memory::EMPTY}};
+
 		const VarT& access(VectorStateID state_id, usize idx) const {
 			auto state  = validaState(state_id);
 			auto val_id = *Memory::access(state, idx);
@@ -138,11 +140,6 @@ namespace vm::persistent {
 			auto new_state = Memory::slice(state, 0, size - how_many_pop);
 			
 			return toVeccState(new_state);
-		}
-
-		[[nodiscard]]
-		VectorStateID getEmpty() const {
-			return toVeccState(Memory::EMPTY);
 		}
 
 		Vector() = default;
