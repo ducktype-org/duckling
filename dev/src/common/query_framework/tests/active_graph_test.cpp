@@ -85,8 +85,9 @@ private:
 			"TEST_NODE_COUNT must be divisible by THREAD_COUNT, we rely on that later."
 		);
 
-		auto node_ids_fixtures = generateNodeIDs(TEST_NODE_COUNT);
-		query::Context context_fixture = query::internal::ContextAccess::make(node_ids_fixtures.at(0));
+		auto           node_ids_fixtures = generateNodeIDs(TEST_NODE_COUNT);
+		query::Context context_fixture
+			= query::internal::ContextAccess::make(node_ids_fixtures.at(0));
 
 		// We spawn THREAD_COUNT threads that will concurrently create a full cycle
 
@@ -152,8 +153,9 @@ private:
 	void testEdgeCases() {
 		query::internal::ActiveGraph active_graph;
 
-		auto node_ids_fixtures = generateNodeIDs(2);
-		query::Context context_fixture = query::internal::ContextAccess::make(node_ids_fixtures.at(0));
+		auto           node_ids_fixtures = generateNodeIDs(2);
+		query::Context context_fixture
+			= query::internal::ContextAccess::make(node_ids_fixtures.at(0));
 
 		// empty graph sanity checks:
 		auto was_cycle_empty = active_graph.cycleCheck(node_ids_fixtures.at(0));
