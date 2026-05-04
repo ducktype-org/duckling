@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # Adjust accordingly
-REPO_ROOT="/home/poleszc/ducktype/duckling"
-BUILD_DIR="$REPO_ROOT/dev/rel-opt-build"
+REPO_ROOT="/home/mateusz/code/duckling"
+BUILD_DIR="$REPO_ROOT/dev/build-bench-psac"
 BIN_DIR="$BUILD_DIR/bin"
 
 PSAC_ARRAY_TARGET="psac_array_sum"
@@ -32,7 +32,7 @@ fi
 for TARGET in "${TARGETS[@]}"; do
     echo "Building target: $TARGET..."
     cmake --build "$BUILD_DIR" --target "$TARGET" -j$(nproc)
-    
+
     if [ $? -ne 0 ]; then
         echo "Error: Build failed for target $TARGET"
         exit 1
