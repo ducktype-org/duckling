@@ -95,6 +95,6 @@ namespace query::internal {
 		 *       It might seem not necessary, since we only detect cycles that node_id is part of,
 		 *       but it is still needed to prevent infinite looping on actual cycles.
 		 */
-		base::Optional<QueryCycle> cycleCheck(const NodeID node_id) const;
+		base::Optional<QueryCycle> cycleCheck(const NodeID initial_node_id) const;
 	};
 }

@@ -13,7 +13,7 @@ namespace query::internal {
 	public:
 		[[nodiscard]] const char* what() const noexcept final {
 			return "Query cycle detected. This exception is thrown when a cycle is detected in the "
-			       "query graph. Note that this message should not ever be called.";
+				   "query graph. Note that this message should not ever be called.";
 		}
 	};
 }

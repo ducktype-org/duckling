@@ -43,7 +43,8 @@ namespace query::internal {
 		});
 	}
 
-	base::Optional<ActiveGraph::QueryCycle> ActiveGraph::cycleCheck(const NodeID node_id) const {
+	base::Optional<ActiveGraph::QueryCycle> ActiveGraph::cycleCheck(const NodeID initial_node_id
+	) const {
 		/***********************************************************\
 		| Cycle detection algorithm: Floyd's Tortoise and Hare.     |
 		\***********************************************************/
@@ -61,8 +62,8 @@ namespace query::internal {
 			return walk(walk_one.value());
 		};
 
-		base::Optional<NodeID> current_node_slow = node_id;
-		base::Optional<NodeID> current_node_fast = node_id;
+		base::Optional<NodeID> current_node_slow = initial_node_id;
+		base::Optional<NodeID> current_node_fast = initial_node_id;
 
 		while (true) {
 			current_node_slow = walk(current_node_slow.value());
@@ -93,7 +94,7 @@ namespace query::internal {
 		NodeID current_node = cycle_start;
 
 		while (true) {
-			if (current_node == node_id) is_the_initial_node_on_the_cycle = true;
+			if (current_node == initial_node_id) is_the_initial_node_on_the_cycle = true;
 
 			auto node_data = active_nodes.getCopy(current_node);
 			cycle_nodes.push_back(QueryCycle::NodeCycleInfo{
