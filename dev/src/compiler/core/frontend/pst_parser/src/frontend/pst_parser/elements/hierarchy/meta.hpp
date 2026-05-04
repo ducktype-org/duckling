@@ -129,6 +129,16 @@ namespace pst {
 
 		void makeImplicitReturn() { implicit_return = true; }
 
+		/**
+		 * @brief Gets the symbol name for the purposes of block ordering.
+		 *
+		 * Shouldn't be used outside of pst as it violates access.
+		 *
+		 * Uses getDeclSymbolName as the base implementation that can be overriden if for example a keyword is used instead.
+		 */
+		[[nodiscard]]
+		virtual base::Optional<base::StrID> getInternalSymbolName() const;
+
 	public:
 		[[nodiscard]]
 		StmtKind getStmtKind() const {
@@ -199,9 +209,19 @@ namespace pst {
 
 		/**
 		 * @brief Get the symbol name declared by a given statement if it exists.
+		 *
+		 * @todo Remove after refactor
 		 */
 		[[nodiscard]]
-		virtual base::Optional<base::StrID> getDeclSymbolName() const {
+		virtual base::Optional<base::StrID> getDeclSymbolName() const;
+
+		/**
+		 * @brief Get the identifier declared by a given statement if it exists.
+		 *
+		 * @todo Remove the 2 after refactor
+		 */
+		[[nodiscard]]
+		virtual base::Optional<AccessLocked<IdentifierWrapper>> getDeclSymbol2() const {
 			return {};
 		}
 	};

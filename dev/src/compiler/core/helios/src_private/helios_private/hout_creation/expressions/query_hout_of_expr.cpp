@@ -89,7 +89,7 @@ namespace compiler::helios::code {
 		) {
 			if (auto bin_op_opt = expr.unlock(ctx).dynamicCast<pst::expr::BinaryOperator>()) {
 				auto bin_op = bin_op_opt.value();
-				if (bin_op->getOperator().unlock(ctx)->getOperator()
+				if (bin_op->getOperator().unlock(ctx)->unwrap()
 				    == lang_def::NamedOperator::Pipe) {
 					getVariantSubExprsInPlace(ctx, bin_op->getLeftOperand(), sub_exprs_append);
 					getVariantSubExprsInPlace(ctx, bin_op->getRightOperand(), sub_exprs_append);
@@ -107,7 +107,7 @@ namespace compiler::helios::code {
 			query::Context& ctx, pst::AccessLocked<pst::expr::BinaryOperator> expr
 		) {
 			CORE_ASSERT(
-				expr.unlock(ctx)->getOperator().unlock(ctx)->getOperator()
+				expr.unlock(ctx)->getOperator().unlock(ctx)->unwrap()
 					== lang_def::NamedOperator::Pipe,
 				"Not a variant operator"
 			);
@@ -275,7 +275,7 @@ namespace compiler::helios::code {
 
 			void visitBinaryOperator(pst::Access<pst::expr::BinaryOperator> stmt) override {
 				// handle variants:
-				const auto op = stmt->getOperator().unlock(ctx)->getOperator();
+				const auto op = stmt->getOperator().unlock(ctx)->unwrap();
 				if (op == lang_def::NamedOperator::Pipe) {
 					auto                   sub_exprs = getVariantSubExprs(ctx, stmt);
 					std::vector<Box<Expr>> all_subtypes;
@@ -499,7 +499,7 @@ namespace compiler::helios::code {
 				auto inner      = std::move(inner_res).valueOrThrow();
 				auto inner_type = inner->expression_type.getSymbolType();
 
-				if (stmt->getOperator().unlock(ctx)->getOperator()
+				if (stmt->getOperator().unlock(ctx)->unwrap()
 				    == lang_def::NamedOperator::Ampersand) {
 					// @TODO: #1956 remove the check bellow.
 					// This is a temporary check to prevent us from taking reference of types that
@@ -528,7 +528,7 @@ namespace compiler::helios::code {
 				}
 
 				auto builtin = unaryBuiltin(
-					stmt->getOperator().unlock(ctx)->getOperator(), std::move(inner), pstOrigin(stmt)
+					stmt->getOperator().unlock(ctx)->unwrap(), std::move(inner), pstOrigin(stmt)
 				);
 				if (builtin.has_value()) {
 					node = std::move(builtin).value();
@@ -536,7 +536,7 @@ namespace compiler::helios::code {
 				} else {
 					ctx.logInt(makeBox<UndefinedUnaryOperatorError>(
 						stmt->getSourcePosition().unlock(ctx),
-						stmt->getOperator().unlock(ctx)->getOperator().str(),
+						stmt->getOperator().unlock(ctx)->unwrap().str(),
 						makeBox<InteractiveType>(ctx, inner_type)
 					));
 					// failed
@@ -595,7 +595,7 @@ namespace compiler::helios::code {
 				// Perform operator resolution for each operator in the chain. Reuse the expressions
 				// which are between two operators. The last expressions is not reused, but that's fine.
 				for (usize op_idx = 0; op_idx < operator_count; op_idx++) {
-					const auto op = stmt->getOperator(op_idx).unlock(ctx)->getOperator();
+					const auto op = stmt->getOperator(op_idx).unlock(ctx)->unwrap();
 					auto rhs = makeBox<ReusableExpr>(ctx, std::move(result_exprs.at(op_idx + 1)));
 					auto next_lhs = rhs->nextUse();
 

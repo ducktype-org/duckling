@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../not_statements/wrapper_elements/identifier_wrapper.hpp"
+
 #include "preamble.hpp"
 
 namespace pst {
@@ -7,7 +9,7 @@ namespace pst {
 	 * @brief Block declaration
 	 */
 	class Block final: public CodeDecl {
-		tpc::OptionalIdentifier optional_name;
+		NAMED_CHILD_OPT(name, IdentifierWrapper);
 		NAMED_CHILD(code_block, CodeBlock);
 
 	protected:
@@ -29,12 +31,12 @@ namespace pst {
 
 		[[nodiscard]]
 		DeclKind isDeclaration() const final {
-			return (optional_name.value ? DeclKind::Symbol : DeclKind::None);
+			return (name.has_value() ? DeclKind::Symbol : DeclKind::None);
 		}
 
 		[[nodiscard]]
-		base::Optional<base::StrID> getDeclSymbolName() const final {
-			return optional_name.value;
+		base::Optional<AccessLocked<IdentifierWrapper>> getDeclSymbol2() const final {
+			return name.map([](const auto& x) {return x.give();});
 		}
 
 		void acceptVisitor(PstVisitor& visitor) const override;

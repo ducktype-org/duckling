@@ -17,7 +17,6 @@ namespace pst {
 	// Not Statements
 	class Param;
 	class DottedName;
-	class OperatorWrapper;
 	class Attribute;
 	class CallArgument;
 	class CodeBlock;
@@ -29,6 +28,10 @@ namespace pst {
 	class FormatSubElement;
 	class FormatSubExpression;
 	class FormatSubString;
+	// Wrappers
+	class OperatorWrapper;
+	class IdentifierWrapper;
+	class KeywordWrapper;
 	// Patterns
 	class FlowPattern;
 	class AnalysisPattern;

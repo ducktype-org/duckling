@@ -20,7 +20,7 @@ namespace pst {
 		HashAlg& addElementDataToStableHash(HashAlg&) const override;
 
 		[[nodiscard]]
-		lexer::Operator getOperator() const {
+		lexer::Operator unwrap() const {
 			return op;
 		}
 

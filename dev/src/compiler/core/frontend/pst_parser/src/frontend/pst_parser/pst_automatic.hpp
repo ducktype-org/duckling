@@ -256,6 +256,18 @@ namespace pst {
 		}
 
 		/**
+		 * @brief Specialization for optional of identifier wrappers
+		 */
+		template <std::derived_from<LangElement> T, base::TemplateStringLiteral name> requires std::same_as<T, IdentifierWrapper>
+		PSTAutomatic& one(base::Optional<AccessInternal<T, name>>* result) {
+			PST_AUTOMATIC_SKIP(*this);
+			if (state.ctokens().peek().isIdentifier()) {
+				with(result, T::parse);
+			}
+			return *this;
+		}
+
+		/**
 		 * @brief Assigned an already parsed subtree to a variable with all of the automation.
 		 *
 		 * @param sink Place to store the new value(works with optionals).

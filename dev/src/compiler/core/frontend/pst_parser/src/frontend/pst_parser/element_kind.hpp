@@ -89,6 +89,8 @@ namespace pst {
 
 		// wrappers
 		OperatorWrapper,
+		KeywordWrapper,
+		IdentifierWrapper,
 
 		FormatSubExpression,
 		FormatSubString,

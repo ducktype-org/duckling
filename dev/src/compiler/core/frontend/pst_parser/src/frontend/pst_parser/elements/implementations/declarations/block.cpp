@@ -9,7 +9,7 @@ namespace pst {
 
 		if (!assertStmtChoice<Block>(state, state[0].is(Keyword::Block))) return nullptr;
 
-		PARSE().all(Keyword::Block, &out->optional_name, &out->code_block);
+		PARSE().all(Keyword::Block, &out->name, &out->code_block);
 
 		PST_RETURN out;
 	}
@@ -17,16 +17,18 @@ namespace pst {
 	void Block::dprint(std::ostream& out) const {
 		out << "{";
 
-		out << R"("optional name": )";
-		nullAwareDprint(optional_name, out);
-		out << R"(, "code block": )";
+		if (name.has_value()) {
+			out << R"("name": )";
+			nullAwareDprint(name.value(), out);
+			out << ",";
+		}
+		out << R"("code block": )";
 		nullAwareDprint(code_block, out);
 
 		out << "}";
 	}
 
 	HashAlg& Block::addElementDataToStableHash(HashAlg& partial_hash) const {
-		addToHash(partial_hash, optional_name);
 		return partial_hash;
 	}
 
