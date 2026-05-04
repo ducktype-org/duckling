@@ -82,7 +82,7 @@ fn create_manifest_file(
         make_default_manifest_for_name(&name)
     };
     let mut manifest_file =
-        manifest_file.open_and_bail_if_exists(|p| bail_on_overriding_project(ctx, p))?;
+        manifest_file.open_and_bail_if_exists(|_| bail_on_overriding_project(ctx, root_path))?;
     manifest_file
         .write(manifest_contents.as_bytes())
         .context("failed to write to the manifest file")?;
@@ -122,7 +122,10 @@ metadata:
 /// Error to return if a project already exists at the location.
 fn bail_on_overriding_project(ctx: &DuckContext, root: &Path) -> QuackError {
     let Ok(package) = PackageLoader::find_at_exact_directory(root, ctx) else {
-        return qp_err!("There is already a manifest file at `{}`", root.display());
+        return qp_err!(
+            "There is already a manifest file at `{}`",
+            root.join(PackageLoader::MANIFEST_NAME).display()
+        );
     };
     qp_err!(
         "cannot reinitialize project `{}` at `{}`",

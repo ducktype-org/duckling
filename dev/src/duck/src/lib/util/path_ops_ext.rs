@@ -409,6 +409,9 @@ impl PathOpsExt for Path {
     where
         F: FnOnce(&Self) -> QuackError,
     {
+        if let Some(parent) = self.parent() {
+            parent.mkdir(MkdirOptions::WithParents)?;
+        }
         match File::create_new(self) {
             Ok(file) => Ok(file),
             Err(err) => {
@@ -425,6 +428,9 @@ impl PathOpsExt for Path {
     where
         F: FnOnce(&Self),
     {
+        if let Some(parent) = self.parent() {
+            parent.mkdir(MkdirOptions::WithParents)?;
+        }
         match File::create_new(self) {
             Ok(file) => Ok(Some(file)),
             Err(err) => {
