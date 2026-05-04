@@ -52,7 +52,7 @@ impl<'duck> Fetcher<'duck> {
     /// 2. failed to initialize any of the underlying clients,
     /// 3. failed to initialize cache manager.
     pub fn new(ctx: &'duck DuckContext) -> QuackResult<Self> {
-        let metadata_path = ctx.duck_home().ensure_metadata_db()?;
+        let metadata_path = ctx.duck_home().get_metadata_db_path();
         let artifacts_cache_path = ctx.duck_home().artifacts();
         artifacts_cache_path.mkdir()?;
         let download_cache_path = ctx.duck_home().downloads();
@@ -133,7 +133,7 @@ impl<'duck> Fetcher<'duck> {
         let result = self
             .ducknest_client
             .get_multi_metadata(url, package_name)
-            .with_context(|| format!("while getting a multimetadata of `{}", package_name))?;
+            .with_context(|| format!("while getting a multimetadata of `{}`", package_name))?;
         self.cache
             .add_or_replace_multiple_manifests(url.clone(), result.packages_metadata.clone())?;
         Ok(FetcherResponse::Some(result))

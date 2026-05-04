@@ -18,7 +18,6 @@ use tracing::debug;
 
 use crate::quackpack::core::PackageLoader;
 use crate::util::filesystem::{Filesystem, LockedFile};
-use crate::util::path_ops_ext::PathOpsExt;
 use crate::{DuckContext, QuackResult, QuackResultContext};
 
 /// Implementation of the above layout
@@ -44,39 +43,48 @@ impl DuckHome {
         }
     }
 
+    /// Get the [`PathBuf`] to the user config.
     pub fn user_config(&self) -> PathBuf {
         self.root.not_locked_path().join("config.yaml")
     }
 
+    /// Get the [`Filesystem`] rooted at the storage's root.
     pub fn storage(&self) -> Filesystem {
         self.root.join("storage")
     }
 
+    /// Get the [`Filesystem`] rooted at the global venv root.
     pub fn global_venv(&self) -> Filesystem {
         self.root.join("global_venv")
     }
 
+    /// Get the [`Filesystem`] rooted at the cache root.
     pub fn cache(&self) -> Filesystem {
         self.root.join("cache")
     }
 
+    /// Get the [`Filesystem`] rooted at the cache artifacts root.
     pub fn artifacts(&self) -> Filesystem {
         self.cache().join("artifacts")
     }
 
+    /// Get the [`Filesystem`] rooted at the cache downloads root.
     pub fn downloads(&self) -> Filesystem {
         self.cache().join("downloads")
     }
 
+    /// Get an exclusive lock to the fetcher lockfile.
     pub fn open_fetcher_lockfile(&self, ctx: &DuckContext) -> QuackResult<LockedFile> {
         self.cache().open_exclusive("fetcher.lock", ctx)
     }
 
-    pub fn ensure_metadata_db(&self) -> QuackResult<PathBuf> {
-        let mut root = self.cache().into_not_locked_path();
-        root.push("metadata_db.sqlite");
-        root.touch()?;
-        Ok(root)
+    /// Get the [`PathBuf`] to metadata database file.
+    ///
+    /// We don't have to create this file, as SQLite will do this for us.
+    pub fn get_metadata_db_path(&self) -> PathBuf {
+        self.cache()
+            .into_not_locked_path()
+            .join("metadata_db.sqlite")
     }
 
     pub const GLOBAL_PACKAGE_NAME: &str = "__global__";

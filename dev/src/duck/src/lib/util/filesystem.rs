@@ -118,7 +118,7 @@ impl Filesystem {
 
     /// Open a `path` from `root`, in RW mode, create it and try to lock it exclusively.
     ///
-    /// `Ok(None)` is returned, if we acquiring a lock would block.
+    /// `Ok(None)` is returned, if acquiring a lock would block.
     pub fn try_open_exclusive(&self, path: impl AsRef<Path>) -> QuackResult<Option<LockedFile>> {
         let path = self.root.join(path);
         let mut opts = OpenOptions::new();
@@ -151,7 +151,7 @@ impl Filesystem {
 
     /// Open a `path` from `root`, in RO mode, and shared lock it.
     ///
-    /// `Ok(None)` is returned, if we acquiring a lock would block.
+    /// `Ok(None)` is returned, if acquiring a lock would block.
     ///
     /// This function will fail, if a file does not exist.
     pub fn try_open_shared(&self, path: impl AsRef<Path>) -> QuackResult<Option<LockedFile>> {
@@ -166,7 +166,7 @@ impl Filesystem {
         }
     }
 
-    /// Open a `path` from `root`, in RW mode, and shared lock it.
+    /// Open a `path` from `root`, in RW mode, create it, and shared lock it.
     ///
     /// Unfortunately, creating a file requires a write access.
     pub fn open_shared_rw_create(
@@ -184,9 +184,9 @@ impl Filesystem {
         Ok(LockedFile { file, path })
     }
 
-    /// Open a `path` from `root`, in RW mode, and shared lock it.
+    /// Open a `path` from `root`, in RW mode, create it, and shared lock it.
     ///
-    /// `Ok(None)` is returned, if we acquiring a lock would block.
+    /// `Ok(None)` is returned, if acquiring a lock would block.
     ///
     /// Unfortunately, creating a file requires a write access.
     pub fn try_open_shared_rw_create(
