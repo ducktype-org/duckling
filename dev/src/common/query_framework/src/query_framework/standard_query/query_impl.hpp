@@ -142,24 +142,19 @@ namespace query::internal {
 				QueryIntType::QUERY_DATA.name,
 				"\"]: Caught query cycle exception."
 			);
-			CORE_ASSERT(
-				QueryImplType::USES_QRESULT,
-				"Query cycle exception should only be thrown for queries using QResult, as this is "
-			    "the only way to recover from it."
-			);
 
-			// PR TODO: implement it properly, also check allow cycles
-			if constexpr (QueryImplType::USES_QRESULT) {
+			if constexpr (QueryImplType::USES_QRESULT and QueryImplType::ALLOW_CYCLES) {
 				return QueryImplType::store(perfect_hash, query::Failed(), acd);
 
 			} else {
 				CORE_PANIC(
-					"Query cycle detected in a query that does not use QResult, and thus cannot "
-				    "recover from it."
+					"Query cycle detected in a query that does not use QResult or does not allow cycles, and thus cannot "
+				    "recover from it.",
+					"Query: ",
+					QueryIntType::QUERY_DATA.name
 				);
 			}
 		}
-
 		catch (const QueryFailedException& qfe) {
 			CORE_DEV_LOG(
 				Query,
@@ -210,6 +205,7 @@ namespace query::internal {
 		constexpr static bool USES_QRESULT = QueryType_tp::QUERY_DATA.tags.uses_qresult;
 		constexpr static bool CATCH_EXCEPTIONS_IF_USING_QRESULT
 			= QueryType_tp::QUERY_DATA.tags.catch_exceptions_if_using_qresult;
+		constexpr static bool ALLOW_CYCLES = QueryType_tp::QUERY_DATA.tags.allow_cycles;
 
 
 		/**
@@ -279,6 +275,10 @@ namespace query::internal {
 	static_assert(                                                                                                                       \
 		not std::is_reference_v<type::QResult>,                                                                                          \
 		"Query result type should not be a reference (use CRef instead)"                                                                 \
+	);\
+	static_assert(                                                                                                                       \
+		std::is_copy_constructible_v<type::QResult>,                                                                                      \    \
+		"Query result type should be copy constructible"                                                                                  \
 	);                                                                                                                                   \
 	static_assert(                                                                                                                       \
 		not std::is_reference_v<type::PResult>,                                                                                          \

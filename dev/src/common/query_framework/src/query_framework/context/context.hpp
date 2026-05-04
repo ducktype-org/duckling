@@ -215,12 +215,11 @@ namespace query {
 				main_query_state.getTaskPool()->query(internal::Task{
 					dep_id, [key](concurrent::worker::WRef) { OthQuery::internal_query(key); } });
 
-				// return OthQuery::internal_load(dep_id.hash.val);
 
-				// We would like to "throw" here, after the return.
-				// i.e.: if (is_cyclic_node) throw QueryCycleException();
-				// but we can't do it in destructor,
-				// For now for testing we just do:
+				// We would like to throw here, "after the return",
+				// to avoid copy, but that would require throwing in a constructor.
+				// For now we just do this. It should not be a problem since in practice most query results
+				// are trivially copyable anyway, and the compiler should generally use here copy-elision in non-trivial cases, so it should not be a problem.
 				auto result = OthQuery::internal_load(dep_id.hash.val);
 				if (is_cyclic_node) throw internal::QueryCycleException();
 				return result;
@@ -260,9 +259,6 @@ namespace query {
 		 */
 		template<typename OthQuery>
 		auto await(internal::TaskHandle& handle) {
-			// @TODO PR: Awaiting issue and interrupts don't go well together.
-
-
 			CORE_ASSERT(
 				OthQuery::getID() == handle.getID().q_id,
 				"Task handle query ID does not match the awaited query type."
@@ -276,7 +272,9 @@ namespace query {
 			// note that this will block, until the task is completed
 			handle.await();
 
-			return OthQuery::internal_load(handle.getID().hash.val);
+			auto result = OthQuery::internal_load(handle.getID().hash.val);
+			if (is_cyclic_node) throw internal::QueryCycleException();
+			return result;
 		}
 
 		/**
