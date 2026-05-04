@@ -8,18 +8,18 @@ Tests:
         Output:
           Run: |+
             echo "info: successfully created a new project \`foo\` at \`$(pwd)/foo\`"
-        PostCase: python3 check1.py
+        PostCase: python3 check.py expose_freezefile
       ephemeral:
         test_cmd: |+
           init --ephemeral foo
         Output:
           Run: |+
             echo "info: successfully created a new project \`foo\` at \`$(pwd)/foo\`"
-        PostCase: python3 check2.py
+        PostCase: python3 check.py ephemeral
       local_storage:
         test_cmd: |+
           init --local-storage foo
         Output:
           Run: |+
             echo "info: successfully created a new project \`foo\` at \`$(pwd)/foo\`"
-        PostCase: python3 check3.py
+        PostCase: python3 check.py local_storage
