@@ -5,6 +5,7 @@ add_files(
     serializer/serializer.cpp
     validator/function_validator.cpp
     validator/type_validator.cpp
+    validator/flag_context.cpp
     validator/valid_type/type_context.cpp
     validator/valid_type/valid_type.cpp
     validator/valid_program.cpp

@@ -81,6 +81,8 @@ void vm::code::ValidProgram::insertFunctions(const std::vector<Function>& new_fu
 		);
 		function_map.insert(validated_function, validated_function.name);
 	}
+
+	flag_context.insertAndValidate(new_functions, globals_map, ext_c_function_map);
 }
 
 void vm::code::ValidProgram::insertExternalCFunctions(

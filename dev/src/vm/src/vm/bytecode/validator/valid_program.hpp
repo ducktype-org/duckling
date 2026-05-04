@@ -1,5 +1,7 @@
 #pragma once
 
+#include "flag_context.hpp"
+
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/type_of_data.hpp>
 #include <vm/bytecode/validator/valid_type/type_context.hpp>
@@ -55,6 +57,7 @@ namespace vm::code {
 		ObjIdNameMap<ExternalCFunction> ext_c_function_map;
 		ObjIdNameMap<GlobalData>        globals_map;
 		TypeContext                     type_context;
+		FlagContext                     flag_context;
 
 		/**
 		 * @brief Contains a mapping from function name to function signature for all functions

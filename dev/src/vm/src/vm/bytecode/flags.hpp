@@ -13,10 +13,10 @@ MAKE_FLAG_TYPE(vm::code, InstructionFlagOptions, InstructionFlag,
 	CallExternal,
 	Mutlithread,
 
-	RequiresGIL,           // Instrukcja WYMAGA GIL
-    ReleaseGIL,            // Instrukcja MOŻE puścić GIL (długa operacja)
-    ControlFlowModifying,  // Zmienia przepływ kontroli (jmp, branch, call, ret)
-    MayBlock
+	RequiresGIL,           // Instruction REQUIRES GIL
+	ReleaseGIL,            // Instruction MIGHT release GIL (takes a long time)
+	ControlFlowModifying,  // Modifies control flow, e.g. jmp, branch, call, ret
+	MayBlock
 )
 
 MAKE_FLAG_TYPE(vm::code, FunctionFlagOptions, FunctionFlag,
@@ -28,10 +28,10 @@ MAKE_FLAG_TYPE(vm::code, FunctionFlagOptions, FunctionFlag,
 	CallExternal,
 	Mutlithread,
 
-	RequiresGIL,           // Instrukcja WYMAGA GIL
-    ReleaseGIL,            // Instrukcja MOŻE puścić GIL (długa operacja)
-    ControlFlowModifying,  // Zmienia przepływ kontroli (jmp, branch, call, ret)
-    MayBlock
+	RequiresGIL,           // Instruction REQUIRES GIL
+	ReleaseGIL,            // Instruction MIGHT release GIL (takes a long time)
+	ControlFlowModifying,  // Modifies control flow, e.g. jmp, branch, call, ret
+	MayBlock
 )
 
 namespace vm::code {
@@ -41,34 +41,34 @@ namespace vm::code {
 	inline FunctionFlag getFlagsForBuiltinFunction(base::StrID name) {
 		using enum FunctionFlagOptions;
 
-		auto builtin_func_opt = vm::builtins::getBuiltinFunctionID(name);
+		auto builtin_func_opt = builtins::getBuiltinFunctionID(name);
 		if (!builtin_func_opt) {
 			CORE_PANIC("Function name ", name, " is not a builtin function");
 		}
 		switch (builtin_func_opt.value()) {
-			case vm::builtins::BuiltinFunctionID::InputI64:
+			case builtins::BuiltinFunctionID::InputI64:
 				// reads from stdin, blocks waiting for the user
 				return FunctionFlag(IORead) | MayBlock | ReleaseGIL;
-			case vm::builtins::BuiltinFunctionID::OutputI64:
-			case vm::builtins::BuiltinFunctionID::OutputString:
+			case builtins::BuiltinFunctionID::OutputI64:
+			case builtins::BuiltinFunctionID::OutputString:
 				return FunctionFlag(IOWrite) | RequiresGIL;
-			case vm::builtins::BuiltinFunctionID::Stoi:
+			case builtins::BuiltinFunctionID::Stoi:
 				// pure conversion, no observable effects
 				return {};
-			case vm::builtins::BuiltinFunctionID::StartThread:
+			case builtins::BuiltinFunctionID::StartThread:
 				return FunctionFlag(Mutlithread) | ControlFlowModifying;
-			case vm::builtins::BuiltinFunctionID::JoinThread:
+			case builtins::BuiltinFunctionID::JoinThread:
 				return FunctionFlag(Mutlithread) | MayBlock | ReleaseGIL;
-			case vm::builtins::BuiltinFunctionID::CreateMutex:
-			case vm::builtins::BuiltinFunctionID::UnlockMutex:
-			case vm::builtins::BuiltinFunctionID::DestroyMutex:
-			case vm::builtins::BuiltinFunctionID::CreateCV:
-			case vm::builtins::BuiltinFunctionID::NotifyCV:
-			case vm::builtins::BuiltinFunctionID::NotifyAllCV:
-			case vm::builtins::BuiltinFunctionID::DestroyCV:
+			case builtins::BuiltinFunctionID::CreateMutex:
+			case builtins::BuiltinFunctionID::UnlockMutex:
+			case builtins::BuiltinFunctionID::DestroyMutex:
+			case builtins::BuiltinFunctionID::CreateCV:
+			case builtins::BuiltinFunctionID::NotifyCV:
+			case builtins::BuiltinFunctionID::NotifyAllCV:
+			case builtins::BuiltinFunctionID::DestroyCV:
 				return {Mutlithread};
-			case vm::builtins::BuiltinFunctionID::LockMutex:
-			case vm::builtins::BuiltinFunctionID::WaitCV:
+			case builtins::BuiltinFunctionID::LockMutex:
+			case builtins::BuiltinFunctionID::WaitCV:
 				return FunctionFlag(Mutlithread) | MayBlock | ReleaseGIL;
 		}
 		CORE_PANIC("Invalid builtin function ID");
@@ -122,10 +122,10 @@ namespace vm::code {
 		};
 		// dst that is read and then written (arith/cmov/cast in-place)
 		auto rdwr = [&](auto const& place) {
-			if (is_global(place.var_name)) flags |= GlobalRead | InstructionFlag(GlobalWrite);
+			if (is_global(place.var_name)) flags |= InstructionFlag(GlobalRead) | GlobalWrite;
 		};
 
-		// We can't have a pointers to global values so do nothing here
+		// We can't have pointers to global values so do nothing here
 		auto deref_read  = [&] {  };
 		auto deref_write = [&] {  };
 
