@@ -45,14 +45,11 @@ void FunctionLoweringContext::pushTerminator(const lir::Instruction& lir_termina
 	VISIT(dvm_operation, op, InstructionLowerer(this).lower(op));
 }
 
-DVMLocal compiler::backend_vm::internal::FunctionLoweringContext::pushTempLocal(
+DVMPlace compiler::backend_vm::internal::FunctionLoweringContext::pushTempLocal(
 	const vm::code::TypeOfData& type, base::Optional<std::string_view> name_hint, bool tracked
 ) {
 	auto name       = base::strConcat(name_hint.copyValueOr("temp"), next_temp_id++);
-	auto temp_local = DVMLocal{
-		.name = base::StrID(name),
-		.type = type,
-	};
+	auto temp_local = DVMPlace(base::StrID(name), type, DVMPlace::AccessKind::Direct);
 	if (tracked) current_temp_count++;
 
 	pushInstruction({

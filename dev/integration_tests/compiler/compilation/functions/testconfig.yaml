@@ -3,13 +3,8 @@
 Tests:
   default_args_advanced:
     Cases:
-      llvm:
-        backend: llvm
-        Output:
-          String: "101\n105\n109\n"
-        ExitCode: 0
-      dvm:
-        backend: dvm
+      all:
+        backend: all
         Output:
           String: "101\n105\n109\n"
         ExitCode: 0
@@ -29,26 +24,16 @@ Tests:
 
   named_default_args:
     Cases:
-      llvm:
-        backend: llvm
-        Output:
-          String: "1\n2\n1\n2\n3\n2\n4\n5\n1\n3\n1\n2\n2\n3\n4\n5\n1\n5\n4\n2\n"
-        ExitCode: 0
-      dvm:
-        backend: dvm
+      all:
+        backend: all
         Output:
           String: "1\n2\n1\n2\n3\n2\n4\n5\n1\n3\n1\n2\n2\n3\n4\n5\n1\n5\n4\n2\n"
         ExitCode: 0
 
   numeric:
     Cases:
-      llvm:
-        backend: llvm
-        Output:
-          String: ""
-        ExitCode: 0
-      dvm:
-        backend: dvm
+      all:
+        backend: all
         Output:
           String: ""
         ExitCode: 0
@@ -68,26 +53,16 @@ Tests:
 
   simple:
     Cases: 
-      llvm:
-        backend: llvm
-        Output:
-          String: "5\n7\n"
-        ExitCode: 0
-      dvm:
-        backend: dvm
+      all:
+        backend: all
         Output:
           String: "5\n7\n"
         ExitCode: 0
 
   single_stmt_body:
     Cases:
-      llvm:
-        backend: llvm
-        Output:
-          String: "5\n7\n"
-        ExitCode: 0
-      dvm:
-        backend: dvm
+      all:
+        backend: all
         Output:
           String: "5\n7\n"
         ExitCode: 0
@@ -96,13 +71,8 @@ Tests:
     # @TODO: #2448 Investigate why deterministic compilation check fails for this test
     enable_conc_deterministic_tests: "false"
     Cases:
-      llvm:
-        backend: llvm
-        Output:
-          String: "1\n2\n"
-        ExitCode: 0
-      dvm:
-        backend: dvm
+      all:
+        backend: all
         Output:
           String: "1\n2\n"
         ExitCode: 0

@@ -1,4 +1,4 @@
-Run: "@{build_dir}/bin//duckc repl"
+Run: "@{duckc_path} repl"
 
 prompt: "duckling> "
 beginning: |
@@ -13,4 +13,5 @@ SubDirs:
   - fundamentals
   - intermediate_statements
   - declarations
+  - script_loading
   - variable_assignment
