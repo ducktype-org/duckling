@@ -5,11 +5,11 @@
 #pragma once
 
 #include <vm/bytecode/bytecode.hpp>
+#include <vm/core/jit/cf_analysis.hpp>
 #include <vm/core/safe/low_program/low_program.hpp>
 
 #include <algorithm>
 #include <array>
-#include <bit>
 #include <functional>
 #include <vector>
 
@@ -18,18 +18,6 @@ namespace vm::jit::cf {
 	 * @brief Identifier of a basic block in the control-flow graph.
 	 */
 	using BlockID = usize;
-
-	/**
-	 * @brief Computes absolute jump target from next-instruction offset and encoded delta.
-	 * @param next_offset Offset of the instruction immediately after the jump.
-	 * @param raw_delta Signed relative jump delta encoded in u64.
-	 * @return Absolute jump target as instruction index.
-	 */
-	[[nodiscard]] inline usize jumpTarget(usize next_offset, u64 raw_delta) {
-		const i64 target = static_cast<i64>(next_offset) + std::bit_cast<i64>(raw_delta);
-		CORE_ASSERT(target >= 0, "Negative jump target computed, likely due to malformed bytecode");
-		return static_cast<usize>(target);
-	}
 
 	/**
 	 * @brief Compact representation of outgoing edges from a basic block.
@@ -228,6 +216,13 @@ namespace vm::jit::cf {
 		) {
 			createCFG(function, block_beginnings);
 		}
+
+		/**
+		 * @brief Creates a control-flow graph from lowered function data.
+		 * @param function Lowered function to analyze.
+		 */
+		ControlFlowGraph(const low::LowFuncData& function):
+			ControlFlowGraph(function, basicBlockBeginnings(function)) {}
 
 		/**
 		 * @brief Returns number of blocks in the graph.
