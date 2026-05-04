@@ -256,7 +256,7 @@ namespace base {
 			RELEASE_NOEXCEPT {
 			auto current_node = buckets.at(hashToBucket(key_hash));
 			while (current_node) {
-				if (current_node->key_value.key == key) return &current_node->key_value.value;
+				if (current_node->next == nullptr or current_node->key_value.key == key) return &current_node->key_value.value;
 				current_node = current_node->next;
 			}
 			CORE_UNREACHABLE();
@@ -271,7 +271,7 @@ namespace base {
 			RELEASE_NOEXCEPT {
 			auto current_node = buckets.at(hashToBucket(key_hash));
 			while (current_node) {
-				if (current_node->key_value.key == key) return &current_node->key_value.value;
+				if (current_node->next == nullptr or current_node->key_value.key == key) return &current_node->key_value.value;
 				current_node = current_node->next;
 			}
 			CORE_UNREACHABLE();
