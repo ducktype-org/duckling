@@ -15,7 +15,7 @@ use crate::quackpack::core::storage::{self};
 /// We should have at most `threads - 1` failures (but we may not have exactly that many, because
 /// of 1.)
 fn concurrent_delete() {
-    let (ctx, _home, storage_root) = setup_mock_storage();
+    let (ctx, _home, _storage_root) = setup_mock_storage();
     let thread_count = 4;
     let barrier = Barrier::new(thread_count);
     let lock_failures = AtomicUsize::default();
@@ -33,16 +33,7 @@ fn concurrent_delete() {
                     lock_failures.fetch_add(1, Ordering::SeqCst);
                     assert_eq!(
                         e.to_string(),
-                        format!(
-                            "another synchronization operation is ongoing in venv `venv1`
-failed to acquire an exclusive lock on `{}`
-operation would block",
-                            storage_root
-                                .join("locks")
-                                .join("venv_sync")
-                                .join("venv1")
-                                .display()
-                        )
+                        "another synchronization operation is ongoing in venv `venv1`"
                     );
                 }
             });

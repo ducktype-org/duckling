@@ -30,7 +30,8 @@ pub fn delete_venv(ctx: &DuckContext, storage_root: &Path, venv: impl ToVenvId) 
     let venv_id = venv.to_venv_id();
 
     let _sync_lock = {
-        let lock = locks::TrySyncLock::new(&storage, venv_id, ctx)
+        // First context is for IO results, second for unpacking Option (None = would block).
+        let lock = locks::TrySyncLock::new(&storage, venv_id)
             .with_context(|| format!("failed to acquire a lock for venv `{venv_id}`"))?;
         let Some(lock) = lock else {
             qp_bail!("another synchronization operation is ongoing in venv `{venv_id}`")

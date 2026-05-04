@@ -59,7 +59,8 @@ pub fn sync(
     let user_exposed_freeze = load_external_freezefile(pcx, expose_freezefile)?;
     let id = pcx.to_venv_id();
 
-    let _sync_lock = storage::locks::TrySyncLock::new(&storage, id, pcx.ctx())
+    // First context is for IO results, second for unpacking Option (None = would block).
+    let _sync_lock = storage::locks::TrySyncLock::new(&storage, id)
         .context("failed to acquire try sync lock")?
         .with_context(|| format!("another synchronization operation is ongoing in venv `{id}`"))?;
 
