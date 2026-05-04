@@ -276,7 +276,8 @@ namespace concurrent {
 
 		[[nodiscard]]
 		auto at(const KEY_T& key) RELEASE_NOEXCEPT -> Ref<DATA_T> {
-			return atMaybe(key).value();
+			WithShardLock lock(*this, keyToShard(key));
+			return shards[lock.shard_index].at(key);
 		}
 
 		/**

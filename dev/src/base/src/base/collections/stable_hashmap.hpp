@@ -246,6 +246,39 @@ namespace base {
 			return {};
 		}
 
+
+		/**
+		 * See docs of atMaybe() method for for info.
+		 * @param key_hash Precomputed hash of the key.
+		 */
+		[[nodiscard]]
+		CRef<DATA_T> atAssumingHash(const KEY_T& key, KeyHash key_hash) const
+			RELEASE_NOEXCEPT {
+			auto current_node = buckets.at(hashToBucket(key_hash));
+			while (current_node) {
+				if (current_node->key_value.key == key) return &current_node->key_value.value;
+				current_node = current_node->next;
+			}
+			CORE_UNREACHABLE();
+		}
+
+		/**
+		 * See docs of atMaybe() method for for info.
+		 * @param key_hash Precomputed hash of the key.
+		 */
+		[[nodiscard]]
+		Ref<DATA_T> atAssumingHash(const KEY_T& key, KeyHash key_hash)
+			RELEASE_NOEXCEPT {
+			auto current_node = buckets.at(hashToBucket(key_hash));
+			while (current_node) {
+				if (current_node->key_value.key == key) return &current_node->key_value.value;
+				current_node = current_node->next;
+			}
+			CORE_UNREACHABLE();
+		}
+
+
+
 		/**
 		 * See docs of atMaybeCopy() method for for info.
 		 * @param key_hash Precomputed hash of the key.
@@ -451,6 +484,18 @@ namespace base {
 		base::Optional<Ref<DATA_T>> atMaybe(const KEY_T& key) RELEASE_NOEXCEPT {
 			auto hash = keyHash(key);
 			return atMaybeAssumingHash(key, hash);
+		}
+
+		[[nodiscard]]
+		CRef<DATA_T> at(const KEY_T& key) const RELEASE_NOEXCEPT {
+			auto hash = keyHash(key);
+			return atAssumingHash(key, hash);
+		}
+
+		[[nodiscard]]
+		Ref<DATA_T> at(const KEY_T& key) RELEASE_NOEXCEPT {
+			auto hash = keyHash(key);
+			return atAssumingHash(key, hash);
 		}
 
 		[[nodiscard]]
