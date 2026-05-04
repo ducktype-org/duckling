@@ -7,7 +7,7 @@ use git2::{Repository, RepositoryInitOptions};
 use crate::duck::util::terminal::Terminal;
 use crate::quackpack::core::{PackageLoader, VenvConfig, Version};
 use crate::util::path_ops_ext::PathOpsExt;
-use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail};
+use crate::{DuckContext, QuackError, QuackResult, QuackResultContext, StrId, qp_bail, qp_err};
 
 /// Options for initializing a new project.
 pub struct InitOptions<'duck> {
@@ -46,7 +46,6 @@ const DEFAULT_GITIGNORE: &str = "\
 
 /// Initialize a new project with the given options.
 pub fn init(opts: InitOptions<'_>) -> QuackResult<()> {
-    bail_if_would_override_project(opts.ctx, &opts.at)?;
     create_manifest_file(opts.ctx, &opts.at, opts.name, opts.full)?;
     create_venv_config_file(
         opts.ctx,
@@ -69,18 +68,6 @@ pub fn init(opts: InitOptions<'_>) -> QuackResult<()> {
     Ok(())
 }
 
-/// Error, if we were to override an existing project.
-fn bail_if_would_override_project(ctx: &DuckContext, root: &Path) -> QuackResult<()> {
-    if let Ok(package) = PackageLoader::find_at_exact_directory(root, ctx) {
-        qp_bail!(
-            "cannot reinitialize project `{}` at `{}`",
-            package.package().manifest().name(),
-            package.package().root_directory().display()
-        )
-    }
-    Ok(())
-}
-
 /// Create a file with the manifest of the project.
 fn create_manifest_file(
     ctx: &DuckContext,
@@ -89,17 +76,16 @@ fn create_manifest_file(
     full: bool,
 ) -> QuackResult<()> {
     let manifest_file = root_path.join(PackageLoader::MANIFEST_NAME);
-    manifest_file
-        .touch()
-        .context("failed to create a manifest file")?;
     let manifest_contents = if full {
         manifest_with_user_prompts(ctx.console(), name)?
     } else {
         make_default_manifest_for_name(&name)
     };
+    let mut manifest_file =
+        manifest_file.open_and_bail_if_exists(|p| bail_on_overriding_project(ctx, p))?;
     manifest_file
-        .write(manifest_contents)
-        .context("failed to write a default manifest")?;
+        .write(manifest_contents.as_bytes())
+        .context("failed to write to the manifest file")?;
     Ok(())
 }
 
@@ -133,6 +119,18 @@ metadata:
     ))
 }
 
+/// Error to return if a project already exists at the location.
+fn bail_on_overriding_project(ctx: &DuckContext, root: &Path) -> QuackError {
+    let Ok(package) = PackageLoader::find_at_exact_directory(root, ctx) else {
+        return qp_err!("There is already a manifest file at `{}`", root.display());
+    };
+    qp_err!(
+        "cannot reinitialize project `{}` at `{}`",
+        package.package().manifest().name(),
+        package.package().root_directory().display()
+    )
+}
+
 /// Create a file with the venv config of the project (if necessary).
 fn create_venv_config_file(
     ctx: &DuckContext,
@@ -147,13 +145,12 @@ fn create_venv_config_file(
     else {
         return Ok(());
     };
-    if venv_cfg_file.exists() {
-        ctx.error_console().warning(format!("init run with non-default venv configuration flags, but venv configuration file already exists at `{}`", venv_cfg_file.display()));
-        return Ok(());
-    }
-    let mut venv_cfg_file = venv_cfg_file
-        .touch()
+    let venv_cfg_file = venv_cfg_file.open_and_run_if_exists(|p| ctx.error_console().warning(format!("init run with non-default venv configuration flags, but venv configuration file already exists at `{}`", p.display())))
         .context("failed to create a venv configuration file")?;
+    let Some(mut venv_cfg_file) = venv_cfg_file else {
+        // The file already exists.
+        return Ok(());
+    };
     venv_cfg_file
         .write(venv_cfg.to_string().as_bytes())
         .context("failed to write to a venv configuration file")?;
@@ -193,14 +190,16 @@ fn generate_venv_config(
 /// In the future an option should be added to initialize the project's entry point as a script (`main.ds`).
 fn add_package_structure(root_path: &Path) -> QuackResult<()> {
     let source_file = root_path.join("src").join(DEFAULT_SOURCE_FILENAME);
-    if !source_file.exists() {
-        source_file
-            .touch()
-            .context("failed to create a default source file")?;
-        source_file
-            .write(DEFAULT_SOURCE_CONTENTS)
-            .context("failed to write a default duck file")?;
-    }
+    let Some(mut source_file) = source_file
+        .open_and_run_if_exists(|_| {})
+        .context("failed to create a default source file")?
+    else {
+        // File already exists
+        return Ok(());
+    };
+    source_file
+        .write(DEFAULT_SOURCE_CONTENTS.as_bytes())
+        .context("failed to write a default duckling file")?;
     Ok(())
 }
 
@@ -211,14 +210,15 @@ fn init_git(root_path: &Path) -> QuackResult<()> {
     Repository::init_opts(root_path, &init_opts)
         .context("failed to initialize a git repository")?;
     let gitignore_file = root_path.join(".gitignore");
-    if gitignore_file.exists() {
+    let Some(mut gitignore_file) = gitignore_file
+        .open_and_run_if_exists(|_| {})
+        .context("failed to create a `.gitignore` file")?
+    else {
+        // File already exists.
         return Ok(());
-    }
+    };
     gitignore_file
-        .touch()
-        .context("failed to create a `.gitignore` file")?;
-    gitignore_file
-        .write(DEFAULT_GITIGNORE)
+        .write(DEFAULT_GITIGNORE.as_bytes())
         .context("failed to write to a `.gitignore` file")?;
     Ok(())
 }
