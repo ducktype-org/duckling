@@ -241,7 +241,7 @@ namespace compiler::helios {
 			auto const_stmt = stmt.dynamicCast<pst::Const>().value();
 			return SymbolData::makePSTSymbolData(
 				{
-					.name = const_stmt->getName(),
+					.name = const_stmt->getName().unlock(ctx)->unwrap(),
 					.kind = SymbolKind::Const,
 				},
 				pst_data
