@@ -121,7 +121,8 @@ namespace base {
 		}
 
 		void maybeRehash() RELEASE_NOEXCEPT {
-			if (double(element_count) > MAX_LOAD_FACTOR * double(buckets.size())) [[unlikely]]
+			// NO DIFFERENCE IN PERFORMANCE:
+			if (element_count * 10 > buckets.size() * 7) [[unlikely]]
 				rehash();
 		}
 

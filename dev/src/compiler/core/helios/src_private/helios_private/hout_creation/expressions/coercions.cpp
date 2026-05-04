@@ -125,13 +125,10 @@ namespace compiler::helios {
 		const tsh::SymbolType<> to,
 		bool                    bypass_trivial_copyability_check
 	) {
-
 		// FAST PATH FOR Integers: (marginal +)
-		if (
-			from.withMutability(to.getMutability()) == to
-			and from.getType().getKind() == tsh::Kind::Integral
-			and from.getRefKind() == tsh::ReferenceKind::Direct
-		) {
+		if (from.withMutability(to.getMutability()) == to
+		    and from.getType().getKind() == tsh::Kind::Integral
+		    and from.getRefKind() == tsh::ReferenceKind::Direct) {
 			return Coercion::emptyCoercion(from);
 		}
 

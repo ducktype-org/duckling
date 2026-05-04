@@ -9,10 +9,8 @@
 #define QUERY_AUTO_CACHE_COPY                                                      \
 	static inline concurrent::ConHashMap<KHash, query::CacheEntry<PResult>> cache; \
 	static auto load(KHash key_hash) -> LoadResult {                               \
-		if (const auto& value = cache.atMaybeCopy(key_hash)) {                     \
-			return QResWithACD{ (*value).data, (*value).acd };                     \
-		}                                                                          \
-		return {};                                                                 \
+		const auto& value = cache.getCopy(key_hash);                               \
+		return QResWithACD{ value.data, value.acd };                               \
 	}                                                                              \
 	static auto store(KHash key_hash, PResult res, query::ACD acd) -> QResult {    \
 		cache.put(key_hash, { std::move(res), acd });                              \
@@ -36,10 +34,8 @@
 #define QUERY_AUTO_CACHE_CONSTRUCT                                                      \
 	static inline concurrent::ConHashMap<KHash, query::CacheEntry<PResult>> cache;      \
 	static auto load(KHash key_hash) -> LoadResult {                                    \
-		if (const auto& value = cache.atMaybe(key_hash)) {                              \
-			return QResWithACD{ QResult((*value)->data), (*value)->acd };               \
-		}                                                                               \
-		return {};                                                                      \
+		const auto& value = cache.at(key_hash);                                         \
+		return QResWithACD{ QResult(value->data), value->acd };                         \
 	}                                                                                   \
 	static auto store(KHash key_hash, PResult res, query::ACD acd) -> QResult {         \
 		cache.put(key_hash, { std::move(res), acd });                                   \
@@ -80,10 +76,8 @@
 #define QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF_IGNORE_CONSTRUCTIBILITY_CHECK                 \
 	static inline concurrent::ConHashMap<KHash, query::CacheEntry<PResult>> cache;         \
 	static auto load(KHash key_hash) -> LoadResult {                                       \
-		if (auto value = cache.atMaybe(key_hash)) {                                        \
-			return QResWithACD{ QResult(CRef<PResult>(&(*value)->data)), (*value)->acd };  \
-		}                                                                                  \
-		return {};                                                                         \
+		auto value = cache.at(key_hash);                                                   \
+		return QResWithACD{ QResult(CRef<PResult>(&value->data)), value->acd };            \
 	}                                                                                      \
 	static auto store(KHash key_hash, PResult res, query::ACD acd) -> QResult {            \
 		auto ref = cache.put(key_hash, query::CacheEntry<PResult>{ std::move(res), acd }); \
@@ -105,10 +99,8 @@
 #define QUERY_AUTO_CACHE_CREF                                                              \
 	static inline concurrent::ConHashMap<KHash, query::CacheEntry<PResult>> cache;         \
 	static auto load(KHash key_hash) -> LoadResult {                                       \
-		if (auto value = cache.atMaybe(key_hash)) {                                        \
-			return QResWithACD{ CRef<PResult>(&(*value)->data), (*value)->acd };           \
-		}                                                                                  \
-		return {};                                                                         \
+		auto value = cache.at(key_hash);                                                   \
+		return QResWithACD{ CRef<PResult>(&value->data), value->acd };                     \
 	}                                                                                      \
 	static auto store(KHash key_hash, PResult res, query::ACD acd) -> QResult {            \
 		auto ref = cache.put(key_hash, query::CacheEntry<PResult>{ std::move(res), acd }); \
@@ -130,25 +122,23 @@
  *
  * @note This macro acts similarly to QUERY_AUTO_CACHE_CREF, but additionally calls provided lambda.
  */
-#define QUERY_AUTO_CACHE_CONSTRUCT_BY_LAMBDA(lambda)                                               \
-	static inline concurrent::ConHashMap<KHash, query::CacheEntry<PResult>> cache;                 \
-	static auto load(KHash key_hash) -> LoadResult {                                               \
-		static constexpr auto construct_lambda = lambda;                                           \
-                                                                                                   \
-		if (auto value = cache.atMaybe(key_hash)) {                                                \
-			return QResWithACD{ construct_lambda(CRef<PResult>(&(*value)->data)), (*value)->acd }; \
-		}                                                                                          \
-		return {};                                                                                 \
-	}                                                                                              \
-	static auto store(KHash key_hash, PResult res, query::ACD acd) -> QResult {                    \
-		static constexpr auto construct_lambda = lambda;                                           \
-                                                                                                   \
-		auto ref = cache.put(key_hash, query::CacheEntry<PResult>{ std::move(res), acd });         \
-		return construct_lambda(&ref->value.data);                                                 \
-	}                                                                                              \
-	static auto erase(KHash key_hash) -> bool { return cache.erase(key_hash); }                    \
-	static_assert(                                                                                 \
-		not std::is_same_v<QResult, CRef<PResult>>,                                                \
-		"QResult should not be equal to CRef<PResult> for "                                        \
-		"QUERY_AUTO_CACHE_CONSTRUCT_BY_LAMBDA"                                                     \
+#define QUERY_AUTO_CACHE_CONSTRUCT_BY_LAMBDA(lambda)                                       \
+	static inline concurrent::ConHashMap<KHash, query::CacheEntry<PResult>> cache;         \
+	static auto load(KHash key_hash) -> LoadResult {                                       \
+		static constexpr auto construct_lambda = lambda;                                   \
+                                                                                           \
+		auto value = cache.at(key_hash);                                                   \
+		return QResWithACD{ construct_lambda(CRef<PResult>(&value->data)), value->acd };   \
+	}                                                                                      \
+	static auto store(KHash key_hash, PResult res, query::ACD acd) -> QResult {            \
+		static constexpr auto construct_lambda = lambda;                                   \
+                                                                                           \
+		auto ref = cache.put(key_hash, query::CacheEntry<PResult>{ std::move(res), acd }); \
+		return construct_lambda(&ref->value.data);                                         \
+	}                                                                                      \
+	static auto erase(KHash key_hash) -> bool { return cache.erase(key_hash); }            \
+	static_assert(                                                                         \
+		not std::is_same_v<QResult, CRef<PResult>>,                                        \
+		"QResult should not be equal to CRef<PResult> for "                                \
+		"QUERY_AUTO_CACHE_CONSTRUCT_BY_LAMBDA"                                             \
 	);

@@ -53,9 +53,9 @@ namespace query::internal {
 
 		// @TODO: #2026 add note status static assertion if possible.
 
-		CORE_ASSERT(
-			QueryImplType::load(perfect_hash).empty(), "Cache should be empty in standardQueryEntry"
-		);
+		// CORE_ASSERT(
+		// 	QueryImplType::load(perfect_hash).empty(), "Cache should be empty in standardQueryEntry"
+		// );
 
 		auto node_id = makeNodeID<QueryIntType>(key);
 		auto context = ContextAccess::make(node_id);
@@ -175,7 +175,7 @@ namespace query::internal {
 		using QResWithACD = CacheEntry<QResult>;
 		using PResult     = PResult_tp;
 		using PResWithACD = CacheEntry<PResult>;
-		using LoadResult  = base::Optional<QResWithACD>;
+		using LoadResult  = QResWithACD;
 
 		// Some forwards used to simplify the code:
 		constexpr static bool IS_HASH_STABLE = QueryType_tp::QUERY_DATA.usesStableHashing();
@@ -245,7 +245,7 @@ namespace query::internal {
 		return ::query::internal::standardQueryEntry<type>(key);                                                                         \
 	}                                                                                                                                    \
 	auto type::QueryType::internal_load(::query::QueryStableHash hash) -> type::QResult {                                                \
-		return type::load(type::KHash(hash)).value().data;                                                                               \
+		return type::load(type::KHash(hash)).data;                                                                                       \
 	}                                                                                                                                    \
 	auto type::QueryType::internal_erase(::query::QueryStableHash hash) -> bool {                                                        \
 		return type::erase(type::KHash(hash));                                                                                           \

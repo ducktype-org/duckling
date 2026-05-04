@@ -239,14 +239,14 @@ Load and store functions should be kept as minimal as possible.
 There are two very simple concepts to unravel before we can go into implementation:
 
 - `query::ACD` type -- This is just "additional cache data". The store function has to store a value of this type alongside every cache entry while the load function has to retrieve it.
-- `LoadResult` type -- This is a type that expands to `base::Optional<query::CacheEntry<QResult>>`. `Optional` comes from the fact that the load function may not find a cached value. `query::CacheEntry<T>` is just a simple template that stores a value of type `T` and a value of type `query::ACD`. In other words, `LoadResult` type is just an optional of a pair `QResult, query::ACD`.
+- `LoadResult` type -- This is a type that expands to `query::CacheEntry<QResult>`. `query::CacheEntry<T>` is just a simple template that stores a value of type `T` and a value of type `query::ACD`. In other words, `LoadResult` type is jus a pair `QResult, query::ACD`.
 
 Now we can finally write the functions:
 
 ~~~~~cpp
     static auto load((KHash) key) -> LoadResult {
         if (/* cache miss */) {
-            return {}; // empty optional
+            /* panic */
         }
         if (/* cache hit */) {
             return { some_data, acd };
