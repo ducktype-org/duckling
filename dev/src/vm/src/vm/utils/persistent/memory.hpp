@@ -83,13 +83,12 @@ namespace vm::persistent {
 		}
 
 	public:
-		
 		std::pair<usize, usize> getRangeOf(MemoryStateID state) const {
 			auto root = validateInput(state);
 			return getRange(root);
 		}
 
-		Path const getPathTo(MemoryStateID state, usize idx) const {
+		const Path getPathTo(MemoryStateID state, usize idx) const {
 			return detail::SegmentTree::getPathTo(fromState(state), idx);
 		}
 

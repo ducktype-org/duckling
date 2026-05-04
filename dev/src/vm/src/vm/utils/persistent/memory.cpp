@@ -143,7 +143,9 @@ namespace vm::persistent {
 		auto root = validateInput(state, idxs);
 
 		auto new_root = detail::SegmentTree::reconstructIdxs(
-			root, idxs, [&](usize cur_idx, base::Optional<usize>) -> ID {
+			root,
+			idxs,
+			[&](usize cur_idx, base::Optional<usize>) -> ID {
 				CORE_ASSERT(vals.size(), "there must be sth");
 				auto [idx, val] = vals.front();
 				vals.pop_front();

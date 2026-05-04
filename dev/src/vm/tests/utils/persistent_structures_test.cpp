@@ -61,10 +61,8 @@ public:
 		using namespace vm::persistent;
 		Memory mem{};
 
-		auto checker
-			= [&](MemoryStateID state, std::vector<std::pair<usize, usize>> expected) -> void {
-			ASSERT_EQUAL(expected, mem.toVec(state));
-		};
+		auto checker = [&](MemoryStateID state, std::vector<std::pair<usize, usize>> expected
+		               ) -> void { ASSERT_EQUAL(expected, mem.toVec(state)); };
 
 		auto empt = Memory::EMPTY;
 		checker(empt, {});
@@ -178,13 +176,11 @@ public:
 					"map should contain all of expected values"
 				);
 				CORE_ASSERT(
-					map_copy.at(key) == val,
-					"values should be equal in both copy and database"
+					map_copy.at(key) == val, "values should be equal in both copy and database"
 				);
 
 				CORE_ASSERT(
-					map.access(state, key) == val,
-					"values should be equal in both copy and database"
+					map.access(state, key) == val, "values should be equal in both copy and database"
 				);
 			}
 
@@ -218,7 +214,7 @@ public:
 
 		auto [success, op05] = map.emplace(op04, "key2", "val5");
 		ASSERT_EQUAL(success, true);
-		checker(op05, { { "key1", "val1" }, {"key2", "val5"}, { "key3", "val2" } });
+		checker(op05, { { "key1", "val1" }, { "key2", "val5" }, { "key3", "val2" } });
 
 		auto [success_2, op06] = map.emplace(op05, "key2", "val6");
 		ASSERT_EQUAL(success_2, false);

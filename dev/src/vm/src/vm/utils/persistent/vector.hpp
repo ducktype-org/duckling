@@ -65,7 +65,7 @@ namespace vm::persistent {
 		}
 
 	public:
-		static constexpr auto EMPTY = VectorStateID{u64{Memory::EMPTY}};
+		static constexpr auto EMPTY = VectorStateID{ u64{ Memory::EMPTY } };
 
 		const VarT& access(VectorStateID state_id, usize idx) const {
 			auto state  = validaState(state_id);
@@ -128,7 +128,7 @@ namespace vm::persistent {
 			if (pref_size > size) throw std::invalid_argument("trying to take too much");
 
 			auto new_state = Memory::slice(state, 0, pref_size);
-			
+
 			return toVeccState(new_state);
 		}
 
@@ -138,7 +138,7 @@ namespace vm::persistent {
 			if (how_many_pop > size) throw std::invalid_argument("trying to pop too much");
 
 			auto new_state = Memory::slice(state, 0, size - how_many_pop);
-			
+
 			return toVeccState(new_state);
 		}
 

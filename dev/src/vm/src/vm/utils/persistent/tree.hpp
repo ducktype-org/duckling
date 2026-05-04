@@ -36,16 +36,29 @@ namespace vm::persistent::detail {
 	concept SameWNoQual = std::is_same_v<std::remove_cvref_t<T1>, std::remove_cvref_t<T2>>;
 
 	class SegmentTree {
+		using posT = usize;
+		using valT = usize;
+
+		using idxT                        = posT;
+		constexpr static usize POS_T_SIZE = 8 * sizeof(posT);
+
+		static_assert(
+			std::is_integral_v<posT> && std::is_unsigned_v<posT>, "posT must be an unsigned integer"
+		);
+		static_assert(
+			std::is_integral_v<valT> && std::is_unsigned_v<valT>, "valT must be an unsigned integer"
+		);
+
 	public:
-		constexpr static auto  EMPTY   = NodeID{ 0 };
-		constexpr static usize IDX_END = usize(1) << 63;
+		constexpr static auto EMPTY   = NodeID{ 0 };
+		constexpr static idxT IDX_END = idxT(1) << (POS_T_SIZE - 1);
 
 		enum class Dir { Left, Right };
 
 	private:
-		constexpr static usize OFFSET_MASK = (usize(-1) >> 1);
-		constexpr static usize LEAF_MASK   = usize(1) << 63;
-		constexpr static usize TOP_BIT     = usize(1) << 63;
+		constexpr static posT OFFSET_MASK = (posT(-1) >> 1);
+		constexpr static posT LEAF_MASK   = posT(1) << (POS_T_SIZE - 1);
+		constexpr static posT TOP_BIT     = posT(1) << (POS_T_SIZE - 1);
 
 		struct ChildEntry {
 			NodeID left_child;
@@ -60,8 +73,8 @@ namespace vm::persistent::detail {
 		});
 
 		struct LeafEntry {
-			usize idx;
-			usize value;
+			idxT idx;
+			valT value;
 
 			bool operator==(const LeafEntry&) const = default;
 		};
@@ -73,20 +86,22 @@ namespace vm::persistent::detail {
 
 		struct RootEntry {
 			usize size;
-			usize position;
-			usize left_bound;
-			usize right_bound;
+			posT  position;
+			idxT  left_bound;
+			idxT  right_bound;
 		};
 
 		static constexpr Dir othDir(Dir dir) { return dir == Dir::Left ? Dir::Right : Dir::Left; }
 
-		static constexpr usize heightFromPos(usize pos) { return usize(64 - std::bit_width(pos)); }
+		static constexpr usize heightFromPos(posT pos) {
+			return POS_T_SIZE - usize(std::bit_width(pos));
+		}
 
-		static constexpr usize offsetFromPos(usize pos) {
+		static constexpr idxT offsetFromPos(posT pos) {
 			return (pos << heightFromPos(pos)) & OFFSET_MASK;
 		}
 
-		static constexpr usize getLCAHeight(usize pos_1, usize pos_2) {
+		static constexpr usize getLCAHeight(posT pos_1, posT pos_2) {
 			if (pos_1 > pos_2) std::swap(pos_1, pos_2);
 			if (pos_1 == 0) return pos_2;
 			auto h_1 = heightFromPos(pos_1), h_2 = heightFromPos(pos_2);
@@ -95,23 +110,23 @@ namespace vm::persistent::detail {
 			return h_1 + (usize) std::bit_width(pos_1 ^ pos_2);
 		}
 
-		static constexpr usize getLCAPos(usize pos_1, usize pos_2) {
+		static constexpr posT getLCAPos(posT pos_1, posT pos_2) {
 			if (pos_1 == 0) std::swap(pos_1, pos_2);
 			return pos_1 >> (getLCAHeight(pos_1, pos_2) - heightFromPos(pos_1));
 		}
 
-		static constexpr bool inSubtree(usize maybe_child, usize root) {
+		static constexpr bool inSubtree(posT maybe_child, posT root) {
 			return (root == getLCAPos(root, maybe_child));
 		}
 
 		/**
 		 * @brief Get the nodes for range [l, r)
 		 */
-		static constexpr std::deque<usize> getPosInRange(usize left_idx, usize right_idx) {
+		static constexpr std::deque<posT> getPosInRange(idxT left_idx, idxT right_idx) {
 			CORE_ASSERT(left_idx < right_idx, "Received wrong interval");
 			CORE_ASSERT(right_idx <= IDX_END, "Expecting a valid interval");
 
-			std::deque<usize> ans = {};
+			std::deque<posT> ans = {};
 
 			auto right_guard = right_idx & OFFSET_MASK;  // to handle right_idx == IDX_END
 
@@ -124,9 +139,10 @@ namespace vm::persistent::detail {
 
 				usize final_height = std::min(height_of_diff, max_height) - 1;
 
-				usize pos = (left_idx >> final_height) | ((usize(1)) << (63 - final_height));
+				posT pos
+					= (left_idx >> final_height) | ((posT(1)) << (POS_T_SIZE - 1 - final_height));
 				ans.emplace_back(pos);
-				left_idx += (usize(1) << final_height);
+				left_idx += (posT(1) << final_height);
 			}
 
 			return ans;
@@ -135,14 +151,14 @@ namespace vm::persistent::detail {
 		template<typename segTreeT>
 		requires SameWNoQual<SegmentTree, segTreeT> struct SurroundingNeigh {
 			segTreeT* mem;
-			usize     root_pos{};
-			usize     node_pos{};
+			posT      root_pos{};
+			posT      node_pos{};
 			NodeID    node{};
 
 			std::deque<NodeID> siblings{};
 			std::deque<NodeID> ancestors{};
 
-			void moveNodeTo(usize desired_pos) {
+			void moveNodeTo(posT desired_pos) {
 				static constexpr bool RECONSTRUCT = !std::is_const_v<segTreeT>;
 				if (!desired_pos || desired_pos == node_pos) return;
 				CORE_ASSERT(inSubtree(desired_pos, root_pos), "we should be within root's subtree");
@@ -170,8 +186,8 @@ namespace vm::persistent::detail {
 				CORE_ASSERT(inSubtree(desired_pos, node_pos), "we are above desired pos");
 
 				while (node_pos != desired_pos) {
-					auto left_pos  = node_pos << 1;
-					auto right_pos = (node_pos << 1 | 1);
+					posT left_pos  = node_pos << 1;
+					posT right_pos = (node_pos << 1 | 1);
 
 					NodeID left = EMPTY, right = EMPTY;
 					CORE_ASSERT(
@@ -202,8 +218,8 @@ namespace vm::persistent::detail {
 			}
 
 			[[nodiscard]]
-			std::pair<usize, std::deque<std::pair<usize, NodeID>>> inOrder(usize upto_here) const {
-				std::deque<std::pair<usize, NodeID>> ans = {};
+			std::pair<usize, std::deque<std::pair<posT, NodeID>>> inOrder(posT upto_here) const {
+				std::deque<std::pair<posT, NodeID>> ans = {};
 				{
 					auto before = beforeNode(upto_here);
 					for (auto el: before) ans.emplace_back(el);
@@ -221,10 +237,10 @@ namespace vm::persistent::detail {
 			}
 
 			[[nodiscard]]
-			std::deque<std::pair<usize, NodeID>> beforeNode(usize upto_here) const {
+			std::deque<std::pair<posT, NodeID>> beforeNode(posT upto_here) const {
 				auto cur_pos = node_pos;
 
-				std::deque<std::pair<usize, NodeID>> ans = {};
+				std::deque<std::pair<posT, NodeID>> ans = {};
 				CORE_ASSERT(
 					inSubtree(upto_here, root_pos), "target root must be my in root subtree"
 				);
@@ -242,10 +258,10 @@ namespace vm::persistent::detail {
 			}
 
 			[[nodiscard]]
-			std::deque<std::pair<usize, NodeID>> afterNode(usize upto_here) const {
+			std::deque<std::pair<posT, NodeID>> afterNode(usize upto_here) const {
 				auto cur_pos = node_pos;
 
-				std::deque<std::pair<usize, NodeID>> ans = {};
+				std::deque<std::pair<posT, NodeID>> ans = {};
 				CORE_ASSERT(
 					inSubtree(upto_here, root_pos), "target root must be my in root subtree"
 				);
@@ -274,7 +290,7 @@ namespace vm::persistent::detail {
 		 * @brief struture used to iterate over the MemoryStateView
 		 */
 		struct Path {
-			usize                   idx;
+			idxT                    idx;
 			std::deque<NodeID>      trace;
 			base::CRef<SegmentTree> mem;
 			NodeID                  root;
@@ -290,7 +306,7 @@ namespace vm::persistent::detail {
 			bool moveToValid(Dir move_dir, usize skip = 0) {
 				CORE_ASSERT(trace.size(), "there must be a leaf on the path");
 
-				usize mask = 1;
+				posT mask = 1;
 				trace.pop_front();
 
 				for (; trace.size(); trace.pop_front(), mask <<= 1) {
@@ -342,7 +358,7 @@ namespace vm::persistent::detail {
 			}
 
 			[[nodiscard]]
-			base::Optional<usize> getValue() const {
+			base::Optional<valT> getValue() const {
 				if (trace.at(0) == EMPTY)
 					return std::nullopt;
 				else
@@ -350,7 +366,7 @@ namespace vm::persistent::detail {
 			}
 		};
 
-		std::pair<usize, usize> getHeightOffset(NodeID state) const {
+		std::pair<usize, idxT> getHeightOffset(NodeID state) const {
 			if_opt_some(root_info.atMaybeCopy(state), entry) {
 				auto pos = entry.position;
 				CORE_ASSERT(!(pos & LEAF_MASK), "top bit would imply that node is leaf");
@@ -375,13 +391,13 @@ namespace vm::persistent::detail {
 			CORE_UNREACHABLE();
 		}
 
-		usize getPos(NodeID state) const {
+		posT getPos(NodeID state) const {
 			if_opt_some(root_info.atMaybeCopy(state), entry) { return entry.position; }
 			if_opt_some(leaf_entries.atRightOpt(state), entry) { return LEAF_MASK | entry.idx; }
 			CORE_UNREACHABLE();
 		}
 
-		std::pair<usize, usize> getRange(NodeID state) const {
+		std::pair<idxT, idxT> getRange(NodeID state) const {
 			if_opt_some(root_info.atMaybeCopy(state), entry) {
 				return { entry.left_bound, entry.right_bound };
 			}
@@ -391,7 +407,7 @@ namespace vm::persistent::detail {
 			CORE_UNREACHABLE();
 		}
 
-		usize getValueOfLeaf(NodeID leaf) const {
+		valT getValueOfLeaf(NodeID leaf) const {
 			if_opt_some(leaf_entries.atRightOpt(leaf), entry) { return entry.value; }
 			CORE_UNREACHABLE();
 		}
@@ -400,9 +416,9 @@ namespace vm::persistent::detail {
 			if (!root_info.contains(root) && !leaf_entries.atRightOpt(root))
 				throw std::invalid_argument("got invalid state");
 
-			auto size             = getSize(root);
+			auto size             = (idxT) getSize(root);
 			auto [height, offset] = getHeightOffset(root);
-			CORE_ASSERT(size <= (usize(1) << height), "root's size is too large");
+			CORE_ASSERT(size <= (idxT(1) << height), "root's size is too large");
 		}
 
 		NodeID nodeFromChildren(NodeID left, NodeID right) {
@@ -416,7 +432,7 @@ namespace vm::persistent::detail {
 			auto children       = ChildEntry{ .left_child = left, .right_child = right };
 			auto [is_new, node] = child_entries.emplaceByLeft(children, next_node_id);
 
-			usize left_bound = 0, right_bound = 0;
+			idxT left_bound = 0, right_bound = 0;
 			if (!left) {
 				auto [l, r] = getRange(right);
 				left_bound  = l;
@@ -446,7 +462,7 @@ namespace vm::persistent::detail {
 			return node;
 		}
 
-		NodeID nodeFromIdxVar(usize idx, usize var_id) {
+		NodeID nodeFromIdxVar(idxT idx, valT var_id) {
 			auto leaf_entry = LeafEntry{
 				.idx   = idx,
 				.value = var_id,
@@ -460,37 +476,37 @@ namespace vm::persistent::detail {
 
 		template<RebuildRes ResT>
 		struct MergeBuilder {
-			std::function<ResT(NodeID, usize)> only_1 = [](NodeID id, usize) -> ResT {
+			std::function<ResT(NodeID, posT)> only_1 = [](NodeID id, posT) -> ResT {
 				if constexpr (std::is_same_v<ResT, NodeID>) return id;
 			};
 
-			std::function<ResT(NodeID, usize)> only_2 = [](NodeID id, usize) -> ResT {
+			std::function<ResT(NodeID, posT)> only_2 = [](NodeID id, posT) -> ResT {
 				if constexpr (std::is_same_v<ResT, NodeID>) return id;
 			};
 
-			std::function<ResT(NodeID, usize)> the_same = [](NodeID id, usize) -> ResT {
+			std::function<ResT(NodeID, posT)> the_same = [](NodeID id, posT) -> ResT {
 				if constexpr (std::is_same_v<ResT, NodeID>) return id;
 			};
 
-			std::function<ResT(usize, usize, usize)> confilicts = [](usize, usize, usize) -> ResT {
+			std::function<ResT(idxT, valT, valT)> confilicts = [](idxT, valT, valT) -> ResT {
 				throw std::invalid_argument("conflicts present");
 			};
 		};
 
 		template<RebuildRes ResT>
 		struct RangeBuilder {
-			std::function<ResT(NodeID, usize)> in_range = [](NodeID id, usize) -> ResT {
+			std::function<ResT(NodeID, posT)> in_range = [](NodeID id, posT) -> ResT {
 				if constexpr (std::is_same_v<ResT, NodeID>) return id;
 			};
 
-			std::function<ResT(NodeID, usize)> out_of_range = [](NodeID id, usize) -> ResT {
+			std::function<ResT(NodeID, posT)> out_of_range = [](NodeID id, posT) -> ResT {
 				if constexpr (std::is_same_v<ResT, NodeID>) return id;
 			};
 		};
 
 		using LeafBuilder = std::function<NodeID(usize, base::Optional<usize>)>;
 
-		NodeID reconstructIdxs(NodeID root, std::deque<usize> idxs, LeafBuilder constructor) {
+		NodeID reconstructIdxs(NodeID root, std::deque<idxT> idxs, LeafBuilder constructor) {
 			if (idxs.empty()) return root;
 
 			for (auto& idx: idxs)
@@ -519,7 +535,7 @@ namespace vm::persistent::detail {
 				.siblings = {},
 			};
 
-			std::deque<usize> left = {}, right = {};
+			std::deque<idxT> left = {}, right = {};
 			for (; idxs.size(); idxs.pop_front())
 				if (idxs.front() < offset)
 					left.emplace_back(idxs.front());
@@ -569,12 +585,12 @@ namespace vm::persistent::detail {
 				std::swap(root_1, root_2);
 				std::swap(merge_policy.only_1, merge_policy.only_1);
 				merge_policy.confilicts = [orig_strat = merge_policy.confilicts](
-											  usize idx, usize val_1, usize val_2
+											  idxT idx, valT val_1, valT val_2
 										  ) -> ResT { return orig_strat(idx, val_2, val_1); };
 			}
 
 			auto detail_merge =
-				[&, mem = &obj](this auto&& self, usize pos, NodeID node_1, NodeID node_2) -> ResT {
+				[&, mem = &obj](this auto&& self, posT pos, NodeID node_1, NodeID node_2) -> ResT {
 				CORE_ASSERT(
 					mem->getPos(node_1) == mem->getPos(node_2) || !node_1 || !node_2,
 					"both nodes are responsible for the same memory region"
@@ -746,8 +762,8 @@ namespace vm::persistent::detail {
 		ResT rebuildWithRange(
 			this SelfT&&       st,
 			NodeID             root,
-			usize              left_idx,
-			usize              right_idx,
+			idxT               left_idx,
+			idxT               right_idx,
 			RangeBuilder<ResT> range_constructor
 		) requires ValidSignature<SelfT, ResT> {
 			using BaseT = std::conditional_t<
@@ -771,8 +787,8 @@ namespace vm::persistent::detail {
 				right_idx = std::max(right_idx, offset + (usize(1) << height));
 			}
 
-			usize left_pos  = left_idx | LEAF_MASK;
-			usize right_pos = (right_idx - 1) | LEAF_MASK;
+			posT left_pos  = left_idx | LEAF_MASK;
+			posT right_pos = (right_idx - 1) | LEAF_MASK;
 
 			auto lca_pos = getLCAPos(left_pos, right_pos);
 
@@ -792,10 +808,8 @@ namespace vm::persistent::detail {
 
 			neigh.moveNodeTo(range_nodes.front());
 			{
-				auto [idx, list] = neigh.inOrder(lca_pos);
-				for (usize i = 0; i < idx; i++) {
-					auto [pos, node] = list.front();
-					list.pop_front();
+				auto list = neigh.beforeNode(lca_pos);
+				for (auto [pos, node]: list) {
 					CORE_ASSERT(heightFromPos(pos) >= first_height, "All the siblings are above");
 
 					if constexpr (RECONSTRUCT)
@@ -817,11 +831,9 @@ namespace vm::persistent::detail {
 			}
 
 			{
-				auto [idx, list] = neigh.inOrder(lca_pos);
-				for (usize i = 0; i <= idx; i++) list.pop_front();
+				auto list = neigh.afterNode(lca_pos);
 
-				for (; list.size(); list.pop_front()) {
-					auto [pos, node] = list.front();
+				for (auto [pos, node]: list) {
 					CORE_ASSERT(heightFromPos(pos) >= last_height, "All the siblings are above");
 
 					if constexpr (RECONSTRUCT) {
@@ -855,16 +867,16 @@ namespace vm::persistent::detail {
 		}
 
 		[[nodiscard]]
-		Path getPathTo(NodeID root, usize idx) const {
+		Path getPathTo(NodeID root, idxT idx) const {
 			auto [height, offset] = getHeightOffset(root);
 
 			std::deque<NodeID> trace = { root };
 
-			if (idx < offset || idx >= offset + (usize(1) << height))
+			if (idx < offset || idx >= offset + (idxT(1) << height))
 				trace = { EMPTY };
 			else {
 				NodeID node = root;
-				usize  mask = (usize(1) << height);
+				idxT   mask = (idxT(1) << height);
 
 				for (usize i = 0; i < height; i++) {
 					mask >>= 1;
@@ -945,7 +957,7 @@ namespace vm::persistent::detail {
 				inSubtree(pos_1, lca) && inSubtree(pos_2, lca), "Both positions are in LCA's subtree"
 			);
 			CORE_ASSERT(
-				offsetFromPos(pos_1) + (usize(1) << heightFromPos(pos_1)) <= offsetFromPos(pos_2),
+				offsetFromPos(pos_1) + (idxT(1) << heightFromPos(pos_1)) <= offsetFromPos(pos_2),
 				"pos_1 has to be on the left to pos_2"
 			);
 
