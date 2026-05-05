@@ -307,9 +307,11 @@ namespace compiler::helios {
 			if (auto import_as = import_chain.dynamicCast<pst::ImportIdentifierAs>()) {
 				base::StrID name;
 				if (import_as.value()->isImportAs())
-					name = import_as.value()->asWhat().value();
-				else
-					name = import_as.value()->getNames().back().value;
+					name = import_as.value()->asWhat().value().unlock(ctx)->unwrap();
+				else {
+					usize count = import_as.value()->numberOfNames();
+					name = import_as.value()->getNameIndex(count - 1).unlock(ctx)->unwrap();
+				}
 
 				return SymbolData::makePSTSymbolData(
 					{
@@ -731,13 +733,19 @@ namespace compiler::helios {
 			void visitImport(pst::Access<pst::Import> import_stmt) final {
 				// @TODO: proper error handling
 
-				auto names = import_stmt.dynamicCast<pst::Import>()
+				auto import_chain = import_stmt.dynamicCast<pst::Import>()
 				                 .value()
 				                 ->getImportChain()
 				                 .dynamicCast<pst::ImportIdentifierAs>()
-				                 .unlock(ctx)
-				                 ->getNames();
-				std::vector<base::StrID> module_path{ names.begin(), names.end() };
+				                 .unlock(ctx);
+
+				usize name_count = import_chain->numberOfNames();
+
+				std::vector<base::StrID> module_path(name_count);
+
+				for(int i = 0; i < name_count; i++) {
+					module_path[i] = import_chain->getNameIndex(i).unlock(ctx)->unwrap();
+				}
 
 				auto maybe_imported_module
 					= frontend::getRelativeModule(ctx, module(scope(key)), module_path);

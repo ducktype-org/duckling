@@ -6,14 +6,19 @@ namespace pst {
 	MBox<ImportStarHides> ImportStarHides::parse(LangParserState& state) {
 		auto out = makeBox<ImportStarHides>(state);
 
-		tpc::Identifier id;
+		MBox<IdentifierWrapper> id;
 
-		PARSE().all(&id);
-		out->names.push_back(id);
+		auto push_id = [&](auto& id_list) {
+			id_list.emplace_back(nullptr);
+			PARSE().assign(&id_list.back(), std::move(id));
+		};
+
+		PARSE().one(&id);
+		push_id(out->names);
 
 		PST_WHILE(state[0].is(NamedOperator::Period)) {
 			PARSE().all(NamedOperator::Period, &id);
-			out->names.push_back(id);
+			push_id(out->names);
 		}
 
 		PARSE().one(NamedOperator::PeriodStar);
@@ -22,11 +27,11 @@ namespace pst {
 			out->hides.emplace();
 
 			PARSE().all(&id);
-			out->hides->push_back(id);
+			push_id(out->hides.value());
 
 			PST_WHILE(state[0].is(Special::Comma)) {
 				PARSE().all(Special::Comma, &id);
-				out->hides->push_back(id);
+				push_id(out->hides.value());
 			}
 		}
 
@@ -60,5 +65,12 @@ namespace pst {
 		addToHash(partial_hash, hides.has_value());
 		if (hides) addToHash(partial_hash, hides->size());
 		return partial_hash;
+	}
+
+	void ImportStarHides::calcElementPathHashRecursive() {
+		calcIndexedListChildPath<IdentifierWrapper>({ names }, getElementPathHash());
+		if (hides.has_value()) {
+			calcIndexedListChildPath<IdentifierWrapper>({ hides.value() }, getElementPathHash());
+		}
 	}
 }

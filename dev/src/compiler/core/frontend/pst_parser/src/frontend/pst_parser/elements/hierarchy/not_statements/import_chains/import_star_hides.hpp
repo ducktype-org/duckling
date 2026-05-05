@@ -50,5 +50,6 @@ namespace pst {
 		void dprint(std::ostream& out) const final;
 		~ImportStarHides() final = default;
 		HashAlg& addElementDataToStableHash(HashAlg&) const override;
+		void calcElementPathHashRecursive() override;
 	};
 }

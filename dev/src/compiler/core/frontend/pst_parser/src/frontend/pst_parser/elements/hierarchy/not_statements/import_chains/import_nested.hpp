@@ -40,5 +40,7 @@ namespace pst {
 		void dprint(std::ostream& out) const final;
 		~ImportNested() final = default;
 		HashAlg& addElementDataToStableHash(HashAlg&) const override;
+
+		void calcElementPathHashRecursive() override;
 	};
 }
