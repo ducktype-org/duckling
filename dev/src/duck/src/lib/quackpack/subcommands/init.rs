@@ -3,7 +3,7 @@ use std::fs::File;
 use std::io::{ErrorKind, Write};
 use std::path::{Path, PathBuf};
 
-use git2::{Repository, RepositoryInitOptions};
+use git2::Repository;
 
 use crate::duck::util::terminal::Terminal;
 use crate::quackpack::core::{PackageLoader, VenvConfig, Version};
@@ -234,10 +234,7 @@ fn add_package_structure(ctx: &DuckContext, root_path: &Path) -> QuackResult<()>
 
 /// Initialize git repository in the project and add `.gitignore`.
 fn init_git(ctx: &DuckContext, root_path: &Path) -> QuackResult<()> {
-    let mut init_opts = RepositoryInitOptions::new();
-    init_opts.no_reinit(true);
-    Repository::init_opts(root_path, &init_opts)
-        .context("failed to initialize a git repository")?;
+    Repository::init(root_path).context("failed to initialize a git repository")?;
     let gitignore_path = root_path.join(".gitignore");
     if let Some(parent) = gitignore_path.parent() {
         parent.mkdir(MkdirOptions::WithParents)?;
