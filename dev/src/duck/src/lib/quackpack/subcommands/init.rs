@@ -221,7 +221,7 @@ fn init_git(root_path: &Path) -> QuackResult<()> {
         return Ok(());
     };
     gitignore_file
-        .write(DEFAULT_GITIGNORE.as_bytes())
+        .write_all(DEFAULT_GITIGNORE.as_bytes())
         .context("failed to write to a `.gitignore` file")?;
     Ok(())
 }
