@@ -154,9 +154,11 @@ namespace vm {
 	}
 
 	SafeVMThread& SafeVMProcess::getEmptyThread() {
-		for (auto& thread: vm_threads)
-			if (!api::isExecuting(thread.getStatus())) return thread;
-
+		for (auto& thread: vm_threads) {
+			// Thread must not be executing AND must not have an active exec_thread handle
+			if (!api::isExecuting(thread.getStatus()) && !thread.hasActiveThread())
+				return thread;
+		}
 		return *vm_threads.get(vm_threads.add(*this));
 	}
 
