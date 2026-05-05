@@ -158,6 +158,10 @@ namespace compiler::helios {
 							return ctx.query<defgen::QueryDefaultClassConstructor>(type)
 							    ->valueOrThrow();
 						}
+						variant_case(defgen::GeneratedSymbolData::DefaultDestructor, dtor) {
+							return ctx.query<defgen::QueryDefaultClassConstructor>(dtor.owner_type)
+								->valueOrThrow();
+						}
 						variant_case(
 							defgen::GeneratedSymbolData::DefaultStaticArrayConstructor, ctor
 						) {

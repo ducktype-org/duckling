@@ -122,7 +122,6 @@ namespace compiler::helios::defgen {
 			const auto self_param = to_string_decl.parameters.at(0).helios_symbol;
 
 			const auto string_type = tsh::SymbolType<>::withDefaults(tsh::getStringType());
-			const auto float_type  = tsh::SymbolType<>::withDefaults(owner_type);
 
 			const auto target_builtin_name = base::StrID("builtin_stringify_f64");
 			const auto target_float_type
@@ -219,6 +218,16 @@ namespace compiler::helios::defgen {
                 } },
             });
 
+			// Create a reusable expression of the de-reffed self (self is passed by reference)
+			auto self_expr = makeBox<code::DerefExpr>(
+				ctx,
+				code::generatedOrigin(),
+				makeBox<code::IdentifierExpr>(
+					ctx, code::generatedOrigin(), to_string_decl.parameters.at(0).helios_symbol
+				)
+			);
+			auto reusable_self_expr = makeBox<code::ReusableExpr>(ctx, std::move(self_expr), true);
+
 			// Prelude: the class name and opening parenthesis
 			const auto result_sym = ctx.query<QueryGeneratedSymbol>(
 				{ .name                  = base::StrID("__result"),
@@ -253,14 +262,11 @@ namespace compiler::helios::defgen {
 						field_type.getType() } },
 				});
 
-				auto accessed_field = makeBox<code::AccessExpr>(
-					ctx,
-					code::generatedOrigin(),
-					makeBox<code::IdentifierExpr>(
-						ctx, code::generatedOrigin(), to_string_decl.parameters.at(0).helios_symbol
-					),
-					field.getSymbol()
-				);
+				auto next_reusable_self_expr = reusable_self_expr->nextUse();
+				auto accessed_field          = makeBox<code::AccessExpr>(
+                    ctx, code::generatedOrigin(), std::move(reusable_self_expr), field.getSymbol()
+                );
+				reusable_self_expr = std::move(next_reusable_self_expr);
 
 				std::vector<Box<code::Expr>> v1;
 				v1.emplace_back(std::move(accessed_field));
