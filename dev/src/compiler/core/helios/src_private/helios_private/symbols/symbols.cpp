@@ -261,7 +261,7 @@ namespace compiler::helios {
 			auto alias = stmt.dynamicCast<pst::Alias>().value();
 			return SymbolData::makePSTSymbolData(
 				{
-					.name     = alias->getName(),
+					.name     = alias->getName().unlock(ctx)->unwrap(),
 					.kind     = SymbolKind::Alias,
 					.is_alias = true,
 				},
