@@ -61,26 +61,26 @@ impl Storage {
     }
 
     /// Get the root directory for storing packages.
-    pub fn packages_dir(&self) -> PathBuf {
+    pub fn packages_root_dir(&self) -> PathBuf {
         self.root.join(PKGS_DIR_NAME)
     }
 
     /// Get the root directory for storing venvs.
-    pub fn venvs_dir(&self) -> PathBuf {
+    pub fn venvs_root_dir(&self) -> PathBuf {
         self.root.join(VENVS_DIR_NAME)
     }
 
-    /// Get the root directory for storing locks.
+    /// Get the root [`FileLockManager`] for storing locks.
     fn locks_base(&self) -> FileLockManager {
         FileLockManager::new(self.root.clone()).join(LOCKS_DIRECTORY_NAME)
     }
 
     /// Get the root directory for storing package `package`.
     pub fn pkg_dir(&self, package: &PackageId) -> PathBuf {
-        self.packages_dir().join(package.storage_name())
+        self.packages_root_dir().join(package.storage_name())
     }
 
-    /// Acquire a shared clean lock.
+    /// Try to acquire a shared clean lock.
     pub fn shared_clean_lock(&self) -> QuackResult<Option<LockedFile>> {
         self.locks_base()
             .try_open_shared_rw_create(CLEAN_LOCK_FILENAME)
@@ -91,19 +91,29 @@ impl Storage {
         self.locks_base().open_exclusive(CLEAN_LOCK_FILENAME, ctx)
     }
 
-    /// Get the root directory for data storing locks.
+    /// Get the [`FileLockManager`] for data storing locks.
     pub fn data_locks(&self) -> FileLockManager {
         self.locks_base().join(VENV_DATA_LOCK_FILENAME)
     }
 
-    /// Get the root directory for sync storing locks.
+    /// Get the root directory for data storing locks.
+    pub fn data_locks_path(&self) -> PathBuf {
+        self.data_locks().into_not_locked_path()
+    }
+
+    /// Get the [`FileLockManager`] for sync storing locks.
     pub fn sync_locks(&self) -> FileLockManager {
         self.locks_base().join(VENV_SYNC_LOCK_FILENAME)
     }
 
+    /// Get the root directory for sync storing locks.
+    pub fn sync_locks_path(&self) -> PathBuf {
+        self.sync_locks().into_not_locked_path()
+    }
+
     /// Get the root directory for storing venv `venv_id`.
     pub fn venv_dir(&self, venv_id: VenvId) -> PathBuf {
-        self.venvs_dir().join(venv_id)
+        self.venvs_root_dir().join(venv_id)
     }
 
     /// Get the path to the metadata of the venv `venv_id`.
@@ -121,8 +131,7 @@ impl Storage {
     /// It is not guaranteed that during iteration, the yielded paths
     /// still exist and there are no guarantees on paths that appeared during an iteration.
     pub fn iter_pkgs(&self) -> QuackResult<ReadDir> {
-        let dir = self.packages_dir();
-        create_dir_iterator(&dir)
+        create_dir_iterator(&self.packages_root_dir())
     }
 
     /// Returns an iterator over all venvs in the storage.
@@ -130,24 +139,21 @@ impl Storage {
     /// It is not guaranteed that during iteration, the yielded paths
     /// still exist and there are no guarantees on paths that appeared during an iteration.
     pub fn iter_venvs(&self) -> QuackResult<ReadDir> {
-        let dir = self.venvs_dir();
-        create_dir_iterator(&dir)
+        create_dir_iterator(&self.venvs_root_dir())
     }
 
     /// Returns an iterator over all sync locks in the storage.
     /// It is not guaranteed that during iteration, the yielded paths
     /// still exist and there are no guarantees on paths that appeared during an iteration.
     pub fn iter_sync_locks(&self) -> QuackResult<ReadDir> {
-        let dir = self.sync_locks().into_not_locked_path();
-        create_dir_iterator(&dir)
+        create_dir_iterator(&self.sync_locks_path())
     }
 
     /// Returns an iterator over all data locks in the storage.
     /// It is not guaranteed that during iteration, the yielded paths
     /// still exist and there are no guarantees on paths that appeared during an iteration.
     pub fn iter_data_locks(&self) -> QuackResult<ReadDir> {
-        let dir = self.data_locks().into_not_locked_path();
-        create_dir_iterator(&dir)
+        create_dir_iterator(&self.data_locks_path())
     }
 
     /// Check if package `id` is stored in storage.

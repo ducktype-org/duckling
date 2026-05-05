@@ -404,7 +404,7 @@ impl Venv {
         // both files are not valid, so the venv does not exist,
         // put it in the canonical form by deleting its directory
         storage.venv_dir(venv_id).rmtree()?;
-        storage.venvs_dir().try_fsync_dir()?;
+        storage.venvs_root_dir().try_fsync_dir()?;
         Ok(None)
     }
 
