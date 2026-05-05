@@ -12,7 +12,7 @@ use url::Url;
 use crate::quackpack::core::Git;
 use crate::quackpack::core::fetcher::types::{FetcherResponse, PackageWithUrl};
 use crate::quackpack::schemas::registry;
-use crate::util::filesystem::Filesystem;
+use crate::util::file_locks::FileLockManager;
 use crate::util::path_ops_ext::{MkdirOptions, PathOpsExt};
 use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail_internal};
 
@@ -33,9 +33,9 @@ pub struct Fetcher<'duck> {
     #[allow(unused)] // @TODO: #1737 Remove this
     git_client: git::GitClient,
     cache: cache::ManifestCache,
-    download_cache_path: Filesystem,
+    download_cache_path: FileLockManager,
     #[allow(unused)] // @TODO: #1905 Remove this
-    artifacts_cache_path: Filesystem,
+    artifacts_cache_path: FileLockManager,
 }
 
 impl<'duck> Fetcher<'duck> {

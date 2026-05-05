@@ -29,7 +29,7 @@ use std::path::{Path, PathBuf};
 
 use super::package_id::PackageId;
 use crate::quackpack::core::storage::venv_id::VenvId;
-use crate::util::filesystem::{Filesystem, LockedFile};
+use crate::util::file_locks::{FileLockManager, LockedFile};
 use crate::util::path_ops_ext::PathOpsExt;
 use crate::{DuckContext, QuackResult, qp_bail_internal};
 
@@ -75,8 +75,8 @@ impl Storage {
     }
 
     /// Get the root directory for storing locks.
-    fn locks_base(&self) -> Filesystem {
-        Filesystem::new(self.root.clone()).join(LOCKS_DIRECTORY_NAME)
+    fn locks_base(&self) -> FileLockManager {
+        FileLockManager::new(self.root.clone()).join(LOCKS_DIRECTORY_NAME)
     }
 
     /// Get the root directory for storing package `package`.
@@ -96,17 +96,17 @@ impl Storage {
     }
 
     /// Get the root directory for data storing locks.
-    pub fn data_locks(&self) -> Filesystem {
+    pub fn data_locks(&self) -> FileLockManager {
         self.locks_base().join(VENV_DATA_LOCK_FILENAME)
     }
 
     /// Get the root directory for sync storing locks.
-    pub fn sync_locks(&self) -> Filesystem {
+    pub fn sync_locks(&self) -> FileLockManager {
         self.locks_base().join(VENV_SYNC_LOCK_FILENAME)
     }
 
     /// Get the root directory for compile storing locks.
-    pub fn compile_locks(&self) -> Filesystem {
+    pub fn compile_locks(&self) -> FileLockManager {
         self.locks_base().join(COMPILE_LOCK_FILENAME)
     }
 

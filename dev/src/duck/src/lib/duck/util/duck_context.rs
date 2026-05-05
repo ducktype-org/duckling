@@ -6,7 +6,7 @@ use crate::duck::util::duck_home::DuckHome;
 use crate::duck::util::terminal::Terminal;
 use crate::quackpack::util::paths::duck_home_path;
 use crate::util::env::Env;
-use crate::util::filesystem::Filesystem;
+use crate::util::file_locks::FileLockManager;
 use crate::{QuackResult, QuackResultContext};
 
 #[derive(Debug)]
@@ -112,7 +112,7 @@ impl DuckContext {
     }
 
     /// Get the path of the default packages' storage in [`DuckHome`].
-    pub fn default_storage_root(&self) -> Filesystem {
+    pub fn default_storage_root(&self) -> FileLockManager {
         self.duck_home().storage()
     }
 }

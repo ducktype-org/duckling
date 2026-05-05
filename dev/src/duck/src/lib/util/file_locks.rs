@@ -1,3 +1,4 @@
+//! General file lock support in QuackPack.
 use std::fs::{File, OpenOptions, TryLockError};
 use std::io::{self, Read, Seek, Write};
 use std::path::{Display, Path, PathBuf};
@@ -10,7 +11,7 @@ use crate::{DuckContext, QuackError, QuackResult, QuackResultContext};
 #[derive(Debug)]
 /// A locked [`File`], with its path.
 ///
-/// Can be created via [`Filesystem`] methods.
+/// Can be created via [`FileLockManager`] methods.
 pub struct LockedFile {
     file: File,
     path: PathBuf,
@@ -67,20 +68,21 @@ impl Drop for LockedFile {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-/// A hard to misuse wrapper around [`PathBuf`].
+/// A hard to misuse locking wrapper around [`PathBuf`].
 ///
 /// Generally provides only access to files via locks.
-pub struct Filesystem {
+pub struct FileLockManager {
     root: PathBuf,
 }
 
-impl Filesystem {
-    /// Create a new [`Filesystem`], rooted at `root`.
+impl FileLockManager {
+    /// Create a new [`FileLockManager`], rooted at `root`.
     pub fn new(root: PathBuf) -> Self {
         Self { root }
     }
 
     /// A wrapper around [`Path::join`].
+    #[must_use = "returns a new `FileLockManager` without modifying the original"]
     pub fn join<P: AsRef<Path>>(&self, path: P) -> Self {
         Self {
             root: self.root.join(path),
@@ -112,7 +114,7 @@ impl Filesystem {
         let mut opts = OpenOptions::new();
         opts.create(true).read(true).write(true);
         let file = Self::open(&path, opts, true)?;
-        lock(ctx, &path, &|| file.try_lock(), &|| file.lock())?;
+        lock(ctx, &path, || file.try_lock(), || file.lock())?;
         Ok(LockedFile { file, path })
     }
 
@@ -124,7 +126,7 @@ impl Filesystem {
         let mut opts = OpenOptions::new();
         opts.create(true).read(true).write(true);
         let file = Self::open(&path, opts, true)?;
-        if try_lock(&path, &|| file.try_lock())? {
+        if try_lock(&path, || file.try_lock())? {
             Ok(Some(LockedFile { file, path }))
         } else {
             Ok(None)
@@ -143,9 +145,7 @@ impl Filesystem {
         let mut opts = OpenOptions::new();
         opts.read(true);
         let file = Self::open(&path, opts, false)?;
-        lock(ctx, &path, &|| file.try_lock_shared(), &|| {
-            file.lock_shared()
-        })?;
+        lock(ctx, &path, || file.try_lock_shared(), || file.lock_shared())?;
         Ok(LockedFile { file, path })
     }
 
@@ -159,7 +159,7 @@ impl Filesystem {
         let mut opts = OpenOptions::new();
         opts.read(true);
         let file = Self::open(&path, opts, false)?;
-        if try_lock(&path, &|| file.try_lock_shared())? {
+        if try_lock(&path, || file.try_lock_shared())? {
             Ok(Some(LockedFile { file, path }))
         } else {
             Ok(None)
@@ -178,9 +178,7 @@ impl Filesystem {
         let mut opts = OpenOptions::new();
         opts.read(true).write(true).create(true);
         let file = Self::open(&path, opts, true)?;
-        lock(ctx, &path, &|| file.try_lock_shared(), &|| {
-            file.lock_shared()
-        })?;
+        lock(ctx, &path, || file.try_lock_shared(), || file.lock_shared())?;
         Ok(LockedFile { file, path })
     }
 
@@ -197,7 +195,7 @@ impl Filesystem {
         let mut opts = OpenOptions::new();
         opts.read(true).write(true).create(true);
         let file = Self::open(&path, opts, true)?;
-        if try_lock(&path, &|| file.try_lock_shared())? {
+        if try_lock(&path, || file.try_lock_shared())? {
             Ok(Some(LockedFile { file, path }))
         } else {
             Ok(None)
@@ -232,7 +230,7 @@ impl Filesystem {
 }
 
 /// Try to acquire a non-blocking lock.
-fn try_lock(path: &Path, f: &dyn Fn() -> Result<(), TryLockError>) -> QuackResult<bool> {
+fn try_lock(path: &Path, f: impl FnOnce() -> Result<(), TryLockError>) -> QuackResult<bool> {
     match f() {
         Ok(()) => Ok(true),
         Err(TryLockError::WouldBlock) => Ok(false),
@@ -246,8 +244,8 @@ fn try_lock(path: &Path, f: &dyn Fn() -> Result<(), TryLockError>) -> QuackResul
 fn lock(
     ctx: &DuckContext,
     path: &Path,
-    non_blocking: &dyn Fn() -> Result<(), TryLockError>,
-    blocking: &dyn Fn() -> io::Result<()>,
+    non_blocking: impl FnOnce() -> Result<(), TryLockError>,
+    blocking: impl FnOnce() -> io::Result<()>,
 ) -> QuackResult<()> {
     if try_lock(path, non_blocking)? {
         return Ok(());

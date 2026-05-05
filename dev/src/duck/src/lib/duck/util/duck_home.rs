@@ -17,19 +17,19 @@ use std::{fmt, io};
 use tracing::debug;
 
 use crate::quackpack::core::PackageLoader;
-use crate::util::filesystem::{Filesystem, LockedFile};
+use crate::util::file_locks::{FileLockManager, LockedFile};
 use crate::{DuckContext, QuackResult, QuackResultContext};
 
 /// Implementation of the above layout
 // We keep all of the paths, because then we don't have to do any allocations later.
 pub struct DuckHome {
-    root: Filesystem,
+    root: FileLockManager,
 }
 
 impl fmt::Debug for DuckHome {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("DuckHome")
-            .field("root", &self.root)
+            .field("root", &self.root.not_locked_path())
             .finish_non_exhaustive()
     }
 }
@@ -39,7 +39,7 @@ impl DuckHome {
     pub fn new(root: PathBuf) -> Self {
         debug!(?root, "duck home root");
         Self {
-            root: Filesystem::new(root),
+            root: FileLockManager::new(root),
         }
     }
 
@@ -48,28 +48,28 @@ impl DuckHome {
         self.root.not_locked_path().join("config.yaml")
     }
 
-    /// Get the [`Filesystem`] rooted at the storage's root.
-    pub fn storage(&self) -> Filesystem {
+    /// Get the [`FileLockManager`] rooted at the storage's root.
+    pub fn storage(&self) -> FileLockManager {
         self.root.join("storage")
     }
 
-    /// Get the [`Filesystem`] rooted at the global venv root.
-    pub fn global_venv(&self) -> Filesystem {
+    /// Get the [`FileLockManager`] rooted at the global venv root.
+    pub fn global_venv(&self) -> FileLockManager {
         self.root.join("global_venv")
     }
 
-    /// Get the [`Filesystem`] rooted at the cache root.
-    pub fn cache(&self) -> Filesystem {
+    /// Get the [`FileLockManager`] rooted at the cache root.
+    pub fn cache(&self) -> FileLockManager {
         self.root.join("cache")
     }
 
-    /// Get the [`Filesystem`] rooted at the cache artifacts root.
-    pub fn artifacts(&self) -> Filesystem {
+    /// Get the [`FileLockManager`] rooted at the cache artifacts root.
+    pub fn artifacts(&self) -> FileLockManager {
         self.cache().join("artifacts")
     }
 
-    /// Get the [`Filesystem`] rooted at the cache downloads root.
-    pub fn downloads(&self) -> Filesystem {
+    /// Get the [`FileLockManager`] rooted at the cache downloads root.
+    pub fn downloads(&self) -> FileLockManager {
         self.cache().join("downloads")
     }
 
@@ -102,7 +102,7 @@ metadata:
     }
 
     /// Assure that the global package root folder exists and there is a manifest in it.
-    pub fn ensure_and_populate_global_dir(&self) -> QuackResult<Filesystem> {
+    pub fn ensure_and_populate_global_dir(&self) -> QuackResult<FileLockManager> {
         let global_pkg_dir = self.global_venv();
         global_pkg_dir.mkdir()?;
         let manifest_path = global_pkg_dir

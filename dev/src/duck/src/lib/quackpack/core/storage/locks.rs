@@ -79,8 +79,8 @@ use std::io;
 use crate::quackpack::core::storage::paths::Storage;
 use crate::quackpack::core::storage::venv_id::{ToVenvId, VenvId};
 #[cfg(not(windows))]
-use crate::util::filesystem::Filesystem;
-use crate::util::filesystem::LockedFile;
+use crate::util::file_locks::FileLockManager;
+use crate::util::file_locks::LockedFile;
 use crate::{DuckContext, QuackResult, QuackResultContext};
 
 #[derive(Debug)]
@@ -178,7 +178,7 @@ pub fn cleanup_locks(storage: &Storage) -> QuackResult<()> {
 fn cleanup_locks_impl(
     storage: &Storage,
     dir_iterator: ReadDir,
-    root: Filesystem,
+    root: FileLockManager,
 ) -> QuackResult<()> {
     for lockfile in dir_iterator {
         let lockfile = lockfile.context("failed to read entry from dir iterator")?;
@@ -195,7 +195,7 @@ fn cleanup_locks_impl(
 /// On Windows, trying to delete file opened by another process
 /// leads to an ERROR_SHARING_VIOLATION error.
 #[cfg(windows)]
-fn try_delete_lock(root: &Filesystem, name: VenvId) -> QuackResult<()> {
+fn try_delete_lock(root: &FileLockManager, name: VenvId) -> QuackResult<()> {
     let path = root.not_locked_path().join(name);
     match path.not_locked_path().rm() {
         Ok(()) => Ok(()),
@@ -211,7 +211,7 @@ fn try_delete_lock(root: &Filesystem, name: VenvId) -> QuackResult<()> {
 }
 
 #[cfg(not(windows))]
-fn try_delete_lock(root: &Filesystem, name: VenvId) -> QuackResult<()> {
+fn try_delete_lock(root: &FileLockManager, name: VenvId) -> QuackResult<()> {
     use crate::util::path_ops_ext::PathOpsExt;
 
     let guard = match root.try_open_exclusive(name) {
