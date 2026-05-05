@@ -9,69 +9,21 @@
 //!   mutable access to the storage as a whole: during clean operation we
 //!   delete existing packages, so operations which could make a new reference
 //!   to an orphaned package must be ruled out.
-//! - [`RunLock`]: *pins* venv, such that dependencies can be safely loaded, while
-//!   avoiding holding lock guarding venv data for too long. Holding this lock
-//!   guarantees that dependencies saved in venv data will not change, even
-//!   without holding venv data lock — operations which require mutable access to
-//!   that file will wait for release of this lock (or fail without blocking).
-//!   For temporary venvs, the [`RunLock`] is not sufficient, since clean operation
-//!   may delete the venv. In that case to guarantee that dependencies will not change
-//!   (be deleted), the data lock must be held.
 //! - [`TrySyncLock`]: grants mutable access to the storage-stored virtual environment
 //!   configuration. Respects all of the conditions given in the descriptions of the
-//!   previous two locks. If the operation would block, [`WouldBlock`](io::ErrorKind::WouldBlock) is
+//!   previous two locks. If the operation would block, [`None`] is
 //!   returned instead. As we do not assume any fair queueing of lock operations,
 //!   this prevents error-prone situation, in which two concurrent synchronization
 //!   operations would execute out of the order in which the user started them.
-//!
-//! Control over access to a virtual environment data file should be done using
-//! [`PathExt::lock_shared`](rustvil::fs::PathExt::lock_shared)/[`PathExt::lock`](rustvil::fs::PathExt::lock)
+//! - [`CompileLock`]: holding this lock guarantees, that no CLEAN operation is in progress.
+//!   Note that this lock does not BLOCK synchronizing this venv afterwards.
 //!
 //! All implementations use the following locks:
-//!
-//! - CLEAN_LOCK: paths.clean_lock(storage)
-//! - SYNC_LOCK[venv_id]: paths.venv_sync_lock(storage, venv_id)
-//!
-//! However, they are used differently on different platforms:
-//!
-//! - on posix and windows, both are shared-exclusive locks:
-//!
-//!   - holding [`CleanLock`] is exclusive access to CLEAN_LOCK,
-//!   - holding [`TrySyncLock`] is shared access to CLEAN_LOCK and exclusive
-//!     access to SYNC_LOCK[venv_id],
-//!   - holding [`RunLock`] is shared access to SYNC_LOCK[venv_id]
-//!
-//! - on other platforms `SoftwareFileLock`
-//!   is used: it works by exclusively creating the file to acquire and delete
-//!   it to release. It only provides exclusive locks, so the locking
-//!   mechanism is somewhat different:
-//!
-//!   - taking [`CleanLock`] takes CLEAN_LOCK and then waits for all SYNC_LOCK-s
-//!     to be released, but only those that were present at the start of the
-//!     operation (that is explained below in [`RunLock`] description),
-//!   - taking [`TrySyncLock`] needs CLEAN_LOCK while acquiring SYNC_LOCK — that
-//!     makes it so that if clean operation has started, no new synchronization
-//!     can start (and clean operation waits for all ongoing ones),
-//!   - [`RunLock`] takes SYNC_LOCK exclusively instead — that is less efficient
-//!     that locking it in a shared mode, but we do not have access to that.
-//!     We do not need to take CLEAN_LOCK as in synchronization operation,
-//!     as run operation does not need mutable access to venv dependencies.
-//!     The clean lock might wait for completion of all run operations as they too
-//!     hold SYNC_LOCK, but as it takes a snapshot of the list of held locks,
-//!     any newly spawned run operations do not delay clean operation any further.
-//!
-//!
-//! Note that the `SoftwareFileLock` implementation is susceptible to deadlocks:
-//! if process holding a lock exists abnormally, it does not delete the file
-//! representing the held lock, which blocks all future operations which
-//! attempt to lock it. Similarly, when system failure occurs, no locks
-//! are freed.
-//!
-//! The posix / windows implementations avoid this issue by using locks provided
-//! by operating system, which are freed when process is killed and vanish
-//! on system reboot. Locks only provide exclusiveness of operations which
-//! modify state, so freeing a lock of killed process does not have any negative
-//! impact on state coherency.
+//! - holding the [`CleanLock`] is an exclusive access to the CLEAN_LOCK,
+//! - holding the [`TrySyncLock`] is a shared access to the CLEAN_LOCK and an exclusive
+//!   access to SYNC_LOCK[venv_id],
+//! - the [`CompileLock`] can be created from the [`TrySyncLock`] by dismissing the SYNC_LOCK[venv_id],
+//!   and keeping only a shared CLEAN_LOCK.
 
 use std::fs::ReadDir;
 use std::io;
@@ -112,7 +64,6 @@ impl CleanLock {
 ///
 /// Can be constructed from [`TrySyncLock::to_compile_lock`].
 pub struct CompileLock {
-    _compile_lock: LockedFile,
     _clean_lock: LockedFile,
 }
 
@@ -146,17 +97,10 @@ impl TrySyncLock {
     }
 
     /// Upgrade self to a [`CompileLock`].
-    pub fn to_compile_lock(
-        self,
-        storage: &Storage,
-        venv_id: VenvId,
-        ctx: &DuckContext,
-    ) -> QuackResult<CompileLock> {
-        let compile_lock = storage.compile_locks().open_exclusive(venv_id, ctx)?;
-        Ok(CompileLock {
-            _compile_lock: compile_lock,
+    pub fn into_compile_lock(self) -> CompileLock {
+        CompileLock {
             _clean_lock: self.clean_lock,
-        })
+        }
     }
 }
 

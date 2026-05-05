@@ -2,10 +2,9 @@
 use crate::quackpack::core::compile::duckc::CompilationType;
 use crate::quackpack::core::compile::profiles::Profile;
 use crate::quackpack::core::compile::{self, BuildContext};
-use crate::quackpack::core::storage::venv_id::ToVenvId;
 use crate::quackpack::core::storage::{StorageSyncOptions, sync};
 use crate::quackpack::core::{FeatureName, PackageContext};
-use crate::{QuackResult, QuackResultContext, StrId};
+use crate::{QuackResult, StrId};
 
 #[derive(Debug)]
 /// Options for compiling a project.
@@ -42,9 +41,7 @@ pub fn compile(options: BuildOptions<'_>) -> QuackResult<()> {
             strict_errors,
         },
     )?;
-    let _compile_lock = lock
-        .to_compile_lock(&storage, pcx.to_venv_id(), pcx.ctx())
-        .context("failed to acquire a compile lock")?;
+    let _compile_lock = lock.into_compile_lock();
     let profile = Profile::construct_profile(profile, pcx.package().manifest().profiles())?;
     let bcx = BuildContext {
         pcx: &pcx,
