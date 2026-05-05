@@ -324,7 +324,15 @@ impl Venv {
         venv_id: VenvId,
         ctx: &DuckContext,
     ) -> QuackResult<Option<Self>> {
-        let _lock = storage.data_locks().open_exclusive(venv_id, ctx)?;
+        let _lock = storage
+            .data_locks()
+            .open_exclusive(venv_id, ctx)
+            .with_context(|| {
+                format!(
+                    "failed to acquire an exclusive data lock for venv `{}`",
+                    venv_id
+                )
+            })?;
         Self::fix_and_load_with_lock_held(storage, venv_id)
     }
 
@@ -406,7 +414,15 @@ impl Venv {
     /// by calling [`fix_and_load`](Self::fix_and_load) before.
     #[tracing::instrument(skip_all)]
     pub fn save_to(&self, storage: &Storage, ctx: &DuckContext) -> QuackResult<()> {
-        let _lock = storage.data_locks().open_exclusive(self.id, ctx)?;
+        let _lock = storage
+            .data_locks()
+            .open_exclusive(self.id, ctx)
+            .with_context(|| {
+                format!(
+                    "failed to acquire an exclusive data lock for venv `{}`",
+                    self.id
+                )
+            })?;
         self.save_to_with_lock_held(storage)
     }
 
