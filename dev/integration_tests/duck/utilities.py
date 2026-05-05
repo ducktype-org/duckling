@@ -140,7 +140,7 @@ def get_git_root(path: Path) -> Path | None:
     return None
 
 
-def is_git_root(root: Path):
+def is_git_root(root: Path) -> bool:
     git_root = get_git_root(root)
     return git_root is not None and git_root == Path(root).resolve()
 
