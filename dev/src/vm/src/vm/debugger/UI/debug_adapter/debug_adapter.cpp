@@ -6,7 +6,7 @@ namespace vm::debug_adapter {
 
 	constexpr std::string_view HEADER_PREFIX = "Content-Length: ";
 
-	DebugAdapter::DebugAdapter(const fs::File& filepath):
+	DebugAdapter::DebugAdapter():
 		  status_change_listener([this](const vm::api::ProcStatus& status) {
 			  std::string message = "";
 			  std::visit(
@@ -20,11 +20,11 @@ namespace vm::debug_adapter {
 			  message += "\n";
 			  this->sendEvent("output", { { "category", "console" }, { "output", message } });
 		  }),
-		  debugger(filepath) {
+		  debugger() {
 		debugger.attachOnVMChangesStatusListener(status_change_listener);
 	}
 
-	DebugAdapter DebugAdapter::get(const fs::File& filepath) { return { filepath }; }
+	DebugAdapter DebugAdapter::get() { return {}; }
 
 	void DebugAdapter::run() {
 		std::string line;
@@ -132,8 +132,8 @@ namespace vm::debug_adapter {
 	}
 
 	void DebugAdapter::handleLaunch(const nlohmann::json& req) {
-		// @TODO: #2559 add load program in debugger
-		// for now we load program at the beginning, while constructing adapter
+		std::string program = req["arguments"]["program"];
+		debugger.loadFile(fs::File(program));
 
 		sendResponse(req, true);
 
