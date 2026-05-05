@@ -115,15 +115,26 @@ namespace vm::builtins {
 	}
 
 	u64 FunctionHandlers::builtinStartThread(SafeVMThread& thread) {
-		return u64{
-			vm::api::runFunction(thread.safe_process.getPID(), thread.getThreadCtx()).value()
-		};
+		thread.releaseGil();
+		auto result = vm::api::runFunction(thread.safe_process.getPID(), thread.getThreadCtx());
+		thread.acquireGil();
+		if (!result.has_value()) {
+			throw vm::exceptions::VMRuntimeException(
+				"builtinStartThread failed to start thread: " + vm::api::errorToString(result.error())
+			);
+		}
+		return u64{ result.value() };
 	}
 
 	void FunctionHandlers::builtinJoinThread(SafeVMThread& thread, u64 thread_id) {
 		thread.releaseGil();
-		vm::api::join(thread.safe_process.getPID(), api::ThreadID{ thread_id });
+		auto result = vm::api::join(thread.safe_process.getPID(), api::ThreadID{ thread_id });
 		thread.acquireGil();
+		if (!result.has_value()) {
+			throw vm::exceptions::VMRuntimeException(
+				"builtinJoinThread failed to join thread: " + vm::api::errorToString(result.error())
+			);
+		}
 	}
 
 	u64 FunctionHandlers::builtinCreateMutex(SafeVMThread& thread) {
