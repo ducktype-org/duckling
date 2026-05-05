@@ -90,7 +90,7 @@ namespace vm {
 		 * @brief Check if thread has an active execution thread handle.
 		 * @return true if exec_thread is active and joinable.
 		 */
-		virtual bool hasActiveThread() const;
+		[[nodiscard]] virtual bool hasActiveThread() const;
 		/**
 		 * @brief Waits for the execution thread to finish and returns final response.
 		 */
