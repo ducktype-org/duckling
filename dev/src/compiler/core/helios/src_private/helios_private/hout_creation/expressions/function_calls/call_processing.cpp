@@ -643,7 +643,7 @@ namespace compiler::helios::code {
 			UNPACK_QRESULT_MOVE(auto arg_expr =, arg_expr_result);
 
 			if (arg.unlock(ctx)->isNamedArg()) {
-				base::StrID arg_name = arg.unlock(ctx)->getArgName().value.value();
+				base::StrID arg_name = arg.unlock(ctx)->getArgName().value().unlock(ctx)->unwrap();
 				for (auto&& [existing_name, _]: named_arguments) {
 					if (existing_name == arg_name) {
 						auto error = RepeatedNamedArgument{ arg_index };

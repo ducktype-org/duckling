@@ -24,10 +24,10 @@ namespace pst {
 		return names.internal()->getStar() ? DeclKind::Transparent : DeclKind::Symbol;
 	}
 
-	base::Optional<base::StrID> Using::getDeclSymbolName() const {
+	base::Optional<AccessLocked<IdentifierWrapper>> Using::getDeclSymbol2() const {
 		if (auto child = names.internal()) {
-			if (child->getNames().empty()) return {};
-			return child->getNames().back().value;
+			if (child->numberOfNames() == 0) return {};
+			return child->getNameIndex(child->numberOfNames() - 1);
 		} else {
 			return {};
 		}

@@ -275,7 +275,7 @@ namespace compiler::helios {
 					.name
 					= base::StrID(base::strConcat(
 									  "<USING> ",
-									  using_stmt->getPointed().unlock(ctx)->getNames().front().value
+									  using_stmt->getPointed().unlock(ctx)->getNameIndex(0).unlock(ctx)->unwrap()
 					)
 			                          .c_str()),
 					.kind        = SymbolKind::Using,
@@ -405,12 +405,12 @@ namespace compiler::helios {
 	 * @todo in the future this function should not use dynamic_casts,
 	 * and should be merged with makeSymbolFromStatement.
 	 */
-	SymbolData makeSymbolFromPSTElement(ScopeID scope, pst::Access<pst::LangElement> element) {
+	SymbolData makeSymbolFromPSTElement(ScopeID scope, pst::Access<pst::LangElement> element, query::Context& ctx) {
 		if (auto parameter_opt = element.dynamicCast<pst::Param>()) {
 			auto parameter = parameter_opt.value();
 			return SymbolData::makePSTSymbolData(
 				{
-					.name = parameter->getName(),
+					.name = parameter->getName().unlock(ctx)->unwrap(),
 					.kind = SymbolKind::Parameter,
 				},
 				PstSymbolData(scope, element->getHash())
@@ -464,7 +464,7 @@ namespace compiler::helios {
 			} else if (auto stmt = key.element.unlock(ctx).dynamicCast<pst::Stmt>())
 				return PResult{ makeSymbolFromStatement(ctx, scope, stmt.value()) };
 			else
-				return PResult{ makeSymbolFromPSTElement(scope, key.element.unlock(ctx)) };
+				return PResult{ makeSymbolFromPSTElement(scope, key.element.unlock(ctx), ctx) };
 		}
 
 		QUERY_AUTO_CACHE_CONSTRUCT_BY_LAMBDA([](CRef<query::QResult<SymbolData>> presult) -> QResult {
@@ -715,10 +715,16 @@ namespace compiler::helios {
 			}
 
 			void visitUsing(pst::Access<pst::Using> using_stmt) final {
-				auto names      = using_stmt->getPointed().unlock(ctx)->getNames();
+				auto pointed = using_stmt->getPointed().unlock(ctx);
+				usize size = pointed->numberOfNames();
+				std::vector<tpc::Identifier> pointed_to_names(size);
+				for(int i = 0; i < size; i++) {
+					pointed_to_names[i] = {.value=pointed->getNameIndex(i).unlock(ctx)->unwrap()};
+				}
+
 				auto lookup_res = lookupChain(
 					ctx,
-					LookupChainKey{ .names       = names,
+					LookupChainKey{ .names       = pointed_to_names,
 				                    .begin_scope = scope(key),
 				                    .params      = { .with_wildcards = false } }
 				);
@@ -808,21 +814,31 @@ namespace compiler::helios {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			std::vector<tpc::Identifier> pointed_chain;
 			if (kind(key) == SymbolKind::Using) {
-				auto using_stmt = getSymRef(key)
+				auto dotted = getSymRef(key)
 				                      ->getPSTData()
 				                      ->getElement()
 				                      .unlock(ctx)
 				                      .dynamicCast<pst::Using>()
-				                      .value();
-				pointed_chain = using_stmt->getPointed().unlock(ctx)->getNames();
+				                      .value()
+									  ->getPointed()
+									  .unlock(ctx);
+				pointed_chain.resize(dotted->numberOfNames());
+				for(int i = 0; i < dotted->numberOfNames(); i++) {
+					pointed_chain[i] = { .value=dotted->getNameIndex(i).unlock(ctx)->unwrap() };
+				}
 			} else if (kind(key) == SymbolKind::Alias) {
-				auto alias_stmt = getSymRef(key)
+				auto dotted = getSymRef(key)
 				                      ->getPSTData()
 				                      ->getElement()
 				                      .unlock(ctx)
 				                      .dynamicCast<pst::Alias>()
-				                      .value();
-				pointed_chain = alias_stmt->getPointed().unlock(ctx)->getNames();
+				                      .value()
+									  ->getPointed()
+									  .unlock(ctx);
+				pointed_chain.resize(dotted->numberOfNames());
+				for(int i = 0; i < dotted->numberOfNames(); i++) {
+					pointed_chain[i] = { .value=dotted->getNameIndex(i).unlock(ctx)->unwrap() };
+				}
 			} else {
 				return SymbolList{ { key } };
 			}

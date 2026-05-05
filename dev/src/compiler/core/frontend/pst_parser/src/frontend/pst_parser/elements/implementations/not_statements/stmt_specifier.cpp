@@ -43,7 +43,9 @@ namespace pst {
 	void StmtSpecifier::dprint(std::ostream& out) const {
 		out << "{";
 
-		out << strConcat(R"("specifier": ")", lang_def::keywordToStr(specifier), R"(",)");
+		out << R"("specifier": ")"; 
+		nullAwareDprint(specifier, out);
+		out << R"(",)";
 
 		if (call_list) {
 			out << R"("call_list": )";
@@ -54,7 +56,6 @@ namespace pst {
 	}
 
 	HashAlg& StmtSpecifier::addElementDataToStableHash(HashAlg& partial_hash) const {
-		addToHash(partial_hash, lang_def::keywordToStr(specifier));
 		return partial_hash;
 	}
 }

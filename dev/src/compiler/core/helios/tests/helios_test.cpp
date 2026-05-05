@@ -2454,7 +2454,7 @@ private:
 		         pst::Keyword                                              keyword) -> bool {
 			for (const auto& spec: specifiers) {
 				auto unlocked = spec.unlock(ctx);
-				if (unlocked->getSpecifier() == keyword) return true;
+				if (unlocked->getSpecifier().unlock(ctx)->unwrap() == keyword) return true;
 			}
 			return false;
 		};
@@ -2467,7 +2467,7 @@ private:
 
 			for (size_t i = 0; i < specifiers.size(); ++i) {
 				auto unlocked = specifiers[i].unlock(ctx);
-				if (unlocked->getSpecifier() != expected_order[i]) return false;
+				if (unlocked->getSpecifier().unlock(ctx)->unwrap() != expected_order[i]) return false;
 			}
 			return true;
 		};
