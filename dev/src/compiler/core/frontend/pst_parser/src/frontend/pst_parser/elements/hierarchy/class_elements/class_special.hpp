@@ -12,9 +12,9 @@ namespace pst {
 	 */
 	class ClassSpecial: public ClassStmt {
 	protected:
-		std::variant<tpc::Identifier, Keyword>
-			kind;  ///< What is after the `.`, It may be a keyword in some cases(for now it's only
-		           ///< the move constructor)
+		/* What is after the `.`, It may be a keyword in some cases(for now it's only the move constructor) */
+		NAMED_CHILD_OPT(ident, IdentifierWrapper);
+		NAMED_CHILD_OPT(key, KeywordWrapper);
 
 		HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const override;
 
