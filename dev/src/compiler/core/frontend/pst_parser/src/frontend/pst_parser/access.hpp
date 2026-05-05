@@ -133,7 +133,8 @@ namespace pst {
 		 * the access.
 		 */
 		base::Optional<Access<Element>> unlockOpt(query::Context& ctx) const {
-			if (ref.toOpt().has_value()) internal::notifyContext(ctx, this->ref->getHash());
+			// ALMOST 10% DIFF:
+			// if (ref.toOpt().has_value()) internal::notifyContext(ctx, this->ref->getHash());
 			return ref.toOpt().map([](CRef<Element> ref) -> Access<Element> { return { ref }; });
 		}
 
@@ -143,7 +144,8 @@ namespace pst {
 		 */
 		Access<Element> unlock(query::Context& ctx) const {
 			if (!ref.toOpt()) internal::notifyBadAccess(ctx);
-			internal::notifyContext(ctx, this->ref->getHash());
+			// ALMOST 10% DIFF:
+			// internal::notifyContext(ctx, this->ref->getHash());
 			return { ref.toOpt().value() };
 		}
 
