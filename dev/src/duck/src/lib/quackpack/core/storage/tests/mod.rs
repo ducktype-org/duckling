@@ -212,6 +212,12 @@ fn create_mock_package<'duck>(
         ctx,
         at: root.to_path_buf(),
         name: name.into(),
+        as_venv: false,
+        expose_freezefile: false,
+        ephemeral: false,
+        local_storage: false,
+        git: false,
+        full: false,
     };
     init::init(opts).unwrap();
     PackageLoader::find_at_exact_directory(root, ctx).unwrap()
@@ -235,6 +241,12 @@ fn create_mock_package_with_dependencies<'duck>(
         ctx,
         at: root.join("dep"),
         name: "dep".into(),
+        as_venv: false,
+        expose_freezefile: false,
+        ephemeral: false,
+        local_storage: false,
+        git: false,
+        full: false,
     };
     init::init(opts).unwrap();
 
@@ -242,6 +254,12 @@ fn create_mock_package_with_dependencies<'duck>(
         ctx,
         at: root.join("root"),
         name: name.into(),
+        as_venv: false,
+        expose_freezefile: false,
+        ephemeral: false,
+        local_storage: false,
+        git: false,
+        full: false,
     };
     init::init(opts).unwrap();
     // !TODO: Use `duck add`.
