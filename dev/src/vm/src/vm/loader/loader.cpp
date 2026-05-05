@@ -120,7 +120,7 @@ std::expected<void, LoaderLogger> Loader::loadAndCompile(const code::CodeCollect
 	} catch (code::StackStructureMismatchError& e) {
 		log.logMap(
 			e.label,
-			[&](Box<dia_int::PlaceholderCodeError>& err) {
+			[&](Box<dia_int::PlaceholderError>& err) {
 				for (const auto& instruction: e.jumps)
 					instruction.visit([&](auto&& i) {
 						log.addNote(
@@ -177,4 +177,14 @@ vm::loader::Loader::Loader() { compiler.recompile(validated_high_program); }
 
 base::CRef<vm::code::ValidProgram> vm::loader::Loader::getHighProgram() const {
 	return &validated_high_program;
+}
+
+std::expected<vm::code::CodeCollection, std::string> vm::loader::Loader::parseCodeCollectionFromFiles(
+	const std::vector<fs::File>& files
+) {
+	return parseFiles(files).transform_error([](LoaderLogger logger) {
+		std::stringstream ss;
+		logger.dump(ss);
+		return ss.str();
+	});
 }

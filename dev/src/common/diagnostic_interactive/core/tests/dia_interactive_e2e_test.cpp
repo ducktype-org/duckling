@@ -220,7 +220,11 @@ content:
                 "type": "code_location",
                 "file": "example.dmf",
                 "line": 1,
-                "column": 1
+      				"column": 1,
+      				"hash_location": {
+      					"begin_node": [10, 11, 12, 13],
+      					"end_node": [14, 15, 16, 17]
+      				}
             }
         }
     },

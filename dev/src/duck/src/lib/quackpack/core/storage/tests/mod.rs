@@ -1,3 +1,5 @@
+use std::fs::OpenOptions;
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime};
 
@@ -5,7 +7,6 @@ use tempfile::TempDir;
 use url::Url;
 
 use crate::DuckContext;
-use crate::quackpack::core::Version;
 use crate::quackpack::core::fetcher::Fetcher;
 use crate::quackpack::core::solver::types_common::ExpandedLocation;
 use crate::quackpack::core::storage::freeze::{FreezeDep, FreezePackage, RootPackage, VenvFreeze};
@@ -13,6 +14,9 @@ use crate::quackpack::core::storage::package_id::{PackageId, RegistryId};
 use crate::quackpack::core::storage::paths::Storage;
 use crate::quackpack::core::storage::venv::{Venv, VenvData};
 use crate::quackpack::core::storage::venv_id::ToVenvId;
+use crate::quackpack::core::{PackageContext, PackageLoader, Version};
+use crate::quackpack::subcommands::init;
+use crate::quackpack::subcommands::init::InitOptions;
 use crate::util::path_ops_ext::PathOpsExt;
 use crate::util::test_utils::setup_test;
 
@@ -197,4 +201,94 @@ fn setup_mock_locks(root: &Path) {
     setup_data_locks(&venvs);
     setup_sync_locks(&venvs);
     setup_compile_locks(&venvs);
+}
+
+fn create_mock_package<'duck>(
+    root: &Path,
+    ctx: &'duck DuckContext,
+    name: &str,
+) -> PackageContext<'duck> {
+    let opts = InitOptions {
+        ctx,
+        at: root.to_path_buf(),
+        name: name.into(),
+        as_venv: false,
+        expose_freezefile: false,
+        ephemeral: false,
+        local_storage: false,
+        git: false,
+        full: false,
+    };
+    init::init(opts).unwrap();
+    PackageLoader::find_at_exact_directory(root, ctx).unwrap()
+}
+
+fn create_mock_package_at_tmpdir<'duck>(
+    ctx: &'duck DuckContext,
+    name: &str,
+) -> (TempDir, PackageContext<'duck>) {
+    let root = TempDir::new().unwrap();
+    let pcx = create_mock_package(root.path(), ctx, name);
+    (root, pcx)
+}
+
+fn create_mock_package_with_dependencies<'duck>(
+    root: &Path,
+    ctx: &'duck DuckContext,
+    name: &str,
+) -> PackageContext<'duck> {
+    let opts = InitOptions {
+        ctx,
+        at: root.join("dep"),
+        name: "dep".into(),
+        as_venv: false,
+        expose_freezefile: false,
+        ephemeral: false,
+        local_storage: false,
+        git: false,
+        full: false,
+    };
+    init::init(opts).unwrap();
+
+    let opts = InitOptions {
+        ctx,
+        at: root.join("root"),
+        name: name.into(),
+        as_venv: false,
+        expose_freezefile: false,
+        ephemeral: false,
+        local_storage: false,
+        git: false,
+        full: false,
+    };
+    init::init(opts).unwrap();
+    // !TODO: Use `duck add`.
+    let mut file = {
+        let mut opts = OpenOptions::new();
+        opts.append(true)
+            .open(root.join("root").join(PackageLoader::MANIFEST_NAME))
+            .unwrap()
+    };
+    file.write_all(
+        "
+dependencies:
+  dep:
+    source:
+      path: ../dep"
+            .as_bytes(),
+    )
+    .unwrap();
+    file.flush().unwrap();
+    file.sync_data().unwrap();
+    drop(file);
+    PackageLoader::find_at_exact_directory(&root.join("root"), ctx).unwrap()
+}
+
+fn create_mock_package_with_deps_at_tmpdir<'duck>(
+    ctx: &'duck DuckContext,
+    name: &str,
+) -> (TempDir, PackageContext<'duck>) {
+    let root = TempDir::new().unwrap();
+    let pcx = create_mock_package_with_dependencies(root.path(), ctx, name);
+    (root, pcx)
 }

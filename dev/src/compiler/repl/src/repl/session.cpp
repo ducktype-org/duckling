@@ -17,7 +17,9 @@
 
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/defer.hpp>
+#include <base/str/str_utils.hpp>
 
+#include <filesystem/file.hpp>
 #include <logger/logger.hpp>
 #include <query_framework/entry/query_entry_point.hpp>
 #include <query_framework/entry/with_context_do.hpp>
@@ -26,9 +28,11 @@
 
 #include <cstring>
 #include <iostream>
+#include <string>
 #include <string_view>
 
 namespace compiler::repl {
+
 	void ReplSession::initDVM() {
 		auto spawn_result = vm::api::spawn();
 		CORE_ASSERT(spawn_result.has_value(), "ReplSession::initDVM: Failed to spawn DVM process");
@@ -43,13 +47,33 @@ namespace compiler::repl {
 		CORE_DEV_LOG(REPL, "DVM initialized with PID ", m_dvm_pid, "\n");
 	}
 
-	ReplSession::ReplSession():
+	ReplSession::ReplSession(bool completions_enabled):
 		  m_should_exit(false),
 		  m_line_counter(0),
 		  m_dvm_pid(0),
-		  m_frontend(),
+		  m_frontend(completions_enabled),
 		  m_lowering_context() {
 		initDVM();
+	}
+
+	ReplResult ReplSession::loadScriptFile(std::string_view file_path) {
+		auto trimmed_path = base::strTrim(file_path);
+		if (trimmed_path.empty())
+			return ReplResult::error("Missing script path. Usage: /load <path-to-script.ds>");
+
+		try {
+			m_suppress_repl_feedback_during_script_load = true;
+			defer(m_suppress_repl_feedback_during_script_load = false);
+			const fs::FilePath script_path{ std::string(trimmed_path) };
+			fs::File           script_file{ script_path };
+			auto               source = script_file.getContent().view().stdString();
+			return executeInput(source);
+		} catch (const std::exception& e) {
+			return ReplResult::error(
+				std::string("Failed to load script file '") + std::string(trimmed_path)
+				+ "': " + e.what()
+			);
+		}
 	}
 
 	bool ReplSession::isCommand(std::string_view line) const {
@@ -93,24 +117,39 @@ namespace compiler::repl {
 	}
 
 	bool ReplSession::handleCommand(std::string_view line) {
+		auto command_end = line.find_first_of(" \t");
+		auto command     = line.substr(0, command_end);
+		auto args        = command_end == std::string_view::npos
+		                     ? std::string_view{}
+		                     : base::strTrimLeft(line.substr(command_end + 1));
+
 		if (line == "/exit" || line == "/quit" || line == "/q") {
 			m_should_exit = true;
 			return true;
 		}
 
-		if (line == "/history" || line == "/h") {
-			m_frontend.printHistory();
-			return true;
-		}
-
-		if (line == "/help" || line == "/?") {
+		if (line == "/help" || line == "/?" || line == "/h") {
 			m_frontend.printHelp();
 			return true;
 		}
 
+		if (line == "/history" || line == "/hist") {
+			m_frontend.printHistory();
+			return true;
+		}
+
 		if (line == "/clear" || line == "/c") {
-			clearHistory();
-			std::cout << "History cleared.\n";
+			m_frontend.clearScreen();
+			return true;
+		}
+
+		if (command == "/load") {
+			auto script_path = base::strTrim(args);
+			auto load_result = loadScriptFile(script_path);
+			if (load_result.status == ReplResult::Status::Error)
+				std::cerr << load_result.message << "\n";
+			else
+				std::cout << "Script loaded: " << script_path << "\n";
 			return true;
 		}
 
@@ -207,10 +246,12 @@ namespace compiler::repl {
 				auto run_result
 					= executeFunctionAndCaptureResult(m_dvm_pid, wrapper_func_name, return_type);
 				if (run_result.has_value()) {
-					if (return_type.toString() == "void")
-						std::cout << "Function executed.\n";
-					else
-						std::cout << "=> " << run_result.value() << "\n";
+					if (!m_suppress_repl_feedback_during_script_load) {
+						if (return_type.toString() == "void")
+							std::cout << "Function executed.\n";
+						else
+							std::cout << "=> " << run_result.value() << "\n";
+					}
 				} else {
 					error_message = "Runtime error: " + run_result.error();
 					had_error     = true;
@@ -304,7 +345,8 @@ namespace compiler::repl {
 				                      .and_then([&](auto) { return vm::api::join(m_dvm_pid); })
 				                      .transform_error(vm::api::errorToString);
 				if (run_result.has_value()) {
-					std::cout << "Instruction executed.\n";
+					if (!m_suppress_repl_feedback_during_script_load)
+						std::cout << "Instruction executed.\n";
 				} else {
 					error_message = "Runtime error: " + run_result.error();
 					had_error     = true;

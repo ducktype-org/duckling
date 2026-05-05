@@ -161,10 +161,10 @@ namespace compiler::helios {
 				return *return_collector.out.begin();
 			default:
 				// there are multiple candidates and return type deduction is inconclusive
-				ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+				ctx.logInt(makeBox<dia_int::PlaceholderError>(
 					"Function declared with no explicit return type and inconsistent return "
 					"statements.",
-					fun->getSourcePosition().unlock(ctx)
+					fun->getStablePosition()
 				));
 				return query::Failed();
 			}
