@@ -73,7 +73,7 @@ impl DuckHome {
         self.cache().join("downloads")
     }
 
-    /// Get an exclusive lock to the fetcher lockfile.
+    /// Exclusively lock the fetcher's lockfile.
     pub fn open_fetcher_lockfile(&self, ctx: &DuckContext) -> QuackResult<LockedFile> {
         self.cache().open_exclusive("fetcher.lock", ctx)
     }
