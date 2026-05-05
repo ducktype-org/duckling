@@ -54,11 +54,15 @@ namespace vm {
 	) {
 		std::unique_lock lock(rw_global);
 		SafeVMThread&    thread   = getEmptyThread();
+		thread.setThreadCtx(func_name);
 		bool             response = thread.spawnThreadAndRun(func_name, run_arguments);
-		// Setting thread ctx necessary for now, until function pointers implemented
-		thread.setThreadCtx("");
 
-		if (!response) return std::unexpected(api::ApiError{ api::RunError{} });
+		if (!response) {
+			thread.setThreadCtx("");
+			return std::unexpected(
+				api::ApiError{ api::RunError{ "Failed to spawn thread for function: " + func_name } }
+			);
+		}
 		return api::Response(thread.getThreadID());
 	}
 
