@@ -7,8 +7,8 @@ namespace pst {
 	 * @brief Import chain of the form `A.B.*` or `A.B.* hides X, Y`
 	 */
 	class ImportStarHides final: public ImportChain {
-		std::vector<tpc::Identifier>                 names;
-		base::Optional<std::vector<tpc::Identifier>> hides;
+		std::vector<AccessInternalAnonymous<IdentifierWrapper>>    names;
+		base::Optional<std::vector<AccessInternalAnonymous<IdentifierWrapper>>> hides;
 
 	public:
 		explicit ImportStarHides(const LangParserState& state): ImportChain(state) {
@@ -16,8 +16,13 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		const std::vector<tpc::Identifier>& getNames() const final {
-			return names;
+		usize numberOfNames() const final {
+			return names.size();
+		}
+
+		[[nodiscard]]
+		AccessLocked<IdentifierWrapper> getNameIndex(usize index) const final {
+			return names[index].give();
 		}
 
 		[[nodiscard]]
@@ -33,8 +38,13 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		base::Optional<std::vector<tpc::Identifier>> getHidesList() const {
-			return hides;
+		base::Optional<usize> numberOfHides() const {
+			return hides.map([](const auto& list) { return list.size(); });
+		}
+
+		[[nodiscard]]
+		base::Optional<AccessLocked<IdentifierWrapper>> getHideIndex(usize index) const {
+			return hides.map([=](const auto& list) { return list[index].give(); });
 		}
 
 		void dprint(std::ostream& out) const final;

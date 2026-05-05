@@ -2,6 +2,8 @@
 
 #include "../meta.hpp"
 
+#include "wrapper_elements/identifier_wrapper.hpp"
+
 namespace pst {
 	/**
 	 * @brief Simple dotted name that is Identifiers separated by dots potentially ended by `.*`
@@ -18,7 +20,11 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		virtual const std::vector<tpc::Identifier>& getNames() const
+		virtual usize numberOfNames() const
+			= 0;
+
+		[[nodiscard]]
+		virtual AccessLocked<IdentifierWrapper> getNameIndex(usize index) const
 			= 0;
 
 		static MBox<ImportChain> parse(LangParserState& state);

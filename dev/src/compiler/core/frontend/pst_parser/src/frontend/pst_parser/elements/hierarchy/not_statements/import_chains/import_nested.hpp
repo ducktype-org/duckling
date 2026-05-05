@@ -7,7 +7,7 @@ namespace pst {
 	 * @brief Import chain of the form `A.B.(A, B.C.*)`
 	 */
 	class ImportNested final: public ImportChain {
-		std::vector<tpc::Identifier> names;
+		std::vector<AccessInternalAnonymous<IdentifierWrapper>>    names;
 		NAMED_CHILD(nested_import, NestedImportList);
 
 	public:
@@ -16,8 +16,13 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		const std::vector<tpc::Identifier>& getNames() const final {
-			return names;
+		usize numberOfNames() const final {
+			return names.size();
+		}
+
+		[[nodiscard]]
+		AccessLocked<IdentifierWrapper> getNameIndex(usize index) const final {
+			return names[index].give();
 		}
 
 		[[nodiscard]]
