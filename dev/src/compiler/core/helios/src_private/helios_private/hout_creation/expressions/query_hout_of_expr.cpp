@@ -331,7 +331,7 @@ namespace compiler::helios::code {
 
 			void visitKeywordLiteral(pst::Access<pst::expr::KeywordLiteral> stmt) override {
 				using enum tsh::IntegralAbstractType::Signedness;
-				switch (stmt->getKeyword()) {
+				switch (stmt->getKeyword().unlock(ctx)->unwrap()) {
 				// true, false:
 				case pst::Keyword::True:
 					node = makeBox<LiteralBoolExpr>(ctx, pstOrigin(stmt), true);
@@ -609,7 +609,7 @@ namespace compiler::helios::code {
 			}
 
 			void visitAssignment(pst::Access<pst::expr::Assignment> stmt) override {
-				auto op = stmt->getAssignmentType();
+				auto op = stmt->getAssignmentType().unlock(ctx)->unwrap();
 
 				auto var = stmt->getVariables();
 				auto val = stmt->getValue();
@@ -679,7 +679,7 @@ namespace compiler::helios::code {
 
 				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 					base::strConcat(
-						"'", op, "' assignment for type: '", location_type.toString(), "'."
+						"'", op.str(), "' assignment for type: '", location_type.toString(), "'."
 					),
 					stmt->getSourcePosition().unlock(ctx)
 				));

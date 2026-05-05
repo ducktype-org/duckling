@@ -2,6 +2,8 @@
 
 #include "expr_common.hpp"
 
+#include "../not_statements/wrapper_elements/operator_wrapper.hpp"
+
 namespace pst::expr {
 	/**
 	 * @brief This is an assignment expression.
@@ -12,7 +14,7 @@ namespace pst::expr {
 		using Lower = Comma;
 
 		NAMED_CHILD(variables, ExprElement);
-		base::StrID type;
+		NAMED_CHILD(type, OperatorWrapper);
 		NAMED_CHILD(value, ExprElement);
 
 	public:
@@ -29,8 +31,8 @@ namespace pst::expr {
 		}
 
 		[[nodiscard]]
-		base::StrID getAssignmentType() const {
-			return type;
+		AccessLocked<OperatorWrapper> getAssignmentType() const {
+			return type.give();
 		}
 
 		[[nodiscard]]

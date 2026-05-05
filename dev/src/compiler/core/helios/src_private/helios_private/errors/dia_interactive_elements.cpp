@@ -72,7 +72,7 @@ namespace compiler::helios {
 		auto       ident = ident_opt.value();
 		const auto scope = ctx.query<QueryPrimaryCodeScopeFor>({ ident });
 		const auto lookup_qresult
-			= HInterface::ofScopeWithParents(scope).lookup(ctx, ident->getName().value);
+			= HInterface::ofScopeWithParents(scope).lookup(ctx, ident->getName().unlock(ctx)->unwrap());
 		if (lookup_qresult->hasFailed()) return;
 		CRef<LookupResult> lookup_result = &lookup_qresult->valueOrThrow();
 
@@ -104,7 +104,7 @@ namespace compiler::helios {
 				};
 			};
 
-		emit_alias_note(*lookup_result, ident->getName().value.str());
+		emit_alias_note(*lookup_result, ident->getName().unlock(ctx)->unwrap().str());
 	}
 
 	InteractiveType::InteractiveType(
