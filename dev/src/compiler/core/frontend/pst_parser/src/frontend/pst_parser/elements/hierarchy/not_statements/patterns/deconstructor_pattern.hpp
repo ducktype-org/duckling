@@ -7,7 +7,7 @@ namespace pst {
 	 * @brief Represents a deconstructor pattern.
 	 */
 	class DeconstructorPattern final: public AnalysisPattern {
-		tpc::Identifier deconstructor_name;
+		NAMED_CHILD(deconstructor_name, IdentifierWrapper);
 		NAMED_CHILD(arguments, FlowPatternList);
 
 	protected:
@@ -23,7 +23,10 @@ namespace pst {
 		static MBox<DeconstructorPattern> parse(LangParserState& state);
 		void                              dprint(std::ostream& out) const final;
 
-		[[nodiscard]] base::StrID getDeconstructorName() const { return deconstructor_name.value; }
+		[[nodiscard]] 
+		AccessLocked<IdentifierWrapper> getDeconstructorName() const { 
+			return deconstructor_name.give(); 
+		}
 
 		[[nodiscard]] const AccessLocked<FlowPatternList> getArguments() const {
 			return arguments.give();

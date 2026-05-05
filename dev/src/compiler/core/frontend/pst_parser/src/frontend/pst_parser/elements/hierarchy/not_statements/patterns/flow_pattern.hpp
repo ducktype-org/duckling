@@ -7,7 +7,7 @@ namespace pst {
 	 * @brief Represents a flow pattern.
 	 */
 	class FlowPattern final: public NotStmt {
-		base::Optional<tpc::Identifier> as_identifier;
+		NAMED_CHILD_OPT(as_identifier, IdentifierWrapper);
 		NAMED_CHILD(pattern, AnalysisPattern);
 		NAMED_CHILD_OPT(type_constraint, UniversalExprHolder);
 
@@ -21,10 +21,14 @@ namespace pst {
 
 		~FlowPattern() final = default;
 
-		[[nodiscard]] AccessLocked<AnalysisPattern> getPattern() const { return pattern.give(); }
+		[[nodiscard]] 
+		AccessLocked<AnalysisPattern> getPattern() const { 
+			return pattern.give(); 
+		}
 
-		[[nodiscard]] base::Optional<base::StrID> getAsIdentifier() const {
-			return as_identifier->value;
+		[[nodiscard]] 
+		base::Optional<AccessLocked<IdentifierWrapper>> getAsIdentifier() const {
+			return as_identifier.map([](const auto& acc) { return acc.give(); });
 		}
 
 		[[nodiscard]] base::Optional<AccessLocked<UniversalExprHolder>> getTypeConstraint() const;
