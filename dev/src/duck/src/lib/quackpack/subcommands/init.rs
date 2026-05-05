@@ -85,15 +85,16 @@ fn create_manifest_file(
     if let Some(parent) = manifest_path.parent() {
         parent.mkdir(MkdirOptions::WithParents)?;
     }
-    let manifest_file = File::create_new(manifest_path);
-    if let Err(err) = manifest_file {
-        if matches!(err.kind(), ErrorKind::AlreadyExists) {
-            qp_bail!(bail_on_overriding_project(ctx, root_path));
-        } else {
-            return Err(err).context("failed to create the manifest file");
+    let mut manifest_file = match File::create_new(manifest_path) {
+        Err(err) => {
+            if matches!(err.kind(), ErrorKind::AlreadyExists) {
+                qp_bail!(bail_on_overriding_project(ctx, root_path));
+            } else {
+                return Err(err).context("failed to create the manifest file");
+            }
         }
-    }
-    let mut manifest_file = manifest_file.unwrap();
+        Ok(manifest_file) => manifest_file,
+    };
     manifest_file
         .write_all(manifest_contents.as_bytes())
         .context("failed to write to the manifest file")?;
@@ -162,16 +163,17 @@ fn create_venv_config_file(
     if let Some(parent) = venv_cfg_file.parent() {
         parent.mkdir(MkdirOptions::WithParents)?;
     }
-    let venv_cfg_file = File::create_new(venv_cfg_file);
-    if let Err(err) = venv_cfg_file {
-        if matches!(err.kind(), ErrorKind::AlreadyExists) {
-            ctx.console().warning(format!("init run with non-default venv configuration flags, but venv configuration file already exists at `{}`", root_path.display()));
-            return Ok(());
-        } else {
-            return Err(err).context("failed to create the venv configuration file");
+    let mut venv_cfg_file = match File::create_new(venv_cfg_file) {
+        Err(err) => {
+            if matches!(err.kind(), ErrorKind::AlreadyExists) {
+                ctx.console().warning(format!("init run with non-default venv configuration flags, but venv configuration file already exists at `{}`", root_path.display()));
+                return Ok(());
+            } else {
+                return Err(err).context("failed to create the venv configuration file");
+            }
         }
-    }
-    let mut venv_cfg_file = venv_cfg_file.unwrap();
+        Ok(venv_cfg_file) => venv_cfg_file,
+    };
     venv_cfg_file
         .write_all(venv_cfg.to_string().as_bytes())
         .context("failed to write to a venv configuration file")?;
@@ -213,19 +215,20 @@ fn add_package_structure(ctx: &DuckContext, root_path: &Path) -> QuackResult<()>
     if let Some(parent) = source_file_path.parent() {
         parent.mkdir(MkdirOptions::WithParents)?;
     }
-    let source_file = File::create_new(&source_file_path);
-    if let Err(err) = source_file {
-        if matches!(err.kind(), ErrorKind::AlreadyExists) {
-            ctx.console().note_verbose(format!(
-                "the source file {} already exists, not overwiting it",
-                source_file_path.display()
-            ));
-            return Ok(());
-        } else {
-            return Err(err).context("failed to create the default source file");
+    let mut source_file = match File::create_new(&source_file_path) {
+        Err(err) => {
+            if matches!(err.kind(), ErrorKind::AlreadyExists) {
+                ctx.console().note_verbose(format!(
+                    "the source file {} already exists, not overwiting it",
+                    source_file_path.display()
+                ));
+                return Ok(());
+            } else {
+                return Err(err).context("failed to create the default source file");
+            }
         }
-    }
-    let mut source_file = source_file.unwrap();
+        Ok(source_file) => source_file,
+    };
     source_file
         .write_all(DEFAULT_SOURCE_CONTENTS.as_bytes())
         .context("failed to write a default duckling file")?;
@@ -239,19 +242,20 @@ fn init_git(ctx: &DuckContext, root_path: &Path) -> QuackResult<()> {
     if let Some(parent) = gitignore_path.parent() {
         parent.mkdir(MkdirOptions::WithParents)?;
     }
-    let gitignore_file = File::create_new(&gitignore_path);
-    if let Err(err) = gitignore_file {
-        if matches!(err.kind(), ErrorKind::AlreadyExists) {
-            ctx.console().note_verbose(format!(
-                "the file {} already exists, not overwiting it",
-                gitignore_path.display()
-            ));
-            return Ok(());
-        } else {
-            return Err(err).context("failed to create the default `.gitignore` file");
+    let mut gitignore_file = match File::create_new(&gitignore_path) {
+        Err(err) => {
+            if matches!(err.kind(), ErrorKind::AlreadyExists) {
+                ctx.console().note_verbose(format!(
+                    "the file {} already exists, not overwiting it",
+                    gitignore_path.display()
+                ));
+                return Ok(());
+            } else {
+                return Err(err).context("failed to create the default `.gitignore` file");
+            }
         }
-    }
-    let mut gitignore_file = gitignore_file.unwrap();
+        Ok(gitignore_file) => gitignore_file,
+    };
     gitignore_file
         .write_all(DEFAULT_GITIGNORE.as_bytes())
         .context("failed to write to a `.gitignore` file")?;
