@@ -201,7 +201,7 @@ fn add_package_structure(root_path: &Path) -> QuackResult<()> {
         return Ok(());
     };
     source_file
-        .write(DEFAULT_SOURCE_CONTENTS.as_bytes())
+        .write_all(DEFAULT_SOURCE_CONTENTS.as_bytes())
         .context("failed to write a default duckling file")?;
     Ok(())
 }
