@@ -155,7 +155,7 @@ fn create_venv_config_file(
         return Ok(());
     };
     venv_cfg_file
-        .write(venv_cfg.to_string().as_bytes())
+        .write_all(venv_cfg.to_string().as_bytes())
         .context("failed to write to a venv configuration file")?;
 
     Ok(())
