@@ -1,0 +1,20 @@
+Tests:
+  build:
+    Description: can build a project with conditional dependencies
+    Cases:
+      build_without_bar:
+        test_cmd: -C foo build
+        Output:
+          String: 'info: successfully synchronized venv \`foo\`\n'
+      build_with_bar:
+        test_cmd: -C foo build --features use-bar
+        ExitCode: 1
+        Output:
+          String: 'info: successfully synchronized venv \`foo\`\n'
+        Err:
+          String: |+
+            error: external dependencies are not (yet) supported by duckc
+            
+            critical: got the internal error: external dependencies are not (yet) supported by duckc
+            note: run with \`DUCK_BACKTRACE=1\` to see backtraces
+            note: Please file a bug report at: https://github.com/ducktype-org/duckling/issues/

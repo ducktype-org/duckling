@@ -24,19 +24,14 @@ namespace compiler::backend_vm::internal {
 
 	public:
 		/**
-		 * @brief Construct with no initial context.
-		 *
-		 * Context can be set later via setContext() when a query context is active.
-		 */
-		ProgramLoweringContext(): query_ctx_for_errors(std::nullopt) {}
-
-		/**
 		 * @brief Construct with an initial query context (backward compatible).
 		 *
 		 * This constructor is provided for backward compatibility with existing call sites.
 		 * The context reference should remain valid for the lifetime of this object.
 		 */
-		explicit ProgramLoweringContext(query::Context& query_ctx, bool build_debug_info);
+		explicit ProgramLoweringContext(
+			query::Context& query_ctx, bool build_debug_info, bool is_comp_time_lowering
+		);
 
 		/**
 		 * @brief Set the query context for error reporting during compilation.
@@ -91,7 +86,7 @@ namespace compiler::backend_vm::internal {
 		 * @note The LIR global must have been previously declared using insertLirGlobal,
 		 * panics otherwise.
 		 */
-		[[nodiscard]] const DVMGlobal& getLirGlobal(CRef<lir::LIRGlobal> lir_global) const;
+		[[nodiscard]] const DVMPlace& getLirGlobal(CRef<lir::LIRGlobal> lir_global) const;
 
 		/**
 		 * @brief Retrieves the extern C function with the given name.
@@ -113,10 +108,14 @@ namespace compiler::backend_vm::internal {
 		void insertRawBytecodeDefinitions(const vm::code::CodeCollection& bytecode);
 
 		/**
-		 * @brief Produces the final bytecode program.
+		 * @brief Produces the per-module bytecode collection.
+		 *
+		 * Assembles all lowered functions, globals, types, and extern C functions into a
+		 * CodeCollection. No validation is performed here.
+		 *
 		 * @note It does not consume internal state and can be called multiple times.
 		 */
-		std::expected<vm::code::CodeCollection, std::string> validateAndProduceProgram();
+		vm::code::CodeCollection produceCodeCollection();
 
 		/**
 		 * @brief Builds the debug info for the module
@@ -127,8 +126,15 @@ namespace compiler::backend_vm::internal {
 		 */
 		[[nodiscard]] base::Optional<debug_info::DebugInfo> buildDebugInfo();
 
+		[[nodiscard]] bool isCompTimeLowering() const;
+
 	private:
 		vm::code::TypeOfData lowerTslTypeInternal(CRef<tsl::TypeLayout> layout);
+
+		/// Whether we are lowering the code to be loaded by the VM for compile time evaluation,
+		/// or for the final output module. This affects how certain compile time values (e.g.
+		/// symbol types) are lowered.
+		bool is_comp_time_lowering;
 
 		// Using ValidProgram here would be inefficient due to the need for frequent code verifications.
 
@@ -151,7 +157,7 @@ namespace compiler::backend_vm::internal {
 		std::vector<vm::code::Function> extra_bytecode_functions;
 
 		// Using names as keys to avoid issues with CRef hash/equality.
-		base::HashMap<base::StrID, DVMGlobal>            global_name_to_dvm;
+		base::HashMap<base::StrID, DVMPlace>             global_name_to_dvm;
 		base::HashMap<base::StrID, vm::code::GlobalData> global_name_to_dvm_data;
 
 		// Optional debug info builder.
