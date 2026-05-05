@@ -85,7 +85,7 @@ impl Storage {
     }
 
     /// Acquire a shared clean lock.
-    pub fn try_shared_lock_clean_lock_create(&self) -> QuackResult<Option<LockedFile>> {
+    pub fn shared_clean_lock(&self) -> QuackResult<Option<LockedFile>> {
         self.locks_base()
             .try_open_shared_rw_create(CLEAN_LOCK_FILENAME)
     }

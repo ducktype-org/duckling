@@ -131,7 +131,7 @@ impl TrySyncLock {
     /// Create a new [`TrySyncLock`] for the given venv in the given storage.
     /// Returns `Ok(None)`, if locking would block.
     pub fn new(storage: &Storage, venv_id: VenvId) -> QuackResult<Option<Self>> {
-        let clean_lock = storage.try_shared_lock_clean_lock_create()?;
+        let clean_lock = storage.shared_clean_lock()?;
         let Some(clean_lock) = clean_lock else {
             return Ok(None);
         };
