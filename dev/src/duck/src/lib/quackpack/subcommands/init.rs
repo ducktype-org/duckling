@@ -84,7 +84,7 @@ fn create_manifest_file(
     let mut manifest_file =
         manifest_file.open_and_bail_if_exists(|_| bail_on_overriding_project(ctx, root_path))?;
     manifest_file
-        .write(manifest_contents.as_bytes())
+        .write_all(manifest_contents.as_bytes())
         .context("failed to write to the manifest file")?;
     Ok(())
 }
