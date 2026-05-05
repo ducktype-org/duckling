@@ -39,7 +39,7 @@ public:
 		TESTER_ADD_TEST(testVariableDeclarations);
 		TESTER_ADD_TEST(testReturnStatements);
 		TESTER_ADD_TEST(testAssignmentAndExpressions);
-		TESTER_ADD_TEST(testBlockStatements);
+		TESTER_ADD_TEST(testBlockExpr);
 	}
 
 private:
@@ -365,14 +365,42 @@ private:
 		}
 	}
 
-	void testBlockStatements() {
+	void testBlockExpr() {
 		auto module_id = frontend::createModuleTreeFromContents(
 			R"(
 				fun foo() = {
 					{
 						var a = 1;
-					}
+					};
 					{
+						var a = 1;
+					};
+				}
+			)",
+			"test_pkg"
+		);
+		query::utils::withContextDo([&](query::Context& ctx) {
+			auto block = compileSingleStatementOfFirstFun(ctx, module_id);
+			ASSERT_EQUAL(block.statements.size(),1);
+			StmtKindCounter c;
+			block.statements.at(0)->acceptVisitor(c);
+			ASSERT_EQUAL(c.block_stmt_count, 1);
+
+
+			auto block2 = compileSingleStatementOfFirstFun(ctx, module_id, 1);
+			ASSERT_EQUAL(block2.statements.size(),1);
+			StmtKindCounter c2;
+			block2.statements.at(0)->acceptVisitor(c2);
+			ASSERT_EQUAL(c2.block_stmt_count, 1);
+		});
+
+		module_id = frontend::createModuleTreeFromContents(
+			R"(
+				fun foo() = {
+					block {
+						var a = 1;
+					}
+					block second {
 						var a = 1;
 					}
 				}
@@ -381,11 +409,17 @@ private:
 		);
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto block = compileSingleStatementOfFirstFun(ctx, module_id);
-			ASSERT_EQUAL(block.statements.size(), 2);
+			ASSERT_EQUAL(block.statements.size(),1);
 			StmtKindCounter c;
 			block.statements.at(0)->acceptVisitor(c);
-			ASSERT_EQUAL(c.expr_stmt_count, 2);
-			ASSERT_EQUAL(c.block_stmt_count, 2);
+			ASSERT_EQUAL(c.block_stmt_count, 1);
+
+
+			auto block2 = compileSingleStatementOfFirstFun(ctx, module_id, 1);
+			ASSERT_EQUAL(block2.statements.size(),1);
+			StmtKindCounter c2;
+			block2.statements.at(0)->acceptVisitor(c2);
+			ASSERT_EQUAL(c2.block_stmt_count, 1);
 		});
 	}
 };
