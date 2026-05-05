@@ -4,6 +4,8 @@
 
 namespace compiler::driver {
 	Ref<artifacts::ArtifactCollection> getDebugArtifactCollection() {
-		return global_state::getRootCollection()->subCollectionAtOrNew(base::StrID("debug"));
+		return global_state::getRootCollection()->subCollectionAtOrNew(
+			base::StrID("duck_debug_artifacts")
+		);
 	}
 }

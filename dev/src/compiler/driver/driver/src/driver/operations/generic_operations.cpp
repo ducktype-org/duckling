@@ -141,11 +141,10 @@ namespace compiler::driver {
 
 		static ModuleOutputNames getModuleOutputName(const QKey& key) {
 			ModuleOutputNames names;
-			auto              stem = key.queryStablePerfectHash().toStringHex();
-
-			names.object_file = stem + typeExtension(key.backend_type);
+			const auto        stem = key.queryStablePerfectHash().toStringHex();
+			names.object_file      = stem + typeExtension(key.backend_type);
 			if (key.build_debug_info && key.backend_type == BackendType::DVM)
-				names.debug_info_file = stem.append(DEBUG_INFO_STABLE_EXTENSION);
+				names.debug_info_file = stem + std::string(DEBUG_INFO_STABLE_EXTENSION);
 			return names;
 		}
 

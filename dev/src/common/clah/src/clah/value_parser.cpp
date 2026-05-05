@@ -8,29 +8,24 @@
 
 #include "exceptions.hpp"
 
+#include <base/str/str_utils.hpp>
+
 #include <filesystem/file.hpp>
 
 #include <charconv>
 
 namespace clah {
 	namespace {
-		std::string trimSpaces(std::string_view sv) {
-			auto first = sv.find_first_not_of(" \t\n\r\f\v");
-			if (first == std::string_view::npos) return {};
 
-			auto last = sv.find_last_not_of(" \t\n\r\f\v");
-			return std::string(sv.substr(first, last - first + 1));
-		}
-
-		std::vector<std::string> splitCommaSeparated(const std::string& value) {
+		std::vector<std::string> splitCommaSeparated(std::string_view value) {
 			std::vector<std::string> values;
 			usize                    pos = 0;
 
 			while (pos < value.size()) {
 				auto comma_pos = value.find(',', pos);
-				if (comma_pos == std::string::npos) comma_pos = value.size();
+				if (comma_pos == std::string_view::npos) comma_pos = value.size();
 
-				auto item = trimSpaces(std::string_view(value).substr(pos, comma_pos - pos));
+				auto item = base::strTrim(value.substr(pos, comma_pos - pos));
 				if (!item.empty()) values.emplace_back(item);
 
 				pos = comma_pos + 1;
@@ -40,17 +35,17 @@ namespace clah {
 		}
 
 		bool containsCategory(
-			const std::vector<std::string>& categories, const std::string& candidate
+			const std::vector<std::string>& categories, std::string_view candidate
 		) {
 			return std::ranges::find(categories, candidate) != categories.end();
 		}
 	}
 
-	ValueParsingResult StringParser::parse(const std::string& argument) const {
-		return { .value = argument, .raw_source = argument };
+	ValueParsingResult StringParser::parse(std::string_view argument) const {
+		return { .value = std::string(argument), .raw_source = std::string(argument) };
 	}
 
-	ValueParsingResult IntParser::parse(const std::string& argument) const {
+	ValueParsingResult IntParser::parse(std::string_view argument) const {
 		auto begin = argument.data();
 		auto end   = begin + argument.size();
 
@@ -64,7 +59,7 @@ namespace clah {
 		return { .value = value, .raw_source = std::string(argument) };
 	}
 
-	ValueParsingResult RangeParser::parse(const std::string& argument) const {
+	ValueParsingResult RangeParser::parse(std::string_view argument) const {
 		auto dot_dot_pos = argument.find("..");
 		if (dot_dot_pos == std::string::npos)
 			throw exceptions::ValueParsingException(
@@ -98,9 +93,9 @@ namespace clah {
 		}
 	}
 
-	ValueParsingResult FileParser::parse(const std::string& argument) const {
-		std::smatch match;
-		if (!std::regex_match(argument, match, file_regex))
+	ValueParsingResult FileParser::parse(std::string_view argument) const {
+		std::cmatch match;
+		if (!std::regex_match(argument.begin(), argument.end(), match, file_regex))
 			throw clah::exceptions::ValueParsingException(
 				getTypeName().c_str(),
 				0,
@@ -116,12 +111,12 @@ namespace clah {
 
 		fs::File file(path);
 
-		return { .value = file, .raw_source = argument };
+		return { .value = file, .raw_source = std::string(argument) };
 	}
 
-	ValueParsingResult FilePathParser::parse(const std::string& argument) const {
-		std::smatch r_match;
-		if (!std::regex_match(argument, r_match, filepath_regex))
+	ValueParsingResult FilePathParser::parse(std::string_view argument) const {
+		std::cmatch r_match;
+		if (!std::regex_match(argument.begin(), argument.end(), r_match, filepath_regex))
 			throw clah::exceptions::ValueParsingException(
 				getTypeName().c_str(),
 				0,
@@ -134,15 +129,15 @@ namespace clah {
 
 		fs::FilePath filepath(path);
 
-		return { .value = filepath, .raw_source = argument };
+		return { .value = filepath, .raw_source = std::string(argument) };
 	}
 
-	ValueParsingResult StringListParser::parse(const std::string& argument) const {
+	ValueParsingResult StringListParser::parse(std::string_view argument) const {
 		std::vector<std::string> values = splitCommaSeparated(argument);
 
 		return {
 			.value      = values,
-			.raw_source = argument,
+			.raw_source = std::string(argument),
 		};
 	}
 
@@ -155,7 +150,7 @@ namespace clah {
 		return result;
 	}
 
-	ValueParsingResult CategoryParser::parse(const std::string& argument) const {
+	ValueParsingResult CategoryParser::parse(std::string_view argument) const {
 		if (categories.empty()) {
 			throw exceptions::ValueParsingException(
 				getTypeName().c_str(),
@@ -176,10 +171,10 @@ namespace clah {
 			);
 		}
 
-		return { .value = argument, .raw_source = argument };
+		return { .value = std::string(argument), .raw_source = std::string(argument) };
 	}
 
-	ValueParsingResult CategoryListParser::parse(const std::string& argument) const {
+	ValueParsingResult CategoryListParser::parse(std::string_view argument) const {
 		if (categories.empty()) {
 			throw exceptions::ValueParsingException(
 				getTypeName().c_str(),
@@ -198,12 +193,12 @@ namespace clah {
 					0,
 					argument.empty() ? 0 : argument.size() - 1,
 					argument,
-					"Invalid category in list: \"" + value
+					"Invalid category in list: \"" + std::string(value)
 						+ "\". Allowed: " + CategoryParser::debugPrintCategories(categories)
 				);
 			}
 		}
 
-		return { .value = values, .raw_source = argument };
+		return { .value = values, .raw_source = std::string(argument) };
 	}
 }

@@ -476,7 +476,7 @@ private:
                 "module_",
                 compiler::frontend::ModuleTree::getPathComponentHash(module).hash.toStringHex()
             ));
-			std::filesystem::path base_path   = artifacts_path / "debug";
+			std::filesystem::path base_path   = artifacts_path / "duck_debug_artifacts";
 
 
 			auto asm_art  = base_path / (module_name.str() + ".s");

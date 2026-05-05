@@ -12,8 +12,8 @@ namespace compiler::driver {
 
 	/**
 	 * This is a debug option.
-	 * If set, the selected IR output will be dumped to a file in the `debug` directory
-	 * in the `compileModule` query.
+	 * If set, the selected IR output will be dumped to a file in the `duck_debug_artifacts`
+	 * directory in the `compileModule` query.
 	 */
 	extern constinit DumpIROptions dump_ir_options;
 

@@ -13,10 +13,17 @@ namespace clah {
 	 */
 	class ParsingState {
 	public:
+		/// As the parsing state we use two alternative representations.
+		/// First the index of the current word and the position inside the current word
 		usize                    current_word         = 0;  /// Current word index.
 		usize                    inside_word_position = 0;  /// Position inside the current word.
 		std::vector<std::string> words;                     /// Arguments.
-		ParsingResult            result;                    /// The result of the parsing.
+
+		/// Second representation is the merged view of the arguments, used for error messages.
+		usize       position_in_merged = 0;  /// Position in the merged view of the arguments.
+		std::string merged_view;             /// The merged view of the arguments.
+
+		ParsingResult result;                /// The result of the parsing.
 
 		/**
 		 * @brief Construct a ParsingState object from an argument string
@@ -77,30 +84,13 @@ namespace clah {
 		 * @brief Advances the position until a character satisfying the condition is reached or the
 		 * end of the word is reached.
 		 */
-		size_t advanceUntilInWord(std::predicate<char> auto condition) {
-			size_t count      = 0;
-			size_t start_word = current_word;
-			while (current_word == start_word && !condition(frontChar())) {
-				advanceChar();
-				count++;
-			}
-			return count;
-		}
+		usize advanceUntilInWord(const std::function<bool(char)>& condition);
 
 		/**
 		 * @brief Sets the position to the beginning of the next word.
 		 */
 		void advanceWord();
 
-		/**
-		 * @brief Returns the current position in the merged args string. Used for error messages.
-		 */
-		size_t currentPosition() const;
-
-		/**
-		 * @brief Get the merged view of the arguments. Used for error messages.
-		 */
-		std::string mergedArguments() const;
 
 	private:
 		/**

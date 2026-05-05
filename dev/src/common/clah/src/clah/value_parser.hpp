@@ -39,7 +39,7 @@ namespace clah {
 	public:
 		ValueParser() = default;
 
-		explicit ValueParser(const std::string& custom_value_name):
+		explicit ValueParser(std::string_view custom_value_name):
 			  custom_value_name(custom_value_name) {}
 
 		virtual ~ValueParser() = default;
@@ -49,7 +49,7 @@ namespace clah {
 		 * It is assumed that the argument[start] is a non-whitespace character.
 		 */
 		[[nodiscard]]
-		virtual ValueParsingResult parse(const std::string& argument) const
+		virtual ValueParsingResult parse(std::string_view argument) const
 			= 0;
 
 		/**
@@ -83,7 +83,7 @@ namespace clah {
 		}
 
 		[[nodiscard]]
-		ValueParsingResult parse(const std::string& argument) const override;
+		ValueParsingResult parse(std::string_view argument) const override;
 
 		[[nodiscard]]
 		std::string getTypeName() const override {
@@ -105,7 +105,7 @@ namespace clah {
 		}
 
 		[[nodiscard]]
-		ValueParsingResult parse(const std::string& argument) const override;
+		ValueParsingResult parse(std::string_view argument) const override;
 
 		[[nodiscard]]
 		std::string getTypeName() const override {
@@ -131,7 +131,7 @@ namespace clah {
 		}
 
 		[[nodiscard]]
-		ValueParsingResult parse(const std::string& argument) const override;
+		ValueParsingResult parse(std::string_view argument) const override;
 
 		[[nodiscard]]
 		std::string getTypeName() const override {
@@ -152,7 +152,7 @@ namespace clah {
 	public:
 		explicit FileParser(std::regex regex): file_regex(std::move(regex)) {}
 
-		FileParser(const std::string& name, std::regex regex):
+		FileParser(std::string_view name, std::regex regex):
 			  ValueParser(name),
 			  file_regex(std::move(regex)) {}
 
@@ -162,7 +162,7 @@ namespace clah {
 		}
 
 		[[nodiscard]]
-		ValueParsingResult parse(const std::string& argument) const override;
+		ValueParsingResult parse(std::string_view argument) const override;
 
 		[[nodiscard]]
 		std::string getTypeName() const override {
@@ -183,7 +183,7 @@ namespace clah {
 	public:
 		explicit FilePathParser(std::regex regex): filepath_regex(std::move(regex)) {}
 
-		FilePathParser(const std::string& name, std::regex regex):
+		FilePathParser(std::string_view name, std::regex regex):
 			  ValueParser(name),
 			  filepath_regex(std::move(regex)) {}
 
@@ -193,7 +193,7 @@ namespace clah {
 		}
 
 		[[nodiscard]]
-		ValueParsingResult parse(const std::string& argument) const override;
+		ValueParsingResult parse(std::string_view argument) const override;
 
 		[[nodiscard]]
 		std::string getTypeName() const override {
@@ -215,7 +215,7 @@ namespace clah {
 		}
 
 		[[nodiscard]]
-		ValueParsingResult parse(const std::string& argument) const override;
+		ValueParsingResult parse(std::string_view argument) const override;
 
 		[[nodiscard]]
 		std::string getTypeName() const override {
@@ -236,7 +236,7 @@ namespace clah {
 		explicit CategoryParser(std::vector<std::string> categories):
 			  categories(std::move(categories)) {}
 
-		CategoryParser(const std::string& name, std::vector<std::string> categories):
+		CategoryParser(std::string_view name, std::vector<std::string> categories):
 			  ValueParser(name),
 			  categories(std::move(categories)) {}
 
@@ -246,7 +246,7 @@ namespace clah {
 		}
 
 		[[nodiscard]]
-		ValueParsingResult parse(const std::string& argument) const override;
+		ValueParsingResult parse(std::string_view argument) const override;
 
 		[[nodiscard]]
 		std::string getTypeName() const override {
@@ -269,7 +269,7 @@ namespace clah {
 		explicit CategoryListParser(std::vector<std::string> categories):
 			  categories(std::move(categories)) {}
 
-		CategoryListParser(const std::string& name, std::vector<std::string> categories):
+		CategoryListParser(std::string_view name, std::vector<std::string> categories):
 			  ValueParser(name),
 			  categories(std::move(categories)) {}
 
@@ -279,7 +279,7 @@ namespace clah {
 		}
 
 		[[nodiscard]]
-		ValueParsingResult parse(const std::string& argument) const override;
+		ValueParsingResult parse(std::string_view argument) const override;
 
 		[[nodiscard]]
 		std::string getTypeName() const override {

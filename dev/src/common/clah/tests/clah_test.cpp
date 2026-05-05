@@ -179,6 +179,9 @@ private:
 	}
 
 	void escapingTest() {
+/// We need this define because of the usages below
+/// - the std::string_view can't be used with string literal to create a vector
+/// - const char* can't be automatically concatenated by the compiler with the string literal
 #define STR_ARG "a \" b"
 
 		auto clah = clah::Clah("prog").add(clah::ParamBuilder::ofValue(clah::StringParser::make())
@@ -186,6 +189,7 @@ private:
 		                                       .addLongName("file")
 		                                       .addShortDesc("test")
 		                                       .build());
+		// The const char* has to stay because the clah.parse requires this signature.
 		auto correctly_parses_argument
 			= [&](const std::vector<const char*>& argv, const std::string& expected) {
 				  auto res = clah.parse(argv.size(), argv.data());

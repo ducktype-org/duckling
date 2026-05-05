@@ -74,7 +74,8 @@ namespace clah {
 				!std::is_lvalue_reference_v<Range>, "add(range) requires an rvalue range (temporary)"
 			);
 			for (auto& param: parameters) add(std::move(param));
-			auto _ = std::forward<Range>(parameters);
+			auto _ = std::forward<Range>(parameters
+			);  /// Just to silence the linter that we don't move from the rvalue param.
 			return std::move(*this);
 		}
 

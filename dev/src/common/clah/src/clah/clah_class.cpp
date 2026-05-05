@@ -180,7 +180,7 @@ namespace clah {
 					auto parser = getDefaultValueParser();
 					if (parser == nullptr)  // Extra arguments and no default value parser.
 						throw exceptions::NoDefaultValueParser(
-							(i32) st.currentPosition(), st.mergedArguments()
+							st.position_in_merged, st.merged_view
 						);
 					st.parseExtra(*parser);
 				}
