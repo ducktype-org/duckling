@@ -298,6 +298,11 @@ namespace compiler::helios {
 			}
 		}
 
+		void visitBlock(pst::Access<pst::Block> stmt) override {
+			auto block_body = processBlock(ctx, stmt->getCodeBlock(), return_type);
+			output(code::BlockStmt(code::pstOrigin(stmt), std::move(block_body)));
+		}
+
 		void visitConst(pst::Access<pst::Const>) override {
 			// Consts inside functions do not produce any HOUT statement.
 			// They are translated to HOUT global data instead.

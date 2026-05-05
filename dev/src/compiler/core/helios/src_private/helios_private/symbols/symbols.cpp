@@ -109,6 +109,7 @@ namespace compiler::helios {
 				case pst::ElementKind::Expand:
 				case pst::ElementKind::StmtSpecifier:
 				case pst::ElementKind::SpecifierBlock:
+				case pst::ElementKind::Block:
 				case pst::ElementKind::ExprElement:
 				case pst::ElementKind::ExprHolder:
 				case pst::ElementKind::ExprStmt: {
