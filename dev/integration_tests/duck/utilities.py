@@ -124,7 +124,7 @@ def check_no_gitignore_from_root(root: Path):
     assert_eq(gitignore.exists(), False)
 
 
-def get_git_root(path: Path):
+def get_git_root(path: Path) -> Path | None:
     """Return the git repository root path or None if not in a git repo."""
     try:
         result = subprocess.run(
