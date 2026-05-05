@@ -8,6 +8,7 @@
 #include <helios/queries/function_queries.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/types.hpp>
+#include <helios_private/hout_creation/expressions/coercions.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
@@ -27,23 +28,172 @@ namespace compiler::helios::defgen {
 		) {
 			const auto self_param = to_string_decl.parameters.at(0).helios_symbol;
 
-			std::vector<Box<code::Stmt>> then_stmts;
-			then_stmts.emplace_back(makeBox<code::ReturnStmt>(
+			const auto string_type = tsh::SymbolType<>::withDefaults(tsh::getStringType());
+			const auto bool_type   = tsh::SymbolType<>::withDefaults(owner_type);
+
+			const auto builtin_sym = ctx.query<QueryGeneratedSymbol>({
+				.name                  = base::StrID("builtin_stringify_bool"),
+				.generated_symbol_data = GeneratedSymbolData{ GeneratedSymbolData::BuiltinOperator{
+					.operator_type = ctx.query<tsh::QueryFunctionType>({
+						{ bool_type },
+						string_type,
+					}),
+				} },
+			});
+
+			std::vector<Box<code::Expr>> args;
+			args.emplace_back(makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), self_param)
+			);
+
+			body.emplace_back(makeBox<code::ReturnStmt>(
 				code::generatedOrigin(),
-				makeBox<code::LiteralStringExpr>(ctx, code::generatedOrigin(), base::StrID("true"))
+				makeBox<code::CallExpr>(
+					ctx,
+					code::generatedOrigin(),
+					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), builtin_sym),
+					std::move(args)
+				)
+			));
+		}
+
+		static void stringifyIntegral(
+			Context&                       ctx,
+			const QKey                     owner_type,
+			const HOUTFunctionDeclaration& to_string_decl,
+			std::vector<Box<code::Stmt>>&  body
+		) {
+			const auto self_param = to_string_decl.parameters.at(0).helios_symbol;
+
+			const auto string_type = tsh::SymbolType<>::withDefaults(tsh::getStringType());
+			const auto int_type    = owner_type.as<tsh::IntegralAbstractType>();
+
+			const bool is_signed
+				= int_type.getSignedness() == tsh::IntegralAbstractType::Signedness::Signed;
+
+			const auto target_builtin_name = is_signed ? base::StrID("builtin_stringify_i64")
+			                                           : base::StrID("builtin_stringify_u64");
+
+			const auto target_int_type = tsh::SymbolType<>::withDefaults(tsh::getIntegralType(
+				ctx,
+				64,
+				is_signed ? tsh::IntegralAbstractType::Signedness::Signed
+						  : tsh::IntegralAbstractType::Signedness::Unsigned
 			));
 
-			std::vector<Box<code::Stmt>> else_stmts;
-			else_stmts.emplace_back(makeBox<code::ReturnStmt>(
-				code::generatedOrigin(),
-				makeBox<code::LiteralStringExpr>(ctx, code::generatedOrigin(), base::StrID("false"))
-			));
+			const auto builtin_sym = ctx.query<QueryGeneratedSymbol>({
+				.name                  = target_builtin_name,
+				.generated_symbol_data = GeneratedSymbolData{ GeneratedSymbolData::BuiltinOperator{
+					.operator_type = ctx.query<tsh::QueryFunctionType>({
+						{ target_int_type },
+						string_type,
+					}),
+				} },
+			});
 
-			body.emplace_back(makeBox<code::IfStmt>(
+			Box<code::Expr> arg_expr
+				= makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), self_param);
+
+			const auto owner_sym_type = tsh::SymbolType<>::withDefaults(owner_type);
+			const auto coercion_res
+				= canCoerce(ctx, owner_sym_type, target_int_type).valueOrThrow();
+			if (!coercion_res.getCoercion().isEmptyCoercion())
+				arg_expr = coercion_res.coerce(ctx, std::move(arg_expr));
+
+			std::vector<Box<code::Expr>> args;
+			args.emplace_back(std::move(arg_expr));
+
+			body.emplace_back(makeBox<code::ReturnStmt>(
 				code::generatedOrigin(),
-				makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), self_param),
-				code::CodeBlock{ .statements = std::move(then_stmts) },
-				code::CodeBlock{ .statements = std::move(else_stmts) }
+				makeBox<code::CallExpr>(
+					ctx,
+					code::generatedOrigin(),
+					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), builtin_sym),
+					std::move(args)
+				)
+			));
+		}
+
+		static void stringifyFloat(
+			Context&                       ctx,
+			const QKey                     owner_type,
+			const HOUTFunctionDeclaration& to_string_decl,
+			std::vector<Box<code::Stmt>>&  body
+		) {
+			const auto self_param = to_string_decl.parameters.at(0).helios_symbol;
+
+			const auto string_type = tsh::SymbolType<>::withDefaults(tsh::getStringType());
+			const auto float_type  = tsh::SymbolType<>::withDefaults(owner_type);
+
+			const auto target_builtin_name = base::StrID("builtin_stringify_f64");
+			const auto target_float_type
+				= tsh::SymbolType<>::withDefaults(tsh::getFloatType(ctx, 64));
+
+			const auto builtin_sym = ctx.query<QueryGeneratedSymbol>({
+				.name                  = target_builtin_name,
+				.generated_symbol_data = GeneratedSymbolData{ GeneratedSymbolData::BuiltinOperator{
+					.operator_type = ctx.query<tsh::QueryFunctionType>({
+						{ target_float_type },
+						string_type,
+					}),
+				} },
+			});
+
+			Box<code::Expr> arg_expr
+				= makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), self_param);
+
+			const auto owner_sym_type = tsh::SymbolType<>::withDefaults(owner_type);
+			const auto coercion_res
+				= canCoerce(ctx, owner_sym_type, target_float_type).valueOrThrow();
+			if (!coercion_res.getCoercion().isEmptyCoercion())
+				arg_expr = coercion_res.coerce(ctx, std::move(arg_expr));
+
+			std::vector<Box<code::Expr>> args;
+			args.emplace_back(std::move(arg_expr));
+
+			body.emplace_back(makeBox<code::ReturnStmt>(
+				code::generatedOrigin(),
+				makeBox<code::CallExpr>(
+					ctx,
+					code::generatedOrigin(),
+					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), builtin_sym),
+					std::move(args)
+				)
+			));
+		}
+
+		static void stringifyChar(
+			Context&                       ctx,
+			const QKey                     owner_type,
+			const HOUTFunctionDeclaration& to_string_decl,
+			std::vector<Box<code::Stmt>>&  body
+		) {
+			const auto self_param = to_string_decl.parameters.at(0).helios_symbol;
+
+			const auto string_type = tsh::SymbolType<>::withDefaults(tsh::getStringType());
+			const auto char_type   = tsh::SymbolType<>::withDefaults(owner_type);
+
+			const auto builtin_sym = ctx.query<QueryGeneratedSymbol>({
+				.name                  = base::StrID("builtin_stringify_char"),
+				.generated_symbol_data = GeneratedSymbolData{ GeneratedSymbolData::BuiltinOperator{
+					.operator_type = ctx.query<tsh::QueryFunctionType>({
+						{ char_type },
+						string_type,
+					}),
+				} },
+			});
+
+			std::vector<Box<code::Expr>> args;
+			args.emplace_back(makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), self_param)
+			);
+
+			body.emplace_back(makeBox<code::ReturnStmt>(
+				code::generatedOrigin(),
+				makeBox<code::CallExpr>(
+					ctx,
+					code::generatedOrigin(),
+					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), builtin_sym),
+					std::move(args)
+				)
 			));
 		}
 
@@ -176,11 +326,18 @@ namespace compiler::helios::defgen {
 			std::vector<Box<code::Stmt>> body{};
 
 			switch (owner_type.getKind()) {
-			case tsh::Kind::Integral:
-			case tsh::Kind::Float:
-			case tsh::Kind::Char:
-				// Currently no body logic is generated for the primitive toString methods.
+			case tsh::Kind::Integral: {
+				stringifyIntegral(ctx, owner_type, to_string_decl, body);
 				break;
+			}
+			case tsh::Kind::Float: {
+				stringifyFloat(ctx, owner_type, to_string_decl, body);
+				break;
+			}
+			case tsh::Kind::Char: {
+				stringifyChar(ctx, owner_type, to_string_decl, body);
+				break;
+			}
 			case tsh::Kind::Bool: {
 				stringifyBool(ctx, owner_type, to_string_decl, body);
 				break;
@@ -189,10 +346,15 @@ namespace compiler::helios::defgen {
 				stringifyClass(ctx, owner_type, to_string_decl, body);
 				break;
 			}
-			default:
-				// Currently no body logic is generated for the toString method.
-				// This stub just provides an empty toString method.
+			default: {
+				std::string msg
+					= "Stringification not yet implemented for " + owner_type.toString();
+				body.emplace_back(makeBox<code::ReturnStmt>(
+					code::generatedOrigin(),
+					makeBox<code::LiteralStringExpr>(ctx, code::generatedOrigin(), base::StrID(msg))
+				));
 				break;
+			}
 			}
 
 			return HOUTFunction(

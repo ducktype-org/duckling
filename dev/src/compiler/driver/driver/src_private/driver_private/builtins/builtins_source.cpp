@@ -12,6 +12,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <string>
 
 // Definition of the Duckling string representation.
 struct str {
@@ -46,7 +47,7 @@ struct list {
 // Here, we declare the entire interface as extern "C" to avoid name mangling.
 // The definitions will be given below.
 extern "C" {
-	// Basic small I/O
+	// Basic small I/O @TODO: #2635 move to Duckling, probably
 	int32_t  builtin_output_char(char c);
 	char     builtin_input_char();
 	int64_t  builtin_output_i64(int64_t v);
@@ -56,7 +57,7 @@ extern "C" {
 	int32_t  builtin_output_f64(double v);
 	double   builtin_input_f64();
 
-	// String I/O
+	// String I/O @TODO: #2636 move to Duckling
 	int64_t builtin_output_string(str s);
 	str     builtin_input_string();
 	void    builtin_free_string(str s);
@@ -73,6 +74,13 @@ extern "C" {
 	void     builtin_list_pop(list* list, uint64_t count, uint64_t element_size);
 	uint64_t builtin_list_len(list* list);
 	void     builtin_list_free(list* list);
+
+	// Stringification @TODO: #2634 move to Duckling, probably
+	str builtin_stringify_i64(int64_t v);
+	str builtin_stringify_u64(uint64_t v);
+	str builtin_stringify_f64(double v);
+	str builtin_stringify_char(char c);
+	str builtin_stringify_bool(bool b);
 }
 
 int32_t builtin_output_char(char c) { return printf("%c", c); }
@@ -268,6 +276,77 @@ void builtin_list_free(list* list) {
 		list->memory_begin_offset = 0;
 		list->memory_end_offset   = 0;
 	}
+}
+
+str builtin_stringify_i64(int64_t v) {
+	const auto stringified = std::to_string(v);
+	const auto length      = stringified.size();
+
+	auto result = str{
+		.data                = (char*) malloc(length),
+		.length              = uint64_t(length),
+		.memory_begin_offset = 0,
+		.memory_end_offset   = uint64_t(length),
+	};
+
+	memcpy(result.data, stringified.c_str(), result.length);
+	return result;
+}
+
+str builtin_stringify_u64(uint64_t v) {
+	const auto stringified = std::to_string(v);
+	const auto length      = stringified.size();
+
+	auto result = str{
+		.data                = (char*) malloc(length),
+		.length              = uint64_t(length),
+		.memory_begin_offset = 0,
+		.memory_end_offset   = uint64_t(length),
+	};
+
+	memcpy(result.data, stringified.c_str(), result.length);
+	return result;
+}
+
+str builtin_stringify_f64(double v) {
+	const auto stringified = std::to_string(v);
+	const auto length      = stringified.size();
+
+	auto result = str{
+		.data                = (char*) malloc(length),
+		.length              = uint64_t(length),
+		.memory_begin_offset = 0,
+		.memory_end_offset   = uint64_t(length),
+	};
+
+	memcpy(result.data, stringified.c_str(), result.length);
+	return result;
+}
+
+str builtin_stringify_char(char c) {
+	auto result = str{
+		.data                = (char*) malloc(1),
+		.length              = 1,
+		.memory_begin_offset = 0,
+		.memory_end_offset   = 1,
+	};
+	result.data[0] = c;
+	return result;
+}
+
+str builtin_stringify_bool(bool b) {
+	const auto stringified = std::to_string(b);
+	const auto length      = stringified.size();
+
+	auto result = str{
+		.data                = (char*) malloc(length),
+		.length              = length,
+		.memory_begin_offset = 0,
+		.memory_end_offset   = length,
+	};
+
+	memcpy(result.data, stringified.c_str(), result.length);
+	return result;
 }
 
 // NOLINTEND
