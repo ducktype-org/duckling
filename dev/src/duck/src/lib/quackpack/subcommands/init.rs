@@ -1,12 +1,13 @@
 //! Initialize a new project.
-use std::io::Write;
+use std::fs::File;
+use std::io::{ErrorKind, Write};
 use std::path::{Path, PathBuf};
 
 use git2::{Repository, RepositoryInitOptions};
 
 use crate::duck::util::terminal::Terminal;
 use crate::quackpack::core::{PackageLoader, VenvConfig, Version};
-use crate::util::path_ops_ext::PathOpsExt;
+use crate::util::path_ops_ext::{MkdirOptions, PathOpsExt};
 use crate::{DuckContext, QuackError, QuackResult, QuackResultContext, StrId, qp_bail, qp_err};
 
 /// Options for initializing a new project.
@@ -55,10 +56,10 @@ pub fn init(opts: InitOptions<'_>) -> QuackResult<()> {
         opts.local_storage,
     )?;
     if !opts.as_venv {
-        add_package_structure(&opts.at)?;
+        add_package_structure(opts.ctx, &opts.at)?;
     }
     if opts.git {
-        init_git(&opts.at)?;
+        init_git(opts.ctx, &opts.at)?;
     }
     opts.ctx.console().info(format!(
         "successfully created a new project `{}` at `{}`",
@@ -75,14 +76,24 @@ fn create_manifest_file(
     name: StrId,
     full: bool,
 ) -> QuackResult<()> {
-    let manifest_file = root_path.join(PackageLoader::MANIFEST_NAME);
+    let manifest_path = root_path.join(PackageLoader::MANIFEST_NAME);
     let manifest_contents = if full {
         manifest_with_user_prompts(ctx.console(), name)?
     } else {
         make_default_manifest_for_name(&name)
     };
-    let mut manifest_file =
-        manifest_file.open_and_bail_if_exists(|_| bail_on_overriding_project(ctx, root_path))?;
+    if let Some(parent) = manifest_path.parent() {
+        parent.mkdir(MkdirOptions::WithParents)?;
+    }
+    let manifest_file = File::create_new(manifest_path);
+    if let Err(err) = manifest_file {
+        if matches!(err.kind(), ErrorKind::AlreadyExists) {
+            qp_bail!(bail_on_overriding_project(ctx, root_path));
+        } else {
+            return Err(err).context("failed to create the manifest file");
+        }
+    }
+    let mut manifest_file = manifest_file.unwrap();
     manifest_file
         .write_all(manifest_contents.as_bytes())
         .context("failed to write to the manifest file")?;
@@ -148,16 +159,22 @@ fn create_venv_config_file(
     else {
         return Ok(());
     };
-    let venv_cfg_file = venv_cfg_file.open_and_run_if_exists(|p| ctx.error_console().warning(format!("init run with non-default venv configuration flags, but venv configuration file already exists at `{}`", p.display())))
-        .context("failed to create a venv configuration file")?;
-    let Some(mut venv_cfg_file) = venv_cfg_file else {
-        // The file already exists.
-        return Ok(());
-    };
+    if let Some(parent) = venv_cfg_file.parent() {
+        parent.mkdir(MkdirOptions::WithParents)?;
+    }
+    let venv_cfg_file = File::create_new(venv_cfg_file);
+    if let Err(err) = venv_cfg_file {
+        if matches!(err.kind(), ErrorKind::AlreadyExists) {
+            ctx.console().warning(format!("init run with non-default venv configuration flags, but venv configuration file already exists at `{}`", root_path.display()));
+            return Ok(());
+        } else {
+            return Err(err).context("failed to create the venv configuration file");
+        }
+    }
+    let mut venv_cfg_file = venv_cfg_file.unwrap();
     venv_cfg_file
         .write_all(venv_cfg.to_string().as_bytes())
         .context("failed to write to a venv configuration file")?;
-
     Ok(())
 }
 
@@ -191,35 +208,53 @@ fn generate_venv_config(
 /// -----
 /// Currently makes the project's main entry point a `.dmf` file with a `main()` function.
 /// In the future an option should be added to initialize the project's entry point as a script (`main.ds`).
-fn add_package_structure(root_path: &Path) -> QuackResult<()> {
-    let source_file = root_path.join("src").join(DEFAULT_SOURCE_FILENAME);
-    let Some(mut source_file) = source_file
-        .open_and_run_if_exists(|_| {})
-        .context("failed to create a default source file")?
-    else {
-        // File already exists
-        return Ok(());
-    };
+fn add_package_structure(ctx: &DuckContext, root_path: &Path) -> QuackResult<()> {
+    let source_file_path = root_path.join("src").join(DEFAULT_SOURCE_FILENAME);
+    if let Some(parent) = source_file_path.parent() {
+        parent.mkdir(MkdirOptions::WithParents)?;
+    }
+    let source_file = File::create_new(&source_file_path);
+    if let Err(err) = source_file {
+        if matches!(err.kind(), ErrorKind::AlreadyExists) {
+            ctx.console().note_verbose(format!(
+                "the source file {} already exists, not overwiting it",
+                source_file_path.display()
+            ));
+            return Ok(());
+        } else {
+            return Err(err).context("failed to create the default source file");
+        }
+    }
+    let mut source_file = source_file.unwrap();
     source_file
         .write_all(DEFAULT_SOURCE_CONTENTS.as_bytes())
         .context("failed to write a default duckling file")?;
     Ok(())
 }
 
-/// Initialize git repository in the project and add `gitignore`.
-fn init_git(root_path: &Path) -> QuackResult<()> {
+/// Initialize git repository in the project and add `.gitignore`.
+fn init_git(ctx: &DuckContext, root_path: &Path) -> QuackResult<()> {
     let mut init_opts = RepositoryInitOptions::new();
     init_opts.no_reinit(true);
     Repository::init_opts(root_path, &init_opts)
         .context("failed to initialize a git repository")?;
-    let gitignore_file = root_path.join(".gitignore");
-    let Some(mut gitignore_file) = gitignore_file
-        .open_and_run_if_exists(|_| {})
-        .context("failed to create a `.gitignore` file")?
-    else {
-        // File already exists.
-        return Ok(());
-    };
+    let gitignore_path = root_path.join(".gitignore");
+    if let Some(parent) = gitignore_path.parent() {
+        parent.mkdir(MkdirOptions::WithParents)?;
+    }
+    let gitignore_file = File::create_new(&gitignore_path);
+    if let Err(err) = gitignore_file {
+        if matches!(err.kind(), ErrorKind::AlreadyExists) {
+            ctx.console().note_verbose(format!(
+                "the file {} already exists, not overwiting it",
+                gitignore_path.display()
+            ));
+            return Ok(());
+        } else {
+            return Err(err).context("failed to create the default `.gitignore` file");
+        }
+    }
+    let mut gitignore_file = gitignore_file.unwrap();
     gitignore_file
         .write_all(DEFAULT_GITIGNORE.as_bytes())
         .context("failed to write to a `.gitignore` file")?;

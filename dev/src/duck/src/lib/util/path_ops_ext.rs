@@ -2,11 +2,11 @@ use std::fs::{
     File, OpenOptions, Permissions, copy, create_dir, create_dir_all, hard_link, read,
     read_to_string, remove_dir, remove_file, rename, write,
 };
-use std::io::{self, ErrorKind, Read, Write};
+use std::io::{self, Read, Write};
 use std::ops::{Deref, DerefMut};
 use std::path::{Path, PathBuf};
 
-use crate::{QuackError, QuackResult, QuackResultContext, qp_bail};
+use crate::{QuackResult, QuackResultContext, qp_bail};
 
 const BUFFER_SIZE: usize = 4096;
 
@@ -161,16 +161,6 @@ pub trait PathOpsExt {
 
     /// A wrapper around [`std::fs::write`].
     fn write(&self, contents: impl AsRef<[u8]>) -> QuackResult<()>;
-
-    /// Open the file and bail by running a specified fuction if it exists.
-    fn open_and_bail_if_exists<F>(&self, f: F) -> QuackResult<File>
-    where
-        F: FnOnce(&Self) -> QuackError;
-
-    /// Open the file and run a specified function if it exists.
-    fn open_and_run_if_exists<F>(&self, f: F) -> QuackResult<Option<File>>
-    where
-        F: FnOnce(&Self);
 }
 
 impl PathOpsExt for Path {
@@ -403,45 +393,6 @@ impl PathOpsExt for Path {
         Ok(PathBuf::from(
             tilde_with_context(as_str, || Some(home())).into_owned(),
         ))
-    }
-
-    fn open_and_bail_if_exists<F>(&self, f: F) -> QuackResult<File>
-    where
-        F: FnOnce(&Self) -> QuackError,
-    {
-        if let Some(parent) = self.parent() {
-            parent.mkdir(MkdirOptions::WithParents)?;
-        }
-        match File::create_new(self) {
-            Ok(file) => Ok(file),
-            Err(err) => {
-                if err.kind() == ErrorKind::AlreadyExists {
-                    Err(f(self))
-                } else {
-                    Err(err.into())
-                }
-            }
-        }
-    }
-
-    fn open_and_run_if_exists<F>(&self, f: F) -> QuackResult<Option<File>>
-    where
-        F: FnOnce(&Self),
-    {
-        if let Some(parent) = self.parent() {
-            parent.mkdir(MkdirOptions::WithParents)?;
-        }
-        match File::create_new(self) {
-            Ok(file) => Ok(Some(file)),
-            Err(err) => {
-                if err.kind() == ErrorKind::AlreadyExists {
-                    f(self);
-                    Ok(None)
-                } else {
-                    Err(err.into())
-                }
-            }
-        }
     }
 }
 
