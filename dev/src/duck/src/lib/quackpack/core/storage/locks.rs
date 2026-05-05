@@ -109,11 +109,6 @@ impl TrySyncLock {
 pub fn cleanup_locks(storage: &Storage) -> QuackResult<()> {
     cleanup_locks_impl(storage, storage.iter_sync_locks()?, storage.sync_locks())?;
     cleanup_locks_impl(storage, storage.iter_data_locks()?, storage.data_locks())?;
-    cleanup_locks_impl(
-        storage,
-        storage.iter_compile_locks()?,
-        storage.compile_locks(),
-    )?;
     Ok(())
 }
 

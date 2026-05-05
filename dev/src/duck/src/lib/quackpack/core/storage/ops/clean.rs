@@ -43,11 +43,6 @@ pub fn delete_venv(ctx: &DuckContext, storage_root: &Path, venv: impl ToVenvId) 
         return Ok(());
     }
     storage.venv_dir(venv_id).rmtree()?;
-    storage
-        .compile_locks()
-        .not_locked_path()
-        .join(venv_id)
-        .rm()?;
     storage.sync_locks().not_locked_path().join(venv_id).rm()?;
     data_lock.path().rm()?;
     ctx.console()

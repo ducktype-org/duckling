@@ -14,9 +14,6 @@
 //! │   └── ...
 //! └── locks/
 //!     ├── clean.lock
-//!     ├── compile/
-//!     │   ├── <package id>
-//!     │   └── ...
 //!     ├── venv_sync/
 //!     │   ├── <package id>
 //!     │   └── ...
@@ -36,7 +33,6 @@ use crate::{DuckContext, QuackResult, qp_bail_internal};
 const LOCKS_DIRECTORY_NAME: &str = "locks";
 const VENV_SYNC_LOCK_FILENAME: &str = "venv_sync";
 const VENV_DATA_LOCK_FILENAME: &str = "venv_data";
-const COMPILE_LOCK_FILENAME: &str = "compile";
 const CLEAN_LOCK_FILENAME: &str = "clean.lock";
 
 const VENVS_DIR_NAME: &str = "venv";
@@ -105,11 +101,6 @@ impl Storage {
         self.locks_base().join(VENV_SYNC_LOCK_FILENAME)
     }
 
-    /// Get the root directory for compile storing locks.
-    pub fn compile_locks(&self) -> FileLockManager {
-        self.locks_base().join(COMPILE_LOCK_FILENAME)
-    }
-
     /// Get the root directory for storing venv `venv_id`.
     pub fn venv_dir(&self, venv_id: VenvId) -> PathBuf {
         self.venvs_dir().join(venv_id)
@@ -156,14 +147,6 @@ impl Storage {
     /// still exist and there are no guarantees on paths that appeared during an iteration.
     pub fn iter_data_locks(&self) -> QuackResult<ReadDir> {
         let dir = self.data_locks().into_not_locked_path();
-        create_dir_iterator(&dir)
-    }
-
-    /// Returns an iterator over all compile locks in the storage.
-    /// It is not guaranteed that during iteration, the yielded paths
-    /// still exist and there are no guarantees on paths that appeared during an iteration.
-    pub fn iter_compile_locks(&self) -> QuackResult<ReadDir> {
-        let dir = self.compile_locks().into_not_locked_path();
         create_dir_iterator(&dir)
     }
 

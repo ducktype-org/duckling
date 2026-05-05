@@ -18,7 +18,6 @@ use crate::util::path_ops_ext::PathOpsExt;
 fn check_venvs_exist(root: &Path, names: &[&str]) {
     for name in names {
         assert!(root.join("venv").join(name).exists());
-        assert!(root.join("locks").join("compile").join(name).exists());
         assert!(root.join("locks").join("venv_sync").join(name).exists());
         assert!(root.join("locks").join("venv_data").join(name).exists());
     }
@@ -27,7 +26,6 @@ fn check_venvs_exist(root: &Path, names: &[&str]) {
 fn check_venvs_dont_exist(root: &Path, names: &[&str]) {
     for name in names {
         assert!(!root.join("venv").join(name).exists());
-        assert!(!root.join("locks").join("compile").join(name).exists());
         assert!(!root.join("locks").join("venv_sync").join(name).exists());
         assert!(!root.join("locks").join("venv_data").join(name).exists());
     }
