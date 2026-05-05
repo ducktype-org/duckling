@@ -120,7 +120,8 @@ namespace vm::builtins {
 		thread.acquireGil();
 		if (!result.has_value()) {
 			throw vm::exceptions::VMRuntimeException(
-				"builtinStartThread failed to start thread: " + vm::api::errorToString(result.error())
+				"builtinStartThread failed to start thread: "
+				+ vm::api::errorToString(result.error())
 			);
 		}
 		return u64{ result.value() };

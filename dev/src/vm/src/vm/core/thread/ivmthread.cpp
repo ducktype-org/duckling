@@ -149,9 +149,7 @@ bool vm::IVMThread::stop() {
 	return waitForStoppedResponse();
 }
 
-bool vm::IVMThread::hasActiveThread() const {
-	return exec_thread && exec_thread->joinable();
-}
+bool vm::IVMThread::hasActiveThread() const { return exec_thread && exec_thread->joinable(); }
 
 void vm::IVMThread::breakActiveExecution() {
 	std::unique_lock lock(execution_request_mutex);
