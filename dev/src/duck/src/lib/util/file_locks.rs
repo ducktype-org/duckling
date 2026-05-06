@@ -136,7 +136,7 @@ impl FileLockManager {
     /// Open a `path` from `root`, in RO mode, and shared lock it.
     ///
     /// This function will fail, if a file does not exist.
-    pub fn open_shared(
+    pub fn open_existing_shared(
         &self,
         path: impl AsRef<Path>,
         ctx: &DuckContext,
@@ -154,7 +154,10 @@ impl FileLockManager {
     /// `Ok(None)` is returned, if acquiring a lock would block.
     ///
     /// This function will fail, if a file does not exist.
-    pub fn try_open_shared(&self, path: impl AsRef<Path>) -> QuackResult<Option<LockedFile>> {
+    pub fn try_open_existing_shared(
+        &self,
+        path: impl AsRef<Path>,
+    ) -> QuackResult<Option<LockedFile>> {
         let path = self.root.join(path);
         let mut opts = OpenOptions::new();
         opts.read(true);
@@ -169,7 +172,7 @@ impl FileLockManager {
     /// Open a `path` from `root`, in RW mode, create it, and shared lock it.
     ///
     /// Unfortunately, creating a file requires a write access.
-    pub fn open_shared_rw_create(
+    pub fn open_shared_rw(
         &self,
         path: impl AsRef<Path>,
         ctx: &DuckContext,
@@ -187,10 +190,7 @@ impl FileLockManager {
     /// `Ok(None)` is returned, if acquiring a lock would block.
     ///
     /// Unfortunately, creating a file requires a write access.
-    pub fn try_open_shared_rw_create(
-        &self,
-        path: impl AsRef<Path>,
-    ) -> QuackResult<Option<LockedFile>> {
+    pub fn try_open_shared_rw(&self, path: impl AsRef<Path>) -> QuackResult<Option<LockedFile>> {
         let path = self.root.join(path);
         let mut opts = OpenOptions::new();
         opts.read(true).write(true).create(true);
