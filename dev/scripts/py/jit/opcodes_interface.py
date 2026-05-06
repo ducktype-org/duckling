@@ -23,7 +23,7 @@ def nonjitable(func_name: str) -> bool:
         "jit_call_entrypoint",
         "call_func",
         "call_builtinfunc",
-        "virtual_call_lptr_method",
+        "virtual_call_pptr_method",
         "ret_tailcall_func",
         "breakpoint",
     ]
