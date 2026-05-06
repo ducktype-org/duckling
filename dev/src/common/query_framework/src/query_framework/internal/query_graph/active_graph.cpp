@@ -81,10 +81,20 @@ namespace query::internal {
 		| Now, we have found a cycle. We reconstruct it.     |
 		\****************************************************/
 
-		// Note that due to the assumptions on the active graph usage,
+		// Note that IT MIGHT SEEM that due to the assumptions on the active graph usage,
 		// the found cycle cannot change while we reconstruct it,
 		// as no nodes can be removed from the graph until their active edges
 		// are "computed" and removed.
+		// 
+		// This is almost true.
+		// There is however a case, where two or more workers enter here concurrently and find the same cycle.
+		// Then one of them reconstructs the cycle and return first, and queries on the cycle might 
+		// continue their execution and remove nodes and edges from the cycle, while the other worker is still reconstructing it. 
+		//
+		// For this reason we must check, while reconstructing the cycle, for any empty edges / non existing nodes, and if we find any,
+		// we must return an empty result, as we can reconstruct the cycle.
+		// It still keeps the system in a correct state, as the cycle is guaranteed to be correctly reconstructed by at least one worker
+		// AND the edge on a cycle can be removed only after the cycle is marked in all Context::is_cyclic_node.
 
 		std::vector<QueryCycle::NodeCycleInfo> cycle_nodes;
 		bool                                   is_the_initial_node_on_the_cycle = false;
