@@ -24,9 +24,12 @@
 #include <time_stats/time_stats.hpp>
 
 #include <base/except/exceptions.hpp>
+#include <base/extend_cpp/variant_match.hpp>
 #include <base/misc/int_conv.hpp>
 #include <base/str/str_utils.hpp>
 #include <base/types/ok_bad.hpp>
+
+#include <nlohmann/json.hpp>
 
 #include <clah/clah.hpp>
 #include <diagnostic/logger.hpp>
@@ -434,10 +437,12 @@ clah::Clah getClahForMain() {
 
 					auto init_result = compiler::driver::initializeTheCompiler(
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
-							.main_packages_info = {
-								{
-									.package_name  = package_name,
-									.package_path  = path_to_compile.getFilePath(),
+							.packages_info = {
+								compiler::driver::RawPackageInfo{
+									.package_name = base::StrID(package_name.c_str()),
+									.version      = base::StrID("not_supported"),
+									.package_path = path_to_compile.getFilePath(),
+									.features     = {},
 									.dependencies = {},
 								},
 							},
@@ -460,19 +465,18 @@ clah::Clah getClahForMain() {
 					}
 
 					const auto& linking_options   = getLinkingOptionsFromClap(options);
-					const auto& archiving_options = getArchivingOptionsFromClap(options);
 
 					compiler::driver::BuildTarget build_target;
 					if (options.isFlag("dvm-backend")) {
 						build_target = compiler::driver::BuildTargetDVM{};
 					} else if (options.isFlag("emit-static-lib")) {
 						build_target = compiler::driver::BuildTargetLLVMStaticLibrary{
-							.output_file_name  = output_file_name,
-							.archiving_options = archiving_options
+							.output_file_stem = base::StrID(output_file_name.c_str()),
 						};
 					} else {
 						build_target = compiler::driver::BuildTargetLLVMExecutable{
-							.output_file_name = output_file_name, .linking_options = linking_options
+							.output_file_stem           = base::StrID(output_file_name.c_str()),
+							.additional_linking_options = base::StrID(linking_options.additional_link_options.c_str()),
 						};
 					}
 
@@ -481,9 +485,12 @@ clah::Clah getClahForMain() {
 					);
 
 					CORE_ASSERT(!global_state::getPackages().empty(), "No packages registered");
-					base::OkBad result = compiler::driver::compileEntirePackage(
-						global_state::getPackages().front(), build_target
-					);
+					base::OkBad result = compiler::driver::compilePackages({
+						compiler::driver::PackageCompilationTask{
+							.root_module  = global_state::getPackages().front().root_module,
+							.build_target = build_target,
+						},
+					});
 
 					total_compilation_time.end();
 
@@ -539,49 +546,41 @@ clah::Clah getClahForMain() {
 					auto manifest_file = options.getPositional<fs::File>(0);
 					auto worker_count  = options.getValue<i64>("workers").copyValueOr(1);
 
-					auto loaded
-						= compiler::driver::loadPackagesManifest(manifest_file.getFilePath());
-					if (!loaded.has_value()) {
+					auto file_content = manifest_file.getContentSafe();
+					if (!file_content.has_value()) {
+						std::cerr << "Error: failed to read manifest file: " << file_content.error() << "\n";
+						compiler::driver::exit();
+						return 1;
+					}
+					nlohmann::json manifest_json;
+					try {
+						auto raw = file_content->view();
+						manifest_json = nlohmann::json::parse(
+							raw.getBegin(),
+							raw.getBegin() + raw.size()
+						);
+					} catch (const nlohmann::json::parse_error& e) {
+						std::cerr << "Error: failed to parse manifest JSON: " << e.what() << "\n";
 						compiler::driver::exit();
 						return 1;
 					}
 
-					if (loaded->empty()) {
+					auto manifest = compiler::driver::PackageCompilationManifest::fromJson(manifest_json);
+					if (!manifest.has_value()) {
+						compiler::driver::exit();
+						return 1;
+					}
+
+					if (manifest->packages.empty()) {
 						std::cerr
 							<< "Error: packages manifest does not contain any package entries.\n";
 						compiler::driver::exit();
 						return 1;
 					}
 
-					if (loaded->size() > 1)
-						throw base::NotYetImplemented(
-							"Compilation of multiple packages as a single compilation unit"
-						);
-
-					// check if any of the dependencies has unsupported inline compilation strategy.
-					for (const auto& entry: *loaded) {
-						for (const auto& dep: entry.package_info.dependencies) {
-							using Strategy
-								= compiler::driver::options_types::DependencyInfo::CompilationStrategy;
-							if (std::holds_alternative<Strategy::InlineCompilation>(
-									dep.compilation_strategy.strategy
-								))
-								throw base::NotYetImplemented(
-									"Dependency compilation strategy `InPlace` is not supported yet"
-								);
-						}
-					}
-
-					std::vector<compiler::driver::options_types::PackageInfo> packages_info;
-					packages_info.reserve(loaded->size());
-					for (const auto& package_request: *loaded)
-						packages_info.push_back(package_request.package_info);
-
-					const auto& package_request = loaded->front();
-
 					auto init_result = compiler::driver::initializeTheCompiler(
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
-							.main_packages_info = std::move(packages_info),
+							.packages_info = manifest->packages,
 							.compilation_artifacts = {
 								.artifacts_path =
 									options.getValue<fs::FilePath>("artifact-location").copyValueOr("./duck_build/"),
@@ -600,14 +599,30 @@ clah::Clah getClahForMain() {
 						return 1;
 					}
 
+					std::vector<compiler::driver::PackageCompilationTask> compilation_tasks;
+					compilation_tasks.reserve(manifest->tasks.size());
+					for (const auto& raw_task: manifest->tasks) {
+						auto converted = compiler::driver::convertRawTaskToTask(raw_task);
+						if (!converted.has_value()) {
+							compiler::driver::exit();
+							return 1;
+						}
+						variant_match(converted->task_data) {
+							variant_case(compiler::driver::PackageCompilationTask, package_task) {
+								compilation_tasks.push_back(package_task);
+							}
+							variant_default {
+								CORE_PANIC("Unsupported task type in manifest");
+							}
+						}
+					}
+
 					time_stats::TrackCategoryTime total_compilation_time(
 						time_stats::TimeCategories::TotalCompilationTime
 					);
 
 					CORE_ASSERT(!global_state::getPackages().empty(), "No packages registered");
-					base::OkBad result = compiler::driver::compileEntirePackage(
-						global_state::getPackages().front(), package_request.build_target
-					);
+					base::OkBad result = compiler::driver::compilePackages(compilation_tasks);
 
 					total_compilation_time.end();
 
@@ -656,10 +671,12 @@ clah::Clah getClahForMain() {
 
 					auto init_result = compiler::driver::initializeTheCompiler(
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
-									.main_packages_info = {
-										{
-											.package_name  = package_name,
-											.package_path  = path_to_compile.getFilePath(),
+									.packages_info = {
+										compiler::driver::RawPackageInfo{
+											.package_name = base::StrID(package_name.c_str()),
+											.version      = base::StrID("not_supported"),
+											.package_path = path_to_compile.getFilePath(),
+											.features     = {},
 											.dependencies = {},
 										},
 									},
@@ -680,7 +697,7 @@ clah::Clah getClahForMain() {
 						return 1;
 					}
 
-					auto root = frontend::createModuleTree(path_to_compile, package_name);
+					auto root = frontend::createModuleTree(path_to_compile, base::StrID(package_name.c_str()));
 
 					int exit_code = 0;
 					query::utils::withContextDo([&](query::Context& ctx) {

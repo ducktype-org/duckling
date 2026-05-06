@@ -25,7 +25,7 @@ namespace compiler::driver {
 		/**
 		 * @brief A list of tasks to be performed during compilation.
 		 */
-		std::vector<Task>            tasks;
+		std::vector<RawTask>         tasks;
 
 		static base::Optional<PackageCompilationManifest> fromJson(const nlohmann::json& json);
 	};

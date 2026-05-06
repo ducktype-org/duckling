@@ -44,7 +44,7 @@ namespace compiler::repl {
 	 */
 	static base::Ref<frontend::ModuleTree> createProbeReplModule(std::string_view input) {
 		auto builder = frontend::ModuleTreeBuilder::create();
-		builder->setPackageID(base::generateRandomString(32));
+		builder->setPackageID(base::StrID(base::generateRandomString(32).c_str()));
 		builder->setMainSourceFile(fs::FileManager::createRandomVirtualFile(input));
 		builder->setName(base::StrID("repl_probe"));
 		builder->setReplModule(frontend::ReplData{});

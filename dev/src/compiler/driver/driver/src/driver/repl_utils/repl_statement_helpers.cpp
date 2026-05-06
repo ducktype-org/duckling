@@ -21,7 +21,7 @@ namespace compiler::repl {
 		std::string_view                          module_name_prefix
 	) {
 		auto builder = frontend::ModuleTreeBuilder::create();
-		builder->setPackageID(base::generateRandomString(32));
+		builder->setPackageID(base::StrID(base::generateRandomString(32).c_str()));
 		builder->setMainSourceFile(fs::FileManager::createRandomVirtualFile(input));
 
 		auto module_name = base::strConcat(module_name_prefix, std::to_string(line_counter));

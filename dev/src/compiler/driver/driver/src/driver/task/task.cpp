@@ -28,7 +28,8 @@ namespace compiler::driver {
 			if (global_state::hasGlobalLogger()) {
 				global_state::getGlobalLogger()->log(
 					makeBox<dia_int::PlaceholderError>(
-						base::strConcat("Package name provided in a compilation task was not found in the provided package list. Package name: \"", package_name.strView(), "\"")
+						base::strConcat("Package name provided in a compilation task was not found in the provided package list. Package name: \"", package_name.strView(), "\""),
+						std::string{}
 					)
 				);
 			}
@@ -71,7 +72,7 @@ namespace compiler::driver {
 			}
 
 			build_target = BuildTargetLLVMExecutable{
-				.output                     = fs::FilePath(output->str()),
+				.output_file_stem           = *output,
 				.additional_linking_options = linking_options,
 			};
 		} else if (strategy->view() == "lib") {
@@ -79,7 +80,7 @@ namespace compiler::driver {
 			if (!output) return {};
 
 			build_target = BuildTargetLLVMStaticLibrary{
-				.output = fs::FilePath(output->str()),
+				.output_file_stem = *output,
 			};
 		} else {
 			if (global_state::hasGlobalLogger()) {
@@ -99,11 +100,11 @@ namespace compiler::driver {
 		};
 	}
 
-	base::Optional<Task> Task::fromJson(const nlohmann::json& json) {
+	base::Optional<RawTask> RawTask::fromJson(const nlohmann::json& json) {
 		auto task_data = RawPackageCompilationTask::fromJson(json);
 		if (!task_data) return {};
 
-		return Task{
+		return RawTask{
 			.type      = TaskType::PackageCompilation,
 			.task_data = std::move(*task_data),
 		};

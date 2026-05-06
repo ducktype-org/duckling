@@ -32,10 +32,10 @@ namespace compiler::driver {
 		auto tasks_array = ju::getArray(json, "tasks", "Manifest requires a tasks array!");
 		if (!tasks_array) return {};
 
-		std::vector<Task> tasks;
+		std::vector<RawTask> tasks;
 		tasks.reserve(tasks_array->size());
 		for (const auto& task_json : *tasks_array) {
-			auto task = Task::fromJson(task_json);
+			auto task = RawTask::fromJson(task_json);
 			if (!task) return {};
 			tasks.push_back(std::move(*task));
 		}

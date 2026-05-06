@@ -39,7 +39,7 @@ namespace compiler::driver {
 	 * concurrently.
 	 */
 	base::OkBad compilePackages(
-		const std::vector<RawPackageCompilationTask>& tasks
+		const std::vector<PackageCompilationTask>& tasks
 	);
 
 	struct RunOutput final {

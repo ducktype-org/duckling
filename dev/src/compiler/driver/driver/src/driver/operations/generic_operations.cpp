@@ -779,13 +779,18 @@ namespace compiler::driver {
 			variant_match(task.build_target) {
 				variant_case(BuildTargetLLVMExecutable, target_exe) {
 					auto output_file = global_state::getRootCollection()->fileArtifactAtOrNew(
-						base::StrID(base::strConcat(target_exe.output_file_name, ".exe").c_str())
+						base::StrID(base::strConcat(target_exe.output_file_stem.strView(), ".exe").c_str())
 					);
 
 					objects_by_root_module[task.root_module].push_back(emitBuiltinLLVMObjectFile());
 
+					linker::LinkingOptions linking_options{
+						.linker_path             = {},
+						.additional_link_options = std::string(target_exe.additional_linking_options.strView()),
+						.link_c_standard_library = true,
+					};
 					auto linking_result
-						= linker::linkExecutable(output_file, objects_by_root_module[task.root_module], target_exe.linking_options);
+						= linker::linkExecutable(output_file, objects_by_root_module[task.root_module], linking_options);
 
 					if (linking_result.isBad()) {
 						CORE_USER_LOG("Linking for package " + compiler::frontend::getModuleRef(task.root_module)->getPackageID().str() + " failed!\n");
@@ -794,11 +799,12 @@ namespace compiler::driver {
 				}
 				variant_case(BuildTargetLLVMStaticLibrary, target_lib) {
 					auto output_file = global_state::getRootCollection()->fileArtifactAtOrNew(
-						base::StrID(base::strConcat(target_lib.output_file_name, ".a").c_str())
+						base::StrID(base::strConcat(target_lib.output_file_stem.strView(), ".a").c_str())
 					);
 
+					archiver::ArchivingOptions archiving_options{};
 					auto archive_result
-						= archiver::createArchive(output_file, objects_by_root_module[task.root_module], target_lib.archiving_options);
+						= archiver::createArchive(output_file, objects_by_root_module[task.root_module], archiving_options);
 
 					if (archive_result.isBad()) {
 						CORE_USER_LOG("Archiving for package " + compiler::frontend::getModuleRef(task.root_module)->getPackageID().str() + " failed!\n");
