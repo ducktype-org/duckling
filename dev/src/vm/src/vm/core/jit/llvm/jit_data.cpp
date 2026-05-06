@@ -42,9 +42,9 @@ std::string extractFunctionName(const std::string& full) {
 }
 
 /**
- * @brief Find all opcodes functions in module and creates map: opcode -> mangled name.
+ * @brief creates map: opcode -> mangled name.
  */
-std::unordered_map<vm::low::MicroOpcode, std::string> fillLfuncNameMap(Module& module) {
+std::unordered_map<vm::low::MicroOpcode, std::string> createOpcodeNameMap(Module& module) {
 	std::unordered_map<vm::low::MicroOpcode, std::string> lfunc_name_map;
 
 	for (auto& f: module.functions()) {
@@ -162,10 +162,10 @@ LlvmData initLlvmJit() {
 	CORE_ASSERT(g_module->isMaterialized(), "Opfuns module not fully materialized!");
 	externalizeAllGlobalValues(*g_module);
 
-	auto lfunc_name_map = fillLfuncNameMap(*g_module);
+	auto opcode_name_map = createOpcodeNameMap(*g_module);
 
 	std::unordered_set<std::string> name_set;  // Hashset of all mangled names for fast lookup.
-	for (const auto& [k, v]: lfunc_name_map) name_set.insert(v);
+	for (const auto& [k, v]: opcode_name_map) name_set.insert(v);
 
 	auto g_context = std::make_unique<ThreadSafeContext>(std::move(initial_context));
 
@@ -177,7 +177,7 @@ LlvmData initLlvmJit() {
 		             .g_module       = std::move(g_module),
 		             .lljit_instance = std::move(lljit_instance),
 		             .exit_on_err    = std::move(exit_on_err),
-		             .lfunc_name_map = std::move(lfunc_name_map),
+		             .opcode_name_map = std::move(opcode_name_map),
 		             .types          = types };
 }
 
@@ -187,7 +187,7 @@ const LlvmData& llvmData() {
 }
 
 base::Optional<std::string> LlvmData::getFunName(const vm::low::MicroOpcode& fun) const {
-	auto fun_name_iter = lfunc_name_map.find(fun);
-	if (fun_name_iter != lfunc_name_map.end()) return fun_name_iter->second;
+	auto fun_name_iter = opcode_name_map.find(fun);
+	if (fun_name_iter != opcode_name_map.end()) return fun_name_iter->second;
 	return {};
 }
