@@ -18,29 +18,26 @@ LLVM_INCLUDE_BEGIN()
 
 LLVM_INCLUDE_END()
 
-using namespace llvm;
-using namespace llvm::orc;
-
 struct LlvmData {
 	/// @brief Context of llvmInit.
 	/// @note We need to use ThreadSafeContext instead of LLVMContext to be able to use a single
 	/// shared context for the JIT instance.
-	std::unique_ptr<ThreadSafeContext> g_context;
+	std::unique_ptr<llvm::orc::ThreadSafeContext> g_context;
 
 	/**
 	 * @brief LLVM master module containing the parsed microinstruction bitcode.
 	 * @note Acts as an IR cache for opfun body cloning, to enable interprocedural optimizations.
 	 */
-	std::unique_ptr<Module> g_module;
+	std::unique_ptr<llvm::Module> g_module;
 
 	/// @brief Active LLjit instance.
-	std::unique_ptr<LLJIT> lljit_instance;
+	std::unique_ptr<llvm::orc::LLJIT> lljit_instance;
 
 	/// @brief LLVM helper object used for errors.
-	ExitOnError exit_on_err;
+	llvm::ExitOnError exit_on_err;
 
 	/// @brief For each MicroOpcode stores the name of its corresponding llvm::Function*.
-	std::unordered_map<vm::low::MicroOpcode, std::string> lfunc_name_map;
+	std::unordered_map<vm::low::MicroOpcode, std::string> opcode_name_map;
 
 	struct LlvmTypes {
 		Ref<llvm::StructType>   frame;
@@ -56,7 +53,7 @@ struct LlvmData {
 	/**
 	 * @brief Returns mangled name of opcode if it is in module.
 	 */
-	base::Optional<std::string> getFunName(const vm::low::MicroOpcode& fun) const;
+	base::Optional<std::string_view> getFunName(const vm::low::MicroOpcode& fun) const;
 };
 
 /**

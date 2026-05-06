@@ -44,7 +44,7 @@ std::string extractFunctionName(const std::string& full) {
 /**
  * @brief creates map: opcode -> mangled name.
  */
-std::unordered_map<vm::low::MicroOpcode, std::string> createOpcodeNameMap(Module& module) {
+std::unordered_map<vm::low::MicroOpcode, std::string> createOpcodeNameMap(llvm::Module& module) {
 	std::unordered_map<vm::low::MicroOpcode, std::string> lfunc_name_map;
 
 	for (auto& f: module.functions()) {
@@ -70,10 +70,10 @@ std::unordered_map<vm::low::MicroOpcode, std::string> createOpcodeNameMap(Module
  */
 void cloneOpcodesModules(
 	const std::unordered_set<std::string>& name_set,
-	Module&                                module,
-	LLJIT&                                 lljit_instance,
-	ThreadSafeContext&                     g_context,
-	ExitOnError&                           exit_on_err
+	llvm::Module&                          module,
+	llvm::orc::LLJIT&                      lljit_instance,
+	llvm::orc::ThreadSafeContext&          g_context,
+	llvm::ExitOnError&                     exit_on_err
 ) {
 	auto globals_filter = [&](const llvm::GlobalValue* gv) -> bool {
 		return !name_set.contains(gv->getName().str());
@@ -93,7 +93,7 @@ void cloneOpcodesModules(
  * @brief Finds or creates LLVM types used in opcode function definitions and returns them in a
  * struct.
  */
-LlvmData::LlvmTypes findOrCreateTypes(std::unique_ptr<ThreadSafeContext>& g_context) {
+LlvmData::LlvmTypes findOrCreateTypes(std::unique_ptr<llvm::orc::ThreadSafeContext>& g_context) {
 	// Casting to Ref is used to detect nullptr.
 	auto flag_data_ty
 		= Ref(llvm::StructType::create(*g_context->getContext(), "struct.vm::FlagData"));
@@ -148,10 +148,10 @@ LlvmData initLlvmJit() {
 
 	auto initial_context = std::make_unique<llvm::LLVMContext>();
 
-	auto        g_module = parseOpcodesBitcode(*initial_context);
-	ExitOnError exit_on_err;
+	auto              g_module = parseOpcodesBitcode(*initial_context);
+	llvm::ExitOnError exit_on_err;
 
-	auto  lljit_instance = exit_on_err(LLJITBuilder().create());
+	auto  lljit_instance = exit_on_err(llvm::orc::LLJITBuilder().create());
 	auto& jd             = lljit_instance->getMainJITDylib();
 	jd.addGenerator(cantFail(llvm::orc::DynamicLibrarySearchGenerator::GetForCurrentProcess(
 		lljit_instance->getDataLayout().getGlobalPrefix()
@@ -167,7 +167,7 @@ LlvmData initLlvmJit() {
 	std::unordered_set<std::string> name_set;  // Hashset of all mangled names for fast lookup.
 	for (const auto& [k, v]: opcode_name_map) name_set.insert(v);
 
-	auto g_context = std::make_unique<ThreadSafeContext>(std::move(initial_context));
+	auto g_context = std::make_unique<llvm::orc::ThreadSafeContext>(std::move(initial_context));
 
 	cloneOpcodesModules(name_set, *g_module, *lljit_instance, *g_context, exit_on_err);
 
@@ -186,7 +186,7 @@ const LlvmData& llvmData() {
 	return llvm_data;
 }
 
-base::Optional<std::string> LlvmData::getFunName(const vm::low::MicroOpcode& fun) const {
+base::Optional<std::string_view> LlvmData::getFunName(const vm::low::MicroOpcode& fun) const {
 	auto fun_name_iter = opcode_name_map.find(fun);
 	if (fun_name_iter != opcode_name_map.end()) return fun_name_iter->second;
 	return {};
