@@ -1,5 +1,7 @@
 #pragma once
 
+#include <base/types/ok_bad.hpp>
+
 #include <query_framework/utils/query_hash.hpp>
 
 #include <string_view>
@@ -70,6 +72,12 @@ namespace query {
 			 * Relevant only if `uses_qresult` is true, otherwise the tag is ignored.
 			 */
 			bool catch_exceptions_if_using_qresult = true;
+
+			/**
+			 * Whether the query is allowed to be cyclic.
+			 * Relevant only if `uses_qresult` is true, otherwise the tag is ignored.
+			 */
+			bool allow_cycles = true;
 		};
 
 		/**
@@ -137,21 +145,21 @@ namespace query {
 			 * Is run in comptime time in query implementation boilerplate.
 			 */
 			[[nodiscard]]
-			constexpr bool verify() const {
+			constexpr base::OkBad verify() const {
 				if (tags.can_be_loaded_from_disk) {
 					// queries that are cached on disk must use stable hashing:
-					if (tags.used_hashes != UsedHashes::StableHash) return false;
+					if (tags.used_hashes != UsedHashes::StableHash) return base::BAD;
 					// queries that can be loaded from disk must have preserve_in_graph true:
-					if (!tags.preserve_in_graph) return false;
+					if (!tags.preserve_in_graph) return base::BAD;
 				}
 				if (isInputQuery()) {
 					// input queries must use stable hashing:
-					if (tags.used_hashes != UsedHashes::StableHash) return false;
+					if (tags.used_hashes != UsedHashes::StableHash) return base::BAD;
 					// inputs must be preserved on disk:
-					if (!tags.preserve_in_graph) return false;
+					if (!tags.preserve_in_graph) return base::BAD;
 				}
 
-				return true;
+				return base::OK;
 			}
 		};
 	}
