@@ -79,10 +79,10 @@ namespace pst::expr {
 	void ComparisonChain::calcElementPathHashRecursive() {
 		auto path          = getElementPathHash();
 		auto sub_expr_path = hashing::ComponentHash(path, "value");
-		;
+
 		calcIndexedListChildPath<ExprElement>({ sub_expr }, sub_expr_path);
 		auto op_path = hashing::ComponentHash(path, "operator");
-		;
+
 		calcIndexedListChildPath<OperatorWrapper>({ operators }, op_path);
 	}
 }
