@@ -49,7 +49,7 @@ namespace vm::low {
 	/**
 	 * @brief For microinstruction name, returns corresponding MicroOpcode.
 	 */
-	constexpr vm::low::MicroOpcode getOpcode(const std::string& func_name) {
+	constexpr vm::low::MicroOpcode getOpcode(std::string_view func_name) {
 		for (auto [opcode, name]: std::views::enumerate(vm::low::OPCODE_NAMES))
 			if (func_name == name) return static_cast<vm::low::MicroOpcode>(opcode);
 		CORE_PANIC("Function name does not correspond to any MicroOpcode", func_name);
@@ -64,27 +64,31 @@ namespace vm::low {
 		return count;
 	}
 
-	/**
-	 * @brief Constructs an array of non-executable opcodes (like ext_*).
-	 */
-	constexpr std::array<vm::low::MicroOpcode, vm::low::nonExecutableMicroInstrCount()> constructNonExecOpcodeArray(
-	) {
-		auto non_executable_opcodes
-			= vm::low::OPCODE_NAMES | std::views::enumerate
-		    | std::views::filter([](auto pair) { return std::get<1>(pair).starts_with("ext_"); })
-		    | std::views::transform([](auto pair) {
-				  return static_cast<vm::low::MicroOpcode>(std::get<0>(pair));
-			  });
+	namespace internal {
+		/**
+		 * @brief Constructs an array of non-executable opcodes (like ext_*).
+		 * Used to create NON_EXEC_OPCODES.
+		 */
+		constexpr std::array<vm::low::MicroOpcode, vm::low::nonExecutableMicroInstrCount()>
+			constructNonExecOpcodeArray() {
+			auto non_executable_opcodes
+				= vm::low::OPCODE_NAMES | std::views::enumerate | std::views::filter([](auto pair) {
+					  return std::get<1>(pair).starts_with("ext_");
+				  })
+			    | std::views::transform([](auto pair) {
+					  return static_cast<vm::low::MicroOpcode>(std::get<0>(pair));
+				  });
 
-		std::array<vm::low::MicroOpcode, vm::low::nonExecutableMicroInstrCount()> output{};
+			std::array<vm::low::MicroOpcode, vm::low::nonExecutableMicroInstrCount()> output{};
 
-		std::ranges::copy(non_executable_opcodes, output.begin());
+			std::ranges::copy(non_executable_opcodes, output.begin());
 
-		return output;
+			return output;
+		}
 	}
 
 	static constexpr std::array<vm::low::MicroOpcode, vm::low::nonExecutableMicroInstrCount()>
-		NON_EXEC_OPCODES = constructNonExecOpcodeArray();
+		NON_EXEC_OPCODES = internal::constructNonExecOpcodeArray();
 
 	/**
 	 * @brief Returns whether opcode is not executable like ext_*.
