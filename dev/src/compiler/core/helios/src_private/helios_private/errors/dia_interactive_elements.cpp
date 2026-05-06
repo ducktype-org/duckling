@@ -178,7 +178,7 @@ namespace compiler::helios {
 		case pst::ElementKind::ClassMethod: {
 			auto class_method = function_like.dynamicCast<pst::Method>().value();
 			return dia::SourcePosition::merge(
-				class_method->getNameIdentifier().position,
+				class_method->getName().unlock(ctx)->getSourcePosition().unlock(ctx),
 				class_method->getParams().unlock(ctx)->getSourcePosition().unlock(ctx)
 			);
 		}

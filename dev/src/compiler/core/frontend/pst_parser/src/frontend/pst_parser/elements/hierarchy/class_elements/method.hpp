@@ -9,7 +9,7 @@ namespace pst {
 	 * @brief Class method element.
 	 */
 	class Method final: public ClassStmt {
-		tpc::Identifier name;
+		NAMED_CHILD(name, IdentifierWrapper);
 		NAMED_CHILD(params, ParamList);
 		NAMED_CHILD_OPT(ret, CommaExprHolder);
 		NAMED_CHILD(body, CodeBlockOrStmt);
@@ -29,11 +29,9 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		base::StrID getName() const {
-			return name.value;
+		AccessLocked<IdentifierWrapper> getName() const {
+			return name.give();
 		}
-
-		[[nodiscard]] tpc::Identifier getNameIdentifier() const { return name; }
 
 		[[nodiscard]]
 		AccessLocked<ParamList> getParams() const {
@@ -54,7 +52,7 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		base::Optional<base::StrID> getDeclSymbolName() const final {
+		base::Optional<AccessLocked<IdentifierWrapper>> getDeclSymbol2() const final {
 			return getName();
 		}
 

@@ -55,7 +55,7 @@ namespace pst {
 				no_symbol_count++;
 				break;
 			case DeclKind::Symbol:
-				symbol = stmt.internal()->getDeclSymbolName().value();
+				symbol = stmt.internal()->getInternalSymbolName().value();
 				if (by_symbol_count.atMaybe(symbol)) {
 					symbol_count = by_symbol_count[symbol];
 				} else {

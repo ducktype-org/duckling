@@ -3,6 +3,8 @@
 #include "../meta.hpp"
 #include "preamble.hpp"
 
+#include "../not_statements/wrapper_elements/identifier_wrapper.hpp"
+
 namespace pst {
 	/**
 	 * @brief Allows for limited non-class statements to be in a class.
@@ -16,7 +18,7 @@ namespace pst {
 		NAMED_CHILD(inner_stmt, Stmt);
 
 		DeclKind                    inner_decl_kind = DeclKind::None;
-		base::Optional<base::StrID> inner_decl_symbol_name{};
+		base::Optional<AccessLocked<IdentifierWrapper>> inner_decl_symbol_name;
 
 		HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const override;
 
@@ -43,7 +45,7 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		base::Optional<base::StrID> getDeclSymbolName() const override {
+		base::Optional<AccessLocked<IdentifierWrapper>> getDeclSymbol2() const override {
 			return inner_decl_symbol_name;
 		}
 

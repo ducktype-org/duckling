@@ -172,7 +172,7 @@ namespace compiler::helios {
 			auto stmt = pst->unlock(ctx).dynamicCast<pst::Stmt>();
 			if (!stmt) continue;
 
-			auto name = stmt.value()->getDeclSymbolName();
+			auto name = stmt.value()->getInternalSymbolName();
 			if (!name.has_value()) continue;
 
 			if (!out.empty())
@@ -332,7 +332,7 @@ namespace compiler::helios {
 			auto method = stmt.dynamicCast<pst::Method>().value();
 			return SymbolData::makePSTSymbolData(
 				{
-					.name = method->getName(),
+					.name = method->getName().unlock(ctx)->unwrap(),
 					.kind = SymbolKind::Method,
 				},
 				pst_data
@@ -342,7 +342,7 @@ namespace compiler::helios {
 			auto field = stmt.dynamicCast<pst::Field>().value();
 			return SymbolData::makePSTSymbolData(
 				{
-					.name      = field->getName(),
+					.name      = field->getName().unlock(ctx)->unwrap(),
 					.kind      = SymbolKind::Field,
 					.dependent = true,
 				},
@@ -353,7 +353,7 @@ namespace compiler::helios {
 			auto constructor = stmt.dynamicCast<pst::Constructor>().value();
 			return SymbolData::makePSTSymbolData(
 				{
-					.name = constructor->getName(),
+					.name = constructor->isImpliedConstructor() ? base::StrID("create") : lang_def::keywordToStr(constructor->getKeyword()->unlock(ctx)->unwrap()),
 					.kind = SymbolKind::Constructor,
 				},
 				pst_data
@@ -363,7 +363,7 @@ namespace compiler::helios {
 			auto constructor = stmt.dynamicCast<pst::CopyConstructor>().value();
 			return SymbolData::makePSTSymbolData(
 				{
-					.name = constructor->getName(),
+					.name = lang_def::keywordToStr(constructor->getKeyword()->unlock(ctx)->unwrap()),
 					.kind = SymbolKind::Constructor,
 				},
 				pst_data
@@ -384,7 +384,7 @@ namespace compiler::helios {
 			// we can assume that it is only named ones.
 			return SymbolData::makePSTSymbolData(
 				{
-					.name = stmt->getDeclSymbolName().value(),
+					.name = stmt->getDeclSymbol2()->unlock(ctx)->unwrap(),
 					.kind = SymbolKind::NamedCodeElement,
 				},
 				pst_data

@@ -9,8 +9,8 @@ namespace pst {
 
 		PARSE().eatOne();
 
-		out->kind = Keyword::Copy;
-		PARSE().all(NamedOperator::Period, Keyword::Copy);
+		out->key.emplace();
+		PARSE().all(NamedOperator::Period, &out->key.value());
 
 		PARSE().one(&out->params);
 		if (PARSE().tryEat(NamedOperator::Colon)) PARSE().one(&out->inits);
@@ -26,7 +26,7 @@ namespace pst {
 	void CopyConstructor::dprint(std::ostream& out) const {
 		out << "{";
 		out << "\"name\":";
-		out << "\"" << getName().strView() << "\"";
+		out << "\"" << getInternalSymbolName()->str() << "\"";
 		out << ",\"params\":";
 		nullAwareDprint(params, out);
 		out << ",\"inits\":";

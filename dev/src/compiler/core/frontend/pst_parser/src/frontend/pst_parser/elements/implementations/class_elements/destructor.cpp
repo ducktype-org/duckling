@@ -9,9 +9,8 @@ namespace pst {
 
 		PARSE().eatOne();
 
-		tpc::Identifier ident;
-		PARSE().all(NamedOperator::Period, &ident);
-		out->kind = ident;
+		out->ident.emplace();
+		PARSE().all(NamedOperator::Period, &out->ident.value());
 
 		PARSE().goDown();
 		if (state.notEmpty()) state.logInt(makeBox<NonEmptyError>(state.getPosition()));

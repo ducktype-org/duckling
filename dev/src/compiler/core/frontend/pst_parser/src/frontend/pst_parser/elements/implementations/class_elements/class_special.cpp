@@ -17,8 +17,6 @@ namespace pst {
 	}
 
 	HashAlg& ClassSpecial::addElementDataToStableHash(HashAlg& partial_hash) const {
-		addToHash(partial_hash, kind.index());
-		std::visit([&](auto val) { addToHash(partial_hash, val); }, kind);
 		return partial_hash;
 	}
 }

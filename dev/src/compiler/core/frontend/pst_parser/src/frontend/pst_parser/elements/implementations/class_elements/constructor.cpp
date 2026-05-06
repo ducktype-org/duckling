@@ -10,12 +10,14 @@ namespace pst {
 
 		PARSE().eatOne();
 
-		if (state[0].isBracketGroup(Token::Round))
-			out->kind = tpc::Identifier{ .value = base::StrID("create") };
+		if (state[0].isBracketGroup(Token::Round)) {
+			out->implied_constructor = true;
+		}
 		else {
-			tpc::Identifier ident;
+			MBox<IdentifierWrapper> ident;
 			PARSE().all(NamedOperator::Period, &ident);
-			out->kind = ident;
+			out->ident.emplace();
+			PARSE().assign(&out->ident, std::move(ident));
 		}
 
 		PARSE().one(&out->params);
@@ -32,7 +34,7 @@ namespace pst {
 	void Constructor::dprint(std::ostream& out) const {
 		out << "{";
 		out << "\"name\":";
-		out << "\"" << getName().strView() << "\"";
+		out << "\"" << getInternalSymbolName().value().str() << "\"";
 		out << ",\"params\":";
 		nullAwareDprint(params, out);
 		out << ",\"inits\":";
