@@ -218,7 +218,7 @@ namespace query {
 
 
 				// We would like to throw here, "after the return",
-				// to avoid copy, but that would require throwing in a constructor.
+				// to avoid copy, but that would require throwing in a destructor.
 				// For now we just do this. It should not be a problem since in practice most query
 				// results are trivially copyable anyway, and the compiler should generally use here
 				// copy-elision in non-trivial cases, so it should not be a problem.

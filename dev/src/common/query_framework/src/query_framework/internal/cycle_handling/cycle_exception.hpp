@@ -7,7 +7,7 @@ namespace query::internal {
 	/**
 	 * Special exception that is thrown when a cycle is detected during the query invocation.
 	 * This is used to break the provide() execution, as given query computation can't continue
-	 * after cyclic call (this is a requirement of a Query Model we implement).
+	 * after cyclic call (this is a requirement of a DuckLing Query Model).
 	 */
 	class QueryCycleException final: public std::exception {
 	public:

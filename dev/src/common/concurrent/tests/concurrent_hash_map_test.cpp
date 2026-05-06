@@ -752,7 +752,7 @@ private:
 		// fill the map
 		for (u64 i = 0; i < KEY_RANGE; i++) map.put(i, i * 10);
 
-		// Each thread tries to callOn keys [0, KEY_RANGE * 3).
+		// Each thread tries to callOn keys [0, KEY_RANGE).
 		std::vector<std::jthread> threads;
 		threads.reserve(thread_count);
 		std::vector<std::vector<std::pair<u64, u64>>> accessed_values(thread_count);
