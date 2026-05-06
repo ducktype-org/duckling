@@ -19,84 +19,57 @@ public:
 
 private:
 	static i64 parseInt(const std::string& str) {
-		return std::any_cast<i64>(clah::IntParser::make()->parse(0, str).value);
+		return std::any_cast<i64>(clah::IntParser::make()->parse(str).value);
 	}
 
 	static std::string parseString(const std::string& str) {
-		return std::any_cast<std::string>(clah::StringParser::make()->parse(0, str).value);
+		return std::any_cast<std::string>(clah::StringParser::make()->parse(str).value);
 	}
 
 	using Range = std::pair<i64, i64>;
 
 	static Range parseRange(const std::string& str) {
 		auto val
-			= std::any_cast<clah::RangeParser::Range>(clah::RangeParser::make()->parse(0, str).value
-		    );
+			= std::any_cast<clah::RangeParser::Range>(clah::RangeParser::make()->parse(str).value);
 		return { val.begin, val.end };
 	}
 
 	static std::vector<std::string> parseStringList(const std::string& str) {
 		return std::any_cast<std::vector<std::string>>(
-			clah::StringListParser::make()->parse(0, str).value
+			clah::StringListParser::make()->parse(str).value
 		);
 	}
 
 	static fs::File parseFile(const std::string& str, const std::regex& regex = std::regex(".*")) {
-		return std::any_cast<fs::File>(clah::FileParser::make(regex)->parse(0, str).value);
+		return std::any_cast<fs::File>(clah::FileParser::make(regex)->parse(str).value);
 	}
 
 	static fs::FilePath parseFilePath(
 		const std::string& str, const std::regex& regex = std::regex(".*")
 	) {
-		return std::any_cast<fs::FilePath>(clah::FilePathParser::make(regex)->parse(0, str).value);
+		return std::any_cast<fs::FilePath>(clah::FilePathParser::make(regex)->parse(str).value);
 	}
 
 	void intParserTest() {
 		ASSERT_EQUAL(123, parseInt("123"));
 		ASSERT_EQUAL(-9, parseInt("-9"));
-		ASSERT_EQUAL(3, parseInt("3 SHOULD NOT PARSE AFTER SPACE"));
-		ASSERT_EQUAL(-200, parseInt("-200\tOR ANY OTHER WHITE SPACE"));
-		ASSERT_EQUAL(0, parseInt("-0\n"));
+		ASSERT_EQUAL(0, parseInt("-0"));
 
-		auto parsed = clah::IntParser::make()->parse(0, "123 123");
-		ASSERT_EQUAL("123", parsed.raw_source);
-		ASSERT_EQUAL(3, parsed.position);
-
-		auto parsed2 = clah::IntParser::make()->parse(0, "123");
+		auto parsed2 = clah::IntParser::make()->parse({ "123" });
 		ASSERT_EQUAL("123", parsed2.raw_source);
-		ASSERT_EQUAL(3, parsed2.position);
 
 		assertThrows<clah::exceptions::ValueParsingException>(
 			[&]() { parseInt("str"); }, "Cannot parse str to int"
 		);
+		assertThrows<clah::exceptions::ValueParsingException>(
+			[&]() { parseInt("123 123"); }, "Cannot parse 123 123 to int"
+		);
+		assertThrows<clah::exceptions::ValueParsingException>(
+			[&]() { parseInt("123z"); }, "Cannot parse 123z to int"
+		);
 	}
 
-	void stringParserTest() {
-		ASSERT_EQUAL("str", parseString("str"));
-
-		auto parsed = clah::StringParser::make()->parse(0, "str str");
-		ASSERT_EQUAL("str", parsed.raw_source);
-		ASSERT_EQUAL(3, parsed.position);
-
-		auto parsed2 = clah::StringParser::make()->parse(0, "str");
-		ASSERT_EQUAL("str", parsed2.raw_source);
-		ASSERT_EQUAL(3, parsed2.position);
-
-		auto parsed3 = clah::StringParser::make()->parse(0, "\"test1 test2\" test3");
-		ASSERT_EQUAL("test1 test2", std::any_cast<std::string>(parsed3.value));
-		ASSERT_EQUAL(13, parsed3.position);
-		ASSERT_EQUAL("test1 test2", parsed3.raw_source);
-
-		auto parsed4 = clah::StringParser::make()->parse(0, R"("val: \"1\"" test3)");
-		ASSERT_EQUAL("val: \"1\"", std::any_cast<std::string>(parsed4.value));
-		ASSERT_EQUAL(12, parsed4.position);
-		ASSERT_EQUAL("val: \"1\"", parsed4.raw_source);
-
-		auto parsed5 = clah::StringParser::make()->parse(0, R"("")");
-		ASSERT_EQUAL("", std::any_cast<std::string>(parsed5.value));
-		ASSERT_EQUAL(2, parsed5.position);
-		ASSERT_EQUAL("", parsed5.raw_source);
-	}
+	void stringParserTest() { ASSERT_EQUAL("str", parseString("str")); }
 
 	void rangeParserTest() {
 		ASSERT_EQUAL(Range(1, 2), parseRange("1..2"));
@@ -149,50 +122,21 @@ private:
 
 	void stringListParserTest() {
 		ASSERT_EQUAL(
-			(std::vector<std::string>{ "str1", "str2", "str3" }), parseStringList("[str1,str2,str3]")
+			(std::vector<std::string>{ "str1", "str2", "str3" }), parseStringList("str1,str2,str3")
+		);
+
+		ASSERT_EQUAL(
+			(std::vector<std::string>{ "str1", "str2", "str3" }), parseStringList("str1, str2, str3")
 		);
 
 		ASSERT_EQUAL(
 			(std::vector<std::string>{ "str1", "str2", "str3" }),
-			parseStringList("[str1, str2, str3]")
+			parseStringList("str1 ,   str2 ,   str3   ")
 		);
 
-		ASSERT_EQUAL(
-			(std::vector<std::string>{ "str1", "str2", "str3" }),
-			parseStringList("[ str1 ,   str2 ,   str3  ]  ")
-		);
+		ASSERT_EQUAL((std::vector<std::string>{}), parseStringList(""));
 
-		ASSERT_EQUAL((std::vector<std::string>{}), parseStringList("[]"));
-
-		ASSERT_EQUAL((std::vector<std::string>{ "str1" }), parseStringList("[ str1   ]  "));
-
-		ASSERT_EQUAL((std::vector<std::string>{}), parseStringList("[   ]  "));
-
-		assertThrows<clah::exceptions::ValueParsingException>(
-			[&]() { parseRange("["); }, "Should throw on invalid value"
-		);
-
-		assertThrows<clah::exceptions::ValueParsingException>(
-			[&]() { parseRange("]"); }, "Should throw on invalid value"
-		);
-
-		assertThrows<clah::exceptions::ValueParsingException>(
-			[&]() { parseRange("[]a"); }, "Should throw on invalid value"
-		);
-
-		assertThrows<clah::exceptions::ValueParsingException>(
-			[&]() { parseRange("  "); }, "Should throw on invalid value"
-		);
-
-		assertThrows<clah::exceptions::ValueParsingException>(
-			[&]() { parseRange(" b "); }, "Should throw on invalid value"
-		);
-
-		// note: clah should ensure, that value parser input
-		// always starts with a non-whitespace character, so this throws:
-		assertThrows<clah::exceptions::ValueParsingException>(
-			[&]() { parseRange("  []"); }, "Should throw on invalid value"
-		);
+		ASSERT_EQUAL((std::vector<std::string>{ "str1" }), parseStringList("str1"));
 	}
 };
 
