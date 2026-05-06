@@ -714,7 +714,7 @@ namespace compiler::helios {
 				auto                         pointed = using_stmt->getPointed().unlock(ctx);
 				usize                        size    = pointed->numberOfNames();
 				std::vector<tpc::Identifier> pointed_to_names(size);
-				for (int i = 0; i < size; i++) {
+				for (usize i = 0; i < size; i++) {
 					pointed_to_names[i]
 						= { .value = pointed->getNameIndex(i).unlock(ctx)->unwrap() };
 				}
@@ -746,7 +746,7 @@ namespace compiler::helios {
 
 				std::vector<base::StrID> module_path(name_count);
 
-				for (int i = 0; i < name_count; i++)
+				for (usize i = 0; i < name_count; i++)
 					module_path[i] = import_chain->getNameIndex(i).unlock(ctx)->unwrap();
 
 				auto maybe_imported_module
@@ -819,7 +819,7 @@ namespace compiler::helios {
 				                  ->getPointed()
 				                  .unlock(ctx);
 				pointed_chain.resize(dotted->numberOfNames());
-				for (int i = 0; i < dotted->numberOfNames(); i++)
+				for (usize i = 0; i < dotted->numberOfNames(); i++)
 					pointed_chain[i] = { .value = dotted->getNameIndex(i).unlock(ctx)->unwrap() };
 			} else if (kind(key) == SymbolKind::Alias) {
 				auto dotted = getSymRef(key)
@@ -831,7 +831,7 @@ namespace compiler::helios {
 				                  ->getPointed()
 				                  .unlock(ctx);
 				pointed_chain.resize(dotted->numberOfNames());
-				for (int i = 0; i < dotted->numberOfNames(); i++)
+				for (usize i = 0; i < dotted->numberOfNames(); i++)
 					pointed_chain[i] = { .value = dotted->getNameIndex(i).unlock(ctx)->unwrap() };
 			} else {
 				return SymbolList{ { key } };
