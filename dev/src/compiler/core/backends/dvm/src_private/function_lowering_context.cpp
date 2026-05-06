@@ -117,7 +117,7 @@ vm::code::Function compiler::backend_vm::internal::createMiniGlobalCtorFromCTV(
 
 	vm::code::Function mini_ctor;
 	mini_ctor.name                   = vm::code::Identifier(mini_ctor_name);
-	mini_ctor.signature.result_types = { vm::code::Identifier(base::StrID("void")) };
+	mini_ctor.signature.result_types = {  };
 	mini_ctor.body.push_back(
 		vm::code::builders::InstructionBuilder(
 			vm::code::builders::OpKind::mov, dvm_global.asArgument(), immediate.asArgument()
