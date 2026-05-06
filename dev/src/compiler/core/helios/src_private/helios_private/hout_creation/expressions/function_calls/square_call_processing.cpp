@@ -32,10 +32,10 @@ namespace compiler::helios::code {
 		) {
 			if (auto expr_kind = current_expr->expression_type.getSymbolType().getType().getKind();
 			    expr_kind != tsh::Kind::StaticArray && expr_kind != tsh::Kind::DynamicArray) {
-				auto error_pos = current_expr->origin.getSourcePosition(ctx).copyValueOr(
-					index_pst.unlock(ctx)->getSourcePosition().unlock(ctx)
+				auto error_pos = current_expr->origin.getStablePosition().copyValueOr(
+					index_pst.unlock(ctx)->getStablePosition()
 				);
-				ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+				ctx.logInt(makeBox<dia_int::PlaceholderError>(
 					"Index operator base must be indexable.", error_pos
 				));
 				return query::Failed();
@@ -124,9 +124,8 @@ namespace compiler::helios::code {
 		// @TODO: #1532 This check should be handled by the `[]` operator.
 		auto args = call_expr->getArgs().unlock(ctx);
 		if (args->size() != 1) {
-			ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
-				"Array index/size must be exactly one expression.",
-				call_expr->getSourcePosition().unlock(ctx)
+			ctx.logInt(makeBox<dia_int::PlaceholderError>(
+				"Array index/size must be exactly one expression.", call_expr->getStablePosition()
 			));
 			return query::Failed();
 		}

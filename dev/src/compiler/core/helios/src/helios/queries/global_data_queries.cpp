@@ -26,7 +26,8 @@ namespace compiler::helios {
 			                                                  : HOUTGlobalDataType::Variable;
 
 			const auto symbol_type = ctx.query<QueryTypeOfSymbol>(symbol)->valueOrThrow();
-			auto       origin      = code::pstOrigin(stmt(ctx, symbol).value());
+			auto       pst_decl    = stmt(ctx, symbol).value();
+			auto       origin      = code::pstOrigin(pst_decl);
 
 			auto value = [&]() -> std::variant<HOUTGlobalConst, HOUTGlobalVariable> {
 				switch (data_type) {
@@ -42,7 +43,7 @@ namespace compiler::helios {
 						}
 
 						return defgen::getDefaultInitializerExpr(
-								   ctx, symbol_type, origin.getSourcePosition(ctx).value()
+								   ctx, symbol_type, pst_decl->getStablePosition()
 						)
 						    .valueOrThrow();
 					};

@@ -9,6 +9,7 @@
 
 #include <vm/core/safe/low_program/instruction.hpp>
 #include <vm/core/supervisor/supervisor.hpp>
+#include <vm/debugger/UI/debug_adapter/debug_adapter.hpp>
 
 #include <exception>
 #include <fstream>
@@ -44,7 +45,7 @@ clah::Clah getVmClah() {
 				logger::enable_dev_logs = true;
 				logger::enableDevCategory(logger::DevLogCategories::DVM);
 				logger::enableDevCategory(logger::DevLogCategories::DVMDetails);
-                logger::setDevLogOutputStreamCurrentDate();
+				logger::setDevLogOutputStreamCurrentDate();
 			}
 		})
 #endif
@@ -73,6 +74,12 @@ clah::Clah getVmClah() {
 								   args.push_back(*options.getExtra<std::string>(argc));
 
 							   return cli(file, args);
+						   }))
+	    .addSubcommand(clah::Clah("debug_adapter", "Start the VM debug adapter.")
+	                       .setHandler([](const clah::ParsingResult&) -> int {
+							   vm::Supervisor::get();
+							   vm::debug_adapter::DebugAdapter::get().run();
+							   return 0;
 						   }))
 	    .addSubcommand(clah::Clah("repl", "Start the VM in REPL mode.")
 	                       .setHandler([](const clah::ParsingResult&) -> int {

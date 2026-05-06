@@ -6,6 +6,7 @@ use crate::duck::util::duck_home::DuckHome;
 use crate::duck::util::terminal::Terminal;
 use crate::quackpack::util::paths::duck_home_path;
 use crate::util::env::Env;
+use crate::util::file_locks::FileLockManager;
 use crate::{QuackResult, QuackResultContext};
 
 #[derive(Debug)]
@@ -29,7 +30,6 @@ impl DuckContext {
         let user_home = home_dir().context("while trying to get user home directory")?;
         let duck_home = DuckHome::new(
             duck_home_path(&env, &user_home).context("while trying to get duck home directory")?,
-            &env,
         );
         let config = DuckCfg::new(&duck_home)?;
         let cwd = current_dir().context("while trying to get the current working directory")?;
@@ -112,8 +112,8 @@ impl DuckContext {
     }
 
     /// Get the path of the default packages' storage in [`DuckHome`].
-    pub fn default_storage_root(&self) -> &Path {
-        self.duck_home().storage_dir()
+    pub fn default_storage_root(&self) -> FileLockManager {
+        self.duck_home().storage()
     }
 }
 
@@ -124,7 +124,7 @@ impl Default for DuckContext {
 
         let env = Default::default();
         let user_home = home_dir().unwrap();
-        let duck_home = DuckHome::new(duck_home_path(&env, &user_home).unwrap(), &env);
+        let duck_home = DuckHome::new(duck_home_path(&env, &user_home).unwrap());
         let mut console = Terminal::stdout();
         let mut error_console = Terminal::stderr();
         console.set_verbosity(Verbosity::Quiet);
