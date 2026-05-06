@@ -26,6 +26,7 @@ using namespace llvm;
  */
 // NOLINTBEGIN
 PUSH_DIAGNOSTIC ALLOW_EXTENSIONS inline constexpr char OPCODES[] = {
+// Linter doesn't actually build common_sc.bc so it would be unavailable.
 #if __has_embed("common_sc.bc")
 	#embed "common_sc.bc"
 #else

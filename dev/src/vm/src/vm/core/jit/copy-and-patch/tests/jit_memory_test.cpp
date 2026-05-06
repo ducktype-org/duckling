@@ -17,6 +17,7 @@ PUSH_DIAGNOSTIC
 ALLOW_EXTENSIONS
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays)
 constexpr static char FULL_ELF[] = {
+// Linter doesn't actually build mock_stencils-so so it would be unavailable.
 #if __has_embed("mock_stencils-so")
 	#embed "mock_stencils-so"
 #else
@@ -28,6 +29,8 @@ POP_DIAGNOSTIC
 static auto stencils
 	= Stencils{ .stencils_binary    = std::bit_cast<std::array<byte, sizeof(FULL_ELF)>>(FULL_ELF),
 	            .stencils_data = std::array {
+
+// Linter doesn't actually build <mock_stencils-nm> so it would be unavailable.
 #if __has_include(<mock_stencils-nm>)
 	#include <mock_stencils-nm>
 #else
