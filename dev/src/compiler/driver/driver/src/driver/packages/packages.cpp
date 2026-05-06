@@ -1,18 +1,20 @@
 #include "packages.hpp"
 
+#include <diagnostic_interactive/placeholder.hpp>
 #include <driver/manifest/utils.hpp>
+#include <frontend/module_tree/functors.hpp>
+#include <frontend/module_tree/module_tree.hpp>
+#include <global_state/global_logger.hpp>
+#include <global_state/packages.hpp>
 
-#include "base/collections/optional.hpp"
+#include <base/collections/optional.hpp>
 #include <base/pointers/box.hpp>
 #include <base/str/str_utils.hpp>
-#include "frontend/module_tree/module_tree.hpp"
-#include "global_state/packages.hpp"
-#include <diagnostic_interactive/placeholder.hpp>
-#include <global_state/global_logger.hpp>
+
 #include <json/json.hpp>
+
 #include <utility>
 #include <vector>
-#include <frontend/module_tree/functors.hpp>
 
 namespace compiler::driver {
 
@@ -21,7 +23,16 @@ namespace compiler::driver {
 	base::Optional<RawDependencyInfo> RawDependencyInfo::fromJson(const nlohmann::json& json) {
 		if (!ju::checkIsObject(json, "dependency")) return {};
 
-		ju::checkForUknownFields(json, { "name", }, { "alias", }, "dependency");
+		ju::checkForUknownFields(
+			json,
+			{
+				"name",
+			},
+			{
+				"alias",
+			},
+			"dependency"
+		);
 
 		auto name = ju::getString(json, "name", "Dependency requires a package name!");
 		if (!name) return {};
@@ -39,8 +50,15 @@ namespace compiler::driver {
 
 		ju::checkForUknownFields(
 			json,
-			{ "name", "path", },
-			{ "version", "features", "dependencies", },
+			{
+				"name",
+				"path",
+			},
+			{
+				"version",
+				"features",
+				"dependencies",
+			},
 			"package"
 		);
 
@@ -51,31 +69,27 @@ namespace compiler::driver {
 		if (!path) return {};
 
 		auto version = ju::getStringNoError(json, "version");
-		if (!version){
-			version = base::StrID();
-		}
+		if (!version) version = base::StrID();
 
 		auto features_array = ju::getArrayNoError(json, "features");
-		if (!features_array) {
-			features_array = std::vector<nlohmann::json>();
-		}
+		if (!features_array) features_array = std::vector<nlohmann::json>();
 
 		std::vector<base::StrID> features;
 		features.reserve(features_array->size());
-		for (const auto& feat : *features_array) {
-			auto feat_str = ju::getStringFromArray(feat, base::strConcat("package \"", name->str(), "\" features"));
+		for (const auto& feat: *features_array) {
+			auto feat_str = ju::getStringFromArray(
+				feat, base::strConcat("package \"", name->str(), "\" features")
+			);
 			if (!feat_str) return {};
 			features.push_back(*feat_str);
 		}
 
 		auto deps_array = ju::getArrayNoError(json, "dependencies");
-		if (!deps_array) {
-			deps_array = std::vector<nlohmann::json>();
-		}
+		if (!deps_array) deps_array = std::vector<nlohmann::json>();
 
 		std::vector<RawDependencyInfo> deps;
 		deps.reserve(deps_array->size());
-		for (const auto& dep_json : *deps_array) {
+		for (const auto& dep_json: *deps_array) {
 			auto dep = RawDependencyInfo::fromJson(dep_json);
 			if (!dep) continue;  // Log error inside fromJson and skip invalid dependency
 			deps.push_back(*dep);
@@ -90,13 +104,16 @@ namespace compiler::driver {
 		};
 	}
 
-	base::Optional<global_state::PackageInfo> createGlobalPackageInfo(const RawPackageInfo& package_info){
+	base::Optional<global_state::PackageInfo> createGlobalPackageInfo(
+		const RawPackageInfo& package_info
+	) {
 		// First, create the module tree for the package for the give path
 		auto root_module = compiler::frontend::createModuleTree(
 			package_info.package_path, package_info.package_name
 		);
 
-		// If module tree does not have a main source file, it is not a valid package. We require main source file as an entry point for the package.
+		// If module tree does not have a main source file, it is not a valid package. We require
+		// main source file as an entry point for the package.
 		if (!getModuleRef(root_module)->hasMainSourceFile()) {
 			auto module_name = getModuleRef(root_module)->getName();
 			global_state::getGlobalLogger()->log(makeBox<dia_int::PlaceholderError>(
@@ -117,16 +134,16 @@ namespace compiler::driver {
 		for (const auto& dependency: package_info.dependencies) {
 			auto dependency_package_info = global_state::PackageDependencyInfo{
 				.package_id = dependency.package_name,
-				.alias      = (dependency.alias.isBad()) ? dependency.package_name : dependency.alias,
+				.alias = (dependency.alias.isBad()) ? dependency.package_name : dependency.alias,
 			};
 			package_dependencies.push_back(dependency_package_info);
 		}
 
 		auto global_package_info = global_state::PackageInfo{
-			.root_module  = root_module,
-			.version      = package_info.version,
+			.root_module      = root_module,
+			.version          = package_info.version,
 			.package_features = package_info.features,
-			.dependencies = std::move(package_dependencies),
+			.dependencies     = std::move(package_dependencies),
 		};
 		return global_package_info;
 	}

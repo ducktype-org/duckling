@@ -8,10 +8,10 @@
 
 #include <archiver/archive.hpp>
 #include <driver/exit.hpp>
-#include <driver/manifest/manifest.hpp>
-#include <driver/task/task.hpp>
 #include <driver/initialize.hpp>
+#include <driver/manifest/manifest.hpp>
 #include <driver/operations/generic_operations.hpp>
+#include <driver/task/task.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/pst.hpp>
@@ -29,8 +29,6 @@
 #include <base/str/str_utils.hpp>
 #include <base/types/ok_bad.hpp>
 
-#include <nlohmann/json.hpp>
-
 #include <clah/clah.hpp>
 #include <diagnostic/logger.hpp>
 #include <filesystem/file.hpp>
@@ -40,6 +38,8 @@
 #include <query_framework/entry/query_entry_point.hpp>
 #include <query_framework/entry/with_context_do.hpp>
 #include <query_framework/q_stats/q_stats.hpp>
+
+#include <nlohmann/json.hpp>
 
 #include <iostream>
 
@@ -296,7 +296,7 @@ clah::Clah getClahForMain() {
 					auto package_name    = options.getValue<std::string>("name").copyValueOr(
                         base::generateRandomString(32)
                     );
-					
+
 					auto init_result = compiler::driver::initializeTheCompiler(
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
 							.packages_info = {
@@ -464,7 +464,7 @@ clah::Clah getClahForMain() {
 						return 1;
 					}
 
-					const auto& linking_options   = getLinkingOptionsFromClap(options);
+					const auto& linking_options = getLinkingOptionsFromClap(options);
 
 					compiler::driver::BuildTarget build_target;
 					if (options.isFlag("dvm-backend")) {
@@ -475,8 +475,9 @@ clah::Clah getClahForMain() {
 						};
 					} else {
 						build_target = compiler::driver::BuildTargetLLVMExecutable{
-							.output_file_stem           = base::StrID(output_file_name.c_str()),
-							.additional_linking_options = base::StrID(linking_options.additional_link_options.c_str()),
+							.output_file_stem = base::StrID(output_file_name.c_str()),
+							.additional_linking_options
+							= base::StrID(linking_options.additional_link_options.c_str()),
 						};
 					}
 
@@ -548,24 +549,24 @@ clah::Clah getClahForMain() {
 
 					auto file_content = manifest_file.getContentSafe();
 					if (!file_content.has_value()) {
-						std::cerr << "Error: failed to read manifest file: " << file_content.error() << "\n";
+						std::cerr << "Error: failed to read manifest file: " << file_content.error()
+								  << "\n";
 						compiler::driver::exit();
 						return 1;
 					}
 					nlohmann::json manifest_json;
 					try {
 						auto raw = file_content->view();
-						manifest_json = nlohmann::json::parse(
-							raw.getBegin(),
-							raw.getBegin() + raw.size()
-						);
+						manifest_json
+							= nlohmann::json::parse(raw.getBegin(), raw.getBegin() + raw.size());
 					} catch (const nlohmann::json::parse_error& e) {
 						std::cerr << "Error: failed to parse manifest JSON: " << e.what() << "\n";
 						compiler::driver::exit();
 						return 1;
 					}
 
-					auto manifest = compiler::driver::PackageCompilationManifest::fromJson(manifest_json);
+					auto manifest
+						= compiler::driver::PackageCompilationManifest::fromJson(manifest_json);
 					if (!manifest.has_value()) {
 						compiler::driver::exit();
 						return 1;
@@ -611,9 +612,7 @@ clah::Clah getClahForMain() {
 							variant_case(compiler::driver::PackageCompilationTask, package_task) {
 								compilation_tasks.push_back(package_task);
 							}
-							variant_default {
-								CORE_PANIC("Unsupported task type in manifest");
-							}
+							variant_default { CORE_PANIC("Unsupported task type in manifest"); }
 						}
 					}
 
@@ -697,7 +696,9 @@ clah::Clah getClahForMain() {
 						return 1;
 					}
 
-					auto root = frontend::createModuleTree(path_to_compile, base::StrID(package_name.c_str()));
+					auto root = frontend::createModuleTree(
+						path_to_compile, base::StrID(package_name.c_str())
+					);
 
 					int exit_code = 0;
 					query::utils::withContextDo([&](query::Context& ctx) {

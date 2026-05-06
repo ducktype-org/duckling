@@ -171,5 +171,5 @@ namespace dia_int {
 		 */
 		PlaceholderWarning(std::string header_message, std::string description = "");
 	};
-	
+
 }

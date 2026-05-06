@@ -7,15 +7,14 @@
 #pragma once
 
 #include "../task/task.hpp"
-#include "driver/backend_type.hpp"
 
 #include <archiver/archive.hpp>
 #include <debug_info/debug_info.hpp>
+#include <driver/backend_type.hpp>
+#include <driver/task/task.hpp>
 #include <frontend/module_tree/module_id.hpp>
 #include <global_state/packages.hpp>
 #include <linker/link.hpp>
-
-#include <driver/task/task.hpp>
 
 #include <artifacts/artifacts.hpp>
 #include <query_framework/query_int.hpp>
@@ -28,19 +27,20 @@ namespace compiler::driver {
 
 	/**
 	 * Temporary interface for compiling the packages defined in global_state::packages.
-	 * Each package is compiled according to its compilation strategy defined in the RawPackageCompilationTask:
+	 * Each package is compiled according to its compilation strategy defined in the
+	 * RawPackageCompilationTask:
 	 * - DVM strategy: compiles each module into .dbc files, no linking step.
-	 * - Native strategy: compiles each module into .o files, then links them into a final executable using the specified linking options.
-	 * - Lib strategy: compiles each module into .o files, then archives them into a final static library.
+	 * - Native strategy: compiles each module into .o files, then links them into a final
+	 * executable using the specified linking options.
+	 * - Lib strategy: compiles each module into .o files, then archives them into a final static
+	 * library.
 	 * - LLVM strategy: compiles each module into .o files only
 	 *
 	 * @brief The final link/archive step for producing the package artifact.
 	 * \parallel Must be serialized or guarded to avoid overwriting/colliding outputs when packaging
 	 * concurrently.
 	 */
-	base::OkBad compilePackages(
-		const std::vector<PackageCompilationTask>& tasks
-	);
+	base::OkBad compilePackages(const std::vector<PackageCompilationTask>& tasks);
 
 	struct RunOutput final {
 		int exit_code;

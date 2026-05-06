@@ -121,9 +121,7 @@ namespace dia_int {
 			  {}
 		  ) {}
 
-	PlaceholderWarning::PlaceholderWarning(
-		std::string header_message, std::string description
-	):
+	PlaceholderWarning::PlaceholderWarning(std::string header_message, std::string description):
 		  PlaceholderWarning(
 			  std::move(header_message),
 			  base::Optional<dia::SourcePosition>{},

@@ -1,37 +1,41 @@
 #include "task.hpp"
 
-#include <driver/manifest/utils.hpp>
-
-#include "base/collections/optional.hpp"
-#include <base/pointers/box.hpp>
-#include <base/str/str_utils.hpp>
-#include <base/except/exceptions.hpp>
-#include <base/extend_cpp/variant_match.hpp>
 #include <diagnostic_interactive/placeholder.hpp>
-#include <global_state/global_logger.hpp>
-#include <json/json.hpp>
+#include <driver/manifest/utils.hpp>
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
+#include <global_state/global_logger.hpp>
 #include <global_state/packages.hpp>
+
+#include <base/collections/optional.hpp>
+#include <base/except/exceptions.hpp>
+#include <base/extend_cpp/variant_match.hpp>
+#include <base/pointers/box.hpp>
+#include <base/str/str_utils.hpp>
+
+#include <json/json.hpp>
 
 namespace compiler::driver {
 
 	namespace {
-		base::Optional<compiler::frontend::ModuleID> getRootModuleIDForRawPackageName(base::StrID package_name) {
-			for (const auto& global_package_info : global_state::getPackages()) {
-				if (getModuleRef(global_package_info.root_module)->getName() == package_name) {
+		base::Optional<compiler::frontend::ModuleID> getRootModuleIDForRawPackageName(
+			base::StrID package_name
+		) {
+			for (const auto& global_package_info: global_state::getPackages())
+				if (getModuleRef(global_package_info.root_module)->getName() == package_name)
 					return global_package_info.root_module;
-				}
-			}
 
 			// Get the global logger and log the error if the package is not found
 			if (global_state::hasGlobalLogger()) {
-				global_state::getGlobalLogger()->log(
-					makeBox<dia_int::PlaceholderError>(
-						base::strConcat("Package name provided in a compilation task was not found in the provided package list. Package name: \"", package_name.strView(), "\""),
-						std::string{}
-					)
-				);
+				global_state::getGlobalLogger()->log(makeBox<dia_int::PlaceholderError>(
+					base::strConcat(
+						"Package name provided in a compilation task was not found in the provided "
+						"package list. Package name: \"",
+						package_name.strView(),
+						"\""
+					),
+					std::string{}
+				));
 			}
 
 			return {};
@@ -63,13 +67,13 @@ namespace compiler::driver {
 		if (strategy->view() == "dvm") {
 			build_target = BuildTargetDVM{};
 		} else if (strategy->view() == "native") {
-			auto output = ju::getString(json, "output_file", "Native task requires an output file!");
+			auto output
+				= ju::getString(json, "output_file", "Native task requires an output file!");
 			if (!output) return {};
 
 			base::StrID linking_options;
-			if (json.contains("linking_options") && json["linking_options"].is_string()) {
+			if (json.contains("linking_options") && json["linking_options"].is_string())
 				linking_options = base::StrID(json["linking_options"].get<std::string>());
-			}
 
 			build_target = BuildTargetLLVMExecutable{
 				.output_file_stem           = *output,
@@ -84,12 +88,10 @@ namespace compiler::driver {
 			};
 		} else {
 			if (global_state::hasGlobalLogger()) {
-				global_state::getGlobalLogger()->log(
-					makeBox<dia_int::PlaceholderError>(
-						base::strConcat("Unknown task strategy: \"", strategy->str(), "\""),
-						R"(Expected "dvm", "native", or "lib".)"
-					)
-				);
+				global_state::getGlobalLogger()->log(makeBox<dia_int::PlaceholderError>(
+					base::strConcat("Unknown task strategy: \"", strategy->str(), "\""),
+					R"(Expected "dvm", "native", or "lib".)"
+				));
 			}
 			return {};
 		}
@@ -113,10 +115,12 @@ namespace compiler::driver {
 	base::Optional<Task> convertRawTaskToTask(const RawTask& raw_task) {
 		variant_match(raw_task.task_data) {
 			variant_case(RawPackageCompilationTask, raw_package_task) {
-				auto root_module_opt = getRootModuleIDForRawPackageName(raw_package_task.package_name);
+				auto root_module_opt
+					= getRootModuleIDForRawPackageName(raw_package_task.package_name);
 
-				if(!root_module_opt.has_value()) {
-					// Error is already logged in getRootModuleIDForRawPackageName, just return empty optional here
+				if (!root_module_opt.has_value()) {
+					// Error is already logged in getRootModuleIDForRawPackageName, just return
+					// empty optional here
 					return {};
 				}
 
@@ -128,9 +132,7 @@ namespace compiler::driver {
 					},
 				};
 			}
-			variant_default {
-				CORE_PANIC("Unknown task type in convertRawTaskToTask");
-			}
+			variant_default { CORE_PANIC("Unknown task type in convertRawTaskToTask"); }
 		}
 		CORE_UNREACHABLE();
 	}

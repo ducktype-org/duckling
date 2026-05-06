@@ -161,8 +161,7 @@ namespace lsp {
 				if_opt_some(parent_module_ref_opt, module_ref) {
 					std::cerr << "Adding new file to already loaded package: "
 							  << file.getFilePath().strView() << "\n";
-					auto submodule
-						= ModuleTreeBuilder::create(file, module_ref->getPackageID());
+					auto submodule = ModuleTreeBuilder::create(file, module_ref->getPackageID());
 					ModuleTreeModifier::addSubmodule(module_ref, submodule);
 				}
 				if_opt_none(parent_module_ref_opt) { createRootModuleAndRegisterPackage(file); }

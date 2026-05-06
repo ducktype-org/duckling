@@ -323,7 +323,7 @@ namespace compiler::frontend {
 		 */
 		static Ref<ModuleTree> create(
 			const fs::File&   root,
-			base::StrID  package_id,
+			base::StrID       package_id,
 			const std::regex& file_reject = DEFAULT_REJECT_FILE_REGEX,
 			const std::regex& dir_reject  = DEFAULT_REJECT_DIRECTORY_REGEX
 		);
@@ -426,7 +426,7 @@ namespace compiler::frontend {
 		 */
 		void buildFromDirectory(
 			const fs::File&   directory,
-			base::StrID  package_id,
+			base::StrID       package_id,
 			const std::regex& file_reject = DEFAULT_REJECT_FILE_REGEX,
 			const std::regex& dir_reject  = DEFAULT_REJECT_DIRECTORY_REGEX
 		);

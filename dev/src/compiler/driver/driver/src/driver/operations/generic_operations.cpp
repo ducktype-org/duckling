@@ -17,38 +17,38 @@
 #include <driver_private/backend_operations/compile_llvm.hpp>
 #include <driver_private/operations.hpp>
 #include <frontend/module_tree/functors.hpp>
+#include <frontend/module_tree/module_id.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <global_state/artifacts_location.hpp>
+#include <global_state/global_logger.hpp>
 #include <global_state/packages.hpp>
 #include <global_state/script_context.hpp>
-#include <global_state/global_logger.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/queries/queries.hpp>
 #include <helios/repl_utils/script_helpers.hpp>
 #include <linker/link.hpp>
 #include <time_stats/time_stats.hpp>
 
-#include "base/collections/maps.hpp"
+#include <base/collections/maps.hpp>
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/types/ok_bad.hpp>
 
-#include "artifacts/artifacts.hpp"
-#include "string_id/string_id.hpp"
+#include <artifacts/artifacts.hpp>
 #include <hashing/component_hash.hpp>
 #include <logger/logger.hpp>
 #include <query_framework/entry/query_entry_point.hpp>
 #include <query_framework/entry/with_context_do.hpp>
 #include <query_framework/standard_query/query_artifacts_macros.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
+#include <string_id/string_id.hpp>
 
 #include <vm/api/vm.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
 #include <vm/bytecode/validator/errors.hpp>
 #include <vm/bytecode/validator/valid_program.hpp>
 #include <vm/loader/loader.hpp>
-#include "frontend/module_tree/module_id.hpp"
 
 #include <filesystem>
 #include <fstream>
@@ -674,12 +674,8 @@ namespace compiler::driver {
 		return base::OK;
 	}
 
-	base::OkBad compilePackages(
-		const std::vector<PackageCompilationTask>& tasks
-	) {
-
+	base::OkBad compilePackages(const std::vector<PackageCompilationTask>& tasks) {
 		base::OkBad result = base::OK;
-
 
 		struct ModuleToCompile {
 			frontend::ModuleID root_module;
@@ -690,20 +686,22 @@ namespace compiler::driver {
 
 		std::vector<ModuleToCompile> modules_to_compile;
 
-		base::HashMap<frontend::ModuleID, std::vector<artifacts::FileArtifact>> objects_by_root_module;
+		base::HashMap<frontend::ModuleID, std::vector<artifacts::FileArtifact>>
+			objects_by_root_module;
 
 		std::function<void(frontend::ModuleID, BackendType, frontend::ModuleID)> collect_modules
-			= [&](frontend::ModuleID module_id, BackendType backend, frontend::ModuleID root_module) -> void {
-
+			= [&](frontend::ModuleID module_id, BackendType backend, frontend::ModuleID root_module
+		      ) -> void {
 			// @TODO: #2354 This is temporary.
 			const bool build_debug_info = backend == BackendType::DVM;
 
 			modules_to_compile.push_back({ root_module, module_id, backend, build_debug_info });
 			auto sub_modules = query::entryPoint<frontend::QuerySubmodules>(module_id);
-			for (const auto& [id, sub_module]: *sub_modules) collect_modules(sub_module, backend, root_module);
+			for (const auto& [id, sub_module]: *sub_modules)
+				collect_modules(sub_module, backend, root_module);
 		};
 
-		for (const auto& task: tasks){
+		for (const auto& task: tasks) {
 			variant_match(task.build_target) {
 				variant_case(BuildTargetLLVMExecutable, target_exe) {
 					collect_modules(task.root_module, BackendType::LLVM, task.root_module);
@@ -712,7 +710,8 @@ namespace compiler::driver {
 					collect_modules(task.root_module, BackendType::LLVM, task.root_module);
 				}
 				variant_case_novalue(BuildTargetLLVM) {
-					// Scripts are compiled as a single module, so we don't need to collect submodules here.
+					// Scripts are compiled as a single module, so we don't need to collect
+					// submodules here.
 					collect_modules(task.root_module, BackendType::LLVM, task.root_module);
 				}
 				variant_case_novalue(BuildTargetDVM) {
@@ -721,25 +720,32 @@ namespace compiler::driver {
 			}
 		}
 
-		// Shuffle the modules to compile to increase the chance of better load distribution between worker threads.
-		std::shuffle(modules_to_compile.begin(), modules_to_compile.end(), std::mt19937{ std::random_device{}() });
+		// Shuffle the modules to compile to increase the chance of better load distribution between
+		// worker threads.
+		std::shuffle(
+			modules_to_compile.begin(),
+			modules_to_compile.end(),
+			std::mt19937{ std::random_device{}() }
+		);
 
 		ImplementationOf_CompileModule::total_module_count.store(modules_to_compile.size());
 
 		// Schedule compilation of every module up front so worker threads can run
 		// them concurrently, then collect the results in a second pass.
 		struct ScheduledModule {
-			ModuleToCompile     module;
+			ModuleToCompile        module;
 			query::EntryTaskHandle handle;
 		};
 
 		std::vector<ScheduledModule> compile_handles;
 		compile_handles.reserve(modules_to_compile.size());
 		for (const auto& module: modules_to_compile) {
-			compile_handles.push_back({module ,
-			                            query::scheduleEntryPoint<CompileModule>(
-											{ module.module_id, module.backend, module.build_debug_info }
-										), });
+			compile_handles.push_back({
+				module,
+				query::scheduleEntryPoint<CompileModule>(
+					{ module.module_id, module.backend, module.build_debug_info }
+				),
+			});
 		}
 
 		std::vector<ScheduledModule> debug_info_handles;
@@ -747,25 +753,31 @@ namespace compiler::driver {
 		for (auto& [module, handle]: compile_handles) {
 			auto module_result = query::awaitEntryPoint<CompileModule>(handle);
 			if (module_result->hasValue()) {
-				objects_by_root_module[module.root_module].emplace_back(module_result->valueOrPanic().object_art);
+				objects_by_root_module[module.root_module].emplace_back(
+					module_result->valueOrPanic().object_art
+				);
 
 				// We schedule debug info here, to only schedule it for correctly compiled modules.
 				if (module.build_debug_info) {
-					debug_info_handles.push_back(
-						{module, query::scheduleEntryPoint<DebugInfoForModule>({ module.module_id, module.backend })}
-					);
+					debug_info_handles.push_back({ module,
+					                               query::scheduleEntryPoint<DebugInfoForModule>(
+													   { module.module_id, module.backend }
+												   ) });
 				}
 			} else {
 				result = base::BAD;
 			}
 		}
 
-		base::HashMap<frontend::ModuleID, std::vector<artifacts::FileArtifact>> debug_info_artifacts_by_root_module;
+		base::HashMap<frontend::ModuleID, std::vector<artifacts::FileArtifact>>
+			debug_info_artifacts_by_root_module;
 
 		for (auto [module, handle]: debug_info_handles) {
 			auto di_result = query::awaitEntryPoint<DebugInfoForModule>(handle);
 			if (di_result.hasValue())
-				debug_info_artifacts_by_root_module[module.root_module].emplace_back(di_result.valueOrPanic());
+				debug_info_artifacts_by_root_module[module.root_module].emplace_back(
+					di_result.valueOrPanic()
+				);
 			else {
 				CORE_USER_LOG("Debug info generation failed for a module.");
 				result = base::BAD;
@@ -775,39 +787,51 @@ namespace compiler::driver {
 		if (result.isBad()) return result;
 
 		for (const auto& task: tasks) {
-
 			variant_match(task.build_target) {
 				variant_case(BuildTargetLLVMExecutable, target_exe) {
-					auto output_file = global_state::getRootCollection()->fileArtifactAtOrNew(
-						base::StrID(base::strConcat(target_exe.output_file_stem.strView(), ".exe").c_str())
-					);
+					auto output_file
+						= global_state::getRootCollection()->fileArtifactAtOrNew(base::StrID(
+							base::strConcat(target_exe.output_file_stem.strView(), ".exe").c_str()
+						));
 
 					objects_by_root_module[task.root_module].push_back(emitBuiltinLLVMObjectFile());
 
 					linker::LinkingOptions linking_options{
-						.linker_path             = {},
-						.additional_link_options = std::string(target_exe.additional_linking_options.strView()),
+						.linker_path = {},
+						.additional_link_options
+						= std::string(target_exe.additional_linking_options.strView()),
 						.link_c_standard_library = true,
 					};
-					auto linking_result
-						= linker::linkExecutable(output_file, objects_by_root_module[task.root_module], linking_options);
+					auto linking_result = linker::linkExecutable(
+						output_file, objects_by_root_module[task.root_module], linking_options
+					);
 
 					if (linking_result.isBad()) {
-						CORE_USER_LOG("Linking for package " + compiler::frontend::getModuleRef(task.root_module)->getPackageID().str() + " failed!\n");
+						CORE_USER_LOG(
+							"Linking for package "
+							+ compiler::frontend::getModuleRef(task.root_module)->getPackageID().str()
+							+ " failed!\n"
+						);
 						result = base::BAD;
 					}
 				}
 				variant_case(BuildTargetLLVMStaticLibrary, target_lib) {
-					auto output_file = global_state::getRootCollection()->fileArtifactAtOrNew(
-						base::StrID(base::strConcat(target_lib.output_file_stem.strView(), ".a").c_str())
-					);
+					auto output_file
+						= global_state::getRootCollection()->fileArtifactAtOrNew(base::StrID(
+							base::strConcat(target_lib.output_file_stem.strView(), ".a").c_str()
+						));
 
 					archiver::ArchivingOptions archiving_options{};
-					auto archive_result
-						= archiver::createArchive(output_file, objects_by_root_module[task.root_module], archiving_options);
+					auto                       archive_result = archiver::createArchive(
+                        output_file, objects_by_root_module[task.root_module], archiving_options
+                    );
 
 					if (archive_result.isBad()) {
-						CORE_USER_LOG("Archiving for package " + compiler::frontend::getModuleRef(task.root_module)->getPackageID().str() + " failed!\n");
+						CORE_USER_LOG(
+							"Archiving for package "
+							+ compiler::frontend::getModuleRef(task.root_module)->getPackageID().str()
+							+ " failed!\n"
+						);
 						result = base::BAD;
 					}
 				}
@@ -815,7 +839,12 @@ namespace compiler::driver {
 					// Do nothing for plain object files
 				}
 				variant_case_novalue(BuildTargetDVM) {
-					if (linkDVMPackage(objects_by_root_module[task.root_module], debug_info_artifacts_by_root_module[task.root_module], "package_dvm").isBad())
+					if (linkDVMPackage(
+							objects_by_root_module[task.root_module],
+							debug_info_artifacts_by_root_module[task.root_module],
+							"package_dvm"
+						)
+					        .isBad())
 						result = base::BAD;
 				}
 			}

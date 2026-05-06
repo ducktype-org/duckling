@@ -313,7 +313,7 @@ private:
 		std::vector<fs::File> cleanup_files;
 		auto                  module_builder = ModuleTreeBuilder::create();
 		module_builder->setName(base::StrID("sf_removal_mod"));
-		module_builder->setPackageID("sf_removal_pkg");
+		module_builder->setPackageID(base::StrID("sf_removal_pkg"));
 		auto main_file = fs::FileManager::createRandomVirtualFile("fn main() {}");
 		cleanup_files.push_back(main_file);
 		module_builder->setMainSourceFile(main_file);
@@ -340,7 +340,7 @@ private:
 		std::vector<fs::File> cleanup_files;
 		auto                  module_builder = ModuleTreeBuilder::create();
 		module_builder->setName(base::StrID("sf_dangling_mod"));
-		module_builder->setPackageID("sf_dangling_pkg");
+		module_builder->setPackageID(base::StrID("sf_dangling_pkg"));
 		auto main_file = fs::FileManager::createRandomVirtualFile("fn main() {}");
 		cleanup_files.push_back(main_file);
 		module_builder->setMainSourceFile(main_file);

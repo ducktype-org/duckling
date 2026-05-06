@@ -9,11 +9,10 @@
 #include <base/types/bit256.hpp>
 #include <base/types/ints.hpp>
 
-#include "query_framework/context/context.hpp"
+#include <query_framework/context/context.hpp>
+#include <query_framework/query_errors.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 #include <string_id/string_id.hpp>
-
-#include <query_framework/query_errors.hpp>
 
 namespace compiler::frontend {
 
@@ -25,16 +24,16 @@ namespace compiler::frontend {
 		}
 
 		const global_state::PackageInfo& getPackageInfo(query::Context& ctx, ModuleID module_id) {
-			auto root_ancestor = getRootAncestorModuleID(ctx, module_id);
-			const auto& all_packages = global_state::getPackages();
-			for (const auto& pkg : all_packages)
+			auto        root_ancestor = getRootAncestorModuleID(ctx, module_id);
+			const auto& all_packages  = global_state::getPackages();
+			for (const auto& pkg: all_packages)
 				if (pkg.root_module == root_ancestor) return pkg;
 			CORE_PANIC("Root module does not belong to any package");
 		}
 
 		const global_state::PackageInfo& getPackageInfo(base::StrID package_id) {
 			const auto& all_packages = global_state::getPackages();
-			for (const auto& pkg : all_packages)
+			for (const auto& pkg: all_packages)
 				if (getModuleRef(pkg.root_module)->getPackageID() == package_id) return pkg;
 			CORE_PANIC("Package not found");
 		}
@@ -69,10 +68,11 @@ namespace compiler::frontend {
 		}
 
 		if (not current_module.has_value()) {
-			// Get the package info of the current module package and look for the dependency with the alias same as imported name.
+			// Get the package info of the current module package and look for the dependency with
+			// the alias same as imported name.
 			const auto& package_info = getPackageInfo(ctx, from);
-			for (const auto& dep : package_info.dependencies) {
-				if(path.at(0) == dep.alias) {
+			for (const auto& dep: package_info.dependencies) {
+				if (path.at(0) == dep.alias) {
 					current_module = getPackageInfo(dep.package_id).root_module;
 					break;
 				}

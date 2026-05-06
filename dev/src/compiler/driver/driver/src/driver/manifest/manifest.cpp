@@ -2,9 +2,11 @@
 
 #include "utils.hpp"
 
-#include <base/pointers/box.hpp>
 #include <diagnostic_interactive/placeholder.hpp>
 #include <global_state/global_logger.hpp>
+
+#include <base/pointers/box.hpp>
+
 #include <json/json.hpp>
 
 namespace compiler::driver {
@@ -23,7 +25,7 @@ namespace compiler::driver {
 
 		std::vector<RawPackageInfo> packages;
 		packages.reserve(packages_array->size());
-		for (const auto& pkg_json : *packages_array) {
+		for (const auto& pkg_json: *packages_array) {
 			auto pkg = RawPackageInfo::fromJson(pkg_json);
 			if (!pkg) return {};
 			packages.push_back(std::move(*pkg));
@@ -34,7 +36,7 @@ namespace compiler::driver {
 
 		std::vector<RawTask> tasks;
 		tasks.reserve(tasks_array->size());
-		for (const auto& task_json : *tasks_array) {
+		for (const auto& task_json: *tasks_array) {
 			auto task = RawTask::fromJson(task_json);
 			if (!task) return {};
 			tasks.push_back(std::move(*task));

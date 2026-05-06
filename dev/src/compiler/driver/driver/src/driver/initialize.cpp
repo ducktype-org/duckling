@@ -5,7 +5,7 @@
 #include <concurrent/module_flags/worker_count.hpp>
 #include <diagnostic_interactive/logger.hpp>
 #include <diagnostic_interactive/module_flags/module_flags.hpp>
-#include <diagnostic_interactive/placeholder.hpp> 
+#include <diagnostic_interactive/placeholder.hpp>
 #include <driver/incremental_utils/collect_input.hpp>
 #include <driver/module_flags/module_flags.hpp>
 #include <frontend/module_tree/functors.hpp>
@@ -76,8 +76,7 @@ namespace compiler::driver {
 			);
 		}
 
-		base::OkBad handlePackageOptions(const std::vector<RawPackageInfo>& packages_info
-		) {
+		base::OkBad handlePackageOptions(const std::vector<RawPackageInfo>& packages_info) {
 			for (const auto& package_info: packages_info) {
 				auto global_package_info = createGlobalPackageInfo(package_info);
 				if (!global_package_info.has_value()) return base::BAD;
@@ -128,9 +127,8 @@ namespace compiler::driver {
 				query::external::setPreviousMetadataFromRawBytes(span);
 
 				// We need to parse all files before compilation to collect all PST elements.
-				for (const auto& package_info : global_state::getPackages()) {
+				for (const auto& package_info: global_state::getPackages())
 					compiler::frontend::parseAllFilesInModuleTree(package_info.root_module);
-				}
 
 				// Collect all Inputs and Side inputs and perform red-green sweep.
 				// This must be called after loading both the graph and metadata, as metadata

@@ -1,14 +1,14 @@
+#include <diagnostic_interactive/core/diagnostic_arguments.hpp>
+#include <diagnostic_interactive/logger.hpp>
 #include <driver/manifest/manifest.hpp>
 #include <driver/manifest/utils.hpp>
 #include <driver/packages/packages.hpp>
 #include <driver/task/task.hpp>
-
-#include <diagnostic_interactive/core/diagnostic_arguments.hpp>
-#include <diagnostic_interactive/logger.hpp>
 #include <global_state/global_logger.hpp>
 
 #include <base/pointers/box.hpp>
 #include <base/pointers/ref.hpp>
+
 #include <tester/tester.hpp>
 
 #include <json/json.hpp>
@@ -45,9 +45,8 @@ private:
 	bool hasWarning() {
 		std::vector<base::CRef<dia_int::dia_args::Diagnostic>> diags;
 		logger().collectDiagnostics(diags);
-		for (const auto& d : diags) {
+		for (const auto& d: diags)
 			if (d.get().main_message.metadata.type == "warning") return true;
-		}
 		return false;
 	}
 
@@ -179,7 +178,7 @@ private:
 	void dvmStrategyParsed() {
 		clearLogger();
 
-		auto json = json::parse(R"({ "package": "mylib", "strategy": "dvm" })");
+		auto json   = json::parse(R"({ "package": "mylib", "strategy": "dvm" })");
 		auto result = RawPackageCompilationTask::fromJson(json);
 
 		ASSERT_TRUE(result.has_value());
@@ -206,7 +205,7 @@ private:
 	void unknownStrategyFails() {
 		clearLogger();
 
-		auto json = json::parse(R"({ "package": "app", "strategy": "wasm" })");
+		auto json   = json::parse(R"({ "package": "app", "strategy": "wasm" })");
 		auto result = RawPackageCompilationTask::fromJson(json);
 
 		ASSERT_FALSE(result.has_value());

@@ -50,9 +50,7 @@ namespace {
 	 * @param reject_directory_regex The regex to use for rejection.
 	 * @return True if valid, false otherwise.
 	 */
-	bool isDirectoryNameValid(
-		base::StrID dirname, const std::regex& reject_directory_regex
-	) {
+	bool isDirectoryNameValid(base::StrID dirname, const std::regex& reject_directory_regex) {
 		auto view = dirname.strView();
 		return !std::regex_match(view.begin(), view.end(), reject_directory_regex);
 	}
@@ -80,7 +78,7 @@ namespace compiler::frontend {
 
 	Ref<ModuleTree> ModuleTreeBuilder::create(
 		const fs::File&   root,
-		base::StrID  package_id,
+		base::StrID       package_id,
 		const std::regex& file_reject,
 		const std::regex& dir_reject
 	) {
@@ -98,10 +96,7 @@ namespace compiler::frontend {
 		const fs::File& root, const std::regex& file_reject, const std::regex& dir_reject
 	) {
 		return create(
-			root,
-			base::StrID(base::generateRandomString(32).c_str()),
-			file_reject,
-			dir_reject
+			root, base::StrID(base::generateRandomString(32).c_str()), file_reject, dir_reject
 		);
 	}
 
@@ -305,7 +300,7 @@ namespace compiler::frontend {
 
 	void ModuleTreeBuilder::buildFromDirectory(
 		const fs::File&   directory,
-		base::StrID  package_id,
+		base::StrID       package_id,
 		const std::regex& file_reject,
 		const std::regex& dir_reject
 	) {
@@ -404,7 +399,7 @@ namespace compiler::frontend {
 		base::Box<ModuleTreeBuilder> builder = ModuleTreeBuilder::create();
 		builder->setPackageID(base::StrID(base::generateRandomString(32).c_str()));
 		return builder;
-	}	
+	}
 
 	void ModuleTreeBuilder::addSourceFile(const fs::File& file) {
 		CORE_ASSERT(!m_finalized, "Builder already finalized");
@@ -713,20 +708,20 @@ namespace compiler::frontend {
 			module->m_parent.value()->getName().strView()
 		);
 
-		std::function<void(base::Ref<ModuleTree>, base::StrID)> change_package_id =
-			[&](base::Ref<ModuleTree> internal, base::StrID internal_new_package_id) {
-				CORE_ASSERT(
-					internal->m_package_id.isGood(), "Module does not have a valid package ID"
-				);
-				internal->m_package_id = internal_new_package_id;
+		std::function<void(base::Ref<ModuleTree>, base::StrID)> change_package_id
+			= [&](base::Ref<ModuleTree> internal, base::StrID internal_new_package_id) {
+				  CORE_ASSERT(
+					  internal->m_package_id.isGood(), "Module does not have a valid package ID"
+				  );
+				  internal->m_package_id = internal_new_package_id;
 
-				// Change the package ID for all submodules recursively
-				for (auto& [_, submodule]: internal->m_submodules)
-					change_package_id(submodule, internal_new_package_id);
+				  // Change the package ID for all submodules recursively
+				  for (auto& [_, submodule]: internal->m_submodules)
+					  change_package_id(submodule, internal_new_package_id);
 
-				// Invalidate component hash for the module and its children as the package ID changed
-				internal->invalidateHash();
-			};
+				  // Invalidate component hash for the module and its children as the package ID changed
+				  internal->invalidateHash();
+			  };
 
 		change_package_id(module, new_package_id);
 	}
