@@ -1,9 +1,6 @@
 Tests:
   sample_duck:
     Cases:
-      llvm:
-        backend: llvm
-        ExitCode: 3
-      dvm:
-        backend: dvm
+      all:
+        backend: all
         ExitCode: 3
