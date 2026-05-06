@@ -10,7 +10,6 @@
 				"sourceEnd": 35
 			},
 			"While": {
-				"name": "<ANONYMOUS>",
 				"condition": {
 					"position": {
 						"sourceStart": 5,
@@ -42,7 +41,13 @@
 													},
 													"Identifier Expression": {
 														"name": {
-															"Name": "a"
+															"position": {
+																"sourceStart": 6,
+																"sourceEnd": 6
+															},
+															"Identifier Wrapper": {
+																"value": "a"
+															}
 														}
 													}
 												},
@@ -62,7 +67,13 @@
 													},
 													"Identifier Expression": {
 														"name": {
-															"Name": "b"
+															"position": {
+																"sourceStart": 10,
+																"sourceEnd": 10
+															},
+															"Identifier Wrapper": {
+																"value": "b"
+															}
 														}
 													}
 												}
@@ -155,7 +166,13 @@
 													},
 													"Identifier Expression": {
 														"name": {
-															"Name": "c"
+															"position": {
+																"sourceStart": 28,
+																"sourceEnd": 28
+															},
+															"Identifier Wrapper": {
+																"value": "c"
+															}
 														}
 													}
 												},
@@ -175,7 +192,13 @@
 													},
 													"Identifier Expression": {
 														"name": {
-															"Name": "d"
+															"position": {
+																"sourceStart": 32,
+																"sourceEnd": 32
+															},
+															"Identifier Wrapper": {
+																"value": "d"
+															}
 														}
 													}
 												}

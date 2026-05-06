@@ -68,8 +68,10 @@ namespace pst {
 	}
 
 	void ImportStarHides::calcElementPathHashRecursive() {
-		calcIndexedListChildPath<IdentifierWrapper>({ names }, getElementPathHash());
+		calcIndexedListChildPath<IdentifierWrapper>({ names }, { getElementPathHash(), "names" });
 		if (hides.has_value())
-			calcIndexedListChildPath<IdentifierWrapper>({ hides.value() }, getElementPathHash());
+			calcIndexedListChildPath<IdentifierWrapper>(
+				{ hides.value() }, { getElementPathHash(), "hides" }
+			);
 	}
 }

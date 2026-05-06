@@ -23,9 +23,9 @@ namespace pst {
 	void Alias::dprint(std::ostream& out) const {
 		out << "{";
 
-		out << R"("name": ")";
+		out << R"("name": )";
 		nullAwareDprint(name, out);
-		out << R"(",)";
+		out << R"(,)";
 
 		out << R"("points_to": )";
 

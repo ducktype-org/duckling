@@ -16,7 +16,15 @@
 						"sourceEnd": 10
 					},
 					"StmtSpecifier": {
-						"specifier": "extern",
+						"specifier": {
+							"position": {
+								"sourceStart": 0,
+								"sourceEnd": 5
+							},
+							"Keyword Wrapper": {
+								"value": "extern"
+							}
+						},
 						"call_list": {
 							"position": {
 								"sourceStart": 7,
@@ -29,7 +37,6 @@
 										"sourceEnd": 9
 									},
 									"Call argument": {
-										"name": "<ANONYMOUS>",
 										"value": {
 											"position": {
 												"sourceStart": 7,
@@ -68,7 +75,13 @@
 							},
 							"Function": {
 								"name": {
-									"Name": "getpid"
+									"position": {
+										"sourceStart": 26,
+										"sourceEnd": 31
+									},
+									"Identifier Wrapper": {
+										"value": "getpid"
+									}
 								},
 								"parameters": {
 									"position": {
@@ -89,7 +102,15 @@
 												"sourceEnd": 40
 											},
 											"Keyword Expression": {
-												"keyword": "i32"
+												"keyword": {
+													"position": {
+														"sourceStart": 38,
+														"sourceEnd": 40
+													},
+													"Keyword Wrapper": {
+														"value": "i32"
+													}
+												}
 											}
 										}
 									}
@@ -120,7 +141,13 @@
 												},
 												"Identifier Expression": {
 													"name": {
-														"Name": "struct"
+														"position": {
+															"sourceStart": 48,
+															"sourceEnd": 53
+														},
+														"Identifier Wrapper": {
+															"value": "struct"
+														}
 													}
 												}
 											},
@@ -152,7 +179,13 @@
 																},
 																"Var": {
 																	"name": {
-																		"Name": "x"
+																		"position": {
+																			"sourceStart": 76,
+																			"sourceEnd": 76
+																		},
+																		"Identifier Wrapper": {
+																			"value": "x"
+																		}
 																	},
 																	"mutable": true,
 																	"type": {
@@ -167,7 +200,15 @@
 																					"sourceEnd": 81
 																				},
 																				"Keyword Expression": {
-																					"keyword": "i32"
+																					"keyword": {
+																						"position": {
+																							"sourceStart": 79,
+																							"sourceEnd": 81
+																						},
+																						"Keyword Wrapper": {
+																							"value": "i32"
+																						}
+																					}
 																				}
 																			}
 																		}
@@ -199,7 +240,15 @@
 						"sourceEnd": 115
 					},
 					"StmtSpecifier": {
-						"specifier": "extern",
+						"specifier": {
+							"position": {
+								"sourceStart": 94,
+								"sourceEnd": 99
+							},
+							"Keyword Wrapper": {
+								"value": "extern"
+							}
+						},
 						"call_list": {
 							"position": {
 								"sourceStart": 101,
@@ -212,7 +261,6 @@
 										"sourceEnd": 103
 									},
 									"Call argument": {
-										"name": "<ANONYMOUS>",
 										"value": {
 											"position": {
 												"sourceStart": 101,
@@ -238,7 +286,6 @@
 										"sourceEnd": 114
 									},
 									"Call argument": {
-										"name": "<ANONYMOUS>",
 										"value": {
 											"position": {
 												"sourceStart": 106,
@@ -265,7 +312,13 @@
 			],
 			"Function": {
 				"name": {
-					"Name": "SSL_new"
+					"position": {
+						"sourceStart": 125,
+						"sourceEnd": 131
+					},
+					"Identifier Wrapper": {
+						"value": "SSL_new"
+					}
 				},
 				"parameters": {
 					"position": {
@@ -281,7 +334,13 @@
 							"Parameter": {
 								"Parameter": {
 									"name": {
-										"Name": "a"
+										"position": {
+											"sourceStart": 133,
+											"sourceEnd": 133
+										},
+										"Identifier Wrapper": {
+											"value": "a"
+										}
 									},
 									"type": {
 										"position": {
@@ -295,7 +354,15 @@
 													"sourceEnd": 138
 												},
 												"Keyword Expression": {
-													"keyword": "i32"
+													"keyword": {
+														"position": {
+															"sourceStart": 136,
+															"sourceEnd": 138
+														},
+														"Keyword Wrapper": {
+															"value": "i32"
+														}
+													}
 												}
 											}
 										}
@@ -317,7 +384,15 @@
 								"sourceEnd": 146
 							},
 							"Keyword Expression": {
-								"keyword": "i32"
+								"keyword": {
+									"position": {
+										"sourceStart": 144,
+										"sourceEnd": 146
+									},
+									"Keyword Wrapper": {
+										"value": "i32"
+									}
+								}
 							}
 						}
 					}
