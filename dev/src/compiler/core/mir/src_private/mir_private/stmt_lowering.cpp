@@ -298,15 +298,6 @@ namespace compiler::mir {
 				variant_default { CORE_PANIC("Assignment to unsupported MIRValue kind."); }
 			}
 		}
-
-		void visitBlockStmt(const hc::BlockStmt& stmt) override {
-			auto block_scope = function.newScope(parent_scope);
-
-			auto block_body
-				= lowerCodeBlock(stmt.body, continuation, function, block_scope);
-
-			output({ block_body.begin });
-		}
 	};
 
 	StmtLowerRes lowerStmt(

@@ -133,11 +133,6 @@ namespace compiler::mir {
 
 ID_STD_HASH(::compiler::mir::BlockID);
 
-MAKE_FLAG_TYPE(compiler::mir, LifetimeAnalysisOptions, LifetimeAnalysisFlags,
-	NoDestructorInsertion,
-	NoUseAfterFreeValidation
-)
-
 namespace compiler::mir {
 	struct MIRValue;
 
@@ -150,6 +145,7 @@ namespace compiler::mir {
 	struct MIRConstant final {
 		ctv::CompileTimeValue value;
 	};
+
 	/**
 	 * Represent a direct reference to a function linked to a HELIOS SymID.
 	 */
@@ -194,7 +190,6 @@ namespace compiler::mir {
 		 */
 		base::Optional<ScopeRef> scope;
 
-		LifetimeAnalysisOptions lifetime_analysis_options{};
 		/**
 		 * If this local is a function parameter, this field contains the index of the parameter.
 		 */

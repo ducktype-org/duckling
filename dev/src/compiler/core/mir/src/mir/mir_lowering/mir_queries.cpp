@@ -94,8 +94,6 @@ namespace compiler::mir {
 
 		void visitWhileStmt(const hc::WhileStmt& stmt) override { goOverCodeBlock(stmt.body); }
 
-		void visitBlockStmt(const hc::BlockStmt& stmt) override { goOverCodeBlock(stmt.body); }
-
 		// Explicit empty boilerplate. Expected changes when block expressions are implemented.
 
 		void visitReturnStmt(const hc::ReturnStmt&) override {}
