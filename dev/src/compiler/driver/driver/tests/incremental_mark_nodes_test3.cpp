@@ -38,9 +38,9 @@ private:
 		// Initialize with changed functions path (same package name as previous step)
 		auto init_result = compiler::driver::initializeTheCompiler(
             compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
-				.main_packages_info = {
+				.packages_info = {
 					{
-						.package_name  = std::string("mark_nodes_test_package"),
+						.package_name = base::StrID("mark_nodes_test_package"),
 						.package_path  = fs::FilePath(path("modules/incremental/changed_functions/functions_1")),
 						.dependencies = {},
 					},
@@ -92,7 +92,7 @@ private:
 		// Compile module to trigger red-green sweep
 		auto module = frontend::createModuleTree(
 			fs::File(path("modules/incremental/changed_functions/functions_1")),
-			"mark_nodes_test_package"
+			base::StrID("mark_nodes_test_package")
 		);
 
 		query::utils::withContextDo([&](query::Context& ctx) {

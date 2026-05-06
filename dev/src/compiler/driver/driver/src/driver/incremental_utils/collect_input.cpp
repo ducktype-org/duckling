@@ -190,19 +190,8 @@ namespace compiler::driver {
 			std::vector<frontend::ModuleID> module_ids;
 			for (const auto& package: global_state::getPackages()) {
 				module_ids.push_back(package.root_module);
-				for (const auto& dep: package.dependencies)
-					if (auto dep_pkg = global_state::getPackageRefOpt(dep.package_id))
-						module_ids.push_back(dep_pkg->get()->root_module);
 			}
-			std::hash<frontend::ModuleID> module_id_hasher;
-			std::sort(
-				module_ids.begin(),
-				module_ids.end(),
-				[&](const frontend::ModuleID& a, const frontend::ModuleID& b) {
-					return module_id_hasher(a) < module_id_hasher(b);
-				}
-			);
-			module_ids.erase(std::unique(module_ids.begin(), module_ids.end()), module_ids.end());
+			
 			for (const auto module_id: module_ids)
 				collectFromModule(lookups_map, module_id, base::Ref(&out));
 

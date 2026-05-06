@@ -39,9 +39,9 @@ private:
 		// Re-initialize compiler which will load the previous graph from artifacts
 		auto init_result = compiler::driver::initializeTheCompiler(
             compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
-				.main_packages_info = {
+				.packages_info = {
 					{
-						.package_name  = std::string("mark_nodes_test_package"),
+						.package_name = base::StrID("mark_nodes_test_package"),
 						.package_path  = fs::FilePath(path("modules/incremental/org_functions/functions_1")),
 						.dependencies = {},
 					},
@@ -90,7 +90,7 @@ private:
 		// Compile the module again to trigger loadFromDisc and use the previous graph
 		auto module = frontend::createModuleTree(
 			fs::File(path("modules/incremental/org_functions/functions_1")),
-			"mark_nodes_test_package"
+			base::StrID("mark_nodes_test_package")
 		);
 
 		// Build a NodeID for the CompileModule query with the exact key we used

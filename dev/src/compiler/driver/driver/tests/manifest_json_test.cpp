@@ -14,7 +14,6 @@
 #include <json/json.hpp>
 
 using namespace compiler::driver;
-using namespace nlohmann;
 
 class ManifestJsonTest final: public tester::TestSuite {
 #undef TESTER_CLASS
@@ -46,7 +45,7 @@ private:
 		std::vector<base::CRef<dia_int::dia_args::Diagnostic>> diags;
 		logger().collectDiagnostics(diags);
 		for (const auto& d: diags)
-			if (d.get().main_message.metadata.type == "warning") return true;
+			if (d->main_message.metadata.type == "warning") return true;
 		return false;
 	}
 
@@ -55,7 +54,7 @@ private:
 	void validManifestParsed() {
 		clearLogger();
 
-		auto json = json::parse(R"({
+		auto manifest_json = nlohmann::json::parse(R"({
             "packages": [
                 {
                     "name": "mylib",
@@ -82,7 +81,7 @@ private:
             ]
         })");
 
-		auto result = PackageCompilationManifest::fromJson(json);
+		auto result = PackageCompilationManifest::fromJson(manifest_json);
 
 		ASSERT_TRUE(result.has_value());
 		ASSERT_TRUE(logger().good());
@@ -97,20 +96,20 @@ private:
 	void missingPackagesFieldFails() {
 		clearLogger();
 
-		auto json = json::parse(R"({
+		auto manifest_json = nlohmann::json::parse(R"({
             "tasks": []
         })");
 
-		auto result = PackageCompilationManifest::fromJson(json);
+		auto result = PackageCompilationManifest::fromJson(manifest_json);
 
-		ASSERT_FALSE(result.has_value());
+		ASSERT_TRUE(!result.has_value());
 		ASSERT_TRUE(logger().hasErrors());
 	}
 
 	void missingPackageNameFails() {
 		clearLogger();
 
-		auto json = json::parse(R"({
+		auto manifest_json = nlohmann::json::parse(R"({
             "packages": [
                 {
                     "version": "1.0.0",
@@ -122,32 +121,32 @@ private:
             "tasks": []
         })");
 
-		auto result = PackageCompilationManifest::fromJson(json);
+		auto result = PackageCompilationManifest::fromJson(manifest_json);
 
-		ASSERT_FALSE(result.has_value());
+		ASSERT_TRUE(!result.has_value());
 		ASSERT_TRUE(logger().hasErrors());
 	}
 
 	void missingTaskPackageFails() {
 		clearLogger();
 
-		auto json = json::parse(R"({
+		auto manifest_json = nlohmann::json::parse(R"({
             "packages": [],
             "tasks": [
                 { "strategy": "dvm" }
             ]
         })");
 
-		auto result = PackageCompilationManifest::fromJson(json);
+		auto result = PackageCompilationManifest::fromJson(manifest_json);
 
-		ASSERT_FALSE(result.has_value());
+		ASSERT_TRUE(!result.has_value());
 		ASSERT_TRUE(logger().hasErrors());
 	}
 
 	void unknownFieldsWarnNotError() {
 		clearLogger();
 
-		auto json = json::parse(R"({
+		auto manifest_json = nlohmann::json::parse(R"({
             "packages": [
                 {
                     "name": "app",
@@ -168,18 +167,18 @@ private:
             ]
         })");
 
-		auto result = PackageCompilationManifest::fromJson(json);
+		auto result = PackageCompilationManifest::fromJson(manifest_json);
 
 		ASSERT_TRUE(result.has_value());
-		ASSERT_FALSE(logger().hasErrors());
+		ASSERT_TRUE(!logger().hasErrors());
 		ASSERT_TRUE(hasWarning());
 	}
 
 	void dvmStrategyParsed() {
 		clearLogger();
 
-		auto json   = json::parse(R"({ "package": "mylib", "strategy": "dvm" })");
-		auto result = RawPackageCompilationTask::fromJson(json);
+		auto task_json = nlohmann::json::parse(R"({ "package": "mylib", "strategy": "dvm" })");
+		auto result    = RawPackageCompilationTask::fromJson(task_json);
 
 		ASSERT_TRUE(result.has_value());
 		ASSERT_TRUE(logger().good());
@@ -190,10 +189,10 @@ private:
 	void nativeStrategyParsed() {
 		clearLogger();
 
-		auto json = json::parse(
+		auto task_json = nlohmann::json::parse(
 			R"({ "package": "app", "strategy": "native", "output_file": "bin/app", "linking_options": "-lm" })"
 		);
-		auto result = RawPackageCompilationTask::fromJson(json);
+		auto result = RawPackageCompilationTask::fromJson(task_json);
 
 		ASSERT_TRUE(result.has_value());
 		ASSERT_TRUE(logger().good());
@@ -205,10 +204,10 @@ private:
 	void unknownStrategyFails() {
 		clearLogger();
 
-		auto json   = json::parse(R"({ "package": "app", "strategy": "wasm" })");
-		auto result = RawPackageCompilationTask::fromJson(json);
+		auto task_json = nlohmann::json::parse(R"({ "package": "app", "strategy": "wasm" })");
+		auto result    = RawPackageCompilationTask::fromJson(task_json);
 
-		ASSERT_FALSE(result.has_value());
+		ASSERT_TRUE(!result.has_value());
 		ASSERT_TRUE(logger().hasErrors());
 	}
 

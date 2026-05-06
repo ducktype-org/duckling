@@ -42,6 +42,22 @@ namespace compiler::driver {
 	 */
 	base::OkBad compilePackages(const std::vector<PackageCompilationTask>& tasks);
 
+	/**
+	 * @brief Compile a single package.
+	 * In normal compilation mode, compilePackages should be used
+	 * This function is olnly for testing purpose
+	 */
+	inline base::OkBad compileEntirePackage(
+		const global_state::PackageInfo& package_info, const BuildTarget& build_target
+	) {
+		return compilePackages({
+			PackageCompilationTask{
+				.root_module  = package_info.root_module,
+				.build_target = build_target,
+			},
+		});
+	}
+
 	struct RunOutput final {
 		int exit_code;
 	};

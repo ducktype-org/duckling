@@ -58,9 +58,9 @@ protected:
 	void beforeAll() override {
 		auto init_result = compiler::driver::initializeTheCompiler(
 			compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
-				.main_packages_info = {
+				.packages_info = {
 					{
-						.package_name  = package_name,
+						.package_name = base::StrID(package_name.c_str()),
 						.package_path  = fs::FilePath(path("modules/functions_1")),
 						.dependencies = {},
 					},
@@ -207,22 +207,19 @@ private:
 			package_id += std::to_string(precompile_suffix++);
 
 			global_state::PackageInfo package_info{
-				.root_module
-				= frontend::createModuleTree(fs::File(path(info.module_path)), package_id),
+				.root_module = frontend::createModuleTree(
+					fs::File(path(info.module_path)), base::StrID(package_id.c_str())
+				),
 				.dependencies = {},
 			};
 
 			driver::compileEntirePackage(
-package_info,
-			driver::BuildTargetLLVMExecutable{
-				.output_file_name = "package_llvm",
-				.linking_options = {
-					.linker_path             = {},
-					.additional_link_options = {},
-					.link_c_standard_library = true,
+				package_info,
+				driver::BuildTargetLLVMExecutable{
+					.output_file_stem           = base::StrID("package_llvm"),
+					.additional_linking_options = base::StrID(""),
 				}
-			}
-		);
+			);
 		}
 
 		// ================================================================================
@@ -419,8 +416,9 @@ package_info,
 	void objFileGenerated() {
 		using namespace compiler;
 
-		auto module
-			= frontend::createModuleTree(fs::File(path("modules/functions_1")), package_name);
+		auto module = frontend::createModuleTree(
+			fs::File(path("modules/functions_1")), base::StrID(package_name.c_str())
+		);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			// This method can fail on module verification
@@ -438,8 +436,9 @@ package_info,
 	void debugInfoGenerated() {
 		using namespace compiler;
 
-		auto module
-			= frontend::createModuleTree(fs::File(path("modules/functions_2")), package_name);
+		auto module = frontend::createModuleTree(
+			fs::File(path("modules/functions_2")), base::StrID(package_name.c_str())
+		);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto artifacts
@@ -464,8 +463,9 @@ package_info,
 		compiler::driver::llvm_dump_asm = true;
 		defer(compiler::driver::llvm_dump_ir = false; compiler::driver::llvm_dump_asm = false;);
 
-		auto module
-			= frontend::createModuleTree(fs::File(path("modules/functions_3")), package_name);
+		auto module = frontend::createModuleTree(
+			fs::File(path("modules/functions_3")), base::StrID(package_name.c_str())
+		);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			// This method can fail on module verification
@@ -492,8 +492,9 @@ package_info,
 	void dvmBackendRuns() {
 		using namespace compiler;
 
-		auto module
-			= frontend::createModuleTree(fs::File(path("modules/functions_4")), package_name);
+		auto module = frontend::createModuleTree(
+			fs::File(path("modules/functions_4")), base::StrID(package_name.c_str())
+		);
 
 
 		query::utils::withContextDo([&](query::Context& ctx) {
@@ -510,20 +511,17 @@ package_info,
 		// this also checks if llvm IR lib compile and link into the executable:
 
 		global_state::PackageInfo package_info{
-			.root_module
-			= frontend::createModuleTree(fs::File(path("modules/functions_5")), package_name),
+			.root_module = frontend::createModuleTree(
+				fs::File(path("modules/functions_5")), base::StrID(package_name.c_str())
+			),
 			.dependencies = {},
 		};
 
 		driver::compileEntirePackage(
-package_info,
+			package_info,
 			driver::BuildTargetLLVMExecutable{
-				.output_file_name = "package_llvm",
-				.linking_options = {
-					.linker_path             = {},
-					.additional_link_options = {},
-					.link_c_standard_library = true,
-				}
+				.output_file_stem           = base::StrID("package_llvm"),
+				.additional_linking_options = base::StrID(""),
 			}
 		);
 
@@ -545,7 +543,9 @@ package_info,
 	void globalsTest() {
 		using namespace compiler;
 
-		auto module = frontend::createModuleTree(fs::File(path("modules/globals")), package_name);
+		auto module = frontend::createModuleTree(
+			fs::File(path("modules/globals")), base::StrID(package_name.c_str())
+		);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			// This method can fail on module verification
@@ -577,7 +577,7 @@ package_info,
 		using namespace compiler;
 
 		auto module = frontend::createModuleTree(
-			fs::File(path("modules/globals_initialization")), package_name
+			fs::File(path("modules/globals_initialization")), base::StrID(package_name.c_str())
 		);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
@@ -591,7 +591,7 @@ package_info,
 		using namespace compiler;
 
 		auto module = frontend::createModuleTree(
-			fs::File(path("modules/functions_1")), "artifacts_test_package"
+			fs::File(path("modules/functions_1")), base::StrID("artifacts_test_package")
 		);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
@@ -628,20 +628,17 @@ package_info,
 		using namespace compiler;
 
 		global_state::PackageInfo package_info{
-			.root_module
-			= frontend::createModuleTree(fs::File(path("modules/import_simple")), "import_simple"),
+			.root_module = frontend::createModuleTree(
+				fs::File(path("modules/import_simple")), base::StrID("import_simple")
+			),
 			.dependencies = {},
 		};
 
 		driver::compileEntirePackage(
-package_info,
+			package_info,
 			driver::BuildTargetLLVMExecutable{
-				.output_file_name = "package_llvm",
-				.linking_options = {
-					.linker_path             = {},
-					.additional_link_options = {},
-					.link_c_standard_library = true,
-				}
+				.output_file_stem           = base::StrID("package_llvm"),
+				.additional_linking_options = base::StrID(""),
 			}
 		);
 
@@ -751,20 +748,17 @@ package_info,
 
 		global_state::PackageInfo package_info{
 			.root_module = frontend::createModuleTree(
-				fs::File(path("modules/imports_complicated")), "imports_complicated_test"
+				fs::File(path("modules/imports_complicated")),
+				base::StrID("imports_complicated_test")
 			),
 			.dependencies = {},
 		};
 
 		driver::compileEntirePackage(
-package_info,
+			package_info,
 			driver::BuildTargetLLVMExecutable{
-				.output_file_name = "package_llvm",
-				.linking_options = {
-					.linker_path             = {},
-					.additional_link_options = {},
-					.link_c_standard_library = true,
-				}
+				.output_file_stem           = base::StrID("package_llvm"),
+				.additional_linking_options = base::StrID(""),
 			}
 		);
 
@@ -1035,8 +1029,9 @@ package_info,
 		};
 
 		global_state::PackageInfo dvm_package_info{
-			.root_module
-			= frontend::createModuleTree(fs::File(path("modules/functions_2")), "src_pos_dvm"),
+			.root_module = frontend::createModuleTree(
+				fs::File(path("modules/functions_2")), base::StrID("src_pos_dvm")
+			),
 			.dependencies = {},
 		};
 

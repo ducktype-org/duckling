@@ -42,9 +42,9 @@ private:
 		// Initialize compiler (as in markPreviousLeavesGreenTest, first stage)
 		auto init_result= compiler::driver::initializeTheCompiler(
             compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
-				.main_packages_info = {
+				.packages_info = {
 					{
-						.package_name  = std::string("mark_nodes_test_package"),
+						.package_name = base::StrID("mark_nodes_test_package"),
 						.package_path  = fs::FilePath(path("modules/incremental/org_functions/functions_1")),
 						.dependencies = {},
 					},
@@ -64,7 +64,7 @@ private:
 		// First compilation creates a current graph
 		auto module = frontend::createModuleTree(
 			fs::File(path("modules/incremental/org_functions/functions_1")),
-			"mark_nodes_test_package"
+			base::StrID("mark_nodes_test_package")
 		);
 
 		// Get the submodule "submodule" id for compilation
