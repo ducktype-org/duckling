@@ -12,7 +12,6 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <string>
 
 // Definition of the Duckling string representation.
 struct str {
@@ -279,8 +278,9 @@ void builtin_list_free(list* list) {
 }
 
 str builtin_stringify_i64(int64_t v) {
-	const auto stringified = std::to_string(v);
-	const auto length      = stringified.size();
+	char stringified[21];
+	snprintf(stringified, sizeof(stringified), "%ld", v);
+	uint64_t length = strlen(stringified);
 
 	auto result = str{
 		.data                = (char*) malloc(length),
@@ -289,13 +289,14 @@ str builtin_stringify_i64(int64_t v) {
 		.memory_end_offset   = uint64_t(length),
 	};
 
-	memcpy(result.data, stringified.c_str(), result.length);
+	memcpy(result.data, stringified, result.length);
 	return result;
 }
 
 str builtin_stringify_u64(uint64_t v) {
-	const auto stringified = std::to_string(v);
-	const auto length      = stringified.size();
+	char stringified[21];
+	snprintf(stringified, sizeof(stringified), "%lu", v);
+	uint64_t length = strlen(stringified);
 
 	auto result = str{
 		.data                = (char*) malloc(length),
@@ -304,13 +305,14 @@ str builtin_stringify_u64(uint64_t v) {
 		.memory_end_offset   = uint64_t(length),
 	};
 
-	memcpy(result.data, stringified.c_str(), result.length);
+	memcpy(result.data, stringified, result.length);
 	return result;
 }
 
 str builtin_stringify_f64(double v) {
-	const auto stringified = std::to_string(v);
-	const auto length      = stringified.size();
+	char stringified[21];
+	snprintf(stringified, sizeof(stringified), "%g", v);
+	uint64_t length = strlen(stringified);
 
 	auto result = str{
 		.data                = (char*) malloc(length),
@@ -319,7 +321,7 @@ str builtin_stringify_f64(double v) {
 		.memory_end_offset   = uint64_t(length),
 	};
 
-	memcpy(result.data, stringified.c_str(), result.length);
+	memcpy(result.data, stringified, result.length);
 	return result;
 }
 
@@ -335,8 +337,8 @@ str builtin_stringify_char(char c) {
 }
 
 str builtin_stringify_bool(bool b) {
-	const auto stringified = std::to_string(b);
-	const auto length      = stringified.size();
+	const char* stringified = b ? "true" : "false";
+	const uint64_t length = b ? 4 : 5;
 
 	auto result = str{
 		.data                = (char*) malloc(length),
@@ -345,7 +347,7 @@ str builtin_stringify_bool(bool b) {
 		.memory_end_offset   = length,
 	};
 
-	memcpy(result.data, stringified.c_str(), result.length);
+	memcpy(result.data, stringified, length);
 	return result;
 }
 
