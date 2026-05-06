@@ -9,7 +9,7 @@
 //! ├── global_venv/ <root of the global shared virtual environment>
 //! └── storage/ <root of the storage internal files>
 
-use std::fs::OpenOptions;
+use std::fs::{File, OpenOptions};
 use std::io::Write;
 use std::path::PathBuf;
 use std::{fmt, io};
@@ -103,12 +103,23 @@ metadata:
 
     /// Assure that the global package root folder exists and there is a manifest in it.
     pub fn ensure_and_populate_global_dir(&self) -> QuackResult<FileLockManager> {
+        struct UnlockOnDrop {
+            file: File,
+        }
+
+        impl Drop for UnlockOnDrop {
+            fn drop(&mut self) {
+                if let Err(e) = self.file.unlock() {
+                    debug!("failed to unlock the global manifest file: {e} ({e:})");
+                }
+            }
+        }
         let global_pkg_dir = self.global_venv();
         global_pkg_dir.mkdir()?;
         let manifest_path = global_pkg_dir
             .join(PackageLoader::MANIFEST_NAME)
             .into_not_locked_path();
-        let mut file = {
+        let file = {
             let mut opts = OpenOptions::new();
             opts.create_new(true).write(true);
             match opts.open(&manifest_path) {
@@ -122,7 +133,12 @@ metadata:
                 }
             }
         }?;
-        file.write_all(Self::default_global_manifest().as_bytes())
+        file.lock()
+            .with_context(|| format!("failed to lock the `{}`", manifest_path.display()))?;
+        let mut guard = UnlockOnDrop { file };
+        guard
+            .file
+            .write_all(Self::default_global_manifest().as_bytes())
             .with_context(|| format!("failed to write to the `{}`", manifest_path.display()))
             .context("failed to populate global venv")?;
         Ok(global_pkg_dir)
