@@ -108,11 +108,23 @@ namespace query::internal {
 		while (true) {
 			if (current_node == initial_node_id) is_the_initial_node_on_the_cycle = true;
 
-			auto node_data = active_nodes.getCopy(current_node);
-			cycle_nodes.push_back(QueryCycle::NodeCycleInfo{
-				.node_id = current_node, .node_context_ref = node_data.node_context_ref });
+			auto node_data = active_nodes.atMaybeCopy(current_node);
 
-			current_node = node_data.active_edge.value();
+			if (node_data.empty()) {
+				// This is the case described in the comment above, where we cannot reconstruct the cycle.
+				return {};
+			}
+
+			cycle_nodes.push_back(QueryCycle::NodeCycleInfo{
+				.node_id = current_node, .node_context_ref = node_data.value().node_context_ref });
+			
+			auto edge = node_data.value().active_edge;
+			if (edge.empty()) {
+				// This is the case described in the comment above, where we cannot reconstruct the cycle.
+				return {};
+			}
+			current_node = edge.value();
+			
 			if (current_node == cycle_start) break;
 		}
 
