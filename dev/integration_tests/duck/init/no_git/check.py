@@ -1,3 +1,4 @@
+import subprocess
 import sys
 import shutil
 from pathlib import Path
@@ -10,7 +11,7 @@ from utilities import *
 root = Path.cwd() / "foo"
 
 quackconfig = """metadata:
-  name: bar
+  name: foo
   version: '1.0.0'
 """
 
@@ -19,8 +20,7 @@ try:
   assert_eq(quackconfig, real_qp)
 
   check_src_from_root(root)
-  check_gitignore_from_root(root)
-
-  check_is_git_root(root)
+  check_no_gitignore_from_root(root)
+  check_not_git_root(root)
 finally:
   shutil.rmtree(root)

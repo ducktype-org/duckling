@@ -1,6 +1,7 @@
 use std::path::Path;
 
 use super::{registry_url_hash, setup_mock_storage};
+use crate::DuckContext;
 use crate::quackpack::core::fetcher::Fetcher;
 use crate::quackpack::core::solver::types_common::ExpandedLocation;
 use crate::quackpack::core::storage::freeze::{FreezeDep, FreezePackage, VenvFreeze};
@@ -17,7 +18,6 @@ use crate::util::path_ops_ext::PathOpsExt;
 fn check_venvs_exist(root: &Path, names: &[&str]) {
     for name in names {
         assert!(root.join("venv").join(name).exists());
-        assert!(root.join("locks").join("compile").join(name).exists());
         assert!(root.join("locks").join("venv_sync").join(name).exists());
         assert!(root.join("locks").join("venv_data").join(name).exists());
     }
@@ -26,7 +26,6 @@ fn check_venvs_exist(root: &Path, names: &[&str]) {
 fn check_venvs_dont_exist(root: &Path, names: &[&str]) {
     for name in names {
         assert!(!root.join("venv").join(name).exists());
-        assert!(!root.join("locks").join("compile").join(name).exists());
         assert!(!root.join("locks").join("venv_sync").join(name).exists());
         assert!(!root.join("locks").join("venv_data").join(name).exists());
     }
@@ -36,28 +35,26 @@ fn check_venvs_dont_exist(root: &Path, names: &[&str]) {
 /// Check that we clean what we should've cleaned.
 /// Details are in [`setup_mock_storage`].
 fn clean() {
-    let (ctx, root) = setup_mock_storage();
-    let mut output = storage::ops::clean_storage(&ctx, ctx.default_storage_root()).unwrap();
+    let (ctx, _home, root) = setup_mock_storage();
+    let mut output =
+        storage::ops::clean_storage(&ctx, ctx.default_storage_root().not_locked_path()).unwrap();
     output.removed_packages.sort();
     let mut expected_packages = [
-        root.path()
-            .join("pkg")
+        root.join("pkg")
             .join(format!("registry-{}-foo-1.0.0", registry_url_hash())),
-        root.path()
-            .join("pkg")
+        root.join("pkg")
             .join(format!("registry-{}-bar-1.0.0", registry_url_hash())),
     ];
     expected_packages.sort();
     assert_eq!(output.removed_venvs, ["root3".to_venv_id()]);
     assert_eq!(output.removed_packages, expected_packages);
-    check_venvs_exist(root.path(), &["root1", "root2", "root4"]);
-    check_venvs_dont_exist(root.path(), &["root3"]);
+    check_venvs_exist(&root, &["root1", "root2", "root4"]);
+    check_venvs_dont_exist(&root, &["root3"]);
 
-    let mut iterator = root.path().join("pkg").read_dir().unwrap();
+    let mut iterator = root.join("pkg").read_dir().unwrap();
     assert!(
         iterator.next().is_some_and(|entry| entry.unwrap().path()
             == root
-                .path()
                 .join("pkg")
                 .join(format!("registry-{}-baz-1.0.0", registry_url_hash()))),
         "we should left only baz"
@@ -71,36 +68,32 @@ fn clean() {
 /// Also, after deleting every venv, check that clean removes every package, but no venvs are
 /// removed.
 fn delete_venv() {
-    let (ctx, root) = setup_mock_storage();
-    let storage_root = ctx.default_storage_root();
-    storage::ops::delete_venv(&ctx, storage_root, "root1").unwrap();
-    check_venvs_exist(root.path(), &["root2", "root3", "root4"]);
-    check_venvs_dont_exist(root.path(), &["root1"]);
-    storage::ops::delete_venv(&ctx, storage_root, "root2").unwrap();
-    check_venvs_exist(root.path(), &["root3", "root4"]);
-    check_venvs_dont_exist(root.path(), &["root1", "root2"]);
-    storage::ops::delete_venv(&ctx, storage_root, "root3").unwrap();
-    check_venvs_exist(root.path(), &["root4"]);
-    check_venvs_dont_exist(root.path(), &["root1", "root2", "root3"]);
+    let (ctx, _home, root) = setup_mock_storage();
+    storage::ops::delete_venv(&ctx, &root, "root1").unwrap();
+    check_venvs_exist(&root, &["root2", "root3", "root4"]);
+    check_venvs_dont_exist(&root, &["root1"]);
+    storage::ops::delete_venv(&ctx, &root, "root2").unwrap();
+    check_venvs_exist(&root, &["root3", "root4"]);
+    check_venvs_dont_exist(&root, &["root1", "root2"]);
+    storage::ops::delete_venv(&ctx, &root, "root3").unwrap();
+    check_venvs_exist(&root, &["root4"]);
+    check_venvs_dont_exist(&root, &["root1", "root2", "root3"]);
 
-    storage::ops::delete_venv(&ctx, storage_root, "non_existent_venv").unwrap();
-    check_venvs_exist(root.path(), &["root4"]);
-    check_venvs_dont_exist(root.path(), &["root1", "root2", "root3"]);
+    storage::ops::delete_venv(&ctx, &root, "non_existent_venv").unwrap();
+    check_venvs_exist(&root, &["root4"]);
+    check_venvs_dont_exist(&root, &["root1", "root2", "root3"]);
 
-    storage::ops::delete_venv(&ctx, storage_root, "root4").unwrap();
-    check_venvs_dont_exist(root.path(), &["root1", "root2", "root3", "root4"]);
+    storage::ops::delete_venv(&ctx, &root, "root4").unwrap();
+    check_venvs_dont_exist(&root, &["root1", "root2", "root3", "root4"]);
 
-    let mut output = storage::ops::clean_storage(&ctx, storage_root).unwrap();
+    let mut output = storage::ops::clean_storage(&ctx, &root).unwrap();
     output.removed_packages.sort();
     let mut expected_packages = [
-        root.path()
-            .join("pkg")
+        root.join("pkg")
             .join(format!("registry-{}-foo-1.0.0", registry_url_hash())),
-        root.path()
-            .join("pkg")
+        root.join("pkg")
             .join(format!("registry-{}-baz-1.0.0", registry_url_hash())),
-        root.path()
-            .join("pkg")
+        root.join("pkg")
             .join(format!("registry-{}-bar-1.0.0", registry_url_hash())),
     ];
     expected_packages.sort();
@@ -111,8 +104,9 @@ fn delete_venv() {
 #[test]
 /// Basic info output tests.
 fn info() {
-    let (ctx, _root) = setup_mock_storage();
-    let output = storage::ops::list_venvs(ctx.default_storage_root()).unwrap();
+    let (ctx, _home, _root) = setup_mock_storage();
+    let output =
+        storage::ops::list_venvs(ctx.default_storage_root().not_locked_path(), &ctx).unwrap();
     assert_eq!(output.len(), 4);
     assert_eq!(
         output
@@ -225,8 +219,8 @@ fn info() {
     );
 }
 
-fn assert_can_load_after_save(venv: &Venv, storage: &Storage) -> Venv {
-    venv.save_to(storage).unwrap();
+fn assert_can_load_after_save(venv: &Venv, storage: &Storage, ctx: &DuckContext) -> Venv {
+    venv.save_to(storage, ctx).unwrap();
     let id = venv.id();
     let metadata = storage.venv_metadata(id);
     let backup = storage.venv_backup_metadata(id);
@@ -239,17 +233,17 @@ fn assert_can_load_after_save(venv: &Venv, storage: &Storage) -> Venv {
         metadata.display(),
         backup.display()
     );
-    Venv::fix_and_load(storage, id)
+    Venv::fix_and_load(storage, id, ctx)
         .expect("an error occured")
         .expect("failed to load venv")
 }
 
 #[test]
 fn save_trims_files() {
-    let (ctx, _root) = setup_mock_storage();
+    let (ctx, _home, _root) = setup_mock_storage();
     let id = "root1".to_venv_id();
-    let storage = Storage::new(ctx.default_storage_root());
-    let mut venv = Venv::fix_and_load(&storage, id)
+    let storage = Storage::new(ctx.default_storage_root().into_not_locked_path());
+    let mut venv = Venv::fix_and_load(&storage, id, &ctx)
         .expect("an error occured")
         .expect("failed to load venv");
     let original_venv = venv.clone();
@@ -272,10 +266,10 @@ fn save_trims_files() {
             .dependencies_mut()
             .push(package);
     }
-    let mut venv = assert_can_load_after_save(&venv, &storage);
+    let mut venv = assert_can_load_after_save(&venv, &storage, &ctx);
     // Secondly, remove all dependencies, to make a file shorter, so we'll leave trailing bytes (which should be truncated).
     venv.data_mut().freeze_mut().dependencies_mut().clear();
-    let mut new_venv = assert_can_load_after_save(&venv, &storage);
+    let mut new_venv = assert_can_load_after_save(&venv, &storage, &ctx);
     // The first and last state should only differ in access time. Copy one from the other.
     new_venv
         .data_mut()
@@ -285,7 +279,7 @@ fn save_trims_files() {
 
 #[test]
 fn sync() {
-    let (ctx, storage_root) = setup_mock_storage();
+    let (ctx, _home, storage_root) = setup_mock_storage();
     let (root, pcx) = create_mock_package_at_tmpdir(&ctx, "my-package");
     let (_lock, venv, storage) = ops::sync(
         &pcx,
@@ -300,7 +294,7 @@ fn sync() {
     let data = venv.data();
     assert!(!data.is_ephemeral());
     assert_eq!(data.last_known_directory(), root.path());
-    assert_eq!(storage.root(), storage_root.path());
+    assert_eq!(storage.root(), storage_root);
     let freeze = data.freeze();
     let root_package = freeze.root();
     assert_eq!(root_package.name(), "my-package");
@@ -312,7 +306,7 @@ fn sync() {
 
 #[test]
 fn sync_overwrite_fail() {
-    let (ctx, _storage_root) = setup_mock_storage();
+    let (ctx, _home, _storage_root) = setup_mock_storage();
     let (_root, pcx) = create_mock_package_at_tmpdir(&ctx, "my-package");
     ops::sync(
         &pcx,
@@ -345,7 +339,7 @@ tried to overwrite an existing virtual environment from another location"
 
 #[test]
 fn sync_overwrite_success() {
-    let (ctx, storage_root) = setup_mock_storage();
+    let (ctx, _home, storage_root) = setup_mock_storage();
     let (_root, pcx) = create_mock_package_at_tmpdir(&ctx, "my-package");
     ops::sync(
         &pcx,
@@ -373,7 +367,7 @@ fn sync_overwrite_success() {
     let data = venv.data();
     assert!(!data.is_ephemeral());
     assert_eq!(data.last_known_directory(), root2.path());
-    assert_eq!(storage.root(), storage_root.path());
+    assert_eq!(storage.root(), storage_root);
     let freeze = data.freeze();
     let root_package = freeze.root();
     assert_eq!(root_package.name(), "my-package");
@@ -385,7 +379,7 @@ fn sync_overwrite_success() {
 
 #[test]
 fn sync_overwrite_doesnt_matter_for_the_same_root() {
-    let (ctx, _storage_root) = setup_mock_storage();
+    let (ctx, _home, _storage_root) = setup_mock_storage();
     let (_root, pcx) = create_mock_package_at_tmpdir(&ctx, "my-package");
     ops::sync(
         &pcx,
@@ -410,7 +404,7 @@ fn sync_overwrite_doesnt_matter_for_the_same_root() {
 
 #[test]
 fn can_sync_after_clean() {
-    let (ctx, storage_root) = setup_mock_storage();
+    let (ctx, _home, storage_root) = setup_mock_storage();
     let (_root, pcx) = create_mock_package_at_tmpdir(&ctx, "my-package");
     ops::sync(
         &pcx,
@@ -425,7 +419,7 @@ fn can_sync_after_clean() {
     // Create a second package at a different directory.
     let (root2, pcx2) = create_mock_package_at_tmpdir(&ctx, "my-package");
 
-    storage::ops::delete_venv(&ctx, storage_root.path(), "my-package").unwrap();
+    storage::ops::delete_venv(&ctx, &storage_root, "my-package").unwrap();
 
     let (_lock, venv, storage) = ops::sync(
         &pcx2,
@@ -440,7 +434,7 @@ fn can_sync_after_clean() {
     let data = venv.data();
     assert!(!data.is_ephemeral());
     assert_eq!(data.last_known_directory(), root2.path());
-    assert_eq!(storage.root(), storage_root.path());
+    assert_eq!(storage.root(), storage_root);
     let freeze = data.freeze();
     let root_package = freeze.root();
     assert_eq!(root_package.name(), "my-package");
@@ -452,7 +446,7 @@ fn can_sync_after_clean() {
 
 #[test]
 fn sync_with_deps() {
-    let (ctx, storage_root) = setup_mock_storage();
+    let (ctx, _home, storage_root) = setup_mock_storage();
     let (root, pcx) = create_mock_package_with_deps_at_tmpdir(&ctx, "my-package");
 
     let (_lock, venv, storage) = ops::sync(
@@ -468,7 +462,7 @@ fn sync_with_deps() {
     let data = venv.data();
     assert!(!data.is_ephemeral());
     assert_eq!(data.last_known_directory(), root.path().join("root"));
-    assert_eq!(storage.root(), storage_root.path());
+    assert_eq!(storage.root(), storage_root);
     let freeze = data.freeze();
     let root_package = freeze.root();
     assert_eq!(root_package.name(), "my-package");
@@ -495,7 +489,7 @@ fn sync_with_deps() {
 
 #[test]
 fn sync_with_deps_and_expose_freezefile() {
-    let (ctx, storage_root) = setup_mock_storage();
+    let (ctx, _home, storage_root) = setup_mock_storage();
     let (root, _) = create_mock_package_with_deps_at_tmpdir(&ctx, "my-package");
     println!("root: {}", root.path().display());
     root.path()
@@ -520,7 +514,7 @@ fn sync_with_deps_and_expose_freezefile() {
     let data = venv.data();
     assert!(!data.is_ephemeral());
     assert_eq!(data.last_known_directory(), root.path().join("root"));
-    assert_eq!(storage.root(), storage_root.path());
+    assert_eq!(storage.root(), storage_root);
     let freeze = data.freeze();
     let root_package = freeze.root();
     assert_eq!(root_package.name(), "my-package");
