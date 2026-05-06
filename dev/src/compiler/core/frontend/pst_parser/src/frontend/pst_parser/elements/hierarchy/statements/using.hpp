@@ -34,6 +34,6 @@ namespace pst {
 		[[nodiscard]]
 		DeclKind isDeclaration() const final;
 
-		[[nodiscard]] base::Optional<AccessLocked<IdentifierWrapper>> getDeclSymbol2() const final;
+		[[nodiscard]] base::Optional<AccessLocked<IdentifierWrapper>> getDeclSymbolIdentifier() const final;
 	};
 }

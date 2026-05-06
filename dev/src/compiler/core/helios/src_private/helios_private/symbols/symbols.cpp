@@ -384,7 +384,7 @@ namespace compiler::helios {
 			// we can assume that it is only named ones.
 			return SymbolData::makePSTSymbolData(
 				{
-					.name = stmt->getDeclSymbol2()->unlock(ctx)->unwrap(),
+					.name = stmt->getDeclSymbolIdentifier()->unlock(ctx)->unwrap(),
 					.kind = SymbolKind::NamedCodeElement,
 				},
 				pst_data

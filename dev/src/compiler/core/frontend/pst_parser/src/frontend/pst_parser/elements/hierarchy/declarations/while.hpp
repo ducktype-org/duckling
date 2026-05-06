@@ -42,7 +42,7 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		base::Optional<AccessLocked<IdentifierWrapper>> getDeclSymbol2() const final {
+		base::Optional<AccessLocked<IdentifierWrapper>> getDeclSymbolIdentifier() const final {
 			return name.map([](const auto& acc) { return acc.give(); });
 		}
 

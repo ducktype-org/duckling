@@ -15,7 +15,7 @@ namespace pst {
 
 		PARSE().one(&out->inner_stmt);
 		out->inner_decl_kind        = out->inner_stmt.internal()->isDeclaration();
-		out->inner_decl_symbol_name = out->inner_stmt.internal()->getDeclSymbol2();
+		out->inner_decl_symbol_name = out->inner_stmt.internal()->getDeclSymbolIdentifier();
 
 		PST_RETURN out;
 	}

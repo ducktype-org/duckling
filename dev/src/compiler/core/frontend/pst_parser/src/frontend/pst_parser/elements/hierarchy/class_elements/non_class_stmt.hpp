@@ -45,7 +45,7 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		base::Optional<AccessLocked<IdentifierWrapper>> getDeclSymbol2() const override {
+		base::Optional<AccessLocked<IdentifierWrapper>> getDeclSymbolIdentifier() const override {
 			return inner_decl_symbol_name;
 		}
 

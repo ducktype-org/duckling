@@ -208,20 +208,10 @@ namespace pst {
 		virtual base::Optional<base::StrID> getInternalSymbolName() const;
 
 		/**
-		 * @brief Get the symbol name declared by a given statement if it exists.
-		 *
-		 * @todo Remove after refactor
-		 */
-		[[nodiscard]]
-		virtual base::Optional<base::StrID> getDeclSymbolName() const;
-
-		/**
 		 * @brief Get the identifier declared by a given statement if it exists.
-		 *
-		 * @todo Remove the 2 after refactor
 		 */
 		[[nodiscard]]
-		virtual base::Optional<AccessLocked<IdentifierWrapper>> getDeclSymbol2() const {
+		virtual base::Optional<AccessLocked<IdentifierWrapper>> getDeclSymbolIdentifier() const {
 			return {};
 		}
 	};

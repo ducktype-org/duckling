@@ -24,7 +24,7 @@ namespace pst {
 		return names.internal()->getStar() ? DeclKind::Transparent : DeclKind::Symbol;
 	}
 
-	base::Optional<AccessLocked<IdentifierWrapper>> Using::getDeclSymbol2() const {
+	base::Optional<AccessLocked<IdentifierWrapper>> Using::getDeclSymbolIdentifier() const {
 		if (auto child = names.internal()) {
 			if (child->numberOfNames() == 0) return {};
 			return child->getNameIndex(child->numberOfNames() - 1);
