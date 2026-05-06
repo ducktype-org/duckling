@@ -173,12 +173,12 @@ LlvmData initLlvmJit() {
 
 	auto types = findOrCreateTypes(g_context);
 
-	return LlvmData{ .g_context      = std::move(g_context),
-		             .g_module       = std::move(g_module),
-		             .lljit_instance = std::move(lljit_instance),
-		             .exit_on_err    = std::move(exit_on_err),
+	return LlvmData{ .g_context       = std::move(g_context),
+		             .g_module        = std::move(g_module),
+		             .lljit_instance  = std::move(lljit_instance),
+		             .exit_on_err     = std::move(exit_on_err),
 		             .opcode_name_map = std::move(opcode_name_map),
-		             .types          = types };
+		             .types           = types };
 }
 
 const LlvmData& llvmData() {
