@@ -72,6 +72,8 @@ namespace vm::jit {
 			auto&           llvm_data = llvmData();
 			llvm::Function* callee    = module->getFunction(opfun_name.data());
 			if (!callee) {
+				// Because opfunctions' definitions can live in a different LLVM module, or even in the
+				// executor process, we declare them once in the user function module with external linkage.
 				callee = llvm::Function::Create(
 					llvm_data.types.opfun.get(), llvm::Function::ExternalLinkage, opfun_name, module
 				);
