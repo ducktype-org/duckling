@@ -52,4 +52,3 @@ Tests:
         Output:
           String: "11\n"
         ExitCode: 0
-    
