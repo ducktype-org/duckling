@@ -99,7 +99,7 @@ namespace compiler::driver {
 		// If module tree does not have a main source file, it is not a valid package. We require main source file as an entry point for the package.
 		if (!getModuleRef(root_module)->hasMainSourceFile()) {
 			auto module_name = getModuleRef(root_module)->getName();
-			global_state::getGlobalLogger()->log(makeBox<dia_int::PlaceholderHeaderError>(
+			global_state::getGlobalLogger()->log(makeBox<dia_int::PlaceholderError>(
 				"Package does not have a main source file.",
 				base::strConcat(
 					"The main source file is required for package ",

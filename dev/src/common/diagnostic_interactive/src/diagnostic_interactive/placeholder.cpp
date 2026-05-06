@@ -120,4 +120,34 @@ namespace dia_int {
 			  std::move(description),
 			  {}
 		  ) {}
+
+	PlaceholderWarning::PlaceholderWarning(
+		std::string header_message, std::string description
+	):
+		  PlaceholderWarning(
+			  std::move(header_message),
+			  base::Optional<dia::SourcePosition>{},
+			  std::move(description),
+			  {}
+		  ) {}
+
+	PlaceholderWarning::PlaceholderWarning(
+		std::string                             header_message,
+		base::Optional<dia_int::StablePosition> source_position,
+		std::string                             description,
+		base::Optional<std::string>             pointer_message_content
+	):
+		  MessageBase() {
+		ADD_ARGUMENTS();
+	}
+
+	PlaceholderWarning::PlaceholderWarning(
+		std::string                         header_message,
+		base::Optional<dia::SourcePosition> source_position,
+		std::string                         description,
+		base::Optional<std::string>         pointer_message_content
+	):
+		  MessageBase() {
+		ADD_ARGUMENTS();
+	}
 }

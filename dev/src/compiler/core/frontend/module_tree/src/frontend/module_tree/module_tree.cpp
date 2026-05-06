@@ -39,9 +39,9 @@ namespace {
 	 * @param reject_file_regex The regex to use for rejection.
 	 * @return True if valid, false otherwise.
 	 */
-	bool isFileNameValid(const std::string& filename, const std::regex& reject_file_regex) {
-		std::smatch match;
-		return !std::regex_match(filename, match, reject_file_regex);
+	bool isFileNameValid(base::StrID filename, const std::regex& reject_file_regex) {
+		auto view = filename.strView();
+		return !std::regex_match(view.begin(), view.end(), reject_file_regex);
 	}
 
 	/**
@@ -50,9 +50,11 @@ namespace {
 	 * @param reject_directory_regex The regex to use for rejection.
 	 * @return True if valid, false otherwise.
 	 */
-	bool isDirectoryNameValid(const std::string& dirname, const std::regex& reject_directory_regex) {
-		std::smatch match;
-		return !std::regex_match(dirname, match, reject_directory_regex);
+	bool isDirectoryNameValid(
+		base::StrID dirname, const std::regex& reject_directory_regex
+	) {
+		auto view = dirname.strView();
+		return !std::regex_match(view.begin(), view.end(), reject_directory_regex);
 	}
 }
 
@@ -95,7 +97,12 @@ namespace compiler::frontend {
 	Ref<ModuleTree> ModuleTreeBuilder::createWithRandomPackageID(
 		const fs::File& root, const std::regex& file_reject, const std::regex& dir_reject
 	) {
-		return create(root, base::generateRandomString(32), file_reject, dir_reject);
+		return create(
+			root,
+			base::StrID(base::generateRandomString(32).c_str()),
+			file_reject,
+			dir_reject
+		);
 	}
 
 	ModuleTree::ModuleTree(): m_hash_recompute_mutex(base::makeBox<std::mutex>()) {}
@@ -319,7 +326,7 @@ namespace compiler::frontend {
 
 			if (file.isDirectory()) {
 				// Handle subdirectory
-				if (!isDirectoryNameValid(file.name(), dir_reject)) continue;
+				if (!isDirectoryNameValid(base::StrID(file.name().c_str()), dir_reject)) continue;
 
 				// build sub-module from directory
 				base::Box<ModuleTreeBuilder> submodule_builder = ModuleTreeBuilder::create();
@@ -335,20 +342,20 @@ namespace compiler::frontend {
 				if (submodule->hasMainSourceFile()) addSubmodule(submodule);
 			} else {
 				// Handle regular file
-				if (!isFileNameValid(file.name(), file_reject)) continue;
+				if (!isFileNameValid(base::StrID(file.name().c_str()), file_reject)) continue;
 				handleNewFile(file);
 			}
 		}
 	}
 
 	void ModuleTreeBuilder::buildFromSingleFile(const fs::File& file, base::StrID package_id) {
-		std::string stem      = file.stem();
-		std::string extension = file.extension();
+		base::StrID stem      = base::StrID(file.stem().c_str());
+		base::StrID extension = base::StrID(file.extension().c_str());
 		CORE_ASSERT(
 			extension == LANG_MODULE_FILE,
 			"Expected a module file, got: " + file.getFilePath().string()
 		);
-		setName(base::StrID(stem.c_str()));
+		setName(stem);
 		setPackageID(package_id);
 		setMainSourceFile(file);
 	}
@@ -358,21 +365,21 @@ namespace compiler::frontend {
 			file.isFile(),
 			base::strConcat("Expected file, got directory: ", file.getFilePath().string())
 		);
-		std::string stem      = file.stem();
-		std::string extension = file.extension();
+		base::StrID stem      = base::StrID(file.stem().c_str());
+		base::StrID extension = base::StrID(file.extension().c_str());
 
 		if (extension == LANG_SOURCE_FILE) {
 			// Regular source file - store path for later
 			addSourceFile(file);
 		} else if (extension == LANG_MODULE_FILE) {
 			// Module file
-			base::StrID stem_id(stem.c_str());
+			base::StrID stem_id = stem;
 
 			if (stem_id == m_name) {
 				setMainSourceFile(file);
 			} else {
 				base::Box<ModuleTreeBuilder> submodule_builder = ModuleTreeBuilder::create();
-				submodule_builder->buildFromSingleFile(file, this->m_package_id.strView());
+				submodule_builder->buildFromSingleFile(file, this->m_package_id);
 				auto submodule = submodule_builder->finalize();
 				CORE_ASSERT(submodule->getName() == stem_id, "Submodule name does not match");
 				addSubmodule(base::Ref<ModuleTree>(submodule));
@@ -447,7 +454,7 @@ namespace compiler::frontend {
 	void ModuleTreeBuilder::setPackageID(base::StrID package_id) {
 		CORE_ASSERT(!m_finalized, "Builder already finalized");
 		CORE_ASSERT(m_package_id.isBad(), "Package ID is already set");
-		m_package_id = base::StrID(std::string(package_id).c_str());
+		m_package_id = package_id;
 	}
 
 	bool ModuleTreeBuilder::isFinalized() const { return m_finalized; }

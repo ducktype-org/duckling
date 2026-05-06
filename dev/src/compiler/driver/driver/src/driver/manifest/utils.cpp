@@ -12,22 +12,6 @@
 namespace compiler::driver::json {
 
 	namespace {
-
-		class ManifestWarning final : public dia_int::MessageBase {
-			dia_int::Metadata getMetadata() const final {
-				return { .template_type = "message",
-					     .type          = "warning",
-					     .family        = "misc",
-					     .name          = "placeholder_header" };
-			}
-
-		public:
-			ManifestWarning(std::string header, std::string description = "") : MessageBase() {
-				addArgument<dia_int::TextArgument>("header_message", std::move(header));
-				addArgument<dia_int::TextArgument>("description", std::move(description));
-			}
-		};
-
 		void logFieldError(
 			std::string_view     field_type,
 			const std::string&   key,
@@ -35,7 +19,7 @@ namespace compiler::driver::json {
 		) {
 			if (!global_state::hasGlobalLogger()) return;
 			global_state::getGlobalLogger()->log(
-				makeBox<dia_int::PlaceholderHeaderError>(
+				makeBox<dia_int::PlaceholderError>(
 					base::strConcat("No ", field_type, " value with key: ", key),
 					error_message
 				)
@@ -44,7 +28,7 @@ namespace compiler::driver::json {
 
 		void logWarning(const std::string& header, const std::string& description = "") {
 			if (!global_state::hasGlobalLogger()) return;
-			global_state::getGlobalLogger()->log(makeBox<ManifestWarning>(header, description));
+			global_state::getGlobalLogger()->log(makeBox<dia_int::PlaceholderWarning>(header, description));
 		}
 
 		void logFieldWarning(
@@ -193,7 +177,7 @@ namespace compiler::driver::json {
 		if (json.is_object()) return true;
 		if (global_state::hasGlobalLogger()) {
 			global_state::getGlobalLogger()->log(
-				makeBox<dia_int::PlaceholderHeaderError>(
+				makeBox<dia_int::PlaceholderError>(
 					base::strConcat(context_name, " must be a JSON object"),
 					base::strConcat("The value for ", context_name, " is not a JSON object and cannot be parsed.")
 				)
@@ -228,7 +212,7 @@ namespace compiler::driver::json {
 		auto result = getStringFromArrayNoError(elem);
 		if (!result.has_value() && global_state::hasGlobalLogger()) {
 			global_state::getGlobalLogger()->log(
-				makeBox<dia_int::PlaceholderHeaderError>(
+				makeBox<dia_int::PlaceholderError>(
 					base::strConcat("Non-string value in array of ", parent_name),
 					base::strConcat("In ", parent_name, ": a non-string value was found in the array.")
 				)

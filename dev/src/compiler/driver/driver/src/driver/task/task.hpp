@@ -30,7 +30,7 @@ namespace compiler::driver {
         /**
          * @brief The output file path for the compiled executable.
          */
-		fs::FilePath            output;
+		base::StrID output_file_stem;
 
         /**
          * @brief Linking options passed by a string to the linker.
@@ -42,7 +42,7 @@ namespace compiler::driver {
         /**
          * @brief The output file path for the compiled static library.
          */
-		fs::FilePath                output;
+		base::StrID                output_file_stem;
 	};
 
     /**

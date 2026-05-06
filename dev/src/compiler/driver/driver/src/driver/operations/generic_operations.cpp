@@ -544,7 +544,7 @@ namespace compiler::driver {
 		void logErrorToGLobalLogger(const std::string& header, const std::string& description = "") {
 			if (!global_state::hasGlobalLogger()) return;
 			global_state::getGlobalLogger()->log(
-				makeBox<dia_int::PlaceholderHeaderError>(
+				makeBox<dia_int::PlaceholderError>(
 					header,
 					description
 				)

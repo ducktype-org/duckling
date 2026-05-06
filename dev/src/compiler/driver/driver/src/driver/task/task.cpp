@@ -27,7 +27,7 @@ namespace compiler::driver {
 			// Get the global logger and log the error if the package is not found
 			if (global_state::hasGlobalLogger()) {
 				global_state::getGlobalLogger()->log(
-					makeBox<dia_int::PlaceholderHeaderError>(
+					makeBox<dia_int::PlaceholderError>(
 						base::strConcat("Package name provided in a compilation task was not found in the provided package list. Package name: \"", package_name.strView(), "\"")
 					)
 				);
@@ -84,7 +84,7 @@ namespace compiler::driver {
 		} else {
 			if (global_state::hasGlobalLogger()) {
 				global_state::getGlobalLogger()->log(
-					makeBox<dia_int::PlaceholderHeaderError>(
+					makeBox<dia_int::PlaceholderError>(
 						base::strConcat("Unknown task strategy: \"", strategy->str(), "\""),
 						R"(Expected "dvm", "native", or "lib".)"
 					)
