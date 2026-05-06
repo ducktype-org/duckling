@@ -6,15 +6,16 @@
 
 namespace pg::sym {
 	struct FunctionSymbol {
-		std::vector<tp::TypeID> param_types;
-		tp::TypeID      return_type;
+		ns::NamespaceID            primary_namespace;
+		std::vector<sym::SymbolID> argument_symbols;
 	};
-	struct VariableSymbol {
-		tp::TypeID type_id;
-	};
+
+	struct VariableSymbol {};
+
 	struct TypeSymbol {
 		tp::TypeID type_id;
 	};
+
 	struct NamespaceSymbol {
 		ns::NamespaceID namespace_id;
 	};
@@ -22,10 +23,10 @@ namespace pg::sym {
 	using SymbolKind = std::variant<FunctionSymbol, VariableSymbol, TypeSymbol, NamespaceSymbol>;
 
 	struct Symbol {
-		base::StrID     name;
-		SymbolID        id;
-		tp::TypeID      type_id;
-		SymbolKind      kind;
+		base::StrID name;
+		SymbolID    id;
+		tp::TypeID  type_id;
+		SymbolKind  kind;
 	};
 
 }

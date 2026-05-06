@@ -139,12 +139,6 @@ void pg::compile(const fs::File& file, std::string_view output_path) {
 
 	LlvmProgramModule llvm_module;
 
-	TypeInformation type_info_pass(llvm_module);
-	for (pst::AccessLocked<pst::Stmt> inner_stmt:
-	     pst.getRootElement().illegalAccess().value()->getStatements()) {
-		inner_stmt.illegalAccess().value()->acceptVisitor(type_info_pass);
-	}
-
 	VisitorCompiler compiler(llvm_module);
 	for (pst::AccessLocked<pst::Stmt> inner_stmt:
 	     pst.getRootElement().illegalAccess().value()->getStatements()) {

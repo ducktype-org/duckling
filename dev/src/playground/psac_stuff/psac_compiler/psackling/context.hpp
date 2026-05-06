@@ -1,14 +1,22 @@
 #pragma once
 
 #include "ids.hpp"
-#include "psackling/type.hpp"
-#include "psackling/symbol.hpp"
+#include "psackling/llvm.hpp"
+#include "psackling/llvm_lowering_context.hpp"
 #include "psackling/namespace.hpp"
+#include "psackling/symbol.hpp"
+#include "psackling/type.hpp"
+
+#include "base/except/exceptions.hpp"
+
+#include <ranges>
+#include <variant>
 
 namespace pg {
 	class Context final {
 	public:
-		Context():
+		Context(LlvmLoweringContext& llvm_context):
+			  llvm_context(llvm_context),
 			  root_ns_id([this]() {
 				  // Instantiate the top level namespace, it will be used for all top level declarations
 				  ns::NamespaceID id = ns::NamespaceID::next();
@@ -18,17 +26,18 @@ namespace pg {
 				  namespace_stack.push_back(id);
 				  return id;
 			  }()),
-			  bool_type_id(newType(base::StrID("$bool"), tp::Boolean{})),
+			  bool_type_id(newType(base::StrID("bool"), tp::Boolean{})),
+			  void_type_id(newType(base::StrID("void"), tp::Void{})),
 			  incomplete_type_id(newType(base::StrID("$incomplete"), tp::Incomplete{})),
-			  void_type_id(newType(base::StrID("$void"), tp::Void{})) {}
+			  namespace_type_id(newType(base::StrID("$namespace"), tp::Namespace{})) {}
 
 		ns::Namespace& currNs() { return namespaces[namespace_stack.back()]; }
 
 		sym::SymbolID declareSymbol(base::StrID name, sym::SymbolKind kind) {
-			return pushSymbol(name, std::move(kind), incomplete_type_id);
+			return insertSymbol(name, std::move(kind), incomplete_type_id);
 		}
 
-		sym::SymbolID pushSymbol(base::StrID name, sym::SymbolKind kind, tp::TypeID type_id) {
+		sym::SymbolID insertSymbol(base::StrID name, sym::SymbolKind kind, tp::TypeID type_id) {
 			sym::SymbolID id = sym::SymbolID::next();
 			if (currNs().symbols.contains(name)) {
 				throw std::runtime_error(
@@ -40,24 +49,79 @@ namespace pg {
 			return id;
 		}
 
+		/// If a type or function is forward declared, we can use this to update the symbol with the
+		/// actual type information once it's available.
+		void finalizeSymbol(sym::SymbolID id, tp::TypeID type_id) {
+			CORE_ASSERT(symbols.contains(id), "Symbol ID not found");
+			CORE_ASSERT(
+				std::holds_alternative<sym::TypeSymbol>(symbols[id].kind)
+					|| std::holds_alternative<sym::FunctionSymbol>(symbols[id].kind),
+				"Can only finalize type and function symbols"
+			);
+			symbols[id].type_id = type_id;
+		}
+
 		tp::TypeID newType(base::StrID name, tp::TypeKind kind) {
 			tp::TypeID id = tp::TypeID::next();
 			types[id]
 				= { .name = name, .kind = std::move(kind), .id = id, .namespace_id = currNs().id };
+			if (!std::holds_alternative<tp::Incomplete>(types[id].kind))
+				llvm_context.lowerType(id, *this);
+			insertSymbol(name, sym::TypeSymbol{ .type_id = id }, id);
 			return id;
 		}
 
-        ns::NamespaceID newNamespace(base::StrID name) {
-            ns::NamespaceID id = ns::NamespaceID::next();
-            namespaces[id] = { .name = name, .id = id, .parent_namespace = currNs().id, .symbols = {} };
-            return id;
-        }
+		ns::NamespaceID newNamespace(base::StrID name) {
+			ns::NamespaceID id = ns::NamespaceID::next();
+			namespaces[id]
+				= { .name = name, .id = id, .parent_namespace = currNs().id, .symbols = {} };
+			insertSymbol(name, sym::NamespaceSymbol{ .namespace_id = id }, namespace_type_id);
+			return id;
+		}
 
-	private:
+		sym::SymbolID lookupInScopeAndParents(ns::NamespaceID ns_id, base::StrID name) {
+			ns::Namespace& ns = namespaces[ns_id];
+			if (ns.symbols.contains(name)) return ns.symbols[name];
+			if (ns.parent_namespace.has_value())
+				return lookupInScopeAndParents(*ns.parent_namespace, name);
+			throw std::runtime_error(
+				"Symbol " + name.str() + " not found in namespace " + ns.name.str()
+				+ " or any of its parents"
+			);
+		}
+		tp::TypeID lookupTypeInScopeAndParents(ns::NamespaceID ns_id, base::StrID name) {
+            sym::SymbolID sym_id = lookupInScopeAndParents(ns_id, name);
+            if (!std::holds_alternative<sym::TypeSymbol>(symbols[sym_id].kind)) {
+                throw std::runtime_error(
+                    "Symbol " + name.str() + " found in namespace " + namespaces[ns_id].name.str()
+                    + " but is not a type"
+                );
+            }
+            return symbols[sym_id].type_id;
+		}
+
+		ns::NamespaceID pushNamespace(base::StrID name) {
+			ns::NamespaceID id = newNamespace(name);
+			namespace_stack.push_back(id);
+            return id;
+		}
+
+		void popNamespace() { namespace_stack.pop_back(); }
+
+		tp::TypeInfo& getTypeInfo(tp::TypeID id) { return types[id]; }
+
+		ns::Namespace& getNamespace(ns::NamespaceID id) { return namespaces[id]; }
+
+		sym::Symbol& getSymbol(sym::SymbolID id) { return symbols[id]; }
+
 		const ns::NamespaceID root_ns_id;
 		const tp::TypeID      bool_type_id;
-		const tp::TypeID      incomplete_type_id;
 		const tp::TypeID      void_type_id;
+		const tp::TypeID      incomplete_type_id;
+		const tp::TypeID      namespace_type_id;
+	private:
+		LlvmLoweringContext& llvm_context;
+
 
 		std::vector<ns::NamespaceID> namespace_stack;  /// Stack of namespaces we're currently in
 

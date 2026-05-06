@@ -11,6 +11,8 @@ add_library(libpsackling
     psackling/ids.hpp
     psackling/namespace.hpp
     psackling/context.hpp
+    psackling/llvm_lowering_context.hpp
+    psackling/llvm_lowering_context.cpp
 )
 
 llvm_map_components_to_libnames(psackling_llvm_libs
