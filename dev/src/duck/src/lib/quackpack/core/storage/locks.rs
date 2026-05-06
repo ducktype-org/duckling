@@ -159,22 +159,20 @@ fn try_delete_lock(root: &FileLockManager, name: VenvId) -> QuackResult<()> {
             let Some(err) = e.downcast_ref_in_chain::<io::Error>() else {
                 return Err(e);
             };
-            if err.kind() == io::ErrorKind::NotFound {
+
+            let kind = err.kind();
+            // This should almost never happen, as we'll try to create a file in this case,
+            // but we may hit EPERM nevertheless.
+            if kind == io::ErrorKind::NotFound {
                 return Ok(());
-            };
-            // We only try to delete lock if that is possible, if we would need
-            // to block we skip that lock.
-            if err.kind() == io::ErrorKind::WouldBlock
-                || err.kind() == io::ErrorKind::PermissionDenied
-            {
+            // We only try to delete lock, if that is possible.
+            } else if kind == io::ErrorKind::PermissionDenied {
                 None
             } else {
                 return Err(e);
             }
         }
     };
-    // Due to the lock taking mechanism we use, we may simply
-    // delete the file if we own it, see `_posix_acquire`.
     if let Some(ref guard) = guard {
         guard.path().rm()?;
     };
