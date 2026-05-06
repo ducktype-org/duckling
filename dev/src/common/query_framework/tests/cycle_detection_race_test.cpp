@@ -48,10 +48,10 @@ struct IMPLEMENT_QUERY(CycleInitiator, query::QResult<u64>) {
 		CORE_ASSERT(current_cycle_id.load() == key.cycle_id, "Bad cycle id");
 		CORE_ASSERT(
 			concurrent::worker::Worker::getCurrentWorker()->getID() == key.expected_worker_id,
-			"Bad worker id"
+			"Bad worker id (1)"
 		);
 		CORE_ASSERT(
-			0 <= key.expected_worker_id and key.expected_worker_id < WORKER_COUNT, "Bad worker id"
+			0 <= key.expected_worker_id and key.expected_worker_id < WORKER_COUNT, "Bad worker id (2)"
 		);
 
 		cycle_barrier.arrive_and_wait();  // Ensure all workers "fire" at the same time
