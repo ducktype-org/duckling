@@ -14,10 +14,10 @@ namespace pst::expr {
 		if (state[fwd].isIdentifier()) { fwd++; }  // Ignores first identifier
 		PST_WHILE(
 			fwd < length
-			&& !(state[fwd]
-		             .asBinaryOperator()
-		             .map([](auto op) { return !op.isAssignment() && !op.isSpecialOp(); })
-		             .copyValueOr(false))
+			&& !(
+				state[fwd].isOperatorSymbol()
+				&& state[fwd].asBinaryOperator().value().isNotReserved()
+			)
 			&& !(
 				state[fwd].isIdentifier()
 				&& !state[fwd - 1].asBinaryOperator().map([](auto x) { return x.isAccessOp(); }
