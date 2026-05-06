@@ -793,24 +793,6 @@ namespace compiler::helios {
 			result.functions.reserve(dependencies->size());
 
 			for (const SymID& func_id: *dependencies) {
-				if (getSymRef(func_id)->getPSTDataOpt().empty()) {
-					// This path is not implemented yet.
-					// Figure out how to change this check if you hit this one when adding new feature.
-					ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-						base::strConcat(
-							"Evaluating a function in DVM at compile time which was generated "
-							"automatically. "
-							"This likely means that the function was a compiler generated class "
-							"constructor. "
-							"The failure happened for the symbol `",
-							name(func_id),
-							"`."
-						),
-						""
-					));
-					return query::Failed();
-				}
-
 				// @TODO: #826 Change this code to a single query once it gets implemented.
 				auto& hout_func = ctx.query<QueryCodeOfFun>(func_id)->valueOrThrow();
 				auto& mir_func = ctx.query<mir::LowerToMIRFunction>({ &hout_func })->valueOrThrow();
