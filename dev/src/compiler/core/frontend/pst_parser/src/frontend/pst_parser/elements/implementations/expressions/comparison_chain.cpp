@@ -23,6 +23,7 @@ namespace pst::expr {
 		if (fwd == length) return Lower::parse(state);
 
 		// A chain with only one comparison operator should be returned as a binary operator
+		// because the generated code is much simpler that way.
 		if (skipToOp(state, fwd + 1) == length) {
 			auto op  = state[fwd].asBinaryOperator().value();
 			auto out = makeBox<GeneralBinary>(state, op);
