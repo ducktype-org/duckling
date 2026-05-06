@@ -4,11 +4,13 @@ add_library(libpsackling
     psackling/llvm.hpp
     psackling/llvm.cpp
     psackling/type.hpp
-    psackling/namespace.hpp
     psackling/symbol.hpp
     psackling/global_pass.hpp
     psackling/global_pass.cpp
     psackling/function_pass.hpp
+    psackling/ids.hpp
+    psackling/namespace.hpp
+    psackling/context.hpp
 )
 
 llvm_map_components_to_libnames(psackling_llvm_libs
