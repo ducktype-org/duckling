@@ -7,7 +7,7 @@ namespace pst {
 	 * @brief Import chain of the form `A.B.(A, B.C.*)`
 	 */
 	class ImportNested final: public ImportChain {
-		std::vector<AccessInternalAnonymous<IdentifierWrapper>>    names;
+		std::vector<AccessInternalAnonymous<IdentifierWrapper>> names;
 		NAMED_CHILD(nested_import, NestedImportList);
 
 	public:

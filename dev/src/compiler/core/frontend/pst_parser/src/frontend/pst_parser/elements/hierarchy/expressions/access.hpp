@@ -1,8 +1,7 @@
 #pragma once
 
-#include "expr_common.hpp"
-
 #include "../not_statements/wrapper_elements/operator_wrapper.hpp"
+#include "expr_common.hpp"
 
 namespace pst::expr {
 	/**
@@ -10,7 +9,7 @@ namespace pst::expr {
 	 * .?][name][optionally template specifier]`
 	 */
 	class Access final: public ExprElement {
-		NAMED_CHILD(type, OperatorWrapper); ///< either `.` or `.?` or `::`
+		NAMED_CHILD(type, OperatorWrapper);  ///< either `.` or `.?` or `::`
 		NAMED_CHILD(name, IdentifierWrapper);
 		NAMED_CHILD_OPT(template_specifier, ExprElement);
 
@@ -33,8 +32,9 @@ namespace pst::expr {
 		AccessLocked<OperatorWrapper> getType() const {
 			return type.give();
 		}
+
 		[[nodiscard]]
-		AccessLocked<IdentifierWrapper>  getName() const {
+		AccessLocked<IdentifierWrapper> getName() const {
 			return name.give();
 		}
 

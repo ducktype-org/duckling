@@ -120,7 +120,8 @@ namespace compiler::helios {
 
 			auto specifiers = ctx.query<QuerySpecifiersOfSymbol>(key);
 			for (auto specifier: *specifiers) {
-				if (specifier.unlock(ctx)->getSpecifier().unlock(ctx)->unwrap() == pst::Keyword::Extern) {
+				if (specifier.unlock(ctx)->getSpecifier().unlock(ctx)->unwrap()
+				    == pst::Keyword::Extern) {
 					match_optional(specifier.unlock(ctx)->getArgs()) {
 						opt_some(args) { return getSymbolABI(ctx, args); }
 						opt_none {

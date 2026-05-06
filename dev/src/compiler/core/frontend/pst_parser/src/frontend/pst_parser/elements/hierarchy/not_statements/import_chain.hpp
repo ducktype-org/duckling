@@ -1,7 +1,6 @@
 #pragma once
 
 #include "../meta.hpp"
-
 #include "wrapper_elements/identifier_wrapper.hpp"
 
 namespace pst {

@@ -43,7 +43,7 @@ namespace pst {
 	void StmtSpecifier::dprint(std::ostream& out) const {
 		out << "{";
 
-		out << R"("specifier": ")"; 
+		out << R"("specifier": ")";
 		nullAwareDprint(specifier, out);
 		out << R"(",)";
 

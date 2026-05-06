@@ -21,12 +21,12 @@ namespace pst {
 
 		~FlowPattern() final = default;
 
-		[[nodiscard]] 
-		AccessLocked<AnalysisPattern> getPattern() const { 
-			return pattern.give(); 
+		[[nodiscard]]
+		AccessLocked<AnalysisPattern> getPattern() const {
+			return pattern.give();
 		}
 
-		[[nodiscard]] 
+		[[nodiscard]]
 		base::Optional<AccessLocked<IdentifierWrapper>> getAsIdentifier() const {
 			return as_identifier.map([](const auto& acc) { return acc.give(); });
 		}

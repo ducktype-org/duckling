@@ -64,9 +64,7 @@ namespace pst {
 		out << "}";
 	}
 
-	HashAlg& For::addElementDataToStableHash(HashAlg& partial_hash) const {
-		return partial_hash;
-	}
+	HashAlg& For::addElementDataToStableHash(HashAlg& partial_hash) const { return partial_hash; }
 
 	void For::acceptVisitor(PstVisitor& visitor) const { visitor.visitFor(*this); }
 }

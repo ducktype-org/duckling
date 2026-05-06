@@ -69,10 +69,11 @@ namespace compiler::helios {
 	) {
 		auto ident_opt = elem.dynamicCast<pst::expr::IdentifierLiteral>();
 		if (!ident_opt.has_value()) return;
-		auto       ident = ident_opt.value();
-		const auto scope = ctx.query<QueryPrimaryCodeScopeFor>({ ident });
-		const auto lookup_qresult
-			= HInterface::ofScopeWithParents(scope).lookup(ctx, ident->getName().unlock(ctx)->unwrap());
+		auto       ident          = ident_opt.value();
+		const auto scope          = ctx.query<QueryPrimaryCodeScopeFor>({ ident });
+		const auto lookup_qresult = HInterface::ofScopeWithParents(scope).lookup(
+			ctx, ident->getName().unlock(ctx)->unwrap()
+		);
 		if (lookup_qresult->hasFailed()) return;
 		CRef<LookupResult> lookup_result = &lookup_qresult->valueOrThrow();
 

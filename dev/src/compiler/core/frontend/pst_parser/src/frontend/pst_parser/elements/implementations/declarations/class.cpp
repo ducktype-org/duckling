@@ -45,9 +45,7 @@ namespace pst {
 		out << "}";
 	}
 
-	HashAlg& Class::addElementDataToStableHash(HashAlg& partial_hash) const {
-		return partial_hash;
-	}
+	HashAlg& Class::addElementDataToStableHash(HashAlg& partial_hash) const { return partial_hash; }
 
 	void Class::acceptVisitor(PstVisitor& visitor) const { visitor.visitClass(*this); }
 }

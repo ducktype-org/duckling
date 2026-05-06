@@ -272,12 +272,13 @@ namespace compiler::helios {
 			auto using_stmt = stmt.dynamicCast<pst::Using>().value();
 			return SymbolData::makePSTSymbolData(
 				{
-					.name
-					= base::StrID(base::strConcat(
-									  "<USING> ",
-									  using_stmt->getPointed().unlock(ctx)->getNameIndex(0).unlock(ctx)->unwrap()
-					)
-			                          .c_str()),
+					.name = base::StrID(
+						base::strConcat(
+							"<USING> ",
+							using_stmt->getPointed().unlock(ctx)->getNameIndex(0).unlock(ctx)->unwrap()
+						)
+							.c_str()
+					),
 					.kind        = SymbolKind::Using,
 					.is_wildcard = true,
 					.is_alias    = true,
@@ -310,7 +311,7 @@ namespace compiler::helios {
 					name = import_as.value()->asWhat().value().unlock(ctx)->unwrap();
 				else {
 					usize count = import_as.value()->numberOfNames();
-					name = import_as.value()->getNameIndex(count - 1).unlock(ctx)->unwrap();
+					name        = import_as.value()->getNameIndex(count - 1).unlock(ctx)->unwrap();
 				}
 
 				return SymbolData::makePSTSymbolData(
@@ -353,7 +354,10 @@ namespace compiler::helios {
 			auto constructor = stmt.dynamicCast<pst::Constructor>().value();
 			return SymbolData::makePSTSymbolData(
 				{
-					.name = constructor->isImpliedConstructor() ? base::StrID("create") : lang_def::keywordToStr(constructor->getKeyword()->unlock(ctx)->unwrap()),
+					.name
+					= constructor->isImpliedConstructor()
+			            ? base::StrID("create")
+			            : lang_def::keywordToStr(constructor->getKeyword()->unlock(ctx)->unwrap()),
 					.kind = SymbolKind::Constructor,
 				},
 				pst_data
@@ -405,7 +409,9 @@ namespace compiler::helios {
 	 * @todo in the future this function should not use dynamic_casts,
 	 * and should be merged with makeSymbolFromStatement.
 	 */
-	SymbolData makeSymbolFromPSTElement(ScopeID scope, pst::Access<pst::LangElement> element, query::Context& ctx) {
+	SymbolData makeSymbolFromPSTElement(
+		ScopeID scope, pst::Access<pst::LangElement> element, query::Context& ctx
+	) {
 		if (auto parameter_opt = element.dynamicCast<pst::Param>()) {
 			auto parameter = parameter_opt.value();
 			return SymbolData::makePSTSymbolData(
@@ -715,11 +721,12 @@ namespace compiler::helios {
 			}
 
 			void visitUsing(pst::Access<pst::Using> using_stmt) final {
-				auto pointed = using_stmt->getPointed().unlock(ctx);
-				usize size = pointed->numberOfNames();
+				auto                         pointed = using_stmt->getPointed().unlock(ctx);
+				usize                        size    = pointed->numberOfNames();
 				std::vector<tpc::Identifier> pointed_to_names(size);
-				for(int i = 0; i < size; i++) {
-					pointed_to_names[i] = {.value=pointed->getNameIndex(i).unlock(ctx)->unwrap()};
+				for (int i = 0; i < size; i++) {
+					pointed_to_names[i]
+						= { .value = pointed->getNameIndex(i).unlock(ctx)->unwrap() };
 				}
 
 				auto lookup_res = lookupChain(
@@ -740,18 +747,17 @@ namespace compiler::helios {
 				// @TODO: proper error handling
 
 				auto import_chain = import_stmt.dynamicCast<pst::Import>()
-				                 .value()
-				                 ->getImportChain()
-				                 .dynamicCast<pst::ImportIdentifierAs>()
-				                 .unlock(ctx);
+				                        .value()
+				                        ->getImportChain()
+				                        .dynamicCast<pst::ImportIdentifierAs>()
+				                        .unlock(ctx);
 
 				usize name_count = import_chain->numberOfNames();
 
 				std::vector<base::StrID> module_path(name_count);
 
-				for(int i = 0; i < name_count; i++) {
+				for (int i = 0; i < name_count; i++)
 					module_path[i] = import_chain->getNameIndex(i).unlock(ctx)->unwrap();
-				}
 
 				auto maybe_imported_module
 					= frontend::getRelativeModule(ctx, module(scope(key)), module_path);
@@ -815,30 +821,28 @@ namespace compiler::helios {
 			std::vector<tpc::Identifier> pointed_chain;
 			if (kind(key) == SymbolKind::Using) {
 				auto dotted = getSymRef(key)
-				                      ->getPSTData()
-				                      ->getElement()
-				                      .unlock(ctx)
-				                      .dynamicCast<pst::Using>()
-				                      .value()
-									  ->getPointed()
-									  .unlock(ctx);
+				                  ->getPSTData()
+				                  ->getElement()
+				                  .unlock(ctx)
+				                  .dynamicCast<pst::Using>()
+				                  .value()
+				                  ->getPointed()
+				                  .unlock(ctx);
 				pointed_chain.resize(dotted->numberOfNames());
-				for(int i = 0; i < dotted->numberOfNames(); i++) {
-					pointed_chain[i] = { .value=dotted->getNameIndex(i).unlock(ctx)->unwrap() };
-				}
+				for (int i = 0; i < dotted->numberOfNames(); i++)
+					pointed_chain[i] = { .value = dotted->getNameIndex(i).unlock(ctx)->unwrap() };
 			} else if (kind(key) == SymbolKind::Alias) {
 				auto dotted = getSymRef(key)
-				                      ->getPSTData()
-				                      ->getElement()
-				                      .unlock(ctx)
-				                      .dynamicCast<pst::Alias>()
-				                      .value()
-									  ->getPointed()
-									  .unlock(ctx);
+				                  ->getPSTData()
+				                  ->getElement()
+				                  .unlock(ctx)
+				                  .dynamicCast<pst::Alias>()
+				                  .value()
+				                  ->getPointed()
+				                  .unlock(ctx);
 				pointed_chain.resize(dotted->numberOfNames());
-				for(int i = 0; i < dotted->numberOfNames(); i++) {
-					pointed_chain[i] = { .value=dotted->getNameIndex(i).unlock(ctx)->unwrap() };
-				}
+				for (int i = 0; i < dotted->numberOfNames(); i++)
+					pointed_chain[i] = { .value = dotted->getNameIndex(i).unlock(ctx)->unwrap() };
 			} else {
 				return SymbolList{ { key } };
 			}

@@ -361,6 +361,8 @@ namespace pst {
 	}
 
 	base::Optional<base::StrID> Stmt::getInternalSymbolName() const {
-		return getDeclSymbolIdentifier().map([](const AccessLocked<IdentifierWrapper>& acc) {return acc.illegalAccess().value()->unwrap();});
+		return getDeclSymbolIdentifier().map([](const AccessLocked<IdentifierWrapper>& acc) {
+			return acc.illegalAccess().value()->unwrap();
+		});
 	}
 }

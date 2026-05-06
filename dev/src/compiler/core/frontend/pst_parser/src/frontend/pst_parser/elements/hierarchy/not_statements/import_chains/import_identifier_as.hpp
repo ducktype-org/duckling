@@ -7,7 +7,7 @@ namespace pst {
 	 * @brief Import chain of the form `A.B.C` or `A.B.C as X`
 	 */
 	class ImportIdentifierAs final: public ImportChain {
-		std::vector<AccessInternalAnonymous<IdentifierWrapper>>    names;
+		std::vector<AccessInternalAnonymous<IdentifierWrapper>> names;
 		NAMED_CHILD_OPT(as, IdentifierWrapper);
 
 	public:
@@ -45,6 +45,6 @@ namespace pst {
 		void dprint(std::ostream& out) const final;
 		~ImportIdentifierAs() final = default;
 		HashAlg& addElementDataToStableHash(HashAlg&) const override;
-		void calcElementPathHashRecursive() override;
+		void     calcElementPathHashRecursive() override;
 	};
 }

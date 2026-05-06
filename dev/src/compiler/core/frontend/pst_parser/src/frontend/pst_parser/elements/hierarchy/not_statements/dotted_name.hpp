@@ -10,7 +10,7 @@ namespace pst {
 	 */
 	class DottedName final: public NotStmt {
 		std::vector<AccessInternalAnonymous<IdentifierWrapper>> names;
-		bool                         star = false;
+		bool                                                    star = false;
 
 	public:
 		explicit DottedName(const LangParserState& state): NotStmt(state) {
@@ -50,6 +50,6 @@ namespace pst {
 		void dprint(std::ostream& out) const final;
 		~DottedName() final = default;
 		HashAlg& addElementDataToStableHash(HashAlg&) const override;
-		void calcElementPathHashRecursive() override;
+		void     calcElementPathHashRecursive() override;
 	};
 }

@@ -1,11 +1,11 @@
 #pragma once
 
 #include "../meta.hpp"
+#include "../not_statements/wrapper_elements/identifier_wrapper.hpp"
+#include "../not_statements/wrapper_elements/keyword_wrapper.hpp"
 #include "preamble.hpp"
 
 #include <base/extend_cpp/variant_match.hpp>
-#include "../not_statements/wrapper_elements/identifier_wrapper.hpp"
-#include "../not_statements/wrapper_elements/keyword_wrapper.hpp"
 
 namespace pst {
 	/**
@@ -14,12 +14,14 @@ namespace pst {
 	 */
 	class ClassSpecial: public ClassStmt {
 	protected:
-		/* What is after the `.`, It may be a keyword in some cases(for now it's only the move constructor) */
+		/* What is after the `.`, It may be a keyword in some cases(for now it's only the move
+		 * constructor) */
 		bool implied_constructor = false;
 		NAMED_CHILD_OPT(ident, IdentifierWrapper);
 		NAMED_CHILD_OPT(key, KeywordWrapper);
 
 		HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const override;
+
 	public:
 		CLASS_STMT_PASS_CONSTRUCTOR(ClassSpecial);
 		CLASS_STMT_PARSE(ClassSpecial);
@@ -51,9 +53,12 @@ namespace pst {
 
 		[[nodiscard]]
 		base::Optional<base::StrID> getInternalSymbolName() const final {
-			if (implied_constructor) return base::StrID("create");
-			else if (ident) return ident->internal()->unwrap();
-			else if (key) return lang_def::keywordToStr(key->internal()->unwrap());
+			if (implied_constructor)
+				return base::StrID("create");
+			else if (ident)
+				return ident->internal()->unwrap();
+			else if (key)
+				return lang_def::keywordToStr(key->internal()->unwrap());
 			CORE_UNREACHABLE();
 		}
 

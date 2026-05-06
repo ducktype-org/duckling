@@ -7,7 +7,7 @@ namespace pst {
 	 * @brief Import chain of the form `A.B.*` or `A.B.* hides X, Y`
 	 */
 	class ImportStarHides final: public ImportChain {
-		std::vector<AccessInternalAnonymous<IdentifierWrapper>>    names;
+		std::vector<AccessInternalAnonymous<IdentifierWrapper>>                 names;
 		base::Optional<std::vector<AccessInternalAnonymous<IdentifierWrapper>>> hides;
 
 	public:
@@ -50,6 +50,6 @@ namespace pst {
 		void dprint(std::ostream& out) const final;
 		~ImportStarHides() final = default;
 		HashAlg& addElementDataToStableHash(HashAlg&) const override;
-		void calcElementPathHashRecursive() override;
+		void     calcElementPathHashRecursive() override;
 	};
 }

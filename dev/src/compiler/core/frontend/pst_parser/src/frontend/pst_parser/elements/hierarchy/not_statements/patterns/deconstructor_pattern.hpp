@@ -23,9 +23,9 @@ namespace pst {
 		static MBox<DeconstructorPattern> parse(LangParserState& state);
 		void                              dprint(std::ostream& out) const final;
 
-		[[nodiscard]] 
-		AccessLocked<IdentifierWrapper> getDeconstructorName() const { 
-			return deconstructor_name.give(); 
+		[[nodiscard]]
+		AccessLocked<IdentifierWrapper> getDeconstructorName() const {
+			return deconstructor_name.give();
 		}
 
 		[[nodiscard]] const AccessLocked<FlowPatternList> getArguments() const {

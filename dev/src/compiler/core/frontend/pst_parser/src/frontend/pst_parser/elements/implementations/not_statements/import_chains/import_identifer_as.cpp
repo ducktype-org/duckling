@@ -54,8 +54,6 @@ namespace pst {
 
 	void ImportIdentifierAs::calcElementPathHashRecursive() {
 		calcIndexedListChildPath<IdentifierWrapper>({ names }, getElementPathHash());
-		if (as.has_value()) {
-			calcNamedChildPath(as.value(), getElementPathHash());
-		}
+		if (as.has_value()) calcNamedChildPath(as.value(), getElementPathHash());
 	}
 }

@@ -12,8 +12,7 @@ namespace pst {
 
 		if (state[0].isBracketGroup(Token::Round)) {
 			out->implied_constructor = true;
-		}
-		else {
+		} else {
 			MBox<IdentifierWrapper> ident;
 			PARSE().all(NamedOperator::Period, &ident);
 			out->ident.emplace();

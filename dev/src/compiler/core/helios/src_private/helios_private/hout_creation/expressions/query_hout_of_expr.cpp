@@ -89,8 +89,7 @@ namespace compiler::helios::code {
 		) {
 			if (auto bin_op_opt = expr.unlock(ctx).dynamicCast<pst::expr::BinaryOperator>()) {
 				auto bin_op = bin_op_opt.value();
-				if (bin_op->getOperator().unlock(ctx)->unwrap()
-				    == lang_def::NamedOperator::Pipe) {
+				if (bin_op->getOperator().unlock(ctx)->unwrap() == lang_def::NamedOperator::Pipe) {
 					getVariantSubExprsInPlace(ctx, bin_op->getLeftOperand(), sub_exprs_append);
 					getVariantSubExprsInPlace(ctx, bin_op->getRightOperand(), sub_exprs_append);
 				}
@@ -568,8 +567,8 @@ namespace compiler::helios::code {
 			void visitComparisonChain(pst::Access<pst::expr::ComparisonChain> stmt) override {
 				using namespace ::std::views;
 
-				auto       expr_count     = usize(stmt->numberOfSubExpressions());
-				usize        operator_count = expr_count - 1;
+				auto  expr_count     = usize(stmt->numberOfSubExpressions());
+				usize operator_count = expr_count - 1;
 
 				std::vector<Box<Expr>> result_exprs;
 				result_exprs.reserve(expr_count);

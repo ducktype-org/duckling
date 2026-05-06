@@ -21,9 +21,9 @@ namespace pst {
 		static MBox<BindingPattern> parse(LangParserState& state);
 		void                        dprint(std::ostream& out) const final;
 
-		[[nodiscard]] 
-		AccessLocked<IdentifierWrapper> getName() const { 
-			return name.give(); 
+		[[nodiscard]]
+		AccessLocked<IdentifierWrapper> getName() const {
+			return name.give();
 		}
 
 		[[nodiscard]]

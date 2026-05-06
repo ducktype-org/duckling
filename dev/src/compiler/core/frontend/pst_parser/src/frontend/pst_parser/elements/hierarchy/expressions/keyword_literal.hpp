@@ -1,8 +1,7 @@
 #pragma once
 
+#include "../not_statements/wrapper_elements/keyword_wrapper.hpp"  // IWYU pragma: keep
 #include "expr_common.hpp"
-
-#include "../not_statements/wrapper_elements/keyword_wrapper.hpp" // IWYU pragma: keep
 
 namespace pst::expr {
 	/**

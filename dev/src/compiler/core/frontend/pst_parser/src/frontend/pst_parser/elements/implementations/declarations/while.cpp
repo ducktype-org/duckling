@@ -34,9 +34,7 @@ namespace pst {
 		out << "}";
 	}
 
-	HashAlg& While::addElementDataToStableHash(HashAlg& partial_hash) const {
-		return partial_hash;
-	}
+	HashAlg& While::addElementDataToStableHash(HashAlg& partial_hash) const { return partial_hash; }
 
 	AccessLocked<ExprHolder> While::getCondition() const { return condition.internal()->getExpr(); }
 

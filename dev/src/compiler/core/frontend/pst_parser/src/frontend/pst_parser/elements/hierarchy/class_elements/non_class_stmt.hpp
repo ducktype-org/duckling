@@ -1,9 +1,8 @@
 #pragma once
 
 #include "../meta.hpp"
-#include "preamble.hpp"
-
 #include "../not_statements/wrapper_elements/identifier_wrapper.hpp"
+#include "preamble.hpp"
 
 namespace pst {
 	/**
@@ -17,7 +16,7 @@ namespace pst {
 	class NonClassStmt: public ClassStmt {
 		NAMED_CHILD(inner_stmt, Stmt);
 
-		DeclKind                    inner_decl_kind = DeclKind::None;
+		DeclKind                                        inner_decl_kind = DeclKind::None;
 		base::Optional<AccessLocked<IdentifierWrapper>> inner_decl_symbol_name;
 
 		HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const override;

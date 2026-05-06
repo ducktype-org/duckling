@@ -18,9 +18,7 @@ namespace pst {
 		PST_RETURN out;
 	}
 
-	HashAlg& Alias::addElementDataToStableHash(HashAlg& partial_hash) const {
-		return partial_hash;
-	}
+	HashAlg& Alias::addElementDataToStableHash(HashAlg& partial_hash) const { return partial_hash; }
 
 	void Alias::dprint(std::ostream& out) const {
 		out << "{";

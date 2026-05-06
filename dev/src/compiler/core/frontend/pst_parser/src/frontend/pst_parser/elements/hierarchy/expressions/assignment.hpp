@@ -1,8 +1,7 @@
 #pragma once
 
-#include "expr_common.hpp"
-
 #include "../not_statements/wrapper_elements/operator_wrapper.hpp"
+#include "expr_common.hpp"
 
 namespace pst::expr {
 	/**

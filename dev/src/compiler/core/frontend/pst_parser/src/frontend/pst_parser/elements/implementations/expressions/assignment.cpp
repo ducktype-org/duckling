@@ -43,7 +43,7 @@ namespace pst::expr {
 
 		out << R"("assigned variables": )";
 		nullAwareDprint(variables, out);
-		out << R"(, "assignment type": )"; 
+		out << R"(, "assignment type": )";
 		nullAwareDprint(type, out);
 		out << R"(, "assigned value": )";
 		nullAwareDprint(value, out);

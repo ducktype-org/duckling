@@ -34,7 +34,7 @@ namespace pst {
 
 		[[nodiscard]]
 		base::Optional<AccessLocked<IdentifierWrapper>> getDeclSymbolIdentifier() const final {
-			return name.map([](const auto& x) {return x.give();});
+			return name.map([](const auto& x) { return x.give(); });
 		}
 
 		void acceptVisitor(PstVisitor& visitor) const override;
