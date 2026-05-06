@@ -22,7 +22,7 @@ namespace query::internal {
 	u64 ActiveGraph::size() const { return active_node_count.load(); }
 
 	void ActiveGraph::removeEdge(NodeID node_id) {
-		// This will panic, on setting edge for node that does not exist, this is the expected behavior.
+		// Note that callOn will panic here, on a node that does not exist, this is the expected behavior.
 		active_nodes.callOn(node_id, [](Ref<ActiveData> data_ref) {
 			CORE_ASSERT(
 				data_ref->active_edge.has_value(),
@@ -31,9 +31,9 @@ namespace query::internal {
 			data_ref->active_edge.reset();
 		});
 	}
-
+	
 	void ActiveGraph::setEdge(NodeID node_id, NodeID edge) {
-		// This will panic, on setting edge for node that does not exist, this is the expected behavior.
+		// Note that callOn will panic here, on a node that does not exist, this is the expected behavior.
 		active_nodes.callOn(node_id, [edge](Ref<ActiveData> data_ref) {
 			CORE_ASSERT(
 				data_ref->active_edge.empty(),
