@@ -1,0 +1,206 @@
+Query ID: QuerySymbolOfSTMT
+    Number of Calls:   21653
+    Number of P-Calls: 21653
+    Total Call Time:   33 ms
+
+Query ID: QueryGlobalBuiltinSymbols
+    Number of Calls:   1
+    Number of P-Calls: 1
+    Total Call Time:   0 ms
+
+Query ID: QueryDealias
+    Number of Calls:   8608
+    Number of P-Calls: 8608
+    Total Call Time:   8 ms
+
+Query ID: QuerySpecifiersOfSymbol
+    Number of Calls:   3192
+    Number of P-Calls: 3192
+    Total Call Time:   3 ms
+
+Query ID: QueryGeneratedSymbol
+    Number of Calls:   1
+    Number of P-Calls: 1
+    Total Call Time:   0 ms
+
+Query ID: QueryRootScopeOf
+    Number of Calls:   8
+    Number of P-Calls: 8
+    Total Call Time:   0 ms
+
+Query ID: QueryPrimaryCodeScopeFor
+    Number of Calls:   504048
+    Number of P-Calls: 504048
+    Total Call Time:   2064 ms
+
+Query ID: QueryScopesInModule
+    Number of Calls:   8
+    Number of P-Calls: 8
+    Total Call Time:   2208 ms
+
+Query ID: QuerySymbolsInScope
+    Number of Calls:   14424
+    Number of P-Calls: 14424
+    Total Call Time:   69 ms
+
+Query ID: QueryLookupInScope
+    Number of Calls:   263672
+    Number of P-Calls: 263672
+    Total Call Time:   326 ms
+
+Query ID: QueryLookupInScopeAndParents
+    Number of Calls:   263672
+    Number of P-Calls: 263672
+    Total Call Time:   2135 ms
+
+Query ID: QueryHoutOfExpr
+    Number of Calls:   91503
+    Number of P-Calls: 91503
+    Total Call Time:   2275 ms
+
+Query ID: QueryEvaluateHOUTExpression
+    Number of Calls:   21653
+    Number of P-Calls: 21653
+    Total Call Time:   19 ms
+
+Query ID: QueryModuleHOUT
+    Number of Calls:   8
+    Number of P-Calls: 8
+    Total Call Time:   4791 ms
+
+Query ID: QueryCodeOfFun
+    Number of Calls:   2801
+    Number of P-Calls: 2801
+    Total Call Time:   2395 ms
+
+Query ID: QueryDeclOfFun
+    Number of Calls:   2802
+    Number of P-Calls: 2802
+    Total Call Time:   49 ms
+
+Query ID: QueryHOUTGlobalData
+    Number of Calls:   392
+    Number of P-Calls: 392
+    Total Call Time:   15 ms
+
+Query ID: QueryMangledSymbol
+    Number of Calls:   3594
+    Number of P-Calls: 3594
+    Total Call Time:   17 ms
+
+Query ID: QueryMangledType
+    Number of Calls:   7
+    Number of P-Calls: 7
+    Total Call Time:   0 ms
+
+Query ID: QueryTypeOfSymbol
+    Number of Calls:   21654
+    Number of P-Calls: 21654
+    Total Call Time:   111 ms
+
+Query ID: QuerySymbolABI
+    Number of Calls:   3194
+    Number of P-Calls: 3194
+    Total Call Time:   7 ms
+
+Query ID: QueryImplicitCoercibilityOnAbstractType
+    Number of Calls:   2
+    Number of P-Calls: 2
+    Total Call Time:   0 ms
+
+Query ID: QueryImplicitCoercibilityOnSymbolType
+    Number of Calls:   2
+    Number of P-Calls: 2
+    Total Call Time:   0 ms
+
+Query ID: QueryFunctionType
+    Number of Calls:   13
+    Number of P-Calls: 13
+    Total Call Time:   0 ms
+
+Query ID: LowerGlobalDataToMIRCtor
+    Number of Calls:   392
+    Number of P-Calls: 392
+    Total Call Time:   4 ms
+
+Query ID: LowerToMIRFunction
+    Number of Calls:   2801
+    Number of P-Calls: 2801
+    Total Call Time:   231 ms
+
+Query ID: CompileHOUTUnitToLIRModuleData
+    Number of Calls:   8
+    Number of P-Calls: 8
+    Total Call Time:   547 ms
+
+Query ID: CompileToLIRModuleData
+    Number of Calls:   8
+    Number of P-Calls: 8
+    Total Call Time:   5339 ms
+
+Query ID: CompileModule
+    Number of Calls:   8
+    Number of P-Calls: 8
+    Total Call Time:   6197 ms
+
+Query ID: LowerToLIRFunction
+    Number of Calls:   3193
+    Number of P-Calls: 3193
+    Total Call Time:   304 ms
+
+Query ID: QueryAbstractTypeLayout
+    Number of Calls:   3
+    Number of P-Calls: 3
+    Total Call Time:   0 ms
+
+Query ID: QuerySymbolTypeLayout
+    Number of Calls:   4
+    Number of P-Calls: 4
+    Total Call Time:   0 ms
+
+Query ID: QueryIsReplModule
+    Number of Calls:   8
+    Number of P-Calls: 8
+    Total Call Time:   0 ms
+
+Query ID: QueryReplModuleParent
+    Number of Calls:   8
+    Number of P-Calls: 8
+    Total Call Time:   0 ms
+
+Query ID: QueryParentModule
+    Number of Calls:   8
+    Number of P-Calls: 8
+    Total Call Time:   0 ms
+
+Query ID: QueryMainSourceFile
+    Number of Calls:   8
+    Number of P-Calls: 8
+    Total Call Time:   1 ms
+
+Query ID: QuerySourceFiles
+    Number of Calls:   8
+    Number of P-Calls: 8
+    Total Call Time:   0 ms
+
+Query ID: QuerySubmodules
+    Number of Calls:   8
+    Number of P-Calls: 8
+    Total Call Time:   0 ms
+
+=== Query Framework Other Statistics ===
+
+Total time spent in red-green sweeps: 0 ms
+Total time spent in graph merges: 0 ms
+
+=== Time statistics collected by compiler time_stats module ===
+
+Driver initialization time: 1 ms
+Driver exit time: 0 ms
+Graph optimization time: 0 ms
+Total compilation time (note that subcategories may overlap): 839 ms
+ - PST construction time: 1717 ms
+ - Backend compilation time: 828 ms
+ - Linking time: 33 ms
+
+./bin/duckc compile_package ../build_rel/ducks/better_test8 -n perf  -w 8   5.90s user 0.57s system 550% cpu 1.176 total

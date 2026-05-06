@@ -7,6 +7,8 @@ namespace time_stats {
 	 *
 	 * @note It is needed mostly, because time statistics collection can have significant
 	 * performance overhead, and we don't want to pay it when we don't need it.
+	 *
+	 * PR: no diff
 	 */
-	constexpr bool ENABLE_TIME_STATS = true;
+	constexpr bool ENABLE_TIME_STATS = false;
 }

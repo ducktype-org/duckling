@@ -100,7 +100,7 @@ namespace query {
 					// scheduling queries. Scheduling acts as if the schedule operation came from
 					// outside the query framework.
 					main_query_state.getActiveGraph()->setEdge(caller, callee);
-					auto maybe_cycle = main_query_state.getActiveGraph()->cycleCheck(caller);
+					auto maybe_cycle = main_query_state.getActiveGraph()->cycleCheck(callee);
 
 					if (maybe_cycle.has_value()) [[unlikely]] {
 						// we hit a cycle!
@@ -132,13 +132,14 @@ namespace query {
 								}()
 							)
 						));
-						CORE_ASSERT(
-							false,
-							"Query cycle detected involving query node:",
-							caller.q_id.asInt(),
-							".",
-							caller.hash.val.toStringHex()
-						);
+						throw "aaaa";
+						// CORE_ASSERT(
+						// 	false,
+						// 	"Query cycle detected involving query node:",
+						// 	caller.q_id.asInt(),
+						// 	".",
+						// 	caller.hash.val.toStringHex()
+						// );
 					}
 				}
 			}
@@ -183,7 +184,7 @@ namespace query {
 				QueryGraphHandler graph_handler(*this, my_node, dep_id, false);
 				return OthQuery::internal_query(key);
 			} else {
-				QueryGraphHandler graph_handler(*this, my_node, dep_id, false);
+				QueryGraphHandler graph_handler(*this, my_node, dep_id, true);
 
 				// note that this will block, until the task is completed
 				main_query_state.getTaskPool()->query(internal::Task{
@@ -232,7 +233,7 @@ namespace query {
 			);
 
 			// ->FALSE: LARGE improvement, even larger for 1 worker (huh..?????)
-			QueryGraphHandler graph_handler(*this, my_node, handle.getID(), false);
+			QueryGraphHandler graph_handler(*this, my_node, handle.getID(), true);
 
 			this->active = false;
 			defer({ this->active = true; });
