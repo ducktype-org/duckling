@@ -24,7 +24,7 @@ namespace pst::expr {
 
 		// A chain with only one comparison operator should be returned as a binary operator
 		if (skipToOp(state, fwd + 1) == length) {
-			auto op = state[fwd].asBinaryOperator().value();
+			auto op  = state[fwd].asBinaryOperator().value();
 			auto out = makeBox<GeneralBinary>(state, op);
 
 			PARSE().autoFallbackLen(fwd).with(&out->left, Lower::parse);
