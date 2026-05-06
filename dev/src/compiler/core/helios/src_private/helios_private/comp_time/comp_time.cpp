@@ -860,7 +860,14 @@ namespace compiler::helios {
 				ctx, func_to_call_name, all_lir_functions, ctv_arguments, func_type.getResultType()
 			);
 
-			if (!vm_eval_result) return query::Failed();
+			if (!vm_eval_result) {
+				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					"VM based evaluation of this function call at compile time.",
+					call_expr->origin.getStablePosition(),
+					base::strConcat("Detailed reason: ", vm_eval_result.error().message, "\n")
+				));
+				return query::Failed();
+			}
 			return vm_eval_result.value();
 		}
 
