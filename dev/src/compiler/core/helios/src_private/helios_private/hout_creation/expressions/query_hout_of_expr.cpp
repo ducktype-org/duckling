@@ -56,9 +56,7 @@ namespace compiler::helios::code {
 			};
 
 		public:
-			UnknownEscapeSequenceError(
-				const dia::SourcePosition& source_position, std::string sequence
-			):
+			UnknownEscapeSequenceError(dia_int::StablePosition source_position, std::string sequence):
 				  MessageWithCodeFragmentAndCause(source_position) {
 				addArgument<dia_int::TextArgument>("sequence", std::move(sequence));
 				addAttachedMessage(makeBox<SupportedEscapeSequencesDocs>());
@@ -78,7 +76,7 @@ namespace compiler::helios::code {
 			}
 
 		public:
-			explicit InvalidCharacterLiteralError(const dia::SourcePosition& source_position):
+			explicit InvalidCharacterLiteralError(dia_int::StablePosition source_position):
 				  MessageWithCodeFragment(source_position) {}
 		};
 
@@ -155,14 +153,14 @@ namespace compiler::helios::code {
 							node
 								= makeBox<LiteralCharExpr>(ctx, pstOrigin(stmt), result.value.at(0));
 						} else {
-							ctx.logInt(makeBox<InvalidCharacterLiteralError>(
-								stmt->getSourcePosition().unlock(ctx)
-							));
+							ctx.logInt(
+								makeBox<InvalidCharacterLiteralError>(stmt->getStablePosition())
+							);
 						}
 					}
 					opt_err(error) {
 						ctx.logInt(makeBox<UnknownEscapeSequenceError>(
-							stmt->getSourcePosition().unlock(ctx), error.value
+							stmt->getStablePosition(), error.value
 						));
 					}
 				}
@@ -179,7 +177,7 @@ namespace compiler::helios::code {
 					}
 					opt_err(error) {
 						ctx.logInt(makeBox<UnknownEscapeSequenceError>(
-							stmt->getSourcePosition().unlock(ctx), error.value
+							stmt->getStablePosition(), error.value
 						));
 					}
 				}
@@ -454,7 +452,7 @@ namespace compiler::helios::code {
 				}
 				default:
 					ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-						"Keyword not yet handled.", stmt->getSourcePosition().unlock(ctx)
+						"Keyword not yet handled.", stmt->getStablePosition()
 					));
 					return;  // failed
 				}
@@ -478,7 +476,7 @@ namespace compiler::helios::code {
 				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 					"Suffix operators are not implemented yet in HOUT, since they don't exist "
 					"yet.",
-					stmt->getSourcePosition().unlock(ctx)
+					stmt->getStablePosition()
 				));
 				return;  // failed
 			}
@@ -507,7 +505,7 @@ namespace compiler::helios::code {
 						ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 							"Taking reference of type that does not carry information is not "
 							"supported yet.",
-							stmt->getSourcePosition().unlock(ctx)
+							stmt->getStablePosition()
 						));
 						return;  // failed
 					}
@@ -517,8 +515,8 @@ namespace compiler::helios::code {
 					auto primary_category = inner->expression_type.getValueCategory().getCategory();
 					if (primary_category == tsh::PrimaryCategory::Literal
 					    || primary_category == tsh::PrimaryCategory::Temporary) {
-						ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
-							"Tried to reference a temporary", stmt->getSourcePosition().unlock(ctx)
+						ctx.logInt(makeBox<dia_int::PlaceholderError>(
+							"Tried to reference a temporary", stmt->getStablePosition()
 						));
 						return;
 					}
@@ -534,7 +532,7 @@ namespace compiler::helios::code {
 					return;
 				} else {
 					ctx.logInt(makeBox<UndefinedUnaryOperatorError>(
-						stmt->getSourcePosition().unlock(ctx),
+						stmt->getStablePosition(),
 						stmt->getOperator().unlock(ctx)->unwrap().str(),
 						makeBox<InteractiveType>(ctx, inner_type)
 					));
@@ -626,9 +624,8 @@ namespace compiler::helios::code {
 
 				auto location_mutability = location_type.getMutability();
 				if (location_mutability == tsh::Mutability::Immutable) {
-					ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
-						"Left side of assignment can't be immutable.",
-						stmt->getSourcePosition().unlock(ctx)
+					ctx.logInt(makeBox<dia_int::PlaceholderError>(
+						"Left side of assignment can't be immutable.", stmt->getStablePosition()
 					));
 					return;
 				}
@@ -680,7 +677,7 @@ namespace compiler::helios::code {
 					base::strConcat(
 						"'", op.str(), "' assignment for type: '", location_type.toString(), "'."
 					),
-					stmt->getSourcePosition().unlock(ctx)
+					stmt->getStablePosition()
 				));
 			}
 		};
@@ -710,7 +707,7 @@ namespace compiler::helios {
 			const CoercionQResult&                               coercion_qresult,
 			const tsh::SymbolType<>&                             source_symbol_type,
 			const tsh::SymbolType<>&                             expected_type,
-			const dia::SourcePosition&                           source_position,
+			dia_int::StablePosition                              source_position,
 			base::Optional<std::function<void(query::Context&)>> log_error
 		) {
 			variant_match(coercion_qresult.valueOrThrow().getVariant()) {
@@ -769,7 +766,7 @@ namespace compiler::helios {
 		UNPACK_QRESULT_CREF_TO_BOX(CRef<code::Expr> expr_hout =, expr_hout_qresult);
 
 		const auto source_symbol_type = expr_hout->expression_type.getSymbolType();
-		const auto source_position    = pst_expr.element.unlock(ctx)->getSourcePosition();
+		const auto source_position    = pst_expr.element.unlock(ctx)->getStablePosition();
 		const auto coercion_qresult   = canCoerce(ctx, source_symbol_type, expected_type);
 		if (coercion_qresult.hasFailed()) return query::Failed();
 
@@ -781,7 +778,7 @@ namespace compiler::helios {
 					coercion_qresult,
 					source_symbol_type,
 					expected_type,
-					source_position.unlock(ctx),
+					source_position,
 					std::move(log_error)
 				);
 				return query::Failed();
@@ -800,7 +797,7 @@ namespace compiler::helios {
 		UNPACK_QRESULT_MOVE(auto expr_hout =, expr_hout_qresult);
 
 		const auto source_symbol_type = expr_hout->expression_type.getSymbolType();
-		const auto source_position    = element.unlock(ctx)->getSourcePosition();
+		const auto source_position    = element.unlock(ctx)->getStablePosition();
 		const auto coercion_qresult   = canCoerce(ctx, source_symbol_type, expected_type);
 		if (coercion_qresult.hasFailed()) return query::Failed();
 
@@ -812,7 +809,7 @@ namespace compiler::helios {
 					coercion_qresult,
 					source_symbol_type,
 					expected_type,
-					source_position.unlock(ctx),
+					source_position,
 					std::move(log_error)
 				);
 				return query::Failed();

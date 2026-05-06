@@ -2,13 +2,19 @@
 #include "diagnostic_arguments_forward.hpp"
 #include "utils.hpp"
 
+#include <diagnostic_interactive/core/common_classes.hpp>
+
 #include <base/collections/maps.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/visitor.hpp>
 #include <base/pointers/box.hpp>
+#include <base/types/bit256.hpp>
 #include <base/types/ints.hpp>
 
 #include <json/json.hpp>
+
+#include <concepts>
+#include <utility>
 
 namespace dia_int::dia_args {
 
@@ -110,24 +116,14 @@ namespace dia_int::dia_args {
 	};
 
 	struct CodeLocationComponent final: public Component {
-		std::string         file;
-		u64                 line;
-		u64                 column;
-		base::Optional<u64> end_line;
-		base::Optional<u64> end_column;
+		CodeLocation                     location;
+		base::Optional<HashCodeLocation> hash_location;
 
 		CodeLocationComponent(
-			std::string         file,
-			u64                 line,
-			u64                 column,
-			base::Optional<u64> end_line   = {},
-			base::Optional<u64> end_column = {}
+			CodeLocation location, base::Optional<HashCodeLocation> hash_location = {}
 		):
-			  file(std::move(file)),
-			  line(line),
-			  column(column),
-			  end_line(end_line),
-			  end_column(end_column) {}
+			  location(std::move(location)),
+			  hash_location(hash_location) {}
 
 		void acceptVisitor(ComponentVisitor& visitor) const final {
 			visitor.visitCodeLocationComponent(*this);
@@ -138,6 +134,8 @@ namespace dia_int::dia_args {
 		[[nodiscard]] static std::string_view typeName() { return "code_location"; }
 
 		[[nodiscard]] std::string_view getTypeName() const override { return typeName(); }
+
+		void updatePosition(const UpdatePositionFunc& func);
 
 		static Box<CodeLocationComponent> fromJson(const json& elem);
 	};
@@ -343,7 +341,11 @@ namespace dia_int::dia_args {
 		[[nodiscard]] json toJson() const;
 
 		static Diagnostic fromJson(const json& thread_json);
+
+
+		void updateCodeLocationComponents(const UpdatePositionFunc& func);
 	};
+
 }  // namespace dia_int::dia_args
 
 namespace std {

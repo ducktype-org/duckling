@@ -20,6 +20,7 @@ public:
 		TESTER_ADD_TEST(testClassifySingleInstruction);
 		TESTER_ADD_TEST(testClassifySingleDefinition);
 		TESTER_ADD_TEST(testClassifyRejectsNonSingleInput);
+		TESTER_ADD_TEST(testClassifyRejectsSingleActionStatements);
 		TESTER_ADD_TEST(testBuildExpressionWrapper);
 		TESTER_ADD_TEST(testBuildInstructionWrapper);
 		TESTER_ADD_TEST(testBuildWrapperRejectsDefinition);
@@ -99,10 +100,36 @@ private:
 			auto result = repl::classifySingleStatement(ctx, module_id);
 			assertTrue(!result.has_value(), "Expected error for non-single-statement input");
 			assertTrue(
-				result.error().find("Expected exactly one top-level statement") != std::string::npos,
+				result.error().find("Expected exactly one classified statement")
+					!= std::string::npos,
 				"Expected a useful error message"
 			);
 		});
+	}
+
+	void testClassifyRejectsSingleActionStatements() {
+		auto assert_unclassified_action = [&](std::string_view code) {
+			auto module_id = createModule(code);
+
+			query::utils::withContextDo([&](query::Context& ctx) {
+				auto result = repl::classifySingleStatement(ctx, module_id);
+				assertTrue(!result.has_value(), "Expected action statement to be unclassified");
+				assertTrue(
+					result.error().find("Unsupported single statement kind for REPL classification")
+						!= std::string::npos,
+					"Expected explicit unsupported-kind error"
+				);
+				assertTrue(
+					result.error().find("Action") != std::string::npos,
+					"Expected unsupported kind to mention Action"
+				);
+			});
+		};
+
+		assert_unclassified_action("break;");
+		assert_unclassified_action("continue;");
+		assert_unclassified_action("throw 5;");
+		assert_unclassified_action("return 2;");
 	}
 
 	void testBuildExpressionWrapper() {

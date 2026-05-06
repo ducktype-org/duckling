@@ -108,6 +108,12 @@ namespace compiler::helios::defgen {
 		 * This is used to wrap single REPL expressions in a synthetic function.
 		 * @note this does not store any function data, since this symbol is created when
 		 * programmatically generating the function HOUT via QueryReplExpressionWrapper.
+		 *
+		 * @warning counter must never be reused with a different return_type.
+		 * The mangled name is based only on counter, so reusing counter with different return_type
+		 * will produce linker symbol collisions. The REPL code path (ReplSession::executeInput)
+		 * enforces this by incrementing m_line_counter per statement, but any manual wrapper
+		 * construction must preserve this rule.
 		 */
 		struct ReplExpressionWrapper final {
 			u64 counter;  // A unique counter to distinguish different REPL expression wrappers.
@@ -135,9 +141,10 @@ namespace compiler::helios::defgen {
 		 */
 		struct ScriptMainWrapper final {
 			/**
-			 * Stable per-script identity used by QueryGeneratedSymbol key hashing.
-			 * This helps keep generated-symbol identity/cache behavior deterministic
-			 * across script compilation units.
+			 * Stable per-script identity used as one component of QueryGeneratedSymbol key hashing.
+			 *
+			 * @note Full ScriptMainWrapper unstable hash also includes `scope` (via
+			 * `scope.queryUnstablePerfectHash()`), so final unstable identity is scope-dependent.
 			 *
 			 * @note This does NOT define the emitted linker symbol name.
 			 * The emitted entry name is still `main` (set separately as symbol name).

@@ -390,16 +390,16 @@ namespace compiler::helios::code {
 				auto& decl = ctx.query<QueryDeclOfFun>(match.function)->valueOrThrow();
 
 				// @TODO: #2110 unify diagnostics between user-defined and generated functions.
-				if_opt_none(decl.origin.getSourcePosition(ctx)) {
+				if_opt_none(decl.origin.getStablePosition()) {
 					const auto type = ctx.query<QueryTypeOfSymbol>(match.function)->valueOrThrow();
-					return makeBox<dia_int::PlaceholderHeaderError>(
+					return makeBox<dia_int::PlaceholderError>(
 						"Found exact candidate.",
 						base::strConcat(
 							"Candidate is compiler-generated, with type " + type.toString() + "."
 						)
 					);
 				}
-				return makeBox<ExactCandidateNote>(decl.origin.getSourcePosition(ctx).value());
+				return makeBox<ExactCandidateNote>(decl.origin.getStablePosition().value());
 			}();
 
 			if (not first_candidate_msg.has_value())
@@ -431,22 +431,22 @@ namespace compiler::helios::code {
 				auto& decl = ctx.query<QueryDeclOfFun>(match.function)->valueOrThrow();
 
 				// @TODO: #2110 unify diagnostics between user-defined and generated functions.
-				if_opt_none(decl.origin.getSourcePosition(ctx)) {
+				if_opt_none(decl.origin.getStablePosition()) {
 					const auto type = ctx.query<QueryTypeOfSymbol>(match.function)->valueOrThrow();
-					return makeBox<dia_int::PlaceholderHeaderNote>(
+					return makeBox<dia_int::PlaceholderNote>(
 						"Found coercible candidate.",
 						"Candidate is compiler-generated, with type " + type.toString() + "."
 					);
 				}
 
-				auto decl_pos = decl.origin.getSourcePosition(ctx).value();
+				auto decl_pos = decl.origin.getStablePosition().value();
 
 				auto result = makeBox<CoercibleCandidateNote>(decl_pos);
 				for (usize i{ 0 }; i < match.coercions.size(); i++) {
 					auto& coercion = match.coercions[i];
 					if (not coercion.isEmptyCoercion()) {
-						if_opt_none(decl.parameters[i].origin.getSourcePosition(ctx)) continue;
-						auto param_pos = decl.parameters[i].origin.getSourcePosition(ctx).value();
+						if_opt_none(decl.parameters[i].origin.getStablePosition()) continue;
+						auto param_pos = decl.parameters[i].origin.getStablePosition().value();
 
 						auto pm = makeBox<CoercibleCandidateCoercionPointerMessage>(
 							coercion.to.toString(), coercion.validated_from.toString()
@@ -490,15 +490,15 @@ namespace compiler::helios::code {
 				auto& decl = ctx.query<QueryDeclOfFun>(function)->valueOrThrow();
 
 				// @TODO: #2110 unify diagnostics between user-defined and generated functions.
-				if_opt_none(decl.origin.getSourcePosition(ctx)) {
+				if_opt_none(decl.origin.getStablePosition()) {
 					const auto type = ctx.query<QueryTypeOfSymbol>(function)->valueOrThrow();
-					return makeBox<dia_int::PlaceholderHeaderNote>(
+					return makeBox<dia_int::PlaceholderNote>(
 						"Candidate failed to match.",
 						"Candidate is compiler-generated, with type " + type.toString() + "."
 					);
 				}
 
-				return makeBox<FailedCandidateNote>(decl.origin.getSourcePosition(ctx).value());
+				return makeBox<FailedCandidateNote>(decl.origin.getStablePosition().value());
 			}();
 
 			candidate_note->addAttachedMessage(createDetailedCallErrorMessage(
@@ -541,7 +541,7 @@ namespace compiler::helios::code {
 	) {
 		if (candidates.empty()) {
 			ctx.logInt(makeBox<NoCandidatesFoundError>(
-				pst_origin.whole_call_origin.getSourcePosition(ctx).value()
+				pst_origin.whole_call_origin.getStablePosition().value()
 			));
 			return query::Failed();
 		}
@@ -567,7 +567,7 @@ namespace compiler::helios::code {
 
 		if (exact_match.size() > 1) {
 			auto main_msg = makeBox<AmbiguousMatchesError>(
-				pst_origin.whole_call_origin.getSourcePosition(ctx).value()
+				pst_origin.whole_call_origin.getStablePosition().value()
 			);
 			appendExactMatchesErrors(ctx, main_msg, exact_match, false);
 			appendCoercibleMatchesErrors(ctx, main_msg, coercion_match, true);
@@ -585,7 +585,7 @@ namespace compiler::helios::code {
 
 		if (coercion_match.size() > 1) {
 			auto main_msg = makeBox<AmbiguousMatchesError>(
-				pst_origin.whole_call_origin.getSourcePosition(ctx).value()
+				pst_origin.whole_call_origin.getStablePosition().value()
 			);
 			appendCoercibleMatchesErrors(ctx, main_msg, coercion_match, false);
 			appendFailedMatchesErrors(ctx, main_msg, pst_origin, no_match, true);
@@ -606,7 +606,7 @@ namespace compiler::helios::code {
 			));
 		} else {
 			auto main_msg = makeBox<AmbiguousMatchesError>(
-				pst_origin.whole_call_origin.getSourcePosition(ctx).value()
+				pst_origin.whole_call_origin.getStablePosition().value()
 			);
 			appendFailedMatchesErrors(ctx, main_msg, pst_origin, no_match, false);
 			ctx.logInt(std::move(main_msg));

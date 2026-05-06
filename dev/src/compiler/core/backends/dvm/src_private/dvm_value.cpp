@@ -3,12 +3,12 @@
 #include "common.hpp"
 
 #include <vm/bytecode/opcode_args.hpp>
-#include <vm/core/process/builtin_functions.hpp>
+#include <vm/core/builtin_functions.hpp>
 #include <vm/utils/interpret.hpp>
 
 using namespace compiler::backend_vm::internal;
 
-[[nodiscard]] vm::opargs::OpCodeArg DVMLocal::asArgument() const {
+[[nodiscard]] vm::opargs::OpCodeArg DVMPlace::asArgument() const {
 	variant_match(type) {
 		variant_case(vm::code::PrimitiveType, primitive) {
 			if (primitive.size == 8) return vm::opargs::Place64{ name };
@@ -26,35 +26,11 @@ using namespace compiler::backend_vm::internal;
 	CORE_UNREACHABLE();
 }
 
-[[nodiscard]] vm::opargs::OpCodeArg DVMLocal::asAnyArgument() const {
+[[nodiscard]] vm::opargs::OpCodeArg DVMPlace::asAnyArgument() const {
 	return vm::opargs::PlaceAny{ name };
 }
 
-DVMLocal::operator vm::opargs::OpCodeArg() const { return asArgument(); }
-
-[[nodiscard]] vm::opargs::OpCodeArg DVMGlobal::asArgument() const {
-	variant_match(type) {
-		variant_case(vm::code::PrimitiveType, primitive) {
-			if (primitive.size == 8) return vm::opargs::Place64{ name };
-			if (primitive.size == 4) return vm::opargs::Place32{ name };
-			if (primitive.size == 2) return vm::opargs::Place16{ name };
-			if (primitive.size == 1) return vm::opargs::Place8{ name };
-		}
-		variant_case(vm::code::PointerType, pointer) { return vm::opargs::PlacePtr(name); }
-		variant_case(vm::code::DataType, data) { return vm::opargs::PlaceStructure(name); }
-		variant_case(vm::code::OpaqueType, opaque) { return vm::opargs::PlaceOpq(name); }
-		variant_default {
-			CORE_PANIC("DVMGlobal type not supported for argument: ", typeName(type));
-		}
-	}
-	CORE_UNREACHABLE();
-}
-
-DVMGlobal::operator vm::opargs::OpCodeArg() const { return asArgument(); }
-
-[[nodiscard]] vm::opargs::OpCodeArg DVMGlobal::asAnyArgument() const {
-	return vm::opargs::PlaceAny{ name };
-}
+DVMPlace::operator vm::opargs::OpCodeArg() const { return asArgument(); }
 
 [[nodiscard]] vm::opargs::OpCodeArg DVMValue::asArgument() const {
 	return VISIT(stored_value, value, return value.asArgument());
@@ -67,23 +43,11 @@ DVMGlobal::operator vm::opargs::OpCodeArg() const { return asArgument(); }
 	}
 }
 
-[[nodiscard]] vm::code::TypeOfData DVMPlace::getType() const {
-	return VISIT(stored_place, place, return place.type);
-}
-
-[[nodiscard]] vm::opargs::OpCodeArg DVMPlace::asArgument() const {
-	return VISIT(stored_place, place, return place.asArgument());
-}
-
-[[nodiscard]] vm::opargs::OpCodeArg DVMPlace::asAnyArgument() const {
-	return VISIT(stored_place, place, return place.asAnyArgument());
-}
+const vm::code::TypeOfData& DVMPlace::getType() const { return type; }
 
 [[nodiscard]] vm::opargs::OpCodeArg DVMImmediate::asArgument() const {
 	return vm::opargs::Immediate{ value };
 }
-
-DVMPlace::operator vm::opargs::OpCodeArg() const { return asArgument(); }
 
 DVMImmediate::DVMImmediate(::u64 value, vm::code::TypeOfData type):
 	  value(value),

@@ -18,6 +18,7 @@
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/lookup/lookup_chain.hpp>
+#include <helios_private/pst_layer/pst_parent.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 
@@ -103,18 +104,13 @@ namespace compiler::helios {
 				case pst::ElementKind::Variable:
 				case pst::ElementKind::Expand:
 				case pst::ElementKind::StmtSpecifier: {
-					// @TODO: #2452 unify this logic
-					if (el->getParent().has_value()) {
-						return self(el->getParent().value().unlock(ctx));
-					} else {
-						// we hit an expand!
-					    // note that here, we should never hit an element without parent that is not
-					    // an expand
-						return self(std::get<pst::AdditionalRootData::MacroExpansionParent>(
-										el->getAdditionalRootData().pst_parent
-						)
-					                    .expand_element.unlock(ctx));
-					}
+					auto pst_parent = getPSTElementParent(ctx, el);
+
+					CORE_ASSERT(
+						pst_parent.isLangElement(),
+						"Non TopLevel elements should always have a pst or an expand parent"
+					);
+					return self(pst_parent.getAsLangElement().unlock(ctx));
 				}
 				default:
 					CORE_PANIC(base::strConcat(
@@ -438,22 +434,16 @@ namespace compiler::helios {
 			// Note: This has to be consistent with QuerySymbolsInScope logic.
 			// @TODO: #2397 maybe move it into a single place
 
-			// @TODO: #2452 this logic should be unified
-
 			auto unlocked = element.unlock(ctx);
+			auto parent   = getPSTElementParent(ctx, unlocked);
 
-			if (unlocked->getParent().has_value()) {
-				return ctx.query<QueryPrimaryCodeScopeFor>(unlocked->getParent().value());
-			} else {
-				// we hit an expand!
-				// note that here, we should never hit an element without parent that is not an expand
-				return ctx.query<QueryPrimaryCodeScopeFor>(
-					std::get<pst::AdditionalRootData::MacroExpansionParent>(
-						unlocked->getAdditionalRootData().pst_parent
-					)
-						.expand_element
-				);
-			}
+			// We should never hit an element without PST parent here,
+			// since it would be a non-expand root element (i.e. TopLevel element), and those don't
+			// have symbols.
+			CORE_ASSERT(
+				parent.isLangElement(), "PST element without LangElement parent in QuerySymbolOfSTMT"
+			);
+			return ctx.query<QueryPrimaryCodeScopeFor>(parent.getAsLangElement());
 		}
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
@@ -462,7 +452,7 @@ namespace compiler::helios {
 				// @TODO: #2087 remove this branch, when non-class statements will be properly supported.
 				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 					"Non-class statements inside classes are not supported yet.",
-					key.element.unlock(ctx)->getSourcePosition().unlock(ctx),
+					key.element.unlock(ctx)->getStablePosition(),
 					"",
 					"here"
 				));
@@ -763,8 +753,8 @@ namespace compiler::helios {
 					= frontend::getRelativeModule(ctx, module(scope(key)), module_path);
 
 				if (!maybe_imported_module.has_value()) {
-					ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
-						"Module not found.", import_stmt->getSourcePosition().unlock(ctx)
+					ctx.logInt(makeBox<dia_int::PlaceholderError>(
+						"Module not found.", import_stmt->getStablePosition()
 					));
 					output(query::Failed());
 					return;
@@ -797,7 +787,7 @@ namespace compiler::helios {
 						"Linked scope for this symbol kind is not implemented yet: ",
 						key.ref->common.kind
 					),
-					stmt(ctx, key.ref).value()->getSourcePosition().unlock(ctx)
+					stmt(ctx, key.ref).value()->getStablePosition()
 				));
 				return query::Failed();
 			}

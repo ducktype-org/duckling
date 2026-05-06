@@ -1,15 +1,17 @@
-Run: "@{build_dir}/bin//duckc repl"
+Run: "@{duckc_path} repl"
 
 prompt: "duckling> "
-begining: |
+beginning: |
   Duckling REPL
   Type /help for available commands, /exit to quit.
-  Press Enter for new line, Alt+Enter to submit.
+  Press Enter to submit. Press Alt+Enter for new line.
 
 end: "\nGoodbye!\n"
+instruction_prompt: "Instruction executed.\n"
 
 SubDirs:
-  - basic_expressions
-  - decl_of_functions
-  # - multiline
+  - fundamentals
+  - intermediate_statements
+  - declarations
+  - script_loading
   - variable_assignment

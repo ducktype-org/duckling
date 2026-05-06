@@ -22,10 +22,6 @@
 namespace compiler::helios {
 	using namespace dia_int;
 
-	std::string getStr(dia::SourcePosition pos) {
-		return pos.getSource()->getCharRange(pos.getStart(), pos.getEnd() + 1).stdString();
-	}
-
 	class IsAliasNote: public MessageBase {
 		Metadata getMetadata() const final {
 			return {
@@ -49,7 +45,9 @@ namespace compiler::helios {
 		}
 
 	public:
-		IsAliasCodeNote(dia::SourcePosition pos, std::string alias_name, std::string underlying_name):
+		IsAliasCodeNote(
+			dia_int::StablePosition pos, std::string alias_name, std::string underlying_name
+		):
 			  MessageWithCodeFragmentAndCause(pos) {
 			addArgument<TextArgument>("alias_name", std::move(alias_name));
 			addArgument<TextArgument>("underlying_name", std::move(underlying_name));
@@ -77,33 +75,37 @@ namespace compiler::helios {
 		if (lookup_qresult->hasFailed()) return;
 		CRef<LookupResult> lookup_result = &lookup_qresult->valueOrThrow();
 
-		std::function<void(const LookupResult&, const std::string&)> emit_alias_note =
-			[&](const LookupResult& current, const std::string& alias_name) {
-				if (current.children.size() != 1) return;
+		std::function<void(const LookupResult&, const std::string&)> emit_alias_note
+			= [&](const LookupResult& current, const std::string& alias_name) {
+				  if (current.children.size() != 1) return;
 
-				auto nested = current.children[0];
-				if (kind(nested.node) == SymbolKind::Alias) {
-					auto alias_stmt = getSymRef(nested.node)
-				                          ->getPSTData()
-				                          ->getElement()
-				                          .unlock(ctx)
-				                          .dynamicCast<pst::Alias>()
-				                          .value();
-					auto underlying_chain = getStr(
-						alias_stmt->getPointed().unlock(ctx)->getSourcePosition().unlock(ctx)
-					);
+				  auto nested = current.children[0];
+				  if (kind(nested.node) == SymbolKind::Alias) {
+					  auto alias_stmt = getSymRef(nested.node)
+				                            ->getPSTData()
+				                            ->getElement()
+				                            .unlock(ctx)
+				                            .dynamicCast<pst::Alias>()
+				                            .value();
+					  auto underlying_chain
+						  = alias_stmt->getPointed()
+				                .unlock(ctx)
+				                ->getSourcePosition()
+				                .illegalAccess(
+								)  // Here we should use illegalAccess, maybe serialize the PST
+				                .content();
 
-					auto id = MessageBase::getUniqueID();
-					linked_messages.put(
-						id,
-						makeBox<IsAliasCodeNote>(
-							alias_stmt->getSourcePosition().unlock(ctx), alias_name, underlying_chain
-						)
-					);
+					  auto id = MessageBase::getUniqueID();
+					  linked_messages.put(
+						  id,
+						  makeBox<IsAliasCodeNote>(
+							  alias_stmt->getStablePosition(), alias_name, underlying_chain
+						  )
+					  );
 
-					emit_alias_note(nested.inner, underlying_chain);
-				};
-			};
+					  emit_alias_note(nested.inner, underlying_chain);
+				  };
+			  };
 
 		emit_alias_note(*lookup_result, ident->getName().unlock(ctx)->unwrap().str());
 	}
@@ -116,7 +118,8 @@ namespace compiler::helios {
 		  symbol_type(symbol_type),
 		  pst_expr(std::move(pst_expr)) {
 		if (pst_expr.has_value()) {
-			this->displayed_name = getStr(pst_expr.value()->getSourcePosition().unlock(ctx));
+			this->displayed_name = pst_expr.value()->getSourcePosition().illegalAccess().content(
+			);  // Here we should use illegalAccess, maybe serialize the PST
 			checkForAliases(ctx, this->linked_messages, pst_expr.value());
 		} else
 			this->displayed_name = symbol_type.toString();
@@ -149,39 +152,30 @@ namespace compiler::helios {
 		}
 
 	public:
-		FunctionDeclaredHereNote(dia::SourcePosition source_position):
+		FunctionDeclaredHereNote(dia_int::StablePosition source_position):
 			  MessageWithCodeFragmentAndCause(source_position) {}
 	};
 
 	/**
 	 * @brief Get source position from a PST element of a function-like character
 	 * (pst of a function, function declaration or class method). We want only the
-	 * name and parameters to be included in the source position.
+	 * name and parameters to be included in the source position. @TODO: #2521 fix this
 	 */
-	dia::SourcePosition getFunctionLikeSourcePosition(
+	dia_int::StablePosition getFunctionLikeSourcePosition(
 		query::Context& ctx, pst::Access<pst::LangElement> function_like
 	) {
 		switch (function_like->getElementKind()) {
 		case pst::ElementKind::Fun: {
 			auto fun = function_like.dynamicCast<pst::Fun>().value();
-			return dia::SourcePosition::merge(
-				fun->getName().unlock(ctx)->getSourcePosition().unlock(ctx),
-				fun->getParams().unlock(ctx)->getSourcePosition().unlock(ctx)
-			);
+			return fun->getParams().unlock(ctx)->getStablePosition();
 		}
 		case pst::ElementKind::FunDecl: {
 			auto fun_decl = function_like.dynamicCast<pst::FunDecl>().value();
-			return dia::SourcePosition::merge(
-				fun_decl->getName().unlock(ctx)->getSourcePosition().unlock(ctx),
-				fun_decl->getParams().unlock(ctx)->getSourcePosition().unlock(ctx)
-			);
+			return fun_decl->getParams().unlock(ctx)->getStablePosition();
 		}
 		case pst::ElementKind::ClassMethod: {
 			auto class_method = function_like.dynamicCast<pst::Method>().value();
-			return dia::SourcePosition::merge(
-				class_method->getName().unlock(ctx)->getSourcePosition().unlock(ctx),
-				class_method->getParams().unlock(ctx)->getSourcePosition().unlock(ctx)
-			);
+			return class_method->getParams().unlock(ctx)->getStablePosition();
 		}
 		default:
 			CORE_PANIC(
