@@ -165,11 +165,11 @@ namespace {
 		default: {
 			return std::unexpected(VmEvaluationError(
 				VmEvaluationError::Kind::ReturnConversionFailed,
-					base::strConcat(
+				base::strConcat(
 					"VMValue to CTV conversion for type: ",
 					base::enumToStr(kind),
 					" is not implemented yet."
-				) 
+				)
 			));
 		}
 		}
