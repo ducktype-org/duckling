@@ -601,7 +601,10 @@ namespace compiler::helios::code {
 				}
 				variant_case_novalue(errors::Ambiguity) {
 					query_ctx.logInt(makeBox<dia_int::PlaceholderError>(
-						"Accessed value is ambiguous.", expr_access->getName().unlock(query_ctx)->getSourcePosition().unlock(query_ctx)
+						"Accessed value is ambiguous.",
+						expr_access->getName().unlock(query_ctx)->getSourcePosition().unlock(
+							query_ctx
+						)
 					));
 					return query::Failed();
 				}
@@ -612,7 +615,10 @@ namespace compiler::helios::code {
 					// https://www.scala-lang.org/api/current/scala/Dynamic.html
 
 					query_ctx.logInt(makeBox<dia_int::PlaceholderError>(
-						"Accessed value not found.", expr_access->getName().unlock(query_ctx)->getSourcePosition().unlock(query_ctx)
+						"Accessed value not found.",
+						expr_access->getName().unlock(query_ctx)->getSourcePosition().unlock(
+							query_ctx
+						)
 					));
 					return query::Failed();
 				}

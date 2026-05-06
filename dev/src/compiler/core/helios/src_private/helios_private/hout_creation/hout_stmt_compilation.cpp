@@ -161,7 +161,9 @@ namespace compiler::helios {
 			}
 
 			ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-				base::strConcat("'", op.str(), "' assignment for type: '", location_type.toString(), "'."),
+				base::strConcat(
+					"'", op.str(), "' assignment for type: '", location_type.toString(), "'."
+				),
 				assignment->getStablePosition()
 			));
 			query::throwFailed();
