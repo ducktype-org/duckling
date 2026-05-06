@@ -206,16 +206,16 @@ struct IMPLEMENT_QUERY(LifeTimeQueryUnstable, Result) {
 QUERY_IMPLEMENTATION_BOILERPLATE(LifeTimeQueryUnstable);
 
 
-DECLARE_QUERY(CyclicQuery1, query::U64Key, u64, ({ .uses_qresult = false }));
-DECLARE_QUERY(CyclicQuery2, query::U64Key, u64, ({ .uses_qresult = false }));
+DECLARE_QUERY(CyclicQuery1, query::U64Key, query::QResult<u64>, ({}));
+DECLARE_QUERY(CyclicQuery2, query::U64Key, query::QResult<u64>, ({}));
 
-struct IMPLEMENT_QUERY(CyclicQuery1, u64) {
+struct IMPLEMENT_QUERY(CyclicQuery1, query::QResult<u64>) {
 	static auto provide(Context& ctx, QKey key) -> PResult { return ctx.query<CyclicQuery2>(key); }
 
 	QUERY_AUTO_CACHE_COPY
 };
 
-struct IMPLEMENT_QUERY(CyclicQuery2, u64) {
+struct IMPLEMENT_QUERY(CyclicQuery2, query::QResult<u64>) {
 	static auto provide(Context& ctx, QKey key) -> PResult { return ctx.query<CyclicQuery1>(key); }
 
 	QUERY_AUTO_CACHE_COPY
@@ -921,19 +921,13 @@ private:
 	}
 
 	void cycleDetectionTest() {
-		// @TODO: #1888 this test will change when proper cycle handling will
-		// be introduced.
-		// Note: we can't catch panics anymore, re-enable this test when working on #1888.
-		return;
-
 		assertTrue(
 			!query::Context::isAnyQueryCurrentlyRunning(),
 			"Active graph not empty before some computations"
 		);
 
-		assertThrows<base::Panic>(
-			[&]() { query::entryPoint<CyclicQuery1>({ 1 }); }, "Cycle detection did not throw."
-		);
+		auto cyclic_call_result = query::entryPoint<CyclicQuery1>({ 1 });
+		assertTrue(cyclic_call_result.hasFailed(), "Cyclic query should return a failed QResult");
 
 		assertTrue(
 			!query::Context::isAnyQueryCurrentlyRunning(),
