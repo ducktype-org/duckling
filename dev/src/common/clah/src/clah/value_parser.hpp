@@ -286,6 +286,4 @@ namespace clah {
 			return getCustomValueName().copyValueOr("category-list");
 		}
 	};
-
-
 }

@@ -73,6 +73,8 @@ namespace {
 	usize calculatePositionInMerged(
 		const std::vector<std::string>& words, usize word_index, usize inside_word_position
 	) {
+		if (word_index >= words.size()) return mergedArguments(words).size() - 1;
+
 		usize position = 0;
 		for (usize i = 0; i < word_index; ++i)
 			position += withQuotes(words[i]).size() + 1;  // +1 for the space between arguments
