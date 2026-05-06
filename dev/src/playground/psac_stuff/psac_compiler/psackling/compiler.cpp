@@ -1,18 +1,21 @@
 #include "compiler.hpp"
 
-#include "frontend/pst_parser/elements/elements_list.hpp"
-#include "frontend/pst_parser/elements/hierarchy/expressions/identifier_literal.hpp"
-#include "frontend/pst_parser/elements/hierarchy/expressions/numeric_value.hpp"
-#include "frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp"
-#include "frontend/pst_parser/pst_expr_visitor.hpp"
 #include "llvm.hpp"
+#include "psackling/type.hpp"
 
+#include <frontend/pst_parser/elements/elements_list.hpp>
 #include <frontend/pst_parser/elements/hierarchy/actions/all_actions.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
+#include <frontend/pst_parser/elements/hierarchy/expressions/identifier_literal.hpp>
+#include <frontend/pst_parser/elements/hierarchy/expressions/numeric_value.hpp>
 #include <frontend/pst_parser/elements/hierarchy/lists/all_lists.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
+#include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
 #include <frontend/pst_parser/pst.hpp>
+#include <frontend/pst_parser/pst_expr_visitor.hpp>
 #include <frontend/pst_parser/pst_visitor.hpp>
+
+#include "base/extend_cpp/strongly_typed_id.hpp"
 
 #include <logger/logger.hpp>
 #include <system_command/system_command.hpp>
@@ -56,6 +59,7 @@ llvm::IntegerType* getIntNTy(llvm::LLVMContext& ctx, std::string_view type_name)
 class VisitorCompiler final: public pst::PstVisitorPanicky {
 public:
 	VisitorCompiler(pg::LlvmProgramModule& llvm_module): llvm_module(llvm_module) {}
+
 	pg::LlvmProgramModule& llvm_module;
 
 	void visitReturn(pst::Access<pst::Return> stmt) override {
@@ -134,6 +138,12 @@ void pg::compile(const fs::File& file, std::string_view output_path) {
 	pst::PST pst(file, pst::PSTType::Program);
 
 	LlvmProgramModule llvm_module;
+
+	TypeInformation type_info_pass(llvm_module);
+	for (pst::AccessLocked<pst::Stmt> inner_stmt:
+	     pst.getRootElement().illegalAccess().value()->getStatements()) {
+		inner_stmt.illegalAccess().value()->acceptVisitor(type_info_pass);
+	}
 
 	VisitorCompiler compiler(llvm_module);
 	for (pst::AccessLocked<pst::Stmt> inner_stmt:

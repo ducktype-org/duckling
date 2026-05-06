@@ -3,6 +3,10 @@ add_library(libpsackling
     psackling/compiler.cpp
     psackling/llvm.hpp
     psackling/llvm.cpp
+    psackling/type.hpp
+    psackling/type.cpp
+    psackling/namespace.hpp
+    psackling/symbol.hpp
 )
 
 llvm_map_components_to_libnames(psackling_llvm_libs
@@ -21,3 +25,6 @@ target_link_libraries(libpsackling PRIVATE Base Logger psac PstParser SystemComm
 target_compile_options(libpsackling PRIVATE ${PSAC_FLAGS})
 
 add_example(psacklinger main.cpp USES libpsackling Base Init Clah Logger SystemCommand llvm_helpers)
+
+
+add_example(psacklinger_test tests/test.cpp USES libpsackling Tester Base Init Clah Logger SystemCommand llvm_helpers)
