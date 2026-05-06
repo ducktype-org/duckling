@@ -69,6 +69,19 @@ namespace {
 		}
 		return args;
 	}
+
+	usize calculatePositionInMerged(
+		const std::vector<std::string>& words, usize word_index, usize inside_word_position
+	) {
+		usize position = 0;
+		for (usize i = 0; i < word_index; ++i)
+			position += withQuotes(words[i]).size() + 1;  // +1 for the space between arguments
+		// If the last word has quotes, we add 1 for the opening quote
+		position += withQuotes(words[word_index]).size() - (words[word_index].size()) / 2;
+		position += inside_word_position;
+
+		return position;
+	}
 }
 
 namespace clah {
@@ -194,14 +207,14 @@ namespace clah {
 			inside_word_position = 0;
 		}
 
-		position_in_merged++;
+		position_in_merged = calculatePositionInMerged(words, current_word, inside_word_position);
 	}
 
 	void ParsingState::advanceWord() {
-		position_in_merged += words[current_word].size() - inside_word_position;
-
 		current_word++;
 		inside_word_position = 0;
+
+		position_in_merged = calculatePositionInMerged(words, current_word, inside_word_position);
 	}
 
 	char ParsingState::frontChar() const {
