@@ -1,23 +1,22 @@
 //! [`Command`]-based backend communicating with the compiler.
 
-use std::{convert::Infallible, fmt, process::Command};
-
-use crate::{
-    QuackResult, QuackResultContext, qp_bail,
-    quackpack::core::{
-        Package,
-        compile::profiles::{OptLevel, Profile},
-    },
-    util::command_ext::CommandExt,
-};
+use std::convert::Infallible;
+use std::fmt;
+use std::path::Path;
+use std::process::Command;
 
 use super::Duckc;
+use crate::quackpack::core::Package;
+use crate::quackpack::core::compile::profiles::{OptLevel, Profile};
+use crate::util::command_ext::CommandExt;
+use crate::{QuackResult, QuackResultContext, qp_bail};
 
 #[non_exhaustive]
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 /// Supported subcommands passed to the duckc.
 pub enum DuckcSubcommand {
     CompilePackage,
+    CompileScript,
     Repl,
 }
 
@@ -25,6 +24,7 @@ impl DuckcSubcommand {
     fn as_argument(&self) -> &'static str {
         match self {
             Self::CompilePackage => "compile_package",
+            Self::CompileScript => "compile_script",
             Self::Repl => "repl",
         }
     }
@@ -50,6 +50,12 @@ impl DuckcProcessBuilder {
         self
     }
 
+    /// Set path to the script to compile.
+    pub fn set_script_path(&mut self, path: &Path) -> &mut Self {
+        self.inner.arg(path);
+        self
+    }
+
     /// Set package name of the currently compiling package.
     pub fn set_package_name(&mut self, package: &Package) -> &mut Self {
         let name = package.manifest().name();
@@ -66,6 +72,11 @@ impl DuckcProcessBuilder {
     /// Set artifacts directory of the currently compiling package.
     pub fn set_package_artifacts_dir(&mut self, package: &Package) -> &mut Self {
         let dir = package.artifacts_directory();
+        self.set_artifacts_dir(dir.not_locked_path())
+    }
+
+    /// Set artifacts directory of the currently compiling package.
+    pub fn set_artifacts_dir(&mut self, dir: &Path) -> &mut Self {
         self.inner.arg("-a").arg(dir);
         self
     }
@@ -89,9 +100,21 @@ impl DuckcProcessBuilder {
         self
     }
 
+    /// As [`Self::update_with_profile`] but does not set `no_incremental`.
+    pub fn update_with_script_profile(&mut self, profile: &Profile) -> &mut Self {
+        self.set_opt_level(profile.opt_level);
+        if profile.dvm_bytecode {
+            self.set_dvm_backend();
+        }
+        if !profile.c_std {
+            self.set_no_c_std();
+        }
+        self
+    }
+
     /// Set LLVM optimization level.
     fn set_opt_level(&mut self, opt_level: OptLevel) -> &mut Self {
-        self.inner.arg("-0").arg(opt_level.to_string());
+        self.inner.arg("-O").arg(opt_level.to_string());
         self
     }
 

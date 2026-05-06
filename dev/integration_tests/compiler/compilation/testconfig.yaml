@@ -17,6 +17,8 @@ duckc_worker_count: "3"
 
 # Path to the local helper script used by the deterministic pre-check.
 compile_determinism_script: "@{dev_dir}/integration_tests/compiler/compilation/scripts/concurrent_compile_determinism.py"
+# Path to the helper script that runs multiple commands and asserts identical stdout/stderr/exit code.
+compare_runs_script: "@{dev_dir}/integration_tests/compiler/compilation/scripts/compare_runs.py"
 
 compile_dvm_backend_deterministically_cmd: "if [ '@{enable_conc_deterministic_tests}' = 'true' ]; then python3 @{compile_determinism_script} --duckc-path @{duckc_path} --module-name @{Name} --duckc-worker-count @{duckc_worker_count} --compile-options='@{compile_dvm_options}' --backend dvm; else true; fi"
 compile_llvm_backend_deterministically_cmd: "if [ '@{enable_conc_deterministic_tests}' = 'true' ]; then python3 @{compile_determinism_script} --duckc-path @{duckc_path} --module-name @{Name} --duckc-worker-count @{duckc_worker_count} --compile-options='@{compile_llvm_options}' --backend llvm; else true; fi"
@@ -24,8 +26,12 @@ compile_llvm_backend_deterministically_cmd: "if [ '@{enable_conc_deterministic_t
 compile_dvm_backend_cmd:  "@{compile_dvm_backend_deterministically_cmd} && @{duckc_path} compile_package duck_modules/@{Name} -w @{duckc_worker_count} -a build -n package_@{Name} @{compile_dvm_options} --dvm-backend"
 compile_llvm_backend_cmd: "@{compile_llvm_backend_deterministically_cmd} && @{duckc_path} compile_package duck_modules/@{Name} -w @{duckc_worker_count} -a build -n package_@{Name} @{compile_llvm_options}"
 
+# "compile only" commands used by the all backend (determinism checks run separately before these).
+compile_dvm_only_cmd: "@{duckc_path} compile_package duck_modules/@{Name} -w @{duckc_worker_count} -a build -n package_@{Name} @{compile_dvm_options} --dvm-backend"
+compile_llvm_only_cmd: "@{duckc_path} compile_package duck_modules/@{Name} -w @{duckc_worker_count} -a build -n package_@{Name} @{compile_llvm_options}"
+
 compiled_to_llvm: "./build/package_llvm.exe"
-compiled_to_dvm: "./build/query/query*/*.dbc" # ??
+compiled_to_dvm: "./build/package_dvm.dbc"
 
 # Deliberately empty, so as not to recompile duckc and dvm for each test.
 PreNode: ""
@@ -33,10 +39,12 @@ PreNode: ""
 Clean: "@{clean_cmd}"
 PreCase: "@{clean_cmd} && mkdir build;
   case '@{backend}' in
-    dvm)       @{compile_dvm_backend_cmd}                   ;;
-    llvm)      @{compile_llvm_backend_cmd}                  ;;
-    nobackend) echo 'Backend undefined'; exit 1             ;;
-    *)         echo 'Unknown backend';   exit 1             ;;
+    dvm)       @{compile_dvm_backend_cmd}                                                                                ;;
+    llvm)      @{compile_llvm_backend_cmd}                                                                               ;;
+    all)       @{compile_dvm_backend_deterministically_cmd} && @{compile_llvm_backend_deterministically_cmd} &&
+               @{compile_dvm_only_cmd} && @{compile_llvm_only_cmd}                                                      ;;
+    nobackend) echo 'Backend undefined'; exit 1                                                                          ;;
+    *)         echo 'Unknown backend';   exit 1                                                                          ;;
   esac;"
 
 Run: "
@@ -49,6 +57,11 @@ Run: "
         @{compiled_to_llvm};
       fi
       ;;
+    all)
+      _llvm=@{compiled_to_llvm};
+      _dvm=\"@{dvm_path} run @{compiled_to_dvm}\";
+      python3 @{compare_runs_script} --cmd llvm \"$_llvm\" --cmd dvm \"$_dvm\";
+      ;;
     nobackend) echo \"Backend undefined\"; exit 1 ;;
     *)         echo \"Unknown backend\";   exit 1 ;;
   esac;"
@@ -56,13 +69,8 @@ Run: "
 Tests:
   base:
     Cases:
-      dvm:
-        backend: dvm
-        Output:
-          String: "4\n1\n23\n4\n1\n4\n4\n8\n4\n8\n76\n"
-        ExitCode: 76
-      llvm:
-        backend: llvm
+      all:
+        backend: all
         Output:
           String: "4\n1\n23\n4\n1\n4\n4\n8\n4\n8\n76\n"
         ExitCode: 76

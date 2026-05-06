@@ -1,22 +1,20 @@
 //! Try to (wisely) fix user typos.
-use std::{collections::HashMap, ffi::OsString, path::PathBuf};
+use std::collections::HashMap;
+use std::ffi::OsString;
+use std::path::PathBuf;
 
-use crate::{
-    DuckContext, QuackResult,
-    duck::driver::subcommands::run_script::is_name_possible_script_path_subcmd, qp_bail,
-};
 use clap::ArgMatches;
 use itertools::Itertools;
 use tracing::debug;
 
-use crate::duck::driver::{
-    cli,
-    cli_args_preprocessing::{
-        builtin::{get_builtin_alias_expansion, get_builtin_aliases, is_builtin_subcommand},
-        levenshtein,
-    },
-    subcommands::subcommands,
+use crate::duck::driver::cli;
+use crate::duck::driver::cli_args_preprocessing::builtin::{
+    get_builtin_alias_expansion, get_builtin_aliases, is_builtin_subcommand,
 };
+use crate::duck::driver::cli_args_preprocessing::levenshtein;
+use crate::duck::driver::subcommands::run_script::is_name_possible_script_path_subcmd;
+use crate::duck::driver::subcommands::subcommands;
+use crate::{DuckContext, QuackResult, qp_bail};
 
 /// Try to fix user typos.
 ///
@@ -212,7 +210,7 @@ mod tests {
 
     #[test]
     fn test_single_closest_target() {
-        let args_matches = cli().try_get_matches_from(["duck", "ini"]).unwrap();
+        let args_matches = cli().try_get_matches_from(["duck", "ini", "f"]).unwrap();
         let mut ctx = DuckContext::new().unwrap();
         ctx.duck_cfg_mut().set_fixes_enabled(true);
         ctx.duck_cfg_mut().set_max_fix_dist(100);

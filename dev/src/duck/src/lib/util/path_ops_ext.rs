@@ -1,49 +1,13 @@
-use std::{
-    fs::{
-        File, OpenOptions, Permissions, copy, create_dir, create_dir_all, hard_link, read,
-        read_to_string, remove_dir, remove_file, rename, write,
-    },
-    io::{self, Read, Write},
-    ops::{Deref, DerefMut},
-    path::{Path, PathBuf},
+use std::fs::{
+    File, OpenOptions, Permissions, copy, create_dir, create_dir_all, hard_link, read,
+    read_to_string, remove_dir, remove_file, rename, write,
 };
+use std::io::{self, Read, Write};
+use std::path::{Path, PathBuf};
 
 use crate::{QuackResult, QuackResultContext, qp_bail};
 
 const BUFFER_SIZE: usize = 4096;
-
-/// Whether the [`PathOpsExt::lock`]/[`PathOpsExt::lock_shared`] should block the current thread.
-#[derive(Debug, Hash, Clone, Copy, PartialEq, Eq)]
-pub enum ShouldBlock {
-    No,
-    Yes,
-}
-
-/// An RAII guard, which calls [`(*self).unlock()`](std::fs::File::unlock) on a drop.
-#[derive(Debug)]
-pub struct FileLockGuard {
-    file: File,
-}
-
-impl Drop for FileLockGuard {
-    fn drop(&mut self) {
-        drop(self.file.unlock())
-    }
-}
-
-impl Deref for FileLockGuard {
-    type Target = File;
-
-    fn deref(&self) -> &Self::Target {
-        &self.file
-    }
-}
-
-impl DerefMut for FileLockGuard {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.file
-    }
-}
 
 /// Options for controlling the [`PathOpsExt::mkdir`]
 #[derive(Debug, Clone, Copy, Hash, Eq, PartialEq)]
@@ -79,19 +43,6 @@ pub trait PathOpsExt {
     /// Note that this function will return `Ok(())`, if [`create_dir`] returns `Err` with kind
     /// [`ErrorKind::AlreadyExists`](io::ErrorKind::AlreadyExists).
     fn mkdir(&self, opts: MkdirOptions) -> QuackResult<()>;
-
-    /// Locks exclusively `self`, creating a file if needed.
-    ///
-    /// This is essentially [`self.touch()?`](PathOpsExt::touch) followed by [`File::lock`]/[`File::try_lock`], with RAII bloat.
-    fn lock(&self, should_block: ShouldBlock) -> QuackResult<FileLockGuard>;
-
-    /// Locks shared `self`, creating a file if needed.
-    ///
-    /// This is essentially [`self.touch()?`](PathOpsExt::touch) followed by [`File::lock_shared`]/[`File::try_lock_shared`], with RAII bloat.
-    ///
-    /// ## Returns
-    /// [`Ok(FileLockGuard)`](FileLockGuard) on a success.
-    fn lock_shared(&self, should_block: ShouldBlock) -> QuackResult<FileLockGuard>;
 
     /// Resolve `self` fully, as best as possible.
     ///
@@ -248,39 +199,6 @@ impl PathOpsExt for Path {
         .with_context(|| format!("failed to create {text} `{}`", self.display()))
     }
 
-    fn lock(&self, should_block: ShouldBlock) -> QuackResult<FileLockGuard> {
-        let file = self.touch()?;
-        let result = if matches!(should_block, ShouldBlock::Yes) {
-            file.lock()
-        } else {
-            file.try_lock().map_err(|err| match err {
-                std::fs::TryLockError::Error(error) => error,
-                std::fs::TryLockError::WouldBlock => io::Error::from(io::ErrorKind::WouldBlock),
-            })
-        };
-        result.map(|_| FileLockGuard { file }).with_context(|| {
-            format!(
-                "failed to acquire an exclusive lock on `{}`",
-                self.display()
-            )
-        })
-    }
-
-    fn lock_shared(&self, should_block: ShouldBlock) -> QuackResult<FileLockGuard> {
-        let file = self.touch()?;
-        let result = if matches!(should_block, ShouldBlock::Yes) {
-            file.lock_shared()
-        } else {
-            file.try_lock_shared().map_err(|err| match err {
-                std::fs::TryLockError::Error(error) => error,
-                std::fs::TryLockError::WouldBlock => io::Error::from(io::ErrorKind::WouldBlock),
-            })
-        };
-        result
-            .map(|_| FileLockGuard { file })
-            .with_context(|| format!("failed to acquire a shared lock on `{}`", self.display()))
-    }
-
     #[cfg(unix)]
     fn is_executable(&self) -> bool {
         use std::os::unix::prelude::*;
@@ -342,15 +260,17 @@ impl PathOpsExt for Path {
     }
 
     fn rm(&self) -> QuackResult<()> {
-        remove_file(self).with_context(|| format!("failed to remove file `{}`", self.display()))
+        ignore_not_found(remove_file(self))
+            .with_context(|| format!("failed to remove file `{}`", self.display()))
     }
 
     fn rmdir(&self) -> QuackResult<()> {
-        remove_dir(self).with_context(|| format!("failed to remove directory `{}`", self.display()))
+        ignore_not_found(remove_dir(self))
+            .with_context(|| format!("failed to remove directory `{}`", self.display()))
     }
 
     fn rmtree(&self) -> QuackResult<()> {
-        std::fs::remove_dir_all(self)
+        ignore_not_found(std::fs::remove_dir_all(self))
             .with_context(|| format!("failed to remove tree at `{}`", self.display()))
     }
 
@@ -394,4 +314,24 @@ impl PathOpsExt for Path {
             tilde_with_context(as_str, || Some(home())).into_owned(),
         ))
     }
+}
+
+fn ignore_io_kind_error<T: Default>(
+    err: io::Result<T>,
+    to_ignore: &[io::ErrorKind],
+) -> io::Result<T> {
+    match err {
+        x @ Ok(_) => x,
+        Err(e) => {
+            if to_ignore.contains(&e.kind()) {
+                Ok(T::default())
+            } else {
+                Err(e)
+            }
+        }
+    }
+}
+
+fn ignore_not_found<T: Default>(err: io::Result<T>) -> io::Result<T> {
+    ignore_io_kind_error(err, &[io::ErrorKind::NotFound])
 }

@@ -1,18 +1,17 @@
 //! Loading packages from the disk.
-use std::{io, marker::PhantomData, path::Path};
+use std::io;
+use std::marker::PhantomData;
+use std::path::Path;
 
 use tracing::{debug, trace};
 
-use crate::{
-    DuckContext, QuackResult, QuackResultContext,
-    duck::util::duck_home::DuckHome,
-    qp_bail, qp_err,
-    quackpack::core::{
-        PackageContext,
-        storage::{paths::Storage, venv::Venv, venv_id::VenvId},
-    },
-    util::path_ops_ext::PathOpsExt,
-};
+use crate::duck::util::duck_home::DuckHome;
+use crate::quackpack::core::PackageContext;
+use crate::quackpack::core::storage::paths::Storage;
+use crate::quackpack::core::storage::venv::Venv;
+use crate::quackpack::core::storage::venv_id::VenvId;
+use crate::util::path_ops_ext::PathOpsExt;
+use crate::{DuckContext, QuackResult, QuackResultContext, qp_bail, qp_err};
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 /// Is [`PackageLoader`] allowed to return a global package, if it doesn't find any package.
@@ -48,7 +47,7 @@ impl PackageLoader {
     /// Get the global package.
     pub fn global_package<'duck>(ctx: &'duck DuckContext) -> QuackResult<PackageContext<'duck>> {
         let global_package_path = ctx.duck_home().ensure_and_populate_global_dir()?;
-        let global_package = PackageContext::new(global_package_path.to_path_buf(), ctx)?;
+        let global_package = PackageContext::new(global_package_path.into_not_locked_path(), ctx)?;
         if !global_package.is_global() {
             qp_bail!(
                 "Global package should be named {}",
@@ -130,8 +129,8 @@ impl PackageLoader {
         venv_id: VenvId,
     ) -> QuackResult<PackageContext<'duck>> {
         let storage_loc = ctx.default_storage_root();
-        let storage = Storage::new(storage_loc);
-        let Some(venv) = Venv::fix_and_load(&storage, venv_id)? else {
+        let storage = Storage::new(storage_loc.into_not_locked_path());
+        let Some(venv) = Venv::fix_and_load(&storage, venv_id, ctx)? else {
             qp_bail!("Could not find venv {} in the main storage", venv_id);
         };
         let dir = venv.data().last_known_directory();
@@ -144,16 +143,14 @@ impl PackageLoader {
 mod tests {
     use tempfile::tempdir;
 
-    use crate::{
-        DuckContext,
-        quackpack::core::PackageLoader,
-        util::path_ops_ext::{MkdirOptions, PathOpsExt},
-    };
+    use crate::DuckContext;
+    use crate::quackpack::core::PackageLoader;
+    use crate::util::path_ops_ext::{MkdirOptions, PathOpsExt};
 
     const BASIC_MANIFEST: &str = r"
 metadata:
   name: foo
-  version: 0.1
+  version: '0.1'
 ";
 
     #[test]

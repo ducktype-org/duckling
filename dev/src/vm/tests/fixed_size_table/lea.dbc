@@ -1,25 +1,25 @@
 type fixed_size_table: stable64 i64 4
 type pointer: stable64_ptr stable64
 
-function main { i64, ptr_argv } -> i64 {
-    # ret_val
+function main { i64, ptr_argv } -> { i64 } {
+    # ret0
     # argc
     # *argv
-    init_lany_type test_val, i64;
-    init_lany_type test_ptr, ptr_i64;
-    init_lany_type test_idx, i64;
-    init_lany_type arr_ptr, stable64_ptr;
-    alloc_lptr_type arr_ptr, stable64;
-    mov_l64_imm test_val, 42;
-    mov_l64_imm test_idx, 2;
+    init_pany_type test_val, i64;
+    init_pany_type test_ptr, ptr_i64;
+    init_pany_type test_idx, i64;
+    init_pany_type arr_ptr, stable64_ptr;
+    alloc_pptr_type arr_ptr, stable64;
+    mov_p64_imm test_val, 42;
+    mov_p64_imm test_idx, 2;
 
-    fixedSizeTableStore_lptr_lany_l64 arr_ptr, test_val, test_idx;
-    fixedSizeTableLea_lptr_lptr_l64 test_ptr, arr_ptr, test_idx;
+    fixedSizeTableStore_pptr_pany_p64 arr_ptr, test_val, test_idx;
+    fixedSizeTableLea_pptr_pptr_p64 test_ptr, arr_ptr, test_idx;
 
-    load_lany_lptr test_idx, test_ptr;
-    output_l64 test_idx;
+    load_pany_pptr test_idx, test_ptr;
+    output_p64 test_idx;
 
-    free_lptr arr_ptr;
+    free_pptr arr_ptr;
     deinit; # arr_ptr
     deinit; # test_idx
     deinit; # test_ptr

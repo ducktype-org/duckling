@@ -2,7 +2,8 @@ use std::any::Any;
 
 use clap::{Arg, ArgAction, ArgMatches, Command};
 
-use crate::{StrId, quackpack::core::Package};
+use crate::StrId;
+use crate::quackpack::core::Package;
 
 const DEFAULT_PROFILE: &str = "dev";
 
@@ -68,6 +69,10 @@ pub fn subcommand(name: &'static str) -> Command {
 }
 
 /// Get selected profile from `args`.
+/// Note:
+/// -----
+/// This function is only for selecting the profile for building/running packages.
+/// Running scripts uses different logic.
 pub fn profile_from_matches(args: &ArgMatches) -> StrId {
     if args.get_flag("release") {
         "release".into()

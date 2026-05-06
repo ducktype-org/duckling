@@ -1,0 +1,38 @@
+# Simplest tests for scripts in Duckling.
+
+Tests:
+  simple_addition:
+    folder: "simple_addition"
+    Cases:
+      direct:
+        mode: direct
+        Output: 
+          String: "42\n"
+      vm:
+        mode: vm
+        Output: 
+          String: "42\n"
+
+  function_declaration:
+    folder: "function_declaration"
+    Cases:
+      direct:
+        mode: direct
+        Output: 
+          String: "42\n"
+      vm:
+        mode: vm
+        Output: 
+          String: "42\n"
+
+  simple_loop:
+    folder: "simple_loop"
+    Cases:
+      direct:
+        mode: direct
+        Output: 
+          String: "6\n5\n4\n3\n2\n1\n"
+      vm:
+        mode: vm
+        Output: 
+          String: "6\n5\n4\n3\n2\n1\n"

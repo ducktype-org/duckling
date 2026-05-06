@@ -6,6 +6,7 @@
 #include "elements/lang_state_unmethods.hpp"
 #include "pst_config.hpp"
 #include "pst_id.hpp"
+#include "source_position_locked.hpp"
 
 #include <concurrent/base/collections/hash_map.hpp>
 
@@ -24,6 +25,10 @@
 #include <ranges>
 #include <variant>
 
+namespace dia_int {
+	class StablePosition;
+}
+
 namespace pst {
 	class Import;
 
@@ -32,7 +37,6 @@ namespace pst {
 
 	class PstVisitor;
 
-	class StablePosition;
 
 	class LangParserState;
 
@@ -106,13 +110,28 @@ namespace pst {
 		 * @brief Position covering the whole element.
 		 */
 		[[nodiscard]]
-		const dia::SourcePosition& getSourcePosition() const;
+		SourcePositionLocked getSourcePosition() const;
 
 		/**
 		 * @brief The stable position of an element.
 		 */
 		[[nodiscard]]
-		StablePosition getStablePosition() const;
+		dia_int::StablePosition getStablePosition() const;
+
+		/**
+		 * @brief Given a StablePosition of an element, returns the source position of the element.
+		 */
+		static dia::SourcePosition getActiveSourcePosition(
+			query::Context& ctx, const dia_int::StablePosition& pos
+		);
+
+		/**
+		 * @brief Given a StablePosition of an element, returns the source position of the element,
+		 * bypasses the query graph.
+		 */
+		static dia::SourcePosition getActiveSourcePositionIllegalAccess(
+			const dia_int::StablePosition& pos
+		);
 
 		/**
 		 * @brief Get pst node the by stable hash. Throws on non-existent hash.
@@ -409,13 +428,14 @@ namespace pst {
 		/**
 		 * @brief Calculates the signature of the whole PST sub-tree. Assumes the hashes are already
 		 * calculated.
+		 * @param partial_hash partial hash to add the signature to
 		 */
 		void calcSignature(HashAlg& partial_hash) const;
 
 		/**
 		 * @brief Signs the hashes of the whole PST sub-tree with given signature.
 		 */
-		void signGenerated(HashType& signature);
+		void signGenerated(const HashType& signature);
 
 		/**
 		 * @brief Used to add additional data that is generic to multiple elements for example in

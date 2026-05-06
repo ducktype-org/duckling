@@ -51,11 +51,11 @@ private:
 				= frontend::createModuleTreeWithRandomPackageID(fs::File(path(module_path)));
 			auto& top_level = ctx.query<helios::QueryTopLevelEntities>(module)->valueOrPanic();
 
-			backend_vm::DVMCodeBuilder m(ctx, false);
+			backend_vm::DVMCodeBuilder m(ctx, false, false);
 
 			for (auto& hout_glob: top_level.glob_data) {
-				auto lir_glob = lir::LIRGlobal::fromHOUT(ctx, hout_glob);
-				variant_match(hout_glob.value) {
+				auto lir_glob = lir::LIRGlobal::fromHOUT(ctx, *hout_glob);
+				variant_match(hout_glob->value) {
 					variant_case(helios::HOUTGlobalVariable, var) {
 						CRef mir_func = &ctx.query<mir::LowerGlobalDataToMIRCtor>({ hout_glob })
 						                     ->valueOrThrow();
@@ -79,14 +79,14 @@ private:
 								"remove "
 								"the fail after #1553. ",
 								"Global constant: ",
-								hout_glob.original_name.strView()
+								hout_glob->original_name.strView()
 							));
 						}
 					}
 					variant_default {
 						fail(base::strConcat(
 							"Unexpected global data type in module: ",
-							hout_glob.original_name.strView()
+							hout_glob->original_name.strView()
 						));
 					}
 				}

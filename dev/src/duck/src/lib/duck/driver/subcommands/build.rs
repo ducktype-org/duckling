@@ -1,12 +1,11 @@
-use crate::quackpack::core::{AllowGlobalPackage, PackageLoader};
-use crate::{DuckContext, QuackResult};
 use clap::{ArgMatches, Command};
 
 use crate::duck::driver::cli_ext::{
     CommandExt, features_from_matches, flag, multi, profile_from_matches, subcommand,
 };
-
+use crate::quackpack::core::{AllowGlobalPackage, PackageLoader};
 use crate::quackpack::subcommands::build::{BuildOptions, compile};
+use crate::{DuckContext, QuackResult};
 
 /// Creates parser for the `build` subcommand.
 pub fn get_parser() -> Command {
@@ -42,11 +41,11 @@ pub fn get_parser() -> Command {
 pub fn execute(ctx: &DuckContext, matches: &ArgMatches) -> QuackResult<()> {
     // We do not allow to build the global package.
     // It has no src folder and is purely for running scripts.
-    let package = PackageLoader::find_from_cwd(ctx, AllowGlobalPackage::No)?;
-    let features = features_from_matches(matches, package.package());
+    let pcx = PackageLoader::find_from_cwd(ctx, AllowGlobalPackage::No)?;
+    let features = features_from_matches(matches, pcx.package());
     let profile = profile_from_matches(matches);
     let opts = BuildOptions {
-        package,
+        pcx,
         used_features: features,
         profile,
         overwrite: matches.get_flag("overwrite"),

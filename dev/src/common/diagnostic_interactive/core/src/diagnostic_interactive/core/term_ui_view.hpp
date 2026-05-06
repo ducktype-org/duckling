@@ -6,6 +6,8 @@
  */
 #pragma once
 
+#include <diagnostic_interactive/core/common_classes.hpp>
+
 #include <base/collections/maps.hpp>
 #include <base/collections/optional.hpp>
 #include <base/types/ints.hpp>
@@ -33,23 +35,9 @@ namespace dia_int::term_ui_view {
 	};
 
 	struct CodeSection final {
-		std::string file;
-		u64         line;
-		u64         col;
-
+		CodeLocation                       location;
 		std::vector<CodeLine>              lines;
 		base::HashMap<u64, PointerMessage> pointers;
-
-		/**
-		 * The end line of the error span (not entire code block).
-		 * Typically this is the highlighted portion of the code block.
-		 * This is not needed for term_ui, but is needed for the lsp_ui.
-		 */
-		base::Optional<u64> end_line{};
-		/**
-		 * Same as end_line.
-		 */
-		base::Optional<u64> end_col{};
 	};
 
 	using TextSection = std::string;

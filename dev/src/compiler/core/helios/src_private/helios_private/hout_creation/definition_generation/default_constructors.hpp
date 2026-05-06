@@ -1,6 +1,7 @@
 #pragma once
 
 
+#include <frontend/pst_parser/source_position_locked.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/tsh/types.hpp>
 
@@ -73,7 +74,7 @@ namespace compiler::helios::defgen {
 	 * @return A HOUT Expression that initializes the given type, or an error if the type is not
 	 * default constructible.
 	 */
-	query::QResult<Box<code::Expr>> getDefaultInitializerExpr(
-		query::Context& ctx, const tsh::SymbolType<>& type, dia::SourcePosition pos
+	query::QResult<CRef<code::Expr>> getDefaultInitializerExpr(
+		query::Context& ctx, const tsh::SymbolType<>& type, dia_int::StablePosition pos
 	);
 }

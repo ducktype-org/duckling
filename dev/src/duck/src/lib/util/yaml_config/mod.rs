@@ -1,19 +1,14 @@
 //! Implementation of traversing YAML documents, and getting/setting values at dotted keys.
+use std::path::{Path, PathBuf};
+use std::{fmt, io};
+
 use serde::Deserialize;
-use std::{
-    fmt, io,
-    path::{Path, PathBuf},
-};
+use serde_yaml_ng::{Mapping, Sequence, Value, from_str, to_string};
 use tracing::debug;
 
-use serde_yaml_ng::{Mapping, Sequence, Value, from_str, to_string};
-
-use crate::{
-    QuackError, QuackResult, QuackResultContext, qp_bail, qp_bail_internal, qp_err,
-    util::path_ops_ext::PathOpsExt,
-};
-
 use super::DescriptionWithAnArticle;
+use crate::util::path_ops_ext::PathOpsExt;
+use crate::{QuackError, QuackResult, QuackResultContext, qp_bail, qp_bail_internal, qp_err};
 
 mod de;
 
@@ -362,14 +357,14 @@ impl YamlConfig {
     }
 
     /// Deserialize a value at the dotted key.
-    pub fn deserialize<'de, T: Deserialize<'de>>(&self, key: &str) -> QuackResult<T> {
+    pub fn deserialize<'de, T: Deserialize<'de>>(&'de self, key: &str) -> QuackResult<T> {
         let deserializer = de::YamlDeserializer { config: self, key };
         T::deserialize(deserializer).with_context(|| self.make_location_error())
     }
 
     /// Deserialize an optional value at the dotted key.
     pub fn deserialize_optional<'de, T: Deserialize<'de>>(
-        &self,
+        &'de self,
         key: &str,
     ) -> QuackResult<Option<T>> {
         self.deserialize::<Option<T>>(key)
@@ -385,8 +380,9 @@ impl fmt::Display for YamlConfig {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use tempfile::NamedTempFile;
+
+    use super::*;
 
     fn prepare_file(content: &str) -> NamedTempFile {
         use std::io::Write;
@@ -692,9 +688,19 @@ invalid type: map, expected an int or a string",
             format!(
                 "\
 when parsing the configuration at `{}`
-invalid type: Option value, expected an int or a string",
+missing key `nonexistentkey`",
                 file.path().display()
             )
         );
+
+        let none = config
+            .deserialize::<Option<IntOrString>>("nonexistentkey")
+            .unwrap();
+        assert!(none.is_none());
+
+        let none = config
+            .deserialize_optional::<IntOrString>("nonexistentkey")
+            .unwrap();
+        assert!(none.is_none());
     }
 }

@@ -3,9 +3,9 @@ use std::collections::HashMap;
 use httpmock::prelude::*;
 use tempfile::{TempDir, tempdir};
 
-use crate::{quackpack::core::Version, util::test_utils::setup_test};
-
 use super::*;
+use crate::quackpack::core::Version;
+use crate::util::test_utils::setup_test;
 
 fn setup_duck_ctx() -> (DuckContext, TempDir) {
     let setup = || {
@@ -14,12 +14,12 @@ fn setup_duck_ctx() -> (DuckContext, TempDir) {
         let dir = tempdir().unwrap();
         // SAFETY: Setup is single threaded, and `Env` in `DuckContext`, copies all envs.
         unsafe {
-            std::env::set_var("DUCK_CACHE_DIR", dir.path());
+            std::env::set_var("DUCK_HOME", dir.path());
         }
         let ctx = DuckContext::default();
         // SAFETY: Setup is single threaded, and `Env` in `DuckContext`, copies all envs.
         unsafe {
-            std::env::remove_var("DUCK_CACHE_DIR");
+            std::env::remove_var("DUCK_HOME");
         }
         (ctx, dir)
     };

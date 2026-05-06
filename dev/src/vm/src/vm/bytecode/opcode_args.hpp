@@ -21,10 +21,8 @@
 		}                                                             \
 	}
 
-#define DEFINE_STACK_LOCAL(SUFFIX, OP_SHORT_VALUE) \
-	DEFINE_STR_ARG_TYPE(StackLocal##SUFFIX, var_name, OP_SHORT_VALUE)
-#define DEFINE_GLOBAL(SUFFIX, OP_SHORT_VALUE) \
-	DEFINE_STR_ARG_TYPE(Global##SUFFIX, global_data_name, OP_SHORT_VALUE)
+#define DEFINE_PLACE(SUFFIX, OP_SHORT_VALUE) \
+	DEFINE_STR_ARG_TYPE(Place##SUFFIX, var_name, OP_SHORT_VALUE)
 
 /**
  * @brief This namespace encapsulates types of opcode arguments.
@@ -49,40 +47,24 @@ namespace vm::opargs {
 		}
 	};
 
-	DEFINE_STACK_LOCAL(8, "l8");
-	DEFINE_STACK_LOCAL(16, "l16");
-	DEFINE_STACK_LOCAL(32, "l32");
-	DEFINE_STACK_LOCAL(64, "l64");
-	DEFINE_STACK_LOCAL(Any, "lany");
-	DEFINE_STACK_LOCAL(Ptr, "lptr");
-	DEFINE_STACK_LOCAL(Opq, "lopq");
-	DEFINE_STACK_LOCAL(Structure, "lste");
+	DEFINE_PLACE(8, "p8");
+	DEFINE_PLACE(16, "p16");
+	DEFINE_PLACE(32, "p32");
+	DEFINE_PLACE(64, "p64");
+	DEFINE_PLACE(Any, "pany");
+	DEFINE_PLACE(Ptr, "pptr");
+	DEFINE_PLACE(Opq, "popq");
+	DEFINE_PLACE(Structure, "pste");
+	DEFINE_PLACE(FSTable, "pfst");
 
 	/**
-	 * @brief Represents local variant argument.
+	 * @brief Represents place variant argument.
 	 */
-	DEFINE_STACK_LOCAL(Vnt, "lvnt");
+	DEFINE_PLACE(Vnt, "pvnt");
 
-#define VM_OPARG_LOCAL_TYPES                                                             \
-	StackLocal8, StackLocal16, StackLocal32, StackLocal64, StackLocalAny, StackLocalPtr, \
-		StackLocalVnt, StackLocalOpq, StackLocalStructure
-
-	DEFINE_GLOBAL(8, "g8");
-	DEFINE_GLOBAL(16, "g16");
-	DEFINE_GLOBAL(32, "g32");
-	DEFINE_GLOBAL(64, "g64");
-	DEFINE_GLOBAL(Any, "gany");
-	DEFINE_GLOBAL(Vnt, "gvnt");
-	DEFINE_GLOBAL(Ptr, "gptr");
-	DEFINE_GLOBAL(Opq, "gopq");
-	DEFINE_GLOBAL(Structure, "gste");
-
-	/**
-	 * @brief List of all argument types that target global data.
-	 */
-#define VM_OPARG_GLOBAL_TYPES                                                          \
-	Global64, Global32, Global16, Global8, GlobalAny, GlobalVnt, GlobalPtr, GlobalOpq, \
-		GlobalStructure
+#define VM_OPARG_PLACE_TYPES                                                                   \
+	Place8, Place16, Place32, Place64, PlaceAny, PlacePtr, PlaceVnt, PlaceOpq, PlaceStructure, \
+		PlaceFSTable
 
 	/**
 	 * @brief Represents type name argument.
@@ -204,8 +186,7 @@ namespace vm::opargs {
 	 * @brief Storage class for any kind of opcode argument.
 	 */
 	using OpCodeArg = std::variant<
-		VM_OPARG_LOCAL_TYPES,
-		VM_OPARG_GLOBAL_TYPES,
+		VM_OPARG_PLACE_TYPES,
 		Immediate,
 		Type,
 		Field,
@@ -215,21 +196,16 @@ namespace vm::opargs {
 		MethodName,
 		Label>;
 	using OpCodeArgCRef      = base::CRefifyParams<OpCodeArg>;
-	using OpCodeLocalArg     = std::variant<VM_OPARG_LOCAL_TYPES>;
-	using OpCodeGlobalArg    = std::variant<VM_OPARG_GLOBAL_TYPES>;
+	using OpCodePlaceArg     = std::variant<VM_OPARG_PLACE_TYPES>;
 	using OpCodeFunctionArg  = std::variant<FunctionName, BuiltinFunctionName, ExtCFunctionName>;
-	using OpCodePrimitiveArg = std::variant<StackLocal8, StackLocal16, StackLocal32, StackLocal64>;
+	using OpCodePrimitiveArg = std::variant<Place8, Place16, Place32, Place64>;
 
 	template<typename T>
 	concept ArgumentType = base::IsVariantMember<T, OpCodeArg>;
 
 	template<typename T>
-	concept LocalArgumentType = base::IsVariantMember<T, OpCodeLocalArg>;
-
-	template<typename T>
-	concept GlobalArgumentType = base::IsVariantMember<T, OpCodeGlobalArg>;
+	concept PlaceArgumentType = base::IsVariantMember<T, OpCodePlaceArg>;
 }
 
 #undef DEFINE_STR_ARG_TYPE
-#undef DEFINE_STACK_LOCAL
-#undef DEFINE_GLOBAL
+#undef DEFINE_PLACE

@@ -6,6 +6,7 @@
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
+#include <frontend/pst_parser/source_position_locked.hpp>
 #include <global_state/backend_options.hpp>
 #include <global_state/packages.hpp>
 #include <helios/queries/queries.hpp>
@@ -50,6 +51,7 @@ public:
 		TESTER_ADD_TEST(saveArtifactsTest);
 		TESTER_ADD_TEST(sideInputsTest);
 		TESTER_ADD_TEST(moduleChildSideInputsTest);
+		TESTER_ADD_TEST(sourcePositionInputDependencyForDvmDebugInfoInCompileEntirePackageTest);
 	}
 
 protected:
@@ -452,9 +454,16 @@ private:
 	void assemblyAndLLVMGenerated() {
 		using namespace compiler;
 
-		compiler::driver::llvm_dump_ir  = true;
-		compiler::driver::llvm_dump_asm = true;
-		defer(compiler::driver::llvm_dump_ir = false; compiler::driver::llvm_dump_asm = false;);
+		compiler::driver::dump_ir_options.dump_asm  = true;
+		compiler::driver::dump_ir_options.dump_llvm = true;
+		compiler::driver::dump_ir_options.dump_lir  = true;
+		compiler::driver::dump_ir_options.dump_mir  = true;
+		compiler::driver::dump_ir_options.dump_hir  = true;
+		defer(compiler::driver::dump_ir_options.dump_asm  = false;
+		      compiler::driver::dump_ir_options.dump_llvm = false;
+		      compiler::driver::dump_ir_options.dump_lir  = false;
+		      compiler::driver::dump_ir_options.dump_mir  = false;
+		      compiler::driver::dump_ir_options.dump_hir  = false;);
 
 		auto module
 			= frontend::createModuleTree(fs::File(path("modules/functions_3")), package_name);
@@ -463,21 +472,31 @@ private:
 			// This method can fail on module verification
 			ctx.query<driver::CompileModule>({ module, driver::BackendType::LLVM, false });
 
-			auto module_name = base::StrID(
-				base::strConcat(
-					"module_", frontend::ModuleTree::getPathComponentHash(module).hash.toStringHex()
-				)
-					.c_str()
-			);
+			auto                  module_name = base::StrID(base::strConcat(
+                "module_",
+                compiler::frontend::ModuleTree::getPathComponentHash(module).hash.toStringHex()
+            ));
+			std::filesystem::path base_path   = artifacts_path / "duck_debug_artifacts";
 
-			auto asm_file     = module_name.str() + ".s";
-			auto llvm_ir_file = module_name.str() + ".ll";
 
-			assertTrue(std::filesystem::exists(asm_file), "Assembly file does not exist");
-			assertTrue(std::filesystem::exists(llvm_ir_file), "LLVM IR file does not exist");
+			auto asm_art  = base_path / (module_name.str() + ".s");
+			auto llvm_art = base_path / (module_name.str() + ".ll");
+			auto lir_art  = base_path / (module_name.str() + ".lir");
+			auto mir_art  = base_path / (module_name.str() + ".mir");
+			auto hir_art  = base_path / (module_name.str() + ".hir");
 
-			std::filesystem::remove(asm_file);
-			std::filesystem::remove(llvm_ir_file);
+
+			assertTrue(std::filesystem::exists(asm_art), "Assembly file does not exist");
+			assertTrue(std::filesystem::exists(llvm_art), "LLVM IR file does not exist");
+			assertTrue(std::filesystem::exists(lir_art), "LIR file does not exist");
+			assertTrue(std::filesystem::exists(mir_art), "MIR file does not exist");
+			assertTrue(std::filesystem::exists(hir_art), "HIR file does not exist");
+
+			std::filesystem::remove(asm_art);
+			std::filesystem::remove(llvm_art);
+			std::filesystem::remove(lir_art);
+			std::filesystem::remove(mir_art);
+			std::filesystem::remove(hir_art);
 		});
 	}
 
@@ -530,6 +549,12 @@ private:
 				.additional_link_options = {},
 				.link_c_standard_library = true,
 			}
+		);
+
+		auto dvm_exe_path = artifacts_path / "package_dvm.dbc";
+		assertTrue(
+			std::filesystem::exists(dvm_exe_path),
+			base::strConcat("DVM executable file does not exist: ", dvm_exe_path.native())
 		);
 	}
 
@@ -1002,6 +1027,51 @@ private:
 		ASSERT_EQUAL_PRINT(0, count_submodule_count_inputs(bar_deps));
 		ASSERT_EQUAL_PRINT(0, count_submodule_count_inputs(c_deps));
 		ASSERT_EQUAL_PRINT(0, count_submodule_count_inputs(d_deps));
+	}
+
+	void sourcePositionInputDependencyForDvmDebugInfoInCompileEntirePackageTest() {
+		using namespace compiler;
+
+		auto source_position_input = pst::SourcePositionLocked::getQueryInputNode();
+		auto source_position_node  = query::internal::NodeID(
+            source_position_input.q_id, query::internal::KeyHash{ source_position_input.hash }
+        );
+
+		auto has_source_position_dep = [&](const query::internal::NodeID& node_id) {
+			auto& graph = query::internal::ContextAccess::getState()->getGraph();
+			if (!graph.nodeExists(node_id)) return false;
+			auto deps = graph.getNodeDeps(node_id);
+			return std::ranges::find(deps, source_position_node) != deps.end();
+		};
+
+		global_state::PackageInfo dvm_package_info{
+			.root_module
+			= frontend::createModuleTree(fs::File(path("modules/functions_2")), "src_pos_dvm"),
+		};
+
+		driver::compileEntirePackage(
+			dvm_package_info,
+			driver::BackendType::DVM,
+			{
+				.linker_path             = {},
+				.additional_link_options = {},
+				.link_c_standard_library = true,
+			}
+		);
+		auto dvm_compile_node
+			= query::internal::makeNodeID<driver::CompileModule>(driver::KeyOf_CompileModule{
+				.module_id        = dvm_package_info.root_module,
+				.backend_type     = driver::BackendType::DVM,
+				.build_debug_info = true,
+			});
+		auto dvm_debug_node = query::internal::makeNodeID<driver::DebugInfoForModule>(
+			driver::KeyOf_DebugInfoForModule{
+				.module_id    = dvm_package_info.root_module,
+				.backend_type = driver::BackendType::DVM,
+			}
+		);
+		ASSERT_TRUE(not has_source_position_dep(dvm_compile_node));
+		ASSERT_TRUE(has_source_position_dep(dvm_debug_node));
 	}
 };
 

@@ -48,7 +48,7 @@ set_source_files_properties(${OtherElementsImplementationFiles}
 add_library(PstParser
 	${PST_SRC}/lang_parser_element.cpp
 	${PST_SRC}/lang_parser_state.cpp
-	${PST_SRC}/stable_position.cpp
+	${PST_SRC}/source_position_locked.cpp
 	${PST_SRC}/test_utils/pst_test_utils.cpp
 	${PST_SRC}/access.cpp
 	${PST_SRC}/utility.cpp
@@ -81,4 +81,4 @@ duck_add_test(compiler parser_errors tests/parser_errors_test.cpp USES PstParser
 
 duck_add_test(compiler extract_single_expression tests/extract_single_expression_test.cpp USES PstParser)
 duck_add_test(compiler extract_single_instruction tests/extract_single_instruction_test.cpp USES PstParser)
-duck_add_test(compiler extract_single_top_level_statement tests/extract_single_top_level_statement_test.cpp USES PstParser)
+duck_add_test(compiler extract_single_definition tests/extract_single_definition_test.cpp USES PstParser)

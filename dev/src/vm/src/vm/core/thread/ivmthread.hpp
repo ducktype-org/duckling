@@ -8,7 +8,7 @@
 #include <vm/api/data/response.hpp>
 #include <vm/api/data/status.hpp>
 #include <vm/core/process/interface_types.hpp>
-#include <vm/core/thread/blocking_queue.hpp>
+#include <vm/utils/blocking_queue.hpp>
 
 #include <expected>
 #include <string>

@@ -2,20 +2,14 @@
 
 use tracing::debug;
 
-use crate::{
-    DuckContext, QuackResultContext, qp_bail, qp_bail_internal,
-    quackpack::core::{
-        PackageLoader,
-        compile::{BuildContext, compiler_package::PackageType},
-        storage::{
-            freeze::{FreezePackage, VenvFreeze},
-            package_id::PackageId,
-            paths::Storage,
-        },
-    },
-};
-
 use super::*;
+use crate::quackpack::core::PackageLoader;
+use crate::quackpack::core::compile::BuildContext;
+use crate::quackpack::core::compile::compiler_package::PackageType;
+use crate::quackpack::core::storage::freeze::{FreezePackage, VenvFreeze};
+use crate::quackpack::core::storage::package_id::PackageId;
+use crate::quackpack::core::storage::paths::Storage;
+use crate::{DuckContext, QuackResultContext, qp_bail, qp_bail_internal};
 
 impl DependencyDag {
     /// Create new [`DependencyDag`] from the given freeze.
@@ -137,7 +131,10 @@ fn parse_dependency(
 ) -> QuackResult<CompilerPackage> {
     debug!(?dep, type = %pkg_type, "parsing dep");
     let storage_id = dep.to_package_id();
-    let directory = storage.pkg_dir(&storage_id);
+    let directory = match storage_id {
+        PackageId::Local(ref local) => local.path().to_path_buf(),
+        _ => storage.pkg_dir(&storage_id),
+    };
     let ctx =
         PackageLoader::find_at_exact_directory(&directory, ctx).with_context(
             || match storage_id {
@@ -151,10 +148,10 @@ fn parse_dependency(
                     dep.as_freeze_dep(),
                     git_id.url()
                 ),
-                PackageId::Local(ref local_id) => format!(
+                PackageId::Local(..) => format!(
                     "malformed local dependency `{}` at `{}`",
                     dep.as_freeze_dep(),
-                    local_id.path().display()
+                    directory.display(),
                 ),
             },
         )?;
@@ -173,9 +170,9 @@ fn parse_dependency(
                 package.as_freeze_dep(),
                 dep.as_freeze_dep(),
             ),
-            PackageId::Local(local_id) => qp_bail!(
+            PackageId::Local(..) => qp_bail!(
                 "malformed local dependency at `{}`: got name `{}`, expected `{}`",
-                local_id.path().display(),
+                directory.display(),
                 package.as_freeze_dep(),
                 dep.as_freeze_dep(),
             ),

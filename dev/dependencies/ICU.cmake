@@ -1,13 +1,13 @@
 include(FetchContent)
 
-# Set it to true, to link ICU statically and force building it from source
-# set (BUILD_STATIC_ICU true)
+option(BUILD_STATIC_ICU "Whether to force building and linking against a custom-built static version of ICU." OFF)
 
-set(ICU_VERSION_REQUIRED "74.1")
-set(ICU_RELEASE "https://github.com/unicode-org/icu/releases/download/release-74-1/icu4c-74_1-src.tgz")
-set (FindOrBuildICU_URL ${ICU_RELEASE})
-
-set(ICU_CONTROL "SHA512=32c28270aa5d94c58d2b1ef46d4ab73149b5eaa2e0621d4a4c11597b71d146812f5e66db95f044e8aaa11b94e99edd4a48ab1aa8efbe3d72a73870cd56b564c2")
+# released 2026-01-09
+set(ICU_VERSION_MAJOR "74")
+set(ICU_VERSION_MINOR "2")
+set(ICU_VERSION_REQUIRED "${ICU_VERSION_MAJOR}.${ICU_VERSION_MINOR}")
+set(ICU_RELEASE "https://github.com/unicode-org/icu/releases/download/release-${ICU_VERSION_MAJOR}-${ICU_VERSION_MINOR}/icu4c-${ICU_VERSION_MAJOR}_${ICU_VERSION_MINOR}-src.tgz")
+set(ICU_CONTROL "SHA512=e6c7876c0f3d756f3a6969cad9a8909e535eeaac352f3a721338b9cbd56864bf7414469d29ec843462997815d2ca9d0dab06d38c37cdd4d8feb28ad04d8781b0")
 
 # Based on: https://github.com/meta-toolkit/meta-cmake/blob/master/FindOrBuildICU.cmake
 # Windows building is removed because it's very version-dependent
@@ -45,7 +45,6 @@ if(BUILD_STATIC_ICU OR NOT ICU_VERSION OR NOT ICU_VERSION VERSION_GREATER_EQUAL 
 		# probably could, but it's more trouble than it's worth I think
 		message("-- ICU building not supported on Windows.")
 		message(FATAL_ERROR "   -- Please download the latest ICU binaries from http://site.icu-project.org/download")
-	
 
 	elseif(UNIX)
 		set(ICU_CFLAGS "-w")
@@ -58,7 +57,7 @@ if(BUILD_STATIC_ICU OR NOT ICU_VERSION OR NOT ICU_VERSION VERSION_GREATER_EQUAL 
 			set(ICU_MAKE_EXTRA_FLAGS "-j${CORES}")
 		endif()
 
-		set(ICU_EP_PREFIX ${PROJECT_BINARY_DIR}/_deps/icu-${FindOrBuildICU_VERSION}-build)
+		set(ICU_EP_PREFIX ${PROJECT_BINARY_DIR}/_deps/icu-${ICU_VERSION_REQUIRED}-build)
 
 		set(ICU_EP_LIBICUDATA ${ICU_EP_PREFIX}/lib/libicudata.a)
 		set(ICU_EP_LIBICUI18N ${ICU_EP_PREFIX}/lib/libicui18n.a)
@@ -70,11 +69,11 @@ if(BUILD_STATIC_ICU OR NOT ICU_VERSION OR NOT ICU_VERSION VERSION_GREATER_EQUAL 
 			PREFIX
 				${ICU_EP_PREFIX}
 			DOWNLOAD_DIR
-				${PROJECT_BINARY_DIR}/_deps/icu-${FindOrBuildICU_VERSION}-src
+				${PROJECT_BINARY_DIR}/_deps/icu-${ICU_VERSION_REQUIRED}-src
 			URL
-				${FindOrBuildICU_URL}
+				${ICU_RELEASE}
 			URL_HASH
-				${FindOrBuildICU_URL_HASH}
+				${ICU_CONTROL}
 			PATCH_COMMAND
 				${ICU_EP_PATCH_COMMAND}
 			CONFIGURE_COMMAND

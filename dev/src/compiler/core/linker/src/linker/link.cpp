@@ -1,9 +1,13 @@
 
 #include "link.hpp"
 
+#include <diagnostic_interactive/logger.hpp>
+#include <diagnostic_interactive/placeholder.hpp>
+#include <global_state/global_logger.hpp>
 #include <time_stats/time_stats.hpp>
 
 #include <logger/logger.hpp>
+#include <query_framework/context/context.hpp>
 #include <system_command/system_command.hpp>
 
 namespace compiler::linker {
@@ -36,7 +40,33 @@ namespace compiler::linker {
 		CORE_USER_LOG("Linking executable: ", output.file.getFilePath().name(), "\n");
 
 		auto exit_code = command.execute(system_command::SystemCommand::ExitCodeHandling::Warn);
+		auto linking_result = exit_code == 0 ? base::OK : base::BAD;
 
-		return exit_code == 0 ? base::OK : base::BAD;
+		if (linking_result.isBad()) {
+			if ((not query::Context::areWeInsideQuery()) and global_state::hasGlobalLogger()) {
+				global_state::getGlobalLogger()->log(makeBox<dia_int::PlaceholderError>(
+					"Linking of the final executable failed. See the linker output above. ",
+					"The common reasons for this error may include missing main function "
+					"(temporary "
+					"feature), missing linker options related to external libraries or duplicated "
+					"declaration not detected by the compiler."
+				));
+			} else {
+				CORE_USER_LOG(
+					"\nWARNING: linker called inside a query or the global logger is not "
+					"available. Falling back to the user logs for diagnostics.\n"
+				);
+				CORE_USER_LOG(
+					"\nERROR: Linking of the final executable failed. See the linker output "
+					"above. ",
+					"The common reasons for this error may include missing main function "
+					"(temporary "
+					"feature), missing linker options related to external libraries or duplicated "
+					"declaration not detected by the compiler.\n"
+				);
+			}
+		}
+
+		return linking_result;
 	}
 }

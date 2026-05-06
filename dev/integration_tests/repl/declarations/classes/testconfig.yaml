@@ -1,0 +1,22 @@
+# Tests for declarations of classes in REPL
+
+# @TODO: #2569 Enable the tests after making usage of classes in REPL possible.
+
+Tests:
+  basic_declarations:
+    Enabled: "false"
+    Cases:
+      basic_declarations:
+        Input:
+          File: "basic_declarations/basic_declarations.rtf"
+        Output: 
+          String : "@{beginning}\n=> 42\n=> 25\n@{end}"
+
+  interactions:
+    Enabled: "false"
+    Cases:
+      using_previously_defined_objects:
+        Input:
+          File: "interactions/using_previously_defined_objects.rtf"
+        Output:
+          String: "@{beginning}\n=> 12\n@{end}" 

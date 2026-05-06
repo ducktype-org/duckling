@@ -2,67 +2,25 @@ include(FetchContent)
 
 # Downloads and sets up tree sitter parser for usage with c++
 
-set(TREE_SITTER_COMMIT "12fb31826b8469cc7b9788e72bceee5af1cf0977")
-set(TREE_SITTER_CPP_COMMIT "30f973c2244f0bff444186185f475c3bd76bc3a5")
+set(TREE_SITTER_COMMIT "cd5b087cd9f45ca6d93ab1954f6b7c8534f324d2")  # 0.26.8, released 2026-03-31
+set(TREE_SITTER_CPP_COMMIT "f41e1a044c8a84ea9fa8577fdd2eab92ec96de02")  # 0.23.4, released 2024-11-11
 
 set(TS_URL "https://github.com/tree-sitter/tree-sitter/archive/${TREE_SITTER_COMMIT}.zip")
 set(TS_CPP_URL "https://github.com/tree-sitter/tree-sitter-cpp/archive/${TREE_SITTER_CPP_COMMIT}.zip")
 
-set(DEPS_DIR ${PROJECT_BINARY_DIR}/_deps)
-
-set(TS_DIR ${DEPS_DIR}/tree-sitter-src)
-set(TS_CPP_DIR ${DEPS_DIR}/tree-sitter-cpp-src)
-
-set(TS_LIB ${TS_DIR}/libtree-sitter.a)
-set(TS_CPP_LIB ${TS_CPP_DIR}/libtree-sitter-cpp.a)
-
-set(TS_INCLUDE ${TS_DIR}/lib/include)
-set(TS_CPP_INCLUDE ${TS_CPP_DIR}/bindings/c)
-
 FetchContent_Declare(
-	fetch_tree_sitter
+	tree-sitter
 	URL ${TS_URL}
-	SOURCE_DIR ${TS_DIR}
+    SYSTEM
 )
 
 FetchContent_Declare(
-	fetch_tree_sitter_cpp
-	URL ${TS_CPP_URL}
-	SOURCE_DIR ${TS_CPP_DIR}
+	tree-sitter-cpp
+    URL ${TS_CPP_URL}
+    # See the file to know why this is a copy and not an actual patch.
+    PATCH_COMMAND "${CMAKE_COMMAND}" -E copy "${CMAKE_CURRENT_LIST_DIR}/patches/tree-sitter-cpp-CMakeLists.txt" CMakeLists.txt
+    SYSTEM
 )
 
-FetchContent_MakeAvailable(fetch_tree_sitter fetch_tree_sitter_cpp)
-
-# In the following targets the `make` command is used,
-# not the ${CMAKE_MAKE_PROGRAM}, as tree sitter only provides
-# `Makefile`s and does not support other build systems.
-add_custom_target(
-	build_tree_sitter
-	BYPRODUCTS ${TS_LIB}
-	COMMAND make --quiet
-	WORKING_DIRECTORY ${TS_DIR}
-	VERBATIM
-)
-
-add_custom_target(
-	build_tree_sitter_cpp
-	BYPRODUCTS ${TS_CPP_LIB}
-	COMMAND make --quiet
-	WORKING_DIRECTORY ${TS_CPP_DIR}
-	VERBATIM
-)
-
-add_library(tree_sitter STATIC IMPORTED GLOBAL)
-add_dependencies(tree_sitter build_tree_sitter)
-set_target_properties(tree_sitter PROPERTIES 
-	IMPORTED_LOCATION ${TS_LIB})
-target_include_directories(tree_sitter INTERFACE ${TS_INCLUDE})
-
-add_library(tree_sitter_cpp STATIC IMPORTED GLOBAL)
-add_dependencies(tree_sitter_cpp build_tree_sitter_cpp)
-set_target_properties(tree_sitter_cpp PROPERTIES 
-	IMPORTED_LOCATION ${TS_CPP_LIB})
-target_include_directories(tree_sitter_cpp INTERFACE ${TS_CPP_INCLUDE})
-
-add_library(TreeSitter INTERFACE)
-target_link_libraries(TreeSitter INTERFACE tree_sitter tree_sitter_cpp)
+FetchContent_MakeAvailable(tree-sitter tree-sitter-cpp)
+target_include_directories(tree-sitter-cpp INTERFACE "${tree-sitter-cpp_SOURCE_DIR}/bindings/c")

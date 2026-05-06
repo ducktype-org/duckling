@@ -1,15 +1,10 @@
-use std::sync::{
-    Barrier,
-    atomic::{AtomicUsize, Ordering},
-};
+use std::sync::Barrier;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
-use crate::{
-    StrId,
-    quackpack::core::storage::{self, venv_id::ToVenvId},
-};
-
-use super::registry_url_hash;
-use super::setup_mock_storage;
+use super::{registry_url_hash, setup_mock_storage};
+use crate::StrId;
+use crate::quackpack::core::storage::venv_id::ToVenvId;
+use crate::quackpack::core::storage::{self};
 
 #[test]
 /// Only one thread should be able to delete a given venv.
@@ -20,7 +15,7 @@ use super::setup_mock_storage;
 /// We should have at most `threads - 1` failures (but we may not have exactly that many, because
 /// of 1.)
 fn concurrent_delete() {
-    let (ctx, root) = setup_mock_storage();
+    let (ctx, _home, _storage_root) = setup_mock_storage();
     let thread_count = 4;
     let barrier = Barrier::new(thread_count);
     let lock_failures = AtomicUsize::default();
@@ -31,23 +26,14 @@ fn concurrent_delete() {
                 barrier.wait();
                 let result = storage::ops::delete_venv(
                     &ctx,
-                    ctx.default_storage_root(),
+                    ctx.default_storage_root().not_locked_path(),
                     StrId::new("venv1"),
                 );
                 if let Err(e) = result {
                     lock_failures.fetch_add(1, Ordering::SeqCst);
                     assert_eq!(
                         e.to_string(),
-                        format!(
-                            "another synchronization operation is ongoing in venv `venv1`
-failed to acquire an exclusive lock on `{}`
-operation would block",
-                            root.path()
-                                .join("locks")
-                                .join("venv_sync")
-                                .join("venv1")
-                                .display()
-                        )
+                        "another synchronization operation is ongoing in venv `venv1`"
                     );
                 }
             });
@@ -63,17 +49,15 @@ operation would block",
 /// 1. clean is a blocking operation,
 /// 2. cleaning an empty venv has empty result
 fn concurrent_clean() {
-    let (ctx, root) = setup_mock_storage();
+    let (ctx, _home, root) = setup_mock_storage();
     let thread_count = 4;
     let barrier = Barrier::new(thread_count);
     let empty_cleans = AtomicUsize::default();
 
     let mut expected_packages = [
-        root.path()
-            .join("pkg")
+        root.join("pkg")
             .join(format!("registry-{}-foo-1.0.0", registry_url_hash())),
-        root.path()
-            .join("pkg")
+        root.join("pkg")
             .join(format!("registry-{}-bar-1.0.0", registry_url_hash())),
     ];
     expected_packages.sort();
@@ -82,7 +66,8 @@ fn concurrent_clean() {
             s.spawn(|| {
                 barrier.wait();
                 let mut result =
-                    storage::ops::clean_storage(&ctx, ctx.default_storage_root()).unwrap();
+                    storage::ops::clean_storage(&ctx, ctx.default_storage_root().not_locked_path())
+                        .unwrap();
                 if !result.removed_packages.is_empty() {
                     result.removed_packages.sort();
                     assert_eq!(result.removed_venvs, ["root3".to_venv_id()]);
@@ -101,7 +86,7 @@ fn concurrent_clean() {
 #[test]
 /// Concurrent deletes on different venvs should not block and both should succeed.
 fn concurrent_different_deletes() {
-    let (ctx, _root) = setup_mock_storage();
+    let (ctx, _home, _root) = setup_mock_storage();
     let thread_count = 2;
     let barrier = Barrier::new(thread_count);
 
@@ -112,7 +97,8 @@ fn concurrent_different_deletes() {
 
                 let venv = if is_leader { "venv1" } else { "venv2" };
 
-                storage::ops::delete_venv(&ctx, ctx.default_storage_root(), venv).unwrap();
+                storage::ops::delete_venv(&ctx, ctx.default_storage_root().not_locked_path(), venv)
+                    .unwrap();
             });
         }
     });
