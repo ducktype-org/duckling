@@ -262,10 +262,16 @@ namespace compiler::helios::defgen {
 						field_type.getType() } },
 				});
 
-				auto next_reusable_self_expr = reusable_self_expr->nextUse();
-				auto accessed_field          = makeBox<code::AccessExpr>(
+				auto            next_reusable_self_expr = reusable_self_expr->nextUse();
+				Box<code::Expr> accessed_field          = makeBox<code::AccessExpr>(
                     ctx, code::generatedOrigin(), std::move(reusable_self_expr), field.getSymbol()
                 );
+				// If the field is not a simple type, we must call its `toString` method on a reference.
+				if (not accessed_field->expression_type.getType().isSimple()) {
+					accessed_field = makeBox<code::RefOfExpr>(
+						ctx, code::generatedOrigin(), std::move(accessed_field)
+					);
+				}
 				reusable_self_expr = std::move(next_reusable_self_expr);
 
 				std::vector<Box<code::Expr>> v1;

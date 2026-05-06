@@ -69,6 +69,24 @@ namespace compiler::tsh {
 		return ctx.query<QueryTypeInterface>(AbstractType(this));
 	}
 
+	bool AbstractTypeImpl::isSimple() const {
+		using enum Kind;
+		switch (this->getKind()) {
+		case Unit:
+		case Void:
+		case Bool:
+		case Char:
+		case Byte:
+		case Integral:
+		case Float:
+		case Pointer:
+		case RawPointer:
+			return true;
+		default:
+			return false;
+		}
+	}
+
 	struct IMPLEMENT_QUERY(QueryTypeInterface, TypeInterface) {
 		static auto provide(Context& ctx, const QKey key) -> PResult {
 			return getDefaultTypeInterfaceForType(ctx, key).combine(

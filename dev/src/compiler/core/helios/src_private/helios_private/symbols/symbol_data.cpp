@@ -148,7 +148,8 @@ namespace compiler::helios {
 				variant_case(ToStringMethod, to_string) {
 					const tsh::SymbolType<> self_type{
 						to_string.owner_type,
-						tsh::ReferenceKind::Ref,
+						to_string.owner_type.isSimple() ? tsh::ReferenceKind::Direct
+														: tsh::ReferenceKind::Ref,
 						tsh::Mutability::Immutable,
 					};
 
@@ -218,8 +219,8 @@ namespace compiler::helios {
 				}
 				variant_case(SelfParameterNoScope, param) {
 					// Don't use QueryClassOfMember (if it even still exists) because methods may be
-					// generated for non-class types, and QueryClassOfMember is a temporary solution anyway.
-					// Reconsidevisit
+					// generated for non-class types, and QueryClassOfMember is a temporary solution
+					// anyway. Reconsidevisit
 					const auto method_type = ctx.query<QueryTypeOfSymbol>({ param.method_symbol })
 					                             ->valueOrThrow()
 					                             .getType()

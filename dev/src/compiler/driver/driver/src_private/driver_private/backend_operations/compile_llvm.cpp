@@ -64,8 +64,14 @@ namespace compiler::driver {
 			mod.addFunctionToModuleDtors(ctx, CRef<lir::Function>(&module_dtor));
 		}
 
-		for (const auto& lir_function: lir_module->functions)
+		for (const auto& lir_function: lir_module->functions) {
+			lir_function->debugPrint(ctx, std::cerr);
 			mod.addFunctionToModule(ctx, lir_function);
+		}
+
+		std::cerr << "LLVM module:\n\n";
+		mod.debugPrint();
+		std::cerr << "\n\nEND";
 
 		CORE_ASSERT(mod.verify().isOk(), "LLVM module verification failed");
 
