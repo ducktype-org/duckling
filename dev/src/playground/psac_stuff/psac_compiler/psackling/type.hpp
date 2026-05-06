@@ -25,9 +25,14 @@ namespace pg::tp {
 		TypeID points_to;
 	};
 
+    struct Function {
+        std::vector<TypeID> param_types;
+        TypeID return_type;
+    };
+
 	struct TypeInfo {
 		base::StrID                                                         name;
-		std::variant<std::monostate, Integral, Boolean, Structure, Pointer> type;
+		std::variant<std::monostate, Integral, Boolean, Structure, Pointer, Function> type;
 		TypeID                                                              id;
 	};
 }
