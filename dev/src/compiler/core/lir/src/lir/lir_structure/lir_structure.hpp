@@ -20,6 +20,7 @@
 #include <query_framework/context/context_fd.hpp>
 
 #include <memory>
+#include <ostream>
 #include <utility>
 
 // Doc style is intentional, caused by inexplicable funkiness in how Doxygen interacts with macros.
@@ -261,6 +262,9 @@ namespace compiler::lir {
 		 * value of the global.
 		 */
 		static LIRGlobal fromHOUT(query::Context& ctx, const helios::HOUTGlobalData& helios_id);
+
+
+		void debugPrint(query::Context& ctx, std::ostream& os) const;
 	};
 
 	/**

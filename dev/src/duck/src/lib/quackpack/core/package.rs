@@ -6,6 +6,7 @@ use std::sync::Arc;
 use crate::quackpack::core::Manifest;
 use crate::quackpack::core::storage::freeze::FreezeDep;
 use crate::quackpack::schemas::manifest::Manifest as ManifestSchema;
+use crate::util::file_locks::FileLockManager;
 
 #[derive(Clone)]
 /// High-level abstraction over a package we are currently working on.
@@ -28,7 +29,7 @@ impl Package {
         root: PathBuf,
         manifest_path: PathBuf,
     ) -> Self {
-        let artifacts_dir = root.join(".duck_build");
+        let artifacts_dir = FileLockManager::new(root.join(".duck_build"));
         let source_directory = root.join("src");
         Self {
             inner: Arc::new(PackageInner {
@@ -74,7 +75,7 @@ impl Package {
     }
 
     /// Get the path to the artifacts directory.
-    pub fn artifacts_directory(&self) -> &Path {
+    pub fn artifacts_directory(&self) -> &FileLockManager {
         &self.inner.artifacts_dir
     }
 
@@ -95,7 +96,7 @@ struct PackageInner {
     manifest: Manifest,
     root: PathBuf,
     manifest_path: PathBuf,
-    artifacts_dir: PathBuf,
+    artifacts_dir: FileLockManager,
     source_dir: PathBuf,
 }
 
