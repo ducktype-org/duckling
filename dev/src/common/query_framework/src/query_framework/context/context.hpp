@@ -59,8 +59,8 @@ namespace query {
 		 * and write to it concurrently.
 		 *
 		 * @important when setting this flag we must use memory order (at least) acquire-release
-		 * to ensure that any removal of edges from the cycle that happens after the cycle detection,
-		 * is only visible after all nodes on the cycle are marked as cyclic. 
+		 * to ensure that any removal of edges from the cycle that happens after the cycle
+		 * detection, is only visible after all nodes on the cycle are marked as cyclic.
 		 */
 		std::atomic<bool> is_cyclic_node = false;
 
