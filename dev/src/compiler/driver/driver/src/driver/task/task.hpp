@@ -83,5 +83,5 @@ namespace compiler::driver {
         std::variant<PackageCompilationTask> task_data;
     };
 
-    Task convertRawTaskToTask(const RawTask& raw_task);
+    base::Optional<Task> convertRawTaskToTask(const RawTask& raw_task);
 }

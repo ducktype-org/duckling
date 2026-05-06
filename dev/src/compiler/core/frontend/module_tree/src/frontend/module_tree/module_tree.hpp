@@ -23,13 +23,13 @@ namespace compiler::frontend {
 	 * If a file's extension is equal to this constant, then it is assumed
 	 * it is a source file of the module.
 	 */
-	inline const base::StrID LANG_SOURCE_FILE = ".duck";
+	constexpr std::string_view LANG_SOURCE_FILE = ".duck";
 
 	/**
 	 * If a file's extension is equal to this constant, then it is assumed
 	 * it is a single file module.
 	 */
-	inline const base::StrID LANG_MODULE_FILE = ".dmf";
+	constexpr std::string_view LANG_MODULE_FILE = ".dmf";
 
 	// Regexes to reject files/directories starting with '.' or '$'
 	const std::regex DEFAULT_REJECT_FILE_REGEX      = std::regex(R"((\$.*|\..*))");

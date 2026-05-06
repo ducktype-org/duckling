@@ -350,7 +350,7 @@ namespace compiler::frontend {
 
 	void ModuleTreeBuilder::buildFromSingleFile(const fs::File& file, base::StrID package_id) {
 		base::StrID stem      = base::StrID(file.stem().c_str());
-		base::StrID extension = base::StrID(file.extension().c_str());
+		std::string extension = file.extension();
 		CORE_ASSERT(
 			extension == LANG_MODULE_FILE,
 			"Expected a module file, got: " + file.getFilePath().string()
@@ -365,15 +365,15 @@ namespace compiler::frontend {
 			file.isFile(),
 			base::strConcat("Expected file, got directory: ", file.getFilePath().string())
 		);
-		base::StrID stem      = base::StrID(file.stem().c_str());
-		base::StrID extension = base::StrID(file.extension().c_str());
+		std::string stem      = file.stem();
+		std::string extension = file.extension();
 
 		if (extension == LANG_SOURCE_FILE) {
 			// Regular source file - store path for later
 			addSourceFile(file);
 		} else if (extension == LANG_MODULE_FILE) {
 			// Module file
-			base::StrID stem_id = stem;
+			base::StrID stem_id = base::StrID(stem.c_str());
 
 			if (stem_id == m_name) {
 				setMainSourceFile(file);
