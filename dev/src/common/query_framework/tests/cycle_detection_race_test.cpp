@@ -42,16 +42,20 @@ DECLARE_QUERY(Cycle3, query::U64Key, query::QResult<u64>, ({}));
  * on all workers using a barrier.
  */
 struct IMPLEMENT_QUERY(CycleInitiator, query::QResult<u64>) {
-	inline static std::barrier<> cycle_barrier{ 3 };
+	inline static std::barrier<>                              cycle_barrier{ 3 };
+	inline static std::array<std::atomic<bool>, WORKER_COUNT> was_worker{};
 
 	static auto provide(Context& ctx, QKey key) -> PResult {
 		CORE_ASSERT(current_cycle_id.load() == key.cycle_id, "Bad cycle id");
+		CORE_ASSERT(key.expected_worker_id < WORKER_COUNT, "Bad worker id (2)");
+
+		bool was_worker_before = was_worker.at(key.expected_worker_id).exchange(true);
+
 		CORE_ASSERT(
-			concurrent::worker::Worker::getCurrentWorker()->getID() == key.expected_worker_id,
-			"Bad worker id (1)"
-		);
-		CORE_ASSERT(
-			0 <= key.expected_worker_id and key.expected_worker_id < WORKER_COUNT, "Bad worker id (2)"
+			was_worker_before == false,
+			"Worker with id ",
+			std::to_string(key.expected_worker_id),
+			" executed the query more than once in the same cycle. "
 		);
 
 		cycle_barrier.arrive_and_wait();  // Ensure all workers "fire" at the same time
@@ -124,7 +128,9 @@ private:
 	void runSingleCycleTest(u64 cycle_id) {
 		// Note: this test assumes that the workers ids are counted from 0 to WORKER_COUNT-1.
 
+		// Test setup:
 		current_cycle_id.store(cycle_id);
+		for (auto& flag: ImplementationOf_CycleInitiator::was_worker) flag.store(false);
 
 		std::vector<query::EntryTaskHandle> handles;
 		handles.reserve(WORKER_COUNT);
