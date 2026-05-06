@@ -14,11 +14,10 @@ namespace pst::expr {
 		if (state[fwd].isIdentifier()) { fwd++; }  // Ignores first identifier
 		PST_WHILE(
 			fwd < length
-			&& !(
-				state[fwd].asBinaryOperator().map([](auto op) {
-					return !op.isAssignment() && !op.isSpecialOp();
-				}).copyValueOr(false)
-			)
+			&& !(state[fwd]
+		             .asBinaryOperator()
+		             .map([](auto op) { return !op.isAssignment() && !op.isSpecialOp(); })
+		             .copyValueOr(false))
 			&& !(
 				state[fwd].isIdentifier()
 				&& !state[fwd - 1].asBinaryOperator().map([](auto x) { return x.isAccessOp(); }
@@ -81,9 +80,7 @@ namespace pst::expr {
 			fwd = std::min(next + 1, reduced_length);
 		}
 
-		if (operators.size() == 0) {
-			return Lower::parse(state);
-		}
+		if (operators.size() == 0) return Lower::parse(state);
 
 		struct Partial {
 			BuilderExpr lhs;

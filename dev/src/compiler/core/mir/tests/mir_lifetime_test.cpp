@@ -3,6 +3,8 @@
  * @brief Tests for MIR lifetime analysis and validation
  */
 
+#include "lifetime_validator.hpp"
+
 #include <ctv/ctv.hpp>
 #include <helios/queries/queries.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
@@ -15,8 +17,6 @@
 #include <query_framework/context/context.hpp>
 #include <query_framework/entry/with_context_do.hpp>
 #include <tester/tester.hpp>
-
-#include "lifetime_validator.hpp"
 
 using namespace compiler::tsh;
 using namespace compiler::helios::test_utils;
@@ -55,9 +55,7 @@ private:
 			ASSERT_EQUAL(foo_mir.local_list.size(), 5);
 
 			// Verify lifetime scopes are assigned
-			for (const auto& local: foo_mir.local_list) {
-				ASSERT_TRUE(local.scope.has_value());
-			}
+			for (const auto& local: foo_mir.local_list) ASSERT_TRUE(local.scope.has_value());
 		});
 	}
 
@@ -69,8 +67,8 @@ private:
 			auto& functions = unit.functions;
 
 			// Test simple variable "goo" function
-			auto& goo_mir = ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(1) })
-			                    ->valueOrThrow();
+			auto& goo_mir
+				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(1) })->valueOrThrow();
 
 			ASSERT_EQUAL(goo_mir.name, base::StrID("goo"));
 
@@ -81,7 +79,6 @@ private:
 				.validate(goo_mir);
 		});
 	}
-
 
 	void moveValidationTest() {
 		// @note This test is very fragile and may require hotfixes even after unrelated changes.

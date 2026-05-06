@@ -112,7 +112,10 @@ private:
 																tsh::ReferenceKind::Direct,
 																tsh::Mutability::Mutable,
 															};
-		body_stmts.at(stmt_index).illegalAccess().value()->debugPrint(std::cerr); //value().elementType()();
+		body_stmts.at(stmt_index)
+			.illegalAccess()
+			.value()
+			->debugPrint(std::cerr);  // value().elementType()();
 		return compileSingleStatement(ctx, body_stmts.at(stmt_index), return_type);
 	}
 
@@ -381,14 +384,14 @@ private:
 		);
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto block = compileSingleStatementOfFirstFun(ctx, module_id);
-			ASSERT_EQUAL(block.statements.size(),1);
+			ASSERT_EQUAL(block.statements.size(), 1);
 			StmtKindCounter c;
 			block.statements.at(0)->acceptVisitor(c);
 			ASSERT_EQUAL(c.block_stmt_count, 1);
 
 
 			auto block2 = compileSingleStatementOfFirstFun(ctx, module_id, 1);
-			ASSERT_EQUAL(block2.statements.size(),1);
+			ASSERT_EQUAL(block2.statements.size(), 1);
 			StmtKindCounter c2;
 			block2.statements.at(0)->acceptVisitor(c2);
 			ASSERT_EQUAL(c2.block_stmt_count, 1);
@@ -409,14 +412,14 @@ private:
 		);
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto block = compileSingleStatementOfFirstFun(ctx, module_id);
-			ASSERT_EQUAL(block.statements.size(),1);
+			ASSERT_EQUAL(block.statements.size(), 1);
 			StmtKindCounter c;
 			block.statements.at(0)->acceptVisitor(c);
 			ASSERT_EQUAL(c.block_stmt_count, 1);
 
 
 			auto block2 = compileSingleStatementOfFirstFun(ctx, module_id, 1);
-			ASSERT_EQUAL(block2.statements.size(),1);
+			ASSERT_EQUAL(block2.statements.size(), 1);
 			StmtKindCounter c2;
 			block2.statements.at(0)->acceptVisitor(c2);
 			ASSERT_EQUAL(c2.block_stmt_count, 1);

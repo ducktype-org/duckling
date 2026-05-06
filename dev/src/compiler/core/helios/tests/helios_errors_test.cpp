@@ -994,7 +994,7 @@ private:
 					x;
 				}
 		)",
-			{"Symbol", "not found"},
+			{ "Symbol", "not found" },
 			1
 		);
 	}

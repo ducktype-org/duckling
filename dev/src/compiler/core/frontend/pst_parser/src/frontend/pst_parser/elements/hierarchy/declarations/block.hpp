@@ -31,9 +31,7 @@ namespace pst {
 			return code_block.give();
 		}
 
-		[[nodiscard]] base::Optional<base::StrID> getName() const {
-			return optional_name.value;
-		}
+		[[nodiscard]] base::Optional<base::StrID> getName() const { return optional_name.value; }
 
 		[[nodiscard]]
 		DeclKind isDeclaration() const final {
