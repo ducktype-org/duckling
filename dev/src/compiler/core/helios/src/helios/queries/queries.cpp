@@ -9,6 +9,7 @@
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
+#include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/symbol_type.hpp>
 #include <helios/tsh/type_interface.hpp>
 #include <helios_private/errors/dia_interactive_elements.hpp>
@@ -126,6 +127,8 @@ namespace compiler::helios {
 				}
 			}
 
+			appendToStringForSimpleTypes(out.functions, ctx);
+
 			for (auto class_sym: class_symbols) {
 				// we postpone this past function scheduling, as
 				// appendClassConstructors may be time consuming.
@@ -156,12 +159,50 @@ namespace compiler::helios {
 		}
 
 		/**
+		 * @brief Appends the compiler-generated methods for simple types.
+		 * @param out_functions The vector of functions to be modified.
+		 * @param ctx The query context.
+		 */
+		static void appendToStringForSimpleTypes(
+			std::vector<CRef<HOUTFunction>>& out_functions, Context& ctx
+		) {
+			auto append_to_string_for_simple_type = [&](tsh::AbstractType type) {
+				const auto to_string_method
+					= ctx.query<QueryCodeOfFun>(ctx.query<defgen::QueryGeneratedSymbol>({
+						.name = base::StrID("toString"),
+						.generated_symbol_data
+						= defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::ToStringMethod{
+							.owner_type = type,
+						} },
+					}));
+				out_functions.push_back(&to_string_method->valueOrThrow());
+			};
+
+			for (auto size: { 8, 16, 32, 64 }) {
+				append_to_string_for_simple_type(tsh::getIntegralType(
+					ctx, u64(size), tsh::IntegralAbstractType::Signedness::Signed
+				));
+				append_to_string_for_simple_type(tsh::getIntegralType(
+					ctx, u64(size), tsh::IntegralAbstractType::Signedness::Unsigned
+				));
+			}
+
+			for (auto size: {32, 64}) {
+				append_to_string_for_simple_type(tsh::getFloatType(ctx, u64(size)));
+			}
+
+			append_to_string_for_simple_type(tsh::getCharType());
+			append_to_string_for_simple_type(tsh::getBoolType());
+			append_to_string_for_simple_type(tsh::getStringType());
+		}
+
+		/**
 		 * @brief Appends the default constructors and all the default constructors they call to
 		 * the HOUT unit.
 		 *
 		 * @param out_functions The vector of functions to be modified.
-		 * @param ctors Symbol IDs of the top level default constructors generated for the symbols
-		 * in scope.
+		 * @param ctors Symbol IDs of the top level default constructors generated for the
+		 * symbols in scope.
 		 * @param ctx The query context.
 		 */
 		static void appendDefaultConstructors(

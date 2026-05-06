@@ -22,14 +22,13 @@ namespace compiler::helios::defgen {
 	struct IMPLEMENT_QUERY(QueryToStringMethod, query::QResult<HOUTFunction>) {
 		static void stringifyBool(
 			Context&                       ctx,
-			const QKey                     owner_type,
 			const HOUTFunctionDeclaration& to_string_decl,
 			std::vector<Box<code::Stmt>>&  body
 		) {
 			const auto self_param = to_string_decl.parameters.at(0).helios_symbol;
 
 			const auto string_type = tsh::SymbolType<>::withDefaults(tsh::getStringType());
-			const auto bool_type   = tsh::SymbolType<>::withDefaults(owner_type);
+			const auto bool_type   = to_string_decl.parameters.at(0).type;
 
 			const auto builtin_sym = ctx.query<QueryGeneratedSymbol>({
 				.name                  = base::StrID("builtin_stringify_bool"),
@@ -58,17 +57,17 @@ namespace compiler::helios::defgen {
 
 		static void stringifyIntegral(
 			Context&                       ctx,
-			const QKey                     owner_type,
 			const HOUTFunctionDeclaration& to_string_decl,
 			std::vector<Box<code::Stmt>>&  body
 		) {
 			const auto self_param = to_string_decl.parameters.at(0).helios_symbol;
 
-			const auto string_type = tsh::SymbolType<>::withDefaults(tsh::getStringType());
-			const auto int_type    = owner_type.as<tsh::IntegralAbstractType>();
+			const auto string_type     = tsh::SymbolType<>::withDefaults(tsh::getStringType());
+			const auto source_int_type = to_string_decl.parameters.at(0).type;
 
 			const bool is_signed
-				= int_type.getSignedness() == tsh::IntegralAbstractType::Signedness::Signed;
+				= source_int_type.getType().as<tsh::IntegralAbstractType>().getSignedness()
+			   == tsh::IntegralAbstractType::Signedness::Signed;
 
 			const auto target_builtin_name = is_signed ? base::StrID("builtin_stringify_i64")
 			                                           : base::StrID("builtin_stringify_u64");
@@ -93,9 +92,8 @@ namespace compiler::helios::defgen {
 			Box<code::Expr> arg_expr
 				= makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), self_param);
 
-			const auto owner_sym_type = tsh::SymbolType<>::withDefaults(owner_type);
 			const auto coercion_res
-				= canCoerce(ctx, owner_sym_type, target_int_type).valueOrThrow();
+				= canCoerce(ctx, source_int_type, target_int_type).valueOrThrow();
 			if (!coercion_res.getCoercion().isEmptyCoercion())
 				arg_expr = coercion_res.coerce(ctx, std::move(arg_expr));
 
@@ -115,13 +113,13 @@ namespace compiler::helios::defgen {
 
 		static void stringifyFloat(
 			Context&                       ctx,
-			const QKey                     owner_type,
 			const HOUTFunctionDeclaration& to_string_decl,
 			std::vector<Box<code::Stmt>>&  body
 		) {
 			const auto self_param = to_string_decl.parameters.at(0).helios_symbol;
 
-			const auto string_type = tsh::SymbolType<>::withDefaults(tsh::getStringType());
+			const auto string_type       = tsh::SymbolType<>::withDefaults(tsh::getStringType());
+			const auto source_float_type = to_string_decl.parameters.at(0).type;
 
 			const auto target_builtin_name = base::StrID("builtin_stringify_f64");
 			const auto target_float_type
@@ -140,9 +138,8 @@ namespace compiler::helios::defgen {
 			Box<code::Expr> arg_expr
 				= makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), self_param);
 
-			const auto owner_sym_type = tsh::SymbolType<>::withDefaults(owner_type);
 			const auto coercion_res
-				= canCoerce(ctx, owner_sym_type, target_float_type).valueOrThrow();
+				= canCoerce(ctx, source_float_type, target_float_type).valueOrThrow();
 			if (!coercion_res.getCoercion().isEmptyCoercion())
 				arg_expr = coercion_res.coerce(ctx, std::move(arg_expr));
 
@@ -162,20 +159,19 @@ namespace compiler::helios::defgen {
 
 		static void stringifyChar(
 			Context&                       ctx,
-			const QKey                     owner_type,
 			const HOUTFunctionDeclaration& to_string_decl,
 			std::vector<Box<code::Stmt>>&  body
 		) {
 			const auto self_param = to_string_decl.parameters.at(0).helios_symbol;
 
-			const auto string_type = tsh::SymbolType<>::withDefaults(tsh::getStringType());
-			const auto char_type   = tsh::SymbolType<>::withDefaults(owner_type);
+			const auto string_type      = tsh::SymbolType<>::withDefaults(tsh::getStringType());
+			const auto source_char_type = to_string_decl.parameters.at(0).type;
 
 			const auto builtin_sym = ctx.query<QueryGeneratedSymbol>({
 				.name                  = base::StrID("builtin_stringify_char"),
 				.generated_symbol_data = GeneratedSymbolData{ GeneratedSymbolData::BuiltinOperator{
 					.operator_type = ctx.query<tsh::QueryFunctionType>({
-						{ char_type },
+						{ source_char_type },
 						string_type,
 					}),
 				} },
@@ -198,11 +194,11 @@ namespace compiler::helios::defgen {
 
 		static void stringifyClass(
 			Context&                       ctx,
-			const QKey                     owner_type,
 			const HOUTFunctionDeclaration& to_string_decl,
 			std::vector<Box<code::Stmt>>&  body
 		) {
-			const auto class_type      = owner_type.as<tsh::ClassAbstractType>();
+			const auto class_type
+				= to_string_decl.parameters.at(0).type.getType().as<tsh::ClassAbstractType>();
 			const auto class_name      = name(class_type.getSymbol());
 			const auto class_interface = class_type.getInterface(ctx);
 
@@ -339,23 +335,23 @@ namespace compiler::helios::defgen {
 
 			switch (owner_type.getKind()) {
 			case tsh::Kind::Integral: {
-				stringifyIntegral(ctx, owner_type, to_string_decl, body);
+				stringifyIntegral(ctx, to_string_decl, body);
 				break;
 			}
 			case tsh::Kind::Float: {
-				stringifyFloat(ctx, owner_type, to_string_decl, body);
+				stringifyFloat(ctx, to_string_decl, body);
 				break;
 			}
 			case tsh::Kind::Char: {
-				stringifyChar(ctx, owner_type, to_string_decl, body);
+				stringifyChar(ctx, to_string_decl, body);
 				break;
 			}
 			case tsh::Kind::Bool: {
-				stringifyBool(ctx, owner_type, to_string_decl, body);
+				stringifyBool(ctx, to_string_decl, body);
 				break;
 			}
 			case tsh::Kind::Class: {
-				stringifyClass(ctx, owner_type, to_string_decl, body);
+				stringifyClass(ctx, to_string_decl, body);
 				break;
 			}
 			default: {
