@@ -160,6 +160,8 @@ private:
 	}
 
 	void unitsTest() { runTest("modules/units", {}, {}, {}, 0); }
+
+	void initsDeinitsTest() { runTest("modules/inits_deinits", {}, { "100\n" }, {}, 0); }
 };
 
 

@@ -5,7 +5,26 @@
 #include <query_framework/context/context_fd.hpp>
 
 namespace compiler::mir {
+
+	/**
+	 * @brief Helper lowest common ancestor of @p a and @p b
+	 */
+	ScopeRef lca(ScopeRef a, ScopeRef b);
+
+
 	struct Function;
+	struct LifetimePassArgs;
+
+	/**
+	 * @brief Abstract class representing a pass that adds lifetime related instructions and flags
+	 * to MIR.
+	 */
+	class LifetimePass {
+	public:
+		virtual ~LifetimePass() = default;
+
+		virtual void run(query::Context&, Function&, const LifetimePassArgs&) = 0;
+	};
 
 	/**
 	 * @brief Perform a pass of MIR, that adds destructor calls
@@ -19,23 +38,29 @@ namespace compiler::mir {
 	 * fun foo() { return; var a: T; } // calls destructor on return
 	 * ```
 	 *
-	 * @todo make it a final implementation, that takes liveness into account.
+	 * @TODO: #2654 make it a final implementation, that takes liveness into account.
 	 * Ideas:
 	 *   * "add liveness" after adding destructors, and delete destructors that are not needed.
 	 *   * make explicit cfg graph, and somehow walk it to find liveness ranges.
 	 *   * somehow use lifetime_scopes to find liveness ranges.
-	 *
-	 * @todo Currently no code is put in place to
-	 * generate correct order of destructors calls.
-	 *
-	 * @todo Add better tests once its not mock anymore.
-	 *
-	 * @return Function
 	 */
-	Function addDestructors(query::Context&, Function);
+	class AddDestructorsPass final: public LifetimePass {
+	public:
+		void run(query::Context&, Function&, const LifetimePassArgs&) final;
+	};
 
 	/**
-	 * @brief Helper lowest common ancestor of @p a and @p b
+	 * @brief Performs a pass of MIR, that adds `ScopeStart` and `ScopeEnd` flags to
+	 * instructions based on scopes of variables. These are not lifetimes, but the places
+	 * where we should allocate and de-allocate memory for variables,
+	 * used by the DVM backend.
+	 *
+	 * @see src/compiler/core/mir/init_deinit_dvm.md for more info.
 	 */
-	ScopeRef lca(ScopeRef a, ScopeRef b);
+	class AddScopeFlagsPass final: public LifetimePass {
+	public:
+		void run(query::Context&, Function&, const LifetimePassArgs&) final;
+	};
+
+	Function runAllLifetimePasses(query::Context& ctx, Function function);
 }

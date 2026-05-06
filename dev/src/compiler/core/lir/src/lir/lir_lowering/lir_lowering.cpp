@@ -422,18 +422,17 @@ namespace compiler::lir {
 
 			/**
 			 * @brief Lowers flags of the given operation into
-			 * LIR operations. Should always be called before lowering any operation
-			 * @TODO: does calling before always make sense?
-			 * @TODO: implement logic here
+			 * LIR instruction flags.
 			 *
-			 * @note: it is currently assumed this will not produce new blocks
-			 * @param curr_block
+			 * @note This function will not work correctly when one MIR instruction translates into
+			 * multiple LIR instructions, since the `ScopeStart` flags should only be applied to the
+			 * first of the LIR instructions and the `ScopeEnd` flags should only be applied to the
+			 * last of the LIR instructions.
+			 *
 			 * @param mir_instruction
 			 */
-			void lowerFlags(
-				[[maybe_unused]] /*<temporary for linter*/ MutBlockRef curr_block,
-				const mir::Instruction&                                mir_instruction
-			) {
+			std::vector<ScopeFlag> lowerFlags(const mir::Instruction& mir_instruction) {
+				std::vector<ScopeFlag> result;
 				for (const auto& [flag, local]: mir_instruction.flags) {
 					// Discard flags for information-less locals.
 					if (!local->carriesInformation(ctx)) continue;
@@ -445,19 +444,17 @@ namespace compiler::lir {
 
 					switch (flag) {
 						using enum mir::OperationFlag::Flag;
-					case Construct:
-						// @TODO -- set lifetime flag
-						return;
-					case Destruct:
-						// @TODO -- ??? (also: after or before...?)
-						return;
-					case Move:
-						// @TODO -- unset lifetime flag
-						return;
+					case ScopeStart:
+						result.push_back({ ScopeFlag::Flag::ScopeStart, lir_local });
+						break;
+					case ScopeEnd:
+						result.push_back({ ScopeFlag::Flag::ScopeEnd, lir_local });
+						break;
 					default:
-						throw base::NotYetImplemented("flag in lowerFlags");
+						break;
 					}
 				}
+				return result;
 			}
 
 			static bool isArgSigned(const mir::MIRValue& location) {
@@ -508,11 +505,11 @@ namespace compiler::lir {
 					not mir::isTerminating(mir_instruction.operation),
 					"Terminator in lowerInstruction"
 				);
-				lowerFlags(curr_block, mir_instruction);
+				auto before_instruction_count = curr_block->instructions.size();
 
 				switch (mir_instruction.operation) {
 				case mir::Operation::Nop: {
-					return curr_block;
+					break;
 				}
 				case mir::Operation::Assign: {
 					CORE_ASSERT(
@@ -530,7 +527,7 @@ namespace compiler::lir {
 							mir_instruction.metadata
 						);
 					}
-					return curr_block;
+					break;
 				}
 				case mir::Operation::ZeroInitialize: {
 					auto output = getOutput(mir_instruction.output);
@@ -543,7 +540,7 @@ namespace compiler::lir {
 							mir_instruction.metadata
 						);
 					}
-					return curr_block;
+					break;
 				}
 				case mir::Operation::ListPush:
 				case mir::Operation::ListPop: {
@@ -564,7 +561,7 @@ namespace compiler::lir {
 						InstructionMetadata{},
 						ListOperationParameters{ .element_layout = element_layout }
 					);
-					return curr_block;
+					break;
 				}
 				case mir::Operation::AddressOf:
 				case mir::Operation::ListLen:
@@ -623,7 +620,7 @@ namespace compiler::lir {
 						std::move(args),
 						mir_instruction.metadata
 					);
-					return curr_block;
+					break;
 				}
 				case mir::Operation::DestructIf: {
 					const auto& to_destruct = mir_instruction.arguments.at(0).get<mir::MIRPlace>();
@@ -643,7 +640,7 @@ namespace compiler::lir {
 								std::vector{ lir_place.value() },
 								InstructionMetadata{}
 							);
-							return curr_block;
+							break;
 						}
 					}
 
@@ -663,7 +660,7 @@ namespace compiler::lir {
 								std::vector{ lir_place.value() },
 								mir_instruction.metadata
 							);
-							return curr_block;
+							break;
 						}
 					}
 
@@ -673,8 +670,14 @@ namespace compiler::lir {
 						"destructors, skipping",
 						"\n"
 					);
+					curr_block->instructions.emplace_back(
+						Operation::Nop,
+						base::Optional<LIRPlace>{},
+						std::vector<LIRValue>{},
+						mir_instruction.metadata
+					);
 
-					return curr_block;
+					break;
 				}
 				case mir::Operation::Call: {
 					auto output = getOutput(mir_instruction.output);
@@ -682,7 +685,7 @@ namespace compiler::lir {
 					curr_block->instructions.emplace_back(
 						Operation::Call, output, std::move(args), mir_instruction.metadata
 					);
-					return curr_block;
+					break;
 				}
 				case mir::Operation::Cast: {
 					auto cast_parameters
@@ -704,7 +707,7 @@ namespace compiler::lir {
 							.target_layout
 							= ctx.query<tsl::QuerySymbolTypeLayout>(cast_parameters->target_type) }
 					);
-					return curr_block;
+					break;
 				}
 				default:
 					throw base::NotYetImplemented(base::strConcat(
@@ -713,6 +716,36 @@ namespace compiler::lir {
 						" in LowerToLIRFunction"
 					));
 				}
+				usize after_instruction_count = curr_block->instructions.size();
+
+				auto flags = lowerFlags(mir_instruction);
+				if (!flags.empty()) {
+					// If this fails, then it's no problem, we just have to adjust the code.
+					// The `ScopeStart` flags should be added to the first of the LIR instructions
+					// and the `ScopeEnd` flags should be added to the last of the LIR instructions.
+					// Now they are added to both in one place.
+					CORE_ASSERT(
+						after_instruction_count - before_instruction_count <= 1,
+						base::strConcat(
+							"lowerFlags expected the increase to be less equal to 1, but it was ",
+							after_instruction_count - before_instruction_count
+						)
+					);
+					if (curr_block->instructions.size() == 0) {
+						curr_block->instructions.emplace_back(
+							Operation::Nop,
+							base::Optional<LIRPlace>{},
+							std::vector<LIRValue>{},
+							mir_instruction.metadata
+						);
+					}
+					curr_block->instructions.back().scope_flags.insert(
+						curr_block->instructions.back().scope_flags.end(),
+						flags.begin(),
+						flags.end()
+					);
+				}
+				return curr_block;
 			}
 
 			/**
@@ -728,7 +761,6 @@ namespace compiler::lir {
 				CORE_ASSERT(
 					mir::isTerminating(mir_terminator.operation), "non-Terminator in lowerTerminator"
 				);
-				lowerFlags(curr_block, mir_terminator);
 
 				CORE_ASSERT(mir_terminator.output.empty(), "terminator should not return");
 				switch (mir_terminator.operation) {
@@ -762,6 +794,8 @@ namespace compiler::lir {
 				default:
 					throw base::NotYetImplemented("terminator in LowerToLIRFunction");
 				}
+
+				curr_block->terminator.scope_flags = lowerFlags(mir_terminator);
 			}
 
 			/**

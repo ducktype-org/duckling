@@ -152,6 +152,10 @@ void FunctionLoweringContext::maybeStoreResult(
 	if_opt_none(maybe_dest_place) return;
 	const DVMPlace& dest_place = maybe_dest_place.value();
 
+	// If the source value is already in the destination place, we don't need to do anything.
+	if (DVMValue{ dest_place } == src_value) return;
+
+
 	// If a place is direct we just move the value into it.
 	if (dest_place.isDirect()) {
 		pushInstruction(
@@ -333,26 +337,28 @@ DVMValue FunctionLoweringContext::lowerLirValue(const lir::LIRValue& lir_value) 
 	CORE_UNREACHABLE();
 }
 
-const DVMPlace& FunctionLoweringContext::insertLirLocal(lir::LIRLocalRef local) {
+const DVMPlace& FunctionLoweringContext::getOrInsertLirLocal(lir::LIRLocalRef local) {
 	if (!lir_local_to_dvm.contains(local)) auto new_local = createLirLocalToDVMMapping(local);
 	return lir_local_to_dvm.at(local);
 }
 
 const DVMPlace& FunctionLoweringContext::createLirLocalToDVMMapping(lir::LIRLocalRef lir_local) {
-	auto var_name = [&] {
-		match_optional(lir_local->parameter_index) {
-			opt_some(index) return base::strConcat("arg", index);
-			opt_none return base::strConcat("var", lir_local_to_dvm.size());
+	DVMPlace result = [&]() -> DVMPlace {
+		if_opt_some(lir_local->parameter_index, index) {
+			auto var_name = base::StrID(base::strConcat("arg", index));
+			auto var_type = program_context.lowerAndKeepTslType(lir_local->layout);
+			return { var_name, var_type, DVMPlace::AccessKind::Direct };
 		}
-		CORE_UNREACHABLE();
+
+		if (lir_local->special_kind == lir::LIRLocalSpecialKind::ReturnValue)
+			return getFunctionReturnValueLocal();
+
+		auto var_name = base::StrID(base::strConcat("var", lir_local_to_dvm.size()));
+		auto var_type = program_context.lowerAndKeepTslType(lir_local->layout);
+		return { var_name, var_type, DVMPlace::AccessKind::Direct };
 	}();
 
-	auto var_name_str_id = base::StrID(var_name.data());
-
-	auto var_type = program_context.lowerAndKeepTslType(lir_local->layout);
-	lir_local_to_dvm.put(
-		lir_local, DVMPlace(var_name_str_id, var_type, DVMPlace::AccessKind::Direct)
-	);
+	lir_local_to_dvm.put(lir_local, result);
 	return lir_local_to_dvm.at(lir_local);
 }
 
@@ -369,6 +375,12 @@ void compiler::backend_vm::internal::FunctionLoweringContext::registerFunctionPa
 			);
 		}
 	}
+}
+
+void compiler::backend_vm::internal::FunctionLoweringContext::registerFunctionLocal(
+	lir::LIRLocalRef lir_local
+) {
+	createLirLocalToDVMMapping(lir_local);
 }
 
 void compiler::backend_vm::internal::FunctionLoweringContext::beginBlock(lir::BlockRef block) {
@@ -411,7 +423,10 @@ DVMPlace FunctionLoweringContext::getFunctionReturnValueLocal() {
 			"Main function must have i64 return type"
 		);
 	}
-	return { base::StrID("ret0"), function_return_type, DVMPlace::AccessKind::Pointer };
+	return { base::StrID("ret0"),
+		     function_return_type,
+		     DVMPlace::AccessKind::Direct,
+		     DVMPlace::SpecialKind::ReturnValue };
 }
 
 [[nodiscard]] const compiler::backend_vm::internal::DVMPlace& compiler::backend_vm::internal::
@@ -429,7 +444,7 @@ void compiler::backend_vm::internal::FunctionLoweringContext::pushInit(lir::LIRL
 		}
 	}
 
-	DVMPlace dvm_local = insertLirLocal(lir_local);
+	DVMPlace dvm_local = getOrInsertLirLocal(lir_local);
 	pushInstruction({
 		vm::code::builders::OpKind::init,
 		dvm_local.asAnyArgument(),
@@ -437,6 +452,35 @@ void compiler::backend_vm::internal::FunctionLoweringContext::pushInit(lir::LIRL
 	});
 }
 
+void compiler::backend_vm::internal::FunctionLoweringContext::pushDeinit(lir::LIRLocalRef) {
+	pushInstruction({ vm::code::builders::OpKind::deinit });
+}
+
 usize compiler::backend_vm::internal::FunctionLoweringContext::instructionsCount() const {
 	return function_body.size();
+}
+
+void compiler::backend_vm::internal::FunctionLoweringContext::pushInitsForInstr(
+	const std::vector<lir::ScopeFlag>& scope_flags
+) {
+	for (const auto& lifetime_flag: scope_flags) {
+		if (lifetime_flag.local->parameter_index.has_value())
+			continue;  // Parameters are not inited
+
+		if (lifetime_flag.flag == lir::ScopeFlag::Flag::ScopeStart) pushInit(lifetime_flag.local);
+	}
+}
+
+void compiler::backend_vm::internal::FunctionLoweringContext::pushDeinitsForInstr(
+	const std::vector<lir::ScopeFlag>& lifetime_flags, bool& deinits_pushed
+) {
+	if (deinits_pushed) return;
+
+	for (const auto& lifetime_flag: lifetime_flags) {
+		if (lifetime_flag.local->parameter_index.has_value())
+			continue;  // Parameters are deinited automatically.
+
+		if (lifetime_flag.flag == lir::ScopeFlag::Flag::ScopeEnd) pushDeinit(lifetime_flag.local);
+	}
+	deinits_pushed = true;
 }

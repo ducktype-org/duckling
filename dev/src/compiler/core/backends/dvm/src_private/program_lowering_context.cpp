@@ -270,10 +270,7 @@ const vm::code::Function& ProgramLoweringContext::lowerAndKeepLirFunction(
 	for (const auto& param: lir_function->local_list) {
 		match_optional(param.parameter_index) {
 			opt_some(_) func_ctx.registerFunctionParameter(&param);
-			opt_none {
-				// @TODO: #1656 Handle local variable inits properly.
-				func_ctx.pushInit(&param);  // NOLINT(clang-diagnostic-deprecated-declarations)
-			}
+			opt_none { func_ctx.registerFunctionLocal(&param); }
 		}
 	}
 

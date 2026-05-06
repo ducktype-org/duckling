@@ -108,7 +108,19 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 	ReturnVoid,
 	ReturnValue,
 	Jump,
-	Branch
+	Branch,
+	Nop
+)
+
+/// A helper tag that indicates that a value has some special meaning
+/// that can be used by the lower layers.
+MAKE_STRINGIFYABLE_ENUM(compiler::lir, u32, LIRLocalSpecialKind,
+	/// Normal local.
+	Normal,
+	/// This is the return value temporary local.
+	ReturnValue,
+	/// This is a condition result temporary local.
+	ConditionTmp
 )
 
 namespace compiler::lir {
@@ -148,6 +160,8 @@ namespace compiler::lir {
 		base::Optional<dia_int::StablePosition> position;
 	};
 
+	LIRLocalSpecialKind specialKindFromMIR(const mir::MIRLocal& mir_local);
+
 	/**
 	 * @brief Description of a LIR Local variable or function argument.
 	 * @note This structure should only be stored directly in LIR Function, as part of the
@@ -169,19 +183,26 @@ namespace compiler::lir {
 
 		LIRLocalMetadata metadata;
 
+		LIRLocalSpecialKind special_kind;
+
 	private:
 		LIRLocal(
 			const base::Optional<helios::SymID> helios_id,
 			const CRef<tsl::TypeLayout>         layout,
 			const base::Optional<u64>           parameter_index,
-			LIRLocalMetadata                    metadata
+			LIRLocalMetadata                    metadata,
+			LIRLocalSpecialKind                 special_kind = LIRLocalSpecialKind::Normal
 		):
 			  helios_id(helios_id),
 			  layout(layout),
 			  parameter_index(parameter_index),
-			  metadata(metadata) {}
+			  metadata(metadata),
+			  special_kind(special_kind) {}
 
-		explicit LIRLocal(const CRef<tsl::TypeLayout> layout): helios_id({}), layout(layout) {}
+		explicit LIRLocal(const CRef<tsl::TypeLayout> layout):
+			  helios_id({}),
+			  layout(layout),
+			  special_kind(LIRLocalSpecialKind::Normal) {}
 
 		friend Function;
 		friend LIRLocalRef;
@@ -493,6 +514,19 @@ namespace compiler::lir {
 	};
 
 	/**
+	 * @brief The operation flags of the instruction.
+	 * The only user is for now the DVM Backend, which uses it to generate `init` and `deinit`
+	 * instructions.
+	 */
+	struct ScopeFlag {
+		enum class Flag { ScopeStart, ScopeEnd };
+		Flag        flag;
+		LIRLocalRef local;
+
+		bool operator==(const ScopeFlag& other) const = default;
+	};
+
+	/**
 	 * @brief Single instruction of LIR code.
 	 */
 	struct Instruction final {
@@ -501,6 +535,8 @@ namespace compiler::lir {
 		std::vector<LIRValue>    arguments;
 		InstrParameters          extra_params{ NoInstrParameters{} };
 		InstructionMetadata      metadata;
+
+		std::vector<ScopeFlag> scope_flags;
 
 
 		Instruction()                       = default;
@@ -522,6 +558,8 @@ namespace compiler::lir {
 			  extra_params(extra_parameters),
 			  metadata(metadata) {}
 	};
+
+	bool isTerminatorInstr(const Instruction& instr);
 
 	/**
 	 * @brief LIR block.

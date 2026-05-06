@@ -133,6 +133,8 @@ namespace compiler::backend_vm::internal {
 	 */
 	struct JumpOperation {
 		DVMLabel target;
+
+		std::vector<lir::ScopeFlag> lifetime_flags;
 	};
 
 	/**
@@ -142,6 +144,8 @@ namespace compiler::backend_vm::internal {
 		DVMValue condition;
 		DVMLabel true_target;
 		DVMLabel false_target;
+
+		std::vector<lir::ScopeFlag> lifetime_flags;
 	};
 
 	/**
@@ -149,6 +153,8 @@ namespace compiler::backend_vm::internal {
 	 */
 	struct ReturnOperation {
 		base::Optional<DVMValue> value;  ///< Empty optional on void returns.
+
+		std::vector<lir::ScopeFlag> lifetime_flags;
 	};
 
 	/**
