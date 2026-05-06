@@ -158,11 +158,7 @@ private:
 	}
 
 	void testConstants() {
-		std::println(std::cerr, "setup");
-
 		auto [_, root_scope] = getModule(fs::File(path("test_modules/constants")));
-
-		std::println(std::cerr, "start");
 
 		ASSERT_EQUAL(1'107, getConstValueAs<i64>("M", root_scope));
 		ASSERT_EQUAL(1, getConstValueAs<i32>("N.X", root_scope));
@@ -178,28 +174,17 @@ private:
 		ASSERT_EQUAL(3, getConstValueAs<i64>("T2", root_scope));
 		ASSERT_EQUAL(30, getConstValueAs<i64>("F", root_scope));
 
-		std::println(std::cerr, "mid");
-
 		// Floating point.
 		ASSERT_EQUAL(1.0f, getConstValueAs<f64>("F1", root_scope));
 		ASSERT_EQUAL(1.0l, getConstValueAs<f32>("F2", root_scope));
 		ASSERT_EQUAL(5.0l, getConstValueAs<f64>("F3", root_scope));
 
-		std::println(std::cerr, "next1");
-
 		ASSERT_EQUAL(true, getConstValueAs<bool>("BOOL_TRUE", root_scope));
-		std::println(std::cerr, "true");
 		ASSERT_EQUAL(false, getConstValueAs<bool>("BOOL_FALSE", root_scope));
-		std::println(std::cerr, "false");
 		ASSERT_EQUAL(true, getConstValueAs<bool>("LOGIC_AND", root_scope));
-		std::println(std::cerr, "and");
 		ASSERT_EQUAL(false, getConstValueAs<bool>("LOGIC_OR", root_scope));
-		std::println(std::cerr, "or");
 		ASSERT_EQUAL(true, getConstValueAs<bool>("TRUE_COMPARISON", root_scope));
-		std::println(std::cerr, "true_comp");
 		ASSERT_EQUAL(false, getConstValueAs<bool>("FALSE_COMPARISON", root_scope));
-
-		std::println(std::cerr, "next2");
 
 		ASSERT_EQUAL(42, getConstValueAs<i64>("VM_SIMPLE_CALL", root_scope));
 		ASSERT_EQUAL(1'129, getConstValueAs<i64>("VM_SIMPLE_CALL_2", root_scope));
