@@ -29,10 +29,6 @@ public:
 	~StateMachineTest() override = default;
 
 private:
-	// =========================================================================
-	// Traffic light - simple stateless states/events used by most tests.
-	// =========================================================================
-
 	struct Red {};
 
 	struct Yellow {};
