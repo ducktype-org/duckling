@@ -31,6 +31,8 @@ public:
 		TESTER_ADD_TEST(conditionalParameterTest);
 		TESTER_ADD_TEST(mixedGlobalAndLocalParameters);
 		TESTER_ADD_TEST(argumentParsingTest);
+		TESTER_ADD_TEST(categoryParserTest);
+		TESTER_ADD_TEST(categoryListParserTest);
 	}
 
 private:
@@ -177,14 +179,31 @@ private:
 	}
 
 	void escapingTest() {
+/// We need this define because of the usages below
+/// - the std::string_view can't be used with string literal to create a vector
+/// - const char* can't be automatically concatenated by the compiler with the string literal
+#define STR_ARG "a \" b"
+
 		auto clah = clah::Clah("prog").add(clah::ParamBuilder::ofValue(clah::StringParser::make())
 		                                       .addShortName('f')
+		                                       .addLongName("file")
 		                                       .addShortDesc("test")
 		                                       .build());
-
-		std::array argv{ "./prog", "-f", "a \" b" };
-		auto       res = clah.parse(argv.size(), argv.begin());
-		ASSERT_EQUAL("a \" b", *res.getValue<std::string>('f'));
+		// The const char* has to stay because the clah.parse requires this signature.
+		auto correctly_parses_argument
+			= [&](const std::vector<const char*>& argv, const std::string& expected) {
+				  auto res = clah.parse(argv.size(), argv.data());
+				  ASSERT_EQUAL(expected, *res.getValue<std::string>('f'));
+			  };
+		correctly_parses_argument({ "./prog", "-f", STR_ARG }, STR_ARG);
+		correctly_parses_argument({ "./prog", "-f=", STR_ARG }, STR_ARG);
+		correctly_parses_argument({ "./prog", "-f", "=" STR_ARG }, STR_ARG);
+		correctly_parses_argument({ "./prog", "-f=" STR_ARG }, STR_ARG);
+		correctly_parses_argument({ "./prog", "--file", STR_ARG }, STR_ARG);
+		correctly_parses_argument({ "./prog", "--file=", STR_ARG }, STR_ARG);
+		correctly_parses_argument({ "./prog", "--file", "=" STR_ARG }, STR_ARG);
+		correctly_parses_argument({ "./prog", "--file=" STR_ARG }, STR_ARG);
+		correctly_parses_argument({ "./prog", "--file=abc" }, "abc");
 	}
 
 	void subcommandBasicTest() {
@@ -439,6 +458,48 @@ private:
 		ASSERT_EQUAL(true, res2.isFlag('v'));
 		ASSERT_EQUAL(false, res2.isFlag("version"));
 		ASSERT_EQUAL("my-origin", res2.getPositional<std::string>(0));
+	}
+
+	void categoryParserTest() {
+		auto clah = clah::Clah("prog").add(
+			clah::ParamBuilder::ofValue(clah::CategoryParser::make(std::vector<std::string>{
+											"low", "medium", "high" }))
+				.addLongName("priority")
+				.addShortDesc("Priority level")
+				.required()
+				.build()
+		);
+
+		std::array argv_ok{ "./prog", "--priority", "medium" };
+		auto       res_ok = clah.parse(argv_ok.size(), argv_ok.data());
+		ASSERT_EQUAL("medium", *res_ok.getValue<std::string>("priority"));
+
+		std::array argv_bad{ "./prog", "--priority", "urgent" };
+		assertThrows<clah::exceptions::ValueParsingException>(
+			[&]() { clah.parse(argv_bad.size(), argv_bad.data()); },
+			"Clah did not reject an invalid category value."
+		);
+	}
+
+	void categoryListParserTest() {
+		auto clah = clah::Clah("prog").addPositional(
+			clah::CategoryListParser::make(std::vector<std::string>{ "cpu", "memory", "disk" })
+		);
+
+		std::array argv_ok{ "./prog", "cpu, memory,disk" };
+		auto       res_ok = clah.parse(argv_ok.size(), argv_ok.data());
+
+		auto values = res_ok.getPositional<std::vector<std::string>>(0);
+		ASSERT_EQUAL(3, values.size());
+		ASSERT_EQUAL("cpu", values[0]);
+		ASSERT_EQUAL("memory", values[1]);
+		ASSERT_EQUAL("disk", values[2]);
+
+		std::array argv_bad{ "./prog", "cpu,gpu" };
+		assertThrows<clah::exceptions::ValueParsingException>(
+			[&]() { clah.parse(argv_bad.size(), argv_bad.data()); },
+			"Clah did not reject an invalid category in category-list parser."
+		);
 	}
 };
 

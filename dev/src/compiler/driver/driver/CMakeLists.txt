@@ -8,6 +8,7 @@ add_library(Driver
 	src_private/driver_private/backend_operations/compile_dvm.cpp
 
 	src_private/driver_private/operations.cpp
+	src_private/driver_private/debug_artifacts.cpp
 	src_private/driver_private/save_artifacts.cpp
 	
 	src/driver/module_flags/module_flags.cpp
