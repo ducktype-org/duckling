@@ -103,7 +103,7 @@ namespace {
 			std::perror("_spawnvp");
 			return 1;
 		}
-		return 0;
+		return static_cast<int>(result);
 #else
 		execvp(args[0], args.data());
 		std::perror("execvp");
