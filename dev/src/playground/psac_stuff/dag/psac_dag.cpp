@@ -33,6 +33,7 @@ psac_function(sumNodes, const ValueTp mod, It in_begin, It in_end, psac::Mod<Val
 		);
 
 		psac_read((ValueTp x, ValueTp y), (left_res, right_res), {
+			work(g_config.workload);
 			psac_write(result, (x + y) % mod);
 		});
 	}
@@ -45,8 +46,9 @@ psac_function(
 	std::vector<psac::Mod<ValueTp>>* w,
 	std::vector<psac::Mod<ValueTp>>* out
 ) {
-	work(g_config.workload);
-
+	// NOT HERE:
+	// work(g_config.workload);
+			
 	std::vector<psac::Mod<ValueTp>*> inputs;
 	inputs.push_back(&(*w)[i]);
 	for (usize j: g_adj[i]) inputs.push_back(&(*out)[j]);

@@ -111,6 +111,7 @@ void runUpdateAndRecompute() {
 	results.reserve(g_weights.size());
 	for (usize i = 0; i < g_weights.size(); i++)
 		results.push_back(query::entryPoint<ComputeNode>(NodeKey{ i }));
+
 	// std::cout << "Total invocations after update: " << g_invocations << "\n";
 	// printFinalChecksum("Query Recompute", results);
 }
