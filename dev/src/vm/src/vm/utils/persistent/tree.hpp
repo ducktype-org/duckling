@@ -14,6 +14,7 @@
 #include <functional>
 #include <stdexcept>
 #include <type_traits>
+#include <unordered_set>
 #include <vector>
 
 namespace vm::persistent::detail {
@@ -98,13 +99,16 @@ namespace vm::persistent::detail {
 		}
 
 		static constexpr idxT offsetFromPos(posT pos) {
-			return (pos << heightFromPos(pos)) & OFFSET_MASK;
+			auto h = heightFromPos(pos);
+			if (h >= POS_T_SIZE) return 0;
+			return (pos << h) & OFFSET_MASK;
 		}
 
 		static constexpr usize getLCAHeight(posT pos_1, posT pos_2) {
 			if (pos_1 > pos_2) std::swap(pos_1, pos_2);
-			if (pos_1 == 0) return pos_2;
-			auto h_1 = heightFromPos(pos_1), h_2 = heightFromPos(pos_2);
+			auto h_2 = heightFromPos(pos_2);
+			if (pos_1 == 0) return h_2;
+			auto h_1 = heightFromPos(pos_1);
 			CORE_ASSERT(h_1 >= h_2, "pos_1 should be higher tahn pos_2");
 			pos_2 >>= (h_1 - h_2);
 			return h_1 + (usize) std::bit_width(pos_1 ^ pos_2);
@@ -112,7 +116,9 @@ namespace vm::persistent::detail {
 
 		static constexpr posT getLCAPos(posT pos_1, posT pos_2) {
 			if (pos_1 == 0) std::swap(pos_1, pos_2);
-			return pos_1 >> (getLCAHeight(pos_1, pos_2) - heightFromPos(pos_1));
+			usize lca_h = getLCAHeight(pos_1, pos_2);
+			usize h_1 =  heightFromPos(pos_1);
+			return pos_1 >> (lca_h - h_1);
 		}
 
 		static constexpr bool inSubtree(posT maybe_child, posT root) {
@@ -163,14 +169,16 @@ namespace vm::persistent::detail {
 				if (!desired_pos || desired_pos == node_pos) return;
 				CORE_ASSERT(inSubtree(desired_pos, root_pos), "we should be within root's subtree");
 
-				usize height_diff = getLCAHeight(desired_pos, node_pos) - heightFromPos(node_pos);
+				usize lca_h = getLCAHeight(desired_pos, node_pos);
+				usize h = heightFromPos(node_pos);
+				usize height_diff = lca_h - h;
 				for (usize i = (desired_pos == root_pos ? 0 : 1); i < height_diff; i++) {
 					if constexpr (RECONSTRUCT) {
 						auto left = node, right = siblings.front();
 						if (node_pos & 1) std::swap(left, right);
 						node = mem->mergeTwoRoots(left, right);
 					} else {
-						node = ancestors.back();
+						node = ancestors.front();
 						ancestors.pop_front();
 					}
 					siblings.pop_front();
@@ -416,8 +424,10 @@ namespace vm::persistent::detail {
 			if (!root_info.contains(root) && !leaf_entries.atRightOpt(root))
 				throw std::invalid_argument("got invalid state");
 
+			if (root == EMPTY) return;
 			auto size             = (idxT) getSize(root);
 			auto [height, offset] = getHeightOffset(root);
+			CORE_ASSERT(height < POS_T_SIZE, "all non-empty roots need to have valid height");
 			CORE_ASSERT(size <= (idxT(1) << height), "root's size is too large");
 		}
 
@@ -583,7 +593,7 @@ namespace vm::persistent::detail {
 			if (offsetFromPos(pos_2) < offsetFromPos(pos_1)) {
 				std::swap(pos_1, pos_2);
 				std::swap(root_1, root_2);
-				std::swap(merge_policy.only_1, merge_policy.only_1);
+				std::swap(merge_policy.only_1, merge_policy.only_2);
 				merge_policy.confilicts = [orig_strat = merge_policy.confilicts](
 											  idxT idx, valT val_1, valT val_2
 										  ) -> ResT { return orig_strat(idx, val_2, val_1); };

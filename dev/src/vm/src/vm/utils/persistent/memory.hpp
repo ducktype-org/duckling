@@ -55,7 +55,7 @@ namespace vm::persistent {
 
 			for (auto idx: idxs) validateIdx(idx);
 			for (usize i = 1; i < idxs.size(); i++) {
-				CORE_ASSERT(idxs[i] > idxs[i - 1], "idxs must be ordered");
+				CORE_ASSERT(idxs[i] >= idxs[i - 1], "idxs must be ordered");
 				if (idxs[i] == idxs[i - 1]) throw std::invalid_argument("repeating idx error");
 			}
 
@@ -133,7 +133,7 @@ namespace vm::persistent {
 		MemoryIterator& operator--();
 		MemoryIterator  operator--(int);
 
-		MemoryIterator();
+		MemoryIterator() = default;
 		MemoryIterator(const Memory& mem, MemoryStateID state, usize idx);
 	};
 

@@ -52,7 +52,7 @@ namespace vm::persistent {
 		}
 
 		usize emplaceNewKey(const KeyT& key) {
-			auto [is_new, var_id] = held_values.emplaceByLeft(key, next_key_id);
+			auto [is_new, var_id] = held_keys.emplaceByLeft(key, next_key_id);
 			next_key_id += (is_new ? 1 : 0);
 			return var_id;
 		}
@@ -103,10 +103,13 @@ namespace vm::persistent {
 		}
 
 		const ValT& access(HashMapStateID state_id, const KeyT& key) const {
-			auto key_id = *held_keys.atLeftOpt(key);
-			auto state  = toMemState(state_id);
-			auto val_id = *Memory::access(state, key_id);
-			return held_values.atRight(val_id);
+			auto state = toMemState(state_id);
+			if_opt_some(held_keys.atLeftOpt(key), key_id) {
+				if_opt_some(Memory::access(state, key_id), val_id) {
+					return held_values.atRight(val_id);
+				}
+			}
+			CORE_UNREACHABLE();
 		}
 
 		HashMapStateID insert(HashMapStateID state_id, const KeyT& key, const ValT& var) {

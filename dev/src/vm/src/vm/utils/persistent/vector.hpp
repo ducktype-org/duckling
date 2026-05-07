@@ -33,7 +33,7 @@ namespace vm::persistent {
 		detail::BijectiveMap<VarT, usize, VarH> held_values{};
 		usize                                   next_val_id = 0;
 
-		constexpr static VectorStateID toVeccState(MemoryStateID state) {
+		constexpr static VectorStateID toVecState(MemoryStateID state) {
 			return VectorStateID{ u64(state) };
 		}
 
@@ -41,7 +41,7 @@ namespace vm::persistent {
 			return MemoryStateID{ u64(state) };
 		}
 
-		MemoryStateID validaState(VectorStateID vec_state) const {
+		MemoryStateID validateState(VectorStateID vec_state) const {
 			auto  state = toMemState(vec_state);
 			usize size{};
 			try {
@@ -68,32 +68,32 @@ namespace vm::persistent {
 		static constexpr auto EMPTY = VectorStateID{ u64{ Memory::EMPTY } };
 
 		const VarT& access(VectorStateID state_id, usize idx) const {
-			auto state  = validaState(state_id);
-			auto val_id = *Memory::access(state, idx);
-			return held_values.atRight(val_id);
+			auto state = validateState(state_id);
+			if_opt_some(Memory::access(state, idx), val_id) { return held_values.atRight(val_id); }
+			CORE_UNREACHABLE();
 		}
 
 		[[nodiscard]]
 		usize size(VectorStateID state_id) const {
-			auto state = validaState(state_id);
+			auto state = validateState(state_id);
 			return Memory::size(state);
 		}
 
 		VectorStateID push(VectorStateID state_id, const VarT& var) {
-			auto  state     = validaState(state_id);
+			auto  state     = validateState(state_id);
 			auto  size      = Memory::size(state);
 			usize val_id    = emplaceNewVal(var);
 			auto  new_state = Memory::set(state, size, val_id);
 
-			return toVeccState(new_state);
+			return toVecState(new_state);
 		}
 
 		VectorStateID change(VectorStateID state_id, usize idx, const VarT& var) {
-			auto  state     = validaState(state_id);
+			auto  state     = validateState(state_id);
 			usize val_id    = emplaceNewVal(var);
 			auto  new_state = Memory::set(state, idx, val_id);
 
-			return toVeccState(new_state);
+			return toVecState(new_state);
 		}
 
 		/**
@@ -103,7 +103,7 @@ namespace vm::persistent {
 			if (left > right) throw std::invalid_argument("left idx was bigger than right");
 			if (right > size(state_id)) throw std::invalid_argument("right bound is too big");
 
-			auto state = validaState(state_id);
+			auto state = validateState(state_id);
 			auto iter  = getPathTo(state, left);
 
 			std::vector<VarT> ans        = {};
@@ -123,23 +123,23 @@ namespace vm::persistent {
 		}
 
 		VectorStateID getPrefix(VectorStateID state_id, usize pref_size) {
-			auto state = validaState(state_id);
+			auto state = validateState(state_id);
 			auto size  = Memory::size(state);
 			if (pref_size > size) throw std::invalid_argument("trying to take too much");
 
 			auto new_state = Memory::slice(state, 0, pref_size);
 
-			return toVeccState(new_state);
+			return toVecState(new_state);
 		}
 
 		VectorStateID pop(VectorStateID state_id, usize how_many_pop = 1) {
-			auto state = validaState(state_id);
+			auto state = validateState(state_id);
 			auto size  = Memory::size(state);
 			if (how_many_pop > size) throw std::invalid_argument("trying to pop too much");
 
 			auto new_state = Memory::slice(state, 0, size - how_many_pop);
 
-			return toVeccState(new_state);
+			return toVecState(new_state);
 		}
 
 		Vector() = default;
