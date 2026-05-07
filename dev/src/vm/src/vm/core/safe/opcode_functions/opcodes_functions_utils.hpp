@@ -90,7 +90,7 @@ inline static void writeToPlace(
 /**
  * @brief Helper macro for reading a value from a immediate argument.
  */
-#define READ_FROM_IMMEDIATE_ARG(TYPE, ARG) safeReadObjectBytes<TYPE>(ARG)
+#define READ_FROM_DIRECT_ARG(TYPE, ARG) safeReadObjectBytes<TYPE>(ARG)
 
 /**
  * @brief Reads a value of a given TYPE from the beginning of the given view.
