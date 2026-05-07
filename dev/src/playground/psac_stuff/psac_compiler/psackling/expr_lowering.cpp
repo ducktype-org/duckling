@@ -23,7 +23,6 @@ namespace pg {
 	}
 
 	void ExprLowering::visitExprNumericValue(pst::Access<pst::expr::ExprNumericValue> lit) {
-		// M3: only i64 numeric literals are supported.
 		const u64   value   = std::stoull(lit->getValue().str());
 		llvm::Type* llvm_ty = lowering.lowerType(ctx.i64_type_id, ctx);
 		result              = LoweredExpr{
@@ -131,7 +130,7 @@ namespace pg {
 			default:
 				throw std::runtime_error(
 					"Binary operator '" + op->getOperator().value.str()
-					+ "' is not yet supported (M5: + - * /)"
+					+ "' is not yet supported (+ - * /)"
 				);
 		}
 
@@ -157,7 +156,7 @@ namespace pg {
 				case lang_def::NamedOperator::GEqual:   return builder.CreateICmpSGE(l, r, "getmp");
 				default:
 					throw std::runtime_error(
-						"Unsupported comparison operator in chain (M6: == != < <= > >=)"
+						"Unsupported comparison operator in chain (== != < <= > >=)"
 					);
 			}
 		};
