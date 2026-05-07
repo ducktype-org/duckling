@@ -18,10 +18,10 @@ psac_function(
 	psac::Mod<ValueTp>*              r_mod
 ) {
 	psac_read((ValueTp my_index, ValueTp l, ValueTp r), (my_index_mod, l_mod, r_mod), {
-		work(g_config.workload);
-
+		
 		if (l == r - 1) {
 			psac_read((ValueTp my_value), (&source_array_mod->at(l)), {
+				work(g_config.workload);
 				psac_write(&value_tree.at(my_index), my_value);
 			});
 			return;
@@ -43,7 +43,10 @@ psac_function(
 		psac_read(
 			(ValueTp l_value, ValueTp r_value),
 			(&value_tree.at(my_index * 2), &value_tree.at(my_index * 2 + 1)),
-			{ psac_write(&value_tree.at(my_index), l_value + r_value); }
+			{ 
+				work(g_config.workload);
+				psac_write(&value_tree.at(my_index), l_value + r_value);
+			}
 		);
 	});
 }
