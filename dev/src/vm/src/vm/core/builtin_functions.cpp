@@ -114,28 +114,24 @@ namespace vm::builtins {
 		return std::stoll(str_data);
 	}
 
-	u64 FunctionHandlers::builtinStartThread(SafeVMThread& thread) {
+	i64 FunctionHandlers::builtinStartThread(SafeVMThread& thread) {
 		thread.releaseGil();
 		auto result = vm::api::runFunction(thread.safe_process.getPID(), thread.getThreadCtx());
 		thread.acquireGil();
 		if (!result.has_value()) {
-			throw vm::exceptions::VMRuntimeException(
-				"builtinStartThread failed to start thread: "
-				+ vm::api::errorToString(result.error())
-			);
+			return -vm::api::errorToErrno(result.error());
 		}
-		return u64{ result.value() };
+		return static_cast<i64>(result.value().asInt());
 	}
 
-	void FunctionHandlers::builtinJoinThread(SafeVMThread& thread, u64 thread_id) {
+	i64 FunctionHandlers::builtinJoinThread(SafeVMThread& thread, u64 thread_id) {
 		thread.releaseGil();
 		auto result = vm::api::join(thread.safe_process.getPID(), api::ThreadID{ thread_id });
 		thread.acquireGil();
 		if (!result.has_value()) {
-			throw vm::exceptions::VMRuntimeException(
-				"builtinJoinThread failed to join thread: " + vm::api::errorToString(result.error())
-			);
+			return -vm::api::errorToErrno(result.error());
 		}
+		return 0; // success
 	}
 
 	u64 FunctionHandlers::builtinCreateMutex(SafeVMThread& thread) {
@@ -277,11 +273,11 @@ namespace vm::builtins {
 					{ base::StrID("builtin_start_thread"),
 			          code::FuncSignature({ base::StrID("i64") }, {}) },
 				},
-				{
-					BuiltinFunctionID::JoinThread,
-					{ base::StrID("builtin_join_thread"),
-			          code::FuncSignature({}, { base::StrID("i64") }) },
-				},
+								{
+										BuiltinFunctionID::JoinThread,
+										{ base::StrID("builtin_join_thread"),
+											code::FuncSignature({ base::StrID("i64") }, { base::StrID("i64") }) },
+								},
 				{ BuiltinFunctionID::CreateMutex,
 			      { base::StrID("builtin_create_mutex"),
 			        code::FuncSignature({ base::StrID("mutex") }, {}) } },
