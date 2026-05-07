@@ -98,15 +98,15 @@ namespace {
 		args.push_back(nullptr);
 
 #ifdef _WIN32
-		intptr_t result = _spawnv(_P_WAIT, args[0], args.data());
+		intptr_t result = _spawnvp(_P_WAIT, args[0], args.data());
 		if (result == -1) {
-			std::perror("_spawnv");
+			std::perror("_spawnvp");
 			return 1;
 		}
 		return 0;
 #else
-		execv(args[0], args.data());
-		std::perror("execv");
+		execvp(args[0], args.data());
+		std::perror("execvp");
 		return 1;
 #endif
 	}
