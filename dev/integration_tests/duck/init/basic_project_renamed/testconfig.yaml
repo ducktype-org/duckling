@@ -8,4 +8,4 @@ Tests:
         test_cmd: init foo --name bar
         Output:
           Run: |+
-            echo "info: successfully created new project \`bar\` at \`$(pwd)/foo\`"
+            echo "info: successfully created a new project \`bar\` at \`$(pwd)/foo\`"

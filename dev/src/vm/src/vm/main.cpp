@@ -76,11 +76,9 @@ clah::Clah getVmClah() {
 							   return cli(file, args);
 						   }))
 	    .addSubcommand(clah::Clah("debug_adapter", "Start the VM debug adapter.")
-	                       .addPositional(clah::FileParser::make("file"))
-	                       .setHandler([](const clah::ParsingResult& options) -> int {
+	                       .setHandler([](const clah::ParsingResult&) -> int {
 							   vm::Supervisor::get();
-							   auto file = options.getPositional<fs::File>(0);
-							   vm::debug_adapter::DebugAdapter::get(file).run();
+							   vm::debug_adapter::DebugAdapter::get().run();
 							   return 0;
 						   }))
 	    .addSubcommand(clah::Clah("repl", "Start the VM in REPL mode.")
