@@ -74,8 +74,6 @@
  * outlive every `StateMachine` that references it.
  *
  * @note `StateMachine` itself is **not** thread-safe.
- * @note A fully configured `StateMachineDefinition` is read-only and may be
- * shared between many state machines.
  */
 
 #pragma once
@@ -93,31 +91,6 @@
 #include <variant>
 
 namespace state_machine {
-
-	namespace detail {
-		/**
-		 * @brief Concept satisfied by any `std::variant` instantiation.
-		 */
-		template<typename T>
-		concept IsVariant = requires(T t) { std::visit([](auto&&) {}, t); };
-
-		/**
-		 * @brief Returns the index of `T` in a `std::variant` at compile time.
-		 *
-		 * Falls back to `std::variant_size_v<Variant>` (an out-of-range
-		 * value) when `T` is not an alternative of the variant.
-		 */
-		template<typename Variant, typename T, usize Index = 0>
-		constexpr usize variantIndex() {
-			if constexpr (Index >= std::variant_size_v<Variant>)
-				return Index;
-			else if constexpr (std::is_same_v<std::variant_alternative_t<Index, Variant>, T>)
-				return Index;
-			else
-				return variantIndex<Variant, T, Index + 1>();
-		}
-	}
-
 	/**
 	 * @brief Static description of a state machine - the set of allowed
 	 * `(state, event)` transitions and their handlers.
@@ -125,15 +98,14 @@ namespace state_machine {
 	 * A `StateMachineDefinition` is meant to be configured once and then
 	 * passed to one or more `StateMachine` instances which carry the
 	 * runtime state. Transitions are stored in a fixed-size
-	 * `(NUM_STATES x NUM_EVENTS)` table keyed by the variant indices, so
-	 * lookup is O(1).
+	 * `(NUM_STATES x NUM_EVENTS)` table keyed by the variant indices.
 	 *
 	 * @tparam States Variant of state alternatives.
 	 * @tparam Events Variant of event alternatives.
 	 * @tparam ErrorT Error type used by guards and actions.
 	 */
 	template<typename States, typename Events, typename ErrorT = std::string>
-	requires detail::IsVariant<States> && detail::IsVariant<Events> class StateMachineDefinition {
+	requires base::IsVariant<States> && base::IsVariant<Events> class StateMachineDefinition {
 	public:
 		using ActionResultT = std::expected<States, ErrorT>;
 		using GuardResultT  = std::expected<void, ErrorT>;
@@ -166,16 +138,6 @@ namespace state_machine {
 		 */
 		std::array<std::array<base::Optional<TransitionEntry>, NUM_EVENTS>, NUM_STATES> transitions;
 
-		[[nodiscard]] const base::Optional<TransitionEntry>& getEntry(
-			usize state_idx, usize event_idx
-		) const {
-			CORE_ASSERT(
-				state_idx < NUM_STATES && event_idx < NUM_EVENTS,
-				"State or Event index out of bounds"
-			);
-			return transitions[state_idx][event_idx];
-		}
-
 	public:
 		/**
 		 * @brief Registers a transition for a single `(State, Event)` pair.
@@ -190,9 +152,6 @@ namespace state_machine {
 		 * @param guard  Optional callable evaluated before `action`. May
 		 *               veto the transition by returning
 		 *               `std::unexpected(error)`.
-		 *
-		 * @note Calling this twice for the same `(State, Event)` pair
-		 * overwrites the previously registered entry.
 		 */
 		template<typename State, typename Event>
 		requires base::IsVariantMember<State, States> && base::IsVariantMember<Event, Events>
@@ -200,10 +159,17 @@ namespace state_machine {
 			std::function<ActionResultT(const State&, const Event&)>                action,
 			base::Optional<std::function<GuardResultT(const State&, const Event&)>> guard = {}
 		) {
-			// TODOP: Probably CORE_ASSERT that this transition is unset.
-			// TODOP: Validate the return types of handlers. Here and everywhere.
-			const usize state_idx = detail::variantIndex<States, State>();
-			const usize event_idx = detail::variantIndex<Events, Event>();
+			const usize state_idx = base::variantIndex<States, State>();
+			const usize event_idx = base::variantIndex<Events, Event>();
+
+			CORE_ASSERT(
+				!transitions[state_idx][event_idx].has_value(),
+				"Transition for this State (variant index: ",
+				state_idx,
+				") and Event (variant index: ",
+				event_idx,
+				") is already defined!"
+			);
 
 			RawAction raw_action
 				= [action = std::move(action)](const States& s, const Events& e) -> ActionResultT {
@@ -273,8 +239,8 @@ namespace state_machine {
 		template<typename State, typename Event>
 		requires base::IsVariantMember<State, States> && base::IsVariantMember<Event, Events>
 		[[nodiscard]] base::Optional<CRef<TransitionEntry>> getTransition() const {
-			const usize state_idx = detail::variantIndex<States, State>();
-			const usize event_idx = detail::variantIndex<Events, Event>();
+			const usize state_idx = base::variantIndex<States, State>();
+			const usize event_idx = base::variantIndex<Events, Event>();
 
 			CORE_ASSERT(state_idx < NUM_STATES && event_idx < NUM_EVENTS, "Index out of bounds");
 			const auto& entry = transitions.at(state_idx).at(event_idx);
@@ -294,8 +260,17 @@ namespace state_machine {
 		void addTransitionInternal(
 			const GenericAction<Event>& action, const base::Optional<GenericGuard<Event>> guard
 		) {
-			const usize state_idx = detail::variantIndex<States, State>();
-			const usize event_idx = detail::variantIndex<Events, Event>();
+			const usize state_idx = base::variantIndex<States, State>();
+			const usize event_idx = base::variantIndex<Events, Event>();
+
+			CORE_ASSERT(
+				!transitions[state_idx][event_idx].has_value(),
+				"Transition for this State (variant index: ",
+				state_idx,
+				") and Event (variant index: ",
+				event_idx,
+				") is already defined!"
+			);
 
 			// Wrapper over action so it can be stored next to strongly-typed actions.
 			RawAction raw_action = [action](const States& s, const Events& e) {
@@ -328,10 +303,6 @@ namespace state_machine {
 	 *                definition's `Events`.
 	 * @tparam ErrorT Error type used by guards and actions. Must match
 	 *                the definition's `ErrorT`.
-	 *
-	 * @attention The referenced `StateMachineDefinition` must outlive
-	 * this object.
-	 * TODOP: Make it a CRef
 	 */
 	template<typename States, typename Events, typename ErrorT = std::string>
 	class StateMachine {
@@ -345,7 +316,7 @@ namespace state_machine {
 		 * @param initial_state State the machine starts in.
 		 * @param def           Definition describing the allowed transitions.
 		 */
-		StateMachine(States initial_state, const StateMachineDef& def):
+		StateMachine(States initial_state, CRef<StateMachineDef> def):
 			  current_state(std::move(initial_state)),
 			  definition(def) {}
 
@@ -372,7 +343,7 @@ namespace state_machine {
 				[&](auto&& inner_state, auto&& inner_event) -> ResultT {
 					using State           = std::decay_t<decltype(inner_state)>;
 					using Event           = std::decay_t<decltype(inner_event)>;
-					auto maybe_transition = definition.template getTransition<State, Event>();
+					auto maybe_transition = definition->template getTransition<State, Event>();
 					if (!maybe_transition.has_value()) return std::nullopt;
 
 					const auto& transition = maybe_transition.value();
@@ -403,8 +374,8 @@ namespace state_machine {
 		[[nodiscard]] const States& getState() const { return current_state; }
 
 	private:
-		States current_state;               ///< Current state of the machine.
-		const StateMachineDef& definition;  ///< The definition the state machine was configured with.
+		States current_state;              ///< Current state of the machine.
+		CRef<StateMachineDef> definition;  ///< The definition the state machine was configured with.
 	};
 
 }

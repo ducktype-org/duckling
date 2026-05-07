@@ -21,8 +21,6 @@
 
 #include <base/extend_cpp/variant_match.hpp>
 
-#include <init/init.hpp>
-
 #include <expected>
 #include <iostream>
 #include <string>
@@ -48,7 +46,7 @@ namespace state {
 
 namespace event {
 	struct LoadCode {
-		std::vector<i32> code;
+		std::vector<i32> code{};
 	};
 
 	struct Run {};
@@ -98,7 +96,7 @@ private:
 	 * The definition is configured on first call and shared by every
 	 * `VMProcess` instance afterwards.
 	 */
-	static const Definition& getConfig() {
+	static CRef<Definition> getConfig() {
 		static const Definition config = [] {
 			Definition cfg;
 
@@ -139,7 +137,7 @@ private:
 
 			return cfg;
 		}();
-		return config;
+		return &config;
 	}
 
 	/**
@@ -158,8 +156,7 @@ private:
 };
 
 int main() {
-	init::InitObject _;
-	VMProcess        vm;
+	VMProcess vm;
 
 	vm.printStatus();  // NotStarted
 	CORE_ASSERT(!vm.start().has_value(), "Run on NotStarted should be rejected");

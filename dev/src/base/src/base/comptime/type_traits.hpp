@@ -11,10 +11,13 @@
  * - base::IsInstantiationOf
  * - base::IsNumber
  * - base::IsOfSameClass
+ * - base::IsVariantMember
+ * - base::IsVariant
  *
  * Functions:
  * ----------
  * - base::typeName
+ * - base::variantTypeIndex
  *
  * Variables:
  * ----------
@@ -31,6 +34,8 @@
  * @example type_traits_example.cpp
  */
 #pragma once
+
+#include <base/types/ints.hpp>
 
 #include <string_view>
 #include <tuple>
@@ -138,6 +143,12 @@ namespace base {
 	concept IsVariantMember = IS_VARIANT_MEMBER_V<T, Var>;
 
 	/**
+	 * @brief Concept that checks if a type `T` is a `std::variant`.
+	 */
+	template<typename T>
+	concept IsVariant = requires(T t) { std::visit([](auto&&) {}, t); };
+
+	/**
 	 * @brief Type trait to check if a type `T` is present in a tuple `Tup`.
 	 * @tparam T The type to check for.
 	 * @tparam Tup The tuple type.
@@ -183,6 +194,22 @@ namespace base {
 	 */
 	template<bool A, bool B>
 	concept Implication = !A || B;
+
+	/**
+	 * @brief Returns the index of `T` in a `std::variant` at compile time.
+	 *
+	 * Falls back to `std::variant_size_v<Variant>` (an out-of-range
+	 * value) when `T` is not an alternative of the variant.
+	 */
+	template<typename Variant, typename T, usize Index = 0>
+	constexpr usize variantIndex() {
+		if constexpr (Index >= std::variant_size_v<Variant>)
+			return Index;
+		else if constexpr (std::is_same_v<std::variant_alternative_t<Index, Variant>, T>)
+			return Index;
+		else
+			return variantIndex<Variant, T, Index + 1>();
+	}
 
 	/**
 	 * @brief Returns the name of the passed type `T`.

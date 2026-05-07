@@ -54,7 +54,7 @@ private:
 		LightDefinition def;
 		def.addTransition<Red, Tick>([](const Red&, const Tick&) -> LightState { return Green{}; });
 
-		LightMachine m(Red{}, def);
+		LightMachine m(Red{}, &def);
 		assertTrue(std::holds_alternative<Red>(m.getState()), "Initial state should be Red");
 
 		auto res = m.handleEvent(Tick{});
@@ -68,7 +68,7 @@ private:
 		def.addTransition<Red, Tick>([](const Red&, const Tick&) -> LightState { return Green{}; });
 
 		// (Green, Tick) doesn't exist.
-		LightMachine m(Green{}, def);
+		LightMachine m(Green{}, &def);
 		auto         res = m.handleEvent(Tick{});
 		assertTrue(!res.has_value(), "Should return nullopt when no transition is configured");
 		assertTrue(std::holds_alternative<Green>(m.getState()), "State should be unchanged");
@@ -80,18 +80,18 @@ private:
 			return Red{};
 		});
 
-		LightMachine m1(Yellow{}, def);
+		LightMachine m1(Yellow{}, &def);
 		auto         r1 = m1.handleEvent(Reset{});
 		assertTrue(r1.has_value() && r1.value().has_value(), "Yellow + Reset should succeed");
 		assertTrue(std::holds_alternative<Red>(m1.getState()), "Yellow + Reset -> Red");
 
-		LightMachine m2(Green{}, def);
+		LightMachine m2(Green{}, &def);
 		auto         r2 = m2.handleEvent(Reset{});
 		assertTrue(r2.has_value() && r2.value().has_value(), "Green + Reset should succeed");
 		assertTrue(std::holds_alternative<Red>(m2.getState()), "Green + Reset -> Red");
 
 		// Red was not in FromStates, so Reset is undefined for it.
-		LightMachine m3(Red{}, def);
+		LightMachine m3(Red{}, &def);
 		auto         r3 = m3.handleEvent(Reset{});
 		assertTrue(!r3.has_value(), "No transition for (Red, Reset)");
 		assertTrue(std::holds_alternative<Red>(m3.getState()), "Red unchanged");
@@ -103,15 +103,15 @@ private:
 			return Red{};
 		});
 
-		LightMachine m1(Yellow{}, def);
+		LightMachine m1(Yellow{}, &def);
 		m1.handleEvent(Reset{});
 		assertTrue(std::holds_alternative<Red>(m1.getState()), "Yellow -> Red");
 
-		LightMachine m2(Green{}, def);
+		LightMachine m2(Green{}, &def);
 		m2.handleEvent(Reset{});
 		assertTrue(std::holds_alternative<Red>(m2.getState()), "Green -> Red");
 
-		LightMachine m3(Red{}, def);
+		LightMachine m3(Red{}, &def);
 		m3.handleEvent(Reset{});
 		assertTrue(std::holds_alternative<Red>(m3.getState()), "Red -> Red still works");
 	}
@@ -127,7 +127,7 @@ private:
 			return Red{};
 		});
 
-		LightMachine m(Red{}, def);
+		LightMachine m(Red{}, &def);
 		m.handleEvent(Tick{});
 		assertTrue(std::holds_alternative<Green>(m.getState()), "Red -> Green");
 		m.handleEvent(Tick{});
@@ -144,7 +144,7 @@ private:
 				[](const Red&, const Tick&) -> std::expected<void, std::string> { return {}; } }
 		);
 
-		LightMachine m(Red{}, def);
+		LightMachine m(Red{}, &def);
 		auto         res = m.handleEvent(Tick{});
 		assertTrue(res.has_value(), "Transition is configured");
 		assertTrue(res.value().has_value(), "Guard should allow transition");
@@ -160,7 +160,7 @@ private:
 			} }
 		);
 
-		LightMachine m(Red{}, def);
+		LightMachine m(Red{}, &def);
 		auto         res = m.handleEvent(Tick{});
 		assertTrue(res.has_value(), "Transition is configured");
 		assertTrue(!res.value().has_value(), "Guard should veto");
@@ -175,7 +175,7 @@ private:
 				return std::unexpected("action failed");
 			} });
 
-		LightMachine m(Red{}, def);
+		LightMachine m(Red{}, &def);
 		auto         res = m.handleEvent(Tick{});
 		assertTrue(res.has_value(), "Transition is configured");
 		assertTrue(!res.value().has_value(), "Action should fail");
@@ -215,7 +215,7 @@ private:
 			}
 		);
 
-		CounterMachine m(Empty{}, def);
+		CounterMachine m(Empty{}, &def);
 		m.handleEvent(Init{ 10 });
 		assertTrue(std::holds_alternative<Counter>(m.getState()), "Should be Counter after Init");
 		assertTrue(std::get<Counter>(m.getState()).value == 10, "Counter should be 10");
@@ -235,7 +235,7 @@ private:
 			return Counter{ init.start };
 		});
 
-		CounterMachine m(Empty{}, def);
+		CounterMachine m(Empty{}, &def);
 		m.handleEvent(Init{ 42 });
 		assertTrue(witnessed == 42, "Action should receive the event payload");
 	}
@@ -246,7 +246,7 @@ private:
 			return Counter{ init.start };
 		});
 
-		CounterMachine m(Empty{}, def);
+		CounterMachine m(Empty{}, &def);
 		assertTrue(std::holds_alternative<Empty>(m.getState()), "Initial state");
 
 		// getState should reflect updates after a transition fires.
@@ -260,8 +260,8 @@ private:
 		LightDefinition def;
 		def.addTransition<Red, Tick>([](const Red&, const Tick&) -> LightState { return Green{}; });
 
-		LightMachine m1(Red{}, def);
-		LightMachine m2(Red{}, def);
+		LightMachine m1(Red{}, &def);
+		LightMachine m2(Red{}, &def);
 
 		m1.handleEvent(Tick{});
 		assertTrue(std::holds_alternative<Green>(m1.getState()), "m1 should advance");
