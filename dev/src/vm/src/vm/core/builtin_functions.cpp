@@ -118,9 +118,7 @@ namespace vm::builtins {
 		thread.releaseGil();
 		auto result = vm::api::runFunction(thread.safe_process.getPID(), thread.getThreadCtx());
 		thread.acquireGil();
-		if (!result.has_value()) {
-			return -vm::api::errorToErrno(result.error());
-		}
+		if (!result.has_value()) return -vm::api::errorToErrno(result.error());
 		return static_cast<i64>(result.value().asInt());
 	}
 
@@ -128,10 +126,8 @@ namespace vm::builtins {
 		thread.releaseGil();
 		auto result = vm::api::join(thread.safe_process.getPID(), api::ThreadID{ thread_id });
 		thread.acquireGil();
-		if (!result.has_value()) {
-			return -vm::api::errorToErrno(result.error());
-		}
-		return 0; // success
+		if (!result.has_value()) return -vm::api::errorToErrno(result.error());
+		return 0;  // success
 	}
 
 	u64 FunctionHandlers::builtinCreateMutex(SafeVMThread& thread) {
@@ -273,11 +269,11 @@ namespace vm::builtins {
 					{ base::StrID("builtin_start_thread"),
 			          code::FuncSignature({ base::StrID("i64") }, {}) },
 				},
-								{
-										BuiltinFunctionID::JoinThread,
-										{ base::StrID("builtin_join_thread"),
-											code::FuncSignature({ base::StrID("i64") }, { base::StrID("i64") }) },
-								},
+				{
+					BuiltinFunctionID::JoinThread,
+					{ base::StrID("builtin_join_thread"),
+			          code::FuncSignature({ base::StrID("i64") }, { base::StrID("i64") }) },
+				},
 				{ BuiltinFunctionID::CreateMutex,
 			      { base::StrID("builtin_create_mutex"),
 			        code::FuncSignature({ base::StrID("mutex") }, {}) } },
