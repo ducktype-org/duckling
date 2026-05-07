@@ -1,9 +1,8 @@
-#include "cast_operation_lowering.hpp"
 #include "debug_info_utils.hpp"
-#include "dvm_operation.hpp"
 #include "dvm_value.hpp"
 #include "function_lowering_context.hpp"
-#include "meta_operation_lowering.hpp"
+#include "operations/dvm_operation.hpp"
+#include "operations/instruction_lowerer.hpp"
 
 #include <lir/lir_structure/lir_structure.hpp>
 #include <program_lowering_context.hpp>
@@ -18,324 +17,17 @@ using namespace vm::code;
 using namespace compiler;
 using namespace vm::code::builders;
 
-namespace {
-
-	bool isComparison(OpKind op) {
-		return op == OpKind::cmpEq || op == OpKind::cmpNeq || op == OpKind::cmpLt
-		    || op == OpKind::cmpLe || op == OpKind::cmpGt || op == OpKind::cmpGe
-		    || op == OpKind::ucmpLt || op == OpKind::ucmpLe || op == OpKind::ucmpGt
-		    || op == OpKind::ucmpGe || op == OpKind::fcmpEq || op == OpKind::fcmpNeq
-		    || op == OpKind::fcmpLt || op == OpKind::fcmpLe || op == OpKind::fcmpGt
-		    || op == OpKind::fcmpGe;
-	}
-
-	bool isUnaryOperation(OpKind op) {
-		return op == OpKind::neg || op == OpKind::fneg || op == OpKind::log_not;
-	}
-
-	/**
-	 * @brief Helper used to evaluate comparison operations at compile-time.
-	 * @note Keep the same semantics as in the compiler's comp_time and VM.
-	 * @return The result of the comparison.
-	 */
-	bool compTimeEvaluateComparison(
-		OpKind                       operation,
-		const ctv::CompileTimeValue& lhs_value,
-		const ctv::CompileTimeValue& rhs_value
-	) {
-		auto lhs_numeric_opt = lhs_value.get<ctv::NumericValue>();
-		auto rhs_numeric_opt = rhs_value.get<ctv::NumericValue>();
-		CORE_ASSERT(
-			lhs_numeric_opt.has_value() && rhs_numeric_opt.has_value(),
-			"Comparison between non-numeric immediates is not supported"
-		);
-		auto lhs_numeric = lhs_numeric_opt.value();
-		auto rhs_numeric = rhs_numeric_opt.value();
-		auto result      = std::visit(
-            [&](auto&& lhs_num) -> bool {
-                using LhsNumT    = std::decay_t<decltype(lhs_num)>;
-                auto rhs_num_opt = rhs_numeric.template get<LhsNumT>();
-                CORE_ASSERT(
-                    rhs_num_opt.has_value(),
-                    "Comparison between different numeric types is not supported"
-                );
-                auto rhs_num = rhs_num_opt.value();
-                switch (operation) {
-                case OpKind::cmpEq:
-                case OpKind::fcmpEq:
-                    return lhs_num == rhs_num;
-                case OpKind::cmpNeq:
-                case OpKind::fcmpNeq:
-                    return lhs_num != rhs_num;
-                case OpKind::cmpGt:
-                case OpKind::fcmpGt:
-                case OpKind::ucmpGt:
-                    return lhs_num > rhs_num;
-                case OpKind::cmpGe:
-                case OpKind::fcmpGe:
-                case OpKind::ucmpGe:
-                    return lhs_num >= rhs_num;
-                case OpKind::cmpLt:
-                case OpKind::fcmpLt:
-                case OpKind::ucmpLt:
-                    return lhs_num < rhs_num;
-                case OpKind::cmpLe:
-                case OpKind::fcmpLe:
-                case OpKind::ucmpLe:
-                    return lhs_num <= rhs_num;
-                default:
-                    CORE_PANIC("Unhandled comparison operation");
-                }
-            },
-            lhs_numeric.getStorage()
-        );
-		return result;
-	}
-
-	/**
-	 * @brief Gets the opposite direction of a comparison operation, e.g `a < b` becomes `b > a`.
-	 */
-	OpKind getComparisonOppositeDirection(OpKind operation) {
-		switch (operation) {
-		case OpKind::cmpEq:
-			return OpKind::cmpEq;
-
-		case OpKind::cmpNeq:
-			return OpKind::cmpNeq;
-
-		case OpKind::fcmpEq:
-			return OpKind::fcmpEq;
-
-		case OpKind::fcmpNeq:
-			return OpKind::fcmpNeq;
-
-		case OpKind::cmpGt:
-			return OpKind::cmpLt;
-
-		case OpKind::cmpGe:
-			return OpKind::cmpLe;
-
-		case OpKind::ucmpGt:
-			return OpKind::ucmpLt;
-
-		case OpKind::ucmpGe:
-			return OpKind::ucmpLe;
-
-		case OpKind::cmpLt:
-			return OpKind::cmpGt;
-
-		case OpKind::cmpLe:
-			return OpKind::cmpGe;
-
-		case OpKind::fcmpGt:
-			return OpKind::fcmpLt;
-
-		case OpKind::fcmpGe:
-			return OpKind::fcmpLe;
-
-		case OpKind::fcmpLt:
-			return OpKind::fcmpGt;
-
-		case OpKind::fcmpLe:
-			return OpKind::fcmpGe;
-
-		default:
-			CORE_PANIC("Unhandled comparison operation");
-		}
-	}
-}
-
-void FunctionLoweringContext::handleCall(
-	const FunctionCallInfo&     call_info,
-	const std::deque<DVMValue>& func_args,
-	base::Optional<DVMPlace>    output
-) {
-	CORE_ASSERT(
-		call_info.param_types.size() == func_args.size(),
-		"Argument count mismatch for extern C function call: ",
-		VISIT(call_info.call_target, callable, return callable.name)
-	);
-
-	auto call_result_storage = [&] -> base::Optional<DVMLocal> {
-		if (call_info.return_type.has_value())
-			return pushTempLocal(call_info.return_type.value(), "call_result");
-		else
-			return {};
-	}();
-
-	for (const auto& [arg_idx, func_arg, arg_type]:
-	     std::views::zip(std::views::iota(0), func_args, call_info.param_types)) {
-		CORE_DEV_LOG(Backend, "Initializing: ", typeName(arg_type), '\n');
-
-		auto arg_name = base::strConcat("call", "_arg", arg_idx, "_");
-		auto temp_arg = pushTempLocal(arg_type, arg_name, false);
-		pushInstruction({ OpKind::mov, temp_arg.asArgument(), func_arg });
-	}
-
-	pushInstruction({ OpKind::call,
-	                  VISIT(call_info.call_target, callable, return callable.asArgument()) });
-
-	if (output)
-		storeResult(output.value(), { call_result_storage.value(), DVMPlace::AccessKind::Direct });
-}
-
 void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instruction) {
-	// Schedule cleaning of all temporaries created by `pushTempLocal` while lowering this instruction.
-	defer(cleanUpRegisteredTemps());
-
 	if_opt_some(fun_di_builder_opt, builder) {
 		if_opt_some(lir_instruction.metadata.position, pos) {
 			builder.addInstruction(instructionsCount(), mapDIPosition(pos));
 		}
 	}
 
-	// This is an edge case where LIRValues should not be lowered to DVMValue as this creates a copy
-	// of the value we try to reference on the stack. We have to lower it to a place and if it's
-	// direct, take a pointer to it, but if it's not, the resulting address is the pointer returned
-	// by `resolveLirPlace`.
-	if (lir_instruction.operation == lir::Operation::AddressOf) {
-		CORE_ASSERT(lir_instruction.arguments.size() == 1, "Invalid ref args count");
-		CORE_ASSERT(lir_instruction.arguments[0].is<lir::LIRPlace>(), "AddressOf on non place");
-		const auto& lir_place = lir_instruction.arguments[0].get<lir::LIRPlace>();
-
-		DVMPlace resolved_src = resolveLirPlace(lir_place);
-		auto     maybe_output
-			= lir_instruction.output.map([&](auto& place) { return resolveLirPlace(place); });
-
-		auto addr_temp = pushTempLocal(
-			program_context.lowerAndKeepTslType(lir_instruction.output->layout), "addr_of"
-		);
-
-		if (resolved_src.isDirect()) {
-			// If access to the variable is direct, we take it's address.
-			pushInstruction({ OpKind::ref, addr_temp.asArgument(), resolved_src.asAnyArgument() });
-		} else {
-			// Otherwise, if the resolved source is accessed through a pointer
-			// (AccessKind::Pointer), than we have the address in hand. We just move it.
-			pushInstruction({ OpKind::mov, addr_temp.asArgument(), resolved_src.asArgument() });
-		}
-
-		if (maybe_output.has_value())
-			storeResult(maybe_output.value(), { addr_temp, DVMPlace::AccessKind::Direct });
-		return;
-	}
-
-	std::deque<DVMValue> args
-		= lir_instruction.arguments
-	    | std::views::transform([&](const auto& lir_arg) { return lowerLirValue(lir_arg); })
-	    | std::ranges::to<std::deque>();
-	const auto maybe_output
-		= lir_instruction.output.map([&](auto& place) { return resolveLirPlace(place); });
-
-	const auto dvm_operation = lirInstrToDVMOperation(lir_instruction);
-
-	variant_match(dvm_operation) {
-		variant_case(MetaOperation, operation) {
-			MetaOperationLowerer(*this).lower(operation, args, maybe_output);
-			return;
-		}
-		variant_case(CastOperation, operation) {
-			CastOperationLowerer::lowerCastOperation(operation, args, maybe_output.value(), *this);
-			return;
-		}
-		variant_case_novalue(NoOpOperation) { return; }
-	}
-	auto operation = std::get<SimpleOperation>(dvm_operation).op;
-
-	if (isComparison(operation)) {
-		CORE_ASSERT(args.size() == 2, "Invalid comparison argument count");
-		CORE_ASSERT(
-			maybe_output.has_value(), "Comparison operations must have an output destination"
-		);
-		auto output = maybe_output.value();
-
-		DVMValue result_val = [&]() -> DVMValue {
-			if (args[0].is<DVMImmediate>() && args[1].is<DVMImmediate>()) {
-				auto lhs_value = lir_instruction.arguments[0].get<lir::LIRConstant>().value;
-				auto rhs_value = lir_instruction.arguments[1].get<lir::LIRConstant>().value;
-				auto res       = compTimeEvaluateComparison(operation, lhs_value, rhs_value);
-				return { DVMImmediate::boolean(res) };
-			} else {
-				if (args[0].is<DVMImmediate>()) {
-					// Swap arguments to place immediate on the right side.
-					std::swap(args[0], args[1]);
-					operation = getComparisonOppositeDirection(operation);
-				}
-
-				// Force globals into locals if needed.
-				auto lhs = forceToLocal(args[0], "lhs_temp");
-				auto rhs = args[1].is<DVMGlobal>() ? DVMValue{ forceToLocal(args[1], "rhs_temp"),
-					                                           DVMPlace::AccessKind::Direct }
-				                                   : args[1];
-
-				// This resolves e.g. `x = a CMP b;`
-				// by splitting it into three instructions:
-				// a CMP b;
-				// mov x, 0;
-				// cmov x, 1;
-				auto tmp_res
-					= pushTempLocal(vm::code::PrimitiveType(base::StrID("i8"), 1), "cnp_tmp");
-				pushInstruction({ operation, lhs, rhs });
-				pushInstruction({ OpKind::mov, tmp_res, DVMImmediate::u8(u8(0)) });
-				pushInstruction({ OpKind::cmov, tmp_res, DVMImmediate::u8(u8(1)) });
-				return { tmp_res, DVMPlace::AccessKind::Direct };
-			}
-		}();
-
-		storeResult(output, result_val);
-	} else if (operation == OpKind::call) {
-		auto called_function = lir_instruction.arguments.at(0).get<lir::FunctionLiteral>();
-		args.pop_front();
-		handleCall(
-			FunctionCallInfo::fromLirFunction(called_function, program_context), args, maybe_output
-		);
-	} else if (isUnaryOperation(operation)) {
-		CORE_ASSERT(args.size() == 1, "Invalid unary operation argument count");
-		auto output = maybe_output.value();
-		// If instruction is of the form: a = OP b, then
-		// we transform it to:
-		// a = b;
-		// a = OP a;
-
-		if (output.isDirect() && output.is<DVMLocal>()) {
-			// If output is a direct place we just use it.
-			storeResult(output, args[0]);
-			pushInstruction({ operation, output });
-		} else {
-			// Otherwise it's a global or indirect. We perform the operations on the
-			// temporary and then store it in the indirect place.
-			auto tmp = forceToLocal(args[0]);
-			pushInstruction({ operation, tmp });
-			storeResult(output, { tmp, DVMPlace::AccessKind::Direct });
-		}
-	} else if (args.size() == 2) {
-		// In this case we assume we have a very general quadruple of the form:
-		// output = arg1 OP arg2;
-		auto output = maybe_output.value();
-
-		// Force globals into locals. Immediates are allowed.
-		DVMValue rhs = args[1].is<DVMGlobal>() ? DVMValue{ forceToLocal(args[1], "bin_rhs_tmp"),
-			                                               DVMPlace::AccessKind::Direct }
-		                                       : args[1];
-
-		if (output.isDirect() && output.is<DVMLocal>()) {
-			// If instruction is of the form: a = b OP c, then
-			// we transform it to:
-			// a = b;
-			// a = a OP c;
-			storeResult(output, args[0]);
-			pushInstruction({ operation, output, rhs });
-		} else {
-			// Force globals into locals if needed.
-			auto tmp = forceToLocal(args[0], "bin_tmp");
-			pushInstruction({ operation, tmp, rhs });
-			storeResult(output, { tmp, DVMPlace::AccessKind::Direct });
-		}
-		return;
-	} else {
-		// Otherwise, it's a simple assignment.
-		storeResult(maybe_output.value(), args[0]);
-	}
+	DVMOperation dvm_operation = lirInstrToDVMOperation(*this, lir_instruction);
+	VISIT(dvm_operation, op, InstructionLowerer(this).lower(op));
+	// Clean all of the temporaries created by `pushTempLocal` while lowering this instruction.
+	cleanUpRegisteredTemps();
 }
 
 void FunctionLoweringContext::pushTerminator(const lir::Instruction& lir_terminator) {
@@ -349,64 +41,15 @@ void FunctionLoweringContext::pushTerminator(const lir::Instruction& lir_termina
 		}
 	}
 
-	if (lir_terminator.operation == lir::Operation::Branch) {
-		auto bool_arg    = lowerLirValue(lir_terminator.arguments.at(0));
-		auto true_block  = lowerLirValue(lir_terminator.arguments.at(1));
-		auto false_block = lowerLirValue(lir_terminator.arguments.at(2));
-
-
-		variant_match(lir_terminator.arguments.at(0).getVariant()) {
-			variant_case(lir::LIRConstant, constant) {
-				auto bool_val
-					= constant.value.get<bool>().expect("Expected boolean in LIRConstant");
-				cleanUpRegisteredTemps();
-				if (bool_val)
-					pushInstruction({ OpKind::jmp, true_block });
-				else
-					pushInstruction({ OpKind::jmp, false_block });
-			}
-			variant_default {
-				pushInstruction({ OpKind::cmpEq, bool_arg, vm::opargs::Immediate{ 1 } });
-				cleanUpRegisteredTemps();
-				pushInstruction({ OpKind::jmpIf, true_block });
-				pushInstruction({ OpKind::jmpIfNot, false_block });
-			}
-		}
-	} else if (lir_terminator.operation == lir::Operation::ReturnVoid) {
-		pushInstruction({ OpKind::ret });
-	} else if (lir_terminator.operation == lir::Operation::Jump) {
-		CORE_ASSERT(
-			lir_terminator.arguments.size() == 1, "Invalid number of arguments for jump terminator."
-		);
-		auto target_block = lowerLirValue(lir_terminator.arguments.at(0));
-		pushInstruction({ OpKind::jmp, target_block });
-	} else if (lir_terminator.operation == lir::Operation::ReturnValue) {
-		CORE_ASSERT(
-			lir_terminator.arguments.size() == 1, "Invalid number of arguments for value-return."
-		);
-
-		// Since VM does not support `return X;` operation, we must move the value to
-		// the ret_val local and then return.
-		pushInstruction({
-			OpKind::mov,
-			getFunctionReturnValueLocal().asArgument(),
-			lowerLirValue(lir_terminator.arguments.at(0)),
-		});
-		cleanUpRegisteredTemps();
-		pushInstruction({ OpKind::ret });
-	} else {
-		CORE_PANIC("Invalid terminator: ", base::enumToStr(lir_terminator.operation));
-	}
+	DVMOperation dvm_operation = lirInstrToDVMOperation(*this, lir_terminator);
+	VISIT(dvm_operation, op, InstructionLowerer(this).lower(op));
 }
 
-DVMLocal compiler::backend_vm::internal::FunctionLoweringContext::pushTempLocal(
+DVMPlace compiler::backend_vm::internal::FunctionLoweringContext::pushTempLocal(
 	const vm::code::TypeOfData& type, base::Optional<std::string_view> name_hint, bool tracked
 ) {
 	auto name       = base::strConcat(name_hint.copyValueOr("temp"), next_temp_id++);
-	auto temp_local = DVMLocal{
-		.name = base::StrID(name),
-		.type = type,
-	};
+	auto temp_local = DVMPlace(base::StrID(name), type, DVMPlace::AccessKind::Direct);
 	if (tracked) current_temp_count++;
 
 	pushInstruction({

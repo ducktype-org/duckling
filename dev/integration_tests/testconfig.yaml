@@ -5,4 +5,8 @@ SubDirs:
     - compiler
     - duck
     - repl
+<<<<<<< HEAD
+=======
+    - debug_adapter
+>>>>>>> origin/main
     - scripts

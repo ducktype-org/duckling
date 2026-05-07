@@ -2,8 +2,8 @@
 
 #include "lookup_result.hpp"
 
+#include <diagnostic_interactive/stable_position.hpp>
 #include <frontend/pst_parser/source_position_locked.hpp>
-#include <frontend/pst_parser/stable_position.hpp>
 #include <helios/scope_id.hpp>
 #include <helios/tsh/abstract_type.hpp>
 

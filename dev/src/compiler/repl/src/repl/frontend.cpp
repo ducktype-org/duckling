@@ -5,13 +5,15 @@
 #include <string>
 
 namespace compiler::repl {
-	ReplFrontend::ReplFrontend(): m_impl() {}
+	ReplFrontend::ReplFrontend(bool completions_enabled): m_impl(completions_enabled) {}
 
 	void ReplFrontend::printWelcome() const { m_impl.printWelcome(); }
 
 	std::string ReplFrontend::readLine() { return m_impl.readLine(); }
 
 	void ReplFrontend::printHistory() const { m_impl.printHistory(); }
+
+	void ReplFrontend::clearScreen() { m_impl.clearScreen(); }
 
 	void ReplFrontend::clearHistory() { m_impl.clearHistory(); }
 

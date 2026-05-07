@@ -1,6 +1,7 @@
 #pragma once
 
 #include <diagnostic_interactive/logger.hpp>
+#include <diagnostic_interactive/stable_position.hpp>
 
 #include <base/misc/shared_view.hpp>
 
@@ -8,6 +9,7 @@
 #include <diagnostic/logger.hpp>
 #include <filesystem/encoding.hpp>
 #include <filesystem/file.hpp>
+#include <lang_definitions/key_spec_op.hpp>
 #include <lexer/char.hpp>
 #include <lexer/token.hpp>
 #include <token_source/forward.hpp>  // IWYU pragma: keep
@@ -51,7 +53,7 @@ namespace tokenizer {
 		/**
 		 * @brief Construct a new TokenSource as a macro with parent position.
 		 */
-		explicit TokenSource(dia::SourcePosition parent, std::string_view contents);
+		explicit TokenSource(dia_int::StablePosition parent, std::string_view contents);
 
 		template<class... Ts>
 		friend Box<TokenSource> makeTokenSource(Ts&&... args);
@@ -123,11 +125,18 @@ namespace tokenizer {
 		void runLexer();
 
 		/**
-		 * @brief Run the whole lexer.
+		 * @brief Run the whole lexer and change the keyword mode
+		 * to the given one. The keyword mode is set until any subsequent
+		 * call to this function, because we need the same keyword mode
+		 * for tokenizing and parsing.
+		 *
 		 * @return If tokenizing process run without errors.
 		 */
-		template<fs::Encoding encoding = fs::Encoding::UTF8>
+		template<
+			lang_def::KeywordMode keyword_mode = lang_def::KeywordMode::DucklingSource,
+			fs::Encoding          encoding     = fs::Encoding::UTF8>
 		bool tokenize() {
+			lang_def::setKeywordMode(keyword_mode);
 			decode<encoding>();
 			if (int_log.hasErrors()) return false;
 			countLines();

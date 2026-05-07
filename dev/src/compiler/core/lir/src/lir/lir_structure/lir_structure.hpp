@@ -3,7 +3,7 @@
 #include "function_forward.hpp"  // IWYU pragma: keep
 
 #include <ctv/ctv.hpp>
-#include <frontend/pst_parser/stable_position.hpp>
+#include <diagnostic_interactive/stable_position.hpp>
 #include <helios/hout/hout_fd.hpp>
 #include <helios/symbols/symbol_abi.hpp>
 #include <helios/symbols/symbol_id.hpp>
@@ -20,6 +20,7 @@
 #include <query_framework/context/context_fd.hpp>
 
 #include <memory>
+#include <ostream>
 #include <utility>
 
 // Doc style is intentional, caused by inexplicable funkiness in how Doxygen interacts with macros.
@@ -143,8 +144,8 @@ namespace compiler::lir {
 	 * Used by the backends for the DebugInfo.
 	 */
 	struct LIRLocalMetadata {
-		base::Optional<base::StrID>         source_code_name;
-		base::Optional<pst::StablePosition> position;
+		base::Optional<base::StrID>             source_code_name;
+		base::Optional<dia_int::StablePosition> position;
 	};
 
 	/**
@@ -261,6 +262,9 @@ namespace compiler::lir {
 		 * value of the global.
 		 */
 		static LIRGlobal fromHOUT(query::Context& ctx, const helios::HOUTGlobalData& helios_id);
+
+
+		void debugPrint(query::Context& ctx, std::ostream& os) const;
 	};
 
 	/**
@@ -481,7 +485,7 @@ namespace compiler::lir {
 		= std::variant<NoInstrParameters, CastParameters, ListOperationParameters>;
 
 	struct InstructionMetadata {
-		base::Optional<pst::StablePosition> position;
+		base::Optional<dia_int::StablePosition> position;
 
 		InstructionMetadata(const mir::InstructionMetadata& other): position(other.position) {}
 
@@ -530,8 +534,8 @@ namespace compiler::lir {
 	};
 
 	struct FunctionMetadata {
-		base::Optional<pst::StablePosition> position;
-		base::Optional<base::StrID>         source_code_name;
+		base::Optional<dia_int::StablePosition> position;
+		base::Optional<base::StrID>             source_code_name;
 	};
 
 	/**

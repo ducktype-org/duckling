@@ -6,7 +6,7 @@
 
 #include <vm/api/vm.hpp>
 #include <vm/bytecode/validator/errors.hpp>
-#include <vm/core/thread/vmvalue.hpp>
+#include <vm/core/vmvalue/vmvalue.hpp>
 
 #include <expected>
 #include <mutex>
@@ -273,7 +273,7 @@ namespace {
 		const std::vector<CRef<compiler::lir::Function>>& all_lir_functions,
 		query::Context&                                   query_ctx
 	) {
-		compiler::backend_vm::DVMCodeBuilder m(query_ctx, false);
+		compiler::backend_vm::DVMCodeBuilder m(query_ctx, false, true);
 
 		// Insert comptime context intto the module, for the module to pass the validation. This code
 		// although loaded here multiple times will be deduplicated by `CompTimeDVM::loadCode()`
