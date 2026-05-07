@@ -53,8 +53,8 @@ clah::Clah getStandardDucklingOptions() {
 	             .addShortDesc("Print version and exit")
 	             .build())
 	    // Note that dev-logs options are not handled in pre-handler below,
-	    // they should be handled in each command by debug_options::getDebugOptionsFromClah and passed to
-	    // initializeTheCompiler.
+	    // they should be handled in each command by debug_options::getDebugOptionsFromClah and
+	    // passed to initializeTheCompiler.
 	    .add(clah::ParamBuilder::ofValue(clah::StringListParser::make("categories"))
 	             .addLongName("dev-logs")
 	             .addShortDesc("Enable developer logs for given categories.")
