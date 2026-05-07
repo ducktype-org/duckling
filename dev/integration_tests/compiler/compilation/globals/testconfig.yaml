@@ -2,13 +2,8 @@
 Tests:
   globals:
     Cases:
-      llvm:
-        backend: llvm
-        Output:
-          String: "4\n1\n3\n4\n"
-        ExitCode: 0
-      dvm:
-        backend: dvm 
+      all:
+        backend: all
         Output:
           String: "4\n1\n3\n4\n"
         ExitCode: 0

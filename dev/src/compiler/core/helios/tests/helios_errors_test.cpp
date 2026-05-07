@@ -33,6 +33,7 @@ public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(testErrorLogging);
 		TESTER_ADD_TEST(testErrorLoggingExpandStatements);
+		TESTER_ADD_TEST(testErrorLoggingCyclicErrors);
 		TESTER_ADD_TEST(testErrorBadExpr);
 		TESTER_ADD_TEST(testDiagnosticErrorsCorrectness);
 	}
@@ -1100,6 +1101,34 @@ private:
 			)",
 			{ "y", "z", "w", "not found" },
 			3
+		);
+	}
+
+	/**
+	 * Test error logging related to errors on cyclic compilation.
+	 */
+	void testErrorLoggingCyclicErrors() {
+		checkForErrorOnCompileModule(
+			R"(
+				const a = b;
+				const b = a;
+			)",
+			{ "cycle" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun foo() = {
+					return bar();
+				}
+
+				fun bar() = {
+					return foo();
+				}
+			)",
+			{ "cycle" },
+			1
 		);
 	}
 
