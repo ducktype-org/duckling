@@ -8,11 +8,14 @@ add_library(libpsackling
     psackling/global_pass.hpp
     psackling/global_pass.cpp
     psackling/function_pass.hpp
+    psackling/function_pass.cpp
     psackling/ids.hpp
     psackling/namespace.hpp
     psackling/context.hpp
     psackling/llvm_lowering_context.hpp
     psackling/llvm_lowering_context.cpp
+    psackling/expr_lowering.hpp
+    psackling/expr_lowering.cpp
 )
 
 llvm_map_components_to_libnames(psackling_llvm_libs

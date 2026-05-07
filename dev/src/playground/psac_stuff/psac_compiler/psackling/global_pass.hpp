@@ -48,8 +48,9 @@ namespace pg {
 			}
 			ctx.popNamespace();
 
-			tp::TypeID return_type_id
-				= ctx.lookupTypeInScopeAndParents(ctx.currNs().id, base::StrID("void"));
+			tp::TypeID return_type_id = stmt->getRet().has_value()
+			    ? ctx.lookupTypeInScopeAndParents(ctx.currNs().id, base::StrID("i64"))
+			    : ctx.lookupTypeInScopeAndParents(ctx.currNs().id, base::StrID("void"));
 			auto fun_type_id = ctx.newType(
 				base::StrID(base::strConcat("$tp_", stmt->getName().str())),
 				tp::Function{ .param_types = std::move(param_type_ids),

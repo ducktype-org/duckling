@@ -21,21 +21,21 @@ llvm::Type* pg::LlvmLoweringContext::lowerType(tp::TypeID type_id, Context& ctx)
 				auto new_type = llvm::Type::getIntNTy(
 					llvm_ctx, static_cast<u32>(base::bytes2bits(integral.size).asInt())
 				);
-				types[type_id] = new_type;
+				types.insertOrAssign(type_id, new_type);
 			});
 			return types[type_id];
 		}
 		variant_case(tp::Boolean, boolean) {
 			llvm_module.inCtxDo([&](llvm::LLVMContext& llvm_ctx, llvm::Module&) {
 				auto new_type  = llvm::Type::getInt1Ty(llvm_ctx);
-				types[type_id] = new_type;
+				types.insertOrAssign(type_id, new_type);
 			});
 			return types[type_id];
 		}
 		variant_case(tp::Void, void_type) {
 			llvm_module.inCtxDo([&](llvm::LLVMContext& llvm_ctx, llvm::Module&) {
 				auto new_type  = llvm::Type::getVoidTy(llvm_ctx);
-				types[type_id] = new_type;
+				types.insertOrAssign(type_id, new_type);
 			});
 			return types[type_id];
 		}
@@ -46,7 +46,7 @@ llvm::Type* pg::LlvmLoweringContext::lowerType(tp::TypeID type_id, Context& ctx)
 			llvm::Type* pointed_to_type = lowerType(pointer.points_to, ctx);
 			llvm_module.inCtxDo([&](llvm::LLVMContext&, llvm::Module&) {
 				auto new_type  = llvm::PointerType::getUnqual(pointed_to_type);
-				types[type_id] = new_type;
+				types.insertOrAssign(type_id, new_type);
 			});
 			return types[type_id];
 		}
@@ -61,7 +61,7 @@ llvm::Type* pg::LlvmLoweringContext::lowerType(tp::TypeID type_id, Context& ctx)
 			llvm::Type* return_type = lowerType(function.return_type, ctx);
 			llvm_module.inCtxDo([&](llvm::LLVMContext&, llvm::Module&) {
 				auto new_type  = llvm::FunctionType::get(return_type, param_types, false);
-				types[type_id] = new_type;
+				types.insertOrAssign(type_id, new_type);
 			});
 			return types[type_id];
 		}

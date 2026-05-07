@@ -14,22 +14,33 @@
 
 namespace pg {
 	class Context final {
+	private:
+		LlvmLoweringContext&                          llvm_context;
+		std::vector<ns::NamespaceID>                  namespace_stack;
+		base::HashMap<tp::TypeID, tp::TypeInfo>       types;
+		base::HashMap<ns::NamespaceID, ns::Namespace> namespaces;
+		base::HashMap<sym::SymbolID, sym::Symbol>     symbols;
+
 	public:
 		Context(LlvmLoweringContext& llvm_context):
 			  llvm_context(llvm_context),
 			  root_ns_id([this]() {
 				  // Instantiate the top level namespace, it will be used for all top level declarations
 				  ns::NamespaceID id = ns::NamespaceID::next();
-				  namespaces[id]     = {
-					  .name = base::StrID("$"), .id = id, .parent_namespace = {}, .symbols = {}
-				  };
+				  namespaces.insertOrAssign(
+					  id,
+					  ns::Namespace{
+						  .name = base::StrID("$"), .id = id, .parent_namespace = {}, .symbols = {}
+					  }
+				  );
 				  namespace_stack.push_back(id);
 				  return id;
 			  }()),
 			  bool_type_id(newType(base::StrID("bool"), tp::Boolean{})),
 			  void_type_id(newType(base::StrID("void"), tp::Void{})),
 			  incomplete_type_id(newType(base::StrID("$incomplete"), tp::Incomplete{})),
-			  namespace_type_id(newType(base::StrID("$namespace"), tp::Namespace{})) {}
+			  namespace_type_id(newType(base::StrID("$namespace"), tp::Namespace{})),
+			  i64_type_id(newType(base::StrID("i64"), tp::Integral{ .size = Bytes(8) })) {}
 
 		ns::Namespace& currNs() { return namespaces[namespace_stack.back()]; }
 
@@ -44,8 +55,10 @@ namespace pg {
 					"Symbol " + name.str() + " already declared in namespace " + currNs().name.str()
 				);
 			}
-			currNs().symbols[name] = id;
-			symbols[id] = { .name = name, .id = id, .type_id = type_id, .kind = std::move(kind) };
+			currNs().symbols.insertOrAssign(name, id);
+			symbols.insertOrAssign(
+				id, sym::Symbol{ .name = name, .id = id, .type_id = type_id, .kind = std::move(kind) }
+			);
 			return id;
 		}
 
@@ -63,9 +76,16 @@ namespace pg {
 
 		tp::TypeID newType(base::StrID name, tp::TypeKind kind) {
 			tp::TypeID id = tp::TypeID::next();
-			types[id]
-				= { .name = name, .kind = std::move(kind), .id = id, .namespace_id = currNs().id };
-			if (!std::holds_alternative<tp::Incomplete>(types[id].kind))
+			types.insertOrAssign(
+				id,
+				tp::TypeInfo{
+					.name = name, .kind = std::move(kind), .id = id, .namespace_id = currNs().id
+				}
+			);
+			// Pseudo-types (Incomplete, Namespace) have no LLVM representation; skip lowering.
+			const auto& kind_ref = types[id].kind;
+			if (!std::holds_alternative<tp::Incomplete>(kind_ref)
+			    && !std::holds_alternative<tp::Namespace>(kind_ref))
 				llvm_context.lowerType(id, *this);
 			insertSymbol(name, sym::TypeSymbol{ .type_id = id }, id);
 			return id;
@@ -73,8 +93,12 @@ namespace pg {
 
 		ns::NamespaceID newNamespace(base::StrID name) {
 			ns::NamespaceID id = ns::NamespaceID::next();
-			namespaces[id]
-				= { .name = name, .id = id, .parent_namespace = currNs().id, .symbols = {} };
+			namespaces.insertOrAssign(
+				id,
+				ns::Namespace{
+					.name = name, .id = id, .parent_namespace = currNs().id, .symbols = {}
+				}
+			);
 			insertSymbol(name, sym::NamespaceSymbol{ .namespace_id = id }, namespace_type_id);
 			return id;
 		}
@@ -106,6 +130,9 @@ namespace pg {
             return id;
 		}
 
+		/// Enter an already-existing namespace (e.g. one created by an earlier pass).
+		void enterNamespace(ns::NamespaceID id) { namespace_stack.push_back(id); }
+
 		void popNamespace() { namespace_stack.pop_back(); }
 
 		tp::TypeInfo& getTypeInfo(tp::TypeID id) { return types[id]; }
@@ -119,14 +146,6 @@ namespace pg {
 		const tp::TypeID      void_type_id;
 		const tp::TypeID      incomplete_type_id;
 		const tp::TypeID      namespace_type_id;
-	private:
-		LlvmLoweringContext& llvm_context;
-
-
-		std::vector<ns::NamespaceID> namespace_stack;  /// Stack of namespaces we're currently in
-
-		base::HashMap<tp::TypeID, tp::TypeInfo>       types;
-		base::HashMap<ns::NamespaceID, ns::Namespace> namespaces;
-		base::HashMap<sym::SymbolID, sym::Symbol>     symbols;
+		const tp::TypeID      i64_type_id;
 	};
 }
