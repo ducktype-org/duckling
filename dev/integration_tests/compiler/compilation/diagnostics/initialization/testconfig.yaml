@@ -11,5 +11,5 @@ Tests:
           String: ""
         Err:
           String: "\u001b[31m\u001b[1merror[E0]\u001b[39m\u001b[0m\u001b[31m\u001b[1m:\u001b[39m\u001b[0m \u001b[1mPackage does not have a main source file.\
-            \u001b[39m\u001b[0m\nThe main source file is required for package package_no_main_source_file. Please add a no_main_source_file.dmf file to the package module directory.\n\n"
+            \u001b[39m\u001b[0m\nThe main source file is required for package no_main_source_file. Please add a no_main_source_file.dmf file to the package module directory.\n\n"
         ExitCode: 1

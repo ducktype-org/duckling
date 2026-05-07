@@ -120,7 +120,7 @@ namespace compiler::driver {
 				"Package does not have a main source file.",
 				base::strConcat(
 					"The main source file is required for package ",
-					package_info.package_path.strView(),
+					module_name,
 					". Please add a ",
 					module_name,
 					".dmf file to the package module directory."

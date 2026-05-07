@@ -50,6 +50,7 @@
 #include <vm/bytecode/validator/valid_program.hpp>
 #include <vm/loader/loader.hpp>
 
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -747,6 +748,12 @@ namespace compiler::driver {
 				),
 			});
 		}
+
+		// sort the compile_handles to make the output oof the compiler deterministic
+		std::ranges::sort(compile_handles, [](const ScheduledModule& a, const ScheduledModule& b) {
+			return frontend::ModuleTree::getModuleHash(a.module.module_id)
+			     < frontend::ModuleTree::getModuleHash(b.module.module_id);
+		});
 
 		std::vector<ScheduledModule> debug_info_handles;
 

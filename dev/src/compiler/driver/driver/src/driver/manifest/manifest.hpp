@@ -37,6 +37,6 @@ namespace compiler::driver {
 		 * in the packages list
 		 * @return base::OkBad indicating whether the manifest is valid.
 		 */
-		base::OkBad verify() const;
+		[[nodiscard]] base::OkBad verify() const;
 	};
 }
