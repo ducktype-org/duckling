@@ -35,7 +35,7 @@ namespace pg {
 			std::vector<tp::TypeID>    param_type_ids;
 			std::vector<sym::SymbolID> argument_symbol_ids;
 			// We are pushing an empty namespace for the function body
-			auto func_ns_id = ctx.pushNamespace(base::StrID(""));
+			auto func_ns_id = ctx.pushNamespace(base::StrID("$fn_" + stmt->getName().str()));
 			for (pst::AccessLocked<pst::Param> param: *stmt->getParams().illegalAccess().value()) {
 				auto param_accessed = param.illegalAccess().value();
 				// param_accessed->getType().illegalAccess().value()->getExpr()

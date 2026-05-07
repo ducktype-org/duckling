@@ -2,6 +2,7 @@
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/binary_operator.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/comparison_chain.hpp>
+#include <frontend/pst_parser/elements/hierarchy/expressions/chain_expr.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/identifier_literal.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/keyword_literal.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/numeric_value.hpp>
@@ -182,5 +183,11 @@ namespace pg {
 	void ExprLowering::visitRoundExpr(pst::Access<pst::expr::RoundExpr> round) {
 		// Parentheses carry no semantic meaning; just lower the inner expression.
 		result = lower(*round->getInner().illegalAccess().value());
+	}
+
+	void ExprLowering::visitChainExpr(pst::Access<pst::expr::ChainExpr> chain) {
+		// For now we support only a single call.
+		// chain->getAtom().illegalAccess().value().
+		throw std::runtime_error("Chain expressions not yet supported");
 	}
 }

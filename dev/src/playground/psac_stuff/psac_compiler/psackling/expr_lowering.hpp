@@ -47,6 +47,7 @@ namespace pg {
 		void visitBinaryOperator(pst::Access<pst::expr::BinaryOperator> op) override;
 		void visitComparisonChain(pst::Access<pst::expr::ComparisonChain> chain) override;
 		void visitRoundExpr(pst::Access<pst::expr::RoundExpr> round) override;
+		void visitChainExpr(pst::Access<pst::expr::ChainExpr> chain) override;
 
 	private:
 		Context&             ctx;
