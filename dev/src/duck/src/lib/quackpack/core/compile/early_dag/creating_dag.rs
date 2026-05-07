@@ -2,25 +2,20 @@
 
 use tracing::debug;
 
-use crate::{
-    DuckCtx, QuackResultContext, qp_bail, qp_bail_internal,
-    quackpack::core::{
-        PackageLoader,
-        compile::{BuildContext, compiler_package::PackageType},
-        storage::{
-            freeze::{FreezePackage, VenvFreeze},
-            package_id::PackageId,
-            paths::Storage,
-        },
-    },
-};
-
 use super::*;
+use crate::quackpack::core::PackageLoader;
+use crate::quackpack::core::compile::BuildContext;
+use crate::quackpack::core::compile::compiler_package::PackageType;
+use crate::quackpack::core::storage::freeze::{FreezePackage, VenvFreeze};
+use crate::quackpack::core::storage::package_id::PackageId;
+use crate::quackpack::core::storage::paths::Storage;
+use crate::{DuckContext, QuackResultContext, qp_bail, qp_bail_internal};
 
 impl DependencyDag {
     /// Create new [`DependencyDag`] from the given freeze.
     ///
     /// This method checks that the graph is complete, and that it is, in fact, a DAG.
+    #[tracing::instrument(skip_all)]
     pub fn new(freeze: &VenvFreeze) -> QuackResult<Self> {
         let root = freeze.root();
         let mut dag = HashMap::new();
@@ -47,10 +42,12 @@ impl DependencyDag {
     }
 
     /// Checks, whether `graph` rooted at `root` is complete.
+    #[tracing::instrument(skip_all)]
     fn check_is_complete_graph(
         root: FreezeDep,
         graph: &HashMap<FreezeDep, DependencyNode>,
     ) -> QuackResult<()> {
+        debug!(%root, ?graph, "checking completeness");
         for (k, v) in graph {
             for dep in v.dependencies() {
                 if !graph.contains_key(dep) {
@@ -59,7 +56,6 @@ impl DependencyDag {
                     } else {
                         PackageType::TransitiveDependency
                     };
-                    debug!("graph is `{graph:?}`");
                     qp_bail_internal!("malformed freezefile: missing {dep_type} `{dep}`")
                 }
             }
@@ -68,10 +64,12 @@ impl DependencyDag {
     }
 
     /// Checks, that the `graph` rooted at `root` doesn't have cycles.
+    #[tracing::instrument(skip_all)]
     fn check_no_cycles(
         root: FreezeDep,
         dag: &HashMap<FreezeDep, DependencyNode>,
     ) -> QuackResult<()> {
+        debug!(%root, graph = ?dag, "checking cycles");
         #[derive(Debug, Eq, PartialEq)]
         enum State {
             Entered,
@@ -124,14 +122,19 @@ impl DependencyNode {
 }
 
 /// Parses the dependency from the freezefile using data in the storage.
+#[tracing::instrument(skip_all)]
 fn parse_dependency(
     dep: &FreezePackage,
     storage: &Storage,
-    ctx: &DuckCtx,
+    ctx: &DuckContext,
     pkg_type: PackageType,
 ) -> QuackResult<CompilerPackage> {
+    debug!(?dep, type = %pkg_type, "parsing dep");
     let storage_id = dep.to_package_id();
-    let directory = storage.pkg_dir(&storage_id);
+    let directory = match storage_id {
+        PackageId::Local(ref local) => local.path().to_path_buf(),
+        _ => storage.pkg_dir(&storage_id),
+    };
     let ctx =
         PackageLoader::find_at_exact_directory(&directory, ctx).with_context(
             || match storage_id {
@@ -145,10 +148,10 @@ fn parse_dependency(
                     dep.as_freeze_dep(),
                     git_id.url()
                 ),
-                PackageId::Local(ref local_id) => format!(
+                PackageId::Local(..) => format!(
                     "malformed local dependency `{}` at `{}`",
                     dep.as_freeze_dep(),
-                    local_id.path().display()
+                    directory.display(),
                 ),
             },
         )?;
@@ -167,9 +170,9 @@ fn parse_dependency(
                 package.as_freeze_dep(),
                 dep.as_freeze_dep(),
             ),
-            PackageId::Local(local_id) => qp_bail!(
+            PackageId::Local(..) => qp_bail!(
                 "malformed local dependency at `{}`: got name `{}`, expected `{}`",
-                local_id.path().display(),
+                directory.display(),
                 package.as_freeze_dep(),
                 dep.as_freeze_dep(),
             ),
@@ -184,16 +187,17 @@ impl EarlyDag {
     /// Also note that:
     /// - no features are expanded (including the root package),
     /// - no disabled dependencies are removed.
-    pub fn new_early(ctx: &BuildContext<'_, '_>) -> QuackResult<Self> {
+    #[tracing::instrument(skip_all)]
+    pub fn new_early(bcx: &BuildContext<'_, '_>) -> QuackResult<Self> {
         // `new` checks for cycles.
-        let graph = DependencyDag::new(&ctx.freeze)?;
+        let graph = DependencyDag::new(&bcx.freeze)?;
         let mut packages = HashMap::new();
         packages.insert(
-            ctx.freeze.root().as_freeze_dep(),
-            CompilerPackage::new(ctx.package.package().clone(), PackageType::RootPackage),
+            bcx.freeze.root().as_freeze_dep(),
+            CompilerPackage::new(bcx.pcx.package().clone(), PackageType::RootPackage),
         );
-        let direct_dependencies_names = ctx
-            .package
+        let direct_dependencies_names = bcx
+            .pcx
             .package()
             .manifest()
             .dependencies()
@@ -201,13 +205,13 @@ impl EarlyDag {
             .iter()
             .map(|dep| dep.name())
             .collect::<HashSet<_>>();
-        for dep in ctx.freeze.dependencies() {
+        for dep in bcx.freeze.dependencies() {
             let pkg_type = if direct_dependencies_names.contains(&dep.name()) {
                 PackageType::DirectDependency
             } else {
                 PackageType::TransitiveDependency
             };
-            let package = parse_dependency(dep, &ctx.storage, ctx.package.ctx(), pkg_type)?;
+            let package = parse_dependency(dep, &bcx.storage, bcx.pcx.ctx(), pkg_type)?;
             let overwritten_entry = packages.insert(dep.as_freeze_dep(), package).is_some();
             if overwritten_entry {
                 qp_bail!(

@@ -3,6 +3,7 @@
 #include "coercions.hpp"
 #include "errors.hpp"
 #include "function_calls/call_processing.hpp"
+#include "hout_of_subexpr.hpp"
 #include "numeric_literals.hpp"
 
 #include <diagnostic_interactive/core/diagnostic_arguments.hpp>
@@ -12,12 +13,12 @@
 #include <frontend/pst_parser/pst_expr_visitor.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
+#include <helios/tsh/queries.hpp>
 #include <helios_private/errors/dia_interactive_elements.hpp>
 #include <helios_private/hout_creation/expressions/builtin_operators.hpp>
 #include <helios_private/hout_creation/expressions/chain_expr.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
-#include <tsh/queries.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
@@ -28,6 +29,7 @@
 #include <query_framework/standard_query/query_impl.hpp>
 
 namespace compiler::helios::code {
+
 	namespace {
 		/**
 		 * @brief This error message is used when there is a string literal with escape sequences
@@ -54,9 +56,7 @@ namespace compiler::helios::code {
 			};
 
 		public:
-			UnknownEscapeSequenceError(
-				const dia::SourcePosition& source_position, std::string sequence
-			):
+			UnknownEscapeSequenceError(dia_int::StablePosition source_position, std::string sequence):
 				  MessageWithCodeFragmentAndCause(source_position) {
 				addArgument<dia_int::TextArgument>("sequence", std::move(sequence));
 				addAttachedMessage(makeBox<SupportedEscapeSequencesDocs>());
@@ -76,18 +76,9 @@ namespace compiler::helios::code {
 			}
 
 		public:
-			explicit InvalidCharacterLiteralError(const dia::SourcePosition& source_position):
+			explicit InvalidCharacterLiteralError(dia_int::StablePosition source_position):
 				  MessageWithCodeFragment(source_position) {}
 		};
-
-		/**
-		 * This is an effective implementation of QueryHoutOfExpr.
-		 * QueryHoutOfExpr is mostly a wrapper for future cache.
-		 * @note This is a private function of this file.
-		 */
-		ExprConstructionResult fromPST(
-			query::Context& ctx, pst::AccessLocked<pst::ExprElement> element
-		);
 
 		void getVariantSubExprsInPlace(
 			query::Context&                                   ctx,
@@ -162,13 +153,13 @@ namespace compiler::helios::code {
 								= makeBox<LiteralCharExpr>(ctx, pstOrigin(stmt), result.value.at(0));
 						} else {
 							ctx.logInt(
-								makeBox<InvalidCharacterLiteralError>(stmt->getSourcePosition())
+								makeBox<InvalidCharacterLiteralError>(stmt->getStablePosition())
 							);
 						}
 					}
 					opt_err(error) {
 						ctx.logInt(makeBox<UnknownEscapeSequenceError>(
-							stmt->getSourcePosition(), error.value
+							stmt->getStablePosition(), error.value
 						));
 					}
 				}
@@ -185,7 +176,7 @@ namespace compiler::helios::code {
 					}
 					opt_err(error) {
 						ctx.logInt(makeBox<UnknownEscapeSequenceError>(
-							stmt->getSourcePosition(), error.value
+							stmt->getStablePosition(), error.value
 						));
 					}
 				}
@@ -252,7 +243,7 @@ namespace compiler::helios::code {
 				    && isNumericOperator(op)) {
 					auto numeric_builtin_opt
 						= findNumericBinaryBuiltin(ctx, op, lhs.ref(), rhs.ref());
-					auto new_origin = elementOrigin(lhs->origin, rhs->origin);
+					auto new_origin = elementOriginOrdered(lhs->origin, rhs->origin);
 
 					if_opt_some(numeric_builtin_opt, numeric_builtin) {
 						auto [operation, lhs_coercion, rhs_coercion] = numeric_builtin;
@@ -294,8 +285,7 @@ namespace compiler::helios::code {
 					};
 
 					for (auto sub_expr: sub_exprs) {
-						auto sub_expr_hout
-							= getHoutOfExprWithExpectedType(ctx, sub_expr, meta_type);
+						auto sub_expr_hout = subExprFromPSTWithType(ctx, sub_expr, meta_type);
 						if (sub_expr_hout.hasFailed()) {
 							// Error has occurred.
 							return;
@@ -309,8 +299,8 @@ namespace compiler::helios::code {
 				}
 
 				// Default case (typical operators, built-in or user-defined)
-				auto lhs_res = fromPST(ctx, stmt->getLeftOperand());
-				auto rhs_res = fromPST(ctx, stmt->getRightOperand());
+				auto lhs_res = subExprFromPST(ctx, stmt->getLeftOperand());
+				auto rhs_res = subExprFromPST(ctx, stmt->getRightOperand());
 
 				auto lhs = std::move(lhs_res).valueOrThrow();
 				auto rhs = std::move(rhs_res).valueOrThrow();
@@ -451,7 +441,7 @@ namespace compiler::helios::code {
 					auto scope = ctx.query<QueryPrimaryCodeScopeFor>({ stmt });
 
 					const auto& sym_list = HInterface::ofScopeWithParents(scope).lookupExpectUnique(
-						stmt->getSourcePosition(), ctx, base::StrID("self")
+						stmt->getStablePosition(), ctx, base::StrID("self")
 					);
 
 					node = makeBox<IdentifierExpr>(
@@ -461,7 +451,7 @@ namespace compiler::helios::code {
 				}
 				default:
 					ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-						"Keyword not yet handled.", stmt->getSourcePosition()
+						"Keyword not yet handled.", stmt->getStablePosition()
 					));
 					return;  // failed
 				}
@@ -470,7 +460,7 @@ namespace compiler::helios::code {
 			void visitComma(pst::Access<pst::expr::Comma> stmt) override {
 				std::vector<Box<Expr>> expressions;
 				for (auto ex: stmt->getExpressions()) {
-					auto res = fromPST(ctx, ex);
+					auto res = subExprFromPST(ctx, ex);
 					if (res.hasFailed()) {
 						// Error has occurred.
 						return;
@@ -485,14 +475,14 @@ namespace compiler::helios::code {
 				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 					"Suffix operators are not implemented yet in HOUT, since they don't exist "
 					"yet.",
-					stmt->getSourcePosition()
+					stmt->getStablePosition()
 				));
 				return;  // failed
 			}
 
 			void visitPrefixOperator(pst::Access<pst::expr::PrefixOperator> stmt) override {
 				// @NOTE: This is a mockup
-				auto inner_res = fromPST(ctx, stmt->getExpr());
+				auto inner_res = subExprFromPST(ctx, stmt->getExpr());
 				if (inner_res.hasFailed()) return;  // failed
 
 				// @todo here we should:
@@ -513,7 +503,7 @@ namespace compiler::helios::code {
 						ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 							"Taking reference of type that does not carry information is not "
 							"supported yet.",
-							stmt->getSourcePosition()
+							stmt->getStablePosition()
 						));
 						return;  // failed
 					}
@@ -523,8 +513,8 @@ namespace compiler::helios::code {
 					auto primary_category = inner->expression_type.getValueCategory().getCategory();
 					if (primary_category == tsh::PrimaryCategory::Literal
 					    || primary_category == tsh::PrimaryCategory::Temporary) {
-						ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
-							"Tried to reference a temporary", stmt->getSourcePosition()
+						ctx.logInt(makeBox<dia_int::PlaceholderError>(
+							"Tried to reference a temporary", stmt->getStablePosition()
 						));
 						return;
 					}
@@ -538,7 +528,7 @@ namespace compiler::helios::code {
 					return;
 				} else {
 					ctx.logInt(makeBox<UndefinedUnaryOperatorError>(
-						stmt->getSourcePosition(),
+						stmt->getStablePosition(),
 						stmt->getOperator().str(),
 						makeBox<InteractiveType>(ctx, inner_type)
 					));
@@ -548,12 +538,9 @@ namespace compiler::helios::code {
 
 			void visitTernary(pst::Access<pst::expr::Ternary> stmt) override {
 				const auto bool_type = tsh::SymbolType<>::withDefaults(tsh::getBoolType());
-				// @TODO: #2063 Change that to subExprFromPSTWithType :)
-				auto condition_res
-					= getHoutOfExprWithExpectedType(ctx, stmt->getCondition(), bool_type);
-
-				auto if_true_res  = fromPST(ctx, stmt->getIfTrue());
-				auto if_false_res = fromPST(ctx, stmt->getIfFalse());
+				auto condition_res   = subExprFromPSTWithType(ctx, stmt->getCondition(), bool_type);
+				auto if_true_res     = subExprFromPST(ctx, stmt->getIfTrue());
+				auto if_false_res    = subExprFromPST(ctx, stmt->getIfFalse());
 
 				if (condition_res.hasFailed() or if_true_res.hasFailed() or if_false_res.hasFailed())
 					return;
@@ -581,7 +568,7 @@ namespace compiler::helios::code {
 				std::vector<Box<Expr>> result_exprs;
 				result_exprs.reserve(expr_count);
 				for (usize i = 0; i < expr_count; ++i) {
-					auto result = fromPST(ctx, stmt->getSubExpr(i));
+					auto result = subExprFromPST(ctx, stmt->getSubExpr(i));
 					if (result.hasFailed()) return;
 					result_exprs.push_back(std::move(result.valueOrThrow()));
 				}
@@ -614,32 +601,150 @@ namespace compiler::helios::code {
 
 				node = makeBox<ChainComparisonExpr>(ctx, pstOrigin(stmt), std::move(comparisons));
 			}
-		};
 
-		ExprConstructionResult fromPST(
-			query::Context& ctx, pst::AccessLocked<pst::ExprElement> element
-		) {
-			auto element_unlocked = element.unlockOpt(ctx);
-			if (element_unlocked.empty()) {
-				// PST should have reported parsing error for this, so we just return failure here.
-				return query::Failed();
+			void visitAssignment(pst::Access<pst::expr::Assignment> stmt) override {
+				auto op = stmt->getAssignmentType();
+
+				auto var = stmt->getVariables();
+				auto val = stmt->getValue();
+
+				auto location_expr_qresult = subExprFromPST(ctx, var);
+				if (location_expr_qresult.hasFailed()) return;
+				auto location_expr = std::move(location_expr_qresult).valueOrThrow();
+
+				// If left side of the assignment is a ref/box, dereference it first.
+				auto location_type = location_expr->expression_type.getSymbolType();
+				if (location_type.getRefKind() != tsh::ReferenceKind::Direct)
+					location_expr = makeBox<DerefExpr>(
+						ctx, location_expr->origin.generatedFrom(), std::move(location_expr)
+					);
+
+				auto location_mutability = location_type.getMutability();
+				if (location_mutability == tsh::Mutability::Immutable) {
+					ctx.logInt(makeBox<dia_int::PlaceholderError>(
+						"Left side of assignment can't be immutable.", stmt->getStablePosition()
+					));
+					return;
+				}
+
+				if (op == base::StrID("+=")) {
+					// @TODO: #1970 This implementation is temporary and should be handled by the
+					// `+=` operator in the future.
+					if (location_type.getType().getKind() == tsh::Kind::DynamicArray) {
+						auto dyn_array
+							= location_type.getType().as<tsh::DynamicArrayAbstractType>();
+						auto element_type = dyn_array.getElementType();
+						auto value_expr_coerced_qresult
+							= subExprFromPSTWithType(ctx, val, element_type);
+						if (value_expr_coerced_qresult.hasFailed()) return;
+
+						node = makeBox<ListPushExpr>(
+							pstOrigin(stmt),
+							std::move(location_expr),
+							std::move(value_expr_coerced_qresult).valueOrThrow()
+						);
+						return;
+					}
+				} else if (op == base::StrID("-=")) {
+					// @TODO: #1970 This implementation is temporary and should be handled by the
+					// `-=` operator in the future.
+					if (location_type.getType().getKind() == tsh::Kind::DynamicArray) {
+						auto u64_type = tsh::SymbolType<>{
+							tsh::getIntegralType(
+								ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned
+							),
+							tsh::ReferenceKind::Direct,
+							tsh::Mutability::Mutable
+						};
+
+						auto value_expr_coerced_qresult
+							= subExprFromPSTWithType(ctx, val, u64_type);
+						if (value_expr_coerced_qresult.hasFailed()) return;
+
+						node = makeBox<ListPopExpr>(
+							pstOrigin(stmt),
+							std::move(location_expr),
+							std::move(value_expr_coerced_qresult).valueOrThrow()
+						);
+						return;
+					}
+				}
+
+				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					base::strConcat(
+						"'", op, "' assignment for type: '", location_type.toString(), "'."
+					),
+					stmt->getStablePosition()
+				));
 			}
+		};
+	}
 
-			PstExprToHoutExprVisitor visitor(ctx);
-			element_unlocked.value()->acceptExprVisitor(visitor);
-
-			if_opt_some(visitor.node, expr) return std::move(expr);
+	ExprConstructionResult subExprFromPST(
+		query::Context& ctx, pst::AccessLocked<pst::ExprElement> element
+	) {
+		auto element_unlocked = element.unlockOpt(ctx);
+		if (element_unlocked.empty()) {
+			// PST should have reported parsing error for this, so we just return failure here.
 			return query::Failed();
 		}
+
+		PstExprToHoutExprVisitor visitor(ctx);
+		element_unlocked.value()->acceptExprVisitor(visitor);
+
+		if_opt_some(visitor.node, expr) return std::move(expr);
+		return query::Failed();
 	}
 }
 
 namespace compiler::helios {
+	namespace {
+		void logCoercionFailure(
+			query::Context&                                      ctx,
+			const CoercionQResult&                               coercion_qresult,
+			const tsh::SymbolType<>&                             source_symbol_type,
+			const tsh::SymbolType<>&                             expected_type,
+			dia_int::StablePosition                              source_position,
+			base::Optional<std::function<void(query::Context&)>> log_error
+		) {
+			variant_match(coercion_qresult.valueOrThrow().getVariant()) {
+				variant_case(InvalidCoercion, _) {
+					if (log_error.has_value()) {
+						(*log_error)(ctx);
+					} else {
+						ctx.logInt(makeBox<IncompatibleTypesError>(
+							source_position,
+							makeBox<InteractiveType>(ctx, source_symbol_type),
+							makeBox<InteractiveType>(ctx, expected_type)
+						));
+					}
+					return;
+				}
+				variant_case(TypeNotTriviallyCopyable, _) {
+					ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+						base::strConcat(
+							"Copy constructor for non-trivially-copyable type `",
+							source_symbol_type.withReferenceKind(tsh::ReferenceKind::Direct)
+								.toString(),
+							"`. This was caused by the need of dereferencing a value of type: "
+							"`",
+							source_symbol_type.toString(),
+							"`."
+						),
+						source_position
+					));
+					return;
+				}
+				variant_default { CORE_PANIC("Unhandled coercion result variant."); }
+			}
+			CORE_UNREACHABLE();
+		}
+	}
 
 	struct IMPLEMENT_QUERY(QueryHoutOfExpr, ExprConstructionResult) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			// @TODO static assert this is top-expr
-			return code::fromPST(ctx, key.element);
+			return code::subExprFromPST(ctx, key.element);
 		}
 
 		QUERY_AUTO_CACHE_CREF
@@ -647,7 +752,7 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryHoutOfExpr)
 
-	ExprConstructionResult getHoutOfExprWithExpectedType(
+	query::QResult<BoxOrCRef<code::Expr>> getHoutOfExprWithExpectedType(
 		query::Context&                                      ctx,
 		const pst::GenericPSTQueryKey<pst::ExprElement>&     pst_expr,
 		const tsh::SymbolType<>                              expected_type,
@@ -655,57 +760,57 @@ namespace compiler::helios {
 	) {
 		auto expr_hout_qresult = ctx.query<QueryHoutOfExpr>({ pst_expr.element });
 
-		UNPACK_QRESULT_CREF_TO_BOX(auto expr_hout =, expr_hout_qresult);
+		UNPACK_QRESULT_CREF_TO_BOX(CRef<code::Expr> expr_hout =, expr_hout_qresult);
 
-		const auto coercion_qresult
-			= canCoerce(ctx, expr_hout->expression_type.getSymbolType(), expected_type);
+		const auto source_symbol_type = expr_hout->expression_type.getSymbolType();
+		const auto source_position    = pst_expr.element.unlock(ctx)->getStablePosition();
+		const auto coercion_qresult   = canCoerce(ctx, source_symbol_type, expected_type);
 		if (coercion_qresult.hasFailed()) return query::Failed();
 
 		variant_match(coercion_qresult.valueOrThrow().getVariant()) {
-			variant_case(Coercion, coercion) { return coercion.coerce(ctx, expr_hout->clone()); }
-			variant_case(InvalidCoercion, _) {
-				if (log_error.has_value()) {
-					(*log_error)(ctx);
-				} else {
-					ctx.logInt(makeBox<IncompatibleTypesError>(
-						pst_expr.element.unlock(ctx)->getSourcePosition(),
-						makeBox<InteractiveType>(ctx, expr_hout->expression_type.getSymbolType()),
-						makeBox<InteractiveType>(ctx, expected_type)
-					));
-				}
+			variant_case(Coercion, coercion) { return coercion.coerceFromRef(ctx, expr_hout); }
+			variant_default {
+				logCoercionFailure(
+					ctx,
+					coercion_qresult,
+					source_symbol_type,
+					expected_type,
+					source_position,
+					std::move(log_error)
+				);
 				return query::Failed();
 			}
-			variant_case(TypeNotTriviallyCopyable, _) {
-				if (expr_hout->expression_type.getSymbolType().getRefKind()
-				        == tsh::ReferenceKind::Ref
-				    && expected_type.getRefKind() == tsh::ReferenceKind::Direct) {
-					ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-						base::strConcat(
-							"Copy constructor for non-trivially-copyable type `",
-							expr_hout->expression_type.getSymbolType()
-								.withReferenceKind(tsh::ReferenceKind::Direct)
-								.toString(),
-							"`. This was caused by the need of dereferencing a value of type: "
-							"`",
-							expr_hout->expression_type.getSymbolType().toString(),
-							"`."
-						),
-						pst_expr.element.unlock(ctx)->getSourcePosition()
-					));
+		}
+		CORE_UNREACHABLE();
+	}
 
-				} else {
-					ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-						base::strConcat(
-							"Copy constructor for non-trivially-copyable type `",
-							expr_hout->expression_type.getSymbolType().toString(),
-							"`."
-						),
-						pst_expr.element.unlock(ctx)->getSourcePosition()
-					));
-				}
+	query::QResult<Box<code::Expr>> code::subExprFromPSTWithType(
+		query::Context&                                      ctx,
+		pst::AccessLocked<pst::ExprElement>                  element,
+		tsh::SymbolType<>                                    expected_type,
+		base::Optional<std::function<void(query::Context&)>> log_error
+	) {
+		auto expr_hout_qresult = code::subExprFromPST(ctx, element);
+		UNPACK_QRESULT_MOVE(auto expr_hout =, expr_hout_qresult);
+
+		const auto source_symbol_type = expr_hout->expression_type.getSymbolType();
+		const auto source_position    = element.unlock(ctx)->getStablePosition();
+		const auto coercion_qresult   = canCoerce(ctx, source_symbol_type, expected_type);
+		if (coercion_qresult.hasFailed()) return query::Failed();
+
+		variant_match(coercion_qresult.valueOrThrow().getVariant()) {
+			variant_case(Coercion, coercion) { return coercion.coerce(ctx, std::move(expr_hout)); }
+			variant_default {
+				logCoercionFailure(
+					ctx,
+					coercion_qresult,
+					source_symbol_type,
+					expected_type,
+					source_position,
+					std::move(log_error)
+				);
 				return query::Failed();
 			}
-			variant_default { CORE_PANIC("Unhandled coercion result variant."); }
 		}
 		CORE_UNREACHABLE();
 	}

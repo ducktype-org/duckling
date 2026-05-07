@@ -17,26 +17,13 @@
 
 #include "message.hpp"
 
+#include <diagnostic_interactive/stable_position.hpp>
+
 namespace dia_int {
-	/**
-	 * @brief A Placeholder message with a header only and no code snippet.
-	 *
-	 * Used when the developer is lazy and want's to have a fast error message.
-	 */
-	class PlaceholderHeaderError: public MessageBase {
-		Metadata getMetadata() const final {
-			return { .template_type = "message",
-				     .type          = "error",
-				     .family        = "misc",
-				     .name          = "placeholder_header" };
-		}
-
-	public:
-		PlaceholderHeaderError(std::string header_message, std::string description = "");
-	};
 
 	/**
-	 * @brief A Placeholder message with a code snippet and optional description and pointer message.
+	 * @brief A Placeholder message with an optional code snippet
+	 * and optional description and pointer message.
 	 *
 	 * Used when the developer is lazy and want's to have a fast error message.
 	 *
@@ -46,23 +33,38 @@ namespace dia_int {
 	 * This is not a recommended way of reporting errors to the user,
 	 * the text content of the error message should be inside the template files as much as possible.
 	 */
-	class PlaceholderCodeError final: public MessageBase {
+	class PlaceholderError final: public MessageBase {
 		Metadata getMetadata() const final {
 			return {
 				.template_type = "message",
 				.type          = "error",
 				.family        = "misc",
-				.name          = "placeholder_code",
+				.name          = "placeholder",
 			};
 		}
 
 	public:
-		PlaceholderCodeError(
-			std::string                 header_message,
-			dia::SourcePosition         source_position,
-			std::string                 description             = "",
-			base::Optional<std::string> pointer_message_content = "here"
+		PlaceholderError(
+			std::string                             header_message,
+			base::Optional<dia_int::StablePosition> source_position         = {},
+			std::string                             description             = "",
+			base::Optional<std::string>             pointer_message_content = "here"
 		);
+
+		/**
+		 * @brief Should be used when we can't access the stable position only.
+		 */
+		PlaceholderError(
+			std::string                         header_message,
+			base::Optional<dia::SourcePosition> source_position         = {},
+			std::string                         description             = "",
+			base::Optional<std::string>         pointer_message_content = "here"
+		);
+
+		/**
+		 * @brief Alias because not providing a source_position leads to ambiguity.
+		 */
+		PlaceholderError(std::string header_message, std::string description = "");
 	};
 
 	/**
@@ -85,6 +87,8 @@ namespace dia_int {
 			};
 		}
 
+		void addStacktraceArgument();
+
 	public:
 		NotYetImplementedCodeError(
 			std::string                         header_message,
@@ -92,41 +96,50 @@ namespace dia_int {
 			std::string                         description             = "",
 			base::Optional<std::string>         pointer_message_content = "here"
 		);
-	};
 
-	/**
-	 * @brief Same as PlaceholderHeaderError but with type "note".
-	 * Used to add a note to an error message when the source position is not available.
-	 */
-	class PlaceholderHeaderNote: public MessageBase {
-		Metadata getMetadata() const final {
-			return { .template_type = "message",
-				     .type          = "note",
-				     .family        = "misc",
-				     .name          = "placeholder_header" };
-		}
-
-	public:
-		PlaceholderHeaderNote(std::string header_message, std::string description = "");
-	};
-
-	/**
-	 * @brief A Placeholder message with a code snippet and optional description and pointer message.
-	 */
-	class PlaceholderCodeNote final: public MessageBase {
-		Metadata getMetadata() const final {
-			return { .template_type = "message",
-				     .type          = "note",
-				     .family        = "misc",
-				     .name          = "placeholder_code" };
-		}
-
-	public:
-		PlaceholderCodeNote(
-			std::string                 header_message,
-			dia::SourcePosition         source_position,
-			std::string                 description             = "",
-			base::Optional<std::string> pointer_message_content = "here"
+		NotYetImplementedCodeError(
+			std::string                             header_message,
+			base::Optional<dia_int::StablePosition> source_position,
+			std::string                             description             = "",
+			base::Optional<std::string>             pointer_message_content = "here"
 		);
+
+		/**
+		 * @brief Alias because not providing a source_position leads to ambiguity.
+		 */
+		NotYetImplementedCodeError(std::string header_message, std::string description = "");
+	};
+
+	/**
+	 * @brief A Placeholder message with an optional code snippet and optional description and
+	 * pointer message.
+	 */
+	class PlaceholderNote final: public MessageBase {
+		Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "note",
+				     .family        = "misc",
+				     .name          = "placeholder" };
+		}
+
+	public:
+		PlaceholderNote(
+			std::string                         header_message,
+			base::Optional<dia::SourcePosition> source_position         = {},
+			std::string                         description             = "",
+			base::Optional<std::string>         pointer_message_content = "here"
+		);
+
+		PlaceholderNote(
+			std::string                             header_message,
+			base::Optional<dia_int::StablePosition> source_position         = {},
+			std::string                             description             = "",
+			base::Optional<std::string>             pointer_message_content = "here"
+		);
+
+		/**
+		 * @brief Alias because not providing a source_position leads to ambiguity.
+		 */
+		PlaceholderNote(std::string header_message, std::string description = "");
 	};
 }

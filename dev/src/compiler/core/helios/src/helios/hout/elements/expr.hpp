@@ -3,7 +3,7 @@
 #include <ctv/numeric_value.hpp>
 #include <helios/hout/origin.hpp>
 #include <helios/symbols/symbol_id.hpp>
-#include <tsh/expression_type.hpp>
+#include <helios/tsh/expression_type.hpp>
 
 #include <base/pointers/box.hpp>
 #include <base/pointers/shared_box.hpp>
@@ -64,7 +64,7 @@ namespace compiler::helios::code {
 			return id;
 		}
 
-		[[nodiscard]] base::Optional<pst::StablePosition> getPosition() const {
+		[[nodiscard]] base::Optional<dia_int::StablePosition> getPosition() const {
 			return origin.getStablePosition();
 		}
 

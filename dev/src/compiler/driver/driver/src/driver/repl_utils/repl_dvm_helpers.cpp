@@ -162,7 +162,10 @@ namespace compiler::repl {
 	std::expected<std::string, std::string> executeFunctionAndCaptureResult(
 		vm::PID pid, std::string_view func_name, const tsh::SymbolType<>& return_type
 	) {
-		auto type_str = return_type.toString();
+		if (return_type.getRefKind() != tsh::ReferenceKind::Direct)
+			return std::unexpected("Unsupported return type for REPL: " + return_type.toString());
+
+		std::string type_str = return_type.getType().toString();
 
 		if (type_str == "void") {
 			auto run_result = vm::api::runFunction(pid, std::string(func_name), {})
@@ -180,7 +183,12 @@ namespace compiler::repl {
 		    .and_then([&] { return vm::api::getExitValue(pid); })
 		    .transform_error(vm::api::errorToString)
 		    .and_then(
-				[&type_str](Ref<vm::VmValue> exit_value) -> std::expected<std::string, std::string> {
+				[&type_str](vm::api::ExitValue exit_values
+		        ) -> std::expected<std::string, std::string> {
+					CORE_ASSERT(
+						exit_values.size() == 1, "Expecting only one return value from the DVM"
+					);
+					auto& exit_value = exit_values.at(0);
 					if (type_str == "i32")
 						return std::to_string(exit_value->readBytes<i32>());
 					else if (type_str == "i64")

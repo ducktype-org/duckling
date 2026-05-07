@@ -1,35 +1,24 @@
-use std::{
-    path::{Path, PathBuf},
-    time::{Duration, SystemTime},
-};
+use std::fs::OpenOptions;
+use std::io::Write;
+use std::path::{Path, PathBuf};
+use std::time::{Duration, SystemTime};
 
-use crate::{
-    quackpack::core::{
-        fetcher::Fetcher,
-        storage::{
-            freeze::{FreezeDep, FreezePackage},
-            package_id::{PackageId, RegistryId},
-            paths::Storage,
-            venv::Venv,
-            venv_id::ToVenvId,
-        },
-        types_common::{ExpandedLocation, InternedExpandedLocation},
-    },
-    util::{path_ops_ext::PathOpsExt, test_utils::setup_test},
-};
 use tempfile::TempDir;
 use url::Url;
 
-use crate::{
-    DuckCtx,
-    quackpack::core::{
-        Version,
-        storage::{
-            freeze::{RootPackage, VenvFreeze},
-            venv::VenvData,
-        },
-    },
-};
+use crate::DuckContext;
+use crate::quackpack::core::fetcher::Fetcher;
+use crate::quackpack::core::solver::types_common::ExpandedLocation;
+use crate::quackpack::core::storage::freeze::{FreezeDep, FreezePackage, RootPackage, VenvFreeze};
+use crate::quackpack::core::storage::package_id::{PackageId, RegistryId};
+use crate::quackpack::core::storage::paths::Storage;
+use crate::quackpack::core::storage::venv::{Venv, VenvData};
+use crate::quackpack::core::storage::venv_id::ToVenvId;
+use crate::quackpack::core::{PackageContext, PackageLoader, Version};
+use crate::quackpack::subcommands::init;
+use crate::quackpack::subcommands::init::InitOptions;
+use crate::util::path_ops_ext::PathOpsExt;
+use crate::util::test_utils::setup_test;
 
 mod basic;
 mod concurrent;
@@ -52,25 +41,24 @@ fn registry_url_hash() -> String {
 /// 1. remove foo, because no package references it,
 /// 2. remove root3, because it's too old,
 /// 3. remove bar, because it was only references by root3.
-fn setup_mock_storage() -> (DuckCtx, TempDir) {
+fn setup_mock_storage() -> (DuckContext, TempDir, PathBuf) {
     let setup = || {
-        let storage_root = TempDir::new().unwrap();
-        setup_mock_packages(storage_root.path());
-        setup_mock_venvs(storage_root.path());
-        setup_mock_locks(storage_root.path());
+        let duck_home = TempDir::new().unwrap();
         // Also overwrite DUCK_HOME, so we'll use the default configuration options.
-        // SAFETY: Setup is single threaded, and `Env` in `DuckCtx`, copies all envs.
+        // SAFETY: Setup is single threaded, and `Env` in `DuckContext`, copies all envs.
         unsafe {
-            std::env::set_var("DUCK_STORAGE_DIR", storage_root.path());
-            std::env::set_var("DUCK_HOME", storage_root.path());
+            std::env::set_var("DUCK_HOME", duck_home.path());
         }
-        let ctx = DuckCtx::default();
-        // SAFETY: Setup is single threaded, and `Env` in `DuckCtx`, copies all envs.
+        let ctx = DuckContext::default();
+        // SAFETY: Setup is single threaded, and `Env` in `DuckContext`, copies all envs.
         unsafe {
-            std::env::remove_var("DUCK_STORAGE_DIR");
             std::env::remove_var("DUCK_HOME");
         }
-        (ctx, storage_root)
+        let storage_root = ctx.duck_home().storage().into_not_locked_path();
+        setup_mock_packages(storage_root.as_path());
+        setup_mock_venvs(storage_root.as_path(), &ctx);
+        setup_mock_locks(storage_root.as_path());
+        (ctx, duck_home, storage_root)
     };
     setup_test(setup)
 }
@@ -97,6 +85,7 @@ fn setup_mock_venv(
     name: &str,
     freeze_mutator: impl FnOnce(&mut VenvFreeze),
     data_mutator: impl FnOnce(&mut VenvData),
+    ctx: &DuckContext,
 ) {
     let storage = Storage::new(root);
     let mut basic_freeze = VenvFreeze::new(
@@ -113,11 +102,11 @@ fn setup_mock_venv(
     );
     data_mutator(&mut basic_data);
     let venv = Venv::new(name.to_venv_id(), basic_data);
-    venv.save_to(&storage).unwrap()
+    venv.save_to(&storage, ctx).unwrap()
 }
 
-fn setup_mock_venvs(root: &Path) {
-    setup_mock_venv(root, "root1", |_| {}, |_| {});
+fn setup_mock_venvs(root: &Path, ctx: &DuckContext) {
+    setup_mock_venv(root, "root1", |_| {}, |_| {}, ctx);
     setup_mock_venv(
         root,
         "root2",
@@ -125,6 +114,7 @@ fn setup_mock_venvs(root: &Path) {
         |data| {
             data.set_ephemeral(true);
         },
+        ctx,
     );
     let dep = FreezeDep::new("bar".into(), Version::new(1, 0, 0));
     let package = FreezePackage::new(
@@ -132,10 +122,11 @@ fn setup_mock_venvs(root: &Path) {
         dep.version(),
         vec![],
         vec![],
-        InternedExpandedLocation::new(ExpandedLocation::Registry {
+        ExpandedLocation::Registry {
             url: Fetcher::DEFAULT_REGISTRY_URL.parse().unwrap(),
             real_name: dep.name(),
-        }),
+        }
+        .into(),
     );
     setup_mock_venv(
         root,
@@ -148,6 +139,7 @@ fn setup_mock_venvs(root: &Path) {
             data.set_ephemeral(true);
             data.set_last_modification(SystemTime::now() - Duration::from_secs(2 * 24 * 60 * 60));
         },
+        ctx,
     );
 
     let dep = FreezeDep::new("baz".into(), Version::new(1, 0, 0));
@@ -156,10 +148,11 @@ fn setup_mock_venvs(root: &Path) {
         dep.version(),
         vec![],
         vec![],
-        InternedExpandedLocation::new(ExpandedLocation::Registry {
+        ExpandedLocation::Registry {
             url: Fetcher::DEFAULT_REGISTRY_URL.parse().unwrap(),
             real_name: dep.name(),
-        }),
+        }
+        .into(),
     );
 
     setup_mock_venv(
@@ -172,6 +165,7 @@ fn setup_mock_venvs(root: &Path) {
         |data| {
             data.set_last_modification(SystemTime::now() - Duration::from_secs(2 * 24 * 60 * 60));
         },
+        ctx,
     );
 }
 
@@ -210,4 +204,94 @@ fn setup_mock_locks(root: &Path) {
     setup_data_locks(&venvs);
     setup_sync_locks(&venvs);
     setup_compile_locks(&venvs);
+}
+
+fn create_mock_package<'duck>(
+    root: &Path,
+    ctx: &'duck DuckContext,
+    name: &str,
+) -> PackageContext<'duck> {
+    let opts = InitOptions {
+        ctx,
+        at: root.to_path_buf(),
+        name: name.into(),
+        as_venv: false,
+        expose_freezefile: false,
+        ephemeral: false,
+        local_storage: false,
+        git: false,
+        full: false,
+    };
+    init::init(opts).unwrap();
+    PackageLoader::find_at_exact_directory(root, ctx).unwrap()
+}
+
+fn create_mock_package_at_tmpdir<'duck>(
+    ctx: &'duck DuckContext,
+    name: &str,
+) -> (TempDir, PackageContext<'duck>) {
+    let root = TempDir::new().unwrap();
+    let pcx = create_mock_package(root.path(), ctx, name);
+    (root, pcx)
+}
+
+fn create_mock_package_with_dependencies<'duck>(
+    root: &Path,
+    ctx: &'duck DuckContext,
+    name: &str,
+) -> PackageContext<'duck> {
+    let opts = InitOptions {
+        ctx,
+        at: root.join("dep"),
+        name: "dep".into(),
+        as_venv: false,
+        expose_freezefile: false,
+        ephemeral: false,
+        local_storage: false,
+        git: false,
+        full: false,
+    };
+    init::init(opts).unwrap();
+
+    let opts = InitOptions {
+        ctx,
+        at: root.join("root"),
+        name: name.into(),
+        as_venv: false,
+        expose_freezefile: false,
+        ephemeral: false,
+        local_storage: false,
+        git: false,
+        full: false,
+    };
+    init::init(opts).unwrap();
+    // !TODO: Use `duck add`.
+    let mut file = {
+        let mut opts = OpenOptions::new();
+        opts.append(true)
+            .open(root.join("root").join(PackageLoader::MANIFEST_NAME))
+            .unwrap()
+    };
+    file.write_all(
+        "
+dependencies:
+  dep:
+    source:
+      path: ../dep"
+            .as_bytes(),
+    )
+    .unwrap();
+    file.flush().unwrap();
+    file.sync_data().unwrap();
+    drop(file);
+    PackageLoader::find_at_exact_directory(&root.join("root"), ctx).unwrap()
+}
+
+fn create_mock_package_with_deps_at_tmpdir<'duck>(
+    ctx: &'duck DuckContext,
+    name: &str,
+) -> (TempDir, PackageContext<'duck>) {
+    let root = TempDir::new().unwrap();
+    let pcx = create_mock_package_with_dependencies(root.path(), ctx, name);
+    (root, pcx)
 }

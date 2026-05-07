@@ -5,10 +5,11 @@
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
 #include <frontend/pst_parser/elements/hierarchy/lists/nested_import_list.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
+#include <helios/tsh/queries/types.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/hout_creation/expressions/coercions.hpp>
+#include <helios_private/hout_creation/expressions/hout_of_subexpr.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
-#include <tsh/queries/types.hpp>
 
 namespace compiler::helios::code {
 	namespace {
@@ -31,10 +32,10 @@ namespace compiler::helios::code {
 		) {
 			if (auto expr_kind = current_expr->expression_type.getSymbolType().getType().getKind();
 			    expr_kind != tsh::Kind::StaticArray && expr_kind != tsh::Kind::DynamicArray) {
-				auto error_pos = current_expr->origin.getSourcePosition().copyValueOr(
-					index_pst.unlock(ctx)->getSourcePosition()
+				auto error_pos = current_expr->origin.getStablePosition().copyValueOr(
+					index_pst.unlock(ctx)->getStablePosition()
 				);
-				ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+				ctx.logInt(makeBox<dia_int::PlaceholderError>(
 					"Index operator base must be indexable.", error_pos
 				));
 				return query::Failed();
@@ -53,12 +54,12 @@ namespace compiler::helios::code {
 				tsh::ReferenceKind::Direct,
 				tsh::Mutability::Immutable
 			};
-			auto index_res = getHoutOfExprWithExpectedType(ctx, index_pst, i64_type);
+			auto index_res = subExprFromPSTWithType(ctx, index_pst, i64_type);
 			UNPACK_QRESULT_MOVE(base::Box<Expr> index_expr =, index_res);
 
 			return makeBox<IndexExpr>(
 				ctx,
-				pstOrigin(current_expr->origin, index_pst.unlock(ctx)),
+				pstOriginOrdered(current_expr->origin, index_pst.unlock(ctx)),
 				std::move(current_expr),
 				std::move(index_expr)
 			);
@@ -103,10 +104,10 @@ namespace compiler::helios::code {
 				};
 			}();
 
-			auto arg_res = getHoutOfExprWithExpectedType(ctx, arg_pst, expected_index_arg_type);
+			auto arg_res = subExprFromPSTWithType(ctx, arg_pst, expected_index_arg_type);
 			UNPACK_QRESULT_MOVE(Box<Expr> arg_expr =, arg_res);
 
-			auto total_origin = pstOrigin(base->origin, arg_pst.unlock(ctx));
+			auto total_origin = pstOriginOrdered(base->origin, arg_pst.unlock(ctx));
 			return makeBox<IndexExpr>(ctx, total_origin, std::move(base), std::move(arg_expr));
 		}
 	}
@@ -123,8 +124,8 @@ namespace compiler::helios::code {
 		// @TODO: #1532 This check should be handled by the `[]` operator.
 		auto args = call_expr->getArgs().unlock(ctx);
 		if (args->size() != 1) {
-			ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
-				"Array index/size must be exactly one expression.", call_expr->getSourcePosition()
+			ctx.logInt(makeBox<dia_int::PlaceholderError>(
+				"Array index/size must be exactly one expression.", call_expr->getStablePosition()
 			));
 			return query::Failed();
 		}

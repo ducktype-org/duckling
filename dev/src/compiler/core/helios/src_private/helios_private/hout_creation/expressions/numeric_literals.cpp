@@ -3,6 +3,7 @@
 #include "errors.hpp"
 
 #include <ctv/numeric_value.hpp>
+#include <diagnostic_interactive/stable_position.hpp>
 #include <frontend/pst_parser/elements/includes/basic.hpp>
 
 #include <lang_definitions/key_spec_op.hpp>
@@ -20,10 +21,10 @@ namespace compiler::helios::code {
 		 * error is logged.
 		 */
 		bool handleFromCharsFailure(
-			const std::from_chars_result& result,
-			std::string_view              value,
-			const dia::SourcePosition&    position,
-			query::Context&               ctx
+			const std::from_chars_result&  result,
+			std::string_view               value,
+			const dia_int::StablePosition& position,
+			query::Context&                ctx
 		) {
 			if (result.ec != std::errc()) {
 				if (result.ec
@@ -49,7 +50,10 @@ namespace compiler::helios::code {
 
 		template<typename TargetInt>
 		base::Optional<numeric_value::NumericValue> parseSignedInteger(
-			std::string_view value, int base, const dia::SourcePosition& position, query::Context& ctx
+			std::string_view               value,
+			int                            base,
+			const dia_int::StablePosition& position,
+			query::Context&                ctx
 		) {
 			i64  parsed_value = 0;
 			auto result
@@ -67,7 +71,10 @@ namespace compiler::helios::code {
 
 		template<typename TargetUInt>
 		base::Optional<numeric_value::NumericValue> parseUnsignedInteger(
-			std::string_view value, int base, const dia::SourcePosition& position, query::Context& ctx
+			std::string_view               value,
+			int                            base,
+			const dia_int::StablePosition& position,
+			query::Context&                ctx
 		) {
 			u64  parsed_value = 0;
 			auto result
@@ -83,7 +90,7 @@ namespace compiler::helios::code {
 
 		template<typename TargetFloat>
 		base::Optional<numeric_value::NumericValue> parseFloat(
-			std::string_view value, const dia::SourcePosition& position, query::Context& ctx
+			std::string_view value, const dia_int::StablePosition& position, query::Context& ctx
 		) {
 			f64  parsed_value = 0;
 			auto result = std::from_chars(value.data(), value.data() + value.size(), parsed_value);
@@ -94,7 +101,10 @@ namespace compiler::helios::code {
 		}
 
 		base::Optional<numeric_value::NumericValue> deduceIntegerType(
-			std::string_view value, int base, const dia::SourcePosition& position, query::Context& ctx
+			std::string_view               value,
+			int                            base,
+			const dia_int::StablePosition& position,
+			query::Context&                ctx
 		) {
 			i64  parsed_value = 0;
 			auto result
@@ -104,14 +114,13 @@ namespace compiler::helios::code {
 		}
 
 		base::Optional<numeric_value::NumericValue> deduceFloatType(
-			std::string_view value, const dia::SourcePosition& position, query::Context& ctx
+			std::string_view value, const dia_int::StablePosition& position, query::Context& ctx
 		) {
 			f64  parsed_value = 0;
 			auto result = std::from_chars(value.data(), value.data() + value.size(), parsed_value);
 			if (!handleFromCharsFailure(result, value, position, ctx)) return {};
 			return numeric_value::NumericValue::createMinimized(parsed_value);
 		}
-
 	}
 
 	base::Optional<compiler::numeric_value::NumericValue> fromExprNumericValue(
@@ -122,7 +131,7 @@ namespace compiler::helios::code {
 		auto type_specifier_strid
 			= literal_expr->getValue().type_specifier.copyValueOr(base::StrID(""));
 		auto type_specifier = lang_def::strAsNumericLiteralTypeSpecifier(type_specifier_strid);
-		auto position       = literal_expr->getSourcePosition();
+		auto position       = literal_expr->getStablePosition();
 
 		int base = 10;
 		if (value.starts_with("0b") || value.starts_with("0B")) {

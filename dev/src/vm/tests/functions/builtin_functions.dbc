@@ -3,27 +3,27 @@
 # input = n
 # output = n
 
-function main { i64, ptr_argv } -> i64 {
-	# [0, 8) main ret_val
+function main { i64, ptr_argv } -> { i64 } {
+	# [0, 8) main ret0
 	# [8, 16) argc
 	# [16, 32) *argv
 
-	init_lany_type          x, i64; # [32, 40)
+	init_pany_type          x, i64; # [32, 40)
 	call_builtinfunc  builtin_input_i64;
 
-	init_lany_type          y, i64; # [40, 48)
+	init_pany_type          y, i64; # [40, 48)
 	call_builtinfunc  builtin_input_i64;
 
-	add_l64_l64        y,   x;
+	add_p64_p64        y,   x;
 
 	call_builtinfunc  builtin_output_i64; # should output "input1 + input2"
 
-	init_lany_type          z, i64; # [16, 24)
-	mov_l64_l64        z,   x;
+	init_pany_type          z, i64; # [16, 24)
+	mov_p64_p64        z,   x;
 
 	call_builtinfunc  builtin_output_i64; # should output the size of outputed value
 
-	deinit; # [8, 16) ret_val
+	deinit; # [8, 16) ret0
 	deinit; # *argv
 	deinit; # argc
 	ret;

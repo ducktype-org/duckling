@@ -1,0 +1,6 @@
+metadata:
+  name: bar
+  version: '1.0.0'
+
+features:
+  b: []

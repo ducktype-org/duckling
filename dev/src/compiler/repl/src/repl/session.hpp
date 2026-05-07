@@ -36,7 +36,25 @@ namespace compiler::repl {
 	 */
 	class ReplSession final {
 	public:
-		ReplSession();
+		explicit ReplSession(bool completions_enabled = true);
+
+		/**
+		 * @brief Load a script file and execute its statements in the current REPL session.
+		 *
+		 * Statements are executed in source order and become part of the current session state.
+		 * This means loaded definitions and variables can be used by subsequent interactive input.
+		 *
+		 * @note The input is accepted as raw text so `/load` command parsing can report
+		 * missing/invalid arguments consistently; filesystem operations are performed using
+		 * `fs::FilePath` after trimming and validation.
+		 *
+		 * @note Loading is non-transactional: execution stops at the first error and statements
+		 * that finished successfully before that error remain applied in the session.
+		 *
+		 * @param file_path Path to a .ds file
+		 * @return ReplResult indicating success or an error message
+		 */
+		ReplResult loadScriptFile(std::string_view file_path);
 
 		/**
 		 * Run the main REPL loop (blocking).
@@ -69,6 +87,9 @@ namespace compiler::repl {
 		 * Parses the full input to validate syntax and extract statement boundaries,
 		 * then creates a separate module for each top-level statement and executes
 		 * them in order. Stops at the first error.
+		 *
+		 * @note Execution is intentionally non-transactional: statements executed before
+		 * the failing one remain part of the active REPL state.
 		 *
 		 * @param input The code to execute (may contain multiple statements)
 		 * @return ReplResult with execution outcome and optional message
@@ -201,6 +222,17 @@ namespace compiler::repl {
 		 * Similar to DVMBuilder but with incremental loading semantics for interactive sessions.
 		 */
 		base::Optional<backend_vm::ReplLoweringContext> m_lowering_context;
+		/**
+		 * Suppress per-statement REPL feedback while ingesting a script into session state.
+		 *
+		 * When true, REPL bookkeeping messages like "=> <value>" and
+		 * "Instruction executed." are hidden for statements executed by `loadScriptFile`.
+		 *
+		 * @note This flag is only enabled inside script-loading flow (`/load` and
+		 *       `duckc repl <script>` preload). Standard interactive REPL input keeps
+		 *       normal feedback.
+		 */
+		bool m_suppress_repl_feedback_during_script_load = false;
 	};
 
 }  // namespace compiler::repl

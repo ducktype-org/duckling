@@ -1,0 +1,5 @@
+SubDirs:
+ - functions
+ - namespaces
+ - classes
+ - aliases

@@ -1,23 +1,16 @@
-use std::{
-    collections::{HashMap, HashSet},
-    ops::Deref,
-    path::PathBuf,
-    sync::{Mutex, OnceLock},
-};
+use std::collections::{HashMap, HashSet};
+use std::ops::Deref;
+use std::path::PathBuf;
+use std::sync::{Mutex, OnceLock};
 
 use url::Url;
 
-use crate::{
-    QuackResult, StrId, qp_bail_internal,
-    quackpack::{
-        core::{
-            BranchOrTag, Dependency, Source, Version,
-            types_common::{ExpandedLocation, ExpandedPackage, expanded::InternedExpandedLocation},
-            version::CompatibilityCheck,
-        },
-        util::PANIC_MESSAGE,
-    },
-};
+use crate::quackpack::core::solver::types_common::expanded::InternedExpandedLocation;
+use crate::quackpack::core::solver::types_common::{ExpandedLocation, ExpandedPackage};
+use crate::quackpack::core::version::CompatibilityCheck;
+use crate::quackpack::core::{BranchOrTag, Dependency, Source, Version};
+use crate::quackpack::util::PANIC_MESSAGE;
+use crate::{QuackResult, StrId, qp_bail_internal};
 
 static INTERNED_LOCATION_CACHE: OnceLock<Mutex<HashSet<&'static Location>>> = OnceLock::new();
 
@@ -52,9 +45,9 @@ impl InternedLocation {
     }
 }
 
-impl From<Location> for InternedLocation {
-    fn from(value: Location) -> Self {
-        Self::new(value)
+impl<T: Into<Location>> From<T> for InternedLocation {
+    fn from(value: T) -> Self {
+        Self::new(value.into())
     }
 }
 
@@ -72,7 +65,7 @@ impl AsRef<Location> for InternedLocation {
     }
 }
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Eq, Hash, PartialEq)]
 pub enum Location {
     Registry {
         url: Url,
@@ -86,6 +79,29 @@ pub enum Location {
     Local {
         path: PathBuf,
     },
+}
+
+impl std::fmt::Debug for Location {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Registry { url, real_name } => f
+                .debug_struct("Registry")
+                .field("url", &url.as_str())
+                .field("real_name", real_name)
+                .finish(),
+            Self::Git {
+                url,
+                branch_or_tag,
+                rev,
+            } => f
+                .debug_struct("Git")
+                .field("url", &url.as_str())
+                .field("branch_or_tag", branch_or_tag)
+                .field("rev", rev)
+                .finish(),
+            Self::Local { path } => f.debug_struct("Local").field("path", path).finish(),
+        }
+    }
 }
 
 impl From<&Dependency> for Location {

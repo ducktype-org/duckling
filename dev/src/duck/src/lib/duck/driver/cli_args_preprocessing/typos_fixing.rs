@@ -1,29 +1,27 @@
 //! Try to (wisely) fix user typos.
-use std::{collections::HashMap, ffi::OsString, path::PathBuf};
+use std::collections::HashMap;
+use std::ffi::OsString;
+use std::path::PathBuf;
 
-use crate::{
-    DuckCtx, QuackResult,
-    duck::driver::subcommands::run_script::is_name_possible_script_path_subcmd, qp_bail,
-};
 use clap::ArgMatches;
 use itertools::Itertools;
 use tracing::debug;
 
-use crate::duck::driver::{
-    cli,
-    cli_args_preprocessing::{
-        builtin::{get_builtin_alias_expansion, get_builtin_aliases, is_builtin_subcommand},
-        levenshtein,
-    },
-    subcommands::subcommands,
+use crate::duck::driver::cli;
+use crate::duck::driver::cli_args_preprocessing::builtin::{
+    get_builtin_alias_expansion, get_builtin_aliases, is_builtin_subcommand,
 };
+use crate::duck::driver::cli_args_preprocessing::levenshtein;
+use crate::duck::driver::subcommands::run_script::is_name_possible_script_path_subcmd;
+use crate::duck::driver::subcommands::subcommands;
+use crate::{DuckContext, QuackResult, qp_bail};
 
 /// Try to fix user typos.
 ///
 /// We're using [levenshtein distance](levenshtein::distance) for checking what is a typo.
 pub fn fix_typos(
     args: ArgMatches,
-    ctx: &DuckCtx,
+    ctx: &DuckContext,
     external_cmds: &HashMap<String, PathBuf>,
 ) -> QuackResult<ArgMatches> {
     // No subcommand.
@@ -63,7 +61,7 @@ pub fn fix_typos(
 /// - external subcommands,
 /// - anything that resembles a path to a script.
 fn is_valid_subcmd(
-    ctx: &DuckCtx,
+    ctx: &DuckContext,
     name: &str,
     external_cmds: &HashMap<String, PathBuf>,
 ) -> QuackResult<bool> {
@@ -78,7 +76,7 @@ fn is_valid_subcmd(
 ///
 /// This is a list containing all values for which [`is_valid_subcmd`] returns true.
 fn possible_targets(
-    ctx: &DuckCtx,
+    ctx: &DuckContext,
     external_cmds: &HashMap<String, PathBuf>,
 ) -> QuackResult<Vec<String>> {
     let mut targets = subcommands()
@@ -185,7 +183,7 @@ mod tests {
     #[test]
     fn test_fixes() {
         let args_matches = cli().try_get_matches_from(["duck", "buil"]).unwrap();
-        let mut ctx = DuckCtx::new().unwrap();
+        let mut ctx = DuckContext::new().unwrap();
         ctx.duck_cfg_mut().set_fixes_enabled(true);
         ctx.duck_cfg_mut().set_max_fix_dist(1);
         let external_cmds = HashMap::new();
@@ -197,7 +195,7 @@ mod tests {
     // #[test]
     // fn test_multiple_targets() {
     //     let args_matches = cli().try_get_matches_from(["duck", "inaa"]).unwrap();
-    //     let mut ctx = DuckCtx::new().unwrap();
+    //     let mut ctx = DuckContext::new().unwrap();
     //     ctx.duck_cfg_mut().set_fixes_enabled(true);
     //     ctx.duck_cfg_mut().set_max_fix_dist(100);
     //     let external_cmds = HashMap::new();
@@ -212,8 +210,8 @@ mod tests {
 
     #[test]
     fn test_single_closest_target() {
-        let args_matches = cli().try_get_matches_from(["duck", "ini"]).unwrap();
-        let mut ctx = DuckCtx::new().unwrap();
+        let args_matches = cli().try_get_matches_from(["duck", "ini", "f"]).unwrap();
+        let mut ctx = DuckContext::new().unwrap();
         ctx.duck_cfg_mut().set_fixes_enabled(true);
         ctx.duck_cfg_mut().set_max_fix_dist(100);
         let external_cmds = HashMap::new();
@@ -229,7 +227,7 @@ mod tests {
         )]);
 
         let args_matches = cli().try_get_matches_from(["duck", "ny_aias"]).unwrap();
-        let mut ctx = DuckCtx::new().unwrap();
+        let mut ctx = DuckContext::new().unwrap();
         ctx.duck_cfg_mut().set_fixes_enabled(true);
         ctx.duck_cfg_mut().set_max_fix_dist(2);
         ctx.duck_cfg_mut().set_aliases(fake_aliases);
@@ -243,7 +241,7 @@ mod tests {
         let args_matches = cli()
             .try_get_matches_from(["duck", "my_external_xmd"])
             .unwrap();
-        let mut ctx = DuckCtx::new().unwrap();
+        let mut ctx = DuckContext::new().unwrap();
         ctx.duck_cfg_mut().set_fixes_enabled(true);
         ctx.duck_cfg_mut().set_max_fix_dist(1);
         let external_cmds = HashMap::from([(String::from("my_external_cmd"), PathBuf::new())]);
@@ -254,7 +252,7 @@ mod tests {
     #[test]
     fn test_tries_fixing_to_builtin_alias() {
         let args_matches = cli().try_get_matches_from(["duck", "a"]).unwrap();
-        let mut ctx = DuckCtx::new().unwrap();
+        let mut ctx = DuckContext::new().unwrap();
         ctx.duck_cfg_mut().set_fixes_enabled(true);
         ctx.duck_cfg_mut().set_max_fix_dist(1);
         let external_cmds = HashMap::new();

@@ -3,15 +3,11 @@ use std::collections::{HashMap, HashSet};
 
 use setup::*;
 
-use crate::quackpack::core::{
-    PackageLoader,
-    compile::{
-        BuildContext,
-        early_dag::{DependencyNode, EarlyDag},
-        profiles::Profile,
-    },
-    storage::paths::Storage,
-};
+use crate::quackpack::core::PackageLoader;
+use crate::quackpack::core::compile::BuildContext;
+use crate::quackpack::core::compile::early_dag::{DependencyNode, EarlyDag};
+use crate::quackpack::core::compile::profiles::Profile;
+use crate::quackpack::core::storage::paths::Storage;
 
 #[test]
 fn creates_valid_initial_graph() {
@@ -20,11 +16,12 @@ fn creates_valid_initial_graph() {
     let profile =
         Profile::construct_profile("dev".into(), package.package().manifest().profiles()).unwrap();
     let bcx = BuildContext {
-        package: &package,
+        pcx: &package,
         freeze: freeze(),
-        storage: Storage::new(ctx.default_storage_root()),
+        storage: Storage::new(ctx.default_storage_root().into_not_locked_path()),
         used_features: vec![],
         profile,
+        script_path: None,
     };
     let graph = EarlyDag::new_early(&bcx).unwrap();
     assert_eq!(graph.dag.root.to_string(), "root 1.0.0");
@@ -58,11 +55,12 @@ fn expands_valid_features1() {
     let profile =
         Profile::construct_profile("dev".into(), package.package().manifest().profiles()).unwrap();
     let bcx = BuildContext {
-        package: &package,
+        pcx: &package,
         freeze: freeze(),
-        storage: Storage::new(ctx.default_storage_root()),
+        storage: Storage::new(ctx.default_storage_root().into_not_locked_path()),
         used_features: vec!["use_foo_with_baz".into()],
         profile,
+        script_path: None,
     };
     let mut graph = EarlyDag::new_early(&bcx).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
@@ -98,11 +96,12 @@ fn expands_valid_features2() {
     let profile =
         Profile::construct_profile("dev".into(), package.package().manifest().profiles()).unwrap();
     let bcx = BuildContext {
-        package: &package,
+        pcx: &package,
         freeze: freeze(),
-        storage: Storage::new(ctx.default_storage_root()),
+        storage: Storage::new(ctx.default_storage_root().into_not_locked_path()),
         used_features: vec!["use_bar_with_baz".into()],
         profile,
+        script_path: None,
     };
     let mut graph = EarlyDag::new_early(&bcx).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
@@ -138,11 +137,12 @@ fn expands_valid_features3() {
     let profile =
         Profile::construct_profile("dev".into(), package.package().manifest().profiles()).unwrap();
     let bcx = BuildContext {
-        package: &package,
+        pcx: &package,
         freeze: freeze(),
-        storage: Storage::new(ctx.default_storage_root()),
+        storage: Storage::new(ctx.default_storage_root().into_not_locked_path()),
         used_features: vec!["full".into()],
         profile,
+        script_path: None,
     };
     let mut graph = EarlyDag::new_early(&bcx).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
@@ -185,11 +185,12 @@ fn errors_with_nonexistent_features() {
     let profile =
         Profile::construct_profile("dev".into(), package.package().manifest().profiles()).unwrap();
     let bcx = BuildContext {
-        package: &package,
+        pcx: &package,
         freeze: freeze(),
-        storage: Storage::new(ctx.default_storage_root()),
+        storage: Storage::new(ctx.default_storage_root().into_not_locked_path()),
         used_features: vec!["nonexistent".into()],
         profile,
+        script_path: None,
     };
     let mut graph = EarlyDag::new_early(&bcx).unwrap();
     let err = graph.populate_features(&bcx.used_features).unwrap_err();
@@ -207,11 +208,12 @@ fn removes_inactive_deps1() {
     let profile =
         Profile::construct_profile("dev".into(), package.package().manifest().profiles()).unwrap();
     let bcx = BuildContext {
-        package: &package,
+        pcx: &package,
         freeze: freeze(),
-        storage: Storage::new(ctx.default_storage_root()),
+        storage: Storage::new(ctx.default_storage_root().into_not_locked_path()),
         used_features: vec![],
         profile,
+        script_path: None,
     };
     let mut graph = EarlyDag::new_early(&bcx).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
@@ -241,11 +243,12 @@ fn removes_inactive_deps2() {
     let profile =
         Profile::construct_profile("dev".into(), package.package().manifest().profiles()).unwrap();
     let bcx = BuildContext {
-        package: &package,
+        pcx: &package,
         freeze: freeze(),
-        storage: Storage::new(ctx.default_storage_root()),
+        storage: Storage::new(ctx.default_storage_root().into_not_locked_path()),
         used_features: vec!["use_foo_with_baz".into()],
         profile,
+        script_path: None,
     };
     let mut graph = EarlyDag::new_early(&bcx).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
@@ -278,11 +281,12 @@ fn removes_inactive_deps3() {
     let profile =
         Profile::construct_profile("dev".into(), package.package().manifest().profiles()).unwrap();
     let bcx = BuildContext {
-        package: &package,
+        pcx: &package,
         freeze: freeze(),
-        storage: Storage::new(ctx.default_storage_root()),
+        storage: Storage::new(ctx.default_storage_root().into_not_locked_path()),
         used_features: vec!["use_bar_with_baz".into()],
         profile,
+        script_path: None,
     };
     let mut graph = EarlyDag::new_early(&bcx).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
@@ -315,11 +319,12 @@ fn removes_inactive_deps4() {
     let profile =
         Profile::construct_profile("dev".into(), package.package().manifest().profiles()).unwrap();
     let bcx = BuildContext {
-        package: &package,
+        pcx: &package,
         freeze: freeze(),
-        storage: Storage::new(ctx.default_storage_root()),
+        storage: Storage::new(ctx.default_storage_root().into_not_locked_path()),
         used_features: vec!["full".into()],
         profile,
+        script_path: None,
     };
     let mut graph = EarlyDag::new_early(&bcx).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
@@ -355,11 +360,12 @@ fn cycle_in_freeze() {
     let profile =
         Profile::construct_profile("dev".into(), package.package().manifest().profiles()).unwrap();
     let bcx = BuildContext {
-        package: &package,
+        pcx: &package,
         freeze: freeze_with_cycle(),
-        storage: Storage::new(ctx.default_storage_root()),
+        storage: Storage::new(ctx.default_storage_root().into_not_locked_path()),
         used_features: vec![],
         profile,
+        script_path: None,
     };
     let err = EarlyDag::new_early(&bcx).unwrap_err();
     assert_eq!(
@@ -375,11 +381,12 @@ fn missing_direct_dep_in_freeze() {
     let profile =
         Profile::construct_profile("dev".into(), package.package().manifest().profiles()).unwrap();
     let bcx = BuildContext {
-        package: &package,
+        pcx: &package,
         freeze: freeze_without_direct_dep(),
-        storage: Storage::new(ctx.default_storage_root()),
+        storage: Storage::new(ctx.default_storage_root().into_not_locked_path()),
         used_features: vec![],
         profile,
+        script_path: None,
     };
     let err = EarlyDag::new_early(&bcx).unwrap_err();
     assert_eq!(
@@ -395,11 +402,12 @@ fn missing_transitive_dep_in_freeze() {
     let profile =
         Profile::construct_profile("dev".into(), package.package().manifest().profiles()).unwrap();
     let bcx = BuildContext {
-        package: &package,
+        pcx: &package,
         freeze: freeze_without_transitive_dep(),
-        storage: Storage::new(ctx.default_storage_root()),
+        storage: Storage::new(ctx.default_storage_root().into_not_locked_path()),
         used_features: vec![],
         profile,
+        script_path: None,
     };
     let err = EarlyDag::new_early(&bcx).unwrap_err();
     assert_eq!(

@@ -18,18 +18,19 @@
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
+#include <helios/tsh/queries/types.hpp>
+#include <helios/tsh/types.hpp>
 #include <helios/utils/get_expr_symid.hpp>
 #include <helios_private/hout_creation/definition_generation/class_constructors.hpp>
 #include <helios_private/hout_creation/expressions/coercions.hpp>
 #include <helios_private/hout_creation/expressions/function_calls/call_processing.hpp>
 #include <helios_private/hout_creation/expressions/function_calls/square_call_processing.hpp>
+#include <helios_private/hout_creation/expressions/hout_of_subexpr.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/lookup/lookup_result.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
-#include <tsh/queries/types.hpp>
-#include <tsh/types.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
@@ -77,11 +78,11 @@ namespace compiler::helios::code {
 			}
 
 		public:
-			CandidateNote(dia::SourcePosition source_position):
+			CandidateNote(dia_int::StablePosition source_position):
 				  MessageWithCodeFragmentAndCause(source_position) {}
 		};
 
-		CallInvalidCallablesError(dia::SourcePosition source_position):
+		CallInvalidCallablesError(dia_int::StablePosition source_position):
 			  MessageWithCodeFragmentAndCause(source_position) {
 			addAttachedMessage(makeBox<InvalidCallableReferenceDocs>());
 		}
@@ -281,11 +282,11 @@ namespace compiler::helios::code {
 			// Check error condition and report error.
 			if (looked_up_callees.size() > 1) {
 				auto error = makeBox<CallInvalidCallablesError>(
-					chain_elements.at(index).unlock(query_ctx)->getSourcePosition()
+					chain_elements.at(index).unlock(query_ctx)->getStablePosition()
 				);
 				for (const auto& candidate: looked_up_callees) {
 					error->addAttachedMessage(makeBox<CallInvalidCallablesError::CandidateNote>(
-						stmt(query_ctx, candidate).value()->getSourcePosition()
+						stmt(query_ctx, candidate).value()->getStablePosition()
 					));
 				}
 				query_ctx.logInt(std::move(error));
@@ -310,7 +311,7 @@ namespace compiler::helios::code {
 			default: {
 				query_ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 					base::strConcat("Round Call '()' operator on symbol: ", name(symbol)),
-					stmt(query_ctx, symbol).value()->getSourcePosition()
+					stmt(query_ctx, symbol).value()->getStablePosition()
 				));
 				return query::Failed();
 			}
@@ -346,7 +347,7 @@ namespace compiler::helios::code {
 			}
 			case lexer::Token::Square: {
 				const auto lookup_result = h_interface.lookupExpectUnique(
-					ident->getSourcePosition(), query_ctx, ident->getName().value
+					ident->getStablePosition(), query_ctx, ident->getName().value
 				);
 				UNPACK_QRESULT_MOVE(const auto& sym_list =, lookup_result);
 
@@ -361,8 +362,8 @@ namespace compiler::helios::code {
 					UNPACK_QRESULT_MOVE(auto expr =, square_call_res);
 					return ChainState::ofExpr(std::move(expr));
 				}
-				query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
-					"This symbol cannot be indexed.", call_expr->getSourcePosition()
+				query_ctx.logInt(makeBox<dia_int::PlaceholderError>(
+					"This symbol cannot be indexed.", call_expr->getStablePosition()
 				));
 				return query::Failed();
 			}
@@ -371,7 +372,7 @@ namespace compiler::helios::code {
 					base::strConcat(
 						"HOUT call with unsupported bracket type: ", char(call_expr->getType())
 					),
-					call_expr->getSourcePosition()
+					call_expr->getStablePosition()
 				));
 				return query::Failed();
 			}
@@ -390,43 +391,44 @@ namespace compiler::helios::code {
 			pst::Access<pst::expr::KeywordLiteral> keyword, pst::Access<pst::expr::Call> call_expr
 		) -> query::QResult<ChainState> {
 			//  @TODO: #1530 This is a temporary mock implementation
-			auto hout_expr_result = query_ctx.query<QueryHoutOfExpr>({ keyword });
-			UNPACK_QRESULT_CREF_TO_BOX(CRef<Expr> hout_expr =, hout_expr_result);
+			auto hout_expr_result = subExprFromPST(query_ctx, keyword);
+			UNPACK_QRESULT_MOVE(auto hout_expr =, hout_expr_result);
 
 			switch (call_expr->getType()) {
 			case lexer::Token::Round: {
 				if (auto literal_type_expr = dynamic_cast<const LiteralTypeExpr*>(hout_expr.get())) {
 					auto args = call_expr->getArgs().unlock(query_ctx);
 					if (args->size() != 1) {
-						query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+						query_ctx.logInt(makeBox<dia_int::PlaceholderError>(
 							"Type cast must have exactly one argument.",
-							call_expr->getSourcePosition()
+							call_expr->getStablePosition()
 						));
 						return query::Failed();
 					}
 
 					auto arg_access      = (*args->begin()).unlock(query_ctx);
-					auto arg_expr_result = query_ctx.query<QueryHoutOfExpr>(
-						arg_access->getArg().unlock(query_ctx)->getExpr()
+					auto arg_expr_result = subExprFromPST(
+						query_ctx, arg_access->getArg().unlock(query_ctx)->getExpr()
 					);
-					UNPACK_QRESULT_CREF_TO_BOX(CRef<Expr> arg_expr =, arg_expr_result);
+					UNPACK_QRESULT_MOVE(auto arg_expr =, arg_expr_result);
 
 					auto cast_expr = makeBox<CastExpr>(
 						query_ctx,
-						multiplePstOrigin({ keyword, call_expr }),
-						arg_expr->clone(),
+						multiplePstOriginOrdered({ keyword, call_expr }),
+						std::move(arg_expr),
 						literal_type_expr->value_type
 					);
 					return ChainState::ofExpr(std::move(cast_expr));
 				}
 
-				query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
-					"Unsupported keyword literal in call expression.", call_expr->getSourcePosition()
+				query_ctx.logInt(makeBox<dia_int::PlaceholderError>(
+					"Unsupported keyword literal in call expression.", call_expr->getStablePosition()
 				));
 				break;
 			}
 			case lexer::Token::Square: {
-				auto square_call_res = processSquareCall(query_ctx, hout_expr->clone(), call_expr);
+				auto square_call_res
+					= processSquareCall(query_ctx, std::move(hout_expr), call_expr);
 				UNPACK_QRESULT_MOVE(auto expr =, square_call_res);
 				return ChainState::ofExpr(std::move(expr));
 			}
@@ -435,7 +437,7 @@ namespace compiler::helios::code {
 					base::strConcat(
 						"HOUT call with unsupported bracket type: ", char(call_expr->getType())
 					),
-					call_expr->getSourcePosition()
+					call_expr->getStablePosition()
 				));
 				return query::Failed();
 			}
@@ -455,7 +457,7 @@ namespace compiler::helios::code {
 			// identifier it will return ChainContext with namespace or expr.
 			auto        scope         = query_ctx.query<QueryPrimaryCodeScopeFor>({ ident });
 			const auto& lookup_result = HInterface::ofScopeWithParents(scope).lookupExpectUnique(
-				ident->getName().position, query_ctx, ident->getName().value
+				ident->getStablePosition(), query_ctx, ident->getName().value
 			);
 			// @TODO: #1412 handle dealias expressions:
 			UNPACK_QRESULT_MOVE(const auto& sym_list =, lookup_result);
@@ -469,12 +471,12 @@ namespace compiler::helios::code {
 		 * is a more complicated expression like (NS1.NS2).a.b.c
 		 */
 		auto processPSTExpr(pst::Access<pst::ExprElement> pst_expr) -> query::QResult<ChainState> {
-			auto expr = query_ctx.query<QueryHoutOfExpr>({ pst_expr });
-			UNPACK_QRESULT_CREF_TO_BOX(CRef<Expr> hout_expr =, expr);
-			auto symbol = getIdentifierExprSymID(hout_expr);
+			auto expr_result = subExprFromPST(query_ctx, pst_expr);
+			UNPACK_QRESULT_MOVE(auto expr =, expr_result);
+			auto symbol = getIdentifierExprSymID(expr.ref());
 			if (symbol.has_value())
 				return processNamespaceOrValue(symbol.value(), pstOrigin(pst_expr), pst_expr);
-			return ChainState::ofExpr(hout_expr->clone());
+			return ChainState::ofExpr(std::move(expr));
 		}
 
 		/**
@@ -511,7 +513,7 @@ namespace compiler::helios::code {
 					base::strConcat(
 						"HOUT call with unsupported bracket type: ", char(call_expr->getType())
 					),
-					call_expr->getSourcePosition()
+					call_expr->getStablePosition()
 				));
 				return query::Failed();
 			}
@@ -524,8 +526,8 @@ namespace compiler::helios::code {
 		auto processPSTExpr(SymID namespace_like_symbol, pst::Access<pst::expr::Call> call_expr)
 			-> query::QResult<ChainState> {
 			(void) namespace_like_symbol;
-			query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
-				base::strConcat("Namespace is not callable"), call_expr->getSourcePosition()
+			query_ctx.logInt(makeBox<dia_int::PlaceholderError>(
+				base::strConcat("Namespace is not callable"), call_expr->getStablePosition()
 			));
 			return query::Failed();
 		}
@@ -565,7 +567,7 @@ namespace compiler::helios::code {
 						}
 						auto node = makeBox<AccessExpr>(
 							query_ctx,
-							pstOrigin(current_expr->origin, expr_access),
+							pstOriginOrdered(current_expr->origin, expr_access),
 							std::move(current_expr),
 							sym
 						);
@@ -577,11 +579,11 @@ namespace compiler::helios::code {
 						query_ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 							"Handling of access to method without a call is not implemented yet"
 							"argument at compile time",
-							current_expr->origin.getSourcePosition()
+							current_expr->origin.getStablePosition()
 						));
 						return query::Failed();
 					}
-					query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+					query_ctx.logInt(makeBox<dia_int::PlaceholderError>(
 						base::strConcat(
 							"Unsupported symbol kind in type lookup for symbol: ",
 							prettyDebugPrint(sym, query_ctx)
@@ -592,7 +594,7 @@ namespace compiler::helios::code {
 					return query::Failed();
 				}
 				variant_case_novalue(errors::Ambiguity) {
-					query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+					query_ctx.logInt(makeBox<dia_int::PlaceholderError>(
 						"Accessed value is ambiguous.", expr_access->getName().position
 					));
 					return query::Failed();
@@ -603,7 +605,7 @@ namespace compiler::helios::code {
 					// obj.selectDynamic("a"). See Scala's Dynamic:
 					// https://www.scala-lang.org/api/current/scala/Dynamic.html
 
-					query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+					query_ctx.logInt(makeBox<dia_int::PlaceholderError>(
 						"Accessed value not found.", expr_access->getName().position
 					));
 					return query::Failed();
@@ -623,12 +625,12 @@ namespace compiler::helios::code {
 			const auto& lookup_result
 				= HInterface::ofSymbol(namespace_like_symbol)
 			          .lookupExpectUnique(
-						  expr_access->getSourcePosition(), query_ctx, expr_access->getName().value
+						  expr_access->getStablePosition(), query_ctx, expr_access->getName().value
 					  );
 			// @TODO: #1412 handle dealias expressions:
 			UNPACK_QRESULT_MOVE(const auto& sym_list =, lookup_result);
 			auto whole_expr_origin
-				= pstOrigin(current_state.getNamespaceLikePstOrigin(), expr_access);
+				= pstOriginOrdered(current_state.getNamespaceLikePstOrigin(), expr_access);
 			return processNamespaceOrValue(sym_list.back(), whole_expr_origin, expr_access);
 		}
 
@@ -682,7 +684,7 @@ namespace compiler::helios::code {
 					base::strConcat(
 						"HOUT call with unsupported bracket type: ", char(call_expr->getType())
 					),
-					call_expr->getSourcePosition()
+					call_expr->getStablePosition()
 				));
 				return query::Failed();
 			}
@@ -718,14 +720,14 @@ namespace compiler::helios::code {
 			case lexer::Token::Square: {
 				auto lookup_result = HInterface::ofSymbol(namespace_like_symbol)
 				                         .lookupExpectUnique(
-											 expr_access->getSourcePosition(),
+											 expr_access->getStablePosition(),
 											 query_ctx,
 											 expr_access->getName().value
 										 );
 				UNPACK_QRESULT_MOVE(const auto& sym_list =, lookup_result);
 
 				auto whole_expr_origin
-					= pstOrigin(current_state.getNamespaceLikePstOrigin(), expr_access);
+					= pstOriginOrdered(current_state.getNamespaceLikePstOrigin(), expr_access);
 				auto state_res
 					= processNamespaceOrValue(sym_list.back(), whole_expr_origin, expr_access);
 				UNPACK_QRESULT_MOVE(auto access_state =, state_res);
@@ -738,8 +740,8 @@ namespace compiler::helios::code {
 				}
 
 
-				query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
-					"This symbol cannot be indexed", call_expr->getSourcePosition()
+				query_ctx.logInt(makeBox<dia_int::PlaceholderError>(
+					"This symbol cannot be indexed", call_expr->getStablePosition()
 				));
 				return query::Failed();
 			}
@@ -748,7 +750,7 @@ namespace compiler::helios::code {
 					base::strConcat(
 						"HOUT call with unsupported bracket type: ", char(call_expr->getType())
 					),
-					call_expr->getSourcePosition()
+					call_expr->getStablePosition()
 				));
 				return query::Failed();
 			}
@@ -794,11 +796,11 @@ namespace compiler::helios::code {
 				return ChainState::ofExpr(std::move(field_expr));
 			}
 			default:
-				query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+				query_ctx.logInt(makeBox<dia_int::PlaceholderError>(
 					base::strConcat(
 						"Unsupported kind of the symbol `", name(symbol), "` in chain expression."
 					),
-					chain_elements.at(index).unlock(query_ctx)->getSourcePosition()
+					chain_elements.at(index).unlock(query_ctx)->getStablePosition()
 				));
 				return query::Failed();
 			}
@@ -819,19 +821,19 @@ namespace compiler::helios::code {
 			// @TODO: #2135 handle ambiguity in class scopes
 			auto scope           = ctx.query<QueryPrimaryCodeScopeFor>({ pst_elem });
 			auto sym_list_result = HInterface::ofScopeWithParents(scope).lookupExpectUnique(
-				pst_elem->getSourcePosition(), ctx, base::StrID("self")
+				pst_elem->getStablePosition(), ctx, base::StrID("self")
 			);
 			UNPACK_QRESULT_MOVE(const auto& sym_list =, sym_list_result);
 
 			auto self_expr = makeBox<IdentifierExpr>(ctx, generatedOrigin(), sym_list.back());
 			auto self_type = self_expr->expression_type.getSymbolType().getType();
 
-			auto fields = self_type.getInterface(ctx)->getFieldsView();
+			auto fields = self_type.getInterface(query_ctx)->getFieldsView();
 			if (std::ranges::find(fields, field_symbol, &tsh::InterfaceElement::getSymbol)
 			    == fields.end()) {
-				ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+				ctx.logInt(makeBox<dia_int::PlaceholderError>(
 					"No such field found in the interface of prefix expression.",
-					pst_elem->getSourcePosition()
+					pst_elem->getStablePosition()
 				));
 				return query::Failed();
 			}
@@ -875,17 +877,17 @@ namespace compiler::helios::code {
 					variant_match(sym_list) {
 						variant_case(SymbolList, result) { return result.back(); }
 						variant_case_novalue(errors::SymbolNotFound) {
-							ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+							ctx.logInt(makeBox<dia_int::PlaceholderError>(
 								"Method call without `self` argument.",
-								call_expr->getSourcePosition()
+								call_expr->getStablePosition()
 							));
 							return query::Failed();
 						}
 						variant_case_novalue(errors::Ambiguity) {
-							ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+							ctx.logInt(makeBox<dia_int::PlaceholderError>(
 								"Multiple candidates for `self` argument found which should be "
 								"impossible.",
-								call_expr->getSourcePosition()
+								call_expr->getStablePosition()
 							));
 							return query::Failed();
 						}
@@ -1050,9 +1052,9 @@ namespace compiler::helios::code {
 				}
 
 				else {
-					query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+					query_ctx.logInt(makeBox<dia_int::PlaceholderError>(
 						"Expected access or call expression in chain expression",
-						currentElem().value()->getSourcePosition()
+						currentElem().value()->getStablePosition()
 					));
 					return query::Failed();
 				}
@@ -1071,9 +1073,9 @@ namespace compiler::helios::code {
 			}
 
 			if (result_sequence.empty()) {
-				query_ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+				query_ctx.logInt(makeBox<dia_int::PlaceholderError>(
 					"Chain expression resulted in empty expression sequence.",
-					chain_elements[0].unlock(query_ctx)->getSourcePosition()
+					chain_elements[0].unlock(query_ctx)->getStablePosition()
 				));
 				return query::Failed();
 			}

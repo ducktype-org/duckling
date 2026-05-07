@@ -3,13 +3,8 @@ Tests:
     # @TODO: #2448 Investigate why deterministic compilation check fails for this test
     enable_conc_deterministic_tests: "false"
     Cases:
-      dvm:
-        backend: dvm
-        Output:
-          String: ""
-        ExitCode: 0
-      llvm:
-        backend: llvm
+      all:
+        backend: all
         Output:
           String: ""
         ExitCode: 0

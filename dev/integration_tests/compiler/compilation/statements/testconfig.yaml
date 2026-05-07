@@ -3,11 +3,8 @@
 Tests:
   conditional: # if, if-else
     Cases:
-      llvm:
-        backend: llvm
-        ExitCode: 99
-      dvm:
-        backend: dvm
+      all:
+        backend: all
         ExitCode: 99
   declaration_coercions:
     Cases:
@@ -27,7 +24,6 @@ Tests:
     enable_conc_deterministic_tests: "false"
     Cases:
       # @TODO: #1916 When arrays are handled in DVM, add a DVM case.
-      # @TODO: #1560 When records are handled in DVM, add a DVM case.
       llvm:
         backend: llvm
         Output:
@@ -44,13 +40,8 @@ Tests:
 
   named_statements:
     Cases:
-      llvm:
-        backend: llvm
-        Output:
-          String: ""
-        ExitCode: 0
-      dvm:
-        backend: dvm
+      all:
+        backend: all
         Output:
           String: ""
         ExitCode: 0

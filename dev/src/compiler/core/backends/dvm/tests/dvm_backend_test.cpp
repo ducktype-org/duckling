@@ -30,6 +30,10 @@ public:
 		TESTER_ADD_TEST(booleanOperationsTest);
 		TESTER_ADD_TEST(comparisonsTest);
 		TESTER_ADD_TEST(referencesTest);
+		// @TODO: #2246 This test works well when compiled with `duckc dvm_run` although fails when
+		// tested here because constructors aren't inserted properly. When this pipeline is unified,
+		// uncomment this test.
+		// TESTER_ADD_TEST(recordsTest);
 		TESTER_ADD_TEST(unitsTest);
 	}
 
@@ -47,11 +51,11 @@ private:
 				= frontend::createModuleTreeWithRandomPackageID(fs::File(path(module_path)));
 			auto& top_level = ctx.query<helios::QueryTopLevelEntities>(module)->valueOrPanic();
 
-			backend_vm::DVMCodeBuilder m(ctx, false);
+			backend_vm::DVMCodeBuilder m(ctx, false, false);
 
 			for (auto& hout_glob: top_level.glob_data) {
-				auto lir_glob = lir::LIRGlobal::fromHOUT(ctx, hout_glob);
-				variant_match(hout_glob.value) {
+				auto lir_glob = lir::LIRGlobal::fromHOUT(ctx, *hout_glob);
+				variant_match(hout_glob->value) {
 					variant_case(helios::HOUTGlobalVariable, var) {
 						CRef mir_func = &ctx.query<mir::LowerGlobalDataToMIRCtor>({ hout_glob })
 						                     ->valueOrThrow();
@@ -75,14 +79,14 @@ private:
 								"remove "
 								"the fail after #1553. ",
 								"Global constant: ",
-								hout_glob.original_name.strView()
+								hout_glob->original_name.strView()
 							));
 						}
 					}
 					variant_default {
 						fail(base::strConcat(
 							"Unexpected global data type in module: ",
-							hout_glob.original_name.strView()
+							hout_glob->original_name.strView()
 						));
 					}
 				}
@@ -135,6 +139,16 @@ private:
 			{},
 			"10\n20\n20\n20\n20\n21\n16\n20\n-20\n-20\n-40\n-"
 			"30\n222\n111\n222\n400\n400\n400\n500\n",
+			{},
+			0
+		);
+	}
+
+	void recordsTest() {
+		runTest(
+			"modules/records",
+			{},
+			"10\n20\n-1\n-2\n5\n15\n42\n50\n100\n101\n0\n300\n99\n2000\n0\n1\n",
 			{},
 			0
 		);

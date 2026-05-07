@@ -1,12 +1,14 @@
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
 
-use crate::quackpack::core::gathering::error_surpression::{GathererComputation, GathererResult};
-use crate::quackpack::core::gathering::fetch_types::{
+use crate::quackpack::core::solver::gathering::error_surpression::{
+    GathererComputation, GathererResult,
+};
+use crate::quackpack::core::solver::gathering::fetch_types::{
     FetchFailure, FetchResponse, FetchSuccess, ManifestsRequest, NotPinnedFailure,
     NotPinnedRequest, NotPinnedSuccess, PinnedFailure, PinnedRequest, PinnedSuccess,
 };
-use crate::quackpack::core::types_common::{
+use crate::quackpack::core::solver::types_common::{
     ExpandedPackage, InternedExpandedLocation, InternedLocation, Location, Package,
 };
 use crate::quackpack::core::version::CompatibilityCheck;
@@ -589,7 +591,7 @@ where {
                 "s"
             };
             return Ok(GathererComputation::only_error(qp_err!(
-                "Package {package}` does not have feature{plural} `{missing_features}`"
+                "package {package} does not have feature{plural} `{missing_features}`"
             )));
         }
         if !requested_features.is_empty() || !pkg_data.referenced_by_requests {
@@ -603,6 +605,7 @@ where {
 }
 
 /// A struct containing all the information gathered by the gatherer.
+#[derive(Debug)]
 pub struct GatheredInfo {
     /// The gathered manifests of the packages referenced in requests.
     pub gathered_manifests: HashMap<ExpandedPackage, Box<Manifest>>,

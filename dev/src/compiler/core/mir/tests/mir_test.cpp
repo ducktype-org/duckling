@@ -6,10 +6,10 @@
 #include <helios/queries/queries.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
+#include <helios/tsh/queries.hpp>
 #include <mir/mir_lowering/mir_queries.hpp>
 #include <mir/mir_lowering/mir_validation.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
-#include <tsh/queries.hpp>
 
 #include <query_framework/context/context.hpp>
 #include <query_framework/entry/with_context_do.hpp>
@@ -99,7 +99,7 @@ private:
 
 			auto globals = unit.glob_data;
 			ASSERT_EQUAL(2, globals.size());
-			ASSERT_EQUAL(base::StrID("c"), globals.at(0).original_name);
+			ASSERT_EQUAL(base::StrID("c"), globals.at(0)->original_name);
 
 			auto& c_ctor = ctx.query<compiler::mir::LowerGlobalDataToMIRCtor>({ globals.at(0) })
 			                   ->valueOrThrow();

@@ -23,19 +23,20 @@
 namespace {
 	inline constexpr std::string_view CURSOR_LEFT_SEQ
 		= ESC "[D";  // \x1b is start of ANSI escape sequence - needed to control terminal.
-	inline constexpr std::string_view CURSOR_RIGHT_SEQ     = ESC "[C";
-	inline constexpr std::string_view CURSOR_UP_SEQ        = ESC "[A";
-	inline constexpr char             BACKSPACE_CHAR       = 0x7f;  // DEL
-	inline constexpr char             NEWLINE_CHAR         = '\n';
-	inline constexpr char             CARRIAGE_RETURN_CHAR = '\r';
-	inline constexpr char             ESC_CHAR             = 0x1b;
-	inline constexpr char             ARROW_SEQ_LEAD       = '[';
-	inline constexpr char             ARROW_UP_CODE        = 'A';
-	inline constexpr char             ARROW_DOWN_CODE      = 'B';
-	inline constexpr char             ARROW_LEFT_CODE      = 'D';
-	inline constexpr char             ARROW_RIGHT_CODE     = 'C';
-	inline constexpr char             PRINTABLE_MIN        = 0x20;  // Space
-	inline constexpr char             PRINTABLE_MAX        = 0x7e;  // ~
+	inline constexpr std::string_view CURSOR_RIGHT_SEQ        = ESC "[C";
+	inline constexpr std::string_view CURSOR_UP_SEQ           = ESC "[A";
+	inline constexpr char             BACKSPACE_CHAR          = 0x7f;  // DEL
+	inline constexpr char             NEWLINE_CHAR            = '\n';
+	inline constexpr char             CARRIAGE_RETURN_CHAR    = '\r';
+	inline constexpr char             ESC_CHAR                = 0x1b;
+	inline constexpr char             ARROW_SEQ_LEAD          = '[';
+	inline constexpr char             ARROW_UP_CODE           = 'A';
+	inline constexpr char             ARROW_DOWN_CODE         = 'B';
+	inline constexpr char             ARROW_LEFT_CODE         = 'D';
+	inline constexpr char             ARROW_RIGHT_CODE        = 'C';
+	inline constexpr char             PRINTABLE_MIN           = 0x20;  // Space
+	inline constexpr char             PRINTABLE_MAX           = 0x7e;  // ~
+	inline constexpr std::string_view CLEAR_ENTIRE_SCREEN_SEQ = "\033c\033[H\033[2J\033[0m";
 
 #ifndef _WIN32
 	void writeStr(std::string_view str) { ::write(STDOUT_FILENO, str.data(), str.size()); }
@@ -183,11 +184,14 @@ namespace compiler::repl {
 		return *this;
 	}
 
-	FrontendMinImplementation::FrontendMinImplementation():
+	FrontendMinImplementation::FrontendMinImplementation(bool completions_enabled):
 		  m_hist_idx(0),
 		  m_sequence_to_align_cursor_to_multiline_start(
 			  std::format("{}[{}C", ESC, ReplConfig::CONTINUATION.size())
-		  ) {}
+		  ) {
+		if (completions_enabled)
+			std::cerr << "Warning: minimal REPL frontend does not support completions.\n";
+	}
 
 	void FrontendMinImplementation::printWelcome() const {
 		std::cout << "Duckling REPL (minimal mode)\n";
@@ -220,10 +224,12 @@ namespace compiler::repl {
 
 	void FrontendMinImplementation::printHelp() const {
 		std::cout << "\n=== REPL Commands ===\n";
-		std::cout << "  /help, /?           - Show this help message\n";
+		std::cout << "  /help, /?, /h       - Show this help message\n";
 		std::cout << "  /exit, /quit, /q    - Exit the REPL\n";
-		std::cout << "  /history, /h        - Show all executed statements\n";
-		std::cout << "  /clear, /c          - Clear statement history\n";
+		std::cout << "  /history, /hist     - Show all executed statements\n";
+		std::cout << "  /clear, /c          - Clear terminal\n";
+		std::cout << "  /load <file.ds>     - Load script file (stops on first error; previous\n"
+				  << "                         statements stay applied)\n";
 		std::cout << "\n=== Editing ===\n";
 		std::cout << "  Alt + Enter         - Insert a new line\n";
 		std::cout << "  Alt + Up / Down     - Navigate input history\n";
@@ -459,5 +465,38 @@ namespace compiler::repl {
 		m_editor_state.prev_state_col = m_editor_state.col;
 	}
 
-	void FrontendMinImplementation::clearScreen() {}
+	void FrontendMinImplementation::clearScreen() {
+#ifndef _WIN32
+		writeStr(CLEAR_ENTIRE_SCREEN_SEQ);
+#else
+		HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+		if (hOut == INVALID_HANDLE_VALUE || hOut == nullptr) {
+			writeStr(CLEAR_ENTIRE_SCREEN_SEQ);
+			return;
+		}
+
+		CONSOLE_SCREEN_BUFFER_INFO buffer_info{};
+		if (!GetConsoleScreenBufferInfo(hOut, &buffer_info)) {
+			writeStr(CLEAR_ENTIRE_SCREEN_SEQ);
+			return;
+		}
+
+		const DWORD cells_count
+			= static_cast<DWORD>(buffer_info.dwSize.X) * static_cast<DWORD>(buffer_info.dwSize.Y);
+		const COORD home{ 0, 0 };
+		DWORD       written = 0;
+
+		if (!FillConsoleOutputCharacterA(hOut, ' ', cells_count, home, &written)) {
+			writeStr(CLEAR_ENTIRE_SCREEN_SEQ);
+			return;
+		}
+
+		if (!FillConsoleOutputAttribute(hOut, buffer_info.wAttributes, cells_count, home, &written)) {
+			writeStr(CLEAR_ENTIRE_SCREEN_SEQ);
+			return;
+		}
+
+		SetConsoleCursorPosition(hOut, home);
+#endif
+	}
 }  // namespace compiler::repl

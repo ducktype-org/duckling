@@ -831,8 +831,8 @@ namespace compiler::frontend {
 
 	void parseAllFilesInModuleTree(ModuleID module_id) {
 		CORE_ASSERT(
-			query::Context::getState().activeQueryCount() == 0,
-			"parseAllFilesInModuleTree called from within a query!"
+			!query::Context::isAnyQueryCurrentlyRunning(),
+			"parseAllFilesInModuleTree called when some query is currently running."
 		);
 
 		// First collect all files to be parsed.

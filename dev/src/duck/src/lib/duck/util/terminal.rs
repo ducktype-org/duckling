@@ -1,17 +1,27 @@
-use std::fmt::Display;
-use std::io::Read;
-use std::io::Write;
+use std::fmt::{self, Display};
+use std::io::{Read, Write};
+use std::str::FromStr;
 
 use console::{Term, WithoutAnsi, colors_enabled, colors_enabled_stderr, style};
+use dialoguer::Input;
 
+use crate::QuackResult;
 use crate::duck::util::indent::indent;
 
-#[derive(Debug)]
 /// A struct which is responsible for printing to stdout/stderr.
 pub struct Terminal {
     term: Term,
     verbosity: Verbosity,
     colors_enabled: bool,
+}
+
+impl fmt::Debug for Terminal {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Terminal")
+            .field("verbosity", &self.verbosity)
+            .field("colors_enabled", &self.colors_enabled)
+            .finish_non_exhaustive()
+    }
 }
 
 #[derive(Debug, Default)]
@@ -172,6 +182,62 @@ impl Terminal {
     /// Get the underlying [`Term`] used for printing.
     pub fn term(&self) -> &Term {
         &self.term
+    }
+
+    /// Get a [`String`] input from the user.
+    pub fn prompt_once(&self, prompt: impl Into<String>) -> QuackResult<String> {
+        Ok(Input::new()
+            .with_prompt(prompt)
+            .interact_text_on(&self.term)?)
+    }
+
+    /// Get a [`String`] input from the user, with a default value supplied.
+    pub fn prompt_once_with_default(
+        &self,
+        prompt: impl Into<String>,
+        default: String,
+    ) -> QuackResult<String> {
+        Ok(Input::new()
+            .with_prompt(prompt)
+            .default(default)
+            .interact_text_on(&self.term)?)
+    }
+
+    /// Prompt user for an input until it can be correctly deserialized.
+    pub fn prompt_until_valid<T>(&self, prompt: impl Into<String> + Clone) -> T
+    where
+        T: ToString + FromStr + Clone,
+        <T as std::str::FromStr>::Err: std::fmt::Display,
+    {
+        loop {
+            let input = Input::<'_, T>::new()
+                .with_prompt(prompt.clone())
+                .interact_text_on(&self.term);
+            if let Ok(t) = input {
+                return t;
+            }
+        }
+    }
+
+    /// Prompt user for an input until it can be correctly deserialized, with a default value supplied.
+    pub fn prompt_until_valid_with_default<T>(
+        &self,
+        prompt: impl Into<String> + Clone,
+        default: T,
+    ) -> T
+    where
+        T: ToString + FromStr + Clone,
+        <T as std::str::FromStr>::Err: std::fmt::Display,
+    {
+        loop {
+            let input = Input::<'_, T>::new()
+                .with_prompt(prompt.clone())
+                .default(default.clone())
+                .interact_text_on(self.term());
+            if let Ok(t) = input {
+                return t;
+            }
+        }
     }
 }
 

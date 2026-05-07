@@ -1,30 +1,25 @@
-use std::{
-    collections::HashMap,
-    ffi::OsString,
-    io::Write,
-    path::{Path, PathBuf},
-};
+use std::collections::HashMap;
+use std::ffi::OsString;
+use std::io::Write;
+use std::path::{Path, PathBuf};
 
-use crate::{
-    DuckCtx, QuackResult, QuackResultContext,
-    duck::driver::subcommands::run_script::{check_is_script, possible_script_path_subcmd},
-    qp_bail,
-    quackpack::core::compile::duckc::Duckc,
-    quackpack::subcommands::run_script::{RunScriptOptions, run_script},
-    util::{command_ext::CommandExt, path_ops_ext::PathOpsExt},
-};
 use clap::ArgMatches;
 use tracing::debug;
 
-use crate::duck::driver::{
-    cli,
-    cli_args_preprocessing::{aliases_expansion::expand_aliases, typos_fixing::fix_typos},
-    global_options::GlobalOptions,
-    subcommands::exec_for,
-};
+use crate::duck::driver::cli;
+use crate::duck::driver::cli_args_preprocessing::aliases_expansion::expand_aliases;
+use crate::duck::driver::cli_args_preprocessing::typos_fixing::fix_typos;
+use crate::duck::driver::global_options::GlobalOptions;
+use crate::duck::driver::subcommands::exec_for;
+use crate::duck::driver::subcommands::run_script::{check_is_script, possible_script_path_subcmd};
+use crate::quackpack::core::compile::duckc::Duckc;
+use crate::quackpack::subcommands::run_script::{RunScriptOptions, run_script};
+use crate::util::command_ext::CommandExt;
+use crate::util::path_ops_ext::PathOpsExt;
+use crate::{DuckContext, QuackResult, QuackResultContext, qp_bail};
 
-/// Run the duck with the given [`DuckCtx`].
-pub(crate) fn run(ctx: &mut DuckCtx) -> QuackResult<()> {
+/// Run the duck with the given [`DuckContext`].
+pub(crate) fn run(ctx: &mut DuckContext) -> QuackResult<()> {
     let external = gather_external_subcmds(ctx);
     debug!(
         "found the external subcommands `{}`",
@@ -59,7 +54,7 @@ pub(crate) fn run(ctx: &mut DuckCtx) -> QuackResult<()> {
 ///
 /// In the returned map, keys are stripped from prefixes and suffixes; in other words, keys are
 /// valid duck subcommands names.
-fn gather_external_subcmds(ctx: &DuckCtx) -> HashMap<String, PathBuf> {
+fn gather_external_subcmds(ctx: &DuckContext) -> HashMap<String, PathBuf> {
     use std::env;
     const PREFIX: &str = "duck-";
     const SUFFIX: &str = env::consts::EXE_SUFFIX;
@@ -93,7 +88,7 @@ fn gather_external_subcmds(ctx: &DuckCtx) -> HashMap<String, PathBuf> {
 
 /// Execute fully fixed, parsed, and expanded subcommand.
 fn run_subcmd(
-    ctx: &mut DuckCtx,
+    ctx: &mut DuckContext,
     args: ArgMatches,
     external: &HashMap<String, PathBuf>,
 ) -> QuackResult<()> {

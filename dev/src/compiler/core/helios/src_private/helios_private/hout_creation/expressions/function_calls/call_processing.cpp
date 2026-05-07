@@ -10,13 +10,14 @@
 #include <helios/queries/function_queries.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
+#include <helios/tsh/symbol_type.hpp>
 #include <helios_private/hout_creation/expressions/builtin_operators.hpp>
 #include <helios_private/hout_creation/expressions/coercions.hpp>
 #include <helios_private/hout_creation/expressions/function_calls/call_processing.hpp>
 #include <helios_private/hout_creation/expressions/function_calls/errors.hpp>
+#include <helios_private/hout_creation/expressions/hout_of_subexpr.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
-#include <tsh/symbol_type.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
@@ -389,16 +390,16 @@ namespace compiler::helios::code {
 				auto& decl = ctx.query<QueryDeclOfFun>(match.function)->valueOrThrow();
 
 				// @TODO: #2110 unify diagnostics between user-defined and generated functions.
-				if_opt_none(decl.origin.getSourcePosition()) {
+				if_opt_none(decl.origin.getStablePosition()) {
 					const auto type = ctx.query<QueryTypeOfSymbol>(match.function)->valueOrThrow();
-					return makeBox<dia_int::PlaceholderHeaderError>(
+					return makeBox<dia_int::PlaceholderError>(
 						"Found exact candidate.",
 						base::strConcat(
 							"Candidate is compiler-generated, with type " + type.toString() + "."
 						)
 					);
 				}
-				return makeBox<ExactCandidateNote>(decl.origin.getSourcePosition().value());
+				return makeBox<ExactCandidateNote>(decl.origin.getStablePosition().value());
 			}();
 
 			if (not first_candidate_msg.has_value())
@@ -430,22 +431,22 @@ namespace compiler::helios::code {
 				auto& decl = ctx.query<QueryDeclOfFun>(match.function)->valueOrThrow();
 
 				// @TODO: #2110 unify diagnostics between user-defined and generated functions.
-				if_opt_none(decl.origin.getSourcePosition()) {
+				if_opt_none(decl.origin.getStablePosition()) {
 					const auto type = ctx.query<QueryTypeOfSymbol>(match.function)->valueOrThrow();
-					return makeBox<dia_int::PlaceholderHeaderNote>(
+					return makeBox<dia_int::PlaceholderNote>(
 						"Found coercible candidate.",
 						"Candidate is compiler-generated, with type " + type.toString() + "."
 					);
 				}
 
-				auto decl_pos = decl.origin.getSourcePosition().value();
+				auto decl_pos = decl.origin.getStablePosition().value();
 
 				auto result = makeBox<CoercibleCandidateNote>(decl_pos);
 				for (usize i{ 0 }; i < match.coercions.size(); i++) {
 					auto& coercion = match.coercions[i];
 					if (not coercion.isEmptyCoercion()) {
-						if_opt_none(decl.parameters[i].origin.getSourcePosition()) continue;
-						auto param_pos = decl.parameters[i].origin.getSourcePosition().value();
+						if_opt_none(decl.parameters[i].origin.getStablePosition()) continue;
+						auto param_pos = decl.parameters[i].origin.getStablePosition().value();
 
 						auto pm = makeBox<CoercibleCandidateCoercionPointerMessage>(
 							coercion.to.toString(), coercion.validated_from.toString()
@@ -489,15 +490,15 @@ namespace compiler::helios::code {
 				auto& decl = ctx.query<QueryDeclOfFun>(function)->valueOrThrow();
 
 				// @TODO: #2110 unify diagnostics between user-defined and generated functions.
-				if_opt_none(decl.origin.getSourcePosition()) {
+				if_opt_none(decl.origin.getStablePosition()) {
 					const auto type = ctx.query<QueryTypeOfSymbol>(function)->valueOrThrow();
-					return makeBox<dia_int::PlaceholderHeaderNote>(
+					return makeBox<dia_int::PlaceholderNote>(
 						"Candidate failed to match.",
 						"Candidate is compiler-generated, with type " + type.toString() + "."
 					);
 				}
 
-				return makeBox<FailedCandidateNote>(decl.origin.getSourcePosition().value());
+				return makeBox<FailedCandidateNote>(decl.origin.getStablePosition().value());
 			}();
 
 			candidate_note->addAttachedMessage(createDetailedCallErrorMessage(
@@ -540,7 +541,7 @@ namespace compiler::helios::code {
 	) {
 		if (candidates.empty()) {
 			ctx.logInt(makeBox<NoCandidatesFoundError>(
-				pst_origin.whole_call_origin.getSourcePosition().value()
+				pst_origin.whole_call_origin.getStablePosition().value()
 			));
 			return query::Failed();
 		}
@@ -566,7 +567,7 @@ namespace compiler::helios::code {
 
 		if (exact_match.size() > 1) {
 			auto main_msg = makeBox<AmbiguousMatchesError>(
-				pst_origin.whole_call_origin.getSourcePosition().value()
+				pst_origin.whole_call_origin.getStablePosition().value()
 			);
 			appendExactMatchesErrors(ctx, main_msg, exact_match, false);
 			appendCoercibleMatchesErrors(ctx, main_msg, coercion_match, true);
@@ -584,7 +585,7 @@ namespace compiler::helios::code {
 
 		if (coercion_match.size() > 1) {
 			auto main_msg = makeBox<AmbiguousMatchesError>(
-				pst_origin.whole_call_origin.getSourcePosition().value()
+				pst_origin.whole_call_origin.getStablePosition().value()
 			);
 			appendCoercibleMatchesErrors(ctx, main_msg, coercion_match, false);
 			appendFailedMatchesErrors(ctx, main_msg, pst_origin, no_match, true);
@@ -605,7 +606,7 @@ namespace compiler::helios::code {
 			));
 		} else {
 			auto main_msg = makeBox<AmbiguousMatchesError>(
-				pst_origin.whole_call_origin.getSourcePosition().value()
+				pst_origin.whole_call_origin.getStablePosition().value()
 			);
 			appendFailedMatchesErrors(ctx, main_msg, pst_origin, no_match, false);
 			ctx.logInt(std::move(main_msg));
@@ -619,8 +620,8 @@ namespace compiler::helios::code {
 	 * argument collections.
 	 * @param ctx Query context
 	 * @param call_expr The PST call expression containing arguments
-	 * @param positional_arguments Output vector for positional arguments
-	 * @param named_arguments Output map for named arguments
+	 * @param[out] positional_arguments Output vector for positional arguments
+	 * @param[out] named_arguments Output map for named arguments
 	 * @return A vector of argument origins if successful, or a failure result if validation fails.
 	 */
 	query::QResult<std::vector<ElementOrigin>> fillCallArgs(
@@ -638,8 +639,8 @@ namespace compiler::helios::code {
 
 		for (auto&& arg: *call_expr->getArgs().unlock(ctx)) {
 			auto arg_expr_result
-				= ctx.query<QueryHoutOfExpr>(arg.unlock(ctx)->getArg().unlock(ctx)->getExpr());
-			UNPACK_QRESULT_CREF_TO_BOX(auto arg_expr =, arg_expr_result);
+				= subExprFromPST(ctx, arg.unlock(ctx)->getArg().unlock(ctx)->getExpr());
+			UNPACK_QRESULT_MOVE(auto arg_expr =, arg_expr_result);
 
 			if (arg.unlock(ctx)->isNamedArg()) {
 				base::StrID arg_name = arg.unlock(ctx)->getArgName().value.value();
@@ -652,7 +653,7 @@ namespace compiler::helios::code {
 						return query::Failed();
 					}
 				}
-				named_arguments.emplace_back(arg_name, arg_expr->clone());
+				named_arguments.emplace_back(arg_name, std::move(arg_expr));
 			} else {
 				if (!named_arguments.empty()) {
 					auto error = PositionalAfterNamedArgument{ arg_index };
@@ -662,7 +663,7 @@ namespace compiler::helios::code {
 					return query::Failed();
 				}
 
-				positional_arguments.emplace_back(arg_expr->clone());
+				positional_arguments.emplace_back(std::move(arg_expr));
 			}
 			arg_index++;
 		}
@@ -675,7 +676,7 @@ namespace compiler::helios::code {
 		pst::Access<pst::LangElement> callee_element,
 		pst::Access<pst::expr::Call>  call_expr
 	) {
-		auto whole_call_origin = multiplePstOrigin({ callee_element, call_expr });
+		auto whole_call_origin = multiplePstOriginOrdered({ callee_element, call_expr });
 
 		// Unwrap and validate call arguments.
 		std::vector<Box<Expr>>                          positional_arguments;
@@ -713,7 +714,8 @@ namespace compiler::helios::code {
 		pst::Access<pst::expr::Call>  call_expr,
 		Box<Expr>                     self_arg
 	) {
-		auto whole_call_origin = pstOrigin(pstOrigin(self_arg->origin, callee_element), call_expr);
+		auto whole_call_origin
+			= pstOriginOrdered(pstOriginOrdered(self_arg->origin, callee_element), call_expr);
 
 		// Unwrap and validate call arguments.
 		std::vector<Box<Expr>>                          positional_arguments;
@@ -753,7 +755,7 @@ namespace compiler::helios::code {
 		const auto lhs_origin = lhs->origin;
 		const auto rhs_origin = rhs->origin;
 
-		const auto whole_call_origin = elementOrigin(lhs->origin, rhs->origin);
+		const auto whole_call_origin = elementOriginOrdered(lhs->origin, rhs->origin);
 
 		const CallPstOrigin pst_origin{
 			// @TODO: #2075 Giving the callee the position of the entire call is not

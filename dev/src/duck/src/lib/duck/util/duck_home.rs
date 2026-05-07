@@ -9,213 +9,138 @@
 //! ├── global_venv/ <root of the global shared virtual environment>
 //! └── storage/ <root of the storage internal files>
 
-use crate::{QuackResult, util::env::Env};
-use std::path::{Path, PathBuf};
+use std::fs::{File, OpenOptions};
+use std::io::Write;
+use std::path::PathBuf;
+use std::{fmt, io};
+
 use tracing::debug;
 
-macro_rules! getter {
-    (
-        MemberName: $name:ident,
-        Description: $desc:literal,
-        EnsureFunction: $fn:ident $(,)?
-    ) => {
-        /// Get the path for the
-        #[doc = $desc]
-        /// Note that it may not exist on the disk
-        pub fn $name(&self) -> &Path {
-            &self.$name
-        }
-    };
-}
+use crate::quackpack::core::PackageLoader;
+use crate::util::file_locks::{FileLockManager, LockedFile};
+use crate::{DuckContext, QuackResult, QuackResultContext};
 
-macro_rules! ensure_file {
-    (
-        MemberName: $name:ident,
-        Description: $desc:literal,
-        EnsureFunction: $fn:ident $(,)?
-    ) => {
-        /// Ensure that the file
-        #[doc = $desc]
-        /// exists on the disk
-        pub fn $fn(&self) -> QuackResult<&Path> {
-            use $crate::util::path_ops_ext::PathOpsExt;
-            let file = self.$name();
-            let _ = file.touch()?;
-            Ok(file)
-        }
-    };
-}
-
-macro_rules! ensure_dir {
-    (
-        MemberName: $name:ident,
-        Description: $desc:literal,
-        EnsureFunction: $fn:ident $(,)?
-    ) => {
-        /// Ensure that the directory
-        #[doc = $desc]
-        /// exists on the disk
-        pub fn $fn(&self) -> QuackResult<&Path> {
-            use $crate::util::path_ops_ext::{MkdirOptions, PathOpsExt};
-            let file = self.$name();
-            let _ = file.mkdir(MkdirOptions::WithParents)?;
-            Ok(file)
-        }
-    };
-}
-
-macro_rules! call_on_files {
-    ($callback:ident) => {
-        $callback! {
-            MemberName: fetcher_lockfile,
-            Description: "fetcher lockfile",
-            EnsureFunction: ensure_fetcher_lockfile,
-        }
-        $callback! {
-            MemberName: metadata_db,
-            Description: "fetcher metadata database",
-            EnsureFunction: ensure_metadata_db,
-        }
-    };
-
-    ($callback:ident INCLUDE_USER_CONFIG) => {
-        $callback! {
-            MemberName: user_config,
-            Description: "user config",
-            EnsureFunction: ensure_user_config,
-        }
-
-        $callback! {
-            MemberName: fetcher_lockfile,
-            Description: "fetcher lockfile",
-            EnsureFunction: ensure_fetcher_lockfile,
-        }
-        $callback! {
-            MemberName: metadata_db,
-            Description: "fetcher metadata database",
-            EnsureFunction: ensure_metadata_db,
-        }
-    };
-}
-
-macro_rules! call_on_dirs {
-    ($callback:ident) => {
-        $callback! {
-            MemberName: root,
-            Description: "duck home root directory",
-            EnsureFunction: ensure_root,
-        }
-
-        $callback! {
-            MemberName: downloads_dir,
-            Description: "fetcher downloads directory",
-            EnsureFunction: ensure_downloads_dir,
-        }
-
-        $callback! {
-            MemberName: cache_dir,
-            Description: "cache directory",
-            EnsureFunction: ensure_cache_dir,
-        }
-
-        $callback! {
-            MemberName: artifacts_dir,
-            Description: "fetcher artifacts directory",
-            EnsureFunction: ensure_artifacts_dir,
-        }
-
-        $callback! {
-            MemberName: storage_dir,
-            Description: "storage directory",
-            EnsureFunction: ensure_storage_dir,
-        }
-        $callback! {
-            MemberName: global_venv_dir,
-            Description: "global venv directory",
-            EnsureFunction: ensure_global_dir,
-        }
-    };
-}
-
-#[derive(Debug)]
 /// Implementation of the above layout
 // We keep all of the paths, because then we don't have to do any allocations later.
 pub struct DuckHome {
-    root: PathBuf,
-    cache_dir: PathBuf,
-    downloads_dir: PathBuf,
-    artifacts_dir: PathBuf,
-    fetcher_lockfile: PathBuf,
-    metadata_db: PathBuf,
-    user_config: PathBuf,
-    storage_dir: PathBuf,
-    global_venv_dir: PathBuf,
+    root: FileLockManager,
+}
+
+impl fmt::Debug for DuckHome {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("DuckHome")
+            .field("root", &self.root.not_locked_path())
+            .finish_non_exhaustive()
+    }
 }
 
 impl DuckHome {
-    /// Create a new [`DuckHome`] rooted at `root`, and using environmental variables from [`Env`].
-    pub fn new(root: PathBuf, env: &Env) -> Self {
-        fn get_key_with_fallback(
-            env: &Env,
-            path: &'static str,
-            fallback: impl FnOnce() -> PathBuf,
-        ) -> PathBuf {
-            env.get_os(path).map(PathBuf::from).unwrap_or_else(fallback)
+    /// Create a new [`DuckHome`] rooted at `root`.
+    pub fn new(root: PathBuf) -> Self {
+        debug!(?root, "duck home root");
+        Self {
+            root: FileLockManager::new(root),
         }
-        // @TODO: #1671 Right now these are hardcoded. Idea is, that they can be set in config, but also as an environmental variable.
-        //  Let's take a cache directory as a prime example. In config it can be set in:
-        //  ```yaml
-        //  cache:
-        //    dir: path
-        //  ```
-        //  It's *path* is `cache.dir`. Then we would process this path to get DUCK_CACHE_DIR: an environmental variable name corresponding to this config value.
-        let cache_dir = get_key_with_fallback(env, "DUCK_CACHE_DIR", || root.join("cache"));
-        let downloads_dir = get_key_with_fallback(env, "DUCK_CACHE_DOWNLOADS_DIR", || {
-            cache_dir.join("downloads")
-        });
-        let artifacts_dir = get_key_with_fallback(env, "DUCK_CACHE_ARTIFACTS_DIR", || {
-            cache_dir.join("artifacts")
-        });
-        let fetcher_lockfile = get_key_with_fallback(env, "DUCK_CACHE_FETCHER_LOCKFILE", || {
-            cache_dir.join("fetcher.lock")
-        });
-        let metadata_db = get_key_with_fallback(env, "DUCK_CACHE_METADATA_DB", || {
-            cache_dir.join("metadata_db.sqlite")
-        });
-        let user_config = get_key_with_fallback(env, "DUCK_CONFIG", || root.join("config.yaml"));
-
-        let storage_dir = get_key_with_fallback(env, "DUCK_STORAGE_DIR", || root.join("storage"));
-
-        let global_venv_dir =
-            get_key_with_fallback(env, "DUCK_STORAGE_GLOBAL_VENV", || root.join("global_venv"));
-        let duck_home = Self {
-            root,
-            cache_dir,
-            downloads_dir,
-            artifacts_dir,
-            fetcher_lockfile,
-            metadata_db,
-            user_config,
-            storage_dir,
-            global_venv_dir,
-        };
-        debug!("duck home layout is `{duck_home:?}`");
-        duck_home
     }
 
-    call_on_dirs! {
-        getter
+    /// Get the [`PathBuf`] to the user config.
+    pub fn user_config(&self) -> PathBuf {
+        self.root.not_locked_path().join("config.yaml")
     }
 
-    call_on_files! {
-        getter INCLUDE_USER_CONFIG
+    /// Get the [`FileLockManager`] rooted at the storage's root.
+    pub fn storage(&self) -> FileLockManager {
+        self.root.join("storage")
     }
 
-    call_on_dirs! {
-        ensure_dir
+    /// Get the [`FileLockManager`] rooted at the global venv root.
+    pub fn global_venv(&self) -> FileLockManager {
+        self.root.join("global_venv")
     }
 
-    call_on_files! {
-        ensure_file
+    /// Get the [`FileLockManager`] rooted at the cache root.
+    pub fn cache(&self) -> FileLockManager {
+        self.root.join("cache")
+    }
+
+    /// Get the [`FileLockManager`] rooted at the cache artifacts root.
+    pub fn artifacts(&self) -> FileLockManager {
+        self.cache().join("artifacts")
+    }
+
+    /// Get the [`FileLockManager`] rooted at the cache downloads root.
+    pub fn downloads(&self) -> FileLockManager {
+        self.cache().join("downloads")
+    }
+
+    /// Exclusively lock the fetcher's lockfile.
+    pub fn open_fetcher_lockfile(&self, ctx: &DuckContext) -> QuackResult<LockedFile> {
+        self.cache().open_exclusive("fetcher.lock", ctx)
+    }
+
+    /// Get the [`PathBuf`] to metadata database file.
+    ///
+    /// We don't have to create this file, as SQLite will do this for us.
+    pub fn get_metadata_db_path(&self) -> PathBuf {
+        self.cache()
+            .into_not_locked_path()
+            .join("metadata_db.sqlite")
+    }
+
+    pub const GLOBAL_PACKAGE_NAME: &str = "__global__";
+
+    /// Default minimal manifest for the global package.
+    pub fn default_global_manifest() -> String {
+        format!(
+            "\
+metadata:
+  name: {}
+  version: '0.1'
+  authors: []",
+            Self::GLOBAL_PACKAGE_NAME
+        )
+    }
+
+    /// Assure that the global package root folder exists and there is a manifest in it.
+    pub fn ensure_and_populate_global_dir(&self) -> QuackResult<FileLockManager> {
+        struct UnlockOnDrop {
+            file: File,
+        }
+
+        impl Drop for UnlockOnDrop {
+            fn drop(&mut self) {
+                if let Err(e) = self.file.unlock() {
+                    debug!("failed to unlock the global manifest file: {e} ({e:})");
+                }
+            }
+        }
+        let global_pkg_dir = self.global_venv();
+        global_pkg_dir.mkdir()?;
+        let manifest_path = global_pkg_dir
+            .join(PackageLoader::MANIFEST_NAME)
+            .into_not_locked_path();
+        let file = {
+            let mut opts = OpenOptions::new();
+            opts.create_new(true).write(true);
+            match opts.open(&manifest_path) {
+                Ok(file) => Ok(file),
+                Err(e) => {
+                    // Global manifest already exists.
+                    if e.kind() == io::ErrorKind::AlreadyExists {
+                        return Ok(global_pkg_dir);
+                    }
+                    Err(e).context(format!("failed to create `{}`", manifest_path.display()))
+                }
+            }
+        }?;
+        file.lock()
+            .with_context(|| format!("failed to lock the `{}`", manifest_path.display()))?;
+        let mut guard = UnlockOnDrop { file };
+        guard
+            .file
+            .write_all(Self::default_global_manifest().as_bytes())
+            .with_context(|| format!("failed to write to the `{}`", manifest_path.display()))
+            .context("failed to populate global venv")?;
+        Ok(global_pkg_dir)
     }
 }

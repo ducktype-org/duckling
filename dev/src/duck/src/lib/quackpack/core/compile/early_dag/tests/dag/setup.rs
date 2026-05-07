@@ -2,35 +2,28 @@ use std::path::Path;
 
 use tempfile::TempDir;
 
-use crate::{
-    DuckCtx,
-    quackpack::core::{
-        PackageLoader, Version,
-        fetcher::Fetcher,
-        storage::{
-            freeze::{FreezeDep, FreezePackage, RootPackage, VenvFreeze},
-            package_id::{PackageId, RegistryId},
-        },
-        types_common::{ExpandedLocation, InternedExpandedLocation},
-    },
-    util::{path_ops_ext::PathOpsExt, test_utils::setup_test},
-};
+use crate::DuckContext;
+use crate::quackpack::core::fetcher::Fetcher;
+use crate::quackpack::core::solver::types_common::ExpandedLocation;
+use crate::quackpack::core::storage::freeze::{FreezeDep, FreezePackage, RootPackage, VenvFreeze};
+use crate::quackpack::core::storage::package_id::RegistryId;
+use crate::quackpack::core::{PackageLoader, Version};
+use crate::util::path_ops_ext::PathOpsExt;
+use crate::util::test_utils::setup_test;
 
-pub fn setup_mock_storage() -> (DuckCtx, TempDir) {
+pub fn setup_mock_storage() -> (DuckContext, TempDir) {
     let setup = || {
         let tmpdir_root = TempDir::new().unwrap();
         setup_mock_packages(&tmpdir_root.path().join("storage"));
         setup_mock_root_package(&tmpdir_root.path().join("root"));
         // Also overwrite DUCK_HOME, so we'll use the default configuration options.
-        // SAFETY: Setup is single threaded, and `Env` in `DuckCtx`, copies all envs.
+        // SAFETY: Setup is single threaded, and `Env` in `DuckContext`, copies all envs.
         unsafe {
-            std::env::set_var("DUCK_STORAGE_DIR", tmpdir_root.path().join("storage"));
             std::env::set_var("DUCK_HOME", tmpdir_root.path());
         }
-        let ctx = DuckCtx::default();
-        // SAFETY: Setup is single threaded, and `Env` in `DuckCtx`, copies all envs.
+        let ctx = DuckContext::default();
+        // SAFETY: Setup is single threaded, and `Env` in `DuckContext`, copies all envs.
         unsafe {
-            std::env::remove_var("DUCK_STORAGE_DIR");
             std::env::remove_var("DUCK_HOME");
         }
         (ctx, tmpdir_root)
@@ -40,11 +33,11 @@ pub fn setup_mock_storage() -> (DuckCtx, TempDir) {
 
 pub fn setup_mock_packages(root: &Path) {
     for (name, manifest) in packages_names_and_manifests() {
-        let pkg_id = PackageId::Registry(RegistryId::new(
+        let pkg_id = RegistryId::new(
             (*name).into(),
             Version::new(1, 0, 0),
             Fetcher::DEFAULT_REGISTRY_URL.parse().unwrap(),
-        ));
+        );
         root.join("pkg")
             .join(pkg_id.storage_name())
             .join("src")
@@ -187,30 +180,33 @@ pub fn freeze() -> VenvFreeze {
                 Version::new(1, 0, 0),
                 vec!["use_baz".into()],
                 vec![FreezeDep::new("baz".into(), Version::new(1, 0, 0))],
-                InternedExpandedLocation::new(ExpandedLocation::Registry {
+                ExpandedLocation::Registry {
                     url: Fetcher::DEFAULT_REGISTRY_URL.parse().unwrap(),
                     real_name: "foo".into(),
-                }),
+                }
+                .into(),
             ),
             FreezePackage::new(
                 "bar".into(),
                 Version::new(1, 0, 0),
                 vec!["use_baz".into()],
                 vec![FreezeDep::new("baz".into(), Version::new(1, 0, 0))],
-                InternedExpandedLocation::new(ExpandedLocation::Registry {
+                ExpandedLocation::Registry {
                     url: Fetcher::DEFAULT_REGISTRY_URL.parse().unwrap(),
                     real_name: "bar".into(),
-                }),
+                }
+                .into(),
             ),
             FreezePackage::new(
                 "baz".into(),
                 Version::new(1, 0, 0),
                 vec![],
                 vec![],
-                InternedExpandedLocation::new(ExpandedLocation::Registry {
+                ExpandedLocation::Registry {
                     url: Fetcher::DEFAULT_REGISTRY_URL.parse().unwrap(),
                     real_name: "baz".into(),
-                }),
+                }
+                .into(),
             ),
         ],
     )
@@ -238,30 +234,33 @@ pub fn freeze_with_cycle() -> VenvFreeze {
                 Version::new(1, 0, 0),
                 vec!["use_baz".into()],
                 vec![FreezeDep::new("bar".into(), Version::new(1, 0, 0))],
-                InternedExpandedLocation::new(ExpandedLocation::Registry {
+                ExpandedLocation::Registry {
                     url: Fetcher::DEFAULT_REGISTRY_URL.parse().unwrap(),
                     real_name: "foo".into(),
-                }),
+                }
+                .into(),
             ),
             FreezePackage::new(
                 "bar".into(),
                 Version::new(1, 0, 0),
                 vec!["use_baz".into()],
                 vec![FreezeDep::new("foo".into(), Version::new(1, 0, 0))],
-                InternedExpandedLocation::new(ExpandedLocation::Registry {
+                ExpandedLocation::Registry {
                     url: Fetcher::DEFAULT_REGISTRY_URL.parse().unwrap(),
                     real_name: "bar".into(),
-                }),
+                }
+                .into(),
             ),
             FreezePackage::new(
                 "baz".into(),
                 Version::new(1, 0, 0),
                 vec![],
                 vec![],
-                InternedExpandedLocation::new(ExpandedLocation::Registry {
+                ExpandedLocation::Registry {
                     url: Fetcher::DEFAULT_REGISTRY_URL.parse().unwrap(),
                     real_name: "baz".into(),
-                }),
+                }
+                .into(),
             ),
         ],
     )
@@ -309,20 +308,22 @@ pub fn freeze_without_transitive_dep() -> VenvFreeze {
                 Version::new(1, 0, 0),
                 vec!["use_baz".into()],
                 vec![FreezeDep::new("baz".into(), Version::new(1, 0, 0))],
-                InternedExpandedLocation::new(ExpandedLocation::Registry {
+                ExpandedLocation::Registry {
                     url: Fetcher::DEFAULT_REGISTRY_URL.parse().unwrap(),
                     real_name: "foo".into(),
-                }),
+                }
+                .into(),
             ),
             FreezePackage::new(
                 "bar".into(),
                 Version::new(1, 0, 0),
                 vec!["use_baz".into()],
                 vec![FreezeDep::new("foo".into(), Version::new(1, 0, 0))],
-                InternedExpandedLocation::new(ExpandedLocation::Registry {
+                ExpandedLocation::Registry {
                     url: Fetcher::DEFAULT_REGISTRY_URL.parse().unwrap(),
                     real_name: "bar".into(),
-                }),
+                }
+                .into(),
             ),
         ],
     )

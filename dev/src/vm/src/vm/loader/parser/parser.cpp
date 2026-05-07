@@ -1,6 +1,6 @@
 #include <diagnostic_interactive/logger.hpp>
 
-#include <lexer/lexer.hpp>
+#include <lang_definitions/key_spec_op.hpp>
 #include <token_source/source.hpp>
 
 #include <vm/loader/parser/elements.hpp>
@@ -10,8 +10,9 @@
 namespace vm::loader::parser {
 
 	Box<tokenizer::TokenSource> tokenizeFile(const fs::File& path) {
-		lang_def::setKeywordMode(lang_def::KeywordMode::DuckBC);
-		return lexer::tokenizeFile(path);
+		auto source = tokenizer::makeTokenSource(path);
+		source->tokenize<lang_def::KeywordMode::DuckBC>();
+		return source;
 	}
 
 	MBox<ParsedFile> parseFile(Ref<tokenizer::TokenSource> file, Ref<dia_int::Logger> int_log) {

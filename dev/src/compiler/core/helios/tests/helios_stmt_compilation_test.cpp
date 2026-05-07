@@ -13,10 +13,10 @@
 #include <helios/hout/visitors.hpp>
 #include <helios/queries/queries.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
+#include <helios/tsh/queries/types.hpp>
 #include <helios_private/pst_layer/stmts_from_aggregate.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
-#include <tsh/queries/types.hpp>
 
 #include <base/except/exceptions.hpp>
 
@@ -83,7 +83,7 @@ private:
 	) {
 		// Locate the function symbol
 		auto root_scope = queryRootScopeOfMainModuleFile(ctx, module_id);
-		auto symbols    = *ctx.query<QuerySymbolsInScope>(root_scope);
+		auto symbols    = ctx.query<QuerySymbolsInScope>(root_scope)->valueOrPanic();
 
 		base::Optional<SymID> fun_sym_opt;
 		for (auto sym: symbols) {

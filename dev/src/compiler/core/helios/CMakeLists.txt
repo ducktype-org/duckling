@@ -6,6 +6,7 @@ add_library(HELIOS STATIC
 	src_private/helios_private/scopes/scope_data.cpp
 	src_private/helios_private/pst_layer/stmts_from_aggregate.cpp
 	src_private/helios_private/pst_layer/macros.cpp
+	src_private/helios_private/pst_layer/pst_parent.cpp
 	src_private/helios_private/lookup/lookup_result.cpp
 	src_private/helios_private/lookup/interface.cpp
 	src_private/helios_private/lookup/lookup_chain.cpp
@@ -24,9 +25,13 @@ add_library(HELIOS STATIC
 	src_private/helios_private/hout_creation/definition_generation/default_constructors.cpp
 	src_private/helios_private/hout_creation/hout_stmt_compilation.cpp
 	src_private/helios_private/errors/dia_interactive_elements.cpp
+	src_private/helios_private/tsh/abstract_type_impl.cpp
+	src_private/helios_private/tsh/queries.cpp
 
 	src/helios/queries/queries.cpp
-	src/helios/queries/function_queries.cpp
+	src/helios/queries/query_code_of_fun.cpp
+	src/helios/queries/query_decl_of_fun.cpp
+	src/helios/queries/global_data_queries.cpp
     src/helios/scope_id.cpp
 	src/helios/hout/hout.cpp
 	src/helios/hout/elements/stmt.cpp
@@ -43,33 +48,47 @@ add_library(HELIOS STATIC
 	src/helios/utils/get_expr_symid.cpp
 	src/helios/utils/symbol_list.cpp
 	src/helios/repl_utils/repl_queries.cpp
+	src/helios/repl_utils/script_helpers.cpp
 	src/helios/ls_utils/ls_utils.cpp
 	src/helios/utils/go_to_definition.cpp
+	src/helios/tsh/queries/implicit_coercibility.cpp
+	src/helios/tsh/queries/types.cpp
+	src/helios/tsh/abstract_type.cpp
+	src/helios/tsh/deductions.cpp
+	src/helios/tsh/types.cpp
+	src/helios/tsh/type_interface.cpp
+	src/helios/tsh/value_category.cpp
 )
 
-make_module(HELIOS USES Base QueryFramework PstParser ModuleTree Hashing TypeSystemHigher CTV LibVM MIR LIR DVMBackend)
+make_module(HELIOS USES Base QueryFramework PstParser ModuleTree Hashing CTV LibVM MIR LIR DVMBackend)
 
 duck_add_test(compiler helios tests/helios_test.cpp
-	USES Base TypeSystemHigher PstParser HELIOS
+	USES Base PstParser HELIOS
 	INCLUDE "${CMAKE_CURRENT_LIST_DIR}/src_private")
 
 
 duck_add_test(compiler helios_errors tests/helios_errors_test.cpp
-	USES Base TypeSystemHigher PstParser HELIOS
+	USES Base PstParser HELIOS
 	INCLUDE "${CMAKE_CURRENT_LIST_DIR}/src_private")
 
 duck_add_test(compiler helios_stmt_compilation tests/helios_stmt_compilation_test.cpp
-	USES Base TypeSystemHigher PstParser HELIOS
+	USES Base PstParser HELIOS
 	INCLUDE "${CMAKE_CURRENT_LIST_DIR}/src_private")
 
 duck_add_test(compiler helios_repl_instruction_wrapper tests/helios_repl_instruction_wrapper_test.cpp
-	USES Base TypeSystemHigher PstParser HELIOS
+	USES Base PstParser HELIOS
 	INCLUDE "${CMAKE_CURRENT_LIST_DIR}/src_private")
 
 duck_add_test(compiler helios_repl_expression_wrapper tests/helios_repl_expression_wrapper_test.cpp
-	USES Base TypeSystemHigher PstParser HELIOS
+	USES Base PstParser HELIOS
 	INCLUDE "${CMAKE_CURRENT_LIST_DIR}/src_private")
 
 duck_add_test(compiler helios_pst_layer tests/helios_pst_layer_test.cpp
-	USES Base TypeSystemHigher PstParser HELIOS
+	USES Base PstParser HELIOS
 	INCLUDE "${CMAKE_CURRENT_LIST_DIR}/src_private")
+
+duck_add_test(compiler tsh_simple tests/tsh_simple_test.cpp USES HELIOS)
+
+duck_add_test(compiler tsh_error tests/tsh_error_test.cpp USES HELIOS)
+
+duck_add_test(compiler tsh_advanced tests/tsh_advanced_test.cpp USES HELIOS)

@@ -12,5 +12,7 @@ namespace query::internal {
 		static auto make(NodeID my_node) { return Context(my_node); }
 
 		static Ref<internal::QueryState> getState() { return &Context::main_query_state; }
+
+		static void setAreWeInsideQuery(bool value) { Context::setAreWeInsideQuery(value); }
 	};
 }

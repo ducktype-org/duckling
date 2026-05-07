@@ -1,11 +1,11 @@
 //! Fetcher cache for a fetched manifest.
 use std::path::Path;
 
-use crate::quackpack::schemas::registry;
 use tracing::debug;
 use url::Url;
 
 use super::types;
+use crate::quackpack::schemas::registry;
 
 #[cfg(test)]
 mod tests;
@@ -131,6 +131,7 @@ impl ManifestCache {
     ///
     /// `Ok(Some)` means that manifest has been fetched successful, `Ok(None)`: we didn't have
     /// `package` in a cache, while `Err` indicates, most likely, internal SQL error.
+    #[tracing::instrument(skip(self))]
     pub fn get_manifest(
         &self,
         package: &types::PackageWithUrl,
@@ -153,6 +154,7 @@ impl ManifestCache {
     ///
     /// Note that `Ok` allows inner `packages_manifest` to be an empty Vec: it means that we don't
     /// have `package` in a cache.
+    #[tracing::instrument(skip(self))]
     pub fn get_all_manifests(
         &self,
         package: &types::PackageWithUrl,
@@ -171,6 +173,7 @@ impl ManifestCache {
     /// Add or replace manifest for package `package`.
     ///
     /// `Ok` means that manifest has been added successful, while `Err` indicates, most likely, internal SQL error.
+    #[tracing::instrument(skip(self))]
     pub fn add_or_replace_manifest(
         &self,
         package: &types::PackageWithUrl,
@@ -191,6 +194,7 @@ impl ManifestCache {
     /// to inner SQL locking.
     ///
     /// `Ok` means that manifest has been added successful, while `Err` indicates, most likely, internal SQL error.
+    #[tracing::instrument(skip(self))]
     pub fn add_or_replace_multiple_manifests(
         &mut self,
         registry_url: Url,

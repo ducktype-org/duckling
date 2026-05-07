@@ -1,10 +1,15 @@
 
 #include "macros.hpp"
 
+#include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/expand.hpp>
 #include <frontend/pst_parser/pst.hpp>
+#include <helios/tsh/queries.hpp>
+#include <helios/tsh/symbol_type.hpp>
+#include <helios_private/comp_time/comp_time.hpp>
+#include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 
 #include <base/str/str_utils.hpp>
 
@@ -12,20 +17,49 @@
 
 namespace compiler::helios {
 
-	struct IMPLEMENT_QUERY(QueryMacroExpansion, pst::PST<pst::Stmt>) {
-		static inline concurrent::ConHashMap<KHash, query::CacheEntry<pst::PST<pst::Stmt>>> cache;
-
+	struct IMPLEMENT_QUERY(QueryMacroExpansion, query::QResult<pst::PST<pst::Stmt>>) {
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
-			// In the future calculate resulting string in comp time
-			auto expand       = key.element.unlock(ctx);
-			auto value_holder = expand->getValue().unlock(ctx);
-			auto value = value_holder->getExpr().unlock(ctx).dynamicCast<pst::expr::ExprStrValue>();
-			if (value.has_value()) {
+			auto expand = key.element.unlock(ctx);
+
+			auto expand_hout = getHoutOfExprWithExpectedType(
+								   ctx,
+								   expand->getValue().unlock(ctx)->getExpr(),
+								   tsh::SymbolType<>::withDefaults(tsh::getStringType())
+			)
+			                       .valueOrThrow();
+			auto expand_ctv
+				= ctx.query<QueryEvaluateHOUTExpression>({ expand_hout.ref() }).valueOrThrow();
+
+			if (expand_ctv.has<base::StrID>()) {
+				auto expand_str = expand_ctv.get<base::StrID>().value();
+
 				auto pst = pst::PST<pst::Stmt>::fromExpand(
-					expand->getSourcePosition(),
-					base::unescapeString(value.value()->getValue().value.strView()).value().value,
-					makeBox<pst::LangParserContext>(expand->getContext())
+					expand->getStablePosition(),
+					// @TODO: #2471 change to strView, once it is fixed
+					expand_str.str(),
+					makeBox<pst::LangParserContext>(expand->getContext()),
+
+					// This is a little weird, we create a path context hash by hashing the string
+				    // representation of the expand argument bit256 hash.
+				    // Note that this is generally correct since hash(hash) keeps all the necessary
+				    // properties we need, and the expand argument hash includes the bits related to
+				    // the expand path.
+					hashing::ComponentHash({}, expand->getHash().toStringHex())
 				);
+
+				if (not pst.getLogger()->good()) {
+					// Note that PST diagnostics are logged eagerly, so if the PST did not parse
+					// correctly, the diagnostics should already be logged at this point.
+					// @TODO: #2438 remove this diagnostic and rely on PST diagnostics only, once
+					// they properly show their origin.
+					ctx.logInt(makeBox<dia_int::PlaceholderError>(
+						"Macro expansion produced code with parsing errors (see other diagnostics "
+						"for details)",
+						expand->getStablePosition()
+					));
+
+					return query::Failed();
+				}
 
 				if (pst.getRootElement().unlockOpt(ctx).has_value()) {
 					pst.setAdditionalRootData(pst::AdditionalRootData{
@@ -34,29 +68,29 @@ namespace compiler::helios {
 
 				return pst;
 			} else {
-				CORE_PANIC("Expand argument is not exactly a single string.");
+				ctx.logInt(makeBox<dia_int::PlaceholderError>(
+					"The expression in expand statements did not evaluate to a string value.",
+					expand->getValue().unlock(ctx)->getExpr().unlock(ctx)->getStablePosition()
+				));
+				return query::Failed();
 			}
 		}
 
-		static auto extractResult(const pst::PST<pst::Stmt>& pst_ref) -> QResult {
-			if (pst_ref.getLogger()->good())
-				return { pst_ref.getRootElement() };
-			else
-				return ExpansionError<pst::Stmt>(pst_ref.getRootElement(), pst_ref.getLogger());
+		static auto extractResult(CRef<query::QResult<pst::PST<pst::Stmt>>> p_result) -> QResult {
+			if (p_result->hasFailed())
+				return query::Failed{};
+			else {
+				Ref pst_ref = &p_result->valueOrPanic();
+				CORE_ASSERT(
+					pst_ref->getLogger()->good(),
+					"PST from macro expansion should have been checked for errors in provide()"
+				);
+				return { pst_ref->getRootElement() };
+			}
 		}
 
-		static auto load(KHash key) -> LoadResult {
-			if (const auto& value = cache.atMaybe(key))
-				return QResWithACD{ extractResult(value.value()->data), (value.value())->acd };
-			return {};
-		}
 
-		static auto store(KHash key, PResult res, query::ACD acd) -> QResult {
-			cache.put(key, { .data = std::move(res), .acd = acd });
-			return extractResult(cache.at(key)->data);
-		}
-
-		static auto erase(KHash key) -> bool { return cache.erase(key); }
+		QUERY_AUTO_CACHE_CONSTRUCT_BY_LAMBDA(extractResult)
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryMacroExpansion);

@@ -1,15 +1,15 @@
 use std::collections::HashMap;
 
-use crate::quackpack::core::fetcher::types;
-use crate::util::path_ops_ext::PathOpsExt;
-
-use super::*;
-use crate::quackpack::core::Version;
-use crate::quackpack::schemas::registry;
 use httpmock::prelude::*;
 use tempfile::tempdir;
 
-fn create_mock_server() -> (MockServer, DuckCtx) {
+use super::*;
+use crate::quackpack::core::Version;
+use crate::quackpack::core::fetcher::types;
+use crate::quackpack::schemas::registry;
+use crate::util::path_ops_ext::PathOpsExt;
+
+fn create_mock_server() -> (MockServer, DuckContext) {
     let pkg1 = registry::Dependency {
         name: "pkg1".into(),
         version: vec![Version::new(2, 3, 6)],
@@ -151,7 +151,7 @@ fn create_mock_server() -> (MockServer, DuckCtx) {
         then.status(200).body("foo-1.2.3");
     });
 
-    (server, DuckCtx::default())
+    (server, DuckContext::default())
 }
 
 #[test]

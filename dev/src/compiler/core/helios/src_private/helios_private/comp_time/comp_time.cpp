@@ -9,6 +9,7 @@
 #include <helios/queries/queries.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
+#include <helios/tsh/queries/types.hpp>
 #include <helios_private/comp_time/vm_evaluator.hpp>
 #include <helios_private/hout_creation/expressions/coercions.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
@@ -16,7 +17,6 @@
 #include <helios_private/symbols/symbols.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <mir/mir_lowering/mir_queries.hpp>
-#include <tsh/queries/types.hpp>
 
 #include <base/str/str_utils.hpp>
 
@@ -82,7 +82,7 @@ namespace compiler::helios {
 			void visitAccessExpr(const code::AccessExpr& expr) final {
 				// @TODO: #1922 Implement that.
 				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-					"Evaluating access expressions at compile time.", expr.origin.getSourcePosition()
+					"Evaluating access expressions at compile time.", expr.origin.getStablePosition()
 				));
 				result = query::Failed();
 			}
@@ -192,7 +192,7 @@ namespace compiler::helios {
 				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 					"Evaluating index expressions with non-meta and non-type-template base at "
 					"compile time.",
-					expr.origin.getSourcePosition()
+					expr.origin.getStablePosition()
 				));
 				result = query::Failed();
 			}
@@ -207,14 +207,14 @@ namespace compiler::helios {
 					auto const_val_result = ctx.query<QueryConstValueOf>({ expr.symbol });
 					result                = const_val_result.valueOrThrow();
 				} else {
-					match_optional(expr.origin.getSourcePosition()) {
+					match_optional(expr.origin.getStablePosition()) {
 						opt_some(pos) {
-							ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+							ctx.logInt(makeBox<dia_int::PlaceholderError>(
 								"Expression cannot be evaluated at compile-time.", pos
 							));
 						}
 						opt_none {
-							ctx.logInt(makeBox<dia_int::PlaceholderHeaderError>(
+							ctx.logInt(makeBox<dia_int::PlaceholderError>(
 								"Expression cannot be evaluated at compile-time.",
 								base::strConcat(
 									"The code is unavailable because the expression is at "
@@ -326,10 +326,10 @@ namespace compiler::helios {
 									case IntegerDiv:
 									case FloatDiv:
 										if (rhs_val == 0) {
-											ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+											ctx.logInt(makeBox<dia_int::PlaceholderError>(
 												"Division by zero in compile-time expression "
 												"evaluation.",
-												expr.origin.getSourcePosition().value()
+												expr.origin.getStablePosition().value()
 											));
 											return query::Failed();
 										}
@@ -338,10 +338,10 @@ namespace compiler::helios {
 									case IntegerMod:
 									case FloatMod:
 										if (rhs_val == 0) {
-											ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+											ctx.logInt(makeBox<dia_int::PlaceholderError>(
 												"Modulo by zero in compile-time expression "
 												"evaluation.",
-												expr.origin.getSourcePosition().value()
+												expr.origin.getStablePosition().value()
 											));
 											return query::Failed();
 										}
@@ -360,7 +360,7 @@ namespace compiler::helios {
 										ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 											"Evaluation of this binary operator at compile "
 											"time",
-											expr.origin.getSourcePosition()
+											expr.origin.getStablePosition()
 										));
 										return query::Failed();
 									}
@@ -385,7 +385,7 @@ namespace compiler::helios {
 								ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 									"Evaluation of this binary operator at compile "
 									"time",
-									expr.origin.getSourcePosition()
+									expr.origin.getStablePosition()
 								));
 								return query::Failed();
 							}
@@ -449,7 +449,7 @@ namespace compiler::helios {
 								ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 									"Evaluation of this unary operator at compile "
 									"time",
-									expr.origin.getSourcePosition()
+									expr.origin.getStablePosition()
 								));
 								return query::Failed();
 							}
@@ -479,7 +479,7 @@ namespace compiler::helios {
 								ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 									"Evaluation of this unary operator at compile "
 									"time",
-									expr.origin.getSourcePosition()
+									expr.origin.getStablePosition()
 								));
 								return query::Failed();
 							}
@@ -487,7 +487,7 @@ namespace compiler::helios {
 							ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 								"Evaluation of this unary operator at compile "
 								"time",
-								expr.origin.getSourcePosition()
+								expr.origin.getStablePosition()
 							));
 							return query::Failed();
 						}
@@ -628,7 +628,7 @@ namespace compiler::helios {
 				if (!numeric) {
 					ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 						"Casts of non-numeric compile-time values are not yet implemented.",
-						cast.origin.getSourcePosition()
+						cast.origin.getStablePosition()
 					));
 					result = query::Failed();
 					return;
@@ -638,13 +638,13 @@ namespace compiler::helios {
 				auto maybe_new_numeric = numeric->castTo(cast.target_type.getType());
 
 				if (!maybe_new_numeric.has_value()) {
-					ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+					ctx.logInt(makeBox<dia_int::PlaceholderError>(
 						base::strConcat(
 							"Value cannot be converted to type `",
 							cast.target_type.toString(),
 							"` at compile-time."
 						),
-						cast.origin.getSourcePosition().value()
+						cast.origin.getStablePosition().value()
 					));
 					result = query::Failed();
 					return;
@@ -685,7 +685,7 @@ namespace compiler::helios {
 							expr.type.toString(),
 							"'."
 						),
-						expr.origin.getSourcePosition()
+						expr.origin.getStablePosition()
 					));
 					result = query::Failed();
 				}
@@ -743,14 +743,14 @@ namespace compiler::helios {
 			void visitListPushExpr(const code::ListPushExpr& expr) final {
 				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 					"Evaluating list push expression at compile time.",
-					expr.origin.getSourcePosition()
+					expr.origin.getStablePosition()
 				));
 			}
 
 			void visitListPopExpr(const code::ListPopExpr& expr) final {
 				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 					"Evaluating list pop expression at compile time.",
-					expr.origin.getSourcePosition()
+					expr.origin.getStablePosition()
 				));
 			}
 		};
@@ -806,7 +806,7 @@ namespace compiler::helios {
 							name(func_id),
 							"`."
 						),
-						std::nullopt
+						""
 					));
 					return query::Failed();
 				}
@@ -920,7 +920,7 @@ namespace compiler::helios {
 					// Otherwise, log an error.
 					ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 						"Evaluation of this expression in DVM at compile time",
-						expr->origin.getSourcePosition()
+						expr->origin.getStablePosition()
 					));
 					return query::Failed();
 				}

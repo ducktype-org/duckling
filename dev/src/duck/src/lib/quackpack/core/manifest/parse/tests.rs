@@ -1,13 +1,13 @@
-use std::{collections::HashMap, env::home_dir, path::PathBuf};
+use std::collections::HashMap;
+use std::env::home_dir;
+use std::path::PathBuf;
 
 use tempfile::{TempDir, tempdir};
 
 use super::parse_manifest;
-use crate::{
-    DuckCtx, QpCtx, StrId,
-    quackpack::core::{BranchOrTag, OptLevel, Profile, Source, Version},
-    util::path_ops_ext::PathOpsExt,
-};
+use crate::quackpack::core::{BranchOrTag, OptLevel, Profile, Source, Version};
+use crate::util::path_ops_ext::PathOpsExt;
+use crate::{DuckContext, QpContext, StrId};
 
 fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {
     let dir = tempdir().unwrap();
@@ -37,7 +37,7 @@ metadata:
   version: '0.1'
 "#,
     );
-    let ctx = DuckCtx::default();
+    let ctx = DuckContext::default();
     let manifest = parse_manifest(&manifest_path, &ctx).unwrap();
     let summary = manifest.manifest();
     assert_eq!(summary.name(), "xd");
@@ -59,7 +59,7 @@ dependencies:
     version: '0.1'
 "#,
     );
-    let ctx = DuckCtx::default();
+    let ctx = DuckContext::default();
     let manifest = parse_manifest(&manifest_path, &ctx).unwrap();
     let summary = manifest.manifest();
     assert_eq!(summary.dependencies().all_dependencies().len(), 1);
@@ -86,7 +86,7 @@ dependencies:
     version: '1'
 "#,
     );
-    let ctx = DuckCtx::default();
+    let ctx = DuckContext::default();
     let manifest = parse_manifest(&manifest_path, &ctx).unwrap();
     let summary = manifest.manifest();
     assert_eq!(summary.dependencies().all_dependencies().len(), 1);
@@ -113,7 +113,7 @@ dependencies:
     version: '-1'
 "#,
     );
-    let ctx = DuckCtx::default();
+    let ctx = DuckContext::default();
     let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
     assert_eq!(
         err.to_string(),
@@ -137,7 +137,7 @@ dependencies:
     version: 0.1 or 2 # Here it's not needed, because `or` makes it implicitly a string...
 "#,
     );
-    let ctx = DuckCtx::default();
+    let ctx = DuckContext::default();
 
     let manifest = parse_manifest(&manifest_path, &ctx).unwrap();
     let summary = manifest.manifest();
@@ -167,7 +167,7 @@ dependencies:
       git-url: https://google.com
 "#,
     );
-    let ctx = DuckCtx::default();
+    let ctx = DuckContext::default();
     let manifest = parse_manifest(&manifest_path, &ctx).unwrap();
     let summary = manifest.manifest();
     assert_eq!(summary.dependencies().all_dependencies().len(), 1);
@@ -198,7 +198,7 @@ dependencies:
       tag: xd
 "#,
     );
-    let ctx = DuckCtx::default();
+    let ctx = DuckContext::default();
     let result = parse_manifest(&manifest_path, &ctx);
     assert!(result.is_err());
     let err = result.unwrap_err();
@@ -228,7 +228,7 @@ dependencies:
       registry-url: https://google.com
 "#,
     );
-    let ctx = DuckCtx::default();
+    let ctx = DuckContext::default();
     let result = parse_manifest(&manifest_path, &ctx);
     assert!(result.is_err());
     let err = result.unwrap_err();
@@ -259,7 +259,7 @@ dependencies:
       path: xd
 "#,
     );
-    let ctx = DuckCtx::default();
+    let ctx = DuckContext::default();
     let result = parse_manifest(&manifest_path, &ctx);
     assert!(result.is_err());
     let err = result.unwrap_err();
@@ -285,7 +285,7 @@ dependencies:
       path: xd
 "#,
     );
-    let ctx = DuckCtx::default();
+    let ctx = DuckContext::default();
     let result = parse_manifest(&manifest_path, &ctx);
     assert!(result.is_err());
     let err = result.unwrap_err();
@@ -308,7 +308,7 @@ dependencies:
       path: xd
 "#,
     );
-    let ctx = DuckCtx::default();
+    let ctx = DuckContext::default();
     let result = parse_manifest(&manifest_path, &ctx);
     assert!(result.is_err());
     let err = result.unwrap_err();
@@ -331,7 +331,7 @@ dependencies:
       path: xd
 "#,
     );
-    let ctx = DuckCtx::default();
+    let ctx = DuckContext::default();
     let result = parse_manifest(&manifest_path, &ctx);
     assert!(result.is_err());
     let err = result.unwrap_err();
@@ -380,7 +380,7 @@ dependencies:
       commit: commit
 "#,
     );
-    let ctx = DuckCtx::default();
+    let ctx = DuckContext::default();
     let manifest = parse_manifest(&manifest_path, &ctx).unwrap();
     let summary = manifest.manifest();
     assert_eq!(summary.dependencies().all_dependencies().len(), 8);
@@ -517,7 +517,7 @@ dependencies:
       branch: branch
 "#,
     );
-    let ctx = DuckCtx::default();
+    let ctx = DuckContext::default();
     let result = parse_manifest(&manifest_path, &ctx);
     assert!(result.is_err());
     let err = result.unwrap_err();
@@ -545,7 +545,7 @@ features:
   a: []
 "#,
     );
-    let ctx = DuckCtx::default();
+    let ctx = DuckContext::default();
     let manifest = parse_manifest(&manifest_path, &ctx).unwrap();
     let summary = manifest.manifest();
     assert_eq!(summary.features().all_features().len(), 1);
@@ -573,7 +573,7 @@ features:
   d: []
 "#,
     );
-    let ctx = DuckCtx::default();
+    let ctx = DuckContext::default();
     let manifest = parse_manifest(&manifest_path, &ctx).unwrap();
     let summary = manifest.manifest();
     assert_eq!(summary.features().all_features().len(), 4);
@@ -638,7 +638,7 @@ dependencies:
     features: [a, b]
 "#,
     );
-    let ctx = DuckCtx::default();
+    let ctx = DuckContext::default();
     let manifest = parse_manifest(&manifest_path, &ctx).unwrap();
     let summary = manifest.manifest();
     let dep = summary.dependencies().get_by_name(StrId::new("a")).unwrap();
@@ -676,7 +676,7 @@ dependencies:
       - c
 "#,
     );
-    let ctx = DuckCtx::default();
+    let ctx = DuckContext::default();
     let manifest = parse_manifest(&manifest_path, &ctx).unwrap();
     let summary = manifest.manifest();
     let dep = summary.dependencies().get_by_name(StrId::new("a")).unwrap();
@@ -711,7 +711,7 @@ dependencies:
       package-features: []
 "#,
     );
-    let ctx = DuckCtx::default();
+    let ctx = DuckContext::default();
     let result = parse_manifest(&manifest_path, &ctx);
     assert!(result.is_err());
     let err = result.unwrap_err();
@@ -746,7 +746,7 @@ dependencies:
         c:
 "#,
     );
-    let ctx = DuckCtx::default();
+    let ctx = DuckContext::default();
     let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
     assert_eq!(
         err.to_string(),
@@ -771,7 +771,7 @@ dependencies:
       - {}
 "#,
     );
-    let ctx = DuckCtx::default();
+    let ctx = DuckContext::default();
     let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
     assert_eq!(
         err.to_string(),
@@ -791,7 +791,7 @@ fn git_url_points_to_local_dir() {
         r#"
 metadata:
   name: xd
-  version: 0.1
+  version: '0.1'
 
 dependencies:
   a:
@@ -800,7 +800,7 @@ dependencies:
 "#,
         root_dir.path().display()
     ));
-    let ctx = DuckCtx::default();
+    let ctx = DuckContext::default();
 
     let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
     assert_eq!(
@@ -827,7 +827,7 @@ fn valid_git_url_points_to_local_dir() {
         r#"
 metadata:
   name: xd
-  version: 0.1
+  version: '0.1'
 
 dependencies:
   a:
@@ -836,14 +836,14 @@ dependencies:
 "#,
         root_dir.path().display()
     ));
-    let ctx = DuckCtx::default();
+    let ctx = DuckContext::default();
 
     assert!(parse_manifest(&manifest_path, &ctx).is_ok());
 }
 
 #[test]
-fn floats_explicit_string_work() {
-    let (_dir, manifest_path) = prepare_manifest(
+fn floats_explicit_string_dont_work() {
+    let (dir, manifest_path) = prepare_manifest(
         r#"
 metadata:
   name: xd
@@ -856,26 +856,16 @@ dependencies:
     version: ['0.10', 0.10]
 "#,
     );
-    let ctx = DuckCtx::default();
-    let manifest = parse_manifest(&manifest_path, &ctx).unwrap();
-    let summary = manifest.manifest();
-    assert_eq!(summary.version(), Version::new(0, 10, 0));
+    let ctx = DuckContext::default();
+    let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
     assert_eq!(
-        summary
-            .dependencies()
-            .get_by_name("a".into())
-            .unwrap()
-            .versions()[0],
-        Version::new(0, 10, 0)
-    );
-
-    assert_eq!(
-        summary
-            .dependencies()
-            .get_by_name("b".into())
-            .unwrap()
-            .versions(),
-        [Version::new(0, 10, 0), Version::new(0, 10, 0)]
+        err.to_string(),
+        make_errors_message(
+            &dir,
+            [
+                "dependencies.b.version[1]: invalid type: floating point `0.1`, expected a semver string at line 10 column 23"
+            ]
+        )
     );
 }
 
@@ -892,7 +882,7 @@ dependencies:
     version: 0.10
 "#,
     );
-    let ctx = DuckCtx::default();
+    let ctx = DuckContext::default();
     let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
     assert_eq!(
         err.to_string(),
@@ -911,10 +901,10 @@ fn floats_root_version_parses() {
         r#"
 metadata:
   name: xd
-  version: 0.10
+  version: '0.10'
 "#,
     );
-    let ctx = DuckCtx::default();
+    let ctx = DuckContext::default();
     let manifest = parse_manifest(&manifest_path, &ctx).unwrap();
     let summary = manifest.manifest();
     assert_eq!(summary.version(), Version::new(0, 10, 0));
@@ -926,7 +916,7 @@ fn profiles_parse() {
         r#"
 metadata:
   name: xd
-  version: 0.10
+  version: '0.10'
 
 profiles:
   prof1:
@@ -936,7 +926,7 @@ profiles:
     inherits: prof1
 "#,
     );
-    let ctx = DuckCtx::default();
+    let ctx = DuckContext::default();
     let manifest = parse_manifest(&manifest_path, &ctx).unwrap();
     let summary = manifest.manifest();
     let profiles = summary.profiles();
@@ -973,14 +963,14 @@ fn unknown_opt_level() {
         r#"
 metadata:
   name: xd
-  version: 0.10
+  version: '0.10'
 
 profiles:
   prof1:
     opt-level: x
 "#,
     );
-    let ctx = DuckCtx::default();
+    let ctx = DuckContext::default();
     let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
     assert_eq!(
         err.to_string(),
@@ -1001,7 +991,7 @@ fn duplicated_names() {
         r#"
 metadata:
   name: xd
-  version: 0.10
+  version: '0.10'
 
 dependencies:
   a:
@@ -1012,7 +1002,7 @@ dependencies:
       name: a
 "#,
     );
-    let ctx = DuckCtx::default();
+    let ctx = DuckContext::default();
     let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
     assert_eq!(
         err.to_string(),
@@ -1032,7 +1022,7 @@ fn duplicated_names_in_aliases() {
         r#"
 metadata:
   name: xd
-  version: 0.10
+  version: '0.10'
 
 dependencies:
   a:
@@ -1045,7 +1035,7 @@ dependencies:
       name: c
 "#,
     );
-    let ctx = DuckCtx::default();
+    let ctx = DuckContext::default();
     let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
     assert_eq!(
         err.to_string(),

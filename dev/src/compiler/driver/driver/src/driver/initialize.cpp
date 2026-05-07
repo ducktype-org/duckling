@@ -18,7 +18,6 @@
 #include <linker/link.hpp>
 #include <time_stats/time_stats.hpp>
 
-#include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <artifacts/artifacts.hpp>
@@ -28,17 +27,6 @@
 
 namespace compiler::driver {
 
-	InitializationResult::InitializationResult(base::OkBad result): result(result) {}
-
-	InitializationResult::~InitializationResult() {
-		CORE_ASSERT_NOEXCEPT(checked, "Initialization status was not checked, use status method!");
-	}
-
-	[[nodiscard]]
-	base::OkBad InitializationResult::status() {
-		checked = true;
-		return result;
-	}
 
 	namespace {
 		constinit bool is_initialized = false;
@@ -57,8 +45,15 @@ namespace compiler::driver {
 			for (const auto& category_name: debug_options.dev_log_categories)
 				logger::enableDevCategoryByStringName(category_name);
 
-			driver::llvm_dump_ir  = debug_options.dump_llvm_ir;
-			driver::llvm_dump_asm = debug_options.dump_llvm_asm;
+			driver::dump_ir_options.dump_asm  = debug_options.dump_asm;
+			driver::dump_ir_options.dump_llvm = debug_options.dump_llvm;
+			driver::dump_ir_options.dump_lir  = debug_options.dump_lir;
+			driver::dump_ir_options.dump_mir  = debug_options.dump_mir;
+			driver::dump_ir_options.dump_hir  = debug_options.dump_hir;
+
+			driver::print_ir_options.print_lir = debug_options.print_lir;
+			driver::print_ir_options.print_mir = debug_options.print_mir;
+			driver::print_ir_options.print_hir = debug_options.print_hir;
 		}
 
 		void handleArtifactsOptions(const options_types::ArtifactsOptions& artifacts_options) {
@@ -93,7 +88,7 @@ namespace compiler::driver {
 			);
 			if (!getModuleRef(root_module)->hasMainSourceFile()) {
 				auto module_name = getModuleRef(root_module)->getName();
-				global_state::getGlobalLogger()->log(makeBox<dia_int::PlaceholderHeaderError>(
+				global_state::getGlobalLogger()->log(makeBox<dia_int::PlaceholderError>(
 					"Main package does not have a main source file.",
 					base::strConcat(
 						"The main source file is required for compilation. Please add a ",
@@ -187,7 +182,7 @@ namespace compiler::driver {
 		}
 	}
 
-	InitializationResult initializeTheCompiler(CompilerModeOfOperationAndOptions options) {
+	base::CheckedOkBad initializeTheCompiler(CompilerModeOfOperationAndOptions options) {
 		time_stats::TrackCategoryTime driver_initialization_time(
 			time_stats::TimeCategories::DriverInitialization
 		);

@@ -1,60 +1,60 @@
-type fun: fib { i64 } i64
+type fun: fib { i64 } { i64 }
 
 function fib {
     # n := argument
 
-    # [0, 8) ret_val
+    # [0, 8) ret0
     # [8, 16) arg0
 
-    mov_l64_l64         0, 8;
+    mov_p64_p64         0, 8;
 
     # if !(n > 1): end
-    cmpGt_l64_imm        8, 1;
+    cmpGt_p64_imm        8, 1;
     jmpIfNot_label   End;
 
     # fib(n - 1)
-    init_type i64; # [16, 24) fib(n-1) ret_val
+    init_type i64; # [16, 24) fib(n-1) ret0
     init_type i64; # [24, 32) fib(n-1) arg0
-    mov_l64_l64         24, 8;
-    sub_l64_imm         24, 1;
+    mov_p64_p64         24, 8;
+    sub_p64_imm         24, 1;
     call_func           fib;
 
-    mov_l64_l64         0, 16;
+    mov_p64_p64         0, 16;
 
     # fib(n - 2)
     init_type i64; # [24, 32) fib(n-2) arg0
-    mov_l64_imm         16, 0;
-    mov_l64_l64         24, 8;
-    sub_l64_imm         24, 2;
+    mov_p64_imm         16, 0;
+    mov_p64_p64         24, 8;
+    sub_p64_imm         24, 2;
     call_func           fib;
 
 
     # (fib(n - 1) + fib(n - 2)) % mod
-    add_l64_l64         0, 16;
-    mod_l64_imm         0, 8388449;
+    add_p64_p64         0, 16;
+    mod_p64_imm         0, 8388449;
 
-    deinit; # fib() ret_val
+    deinit; # fib() ret0
     label               End;
 
     deinit; # arg0
     ret;
 }
 
-function main { i64, ptr_argv } -> i64 {
-    # [0, 8) main ret_val
+function main { i64, ptr_argv } -> { i64 } {
+    # [0, 8) main ret0
     # [8, 16) -> argc
     # [16, 32) -> *argv
 
     # n := argument
-    init_type   i64; # [32, 40) fib() ret_val
+    init_type   i64; # [32, 40) fib() ret0
     init_type   i64; # [40, 48) fib() arg0
-    input_l64   40;
+    input_p64   40;
 
     call_func   fib;
 
-    output_l64  32;
+    output_p64  32;
 
-    deinit; # fib() ret_val
+    deinit; # fib() ret0
     deinit;       # *argv
     deinit;       # argc
     ret;

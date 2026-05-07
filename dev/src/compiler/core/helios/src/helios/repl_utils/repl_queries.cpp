@@ -10,12 +10,12 @@
 #include <helios/queries/queries.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
+#include <helios/tsh/queries/types.hpp>
+#include <helios/tsh/type_interface.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/hout_creation/hout_stmt_compilation.hpp>
 #include <helios_private/symbols/generated_symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
-#include <tsh/queries/types.hpp>
-#include <tsh/type_interface.hpp>
 
 #include <logger/logger.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
@@ -45,7 +45,7 @@ namespace compiler::repl {
 			);
 
 
-			auto hout_expr   = hout_expr_result->valueOrPanic()->clone();
+			auto hout_expr   = hout_expr_result->valueOrPanic().ref();
 			auto return_type = hout_expr->expression_type.getSymbolType();
 
 			CORE_DEV_LOG(REPL, "Expression return type: ", return_type.toString(), "\n");
@@ -58,7 +58,7 @@ namespace compiler::repl {
 			if (return_type.toString() == "void") {
 				CORE_DEV_LOG(REPL, "Creating ExprStmt for void expression\n");
 				auto void_expr_stmt = base::makeBox<helios::code::ExprStmt>(
-					helios::code::generatedOrigin(), std::move(hout_expr)
+					helios::code::generatedOrigin(), hout_expr
 				);
 				code_block->statements.emplace_back(std::move(void_expr_stmt));
 			} else {

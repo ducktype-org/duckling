@@ -1,12 +1,12 @@
 #include "vm_evaluator.hpp"
 
 #include <backends/dvm/dvm_backend.hpp>
+#include <helios/tsh/types.hpp>
 #include <helios_private/comp_time/comptime_type_operations.hpp>
-#include <tsh/types.hpp>
 
 #include <vm/api/vm.hpp>
 #include <vm/bytecode/validator/errors.hpp>
-#include <vm/core/thread/vmvalue.hpp>
+#include <vm/core/vmvalue/vmvalue.hpp>
 
 #include <expected>
 #include <mutex>
@@ -273,7 +273,7 @@ namespace {
 		const std::vector<CRef<compiler::lir::Function>>& all_lir_functions,
 		query::Context&                                   query_ctx
 	) {
-		compiler::backend_vm::DVMCodeBuilder m(query_ctx, false);
+		compiler::backend_vm::DVMCodeBuilder m(query_ctx, false, true);
 
 		// Insert comptime context intto the module, for the module to pass the validation. This code
 		// although loaded here multiple times will be deduplicated by `CompTimeDVM::loadCode()`
@@ -345,7 +345,11 @@ namespace {
 		// Free the owned arguments.
 		for (const auto& arg: owned_args) arg->freeData();
 
-		auto exit_value = maybe_exit_value.value();
+		CORE_ASSERT(
+			maybe_exit_value.value().size() == 1,
+			"Compiler support for multiple values not implemented"
+		);
+		auto exit_value = maybe_exit_value.value().at(0);
 		return vmValueToCtv(return_type, exit_value);
 	}
 }

@@ -1,18 +1,16 @@
 //! `build` subcommand execution logic.
-use crate::{
-    QuackResult, QuackResultContext, StrId,
-    quackpack::core::{
-        FeatureName, PackageCtx,
-        compile::{self, BuildContext, profiles::Profile},
-        storage::{StorageSyncOptions, sync, venv_id::ToVenvId},
-    },
-};
+use crate::quackpack::core::compile::duckc::CompilationType;
+use crate::quackpack::core::compile::profiles::Profile;
+use crate::quackpack::core::compile::{self, BuildContext};
+use crate::quackpack::core::storage::{StorageSyncOptions, sync};
+use crate::quackpack::core::{FeatureName, PackageContext};
+use crate::{QuackResult, StrId};
 
 #[derive(Debug)]
 /// Options for compiling a project.
 pub struct BuildOptions<'duck> {
     /// Package to compile.
-    pub package: PackageCtx<'duck>,
+    pub pcx: PackageContext<'duck>,
     /// Enabled features from the CLI.
     pub used_features: Vec<FeatureName>,
     /// Selected build profile.
@@ -28,7 +26,7 @@ pub struct BuildOptions<'duck> {
 /// Compile given options.
 pub fn compile(options: BuildOptions<'_>) -> QuackResult<()> {
     let BuildOptions {
-        package,
+        pcx,
         used_features,
         profile,
         overwrite,
@@ -36,24 +34,23 @@ pub fn compile(options: BuildOptions<'_>) -> QuackResult<()> {
         strict_errors,
     } = options;
     let (lock, venv, storage) = sync(
-        &package,
+        &pcx,
         StorageSyncOptions {
             overwrite,
             frozen,
             strict_errors,
         },
     )?;
-    let _compile_lock = lock
-        .to_compile_lock(&storage, package.to_venv_id())
-        .context("failed to acquire a compile lock")?;
-    let profile = Profile::construct_profile(profile, package.package().manifest().profiles())?;
+    let _compile_lock = lock.into_compile_lock();
+    let profile = Profile::construct_profile(profile, pcx.package().manifest().profiles())?;
     let bcx = BuildContext {
-        package: &package,
+        pcx: &pcx,
         freeze: venv.into(),
         storage,
         used_features,
         profile,
+        script_path: None,
     };
-    compile::compile(bcx)?;
+    compile::compile(bcx, CompilationType::OnlyRootPackage)?;
     Ok(())
 }

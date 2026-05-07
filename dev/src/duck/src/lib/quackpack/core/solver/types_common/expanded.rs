@@ -1,22 +1,18 @@
-use std::{
-    collections::HashSet,
-    ops::Deref,
-    path::PathBuf,
-    sync::{Mutex, OnceLock},
-};
+use std::collections::HashSet;
+use std::ops::Deref;
+use std::path::PathBuf;
+use std::sync::{Mutex, OnceLock};
 
 use serde::{Deserialize, Serialize, de, ser};
 use url::Url;
 
-use crate::{
-    QuackResult, QuackResultContext, StrId, qp_bail_internal,
-    quackpack::core::{
-        BranchOrTag, Dependency, Registry, Source, Version,
-        gathering::fetch_types::{ManifestsRequest, NotPinnedRequest, PinnedRequest},
-        types_common::{InternedLocation, Location},
-        version::CompatibilityCheck,
-    },
+use crate::quackpack::core::solver::gathering::fetch_types::{
+    ManifestsRequest, NotPinnedRequest, PinnedRequest,
 };
+use crate::quackpack::core::solver::types_common::{InternedLocation, Location};
+use crate::quackpack::core::version::CompatibilityCheck;
+use crate::quackpack::core::{BranchOrTag, Dependency, Registry, Source, Version};
+use crate::{QuackResult, QuackResultContext, StrId, qp_bail_internal};
 
 static INTERNED_EXPANDED_LOCATION_CACHE: OnceLock<Mutex<HashSet<&'static ExpandedLocation>>> =
     OnceLock::new();
@@ -71,9 +67,9 @@ impl<'de> de::Deserialize<'de> for InternedExpandedLocation {
     }
 }
 
-impl From<ExpandedLocation> for InternedExpandedLocation {
-    fn from(value: ExpandedLocation) -> Self {
-        Self::new(value)
+impl<T: Into<ExpandedLocation>> From<T> for InternedExpandedLocation {
+    fn from(value: T) -> Self {
+        Self::new(value.into())
     }
 }
 
@@ -91,7 +87,7 @@ impl AsRef<ExpandedLocation> for InternedExpandedLocation {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
+#[derive(Clone, Deserialize, Eq, Hash, PartialEq, Serialize)]
 /// Type describing a localization of a dependency.
 /// Can either be:
 /// * registry - a dependency with a given name from a given server;
@@ -110,6 +106,27 @@ pub enum ExpandedLocation {
     Registry { url: Url, real_name: StrId },
     Git { url: Url, commit: StrId },
     Local { absolute_path: PathBuf },
+}
+
+impl std::fmt::Debug for ExpandedLocation {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Registry { url, real_name } => f
+                .debug_struct("Registry")
+                .field("url", &url.as_str())
+                .field("real_name", real_name)
+                .finish(),
+            Self::Git { url, commit } => f
+                .debug_struct("Git")
+                .field("url", &url.as_str())
+                .field("commit", commit)
+                .finish(),
+            Self::Local { absolute_path } => f
+                .debug_struct("Local")
+                .field("absolute_path", absolute_path)
+                .finish(),
+        }
+    }
 }
 
 impl ExpandedLocation {

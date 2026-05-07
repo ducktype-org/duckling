@@ -50,28 +50,20 @@
 //! to exist after reboot even if it has been used before. The problem affects
 //! however only relatively new virtual environments.
 
-use std::{
-    fmt,
-    io::Write,
-    path::{Path, PathBuf},
-    time::SystemTime,
-};
+use std::fmt;
+use std::io::Write;
+use std::path::{Path, PathBuf};
+use std::time::SystemTime;
 
 use serde::{Deserialize, Serialize};
 use tracing::debug;
 
-use crate::{
-    QuackError, QuackResult, QuackResultContext,
-    quackpack::core::storage::{
-        freeze::{self, VenvFreeze},
-        paths::Storage,
-        venv_id::VenvId,
-    },
-    util::{
-        hash,
-        path_ops_ext::{MkdirOptions, PathOpsExt, ShouldBlock},
-    },
-};
+use crate::quackpack::core::storage::freeze::{self, VenvFreeze};
+use crate::quackpack::core::storage::paths::Storage;
+use crate::quackpack::core::storage::venv_id::VenvId;
+use crate::util::hash;
+use crate::util::path_ops_ext::{MkdirOptions, PathOpsExt};
+use crate::{DuckContext, QuackError, QuackResult, QuackResultContext};
 
 #[derive(Debug)]
 pub enum CorruptedVenvReason {
@@ -112,7 +104,7 @@ impl fmt::Display for CorruptedVenvError {
 
 impl std::error::Error for CorruptedVenvError {}
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq, Hash)]
 /// State of virtual environment in the storage. Stores the freeze for the given
 /// virtual environment, copy of manifest's metadata, and additional info
 /// required for storage functioning: last location and access info.
@@ -143,39 +135,35 @@ impl VenvData {
     }
 
     /// Load [`VenvData`] from the given path.
+    #[tracing::instrument]
     fn load(path: &Path) -> QuackResult<Self> {
-        debug!("loading venv data from `{}`", path.display());
+        debug!("loading venv data");
         let content = path.read_to_string()?;
-        let Some((data, checksum)) = content.rsplit_once("\n") else {
-            debug!("missing newline for venv data at `{}`", path.display());
+        let Some((data, found_checksum)) = content.rsplit_once("\n") else {
+            debug!("missing a newline");
             return Err(CorruptedVenvError {
                 reason: CorruptedVenvReason::MissingNewLine,
                 path: path.to_path_buf(),
             }
             .into());
         };
-        let current_hash = hash::sha256_string(data);
-        if current_hash != checksum {
+        let expected_checksum = hash::sha256_string(data);
+        if expected_checksum != found_checksum {
             debug!(
-                "invalid checksum (computed/expected: `{}`, got: `{}`) for venv data at `{}`",
-                current_hash,
-                checksum,
-                path.display()
+                "invalid checksum (expected: `{}`, got: `{}`)",
+                expected_checksum, found_checksum,
             );
             return Err(CorruptedVenvError {
                 reason: CorruptedVenvReason::InvalidChecksum {
-                    expected: checksum.to_string(),
-                    actual: current_hash,
+                    actual: found_checksum.to_string(),
+                    expected: expected_checksum,
                 },
                 path: path.to_path_buf(),
             }
             .into());
         }
         serde_json::from_str(data).map_err(|e| {
-            debug!(
-                "json error `{e}` while deserializing venv data at `{}`",
-                path.display()
-            );
+            debug!("json error `{e}`");
             let err = QuackError::from(e);
             err.context(CorruptedVenvError {
                 reason: CorruptedVenvReason::Other,
@@ -185,6 +173,7 @@ impl VenvData {
     }
 
     /// Save to the given path.
+    #[tracing::instrument(skip(self))]
     fn save_to(&self, path: &Path) -> QuackResult<()> {
         let data = serde_json::to_string(self)?;
         let checksum = hash::sha256_string(&data);
@@ -192,7 +181,7 @@ impl VenvData {
         file.set_len(0)
             .with_context(|| format!("failed to truncate `{}`", path.display()))?;
         let full_data = format!("{data}\n{checksum}");
-        debug!("for data `{data}` calculated checksum `{checksum}`");
+        debug!(%checksum);
         file.write_all(full_data.as_ref())?;
         file.flush()?;
         file.sync_data()?;
@@ -288,7 +277,7 @@ impl From<Venv> for VenvFreeze {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 /// A virtual environment.
 pub struct Venv {
     id: VenvId,
@@ -329,17 +318,26 @@ impl Venv {
     /// Convert the state of a virtual environment into canonical form and return its state.
     ///
     /// If neither the main nor backup file is valid, the environment directory is removed.
-    pub fn fix_and_load(storage: &Storage, venv_id: VenvId) -> QuackResult<Option<Self>> {
+    #[tracing::instrument(skip_all)]
+    pub fn fix_and_load(
+        storage: &Storage,
+        venv_id: VenvId,
+        ctx: &DuckContext,
+    ) -> QuackResult<Option<Self>> {
         let _lock = storage
-            .data_lock(venv_id)
-            .lock(ShouldBlock::Yes)
+            .data_locks()
+            .open_exclusive(venv_id, ctx)
             .with_context(|| {
-                format!("failed to acquire an exclusive data lock for venv `{venv_id}`")
+                format!(
+                    "failed to acquire an exclusive data lock for venv `{}`",
+                    venv_id
+                )
             })?;
         Self::fix_and_load_with_lock_held(storage, venv_id)
     }
 
     /// Helper for [`fix_and_load`](Self::fix_and_load).
+    #[tracing::instrument(skip(storage))]
     fn fix_and_load_with_lock_held(
         storage: &Storage,
         venv_id: VenvId,
@@ -347,7 +345,7 @@ impl Venv {
         // NOTE: when external entity changes the storage disregarding the rules, we have
         // toctou here and an exception might be thrown later. We ignore that to keep sanity.
         if !storage.venv_dir(venv_id).is_dir() {
-            debug!("storage for venv `{venv_id}` is not a directory");
+            debug!("not a directory");
             return Ok(None);
         }
         let metadata = storage.venv_metadata(venv_id);
@@ -358,7 +356,7 @@ impl Venv {
                 Ok(data) => Some(data),
                 Err(e) => {
                     if let Some(err) = e.downcast_ref_in_chain::<CorruptedVenvError>() {
-                        debug!("venv `{venv_id}` is corrupted: {err}");
+                        debug!("corrupted: {err}");
                         None
                     } else {
                         return Err(e);
@@ -370,7 +368,7 @@ impl Venv {
                 let previous_now = this.data().last_access();
                 this.data_mut().set_last_access(SystemTime::now());
                 if let Err(e) = this.save_to_with_lock_held(storage) {
-                    debug!("failed to update last access time for venv `{venv_id}`: {e} ({e:?})");
+                    debug!("failed to update last access time: {e} ({e:?})");
                     this.data_mut().set_last_access(previous_now);
                 }
                 return Ok(Some(this));
@@ -384,7 +382,7 @@ impl Venv {
                 Ok(data) => Some(data),
                 Err(e) => {
                     if let Some(err) = e.downcast_ref_in_chain::<CorruptedVenvError>() {
-                        debug!("venv `{venv_id}` is corrupted: {err}");
+                        debug!("corrupted: {err}");
                         None
                     } else {
                         return Err(e);
@@ -397,7 +395,7 @@ impl Venv {
                 let previous_now = this.data().last_access();
                 this.data_mut().set_last_access(SystemTime::now());
                 if let Err(e) = this.save_to_with_lock_held(storage) {
-                    debug!("failed to update last access time for venv `{venv_id}`: {e} ({e:?})");
+                    debug!("failed to update last access time: {e} ({e:?})");
                     this.data_mut().set_last_access(previous_now);
                 }
                 return Ok(Some(this));
@@ -406,7 +404,7 @@ impl Venv {
         // both files are not valid, so the venv does not exist,
         // put it in the canonical form by deleting its directory
         storage.venv_dir(venv_id).rmtree()?;
-        storage.venvs_base_dir().try_fsync_dir()?;
+        storage.venvs_root_dir().try_fsync_dir()?;
         Ok(None)
     }
 
@@ -414,10 +412,11 @@ impl Venv {
     ///
     /// Assumes that the current `metadata` file is valid. This is typically ensured
     /// by calling [`fix_and_load`](Self::fix_and_load) before.
-    pub fn save_to(&self, storage: &Storage) -> QuackResult<()> {
+    #[tracing::instrument(skip_all)]
+    pub fn save_to(&self, storage: &Storage, ctx: &DuckContext) -> QuackResult<()> {
         let _lock = storage
-            .data_lock(self.id)
-            .lock(ShouldBlock::Yes)
+            .data_locks()
+            .open_exclusive(self.id, ctx)
             .with_context(|| {
                 format!(
                     "failed to acquire an exclusive data lock for venv `{}`",
@@ -428,6 +427,7 @@ impl Venv {
     }
 
     /// Helper for [`save_to`](Self::save_to).
+    #[tracing::instrument(skip_all, fields(id = ?self.id))]
     fn save_to_with_lock_held(&self, storage: &Storage) -> QuackResult<()> {
         let metadata = storage.venv_metadata(self.id);
         let backup_metadata = storage.venv_backup_metadata(self.id);

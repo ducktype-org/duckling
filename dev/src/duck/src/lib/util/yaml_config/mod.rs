@@ -1,19 +1,14 @@
 //! Implementation of traversing YAML documents, and getting/setting values at dotted keys.
+use std::path::{Path, PathBuf};
+use std::{fmt, io};
+
 use serde::Deserialize;
-use std::{
-    fmt, io,
-    path::{Path, PathBuf},
-};
+use serde_yaml_ng::{Mapping, Sequence, Value, from_str, to_string};
 use tracing::debug;
 
-use serde_yaml_ng::{Mapping, Sequence, Value, from_str, to_string};
-
-use crate::{
-    QuackError, QuackResult, QuackResultContext, qp_bail, qp_bail_internal, qp_err,
-    util::path_ops_ext::PathOpsExt,
-};
-
 use super::DescriptionWithAnArticle;
+use crate::util::path_ops_ext::PathOpsExt;
+use crate::{QuackError, QuackResult, QuackResultContext, qp_bail, qp_bail_internal, qp_err};
 
 mod de;
 
@@ -48,6 +43,7 @@ macro_rules! delegate_getter {
         CastFunctionName: $yaml_value_fn:ident $(,)?
     ) => {
         #[doc = concat!("Get [`", stringify!($doc), "`] at the dotted key.")]
+        #[tracing::instrument(skip_all)]
         pub fn $name(&self, key: &str) -> QuackResult<Option<$ret>> {
             let value = self.get(key)?;
             let Some(value) = value else {
@@ -71,6 +67,7 @@ macro_rules! delegate_setter {
         InputType: $value:ty $(,)?
     ) => {
         #[doc = concat!("Set [`", stringify!($value), "`] at the dotted key.")]
+        #[tracing::instrument(skip_all)]
         pub fn $name(&mut self, key: &str, value: $value) -> QuackResult<()> {
             let value: Value = value.into();
             self.set(key, value)
@@ -78,11 +75,19 @@ macro_rules! delegate_setter {
     };
 }
 
-#[derive(Default, Debug)]
+#[derive(Default)]
 /// YAML config manager.
 pub struct YamlConfig {
     content: Mapping,
     source: Option<PathBuf>,
+}
+
+impl fmt::Debug for YamlConfig {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("YamlConfig")
+            .field("where", &self.source)
+            .finish_non_exhaustive()
+    }
 }
 
 impl YamlConfig {
@@ -137,16 +142,17 @@ impl YamlConfig {
         }
     }
 
+    fn get_location_description(&self) -> impl fmt::Display {
+        self.source
+            .as_ref()
+            .map(|buf| buf.display())
+            .unwrap_or_else(|| Path::new("<default-config>").display()) // It's dyn-hack.
+    }
+
     #[track_caller]
     /// Get the value from the dotted key.
     fn _get(&self, key: &str) -> QuackResult<Option<&Value>> {
-        debug!(
-            "getting the key `{key}` from config at `{}`",
-            self.source
-                .as_ref()
-                .map(|buf| buf.display())
-                .unwrap_or_else(|| Path::new("<default-config>").display()) // It's dyn-hack.
-        );
+        debug!(%key, where = %self.get_location_description());
         if key.is_empty() {
             qp_bail_internal!("empty key")
         }
@@ -188,6 +194,7 @@ impl YamlConfig {
     #[track_caller]
     /// Set the value at the dotted key.
     fn _set(&mut self, key: &str, value: Value) -> QuackResult<()> {
+        debug!(%key, ?value, where = %self.get_location_description());
         if key.is_empty() {
             qp_bail_internal!("empty key")
         }
@@ -350,14 +357,14 @@ impl YamlConfig {
     }
 
     /// Deserialize a value at the dotted key.
-    pub fn deserialize<'de, T: Deserialize<'de>>(&self, key: &str) -> QuackResult<T> {
+    pub fn deserialize<'de, T: Deserialize<'de>>(&'de self, key: &str) -> QuackResult<T> {
         let deserializer = de::YamlDeserializer { config: self, key };
         T::deserialize(deserializer).with_context(|| self.make_location_error())
     }
 
     /// Deserialize an optional value at the dotted key.
     pub fn deserialize_optional<'de, T: Deserialize<'de>>(
-        &self,
+        &'de self,
         key: &str,
     ) -> QuackResult<Option<T>> {
         self.deserialize::<Option<T>>(key)
@@ -373,8 +380,9 @@ impl fmt::Display for YamlConfig {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use tempfile::NamedTempFile;
+
+    use super::*;
 
     fn prepare_file(content: &str) -> NamedTempFile {
         use std::io::Write;
@@ -680,9 +688,19 @@ invalid type: map, expected an int or a string",
             format!(
                 "\
 when parsing the configuration at `{}`
-invalid type: Option value, expected an int or a string",
+missing key `nonexistentkey`",
                 file.path().display()
             )
         );
+
+        let none = config
+            .deserialize::<Option<IntOrString>>("nonexistentkey")
+            .unwrap();
+        assert!(none.is_none());
+
+        let none = config
+            .deserialize_optional::<IntOrString>("nonexistentkey")
+            .unwrap();
+        assert!(none.is_none());
     }
 }

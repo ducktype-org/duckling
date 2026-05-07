@@ -9,7 +9,7 @@
 #include <frontend/pst_parser/elements/hierarchy/expressions/call.hpp>
 #include <helios/hout/origin.hpp>
 #include <helios/symbols/symbol_id.hpp>
-#include <tsh/symbol_type.hpp>
+#include <helios/tsh/symbol_type.hpp>
 
 #include <diagnostic/source_position.hpp>
 
@@ -90,7 +90,7 @@ namespace compiler::helios::code {
 		}
 
 	public:
-		AmbiguousMatchesError(dia::SourcePosition source_position):
+		AmbiguousMatchesError(dia_int::StablePosition source_position):
 			  MessageWithCodeFragmentAndCause(source_position) {}
 
 		// void addExplore
@@ -151,7 +151,7 @@ namespace compiler::helios::code {
 		}
 
 	public:
-		CoercibleCandidateNote(dia::SourcePosition source_position):
+		CoercibleCandidateNote(dia_int::StablePosition source_position):
 			  MessageWithCodeFragment(source_position) {}
 	};
 
@@ -164,7 +164,7 @@ namespace compiler::helios::code {
 		}
 
 	public:
-		ExactCandidateNote(dia::SourcePosition source_position):
+		ExactCandidateNote(dia_int::StablePosition source_position):
 			  MessageWithCodeFragmentAndCause(source_position) {}
 	};
 
@@ -177,7 +177,7 @@ namespace compiler::helios::code {
 		}
 
 	public:
-		FailedCandidateNote(dia::SourcePosition source_position):
+		FailedCandidateNote(dia_int::StablePosition source_position):
 			  MessageWithCodeFragmentAndCause(source_position) {}
 	};
 
@@ -190,7 +190,7 @@ namespace compiler::helios::code {
 		}
 
 	public:
-		NoCandidatesFoundError(dia::SourcePosition source_position):
+		NoCandidatesFoundError(dia_int::StablePosition source_position):
 			  MessageWithCodeFragmentAndCause(source_position) {}
 	};
 }

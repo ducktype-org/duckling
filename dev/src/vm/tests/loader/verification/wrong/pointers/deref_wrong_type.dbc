@@ -1,17 +1,17 @@
 type primitive: ui64 8
 
-function main { i64, ptr_argv } -> i64 {
-	# ret_val -> main ret_val
+function main { i64, ptr_argv } -> { i64 } {
+	# ret0 -> main ret0
 	# arg0 -> argc
 	# arg1 -> *argv
 
-	init_lany_type 		x, ptr_i64;
-	init_lany_type 		y, ui64;
-	init_lany_type 		z, i64;
+	init_pany_type 		x, ptr_i64;
+	init_pany_type 		y, ui64;
+	init_pany_type 		z, i64;
 
-	mov_l64_imm         z, 1;
-	ref_lptr_lany        x, z;  # x = &z
-	load_lany_lptr       y, x;  # y = *x
+	mov_p64_imm         z, 1;
+	ref_pptr_pany        x, z;  # x = &z
+	load_pany_pptr       y, x;  # y = *x
 
 	deinit; # z
 	deinit; # y

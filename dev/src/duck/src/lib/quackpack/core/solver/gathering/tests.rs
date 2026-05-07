@@ -1,33 +1,24 @@
-use std::{collections::HashMap, path::PathBuf, time::Duration};
+use std::collections::{HashMap, HashSet};
+use std::path::PathBuf;
+use std::time::Duration;
 
 use httpmock::prelude::*;
 use tempfile::{TempDir, tempdir};
-
-use crate::{
-    DuckCtx,
-    quackpack::{
-        core::{Version, fetcher::types, git_access::GitAccess},
-        schemas::{
-            OneEntryMap,
-            registry::{self, DependencyCondition, DependencyFeature},
-        },
-    },
-    util::{path_ops_ext::PathOpsExt, test_utils::setup_test},
-};
-
-use std::collections::HashSet;
-
 use url::Url;
 
-use crate::quackpack::core::{
-    fetcher::Fetcher,
-    gathering::gatherer::Gatherer,
-    parse_manifest,
-    solver_mode::SolverMode,
-    types_common::{
-        ExpandedLocation, ExpandedPackage, InternedExpandedLocation, InternedLocation, Location,
-    },
+use crate::DuckContext;
+use crate::quackpack::core::fetcher::{Fetcher, types};
+use crate::quackpack::core::solver::gathering::gatherer::Gatherer;
+use crate::quackpack::core::solver::git_access::GitAccess;
+use crate::quackpack::core::solver::solver_mode::SolverMode;
+use crate::quackpack::core::solver::types_common::{
+    ExpandedLocation, ExpandedPackage, InternedLocation, Location,
 };
+use crate::quackpack::core::{Version, parse_manifest};
+use crate::quackpack::schemas::OneEntryMap;
+use crate::quackpack::schemas::registry::{self, DependencyCondition, DependencyFeature};
+use crate::util::path_ops_ext::PathOpsExt;
+use crate::util::test_utils::setup_test;
 
 struct MockGitAccess();
 impl GitAccess for MockGitAccess {
@@ -49,19 +40,19 @@ impl GitAccess for MockGitAccess {
     }
 }
 
-fn setup_duck_ctx() -> (DuckCtx, TempDir) {
+fn setup_duck_ctx() -> (DuckContext, TempDir) {
     let setup = || {
         // We set cache directory to a temporary directory, so we can use `Fetcher` without
         // worrying about leaving traces of tests in FS.
         let dir = tempdir().unwrap();
-        // SAFETY: Setup is single threaded, and `Env` in `DuckCtx`, copies all envs.
+        // SAFETY: Setup is single threaded, and `Env` in `DuckContext`, copies all envs.
         unsafe {
-            std::env::set_var("DUCK_CACHE_DIR", dir.path());
+            std::env::set_var("DUCK_HOME", dir.path());
         }
-        let ctx = DuckCtx::default();
-        // SAFETY: Setup is single threaded, and `Env` in `DuckCtx`, copies all envs.
+        let ctx = DuckContext::default();
+        // SAFETY: Setup is single threaded, and `Env` in `DuckContext`, copies all envs.
         unsafe {
-            std::env::remove_var("DUCK_CACHE_DIR");
+            std::env::remove_var("DUCK_HOME");
         }
         (ctx, dir)
     };
@@ -407,17 +398,20 @@ dependencies:
             SolverMode::default(),
         )
         .unwrap();
-    let loc_root = InternedExpandedLocation::new(ExpandedLocation::Local {
+    let loc_root = ExpandedLocation::Local {
         absolute_path: root_path.clone(),
-    });
-    let loc_foo = InternedExpandedLocation::new(ExpandedLocation::Registry {
+    }
+    .into();
+    let loc_foo = ExpandedLocation::Registry {
         url: url.clone(),
         real_name: "foo".into(),
-    });
-    let loc_bar = InternedExpandedLocation::new(ExpandedLocation::Registry {
+    }
+    .into();
+    let loc_bar = ExpandedLocation::Registry {
         url: url.clone(),
         real_name: "bar".into(),
-    });
+    }
+    .into();
     assert!(
         gathered_info.versions_for_location
             == HashMap::from([
@@ -541,17 +535,20 @@ dependencies:
             SolverMode::default(),
         )
         .unwrap();
-    let loc_root = InternedExpandedLocation::new(ExpandedLocation::Local {
+    let loc_root = ExpandedLocation::Local {
         absolute_path: root_path.clone(),
-    });
-    let loc_xd = InternedExpandedLocation::new(ExpandedLocation::Registry {
+    }
+    .into();
+    let loc_xd = ExpandedLocation::Registry {
         url: url.clone(),
         real_name: "xd".into(),
-    });
-    let loc_dx = InternedExpandedLocation::new(ExpandedLocation::Registry {
+    }
+    .into();
+    let loc_dx = ExpandedLocation::Registry {
         url: url.clone(),
         real_name: "dx".into(),
-    });
+    }
+    .into();
     assert!(
         gathered_info.versions_for_location
             == HashMap::from([
@@ -611,17 +608,20 @@ features:
             SolverMode::default(),
         )
         .unwrap();
-    let loc_root = InternedExpandedLocation::new(ExpandedLocation::Local {
+    let loc_root = ExpandedLocation::Local {
         absolute_path: root_path.clone(),
-    });
-    let loc_xd = InternedExpandedLocation::new(ExpandedLocation::Registry {
+    }
+    .into();
+    let loc_xd = ExpandedLocation::Registry {
         url: url.clone(),
         real_name: "xd".into(),
-    });
-    let loc_dx = InternedExpandedLocation::new(ExpandedLocation::Registry {
+    }
+    .into();
+    let loc_dx = ExpandedLocation::Registry {
         url: url.clone(),
         real_name: "dx".into(),
-    });
+    }
+    .into();
     assert!(
         gathered_info.possible_features
             == HashMap::from([
@@ -700,21 +700,25 @@ dependencies:
             SolverMode::default(),
         )
         .unwrap();
-    let loc_root = InternedExpandedLocation::new(ExpandedLocation::Local {
+    let loc_root = ExpandedLocation::Local {
         absolute_path: root_path.clone(),
-    });
-    let loc_a = InternedExpandedLocation::new(ExpandedLocation::Registry {
+    }
+    .into();
+    let loc_a = ExpandedLocation::Registry {
         url: url.clone(),
         real_name: "a".into(),
-    });
-    let loc_b = InternedExpandedLocation::new(ExpandedLocation::Registry {
+    }
+    .into();
+    let loc_b = ExpandedLocation::Registry {
         url: url.clone(),
         real_name: "b".into(),
-    });
-    let loc_c = InternedExpandedLocation::new(ExpandedLocation::Registry {
+    }
+    .into();
+    let loc_c = ExpandedLocation::Registry {
         url: url.clone(),
         real_name: "c".into(),
-    });
+    }
+    .into();
     assert!(
         gathered_info.versions_for_location
             == HashMap::from([
