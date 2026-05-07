@@ -72,7 +72,7 @@ impl DuckcProcessBuilder {
     /// Set artifacts directory of the currently compiling package.
     pub fn set_package_artifacts_dir(&mut self, package: &Package) -> &mut Self {
         let dir = package.artifacts_directory();
-        self.set_artifacts_dir(dir.not_locked_path())
+        self.set_artifacts_dir(dir.root_directory())
     }
 
     /// Set artifacts directory of the currently compiling package.
