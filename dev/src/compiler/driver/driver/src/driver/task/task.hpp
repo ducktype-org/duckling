@@ -1,7 +1,9 @@
 #pragma once
 
+#include <archiver/archive.hpp>
 #include <frontend/module_tree/module_id.hpp>
 #include <global_state/packages.hpp>
+#include <linker/link.hpp>
 
 #include <base/extend_cpp/stringifyable_enum.hpp>
 
@@ -23,7 +25,12 @@ namespace compiler::driver {
 	/**
 	 * @brief Package build target.
 	 */
-	struct BuildTargetDVM {};
+	struct BuildTargetDVM {
+		/**
+		 * @brief The output file path stem for the compiled DVM package.
+		 */
+		base::StrID output_file_stem = base::StrID("package_dvm");
+	};
 
 	/**
 	 * @brief Package build target for LLVM backend (to object files).
@@ -37,9 +44,9 @@ namespace compiler::driver {
 		base::StrID output_file_stem;
 
 		/**
-		 * @brief Linking options passed by a string to the linker.
+		 * @brief Linking options for the executable.
 		 */
-		base::StrID additional_linking_options;
+		linker::LinkingOptions linking_options;
 	};
 
 	struct BuildTargetLLVMStaticLibrary {
@@ -47,6 +54,11 @@ namespace compiler::driver {
 		 * @brief The output file path for the compiled static library.
 		 */
 		base::StrID output_file_stem;
+
+		/**
+		 * @brief Archiving options for the static library.
+		 */
+		archiver::ArchivingOptions archiving_options;
 	};
 
 	/**

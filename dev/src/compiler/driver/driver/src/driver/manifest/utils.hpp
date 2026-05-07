@@ -52,6 +52,30 @@ namespace compiler::driver::json {
 	);
 
 	/**
+	 * @brief Extracts a string value from a JSON object if the key is present.
+	 * Logs an error if the key exists but has a non-string value.
+	 * @param json The JSON object to extract from.
+	 * @param key The key of the value to extract.
+	 * @param error_message The error message to log if the key has an invalid type.
+	 * @return An optional containing the extracted string, or empty if the key is missing or invalid.
+	 */
+	base::Optional<base::StrID> getStringIfPresent(
+		const nlohmann::json& json, const Key& key, const std::string& error_message
+	);
+
+	/**
+	 * @brief Extracts a string value from a JSON value.
+	 * Logs an error if the value is not a string.
+	 * @param json The JSON value to extract from.
+	 * @param context_name The name of the value (used for error reporting).
+	 * @param error_message The error message to log if the value has an invalid type.
+	 * @return An optional containing the extracted string, or empty if the value is invalid.
+	 */
+	base::Optional<base::StrID> getStringValue(
+		const nlohmann::json& json, const std::string& context_name, const std::string& error_message
+	);
+
+	/**
 	 * @brief Extracts a boolean value from a JSON object without logging.
 	 * @param json The JSON object to extract from.
 	 * @param key The key of the value to extract.
@@ -78,6 +102,19 @@ namespace compiler::driver::json {
 	 * @return An optional containing the extracted boolean, or an empty optional if extraction fails.
 	 */
 	base::Optional<bool> getBool(
+		const nlohmann::json& json, const Key& key, const std::string& error_message
+	);
+
+	/**
+	 * @brief Extracts a boolean value from a JSON object if the key is present.
+	 * Logs an error if the key exists but has a non-boolean value.
+	 * @param json The JSON object to extract from.
+	 * @param key The key of the value to extract.
+	 * @param error_message The error message to log if the key has an invalid type.
+	 * @return An optional containing the extracted boolean, or empty if the key is missing or
+	 * invalid.
+	 */
+	base::Optional<bool> getBoolIfPresent(
 		const nlohmann::json& json, const Key& key, const std::string& error_message
 	);
 
@@ -140,6 +177,18 @@ namespace compiler::driver::json {
 	 * @return An optional containing the extracted object, or an empty optional if extraction fails.
 	 */
 	base::Optional<nlohmann::json> getObject(
+		const nlohmann::json& json, const Key& key, const std::string& error_message
+	);
+
+	/**
+	 * @brief Extracts an object value from a JSON object if the key is present.
+	 * Logs an error if the key exists but has a non-object value.
+	 * @param json The JSON object to extract from.
+	 * @param key The key of the value to extract.
+	 * @param error_message The error message to log if the key has an invalid type.
+	 * @return An optional containing the extracted object, or empty if the key is missing or invalid.
+	 */
+	base::Optional<nlohmann::json> getObjectIfPresent(
 		const nlohmann::json& json, const Key& key, const std::string& error_message
 	);
 

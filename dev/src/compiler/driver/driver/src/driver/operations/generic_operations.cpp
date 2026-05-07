@@ -753,9 +753,9 @@ namespace compiler::driver {
 		for (auto& [module, handle]: compile_handles) {
 			auto module_result = query::awaitEntryPoint<CompileModule>(handle);
 			if (module_result->hasValue()) {
-				objects_by_root_module[module.root_module].emplace_back(
-					module_result->valueOrPanic().object_art
-				);
+				objects_by_root_module
+					.put(module.root_module, std::vector<artifacts::FileArtifact>())
+					.first->second.emplace_back(module_result->valueOrPanic().object_art);
 
 				// We schedule debug info here, to only schedule it for correctly compiled modules.
 				if (module.build_debug_info) {
@@ -775,9 +775,9 @@ namespace compiler::driver {
 		for (auto [module, handle]: debug_info_handles) {
 			auto di_result = query::awaitEntryPoint<DebugInfoForModule>(handle);
 			if (di_result.hasValue())
-				debug_info_artifacts_by_root_module[module.root_module].emplace_back(
-					di_result.valueOrPanic()
-				);
+				debug_info_artifacts_by_root_module
+					.put(module.root_module, std::vector<artifacts::FileArtifact>())
+					.first->second.emplace_back(di_result.valueOrPanic());
 			else {
 				CORE_USER_LOG("Debug info generation failed for a module.");
 				result = base::BAD;
@@ -794,16 +794,14 @@ namespace compiler::driver {
 							base::strConcat(target_exe.output_file_stem.strView(), ".exe").c_str()
 						));
 
-					objects_by_root_module[task.root_module].push_back(emitBuiltinLLVMObjectFile());
+					objects_by_root_module.atMaybe(task.root_module)
+						.value()
+						->push_back(emitBuiltinLLVMObjectFile());
 
-					linker::LinkingOptions linking_options{
-						.linker_path = {},
-						.additional_link_options
-						= std::string(target_exe.additional_linking_options.strView()),
-						.link_c_standard_library = true,
-					};
 					auto linking_result = linker::linkExecutable(
-						output_file, objects_by_root_module[task.root_module], linking_options
+						output_file,
+						objects_by_root_module.at(task.root_module),
+						target_exe.linking_options
 					);
 
 					if (linking_result.isBad()) {
@@ -821,10 +819,11 @@ namespace compiler::driver {
 							base::strConcat(target_lib.output_file_stem.strView(), ".a").c_str()
 						));
 
-					archiver::ArchivingOptions archiving_options{};
-					auto                       archive_result = archiver::createArchive(
-                        output_file, objects_by_root_module[task.root_module], archiving_options
-                    );
+					auto archive_result = archiver::createArchive(
+						output_file,
+						*objects_by_root_module.atMaybe(task.root_module).value(),
+						target_lib.archiving_options
+					);
 
 					if (archive_result.isBad()) {
 						CORE_USER_LOG(
@@ -838,11 +837,15 @@ namespace compiler::driver {
 				variant_case_novalue(BuildTargetLLVM) {
 					// Do nothing for plain object files
 				}
-				variant_case_novalue(BuildTargetDVM) {
+				variant_case(BuildTargetDVM, target_dvm) {
+					auto debug_info_opt
+						= debug_info_artifacts_by_root_module.atMaybe(task.root_module);
+
 					if (linkDVMPackage(
-							objects_by_root_module[task.root_module],
-							debug_info_artifacts_by_root_module[task.root_module],
-							"package_dvm"
+							*objects_by_root_module.atMaybe(task.root_module).value(),
+							debug_info_opt.has_value() ? *debug_info_opt.value()
+													   : std::vector<artifacts::FileArtifact>(),
+							std::string(target_dvm.output_file_stem.strView())
 						)
 					        .isBad())
 						result = base::BAD;

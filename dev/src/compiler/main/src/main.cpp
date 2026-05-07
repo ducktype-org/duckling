@@ -34,6 +34,7 @@
 #include <filesystem/file.hpp>
 #include <filesystem/file_path.hpp>
 #include <init/init.hpp>
+#include <logger/logger.hpp>
 #include <printer/stream_printer.hpp>
 #include <query_framework/entry/query_entry_point.hpp>
 #include <query_framework/entry/with_context_do.hpp>
@@ -468,16 +469,19 @@ clah::Clah getClahForMain() {
 
 					compiler::driver::BuildTarget build_target;
 					if (options.isFlag("dvm-backend")) {
-						build_target = compiler::driver::BuildTargetDVM{};
-					} else if (options.isFlag("emit-static-lib")) {
-						build_target = compiler::driver::BuildTargetLLVMStaticLibrary{
+						build_target = compiler::driver::BuildTargetDVM{
 							.output_file_stem = base::StrID(output_file_name.c_str()),
+						};
+					} else if (options.isFlag("emit-static-lib")) {
+						auto archiving_options = getArchivingOptionsFromClap(options);
+						build_target           = compiler::driver::BuildTargetLLVMStaticLibrary{
+									  .output_file_stem  = base::StrID(output_file_name.c_str()),
+									  .archiving_options = archiving_options,
 						};
 					} else {
 						build_target = compiler::driver::BuildTargetLLVMExecutable{
 							.output_file_stem = base::StrID(output_file_name.c_str()),
-							.additional_linking_options
-							= base::StrID(linking_options.additional_link_options.c_str()),
+							.linking_options  = linking_options,
 						};
 					}
 
@@ -547,37 +551,30 @@ clah::Clah getClahForMain() {
 					auto manifest_file = options.getPositional<fs::File>(0);
 					auto worker_count  = options.getValue<i64>("workers").copyValueOr(1);
 
-					auto file_content = manifest_file.getContentSafe();
-					if (!file_content.has_value()) {
-						std::cerr << "Error: failed to read manifest file: " << file_content.error()
-								  << "\n";
-						compiler::driver::exit();
-						return 1;
-					}
+					auto file_content = manifest_file.getContent().view();
+
 					nlohmann::json manifest_json;
 					try {
-						auto raw = file_content->view();
-						manifest_json
-							= nlohmann::json::parse(raw.getBegin(), raw.getBegin() + raw.size());
+						manifest_json = nlohmann::json::parse(
+							file_content.getBegin(), file_content.getBegin() + file_content.size()
+						);
 					} catch (const nlohmann::json::parse_error& e) {
-						std::cerr << "Error: failed to parse manifest JSON: " << e.what() << "\n";
+						CORE_USER_LOG(base::strConcat(
+							"Error: failed to parse manifest JSON: ", e.what(), "\n"
+						));
 						compiler::driver::exit();
 						return 1;
 					}
 
 					auto manifest
 						= compiler::driver::PackageCompilationManifest::fromJson(manifest_json);
+
 					if (!manifest.has_value()) {
 						compiler::driver::exit();
 						return 1;
 					}
 
-					if (manifest->packages.empty()) {
-						std::cerr
-							<< "Error: packages manifest does not contain any package entries.\n";
-						compiler::driver::exit();
-						return 1;
-					}
+					manifest->verify();
 
 					auto init_result = compiler::driver::initializeTheCompiler(
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{

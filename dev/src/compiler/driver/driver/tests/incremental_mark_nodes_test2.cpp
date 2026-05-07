@@ -42,7 +42,9 @@ private:
 				.packages_info = {
 					{
 						.package_name = base::StrID("mark_nodes_test_package"),
+						.version      = base::StrID("not_supported"),
 						.package_path  = fs::FilePath(path("modules/incremental/org_functions/functions_1")),
+						.features     = {},
 						.dependencies = {},
 					},
 				},

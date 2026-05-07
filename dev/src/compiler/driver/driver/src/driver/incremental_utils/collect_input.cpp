@@ -188,10 +188,9 @@ namespace compiler::driver {
 			std::vector<query::external::InputData> out;
 
 			std::vector<frontend::ModuleID> module_ids;
-			for (const auto& package: global_state::getPackages()) {
+			for (const auto& package: global_state::getPackages())
 				module_ids.push_back(package.root_module);
-			}
-			
+
 			for (const auto module_id: module_ids)
 				collectFromModule(lookups_map, module_id, base::Ref(&out));
 

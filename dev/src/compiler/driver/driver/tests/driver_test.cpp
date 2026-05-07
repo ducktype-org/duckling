@@ -10,6 +10,7 @@
 #include <global_state/backend_options.hpp>
 #include <global_state/packages.hpp>
 #include <helios/queries/queries.hpp>
+#include <linker/link.hpp>
 
 #include <artifacts/artifacts.hpp>
 #include <filesystem/file_path.hpp>
@@ -61,7 +62,9 @@ protected:
 				.packages_info = {
 					{
 						.package_name = base::StrID(package_name.c_str()),
+						.version      = base::StrID("not_supported"),
 						.package_path  = fs::FilePath(path("modules/functions_1")),
+						.features     = {},
 						.dependencies = {},
 					},
 				},
@@ -210,14 +213,20 @@ private:
 				.root_module = frontend::createModuleTree(
 					fs::File(path(info.module_path)), base::StrID(package_id.c_str())
 				),
-				.dependencies = {},
+				.version          = base::StrID("not_supported"),
+				.package_features = {},
+				.dependencies     = {},
 			};
 
 			driver::compileEntirePackage(
 				package_info,
 				driver::BuildTargetLLVMExecutable{
-					.output_file_stem           = base::StrID("package_llvm"),
-					.additional_linking_options = base::StrID(""),
+					.output_file_stem = base::StrID("package_llvm"),
+					.linking_options  = linker::LinkingOptions{
+						.linker_path = {},
+						.additional_link_options = {},
+						.link_c_standard_library = true,
+					},
 				}
 			);
 		}
@@ -514,14 +523,20 @@ private:
 			.root_module = frontend::createModuleTree(
 				fs::File(path("modules/functions_5")), base::StrID(package_name.c_str())
 			),
-			.dependencies = {},
+			.version          = base::StrID("not_supported"),
+			.package_features = {},
+			.dependencies     = {},
 		};
 
 		driver::compileEntirePackage(
 			package_info,
 			driver::BuildTargetLLVMExecutable{
-				.output_file_stem           = base::StrID("package_llvm"),
-				.additional_linking_options = base::StrID(""),
+				.output_file_stem = base::StrID("package_llvm"),
+				.linking_options  = linker::LinkingOptions{
+					.linker_path = {},
+					.additional_link_options = {},
+					.link_c_standard_library = true,
+				},
 			}
 		);
 
@@ -631,14 +646,20 @@ private:
 			.root_module = frontend::createModuleTree(
 				fs::File(path("modules/import_simple")), base::StrID("import_simple")
 			),
-			.dependencies = {},
+			.version          = base::StrID("not_supported"),
+			.package_features = {},
+			.dependencies     = {},
 		};
 
 		driver::compileEntirePackage(
 			package_info,
 			driver::BuildTargetLLVMExecutable{
-				.output_file_stem           = base::StrID("package_llvm"),
-				.additional_linking_options = base::StrID(""),
+				.output_file_stem = base::StrID("package_llvm"),
+				.linking_options  = linker::LinkingOptions{
+					.linker_path = {},
+					.additional_link_options = {},
+					.link_c_standard_library = true,
+				},
 			}
 		);
 
@@ -751,14 +772,20 @@ private:
 				fs::File(path("modules/imports_complicated")),
 				base::StrID("imports_complicated_test")
 			),
-			.dependencies = {},
+			.version          = base::StrID("not_supported"),
+			.package_features = {},
+			.dependencies     = {},
 		};
 
 		driver::compileEntirePackage(
 			package_info,
 			driver::BuildTargetLLVMExecutable{
-				.output_file_stem           = base::StrID("package_llvm"),
-				.additional_linking_options = base::StrID(""),
+				.output_file_stem = base::StrID("package_llvm"),
+				.linking_options  = linker::LinkingOptions{
+					.linker_path = {},
+					.additional_link_options = {},
+					.link_c_standard_library = true,
+				},
 			}
 		);
 
@@ -1032,7 +1059,9 @@ private:
 			.root_module = frontend::createModuleTree(
 				fs::File(path("modules/functions_2")), base::StrID("src_pos_dvm")
 			),
-			.dependencies = {},
+			.version          = base::StrID("not_supported"),
+			.package_features = {},
+			.dependencies     = {},
 		};
 
 		driver::compileEntirePackage(dvm_package_info, driver::BuildTargetDVM{});

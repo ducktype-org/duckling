@@ -6,6 +6,8 @@
 #include <frontend/module_tree/access.hpp>
 #include <global_state/packages.hpp>
 
+#include <base/collections/optional.hpp>
+#include <base/str/str_utils.hpp>
 #include <base/types/bit256.hpp>
 #include <base/types/ints.hpp>
 
@@ -23,19 +25,28 @@ namespace compiler::frontend {
 			return current;
 		}
 
-		const global_state::PackageInfo& getPackageInfo(query::Context& ctx, ModuleID module_id) {
+		base::Optional<global_state::PackageInfo> getPackageInfo(
+			query::Context& ctx, ModuleID module_id
+		) {
 			auto        root_ancestor = getRootAncestorModuleID(ctx, module_id);
 			const auto& all_packages  = global_state::getPackages();
 			for (const auto& pkg: all_packages)
 				if (pkg.root_module == root_ancestor) return pkg;
-			CORE_PANIC("Root module does not belong to any package");
+
+			// This could be panic, but in some tests we might want to compile modules directly
+			// without initializing the compiler
+			return {};
 		}
 
-		const global_state::PackageInfo& getPackageInfo(base::StrID package_id) {
+		base::Optional<global_state::PackageInfo> getPackageInfo(base::StrID package_id) {
 			const auto& all_packages = global_state::getPackages();
 			for (const auto& pkg: all_packages)
 				if (getModuleRef(pkg.root_module)->getPackageID() == package_id) return pkg;
-			CORE_PANIC("Package not found");
+
+			// The error is already logged, when verifying the manifest
+			// This could be panic, but we allow the compiler to run with broken manifest, to
+			// collect as many errors as possible.
+			return {};
 		}
 	}
 
@@ -70,10 +81,15 @@ namespace compiler::frontend {
 		if (not current_module.has_value()) {
 			// Get the package info of the current module package and look for the dependency with
 			// the alias same as imported name.
-			const auto& package_info = getPackageInfo(ctx, from);
-			for (const auto& dep: package_info.dependencies) {
+			auto package_info_opt = getPackageInfo(ctx, from);
+			if (not package_info_opt.has_value()) return {};
+
+			for (const auto& dep: package_info_opt.value().dependencies) {
 				if (path.at(0) == dep.alias) {
-					current_module = getPackageInfo(dep.package_id).root_module;
+					auto dep_package_info_opt = getPackageInfo(dep.package_id);
+					if_opt_some(dep_package_info_opt, dep_package_info) {
+						current_module = dep_package_info.root_module;
+					}
 					break;
 				}
 			}

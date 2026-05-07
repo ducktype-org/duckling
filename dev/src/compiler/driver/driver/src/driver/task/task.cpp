@@ -65,26 +65,111 @@ namespace compiler::driver {
 		BuildTarget build_target;
 
 		if (strategy->view() == "dvm") {
-			build_target = BuildTargetDVM{};
+			auto output = ju::getStringIfPresent(
+				json, "output_file", "DVM task output_file must be a string"
+			);
+			build_target = BuildTargetDVM{
+				.output_file_stem = output.has_value() ? *output : base::StrID("package_dvm"),
+			};
 		} else if (strategy->view() == "native") {
 			auto output
 				= ju::getString(json, "output_file", "Native task requires an output file!");
 			if (!output) return {};
 
-			base::StrID linking_options;
-			if (json.contains("linking_options") && json["linking_options"].is_string())
-				linking_options = base::StrID(json["linking_options"].get<std::string>());
+			linker::LinkingOptions linking_options{
+				.linker_path             = {},
+				.additional_link_options = {},
+				.link_c_standard_library = true,
+			};
+			if (json.contains("linking_options")) {
+				const auto& linking_json = json["linking_options"];
+				if (linking_json.is_string()) {
+					auto options_value = ju::getStringValue(
+						linking_json, "linking_options", "linking_options must be a string"
+					);
+					if (!options_value) return {};
+					linking_options.additional_link_options = options_value->str();
+				} else {
+					auto linking_obj = ju::getObjectIfPresent(
+						json, "linking_options", "linking_options must be a string or an object"
+					);
+					if (!linking_obj) return {};
+					ju::checkForUknownFields(
+						*linking_obj,
+						{},
+						{ "linker", "additional_link_options", "link_c_standard_library" },
+						"linking_options"
+					);
+
+					if (linking_obj->contains("linker")) {
+						auto linker_path = ju::getStringIfPresent(
+							*linking_obj, "linker", "linking_options.linker must be a string"
+						);
+						if (!linker_path) return {};
+						linking_options.linker_path = linker_path->str();
+					}
+
+					if (linking_obj->contains("additional_link_options")) {
+						auto additional_options = ju::getStringIfPresent(
+							*linking_obj,
+							"additional_link_options",
+							"linking_options.additional_link_options must be a string"
+						);
+						if (!additional_options) return {};
+						linking_options.additional_link_options = additional_options->str();
+					}
+
+					if (linking_obj->contains("link_c_standard_library")) {
+						auto link_stdlib = ju::getBoolIfPresent(
+							*linking_obj,
+							"link_c_standard_library",
+							"linking_options.link_c_standard_library must be a boolean"
+						);
+						if (!link_stdlib) return {};
+						linking_options.link_c_standard_library = *link_stdlib;
+					}
+				}
+			}
 
 			build_target = BuildTargetLLVMExecutable{
-				.output_file_stem           = *output,
-				.additional_linking_options = linking_options,
+				.output_file_stem = *output,
+				.linking_options  = std::move(linking_options),
 			};
 		} else if (strategy->view() == "lib") {
 			auto output = ju::getString(json, "output_file", "Lib task requires an output file!");
 			if (!output) return {};
 
+			archiver::ArchivingOptions archiving_options{
+				.archiver_path = {},
+			};
+			if (json.contains("archive_options")) {
+				const auto& archive_json = json["archive_options"];
+				if (archive_json.is_string()) {
+					auto archiver = ju::getStringValue(
+						archive_json, "archive_options", "archive_options must be a string"
+					);
+					if (!archiver) return {};
+					archiving_options.archiver_path = archiver->str();
+				} else {
+					auto archive_obj = ju::getObjectIfPresent(
+						json, "archive_options", "archive_options must be a string or an object"
+					);
+					if (!archive_obj) return {};
+					ju::checkForUknownFields(*archive_obj, {}, { "archiver" }, "archive_options");
+
+					if (archive_obj->contains("archiver")) {
+						auto archiver_path = ju::getStringIfPresent(
+							*archive_obj, "archiver", "archive_options.archiver must be a string"
+						);
+						if (!archiver_path) return {};
+						archiving_options.archiver_path = archiver_path->str();
+					}
+				}
+			}
+
 			build_target = BuildTargetLLVMStaticLibrary{
-				.output_file_stem = *output,
+				.output_file_stem  = *output,
+				.archiving_options = std::move(archiving_options),
 			};
 		} else {
 			if (global_state::hasGlobalLogger()) {

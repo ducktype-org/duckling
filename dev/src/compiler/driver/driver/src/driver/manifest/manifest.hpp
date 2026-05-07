@@ -30,5 +30,13 @@ namespace compiler::driver {
 		std::vector<RawTask> tasks;
 
 		static base::Optional<PackageCompilationManifest> fromJson(const nlohmann::json& json);
+
+		/**
+		 * @brief Verifies the integrity of the manifest.
+		 * For example we need to check if every dependency of a package has a corresponding entry
+		 * in the packages list
+		 * @return base::OkBad indicating whether the manifest is valid.
+		 */
+		base::OkBad verify() const;
 	};
 }

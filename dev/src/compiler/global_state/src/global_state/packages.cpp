@@ -29,7 +29,10 @@ namespace global_state {
 		void addPackage(const PackageInfo& package_info) { packages.push_back(package_info); }
 
 		void addPackage(compiler::frontend::ModuleID root_module) {
-			packages.push_back({ .root_module = root_module, .dependencies = {} });
+			packages.push_back({ .root_module      = root_module,
+			                     .version          = base::StrID("not_supported"),
+			                     .package_features = {},
+			                     .dependencies     = {} });
 		}
 
 		void removePackage(compiler::frontend::ModuleID root_module) {

@@ -177,12 +177,16 @@ private:
 	void dvmStrategyParsed() {
 		clearLogger();
 
-		auto task_json = nlohmann::json::parse(R"({ "package": "mylib", "strategy": "dvm" })");
-		auto result    = RawPackageCompilationTask::fromJson(task_json);
+		auto task_json = nlohmann::json::parse(
+			R"({ "package": "mylib", "strategy": "dvm", "output_file": "bin/mylib_dvm" })"
+		);
+		auto result = RawPackageCompilationTask::fromJson(task_json);
 
 		ASSERT_TRUE(result.has_value());
 		ASSERT_TRUE(logger().good());
 		ASSERT_TRUE(std::holds_alternative<BuildTargetDVM>(result->build_target));
+		const auto& target = std::get<BuildTargetDVM>(result->build_target);
+		ASSERT_EQUAL(target.output_file_stem.str(), std::string("bin/mylib_dvm"));
 		ASSERT_EQUAL(result->package_name.str(), std::string("mylib"));
 	}
 
@@ -198,7 +202,7 @@ private:
 		ASSERT_TRUE(logger().good());
 		ASSERT_TRUE(std::holds_alternative<BuildTargetLLVMExecutable>(result->build_target));
 		const auto& target = std::get<BuildTargetLLVMExecutable>(result->build_target);
-		ASSERT_EQUAL(target.additional_linking_options.str(), std::string("-lm"));
+		ASSERT_EQUAL(target.linking_options.additional_link_options, std::string("-lm"));
 	}
 
 	void unknownStrategyFails() {

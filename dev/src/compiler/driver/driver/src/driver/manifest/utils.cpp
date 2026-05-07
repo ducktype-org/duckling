@@ -38,6 +38,17 @@ namespace compiler::driver::json {
 			);
 		}
 
+		void logValueError(
+			std::string_view   field_type,
+			const std::string& value_name,
+			const std::string& error_message
+		) {
+			if (!global_state::hasGlobalLogger()) return;
+			global_state::getGlobalLogger()->log(makeBox<dia_int::PlaceholderError>(
+				base::strConcat("No ", field_type, " value for: ", value_name), error_message
+			));
+		}
+
 	}  // namespace
 
 	base::Optional<base::StrID> getStringNoError(const nlohmann::json& json, const Key& key) {
@@ -61,6 +72,27 @@ namespace compiler::driver::json {
 		return result;
 	}
 
+	base::Optional<base::StrID> getStringIfPresent(
+		const nlohmann::json& json, const Key& key, const std::string& error_message
+	) {
+		if (!json.contains(key)) return {};
+		if (!json[key].is_string()) {
+			logFieldError("string", key, error_message);
+			return {};
+		}
+		return base::StrID(json[key].get<std::string>());
+	}
+
+	base::Optional<base::StrID> getStringValue(
+		const nlohmann::json& json, const std::string& context_name, const std::string& error_message
+	) {
+		if (!json.is_string()) {
+			logValueError("string", context_name, error_message);
+			return {};
+		}
+		return base::StrID(json.get<std::string>());
+	}
+
 	base::Optional<bool> getBoolNoError(const nlohmann::json& json, const Key& key) {
 		if (!json.contains(key) || !json[key].is_boolean()) return {};
 		return json[key].get<bool>();
@@ -80,6 +112,17 @@ namespace compiler::driver::json {
 		auto result = getBoolNoError(json, key);
 		if (!result.has_value()) logFieldError("bool", key, error_message);
 		return result;
+	}
+
+	base::Optional<bool> getBoolIfPresent(
+		const nlohmann::json& json, const Key& key, const std::string& error_message
+	) {
+		if (!json.contains(key)) return {};
+		if (!json[key].is_boolean()) {
+			logFieldError("bool", key, error_message);
+			return {};
+		}
+		return json[key].get<bool>();
 	}
 
 	base::Optional<std::vector<nlohmann::json>> getArrayNoError(
@@ -127,6 +170,17 @@ namespace compiler::driver::json {
 		auto result = getObjectNoError(json, key);
 		if (!result.has_value()) logFieldError("object", key, error_message);
 		return result;
+	}
+
+	base::Optional<nlohmann::json> getObjectIfPresent(
+		const nlohmann::json& json, const Key& key, const std::string& error_message
+	) {
+		if (!json.contains(key)) return {};
+		if (!json[key].is_object()) {
+			logFieldError("object", key, error_message);
+			return {};
+		}
+		return json[key];
 	}
 
 	bool checkIsObject(const nlohmann::json& json, const std::string& context_name) {
