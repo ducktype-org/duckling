@@ -103,7 +103,10 @@ namespace compiler::repl {
 			if (value.front() == '-') {
 				is_relative          = true;
 				number_abs_val_start = 1;
-				if (value.size() == 1) return false;
+				if (value.size() == 1) {
+ 					error_message = std::string(K_RESET_ERROR_MSG);
+ 					return false;
+ 				}
 			}
 
 			for (size_t i = number_abs_val_start; i < value.size(); ++i) {
