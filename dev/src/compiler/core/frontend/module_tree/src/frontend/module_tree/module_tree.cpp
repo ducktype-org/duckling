@@ -368,7 +368,7 @@ namespace compiler::frontend {
 			addSourceFile(file);
 		} else if (extension == LANG_MODULE_FILE) {
 			// Module file
-			base::StrID stem_id = base::StrID(stem.c_str());
+			auto stem_id = base::StrID(stem.c_str());
 
 			if (stem_id == m_name) {
 				setMainSourceFile(file);
