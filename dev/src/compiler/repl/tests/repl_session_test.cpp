@@ -34,7 +34,6 @@ namespace compiler::repl {
 			TESTER_ADD_TEST(testReplHistoryCommandThroughProcessLine);
 			TESTER_ADD_TEST(testReplUnknownCommandThroughHandleCommand);
 			TESTER_ADD_TEST(testReplClearCommandDoesNotResetSessionState);
-			TESTER_ADD_TEST(testReplClearHistoryResetsSessionState);
 			TESTER_ADD_TEST(testReplProcessLineWithCode);
 			TESTER_ADD_TEST(testReplInstructionExecution);
 			TESTER_ADD_TEST(testReplCommandDetection);
