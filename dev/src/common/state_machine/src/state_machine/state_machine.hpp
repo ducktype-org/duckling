@@ -68,12 +68,6 @@
  *
  * The current state can be inspected via `StateMachine::getState()`, which
  * returns `const States&` variant.
- *
- * @attention `StateMachine` keeps a reference to the
- * `StateMachineDefinition` it was constructed with. The definition must
- * outlive every `StateMachine` that references it.
- *
- * @note `StateMachine` itself is **not** thread-safe.
  */
 
 #pragma once
@@ -159,8 +153,8 @@ namespace state_machine {
 			std::function<ActionResultT(const State&, const Event&)>                action,
 			base::Optional<std::function<GuardResultT(const State&, const Event&)>> guard = {}
 		) {
-			const usize state_idx = base::variantIndex<States, State>();
-			const usize event_idx = base::variantIndex<Events, Event>();
+			const usize state_idx = base::variantTypeIndex<States, State>();
+			const usize event_idx = base::variantTypeIndex<Events, Event>();
 
 			CORE_ASSERT(
 				!transitions[state_idx][event_idx].has_value(),
@@ -239,8 +233,8 @@ namespace state_machine {
 		template<typename State, typename Event>
 		requires base::IsVariantMember<State, States> && base::IsVariantMember<Event, Events>
 		[[nodiscard]] base::Optional<CRef<TransitionEntry>> getTransition() const {
-			const usize state_idx = base::variantIndex<States, State>();
-			const usize event_idx = base::variantIndex<Events, Event>();
+			const usize state_idx = base::variantTypeIndex<States, State>();
+			const usize event_idx = base::variantTypeIndex<Events, Event>();
 
 			CORE_ASSERT(state_idx < NUM_STATES && event_idx < NUM_EVENTS, "Index out of bounds");
 			const auto& entry = transitions.at(state_idx).at(event_idx);
@@ -260,8 +254,8 @@ namespace state_machine {
 		void addTransitionInternal(
 			const GenericAction<Event>& action, const base::Optional<GenericGuard<Event>> guard
 		) {
-			const usize state_idx = base::variantIndex<States, State>();
-			const usize event_idx = base::variantIndex<Events, Event>();
+			const usize state_idx = base::variantTypeIndex<States, State>();
+			const usize event_idx = base::variantTypeIndex<Events, Event>();
 
 			CORE_ASSERT(
 				!transitions[state_idx][event_idx].has_value(),

@@ -256,7 +256,6 @@ private:
 	}
 
 	void definitionSharingTest() {
-		// One definition can drive multiple independent state machines.
 		LightDefinition def;
 		def.addTransition<Red, Tick>([](const Red&, const Tick&) -> LightState { return Green{}; });
 

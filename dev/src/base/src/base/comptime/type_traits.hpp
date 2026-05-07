@@ -202,13 +202,13 @@ namespace base {
 	 * value) when `T` is not an alternative of the variant.
 	 */
 	template<typename Variant, typename T, usize Index = 0>
-	constexpr usize variantIndex() {
+	constexpr usize variantTypeIndex() {
 		if constexpr (Index >= std::variant_size_v<Variant>)
 			return Index;
 		else if constexpr (std::is_same_v<std::variant_alternative_t<Index, Variant>, T>)
 			return Index;
 		else
-			return variantIndex<Variant, T, Index + 1>();
+			return variantTypeIndex<Variant, T, Index + 1>();
 	}
 
 	/**
