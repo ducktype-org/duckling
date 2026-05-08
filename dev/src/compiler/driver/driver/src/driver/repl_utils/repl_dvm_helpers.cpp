@@ -179,6 +179,14 @@ namespace compiler::repl {
 		    .and_then(
 				[type_view](vm::api::ExitValue exit_values
 		        ) -> std::expected<std::string, std::string> {
+					if (type_view == "()") {
+						CORE_ASSERT(
+							exit_values.empty(),
+							"Expecting no return values for unit return type"
+						);
+						return std::expected<std::string, std::string>("");
+					}
+
 					CORE_ASSERT(
 						exit_values.size() == 1, "Expecting only one return value from the DVM"
 					);
