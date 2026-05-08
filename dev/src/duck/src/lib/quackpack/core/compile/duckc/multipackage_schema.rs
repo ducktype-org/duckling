@@ -2,6 +2,8 @@
 //!
 //! There are a few nuances we have to remember about:
 //! * when compiling a package, we need to pass its __entire__ subtree to duckc,
+//! * only ids specified in [`tasks`](DuckcMultiPackage::tasks) will be compiled; this effectively
+//!   allows us to compile a single package, entire graph, or a chosen subset.
 
 use std::path::PathBuf;
 
@@ -67,7 +69,8 @@ pub struct DuckcPackageCompilationTask {
 /// Supported duckc compilation strategies.
 pub enum DuckcPackageCompilationStrategy {
     /// Compile this task into a DVM file.
-    Dvm { // Name has to be `Dvm`, as `DVM` (with "snake_case") would be rendered as "d_v_m".
+    Dvm {
+        // Name has to be `Dvm`, as `DVM` (with "snake_case") would be rendered as "d_v_m".
         /// Set an explicit output filename. By default `package_dvm` is used.
         #[serde(skip_serializing_if = "Option::is_none")]
         output_file: Option<PathBuf>,
