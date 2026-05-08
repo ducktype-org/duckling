@@ -16,12 +16,12 @@
 
 namespace compiler::backend_vm {
 	/**
-	 * @brief Wrapper for REPL-specific program lowering context.
+	 * @brief REPL wrapper around ProgramLoweringContext with incremental emission support.
 	 *
-	 * This class is a convenience wrapper that owns and manages a ProgramLoweringContext
-	 * for use in REPL sessions. The underlying context maintains state across multiple
-	 * REPL statement compilations, allowing later statements to reference symbols
-	 * (functions, globals, types) defined in earlier statements.
+	 * Keeps a persistent lowering context across REPL statements and exposes helpers to
+	 * capture a snapshot before lowering and then collect only the newly lowered code
+	 * since that snapshot. This enables incremental bytecode loading while still allowing
+	 * later statements to reference symbols (functions, globals, types) from earlier ones.
 	 *
 	 * @note This wrapper doesn't add any complicated logic,
 	 * it is a simple wrapper for the ProgramLoweringContext.
