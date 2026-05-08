@@ -167,7 +167,7 @@ impl<'de> de::Deserialize<'de> for DuckcArchiveOptions {
         D: de::Deserializer<'de>,
     {
         serde_untagged::UntaggedEnumVisitor::new()
-            .expecting("a valid duckc linking options")
+            .expecting("a valid duckc archiver options")
             .string(|string| Ok(Self::Archiver(string.into())))
             .map(|map| map.deserialize().map(Self::Complex))
             .deserialize(deserializer)
