@@ -20,8 +20,6 @@ namespace compiler::backend_vm {
 	ReplLoweringContext::ReplLoweringContext(ReplLoweringContext&&) noexcept            = default;
 	ReplLoweringContext& ReplLoweringContext::operator=(ReplLoweringContext&&) noexcept = default;
 
-	internal::ProgramLoweringContext& ReplLoweringContext::getContext() { return *m_context; }
-
 	void ReplLoweringContext::setContext(query::Context& query_ctx) {
 		m_context->setContext(query_ctx);
 	}
@@ -46,41 +44,8 @@ namespace compiler::backend_vm {
 		return m_context->lowerAndKeepLirGlobal(lir_global, global_ctor, global_dtor);
 	}
 
-	const vm::code::TypeOfData& ReplLoweringContext::lowerAndKeepTslType(CRef<tsl::TypeLayout> layout
-	) {
-		return m_context->lowerAndKeepTslType(layout);
-	}
-
-	usize ReplLoweringContext::getExtraBytecodeFunctionCount() const {
-		return m_context->getExtraBytecodeFunctionCount();
-	}
-
-	usize ReplLoweringContext::getLoweredTypeCount() const {
-		return m_context->getLoweredTypeCount();
-	}
-
-	usize ReplLoweringContext::getLoweredFunctionCount() const {
-		return m_context->getLoweredFunctionCount();
-	}
-
 	LoweredEntitiesSnapshot ReplLoweringContext::captureLoweredEntitiesSnapshot() const {
 		return m_context->captureLoweredEntitiesSnapshot();
-	}
-
-	std::vector<vm::code::Function> ReplLoweringContext::getExtraBytecodeFunctionsSince(
-		usize start_index
-	) const {
-		return m_context->getExtraBytecodeFunctionsSince(start_index);
-	}
-
-	std::vector<vm::code::TypeOfData> ReplLoweringContext::getLoweredTypesSince(usize start_index
-	) const {
-		return m_context->getLoweredTypesSince(start_index);
-	}
-
-	std::vector<vm::code::Function> ReplLoweringContext::getLoweredFunctionsSince(usize start_index
-	) const {
-		return m_context->getLoweredFunctionsSince(start_index);
 	}
 
 	vm::code::CodeCollection ReplLoweringContext::collectNewCodeSince(

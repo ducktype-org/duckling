@@ -39,13 +39,6 @@ namespace compiler::backend_vm {
 		ReplLoweringContext(ReplLoweringContext&&) noexcept;
 		ReplLoweringContext& operator=(ReplLoweringContext&&) noexcept;
 
-		/**
-		 * @brief Get the underlying persistent program lowering context.
-		 *
-		 * This context accumulates all lowered functions, globals, and types across
-		 * all REPL modules in this session.
-		 */
-		internal::ProgramLoweringContext& getContext();
 
 		/**
 		 * @brief Set the query context for error reporting during compilation.
@@ -84,49 +77,12 @@ namespace compiler::backend_vm {
 			base::Optional<base::CRef<lir::Function>> global_dtor
 		);
 
-		/**
-		 * @brief Lower a LIR type layout into VM bytecode type representation.
-		 * It caches the result, so inserts the type into the program only if needed.
-		 */
-		const vm::code::TypeOfData& lowerAndKeepTslType(base::CRef<tsl::TypeLayout> layout);
-
-		/**
-		 * @brief Returns how many helper functions have been generated for the current REPL state.
-		 */
-		[[nodiscard]] usize getExtraBytecodeFunctionCount() const;
-
-		/**
-		 * @brief Returns how many lowered types have been generated for the current REPL state.
-		 */
-		[[nodiscard]] usize getLoweredTypeCount() const;
-
-		/**
-		 * @brief Returns how many lowered functions have been generated for the current REPL state.
-		 */
-		[[nodiscard]] usize getLoweredFunctionCount() const;
 
 		/**
 		 * @brief Capture current counts of lowered entities.
 		 */
 		[[nodiscard]] LoweredEntitiesSnapshot captureLoweredEntitiesSnapshot() const;
 
-		/**
-		 * @brief Returns helper functions generated after the given snapshot index.
-		 */
-		[[nodiscard]] std::vector<vm::code::Function> getExtraBytecodeFunctionsSince(usize start_index
-		) const;
-
-		/**
-		 * @brief Returns lowered types generated after the given snapshot index.
-		 */
-		[[nodiscard]] std::vector<vm::code::TypeOfData> getLoweredTypesSince(usize start_index
-		) const;
-
-		/**
-		 * @brief Returns lowered functions generated after the given snapshot index.
-		 */
-		[[nodiscard]] std::vector<vm::code::Function> getLoweredFunctionsSince(usize start_index
-		) const;
 
 		/**
 		 * @brief Collect newly lowered types/functions/extra functions since a snapshot.
@@ -135,13 +91,6 @@ namespace compiler::backend_vm {
 			const LoweredEntitiesSnapshot& snapshot
 		) const;
 
-		/**
-		 * @brief Check if a query context is currently set.
-		 *
-		 * @return true if a query context has been set via setContext() and not yet
-		 *         invalidated, false otherwise.
-		 */
-		[[nodiscard]] bool hasContext() const;
 
 	private:
 		// Pimpl: store pointer to complete type, with details in CPP
