@@ -15,7 +15,7 @@ inline std::string statusToString(const vm::api::ProcStatus& status) {
 }
 
 namespace vm::debugger {
-	Debugger::Debugger(const fs::File& filepath, const std::vector<std::string>& main_args):
+	Debugger::Debugger(const std::vector<std::string>& main_args):
 		  main_args(main_args),
 		  updater([&](const vm::api::ProcStatus& status) {
 			  variant_match(status) {
@@ -34,12 +34,16 @@ namespace vm::debugger {
 
 				return std::expected<void, vm::api::ApiError>{};
 			})
-			.and_then([&] { return vm::api::loadFiles(pid, { filepath }); })
 			.and_then([&] { return vm::api::attachStatusListener(pid, &updater); })
 			.transform_error([&](const vm::api::ApiError& api_error) {
 				throw std::runtime_error(vm::api::errorToString(api_error));
 				return api_error;
 			});
+	}
+
+	Debugger::Debugger(const fs::File& filepath, const std::vector<std::string>& main_args):
+		  Debugger(main_args) {
+		loadFile(filepath);
 	}
 
 	Debugger::~Debugger() {
@@ -94,4 +98,42 @@ namespace vm::debugger {
 		    .value();
 	}
 
+	void Debugger::loadFile(const fs::File& filepath) {
+		auto result = vm::api::loadFiles(pid, { filepath });
+		if (!result.has_value()) throw std::runtime_error(vm::api::errorToString(result.error()));
+	}
+	
+	void Debugger::pause() {
+		vm::api::getExecutionStatus(pid)
+			.and_then([&](const vm::api::ProcStatus& status) {
+				if (std::holds_alternative<vm::api::Running>(status))
+					return std::expected<void, vm::api::ApiError>{};
+
+				return std::expected<void, vm::api::ApiError>{ std::unexpected(vm::api::ApiError{
+					vm::api::OtherError{ "Wrong VM state to pause: got " + statusToString(status)
+				                         + ", allowed state is Running." } }) };
+			})
+			.and_then([&] { return vm::api::pause(pid); })
+			.transform_error([&](const vm::api::ApiError& api_error) {
+				on_error.emitEvent(vm::api::errorToString(api_error));
+				return api_error;
+			});
+	}
+
+	void Debugger::resume() {
+		vm::api::getExecutionStatus(pid)
+			.and_then([&](const vm::api::ProcStatus& status) {
+				if (std::holds_alternative<vm::api::Paused>(status))
+					return std::expected<void, vm::api::ApiError>{};
+
+				return std::expected<void, vm::api::ApiError>{ std::unexpected(vm::api::ApiError{
+					vm::api::OtherError{ "Wrong VM state to resume: got " + statusToString(status)
+				                         + ", allowed state is Paused." } }) };
+			})
+			.and_then([&] { return vm::api::resume(pid); })
+			.transform_error([&](const vm::api::ApiError& api_error) {
+				on_error.emitEvent(vm::api::errorToString(api_error));
+				return api_error;
+			});
+	}
 }

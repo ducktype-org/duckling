@@ -21,10 +21,8 @@ namespace vm::debug_adapter {
 	 */
 	class DebugAdapter {
 	public:
-		// @TODO: #2559 when load program will be available in debugger
-		// change it that filepath will be get from dap message
-		DebugAdapter(const fs::File& filepath);
-		static DebugAdapter get(const fs::File& filepath);
+		DebugAdapter();
+		static DebugAdapter get();
 		~DebugAdapter() = default;
 		void run();
 
