@@ -20,7 +20,6 @@ add_library(Driver
 	src/driver/exit.cpp
 	src/driver/manifest/utils.cpp
 	src/driver/manifest/manifest.cpp
-	src/driver/packages/packages.cpp
 	src/driver/task/task.cpp
 	src/driver/repl_utils/repl_dvm_helpers.cpp
 	src/driver/repl_utils/script_helpers.cpp
