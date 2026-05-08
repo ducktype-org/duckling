@@ -108,13 +108,21 @@ namespace vm::jit::cf {
 		 * @brief Returns a mutable reference to the edge target at the given position.
 		 * @param index Edge index in [0, size()).
 		 */
-		BlockID& operator[](usize index) { return to[index]; }
+		BlockID& operator[](usize index) {
+			CORE_ASSERT(index < size(), "edge index out of bounds");
+			// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
+			return to[index];
+		}
 
 		/**
 		 * @brief Returns an immutable reference to the edge target at the given position.
 		 * @param index Edge index in [0, size()).
 		 */
-		const BlockID& operator[](usize index) const { return to[index]; }
+		const BlockID& operator[](usize index) const {
+			CORE_ASSERT(index < size(), "edge index out of bounds");
+			// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
+			return to[index];
+		}
 
 	private:
 		std::array<BlockID, 2> to;
