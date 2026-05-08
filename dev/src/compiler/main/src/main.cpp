@@ -7,6 +7,7 @@
  */
 
 #include <archiver/archive.hpp>
+#include <driver/diagnostics/log_helpers.hpp>
 #include <driver/exit.hpp>
 #include <driver/initialize.hpp>
 #include <driver/manifest/manifest.hpp>
@@ -323,7 +324,7 @@ clah::Clah getClahForMain() {
 					auto init_result = compiler::driver::initializeTheCompiler(
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
 							.packages_info = {
-								compiler::driver::RawPackageInfo{
+								compiler::frontend::packages::RawPackageInfo{
 									.package_name = base::StrID(package_name.c_str()),
 									.version      = base::StrID("not_supported"),
 									.package_path = fs::FilePath(path_to_compile.getFilePath()),
@@ -459,7 +460,7 @@ clah::Clah getClahForMain() {
 					auto init_result = compiler::driver::initializeTheCompiler(
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
 							.packages_info = {
-								compiler::driver::RawPackageInfo{
+								compiler::frontend::packages::RawPackageInfo{
 									.package_name = base::StrID(package_name.c_str()),
 									.version      = base::StrID("not_supported"),
 									.package_path = path_to_compile.getFilePath(),
@@ -595,15 +596,17 @@ clah::Clah getClahForMain() {
 						return 1;
 					}
 
-					auto manifest
-						= compiler::driver::PackageCompilationManifest::fromJson(manifest_json);
+					auto report   = compiler::driver::diagnostics::makeGlobalLoggerReporter();
+					auto manifest = compiler::driver::PackageCompilationManifest::fromJson(
+						manifest_json, report
+					);
 
 					if (!manifest.has_value()) {
 						compiler::driver::exit();
 						return 1;
 					}
 
-					(void) manifest->verify();
+					(void) manifest->verify(report);
 
 					auto init_result = compiler::driver::initializeTheCompiler(
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
@@ -629,7 +632,7 @@ clah::Clah getClahForMain() {
 					std::vector<compiler::driver::PackageCompilationTask> compilation_tasks;
 					compilation_tasks.reserve(manifest->tasks.size());
 					for (const auto& raw_task: manifest->tasks) {
-						auto converted = compiler::driver::convertRawTaskToTask(raw_task);
+						auto converted = compiler::driver::convertRawTaskToTask(raw_task, report);
 						if (!converted.has_value()) {
 							compiler::driver::exit();
 							return 1;
@@ -697,7 +700,7 @@ clah::Clah getClahForMain() {
 					auto init_result = compiler::driver::initializeTheCompiler(
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
 									.packages_info = {
-										compiler::driver::RawPackageInfo{
+										compiler::frontend::packages::RawPackageInfo{
 											.package_name = base::StrID(package_name.c_str()),
 											.version      = base::StrID("not_supported"),
 											.package_path = path_to_compile.getFilePath(),

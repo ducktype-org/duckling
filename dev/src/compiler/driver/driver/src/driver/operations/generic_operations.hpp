@@ -48,7 +48,8 @@ namespace compiler::driver {
 	 * This function is olnly for testing purpose
 	 */
 	inline base::OkBad compileEntirePackage(
-		const global_state::PackageInfo& package_info, const BuildTarget& build_target
+		const compiler::frontend::packages::PackageInfo& package_info,
+		const BuildTarget&                               build_target
 	) {
 		return compilePackages({
 			PackageCompilationTask{

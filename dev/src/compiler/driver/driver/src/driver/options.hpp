@@ -1,7 +1,6 @@
 #pragma once
 
-#include "packages/packages.hpp"
-
+#include <frontend/packages/packages.hpp>
 #include <global_state/backend_options.hpp>
 
 #include <filesystem/file.hpp>
@@ -90,12 +89,12 @@ namespace compiler::driver {
 		 * and its dependencies.
 		 */
 		struct PackageCompilationMode final {
-			std::vector<RawPackageInfo>       packages_info;
-			options_types::ArtifactsOptions   compilation_artifacts;
-			global_state::BackendOptions      backend_options;
-			options_types::DebugOptions       debug_options;
-			options_types::IncrementalOptions incremental;
-			options_types::ExecutionOptions   execution_options;
+			std::vector<compiler::frontend::packages::RawPackageInfo> packages_info;
+			options_types::ArtifactsOptions                           compilation_artifacts;
+			global_state::BackendOptions                              backend_options;
+			options_types::DebugOptions                               debug_options;
+			options_types::IncrementalOptions                         incremental;
+			options_types::ExecutionOptions                           execution_options;
 		};
 
 		/**

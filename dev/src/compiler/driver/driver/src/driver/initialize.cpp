@@ -6,6 +6,7 @@
 #include <diagnostic_interactive/logger.hpp>
 #include <diagnostic_interactive/module_flags/module_flags.hpp>
 #include <diagnostic_interactive/placeholder.hpp>
+#include <driver/diagnostics/log_helpers.hpp>
 #include <driver/incremental_utils/collect_input.hpp>
 #include <driver/module_flags/module_flags.hpp>
 #include <frontend/module_tree/functors.hpp>
@@ -83,13 +84,19 @@ namespace compiler::driver {
 			);
 		}
 
-		base::OkBad handlePackageOptions(const std::vector<RawPackageInfo>& packages_info) {
+		base::OkBad handlePackageOptions(
+			const std::vector<compiler::frontend::packages::RawPackageInfo>& packages_info
+		) {
+			auto report      = diagnostics::makeGlobalLoggerReporter();
+			bool had_failure = false;
 			for (const auto& package_info: packages_info) {
-				auto global_package_info = createGlobalPackageInfo(package_info);
-				if (!global_package_info.has_value()) return base::BAD;
-				global_state::setters::addPackage(global_package_info.value());
+				auto pkg = compiler::frontend::packages::createPackageInfo(package_info, report);
+				if (pkg)
+					global_state::setters::addPackage(*pkg);
+				else
+					had_failure = true;
 			}
-			return base::OK;
+			return had_failure ? base::BAD : base::OK;
 		}
 
 		/**

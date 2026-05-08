@@ -10,6 +10,7 @@
 #include <filesystem/file_path.hpp>
 #include <string_id/string_id.hpp>
 
+#include <json/diagnostics.hpp>
 #include <nlohmann/json_fwd.hpp>
 
 
@@ -22,6 +23,23 @@ MAKE_STRINGIFYABLE_ENUM(compiler::driver, u32, TaskType,
 )
 
 namespace compiler::driver {
+	/**
+	 * @brief Diagnostics for task parsing and task resolution.
+	 */
+	namespace task {
+		/**
+		 * @brief Callback for reporting task diagnostics.
+		 */
+		using DiagnosticReporter = js::DiagnosticLogger;
+
+		/**
+		 * @brief Look up a package root module by its raw package name.
+		 */
+		base::Optional<compiler::frontend::ModuleID> getRootModuleIDForRawPackageName(
+			base::StrID package_name, const DiagnosticReporter& report
+		);
+	}  // namespace task
+
 	/**
 	 * @brief Package build target.
 	 */
@@ -77,7 +95,12 @@ namespace compiler::driver {
 		base::StrID package_name;
 		BuildTarget build_target;
 
-		static base::Optional<RawPackageCompilationTask> fromJson(const nlohmann::json& json);
+		/**
+		 * @brief Parse a package compilation task from JSON.
+		 */
+		static base::Optional<RawPackageCompilationTask> fromJson(
+			const nlohmann::json& json, const task::DiagnosticReporter& report
+		);
 	};
 
 	struct PackageCompilationTask final {
@@ -94,7 +117,12 @@ namespace compiler::driver {
 		TaskType                                type;
 		std::variant<RawPackageCompilationTask> task_data;
 
-		static base::Optional<RawTask> fromJson(const nlohmann::json& json);
+		/**
+		 * @brief Parse a compilation task from JSON.
+		 */
+		static base::Optional<RawTask> fromJson(
+			const nlohmann::json& json, const task::DiagnosticReporter& report
+		);
 	};
 
 	struct Task {
@@ -102,5 +130,10 @@ namespace compiler::driver {
 		std::variant<PackageCompilationTask> task_data;
 	};
 
-	base::Optional<Task> convertRawTaskToTask(const RawTask& raw_task);
+	/**
+	 * @brief Convert a raw task into a resolved task.
+	 */
+	base::Optional<Task> convertRawTaskToTask(
+		const RawTask& raw_task, const task::DiagnosticReporter& report
+	);
 }

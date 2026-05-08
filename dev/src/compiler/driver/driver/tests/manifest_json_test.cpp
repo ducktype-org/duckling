@@ -1,9 +1,9 @@
 #include <diagnostic_interactive/core/diagnostic_arguments.hpp>
 #include <diagnostic_interactive/logger.hpp>
+#include <driver/diagnostics/log_helpers.hpp>
 #include <driver/manifest/manifest.hpp>
-#include <driver/manifest/utils.hpp>
-#include <driver/packages/packages.hpp>
 #include <driver/task/task.hpp>
+#include <frontend/packages/packages.hpp>
 #include <global_state/global_logger.hpp>
 
 #include <base/pointers/box.hpp>
@@ -81,10 +81,13 @@ private:
             ]
         })");
 
-		auto result = PackageCompilationManifest::fromJson(manifest_json);
+		auto result = PackageCompilationManifest::fromJson(
+			manifest_json, diagnostics::makeGlobalLoggerReporter()
+		);
 
 		ASSERT_TRUE(result.has_value());
 		ASSERT_TRUE(logger().good());
+		(void) result->verify(diagnostics::makeGlobalLoggerReporter());
 		ASSERT_EQUAL(result->packages.size(), 2u);
 		ASSERT_EQUAL(result->tasks.size(), 1u);
 		ASSERT_EQUAL(result->packages[0].package_name.str(), std::string("mylib"));
@@ -100,7 +103,9 @@ private:
             "tasks": []
         })");
 
-		auto result = PackageCompilationManifest::fromJson(manifest_json);
+		auto result = PackageCompilationManifest::fromJson(
+			manifest_json, diagnostics::makeGlobalLoggerReporter()
+		);
 
 		ASSERT_TRUE(!result.has_value());
 		ASSERT_TRUE(logger().hasErrors());
@@ -121,7 +126,9 @@ private:
             "tasks": []
         })");
 
-		auto result = PackageCompilationManifest::fromJson(manifest_json);
+		auto result = PackageCompilationManifest::fromJson(
+			manifest_json, diagnostics::makeGlobalLoggerReporter()
+		);
 
 		ASSERT_TRUE(!result.has_value());
 		ASSERT_TRUE(logger().hasErrors());
@@ -137,7 +144,9 @@ private:
             ]
         })");
 
-		auto result = PackageCompilationManifest::fromJson(manifest_json);
+		auto result = PackageCompilationManifest::fromJson(
+			manifest_json, diagnostics::makeGlobalLoggerReporter()
+		);
 
 		ASSERT_TRUE(!result.has_value());
 		ASSERT_TRUE(logger().hasErrors());
@@ -167,10 +176,13 @@ private:
             ]
         })");
 
-		auto result = PackageCompilationManifest::fromJson(manifest_json);
+		auto result = PackageCompilationManifest::fromJson(
+			manifest_json, diagnostics::makeGlobalLoggerReporter()
+		);
 
 		ASSERT_TRUE(result.has_value());
 		ASSERT_TRUE(!logger().hasErrors());
+		(void) result->verify(diagnostics::makeGlobalLoggerReporter());
 		ASSERT_TRUE(hasWarning());
 	}
 
@@ -180,7 +192,9 @@ private:
 		auto task_json = nlohmann::json::parse(
 			R"({ "package": "mylib", "strategy": "dvm", "output_file": "bin/mylib_dvm" })"
 		);
-		auto result = RawPackageCompilationTask::fromJson(task_json);
+		auto result = RawPackageCompilationTask::fromJson(
+			task_json, diagnostics::makeGlobalLoggerReporter()
+		);
 
 		ASSERT_TRUE(result.has_value());
 		ASSERT_TRUE(logger().good());
@@ -196,7 +210,9 @@ private:
 		auto task_json = nlohmann::json::parse(
 			R"({ "package": "app", "strategy": "native", "output_file": "bin/app", "linking_options": "-lm" })"
 		);
-		auto result = RawPackageCompilationTask::fromJson(task_json);
+		auto result = RawPackageCompilationTask::fromJson(
+			task_json, diagnostics::makeGlobalLoggerReporter()
+		);
 
 		ASSERT_TRUE(result.has_value());
 		ASSERT_TRUE(logger().good());
@@ -209,7 +225,9 @@ private:
 		clearLogger();
 
 		auto task_json = nlohmann::json::parse(R"({ "package": "app", "strategy": "wasm" })");
-		auto result    = RawPackageCompilationTask::fromJson(task_json);
+		auto result    = RawPackageCompilationTask::fromJson(
+            task_json, diagnostics::makeGlobalLoggerReporter()
+        );
 
 		ASSERT_TRUE(!result.has_value());
 		ASSERT_TRUE(logger().hasErrors());

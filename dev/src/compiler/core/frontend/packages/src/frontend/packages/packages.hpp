@@ -1,96 +1,109 @@
 #pragma once
-#include <global_state/packages.hpp>
+
+#include <frontend/module_tree/module_id.hpp>
 
 #include <base/collections/optional.hpp>
 
 #include <filesystem/file_path.hpp>
 #include <string_id/string_id.hpp>
 
+#include <json/diagnostics.hpp>
 #include <nlohmann/json_fwd.hpp>
 
-namespace compiler::driver {
+#include <vector>
+
+namespace compiler::frontend::packages {
+	/**
+	 * @brief Diagnostics for package parsing and resolution.
+	 */
+	using DiagnosticReporter = js::DiagnosticLogger;
 
 	/**
-	 * @brief Describes a single external dependency of the main package.
-	 * This dependency info should be returned from parsing compilation options (e.g. from a
-	 * manifest file). And transferred to global_state::DependencyInfo in the process of compiler
-	 * initialization.
+	 * @brief Information about a package dependency in the package graph.
 	 */
-	struct RawDependencyInfo final {
+	struct PackageDependencyInfo final {
+		/** @brief The ID of the dependency package. */
+		base::StrID package_id;
 		/**
-		 * @brief The name of the dependency package.
-		 * This name must be unique and it's used as package_id in global_state::DependencyInfo.
-		 */
-		base::StrID package_name;
-
-		/**
-		 * @brief Alias of the dependency used in some package code.
+		 * @brief Name used in importing code.
+		 * Defaults to the package ID when no explicit alias is set.
 		 */
 		base::StrID alias;
-
-		static base::Optional<RawDependencyInfo> fromJson(const nlohmann::json& json);
 	};
 
 	/**
-	 * @brief Describes a single package in the system.
-	 * This package info should be returned from parsing compilation options (e.g. from a manifest
-	 * file). And transferred to global_state::PackageInfo in the process of compiler
-	 * initialization.
+	 * @brief Resolved information about a single package.
+	 * @note The package_id is stored in @c root_module's ModuleID.
 	 */
-	struct RawPackageInfo final {
-		/**
-		 * @brief The name of the package.
-		 * This name must be unique and it's used as package_id in global_state::PackageInfo.
-		 */
-		base::StrID package_name;
+	struct PackageInfo final {
+		/** @brief The root module of the package. */
+		compiler::frontend::ModuleID root_module;
 
-		/**
-		 * @brief The version of the package.
-		 * This field is currently unused in the actual compilation process, but it might be used in
-		 * the future as a global define.
-		 */
+		/** @brief Version of the package (currently informational). */
 		base::StrID version;
 
+		/** @brief Feature flags advertised by the package (currently informational). */
+		std::vector<base::StrID> package_features;
+
+		/** @brief Dependencies the package imports. */
+		std::vector<PackageDependencyInfo> dependencies;
+	};
+
+	/**
+	 * @brief Describes a single external dependency parsed from manifest input.
+	 */
+	struct RawDependencyInfo final {
+		/** @brief The name of the dependency package. Used as @c package_id later. */
+		base::StrID package_name;
+
+		/** @brief Alias of the dependency used in importing code. */
+		base::StrID alias;
+
 		/**
-		 * @brief The file path to the package.
-		 * This path is used to locate the package on the filesystem and load its contents during
-		 * compilation.
+		 * @brief Parse a dependency entry from JSON.
+		 * @param report Reporter that receives any encountered diagnostics.
+		 * @return The parsed dependency, or empty if a fatal error was reported.
 		 */
+		static base::Optional<RawDependencyInfo> fromJson(
+			const nlohmann::json& json, const DiagnosticReporter& report
+		);
+	};
+
+	/**
+	 * @brief Describes a single package parsed from manifest input.
+	 */
+	struct RawPackageInfo final {
+		/** @brief The name of the package. Used as @c package_id later. */
+		base::StrID package_name;
+
+		/** @brief Version of the package. */
+		base::StrID version;
+
+		/** @brief File path to the package's source root. */
 		fs::FilePath package_path;
 
-		/**
-		 * @brief A list of features supported by the package.
-		 * Features are flags that can be used in the code for conditional compilation.
-		 * This field is currently unused in the actual compilation process, but it might be used in
-		 * the future for conditional compilation based on package features.
-		 */
+		/** @brief Feature flags advertised by the package. */
 		std::vector<base::StrID> features;
 
-		/**
-		 * @brief A list of dependencies for the package.
-		 * Dependencies can be imported in a code like other local modules.
-		 * This field is used to determine which other packages need to be compiled and linked
-		 * together with this package.
-		 */
+		/** @brief Direct dependencies declared by the package. */
 		std::vector<RawDependencyInfo> dependencies;
 
 		/**
-		 * @brief Creates a RawPackageInfo instance from a JSON object.
-		 * @param json The JSON object containing the package information.
-		 * @return The created RawPackageInfo instance or an empty optional if the JSON is invalid.
+		 * @brief Parse a package entry from JSON.
+		 * @param report Reporter that receives any encountered diagnostics.
+		 * @return The parsed package, or empty if a fatal error was reported.
 		 */
-		static base::Optional<RawPackageInfo> fromJson(const nlohmann::json& json);
+		static base::Optional<RawPackageInfo> fromJson(
+			const nlohmann::json& json, const DiagnosticReporter& report
+		);
 	};
 
 	/**
-	 * @brief Creates a global_state::PackageInfo instance from a RawPackageInfo instance.
-	 * This involves loading the package's module tree and validating its structure.
-	 * @param package_info The RawPackageInfo instance containing the raw package information.
-	 * @note This function logs errors to the global logger if the package is invalid.
-	 * @return The created global_state::PackageInfo instance or an empty optional if the package is
-	 * invalid.
+	 * @brief Resolve a RawPackageInfo into a PackageInfo by loading its module tree.
+	 * Pure — does not log; routes errors via @p report.
 	 */
-	base::Optional<global_state::PackageInfo> createGlobalPackageInfo(
-		const RawPackageInfo& package_info
+	base::Optional<PackageInfo> createPackageInfo(
+		const RawPackageInfo& package_info, const DiagnosticReporter& report
 	);
-}
+
+}  // namespace compiler::frontend::packages

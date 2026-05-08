@@ -1,48 +1,55 @@
 #include "manifest.hpp"
 
-#include "utils.hpp"
+#include <frontend/packages/packages.hpp>
 
-#include <diagnostic_interactive/placeholder.hpp>
-#include <global_state/global_logger.hpp>
+#include <base/str/str_utils.hpp>
 
-#include <base/pointers/box.hpp>
-
-#include <json/json.hpp>
+#include <json/diagnostics.hpp>
+#include <nlohmann/json.hpp>
 
 #include <unordered_set>
+#include <utility>
 
 namespace compiler::driver {
 
-	namespace ju = compiler::driver::json;
+	namespace fp = compiler::frontend::packages;
 
 	base::Optional<PackageCompilationManifest> PackageCompilationManifest::fromJson(
-		const nlohmann::json& json
+		const nlohmann::json& json, const manifest::DiagnosticReporter& report
 	) {
-		if (!ju::checkIsObject(json, "manifest")) return {};
+		if (!js::checkIsObject(json, "manifest", report)) return {};
 
-		ju::checkForUknownFields(json, { "packages", "tasks" }, {}, "manifest");
+		js::checkForUnknownFields(json, { "packages", "tasks" }, {}, "manifest", report);
 
-		auto packages_array = ju::getArray(json, "packages", "Manifest requires a packages array!");
+		auto packages_array
+			= js::getArray(json, "packages", "Manifest requires a packages array!", report);
 		if (!packages_array) return {};
 
-		std::vector<RawPackageInfo> packages;
+		bool                            had_fatal = false;
+		std::vector<fp::RawPackageInfo> packages;
 		packages.reserve(packages_array->size());
 		for (const auto& pkg_json: *packages_array) {
-			auto pkg = RawPackageInfo::fromJson(pkg_json);
-			if (!pkg) return {};
-			packages.push_back(std::move(*pkg));
+			auto pkg = fp::RawPackageInfo::fromJson(pkg_json, report);
+			if (pkg)
+				packages.push_back(std::move(*pkg));
+			else
+				had_fatal = true;
 		}
 
-		auto tasks_array = ju::getArray(json, "tasks", "Manifest requires a tasks array!");
+		auto tasks_array = js::getArray(json, "tasks", "Manifest requires a tasks array!", report);
 		if (!tasks_array) return {};
 
 		std::vector<RawTask> tasks;
 		tasks.reserve(tasks_array->size());
 		for (const auto& task_json: *tasks_array) {
-			auto task = RawTask::fromJson(task_json);
-			if (!task) return {};
-			tasks.push_back(std::move(*task));
+			auto task = RawTask::fromJson(task_json, report);
+			if (task)
+				tasks.push_back(std::move(*task));
+			else
+				had_fatal = true;
 		}
+
+		if (had_fatal) return {};
 
 		return PackageCompilationManifest{
 			.packages = std::move(packages),
@@ -50,21 +57,15 @@ namespace compiler::driver {
 		};
 	}
 
-	namespace {
-		void logManifestError(const std::string& header, const std::string& description) {
-			if (!global_state::hasGlobalLogger()) return;
-			global_state::getGlobalLogger()->log(
-				makeBox<dia_int::PlaceholderError>(header, description)
-			);
-		}
-	}  // namespace
-
-	base::OkBad PackageCompilationManifest::verify() const {
+	base::OkBad PackageCompilationManifest::verify(const manifest::DiagnosticReporter& report
+	) const {
 		base::OkBad result = base::OK;
 
 		if (packages.empty()) {
-			logManifestError(
-				"Empty packages list in manifest", "The manifest must contain at least one package."
+			report(
+				"Empty packages list in manifest",
+				"The manifest must contain at least one package.",
+				true
 			);
 			result = base::BAD;
 		}
@@ -72,10 +73,11 @@ namespace compiler::driver {
 		std::unordered_set<base::StrID> package_names;
 		for (const auto& pkg: packages) {
 			if (!package_names.insert(pkg.package_name).second) {
-				logManifestError(
+				report(
 					base::strConcat("Duplicate package name in manifest: ", pkg.package_name.str()),
 					"Two or more packages share the same name in the packages list. "
-					"Each package name must be unique."
+					"Each package name must be unique.",
+					true
 				);
 				result = base::BAD;
 			}
@@ -86,7 +88,7 @@ namespace compiler::driver {
 			std::unordered_set<base::StrID> dep_aliases;
 			for (const auto& dep: pkg.dependencies) {
 				if (!package_names.contains(dep.package_name)) {
-					logManifestError(
+					report(
 						base::strConcat(
 							"Unknown dependency package: ",
 							dep.package_name.str(),
@@ -94,12 +96,13 @@ namespace compiler::driver {
 							pkg.package_name.str(),
 							")"
 						),
-						"Every dependency must have a corresponding entry in the packages list."
+						"Every dependency must have a corresponding entry in the packages list.",
+						true
 					);
 					result = base::BAD;
 				}
 				if (!dep_package_names.insert(dep.package_name).second) {
-					logManifestError(
+					report(
 						base::strConcat(
 							"Duplicate dependency: ",
 							dep.package_name.str(),
@@ -107,14 +110,15 @@ namespace compiler::driver {
 							pkg.package_name.str(),
 							")"
 						),
-						"A package cannot list the same dependency twice."
+						"A package cannot list the same dependency twice.",
+						true
 					);
 					result = base::BAD;
 				}
 				const base::StrID effective_alias
 					= dep.alias.isBad() ? dep.package_name : dep.alias;
 				if (!dep_aliases.insert(effective_alias).second) {
-					logManifestError(
+					report(
 						base::strConcat(
 							"Duplicate dependency alias: ",
 							effective_alias.str(),
@@ -123,7 +127,9 @@ namespace compiler::driver {
 							")"
 						),
 						"A package cannot have two dependencies sharing the same alias. "
-						"A dependency without an explicit alias uses its package name as the alias."
+						"A dependency without an explicit alias uses its package name as the "
+						"alias.",
+						true
 					);
 					result = base::BAD;
 				}

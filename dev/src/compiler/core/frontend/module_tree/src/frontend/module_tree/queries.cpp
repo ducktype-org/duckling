@@ -25,7 +25,7 @@ namespace compiler::frontend {
 			return current;
 		}
 
-		base::Optional<global_state::PackageInfo> getPackageInfo(
+		base::Optional<compiler::frontend::packages::PackageInfo> getPackageInfo(
 			query::Context& ctx, ModuleID module_id
 		) {
 			auto        root_ancestor = getRootAncestorModuleID(ctx, module_id);
@@ -38,7 +38,9 @@ namespace compiler::frontend {
 			return {};
 		}
 
-		base::Optional<global_state::PackageInfo> getPackageInfo(base::StrID package_id) {
+		base::Optional<compiler::frontend::packages::PackageInfo> getPackageInfo(
+			base::StrID package_id
+		) {
 			const auto& all_packages = global_state::getPackages();
 			for (const auto& pkg: all_packages)
 				if (getModuleRef(pkg.root_module)->getPackageID() == package_id) return pkg;

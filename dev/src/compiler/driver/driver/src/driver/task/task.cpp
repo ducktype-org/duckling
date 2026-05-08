@@ -1,80 +1,67 @@
 #include "task.hpp"
 
-#include <diagnostic_interactive/placeholder.hpp>
-#include <driver/manifest/utils.hpp>
+#include <driver/diagnostics/log_helpers.hpp>
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
-#include <global_state/global_logger.hpp>
 #include <global_state/packages.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
-#include <base/pointers/box.hpp>
 #include <base/str/str_utils.hpp>
 
-#include <json/json.hpp>
+#include <json/diagnostics.hpp>
+#include <nlohmann/json.hpp>
 
 namespace compiler::driver {
 
-	namespace {
+	namespace task {
 		base::Optional<compiler::frontend::ModuleID> getRootModuleIDForRawPackageName(
-			base::StrID package_name
+			base::StrID package_name, const DiagnosticReporter& report
 		) {
 			for (const auto& global_package_info: global_state::getPackages())
 				if (getModuleRef(global_package_info.root_module)->getName() == package_name)
 					return global_package_info.root_module;
 
-			// Get the global logger and log the error if the package is not found
-			if (global_state::hasGlobalLogger()) {
-				global_state::getGlobalLogger()->log(makeBox<dia_int::PlaceholderError>(
-					base::strConcat(
-						"Package name provided in a compilation task was not found in the provided "
-						"package list. Package name: \"",
-						package_name.strView(),
-						"\""
-					),
-					std::string{}
-				));
-			}
-
+			diagnostics::reportMissingPackageInTask(package_name, report);
 			return {};
 		}
-	}
-
-	namespace ju = compiler::driver::json;
+	}  // namespace task
 
 	base::Optional<RawPackageCompilationTask> RawPackageCompilationTask::fromJson(
-		const nlohmann::json& json
+		const nlohmann::json& json, const task::DiagnosticReporter& report
 	) {
-		if (!ju::checkIsObject(json, "task")) return {};
+		if (!js::checkIsObject(json, "task", report)) return {};
 
-		ju::checkForUknownFields(
+		js::checkForUnknownFields(
 			json,
 			{ "package", "strategy" },
 			{ "name", "output_file", "linking_options", "archive_options" },
-			"task"
+			"task",
+			report
 		);
 
-		auto package_name = ju::getString(json, "package", "Task requires a package name!");
-		if (!package_name) return {};
+		bool had_error = false;
 
-		auto strategy = ju::getString(json, "strategy", "Task requires a strategy!");
-		if (!strategy) return {};
+		auto package_name = js::getString(json, "package", "Task requires a package name!", report);
+		if (!package_name) had_error = true;
+
+		auto strategy = js::getString(json, "strategy", "Task requires a strategy!", report);
+		if (!strategy) had_error = true;
 
 		BuildTarget build_target;
 
-		if (strategy->view() == "dvm") {
-			auto output = ju::getStringIfPresent(
-				json, "output_file", "DVM task output_file must be a string"
+		if (strategy && strategy->view() == "dvm") {
+			auto output = js::getStringIfPresent(
+				json, "output_file", "DVM task output_file must be a string", report
 			);
 			build_target = BuildTargetDVM{
 				.output_file_stem = output.has_value() ? *output : base::StrID("package_dvm"),
 			};
-		} else if (strategy->view() == "native") {
+		} else if (strategy && strategy->view() == "native") {
 			auto output
-				= ju::getString(json, "output_file", "Native task requires an output file!");
-			if (!output) return {};
+				= js::getString(json, "output_file", "Native task requires an output file!", report);
+			if (!output) had_error = true;
 
 			linker::LinkingOptions linking_options{
 				.linker_path             = {},
@@ -84,60 +71,81 @@ namespace compiler::driver {
 			if (json.contains("linking_options")) {
 				const auto& linking_json = json["linking_options"];
 				if (linking_json.is_string()) {
-					auto options_value = ju::getStringValue(
-						linking_json, "linking_options", "linking_options must be a string"
+					auto options_value = js::getStringValue(
+						linking_json, "linking_options", "linking_options must be a string", report
 					);
-					if (!options_value) return {};
-					linking_options.additional_link_options = options_value->str();
+					if (options_value)
+						linking_options.additional_link_options = options_value->str();
+					else
+						had_error = true;
 				} else {
-					auto linking_obj = ju::getObjectIfPresent(
-						json, "linking_options", "linking_options must be a string or an object"
+					auto linking_obj = js::getObjectIfPresent(
+						json,
+						"linking_options",
+						"linking_options must be a string or an object",
+						report
 					);
-					if (!linking_obj) return {};
-					ju::checkForUknownFields(
-						*linking_obj,
-						{},
-						{ "linker", "additional_link_options", "link_c_standard_library" },
-						"linking_options"
-					);
-
-					if (linking_obj->contains("linker")) {
-						auto linker_path = ju::getStringIfPresent(
-							*linking_obj, "linker", "linking_options.linker must be a string"
-						);
-						if (!linker_path) return {};
-						linking_options.linker_path = linker_path->str();
-					}
-
-					if (linking_obj->contains("additional_link_options")) {
-						auto additional_options = ju::getStringIfPresent(
+					if (!linking_obj) {
+						had_error = true;
+					} else {
+						js::checkForUnknownFields(
 							*linking_obj,
-							"additional_link_options",
-							"linking_options.additional_link_options must be a string"
+							{},
+							{ "linker", "additional_link_options", "link_c_standard_library" },
+							"linking_options",
+							report
 						);
-						if (!additional_options) return {};
-						linking_options.additional_link_options = additional_options->str();
-					}
 
-					if (linking_obj->contains("link_c_standard_library")) {
-						auto link_stdlib = ju::getBoolIfPresent(
-							*linking_obj,
-							"link_c_standard_library",
-							"linking_options.link_c_standard_library must be a boolean"
-						);
-						if (!link_stdlib) return {};
-						linking_options.link_c_standard_library = *link_stdlib;
+						if (linking_obj->contains("linker")) {
+							auto linker_path = js::getStringIfPresent(
+								*linking_obj,
+								"linker",
+								"linking_options.linker must be a string",
+								report
+							);
+							if (linker_path)
+								linking_options.linker_path = linker_path->str();
+							else
+								had_error = true;
+						}
+
+						if (linking_obj->contains("additional_link_options")) {
+							auto additional_options = js::getStringIfPresent(
+								*linking_obj,
+								"additional_link_options",
+								"linking_options.additional_link_options must be a string",
+								report
+							);
+							if (additional_options)
+								linking_options.additional_link_options = additional_options->str();
+							else
+								had_error = true;
+						}
+
+						if (linking_obj->contains("link_c_standard_library")) {
+							auto link_stdlib = js::getBoolIfPresent(
+								*linking_obj,
+								"link_c_standard_library",
+								"linking_options.link_c_standard_library must be a boolean",
+								report
+							);
+							if (link_stdlib)
+								linking_options.link_c_standard_library = *link_stdlib;
+							else
+								had_error = true;
+						}
 					}
 				}
 			}
 
 			build_target = BuildTargetLLVMExecutable{
-				.output_file_stem = *output,
+				.output_file_stem = output ? *output : base::StrID(),
 				.linking_options  = std::move(linking_options),
 			};
-		} else if (strategy->view() == "lib") {
-			auto output = ju::getString(json, "output_file", "Lib task requires an output file!");
-			if (!output) return {};
+		} else if (strategy && strategy->view() == "lib") {
+			auto output
+				= js::getString(json, "output_file", "Lib task requires an output file!", report);
+			if (!output) had_error = true;
 
 			archiver::ArchivingOptions archiving_options{
 				.archiver_path = {},
@@ -145,41 +153,57 @@ namespace compiler::driver {
 			if (json.contains("archive_options")) {
 				const auto& archive_json = json["archive_options"];
 				if (archive_json.is_string()) {
-					auto archiver = ju::getStringValue(
-						archive_json, "archive_options", "archive_options must be a string"
+					auto archiver = js::getStringValue(
+						archive_json, "archive_options", "archive_options must be a string", report
 					);
-					if (!archiver) return {};
-					archiving_options.archiver_path = archiver->str();
+					if (archiver)
+						archiving_options.archiver_path = archiver->str();
+					else
+						had_error = true;
 				} else {
-					auto archive_obj = ju::getObjectIfPresent(
-						json, "archive_options", "archive_options must be a string or an object"
+					auto archive_obj = js::getObjectIfPresent(
+						json,
+						"archive_options",
+						"archive_options must be a string or an object",
+						report
 					);
-					if (!archive_obj) return {};
-					ju::checkForUknownFields(*archive_obj, {}, { "archiver" }, "archive_options");
-
-					if (archive_obj->contains("archiver")) {
-						auto archiver_path = ju::getStringIfPresent(
-							*archive_obj, "archiver", "archive_options.archiver must be a string"
+					if (!archive_obj) {
+						had_error = true;
+					} else {
+						js::checkForUnknownFields(
+							*archive_obj, {}, { "archiver" }, "archive_options", report
 						);
-						if (!archiver_path) return {};
-						archiving_options.archiver_path = archiver_path->str();
+
+						if (archive_obj->contains("archiver")) {
+							auto archiver_path = js::getStringIfPresent(
+								*archive_obj,
+								"archiver",
+								"archive_options.archiver must be a string",
+								report
+							);
+							if (archiver_path)
+								archiving_options.archiver_path = archiver_path->str();
+							else
+								had_error = true;
+						}
 					}
 				}
 			}
 
 			build_target = BuildTargetLLVMStaticLibrary{
-				.output_file_stem  = *output,
+				.output_file_stem  = output ? *output : base::StrID(),
 				.archiving_options = std::move(archiving_options),
 			};
-		} else {
-			if (global_state::hasGlobalLogger()) {
-				global_state::getGlobalLogger()->log(makeBox<dia_int::PlaceholderError>(
-					base::strConcat("Unknown task strategy: \"", strategy->str(), "\""),
-					R"(Expected "dvm", "native", or "lib".)"
-				));
-			}
-			return {};
+		} else if (strategy) {
+			report(
+				base::strConcat("Unknown task strategy: \"", strategy->str(), "\""),
+				R"(Expected "dvm", "native", or "lib".)",
+				true
+			);
+			had_error = true;
 		}
+
+		if (had_error) return {};
 
 		return RawPackageCompilationTask{
 			.package_name = *package_name,
@@ -187,8 +211,10 @@ namespace compiler::driver {
 		};
 	}
 
-	base::Optional<RawTask> RawTask::fromJson(const nlohmann::json& json) {
-		auto task_data = RawPackageCompilationTask::fromJson(json);
+	base::Optional<RawTask> RawTask::fromJson(
+		const nlohmann::json& json, const task::DiagnosticReporter& report
+	) {
+		auto task_data = RawPackageCompilationTask::fromJson(json, report);
 		if (!task_data) return {};
 
 		return RawTask{
@@ -197,20 +223,18 @@ namespace compiler::driver {
 		};
 	}
 
-	base::Optional<Task> convertRawTaskToTask(const RawTask& raw_task) {
+	base::Optional<Task> convertRawTaskToTask(
+		const RawTask& raw_task, const task::DiagnosticReporter& report
+	) {
 		variant_match(raw_task.task_data) {
 			variant_case(RawPackageCompilationTask, raw_package_task) {
 				auto root_module_opt
-					= getRootModuleIDForRawPackageName(raw_package_task.package_name);
+					= task::getRootModuleIDForRawPackageName(raw_package_task.package_name, report);
 
-				if (!root_module_opt.has_value()) {
-					// Error is already logged in getRootModuleIDForRawPackageName, just return
-					// empty optional here
-					return {};
-				}
+				if (!root_module_opt.has_value()) return {};
 
 				return Task{
-					.type = TaskType::PackageCompilation,
+					.type      = TaskType::PackageCompilation,
 					.task_data = PackageCompilationTask{
 						.root_module = *root_module_opt,
 						.build_target = raw_package_task.build_target,

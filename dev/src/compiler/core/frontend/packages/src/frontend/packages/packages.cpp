@@ -1,43 +1,37 @@
 #include "packages.hpp"
 
-#include <diagnostic_interactive/placeholder.hpp>
-#include <driver/manifest/utils.hpp>
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
-#include <global_state/global_logger.hpp>
-#include <global_state/packages.hpp>
 
-#include <base/collections/optional.hpp>
-#include <base/pointers/box.hpp>
 #include <base/str/str_utils.hpp>
 
-#include <json/json.hpp>
+#include <json/diagnostics.hpp>
+#include <json/extract.hpp>
+#include <nlohmann/json.hpp>
 
+#include <string>
 #include <utility>
 #include <vector>
 
-namespace compiler::driver {
+namespace compiler::frontend::packages {
 
-	namespace ju = compiler::driver::json;
+	base::Optional<RawDependencyInfo> RawDependencyInfo::fromJson(
+		const nlohmann::json& json, const DiagnosticReporter& report
+	) {
+		if (!js::checkIsObject(json, "dependency", report)) return {};
 
-	base::Optional<RawDependencyInfo> RawDependencyInfo::fromJson(const nlohmann::json& json) {
-		if (!ju::checkIsObject(json, "dependency")) return {};
+		js::checkForUnknownFields(json, { "name" }, { "alias" }, "dependency", report);
 
-		ju::checkForUknownFields(
-			json,
-			{
-				"name",
-			},
-			{
-				"alias",
-			},
-			"dependency"
-		);
+		bool had_error = false;
 
-		auto name = ju::getString(json, "name", "Dependency requires a package name!");
-		if (!name) return {};
+		auto name = js::getString(json, "name", "Dependency requires a package name!", report);
+		if (!name) had_error = true;
 
-		auto alias = ju::getStringNoError(json, "alias");
+		base::Optional<base::StrID> alias;
+		if (auto alias_result = js::extractString(json, "alias"); alias_result.has_value())
+			alias = *alias_result;
+
+		if (had_error) return {};
 
 		return RawDependencyInfo{
 			.package_name = *name,
@@ -45,78 +39,78 @@ namespace compiler::driver {
 		};
 	}
 
-	base::Optional<RawPackageInfo> RawPackageInfo::fromJson(const nlohmann::json& json) {
-		if (!ju::checkIsObject(json, "package")) return {};
+	base::Optional<RawPackageInfo> RawPackageInfo::fromJson(
+		const nlohmann::json& json, const DiagnosticReporter& report
+	) {
+		if (!js::checkIsObject(json, "package", report)) return {};
 
-		ju::checkForUknownFields(
-			json,
-			{
-				"name",
-				"path",
-			},
-			{
-				"version",
-				"features",
-				"dependencies",
-			},
-			"package"
+		js::checkForUnknownFields(
+			json, { "name", "path" }, { "version", "features", "dependencies" }, "package", report
 		);
 
-		auto name = ju::getString(json, "name", "Package requires a name!");
-		if (!name) return {};
+		bool had_error = false;
 
-		auto path = ju::getString(json, "path", "Package requires a path!");
-		if (!path) return {};
+		auto name = js::getString(json, "name", "Package requires a name!", report);
+		if (!name) had_error = true;
 
-		auto version = ju::getStringNoError(json, "version");
-		if (!version) version = base::StrID();
+		auto path = js::getString(json, "path", "Package requires a path!", report);
+		if (!path) had_error = true;
 
-		auto features_array = ju::getArrayNoError(json, "features");
-		if (!features_array) features_array = std::vector<nlohmann::json>();
+		base::Optional<base::StrID> version_opt;
+		if (auto version_result = js::extractString(json, "version"); version_result.has_value())
+			version_opt = *version_result;
 
 		std::vector<base::StrID> features;
-		features.reserve(features_array->size());
-		for (const auto& feat: *features_array) {
-			auto feat_str = ju::getStringFromArray(
-				feat, base::strConcat("package \"", name->str(), "\" features")
-			);
-			if (!feat_str) return {};
-			features.push_back(*feat_str);
+		if (auto features_result = js::extractArray(json, "features"); features_result.has_value()) {
+			auto& features_array = *features_result;
+			features.reserve(features_array.size());
+			for (const auto& feat: features_array) {
+				auto feat_str = js::getStringFromArray(
+					feat,
+					base::strConcat("package \"", name ? name->str() : std::string{}, "\" features"),
+					report
+				);
+				if (feat_str)
+					features.push_back(*feat_str);
+				else
+					had_error = true;
+			}
 		}
-
-		auto deps_array = ju::getArrayNoError(json, "dependencies");
-		if (!deps_array) deps_array = std::vector<nlohmann::json>();
 
 		std::vector<RawDependencyInfo> deps;
-		deps.reserve(deps_array->size());
-		for (const auto& dep_json: *deps_array) {
-			auto dep = RawDependencyInfo::fromJson(dep_json);
-			if (!dep) continue;  // Log error inside fromJson and skip invalid dependency
-			deps.push_back(*dep);
+		if (auto deps_result = js::extractArray(json, "dependencies"); deps_result.has_value()) {
+			auto& deps_array = *deps_result;
+			deps.reserve(deps_array.size());
+			for (const auto& dep_json: deps_array) {
+				auto dep = RawDependencyInfo::fromJson(dep_json, report);
+				if (dep)
+					deps.push_back(*dep);
+				else
+					had_error = true;
+			}
 		}
+
+		if (had_error) return {};
 
 		return RawPackageInfo{
 			.package_name = *name,
-			.version      = *version,
+			.version      = version_opt.has_value() ? *version_opt : base::StrID(),
 			.package_path = fs::FilePath(path->str()),
 			.features     = std::move(features),
 			.dependencies = std::move(deps),
 		};
 	}
 
-	base::Optional<global_state::PackageInfo> createGlobalPackageInfo(
-		const RawPackageInfo& package_info
+	base::Optional<PackageInfo> createPackageInfo(
+		const RawPackageInfo& package_info, const DiagnosticReporter& report
 	) {
-		// First, create the module tree for the package for the give path
 		auto root_module = compiler::frontend::createModuleTree(
 			package_info.package_path, package_info.package_name
 		);
 
-		// If module tree does not have a main source file, it is not a valid package. We require
-		// main source file as an entry point for the package.
 		if (!getModuleRef(root_module)->hasMainSourceFile()) {
 			auto module_name = getModuleRef(root_module)->getName();
-			global_state::getGlobalLogger()->log(makeBox<dia_int::PlaceholderError>(
+			report(
 				"Package does not have a main source file.",
 				base::strConcat(
 					"The main source file is required for package ",
@@ -124,28 +118,27 @@ namespace compiler::driver {
 					". Please add a ",
 					module_name,
 					".dmf file to the package module directory."
-				)
-			));
+				),
+				true
+			);
 			return {};
 		}
 
-		std::vector<global_state::PackageDependencyInfo> package_dependencies;
-
+		std::vector<PackageDependencyInfo> package_dependencies;
+		package_dependencies.reserve(package_info.dependencies.size());
 		for (const auto& dependency: package_info.dependencies) {
-			auto dependency_package_info = global_state::PackageDependencyInfo{
+			package_dependencies.push_back(PackageDependencyInfo{
 				.package_id = dependency.package_name,
-				.alias = (dependency.alias.isBad()) ? dependency.package_name : dependency.alias,
-			};
-			package_dependencies.push_back(dependency_package_info);
+				.alias      = dependency.alias.isBad() ? dependency.package_name : dependency.alias,
+			});
 		}
 
-		auto global_package_info = global_state::PackageInfo{
+		return PackageInfo{
 			.root_module      = root_module,
 			.version          = package_info.version,
 			.package_features = package_info.features,
 			.dependencies     = std::move(package_dependencies),
 		};
-		return global_package_info;
 	}
 
-}  // namespace compiler::driver
+}  // namespace compiler::frontend::packages

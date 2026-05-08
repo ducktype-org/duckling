@@ -209,7 +209,7 @@ private:
 			package_id += "_";
 			package_id += std::to_string(precompile_suffix++);
 
-			global_state::PackageInfo package_info{
+			compiler::frontend::packages::PackageInfo package_info{
 				.root_module = frontend::createModuleTree(
 					fs::File(path(info.module_path)), base::StrID(package_id.c_str())
 				),
@@ -536,7 +536,7 @@ private:
 
 		// this also checks if llvm IR lib compile and link into the executable:
 
-		global_state::PackageInfo package_info{
+		compiler::frontend::packages::PackageInfo package_info{
 			.root_module = frontend::createModuleTree(
 				fs::File(path("modules/functions_5")), base::StrID(package_name.c_str())
 			),
@@ -659,7 +659,7 @@ private:
 	void sideInputsTest() {
 		using namespace compiler;
 
-		global_state::PackageInfo package_info{
+		compiler::frontend::packages::PackageInfo package_info{
 			.root_module = frontend::createModuleTree(
 				fs::File(path("modules/import_simple")), base::StrID("import_simple")
 			),
@@ -784,7 +784,7 @@ private:
 	void moduleChildSideInputsTest() {
 		using namespace compiler;
 
-		global_state::PackageInfo package_info{
+		compiler::frontend::packages::PackageInfo package_info{
 			.root_module = frontend::createModuleTree(
 				fs::File(path("modules/imports_complicated")),
 				base::StrID("imports_complicated_test")
@@ -1072,7 +1072,7 @@ private:
 			return std::ranges::find(deps, source_position_node) != deps.end();
 		};
 
-		global_state::PackageInfo dvm_package_info{
+		compiler::frontend::packages::PackageInfo dvm_package_info{
 			.root_module = frontend::createModuleTree(
 				fs::File(path("modules/functions_2")), base::StrID("src_pos_dvm")
 			),
