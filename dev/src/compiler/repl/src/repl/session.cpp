@@ -28,10 +28,52 @@
 
 #include <cstring>
 #include <iostream>
+#include <sstream>
 #include <string>
 #include <string_view>
 
 namespace compiler::repl {
+	namespace {}
+
+	ReplResult ReplSession::failWithMessage(std::string_view message) {
+		return ReplResult::error(std::string(message));
+	}
+
+	ReplResult ReplSession::runWithReplErrorHandling(
+		std::string_view                   panic_prefix,
+		std::string_view                   std_exception_prefix,
+		const std::function<ReplResult()>& action
+	) {
+		try {
+			return action();
+		} catch (const base::Panic& e) {
+			return ReplResult::error(base::strConcat(panic_prefix, e.what()));
+		} catch (const std::exception& e) {
+			return ReplResult::error(base::strConcat(std_exception_prefix, e.what()));
+		} catch (...) {
+			return ReplResult::error(base::strConcat(std_exception_prefix, "Unknown error occurred")
+			);
+		}
+	}
+
+	void ReplSession::runWithContextErrorHandling(
+		std::string_view                            panic_prefix,
+		std::string_view                            std_exception_prefix,
+		const std::function<void(query::Context&)>& action,
+		std::string&                                out_error
+	) {
+		query::utils::withContextDo([&](query::Context& ctx) {
+			try {
+				action(ctx);
+			} catch (const base::Panic& e) {
+				out_error = base::strConcat(panic_prefix, e.what());
+			} catch (const std::exception& e) {
+				out_error = base::strConcat(std_exception_prefix, e.what());
+			} catch (...) {
+				out_error = base::strConcat(std_exception_prefix, "Unknown error occurred");
+			}
+		});
+	}
 
 	void ReplSession::initDVM() {
 		auto spawn_result = vm::api::spawn();
@@ -175,250 +217,246 @@ namespace compiler::repl {
 	}
 
 	ReplResult ReplSession::handleExpression(const pst::AccessLocked<pst::ExprStmt>& expr_stmt) {
-		std::string output_message;
-		std::string error_message;
-		bool        had_error = false;
+		return runWithReplErrorHandling(
+			"Expression evaluation failed: ",
+			"Unexpected error during expression evaluation: ",
+			[&]() -> ReplResult {
+				std::string output_message;
+				std::string error_message;
 
-		base::Optional<helios::HOUTFunction> expr_wrapper;
-		std::string                          wrapper_func_name;
+				base::Optional<helios::HOUTFunction> expr_wrapper;
+				std::string                          wrapper_func_name;
 
-		CORE_DEV_LOG(REPL, "Starting handleExpression\n");
+				CORE_DEV_LOG(REPL, "Starting handleExpression\n");
 
-		query::utils::withContextDo([&](query::Context& ctx) {
-			try {
-				auto build_result = buildStatementWrapper(
-					ctx,
-					SingleStatementInfo{ ExpressionSingleStatementInfo{ .expr_stmt = expr_stmt } },
-					m_line_counter
+				runWithContextErrorHandling(
+					"Expression evaluation failed: ",
+					"Unexpected error during expression evaluation: ",
+					[&](query::Context& ctx) {
+						auto build_result = buildStatementWrapper(
+							ctx,
+							SingleStatementInfo{
+								ExpressionSingleStatementInfo{ .expr_stmt = expr_stmt } },
+							m_line_counter
+						);
+						if (!build_result.has_value()) {
+							error_message = build_result.error();
+							return;
+						}
+
+						expr_wrapper      = std::move(build_result->wrapper_function);
+						wrapper_func_name = std::move(build_result->wrapper_func_name);
+						CORE_DEV_LOG(REPL, "Wrapper function name: ", wrapper_func_name, "\n");
+					},
+					error_message
 				);
-				if (!build_result.has_value()) {
-					error_message = build_result.error();
-					had_error     = true;
-					return;
-				}
 
-				expr_wrapper      = std::move(build_result->wrapper_function);
-				wrapper_func_name = std::move(build_result->wrapper_func_name);
-				CORE_DEV_LOG(REPL, "Wrapper function name: ", wrapper_func_name, "\n");
-			} catch (const base::Panic& e) {
-				error_message = "Expression evaluation failed: " + std::string(e.what());
-				had_error     = true;
-			} catch (const std::exception& e) {
-				error_message
-					= "Unexpected error during expression evaluation: " + std::string(e.what());
-				had_error = true;
+				if (!error_message.empty()) return failWithMessage(error_message);
+
+				CORE_DEV_LOG(REPL, "Creating HOUT unit\n");
+				auto hout_unit = makeExecutableHOUTUnit(expr_wrapper.value());
+
+				runWithContextErrorHandling(
+					"Compilation/execution error: ",
+					"Unexpected error: ",
+					[&](query::Context& ctx) {
+						// Initialize context on first use or update it for this scope
+						if (!m_lowering_context.has_value()) m_lowering_context.emplace(ctx);
+						m_lowering_context->setContext(ctx);  // Update context for this scope
+
+						// Defer: invalidate when exiting this scope, even on early return
+						defer(m_lowering_context->invalidateContext());
+
+						std::stringstream ss;
+						hout_unit.debugPrint(ctx, ss);
+						CORE_DEV_LOG(REPL, "HOUT unit:\n", ss.str(), "\n");
+
+						CORE_DEV_LOG(REPL, "Compiling and loading to DVM\n");
+						auto eval_module_id = getCurrentModuleID();
+						auto module_name    = getStatementModuleName(eval_module_id);
+						auto load_result    = compileAndLoad(
+                            ctx, hout_unit, module_name, m_dvm_pid, m_lowering_context.value()
+                        );
+						if (!load_result.has_value()) {
+							error_message = "DVM load error: " + load_result.error();
+							return;
+						}
+
+						CORE_DEV_LOG(REPL, "Expression compiled and loaded to DVM\n");
+
+						auto return_type = hout_unit.functions[0]->declaration->return_type;
+						auto run_result  = executeFunctionAndCaptureResult(
+                            m_dvm_pid, wrapper_func_name, return_type
+                        );
+						if (run_result.has_value()) {
+							if (!m_suppress_repl_feedback_during_script_load) {
+								if (return_type.toString() == "()")
+									std::cout << "Function executed.\n";
+								else
+									std::cout << "=> " << run_result.value() << "\n";
+							}
+						} else {
+							error_message = "Runtime error: " + run_result.error();
+							return;
+						}
+					},
+					error_message
+				);
+
+				if (!error_message.empty()) return failWithMessage(error_message);
+
+				return ReplResult::success(output_message);
 			}
-		});
-
-		if (had_error) return ReplResult::error(error_message);
-
-		CORE_DEV_LOG(REPL, "Creating HOUT unit\n");
-		auto hout_unit = makeExecutableHOUTUnit(expr_wrapper.value());
-
-		query::utils::withContextDo([&](query::Context& ctx) {
-			// Initialize context on first use or update it for this scope
-			if (!m_lowering_context.has_value()) m_lowering_context.emplace(ctx);
-			m_lowering_context->setContext(ctx);  // Update context for this scope
-
-			// Defer: invalidate when exiting this scope, even on early return
-			defer(m_lowering_context->invalidateContext());
-
-			try {
-				std::stringstream ss;
-				hout_unit.debugPrint(ctx, ss);
-				CORE_DEV_LOG(REPL, "HOUT unit:\n", ss.str(), "\n");
-
-				CORE_DEV_LOG(REPL, "Compiling and loading to DVM\n");
-				auto eval_module_id = getCurrentModuleID();
-				auto module_name    = getStatementModuleName(eval_module_id);
-				auto load_result    = compileAndLoad(
-                    ctx, hout_unit, module_name, m_dvm_pid, m_lowering_context.value()
-                );
-				if (!load_result.has_value()) {
-					error_message = "DVM load error: " + load_result.error();
-					had_error     = true;
-					return;
-				}
-
-				CORE_DEV_LOG(REPL, "Expression compiled and loaded to DVM\n");
-
-				auto return_type = hout_unit.functions[0]->declaration->return_type;
-				auto run_result
-					= executeFunctionAndCaptureResult(m_dvm_pid, wrapper_func_name, return_type);
-				if (run_result.has_value()) {
-					if (!m_suppress_repl_feedback_during_script_load) {
-						if (return_type.toString() == "()")
-							std::cout << "Function executed.\n";
-						else
-							std::cout << "=> " << run_result.value() << "\n";
-					}
-				} else {
-					error_message = "Runtime error: " + run_result.error();
-					had_error     = true;
-					return;
-				}
-			} catch (const base::Panic& e) {
-				error_message = "Compilation/execution error: " + std::string(e.what());
-				had_error     = true;
-			} catch (const std::exception& e) {
-				error_message = "Unexpected error: " + std::string(e.what());
-				had_error     = true;
-			}
-		});
-
-		if (had_error) return ReplResult::error(error_message);
-
-		return ReplResult::success(output_message);
+		);
 	}
 
 	ReplResult ReplSession::handleInstruction(const pst::AccessLocked<pst::Stmt>& stmt) {
-		std::string output_message;
-		std::string error_message;
-		bool        had_error = false;
+		return runWithReplErrorHandling(
+			"Instruction evaluation failed: ",
+			"Unexpected error during instruction evaluation: ",
+			[&]() -> ReplResult {
+				std::string output_message;
+				std::string error_message;
 
-		base::Optional<helios::HOUTFunction> instr_wrapper;
-		std::string                          wrapper_func_name;
+				base::Optional<helios::HOUTFunction> instr_wrapper;
+				std::string                          wrapper_func_name;
 
-		CORE_DEV_LOG(REPL, "Starting handleInstruction\n");
+				CORE_DEV_LOG(REPL, "Starting handleInstruction\n");
 
-		query::utils::withContextDo([&](query::Context& ctx) {
-			try {
-				auto build_result = buildStatementWrapper(
-					ctx,
-					SingleStatementInfo{
-						InstructionSingleStatementInfo{ .instruction_stmt = stmt } },
-					m_line_counter
+				runWithContextErrorHandling(
+					"Instruction evaluation failed: ",
+					"Unexpected error during instruction evaluation: ",
+					[&](query::Context& ctx) {
+						auto build_result = buildStatementWrapper(
+							ctx,
+							SingleStatementInfo{
+								InstructionSingleStatementInfo{ .instruction_stmt = stmt } },
+							m_line_counter
+						);
+						if (!build_result.has_value()) {
+							error_message = build_result.error();
+							return;
+						}
+
+						instr_wrapper     = std::move(build_result->wrapper_function);
+						wrapper_func_name = std::move(build_result->wrapper_func_name);
+						CORE_DEV_LOG(REPL, "Wrapper function name: ", wrapper_func_name, "\n");
+					},
+					error_message
 				);
-				if (!build_result.has_value()) {
-					error_message = build_result.error();
-					had_error     = true;
-					return;
-				}
 
-				instr_wrapper     = std::move(build_result->wrapper_function);
-				wrapper_func_name = std::move(build_result->wrapper_func_name);
-				CORE_DEV_LOG(REPL, "Wrapper function name: ", wrapper_func_name, "\n");
-			} catch (const base::Panic& e) {
-				error_message = "Instruction evaluation failed: " + std::string(e.what());
-				had_error     = true;
-			} catch (const std::exception& e) {
-				error_message
-					= "Unexpected error during instruction evaluation: " + std::string(e.what());
-				had_error = true;
+				if (!error_message.empty()) return failWithMessage(error_message);
+
+				CORE_DEV_LOG(REPL, "Creating HOUT unit\n");
+				auto hout_unit = makeExecutableHOUTUnit(instr_wrapper.value());
+
+				runWithContextErrorHandling(
+					"Compilation/execution error: ",
+					"Unexpected error: ",
+					[&](query::Context& ctx) {
+						// Initialize context on first use or update it for this scope
+						if (!m_lowering_context.has_value()) m_lowering_context.emplace(ctx);
+						m_lowering_context->setContext(ctx);  // Update context for this scope
+
+						// Defer: invalidate when exiting this scope, even on early return
+						defer(m_lowering_context->invalidateContext());
+
+						std::stringstream ss;
+						hout_unit.debugPrint(ctx, ss);
+						CORE_DEV_LOG(REPL, "HOUT unit:\n", ss.str(), "\n");
+						CORE_DEV_LOG(REPL, "Compiling and loading to DVM\n");
+						auto eval_module_id = getCurrentModuleID();
+						auto module_name    = getStatementModuleName(eval_module_id);
+						auto load_result    = compileAndLoad(
+                            ctx, hout_unit, module_name, m_dvm_pid, m_lowering_context.value()
+                        );
+						if (!load_result.has_value()) {
+							error_message = "DVM load error: " + load_result.error();
+							return;
+						}
+
+						CORE_DEV_LOG(REPL, "Instruction compiled and loaded to DVM\n");
+
+						// Instructions always return unit — run and join without reading an exit value.
+						auto run_result
+							= vm::api::runFunction(m_dvm_pid, wrapper_func_name, {})
+				                  .and_then([&](auto) { return vm::api::join(m_dvm_pid); })
+				                  .transform_error(vm::api::errorToString);
+						if (run_result.has_value()) {
+							if (!m_suppress_repl_feedback_during_script_load)
+								std::cout << "Instruction executed.\n";
+						} else {
+							error_message = "Runtime error: " + run_result.error();
+							return;
+						}
+					},
+					error_message
+				);
+
+				if (!error_message.empty()) return failWithMessage(error_message);
+
+				return ReplResult::success(output_message);
 			}
-		});
-
-		if (had_error) return ReplResult::error(error_message);
-
-		CORE_DEV_LOG(REPL, "Creating HOUT unit\n");
-		auto hout_unit = makeExecutableHOUTUnit(instr_wrapper.value());
-
-		query::utils::withContextDo([&](query::Context& ctx) {
-			// Initialize context on first use or update it for this scope
-			if (!m_lowering_context.has_value()) m_lowering_context.emplace(ctx);
-			m_lowering_context->setContext(ctx);  // Update context for this scope
-
-			// Defer: invalidate when exiting this scope, even on early return
-			defer(m_lowering_context->invalidateContext());
-
-			try {
-				std::stringstream ss;
-				hout_unit.debugPrint(ctx, ss);
-				CORE_DEV_LOG(REPL, "HOUT unit:\n", ss.str(), "\n");
-
-				CORE_DEV_LOG(REPL, "Compiling and loading to DVM\n");
-				auto eval_module_id = getCurrentModuleID();
-				auto module_name    = getStatementModuleName(eval_module_id);
-				auto load_result    = compileAndLoad(
-                    ctx, hout_unit, module_name, m_dvm_pid, m_lowering_context.value()
-                );
-				if (!load_result.has_value()) {
-					error_message = "DVM load error: " + load_result.error();
-					had_error     = true;
-					return;
-				}
-
-				CORE_DEV_LOG(REPL, "Instruction compiled and loaded to DVM\n");
-
-				// Instructions always return unit — run and join without reading an exit value.
-				auto run_result = vm::api::runFunction(m_dvm_pid, wrapper_func_name, {})
-				                      .and_then([&](auto) { return vm::api::join(m_dvm_pid); })
-				                      .transform_error(vm::api::errorToString);
-				if (!run_result.has_value()) {
-					error_message = "Runtime error: " + run_result.error();
-					had_error     = true;
-					return;
-				}
-
-				CORE_DEV_LOG(REPL, "Instruction executed.\n");
-			} catch (const base::Panic& e) {
-				error_message = "Compilation/execution error: " + std::string(e.what());
-				had_error     = true;
-			} catch (const std::exception& e) {
-				error_message = "Unexpected error: " + std::string(e.what());
-				had_error     = true;
-			}
-		});
-
-		if (had_error) return ReplResult::error(error_message);
-
-		return ReplResult::success(output_message);
+		);
 	}
 
 	ReplResult ReplSession::handleDefinition(const pst::AccessLocked<pst::Stmt>& stmt) {
-		std::string output_message;
-		std::string error_message;
-		bool        had_error = false;
-		auto        module_id = getCurrentModuleID();
+		return runWithReplErrorHandling(
+			"Definition compilation error: ",
+			"Unexpected error: ",
+			[&]() -> ReplResult {
+				std::string output_message;
+				std::string error_message;
+				auto        module_id = getCurrentModuleID();
 
-		query::utils::withContextDo([&](query::Context& ctx) {
-			// Initialize context on first use or update it for this scope
-			if (!m_lowering_context.has_value()) m_lowering_context.emplace(ctx);
-			m_lowering_context->setContext(ctx);  // Update context for this scope
+				runWithContextErrorHandling(
+					"Definition compilation error: ",
+					"Unexpected error: ",
+					[&](query::Context& ctx) {
+						// Initialize context on first use or update it for this scope
+						if (!m_lowering_context.has_value()) m_lowering_context.emplace(ctx);
+						m_lowering_context->setContext(ctx);  // Update context for this scope
 
-			// Defer: invalidate when exiting this scope, even on early return
-			defer(m_lowering_context->invalidateContext());
+						// Defer: invalidate when exiting this scope, even on early return
+						defer(m_lowering_context->invalidateContext());
 
-			try {
-				const auto& hout_unit = getDefinitionHOUTUnit(ctx, module_id);
-				// The stmt parameter is used only here, for logging. It's not needed for the actual
-				// query since QueryModuleHOUT already compiles the entire module containing the
-				// statement.
-				auto stmt_kind = stmt.unlock(ctx)->getElementKind();
-				CORE_DEV_LOG(REPL, "Definition statement kind: ", static_cast<u32>(stmt_kind), "\n");
-				std::stringstream ss;
-				hout_unit.debugPrint(ctx, ss);
-				CORE_DEV_LOG(REPL, "HOUT unit:\n", ss.str(), "\n");
+						const auto& hout_unit = getDefinitionHOUTUnit(ctx, module_id);
+						// The stmt parameter is used only here, for logging. It's not needed for
+				        // the actual query since QueryModuleHOUT already compiles the entire module
+				        // containing the statement.
+						auto stmt_kind = stmt.unlock(ctx)->getElementKind();
+						CORE_DEV_LOG(
+							REPL, "Definition statement kind: ", static_cast<u32>(stmt_kind), "\n"
+						);
+						std::stringstream ss;
+						hout_unit.debugPrint(ctx, ss);
+						CORE_DEV_LOG(REPL, "HOUT unit:\n", ss.str(), "\n");
 
-				auto module_name = getStatementModuleName(module_id);
-				auto load_result = compileAndLoad(
-					ctx, hout_unit, module_name, m_dvm_pid, m_lowering_context.value()
+						auto module_name = getStatementModuleName(module_id);
+						auto load_result = compileAndLoad(
+							ctx, hout_unit, module_name, m_dvm_pid, m_lowering_context.value()
+						);
+						if (!load_result.has_value()) {
+							error_message = "DVM load error: " + load_result.error();
+							return;
+						}
+
+						CORE_DEV_LOG(REPL, "Definitions loaded.\n");
+					},
+					error_message
 				);
-				if (!load_result.has_value()) {
-					error_message = "DVM load error: " + load_result.error();
-					had_error     = true;
-					return;
-				}
 
-				CORE_DEV_LOG(REPL, "Definitions loaded.\n");
-			} catch (const base::Panic& e) {
-				error_message = "Definition compilation error: " + std::string(e.what());
-				had_error     = true;
-			} catch (const std::exception& e) {
-				error_message = "Unexpected error: " + std::string(e.what());
-				had_error     = true;
+				if (!error_message.empty()) return failWithMessage(error_message);
+
+				return ReplResult::success(output_message);
 			}
-		});
-
-		if (had_error) return ReplResult::error(error_message);
-
-		return ReplResult::success(output_message);
+		);
 	}
 
 	ReplResult ReplSession::executeInput(std::string_view input) {
-		if (input.empty()) return ReplResult::success();
+		return runWithReplErrorHandling("REPL execution failed: ", "Error: ", [&]() -> ReplResult {
+			if (input.empty()) return ReplResult::success();
 
-		try {
 			CORE_DEV_LOG(REPL, "Starting executeInput\n");
 
 			CORE_DEV_LOG(REPL, "Parsing input for statement extraction\n");
@@ -470,25 +508,17 @@ namespace compiler::repl {
 						m_history.emplace_back(stmt_source, module_id);
 						++m_line_counter;
 						last_result = executeSingleStatement(module_id);
-						if (last_result.status == ReplResult::Status::Error) return last_result;
+						if (last_result.status == ReplResult::Status::Error) {
+							m_history.pop_back();
+							return last_result;
+						}
 					}
 					return last_result;
 				}
-				opt_err(err) return ReplResult::error(err);
+				opt_err(err) { return ReplResult::error(err); }
 			}
 			CORE_UNREACHABLE();
-
-		} catch (const std::out_of_range& e) {
-			std::string error_msg = std::string("REPL map::at error (out_of_range): ") + e.what();
-			CORE_DEV_LOG(REPL, "This typically means a lookup in a map/vector failed\n");
-			return ReplResult::error(error_msg);
-		} catch (const std::exception& e) {
-			std::string error_msg = std::string("Error: ") + e.what();
-			return ReplResult::error(error_msg);
-		} catch (...) {
-			std::string error_msg = "Unknown error occurred";
-			return ReplResult::error(error_msg);
-		}
+		});
 	}
 
 	int ReplSession::run() {

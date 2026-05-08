@@ -5,6 +5,7 @@
 #include <helios/hout/hout.hpp>
 
 #include <query_framework/query_int.hpp>
+#include <query_framework/query_result.hpp>
 
 namespace compiler::repl {
 
@@ -28,8 +29,8 @@ namespace compiler::repl {
 	DECLARE_QUERY(
 		QueryReplExpressionWrapper,
 		QueryReplExpressionWrapper_Key,
-		helios::HOUTFunction,
-		({ .uses_qresult = false })
+		query::QResult<helios::HOUTFunction>,
+		({ .uses_qresult = true })
 	);
 
 	/**
@@ -53,8 +54,8 @@ namespace compiler::repl {
 	DECLARE_QUERY(
 		QueryReplInstructionWrapper,
 		QueryReplInstructionWrapper_Key,
-		helios::HOUTFunction,
-		({ .uses_qresult = false })
+		query::QResult<helios::HOUTFunction>,
+		({ .uses_qresult = true })
 	);
 
 }  // namespace compiler::repl
