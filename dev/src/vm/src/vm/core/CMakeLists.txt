@@ -17,6 +17,7 @@ add_files(
 	safe/concurrency/synchronization_primitives.cpp
 
 	fast/fast_vmprocess.cpp
+	fast/fast_vmthread.cpp
 )
 
 set(vm_common_sources ${vm_common_sources} ${files} PARENT_SCOPE)

@@ -24,7 +24,7 @@ protected:
 	};
 
 protected:
-	vm::PID initProcess();
+	vm::PID initProcess(const vm::api::ProcessOptions& options = {});
 
 	void handleTestResult(const TestResult& test_result, i64 exit_code);
 

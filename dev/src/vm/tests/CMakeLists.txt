@@ -86,6 +86,8 @@ function(duck_add_vm_tests suffix)
         duck_add_test_custom(vm ${test_set}_threads_test threads/thread_tests.cpp
                 USES ${libvm} Tester ${vmtester})
         duck_disable_tc_when_not_opt("threads_test" ${test_set})
+        duck_add_test_custom(vm ${test_set}_fast_mode_test fast_mode/fast_mode_test.cpp
+                USES ${libvm} Tester ${vmtester})
 endfunction()
 
 duck_add_vm_tests("tc")
