@@ -65,12 +65,10 @@ const vm::code::TypeOfData& ProgramLoweringContext::lowerAndKeepTslType(CRef<tsl
 
 compiler::backend_vm::LoweredEntitiesSnapshot ProgramLoweringContext::captureLoweredEntitiesSnapshot(
 ) const {
-	return compiler::backend_vm::LoweredEntitiesSnapshot(
-		lowered_type_order.size(),
-		lowered_global_order.size(),
-		lowered_function_order.size(),
-		extra_bytecode_functions.size()
-	);
+	return { lowered_type_order.size(),
+		     lowered_global_order.size(),
+		     lowered_function_order.size(),
+		     extra_bytecode_functions.size() };
 }
 
 const vm::code::TypeOfData& ProgramLoweringContext::getOrInsertPointerType(
@@ -121,7 +119,7 @@ void ProgramLoweringContext::insertRawBytecodeDefinitions(const vm::code::CodeCo
 vm::code::CodeCollection ProgramLoweringContext::collectNewCodeSince(
 	const compiler::backend_vm::LoweredEntitiesSnapshot& snapshot
 ) const {
-	auto collectTypesSince = [&](usize start_index) {
+	auto collect_types_since = [&](usize start_index) {
 		CORE_ASSERT(
 			start_index <= lowered_type_order.size(),
 			"Requested lowered types from an out-of-range start index"
@@ -135,7 +133,7 @@ vm::code::CodeCollection ProgramLoweringContext::collectNewCodeSince(
 		return result;
 	};
 
-	auto collectFunctionsSince = [&](usize start_index) {
+	auto collect_functions_since = [&](usize start_index) {
 		CORE_ASSERT(
 			start_index <= lowered_function_order.size(),
 			"Requested lowered functions from an out-of-range start index"
@@ -149,7 +147,7 @@ vm::code::CodeCollection ProgramLoweringContext::collectNewCodeSince(
 		return result;
 	};
 
-	auto collectGlobalsSince = [&](usize start_index) {
+	auto collect_globals_since = [&](usize start_index) {
 		CORE_ASSERT(
 			start_index <= lowered_global_order.size(),
 			"Requested lowered globals from an out-of-range start index"
@@ -163,23 +161,21 @@ vm::code::CodeCollection ProgramLoweringContext::collectNewCodeSince(
 		return result;
 	};
 
-	auto collectExtraFunctionsSince = [&](usize start_index) {
+	auto collect_extra_functions_since = [&](usize start_index) {
 		CORE_ASSERT(
 			start_index <= extra_bytecode_functions.size(),
 			"Requested extra bytecode functions from an out-of-range start index"
 		);
 		auto offset = static_cast<std::ptrdiff_t>(start_index);
-		return std::vector<vm::code::Function>{
-			extra_bytecode_functions.begin() + offset,
-			extra_bytecode_functions.end()
-		};
+		return std::vector<vm::code::Function>{ extra_bytecode_functions.begin() + offset,
+			                                    extra_bytecode_functions.end() };
 	};
 
 	vm::code::CodeCollection collection;
-	collection.types       = collectTypesSince(snapshot.lowered_type_count);
-	collection.global_data = collectGlobalsSince(snapshot.lowered_global_count);
-	collection.functions   = collectFunctionsSince(snapshot.lowered_function_count);
-	auto extra = collectExtraFunctionsSince(snapshot.extra_bytecode_function_count);
+	collection.types       = collect_types_since(snapshot.lowered_type_count);
+	collection.global_data = collect_globals_since(snapshot.lowered_global_count);
+	collection.functions   = collect_functions_since(snapshot.lowered_function_count);
+	auto extra             = collect_extra_functions_since(snapshot.extra_bytecode_function_count);
 	collection.functions.insert(collection.functions.end(), extra.begin(), extra.end());
 	return collection;
 }

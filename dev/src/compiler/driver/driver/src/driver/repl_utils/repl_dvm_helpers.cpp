@@ -181,10 +181,9 @@ namespace compiler::repl {
 		        ) -> std::expected<std::string, std::string> {
 					if (type_view == "()") {
 						CORE_ASSERT(
-							exit_values.empty(),
-							"Expecting no return values for unit return type"
+							exit_values.empty(), "Expecting no return values for unit return type"
 						);
-						return std::expected<std::string, std::string>("");
+						return { "" };
 					}
 
 					CORE_ASSERT(
