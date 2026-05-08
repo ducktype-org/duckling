@@ -1,4 +1,4 @@
-#include "program_lowering_context.hpp"
+#include <program_lowering_context.hpp>
 
 #include <backends/dvm/repl_lowering.hpp>
 
