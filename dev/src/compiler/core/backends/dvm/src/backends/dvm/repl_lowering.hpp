@@ -79,7 +79,7 @@ namespace compiler::backend_vm {
 
 
 		/**
-		 * @brief Capture current counts of lowered entities.
+		 * @brief Capture current state of lowered entities.
 		 */
 		[[nodiscard]] LoweredEntitiesSnapshot captureLoweredEntitiesSnapshot() const;
 

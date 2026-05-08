@@ -54,13 +54,13 @@ namespace compiler::repl {
 		CORE_DEV_LOG(
 			REPL,
 			"Lowering context snapshot: types=",
-			snapshot.lowered_type_count,
+			snapshot.loweredTypeCount(),
 			", globals=",
-			snapshot.lowered_global_count,
+			snapshot.loweredGlobalCount(),
 			", functions=",
-			snapshot.lowered_function_count,
+			snapshot.loweredFunctionCount(),
 			", helper_functions=",
-			snapshot.extra_bytecode_function_count,
+			snapshot.extraBytecodeFunctionCount(),
 			"\n"
 		);
 
