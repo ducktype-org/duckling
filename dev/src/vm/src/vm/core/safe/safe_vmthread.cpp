@@ -26,7 +26,6 @@
 #include <vm/module_flags/module_flags.hpp>
 #include <vm/utils/interpret.hpp>
 
-#include <mutex>
 #include <ranges>
 #include <string>
 #include <vector>
