@@ -2,6 +2,7 @@
 
 #include "dvm_value.hpp"
 
+#include <backends/dvm/repl_lowering_snapshot.hpp>
 #include <debug_info/debug_info_builder.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 #include <tsl/type_layout.hpp>
@@ -127,6 +128,17 @@ namespace compiler::backend_vm::internal {
 		}
 
 		/**
+		 * @brief Returns how many lowered globals have been accumulated so far.
+		 */
+		[[nodiscard]] usize getLoweredGlobalCount() const { return lowered_global_order.size(); }
+
+		/**
+		 * @brief Capture current counts of lowered entities.
+		 */
+		[[nodiscard]] compiler::backend_vm::LoweredEntitiesSnapshot captureLoweredEntitiesSnapshot(
+		) const;
+
+		/**
 		 * @brief Returns the lowered types added since @p start_index.
 		 */
 		[[nodiscard]] std::vector<vm::code::TypeOfData> getLoweredTypesSince(usize start_index
@@ -139,9 +151,22 @@ namespace compiler::backend_vm::internal {
 		) const;
 
 		/**
+		 * @brief Returns the lowered globals added since @p start_index.
+		 */
+		[[nodiscard]] std::vector<vm::code::GlobalData> getLoweredGlobalsSince(usize start_index
+		) const;
+
+		/**
 		 * @brief Returns the extra bytecode functions added since @p start_index.
 		 */
 		[[nodiscard]] std::vector<vm::code::Function> getExtraBytecodeFunctionsSince(usize start_index
+		) const;
+
+		/**
+		 * @brief Collect newly lowered types/functions/extra functions since a snapshot.
+		 */
+		[[nodiscard]] vm::code::CodeCollection collectNewCodeSince(
+			const compiler::backend_vm::LoweredEntitiesSnapshot& snapshot
 		) const;
 
 		/**
@@ -187,9 +212,12 @@ namespace compiler::backend_vm::internal {
 		// Maintains insertion order for types so REPL can emit only new types.
 		std::vector<base::StrID> lowered_type_order;
 		// Maintains insertion order for functions so REPL can emit only new functions.
-		std::vector<vm::code::Function> lowered_function_order;
+		std::vector<base::StrID> lowered_function_order;
+		// Maintains insertion order for globals so REPL can emit only new globals.
+		std::vector<base::StrID> lowered_global_order;
 
-		base::Map<CRef<lir::Function>, vm::code::Function> lir_function_to_dvm;
+		base::Map<CRef<lir::Function>, base::StrID> lir_function_to_name;
+		base::Map<base::StrID, vm::code::Function>  dvm_functions_by_name;
 
 		// Extern function name to definition.
 		base::Map<base::StrID, vm::code::ExternalCFunction> extern_c_functions;

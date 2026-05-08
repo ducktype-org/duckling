@@ -63,6 +63,10 @@ namespace compiler::backend_vm {
 		return m_context->getLoweredFunctionCount();
 	}
 
+	LoweredEntitiesSnapshot ReplLoweringContext::captureLoweredEntitiesSnapshot() const {
+		return m_context->captureLoweredEntitiesSnapshot();
+	}
+
 	std::vector<vm::code::Function> ReplLoweringContext::getExtraBytecodeFunctionsSince(
 		usize start_index
 	) const {
@@ -77,5 +81,11 @@ namespace compiler::backend_vm {
 	std::vector<vm::code::Function> ReplLoweringContext::getLoweredFunctionsSince(usize start_index
 	) const {
 		return m_context->getLoweredFunctionsSince(start_index);
+	}
+
+	vm::code::CodeCollection ReplLoweringContext::collectNewCodeSince(
+		const LoweredEntitiesSnapshot& snapshot
+	) const {
+		return m_context->collectNewCodeSince(snapshot);
 	}
 }

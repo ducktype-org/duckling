@@ -1,19 +1,17 @@
 #pragma once
 
+#include <backends/dvm/dvm_internal_fwd.hpp>
+#include <backends/dvm/repl_lowering_snapshot.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 #include <tsl/type_layout.hpp>
 
 #include <base/collections/optional.hpp>
-#include <base/pointers/box.hpp>
 #include <base/pointers/ref.hpp>
+#include <base/types/ints.hpp>
 
 #include <query_framework/context/context_fd.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
-
-namespace compiler::backend_vm::internal {
-	class ProgramLoweringContext;
-}
 
 namespace compiler::backend_vm {
 	/**
@@ -108,6 +106,11 @@ namespace compiler::backend_vm {
 		[[nodiscard]] usize getLoweredFunctionCount() const;
 
 		/**
+		 * @brief Capture current counts of lowered entities.
+		 */
+		[[nodiscard]] LoweredEntitiesSnapshot captureLoweredEntitiesSnapshot() const;
+
+		/**
 		 * @brief Returns helper functions generated after the given snapshot index.
 		 */
 		[[nodiscard]] std::vector<vm::code::Function> getExtraBytecodeFunctionsSince(usize start_index
@@ -123,6 +126,13 @@ namespace compiler::backend_vm {
 		 * @brief Returns lowered functions generated after the given snapshot index.
 		 */
 		[[nodiscard]] std::vector<vm::code::Function> getLoweredFunctionsSince(usize start_index
+		) const;
+
+		/**
+		 * @brief Collect newly lowered types/functions/extra functions since a snapshot.
+		 */
+		[[nodiscard]] vm::code::CodeCollection collectNewCodeSince(
+			const LoweredEntitiesSnapshot& snapshot
 		) const;
 
 		/**

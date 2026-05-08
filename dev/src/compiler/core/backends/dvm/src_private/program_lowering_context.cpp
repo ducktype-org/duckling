@@ -84,8 +84,36 @@ std::vector<vm::code::Function> ProgramLoweringContext::getLoweredFunctionsSince
 		start_index <= lowered_function_order.size(),
 		"Requested lowered functions from an out-of-range start index"
 	);
-	auto offset = static_cast<std::ptrdiff_t>(start_index);
-	return { lowered_function_order.begin() + offset, lowered_function_order.end() };
+	std::vector<vm::code::Function> result;
+	result.reserve(lowered_function_order.size() - start_index);
+	for (usize i = start_index; i < lowered_function_order.size(); ++i) {
+		const auto& func_name = lowered_function_order[i];
+		result.push_back(dvm_functions_by_name.at(func_name));
+	}
+	return result;
+}
+
+std::vector<vm::code::GlobalData> ProgramLoweringContext::getLoweredGlobalsSince(usize start_index
+) const {
+	CORE_ASSERT(
+		start_index <= lowered_global_order.size(),
+		"Requested lowered globals from an out-of-range start index"
+	);
+	std::vector<vm::code::GlobalData> result;
+	result.reserve(lowered_global_order.size() - start_index);
+	for (usize i = start_index; i < lowered_global_order.size(); ++i) {
+		const auto& global_name = lowered_global_order[i];
+		result.push_back(global_name_to_dvm_data.at(global_name));
+	}
+	return result;
+}
+
+compiler::backend_vm::LoweredEntitiesSnapshot ProgramLoweringContext::captureLoweredEntitiesSnapshot(
+) const {
+	return { .lowered_type_count            = getLoweredTypeCount(),
+		     .lowered_global_count          = getLoweredGlobalCount(),
+		     .lowered_function_count        = getLoweredFunctionCount(),
+		     .extra_bytecode_function_count = getExtraBytecodeFunctionCount() };
 }
 
 const vm::code::TypeOfData& ProgramLoweringContext::getOrInsertPointerType(
@@ -119,7 +147,11 @@ const vm::code::ExternalCFunction& ProgramLoweringContext::getExternCFunction(
 }
 
 void ProgramLoweringContext::insertRawBytecodeDefinitions(const vm::code::CodeCollection& bytecode) {
-	for (const auto& global: bytecode.global_data) global_name_to_dvm_data.put(global.name, global);
+	for (const auto& global: bytecode.global_data) {
+		if (!global_name_to_dvm_data.atMaybe(global.name).has_value())
+			lowered_global_order.push_back(global.name);
+		global_name_to_dvm_data.put(global.name, global);
+	}
 
 	for (const auto& ext_func: bytecode.external_c_functions)
 		extern_c_functions.put(ext_func.name.str, ext_func);
@@ -138,6 +170,18 @@ std::vector<vm::code::Function> ProgramLoweringContext::getExtraBytecodeFunction
 	);
 	auto offset = static_cast<std::ptrdiff_t>(start_index);
 	return { extra_bytecode_functions.begin() + offset, extra_bytecode_functions.end() };
+}
+
+vm::code::CodeCollection ProgramLoweringContext::collectNewCodeSince(
+	const compiler::backend_vm::LoweredEntitiesSnapshot& snapshot
+) const {
+	vm::code::CodeCollection collection;
+	collection.types       = getLoweredTypesSince(snapshot.lowered_type_count);
+	collection.global_data = getLoweredGlobalsSince(snapshot.lowered_global_count);
+	collection.functions   = getLoweredFunctionsSince(snapshot.lowered_function_count);
+	auto extra             = getExtraBytecodeFunctionsSince(snapshot.extra_bytecode_function_count);
+	collection.functions.insert(collection.functions.end(), extra.begin(), extra.end());
+	return collection;
 }
 
 const vm::code::GlobalData& ProgramLoweringContext::lowerAndKeepLirGlobal(
@@ -194,13 +238,15 @@ const vm::code::GlobalData& ProgramLoweringContext::lowerAndKeepLirGlobal(
 	global_data.dtor_name = dtor_name;
 
 	global_name_to_dvm_data.put(lir_global.mangled_name, global_data);
+	lowered_global_order.push_back(lir_global.mangled_name);
 	return global_name_to_dvm_data.at(lir_global.mangled_name);
 }
 
 const vm::code::Function& ProgramLoweringContext::lowerAndKeepLirFunction(
 	CRef<lir::Function> lir_function
 ) {
-	if (auto maybe_lowered = lir_function_to_dvm.atMaybe(lir_function)) return **maybe_lowered;
+	if (auto maybe_name = lir_function_to_name.atMaybe(lir_function))
+		return dvm_functions_by_name.at(**maybe_name);
 
 	auto func_result_type = lowerAndKeepTslType(lir_function->return_type_layout);
 	std::vector<vm::code::TypeOfData> func_param_types;
@@ -242,14 +288,16 @@ const vm::code::Function& ProgramLoweringContext::lowerAndKeepLirFunction(
 		func_ctx.pushTerminator(block_ref->terminator);
 	}
 
-	auto dvm_function = std::move(func_ctx).finish();
-	lir_function_to_dvm.put(lir_function, dvm_function);
-	const auto& desired_function = lir_function_to_dvm.at(lir_function);
-	lowered_function_order.push_back(desired_function);
+	auto       dvm_function  = std::move(func_ctx).finish();
+	const auto function_name = dvm_function.name.str;
+	dvm_functions_by_name.put(function_name, std::move(dvm_function));
+	lir_function_to_name.put(lir_function, function_name);
+	const auto& desired_function = dvm_functions_by_name.at(function_name);
+	lowered_function_order.push_back(function_name);
 
 	CORE_DEV_LOG(REPL, "[DEBUG] lowered_function_order size=", lowered_function_order.size(), "\n");
-	for (const auto& lowered_function: lowered_function_order)
-		CORE_DEV_LOG(REPL, "  function: ", lowered_function.name.str, "\n");
+	for (const auto& lowered_function_name: lowered_function_order)
+		CORE_DEV_LOG(REPL, "  function: ", lowered_function_name, "\n");
 
 	return desired_function;
 }
@@ -335,7 +383,7 @@ vm::code::TypeOfData ProgramLoweringContext::lowerTslTypeInternal(CRef<tsl::Type
 
 vm::code::CodeCollection ProgramLoweringContext::produceCodeCollection() {
 	auto collection      = vm::code::CodeCollection();
-	collection.functions = std::ranges::to<std::vector>(lir_function_to_dvm | std::views::values);
+	collection.functions = std::ranges::to<std::vector>(dvm_functions_by_name | std::views::values);
 	collection.functions.insert(
 		collection.functions.end(), extra_bytecode_functions.begin(), extra_bytecode_functions.end()
 	);

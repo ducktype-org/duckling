@@ -16,6 +16,7 @@
 #include <string_id/string_id.hpp>
 
 #include <vm/api/vm.hpp>
+#include <vm/bytecode/bytecode.hpp>
 
 namespace compiler::repl {
 	// Platform portability check: DVM assumes bool is 1 byte (stored as i8).
@@ -49,17 +50,17 @@ namespace compiler::repl {
 		auto module_unique_name = base::StrID(std::string(module_name.data(), module_name.size()));
 		CORE_DEV_LOG(REPL, "Using module name: ", module_unique_name.strView(), "\n");
 
-		const auto lowered_type_start     = lowering_context.getLoweredTypeCount();
-		const auto lowered_function_start = lowering_context.getLoweredFunctionCount();
-		const auto extra_bytecode_start   = lowering_context.getExtraBytecodeFunctionCount();
+		const auto snapshot = lowering_context.captureLoweredEntitiesSnapshot();
 		CORE_DEV_LOG(
 			REPL,
 			"Lowering context snapshot: types=",
-			lowered_type_start,
+			snapshot.lowered_type_count,
+			", globals=",
+			snapshot.lowered_global_count,
 			", functions=",
-			lowered_function_start,
+			snapshot.lowered_function_count,
 			", helper_functions=",
-			extra_bytecode_start,
+			snapshot.extra_bytecode_function_count,
 			"\n"
 		);
 
@@ -91,15 +92,12 @@ namespace compiler::repl {
 
 		// @TODO: #2246 check if we can avoid repeating the logic from compileLirToModuleData.
 		// This is strictly connected to the loading dvm context.
-		vm::code::CodeCollection new_code;
-
 		// We mimic the same idea as in compiling a single module,
 		// but this time we append the new functions to the lowering context.
 		for (const auto& global: lir_data->globals) {
-			const auto& dvm_global = lowering_context.lowerAndKeepLirGlobal(
+			(void) lowering_context.lowerAndKeepLirGlobal(
 				global.lir_global, global.global_ctor, global.global_dtor
 			);
-			new_code.global_data.push_back(dvm_global);
 		}
 
 		// Lower all functions
@@ -108,21 +106,13 @@ namespace compiler::repl {
 			(void) lowering_context.lowerAndKeepLirFunction(lir_function);
 		}
 
-		for (const auto& func: lowering_context.getLoweredFunctionsSince(lowered_function_start)) {
+		vm::code::CodeCollection new_code = lowering_context.collectNewCodeSince(snapshot);
+
+		for (const auto& func: new_code.functions)
 			CORE_DEV_LOG(REPL, "Adding lowered function: ", func.name.str, "\n");
-			new_code.functions.push_back(func);
-		}
 
-		for (const auto& type: lowering_context.getLoweredTypesSince(lowered_type_start)) {
+		for (const auto& type: new_code.types)
 			CORE_DEV_LOG(REPL, "Adding lowered type: ", vm::code::typeName(type), "\n");
-			new_code.types.push_back(type);
-		}
-
-		for (const auto& extra_func:
-		     lowering_context.getExtraBytecodeFunctionsSince(extra_bytecode_start)) {
-			CORE_DEV_LOG(REPL, "Adding synthetic helper function: ", extra_func.name.str, "\n");
-			new_code.functions.push_back(extra_func);
-		}
 
 		CORE_DEV_LOG(
 			REPL,
@@ -178,20 +168,9 @@ namespace compiler::repl {
 	) {
 		if (return_type.getRefKind() != tsh::ReferenceKind::Direct)
 			return std::unexpected("Unsupported return type for REPL: " + return_type.toString());
-	
+
 		const auto&      raw_type_str = return_type.getType().toString();
 		std::string_view type_view(raw_type_str);
-
-		if (type_view == "void") {
-			auto run_result = vm::api::runFunction(pid, std::string(func_name), {})
-			                      .and_then([&](auto) { return vm::api::join(pid); })
-			                      .transform_error(vm::api::errorToString);
-
-			if (run_result.has_value())
-				return std::string("");
-			else
-				return std::unexpected(run_result.error());
-		}
 
 		return vm::api::runFunction(pid, std::string(func_name), {})
 		    .and_then([&](auto) { return vm::api::join(pid); })
