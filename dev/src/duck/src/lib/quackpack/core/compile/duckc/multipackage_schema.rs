@@ -13,15 +13,15 @@ use crate::StrId;
 use crate::quackpack::core::{FeatureName, Version};
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
-pub struct DuckcMultiPackage {
+pub struct MultiPackage {
     /// Packages required for a successful duckc invocation; packages have to contain their __entire__ dependencies trees.
-    pub packages: Vec<DuckcPackage>,
+    pub packages: Vec<Package>,
     /// Duckc tasks to finish in this invocation.
-    pub tasks: Vec<DuckcTask>,
+    pub tasks: Vec<Task>,
 }
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
-pub struct DuckcPackage {
+pub struct Package {
     #[serde(rename = "name")]
     /// ID of a package to compile. Note, that it doesn't have to be a package's name, it can be a
     /// unique id.
@@ -35,12 +35,12 @@ pub struct DuckcPackage {
     /// Path to the source directory of this package.
     pub path_to_the_src_directory: PathBuf,
     /// Dependencies of this package.
-    pub dependencies: Vec<DuckcDependency>,
+    pub dependencies: Vec<Dependency>,
 }
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 /// A single package's dependency, in a duckc-friendly format.
-pub struct DuckcDependency {
+pub struct Dependency {
     #[serde(rename = "name")]
     /// ID of a package. Note, that there must a package with `id = self.id` in a [`packages`](DuckcMultiPackage::packages) vector.
     pub id: StrId,
@@ -51,26 +51,26 @@ pub struct DuckcDependency {
 
 // `compiler/driver/driver/src/driver/task/task.cpp` deserializes `RawTask` as `RawPackageCompilationTask`.
 // So, from JSON POV, they are the same type.
-pub type DuckcTask = DuckcPackageCompilationTask;
+pub type Task = PackageCompilationTask;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
-pub struct DuckcPackageCompilationTask {
+pub struct PackageCompilationTask {
     #[serde(rename = "package")]
     /// ID of a package refered by this task.
     pub package_id: StrId,
     #[serde(flatten)]
     /// Compilation strategy of this task.
-    pub strategy: DuckcPackageCompilationStrategy,
+    pub strategy: PackageCompilationStrategy,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 // These and the flatten above are required for generating valid JSON's, while still giving us type safety :^).
 #[serde(rename_all = "snake_case", tag = "strategy")]
 /// Supported duckc compilation strategies.
-pub enum DuckcPackageCompilationStrategy {
+pub enum PackageCompilationStrategy {
     /// Compile this task into a DVM file.
+    // Name has to be `Dvm`, as `DVM` (with "snake_case") would be rendered as "d_v_m".
     Dvm {
-        // Name has to be `Dvm`, as `DVM` (with "snake_case") would be rendered as "d_v_m".
         /// Set an explicit output filename. By default `package_dvm` is used.
         #[serde(skip_serializing_if = "Option::is_none")]
         output_file: Option<PathBuf>,
@@ -80,26 +80,26 @@ pub enum DuckcPackageCompilationStrategy {
         output_file: PathBuf,
         /// Additional linking options.
         #[serde(skip_serializing_if = "Option::is_none")]
-        linking_options: Option<DuckcLinkingOptions>,
+        linking_options: Option<LinkerOptions>,
     },
     Lib {
         /// Path to the output file.
         output_file: PathBuf,
         /// Additional archiving options.
         #[serde(skip_serializing_if = "Option::is_none")]
-        archive_options: Option<DuckcArchiveOptions>,
+        archive_options: Option<ArchiverOptions>,
     },
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 /// Possible variants of linking options passed to duckc.
-pub enum DuckcLinkingOptions {
+pub enum LinkerOptions {
     /// Add extra linker arguments.
     RawLinkerArgs(String),
-    Complex(ComplexLinkingOptions),
+    Complex(ComplexLinkerOptions),
 }
 
-impl ser::Serialize for DuckcLinkingOptions {
+impl ser::Serialize for LinkerOptions {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: ser::Serializer,
@@ -111,7 +111,7 @@ impl ser::Serialize for DuckcLinkingOptions {
     }
 }
 
-impl<'de> de::Deserialize<'de> for DuckcLinkingOptions {
+impl<'de> de::Deserialize<'de> for LinkerOptions {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: de::Deserializer<'de>,
@@ -126,7 +126,7 @@ impl<'de> de::Deserialize<'de> for DuckcLinkingOptions {
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 /// More complex linking options.
-pub struct ComplexLinkingOptions {
+pub struct ComplexLinkerOptions {
     /// Use an explicit linker, instead of the system default.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub linker: Option<PathBuf>,
@@ -143,13 +143,13 @@ pub struct ComplexLinkingOptions {
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 /// Possible variants of archiver options passed to duckc.
-pub enum DuckcArchiveOptions {
+pub enum ArchiverOptions {
     /// Set an explicit archiver path.
     Archiver(PathBuf),
-    Complex(ComplexArchiveOptions),
+    Complex(ComplexArchiverOptions),
 }
 
-impl ser::Serialize for DuckcArchiveOptions {
+impl ser::Serialize for ArchiverOptions {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: ser::Serializer,
@@ -161,7 +161,7 @@ impl ser::Serialize for DuckcArchiveOptions {
     }
 }
 
-impl<'de> de::Deserialize<'de> for DuckcArchiveOptions {
+impl<'de> de::Deserialize<'de> for ArchiverOptions {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: de::Deserializer<'de>,
@@ -176,7 +176,7 @@ impl<'de> de::Deserialize<'de> for DuckcArchiveOptions {
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 /// More complex archiver options.
-pub struct ComplexArchiveOptions {
+pub struct ComplexArchiverOptions {
     /// Set an explicit archiver.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub archiver: Option<PathBuf>,
@@ -188,9 +188,9 @@ mod tests {
 
     #[test]
     fn basic_json_convertion() {
-        let mut multi_package = DuckcMultiPackage::default();
-        populate_packages(&mut multi_package.packages);
-        populate_tasks(&mut multi_package.tasks);
+        let packages = create_mock_packages();
+        let tasks = create_mock_tasks();
+        let multi_package = MultiPackage { packages, tasks };
         let serialized = serde_json::to_string_pretty(&multi_package).unwrap();
         assert_eq!(
             serialized,
@@ -296,117 +296,116 @@ mod tests {
 }"#
         );
 
-        let deserialized = serde_json::from_str::<DuckcMultiPackage>(&serialized).unwrap();
+        let deserialized = serde_json::from_str::<MultiPackage>(&serialized).unwrap();
         assert_eq!(deserialized, multi_package);
     }
 
-    fn populate_packages(packages: &mut Vec<DuckcPackage>) {
-        packages.push(DuckcPackage {
-            id: "a".into(),
-            version: Version::new(1, 0, 0),
-            features: vec![],
-            path_to_the_src_directory: PathBuf::default(),
-            dependencies: vec![
-                DuckcDependency {
-                    id: "dep-hash".into(),
-                    import_name: "bar".into(),
-                },
-                DuckcDependency {
+    fn create_mock_packages() -> Vec<Package> {
+        vec![
+            Package {
+                id: "a".into(),
+                version: Version::new(1, 0, 0),
+                features: vec![],
+                path_to_the_src_directory: PathBuf::default(),
+                dependencies: vec![
+                    Dependency {
+                        id: "dep-hash".into(),
+                        import_name: "bar".into(),
+                    },
+                    Dependency {
+                        id: "dep2-hash".into(),
+                        import_name: "foo".into(),
+                    },
+                ],
+            },
+            Package {
+                id: "dep-hash".into(),
+                version: Version::new(2, 0, 0),
+                features: vec!["feature".into()],
+                path_to_the_src_directory: PathBuf::default(),
+                dependencies: vec![Dependency {
                     id: "dep2-hash".into(),
-                    import_name: "foo".into(),
-                },
-            ],
-        });
-        packages.push(DuckcPackage {
-            id: "dep-hash".into(),
-            version: Version::new(2, 0, 0),
-            features: vec!["feature".into()],
-            path_to_the_src_directory: PathBuf::default(),
-            dependencies: vec![DuckcDependency {
+                    import_name: "foo-aliased".into(),
+                }],
+            },
+            Package {
                 id: "dep2-hash".into(),
-                import_name: "foo-aliased".into(),
-            }],
-        });
-        packages.push(DuckcPackage {
-            id: "dep2-hash".into(),
-            version: Version::new(2, 1, 37),
-            features: vec!["foo".into(), "bar".into()],
-            path_to_the_src_directory: PathBuf::default(),
-            dependencies: vec![],
-        });
+                version: Version::new(2, 1, 37),
+                features: vec!["foo".into(), "bar".into()],
+                path_to_the_src_directory: PathBuf::default(),
+                dependencies: vec![],
+            },
+        ]
     }
-    fn populate_tasks(tasks: &mut Vec<DuckcTask>) {
-        tasks.push(DuckcPackageCompilationTask {
-            package_id: "a".into(),
-            strategy: DuckcPackageCompilationStrategy::Native {
-                output_file: PathBuf::from("out.exe"),
-                linking_options: Some(DuckcLinkingOptions::Complex(ComplexLinkingOptions {
-                    linker: None,
-                    additional_linking_options: Some("-lfoo".into()),
-                    link_cstd: Some(true),
-                })),
+    fn create_mock_tasks() -> Vec<PackageCompilationTask> {
+        vec![
+            PackageCompilationTask {
+                package_id: "a".into(),
+                strategy: PackageCompilationStrategy::Native {
+                    output_file: PathBuf::from("out.exe"),
+                    linking_options: Some(LinkerOptions::Complex(ComplexLinkerOptions {
+                        linker: None,
+                        additional_linking_options: Some("-lfoo".into()),
+                        link_cstd: Some(true),
+                    })),
+                },
             },
-        });
-        tasks.push(DuckcPackageCompilationTask {
-            package_id: "a".into(),
-            strategy: DuckcPackageCompilationStrategy::Native {
-                output_file: PathBuf::from("out.exe"),
-                linking_options: Some(DuckcLinkingOptions::RawLinkerArgs("-lfoo".into())),
+            PackageCompilationTask {
+                package_id: "a".into(),
+                strategy: PackageCompilationStrategy::Native {
+                    output_file: PathBuf::from("out.exe"),
+                    linking_options: Some(LinkerOptions::RawLinkerArgs("-lfoo".into())),
+                },
             },
-        });
-        tasks.push(DuckcPackageCompilationTask {
-            package_id: "a".into(),
-            strategy: DuckcPackageCompilationStrategy::Native {
-                output_file: PathBuf::from("out.exe"),
-                linking_options: None,
+            PackageCompilationTask {
+                package_id: "a".into(),
+                strategy: PackageCompilationStrategy::Native {
+                    output_file: PathBuf::from("out.exe"),
+                    linking_options: None,
+                },
             },
-        });
-        tasks.push(DuckcPackageCompilationTask {
-            package_id: "dep-hash".into(),
-            strategy: DuckcPackageCompilationStrategy::Dvm {
-                output_file: Some(PathBuf::from("out.dvm")),
+            PackageCompilationTask {
+                package_id: "dep-hash".into(),
+                strategy: PackageCompilationStrategy::Dvm {
+                    output_file: Some(PathBuf::from("out.dvm")),
+                },
             },
-        });
-
-        tasks.push(DuckcPackageCompilationTask {
-            package_id: "dep-hash".into(),
-            strategy: DuckcPackageCompilationStrategy::Dvm { output_file: None },
-        });
-
-        tasks.push(DuckcPackageCompilationTask {
-            package_id: "dep2-hash".into(),
-            strategy: DuckcPackageCompilationStrategy::Lib {
-                output_file: PathBuf::from("out.so"),
-                archive_options: Some(DuckcArchiveOptions::Archiver("ar".into())),
+            PackageCompilationTask {
+                package_id: "dep-hash".into(),
+                strategy: PackageCompilationStrategy::Dvm { output_file: None },
             },
-        });
-
-        tasks.push(DuckcPackageCompilationTask {
-            package_id: "dep2-hash".into(),
-            strategy: DuckcPackageCompilationStrategy::Lib {
-                output_file: PathBuf::from("out.so"),
-                archive_options: Some(DuckcArchiveOptions::Complex(ComplexArchiveOptions {
-                    archiver: Some("ar".into()),
-                })),
+            PackageCompilationTask {
+                package_id: "dep2-hash".into(),
+                strategy: PackageCompilationStrategy::Lib {
+                    output_file: PathBuf::from("out.so"),
+                    archive_options: Some(ArchiverOptions::Archiver("ar".into())),
+                },
             },
-        });
-
-        tasks.push(DuckcPackageCompilationTask {
-            package_id: "dep2-hash".into(),
-            strategy: DuckcPackageCompilationStrategy::Lib {
-                output_file: PathBuf::from("out.so"),
-                archive_options: Some(DuckcArchiveOptions::Complex(ComplexArchiveOptions {
-                    archiver: None,
-                })),
+            PackageCompilationTask {
+                package_id: "dep2-hash".into(),
+                strategy: PackageCompilationStrategy::Lib {
+                    output_file: PathBuf::from("out.so"),
+                    archive_options: Some(ArchiverOptions::Complex(ComplexArchiverOptions {
+                        archiver: Some("ar".into()),
+                    })),
+                },
             },
-        });
-
-        tasks.push(DuckcPackageCompilationTask {
-            package_id: "dep2-hash".into(),
-            strategy: DuckcPackageCompilationStrategy::Lib {
-                output_file: PathBuf::from("out.so"),
-                archive_options: None,
+            PackageCompilationTask {
+                package_id: "dep2-hash".into(),
+                strategy: PackageCompilationStrategy::Lib {
+                    output_file: PathBuf::from("out.so"),
+                    archive_options: Some(ArchiverOptions::Complex(ComplexArchiverOptions {
+                        archiver: None,
+                    })),
+                },
             },
-        });
+            PackageCompilationTask {
+                package_id: "dep2-hash".into(),
+                strategy: PackageCompilationStrategy::Lib {
+                    output_file: PathBuf::from("out.so"),
+                    archive_options: None,
+                },
+            },
+        ]
     }
 }
