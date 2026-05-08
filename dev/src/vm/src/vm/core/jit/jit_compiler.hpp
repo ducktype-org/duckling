@@ -12,6 +12,7 @@
 #ifdef BUILD_TYPE_RELEASE
 constexpr inline uint COMPILATION_THRESHOLD = 10;
 #else
+// During testing compile always to check properly that jit integration works.
 constexpr inline uint COMPILATION_THRESHOLD = 0;
 #endif
 
