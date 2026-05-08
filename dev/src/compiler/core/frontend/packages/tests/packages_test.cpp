@@ -116,7 +116,8 @@ private:
 			.version      = base::StrID("1.0.0"),
 			.package_path = main_file.getFilePath(),
 			.features     = { base::StrID("f1") },
-			.dependencies = { RawDependencyInfo{ base::StrID("dep"), base::StrID() } },
+			.dependencies
+			= { RawDependencyInfo{ .package_name = base::StrID("dep"), .alias = base::StrID() } },
 		};
 
 		auto pkg_info = createPackageInfo(raw, reporter.callback());

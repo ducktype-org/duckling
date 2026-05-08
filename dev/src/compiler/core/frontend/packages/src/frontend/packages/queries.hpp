@@ -1,11 +1,15 @@
 #pragma once
 
-#include <query_framework/input_query/query_input_impl.hpp>
+#include <base/str/str_utils.hpp>
+
+#include <query_framework/input_query/query_input.hpp>
+#include <query_framework/utils/query_hash.hpp>
+#include <string_id/string_id.hpp>
 
 namespace compiler::frontend::packages {
 
 
-    /**
+	/**
 	 * @brief Key for module child side input query.
 	 * It stores the parent module hash, child name and whether the child was found.
 	 * This is needed to be in the key to store the metadata, and recreate this input during driver
@@ -15,10 +19,10 @@ namespace compiler::frontend::packages {
 	 * These methods are called during metadata serialization/deserialization.
 	 */
 	struct KeyOf_QueryPackageSideInput final {
-        /**
-         * @brief The ID of the package.
-         */
-		base::StrID                      package_id; 
+		/**
+		 * @brief The ID of the package.
+		 */
+		base::StrID package_id;
 
 		[[nodiscard]] query::QueryStableHash queryStablePerfectHash() const;
 	};
@@ -30,6 +34,6 @@ namespace compiler::frontend::packages {
 	 * This registers dependencies that queries rely on to determine whether a module has or doesn't
 	 * have a child with a given name.
 	 */
-	DECLARE_QUERY_SIDE_INPUT(QueryPackageSideInput, KeyOf_QueryPackageSideInput)
+	DECLARE_QUERY_SIDE_INPUT(QueryPackageSideInput, KeyOf_QueryPackageSideInput);
 
-} // namespace compiler::frontend::packages
+}  // namespace compiler::frontend::packages
