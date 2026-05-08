@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize, de, ser};
 use crate::StrId;
 use crate::quackpack::core::{FeatureName, Version};
 
-#[derive(Default, Debug, Clone, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub struct DuckcMultiPackage {
     /// Packages required for a successful duckc invocation; packages have to contain their __entire__ dependencies trees.
     pub packages: Vec<DuckcPackage>,
@@ -18,7 +18,7 @@ pub struct DuckcMultiPackage {
     pub tasks: Vec<DuckcTask>,
 }
 
-#[derive(Default, Debug, Clone, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub struct DuckcPackage {
     #[serde(rename = "name")]
     /// ID of a package to compile. Note, that it doesn't have to be a package's name, it can be a
@@ -36,7 +36,7 @@ pub struct DuckcPackage {
     pub dependencies: Vec<DuckcDependency>,
 }
 
-#[derive(Default, Debug, Clone, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 /// A single package's dependency, in a duckc-friendly format.
 pub struct DuckcDependency {
     #[serde(rename = "name")]
@@ -51,7 +51,7 @@ pub struct DuckcDependency {
 // So, from JSON POV, they are the same type.
 pub type DuckcTask = DuckcPackageCompilationTask;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub struct DuckcPackageCompilationTask {
     #[serde(rename = "package")]
     /// ID of a package refered by this task.
@@ -61,12 +61,13 @@ pub struct DuckcPackageCompilationTask {
     pub strategy: DuckcPackageCompilationStrategy,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
+// These and the flatten above are required for generating valid JSON's, while still giving us type safety :^).
 #[serde(rename_all = "snake_case", tag = "strategy")]
 /// Supported duckc compilation strategies.
 pub enum DuckcPackageCompilationStrategy {
     /// Compile this task into a DVM file.
-    Dvm {
+    Dvm { // Name has to be `Dvm`, as `DVM` (with "snake_case") would be rendered as "d_v_m".
         /// Set an explicit output filename. By default `package_dvm` is used.
         #[serde(skip_serializing_if = "Option::is_none")]
         output_file: Option<PathBuf>,
@@ -87,7 +88,7 @@ pub enum DuckcPackageCompilationStrategy {
     },
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
 /// Possible variants of linking options passed to duckc.
 pub enum DuckcLinkingOptions {
     /// Add extra linker arguments.
@@ -120,7 +121,7 @@ impl<'de> de::Deserialize<'de> for DuckcLinkingOptions {
     }
 }
 
-#[derive(Default, Debug, Clone, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 /// More complex linking options.
 pub struct ComplexLinkingOptions {
     /// Use an explicit linker, instead of the system default.
@@ -137,7 +138,7 @@ pub struct ComplexLinkingOptions {
     pub link_cstd: Option<bool>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
 /// Possible variants of archiver options passed to duckc.
 pub enum DuckcArchiveOptions {
     /// Set an explicit archiver path.
@@ -170,7 +171,7 @@ impl<'de> de::Deserialize<'de> for DuckcArchiveOptions {
     }
 }
 
-#[derive(Default, Debug, Clone, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 /// More complex archiver options.
 pub struct ComplexArchiveOptions {
     /// Set an explicit archiver.
@@ -291,6 +292,9 @@ mod tests {
   ]
 }"#
         );
+
+        let deserialized = serde_json::from_str::<DuckcMultiPackage>(&serialized).unwrap();
+        assert_eq!(deserialized, multi_package);
     }
 
     fn populate_packages(packages: &mut Vec<DuckcPackage>) {
