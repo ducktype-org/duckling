@@ -20,9 +20,7 @@ namespace js {
 		return base::StrID(j.at(k).get<std::string>());
 	}
 
-	std::expected<bool, JsonExtractError> extractBool(
-		const nlohmann::json& j, std::string_view key
-	) {
+	std::expected<bool, JsonExtractError> extractBool(const nlohmann::json& j, std::string_view key) {
 		if (!j.is_object()) return std::unexpected(JsonExtractError::NotAnObject);
 		const auto k = keyString(key);
 		if (!j.contains(k)) return std::unexpected(JsonExtractError::MissingKey);

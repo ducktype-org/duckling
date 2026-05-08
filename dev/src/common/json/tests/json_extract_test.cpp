@@ -1,6 +1,6 @@
-#include <json/extract.hpp>
-
 #include <tester/tester.hpp>
+
+#include <json/extract.hpp>
 
 #include <array>
 #include <string_view>
@@ -107,10 +107,10 @@ private:
 	}
 
 	void findUnknownFieldsAllKnown() {
-		auto j = nlohmann::json::parse(R"({"a": 1, "b": 2})");
+		auto                            j = nlohmann::json::parse(R"({"a": 1, "b": 2})");
 		std::array<std::string_view, 1> required{ "a" };
 		std::array<std::string_view, 1> optional{ "b" };
-		auto unknown = js::findUnknownFields(j, required, optional);
+		auto                            unknown = js::findUnknownFields(j, required, optional);
 		ASSERT_TRUE(unknown.empty());
 	}
 
@@ -118,15 +118,15 @@ private:
 		auto j = nlohmann::json::parse(R"({"a": 1, "extra": 2, "b": 3, "weird": 4})");
 		std::array<std::string_view, 1> required{ "a" };
 		std::array<std::string_view, 1> optional{ "b" };
-		auto unknown = js::findUnknownFields(j, required, optional);
+		auto                            unknown = js::findUnknownFields(j, required, optional);
 		ASSERT_EQUAL(unknown.size(), 2u);
 	}
 
 	void findUnknownFieldsNotAnObject() {
-		auto j = nlohmann::json::parse(R"([1, 2, 3])");
+		auto                            j = nlohmann::json::parse(R"([1, 2, 3])");
 		std::array<std::string_view, 0> required{};
 		std::array<std::string_view, 0> optional{};
-		auto unknown = js::findUnknownFields(j, required, optional);
+		auto                            unknown = js::findUnknownFields(j, required, optional);
 		ASSERT_TRUE(unknown.empty());
 	}
 

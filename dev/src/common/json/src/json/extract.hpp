@@ -43,9 +43,7 @@ namespace js {
 	/**
 	 * @brief Extract a boolean field from an object by key.
 	 */
-	std::expected<bool, JsonExtractError> extractBool(
-		const nlohmann::json& j, std::string_view key
-	);
+	std::expected<bool, JsonExtractError> extractBool(const nlohmann::json& j, std::string_view key);
 
 	/**
 	 * @brief Extract an array field as a vector of JSON nodes.

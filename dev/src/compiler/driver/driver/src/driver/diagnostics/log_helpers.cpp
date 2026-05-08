@@ -27,7 +27,7 @@ namespace compiler::driver::diagnostics {
 	}
 
 	void reportMissingPackageInTask(
-		base::StrID package_name,
+		base::StrID                                                          package_name,
 		const std::function<void(std::string_view, std::string_view, bool)>& report
 	) {
 		report(

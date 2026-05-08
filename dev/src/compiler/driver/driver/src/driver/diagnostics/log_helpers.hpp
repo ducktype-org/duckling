@@ -20,7 +20,7 @@ namespace compiler::driver::diagnostics {
 	 * @brief Report a missing package name referenced by a task.
 	 */
 	void reportMissingPackageInTask(
-		base::StrID package_name,
+		base::StrID                                                          package_name,
 		const std::function<void(std::string_view, std::string_view, bool)>& report
 	);
 

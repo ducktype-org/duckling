@@ -15,29 +15,21 @@ namespace js {
 	namespace {
 		void reportFieldError(
 			const DiagnosticLogger& report,
-			std::string_view field_type,
-			std::string_view key,
-			std::string_view message,
-			bool             is_error
+			std::string_view        field_type,
+			std::string_view        key,
+			std::string_view        message,
+			bool                    is_error
 		) {
-			report(
-				base::strConcat("No ", field_type, " value with key: ", key),
-				message,
-				is_error
-			);
+			report(base::strConcat("No ", field_type, " value with key: ", key), message, is_error);
 		}
 
 		void reportValueError(
 			const DiagnosticLogger& report,
-			std::string_view field_type,
-			std::string_view value_name,
-			std::string_view message
+			std::string_view        field_type,
+			std::string_view        value_name,
+			std::string_view        message
 		) {
-			report(
-				base::strConcat("No ", field_type, " value for: ", value_name),
-				message,
-				true
-			);
+			report(base::strConcat("No ", field_type, " value for: ", value_name), message, true);
 		}
 
 		template<class T>
@@ -48,17 +40,13 @@ namespace js {
 	}  // namespace
 
 	bool checkIsObject(
-		const nlohmann::json& json,
-		std::string_view context_name,
-		const DiagnosticLogger& report
+		const nlohmann::json& json, std::string_view context_name, const DiagnosticLogger& report
 	) {
 		if (isObject(json)) return true;
 		report(
 			base::strConcat(context_name, " must be a JSON object"),
 			base::strConcat(
-				"The value for ",
-				context_name,
-				" is not a JSON object and cannot be parsed."
+				"The value for ", context_name, " is not a JSON object and cannot be parsed."
 			),
 			true
 		);
@@ -66,9 +54,9 @@ namespace js {
 	}
 
 	base::Optional<base::StrID> getStringWarning(
-		const nlohmann::json& json,
-		std::string_view key,
-		std::string_view warning_message,
+		const nlohmann::json&   json,
+		std::string_view        key,
+		std::string_view        warning_message,
 		const DiagnosticLogger& report
 	) {
 		auto result = extractString(json, key);
@@ -77,9 +65,9 @@ namespace js {
 	}
 
 	base::Optional<base::StrID> getString(
-		const nlohmann::json& json,
-		std::string_view key,
-		std::string_view error_message,
+		const nlohmann::json&   json,
+		std::string_view        key,
+		std::string_view        error_message,
 		const DiagnosticLogger& report
 	) {
 		auto result = extractString(json, key);
@@ -88,9 +76,9 @@ namespace js {
 	}
 
 	base::Optional<base::StrID> getStringIfPresent(
-		const nlohmann::json& json,
-		std::string_view key,
-		std::string_view error_message,
+		const nlohmann::json&   json,
+		std::string_view        key,
+		std::string_view        error_message,
 		const DiagnosticLogger& report
 	) {
 		auto result = extractString(json, key);
@@ -101,9 +89,9 @@ namespace js {
 	}
 
 	base::Optional<base::StrID> getStringValue(
-		const nlohmann::json& json,
-		std::string_view context_name,
-		std::string_view error_message,
+		const nlohmann::json&   json,
+		std::string_view        context_name,
+		std::string_view        error_message,
 		const DiagnosticLogger& report
 	) {
 		auto result = extractStringValue(json);
@@ -113,9 +101,9 @@ namespace js {
 	}
 
 	base::Optional<bool> getBoolWarning(
-		const nlohmann::json& json,
-		std::string_view key,
-		std::string_view warning_message,
+		const nlohmann::json&   json,
+		std::string_view        key,
+		std::string_view        warning_message,
 		const DiagnosticLogger& report
 	) {
 		auto result = extractBool(json, key);
@@ -124,9 +112,9 @@ namespace js {
 	}
 
 	base::Optional<bool> getBool(
-		const nlohmann::json& json,
-		std::string_view key,
-		std::string_view error_message,
+		const nlohmann::json&   json,
+		std::string_view        key,
+		std::string_view        error_message,
 		const DiagnosticLogger& report
 	) {
 		auto result = extractBool(json, key);
@@ -135,9 +123,9 @@ namespace js {
 	}
 
 	base::Optional<bool> getBoolIfPresent(
-		const nlohmann::json& json,
-		std::string_view key,
-		std::string_view error_message,
+		const nlohmann::json&   json,
+		std::string_view        key,
+		std::string_view        error_message,
 		const DiagnosticLogger& report
 	) {
 		auto result = extractBool(json, key);
@@ -148,9 +136,9 @@ namespace js {
 	}
 
 	base::Optional<std::vector<nlohmann::json>> getArrayWarning(
-		const nlohmann::json& json,
-		std::string_view key,
-		std::string_view warning_message,
+		const nlohmann::json&   json,
+		std::string_view        key,
+		std::string_view        warning_message,
 		const DiagnosticLogger& report
 	) {
 		auto result = extractArray(json, key);
@@ -159,9 +147,9 @@ namespace js {
 	}
 
 	base::Optional<std::vector<nlohmann::json>> getArray(
-		const nlohmann::json& json,
-		std::string_view key,
-		std::string_view error_message,
+		const nlohmann::json&   json,
+		std::string_view        key,
+		std::string_view        error_message,
 		const DiagnosticLogger& report
 	) {
 		auto result = extractArray(json, key);
@@ -170,9 +158,9 @@ namespace js {
 	}
 
 	base::Optional<nlohmann::json> getObjectWarning(
-		const nlohmann::json& json,
-		std::string_view key,
-		std::string_view warning_message,
+		const nlohmann::json&   json,
+		std::string_view        key,
+		std::string_view        warning_message,
 		const DiagnosticLogger& report
 	) {
 		auto result = extractObject(json, key);
@@ -181,9 +169,9 @@ namespace js {
 	}
 
 	base::Optional<nlohmann::json> getObject(
-		const nlohmann::json& json,
-		std::string_view key,
-		std::string_view error_message,
+		const nlohmann::json&   json,
+		std::string_view        key,
+		std::string_view        error_message,
 		const DiagnosticLogger& report
 	) {
 		auto result = extractObject(json, key);
@@ -192,9 +180,9 @@ namespace js {
 	}
 
 	base::Optional<nlohmann::json> getObjectIfPresent(
-		const nlohmann::json& json,
-		std::string_view key,
-		std::string_view error_message,
+		const nlohmann::json&   json,
+		std::string_view        key,
+		std::string_view        error_message,
 		const DiagnosticLogger& report
 	) {
 		auto result = extractObject(json, key);
@@ -205,9 +193,7 @@ namespace js {
 	}
 
 	base::Optional<base::StrID> getStringFromArrayWarning(
-		const nlohmann::json& elem,
-		std::string_view parent_name,
-		const DiagnosticLogger& report
+		const nlohmann::json& elem, std::string_view parent_name, const DiagnosticLogger& report
 	) {
 		auto result = extractStringValue(elem);
 		if (result.has_value()) return *result;
@@ -224,9 +210,7 @@ namespace js {
 	}
 
 	base::Optional<base::StrID> getStringFromArray(
-		const nlohmann::json& elem,
-		std::string_view parent_name,
-		const DiagnosticLogger& report
+		const nlohmann::json& elem, std::string_view parent_name, const DiagnosticLogger& report
 	) {
 		auto result = extractStringValue(elem);
 		if (result.has_value()) return *result;
@@ -239,24 +223,20 @@ namespace js {
 	}
 
 	void checkForUnknownFields(
-		const nlohmann::json& json,
+		const nlohmann::json&                   json,
 		std::initializer_list<std::string_view> required_keys,
 		std::initializer_list<std::string_view> optional_keys,
-		std::string_view context,
-		const DiagnosticLogger& report
+		std::string_view                        context,
+		const DiagnosticLogger&                 report
 	) {
 		std::vector<std::string_view> required(required_keys);
 		std::vector<std::string_view> optional(optional_keys);
-		auto unknown = findUnknownFields(json, required, optional);
+		auto                          unknown = findUnknownFields(json, required, optional);
 		for (const auto& key: unknown) {
 			report(
 				base::strConcat("Unknown field: ", key),
 				base::strConcat(
-					"In ",
-					context,
-					": field \"",
-					key,
-					"\" is not recognized and will be ignored."
+					"In ", context, ": field \"", key, "\" is not recognized and will be ignored."
 				),
 				false
 			);
