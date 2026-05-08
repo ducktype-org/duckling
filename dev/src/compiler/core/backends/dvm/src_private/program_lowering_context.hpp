@@ -109,57 +109,9 @@ namespace compiler::backend_vm::internal {
 		void insertRawBytecodeDefinitions(const vm::code::CodeCollection& bytecode);
 
 		/**
-		 * @brief Returns how many extra bytecode functions have been accumulated so far.
-		 */
-		[[nodiscard]] usize getExtraBytecodeFunctionCount() const {
-			return extra_bytecode_functions.size();
-		}
-
-		/**
-		 * @brief Returns how many lowered types have been accumulated so far.
-		 */
-		[[nodiscard]] usize getLoweredTypeCount() const { return lowered_type_order.size(); }
-
-		/**
-		 * @brief Returns how many lowered functions have been accumulated so far.
-		 */
-		[[nodiscard]] usize getLoweredFunctionCount() const {
-			return lowered_function_order.size();
-		}
-
-		/**
-		 * @brief Returns how many lowered globals have been accumulated so far.
-		 */
-		[[nodiscard]] usize getLoweredGlobalCount() const { return lowered_global_order.size(); }
-
-		/**
 		 * @brief Capture current counts of lowered entities.
 		 */
 		[[nodiscard]] compiler::backend_vm::LoweredEntitiesSnapshot captureLoweredEntitiesSnapshot(
-		) const;
-
-		/**
-		 * @brief Returns the lowered types added since @p start_index.
-		 */
-		[[nodiscard]] std::vector<vm::code::TypeOfData> getLoweredTypesSince(usize start_index
-		) const;
-
-		/**
-		 * @brief Returns the lowered functions added since @p start_index.
-		 */
-		[[nodiscard]] std::vector<vm::code::Function> getLoweredFunctionsSince(usize start_index
-		) const;
-
-		/**
-		 * @brief Returns the lowered globals added since @p start_index.
-		 */
-		[[nodiscard]] std::vector<vm::code::GlobalData> getLoweredGlobalsSince(usize start_index
-		) const;
-
-		/**
-		 * @brief Returns the extra bytecode functions added since @p start_index.
-		 */
-		[[nodiscard]] std::vector<vm::code::Function> getExtraBytecodeFunctionsSince(usize start_index
 		) const;
 
 		/**

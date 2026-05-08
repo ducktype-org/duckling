@@ -6,6 +6,7 @@
 #include <tsl/type_layout.hpp>
 
 #include <base/collections/optional.hpp>
+#include <base/pointers/box.hpp>
 #include <base/pointers/ref.hpp>
 #include <base/types/ints.hpp>
 

@@ -63,57 +63,14 @@ const vm::code::TypeOfData& ProgramLoweringContext::lowerAndKeepTslType(CRef<tsl
 	return type_storage.dvm_types.at(type_name);
 }
 
-std::vector<vm::code::TypeOfData> ProgramLoweringContext::getLoweredTypesSince(usize start_index
-) const {
-	CORE_ASSERT(
-		start_index <= lowered_type_order.size(),
-		"Requested lowered types from an out-of-range start index"
-	);
-	std::vector<vm::code::TypeOfData> result;
-	result.reserve(lowered_type_order.size() - start_index);
-	for (usize i = start_index; i < lowered_type_order.size(); ++i) {
-		const auto& type_name = lowered_type_order[i];
-		result.push_back(type_storage.dvm_types.at(type_name));
-	}
-	return result;
-}
-
-std::vector<vm::code::Function> ProgramLoweringContext::getLoweredFunctionsSince(usize start_index
-) const {
-	CORE_ASSERT(
-		start_index <= lowered_function_order.size(),
-		"Requested lowered functions from an out-of-range start index"
-	);
-	std::vector<vm::code::Function> result;
-	result.reserve(lowered_function_order.size() - start_index);
-	for (usize i = start_index; i < lowered_function_order.size(); ++i) {
-		const auto& func_name = lowered_function_order[i];
-		result.push_back(dvm_functions_by_name.at(func_name));
-	}
-	return result;
-}
-
-std::vector<vm::code::GlobalData> ProgramLoweringContext::getLoweredGlobalsSince(usize start_index
-) const {
-	CORE_ASSERT(
-		start_index <= lowered_global_order.size(),
-		"Requested lowered globals from an out-of-range start index"
-	);
-	std::vector<vm::code::GlobalData> result;
-	result.reserve(lowered_global_order.size() - start_index);
-	for (usize i = start_index; i < lowered_global_order.size(); ++i) {
-		const auto& global_name = lowered_global_order[i];
-		result.push_back(global_name_to_dvm_data.at(global_name));
-	}
-	return result;
-}
-
 compiler::backend_vm::LoweredEntitiesSnapshot ProgramLoweringContext::captureLoweredEntitiesSnapshot(
 ) const {
-	return { .lowered_type_count            = getLoweredTypeCount(),
-		     .lowered_global_count          = getLoweredGlobalCount(),
-		     .lowered_function_count        = getLoweredFunctionCount(),
-		     .extra_bytecode_function_count = getExtraBytecodeFunctionCount() };
+	return compiler::backend_vm::LoweredEntitiesSnapshot(
+		lowered_type_order.size(),
+		lowered_global_order.size(),
+		lowered_function_order.size(),
+		extra_bytecode_functions.size()
+	);
 }
 
 const vm::code::TypeOfData& ProgramLoweringContext::getOrInsertPointerType(
@@ -161,25 +118,68 @@ void ProgramLoweringContext::insertRawBytecodeDefinitions(const vm::code::CodeCo
 	);
 }
 
-std::vector<vm::code::Function> ProgramLoweringContext::getExtraBytecodeFunctionsSince(
-	usize start_index
-) const {
-	CORE_ASSERT(
-		start_index <= extra_bytecode_functions.size(),
-		"Requested extra bytecode functions from an out-of-range start index"
-	);
-	auto offset = static_cast<std::ptrdiff_t>(start_index);
-	return { extra_bytecode_functions.begin() + offset, extra_bytecode_functions.end() };
-}
-
 vm::code::CodeCollection ProgramLoweringContext::collectNewCodeSince(
 	const compiler::backend_vm::LoweredEntitiesSnapshot& snapshot
 ) const {
+	auto collectTypesSince = [&](usize start_index) {
+		CORE_ASSERT(
+			start_index <= lowered_type_order.size(),
+			"Requested lowered types from an out-of-range start index"
+		);
+		std::vector<vm::code::TypeOfData> result;
+		result.reserve(lowered_type_order.size() - start_index);
+		for (usize i = start_index; i < lowered_type_order.size(); ++i) {
+			const auto& type_name = lowered_type_order[i];
+			result.push_back(type_storage.dvm_types.at(type_name));
+		}
+		return result;
+	};
+
+	auto collectFunctionsSince = [&](usize start_index) {
+		CORE_ASSERT(
+			start_index <= lowered_function_order.size(),
+			"Requested lowered functions from an out-of-range start index"
+		);
+		std::vector<vm::code::Function> result;
+		result.reserve(lowered_function_order.size() - start_index);
+		for (usize i = start_index; i < lowered_function_order.size(); ++i) {
+			const auto& func_name = lowered_function_order[i];
+			result.push_back(dvm_functions_by_name.at(func_name));
+		}
+		return result;
+	};
+
+	auto collectGlobalsSince = [&](usize start_index) {
+		CORE_ASSERT(
+			start_index <= lowered_global_order.size(),
+			"Requested lowered globals from an out-of-range start index"
+		);
+		std::vector<vm::code::GlobalData> result;
+		result.reserve(lowered_global_order.size() - start_index);
+		for (usize i = start_index; i < lowered_global_order.size(); ++i) {
+			const auto& global_name = lowered_global_order[i];
+			result.push_back(global_name_to_dvm_data.at(global_name));
+		}
+		return result;
+	};
+
+	auto collectExtraFunctionsSince = [&](usize start_index) {
+		CORE_ASSERT(
+			start_index <= extra_bytecode_functions.size(),
+			"Requested extra bytecode functions from an out-of-range start index"
+		);
+		auto offset = static_cast<std::ptrdiff_t>(start_index);
+		return std::vector<vm::code::Function>{
+			extra_bytecode_functions.begin() + offset,
+			extra_bytecode_functions.end()
+		};
+	};
+
 	vm::code::CodeCollection collection;
-	collection.types       = getLoweredTypesSince(snapshot.lowered_type_count);
-	collection.global_data = getLoweredGlobalsSince(snapshot.lowered_global_count);
-	collection.functions   = getLoweredFunctionsSince(snapshot.lowered_function_count);
-	auto extra             = getExtraBytecodeFunctionsSince(snapshot.extra_bytecode_function_count);
+	collection.types       = collectTypesSince(snapshot.lowered_type_count);
+	collection.global_data = collectGlobalsSince(snapshot.lowered_global_count);
+	collection.functions   = collectFunctionsSince(snapshot.lowered_function_count);
+	auto extra = collectExtraFunctionsSince(snapshot.extra_bytecode_function_count);
 	collection.functions.insert(collection.functions.end(), extra.begin(), extra.end());
 	return collection;
 }
