@@ -10,6 +10,9 @@
 #include <query_framework/entry/query_entry_point.hpp>
 #include <tester/tester.hpp>
 
+#include <filesystem>
+#include <iostream>
+#include <sstream>
 #include <string_view>
 
 namespace compiler::repl {
@@ -34,6 +37,9 @@ namespace compiler::repl {
 			TESTER_ADD_TEST(testReplHistoryCommandThroughProcessLine);
 			TESTER_ADD_TEST(testReplUnknownCommandThroughHandleCommand);
 			TESTER_ADD_TEST(testReplClearCommandDoesNotResetSessionState);
+			TESTER_ADD_TEST(testReplResetAbsoluteReplay);
+			TESTER_ADD_TEST(testReplResetRelativeReplay);
+			TESTER_ADD_TEST(testReplResetSyntaxErrors);
 			TESTER_ADD_TEST(testReplProcessLineWithCode);
 			TESTER_ADD_TEST(testReplInstructionExecution);
 			TESTER_ADD_TEST(testReplCommandDetection);
@@ -55,6 +61,24 @@ namespace compiler::repl {
 		}
 
 	private:
+		struct ScopedStderrCapture final {
+			ScopedStderrCapture(): m_old_buf(std::cerr.rdbuf(m_buffer.rdbuf())) {}
+			~ScopedStderrCapture() { std::cerr.rdbuf(m_old_buf); }
+			ScopedStderrCapture(const ScopedStderrCapture&)            = delete;
+			ScopedStderrCapture& operator=(const ScopedStderrCapture&) = delete;
+
+			std::string str() const { return m_buffer.str(); }
+
+		private:
+			std::stringstream m_buffer;
+			std::streambuf*   m_old_buf = nullptr;
+		};
+
+		void removeSessionHistoryFile() {
+			std::error_code err;
+			std::filesystem::remove(".duckling_repl_session_history", err);
+		}
+
 		/**
 		 * @brief Test that a ReplSession can be initialized successfully.
 		 *
@@ -165,6 +189,172 @@ namespace compiler::repl {
 				session.m_line_counter == line_counter_before_clear,
 				"/clear should not reset REPL line counter"
 			);
+		}
+
+		void testReplResetAbsoluteReplay() {
+			removeSessionHistoryFile();
+			ReplSession session;
+
+			std::vector<std::string_view> statements = {
+				"var a: i32 = 1;",
+				"var b: i32 = a + 1;",
+				"var c: i32 = b + 1;",
+				"var d: i32 = c + 1;",
+			};
+
+			for (auto stmt: statements) {
+				auto result = session.processLine(stmt);
+				assertTrue(
+					result.status == ReplResult::Status::Success,
+					"Setup statements should execute before reset"
+				);
+			}
+
+			auto reset_result = session.processLine("/reset 2");
+			assertTrue(
+				reset_result.status == ReplResult::Status::Reset,
+				"/reset 2 should request a REPL reset"
+			);
+			assertTrue(
+				session.getResetReplayCount().has_value()
+					&& session.getResetReplayCount().value() == 2,
+				"/reset 2 should set replay count to 2"
+			);
+
+			{
+				ReplSession replay_session;
+				replay_session.replayHistoryEntries(2, true);
+
+				auto first_result  = replay_session.processLine("a;");
+				auto second_result = replay_session.processLine("b;");
+				auto third_result  = replay_session.processLine("c;");
+				auto fourth_result = replay_session.processLine("d;");
+
+				assertTrue(
+					first_result.status == ReplResult::Status::Success,
+					"After reset to entry 2, 'a' should be available"
+				);
+				assertTrue(
+					second_result.status == ReplResult::Status::Success,
+					"After reset to entry 2, 'b' should be available"
+				);
+				assertTrue(
+					third_result.status == ReplResult::Status::Error,
+					"After reset to entry 2, 'c' should be unavailable"
+				);
+				assertTrue(
+					fourth_result.status == ReplResult::Status::Error,
+					"After reset to entry 2, 'd' should be unavailable"
+				);
+			}
+
+			removeSessionHistoryFile();
+		}
+
+		void testReplResetRelativeReplay() {
+			removeSessionHistoryFile();
+			ReplSession session;
+
+			std::vector<std::string_view> statements = {
+				"var a: i32 = 1;",
+				"var b: i32 = a + 1;",
+				"var c: i32 = b + 1;",
+				"var d: i32 = c + 1;",
+			};
+
+			for (auto stmt: statements) {
+				auto result = session.processLine(stmt);
+				assertTrue(
+					result.status == ReplResult::Status::Success,
+					"Setup statements should execute before reset"
+				);
+			}
+
+			auto reset_result = session.processLine("/reset -2");
+			assertTrue(
+				reset_result.status == ReplResult::Status::Reset,
+				"/reset -2 should request a REPL reset"
+			);
+			assertTrue(
+				session.getResetReplayCount().has_value()
+					&& session.getResetReplayCount().value() == 2,
+				"/reset -2 should set replay count to size - 2"
+			);
+
+			{
+				ReplSession replay_session;
+				replay_session.replayHistoryEntries(2, true);
+				auto first_result  = replay_session.processLine("a;");
+				auto second_result = replay_session.processLine("b;");
+				auto third_result  = replay_session.processLine("c;");
+				assertTrue(
+					first_result.status == ReplResult::Status::Success,
+					"After relative reset, 'a' should be available"
+				);
+				assertTrue(
+					second_result.status == ReplResult::Status::Success,
+					"After relative reset, 'b' should be available"
+				);
+				assertTrue(
+					third_result.status == ReplResult::Status::Error,
+					"After relative reset, 'c' should be unavailable"
+				);
+			}
+
+			removeSessionHistoryFile();
+		}
+
+		void testReplResetSyntaxErrors() {
+			removeSessionHistoryFile();
+			ReplSession session;
+
+			{
+				ScopedStderrCapture capture;
+				auto result = session.processLine("/reset -");
+				assertTrue(
+					result.status == ReplResult::Status::Success,
+					"Invalid /reset syntax should not request a reset"
+				);
+				assertTrue(
+					capture.str().find("Usage: /reset") != std::string::npos,
+					"Invalid /reset syntax should print usage"
+				);
+			}
+
+			{
+				ScopedStderrCapture capture;
+				auto result = session.processLine("/reset 1 2");
+				assertTrue(
+					result.status == ReplResult::Status::Success,
+					"Extra tokens in /reset should not request a reset"
+				);
+				assertTrue(
+					capture.str().find("Usage: /reset") != std::string::npos,
+					"Extra tokens in /reset should print usage"
+				);
+			}
+
+			{
+				auto setup_a = session.processLine("var a: i32 = 1;");
+				auto setup_b = session.processLine("var b: i32 = a + 1;");
+				assertTrue(
+					setup_a.status == ReplResult::Status::Success
+						&& setup_b.status == ReplResult::Status::Success,
+					"Setup should succeed before reset validation"
+				);
+				ScopedStderrCapture capture;
+				auto result = session.processLine("/reset 1");
+				assertTrue(
+					result.status == ReplResult::Status::Reset,
+					"/reset 1 should request a reset when history has entries"
+				);
+				assertTrue(
+					capture.str().empty(),
+					"Valid /reset should not print usage"
+				);
+			}
+
+			removeSessionHistoryFile();
 		}
 
 		/**
