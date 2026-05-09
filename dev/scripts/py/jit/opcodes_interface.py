@@ -78,7 +78,7 @@ def main(llvm_nm, llvm_cxxfilt, input_path, output_file, **kwargs):
 
     for mangled, unmangled in zip(mangled_names, unmangled_names):
         if should_remain(unmangled):
-            write(mangled + "\n")
+            write(mangled)
 
     global special_functions
     for func_name, used in special_functions.items():
