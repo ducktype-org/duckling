@@ -2,6 +2,7 @@
 #include <frontend/module_tree/module_flags/module_flags.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
+#include <frontend/packages/access.hpp>
 
 #include <base/config/build_type.hpp>
 #include <base/except/exceptions.hpp>
@@ -524,8 +525,12 @@ private:
 			// std::cout << root_mod->getParentModule().value()->getName().strView() << '\n';
 			//  Change package ID for root module
 			ModuleTreeModifier::changePackageID(root_mod, base::StrID("new_package_id"));
-			ASSERT_EQUAL("new_package_id", root_mod->getPackageID().strView());
-			ASSERT_EQUAL("new_package_id", sub_mod->getPackageID().strView());
+			ASSERT_EQUAL(
+				"new_package_id", root_mod->getPackageID().illegalAccess().getPackageID().strView()
+			);
+			ASSERT_EQUAL(
+				"new_package_id", sub_mod->getPackageID().illegalAccess().getPackageID().strView()
+			);
 		}
 	}
 

@@ -1,4 +1,5 @@
 add_library(Packages
+	src/frontend/packages/access.cpp
 	src/frontend/packages/packages.cpp
 	src/frontend/packages/queries.cpp
 )

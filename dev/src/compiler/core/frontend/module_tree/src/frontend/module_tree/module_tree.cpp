@@ -8,6 +8,7 @@
 
 #include <concurrent/base/collections/hash_map.hpp>
 #include <concurrent/worker/worker_manager.hpp>
+#include <frontend/packages/access.hpp>
 
 #include <base/collections/stable_hashmap.hpp>
 #include <base/config/build_type.hpp>
@@ -129,6 +130,10 @@ namespace compiler::frontend {
 		for (const auto& [name, submodule]: m_submodules)
 			submodules.emplace_back(submodule->getModuleID());
 		return { getModuleID(), std::move(submodules) };
+	}
+
+	packages::PackageAccessLocked ModuleTree::getPackageID() const {
+		return packages::PackageAccessLocked(m_package_id);
 	}
 
 	ModuleChildAccessLocked ModuleTree::getSubmoduleByName(base::StrID name) const {

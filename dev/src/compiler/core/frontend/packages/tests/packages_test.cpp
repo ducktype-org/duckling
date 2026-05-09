@@ -122,8 +122,9 @@ private:
 
 		auto pkg_info = createPackageInfo(raw, reporter.callback());
 		ASSERT_TRUE(pkg_info.has_value());
-		ASSERT_EQUAL(pkg_info->dependencies.size(), 1u);
-		ASSERT_EQUAL(pkg_info->dependencies[0].alias.str(), std::string("dep"));
+		auto deps = pkg_info->getDependencies().illegalAccess();
+		ASSERT_EQUAL(deps.size(), 1u);
+		ASSERT_EQUAL(deps[0].getAlias().str(), std::string("dep"));
 		ASSERT_EQUAL(reporter.errors, 0);
 
 		fs::FileManager::deleteFile(main_file);

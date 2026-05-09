@@ -19,9 +19,10 @@ namespace compiler::driver {
 		base::Optional<compiler::frontend::ModuleID> getRootModuleIDForRawPackageName(
 			base::StrID package_name, const DiagnosticReporter& report
 		) {
-			for (const auto& global_package_info: global_state::getPackages())
-				if (getModuleRef(global_package_info.root_module)->getName() == package_name)
-					return global_package_info.root_module;
+			for (const auto& global_package_info: global_state::getPackages()) {
+				auto root_id = global_package_info.getRootModule().illegalAccess().getID();
+				if (getModuleRef(root_id)->getName() == package_name) return root_id;
+			}
 
 			diagnostics::reportMissingPackageInTask(package_name, report);
 			return {};

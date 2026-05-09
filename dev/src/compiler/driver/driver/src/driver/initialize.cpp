@@ -142,7 +142,9 @@ namespace compiler::driver {
 
 				// We need to parse all files before compilation to collect all PST elements.
 				for (const auto& package_info: global_state::getPackages())
-					compiler::frontend::parseAllFilesInModuleTree(package_info.root_module);
+					compiler::frontend::parseAllFilesInModuleTree(
+						package_info.getRootModule().illegalAccess().getID()
+					);
 
 				// Collect all Inputs and Side inputs and perform red-green sweep.
 				// This must be called after loading both the graph and metadata, as metadata

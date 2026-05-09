@@ -1,39 +1,39 @@
 #pragma once
 
-#include <base/str/str_utils.hpp>
+#include "access.hpp"
 
 #include <query_framework/input_query/query_input.hpp>
-#include <query_framework/utils/query_hash.hpp>
-#include <string_id/string_id.hpp>
+#include <query_framework/query_metadata/declare_metadata.hpp>
 
 namespace compiler::frontend::packages {
 
+	/**
+	 * @brief Side input query registering a dependency on a package.
+	 * Key is the (pre-computed) package hash. See KeyOf_PackageSideInput.
+	 */
+	DECLARE_QUERY_SIDE_INPUT(QueryPackageSideInput, KeyOf_PackageSideInput)
 
 	/**
-	 * @brief Key for module child side input query.
-	 * It stores the parent module hash, child name and whether the child was found.
-	 * This is needed to be in the key to store the metadata, and recreate this input during driver
-	 * initialization. For more info see QueryModuleChildSideInput query.
-	 * @note This key is used as MetadataType and it's stored in metadata during the provide call.
-	 * That's why it implements the serialize/deserialize methods.
-	 * These methods are called during metadata serialization/deserialization.
+	 * @brief Side input query registering a dependency on a package's dependency-count.
+	 * Triggered by PackageDependenciesAccessLocked::unlock.
 	 */
-	struct KeyOf_QueryPackageSideInput final {
-		/**
-		 * @brief The ID of the package.
-		 */
-		base::StrID package_id;
-
-		[[nodiscard]] query::QueryStableHash queryStablePerfectHash() const;
-	};
+	DECLARE_QUERY_SIDE_INPUT(
+		QueryPackageDependencyCountSideInput, KeyOf_PackageDependencyCountSideInput
+	)
 
 	/**
-	 * @brief Side input identifying parent->child edge for a submodule lookup by name.
-	 * Key includes parent module hash, child name and whether the child was found.
-	 * This is needed to properly register the dependency when looking up a submodule by name.
-	 * This registers dependencies that queries rely on to determine whether a module has or doesn't
-	 * have a child with a given name.
+	 * @brief Side input query registering a dependency on a (package, alias) lookup edge.
+	 * Records whether the alias resolves to a dependency in the owner package and which package
+	 * id it points to (if any). Used by PackageInfo::getPackageDependencyByAlias.
 	 */
-	DECLARE_QUERY_SIDE_INPUT(QueryPackageSideInput, KeyOf_QueryPackageSideInput);
+	DECLARE_QUERY_SIDE_INPUT(
+		QueryPackageDependencyAliasSideInput, KeyOf_PackageDependencyAliasSideInput
+	)
+
+	/**
+	 * @brief Metadata storing KeyOf_PackageDependencyAliasSideInput for incremental driver init.
+	 * Added during the provide call of QueryPackageDependencyAliasSideInput.
+	 */
+	DECLARE_METADATA(PackageDependencyAliasLookup, KeyOf_PackageDependencyAliasSideInput);
 
 }  // namespace compiler::frontend::packages

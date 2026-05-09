@@ -209,14 +209,14 @@ private:
 			package_id += "_";
 			package_id += std::to_string(precompile_suffix++);
 
-			compiler::frontend::packages::PackageInfo package_info{
-				.root_module = frontend::createModuleTree(
+			compiler::frontend::packages::PackageInfo package_info(
+				frontend::createModuleTree(
 					fs::File(path(info.module_path)), base::StrID(package_id.c_str())
 				),
-				.version          = base::StrID("not_supported"),
-				.package_features = {},
-				.dependencies     = {},
-			};
+				base::StrID("not_supported"),
+				{},
+				{}
+			);
 
 			driver::compileEntirePackage(
 				package_info,
@@ -536,14 +536,14 @@ private:
 
 		// this also checks if llvm IR lib compile and link into the executable:
 
-		compiler::frontend::packages::PackageInfo package_info{
-			.root_module = frontend::createModuleTree(
+		compiler::frontend::packages::PackageInfo package_info(
+			frontend::createModuleTree(
 				fs::File(path("modules/functions_5")), base::StrID(package_name.c_str())
 			),
-			.version          = base::StrID("not_supported"),
-			.package_features = {},
-			.dependencies     = {},
-		};
+			base::StrID("not_supported"),
+			{},
+			{}
+		);
 
 		driver::compileEntirePackage(
 			package_info,
@@ -659,14 +659,14 @@ private:
 	void sideInputsTest() {
 		using namespace compiler;
 
-		compiler::frontend::packages::PackageInfo package_info{
-			.root_module = frontend::createModuleTree(
+		compiler::frontend::packages::PackageInfo package_info(
+			frontend::createModuleTree(
 				fs::File(path("modules/import_simple")), base::StrID("import_simple")
 			),
-			.version          = base::StrID("not_supported"),
-			.package_features = {},
-			.dependencies     = {},
-		};
+			base::StrID("not_supported"),
+			{},
+			{}
+		);
 
 		driver::compileEntirePackage(
 			package_info,
@@ -681,7 +681,7 @@ private:
 		);
 
 		// Get root module ID
-		auto root_id = package_info.root_module;
+		auto root_id = package_info.getRootModule().illegalAccess().getID();
 
 		// Find submodule ID
 		auto root_ref   = frontend::getModuleRef(root_id);
@@ -784,15 +784,15 @@ private:
 	void moduleChildSideInputsTest() {
 		using namespace compiler;
 
-		compiler::frontend::packages::PackageInfo package_info{
-			.root_module = frontend::createModuleTree(
+		compiler::frontend::packages::PackageInfo package_info(
+			frontend::createModuleTree(
 				fs::File(path("modules/imports_complicated")),
 				base::StrID("imports_complicated_test")
 			),
-			.version          = base::StrID("not_supported"),
-			.package_features = {},
-			.dependencies     = {},
-		};
+			base::StrID("not_supported"),
+			{},
+			{}
+		);
 
 		driver::compileEntirePackage(
 			package_info,
@@ -810,7 +810,7 @@ private:
 		// Helper lambdas
 		// ================================================================================
 
-		auto root_id  = package_info.root_module;
+		auto root_id  = package_info.getRootModule().illegalAccess().getID();
 		auto root_ref = frontend::getModuleRef(root_id);
 
 		// Helper to get mutable module reference
@@ -1072,25 +1072,25 @@ private:
 			return std::ranges::find(deps, source_position_node) != deps.end();
 		};
 
-		compiler::frontend::packages::PackageInfo dvm_package_info{
-			.root_module = frontend::createModuleTree(
+		compiler::frontend::packages::PackageInfo dvm_package_info(
+			frontend::createModuleTree(
 				fs::File(path("modules/functions_2")), base::StrID("src_pos_dvm")
 			),
-			.version          = base::StrID("not_supported"),
-			.package_features = {},
-			.dependencies     = {},
-		};
+			base::StrID("not_supported"),
+			{},
+			{}
+		);
 
 		driver::compileEntirePackage(dvm_package_info, driver::BuildTargetDVM{});
 		auto dvm_compile_node
 			= query::internal::makeNodeID<driver::CompileModule>(driver::KeyOf_CompileModule{
-				.module_id        = dvm_package_info.root_module,
+				.module_id        = dvm_package_info.getRootModule().illegalAccess().getID(),
 				.backend_type     = driver::BackendType::DVM,
 				.build_debug_info = true,
 			});
 		auto dvm_debug_node = query::internal::makeNodeID<driver::DebugInfoForModule>(
 			driver::KeyOf_DebugInfoForModule{
-				.module_id    = dvm_package_info.root_module,
+				.module_id    = dvm_package_info.getRootModule().illegalAccess().getID(),
 				.backend_type = driver::BackendType::DVM,
 			}
 		);

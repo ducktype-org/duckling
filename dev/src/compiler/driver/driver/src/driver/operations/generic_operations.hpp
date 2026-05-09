@@ -53,7 +53,7 @@ namespace compiler::driver {
 	) {
 		return compilePackages({
 			PackageCompilationTask{
-				.root_module  = package_info.root_module,
+				.root_module  = package_info.getRootModule().illegalAccess().getID(),
 				.build_target = build_target,
 			},
 		});

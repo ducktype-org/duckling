@@ -17,14 +17,14 @@ namespace global_state {
 
 	base::CRef<PackageInfo> getPackageRef(base::StrID package_id) {
 		for (const auto& pkg: packages)
-			if (getModuleRef(pkg.root_module)->getPackageID() == package_id) return &pkg;
+			if (pkg.getPackageID() == package_id) return &pkg;
 		CORE_PANIC("Package with ID ", package_id, " not found in global state!");
 		CORE_UNREACHABLE();
 	}
 
 	base::Optional<base::CRef<PackageInfo>> getPackageRefOpt(base::StrID package_id) {
 		for (const auto& pkg: packages)
-			if (getModuleRef(pkg.root_module)->getPackageID() == package_id) return &pkg;
+			if (pkg.getPackageID() == package_id) return &pkg;
 		return {};
 	}
 
@@ -32,17 +32,17 @@ namespace global_state {
 		void addPackage(const PackageInfo& package_info) { packages.push_back(package_info); }
 
 		void addPackage(compiler::frontend::ModuleID root_module) {
-			packages.push_back(PackageInfo{
-				.root_module      = root_module,
-				.version          = base::StrID("not_supported"),
-				.package_features = {},
-				.dependencies     = {},
-			});
+			packages.emplace_back(
+				root_module,
+				base::StrID("not_supported"),
+				std::vector<base::StrID>{},
+				std::vector<compiler::frontend::packages::PackageDependencyInfo>{}
+			);
 		}
 
 		void removePackage(compiler::frontend::ModuleID root_module) {
 			std::erase_if(packages, [&](const PackageInfo& pkg) {
-				return pkg.root_module == root_module;
+				return pkg.getRootModule().illegalAccess().getID() == root_module;
 			});
 		}
 	}

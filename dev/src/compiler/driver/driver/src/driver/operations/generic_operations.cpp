@@ -821,7 +821,11 @@ namespace compiler::driver {
 					if (linking_result.isBad()) {
 						CORE_USER_LOG(
 							"Linking for package "
-							+ compiler::frontend::getModuleRef(task.root_module)->getPackageID().str()
+							+ compiler::frontend::getModuleRef(task.root_module)
+								  ->getPackageID()
+								  .illegalAccess()
+								  .getPackageID()
+								  .str()
 							+ " failed!\n"
 						);
 						result = base::BAD;
@@ -842,7 +846,11 @@ namespace compiler::driver {
 					if (archive_result.isBad()) {
 						CORE_USER_LOG(
 							"Archiving for package "
-							+ compiler::frontend::getModuleRef(task.root_module)->getPackageID().str()
+							+ compiler::frontend::getModuleRef(task.root_module)
+								  ->getPackageID()
+								  .illegalAccess()
+								  .getPackageID()
+								  .str()
 							+ " failed!\n"
 						);
 						result = base::BAD;

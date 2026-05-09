@@ -1,9 +1,13 @@
 #include "packages.hpp"
 
+#include "access.hpp"
+
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 
 #include <base/str/str_utils.hpp>
+
+#include <hashing/add_to_hash.hpp>
 
 #include <json/diagnostics.hpp>
 #include <json/extract.hpp>
@@ -14,6 +18,59 @@
 #include <vector>
 
 namespace compiler::frontend::packages {
+
+	hashing::ComponentHash::HashType PackageInfo::computeHash(base::StrID package_id) {
+		hashing::ComponentHash::HashAlg hasher;
+		hashing::addToHash(hasher, package_id);
+		return hasher.finalize();
+	}
+
+	PackageInfo::PackageInfo(
+		compiler::frontend::ModuleID       root_module,
+		base::StrID                        version,
+		std::vector<base::StrID>           features,
+		std::vector<PackageDependencyInfo> dependencies
+	):
+		  m_root_module(root_module),
+		  m_version(version),
+		  m_features(std::move(features)),
+		  m_dependencies(std::move(dependencies)),
+		  m_hash(
+			  computeHash(getModuleRef(root_module)->getPackageID().illegalAccess().getPackageID())
+		  ) {}
+
+	base::StrID PackageInfo::getPackageID() const {
+		return getModuleRef(m_root_module)->getPackageID().illegalAccess().getPackageID();
+	}
+
+	const hashing::ComponentHash::HashType& PackageInfo::getPackageHash() const { return m_hash; }
+
+	compiler::frontend::ModuleAccessLocked PackageInfo::getRootModule() const {
+		return compiler::frontend::ModuleAccessLocked(m_root_module);
+	}
+
+	base::StrID PackageInfo::getVersion() const { return m_version; }
+
+	base::CRef<std::vector<base::StrID>> PackageInfo::getFeatures() const { return &m_features; }
+
+	PackageDependenciesAccessLocked PackageInfo::getDependencies() const {
+		std::vector<PackageDependencyAccessLocked> deps;
+		deps.reserve(m_dependencies.size());
+		for (const auto& dep: m_dependencies)
+			deps.emplace_back(dep.alias, PackageAccessLocked(dep.package_id));
+		return { getPackageID(), std::move(deps) };
+	}
+
+	PackageDependencyAliasAccessLocked PackageInfo::getPackageDependencyByAlias(base::StrID alias
+	) const {
+		base::Optional<base::StrID> resolved;
+		for (const auto& dep: m_dependencies)
+			if (dep.alias == alias) {
+				resolved = dep.package_id;
+				break;
+			}
+		return { getPackageID(), alias, resolved };
+	}
 
 	base::Optional<RawDependencyInfo> RawDependencyInfo::fromJson(
 		const nlohmann::json& json, const DiagnosticReporter& report
@@ -133,12 +190,9 @@ namespace compiler::frontend::packages {
 			});
 		}
 
-		return PackageInfo{
-			.root_module      = root_module,
-			.version          = package_info.version,
-			.package_features = package_info.features,
-			.dependencies     = std::move(package_dependencies),
-		};
+		return PackageInfo(
+			root_module, package_info.version, package_info.features, std::move(package_dependencies)
+		);
 	}
 
 }  // namespace compiler::frontend::packages

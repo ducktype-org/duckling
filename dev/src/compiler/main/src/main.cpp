@@ -356,7 +356,9 @@ clah::Clah getClahForMain() {
 		                                                              : driver::BackendType::LLVM;
 
 					CORE_ASSERT(!global_state::getPackages().empty(), "No packages registered");
-					auto root = global_state::getPackages().front().root_module;
+					auto root
+						= global_state::getPackages().front().getRootModule().illegalAccess().getID(
+						);
 
 					(void) query::entryPoint<driver::CompileModule>({ root, backend_type, false });
 
@@ -522,7 +524,9 @@ clah::Clah getClahForMain() {
 					CORE_ASSERT(!global_state::getPackages().empty(), "No packages registered");
 					base::OkBad result = compiler::driver::compilePackages({
 						compiler::driver::PackageCompilationTask{
-							.root_module  = global_state::getPackages().front().root_module,
+							.root_module
+							= global_state::getPackages().front().getRootModule().illegalAccess().getID(
+							),
 							.build_target = build_target,
 						},
 					});

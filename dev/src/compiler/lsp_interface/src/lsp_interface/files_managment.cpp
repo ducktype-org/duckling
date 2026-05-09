@@ -161,7 +161,9 @@ namespace lsp {
 				if_opt_some(parent_module_ref_opt, module_ref) {
 					std::cerr << "Adding new file to already loaded package: "
 							  << file.getFilePath().strView() << "\n";
-					auto submodule = ModuleTreeBuilder::create(file, module_ref->getPackageID());
+					auto submodule = ModuleTreeBuilder::create(
+						file, module_ref->getPackageID().illegalAccess().getPackageID()
+					);
 					ModuleTreeModifier::addSubmodule(module_ref, submodule);
 				}
 				if_opt_none(parent_module_ref_opt) { createRootModuleAndRegisterPackage(file); }
@@ -193,7 +195,8 @@ namespace lsp {
 							  << " to parent module " << parent_module_ref->getName().strView()
 							  << "\n";
 					auto submodule = ModuleTreeBuilder::create(
-						fs::File(file_path), parent_module_ref->getPackageID()
+						fs::File(file_path),
+						parent_module_ref->getPackageID().illegalAccess().getPackageID()
 					);
 					ModuleTreeModifier::addSubmodule(parent_module_ref, submodule);
 				}
@@ -206,7 +209,8 @@ namespace lsp {
 								  << " to new parent module "
 								  << parent_module_ref->getName().strView() << "\n";
 						ModuleTreeModifier::changePackageID(
-							submodule, parent_module_ref->getPackageID()
+							submodule,
+							parent_module_ref->getPackageID().illegalAccess().getPackageID()
 						);
 						ModuleTreeModifier::addSubmodule(parent_module_ref, submodule);
 

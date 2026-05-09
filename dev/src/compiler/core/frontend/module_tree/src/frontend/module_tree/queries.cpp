@@ -31,7 +31,7 @@ namespace compiler::frontend {
 			auto        root_ancestor = getRootAncestorModuleID(ctx, module_id);
 			const auto& all_packages  = global_state::getPackages();
 			for (const auto& pkg: all_packages)
-				if (pkg.root_module == root_ancestor) return pkg;
+				if (pkg.getRootModule().illegalAccess().getID() == root_ancestor) return pkg;
 
 			// This could be panic, but in some tests we might want to compile modules directly
 			// without initializing the compiler
@@ -43,7 +43,7 @@ namespace compiler::frontend {
 		) {
 			const auto& all_packages = global_state::getPackages();
 			for (const auto& pkg: all_packages)
-				if (getModuleRef(pkg.root_module)->getPackageID() == package_id) return pkg;
+				if (pkg.getPackageID() == package_id) return pkg;
 
 			// The error is already logged, when verifying the manifest
 			// This could be panic, but we allow the compiler to run with broken manifest, to
@@ -86,11 +86,12 @@ namespace compiler::frontend {
 			auto package_info_opt = getPackageInfo(ctx, from);
 			if (not package_info_opt.has_value()) return {};
 
-			for (const auto& dep: package_info_opt.value().dependencies) {
-				if (path.at(0) == dep.alias) {
-					auto dep_package_info_opt = getPackageInfo(dep.package_id);
+			for (const auto& dep: package_info_opt.value().getDependencies().illegalAccess()) {
+				if (path.at(0) == dep.getAlias()) {
+					auto dep_package_info_opt
+						= getPackageInfo(dep.getPackage().illegalAccess().getPackageID());
 					if_opt_some(dep_package_info_opt, dep_package_info) {
-						current_module = dep_package_info.root_module;
+						current_module = dep_package_info.getRootModule().illegalAccess().getID();
 					}
 					break;
 				}

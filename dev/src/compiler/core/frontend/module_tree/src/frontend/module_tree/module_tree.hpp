@@ -18,6 +18,10 @@
 #include <string>
 #include <string_view>
 
+namespace compiler::frontend::packages {
+	class PackageAccessLocked;
+}
+
 namespace compiler::frontend {
 	/**
 	 * If a file's extension is equal to this constant, then it is assumed
@@ -151,7 +155,13 @@ namespace compiler::frontend {
 		[[nodiscard]]
 		base::StrID getName() const;
 
-		base::StrID getPackageID() const { return m_package_id; }
+		/**
+		 * @brief Access the package this module belongs to.
+		 * Available for every module (not only root). On unlock registers
+		 * QueryPackageSideInput dependency on the owning package; outside of queries use
+		 * illegalAccess to obtain the raw package id.
+		 */
+		[[nodiscard]] packages::PackageAccessLocked getPackageID() const;
 
 		/**
 		 * Check if this module is a REPL-generated module.

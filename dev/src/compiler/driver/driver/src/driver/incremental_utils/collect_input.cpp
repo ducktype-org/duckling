@@ -17,7 +17,6 @@
 #include <query_framework/external/api.hpp>
 #include <query_framework/internal/query_data/query_id.hpp>
 
-#include <algorithm>
 #include <vector>
 
 namespace compiler::driver {
@@ -189,7 +188,7 @@ namespace compiler::driver {
 
 			std::vector<frontend::ModuleID> module_ids;
 			for (const auto& package: global_state::getPackages())
-				module_ids.push_back(package.root_module);
+				module_ids.push_back(package.getRootModule().illegalAccess().getID());
 
 			for (const auto module_id: module_ids)
 				collectFromModule(lookups_map, module_id, base::Ref(&out));

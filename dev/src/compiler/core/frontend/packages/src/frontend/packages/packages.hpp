@@ -1,10 +1,15 @@
 #pragma once
 
+#include "access.hpp"
+
+#include <frontend/module_tree/access.hpp>
 #include <frontend/module_tree/module_id.hpp>
 
 #include <base/collections/optional.hpp>
+#include <base/pointers/ref.hpp>
 
 #include <filesystem/file_path.hpp>
+#include <hashing/component_hash.hpp>
 #include <string_id/string_id.hpp>
 
 #include <json/diagnostics.hpp>
@@ -33,20 +38,68 @@ namespace compiler::frontend::packages {
 
 	/**
 	 * @brief Resolved information about a single package.
-	 * @note The package_id is stored in @c root_module's ModuleID.
+	 *
+	 * Identified by its package id (== root module's package id). Provides access to its
+	 * dependencies through a query-friendly mechanism: getPackageDependencyByAlias returns
+	 * a PackageDependencyAliasAccessLocked whose unlock registers a side input recording the
+	 * (package, alias) → target package lookup result.
 	 */
-	struct PackageInfo final {
-		/** @brief The root module of the package. */
-		compiler::frontend::ModuleID root_module;
+	class PackageInfo final {
+	public:
+		PackageInfo(
+			compiler::frontend::ModuleID       root_module,
+			base::StrID                        version,
+			std::vector<base::StrID>           features,
+			std::vector<PackageDependencyInfo> dependencies
+		);
+
+		/** @brief Package ID — equal to the root module's package id. */
+		[[nodiscard]] base::StrID getPackageID() const;
+
+		/** @brief Stable hash of the package, used as side-input key. */
+		[[nodiscard]] const hashing::ComponentHash::HashType& getPackageHash() const;
+
+		/**
+		 * @brief Root module of the package as an AccessLocked wrapper.
+		 * Unlock in queries to register a dependency on the module; use illegalAccess outside.
+		 */
+		[[nodiscard]] compiler::frontend::ModuleAccessLocked getRootModule() const;
 
 		/** @brief Version of the package (currently informational). */
-		base::StrID version;
+		[[nodiscard]] base::StrID getVersion() const;
 
 		/** @brief Feature flags advertised by the package (currently informational). */
-		std::vector<base::StrID> package_features;
+		[[nodiscard]] base::CRef<std::vector<base::StrID>> getFeatures() const;
 
-		/** @brief Dependencies the package imports. */
-		std::vector<PackageDependencyInfo> dependencies;
+		/**
+		 * @brief Direct dependencies declared by the package.
+		 * Mirrors ModuleTree::getSubmodules — on unlock registers
+		 * QueryPackageDependencyCountSideInput so consumers depending on the dependency list
+		 * are invalidated when its size changes; outside queries use illegalAccess.
+		 */
+		[[nodiscard]] PackageDependenciesAccessLocked getDependencies() const;
+
+		/**
+		 * @brief Lookup a dependency by its alias.
+		 * Unlock registers QueryPackageDependencyAliasSideInput recording whether the alias
+		 * exists and which package id it resolves to. Returns Optional<PackageAccessLocked>
+		 * — empty if the alias is not declared. The caller decides whether to unlock further.
+		 */
+		[[nodiscard]] PackageDependencyAliasAccessLocked getPackageDependencyByAlias(base::StrID alias
+		) const;
+
+	private:
+		friend class PackageAccessLocked;
+		friend class PackageDependencyAliasAccessLocked;
+
+		/** @brief Compute the stable hash of a package from its package id. */
+		[[nodiscard]] static hashing::ComponentHash::HashType computeHash(base::StrID package_id);
+
+		compiler::frontend::ModuleID       m_root_module;
+		base::StrID                        m_version;
+		std::vector<base::StrID>           m_features;
+		std::vector<PackageDependencyInfo> m_dependencies;
+		hashing::ComponentHash::HashType   m_hash;
 	};
 
 	/**
