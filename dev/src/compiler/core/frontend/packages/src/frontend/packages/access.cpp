@@ -93,7 +93,7 @@ namespace compiler::frontend::packages {
 		);
 		auto found_byte = std::byte(0);
 		std::memcpy(&found_byte, data.data() + offset, sizeof(std::byte));
-		out.found = bool(found_byte);
+		out.found = (found_byte != std::byte{ 0 });
 		offset += sizeof(std::byte);
 
 		read_str(out.target_package_id);

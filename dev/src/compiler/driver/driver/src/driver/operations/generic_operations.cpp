@@ -52,9 +52,9 @@
 #include <vm/loader/loader.hpp>
 
 #include <algorithm>
-#include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <random>
 #include <utility>
 #include <vector>
 
@@ -682,15 +682,35 @@ namespace compiler::driver {
 		return base::OK;
 	}
 
-	base::OkBad compilePackages(const std::vector<PackageCompilationTask>& tasks) {
-		base::OkBad result = base::OK;
-
+	namespace {
 		struct ModuleToCompile {
 			frontend::ModuleID root_module;
 			frontend::ModuleID module_id;
 			BackendType        backend;
 			bool               build_debug_info;
+
+			bool operator==(const ModuleToCompile&) const = default;
 		};
+
+		/**
+		 * @brief Strict-weak ordering over all fields of ModuleToCompile for deterministic
+		 * sort/dedup. Uses stable module hash so the order is reproducible across runs.
+		 */
+		bool lessModuleToCompile(const ModuleToCompile& a, const ModuleToCompile& b) {
+			const auto& a_mod_hash = frontend::ModuleTree::getModuleHash(a.module_id);
+			const auto& b_mod_hash = frontend::ModuleTree::getModuleHash(b.module_id);
+			if (a_mod_hash != b_mod_hash) return a_mod_hash < b_mod_hash;
+			if (a.backend != b.backend) return a.backend < b.backend;
+			if (a.build_debug_info != b.build_debug_info)
+				return a.build_debug_info < b.build_debug_info;
+			const auto& a_root_hash = frontend::ModuleTree::getModuleHash(a.root_module);
+			const auto& b_root_hash = frontend::ModuleTree::getModuleHash(b.root_module);
+			return a_root_hash < b_root_hash;
+		}
+	}  // namespace
+
+	base::OkBad compilePackages(const std::vector<PackageCompilationTask>& tasks) {
+		base::OkBad result = base::OK;
 
 		std::vector<ModuleToCompile> modules_to_compile;
 
@@ -728,6 +748,13 @@ namespace compiler::driver {
 			}
 		}
 
+		// Dedup: a single (module_id, backend, build_debug_info, root_module) should be compiled
+		// at most once even if multiple tasks reference it.
+		std::ranges::sort(modules_to_compile, lessModuleToCompile);
+		modules_to_compile.erase(
+			std::ranges::unique(modules_to_compile).begin(), modules_to_compile.end()
+		);
+
 		// Shuffle the modules to compile to increase the chance of better load distribution between
 		// worker threads.
 		std::shuffle(
@@ -756,10 +783,9 @@ namespace compiler::driver {
 			});
 		}
 
-		// sort the compile_handles to make the output oof the compiler deterministic
+		// sort the compile_handles to make the output of the compiler deterministic
 		std::ranges::sort(compile_handles, [](const ScheduledModule& a, const ScheduledModule& b) {
-			return frontend::ModuleTree::getModuleHash(a.module.module_id)
-			     < frontend::ModuleTree::getModuleHash(b.module.module_id);
+			return lessModuleToCompile(a.module, b.module);
 		});
 
 		std::vector<ScheduledModule> debug_info_handles;

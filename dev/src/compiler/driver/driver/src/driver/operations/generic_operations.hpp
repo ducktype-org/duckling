@@ -6,8 +6,6 @@
 
 #pragma once
 
-#include "../task/task.hpp"
-
 #include <archiver/archive.hpp>
 #include <debug_info/debug_info.hpp>
 #include <driver/backend_type.hpp>
@@ -45,7 +43,7 @@ namespace compiler::driver {
 	/**
 	 * @brief Compile a single package.
 	 * In normal compilation mode, compilePackages should be used
-	 * This function is olnly for testing purpose
+	 * This function is only for testing purpose
 	 */
 	inline base::OkBad compileEntirePackage(
 		const compiler::frontend::packages::PackageInfo& package_info,

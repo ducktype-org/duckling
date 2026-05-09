@@ -434,6 +434,7 @@ clah::Clah getClahForMain() {
 	                     .addShortName('o')
 	                     .addLongName("output-file-name")
 	                     .addShortDesc("Output artifact file name (without extension).")
+	                     .optional()
 	                     .build())
 				.add(clah::ParamBuilder::ofFlag()
 	                     .addLongName("emit-static-lib")
@@ -450,11 +451,6 @@ clah::Clah getClahForMain() {
 						if (options.isFlag("emit-static-lib")) {
 							std::cerr << "Error: --dvm-backend and --emit-static-lib flags cannot "
 										 "be used together.\n";
-							return 1;
-						}
-						if (options.isParam("output-file-name")) {
-							std::cerr << "Error: --dvm-backend does not support custom output file "
-										 "names.\n";
 							return 1;
 						}
 					}

@@ -1,8 +1,5 @@
 #pragma once
 
-#include <archiver/archive.hpp>
-#include <linker/link.hpp>
-
 #include <base/types/ints.hpp>
 
 #include <string>

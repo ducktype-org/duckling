@@ -18,21 +18,6 @@
 
 namespace compiler::frontend {
 
-	namespace {
-		base::Optional<compiler::frontend::packages::PackageInfo> getPackageInfo(
-			base::StrID package_id
-		) {
-			const auto& all_packages = global_state::getPackages();
-			for (const auto& pkg: all_packages)
-				if (pkg.getPackageID() == package_id) return pkg;
-
-			// The error is already logged, when verifying the manifest
-			// This could be panic, but we allow the compiler to run with broken manifest, to
-			// collect as many errors as possible.
-			return {};
-		}
-	}
-
 	base::Optional<ModuleID> getRelativeModule(
 		query::Context& ctx, ModuleID from, const std::vector<base::StrID>& path
 	) {
@@ -66,16 +51,16 @@ namespace compiler::frontend {
 			// Uses getPackageDependencyByAlias so we register a dependency only on this specific
 			// (package, alias) edge instead of on every dependency of the package.
 			auto owner_pkg_id  = getModuleRef(from)->getPackageID().unlock(ctx).getPackageID();
-			auto owner_pkg_opt = getPackageInfo(owner_pkg_id);
+			auto owner_pkg_opt = global_state::getPackageRefOpt(owner_pkg_id);
 			if (not owner_pkg_opt.has_value()) return {};
 
 			auto dep_locked_opt
-				= owner_pkg_opt.value().getPackageDependencyByAlias(path.at(0)).unlock(ctx);
+				= owner_pkg_opt.value()->getPackageDependencyByAlias(path.at(0)).unlock(ctx);
 			if_opt_some(dep_locked_opt, dep_locked) {
 				auto dep_pkg_id           = dep_locked.unlock(ctx).getPackageID();
-				auto dep_package_info_opt = getPackageInfo(dep_pkg_id);
+				auto dep_package_info_opt = global_state::getPackageRefOpt(dep_pkg_id);
 				if_opt_some(dep_package_info_opt, dep_package_info) {
-					current_module = dep_package_info.getRootModule().unlock(ctx).getID();
+					current_module = dep_package_info->getRootModule().unlock(ctx).getID();
 				}
 			}
 		}
