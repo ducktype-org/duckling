@@ -38,5 +38,4 @@ namespace compiler::linker {
 		const std::vector<artifacts::FileArtifact>& inputs,
 		const LinkingOptions&                       options
 	);
-
 }
