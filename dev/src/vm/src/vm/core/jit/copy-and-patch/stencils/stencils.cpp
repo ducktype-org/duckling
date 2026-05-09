@@ -6,7 +6,7 @@
 namespace vm::jit::cnp {
 
 // for now only a single(ext-less) instruction
-// opcodes_interface.py depends on the exact fully-qualified name
+// jitable_interface.py depends on the exact fully-qualified name
 #define HANDLE_MICRO_INSTR(opcode_name)                                               \
 	void stencil_##opcode_name(                                                       \
 		MicroInstruction instr, byte* local_stack, Frame* frame, SafeVMThread& thread \

@@ -148,7 +148,7 @@ function(add_vm_variant suffix compile_def)
         
             # Get all microopcodes names to add them to api later. Heuristic used: contains "OpFuns", "op_" and not "debug"            
             COMMAND /usr/bin/env python3
-                ${CMAKE_SOURCE_DIR}/scripts/py/jit/opcodes_interface.py
+                ${CMAKE_SOURCE_DIR}/scripts/py/jit/jitable_interface.py
                 ${LLVM_TOOLS_ARGS}
                 -i ${common_bc}
                 -o ${extracted_func_file}
@@ -165,7 +165,7 @@ function(add_vm_variant suffix compile_def)
             VERBATIM
             DEPENDS $<TARGET_OBJECTS:LibCommonVM_bc>
                     # cp-stencils_bc
-                    ${CMAKE_SOURCE_DIR}/scripts/py/jit/opcodes_interface.py
+                    ${CMAKE_SOURCE_DIR}/scripts/py/jit/jitable_interface.py
                     $<TARGET_OBJECTS:${lib_thread_vm_name}_bc>
                     # Here dependency to both bc files and targets is necessery.
                     ${vm_dep_objects_bc} # File dependency ensures each file will tracked and program will be rebuild if it changes.
