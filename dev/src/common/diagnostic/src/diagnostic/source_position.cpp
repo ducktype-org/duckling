@@ -142,8 +142,9 @@ namespace dia {
 		out << std::to_string(line) << ":" << std::to_string(column);
 	}
 
-	printer::PrinterContentsSeq SourcePosition::genPrinterContents(const printer::PrinterContentsSeq&)
-		const {
+	printer::PrinterContentsSeq SourcePosition::genPrinterContents(
+		const printer::PrinterContentsSeq& reason
+	) const {
 		printer::PrinterOStream str;
 		return str.getContents();
 	}
