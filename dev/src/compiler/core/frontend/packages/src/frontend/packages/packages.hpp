@@ -65,12 +65,10 @@ namespace compiler::frontend::packages {
 		 */
 		[[nodiscard]] compiler::frontend::ModuleAccessLocked getRootModule() const;
 
-		/** @brief Version of the package (currently informational, requires query dependency
-		 * tracking). */
+		/** @brief Version of the package  */
 		[[nodiscard]] base::StrID getVersion() const;
 
-		/** @brief Feature flags advertised by the package (currently informational, requires query
-		 * dependency tracking). */
+		/** @brief Feature flags advertised by the package  */
 		[[nodiscard]] base::CRef<std::vector<base::StrID>> getFeatures() const;
 
 		/**
