@@ -13,8 +13,16 @@ namespace clah {
 	 */
 	class ParsingState {
 	public:
-		usize         parsing_position = 0;  /// Position in the args.
-		std::string   args;                  /// Merged arguments.
+		/// As the parsing state we use two alternative representations.
+		/// First the index of the current word and the position inside the current word
+		usize                    current_word         = 0;  /// Current word index.
+		usize                    inside_word_position = 0;  /// Position inside the current word.
+		std::vector<std::string> words;                     /// Arguments.
+
+		/// Second representation is the merged view of the arguments, used for error messages.
+		usize       position_in_merged = 0;  /// Position in the merged view of the arguments.
+		std::string merged_view;             /// The merged view of the arguments.
+
 		ParsingResult result;                /// The result of the parsing.
 
 		/**
@@ -49,23 +57,40 @@ namespace clah {
 		 */
 		void parseParameter(const std::vector<clah::Parameter>& params);
 
+
 		/**
-		 * @brief Peeks at the token starting from `parsing_position` to the first space and returns
-		 * it. Doesn't move the `parsing_position`.
-		 * @return The next token.
+		 * @brief The character at the current position.
 		 */
-		std::string peekToken();
+		char frontChar() const;
+
+		/**
+		 * @brief The word string from the current position within the word until the end of the word.
+		 */
+		std::string frontWord() const;
 
 		/**
 		 * @brief Checks whether there is more arguments to parse in the args string.
 		 * @return Are there any arguments to parse.
 		 */
-		bool hasMoreArgs() const;
+		bool isEnd() const;
 
 		/**
-		 * @brief Consumes one token starting from the `parsing_position` until the first space.
+		 * @brief Advance the position by one character. If the end of the current word is reached,
+		 * move to the next word.
 		 */
-		void consumeToken();
+		void advanceChar();
+
+		/**
+		 * @brief Advances the position until a character satisfying the condition is reached or the
+		 * end of the word is reached.
+		 */
+		usize advanceUntilInWord(const std::function<bool(char)>& condition);
+
+		/**
+		 * @brief Sets the position to the beginning of the next word.
+		 */
+		void advanceWord();
+
 
 	private:
 		/**
@@ -95,11 +120,10 @@ namespace clah {
 		void parseWithParameter(const clah::Parameter& parameter, const std::string& name);
 
 		/**
-		 * @brief Tries to perform parsing with a value parser. Returns an empty optional if no more
-		 * characters are left.
+		 * @brief Tries to perform parsing with a value parser. Throws an error on exception
 		 * @param parser The parser to be used.
-		 * @return An optionally parsed value.
+		 * @return A parsed value.
 		 */
-		base::Optional<clah::ParsedValue> parseValueWithParser(const clah::ValueParser& parser);
+		clah::ParsedValue parseValueWithParser(const clah::ValueParser& parser);
 	};
 }

@@ -6,7 +6,7 @@ use clap::{Arg, ArgAction, ArgMatches, Command};
 use crate::duck::driver::cli_ext::{flag, optional, subcommand};
 use crate::quackpack::subcommands::init::{InitOptions, init};
 use crate::util::path_ops_ext::PathOpsExt;
-use crate::{DuckContext, QuackResult, qp_bail_internal};
+use crate::{DuckContext, QuackResult};
 
 /// Creates parser for the `init` subcommand.
 pub fn get_parser() -> Command {
@@ -26,6 +26,10 @@ pub fn get_parser() -> Command {
             "expose-freezefile",
             "Makes the synchronization export a freezefile and use the provided one",
         ))
+        .arg(flag(
+            "no-git",
+            "Do not initialize a git repository in the projects root",
+        ))
         .arg(optional("name", "Override the package name"))
         .arg(
             Arg::new("path")
@@ -38,16 +42,6 @@ pub fn get_parser() -> Command {
 
 /// Logic for executing the `init` subcommand.
 pub fn execute(ctx: &DuckContext, matches: &ArgMatches) -> QuackResult<()> {
-    let unsupported_flags = [
-        "venv",
-        "full",
-        "ephemeral",
-        "local-storage",
-        "expose-freezefile",
-    ];
-    for flag in unsupported_flags {
-        bail_on_unsupported_flag(matches.get_flag(flag), flag)?;
-    }
     let at = matches
         .get_one::<PathBuf>("path")
         .expect("required by clap")
@@ -56,13 +50,15 @@ pub fn execute(ctx: &DuckContext, matches: &ArgMatches) -> QuackResult<()> {
         Some(name) => name.into(),
         None => at.file_name().expect("file without filename").into(),
     };
-    init(InitOptions { ctx, at, name })
-}
-
-/// Return an internal error for unsupported flags.
-fn bail_on_unsupported_flag(flag: bool, name: &str) -> QuackResult<()> {
-    if flag {
-        qp_bail_internal!("init flag `--{name}` is not yet supported")
-    }
-    Ok(())
+    init(InitOptions {
+        ctx,
+        at,
+        name,
+        as_venv: matches.get_flag("venv"),
+        expose_freezefile: matches.get_flag("expose-freezefile"),
+        local_storage: matches.get_flag("local-storage"),
+        ephemeral: matches.get_flag("ephemeral"),
+        git: !matches.get_flag("no-git"),
+        full: matches.get_flag("full"),
+    })
 }

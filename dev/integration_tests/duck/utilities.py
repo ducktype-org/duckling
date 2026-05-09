@@ -1,4 +1,6 @@
 import hashlib
+import os
+import subprocess
 import sys
 import filecmp
 from pathlib import Path
@@ -11,6 +13,9 @@ DEFAULT_SRC: Final[str] = """fun main() = {
     # builtin_output_string("Hello, world!");
     return 0;
 }
+"""
+
+DEFAULT_GITIGNORE: Final[str] = """.duck_build
 """
 
 
@@ -107,3 +112,42 @@ def assert_eq(lhs: Any, rhs: Any, msg: str | None = None) -> None:
 def check_src_from_root(root: Path):
     src = (root / "src" / "src.dmf").read_text()
     assert_eq(src, DEFAULT_SRC)
+
+
+def check_gitignore_from_root(root: Path):
+    gitignore = (root / ".gitignore").read_text()
+    assert_eq(gitignore, DEFAULT_GITIGNORE)
+
+
+def check_no_gitignore_from_root(root: Path):
+    gitignore = root / ".gitignore"
+    assert_eq(gitignore.exists(), False)
+
+
+def get_git_root(path: Path) -> Path | None:
+    """Return the git repository root path or None if not in a git repo."""
+    try:
+        result = subprocess.run(
+            ['git', 'rev-parse', '--show-toplevel'],
+            cwd=str(path),
+            capture_output=True,
+            text=True
+        )
+        if result.returncode == 0:
+            return Path(result.stdout.strip())
+    except (subprocess.SubprocessError, OSError):
+        pass
+    return None
+
+
+def is_git_root(root: Path) -> bool:
+    git_root = get_git_root(root)
+    return git_root is not None and git_root == Path(root).resolve()
+
+
+def check_is_git_root(root: Path):
+    assert_eq(is_git_root(root), True)
+
+
+def check_not_git_root(root: Path):
+    assert_eq(is_git_root(root), False)
