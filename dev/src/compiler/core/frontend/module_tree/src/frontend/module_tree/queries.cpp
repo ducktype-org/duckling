@@ -12,7 +12,6 @@
 #include <base/types/ints.hpp>
 
 #include <query_framework/context/context.hpp>
-#include <query_framework/query_errors.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 #include <string_id/string_id.hpp>
 
@@ -50,14 +49,14 @@ namespace compiler::frontend {
 			// Look up the dependency by alias in the current module's package.
 			// Uses getPackageDependencyByAlias so we register a dependency only on this specific
 			// (package, alias) edge instead of on every dependency of the package.
-			auto owner_pkg_id  = getModuleRef(from)->getPackageID().unlock(ctx).getPackageID();
+			auto owner_pkg_id  = getModuleRef(from)->getPackage().unlock(ctx).getID();
 			auto owner_pkg_opt = global_state::getPackageRefOpt(owner_pkg_id);
 			if (not owner_pkg_opt.has_value()) return {};
 
 			auto dep_locked_opt
 				= owner_pkg_opt.value()->getPackageDependencyByAlias(path.at(0)).unlock(ctx);
 			if_opt_some(dep_locked_opt, dep_locked) {
-				auto dep_pkg_id           = dep_locked.unlock(ctx).getPackageID();
+				auto dep_pkg_id           = dep_locked.unlock(ctx).getID();
 				auto dep_package_info_opt = global_state::getPackageRefOpt(dep_pkg_id);
 				if_opt_some(dep_package_info_opt, dep_package_info) {
 					current_module = dep_package_info->getRootModule().unlock(ctx).getID();

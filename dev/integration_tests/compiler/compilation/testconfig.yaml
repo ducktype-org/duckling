@@ -93,3 +93,4 @@ SubDirs:
   - imports
   - macros
   - diagnostics
+  - packages

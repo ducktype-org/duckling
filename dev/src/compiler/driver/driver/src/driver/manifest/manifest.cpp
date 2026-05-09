@@ -115,8 +115,7 @@ namespace compiler::driver {
 					);
 					result = base::BAD;
 				}
-				const base::StrID effective_alias
-					= dep.alias.isBad() ? dep.package_name : dep.alias;
+				const base::StrID effective_alias = dep.alias.copyValueOr(dep.package_name);
 				if (!dep_aliases.insert(effective_alias).second) {
 					report(
 						base::strConcat(

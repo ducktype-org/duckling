@@ -20,6 +20,8 @@
 namespace compiler::frontend::packages {
 
 	hashing::ComponentHash::HashType PackageInfo::computeHash(base::StrID package_id) {
+		// Only the package id participates in the hash for now: version and features are
+		// intentionally not included until query dependency tracking on them is implemented.
 		hashing::ComponentHash::HashAlg hasher;
 		hashing::addToHash(hasher, package_id);
 		return hasher.finalize();
@@ -35,12 +37,10 @@ namespace compiler::frontend::packages {
 		  m_version(version),
 		  m_features(std::move(features)),
 		  m_dependencies(std::move(dependencies)),
-		  m_hash(
-			  computeHash(getModuleRef(root_module)->getPackageID().illegalAccess().getPackageID())
-		  ) {}
+		  m_hash(computeHash(getModuleRef(root_module)->getPackage().illegalAccess().getID())) {}
 
 	base::StrID PackageInfo::getPackageID() const {
-		return getModuleRef(m_root_module)->getPackageID().illegalAccess().getPackageID();
+		return getModuleRef(m_root_module)->getPackage().illegalAccess().getID();
 	}
 
 	const hashing::ComponentHash::HashType& PackageInfo::getPackageHash() const { return m_hash; }
@@ -92,7 +92,7 @@ namespace compiler::frontend::packages {
 
 		return RawDependencyInfo{
 			.package_name = *name,
-			.alias        = alias.has_value() ? *alias : base::StrID(),
+			.alias        = alias,
 		};
 	}
 
@@ -186,7 +186,7 @@ namespace compiler::frontend::packages {
 		for (const auto& dependency: package_info.dependencies) {
 			package_dependencies.push_back(PackageDependencyInfo{
 				.package_id = dependency.package_name,
-				.alias      = dependency.alias.isBad() ? dependency.package_name : dependency.alias,
+				.alias      = dependency.alias.copyValueOr(dependency.package_name),
 			});
 		}
 

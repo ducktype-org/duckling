@@ -96,9 +96,7 @@ namespace compiler::frontend {
 	Ref<ModuleTree> ModuleTreeBuilder::createWithRandomPackageID(
 		const fs::File& root, const std::regex& file_reject, const std::regex& dir_reject
 	) {
-		return create(
-			root, base::StrID(base::generateRandomString(32).c_str()), file_reject, dir_reject
-		);
+		return create(root, base::StrID(base::generateRandomString(32)), file_reject, dir_reject);
 	}
 
 	ModuleTree::ModuleTree(): m_hash_recompute_mutex(base::makeBox<std::mutex>()) {}
@@ -132,7 +130,7 @@ namespace compiler::frontend {
 		return { getModuleID(), std::move(submodules) };
 	}
 
-	packages::PackageAccessLocked ModuleTree::getPackageID() const {
+	packages::PackageAccessLocked ModuleTree::getPackage() const {
 		return packages::PackageAccessLocked(m_package_id);
 	}
 
@@ -326,15 +324,14 @@ namespace compiler::frontend {
 
 			if (file.isDirectory()) {
 				// Handle subdirectory
-				if (!isDirectoryNameValid(base::StrID(file.name().c_str()), dir_reject)) continue;
+				if (!isDirectoryNameValid(base::StrID(file.name()), dir_reject)) continue;
 
 				// build sub-module from directory
 				base::Box<ModuleTreeBuilder> submodule_builder = ModuleTreeBuilder::create();
 				submodule_builder->buildFromDirectory(file, package_id, file_reject, dir_reject);
 				auto submodule = submodule_builder->finalize();
 				CORE_ASSERT(
-					submodule->getName() == base::StrID(file.name().c_str()),
-					"Submodule name does not match"
+					submodule->getName() == base::StrID(file.name()), "Submodule name does not match"
 				);
 
 				// Discards directories without main module file:
@@ -342,14 +339,14 @@ namespace compiler::frontend {
 				if (submodule->hasMainSourceFile()) addSubmodule(submodule);
 			} else {
 				// Handle regular file
-				if (!isFileNameValid(base::StrID(file.name().c_str()), file_reject)) continue;
+				if (!isFileNameValid(base::StrID(file.name()), file_reject)) continue;
 				handleNewFile(file);
 			}
 		}
 	}
 
 	void ModuleTreeBuilder::buildFromSingleFile(const fs::File& file, base::StrID package_id) {
-		base::StrID stem      = base::StrID(file.stem().c_str());
+		base::StrID stem      = base::StrID(file.stem());
 		std::string extension = file.extension();
 		CORE_ASSERT(
 			extension == LANG_MODULE_FILE,
@@ -373,7 +370,7 @@ namespace compiler::frontend {
 			addSourceFile(file);
 		} else if (extension == LANG_MODULE_FILE) {
 			// Module file
-			auto stem_id = base::StrID(stem.c_str());
+			auto stem_id = base::StrID(stem);
 
 			if (stem_id == m_name) {
 				setMainSourceFile(file);
@@ -402,7 +399,7 @@ namespace compiler::frontend {
 
 	base::Box<ModuleTreeBuilder> ModuleTreeBuilder::createWithRandomPackageID() {
 		base::Box<ModuleTreeBuilder> builder = ModuleTreeBuilder::create();
-		builder->setPackageID(base::StrID(base::generateRandomString(32).c_str()));
+		builder->setPackageID(base::StrID(base::generateRandomString(32)));
 		return builder;
 	}
 

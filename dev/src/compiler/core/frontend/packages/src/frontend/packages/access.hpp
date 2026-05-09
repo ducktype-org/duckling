@@ -82,7 +82,7 @@ namespace compiler::frontend::packages {
 		explicit PackageAccess(base::StrID package_id): m_package_id(package_id) {}
 
 	public:
-		[[nodiscard]] base::StrID getPackageID() const { return m_package_id; }
+		[[nodiscard]] base::StrID getID() const { return m_package_id; }
 	};
 
 	/**

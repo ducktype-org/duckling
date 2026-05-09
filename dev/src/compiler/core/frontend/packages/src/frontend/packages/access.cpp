@@ -1,7 +1,8 @@
 #include "access.hpp"
 
 #include "packages.hpp"
-#include "queries.hpp"
+
+#include <queries.hpp>
 
 #include <hashing/add_to_hash.hpp>
 #include <hashing/component_hash.hpp>

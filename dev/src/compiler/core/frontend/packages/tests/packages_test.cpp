@@ -48,7 +48,8 @@ private:
 		auto         dep  = RawDependencyInfo::fromJson(json, reporter.callback());
 		ASSERT_TRUE(dep.has_value());
 		ASSERT_EQUAL(dep->package_name.str(), std::string("dep"));
-		ASSERT_EQUAL(dep->alias.str(), std::string("alias"));
+		ASSERT_TRUE(dep->alias.has_value());
+		ASSERT_EQUAL(dep->alias.value().str(), std::string("alias"));
 		ASSERT_EQUAL(reporter.errors, 0);
 	}
 
@@ -116,8 +117,7 @@ private:
 			.version      = base::StrID("1.0.0"),
 			.package_path = main_file.getFilePath(),
 			.features     = { base::StrID("f1") },
-			.dependencies
-			= { RawDependencyInfo{ .package_name = base::StrID("dep"), .alias = base::StrID() } },
+			.dependencies = { RawDependencyInfo{ .package_name = base::StrID("dep"), .alias = {} } },
 		};
 
 		auto pkg_info = createPackageInfo(raw, reporter.callback());

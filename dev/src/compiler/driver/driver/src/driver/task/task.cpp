@@ -16,6 +16,23 @@
 namespace compiler::driver {
 
 	namespace task {
+		namespace {
+			void reportMissingPackageInTask(
+				base::StrID package_name, const DiagnosticReporter& report
+			) {
+				report(
+					base::strConcat(
+						"Package name provided in a compilation task was not found in the provided "
+						"package list. Package name: \"",
+						package_name.strView(),
+						"\""
+					),
+					std::string{},
+					true
+				);
+			}
+		}
+
 		base::Optional<compiler::frontend::ModuleID> getRootModuleIDForRawPackageName(
 			base::StrID package_name, const DiagnosticReporter& report
 		) {
@@ -23,7 +40,7 @@ namespace compiler::driver {
 				if (global_package_info.getPackageID() == package_name)
 					return global_package_info.getRootModule().illegalAccess().getID();
 
-			diagnostics::reportMissingPackageInTask(package_name, report);
+			reportMissingPackageInTask(package_name, report);
 			return {};
 		}
 	}  // namespace task
@@ -52,11 +69,12 @@ namespace compiler::driver {
 		BuildTarget build_target;
 
 		if (strategy && strategy->view() == "dvm") {
-			auto output = js::getStringIfPresent(
-				json, "output_file", "DVM task output_file must be a string", report
-			);
+			auto output
+				= js::getString(json, "output_file", "DVM task requires an output file!", report);
+			if (!output) had_error = true;
+
 			build_target = BuildTargetDVM{
-				.output_file_stem = output.has_value() ? *output : base::StrID("package_dvm"),
+				.output_file_stem = output ? *output : base::StrID("package_dvm"),
 			};
 		} else if (strategy && strategy->view() == "native") {
 			auto output
@@ -142,6 +160,8 @@ namespace compiler::driver {
 				.output_file_stem = output ? *output : base::StrID(),
 				.linking_options  = std::move(linking_options),
 			};
+		} else if (strategy && strategy->view() == "obj") {
+			build_target = BuildTargetLLVM{};
 		} else if (strategy && strategy->view() == "lib") {
 			auto output
 				= js::getString(json, "output_file", "Lib task requires an output file!", report);
@@ -197,7 +217,7 @@ namespace compiler::driver {
 		} else if (strategy) {
 			report(
 				base::strConcat("Unknown task strategy: \"", strategy->str(), "\""),
-				R"(Expected "dvm", "native", or "lib".)",
+				R"(Expected "dvm", "native", "obj", or "lib".)",
 				true
 			);
 			had_error = true;

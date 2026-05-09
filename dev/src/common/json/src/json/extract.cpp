@@ -4,17 +4,13 @@
 
 namespace js {
 
-	namespace {
-		std::string keyString(std::string_view key) { return std::string{ key }; }
-	}
-
 	bool isObject(const nlohmann::json& j) noexcept { return j.is_object(); }
 
 	std::expected<base::StrID, JsonExtractError> extractString(
 		const nlohmann::json& j, std::string_view key
 	) {
 		if (!j.is_object()) return std::unexpected(JsonExtractError::NotAnObject);
-		const auto k = keyString(key);
+		const std::string k{ key };
 		if (!j.contains(k)) return std::unexpected(JsonExtractError::MissingKey);
 		if (!j.at(k).is_string()) return std::unexpected(JsonExtractError::WrongType);
 		return base::StrID(j.at(k).get<std::string>());
@@ -22,7 +18,7 @@ namespace js {
 
 	std::expected<bool, JsonExtractError> extractBool(const nlohmann::json& j, std::string_view key) {
 		if (!j.is_object()) return std::unexpected(JsonExtractError::NotAnObject);
-		const auto k = keyString(key);
+		const std::string k{ key };
 		if (!j.contains(k)) return std::unexpected(JsonExtractError::MissingKey);
 		if (!j.at(k).is_boolean()) return std::unexpected(JsonExtractError::WrongType);
 		return j.at(k).get<bool>();
@@ -32,7 +28,7 @@ namespace js {
 		const nlohmann::json& j, std::string_view key
 	) {
 		if (!j.is_object()) return std::unexpected(JsonExtractError::NotAnObject);
-		const auto k = keyString(key);
+		const std::string k{ key };
 		if (!j.contains(k)) return std::unexpected(JsonExtractError::MissingKey);
 		const auto& node = j.at(k);
 		if (!node.is_array()) return std::unexpected(JsonExtractError::WrongType);
@@ -46,7 +42,7 @@ namespace js {
 		const nlohmann::json& j, std::string_view key
 	) {
 		if (!j.is_object()) return std::unexpected(JsonExtractError::NotAnObject);
-		const auto k = keyString(key);
+		const std::string k{ key };
 		if (!j.contains(k)) return std::unexpected(JsonExtractError::MissingKey);
 		if (!j.at(k).is_object()) return std::unexpected(JsonExtractError::WrongType);
 		return j.at(k);

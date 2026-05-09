@@ -65,10 +65,12 @@ namespace compiler::frontend::packages {
 		 */
 		[[nodiscard]] compiler::frontend::ModuleAccessLocked getRootModule() const;
 
-		/** @brief Version of the package (currently informational). */
+		/** @brief Version of the package (currently informational, requires query dependency
+		 * tracking). */
 		[[nodiscard]] base::StrID getVersion() const;
 
-		/** @brief Feature flags advertised by the package (currently informational). */
+		/** @brief Feature flags advertised by the package (currently informational, requires query
+		 * dependency tracking). */
 		[[nodiscard]] base::CRef<std::vector<base::StrID>> getFeatures() const;
 
 		/**
@@ -109,8 +111,9 @@ namespace compiler::frontend::packages {
 		/** @brief The name of the dependency package. Used as @c package_id later. */
 		base::StrID package_name;
 
-		/** @brief Alias of the dependency used in importing code. */
-		base::StrID alias;
+		/** @brief Alias of the dependency used in importing code. Empty if no explicit alias was
+		 * provided (defaults to @c package_name). */
+		base::Optional<base::StrID> alias;
 
 		/**
 		 * @brief Parse a dependency entry from JSON.
@@ -154,6 +157,7 @@ namespace compiler::frontend::packages {
 	/**
 	 * @brief Resolve a RawPackageInfo into a PackageInfo by loading its module tree.
 	 * Pure — does not log; routes errors via @p report.
+	 * @return The loaded PackageInfo or empty if an error was reported.
 	 */
 	base::Optional<PackageInfo> createPackageInfo(
 		const RawPackageInfo& package_info, const DiagnosticReporter& report

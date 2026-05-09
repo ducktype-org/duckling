@@ -26,7 +26,7 @@ private:
 		const std::string& source_code, base::Optional<frontend::ModuleID> parent = {}
 	) {
 		auto builder = frontend::ModuleTreeBuilder::create();
-		builder->setPackageID(base::StrID(base::generateRandomString(32).c_str()));
+		builder->setPackageID(base::StrID(base::generateRandomString(32)));
 
 		auto virtual_file = fs::FileManager::createRandomVirtualFile(source_code);
 		builder->setMainSourceFile(virtual_file);

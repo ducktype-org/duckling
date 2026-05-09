@@ -1,6 +1,6 @@
 #pragma once
 
-#include "access.hpp"
+#include <frontend/packages/access.hpp>
 
 #include <query_framework/input_query/query_input.hpp>
 #include <query_framework/query_metadata/declare_metadata.hpp>

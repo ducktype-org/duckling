@@ -161,7 +161,7 @@ namespace compiler::frontend {
 		 * QueryPackageSideInput dependency on the owning package; outside of queries use
 		 * illegalAccess to obtain the raw package id.
 		 */
-		[[nodiscard]] packages::PackageAccessLocked getPackageID() const;
+		[[nodiscard]] packages::PackageAccessLocked getPackage() const;
 
 		/**
 		 * Check if this module is a REPL-generated module.

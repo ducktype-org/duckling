@@ -525,12 +525,8 @@ private:
 			// std::cout << root_mod->getParentModule().value()->getName().strView() << '\n';
 			//  Change package ID for root module
 			ModuleTreeModifier::changePackageID(root_mod, base::StrID("new_package_id"));
-			ASSERT_EQUAL(
-				"new_package_id", root_mod->getPackageID().illegalAccess().getPackageID().strView()
-			);
-			ASSERT_EQUAL(
-				"new_package_id", sub_mod->getPackageID().illegalAccess().getPackageID().strView()
-			);
+			ASSERT_EQUAL("new_package_id", root_mod->getPackage().illegalAccess().getID().strView());
+			ASSERT_EQUAL("new_package_id", sub_mod->getPackage().illegalAccess().getID().strView());
 		}
 	}
 

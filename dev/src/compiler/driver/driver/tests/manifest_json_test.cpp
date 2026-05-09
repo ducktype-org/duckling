@@ -41,13 +41,7 @@ private:
 
 	void clearLogger() { logger().clear(); }
 
-	bool hasWarning() {
-		std::vector<base::CRef<dia_int::dia_args::Diagnostic>> diags;
-		logger().collectDiagnostics(diags);
-		for (const auto& d: diags)
-			if (d->main_message.metadata.type == "warning") return true;
-		return false;
-	}
+	bool hasWarning() { return logger().warningCount() > 0; }
 
 	// ------------------------------------------------------------
 
@@ -76,7 +70,8 @@ private:
             "tasks": [
                 {
                     "package": "app",
-                    "strategy": "dvm"
+                    "strategy": "dvm",
+                    "output_file": "bin/app_dvm"
                 }
             ]
         })");
@@ -171,6 +166,7 @@ private:
                 {
                     "package": "app",
                     "strategy": "dvm",
+                    "output_file": "bin/app_dvm",
                     "name": "build_app"
                 }
             ]

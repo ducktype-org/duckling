@@ -848,9 +848,9 @@ namespace compiler::driver {
 						CORE_USER_LOG(
 							"Linking for package "
 							+ compiler::frontend::getModuleRef(task.root_module)
-								  ->getPackageID()
+								  ->getPackage()
 								  .illegalAccess()
-								  .getPackageID()
+								  .getID()
 								  .str()
 							+ " failed!\n"
 						);
@@ -873,9 +873,9 @@ namespace compiler::driver {
 						CORE_USER_LOG(
 							"Archiving for package "
 							+ compiler::frontend::getModuleRef(task.root_module)
-								  ->getPackageID()
+								  ->getPackage()
 								  .illegalAccess()
-								  .getPackageID()
+								  .getID()
 								  .str()
 							+ " failed!\n"
 						);
