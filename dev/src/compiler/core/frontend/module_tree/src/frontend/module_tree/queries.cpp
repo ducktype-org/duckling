@@ -65,7 +65,7 @@ namespace compiler::frontend {
 			// Look up the dependency by alias in the current module's package.
 			// Uses getPackageDependencyByAlias so we register a dependency only on this specific
 			// (package, alias) edge instead of on every dependency of the package.
-			auto owner_pkg_id = getModuleRef(from)->getPackageID().unlock(ctx).getPackageID();
+			auto owner_pkg_id  = getModuleRef(from)->getPackageID().unlock(ctx).getPackageID();
 			auto owner_pkg_opt = getPackageInfo(owner_pkg_id);
 			if (not owner_pkg_opt.has_value()) return {};
 

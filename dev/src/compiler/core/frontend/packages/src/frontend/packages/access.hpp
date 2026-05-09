@@ -24,7 +24,7 @@ namespace compiler::frontend::packages {
 		hashing::ComponentHash::HashType package_hash;
 
 		[[nodiscard]] query::QueryStableHash queryStablePerfectHash() const;
-		bool                                 operator==(const KeyOf_PackageSideInput&) const = default;
+		bool operator==(const KeyOf_PackageSideInput&) const = default;
 	};
 
 	/**
@@ -44,8 +44,8 @@ namespace compiler::frontend::packages {
 		[[nodiscard]] query::QueryStableHash queryStablePerfectHash() const;
 		bool operator==(const KeyOf_PackageDependencyAliasSideInput&) const = default;
 
-		[[nodiscard]] std::vector<std::byte>          serialize() const;
-		static KeyOf_PackageDependencyAliasSideInput  deserialize(std::span<const std::byte> data);
+		[[nodiscard]] std::vector<std::byte>         serialize() const;
+		static KeyOf_PackageDependencyAliasSideInput deserialize(std::span<const std::byte> data);
 
 		void prettyPrint(std::ostream& os) const;
 	};
@@ -115,7 +115,8 @@ namespace compiler::frontend::packages {
 			  m_alias(alias),
 			  m_package(package) {}
 
-		[[nodiscard]] base::StrID         getAlias() const { return m_alias; }
+		[[nodiscard]] base::StrID getAlias() const { return m_alias; }
+
 		[[nodiscard]] PackageAccessLocked getPackage() const { return m_package; }
 	};
 

@@ -40,7 +40,7 @@ namespace compiler::frontend::packages {
 
 	std::vector<std::byte> KeyOf_PackageDependencyAliasSideInput::serialize() const {
 		std::vector<std::byte> data;
-		auto hash_ptr = reinterpret_cast<const std::byte*>(&package_hash);
+		auto                   hash_ptr = reinterpret_cast<const std::byte*>(&package_hash);
 		data.insert(data.end(), hash_ptr, hash_ptr + sizeof(hashing::ComponentHash::HashType));
 
 		auto append_str = [&](base::StrID s) {
@@ -126,30 +126,32 @@ namespace compiler::frontend::packages {
 		query::Context& ctx
 	) const {
 		ctx.query<QueryPackageDependencyCountSideInput>(
-			KeyOf_PackageDependencyCountSideInput::computeHash(m_owner_package_id, m_dependencies.size())
+			KeyOf_PackageDependencyCountSideInput::computeHash(
+				m_owner_package_id, m_dependencies.size()
+			)
 		);
 		return m_dependencies;
 	}
 
-	std::vector<PackageDependencyAccessLocked> PackageDependenciesAccessLocked::illegalAccess() const {
+	std::vector<PackageDependencyAccessLocked> PackageDependenciesAccessLocked::illegalAccess(
+	) const {
 		return m_dependencies;
 	}
 
 	PackageAccess PackageAccessLocked::unlock(query::Context& ctx) const {
-		ctx.query<QueryPackageSideInput>(KeyOf_PackageSideInput{ PackageInfo::computeHash(m_package_id)
-		});
+		ctx.query<QueryPackageSideInput>(KeyOf_PackageSideInput{
+			PackageInfo::computeHash(m_package_id) });
 		return PackageAccess(m_package_id);
 	}
 
-	base::Optional<PackageAccessLocked> PackageDependencyAliasAccessLocked::unlock(
-		query::Context& ctx
+	base::Optional<PackageAccessLocked> PackageDependencyAliasAccessLocked::unlock(query::Context& ctx
 	) const {
 		ctx.query<QueryPackageDependencyAliasSideInput>(KeyOf_PackageDependencyAliasSideInput{
-			.package_hash      = PackageInfo::computeHash(m_owner_package_id),
-			.alias             = m_alias,
-			.found             = m_dependency_package_id.has_value(),
-			.target_package_id = m_dependency_package_id.has_value() ? *m_dependency_package_id
-			                                                         : base::StrID(),
+			.package_hash = PackageInfo::computeHash(m_owner_package_id),
+			.alias        = m_alias,
+			.found        = m_dependency_package_id.has_value(),
+			.target_package_id
+			= m_dependency_package_id.has_value() ? *m_dependency_package_id : base::StrID(),
 		});
 		if (!m_dependency_package_id.has_value()) return {};
 		return PackageAccessLocked(*m_dependency_package_id);
