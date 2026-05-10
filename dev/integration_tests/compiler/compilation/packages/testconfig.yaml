@@ -1,28 +1,27 @@
-# Tests for imports
+# Multi-package compilation tests.
+#
+# Exercises `duckc compile_packages` driven by a JSON manifest:
+# multiple packages, mixed strategies (lib/.a, dvm/.dbc, native/.exe),
+# linker + archiver options, all in one invocation.
+# DVM artifacts are produced but not executed (DVM execution not yet hooked up
+# for multi-package output).
+
+compile_deterministically_cmd: "if [ '@{enable_conc_deterministic_tests}' = 'true' ]; then python3 @{compile_determinism_script} --duckc-path @{duckc_path} --manifest duck_modules/@{Name}/manifest.json --duckc-worker-count @{duckc_worker_count}; else true; fi"
+compile_only_cmd:  "@{duckc_path} compile_packages duck_modules/@{Name}/manifest.json -w @{duckc_worker_count} -a build"
+
+
+PreCase: "@{clean_cmd} && mkdir build && @{compile_deterministically_cmd} && @{compile_only_cmd}"
+
+# Run only LLVM executables; DVM run is intentionally skipped.
+Run: "./build/app1.exe && ./build/app2.exe"
 
 Tests:
-  named_simple_imports:
+  multi_package:
     Cases:
-      llvm:
+      all:
+        # Backend value is unused (PreCase and Run are both overridden), but
+        # the parent schema requires a non-empty backend.
         backend: llvm
         Output:
-          String: "1\n"
-        ExitCode: 0
-      dvm:
-        backend: dvm
-        Output:
-          String: "1\n"
-        ExitCode: 0
-
-  unnamed_simple_imports:
-    Cases:
-      llvm:
-        backend: llvm
-        Output:
-          String: "1\n"
-        ExitCode: 0
-      dvm:
-        backend: dvm
-        Output:
-          String: "1\n"
+          String: "10\n15\n20\n"
         ExitCode: 0

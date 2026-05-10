@@ -714,8 +714,15 @@ namespace compiler::driver {
 
 		std::vector<ModuleToCompile> modules_to_compile;
 
+		// Per-backend artifact maps: a single package may have both LLVM tasks
+		// (lib/native) and a DVM task, in which case both backends compile the
+		// same modules. Mixing .o (LLVM) and .dbc (DVM) artifacts in one vector
+		// would feed the DVM linker .o files (and vice versa), so the maps are
+		// keyed separately by backend.
 		base::HashMap<frontend::ModuleID, std::vector<artifacts::FileArtifact>>
-			objects_by_root_module;
+			llvm_objects_by_root_module;
+		base::HashMap<frontend::ModuleID, std::vector<artifacts::FileArtifact>>
+			dvm_objects_by_root_module;
 
 		std::function<void(frontend::ModuleID, BackendType, frontend::ModuleID)> collect_modules
 			= [&](frontend::ModuleID module_id, BackendType backend, frontend::ModuleID root_module
@@ -793,6 +800,9 @@ namespace compiler::driver {
 		for (auto& [module, handle]: compile_handles) {
 			auto module_result = query::awaitEntryPoint<CompileModule>(handle);
 			if (module_result->hasValue()) {
+				auto& objects_by_root_module = module.backend == BackendType::DVM
+				                                 ? dvm_objects_by_root_module
+				                                 : llvm_objects_by_root_module;
 				objects_by_root_module
 					.put(module.root_module, std::vector<artifacts::FileArtifact>())
 					.first->second.emplace_back(module_result->valueOrPanic().object_art);
@@ -834,13 +844,13 @@ namespace compiler::driver {
 							base::strConcat(target_exe.output_file_stem.strView(), ".exe").c_str()
 						));
 
-					objects_by_root_module.atMaybe(task.root_module)
+					llvm_objects_by_root_module.atMaybe(task.root_module)
 						.value()
 						->push_back(emitBuiltinLLVMObjectFile());
 
 					auto linking_result = linker::linkExecutable(
 						output_file,
-						objects_by_root_module.at(task.root_module),
+						llvm_objects_by_root_module.at(task.root_module),
 						target_exe.linking_options
 					);
 
@@ -865,7 +875,7 @@ namespace compiler::driver {
 
 					auto archive_result = archiver::createArchive(
 						output_file,
-						*objects_by_root_module.atMaybe(task.root_module).value(),
+						*llvm_objects_by_root_module.atMaybe(task.root_module).value(),
 						target_lib.archiving_options
 					);
 
@@ -890,7 +900,7 @@ namespace compiler::driver {
 						= debug_info_artifacts_by_root_module.atMaybe(task.root_module);
 
 					if (linkDVMPackage(
-							*objects_by_root_module.atMaybe(task.root_module).value(),
+							*dvm_objects_by_root_module.atMaybe(task.root_module).value(),
 							debug_info_opt.has_value() ? *debug_info_opt.value()
 													   : std::vector<artifacts::FileArtifact>(),
 							std::string(target_dvm.output_file_stem.strView())

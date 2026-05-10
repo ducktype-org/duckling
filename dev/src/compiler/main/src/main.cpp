@@ -581,7 +581,8 @@ clah::Clah getClahForMain() {
 					auto manifest_file = options.getPositional<fs::File>(0);
 					auto worker_count  = options.getValue<i64>("workers").copyValueOr(1);
 
-					auto file_content = manifest_file.getContent().view();
+					auto manifest_content = manifest_file.getContent();
+					auto file_content     = manifest_content.view();
 
 					nlohmann::json manifest_json;
 					try {

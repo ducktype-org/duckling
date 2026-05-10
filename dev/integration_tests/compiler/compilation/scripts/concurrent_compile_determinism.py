@@ -156,11 +156,14 @@ def remove_files(paths: list[Path]) -> None:
 
 
 # Collects sha256 hashes for produced object/bytecode artifacts.
-def collect_artifact_snapshot(build_dir: Path) -> dict[str, str]:
+def collect_artifact_snapshot(build_dir: Path, suffixes: set[str] | None = None) -> dict[str, str]:
     if not build_dir.exists():
         return {}
 
-    files = sorted(file for file in build_dir.rglob("*") if file.is_file() and file.suffix in {".o", ".dbc"})
+    if suffixes is None:
+        suffixes = {".o", ".dbc"}
+
+    files = sorted(file for file in build_dir.rglob("*") if file.is_file() and file.suffix in suffixes)
     snapshot: dict[str, str] = {}
     for file in files:
         rel = file.relative_to(build_dir).as_posix()
@@ -199,10 +202,15 @@ def parse_args() -> argparse.Namespace:
         )
     )
     parser.add_argument("--duckc-path", required=True)
-    parser.add_argument("--module-name", required=True)
+    source_group = parser.add_mutually_exclusive_group(required=True)
+    source_group.add_argument("--module-name", help="Single-package mode: name of the package under duck_modules/.")
+    source_group.add_argument("--manifest", help="Manifest mode: path to a compile_packages JSON manifest.")
     parser.add_argument("--duckc-worker-count", type=int, required=True)
     parser.add_argument("--compile-options", default="")
-    parser.add_argument("--backend", choices=["dvm", "llvm"], required=True)
+    # In manifest mode the backend is determined per-task by the manifest, so
+    # --backend is optional there. Kept required-ish for compatibility: when
+    # provided in manifest mode it is silently ignored.
+    parser.add_argument("--backend", choices=["dvm", "llvm"])
     parser.add_argument("--copy-count", type=int, default=3)
     return parser.parse_args()
 
@@ -211,6 +219,131 @@ def parse_args() -> argparse.Namespace:
 def clean_build_dir(build_dir: Path) -> None:
     shutil.rmtree(build_dir, ignore_errors=True)
     build_dir.mkdir(parents=True, exist_ok=True)
+
+
+# Executes duckc compile_packages on a manifest and captures process output.
+def compile_packages_manifest(
+    duckc_path: str,
+    manifest_path: str,
+    workers: int,
+    compile_options: str,
+) -> tuple[int, str, str]:
+    command = [
+        duckc_path,
+        "compile_packages",
+        manifest_path,
+        "-w",
+        str(workers),
+        "-a",
+        "build",
+    ]
+
+    if compile_options.strip():
+        command.extend(shlex.split(compile_options))
+
+    result = subprocess.run(command, capture_output=True, text=True)
+    return result.returncode, result.stdout, result.stderr
+
+
+# Runs one compile_packages pass and returns success flag, snapshot and error details.
+def run_once_manifest(
+    duckc_path: str,
+    manifest_path: str,
+    workers: int,
+    compile_options: str,
+    build_dir: Path,
+) -> tuple[bool, dict[str, str], str]:
+    clean_build_dir(build_dir)
+    code, out, err = compile_packages_manifest(
+        duckc_path=duckc_path,
+        manifest_path=manifest_path,
+        workers=workers,
+        compile_options=compile_options,
+    )
+    if code != 0:
+        details = (
+            f"compile_packages failed for workers={workers} (exit code {code})\n"
+            f"stdout:\n{out}\n"
+            f"stderr:\n{err}\n"
+        )
+        return False, {}, details
+
+    # In manifest mode tasks may emit .o, .dbc, .a, .exe — hash them all.
+    snapshot = collect_artifact_snapshot(build_dir, {".o", ".dbc", ".a", ".exe"})
+    return True, snapshot, ""
+
+
+# Manifest-mode determinism check: compile_packages with 1 vs N workers,
+# diff produced artifacts. Skips the source-duplication trick used in
+# single-package mode (multi-package manifests already provide enough
+# parallelism to exercise worker scheduling).
+def run_manifest_mode(args: argparse.Namespace) -> int:
+    manifest_path = Path(args.manifest)
+    if not manifest_path.exists():
+        print(
+            f"[determinism-check] Manifest not found: {manifest_path}",
+            file=sys.stderr,
+        )
+        return 1
+
+    concurrent_workers = args.duckc_worker_count if args.duckc_worker_count > 1 else 3
+    build_dir = Path("build")
+
+    ok_single, single_snapshot, single_error = run_once_manifest(
+        duckc_path=args.duckc_path,
+        manifest_path=str(manifest_path),
+        workers=1,
+        compile_options=args.compile_options,
+        build_dir=build_dir,
+    )
+    if not ok_single:
+        print(
+            "[determinism-check] Compilation failed (single-worker pass).\n" + single_error,
+            file=sys.stderr,
+        )
+        shutil.rmtree(build_dir, ignore_errors=True)
+        return 1
+
+    ok_concurrent, concurrent_snapshot, concurrent_error = run_once_manifest(
+        duckc_path=args.duckc_path,
+        manifest_path=str(manifest_path),
+        workers=concurrent_workers,
+        compile_options=args.compile_options,
+        build_dir=build_dir,
+    )
+    if not ok_concurrent:
+        print(
+            "[determinism-check] Compilation failed (concurrent pass).\n" + concurrent_error,
+            file=sys.stderr,
+        )
+        shutil.rmtree(build_dir, ignore_errors=True)
+        return 1
+
+    if not single_snapshot and not concurrent_snapshot:
+        print(
+            "[determinism-check] No compiled artifacts were produced; cannot perform determinism check.\n"
+            "Expected at least one .o/.dbc/.a/.exe artifact.",
+            file=sys.stderr,
+        )
+        shutil.rmtree(build_dir, ignore_errors=True)
+        return 1
+
+    diffs = diff_snapshots(single_snapshot, concurrent_snapshot)
+    shutil.rmtree(build_dir, ignore_errors=True)
+
+    if diffs:
+        print(
+            "[determinism-check] Compilation is not deterministic and did not compile consistently.\n"
+            + "\n".join(diffs),
+            file=sys.stderr,
+        )
+        return 1
+
+    print(
+        "[determinism-check] Deterministic artifacts verified for manifest "
+        f"'{manifest_path}' (workers 1 vs {concurrent_workers})."
+    )
+    return 0
 
 
 # Executes duckc compile_package and captures process output.
@@ -281,6 +414,16 @@ def main() -> int:
         return 1
     if args.copy_count < 1:
         print("[determinism-check] Invalid copy count (must be >= 1).", file=sys.stderr)
+        return 1
+
+    if args.manifest:
+        return run_manifest_mode(args)
+
+    if not args.backend:
+        print(
+            "[determinism-check] --backend is required in single-package mode.",
+            file=sys.stderr,
+        )
         return 1
 
     package_dir = Path("duck_modules") / args.module_name
