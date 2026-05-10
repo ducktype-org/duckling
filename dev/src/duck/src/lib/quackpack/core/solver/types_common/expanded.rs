@@ -12,6 +12,7 @@ use crate::quackpack::core::solver::gathering::fetch_types::{
 use crate::quackpack::core::solver::types_common::{InternedLocation, Location};
 use crate::quackpack::core::version::CompatibilityCheck;
 use crate::quackpack::core::{BranchOrTag, Dependency, Registry, Source, Version};
+use crate::util::extract::Extract;
 use crate::{QuackResult, QuackResultContext, StrId, qp_bail_internal};
 
 static INTERNED_EXPANDED_LOCATION_CACHE: OnceLock<Mutex<HashSet<&'static ExpandedLocation>>> =
@@ -28,17 +29,7 @@ impl InternedExpandedLocation {
         let mut cache = INTERNED_EXPANDED_LOCATION_CACHE
             .get_or_init(Default::default)
             .lock()
-            // NOTE: `.unwrap()` should never panic: from docs:
-            // Errors
-            //
-            // If another user of this mutex panicked while holding the mutex,
-            // then this call will return an error once the mutex is acquired.
-            // The acquired mutex guard will be contained in the returned error.
-            //
-            // Panics
-            //
-            // This function might panic when called if the lock is already held by the current thread.
-            .unwrap();
+            .extract();
         let reference = cache.get(&source).copied().unwrap_or_else(|| {
             let static_ref = Box::leak(Box::new(source));
             cache.insert(static_ref);
