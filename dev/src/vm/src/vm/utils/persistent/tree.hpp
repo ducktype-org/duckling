@@ -173,7 +173,7 @@ namespace vm::persistent::detail {
 
 				posT pos = (left_pos >> final_height);
 				ans.emplace_back(pos);
-				left_idx += (posT(1) << final_height);
+				left_idx += (idxT(1) << final_height);
 			}
 
 			return ans;
@@ -183,6 +183,7 @@ namespace vm::persistent::detail {
 		 * @brief Helper struct for moving around th tree, with built-in support for tree-rebuilding
 		 * @note this is to avoid non-trivial recursion and make a more generic code
 		 * @note reconstruction will only happen if the segTreeT is not const-qualified
+		 * @tparam segTreeT underlying inner type of the ptr to memory. Passed explicitly to determine qualifiers
 		 */
 		template<typename segTreeT>
 		requires SameWNoQual<SegmentTree, segTreeT> struct SurroundingNeigh {
@@ -624,7 +625,7 @@ namespace vm::persistent::detail {
 		 * @note idxs must be sorted from left to right
 		 * @note this function is never const (use Path for iterating over unmutable memory)
 		 */
-		NodeID reconstructIdxs(NodeID root, std::deque<idxT> idxs, LeafBuilder constructor) {
+		NodeID reconstructIdxs(NodeID root, std::deque<idxT> idxs, const LeafBuilder& constructor) {
 			if (idxs.empty()) return root;
 
 			for (auto& idx: idxs)
@@ -687,14 +688,14 @@ namespace vm::persistent::detail {
 		 */
 		template<typename ResT, typename SelfT>
 		ResT rebuildFromTwo(
-			this SelfT&& st, NodeID root_1, NodeID root_2, MergeBuilder<ResT> merge_policy
+			this SelfT& st, NodeID root_1, NodeID root_2, MergeBuilder<ResT> merge_policy
 		) requires ValidSignature<SelfT, ResT> {
 			using BaseT = std::conditional_t<
 				std::is_const_v<std::remove_reference_t<SelfT>>,
 				const SegmentTree,
 				SegmentTree>;
 
-			auto&& obj = static_cast<BaseT&>(st);
+			auto& obj = static_cast<BaseT&>(st);
 
 			static constexpr bool RECONSTRUCT = std::is_same_v<ResT, NodeID>;
 
@@ -888,7 +889,7 @@ namespace vm::persistent::detail {
 		 */
 		template<typename ResT, typename SelfT>
 		ResT rebuildWithRange(
-			this SelfT&&       st,
+			this SelfT&       st,
 			NodeID             root,
 			idxT               left_idx,
 			idxT               right_idx,

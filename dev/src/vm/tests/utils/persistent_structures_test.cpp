@@ -8,9 +8,100 @@
 
 #include <array>
 #include <string>
+#include <unordered_map>
 #include <utility>
+#include <vector>
 
 class PersistentStlTester: public tester::TestSuite {
+	template<typename Val>
+	struct dummyPersistentVec {
+		std::unordered_map<usize, std::vector<Val>> dict = { 0, {} };
+
+		usize emplace(const std::vector<Val>& inp) {
+			for (auto& [id, vec]: dict)
+				if (vec == inp) return id;
+
+			usize new_id = dict.size();
+			dict.emplace(new_id, inp);
+
+			return new_id;
+		}
+
+		usize push(usize id, const Val& v) {
+			CORE_ASSERT(dict.contains(id), "must be valid id");
+			auto cpy = dict.at(id);
+			cpy.push_back(v);
+
+			return emplace(cpy);
+		}
+
+		usize pop(usize id, usize how_many = 1) {
+			CORE_ASSERT(dict.contains(id), "must be valid id");
+			auto cpy = dict.at(id);
+
+			CORE_ASSERT(cpy.size() >= how_many, "vec must be big enough");
+			for (usize i = 0; i < how_many; i++) cpy.pop_back();
+
+			return emplace(cpy);
+		}
+
+		usize change(usize id, usize idx, const Val& v) {
+			CORE_ASSERT(dict.contains(id), "must be valid id");
+			auto cpy = dict.at(id);
+			CORE_ASSERT(idx < cpy.size(), "we require valid idx");
+			cpy.at(idx) = v;
+
+			return emplace(cpy);
+		}
+	};
+
+	template<typename Key, typename Val>
+	struct dummyPersistentMap {
+		std::unordered_map<usize, base::HashMap<Key, Val>> dict = { 0, {} };
+
+		usize emplace(const base::HashMap<Key, Val>& inp) {
+			for (auto& [id, map]: dict)
+				if (map == inp) return id;
+
+			usize new_id = dict.size();
+			dict.emplace(new_id, inp);
+
+			return new_id;
+		}
+
+		usize insert(usize id, const Key& k, const Val& v) {
+			CORE_ASSERT(dict.contains(id), "must be valid id");
+			auto cpy  = dict.at(id);
+			cpy.at(k) = v;
+
+			return emplace(cpy);
+		}
+
+		usize erase(usize id, const Key& k) {
+			CORE_ASSERT(dict.contains(id), "must be valid id");
+			auto cpy = dict.at(id);
+			cpy.erase(k);
+
+			return emplace(cpy);
+		}
+
+		bool contains(usize id, const Key& k) const {
+			CORE_ASSERT(dict.contains(id), "must be valid id");
+			return dict.at(id).contains(k);
+		}
+
+		std::pair<bool, usize> emplace(usize id, const Key& k, const Val& v) {
+			CORE_ASSERT(dict.contains(id), "must be valid id");
+			auto cpy      = dict.at(id);
+			auto [suc, _] = cpy.emplace(k, v);
+
+			if (!suc) return { false, id };
+
+			usize new_id = emplace(cpy);
+			return { true, new_id };
+		}
+	};
+
 #undef TESTER_CLASS
 #define TESTER_CLASS PersistentStlTester
 
@@ -62,8 +153,10 @@ public:
 		using namespace vm::persistent;
 		Memory mem{};
 
-		auto checker = [&](MemoryStateID state, std::vector<std::pair<usize, usize>> expected
-		               ) -> void { ASSERT_EQUAL(expected, mem.toVec(state)); };
+		auto checker
+			= [&](MemoryStateID state, std::vector<std::pair<usize, usize>> expected) -> void {
+			ASSERT_EQUAL(expected, mem.toVec(state));
+		};
 
 		auto empt = Memory::EMPTY;
 		checker(empt, {});
