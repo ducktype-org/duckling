@@ -19,11 +19,10 @@ namespace vm::persistent {
 	 * @brief Class implementing a STL vector with time-persistency aka control version. You can
 	 * modify any of the previous instances of the vector, by using `VectorStateID`.
 	 *
-	 * @note Implementation based of persistent segment tree.
-	 * @note Allows for (==) comparison of two instances with ArrayStateID in O(1)
-	 * @note Held values are constructed only once, and nodes hold their id's. This is to allow for
-	 * quick construction of leaf elements and to avoid any assumptions about the hash function of
-	 * values.
+	 * @note Implementation based of persistent memory.
+	 * @note two VectorStateID's are equal if and only if corresponding vectors are the same (same
+	 size and same values on same idxs)
+	 * @note Held values are constructed only once, and nodes hold their id's.
 	 *
 	 * @tparam VarT type held in the vector
 	 * @tparam VarH hash object for VarT
@@ -33,14 +32,20 @@ namespace vm::persistent {
 		detail::BijectiveMap<VarT, usize, VarH> held_values{};
 		usize                                   next_val_id = 0;
 
+		// casting memory state to vector state
 		constexpr static VectorStateID toVecState(MemoryStateID state) {
 			return VectorStateID{ u64(state) };
 		}
 
+		// casting vector state to underlying memory state
 		constexpr static MemoryStateID toMemState(VectorStateID state) {
 			return MemoryStateID{ u64(state) };
 		}
 
+		/**
+		 * @brief basic method for validating vector state
+		 * @return passed state transformed to MemoryStateID
+		 */
 		MemoryStateID validateState(VectorStateID vec_state) const {
 			auto  state = toMemState(vec_state);
 			usize size{};
@@ -58,6 +63,10 @@ namespace vm::persistent {
 			return state;
 		}
 
+		/**
+		 * @brief returns an ID of a VarT value
+		 * @note if the value wasn't previously used, it is assigned a new one
+		 */
 		usize emplaceNewVal(const VarT& var) {
 			auto [is_new, var_id] = held_values.emplaceByLeft(var, next_val_id);
 			next_val_id += (is_new ? 1 : 0);
@@ -65,20 +74,31 @@ namespace vm::persistent {
 		}
 
 	public:
+		// public state representing empty vector
 		static constexpr auto EMPTY = VectorStateID{ u64{ Memory::EMPTY } };
 
+		/**
+		 * @brief method for accessing element at given idx for given instance.
+		 */
 		const VarT& access(VectorStateID state_id, usize idx) const {
 			auto state = validateState(state_id);
 			if_opt_some(Memory::access(state, idx), val_id) { return held_values.atRight(val_id); }
 			CORE_UNREACHABLE();
 		}
 
+		/**
+		 * @brief return size of vector at given instance
+		 */
 		[[nodiscard]]
 		usize size(VectorStateID state_id) const {
 			auto state = validateState(state_id);
 			return Memory::size(state);
 		}
 
+		/**
+		 * @brief emplaces value at the end vector at given instance
+		 */
+		[[nodiscard]]
 		VectorStateID push(VectorStateID state_id, const VarT& var) {
 			auto  state     = validateState(state_id);
 			auto  size      = Memory::size(state);
@@ -88,8 +108,14 @@ namespace vm::persistent {
 			return toVecState(new_state);
 		}
 
+		/**
+		 * @brief emplaces value at the end of given instance
+		 */
+		[[nodiscard]]
 		VectorStateID change(VectorStateID state_id, usize idx, const VarT& var) {
-			auto  state     = validateState(state_id);
+			auto state = validateState(state_id);
+			if (idx >= size(state_id)) throw std::invalid_argument("idx out of bounds");
+
 			usize val_id    = emplaceNewVal(var);
 			auto  new_state = Memory::set(state, idx, val_id);
 
@@ -97,9 +123,13 @@ namespace vm::persistent {
 		}
 
 		/**
-		 * @brief get vector from [left, right)
+		 * @brief get a range of vector  [left, right) at given intance
+		 * @note interval [left, right) must be contained within interval [0, size)
+		 * @note left must be >= right
+		 * @note it can happen that left == right - this just returns empty vector
 		 */
-		std::vector<VarT> view(VectorStateID state_id, usize left, usize right) {
+		[[nodiscard]]
+		std::vector<VarT> view(VectorStateID state_id, usize left, usize right) const {
 			if (left > right) throw std::invalid_argument("left idx was bigger than right");
 			if (right > size(state_id)) throw std::invalid_argument("right bound is too big");
 
@@ -122,6 +152,10 @@ namespace vm::persistent {
 			return ans;
 		}
 
+		/**
+		 * @brief returns a state which consists of `pref_size` first elements at given instamce
+		 * @note `pref_size` must be smaller than the size of vector at given instance
+		 */
 		VectorStateID getPrefix(VectorStateID state_id, usize pref_size) {
 			auto state = validateState(state_id);
 			auto size  = Memory::size(state);
@@ -132,6 +166,10 @@ namespace vm::persistent {
 			return toVecState(new_state);
 		}
 
+		/**
+		 * @brief pops multple values from the vector ar given instance
+		 * @note number of values to pop must be smaller than the size of vector at given instance
+		 */
 		VectorStateID pop(VectorStateID state_id, usize how_many_pop = 1) {
 			auto state = validateState(state_id);
 			auto size  = Memory::size(state);

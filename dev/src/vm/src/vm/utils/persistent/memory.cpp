@@ -186,7 +186,9 @@ namespace vm::persistent {
 
 	Memory::Memory() = default;
 
-	MemoryIterator& MemoryIterator::operator++() {
+	using memIt = MemoryStateView::MemoryIterator;
+
+	memIt& memIt::operator++() {
 		if_opt_some(maybe_path, path) {
 			auto success = path.moveToValid(detail::SegmentTree::Dir::Right);
 			if (!success) maybe_path = std::nullopt;
@@ -194,13 +196,13 @@ namespace vm::persistent {
 		return *this;
 	}
 
-	MemoryIterator MemoryIterator::operator++(int) {
+	memIt memIt::operator++(int) {
 		auto copy = *this;
 		++(*this);
 		return copy;
 	}
 
-	MemoryIterator& MemoryIterator::operator--() {
+	memIt& memIt::operator--() {
 		if_opt_some(maybe_path, path) {
 			auto success = path.moveToValid(detail::SegmentTree::Dir::Left);
 			if (!success) maybe_path = std::nullopt;
@@ -208,13 +210,13 @@ namespace vm::persistent {
 		return *this;
 	}
 
-	MemoryIterator MemoryIterator::operator--(int) {
+	memIt memIt::operator--(int) {
 		auto copy = *this;
 		--(*this);
 		return copy;
 	}
 
-	MemoryIterator::MemoryIterator(const Memory& mem, MemoryStateID state, usize idx) {
+	memIt::MemoryIterator(const Memory& mem, MemoryStateID state, usize idx) {
 		maybe_path = mem.getPathTo(state, idx);
 		if (maybe_path->pointsToValid()) return;
 		if (maybe_path->moveToValid(detail::SegmentTree::Dir::Right) == false) {

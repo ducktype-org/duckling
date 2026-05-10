@@ -68,7 +68,7 @@ namespace vm::persistent::detail {
 			bool operator==(const ChildEntry&) const = default;
 		};
 
-		// required for use of BijectiveMap (both sides mus be hashable)
+		// required for use of BijectiveMap (both sides must be hashable)
 		using ChildEntryH = decltype([](const ChildEntry& h) -> usize {
 			return (std::hash<NodeID>{}(h.left_child) << 1) ^ std::hash<NodeID>{}(h.right_child);
 		});
@@ -80,11 +80,15 @@ namespace vm::persistent::detail {
 			bool operator==(const LeafEntry&) const = default;
 		};
 
-		// required for use of BijectiveMap (both sides mus be hashable)
+		// required for use of BijectiveMap (both sides must be hashable)
 		using LeafEntryH = decltype([](const LeafEntry& h) -> usize {
 			return (std::hash<usize>{}(h.idx) << 1) ^ std::hash<usize>{}(h.value);
 		});
 
+		/**
+		 * @brief helds no of actiVe nodes, position in the tree and idx of leftmost and rightmost
+		 * leaf
+		 */
 		struct RootEntry {
 			usize size;
 			posT  position;
@@ -92,18 +96,34 @@ namespace vm::persistent::detail {
 			idxT  right_bound;
 		};
 
+		/**
+		 * @brief helper function for getting other direction
+		 */
 		static constexpr Dir othDir(Dir dir) { return dir == Dir::Left ? Dir::Right : Dir::Left; }
 
+		/**
+		 * @brief helper function for getting height of tree position
+		 * @note leaf nodes get height 0
+		 * @note empty position has position higher than everyone else
+		 */
 		static constexpr usize heightFromPos(posT pos) {
 			return POS_T_SIZE - usize(std::bit_width(pos));
 		}
 
+		/**
+		 * @brief helper function for getting smallest possible idx of leaf in subtree of given tree
+		 * position
+		 * @note empty position has offset 0
+		 */
 		static constexpr idxT offsetFromPos(posT pos) {
 			auto h = heightFromPos(pos);
 			if (h >= POS_T_SIZE) return 0;
 			return (pos << h) & OFFSET_MASK;
 		}
 
+		/**
+		 * @brief helper function for getting height of lca for two tree positions
+		 */
 		static constexpr usize getLCAHeight(posT pos_1, posT pos_2) {
 			if (pos_1 > pos_2) std::swap(pos_1, pos_2);
 			auto h_2 = heightFromPos(pos_2);
@@ -114,22 +134,28 @@ namespace vm::persistent::detail {
 			return h_1 + (usize) std::bit_width(pos_1 ^ pos_2);
 		}
 
+		/**
+		 * @brief helper function for getting position of lca for two tree positions
+		 */
 		static constexpr posT getLCAPos(posT pos_1, posT pos_2) {
 			if (pos_1 == 0) std::swap(pos_1, pos_2);
 			usize lca_h = getLCAHeight(pos_1, pos_2);
-			usize h_1 =  heightFromPos(pos_1);
+			usize h_1   = heightFromPos(pos_1);
 			return pos_1 >> (lca_h - h_1);
 		}
 
+		/**
+		 * @brief helper function for determining if one position in subtree of another
+		 */
 		static constexpr bool inSubtree(posT maybe_child, posT root) {
 			return (root == getLCAPos(root, maybe_child));
 		}
 
 		/**
-		 * @brief Get the nodes for range [l, r)
+		 * @brief Get the tree psitions of nodes responsible for range [lefft_idx, right_idx)
 		 */
 		static constexpr std::deque<posT> getPosInRange(idxT left_idx, idxT right_idx) {
-			CORE_ASSERT(left_idx < right_idx, "Received wrong interval");
+			CORE_ASSERT(left_idx <= right_idx, "Received wrong interval");
 			CORE_ASSERT(right_idx <= IDX_END, "Expecting a valid interval");
 
 			std::deque<posT> ans = {};
@@ -137,16 +163,15 @@ namespace vm::persistent::detail {
 			auto right_guard = right_idx & OFFSET_MASK;  // to handle right_idx == IDX_END
 
 			while (left_idx < right_idx) {
-				auto left_guard = left_idx | TOP_BIT;
+				auto left_pos = left_idx | TOP_BIT;
 
-				// max_height == height of lsb or 64 when left_idx == 0
-				auto max_height     = (usize) std::bit_width(left_guard & (-left_guard));
+				// max_height == height of lsb or TOP_BIT when left_idx == 0
+				auto max_height     = (usize) std::bit_width(left_pos & (-left_pos));
 				auto height_of_diff = (usize) std::bit_width(left_idx ^ right_guard);
 
 				usize final_height = std::min(height_of_diff, max_height) - 1;
 
-				posT pos
-					= (left_idx >> final_height) | ((posT(1)) << (POS_T_SIZE - 1 - final_height));
+				posT pos = (left_pos >> final_height);
 				ans.emplace_back(pos);
 				left_idx += (posT(1) << final_height);
 			}
@@ -154,6 +179,11 @@ namespace vm::persistent::detail {
 			return ans;
 		}
 
+		/**
+		 * @brief Helper struct for moving around th tree, with built-in support for tree-rebuilding
+		 * @note this is to avoid non-trivial recursion and make a more generic code
+		 * @note reconstruction will only happen if the segTreeT is not const-qualified
+		 */
 		template<typename segTreeT>
 		requires SameWNoQual<SegmentTree, segTreeT> struct SurroundingNeigh {
 			segTreeT* mem;
@@ -164,19 +194,23 @@ namespace vm::persistent::detail {
 			std::deque<NodeID> siblings{};
 			std::deque<NodeID> ancestors{};
 
+			/**
+			 * @brief moves the tracked node to desired position
+			 * @note when moving upwards, children are reconstructed by lazily merging
+			 */
 			void moveNodeTo(posT desired_pos) {
 				static constexpr bool RECONSTRUCT = !std::is_const_v<segTreeT>;
 				if (!desired_pos || desired_pos == node_pos) return;
 				CORE_ASSERT(inSubtree(desired_pos, root_pos), "we should be within root's subtree");
 
-				usize lca_h = getLCAHeight(desired_pos, node_pos);
-				usize h = heightFromPos(node_pos);
+				usize lca_h       = getLCAHeight(desired_pos, node_pos);
+				usize h           = heightFromPos(node_pos);
 				usize height_diff = lca_h - h;
 				for (usize i = (desired_pos == root_pos ? 0 : 1); i < height_diff; i++) {
 					if constexpr (RECONSTRUCT) {
 						auto left = node, right = siblings.front();
 						if (node_pos & 1) std::swap(left, right);
-						node = mem->mergeTwoRoots(left, right);
+						node = mem->lazyMergeTwoRoots(left, right);
 					} else {
 						node = ancestors.front();
 						ancestors.pop_front();
@@ -225,6 +259,13 @@ namespace vm::persistent::detail {
 				}
 			}
 
+			/**
+			 * @brief returns a list of nodes and positions of the nodes which would habe been touch
+			 * if there have been executed a recursive call from given node to tracked position and
+			 * the idx of the currently tracked node
+			 * @note nodes are given in the order from left to right (just as if the call was
+			 * recursive)
+			 */
 			[[nodiscard]]
 			std::pair<usize, std::deque<std::pair<posT, NodeID>>> inOrder(posT upto_here) const {
 				std::deque<std::pair<posT, NodeID>> ans = {};
@@ -244,6 +285,15 @@ namespace vm::persistent::detail {
 				return { idx, ans };
 			}
 
+			/**
+			 * @brief Gives all the nodes which are in subtree of given position and preceed
+			 * currently tracked node in pre-order traverse of tree
+			 * @note Think about returned list as a list of nodes which had to be processed before
+			 * node if we were doing recursive operations from given node to currently tracked
+			 * @note nodes are given in the order from left to right (just as if the call was
+			 * recursive)
+			 * @note related to inOrder
+			 */
 			[[nodiscard]]
 			std::deque<std::pair<posT, NodeID>> beforeNode(posT upto_here) const {
 				auto cur_pos = node_pos;
@@ -265,6 +315,15 @@ namespace vm::persistent::detail {
 				return ans;
 			}
 
+			/**
+			 * @brief Gives all the nodes which are in subtree of given position and follow
+			 * currently tracked node in pre-order traverse of tree
+			 * @note Think about returned list as a list of nodes which had to be processed adter
+			 * node if we were doing recursive operations from given node to currently tracked
+			 * @note nodes are given in the order from left to right (just as if the call was
+			 * recursive)
+			 * @note related to inOrder
+			 */
 			[[nodiscard]]
 			std::deque<std::pair<posT, NodeID>> afterNode(usize upto_here) const {
 				auto cur_pos = node_pos;
@@ -295,7 +354,7 @@ namespace vm::persistent::detail {
 
 	protected:
 		/**
-		 * @brief struture used to iterate over the MemoryStateView
+		 * @brief struture used to iterate over the unmutable memory
 		 */
 		struct Path {
 			idxT                    idx;
@@ -360,11 +419,18 @@ namespace vm::persistent::detail {
 				return true;
 			}
 
+			/**
+			 * @brief checks whether path points to an active idx
+			 */
 			[[nodiscard]]
 			bool pointsToValid() const {
 				return trace.at(0) != EMPTY;
 			}
 
+			/**
+			 * @brief returns a value of at the idx to which path points or empty optional if idx is
+			 * not active
+			 */
 			[[nodiscard]]
 			base::Optional<valT> getValue() const {
 				if (trace.at(0) == EMPTY)
@@ -374,6 +440,10 @@ namespace vm::persistent::detail {
 			}
 		};
 
+		/**
+		 * @brief Get the height and the smallest idx of the leaf which could potentially be in the
+		 * subtree
+		 */
 		std::pair<usize, idxT> getHeightOffset(NodeID state) const {
 			if_opt_some(root_info.atMaybeCopy(state), entry) {
 				auto pos = entry.position;
@@ -393,18 +463,27 @@ namespace vm::persistent::detail {
 			CORE_UNREACHABLE();
 		}
 
+		/**
+		 * @brief Return number of active leaves in subtree
+		 */
 		usize getSize(NodeID state) const {
 			if_opt_some(root_info.atMaybeCopy(state), entry) { return entry.size; }
 			if_opt_some(leaf_entries.atRightOpt(state), _) { return 1UL; }
 			CORE_UNREACHABLE();
 		}
 
+		/**
+		 * @brief Return position in the tree of given node
+		 */
 		posT getPos(NodeID state) const {
 			if_opt_some(root_info.atMaybeCopy(state), entry) { return entry.position; }
 			if_opt_some(leaf_entries.atRightOpt(state), entry) { return LEAF_MASK | entry.idx; }
 			CORE_UNREACHABLE();
 		}
 
+		/**
+		 * @brief Return idx of leftmost and rightmost idx of active leavs in fiven subtree
+		 */
 		std::pair<idxT, idxT> getRange(NodeID state) const {
 			if_opt_some(root_info.atMaybeCopy(state), entry) {
 				return { entry.left_bound, entry.right_bound };
@@ -415,11 +494,17 @@ namespace vm::persistent::detail {
 			CORE_UNREACHABLE();
 		}
 
+		/**
+		 * @brief Return the value held by leaf
+		 */
 		valT getValueOfLeaf(NodeID leaf) const {
 			if_opt_some(leaf_entries.atRightOpt(leaf), entry) { return entry.value; }
 			CORE_UNREACHABLE();
 		}
 
+		/**
+		 * @brief Checks if the id is a valid root of some tree
+		 */
 		void validateRoot(NodeID root) const {
 			if (!root_info.contains(root) && !leaf_entries.atRightOpt(root))
 				throw std::invalid_argument("got invalid state");
@@ -431,6 +516,11 @@ namespace vm::persistent::detail {
 			CORE_ASSERT(size <= (idxT(1) << height), "root's size is too large");
 		}
 
+		/**
+		 * @brief emplaces a new node from given children.
+		 * @note node can be either constructed, or returned previous (depeding if there already was
+		 * node with given subtrees)
+		 */
 		NodeID nodeFromChildren(NodeID left, NodeID right) {
 			auto pos_left = getPos(left), pos_right = getPos(right);
 			CORE_ASSERT(pos_right != 1 && pos_left != 1, "top node cannot be ever passed");
@@ -472,6 +562,11 @@ namespace vm::persistent::detail {
 			return node;
 		}
 
+		/**
+		 * @brief emplaces a new leaf from idx and held valie.
+		 * @note node can be either constructed, or returned previous (depeding if there already was
+		 * node with given idx and value)
+		 */
 		NodeID nodeFromIdxVar(idxT idx, valT var_id) {
 			auto leaf_entry = LeafEntry{
 				.idx   = idx,
@@ -484,6 +579,10 @@ namespace vm::persistent::detail {
 			return node;
 		}
 
+		/**
+		 * @brief helper structure dedicated for merging two trees
+		 * @note used either for rebuilding or const operations (depending on result type)
+		 */
 		template<RebuildRes ResT>
 		struct MergeBuilder {
 			std::function<ResT(NodeID, posT)> only_1 = [](NodeID id, posT) -> ResT {
@@ -503,6 +602,10 @@ namespace vm::persistent::detail {
 			};
 		};
 
+		/**
+		 * @brief helper structure dedicated for handling ranges
+		 * @note used either for rebuilding or const operations (depending on result type)
+		 */
 		template<RebuildRes ResT>
 		struct RangeBuilder {
 			std::function<ResT(NodeID, posT)> in_range = [](NodeID id, posT) -> ResT {
@@ -516,6 +619,11 @@ namespace vm::persistent::detail {
 
 		using LeafBuilder = std::function<NodeID(usize, base::Optional<usize>)>;
 
+		/**
+		 * @brief helper function for atomically modifying the certain idxs
+		 * @note idxs must be sorted from left to right
+		 * @note this function is never const (use Path for iterating over unmutable memory)
+		 */
 		NodeID reconstructIdxs(NodeID root, std::deque<idxT> idxs, LeafBuilder constructor) {
 			if (idxs.empty()) return root;
 
@@ -572,6 +680,11 @@ namespace vm::persistent::detail {
 			return neigh.node;
 		}
 
+		/**
+		 * @brief helper function for merging two instances of the memory
+		 * @note can be mutable or unmutable, depending of return type of merge poliscy (hence use
+		 * of this deduction)
+		 */
 		template<typename ResT, typename SelfT>
 		ResT rebuildFromTwo(
 			this SelfT&& st, NodeID root_1, NodeID root_2, MergeBuilder<ResT> merge_policy
@@ -652,7 +765,7 @@ namespace vm::persistent::detail {
 						!rec_right || inSubtree(mem->getPos(rec_right), pos_right), "stay in subtree"
 					);
 
-					return mem->mergeTwoRoots(rec_left, rec_right);
+					return mem->lazyMergeTwoRoots(rec_left, rec_right);
 				} else {
 					self(pos_left, left_1, left_2);
 					self(pos_right, right_1, right_2);
@@ -768,6 +881,11 @@ namespace vm::persistent::detail {
 			}
 		}
 
+		/**
+		 * @brief helper function for modifying a single range of memory
+		 * @note can be mutable or unmutable, depending of return type of merge poliscy (hence use
+		 * of this deduction)
+		 */
 		template<typename ResT, typename SelfT>
 		ResT rebuildWithRange(
 			this SelfT&&       st,
@@ -863,6 +981,9 @@ namespace vm::persistent::detail {
 			if constexpr (RECONSTRUCT) return neigh.node;
 		}
 
+		/**
+		 * @brief Gets a child of given root in particular direction
+		 */
 		[[nodiscard]]
 		NodeID getChild(Dir dir, NodeID root) const {
 			if_opt_some(child_entries.atRightOpt(root), children) {
@@ -876,6 +997,9 @@ namespace vm::persistent::detail {
 			return EMPTY;
 		}
 
+		/**
+		 * @brief returns a path from particular root to the idx
+		 */
 		[[nodiscard]]
 		Path getPathTo(NodeID root, idxT idx) const {
 			auto [height, offset] = getHeightOffset(root);
@@ -904,6 +1028,11 @@ namespace vm::persistent::detail {
 			};
 		}
 
+		/**
+		 * @brief draft impl of potentially removing excessive nodes from segemnt tree, apart from
+		 * desired
+		 * @warning NOT TESTED
+		 */
 		void pruneHistory(std::vector<NodeID> desired) {
 			std::unordered_set<NodeID> stay{ EMPTY };
 
@@ -950,7 +1079,12 @@ namespace vm::persistent::detail {
 			leaf_entries.pruneByRight(leafs);
 		}
 
-		NodeID mergeTwoRoots(NodeID root_1, NodeID root_2) {
+		/**
+		 * @brief Lazy merge of two roots
+		 * @note when one of the roor is empty, other is returned
+		 * @note requires that the root cannot contain each other
+		 */
+		NodeID lazyMergeTwoRoots(NodeID root_1, NodeID root_2) {
 			if (!root_1) return root_2;
 			if (!root_2) return root_1;
 
@@ -989,6 +1123,9 @@ namespace vm::persistent::detail {
 		}
 
 	public:
+		/**
+		 * @brief Construct a new Segment Tree object
+		 */
 		SegmentTree() {
 			root_info.put(
 				EMPTY,

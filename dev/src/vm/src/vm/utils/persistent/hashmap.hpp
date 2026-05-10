@@ -10,10 +10,13 @@ namespace vm::persistent {
 	STRONG_TYPEDEF_INT(HashMapStateID, u64);
 
 	/**
-	 * @brief Persistent data structure which simulates STL hashmap
+	 * @brief Class implementing a STL hashmap with time-persistency aka control version. You can
+	 * modify any of the previous instances of the vector, by using `HashMapStateID`.
 	 *
-	 * @note currently a wrapper for persistant array and bijective map value~idx.
-	 * @note Allows for (==) comparison of two instances with ArrayStateID in O(1)
+	 * @note Implementation based of persistent memory.
+	 * @note two HashMapStateID's are equal if and only if corresponding hashmaps are the same (same
+	 size and same values on same keys)
+	 * @note Held values & keys are constructed only once.
 	 *
 	 * @tparam KeyT
 	 * @tparam ValT
@@ -32,25 +35,30 @@ namespace vm::persistent {
 		usize next_val_id = 0;
 		usize next_key_id = 0;
 
-		usize emplaceKey(const KeyT& var) {
-			auto [_, idx] = held_keys.emplaceByLeft(var, held_keys.size());
-			return idx;
-		}
-
+		// casting memory state to hashmap state
 		constexpr static HashMapStateID toMapState(MemoryStateID state) {
 			return HashMapStateID{ u64(state) };
 		}
 
+		// casting hashmap state to memory state
 		constexpr static MemoryStateID toMemState(HashMapStateID state) {
 			return MemoryStateID{ u64(state) };
 		}
 
+		/**
+		 * @brief returns an ID of a ValT value
+		 * @note if the value wasn't previously used, it is assigned a new one
+		 */
 		usize emplaceNewVal(const ValT& var) {
 			auto [is_new, var_id] = held_values.emplaceByLeft(var, next_val_id);
 			next_val_id += (is_new ? 1 : 0);
 			return var_id;
 		}
 
+		/**
+		 * @brief returns an ID of a KeyT key
+		 * @note if the key wasn't previously used, it is assigned a new one
+		 */
 		usize emplaceNewKey(const KeyT& key) {
 			auto [is_new, var_id] = held_keys.emplaceByLeft(key, next_key_id);
 			next_key_id += (is_new ? 1 : 0);
@@ -59,13 +67,20 @@ namespace vm::persistent {
 
 
 	public:
+		// public state representing empty vector
 		static constexpr auto EMPTY = HashMapStateID(u64(Memory::EMPTY));
 
-		usize size(HashMapStateID state_id) {
+		/**
+		 * @brief return size of hashmap at given instance
+		 */
+		usize size(HashMapStateID state_id) const {
 			auto mem_state = toMemState(state_id);
 			return Memory::size(mem_state);
 		}
 
+		/**
+		 * @brief transforms given state to actual hashmap
+		 */
 		base::HashMap<KeyT, ValT, KeyH> toMap(HashMapStateID state_id) const {
 			if (state_id == EMPTY) return {};
 
@@ -93,6 +108,9 @@ namespace vm::persistent {
 			return ans;
 		}
 
+		/**
+		 * @brief checks if the key is present in given instance of hashmap
+		 */
 		bool contains(HashMapStateID state_id, const KeyT& key) const {
 			if_opt_some(held_keys.atLeftOpt(key), key_id) {
 				auto state = toMemState(state_id);
@@ -102,6 +120,9 @@ namespace vm::persistent {
 			return false;
 		}
 
+		/**
+		 * @brief method for accessing element for given key at given instance.
+		 */
 		const ValT& access(HashMapStateID state_id, const KeyT& key) const {
 			auto state = toMemState(state_id);
 			if_opt_some(held_keys.atLeftOpt(key), key_id) {
@@ -112,19 +133,31 @@ namespace vm::persistent {
 			CORE_UNREACHABLE();
 		}
 
+		/**
+		 * @brief method for inserting [key, value] to given instance.
+		 * @note if key was present at given instance, it will be overriden
+		 */
 		HashMapStateID insert(HashMapStateID state_id, const KeyT& key, const ValT& var) {
 			auto state  = toMemState(state_id);
-			auto key_id = emplaceKey(key);
+			auto key_id = emplaceNewKey(key);
 			auto val_id = emplaceNewVal(var);
 			return toMapState(Memory::set(state, key_id, val_id));
 		}
 
+		/**
+		 * @brief method for erasing entry with given key at given instance
+		 * @note if given instance doesn't contain the key, no effect take place
+		 */
 		HashMapStateID erase(HashMapStateID state_id, const KeyT& key) {
 			auto state  = toMemState(state_id);
-			auto key_id = emplaceKey(key);
+			auto key_id = emplaceNewKey(key);
 			return toMapState(Memory::erase(state, key_id));
 		}
 
+		/**
+		 * @brief method for inserting [key, value] to given instance. 
+		 * @note if key was present at given instance, it won't be overriden
+		 */
 		std::pair<bool, HashMapStateID> emplace(
 			HashMapStateID state_id, const KeyT& key, const ValT& var
 		) {
