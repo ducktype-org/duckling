@@ -24,7 +24,6 @@
 #include <linker/link.hpp>
 #include <repl/session.hpp>
 #include <time_stats/time_stats.hpp>
-#include <unistd.h>
 
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
@@ -33,6 +32,7 @@
 #include <base/types/ok_bad.hpp>
 
 #include <clah/clah.hpp>
+#include <system_utils.hpp>
 #include <diagnostic/logger.hpp>
 #include <filesystem/file.hpp>
 #include <filesystem/file_path.hpp>
@@ -51,9 +51,6 @@
 #include <string>
 #include <vector>
 
-#ifdef _WIN32
-	#include <process.h>
-#endif
 
 namespace {
 	std::vector<std::string> g_argv;
@@ -89,26 +86,6 @@ namespace {
 		if (silent) new_args.push_back("--history-entries-silent");
 
 		g_argv = std::move(new_args);
-	}
-
-	int execSelf() {
-		std::vector<char*> args;
-		args.reserve(g_argv.size() + 1);
-		for (auto& arg: g_argv) args.push_back(arg.data());
-		args.push_back(nullptr);
-
-#ifdef _WIN32
-		intptr_t result = _spawnvp(_P_WAIT, args[0], args.data());
-		if (result == -1) {
-			std::perror("_spawnvp");
-			return 1;
-		}
-		return static_cast<int>(result);
-#else
-		execvp(args[0], args.data());
-		std::perror("execvp");
-		return 1;
-#endif
 	}
 }
 
@@ -1086,7 +1063,7 @@ clah::Clah getClahForMain() {
 					if (result == compiler::repl::ReplSession::RESET_EXIT_CODE) {
 						if (reset_replay_count.has_value())
 							setReplRestartArgs(reset_replay_count.value(), true);
-						return execSelf();
+						return execSelf(g_argv);
 					}
 					return result;
 				})

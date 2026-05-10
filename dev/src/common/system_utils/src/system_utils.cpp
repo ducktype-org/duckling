@@ -1,0 +1,21 @@
+#include "system_utils.hpp"
+
+int execSelf(std::vector<std::string>& g_argv) {
+    std::vector<char*> args;
+    args.reserve(g_argv.size() + 1);
+    for (auto& arg: g_argv) args.push_back(arg.data());
+    args.push_back(nullptr);
+
+#ifdef _WIN32
+		intptr_t result = _spawnvp(_P_WAIT, args[0], args.data());
+		if (result == -1) {
+			std::perror("_spawnvp");
+			return 1;
+		}
+		return static_cast<int>(result);
+#else
+		execvp(args[0], args.data());
+		std::perror("execvp");
+		return 1;
+#endif
+	}
