@@ -1,15 +1,92 @@
-/**
- * @file cf_graph.cpp
- * @brief Implementation of control-flow graph construction.
- */
 #include "cf_graph.hpp"
 
 namespace vm::jit::cf {
-	/**
-	 * @brief Builds basic blocks and successor edges for a lowered function.
-	 * @param function Lowered function containing bytecode.
-	 * @param block_beginnings Sorted basic-block start offsets.
-	 */
+
+	OutEdges::OutEdges(): to{ 0, 0 } {}
+
+	usize OutEdges::size() const { return no_edges; }
+
+	OutEdges::Kind OutEdges::kind() const { return op_type; }
+
+	void OutEdges::setCond(Kind kind, BlockID target1, BlockID target2) {
+		CORE_ASSERT(no_edges == 0, "Outgoing edges already set for this basic block");
+		this->op_type = kind;
+		to[0]         = target1;
+		to[1]         = target2;
+		no_edges      = 2;
+	}
+
+	void OutEdges::setDefault(BlockID target) {
+		CORE_ASSERT(no_edges == 0, "Outgoing edges already set for this basic block");
+		this->op_type = Kind::Default;
+		to[0]         = target;
+		no_edges      = 1;
+	}
+
+	BlockID OutEdges::next() const {
+		CORE_ASSERT(op_type == Kind::Default, "This block has no default outgoing edge.");
+		return to[0];
+	}
+
+	BlockID OutEdges::successTarget() const {
+		CORE_ASSERT(
+			op_type == Kind::JmpIf || op_type == Kind::JmpIfNot,
+			"This block does not have conditional outgoing edges."
+		);
+		return to[0];
+	}
+
+	BlockID OutEdges::failTarget() const {
+		CORE_ASSERT(
+			op_type == Kind::JmpIf || op_type == Kind::JmpIfNot,
+			"This block does not have conditional outgoing edges."
+		);
+		return to[1];
+	}
+
+	BlockID& OutEdges::operator[](usize index) {
+		CORE_ASSERT(index < size(), "edge index out of bounds");
+		// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
+		return to[index];
+	}
+
+	const BlockID& OutEdges::operator[](usize index) const {
+		CORE_ASSERT(index < size(), "edge index out of bounds");
+		// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
+		return to[index];
+	}
+
+	BasicBlock::BasicBlock(BlockID id, usize start, usize end): succ(), id(id), start(start), end(end) {}
+
+	OutEdges::Kind BasicBlock::edgeKind() const { return succ.kind(); }
+
+	BlockID BasicBlock::next() const { return succ.next(); }
+
+	BlockID BasicBlock::successTarget() const { return succ.successTarget(); }
+
+	BlockID BasicBlock::failTarget() const { return succ.failTarget(); }
+
+	void BasicBlock::setCondEdge(OutEdges::Kind kind, BlockID target1, BlockID target2) {
+		succ.setCond(kind, target1, target2);
+	}
+
+	void BasicBlock::setDefaultEdge(BlockID target) { succ.setDefault(target); }
+
+	BlockID BasicBlock::edge(usize index) const { return succ[index]; }
+
+	usize BasicBlock::edgeCount() const { return succ.size(); }
+
+	ControlFlowGraph::ControlFlowGraph(const low::LowFuncData& function) {
+		createCFG(function, basicBlockBeginnings(function));
+	}
+
+	usize ControlFlowGraph::size() const { return blocks.size(); }
+
+	const BasicBlock& ControlFlowGraph::getBlock(BlockID id) const {
+		CORE_ASSERT(id < blocks.size(), "Invalid block ID");
+		return blocks[id];
+	}
+
 	void ControlFlowGraph::createCFG(
 		const low::LowFuncData& function, const std::vector<usize>& block_beginnings
 	) {
@@ -89,14 +166,7 @@ namespace vm::jit::cf {
 		}
 	}
 
-	/**
-	 * @brief Builds a CFG containing only selected blocks.
-	 * @param block_ids Block ids to keep in the resulting graph.
-	 * @return A remapped CFG subgraph with out-of-subset edges redirected.
-	 * @note Current implementation redirects external edges to a synthetic dummy block.
-	 */
-	[[nodiscard]] ControlFlowGraph ControlFlowGraph::subgraph(const std::vector<BlockID>& block_ids
-	) const {
+	ControlFlowGraph ControlFlowGraph::subgraph(const std::vector<BlockID>& block_ids) const {
 		ControlFlowGraph subgraph;
 		subgraph.blocks.reserve(block_ids.size());
 

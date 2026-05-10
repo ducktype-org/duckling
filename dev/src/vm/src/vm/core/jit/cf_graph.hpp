@@ -34,7 +34,7 @@ namespace vm::jit::cf {
 			JmpIfNot,
 		};
 
-		OutEdges(): to{ 0, 0 } {}
+		OutEdges();
 
 		OutEdges(const OutEdges&)            = default;
 		OutEdges& operator=(const OutEdges&) = default;
@@ -42,12 +42,12 @@ namespace vm::jit::cf {
 		/**
 		 * @brief Returns the number of outgoing edges.
 		 */
-		[[nodiscard]] usize size() const { return no_edges; }
+		[[nodiscard]] usize size() const;
 
 		/**
 		 * @brief Returns the edge kind.
 		 */
-		[[nodiscard]] Kind kind() const { return op_type; }
+		[[nodiscard]] Kind kind() const;
 
 		/**
 		 * @brief Configures a conditional edge pair.
@@ -55,74 +55,40 @@ namespace vm::jit::cf {
 		 * @param target1 Target reached when condition succeeds.
 		 * @param target2 Target reached when condition fails.
 		 */
-		void setCond(Kind kind, BlockID target1, BlockID target2) {
-			CORE_ASSERT(no_edges == 0, "Outgoing edges already set for this basic block");
-			this->op_type = kind;
-			to[0]         = target1;
-			to[1]         = target2;
-			no_edges      = 2;
-		}
+		void setCond(Kind kind, BlockID target1, BlockID target2);
 
 		/**
 		 * @brief Configures a single default edge.
 		 * @param target Fallthrough or unconditional jump destination.
 		 */
-		void setDefault(BlockID target) {
-			CORE_ASSERT(no_edges == 0, "Outgoing edges already set for this basic block");
-			this->op_type = Kind::Default;
-			to[0]         = target;
-			no_edges      = 1;
-		}
+		void setDefault(BlockID target);
 
 		/**
 		 * @brief Returns the default successor.
 		 */
-		[[nodiscard]] BlockID next() const {
-			CORE_ASSERT(op_type == Kind::Default, "This block has no default outgoing edge.");
-			return to[0];
-		}
+		[[nodiscard]] BlockID next() const;
 
 		/**
 		 * @brief Returns the success successor for conditional branches.
 		 */
-		[[nodiscard]] BlockID successTarget() const {
-			CORE_ASSERT(
-				op_type == Kind::JmpIf || op_type == Kind::JmpIfNot,
-				"This block does not have conditional outgoing edges."
-			);
-			return to[0];
-		}
+		[[nodiscard]] BlockID successTarget() const;
 
 		/**
 		 * @brief Returns the failure successor for conditional branches.
 		 */
-		[[nodiscard]] BlockID failTarget() const {
-			CORE_ASSERT(
-				op_type == Kind::JmpIf || op_type == Kind::JmpIfNot,
-				"This block does not have conditional outgoing edges."
-			);
-			return to[1];
-		}
+		[[nodiscard]] BlockID failTarget() const;
 
 		/**
 		 * @brief Returns a mutable reference to the edge target at the given position.
 		 * @param index Edge index in [0, size()).
 		 */
-		BlockID& operator[](usize index) {
-			CORE_ASSERT(index < size(), "edge index out of bounds");
-			// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
-			return to[index];
-		}
+		BlockID& operator[](usize index);
 
 		/**
 		 * @brief Returns an immutable reference to the edge target at the given position.
 		 * @param index Edge index in [0, size()).
 		 */
-		const BlockID& operator[](usize index) const {
-			CORE_ASSERT(index < size(), "edge index out of bounds");
-			// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
-			return to[index];
-		}
+		const BlockID& operator[](usize index) const;
 
 	private:
 		std::array<BlockID, 2> to;
@@ -145,29 +111,29 @@ namespace vm::jit::cf {
 		 * @param start Inclusive instruction index where the block starts.
 		 * @param end Exclusive instruction index where the block ends.
 		 */
-		BasicBlock(BlockID id, usize start, usize end): succ(), id(id), start(start), end(end) {}
+		BasicBlock(BlockID id, usize start, usize end);
 
 		BasicBlock() = delete;
 
 		/**
 		 * @brief Returns the shape of outgoing edges.
 		 */
-		[[nodiscard]] OutEdges::Kind edgeKind() const { return succ.kind(); }
+		[[nodiscard]] OutEdges::Kind edgeKind() const;
 
 		/**
 		 * @brief Returns the default successor.
 		 */
-		[[nodiscard]] BlockID next() const { return succ.next(); }
+		[[nodiscard]] BlockID next() const;
 
 		/**
 		 * @brief Returns the success successor for conditional branches.
 		 */
-		[[nodiscard]] BlockID successTarget() const { return succ.successTarget(); }
+		[[nodiscard]] BlockID successTarget() const;
 
 		/**
 		 * @brief Returns the failure successor for conditional branches.
 		 */
-		[[nodiscard]] BlockID failTarget() const { return succ.failTarget(); }
+		[[nodiscard]] BlockID failTarget() const;
 
 		/**
 		 * @brief Sets conditional successors.
@@ -175,26 +141,24 @@ namespace vm::jit::cf {
 		 * @param target1 Success destination.
 		 * @param target2 Failure destination.
 		 */
-		void setCondEdge(OutEdges::Kind kind, BlockID target1, BlockID target2) {
-			succ.setCond(kind, target1, target2);
-		}
+		void setCondEdge(OutEdges::Kind kind, BlockID target1, BlockID target2);
 
 		/**
 		 * @brief Sets a single default successor.
 		 * @param target Default destination.
 		 */
-		void setDefaultEdge(BlockID target) { succ.setDefault(target); }
+		void setDefaultEdge(BlockID target);
 
 		/**
 		 * @brief Returns the edge target at index.
 		 * @param index Edge index in [0, edgeCount()).
 		 */
-		[[nodiscard]] BlockID edge(usize index) const { return succ[index]; }
+		[[nodiscard]] BlockID edge(usize index) const;
 
 		/**
 		 * @brief Returns the number of outgoing edges.
 		 */
-		[[nodiscard]] usize edgeCount() const { return succ.size(); }
+		[[nodiscard]] usize edgeCount() const;
 	};
 
 	/**
@@ -218,23 +182,18 @@ namespace vm::jit::cf {
 		 * @brief Creates a control-flow graph from lowered function data.
 		 * @param function Lowered function to analyze.
 		 */
-		ControlFlowGraph(const low::LowFuncData& function) {
-			createCFG(function, basicBlockBeginnings(function));
-		}
+		ControlFlowGraph(const low::LowFuncData& function);
 
 		/**
 		 * @brief Returns number of blocks in the graph.
 		 */
-		[[nodiscard]] usize size() const { return blocks.size(); }
+		[[nodiscard]] usize size() const;
 
 		/**
 		 * @brief Returns block metadata by identifier.
 		 * @param id Block identifier.
 		 */
-		[[nodiscard]] const BasicBlock& getBlock(BlockID id) const {
-			CORE_ASSERT(id < blocks.size(), "Invalid block ID");
-			return blocks[id];
-		}
+		[[nodiscard]] const BasicBlock& getBlock(BlockID id) const;
 
 		/**
 		 * @brief Builds a CFG containing only selected blocks.
