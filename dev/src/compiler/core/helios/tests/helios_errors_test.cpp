@@ -835,7 +835,7 @@ private:
 					return 0;
 				}
 			)",
-			{ "Feature not implemented", "at compile time", "generated class constructor" },
+			{ "Feature not implemented", "Compile time" },
 			1
 		);
 
