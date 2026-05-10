@@ -89,6 +89,7 @@ namespace compiler::repl {
 		out << "  /commands, /cmds                - Show all input history (editor history)\n";
 		out << "  /commands-reset, /cmds-reset    - Clear input history (editor history)\n";
 		out << "  /clear, /c                      - Clear terminal\n";
-		out << "  /load <file.ds>                 - Load script file (stops on first error; previous statements stay applied)\n";
+		out << "  /load <file.ds>                 - Load script file (stops on first error; "
+		       "previous statements stay applied)\n";
 	}
 }  // namespace compiler::repl

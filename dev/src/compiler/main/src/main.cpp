@@ -1034,28 +1034,30 @@ clah::Clah getClahForMain() {
 							return 1;
 						}
 						if (replay_count > 0)
-							session.replayHistoryEntries(static_cast<size_t>(replay_count), replay_silent);
+							session.replayHistoryEntries(
+								static_cast<size_t>(replay_count), replay_silent
+							);
 						if (options.getExtraParameterCount() > 1) {
-						std::cerr << "Error: repl accepts at most one script path. "
-									 "Usage: duckc repl [script.ds]\n";
-						compiler::driver::exit();
-						return 1;
-					}
-
-					if (options.getExtraParameterCount() == 1) {
-						// Preload mode currently treats load failure as fatal: if the
-			            // script fails to load/compile, we print the error and exit
-			            // before entering the interactive REPL loop.
-						auto script_file = options.getExtra<fs::File>(0).value();
-						auto load_result
-							= session.loadScriptFile(script_file.getFilePath().string());
-						if (load_result.status == compiler::repl::ReplResult::Status::Error) {
-							std::cerr << load_result.message << "\n";
+							std::cerr << "Error: repl accepts at most one script path. "
+										 "Usage: duckc repl [script.ds]\n";
 							compiler::driver::exit();
 							return 1;
 						}
-					}
-						result = session.run();
+
+						if (options.getExtraParameterCount() == 1) {
+							// Preload mode currently treats load failure as fatal: if the
+				            // script fails to load/compile, we print the error and exit
+				            // before entering the interactive REPL loop.
+							auto script_file = options.getExtra<fs::File>(0).value();
+							auto load_result
+								= session.loadScriptFile(script_file.getFilePath().string());
+							if (load_result.status == compiler::repl::ReplResult::Status::Error) {
+								std::cerr << load_result.message << "\n";
+								compiler::driver::exit();
+								return 1;
+							}
+						}
+						result             = session.run();
 						reset_replay_count = session.getResetReplayCount();
 					}
 					compiler::driver::exit();
