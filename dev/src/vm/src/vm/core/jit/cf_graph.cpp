@@ -60,7 +60,11 @@ namespace vm::jit::cf {
 		return to[index];
 	}
 
-	BasicBlock::BasicBlock(BlockID id, usize start, usize end): succ(), id(id), start(start), end(end) {}
+	BasicBlock::BasicBlock(BlockID id, usize start, usize end):
+		  succ(),
+		  id(id),
+		  start(start),
+		  end(end) {}
 
 	OutEdges::Kind BasicBlock::edgeKind() const { return succ.kind(); }
 
