@@ -83,9 +83,12 @@ private:
 		auto submodule_id = sub_module_locked.value().illegalAccess().getID();
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			(void) ctx.query<driver::CompileModule>({ module, driver::BackendType::LLVM, false });
-			(void
-			) ctx.query<driver::CompileModule>({ submodule_id, driver::BackendType::LLVM, false });
+			(void) ctx.query<driver::CompileModule>({ .module_id        = module,
+			                                          .backend_type     = driver::BackendType::LLVM,
+			                                          .build_debug_info = false });
+			(void) ctx.query<driver::CompileModule>({ .module_id        = submodule_id,
+			                                          .backend_type     = driver::BackendType::LLVM,
+			                                          .build_debug_info = false });
 
 			// Add metadata for persistence test
 			(void) ctx.query<MetadataPersistenceTestQuery>({ 42 });

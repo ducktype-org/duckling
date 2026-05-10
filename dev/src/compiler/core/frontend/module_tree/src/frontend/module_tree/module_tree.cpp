@@ -285,7 +285,8 @@ namespace compiler::frontend {
 		CORE_ASSERT(erased, "Failed to remove ModuleTree from storage");
 	}
 
-	void ModuleTree::checkDanglingReference(const base::Ref<ModuleTree>& candidate) {
+	void ModuleTree::checkDanglingReference([[maybe_unused]] const base::Ref<ModuleTree>& candidate
+	) {
 		IF_BUILD_TYPE_DEV({
 			// If we are not using module modifier, skip the check
 			if (!use_module_modifier_remove) return;

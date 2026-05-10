@@ -9,10 +9,6 @@ namespace pst::expr {
 
 		u64 length = state.ctokens().size();
 
-		auto pos = dia::SourcePosition(
-			state.getPosition(), state.getPosition(base::safeIntConv<i64>(length) - 1).getEnd()
-		);
-
 		std::vector<i64> ends;
 		for (i64 i = 0; i < length; i++)
 			if (state[i].is(Special::Comma)) ends.push_back(i);
