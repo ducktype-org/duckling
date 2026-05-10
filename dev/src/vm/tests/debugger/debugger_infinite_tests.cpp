@@ -80,6 +80,9 @@ private:
 		auto line_number6 = stepAndGetLine(pid);
 		ASSERT_EQUAL_PRINT(expected_next_line(line_number5), line_number6);
 
+		auto line_number7 = stepAndGetLine(pid);
+		ASSERT_EQUAL_PRINT(expected_next_line(line_number6), line_number7);
+
 		vm::api::resume(pid).value();  // "Resume failed (1)"
 
 		vm::api::stop(pid).value();    // "Stop failed (1)"
