@@ -3,3 +3,4 @@ SubDirs:
  - namespaces
  - classes
  - aliases
+ - macros

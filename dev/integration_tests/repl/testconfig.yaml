@@ -8,13 +8,11 @@ beginning: |
 
 end: "\nGoodbye!\n"
 instruction_prompt: "Instruction executed.\n"
+function_prompt: "Function executed.\n"
 
 SubDirs:
   - fundamentals
   - intermediate_statements
   - declarations
-<<<<<<< HEAD
-=======
   - script_loading
->>>>>>> origin/main
   - variable_assignment

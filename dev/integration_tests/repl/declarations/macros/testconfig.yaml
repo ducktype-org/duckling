@@ -1,0 +1,25 @@
+# Tests for declaration of macros in REPL
+
+Tests:
+  basic_usage:
+    Cases:
+      single_expand:
+        Input:
+          File: "basic_usage/single_expand.rtf"
+        Output:
+          String: "@{beginning}\n44\n=> 3\n@{end}"
+      nested_expand:
+        Input:
+          File: "basic_usage/nested_expand.rtf"
+        Output:
+          String: "@{beginning}\n12\n=> 3\n@{end}"
+
+  macros_and_namespaces:
+    Cases:
+      duality:
+        Input:
+          File: "macros_and_namespaces/duality.rtf"
+        Output:
+          String: "@{beginning}\n=> 10\n=> 12\n@{end}"  
+
+  

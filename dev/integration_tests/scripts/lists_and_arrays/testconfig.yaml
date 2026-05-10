@@ -1,0 +1,29 @@
+# Simplest tests for using lists and arrays in Duckling scripts.
+
+Tests:
+  list_length:
+    Enabled: "false"
+    folder: "lists"
+    Cases:
+      direct:
+        mode: direct
+        Output: 
+          String: "6\n"
+      vm:
+        mode: vm
+        Output: 
+          String: "6\n"
+
+  list_access:
+    Enabled: "false"
+    folder: "lists"
+    Cases:
+      direct:
+        mode: direct
+        Output: 
+          String: "2\n4\n6\n"
+      vm:
+        mode: vm
+        Output: 
+          String: "2\n4\n6\n"
+

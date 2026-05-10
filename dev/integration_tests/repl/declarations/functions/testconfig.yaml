@@ -11,6 +11,14 @@ Tests:
         Output: 
           String : "@{beginning}\n=> 7\n@{end}"
 
+  empty_functions:
+    Cases:
+      empty_function:
+        Input:
+          File: "empty_functions/empty_function.rtf"
+        Output:
+          String: "@{beginning}\n@{function_prompt}@{end}"
+
   nested_calls:
     Cases:
       nested_calls:
