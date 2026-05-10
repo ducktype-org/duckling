@@ -494,7 +494,7 @@ namespace compiler::repl {
 				= fs::FileManager::createRandomTempFile("var loaded_x: i32 = 1;\nloaded_x = 10;");
 			auto script_path = std::string("   ") + script_file.getFilePath().string();
 
-			auto initial_history_size = session.m_history.size();
+			auto initial_history_size = session.m_session_history.size();
 
 			auto result = session.loadScriptFile(script_path);
 
@@ -502,8 +502,8 @@ namespace compiler::repl {
 				result.status == ReplResult::Status::Success, "Loading a valid script should succeed"
 			);
 
-			auto updated_history_size = session.m_history.size();
-			ASSERT_EQUAL(2UL, updated_history_size - initial_history_size);
+			auto updated_history_size = session.m_session_history.size();
+			ASSERT_EQUAL(3UL, updated_history_size - initial_history_size);
 			assertFalse(
 				session.m_suppress_repl_feedback_during_script_load,
 				"Output suppression should be restored"
