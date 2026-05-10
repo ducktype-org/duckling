@@ -70,7 +70,7 @@ impl From<&registry::Manifest> for Package {
 /// Response of the [`GitClient::clone_blocking`](super::git::GitClient::clone_blocking).
 pub struct GitCloneResponse {
     /// Hash of the checkouted repository.
-    pub commit_hash: StrId,
+    pub commit_hash: String,
     /// Parsed package at the repository checkouted at the
     /// [`commit_hash`](GitCloneResponse::commit_hash).
     pub package: core::Package,

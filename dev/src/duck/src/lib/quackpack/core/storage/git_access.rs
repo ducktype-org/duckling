@@ -5,9 +5,9 @@ use url::Url;
 
 use super::package_id::GitId;
 use super::paths::Storage;
+use crate::QuackResult;
 use crate::quackpack::core::solver::git_access::GitAccess;
 use crate::util::path_ops_ext::{MkdirOptions, PathOpsExt};
-use crate::{QuackResult, StrId};
 #[derive(Debug, Clone, Copy)]
 /// An implementation of [`GitAccess`].
 pub struct StorageGitAccess<'paths> {
@@ -22,17 +22,18 @@ impl<'paths> StorageGitAccess<'paths> {
 }
 
 impl GitAccess for StorageGitAccess<'_> {
-    fn git_path(&self, url: Url, commit: StrId) -> PathBuf {
-        self.paths.pkg_dir(&GitId::new(url, commit).into())
-    }
-
-    fn is_stored(&self, url: Url, commit: StrId) -> bool {
+    fn git_path(&self, url: Url, commit: &str) -> PathBuf {
         self.paths
-            .is_package_stored(&GitId::new(url, commit).into())
+            .pkg_dir(&GitId::new(url, commit.to_owned()).into())
     }
 
-    fn store(&mut self, url: Url, commit: StrId, source_path: &Path) -> QuackResult<()> {
-        let id = GitId::new(url, commit).into();
+    fn is_stored(&self, url: Url, commit: &str) -> bool {
+        self.paths
+            .is_package_stored(&GitId::new(url, commit.to_owned()).into())
+    }
+
+    fn store(&mut self, url: Url, commit: &str, source_path: &Path) -> QuackResult<()> {
+        let id = GitId::new(url, commit.to_owned()).into();
         let dir = self.paths.pkg_dir(&id);
         if dir.exists() {
             dir.rmtree()?;

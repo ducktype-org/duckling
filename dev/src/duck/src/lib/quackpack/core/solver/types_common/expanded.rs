@@ -95,7 +95,7 @@ impl AsRef<ExpandedLocation> for InternedExpandedLocation {
 /// we transition to using [`ExpandedLocation`].
 pub enum ExpandedLocation {
     Registry { url: Url, real_name: StrId },
-    Git { url: Url, commit: StrId },
+    Git { url: Url, commit: String },
     Local { absolute_path: PathBuf },
 }
 
@@ -258,7 +258,7 @@ impl ExpandedPackage {
                     location: InternedLocation::new(Location::Git {
                         url: url.clone(),
                         branch_or_tag: BranchOrTag::Default,
-                        rev: Some(*commit),
+                        rev: Some(commit.clone()),
                     }),
                     versions: None,
                     features: HashSet::new(),

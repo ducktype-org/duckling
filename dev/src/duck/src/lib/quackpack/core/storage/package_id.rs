@@ -130,12 +130,12 @@ impl RegistryId {
 /// An ID of a stored git package.
 pub struct GitId {
     url: Url,
-    commit: StrId,
+    commit: String,
 }
 
 impl GitId {
     /// Create a new [`GitId`].
-    pub fn new(url: Url, commit: StrId) -> Self {
+    pub fn new(url: Url, commit: String) -> Self {
         Self { url, commit }
     }
 
@@ -168,12 +168,12 @@ impl GitId {
     }
 
     /// Get the checkouted commit of this repository.
-    pub fn commit(&self) -> StrId {
-        self.commit
+    pub fn commit(&self) -> &str {
+        &self.commit
     }
 
     /// Set the checkouted commit of this repository.
-    pub fn set_commit(&mut self, commit: StrId) {
+    pub fn set_commit(&mut self, commit: String) {
         self.commit = commit;
     }
 }

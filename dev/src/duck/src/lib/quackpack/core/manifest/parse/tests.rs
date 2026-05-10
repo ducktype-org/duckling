@@ -491,9 +491,9 @@ dependencies:
         assert_eq!(git_source.url().as_str(), "https://google.com/");
         assert_eq!(
             git_source.branch_or_tag(),
-            BranchOrTag::Branch(StrId::new("branch"))
+            &BranchOrTag::Branch("branch".to_owned())
         );
-        assert_eq!(git_source.rev(), Some(StrId::new("commit")));
+        assert_eq!(git_source.rev(), Some("commit"));
     }
     assert!(e.versions().is_empty());
     assert_eq!(e.name(), e.effective_name());
