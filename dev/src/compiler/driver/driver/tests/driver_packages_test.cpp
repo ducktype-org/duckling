@@ -15,8 +15,9 @@
 #include <base/str/str_utils.hpp>
 
 #include <filesystem/file_path.hpp>
-#include <json/json.hpp>
 #include <tester/tester.hpp>
+
+#include <json/json.hpp>
 
 #include <filesystem>
 #include <fstream>
@@ -31,7 +32,7 @@ using namespace compiler;
 namespace {
 	std::string rewriteBuildPaths(std::string_view options, const fs::FilePath& artifacts_path) {
 		const std::string build_prefix = "build/";
-		const std::string replacement = artifacts_path.getPath().string() + "/";
+		const std::string replacement  = artifacts_path.getPath().string() + "/";
 		std::string       result(options);
 		size_t            pos = 0;
 		while ((pos = result.find(build_prefix, pos)) != std::string::npos) {
@@ -86,14 +87,14 @@ protected:
 
 private:
 	driver::PackageCompilationManifest loadManifest() {
-		const auto manifest_path = fs::FilePath(path("modules/packages/manifest.json"));
+		const auto    manifest_path = fs::FilePath(path("modules/packages/manifest.json"));
 		std::ifstream in(manifest_path.getPath());
 		assertTrue(in.is_open(), "Failed to open packages manifest for driver tests");
 
 		nlohmann::json manifest_json = nlohmann::json::parse(in, nullptr, true, true);
-		auto manifest_opt = driver::PackageCompilationManifest::fromJson(
-			manifest_json, compiler::driver::diagnostics::makeGlobalLoggerReporter()
-		);
+		auto           manifest_opt  = driver::PackageCompilationManifest::fromJson(
+            manifest_json, compiler::driver::diagnostics::makeGlobalLoggerReporter()
+        );
 		assertTrue(manifest_opt.has_value(), "Failed to parse packages manifest");
 		assertTrue(
 			manifest_opt->verify(compiler::driver::diagnostics::makeGlobalLoggerReporter()).isOk(),
@@ -114,14 +115,13 @@ private:
 		ASSERT_EQUAL(packages.size(), manifest.packages.size());
 
 		std::unordered_set<std::string> expected_names;
-		for (const auto& pkg: manifest.packages)
-			expected_names.insert(pkg.package_name.str());
+		for (const auto& pkg: manifest.packages) expected_names.insert(pkg.package_name.str());
 
 		for (const auto& pkg: packages) {
 			auto package_id = pkg.getPackageID().str();
 			assertTrue(expected_names.contains(package_id), "Unexpected package in global state");
 
-			auto root_id = pkg.getRootModule().illegalAccess().getID();
+			auto root_id  = pkg.getRootModule().illegalAccess().getID();
 			auto root_ref = frontend::getModuleRef(root_id);
 			ASSERT_EQUAL(root_ref->getName().str(), package_id);
 		}
@@ -162,12 +162,10 @@ private:
 		}
 
 		for (auto& task: tasks) {
-			if (auto* target_exe = std::get_if<driver::BuildTargetLLVMExecutable>(
-				&task.build_target
-			)) {
+			if (auto* target_exe
+			    = std::get_if<driver::BuildTargetLLVMExecutable>(&task.build_target)) {
 				target_exe->linking_options.additional_link_options = rewriteBuildPaths(
-					target_exe->linking_options.additional_link_options,
-					artifacts_path
+					target_exe->linking_options.additional_link_options, artifacts_path
 				);
 			}
 		}
@@ -175,14 +173,8 @@ private:
 		ASSERT_TRUE(driver::compilePackages(tasks).isOk());
 
 		const std::vector<std::string> expected_outputs{
-			"lib_a.a",
-			"lib_b.a",
-			"lib_a_dvm.dbc",
-			"lib_b_dvm.dbc",
-			"app1_dvm.dbc",
-			"app2_dvm.dbc",
-			"app1.exe",
-			"app2.exe",
+			"lib_a.a",      "lib_b.a",      "lib_a_dvm.dbc", "lib_b_dvm.dbc",
+			"app1_dvm.dbc", "app2_dvm.dbc", "app1.exe",      "app2.exe",
 		};
 
 		for (const auto& output: expected_outputs) {
