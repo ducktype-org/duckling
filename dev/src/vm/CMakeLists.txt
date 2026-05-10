@@ -156,6 +156,14 @@ function(add_vm_variant suffix compile_def)
             # Strip global constructors, they are not necessery for jit.
             COMMAND ${LLVM_EXTRACT} --delete --glob=llvm.global_ctors  ${common_bc} -o ${common_bc}
 
+            # Passess used to shorten bytecode and reduce JIT startup. Public api list, represents all jitable opcodes.
+            # globalopt removes unused global variables. It is crucial to do it first to clean up after global constcors
+            # got stripped in the previous step.
+            # Internalize marks all function not in api list as internal, so they possibly can be removed in dead code
+            # elimination (part of O3)
+            # Other passess can improve bitcode (they are not part of O3).
+            # O3 is duplicated, because it can possibly improve code after strip-dead-prototypes. It is important to generate
+            # as short bitcode as possible, even at the cost of build time.
             COMMAND ${LLVM_OPT}
                 -passes=globalopt,internalize,attributor,simplifycfg,default<O3>,strip-dead-prototypes,default<O3>
                 --internalize-public-api-file=${extracted_func_file}
