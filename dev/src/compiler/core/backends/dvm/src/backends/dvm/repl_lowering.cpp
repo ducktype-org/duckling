@@ -1,6 +1,5 @@
-#include "program_lowering_context.hpp"
-
 #include <backends/dvm/repl_lowering.hpp>
+#include <program_lowering_context.hpp>
 
 #include <base/pointers/box.hpp>
 
@@ -19,8 +18,6 @@ namespace compiler::backend_vm {
 	ReplLoweringContext::~ReplLoweringContext()                                         = default;
 	ReplLoweringContext::ReplLoweringContext(ReplLoweringContext&&) noexcept            = default;
 	ReplLoweringContext& ReplLoweringContext::operator=(ReplLoweringContext&&) noexcept = default;
-
-	internal::ProgramLoweringContext& ReplLoweringContext::getContext() { return *m_context; }
 
 	void ReplLoweringContext::setContext(query::Context& query_ctx) {
 		m_context->setContext(query_ctx);
@@ -46,8 +43,13 @@ namespace compiler::backend_vm {
 		return m_context->lowerAndKeepLirGlobal(lir_global, global_ctor, global_dtor);
 	}
 
-	const vm::code::TypeOfData& ReplLoweringContext::lowerAndKeepTslType(CRef<tsl::TypeLayout> layout
-	) {
-		return m_context->lowerAndKeepTslType(layout);
+	LoweredEntitiesSnapshot ReplLoweringContext::captureLoweredEntitiesSnapshot() const {
+		return m_context->captureLoweredEntitiesSnapshot();
+	}
+
+	vm::code::CodeCollection ReplLoweringContext::collectNewCodeSince(
+		const LoweredEntitiesSnapshot& snapshot
+	) const {
+		return m_context->collectNewCodeSince(snapshot);
 	}
 }

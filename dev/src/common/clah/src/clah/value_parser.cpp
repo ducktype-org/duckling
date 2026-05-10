@@ -8,179 +8,197 @@
 
 #include "exceptions.hpp"
 
+#include <base/str/str_utils.hpp>
+
 #include <filesystem/file.hpp>
 
 #include <charconv>
-#include <iostream>
 
 namespace clah {
-	ValueParsingResult StringParser::parse(usize start, std::string_view raw_input) const {
-		// Allows parsing of strings like "\"Hello\\\" here\" and the\"re!".
-		usize position        = start;
-		usize quotes_to_close = raw_input[position] == '\"';
+	namespace {
 
-		if (quotes_to_close > 0) position++;
+		std::vector<std::string> splitCommaSeparated(std::string_view value) {
+			std::vector<std::string> values;
+			usize                    pos = 0;
 
-		std::string data;
-		while (position < raw_input.size()
-		       && (quotes_to_close || !std::isspace(raw_input[position]))) {
-			if (raw_input[position] == '\"') {
-				if (!data.empty() && data.back() == '\\')
-					data.pop_back();
-				else {
-					quotes_to_close--;
-					position++;
-					continue;
-				}
+			while (pos < value.size()) {
+				auto comma_pos = value.find(',', pos);
+				if (comma_pos == std::string_view::npos) comma_pos = value.size();
+
+				auto item = base::strTrim(value.substr(pos, comma_pos - pos));
+				if (!item.empty()) values.emplace_back(item);
+
+				pos = comma_pos + 1;
 			}
 
-			data.push_back(raw_input[position++]);
+			return values;
 		}
 
-		return { .value = data, .raw_source = data, .position = position };
+		bool containsCategory(
+			const std::vector<std::string>& categories, std::string_view candidate
+		) {
+			return std::ranges::find(categories, candidate) != categories.end();
+		}
 	}
 
-	ValueParsingResult IntParser::parse(usize start, std::string_view raw_input) const {
-		usize end_index = start;
-		while (end_index < raw_input.size() && !std::isspace(raw_input[end_index])) end_index++;
+	ValueParsingResult StringParser::parse(std::string_view argument) const {
+		return { .value = std::string(argument), .raw_source = std::string(argument) };
+	}
+
+	ValueParsingResult IntParser::parse(std::string_view argument) const {
+		auto begin = argument.data();
+		auto end   = begin + argument.size();
 
 		i64  value  = 0;
-		auto begin  = raw_input.begin() + start;
-		auto end    = raw_input.begin() + end_index;
 		auto result = std::from_chars(begin, end, value, 10);
 		if (result.ptr != end or result.ec == std::errc::invalid_argument
 		    or result.ec == std::errc::result_out_of_range) {
-			throw exceptions::ValueParsingException(
-				getTypeName().c_str(), start, end_index, raw_input
-			);
+			usize end_index = argument.empty() ? 0 : argument.size() - 1;
+			throw exceptions::ValueParsingException(getTypeName().c_str(), 0, end_index, argument);
 		}
-		return { .value      = value,
-			     .raw_source = std::string(raw_input.substr(start, end_index - start)),
-			     .position   = end_index };
+		return { .value = value, .raw_source = std::string(argument) };
 	}
 
-	ValueParsingResult RangeParser::parse(usize start, std::string_view raw_input) const {
-		usize position = start;
-		while (position < raw_input.size() && !std::isspace(raw_input[position])) position++;
-
-		std::string_view my_chunk    = raw_input.substr(start, position - start + 1);
-		auto             dot_dot_pos = my_chunk.find("..");
-		if (my_chunk.find("..") == std::string_view::npos)
+	ValueParsingResult RangeParser::parse(std::string_view argument) const {
+		auto dot_dot_pos = argument.find("..");
+		if (dot_dot_pos == std::string::npos)
 			throw exceptions::ValueParsingException(
 				getTypeName().c_str(),
-				start,
-				position,
-				raw_input,
+				0,
+				argument.empty() ? 0 : argument.size() - 1,
+				argument,
 				"There should be \"..\" between values, like 1..4 == 1, 2, 3"
 			);
 
-		auto left_value_source = my_chunk.substr(0, dot_dot_pos);
+		auto left_value_source = argument.substr(0, dot_dot_pos);
 		auto right_value_source
-			= my_chunk.substr(dot_dot_pos + 2, my_chunk.size() - dot_dot_pos - 2);
+			= argument.substr(dot_dot_pos + 2, argument.size() - dot_dot_pos - 2);
 		try {
-			auto parser      = IntParser::make();
-			i64  value_left  = std::any_cast<i64>(parser->parse(0, left_value_source).value);
-			i64  value_right = std::any_cast<i64>(parser->parse(0, right_value_source).value);
+			auto parser = IntParser::make();
+			i64  value_left
+				= std::any_cast<i64>(parser->parse({ std::string(left_value_source) }).value);
+			i64 value_right
+				= std::any_cast<i64>(parser->parse({ std::string(right_value_source) }).value);
 
 			return { .value      = Range{ .begin = value_left, .end = value_right },
-				     .raw_source = std::string(my_chunk),
-				     .position   = position };
+				     .raw_source = std::string(argument) };
 		} catch (clah::exceptions::ValueParsingException& e) {
 			throw exceptions::ValueParsingException(
-				getTypeName().c_str(), start, position, raw_input, "Error parsing range's values"
+				getTypeName().c_str(),
+				0,
+				argument.empty() ? 0 : argument.size() - 1,
+				argument,
+				"Error parsing range's values"
 			);
 		}
 	}
 
-	ValueParsingResult FileParser::parse(usize start, std::string_view raw_input) const {
-		auto result = StringParser::make()->parse(start, raw_input);
-		auto str    = std::any_cast<std::string>(result.value);
-
-		std::smatch match;
-		if (!std::regex_match(str, match, file_regex))
+	ValueParsingResult FileParser::parse(std::string_view argument) const {
+		std::cmatch match;
+		if (!std::regex_match(argument.begin(), argument.end(), match, file_regex))
 			throw clah::exceptions::ValueParsingException(
 				getTypeName().c_str(),
-				start,
-				result.position,
-				raw_input,
+				0,
+				argument.empty() ? 0 : argument.size() - 1,
+				argument,
 				"argument does not match regex"  // unluckily, there is no way to extract the regex
 			                                     // from file_regex.
 			);
 
-		std::filesystem::path path = str;
+		std::filesystem::path path = argument;
 
 		if (!std::filesystem::exists(path)) throw clah::exceptions::FileDoesNotExist(path);
 
 		fs::File file(path);
 
-		return { .value = file, .raw_source = result.raw_source, .position = result.position };
+		return { .value = file, .raw_source = std::string(argument) };
 	}
 
-	ValueParsingResult FilePathParser::parse(usize start, std::string_view raw_input) const {
-		auto result = StringParser::make()->parse(start, raw_input);
-		auto str    = std::any_cast<std::string>(result.value);
-
-		std::smatch r_match;
-		if (!std::regex_match(str, r_match, filepath_regex))
+	ValueParsingResult FilePathParser::parse(std::string_view argument) const {
+		std::cmatch r_match;
+		if (!std::regex_match(argument.begin(), argument.end(), r_match, filepath_regex))
 			throw clah::exceptions::ValueParsingException(
 				getTypeName().c_str(),
-				start,
-				result.position,
-				raw_input,
+				0,
+				argument.empty() ? 0 : argument.size() - 1,
+				argument,
 				"argument does not match regex"
 			);
 
-		std::filesystem::path path = str;
+		std::filesystem::path path = argument;
 
 		fs::FilePath filepath(path);
 
-		return { .value = filepath, .raw_source = result.raw_source, .position = result.position };
+		return { .value = filepath, .raw_source = std::string(argument) };
 	}
 
-	ValueParsingResult StringListParser::parse(usize start, std::string_view raw_input) const {
-		if (raw_input.at(start) != '[') {
-			throw exceptions::ValueParsingException(
-				getTypeName().c_str(), start, start + 1, raw_input, "String list must start with '['"
-			);
-		}
-
-		// find: ]:
-		usize ending_pos = raw_input.find(']', start);
-		if (ending_pos == std::string_view::npos) {
-			throw exceptions::ValueParsingException(
-				getTypeName().c_str(), start, start + 1, raw_input, "String list must end with ']'"
-			);
-		}
-
-		CORE_ASSERT(start + 1 <= ending_pos, "Calculated string list range is invalid");
-		std::string string_list{ raw_input.substr(start + 1, ending_pos - start - 1) };
-
-		// lambda to trim spaces from both ends:
-		auto trim_spaces = [](std::string_view sv) -> std::string {
-			std::string string_result_trimmed{ sv };
-			string_result_trimmed.erase(0, string_result_trimmed.find_first_not_of(" \t\n\r\f\v"));
-			string_result_trimmed.erase(string_result_trimmed.find_last_not_of(" \t\n\r\f\v") + 1);
-			return string_result_trimmed;
-		};
-
-		// split by commas:
-		std::vector<std::string> values;
-		usize                    pos = 0;
-
-		while (pos < string_list.size()) {
-			auto comma_pos = string_list.find(',', pos);
-			if (comma_pos == std::string::npos) comma_pos = string_list.size();
-
-			auto value = trim_spaces(string_list.substr(pos, comma_pos - pos));
-			if (!value.empty()) values.emplace_back(value);
-
-			pos = comma_pos + 1;
-		}
+	ValueParsingResult StringListParser::parse(std::string_view argument) const {
+		std::vector<std::string> values = splitCommaSeparated(argument);
 
 		return {
 			.value      = values,
-			.raw_source = string_list,
-			.position   = ending_pos + 1,
+			.raw_source = std::string(argument),
 		};
+	}
+
+	std::string CategoryParser::debugPrintCategories(const std::vector<std::string>& categories) {
+		std::string result;
+		for (usize i = 0; i < categories.size(); ++i) {
+			result += categories[i];
+			if (i + 1 < categories.size()) result += ", ";
+		}
+		return result;
+	}
+
+	ValueParsingResult CategoryParser::parse(std::string_view argument) const {
+		if (categories.empty()) {
+			throw exceptions::ValueParsingException(
+				getTypeName().c_str(),
+				0,
+				argument.empty() ? 0 : argument.size() - 1,
+				argument,
+				"No categories configured for parser"
+			);
+		}
+
+		if (!containsCategory(categories, argument)) {
+			throw exceptions::ValueParsingException(
+				getTypeName().c_str(),
+				0,
+				argument.empty() ? 0 : argument.size() - 1,
+				argument,
+				"Invalid category. Allowed: " + CategoryParser::debugPrintCategories(categories)
+			);
+		}
+
+		return { .value = std::string(argument), .raw_source = std::string(argument) };
+	}
+
+	ValueParsingResult CategoryListParser::parse(std::string_view argument) const {
+		if (categories.empty()) {
+			throw exceptions::ValueParsingException(
+				getTypeName().c_str(),
+				0,
+				argument.empty() ? 0 : argument.size() - 1,
+				argument,
+				"No categories configured for parser"
+			);
+		}
+
+		std::vector<std::string> values = splitCommaSeparated(argument);
+		for (const auto& value: values) {
+			if (!containsCategory(categories, value)) {
+				throw exceptions::ValueParsingException(
+					getTypeName().c_str(),
+					0,
+					argument.empty() ? 0 : argument.size() - 1,
+					argument,
+					"Invalid category in list: \"" + std::string(value)
+						+ "\". Allowed: " + CategoryParser::debugPrintCategories(categories)
+				);
+			}
+		}
+
+		return { .value = values, .raw_source = std::string(argument) };
 	}
 }
