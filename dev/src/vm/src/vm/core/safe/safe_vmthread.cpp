@@ -45,6 +45,7 @@ namespace vm {
 
 	/**
 	 * @brief Tail call written function that handles the execution pause request.
+ 	 * @details Assumes that the instruction in the frame is to be executed before AND after running this function.
 	 */
 	RETURN_TYPE OpFuns::handle_execution_break(OPFUN_ARGS) {
 		{
@@ -58,7 +59,7 @@ namespace vm {
 			instr       = frame->instr;
 			local_stack = frame->local_stack;
 		}
-		OPFUN_CONT(1);
+		OPFUN_CONT(0);
 	}
 
 	/**
