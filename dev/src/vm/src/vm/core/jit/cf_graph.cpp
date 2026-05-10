@@ -1,3 +1,7 @@
+/**
+ * @file cf_graph.cpp
+ * @brief Implementation of control-flow graph construction.
+ */
 #include "cf_graph.hpp"
 
 namespace vm::jit::cf {
