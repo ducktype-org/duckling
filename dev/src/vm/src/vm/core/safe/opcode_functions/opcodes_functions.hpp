@@ -74,7 +74,9 @@ namespace vm {
 		 * @brief A mapping between opcode ids and debug function pointers.
 		 */
 		static constexpr std::array<DebugOpFun*, OP_CASES_COUNT> DEBUG_OPFUNS{
-#define HANDLE_MICRO_INSTR(opcode) #opcode == "check_strategy" ? op_debug_pass : op_debug_##opcode,
+#define HANDLE_MICRO_INSTR(opcode)                                               \
+	low::MicroOpcode::opcode == low::MicroOpcode::check_strategy ? op_debug_pass \
+																 : op_debug_##opcode,
 #include <vm/core/safe/low_program/micro_instruction_definitions.hpp>
 
 
