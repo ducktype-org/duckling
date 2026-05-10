@@ -388,6 +388,14 @@ namespace vm {
 		return start_function;
 	}
 
+	SafeVMThread::ScopedGilGuard::ScopedGilGuard(SafeVMThread& t): thread(t) {
+		thread.acquireGil();
+	}
+
+	SafeVMThread::ScopedGilGuard::~ScopedGilGuard() {
+		if (thread.has_gil) thread.releaseGil();
+	}
+
 #if defined(__clang__)
 // @TODO: suppress code deduplication in Clang
 #elif defined(__GNUG__)
@@ -399,7 +407,8 @@ namespace vm {
 	std::vector<Ref<VmValue>> SafeVMThread::executeFunction(
 		const low::LowFuncData& start_function, const low::LowFuncData& func
 	) {
-		acquireGil();
+		ScopedGilGuard gil_guard(*this);
+
 		// Frame of the called function.
 		Frame*     frame          = runtime_data.frame_stack_current;
 		Frame*     orig_frame_ptr = frame;
@@ -471,8 +480,6 @@ namespace vm {
 			process_memory.decreaseBlockRefcount(block);
 		}
 		*orig_frame_ptr = orig_frame_cpy;
-
-		releaseGil();
 
 		return exit_value_storage.value();
 	}
