@@ -82,7 +82,7 @@ pub fn clean_storage(ctx: &DuckContext, storage_root: &Path) -> QuackResult<Clea
         .into_iter()
         .flat_map(|pkg| {
             let venv_id: StrId = pkg.file_name().into();
-            if !all_deps.contains(&venv_id) {
+            if !all_deps.contains(venv_id.as_str()) {
                 Some(pkg.path())
             } else {
                 None
@@ -107,7 +107,7 @@ fn clean_venv_from_storage(
     temporary_lifetime: Duration,
     now: SystemTime,
     removed_venvs: &mut Vec<VenvId>,
-    all_deps: &mut HashSet<StrId>,
+    all_deps: &mut HashSet<String>,
     ctx: &DuckContext,
 ) -> QuackResult<()> {
     let venv_id = dir.file_name().to_venv_id();
