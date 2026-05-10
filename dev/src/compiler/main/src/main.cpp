@@ -23,6 +23,7 @@
 #include <helios/queries/queries.hpp>
 #include <linker/link.hpp>
 #include <repl/session.hpp>
+#include <system_utils.hpp>
 #include <time_stats/time_stats.hpp>
 
 #include <base/except/exceptions.hpp>
@@ -32,7 +33,6 @@
 #include <base/types/ok_bad.hpp>
 
 #include <clah/clah.hpp>
-#include <system_utils.hpp>
 #include <diagnostic/logger.hpp>
 #include <filesystem/file.hpp>
 #include <filesystem/file_path.hpp>
@@ -50,7 +50,6 @@
 #include <ranges>
 #include <string>
 #include <vector>
-
 
 namespace {
 	std::vector<std::string> g_argv;

@@ -63,7 +63,9 @@ namespace compiler::repl {
 	private:
 		struct ScopedStderrCapture final {
 			ScopedStderrCapture(): m_old_buf(std::cerr.rdbuf(m_buffer.rdbuf())) {}
+
 			~ScopedStderrCapture() { std::cerr.rdbuf(m_old_buf); }
+
 			ScopedStderrCapture(const ScopedStderrCapture&)            = delete;
 			ScopedStderrCapture& operator=(const ScopedStderrCapture&) = delete;
 
@@ -310,7 +312,7 @@ namespace compiler::repl {
 
 			{
 				ScopedStderrCapture capture;
-				auto result = session.processLine("/reset -");
+				auto                result = session.processLine("/reset -");
 				assertTrue(
 					result.status == ReplResult::Status::Success,
 					"Invalid /reset syntax should not request a reset"
@@ -323,7 +325,7 @@ namespace compiler::repl {
 
 			{
 				ScopedStderrCapture capture;
-				auto result = session.processLine("/reset 1 2");
+				auto                result = session.processLine("/reset 1 2");
 				assertTrue(
 					result.status == ReplResult::Status::Success,
 					"Extra tokens in /reset should not request a reset"
@@ -343,15 +345,12 @@ namespace compiler::repl {
 					"Setup should succeed before reset validation"
 				);
 				ScopedStderrCapture capture;
-				auto result = session.processLine("/reset 1");
+				auto                result = session.processLine("/reset 1");
 				assertTrue(
 					result.status == ReplResult::Status::Reset,
 					"/reset 1 should request a reset when history has entries"
 				);
-				assertTrue(
-					capture.str().empty(),
-					"Valid /reset should not print usage"
-				);
+				assertTrue(capture.str().empty(), "Valid /reset should not print usage");
 			}
 
 			removeSessionHistoryFile();
