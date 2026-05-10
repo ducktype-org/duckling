@@ -145,6 +145,13 @@ namespace compiler::frontend::packages {
 				else
 					had_error = true;
 			}
+		} else if (json.contains("dependencies")) {
+			report(
+				"Package dependencies must be an array",
+				"The 'dependencies' field must be an array of objects when present.",
+				true
+			);
+			had_error = true;
 		}
 
 		if (had_error) return {};

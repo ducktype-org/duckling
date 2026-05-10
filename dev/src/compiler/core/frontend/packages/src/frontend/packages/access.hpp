@@ -39,7 +39,7 @@ namespace compiler::frontend::packages {
 		hashing::ComponentHash::HashType package_hash;       //< owner package hash
 		base::StrID                      alias;              //< alias being looked up
 		bool                             found;              //< whether alias is declared
-		base::StrID                      target_package_id;  //< target package id (bad if !found)
+		base::Optional<base::StrID>      target_package_id;  //< target package id if found
 
 		[[nodiscard]] query::QueryStableHash queryStablePerfectHash() const;
 		bool operator==(const KeyOf_PackageDependencyAliasSideInput&) const = default;
