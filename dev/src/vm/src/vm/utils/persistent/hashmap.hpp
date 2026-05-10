@@ -155,7 +155,7 @@ namespace vm::persistent {
 		}
 
 		/**
-		 * @brief method for inserting [key, value] to given instance. 
+		 * @brief method for inserting [key, value] to given instance.
 		 * @note if key was present at given instance, it won't be overriden
 		 */
 		std::pair<bool, HashMapStateID> emplace(

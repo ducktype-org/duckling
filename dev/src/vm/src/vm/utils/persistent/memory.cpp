@@ -144,7 +144,9 @@ namespace vm::persistent {
 		auto root = validateInput(state, idxs);
 
 		auto new_root = detail::SegmentTree::reconstructIdxs(
-			root, idxs, [&](usize cur_idx, base::Optional<usize>) -> ID {
+			root,
+			idxs,
+			[&](usize cur_idx, base::Optional<usize>) -> ID {
 				CORE_ASSERT(vals.size(), "there must be sth");
 				auto [idx, val] = vals.front();
 				vals.pop_front();
@@ -219,9 +221,8 @@ namespace vm::persistent {
 	memIt::MemoryIterator(const Memory& mem, MemoryStateID state, usize idx) {
 		maybe_path = mem.getPathTo(state, idx);
 		if (maybe_path->pointsToValid()) return;
-		if (maybe_path->moveToValid(detail::SegmentTree::Dir::Right) == false) {
+		if (maybe_path->moveToValid(detail::SegmentTree::Dir::Right) == false)
 			maybe_path = std::nullopt;
-		}
 	}
 
 	MemoryStateView::MemoryStateView(const Memory& mem, MemoryStateID id): id{ id }, mem{ mem } {}
