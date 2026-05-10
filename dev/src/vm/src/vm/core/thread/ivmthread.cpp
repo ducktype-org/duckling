@@ -152,7 +152,8 @@ bool vm::IVMThread::stop() {
 bool vm::IVMThread::hasActiveThread() const { return exec_thread && exec_thread->joinable(); }
 
 /**
- * @details Assumes that the instruction in the frame is to be executed before AND after running this function.
+ * @details Assumes that the instruction in the frame is to be executed before AND after running
+ * this function.
  */
 void vm::IVMThread::breakActiveExecution() {
 	std::unique_lock lock(execution_request_mutex);
@@ -174,7 +175,8 @@ void vm::IVMThread::breakActiveExecution() {
 void vm::IVMThread::notifyPaused() { pause_cv.notify_all(); }
 
 /**
- * @details Assumes that the instruction in the frame is to be executed before AND after running this function.
+ * @details Assumes that the instruction in the frame is to be executed before AND after running
+ * this function.
  */
 void vm::IVMThread::runDebuggerLoop(std::unique_lock<std::mutex>& lock) {
 	while (true) {

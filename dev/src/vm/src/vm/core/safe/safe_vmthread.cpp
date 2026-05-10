@@ -45,7 +45,8 @@ namespace vm {
 
 	/**
 	 * @brief Tail call written function that handles the execution pause request.
- 	 * @details Assumes that the instruction in the frame is to be executed before AND after running this function.
+	 * @details Assumes that the instruction in the frame is to be executed before AND after running
+	 * this function.
 	 */
 	RETURN_TYPE OpFuns::handle_execution_break(OPFUN_ARGS) {
 		{
