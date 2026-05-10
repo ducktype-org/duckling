@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 from hashlib import sha256
 from pathlib import Path
 import re
@@ -145,6 +146,38 @@ def duplicate_package_modules(package_dir: Path, copy_count: int) -> list[Path]:
     return created_files
 
 
+# Returns package directories from a compile_packages manifest.
+def get_manifest_package_dirs(manifest_path: Path) -> list[Path]:
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    packages = manifest.get("packages")
+    if not isinstance(packages, list) or not packages:
+        raise ValueError("Manifest must define a non-empty 'packages' array.")
+
+    package_dirs: list[Path] = []
+    seen: set[str] = set()
+    for package in packages:
+        if not isinstance(package, dict) or "path" not in package:
+            raise ValueError("Manifest package entries must define a 'path'.")
+        package_dir = Path(package["path"])
+        key = str(package_dir)
+        if key in seen:
+            continue
+        if not package_dir.exists():
+            raise ValueError(f"Manifest package path not found: {package_dir}")
+        seen.add(key)
+        package_dirs.append(package_dir)
+
+    return package_dirs
+
+
+# Duplicates all packages referenced by the manifest.
+def duplicate_manifest_packages(manifest_path: Path, copy_count: int) -> list[Path]:
+    created_files: list[Path] = []
+    for package_dir in get_manifest_package_dirs(manifest_path):
+        created_files.extend(duplicate_package_modules(package_dir, copy_count))
+    return created_files
+
+
 # Removes temporary duplicated files.
 def remove_files(paths: list[Path]) -> None:
     for file in reversed(paths):
@@ -274,9 +307,8 @@ def run_once_manifest(
 
 
 # Manifest-mode determinism check: compile_packages with 1 vs N workers,
-# diff produced artifacts. Skips the source-duplication trick used in
-# single-package mode (multi-package manifests already provide enough
-# parallelism to exercise worker scheduling).
+# diff produced artifacts. Uses the same source-duplication trick as
+# single-package mode to stress concurrent compilation.
 def run_manifest_mode(args: argparse.Namespace) -> int:
     manifest_path = Path(args.manifest)
     if not manifest_path.exists():
@@ -288,62 +320,68 @@ def run_manifest_mode(args: argparse.Namespace) -> int:
 
     concurrent_workers = args.duckc_worker_count if args.duckc_worker_count > 1 else 3
     build_dir = Path("build")
+    created_files: list[Path] = []
 
-    ok_single, single_snapshot, single_error = run_once_manifest(
-        duckc_path=args.duckc_path,
-        manifest_path=str(manifest_path),
-        workers=1,
-        compile_options=args.compile_options,
-        build_dir=build_dir,
-    )
-    if not ok_single:
-        print(
-            "[determinism-check] Compilation failed (single-worker pass).\n" + single_error,
-            file=sys.stderr,
+    try:
+        created_files = duplicate_manifest_packages(manifest_path, args.copy_count)
+    except ValueError as error:
+        print(f"[determinism-check] {error}", file=sys.stderr)
+        return 1
+
+    try:
+        ok_single, single_snapshot, single_error = run_once_manifest(
+            duckc_path=args.duckc_path,
+            manifest_path=str(manifest_path),
+            workers=1,
+            compile_options=args.compile_options,
+            build_dir=build_dir,
         )
+        if not ok_single:
+            print(
+                "[determinism-check] Compilation failed (single-worker pass).\n" + single_error,
+                file=sys.stderr,
+            )
+            return 1
+
+        ok_concurrent, concurrent_snapshot, concurrent_error = run_once_manifest(
+            duckc_path=args.duckc_path,
+            manifest_path=str(manifest_path),
+            workers=concurrent_workers,
+            compile_options=args.compile_options,
+            build_dir=build_dir,
+        )
+        if not ok_concurrent:
+            print(
+                "[determinism-check] Compilation failed (concurrent pass).\n" + concurrent_error,
+                file=sys.stderr,
+            )
+            return 1
+
+        if not single_snapshot and not concurrent_snapshot:
+            print(
+                "[determinism-check] No compiled artifacts were produced; cannot perform determinism check.\n"
+                "Expected at least one .o/.dbc/.a/.exe artifact.",
+                file=sys.stderr,
+            )
+            return 1
+
+        diffs = diff_snapshots(single_snapshot, concurrent_snapshot)
+        if diffs:
+            print(
+                "[determinism-check] Compilation is not deterministic and did not compile consistently.\n"
+                + "\n".join(diffs),
+                file=sys.stderr,
+            )
+            return 1
+
+        print(
+            "[determinism-check] Deterministic artifacts verified for manifest "
+            f"'{manifest_path}' (workers 1 vs {concurrent_workers})."
+        )
+        return 0
+    finally:
+        remove_files(created_files)
         shutil.rmtree(build_dir, ignore_errors=True)
-        return 1
-
-    ok_concurrent, concurrent_snapshot, concurrent_error = run_once_manifest(
-        duckc_path=args.duckc_path,
-        manifest_path=str(manifest_path),
-        workers=concurrent_workers,
-        compile_options=args.compile_options,
-        build_dir=build_dir,
-    )
-    if not ok_concurrent:
-        print(
-            "[determinism-check] Compilation failed (concurrent pass).\n" + concurrent_error,
-            file=sys.stderr,
-        )
-        shutil.rmtree(build_dir, ignore_errors=True)
-        return 1
-
-    if not single_snapshot and not concurrent_snapshot:
-        print(
-            "[determinism-check] No compiled artifacts were produced; cannot perform determinism check.\n"
-            "Expected at least one .o/.dbc/.a/.exe artifact.",
-            file=sys.stderr,
-        )
-        shutil.rmtree(build_dir, ignore_errors=True)
-        return 1
-
-    diffs = diff_snapshots(single_snapshot, concurrent_snapshot)
-    shutil.rmtree(build_dir, ignore_errors=True)
-
-    if diffs:
-        print(
-            "[determinism-check] Compilation is not deterministic and did not compile consistently.\n"
-            + "\n".join(diffs),
-            file=sys.stderr,
-        )
-        return 1
-
-    print(
-        "[determinism-check] Deterministic artifacts verified for manifest "
-        f"'{manifest_path}' (workers 1 vs {concurrent_workers})."
-    )
-    return 0
 
 
 # Executes duckc compile_package and captures process output.
