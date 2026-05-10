@@ -3,7 +3,7 @@
 //! It incorporates [`DucknestClient`](ducknest::DucknestClient) with
 //! [`ManifestCache`](cache::ManifestCache), and provides another layer of abstraction over the
 //! [`GitClient`](git::GitClient).
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use tempfile::TempDir;
 use tracing::debug;
@@ -12,6 +12,7 @@ use url::Url;
 use crate::quackpack::core::Git;
 use crate::quackpack::core::fetcher::types::{FetcherResponse, PackageWithUrl};
 use crate::quackpack::schemas::registry;
+use crate::util::file_locks::FileLockManager;
 use crate::util::path_ops_ext::{MkdirOptions, PathOpsExt};
 use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail_internal};
 
@@ -32,9 +33,9 @@ pub struct Fetcher<'duck> {
     #[allow(unused)] // @TODO: #1737 Remove this
     git_client: git::GitClient,
     cache: cache::ManifestCache,
-    download_cache_path: &'duck Path,
+    download_cache_path: FileLockManager,
     #[allow(unused)] // @TODO: #1905 Remove this
-    artifacts_cache_path: &'duck Path,
+    artifacts_cache_path: FileLockManager,
 }
 
 impl<'duck> Fetcher<'duck> {
@@ -51,9 +52,11 @@ impl<'duck> Fetcher<'duck> {
     /// 2. failed to initialize any of the underlying clients,
     /// 3. failed to initialize cache manager.
     pub fn new(ctx: &'duck DuckContext) -> QuackResult<Self> {
-        let metadata_path = ctx.duck_home().ensure_metadata_db()?;
-        let artifacts_cache_path = ctx.duck_home().ensure_artifacts_dir()?;
-        let download_cache_path = ctx.duck_home().ensure_downloads_dir()?;
+        let metadata_path = ctx.duck_home().get_metadata_db_path();
+        let artifacts_cache_path = ctx.duck_home().artifacts();
+        artifacts_cache_path.mkdir()?;
+        let download_cache_path = ctx.duck_home().downloads();
+        download_cache_path.mkdir()?;
         debug!(
             "metadata is at `{}`, artifacts are at `{}`, and downloads are at `{}`",
             metadata_path.display(),
@@ -61,7 +64,7 @@ impl<'duck> Fetcher<'duck> {
             download_cache_path.display()
         );
         let ducknest_client = ducknest::DucknestClient::new(ctx);
-        let cache = cache::ManifestCache::new(cache::CacheLocation::Path(metadata_path))?;
+        let cache = cache::ManifestCache::new(cache::CacheLocation::Path(metadata_path.as_path()))?;
         let git_client = git::GitClient {};
         Ok(Self {
             ctx,
@@ -130,7 +133,7 @@ impl<'duck> Fetcher<'duck> {
         let result = self
             .ducknest_client
             .get_multi_metadata(url, package_name)
-            .with_context(|| format!("while getting a multimetadata of `{}", package_name))?;
+            .with_context(|| format!("while getting a multimetadata of `{}`", package_name))?;
         self.cache
             .add_or_replace_multiple_manifests(url.clone(), result.packages_metadata.clone())?;
         Ok(FetcherResponse::Some(result))
@@ -142,28 +145,31 @@ impl<'duck> Fetcher<'duck> {
         let destination = self
             .download_cache_path
             .join(package.id)
-            .join(package.version.to_string())
+            .join(package.version.to_string());
+
+        let blob_path = destination
+            .not_locked_path()
             .join(Self::DEFAULT_BLOB_FILENAME);
 
-        if destination.exists() {
+        if blob_path.exists() {
             debug!("cache hit");
-            return Ok(destination);
+            return Ok(blob_path);
         }
 
-        if let Some(parent) = destination.parent() {
+        if let Some(parent) = blob_path.parent() {
             parent.mkdir(MkdirOptions::WithParents)?;
         } else {
             qp_bail_internal!("path without a parent")
         }
         self.ducknest_client
-            .fetch_blob(package, &destination)
+            .fetch_blob(package, &blob_path)
             .with_context(|| {
                 format!(
                     "while downloading a source of `{}` version `{}`",
                     package.id, package.version
                 )
             })?;
-        Ok(destination)
+        Ok(blob_path)
     }
 
     /// Clone a git repository pointed by `source` to the `destination_directory`.
