@@ -83,14 +83,9 @@ namespace vm {
 	void SafeVMThread::executeOneStep() {
 		Frame*     frame       = runtime_data.frame_stack_current;
 		auto*      instr       = frame->instr;
+		std::byte* local_stack = frame->local_stack;
 
 		low::MicroOpcode opcode = getInstructionOpcode(*instr);
-
-		if (opcode == low::MicroOpcode::check_strategy) {
-			frame->instr = instr + 1;
-			return;
-		}
-		std::byte* local_stack = frame->local_stack;
 
 		// Execute the instruction by calling the debug opcode function.
 		OpFuns::DEBUG_OPFUNS.at(std::to_underlying(opcode))(instr, local_stack, frame, *this);
