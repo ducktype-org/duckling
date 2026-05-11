@@ -6,10 +6,10 @@
 #include <base/pointers/ref.hpp>
 #include <base/types/ints.hpp>
 
+#include <vm/core/safe/memory/block.hpp>
 #include <vm/utils/interpret.hpp>
 
 namespace vm {
-	class Block;
 }
 
 /**
@@ -91,6 +91,24 @@ inline static void writeToPlace(
 /**
  * @brief Reads a value of a given TYPE from the beginning of the given view.
  */
+template<typename T, typename EntryT>
+[[nodiscard]] [[gnu::always_inline]]
+inline static T readFromView(base::TypedModRawView<EntryT> view) {
+	return vm::safeReadPointerBytes<T>(view.getBegin());
+}
+
+/**
+ * @brief Writes a value of a given TYPE to the beginning of the given view.
+ */
+template<typename T, typename EntryT>
+[[gnu::always_inline]]
+inline static void writeToView(base::TypedModRawView<EntryT> view, const T& value) {
+	vm::safeWriteBytes<T>(view.getBegin(), value);
+}
+
+/**
+ * @brief Reads a value of a given TYPE from the beginning of the given view.
+ */
 template<typename T>
 [[nodiscard]] [[gnu::always_inline]]
 inline static T readFromView(base::ModRawView view) {
@@ -103,8 +121,9 @@ inline static T readFromView(base::ModRawView view) {
 template<typename T>
 [[gnu::always_inline]]
 inline static void writeToView(base::ModRawView view, const T& value) {
-	return vm::safeWriteBytes<T>(view.getBegin(), value);
+	vm::safeWriteBytes<T>(view.getBegin(), value);
 }
+
 
 
 #if defined(__clang_major__) && __clang_major__ >= 13

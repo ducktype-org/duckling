@@ -65,7 +65,7 @@ namespace vm {
 		std::byte* global_data_buffer_base;    /// Pointer to the start of global data buffer.
 		Block** global_block_ref_buffer_base;  /// Pointer to the start of global block ref buffer.
 
-		RuntimeData(Ref<ThreadStack> stack, GlobalBufferPointers global_buffer_pointers):
+		RuntimeData(Ref<ThreadStack> stack, GlobalBufferPointersGeneric global_buffer_pointers):
 			  frame_stack_base(stack->getFrameStack()->data()),
 			  frame_stack_end(stack->getFrameStack()->data() + stack->getFrameStack()->size()),
 			  frame_stack_current(stack->getFrameStack()->data()),
@@ -218,6 +218,6 @@ namespace vm {
 		 * For now only the VMProcess calls this function after the global data memory is
 		 * reallocated and the pointers change.
 		 */
-		void updateGlobalDataBufferPointers(GlobalBufferPointers global_buffer_pointers);
+		void updateGlobalDataBufferPointers(GlobalBufferPointersGeneric global_buffer_pointers);
 	};
 }
