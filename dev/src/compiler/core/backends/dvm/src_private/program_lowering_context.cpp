@@ -8,8 +8,8 @@
 #include <debug_info/debug_info_builder.hpp>
 #include <tsl/type_layout.hpp>
 
-#include "base/str/str_utils.hpp"
-#include "base/types/bits_and_bytes.hpp"
+#include <base/str/str_utils.hpp>
+#include <base/types/bits_and_bytes.hpp>
 
 #include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/bytecode.hpp>

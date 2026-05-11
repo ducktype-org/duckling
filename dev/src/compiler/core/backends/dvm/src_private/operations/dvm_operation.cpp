@@ -10,8 +10,8 @@
 
 #include <base/collections/optional.hpp>
 
-#include "vm/bytecode/type_of_data.hpp"
 #include <vm/bytecode/builtin_types.hpp>
+#include <vm/bytecode/type_of_data.hpp>
 
 #include <ranges>
 
