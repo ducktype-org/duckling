@@ -17,6 +17,7 @@ using namespace compiler::backend_vm::internal;
 			if (primitive.size == 1) return vm::opargs::Place8{ name };
 		}
 		variant_case(vm::code::PointerType, pointer) { return vm::opargs::PlacePtr(name); }
+		variant_case(vm::code::FixedSizeTableType, array) { return vm::opargs::PlaceFSTable(name); }
 		variant_case(vm::code::DataType, data) { return vm::opargs::PlaceStructure(name); }
 		variant_case(vm::code::OpaqueType, opaque) { return vm::opargs::PlaceOpq(name); }
 		variant_default {

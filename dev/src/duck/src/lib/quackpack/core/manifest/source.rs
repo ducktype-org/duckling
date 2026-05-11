@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use url::Url;
 
 use crate::quackpack::schemas::registry;
+use crate::util::extract::Extract;
 use crate::{QuackError, StrId, qp_bail};
 
 static INTERNED_SOURCE_CACHE: OnceLock<Mutex<HashSet<&'static Source>>> = OnceLock::new();
@@ -25,17 +26,7 @@ impl InternedSource {
         let mut cache = INTERNED_SOURCE_CACHE
             .get_or_init(Default::default)
             .lock()
-            // NOTE: `.unwrap()` should never panic: from docs:
-            // Errors
-            //
-            // If another user of this mutex panicked while holding the mutex,
-            // then this call will return an error once the mutex is acquired.
-            // The acquired mutex guard will be contained in the returned error.
-            //
-            // Panics
-            //
-            // This function might panic when called if the lock is already held by the current thread.
-            .unwrap();
+            .extract();
         let reference = cache.get(&source).copied().unwrap_or_else(|| {
             let static_ref = Box::leak(Box::new(source));
             cache.insert(static_ref);

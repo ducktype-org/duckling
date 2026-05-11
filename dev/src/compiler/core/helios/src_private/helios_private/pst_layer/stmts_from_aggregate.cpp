@@ -7,6 +7,7 @@
 #include <frontend/pst_parser/elements/hierarchy/statements/expand.hpp>
 #include <helios_private/pst_layer/macros.hpp>
 
+#include <base/config/build_type.hpp>
 #include <base/except/exceptions.hpp>
 
 #include <query_framework/context/context.hpp>
@@ -43,11 +44,15 @@ namespace compiler::helios {
 				for (auto&& e: *class_block.value()) internal::visitClassStmts(ctx, out, e);
 				return out;
 			} else {
-				const auto& element = *elem.unlock(ctx);
-				CORE_PANIC(base::strConcat(
-					"Bad Duckling Element in `getChildStmtsOfClassBlock`: ", typeid(element).name()
-				));
+				IF_BUILD_TYPE_DEV({
+					const auto& element = *elem.unlock(ctx);
+					CORE_PANIC(base::strConcat(
+						"Bad Duckling Element in `getChildStmtsOfClassBlock`: ",
+						typeid(element).name()
+					));
+				});
 			}
+			CORE_UNREACHABLE();
 		}
 	}
 
@@ -80,10 +85,12 @@ namespace compiler::helios {
 			auto elements = internal::getChildStmtsOfClassBlock(ctx, elem);
 			for (auto e: elements) output.emplace_back(e);
 		} else {
-			const auto& element = *elem;
-			CORE_PANIC(base::strConcat(
-				"Bad Duckling Element in `getStmtsFromStmtAggregate`: ", typeid(element).name()
-			));
+			IF_BUILD_TYPE_DEV({
+				const auto& element = *elem;
+				CORE_PANIC(base::strConcat(
+					"Bad Duckling Element in `getStmtsFromStmtAggregate`: ", typeid(element).name()
+				));
+			});
 		}
 
 		// Now expand macros in the output.
