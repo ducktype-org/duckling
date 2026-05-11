@@ -74,7 +74,7 @@ pub fn init(opts: InitOptions<'_, '_>) -> QuackResult<()> {
         "successfully created a new project `{}` at `{}`",
         name,
         opts.at.display()
-    ));
+    ))?;
     Ok(())
 }
 
@@ -175,7 +175,7 @@ fn create_venv_config_file(
     let mut venv_cfg_file = match File::create_new(venv_cfg_file) {
         Err(err) => {
             if matches!(err.kind(), ErrorKind::AlreadyExists) {
-                ctx.console().warning(format!("init run with non-default venv configuration flags, but venv configuration file already exists at `{}`", root_path.display()));
+                ctx.console().warning(format!("init run with non-default venv configuration flags, but venv configuration file already exists at `{}`", root_path.display()))?;
                 return Ok(());
             } else {
                 return Err(err).context("failed to create the venv configuration file");
@@ -230,7 +230,7 @@ fn add_package_structure(ctx: &DuckContext, root_path: &Path) -> QuackResult<()>
                 ctx.console().note_verbose(format!(
                     "the source file {} already exists, not overwiting it",
                     source_file_path.display()
-                ));
+                ))?;
                 return Ok(());
             } else {
                 return Err(err).context("failed to create the default source file");
@@ -257,7 +257,7 @@ fn init_git(ctx: &DuckContext, root_path: &Path) -> QuackResult<()> {
                 ctx.console().note_verbose(format!(
                     "the file {} already exists, not overwiting it",
                     gitignore_path.display()
-                ));
+                ))?;
                 return Ok(());
             } else {
                 return Err(err).context("failed to create the default `.gitignore` file");
