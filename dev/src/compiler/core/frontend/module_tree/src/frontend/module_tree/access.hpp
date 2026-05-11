@@ -37,28 +37,6 @@ namespace compiler::frontend {
 		bool                   operator==(const KeyOf_FileSideInput&) const = default;
 	};
 
-	/**
-	 * @brief Key for source file count side input query.
-	 * It stores the hash itself for the performance reasons
-	 * For more info see QuerySourceFileCountSideInput query.
-	 */
-	struct KeyOf_SourceFileCountSideInput final {
-		query::QueryStableHash stable_hash;
-
-		[[nodiscard]]
-		query::QueryStableHash queryStablePerfectHash() const;
-		bool                   operator==(const KeyOf_SourceFileCountSideInput&) const = default;
-
-		/**
-		 * @brief Compute the stable hash for source file count side input.
-		 * @param module_id The module whose source files are being counted.
-		 * @param count Number of source files in the module.
-		 * @return KeyOf_SourceFileCountSideInput with computed hash.
-		 */
-		[[nodiscard]] static KeyOf_SourceFileCountSideInput computeHash(
-			ModuleID module_id, usize count
-		);
-	};
 
 	/**
 	 * @brief Key for submodule count side input query.

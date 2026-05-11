@@ -64,17 +64,6 @@ namespace compiler::frontend {
 		return FileAccess(id);
 	}
 
-	query::QueryStableHash KeyOf_SourceFileCountSideInput::queryStablePerfectHash() const {
-		return stable_hash;
-	}
-
-	KeyOf_SourceFileCountSideInput KeyOf_SourceFileCountSideInput::computeHash(
-		ModuleID module_id, usize count
-	) {
-		auto hasher = ModuleTree::getPathComponentHash(module_id).partial;
-		hashing::addToHash(hasher, static_cast<u64>(count));
-		return KeyOf_SourceFileCountSideInput{ hasher.finalize() };
-	}
 
 	query::QueryStableHash KeyOf_SubmoduleCountSideInput::queryStablePerfectHash() const {
 		return stable_hash;

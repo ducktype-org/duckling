@@ -751,13 +751,12 @@ private:
 	}
 
 	/**
-	 * @brief Tests the correctness of ModuleChildSideInput, SourceFileCountSideInput,
+	 * @brief Tests the correctness of ModuleChildSideInput,
 	 *        and SubmoduleCountSideInput dependencies in the query graph.
 	 *
 	 * This test compiles the imports_complicated module structure and verifies that:
 	 * 1. Each module depends on the correct ModuleChildSideInputs based on its imports
-	 * 2. Each module depends on SourceFileCountSideInput only for its own source files
-	 * 3. No module depends on SubmoduleCountSideInput (currently not used)
+	 * 2. No module depends on SubmoduleCountSideInput (currently not used)
 	 */
 	void moduleChildSideInputsTest() {
 		using namespace compiler;
@@ -832,28 +831,7 @@ private:
 			return count;
 		};
 
-		// Helper to check if module depends on SourceFileCountSideInput for a specific module
-		auto has_source_file_count_dep = [&](const std::vector<query::internal::NodeID>& deps,
-		                                     frontend::ModuleID module_id) -> bool {
-			auto hasher = frontend::ModuleTree::getPathComponentHash(module_id).partial;
-			auto files  = frontend::getModuleRef(module_id)->getSourceFiles().illegalAccess();
-			hashing::addToHash(hasher, static_cast<u64>(files.size()));
-			auto expected_id = query::internal::makeNodeID<frontend::QuerySourceFileCountSideInput>(
-				frontend::KeyOf_SourceFileCountSideInput{ hasher.finalize() }
-			);
-			return std::ranges::find(deps, expected_id) != deps.end();
-		};
-
-		// Helper to count how many SourceFileCountSideInput dependencies exist
-		auto count_source_file_count_inputs
-			= [](const std::vector<query::internal::NodeID>& deps) -> usize {
-			usize count = 0;
-			for (const auto& dep: deps)
-				if (dep.q_id.asInt() == frontend::QuerySourceFileCountSideInput::getID().asInt())
-					count++;
-			return count;
-		};
-
+	
 		// Helper to count how many SubmoduleCountSideInput dependencies exist
 		auto count_submodule_count_inputs
 			= [](const std::vector<query::internal::NodeID>& deps) -> usize {
@@ -986,32 +964,6 @@ private:
 
 		ASSERT_EQUAL_PRINT(0, count_child_side_inputs(d_deps));
 
-		// ================================================================================
-		// Test SourceFileCountSideInput dependencies
-		// Each module should depend on SourceFileCountSideInput only for its own source files
-		// ================================================================================
-
-		// Note: We check that each module depends on its own source file count
-		// The getSourceFiles() returns additional source files (not the main .dmf file)
-		// Most modules here only have a main file, so source files count is 0
-
-		// We verify the dependency exists for each module's own files
-		ASSERT_TRUE(has_source_file_count_dep(b_deps, b_id));
-		ASSERT_TRUE(has_source_file_count_dep(foo_deps, foo_id));
-		ASSERT_TRUE(has_source_file_count_dep(a_deps, a_id));
-		ASSERT_TRUE(has_source_file_count_dep(imports_complicated_deps, imports_complicated_id));
-		ASSERT_TRUE(has_source_file_count_dep(bar_deps, bar_id));
-		ASSERT_TRUE(has_source_file_count_dep(c_deps, c_id));
-		ASSERT_TRUE(has_source_file_count_dep(d_deps, d_id));
-
-		// Each module should have exactly 1 SourceFileCountSideInput dependency (only its own)
-		ASSERT_EQUAL_PRINT(1, count_source_file_count_inputs(b_deps));
-		ASSERT_EQUAL_PRINT(1, count_source_file_count_inputs(foo_deps));
-		ASSERT_EQUAL_PRINT(1, count_source_file_count_inputs(a_deps));
-		ASSERT_EQUAL_PRINT(1, count_source_file_count_inputs(imports_complicated_deps));
-		ASSERT_EQUAL_PRINT(1, count_source_file_count_inputs(bar_deps));
-		ASSERT_EQUAL_PRINT(1, count_source_file_count_inputs(c_deps));
-		ASSERT_EQUAL_PRINT(1, count_source_file_count_inputs(d_deps));
 
 		// ================================================================================
 		// Test SubmoduleCountSideInput dependencies
