@@ -37,6 +37,7 @@
 
 #include <base/types/ints.hpp>
 
+#include <limits>
 #include <string_view>
 #include <tuple>
 #include <type_traits>
@@ -59,6 +60,29 @@ namespace base {
 			constexpr bool operator()(const std::variant<VariantArgs...>& v) const {
 				return (std::holds_alternative<Ts>(v) || ...);
 			}
+		};
+
+		template<typename Variant, typename T>
+		struct VariantTypeIndexAux {
+			// placeholder to suppress the error about missing function
+			static constexpr usize findIndex() { return 0; }
+
+			static_assert(false, "variantTypeIndex() can be used only for variant");
+		};
+
+		template<typename T, typename... Types>
+		struct VariantTypeIndexAux<std::variant<Types...>, T> {
+			static constexpr usize findIndex() {
+				usize index = std::numeric_limits<usize>::max();
+
+				// increase index until matching T
+				bool missing_type = not((index++, std::is_same_v<T, Types>) or ...);
+
+				// when no T in variant, returns sizeof...(Types)
+				return index + missing_type;
+			}
+
+			static_assert(findIndex() < sizeof...(Types), "Type not found in variant");
 		};
 	}
 
@@ -201,14 +225,10 @@ namespace base {
 	 * Falls back to `std::variant_size_v<Variant>` (an out-of-range
 	 * value) when `T` is not an alternative of the variant.
 	 */
-	template<typename Variant, typename T, usize Index = 0>
+	template<typename VariantT, typename T>
 	constexpr usize variantTypeIndex() {
-		if constexpr (Index >= std::variant_size_v<Variant>)
-			return Index;
-		else if constexpr (std::is_same_v<std::variant_alternative_t<Index, Variant>, T>)
-			return Index;
-		else
-			return variantTypeIndex<Variant, T, Index + 1>();
+		using ClearedVariantT = std::remove_cvref_t<VariantT>;
+		return internal::VariantTypeIndexAux<ClearedVariantT, T>::findIndex();
 	}
 
 	/**

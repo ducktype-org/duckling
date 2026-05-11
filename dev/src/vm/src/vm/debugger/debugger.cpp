@@ -102,7 +102,7 @@ namespace vm::debugger {
 		auto result = vm::api::loadFiles(pid, { filepath });
 		if (!result.has_value()) throw std::runtime_error(vm::api::errorToString(result.error()));
 	}
-	
+
 	void Debugger::pause() {
 		vm::api::getExecutionStatus(pid)
 			.and_then([&](const vm::api::ProcStatus& status) {

@@ -5,7 +5,7 @@
 #include <condition_variable>
 #include <mutex>
 
-#define altIndex(t) base::internal::alternativeIndex<vm::api::ProcStatus, t>()
+#define altIndex(t) base::variantTypeIndex<vm::api::ProcStatus, t>()
 
 class VmDebuggerTest: public tester::TestSuite {
 #undef TESTER_CLASS
