@@ -8,6 +8,9 @@
 #include <debug_info/debug_info_builder.hpp>
 #include <tsl/type_layout.hpp>
 
+#include "base/str/str_utils.hpp"
+#include "base/types/bits_and_bytes.hpp"
+
 #include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/bytecode.hpp>
 
@@ -208,26 +211,25 @@ base::Optional<vm::code::TypeOfData> ProgramLoweringContext::lowerTslTypeInterna
 	variant_match(layout->getVariant()) {
 		variant_case_novalue(tsl::EmptyTypeLayout) { return {}; }
 		variant_case_novalue(tsl::IntegralTypeLayout) {
-			auto bits = usize(layout->getSize());
-			if (bits == 1) bits = 8;  // Boolean case.
-			if (bits % 8 != 0) CORE_PANIC("Integral type size not divisible by 8");
-			usize       bytes = bits / 8;
-			std::string name  = "i" + std::to_string(bits);
+			Bits bits = layout->getSize();
+			if (bits == Bits{ 1 }) bits = Bits{ 8 };  // Boolean edge-case.
+			Bytes bytes    = base::bits2bytes(bits);
+			auto  str_size = base::toString(bits);
+			str_size.pop_back();  // Remove the `b` specifier.
+			std::string name = "i" + str_size;
 
 			return vm::code::PrimitiveType(base::StrID(name), bytes);
 		}
 		variant_case_novalue(tsl::FloatTypeLayout) {
-			auto bits = usize(layout->getSize());
-			CORE_ASSERT(
-				bits == 16 || bits == 32 || bits == 64 || bits == 80, "Invalid size of float: ", bits
-			);
-			usize       bytes = bits / 8;
-			std::string name  = "f" + std::to_string(bits);
-
+			Bits  bits     = layout->getSize();
+			Bytes bytes    = base::bits2bytes(bits);
+			auto  str_size = base::toString(bits);
+			str_size.pop_back();  // Remove the `b` specifier.
+			std::string name = "f" + str_size;
 			return vm::code::PrimitiveType(base::StrID(name), bytes);
 		}
 		variant_case_novalue(tsl::MetaTypeLayout) {
-			return vm::code::OpaqueType(base::StrID("opaque_ptr"), 8);
+			return vm::code::OpaqueType(base::StrID("opaque_ptr"), Bytes{ 8 });
 		}
 		variant_case(tsl::PointerTypeLayout, pointer_layout) {
 			const vm::code::TypeOfData& pointee_type

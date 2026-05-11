@@ -389,7 +389,7 @@ DVMPlace FunctionLoweringContext::getFunctionReturnValueLocal() {
 	if (function_name == "main") {
 		CORE_ASSERT(
 			function_return_type
-				== vm::code::TypeOfData{ vm::code::PrimitiveType(base::StrID("i64"), 8) },
+				== vm::code::TypeOfData{ vm::code::PrimitiveType(base::StrID("i64"), Bytes{ 8 }) },
 			"Main function must have i64 return type"
 		);
 	}
