@@ -1,7 +1,6 @@
 #include <backends/dvm/repl_lowering.hpp>
 #include <program_lowering_context.hpp>
 
-#include <base/collections/optional.hpp>
 #include <base/pointers/box.hpp>
 
 namespace compiler::backend_vm {

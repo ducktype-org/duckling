@@ -257,10 +257,6 @@ const vm::code::Function& ProgramLoweringContext::lowerAndKeepLirFunction(
 			lir_function->metadata.position.map(mapDIPosition)
 		));
 	}
-	std::cout << "==================Lowering function==================\n";
-	std::cout << "Lowering: " << lir_function->mangled_name.strView() << '\n';
-	std::cout << "Return type: " << lir_function->return_type_layout->toStringIdentification()
-			  << '\n';
 
 	auto func_ctx = FunctionLoweringContext{ *this,
 		                                     lir_function->mangled_name,
