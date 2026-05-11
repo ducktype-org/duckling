@@ -30,7 +30,15 @@ set(CMAKE_CXX_CREATE_ASSEMBLY_SOURCE "<CMAKE_CXX_COMPILER> $(CXX_DEFINES) $(CXX_
 
 if(JIT_ENABLED)
     add_compile_definitions(ENABLE_JIT)
-    separate_arguments(LLVM_TOOLS_ARGS NATIVE_COMMAND "${LLVM_TOOLS}")
+
+    set(LLVM_TOOLS_ARGS
+        --llvm-opt=${LLVM_OPT}
+        --llvm-link=${LLVM_LINK}
+        --llvm-nm=${LLVM_NM}
+        --llvm-cxxfilt=${LLVM_CXXFILT}
+        --llvm-extract=${LLVM_EXTRACT}
+    )
+
     if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
         message(FATAL_ERROR "JIT requires clang")
     endif()

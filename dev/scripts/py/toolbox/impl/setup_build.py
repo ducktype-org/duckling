@@ -11,7 +11,7 @@ from .helpers import (
     exit_with_error,
 )
 
-from ...jit.llvm_tools import (LLVMTool, LLVM_TOOLS)
+from ...jit.llvm_tools import LLVM_TOOLS
 
 def setup_build_impl(
     build_dir,
@@ -83,7 +83,10 @@ def setup_build_impl(
         f"-D ENABLE_LINK_TIME_OPTIMIZATION={'ON' if enable_link_time_optimization else 'OFF'}",
         f"-D JIT_ENABLED={'ON' if enable_jit else 'OFF'}",
         f"-D USE_REPLXX={'ON' if use_replxx else 'OFF'}",
-        f"-D LLVM_TOOLS='{LLVMTool.python_args([llvm_tools_list[tool.param()] for tool in LLVM_TOOLS])}'",
+        *[
+            f"-D {tool.macro()}={llvm_tools_list[tool.param()]}"
+            for tool in LLVM_TOOLS
+        ],
         f"-D EMBED_ASSETS={'ON' if embed_assets else 'OFF'}",
         f"-D BUILD_STATIC_ICU={'ON' if build_static_icu else 'OFF'}",
     ]
@@ -93,9 +96,6 @@ def setup_build_impl(
         cmd_parts.append(f"-D GCOV_VERSION={gcov_version}")
     if clang_for_builtins:
         cmd_parts.append(f"-D CLANG_BIN={clang_for_builtins}")
-
-    for tool in LLVM_TOOLS:
-        cmd_parts.append(f"-D {tool.macro()}={llvm_tools_list[tool.param()]}")
 
     if should_add_linker_flags(linker):
         if supports_cmake_linker_type():
