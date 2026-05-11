@@ -261,7 +261,7 @@ fn fetch_source_code(
             if storage.is_package_stored(&pkg_id) {
                 return Ok(false);
             }
-            if git_access.is_stored(url.clone(), *commit) {
+            if git_access.is_stored(url.clone(), commit) {
                 storage.mark_as_stored(&pkg_id)?;
                 return Ok(true);
             }
