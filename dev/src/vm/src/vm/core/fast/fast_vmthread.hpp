@@ -1,4 +1,4 @@
-#include "vm/utils/vm_not_implemented.hpp"
+#include <vm/utils/vm_not_implemented.hpp>
 #include <vm/core/thread/ivmthread.hpp>
 
 namespace vm::fast {

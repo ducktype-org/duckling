@@ -12,8 +12,8 @@
 #include <vm/core/safe/type_metadata/type_metadata.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
 
-namespace vm::loader::compiler {
-	class Compiler;
+namespace vm::loader::compiler::safe {
+	class SafeCompiler;
 }
 
 namespace vm::low {
@@ -72,24 +72,19 @@ namespace vm::low {
 	class ILowVMProgram {
 	public:
 		[[nodiscard]]
-		virtual const TypeMetadata& getTypes() const
-			= 0;
+		virtual const TypeMetadata& getTypes() const = 0;
 
 		[[nodiscard]]
-		virtual const ObjIdNameMap<LowFuncData, usize>& getFunctions() const
-			= 0;
+		virtual const ObjIdNameMap<LowFuncData, usize>& getFunctions() const = 0;
 
 		[[nodiscard]]
-		virtual const StableObjIdNameMap<LowExternCFunction>& getExternCFunctions() const
-			= 0;
+		virtual const StableObjIdNameMap<LowExternCFunction>& getExternCFunctions() const = 0;
 
 		[[nodiscard]]
-		virtual const ObjIdNameMap<LowGlobalData, GlobalDataID>& getGlobals() const
-			= 0;
+		virtual const ObjIdNameMap<LowGlobalData, GlobalDataID>& getGlobals() const = 0;
 
 		[[nodiscard]]
-		virtual const base::HashMap<u64, base::StrID>& getMethodNamePool() const
-			= 0;
+		virtual const base::HashMap<u64, base::StrID>& getMethodNamePool() const = 0;
 
 		/**
 		 * @brief Helper structure with the configuration for the global buffer in the program.
@@ -106,8 +101,7 @@ namespace vm::low {
 		 * @brief Get the global buffer configuration.
 		 */
 		[[nodiscard]]
-		virtual GlobalBufferConfig getGlobalBufferConfig() const
-			= 0;
+		virtual GlobalBufferConfig getGlobalBufferConfig() const = 0;
 
 		virtual ~ILowVMProgram() = default;
 	};
@@ -128,7 +122,7 @@ namespace vm::low {
 	 */
 	class LowVMProgram final: public ILowVMProgram {
 	public:
-		friend class vm::loader::compiler::Compiler;
+		friend class vm::loader::compiler::safe::SafeCompiler;
 
 		const TypeMetadata& getTypes() const override { return *types; }
 

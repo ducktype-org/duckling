@@ -4,6 +4,7 @@
 #include <base/collections/optional.hpp>
 #include <base/pointers/box.hpp>
 
+#include <vm/loader/compiler/safe/safe_compiler.hpp>
 #include <vm/api/data/api_error.hpp>
 #include <vm/api/data/request.hpp>
 #include <vm/api/data/status.hpp>
@@ -34,12 +35,15 @@ namespace vm {
 
 	private:
 		std::shared_mutex rw_global;
+
 		/**
 		 * @brief A loader instance for this SafeVMProcess. Stores the high level and low level
 		 * representation of the currently executed program. `loaded_program` references the low
 		 * representation which exists in this class.
 		 */
-		loader::Loader loader{};
+		loader::Loader                       loader{};
+		loader::compiler::safe::SafeCompiler compiler{ *loader.getHighProgram() };
+
 		/**
 		 * @brief The program being executed by this process.
 		 * Holds a constant and stable reference.
@@ -112,7 +116,8 @@ namespace vm {
 
 		base::Optional<api::ApiError> stepVMThread(api::ThreadID thread_id) override;
 
-		std::expected<api::Response, api::ApiError> getVMThreadCurrentPosition(api::ThreadID thread_id
+		std::expected<api::Response, api::ApiError> getVMThreadCurrentPosition(
+			api::ThreadID thread_id
 		) override;
 
 		void notifyPausedVMThread(api::ThreadID thread_id) override;
@@ -127,10 +132,12 @@ namespace vm {
 			api::ThreadID thread_id, u64 frame_index
 		) override;
 
-		std::expected<api::Response, api::ApiError> getTypeMetadata(const std::string& type_name
+		std::expected<api::Response, api::ApiError> getTypeMetadata(
+			const std::string& type_name
 		) override;
 
-		std::expected<api::Response, api::ApiError> getVMValueForType(const std::string& type_name
+		std::expected<api::Response, api::ApiError> getVMValueForType(
+			const std::string& type_name
 		) override;
 
 		api::ThreadID getMainThreadID() override;

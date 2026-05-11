@@ -3,59 +3,11 @@
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/validator/valid_program.hpp>
 #include <vm/bytecode/validator/valid_type/type_context.hpp>
-#include <vm/core/safe/low_program/low_program.hpp>
-#include <vm/core/safe/low_program/micro_instruction_args.hpp>
+#include <vm/bytecode/validator/valid_type/valid_type.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
 
 namespace vm::loader::compiler {
 	namespace detail {
-		class MicroBytecodeBuilder;
-		template<typename ToType>
-		struct LowerArgumentImpl;
-	}
-
-	/**
-	 * @class Compiler
-	 * @brief A stateful, incremental bytecode compiler.
-	 *
-	 * This class acts as a builder for a `vm::low::LowVMProgram`. It maintains an internal,
-	 * low-level representation of the program and updates it incrementally when new high-level
-	 * code is provided. This stateful approach avoids recompiling the entire program on each
-	 * code injection, compiling only the new elements (types, globals, and functions).
-	 */
-	class Compiler {
-		friend class detail::MicroBytecodeBuilder;
-		template<typename ToType>
-		friend struct detail::LowerArgumentImpl;
-
-	public:
-		Compiler() = default;
-
-		/**
-		 * @brief Incrementally recompiles and updates the internal `LowVMProgram`.
-		 * This is the main entry point for the compiler. It compares the provided `high_program`
-		 * with its internal state to identify new types, globals, and functions. It then
-		 * compiles only the new elements and adds them to the internal `LowVMProgram`.
-		 *
-		 * @param high_program The new, complete, and validated high-level program representation.
-		 *
-		 * @note The compilation never fails as the given code was statically verified.
-		 *
-		 * @warning This function is stateful and operates incrementally. It is crucial
-		 * that each `high_program` passed to this function is an extension of the one from the
-		 * previous call. The compiler assumes that the existing set of program elements (types,
-		 * functions, etc.) is a stable prefix of the new set. Passing a completely unrelated
-		 * `ValidProgram` will lead to an invalid internal state and incorrect compilation.
-		 */
-		void recompile(const code::ValidProgram& high_program);
-
-		/**
-		 * @brief Provides read-only access to the internally managed `LowVMProgram`.
-		 * @return A constant reference to the current, fully compiled low-level program.
-		 */
-		CRef<vm::low::LowVMProgram> getLowProgram() const;
-
-	private:
 		/**
 		 * @brief Stores the shared, global state required for the entire compilation process.
 		 */
@@ -102,24 +54,72 @@ namespace vm::loader::compiler {
 			base::HashMap<base::StrID, usize> label_id_map;
 
 			struct LocalEntry {
-				u64      offset;
-				u64      block_idx;
-				TypeCRef type;
+				code::valid_type::TypeSize    offset;
+				u64                           block_idx;
+				code::valid_type::ValidTypeID type;
 			};
 
 			/// A mapping from a local variable's name to its offset on the function's local stack
 			/// and type.
 			base::HashMap<base::StrID, LocalEntry> locals_map{};
 			/// Total required size for the local stack frame, in bytes.
-			usize local_stack_size  = 0;
-			usize local_block_count = 0;
+			code::valid_type::TypeSize local_stack_size{};
+			usize                      local_block_count = 0;
 		};
+	}
+
+	/**
+	 * @brief A structure holding the size information for the program.
+	 * Used to determine the size of various internal data structures for incremental compilation.
+	 */
+	struct ProgramSize {
+		usize function_count;
+		usize global_count;
+		usize type_count;
+		usize ext_c_function_count;
+	};
+
+	/**
+	 * @class Compiler
+	 * @brief A stateful, incremental bytecode compiler.
+	 *
+	 * This class acts as a builder for a low-level programs. It maintains an internal,
+	 * low-level representation of the program and updates it incrementally on recompile calls.
+	 * This stateful approach avoids recompiling the entire program on each
+	 * code injection, compiling only the new elements (types, globals, and functions).
+	 */
+	class Compiler {
+	public:
+		/**
+		 * @brief Constructs a new Compiler that will source its information about the program from
+		 * `high_program`.
+		 */
+		Compiler(const code::ValidProgram& high_program): high_program(high_program) {}
+
+		virtual ~Compiler() = default;
 
 		/**
-		 * @brief The microbytecode program representation being built and managed by the compiler.
+		 * @brief Incrementally recompiles and updates the internal low-level program.
+		 * This is the main entry point for the compiler. It compares the provided `high_program`
+		 * with its internal state to identify new types, globals, and functions. It then
+		 * compiles only the new elements and adds them to the internal low-level program.
+		 *
+		 * @param high_program The new, complete, and validated high-level program representation.
+		 *
+		 * @note The compilation never fails as the given code was statically verified.
+		 *
+		 * @warning This function is stateful and operates incrementally. It is crucial
+		 * that `high_program` passed to this function is an extension of the one from the
+		 * previous call. The compiler assumes that the existing set of program elements (types,
+		 * functions, etc.) is a stable prefix of the new set. Passing a completely unrelated
+		 * `ValidProgram` will lead to an invalid internal state and incorrect compilation.
 		 */
-		vm::low::LowVMProgram     low_program;
-		ProgramCompilationContext program_ctx;
+		void recompile();
+
+	protected:
+		const code::ValidProgram& high_program;
+
+		detail::ProgramCompilationContext program_ctx;
 
 		/**
 		 * @brief Processes newly added types and adds them to the existing type_metadata.
@@ -131,7 +131,7 @@ namespace vm::loader::compiler {
 		 * type metadata stay untouched.
 		 * @param new_types A vector containing the new types to add.
 		 */
-		void compileNewTypes(const code::TypeContext& ctx);
+		virtual void compileNewTypes(const std::vector<code::valid_type::ValidType>& new_types) = 0;
 
 		/**
 		 * @brief Compiles newly added global variables.
@@ -139,7 +139,7 @@ namespace vm::loader::compiler {
 		 * to the internal `low_program.global_data` collection.
 		 * @param new_globals A vector containing the new globals to add.
 		 */
-		void compileNewGlobals(const std::vector<code::GlobalData>& new_globals);
+		virtual void compileNewGlobals(const std::vector<code::GlobalData>& new_globals) = 0;
 
 		/**
 		 * @brief Compiles newly added functions.
@@ -148,13 +148,17 @@ namespace vm::loader::compiler {
 		 * @param new_functions A vector containing the new `Function` objects for newly added
 		 * functions.
 		 */
-		void compileNewFunctions(const std::vector<code::Function>& new_functions);
+		virtual void compileNewFunctions(const std::vector<code::Function>& new_functions) = 0;
 
 		/**
 		 * @brief Compiles newly added ExternCFunctions and adds the compiled functions to the
 		 * internal `low_program.extern_c_functions`.
 		 */
-		void compileNewExtCFunctions(const std::vector<code::ExternalCFunction>& new_functions);
+		virtual void compileNewExtCFunctions(
+			const std::vector<code::ExternalCFunction>& new_functions
+		) = 0;
+
+		virtual ProgramSize getCurrentProgramSize() const = 0;
 
 		/**
 		 * @brief Calculates the stack offsets of stack variables.
@@ -163,41 +167,7 @@ namespace vm::loader::compiler {
 		 * variable names to numeric offsets.
 		 * @note Assumes all variables in the program have a unique name.
 		 */
-		void calculateOffsets(FunctionCompilationContext& ctx);
-
-		/**
-		 * @brief Fills out label arguments from IDs to label offsets in micro-bytecode.
-		 * Since a single high bytecode instruction can lower into many micro instructions,
-		 * we do not know in advance where labels land after lowering.
-		 * Instead `MicroBytecodeBuilder` generates temporary label IDs and calculates label
-		 * offsets during building. This function uses this information to go through
-		 * the instructions again and fill out the correct offsets.
-		 */
-		void linkLabelArguments(
-			low::MicroBytecode& instructions, const base::HashMap<usize, usize>& label_map
-		);
-
-		/**
-		 * @brief Lowers instructions to micro-bytecode. Iterates through the label-less
-		 * instructions and translates them into a sequence of `MicroInstruction`, resolving all
-		 * symbolic arguments to numeric values.
-		 * @return The converted list of instructions.
-		 */
-		low::MicroBytecode lowerInstructions(FunctionCompilationContext& ctx);
-
-		/**
-		 * @brief Translates a single high-level instruction argument (`opargs::OpCodeArg`)
-		 * into its raw 64-bit integer representation used by `MicroInstruction`
-		 * This function resolves symbolic names (locals, globals, functions, methods, labels)
-		 * into their corresponding numeric offsets, IDs, or relative jumps.
-		 * @param local_ctx The local context for the current function.
-		 * @param instruction_index The index of the current instruction, needed for relative jump
-		 * calculation.
-		 * @param opcode_arg The symbolic argument to translate.
-		 * @return The 64-bit numeric value of the argument.
-		 */
-		template<opargs::ArgumentType FromType, low::opargs::ArgumentType ToType>
-		u64 lowerArgument(FunctionCompilationContext& local_ctx, const FromType& opcode_arg);
+		void calculateOffsets(detail::FunctionCompilationContext& ctx);
 	};
 
 }

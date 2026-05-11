@@ -98,7 +98,8 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::parseFiles(
 	CORE_UNREACHABLE();
 }
 
-std::expected<void, LoaderLogger> Loader::loadAndCompile(const code::CodeCollection& code_collection
+std::expected<void, LoaderLogger> Loader::loadAndCompile(
+	const code::CodeCollection& code_collection
 ) {
 	// Skip if no new code was added.
 	if (code_collection.functions.empty() && code_collection.types.empty()
@@ -113,9 +114,10 @@ std::expected<void, LoaderLogger> Loader::loadAndCompile(const code::CodeCollect
 		// loader stays unchanged.
 		validated_high_program = validated_high_program.tryInsertCode(code_collection);
 
-		// @note: After successfully inserting code into `validated_high_program` we compile it to
-		// the low level representation. This step cannot fail since the code was already validated.
-		compiler.recompile(validated_high_program);
+		// // @note: After successfully inserting code into `validated_high_program` we compile it
+		// to
+		// // the low level representation. This step cannot fail since the code was already
+		// validated. compiler.recompile(validated_high_program);
 		return {};
 	} catch (code::StackStructureMismatchError& e) {
 		log.logMap(
@@ -169,11 +171,7 @@ std::expected<void, LoaderLogger> Loader::loadAndCompile(const std::vector<fs::F
 	return std::unexpected(std::move(opt_code_collection).error());
 }
 
-CRef<vm::low::LowVMProgram> vm::loader::Loader::getProgram() const {
-	return compiler.getLowProgram();
-}
-
-vm::loader::Loader::Loader() { compiler.recompile(validated_high_program); }
+vm::loader::Loader::Loader() {}
 
 base::CRef<vm::code::ValidProgram> vm::loader::Loader::getHighProgram() const {
 	return &validated_high_program;

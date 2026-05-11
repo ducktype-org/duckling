@@ -25,25 +25,28 @@
 
 DEF_ARG(Immediate)
 #define COMPARE_Immediate(x) x
-#define INFO_Immediate()       (Immediate, imm)
+#define INFO_Immediate()     (imm)
 DEF_ARG(Place8)
 #define COMPARE_Place8(x) x
-#define INFO_Place8()     (Place8, p8)
+#define INFO_Place8()     (p8)
 DEF_ARG(Place16)
 #define COMPARE_Place16(x) x
-#define INFO_Place16()     (Place16, p16)
+#define INFO_Place16()     (p16)
 DEF_ARG(Place32)
 #define COMPARE_Place32(x) x
-#define INFO_Place32()     (Place32, p32)
+#define INFO_Place32()     (p32)
 DEF_ARG(Place64)
 #define COMPARE_Place64(x) x
-#define INFO_Place64()     (Place64, p64)
+#define INFO_Place64()     (p64)
 DEF_ARG(Function)
 #define COMPARE_Function(x) x
-#define INFO_Function()     (Function, func)
+#define INFO_Function()     (func)
 DEF_ARG(JumpDistance)
 #define COMPARE_JumpDistance(x) x
-#define INFO_JumpDistance()     (JumpDistance, dist)
+#define INFO_JumpDistance()     (dist)
+DEF_ARG(Type)
+#define COMPARE_Type(x) x
+#define INFO_Type()     (type)
 
 #ifdef DEFAULT_HANDLE_ARG
 	#undef DEFAULT_HANDLE_ARG

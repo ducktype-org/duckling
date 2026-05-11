@@ -2,9 +2,8 @@
 #include <base/preproc/for_each.hpp>
 
 #define FIRST(a, ...)     a
-#define SECOND(_, b, ...) b
 
-#define ARG_NAME_SHORT(arg)             SECOND CAT(INFO_, FIRST arg)()
+#define ARG_NAME_SHORT(arg)             FIRST CAT(INFO_, FIRST arg)()
 #define COMMA_ARG_NAME_SHORT_FLOOR(arg) , DEFER(CAT)(_, ARG_NAME_SHORT(arg))
 
 #define EXPAND_ARGS_AS_CAT_ARGS(...) FOR_EACH(COMMA_ARG_NAME_SHORT_FLOOR, __VA_ARGS__)

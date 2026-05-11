@@ -10,7 +10,7 @@
 
 #ifndef HANDLE_INSTR
 #define DEFAULT_HANDLE_INSTR
-#define HANDLE_INSTR(instr) struct instr {};
+#define HANDLE_INSTR(instr)
 #endif
 
 #ifndef HANDLE_INSTR_ARGS

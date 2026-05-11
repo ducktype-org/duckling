@@ -6,8 +6,6 @@
 
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/validator/valid_program.hpp>
-#include <vm/core/safe/low_program/low_program.hpp>
-#include <vm/loader/compiler/compiler.hpp>
 
 #include <expected>
 
@@ -28,13 +26,6 @@ namespace vm::loader {
 		code::ValidProgram validated_high_program = code::ValidProgram::withBuiltins();
 
 		/**
-		 * @brief The stateful compiler instance for this loader.
-		 * It manages the low-level program representation (`LowVMProgram`) and contains
-		 * the necessary context to perform compilation of newly added functions.
-		 */
-		compiler::Compiler compiler{};
-
-		/**
 		 * @brief Parses a list of files and returns an intermediate program representation.
 		 * @return Either the parsed `CodeCollection` on success, or a `LoaderLogger` with parsing
 		 * errors on failure.
@@ -45,14 +36,6 @@ namespace vm::loader {
 
 	public:
 		explicit Loader();
-
-		/**
-		 * @brief Returns a pointer to the low-level program representation of the current loader
-		 * state.
-		 * @note The reference will be valid as long as the Loader itself and it's value updates on
-		 * loads calls.
-		 */
-		CRef<vm::low::LowVMProgram> getProgram() const;
 
 		/**
 		 * @brief Injects new code from given file paths to the current program state.

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "compiler.hpp"
+#include "safe_compiler.hpp"
 
 #include <base/comptime/type_traits.hpp>
 #include <base/preproc/for_each.hpp>
@@ -8,12 +8,13 @@
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
+#include <vm/core/safe/low_program/low_program.hpp>
 #include <vm/core/safe/low_program/utils.hpp>
 
 #include <tuple>
 #include <type_traits>
 
-namespace vm::loader::compiler::detail {
+namespace vm::loader::compiler::safe::detail {
 	/**
 	 * @brief Checks whether a high-level instruction argument type can be translated
 	 * to a specific low-level micro instruction argument type.
@@ -64,8 +65,8 @@ namespace vm::loader::compiler::detail {
 	 * from temporary label IDs to label offsets used later by `Compiler::linkLabelArguments`.
 	 */
 	class MicroBytecodeBuilder {
-		Compiler&                             compiler;
-		Compiler::FunctionCompilationContext& ctx;
+		safe::SafeCompiler&                                       compiler;
+		vm::loader::compiler::detail::FunctionCompilationContext& ctx;
 
 		base::HashMap<usize, usize> label_id_to_offset{};
 		usize                       next_instruction_index = 0;
@@ -77,7 +78,10 @@ namespace vm::loader::compiler::detail {
 #endif
 
 	public:
-		MicroBytecodeBuilder(Compiler& compiler, Compiler::FunctionCompilationContext& ctx):
+		MicroBytecodeBuilder(
+			safe::SafeCompiler&                                       compiler,
+			vm::loader::compiler::detail::FunctionCompilationContext& ctx
+		):
 			  compiler{ compiler },
 			  ctx{ ctx } {}
 
@@ -96,7 +100,10 @@ namespace vm::loader::compiler::detail {
 		bool push_step_gil_on_next_add_low = true;
 
 		TypeCRef getPlaceType(const opargs::ArgumentType auto p) const {
-			if (auto maybe_val = ctx.locals_map.atMaybe(p.var_name)) return maybe_val.value()->type;
+			if (auto maybe_val = ctx.locals_map.atMaybe(p.var_name)) {
+				code::valid_type::ValidTypeID type_id = maybe_val.value()->type;
+				return compiler.getLowProgram()->getTypes().at(TypeID(type_id.asInt()));
+			}
 			return compiler.getLowProgram()->getGlobals().at(p.var_name)->type;
 		}
 
@@ -383,18 +390,14 @@ namespace vm::loader::compiler::detail {
 			}
 			instr_case(high::Op_variantSetInner_pptr_type, i) {
 				addLow<Op_variantSetInner_pptr_type>(i.variant_ptr, i.inner_type);
-				opargs::Type variant_type = ctx.locals_map.at(i.variant_ptr.var_name)
-				                                .type->getInnerType()
-				                                .value()
-				                                ->getName();
+				opargs::Type variant_type
+					= getPlaceType(i.variant_ptr)->getInnerType().value()->getName();
 				addLow<Op_ext_type>(variant_type);
 			}
 			instr_case(high::Op_variantGetInner_pptr_pptr_type, i) {
 				addLow<Op_variantGetInner_pptr_pptr>(i.dst_ptr, i.variant_ptr);
-				opargs::Type variant_type = ctx.locals_map.at(i.variant_ptr.var_name)
-				                                .type->getInnerType()
-				                                .value()
-				                                ->getName();
+				opargs::Type variant_type
+					= getPlaceType(i.variant_ptr)->getInnerType().value()->getName();
 				addLow<Op_ext_type_type>(i.expected_type, variant_type);
 			}
 			instr_case(high::Op_label, i) { addLabel(i.label); }
