@@ -3,3 +3,9 @@ target_link_libraries(duckc Printer Lexer PstParser Filesystem Clah Base Diagnos
 
 # We want duckc to use custom allocator if specified.
 target_link_libraries(duckc allocator_proxy_library)
+
+# In compile time evaludation with JIT enabled some symbols have to be looked up 
+# in the executor process's dynamic symbol table.
+if(JIT_ENABLED)
+    target_link_options(duckc PRIVATE -Wl,--export-dynamic)
+endif()
