@@ -102,4 +102,38 @@ namespace vm::debugger {
 		auto result = vm::api::loadFiles(pid, { filepath });
 		if (!result.has_value()) throw std::runtime_error(vm::api::errorToString(result.error()));
 	}
+
+	void Debugger::pause() {
+		vm::api::getExecutionStatus(pid)
+			.and_then([&](const vm::api::ProcStatus& status) {
+				if (std::holds_alternative<vm::api::Running>(status))
+					return std::expected<void, vm::api::ApiError>{};
+
+				return std::expected<void, vm::api::ApiError>{ std::unexpected(vm::api::ApiError{
+					vm::api::OtherError{ "Wrong VM state to pause: got " + statusToString(status)
+				                         + ", allowed state is Running." } }) };
+			})
+			.and_then([&] { return vm::api::pause(pid); })
+			.transform_error([&](const vm::api::ApiError& api_error) {
+				on_error.emitEvent(vm::api::errorToString(api_error));
+				return api_error;
+			});
+	}
+
+	void Debugger::resume() {
+		vm::api::getExecutionStatus(pid)
+			.and_then([&](const vm::api::ProcStatus& status) {
+				if (std::holds_alternative<vm::api::Paused>(status))
+					return std::expected<void, vm::api::ApiError>{};
+
+				return std::expected<void, vm::api::ApiError>{ std::unexpected(vm::api::ApiError{
+					vm::api::OtherError{ "Wrong VM state to resume: got " + statusToString(status)
+				                         + ", allowed state is Paused." } }) };
+			})
+			.and_then([&] { return vm::api::resume(pid); })
+			.transform_error([&](const vm::api::ApiError& api_error) {
+				on_error.emitEvent(vm::api::errorToString(api_error));
+				return api_error;
+			});
+	}
 }

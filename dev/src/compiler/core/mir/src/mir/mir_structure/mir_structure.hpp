@@ -400,7 +400,9 @@ namespace compiler::mir {
 		 * Construct a MIRPlace from a local or global variable.
 		 * @param base The base of the MIRPlace, which is a local or global variable.
 		 */
-		explicit MIRPlace(BaseVariant base): base(base), type(getBaseType()) {}
+		template<typename T>
+		explicit MIRPlace(T&& base) requires(std::is_constructible_v<BaseVariant, T>)
+			  : base(std::forward<T>(base)), type(getBaseType()) {}
 
 		/**
 		 * @brief Extend the MIRPlace structure by adding a new FieldProjection to the projection
