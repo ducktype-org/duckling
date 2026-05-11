@@ -58,7 +58,7 @@ namespace lsp {
 			const auto& virtual_path = path.toVirtualPath();
 
 			if (file.isFile()) {
-				if (path.extension() == LANG_MODULE_FILE || path.extension() == LANG_SOURCE_FILE) {
+				if (path.extension() == LANG_MODULE_FILE) {
 					fs::FileManager::createVirtualFile(
 						virtual_path, file.getContent().view().stringView(), true
 					);
@@ -138,13 +138,6 @@ namespace lsp {
 		void addFileToModuleTree(const fs::File& file) {
 			auto extension  = file.extension();
 			auto parent_dir = fs::File(file.getFilePath().parentPath());
-
-			if (extension == LANG_SOURCE_FILE) {
-				auto module_ref_opt = findModuleForDirectoryPath(parent_dir);
-				if_opt_some(module_ref_opt, module_ref)
-					ModuleTreeModifier::addSourceFile(module_ref, file);
-				return;
-			}
 
 			if (extension == LANG_MODULE_FILE) {
 				base::Optional<base::Ref<ModuleTree>> parent_module_ref_opt;
