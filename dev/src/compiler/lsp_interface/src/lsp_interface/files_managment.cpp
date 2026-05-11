@@ -220,8 +220,7 @@ namespace lsp {
 		// ========================== Removing a file from module tree ==========================
 
 		/**
-		 * @brief Removes a file from the module tree. If the file is a source file, it is removed
-		 * from its module. If the file is a module file, the entire module is removed. If the
+		 * @brief Removes a file from the module tree. If the file is a module file, the entire module is removed. If the
 		 * removed module was a package, it is unregistered.
 		 */
 		void removeFileFromModuleTree(const fs::File& file) {
@@ -232,6 +231,8 @@ namespace lsp {
 				auto module_id  = source_file->getModule().illegalAccess().getID();
 				auto module_ref = getModuleRef(module_id);
 
+				// PR: this will simplify on no optional
+				// now module<->source file mapping will be one to one
 				bool is_main_module_file = false;
 				if (module_ref->hasMainSourceFile()) {
 					auto main_source_file = module_ref->getMainSourceFile().illegalAccess().getID();
@@ -239,13 +240,6 @@ namespace lsp {
 				}
 
 				if (is_main_module_file) modules_to_remove.insert(module_id);
-			}
-
-			for (auto& source_file: source_files) {
-				auto module_id = source_file->getModule().illegalAccess().getID();
-				if (modules_to_remove.contains(module_id)) continue;
-
-				ModuleTreeModifier::removeSourceFileFromStorage(source_file);
 			}
 
 			for (const auto& module_id: modules_to_remove)
