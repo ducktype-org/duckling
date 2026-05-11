@@ -219,8 +219,8 @@ impl Git {
     }
 
     /// Get the git branch or tag.
-    pub fn branch_or_tag(&self) -> BranchOrTag {
-        self.branch_or_tag
+    pub fn branch_or_tag(&self) -> &BranchOrTag {
+        &self.branch_or_tag
     }
 
     /// Get the specific revision (commit hash), if any.
@@ -251,15 +251,17 @@ impl Git {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 /// A type-safe approach for specifying a git tag or a branch.
+// We intentionally keep inner values as strings: we don't clone them a lot,
+// and turning them into StrId would only “leak” memory.
 pub enum BranchOrTag {
     /// The default branch.
     Default,
     /// A specific tag.
-    Tag(StrId),
+    Tag(String),
     /// A specific branch.
-    Branch(StrId),
+    Branch(String),
 }
 
 impl BranchOrTag {
@@ -321,8 +323,8 @@ impl TryFrom<registry::DependencySource> for Source {
             } => {
                 let branch_or_tag = match (tag, branch) {
                     (None, None) => BranchOrTag::Default,
-                    (None, Some(branch)) => BranchOrTag::Branch(branch.into()),
-                    (Some(tag), None) => BranchOrTag::Tag(tag.into()),
+                    (None, Some(branch)) => BranchOrTag::Branch(branch),
+                    (Some(tag), None) => BranchOrTag::Tag(tag),
                     (Some(_), Some(_)) => {
                         qp_bail!("git dependency in the registry specifies both `tag` and `branch`")
                     }
@@ -372,8 +374,8 @@ impl TryFrom<Source> for registry::DependencySource {
                 } = git;
                 let (tag, branch) = match branch_or_tag {
                     BranchOrTag::Default => (None, None),
-                    BranchOrTag::Tag(tag) => (Some(tag.into()), None),
-                    BranchOrTag::Branch(branch) => (None, Some(branch.into())),
+                    BranchOrTag::Tag(tag) => (Some(tag), None),
+                    BranchOrTag::Branch(branch) => (None, Some(branch)),
                 };
                 registry::SourceInner::Git {
                     git_url: url.into(),
