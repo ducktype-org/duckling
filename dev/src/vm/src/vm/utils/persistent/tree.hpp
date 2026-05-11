@@ -12,6 +12,8 @@
 #include <bit>
 #include <deque>
 #include <functional>
+#include <optional>
+#include <ranges>
 #include <stdexcept>
 #include <type_traits>
 #include <unordered_set>
@@ -151,6 +153,22 @@ namespace vm::persistent::detail {
 			return (root == getLCAPos(root, maybe_child));
 		}
 
+		static constexpr posT firstNodeForRange(idxT left_idx, idxT right_idx) {
+			CORE_ASSERT(left_idx <= right_idx, "Received wrong interval");
+			CORE_ASSERT(right_idx <= IDX_END, "Expecting a valid interval");
+
+			auto right_guard = right_idx & OFFSET_MASK;  // to handle right_idx == IDX_END
+			auto left_pos    = left_idx | TOP_BIT;
+
+			// max_height == height of lsb or TOP_BIT when left_idx == 0
+			auto max_height     = (usize) std::bit_width(left_pos & (-left_pos));
+			auto height_of_diff = (usize) std::bit_width(left_idx ^ right_guard);
+
+			usize final_height = std::min(height_of_diff, max_height) - 1;
+
+			return (left_pos >> final_height);
+		}
+
 		/**
 		 * @brief Get the tree psitions of nodes responsible for range [lefft_idx, right_idx)
 		 */
@@ -160,20 +178,11 @@ namespace vm::persistent::detail {
 
 			std::deque<posT> ans = {};
 
-			auto right_guard = right_idx & OFFSET_MASK;  // to handle right_idx == IDX_END
-
 			while (left_idx < right_idx) {
-				auto left_pos = left_idx | TOP_BIT;
-
-				// max_height == height of lsb or TOP_BIT when left_idx == 0
-				auto max_height     = (usize) std::bit_width(left_pos & (-left_pos));
-				auto height_of_diff = (usize) std::bit_width(left_idx ^ right_guard);
-
-				usize final_height = std::min(height_of_diff, max_height) - 1;
-
-				posT pos = (left_pos >> final_height);
+				posT pos = firstNodeForRange(left_idx, right_idx);
 				ans.emplace_back(pos);
-				left_idx += (idxT(1) << final_height);
+				auto height = heightFromPos(pos);
+				left_idx += (idxT(1) << height);
 			}
 
 			return ans;
@@ -183,7 +192,8 @@ namespace vm::persistent::detail {
 		 * @brief Helper struct for moving around th tree, with built-in support for tree-rebuilding
 		 * @note this is to avoid non-trivial recursion and make a more generic code
 		 * @note reconstruction will only happen if the segTreeT is not const-qualified
-		 * @tparam segTreeT underlying inner type of the ptr to memory. Passed explicitly to determine qualifiers
+		 * @tparam segTreeT underlying inner type of the ptr to memory. Passed explicitly to
+		 * determine qualifiers
 		 */
 		template<typename segTreeT>
 		requires SameWNoQual<SegmentTree, segTreeT> struct SurroundingNeigh {
@@ -620,66 +630,6 @@ namespace vm::persistent::detail {
 
 		using LeafBuilder = std::function<NodeID(usize, base::Optional<usize>)>;
 
-		/**
-		 * @brief helper function for atomically modifying the certain idxs
-		 * @note idxs must be sorted from left to right
-		 * @note this function is never const (use Path for iterating over unmutable memory)
-		 */
-		NodeID reconstructIdxs(NodeID root, std::deque<idxT> idxs, const LeafBuilder& constructor) {
-			if (idxs.empty()) return root;
-
-			for (auto& idx: idxs)
-				CORE_ASSERT((LEAF_MASK & idx) == 0, "we must get valid leaf values");
-			std::ranges::sort(idxs);
-			for (usize i = 1; i < idxs.size(); i++)
-				CORE_ASSERT(idxs[i - 1] < idxs[i], "no duplicates");
-
-			auto [height, offset] = getHeightOffset(root);
-
-			auto left_bound = idxs.front(), right_bound = idxs.back();
-
-			if (root) {
-				left_bound  = std::min(left_bound, offset);
-				right_bound = std::max(right_bound, offset + (usize(1) << height) - 1);
-			}
-
-			const auto old_root_pos = getPos(root);
-			const auto new_root_pos = getLCAPos(LEAF_MASK | left_bound, LEAF_MASK | right_bound);
-
-			SurroundingNeigh<SegmentTree> neigh = {
-				.mem      = this,
-				.root_pos = new_root_pos,
-				.node_pos = new_root_pos,
-				.node     = EMPTY,
-				.siblings = {},
-			};
-
-			std::deque<idxT> left = {}, right = {};
-			for (; idxs.size(); idxs.pop_front())
-				if (idxs.front() < offset)
-					left.emplace_back(idxs.front());
-				else
-					right.emplace_back(idxs.front());
-
-			for (auto idx: left) {
-				neigh.moveNodeTo(idx | LEAF_MASK);
-				neigh.node = constructor(idx, std::nullopt);
-			}
-			neigh.moveNodeTo(old_root_pos);
-			neigh.node = root;
-
-			for (auto idx: right) {
-				neigh.moveNodeTo(idx | LEAF_MASK);
-				base::Optional<usize> val = std::nullopt;
-				if (neigh.node) val = getValueOfLeaf(neigh.node);
-				neigh.node = constructor(idx, val);
-			}
-
-			neigh.moveNodeTo(new_root_pos);
-			CORE_ASSERT(neigh.siblings.empty(), "all my siblings should have been handled");
-
-			return neigh.node;
-		}
 
 		/**
 		 * @brief helper function for merging two instances of the memory
@@ -883,17 +833,15 @@ namespace vm::persistent::detail {
 		}
 
 		/**
-		 * @brief helper function for modifying a single range of memory
-		 * @note can be mutable or unmutable, depending of return type of merge poliscy (hence use
-		 * of this deduction)
+		 * @brief helper function for modifying a multiple ranges in memory
+		 * @note can be mutable or unmutable, depending of return type of range builder
 		 */
 		template<typename ResT, typename SelfT>
-		ResT rebuildWithRange(
-			this SelfT&       st,
-			NodeID             root,
-			idxT               left_idx,
-			idxT               right_idx,
-			RangeBuilder<ResT> range_constructor
+		ResT rebuildRanges(
+			this SelfT&                              st,
+			NodeID                                   root,
+			const std::deque<std::pair<idxT, idxT>>& ranges,
+			const RangeBuilder<ResT>&                range_constructor
 		) requires ValidSignature<SelfT, ResT> {
 			using BaseT = std::conditional_t<
 				std::is_const_v<std::remove_reference_t<SelfT>>,
@@ -904,13 +852,24 @@ namespace vm::persistent::detail {
 
 			static constexpr bool RECONSTRUCT = std::is_same_v<ResT, NodeID>;
 
-			CORE_ASSERT(left_idx < right_idx, "Interval must be non-empty");
-			CORE_ASSERT(right_idx <= IDX_END, "idxs must be small enough");
-			auto range_nodes = getPosInRange(left_idx, right_idx);
-			CORE_ASSERT(range_nodes.size(), "when range non-empty, there must be some nodes");
+			CORE_ASSERT(ranges.size(), "we need at least one range");
+			for (auto [l, r]: ranges) CORE_ASSERT(l < r, "Interval must be valid & non-empty");
+
+			for (usize i = 0; i + 1 < ranges.size(); i++) {
+				auto [l1, r1] = ranges.at(i);
+				auto [l2, r2] = ranges.at(i + 1);
+
+				CORE_ASSERT(r1 <= l2, "the intervals have to be disjoint");
+			}
+
+			idxT left_idx  = ranges.front().first;
+			idxT right_idx = ranges.back().second;
+
+			CORE_ASSERT(right_idx <= IDX_END, "last range must finish before the memory end");
 
 			if (root) {
 				auto [height, offset] = obj.getHeightOffset(root);
+				CORE_ASSERT(height < POS_T_SIZE, "This is always the case for normal nodes");
 
 				left_idx  = std::min(left_idx, offset);
 				right_idx = std::max(right_idx, offset + (usize(1) << height));
@@ -932,35 +891,27 @@ namespace vm::persistent::detail {
 			neigh.moveNodeTo(obj.getPos(root));
 			neigh.node = root;
 
-			usize first_height = heightFromPos(range_nodes.front());
-			usize last_height  = heightFromPos(range_nodes.back());
+			auto handle_range = [&](idxT l, idxT r) {
+				if (l == r) return;
+				auto range_nodes = getPosInRange(l, r);
+				CORE_ASSERT(
+					neigh.node_pos == range_nodes.front(),
+					"Currently tracked position must be at the starting position for current range"
+				);
 
-			neigh.moveNodeTo(range_nodes.front());
-			{
-				auto list = neigh.beforeNode(lca_pos);
-				for (auto [pos, node]: list) {
-					CORE_ASSERT(heightFromPos(pos) >= first_height, "All the siblings are above");
+				for (; range_nodes.size(); range_nodes.pop_front()) {
+					auto pos = range_nodes.front();
+					neigh.moveNodeTo(pos);
 
 					if constexpr (RECONSTRUCT)
-						neigh.siblings.at(heightFromPos(pos) - first_height)
-							= range_constructor.out_of_range(node, pos);
+						neigh.node = range_constructor.in_range(neigh.node, pos);
 					else
-						range_constructor.out_of_range(node, pos);
+						range_constructor.in_range(neigh.node, pos);
 				}
-			}
+			};
 
-			for (; range_nodes.size(); range_nodes.pop_front()) {
-				auto pos = range_nodes.front();
-				neigh.moveNodeTo(pos);
-
-				if constexpr (RECONSTRUCT)
-					neigh.node = range_constructor.in_range(neigh.node, pos);
-				else
-					range_constructor.in_range(neigh.node, pos);
-			}
-
-			{
-				auto list = neigh.afterNode(lca_pos);
+			auto handle_list = [&](const std::deque<std::pair<posT, NodeID>>& list) {
+				usize last_height = heightFromPos(neigh.node_pos);
 
 				for (auto [pos, node]: list) {
 					CORE_ASSERT(heightFromPos(pos) >= last_height, "All the siblings are above");
@@ -975,11 +926,95 @@ namespace vm::persistent::detail {
 					} else
 						range_constructor.out_of_range(node, pos);
 				}
+			};
+
+			{
+				auto [l1, r1]  = ranges.front();
+				auto begin_pos = firstNodeForRange(l1, r1);
+				neigh.moveNodeTo(begin_pos);
+
+				handle_list(neigh.beforeNode(lca_pos));
+				handle_range(l1, r1);
 			}
 
+			using namespace std::views;
+			for (auto [l, r]: ranges | drop(1)) {
+				auto begin_pos = firstNodeForRange(l, r);
+				auto lca       = getLCAPos(neigh.node_pos, begin_pos);
+
+				CORE_ASSERT(
+					inSubtree(neigh.node_pos, lca) && inSubtree(begin_pos, lca),
+					"this must always be the case (one is in left subtree other in right)"
+				);
+				CORE_ASSERT(
+					!inSubtree(neigh.node_pos, begin_pos) && !inSubtree(begin_pos, neigh.node_pos),
+					"one position cannot be a predecessor of other"
+				);
+
+				auto list_1 = neigh.afterNode(lca);
+				list_1.pop_back();
+				handle_list(list_1);
+
+				neigh.moveNodeTo(begin_pos);
+
+				auto list_2 = neigh.beforeNode(lca);
+				list_2.pop_front();
+				handle_list(list_2);
+
+				handle_range(l, r);
+			}
+
+
+			handle_list(neigh.afterNode(lca_pos));
 			neigh.moveNodeTo(lca_pos);
 
 			if constexpr (RECONSTRUCT) return neigh.node;
+		}
+
+		/**
+		 * @brief helper function for modifying a single range of memory
+		 * @note can be mutable or unmutable, depending of return type of range constructor
+		 */
+		template<typename ResT, typename SelfT>
+		ResT rebuildWithRange(
+			this SelfT&               st,
+			NodeID                    root,
+			idxT                      left_idx,
+			idxT                      right_idx,
+			const RangeBuilder<ResT>& range_constructor
+		) requires ValidSignature<SelfT, ResT> {
+			return st.rebuildRanges(root, { { left_idx, right_idx } }, range_constructor);
+		}
+
+		/**
+		 * @brief helper function for atomically modifying the certain idxs
+		 * @note idxs must be sorted from left to right
+		 * @note this function is never const (use Path for iterating over unmutable memory)
+		 */
+		NodeID reconstructIdxs(
+			NodeID root, const std::deque<idxT>& idxs, const LeafBuilder& constructor
+		) {
+			std::deque<std::pair<idxT, idxT>> ranges{};
+			for (auto idx: idxs) {
+				CORE_ASSERT(idx < IDX_END, "it has to be valid idx");
+				ranges.emplace_back(idx, idx + 1);
+			}
+			usize idx = 0;
+
+			auto reconstructor = RangeBuilder<NodeID>{
+				.in_range = [&](NodeID id, posT pos) -> NodeID {
+					CORE_ASSERT(pos & LEAF_MASK, "expecting a leaf");
+					idxT offset = offsetFromPos(pos);
+					CORE_ASSERT(idxs.at(idx) == offset, "I iterate exactly over the idxs");
+					idx++;
+
+					base::Optional<valT> val = std::nullopt;
+					if (id) val = getValueOfLeaf(id);
+
+					return constructor(offset, val);
+				},
+			};
+			return rebuildRanges(root, ranges, reconstructor);
 		}
 
 		/**

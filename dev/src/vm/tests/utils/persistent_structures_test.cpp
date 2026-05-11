@@ -154,7 +154,7 @@ public:
 		Memory mem{};
 
 		auto checker
-			= [&](MemoryStateID state, std::vector<std::pair<usize, usize>> expected) -> void {
+			= [&](MemoryStateID state, const std::vector<std::pair<usize, usize>>& expected) -> void {
 			ASSERT_EQUAL(expected, mem.toVec(state));
 		};
 
