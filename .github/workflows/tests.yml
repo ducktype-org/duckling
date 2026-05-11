@@ -49,6 +49,7 @@ jobs:
 
   build:
     needs: [setup]
+    name: ${{ matrix.build-type }} / ${{ matrix.compiler.name }}${{ matrix.compiler.jit-enabled == 'TRUE' && ' + JIT' || '' }}
     # This if condition is quite complex, so let's break it down:
     # 1. Run on push (if not a draft PR) or workflow_dispatch events (these are not related to PRs).
     # 2. Run on pull_request events only if the PR is not a draft, and either
