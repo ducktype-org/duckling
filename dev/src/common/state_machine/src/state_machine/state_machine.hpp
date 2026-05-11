@@ -27,8 +27,8 @@
  * Configuring transitions
  * -----------------------
  *
- * Three overloads are provided on `StateMachineDefinition` for registering
- * transitions:
+ * Three main overloads are provided on `StateMachineDefinition` for registering
+ * transitions (see `state_machine_example.cpp`):
  *  * `addTransition<State, Event>` - registers a transition for a single
  *    `(State, Event)` pair.
  *  * `addTransitions<Event, FromStates...>` - registers the same transition
@@ -36,14 +36,23 @@
  *  * `addTransitionFromAllStates<Event>` - registers a transition for the
  *    given event from every state in the `States` variant. Useful for
  *    events that are always valid (e.g. `Kill` in case of DVM).
+ * Three additional overloads are provided in which each action publishes the new state through a
+ * `setState` callback (see `thread_safe_vm_example.cpp`):
+ *  * `addAtomicTransition<State, Event>`
+ *  * `addAtomicTransitions<Event, FromStates...>`
+ *  * `addAtomicTransitionFromAllStates<Event>`
  *
  * Actions and guards
  * ------------------
  *
  * Each transition is composed of two callables:
- *  * `action` - executed when the transition is performed. Returns
- *    `std::expected<States, ErrorT>` - the new state on success or an
- *    error on failure.
+ *  * `action` - executed when the transition is performed.
+ *    - Standard actions return `std::expected<States, ErrorT>` - the new
+ *      state on success or an error on failure.
+ *    - Atomic actions take an additional `setState` callback of type
+ *      `std::function<void(States)>` and return
+ *      `std::expected<void, ErrorT>`. They are expected to call
+ *      `setState(new_state)` when they decide to publish a new state.
  *  * `guard` (optional) - executed before the action. Returns
  *    `std::expected<void, ErrorT>` and may veto the transition by
  *    returning an error.
@@ -59,7 +68,9 @@
  *  * `std::nullopt` - when the machine is in a state for which the action
  * 	  is not specified as a valid transition. The machine is unchanged.
  *  * `std::expected<void, ErrorT>{}` - the transition fired successfully
- *    and the state was updated.
+ *    and the state was updated. For standard actions, the state has been
+ * 	  updated to the value the action returned. For atomic actions, the state
+ *	  was updated iff the action called `setState`.
  *  * `std::unexpected(error)` - the guard or the action reported an
  *    error. The machine stays in its current state.
  *
@@ -72,6 +83,7 @@
 
 #pragma once
 
+#include "base/extend_cpp/variant_match.hpp"
 #include <base/collections/optional.hpp>
 #include <base/comptime/type_traits.hpp>
 #include <base/except/exceptions.hpp>
@@ -85,6 +97,16 @@
 #include <variant>
 
 namespace state_machine {
+#define ASSERT_TRANSITION_NOT_REGISTERED(STATE_IDX, EVENT_IDX) \
+	CORE_ASSERT(                                               \
+		!transitions[state_idx][event_idx].has_value(),        \
+		"Transition for this State (variant index: ",          \
+		state_idx,                                             \
+		") and Event (variant index: ",                        \
+		event_idx,                                             \
+		") is already defined!"                                \
+	);
+
 	/**
 	 * @brief Static description of a state machine - the set of allowed
 	 * `(state, event)` transitions and their handlers.
@@ -101,16 +123,29 @@ namespace state_machine {
 	template<typename States, typename Events, typename ErrorT = std::string>
 	requires base::IsVariant<States> && base::IsVariant<Events> class StateMachineDefinition {
 	public:
-		using ActionResultT = std::expected<States, ErrorT>;
-		using GuardResultT  = std::expected<void, ErrorT>;
+		using ActionResultT       = std::expected<States, ErrorT>;
+		using AtomicActionResultT = std::expected<void, ErrorT>;
+		using GuardResultT        = std::expected<void, ErrorT>;
+
+		/**
+		 * @brief Callback type handed to atomic actions so they can
+		 * publish a new state into the owning `StateMachine`. This function is expected to call
+		 * `setState()` when updating the new state.
+		 */
+		using SetStateCallback = std::function<void(States)>;
 
 	private:
 		// Type-erased handlers, so they can all be stored in the same array.
-		using RawAction = std::function<ActionResultT(const States&, const Events&)>;
-		using RawGuard  = std::function<GuardResultT(const States&, const Events&)>;
+		using RawAction       = std::function<ActionResultT(const States&, const Events&)>;
+		using RawAtomicAction = std::function<
+			AtomicActionResultT(const States&, const Events&, const SetStateCallback&)>;
+		using RawGuard = std::function<GuardResultT(const States&, const Events&)>;
 
 		template<typename Event>
 		using GenericAction = std::function<ActionResultT(const States&, const Event&)>;
+		template<typename Event>
+		using GenericAtomicAction
+			= std::function<ActionResultT(const States&, const Event&, const SetStateCallback&)>;
 		template<typename Event>
 		using GenericGuard = std::function<GuardResultT(const States&, const Event&)>;
 
@@ -118,7 +153,9 @@ namespace state_machine {
 		 * @brief Represents a single transition entry for a (State, Event) pair.
 		 */
 		struct TransitionEntry {
-			RawAction action;  ///< Action to be performed when this transition is performed.
+			std::variant<RawAction, RawAtomicAction>
+				action;  ///< either a standard action that returns the new state, or an atomic action
+			             ///< that publishes the new state via a `setState` callback handed to it.
 			base::Optional<RawGuard>
 				guard;  ///< Optional guard to additionally validate if the transition is allowed.
 		};
@@ -133,6 +170,9 @@ namespace state_machine {
 		std::array<std::array<base::Optional<TransitionEntry>, NUM_EVENTS>, NUM_STATES> transitions;
 
 	public:
+		// =========================================================
+		// Normal transitions
+		// =========================================================
 		/**
 		 * @brief Registers a transition for a single `(State, Event)` pair.
 		 *
@@ -155,22 +195,14 @@ namespace state_machine {
 		) {
 			const usize state_idx = base::variantTypeIndex<States, State>();
 			const usize event_idx = base::variantTypeIndex<Events, Event>();
-
-			CORE_ASSERT(
-				!transitions[state_idx][event_idx].has_value(),
-				"Transition for this State (variant index: ",
-				state_idx,
-				") and Event (variant index: ",
-				event_idx,
-				") is already defined!"
-			);
+			ASSERT_TRANSITION_NOT_REGISTERED(state_idx, event_idx);
 
 			RawAction raw_action
 				= [action = std::move(action)](const States& s, const Events& e) -> ActionResultT {
 				return action(std::get<State>(s), std::get<Event>(e));
 			};
 
-			base::Optional<RawGuard> raw_guard = std::nullopt;
+			base::Optional<RawGuard> raw_guard{};
 			if (guard.has_value()) {
 				raw_guard =
 					[guard = std::move(*guard)](const States& s, const Events& e) -> GuardResultT {
@@ -223,6 +255,72 @@ namespace state_machine {
 			}(std::make_index_sequence<NUM_STATES>{});
 		}
 
+		// =========================================================
+		// Atomic transitions
+		// =========================================================
+
+		/**
+		 * @brief Atomic counterpart for `addTransition`. See its docs for more info.
+		 */
+		template<typename State, typename Event>
+		requires base::IsVariantMember<State, States> && base::IsVariantMember<Event, Events>
+		void addAtomicTransition(
+			std::function<AtomicActionResultT(const State&, const Event&, const SetStateCallback&)>
+																					action,
+			base::Optional<std::function<GuardResultT(const State&, const Event&)>> guard = {}
+		) {
+			const usize state_idx = base::variantTypeIndex<States, State>();
+			const usize event_idx = base::variantTypeIndex<Events, Event>();
+			ASSERT_TRANSITION_NOT_REGISTERED(state_idx, event_idx);
+
+			RawAtomicAction raw_action
+				= [action = std::move(action)](
+					  const States& s, const Events& e, const SetStateCallback& set_state
+				  ) -> AtomicActionResultT {
+				return action(std::get<State>(s), std::get<Event>(e), set_state);
+			};
+
+			base::Optional<RawGuard> raw_guard{};
+			if (guard.has_value()) {
+				raw_guard =
+					[guard = std::move(*guard)](const States& s, const Events& e) -> GuardResultT {
+					return guard(std::get<State>(s), std::get<Event>(e));
+				};
+			}
+
+			transitions.at(state_idx).at(event_idx)
+				= TransitionEntry{ std::move(raw_action), std::move(raw_guard) };
+		}
+
+		/**
+		 * @brief Atomic counter part of `addTransitions`. See its docs for more info.
+		 */
+		template<typename Event, typename... FromStates>
+		requires(base::IsVariantMember<FromStates, States> && ...)
+		     && base::IsVariantMember<Event, Events>
+		void addAtomicTransitions(
+			const GenericAtomicAction<Event>&          action,
+			const base::Optional<GenericGuard<Event>>& guard = {}
+		) {
+			(addAtomicTransitionInternal<FromStates, Event>(action, guard), ...);
+		}
+
+		/**
+		 * @brief Atomic counter part of `addTransitionFromEveryState`. See its docs for more info.
+		 */
+		template<typename Event>
+		requires base::IsVariantMember<Event, Events> void addAtomicTransitionFromAllStates(
+			const GenericAtomicAction<Event>&          action,
+			const base::Optional<GenericGuard<Event>>& guard = {}
+		) {
+			[this, &action, &guard]<usize... Is>(std::index_sequence<Is...>) {
+				(this->addAtomicTransitionInternal<std::variant_alternative_t<Is, States>, Event>(
+					 action, guard
+				 ),
+				 ...);
+			}(std::make_index_sequence<NUM_STATES>{});
+		}
+
 		/**
 		 * @brief Returns the entry registered for the given
 		 * `(State, Event)` pair, if it exists.
@@ -256,15 +354,7 @@ namespace state_machine {
 		) {
 			const usize state_idx = base::variantTypeIndex<States, State>();
 			const usize event_idx = base::variantTypeIndex<Events, Event>();
-
-			CORE_ASSERT(
-				!transitions[state_idx][event_idx].has_value(),
-				"Transition for this State (variant index: ",
-				state_idx,
-				") and Event (variant index: ",
-				event_idx,
-				") is already defined!"
-			);
+			ASSERT_TRANSITION_NOT_REGISTERED(state_idx, event_idx);
 
 			// Wrapper over action so it can be stored next to strongly-typed actions.
 			RawAction raw_action = [action](const States& s, const Events& e) {
@@ -282,7 +372,41 @@ namespace state_machine {
 			transitions.at(state_idx).at(event_idx)
 				= TransitionEntry{ std::move(raw_action), std::move(raw_guard) };
 		}
+
+		/**
+		 * @brief Atomic counterpart of `addTransitionInternal`.
+		 *
+		 * Shared logic used by `addAtomicTransitions` and
+		 * `addAtomicTransitionFromAllStates`.
+		 */
+		template<typename State, typename Event>
+		void addAtomicTransitionInternal(
+			const GenericAtomicAction<Event>& action, const base::Optional<GenericGuard<Event>> guard
+		) {
+			const usize state_idx = base::variantTypeIndex<States, State>();
+			const usize event_idx = base::variantTypeIndex<Events, Event>();
+			ASSERT_TRANSITION_NOT_REGISTERED(state_idx, event_idx);
+
+			// Wrapper over action so it can be stored next to strongly-typed actions.
+			RawAction raw_action
+				= [action](
+					  const States& s, const Events& e, const SetStateCallback& set_state
+				  ) -> AtomicActionResultT { return action(s, std::get<Event>(e), set_state); };
+
+			// Wrapper over guard so it can be stored next to strongly-typed guards.
+			base::Optional<RawGuard> raw_guard = std::nullopt;
+			if (guard.has_value()) {
+				raw_guard = [guard = *guard](const States& s, const Events& e) -> GuardResultT {
+					return guard(std::get<State>(s), std::get<Event>(e));
+				};
+			}
+
+			transitions.at(state_idx).at(event_idx)
+				= TransitionEntry{ std::move(raw_action), std::move(raw_guard) };
+		}
 	};
+
+#undef ASSERT_TRANSITION_NOT_REGISTERED
 
 	/**
 	 * @brief Runtime instance of a state machine.
@@ -301,8 +425,9 @@ namespace state_machine {
 	template<typename States, typename Events, typename ErrorT = std::string>
 	class StateMachine {
 	public:
-		using ResultT         = base::Optional<std::expected<void, ErrorT>>;
-		using StateMachineDef = StateMachineDefinition<States, Events, ErrorT>;
+		using ResultT          = base::Optional<std::expected<void, ErrorT>>;
+		using StateMachineDef  = StateMachineDefinition<States, Events, ErrorT>;
+		using SetStateCallback = StateMachineDef::SetStateCallback;
 
 		/**
 		 * @brief Constructs a state machine in the given initial state.
@@ -349,13 +474,29 @@ namespace state_machine {
 							return std::unexpected(std::move(guard_result.error()));
 					}
 
-					// Run the action and apply the resulting state.
-					auto action_result = (transition->action)(current_state, event);
-					if (!action_result.has_value())
-						return std::unexpected(std::move(action_result.error()));
+					variant_match(transition) {
+						variant_case(StateMachineDef::RawAction, raw_action) {
+							// Standard action. Action returns ehe new state.
+							auto action_result = raw_action(current_state, event);
+							if (!action_result.has_value())
+								return std::unexpected(std::move(action_result.error()));
 
-					current_state = std::move(action_result.value());
-					return std::expected<void, ErrorT>{};
+							current_state = std::move(action_result.value());
+							return std::expected<void, ErrorT>{};
+						}
+						variant_case(StateMachineDef::RawAtomicAction, atomic_action) {
+							// Atomic action. Save the previous state so it remains valid for the
+						    // action body after setState has changed the current state.
+							States           prev_state = current_state;
+							SetStateCallback set_state  = [this](States new_state) {
+                                current_state = std::move(new_state);
+							};
+							auto action_result = atomic_action(prev_state, event, set_state);
+							if (!action_result.has_value())
+								return std::unexpected(std::move(action_result.error()));
+							return std::expected<void, ErrorT>{};
+						}
+					}
 				},
 				current_state,
 				event
