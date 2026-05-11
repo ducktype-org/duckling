@@ -24,6 +24,13 @@ public:
 		TESTER_ADD_TEST(eventWithDataTest);
 		TESTER_ADD_TEST(getStateReturnsCurrentTest);
 		TESTER_ADD_TEST(definitionSharingTest);
+
+		TESTER_ADD_TEST(basicAtomicTransitionTest);
+		TESTER_ADD_TEST(atomicNoSetStateLeavesStateUnchangedTest);
+		TESTER_ADD_TEST(atomicPrevStateStableAfterSetStateTest);
+		TESTER_ADD_TEST(atomicMultipleSourceStatesTest);
+		TESTER_ADD_TEST(atomicAllStatesTransitionTest);
+		TESTER_ADD_TEST(atomicFailedActionTest);
 	}
 
 	~StateMachineTest() override = default;
@@ -49,6 +56,7 @@ private:
 	using LightGuardFn = std::function<std::expected<void, std::string>(const Red&, const Tick&)>;
 	using LightActionFn
 		= std::function<std::expected<LightState, std::string>(const Red&, const Tick&)>;
+	using LightSetStateFn = std::function<void(LightState)>;
 
 	void basicTransitionTest() {
 		LightDefinition def;
@@ -203,6 +211,7 @@ private:
 
 	using CounterDefinition = state_machine::StateMachineDefinition<CounterState, CounterEvent>;
 	using CounterMachine    = state_machine::StateMachine<CounterState, CounterEvent>;
+	using CounterSetStateFn = std::function<void(CounterState)>;
 
 	void stateWithDataTest() {
 		CounterDefinition def;
@@ -268,6 +277,133 @@ private:
 
 		m2.handleEvent(Tick{});
 		assertTrue(std::holds_alternative<Green>(m2.getState()), "m2 should advance independently");
+	}
+
+	void basicAtomicTransitionTest() {
+		LightDefinition def;
+		def.addAtomicTransition<Red, Tick>(
+			[](const Red&, const Tick&, const LightSetStateFn& set_state
+		    ) -> std::expected<void, std::string> {
+				set_state(Green{});
+				return {};
+			}
+		);
+
+		LightMachine m(Red{}, &def);
+		assertTrue(std::holds_alternative<Red>(m.getState()), "Initial state should be Red");
+
+		auto res = m.handleEvent(Tick{});
+		assertTrue(res.has_value(), "Transition should be configured");
+		assertTrue(res.value().has_value(), "Atomic transition should succeed");
+		assertTrue(std::holds_alternative<Green>(m.getState()), "After Tick should be Green");
+	}
+
+	void atomicNoSetStateLeavesStateUnchangedTest() {
+		LightDefinition def;
+		def.addAtomicTransition<Red, Tick>(
+			[](const Red&, const Tick&, const LightSetStateFn&) -> std::expected<void, std::string> {
+				return {};
+			}
+		);
+
+		LightMachine m(Red{}, &def);
+		auto         res = m.handleEvent(Tick{});
+		assertTrue(res.has_value(), "Transition should be configured");
+		assertTrue(res.value().has_value(), "Transition without setState should still succeed");
+		assertTrue(std::holds_alternative<Red>(m.getState()), "State should be unchanged");
+	}
+
+	void atomicPrevStateStableAfterSetStateTest() {
+		// Verifies the saved state passed to the action remains valid after
+		// setState has been invoked.
+		CounterDefinition def;
+		i32               observed_prev_after_setstate = 0;
+		def.addAtomicTransition<Counter, Increment>(
+			[&observed_prev_after_setstate](
+				const Counter& prev, const Increment& inc, const CounterSetStateFn& set_state
+			) -> std::expected<void, std::string> {
+				// Publish the new state.
+				set_state(Counter{ prev.value + inc.by });
+				// Read `prev` state. It should still hold the old value.
+				observed_prev_after_setstate = prev.value;
+				return {};
+			}
+		);
+
+		CounterMachine m(Counter{ 10 }, &def);
+		auto           res = m.handleEvent(Increment{ 5 });
+		assertTrue(res.has_value() && res.value().has_value(), "Transition should succeed");
+		assertTrue(std::get<Counter>(m.getState()).value == 15, "Current state should be updated");
+		assertTrue(
+			observed_prev_after_setstate == 10, "Previous state should remain valid after setState"
+		);
+	}
+
+	void atomicMultipleSourceStatesTest() {
+		LightDefinition def;
+		def.addAtomicTransitions<Reset, Yellow, Green>(
+			[](const LightState&, const Reset&, const LightSetStateFn& set_state
+		    ) -> std::expected<void, std::string> {
+				set_state(Red{});
+				return {};
+			}
+		);
+
+		LightMachine m1(Yellow{}, &def);
+		auto         r1 = m1.handleEvent(Reset{});
+		assertTrue(r1.has_value() && r1.value().has_value(), "Yellow + Reset should succeed");
+		assertTrue(std::holds_alternative<Red>(m1.getState()), "Yellow + Reset -> Red");
+
+		LightMachine m2(Green{}, &def);
+		auto         r2 = m2.handleEvent(Reset{});
+		assertTrue(r2.has_value() && r2.value().has_value(), "Green + Reset should succeed");
+		assertTrue(std::holds_alternative<Red>(m2.getState()), "Green + Reset -> Red");
+
+		// Red was not in FromStates, so Reset is undefined for it.
+		LightMachine m3(Red{}, &def);
+		auto         r3 = m3.handleEvent(Reset{});
+		assertTrue(!r3.has_value(), "No transition for (Red, Reset)");
+	}
+
+	void atomicAllStatesTransitionTest() {
+		LightDefinition def;
+		def.addAtomicTransitionFromAllStates<Reset>(
+			[](const LightState&, const Reset&, const LightSetStateFn& set_state
+		    ) -> std::expected<void, std::string> {
+				set_state(Red{});
+				return {};
+			}
+		);
+
+		LightMachine m1(Yellow{}, &def);
+		m1.handleEvent(Reset{});
+		assertTrue(std::holds_alternative<Red>(m1.getState()), "Yellow -> Red");
+
+		LightMachine m2(Green{}, &def);
+		m2.handleEvent(Reset{});
+		assertTrue(std::holds_alternative<Red>(m2.getState()), "Green -> Red");
+
+		LightMachine m3(Red{}, &def);
+		m3.handleEvent(Reset{});
+		assertTrue(std::holds_alternative<Red>(m3.getState()), "Red -> Red still works");
+	}
+
+	void atomicFailedActionTest() {
+		// An atomic action that fails without calling setState leaves
+		// the machine unchanged.
+		LightDefinition def;
+		def.addAtomicTransition<Red, Tick>(
+			[](const Red&, const Tick&, const LightSetStateFn&) -> std::expected<void, std::string> {
+				return std::unexpected("action failed");
+			}
+		);
+
+		LightMachine m(Red{}, &def);
+		auto         res = m.handleEvent(Tick{});
+		assertTrue(res.has_value(), "Transition is configured");
+		assertTrue(!res.value().has_value(), "Action should fail");
+		assertTrue(res.value().error() == "action failed", "Error message should be propagated");
+		assertTrue(std::holds_alternative<Red>(m.getState()), "State should be unchanged");
 	}
 };
 
