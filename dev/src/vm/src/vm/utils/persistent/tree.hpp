@@ -630,7 +630,6 @@ namespace vm::persistent::detail {
 
 		using LeafBuilder = std::function<NodeID(usize, base::Optional<usize>)>;
 
-
 		/**
 		 * @brief helper function for merging two instances of the memory
 		 * @note can be mutable or unmutable, depending of return type of merge poliscy (hence use

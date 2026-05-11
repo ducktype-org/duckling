@@ -153,10 +153,8 @@ public:
 		using namespace vm::persistent;
 		Memory mem{};
 
-		auto checker
-			= [&](MemoryStateID state, const std::vector<std::pair<usize, usize>>& expected) -> void {
-			ASSERT_EQUAL(expected, mem.toVec(state));
-		};
+		auto checker = [&](MemoryStateID state, const std::vector<std::pair<usize, usize>>& expected
+		               ) -> void { ASSERT_EQUAL(expected, mem.toVec(state)); };
 
 		auto empt = Memory::EMPTY;
 		checker(empt, {});
