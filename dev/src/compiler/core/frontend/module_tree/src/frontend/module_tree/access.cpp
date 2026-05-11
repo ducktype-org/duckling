@@ -13,27 +13,12 @@ namespace compiler::frontend {
 
 	IMPLEMENT_QUERY_SIDE_INPUT(QueryModuleSideInput);
 	IMPLEMENT_QUERY_SIDE_INPUT(QueryFileSideInput);
-	IMPLEMENT_QUERY_SIDE_INPUT(QuerySourceFileCountSideInput);
 	IMPLEMENT_QUERY_SIDE_INPUT(QuerySubmoduleCountSideInput);
 
 	IMPLEMENT_QUERY_SIDE_INPUT_WITH_LOGIC(QueryModuleChildSideInput, ctx, key, {
 		ctx.addMetadataIfNotExists<metadata_ModuleLookup>(key);
 	});
 
-	SourceFilesAccessLocked::SourceFilesAccessLocked(
-		ModuleID module, std::vector<FileAccessLocked> files
-	):
-		  module(module),
-		  files(std::move(files)) {}
-
-	std::vector<FileAccessLocked> SourceFilesAccessLocked::illegalAccess() const { return files; }
-
-	std::vector<FileAccessLocked> SourceFilesAccessLocked::unlock(query::Context& ctx) const {
-		ctx.query<QuerySourceFileCountSideInput>(
-			KeyOf_SourceFileCountSideInput::computeHash(module, files.size())
-		);
-		return files;
-	}
 
 	SubmodulesAccessLocked::SubmodulesAccessLocked(
 		ModuleID module, std::vector<ModuleAccessLocked> submodules

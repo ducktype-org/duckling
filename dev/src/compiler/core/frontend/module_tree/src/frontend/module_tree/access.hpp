@@ -163,21 +163,6 @@ namespace compiler::frontend {
 	using FileAccess       = Access<FileID>;
 	using FileAccessLocked = AccessLocked<FileID>;
 
-	/**
-	 * @brief This lock holds a vector of FileAccessLocked for each source file in a module
-	 * (excluding main SourceFile). This is needed to register the dependency on the number of
-	 * source files in the module.
-	 */
-	class SourceFilesAccessLocked final {
-		ModuleID                      module;
-		std::vector<FileAccessLocked> files;
-
-	public:
-		SourceFilesAccessLocked(ModuleID module, std::vector<FileAccessLocked> files);
-
-		[[nodiscard]] std::vector<FileAccessLocked> unlock(query::Context& ctx) const;
-		[[nodiscard]] std::vector<FileAccessLocked> illegalAccess() const;
-	};
 
 	/**
 	 * @brief This lock holds a vector of ModuleAccessLocked for each submodule.
