@@ -253,6 +253,8 @@ impl Git {
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 /// A type-safe approach for specifying a git tag or a branch.
+// We intentionally keep inner values as strings: we don't clone them a lot,
+// and turning them into StrId would only “leak” memory.
 pub enum BranchOrTag {
     /// The default branch.
     Default,
