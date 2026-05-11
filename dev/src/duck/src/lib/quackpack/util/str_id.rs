@@ -14,7 +14,7 @@ use std::sync::{Mutex, OnceLock};
 
 use serde::{Deserialize, Serialize};
 
-use crate::quackpack::util::PANIC_MESSAGE;
+use crate::util::extract::Extract;
 
 static STRID_CACHE: OnceLock<Mutex<HashSet<&'static str>>> = OnceLock::new();
 
@@ -92,20 +92,7 @@ impl From<&OsString> for StrId {
 
 impl From<Cow<'_, str>> for StrId {
     fn from(value: Cow<'_, str>) -> Self {
-        let mut cache = STRID_CACHE
-            .get_or_init(Default::default)
-            .lock()
-            // NOTE: `.unwrap()` should never panic: from docs:
-            // Errors
-            //
-            // If another user of this mutex panicked while holding the mutex,
-            // then this call will return an error once the mutex is acquired.
-            // The acquired mutex guard will be contained in the returned error.
-            //
-            // Panics
-            //
-            // This function might panic when called if the lock is already held by the current thread.
-            .expect(PANIC_MESSAGE);
+        let mut cache = STRID_CACHE.get_or_init(Default::default).lock().extract();
         let reference = cache.get(value.as_ref()).copied().unwrap_or_else(|| {
             let static_ref = value.into_owned().leak();
             cache.insert(static_ref);

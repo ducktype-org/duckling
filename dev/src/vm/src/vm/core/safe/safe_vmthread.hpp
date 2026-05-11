@@ -122,6 +122,15 @@ namespace vm {
 #endif
 
 		/**
+		 * @brief RAII object guaranteeing the release of the GIL lock.
+		 */
+		struct ScopedGilGuard {
+			SafeVMThread& thread;
+			ScopedGilGuard(SafeVMThread& t);
+			~ScopedGilGuard();
+		};
+
+		/**
 		 * @brief Creates a list of instructions, which initialize the argv table and populate it
 		 * with given command line `args`, push the argc and *argv blocks onto mains local stack,
 		 * perform the call and deinitialize the argv table when main returns.
