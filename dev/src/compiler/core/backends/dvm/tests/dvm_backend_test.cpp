@@ -34,6 +34,7 @@ public:
 		// tested here because constructors aren't inserted properly. When this pipeline is unified,
 		// uncomment this test.
 		// TESTER_ADD_TEST(recordsTest);
+		TESTER_ADD_TEST(staticArrayTest);
 		TESTER_ADD_TEST(unitsTest);
 	}
 
@@ -152,6 +153,10 @@ private:
 			{},
 			0
 		);
+	}
+
+	void staticArrayTest() {
+		runTest("modules/static_arrays", {}, "1\n100\n200\n300\n600\n20\n42\n11\n13\n4\n", {}, 0);
 	}
 
 	void unitsTest() { runTest("modules/units", {}, {}, {}, 0); }

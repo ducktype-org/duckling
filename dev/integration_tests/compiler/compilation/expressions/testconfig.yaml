@@ -95,13 +95,8 @@ Tests:
 
   no_output:
     Cases:
-      dvm:
-        backend: dvm
-        Output:
-          String: ""
-        ExitCode: 0
-      llvm:
-        backend: llvm
+      all:
+        backend: all
         Output:
           String: ""
         ExitCode: 0
