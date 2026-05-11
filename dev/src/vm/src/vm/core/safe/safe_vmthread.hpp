@@ -9,6 +9,7 @@
 #include <vm/core/process/interface_types.hpp>
 #include <vm/core/safe/low_program/low_program.hpp>
 #include <vm/core/safe/memory/memory.hpp>
+#include <vm/core/process/concurrency/fast_track/shadow_memory.hpp>
 #include <vm/core/safe/memory/thread_stack.hpp>
 #include <vm/core/thread/ivmthread.hpp>
 #include <vm/core/vmvalue/vmvalue.hpp>
@@ -65,7 +66,16 @@ namespace vm {
 		std::byte* global_data_buffer_base;    /// Pointer to the start of global data buffer.
 		Block** global_block_ref_buffer_base;  /// Pointer to the start of global block ref buffer.
 
-		RuntimeData(Ref<ThreadStack> stack, GlobalBufferPointersGeneric global_buffer_pointers):
+		// Shadow memory pointers
+		ShadowEntry* shadow_local_stack_base;
+		ShadowEntry* shadow_global_data_buffer_base;
+
+		RuntimeData(
+			Ref<ThreadStack>           stack,
+			Ref<ShadowThreadStack>     shadow_stack,
+			GlobalBufferPointersGeneric global_buffer_pointers,
+			ShadowGlobalBufferPointers  shadow_global_buffer_pointers
+		):
 			  frame_stack_base(stack->getFrameStack()->data()),
 			  frame_stack_end(stack->getFrameStack()->data() + stack->getFrameStack()->size()),
 			  frame_stack_current(stack->getFrameStack()->data()),
@@ -76,7 +86,9 @@ namespace vm {
 				  stack->getBlockRefStack()->data() + stack->getBlockRefStack()->size()
 			  ),
 			  global_data_buffer_base(global_buffer_pointers.data_buffer_base),
-			  global_block_ref_buffer_base(global_buffer_pointers.blocks_buffer_base) {}
+			  global_block_ref_buffer_base(global_buffer_pointers.blocks_buffer_base),
+			  shadow_local_stack_base(shadow_stack->getLocalStack()->data()),
+			  shadow_global_data_buffer_base(shadow_global_buffer_pointers.data_buffer_base) {}
 	};
 
 	/**
@@ -218,6 +230,9 @@ namespace vm {
 		 * For now only the VMProcess calls this function after the global data memory is
 		 * reallocated and the pointers change.
 		 */
-		void updateGlobalDataBufferPointers(GlobalBufferPointersGeneric global_buffer_pointers);
+		void updateGlobalDataBufferPointers(
+			GlobalBufferPointersGeneric global_buffer_pointers,
+			ShadowGlobalBufferPointers  shadow_global_buffer_pointers
+		);
 	};
 }

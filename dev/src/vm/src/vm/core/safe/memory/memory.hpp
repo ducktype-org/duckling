@@ -41,7 +41,7 @@ namespace vm {
 		HeapAllocator<EntryT>  heap_allocator;
 		DummyAllocator<EntryT> dummy_allocator;
 
-		std::deque<ThreadStack> threads_frame_stacks;
+		std::deque<BasicThreadStack<EntryT>> threads_frame_stacks;
 
 		/// Buffer for the global data
 		std::vector<EntryT> global_data_buffer{};
@@ -501,7 +501,7 @@ namespace vm {
 
 		// =================== Used by executor ===================
 
-		auto initializeFrameStack() -> Ref<ThreadStack> {
+		auto initializeFrameStack() -> Ref<BasicThreadStack<EntryT>> {
 			threads_frame_stacks.emplace_back();
 			return &threads_frame_stacks.back();
 		}

@@ -13,6 +13,7 @@
 #include <vm/core/safe/concurrency/synchronization_primitives.hpp>
 #include <vm/core/safe/low_program/low_program.hpp>
 #include <vm/core/safe/safe_vmthread.hpp>
+#include <vm/core/process/concurrency/fast_track/shadow_memory.hpp>
 #include <vm/loader/loader.hpp>
 
 #include <expected>
@@ -31,6 +32,7 @@ namespace vm {
 	class SafeVMProcess final: public IVMProcess {
 		friend class VmValue;
 		friend class VMValueRef;
+		friend class SafeVMThread;
 
 	private:
 		std::shared_mutex rw_global;
@@ -48,7 +50,8 @@ namespace vm {
 
 		low::LowVMProgramCopy loaded_program_copy;
 
-		Memory memory;
+		Memory       memory;
+		ShadowMemory shadow_memory;
 
 		GIL                       gil;
 		SynchronizationPrimitives synchronization_primitives;
