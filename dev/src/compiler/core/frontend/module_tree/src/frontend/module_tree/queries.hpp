@@ -53,14 +53,6 @@ namespace compiler::frontend {
 	 */
 	DECLARE_QUERY(QueryMainSourceFile, ModuleID, FileID, ({ .uses_qresult = false }))
 
-	/**
-	 * @brief Query sources files of a module (without main source file).
-	 *
-	 * \query_thread_safe_if_cache
-	 */
-	DECLARE_QUERY(QuerySourceFiles, ModuleID, CRef<std::vector<FileID>>, ({ .uses_qresult = false }))
-
-
 	using QuerySubmodules_Result = CRef<base::HashMap<base::StrID, ModuleID>>;
 	/**
 	 * @brief Query map of children modules aka submodules

@@ -418,7 +418,6 @@ namespace compiler::frontend {
 
 		base::Optional<base::Ref<ModuleTree>>             m_parent;
 		base::Optional<fs::File>                          m_main_source_file_path;
-		std::vector<fs::File>                             m_source_file_paths;
 		base::StrID                                       m_package_id;
 		base::HashMap<base::StrID, base::Ref<ModuleTree>> m_submodules;
 		base::HashMap<base::StrID, std::vector<fs::File>> m_other_files;
@@ -440,12 +439,7 @@ namespace compiler::frontend {
 	 */
 	class ModuleTreeModifier final {
 	public:
-		/**
-		 * Removes a source file from its module.
-		 * @param file The SourceFile to remove.
-		 */
-		static void removeSourceFileFromStorage(base::Ref<SourceFile> file);
-
+	
 		/**
 		 * Sets the main source file for the given module.
 		 * @param module The module to modify.
