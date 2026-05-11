@@ -52,3 +52,11 @@ Tests:
         Output:
           String: "11\n"
         ExitCode: 0
+
+  arrays_in_comp_time:
+    Cases:
+      all:
+        backend: all
+        Output:
+          String: "6\n"
+        ExitCode: 0
