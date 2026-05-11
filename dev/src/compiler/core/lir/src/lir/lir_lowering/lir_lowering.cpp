@@ -14,6 +14,7 @@
 #include "lir_lowering.hpp"
 
 #include "../lir_structure/lir_structure.hpp"
+#include "helios/tsh/symbol_type.hpp"
 
 #include <ctv/numeric_value.hpp>
 #include <frontend/pst_parser/lang_parser_element.hpp>
@@ -46,6 +47,20 @@ namespace compiler::lir {
 		return function->queryUnstablePerfectHash();
 	}
 
+	/**
+	 * @brief Converts the MIR function type to a LIR layout. Changes the return type to Unit if the
+	 * function returns a type which doesn't carry information (e.g. for class/array constructors
+	 * which don't carry information).
+	 */
+	CRef<tsl::TypeLayout> mirReturnType2LirLayout(query::Context& ctx, tsh::SymbolType<> type) {
+		if (type.getType().carriesInformation(ctx))
+			return ctx.query<tsl::QuerySymbolTypeLayout>(type);
+		else
+			// Change the return type to Unit if the function returns a type which doesn't carry
+			// information (e.g. for class/array constructors which don't carry information).
+			return ctx.query<tsl::QueryAbstractTypeLayout>(tsh::getUnitType());
+	}
+
 	FunctionLiteral getFunctionLiteralfromHELIOSID(query::Context& ctx, helios::SymID helios_id) {
 		tsh::FunctionAbstractType type
 			= ctx.query<helios::QueryTypeOfSymbol>(helios_id)
@@ -57,16 +72,7 @@ namespace compiler::lir {
 		);
 		auto mangled_name = helios::mangler::getSimpleMangledName(ctx, helios_id);
 
-		auto return_type = [&]() {
-			if (type.getResultType().getType().carriesInformation(ctx))
-				return ctx.query<tsl::QuerySymbolTypeLayout>(type.getResultType());
-			else
-				// Change the return type to Unit if the function returns a type which doesn't carry
-				// information (e.g. for class/array constructors which don't carry information).
-				return ctx.query<tsl::QueryAbstractTypeLayout>(tsh::getUnitType());
-		}();
-
-
+		auto return_type = mirReturnType2LirLayout(ctx, type.getResultType());
 		std::vector<CRef<tsl::TypeLayout>> parameter_types;
 		parameter_types.reserve(type.getParameterTypes().size());
 		for (const auto& param: type.getParameterTypes())
@@ -779,15 +785,7 @@ namespace compiler::lir {
 			 * @return Function
 			 */
 			Function get() && {
-				auto return_type = [&]() {
-					if (key.function->return_type.getType().carriesInformation(ctx))
-						return ctx.query<tsl::QuerySymbolTypeLayout>(key.function->return_type);
-					else
-						// Change the return type to Unit if the function returns a type which
-						// doesn't carry information (e.g. for class/array constructors which don't
-						// carry information).
-						return ctx.query<tsl::QueryAbstractTypeLayout>(tsh::getUnitType());
-				}();
+				auto return_type = mirReturnType2LirLayout(ctx, key.function->return_type);
 				std::vector<CRef<tsl::TypeLayout>> parameter_types;
 				parameter_types.reserve(key.function->parameter_types.size());
 				for (const auto& param: key.function->parameter_types)
