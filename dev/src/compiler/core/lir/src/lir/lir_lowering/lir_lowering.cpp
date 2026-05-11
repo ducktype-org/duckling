@@ -14,6 +14,9 @@
 #include "lir_lowering.hpp"
 
 #include "../lir_structure/lir_structure.hpp"
+#include "helios/tsh/abstract_type.hpp"
+#include "helios/tsh/queries/types.hpp"
+#include "helios/tsh/types.hpp"
 
 #include <ctv/numeric_value.hpp>
 #include <frontend/pst_parser/lang_parser_element.hpp>
@@ -57,7 +60,16 @@ namespace compiler::lir {
 		);
 		auto mangled_name = helios::mangler::getSimpleMangledName(ctx, helios_id);
 
-		auto return_type = ctx.query<tsl::QuerySymbolTypeLayout>(type.getResultType());
+		auto return_type = [&]() {
+			if (type.getResultType().getType().carriesInformation(ctx))
+				return ctx.query<tsl::QuerySymbolTypeLayout>(type.getResultType());
+			else
+				// Change the return type to Unit if the function returns a type which doesn't carry
+				// information (e.g. for class/array constructors which don't carry information).
+				return ctx.query<tsl::QueryAbstractTypeLayout>(tsh::getUnitType());
+		}();
+
+
 		std::vector<CRef<tsl::TypeLayout>> parameter_types;
 		parameter_types.reserve(type.getParameterTypes().size());
 		for (const auto& param: type.getParameterTypes())
@@ -770,7 +782,15 @@ namespace compiler::lir {
 			 * @return Function
 			 */
 			Function get() && {
-				auto return_type = ctx.query<tsl::QuerySymbolTypeLayout>(key.function->return_type);
+				auto return_type = [&]() {
+					if (key.function->return_type.getType().carriesInformation(ctx))
+						return ctx.query<tsl::QuerySymbolTypeLayout>(key.function->return_type);
+					else
+						// Change the return type to Unit if the function returns a type which
+						// doesn't carry information (e.g. for class/array constructors which don't
+						// carry information).
+						return ctx.query<tsl::QueryAbstractTypeLayout>(tsh::getUnitType());
+				}();
 				std::vector<CRef<tsl::TypeLayout>> parameter_types;
 				parameter_types.reserve(key.function->parameter_types.size());
 				for (const auto& param: key.function->parameter_types)

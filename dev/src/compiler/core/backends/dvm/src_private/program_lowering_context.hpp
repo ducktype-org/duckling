@@ -2,6 +2,7 @@
 
 #include "dvm_value.hpp"
 
+#include <backends/dvm/repl_lowering_snapshot.hpp>
 #include <debug_info/debug_info_builder.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 #include <tsl/type_layout.hpp>
@@ -110,6 +111,19 @@ namespace compiler::backend_vm::internal {
 		void insertRawBytecodeDefinitions(const vm::code::CodeCollection& bytecode);
 
 		/**
+		 * @brief Capture current counts of lowered entities.
+		 */
+		[[nodiscard]] compiler::backend_vm::LoweredEntitiesSnapshot captureLoweredEntitiesSnapshot(
+		) const;
+
+		/**
+		 * @brief Collect newly lowered types/functions/extra functions since a snapshot.
+		 */
+		[[nodiscard]] vm::code::CodeCollection collectNewCodeSince(
+			const compiler::backend_vm::LoweredEntitiesSnapshot& snapshot
+		) const;
+
+		/**
 		 * @brief Produces the per-module bytecode collection.
 		 *
 		 * Assembles all lowered functions, globals, types, and extern C functions into a
@@ -149,8 +163,15 @@ namespace compiler::backend_vm::internal {
 
 		// A set of types allowing for insertion of both TSL types and manual insertion of types.
 		TypeStorage type_storage;
+		// Maintains insertion order for types so REPL can emit only new types.
+		std::vector<base::StrID> lowered_type_order;
+		// Maintains insertion order for functions so REPL can emit only new functions.
+		std::vector<base::StrID> lowered_function_order;
+		// Maintains insertion order for globals so REPL can emit only new globals.
+		std::vector<base::StrID> lowered_global_order;
 
-		base::Map<CRef<lir::Function>, vm::code::Function> lir_function_to_dvm;
+		base::Map<CRef<lir::Function>, base::StrID> lir_function_to_name;
+		base::Map<base::StrID, vm::code::Function>  dvm_functions_by_name;
 
 		// Extern function name to definition.
 		base::Map<base::StrID, vm::code::ExternalCFunction> extern_c_functions;

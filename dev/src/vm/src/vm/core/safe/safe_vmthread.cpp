@@ -265,7 +265,8 @@ namespace vm {
 
 		// Now fill in the argv table.
 		if (main_has_args) {
-			for (const auto& [argv_index, arg]: std::views::enumerate(args)) {
+			for (const auto& [argv_index, arg]:
+			     std::views::zip(std::ranges::views::iota(0u), args)) {
 				start_function.bc.insert(
 					start_function.bc.end(),
 					{
@@ -294,7 +295,7 @@ namespace vm {
 					      MAKE_BYTECODE_INSTRUCTION(
 							  anyArrayStore_pptr_bany, 40, 5
 						  ),  // ptr_tmp_store[ix] := char_tmp_store
-					      MAKE_BYTECODE_INSTRUCTION(ext_p64, 32, 0),
+					      MAKE_BYTECODE_INSTRUCTION(ext_p64_type, 32, byte_type_arg),
 					      MAKE_BYTECODE_INSTRUCTION(add_p64_imm, 32, 1) }
 					);
 				}
@@ -306,14 +307,12 @@ namespace vm {
 						MAKE_BYTECODE_INSTRUCTION(
 							anyArrayStore_pptr_bany, 40, 5
 						),  // ptr_tmp_store[ix] := char_tmp_store
-						MAKE_BYTECODE_INSTRUCTION(ext_p64, 32, 0),
-						MAKE_BYTECODE_INSTRUCTION(
-							mov_p64_imm, 32, base::safeIntConv<u64>(argv_index)
-						),  // ix := argv_index
+						MAKE_BYTECODE_INSTRUCTION(ext_p64_type, 32, byte_type_arg),
+						MAKE_BYTECODE_INSTRUCTION(mov_p64_imm, 32, argv_index),  // ix := argv_index
 						MAKE_BYTECODE_INSTRUCTION(
 							anyArrayStore_pptr_bany, 8, 4
 						),  // argv_internal[ix] := ptr_tmp_store
-						MAKE_BYTECODE_INSTRUCTION(ext_p64, 32, 0),
+						MAKE_BYTECODE_INSTRUCTION(ext_p64_type, 32, str_ptr_type_arg),
 						MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),  // deinit char_tmp_store
 						MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),  // deinit ptr_tmp_store
 					}
@@ -363,7 +362,7 @@ namespace vm {
 					MAKE_BYTECODE_INSTRUCTION(
 						anyArrayLoad_bany_pptr, 5, 8
 					),  // ptr_tmp_store := argv_internal[ix]
-					MAKE_BYTECODE_INSTRUCTION(ext_p64, 32, 0),
+					MAKE_BYTECODE_INSTRUCTION(ext_p64_type, 32, str_ptr_type_arg),
 					MAKE_BYTECODE_INSTRUCTION(free_pptr, 48, 0),    // free ptr_tmp_store
 					MAKE_BYTECODE_INSTRUCTION(add_p64_imm, 32, 1),  // ++ix
 				}
@@ -388,6 +387,14 @@ namespace vm {
 		return start_function;
 	}
 
+	SafeVMThread::ScopedGilGuard::ScopedGilGuard(SafeVMThread& t): thread(t) {
+		thread.acquireGil();
+	}
+
+	SafeVMThread::ScopedGilGuard::~ScopedGilGuard() {
+		if (thread.has_gil) thread.releaseGil();
+	}
+
 #if defined(__clang__)
 // @TODO: suppress code deduplication in Clang
 #elif defined(__GNUG__)
@@ -399,7 +406,8 @@ namespace vm {
 	std::vector<Ref<VmValue>> SafeVMThread::executeFunction(
 		const low::LowFuncData& start_function, const low::LowFuncData& func
 	) {
-		acquireGil();
+		ScopedGilGuard gil_guard(*this);
+
 		// Frame of the called function.
 		Frame*     frame          = runtime_data.frame_stack_current;
 		Frame*     orig_frame_ptr = frame;
@@ -471,8 +479,6 @@ namespace vm {
 			process_memory.decreaseBlockRefcount(block);
 		}
 		*orig_frame_ptr = orig_frame_cpy;
-
-		releaseGil();
 
 		return exit_value_storage.value();
 	}

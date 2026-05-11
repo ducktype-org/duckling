@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 import subprocess
 import sys
-
+import select
 
 # Runs an arbitrary number of shell commands and verifies that they all produce
 # identical stdout, stderr, and exit code.
@@ -42,11 +42,13 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-# Runs a single shell command and returns (stdout, stderr, exit_code).
+# Runs a single shell command with a given input and returns (stdout, stderr, exit_code).
 # shell=True is intentional: commands may use glob patterns (e.g. build/query*/*.dbc)
 # and shell features that require a shell interpreter to evaluate.
-def run_command(shell_cmd: str) -> tuple[str, str, int]:
-    result = subprocess.run(shell_cmd, shell=True, capture_output=True, text=True)
+def run_command(shell_cmd: str, input_data: str | None) -> tuple[str, str, int]:
+    result = subprocess.run(
+        shell_cmd, shell=True, capture_output=True, text=True, input=input_data
+    )
     return result.stdout, result.stderr, result.returncode
 
 
@@ -70,12 +72,19 @@ def main() -> int:
         )
         return 1
 
+    # Read the input if it exists.
+    input_data: str | None = None
+    if not sys.stdin.isatty():
+        r, _, _ = select.select([sys.stdin], [], [], 0.1)
+        if r:
+            input_data = sys.stdin.read()
+
     labels: list[str] = []
     results: list[tuple[str, str, int]] = []
 
     for label, shell_cmd in args.commands:
         labels.append(label)
-        stdout, stderr, code = run_command(shell_cmd)
+        stdout, stderr, code = run_command(shell_cmd, input_data)
         results.append((stdout, stderr, code))
 
     stdouts = [r[0] for r in results]
@@ -97,7 +106,9 @@ def main() -> int:
     lines: list[str] = ["[compare-runs] Commands produced different results.\n"]
 
     if not code_match:
-        code_summary = ", ".join(f"{label}: {code}" for label, code in zip(labels, exit_codes))
+        code_summary = ", ".join(
+            f"{label}: {code}" for label, code in zip(labels, exit_codes)
+        )
         lines.append(f"  Exit codes differ — {code_summary}\n")
 
     if not stdout_match:

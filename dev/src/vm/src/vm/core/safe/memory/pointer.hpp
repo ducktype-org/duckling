@@ -31,15 +31,13 @@ namespace vm {
 	public:
 		Pointer(Ref<Block> block, u64 offset): block(block.get()), offset(offset) {}
 
-		void movePointer(i64 move_by) {
+		void movePointer(u64 move_by) {
 			if (block == nullptr) throw exceptions::VMNullPointerAccessException();
-			if (move_by < 0 && base::safeIntConv<u64>(-move_by) > offset)
-				throw exceptions::VMNegativeOffsetException();
-			offset = base::safeIntConv<u64>(base::safeIntConv<i64>(offset) + move_by);
+			offset += move_by;
 		}
 
 		[[nodiscard]]
-		Pointer movedPointer(i64 move_by) const {
+		Pointer movedPointer(u64 move_by) const {
 			Pointer cpy(*this);
 			cpy.movePointer(move_by);
 			return cpy;

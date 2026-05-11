@@ -247,7 +247,7 @@ namespace compiler::repl {
 					= executeFunctionAndCaptureResult(m_dvm_pid, wrapper_func_name, return_type);
 				if (run_result.has_value()) {
 					if (!m_suppress_repl_feedback_during_script_load) {
-						if (return_type.toString() == "void")
+						if (return_type.toString() == "()")
 							std::cout << "Function executed.\n";
 						else
 							std::cout << "=> " << run_result.value() << "\n";
