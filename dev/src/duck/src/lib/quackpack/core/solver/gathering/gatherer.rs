@@ -91,7 +91,7 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
                 for e in errors {
                     self.fetcher.ctx().error_console().info_verbose(format!(
                         "Error\n{e}\nsuppressed due to the Merciful mode of the solver",
-                    ));
+                    ))?;
                 }
             } else {
                 return Err(errors.into_iter().next().unwrap());

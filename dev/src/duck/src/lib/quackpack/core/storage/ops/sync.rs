@@ -119,7 +119,7 @@ pub fn sync(
     }
     pcx.ctx()
         .console()
-        .info(format!("successfully synchronized venv `{id}`"));
+        .info(format!("successfully synchronized venv `{id}`"))?;
     Ok((_sync_lock, venv, storage))
 }
 

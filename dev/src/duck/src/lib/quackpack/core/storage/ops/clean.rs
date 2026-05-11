@@ -46,7 +46,7 @@ pub fn delete_venv(ctx: &DuckContext, storage_root: &Path, venv: impl ToVenvId) 
     storage.sync_locks_path().join(venv_id).rm()?;
     data_lock.path().rm()?;
     ctx.console()
-        .info(format!("successfully removed venv `{venv_id}`"));
+        .info(format!("successfully removed venv `{venv_id}`"))?;
     Ok(())
 }
 
@@ -92,7 +92,7 @@ pub fn clean_storage(ctx: &DuckContext, storage_root: &Path) -> QuackResult<Clea
     for pkg in pgks_to_remove.iter() {
         pkg.rmtree()?;
     }
-    ctx.console().info("successfully cleaned the storage");
+    ctx.console().info("successfully cleaned the storage")?;
     Ok(CleanOutput {
         removed_venvs,
         removed_packages: pgks_to_remove,
