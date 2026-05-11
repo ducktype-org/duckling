@@ -7,6 +7,7 @@ Tests:
         backend: all
         Output:
           String: "9\n9\n9\n18\n4\n2\n"
+
   single_comparison: # Any type of comparison between two values.
     Cases:
       all:
@@ -22,6 +23,7 @@ Tests:
         Output:
           String: ""
         ExitCode: 0
+
   unit_simple:
     Cases:
       all:
@@ -29,6 +31,7 @@ Tests:
         Output:
           String: "1\n1\n"
         ExitCode: 0
+
   unit_simple_multiple_modules:
     Cases:
       llvm:
@@ -106,7 +109,7 @@ Tests:
       all:
         backend: all
         Output:
-          String: "0\n0\n0\n0\n"
+          String: "0\n0\n0\n0\n0\n0\n"
         ExitCode: 0
 
   strings:
