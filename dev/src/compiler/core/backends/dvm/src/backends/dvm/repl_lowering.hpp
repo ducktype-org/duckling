@@ -89,8 +89,13 @@ namespace compiler::backend_vm {
 		/**
 		 * @brief Lower a LIR type layout into VM bytecode type representation.
 		 * It caches the result, so inserts the type into the program only if needed.
+		 *
+		 * @return The DVM type corresponding to the TypeLayout, or an empty optional for layouts
+		 * with no DVM counterpart (e.g. void).
 		 */
-		const vm::code::TypeOfData& lowerAndKeepTslType(base::CRef<tsl::TypeLayout> layout);
+		base::Optional<CRef<vm::code::TypeOfData>> lowerAndKeepTslType(
+			base::CRef<tsl::TypeLayout> layout
+		);
 
 		/**
 		 * @brief Check if a query context is currently set.

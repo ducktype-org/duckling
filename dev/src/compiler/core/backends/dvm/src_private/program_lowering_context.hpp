@@ -72,8 +72,10 @@ namespace compiler::backend_vm::internal {
 		/**
 		 * @brief Lowers a LIR type layout into VM bytecode type representation.
 		 * It caches the result, so inserts the type into the program only if needed.
+		 * @return The DVM type corresponding to the TypeLayout or an empty optional for layout
+		 * which don't have a DVM countertype (e.g. `void`).
 		 */
-		const vm::code::TypeOfData& lowerAndKeepTslType(CRef<tsl::TypeLayout> layout);
+		base::Optional<CRef<vm::code::TypeOfData>> lowerAndKeepTslType(CRef<tsl::TypeLayout> layout);
 
 		/**
 		 * @brief Creates and inserts a pointer type into the program lowering context.
@@ -129,7 +131,7 @@ namespace compiler::backend_vm::internal {
 		[[nodiscard]] bool isCompTimeLowering() const;
 
 	private:
-		vm::code::TypeOfData lowerTslTypeInternal(CRef<tsl::TypeLayout> layout);
+		base::Optional<vm::code::TypeOfData> lowerTslTypeInternal(CRef<tsl::TypeLayout> layout);
 
 		/// Whether we are lowering the code to be loaded by the VM for compile time evaluation,
 		/// or for the final output module. This affects how certain compile time values (e.g.

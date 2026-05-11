@@ -867,8 +867,8 @@ namespace compiler::lir {
 		const base::StrID&                 mangled_name
 	) {
 		auto function_type = ctx.query<tsh::QueryFunctionType>({
-			{},
-			tsh::SymbolType{
+			.parameter_types={},
+			.result_type=tsh::SymbolType{
 				tsh::getUnitType(),
 				tsh::ReferenceKind::Direct,
 				tsh::Mutability::Immutable,

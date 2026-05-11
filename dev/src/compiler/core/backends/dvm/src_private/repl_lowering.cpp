@@ -2,6 +2,7 @@
 
 #include <backends/dvm/repl_lowering.hpp>
 
+#include "base/collections/optional.hpp"
 #include <base/pointers/box.hpp>
 
 namespace compiler::backend_vm {
@@ -46,7 +47,8 @@ namespace compiler::backend_vm {
 		return m_context->lowerAndKeepLirGlobal(lir_global, global_ctor, global_dtor);
 	}
 
-	const vm::code::TypeOfData& ReplLoweringContext::lowerAndKeepTslType(CRef<tsl::TypeLayout> layout
+	base::Optional<CRef<vm::code::TypeOfData>> ReplLoweringContext::lowerAndKeepTslType(
+		CRef<tsl::TypeLayout> layout
 	) {
 		return m_context->lowerAndKeepTslType(layout);
 	}

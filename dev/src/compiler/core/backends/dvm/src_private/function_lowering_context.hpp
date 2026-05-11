@@ -149,10 +149,10 @@ namespace compiler::backend_vm::internal {
 		base::Map<lir::LIRLocalRef, DVMPlace> lir_local_to_dvm;
 		base::Map<lir::BlockRef, base::StrID> block_to_label;
 
-		vm::code::TypeOfData               function_return_type;
-		std::vector<vm::code::TypeOfData>  function_parameter_types;
-		base::StrID                        function_name;
-		std::vector<vm::code::Instruction> function_body;
+		base::Optional<vm::code::TypeOfData> function_return_type;
+		std::vector<vm::code::TypeOfData>    function_parameter_types;
+		base::StrID                          function_name;
+		std::vector<vm::code::Instruction>   function_body;
 
 		usize next_temp_id = 0;
 
