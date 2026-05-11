@@ -324,7 +324,7 @@ private:
 			) -> std::expected<void, std::string> {
 				// Publish the new state.
 				set_state(Counter{ prev.value + inc.by });
-				// Read `prev` state. It should still hold the old value.
+				// `prev` state should still hold the old value.
 				observed_prev_after_setstate = prev.value;
 				return {};
 			}

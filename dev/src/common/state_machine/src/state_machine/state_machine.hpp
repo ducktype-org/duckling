@@ -107,6 +107,10 @@ namespace state_machine {
 		") is already defined!"                                \
 	);
 
+	// FD for friend.
+	template<typename States, typename Events, typename ErrorT>
+	class StateMachine;
+
 	/**
 	 * @brief Static description of a state machine - the set of allowed
 	 * `(state, event)` transitions and their handlers.
@@ -123,6 +127,7 @@ namespace state_machine {
 	template<typename States, typename Events, typename ErrorT = std::string>
 	requires base::IsVariant<States> && base::IsVariant<Events> class StateMachineDefinition {
 	public:
+		friend class StateMachine<States, Events, ErrorT>;
 		using ActionResultT       = std::expected<States, ErrorT>;
 		using AtomicActionResultT = std::expected<void, ErrorT>;
 		using GuardResultT        = std::expected<void, ErrorT>;
@@ -145,7 +150,7 @@ namespace state_machine {
 		using GenericAction = std::function<ActionResultT(const States&, const Event&)>;
 		template<typename Event>
 		using GenericAtomicAction
-			= std::function<ActionResultT(const States&, const Event&, const SetStateCallback&)>;
+			= std::function<AtomicActionResultT(const States&, const Event&, const SetStateCallback&)>;
 		template<typename Event>
 		using GenericGuard = std::function<GuardResultT(const States&, const Event&)>;
 
@@ -388,7 +393,7 @@ namespace state_machine {
 			ASSERT_TRANSITION_NOT_REGISTERED(state_idx, event_idx);
 
 			// Wrapper over action so it can be stored next to strongly-typed actions.
-			RawAction raw_action
+			RawAtomicAction raw_action
 				= [action](
 					  const States& s, const Events& e, const SetStateCallback& set_state
 				  ) -> AtomicActionResultT { return action(s, std::get<Event>(e), set_state); };
@@ -427,7 +432,9 @@ namespace state_machine {
 	public:
 		using ResultT          = base::Optional<std::expected<void, ErrorT>>;
 		using StateMachineDef  = StateMachineDefinition<States, Events, ErrorT>;
-		using SetStateCallback = StateMachineDef::SetStateCallback;
+		using SetStateCallback = typename StateMachineDef::SetStateCallback;
+		using RawAction        = typename StateMachineDef::RawAction;
+		using RawAtomicAction  = typename StateMachineDef::RawAtomicAction;
 
 		/**
 		 * @brief Constructs a state machine in the given initial state.
@@ -474,8 +481,8 @@ namespace state_machine {
 							return std::unexpected(std::move(guard_result.error()));
 					}
 
-					variant_match(transition) {
-						variant_case(StateMachineDef::RawAction, raw_action) {
+					variant_match(transition->action) {
+						variant_case(RawAction, raw_action) {
 							// Standard action. Action returns ehe new state.
 							auto action_result = raw_action(current_state, event);
 							if (!action_result.has_value())
@@ -484,7 +491,7 @@ namespace state_machine {
 							current_state = std::move(action_result.value());
 							return std::expected<void, ErrorT>{};
 						}
-						variant_case(StateMachineDef::RawAtomicAction, atomic_action) {
+						variant_case(RawAtomicAction, atomic_action) {
 							// Atomic action. Save the previous state so it remains valid for the
 						    // action body after setState has changed the current state.
 							States           prev_state = current_state;
@@ -496,6 +503,7 @@ namespace state_machine {
 								return std::unexpected(std::move(action_result.error()));
 							return std::expected<void, ErrorT>{};
 						}
+						variant_default { CORE_UNREACHABLE(); }
 					}
 				},
 				current_state,
