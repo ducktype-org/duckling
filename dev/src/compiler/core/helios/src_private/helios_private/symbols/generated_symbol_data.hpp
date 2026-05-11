@@ -94,6 +94,7 @@ namespace compiler::helios::defgen {
 
 		/**
 		 * Represents a compiler-generated field in a type. That type does not need to be a class.
+		 * For example, the `_1`, `_2`, etc. fields in tuples.
 		 */
 		struct Field final {
 			tsh::AbstractType parent_type;  // The type that the field belongs to

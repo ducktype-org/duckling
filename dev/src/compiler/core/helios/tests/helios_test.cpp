@@ -569,7 +569,6 @@ private:
 		const auto tup_abstract_type = query::entryPoint<compiler::helios::QueryTypeOfSymbol>(tup)
 		                                   ->valueOrThrow()
 		                                   .getType()
-		                                   .as<compiler::tsh::TupleAbstractType>();
 
 		const auto h_interface = compiler::helios::HInterface::ofTypeInstance(tup_abstract_type);
 

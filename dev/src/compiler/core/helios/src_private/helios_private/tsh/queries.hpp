@@ -52,7 +52,7 @@ namespace compiler::tsh {
 
 		[[nodiscard]]
 		u64 queryUnstablePerfectHash() const {
-			return value->toAbstractType().as<TupleAbstractType>().queryUnstablePerfectHash();
+			return value->toAbstractType().queryUnstablePerfectHash();
 		}
 	};
 
