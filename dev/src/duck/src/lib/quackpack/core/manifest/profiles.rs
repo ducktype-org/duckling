@@ -2,6 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use crate::quackpack::core::compile::profiles::PREDEFINED_PROFILES;
 use crate::quackpack::schemas::registry;
+use crate::quackpack::util::str_id::QpJoin;
 use crate::{QuackError, QuackResult, StrId, qp_bail, qp_bail_internal, qp_err};
 
 #[derive(Clone, Debug, PartialEq, Eq)]

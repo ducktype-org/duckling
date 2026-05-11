@@ -1,7 +1,7 @@
 //! A [`StrId`], an interned version of a string (also known as a fly string).
 //!
 //! It's trivially copyable.
-use std::borrow::{Borrow, Cow};
+use std::borrow::Cow;
 use std::collections::HashSet;
 use std::convert::Infallible;
 use std::ffi::{OsStr, OsString};
@@ -130,7 +130,10 @@ impl PartialEq<String> for StrId {
 
 impl PartialEq<StrId> for StrId {
     fn eq(&self, other: &StrId) -> bool {
-        self.inner == other.inner
+        // If we have two equal StrIds, their underlying &str are equal.
+        // That &str is stored exactly once in STRID_CACHE, so we can compare by comparing pointers,
+        // which is faster.
+        self.inner.as_ptr() == other.inner.as_ptr()
     }
 }
 
@@ -174,15 +177,9 @@ impl AsRef<Path> for StrId {
     }
 }
 
-impl Borrow<str> for StrId {
-    fn borrow(&self) -> &str {
-        self.as_str()
-    }
-}
-
 impl Hash for StrId {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.inner.hash(state);
+        self.inner.as_ptr().hash(state);
     }
 }
 
@@ -226,6 +223,30 @@ impl<'de> Deserialize<'de> for StrId {
     {
         let str = <&'de str>::deserialize(deserializer)?;
         Ok(Self::from(str))
+    }
+}
+
+/// A minimal substitute to [`std::slice::Join`].
+/// When [`std::slice::Join`] becomes stable, this can be changed to `impl Join`.
+pub trait QpJoin {
+    fn join(&self, sep: &str) -> String;
+}
+
+impl QpJoin for [StrId] {
+    fn join(&self, sep: &str) -> String {
+        if self.is_empty() {
+            return String::new();
+        }
+        let mut len = self.iter().map(|x| x.len()).sum();
+        len += (self.len() - 1) * sep.len();
+        let mut result = String::with_capacity(len);
+        for (i, x) in self.iter().enumerate() {
+            if i > 0 {
+                result.push_str(sep);
+            }
+            result.push_str(x.as_str());
+        }
+        result
     }
 }
 

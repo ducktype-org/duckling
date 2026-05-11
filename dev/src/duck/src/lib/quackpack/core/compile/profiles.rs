@@ -68,7 +68,7 @@ pub static DEFAULT_PROFILE: LazyLock<Profile> = LazyLock::new(Profile::default);
 pub const DEFAULT_SCRIPT_PROFILE_NAME: &str = "script";
 pub static DEFAULT_SCRIPT_PROFILE: LazyLock<Profile> = LazyLock::new(|| {
     *PREDEFINED_PROFILES
-        .get(DEFAULT_SCRIPT_PROFILE_NAME)
+        .get(&DEFAULT_SCRIPT_PROFILE_NAME.into())
         .unwrap()
 });
 
