@@ -831,7 +831,7 @@ private:
 			return count;
 		};
 
-	
+
 		// Helper to count how many SubmoduleCountSideInput dependencies exist
 		auto count_submodule_count_inputs
 			= [](const std::vector<query::internal::NodeID>& deps) -> usize {

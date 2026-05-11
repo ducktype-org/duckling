@@ -474,7 +474,6 @@ namespace compiler::frontend {
 	 *********************/
 
 
-
 	void ModuleTreeModifier::setMainSourceFile(base::Ref<ModuleTree> module, const fs::File& file) {
 		CORE_ASSERT(
 			!module->m_main_source_file.has_value(),
@@ -909,7 +908,6 @@ namespace compiler::frontend {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryMainSourceFile);
-
 
 	/*******************
 	 * QuerySubmodules *

@@ -19,7 +19,6 @@ namespace compiler::frontend {
 		ctx.addMetadataIfNotExists<metadata_ModuleLookup>(key);
 	});
 
-
 	SubmodulesAccessLocked::SubmodulesAccessLocked(
 		ModuleID module, std::vector<ModuleAccessLocked> submodules
 	):
@@ -63,7 +62,6 @@ namespace compiler::frontend {
 		);
 		return FileAccess(id);
 	}
-
 
 	query::QueryStableHash KeyOf_SubmoduleCountSideInput::queryStablePerfectHash() const {
 		return stable_hash;

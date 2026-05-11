@@ -319,7 +319,7 @@ private:
 		module_builder->setMainSourceFile(main_file);
 		auto module = module_builder->finalize();
 
-		
+
 		// hmm:?
 		// ASSERT_EQUAL(1, module->getSourceFiles().illegalAccess().size());
 		// auto sf_ref = getRef(module->getSourceFiles().illegalAccess().front());

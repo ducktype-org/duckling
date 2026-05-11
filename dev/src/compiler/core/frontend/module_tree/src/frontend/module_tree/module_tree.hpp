@@ -439,7 +439,6 @@ namespace compiler::frontend {
 	 */
 	class ModuleTreeModifier final {
 	public:
-	
 		/**
 		 * Sets the main source file for the given module.
 		 * @param module The module to modify.

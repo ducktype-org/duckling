@@ -37,7 +37,6 @@ namespace compiler::frontend {
 		bool                   operator==(const KeyOf_FileSideInput&) const = default;
 	};
 
-
 	/**
 	 * @brief Key for submodule count side input query.
 	 * It stores the hash itself for the performance reasons
@@ -140,7 +139,6 @@ namespace compiler::frontend {
 
 	using FileAccess       = Access<FileID>;
 	using FileAccessLocked = AccessLocked<FileID>;
-
 
 	/**
 	 * @brief This lock holds a vector of ModuleAccessLocked for each submodule.

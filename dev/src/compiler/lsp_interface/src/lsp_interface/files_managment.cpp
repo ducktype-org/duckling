@@ -213,8 +213,8 @@ namespace lsp {
 		// ========================== Removing a file from module tree ==========================
 
 		/**
-		 * @brief Removes a file from the module tree. If the file is a module file, the entire module is removed. If the
-		 * removed module was a package, it is unregistered.
+		 * @brief Removes a file from the module tree. If the file is a module file, the entire
+		 * module is removed. If the removed module was a package, it is unregistered.
 		 */
 		void removeFileFromModuleTree(const fs::File& file) {
 			auto                         source_files = SourceFile::getSourceFilesFromFile(file);
