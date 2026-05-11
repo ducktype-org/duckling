@@ -95,7 +95,7 @@ impl AsRef<ExpandedLocation> for InternedExpandedLocation {
 /// we transition to using [`ExpandedLocation`].
 pub enum ExpandedLocation {
     Registry { url: Url, real_name: StrId },
-    Git { url: Url, commit: String },
+    Git { url: Url, commit: StrId },
     Local { absolute_path: PathBuf },
 }
 
@@ -191,7 +191,7 @@ impl ExpandedPackage {
                 // If the git dependency specifies tag, branch or nothing (default branch),
                 // some new commits may have appeared.
                 if let Some(required_commit) = git_source.rev()
-                    && *commit == required_commit
+                    && *commit == *required_commit
                     && url == git_source.url()
                 {
                     if let Some(required_version) = dependency.versions().first() {
@@ -258,7 +258,7 @@ impl ExpandedPackage {
                     location: InternedLocation::new(Location::Git {
                         url: url.clone(),
                         branch_or_tag: BranchOrTag::Default,
-                        rev: Some(commit.clone()),
+                        rev: Some(*commit),
                     }),
                     versions: None,
                     features: HashSet::new(),

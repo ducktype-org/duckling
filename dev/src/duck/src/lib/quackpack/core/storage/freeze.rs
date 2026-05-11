@@ -240,7 +240,7 @@ impl FreezePackage {
                 PackageId::Registry(RegistryId::new(self.name(), self.version(), url.clone()))
             }
             ExpandedLocation::Git { url, commit } => {
-                PackageId::Git(GitId::new(url.clone(), commit.clone()))
+                PackageId::Git(GitId::new(url.clone(), *commit))
             }
             ExpandedLocation::Local { absolute_path } => {
                 PackageId::Local(LocalId::new(absolute_path.clone()))

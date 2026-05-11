@@ -64,7 +64,7 @@ pub enum Location {
     Git {
         url: Url,
         branch_or_tag: BranchOrTag,
-        rev: Option<String>,
+        rev: Option<StrId>,
     },
     Local {
         path: PathBuf,
@@ -107,7 +107,7 @@ impl From<&Dependency> for Location {
             Source::Git(git) => Self::Git {
                 url: git.url().clone(),
                 branch_or_tag: git.branch_or_tag().clone(),
-                rev: git.rev().map(String::from),
+                rev: git.rev(),
             },
         }
     }
@@ -135,7 +135,7 @@ impl Location {
             ExpandedLocation::Git { url, commit } => Self::Git {
                 url: url.clone(),
                 branch_or_tag: BranchOrTag::Default,
-                rev: Some(commit.clone()),
+                rev: Some(*commit),
             },
             ExpandedLocation::Local { absolute_path } => Self::Local {
                 path: absolute_path.clone(),

@@ -493,7 +493,7 @@ dependencies:
             git_source.branch_or_tag(),
             &BranchOrTag::Branch("branch".to_owned())
         );
-        assert_eq!(git_source.rev(), Some("commit"));
+        assert_eq!(git_source.rev().as_deref(), Some("commit"));
     }
     assert!(e.versions().is_empty());
     assert_eq!(e.name(), e.effective_name());

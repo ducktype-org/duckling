@@ -53,7 +53,7 @@ impl GitClient {
 
         // Prefer specific commits over tags.
         if let Some(commit) = source.rev() {
-            repository.checkout_commit(commit).with_context(|| {
+            repository.checkout_commit(commit.as_str()).with_context(|| {
                 format!(
                     "when performing a checkout of a repository cloned from `{}` to a commit `{}`",
                     source.url(),
@@ -80,7 +80,7 @@ impl GitClient {
             })?
             .into_package();
         Ok(GitCloneResponse {
-            commit_hash: commit.to_string(),
+            commit_hash: commit.to_string().into(),
             package,
         })
     }

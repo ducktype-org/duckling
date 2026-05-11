@@ -257,7 +257,7 @@ fn fetch_source_code(
     match pkg.location.as_ref() {
         ExpandedLocation::Local { absolute_path: _ } => Ok(false),
         ExpandedLocation::Git { url, commit } => {
-            let pkg_id = GitId::new(url.clone(), commit.clone()).into();
+            let pkg_id = GitId::new(url.clone(), *commit).into();
             if storage.is_package_stored(&pkg_id) {
                 return Ok(false);
             }
@@ -266,7 +266,7 @@ fn fetch_source_code(
                 return Ok(true);
             }
             fetcher.clone_from_git_to_directory(
-                &Git::new(url.clone(), BranchOrTag::Default, Some(commit.clone())),
+                &Git::new(url.clone(), BranchOrTag::Default, Some(*commit)),
                 &storage.pkg_dir(&pkg_id),
             )?;
             storage.mark_as_stored(&pkg_id)?;

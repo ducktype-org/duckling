@@ -126,7 +126,7 @@ fn clone_local_repo_with_rev() {
     let source = Git::new(
         Url::from_directory_path(dir.path()).unwrap(),
         BranchOrTag::Default,
-        Some(original_commit.id().to_string()),
+        Some(original_commit.id().to_string().into()),
     );
     let ctx = DuckContext::default();
     let _ = GitClient::clone_blocking(&source, &target, &ctx).unwrap();

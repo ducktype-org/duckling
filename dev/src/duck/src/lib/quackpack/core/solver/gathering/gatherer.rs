@@ -291,7 +291,7 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
                 origin_location: InternedLocation::new(Location::Git {
                     url: url.clone(),
                     branch_or_tag: branch_or_tag.clone(),
-                    rev: rev.map(String::from),
+                    rev: rev.map(StrId::from),
                 }),
             }))
         };
@@ -306,7 +306,7 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
             return GathererComputation::only_success(fetch_failure());
         }
 
-        let git_source = Git::new(url.clone(), branch_or_tag.clone(), rev.map(String::from));
+        let git_source = Git::new(url.clone(), branch_or_tag.clone(), rev.map(StrId::from));
         let fetcher_response: GathererComputation<Option<(GitCloneResponse, TempDir)>> =
             self.fetcher.clone_from_git(&git_source).into();
         let Some((cloned_pkg, path_where_cloned)) = fetcher_response.0 else {
@@ -314,7 +314,7 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
         };
         let expanded_loc = ExpandedLocation::Git {
             url: url.clone(),
-            commit: cloned_pkg.commit_hash.clone(),
+            commit: cloned_pkg.commit_hash,
         }
         .into();
         if !self
@@ -357,11 +357,11 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
             let origin_location = InternedLocation::new(Location::Git {
                 url: url.clone(),
                 branch_or_tag: branch_or_tag.clone(),
-                rev: rev.map(String::from),
+                rev: rev.map(StrId::from),
             });
             let expanded_location = ExpandedLocation::Git {
                 url: url.clone(),
-                commit: commit.to_owned(),
+                commit: commit.into(),
             }
             .into();
             let storage_local_request = NotPinnedRequest {

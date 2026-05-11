@@ -190,7 +190,7 @@ impl Local {
 pub struct Git {
     url: Url,
     branch_or_tag: BranchOrTag,
-    rev: Option<String>,
+    rev: Option<StrId>,
 }
 
 impl std::fmt::Debug for Git {
@@ -205,7 +205,7 @@ impl std::fmt::Debug for Git {
 
 impl Git {
     /// Create a new [`Git`] source.
-    pub fn new(url: Url, branch_or_tag: BranchOrTag, rev: Option<String>) -> Self {
+    pub fn new(url: Url, branch_or_tag: BranchOrTag, rev: Option<StrId>) -> Self {
         Self {
             url,
             branch_or_tag,
@@ -224,8 +224,8 @@ impl Git {
     }
 
     /// Get the specific revision (commit hash), if any.
-    pub fn rev(&self) -> Option<&str> {
-        self.rev.as_deref()
+    pub fn rev(&self) -> Option<StrId> {
+        self.rev
     }
 
     /// Check whether we can perform a shallow clone of this dependency.
@@ -330,7 +330,7 @@ impl TryFrom<registry::DependencySource> for Source {
                 Git {
                     url: git_url.as_str().try_into()?,
                     branch_or_tag,
-                    rev: commit,
+                    rev: commit.map(Into::into),
                 }
                 .into()
             }
@@ -377,7 +377,7 @@ impl TryFrom<Source> for registry::DependencySource {
                 };
                 registry::SourceInner::Git {
                     git_url: url.into(),
-                    commit: rev,
+                    commit: rev.map(Into::into),
                     tag,
                     branch,
                 }
