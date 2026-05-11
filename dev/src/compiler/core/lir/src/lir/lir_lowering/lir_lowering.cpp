@@ -14,9 +14,6 @@
 #include "lir_lowering.hpp"
 
 #include "../lir_structure/lir_structure.hpp"
-#include "helios/tsh/abstract_type.hpp"
-#include "helios/tsh/queries/types.hpp"
-#include "helios/tsh/types.hpp"
 
 #include <ctv/numeric_value.hpp>
 #include <frontend/pst_parser/lang_parser_element.hpp>
