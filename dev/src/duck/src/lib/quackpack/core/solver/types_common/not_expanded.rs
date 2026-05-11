@@ -106,7 +106,7 @@ impl From<&Dependency> for Location {
             },
             Source::Git(git) => Self::Git {
                 url: git.url().clone(),
-                branch_or_tag: git.branch_or_tag(),
+                branch_or_tag: git.branch_or_tag().clone(),
                 rev: git.rev(),
             },
         }

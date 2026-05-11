@@ -73,32 +73,32 @@ pub fn expand_aliases(
         (false, None, true, Some(builtin)) => {
             ctx.error_console().warning(format!(
                 "builtin alias `{subcmd}` shadows an external subcommand"
-            ));
+            ))?;
             expand_builtin_alias(builtin, subcmd_args)
         }
         (false, Some(_), false, Some(builtin)) => {
             ctx.error_console().warning(format!(
                 "builtin alias `{subcmd}` shadows a user-defined alias"
-            ));
+            ))?;
             expand_builtin_alias(builtin, subcmd_args)
         }
         (false, Some(_), true, Some(builtin)) => {
             ctx.error_console().warning(format!(
                 "builtin alias `{subcmd}` shadows a user-defined alias and an external subcommand"
-            ));
+            ))?;
             expand_builtin_alias(builtin, subcmd_args)
         }
         (false, None, false, Some(builtin)) => expand_builtin_alias(builtin, subcmd_args),
         (true, Some(_), false, None) => {
             ctx.error_console().warning(format!(
                 "builtin subcommand `{subcmd}` shadows a user-defined alias"
-            ));
+            ))?;
             Ok(args)
         }
         (false, Some(_), true, None) => {
             ctx.error_console().warning(format!(
                 "external subcommand `{subcmd}` shadows a user-defined alias"
-            ));
+            ))?;
             Ok(args)
         }
         (false, Some(new), false, None) => {
