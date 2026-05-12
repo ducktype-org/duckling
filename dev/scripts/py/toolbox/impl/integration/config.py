@@ -138,7 +138,7 @@ def config_eval_variables(config: dict, expr: str) -> str:
         variable_name = matchobj.group(1)
         value = config_find_value(config, variable_name)
         if value is not None:
-            return value
+            return str(value)
 
         raise VariableNotFound(variable_name, expr)
 

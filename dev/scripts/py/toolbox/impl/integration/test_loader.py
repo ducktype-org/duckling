@@ -76,8 +76,8 @@ def _make_case(test_dict: dict, case_name: str) -> Case:
             input=io_data[0],
             expected_output=io_data[1],
             expected_err=io_data[2],
-            expected_exitcode=config_find_and_eval(case_dict, EXIT_CODE, default=0),
-            timeout=config_find_and_eval(case_dict, TIME_OUT, default=1),
+            expected_exitcode=config_find_value(case_dict, EXIT_CODE, default=0),
+            timeout=config_find_and_eval(case_dict, TIME_OUT, default="1"),
         )
     except (VariableNotFound, ExpressionFillError) as e:
         case_path = config_get_name_path(case_dict)
