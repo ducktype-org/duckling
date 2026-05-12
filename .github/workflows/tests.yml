@@ -240,7 +240,7 @@ jobs:
             -x ${{ matrix.compiler.cxx }} \
             -t ${{ matrix.build-type }} \
             ${{ steps.check-jit.outputs.jit-flag }} \
-            ${{ steps.setup-build-flags.outputs.flags }}
+            ${{ steps.setup-build-flags.outputs.flags }} \
             --linker ${{ matrix.compiler.linker }} \
             --ccache \
             --strip-symbol-information
