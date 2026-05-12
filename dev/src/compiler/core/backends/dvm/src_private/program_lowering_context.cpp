@@ -85,11 +85,19 @@ const vm::code::TypeOfData& ProgramLoweringContext::getOrInsertPointerType(
 	return type_storage.dvm_types.at(pointer_name);
 }
 
-const DVMPlace& ProgramLoweringContext::getLirGlobal(CRef<lir::LIRGlobal> global) const {
-	if (auto maybe_global = global_name_to_dvm.atMaybe(global->mangled_name))
+const DVMPlace& ProgramLoweringContext::getLirGlobal(CRef<lir::LIRGlobal> lir_global) {
+	if (auto maybe_global = global_name_to_dvm.atMaybe(lir_global->mangled_name))
 		return **maybe_global;
-	else
-		CORE_PANIC("LIR global not previously lowered: ", global->mangled_name);
+	else {
+		const vm::code::TypeOfData& global_type = lowerAndKeepTslType(lir_global->layout);
+
+		global_name_to_dvm.put(
+			lir_global->mangled_name,
+			DVMPlace(lir_global->mangled_name, global_type, DVMPlace::AccessKind::Direct)
+		);
+
+		return global_name_to_dvm.at(lir_global->mangled_name);
+	}
 }
 
 const vm::code::ExternalCFunction& ProgramLoweringContext::getExternCFunction(
@@ -188,14 +196,8 @@ const vm::code::GlobalData& ProgramLoweringContext::lowerAndKeepLirGlobal(
 	if (auto maybe_global = global_name_to_dvm_data.atMaybe(lir_global.mangled_name))
 		return **maybe_global;
 
-	auto global_type = lowerAndKeepTslType(lir_global.layout);
-
-	// Register the global variable itself before inserting ctor/dtor to handle
-	// recursive references.
-	global_name_to_dvm.put(
-		lir_global.mangled_name,
-		DVMPlace(lir_global.mangled_name, global_type, DVMPlace::AccessKind::Direct)
-	);
+	auto& global_type      = lowerAndKeepTslType(lir_global.layout);
+	auto& dvm_global_place = getLirGlobal(&lir_global);  // Ensure the global is added to the map.
 
 	using vm::code::Identifier;
 
@@ -215,7 +217,7 @@ const vm::code::GlobalData& ProgramLoweringContext::lowerAndKeepLirGlobal(
 			global_type,
 			lir_global.initial_value.value(),
 			mini_ctor_name,
-			global_name_to_dvm.at(lir_global.mangled_name)
+			dvm_global_place
 		);
 		extra_bytecode_functions.push_back(std::move(mini_ctor));
 		ctor_name = Identifier(mini_ctor_name);
