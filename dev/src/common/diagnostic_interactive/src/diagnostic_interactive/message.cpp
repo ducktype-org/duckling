@@ -3,6 +3,8 @@
 
 #include <base/collections/maps.hpp>
 
+#include "diagnostic/location.hpp"
+#include "diagnostic/location_types.hpp"
 #include <diagnostic/source_position.hpp>
 
 #include <algorithm>
@@ -21,13 +23,111 @@ namespace dia_int {
 		return base::makeBox<dia_args::TextComponent>(content);
 	}
 
-	Box<dia_args::Component> CodeLocationArgument::getValue(MessageBase&) {
+	CodeLocationArgument::FileLocation CodeLocationArgument::FileLocation::fromSourcePosition(
+		const dia::SourcePosition& pos
+	) {
+		auto [line, column]         = pos.getStartLineColumn();
+		auto [end_line, end_column] = pos.getEndLineColumn();
+		return { .file       = pos.getSource()->getFile().getFilePath().string(),
+			     .line       = (u64) line,
+			     .column     = (u64) column,
+			     .end_line   = end_line,
+			     .end_column = end_column };
+	}
+
+	CodeLocationArgument::FileLocation CodeLocationArgument::FileLocation::fromStablePosition(
+		const StablePosition& pos
+	) {
+		auto source_pos             = pos.getActiveSourcePositionIllegalAccess();
+		auto file_location          = fromSourcePosition(source_pos);
+		file_location.hash_location = pos;
+		return file_location;
+	}
+
+	base::Optional<StablePosition> CodeLocationArgument::getMacroLocationSource(
+		dia::SourcePosition pos
+	) {
+		if_opt_some(pos.getLocation()->as<dia::MacroLocation>(), macro_location) {
+			return macro_location->getMacroParentNode();
+		}
+		return {};
+	}
+
+	namespace {
+		std::vector<StablePosition> getExpandedFromChain(const StablePosition& start_position) {
+			std::vector<StablePosition>    result{};
+			base::Optional<StablePosition> expand_pos = start_position;
+			while (expand_pos) {
+				result.push_back(*expand_pos);
+				expand_pos = CodeLocationArgument::getMacroLocationSource(
+					result.back().getActiveSourcePositionIllegalAccess()
+				);
+			}
+			return result;
+		}
+	}
+
+	CodeLocationArgument::CodeLocationArgument(std::string name, dia::SourcePosition position):
+		  Argument(std::move(name)) {
+		location = FileLocation::fromSourcePosition(position);
+
+		base::Optional<StablePosition> expand_pos = getMacroLocationSource(position);
+
+		// Macro handling
+		if (expand_pos) {
+			expanded_from_position_chain = getExpandedFromChain(*expand_pos);
+			// If the position is being inside the macro expanded code, we want to point to the
+			// "expand" node instead;
+			location = FileLocation::fromStablePosition(expanded_from_position_chain.back());
+		}
+	}
+
+	CodeLocationArgument::CodeLocationArgument(std::string name, dia_int::StablePosition position):
+		  Argument(std::move(name)) {
+		location = FileLocation::fromStablePosition(position);
+
+		// Macro handling
+		base::Optional<StablePosition> expand_pos = getMacroLocationSource(position);
+		if (expand_pos) {
+			expanded_from_position_chain = getExpandedFromChain(*expand_pos);
+			// If the position is being inside the macro expanded code, we want to point to the
+			// "expand" node instead;
+			location = FileLocation::fromStablePosition(expanded_from_position_chain.back());
+		}
+	}
+
+	/**
+	 * @brief A Placeholder message with an optional code snippet and optional description and
+	 * pointer message.
+	 */
+	class ExpandedFromNote final: public MessageWithCodeFragmentAndCause {
+		Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "note",
+				     .family        = "macros",
+				     .name          = "expanded_from" };
+		}
+
+		int getPriority() const final { return 100; }
+
+	public:
+		ExpandedFromNote(dia_int::StablePosition source_position):
+			  MessageWithCodeFragmentAndCause(source_position) {}
+	};
+
+	Box<dia_args::Component> CodeLocationArgument::getValue(MessageBase& diag) {
 		base::Optional<dia_int::HashCodeLocation> hash_location = {};
 
 		if (location.hash_location) {
 			hash_location
 				= dia_int::HashCodeLocation{ .begin_node = location.hash_location->begin_node,
 				                             .end_node   = location.hash_location->end_node };
+		}
+
+		if (expanded_from_position_chain.size() > 0) {
+			diag.addAttachedMessage(
+				base::makeBox<ExpandedFromNote>(expanded_from_position_chain.front())
+			);
 		}
 
 		return base::makeBox<dia_args::CodeLocationComponent>(
@@ -210,10 +310,27 @@ namespace dia_int {
 	) {
 		dia_args::Message msg;
 		msg.metadata = getMetadata();
-		for (const auto& arg: arguments) msg.arguments.put(arg->getName(), arg->getValue(*this));
+
+		// Adding all arguments
+		usize i    = 0;
+		usize size = arguments.size();
+		while (i < size) {
+			auto& arg = arguments[i];
+			msg.arguments.put(arg->getName(), arg->getValue(*this));
+			i++;
+			size = arguments.size();  // In case new arguments were added during getValue
+		}
+
+		// Add all explore_links
 		for (const auto& link: explore_links) msg.explore_links.push_back(link.getValue(*this));
 
 		msg.attached_messages.reserve(this->attached_messages.size());
+
+		std::ranges::sort(this->attached_messages, [&](const std::string& a, const std::string& b) {
+			auto& msg_a = this->linked_messages.at(a);
+			auto& msg_b = this->linked_messages.at(b);
+			return msg_a->getPriority() > msg_b->getPriority();
+		});
 
 		for (const auto& attached_msg: attached_messages)
 			msg.attached_messages.push_back(attached_msg);

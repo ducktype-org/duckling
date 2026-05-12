@@ -39,7 +39,7 @@ namespace dia_int {
 
 		/**
 		 * @warning This operation can change the DiagnosticBase - for example add new additional
-		 * message
+		 * messages or explore links.
 		 */
 		virtual Box<dia_args::Component> getValue(MessageBase&) = 0;
 
@@ -108,22 +108,18 @@ namespace dia_int {
 			base::Optional<u64>            end_column{};
 			base::Optional<StablePosition> hash_location{};
 
-			static FileLocation fromSourcePosition(const dia::SourcePosition& pos) {
-				auto [line, column]         = pos.getStartLineColumn();
-				auto [end_line, end_column] = pos.getEndLineColumn();
-				return { .file       = pos.getSource()->getFile().getFilePath().string(),
-					     .line       = (u64) line,
-					     .column     = (u64) column,
-					     .end_line   = end_line,
-					     .end_column = end_column };
-			}
 
-			static FileLocation fromStablePosition(const StablePosition& pos) {
-				auto source_pos             = pos.getActiveSourcePositionIllegalAccess();
-				auto file_location          = fromSourcePosition(source_pos);
-				file_location.hash_location = pos;
-				return file_location;
-			}
+			/**
+			 * @brief Simple, direct conversion from StablePosition to FileLocation, does not take
+			 * into account the expansion of
+			 */
+			static FileLocation fromSourcePosition(const dia::SourcePosition& pos);
+
+			/**
+			 * @brief Simple, direct conversion from StablePosition to FileLocation, does not take
+			 * into account the expansion of
+			 */
+			static FileLocation fromStablePosition(const StablePosition& pos);
 
 			[[nodiscard]] dia_int::CodeLocation toCodeLocation() const {
 				return { .file       = file,
@@ -134,21 +130,30 @@ namespace dia_int {
 			}
 		};
 
+		static base::Optional<StablePosition> getMacroLocationSource(dia::SourcePosition);
+
+		static base::Optional<StablePosition> getMacroLocationSource(dia_int::StablePosition pos) {
+			return getMacroLocationSource(pos.getActiveSourcePositionIllegalAccess());
+		}
+
 	private:
 		FileLocation location;
+
+		/**
+		 * If this location is the location
+		 *
+		 */
+		std::vector<StablePosition> expanded_from_position_chain;
 
 	public:
 		CodeLocationArgument(std::string name, FileLocation location):
 			  Argument(std::move(name)),
-			  location(std::move(location)) {}
+			  location(std::move(location)),
+			  expanded_from_position_chain() {}
 
-		CodeLocationArgument(std::string name, dia::SourcePosition position):
-			  Argument(std::move(name)),
-			  location(FileLocation::fromSourcePosition(position)) {}
+		CodeLocationArgument(std::string name, dia::SourcePosition position);
 
-		CodeLocationArgument(std::string name, dia_int::StablePosition position):
-			  Argument(std::move(name)),
-			  location(FileLocation::fromStablePosition(position)) {}
+		CodeLocationArgument(std::string name, dia_int::StablePosition position);
 
 		Box<dia_args::Component> getValue(MessageBase&) override;
 	};
@@ -224,8 +229,8 @@ namespace dia_int {
 
 	/**
 	 * @brief Pointer message is an information for where the pointer should point
-	 * in the code snippet. The content of the pointer message is defined in the message template
-	 * with the right ID and here we just specify the ID.
+	 * in the code snippet. The content of the pointer message is defined in the message
+	 * template with the right ID and here we just specify the ID.
 	 */
 	class PointerMessage final {
 	public:
@@ -288,8 +293,14 @@ namespace dia_int {
 
 		bool has_been_built = false;
 
-		virtual Metadata getMetadata() const = 0;
+		[[nodiscard]] virtual Metadata getMetadata() const = 0;
 
+		/**
+		 * @brief The priority of the message class. For now used only when sorting the
+		 * attached messages. The higher the priority, the closer the attached message
+		 * will be to the main diagnostic message.
+		 */
+		[[nodiscard]] virtual int getPriority() const { return 0; }
 
 		dia_args::Message buildMessages(
 			base::HashMap<std::string, dia_args::Message>& additional_messages
@@ -346,7 +357,8 @@ namespace dia_int {
 		/* =============================  ACCESSORS ============================= */
 
 		/**
-		 * @note These method is used by the CodeParameter to get the pointer messages on the code.
+		 * @note These method is used by the CodeParameter to get the pointer messages on the
+		 * code.
 		 */
 		const std::vector<PointerMessage>& getPointerMessages() const { return pointer_messages; }
 
@@ -395,8 +407,8 @@ namespace dia_int {
 
 		/**
 		 * @brief Main method that builds the diagnostic file representation of this diagnostic.
-		 * @warning This method can only be called once because it modifies the arguments by using
-		 * getValue(msg&) on the arguments.
+		 * @warning This method can only be called once because it modifies the arguments by
+		 * using getValue(msg&) on the arguments.
 		 */
 		Box<dia_args::Diagnostic> buildDiagnosticFile();
 
