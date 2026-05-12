@@ -146,6 +146,20 @@ namespace state_machine {
 			AtomicActionResultT(const States&, const Events&, const SetStateCallback&)>;
 		using RawGuard = std::function<GuardResultT(const States&, const Events&)>;
 
+
+		template<typename State, typename Event>
+		requires base::IsVariantMember<State, States> && base::IsVariantMember<Event, Events>
+		using StronglyTypedAction = std::function<ActionResultT(const State&, const Event&)>;
+
+		template<typename State, typename Event>
+		requires base::IsVariantMember<State, States> && base::IsVariantMember<Event, Events>
+		using StronglyTypedAtomicAction
+			= std::function<ActionResultT(const State&, const Event&, const SetStateCallback&)>;
+
+		template<typename State, typename Event>
+		requires base::IsVariantMember<State, States> && base::IsVariantMember<Event, Events>
+		using StronglyTypedGuard = std::function<GuardResultT(const State&, const Event&)>;
+
 		template<typename Event>
 		using GenericAction = std::function<ActionResultT(const States&, const Event&)>;
 		template<typename Event>
@@ -159,7 +173,7 @@ namespace state_machine {
 		 */
 		struct TransitionEntry {
 			std::variant<RawAction, RawAtomicAction>
-				action;  ///< either a standard action that returns the new state, or an atomic action
+				action;  ///< Either a standard action that returns the new state, or an atomic action
 			             ///< that publishes the new state via a `setState` callback handed to it.
 			base::Optional<RawGuard>
 				guard;  ///< Optional guard to additionally validate if the transition is allowed.
@@ -195,8 +209,8 @@ namespace state_machine {
 		template<typename State, typename Event>
 		requires base::IsVariantMember<State, States> && base::IsVariantMember<Event, Events>
 		void addTransition(
-			std::function<ActionResultT(const State&, const Event&)>                action,
-			base::Optional<std::function<GuardResultT(const State&, const Event&)>> guard = {}
+			StronglyTypedAction<State, Event>                action,
+			base::Optional<StronglyTypedGuard<State, Event>> guard = {}
 		) {
 			const usize state_idx = base::variantTypeIndex<States, State>();
 			const usize event_idx = base::variantTypeIndex<Events, Event>();
@@ -270,9 +284,8 @@ namespace state_machine {
 		template<typename State, typename Event>
 		requires base::IsVariantMember<State, States> && base::IsVariantMember<Event, Events>
 		void addAtomicTransition(
-			std::function<AtomicActionResultT(const State&, const Event&, const SetStateCallback&)>
-																					action,
-			base::Optional<std::function<GuardResultT(const State&, const Event&)>> guard = {}
+			StronglyTypedAtomicAction<State, Event>          action,
+			base::Optional<StronglyTypedGuard<State, Event>> guard = {}
 		) {
 			const usize state_idx = base::variantTypeIndex<States, State>();
 			const usize event_idx = base::variantTypeIndex<Events, Event>();
