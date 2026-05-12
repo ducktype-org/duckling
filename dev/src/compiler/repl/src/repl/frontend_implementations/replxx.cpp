@@ -157,6 +157,42 @@ namespace compiler::repl {
 		return depth;
 	}
 
+	/**
+	* Constructs a simplified string where every UTF-8 code point from the input
+	* is represented by exactly 1 byte.
+	* Single-byte characters are kept as-is, while multi-byte characters
+	* are replaced by a specified constant byte.
+	*
+	* \param input - an UTF-8 encoded string.
+	* \param constant_byte - the character to substitute for multi-byte code points.
+	    By default it is '\1' - doesn't fall into any category and will be default color.
+	* \return A string whose .length() perfectly matches the number of code points.
+	*/
+	std::string mapUtf8CodePoints(const std::string& input, char constant_byte = '\1') {
+		std::string result;
+
+		result.reserve(input.length());
+
+		for (size_t i = 0; i < input.length(); ++i) {
+			unsigned char c = static_cast<unsigned char>(input[i]);
+
+			if ((c & 0x80) == 0x00) {
+				// 1-byte code point (ASCII: 0xxxxxxx)
+				result.push_back(input[i]);
+			} else if ((c & 0xC0) == 0xC0) {
+				// Leading byte of a multi-byte code point (11xxxxxx)
+				// We substitute it with our chosen constant byte.
+				result.push_back(constant_byte);
+			} else {
+				// Continuation byte (10xxxxxx)
+				// We simply ignore these, so the multi-byte code point
+				// only contributes exactly 1 byte to the `result` string.
+			}
+		}
+
+		return result;
+	}
+
 	// ─── History file path ───────────────────────────────────────────────────────
 
 	std::string FrontendReplxxImplementation::getHistoryFilePath() {
@@ -178,6 +214,7 @@ namespace compiler::repl {
 		m_replxx.set_beep_on_ambiguous_completion(false);
 		m_replxx.set_max_hint_rows(8);
 		m_replxx.set_hint_delay(0);
+		m_replxx.enable_bracketed_paste();
 
 		// Load persistent history from file.
 		m_replxx.history_load(getHistoryFilePath());
@@ -277,22 +314,23 @@ namespace compiler::repl {
 		m_replxx.set_highlighter_callback([](const std::string&        input,
 		                                     replxx::Replxx::colors_t& colors) {
 			// We iterate over the input, identifying tokens and coloring them.
-			usize i   = 0;
-			usize len = input.size();
+			usize i                 = 0;
+			auto   input_code_points = mapUtf8CodePoints(input);
+			usize len               = input_code_points.size();
 
 			while (i < len) {
 				// Skip whitespace
-				if (std::isspace(static_cast<unsigned char>(input[i]))) {
+				if (std::isspace(static_cast<unsigned char>(input_code_points[i]))) {
 					++i;
 					continue;
 				}
 
 				// String literal (double-quoted)
-				if (input[i] == '"') {
+				if (input_code_points[i] == '"') {
 					usize start = i;
 					++i;
-					while (i < len && input[i] != '"') {
-						if (input[i] == '\\' && i + 1 < len) ++i;  // skip escape
+					while (i < len && input_code_points[i] != '"') {
+						if (input_code_points[i] == '\\' && i + 1 < len) ++i;  // skip escape
 						++i;
 					}
 					if (i < len) ++i;  // closing quote
@@ -302,11 +340,11 @@ namespace compiler::repl {
 				}
 
 				// String literal (single-quoted / char literal)
-				if (input[i] == '\'') {
+				if (input_code_points[i] == '\'') {
 					usize start = i;
 					++i;
-					while (i < len && input[i] != '\'') {
-						if (input[i] == '\\' && i + 1 < len) ++i;
+					while (i < len && input_code_points[i] != '\'') {
+						if (input_code_points[i] == '\\' && i + 1 < len) ++i;
 						++i;
 					}
 					if (i < len) ++i;
@@ -316,19 +354,19 @@ namespace compiler::repl {
 				}
 
 				// Line comment (//)
-				if (input[i] == '/' && i + 1 < len && input[i + 1] == '/') {
+				if (input_code_points[i] == '/' && i + 1 < len && input_code_points[i + 1] == '/') {
 					for (usize j = i; j < colors.size(); ++j) colors[j] = Color::GRAY;
 					break;  // rest of line is comment
 				}
 
 				// Numeric literal
-				if (std::isdigit(static_cast<unsigned char>(input[i]))
-				    || (input[i] == '.' && i + 1 < len
-				        && std::isdigit(static_cast<unsigned char>(input[i + 1])))) {
+				if (std::isdigit(static_cast<unsigned char>(input_code_points[i]))
+				    || (input_code_points[i] == '.' && i + 1 < len
+				        && std::isdigit(static_cast<unsigned char>(input_code_points[i + 1])))) {
 					usize start = i;
 					while (i < len
-					       && (std::isalnum(static_cast<unsigned char>(input[i])) || input[i] == '.'
-					           || input[i] == '_'))
+					       && (std::isalnum(static_cast<unsigned char>(input_code_points[i]))
+					           || input_code_points[i] == '.' || input_code_points[i] == '_'))
 						++i;
 					for (usize j = start; j < i && j < colors.size(); ++j)
 						colors[j] = Color::YELLOW;
@@ -336,13 +374,14 @@ namespace compiler::repl {
 				}
 
 				// Identifier or keyword
-				if (std::isalpha(static_cast<unsigned char>(input[i])) || input[i] == '_') {
+				if (std::isalpha(static_cast<unsigned char>(input_code_points[i]))
+				    || input_code_points[i] == '_') {
 					usize start = i;
 					while (i < len
-					       && (std::isalnum(static_cast<unsigned char>(input[i])) || input[i] == '_'
-					       ))
+					       && (std::isalnum(static_cast<unsigned char>(input_code_points[i]))
+					           || input_code_points[i] == '_'))
 						++i;
-					std::string word = input.substr(start, i - start);
+					std::string word = input_code_points.substr(start, i - start);
 
 					Color color = Color::DEFAULT;
 					if (DUCKLING_KEYWORDS.count(word) != 0)
@@ -357,15 +396,15 @@ namespace compiler::repl {
 				}
 
 				// REPL command (starts with /)
-				if (input[i] == '/' && i == 0) {
+				if (input_code_points[i] == '/' && i == 0) {
 					for (auto& color: colors) color = Color::BRIGHTBLUE;
 					return;
 				}
 
 				// Operator characters
-				if (std::string_view("+-*/%^&|~<>=!?@#$:.->.").find(input[i])
+				if (std::string_view("+-*/%^&|~<>=!?@#$:.->.").find(input_code_points[i])
 				    != std::string_view::npos) {
-					colors[i] = Color::BROWN;
+					if (i < colors.size()) colors[i] = Color::BROWN;
 					++i;
 					continue;
 				}
