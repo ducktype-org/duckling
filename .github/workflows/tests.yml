@@ -213,7 +213,7 @@ jobs:
 
       # Enables coverage only in case of Debug build.
       - name: Additional setup-build flags
-        id: cmake-flags
+        id: setup-build-flags
         # Env here is used for readability only
         env:
           flags: ${{ env.COVERAGE_ENABLED == 'true' && format('--coverage --gcov-version {0}', matrix.compiler.gcov) || '--no-coverage' }}
@@ -240,23 +240,9 @@ jobs:
             -x ${{ matrix.compiler.cxx }} \
             -t ${{ matrix.build-type }} \
             ${{ steps.check-jit.outputs.jit-flag }} \
+            ${{ steps.setup-build-flags.outputs.flags }}
             --ccache \
-            --strip-symbol-information \
-
-        # run: |
-        #   cmake \
-        #       -B ${{ env.BUILD_DIR }} \
-        #       -G ${{ env.BUILD_SYSTEM }} \
-        #       -D CMAKE_CXX_COMPILER=${{ matrix.compiler.cxx }} \
-        #       -D CMAKE_C_COMPILER=${{ matrix.compiler.cc }} \
-        #       -D BUILD_DOCS=OFF \
-        #       -D CMAKE_BUILD_TYPE=${{ matrix.build-type }} \
-        #       -D USE_CCACHE=ON \
-        #       -D JIT_ENABLED=${{ steps.check-jit.outputs.jit-enabled }} \
-        #       -D STRIP_SYMBOL_INFORMATION=ON \
-        #       -D LLVM_OPT=opt-19 -D LLVM_LINK=llvm-link-19 -D LLVM_NM=llvm-nm-19 -D LLVM_CXXFILT=llvm-cxxfilt-19 -D LLVM_EXTRACT=llvm-extract-19 \
-        #       ${{ matrix.compiler.name == 'gcc' && format('-D CMAKE_LINKER_TYPE={0}', matrix.compiler.linker) || '' }} \
-        #       ${{ steps.cmake-flags.outputs.flags }}
+            --strip-symbol-information
 
       # Build all tests.
       # We additionally build coverage targets in case of coverage enabled,
