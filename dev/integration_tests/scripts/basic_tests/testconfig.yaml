@@ -1,8 +1,10 @@
 # Simplest tests for scripts in Duckling.
 
+# @TODO: #2569 Enable the tests after making usage of classes in scripts possible.
+
 Tests:
   declaration:
-    folder: "classs"
+    folder: "class"
     Cases:
       direct:
         mode: direct
@@ -15,7 +17,7 @@ Tests:
 
   using_previously_defined_objects:
     Enabled: "false"
-    folder: "classs"
+    folder: "class"
     Cases:
       direct:
         mode: direct
