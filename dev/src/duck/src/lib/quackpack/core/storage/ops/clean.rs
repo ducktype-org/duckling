@@ -46,7 +46,7 @@ pub fn delete_venv(ctx: &DuckContext, storage_root: &Path, venv: impl ToVenvId) 
     storage.sync_locks_path().join(venv_id).rm()?;
     data_lock.path().rm()?;
     ctx.console()
-        .info(format!("successfully removed venv `{venv_id}`"));
+        .info(format!("successfully removed venv `{venv_id}`"))?;
     Ok(())
 }
 
@@ -82,7 +82,7 @@ pub fn clean_storage(ctx: &DuckContext, storage_root: &Path) -> QuackResult<Clea
         .into_iter()
         .flat_map(|pkg| {
             let venv_id: StrId = pkg.file_name().into();
-            if !all_deps.contains(&venv_id) {
+            if !all_deps.contains(venv_id.as_str()) {
                 Some(pkg.path())
             } else {
                 None
@@ -92,7 +92,7 @@ pub fn clean_storage(ctx: &DuckContext, storage_root: &Path) -> QuackResult<Clea
     for pkg in pgks_to_remove.iter() {
         pkg.rmtree()?;
     }
-    ctx.console().info("successfully cleaned the storage");
+    ctx.console().info("successfully cleaned the storage")?;
     Ok(CleanOutput {
         removed_venvs,
         removed_packages: pgks_to_remove,
@@ -107,7 +107,7 @@ fn clean_venv_from_storage(
     temporary_lifetime: Duration,
     now: SystemTime,
     removed_venvs: &mut Vec<VenvId>,
-    all_deps: &mut HashSet<StrId>,
+    all_deps: &mut HashSet<String>,
     ctx: &DuckContext,
 ) -> QuackResult<()> {
     let venv_id = dir.file_name().to_venv_id();

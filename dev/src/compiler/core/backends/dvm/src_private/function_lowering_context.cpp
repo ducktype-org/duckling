@@ -117,7 +117,7 @@ vm::code::Function compiler::backend_vm::internal::createMiniGlobalCtorFromCTV(
 
 	vm::code::Function mini_ctor;
 	mini_ctor.name                   = vm::code::Identifier(mini_ctor_name);
-	mini_ctor.signature.result_types = { vm::code::Identifier(base::StrID("void")) };
+	mini_ctor.signature.result_types = {};
 	mini_ctor.body.push_back(
 		vm::code::builders::InstructionBuilder(
 			vm::code::builders::OpKind::mov, dvm_global.asArgument(), immediate.asArgument()
@@ -266,7 +266,33 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 				current_layout = field_layout;
 			}
 			variant_case(lir::LIRPlace::IndexProjection, index) {
-				throw base::NotYetImplemented("Index Projection in DVM backend");
+				CORE_ASSERT(
+					current_layout->is<tsl::StaticArrayTypeLayout>(),
+					"IndexProjection on non-array layout"
+				);
+				// Prepare the array type.
+				const auto& array_layout
+					= std::get<tsl::StaticArrayTypeLayout>(current_layout->getVariant());
+
+				DVMValue index_val = lowerLirValue(*index.index);
+
+				// Prepare the pointer to field type.
+				CRef<tsl::TypeLayout>       element_layout = array_layout.getElementLayout();
+				const vm::code::TypeOfData& vm_element_type
+					= program_context.lowerAndKeepTslType(element_layout);
+				const vm::code::TypeOfData& ptr_to_element_type
+					= program_context.getOrInsertPointerType(vm_element_type);
+
+				// Create a temporary to the element
+				DVMPlace element_ptr_tmp = pushTempLocal(ptr_to_element_type, "index_addr");
+
+				pushInstruction({ vm::code::builders::OpKind::fixedSizeTableLea,
+				                  element_ptr_tmp,
+				                  current_place,
+				                  index_val.asArgument() });
+
+				current_place  = element_ptr_tmp.withAccessKind(DVMPlace::AccessKind::Pointer);
+				current_layout = element_layout;
 			}
 		}
 	}
