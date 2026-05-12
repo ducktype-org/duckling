@@ -98,7 +98,7 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::parseFiles(
 	CORE_UNREACHABLE();
 }
 
-std::expected<void, LoaderLogger> Loader::loadAndCompile(const code::CodeCollection& code_collection
+std::expected<void, LoaderLogger> Loader::loadAndCompile(const code::CodeCollection& code_collection, api::ExecutionConfig config
 ) {
 	// Skip if no new code was added.
 	if (code_collection.functions.empty() && code_collection.types.empty()
@@ -111,7 +111,7 @@ std::expected<void, LoaderLogger> Loader::loadAndCompile(const code::CodeCollect
 		// @note: This function creates a copy of the current program state and tries inserting new
 		// code into it. If it fails, an exception is thrown and `validated_high_program` in the
 		// loader stays unchanged.
-		validated_high_program = validated_high_program.tryInsertCode(code_collection);
+		validated_high_program = validated_high_program.tryInsertCode(code_collection, config);
 
 		// @note: After successfully inserting code into `validated_high_program` we compile it to
 		// the low level representation. This step cannot fail since the code was already validated.
@@ -163,9 +163,9 @@ std::expected<void, LoaderLogger> Loader::loadAndCompile(const code::CodeCollect
 	return std::unexpected(std::move(log));
 }
 
-std::expected<void, LoaderLogger> Loader::loadAndCompile(const std::vector<fs::File>& file_paths) {
+std::expected<void, LoaderLogger> Loader::loadAndCompile(const std::vector<fs::File>& file_paths, api::ExecutionConfig config) {
 	auto opt_code_collection = parseFiles(file_paths);
-	if (opt_code_collection.has_value()) return loadAndCompile(*opt_code_collection);
+	if (opt_code_collection.has_value()) return loadAndCompile(*opt_code_collection, config);
 	return std::unexpected(std::move(opt_code_collection).error());
 }
 

@@ -40,7 +40,7 @@ namespace vm::code {
 		 * @note If the newly injected code were to create an unvalid state,
 		 * an exception of ValidationError base will be thrown.
 		 */
-		ValidProgram tryInsertCode(const CodeCollection& collection) const;
+		ValidProgram tryInsertCode(const CodeCollection& collection, api::ExecutionConfig config) const;
 
 		const valid_type::ValidTypeMap& types() const;
 
@@ -74,7 +74,7 @@ namespace vm::code {
 		 * base is thrown. This means this object will contain invalid code and mustn't be used! If
 		 * you don't want to lose the state, place use `tryInsertCode`.
 		 */
-		void insertCode(const CodeCollection& collection);
+		void insertCode(const CodeCollection& collection, api::ExecutionConfig config);
 
 		/**
 		 * @brief Inserts types. May invalidate state.
@@ -94,7 +94,7 @@ namespace vm::code {
 		 * function must not contain any dead-code, but Duckling's compiler, as of 21.05.2025, may
 		 * produce dead code.
 		 */
-		void insertFunctions(const std::vector<Function>& new_functions);
+		void insertFunctions(const std::vector<Function>& new_functions, api::ExecutionConfig config);
 
 		/**
 		 * @brief Inserts an ExternalCFunction. May invalidate state.

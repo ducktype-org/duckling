@@ -20,7 +20,8 @@ namespace vm::code {
 		void insertAndValidate(
 			const std::vector<Function>&           new_functions,
 			const ObjIdNameMap<GlobalData>&        globals,
-			const ObjIdNameMap<ExternalCFunction>& ext_c_functions
+			const ObjIdNameMap<ExternalCFunction>& ext_c_functions,
+			api::ExecutionConfig config
 		);
 
 	private:
