@@ -174,7 +174,7 @@ namespace compiler::repl {
 		result.reserve(input.length());
 
 		for (size_t i = 0; i < input.length(); ++i) {
-			unsigned char c = static_cast<unsigned char>(input[i]);
+			auto c = static_cast<unsigned char>(input[i]);
 
 			if ((c & 0x80) == 0x00) {
 				// 1-byte code point (ASCII: 0xxxxxxx)
