@@ -4,13 +4,13 @@
 
 Tests:
   basic_declarations:
-    Enabled: "false"
+    Enabled: "true"
     Cases:
       basic_declarations:
         Input:
           File: "basic_declarations/basic_declarations.rtf"
         Output: 
-          String : "@{beginning}\n=> 42\n=> 25\n@{end}"
+          String : "@{beginning}\n42\n=> 3\n25\n=> 3\n@{end}"
 
   interactions:
     Enabled: "false"

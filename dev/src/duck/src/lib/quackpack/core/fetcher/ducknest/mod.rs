@@ -50,7 +50,7 @@ impl<'duck> DucknestClient<'duck> {
         package: StrId,
     ) -> QuackResult<types::MultiMetadata> {
         debug!("fetching...");
-        let req_url = url.for_multi_metadata(package)?;
+        let req_url = url.for_multi_metadata(package.as_str())?;
 
         let response = self.client.get(&req_url)?;
         response.deserialize_json()

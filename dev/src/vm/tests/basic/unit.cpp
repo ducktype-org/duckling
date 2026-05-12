@@ -39,6 +39,7 @@ public:
 		TESTER_ADD_TEST(testSyncRun);
 		TESTER_ADD_TEST(structureOperations);
 		TESTER_ADD_TEST(fixedSizeTableOperations);
+		TESTER_ADD_TEST(nestedAggregateTypesCorrectness);
 	}
 
 private:
@@ -146,6 +147,10 @@ private:
 
 	void fixedSizeTableOperations() {
 		runTestOnVm("fixed_size_table_operations.dbc", "", "123", {});
+	}
+
+	void nestedAggregateTypesCorrectness() {
+		runTestOnVm("nested_aggregate.dbc", "", "133707770999", {});
 	}
 
 	void testSyncRun() {

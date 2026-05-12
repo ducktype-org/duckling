@@ -46,14 +46,11 @@ pub fn execute(ctx: &DuckContext, matches: &ArgMatches) -> QuackResult<()> {
         .get_one::<PathBuf>("path")
         .expect("required by clap")
         .resolve()?;
-    let name = match matches.get_one::<String>("name") {
-        Some(name) => name.into(),
-        None => at.file_name().expect("file without filename").into(),
-    };
+    let explicit_name = matches.get_one::<String>("name").map(String::as_str);
     init(InitOptions {
         ctx,
         at,
-        name,
+        explicit_name,
         as_venv: matches.get_flag("venv"),
         expose_freezefile: matches.get_flag("expose-freezefile"),
         local_storage: matches.get_flag("local-storage"),
