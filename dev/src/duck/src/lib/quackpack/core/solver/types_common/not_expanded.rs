@@ -58,6 +58,9 @@ impl AsRef<Location> for InternedLocation {
 
 impl PartialEq for InternedLocation {
     fn eq(&self, other: &Self) -> bool {
+        // If we have two equal InternedLocations, their underlying &Location is equal.
+        // That &Location is stored exactly once in INTERNED_LOCATION_CACHE, so we can compare by comparing pointers,
+        // which is faster.
         std::ptr::eq(self.inner, other.inner)
     }
 }
@@ -66,7 +69,7 @@ impl Eq for InternedLocation {}
 
 impl Hash for InternedLocation {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        (self.inner as *const Location as usize).hash(state);
+        std::ptr::hash(self.inner, state);
     }
 }
 

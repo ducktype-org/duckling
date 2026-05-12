@@ -81,6 +81,9 @@ impl AsRef<ExpandedLocation> for InternedExpandedLocation {
 
 impl PartialEq for InternedExpandedLocation {
     fn eq(&self, other: &Self) -> bool {
+        // If we have two equal InternedExpandedLocations, their underlying &ExpandedLocation is equal.
+        // That &ExpandedLocation is stored exactly once in INTERNED_EXPANDED_LOCATION_CACHE, so we can compare by comparing pointers,
+        // which is faster.
         std::ptr::eq(self.inner, other.inner)
     }
 }
@@ -89,7 +92,7 @@ impl Eq for InternedExpandedLocation {}
 
 impl Hash for InternedExpandedLocation {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        (self.inner as *const ExpandedLocation as usize).hash(state);
+        std::ptr::hash(self.inner, state);
     }
 }
 

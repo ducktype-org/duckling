@@ -130,10 +130,10 @@ impl PartialEq<String> for StrId {
 
 impl PartialEq<StrId> for StrId {
     fn eq(&self, other: &StrId) -> bool {
-        // If we have two equal StrIds, their underlying &str are equal.
+        // If we have two equal StrIds, their underlying &str is equal.
         // That &str is stored exactly once in STRID_CACHE, so we can compare by comparing pointers,
         // which is faster.
-        self.inner.as_ptr() == other.inner.as_ptr()
+        std::ptr::eq(self.inner, other.inner)
     }
 }
 
@@ -179,7 +179,7 @@ impl AsRef<Path> for StrId {
 
 impl Hash for StrId {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.inner.as_ptr().hash(state);
+        std::ptr::hash(self.inner, state);
     }
 }
 
@@ -264,5 +264,11 @@ mod tests {
         assert_eq!(a, "a".to_owned());
         assert_eq!(a.to_string(), "a");
         assert_eq!(a.as_str(), "a");
+    }
+
+    #[test]
+    fn join() {
+        let to_join = [StrId::from("a"), StrId::from("bb"), StrId::from("ζξ")];
+        assert_eq!(to_join.join(".😀"), "a.😀bb.😀ζξ");
     }
 }
