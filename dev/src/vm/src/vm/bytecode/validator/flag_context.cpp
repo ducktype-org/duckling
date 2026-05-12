@@ -1,4 +1,5 @@
 #include "flag_context.hpp"
+#include <vm/bytecode/validator/errors.hpp>
 
 namespace vm::code {
 	std::set<base::StrID> getNewFunctionNames(const std::vector<Function>& new_functions) {
@@ -124,7 +125,28 @@ namespace vm::code {
 		}
 
 		// Finally, save the result
-		for (const auto& [new_func, flags]: flags_in_new_functions)
+		for (const auto& [new_func, flags]: flags_in_new_functions) {
 			flags_in_functions.put(new_func, flags);
+
+			if (config.no_io.copyValueOr(false)) {
+				if (flags.contains(InstructionFlagOptions::IORead)
+				    || flags.contains(InstructionFlagOptions::IOWrite))
+					throw ExecutionConfigViolationError(
+						new_func, "no_io is true, but function performs I/O"
+					);
+			}
+			if (config.read_only.copyValueOr(false)) {
+				if (flags.contains(InstructionFlagOptions::GlobalWrite))
+					throw ExecutionConfigViolationError(
+						new_func, "read_only is true, but function modifies global state"
+					);
+			}
+			if (config.single_thread.copyValueOr(false)) {
+				if (flags.contains(InstructionFlagOptions::Mutlithread))
+					throw ExecutionConfigViolationError(
+						new_func, "single_thread is true, but function uses multithreading"
+					);
+			}
+		}
 	}
 }

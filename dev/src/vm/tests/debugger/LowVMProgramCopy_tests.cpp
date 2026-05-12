@@ -23,10 +23,11 @@ private:
 		vm::loader::Loader          loader;
 		CRef<vm::low::LowVMProgram> program = loader.getProgram();
 		vm::low::LowVMProgramCopy   program_copy(program);
+		vm::api::ExecutionConfig    config{};
 
 		ASSERT_EQUAL(program_copy.getOriginalProgram(), program);
 
-		loader.loadAndCompile({ { path("breakpoint.dbc") } });
+		loader.loadAndCompile({ { path("breakpoint.dbc") } }, config);
 		ASSERT_TRUE(program->getFunctions().size());
 		ASSERT_EQUAL_PRINT(program_copy.getFunctions().size(), 0);
 

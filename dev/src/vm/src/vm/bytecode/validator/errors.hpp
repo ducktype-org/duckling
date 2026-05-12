@@ -404,4 +404,16 @@ namespace vm::code {
 	DEFINE_INSTRUCTION_ERROR(
 		OpaqueTypeMismatchError, "The opaque type does not match the expected type."
 	);
+
+	class ExecutionConfigViolationError: public ValidationError {
+	public:
+		constexpr static std::string_view ERR_MSG = "Function violates execution config: ";
+		const base::StrID                 func_name;
+		const std::string                 violation_reason;
+
+		ExecutionConfigViolationError(base::StrID func_name, std::string violation_reason):
+			  ValidationError(base::strConcat(ERR_MSG, func_name, " (", violation_reason, ")")),
+			  func_name(func_name),
+			  violation_reason(std::move(violation_reason)) {}
+	};
 }
