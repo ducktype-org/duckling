@@ -127,5 +127,14 @@ namespace vm::debugger {
 		std::vector<StackFrameInfo> enumerateFrames(u64 thread_id = 0);
 
 		std::vector<VariableInfo> dereferenceVariablesReference(u64 variables_reference);
+		/**
+		 * @brief Pauses the VM
+		 */
+		void pause();
+
+		/**
+		 * @brief Resumes the VM
+		 */
+		void resume();
 	};
 }
