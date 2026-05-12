@@ -49,7 +49,7 @@ jobs:
 
   build:
     needs: [setup]
-    name: ${{ matrix.build-type }} / ${{ matrix.compiler.name }}${{ matrix.compiler.jit-enabled == 'TRUE' && ' + JIT' || '' }}
+    name: ${{ matrix.build-type }} / ${{ matrix.compiler.name }}
     # This if condition is quite complex, so let's break it down:
     # 1. Run on push (if not a draft PR) or workflow_dispatch events (these are not related to PRs).
     # 2. Run on pull_request events only if the PR is not a draft, and either
@@ -215,6 +215,14 @@ jobs:
           flags: ${{ env.COVERAGE_ENABLED == 'true' && format('-D ENABLE_COVERAGE=ON -D GCOV_VERSION={0}', matrix.compiler.gcov) || '' }}
         run: echo flags=${{ env.flags }} >> $GITHUB_OUTPUT
 
+        # JIT should be enabled if build type is DevOpt and compiler is clang, otherwise it should be disabled.
+      - name: Check should enable JIT
+        id: check-jit
+        run: |
+          echo jit-enabled=$( [ "${{ matrix.build-type }}" = "DevOpt" ] &&
+                              [ "${{ matrix.compiler.name }}" = "clang" ] &&
+                               echo "TRUE" || echo "FALSE" ) >> $GITHUB_OUTPUT
+
       - name: Configure CMake
         working-directory: ${{ env.WORKSPACE }}
         run: |
@@ -226,7 +234,7 @@ jobs:
               -D BUILD_DOCS=OFF \
               -D CMAKE_BUILD_TYPE=${{ matrix.build-type }} \
               -D USE_CCACHE=ON \
-              -D JIT_ENABLED=${{ matrix.compiler.jit-enabled }} \
+              -D JIT_ENABLED=${{ steps.check-jit.outputs.jit-enabled }} \
               -D STRIP_SYMBOL_INFORMATION=ON \
               -D LLVM_OPT=opt-19 -D LLVM_LINK=llvm-link-19 -D LLVM_NM=llvm-nm-19 -D LLVM_CXXFILT=llvm-cxxfilt-19 -D LLVM_EXTRACT=llvm-extract-19 \
               ${{ matrix.compiler.name == 'gcc' && format('-D CMAKE_LINKER_TYPE={0}', matrix.compiler.linker) || '' }} \
@@ -309,7 +317,6 @@ jobs:
       - name: Test
         working-directory: ${{ env.WORKSPACE }}
         run: ./toolbox.py test -b ${{ env.BUILD_DIR }} -j ${{ steps.set-jobs.outputs.jobs }} --output-on-failure --timeout 60
-      
 
       - name: Test Coverage
         id: test-coverage
