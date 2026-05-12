@@ -208,11 +208,11 @@ jobs:
         run: rm -rf ${CCACHE_DIR}
 
       # Enables coverage only in case of Debug build.
-      - name: Additional CMake flags
+      - name: Additional setup-build flags
         id: cmake-flags
         # Env here is used for readability only
         env:
-          flags: ${{ env.COVERAGE_ENABLED == 'true' && format('-D ENABLE_COVERAGE=ON -D GCOV_VERSION={0}', matrix.compiler.gcov) || '' }}
+          flags: ${{ env.COVERAGE_ENABLED == 'true' && format('--coverage --gcov-version {0}', matrix.compiler.gcov) || '--no-coverage' }}
         run: echo flags=${{ env.flags }} >> $GITHUB_OUTPUT
 
         # JIT should be enabled if build type is DevOpt and compiler is clang, otherwise it should be disabled.
