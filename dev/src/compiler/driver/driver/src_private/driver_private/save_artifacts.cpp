@@ -12,7 +12,7 @@
 namespace compiler::driver {
 
 	namespace {
-		void saveQueryGraph(Ref<artifacts::ArtifactCollection> root) {
+		void saveQueryStateData(Ref<artifacts::ArtifactCollection> root) {
 			Ref query_collection = root->subCollectionAtOrNew(base::StrID("query"));
 
 			// Save query graph
@@ -42,7 +42,7 @@ namespace compiler::driver {
 	void saveArtifacts() {
 		Ref root = global_state::getRootCollection();
 
-		if (enable_incremental_compilation) saveQueryGraph(root);
+		if (enable_incremental_compilation) saveQueryStateData(root);
 
 		// Flush all artifacts to disk.
 		root->flush();

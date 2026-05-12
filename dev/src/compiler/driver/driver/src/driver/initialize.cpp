@@ -163,10 +163,10 @@ namespace compiler::driver {
 					!global_state::getPackages().empty(),
 					"Main package must be set before handling incremental compilation"
 				);
-				enable_incremental_compilation = true;
+				driver::enable_incremental_compilation = true;
 				loadPreviousQueryGraphIfExists();
 			} else {
-				enable_incremental_compilation = false;
+				driver::enable_incremental_compilation = false;
 				// Disable the query graph because it's not needed and adds overhead.
 				query::enable_query_graph = false;
 			}

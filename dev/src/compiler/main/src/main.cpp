@@ -30,6 +30,7 @@
 #include <filesystem/file.hpp>
 #include <filesystem/file_path.hpp>
 #include <init/init.hpp>
+#include <logger/logger.hpp>
 #include <printer/stream_printer.hpp>
 #include <query_framework/entry/query_entry_point.hpp>
 #include <query_framework/entry/with_context_do.hpp>
@@ -400,9 +401,11 @@ clah::Clah getClahForMain() {
 	                     .build())
 				.setHandler([](const clah::ParsingResult& options) -> int {
 					if (options.isFlag("no-incremental") && options.isFlag("print-graph")) {
-						std::cerr << "Error: --print-graph requires the query graph, which is "
-									 "disabled by --no-incremental. These flags cannot be used "
-									 "together.\n";
+						CORE_USER_LOG(
+							"Error: --print-graph requires the query graph, which is "
+							"disabled by --no-incremental. These flags cannot be used "
+							"together.\n"
+						);
 						return 1;
 					}
 
