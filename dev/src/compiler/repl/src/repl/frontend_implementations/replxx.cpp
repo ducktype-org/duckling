@@ -168,7 +168,7 @@ namespace compiler::repl {
 	 * By default it is '\1' - doesn't fall into any category and will be default color.
 	 * \return A string whose .length() perfectly matches the number of code points.
 	 */
-	std::string mapUtf8CodePoints(const std::string& input, char constant_byte = '\1') {
+	static std::string mapUtf8CodePoints(const std::string& input, char constant_byte = '\1') {
 		std::string result;
 
 		result.reserve(input.length());
