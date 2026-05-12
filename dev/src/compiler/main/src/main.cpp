@@ -441,6 +441,15 @@ clah::Clah getClahForMain() {
 	                     .addShortDesc("Emit a static library (.a) instead of an executable.")
 	                     .build())
 				.setHandler([](const clah::ParsingResult& options) -> int {
+					if (options.isFlag("no-incremental") && options.isFlag("print-graph")) {
+						CORE_USER_LOG(
+							"Error: --print-graph requires the query graph, which is "
+							"disabled by --no-incremental. These flags cannot be used "
+							"together.\n"
+						);
+						return 1;
+					}
+
 					auto path_to_compile = options.getPositional<fs::File>(0);
 					auto package_name    = options.getValue<std::string>("name").copyValueOr("");
 					CORE_ASSERT(package_name != "", "Package name must be specified");

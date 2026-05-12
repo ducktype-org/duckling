@@ -359,6 +359,19 @@ vm::code::TypeOfData ProgramLoweringContext::lowerTslTypeInternal(CRef<tsl::Type
 				std::move(fields),
 			};
 		}
+		variant_case(tsl::StaticArrayTypeLayout, array_layout) {
+			const auto  element_layout  = array_layout.getElementLayout();
+			const auto  vm_element_type = lowerAndKeepTslType(element_layout);
+			const usize num_elements    = array_layout.getElementCount();
+			auto        array_type_name
+				= base::strConcat("arr_", typeName(vm_element_type), "_", num_elements);
+
+			return vm::code::FixedSizeTableType{
+				base::StrID(array_type_name),
+				typeName(vm_element_type),
+				num_elements,
+			};
+		}
 		variant_default {
 			CORE_ASSERT(
 				query_ctx_for_errors.has_value(), "Query context must be set for error reporting"

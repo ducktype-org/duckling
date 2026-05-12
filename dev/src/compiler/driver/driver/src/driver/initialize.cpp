@@ -25,6 +25,7 @@
 #include <lexer/lexer_class.hpp>
 #include <logger/logger.hpp>
 #include <query_framework/external/api.hpp>
+#include <query_framework/module_flags/module_flags.hpp>
 
 #include <iostream>
 
@@ -165,6 +166,8 @@ namespace compiler::driver {
 				loadPreviousQueryGraphIfExists();
 			} else {
 				driver::enable_incremental_compilation = false;
+				// Disable the query graph because it's not needed and adds overhead.
+				query::enable_query_graph = false;
 			}
 		}
 
