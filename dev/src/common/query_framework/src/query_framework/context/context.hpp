@@ -93,7 +93,9 @@ namespace query {
 			 * Helper method used to deduplicate logic related to
 			 * active graph operations in the destructor.
 			 */
-			void deinitActiveGraph() { main_query_state.getActiveGraph()->removeEdge(caller); }
+			void deinitActiveGraph() { 
+				main_query_state.getActiveGraph()->removeEdge(caller);
+			}
 
 		public:
 			QueryGraphHandler(
@@ -120,55 +122,55 @@ namespace query {
 					// scheduling queries. Scheduling acts as if the schedule operation came from
 					// outside the query framework.
 					main_query_state.getActiveGraph()->setEdge(caller, callee);
-					// auto maybe_cycle = main_query_state.getActiveGraph()->cycleCheck(callee);
+					auto maybe_cycle = main_query_state.getActiveGraph()->cycleCheck(callee);
 
-					// if (maybe_cycle.has_value()) {
-					// 	// We hit a cycle!
+					if (maybe_cycle.has_value()) {
+						// We hit a cycle!
 
-					// 	for (auto node_info: maybe_cycle.value().cycle_nodes) {
-					// 		// This is a critical part of the cycle handling.
-					// 		// We mark all nodes on the cycle as cyclic, so that query
-					// 		// implementations can react to that if needed.
-					// 		node_info.node_context_ref->is_cyclic_node = true;
-					// 	}
+						for (auto node_info: maybe_cycle.value().cycle_nodes) {
+							// This is a critical part of the cycle handling.
+							// We mark all nodes on the cycle as cyclic, so that query
+							// implementations can react to that if needed.
+							node_info.node_context_ref->is_cyclic_node = true;
+						}
 
-					// 	// Log cyclic diagnostic with cycle information.
-					// 	// @TODO: #2615 move and improve this diagnostic.
+						// Log cyclic diagnostic with cycle information.
+						// @TODO: #2615 move and improve this diagnostic.
 
-					// 	this_context.logInt(makeBox<dia_int::PlaceholderError>(
-					// 		base::strConcat(
-					// 			"Query cycle detected involving query node:",
-					// 			caller.q_id.asInt(),
-					// 			".",
-					// 			caller.hash.val.toStringHex()
-					// 		),
-					// 		base::strConcat(
-					// 			"The cycle:\n",
-					// 			[&maybe_cycle]() -> std::string {
-					// 				std::string result;
-					// 				auto        cycle = maybe_cycle.value();
-					// 				for (auto node_info: cycle.cycle_nodes) {
-					// 					result += "  - Query node ";
-					// 					result += base::strConcat(
-					// 						node_info.node_id.q_id.getData().name,
-					// 						".",
-					// 						node_info.node_id.hash.val.toStringHex(),
-					// 						"\n"
-					// 					);
-					// 				}
-					// 				return result;
-					// 			}()
-					// 		)
-					// 	));
+						this_context.logInt(makeBox<dia_int::PlaceholderError>(
+							base::strConcat(
+								"Query cycle detected involving query node:",
+								caller.q_id.asInt(),
+								".",
+								caller.hash.val.toStringHex()
+							),
+							base::strConcat(
+								"The cycle:\n",
+								[&maybe_cycle]() -> std::string {
+									std::string result;
+									auto        cycle = maybe_cycle.value();
+									for (auto node_info: cycle.cycle_nodes) {
+										result += "  - Query node ";
+										result += base::strConcat(
+											node_info.node_id.q_id.getData().name,
+											".",
+											node_info.node_id.hash.val.toStringHex(),
+											"\n"
+										);
+									}
+									return result;
+								}()
+							)
+						));
 
-					// 	// We have to repeat destructor logic here, since it will not be called
-					// 	// after a throw here.
-					// 	deinitActiveGraph();
+						// We have to repeat destructor logic here, since it will not be called
+						// after a throw here.
+						deinitActiveGraph();
 
-					// 	// Interrupt the query execution (i.e. provide function) by throwing the
-					// 	// cycle exception.
-					// 	throw internal::QueryCycleException();
-					// }
+						// Interrupt the query execution (i.e. provide function) by throwing the
+						// cycle exception.
+						throw internal::QueryCycleException();
+					}
 				}
 			}
 
