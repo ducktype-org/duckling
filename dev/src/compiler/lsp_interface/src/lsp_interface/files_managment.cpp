@@ -213,22 +213,26 @@ namespace lsp {
 		// ========================== Removing a file from module tree ==========================
 
 		/**
-		 * @brief Removes files and modules from the module tree. If the removed module was a package, it is unregistered.
+		 * @brief Removes files and modules from the module tree. If the removed module was a
+		 * package, it is unregistered.
 		 */
 		void removeFileFromModuleTree(const fs::File& file) {
 			auto source_files = SourceFile::getSourceFilesFromFile(file);
-		
+
 			for (auto& source_file: source_files) {
 				auto module_id  = source_file->getModule().illegalAccess().getID();
 				auto module_ref = getModuleRef(module_id);
 
 				CORE_ASSERT(
 					module_ref->hasMainSourceFile(),
-					"Modules should have main source files, since module_id is obtained from source file"
+					"Modules should have main source files, since module_id is obtained from "
+				    "source file"
 				);
 				CORE_ASSERT(
-					module_ref->getMainSourceFile().illegalAccess().getID() == source_file->getFileID(),
-					"Module's main source file should be the same as the source file we are trying to remove"
+					module_ref->getMainSourceFile().illegalAccess().getID()
+						== source_file->getFileID(),
+					"Module's main source file should be the same as the source file we are trying "
+				    "to remove"
 				);
 
 				removeModuleAndUnregisterPackage(module_id);
