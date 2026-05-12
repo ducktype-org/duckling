@@ -99,11 +99,11 @@
 namespace state_machine {
 #define ASSERT_TRANSITION_NOT_REGISTERED(STATE_IDX, EVENT_IDX) \
 	CORE_ASSERT(                                               \
-		!transitions[state_idx][event_idx].has_value(),        \
+		!transitions[STATE_IDX][EVENT_IDX].has_value(),        \
 		"Transition for this State (variant index: ",          \
-		state_idx,                                             \
+		STATE_IDX,                                             \
 		") and Event (variant index: ",                        \
-		event_idx,                                             \
+		EVENT_IDX,                                             \
 		") is already defined!"                                \
 	);
 
@@ -483,7 +483,7 @@ namespace state_machine {
 
 					variant_match(transition->action) {
 						variant_case(RawAction, raw_action) {
-							// Standard action. Action returns ehe new state.
+							// Standard action. Action returns the new state.
 							auto action_result = raw_action(current_state, event);
 							if (!action_result.has_value())
 								return std::unexpected(std::move(action_result.error()));

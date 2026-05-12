@@ -1,3 +1,5 @@
+#include <base/comptime/type_traits.hpp>
+
 #include <tester/tester.hpp>
 
 #include <vm/debugger/debugger.hpp>

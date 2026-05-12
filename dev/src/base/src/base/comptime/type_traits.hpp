@@ -170,7 +170,7 @@ namespace base {
 	 * @brief Concept that checks if a type `T` is a `std::variant`.
 	 */
 	template<typename T>
-	concept IsVariant = requires(T t) { std::visit([](auto&&) {}, t); };
+	concept IsVariant = IsInstantiationOf<std::remove_cvref_t<T>, std::variant>;
 
 	/**
 	 * @brief Type trait to check if a type `T` is present in a tuple `Tup`.
