@@ -982,6 +982,26 @@ private:
 			{ "Copy constructor for non-trivially-copyable type `List[i32]`" },
 			1
 		);
+
+		// Blocks are having correct scopes
+		checkForErrorOnCompileModule(
+			R"(
+				block globals {
+					var x = 0;
+				}
+				fun main() = {
+					{
+						var x = 20;
+					};
+					block inner {
+						var x = 30;
+					}
+					x;
+				}
+		)",
+			{ "Symbol", "not found" },
+			1
+		);
 	}
 
 	/**
