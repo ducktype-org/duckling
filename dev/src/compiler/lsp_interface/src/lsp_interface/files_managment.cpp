@@ -213,30 +213,26 @@ namespace lsp {
 		// ========================== Removing a file from module tree ==========================
 
 		/**
-		 * @brief Removes a file from the module tree. If the file is a module file, the entire
-		 * module is removed. If the removed module was a package, it is unregistered.
+		 * @brief Removes files and modules from the module tree. If the removed module was a package, it is unregistered.
 		 */
 		void removeFileFromModuleTree(const fs::File& file) {
-			auto                         source_files = SourceFile::getSourceFilesFromFile(file);
-			std::unordered_set<ModuleID> modules_to_remove;
-
+			auto source_files = SourceFile::getSourceFilesFromFile(file);
+		
 			for (auto& source_file: source_files) {
 				auto module_id  = source_file->getModule().illegalAccess().getID();
 				auto module_ref = getModuleRef(module_id);
 
-				// PR: this will simplify on no optional
-				// now module<->source file mapping will be one to one
-				bool is_main_module_file = false;
-				if (module_ref->hasMainSourceFile()) {
-					auto main_source_file = module_ref->getMainSourceFile().illegalAccess().getID();
-					is_main_module_file   = (main_source_file == source_file->getFileID());
-				}
+				CORE_ASSERT(
+					module_ref->hasMainSourceFile(),
+					"Modules should have main source files, since module_id is obtained from source file"
+				);
+				CORE_ASSERT(
+					module_ref->getMainSourceFile().illegalAccess().getID() == source_file->getFileID(),
+					"Module's main source file should be the same as the source file we are trying to remove"
+				);
 
-				if (is_main_module_file) modules_to_remove.insert(module_id);
-			}
-
-			for (const auto& module_id: modules_to_remove)
 				removeModuleAndUnregisterPackage(module_id);
+			}
 		}
 	}
 
