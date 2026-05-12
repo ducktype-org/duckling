@@ -1,3 +1,6 @@
+"""
+Removes functions unnecessary for jit. Input file should be output of llvm-nm.
+"""
 import click
 import subprocess
 import sys
@@ -69,7 +72,7 @@ def main(llvm_nm, llvm_cxxfilt, input_path, output_file, **kwargs):
     functions = run_llvm(llvm_nm, nm_flags)
 
     mangled_names = [
-        " ".join(name_split) 
+        " ".join(name_split)
         for line in functions.splitlines()
         for *name_split, _type, _place, _size in [line.split(" ")]
     ]
@@ -83,7 +86,7 @@ def main(llvm_nm, llvm_cxxfilt, input_path, output_file, **kwargs):
     global special_functions
     for func_name, used in special_functions.items():
         if not used:
-            print(f"Function: '{func_name}' not found") 
+            print(f"Function: '{func_name}' not found")
 
 
 if __name__ == "__main__":
