@@ -83,7 +83,13 @@ namespace compiler::backend_vm::internal {
 		const vm::code::TypeOfData& getOrInsertPointerType(const vm::code::TypeOfData& pointee_type);
 
 		/**
-		 * @brief Retrieves the DVM global variable corresponding to the given LIR global.
+		 * @brief Retrieves or lazily creates the DVM place for the given LIR global.
+		 *
+		 * This lookup is not purely observational: it may insert and cache a placeholder entry
+		 * for the global and may lower/insert any dependent types required to represent it.
+		 *
+		 * @note Returning a DVM place here does not necessarily mean that the corresponding
+		 * vm::code::GlobalData has already been lowered for that global name.
 		 */
 		const DVMPlace& getLirGlobal(CRef<lir::LIRGlobal> lir_global);
 
