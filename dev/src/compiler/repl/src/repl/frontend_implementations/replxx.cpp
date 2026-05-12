@@ -158,16 +158,16 @@ namespace compiler::repl {
 	}
 
 	/**
-	* Constructs a simplified string where every UTF-8 code point from the input
-	* is represented by exactly 1 byte.
-	* Single-byte characters are kept as-is, while multi-byte characters
-	* are replaced by a specified constant byte.
-	*
-	* \param input - an UTF-8 encoded string.
-	* \param constant_byte - the character to substitute for multi-byte code points.
-	    By default it is '\1' - doesn't fall into any category and will be default color.
-	* \return A string whose .length() perfectly matches the number of code points.
-	*/
+	 * Constructs a simplified string where every UTF-8 code point from the input
+	 * is represented by exactly 1 byte.
+	 * Single-byte characters are kept as-is, while multi-byte characters
+	 * are replaced by a specified constant byte.
+	 *
+	 * \param input - a UTF-8 encoded string.
+	 * \param constant_byte - the character to substitute for multi-byte code points.
+	 * By default it is '\1' - doesn't fall into any category and will be default color.
+	 * \return A string whose .length() perfectly matches the number of code points.
+	 */
 	std::string mapUtf8CodePoints(const std::string& input, char constant_byte = '\1') {
 		std::string result;
 
