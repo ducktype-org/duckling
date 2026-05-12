@@ -4,6 +4,7 @@ add_files(loader.cpp
           compiler/compiler.cpp
           compiler/safe/safe_compiler.cpp
           compiler/safe/type_builder.cpp
+          compiler/fast/fast_compiler.cpp
           )
 
 set(vm_common_sources ${vm_common_sources} ${files} PARENT_SCOPE)

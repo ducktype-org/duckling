@@ -11,7 +11,8 @@
  * before including this file.
  */
 #define VALIDATE_ARG_EXISTS(arg) \
-	static_assert(IS_COMPLETE_V<arg>, "Type " #arg " must exist and be complete");
+	static_assert(IS_COMPLETE_V<arg>, "Type " #arg " must exist and be complete"); \
+	static_assert(std::is_trivially_destructible_v<arg>, "Type " #arg " must be trivially destructible");
 
 #ifndef HANDLE_ARG_DEF
 	#define DEFAULT_HANDLE_ARG

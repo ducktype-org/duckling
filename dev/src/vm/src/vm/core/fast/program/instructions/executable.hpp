@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../type.hpp"         // IWYU pragma: keep
 #include "instruction_id.hpp"  // IWYU pragma: keep
 
 #include <base/comptime/is_complete.hpp>
@@ -7,8 +8,6 @@
 
 namespace vm::fast::exec {
 	struct Function;
-	struct Type;
-
 	namespace arg {
 		using Immediate    = u64;
 		using Place8       = u64;  // Encodes both local stack offsets and global buffer offsets,

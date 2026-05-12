@@ -2,7 +2,7 @@
 
 #include "instruction_lowering.hpp"
 
-#include "vm/bytecode/validator/valid_type/type_size.hpp"
+#include <vm/bytecode/validator/valid_type/type_size.hpp>
 #include <vm/core/builtin_functions.hpp>
 #include <vm/core/safe/low_program/low_program.hpp>
 #include <vm/core/safe/low_program/opcodes.hpp>

@@ -2,7 +2,7 @@
 
 #include "../compiler.hpp"
 
-#include "vm/bytecode/validator/valid_program.hpp"
+#include <vm/bytecode/validator/valid_program.hpp>
 #include <vm/core/safe/low_program/low_program.hpp>
 #include <vm/core/safe/low_program/micro_instruction_args.hpp>
 

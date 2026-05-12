@@ -8,8 +8,17 @@
 namespace vm::fast {
 	STRONG_TYPEDEF_ID_DIRECT_CREATION(TypeID);
 
+	struct VariantData {
+		// For variant types, the size of the type tag in bytes.
+		Bytes               type_tag_size;
+		std::vector<TypeID> variant_alternatives;
+	};
+
 	struct Type {
 		base::StrID name;
 		Bytes       size;
+		union {
+			VariantData variant_data;
+		};
 	};
 }
