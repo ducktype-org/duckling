@@ -1,0 +1,5 @@
+fun mul(x : i64, y : i64) = { return x * y; }
+
+class Test{ test1 : i64; test2 : i64; fun multyply(t : Test) -> i64 = mul(Test.test1, Test.test2); }
+let MainTest : Test = Test(3, 4);
+builtin_output_i64(multyply(MainTest));
