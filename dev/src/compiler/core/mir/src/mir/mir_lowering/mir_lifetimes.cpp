@@ -224,31 +224,17 @@ namespace compiler::mir {
 
 
 			for (u64 i = 0; i < block.instructions.size(); i++) {
-				base::Optional<Instruction> previous_instr
-					= i > 0 ? (block.instructions.at(i - 1)) : base::Optional<Instruction>{};
+				auto& instr      = block.instructions.at(i);
+				auto& next_instr = i < block.instructions.size() - 1 ? block.instructions.at(i + 1)
+				                                                     : block.terminator;
 
-				auto&       instr      = block.instructions.at(i);
-				const auto& next_instr = i < block.instructions.size() - 1
-				                           ? block.instructions.at(i + 1)
-				                           : block.terminator;
-
-
-				if (previous_instr.has_value()) {
-					// We add the start scope flags at the beginning of the second instruction.
-					auto starting_scopes = getStartingScopes(previous_instr->scope, instr.scope);
-					addStartScopeFlags(instr, locals_by_scope, starting_scopes);
-				}
+				// We add the start scope flags at the beginning of the second instruction.
+				auto starting_scopes = getStartingScopes(instr.scope, next_instr.scope);
+				addStartScopeFlags(next_instr, locals_by_scope, starting_scopes);
 
 				// We add the end scope flags at the end of the first instruction we compare
 				auto ending_scopes = getEndingScopes(instr.scope, next_instr.scope);
 				addEndScopeFlags(instr, locals_by_scope, ending_scopes);
-			}
-
-			//  Start scope flags between the last instruction and the terminator:
-			if (not block.instructions.empty()) {
-				auto& last_instr      = block.instructions.back();
-				auto  starting_scopes = getStartingScopes(last_instr.scope, block.terminator.scope);
-				addStartScopeFlags(block.terminator, locals_by_scope, starting_scopes);
 			}
 
 			auto& terminator = block.terminator;

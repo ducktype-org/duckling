@@ -39,6 +39,7 @@ namespace compiler::backend_vm::internal {
 		 * @brief Makes sure deinits for the current instruction are only pushed once.
 		 */
 		bool pushed_deinits_for_instr{ false };
+
 	private:
 		Ref<FunctionLoweringContext> ctx;
 	};

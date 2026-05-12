@@ -137,7 +137,9 @@ namespace compiler::backend_vm::internal {
 		 * @param lifetime_flags
 		 * @param deinits_pushed The boolean flag that used to make sure deinits are only pushed once.
 		 */
-		void pushDeinitsForInstr(const std::vector<lir::ScopeFlag>& lifetime_flags, bool& deinits_pushed);
+		void pushDeinitsForInstr(
+			const std::vector<lir::ScopeFlag>& lifetime_flags, bool& deinits_pushed
+		);
 
 
 		void pushInstruction(const vm::code::Instruction& instruction);

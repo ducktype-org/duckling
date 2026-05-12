@@ -740,9 +740,7 @@ namespace compiler::lir {
 						);
 					}
 					curr_block->instructions.back().scope_flags.insert(
-						curr_block->instructions.back().scope_flags.end(),
-						flags.begin(),
-						flags.end()
+						curr_block->instructions.back().scope_flags.end(), flags.begin(), flags.end()
 					);
 				}
 				return curr_block;
