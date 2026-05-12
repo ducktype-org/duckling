@@ -308,19 +308,14 @@ base::Optional<vm::code::TypeOfData> ProgramLoweringContext::lowerTslTypeInterna
 		variant_case_novalue(tsl::IntegralTypeLayout) {
 			Bits bits = layout->getSize();
 			if (bits == Bits{ 1 }) bits = Bits{ 8 };  // Boolean edge-case.
-			Bytes bytes    = base::bits2bytes(bits);
-			auto  str_size = base::toString(bits);
-			str_size.pop_back();  // Remove the `b` specifier.
-			std::string name = "i" + str_size;
-
+			Bytes       bytes = base::bits2bytes(bits);
+			std::string name  = "i" + base::toString(bits.asInt());
 			return vm::code::PrimitiveType(base::StrID(name), bytes);
 		}
 		variant_case_novalue(tsl::FloatTypeLayout) {
-			Bits  bits     = layout->getSize();
-			Bytes bytes    = base::bits2bytes(bits);
-			auto  str_size = base::toString(bits);
-			str_size.pop_back();  // Remove the `b` specifier.
-			std::string name = "f" + str_size;
+			Bits        bits  = layout->getSize();
+			Bytes       bytes = base::bits2bytes(bits);
+			std::string name  = "f" + base::toString(bits.asInt());
 			return vm::code::PrimitiveType(base::StrID(name), bytes);
 		}
 		variant_case_novalue(tsl::MetaTypeLayout) {

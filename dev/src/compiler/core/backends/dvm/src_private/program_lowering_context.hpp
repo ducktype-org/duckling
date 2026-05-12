@@ -73,8 +73,8 @@ namespace compiler::backend_vm::internal {
 		/**
 		 * @brief Lowers a LIR type layout into VM bytecode type representation.
 		 * It caches the result, so inserts the type into the program only if needed.
-		 * @return The DVM type corresponding to the TypeLayout or an empty optional for layout
-		 * which don't have a DVM countertype (e.g. `void`).
+		 * @return The DVM type corresponding to the TypeLayout or an empty optional for
+		 * `tsl::EmptyTypeLayout` (e.g. `void`) which doesn't have a DVM countertype.
 		 */
 		base::Optional<CRef<vm::code::TypeOfData>> lowerAndKeepTslType(CRef<tsl::TypeLayout> layout);
 
