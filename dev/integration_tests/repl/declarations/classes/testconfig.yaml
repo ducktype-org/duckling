@@ -1,10 +1,7 @@
 # Tests for declarations of classes in REPL
 
-# @TODO: #2569 Enable the tests after making usage of classes in REPL possible.
-
 Tests:
   basic_declarations:
-    Enabled: "true"
     Cases:
       basic_declarations:
         Input:
@@ -13,7 +10,6 @@ Tests:
           String : "@{beginning}\n42\n=> 3\n25\n=> 3\n@{end}"
 
   interactions:
-    Enabled: "false"
     Cases:
       using_previously_defined_objects:
         Input:
