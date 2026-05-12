@@ -16,6 +16,7 @@
 #include <query_framework/context/context.hpp>
 #include <query_framework/internal/acd.hpp>
 #include <query_framework/internal/context_access.hpp>
+#include <query_framework/internal/cycle_handling/cycle_exception.hpp>
 #include <query_framework/internal/query_errors.hpp>
 #include <query_framework/internal/query_graph/node_making.hpp>
 #include <query_framework/q_stats/q_stats.hpp>
@@ -110,7 +111,7 @@ namespace query::internal {
 		// actual cycle checks are done in ctx.query
 		// @TODO: #1887 might want to put it under one more layer of abstraction:
 		ContextAccess::getState()->addGraphNode(node_id);
-		ContextAccess::getState()->getActiveGraph()->putNode(node_id);
+		ContextAccess::getState()->getActiveGraph()->putNode(node_id, &context);
 		CORE_DEV_LOG(Query, "[QUERY \"", QueryIntType::QUERY_DATA.name, "\"]: Calculating.\n");
 
 		// EPILOG
@@ -133,6 +134,26 @@ namespace query::internal {
 				return QueryImplType::store(perfect_hash, provide_result, acd);
 			} else {
 				return QueryImplType::store(perfect_hash, QueryImplType::provide(context, key), acd);
+			}
+		} catch (const QueryCycleException& qce) {
+			CORE_DEV_LOG(
+				Query,
+				"[QUERY \"",
+				QueryIntType::QUERY_DATA.name,
+				"\"]: Caught query cycle exception."
+			);
+
+			if constexpr (QueryImplType::USES_QRESULT and QueryImplType::ALLOW_CYCLES) {
+				return QueryImplType::store(perfect_hash, query::Failed(), acd);
+
+			} else {
+				CORE_PANIC(
+					"Query cycle detected in a query that does not use QResult or does not allow "
+					"cycles, and thus cannot "
+					"recover from it.",
+					"Query: ",
+					QueryIntType::QUERY_DATA.name
+				);
 			}
 		} catch (const QueryFailedException& qfe) {
 			CORE_DEV_LOG(
@@ -184,6 +205,7 @@ namespace query::internal {
 		constexpr static bool USES_QRESULT = QueryType_tp::QUERY_DATA.tags.uses_qresult;
 		constexpr static bool CATCH_EXCEPTIONS_IF_USING_QRESULT
 			= QueryType_tp::QUERY_DATA.tags.catch_exceptions_if_using_qresult;
+		constexpr static bool ALLOW_CYCLES = QueryType_tp::QUERY_DATA.tags.allow_cycles;
 
 
 		/**
@@ -255,6 +277,10 @@ namespace query::internal {
 		"Query result type should not be a reference (use CRef instead)"                                                                 \
 	);                                                                                                                                   \
 	static_assert(                                                                                                                       \
+		std::is_copy_constructible_v<type::QResult>,                                                                                     \
+		"Query result type should be copy constructible"                                                                                 \
+	);                                                                                                                                   \
+	static_assert(                                                                                                                       \
 		not std::is_reference_v<type::PResult>,                                                                                          \
 		"Provider result type should not be a reference (use CRef instead)"                                                              \
 	);                                                                                                                                   \
@@ -279,7 +305,7 @@ namespace query::internal {
 		std::is_same_v<std::invoke_result_t<decltype(type::load), type::KHash>, type::LoadResult>,                                       \
 		"Bad load result."                                                                                                               \
 	);                                                                                                                                   \
-	static_assert(type::QueryType::QUERY_DATA.verify(), "Query data is inconsistent.");                                                  \
+	static_assert(type::QueryType::QUERY_DATA.verify().isOk(), "Query data is inconsistent.");                                           \
 	static_assert(                                                                                                                       \
 		LAZY_IMPLIES(type::QueryType::QUERY_DATA.usesUnstableHashing(), ::query::HasUnstablePerfectHash<type::QKey>),                    \
 		"queryUnstablePerfectHash must be implemented and return u64 or Bit256"                                                          \

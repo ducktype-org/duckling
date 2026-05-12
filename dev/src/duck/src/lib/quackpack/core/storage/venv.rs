@@ -62,8 +62,8 @@ use crate::quackpack::core::storage::freeze::{self, VenvFreeze};
 use crate::quackpack::core::storage::paths::Storage;
 use crate::quackpack::core::storage::venv_id::VenvId;
 use crate::util::hash;
-use crate::util::path_ops_ext::{MkdirOptions, PathOpsExt, ShouldBlock};
-use crate::{QuackError, QuackResult, QuackResultContext};
+use crate::util::path_ops_ext::{MkdirOptions, PathOpsExt};
+use crate::{DuckContext, QuackError, QuackResult, QuackResultContext};
 
 #[derive(Debug)]
 pub enum CorruptedVenvReason {
@@ -319,12 +319,19 @@ impl Venv {
     ///
     /// If neither the main nor backup file is valid, the environment directory is removed.
     #[tracing::instrument(skip_all)]
-    pub fn fix_and_load(storage: &Storage, venv_id: VenvId) -> QuackResult<Option<Self>> {
+    pub fn fix_and_load(
+        storage: &Storage,
+        venv_id: VenvId,
+        ctx: &DuckContext,
+    ) -> QuackResult<Option<Self>> {
         let _lock = storage
-            .data_lock(venv_id)
-            .lock(ShouldBlock::Yes)
+            .data_locks()
+            .open_exclusive(venv_id, ctx)
             .with_context(|| {
-                format!("failed to acquire an exclusive data lock for venv `{venv_id}`")
+                format!(
+                    "failed to acquire an exclusive data lock for venv `{}`",
+                    venv_id
+                )
             })?;
         Self::fix_and_load_with_lock_held(storage, venv_id)
     }
@@ -397,7 +404,7 @@ impl Venv {
         // both files are not valid, so the venv does not exist,
         // put it in the canonical form by deleting its directory
         storage.venv_dir(venv_id).rmtree()?;
-        storage.venvs_base_dir().try_fsync_dir()?;
+        storage.venvs_root_dir().try_fsync_dir()?;
         Ok(None)
     }
 
@@ -406,10 +413,10 @@ impl Venv {
     /// Assumes that the current `metadata` file is valid. This is typically ensured
     /// by calling [`fix_and_load`](Self::fix_and_load) before.
     #[tracing::instrument(skip_all)]
-    pub fn save_to(&self, storage: &Storage) -> QuackResult<()> {
+    pub fn save_to(&self, storage: &Storage, ctx: &DuckContext) -> QuackResult<()> {
         let _lock = storage
-            .data_lock(self.id)
-            .lock(ShouldBlock::Yes)
+            .data_locks()
+            .open_exclusive(self.id, ctx)
             .with_context(|| {
                 format!(
                     "failed to acquire an exclusive data lock for venv `{}`",

@@ -246,6 +246,30 @@ namespace concurrent {
 		}
 
 		/**
+		 * Calls f with reference to the value associated with the key.
+		 * Panics if the key does not exist.
+		 */
+		template<typename K = KEY_T, typename Func>
+		void callOn(const K& key, Func&& f) RELEASE_NOEXCEPT {
+			WithShardLock lock(*this, keyToShard(key));
+
+			auto data = shards[lock.shard_index].atMaybe(key);
+			std::forward<Func>(f)(Ref<DATA_T>(data.value()));
+		}
+
+		/**
+		 * Calls f with const reference to the value associated with the key.
+		 * Panics if the key does not exist.
+		 */
+		template<typename K = KEY_T, typename Func>
+		void callOn(const K& key, Func&& f) const RELEASE_NOEXCEPT {
+			WithShardLock lock(*this, keyToShard(key));
+
+			auto data = shards[lock.shard_index].atMaybe(key);
+			std::forward<Func>(f)(CRef<DATA_T>(data.value()));
+		}
+
+		/**
 		 * Atomically retrieves a copy of the value associated with the given key.
 		 */
 		[[nodiscard]]

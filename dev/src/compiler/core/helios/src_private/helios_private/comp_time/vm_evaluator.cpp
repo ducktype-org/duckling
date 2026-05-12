@@ -163,11 +163,14 @@ namespace {
 			return CompileTimeValue{ *meta_ptr };
 		}
 		default: {
-			throw base::NotYetImplemented{ base::strConcat(
-				"VMValue to CTV conversion for type: ",
-				base::enumToStr(kind),
-				" is not implemented yet."
-			) };
+			return std::unexpected(VmEvaluationError(
+				VmEvaluationError::Kind::ReturnConversionFailed,
+				base::strConcat(
+					"VMValue to CTV conversion for type: ",
+					base::enumToStr(kind),
+					" is not implemented yet."
+				)
+			));
 		}
 		}
 	}

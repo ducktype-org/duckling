@@ -21,9 +21,18 @@ namespace compiler::driver {
 			// options mapping to logger categories:
 			std::vector<std::string> dev_log_categories;
 			bool                     immediate_print_diagnostics = true;
-			// options mapping to driver module flags:
-			bool dump_llvm_ir  = false;
-			bool dump_llvm_asm = false;
+
+			// Debug dumping to file options
+			bool dump_llvm = false;
+			bool dump_asm  = false;
+			bool dump_lir  = false;
+			bool dump_mir  = false;
+			bool dump_hir  = false;
+
+			// Debug printing to stdout options
+			bool print_lir = false;
+			bool print_mir = false;
+			bool print_hir = false;
 		};
 
 		/**

@@ -7,6 +7,8 @@
 #include <base/collections/maps.hpp>
 #include <base/pointers/box.hpp>
 
+#include <mutex>
+
 namespace dia_int {
 
 	/**

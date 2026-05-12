@@ -1,8 +1,6 @@
-use std::{
-    ffi::OsString,
-    path::Path,
-    process::{Command, ExitStatus},
-};
+use std::ffi::OsString;
+use std::path::Path;
+use std::process::{Command, ExitStatus};
 
 use crate::{QuackResult, QuackResultContext};
 

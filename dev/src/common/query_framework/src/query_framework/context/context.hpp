@@ -12,6 +12,7 @@
 
 #include <base/extend_cpp/defer.hpp>
 
+#include <query_framework/internal/cycle_handling/cycle_exception.hpp>
 #include <query_framework/internal/query_graph/node_id.hpp>
 #include <query_framework/internal/query_graph/node_making.hpp>  // IWYU pragma: export
 #include <query_framework/internal/query_graph/query_state.hpp>
@@ -49,6 +50,20 @@ namespace query {
 		internal::NodeID my_node;
 		bool             active = true;
 
+		/**
+		 * A flag indicating that the query node associated with this context is part of a cycle in
+		 * the query graph. This is set by the cycle detection logic in QueryGraphHandler when a
+		 * cycle is detected, and can be used by query implementations to react to cycles if needed.
+		 *
+		 * @note This has to be atomic, as multiple workers can catch the cycle at the same time,
+		 * and write to it concurrently.
+		 *
+		 * @important when setting this flag we must use memory order (at least) acquire-release
+		 * to ensure that any removal of edges from the cycle that happens after the cycle
+		 * detection, is only visible after all nodes on the cycle are marked as cyclic.
+		 */
+		std::atomic<bool> is_cyclic_node = false;
+
 		Context(internal::NodeID my_node): my_node(my_node) {}
 		friend struct query::internal::ContextAccess;
 
@@ -74,6 +89,11 @@ namespace query {
 			internal::NodeID callee;
 			bool             enable_active_graph_operations;
 
+			/**
+			 * Helper method used to deduplicate logic related to
+			 * active graph operations in the destructor.
+			 */
+			void deinitActiveGraph() { main_query_state.getActiveGraph()->removeEdge(caller); }
 
 		public:
 			QueryGraphHandler(
@@ -102,10 +122,18 @@ namespace query {
 					main_query_state.getActiveGraph()->setEdge(caller, callee);
 					auto maybe_cycle = main_query_state.getActiveGraph()->cycleCheck(callee);
 
-					if (maybe_cycle.has_value()) [[unlikely]] {
-						// we hit a cycle!
-						// for now just panic
-						// @TODO: #1888 change that
+					if (maybe_cycle.has_value()) {
+						// We hit a cycle!
+
+						for (auto node_info: maybe_cycle.value().cycle_nodes) {
+							// This is a critical part of the cycle handling.
+							// We mark all nodes on the cycle as cyclic, so that query
+							// implementations can react to that if needed.
+							node_info.node_context_ref->is_cyclic_node = true;
+						}
+
+						// Log cyclic diagnostic with cycle information.
+						// @TODO: #2615 move and improve this diagnostic.
 
 						this_context.logInt(makeBox<dia_int::PlaceholderError>(
 							base::strConcat(
@@ -119,12 +147,12 @@ namespace query {
 								[&maybe_cycle]() -> std::string {
 									std::string result;
 									auto        cycle = maybe_cycle.value();
-									for (auto node_id: cycle.cycle_nodes) {
+									for (auto node_info: cycle.cycle_nodes) {
 										result += "  - Query node ";
 										result += base::strConcat(
-											node_id.q_id.asInt(),
+											node_info.node_id.q_id.getData().name,
 											".",
-											node_id.hash.val.toStringHex(),
+											node_info.node_id.hash.val.toStringHex(),
 											"\n"
 										);
 									}
@@ -132,14 +160,14 @@ namespace query {
 								}()
 							)
 						));
-						throw "aaaa";
-						// CORE_ASSERT(
-						// 	false,
-						// 	"Query cycle detected involving query node:",
-						// 	caller.q_id.asInt(),
-						// 	".",
-						// 	caller.hash.val.toStringHex()
-						// );
+
+						// We have to repeat destructor logic here, since it will not be called
+						// after a throw here.
+						deinitActiveGraph();
+
+						// Interrupt the query execution (i.e. provide function) by throwing the
+						// cycle exception.
+						throw internal::QueryCycleException();
 					}
 				}
 			}
@@ -149,7 +177,7 @@ namespace query {
 					// We remove the edge after the query call is done.
 					// This is because active graph only tracks currently active queries and
 					// dependencies.
-					main_query_state.getActiveGraph()->removeEdge(caller);
+					deinitActiveGraph();
 				}
 			}
 		};
@@ -177,20 +205,30 @@ namespace query {
 
 			internal::NodeID dep_id = internal::makeNodeID<OthQuery>(key);
 
-			this->active = false;
-			defer({ this->active = true; });
-
 			if constexpr (OthQuery::QUERY_DATA.isInputQuery()) {
 				QueryGraphHandler graph_handler(*this, my_node, dep_id, false);
+				this->active = false;
+				defer({ this->active = true; });
+
 				return OthQuery::internal_query(key);
 			} else {
 				QueryGraphHandler graph_handler(*this, my_node, dep_id, true);
+				this->active = false;
+				defer({ this->active = true; });
 
 				// note that this will block, until the task is completed
 				main_query_state.getTaskPool()->query(internal::Task{
 					dep_id, [key](concurrent::worker::WRef) { OthQuery::internal_query(key); } });
 
-				return OthQuery::internal_load(dep_id.hash.val);
+
+				// We would like to throw here, "after the return",
+				// to avoid copy, but that would require throwing in a destructor.
+				// For now we just do this. It should not be a problem since in practice most query
+				// results are trivially copyable anyway, and the compiler should generally use here
+				// copy-elision in non-trivial cases, so it should not be a problem.
+				auto result = OthQuery::internal_load(dep_id.hash.val);
+				if (is_cyclic_node) throw internal::QueryCycleException();
+				return result;
 			}
 		}
 
@@ -241,7 +279,9 @@ namespace query {
 			// note that this will block, until the task is completed
 			handle.await();
 
-			return OthQuery::internal_load(handle.getID().hash.val);
+			auto result = OthQuery::internal_load(handle.getID().hash.val);
+			if (is_cyclic_node) throw internal::QueryCycleException();
+			return result;
 		}
 
 		/**
