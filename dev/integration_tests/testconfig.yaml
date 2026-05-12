@@ -6,6 +6,7 @@ timeout_jit: 10
 timeout_default: 1
 # If JIT is enabled then set timeout to 10s
 TimeOut: "$([ \"$(@{is_jit_enabled})\" = \"ON\" ] && echo @{timeout_jit} || echo @{timeout_default})"
+PreNode: "echo $([ \"$(@{is_jit_enabled})\" = \"ON\" ] && echo @{timeout_jit} || echo @{timeout_default})"
 
 SubDirs:
     - compiler

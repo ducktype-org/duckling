@@ -219,26 +219,40 @@ jobs:
       - name: Check should enable JIT
         id: check-jit
         run: |
-          echo jit-enabled=$( [ "${{ matrix.build-type }}" = "DevOpt" ] &&
+          echo jit-flag=$( [ "${{ matrix.build-type }}" = "DevOpt" ] &&
                               [ "${{ matrix.compiler.name }}" = "clang" ] &&
-                               echo "TRUE" || echo "FALSE" ) >> $GITHUB_OUTPUT
+                               echo "--enable-jit" || echo "--no-enable-jit" ) >> $GITHUB_OUTPUT
 
+      # Configure CMake. Using toolbox instead of direct command, because it
+      # also enables CMake File API, which is necessary for integration tests.
+      # It also allows us to omit specifying all LLVM tools for JIT.
       - name: Configure CMake
         working-directory: ${{ env.WORKSPACE }}
         run: |
-          cmake \
-              -B ${{ env.BUILD_DIR }} \
-              -G ${{ env.BUILD_SYSTEM }} \
-              -D CMAKE_CXX_COMPILER=${{ matrix.compiler.cxx }} \
-              -D CMAKE_C_COMPILER=${{ matrix.compiler.cc }} \
-              -D BUILD_DOCS=OFF \
-              -D CMAKE_BUILD_TYPE=${{ matrix.build-type }} \
-              -D USE_CCACHE=ON \
-              -D JIT_ENABLED=${{ steps.check-jit.outputs.jit-enabled }} \
-              -D STRIP_SYMBOL_INFORMATION=ON \
-              -D LLVM_OPT=opt-19 -D LLVM_LINK=llvm-link-19 -D LLVM_NM=llvm-nm-19 -D LLVM_CXXFILT=llvm-cxxfilt-19 -D LLVM_EXTRACT=llvm-extract-19 \
-              ${{ matrix.compiler.name == 'gcc' && format('-D CMAKE_LINKER_TYPE={0}', matrix.compiler.linker) || '' }} \
-              ${{ steps.cmake-flags.outputs.flags }}
+          ./toolbox.py setup-build \
+            -b ${{ env.BUILD_DIR }} \
+            -s ${{ env.BUILD_SYSTEM }} \
+            -c ${{ matrix.compiler.cc }} \
+            -x ${{ matrix.compiler.cxx }} \
+            -t ${{ matrix.build-type }} \
+            ${{ steps.check-jit.outputs.jit-flag }} \
+            --ccache \
+            --strip-symbol-information \
+
+        # run: |
+        #   cmake \
+        #       -B ${{ env.BUILD_DIR }} \
+        #       -G ${{ env.BUILD_SYSTEM }} \
+        #       -D CMAKE_CXX_COMPILER=${{ matrix.compiler.cxx }} \
+        #       -D CMAKE_C_COMPILER=${{ matrix.compiler.cc }} \
+        #       -D BUILD_DOCS=OFF \
+        #       -D CMAKE_BUILD_TYPE=${{ matrix.build-type }} \
+        #       -D USE_CCACHE=ON \
+        #       -D JIT_ENABLED=${{ steps.check-jit.outputs.jit-enabled }} \
+        #       -D STRIP_SYMBOL_INFORMATION=ON \
+        #       -D LLVM_OPT=opt-19 -D LLVM_LINK=llvm-link-19 -D LLVM_NM=llvm-nm-19 -D LLVM_CXXFILT=llvm-cxxfilt-19 -D LLVM_EXTRACT=llvm-extract-19 \
+        #       ${{ matrix.compiler.name == 'gcc' && format('-D CMAKE_LINKER_TYPE={0}', matrix.compiler.linker) || '' }} \
+        #       ${{ steps.cmake-flags.outputs.flags }}
 
       # Build all tests.
       # We additionally build coverage targets in case of coverage enabled,

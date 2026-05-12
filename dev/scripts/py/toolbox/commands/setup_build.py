@@ -45,11 +45,11 @@ def configure_presets(ctx, param, value):
         }
     else:
         raise ValueError(f"Unknown preset: {value}")
-    
+
     ctx.default_map = preset_map
 
 @command()
-@option( 
+@option(
     # The presets logic is implemented based on an article you can find here: https://jwodder.github.io/kbits/posts/click-config/
     # Note: Presets should correctly override default values provided by our custom option classes (set in cls parameters),
     # but it's best to test it per-case, since Python allows to do quite about anything, and there might be some edge cases.
@@ -81,7 +81,7 @@ def configure_presets(ctx, param, value):
     ),
 )
 @option(
-    "--enable-jit",
+    "--enable-jit/--no-enable-jit",
     prompt="Enable JIT",
     help="Whether or not to enable JIT compilation.",
     type=bool,
