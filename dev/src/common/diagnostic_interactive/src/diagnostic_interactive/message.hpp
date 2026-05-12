@@ -38,7 +38,7 @@ namespace dia_int {
 		Argument(std::string name): name(std::move(name)) {}
 
 		/**
-		 * @warning This operation can change the DiagnosticBase - for example add new additional
+		 * @warning This operation can change the DiagnosticBase - for example add new attached
 		 * messages or explore links.
 		 */
 		virtual Box<dia_args::Component> getValue(MessageBase&) = 0;
@@ -130,11 +130,16 @@ namespace dia_int {
 			}
 		};
 
+		/**
+		 * @brief Function to get the parent position of the position inside the macro expansion.
+		 * If the position is not inside the macro expansion, returns nullopt.
+		 */
 		static base::Optional<StablePosition> getMacroLocationSource(dia::SourcePosition);
 
-		static base::Optional<StablePosition> getMacroLocationSource(dia_int::StablePosition pos) {
-			return getMacroLocationSource(pos.getActiveSourcePositionIllegalAccess());
-		}
+		/**
+		 * @brief Same as getMacroLocationSource but for StablePosition.
+		 */
+		static base::Optional<StablePosition> getMacroLocationSource(dia_int::StablePosition pos);
 
 	private:
 		FileLocation location;

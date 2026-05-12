@@ -3,8 +3,8 @@
 
 #include <base/collections/maps.hpp>
 
-#include "diagnostic/location.hpp"
-#include "diagnostic/location_types.hpp"
+#include <diagnostic/location.hpp>
+#include <diagnostic/location_types.hpp>
 #include <diagnostic/source_position.hpp>
 
 #include <algorithm>
@@ -53,12 +53,25 @@ namespace dia_int {
 		return {};
 	}
 
+	base::Optional<StablePosition> CodeLocationArgument::getMacroLocationSource(
+		dia_int::StablePosition pos
+	) {
+		return getMacroLocationSource(pos.getActiveSourcePositionIllegalAccess());
+	}
+
 	namespace {
+		/**
+		 * @brief A helper to get the macro-parent chain for a given position.
+		 * The last element in a chain is not a position inside the macro expansion.
+		 */
 		std::vector<StablePosition> getExpandedFromChain(const StablePosition& start_position) {
 			std::vector<StablePosition>    result{};
 			base::Optional<StablePosition> expand_pos = start_position;
 			while (expand_pos) {
 				result.push_back(*expand_pos);
+				// Here we assume that the order of the macro expanded from path is stable
+				// for the same PST and that if it will change, the node that created the error
+				// we also be invalidated.
 				expand_pos = CodeLocationArgument::getMacroLocationSource(
 					result.back().getActiveSourcePositionIllegalAccess()
 				);
@@ -76,8 +89,8 @@ namespace dia_int {
 		// Macro handling
 		if (expand_pos) {
 			expanded_from_position_chain = getExpandedFromChain(*expand_pos);
-			// If the position is being inside the macro expanded code, we want to point to the
-			// "expand" node instead;
+			// If the position is being inside the macro expanded code, we want to print the
+			// position of the "expand" node instead;
 			location = FileLocation::fromStablePosition(expanded_from_position_chain.back());
 		}
 	}
@@ -90,16 +103,12 @@ namespace dia_int {
 		base::Optional<StablePosition> expand_pos = getMacroLocationSource(position);
 		if (expand_pos) {
 			expanded_from_position_chain = getExpandedFromChain(*expand_pos);
-			// If the position is being inside the macro expanded code, we want to point to the
-			// "expand" node instead;
+			// If the position is being inside the macro expanded code, we want to print the
+			// position of the "expand" node instead;
 			location = FileLocation::fromStablePosition(expanded_from_position_chain.back());
 		}
 	}
 
-	/**
-	 * @brief A Placeholder message with an optional code snippet and optional description and
-	 * pointer message.
-	 */
 	class ExpandedFromNote final: public MessageWithCodeFragmentAndCause {
 		Metadata getMetadata() const final {
 			return { .template_type = "message",
@@ -125,6 +134,9 @@ namespace dia_int {
 		}
 
 		if (expanded_from_position_chain.size() > 0) {
+			// We attach the "code expanded from here" note only for the first position in the
+			// chain, because the other position will be printed in the "code expanded from here"
+			// note of the previous position.
 			diag.addAttachedMessage(
 				base::makeBox<ExpandedFromNote>(expanded_from_position_chain.front())
 			);
@@ -312,15 +324,7 @@ namespace dia_int {
 		msg.metadata = getMetadata();
 
 		// Adding all arguments
-		usize i    = 0;
-		usize size = arguments.size();
-		while (i < size) {
-			auto& arg = arguments[i];
-			msg.arguments.put(arg->getName(), arg->getValue(*this));
-			i++;
-			size = arguments.size();  // In case new arguments were added during getValue
-		}
-
+		for (const auto& arg: arguments) msg.arguments.put(arg->getName(), arg->getValue(*this));
 		// Add all explore_links
 		for (const auto& link: explore_links) msg.explore_links.push_back(link.getValue(*this));
 
