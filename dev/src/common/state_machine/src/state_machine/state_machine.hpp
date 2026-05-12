@@ -124,8 +124,8 @@ namespace state_machine {
 	 * @tparam Events Variant of event alternatives.
 	 * @tparam ErrorT Error type used by guards and actions.
 	 */
-	template<typename States, typename Events, typename ErrorT = std::string>
-	requires base::IsVariant<States> && base::IsVariant<Events> class StateMachineDefinition {
+	template<base::IsVariant States, base::IsVariant Events, typename ErrorT = std::string>
+	class StateMachineDefinition {
 	public:
 		friend class StateMachine<States, Events, ErrorT>;
 		using ActionResultT       = std::expected<States, ErrorT>;
