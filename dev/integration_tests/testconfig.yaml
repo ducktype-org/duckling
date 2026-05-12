@@ -3,9 +3,9 @@ dvm_path: "@{build_dir}/bin/VM"
 
 is_jit_enabled: "cmake -L -N @{build_dir} | grep JIT_ENABLED | cut -d \"=\" -f 2"
 timeout_jit: 10
-timeout_no_jit: 1
-# If JIT is enabled then set timeout to 7s
-TimeOut: "$([ \"$(@{is_jit_enabled})\" = \"ON\" ] && echo @{timeout_jit} || echo @{timeout_no_jit})"
+timeout_default: 1
+# If JIT is enabled then set timeout to 10s
+TimeOut: "$([ \"$(@{is_jit_enabled})\" = \"ON\" ] && echo @{timeout_jit} || echo @{timeout_default})"
 
 SubDirs:
     - compiler
