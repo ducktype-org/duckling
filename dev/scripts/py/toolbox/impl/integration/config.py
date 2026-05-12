@@ -157,8 +157,7 @@ def config_find_and_eval(config: dict, key: str, default=None) -> Optional[str]:
     its expression.
     """
     value = config_find_value(config, key, default)
-    if value:
-        assert type(value) is str, "Cannot evaluate non-str."
+    if value and type(value) is str:
         return config_eval_variables(config, value)
     return value
 
