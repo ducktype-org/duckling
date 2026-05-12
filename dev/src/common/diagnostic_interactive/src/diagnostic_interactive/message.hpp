@@ -110,14 +110,14 @@ namespace dia_int {
 
 
 			/**
-			 * @brief Simple, direct conversion from StablePosition to FileLocation, does not take
-			 * into account the expansion of
+			 * @brief Simple, direct conversion from StablePosition to FileLocation
+			 * (does not take into account the macro parent chain).
 			 */
 			static FileLocation fromSourcePosition(const dia::SourcePosition& pos);
 
 			/**
-			 * @brief Simple, direct conversion from StablePosition to FileLocation, does not take
-			 * into account the expansion of
+			 * @brief Simple, direct conversion from StablePosition to FileLocation
+			 * (does not take into account the macro parent chain).
 			 */
 			static FileLocation fromStablePosition(const StablePosition& pos);
 
@@ -145,8 +145,9 @@ namespace dia_int {
 		FileLocation location;
 
 		/**
-		 * If this location is the location
-		 *
+		 * If this location is the macro type location,
+		 * this chain contains the positions of the macro expansions from the most inner to the
+		 * most outer.
 		 */
 		std::vector<StablePosition> expanded_from_position_chain;
 

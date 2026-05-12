@@ -85,7 +85,7 @@ private:
 		size_t      current_pos = 0;
 		std::string logged_str  = logged_messages.str();
 		for (const auto& phrase: present_phrases) {
-			size_t found_pos = logged_str.find(phrase.data(), current_pos);
+			size_t found_pos = logged_str.find(phrase, current_pos);
 			assertTrue(
 				found_pos != std::string::npos,
 				"Expected logged messages to contain phrase in order: " + std::string(phrase)

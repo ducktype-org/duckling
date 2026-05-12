@@ -330,11 +330,14 @@ namespace dia_int {
 
 		msg.attached_messages.reserve(this->attached_messages.size());
 
-		std::ranges::sort(this->attached_messages, [&](const std::string& a, const std::string& b) {
-			auto& msg_a = this->linked_messages.at(a);
-			auto& msg_b = this->linked_messages.at(b);
-			return msg_a->getPriority() > msg_b->getPriority();
-		});
+		std::ranges::stable_sort(
+			this->attached_messages,
+			[&](const std::string& a, const std::string& b) {
+				auto& msg_a = this->linked_messages.at(a);
+				auto& msg_b = this->linked_messages.at(b);
+				return msg_a->getPriority() > msg_b->getPriority();
+			}
+		);
 
 		for (const auto& attached_msg: attached_messages)
 			msg.attached_messages.push_back(attached_msg);
