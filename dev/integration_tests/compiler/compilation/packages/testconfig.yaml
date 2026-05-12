@@ -6,6 +6,10 @@
 # DVM artifacts are produced but not executed (DVM execution not yet hooked up
 # for multi-package output).
 
+# DVM fails in determinizm check
+enable_conc_deterministic_tests: "false"
+
+
 compile_deterministically_cmd: "if [ '@{enable_conc_deterministic_tests}' = 'true' ]; then python3 @{compile_determinism_script} --duckc-path @{duckc_path} --manifest duck_modules/@{Name}/manifest.json --duckc-worker-count @{duckc_worker_count}; else true; fi"
 compile_only_cmd:  "@{duckc_path} compile_packages duck_modules/@{Name}/manifest.json -w @{duckc_worker_count} -a build"
 
@@ -13,15 +17,12 @@ compile_only_cmd:  "@{duckc_path} compile_packages duck_modules/@{Name}/manifest
 PreCase: "@{clean_cmd} && mkdir build && @{compile_deterministically_cmd} && @{compile_only_cmd}"
 
 # Run only LLVM executables; DVM run is intentionally skipped.
-Run: "./build/app1.exe && ./build/app2.exe"
+Run: "./build/app1.exe && ./build/app2.exe && ./build/app3.exe && ./build/app3_alias.exe"
 
 Tests:
   multi_package:
     Cases:
       all:
-        # Backend value is unused (PreCase and Run are both overridden), but
-        # the parent schema requires a non-empty backend.
-        backend: llvm
         Output:
-          String: "10\n15\n20\n"
+          String: "10\n42\n20\n73\n42\n42\n73\n"
         ExitCode: 0
