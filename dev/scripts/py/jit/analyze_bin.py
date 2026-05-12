@@ -2,6 +2,10 @@
 
 import click
 import subprocess
+import sys
+from pathlib import Path
+
+from llvm_tools import llvm_tools_version_options
 
 def run_llvm(tool: str, args) -> str:
     result = subprocess.run([tool] + args, 
@@ -28,11 +32,6 @@ def generate_stencils(llvm_nm: str, binary: str, output_file):
 
 @click.command()
 @click.option(
-    '--llvm-nm',
-    type=str,
-    default="llvm-nm-19"
-)
-@click.option(
     '--output', 
     required=True, 
     type=click.File('w'), 
@@ -42,7 +41,8 @@ def generate_stencils(llvm_nm: str, binary: str, output_file):
     'binary', 
     type=click.Path(exists=True)
 )
-def main(llvm_nm, output, binary):
+@llvm_tools_version_options
+def main(llvm_nm, output, binary, **kwargs):
     generate_stencils(llvm_nm, binary, output)
 
 if __name__ == "__main__":
