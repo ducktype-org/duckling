@@ -226,13 +226,13 @@ namespace lsp {
 				CORE_ASSERT(
 					module_ref->hasMainSourceFile(),
 					"Modules should have main source files, since module_id is obtained from "
-				    "source file"
+					"source file"
 				);
 				CORE_ASSERT(
 					module_ref->getMainSourceFile().illegalAccess().getID()
 						== source_file->getFileID(),
 					"Module's main source file should be the same as the source file we are trying "
-				    "to remove"
+					"to remove"
 				);
 
 				removeModuleAndUnregisterPackage(module_id);
