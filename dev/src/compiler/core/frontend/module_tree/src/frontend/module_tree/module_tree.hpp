@@ -241,7 +241,6 @@ namespace compiler::frontend {
 
 		base::Optional<base::Ref<ModuleTree>> m_parent;
 
-		// PR: no optional?
 		base::Optional<base::Ref<SourceFile>>             m_main_source_file;
 		base::HashMap<base::StrID, base::Ref<ModuleTree>> m_submodules;
 		base::HashMap<base::StrID, std::vector<fs::File>>
