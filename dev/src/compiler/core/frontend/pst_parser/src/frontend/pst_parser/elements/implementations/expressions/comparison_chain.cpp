@@ -22,6 +22,19 @@ namespace pst::expr {
 		i64 fwd = skipToOp(state, 0);
 		if (fwd == length) return Lower::parse(state);
 
+		// A chain with only one comparison operator should be returned as a binary operator
+		// because the generated code is much simpler that way.
+		if (skipToOp(state, fwd + 1) == length) {
+			auto op  = state[fwd].asBinaryOperator().value();
+			auto out = makeBox<GeneralBinary>(state, op);
+
+			PARSE().autoFallbackLen(fwd).with(&out->left, Lower::parse);
+			PARSE().one(op);
+			PARSE().autoFallbackLen(length - fwd - 1).with(&out->right, Lower::parse);
+
+			PST_RETURN out;
+		}
+
 		auto out = makeBox<ComparisonChain>(state);
 
 		PST_WHILE(fwd < length) {

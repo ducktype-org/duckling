@@ -164,7 +164,7 @@ namespace query::internal {
 
 		/**
 		 * Graph that tracks the reversed relation to `node_deps`.
-		 * Only used if @p track_reverse_graph is true.
+		 * Only used if @p getTrackReverseGraph() is true.
 		 *
 		 * Currently only used by the Language Server.
 		 *
