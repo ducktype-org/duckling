@@ -8,15 +8,15 @@ use git2::Repository;
 use crate::duck::util::terminal::Terminal;
 use crate::quackpack::core::{PackageLoader, VenvConfig, Version};
 use crate::util::path_ops_ext::{MkdirOptions, PathOpsExt};
-use crate::{DuckContext, QuackError, QuackResult, QuackResultContext, StrId, qp_bail, qp_err};
+use crate::{DuckContext, QuackError, QuackResult, QuackResultContext, qp_bail, qp_err};
 
 /// Options for initializing a new project.
-pub struct InitOptions<'duck> {
+pub struct InitOptions<'duck, 'a> {
     pub ctx: &'duck DuckContext,
     /// Root of the project.
     pub at: PathBuf,
     /// Name of the project.
-    pub name: StrId,
+    pub explicit_name: Option<&'a str>,
     /// Initialize a venv instead of a project (do not create the `src` folder).
     pub as_venv: bool,
     /// Make the project expose freezefile.
@@ -46,8 +46,17 @@ const DEFAULT_GITIGNORE: &str = "\
 ";
 
 /// Initialize a new project with the given options.
-pub fn init(opts: InitOptions<'_>) -> QuackResult<()> {
-    create_manifest_file(opts.ctx, &opts.at, opts.name, opts.full)?;
+pub fn init(opts: InitOptions<'_, '_>) -> QuackResult<()> {
+    let name = match opts.explicit_name {
+        Some(explicit) => explicit.to_owned(),
+        None => opts
+            .at
+            .file_name()
+            .expect("file without a filename")
+            .to_string_lossy()
+            .into_owned(),
+    };
+    create_manifest_file(opts.ctx, &opts.at, &name, opts.full)?;
     create_venv_config_file(
         opts.ctx,
         &opts.at,
@@ -63,7 +72,7 @@ pub fn init(opts: InitOptions<'_>) -> QuackResult<()> {
     }
     opts.ctx.console().info(format!(
         "successfully created a new project `{}` at `{}`",
-        opts.name,
+        name,
         opts.at.display()
     ))?;
     Ok(())
@@ -73,14 +82,14 @@ pub fn init(opts: InitOptions<'_>) -> QuackResult<()> {
 fn create_manifest_file(
     ctx: &DuckContext,
     root_path: &Path,
-    name: StrId,
+    name: &str,
     full: bool,
 ) -> QuackResult<()> {
     let manifest_path = root_path.join(PackageLoader::MANIFEST_NAME);
     let manifest_contents = if full {
         manifest_with_user_prompts(ctx.console(), name)?
     } else {
-        make_default_manifest_for_name(&name)
+        make_default_manifest_for_name(name)
     };
     if let Some(parent) = manifest_path.parent() {
         parent.mkdir(MkdirOptions::WithParents)?;
@@ -113,11 +122,11 @@ metadata:
 }
 
 /// Create custom manifest from user prompts.
-fn manifest_with_user_prompts(terminal: &Terminal, name: StrId) -> QuackResult<String> {
+fn manifest_with_user_prompts(terminal: &Terminal, name: &str) -> QuackResult<String> {
     if terminal.verbosity().is_quiet() {
         qp_bail!("cannot create manifest from user input on quiet verbosity");
     }
-    let name = terminal.prompt_once_with_default("Enter the project's name", name.into())?;
+    let name = terminal.prompt_once_with_default("Enter the project's name", name.to_owned())?;
     let author = terminal.prompt_once("Enter the project's author")?;
     let version = terminal
         .prompt_until_valid_with_default("Enter the version of the project", Version::default());

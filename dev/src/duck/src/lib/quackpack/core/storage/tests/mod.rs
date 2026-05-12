@@ -214,7 +214,7 @@ fn create_mock_package<'duck>(
     let opts = InitOptions {
         ctx,
         at: root.to_path_buf(),
-        name: name.into(),
+        explicit_name: Some(name),
         as_venv: false,
         expose_freezefile: false,
         ephemeral: false,
@@ -243,7 +243,7 @@ fn create_mock_package_with_dependencies<'duck>(
     let opts = InitOptions {
         ctx,
         at: root.join("dep"),
-        name: "dep".into(),
+        explicit_name: Some("dep"),
         as_venv: false,
         expose_freezefile: false,
         ephemeral: false,
@@ -256,7 +256,7 @@ fn create_mock_package_with_dependencies<'duck>(
     let opts = InitOptions {
         ctx,
         at: root.join("root"),
-        name: name.into(),
+        explicit_name: Some(name),
         as_venv: false,
         expose_freezefile: false,
         ephemeral: false,
