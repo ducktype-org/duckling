@@ -50,8 +50,11 @@ namespace vm {
 	public:
 		VMValueRef(SafeVMProcess& process, const TypeCRef type, const Pointer pointed_data);
 
+		bool operator==(const VMValueRef&) const = default;
+
 		[[nodiscard]] base::CRef<code::valid_type::ValidType> getType() const;
 		[[nodiscard]] base::Optional<InterpretedDataVariant>  readData() const;
+		std::string                                           str();
 
 		template<class T>
 		requires std::is_trivially_copy_constructible_v<T> T readBytes() const {

@@ -21,6 +21,7 @@ public:
 		TESTER_ADD_TEST(getStatusBreakpoint);
 		TESTER_ADD_TEST(rerunTest);
 		TESTER_ADD_TEST(errorTest);
+		TESTER_ADD_TEST(memoryTest);
 	}
 
 private:
@@ -207,6 +208,30 @@ private:
 		}));
 		ASSERT_TRUE(std::holds_alternative<vm::api::Running>(debugger.getStatus()));
 		ASSERT_EQUAL_PRINT(expected_errors, error_counter.load());
+	}
+
+	void memoryTest() {
+		vm::debugger::Debugger debugger{ fs::File(path("breakpoint_all_types.dbc")) };
+		std::mutex             m;
+
+		std::condition_variable cv;
+
+		events::Listener<vm::api::ProcStatus> status_listener(
+			[&](const vm::api::ProcStatus& status) {
+				if (status.index() == altIndex(vm::api::Paused)) cv.notify_one();
+			}
+		);
+		debugger.attachOnVMChangesStatusListener(status_listener);
+		debugger.runMain();
+		std::unique_lock lk(m);
+		ASSERT_TRUE(cv.wait_for(lk, std::chrono::milliseconds(100), [&] {
+			return std::holds_alternative<vm::api::Paused>(debugger.getStatus());
+		}));
+
+		auto response = debugger.enumerateFrames();
+		ASSERT_EQUAL(response.size(), 9);
+		auto vars = debugger.dereferenceVariablesReference(1);
+		ASSERT_EQUAL(vars.size(), 1);
 	}
 };
 
