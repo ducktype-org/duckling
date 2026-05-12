@@ -14,7 +14,6 @@ Tests:
           String: "42\n25\n"
 
   using_previously_defined_objects:
-    Enabled: "true"
     folder: "class/using_previously_defined_objects"
     Cases:
       direct:
