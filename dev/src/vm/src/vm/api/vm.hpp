@@ -53,9 +53,7 @@ namespace vm::api {
 	 *
 	 * @return Nothing if the program was run successfully or an API error otherwise.
 	 */
-	std::expected<void, ApiError> run(
-		PID pid, const ProgramRunArguments& args = {}, ExecutionConfig config = {}
-	);
+	std::expected<void, ApiError> run(PID pid, const ProgramRunArguments& args = {});
 
 	/**
 	 * @brief Run a function with a given name on DVM.
@@ -64,10 +62,7 @@ namespace vm::api {
 	 * @return ThreadID if the function was run successfully or an API error otherwise.
 	 */
 	std::expected<ThreadID, ApiError> runFunction(
-		PID                         pid,
-		const std::string&          func_name,
-		const FunctionRunArguments& args   = {},
-		ExecutionConfig             config = {}
+		PID pid, const std::string& func_name, const FunctionRunArguments& args = {}
 	);
 
 	/**
@@ -76,10 +71,7 @@ namespace vm::api {
 	 * @return The return value of the function if it was ran successfully or an API error otherwise.
 	 */
 	std::expected<ExitValue, ApiError> runFunctionAwait(
-		PID                         pid,
-		const std::string&          func_name,
-		const FunctionRunArguments& args   = {},
-		ExecutionConfig             config = {}
+		PID pid, const std::string& func_name, const FunctionRunArguments& args = {}
 	);
 
 	/**
@@ -130,15 +122,15 @@ namespace vm::api {
 	 * @return Nothing if the program successfully resumed or an API error otherwise, in which case
 	 * the state is undefined.
 	 */
-	std::expected<void, ApiError> resume(PID pid, ThreadID thread_id, ExecutionConfig config = {});
-	std::expected<void, ApiError> resume(PID pid, ExecutionConfig config = {});
+	std::expected<void, ApiError> resume(PID pid, ThreadID thread_id);
+	std::expected<void, ApiError> resume(PID pid);
 
 	/**
 	 * @brief Perform one instruction of the program and pause.
 	 * @return Nothing if the program successfully stepped and paused or an API error otherwise, in
 	 * which case the state is undefined.
 	 */
-	std::expected<void, ApiError> step(PID pid, ExecutionConfig config = {});
+	std::expected<void, ApiError> step(PID pid);
 
 	/**
 	 * @brief Force the main execution thread of the given process to stop running and kill the
@@ -151,9 +143,7 @@ namespace vm::api {
 	/**
 	 * @brief Wait for breakpoint hit. Used by tests.
 	 */
-	std::expected<response::CodePosition, ApiError> waitForBreakpoint(
-		PID pid, ExecutionConfig config = {}
-	);
+	std::expected<response::CodePosition, ApiError> waitForBreakpoint(PID pid);
 
 	/**
 	 * @brief Get the code position of the next line of bytecode to be executed on the specified
