@@ -117,6 +117,10 @@ namespace vm {
 				return api::Response(api::response::Empty());
 			}
 
+			variant_case(api::request::SetExecutionConfig, config_request) {
+				return setExecutionConfig(config_request.config);
+			}
+
 			variant_default { return api::Response(api::response::Empty()); }
 		}
 
@@ -179,3 +183,4 @@ namespace vm {
 		return api::Response(api::response::Output{ content });
 	}
 }
+

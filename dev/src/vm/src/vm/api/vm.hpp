@@ -27,13 +27,19 @@ namespace vm::api {
 	std::expected<ProcStatus, ApiError> getExecutionStatus(PID pid);
 
 	/**
+	 * @brief Set the execution config of the VM.
+	 * @return Nothing if the config was set successfully or an API error otherwise.
+	 */
+	std::expected<void, ApiError> setExecutionConfig(PID pid, ExecutionConfig config);
+
+	/**
 	 * @brief Load the code from given files into a specified process on DVM.
 	 * @note This endpoint can be called multiple times and used to load code in separate requests.
 	 * @return Nothing if the code was loaded successfully or an API error otherwise (ex. syntax
 	 * errors, static verification errors, duplicate function errors).
 	 */
 	std::expected<void, ApiError> loadFiles(
-		PID pid, const std::vector<fs::File>& path, ExecutionConfig config = {}
+		PID pid, const std::vector<fs::File>& path
 	);
 
 	/**
@@ -43,7 +49,7 @@ namespace vm::api {
 	 * errors, static verification errors, duplicate function errors).
 	 */
 	std::expected<void, ApiError> loadCode(
-		PID pid, const code::CodeCollection& code, ExecutionConfig config = {}
+		PID pid, const code::CodeCollection& code
 	);
 
 	/**

@@ -230,6 +230,14 @@ namespace vm {
 		});
 	}
 
+	std::expected<api::Response, api::ApiError> SafeVMProcess::setExecutionConfig(
+		const api::ExecutionConfig& config
+	) {
+		std::shared_lock lock(rw_global);
+		this->execution_config = config;
+		return api::Response(api::response::Empty());
+	}
+
 	std::expected<api::Response, api::ApiError> SafeVMProcess::getNumberOfCurrentStackFrames(
 		api::ThreadID thread_id
 	) {

@@ -102,6 +102,10 @@ namespace vm::api {
 		struct AttachStatusListener {
 			Ref<events::Listener<ProcStatus>> listener;
 		};
+
+		struct SetExecutionConfig {
+			api::ExecutionConfig config;
+		};
 	}
 
 	using RequestVariant = std::variant<
@@ -128,12 +132,12 @@ namespace vm::api {
 		request::Detach,
 		request::ExitCodeRequest,
 		request::DeinitAndValidate,
-		request::AttachStatusListener>;
+		request::AttachStatusListener,
+		request::SetExecutionConfig>;
 
 	struct SupervisorRequest {
-		PID             pid;
-		RequestVariant  request;
-		ExecutionConfig config;
+		PID            pid;
+		RequestVariant request;
 	};
 
 }

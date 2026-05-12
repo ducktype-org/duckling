@@ -38,29 +38,29 @@ namespace vm::api {
 		    .and_then(mapOrWrongResponse<response::CodePosition>);
 	}
 
-	std::expected<void, ApiError> resume(PID pid, ThreadID thread_id, ExecutionConfig config) {
+	std::expected<void, ApiError> resume(PID pid, ThreadID thread_id) {
 		return Supervisor::get()
-		    .doRequest(SupervisorRequest(pid, request::Resume{ thread_id }, config))
+		    .doRequest(SupervisorRequest(pid, request::Resume{ thread_id }))
 		    .transform(ignoreResponse);
 	}
 
-	std::expected<void, ApiError> resume(PID pid, ExecutionConfig config) {
+	std::expected<void, ApiError> resume(PID pid) {
 		return Supervisor::get()
-		    .doRequest(SupervisorRequest(pid, request::Resume{ ThreadID{ 0 } }, config))
+		    .doRequest(SupervisorRequest(pid, request::Resume{ ThreadID{ 0 } }))
 		    .transform(ignoreResponse);
 	}
 
-	std::expected<void, ApiError> step(PID pid, ExecutionConfig config) {
+	std::expected<void, ApiError> step(PID pid) {
 		return Supervisor::get()
-		    .doRequest(SupervisorRequest(pid, request::Step{}, config))
+		    .doRequest(SupervisorRequest(pid, request::Step{}))
 		    .transform(ignoreResponse);
 	}
 
 	std::expected<response::CodePosition, ApiError> waitForBreakpoint(
-		PID pid, ExecutionConfig config
+		PID pid
 	) {
 		return Supervisor::get()
-		    .doRequest(SupervisorRequest(pid, request::WaitForBreakpoint{}, config))
+		    .doRequest(SupervisorRequest(pid, request::WaitForBreakpoint{}))
 		    .and_then(mapOrWrongResponse<response::CodePosition>);
 	}
 
@@ -71,38 +71,37 @@ namespace vm::api {
 	}
 
 	std::expected<void, ApiError> loadFiles(
-		PID pid, const std::vector<fs::File>& paths, ExecutionConfig config
+		PID pid, const std::vector<fs::File>& paths
 	) {
 		return Supervisor::get()
-		    .doRequest(SupervisorRequest(pid, request::LoadFiles{ paths }, config))
+		    .doRequest(SupervisorRequest(pid, request::LoadFiles{ paths }))
 		    .transform(ignoreResponse);
 	}
 
 	std::expected<void, ApiError> loadCode(
-		PID pid, const code::CodeCollection& code, ExecutionConfig config
+		PID pid, const code::CodeCollection& code
 	) {
 		return Supervisor::get()
-		    .doRequest(SupervisorRequest(pid, request::LoadCode{ code }, config))
+		    .doRequest(SupervisorRequest(pid, request::LoadCode{ code }))
 		    .transform(ignoreResponse);
 	}
 
 	std::expected<void, ApiError> run(
-		PID pid, const std::vector<std::string>& args, ExecutionConfig config
+		PID pid, const std::vector<std::string>& args
 	) {
 		return Supervisor::get()
-		    .doRequest(SupervisorRequest(pid, request::Run{ args }, config))
+		    .doRequest(SupervisorRequest(pid, request::Run{ args }))
 		    .transform(ignoreResponse);
 	}
 
 	std::expected<ThreadID, ApiError> runFunction(
 		PID                         pid,
 		const std::string&          function_name,
-		const FunctionRunArguments& args,
-		ExecutionConfig             config
+		const FunctionRunArguments& args
 	) {
 		return Supervisor::get()
 		    .doRequest(SupervisorRequest(
-				pid, request::RunFunction{ .func_name = function_name, .func_args = args }, config
+				pid, request::RunFunction{ .func_name = function_name, .func_args = args }
 			))
 		    .and_then([](const Response& response) {
 				return mapOrWrongResponse<ThreadID>(response);
@@ -118,16 +117,20 @@ namespace vm::api {
 	std::expected<ExitValue, ApiError> runFunctionAwait(
 		PID                         pid,
 		const std::string&          function_name,
-		const FunctionRunArguments& args,
-		ExecutionConfig             config
+		const FunctionRunArguments& args
 	) {
 		return Supervisor::get()
 		    .doRequest(SupervisorRequest(
 				pid,
-				request::RunFunctionAwait{ .func_name = function_name, .func_args = args },
-				config
+				request::RunFunctionAwait{ .func_name = function_name, .func_args = args }
 			))
 		    .and_then(mapOrWrongResponse<ExitValue>);
+	}
+
+	std::expected<void, ApiError> setExecutionConfig(PID pid, ExecutionConfig config) {
+		return Supervisor::get()
+		    .doRequest(SupervisorRequest(pid, request::SetExecutionConfig{ config }))
+		    .transform(ignoreResponse);
 	}
 
 	std::expected<void, ApiError> join(PID pid) {
