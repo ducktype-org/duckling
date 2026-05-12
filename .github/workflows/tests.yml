@@ -207,6 +207,10 @@ jobs:
         id: ccache-main-rm
         run: rm -rf ${CCACHE_DIR}
 
+      - name: Initialize project
+        working-directory: ${{ env.WORKSPACE }}
+        run: ./toolbox.py init
+
       # Enables coverage only in case of Debug build.
       - name: Additional setup-build flags
         id: cmake-flags
