@@ -86,7 +86,7 @@ namespace compiler::backend_vm::internal {
 		 * @brief Retrieves or lazily creates the DVM place for the given LIR global.
 		 *
 		 * This lookup is not purely observational: it may insert and cache a placeholder entry
-		 * for the global and may lower/insert any dependent types required to represent it.
+		 * for the global. It is needed to reference globals from different modules.
 		 *
 		 * @note Returning a DVM place here does not necessarily mean that the corresponding
 		 * vm::code::GlobalData has already been lowered for that global name.
