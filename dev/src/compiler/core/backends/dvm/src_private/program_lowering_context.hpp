@@ -84,10 +84,8 @@ namespace compiler::backend_vm::internal {
 
 		/**
 		 * @brief Retrieves the DVM global variable corresponding to the given LIR global.
-		 * @note The LIR global must have been previously declared using insertLirGlobal,
-		 * panics otherwise.
 		 */
-		[[nodiscard]] const DVMPlace& getLirGlobal(CRef<lir::LIRGlobal> lir_global) const;
+		const DVMPlace& getLirGlobal(CRef<lir::LIRGlobal> lir_global);
 
 		/**
 		 * @brief Retrieves the extern C function with the given name.
