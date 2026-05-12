@@ -21,7 +21,7 @@ namespace pst::expr {
 		void     acceptExprVisitor(PstExprVisitor& visitor) const final;
 		HashAlg& addElementDataToStableHash(HashAlg&) const override;
 
-		AccessLocked<CodeBlock> getBlock() const { return block.give(); }
+		[[nodiscard]] AccessLocked<CodeBlock> getBlock() const { return block.give(); }
 
 		[[nodiscard]]
 		std::string elementType() const override {

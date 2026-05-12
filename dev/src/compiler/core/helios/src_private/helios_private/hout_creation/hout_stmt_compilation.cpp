@@ -199,6 +199,7 @@ namespace compiler::helios {
 				handleAssignmentExpr(assignment_opt.value());
 				return;
 			}
+			// as before, if we encounter an code block expression we want a block statement
 			if (auto block_opt = inner_expr.dynamicCast<pst::expr::BlockExpr>()) {
 				auto block_body = processBlock(ctx, block_opt.value()->getBlock(), return_type);
 				output(code::BlockStmt(code::pstOrigin(stmt), std::move(block_body)));
