@@ -19,9 +19,11 @@ LLVM_INCLUDE_BEGIN()
 LLVM_INCLUDE_END()
 
 struct LlvmData {
-	/// @brief Context of llvmInit.
-	/// @note We need to use ThreadSafeContext instead of LLVMContext to be able to use a single
-	/// shared context for the JIT instance.
+	/**
+	 * @brief Context of llvmInit.
+	 * @note We need to use ThreadSafeContext instead of LLVMContext to be able to use a single
+	 * shared context for the JIT instance.
+	 */
 	std::unique_ptr<llvm::orc::ThreadSafeContext> g_context;
 
 	/**
@@ -30,13 +32,19 @@ struct LlvmData {
 	 */
 	std::unique_ptr<llvm::Module> g_module;
 
-	/// @brief Active LLjit instance.
+	/**
+	 * @brief Active LLjit instance.
+	 */
 	std::unique_ptr<llvm::orc::LLJIT> lljit_instance;
 
-	/// @brief LLVM helper object used for errors.
+	/**
+	 * @brief LLVM helper object used for errors.
+	 */
 	llvm::ExitOnError exit_on_err;
 
-	/// @brief For each MicroOpcode stores the name of its corresponding llvm::Function*.
+	/**
+	 * @brief For each MicroOpcode stores the name of its corresponding llvm::Function*.
+	 */
 	std::unordered_map<vm::low::MicroOpcode, std::string> opcode_name_map;
 
 	struct LlvmTypes {
@@ -47,7 +55,9 @@ struct LlvmData {
 		Ref<llvm::FunctionType> opfun;
 	};
 
-	/// @brief pointers to LLVM types used in opcode function definitions.
+	/**
+	 * @brief pointers to LLVM types used in opcode function definitions.
+	 */
 	LlvmTypes types;
 
 	/**
