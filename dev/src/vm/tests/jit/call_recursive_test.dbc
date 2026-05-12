@@ -1,0 +1,82 @@
+function fibonacci{ i64, i64 }-> { i64 } {
+    cmpGt_p64_imm           arg0, 1;
+    jmpIf_label             continue;
+    mov_p64_p64             ret0, arg1;
+    add_p64_p64             ret0, arg0;
+    ret;
+    
+label continue;
+    init_pany_type          sub_res, i64;
+
+    init_pany_type          sub_arg0, i64;
+    mov_p64_p64             sub_arg0, arg0;
+    add_p64_imm             sub_arg0, -1;
+
+    init_pany_type          sub_arg1, i64;
+    mov_p64_p64             sub_arg1, arg1;
+    call_func               fibonacci;
+
+    mov_p64_p64             arg1, sub_res;
+    deinit;               # sub_res1
+
+    add_p64_imm             arg0, -2;
+    ret_tailcall_func       fibonacci;
+
+    init_pany_type          trol, i64;
+    mov_p64_imm             trol, 9;
+    output_p64              trol;
+    output_p64              trol;
+    output_p64              trol;
+    output_p64              trol;
+    output_p64              trol;
+    output_p64              trol;
+    output_p64              trol;
+    output_p64              trol;
+    output_p64              trol;
+    output_p64              trol;
+    ret;    
+}
+
+function main { i64, ptr_argv }-> { i64 } {
+    # ret0 -> main ret0
+    # arg0 -> argc
+    # arg1 -> *argv
+
+    # Read counter from STDIN
+    init_pany_type counter, i64;
+    input_p64 counter;
+
+# Loop until counter equals 0
+label loop_start;
+    
+    cmpEq_p64_imm counter, 0;
+    jmpIf_label loop_end;
+
+	init_pany_type 			fibo_ret, i64;
+    mov_p64_imm             fibo_ret, 0;
+
+    init_pany_type          fibo_arg0, i64;
+	mov_p64_p64             fibo_arg0, counter;
+
+
+	init_pany_type 			fibo_arg1, i64;
+    mov_p64_imm             fibo_arg1, 0;
+
+	call_func          		fibonacci;
+
+    output_p64              fibo_ret;
+    deinit;               # fibo_ret
+
+    add_p64_imm counter, -1;
+    jmp_label loop_start;
+
+label loop_end;
+    
+    # Return 0
+    mov_p64_imm ret0, 0;
+    
+    deinit; # counter
+    deinit; # *argv
+    deinit; # argc
+    ret;
+}

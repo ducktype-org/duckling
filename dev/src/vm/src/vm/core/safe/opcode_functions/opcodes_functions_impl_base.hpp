@@ -53,12 +53,13 @@
 #include <cmath>
 #include <limits>
 
-
+// jitable_interface.py depends on the instructions exact, fully-qualified names
 #ifdef DEBUG_OPCODES
 	#define OPCODE_NAME(name)                  op_debug_##name
 	#define FUNCTION_ARGS                      OPFUN_REF_ARGS
 	#define FUNCTION_CONT(step)                instr += step;
 	#define FUNCTION_CONT_CHECK_STRATEGY(step) instr += step;
+	#define OP_FUN                             vm::DebugOpFun
 #else
 	#define OPCODE_NAME(name)                  op_##name
 	#define FUNCTION_ARGS                      OPFUN_ARGS
@@ -309,7 +310,6 @@ namespace vm {
 		// restoring `instr` from frame.
 		FUNCTION_CONT_CHECK_STRATEGY(0);
 	}
-
 #ifdef ENABLE_JIT
 	RETURN_TYPE OpFuns::OPCODE_NAME(jit_call_entrypoint)(FUNCTION_ARGS) {
 		{
