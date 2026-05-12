@@ -36,7 +36,6 @@ PR_MATRIX: dict[str, list[Any]] = {
             "gcov": "gcov-14",
             "linker": "mold",
             "cache-prefix": "gcc-build",
-            "jit-enabled": "FALSE",
         }
     ],
 }
