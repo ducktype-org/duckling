@@ -337,7 +337,7 @@ private:
 		auto main_file = fs::FileManager::createRandomVirtualFile("fn main() {}");
 		cleanup_files.push_back(main_file);
 		module_builder->setMainSourceFile(main_file);
-		
+
 		auto module = module_builder->finalize();
 
 		auto file_id = module->getMainSourceFile().illegalAccess();
