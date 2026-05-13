@@ -27,7 +27,7 @@ namespace vm::api {
 	std::expected<ProcStatus, ApiError> getExecutionStatus(PID pid);
 
 	/**
-	 * @brief Set the execution config of the VM.
+	 * @brief Set the execution config of a VMProcess.
 	 * @return Nothing if the config was set successfully or an API error otherwise.
 	 */
 	std::expected<void, ApiError> setExecutionConfig(PID pid, ExecutionConfig config);

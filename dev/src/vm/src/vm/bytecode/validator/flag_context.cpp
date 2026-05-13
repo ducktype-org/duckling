@@ -2,6 +2,10 @@
 
 #include <vm/bytecode/validator/errors.hpp>
 
+#include <queue>
+#include <set>
+#include <vector>
+
 namespace vm::code {
 	std::set<base::StrID> getNewFunctionNames(const std::vector<Function>& new_functions) {
 		std::set<base::StrID> result;
@@ -143,7 +147,7 @@ namespace vm::code {
 					);
 			}
 			if (config.single_thread.copyValueOr(false)) {
-				if (flags.contains(InstructionFlagOptions::Mutlithread))
+				if (flags.contains(InstructionFlagOptions::Multithread))
 					throw ExecutionConfigViolationError(
 						new_func, "single_thread flag is set, but function uses multithreading"
 					);

@@ -13,7 +13,7 @@ MAKE_FLAG_TYPE(vm::code, InstructionFlagOptions, InstructionFlag,
 	GlobalWrite,
 	Call,
 	CallExternal,
-	Mutlithread,
+	Multithread,
 
 	RequiresGIL,           // Instruction REQUIRES GIL
 	ReleaseGIL,            // Instruction MIGHT release GIL (takes a long time)
@@ -28,7 +28,7 @@ MAKE_FLAG_TYPE(vm::code, FunctionFlagOptions, FunctionFlag,
 	GlobalWrite,
 	Call,
 	CallExternal,
-	Mutlithread,
+	Multithread,
 
 	RequiresGIL,           // Instruction REQUIRES GIL
 	ReleaseGIL,            // Instruction MIGHT release GIL (takes a long time)
@@ -56,9 +56,9 @@ namespace vm::code {
 			// pure conversion, no observable effects
 			return {};
 		case builtins::BuiltinFunctionID::StartThread:
-			return FunctionFlag(Mutlithread) | ControlFlowModifying;
+			return FunctionFlag(Multithread) | ControlFlowModifying;
 		case builtins::BuiltinFunctionID::JoinThread:
-			return FunctionFlag(Mutlithread) | MayBlock | ReleaseGIL;
+			return FunctionFlag(Multithread) | MayBlock | ReleaseGIL;
 		case builtins::BuiltinFunctionID::CreateMutex:
 		case builtins::BuiltinFunctionID::UnlockMutex:
 		case builtins::BuiltinFunctionID::DestroyMutex:
@@ -66,10 +66,10 @@ namespace vm::code {
 		case builtins::BuiltinFunctionID::NotifyCV:
 		case builtins::BuiltinFunctionID::NotifyAllCV:
 		case builtins::BuiltinFunctionID::DestroyCV:
-			return { Mutlithread };
+			return { Multithread };
 		case builtins::BuiltinFunctionID::LockMutex:
 		case builtins::BuiltinFunctionID::WaitCV:
-			return FunctionFlag(Mutlithread) | MayBlock | ReleaseGIL;
+			return FunctionFlag(Multithread) | MayBlock | ReleaseGIL;
 		}
 		CORE_PANIC("Invalid builtin function ID");
 	}
@@ -86,7 +86,7 @@ namespace vm::code {
 			if (f.contains(FFO::GlobalWrite)) out |= IFO::GlobalWrite;
 			if (f.contains(FFO::Call)) out |= IFO::Call;
 			if (f.contains(FFO::CallExternal)) out |= IFO::CallExternal;
-			if (f.contains(FFO::Mutlithread)) out |= IFO::Mutlithread;
+			if (f.contains(FFO::Multithread)) out |= IFO::Multithread;
 			if (f.contains(FFO::RequiresGIL)) out |= IFO::RequiresGIL;
 			if (f.contains(FFO::ReleaseGIL)) out |= IFO::ReleaseGIL;
 			if (f.contains(FFO::ControlFlowModifying)) out |= IFO::ControlFlowModifying;
@@ -329,7 +329,7 @@ namespace vm::code {
 			instr_case(ins::Op_set_threadctx, i) {
 				(void) i;
 				flags
-					|= Call | InstructionFlag(Mutlithread) | InstructionFlag(ControlFlowModifying);
+					|= Call | InstructionFlag(Multithread) | InstructionFlag(ControlFlowModifying);
 			}
 			instr_case(ins::Op_ret_tailcall_func, i) {
 				(void) i;
