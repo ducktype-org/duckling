@@ -10,7 +10,7 @@ namespace pst {
 	MBox<ClassSpecial> ClassSpecial::parse(LangParserState& state) {
 		if (state[1].isBracketGroup(Token::Round)) return Constructor::parse(state);
 
-		if (state[2].isStr(base::StrID{ "destroy" })) return Destructor::parse(state);
+		if (state[2].is(Keyword::Destroy)) return Destructor::parse(state);
 		if (state[2].is(Keyword::Copy)) return CopyConstructor::parse(state);
 
 		return Constructor::parse(state);

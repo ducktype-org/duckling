@@ -9,8 +9,7 @@ namespace pst {
 
 		PARSE().eatOne();
 
-		out->key.emplace();
-		PARSE().all(NamedOperator::Period, &out->key.value());
+		PARSE().all(NamedOperator::Period, Keyword::Copy);
 
 		PARSE().one(&out->params);
 		if (PARSE().tryEat(NamedOperator::Colon)) PARSE().one(&out->inits);

@@ -351,9 +351,7 @@ namespace compiler::helios {
 			return SymbolData::makePSTSymbolData(
 				{
 					.name
-					= constructor->isImpliedConstructor()
-			            ? base::StrID("create")
-			            : lang_def::keywordToStr(constructor->getKeyword()->unlock(ctx)->unwrap()),
+					= constructor->getIdentifier() ? constructor->getIdentifier()->unlock(ctx)->unwrap() : base::StrID("create"),
 					.kind = SymbolKind::Constructor,
 				},
 				pst_data
@@ -363,7 +361,7 @@ namespace compiler::helios {
 			auto constructor = stmt.dynamicCast<pst::CopyConstructor>().value();
 			return SymbolData::makePSTSymbolData(
 				{
-					.name = lang_def::keywordToStr(constructor->getKeyword()->unlock(ctx)->unwrap()),
+					.name = lang_def::keywordToStr(lang_def::Keyword::Copy),
 					.kind = SymbolKind::Constructor,
 				},
 				pst_data
