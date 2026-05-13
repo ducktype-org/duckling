@@ -203,8 +203,8 @@ namespace pst {
 		 *
 		 * Shouldn't be used outside of pst as it violates access.
 		 *
-		 * Uses getDeclSymbolName as the base implementation that can be overriden if for example a
-		 * keyword is used instead.
+		 * Uses getDeclSymbolIdentifier as the base implementation that can be overriden if for
+		 * example a keyword is used instead.
 		 */
 		[[nodiscard]]
 		virtual base::Optional<base::StrID> getInternalSymbolName() const;

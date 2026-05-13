@@ -40,11 +40,25 @@
 												},
 												"Identifier Expression": {
 													"name": {
-														"Name": "a"
+														"position": {
+															"sourceStart": 6,
+															"sourceEnd": 6
+														},
+														"Identifier Wrapper": {
+															"value": "a"
+														}
 													}
 												}
 											},
-											"operator": "+",
+											"operator": {
+												"position": {
+													"sourceStart": 8,
+													"sourceEnd": 8
+												},
+												"Operator Wrapper": {
+													"value": "+"
+												}
+											},
 											"right_expr": {
 												"position": {
 													"sourceStart": 10,
@@ -52,13 +66,27 @@
 												},
 												"Identifier Expression": {
 													"name": {
-														"Name": "b"
+														"position": {
+															"sourceStart": 10,
+															"sourceEnd": 10
+														},
+														"Identifier Wrapper": {
+															"value": "b"
+														}
 													}
 												}
 											}
 										}
 									},
-									"operator": "<",
+									"operator": {
+										"position": {
+											"sourceStart": 12,
+											"sourceEnd": 12
+										},
+										"Operator Wrapper": {
+											"value": "<"
+										}
+									},
 									"right_expr": {
 										"position": {
 											"sourceStart": 14,
@@ -74,7 +102,15 @@
 													"number": "4"
 												}
 											},
-											"operator": "+",
+											"operator": {
+												"position": {
+													"sourceStart": 16,
+													"sourceEnd": 16
+												},
+												"Operator Wrapper": {
+													"value": "+"
+												}
+											},
 											"right_expr": {
 												"position": {
 													"sourceStart": 18,
