@@ -174,11 +174,7 @@ namespace compiler::helios {
 							field.index
 						);
 					default:
-						throw base::NotYetImplemented(base::strConcat(
-							"Can not get the type of a member of the ",
-							base::enumToStr(field.parent_type.getKind()),
-							" kind."
-						));
+						CORE_UNREACHABLE();
 					}
 				}
 				variant_case(Variable, var) { return var.type; }
