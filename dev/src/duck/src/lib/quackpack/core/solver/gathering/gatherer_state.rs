@@ -13,6 +13,7 @@ use crate::quackpack::core::solver::types_common::{
 };
 use crate::quackpack::core::version::CompatibilityCheck;
 use crate::quackpack::core::{FeatureName, Manifest, Version};
+use crate::quackpack::util::str_id::QpJoin;
 use crate::util::error::MessageError;
 use crate::{
     QuackError, QuackResult, QuackResultContext, qp_bail, qp_bail_internal, qp_err, qp_internal,
