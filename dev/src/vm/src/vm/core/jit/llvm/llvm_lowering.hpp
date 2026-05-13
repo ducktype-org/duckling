@@ -127,7 +127,8 @@ namespace vm::jit {
 					);
 				} else {
 					fields.push_back(llvm::ConstantInt::get(
-						llvm::Type::getInt64Ty(llvm_ctx), (u64) OpFuns::OPFUNS.at(opcode)
+						llvm::Type::getInt64Ty(llvm_ctx),
+						reinterpret_cast<u64>(OpFuns::OPFUNS.at(opcode))
 					));
 				}
 
@@ -203,8 +204,8 @@ namespace vm::jit {
 						opt_none { opfun_name = low::OPCODE_NAMES.at(static_cast<u64>(opcode)); }
 					}
 
-					// Here we are calling instruction originating from bc file or debug instruction.
-					// Create Switch case parameter.
+					// Here we are calling instruction originating from bc file or debug
+					// instruction. Create Switch case parameter.
 					setInstructionPtr<true>(function_to_compile, ir_builder, instr_idx);
 					ir_builder.CreateCall(
 						llvm_data.types.opfun.get(),
