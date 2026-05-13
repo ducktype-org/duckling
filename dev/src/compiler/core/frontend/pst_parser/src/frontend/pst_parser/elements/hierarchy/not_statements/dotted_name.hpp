@@ -23,7 +23,7 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		const AccessLocked<IdentifierWrapper> getNameIndex(usize index) const {
+		const AccessLocked<IdentifierWrapper> getNameByIndex(usize index) const {
 			return names[index].give();
 		}
 

@@ -23,7 +23,7 @@ namespace pst {
 			= 0;
 
 		[[nodiscard]]
-		virtual AccessLocked<IdentifierWrapper> getNameIndex(usize index) const
+		virtual AccessLocked<IdentifierWrapper> getNameByIndex(usize index) const
 			= 0;
 
 		static MBox<ImportChain> parse(LangParserState& state);

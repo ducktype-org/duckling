@@ -271,7 +271,7 @@ namespace compiler::helios {
 					.name = base::StrID(
 						base::strConcat(
 							"<USING> ",
-							using_stmt->getPointed().unlock(ctx)->getNameIndex(0).unlock(ctx)->unwrap()
+							using_stmt->getPointed().unlock(ctx)->getNameByIndex(0).unlock(ctx)->unwrap()
 						)
 							.c_str()
 					),
@@ -307,7 +307,7 @@ namespace compiler::helios {
 					name = import_as.value()->asWhat().value().unlock(ctx)->unwrap();
 				else {
 					usize count = import_as.value()->numberOfNames();
-					name        = import_as.value()->getNameIndex(count - 1).unlock(ctx)->unwrap();
+					name        = import_as.value()->getNameByIndex(count - 1).unlock(ctx)->unwrap();
 				}
 
 				return SymbolData::makePSTSymbolData(
@@ -714,7 +714,7 @@ namespace compiler::helios {
 				std::vector<tpc::Identifier> pointed_to_names(size);
 				for (usize i = 0; i < size; i++) {
 					pointed_to_names[i]
-						= { .value = pointed->getNameIndex(i).unlock(ctx)->unwrap() };
+						= { .value = pointed->getNameByIndex(i).unlock(ctx)->unwrap() };
 				}
 
 				auto lookup_res = lookupChain(
@@ -745,7 +745,7 @@ namespace compiler::helios {
 				std::vector<base::StrID> module_path(name_count);
 
 				for (usize i = 0; i < name_count; i++)
-					module_path[i] = import_chain->getNameIndex(i).unlock(ctx)->unwrap();
+					module_path[i] = import_chain->getNameByIndex(i).unlock(ctx)->unwrap();
 
 				auto maybe_imported_module
 					= frontend::getRelativeModule(ctx, module(scope(key)), module_path);
@@ -818,7 +818,7 @@ namespace compiler::helios {
 				                  .unlock(ctx);
 				pointed_chain.resize(dotted->numberOfNames());
 				for (usize i = 0; i < dotted->numberOfNames(); i++)
-					pointed_chain[i] = { .value = dotted->getNameIndex(i).unlock(ctx)->unwrap() };
+					pointed_chain[i] = { .value = dotted->getNameByIndex(i).unlock(ctx)->unwrap() };
 			} else if (kind(key) == SymbolKind::Alias) {
 				auto dotted = getSymRef(key)
 				                  ->getPSTData()
@@ -830,7 +830,7 @@ namespace compiler::helios {
 				                  .unlock(ctx);
 				pointed_chain.resize(dotted->numberOfNames());
 				for (usize i = 0; i < dotted->numberOfNames(); i++)
-					pointed_chain[i] = { .value = dotted->getNameIndex(i).unlock(ctx)->unwrap() };
+					pointed_chain[i] = { .value = dotted->getNameByIndex(i).unlock(ctx)->unwrap() };
 			} else {
 				return SymbolList{ { key } };
 			}

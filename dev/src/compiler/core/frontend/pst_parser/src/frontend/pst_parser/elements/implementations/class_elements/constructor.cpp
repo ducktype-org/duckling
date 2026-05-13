@@ -8,6 +8,8 @@ namespace pst {
 	MBox<Constructor> Constructor::parse(LangParserState& state) {
 		auto out = makeBox<Constructor>(state);
 
+		CORE_ASSERT(state[0].is(state.getContext()->class_name), "Bad constructor parsing entry");
+
 		PARSE().eatOne();
 
 		if (!state[0].isBracketGroup(Token::Round)) {

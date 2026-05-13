@@ -27,7 +27,7 @@ namespace pst {
 	base::Optional<AccessLocked<IdentifierWrapper>> Using::getDeclSymbolIdentifier() const {
 		if (auto child = names.internal()) {
 			if (child->numberOfNames() == 0) return {};
-			return child->getNameIndex(child->numberOfNames() - 1);
+			return child->getNameByIndex(child->numberOfNames() - 1);
 		} else {
 			return {};
 		}

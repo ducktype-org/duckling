@@ -240,7 +240,7 @@ namespace tpc {
 		}
 
 	public:
-		NoIdentifierError(dia::SourcePosition pos, std::string but_got);
+		NoIdentifierError(dia::SourcePosition pos, std::string_view but_got);
 	};
 
 	class NoKeywordError final: public dia_int::MessageWithCodeFragmentAndCause {
@@ -254,7 +254,7 @@ namespace tpc {
 		}
 
 	public:
-		NoKeywordError(dia::SourcePosition pos, std::string but_got);
+		NoKeywordError(dia::SourcePosition pos, std::string_view but_got);
 	};
 
 	class NoOperatorError final: public dia_int::MessageWithCodeFragmentAndCause {
@@ -268,7 +268,7 @@ namespace tpc {
 		}
 
 	public:
-		NoOperatorError(dia::SourcePosition pos, std::string but_got);
+		NoOperatorError(dia::SourcePosition pos, std::string_view but_got);
 	};
 
 	class NoStringError final: public dia_int::MessageWithCodeFragmentAndCause {
