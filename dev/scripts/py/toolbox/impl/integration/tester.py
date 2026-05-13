@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from .test_loader import Case, Test, TestNode, load_tests
+from .tui_reporter import IntegrationTuiReporter
 from .utils import (
     dit_exec_command,
     log_info_if_needed,
@@ -33,6 +34,7 @@ def tester_impl(
         verbose: bool,
         log_file: str | Path,
         build_dir: str,
+        tui: bool = False,
 ):
     """
     The driver function of Duckling Integration Tests framework.
@@ -58,10 +60,15 @@ def tester_impl(
 
     test_set = load_tests("integration_tests", user_values=user_values)
 
-    (succeeded, failed, disabled) = run_tests(
-        test_set, filter, [], clean, dry, fail_fast, verbose, log_file
-    )
+    reporter = IntegrationTuiReporter() if tui else None
+    if reporter:
+        reporter.on_status("Initializing integration test run")
 
+    (succeeded, failed, disabled) = run_tests(
+        test_set, filter, [], clean, dry, fail_fast, verbose, log_file, reporter
+    )
+    if reporter:
+        reporter.finish()
     if dry:
         return
 
@@ -89,6 +96,7 @@ def run_test(
         fail_fast: bool,
         verbose: bool,
         log_file: Path,
+        reporter: IntegrationTuiReporter | None = None,
 ) -> TestStatistics:
     """
     Runs a test from `Test` object.
@@ -105,6 +113,10 @@ def run_test(
     stats = TestStatistics([], [], [])
     simplified_filter = filter[len(path) + 1:]
     log_info(f"===== {path} =====")
+    
+    if reporter:
+        reporter.on_test_start(path)
+    
     for i, case in enumerate(test.cases):
         if not case.name.startswith(simplified_filter):
             continue
@@ -114,12 +126,18 @@ def run_test(
             match run_case(test, case, dry, verbose, log_file):
                 case Failure(error):
                     print_failure(f"Case `{case.name}` has failed because: {error}")
+                    if reporter:
+                        reporter.on_case_failed(path, case.name, error)
                     stats.failed.append(case_path)
                 case Success():
+                    if reporter:
+                        reporter.on_case_passed(path, case.name)
                     if not dry:
                         stats.succeeded.append(case_path)
                         print_success(f"Case `{case.name}` passed")
                 case Disabled():
+                    if reporter:
+                        reporter.on_case_disabled(path, case.name)
                     if not dry:
                         stats.disabled.append(case_path)
                         print_neutral(f"Case `{case.name}` disabled")
@@ -134,6 +152,9 @@ def run_test(
                 f"{test.name}/{case.name} has failed:\n{''.join(e.args)}\n",
                 log_file=log_file,
             )
+            if reporter:
+                error_msg = f"Exit code {e.exit_code}" if e.exit_code == 124 else "Command error"
+                reporter.on_case_failed(path, case.name, error_msg)
             stats.failed.append(case_path)
             if fail_fast:
                 break
@@ -295,6 +316,7 @@ def run_tests(
         fail_fast: bool,
         verbose: bool,
         log_file: Path,
+        reporter: IntegrationTuiReporter | None = None,
 ) -> TestStatistics:
     """
     A recursive function for running all tests.
@@ -313,8 +335,13 @@ def run_tests(
     if not current_path.startswith(filter) and not filter.startswith(current_path):
         return all_stats
 
+    if reporter:
+        reporter.on_node_start(current_path)
+
     # Pre-node command
     if node.pre_node:
+        if reporter:
+            reporter.on_status(f"Running pre-node hook for {current_path}")
         log_info_if_needed("Executing pre-node command...", dry, verbose)
         dit_exec_command(
             node.pre_node,
@@ -336,14 +363,14 @@ def run_tests(
         if clean:
             clean_test(test, path, dry, verbose)
         else:
-            stats = run_test(test, path, filter, dry, fail_fast, verbose, log_file)
+            stats = run_test(test, path, filter, dry, fail_fast, verbose, log_file, reporter)
             all_stats += stats
             if fail_fast and len(stats.failed) > 0:
                 return all_stats
 
     for subtest in node.subtests:
         all_stats += run_tests(
-            subtest, filter, tree.copy(), clean, dry, fail_fast, verbose, log_file
+            subtest, filter, tree.copy(), clean, dry, fail_fast, verbose, log_file, reporter
         )
 
     # Post-node command

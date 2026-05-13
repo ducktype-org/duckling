@@ -11,7 +11,8 @@ from click import command, option
 
 @command()
 @build_dir(
-    help="The name of the project build directory which is passed to the framework."
+    help="The name of the project build directory which is passed to the framework.",
+    prompt=False,
 )
 @option(
     "-c",
@@ -47,6 +48,12 @@ from click import command, option
     type=str,
     default="",
     help="Run tests under the specified path prefix (e.g., 'tests/C++' or 'tests/C++/Case1').",
+)
+@option(
+    "--tui",
+    is_flag=True,
+    default=False,
+    help="Use terminal UI for real-time test progress visualization.",
 )
 @verbose(help="Prints some debug information about test cases")
 def itest(*args, **kwargs):

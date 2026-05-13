@@ -4,3 +4,4 @@
 click
 PyYAML
 requests
+rich
