@@ -1,6 +1,13 @@
 # Tests for statements
 
 Tests:
+  blocks:
+    Cases:
+      all:
+        backend: all
+        Output:
+          String: "42\n42\n42\n"
+        ExitCode: 0
   conditional: # if, if-else
     Cases:
       all:
