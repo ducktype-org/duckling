@@ -110,8 +110,15 @@ LlvmData::LlvmTypes findOrCreateTypes(std::unique_ptr<llvm::orc::ThreadSafeConte
 		/*isPacked=*/false
 	);
 
-	auto microinstruction_ty
-		= Ref(llvm::StructType::create(*g_context->getContext(), "vm::MicroInstruction"));
+	auto microinstruction_ty = Ref(llvm::StructType::create(
+		*g_context->getContext(),
+		{
+			llvm::Type::getInt64Ty(*g_context->getContext()),  // opcode
+			llvm::Type::getInt64Ty(*g_context->getContext()),  // arg0
+			llvm::Type::getInt64Ty(*g_context->getContext())   // arg1
+		},
+		"vm::MicroInstruction"
+	));
 
 	auto vm_thread_ty = Ref(llvm::StructType::create(*g_context->getContext(), "vm::VMThread"));
 
