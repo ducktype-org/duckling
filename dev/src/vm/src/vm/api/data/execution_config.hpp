@@ -4,7 +4,8 @@
 
 namespace vm::api {
 	/**
-	 * A set of configuration flags to pass with each request. Not all requests use all flags.
+	 * A set of execution configuration flags stored on the VM/process and consulted during
+	 * execution-related operations such as loading and validation. Not all operations use all flags.
 	 */
 	struct ExecutionConfig {
 		// Code execution cannot perform any IO, e.g. when performing compile-time evaluation.

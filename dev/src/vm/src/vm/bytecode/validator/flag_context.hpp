@@ -8,8 +8,8 @@ namespace vm::code {
 	/**
 	 * @brief A simple container to keep track of the flags of instructions and functions,
 	 * for the purpose of verification.
-	 * @note `FlagContext` always contains a valid mapping of types if `insertAndValidate` didn't
-	 * throw any errors.
+	 * @note `FlagContext` always contains a valid mapping of instruction/function flags if
+	 * `insertAndValidate` didn't throw any errors.
 	 */
 	class FlagContext final {
 	public:
