@@ -19,6 +19,7 @@ add_files(
 
 	fast/fast_vmprocess.cpp
 	fast/fast_vmthread.cpp
+	fast/program/type.cpp
 	fast/program/relocator.cpp
 )
 
