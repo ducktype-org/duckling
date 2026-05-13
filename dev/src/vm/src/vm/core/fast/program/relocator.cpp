@@ -51,7 +51,7 @@ namespace {
 	}
 
 	exec::arg::Type relocateType(TRANSLATOR_ARGUMENTS(Type)) {
-		throw base::NotYetImplemented("Type relocation is not yet implemented");
+		return program.types.at(TypeID(reloc_arg.asInt()));
 	}
 
 #undef TRANSLATOR_ARGUMENTS

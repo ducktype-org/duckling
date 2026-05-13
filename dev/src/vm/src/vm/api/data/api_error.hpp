@@ -45,6 +45,11 @@ namespace vm::api {
 		NLOHMANN_DEFINE_TYPE_INTRUSIVE(StateError, why);
 	};
 
+	/**
+	 * @brief Represents an error indicating that a feature is not yet implemented.
+	 * @note After having received this error, the process is in undefined state, so it should be
+	 * killed.
+	 */
 	struct NotImplementedError {
 		std::string why;
 		NLOHMANN_DEFINE_TYPE_INTRUSIVE(NotImplementedError, why);

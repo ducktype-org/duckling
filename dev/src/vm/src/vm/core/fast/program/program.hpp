@@ -31,7 +31,7 @@ namespace vm::fast {
 		/// The name of the global variable.
 		base::StrID name;
 		/// The type of the global variable.
-		TypeID      type;
+		TypeID type;
 		/// The offset of the global variable's data in the global buffer.
 		u64 global_buffer_offset;
 	};
@@ -44,7 +44,7 @@ namespace vm::fast {
 	 */
 	struct ProgramBase {
 		ObjIdNameMap<GlobalData, GlobalDataID> global_data{};
-		ObjIdNameMap<Type, TypeID>             types{};
+		TypeCollection                         types{};
 		ObjIdNameMap<ExternCFunc>              extern_c_functions{};
 		ObjIdNameMap<FunctionInfo, FunctionID> functions{};
 	};

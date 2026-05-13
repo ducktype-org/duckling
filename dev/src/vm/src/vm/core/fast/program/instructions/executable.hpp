@@ -2,13 +2,13 @@
 
 #include "../ids.hpp"  // IWYU pragma: keep
 
-#include <base/comptime/type_traits.hpp>
 #include <base/comptime/is_complete.hpp>
+#include <base/comptime/type_traits.hpp>
 #include <base/types/ints.hpp>
+#include <vm/core/fast/program/type.hpp>
 
 namespace vm::fast::exec {
 	struct ExecFunction;
-	struct Type;
 	struct Instruction;
 
 	namespace arg {
@@ -19,10 +19,7 @@ namespace vm::fast::exec {
 		using Place64         = u64;
 		using Function        = const vm::fast::exec::ExecFunction*;
 		using JumpDestination = const Instruction*;  // Pointer to the next instruction.
-		using Type            = Type*;
-
-		template<class T>
-		concept Place = base::IsOneOf<T, Place8, Place16, Place32, Place64>;
+		using Type            = TypeCRef;
 
 #define HANDLE_ARG_DEF(arg) VALIDATE_ARG_EXISTS(arg)
 #include "argument_definitions.hpp"  // Validates all needed arguments are defined

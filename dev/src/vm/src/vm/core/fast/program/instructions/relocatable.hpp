@@ -2,7 +2,7 @@
 
 #include "../ids.hpp"
 
-#include "base/comptime/type_traits.hpp"
+#include <base/comptime/type_traits.hpp>
 #include <base/comptime/is_complete.hpp>
 #include <base/extend_cpp/strongly_typed_id.hpp>
 
@@ -16,9 +16,6 @@ namespace vm::fast::reloc {
 		using Function        = FunctionID;
 		using JumpDestination = i64;  // Relative instruction jump offset after label linking.
 		using Type            = TypeID;
-
-		template<class T>
-		concept Place = base::IsOneOf<T, Place8, Place16, Place32, Place64>;
 
 #define HANDLE_ARG_DEF(arg) VALIDATE_ARG_EXISTS(arg)
 #include "argument_definitions.hpp"  // Validates all needed arguments are defined
