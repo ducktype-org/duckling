@@ -1,0 +1,13 @@
+fun main() -> i64 = {
+    block big 
+    {
+        let z = 42;
+        builtin_output_i64(z);
+    }
+    {
+        let z = 42;
+        builtin_output_i64(z);
+    };
+    builtin_output_i64(42);
+    return 0;
+}

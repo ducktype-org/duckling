@@ -33,6 +33,7 @@ public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(testErrorLogging);
 		TESTER_ADD_TEST(testErrorLoggingExpandStatements);
+		TESTER_ADD_TEST(testErrorLoggingCyclicErrors);
 		TESTER_ADD_TEST(testErrorBadExpr);
 		TESTER_ADD_TEST(testDiagnosticErrorsCorrectness);
 	}
@@ -834,7 +835,7 @@ private:
 					return 0;
 				}
 			)",
-			{ "Feature not implemented", "at compile time", "generated class constructor" },
+			{ "Feature not implemented", "Compile time" },
 			1
 		);
 
@@ -977,6 +978,26 @@ private:
 			{ "Copy constructor for non-trivially-copyable type `List[i32]`" },
 			1
 		);
+
+		// Blocks are having correct scopes
+		checkForErrorOnCompileModule(
+			R"(
+				block globals {
+					var x = 0;
+				}
+				fun main() = {
+					{
+						var x = 20;
+					};
+					block inner {
+						var x = 30;
+					}
+					x;
+				}
+		)",
+			{ "Symbol", "not found" },
+			1
+		);
 	}
 
 	/**
@@ -1100,6 +1121,34 @@ private:
 			)",
 			{ "y", "z", "w", "not found" },
 			3
+		);
+	}
+
+	/**
+	 * Test error logging related to errors on cyclic compilation.
+	 */
+	void testErrorLoggingCyclicErrors() {
+		checkForErrorOnCompileModule(
+			R"(
+				const a = b;
+				const b = a;
+			)",
+			{ "cycle" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun foo() = {
+					return bar();
+				}
+
+				fun bar() = {
+					return foo();
+				}
+			)",
+			{ "cycle" },
+			1
 		);
 	}
 

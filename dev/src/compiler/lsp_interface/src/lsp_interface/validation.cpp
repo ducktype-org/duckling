@@ -50,15 +50,6 @@ namespace lsp {
 		auto main_pst = main_file->getPST();
 		main_pst->getLogger()->collectDiagnostics(out);
 
-		for (const auto& file_ref: module->getSourceFiles().illegalAccess()) {
-			auto file
-				= frontend::GetFileID_Functor::getFileRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
-					file_ref.illegalAccess().getID()
-				);
-			auto pst = file->getPST();
-			pst->getLogger()->collectDiagnostics(out);
-		}
-
 		// Recurse into submodules
 		for (const auto& submodule_id_locked: module->getSubmodules().illegalAccess()) {
 			auto submodule = getModuleRef(submodule_id_locked.illegalAccess().getID());
@@ -81,14 +72,6 @@ namespace lsp {
 			);
 
 		if (main_file->getPST()->getLogger()->hasErrors()) return false;
-
-		for (const auto& file_ref: module->getSourceFiles().illegalAccess()) {
-			auto file
-				= frontend::GetFileID_Functor::getFileRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
-					file_ref.illegalAccess().getID()
-				);
-			if (file->getPST()->getLogger()->hasErrors()) return false;
-		}
 
 		bool all_submodules_parsed_successfully = true;
 		// Recurse into submodules

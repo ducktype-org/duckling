@@ -378,10 +378,6 @@ namespace compiler::helios {
 
 			getScopes(ctx, main_file, &output);
 
-			// fetch scopes from other module files
-			auto source_files = ctx.query<frontend::QuerySourceFiles>(key);
-			for (auto file: *source_files) getScopes(ctx, file, &output);
-
 			// eliminate duplicates with sort:
 			std::ranges::sort(output.scopes);
 			auto [unique_end, unique_last] = std::ranges::unique(output.scopes);
