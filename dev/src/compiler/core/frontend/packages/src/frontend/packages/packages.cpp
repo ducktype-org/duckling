@@ -232,7 +232,7 @@ namespace compiler::frontend::packages {
 						"\": no such package is declared in the manifest."
 					),
 					std::string{},
-					false
+					true
 				);
 				return true;
 			});

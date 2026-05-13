@@ -250,7 +250,7 @@ private:
 		filterUndeclaredDependencies(packages, reporter.callback());
 		ASSERT_EQUAL(packages[0].dependencies.size(), 1);
 		ASSERT_EQUAL(packages[0].dependencies[0].package_name.str(), std::string("b"));
-		ASSERT_TRUE(reporter.warnings > 0);
+		ASSERT_TRUE(reporter.errors > 0);
 	}
 
 	void createPackageInfoSuccess() {

@@ -166,10 +166,8 @@ namespace compiler::frontend::packages {
 
 	/**
 	 * @brief Drop dependencies that point to packages not declared in @p packages_info.
-	 * Mutates each entry's @c dependencies in place; emits a non-fatal diagnostic via
-	 * @p report for every dropped edge. Downstream code holds a PackageID for every
-	 * dependency and may panic if it cannot be resolved back to a PackageInfo, so the
-	 * dependency graph is filtered up-front rather than guarded on every lookup.
+	 * Mutates each entry's @c dependencies in place.
+	 * @p report errors for every dropped edge.
 	 */
 	void filterUndeclaredDependencies(
 		std::vector<RawPackageInfo>& packages_info, const DiagnosticReporter& report
