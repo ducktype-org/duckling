@@ -38,9 +38,7 @@ namespace vm::api {
 	 * @return Nothing if the code was loaded successfully or an API error otherwise (ex. syntax
 	 * errors, static verification errors, duplicate function errors).
 	 */
-	std::expected<void, ApiError> loadFiles(
-		PID pid, const std::vector<fs::File>& path
-	);
+	std::expected<void, ApiError> loadFiles(PID pid, const std::vector<fs::File>& path);
 
 	/**
 	 * @brief Load the code from given code collection into a specified process on DVM.
@@ -48,9 +46,7 @@ namespace vm::api {
 	 * @return Nothing if the code was loaded successfully or an API error otherwise (ex. syntax
 	 * errors, static verification errors, duplicate function errors).
 	 */
-	std::expected<void, ApiError> loadCode(
-		PID pid, const code::CodeCollection& code
-	);
+	std::expected<void, ApiError> loadCode(PID pid, const code::CodeCollection& code);
 
 	/**
 	 * @brief Run a program on DVM. It is expected that a 'main' function was loaded into the

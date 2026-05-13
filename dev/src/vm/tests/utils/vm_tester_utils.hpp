@@ -112,7 +112,9 @@ protected:
 	 * guidelines. Asserts what error keywords are present in the error message.
 	 */
 	void loadInvalidDbc(
-		const std::string& dbc_filename, const std::vector<std::string_view>& error_keywords, vm::api::ExecutionConfig config = {}
+		const std::string&                   dbc_filename,
+		const std::vector<std::string_view>& error_keywords,
+		vm::api::ExecutionConfig             config = {}
 	);
 
 	/**

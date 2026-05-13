@@ -183,4 +183,3 @@ namespace vm {
 		return api::Response(api::response::Output{ content });
 	}
 }
-

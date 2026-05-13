@@ -56,9 +56,7 @@ namespace vm::api {
 		    .transform(ignoreResponse);
 	}
 
-	std::expected<response::CodePosition, ApiError> waitForBreakpoint(
-		PID pid
-	) {
+	std::expected<response::CodePosition, ApiError> waitForBreakpoint(PID pid) {
 		return Supervisor::get()
 		    .doRequest(SupervisorRequest(pid, request::WaitForBreakpoint{}))
 		    .and_then(mapOrWrongResponse<response::CodePosition>);
@@ -70,34 +68,26 @@ namespace vm::api {
 		});
 	}
 
-	std::expected<void, ApiError> loadFiles(
-		PID pid, const std::vector<fs::File>& paths
-	) {
+	std::expected<void, ApiError> loadFiles(PID pid, const std::vector<fs::File>& paths) {
 		return Supervisor::get()
 		    .doRequest(SupervisorRequest(pid, request::LoadFiles{ paths }))
 		    .transform(ignoreResponse);
 	}
 
-	std::expected<void, ApiError> loadCode(
-		PID pid, const code::CodeCollection& code
-	) {
+	std::expected<void, ApiError> loadCode(PID pid, const code::CodeCollection& code) {
 		return Supervisor::get()
 		    .doRequest(SupervisorRequest(pid, request::LoadCode{ code }))
 		    .transform(ignoreResponse);
 	}
 
-	std::expected<void, ApiError> run(
-		PID pid, const std::vector<std::string>& args
-	) {
+	std::expected<void, ApiError> run(PID pid, const std::vector<std::string>& args) {
 		return Supervisor::get()
 		    .doRequest(SupervisorRequest(pid, request::Run{ args }))
 		    .transform(ignoreResponse);
 	}
 
 	std::expected<ThreadID, ApiError> runFunction(
-		PID                         pid,
-		const std::string&          function_name,
-		const FunctionRunArguments& args
+		PID pid, const std::string& function_name, const FunctionRunArguments& args
 	) {
 		return Supervisor::get()
 		    .doRequest(SupervisorRequest(
@@ -115,14 +105,11 @@ namespace vm::api {
 	}
 
 	std::expected<ExitValue, ApiError> runFunctionAwait(
-		PID                         pid,
-		const std::string&          function_name,
-		const FunctionRunArguments& args
+		PID pid, const std::string& function_name, const FunctionRunArguments& args
 	) {
 		return Supervisor::get()
 		    .doRequest(SupervisorRequest(
-				pid,
-				request::RunFunctionAwait{ .func_name = function_name, .func_args = args }
+				pid, request::RunFunctionAwait{ .func_name = function_name, .func_args = args }
 			))
 		    .and_then(mapOrWrongResponse<ExitValue>);
 	}

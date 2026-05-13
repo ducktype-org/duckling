@@ -32,8 +32,12 @@ namespace vm {
 		std::unique_lock                          lock(rw_global);
 		std::expected<void, loader::LoaderLogger> code_result = [&] {
 			variant_match(source) {
-				variant_case(std::vector<fs::File>, files) { return loader.loadAndCompile(files, execution_config); }
-				variant_case(code::CodeCollection, code) { return loader.loadAndCompile(code, execution_config); }
+				variant_case(std::vector<fs::File>, files) {
+					return loader.loadAndCompile(files, execution_config);
+				}
+				variant_case(code::CodeCollection, code) {
+					return loader.loadAndCompile(code, execution_config);
+				}
 			}
 			CORE_UNREACHABLE();
 		}();

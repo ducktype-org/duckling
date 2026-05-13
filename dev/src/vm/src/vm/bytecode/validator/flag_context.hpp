@@ -1,7 +1,7 @@
 #pragma once
 
-#include <vm/bytecode/flags.hpp>
 #include <vm/bytecode/bytecode.hpp>
+#include <vm/bytecode/flags.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
 
 namespace vm::code {
@@ -21,7 +21,7 @@ namespace vm::code {
 			const std::vector<Function>&           new_functions,
 			const ObjIdNameMap<GlobalData>&        globals,
 			const ObjIdNameMap<ExternalCFunction>& ext_c_functions,
-			api::ExecutionConfig config
+			api::ExecutionConfig                   config
 		);
 
 	private:

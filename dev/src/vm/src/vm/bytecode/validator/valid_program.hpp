@@ -40,7 +40,8 @@ namespace vm::code {
 		 * @note If the newly injected code were to create an unvalid state,
 		 * an exception of ValidationError base will be thrown.
 		 */
-		ValidProgram tryInsertCode(const CodeCollection& collection, api::ExecutionConfig config) const;
+		ValidProgram tryInsertCode(const CodeCollection& collection, api::ExecutionConfig config)
+			const;
 
 		const valid_type::ValidTypeMap& types() const;
 

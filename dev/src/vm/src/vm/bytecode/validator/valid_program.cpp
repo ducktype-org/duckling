@@ -21,7 +21,8 @@ vm::code::CodeCollection vm::code::ValidProgram::produceValidCodeCollection() co
 		     .external_c_functions = std::ranges::to<std::vector>(ext_c_function_map) };
 }
 
-vm::code::ValidProgram vm::code::ValidProgram::tryInsertCode(const code::CodeCollection& collection, api::ExecutionConfig config
+vm::code::ValidProgram vm::code::ValidProgram::tryInsertCode(
+	const code::CodeCollection& collection, api::ExecutionConfig config
 ) const {
 	// @TODO: #1306 We could get rid of copying of the whole program.
 	ValidProgram copy = *this;
@@ -43,7 +44,9 @@ const vm::ObjIdNameMap<vm::code::Function>& vm::code::ValidProgram::functions() 
 	return function_map;
 }
 
-void vm::code::ValidProgram::insertCode(const CodeCollection& collection, api::ExecutionConfig config) {
+void vm::code::ValidProgram::insertCode(
+	const CodeCollection& collection, api::ExecutionConfig config
+) {
 	for (const auto& func: collection.functions) function_signatures.put(func.name, func.signature);
 	insertTypes(collection.types);
 	insertGlobals(collection.global_data);
@@ -69,7 +72,9 @@ void vm::code::ValidProgram::insertGlobals(const std::vector<GlobalData>& new_gl
 	}
 }
 
-void vm::code::ValidProgram::insertFunctions(const std::vector<Function>& new_functions, api::ExecutionConfig config) {
+void vm::code::ValidProgram::insertFunctions(
+	const std::vector<Function>& new_functions, api::ExecutionConfig config
+) {
 	if (new_functions.empty()) return;
 
 	for (const auto& func: new_functions) {

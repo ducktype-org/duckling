@@ -1,4 +1,5 @@
 #include "flag_context.hpp"
+
 #include <vm/bytecode/validator/errors.hpp>
 
 namespace vm::code {
@@ -64,7 +65,7 @@ namespace vm::code {
 		const std::vector<Function>&           new_functions,
 		const ObjIdNameMap<GlobalData>&        globals,
 		const ObjIdNameMap<ExternalCFunction>& ext_c_functions,
-		api::ExecutionConfig config
+		api::ExecutionConfig                   config
 	) {
 		// The validation proceeds as follows:
 		// 1. A graph of function calls is built, containing:
