@@ -734,8 +734,8 @@ namespace vm::persistent::detail {
 							relative_h < neigh.siblings.size(),
 							"Height diff must refer to some sibling"
 						);
-						auto& dst        = special ? neigh.node : neigh.siblings.at(relative_h);
-						dst              = detail_merge(pos, node, corresponding);
+						auto& dst = special ? neigh.node : neigh.siblings.at(relative_h);
+						dst       = detail_merge(pos, node, corresponding);
 					}
 				}
 			};
@@ -844,7 +844,7 @@ namespace vm::persistent::detail {
 			};
 
 			auto handle_list = [&](const std::deque<std::pair<posT, NodeID>>& list) {
-				for (auto [pos, node]: list) {
+				for (auto [pos, node]: list)
 					if constexpr (RECONSTRUCT) {
 						usize relative_h = heightFromPos(pos) - heightFromPos(neigh.node_pos);
 						CORE_ASSERT(
@@ -854,7 +854,6 @@ namespace vm::persistent::detail {
 						neigh.siblings.at(relative_h) = range_constructor.out_of_range(node, pos);
 					} else
 						range_constructor.out_of_range(node, pos);
-				}
 			};
 
 			{
@@ -930,7 +929,7 @@ namespace vm::persistent::detail {
 			}
 			usize idx = 0;
 
-			auto reconstructor = RangeBuilder<NodeID> {
+			auto reconstructor = RangeBuilder<NodeID>{
 				.in_range = [&](NodeID id, posT pos) -> NodeID {
 					CORE_ASSERT(pos & LEAF_MASK, "expecting a leaf");
 					idxT offset = offsetFromPos(pos);

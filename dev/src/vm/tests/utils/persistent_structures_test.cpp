@@ -154,20 +154,19 @@ public:
 		using namespace vm::persistent;
 		Memory mem{};
 
-		auto checker = [&](
-						   MemoryStateID state, const std::vector<std::pair<usize, usize>>& expected
-					   ) -> void { 
-						ASSERT_EQUAL(expected, mem.toVec(state));
-						MemoryStateView view(mem, state);
-						ASSERT_EQUAL(expected, view.toVec());
-						ASSERT_EQUAL(expected.size(), view.size());
-						
-						for (auto [idx, var]: expected) {
-							ASSERT_TRUE(view.contains(idx));
-							ASSERT_TRUE(view.atMaybe(idx).has_value());
-							ASSERT_EQUAL(view[idx], var);
-						}
-					};
+		auto checker = [&](MemoryStateID                               state,
+		                   const std::vector<std::pair<usize, usize>>& expected) -> void {
+			ASSERT_EQUAL(expected, mem.toVec(state));
+			MemoryStateView view(mem, state);
+			ASSERT_EQUAL(expected, view.toVec());
+			ASSERT_EQUAL(expected.size(), view.size());
+
+			for (auto [idx, var]: expected) {
+				ASSERT_TRUE(view.contains(idx));
+				ASSERT_TRUE(view.atMaybe(idx).has_value());
+				ASSERT_EQUAL(view[idx], var);
+			}
+		};
 
 		auto empt = Memory::EMPTY;
 		checker(empt, {});
