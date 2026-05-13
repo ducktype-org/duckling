@@ -53,7 +53,7 @@ namespace compiler::frontend::packages {
 			std::vector<PackageDependencyInfo> dependencies
 		);
 
-		/** @brief Package ID — equal to the root module's package id. */
+		/** @brief Package ID */
 		[[nodiscard]] base::StrID getPackageID() const;
 
 		/** @brief Stable hash of the package, used as side-input key. */
