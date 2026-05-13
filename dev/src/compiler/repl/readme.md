@@ -164,7 +164,7 @@ Assignments are routed as instructions.
 - `f32`
 - `f64`
 - `bool`
-- `()` (unit; no printed value)
+- `()` (unit; prints "Function executed." for expressions or "Instruction executed." for instructions)
 
 ## Related Documentation
 
