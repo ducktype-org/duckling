@@ -115,13 +115,6 @@ namespace compiler::frontend {
 		return FileAccessLocked(m_main_source_file.value()->getFileID());
 	}
 
-	SourceFilesAccessLocked ModuleTree::getSourceFiles() const {
-		std::vector<FileAccessLocked> files;
-		files.reserve(m_source_files.size());
-		for (const auto& file: m_source_files) files.emplace_back(file->getFileID());
-		return { getModuleID(), std::move(files) };
-	}
-
 	SubmodulesAccessLocked ModuleTree::getSubmodules() const {
 		std::vector<ModuleAccessLocked> submodules;
 		submodules.reserve(m_submodules.size());
@@ -166,9 +159,6 @@ namespace compiler::frontend {
 		else
 			output << indent << "├> Missing main module file!\n";
 
-		for (const auto& file_ref: getSourceFiles().illegalAccess())
-			output << indent << "├= " << getFileRef(file_ref.illegalAccess().getID())->file.name()
-				   << '\n';
 
 		for (const auto& [ext, files]: getOtherFiles())
 			for (const auto& file: files) output << indent << "├─ " << file.name() << '\n';
@@ -189,8 +179,6 @@ namespace compiler::frontend {
 
 			// assert if children are invalid too
 
-			for (auto& sf: m_source_files)
-				CORE_ASSERT(!sf->component_hash.has_value(), "Child component hash have value!");
 			if (m_main_source_file.has_value())
 				CORE_ASSERT(
 					!m_main_source_file.value()->component_hash.has_value(),
@@ -204,7 +192,6 @@ namespace compiler::frontend {
 		}
 		m_path_component_hash.reset();
 		m_hash.reset();
-		for (auto& sf: m_source_files) sf->invalidateComponentHash();
 		if (m_main_source_file.has_value()) m_main_source_file.value()->invalidateComponentHash();
 		for (auto& [_, submodule]: m_submodules) submodule->invalidateHash();
 	}
@@ -366,10 +353,7 @@ namespace compiler::frontend {
 		std::string stem      = file.stem();
 		std::string extension = file.extension();
 
-		if (extension == LANG_SOURCE_FILE) {
-			// Regular source file - store path for later
-			addSourceFile(file);
-		} else if (extension == LANG_MODULE_FILE) {
+		if (extension == LANG_MODULE_FILE) {
 			// Module file
 			auto stem_id = base::StrID(stem);
 
@@ -402,11 +386,6 @@ namespace compiler::frontend {
 		base::Box<ModuleTreeBuilder> builder = ModuleTreeBuilder::create();
 		builder->setPackageID(base::StrID(base::generateRandomString(32)));
 		return builder;
-	}
-
-	void ModuleTreeBuilder::addSourceFile(const fs::File& file) {
-		CORE_ASSERT(!m_finalized, "Builder already finalized");
-		m_source_file_paths.push_back(file);
 	}
 
 	void ModuleTreeBuilder::setMainSourceFile(const fs::File& file) {
@@ -489,11 +468,6 @@ namespace compiler::frontend {
 				= SourceFile::create(m_main_source_file_path.value(), mod_id);
 		}
 
-		for (const auto& file_path: m_source_file_paths) {
-			auto source_file = SourceFile::create(file_path, mod_id);
-			module_ref->m_source_files.push_back(source_file);
-		}
-
 		for (const auto& [name, submodule]: m_submodules)
 			ModuleTreeModifier::addSubmodule(module_ref, submodule);
 
@@ -504,34 +478,6 @@ namespace compiler::frontend {
 	 * ModuleTreeModifier Implementation
 	 *********************/
 
-	void ModuleTreeModifier::addSourceFile(base::Ref<ModuleTree> module, const fs::File& file) {
-		module->m_source_files.push_back(SourceFile::create(file, ModuleID(module)));
-	}
-
-	void ModuleTreeModifier::removeSourceFileFromStorage(base::Ref<SourceFile> file) {
-		CORE_ASSERT(
-			use_module_modifier_remove, "Module modifier feature is disabled. See module_flags.hpp"
-		);
-
-		Ref<ModuleTree> module
-			= GetModuleID_Functor::getModRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
-				file->getModule().illegalAccess().getID()
-			);
-
-		auto& source_files = module->m_source_files;
-		auto  it
-			= std::ranges::find_if(source_files, [file](const base::Ref<SourceFile>& source_file) {
-				  return source_file == file;
-			  });
-
-		CORE_ASSERT(it != source_files.end(), "SourceFile not found in module");
-
-		// Remove file from source_files
-		source_files.erase(it);
-
-		// Remove SourceFile from storage. This invalidates the SourceFile instance!
-		SourceFile::removeSourceFileFromStorage(file);
-	}
 
 	void ModuleTreeModifier::setMainSourceFile(base::Ref<ModuleTree> module, const fs::File& file) {
 		CORE_ASSERT(
@@ -767,10 +713,6 @@ namespace compiler::frontend {
 			submodule->invalidateHash();  // invalidate hash as parent changed
 		}
 
-		// Remove all source files from storage this will invalidate the SourceFile instances!
-		for (auto& source_file: module->m_source_files)
-			SourceFile::removeSourceFileFromStorage(source_file);
-
 		// Remove main source file. This will invalidate the SourceFile instance!
 		if (module->m_main_source_file.has_value())
 			SourceFile::removeSourceFileFromStorage(module->m_main_source_file.value());
@@ -807,8 +749,6 @@ namespace compiler::frontend {
 		auto recursive_delete = [&](auto&& self, base::Ref<ModuleTree> current) -> void {
 			for (auto& [_, child]: current->m_submodules) self(self, child);
 
-			for (auto& source_file: current->m_source_files)
-				SourceFile::removeSourceFileFromStorage(source_file);
 			if (current->m_main_source_file.has_value())
 				SourceFile::removeSourceFileFromStorage(current->m_main_source_file.value());
 
@@ -847,8 +787,6 @@ namespace compiler::frontend {
             auto module_tree = GetModuleID_Functor::get(mid);
             if (module_tree->hasMainSourceFile())
                 files_to_parse.push_back(module_tree->getMainSourceFile().illegalAccess().getID());
-            for (const auto& file: module_tree->getSourceFiles().illegalAccess())
-                files_to_parse.push_back(file.illegalAccess().getID());
             for (const auto& submodule: module_tree->getSubmodules().illegalAccess())
                 self(submodule.illegalAccess().getID());
 		};
@@ -975,23 +913,6 @@ namespace compiler::frontend {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryMainSourceFile);
-
-	/********************
-	 * QuerySourceFiles *
-	 ********************/
-	struct IMPLEMENT_QUERY(QuerySourceFiles, std::vector<FileID>) {
-		static auto provide(Context& ctx, QKey key) -> PResult {
-			const auto&         module_tree = GetModuleID_Functor::get(key);
-			std::vector<FileID> out;
-			for (const auto& file: module_tree->getSourceFiles().unlock(ctx))
-				out.emplace_back(file.unlock(ctx).getID());
-			return out;
-		}
-
-		QUERY_AUTO_CACHE_CREF
-	};
-
-	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySourceFiles);
 
 	/*******************
 	 * QuerySubmodules *

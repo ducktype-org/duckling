@@ -319,18 +319,11 @@ private:
 		module_builder->setMainSourceFile(main_file);
 		auto module = module_builder->finalize();
 
-		auto source_path = fs::FileManager::createRandomVirtualFile("removal content");
-		cleanup_files.push_back(source_path);
-		ModuleTreeModifier::addSourceFile(module, source_path);
-		ASSERT_EQUAL(1, module->getSourceFiles().illegalAccess().size());
-		auto sf_ref = getRef(module->getSourceFiles().illegalAccess().front());
-
-		auto before = SourceFile::getSourceFilesFromFile(source_path);
+		auto before = SourceFile::getSourceFilesFromFile(main_file);
 		ASSERT_EQUAL(1, before.size());
 
-		ModuleTreeModifier::removeSourceFileFromStorage(sf_ref);
-		ASSERT_TRUE(module->getSourceFiles().illegalAccess().size() == 0);
-		auto after = SourceFile::getSourceFilesFromFile(source_path);
+		ModuleTreeModifier::removeModuleRecursive(module);
+		auto after = SourceFile::getSourceFilesFromFile(main_file);
 		ASSERT_TRUE(after.empty());
 
 		for (auto& file: cleanup_files) fs::FileManager::deleteFile(file);
@@ -344,19 +337,15 @@ private:
 		auto main_file = fs::FileManager::createRandomVirtualFile("fn main() {}");
 		cleanup_files.push_back(main_file);
 		module_builder->setMainSourceFile(main_file);
+
 		auto module = module_builder->finalize();
 
-		auto source_path = fs::FileManager::createRandomVirtualFile("dangling content");
-		cleanup_files.push_back(source_path);
-		ModuleTreeModifier::addSourceFile(module, source_path);
-		ASSERT_EQUAL(1, module->getSourceFiles().illegalAccess().size());
-		auto sf_ref  = getRef(module->getSourceFiles().illegalAccess().front());
-		auto file_id = sf_ref->getFileID();
+		auto file_id = module->getMainSourceFile().illegalAccess();
 
-		ModuleTreeModifier::removeSourceFileFromStorage(sf_ref);
+		ModuleTreeModifier::removeModuleRecursive(module);
 
 		IF_BUILD_TYPE_DEV(assertThrows<base::Panic>(
-							  [&]() { (void) GetFileID_Functor::get(file_id); },
+							  [&]() { (void) GetFileID_Functor::get(file_id.getID()); },
 							  "Dangling SourceFile should panic after removal"
 		);)
 

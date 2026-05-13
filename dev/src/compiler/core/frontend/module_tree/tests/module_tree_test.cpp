@@ -118,11 +118,9 @@ private:
 		ASSERT_TRUE(mt->hasMainSourceFile());
 		ASSERT_EQUAL(2, mt->getSubmodules().illegalAccess().size());
 		ASSERT_EQUAL(1, mt->getOtherFiles().size());
-		ASSERT_EQUAL(1, mt->getSourceFiles().illegalAccess().size());
 
 		auto another_module
 			= getSubmodule(mt->getSubmodules().illegalAccess(), base::StrID("another"));
-		ASSERT_EQUAL(1, getRef(another_module)->getSourceFiles().illegalAccess().size());
 		ASSERT_TRUE(getRef(another_module)->hasMainSourceFile());
 		ASSERT_EQUAL(
 			2, getRef(another_module)->getOtherFiles().size()
@@ -130,17 +128,11 @@ private:
 		ASSERT_EQUAL(2, getRef(another_module)->getOtherFiles()[base::StrID(".txt")].size());
 		ASSERT_EQUAL(1, getRef(another_module)->getOtherFiles()[base::StrID("")].size());
 		ASSERT_EQUAL(1, getRef(another_module)->getSubmodules().illegalAccess().size());
-		ASSERT_EQUAL(
-			"whoa.duck",
-			getRef(getRef(another_module)->getSourceFiles().illegalAccess().front())
-				->getFileIllegalAccess()
-				.name()
-		);
+
 
 		ASSERT_TRUE(hasSubmodule(mt->getSubmodules().illegalAccess(), base::StrID("awe")));
 		auto awe_module = getSubmodule(mt->getSubmodules().illegalAccess(), base::StrID("awe"));
 		ASSERT_EQUAL(0, getRef(awe_module)->getSubmodules().illegalAccess().size());
-		ASSERT_EQUAL(0, getRef(awe_module)->getSourceFiles().illegalAccess().size());
 		ASSERT_EQUAL(0, getRef(awe_module)->getOtherFiles().size());
 		ASSERT_TRUE(getRef(awe_module)->hasMainSourceFile());
 		ASSERT_EQUAL(
@@ -168,11 +160,6 @@ private:
 				.getID()
 				.queryUnstablePerfectHash()
 		);
-		for (auto& file: module->getSourceFiles().illegalAccess())
-			ASSERT_EQUAL(
-				id.queryUnstablePerfectHash(),
-				getRef(file)->getModule().illegalAccess().getID().queryUnstablePerfectHash()
-			);
 	}
 
 	void testOtherFeatures() {
@@ -254,10 +241,7 @@ private:
 		[[maybe_unused]] auto awe
 			= query::entryPoint<QuerySubmodules>(root)->at(base::StrID("awe"));
 
-		auto sources = query::entryPoint<QuerySourceFiles>(root);
-		assertTrue(sources->size() == 1, "Bad source count!");
-
-		auto main_id = sources->at(0);
+		auto main_id = query::entryPoint<QueryMainSourceFile>(root);
 
 		query::utils::withContextDo([&](query::Context& ctx) { getFilePST(ctx, main_id); });
 	}
@@ -291,12 +275,6 @@ private:
 				if (file.name() == ".skipped_file") found_skipped = true;
 			}
 		}
-		// Also check in source files (if any)
-		for (const auto& src: mt->getSourceFiles().illegalAccess()) {
-			if (getRef(src)->getFileIllegalAccess().name() == "file") found_file = true;
-			if (getRef(src)->getFileIllegalAccess().name() == "file.txt") found_file_txt = true;
-			if (getRef(src)->getFileIllegalAccess().name() == ".skipped_file") found_skipped = true;
-		}
 
 		ASSERT_TRUE(found_file);
 		ASSERT_TRUE(found_file_txt);
@@ -317,7 +295,6 @@ private:
 		// Check submodule's files
 		auto another_dir
 			= getSubmodule(mt->getSubmodules().illegalAccess(), base::StrID("another_directory"));
-		ASSERT_EQUAL(0, getRef(another_dir)->getSourceFiles().illegalAccess().size());
 		ASSERT_EQUAL(0, getRef(another_dir)->getOtherFiles().size());
 	}
 
@@ -354,14 +331,6 @@ private:
 				}
 			}
 		}
-		for (const auto& src: mt->getSourceFiles().illegalAccess()) {
-			if (getRef(src)->getFileIllegalAccess().name() == "file1.txt") {
-				ASSERT_EQUAL(
-					"File1 content", getRef(src)->getFileIllegalAccess().getContent().view()
-				);
-				found_file1 = true;
-			}
-		}
 		ASSERT_TRUE(found_file1);
 
 		// Test files in subDir1
@@ -373,14 +342,6 @@ private:
 					ASSERT_EQUAL("File2 content", file.getContent().view());
 					found_file2 = true;
 				}
-			}
-		}
-		for (const auto& src: getRef(sub1)->getSourceFiles().illegalAccess()) {
-			if (getRef(src)->getFileIllegalAccess().name() == "file2.txt") {
-				ASSERT_EQUAL(
-					"File2 content", getRef(src)->getFileIllegalAccess().getContent().view()
-				);
-				found_file2 = true;
 			}
 		}
 		ASSERT_TRUE(found_file2);
@@ -402,21 +363,7 @@ private:
 		// Build initial module tree
 		auto mt = ModuleTreeBuilder::create(root_dir, base::StrID("modifier_test_package_id65"));
 		// Test addSourceFile
-		auto new_src = root_dir.createSubFile("new src", "newsrc.duck");
-		ModuleTreeModifier::addSourceFile(mt, new_src);
-		bool found_newsrc = false;
-		for (auto& sf: mt->getSourceFiles().illegalAccess())
-			if (getRef(sf)->getFileIllegalAccess().name() == "newsrc.duck") found_newsrc = true;
-		ASSERT_TRUE(found_newsrc);
 
-		// Test removeSourceFileFromStorage
-		auto src_to_remove = mt->getSourceFiles().illegalAccess().front();
-		ModuleTreeModifier::removeSourceFileFromStorage(getRef(src_to_remove));
-		bool still_present = false;
-		for (auto& sf: mt->getSourceFiles().illegalAccess())
-			if (sf.illegalAccess().getID() == src_to_remove.illegalAccess().getID())
-				still_present = true;
-		ASSERT_EQUAL(false, still_present);
 
 		// Test setMainSourceFile (remove first if exists)
 		if (mt->hasMainSourceFile()) {
@@ -470,13 +417,11 @@ private:
 		// 	= mt->getSourceFiles().empty() ? new_src : mt->getSourceFiles().front();
 		// ModuleTreeModifier::fileModified(src_file);
 
-		// Test removeModule with a module that has source files and main source file
+		// Test removeModule with a module that has main source file
 		{
 			// Use unique variable names to avoid shadowing
 			auto removable_sub_dir   = root_dir.createSubDirectory("removable");
 			auto removable_main_file = removable_sub_dir.createSubFile("main", "removable.dmf");
-			auto removable_src_file1 = removable_sub_dir.createSubFile("src1", "src1.duck");
-			auto removable_src_file2 = removable_sub_dir.createSubFile("src2", "src2.duck");
 			auto removable_sub_mod   = ModuleTreeBuilder::create(
                 removable_sub_dir, base::StrID("modifier_test_package_id65")
             );
@@ -487,18 +432,13 @@ private:
 				hasSubmodule(mt->getSubmodules().illegalAccess(), removable_sub_mod->getName())
 			);
 
-			// Check that main and source files exist in SourceFile::file_map
+			// Check that main file exists in SourceFile::file_map
 			ASSERT_TRUE(removable_sub_mod->hasMainSourceFile());
 			auto removable_main_id = removable_sub_mod->getMainSourceFile();
 			ASSERT_TRUE(
 				getRef(removable_main_id)->getModule().illegalAccess().getID()
 				== removable_sub_mod->getModuleID()
 			);
-			for (auto& sf: removable_sub_mod->getSourceFiles().illegalAccess())
-				ASSERT_TRUE(
-					getRef(sf)->getModule().illegalAccess().getID()
-					== removable_sub_mod->getModuleID()
-				);
 
 			// Remove the submodule
 			ModuleTreeModifier::removeSingleModule(removable_sub_mod);
@@ -559,10 +499,6 @@ private:
 
 		ModuleTreeModifier::addSubmodule(child, grand_child);
 		ModuleTreeModifier::addSubmodule(root, child);
-
-		auto extra_source = fs::FileManager::createRandomVirtualFile("fn extra() {}");
-		cleanup_files.push_back(extra_source);
-		ModuleTreeModifier::addSourceFile(child, extra_source);
 
 		ASSERT_TRUE(hasSubmodule(root->getSubmodules().illegalAccess(), base::StrID("removal_child"))
 		);
@@ -658,15 +594,10 @@ private:
 		// Create virtual files
 		auto root_dir   = fs::FileManager::createRandomVirtualDirectory();
 		auto main_file  = root_dir.createSubFile("main", "manual_mod.dmf");
-		auto src_file1  = root_dir.createSubFile("src1", "src1.duck");
-		auto src_file2  = root_dir.createSubFile("src2", "src2.duck");
 		auto other_file = root_dir.createSubFile("other", "other.txt");
 
 		// Set main source file
 		builder->setMainSourceFile(main_file);
-		// Add source files
-		builder->addSourceFile(src_file1);
-		builder->addSourceFile(src_file2);
 		// Add other file
 		builder->addOtherFile(other_file);
 
@@ -704,7 +635,6 @@ private:
 		ASSERT_EQUAL("manual_mod", mt->getName().strView());
 		ASSERT_TRUE(mt->hasMainSourceFile());
 		ASSERT_TRUE(hasSubmodule(parent_mod->getSubmodules().illegalAccess(), mt->getName()));
-		ASSERT_EQUAL(2, mt->getSourceFiles().illegalAccess().size());
 		ASSERT_EQUAL(1, mt->getOtherFiles().size());
 		ASSERT_EQUAL(1, mt->getSubmodules().illegalAccess().size());
 		ASSERT_EQUAL(

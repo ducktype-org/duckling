@@ -58,7 +58,7 @@ namespace lsp {
 			const auto& virtual_path = path.toVirtualPath();
 
 			if (file.isFile()) {
-				if (path.extension() == LANG_MODULE_FILE || path.extension() == LANG_SOURCE_FILE) {
+				if (path.extension() == LANG_MODULE_FILE) {
 					fs::FileManager::createVirtualFile(
 						virtual_path, file.getContent().view().stringView(), true
 					);
@@ -139,13 +139,6 @@ namespace lsp {
 			auto extension  = file.extension();
 			auto parent_dir = fs::File(file.getFilePath().parentPath());
 
-			if (extension == LANG_SOURCE_FILE) {
-				auto module_ref_opt = findModuleForDirectoryPath(parent_dir);
-				if_opt_some(module_ref_opt, module_ref)
-					ModuleTreeModifier::addSourceFile(module_ref, file);
-				return;
-			}
-
 			if (extension == LANG_MODULE_FILE) {
 				base::Optional<base::Ref<ModuleTree>> parent_module_ref_opt;
 				base::StrID                           stem_id(file.stem().c_str());
@@ -221,36 +214,30 @@ namespace lsp {
 		// ========================== Removing a file from module tree ==========================
 
 		/**
-		 * @brief Removes a file from the module tree. If the file is a source file, it is removed
-		 * from its module. If the file is a module file, the entire module is removed. If the
-		 * removed module was a package, it is unregistered.
+		 * @brief Removes files and modules from the module tree. If the removed module was a
+		 * package, it is unregistered.
 		 */
 		void removeFileFromModuleTree(const fs::File& file) {
-			auto                         source_files = SourceFile::getSourceFilesFromFile(file);
-			std::unordered_set<ModuleID> modules_to_remove;
+			auto source_files = SourceFile::getSourceFilesFromFile(file);
 
 			for (auto& source_file: source_files) {
 				auto module_id  = source_file->getModule().illegalAccess().getID();
 				auto module_ref = getModuleRef(module_id);
 
-				bool is_main_module_file = false;
-				if (module_ref->hasMainSourceFile()) {
-					auto main_source_file = module_ref->getMainSourceFile().illegalAccess().getID();
-					is_main_module_file   = (main_source_file == source_file->getFileID());
-				}
+				CORE_ASSERT(
+					module_ref->hasMainSourceFile(),
+					"Modules should have main source files, since module_id is obtained from "
+					"source file"
+				);
+				CORE_ASSERT(
+					module_ref->getMainSourceFile().illegalAccess().getID()
+						== source_file->getFileID(),
+					"Module's main source file should be the same as the source file we are trying "
+					"to remove"
+				);
 
-				if (is_main_module_file) modules_to_remove.insert(module_id);
-			}
-
-			for (auto& source_file: source_files) {
-				auto module_id = source_file->getModule().illegalAccess().getID();
-				if (modules_to_remove.contains(module_id)) continue;
-
-				ModuleTreeModifier::removeSourceFileFromStorage(source_file);
-			}
-
-			for (const auto& module_id: modules_to_remove)
 				removeModuleAndUnregisterPackage(module_id);
+			}
 		}
 	}
 

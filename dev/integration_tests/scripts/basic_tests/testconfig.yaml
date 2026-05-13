@@ -1,6 +1,30 @@
 # Simplest tests for scripts in Duckling.
 
 Tests:
+  declaration:
+    folder: "class/declaration"
+    Cases:
+      direct:
+        mode: direct
+        Output:
+          String: "42\n25\n"
+      vm:
+        mode: vm
+        Output:
+          String: "42\n25\n"
+
+  using_previously_defined_objects:
+    folder: "class/using_previously_defined_objects"
+    Cases:
+      direct:
+        mode: direct
+        Output:
+          String: "12\n"
+      vm:
+        mode: vm
+        Output:
+          String: "12\n"
+
   simple_addition:
     folder: "simple_addition"
     Cases:
