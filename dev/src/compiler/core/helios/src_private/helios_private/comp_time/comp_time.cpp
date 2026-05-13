@@ -797,6 +797,9 @@ namespace compiler::helios {
 				if (getSymRef(func_id)->getPSTDataOpt().empty()) {
 					// @TODO: #2506 Handle comptime of non meta tuples
 					// Skip tuple meta ctor calls, evaluate them to a type instead
+					// This is a mock solution, eventually the ctor should be compiled normally but
+					// currenlty this is not supported in the VM, hence the special case to remain
+					// comptime of tuple types possible until that is implemented.
 					if (isMetaTupleCtor(ctx, func_id)) continue;
 
 					// This path is not implemented yet.
