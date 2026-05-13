@@ -41,6 +41,7 @@ namespace vm::debugger {
 
 
 	public:
+		Debugger(const std::vector<std::string>& main_args = {});
 		Debugger(const fs::File& filepath, const std::vector<std::string>& main_args = {});
 		~Debugger();
 		Debugger(const Debugger&)            = delete;
@@ -77,5 +78,20 @@ namespace vm::debugger {
 		 * @return The current status of the VM.
 		 */
 		[[nodiscard]] vm::api::ProcStatus getStatus();
+
+		/**
+		 * @brief Loads the file
+		 */
+		void loadFile(const fs::File& filepath);
+
+		/**
+		 * @brief Pauses the VM
+		 */
+		void pause();
+
+		/**
+		 * @brief Resumes the VM
+		 */
+		void resume();
 	};
 }

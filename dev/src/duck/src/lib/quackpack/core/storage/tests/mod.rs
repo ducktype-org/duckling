@@ -41,25 +41,24 @@ fn registry_url_hash() -> String {
 /// 1. remove foo, because no package references it,
 /// 2. remove root3, because it's too old,
 /// 3. remove bar, because it was only references by root3.
-fn setup_mock_storage() -> (DuckContext, TempDir) {
+fn setup_mock_storage() -> (DuckContext, TempDir, PathBuf) {
     let setup = || {
-        let storage_root = TempDir::new().unwrap();
-        setup_mock_packages(storage_root.path());
-        setup_mock_venvs(storage_root.path());
-        setup_mock_locks(storage_root.path());
+        let duck_home = TempDir::new().unwrap();
         // Also overwrite DUCK_HOME, so we'll use the default configuration options.
         // SAFETY: Setup is single threaded, and `Env` in `DuckContext`, copies all envs.
         unsafe {
-            std::env::set_var("DUCK_STORAGE_DIR", storage_root.path());
-            std::env::set_var("DUCK_HOME", storage_root.path());
+            std::env::set_var("DUCK_HOME", duck_home.path());
         }
         let ctx = DuckContext::default();
         // SAFETY: Setup is single threaded, and `Env` in `DuckContext`, copies all envs.
         unsafe {
-            std::env::remove_var("DUCK_STORAGE_DIR");
             std::env::remove_var("DUCK_HOME");
         }
-        (ctx, storage_root)
+        let storage_root = ctx.duck_home().storage().into_not_locked_path();
+        setup_mock_packages(storage_root.as_path());
+        setup_mock_venvs(storage_root.as_path(), &ctx);
+        setup_mock_locks(storage_root.as_path());
+        (ctx, duck_home, storage_root)
     };
     setup_test(setup)
 }
@@ -86,6 +85,7 @@ fn setup_mock_venv(
     name: &str,
     freeze_mutator: impl FnOnce(&mut VenvFreeze),
     data_mutator: impl FnOnce(&mut VenvData),
+    ctx: &DuckContext,
 ) {
     let storage = Storage::new(root);
     let mut basic_freeze = VenvFreeze::new(
@@ -102,11 +102,11 @@ fn setup_mock_venv(
     );
     data_mutator(&mut basic_data);
     let venv = Venv::new(name.to_venv_id(), basic_data);
-    venv.save_to(&storage).unwrap()
+    venv.save_to(&storage, ctx).unwrap()
 }
 
-fn setup_mock_venvs(root: &Path) {
-    setup_mock_venv(root, "root1", |_| {}, |_| {});
+fn setup_mock_venvs(root: &Path, ctx: &DuckContext) {
+    setup_mock_venv(root, "root1", |_| {}, |_| {}, ctx);
     setup_mock_venv(
         root,
         "root2",
@@ -114,6 +114,7 @@ fn setup_mock_venvs(root: &Path) {
         |data| {
             data.set_ephemeral(true);
         },
+        ctx,
     );
     let dep = FreezeDep::new("bar".into(), Version::new(1, 0, 0));
     let package = FreezePackage::new(
@@ -138,6 +139,7 @@ fn setup_mock_venvs(root: &Path) {
             data.set_ephemeral(true);
             data.set_last_modification(SystemTime::now() - Duration::from_secs(2 * 24 * 60 * 60));
         },
+        ctx,
     );
 
     let dep = FreezeDep::new("baz".into(), Version::new(1, 0, 0));
@@ -163,6 +165,7 @@ fn setup_mock_venvs(root: &Path) {
         |data| {
             data.set_last_modification(SystemTime::now() - Duration::from_secs(2 * 24 * 60 * 60));
         },
+        ctx,
     );
 }
 
@@ -211,7 +214,13 @@ fn create_mock_package<'duck>(
     let opts = InitOptions {
         ctx,
         at: root.to_path_buf(),
-        name: name.into(),
+        explicit_name: Some(name),
+        as_venv: false,
+        expose_freezefile: false,
+        ephemeral: false,
+        local_storage: false,
+        git: false,
+        full: false,
     };
     init::init(opts).unwrap();
     PackageLoader::find_at_exact_directory(root, ctx).unwrap()
@@ -234,14 +243,26 @@ fn create_mock_package_with_dependencies<'duck>(
     let opts = InitOptions {
         ctx,
         at: root.join("dep"),
-        name: "dep".into(),
+        explicit_name: Some("dep"),
+        as_venv: false,
+        expose_freezefile: false,
+        ephemeral: false,
+        local_storage: false,
+        git: false,
+        full: false,
     };
     init::init(opts).unwrap();
 
     let opts = InitOptions {
         ctx,
         at: root.join("root"),
-        name: name.into(),
+        explicit_name: Some(name),
+        as_venv: false,
+        expose_freezefile: false,
+        ephemeral: false,
+        local_storage: false,
+        git: false,
+        full: false,
     };
     init::init(opts).unwrap();
     // !TODO: Use `duck add`.

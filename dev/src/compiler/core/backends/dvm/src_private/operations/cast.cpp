@@ -89,28 +89,21 @@ namespace compiler::backend_vm::internal {
 	void InstructionLowerer::lower(const CastOperation& op) {
 		// Operation in form a = OP b (like mov)
 		auto operation   = getOpKindFromLIRLayouts(op.cast_params);
-		auto target_type = ctx->program_context.lowerAndKeepTslType(op.cast_params.target_layout);
+		auto target_type = **ctx->program_context.lowerAndKeepTslType(op.cast_params.target_layout);
 
-		// The cast operations are only supported between local stack values.
-		// So if we have a non-local source (like immediate value or global),
-		// we first move it to a temporary local and perform the cast there.
+		// If the source is an immediate, we place it in a local and perform a cast on it.
+		DVMPlace src_arg = ctx->forceToPlace(op.src, "cast_src_tmp");
 
-		// If the destination is non-local, we put the result in a temporary local
-		// and then move the result to the final destination.
-		DVMLocal src_arg = ctx->forceToLocal(op.src, "cast_src_tmp");
-
-		if (op.dest && op.dest->isDirect() && op.dest->is<DVMLocal>()) {
+		if (op.dest && op.dest->isDirect()) {
 			// If output is a direct (not a local storing a pointer to the output place) local,
 			// we optimize the cast to work directly on the local.
-			auto dst_local = op.dest->get<DVMLocal>();
-			ctx->pushInstruction({ operation, dst_local, src_arg });
+			ctx->pushInstruction({ operation, *op.dest, src_arg });
 		} else {
-			// Otherwise, if the output place is not direct or a global we have to create a
-			// temporary to perform the operation on.
-			DVMLocal dst_temp = ctx->pushTempLocal(target_type, "cast_dst_tmp");
-
+			// Otherwise, if the output place is not direct, we have to create a
+			// temporary to place the cast result and then move it into the output place.
+			DVMPlace dst_temp = ctx->pushTempLocal(target_type, "cast_dst_tmp");
 			ctx->pushInstruction({ operation, dst_temp, src_arg });
-			ctx->maybeStoreResult(op.dest, { dst_temp, DVMPlace::AccessKind::Direct });
+			ctx->maybeStoreResult(op.dest, { dst_temp });
 		}
 	}
 }

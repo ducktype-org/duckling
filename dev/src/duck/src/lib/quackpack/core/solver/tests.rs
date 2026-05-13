@@ -19,18 +19,18 @@ use crate::util::test_utils::setup_test;
 
 struct MockGitAccess();
 impl GitAccess for MockGitAccess {
-    fn git_path(&self, _url: url::Url, _commit: crate::StrId) -> PathBuf {
+    fn git_path(&self, _url: url::Url, _commit: &str) -> PathBuf {
         unimplemented!()
     }
 
-    fn is_stored(&self, _url: url::Url, _commit: crate::StrId) -> bool {
+    fn is_stored(&self, _url: url::Url, _commit: &str) -> bool {
         unimplemented!()
     }
 
     fn store(
         &mut self,
         _url: url::Url,
-        _commit: crate::StrId,
+        _commit: &str,
         _source_path: &std::path::Path,
     ) -> crate::QuackResult<()> {
         unimplemented!()
@@ -44,12 +44,12 @@ fn setup_duck_ctx() -> (DuckContext, TempDir) {
         let dir = tempdir().unwrap();
         // SAFETY: Setup is single threaded, and `Env` in `DuckContext`, copies all envs.
         unsafe {
-            std::env::set_var("DUCK_CACHE_DIR", dir.path());
+            std::env::set_var("DUCK_HOME", dir.path());
         }
         let ctx = DuckContext::default();
         // SAFETY: Setup is single threaded, and `Env` in `DuckContext`, copies all envs.
         unsafe {
-            std::env::remove_var("DUCK_CACHE_DIR");
+            std::env::remove_var("DUCK_HOME");
         }
         (ctx, dir)
     };

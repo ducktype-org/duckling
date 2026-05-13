@@ -2,13 +2,15 @@
 Tests:
   globals:
     Cases:
-      llvm:
-        backend: llvm
+      all:
+        backend: all
         Output:
           String: "4\n1\n3\n4\n"
         ExitCode: 0
-      dvm:
-        backend: dvm 
+  submodules:
+    Cases:
+      all:
+        backend: all
         Output:
-          String: "4\n1\n3\n4\n"
+          String: "30\n"
         ExitCode: 0

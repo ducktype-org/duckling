@@ -11,6 +11,7 @@ from .helpers import (
     exit_with_error,
 )
 
+from ...jit.llvm_tools import LLVM_TOOLS
 
 def setup_build_impl(
     build_dir,
@@ -29,11 +30,10 @@ def setup_build_impl(
     disable_unity_compilation,
     enable_link_time_optimization,
     clang_for_builtins,
-    enable_jit,
-    llvm_linker,
-    opt_path,
     sanitizer,
     use_replxx,
+    enable_jit,
+    llvm_tools_list,
     embed_assets,
     build_static_icu,
 ):
@@ -83,6 +83,10 @@ def setup_build_impl(
         f"-D ENABLE_LINK_TIME_OPTIMIZATION={'ON' if enable_link_time_optimization else 'OFF'}",
         f"-D JIT_ENABLED={'ON' if enable_jit else 'OFF'}",
         f"-D USE_REPLXX={'ON' if use_replxx else 'OFF'}",
+        *[
+            f"-D {tool.macro()}={llvm_tools_list[tool.param()]}"
+            for tool in LLVM_TOOLS
+        ],
         f"-D EMBED_ASSETS={'ON' if embed_assets else 'OFF'}",
         f"-D BUILD_STATIC_ICU={'ON' if build_static_icu else 'OFF'}",
     ]
@@ -93,10 +97,6 @@ def setup_build_impl(
     if clang_for_builtins:
         cmd_parts.append(f"-D CLANG_BIN={clang_for_builtins}")
 
-    if enable_jit:
-        cmd_parts.append(f"-D JIT_LLVM_LINKER={llvm_linker}")
-        cmd_parts.append(f"-D JIT_LLVM_OPT={opt_path}")
-
     if should_add_linker_flags(linker):
         if supports_cmake_linker_type():
             cmd_parts.append(f"-D CMAKE_LINKER_TYPE={linker.upper()}")
@@ -106,7 +106,7 @@ def setup_build_impl(
     cmd = " ".join(cmd_parts)
 
     log_info("Setting up a build folder...")
-    if docs or coverage:
+    if docs or coverage or enable_jit:
         with_venv(cmd)
     else:
         bash_command(cmd)
