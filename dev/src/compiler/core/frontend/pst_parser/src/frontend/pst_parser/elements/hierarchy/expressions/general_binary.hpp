@@ -44,5 +44,6 @@ namespace pst::expr {
 		static MBox<ExprElement> parse(LangParserState& state);
 
 		~GeneralBinary() override = default;
+		friend class ComparisonChain;
 	};
 }

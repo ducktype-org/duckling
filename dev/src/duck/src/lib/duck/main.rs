@@ -53,9 +53,10 @@ fn print_error_and_exit(error: QuackError, stdout: &Terminal, stderr: &Terminal)
 
 /// Print [`QuackError`] as a message.
 fn print_message(msgs: &QuackError, term: &Terminal) -> QuackResult<()> {
+    // NOTE: We intentionaly ignore any printing errors here.
     for (i, error) in msgs.sources().enumerate() {
         if i > 0 {
-            term.print("");
+            let _ = term.print("");
         }
         let msg = if let Some(clap_error) = error.context_aware_downcast_ref::<clap::Error>() {
             // Clap internally adds a trailing newline, remove it.
@@ -70,13 +71,13 @@ fn print_message(msgs: &QuackError, term: &Terminal) -> QuackResult<()> {
         };
         match error.error_type() {
             ErrorType::Hint => {
-                term.hint(msg);
+                let _ = term.hint(msg);
             }
             ErrorType::Note => {
-                term.note(msg);
+                let _ = term.note(msg);
             }
             ErrorType::BareMessage => {
-                term.print(msg);
+                let _ = term.print(msg);
             }
             _ => qp_bail_internal!("Errors and internal errors should not be printed on stdout"),
         }
@@ -111,29 +112,29 @@ fn print_errors_stack(error: &QuackError, term: &Terminal) {
         if i == 0 {
             // Clap errors already start with `error: ` prefix, ignore it.
             if is_clap {
-                term.print(msg);
+                let _ = term.print(msg);
             } else {
-                term.error(msg);
+                let _ = term.error(msg);
             }
         } else {
-            term.print("");
+            let _ = term.print("");
             match error.error_type() {
                 ErrorType::Hint => {
-                    term.hint(msg);
+                    let _ = term.hint(msg);
                 }
                 ErrorType::Note => {
-                    term.note(msg);
+                    let _ = term.note(msg);
                 }
                 ErrorType::BareMessage => {
-                    term.print(msg);
+                    let _ = term.print(msg);
                 }
                 ErrorType::Error => {
-                    term.print(indent("Caused by:", 2));
-                    term.print(indent(msg.as_str(), 4));
+                    let _ = term.print(indent("Caused by:", 2));
+                    let _ = term.print(indent(msg.as_str(), 4));
                 }
                 ErrorType::Internal => {
-                    term.print(indent("Caused by:", 2));
-                    term.print(indent(msg.as_str(), 4));
+                    let _ = term.print(indent("Caused by:", 2));
+                    let _ = term.print(indent(msg.as_str(), 4));
                 }
             }
         }
@@ -152,25 +153,26 @@ fn print_internals(error: &QuackError, term: &Terminal) {
         return;
     }
     for e in errors.iter() {
-        term.print("");
-        term.critical(format!("got the internal error: {}", e));
+        let _ = term.print("");
+        let _ = term.critical(format!("got the internal error: {}", e));
     }
     print_backtraces(errors.iter().map(|error| error.backtrace()), term);
-    term.note("Please file a bug report at: https://github.com/ducktype-org/duckling/issues/");
+    let _ =
+        term.note("Please file a bug report at: https://github.com/ducktype-org/duckling/issues/");
 }
 
 /// Print captured [`Backtrace`](std::backtrace::Backtrace)s of captured [`InternalError`]s.
 fn print_backtraces<'a>(backtraces: impl IntoIterator<Item = &'a Backtrace>, term: &Terminal) {
     if std::env::var("DUCK_BACKTRACE").as_deref() != Ok("1") {
-        term.note("run with `DUCK_BACKTRACE=1` to see backtraces");
+        let _ = term.note("run with `DUCK_BACKTRACE=1` to see backtraces");
         return;
     }
     for (i, bt) in backtraces.into_iter().enumerate() {
         if i != 0 {
             // Print a newline.
-            term.print("");
+            let _ = term.print("");
         }
-        term.print(format!("Backtrace #{i}:"));
-        term.print(bt);
+        let _ = term.print(format!("Backtrace #{i}:"));
+        let _ = term.print(bt);
     }
 }

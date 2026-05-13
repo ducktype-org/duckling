@@ -35,80 +35,48 @@
 									"sourceStart": 10,
 									"sourceEnd": 18
 								},
-								"Comparison Chain": {
-									"sub-expressions": [
-										{
-											"position": {
-												"sourceStart": 10,
-												"sourceEnd": 14
+								"Binary Operator": {
+									"left_expr": {
+										"position": {
+											"sourceStart": 10,
+											"sourceEnd": 14
+										},
+										"Binary Operator": {
+											"left_expr": {
+												"position": {
+													"sourceStart": 10,
+													"sourceEnd": 10
+												},
+												"Identifier Expression": {
+													"name": {
+														"Name": "a"
+													}
+												}
 											},
-											"Binary Operator": {
-												"left_expr": {
-													"position": {
-														"sourceStart": 10,
-														"sourceEnd": 10
-													},
-													"Identifier Expression": {
-														"name": {
-															"position": {
-																"sourceStart": 10,
-																"sourceEnd": 10
-															},
-															"Identifier Wrapper": {
-																"value": "a"
-															}
-														}
-													}
+											"operator": "+",
+											"right_expr": {
+												"position": {
+													"sourceStart": 14,
+													"sourceEnd": 14
 												},
-												"operator": {
-													"position": {
-														"sourceStart": 12,
-														"sourceEnd": 12
-													},
-													"Operator Wrapper": {
-														"value": "+"
-													}
-												},
-												"right_expr": {
-													"position": {
-														"sourceStart": 14,
-														"sourceEnd": 14
-													},
-													"Identifier Expression": {
-														"name": {
-															"position": {
-																"sourceStart": 14,
-																"sourceEnd": 14
-															},
-															"Identifier Wrapper": {
-																"value": "b"
-															}
-														}
+												"Identifier Expression": {
+													"name": {
+														"Name": "b"
 													}
 												}
 											}
+										}
+									},
+									"operator": ">",
+									"right_expr": {
+										"position": {
+											"sourceStart": 18,
+											"sourceEnd": 18
 										},
-										{
-											"position": {
-												"sourceStart": 18,
-												"sourceEnd": 18
-											},
-											"Numeric Value Expr": {
-												"number": "0"
-											}
+										"Numeric Value Expr": {
+											"number": "0"
 										}
-									],
-									"operators": [
-										{
-											"position": {
-												"sourceStart": 16,
-												"sourceEnd": 16
-											},
-											"Operator Wrapper": {
-												"value": ">"
-											}
-										}
-									]
+									}
 								}
 							}
 						}
@@ -212,80 +180,48 @@
 												"sourceStart": 45,
 												"sourceEnd": 54
 											},
-											"Comparison Chain": {
-												"sub-expressions": [
-													{
-														"position": {
-															"sourceStart": 45,
-															"sourceEnd": 49
+											"Binary Operator": {
+												"left_expr": {
+													"position": {
+														"sourceStart": 45,
+														"sourceEnd": 49
+													},
+													"Binary Operator": {
+														"left_expr": {
+															"position": {
+																"sourceStart": 45,
+																"sourceEnd": 45
+															},
+															"Identifier Expression": {
+																"name": {
+																	"Name": "a"
+																}
+															}
 														},
-														"Binary Operator": {
-															"left_expr": {
-																"position": {
-																	"sourceStart": 45,
-																	"sourceEnd": 45
-																},
-																"Identifier Expression": {
-																	"name": {
-																		"position": {
-																			"sourceStart": 45,
-																			"sourceEnd": 45
-																		},
-																		"Identifier Wrapper": {
-																			"value": "a"
-																		}
-																	}
-																}
+														"operator": "+",
+														"right_expr": {
+															"position": {
+																"sourceStart": 49,
+																"sourceEnd": 49
 															},
-															"operator": {
-																"position": {
-																	"sourceStart": 47,
-																	"sourceEnd": 47
-																},
-																"Operator Wrapper": {
-																	"value": "+"
-																}
-															},
-															"right_expr": {
-																"position": {
-																	"sourceStart": 49,
-																	"sourceEnd": 49
-																},
-																"Identifier Expression": {
-																	"name": {
-																		"position": {
-																			"sourceStart": 49,
-																			"sourceEnd": 49
-																		},
-																		"Identifier Wrapper": {
-																			"value": "b"
-																		}
-																	}
+															"Identifier Expression": {
+																"name": {
+																	"Name": "b"
 																}
 															}
 														}
+													}
+												},
+												"operator": "==",
+												"right_expr": {
+													"position": {
+														"sourceStart": 54,
+														"sourceEnd": 54
 													},
-													{
-														"position": {
-															"sourceStart": 54,
-															"sourceEnd": 54
-														},
-														"Numeric Value Expr": {
-															"number": "0"
-														}
+													"Numeric Value Expr": {
+														"number": "0"
 													}
-												],
-												"operators": [
-													{
-														"position": {
-															"sourceStart": 51,
-															"sourceEnd": 52
-														},
-														"Operator Wrapper": {
-															"value": "=="
-														}
-													}
-												]
+												}
 											}
 										}
 									}

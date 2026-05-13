@@ -11,9 +11,8 @@ Tests:
 
   comp_time_references:
     Cases:
-      # @TODO: #1849 Add a DVM case when this is fixed.
-      llvm:
-        backend: llvm
+      all:
+        backend: all
         Output:
           String: "124\n"
         ExitCode: 0
@@ -51,4 +50,12 @@ Tests:
         backend: all
         Output:
           String: "11\n"
+        ExitCode: 0
+
+  arrays_in_comp_time:
+    Cases:
+      all:
+        backend: all
+        Output:
+          String: "6\n"
         ExitCode: 0

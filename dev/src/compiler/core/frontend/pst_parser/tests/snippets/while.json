@@ -26,106 +26,66 @@
 									"sourceStart": 6,
 									"sourceEnd": 20
 								},
-								"Comparison Chain": {
-									"sub-expressions": [
-										{
-											"position": {
-												"sourceStart": 6,
-												"sourceEnd": 10
-											},
-											"Binary Operator": {
-												"left_expr": {
-													"position": {
-														"sourceStart": 6,
-														"sourceEnd": 6
-													},
-													"Identifier Expression": {
-														"name": {
-															"position": {
-																"sourceStart": 6,
-																"sourceEnd": 6
-															},
-															"Identifier Wrapper": {
-																"value": "a"
-															}
-														}
-													}
-												},
-												"operator": {
-													"position": {
-														"sourceStart": 8,
-														"sourceEnd": 8
-													},
-													"Operator Wrapper": {
-														"value": "+"
-													}
-												},
-												"right_expr": {
-													"position": {
-														"sourceStart": 10,
-														"sourceEnd": 10
-													},
-													"Identifier Expression": {
-														"name": {
-															"position": {
-																"sourceStart": 10,
-																"sourceEnd": 10
-															},
-															"Identifier Wrapper": {
-																"value": "b"
-															}
-														}
-													}
-												}
-											}
+								"Binary Operator": {
+									"left_expr": {
+										"position": {
+											"sourceStart": 6,
+											"sourceEnd": 10
 										},
-										{
-											"position": {
-												"sourceStart": 14,
-												"sourceEnd": 20
+										"Binary Operator": {
+											"left_expr": {
+												"position": {
+													"sourceStart": 6,
+													"sourceEnd": 6
+												},
+												"Identifier Expression": {
+													"name": {
+														"Name": "a"
+													}
+												}
 											},
-											"Binary Operator": {
-												"left_expr": {
-													"position": {
-														"sourceStart": 14,
-														"sourceEnd": 14
-													},
-													"Numeric Value Expr": {
-														"number": "4"
-													}
+											"operator": "+",
+											"right_expr": {
+												"position": {
+													"sourceStart": 10,
+													"sourceEnd": 10
 												},
-												"operator": {
-													"position": {
-														"sourceStart": 16,
-														"sourceEnd": 16
-													},
-													"Operator Wrapper": {
-														"value": "+"
-													}
-												},
-												"right_expr": {
-													"position": {
-														"sourceStart": 18,
-														"sourceEnd": 20
-													},
-													"Numeric Value Expr": {
-														"number": "0.8"
+												"Identifier Expression": {
+													"name": {
+														"Name": "b"
 													}
 												}
 											}
 										}
-									],
-									"operators": [
-										{
-											"position": {
-												"sourceStart": 12,
-												"sourceEnd": 12
+									},
+									"operator": "<",
+									"right_expr": {
+										"position": {
+											"sourceStart": 14,
+											"sourceEnd": 20
+										},
+										"Binary Operator": {
+											"left_expr": {
+												"position": {
+													"sourceStart": 14,
+													"sourceEnd": 14
+												},
+												"Numeric Value Expr": {
+													"number": "4"
+												}
 											},
-											"Operator Wrapper": {
-												"value": "<"
+											"operator": "+",
+											"right_expr": {
+												"position": {
+													"sourceStart": 18,
+													"sourceEnd": 20
+												},
+												"Numeric Value Expr": {
+													"number": "0.8"
+												}
 											}
 										}
-									]
+									}
 								}
 							}
 						}

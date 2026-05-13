@@ -27,6 +27,10 @@ namespace pst {
 			return "Block";
 		}
 
+		[[nodiscard]] pst::AccessLocked<CodeBlock> getCodeBlock() const {
+			return code_block.give();
+		}
+
 		[[nodiscard]]
 		DeclKind isDeclaration() const final {
 			return (name.has_value() ? DeclKind::Symbol : DeclKind::None);
