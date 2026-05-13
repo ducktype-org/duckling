@@ -96,7 +96,7 @@
 #define IIF_1(t, ...) t
 
 #define BOOL(x) COMPL(NOT(x))
-#define IF(c)   IIF(BOOL(c))
+#define CONST_IF(c)   IIF(BOOL(c))
 
 
 #define EAT(...)

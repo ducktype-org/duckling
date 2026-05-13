@@ -19,6 +19,7 @@ add_files(
 
 	fast/fast_vmprocess.cpp
 	fast/fast_vmthread.cpp
+	fast/program/relocator.cpp
 )
 
 set(vm_common_sources ${vm_common_sources} ${files} PARENT_SCOPE)

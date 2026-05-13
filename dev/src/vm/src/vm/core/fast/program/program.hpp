@@ -1,48 +1,70 @@
 #pragma once
 
+#include "ids.hpp"
 #include "type.hpp"
 
+#include <vm/core/fast/program/instructions/executable.hpp>
+#include <vm/core/fast/program/instructions/relocatable.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
 
 namespace vm::fast {
-	STRONG_TYPEDEF_ID_DIRECT_CREATION(FunctionID);
+
+	struct ExternCFunc {
+		base::StrID         name;
+		std::vector<TypeID> arg_types;
+	};
+
+	struct FunctionInfo {
+		base::StrID name;
+		FunctionID  id;
+
+		/// The maximum size of the local variables on stack required by the function frame.
+		Bytes local_stack_size;
+		// The total summed size of all return values.
+		usize ret_size;
+
+		std::vector<TypeID> arg_types;
+		std::vector<TypeID> result_types;
+	};
+
+	struct GlobalData {
+		/// The name of the global variable.
+		base::StrID name;
+		/// The type of the global variable.
+		TypeID      type;
+		/// The offset of the global variable's data in the global buffer.
+		u64 global_buffer_offset;
+	};
+
+	/**
+	 * @brief The base program structure, containing all the information about the program, except
+	 * the actual instruction data.
+	 * @note Relocated representation contains pointers to this structure, so after modifications it
+	 * has to be re-relocated.
+	 */
+	struct ProgramBase {
+		ObjIdNameMap<GlobalData, GlobalDataID> global_data{};
+		ObjIdNameMap<Type, TypeID>             types{};
+		ObjIdNameMap<ExternCFunc>              extern_c_functions{};
+		ObjIdNameMap<FunctionInfo, FunctionID> functions{};
+	};
 
 	namespace reloc {
-		struct ExternCFunc {
-			base::StrID         name;
-			std::vector<TypeID> arg_types;
+		struct RelocFunction {
+			FunctionID               id;
+			std::vector<Instruction> data;
 		};
 
-		struct Function {
-			base::StrID name;
-
-			/// The maximum size of the local variables on stack required by the function frame.
-			Bytes local_stack_size;
-			// The total summed size of all return values.
-			usize ret_size;
-
-			std::vector<TypeID> arg_types;
-			std::vector<TypeID> result_types;
-		};
-
-		struct Program {
-			ObjIdNameMap<
-			ObjIdNameMap<Type, TypeID>         types{};
-			ObjIdNameMap<ExternCFunc>          extern_c_functions{};
-			ObjIdNameMap<Function, FunctionID> functions{};
-		};
+		using RelocFunctionCollection = std::vector<RelocFunction>;
 	}
 
 	namespace exec {
-		// Box<TypeMetadata>                         types = makeBox<TypeMetadata>();
-		// ObjIdNameMap<LowFuncData, usize>          functions{};
-		// StableObjIdNameMap<LowExternCFunction>    extern_c_functions{};
-		// ObjIdNameMap<LowGlobalData, GlobalDataID> global_data{};
-		// Bytes                                     global_buffer_size = Bytes(0);
-		// usize                                     global_count       = 0;
+		struct ExecFunction {
+			FunctionID               id;
+			std::vector<Instruction> data;
+		};
 
-		// // Contains all method names in the program. It's used by the executor to determine the
-		// // names of called functions.
-		// base::HashMap<u64, base::StrID> method_name_pool{};
+		using ExecFunctionCollection = std::vector<ExecFunction>;
 	}
+
 }

@@ -10,9 +10,11 @@
  * @note To use this you need to include <base/comptime/is_complete.hpp> and define HANDLE_ARG_DEF
  * before including this file.
  */
-#define VALIDATE_ARG_EXISTS(arg) \
-	static_assert(IS_COMPLETE_V<arg>, "Type " #arg " must exist and be complete"); \
-	static_assert(std::is_trivially_destructible_v<arg>, "Type " #arg " must be trivially destructible");
+#define VALIDATE_ARG_EXISTS(arg)                                                              \
+	static_assert(IS_COMPLETE_V<arg>, "Type " #arg " must exist and be complete");            \
+	static_assert(                                                                            \
+		std::is_trivially_destructible_v<arg>, "Type " #arg " must be trivially destructible" \
+	);
 
 #ifndef HANDLE_ARG_DEF
 	#define DEFAULT_HANDLE_ARG
@@ -42,9 +44,9 @@ DEF_ARG(Place64)
 DEF_ARG(Function)
 #define COMPARE_Function(x) x
 #define INFO_Function()     (func)
-DEF_ARG(JumpDistance)
-#define COMPARE_JumpDistance(x) x
-#define INFO_JumpDistance()     (dist)
+DEF_ARG(JumpDestination)
+#define COMPARE_JumpDestination(x) x
+#define INFO_JumpDestination()     (dest)
 DEF_ARG(Type)
 #define COMPARE_Type(x) x
 #define INFO_Type()     (type)

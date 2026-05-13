@@ -47,3 +47,14 @@
 #define FOR_EACH_HELPER_2ARG(macro, arg0, arg1, a1, ...) \
 	macro(arg0, arg1, a1) __VA_OPT__(FOR_EACH_AGAIN_2ARG PARENS(macro, arg0, arg1, __VA_ARGS__))
 #define FOR_EACH_AGAIN_2ARG() FOR_EACH_HELPER_2ARG
+
+/**
+ * @brief For each macro, but has a separate `last_elem_macro` that is called for the last element
+ * instead of `macro`.
+ */
+#define FOR_EACH_CUSTOM_LAST(macro, last_elem_macro, ...) \
+	__VA_OPT__(AUX_EXPAND0(FOR_EACH_CUSTOM_LAST_HELPER(macro, last_elem_macro, __VA_ARGS__)))
+#define FOR_EACH_CUSTOM_LAST_HELPER(macro, last_elem_macro, a1, ...) \
+	FIRST(__VA_OPT__(macro, ) last_elem_macro)(a1)                   \
+		__VA_OPT__(FOR_EACH_CUSTOM_LAST_AGAIN PARENS(macro, last_elem_macro, __VA_ARGS__))
+#define FOR_EACH_CUSTOM_LAST_AGAIN() FOR_EACH_CUSTOM_LAST_HELPER
