@@ -13,27 +13,11 @@ namespace compiler::frontend {
 
 	IMPLEMENT_QUERY_SIDE_INPUT(QueryModuleSideInput);
 	IMPLEMENT_QUERY_SIDE_INPUT(QueryFileSideInput);
-	IMPLEMENT_QUERY_SIDE_INPUT(QuerySourceFileCountSideInput);
 	IMPLEMENT_QUERY_SIDE_INPUT(QuerySubmoduleCountSideInput);
 
 	IMPLEMENT_QUERY_SIDE_INPUT_WITH_LOGIC(QueryModuleChildSideInput, ctx, key, {
 		ctx.addMetadataIfNotExists<metadata_ModuleLookup>(key);
 	});
-
-	SourceFilesAccessLocked::SourceFilesAccessLocked(
-		ModuleID module, std::vector<FileAccessLocked> files
-	):
-		  module(module),
-		  files(std::move(files)) {}
-
-	std::vector<FileAccessLocked> SourceFilesAccessLocked::illegalAccess() const { return files; }
-
-	std::vector<FileAccessLocked> SourceFilesAccessLocked::unlock(query::Context& ctx) const {
-		ctx.query<QuerySourceFileCountSideInput>(
-			KeyOf_SourceFileCountSideInput::computeHash(module, files.size())
-		);
-		return files;
-	}
 
 	SubmodulesAccessLocked::SubmodulesAccessLocked(
 		ModuleID module, std::vector<ModuleAccessLocked> submodules
@@ -77,18 +61,6 @@ namespace compiler::frontend {
 		ctx.query<QueryFileSideInput>(KeyOf_FileSideInput{ getFileRef(id)->getComponentHash().hash }
 		);
 		return FileAccess(id);
-	}
-
-	query::QueryStableHash KeyOf_SourceFileCountSideInput::queryStablePerfectHash() const {
-		return stable_hash;
-	}
-
-	KeyOf_SourceFileCountSideInput KeyOf_SourceFileCountSideInput::computeHash(
-		ModuleID module_id, usize count
-	) {
-		auto hasher = ModuleTree::getPathComponentHash(module_id).partial;
-		hashing::addToHash(hasher, static_cast<u64>(count));
-		return KeyOf_SourceFileCountSideInput{ hasher.finalize() };
 	}
 
 	query::QueryStableHash KeyOf_SubmoduleCountSideInput::queryStablePerfectHash() const {

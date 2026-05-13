@@ -111,14 +111,6 @@ namespace compiler::driver {
 		// Collect module side input
 		out->emplace_back(QueryModuleSideInput::getID(), ModuleTree::getModuleHash(module_id));
 
-		// Add Side Input for the number of source files and submodules
-		auto source_files_count = module_ref->getSourceFiles().illegalAccess().size();
-		out->emplace_back(
-			QuerySourceFileCountSideInput::getID(),
-			KeyOf_SourceFileCountSideInput::computeHash(module_id, source_files_count)
-				.queryStablePerfectHash()
-		);
-
 		auto submodules_count = module_ref->getSubmodules().illegalAccess().size();
 		out->emplace_back(
 			QuerySubmoduleCountSideInput::getID(),
@@ -150,22 +142,6 @@ namespace compiler::driver {
 			auto sf_mut
 				= GetFileID_Functor::getFileRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
 					sf.illegalAccess().getID()
-				);
-
-			// Collect file side input
-			out->emplace_back(QueryFileSideInput::getID(), sf_mut->getComponentHash().hash);
-
-			auto pst = sf_mut->getPST();
-			collectQueryInputsFromPst(pst, *out);
-		}
-
-		// Process other source files
-		for (auto& sf_ref: module_ref->getSourceFiles().illegalAccess()) {
-			// We using mutable reference for calculating the PST and hashes.
-			// This is done before query-based compilation starts, so it won't break anything.
-			auto sf_mut
-				= GetFileID_Functor::getFileRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
-					sf_ref.illegalAccess().getID()
 				);
 
 			// Collect file side input
