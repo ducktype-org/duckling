@@ -64,7 +64,7 @@ public:
 		TESTER_ADD_TEST(testClassSymbolData);
 		TESTER_ADD_TEST(testClassInteractions);
 		TESTER_ADD_TEST(testTypeInstanceInterface);
-		TESTER_ADD_TEST(testGeneratedInterface);
+		TESTER_ADD_TEST(testTupleInterface);
 		TESTER_ADD_TEST(testHoutVariables);
 		TESTER_ADD_TEST(testReferences);
 		TESTER_ADD_TEST(testBoxes);
@@ -562,7 +562,7 @@ private:
 		});
 	}
 
-	void testGeneratedInterface() {
+	void testTupleInterface() {
 		auto [module_id, root_scope] = getModule(fs::File(path("test_modules/tuples")));
 
 		const auto tup = getChain("tup", root_scope).back();
