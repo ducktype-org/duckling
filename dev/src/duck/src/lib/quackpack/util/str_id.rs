@@ -227,7 +227,7 @@ impl<'de> Deserialize<'de> for StrId {
 }
 
 /// A minimal substitute to [`std::slice::Join`].
-/// When [`std::slice::Join`] becomes stable, this can be changed to `impl Join`.
+/// If [`std::slice::Join`] becomes stable, this can be changed to `impl Join`.
 pub trait QpJoin {
     fn join(&self, sep: &str) -> String;
 }
