@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use crate::quackpack::core::Manifest;
-use crate::quackpack::core::compile::artefacts_layout::ArtefactsLayout;
+use crate::quackpack::core::compile::artifacts_layout::ArtifactsLayout;
 use crate::quackpack::core::storage::freeze::FreezeDep;
 use crate::quackpack::schemas::manifest::Manifest as ManifestSchema;
 
@@ -29,7 +29,7 @@ impl Package {
         root: PathBuf,
         manifest_path: PathBuf,
     ) -> Self {
-        let artifacts_dir = ArtefactsLayout::new(root.join(".duck_build"));
+        let artifacts_dir = ArtifactsLayout::new(root.join(".duck_build"));
         let source_directory = root.join("src");
         Self {
             inner: Arc::new(PackageInner {
@@ -75,7 +75,7 @@ impl Package {
     }
 
     /// Get the path to the artifacts directory.
-    pub fn artifacts_directory(&self) -> &ArtefactsLayout {
+    pub fn artifacts_directory(&self) -> &ArtifactsLayout {
         &self.inner.artifacts_dir
     }
 
@@ -96,7 +96,7 @@ struct PackageInner {
     manifest: Manifest,
     root: PathBuf,
     manifest_path: PathBuf,
-    artifacts_dir: ArtefactsLayout,
+    artifacts_dir: ArtifactsLayout,
     source_dir: PathBuf,
 }
 

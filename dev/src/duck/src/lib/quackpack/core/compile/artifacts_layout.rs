@@ -1,14 +1,14 @@
-//! Layout of the QuackPack's artefacts directory.
+//! Layout of the QuackPack's artifacts directory.
 //!
-//! <artefacts root>
+//! <artifacts root>
 //! ├── <profile name>/
-//! │   ├── <dependency artefacts>/
-//! │   │   ├── <generated artefacts of the dependency>
-//! │   │   ├── artefacts/ # Duckc artefacts directory
+//! │   ├── *dependency artifacts*/
+//! │   │   ├── *generated artifacts of the dependency*
+//! │   │   ├── artifacts/ # Duckc artifacts directory
 //! │   │   ├── deps.json # JSON used to communicate between QuackPack and duckc.
-//! │   │   └── .duck_lock # Global artefacts lock
-//! │   └── <useful artefacts of the root package> # artefacts like main executable, main binary, etc
-//! └── .duck_lock # Global artefacts lock
+//! │   │   └── .duck_lock # Per dependency lock
+//! │   └── *useful artifacts of the root package* # artifacts like main executable, main binary, etc
+//! └── .duck_lock # Global artifacts lock
 
 use std::path::{Path, PathBuf};
 
@@ -18,15 +18,15 @@ use crate::{
 };
 
 #[derive(Clone, Debug)]
-/// Layout of the artefacts directory. See the [module](super::artefacts_layout) documentation.
-pub struct ArtefactsLayout {
+/// Layout of the artifacts directory. See the [module](super::artifacts_layout) documentation.
+pub struct ArtifactsLayout {
     root: FileLockManager,
 }
 
-impl ArtefactsLayout {
+impl ArtifactsLayout {
     const GLOBAL_LOCK_NAME: &str = ".duck_lock";
 
-    /// Create a new [`ArtefactsLayout`].
+    /// Create a new [`ArtifactsLayout`].
     pub fn new(root: PathBuf) -> Self {
         Self {
             root: FileLockManager::new(root),
@@ -38,7 +38,7 @@ impl ArtefactsLayout {
         self.root.not_locked_path()
     }
 
-    /// Acquire the global artefacts lock.
+    /// Acquire the global artifacts lock.
     pub fn acquire_global_lock(&self, ctx: &DuckContext) -> QuackResult<LockedFile> {
         self.root.open_exclusive(Self::GLOBAL_LOCK_NAME, ctx)
     }
@@ -101,14 +101,14 @@ impl DependencyLayout {
         self.root.not_locked_path()
     }
 
-    /// Acquire a lock for this dependency's artefacts.
+    /// Acquire a lock for this dependency's artifacts.
     pub fn acquire_lock(&self, ctx: &DuckContext) -> QuackResult<LockedFile> {
         self.root.open_exclusive(Self::LOCK_NAME, ctx)
     }
 
-    /// Get the path for compiler artefacts.
-    pub fn compiler_artefacts(&self) -> PathBuf {
-        self.root_directory().join("artefacts")
+    /// Get the path for compiler artifacts.
+    pub fn compiler_artifacts(&self) -> PathBuf {
+        self.root_directory().join("artifacts")
     }
 
     /// Acquire a lock for the JSON of dependencies of this dependency.
