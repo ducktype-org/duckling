@@ -346,28 +346,28 @@ private:
 	}
 
 	void incorrectUsesIO() {
+		auto ec  = vm::api::ExecutionConfig{};
+		ec.no_io = true;
 		loadInvalidDbc(
 			"wrong/config/io.dbc",
 			{
 				vm::code::ExecutionConfigViolationError::ERR_MSG,
 				"no_io",
 			},
-			vm::api::ExecutionConfig{
-				.no_io = true,
-			}
+			ec
 		);
 	}
 
 	void incorrectWritesToGlobal() {
+		auto ec      = vm::api::ExecutionConfig{};
+		ec.read_only = true;
 		loadInvalidDbc(
 			"wrong/config/read_only.dbc",
 			{
 				vm::code::ExecutionConfigViolationError::ERR_MSG,
 				"read_only",
 			},
-			vm::api::ExecutionConfig{
-				.read_only = true,
-			}
+			ec
 		);
 	}
 };

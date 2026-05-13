@@ -160,13 +160,14 @@ namespace vm::code {
 			// ===== Pure moves: dst written, src (place) read =====
 			FLAGS_WR(mov_p8_imm)
 			FLAGS_WR(mov_p16_imm)
-			FLAGS_WR(mov_p32_imm) FLAGS_WR(mov_p64_imm) FLAGS_WR(mov_popq_imm)
-				FLAGS_WR(setNull_pptr)
+			FLAGS_WR(mov_p32_imm)
+			FLAGS_WR(mov_p64_imm)
+			FLAGS_WR(mov_popq_imm)
+			FLAGS_WR(setNull_pptr)
 
-					FLAGS_WR_RD(mov_p8_p8) FLAGS_WR_RD(mov_p16_p16) FLAGS_WR_RD(mov_p32_p32)
-						FLAGS_WR_RD(mov_p64_p64) FLAGS_WR_RD(mov_pptr_pptr)
-							FLAGS_WR_RD(mov_pste_pste) FLAGS_WR_RD(mov_pfst_pfst)
-								FLAGS_WR_RD(mov_popq_popq)
+				FLAGS_WR_RD(mov_p8_p8) FLAGS_WR_RD(mov_p16_p16) FLAGS_WR_RD(mov_p32_p32)
+					FLAGS_WR_RD(mov_p64_p64) FLAGS_WR_RD(mov_pptr_pptr) FLAGS_WR_RD(mov_pste_pste)
+						FLAGS_WR_RD(mov_pfst_pfst) FLAGS_WR_RD(mov_popq_popq)
 
 				// ===== Conditional moves: dst is read (kept conditionally) and written =====
 				FLAGS_RDWR_RD(cmov_p8_p8) FLAGS_RDWR_RD(cmov_p16_p16) FLAGS_RDWR_RD(cmov_p32_p32)
@@ -520,10 +521,12 @@ namespace vm::code {
 			// ===== Sign / zero extension =====
 			FLAGS_WR_RD(sext_p16_p8)
 			FLAGS_WR_RD(sext_p32_p8)
-			FLAGS_WR_RD(sext_p64_p8) FLAGS_WR_RD(sext_p32_p16) FLAGS_WR_RD(sext_p64_p16)
-				FLAGS_WR_RD(sext_p64_p32) FLAGS_WR_RD(zext_p16_p8) FLAGS_WR_RD(zext_p32_p8)
-					FLAGS_WR_RD(zext_p64_p8) FLAGS_WR_RD(zext_p32_p16) FLAGS_WR_RD(zext_p64_p16)
-						FLAGS_WR_RD(zext_p64_p32)
+			FLAGS_WR_RD(sext_p64_p8)
+			FLAGS_WR_RD(sext_p32_p16)
+			FLAGS_WR_RD(sext_p64_p16)
+			FLAGS_WR_RD(sext_p64_p32) FLAGS_WR_RD(zext_p16_p8) FLAGS_WR_RD(zext_p32_p8)
+				FLAGS_WR_RD(zext_p64_p8) FLAGS_WR_RD(zext_p32_p16) FLAGS_WR_RD(zext_p64_p16)
+					FLAGS_WR_RD(zext_p64_p32)
 
 				// ===== Truncation =====
 				FLAGS_WR_RD(trunc_p8_p16) FLAGS_WR_RD(trunc_p8_p32) FLAGS_WR_RD(trunc_p8_p64)
