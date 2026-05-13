@@ -134,7 +134,7 @@ namespace vm::code {
 			void operator()(const PrimitiveType& type) const {
 				out << "type primitive: ";
 				out << type.name.strView() << " ";
-				out << type.size;
+				out << type.size.asInt();
 			}
 
 			void operator()(const PointerType& type) const {
@@ -191,7 +191,7 @@ namespace vm::code {
 			void operator()(const OpaqueType& type) const {
 				out << "type opaque: ";
 				out << type.name.strView() << " ";
-				out << type.size;
+				out << type.size.asInt();
 			}
 
 			void operator()(const ClassType& clazz) const {

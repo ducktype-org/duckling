@@ -5,8 +5,8 @@ use std::str::FromStr;
 use console::{Term, WithoutAnsi, colors_enabled, colors_enabled_stderr, style};
 use dialoguer::Input;
 
-use crate::QuackResult;
 use crate::duck::util::indent::indent;
+use crate::{QuackResult, QuackResultContext};
 
 /// A struct which is responsible for printing to stdout/stderr.
 pub struct Terminal {
@@ -44,7 +44,7 @@ macro_rules! delegate_styles {
         /// Print a
         #[doc = stringify!($name)]
         /// message to the terminal.
-       pub fn $name(&self, text: impl ::std::fmt::Display) {
+       pub fn $name(&self, text: impl ::std::fmt::Display) -> QuackResult<()> {
            let full_text = format!("{} {}", style($value)$(.$opt())*, text);
            let full_text = indent_without_first_line(full_text, $value.len() + 1);
            self.print(full_text)
@@ -54,7 +54,7 @@ macro_rules! delegate_styles {
         /// Print a verbose
         #[doc = stringify!($name)]
         /// message to the terminal.
-       pub fn $verbose(&self, text: impl ::std::fmt::Display) {
+       pub fn $verbose(&self, text: impl ::std::fmt::Display) -> QuackResult<()> {
            let full_text = format!("{} {}", style($value)$(.$opt())*, text);
            let full_text = indent_without_first_line(full_text, $value.len() + 1);
            self.print_verbose(full_text)
@@ -108,26 +108,27 @@ impl Terminal {
     /// Print a generic message to the terminal.
     ///
     /// If [`Verbosity`] is [`Quiet`](Verbosity::Quiet), this has no effect.
-    pub fn print(&self, text: impl Display) {
+    pub fn print(&self, text: impl Display) -> QuackResult<()> {
         if self.verbosity.is_quiet() {
-            return;
+            return Ok(());
         }
 
         let text = text.to_string();
         if !self.colors_enabled {
-            let _ = self.term.write_line(&WithoutAnsi::new(&text).to_string());
+            self.term.write_line(&WithoutAnsi::new(&text).to_string())
         } else {
-            let _ = self.term.write_line(&text);
+            self.term.write_line(&text)
         }
+        .context("failed to print a message")
     }
 
     #[inline]
     /// Print a generic verbose message to the terminal.
     ///
     /// If [`Verbosity`] is not [`Verbose`](Verbosity::Verbose), this has no effect.
-    pub fn print_verbose(&self, text: impl Display) {
+    pub fn print_verbose(&self, text: impl Display) -> QuackResult<()> {
         if !self.verbosity.is_verbose() {
-            return;
+            return Ok(());
         }
         self.print(text)
     }

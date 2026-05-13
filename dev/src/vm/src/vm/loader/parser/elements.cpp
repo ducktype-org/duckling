@@ -586,7 +586,7 @@ namespace vm::loader::parser {
 					"Expected a numeric literal after here.", state.getPosition()
 				));
 			} else {
-				auto tp = PrimitiveType{ name, static_cast<usize>(strIDToNum(value.getValue())) };
+				auto tp         = PrimitiveType{ name, Bytes{ strIDToNum(value.getValue()) } };
 				tp.bytecode_pos = out->position;
 				out->datatype   = tp;
 			}
@@ -742,7 +742,7 @@ namespace vm::loader::parser {
 					"Expected a numeric literal after here.", state.getPosition()
 				));
 			} else {
-				auto tp = OpaqueType{ name, static_cast<usize>(strIDToNum(value.getValue())) };
+				auto tp         = OpaqueType{ name, Bytes{ strIDToNum(value.getValue()) } };
 				tp.bytecode_pos = out->position;
 				out->datatype   = tp;
 			}
