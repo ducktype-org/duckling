@@ -24,7 +24,7 @@ protected:
 	};
 
 protected:
-	vm::PID initProcess();
+	vm::PID initProcess(vm::api::ExecutionConfig config = {});
 
 	void handleTestResult(const TestResult& test_result, i64 exit_code);
 
@@ -112,11 +112,11 @@ protected:
 	 * guidelines. Asserts what error keywords are present in the error message.
 	 */
 	void loadInvalidDbc(
-		const std::string& dbc_filename, const std::vector<std::string_view>& error_keywords
+		const std::string& dbc_filename, const std::vector<std::string_view>& error_keywords, vm::api::ExecutionConfig config = {}
 	);
 
 	/**
 	 * @brief Loads a file containing a valid bytecode program and asserts it was loaded correctly.
 	 */
-	void loadValidDbc(const std::string& dbc_filename);
+	void loadValidDbc(const std::string& dbc_filename, vm::api::ExecutionConfig config = {});
 };

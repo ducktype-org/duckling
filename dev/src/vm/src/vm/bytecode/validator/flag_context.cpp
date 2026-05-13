@@ -132,19 +132,19 @@ namespace vm::code {
 				if (flags.contains(InstructionFlagOptions::IORead)
 				    || flags.contains(InstructionFlagOptions::IOWrite))
 					throw ExecutionConfigViolationError(
-						new_func, "no_io is true, but function performs I/O"
+						new_func, "no_io flag is set, but function performs I/O"
 					);
 			}
 			if (config.read_only.copyValueOr(false)) {
 				if (flags.contains(InstructionFlagOptions::GlobalWrite))
 					throw ExecutionConfigViolationError(
-						new_func, "read_only is true, but function modifies global state"
+						new_func, "read_only flag is set, but function modifies global state"
 					);
 			}
 			if (config.single_thread.copyValueOr(false)) {
 				if (flags.contains(InstructionFlagOptions::Mutlithread))
 					throw ExecutionConfigViolationError(
-						new_func, "single_thread is true, but function uses multithreading"
+						new_func, "single_thread flag is set, but function uses multithreading"
 					);
 			}
 		}

@@ -9,9 +9,11 @@
 
 #include <variant>
 
-vm::PID VmTestSuite::initProcess() {
+vm::PID VmTestSuite::initProcess(vm::api::ExecutionConfig config) {
 	auto process_pid_response = vm::api::spawn();
 	ASSERT_TRUE(process_pid_response.has_value());
+	auto set_config_response = vm::api::setExecutionConfig(process_pid_response->pid, config);
+	ASSERT_TRUE(set_config_response.has_value());
 	return process_pid_response->pid;
 }
 
@@ -70,10 +72,12 @@ void VmTestSuite::assertExecutionPanickedWith(
 }
 
 void VmTestSuite::loadInvalidDbc(
-	const std::string& dbc_filename, const std::vector<std::string_view>& error_keywords
+	const std::string&                   dbc_filename,
+	const std::vector<std::string_view>& error_keywords,
+	const vm::api::ExecutionConfig       config
 ) {
 	fs::File file(path(dbc_filename));
-	auto     loaded_file_response = vm::api::loadFiles(initProcess(), { file });
+	auto     loaded_file_response = vm::api::loadFiles(initProcess(config), { file });
 	ASSERT_TRUE(!loaded_file_response.has_value());
 	auto err = loaded_file_response.error();
 	ASSERT_TRUE(std::holds_alternative<vm::api::LoadProgramError>(err));
@@ -86,8 +90,10 @@ void VmTestSuite::loadInvalidDbc(
 	}
 }
 
-void VmTestSuite::loadValidDbc(const std::string& dbc_filename) {
-	auto res = vm::api::loadFiles(initProcess(), { fs::File(path(dbc_filename)) });
+void VmTestSuite::loadValidDbc(
+	const std::string& dbc_filename, const vm::api::ExecutionConfig config
+) {
+	auto res = vm::api::loadFiles(initProcess(config), { fs::File(path(dbc_filename)) });
 	if (!res.has_value()) std::cerr << nlohmann::json(res.error()) << '\n';
 	ASSERT_TRUE(res.has_value());
 }

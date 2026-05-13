@@ -53,6 +53,10 @@ public:
 		TESTER_ADD_TEST(variantWrongType);
 		TESTER_ADD_TEST(fixedSizeTableWrongType);
 		TESTER_ADD_TEST(inplaceCasts);
+
+		// Execution verification
+		TESTER_ADD_TEST(incorrectUsesIO);
+		TESTER_ADD_TEST(incorrectWritesToGlobal);
 	}
 
 private:
@@ -337,6 +341,32 @@ private:
 			"wrong/types/wrong_ptr_mov.dbc",
 			{
 				vm::code::PointerTypeMismatchError::ERR_MSG,
+			}
+		);
+	}
+
+	void incorrectUsesIO() {
+		loadInvalidDbc(
+			"wrong/config/io.dbc",
+			{
+				vm::code::ExecutionConfigViolationError::ERR_MSG,
+				"no_io",
+			},
+			vm::api::ExecutionConfig{
+				.no_io = true,
+			}
+		);
+	}
+
+	void incorrectWritesToGlobal() {
+		loadInvalidDbc(
+			"wrong/config/read_only.dbc",
+			{
+				vm::code::ExecutionConfigViolationError::ERR_MSG,
+				"read_only",
+			},
+			vm::api::ExecutionConfig{
+				.read_only = true,
 			}
 		);
 	}
