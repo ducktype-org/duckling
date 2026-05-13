@@ -1,5 +1,8 @@
 if(USE_REPLXX)
-    set(REPL_IMPL_SRC src/repl/frontend_implementations/replxx.cpp)
+    set(REPL_IMPL_SRC
+        src/repl/frontend_implementations/replxx.cpp
+        src/repl/frontend_implementations/replxx_helpers.cpp
+    )
 else()
     set(REPL_IMPL_SRC src/repl/frontend_implementations/minimal.cpp)
 endif()
@@ -28,4 +31,5 @@ duck_add_test(compiler repl_statement_helpers tests/repl_statement_helpers_test.
 if(USE_REPLXX)
     target_link_libraries(Repl replxx)
     target_compile_definitions(Repl PUBLIC USE_REPLXX)
+    duck_add_test(compiler replxx_helpers tests/replxx_helpers_test.cpp USES Repl)
 endif()

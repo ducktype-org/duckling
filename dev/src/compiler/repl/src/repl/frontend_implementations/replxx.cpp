@@ -1,5 +1,6 @@
 #include "replxx.hpp"
 
+#include "replxx_helpers.hpp"
 #include <repl/helpers.hpp>
 
 #include <base/types/ints.hpp>
@@ -39,159 +40,6 @@ namespace compiler::repl {
 		"vec", "set", "dict", "array"
 	};
 	// clang-format on
-
-	// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-	/// Extract a word (identifier-like) ending at position \p pos in \p input.
-	static std::string extractWordEndingAt(const std::string& input, usize pos) {
-		if (pos == 0 || pos > input.length()) return "";
-
-		usize start = pos;
-		while (start > 0
-		       && (std::isalnum(static_cast<unsigned char>(input[start - 1]))
-		           || input[start - 1] == '_')) {
-			--start;
-		}
-
-		return input.substr(start, pos - start);
-	}
-
-	/// Extract all identifier-like tokens from \p text.
-	static std::vector<std::string> tokenizeIdentifiers(const std::string& text) {
-		std::vector<std::string> tokens;
-		std::string              current;
-		for (char ch: text) {
-			if (std::isalnum(static_cast<unsigned char>(ch)) || ch == '_') {
-				current += ch;
-			} else if (!current.empty()) {
-				tokens.push_back(std::move(current));
-				current.clear();
-			}
-		}
-		if (!current.empty()) tokens.push_back(std::move(current));
-		return tokens;
-	}
-
-	/**
-	 * Compute indentation depth from unmatched braces up to \p cursor_pos.
-	 * Braces inside strings or line comments are ignored.
-	 */
-	static int computeBraceIndentDepth(const std::string& input, usize cursor_pos) {
-		int  depth           = 0;
-		bool in_single_quote = false;
-		bool in_double_quote = false;
-		bool escape_next     = false;
-
-		bool in_single_line_comment  = false;
-		int  multiline_comment_depth = 0;
-
-		for (usize i = 0; i < cursor_pos && i < input.size(); ++i) {
-			const char ch = input[i];
-
-			if (escape_next) {
-				escape_next = false;
-				continue;
-			}
-
-			if (in_single_line_comment) {
-				if (ch == '\n') in_single_line_comment = false;
-				continue;
-			}
-
-			if (in_single_quote) {
-				if (ch == '\\')
-					escape_next = true;
-				else if (ch == '\'')
-					in_single_quote = false;
-				continue;
-			}
-
-			if (in_double_quote) {
-				if (ch == '\\')
-					escape_next = true;
-				else if (ch == '"')
-					in_double_quote = false;
-				continue;
-			}
-
-			bool has_next = (i + 1 < cursor_pos && i + 1 < input.size());
-			char next_ch  = has_next ? input[i + 1] : '\0';
-
-			if (ch == '#' && next_ch == '{') {
-				multiline_comment_depth++;
-				++i;  // Skip the '{'
-				continue;
-			}
-
-			if (ch == '#' && next_ch == '}') {
-				if (multiline_comment_depth > 0) {
-					multiline_comment_depth--;
-					++i;  // Skip the '}'
-					continue;
-				}
-			}
-
-			if (ch == '#') {
-				in_single_line_comment = true;
-				continue;
-			}
-
-			if (multiline_comment_depth > 0) continue;
-
-			if (ch == '\'') {
-				in_single_quote = true;
-				continue;
-			}
-
-			if (ch == '"') {
-				in_double_quote = true;
-				continue;
-			}
-
-			if (ch == '{')
-				++depth;
-			else if (ch == '}')
-				depth = std::max(0, depth - 1);
-		}
-
-		return depth;
-	}
-
-	/**
-	 * Constructs a simplified string where every UTF-8 code point from the input
-	 * is represented by exactly 1 byte.
-	 * Single-byte characters are kept as-is, while multi-byte characters
-	 * are replaced by a specified constant byte.
-	 *
-	 * \param input - a UTF-8 encoded string.
-	 * \param constant_byte - the character to substitute for multi-byte code points.
-	 * By default it is '\1' - doesn't fall into any category and will be default color.
-	 * \return A string whose .length() perfectly matches the number of code points.
-	 */
-	static std::string mapUtf8CodePoints(const std::string& input, char constant_byte = '\1') {
-		std::string result;
-
-		result.reserve(input.length());
-
-		for (size_t i = 0; i < input.length(); ++i) {
-			auto c = static_cast<unsigned char>(input[i]);
-
-			if ((c & 0x80) == 0x00) {
-				// 1-byte code point (ASCII: 0xxxxxxx)
-				result.push_back(input[i]);
-			} else if ((c & 0xC0) == 0xC0) {
-				// Leading byte of a multi-byte code point (11xxxxxx)
-				// We substitute it with our chosen constant byte.
-				result.push_back(constant_byte);
-			} else {
-				// Continuation byte (10xxxxxx)
-				// We simply ignore these, so the multi-byte code point
-				// only contributes exactly 1 byte to the `result` string.
-			}
-		}
-
-		return result;
-	}
 
 	// ─── History file path ───────────────────────────────────────────────────────
 
@@ -250,7 +98,8 @@ namespace compiler::repl {
 
 			if (m_completions_enabled) {
 				std::string input_to_cursor = line.substr(0, static_cast<usize>(cursor_pos));
-				std::string prefix = extractWordEndingAt(input_to_cursor, input_to_cursor.size());
+				std::string prefix
+					= replxx_helpers::extractWordEndingAt(input_to_cursor, input_to_cursor.size());
 
 				bool has_completions = false;
 				if (!prefix.empty()) {
@@ -282,7 +131,8 @@ namespace compiler::repl {
 			if (cursor_pos > static_cast<int>(line.size()))
 				cursor_pos = static_cast<int>(line.size());
 
-			const int indent_depth = computeBraceIndentDepth(line, static_cast<usize>(cursor_pos));
+			const int indent_depth
+				= replxx_helpers::computeBraceIndentDepth(line, static_cast<usize>(cursor_pos));
 
 			std::string indentation;
 			indentation.reserve(static_cast<usize>(indent_depth) * TAB_SPACES.size());
@@ -315,7 +165,7 @@ namespace compiler::repl {
 		                                     replxx::Replxx::colors_t& colors) {
 			// We iterate over the input, identifying tokens and coloring them.
 			usize i                 = 0;
-			auto   input_code_points = mapUtf8CodePoints(input);
+			auto   input_code_points = replxx_helpers::mapUtf8CodePoints(input);
 			usize len               = input_code_points.size();
 
 			while (i < len) {
@@ -422,7 +272,7 @@ namespace compiler::repl {
 				using Color = replxx::Replxx::Color;
 
 				replxx::Replxx::completions_t completions;
-				std::string                   prefix = extractWordEndingAt(input, input.size());
+				std::string prefix = replxx_helpers::extractWordEndingAt(input, input.size());
 				if (prefix.empty()) return completions;
 
 				context_len = static_cast<int>(prefix.size());
@@ -456,7 +306,7 @@ namespace compiler::repl {
 				const std::string& input, int& context_len, replxx::Replxx::Color& color
 			) -> replxx::Replxx::hints_t {
 				replxx::Replxx::hints_t hints;
-				std::string             prefix = extractWordEndingAt(input, input.size());
+				std::string prefix = replxx_helpers::extractWordEndingAt(input, input.size());
 				if (prefix.empty()) return hints;
 
 				context_len = static_cast<int>(prefix.size());
@@ -485,7 +335,7 @@ namespace compiler::repl {
 	// ─── Identifier collection ──────────────────────────────────────────────────
 
 	void FrontendReplxxImplementation::collectIdentifiers(const std::string& input) {
-		for (const auto& token: tokenizeIdentifiers(input)) {
+		for (const auto& token: replxx_helpers::tokenizeIdentifiers(input)) {
 			// Only collect user identifiers, not language keywords / types.
 			if (token.size() >= 2 && (DUCKLING_KEYWORDS.count(token) == 0)
 			    && (DUCKLING_TYPES.count(token) == 0)) {
