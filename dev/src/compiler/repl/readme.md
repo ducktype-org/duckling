@@ -10,7 +10,7 @@ The primary components in this flow are:
 
 1. **User Input (CLI/API):** Input is entered interactively (`duckc repl`) or preloaded from script (`duckc repl script.ds`, `/load <file.ds>`).
 2. **[`ReplSession`](./src/repl/session.hpp):** Main orchestrator. Handles commands, splits code into statements, creates statement modules, and routes execution.
-3. **[`ReplFrontend`](./src/repl/frontend.hpp):** Terminal interaction layer (replxx or minimal implementation), including history, display, return values and help.
+3. **[`ReplFrontend`](./src/repl/frontend.hpp):** Terminal interaction layer (replxx or minimal implementation), including history display and help.
 4. **Driver REPL Helpers (`driver/repl_utils`):** Statement splitting/classification, HOUT-to-DVM compilation, and code loading.
 5. **HELIOS REPL Helpers (`helios/repl_utils`):** Wrapper-function generation for executable statements.
 6. **DVM Process:** Receives newly compiled code and executes wrapper functions.
@@ -164,7 +164,7 @@ Assignments are routed as instructions.
 - `f32`
 - `f64`
 - `bool`
-- `()` (unit; prints "Function executed." for expressions or "Instruction executed." for instructions)
+- `()` (unit; no printed value)
 
 ## Related Documentation
 
