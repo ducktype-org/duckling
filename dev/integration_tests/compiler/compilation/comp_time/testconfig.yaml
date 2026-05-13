@@ -11,9 +11,8 @@ Tests:
 
   comp_time_references:
     Cases:
-      # @TODO: #1849 Add a DVM case when this is fixed.
-      llvm:
-        backend: llvm
+      all:
+        backend: all
         Output:
           String: "124\n"
         ExitCode: 0
