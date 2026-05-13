@@ -86,7 +86,7 @@ namespace vm::persistent {
 				.confilicts =
 					[&](usize idx, usize val_1, usize val_2) {
 						match_optional(policy(idx, val_1, val_2)) {
-							opt_some(val) { return nodeFromIdxVar(idx, val); }
+							opt_some(val) { return constructLeaf(idx, val); }
 							opt_none { return detail::SegmentTree::EMPTY; }
 						}
 						CORE_UNREACHABLE();
@@ -100,7 +100,7 @@ namespace vm::persistent {
 	MemoryStateID Memory::slice(MemoryStateID state, usize left_idx, usize right_idx) {
 		auto root = validateInput(state, left_idx, right_idx);
 
-		auto new_root = detail::SegmentTree::rebuildWithRange(
+		auto new_root = detail::SegmentTree::rebuildRange(
 			root,
 			left_idx,
 			right_idx,
@@ -116,7 +116,7 @@ namespace vm::persistent {
 	MemoryStateID Memory::eraseRange(MemoryStateID state, usize left_idx, usize right_idx) {
 		auto root = validateInput(state, left_idx, right_idx);
 
-		auto new_root = detail::SegmentTree::rebuildWithRange(
+		auto new_root = detail::SegmentTree::rebuildRange(
 			root,
 			left_idx,
 			right_idx,
@@ -142,7 +142,7 @@ namespace vm::persistent {
 
 		auto root = validateInput(state, idxs);
 
-		auto new_root = detail::SegmentTree::reconstructIdxs(
+		auto new_root = detail::SegmentTree::reconstructLeaves(
 			root,
 			idxs,
 			[&](usize cur_idx, base::Optional<usize>) -> ID {
@@ -150,7 +150,7 @@ namespace vm::persistent {
 				auto [idx, val] = vals.front();
 				vals.pop_front();
 				CORE_ASSERT(cur_idx == idx, "expected other idx");
-				return nodeFromIdxVar(idx, val);
+				return constructLeaf(idx, val);
 			}
 		);
 
@@ -161,7 +161,7 @@ namespace vm::persistent {
 		std::ranges::sort(idxs);
 		auto root = validateInput(state, idxs);
 
-		auto new_root = detail::SegmentTree::reconstructIdxs(
+		auto new_root = detail::SegmentTree::reconstructLeaves(
 			root, idxs, [&](usize, base::Optional<usize>) { return detail::SegmentTree::EMPTY; }
 		);
 

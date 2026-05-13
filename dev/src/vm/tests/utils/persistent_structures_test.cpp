@@ -7,6 +7,7 @@
 #include <vm/utils/persistent/vector.hpp>
 
 #include <array>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -153,8 +154,20 @@ public:
 		using namespace vm::persistent;
 		Memory mem{};
 
-		auto checker = [&](MemoryStateID state, const std::vector<std::pair<usize, usize>>& expected
-		               ) -> void { ASSERT_EQUAL(expected, mem.toVec(state)); };
+		auto checker = [&](
+						   MemoryStateID state, const std::vector<std::pair<usize, usize>>& expected
+					   ) -> void { 
+						ASSERT_EQUAL(expected, mem.toVec(state));
+						MemoryStateView view(mem, state);
+						ASSERT_EQUAL(expected, view.toVec());
+						ASSERT_EQUAL(expected.size(), view.size());
+						
+						for (auto [idx, var]: expected) {
+							ASSERT_TRUE(view.contains(idx));
+							ASSERT_TRUE(view.atMaybe(idx).has_value());
+							ASSERT_EQUAL(view[idx], var);
+						}
+					};
 
 		auto empt = Memory::EMPTY;
 		checker(empt, {});
@@ -182,6 +195,21 @@ public:
 
 		auto op07 = mem.setMultiple(op05, { { 1'410, 512 }, { 2'137, 67 }, { 8'008'135, 69 } });
 		checker(op07, { { 1, 5 }, { 2, 7 }, { 1'410, 512 }, { 2'137, 67 }, { 8'008'135, 69 } });
+
+		auto op08 = mem.eraseRange(op07, 1'000, 2'138);
+		checker(op08, { { 1, 5 }, { 2, 7 }, { 8'008'135, 69 } });
+
+		auto           diff = mem.getDiff(op07, op08);
+		decltype(diff) exp  = { { 1'410, 512, std::nullopt }, { 2'137, 67, std::nullopt } };
+		CORE_ASSERT(diff == exp, "Expecting two elements missing");
+
+		auto op09 = mem.set(empt, 8'484, 173);
+		checker(op09, { { 8'484, 173 } });
+
+		auto op10 = mem.merge(op09, op08, [](usize, usize l, usize) -> base::Optional<usize> {
+			return l;
+		});
+		checker(op10, { { 1, 5 }, { 2, 7 }, { 8'484, 173 }, { 8'008'135, 69 } });
 	}
 
 	void testVector() {

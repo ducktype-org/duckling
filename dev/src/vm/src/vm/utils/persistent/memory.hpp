@@ -51,7 +51,7 @@ namespace vm::persistent {
 		// basic method for validating input
 		ID validateInput(MemoryStateID state) const {
 			auto root = fromState(state);
-			validateRoot(root);
+			validateNode(root);
 
 			return root;
 		}

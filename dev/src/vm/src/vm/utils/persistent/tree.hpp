@@ -91,7 +91,7 @@ namespace vm::persistent::detail {
 		 * @brief helds no of actiVe nodes, position in the tree and idx of leftmost and rightmost
 		 * leaf
 		 */
-		struct RootEntry {
+		struct BranchEntry {
 			usize size;
 			posT  position;
 			idxT  left_bound;
@@ -172,7 +172,7 @@ namespace vm::persistent::detail {
 		/**
 		 * @brief Get the tree psitions of nodes responsible for range [lefft_idx, right_idx)
 		 */
-		static constexpr std::deque<posT> getPosInRange(idxT left_idx, idxT right_idx) {
+		static constexpr std::deque<posT> getPosForRange(idxT left_idx, idxT right_idx) {
 			CORE_ASSERT(left_idx <= right_idx, "Received wrong interval");
 			CORE_ASSERT(right_idx <= IDX_END, "Expecting a valid interval");
 
@@ -196,7 +196,7 @@ namespace vm::persistent::detail {
 		 * determine qualifiers
 		 */
 		template<typename segTreeT>
-		requires SameWNoQual<SegmentTree, segTreeT> struct SurroundingNeigh {
+		requires SameWNoQual<SegmentTree, segTreeT> struct ReconstructCtx {
 			segTreeT* mem;
 			posT      root_pos{};
 			posT      node_pos{};
@@ -221,7 +221,7 @@ namespace vm::persistent::detail {
 					if constexpr (RECONSTRUCT) {
 						auto left = node, right = siblings.front();
 						if (node_pos & 1) std::swap(left, right);
-						node = mem->lazyMergeTwoRoots(left, right);
+						node = mem->lazyMergeTwoNodes(left, right);
 					} else {
 						node = ancestors.front();
 						ancestors.pop_front();
@@ -281,7 +281,7 @@ namespace vm::persistent::detail {
 			std::pair<usize, std::deque<std::pair<posT, NodeID>>> inOrder(posT upto_here) const {
 				std::deque<std::pair<posT, NodeID>> ans = {};
 				{
-					auto before = beforeNode(upto_here);
+					auto before = getSiblingsOnSide(Dir::Left, upto_here);
 					for (auto el: before) ans.emplace_back(el);
 				}
 
@@ -289,7 +289,7 @@ namespace vm::persistent::detail {
 				ans.emplace_back(node_pos, node);
 
 				{
-					auto after = afterNode(upto_here);
+					auto after = getSiblingsOnSide(Dir::Right, upto_here);
 					for (auto el: after) ans.emplace_back(el);
 				}
 
@@ -297,16 +297,17 @@ namespace vm::persistent::detail {
 			}
 
 			/**
-			 * @brief Gives all the nodes which are in subtree of given position and preceed
-			 * currently tracked node in pre-order traverse of tree
-			 * @note Think about returned list as a list of nodes which had to be processed before
-			 * node if we were doing recursive operations from given node to currently tracked
+			 * @brief Gives all the nodes which are in subtree of given position and preceed/follow
+			 * (depending on dir parameter) currently tracked node in pre-order traverse of tree
+			 * @note Think about returned list as a list of nodes which had to be processed
+			 * before/after node if we were doing recursive operations from given node to currently
+			 * tracked
 			 * @note nodes are given in the order from left to right (just as if the call was
 			 * recursive)
 			 * @note related to inOrder
 			 */
 			[[nodiscard]]
-			std::deque<std::pair<posT, NodeID>> beforeNode(posT upto_here) const {
+			std::deque<std::pair<posT, NodeID>> getSiblingsOnSide(Dir dir, posT upto_here) const {
 				auto cur_pos = node_pos;
 
 				std::deque<std::pair<posT, NodeID>> ans = {};
@@ -314,44 +315,20 @@ namespace vm::persistent::detail {
 					inSubtree(upto_here, root_pos), "target root must be my in root subtree"
 				);
 
-				for (auto it = siblings.begin(); cur_pos != upto_here; it++, cur_pos >>= 1) {
-					CORE_ASSERT(
-						inSubtree(cur_pos, upto_here), "I need to have a path to the target root"
-					);
-					CORE_ASSERT(it != siblings.end(), "there is a sibling on this level");
+				for (auto sibling: siblings) {
+					if (cur_pos == upto_here) break;
 
-					if (cur_pos & 1) ans.emplace_front(cur_pos ^ 1, *it);
+					CORE_ASSERT(
+						inSubtree(cur_pos, upto_here),
+						"current position must remain inside the subtree of target root"
+					);
+
+					if (bool(cur_pos & 1) == (dir == Dir::Left))
+						ans.emplace_front(cur_pos ^ 1, sibling);
+					cur_pos >>= 1;
 				}
 
-				return ans;
-			}
-
-			/**
-			 * @brief Gives all the nodes which are in subtree of given position and follow
-			 * currently tracked node in pre-order traverse of tree
-			 * @note Think about returned list as a list of nodes which had to be processed adter
-			 * node if we were doing recursive operations from given node to currently tracked
-			 * @note nodes are given in the order from left to right (just as if the call was
-			 * recursive)
-			 * @note related to inOrder
-			 */
-			[[nodiscard]]
-			std::deque<std::pair<posT, NodeID>> afterNode(usize upto_here) const {
-				auto cur_pos = node_pos;
-
-				std::deque<std::pair<posT, NodeID>> ans = {};
-				CORE_ASSERT(
-					inSubtree(upto_here, root_pos), "target root must be my in root subtree"
-				);
-
-				for (auto it = siblings.begin(); cur_pos != upto_here; it++, cur_pos >>= 1) {
-					CORE_ASSERT(
-						inSubtree(cur_pos, upto_here), "I need to have a path to the target root"
-					);
-					CORE_ASSERT(it != siblings.end(), "there is a sibling on this level");
-
-					if ((cur_pos & 1) == 0) ans.emplace_back(cur_pos ^ 1, *it);
-				}
+				if (dir != Dir::Right) std::ranges::reverse(ans);
 
 				return ans;
 			}
@@ -360,8 +337,8 @@ namespace vm::persistent::detail {
 		BijectiveMap<ChildEntry, NodeID, ChildEntryH> child_entries{};
 		BijectiveMap<LeafEntry, NodeID, LeafEntryH>   leaf_entries{};
 
-		base::HashMap<NodeID, RootEntry> root_info{};
-		NodeID                           next_node_id = NodeID{ 1 };
+		base::HashMap<NodeID, BranchEntry> root_info{};
+		NodeID                             next_node_id = NodeID{ 1 };
 
 	protected:
 		/**
@@ -516,7 +493,7 @@ namespace vm::persistent::detail {
 		/**
 		 * @brief Checks if the id is a valid root of some tree
 		 */
-		void validateRoot(NodeID root) const {
+		void validateNode(NodeID root) const {
 			if (!root_info.contains(root) && !leaf_entries.atRightOpt(root))
 				throw std::invalid_argument("got invalid state");
 
@@ -532,7 +509,7 @@ namespace vm::persistent::detail {
 		 * @note node can be either constructed, or returned previous (depeding if there already was
 		 * node with given subtrees)
 		 */
-		NodeID nodeFromChildren(NodeID left, NodeID right) {
+		NodeID constructBranch(NodeID left, NodeID right) {
 			auto pos_left = getPos(left), pos_right = getPos(right);
 			CORE_ASSERT(pos_right != 1 && pos_left != 1, "top node cannot be ever passed");
 			CORE_ASSERT(
@@ -560,7 +537,7 @@ namespace vm::persistent::detail {
 			if (is_new) {
 				root_info.emplace(
 					node,
-					RootEntry{
+					BranchEntry{
 						.size        = getSize(left) + getSize(right),
 						.position    = (pos_left | pos_right) >> 1,
 						.left_bound  = left_bound,
@@ -578,7 +555,7 @@ namespace vm::persistent::detail {
 		 * @note node can be either constructed, or returned previous (depeding if there already was
 		 * node with given idx and value)
 		 */
-		NodeID nodeFromIdxVar(idxT idx, valT var_id) {
+		NodeID constructLeaf(idxT idx, valT var_id) {
 			auto leaf_entry = LeafEntry{
 				.idx   = idx,
 				.value = var_id,
@@ -715,7 +692,7 @@ namespace vm::persistent::detail {
 						!rec_right || inSubtree(mem->getPos(rec_right), pos_right), "stay in subtree"
 					);
 
-					return mem->lazyMergeTwoRoots(rec_left, rec_right);
+					return mem->lazyMergeTwoNodes(rec_left, rec_right);
 				} else {
 					self(pos_left, left_1, left_2);
 					self(pos_right, right_1, right_2);
@@ -725,7 +702,7 @@ namespace vm::persistent::detail {
 
 			auto lca = getLCAPos(pos_1, pos_2);
 
-			SurroundingNeigh<BaseT> neigh = {
+			ReconstructCtx<BaseT> neigh = {
 				.mem      = &obj,
 				.root_pos = lca,
 				.node_pos = lca,
@@ -733,97 +710,54 @@ namespace vm::persistent::detail {
 				.siblings = {},
 			};
 
-			{
-				neigh.moveNodeTo(pos_1);
-				neigh.node                  = root_1;
-				auto [node_1_idx, in_order] = neigh.inOrder(lca);
-				in_order.pop_back();
-				usize height_1 = heightFromPos(pos_1);
+			auto handle_list = [&](const auto& list,
+			                       usize       special_idx,
+			                       posT        special_pos,
+			                       NodeID      special_val,
+			                       bool        special_skip) {
+				for (usize i = 0; i < list.size(); i++) {
+					auto [pos, node] = list.at(i);
+					bool special     = (i == special_idx);
 
-				for (usize i = 0; i < node_1_idx; i++) {
-					auto [pos, node_1] = in_order.front();
-					in_order.pop_front();
+					if (special) {
+						CORE_ASSERT(pos == special_pos, "This is our node");
+						if (special_skip) continue;
+					}
 
-					CORE_ASSERT(node_1 == EMPTY, "all before the leftmost must be empty");
+					NodeID corresponding = special ? special_val : EMPTY;
 
-					if constexpr (RECONSTRUCT)
-						neigh.siblings.at(heightFromPos(pos) - height_1)
-							= detail_merge(pos, EMPTY, EMPTY);
-					else
-						detail_merge(pos, EMPTY, EMPTY);
+					if constexpr (!RECONSTRUCT)
+						detail_merge(pos, node, corresponding);
+					else {
+						usize relative_h = heightFromPos(pos) - heightFromPos(special_pos);
+						CORE_ASSERT(
+							relative_h < neigh.siblings.size(),
+							"Height diff must refer to some sibling"
+						);
+						auto& dst        = special ? neigh.node : neigh.siblings.at(relative_h);
+						dst              = detail_merge(pos, node, corresponding);
+					}
 				}
+			};
 
-				if (!inSubtree(pos_2, pos_1)) {
-					CORE_ASSERT(in_order.size(), "There must be node on the list");
-					auto [pos, node_1] = in_order.front();
-					in_order.pop_front();
+			neigh.moveNodeTo(pos_1);
+			neigh.node                    = root_1;
+			auto [node_1_idx, in_order_1] = neigh.inOrder(lca);
+			in_order_1.pop_back();
 
-					if constexpr (RECONSTRUCT)
-						neigh.node = detail_merge(pos, node_1, EMPTY);
-					else
-						detail_merge(pos, node_1, EMPTY);
-				}
+			handle_list(in_order_1, node_1_idx, pos_1, EMPTY, inSubtree(pos_2, pos_1));
 
-				for (; in_order.size(); in_order.pop_front()) {
-					auto [pos, node_1] = in_order.front();
-					CORE_ASSERT(node_1 == EMPTY, "all between two roots must be empty");
+			neigh.moveNodeTo(pos_2);
+			auto [node_2_idx, in_order_2] = neigh.inOrder(lca);
 
-
-					if constexpr (RECONSTRUCT)
-						neigh.siblings.at(heightFromPos(pos) - height_1)
-							= detail_merge(pos, EMPTY, EMPTY);
-					else
-						detail_merge(pos, EMPTY, EMPTY);
-				}
+			if (!inSubtree(pos_2, pos_1)) {
+				CORE_ASSERT(in_order_2.size() >= 2, "There must be sth going on");
+				CORE_ASSERT(node_2_idx > 0, "second node must have at least one sibling on left");
+				in_order_2.pop_front();
+				node_2_idx--;
 			}
 
-			{
-				neigh.moveNodeTo(pos_2);
-				neigh.node                  = root_2;
-				auto [node_2_idx, in_order] = neigh.inOrder(lca);
-				usize height_2              = heightFromPos(pos_2);
-
-				if (!inSubtree(pos_2, pos_1)) {
-					CORE_ASSERT(in_order.size() >= 2, "There must be sth going on");
-					CORE_ASSERT(
-						node_2_idx > 0, "second node must have at least one sibling on left"
-					);
-					in_order.pop_front();
-					node_2_idx--;
-				}
-
-				for (usize i = 0; i < node_2_idx; i++) {
-					auto [pos, node_1] = in_order.front();
-					in_order.pop_front();
-
-					if constexpr (RECONSTRUCT)
-						neigh.siblings.at(heightFromPos(pos) - height_2)
-							= detail_merge(pos, node_1, EMPTY);
-					else
-						detail_merge(pos, node_1, EMPTY);
-				}
-
-				{
-					auto [pos, node_1] = in_order.front();
-					in_order.pop_front();
-					CORE_ASSERT(pos == pos_2, "This is our node");
-
-					if constexpr (RECONSTRUCT)
-						neigh.node = detail_merge(pos, node_1, root_2);
-					else
-						detail_merge(pos, node_1, root_2);
-				}
-
-				for (; in_order.size(); in_order.pop_front()) {
-					auto [pos, node_1] = in_order.front();
-
-					if constexpr (RECONSTRUCT)
-						neigh.siblings.at(heightFromPos(pos) - height_2)
-							= detail_merge(pos, node_1, EMPTY);
-					else
-						detail_merge(pos, node_1, EMPTY);
-				}
-			}
+			handle_list(in_order_2, node_2_idx, pos_2, root_2, false);
 
 			if constexpr (RECONSTRUCT) {
 				neigh.moveNodeTo(lca);
@@ -879,7 +813,7 @@ namespace vm::persistent::detail {
 
 			auto lca_pos = getLCAPos(left_pos, right_pos);
 
-			SurroundingNeigh<BaseT> neigh = {
+			ReconstructCtx<BaseT> neigh = {
 				.mem      = &obj,
 				.root_pos = lca_pos,
 				.node_pos = lca_pos,
@@ -892,7 +826,7 @@ namespace vm::persistent::detail {
 
 			auto handle_range = [&](idxT l, idxT r) {
 				if (l == r) return;
-				auto range_nodes = getPosInRange(l, r);
+				auto range_nodes = getPosForRange(l, r);
 				CORE_ASSERT(
 					neigh.node_pos == range_nodes.front(),
 					"Currently tracked position must be at the starting position for current range"
@@ -910,18 +844,14 @@ namespace vm::persistent::detail {
 			};
 
 			auto handle_list = [&](const std::deque<std::pair<posT, NodeID>>& list) {
-				usize last_height = heightFromPos(neigh.node_pos);
-
 				for (auto [pos, node]: list) {
-					CORE_ASSERT(heightFromPos(pos) >= last_height, "All the siblings are above");
-
 					if constexpr (RECONSTRUCT) {
-						usize height_diff = heightFromPos(pos) - last_height;
+						usize relative_h = heightFromPos(pos) - heightFromPos(neigh.node_pos);
 						CORE_ASSERT(
-							height_diff < neigh.siblings.size(),
+							relative_h < neigh.siblings.size(),
 							"Height diff must refer particular sibling"
 						);
-						neigh.siblings.at(height_diff) = range_constructor.out_of_range(node, pos);
+						neigh.siblings.at(relative_h) = range_constructor.out_of_range(node, pos);
 					} else
 						range_constructor.out_of_range(node, pos);
 				}
@@ -932,7 +862,7 @@ namespace vm::persistent::detail {
 				auto begin_pos = firstNodeForRange(l1, r1);
 				neigh.moveNodeTo(begin_pos);
 
-				handle_list(neigh.beforeNode(lca_pos));
+				handle_list(neigh.getSiblingsOnSide(Dir::Left, lca_pos));
 				handle_range(l1, r1);
 			}
 
@@ -950,13 +880,13 @@ namespace vm::persistent::detail {
 					"one position cannot be a predecessor of other"
 				);
 
-				auto list_1 = neigh.afterNode(lca);
+				auto list_1 = neigh.getSiblingsOnSide(Dir::Right, lca);
 				list_1.pop_back();
 				handle_list(list_1);
 
 				neigh.moveNodeTo(begin_pos);
 
-				auto list_2 = neigh.beforeNode(lca);
+				auto list_2 = neigh.getSiblingsOnSide(Dir::Left, lca);
 				list_2.pop_front();
 				handle_list(list_2);
 
@@ -964,7 +894,7 @@ namespace vm::persistent::detail {
 			}
 
 
-			handle_list(neigh.afterNode(lca_pos));
+			handle_list(neigh.getSiblingsOnSide(Dir::Right, lca_pos));
 			neigh.moveNodeTo(lca_pos);
 
 			if constexpr (RECONSTRUCT) return neigh.node;
@@ -975,7 +905,7 @@ namespace vm::persistent::detail {
 		 * @note can be mutable or unmutable, depending of return type of range constructor
 		 */
 		template<typename ResT, typename SelfT>
-		ResT rebuildWithRange(
+		ResT rebuildRange(
 			this SelfT&               st,
 			NodeID                    root,
 			idxT                      left_idx,
@@ -990,7 +920,7 @@ namespace vm::persistent::detail {
 		 * @note idxs must be sorted from left to right
 		 * @note this function is never const (use Path for iterating over unmutable memory)
 		 */
-		NodeID reconstructIdxs(
+		NodeID reconstructLeaves(
 			NodeID root, const std::deque<idxT>& idxs, const LeafBuilder& constructor
 		) {
 			std::deque<std::pair<idxT, idxT>> ranges{};
@@ -1000,7 +930,7 @@ namespace vm::persistent::detail {
 			}
 			usize idx = 0;
 
-			auto reconstructor = RangeBuilder<NodeID>{
+			auto reconstructor = RangeBuilder<NodeID> {
 				.in_range = [&](NodeID id, posT pos) -> NodeID {
 					CORE_ASSERT(pos & LEAF_MASK, "expecting a leaf");
 					idxT offset = offsetFromPos(pos);
@@ -1012,6 +942,7 @@ namespace vm::persistent::detail {
 
 					return constructor(offset, val);
 				},
+				.out_of_range = [](NodeID id, posT) { return id; },
 			};
 			return rebuildRanges(root, ranges, reconstructor);
 		}
@@ -1119,7 +1050,7 @@ namespace vm::persistent::detail {
 		 * @note when one of the roor is empty, other is returned
 		 * @note requires that the root cannot contain each other
 		 */
-		NodeID lazyMergeTwoRoots(NodeID root_1, NodeID root_2) {
+		NodeID lazyMergeTwoNodes(NodeID root_1, NodeID root_2) {
 			if (!root_1) return root_2;
 			if (!root_2) return root_1;
 
@@ -1142,19 +1073,19 @@ namespace vm::persistent::detail {
 
 			for (; (pos_1 >> 1) != lca; pos_1 >>= 1)
 				if (pos_1 & 1)
-					root_1 = nodeFromChildren(EMPTY, root_1);
+					root_1 = constructBranch(EMPTY, root_1);
 				else
-					root_1 = nodeFromChildren(root_1, EMPTY);
+					root_1 = constructBranch(root_1, EMPTY);
 
 			for (; (pos_2 >> 1) != lca; pos_2 >>= 1)
 				if (pos_2 & 1)
-					root_2 = nodeFromChildren(EMPTY, root_2);
+					root_2 = constructBranch(EMPTY, root_2);
 				else
-					root_2 = nodeFromChildren(root_2, EMPTY);
+					root_2 = constructBranch(root_2, EMPTY);
 
 			CORE_ASSERT(pos_2 == pos_1 + 1, "after all those operations they should be siblings");
 
-			return nodeFromChildren(root_1, root_2);
+			return constructBranch(root_1, root_2);
 		}
 
 	public:
@@ -1164,7 +1095,7 @@ namespace vm::persistent::detail {
 		SegmentTree() {
 			root_info.put(
 				EMPTY,
-				RootEntry{
+				BranchEntry{
 					.size        = 0,
 					.position    = 0,
 					.left_bound  = 0,
