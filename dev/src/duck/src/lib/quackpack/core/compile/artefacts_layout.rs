@@ -38,12 +38,12 @@ impl ArtefactsLayout {
         self.root.not_locked_path()
     }
 
-    /// Acquire a global artefacts lock.
+    /// Acquire the global artefacts lock.
     pub fn acquire_global_lock(&self, ctx: &DuckContext) -> QuackResult<LockedFile> {
         self.root.open_exclusive(Self::GLOBAL_LOCK_NAME, ctx)
     }
 
-    /// Get a layout for a specific profile name.
+    /// Get the layout for a specific profile name.
     pub fn for_profile(&self, name: &str) -> ProfileLayout {
         ProfileLayout {
             root: self.root.join(name),
@@ -68,12 +68,12 @@ impl ProfileLayout {
         &self.root
     }
 
-    /// Get a root directory [`Path`] for this layout.
+    /// Get the root directory [`Path`] for this layout.
     pub fn root_directory(&self) -> &Path {
         self.root.not_locked_path()
     }
 
-    /// Get a layout for a specific dependency.
+    /// Get the layout for a specific dependency.
     pub fn for_dependency(&self, name: &str) -> DependencyLayout {
         DependencyLayout {
             root: self.root.join(name),
@@ -96,7 +96,7 @@ impl DependencyLayout {
         &self.root
     }
 
-    /// Get a root directory [`Path`] for this layout.
+    /// Get the root directory [`Path`] for this layout.
     pub fn root_directory(&self) -> &Path {
         self.root.not_locked_path()
     }
