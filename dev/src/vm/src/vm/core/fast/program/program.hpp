@@ -9,9 +9,12 @@
 
 namespace vm::fast {
 
-	struct ExternCFunc {
-		base::StrID         name;
-		std::vector<TypeID> arg_types;
+	struct ExternCFunction {
+		base::StrID name;
+		void (*function_pointer)(std::byte*, std::byte*) = nullptr;
+		Bytes                    parameter_size_sum;
+		std::vector<TypeCRef>    parameter_types;
+		base::Optional<TypeCRef> result_type;
 	};
 
 	struct FunctionInfo {
@@ -31,7 +34,7 @@ namespace vm::fast {
 		/// The name of the global variable.
 		base::StrID name;
 		/// The type of the global variable.
-		TypeID type;
+		TypeCRef type;
 		/// The offset of the global variable's data in the global buffer.
 		u64 global_buffer_offset;
 	};
@@ -45,8 +48,10 @@ namespace vm::fast {
 	struct ProgramBase {
 		ObjIdNameMap<GlobalData, GlobalDataID> global_data{};
 		TypeCollection                         types{};
-		ObjIdNameMap<ExternCFunc>              extern_c_functions{};
+		ObjIdNameMap<ExternCFunction>          extern_c_functions{};
 		ObjIdNameMap<FunctionInfo, FunctionID> functions{};
+
+		Bytes global_buffer_size = Bytes(0);
 	};
 
 	namespace reloc {

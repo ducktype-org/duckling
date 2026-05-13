@@ -20,12 +20,6 @@
 namespace compiler::frontend {
 	/**
 	 * If a file's extension is equal to this constant, then it is assumed
-	 * it is a source file of the module.
-	 */
-	constexpr std::string_view LANG_SOURCE_FILE = ".duck";
-
-	/**
-	 * If a file's extension is equal to this constant, then it is assumed
 	 * it is a single file module.
 	 */
 	constexpr std::string_view LANG_MODULE_FILE = ".dmf";
@@ -105,15 +99,6 @@ namespace compiler::frontend {
 		 */
 		[[nodiscard]]
 		FileAccessLocked getMainSourceFile() const;
-
-		/**
-		 * Accesses the source files of the module.
-		 * Does not contain Main module file (Main source file)
-		 * @return A lazy view that can be unlocked within a query context or accessed illegally
-		 * (outside queries).
-		 */
-		[[nodiscard]]
-		SourceFilesAccessLocked getSourceFiles() const;
 
 		/**
 		 * Accesses the submodules located in this module.
@@ -257,7 +242,6 @@ namespace compiler::frontend {
 		base::Optional<base::Ref<ModuleTree>> m_parent;
 
 		base::Optional<base::Ref<SourceFile>>             m_main_source_file;
-		std::vector<base::Ref<SourceFile>>                m_source_files;
 		base::HashMap<base::StrID, base::Ref<ModuleTree>> m_submodules;
 		base::HashMap<base::StrID, std::vector<fs::File>>
 			m_other_files;  //< Other files in the module (not SourceFiles) currently nothing is
@@ -340,12 +324,6 @@ namespace compiler::frontend {
 			const std::regex& file_reject = DEFAULT_REJECT_FILE_REGEX,
 			const std::regex& dir_reject  = DEFAULT_REJECT_DIRECTORY_REGEX
 		);
-
-		/**
-		 * Adds a source file to the module being built.
-		 * @param file The source file to add.
-		 */
-		void addSourceFile(const fs::File& file);
 
 		/**
 		 * Sets the main source file for the module.
@@ -439,7 +417,6 @@ namespace compiler::frontend {
 
 		base::Optional<base::Ref<ModuleTree>>             m_parent;
 		base::Optional<fs::File>                          m_main_source_file_path;
-		std::vector<fs::File>                             m_source_file_paths;
 		base::StrID                                       m_package_id;
 		base::HashMap<base::StrID, base::Ref<ModuleTree>> m_submodules;
 		base::HashMap<base::StrID, std::vector<fs::File>> m_other_files;
@@ -461,19 +438,6 @@ namespace compiler::frontend {
 	 */
 	class ModuleTreeModifier final {
 	public:
-		/**
-		 * Adds a source file to the given module.
-		 * @param module The module to modify.
-		 * @param file The file to add.
-		 */
-		static void addSourceFile(base::Ref<ModuleTree> module, const fs::File& file);
-
-		/**
-		 * Removes a source file from its module.
-		 * @param file The SourceFile to remove.
-		 */
-		static void removeSourceFileFromStorage(base::Ref<SourceFile> file);
-
 		/**
 		 * Sets the main source file for the given module.
 		 * @param module The module to modify.

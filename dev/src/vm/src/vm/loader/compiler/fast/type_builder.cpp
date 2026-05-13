@@ -89,11 +89,6 @@ namespace {
 void detail::rebuildFastTypeCollection(
 	Ref<TypeCollection> type_collection, const valid_type::ValidTypeMap& types
 ) {
-	std::vector<CRef<valid_type::ValidType>> new_types_vec
-		= types | std::views::drop(type_collection->size())
-	    | std::views::transform([](const auto& type) { return CRef(&type); })
-	    | std::ranges::to<std::vector>();
-
 	// Declare new types.
 	declareTypes(type_collection, new_types_vec);
 	// Well define new types.

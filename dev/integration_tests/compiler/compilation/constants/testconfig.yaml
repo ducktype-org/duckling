@@ -12,14 +12,8 @@ Tests:
         ExitCode: 0
   local:
     Cases:
-      llvm:
-        backend: llvm
+      all:
+        backend: all
         Output:
           String: "2\n"
         ExitCode: 0
-      # @TODO: #1849 enable this test case
-      # dvm:
-      #   backend: dvm
-      #   Output:
-      #     String: "2\n"
-      #   ExitCode: 0

@@ -4,6 +4,6 @@
 
 namespace vm::fast::detail {
 	void rebuildFastTypeCollection(
-		Ref<TypeCollection> type_collection, const vm::code::valid_type::ValidTypeMap& types
+		Ref<TypeCollection> type_collection, const vm::code::valid_type::ValidTypeMap& type_ctx
 	);
 }
