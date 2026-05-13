@@ -427,7 +427,7 @@ private:
 				hasSubmodule(mt->getSubmodules().illegalAccess(), removable_sub_mod->getName())
 			);
 
-			// Check that main and exist in SourceFile::file_map
+			// Check that main file exists in SourceFile::file_map
 			ASSERT_TRUE(removable_sub_mod->hasMainSourceFile());
 			auto removable_main_id = removable_sub_mod->getMainSourceFile();
 			ASSERT_TRUE(

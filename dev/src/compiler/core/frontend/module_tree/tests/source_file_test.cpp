@@ -318,19 +318,13 @@ private:
 		cleanup_files.push_back(main_file);
 		module_builder->setMainSourceFile(main_file);
 		auto module = module_builder->finalize();
+		
+		auto before = SourceFile::getSourceFilesFromFile(main_file);
+		ASSERT_EQUAL(1, before.size());
 
-
-		// hmm:?
-		// ASSERT_EQUAL(1, module->getSourceFiles().illegalAccess().size());
-		// auto sf_ref = getRef(module->getSourceFiles().illegalAccess().front());
-
-		// auto before = SourceFile::getSourceFilesFromFile(source_path);
-		// ASSERT_EQUAL(1, before.size());
-
-		// ModuleTreeModifier::removeSourceFileFromStorage(sf_ref);
-		// ASSERT_TRUE(module->getSourceFiles().illegalAccess().size() == 0);
-		// auto after = SourceFile::getSourceFilesFromFile(source_path);
-		// ASSERT_TRUE(after.empty());
+		ModuleTreeModifier::removeModuleRecursive(module);
+		auto after = SourceFile::getSourceFilesFromFile(main_file);
+		ASSERT_TRUE(after.empty());
 
 		for (auto& file: cleanup_files) fs::FileManager::deleteFile(file);
 	}
