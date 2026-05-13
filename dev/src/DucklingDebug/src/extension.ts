@@ -80,7 +80,7 @@ class DuckVMExecutableFactory implements vscode.DebugAdapterDescriptorFactory {
             const exePath = path.join(
                 this.context.extensionPath,
                 'bin',
-                'duck_debug_adapter'
+                'debug_adapter'
             );
 
             const args: string[] = [];
