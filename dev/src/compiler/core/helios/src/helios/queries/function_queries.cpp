@@ -305,37 +305,37 @@ namespace compiler::helios {
 			using std::ranges::to;
 			using std::views::transform;
 
-			// Get class data
-			const auto class_type      = ctor_data.class_type;
-			auto       class_interface = class_type.getInterface(ctx);
+			// Get type data
+			const auto target_type = ctor_data.target_type;
+			auto       interface   = target_type.getInterface(ctx);
 
 			const std::vector<tsh::InterfaceElement> fields
-				= class_interface->getFieldsView() | to<std::vector>();
+				= interface->getFieldsView() | to<std::vector>();
 			const u64 num_fields = fields.size();
 
 			base::StrID ctor_name;
-			switch (class_type.getKind()) {
+			switch (target_type.getKind()) {
 			case tsh::Kind::Class:
-				ctor_name = name(class_type.as<tsh::ClassAbstractType>().getSymbol());
+				ctor_name = name(target_type.as<tsh::ClassAbstractType>().getSymbol());
 				break;
 			case tsh::Kind::Tuple:
-				ctor_name
-					= ctx.query<mangler::QueryMangledType>(
-							 tsh::SymbolType<>::withDefaults(class_type.as<tsh::TupleAbstractType>())
-					)
-				          ->valueOrThrow();
+				ctor_name = ctx
+				                .query<mangler::QueryMangledType>(tsh::SymbolType<>::withDefaults(
+									target_type.as<tsh::TupleAbstractType>()
+								))
+				                ->valueOrThrow();
 				break;
 			default:
-				CORE_PANIC("Implicit ctor of type kind", class_type.getKind(), " is not handled.");
+				CORE_PANIC("Implicit ctor of type kind", target_type.getKind(), " is not handled.");
 			}
 
 			// Prepare the necessary symbols (of the constructor and its parameters).
 			const SymID ctor_symbol        = ctx.query<defgen::QueryGeneratedSymbol>({
 					   .name                  = ctor_name,
-					   .generated_symbol_data = GeneratedSymbolData{ ImplicitConstructor{ class_type } },
+					   .generated_symbol_data = GeneratedSymbolData{ ImplicitConstructor{ target_type } },
             });
 			const auto  result_symbol_type = tsh::SymbolType<>{
-                class_type,
+                target_type,
                 tsh::ReferenceKind::Direct,
                 tsh::Mutability::Mutable,
 			};
@@ -673,7 +673,7 @@ namespace compiler::helios {
 				variant_case(defgen::GeneratedSymbolData, gsd_data) {
 					variant_match(gsd_data.data) {
 						variant_case(defgen::GeneratedSymbolData::ImplicitConstructor, ctor) {
-							const auto& type = ctor.class_type;
+							const auto& type = ctor.target_type;
 							if (type.getKind() == tsh::Kind::Class) {
 								const auto& class_type = type.as<tsh::ClassAbstractType>();
 								return ctx.query<defgen::QueryImplicitClassConstructor>(class_type)

@@ -92,8 +92,9 @@ namespace compiler::helios {
 
 				auto element_coercion
 					= canCoerce(ctx, source_element_type, to_element_type).valueOrThrow();
-				if (element_coercion.isInvalid())
-					CORE_PANIC("Coercion should always be valid at this point.");
+				CORE_ASSERT(
+					element_coercion.isValid(), "Coercion should always be valid at this point."
+				);
 
 				elements.emplace_back(element_coercion.getCoercion().coerce(ctx, element->clone()));
 			}

@@ -14,7 +14,7 @@
 namespace compiler::helios {
 	namespace defgen {
 		base::Bit256 GeneratedSymbolData::ImplicitConstructor::queryUnstablePerfectHash() const {
-			return { class_type.queryUnstablePerfectHash() };
+			return { target_type.queryUnstablePerfectHash() };
 		}
 
 		base::Bit256 GeneratedSymbolData::DefaultClassConstructor::queryUnstablePerfectHash() const {
@@ -72,15 +72,15 @@ namespace compiler::helios {
 		tsh::SymbolType<> GeneratedSymbolData::getType(query::Context& ctx) const {
 			variant_match(data) {
 				variant_case(ImplicitConstructor, ctor) {
-					const auto class_type = ctor.class_type;
+					const auto target_type = ctor.target_type;
 
 					// @TODO: #1328 Properly handle value categories in class constructors.
-					auto class_fields = class_type.getInterface(ctx)->getFieldsView();
+					auto fields = target_type.getInterface(ctx)->getFieldsView();
 					std::vector<tsh::SymbolType<>> param_types;
-					for (const auto& field: class_fields) param_types.push_back(field.getType(ctx));
+					for (const auto& field: fields) param_types.push_back(field.getType(ctx));
 
 					const tsh::SymbolType<> return_type{
-						class_type,
+						target_type,
 						tsh::ReferenceKind::Direct,
 						tsh::Mutability::Mutable,
 					};

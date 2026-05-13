@@ -842,7 +842,7 @@ namespace compiler::helios {
 			variant_match(getSymRef(func_id)->getDataOpt<defgen::GeneratedSymbolData>().value()->data
 			) {
 				variant_case(defgen::GeneratedSymbolData::ImplicitConstructor, ctor) {
-					if (ctor.class_type.getKind() == tsh::Kind::Tuple) {
+					if (ctor.target_type.getKind() == tsh::Kind::Tuple) {
 						auto return_type
 							= ctx.query<QueryDeclOfFun>(func_id)->valueOrThrow().return_type;
 						auto coercion = canCoerceToMeta(ctx, return_type).valueOrThrow();

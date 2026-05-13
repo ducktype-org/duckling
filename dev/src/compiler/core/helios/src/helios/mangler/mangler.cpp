@@ -305,7 +305,7 @@ namespace compiler::helios::mangler {
 						variant_match(gen_data.data) {
 							variant_case(defgen::GeneratedSymbolData::ImplicitConstructor, ctor) {
 								const auto mangled_class = ctx.query<QueryMangledType>(
-									tsh::SymbolType<>::withDefaults(ctor.class_type)
+									tsh::SymbolType<>::withDefaults(ctor.target_type)
 								);
 								const auto ctor_suffix = "Hic" + func(ctx, symbol_id) + "E";
 								return mangled_class->valueOrThrow().str() + ctor_suffix;

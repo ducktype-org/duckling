@@ -565,10 +565,9 @@ private:
 	void testGeneratedInterface() {
 		auto [module_id, root_scope] = getModule(fs::File(path("test_modules/tuples")));
 
-		const auto tup               = getChain("tup", root_scope).back();
-		const auto tup_abstract_type = query::entryPoint<compiler::helios::QueryTypeOfSymbol>(tup)
-		                                   ->valueOrThrow()
-		                                   .getType()
+		const auto tup = getChain("tup", root_scope).back();
+		const auto tup_abstract_type
+			= query::entryPoint<compiler::helios::QueryTypeOfSymbol>(tup)->valueOrThrow().getType();
 
 		const auto h_interface = compiler::helios::HInterface::ofTypeInstance(tup_abstract_type);
 

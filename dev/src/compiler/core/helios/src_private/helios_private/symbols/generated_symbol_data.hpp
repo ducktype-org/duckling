@@ -19,15 +19,16 @@ namespace compiler::helios::defgen {
 	 */
 	struct GeneratedSymbolData final {
 		/**
-		 * Represents a compiler-generated implicit constructor for a class.
+		 * Represents a compiler-generated implicit constructor for a class (or other type such as a
+		 * tuple).
 		 *
-		 * The implicit constructor is a function that takes parameters for each field of the class
-		 * and returns an instance of the class with those fields initialised accordingly.
+		 * The implicit constructor is a function that takes parameters for each field of the type
+		 * and returns an instance of the type with those fields initialised accordingly.
 		 *
 		 * @note Different types, such as tuples, might have an implicit ctor as well.
 		 */
 		struct ImplicitConstructor final {
-			tsh::AbstractType class_type;  // The type of the class this constructor belongs to.
+			tsh::AbstractType target_type;  // The type of the object this constructor belongs to.
 
 			[[nodiscard]]
 			base::Bit256 queryUnstablePerfectHash() const;
