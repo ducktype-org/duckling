@@ -10,7 +10,7 @@ namespace pst {
 	 * @brief Class constructor element.
 	 */
 	class Constructor final: public ClassSpecial {
-		NAMED_CHILD_OPT(ident, IdentifierWrapper); ///< If no value it's "create" is implied
+		NAMED_CHILD_OPT(ident, IdentifierWrapper);  ///< If no value it's "create" is implied
 		NAMED_CHILD(params, ParamList);
 		NAMED_CHILD(inits, InitList);
 		NAMED_CHILD(body, CodeBlock);

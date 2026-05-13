@@ -268,13 +268,15 @@ namespace compiler::helios {
 			auto using_stmt = stmt.dynamicCast<pst::Using>().value();
 			return SymbolData::makePSTSymbolData(
 				{
-					.name = base::StrID(
-						base::strConcat(
-							"<USING> ",
-							using_stmt->getPointed().unlock(ctx)->getNameByIndex(0).unlock(ctx)->unwrap()
-						)
-							.c_str()
-					),
+					.name        = base::StrID(base::strConcat(
+                                            "<USING> ",
+                                            using_stmt->getPointed()
+                                                .unlock(ctx)
+                                                ->getNameByIndex(0)
+                                                .unlock(ctx)
+                                                ->unwrap()
+                    )
+                                            .c_str()),
 					.kind        = SymbolKind::Using,
 					.is_wildcard = true,
 					.is_alias    = true,
@@ -307,7 +309,7 @@ namespace compiler::helios {
 					name = import_as.value()->asWhat().value().unlock(ctx)->unwrap();
 				else {
 					usize count = import_as.value()->numberOfNames();
-					name        = import_as.value()->getNameByIndex(count - 1).unlock(ctx)->unwrap();
+					name = import_as.value()->getNameByIndex(count - 1).unlock(ctx)->unwrap();
 				}
 
 				return SymbolData::makePSTSymbolData(
@@ -350,8 +352,9 @@ namespace compiler::helios {
 			auto constructor = stmt.dynamicCast<pst::Constructor>().value();
 			return SymbolData::makePSTSymbolData(
 				{
-					.name
-					= constructor->getIdentifier() ? constructor->getIdentifier()->unlock(ctx)->unwrap() : base::StrID("create"),
+					.name = constructor->getIdentifier()
+			                  ? constructor->getIdentifier()->unlock(ctx)->unwrap()
+			                  : base::StrID("create"),
 					.kind = SymbolKind::Constructor,
 				},
 				pst_data

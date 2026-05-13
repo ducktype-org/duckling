@@ -7,7 +7,9 @@ namespace pst {
 	MBox<CopyConstructor> CopyConstructor::parse(LangParserState& state) {
 		auto out = makeBox<CopyConstructor>(state);
 
-		CORE_ASSERT(state[0].is(state.getContext()->class_name), "Bad copy constructor parsing entry");
+		CORE_ASSERT(
+			state[0].is(state.getContext()->class_name), "Bad copy constructor parsing entry"
+		);
 
 		PARSE().eatOne();
 

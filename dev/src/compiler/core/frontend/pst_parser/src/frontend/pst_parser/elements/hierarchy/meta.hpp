@@ -198,7 +198,8 @@ namespace pst {
 		}
 
 		/**
-		 * @brief Gets the symbol name used internally in pst for the purposes of guessing what symbol is defined by a statement.
+		 * @brief Gets the symbol name used internally in pst for the purposes of guessing what
+		 * symbol is defined by a statement.
 		 *
 		 * Shouldn't be used outside of pst as it violates access.
 		 *
