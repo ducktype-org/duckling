@@ -103,21 +103,54 @@ namespace compiler::frontend::packages {
 	};
 
 	/**
-	 * @brief A single resolved package dependency: alias + access to the dependency package.
-	 * Returned (in batches) by PackageDependenciesAccessLocked::unlock.
+	 * @brief Unlocked access to a single resolved package dependency.
+	 * Exposes the alias and a PackageAccessLocked for the target package — the caller must
+	 * unlock the latter separately if they want to register a dependency on the target
+	 * package's identity (mirrors PackageDependencyAliasAccessLocked::unlock).
 	 */
-	class PackageDependencyAccessLocked final {
-		base::StrID         m_alias;
-		PackageAccessLocked m_package;
+	class PackageDependencyAccess final {
+		base::StrID m_alias;
+		base::StrID m_target_package_id;
+		friend class PackageDependencyAccessLocked;
+
+		PackageDependencyAccess(base::StrID alias, base::StrID target_package_id):
+			  m_alias(alias),
+			  m_target_package_id(target_package_id) {}
 
 	public:
-		PackageDependencyAccessLocked(base::StrID alias, PackageAccessLocked package):
-			  m_alias(alias),
-			  m_package(package) {}
-
 		[[nodiscard]] base::StrID getAlias() const { return m_alias; }
 
-		[[nodiscard]] PackageAccessLocked getPackage() const { return m_package; }
+		[[nodiscard]] PackageAccessLocked getPackage() const {
+			return PackageAccessLocked(m_target_package_id);
+		}
+	};
+
+	/**
+	 * @brief Locked access to a single resolved package dependency.
+	 * Returned (in batches) by PackageDependenciesAccessLocked::unlock. Unlocking registers
+	 * QueryPackageDependencyAliasSideInput on the (owner_package, alias) → target package id
+	 * edge and yields a PackageDependencyAccess.
+	 */
+	class PackageDependencyAccessLocked final {
+		base::StrID m_owner_package_id;
+		base::StrID m_alias;
+		base::StrID m_target_package_id;
+
+	public:
+		PackageDependencyAccessLocked(
+			base::StrID owner_package_id, base::StrID alias, base::StrID target_package_id
+		):
+			  m_owner_package_id(owner_package_id),
+			  m_alias(alias),
+			  m_target_package_id(target_package_id) {}
+
+		/** @brief Unlock and register QueryPackageDependencyAliasSideInput dependency. */
+		[[nodiscard]] PackageDependencyAccess unlock(query::Context& ctx) const;
+
+		/** @brief Access without registering dependency — only outside of queries / debug. */
+		[[nodiscard]] PackageDependencyAccess illegalAccess() const {
+			return { m_alias, m_target_package_id };
+		}
 	};
 
 	/**

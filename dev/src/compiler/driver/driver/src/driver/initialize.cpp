@@ -35,14 +35,6 @@ namespace compiler::driver {
 	namespace {
 		constinit bool is_initialized = false;
 
-		void handleLoggerInitialization() {
-			// We might want to configure it differently in the future:
-			dia_int::configureImmediatePrint(&std::cerr);
-			dia_int::configureTerminalPrinterColors(true);
-
-			global_state::setters::setGlobalLogger(makeBox<dia_int::Logger>());
-		}
-
 		void handleDebugOptions(const options_types::DebugOptions& debug_options) {
 			if (not debug_options.dev_log_categories.empty()) logger::enable_dev_logs = true;
 
@@ -86,10 +78,13 @@ namespace compiler::driver {
 		}
 
 		base::OkBad handlePackageOptions(
-			const std::vector<compiler::frontend::packages::RawPackageInfo>& packages_info
+			std::vector<compiler::frontend::packages::RawPackageInfo> packages_info
 		) {
 			auto report      = diagnostics::makeGlobalLoggerReporter();
 			bool had_failure = false;
+
+			compiler::frontend::packages::filterUndeclaredDependencies(packages_info, report);
+
 			for (const auto& package_info: packages_info) {
 				auto pkg = compiler::frontend::packages::createPackageInfo(package_info, report);
 				if (pkg)
@@ -237,5 +232,11 @@ namespace compiler::driver {
 		return base::OK;
 	}
 
-	void initializeGlobalLogger() { handleLoggerInitialization(); }
+	void initializeGlobalLogger() {
+		// We might want to configure it differently in the future:
+		dia_int::configureImmediatePrint(&std::cerr);
+		dia_int::configureTerminalPrinterColors(true);
+
+		global_state::setters::setGlobalLogger(makeBox<dia_int::Logger>());
+	}
 }

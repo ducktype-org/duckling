@@ -1,3 +1,4 @@
+#include <archiver/archive.hpp>
 #include <diagnostic_interactive/logger.hpp>
 #include <driver/diagnostics/log_helpers.hpp>
 #include <driver/exit.hpp>
@@ -11,7 +12,9 @@
 #include <global_state/global_logger.hpp>
 #include <global_state/packages.hpp>
 
+#include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
+#include <base/pointers/box.hpp>
 #include <base/str/str_utils.hpp>
 
 #include <filesystem/file_path.hpp>
@@ -23,6 +26,7 @@
 #include <fstream>
 #include <string>
 #include <string_view>
+#include <system_error>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -54,6 +58,9 @@ public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(packagesRegisteredInGlobalState);
 		TESTER_ADD_TEST(compilePackagesFromManifest);
+		TESTER_ADD_TEST(taskMissingPackageFails);
+		TESTER_ADD_TEST(globalStatePackageLookup);
+		TESTER_ADD_TEST(archiverFailurePaths);
 	}
 
 protected:
@@ -129,7 +136,7 @@ private:
 		auto get_dep_ids = [](const frontend::packages::PackageInfo& pkg) {
 			std::unordered_set<std::string> deps;
 			for (const auto& dep: pkg.getDependencies().illegalAccess())
-				deps.insert(dep.getPackage().illegalAccess().getID().str());
+				deps.insert(dep.illegalAccess().getPackage().illegalAccess().getID().str());
 			return deps;
 		};
 
@@ -184,6 +191,62 @@ private:
 				base::strConcat("Missing package artifact: ", output_path.string())
 			);
 		}
+	}
+
+	void taskMissingPackageFails() {
+		driver::RawPackageCompilationTask raw_task{
+			.package_name = base::StrID("missing_package"),
+			.build_target = driver::BuildTargetLLVM{},
+		};
+		driver::RawTask raw{
+			.type      = driver::TaskType::PackageCompilation,
+			.task_data = raw_task,
+		};
+
+		auto result = driver::convertRawTaskToTask(
+			raw, compiler::driver::diagnostics::makeGlobalLoggerReporter()
+		);
+		ASSERT_TRUE(!result.has_value());
+		ASSERT_TRUE(global_state::getGlobalLogger()->hasErrors());
+	}
+
+	void globalStatePackageLookup() {
+		const auto& packages = global_state::getPackages();
+		ASSERT_TRUE(!packages.empty());
+		const auto existing_id = packages.front().getPackageID();
+
+		auto found = global_state::getPackageRefOpt(existing_id);
+		ASSERT_TRUE(found.has_value());
+		ASSERT_EQUAL(found.value()->getPackageID(), existing_id);
+
+		auto missing = global_state::getPackageRefOpt(base::StrID("definitely_missing"));
+		ASSERT_TRUE(!missing.has_value());
+
+		assertThrows<base::Panic>(
+			[&]() { (void) global_state::getPackageRef(base::StrID("definitely_missing")); },
+			"Expected panic for missing package"
+		);
+
+		auto removed_id  = packages.back().getPackageID();
+		auto root_module = packages.back().getRootModule().illegalAccess().getID();
+		global_state::setters::removePackage(root_module);
+		auto removed = global_state::getPackageRefOpt(removed_id);
+		ASSERT_TRUE(!removed.has_value());
+	}
+
+	void archiverFailurePaths() {
+		auto temp_dir  = fs::FileManager::createRandomTempDirectory();
+		auto temp_path = temp_dir.getFilePath().getPath();
+
+		auto collection = makeBox<artifacts::ArtifactCollection>(temp_path);
+		auto output     = collection->fileArtifactAtOrNew(base::StrID("out.a"));
+
+		archiver::ArchivingOptions bad_archiver_opts{ .archiver_path = std::string("/no/such/ar") };
+		auto command_result = archiver::createArchive(output, {}, bad_archiver_opts);
+		ASSERT_TRUE(command_result.isBad());
+
+		std::error_code remove_ec;
+		std::filesystem::remove_all(temp_path, remove_ec);
 	}
 };
 

@@ -1,4 +1,5 @@
 #include "incremental_metadata_test_common.hpp"
+#include "test_utils.hpp"
 
 #include <driver/exit.hpp>
 #include <driver/initialize.hpp>
@@ -42,15 +43,10 @@ private:
 		// Initialize compiler (as in markPreviousLeavesGreenTest, first stage)
 		auto init_result= compiler::driver::initializeTheCompiler(
             compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
-				.packages_info = {
-					{
-						.package_name = base::StrID("mark_nodes_test_package"),
-						.version      = base::StrID("not_supported"),
-						.package_path  = fs::FilePath(path("modules/incremental/org_functions/functions_1")),
-						.features     = {},
-						.dependencies = {},
-					},
-				},
+				.packages_info = { driver_test_utils::emptyRawPackageInfo(
+					"mark_nodes_test_package",
+					path("modules/incremental/org_functions/functions_1")
+				) },
                 .compilation_artifacts = {.artifacts_path = artifacts_path},
             	.backend_options = {
 					.llvm_backend = global_state::BackendOptions::LLVMBackend{},

@@ -1,9 +1,26 @@
 #include <tester/tester.hpp>
 
+#include <json/diagnostics.hpp>
 #include <json/extract.hpp>
 
 #include <array>
 #include <string_view>
+
+namespace {
+	struct TestReporter {
+		int errors   = 0;
+		int warnings = 0;
+
+		js::DiagnosticLogger callback() {
+			return [this](std::string_view, std::string_view, bool is_error) {
+				if (is_error)
+					++errors;
+				else
+					++warnings;
+			};
+		}
+	};
+}
 
 class JsonExtractTest final: public tester::TestSuite {
 #undef TESTER_CLASS
@@ -26,6 +43,7 @@ public:
 		TESTER_ADD_TEST(findUnknownFieldsMixed);
 		TESTER_ADD_TEST(findUnknownFieldsNotAnObject);
 		TESTER_ADD_TEST(isObjectPredicate);
+		TESTER_ADD_TEST(diagnosticsReporters);
 	}
 
 private:
@@ -135,6 +153,53 @@ private:
 		auto arr = nlohmann::json::parse(R"([])");
 		ASSERT_TRUE(js::isObject(obj));
 		ASSERT_TRUE(!js::isObject(arr));
+	}
+
+	void diagnosticsReporters() {
+		TestReporter reporter;
+		auto         json = nlohmann::json::parse(R"({
+            "name": 123,
+            "flag": "yes",
+            "array": "no",
+            "obj": "no",
+            "extra": true
+        })");
+
+		ASSERT_TRUE(!js::checkIsObject(nlohmann::json::parse(R"([1])"), "root", reporter.callback())
+		);
+		ASSERT_TRUE(!js::getString(json, "name", "bad", reporter.callback()).has_value());
+		ASSERT_TRUE(!js::getStringIfPresent(json, "name", "bad", reporter.callback()).has_value());
+		ASSERT_TRUE(!js::getBool(json, "flag", "bad", reporter.callback()).has_value());
+		ASSERT_TRUE(!js::getBoolIfPresent(json, "flag", "bad", reporter.callback()).has_value());
+		ASSERT_TRUE(!js::getArray(json, "array", "bad", reporter.callback()).has_value());
+		ASSERT_TRUE(!js::getObject(json, "obj", "bad", reporter.callback()).has_value());
+		ASSERT_TRUE(!js::getObjectIfPresent(json, "obj", "bad", reporter.callback()).has_value());
+		ASSERT_TRUE(
+			!js::getStringValue(nlohmann::json::parse("123"), "value", "bad", reporter.callback())
+				 .has_value()
+		);
+
+		auto warn_json = nlohmann::json::parse(R"({"missing": 1, "items": ["ok", 2]})");
+		ASSERT_TRUE(!js::getStringWarning(warn_json, "nope", "warn", reporter.callback()).has_value()
+		);
+		ASSERT_TRUE(!js::getBoolWarning(warn_json, "nope", "warn", reporter.callback()).has_value());
+		ASSERT_TRUE(!js::getArrayWarning(warn_json, "nope", "warn", reporter.callback()).has_value()
+		);
+		ASSERT_TRUE(!js::getObjectWarning(warn_json, "nope", "warn", reporter.callback()).has_value()
+		);
+
+		auto elem_warn
+			= js::getStringFromArrayWarning(warn_json["items"][1], "items", reporter.callback());
+		ASSERT_TRUE(!elem_warn.has_value());
+		auto elem_err = js::getStringFromArray(warn_json["items"][1], "items", reporter.callback());
+		ASSERT_TRUE(!elem_err.has_value());
+
+		js::checkForUnknownFields(
+			warn_json, { "missing" }, { "items" }, "root", reporter.callback()
+		);
+
+		ASSERT_TRUE(reporter.errors > 0);
+		ASSERT_TRUE(reporter.warnings > 0);
 	}
 
 public:

@@ -65,10 +65,12 @@ namespace compiler::frontend::packages {
 		 */
 		[[nodiscard]] compiler::frontend::ModuleAccessLocked getRootModule() const;
 
-		/** @brief Version of the package  */
+		/** @brief Version of the package (informational only — not tracked as a query input
+		 * yet, see #2668). */
 		[[nodiscard]] base::StrID getVersion() const;
 
-		/** @brief Feature flags advertised by the package  */
+		/** @brief Feature flags advertised by the package (informational only — not tracked as
+		 * a query input yet, see #2668). */
 		[[nodiscard]] base::CRef<std::vector<base::StrID>> getFeatures() const;
 
 		/**
@@ -90,6 +92,7 @@ namespace compiler::frontend::packages {
 
 	private:
 		friend class PackageAccessLocked;
+		friend class PackageDependencyAccessLocked;
 		friend class PackageDependencyAliasAccessLocked;
 
 		/** @brief Compute the stable hash of a package from its package id. */
@@ -159,6 +162,17 @@ namespace compiler::frontend::packages {
 	 */
 	base::Optional<PackageInfo> createPackageInfo(
 		const RawPackageInfo& package_info, const DiagnosticReporter& report
+	);
+
+	/**
+	 * @brief Drop dependencies that point to packages not declared in @p packages_info.
+	 * Mutates each entry's @c dependencies in place; emits a non-fatal diagnostic via
+	 * @p report for every dropped edge. Downstream code holds a PackageID for every
+	 * dependency and may panic if it cannot be resolved back to a PackageInfo, so the
+	 * dependency graph is filtered up-front rather than guarded on every lookup.
+	 */
+	void filterUndeclaredDependencies(
+		std::vector<RawPackageInfo>& packages_info, const DiagnosticReporter& report
 	);
 
 }  // namespace compiler::frontend::packages

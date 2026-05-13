@@ -56,11 +56,9 @@ namespace compiler::frontend {
 			auto dep_locked_opt
 				= owner_pkg_opt.value()->getPackageDependencyByAlias(path.at(0)).unlock(ctx);
 			if_opt_some(dep_locked_opt, dep_locked) {
-				auto dep_pkg_id           = dep_locked.unlock(ctx).getID();
-				auto dep_package_info_opt = global_state::getPackageRefOpt(dep_pkg_id);
-				if_opt_some(dep_package_info_opt, dep_package_info) {
-					current_module = dep_package_info->getRootModule().unlock(ctx).getID();
-				}
+				auto dep_pkg_id       = dep_locked.unlock(ctx).getID();
+				auto dep_package_info = global_state::getPackageRef(dep_pkg_id);
+				current_module        = dep_package_info->getRootModule().unlock(ctx).getID();
 			}
 		}
 

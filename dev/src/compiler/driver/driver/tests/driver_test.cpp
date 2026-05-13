@@ -61,7 +61,7 @@ protected:
 			compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
 				.packages_info = {
 					{
-						.package_name = base::StrID(package_name.c_str()),
+						.package_name = base::StrID(package_name),
 						.version      = base::StrID("not_supported"),
 						.package_path  = fs::FilePath(path("modules/functions_1")),
 						.features     = {},
@@ -426,7 +426,7 @@ private:
 		using namespace compiler;
 
 		auto module = frontend::createModuleTree(
-			fs::File(path("modules/functions_1")), base::StrID(package_name.c_str())
+			fs::File(path("modules/functions_1")), base::StrID(package_name)
 		);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
@@ -446,7 +446,7 @@ private:
 		using namespace compiler;
 
 		auto module = frontend::createModuleTree(
-			fs::File(path("modules/functions_2")), base::StrID(package_name.c_str())
+			fs::File(path("modules/functions_2")), base::StrID(package_name)
 		);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
@@ -480,7 +480,7 @@ private:
 		      compiler::driver::dump_ir_options.dump_hir  = false;);
 
 		auto module = frontend::createModuleTree(
-			fs::File(path("modules/functions_3")), base::StrID(package_name.c_str())
+			fs::File(path("modules/functions_3")), base::StrID(package_name)
 		);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
@@ -519,7 +519,7 @@ private:
 		using namespace compiler;
 
 		auto module = frontend::createModuleTree(
-			fs::File(path("modules/functions_4")), base::StrID(package_name.c_str())
+			fs::File(path("modules/functions_4")), base::StrID(package_name)
 		);
 
 
@@ -538,7 +538,7 @@ private:
 
 		compiler::frontend::packages::PackageInfo package_info(
 			frontend::createModuleTree(
-				fs::File(path("modules/functions_5")), base::StrID(package_name.c_str())
+				fs::File(path("modules/functions_5")), base::StrID(package_name)
 			),
 			base::StrID("not_supported"),
 			{},
@@ -576,7 +576,7 @@ private:
 		using namespace compiler;
 
 		auto module = frontend::createModuleTree(
-			fs::File(path("modules/globals")), base::StrID(package_name.c_str())
+			fs::File(path("modules/globals")), base::StrID(package_name)
 		);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
@@ -609,7 +609,7 @@ private:
 		using namespace compiler;
 
 		auto module = frontend::createModuleTree(
-			fs::File(path("modules/globals_initialization")), base::StrID(package_name.c_str())
+			fs::File(path("modules/globals_initialization")), base::StrID(package_name)
 		);
 
 		query::utils::withContextDo([&](query::Context& ctx) {

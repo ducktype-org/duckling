@@ -54,7 +54,6 @@
 #include <algorithm>
 #include <fstream>
 #include <iostream>
-#include <random>
 #include <utility>
 #include <vector>
 
@@ -684,7 +683,7 @@ namespace compiler::driver {
 
 	namespace {
 		struct ModuleToCompile {
-			frontend::ModuleID root_module;
+			frontend::ModuleID package_root_module;
 			frontend::ModuleID module_id;
 			BackendType        backend;
 			bool               build_debug_info;
@@ -703,8 +702,8 @@ namespace compiler::driver {
 			if (a.backend != b.backend) return a.backend < b.backend;
 			if (a.build_debug_info != b.build_debug_info)
 				return a.build_debug_info < b.build_debug_info;
-			const auto& a_root_hash = frontend::ModuleTree::getModuleHash(a.root_module);
-			const auto& b_root_hash = frontend::ModuleTree::getModuleHash(b.root_module);
+			const auto& a_root_hash = frontend::ModuleTree::getModuleHash(a.package_root_module);
+			const auto& b_root_hash = frontend::ModuleTree::getModuleHash(b.package_root_module);
 			return a_root_hash < b_root_hash;
 		}
 	}  // namespace
@@ -725,15 +724,18 @@ namespace compiler::driver {
 			dvm_objects_by_root_module;
 
 		std::function<void(frontend::ModuleID, BackendType, frontend::ModuleID)> collect_modules
-			= [&](frontend::ModuleID module_id, BackendType backend, frontend::ModuleID root_module
-		      ) -> void {
+			= [&](frontend::ModuleID module_id,
+		          BackendType        backend,
+		          frontend::ModuleID package_root_module) -> void {
 			// @TODO: #2354 This is temporary.
 			const bool build_debug_info = backend == BackendType::DVM;
 
-			modules_to_compile.push_back({ root_module, module_id, backend, build_debug_info });
+			modules_to_compile.push_back(
+				{ package_root_module, module_id, backend, build_debug_info }
+			);
 			auto sub_modules = query::entryPoint<frontend::QuerySubmodules>(module_id);
 			for (const auto& [id, sub_module]: *sub_modules)
-				collect_modules(sub_module, backend, root_module);
+				collect_modules(sub_module, backend, package_root_module);
 		};
 
 		for (const auto& task: tasks) {
@@ -755,19 +757,14 @@ namespace compiler::driver {
 			}
 		}
 
-		// Dedup: a single (module_id, backend, build_debug_info, root_module) should be compiled
-		// at most once even if multiple tasks reference it.
+		// Sort + dedup: a single (module_id, backend, build_debug_info, root_module) should be
+		// compiled at most once even if multiple tasks reference it. The sort key is the module's
+		// content hash, which is effectively random across modules — that gives us deterministic
+		// output *and* spreads sibling modules across the worker queue (better load balancing
+		// than feeding workers a depth-first traversal), so no separate shuffle is needed.
 		std::ranges::sort(modules_to_compile, lessModuleToCompile);
 		modules_to_compile.erase(
 			std::ranges::unique(modules_to_compile).begin(), modules_to_compile.end()
-		);
-
-		// Shuffle the modules to compile to increase the chance of better load distribution between
-		// worker threads.
-		std::shuffle(
-			modules_to_compile.begin(),
-			modules_to_compile.end(),
-			std::mt19937{ std::random_device{}() }
 		);
 
 		ImplementationOf_CompileModule::total_module_count.store(modules_to_compile.size());
@@ -790,11 +787,6 @@ namespace compiler::driver {
 			});
 		}
 
-		// sort the compile_handles to make the output of the compiler deterministic
-		std::ranges::sort(compile_handles, [](const ScheduledModule& a, const ScheduledModule& b) {
-			return lessModuleToCompile(a.module, b.module);
-		});
-
 		std::vector<ScheduledModule> debug_info_handles;
 
 		for (auto& [module, handle]: compile_handles) {
@@ -804,7 +796,7 @@ namespace compiler::driver {
 				                                 ? dvm_objects_by_root_module
 				                                 : llvm_objects_by_root_module;
 				objects_by_root_module
-					.put(module.root_module, std::vector<artifacts::FileArtifact>())
+					.put(module.package_root_module, std::vector<artifacts::FileArtifact>())
 					.first->second.emplace_back(module_result->valueOrPanic().object_art);
 
 				// We schedule debug info here, to only schedule it for correctly compiled modules.
@@ -826,7 +818,7 @@ namespace compiler::driver {
 			auto di_result = query::awaitEntryPoint<DebugInfoForModule>(handle);
 			if (di_result.hasValue())
 				debug_info_artifacts_by_root_module
-					.put(module.root_module, std::vector<artifacts::FileArtifact>())
+					.put(module.package_root_module, std::vector<artifacts::FileArtifact>())
 					.first->second.emplace_back(di_result.valueOrPanic());
 			else {
 				CORE_USER_LOG("Debug info generation failed for a module.");

@@ -325,7 +325,7 @@ clah::Clah getClahForMain() {
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
 							.packages_info = {
 								compiler::frontend::packages::RawPackageInfo{
-									.package_name = base::StrID(package_name.c_str()),
+									.package_name = base::StrID(package_name),
 									.version      = base::StrID("not_supported"),
 									.package_path = fs::FilePath(path_to_compile.getFilePath()),
 									.features     = {},
@@ -456,19 +456,11 @@ clah::Clah getClahForMain() {
 
 					auto worker_count = options.getValue<i64>("workers").copyValueOr(1);
 
-					if (options.isFlag("dvm-backend")) {
-						if (options.isFlag("emit-static-lib")) {
-							std::cerr << "Error: --dvm-backend and --emit-static-lib flags cannot "
-										 "be used together.\n";
-							return 1;
-						}
-					}
-
 					auto init_result = compiler::driver::initializeTheCompiler(
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
 							.packages_info = {
 								compiler::frontend::packages::RawPackageInfo{
-									.package_name = base::StrID(package_name.c_str()),
+									.package_name = base::StrID(package_name),
 									.version      = base::StrID("not_supported"),
 									.package_path = path_to_compile.getFilePath(),
 									.features     = {},
@@ -711,7 +703,7 @@ clah::Clah getClahForMain() {
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
 									.packages_info = {
 										compiler::frontend::packages::RawPackageInfo{
-											.package_name = base::StrID(package_name.c_str()),
+											.package_name = base::StrID(package_name),
 											.version      = base::StrID("not_supported"),
 											.package_path = path_to_compile.getFilePath(),
 											.features     = {},
@@ -735,9 +727,8 @@ clah::Clah getClahForMain() {
 						return 1;
 					}
 
-					auto root = frontend::createModuleTree(
-						path_to_compile, base::StrID(package_name.c_str())
-					);
+					auto root
+						= frontend::createModuleTree(path_to_compile, base::StrID(package_name));
 
 					int exit_code = 0;
 					query::utils::withContextDo([&](query::Context& ctx) {

@@ -27,7 +27,7 @@ import sys
 # a meaningful class of threading issues.
 #
 # High-level flow:
-# 1) duplicate every .dmf module file in one selected package (default x3),
+# 1) duplicate every .dmf module file in every package under test (default x3),
 #    so there is enough work to exercise concurrent modification paths
 #    and force parallel processing of identical function bodies,
 # 2) rewrite duplicated files so they can coexist in one package:
@@ -36,7 +36,7 @@ import sys
 #    - rewrite imports in copied main-module files from `import child...`
 #      to `import main.child...` because copied .dmf files become
 #      sub-modules of the original, so their import paths must be adjusted,
-# 3) compile the same package twice into a local `build` dir:
+# 3) compile the same package(s) twice into a local `build` dir:
 #    - first with 1 worker to get a deterministic baseline,
 #    - then with concurrent workers — if single-threaded output matches
 #      multi-threaded output the compiler is deterministic,
@@ -45,8 +45,9 @@ import sys
 # 5) clean temporary duplicated modules and temporary build artifacts,
 # 6) return 0 on success, otherwise return 1 and print error details to stderr.
 #
-# The script intentionally operates on one package selected by --module-name
-# (duck_modules/<module-name>) so tests can scope checks to a single case.
+# The script supports two modes: single-package mode (--module-name selects a
+# package under duck_modules/), and manifest mode (--manifest points to a
+# compile_packages JSON manifest).
 
 
 GENERATED_COPY_STEM_RE = re.compile(r"^concurrent_copy\d+_.+")

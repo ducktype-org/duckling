@@ -24,9 +24,9 @@
 namespace compiler::driver {
 
 	/**
-	 * Temporary interface for compiling the packages defined in global_state::packages.
+	 * Interface for compiling the packages defined in global_state::packages.
 	 * Each package is compiled according to its compilation strategy defined in the
-	 * RawPackageCompilationTask:
+	 * PackageCompilationTask:
 	 * - DVM strategy: compiles each module into .dbc files, no linking step.
 	 * - Native strategy: compiles each module into .o files, then links them into a final
 	 * executable using the specified linking options.

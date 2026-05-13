@@ -144,6 +144,16 @@ namespace compiler::frontend::packages {
 		return m_dependencies;
 	}
 
+	PackageDependencyAccess PackageDependencyAccessLocked::unlock(query::Context& ctx) const {
+		ctx.query<QueryPackageDependencyAliasSideInput>(KeyOf_PackageDependencyAliasSideInput{
+			.package_hash      = PackageInfo::computeHash(m_owner_package_id),
+			.alias             = m_alias,
+			.found             = true,
+			.target_package_id = m_target_package_id,
+		});
+		return illegalAccess();
+	}
+
 	PackageAccess PackageAccessLocked::unlock(query::Context& ctx) const {
 		ctx.query<QueryPackageSideInput>(KeyOf_PackageSideInput{
 			PackageInfo::computeHash(m_package_id) });

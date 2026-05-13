@@ -29,11 +29,10 @@ inputs that can change between builds are:
 - a specific `(package, alias) → target package id` lookup result
   (alias added, removed, or repointed).
 
-> `version` and `features` are also tracked as query inputs — generated
-> code can depend on them (feature-gated APIs, version conditionals), so
-> any read must register the dependency or builds would silently go
-> stale after a manifest edit. Every read goes through `*AccessLocked`,
-> and unlocking registers the matching side-input query.
+> `version` and `features` are **not tracked** currently (see #2668) —
+> generated code may eventually depend on them (feature-gated APIs,
+> version conditionals), at which point reads will need to register the
+> dependency.
 
 The relevant side inputs:
 
@@ -47,23 +46,6 @@ Because the alias side-input encodes the *outcome* (`found` + `target_package_id
 in its key, distinct results are tracked as independent edges — flipping
 an alias from missing → present, or repointing it to another package,
 correctly invalidates dependents.
-
-## When to `unlock(ctx)` vs. `illegalAccess()`
-
-Rule of thumb:
-
-- **Inside a query (you have a `query::Context&`) → always `unlock(ctx)`.**
-  This registers the side-input dependency. Skipping it = silent stale
-  results.
-- **Outside the query system → `illegalAccess()`.**
-  Examples: driver bootstrap, debug printing, REPL glue, anything that
-  is not a query and never feeds a cached query result.
-
-`PackageDependencyAliasAccessLocked::unlock` returns
-`Optional<PackageAccessLocked>`: empty when the alias does not resolve.
-The caller decides whether to unlock the inner `PackageAccessLocked`
-further (only do so if the query actually depends on the resolved
-package's identity).
 
 ## How a manifest entry becomes a `PackageInfo`
 

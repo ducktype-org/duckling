@@ -156,10 +156,3 @@ When only raw linker flags are needed:
 }
 ```
 
-## Common mistakes
-
-- Missing dependency entry in `packages[]` (every dependency must have its own entry, even if it is not the target of any task).
-- Two packages sharing a name, or two dependencies of the same package sharing an alias.
-- Trying to link a package by declaring it only in `dependencies` — the full path to the `.a` is required in `additional_link_options`.
-- Unknown `strategy` value (allowed: `dvm`, `native`, `obj`, `lib`).
-- Missing `output_file` for `dvm` / `native` / `lib`.

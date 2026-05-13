@@ -26,8 +26,15 @@ public:
 		TESTER_ADD_TEST(missingPackageNameFails);
 		TESTER_ADD_TEST(missingTaskPackageFails);
 		TESTER_ADD_TEST(unknownFieldsWarnNotError);
+		TESTER_ADD_TEST(taskUnknownFieldsWarnNotError);
+		TESTER_ADD_TEST(verifyEmptyPackagesFails);
+		TESTER_ADD_TEST(verifyDuplicateAndUnknownDepsFail);
 		TESTER_ADD_TEST(dvmStrategyParsed);
 		TESTER_ADD_TEST(nativeStrategyParsed);
+		TESTER_ADD_TEST(nativeStrategyBadLinkingOptionsFails);
+		TESTER_ADD_TEST(nativeStrategyLinkingOptionsObjectParsed);
+		TESTER_ADD_TEST(libStrategyBadArchiveOptionsFails);
+		TESTER_ADD_TEST(dvmStrategyMissingOutputFails);
 		TESTER_ADD_TEST(unknownStrategyFails);
 	}
 
@@ -182,6 +189,74 @@ private:
 		ASSERT_TRUE(hasWarning());
 	}
 
+	void taskUnknownFieldsWarnNotError() {
+		clearLogger();
+
+		auto task_json = nlohmann::json::parse(R"({
+            "package": "app",
+            "strategy": "dvm",
+            "output_file": "bin/app_dvm",
+            "extra": 123
+        })");
+		auto result    = RawPackageCompilationTask::fromJson(
+            task_json, diagnostics::makeGlobalLoggerReporter()
+        );
+
+		ASSERT_TRUE(result.has_value());
+		ASSERT_TRUE(!logger().hasErrors());
+		ASSERT_TRUE(hasWarning());
+	}
+
+	void verifyEmptyPackagesFails() {
+		clearLogger();
+
+		PackageCompilationManifest manifest{
+			.packages = {},
+			.tasks    = {},
+		};
+
+		auto result = manifest.verify(diagnostics::makeGlobalLoggerReporter());
+		ASSERT_TRUE(result.isBad());
+		ASSERT_TRUE(logger().hasErrors());
+	}
+
+	void verifyDuplicateAndUnknownDepsFail() {
+		clearLogger();
+
+		PackageCompilationManifest manifest{
+			.packages = {
+				compiler::frontend::packages::RawPackageInfo{
+					.package_name = base::StrID("pkg"),
+					.version      = base::StrID("1"),
+					.package_path = fs::FilePath("/tmp/pkg"),
+					.features     = {},
+					.dependencies = {
+						compiler::frontend::packages::RawDependencyInfo{
+							.package_name = base::StrID("missing"),
+							.alias        = base::StrID("dup"),
+						},
+						compiler::frontend::packages::RawDependencyInfo{
+							.package_name = base::StrID("missing"),
+							.alias        = base::StrID("dup"),
+						},
+					},
+				},
+				compiler::frontend::packages::RawPackageInfo{
+					.package_name = base::StrID("pkg"),
+					.version      = base::StrID("1"),
+					.package_path = fs::FilePath("/tmp/pkg2"),
+					.features     = {},
+					.dependencies = {},
+				},
+			},
+			.tasks = {},
+		};
+
+		auto result = manifest.verify(diagnostics::makeGlobalLoggerReporter());
+		ASSERT_TRUE(result.isBad());
+		ASSERT_TRUE(logger().hasErrors());
+	}
+
 	void dvmStrategyParsed() {
 		clearLogger();
 
@@ -215,6 +290,81 @@ private:
 		ASSERT_TRUE(std::holds_alternative<BuildTargetLLVMExecutable>(result->build_target));
 		const auto& target = std::get<BuildTargetLLVMExecutable>(result->build_target);
 		ASSERT_EQUAL(target.linking_options.additional_link_options, std::string("-lm"));
+	}
+
+	void nativeStrategyBadLinkingOptionsFails() {
+		clearLogger();
+
+		auto task_json = nlohmann::json::parse(R"({
+            "package": "app",
+            "strategy": "native",
+            "output_file": "bin/app",
+            "linking_options": { "linker": 123 }
+        })");
+		auto result    = RawPackageCompilationTask::fromJson(
+            task_json, diagnostics::makeGlobalLoggerReporter()
+        );
+
+		ASSERT_TRUE(!result.has_value());
+		ASSERT_TRUE(logger().hasErrors());
+	}
+
+	void nativeStrategyLinkingOptionsObjectParsed() {
+		clearLogger();
+
+		auto task_json = nlohmann::json::parse(R"({
+            "package": "app",
+            "strategy": "native",
+            "output_file": "bin/app",
+            "linking_options": {
+                "linker": "ld",
+                "additional_link_options": "-lfoo",
+                "link_c_standard_library": false
+            }
+        })");
+		auto result    = RawPackageCompilationTask::fromJson(
+            task_json, diagnostics::makeGlobalLoggerReporter()
+        );
+
+		ASSERT_TRUE(result.has_value());
+		ASSERT_TRUE(logger().good());
+		ASSERT_TRUE(std::holds_alternative<BuildTargetLLVMExecutable>(result->build_target));
+		const auto& target = std::get<BuildTargetLLVMExecutable>(result->build_target);
+		ASSERT_EQUAL(target.linking_options.linker_path, std::string("ld"));
+		ASSERT_EQUAL(target.linking_options.additional_link_options, std::string("-lfoo"));
+		ASSERT_TRUE(!target.linking_options.link_c_standard_library);
+	}
+
+	void libStrategyBadArchiveOptionsFails() {
+		clearLogger();
+
+		auto task_json = nlohmann::json::parse(R"({
+            "package": "lib",
+            "strategy": "lib",
+            "output_file": "bin/lib.a",
+            "archive_options": { "archiver": 123 }
+        })");
+		auto result    = RawPackageCompilationTask::fromJson(
+            task_json, diagnostics::makeGlobalLoggerReporter()
+        );
+
+		ASSERT_TRUE(!result.has_value());
+		ASSERT_TRUE(logger().hasErrors());
+	}
+
+	void dvmStrategyMissingOutputFails() {
+		clearLogger();
+
+		auto task_json = nlohmann::json::parse(R"({
+            "package": "app",
+            "strategy": "dvm"
+        })");
+		auto result    = RawPackageCompilationTask::fromJson(
+            task_json, diagnostics::makeGlobalLoggerReporter()
+        );
+
+		ASSERT_TRUE(!result.has_value());
+		ASSERT_TRUE(logger().hasErrors());
 	}
 
 	void unknownStrategyFails() {

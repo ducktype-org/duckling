@@ -14,14 +14,15 @@
 #include <nlohmann/json.hpp>
 
 #include <string>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
 namespace compiler::frontend::packages {
 
 	hashing::ComponentHash::HashType PackageInfo::computeHash(base::StrID package_id) {
-		// Only the package id participates in the hash for now: version and features are
-		// intentionally not included until query dependency tracking on them is implemented.
+		// @TODO: #2668 version and features are not included in the hash yet; they need
+		// dedicated side inputs before generated code can depend on them.
 		hashing::ComponentHash::HashAlg hasher;
 		hashing::addToHash(hasher, package_id);
 		return hasher.finalize();
@@ -54,11 +55,12 @@ namespace compiler::frontend::packages {
 	base::CRef<std::vector<base::StrID>> PackageInfo::getFeatures() const { return &m_features; }
 
 	PackageDependenciesAccessLocked PackageInfo::getDependencies() const {
+		auto                                       owner_id = getPackageID();
 		std::vector<PackageDependencyAccessLocked> deps;
 		deps.reserve(m_dependencies.size());
 		for (const auto& dep: m_dependencies)
-			deps.emplace_back(dep.alias, PackageAccessLocked(dep.package_id));
-		return { getPackageID(), std::move(deps) };
+			deps.emplace_back(owner_id, dep.alias, dep.package_id);
+		return { owner_id, std::move(deps) };
 	}
 
 	PackageDependencyAliasAccessLocked PackageInfo::getPackageDependencyByAlias(base::StrID alias
@@ -85,8 +87,12 @@ namespace compiler::frontend::packages {
 		if (!name) had_error = true;
 
 		base::Optional<base::StrID> alias;
-		if (auto alias_result = js::extractString(json, "alias"); alias_result.has_value())
+		if (auto alias_result = js::extractString(json, "alias"); alias_result.has_value()) {
 			alias = *alias_result;
+		} else if (alias_result.error() != js::JsonExtractError::MissingKey) {
+			report("Dependency \"alias\" field must be a string.", std::string{}, true);
+			had_error = true;
+		}
 
 		if (had_error) return {};
 
@@ -114,8 +120,12 @@ namespace compiler::frontend::packages {
 		if (!path) had_error = true;
 
 		base::Optional<base::StrID> version_opt;
-		if (auto version_result = js::extractString(json, "version"); version_result.has_value())
+		if (auto version_result = js::extractString(json, "version"); version_result.has_value()) {
 			version_opt = *version_result;
+		} else if (version_result.error() != js::JsonExtractError::MissingKey) {
+			report("Package \"version\" field must be a string.", std::string{}, true);
+			had_error = true;
+		}
 
 		std::vector<base::StrID> features;
 		if (auto features_result = js::extractArray(json, "features"); features_result.has_value()) {
@@ -200,6 +210,32 @@ namespace compiler::frontend::packages {
 		return PackageInfo(
 			root_module, package_info.version, package_info.features, std::move(package_dependencies)
 		);
+	}
+
+	void filterUndeclaredDependencies(
+		std::vector<RawPackageInfo>& packages_info, const DiagnosticReporter& report
+	) {
+		std::unordered_set<base::StrID> declared_packages;
+		declared_packages.reserve(packages_info.size());
+		for (const auto& package_info: packages_info)
+			declared_packages.insert(package_info.package_name);
+
+		for (auto& package_info: packages_info)
+			std::erase_if(package_info.dependencies, [&](const RawDependencyInfo& dep) {
+				if (declared_packages.contains(dep.package_name)) return false;
+				report(
+					base::strConcat(
+						"Dropping dependency \"",
+						dep.package_name.strView(),
+						"\" of package \"",
+						package_info.package_name.strView(),
+						"\": no such package is declared in the manifest."
+					),
+					std::string{},
+					false
+				);
+				return true;
+			});
 	}
 
 }  // namespace compiler::frontend::packages
