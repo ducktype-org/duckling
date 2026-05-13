@@ -44,9 +44,9 @@ pub struct Dependency {
     #[serde(rename = "name")]
     /// ID of a package. Note, that there must a package with `id = self.id` in a [`packages`](DuckcMultiPackage::packages) vector.
     pub id: StrId,
-    #[serde(rename = "alias")]
+    #[serde(rename = "alias", skip_serializing_if = "Option::is_none")]
     /// How should this package be named, when resolving imports.
-    pub import_name: StrId,
+    pub explicit_import_name: Option<StrId>,
 }
 
 // `compiler/driver/driver/src/driver/task/task.cpp` deserializes `RawTask` as `RawPackageCompilationTask`.
@@ -310,11 +310,11 @@ mod tests {
                 dependencies: vec![
                     Dependency {
                         id: "dep-hash".into(),
-                        import_name: "bar".into(),
+                        explicit_import_name: Some("bar".into()),
                     },
                     Dependency {
                         id: "dep2-hash".into(),
-                        import_name: "foo".into(),
+                        explicit_import_name: Some("foo".into()),
                     },
                 ],
             },
@@ -325,7 +325,7 @@ mod tests {
                 path_to_the_src_directory: PathBuf::default(),
                 dependencies: vec![Dependency {
                     id: "dep2-hash".into(),
-                    import_name: "foo-aliased".into(),
+                    explicit_import_name: Some("foo-aliased".into()),
                 }],
             },
             Package {
@@ -337,6 +337,7 @@ mod tests {
             },
         ]
     }
+
     fn create_mock_tasks() -> Vec<PackageCompilationTask> {
         vec![
             PackageCompilationTask {
@@ -404,6 +405,414 @@ mod tests {
                 strategy: PackageCompilationStrategy::Lib {
                     output_file: PathBuf::from("out.so"),
                     archive_options: None,
+                },
+            },
+        ]
+    }
+
+    #[test]
+    fn json_from_piotrek() {
+        let packages = packages_from_piotrek();
+        let tasks = tasks_from_piotrek();
+        let multi_package = MultiPackage { packages, tasks };
+        let serialized = serde_json::to_string_pretty(&multi_package).unwrap();
+        assert_eq!(
+            serialized,
+            r#"{
+  "packages": [
+    {
+      "name": "lib_a",
+      "version": "0.1.0",
+      "features": [
+        "use_mathlib"
+      ],
+      "path": "duck_modules/multi_package/lib_a",
+      "dependencies": []
+    },
+    {
+      "name": "lib_b",
+      "version": "0.1.0",
+      "features": [
+        "use_mathlib",
+        "use_lib_a"
+      ],
+      "path": "duck_modules/multi_package/lib_b",
+      "dependencies": [
+        {
+          "name": "lib_a",
+          "alias": "lib_a"
+        },
+        {
+          "name": "lib_c"
+        }
+      ]
+    },
+    {
+      "name": "lib_c",
+      "version": "0.1.0",
+      "features": [
+        "use_lib_b"
+      ],
+      "path": "duck_modules/multi_package/lib_c",
+      "dependencies": [
+        {
+          "name": "lib_b"
+        }
+      ]
+    },
+    {
+      "name": "app1",
+      "version": "0.1.0",
+      "features": [],
+      "path": "duck_modules/multi_package/app1",
+      "dependencies": [
+        {
+          "name": "lib_a",
+          "alias": "lib_a"
+        },
+        {
+          "name": "lib_c",
+          "alias": "lib_b"
+        }
+      ]
+    },
+    {
+      "name": "app2",
+      "version": "0.1.0",
+      "features": [],
+      "path": "duck_modules/multi_package/app2",
+      "dependencies": [
+        {
+          "name": "lib_a",
+          "alias": "lib_a"
+        }
+      ]
+    },
+    {
+      "name": "app3",
+      "version": "0.1.0",
+      "features": [],
+      "path": "duck_modules/multi_package/app3",
+      "dependencies": [
+        {
+          "name": "lib_a"
+        },
+        {
+          "name": "lib_b"
+        }
+      ]
+    },
+    {
+      "name": "app3_alias",
+      "version": "0.1.0",
+      "features": [],
+      "path": "duck_modules/multi_package/app3",
+      "dependencies": [
+        {
+          "name": "lib_a",
+          "alias": "lib_b"
+        },
+        {
+          "name": "lib_b",
+          "alias": "lib_a"
+        }
+      ]
+    }
+  ],
+  "tasks": [
+    {
+      "package": "lib_a",
+      "strategy": "lib",
+      "output_file": "lib_a"
+    },
+    {
+      "package": "lib_b",
+      "strategy": "lib",
+      "output_file": "lib_b"
+    },
+    {
+      "package": "lib_c",
+      "strategy": "lib",
+      "output_file": "lib_c"
+    },
+    {
+      "package": "lib_a",
+      "strategy": "dvm",
+      "output_file": "lib_a_dvm"
+    },
+    {
+      "package": "lib_b",
+      "strategy": "dvm",
+      "output_file": "lib_b_dvm"
+    },
+    {
+      "package": "lib_c",
+      "strategy": "dvm",
+      "output_file": "lib_c_dvm"
+    },
+    {
+      "package": "app1",
+      "strategy": "dvm",
+      "output_file": "app1_dvm"
+    },
+    {
+      "package": "app2",
+      "strategy": "dvm",
+      "output_file": "app2_dvm"
+    },
+    {
+      "package": "app3",
+      "strategy": "dvm",
+      "output_file": "app3_dvm"
+    },
+    {
+      "package": "app3_alias",
+      "strategy": "dvm",
+      "output_file": "app3_alias_dvm"
+    },
+    {
+      "package": "app1",
+      "strategy": "native",
+      "output_file": "app1",
+      "linking_options": "build/lib_a.a build/lib_c.a build/lib_b.a"
+    },
+    {
+      "package": "app2",
+      "strategy": "native",
+      "output_file": "app2",
+      "linking_options": {
+        "additional_linking_options": "build/lib_a.a",
+        "link_c_standard_library": true
+      }
+    },
+    {
+      "package": "app3",
+      "strategy": "native",
+      "output_file": "app3",
+      "linking_options": {
+        "additional_linking_options": "build/lib_a.a build/lib_b.a build/lib_c.a",
+        "link_c_standard_library": true
+      }
+    },
+    {
+      "package": "app3_alias",
+      "strategy": "native",
+      "output_file": "app3_alias",
+      "linking_options": {
+        "additional_linking_options": "build/lib_a.a build/lib_b.a build/lib_c.a",
+        "link_c_standard_library": true
+      }
+    }
+  ]
+}"#
+        );
+    }
+
+    fn packages_from_piotrek() -> Vec<Package> {
+        vec![
+            Package {
+                id: "lib_a".into(),
+                version: Version::new(0, 1, 0),
+                features: vec!["use_mathlib".into()],
+                path_to_the_src_directory: PathBuf::from("duck_modules/multi_package/lib_a"),
+                dependencies: vec![],
+            },
+            Package {
+                id: "lib_b".into(),
+                version: Version::new(0, 1, 0),
+                features: vec!["use_mathlib".into(), "use_lib_a".into()],
+                path_to_the_src_directory: PathBuf::from("duck_modules/multi_package/lib_b"),
+                dependencies: vec![
+                    Dependency {
+                        id: "lib_a".into(),
+                        explicit_import_name: Some("lib_a".into()),
+                    },
+                    Dependency {
+                        id: "lib_c".into(),
+                        explicit_import_name: None,
+                    },
+                ],
+            },
+            Package {
+                id: "lib_c".into(),
+                version: Version::new(0, 1, 0),
+                features: vec!["use_lib_b".into()],
+                path_to_the_src_directory: PathBuf::from("duck_modules/multi_package/lib_c"),
+                dependencies: vec![Dependency {
+                    id: "lib_b".into(),
+                    explicit_import_name: None,
+                }],
+            },
+            Package {
+                id: "app1".into(),
+                version: Version::new(0, 1, 0),
+                features: vec![],
+                path_to_the_src_directory: PathBuf::from("duck_modules/multi_package/app1"),
+                dependencies: vec![
+                    Dependency {
+                        id: "lib_a".into(),
+                        explicit_import_name: Some("lib_a".into()),
+                    },
+                    Dependency {
+                        id: "lib_c".into(),
+                        explicit_import_name: Some("lib_b".into()),
+                    },
+                ],
+            },
+            Package {
+                id: "app2".into(),
+                version: Version::new(0, 1, 0),
+                features: vec![],
+                path_to_the_src_directory: PathBuf::from("duck_modules/multi_package/app2"),
+                dependencies: vec![Dependency {
+                    id: "lib_a".into(),
+                    explicit_import_name: Some("lib_a".into()),
+                }],
+            },
+            Package {
+                id: "app3".into(),
+                version: Version::new(0, 1, 0),
+                features: vec![],
+                path_to_the_src_directory: PathBuf::from("duck_modules/multi_package/app3"),
+                dependencies: vec![
+                    Dependency {
+                        id: "lib_a".into(),
+                        explicit_import_name: None,
+                    },
+                    Dependency {
+                        id: "lib_b".into(),
+                        explicit_import_name: None,
+                    },
+                ],
+            },
+            Package {
+                id: "app3_alias".into(),
+                version: Version::new(0, 1, 0),
+                features: vec![],
+                path_to_the_src_directory: PathBuf::from("duck_modules/multi_package/app3"),
+                dependencies: vec![
+                    Dependency {
+                        id: "lib_a".into(),
+                        explicit_import_name: Some("lib_b".into()),
+                    },
+                    Dependency {
+                        id: "lib_b".into(),
+                        explicit_import_name: Some("lib_a".into()),
+                    },
+                ],
+            },
+        ]
+    }
+
+    fn tasks_from_piotrek() -> Vec<Task> {
+        vec![
+            PackageCompilationTask {
+                package_id: "lib_a".into(),
+                strategy: PackageCompilationStrategy::Lib {
+                    output_file: PathBuf::from("lib_a"),
+                    archive_options: None,
+                },
+            },
+            PackageCompilationTask {
+                package_id: "lib_b".into(),
+                strategy: PackageCompilationStrategy::Lib {
+                    output_file: PathBuf::from("lib_b"),
+                    archive_options: None,
+                },
+            },
+            PackageCompilationTask {
+                package_id: "lib_c".into(),
+                strategy: PackageCompilationStrategy::Lib {
+                    output_file: PathBuf::from("lib_c"),
+                    archive_options: None,
+                },
+            },
+            PackageCompilationTask {
+                package_id: "lib_a".into(),
+                strategy: PackageCompilationStrategy::Dvm {
+                    output_file: Some(PathBuf::from("lib_a_dvm")),
+                },
+            },
+            PackageCompilationTask {
+                package_id: "lib_b".into(),
+                strategy: PackageCompilationStrategy::Dvm {
+                    output_file: Some(PathBuf::from("lib_b_dvm")),
+                },
+            },
+            PackageCompilationTask {
+                package_id: "lib_c".into(),
+                strategy: PackageCompilationStrategy::Dvm {
+                    output_file: Some(PathBuf::from("lib_c_dvm")),
+                },
+            },
+            PackageCompilationTask {
+                package_id: "app1".into(),
+                strategy: PackageCompilationStrategy::Dvm {
+                    output_file: Some(PathBuf::from("app1_dvm")),
+                },
+            },
+            PackageCompilationTask {
+                package_id: "app2".into(),
+                strategy: PackageCompilationStrategy::Dvm {
+                    output_file: Some(PathBuf::from("app2_dvm")),
+                },
+            },
+            PackageCompilationTask {
+                package_id: "app3".into(),
+                strategy: PackageCompilationStrategy::Dvm {
+                    output_file: Some(PathBuf::from("app3_dvm")),
+                },
+            },
+            PackageCompilationTask {
+                package_id: "app3_alias".into(),
+                strategy: PackageCompilationStrategy::Dvm {
+                    output_file: Some(PathBuf::from("app3_alias_dvm")),
+                },
+            },
+            PackageCompilationTask {
+                package_id: "app1".into(),
+                strategy: PackageCompilationStrategy::Native {
+                    output_file: PathBuf::from("app1"),
+                    linking_options: Some(LinkerOptions::RawLinkerArgs(
+                        "build/lib_a.a build/lib_c.a build/lib_b.a".into(),
+                    )),
+                },
+            },
+            PackageCompilationTask {
+                package_id: "app2".into(),
+                strategy: PackageCompilationStrategy::Native {
+                    output_file: PathBuf::from("app2"),
+                    linking_options: Some(LinkerOptions::Complex(ComplexLinkerOptions {
+                        linker: None,
+                        additional_linking_options: Some("build/lib_a.a".into()),
+                        link_cstd: Some(true),
+                    })),
+                },
+            },
+            PackageCompilationTask {
+                package_id: "app3".into(),
+                strategy: PackageCompilationStrategy::Native {
+                    output_file: PathBuf::from("app3"),
+                    linking_options: Some(LinkerOptions::Complex(ComplexLinkerOptions {
+                        linker: None,
+                        additional_linking_options: Some(
+                            "build/lib_a.a build/lib_b.a build/lib_c.a".into(),
+                        ),
+                        link_cstd: Some(true),
+                    })),
+                },
+            },
+            PackageCompilationTask {
+                package_id: "app3_alias".into(),
+                strategy: PackageCompilationStrategy::Native {
+                    output_file: PathBuf::from("app3_alias"),
+                    linking_options: Some(LinkerOptions::Complex(ComplexLinkerOptions {
+                        linker: None,
+                        additional_linking_options: Some(
+                            "build/lib_a.a build/lib_b.a build/lib_c.a".into(),
+                        ),
+                        link_cstd: Some(true),
+                    })),
                 },
             },
         ]
