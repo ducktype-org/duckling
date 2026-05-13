@@ -166,113 +166,232 @@ namespace vm::code {
 			FLAGS_WR(setNull_pptr)
 
 			FLAGS_WR_RD(mov_p8_p8)
-			FLAGS_WR_RD(mov_p16_p16) FLAGS_WR_RD(mov_p32_p32) FLAGS_WR_RD(mov_p64_p64)
-				FLAGS_WR_RD(mov_pptr_pptr) FLAGS_WR_RD(mov_pste_pste) FLAGS_WR_RD(mov_pfst_pfst)
-					FLAGS_WR_RD(mov_popq_popq)
+			FLAGS_WR_RD(mov_p16_p16)
+			FLAGS_WR_RD(mov_p32_p32)
+			FLAGS_WR_RD(mov_p64_p64)
+			FLAGS_WR_RD(mov_pptr_pptr)
+			FLAGS_WR_RD(mov_pste_pste)
+			FLAGS_WR_RD(mov_pfst_pfst)
+			FLAGS_WR_RD(mov_popq_popq)
 
-				// ===== Conditional moves: dst is read (kept conditionally) and written =====
-				FLAGS_RDWR_RD(cmov_p8_p8) FLAGS_RDWR_RD(cmov_p16_p16) FLAGS_RDWR_RD(cmov_p32_p32)
-					FLAGS_RDWR_RD(cmov_p64_p64) FLAGS_RDWR(cmov_p8_imm) FLAGS_RDWR(cmov_p16_imm)
-						FLAGS_RDWR(cmov_p32_imm) FLAGS_RDWR(cmov_p64_imm)
+			// ===== Conditional moves: dst is read (kept conditionally) and written =====
+			FLAGS_RDWR_RD(cmov_p8_p8)
+			FLAGS_RDWR_RD(cmov_p16_p16)
+			FLAGS_RDWR_RD(cmov_p32_p32)
+			FLAGS_RDWR_RD(cmov_p64_p64)
+			FLAGS_RDWR(cmov_p8_imm)
+			FLAGS_RDWR(cmov_p16_imm)
+			FLAGS_RDWR(cmov_p32_imm)
+			FLAGS_RDWR(cmov_p64_imm)
 
-				// ===== Binary arithmetic: dst = dst op src =====
-				FLAGS_RDWR_RD(add_p64_p64) FLAGS_RDWR(add_p64_imm) FLAGS_RDWR_RD(add_p32_p32
-			    ) FLAGS_RDWR(add_p32_imm) FLAGS_RDWR_RD(add_p16_p16) FLAGS_RDWR(add_p16_imm
-			    ) FLAGS_RDWR_RD(add_p8_p8) FLAGS_RDWR(add_p8_imm) FLAGS_RDWR_RD(sub_p64_p64
-			    ) FLAGS_RDWR(sub_p64_imm) FLAGS_RDWR_RD(sub_p32_p32) FLAGS_RDWR(sub_p32_imm
-			    ) FLAGS_RDWR_RD(sub_p16_p16) FLAGS_RDWR(sub_p16_imm) FLAGS_RDWR_RD(sub_p8_p8
-			    ) FLAGS_RDWR(sub_p8_imm) FLAGS_RDWR_RD(mul_p64_p64) FLAGS_RDWR(mul_p64_imm
-			    ) FLAGS_RDWR_RD(mul_p32_p32) FLAGS_RDWR(mul_p32_imm) FLAGS_RDWR_RD(mul_p16_p16)
-					FLAGS_RDWR(mul_p16_imm) FLAGS_RDWR_RD(mul_p8_p8) FLAGS_RDWR(mul_p8_imm)
-						FLAGS_RDWR_RD(div_p64_p64) FLAGS_RDWR(div_p64_imm)
-							FLAGS_RDWR_RD(div_p32_p32) FLAGS_RDWR(div_p32_imm)
-								FLAGS_RDWR_RD(div_p16_p16) FLAGS_RDWR(div_p16_imm)
-									FLAGS_RDWR_RD(div_p8_p8) FLAGS_RDWR(div_p8_imm)
-										FLAGS_RDWR_RD(mod_p64_p64) FLAGS_RDWR(mod_p64_imm)
-											FLAGS_RDWR_RD(mod_p32_p32) FLAGS_RDWR(mod_p32_imm)
-												FLAGS_RDWR_RD(mod_p16_p16) FLAGS_RDWR(mod_p16_imm)
-													FLAGS_RDWR_RD(mod_p8_p8) FLAGS_RDWR(mod_p8_imm)
+			// ===== Binary arithmetic: dst = dst op src =====
+			FLAGS_RDWR_RD(add_p64_p64)
+			FLAGS_RDWR(add_p64_imm)
+			FLAGS_RDWR_RD(add_p32_p32)
+			FLAGS_RDWR(add_p32_imm)
+			FLAGS_RDWR_RD(add_p16_p16)
+			FLAGS_RDWR(add_p16_imm)
+			FLAGS_RDWR_RD(add_p8_p8)
+			FLAGS_RDWR(add_p8_imm)
+			FLAGS_RDWR_RD(sub_p64_p64)
+			FLAGS_RDWR(sub_p64_imm)
+			FLAGS_RDWR_RD(sub_p32_p32)
+			FLAGS_RDWR(sub_p32_imm)
+			FLAGS_RDWR_RD(sub_p16_p16)
+			FLAGS_RDWR(sub_p16_imm)
+			FLAGS_RDWR_RD(sub_p8_p8)
+			FLAGS_RDWR(sub_p8_imm)
+			FLAGS_RDWR_RD(mul_p64_p64)
+			FLAGS_RDWR(mul_p64_imm)
+			FLAGS_RDWR_RD(mul_p32_p32)
+			FLAGS_RDWR(mul_p32_imm)
+			FLAGS_RDWR_RD(mul_p16_p16)
+			FLAGS_RDWR(mul_p16_imm)
+			FLAGS_RDWR_RD(mul_p8_p8)
+			FLAGS_RDWR(mul_p8_imm)
+			FLAGS_RDWR_RD(div_p64_p64)
+			FLAGS_RDWR(div_p64_imm)
+			FLAGS_RDWR_RD(div_p32_p32)
+			FLAGS_RDWR(div_p32_imm)
+			FLAGS_RDWR_RD(div_p16_p16)
+			FLAGS_RDWR(div_p16_imm)
+			FLAGS_RDWR_RD(div_p8_p8)
+			FLAGS_RDWR(div_p8_imm)
+			FLAGS_RDWR_RD(mod_p64_p64)
+			FLAGS_RDWR(mod_p64_imm)
+			FLAGS_RDWR_RD(mod_p32_p32)
+			FLAGS_RDWR(mod_p32_imm)
+			FLAGS_RDWR_RD(mod_p16_p16)
+			FLAGS_RDWR(mod_p16_imm)
+			FLAGS_RDWR_RD(mod_p8_p8)
+			FLAGS_RDWR(mod_p8_imm)
 
-				// Unsigned arith
-				FLAGS_RDWR_RD(umul_p64_p64) FLAGS_RDWR(umul_p64_imm) FLAGS_RDWR_RD(umul_p32_p32
-			    ) FLAGS_RDWR(umul_p32_imm) FLAGS_RDWR_RD(umul_p16_p16) FLAGS_RDWR(umul_p16_imm)
-					FLAGS_RDWR_RD(umul_p8_p8) FLAGS_RDWR(umul_p8_imm) FLAGS_RDWR_RD(umod_p64_p64)
-						FLAGS_RDWR(umod_p64_imm) FLAGS_RDWR_RD(umod_p32_p32)
-							FLAGS_RDWR(umod_p32_imm) FLAGS_RDWR_RD(umod_p16_p16)
-								FLAGS_RDWR(umod_p16_imm) FLAGS_RDWR_RD(umod_p8_p8)
-									FLAGS_RDWR(umod_p8_imm) FLAGS_RDWR_RD(udiv_p64_p64)
-										FLAGS_RDWR(udiv_p64_imm) FLAGS_RDWR_RD(udiv_p32_p32)
-											FLAGS_RDWR(udiv_p32_imm) FLAGS_RDWR_RD(udiv_p16_p16)
-												FLAGS_RDWR(udiv_p16_imm) FLAGS_RDWR_RD(udiv_p8_p8)
-													FLAGS_RDWR(udiv_p8_imm)
+			// Unsigned arith
+			FLAGS_RDWR_RD(umul_p64_p64)
+			FLAGS_RDWR(umul_p64_imm)
+			FLAGS_RDWR_RD(umul_p32_p32)
+			FLAGS_RDWR(umul_p32_imm)
+			FLAGS_RDWR_RD(umul_p16_p16)
+			FLAGS_RDWR(umul_p16_imm)
+			FLAGS_RDWR_RD(umul_p8_p8)
+			FLAGS_RDWR(umul_p8_imm)
+			FLAGS_RDWR_RD(umod_p64_p64)
+			FLAGS_RDWR(umod_p64_imm)
+			FLAGS_RDWR_RD(umod_p32_p32)
+			FLAGS_RDWR(umod_p32_imm)
+			FLAGS_RDWR_RD(umod_p16_p16)
+			FLAGS_RDWR(umod_p16_imm)
+			FLAGS_RDWR_RD(umod_p8_p8)
+			FLAGS_RDWR(umod_p8_imm)
+			FLAGS_RDWR_RD(udiv_p64_p64)
+			FLAGS_RDWR(udiv_p64_imm)
+			FLAGS_RDWR_RD(udiv_p32_p32)
+			FLAGS_RDWR(udiv_p32_imm)
+			FLAGS_RDWR_RD(udiv_p16_p16)
+			FLAGS_RDWR(udiv_p16_imm)
+			FLAGS_RDWR_RD(udiv_p8_p8)
+			FLAGS_RDWR(udiv_p8_imm)
 
-				// Floating point
-				FLAGS_RDWR_RD(fadd_p64_p64) FLAGS_RDWR(fadd_p64_imm) FLAGS_RDWR_RD(fadd_p32_p32)
-					FLAGS_RDWR(fadd_p32_imm) FLAGS_RDWR_RD(fsub_p64_p64) FLAGS_RDWR(fsub_p64_imm)
-						FLAGS_RDWR_RD(fsub_p32_p32) FLAGS_RDWR(fsub_p32_imm)
-							FLAGS_RDWR_RD(fmul_p64_p64) FLAGS_RDWR(fmul_p64_imm)
-								FLAGS_RDWR_RD(fmul_p32_p32) FLAGS_RDWR(fmul_p32_imm)
-									FLAGS_RDWR_RD(fdiv_p64_p64) FLAGS_RDWR(fdiv_p64_imm)
-										FLAGS_RDWR_RD(fdiv_p32_p32) FLAGS_RDWR(fdiv_p32_imm)
+			// Floating point
+			FLAGS_RDWR_RD(fadd_p64_p64)
+			FLAGS_RDWR(fadd_p64_imm)
+			FLAGS_RDWR_RD(fadd_p32_p32)
+			FLAGS_RDWR(fadd_p32_imm)
+			FLAGS_RDWR_RD(fsub_p64_p64)
+			FLAGS_RDWR(fsub_p64_imm)
+			FLAGS_RDWR_RD(fsub_p32_p32)
+			FLAGS_RDWR(fsub_p32_imm)
+			FLAGS_RDWR_RD(fmul_p64_p64)
+			FLAGS_RDWR(fmul_p64_imm)
+			FLAGS_RDWR_RD(fmul_p32_p32)
+			FLAGS_RDWR(fmul_p32_imm)
+			FLAGS_RDWR_RD(fdiv_p64_p64)
+			FLAGS_RDWR(fdiv_p64_imm)
+			FLAGS_RDWR_RD(fdiv_p32_p32)
+			FLAGS_RDWR(fdiv_p32_imm)
 
-				// Unary arith / negation / logical-not
-				FLAGS_RDWR(neg_p64) FLAGS_RDWR(neg_p32) FLAGS_RDWR(neg_p16) FLAGS_RDWR(neg_p8)
-					FLAGS_RDWR(fneg_p64) FLAGS_RDWR(fneg_p32) FLAGS_RDWR(log_not_p8)
+			// Unary arith / negation / logical-not
+			FLAGS_RDWR(neg_p64)
+			FLAGS_RDWR(neg_p32)
+			FLAGS_RDWR(neg_p16)
+			FLAGS_RDWR(neg_p8)
+			FLAGS_RDWR(fneg_p64)
+			FLAGS_RDWR(fneg_p32)
+			FLAGS_RDWR(log_not_p8)
 
-				// Logical (and/or/xor)
-				FLAGS_RDWR_RD(log_and_p8_p8) FLAGS_RDWR(log_and_p8_imm) FLAGS_RDWR_RD(log_or_p8_p8)
-					FLAGS_RDWR(log_or_p8_imm) FLAGS_RDWR_RD(log_xor_p8_p8)
-						FLAGS_RDWR(log_xor_p8_imm)
+			// Logical (and/or/xor)
+			FLAGS_RDWR_RD(log_and_p8_p8)
+			FLAGS_RDWR(log_and_p8_imm)
+			FLAGS_RDWR_RD(log_or_p8_p8)
+			FLAGS_RDWR(log_or_p8_imm)
+			FLAGS_RDWR_RD(log_xor_p8_p8)
+			FLAGS_RDWR(log_xor_p8_imm)
 
-				// ===== Comparisons: lhs/rhs are read =====
-				FLAGS_CMP(cmpEq_p64_p64) FLAGS_CMP_IMM(cmpEq_p64_imm) FLAGS_CMP(cmpNeq_p64_p64
-			    ) FLAGS_CMP_IMM(cmpNeq_p64_imm) FLAGS_CMP(cmpGt_p64_p64) FLAGS_CMP_IMM(cmpGt_p64_imm
-			    ) FLAGS_CMP(cmpGe_p64_p64) FLAGS_CMP_IMM(cmpGe_p64_imm) FLAGS_CMP(ucmpGt_p64_p64
-			    ) FLAGS_CMP_IMM(ucmpGt_p64_imm) FLAGS_CMP(ucmpGe_p64_p64
-			    ) FLAGS_CMP_IMM(ucmpGe_p64_imm) FLAGS_CMP(cmpLt_p64_p64) FLAGS_CMP_IMM(cmpLt_p64_imm
-			    ) FLAGS_CMP(cmpLe_p64_p64) FLAGS_CMP_IMM(cmpLe_p64_imm) FLAGS_CMP(ucmpLt_p64_p64
-			    ) FLAGS_CMP_IMM(ucmpLt_p64_imm) FLAGS_CMP(ucmpLe_p64_p64
-			    ) FLAGS_CMP_IMM(ucmpLe_p64_imm) FLAGS_CMP(cmpEq_p32_p32) FLAGS_CMP_IMM(cmpEq_p32_imm
-			    ) FLAGS_CMP(cmpNeq_p32_p32) FLAGS_CMP_IMM(cmpNeq_p32_imm
-			    ) FLAGS_CMP(cmpGt_p32_p32) FLAGS_CMP_IMM(cmpGt_p32_imm) FLAGS_CMP(cmpGe_p32_p32
-			    ) FLAGS_CMP_IMM(cmpGe_p32_imm) FLAGS_CMP(ucmpGt_p32_p32
-			    ) FLAGS_CMP_IMM(ucmpGt_p32_imm) FLAGS_CMP(ucmpGe_p32_p32
-			    ) FLAGS_CMP_IMM(ucmpGe_p32_imm) FLAGS_CMP(cmpLt_p32_p32) FLAGS_CMP_IMM(cmpLt_p32_imm
-			    ) FLAGS_CMP(cmpLe_p32_p32) FLAGS_CMP_IMM(cmpLe_p32_imm) FLAGS_CMP(ucmpLt_p32_p32
-			    ) FLAGS_CMP_IMM(ucmpLt_p32_imm) FLAGS_CMP(ucmpLe_p32_p32
-			    ) FLAGS_CMP_IMM(ucmpLe_p32_imm) FLAGS_CMP(cmpEq_p16_p16) FLAGS_CMP_IMM(cmpEq_p16_imm
-			    ) FLAGS_CMP(cmpNeq_p16_p16) FLAGS_CMP_IMM(cmpNeq_p16_imm
-			    ) FLAGS_CMP(cmpGt_p16_p16) FLAGS_CMP_IMM(cmpGt_p16_imm) FLAGS_CMP(cmpGe_p16_p16
-			    ) FLAGS_CMP_IMM(cmpGe_p16_imm) FLAGS_CMP(ucmpGt_p16_p16
-			    ) FLAGS_CMP_IMM(ucmpGt_p16_imm) FLAGS_CMP(ucmpGe_p16_p16
-			    ) FLAGS_CMP_IMM(ucmpGe_p16_imm) FLAGS_CMP(cmpLt_p16_p16) FLAGS_CMP_IMM(cmpLt_p16_imm
-			    ) FLAGS_CMP(cmpLe_p16_p16) FLAGS_CMP_IMM(cmpLe_p16_imm) FLAGS_CMP(ucmpLt_p16_p16
-			    ) FLAGS_CMP_IMM(ucmpLt_p16_imm) FLAGS_CMP(ucmpLe_p16_p16
-			    ) FLAGS_CMP_IMM(ucmpLe_p16_imm) FLAGS_CMP(cmpEq_p8_p8) FLAGS_CMP_IMM(cmpEq_p8_imm
-			    ) FLAGS_CMP(cmpNeq_p8_p8
-			    ) FLAGS_CMP_IMM(cmpNeq_p8_imm) FLAGS_CMP(cmpGt_p8_p8
-			    ) FLAGS_CMP_IMM(cmpGt_p8_imm
-			    ) FLAGS_CMP(cmpGe_p8_p8) FLAGS_CMP_IMM(cmpGe_p8_imm) FLAGS_CMP(ucmpGt_p8_p8
-			    ) FLAGS_CMP_IMM(ucmpGt_p8_imm) FLAGS_CMP(ucmpGe_p8_p8) FLAGS_CMP_IMM(ucmpGe_p8_imm
-			    ) FLAGS_CMP(cmpLt_p8_p8) FLAGS_CMP_IMM(cmpLt_p8_imm
-			    ) FLAGS_CMP(cmpLe_p8_p8) FLAGS_CMP_IMM(cmpLe_p8_imm) FLAGS_CMP(ucmpLt_p8_p8
-			    ) FLAGS_CMP_IMM(ucmpLt_p8_imm) FLAGS_CMP(ucmpLe_p8_p8) FLAGS_CMP_IMM(ucmpLe_p8_imm
-			    ) FLAGS_CMP(fcmpEq_p64_p64) FLAGS_CMP_IMM(fcmpEq_p64_imm
-			    ) FLAGS_CMP(fcmpNeq_p64_p64) FLAGS_CMP_IMM(fcmpNeq_p64_imm) FLAGS_CMP(fcmpGt_p64_p64
-			    ) FLAGS_CMP_IMM(fcmpGt_p64_imm) FLAGS_CMP(fcmpGe_p64_p64)
-					FLAGS_CMP_IMM(fcmpGe_p64_imm) FLAGS_CMP(fcmpLt_p64_p64)
-						FLAGS_CMP_IMM(fcmpLt_p64_imm) FLAGS_CMP(fcmpLe_p64_p64)
-							FLAGS_CMP_IMM(fcmpLe_p64_imm) FLAGS_CMP(fcmpEq_p32_p32)
-								FLAGS_CMP_IMM(fcmpEq_p32_imm) FLAGS_CMP(fcmpNeq_p32_p32)
-									FLAGS_CMP_IMM(fcmpNeq_p32_imm) FLAGS_CMP(fcmpGt_p32_p32)
-										FLAGS_CMP_IMM(fcmpGt_p32_imm) FLAGS_CMP(fcmpGe_p32_p32)
-											FLAGS_CMP_IMM(fcmpGe_p32_imm) FLAGS_CMP(fcmpLt_p32_p32)
-												FLAGS_CMP_IMM(fcmpLt_p32_imm)
-													FLAGS_CMP(fcmpLe_p32_p32)
-														FLAGS_CMP_IMM(fcmpLe_p32_imm)
-															instr_case(ins::Op_cmpNull_pptr, i) {
-				rd(i.ptr);
-			}
+			// ===== Comparisons: lhs/rhs are read =====
+			FLAGS_CMP(cmpEq_p64_p64)
+			FLAGS_CMP_IMM(cmpEq_p64_imm)
+			FLAGS_CMP(cmpNeq_p64_p64)
+			FLAGS_CMP_IMM(cmpNeq_p64_imm)
+			FLAGS_CMP(cmpGt_p64_p64)
+			FLAGS_CMP_IMM(cmpGt_p64_imm)
+			FLAGS_CMP(cmpGe_p64_p64)
+			FLAGS_CMP_IMM(cmpGe_p64_imm)
+			FLAGS_CMP(ucmpGt_p64_p64)
+			FLAGS_CMP_IMM(ucmpGt_p64_imm)
+			FLAGS_CMP(ucmpGe_p64_p64)
+			FLAGS_CMP_IMM(ucmpGe_p64_imm)
+			FLAGS_CMP(cmpLt_p64_p64)
+			FLAGS_CMP_IMM(cmpLt_p64_imm)
+			FLAGS_CMP(cmpLe_p64_p64)
+			FLAGS_CMP_IMM(cmpLe_p64_imm)
+			FLAGS_CMP(ucmpLt_p64_p64)
+			FLAGS_CMP_IMM(ucmpLt_p64_imm)
+			FLAGS_CMP(ucmpLe_p64_p64)
+			FLAGS_CMP_IMM(ucmpLe_p64_imm)
+			FLAGS_CMP(cmpEq_p32_p32)
+			FLAGS_CMP_IMM(cmpEq_p32_imm)
+			FLAGS_CMP(cmpNeq_p32_p32)
+			FLAGS_CMP_IMM(cmpNeq_p32_imm)
+			FLAGS_CMP(cmpGt_p32_p32)
+			FLAGS_CMP_IMM(cmpGt_p32_imm)
+			FLAGS_CMP(cmpGe_p32_p32)
+			FLAGS_CMP_IMM(cmpGe_p32_imm)
+			FLAGS_CMP(ucmpGt_p32_p32)
+			FLAGS_CMP_IMM(ucmpGt_p32_imm)
+			FLAGS_CMP(ucmpGe_p32_p32)
+			FLAGS_CMP_IMM(ucmpGe_p32_imm)
+			FLAGS_CMP(cmpLt_p32_p32)
+			FLAGS_CMP_IMM(cmpLt_p32_imm)
+			FLAGS_CMP(cmpLe_p32_p32)
+			FLAGS_CMP_IMM(cmpLe_p32_imm)
+			FLAGS_CMP(ucmpLt_p32_p32)
+			FLAGS_CMP_IMM(ucmpLt_p32_imm)
+			FLAGS_CMP(ucmpLe_p32_p32)
+			FLAGS_CMP_IMM(ucmpLe_p32_imm)
+			FLAGS_CMP(cmpEq_p16_p16)
+			FLAGS_CMP_IMM(cmpEq_p16_imm)
+			FLAGS_CMP(cmpNeq_p16_p16)
+			FLAGS_CMP_IMM(cmpNeq_p16_imm)
+			FLAGS_CMP(cmpGt_p16_p16)
+			FLAGS_CMP_IMM(cmpGt_p16_imm)
+			FLAGS_CMP(cmpGe_p16_p16)
+			FLAGS_CMP_IMM(cmpGe_p16_imm)
+			FLAGS_CMP(ucmpGt_p16_p16)
+			FLAGS_CMP_IMM(ucmpGt_p16_imm)
+			FLAGS_CMP(ucmpGe_p16_p16)
+			FLAGS_CMP_IMM(ucmpGe_p16_imm)
+			FLAGS_CMP(cmpLt_p16_p16)
+			FLAGS_CMP_IMM(cmpLt_p16_imm)
+			FLAGS_CMP(cmpLe_p16_p16)
+			FLAGS_CMP_IMM(cmpLe_p16_imm)
+			FLAGS_CMP(ucmpLt_p16_p16)
+			FLAGS_CMP_IMM(ucmpLt_p16_imm)
+			FLAGS_CMP(ucmpLe_p16_p16)
+			FLAGS_CMP_IMM(ucmpLe_p16_imm)
+			FLAGS_CMP(cmpEq_p8_p8)
+			FLAGS_CMP_IMM(cmpEq_p8_imm)
+			FLAGS_CMP(cmpNeq_p8_p8)
+			FLAGS_CMP_IMM(cmpNeq_p8_imm)
+			FLAGS_CMP(cmpGt_p8_p8)
+			FLAGS_CMP_IMM(cmpGt_p8_imm)
+			FLAGS_CMP(cmpGe_p8_p8)
+			FLAGS_CMP_IMM(cmpGe_p8_imm)
+			FLAGS_CMP(ucmpGt_p8_p8)
+			FLAGS_CMP_IMM(ucmpGt_p8_imm)
+			FLAGS_CMP(ucmpGe_p8_p8)
+			FLAGS_CMP_IMM(ucmpGe_p8_imm)
+			FLAGS_CMP(cmpLt_p8_p8)
+			FLAGS_CMP_IMM(cmpLt_p8_imm)
+			FLAGS_CMP(cmpLe_p8_p8)
+			FLAGS_CMP_IMM(cmpLe_p8_imm)
+			FLAGS_CMP(ucmpLt_p8_p8)
+			FLAGS_CMP_IMM(ucmpLt_p8_imm)
+			FLAGS_CMP(ucmpLe_p8_p8)
+			FLAGS_CMP_IMM(ucmpLe_p8_imm)
+			FLAGS_CMP(fcmpEq_p64_p64)
+			FLAGS_CMP_IMM(fcmpEq_p64_imm)
+			FLAGS_CMP(fcmpNeq_p64_p64)
+			FLAGS_CMP_IMM(fcmpNeq_p64_imm)
+			FLAGS_CMP(fcmpGt_p64_p64)
+			FLAGS_CMP_IMM(fcmpGt_p64_imm)
+			FLAGS_CMP(fcmpGe_p64_p64)
+			FLAGS_CMP_IMM(fcmpGe_p64_imm)
+			FLAGS_CMP(fcmpLt_p64_p64)
+			FLAGS_CMP_IMM(fcmpLt_p64_imm)
+			FLAGS_CMP(fcmpLe_p64_p64)
+			FLAGS_CMP_IMM(fcmpLe_p64_imm)
+			FLAGS_CMP(fcmpEq_p32_p32)
+			FLAGS_CMP_IMM(fcmpEq_p32_imm)
+			FLAGS_CMP(fcmpNeq_p32_p32)
+			FLAGS_CMP_IMM(fcmpNeq_p32_imm)
+			FLAGS_CMP(fcmpGt_p32_p32)
+			FLAGS_CMP_IMM(fcmpGt_p32_imm)
+			FLAGS_CMP(fcmpGe_p32_p32)
+			FLAGS_CMP_IMM(fcmpGe_p32_imm)
+			FLAGS_CMP(fcmpLt_p32_p32)
+			FLAGS_CMP_IMM(fcmpLt_p32_imm)
+			FLAGS_CMP(fcmpLe_p32_p32)
+			FLAGS_CMP_IMM(fcmpLe_p32_imm) instr_case(ins::Op_cmpNull_pptr, i) { rd(i.ptr); }
 
 			// ===== Variants =====
 			instr_case(ins::Op_variantSetInner_pvnt_type, i) { rdwr(i.variant); }
@@ -526,34 +645,59 @@ namespace vm::code {
 			FLAGS_WR_RD(sext_p32_p16)
 			FLAGS_WR_RD(sext_p64_p16)
 			FLAGS_WR_RD(sext_p64_p32)
-			FLAGS_WR_RD(zext_p16_p8) FLAGS_WR_RD(zext_p32_p8) FLAGS_WR_RD(zext_p64_p8)
-				FLAGS_WR_RD(zext_p32_p16) FLAGS_WR_RD(zext_p64_p16) FLAGS_WR_RD(zext_p64_p32)
+			FLAGS_WR_RD(zext_p16_p8)
+			FLAGS_WR_RD(zext_p32_p8)
+			FLAGS_WR_RD(zext_p64_p8)
+			FLAGS_WR_RD(zext_p32_p16)
+			FLAGS_WR_RD(zext_p64_p16)
+			FLAGS_WR_RD(zext_p64_p32)
 
-				// ===== Truncation =====
-				FLAGS_WR_RD(trunc_p8_p16) FLAGS_WR_RD(trunc_p8_p32) FLAGS_WR_RD(trunc_p8_p64)
-					FLAGS_WR_RD(trunc_p16_p32) FLAGS_WR_RD(trunc_p16_p64) FLAGS_WR_RD(trunc_p32_p64)
+			// ===== Truncation =====
+			FLAGS_WR_RD(trunc_p8_p16)
+			FLAGS_WR_RD(trunc_p8_p32)
+			FLAGS_WR_RD(trunc_p8_p64)
+			FLAGS_WR_RD(trunc_p16_p32)
+			FLAGS_WR_RD(trunc_p16_p64)
+			FLAGS_WR_RD(trunc_p32_p64)
 
-				// ===== Int/Float conversions =====
-				FLAGS_WR_RD(sitofp_p32_p8) FLAGS_WR_RD(sitofp_p64_p8) FLAGS_WR_RD(uitofp_p32_p8
-			    ) FLAGS_WR_RD(uitofp_p64_p8) FLAGS_WR_RD(sitofp_p32_p16) FLAGS_WR_RD(sitofp_p64_p16
-			    ) FLAGS_WR_RD(uitofp_p32_p16) FLAGS_WR_RD(uitofp_p64_p16) FLAGS_WR_RD(sitofp_p32_p32
-			    ) FLAGS_WR_RD(sitofp_p64_p32) FLAGS_WR_RD(uitofp_p32_p32) FLAGS_WR_RD(uitofp_p64_p32
-			    ) FLAGS_WR_RD(sitofp_p32_p64) FLAGS_WR_RD(sitofp_p64_p64) FLAGS_WR_RD(uitofp_p32_p64
-			    ) FLAGS_WR_RD(uitofp_p64_p64) FLAGS_WR_RD(fptosi_p8_p32) FLAGS_WR_RD(fptoui_p8_p32)
-					FLAGS_WR_RD(fptosi_p16_p32) FLAGS_WR_RD(fptoui_p16_p32)
-						FLAGS_WR_RD(fptosi_p32_p32) FLAGS_WR_RD(fptoui_p32_p32)
-							FLAGS_WR_RD(fptosi_p64_p32) FLAGS_WR_RD(fptoui_p64_p32)
-								FLAGS_WR_RD(fptosi_p8_p64) FLAGS_WR_RD(fptoui_p8_p64)
-									FLAGS_WR_RD(fptosi_p16_p64) FLAGS_WR_RD(fptoui_p16_p64)
-										FLAGS_WR_RD(fptosi_p32_p64) FLAGS_WR_RD(fptoui_p32_p64)
-											FLAGS_WR_RD(fptosi_p64_p64) FLAGS_WR_RD(fptoui_p64_p64)
-												FLAGS_WR_RD(fptrunc_p32_p64)
-													FLAGS_WR_RD(fpext_p64_p32)
+			// ===== Int/Float conversions =====
+			FLAGS_WR_RD(sitofp_p32_p8)
+			FLAGS_WR_RD(sitofp_p64_p8)
+			FLAGS_WR_RD(uitofp_p32_p8)
+			FLAGS_WR_RD(uitofp_p64_p8)
+			FLAGS_WR_RD(sitofp_p32_p16)
+			FLAGS_WR_RD(sitofp_p64_p16)
+			FLAGS_WR_RD(uitofp_p32_p16)
+			FLAGS_WR_RD(uitofp_p64_p16)
+			FLAGS_WR_RD(sitofp_p32_p32)
+			FLAGS_WR_RD(sitofp_p64_p32)
+			FLAGS_WR_RD(uitofp_p32_p32)
+			FLAGS_WR_RD(uitofp_p64_p32)
+			FLAGS_WR_RD(sitofp_p32_p64)
+			FLAGS_WR_RD(sitofp_p64_p64)
+			FLAGS_WR_RD(uitofp_p32_p64)
+			FLAGS_WR_RD(uitofp_p64_p64)
+			FLAGS_WR_RD(fptosi_p8_p32)
+			FLAGS_WR_RD(fptoui_p8_p32)
+			FLAGS_WR_RD(fptosi_p16_p32)
+			FLAGS_WR_RD(fptoui_p16_p32)
+			FLAGS_WR_RD(fptosi_p32_p32)
+			FLAGS_WR_RD(fptoui_p32_p32)
+			FLAGS_WR_RD(fptosi_p64_p32)
+			FLAGS_WR_RD(fptoui_p64_p32)
+			FLAGS_WR_RD(fptosi_p8_p64)
+			FLAGS_WR_RD(fptoui_p8_p64)
+			FLAGS_WR_RD(fptosi_p16_p64)
+			FLAGS_WR_RD(fptoui_p16_p64)
+			FLAGS_WR_RD(fptosi_p32_p64)
+			FLAGS_WR_RD(fptoui_p32_p64)
+			FLAGS_WR_RD(fptosi_p64_p64)
+			FLAGS_WR_RD(fptoui_p64_p64)
+			FLAGS_WR_RD(fptrunc_p32_p64)
+			FLAGS_WR_RD(fpext_p64_p32)
 
-				// ===== Misc =====
-				instr_case(ins::Op_nop, i) {
-				(void) i;
-			}
+			// ===== Misc =====
+			instr_case(ins::Op_nop, i) { (void) i; }
 			instr_case(ins::Op_exit, i) {
 				(void) i;
 				flags |= ControlFlowModifying;
