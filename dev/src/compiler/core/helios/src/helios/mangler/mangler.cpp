@@ -15,6 +15,7 @@
 #include <helios/symbols/symbol_id.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/tsh/types.hpp>
+#include <helios_private/pst_layer/pst_parent.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 
@@ -187,11 +188,10 @@ namespace compiler::helios::mangler {
 
 		/**
 		 * @brief Returns symbol name prefixed with all enclosing it scopes to uniquely identify it
-		 * @note: See mangling-scheme.md for details
-		 *
-		 * @TODO: #2464 This is still a little simplified, there should probably be at least an
-		 * additional layer for things like macros and there will probably be other elements that
-		 * create scopes.
+		 * within a single module.
+		 * @note It does not mangle module/package names, pathPrefix and path functions are
+		 * responsible for that.
+		 * @note See mangling-scheme.md for details
 		 */
 		std::string symbolName(query::Context& ctx, SymID symbol_id) {
 			auto scope_id = scope(symbol_id);
@@ -201,31 +201,21 @@ namespace compiler::helios::mangler {
 			} else {
 				std::vector<std::string> path_parts;
 
-				auto current_pst = symbolPst(symbol_id).value().unlock(ctx);
-				while (true) {
-					auto ancestor     = current_pst;
-					auto ancestor_opt = ancestor->getParent();
+				auto ancestor     = symbolPst(symbol_id).value().unlock(ctx);
+				auto ancestor_opt = getPSTElementParent(ctx, ancestor);
 
-					while (ancestor_opt) {
-						ancestor = ancestor_opt.value().unlock(ctx);
+				while (ancestor_opt.isLangElement()) {
+					ancestor = ancestor_opt.getAsLangElement().unlock(ctx);
 
-						if (ancestor->getElementKind() == pst::ElementKind::Namespace) {
-							auto nmsp = ancestor.dynamicCast<pst::Namespace>().value();
-							path_parts.push_back(identifier(nmsp->getName().strView()));
-							current_pst = pst::Access<pst::LangElement>(ancestor);
-							break;
-						}
-						if (ancestor->getElementKind() == pst::ElementKind::Class) {
-							auto nmsp = ancestor.dynamicCast<pst::Class>().value();
-							path_parts.push_back(identifier(nmsp->getName().strView()));
-							current_pst = pst::Access<pst::LangElement>(ancestor);
-							break;
-						}
-
-						ancestor_opt = ancestor->getParent();
+					if (ancestor->getElementKind() == pst::ElementKind::Namespace) {
+						auto namespace_v = ancestor.dynamicCast<pst::Namespace>().value();
+						path_parts.push_back(identifier(namespace_v->getName().strView()));
+					} else if (ancestor->getElementKind() == pst::ElementKind::Class) {
+						auto class_v = ancestor.dynamicCast<pst::Class>().value();
+						path_parts.push_back(identifier(class_v->getName().strView()));
 					}
 
-					if (!ancestor_opt) break;
+					ancestor_opt = getPSTElementParent(ctx, ancestor);
 				}
 
 				std::string ret = "N";
@@ -608,7 +598,7 @@ namespace compiler::helios::mangler {
 				return mangle(ctx, type.as<tsh::MetaAbstractType>());
 			default:
 				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-					base::strConcat("Cannot mangle type of kind: ", type.getKind()), std::nullopt
+					base::strConcat("Cannot mangle type of kind: ", type.getKind()), ""
 				));
 				return query::Failed();
 			}

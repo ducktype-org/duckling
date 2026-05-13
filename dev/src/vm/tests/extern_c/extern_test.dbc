@@ -1,4 +1,4 @@
-function main { i64, ptr_argv } -> i64 {
+function main { i64, ptr_argv } -> { i64 } {
     init_pany_type res, i64;
     init_pany_type a, i64;
     init_pany_type b, i64;

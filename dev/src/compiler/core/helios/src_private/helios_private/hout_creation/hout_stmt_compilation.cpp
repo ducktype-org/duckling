@@ -5,11 +5,13 @@
 #include <frontend/pst_parser/elements/hierarchy/actions/return.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/assignment.hpp>
+#include <frontend/pst_parser/elements/hierarchy/expressions/block_expr.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/expr_stmt.hpp>
 #include <frontend/pst_parser/pst_visitor.hpp>
 #include <helios/hout/elements.hpp>
+#include <helios/hout/elements/stmt.hpp>
 #include <helios/hout/origin.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/tsh/queries/types.hpp>
@@ -30,10 +32,11 @@
 namespace compiler::helios {
 
 	// Forward declaration for processBlock so HoutStmtMaker can call it.
+	template<class Container>
+	requires std::same_as<Container, pst::CodeBlock>
+	      || std::same_as<Container, pst::CodeBlockOrStmt>
 	static code::CodeBlock processBlock(
-		query::Context&                         ctx,
-		pst::AccessLocked<pst::CodeBlockOrStmt> container,
-		tsh::SymbolType<>                       return_type
+		query::Context& ctx, pst::AccessLocked<Container> container, tsh::SymbolType<> return_type
 	);
 
 	/**
@@ -93,7 +96,7 @@ namespace compiler::helios {
 			if (op != base::StrID("=") && op != base::StrID("+=") && op != base::StrID("-=")) {
 				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 					base::strConcat("This assignment type: '", op, "'."),
-					assignment->getSourcePosition().unlock(ctx)
+					assignment->getStablePosition()
 				));
 				query::throwFailed();
 			}
@@ -123,9 +126,9 @@ namespace compiler::helios {
 			auto location_value_category
 				= location_expr->expression_type.getValueCategory().getCategory();
 			if (location_value_category == tsh::PrimaryCategory::Literal) {
-				ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+				ctx.logInt(makeBox<dia_int::PlaceholderError>(
 					"Left side of assignment is a literal",
-					var.unlock(ctx)->getSourcePosition().unlock(ctx),
+					var.unlock(ctx)->getStablePosition(),
 					"",
 					"here"
 				));
@@ -135,9 +138,8 @@ namespace compiler::helios {
 
 			auto location_mutability = location_type.getMutability();
 			if (location_mutability == tsh::Mutability::Immutable) {
-				ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
-					"Left side of assignment can't be immutable.",
-					assignment->getSourcePosition().unlock(ctx)
+				ctx.logInt(makeBox<dia_int::PlaceholderError>(
+					"Left side of assignment can't be immutable.", assignment->getStablePosition()
 				));
 				query::throwFailed();
 				return;
@@ -163,7 +165,7 @@ namespace compiler::helios {
 
 			ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 				base::strConcat("'", op, "' assignment for type: '", location_type.toString(), "'."),
-				assignment->getSourcePosition().unlock(ctx)
+				assignment->getStablePosition()
 			));
 			query::throwFailed();
 		}
@@ -171,9 +173,9 @@ namespace compiler::helios {
 		void visitExprStmt(pst::Access<pst::ExprStmt> stmt) override {
 			auto expr_holder_opt = stmt->getExpr().unlockOpt(ctx);
 			if (!expr_holder_opt.has_value()) {
-				ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+				ctx.logInt(makeBox<dia_int::PlaceholderError>(
 					"Internal compiler error: expression statement has no expression holder.",
-					stmt->getSourcePosition().unlock(ctx)
+					stmt->getStablePosition()
 				));
 				is_failed = true;
 				return;
@@ -181,9 +183,9 @@ namespace compiler::helios {
 
 			auto inner_expr_opt = expr_holder_opt.value()->getExpr().unlockOpt(ctx);
 			if (!inner_expr_opt.has_value()) {
-				ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+				ctx.logInt(makeBox<dia_int::PlaceholderError>(
 					"Internal compiler error: expression statement has no inner expression.",
-					stmt->getSourcePosition().unlock(ctx)
+					stmt->getStablePosition()
 				));
 				is_failed = true;
 				return;
@@ -195,6 +197,12 @@ namespace compiler::helios {
 			// we should create an assignment statement:
 			if (auto assignment_opt = inner_expr.dynamicCast<pst::expr::Assignment>()) {
 				handleAssignmentExpr(assignment_opt.value());
+				return;
+			}
+			// as before, if we encounter an code block expression we want a block statement
+			if (auto block_opt = inner_expr.dynamicCast<pst::expr::BlockExpr>()) {
+				auto block_body = processBlock(ctx, block_opt.value()->getBlock(), return_type);
+				output(code::BlockStmt(code::pstOrigin(stmt), std::move(block_body)));
 				return;
 			}
 
@@ -261,16 +269,13 @@ namespace compiler::helios {
 				// no initial value case
 
 				if (symbol_type.getMutability() == tsh::Mutability::Immutable) {
-					ctx.logInt(
-						makeBox<ImmutableVariableNoInitError>(stmt->getSourcePosition().unlock(ctx))
-					);
+					ctx.logInt(makeBox<ImmutableVariableNoInitError>(stmt->getStablePosition()));
 					is_failed = true;
 					return;
 				}
 
-				auto initial_value_qresult = defgen::getDefaultInitializerExpr(
-					ctx, symbol_type, stmt->getSourcePosition().unlock(ctx)
-				);
+				auto initial_value_qresult
+					= defgen::getDefaultInitializerExpr(ctx, symbol_type, stmt->getStablePosition());
 				if (initial_value_qresult.hasFailed()) {
 					is_failed = true;
 					return;
@@ -293,6 +298,11 @@ namespace compiler::helios {
 			}
 		}
 
+		void visitBlock(pst::Access<pst::Block> stmt) override {
+			auto block_body = processBlock(ctx, stmt->getCodeBlock(), return_type);
+			output(code::BlockStmt(code::pstOrigin(stmt), std::move(block_body)));
+		}
+
 		void visitConst(pst::Access<pst::Const>) override {
 			// Consts inside functions do not produce any HOUT statement.
 			// They are translated to HOUT global data instead.
@@ -300,56 +310,56 @@ namespace compiler::helios {
 
 		void visitContinue(pst::Access<pst::Continue> stmt) override {
 			ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-				"`continue` statements are not supported yet.", stmt->getSourcePosition().unlock(ctx)
+				"`continue` statements are not supported yet.", stmt->getStablePosition()
 			));
 			is_failed = true;
 		}
 
 		void visitBreak(pst::Access<pst::Break> stmt) override {
 			ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-				"`break` statements are not supported yet.", stmt->getSourcePosition().unlock(ctx)
+				"`break` statements are not supported yet.", stmt->getStablePosition()
 			));
 			is_failed = true;
 		}
 
 		void visitRedo(pst::Access<pst::Redo> stmt) override {
 			ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-				"`redo` statements are not supported yet.", stmt->getSourcePosition().unlock(ctx)
+				"`redo` statements are not supported yet.", stmt->getStablePosition()
 			));
 			is_failed = true;
 		}
 
 		void visitThrow(pst::Access<pst::Throw> stmt) override {
 			ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-				"`throw` statements are not supported yet.", stmt->getSourcePosition().unlock(ctx)
+				"`throw` statements are not supported yet.", stmt->getStablePosition()
 			));
 			is_failed = true;
 		}
 
 		void visitDefer(pst::Access<pst::Defer> stmt) override {
 			ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-				"`defer` statements are not supported yet.", stmt->getSourcePosition().unlock(ctx)
+				"`defer` statements are not supported yet.", stmt->getStablePosition()
 			));
 			is_failed = true;
 		}
 
 		void visitRestart(pst::Access<pst::Restart> stmt) override {
 			ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-				"`restart` statements are not supported yet.", stmt->getSourcePosition().unlock(ctx)
+				"`restart` statements are not supported yet.", stmt->getStablePosition()
 			));
 			is_failed = true;
 		}
 
 		void visitFor(pst::Access<pst::For> stmt) override {
 			ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-				"`for` statements are not supported yet.", stmt->getSourcePosition().unlock(ctx)
+				"`for` statements are not supported yet.", stmt->getStablePosition()
 			));
 			is_failed = true;
 		}
 
 		void visitFun(pst::Access<pst::Fun> function) override {
 			ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-				"Nested functions are not supported yet.", function->getSourcePosition().unlock(ctx)
+				"Nested functions are not supported yet.", function->getStablePosition()
 			));
 			is_failed = true;
 		}
@@ -362,10 +372,11 @@ namespace compiler::helios {
 	 * resulting CodeBlock by value. Called from the compileCodeOfCodeBlock
 	 * helper and recursively within HoutStmtMaker for nested blocks (if/while bodies).
 	 */
+	template<class Container>
+	requires std::same_as<Container, pst::CodeBlock>
+	      || std::same_as<Container, pst::CodeBlockOrStmt>
 	static code::CodeBlock processBlock(
-		query::Context&                         ctx,
-		pst::AccessLocked<pst::CodeBlockOrStmt> container,
-		tsh::SymbolType<>                       return_type
+		query::Context& ctx, pst::AccessLocked<Container> container, tsh::SymbolType<> return_type
 	) {
 		code::CodeBlock block({});
 		for (const auto& stmt: getStmtsFromStmtAggregate(ctx, container)) {

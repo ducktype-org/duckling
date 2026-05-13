@@ -8,7 +8,7 @@
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
-#include <vm/core/thread/low_program/utils.hpp>
+#include <vm/core/safe/low_program/utils.hpp>
 
 #include <tuple>
 #include <type_traits>
@@ -172,6 +172,7 @@ namespace vm::loader::compiler::detail {
 			}
 			instr_case(high::Op_mov_popq_imm, i) { addLow<Op_mov_popq_imm>(i.dst, i.src); }
 			instr_case(high::Op_mov_pste_pste, i) { addLow<Op_mov_bste_bste>(i.dst, i.src); }
+			instr_case(high::Op_mov_pfst_pfst, i) { addLow<Op_mov_bfst_bfst>(i.dst, i.src); }
 			instr_case(high::Op_add_p64_p64, i) { addLow<Op_add_p64_p64>(i.dst, i.src); }
 			instr_case(high::Op_add_p64_imm, i) { addLow<Op_add_p64_imm>(i.dst, i.src); }
 			instr_case(high::Op_add_p32_p32, i) { addLow<Op_add_p32_p32>(i.dst, i.src); }
@@ -463,34 +464,63 @@ namespace vm::loader::compiler::detail {
 				addLow<Op_structStore_bste_bany>(i.dst_data_struct, i.src);
 				addLow<Op_ext_field>(i.field);
 			}
+#define TABLE_PTR_ELEM_TYPE(ptr_arg) \
+	(*(*getPlaceType(ptr_arg)->getInnerType())->getInnerType())->getName()
+#define TABLE_VAL_ELEM_TYPE(val_arg) (*getPlaceType(val_arg)->getInnerType())->getName()
 			instr_case(high::Op_fixedSizeTableLea_pptr_pptr_p64, i) {
-				addLow<Op_fixedSizeTableLea_pptr_pptr>(i.dst_ptr, i.src_table_ptr);
-				addLow<Op_ext_p64>(i.index);
+				addLow<Op_anyArrayLea_pptr_pptr>(i.dst_ptr, i.src_table_ptr);
+				addLow<Op_ext_p64_type>(
+					i.index, opargs::Type{ TABLE_PTR_ELEM_TYPE(i.src_table_ptr) }
+				);
 			}
 			instr_case(high::Op_fixedSizeTableLoad_pany_pptr_p64, i) {
-				addLow<Op_fixedSizeTableLoad_bany_pptr>(i.dst, i.src_table_ptr);
-				addLow<Op_ext_p64>(i.index);
+				addLow<Op_anyArrayLoad_bany_pptr>(i.dst, i.src_table_ptr);
+				addLow<Op_ext_p64_type>(
+					i.index, opargs::Type{ TABLE_PTR_ELEM_TYPE(i.src_table_ptr) }
+				);
 			}
 			instr_case(high::Op_fixedSizeTableStore_pptr_pany_p64, i) {
-				addLow<Op_fixedSizeTableStore_pptr_bany>(i.dst_table_ptr, i.src);
-				addLow<Op_ext_p64>(i.index);
+				addLow<Op_anyArrayStore_pptr_bany>(i.dst_table_ptr, i.src);
+				addLow<Op_ext_p64_type>(
+					i.index, opargs::Type{ TABLE_PTR_ELEM_TYPE(i.dst_table_ptr) }
+				);
+			}
+			instr_case(high::Op_fixedSizeTableLea_pptr_pfst_p64, i) {
+				addLow<Op_fixedSizeTableLea_pptr_bfst>(i.dst_ptr, i.src_table);
+				addLow<Op_ext_p64_type>(i.index, opargs::Type{ TABLE_VAL_ELEM_TYPE(i.src_table) });
+			}
+			instr_case(high::Op_fixedSizeTableLoad_pany_pfst_p64, i) {
+				addLow<Op_fixedSizeTableLoad_bany_bfst>(i.dst, i.src_table);
+				addLow<Op_ext_p64_type>(i.index, opargs::Type{ TABLE_VAL_ELEM_TYPE(i.src_table) });
+			}
+			instr_case(high::Op_fixedSizeTableStore_pfst_pany_p64, i) {
+				addLow<Op_fixedSizeTableStore_bfst_bany>(i.dst_table, i.src);
+				addLow<Op_ext_p64_type>(i.index, opargs::Type{ TABLE_VAL_ELEM_TYPE(i.dst_table) });
 			}
 			instr_case(high::Op_dynTableLea_pptr_pptr_p64, i) {
-				addLow<Op_dynTableLea_pptr_pptr>(i.dst_ptr, i.src_table_ptr);
-				addLow<Op_ext_p64>(i.index);
+				addLow<Op_anyArrayLea_pptr_pptr>(i.dst_ptr, i.src_table_ptr);
+				addLow<Op_ext_p64_type>(
+					i.index, opargs::Type{ TABLE_PTR_ELEM_TYPE(i.src_table_ptr) }
+				);
 			}
 			instr_case(high::Op_dynTableLoad_pany_pptr_p64, i) {
-				addLow<Op_dynTableLoad_bany_pptr>(i.dst, i.src_table_ptr);
-				addLow<Op_ext_p64>(i.index);
+				addLow<Op_anyArrayLoad_bany_pptr>(i.dst, i.src_table_ptr);
+				addLow<Op_ext_p64_type>(
+					i.index, opargs::Type{ TABLE_PTR_ELEM_TYPE(i.src_table_ptr) }
+				);
 			}
 			instr_case(high::Op_dynTableStore_pptr_pany_p64, i) {
-				addLow<Op_dynTableStore_pptr_bany>(i.dst_table_ptr, i.src);
-				addLow<Op_ext_p64>(i.index);
+				addLow<Op_anyArrayStore_pptr_bany>(i.dst_table_ptr, i.src);
+				addLow<Op_ext_p64_type>(
+					i.index, opargs::Type{ TABLE_PTR_ELEM_TYPE(i.dst_table_ptr) }
+				);
 			}
 			instr_case(high::Op_dynTableReAlloc_pptr_type_p64, i) {
 				addLow<Op_dynTableReAlloc_pptr_type>(i.dst_table_ptr, i.table_type);
 				addLow<Op_ext_p64>(i.new_elem_count);
 			}
+#undef TABLE_PTR_ELEM_TYPE
+#undef TABLE_VAL_ELEM_TYPE
 			instr_case(high::Op_strOutput_pptr, i) { addLow<Op_strOutput_pptr>(i.string_ptr); }
 			instr_case(high::Op_cast_p8_type, i) {}
 			instr_case(high::Op_cast_p16_type, i) {}

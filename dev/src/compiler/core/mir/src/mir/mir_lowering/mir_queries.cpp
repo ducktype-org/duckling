@@ -94,6 +94,8 @@ namespace compiler::mir {
 
 		void visitWhileStmt(const hc::WhileStmt& stmt) override { goOverCodeBlock(stmt.body); }
 
+		void visitBlockStmt(const hc::BlockStmt& stmt) override { goOverCodeBlock(stmt.body); }
+
 		// Explicit empty boilerplate. Expected changes when block expressions are implemented.
 
 		void visitReturnStmt(const hc::ReturnStmt&) override {}
@@ -195,11 +197,14 @@ namespace compiler::mir {
 			function.blocks[last_block_id].terminator.operation = Operation::ReturnVoid;
 			return function;
 		} else {
-			ctx.logInt(makeBox<dia_int::PlaceholderHeaderError>(base::strConcat(
-				"The function `",
-				function.name,
-				"` is missing a return statement or does not always return."
-			)));
+			ctx.logInt(makeBox<dia_int::PlaceholderError>(
+				base::strConcat(
+					"The function `",
+					function.name,
+					"` is missing a return statement or does not always return."
+				),
+				""
+			));
 			return query::Failed();
 		}
 	}

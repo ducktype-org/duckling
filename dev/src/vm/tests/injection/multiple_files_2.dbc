@@ -1,4 +1,4 @@
-function check { i64 } -> void {
+function check { i64 } -> {} {
 	output_p64          arg0;
 	deinit;
 	ret;

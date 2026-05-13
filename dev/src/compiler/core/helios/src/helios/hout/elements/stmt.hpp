@@ -32,7 +32,7 @@ namespace compiler::helios::code {
 
 		virtual void acceptVisitor(HoutStmtVisitor&) const = 0;
 
-		[[nodiscard]] base::Optional<pst::StablePosition> getPosition() const {
+		[[nodiscard]] base::Optional<dia_int::StablePosition> getPosition() const {
 			return origin.getStablePosition();
 		}
 	};
@@ -175,6 +175,15 @@ namespace compiler::helios::code {
 			  Stmt(origin),
 			  condition(std::move(condition)),
 			  body(std::move(body)) {}
+
+		void debugPrint(std::ostream& out, usize indent = 0) const final;
+		void acceptVisitor(HoutStmtVisitor&) const override;
+	};
+
+	struct BlockStmt final: public Stmt {
+		CodeBlock body;
+
+		BlockStmt(ElementOrigin origin, CodeBlock body): Stmt(origin), body(std::move(body)) {}
 
 		void debugPrint(std::ostream& out, usize indent = 0) const final;
 		void acceptVisitor(HoutStmtVisitor&) const override;

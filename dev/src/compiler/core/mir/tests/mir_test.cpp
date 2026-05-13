@@ -967,7 +967,7 @@ private:
 					                          .query<compiler::mir::LowerToMIRFunction>({ fun })
 					                          ->valueOrThrow();
 
-					CRef<compiler::mir::MIRLocal> tmp(mir_rep_good2.local_list[3]);
+					CRef<compiler::mir::MIRLocal> b_var(mir_rep_good2.local_list[2]);
 					compiler::mir::Instruction&   assignment
 						= mir_rep_good2.blocks[mir_rep_good2.block_order[1]].instructions[0];
 
@@ -982,7 +982,7 @@ private:
 					assertTrue(
 						assignment.arguments[0].isLocal(), "Fragile test, please fix (good2, local)"
 					);
-					assignment.flags.emplace_back(compiler::mir::OperationFlag::Flag::Move, tmp);
+					assignment.flags.emplace_back(compiler::mir::OperationFlag::Flag::Move, b_var);
 
 					ASSERT_TRUE(validateFunction(ctx, mir_rep_good2).isOk());
 				}

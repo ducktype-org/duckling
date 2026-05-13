@@ -3,7 +3,7 @@
 
 #include <tester/tester.hpp>
 
-#include <vm/core/process/exceptions.hpp>
+#include <vm/core/safe/exceptions.hpp>
 
 class VmThreadTest: public VmTestSuite {
 #undef TESTER_CLASS
@@ -14,6 +14,7 @@ public:
 		TESTER_ADD_TEST(multithreadingTest);
 		TESTER_ADD_TEST(mutexTest);
 		TESTER_ADD_TEST(cvTest);
+		TESTER_ADD_TEST(reuseThreadTest);
 	}
 
 private:
@@ -33,6 +34,8 @@ private:
 		runTestOnVm("cv_simple_barrier_all_test.dbc", "", "22020201", {});
 		runTestOnVm("producer_consumer.dbc", "", "20000200000221", {});
 	}
+
+	void reuseThreadTest() { runTestOnVm("reuse_thread_test.dbc", "", "149501", {}); }
 };
 
 TESTER_COMMON_MAIN("/src/vm/tests/threads/");

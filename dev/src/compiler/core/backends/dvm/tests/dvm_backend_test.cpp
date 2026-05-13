@@ -34,6 +34,7 @@ public:
 		// tested here because constructors aren't inserted properly. When this pipeline is unified,
 		// uncomment this test.
 		// TESTER_ADD_TEST(recordsTest);
+		TESTER_ADD_TEST(staticArrayTest);
 		TESTER_ADD_TEST(unitsTest);
 	}
 
@@ -51,14 +52,17 @@ private:
 				= frontend::createModuleTreeWithRandomPackageID(fs::File(path(module_path)));
 			auto& top_level = ctx.query<helios::QueryTopLevelEntities>(module)->valueOrPanic();
 
-			backend_vm::DVMCodeBuilder m(ctx, false);
+			backend_vm::DVMCodeBuilder m(ctx, false, false);
 
 			for (auto& hout_glob: top_level.glob_data) {
 				auto lir_glob = lir::LIRGlobal::fromHOUT(ctx, *hout_glob);
 				variant_match(hout_glob->value) {
 					variant_case(helios::HOUTGlobalVariable, var) {
+						if (not hout_glob->type.getType().carriesInformation(ctx)) continue;
+
 						CRef mir_func = &ctx.query<mir::LowerGlobalDataToMIRCtor>({ hout_glob })
 						                     ->valueOrThrow();
+
 						auto lir_func = ctx.query<lir::LowerToLIRFunction>({ mir_func });
 						m.insertLirGlobal(
 							lir_glob,
@@ -152,6 +156,10 @@ private:
 			{},
 			0
 		);
+	}
+
+	void staticArrayTest() {
+		runTest("modules/static_arrays", {}, "1\n100\n200\n300\n600\n20\n42\n11\n13\n4\n", {}, 0);
 	}
 
 	void unitsTest() { runTest("modules/units", {}, {}, {}, 0); }

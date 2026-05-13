@@ -82,8 +82,7 @@ namespace compiler::helios {
 			void visitAccessExpr(const code::AccessExpr& expr) final {
 				// @TODO: #1922 Implement that.
 				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-					"Evaluating access expressions at compile time.",
-					expr.origin.getSourcePosition(ctx)
+					"Evaluating access expressions at compile time.", expr.origin.getStablePosition()
 				));
 				result = query::Failed();
 			}
@@ -193,7 +192,7 @@ namespace compiler::helios {
 				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 					"Evaluating index expressions with non-meta and non-type-template base at "
 					"compile time.",
-					expr.origin.getSourcePosition(ctx)
+					expr.origin.getStablePosition()
 				));
 				result = query::Failed();
 			}
@@ -208,14 +207,14 @@ namespace compiler::helios {
 					auto const_val_result = ctx.query<QueryConstValueOf>({ expr.symbol });
 					result                = const_val_result.valueOrThrow();
 				} else {
-					match_optional(expr.origin.getSourcePosition(ctx)) {
+					match_optional(expr.origin.getStablePosition()) {
 						opt_some(pos) {
-							ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+							ctx.logInt(makeBox<dia_int::PlaceholderError>(
 								"Expression cannot be evaluated at compile-time.", pos
 							));
 						}
 						opt_none {
-							ctx.logInt(makeBox<dia_int::PlaceholderHeaderError>(
+							ctx.logInt(makeBox<dia_int::PlaceholderError>(
 								"Expression cannot be evaluated at compile-time.",
 								base::strConcat(
 									"The code is unavailable because the expression is at "
@@ -327,10 +326,10 @@ namespace compiler::helios {
 									case IntegerDiv:
 									case FloatDiv:
 										if (rhs_val == 0) {
-											ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+											ctx.logInt(makeBox<dia_int::PlaceholderError>(
 												"Division by zero in compile-time expression "
 												"evaluation.",
-												expr.origin.getSourcePosition(ctx).value()
+												expr.origin.getStablePosition().value()
 											));
 											return query::Failed();
 										}
@@ -339,10 +338,10 @@ namespace compiler::helios {
 									case IntegerMod:
 									case FloatMod:
 										if (rhs_val == 0) {
-											ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+											ctx.logInt(makeBox<dia_int::PlaceholderError>(
 												"Modulo by zero in compile-time expression "
 												"evaluation.",
-												expr.origin.getSourcePosition(ctx).value()
+												expr.origin.getStablePosition().value()
 											));
 											return query::Failed();
 										}
@@ -361,7 +360,7 @@ namespace compiler::helios {
 										ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 											"Evaluation of this binary operator at compile "
 											"time",
-											expr.origin.getSourcePosition(ctx)
+											expr.origin.getStablePosition()
 										));
 										return query::Failed();
 									}
@@ -386,7 +385,7 @@ namespace compiler::helios {
 								ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 									"Evaluation of this binary operator at compile "
 									"time",
-									expr.origin.getSourcePosition(ctx)
+									expr.origin.getStablePosition()
 								));
 								return query::Failed();
 							}
@@ -450,7 +449,7 @@ namespace compiler::helios {
 								ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 									"Evaluation of this unary operator at compile "
 									"time",
-									expr.origin.getSourcePosition(ctx)
+									expr.origin.getStablePosition()
 								));
 								return query::Failed();
 							}
@@ -480,7 +479,7 @@ namespace compiler::helios {
 								ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 									"Evaluation of this unary operator at compile "
 									"time",
-									expr.origin.getSourcePosition(ctx)
+									expr.origin.getStablePosition()
 								));
 								return query::Failed();
 							}
@@ -488,7 +487,7 @@ namespace compiler::helios {
 							ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 								"Evaluation of this unary operator at compile "
 								"time",
-								expr.origin.getSourcePosition(ctx)
+								expr.origin.getStablePosition()
 							));
 							return query::Failed();
 						}
@@ -629,7 +628,7 @@ namespace compiler::helios {
 				if (!numeric) {
 					ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 						"Casts of non-numeric compile-time values are not yet implemented.",
-						cast.origin.getSourcePosition(ctx)
+						cast.origin.getStablePosition()
 					));
 					result = query::Failed();
 					return;
@@ -639,13 +638,13 @@ namespace compiler::helios {
 				auto maybe_new_numeric = numeric->castTo(cast.target_type.getType());
 
 				if (!maybe_new_numeric.has_value()) {
-					ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+					ctx.logInt(makeBox<dia_int::PlaceholderError>(
 						base::strConcat(
 							"Value cannot be converted to type `",
 							cast.target_type.toString(),
 							"` at compile-time."
 						),
-						cast.origin.getSourcePosition(ctx).value()
+						cast.origin.getStablePosition().value()
 					));
 					result = query::Failed();
 					return;
@@ -686,7 +685,7 @@ namespace compiler::helios {
 							expr.type.toString(),
 							"'."
 						),
-						expr.origin.getSourcePosition(ctx)
+						expr.origin.getStablePosition()
 					));
 					result = query::Failed();
 				}
@@ -744,14 +743,14 @@ namespace compiler::helios {
 			void visitListPushExpr(const code::ListPushExpr& expr) final {
 				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 					"Evaluating list push expression at compile time.",
-					expr.origin.getSourcePosition(ctx)
+					expr.origin.getStablePosition()
 				));
 			}
 
 			void visitListPopExpr(const code::ListPopExpr& expr) final {
 				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 					"Evaluating list pop expression at compile time.",
-					expr.origin.getSourcePosition(ctx)
+					expr.origin.getStablePosition()
 				));
 			}
 		};
@@ -794,31 +793,6 @@ namespace compiler::helios {
 			result.functions.reserve(dependencies->size());
 
 			for (const SymID& func_id: *dependencies) {
-				if (getSymRef(func_id)->getPSTDataOpt().empty()) {
-					// @TODO: #2506 Handle comptime of non meta tuples
-					// Skip tuple meta ctor calls, evaluate them to a type instead
-					// This is a mock solution, eventually the ctor should be compiled normally but
-					// currenlty this is not supported in the VM, hence the special case to remain
-					// comptime of tuple types possible until that is implemented.
-					if (isMetaTupleCtor(ctx, func_id)) continue;
-
-					// This path is not implemented yet.
-					// Figure out how to change this check if you hit this one when adding new feature.
-					ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-						base::strConcat(
-							"Evaluating a function in DVM at compile time which was generated "
-							"automatically. "
-							"This likely means that the function was a compiler generated class "
-							"constructor. "
-							"The failure happened for the symbol `",
-							name(func_id),
-							"`."
-						),
-						std::nullopt
-					));
-					return query::Failed();
-				}
-
 				// @TODO: #826 Change this code to a single query once it gets implemented.
 				auto& hout_func = ctx.query<QueryCodeOfFun>(func_id)->valueOrThrow();
 				auto& mir_func = ctx.query<mir::LowerToMIRFunction>({ &hout_func })->valueOrThrow();
@@ -833,29 +807,6 @@ namespace compiler::helios {
 				result.functions.push_back(lir_func_result);
 			}
 			return result;
-		}
-
-		/**
-		 * @brief Check weather a function is a call to a ctor of a tuple that is supposed to be
-		 * treated as a type.
-		 */
-		static bool isMetaTupleCtor(query::Context& ctx, const SymID& func_id) {
-			if (getSymRef(func_id)->getDataOpt<defgen::GeneratedSymbolData>().empty()) return false;
-
-			variant_match(getSymRef(func_id)->getDataOpt<defgen::GeneratedSymbolData>().value()->data
-			) {
-				variant_case(defgen::GeneratedSymbolData::ImplicitConstructor, ctor) {
-					if (ctor.target_type.getKind() == tsh::Kind::Tuple) {
-						auto return_type
-							= ctx.query<QueryDeclOfFun>(func_id)->valueOrThrow().return_type;
-						auto coercion = canCoerceToMeta(ctx, return_type).valueOrThrow();
-						return coercion.isValid();
-					}
-					return false;
-				}
-				variant_default { return false; }
-			}
-			CORE_UNREACHABLE();
 		}
 
 		/**
@@ -909,7 +860,15 @@ namespace compiler::helios {
 				ctx, func_to_call_name, all_lir_functions, ctv_arguments, func_type.getResultType()
 			);
 
-			if (!vm_eval_result) return query::Failed();
+			if (!vm_eval_result) {
+				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					"Compile time evaluation of this function call failed or "
+					"returned unsupported result.",
+					call_expr->origin.getStablePosition(),
+					base::strConcat("Detailed reason: ", vm_eval_result.error().message, "\n")
+				));
+				return query::Failed();
+			}
 			return vm_eval_result.value();
 		}
 
@@ -951,7 +910,7 @@ namespace compiler::helios {
 					// Otherwise, log an error.
 					ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 						"Evaluation of this expression in DVM at compile time",
-						expr->origin.getSourcePosition(ctx)
+						expr->origin.getStablePosition()
 					));
 					return query::Failed();
 				}

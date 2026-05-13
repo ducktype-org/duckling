@@ -1,17 +1,17 @@
 # Test if previously injected functions are present in program state.
 
-function spring { i64, i64 } -> i64 {
+function spring { i64, i64 } -> { i64 } {
 	# For given a, b calculates a * (a+b)
 	
-	mov_p64_p64 ret_val, arg0;
-	init_pany_type sum_ret_val, i64;
+	mov_p64_p64 ret0, arg0;
+	init_pany_type sum_ret0, i64;
 	init_pany_type sum_a0, i64;
 	init_pany_type sum_a1, i64;
 	mov_p64_p64 sum_a0, arg0;
 	mov_p64_p64 sum_a1, arg1;
 	call_func summer;
-	mul_p64_p64 ret_val, sum_ret_val;
-	deinit; # sum_ret_val
+	mul_p64_p64 ret0, sum_ret0;
+	deinit; # sum_ret0
 	deinit; # arg1
 	deinit; # arg0 
 	ret;

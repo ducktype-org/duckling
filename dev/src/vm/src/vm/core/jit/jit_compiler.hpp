@@ -7,7 +7,14 @@
 
 #include <base/pointers/ref.hpp>
 
-#include <vm/core/thread/low_program/low_program.hpp>
+#include <vm/core/safe/low_program/low_program.hpp>
+
+#ifdef BUILD_TYPE_RELEASE
+constexpr inline uint COMPILATION_THRESHOLD = 10;
+#else
+// During testing compile always to check properly that jit integration works.
+constexpr inline uint COMPILATION_THRESHOLD = 0;
+#endif
 
 namespace vm::jit {
 	using JitOpFun
@@ -18,7 +25,7 @@ namespace vm::jit {
 	 */
 	struct JitFuncData {
 		MRef<JitOpFun> func_ptr          = nullptr;
-		uint           until_compilation = 1;
+		uint           until_compilation = COMPILATION_THRESHOLD;
 	};
 
 	/**

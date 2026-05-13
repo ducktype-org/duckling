@@ -46,11 +46,14 @@ namespace {
 				tp.defineVariant(variant_types);
 			}
 			variant_case(vm::code::FunctionType, function) {
-				std::vector<vm::code::valid_type::ValidTypeID> parameter_types;
+				std::vector<vm::code::valid_type::ValidTypeID> parameter_types, return_types;
 				parameter_types.reserve(function.parameters.size());
+				return_types.reserve(function.result.size());
 				for (const auto& param: function.parameters)
 					parameter_types.push_back(types.at(param)->getID());
-				tp.defineFunction(parameter_types, types.at(function.result)->getID());
+				for (const auto& reslt: function.result)
+					return_types.push_back(types.at(reslt)->getID());
+				tp.defineFunction(parameter_types, return_types);
 			}
 			variant_case(vm::code::OpaqueType, opaque) { tp.defineOpaque(Bytes(opaque.size)); }
 			variant_case(vm::code::ClassType, clazz) {

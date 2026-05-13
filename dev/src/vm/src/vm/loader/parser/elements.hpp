@@ -87,7 +87,7 @@ namespace vm::loader::parser {
 
 		tpc::Identifier              name;
 		std::vector<tpc::Identifier> parameters;
-		tpc::Identifier              result_type;
+		std::vector<tpc::Identifier> result_types;
 		MBox<ByteCode>               code;
 
 		static MBox<Func> parse(F8ParserState& state);

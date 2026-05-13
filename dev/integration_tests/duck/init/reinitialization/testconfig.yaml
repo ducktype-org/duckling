@@ -1,0 +1,10 @@
+Tests:
+  init:
+    Description: cannot reinitialise a project
+    Cases:
+      init:
+        test_cmd: init foo
+        ExitCode: 1
+        Err:
+          Run: |+
+            echo "error: cannot reinitialize project \`foo\` at \`$(pwd)/foo\`"

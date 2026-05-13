@@ -1,4 +1,4 @@
-function main {} -> i64 {
+function main {} -> { i64 } {
     init_pany_type x, i64;
 	mov_p64_imm x, 42;
 	output_p64 x;

@@ -6,7 +6,7 @@
 
 #include <vm/api/vm.hpp>
 #include <vm/bytecode/validator/errors.hpp>
-#include <vm/core/thread/vmvalue.hpp>
+#include <vm/core/vmvalue/vmvalue.hpp>
 
 #include <expected>
 #include <mutex>
@@ -163,11 +163,14 @@ namespace {
 			return CompileTimeValue{ *meta_ptr };
 		}
 		default: {
-			throw base::NotYetImplemented{ base::strConcat(
-				"VMValue to CTV conversion for type: ",
-				base::enumToStr(kind),
-				" is not implemented yet."
-			) };
+			return std::unexpected(VmEvaluationError(
+				VmEvaluationError::Kind::ReturnConversionFailed,
+				base::strConcat(
+					"VMValue to CTV conversion for type: ",
+					base::enumToStr(kind),
+					" is not implemented yet."
+				)
+			));
 		}
 		}
 	}
@@ -273,7 +276,7 @@ namespace {
 		const std::vector<CRef<compiler::lir::Function>>& all_lir_functions,
 		query::Context&                                   query_ctx
 	) {
-		compiler::backend_vm::DVMCodeBuilder m(query_ctx, false);
+		compiler::backend_vm::DVMCodeBuilder m(query_ctx, false, true);
 
 		// Insert comptime context intto the module, for the module to pass the validation. This code
 		// although loaded here multiple times will be deduplicated by `CompTimeDVM::loadCode()`
@@ -345,7 +348,11 @@ namespace {
 		// Free the owned arguments.
 		for (const auto& arg: owned_args) arg->freeData();
 
-		auto exit_value = maybe_exit_value.value();
+		CORE_ASSERT(
+			maybe_exit_value.value().size() == 1,
+			"Compiler support for multiple values not implemented"
+		);
+		auto exit_value = maybe_exit_value.value().at(0);
 		return vmValueToCtv(return_type, exit_value);
 	}
 }

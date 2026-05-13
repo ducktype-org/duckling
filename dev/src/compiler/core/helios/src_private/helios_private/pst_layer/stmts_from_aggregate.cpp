@@ -7,6 +7,7 @@
 #include <frontend/pst_parser/elements/hierarchy/statements/expand.hpp>
 #include <helios_private/pst_layer/macros.hpp>
 
+#include <base/config/build_type.hpp>
 #include <base/except/exceptions.hpp>
 
 #include <query_framework/context/context.hpp>
@@ -43,11 +44,15 @@ namespace compiler::helios {
 				for (auto&& e: *class_block.value()) internal::visitClassStmts(ctx, out, e);
 				return out;
 			} else {
-				const auto& element = *elem.unlock(ctx);
-				CORE_PANIC(base::strConcat(
-					"Bad Duckling Element in `getChildStmtsOfClassBlock`: ", typeid(element).name()
-				));
+				IF_BUILD_TYPE_DEV({
+					const auto& element = *elem.unlock(ctx);
+					CORE_PANIC(base::strConcat(
+						"Bad Duckling Element in `getChildStmtsOfClassBlock`: ",
+						typeid(element).name()
+					));
+				});
 			}
+			CORE_UNREACHABLE();
 		}
 	}
 
@@ -80,10 +85,12 @@ namespace compiler::helios {
 			auto elements = internal::getChildStmtsOfClassBlock(ctx, elem);
 			for (auto e: elements) output.emplace_back(e);
 		} else {
-			const auto& element = *elem;
-			CORE_PANIC(base::strConcat(
-				"Bad Duckling Element in `getStmtsFromStmtAggregate`: ", typeid(element).name()
-			));
+			IF_BUILD_TYPE_DEV({
+				const auto& element = *elem;
+				CORE_PANIC(base::strConcat(
+					"Bad Duckling Element in `getStmtsFromStmtAggregate`: ", typeid(element).name()
+				));
+			});
 		}
 
 		// Now expand macros in the output.
@@ -98,19 +105,11 @@ namespace compiler::helios {
 			// Handle macro expansions in a loop to support nested expansions.
 			while (current_stmt->getElementKind() == pst::ElementKind::Expand) {
 				auto expand_result = ctx.query<QueryMacroExpansion>(
-											current_stmt.template dynamicCast<pst::Expand>().value()
-				)
-				                         .valueOrPanic();
-
-				variant_match(expand_result) {
-					variant_case(pst::AccessLocked<pst::Stmt>, expand_statement) {
-						current_stmt = expand_statement.unlock(ctx);
-					}
-					variant_case(ExpansionError<pst::Stmt>, error) {
-						// @TODO: #2406 change this panic into failed state propagation
-						CORE_PANIC("Macro expansion error in getStmtsFromStmtAggregate");
-					}
-				}
+					current_stmt.template dynamicCast<pst::Expand>().value()
+				);
+				// @TODO: #1753 this valueOrThrow may be suboptimal
+				auto expanded_stmt = expand_result.valueOrThrow();
+				current_stmt       = expanded_stmt.unlock(ctx);
 			}
 
 			output_after_macro_expansion.emplace_back(current_stmt);

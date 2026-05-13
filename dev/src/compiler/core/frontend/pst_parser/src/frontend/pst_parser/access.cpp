@@ -16,7 +16,7 @@ namespace pst::internal {
 	}
 
 	void notifyBadAccess(query::Context& ctx) {
-		ctx.logInt(makeBox<dia_int::PlaceholderHeaderError>(
+		ctx.logInt(makeBox<dia_int::PlaceholderError>(
 			"PST Accessed a nullptr LangElement.",
 			"To check the location of the bad access, enable "
 			"query dev logs."
