@@ -1,7 +1,7 @@
 # Operator overloading test (primitive types)
 # This test checks if operator overloads work for primitive types
 
-fun *(c: char, n: i64): str = {
+fun *(c: char, n: i64) -> str = {
 	var result: str = "";
 	while (n > 0) {
 		result = result :+ c;
@@ -11,6 +11,6 @@ fun *(c: char, n: i64): str = {
 }
 
 fun main() -> i64 = {
-    builtin_output_str('a' * 5);
+    builtin_output_string('a' * 5);
     return 0;
 }

@@ -8,5 +8,5 @@ Tests:
       all:
         backend: all
         Output:
-          String: "123\n123\n3.14159\nHello, Duckling!\nTab:\nNewline:\nEnd:\n15\n42\nPoint{x:3,y:4}\n"
+          String: "123\n123\n3.14159\nHello, Duckling!\nTab:\tNewline:\nEnd\n15\n42\nPoint{x:3,y:4}\n"
         ExitCode: 0

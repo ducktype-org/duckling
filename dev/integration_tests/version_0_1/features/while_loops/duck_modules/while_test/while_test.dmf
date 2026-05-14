@@ -85,7 +85,7 @@ fun main() -> i64 = {
     # nested while loops and named break
     a = 5;
     var c = 0;
-    while outer(a > 5) {
+    while outer(a > 0) {
         var b = 0;
         while inner(b < 2) {
             if (b == 1 && a == 3)
@@ -101,7 +101,7 @@ fun main() -> i64 = {
 	    # nested while loops and named continue
         a = 5;
         c = 0;
-        while outer(a > 5) {
+        while outer(a > 0) {
             var b = 0;
             while inner(b < 2) {
                 if (b == 1 && a == 3) {

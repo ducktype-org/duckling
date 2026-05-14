@@ -40,9 +40,9 @@ fun main() -> i64 = {
         secondarg: f64;
     }
 
-    var a: A(2, 3);
+    var a = A(2, 3);
     using a.*;
-    builtin_output_i64(x);            # 2
+    builtin_output_i64(firstarg);      # 2
 
     return 0;
 }

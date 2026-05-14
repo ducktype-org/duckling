@@ -1,6 +1,3 @@
-# Test configuration for coercions
-# Tests implicit and explicit type coercions between numeric types
-
 Tests:
   float_literals_test:
     Description: Test for float literals.
