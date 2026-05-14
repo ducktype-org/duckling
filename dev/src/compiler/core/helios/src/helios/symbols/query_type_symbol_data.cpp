@@ -1,5 +1,5 @@
 
-#include "query_class_symbol_data.hpp"
+#include "query_type_symbol_data.hpp"
 
 #include "symbol_id_utils.hpp"
 #include "symbol_kind.hpp"
@@ -11,6 +11,7 @@
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
+#include <helios_private/symbols/symbols.hpp>
 
 #include <query_framework/standard_query/query_impl.hpp>
 
@@ -96,4 +97,29 @@ namespace compiler::helios {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryClassSymbolData);
+
+	struct IMPLEMENT_QUERY(QueryTupleTypeData, QueryTupleTypeData_Result) {
+		static auto provide(Context& ctx, QKey key) -> PResult {
+			TupleTypeData tuple_info;
+
+			const auto& components = key.getComponents();
+			tuple_info.members.reserve(components.size());
+			for (usize order = 0; order < components.size(); order++) {
+				tuple_info.members.push_back(ctx.query<defgen::QueryGeneratedSymbol>(
+					{ // Tuple field names are _1, _2, ...
+				      // Starting from 1, not 0!
+				      .name = base::StrID{ base::strConcat("_", order + 1) },
+				      .generated_symbol_data
+				      = defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::Field{
+						  .parent_type = key, .index = order } } }
+				));
+			}
+
+			return tuple_info;
+		}
+
+		QUERY_AUTO_CACHE_CREF
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTupleTypeData);
 }

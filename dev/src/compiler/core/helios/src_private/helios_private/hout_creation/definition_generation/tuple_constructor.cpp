@@ -1,23 +1,20 @@
-#include "class_constructors.hpp"
+#include "tuple_constructor.hpp"
 
 #include <helios/hout/elements/stmt.hpp>
+#include <helios/mangler/mangler.hpp>
 #include <helios/queries/function_queries.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/tsh/queries/types.hpp>
-#include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
-
-#include <base/collections/stable_container.hpp>
 
 #include <query_framework/standard_query/query_impl.hpp>
 
 namespace compiler::helios::defgen {
-	struct IMPLEMENT_QUERY(QueryImplicitClassConstructor, query::QResult<HOUTFunction>) {
-		static PResult provide(Context& ctx, const QKey class_type) {
+	struct IMPLEMENT_QUERY(QueryTuplePackConstructor, query::QResult<HOUTFunction>) {
+		static auto provide(Context& ctx, const QKey tuple_type) -> PResult {
+			auto tuple_interface = tuple_type.getInterface(ctx);
 			// Preamble, get some basic data.
-			auto class_interface = class_type.getInterface(ctx);
-
 			using ImplicitConstructor = GeneratedSymbolData::ImplicitConstructor;
 			using Variable            = GeneratedSymbolData::Variable;
 			using std::ranges::to;
@@ -26,13 +23,15 @@ namespace compiler::helios::defgen {
 			// Construct the constructor's type.
 			// @TODO: #1328 Properly handle value categories in class constructors.
 			const std::vector<tsh::InterfaceElement> fields
-				= class_interface->getFieldsView() | to<std::vector>();
+				= tuple_interface->getFieldsView() | to<std::vector>();
 			const u64 num_fields = fields.size();
 
 			// Prepare the ctor symbol and declaration.
 			const SymID ctor_symbol = ctx.query<QueryGeneratedSymbol>({
-				.name                  = name(class_type.getSymbol()),
-				.generated_symbol_data = GeneratedSymbolData{ ImplicitConstructor{ class_type } },
+				.name
+				= ctx.query<mangler::QueryMangledType>(tsh::SymbolType<>::withDefaults(tuple_type))
+			          ->valueOrThrow(),
+				.generated_symbol_data = GeneratedSymbolData{ ImplicitConstructor{ tuple_type } },
 			});
 
 			const auto& ctor_decl = ctx.query<QueryDeclOfFun>(ctor_symbol)->valueOrThrow();
@@ -44,13 +43,12 @@ namespace compiler::helios::defgen {
 			body.reserve(1 + num_fields + 1);
 
 			// - Declare result variable.
-			const auto result_symbol_type = ctor_decl.return_type;
-			// @TODO: #2307 Classes with a field named `__result` don't work.
-			const SymID result_symbol = ctx.query<QueryGeneratedSymbol>({
-				.name = base::StrID("__result"),
-				.generated_symbol_data
-				= GeneratedSymbolData{ Variable{ ctor_symbol, 0, result_symbol_type } },
-			});
+			const auto  result_symbol_type = ctor_decl.return_type;
+			const SymID result_symbol      = ctx.query<QueryGeneratedSymbol>({
+					 .name = base::StrID("__result"),
+					 .generated_symbol_data
+                = GeneratedSymbolData{ Variable{ ctor_symbol, 0, result_symbol_type } },
+            });
 			body.emplace_back(makeBox<code::VariableStmt>(code::VariableStmt(
 				code::generatedOrigin(),
 				makeBox<code::DefaultValueExpr>(
@@ -75,7 +73,6 @@ namespace compiler::helios::defgen {
 					)
 				));
 			}
-
 			body.emplace_back(makeBox<code::ReturnStmt>(
 				code::generatedOrigin(),
 				makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), result_symbol)
@@ -94,5 +91,5 @@ namespace compiler::helios::defgen {
 		QUERY_AUTO_CACHE_CREF
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryImplicitClassConstructor);
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTuplePackConstructor);
 }
