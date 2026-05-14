@@ -12,10 +12,10 @@
 
 #include <mir/mir_structure/mir_structure.hpp>
 
+#include <iostream>
 #include <string>
 #include <variant>
 #include <vector>
-#include <iostream>
 
 namespace compiler::mir::test_utils {
 
