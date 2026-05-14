@@ -151,7 +151,7 @@ namespace vm::loader::compiler::detail {
 		push_step_gil_on_next_add_low = true;
 
 		// Mark control flow instruction
-		// TODO #2692: make it an instruction's trait
+		// @TODO #2692: make it an instruction's trait
 		PUSH_DIAGNOSTIC
 		UNHANDLED_ENUM
 		instr_match(instruction) {
