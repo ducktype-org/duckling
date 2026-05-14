@@ -29,6 +29,12 @@ namespace vm::fast {
 			const api::RequestVariant& request
 		) override;
 
+		u64 getNextUninitializedGlobalId() const {
+			return next_to_initialize_global_id;
+		}
+		void addInitializedGlobals(u64 count) {
+			next_to_initialize_global_id += count;
+		}
 
 	private:
 		std::expected<api::Response, api::LoadProgramError> loadProgram(
@@ -94,6 +100,8 @@ namespace vm::fast {
 
 	private:
 		base::StableObjectPool<FastVMThread, api::ThreadID, false, true> vm_threads;
+
+		u64 next_to_initialize_global_id = 0;
 
 		std::mutex data_lock;
 

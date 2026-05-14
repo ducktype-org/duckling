@@ -71,12 +71,12 @@ namespace vm::fast {
 		const std::string& func_name, const RunArguments& run_arguments
 	) {
 		std::unique_lock lock(data_lock);
-		FastVMThread&    thread = getEmptyThread();
-		thread.setThreadCtx(func_name);
+		FastVMThread&    thread = getMainVMThread();
+		// thread.setThreadCtx(func_name);
 		bool response = thread.spawnThreadAndRun(func_name, run_arguments);
 
 		if (!response) {
-			thread.setThreadCtx("");
+			// thread.setThreadCtx("");
 			return std::unexpected(api::ApiError{
 				api::RunError{ "Failed to spawn thread for function: " + func_name } });
 		}
@@ -88,7 +88,10 @@ namespace vm::fast {
 	) {
 		std::unique_lock lock(data_lock);
 
-		getMainVMThread().runNoSpawn(func_name, run_arguments);
+		FastVMThread& thread = getMainVMThread();
+		// thread.setThreadCtx(func_name);
+		thread.runNoSpawn(func_name, run_arguments);
+		// thread.setThreadCtx("");
 		variant_match(getStatus()) {
 			variant_case(api::ExecutionCompleted, completed) { return completed.exit_value; }
 			variant_default return std::unexpected(api::StateError(
