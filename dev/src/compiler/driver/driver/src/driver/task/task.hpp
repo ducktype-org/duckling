@@ -132,6 +132,7 @@ namespace compiler::driver {
 
 	/**
 	 * @brief Convert a raw task into a resolved task.
+	 * @note This function requires presence of the package specified in the task in global_state
 	 */
 	base::Optional<Task> convertRawTaskToTask(
 		const RawTask& raw_task, const task::DiagnosticReporter& report

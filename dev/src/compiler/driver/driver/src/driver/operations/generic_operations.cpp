@@ -34,6 +34,7 @@
 #include <base/collections/maps.hpp>
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
+#include <base/extend_cpp/variant_match.hpp>
 #include <base/types/ok_bad.hpp>
 
 #include <artifacts/artifacts.hpp>
@@ -740,19 +741,11 @@ namespace compiler::driver {
 
 		for (const auto& task: tasks) {
 			variant_match(task.build_target) {
-				variant_case(BuildTargetLLVMExecutable, target_exe) {
-					collect_modules(task.root_module, BackendType::LLVM, task.root_module);
-				}
-				variant_case(BuildTargetLLVMStaticLibrary, target_lib) {
-					collect_modules(task.root_module, BackendType::LLVM, task.root_module);
-				}
-				variant_case_novalue(BuildTargetLLVM) {
-					// Scripts are compiled as a single module, so we don't need to collect
-					// submodules here.
-					collect_modules(task.root_module, BackendType::LLVM, task.root_module);
-				}
 				variant_case_novalue(BuildTargetDVM) {
 					collect_modules(task.root_module, BackendType::DVM, task.root_module);
+				}
+				variant_default {
+					collect_modules(task.root_module, BackendType::LLVM, task.root_module);
 				}
 			}
 		}
