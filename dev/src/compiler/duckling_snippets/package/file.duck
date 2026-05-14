@@ -1,5 +1,0 @@
-# imports don't work for files yet.
-
-fun goo() -> i64 = {
-    return 2;
-}

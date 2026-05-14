@@ -1,34 +1,39 @@
 # Tests for statements
 
 Tests:
+  blocks:
+    Cases:
+      all:
+        backend: all
+        Output:
+          String: "42\n42\n42\n"
+        ExitCode: 0
   conditional: # if, if-else
     Cases:
       all:
         backend: all
         ExitCode: 99
+
   declaration_coercions:
     Cases:
-      llvm:
-        backend: llvm
+      all:
+        backend: all
         Output:
           String: "0\n1\n-1\n0\n1\n-1\n0\n1\n-1\n0\n1\n-1\n0\n1\n-1\n"
         ExitCode: 0
-      dvm:
-        backend: dvm
-        # @TODO: #1849 the global initial value is not working in VM
-        # Output:
-        #   String: "0\n1\n-1\n0\n1\n-1\n0\n1\n-1\n0\n1\n-1\n0\n1\n-1\n"
-        ExitCode: 0
+
   default_initialization:
     # @TODO: #2448 Investigate why deterministic compilation check fails for this test (mangling issue)
     enable_conc_deterministic_tests: "false"
     Cases:
-      # @TODO: #1916 When arrays are handled in DVM, add a DVM case.
+      # @TODO: #2483 When strings are handled in DVM, add a DVM case here 
+      # and remove `expressions/zero_init` in favour of this test.
       llvm:
         backend: llvm
         Output:
           String: "=================\n0\n0\n0\nA0\n3\n+++++\n0\n0\n0\nA0\n3\n+++++\n1\n1\n1\nACkajak\n+++++\n=================\n0\n1\n0\n=================\n1\n1\n0\n=================\n999\n0\n999\n999\n=================\n1\n=================\n1\n123\n"
         ExitCode: 0
+
   loops-performance: # while
     Cases:
       llvm:

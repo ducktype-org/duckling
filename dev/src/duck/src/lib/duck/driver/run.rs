@@ -104,17 +104,17 @@ fn run_subcmd(
         (Some(exec_fn), Some(_), _) => {
             ctx.error_console().warning(format!(
                 "builtin subcommand `{sub_cmd}` shadows an external subcommand"
-            ));
+            ))?;
             exec_fn(ctx, sub_args)
         }
         (Some(exec_fn), None, _) => exec_fn(ctx, sub_args),
         (None, Some(exec_path), Some(_)) => {
             ctx.console().note(format!(
                 "external subcommand {sub_cmd} possibly shadows a script"
-            ));
+            ))?;
             ctx.console().hint(format!(
                 "If you would like to run a script with that name, type `duck ./{sub_cmd}`"
-            ));
+            ))?;
             drop(ctx.console().flush());
             drop(ctx.error_console().flush());
             let args = external_cli_args(sub_args);

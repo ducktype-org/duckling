@@ -48,7 +48,7 @@ namespace {
 	DVMValue getQueryContext() {
 		return { DVMPlace(
 			base::StrID(comptime_func_names::GLOBAL_QUERY_CONTEXT),
-			vm::code::OpaqueType(base::StrID("opaque_ptr"), 8),
+			vm::code::OpaqueType(base::StrID("opaque_ptr"), Bytes{ 8 }),
 			DVMPlace::AccessKind::Direct
 		) };
 	}
@@ -72,7 +72,7 @@ namespace compiler::backend_vm::internal {
 
 		auto lower_builder_pattern = [&](const BuilderSequence& builder_sequence) {
 			auto builder = ctx->pushTempLocal(
-				vm::code::OpaqueType(base::StrID("opaque_ptr"), 8), "meta_builder"
+				vm::code::OpaqueType(base::StrID("opaque_ptr"), Bytes{ 8 }), "meta_builder"
 			);
 			DVMPlace builder_place = builder;
 
