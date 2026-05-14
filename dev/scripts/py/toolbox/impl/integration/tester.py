@@ -112,7 +112,7 @@ def run_test(
         )
     stats = TestStatistics([], [], [])
     simplified_filter = filter[len(path) + 1:]
-    log_info(f"===== {path} =====")
+    # Removed noisy test path banner for TUI
     
     if reporter:
         reporter.on_test_start(path)
@@ -125,7 +125,7 @@ def run_test(
         try:
             match run_case(test, case, dry, verbose, log_file):
                 case Failure(error):
-                    print_failure(f"Case `{case.name}` has failed because: {error}")
+                    # Removed noisy failure print for TUI
                     if reporter:
                         reporter.on_case_failed(path, case.name, error)
                     stats.failed.append(case_path)
@@ -134,20 +134,14 @@ def run_test(
                         reporter.on_case_passed(path, case.name)
                     if not dry:
                         stats.succeeded.append(case_path)
-                        print_success(f"Case `{case.name}` passed")
+                        # Removed noisy success print for TUI
                 case Disabled():
                     if reporter:
                         reporter.on_case_disabled(path, case.name)
                     if not dry:
                         stats.disabled.append(case_path)
-                        print_neutral(f"Case `{case.name}` disabled")
+                        # Removed noisy disabled print for TUI
         except BashCommandError as e:
-            if e.exit_code == 124:
-                print_failure(
-                    f"Case `{test.name}/{case.name}` has failed with exit code 124 - likely timed out after {case.timeout} second(s)."
-                )
-            else:
-                print_failure(f"Case `{test.name}/{case.name}` has failed.")
             write_log(
                 f"{test.name}/{case.name} has failed:\n{''.join(e.args)}\n",
                 log_file=log_file,
