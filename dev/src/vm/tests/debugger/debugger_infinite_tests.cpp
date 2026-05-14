@@ -53,7 +53,7 @@ private:
 
 		vm::api::resume(pid).value();                 // "Resume failed (1)"
 		auto position = vm::api::pause(pid).value();  // "Pause failed (1)"
-		ASSERT_TRUE(position.instr_number == 10);
+		ASSERT_TRUE(position.instr_number == 9);
 
 		auto expected_next_line = [this](u64 x) -> u64 {
 			if (x == 6) return 7;

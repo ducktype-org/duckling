@@ -94,6 +94,7 @@ namespace vm::loader::compiler::detail {
 		 * @brief Whether to add a step Gil instruction before the next low instruction.
 		 */
 		bool push_step_gil_on_next_add_low = true;
+		bool is_control_flow               = true;
 
 		TypeCRef getPlaceType(const opargs::ArgumentType auto p) const {
 			if (auto maybe_val = ctx.locals_map.atMaybe(p.var_name)) return maybe_val.value()->type;
@@ -117,6 +118,11 @@ namespace vm::loader::compiler::detail {
 			if (push_step_gil_on_next_add_low) {
 				push_step_gil_on_next_add_low = false;
 				addLow<Op_stepGil>();
+			}
+
+			if (is_control_flow) {
+				is_control_flow = false;
+				addLow<Op_check_strategy>();
 			}
 
 			[&]<typename... LowArgs>(std::tuple<LowArgs...>*) {
@@ -143,6 +149,23 @@ namespace vm::loader::compiler::detail {
 #endif
 
 		push_step_gil_on_next_add_low = true;
+
+		// Mark control flow instruction
+		// TODO #2692: make it an instruction's trait
+		PUSH_DIAGNOSTIC
+		UNHANDLED_ENUM
+		instr_match(instruction) {
+			instr_case(high::Op_jmp_label, _) { is_control_flow = true; }
+			instr_case(high::Op_jmpIf_label, _) { is_control_flow = true; }
+			instr_case(high::Op_jmpIfNot_label, _) { is_control_flow = true; }
+			instr_case(high::Op_call_builtinfunc, _) { is_control_flow = true; }
+			instr_case(high::Op_call_cfunc, _) { is_control_flow = true; }
+			instr_case(high::Op_call_func, _) { is_control_flow = true; }
+			instr_case(high::Op_virtual_call_pptr_method, _) { is_control_flow = true; }
+			instr_default { is_control_flow = false; }
+		}
+		POP_DIAGNOSTIC
+
 
 		PUSH_DIAGNOSTIC
 		UNHANDLED_ENUM
@@ -398,20 +421,10 @@ namespace vm::loader::compiler::detail {
 				addLow<Op_ext_type_type>(i.expected_type, variant_type);
 			}
 			instr_case(high::Op_label, i) { addLabel(i.label); }
-			instr_case(high::Op_jmp_label, i) {
-				addLow<Op_check_strategy>();
-				addLow<Op_jmp_label>(i.label);
-			}
-			instr_case(high::Op_jmpIf_label, i) {
-				addLow<Op_check_strategy>();
-				addLow<Op_jmpIf_label>(i.label);
-			}
-			instr_case(high::Op_jmpIfNot_label, i) {
-				addLow<Op_check_strategy>();
-				addLow<Op_jmpIfNot_label>(i.label);
-			}
+			instr_case(high::Op_jmp_label, i) { addLow<Op_jmp_label>(i.label); }
+			instr_case(high::Op_jmpIf_label, i) { addLow<Op_jmpIf_label>(i.label); }
+			instr_case(high::Op_jmpIfNot_label, i) { addLow<Op_jmpIfNot_label>(i.label); }
 			instr_case(high::Op_call_func, i) {
-				addLow<Op_check_strategy>();
 #ifdef ENABLE_JIT
 				addLow<Op_jit_call_entrypoint>(i.function);
 #else
@@ -421,14 +434,8 @@ namespace vm::loader::compiler::detail {
 			instr_case(high::Op_call_builtinfunc, i) { addLow<Op_call_builtinfunc>(i.function); }
 			instr_case(high::Op_call_cfunc, i) { addLow<Op_call_cfunc>(i.function); }
 			instr_case(high::Op_set_threadctx, i) { addLow<Op_set_threadctx>(i.function); }
-			instr_case(high::Op_ret_tailcall_func, i) {
-				addLow<Op_check_strategy>();
-				addLow<Op_ret_tailcall_func>(i.function);
-			}
-			instr_case(high::Op_ret, i) {
-				addLow<Op_check_strategy>();
-				addLow<Op_ret>();
-			}
+			instr_case(high::Op_ret_tailcall_func, i) { addLow<Op_ret_tailcall_func>(i.function); }
+			instr_case(high::Op_ret, i) { addLow<Op_ret>(); }
 			instr_case(high::Op_init_pany_type, i) { addLow<Op_init_bany_type>(i.var, i.type); }
 			instr_case(high::Op_deinit, i) { addLow<Op_deinit>(); }
 			instr_case(high::Op_input_p64, i) { addLow<Op_input_p64>(i.dst); }
@@ -446,7 +453,6 @@ namespace vm::loader::compiler::detail {
 				addLow<Op_ext_type>(variant_type);
 			}
 			instr_case(high::Op_virtual_call_pptr_method, i) {
-				addLow<Op_check_strategy>();
 				addLow<Op_virtual_call_pptr_method>(i.object_ptr, i.method);
 			}
 			instr_case(high::Op_alloc_pptr_type, i) { addLow<Op_alloc_pptr_type>(i.ptr, i.type); }
