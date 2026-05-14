@@ -194,8 +194,12 @@ namespace vm {
 			auto data_ptr = local_stack + frame->local_stack_head;
 			auto block    = thread.process_memory.allocateDummy(type, data_ptr);
 
-			thread.process_memory.increaseBlockRefcount(block
-			);  // so that nobody can delete our block
+			auto shadow_data_ptr
+				= thread.runtime_data.shadow_local_stack_base + frame->local_stack_head;
+			auto shadow_block = thread.safe_process.shadow_memory.allocateDummy(type, shadow_data_ptr);
+
+			thread.process_memory.increaseBlockRefcount(block);
+			thread.safe_process.shadow_memory.increaseBlockRefcount(shadow_block);
 
 			*frame->local_block_ref_stack_end = block.get();
 			frame->local_block_ref_stack_end += 1;
@@ -211,8 +215,15 @@ namespace vm {
 			auto block = frame->local_block_ref_stack_end[-1];
 			auto type  = thread.process_memory.getBlockType(block);
 
+			auto block_id     = thread.process_memory.requestBlockID(block);
+			auto shadow_block = thread.safe_process.shadow_memory.getBlock(block_id);
+
 			thread.process_memory.freeBlockData(block);
 			thread.process_memory.decreaseBlockRefcount(block);
+
+			thread.safe_process.shadow_memory.freeBlockData(shadow_block);
+			thread.safe_process.shadow_memory.decreaseBlockRefcount(shadow_block);
+
 			frame->local_stack_head -= type->getSize().asInt();
 			frame->local_block_ref_stack_end -= 1;
 		}

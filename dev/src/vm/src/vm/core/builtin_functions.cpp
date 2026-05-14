@@ -137,16 +137,18 @@ namespace vm::builtins {
 	void FunctionHandlers::builtinLockMutex(SafeVMThread& thread, u64 mutex_id) {
 		auto mutex = thread.safe_process.getSynchronizationPrimitives().getMutex(mutex_id);
 
-		if (!mutex->try_lock()) {
+		if (!mutex->m.try_lock()) {
 			thread.releaseGil();
-			mutex->lock();
+			mutex->m.lock();
 			thread.acquireGil();
 		}
+		thread.onAcquire(mutex->vc);
 	}
 
 	void FunctionHandlers::builtinUnlockMutex(SafeVMThread& thread, u64 mutex_id) {
 		auto mutex = thread.safe_process.getSynchronizationPrimitives().getMutex(mutex_id);
-		mutex->unlock();
+		thread.onRelease(mutex->vc);
+		mutex->m.unlock();
 	}
 
 	void FunctionHandlers::builtinDestroyMutex(SafeVMThread& thread, u64 mutex_id) {
@@ -163,7 +165,9 @@ namespace vm::builtins {
 
 		thread.releaseGil();
 		try {
-			cv->wait(*mutex);
+			thread.onRelease(mutex->vc);
+			cv->wait(mutex->m);
+			thread.onAcquire(mutex->vc);
 		} catch (const vm::exceptions::VMRuntimeException&) {
 			// Ensure the GIL is held again before propagating VM runtime exceptions.
 			thread.acquireGil();

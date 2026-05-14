@@ -92,6 +92,92 @@ namespace vm {
 	// within the function, but we have to add some instructions on the outside of it. Hence we use
 	// the `OP_CASE_END` macro that adds `goto End` instruction, residing after opcode function,
 	// inside interpreter loop.
+	RETURN_TYPE OpFuns::OPCODE_NAME(ft_read)(FUNCTION_ARGS) {
+		{
+			const auto pointer = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
+			const auto size    = instr->arg1;
+
+			if (pointer.isNull()) return;
+
+			auto  block_id     = thread.process_memory.requestBlockID(pointer.getBlock());
+			auto  shadow_block = thread.safe_process.shadow_memory.getBlock(block_id);
+			auto  shadow_view  = thread.safe_process.shadow_memory.getBlockViewUnsafe(shadow_block);
+			auto* shadow_entries = shadow_view.getBegin() + pointer.getOffset();
+
+			const auto& vc            = thread.vc;
+			const auto  tid           = thread.getThreadID();
+			const auto  current_epoch = thread.getCurrentEpoch();
+
+			for (u64 i = 0; i < size; ++i) {
+				ShadowEntry& entry = shadow_entries[i];
+
+				// 1. Check for write-read race
+				if (!(entry.last_write <= vc)) {
+					throw exceptions::VMRuntimeException("FastTrack: Write-Read race detected!");
+				}
+
+				// 2. Update last_read
+				if (auto* last_read_epoch = std::get_if<Epoch>(&entry.last_read)) {
+					if (*last_read_epoch <= vc) {
+						entry.last_read = current_epoch;
+					} else if (last_read_epoch->tid() != tid) {
+						// Shared mode
+						auto shared_vc = std::make_shared<VectorClock>();
+						*shared_vc |= *last_read_epoch;
+						*shared_vc |= current_epoch;
+						entry.last_read = shared_vc;
+					}
+				} else {
+					auto& shared_vc = std::get<std::shared_ptr<VectorClock>>(entry.last_read);
+					*shared_vc |= current_epoch;
+				}
+			}
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ft_write)(FUNCTION_ARGS) {
+		{
+			const auto pointer = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
+			const auto size    = instr->arg1;
+
+			if (pointer.isNull()) return;
+
+			auto  block_id     = thread.process_memory.requestBlockID(pointer.getBlock());
+			auto  shadow_block = thread.safe_process.shadow_memory.getBlock(block_id);
+			auto  shadow_view  = thread.safe_process.shadow_memory.getBlockViewUnsafe(shadow_block);
+			auto* shadow_entries = shadow_view.getBegin() + pointer.getOffset();
+
+			const auto& vc            = thread.vc;
+			const auto  current_epoch = thread.getCurrentEpoch();
+
+			for (u64 i = 0; i < size; ++i) {
+				ShadowEntry& entry = shadow_entries[i];
+
+				// 1. Check for write-write race
+				if (!(entry.last_write <= vc)) {
+					throw exceptions::VMRuntimeException("FastTrack: Write-Write race detected!");
+				}
+
+				// 2. Check for read-write race
+				if (auto* last_read_epoch = std::get_if<Epoch>(&entry.last_read)) {
+					if (!(*last_read_epoch <= vc)) {
+						throw exceptions::VMRuntimeException("FastTrack: Read-Write race detected!");
+					}
+				} else {
+					auto& shared_vc = std::get<std::shared_ptr<VectorClock>>(entry.last_read);
+					if (!(*shared_vc <= vc)) {
+						throw exceptions::VMRuntimeException("FastTrack: Read-Write race detected!");
+					}
+				}
+
+				// 3. Update last_write
+				entry.last_write = current_epoch;
+			}
+		}
+		FUNCTION_CONT(1);
+	}
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(exit)(FUNCTION_ARGS) { IF_TC(return;) }
 
 #define DEFINE_MOVE_OPS(BITS_SIZE, TYPE)                                                       \
@@ -621,9 +707,10 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(alloc_pptr_type)(FUNCTION_ARGS) {
 		{
-			const auto dst     = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
-			auto       type    = safeReadObjectBytes<TypeCRef>(instr->arg1);
-			auto       block   = thread.process_memory.allocateHeap(type);
+			const auto dst   = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
+			auto       type  = safeReadObjectBytes<TypeCRef>(instr->arg1);
+			auto       block = thread.process_memory.allocateHeap(type);
+			thread.safe_process.shadow_memory.allocateHeap(type);
 			const auto new_dst = thread.process_memory.updatePointerAssignment(dst, { block, 0 });
 			WRITE_TO_PLACE_ARG(Pointer, instr->arg0, new_dst);
 		}
@@ -632,8 +719,14 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(free_pptr)(FUNCTION_ARGS) {
 		{
-			if (auto ptr = READ_FROM_PLACE_ARG(Pointer, instr->arg0))
-				thread.process_memory.freeBlockData(ptr.getBlock());
+			if (auto ptr = READ_FROM_PLACE_ARG(Pointer, instr->arg0)) {
+				auto block    = ptr.getBlock();
+				auto block_id = thread.process_memory.requestBlockID(block);
+				thread.process_memory.freeBlockData(block);
+				thread.safe_process.shadow_memory.freeBlockData(
+					thread.safe_process.shadow_memory.getBlock(block_id)
+				);
+			}
 		}
 		FUNCTION_CONT(1);
 	}
@@ -1054,7 +1147,12 @@ namespace vm {
 				// It might be desired to switch to second approach in the future, depending on the
 				// semantics of Duckling arrays.
 				if (!tbl_pointer.isNull()) {
-					thread.process_memory.freeBlockData(tbl_pointer.getBlock());
+					auto block    = tbl_pointer.getBlock();
+					auto block_id = thread.process_memory.requestBlockID(block);
+					thread.process_memory.freeBlockData(block);
+					thread.safe_process.shadow_memory.freeBlockData(
+						thread.safe_process.shadow_memory.getBlock(block_id)
+					);
 					const Pointer new_dst = thread.process_memory.updatePointerAssignment(
 						tbl_pointer, Pointer::null()
 					);
@@ -1063,12 +1161,17 @@ namespace vm {
 			} else if (tbl_pointer.isNull()) {
 				auto new_block
 					= thread.process_memory.dynTableAllocateHeapN(pointed_type, new_elem_count);
+				thread.safe_process.shadow_memory.dynTableAllocateHeapN(pointed_type, new_elem_count);
 				const Pointer new_dst
 					= thread.process_memory.updatePointerAssignment(tbl_pointer, { new_block, 0 });
 				WRITE_TO_PLACE_ARG(Pointer, instr->arg0, new_dst);
 			} else {
 				auto tbl_block = tbl_pointer.getBlock();
+				auto block_id  = thread.process_memory.requestBlockID(tbl_block);
 				thread.process_memory.dynTableReallocateBlockDataN(tbl_block, new_elem_count);
+				thread.safe_process.shadow_memory.dynTableReallocateBlockDataN(
+					thread.safe_process.shadow_memory.getBlock(block_id), new_elem_count
+				);
 			}
 		}
 		FUNCTION_CONT(2);

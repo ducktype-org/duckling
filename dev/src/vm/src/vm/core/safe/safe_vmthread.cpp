@@ -44,7 +44,9 @@ namespace vm {
 		  ),
 		  safe_process(process),
 		  process_memory(process.getMemory()),
-		  process_program(process.getLoadedProgram()) {}
+		  process_program(process.getLoadedProgram()) {
+		vc[thread_id] = 1;
+	}
 
 	/**
 	 * @brief Tail call written function that handles the execution pause request.

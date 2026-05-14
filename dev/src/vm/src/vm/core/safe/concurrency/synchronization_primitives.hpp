@@ -1,6 +1,7 @@
 #pragma once
 
 #include "condition_variable.hpp"
+#include <vm/core/process/concurrency/fast_track/vc.hpp>
 
 #include <base/collections/maps.hpp>
 #include <base/collections/object_pool.hpp>
@@ -10,12 +11,17 @@
 #include <mutex>
 
 namespace vm {
+	struct Mutex {
+		std::mutex  m;
+		VectorClock vc;
+	};
+
 	class SynchronizationPrimitives final {
 	private:
 		/**
 		 * @brief Pool for mutexes used in the process.
 		 */
-		base::StableObjectPool<std::mutex, u64, false> mutex_pool;
+		base::StableObjectPool<Mutex, u64, false> mutex_pool;
 
 		/**
 		 * @brief Pool for condition variables used in the process.
@@ -27,7 +33,7 @@ namespace vm {
 		/**
 		 * @brief Getter for mutexes in the pool.
 		 */
-		Ref<std::mutex> getMutex(usize mutex_id);
+		Ref<Mutex> getMutex(usize mutex_id);
 
 		/**
 		 * @brief Adds new mutex into pool.

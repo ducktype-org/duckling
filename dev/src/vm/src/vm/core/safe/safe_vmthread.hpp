@@ -13,6 +13,8 @@
 #include <vm/core/safe/memory/thread_stack.hpp>
 #include <vm/core/thread/ivmthread.hpp>
 #include <vm/core/vmvalue/vmvalue.hpp>
+#include <vm/core/process/concurrency/fast_track/vc.hpp>
+#include <vm/core/process/concurrency/fast_track/epoch.hpp>
 
 #ifdef ENABLE_JIT
 	#include <vm/core/jit/jit_compiler.hpp>
@@ -97,6 +99,8 @@ namespace vm {
 	class SafeVMThread final: public IVMThread {
 	private:
 		RuntimeData runtime_data;
+
+		VectorClock vc;
 
 		/**
 		 * @brief Link to parent process.
@@ -215,6 +219,24 @@ namespace vm {
 		 * @brief Sets name of the function that will be used in builtin spawn thread.
 		 */
 		void setThreadCtx(std::string);
+
+		/**
+		 * @brief Gets current epoch of the thread.
+		 */
+		[[nodiscard]] Epoch getCurrentEpoch() const { return Epoch(getThreadID(), vc[getThreadID()]); }
+
+		/**
+		 * @brief FastTrack Acquire event.
+		 */
+		void onAcquire(const VectorClock& lock_vc) { vc |= lock_vc; }
+
+		/**
+		 * @brief FastTrack Release event.
+		 */
+		void onRelease(VectorClock& lock_vc) {
+			lock_vc = vc;
+			vc[getThreadID()]++;
+		}
 
 		/**
 		 * @brief Gets name of the function that will be used in builtin spawn thread.

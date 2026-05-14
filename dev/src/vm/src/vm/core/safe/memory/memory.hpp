@@ -90,14 +90,6 @@ namespace vm {
 			free_ids.push_back(block->id);
 		}
 
-		[[nodiscard]]
-		Ref<BlockT> getBlock(BlockID id) {
-			const auto block_index = static_cast<usize>(id);
-			if (block_index >= blocks.size()) throw exceptions::VMOutOfBlockBoundsException();
-			if (blocks[block_index].deallocated) throw exceptions::VMUseAfterFreeException();
-			return &blocks[block_index];
-		}
-
 		/**
 		 * @brief Copies blocks from `block_src` to `block_dst`, going down the nested block
 		 * hierarchy.
@@ -375,6 +367,14 @@ namespace vm {
 
 	public:
 		IMemory() = default;
+
+		[[nodiscard]]
+		Ref<BlockT> getBlock(BlockID id) {
+			const auto block_index = static_cast<usize>(id);
+			if (block_index >= blocks.size()) throw exceptions::VMOutOfBlockBoundsException();
+			if (blocks[block_index].deallocated) throw exceptions::VMUseAfterFreeException();
+			return &blocks[block_index];
+		}
 
 		// =================== Used by the process ===================
 
