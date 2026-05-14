@@ -26,8 +26,10 @@ namespace {
 #undef HANDLE_ARG_DEF
 
 // Define the translations
-#define TRIVIAL_TRANSLATION(ARG_NAME) \
-	exec::arg::ARG_NAME relocate##ARG_NAME(TRANSLATOR_ARGUMENTS(ARG_NAME)) { return reloc_arg; }
+#define TRIVIAL_TRANSLATION(ARG_NAME)                                                         \
+	[[maybe_unused]] exec::arg::ARG_NAME relocate##ARG_NAME(TRANSLATOR_ARGUMENTS(ARG_NAME)) { \
+		return reloc_arg;                                                                     \
+	}
 
 	FOR_EACH(TRIVIAL_TRANSLATION, Immediate, Place8, Place16, Place32, Place64)
 #undef TRIVIAL_TRANSLATION
@@ -36,7 +38,7 @@ namespace {
 	 * @brief Relocates a function argument (ID) by returning a pointer to the corresponding
 	 * executable function.
 	 */
-	exec::arg::Function relocateFunction(TRANSLATOR_ARGUMENTS(Function)) {
+	[[maybe_unused]] exec::arg::Function relocateFunction(TRANSLATOR_ARGUMENTS(Function)) {
 		return &exec_functions[reloc_arg.asInt()];
 	}
 
@@ -44,15 +46,19 @@ namespace {
 	 * @brief Relocates a jump destination by calculating a pointer to the instruction in the
 	 * executable function based on the relative offset in the relocatable instruction.
 	 */
-	exec::arg::JumpDestination relocateJumpDestination(TRANSLATOR_ARGUMENTS(JumpDestination)) {
+	[[maybe_unused]] exec::arg::JumpDestination relocateJumpDestination(
+		TRANSLATOR_ARGUMENTS(JumpDestination)
+	) {
 		const ptrdiff_t current_offset = current_function_reloc.data.data() - &current_instruction;
 		const ptrdiff_t target_offset  = current_offset + reloc_arg;
 		return current_function.data.data() + target_offset;
 	}
 
-	exec::arg::Type relocateType(TRANSLATOR_ARGUMENTS(Type)) {
+	[[maybe_unused]] exec::arg::Type relocateType(TRANSLATOR_ARGUMENTS(Type)) {
 		return program.types.at(TypeID(reloc_arg.asInt()));
 	}
+
+	// @TODO: Remove the maybe_unused attributes.
 
 #undef TRANSLATOR_ARGUMENTS
 }
@@ -83,7 +89,7 @@ exec::Instruction relocInstruction(
 	)
 #define HANDLE_INSTR_ARGS(INSTR_NAME, ...)                                         \
 	case InstrID::INSTR_NAME: {                                                    \
-		auto&& inner_instr = instruction.CAT(instr_, INSTR_NAME);                  \
+		[[maybe_unused]] auto&& inner_instr = instruction.CAT(instr_, INSTR_NAME); \
 		return exec::maker::INSTR_NAME(                                            \
 			FOR_EACH_CUSTOM_LAST(DO_TRANSLATION, DO_TRANSLATION_LAST, __VA_ARGS__) \
 		);                                                                         \
@@ -108,7 +114,7 @@ exec::ExecFunctionCollection exec::linkFunctions(
 	for (const FunctionInfo& func: program.functions)
 		exec_functions.push_back(ExecFunction{ .id = func.id, .data = {} });
 
-	// Relocate the instructions and fill the exec functions with them.
+	// Relocate the instructions and fill the executable functions with them.
 	for (const auto& [reloc_function, func_info]:
 	     std::views::zip(reloc_functions, program.functions)) {
 		ExecFunction& current_function = exec_functions[func_info.id.asInt()];

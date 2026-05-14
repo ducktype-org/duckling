@@ -14,41 +14,43 @@
 
 namespace vm::loader::compiler::safe {
 
-	static usize getIntTypeSize(code::valid_type::TypeSize& size) {
+	static usize getIntTypeSize(const code::valid_type::TypeSize& size) {
 		return static_cast<usize>(size.assumePointerSize(Bytes(8)));
 	}
 
 	namespace detail {
 
-#define DEFINE_LOWER_ARGUMENT_IMPL_FOR_FAMILY(FAMILY_CONCEPT, ...)                                \
-	template<FAMILY_CONCEPT ToType>                                                               \
-	struct LowerArgumentImpl<ToType> {                                                            \
-		template<opargs::ArgumentType FromType>                                                   \
-		static u64 lower(                                                                         \
-			[[maybe_unused]] SafeCompiler&                                             compiler,  \
-			[[maybe_unused]] vm::loader::compiler::detail::FunctionCompilationContext& ctx,       \
-			const FromType&                                                            opcode_arg \
-		) {                                                                                       \
-			__VA_ARGS__                                                                           \
-		}                                                                                         \
+#define DEFINE_LOWER_ARGUMENT_IMPL_FOR_FAMILY(FAMILY_CONCEPT, ...)                                   \
+	template<FAMILY_CONCEPT ToType>                                                                  \
+	struct LowerArgumentImpl<ToType> {                                                               \
+		template<opargs::ArgumentType FromType>                                                      \
+		static u64 lower(                                                                            \
+			[[maybe_unused]] const SafeCompiler&                                       compiler,     \
+			[[maybe_unused]] const vm::loader::compiler::detail::FunctionStackContext& stack_ctx,    \
+			[[maybe_unused]] base::HashMap<base::StrID, usize>&                        label_id_map, \
+			const FromType&                                                            opcode_arg    \
+		) {                                                                                          \
+			__VA_ARGS__                                                                              \
+		}                                                                                            \
 	}
 
-#define DEFINE_LOWER_ARGUMENT_IMPL(LOW_TO_TYPE, HIGH_FROM_TYPE, ...)                              \
-	template<>                                                                                    \
-	struct LowerArgumentImpl<LOW_TO_TYPE> {                                                       \
-		static u64 lower(                                                                         \
-			[[maybe_unused]] SafeCompiler&                                             compiler,  \
-			[[maybe_unused]] vm::loader::compiler::detail::FunctionCompilationContext& ctx,       \
-			const HIGH_FROM_TYPE&                                                      opcode_arg \
-		) {                                                                                       \
-			__VA_ARGS__                                                                           \
-		}                                                                                         \
+#define DEFINE_LOWER_ARGUMENT_IMPL(LOW_TO_TYPE, HIGH_FROM_TYPE, ...)                                 \
+	template<>                                                                                       \
+	struct LowerArgumentImpl<LOW_TO_TYPE> {                                                          \
+		static u64 lower(                                                                            \
+			[[maybe_unused]] const SafeCompiler&                                       compiler,     \
+			[[maybe_unused]] const vm::loader::compiler::detail::FunctionStackContext& stack_ctx,    \
+			[[maybe_unused]] base::HashMap<base::StrID, usize>&                        label_id_map, \
+			const HIGH_FROM_TYPE&                                                      opcode_arg    \
+		) {                                                                                          \
+			__VA_ARGS__                                                                              \
+		}                                                                                            \
 	}
 		// clang-format off
 
 		DEFINE_LOWER_ARGUMENT_IMPL_FOR_FAMILY(
 			low::opargs::PlaceDataArgumentType,
-			if(auto maybe_val = ctx.locals_map.atMaybe(opcode_arg.var_name)) {
+			if(auto maybe_val = stack_ctx.locals_map.atMaybe(opcode_arg.var_name)) {
 				return getIntTypeSize(maybe_val.value()->offset);
 			}
 			return compiler.low_program.getGlobals().at(opcode_arg.var_name)->global_buffer_offset | (1ULL << 63);
@@ -56,8 +58,8 @@ namespace vm::loader::compiler::safe {
 
 		DEFINE_LOWER_ARGUMENT_IMPL_FOR_FAMILY(
 			low::opargs::PlaceBlockArgumentType,
-			if(auto maybe_val = ctx.locals_map.atMaybe(opcode_arg.var_name)) {
-				return maybe_val.value()->block_idx;
+			if(auto maybe_val = stack_ctx.locals_map.atMaybe(opcode_arg.var_name)) {
+				return maybe_val.value()->stack_index;
 			}
 			return compiler.low_program.getGlobals().at(opcode_arg.var_name)->global_block_idx | (1ULL << 63);
 		);
@@ -79,7 +81,7 @@ namespace vm::loader::compiler::safe {
 		DEFINE_LOWER_ARGUMENT_IMPL(
 			low::opargs::FunctionID,
 		    opargs::FunctionName,
-		    return compiler.program_ctx.function_forward_declarations.idOf(opcode_arg.function_name).value();
+		    return compiler.high_program.functions().idOf(opcode_arg.function_name).value();
 		);
 
 		DEFINE_LOWER_ARGUMENT_IMPL(
@@ -115,9 +117,9 @@ namespace vm::loader::compiler::safe {
 			// A label ID is some number, used later by `linkLabelArguments`
 			// to generate actual offsets once we know where each label
 			// lands after lowering.
-			if (!ctx.label_id_map.contains(opcode_arg.label_name))
-				ctx.label_id_map.put(opcode_arg.label_name, ctx.label_id_map.size());
-			return ctx.label_id_map.at(opcode_arg.label_name);
+			if (!label_id_map.contains(opcode_arg.label_name))
+				label_id_map.put(opcode_arg.label_name, label_id_map.size());
+			return label_id_map.at(opcode_arg.label_name);
 		);
 		// clang-format on
 
@@ -128,9 +130,9 @@ namespace vm::loader::compiler::safe {
 
 	template<opargs::ArgumentType FromType, low::opargs::ArgumentType ToType>
 	u64 SafeCompiler::lowerArgument(
-		vm::loader::compiler::detail::FunctionCompilationContext& ctx, const FromType& opcode_arg
+		const vm::loader::compiler::detail::FunctionStackContext& ctx, base::HashMap<base::StrID, usize>& label_id_map, const FromType& opcode_arg
 	) {
-		return detail::LowerArgumentImpl<ToType>::lower(*this, ctx, opcode_arg);
+		return detail::LowerArgumentImpl<ToType>::lower(*this, ctx, label_id_map, opcode_arg);
 	}
 
 	void SafeCompiler::linkLabelArguments(
@@ -147,7 +149,7 @@ namespace vm::loader::compiler::safe {
 	}
 
 	low::MicroBytecode SafeCompiler::lowerInstructions(
-		vm::loader::compiler::detail::FunctionCompilationContext& ctx
+		const vm::loader::compiler::detail::FunctionStackContext& ctx
 	) {
 		detail::MicroBytecodeBuilder builder{ *this, ctx };
 
@@ -160,13 +162,11 @@ namespace vm::loader::compiler::safe {
 	}
 
 	void SafeCompiler::compileNewFunctions(const std::vector<code::Function>& new_functions) {
-		// Forward declare all functions
-		for (const auto& function: new_functions)
-			program_ctx.function_forward_declarations.insert(function, function.name);
-
 		for (const auto& function: new_functions) {
-			vm::loader::compiler::detail::FunctionCompilationContext ctx(function);
-			calculateOffsets(ctx);
+			vm::loader::compiler::detail::FunctionStackContext ctx
+				= calculateStackContext(function);
+
+			low::MicroBytecode bytecode = lowerInstructions(ctx);
 
 			// Calculate the functions metadata.
 			code::FuncSignature        signature       = function.signature;
@@ -175,12 +175,11 @@ namespace vm::loader::compiler::safe {
 			parameters.reserve(signature.parameters.size());
 
 			for (const auto& param: signature.parameters) {
-				CRef<code::valid_type::ValidType> type = high_program.getTypeContext().getCurrentTypes().at(param.str);
+				CRef<code::valid_type::ValidType> type
+					= high_program.getTypeContext().getCurrentTypes().at(param.str);
 				parameters.emplace_back(low_program.getTypes().at(type->getName()));
 				parameters_size += type->getSize();
 			}
-
-			low::MicroBytecode bytecode = lowerInstructions(ctx);
 
 			code::valid_type::TypeSize ret_type_sum = {};
 			std::vector<TypeCRef>      result_types = {};
@@ -261,7 +260,6 @@ namespace vm::loader::compiler::safe {
 		const std::vector<code::ExternalCFunction>& new_functions
 	) {
 		for (const auto& new_func: new_functions) {
-			program_ctx.ext_c_functions.insert(new_func, new_func.name);
 			std::vector<TypeCRef> params = new_func.signature.parameters
 			                             | std::views::transform([this](const auto& param_name) {
 											   return low_program.types->at(param_name);

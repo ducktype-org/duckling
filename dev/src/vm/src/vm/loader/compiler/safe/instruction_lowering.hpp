@@ -65,10 +65,11 @@ namespace vm::loader::compiler::safe::detail {
 	 * from temporary label IDs to label offsets used later by `Compiler::linkLabelArguments`.
 	 */
 	class MicroBytecodeBuilder {
-		safe::SafeCompiler&                                       compiler;
-		vm::loader::compiler::detail::FunctionCompilationContext& ctx;
+		safe::SafeCompiler&                                             compiler;
+		const vm::loader::compiler::detail::FunctionStackContext& ctx;
 
 		base::HashMap<usize, usize> label_id_to_offset{};
+		base::HashMap<base::StrID, usize> label_name_to_id{};
 		usize                       next_instruction_index = 0;
 
 		low::MicroBytecode result;
@@ -79,8 +80,8 @@ namespace vm::loader::compiler::safe::detail {
 
 	public:
 		MicroBytecodeBuilder(
-			safe::SafeCompiler&                                       compiler,
-			vm::loader::compiler::detail::FunctionCompilationContext& ctx
+			safe::SafeCompiler&                                             compiler,
+			const vm::loader::compiler::detail::FunctionStackContext& ctx
 		):
 			  compiler{ compiler },
 			  ctx{ ctx } {}
@@ -114,7 +115,7 @@ namespace vm::loader::compiler::safe::detail {
 				return u64(arg);
 			} else {
 				return compiler.template lowerArgument<std::remove_cvref_t<HighArg>, LowArg>(
-					ctx, arg
+					ctx, label_name_to_id, arg
 				);
 			}
 		}
@@ -139,7 +140,7 @@ namespace vm::loader::compiler::safe::detail {
 		}
 
 		void addLabel(opargs::Label label) {
-			usize lid = compiler.lowerArgument<opargs::Label, low::opargs::Label>(ctx, label);
+			usize lid = compiler.lowerArgument<opargs::Label, low::opargs::Label>(ctx, label_name_to_id, label);
 			label_id_to_offset.put(lid, next_instruction_index);
 		}
 	};

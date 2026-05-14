@@ -155,6 +155,7 @@ namespace vm::low {
 
 		// Contains all method names in the program. It's used by the executor to determine the
 		// names of called functions.
+		// @TODO: #2685 This is redundant, u64 is as fast as base::StrID.
 		base::HashMap<u64, base::StrID> method_name_pool{};
 	};
 

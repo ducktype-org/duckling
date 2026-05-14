@@ -179,6 +179,11 @@ namespace vm {
 		virtual api::ThreadID getMainThreadID() = 0;
 
 	public:
+		IVMProcess(const IVMProcess&)            = delete;
+		IVMProcess(IVMProcess&&)                 = delete;
+		IVMProcess& operator=(const IVMProcess&) = delete;
+		IVMProcess& operator=(IVMProcess&&)      = delete;
+
 		ProcIO& getIO();
 
 		/**

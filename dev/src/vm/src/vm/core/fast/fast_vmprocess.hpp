@@ -1,6 +1,14 @@
 #pragma once
 
+#include "fast_vmthread.hpp"
+
+#include "base/collections/object_pool.hpp"
+
+#include "vm/api/data/thread_id.hpp"
+#include <vm/core/fast/program/program.hpp>
 #include <vm/core/process/vmprocess.hpp>
+#include <vm/loader/compiler/fast/fast_compiler.hpp>
+#include <vm/loader/loader.hpp>
 #include <vm/utils/vm_not_implemented.hpp>
 
 namespace vm::fast {
@@ -9,15 +17,16 @@ namespace vm::fast {
 		explicit FastVMProcess(PID pid);
 		~FastVMProcess() override = default;
 
-		Ref<VmValue> createVmValue(TypeCRef type) override;
+		Ref<VmValue> createVmValue(vm::TypeCRef type) override;
 
-		Ref<VmValue> createVmValue(TypeCRef type, Pointer src) override;
+		Ref<VmValue> createVmValue(vm::TypeCRef type, Pointer src) override;
 
-		Box<VmValue> createOwnedVmValue(TypeCRef type) override;
+		Box<VmValue> createOwnedVmValue(vm::TypeCRef type) override;
 
-		Box<VmValue> createOwnedVmValue(TypeCRef type, Pointer src) override;
+		Box<VmValue> createOwnedVmValue(vm::TypeCRef type, Pointer src) override;
 
-		std::expected<api::Response, api::ApiError> doRequest(const api::RequestVariant& request
+		std::expected<api::Response, api::ApiError> doRequest(
+			const api::RequestVariant& request
 		) override;
 
 
@@ -39,6 +48,7 @@ namespace vm::fast {
 		std::expected<api::Response, api::ApiError> stop() override;
 
 
+
 	protected:
 		std::expected<api::Response, api::StateError> getExitCode() override;
 
@@ -50,7 +60,8 @@ namespace vm::fast {
 
 		base::Optional<api::ApiError> stepVMThread(api::ThreadID thread_id) override;
 
-		std::expected<api::Response, api::ApiError> getVMThreadCurrentPosition(api::ThreadID thread_id
+		std::expected<api::Response, api::ApiError> getVMThreadCurrentPosition(
+			api::ThreadID thread_id
 		) override;
 
 		std::expected<api::Response, api::ApiError> getNumberOfCurrentStackFrames(
@@ -65,14 +76,28 @@ namespace vm::fast {
 
 		void waitForBreakpoint() override;
 
-		std::expected<api::Response, api::ApiError> getTypeMetadata(const std::string& type_name
+		std::expected<api::Response, api::ApiError> getTypeMetadata(
+			const std::string& type_name
 		) override;
 
-		std::expected<api::Response, api::ApiError> getVMValueForType(const std::string& type_name
+		std::expected<api::Response, api::ApiError> getVMValueForType(
+			const std::string& type_name
 		) override;
 
 		std::vector<api::ThreadID> getAllThreadIDs() override;
 
+		FastVMThread& getMainVMThread();
+
+		base::Optional<Ref<FastVMThread>> getVMThreadByID(api::ThreadID thread_id);
+
 		api::ThreadID getMainThreadID() override;
+
+	private:
+		base::StableObjectPool<FastVMThread, api::ThreadID, false, true> vm_threads;
+
+		std::mutex data_lock;
+
+		loader::Loader                       loader;
+		loader::compiler::fast::FastCompiler compiler{ *loader.getHighProgram() };
 	};
 }

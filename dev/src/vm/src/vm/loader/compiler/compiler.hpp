@@ -9,53 +9,19 @@
 namespace vm::loader::compiler {
 	namespace detail {
 		/**
-		 * @brief Stores the shared, global state required for the entire compilation process.
-		 */
-		struct ProgramCompilationContext {
-			/**
-			 * @brief A mapping from a method's string name (`StrID`) to its unique numeric ID.
-			 * This is a crucial lookup table used during the instruction lowering phase to
-			 * resolve symbolic method names into numeric IDs.
-			 */
-			base::HashMap<base::StrID, u64> method_name_to_id;
-			/**
-			 * @brief A complete list of all bytecode functions which will be added in the
-			 * compilation process. Used when lowering call instructions to translate the function
-			 * name to it's index.
-			 */
-			ObjIdNameMap<code::Function> function_forward_declarations;
-
-			/**
-			 * @brief All available ExternCFunctions callable from the program.
-			 * Used when lowering call_cfunc instructions to translate the function name to it's
-			 * index.
-			 */
-			ObjIdNameMap<code::ExternalCFunction> ext_c_functions;
-
-			/**
-			 * @brief Count of the global variables compiled up to this point.
-			 */
-			usize global_count = 0;
-			/**
-			 * @brief Total size of the globals compiled up to this point, in bytes.
-			 */
-			Bytes global_buffer_size = Bytes(0);
-		};
-
-		/**
 		 * @brief A structure holding the intermediate state for the compilation of a single function.
 		 */
-		struct FunctionCompilationContext {
-			FunctionCompilationContext(const code::Function& func): function(func) {}
+		struct FunctionStackContext {
+			FunctionStackContext(const code::Function& func): function(func) {}
 
 			/// The high level function definition.
 			const code::Function& function;
-			/// Temporary label IDs used before label linking.
-			base::HashMap<base::StrID, usize> label_id_map;
 
 			struct LocalEntry {
-				code::valid_type::TypeSize    offset;
-				u64                           block_idx;
+				code::valid_type::TypeSize offset;
+				u64 stack_index;  /// The index of the local variable in the function's local
+				                  /// stack, always equal to the size of the type stack at the
+				                  /// moment of the variable declaration.
 				code::valid_type::ValidTypeID type;
 			};
 
@@ -83,10 +49,11 @@ namespace vm::loader::compiler {
 	 * @class Compiler
 	 * @brief A stateful, incremental bytecode compiler.
 	 *
-	 * This class acts as a builder for a low-level programs. It maintains an internal,
-	 * low-level representation of the program and updates it incrementally on recompile calls.
-	 * This stateful approach avoids recompiling the entire program on each
-	 * code injection, compiling only the new elements (types, globals, and functions).
+	 * This class acts as a base-class for builders of low-level programs. Does not maintain an
+	 * internal state, however subclasses are very welcome to do so. The main point of this class is
+	 * to provide the `recompile` method, which performs an incremental compilation of the program.
+	 * This stateful approach avoids recompiling the entire program on each code
+	 * injection, compiling only the new elements (types, globals, and functions).
 	 */
 	class Compiler {
 	public:
@@ -118,8 +85,6 @@ namespace vm::loader::compiler {
 
 	protected:
 		const code::ValidProgram& high_program;
-
-		detail::ProgramCompilationContext program_ctx;
 
 		/**
 		 * @brief Processes newly added types and adds them to the existing type_metadata.
@@ -158,16 +123,22 @@ namespace vm::loader::compiler {
 			const std::vector<code::ExternalCFunction>& new_functions
 		) = 0;
 
-		virtual ProgramSize getCurrentProgramSize() const = 0;
+		/**
+		 * @brief Retrieves the current size of the compiled program, in terms of its various
+		 * components (functions, types, globals, etc.). This information is crucial for the
+		 * incremental compilation process, as it allows the compiler to identify which elements of
+		 * the `high_program` are new and need to be compiled.
+		 * @return A `ProgramSize` struct containing the counts of various program components.
+		 */
+		[[nodiscard]] virtual ProgramSize getCurrentProgramSize() const = 0;
 
 		/**
 		 * @brief Calculates the stack offsets of stack variables.
 		 * Since in ValidProgram variables are represented by names not indexes on the stack.
-		 * This function creates an offset map which is used in `lowerInstructions` to change the
-		 * variable names to numeric offsets.
-		 * @note Assumes all variables in the program have a unique name.
+		 * This function creates an offset map which is used during lowering instructions to change
+		 * the variable names to numeric offsets.
 		 */
-		void calculateOffsets(detail::FunctionCompilationContext& ctx);
+		detail::FunctionStackContext calculateStackContext(const code::Function& function);
 	};
 
 }

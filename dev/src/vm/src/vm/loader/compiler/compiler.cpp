@@ -23,7 +23,8 @@
 
 namespace vm::loader::compiler {
 
-	void Compiler::calculateOffsets(detail::FunctionCompilationContext& ctx) {
+	 detail::FunctionStackContext Compiler::calculateStackContext(const code::Function& function) {
+		detail::FunctionStackContext ctx(function);
 		decltype(ctx.locals_map)                result;
 		std::vector<code::valid_type::TypeSize> type_size_stack;
 		code::valid_type::TypeSize              curr_stack_size{};
@@ -44,7 +45,7 @@ namespace vm::loader::compiler {
 			result.put(
 				local.var_name,
 				{ .offset    = curr_stack_size,
-			      .block_idx = type_size_stack.size(),
+			      .stack_index = type_size_stack.size(),
 			      .type      = type_ref->getID() }
 			);
 			code::valid_type::TypeSize type_size = type_ref->getSize();
@@ -142,7 +143,7 @@ namespace vm::loader::compiler {
 					dfs_stack.pop_back();
 				}
 				instr_case(Op_call_func, instr) {
-					usize number_of_params = program_ctx.function_forward_declarations
+					usize number_of_params = high_program.functions()
 					                             .at(instr.function.function_name)
 					                             ->signature.parameters.size();
 					for (usize i = 0; i < number_of_params; i++) pop();
@@ -159,9 +160,9 @@ namespace vm::loader::compiler {
 					index++;
 				}
 				instr_case(Op_call_cfunc, instr) {
-					for (usize i = 0;
-					     i < program_ctx.ext_c_functions.at(instr.function.function_name)
-					             ->signature.parameters.size();
+					for (usize i = 0; i < high_program.extCFunctions()
+					                          .at(instr.function.function_name)
+					                          ->signature.parameters.size();
 					     i++) {
 						pop();
 					}
@@ -183,6 +184,7 @@ namespace vm::loader::compiler {
 		ctx.locals_map        = std::move(result);
 		ctx.local_stack_size  = max_stack_size;
 		ctx.local_block_count = max_block_count;
+		return ctx;
 	}
 
 	void Compiler::recompile() {

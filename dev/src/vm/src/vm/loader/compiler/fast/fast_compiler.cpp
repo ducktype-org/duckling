@@ -4,7 +4,9 @@
 
 #include "base/except/exceptions.hpp"
 
-#include "vm/bytecode/bytecode.hpp"
+#include <vm/bytecode/bytecode.hpp>
+#include <vm/loader/compiler/compiler.hpp>
+#include <vm/loader/compiler/fast/instruction_lowering.hpp>
 
 #include <algorithm>
 
@@ -22,9 +24,7 @@ CRef<vm::fast::ProgramBase> vm::loader::compiler::fast::FastCompiler::getProgram
 void fast::FastCompiler::compileNewTypes(const std::vector<valid_type::ValidType>& new_types) {
 	if (std::ranges::empty(new_types)) return;
 
-	vm::fast::detail::rebuildFastTypeCollection(
-		&program.types, high_program.getTypeContext().getCurrentTypes()
-	);
+	rebuildFastTypeCollection(&program.types, high_program.getTypeContext().getCurrentTypes());
 }
 
 void fast::FastCompiler::compileNewGlobals(const std::vector<GlobalData>& new_globals) {
@@ -43,7 +43,13 @@ void fast::FastCompiler::compileNewGlobals(const std::vector<GlobalData>& new_gl
 }
 
 void fast::FastCompiler::compileNewFunctions(const std::vector<Function>& new_functions) {
-	throw base::NotYetImplemented("Function compilation is not yet implemented in FastCompiler");
+	for(const Function& function: new_functions) {
+		detail::FunctionStackContext ctx = calculateStackContext(function);
+		vm::fast::reloc::RelocFunction reloc_func{
+			.id   = vm::fast::FunctionID(program.functions.size()),
+			.data = lowerInstructions(high_program, ctx)
+		};
+	}
 }
 
 void fast::FastCompiler::compileNewExtCFunctions(

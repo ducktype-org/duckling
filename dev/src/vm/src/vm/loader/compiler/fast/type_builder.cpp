@@ -7,18 +7,18 @@
 #include <vm/bytecode/validator/valid_type/valid_type.hpp>
 
 using namespace vm::code;
-using namespace vm::fast;
+using namespace vm::loader::compiler::fast;
 
 namespace {
 	void declareTypes(
-		Ref<TypeCollection>                             type_collection,
+		Ref<vm::fast::TypeCollection>                   type_collection,
 		const std::vector<CRef<valid_type::ValidType>>& new_types
 	) {
 		for (CRef<valid_type::ValidType> type: new_types) {
 			type_collection->insert(
-				Type::declareType(
+				vm::fast::Type::declareType(
 					type->getName(),
-					TypeID(type->getID().asInt()),
+					vm::fast::TypeID(type->getID().asInt()),
 					type->getSize().assumePointerSize(Bytes(8))
 				),
 				type->getName()
@@ -27,13 +27,14 @@ namespace {
 	}
 
 	void defineTypes(
-		Ref<TypeCollection>                                   type_collection,
+		Ref<vm::fast::TypeCollection>                         type_collection,
 		const vm::code::valid_type::ValidTypeMap&             types_ctx,
 		const std::vector<vm::code::valid_type::ValidTypeID>& new_types
 	) {
 		auto convert_type_ids_to_crefs = [&](const std::vector<valid_type::ValidTypeID>& type_ids) {
-			return type_ids | std::views::transform([&](valid_type::ValidTypeID id) -> TypeCRef {
-					   return type_collection->at(TypeID(id.asInt()));
+			return type_ids
+			     | std::views::transform([&](valid_type::ValidTypeID id) -> vm::fast::TypeCRef {
+					   return type_collection->at(vm::fast::TypeID(id.asInt()));
 				   })
 			     | std::ranges::to<std::vector>();
 		};
@@ -81,23 +82,32 @@ namespace {
 				variant_case(valid_type::finalized::Opaque, opaque) {
 					type_collection->at(type.getName())->defineOpaque(opaque.size);
 				}
+				variant_default { CORE_PANIC("Unhandled type during type building"); }
 			}
 		}
 	}
 }
 
-void detail::rebuildFastTypeCollection(
-	Ref<TypeCollection> type_collection, const valid_type::ValidTypeMap& types
+void rebuildFastTypeCollection(
+	Ref<vm::fast::TypeCollection> type_collection, const valid_type::ValidTypeMap& type_ctx
 ) {
+	std::vector<CRef<valid_type::ValidType>> new_types_vec
+		= type_ctx | std::views::drop(type_collection->size())
+	    | std::views::transform([](const auto& type) { return CRef(&type); })
+	    | std::ranges::to<std::vector>();
+
 	// Declare new types.
 	declareTypes(type_collection, new_types_vec);
+
 	// Well define new types.
-	defineTypes(type_collection, types, new_types_vec | std::views::transform([](const auto& type) {
-											return type->getID();
-										}) | std::ranges::to<std::vector>());
+	defineTypes(
+		type_collection, type_ctx, new_types_vec | std::views::transform([](const auto& type) {
+									   return type->getID();
+								   }) | std::ranges::to<std::vector>()
+	);
 
 	// Sanity assert
-	for (const auto& type: types) {
+	for (const auto& type: type_ctx) {
 		CORE_ASSERT(
 			static_cast<usize>(type_collection->at(type.getName())->getID()) == type.getID().asInt(),
 			"Type ID mismatch after rebuilding type collection"

@@ -1,30 +1,33 @@
 #include "fast_vmprocess.hpp"
 
+#include "vm/loader/logger.hpp"
 #include <vm/core/process/vmprocess.hpp>
 #include <vm/utils/vm_not_implemented.hpp>
 
 namespace vm::fast {
-	FastVMProcess::FastVMProcess(PID pid): IVMProcess(pid) {}
+	FastVMProcess::FastVMProcess(PID pid): IVMProcess(pid) {
+		vm_threads.add(*this);
+	}
 
-	Ref<VmValue> FastVMProcess::createVmValue([[maybe_unused]] TypeCRef type) {
+	Ref<VmValue> FastVMProcess::createVmValue([[maybe_unused]] vm::TypeCRef type) {
 		// @TODO: #2102 Implement this pure virtual method.
 		throw vm::VMNotImplemented("Method `createVmValue` is not implemented.");
 	}
 
 	Ref<VmValue> FastVMProcess::createVmValue(
-		[[maybe_unused]] TypeCRef type, [[maybe_unused]] Pointer src
+		[[maybe_unused]] vm::TypeCRef type, [[maybe_unused]] Pointer src
 	) {
 		// @TODO: #2102 Implement this pure virtual method.
 		throw vm::VMNotImplemented("Method `createVmValue` is not implemented.");
 	}
 
-	Box<VmValue> FastVMProcess::createOwnedVmValue([[maybe_unused]] TypeCRef type) {
+	Box<VmValue> FastVMProcess::createOwnedVmValue([[maybe_unused]] vm::TypeCRef type) {
 		// @TODO: #2102 Implement this pure virtual method.
 		throw vm::VMNotImplemented("Method `createOwnedVmValue` is not implemented.");
 	}
 
 	Box<VmValue> FastVMProcess::createOwnedVmValue(
-		[[maybe_unused]] TypeCRef type, [[maybe_unused]] Pointer src
+		[[maybe_unused]] vm::TypeCRef type, [[maybe_unused]] Pointer src
 	) {
 		// @TODO: #2102 Implement this pure virtual method.
 		throw vm::VMNotImplemented("Method `createOwnedVmValue` is not implemented.");
@@ -45,24 +48,55 @@ namespace vm::fast {
 	std::expected<api::Response, api::LoadProgramError> FastVMProcess::loadProgram(
 		[[maybe_unused]] const std::variant<std::vector<fs::File>, code::CodeCollection>& source
 	) {
-		// @TODO: #2102 Implement this pure virtual method.
-		throw vm::VMNotImplemented("Method `loadProgram` is not implemented.");
+		std::scoped_lock                          lock(data_lock);
+		std::expected<void, loader::LoaderLogger> code_result = [&] {
+			variant_match(source) {
+				variant_case(std::vector<fs::File>, files) { return loader.loadAndCompile(files); }
+				variant_case(code::CodeCollection, code) { return loader.loadAndCompile(code); }
+			}
+			CORE_UNREACHABLE();
+		}();
+
+		if (code_result.has_value()) {
+			compiler.recompile();
+			return api::Response(api::response::Empty());
+		} else {
+			std::stringstream ss;
+			code_result.error().dump(ss);
+			return std::unexpected(api::LoadProgramError{ ss.str() });
+		}
 	}
 
 	std::expected<api::Response, api::ApiError> FastVMProcess::runFunction(
-		[[maybe_unused]] const std::string&  func_name,
-		[[maybe_unused]] const RunArguments& run_arguments
+		const std::string& func_name, const RunArguments& run_arguments
 	) {
-		// @TODO: #2102 Implement this pure virtual method.
-		throw vm::VMNotImplemented("Method `runFunction` is not implemented.");
+		std::unique_lock lock(data_lock);
+		FastVMThread&    thread = getEmptyThread();
+		thread.setThreadCtx(func_name);
+		bool response = thread.spawnThreadAndRun(func_name, run_arguments);
+
+		if (!response) {
+			thread.setThreadCtx("");
+			return std::unexpected(api::ApiError{
+				api::RunError{ "Failed to spawn thread for function: " + func_name } });
+		}
+		return api::Response(thread.getThreadID());
 	}
 
 	std::expected<api::Response, api::ApiError> FastVMProcess::runFunctionAwait(
-		[[maybe_unused]] const std::string&  func_name,
-		[[maybe_unused]] const RunArguments& run_arguments
+		const std::string& func_name, const RunArguments& run_arguments
 	) {
-		// @TODO: #2102 Implement this pure virtual method.
-		throw vm::VMNotImplemented("Method `runFunctionAwait` is not implemented.");
+		std::unique_lock lock(data_lock);
+
+		getMainVMThread().runNoSpawn(func_name, run_arguments);
+		variant_match(getStatus()) {
+			variant_case(api::ExecutionCompleted, completed) { return completed.exit_value; }
+			variant_default return std::unexpected(api::StateError(
+				hasExecutionStarted(getStatus()) ? "Execution did not complete"
+												 : "Execution did not start"
+			));
+		}
+		CORE_UNREACHABLE();
 	}
 
 	std::expected<api::Response, api::ApiError> FastVMProcess::join(
@@ -76,6 +110,14 @@ namespace vm::fast {
 		// @TODO: #2102 Implement this pure virtual method.
 		throw vm::VMNotImplemented("Method `stop` is not implemented.");
 	}
+
+	FastVMThread& FastVMProcess::getMainVMThread() { return *vm_threads.get(api::ThreadID{ 0 }); }
+
+	base::Optional<Ref<FastVMThread>> FastVMProcess::getVMThreadByID(api::ThreadID thread_id) {
+		if_opt_some(vm_threads.maybeGet(thread_id), thread) return thread;
+		return std::nullopt;
+	}
+
 
 	std::expected<api::Response, api::StateError> FastVMProcess::getExitCode() {
 		// @TODO: #2102 Implement this pure virtual method.
@@ -158,7 +200,7 @@ namespace vm::fast {
 	}
 
 	api::ThreadID FastVMProcess::getMainThreadID() {
-		// @TODO: #2102 Implement this pure virtual method.
-		throw vm::VMNotImplemented("Method `getMainThreadID` is not implemented.");
+		std::scoped_lock lock(data_lock);
+		return getMainVMThread().getThreadID();
 	}
 }
