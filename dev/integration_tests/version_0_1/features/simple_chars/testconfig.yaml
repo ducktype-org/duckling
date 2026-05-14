@@ -5,13 +5,8 @@ Tests:
   simple_chars_test:
     Description: Tests for char type.
     Cases:
-      llvm:
-        backend: llvm
-        Output:
-          String: "65\n90\n48\n57\n1\n2\n3\n4\n"
-        ExitCode: 0
-      dvm:
-        backend: dvm
+      all:
+        backend: all
         Output:
           String: "65\n90\n48\n57\n1\n2\n3\n4\n"
         ExitCode: 0
@@ -19,13 +14,8 @@ Tests:
   char_escapes_test:
     Description: Tests for char escape sequences.
     Cases:
-      llvm:
-        backend: llvm
-        Output:
-          String: "10\n9\n13\n92\n39\n34\n1\n2\n32\n3\n4\n"
-        ExitCode: 0
-      dvm:
-        backend: dvm
+      all:
+        backend: all
         Output:
           String: "10\n9\n13\n92\n39\n34\n1\n2\n32\n3\n4\n"
         ExitCode: 0
@@ -33,15 +23,8 @@ Tests:
   chars_borrowed_test:
     Description: Test taken straight from compiler tests directory.
     Cases:
-      llvm:
-        backend: llvm
-        Input:
-          String: "Xd;"
-        Output:
-          String: "Enter a character: The provided character is uppercase.\nIts lowercase counterpart is: x\nEnter a character: The provided character is lowercase.\nIts uppercase counterpart is: D\nEnter a character: The provided character is not a letter.\n"
-        ExitCode: 0
-      dvm:
-        backend: dvm
+      all:
+        backend: all
         Input:
           String: "Xd;"
         Output:

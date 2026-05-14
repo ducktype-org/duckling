@@ -5,26 +5,16 @@ Tests:
   primitive_booleans_test:
     Description: Tests for primitive boolean types and operations.
     Cases:
-      llvm:
-        backend: llvm
-        Output:
-          String: "1\n3\n5\n7\n9\n11\n"
-        ExitCode: 0
-      dvm:
-        backend: dvm
+      all:
+        backend: all
         Output:
           String: "1\n3\n5\n7\n9\n11\n"
         ExitCode: 0
   boolean_expressions_test:
     Description: Tests for primitive boolean types and operations.
     Cases:
-      llvm:
-        backend: llvm
-        Output:
-          String: "100\n200\n50\n20\n1\n2\n3\n4\n5\n10\n15\n"
-        ExitCode: 0
-      dvm:
-        backend: dvm
+      all:
+        backend: all
         Output:
           String: "100\n200\n50\n20\n1\n2\n3\n4\n5\n10\n15\n"
         ExitCode: 0

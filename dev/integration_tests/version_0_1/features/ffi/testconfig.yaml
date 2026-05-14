@@ -13,7 +13,7 @@ Run: "./build/package_llvm.exe"
 Tests:
   ffi:
     Cases:
-      default:
+      all:
         Output:
           String: "Hello from C!\nHello from C!\n1\nHello from C!\n"
         ExitCode: 0

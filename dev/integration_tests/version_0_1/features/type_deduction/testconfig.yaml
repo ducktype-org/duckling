@@ -5,13 +5,8 @@ Tests:
   type_deduction_test:
     Description: Tests for type deduction/inference.
     Cases:
-      llvm:
-        backend: llvm
-        Output:
-          String: "42\n42\n42\n100\n1\n84\n200\n99\n-50\n"
-        ExitCode: 0
-      dvm:
-        backend: dvm
+      all:
+        backend: all
         Output:
           String: "42\n42\n42\n100\n1\n84\n200\n99\n-50\n"
         ExitCode: 0
@@ -19,13 +14,8 @@ Tests:
   type_inference_advanced_test:
     Description: Tests for complex type inference scenarios.
     Cases:
-      llvm:
-        backend: llvm
-        Output:
-          String: "255\n10\n15\n88\n3\n4\n500\n1\n2\n27\n10\n71\n"
-        ExitCode: 0
-      dvm:
-        backend: dvm
+      all:
+        backend: all
         Output:
           String: "255\n10\n15\n88\n3\n4\n500\n1\n2\n27\n10\n71\n"
         ExitCode: 0

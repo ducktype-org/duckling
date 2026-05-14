@@ -4,13 +4,8 @@ Tests:
   unit_as_a_type:
     Description: Test for using implicit value of () as a type.
     Cases:
-      llvm:
-        backend: llvm
-        Output:
-          String: "1\n2\n3\n4\n5\n6\n"
-        ExitCode: 0
-      dvm:
-        backend: dvm
+      all:
+        backend: all
         Output:
           String: "1\n2\n3\n4\n5\n6\n"
         ExitCode: 0

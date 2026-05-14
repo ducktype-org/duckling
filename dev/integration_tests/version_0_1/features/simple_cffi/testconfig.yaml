@@ -7,13 +7,8 @@ Tests:
   cffi_libc_test:
     Description: Tests for CFFI in complex contexts.
     Cases:
-      llvm:
-        backend: llvm
-        Output:
-          String: "5\n7\n1\n6\n42\n100\n7\n"
-        ExitCode: 0
-      dvm:
-        backend: dvm
+      all:
+        backend: all
         Output:
           String: "5\n7\n1\n6\n42\n100\n7\n"
         ExitCode: 0

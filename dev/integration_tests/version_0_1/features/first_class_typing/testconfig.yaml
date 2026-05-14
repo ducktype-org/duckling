@@ -5,13 +5,8 @@ Tests:
   first_class_typing_test:
     Description: Tests for first-class typing features.
     Cases:
-      llvm:
-        backend: llvm
-        Output:
-          String: "4\n6\n6\n8\n25\n100\n50\n200\n"
-        ExitCode: 0
-      dvm:
-        backend: dvm
+      all:
+        backend: all
         Output:
           String: "4\n6\n6\n8\n25\n100\n50\n200\n"
         ExitCode: 0
@@ -19,12 +14,8 @@ Tests:
   type_values_test:
     Description: Tests for type conversions and casts.
     Cases:
-      llvm:
-        backend: llvm
-        Output:
-          String: "100\n100\n100\n5\n10\n1000\n50\n3\n42\n25\n"
-        ExitCode: 0      dvm:
-        backend: dvm
+      all:
+        backend: all
         Output:
           String: "100\n100\n100\n5\n10\n1000\n50\n3\n42\n25\n"
         ExitCode: 0
