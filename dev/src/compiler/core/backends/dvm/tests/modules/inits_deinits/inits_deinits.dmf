@@ -1,4 +1,4 @@
-# This test is mean to be hard to perform init/deinit analysys on
+# This test is meant to be hard to perform init/deinit analysis on
 
 fun foo(arg : i32) -> i32 = {
     var a = 0;

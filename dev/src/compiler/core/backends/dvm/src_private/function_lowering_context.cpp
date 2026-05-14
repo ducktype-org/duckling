@@ -338,7 +338,7 @@ DVMValue FunctionLoweringContext::lowerLirValue(const lir::LIRValue& lir_value) 
 }
 
 const DVMPlace& FunctionLoweringContext::getOrInsertLirLocal(lir::LIRLocalRef local) {
-	if (!lir_local_to_dvm.contains(local)) auto new_local = createLirLocalToDVMMapping(local);
+	if (!lir_local_to_dvm.contains(local)) return createLirLocalToDVMMapping(local);
 	return lir_local_to_dvm.at(local);
 }
 

@@ -134,7 +134,7 @@ namespace compiler::mir {
 ID_STD_HASH(::compiler::mir::BlockID);
 
 /**
- * @brief These are flag types attached to the MIRPlace
+ * @brief These are flag types attached to the MIRLocal
  * used to mark that we want some behaviour in the MIR passes or not on the variable.
  *
  * May also denote some properties of the variable, like whether it is a return value or not.

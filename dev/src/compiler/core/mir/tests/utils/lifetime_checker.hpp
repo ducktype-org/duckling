@@ -1,5 +1,5 @@
 /**
- * @file lifetime_validator.hpp
+ * @file lifetime_checker.hpp
  * @brief Helper for validating lifetime sequences in MIR functions
  * It allows to specify the order of the expected lifetime events (constructions, destructions,
  moves) and specific instructions,
@@ -15,6 +15,7 @@
 #include <string>
 #include <variant>
 #include <vector>
+#include <iostream>
 
 namespace compiler::mir::test_utils {
 

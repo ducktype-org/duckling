@@ -1,7 +1,7 @@
 # Init and deinit propagation from MIR to the DVM Backend
 
 ## Motivation 
-We want to have the init and deinit created in correct places, so that we have lower maximal stack size in the VM and we can track the lifetime of variables, to detect when we use a variable that has deallocated from the stack:
+We want to have the init and deinit created in correct places, so that we have lower maximal stack size in the VM and we can track the lifetime of variables, to detect when we use a variable that has been deallocated from the stack:
 
 ```c
 let p: ptr i64;
@@ -13,11 +13,11 @@ let p: ptr i64;
     let z = 30;
     print(p); // in C/C++ we would print 30, but we would like to throw an error
     // in order to do so, we have to add `init/deinit` denoting that a variable
-    // goes out of scope and it's scope starts
+    // goes out of scope and its scope starts
 }
 ```
 
-Note that it's not the same thing as constructos/destructors, as a constructor for example can be a simple assignment `x = 20` and we have to add init before that and add deinit after the destructor.
+Note that it's not the same thing as constructors/destructors, as a constructor for example can be a simple assignment `x = 20` and we have to add init before that and add deinit after the destructor.
 
 ```dbc
 init(x)

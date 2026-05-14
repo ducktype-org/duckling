@@ -36,6 +36,7 @@ public:
 		TESTER_ADD_TEST(simpleLifetimeSequenceTest);
 		TESTER_ADD_TEST(lifetimeFlagsRepeatedBlocks);
 		TESTER_ADD_TEST(lifetimeFlagsSingleBlock);
+		TESTER_ADD_TEST(lifetimeFlagsNestedBlocks);
 	}
 
 private:

@@ -36,6 +36,7 @@ public:
 		// TESTER_ADD_TEST(recordsTest);
 		TESTER_ADD_TEST(staticArrayTest);
 		TESTER_ADD_TEST(unitsTest);
+		TESTER_ADD_TEST(initsDeinitsTest);
 	}
 
 protected:
