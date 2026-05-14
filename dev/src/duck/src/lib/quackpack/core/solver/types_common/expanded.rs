@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use std::hash::Hash;
 use std::ops::Deref;
 use std::path::PathBuf;
 use std::sync::{Mutex, OnceLock};
@@ -18,7 +19,7 @@ use crate::{QuackResult, QuackResultContext, StrId, qp_bail_internal};
 static INTERNED_EXPANDED_LOCATION_CACHE: OnceLock<Mutex<HashSet<&'static ExpandedLocation>>> =
     OnceLock::new();
 
-#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy)]
 /// Interned version of [`Location`].
 pub struct InternedExpandedLocation {
     inner: &'static ExpandedLocation,
@@ -75,6 +76,23 @@ impl Deref for InternedExpandedLocation {
 impl AsRef<ExpandedLocation> for InternedExpandedLocation {
     fn as_ref(&self) -> &'static ExpandedLocation {
         self.inner
+    }
+}
+
+impl PartialEq for InternedExpandedLocation {
+    fn eq(&self, other: &Self) -> bool {
+        // If we have two equal InternedExpandedLocations, their underlying &ExpandedLocation is equal.
+        // That &ExpandedLocation is stored exactly once in INTERNED_EXPANDED_LOCATION_CACHE, so we can compare by comparing pointers,
+        // which is faster.
+        std::ptr::eq(self.inner, other.inner)
+    }
+}
+
+impl Eq for InternedExpandedLocation {}
+
+impl Hash for InternedExpandedLocation {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        std::ptr::hash(self.inner, state);
     }
 }
 
