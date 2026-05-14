@@ -5,11 +5,13 @@
 #include <frontend/pst_parser/elements/hierarchy/actions/return.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/assignment.hpp>
+#include <frontend/pst_parser/elements/hierarchy/expressions/block_expr.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/expr_stmt.hpp>
 #include <frontend/pst_parser/pst_visitor.hpp>
 #include <helios/hout/elements.hpp>
+#include <helios/hout/elements/stmt.hpp>
 #include <helios/hout/origin.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/tsh/queries/types.hpp>
@@ -30,10 +32,11 @@
 namespace compiler::helios {
 
 	// Forward declaration for processBlock so HoutStmtMaker can call it.
+	template<class Container>
+	requires std::same_as<Container, pst::CodeBlock>
+	      || std::same_as<Container, pst::CodeBlockOrStmt>
 	static code::CodeBlock processBlock(
-		query::Context&                         ctx,
-		pst::AccessLocked<pst::CodeBlockOrStmt> container,
-		tsh::SymbolType<>                       return_type
+		query::Context& ctx, pst::AccessLocked<Container> container, tsh::SymbolType<> return_type
 	);
 
 	/**
@@ -196,6 +199,12 @@ namespace compiler::helios {
 				handleAssignmentExpr(assignment_opt.value());
 				return;
 			}
+			// as before, if we encounter an code block expression we want a block statement
+			if (auto block_opt = inner_expr.dynamicCast<pst::expr::BlockExpr>()) {
+				auto block_body = processBlock(ctx, block_opt.value()->getBlock(), return_type);
+				output(code::BlockStmt(code::pstOrigin(stmt), std::move(block_body)));
+				return;
+			}
 
 			// else just create an expression statement:
 
@@ -289,6 +298,11 @@ namespace compiler::helios {
 			}
 		}
 
+		void visitBlock(pst::Access<pst::Block> stmt) override {
+			auto block_body = processBlock(ctx, stmt->getCodeBlock(), return_type);
+			output(code::BlockStmt(code::pstOrigin(stmt), std::move(block_body)));
+		}
+
 		void visitConst(pst::Access<pst::Const>) override {
 			// Consts inside functions do not produce any HOUT statement.
 			// They are translated to HOUT global data instead.
@@ -358,10 +372,11 @@ namespace compiler::helios {
 	 * resulting CodeBlock by value. Called from the compileCodeOfCodeBlock
 	 * helper and recursively within HoutStmtMaker for nested blocks (if/while bodies).
 	 */
+	template<class Container>
+	requires std::same_as<Container, pst::CodeBlock>
+	      || std::same_as<Container, pst::CodeBlockOrStmt>
 	static code::CodeBlock processBlock(
-		query::Context&                         ctx,
-		pst::AccessLocked<pst::CodeBlockOrStmt> container,
-		tsh::SymbolType<>                       return_type
+		query::Context& ctx, pst::AccessLocked<Container> container, tsh::SymbolType<> return_type
 	) {
 		code::CodeBlock block({});
 		for (const auto& stmt: getStmtsFromStmtAggregate(ctx, container)) {

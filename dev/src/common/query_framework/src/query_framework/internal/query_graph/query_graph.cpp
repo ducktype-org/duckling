@@ -29,7 +29,11 @@ namespace query::internal {
 			node_deps->contains(from), "Node not found in dep graph, call the given query first."
 		);
 
-		if (track_reverse_graph) {
+		if (getTrackReverseGraph()) {
+			CORE_ASSERT(
+				query::enable_query_graph,
+				"Reverse graph tracking should only be enabled when query graph is enabled"
+			);
 			node_reverse_deps->maybePutAndUpdate(
 				to,
 				std::vector<NodeID>{},
@@ -349,7 +353,7 @@ namespace query::internal {
 	QueryGraph::Dependents QueryGraph::getDependentNodes(const std::vector<NodeID>& start_nodes
 	) const {
 		CORE_ASSERT(
-			track_reverse_graph,
+			getTrackReverseGraph(),
 			"Reverse graph tracking must be enabled to erase nodes based on dependencies."
 		);
 
@@ -373,7 +377,7 @@ namespace query::internal {
 
 	void QueryGraph::eraseNodes(const QueryGraph::Dependents& nodes_to_erase) {
 		CORE_ASSERT(
-			track_reverse_graph,
+			getTrackReverseGraph(),
 			"Reverse graph tracking must be enabled to erase nodes based on dependencies."
 		);
 

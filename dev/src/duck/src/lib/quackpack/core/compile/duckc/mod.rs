@@ -105,7 +105,7 @@ impl Duckc {
         bcx.pcx
             .ctx()
             .console()
-            .info_verbose(format!("Running `{}`", builder));
+            .info_verbose(format!("Running `{}`", builder))?;
         builder.execute(|| format!("failed to compile package `{}`", this.as_freeze_dep()))?;
         Ok(ArtifactsDir::Default)
     }

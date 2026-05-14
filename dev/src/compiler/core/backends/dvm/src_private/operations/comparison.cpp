@@ -113,8 +113,9 @@ namespace compiler::backend_vm::internal {
 			// a CMP b;
 			// mov x, 0;
 			// cmov x, 1;
-			auto tmp_res
-				= ctx->pushTempLocal(vm::code::PrimitiveType(base::StrID("i8"), 1), "cmp_tmp");
+			auto tmp_res = ctx->pushTempLocal(
+				vm::code::PrimitiveType(base::StrID("i8"), Bytes{ 1 }), "cmp_tmp"
+			);
 			ctx->pushInstruction({ op.op, op.lhs, op.rhs });
 			ctx->pushInstruction({ OpKind::mov, tmp_res, DVMImmediate::u8(u8(0)) });
 			ctx->pushInstruction({ OpKind::cmov, tmp_res, DVMImmediate::u8(u8(1)) });

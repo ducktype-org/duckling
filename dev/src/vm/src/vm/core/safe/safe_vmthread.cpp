@@ -31,8 +31,22 @@
 #include <vector>
 
 namespace vm {
-#define MAKE_BYTECODE_INSTRUCTION(OPCODE_NAME, ARG_0, ARG_1) \
-	makeLowInstruction(low::MicroOpcode::OPCODE_NAME, ARG_0, ARG_1)
+
+#if defined(ENABLE_JIT) and not defined(BUILD_TYPE_RELEASE)
+	// When testing JIT, compile all calls from the start function. Specifically main.
+	#define MAKE_BYTECODE_INSTRUCTION(OPCODE_NAME, ARG_0, ARG_1)         \
+		makeLowInstruction(                                              \
+			low::MicroOpcode::OPCODE_NAME == low::MicroOpcode::call_func \
+				? low::MicroOpcode::jit_call_entrypoint                  \
+				: low::MicroOpcode::OPCODE_NAME,                         \
+			ARG_0,                                                       \
+			ARG_1                                                        \
+		)
+
+#else
+	#define MAKE_BYTECODE_INSTRUCTION(OPCODE_NAME, ARG_0, ARG_1) \
+		makeLowInstruction(low::MicroOpcode::OPCODE_NAME, ARG_0, ARG_1)
+#endif
 
 	SafeVMThread::SafeVMThread(api::ThreadID thread_id, SafeVMProcess& process):
 		  IVMThread(thread_id, process),
@@ -267,7 +281,8 @@ namespace vm {
 
 		// Now fill in the argv table.
 		if (main_has_args) {
-			for (const auto& [argv_index, arg]: std::views::enumerate(args)) {
+			for (const auto& [argv_index, arg]:
+			     std::views::zip(std::ranges::views::iota(0u), args)) {
 				start_function.bc.insert(
 					start_function.bc.end(),
 					{
@@ -296,7 +311,7 @@ namespace vm {
 					      MAKE_BYTECODE_INSTRUCTION(
 							  anyArrayStore_pptr_bany, 40, 5
 						  ),  // ptr_tmp_store[ix] := char_tmp_store
-					      MAKE_BYTECODE_INSTRUCTION(ext_p64, 32, 0),
+					      MAKE_BYTECODE_INSTRUCTION(ext_p64_type, 32, byte_type_arg),
 					      MAKE_BYTECODE_INSTRUCTION(add_p64_imm, 32, 1) }
 					);
 				}
@@ -308,14 +323,12 @@ namespace vm {
 						MAKE_BYTECODE_INSTRUCTION(
 							anyArrayStore_pptr_bany, 40, 5
 						),  // ptr_tmp_store[ix] := char_tmp_store
-						MAKE_BYTECODE_INSTRUCTION(ext_p64, 32, 0),
-						MAKE_BYTECODE_INSTRUCTION(
-							mov_p64_imm, 32, base::safeIntConv<u64>(argv_index)
-						),  // ix := argv_index
+						MAKE_BYTECODE_INSTRUCTION(ext_p64_type, 32, byte_type_arg),
+						MAKE_BYTECODE_INSTRUCTION(mov_p64_imm, 32, argv_index),  // ix := argv_index
 						MAKE_BYTECODE_INSTRUCTION(
 							anyArrayStore_pptr_bany, 8, 4
 						),  // argv_internal[ix] := ptr_tmp_store
-						MAKE_BYTECODE_INSTRUCTION(ext_p64, 32, 0),
+						MAKE_BYTECODE_INSTRUCTION(ext_p64_type, 32, str_ptr_type_arg),
 						MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),  // deinit char_tmp_store
 						MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),  // deinit ptr_tmp_store
 					}
@@ -365,7 +378,7 @@ namespace vm {
 					MAKE_BYTECODE_INSTRUCTION(
 						anyArrayLoad_bany_pptr, 5, 8
 					),  // ptr_tmp_store := argv_internal[ix]
-					MAKE_BYTECODE_INSTRUCTION(ext_p64, 32, 0),
+					MAKE_BYTECODE_INSTRUCTION(ext_p64_type, 32, str_ptr_type_arg),
 					MAKE_BYTECODE_INSTRUCTION(free_pptr, 48, 0),    // free ptr_tmp_store
 					MAKE_BYTECODE_INSTRUCTION(add_p64_imm, 32, 1),  // ++ix
 				}
@@ -399,13 +412,56 @@ namespace vm {
 	}
 
 #if defined(__clang__)
-// @TODO: suppress code deduplication in Clang
+// @TODO: #2582 suppress code deduplication in Clang
 #elif defined(__GNUG__)
 	#pragma GCC push_options
 	#pragma GCC optimize("-fno-crossjumping")
 #endif
 	// NOLINTBEGIN(cppcoreguidelines-avoid-goto)
 	// NOLINTBEGIN(cppcoreguidelines-pro-bounds-constant-array-index)
+	void runInterpreter(
+		const MicroInstruction* instr, std::byte*& local_stack, Frame*& frame, SafeVMThread& thread
+	) {
+#ifdef USE_TAIL_CALLS
+		return instr->tc_opfun(instr, local_stack, frame, thread);
+
+#elifdef USE_SWITCH_CASE
+		while (true) {
+			switch (static_cast<low::MicroOpcode>(instr->nontc_opcode)) {
+	#define HANDLE_MICRO_INSTR(opcode_name)                                                         \
+	case low::MicroOpcode::opcode_name: {                                                           \
+		vm::OpFuns::op_##opcode_name(instr, local_stack, frame, thread);                            \
+		if constexpr (::vm::ENABLE_VM_DETAIL_LOGGING)                                               \
+			CORE_DEV_LOG(                                                                           \
+				DVMDetails, "opcode, ", #opcode_name, ", ", thread.getThreadID().asInt(), ";\n"     \
+			);                                                                                      \
+		if constexpr (constexpr std::string_view opcode_str = #opcode_name; opcode_str == "exit") { \
+			goto End;                                                                               \
+		} else {                                                                                    \
+			break;                                                                                  \
+		}                                                                                           \
+	}
+	#include <vm/core/safe/low_program/micro_instruction_definitions.hpp>
+	#undef HANDLE_MICRO_INSTR
+
+			default: {
+				CORE_PANIC("Unknown operator: ", u64(instr->nontc_opcode));
+			}
+			}
+		}
+	End:
+#endif
+	}
+
+	// NOLINTEND(cppcoreguidelines-pro-bounds-constant-array-index)
+	// NOLINTEND(cppcoreguidelines-avoid-goto)
+
+#if defined(__clang__)
+// @TODO: #2582 suppress code deduplication in Clang
+#elif defined(__GNUG__)
+	#pragma GCC pop_options
+#endif
+
 	std::vector<Ref<VmValue>> SafeVMThread::executeFunction(
 		const low::LowFuncData& start_function, const low::LowFuncData& func
 	) {
@@ -426,33 +482,7 @@ namespace vm {
 
 		const auto* instr = start_function.bc.data();
 
-#ifdef USE_TAIL_CALLS
-		instr->tc_opfun(instr, local_stack, frame, *this);
-
-#elif defined(USE_SWITCH_CASE)
-		while (true) {
-			switch (static_cast<low::MicroOpcode>(instr->nontc_opcode)) {
-	#define HANDLE_MICRO_INSTR(opcode_name)                                                         \
-	case low::MicroOpcode::opcode_name: {                                                           \
-		vm::OpFuns::op_##opcode_name(instr, local_stack, frame, *this);                             \
-		if constexpr (::vm::ENABLE_VM_DETAIL_LOGGING)                                               \
-			CORE_DEV_LOG(DVMDetails, "opcode, ", #opcode_name, ", ", getThreadID().asInt(), ";\n"); \
-		if constexpr (constexpr std::string_view opcode_str = #opcode_name; opcode_str == "exit") { \
-			goto End;                                                                               \
-		} else {                                                                                    \
-			break;                                                                                  \
-		}                                                                                           \
-	}
-	#include <vm/core/safe/low_program/micro_instruction_definitions.hpp>
-	#undef HANDLE_MICRO_INSTR
-
-			default: {
-				CORE_PANIC("Unknown operator: ", u64(instr->nontc_opcode));
-			}
-			}
-		}
-	End:
-#endif
+		runInterpreter(instr, local_stack, frame, *this);
 
 		CORE_ASSERT(
 			frame == orig_frame_ptr,
@@ -487,15 +517,6 @@ namespace vm {
 	}
 
 	// executeFunction end
-
-	// NOLINTEND(cppcoreguidelines-pro-bounds-constant-array-index)
-	// NOLINTEND(cppcoreguidelines-avoid-goto)
-
-#if defined(__clang__)
-// @TODO: suppress code deduplication in Clang
-#elif defined(__GNUG__)
-	#pragma GCC pop_options
-#endif
 
 	/**
 	 * @brief Starts the execution of a function with a given name and arguments.
