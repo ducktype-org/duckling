@@ -93,8 +93,6 @@ namespace vm {
 	// inside interpreter loop.
 	RETURN_TYPE OpFuns::OPCODE_NAME(exit)(FUNCTION_ARGS) { IF_TC(return;) }
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(pass)(FUNCTION_ARGS) { FUNCTION_CONT(1); }
-
 	RETURN_TYPE OpFuns::OPCODE_NAME(check_strategy)(FUNCTION_ARGS) {
 		{
 			++instr;
