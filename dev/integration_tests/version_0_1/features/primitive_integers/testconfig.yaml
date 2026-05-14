@@ -1,0 +1,32 @@
+# Test configuration for primitive-integers
+# Tests various integer types: i8, i16, i32, i64, u8, u16, u32, u64
+# Also tests literal suffixes, numeric bases (hex, octal, binary), floats, and byte
+
+Tests:
+  primitive_integers_test:
+    Description: Tests for primitive integer types and literals.
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: "127\n32767\n2147483647\n100\n255\n65535\n100\n200\n-128\n-32768\n-100\n-50\n42\n42\n42\n10\n10\n10\n"
+        ExitCode: 0
+      dvm:
+        backend: dvm
+        Output:
+          String: "127\n32767\n2147483647\n100\n255\n65535\n100\n200\n-128\n-32768\n-100\n-50\n42\n42\n42\n10\n10\n10\n"
+        ExitCode: 0
+
+  integer_literals_advanced_test:
+    Description: Tests for hex/octal/binary bases, floats, and byte type.
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: "10\n255\n419\n10\n63\n64\n10\n255\n32\n3\n2\n-9\n65\n0\n255\n255\n10\n"
+        ExitCode: 0
+      dvm:
+        backend: dvm
+        Output:
+          String: "10\n255\n419\n10\n63\n64\n10\n255\n32\n3\n2\n-9\n65\n0\n255\n255\n10\n"
+        ExitCode: 0

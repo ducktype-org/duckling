@@ -2,20 +2,20 @@
 # Tests implicit and explicit type coercions between numeric types
 
 Tests:
-  coercion-cast-simple-test:
+  coercion_cast_simple_test:
     Description: Test for implicit and explicit type coercions.
     Cases:
       llvm:
         backend: llvm
         Output:
-          String: "1\n30\n3\n"
+          String: "1\n30\n4\n"
         ExitCode: 0
       dvm:
         backend: dvm
         Output:
-          String: "1\n30\n3\n"
+          String: "1\n30\n4\n"
         ExitCode: 0
-  casts-test:
+  casts_test:
     Description: Tests for casting numerical types and booleans.
     Cases:
       llvm:
@@ -28,7 +28,7 @@ Tests:
         Output:
           String: "-1\n-1\n255\n-1\n-42\n2147483647\n-2147483648\n7\n9\n1\n123.456\n789.25\n42.0\n99.0\n3\n2\n-7\n-8\n"
         ExitCode: 0
-  coercions-test:
+  coercions_test:
     Description: Tests for coercing boolean value from a numerical type.
     Cases:
       llvm:
@@ -41,7 +41,7 @@ Tests:
         Output:
           String: ""
         ExitCode: 0
-  declaration-coercions:
+  declaration_coercions:
     Cases:
       llvm:
         backend: llvm

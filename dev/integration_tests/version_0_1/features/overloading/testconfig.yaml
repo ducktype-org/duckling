@@ -1,7 +1,7 @@
 # Overloading feature test configuration
 
 Tests:
-  operator-overloading-test:
+  operator_overloading_test:
     Description: Test for operator overloading.
     Cases:
       llvm:
@@ -14,7 +14,7 @@ Tests:
         Output:
           String: "1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n13\n14\n15\n16\n17\n18\n19\n20\n21\n22\n23\n24\n25\n26\n27\n28\n29\n"
         ExitCode: 0
-  variable-shadowing-test:
+  variable_shadowing_test:
     Description: Test for variable shadowing.
     Cases:
       llvm:
@@ -27,7 +27,7 @@ Tests:
         Output:
           String: "1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n"
         ExitCode: 0
-  func-overloading-test:
+  func_overloading_test:
     Description: Test for function overloading.
     Cases:
       llvm:
@@ -40,7 +40,7 @@ Tests:
         Output:
           String: "1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n13\n14\n"
         ExitCode: 0
-  point-operator-overloading-test:
+  point_operator_overloading_test:
     Description: Test for class Point operator < overloading by distance from origin.
     Cases:
       llvm:

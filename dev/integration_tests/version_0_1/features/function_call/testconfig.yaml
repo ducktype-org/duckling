@@ -1,0 +1,31 @@
+# Test configuration for function-call
+# Tests function calls: simple, nested, with default params, and named arguments
+
+Tests:
+  function_call_test:
+    Description: Tests for function calls.
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: "1\n10\n7\n6\n30\n30\n30\n17\n13\n"
+        ExitCode: 0
+      dvm:
+        backend: dvm
+        Output:
+          String: "1\n10\n7\n6\n30\n30\n30\n17\n13\n"
+        ExitCode: 0
+
+  function_call_advanced_test:
+    Description: Tests for default parameters and named arguments.
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: "105\n20\n31\n23\n6\n123\n123\n321\n159\n123\n20\n20\n129\n527\n"
+        ExitCode: 0
+      dvm:
+        backend: dvm
+        Output:
+          String: "105\n20\n31\n23\n6\n123\n123\n321\n159\n123\n20\n20\n129\n527\n"
+        ExitCode: 0

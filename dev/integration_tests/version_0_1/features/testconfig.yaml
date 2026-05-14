@@ -42,18 +42,18 @@ SubDirs:
 #################################
 #         WORKING FULLY
 #################################
-  # - comparison-operators-on-integers
-  # - float-literals
-  # - unit-type
+  - comparison_operators_on_integers
+  # - float_literals
+  # - unit_type
   - ffi
 #################################
 #         ONLY LLVM WORKING
 #################################
-  # - namespace-declaration
-  # - simple-cffi
-  # - simple-ifs
-  # - constant-simple-declaration
-  # - first-class-typing
+  # - namespace_declaration
+  # - simple_cffi
+  # - simple_ifs
+  # - constant_simple_declaration
+  # - first_class_typing
 #################################
 #         ONLY DVM WORKING
 #################################
@@ -62,20 +62,20 @@ SubDirs:
 #         NOT WORKING
 # this is mainly due to the features not being implemented yet
 #################################
-  # - arithmetic-operators-on-integers
+  # - arithmetic_operators_on_integers
   # - overloading
-  # - primitive-integers
-  # - function-call
-  # - type-deduction
-  # - function-definition
-  # - let-simple-declaration
-  # - alias-using-declaration
-  # - boolean-operators
+  # - primitive_integers
+  # - function_call
+  # - type_deduction
+  # - function_definition
+  # - let_simple_declaration
+  # - alias_using_declaration
+  # - boolean_operators
   # - coercions # @TODO: #2182
-  # - variable-simple-declaration
-  # - io-builtins
-  # - while-loops
-  # - primitive-booleans
-  # - class-declaration
-  # - simple-chars
-  # - simple-strings
+  # - variable_simple_declaration
+  # - io_builtins
+  # - while_loops
+  # - primitive_booleans
+  # - class_declaration
+  # - simple_chars
+  # - simple_strings

@@ -1,0 +1,31 @@
+# Test configuration for simple-strings
+# Tests string literals, print function, escape sequences, and format strings
+
+Tests:
+  simple_strings_test:
+    Description: Tests for string type and print functionality.
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: "hello\nworld\ntab:\there\nvalue: 42\n10 + 20 = 30\nline1\nline2\nworld\nworld\nw\nWorld\n6\n12\n"
+        ExitCode: 0
+      dvm:
+        backend: dvm
+        Output:
+          String: "hello\nworld\ntab:\there\nvalue: 42\n10 + 20 = 30\nline1\nline2\nworld\nworld\nw\nWorld\n6\n12\n"
+        ExitCode: 0
+
+  string_formatting_test:
+    Description: Tests for advanced f-string formatting.
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: "calc: 17\nsum=30, diff=10\ntest: 15 items\nnested: 25\neach: 25\n17 mod 5 = 2\na=1\nb=2\nc=3\ntotal=6\nResult: 42\n"
+        ExitCode: 0
+      dvm:
+        backend: dvm
+        Output:
+          String: "calc: 17\nsum=30, diff=10\ntest: 15 items\nnested: 25\neach: 25\n17 mod 5 = 2\na=1\nb=2\nc=3\ntotal=6\nResult: 42\n"
+        ExitCode: 0

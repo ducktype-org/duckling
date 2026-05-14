@@ -1,0 +1,43 @@
+# Test configuration for class-declaration
+# Tests class (record) declarations, construction, field access, nested classes, and functions on classes
+
+Tests:
+  class_declaration_test:
+    Description: Tests for class declarations.
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: "0\n0\n5\n10\n100\n200\n20\n30\n5\n10\n3\n4\n12\n0\n10\n"
+        ExitCode: 0
+      dvm:
+        backend: dvm
+        Output:
+          String: "0\n0\n5\n10\n100\n200\n20\n30\n5\n10\n3\n4\n12\n0\n10\n"
+        ExitCode: 0
+  class_functions_test:
+    Description: Tests for functions operating on classes.
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: "25\n25\n4\n6\n6\n9\n10\n20\n8\n12\n32\n169\n"
+        ExitCode: 0
+      dvm:
+        backend: dvm
+        Output:
+          String: "25\n25\n4\n6\n6\n9\n10\n20\n8\n12\n32\n169\n"
+        ExitCode: 0
+  class_methods_test:
+    Description: Tests for methods defined within classes.
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: "-10\n2\n102\n9\n0\n6\n"
+        ExitCode: 0
+      dvm:
+        backend: dvm
+        Output:
+          String: "-10\n2\n102\n9\n0\n6\n"
+        ExitCode: 0
