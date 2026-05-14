@@ -2,6 +2,9 @@
 
 namespace vm {
 	void GIL::acquire() {
+		// First, we try to acquire GIL without waiting. If we succeed, we can return immediately.
+		if (gil.try_lock()) return;
+
 		u64 saved_exchange_counter = exchange_counter.load(std::memory_order_relaxed);
 
 		while (true) {

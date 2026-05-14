@@ -83,5 +83,15 @@ namespace vm::debugger {
 		 * @brief Loads the file
 		 */
 		void loadFile(const fs::File& filepath);
+
+		/**
+		 * @brief Pauses the VM
+		 */
+		void pause();
+
+		/**
+		 * @brief Resumes the VM
+		 */
+		void resume();
 	};
 }

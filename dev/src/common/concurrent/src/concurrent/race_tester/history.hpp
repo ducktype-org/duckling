@@ -5,6 +5,7 @@
 #include <base/str/str_utils.hpp>
 
 #include <functional>
+#include <mutex>
 #include <variant>
 
 namespace concurrent::tester {

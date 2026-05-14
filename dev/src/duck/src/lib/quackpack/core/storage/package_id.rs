@@ -35,7 +35,7 @@ impl PackageId {
     }
 
     /// Get the directory name for storing this package.
-    pub fn storage_name(&self) -> StrId {
+    pub fn storage_name(&self) -> String {
         match self {
             Self::Registry(registry_id) => registry_id.storage_name(),
             Self::Git(git_id) => git_id.storage_name(),
@@ -80,7 +80,7 @@ impl RegistryId {
     pub const TYPE: &str = "registry";
 
     /// Get the directory name for storing this package.
-    pub fn storage_name(&self) -> StrId {
+    pub fn storage_name(&self) -> String {
         format!(
             "{}-{}-{}-{}",
             Self::TYPE,
@@ -88,7 +88,6 @@ impl RegistryId {
             self.id,
             self.version
         )
-        .into()
     }
 
     /// The name of the package.
@@ -144,14 +143,13 @@ impl GitId {
     pub const TYPE: &str = "git";
 
     /// Get the directory name for storing this package.
-    pub fn storage_name(&self) -> StrId {
+    pub fn storage_name(&self) -> String {
         format!(
             "{}-{}-{}",
             Self::TYPE,
             sha256_string(self.url.as_str()),
             self.commit
         )
-        .into()
     }
 
     /// Get the repository url of this package.
@@ -196,13 +194,12 @@ impl LocalId {
     pub const TYPE: &str = "local";
 
     /// Get the directory name for storing this package.
-    pub fn storage_name(&self) -> StrId {
+    pub fn storage_name(&self) -> String {
         format!(
             "{}-{}",
             Self::TYPE,
             sha256_string(self.path.as_os_str().as_encoded_bytes())
         )
-        .into()
     }
 
     /// Get the path to the stored package.

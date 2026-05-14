@@ -169,15 +169,12 @@ namespace compiler::tsh {
 	typename TYPE_AbstractType::CPimpl checkDynamicCast(const AbstractType::CPimpl pimpl) {
 		auto result = dynamic_cast<const typename TYPE_AbstractType::Impl*>(pimpl.get());
 		if (result == nullptr) {
-			std::stringstream ss;
-			const Kind        original_kind = pimpl->getKind();
-			const Kind        target_kind   = TYPE_AbstractType::Impl::STATIC_KIND;
 			CORE_PANIC(
 				"Type cast between TypeAbstractType kinds failed. ",
 				"A cast from ",
-				base::enumToStr(original_kind),
+				base::enumToStr(pimpl->getKind()),
 				" to ",
-				base::enumToStr(target_kind),
+				base::enumToStr(TYPE_AbstractType::Impl::STATIC_KIND),
 				" was attempted."
 			);
 		}

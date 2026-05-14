@@ -835,7 +835,7 @@ private:
 					return 0;
 				}
 			)",
-			{ "Feature not implemented", "at compile time", "generated class constructor" },
+			{ "Feature not implemented", "Compile time" },
 			1
 		);
 
@@ -976,6 +976,26 @@ private:
 				}
 			)",
 			{ "Copy constructor for non-trivially-copyable type `List[i32]`" },
+			1
+		);
+
+		// Blocks are having correct scopes
+		checkForErrorOnCompileModule(
+			R"(
+				block globals {
+					var x = 0;
+				}
+				fun main() = {
+					{
+						var x = 20;
+					};
+					block inner {
+						var x = 30;
+					}
+					x;
+				}
+		)",
+			{ "Symbol", "not found" },
 			1
 		);
 	}

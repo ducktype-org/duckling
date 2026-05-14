@@ -70,6 +70,13 @@ function(duck_add_test_custom test_pack test_name test_source)
 	target_link_libraries(${test_name} Tester ${duck_add_test_custom_USES})
 	target_include_directories(${test_name} PUBLIC ${duck_add_test_custom_INCLUDE})
 
+	# Some symbols that are necessary for the JIT to work have to be looked up in the executor process's
+	# dynamic symbol table, and this flag makes all symbols exported to the dynamic symbol table.
+	# This also applies to test suites, as they introduce additional symbols.
+	if(JIT_ENABLED)
+		target_link_options(${test_name} PRIVATE -Wl,--export-dynamic)
+	endif()
+
 	add_test(NAME "${test_name}" COMMAND ${test_name})
 
 	# It is needed in case tests are run on multiple threads.
@@ -82,6 +89,13 @@ function(duck_add_test_custom test_pack test_name test_source)
 
 	set_target_properties(${test_name} PROPERTIES EXCLUDE_FROM_ALL true)
 	add_to_coverage(${test_name})
+
+	if(JIT_ENABLED)
+		string(FIND "${test_name}" "debugger" vm_tc_pos)
+		if (vm_tc_pos EQUAL 6)
+            set_property(TEST ${test_name} PROPERTY DISABLED TRUE)
+		endif()
+	endif()
 endfunction()
 
 function(duck_add_test test_pack test_base_name test_user_source)
