@@ -66,30 +66,6 @@ namespace vm::persistent::detail {
 			return { true, right_left[rght] };
 		}
 
-		void pruneByRight(const std::unordered_set<R>& desired) {
-			std::vector<std::pair<L, R>> to_erase;
-
-			for (auto& [l, r]: left_right)
-				if (!desired.contains(r)) to_erase.emplace_back(l, r);
-
-			for (auto& [l, r]: to_erase) {
-				left_right.erase(l);
-				right_left.erase(r);
-			}
-		}
-
-		void pruneByLeft(const std::unordered_set<L>& desired) {
-			std::vector<std::pair<L, R>> to_erase;
-
-			for (auto& [l, r]: left_right)
-				if (!desired.contains(l)) to_erase.emplace_back(l, r);
-
-			for (auto& [l, r]: to_erase) {
-				left_right.erase(l);
-				right_left.erase(r);
-			}
-		}
-
 		auto leftToRight() const { return left_right; }
 
 		auto rightToLeft() const { return right_left; }

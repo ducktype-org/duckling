@@ -994,57 +994,6 @@ namespace vm::persistent::detail {
 		}
 
 		/**
-		 * @brief draft impl of potentially removing excessive nodes from segemnt tree, apart from
-		 * desired
-		 * @warning NOT TESTED
-		 */
-		void pruneHistory(std::vector<NodeID> desired) {
-			std::unordered_set<NodeID> stay{ EMPTY };
-
-			while (desired.size()) {
-				std::vector<NodeID> dfs_queue = { desired.back() };
-				desired.pop_back();
-
-				while (dfs_queue.size()) {
-					auto front = dfs_queue.back();
-					dfs_queue.pop_back();
-
-					if (stay.contains(front)) continue;
-
-					stay.insert(front);
-
-					if_opt_some(child_entries.atRightOpt(front), children) {
-						auto [left, right] = children;
-						dfs_queue.push_back(left);
-						dfs_queue.push_back(right);
-					}
-				}
-			}
-
-			std::unordered_set<NodeID> nodes{};
-			std::unordered_set<NodeID> leafs{};
-
-			for (auto node_id: stay) {
-				if_opt_some(child_entries.atRightOpt(node_id), _) {
-					nodes.insert(node_id);
-					continue;
-				}
-
-				if_opt_some(leaf_entries.atRightOpt(node_id), _) {
-					leafs.insert(node_id);
-					continue;
-				}
-
-				CORE_UNREACHABLE();
-			}
-
-			for (auto root: nodes) root_info.erase(root);
-
-			child_entries.pruneByRight(nodes);
-			leaf_entries.pruneByRight(leafs);
-		}
-
-		/**
 		 * @brief Lazy merge of two roots
 		 * @note when one of the roor is empty, other is returned
 		 * @note requires that the root cannot contain each other
