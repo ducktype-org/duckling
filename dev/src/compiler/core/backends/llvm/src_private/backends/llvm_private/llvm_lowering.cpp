@@ -26,7 +26,7 @@ LLVM_INCLUDE_END()
 #include <ctv/numeric_value.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
-#include <typesystem/lower/type_layout.hpp>
+#include <tsl/type_layout.hpp>
 
 #include <base/collections/maps.hpp>
 #include <base/extend_cpp/variant_match.hpp>
@@ -35,8 +35,7 @@ LLVM_INCLUDE_END()
 #include <base/pointers/ref.hpp>
 
 #include <init/init.hpp>
-
-#include <iostream>
+#include <logger/logger.hpp>
 
 // useful: https://github.com/llvm/llvm-project/tree/main/llvm/examples
 namespace {
@@ -118,6 +117,9 @@ namespace {
 				// using compile time operations on types to compile. This should never be used in
 				// runtime.
 				return llvm::ConstantInt::get(llvm_type.get(), 0, false);
+			}
+			variant_case(char, c) {
+				return llvm::ConstantInt::get(llvm_type.get(), u64((unsigned char) c));
 			}
 			variant_case(base::StrID, str) {
 				// First, create a global constant for the string data
@@ -228,10 +230,6 @@ namespace compiler::backend_llvm {
 	auto typeFromLayout(const Ref<llvm::Module> module, const CRef<tsl::TypeLayout> layout)
 		-> llvm::Type* {
 		auto& llvm_context = module->getContext();
-		// If the layout is empty, return the void type.
-		// Sometimes, empty layouts may appear in LIR, despite being eliminated during MIR -> LIR.
-		// This is because they are function return types. They should then be converted to void.
-		if (layout->getSize() == Bits(0)) return llvm::Type::getVoidTy(llvm_context);
 
 		variant_match(layout->getVariant()) {
 			variant_case_novalue(tsl::EmptyTypeLayout) {
@@ -255,7 +253,7 @@ namespace compiler::backend_llvm {
 				}
 			}
 			variant_case(tsl::StringTypeLayout, string_layout) {
-				const auto string_type_name = "str";
+				const auto string_type_name = string_layout.getMangledName().strView();
 
 				// Get the string type from the context, if it has been previously defined.
 				if (llvm::StructType* string_type
@@ -283,6 +281,35 @@ namespace compiler::backend_llvm {
 
 				return string_type;
 			}
+			variant_case(tsl::DynamicArrayTypeLayout, list_layout) {
+				const auto list_type_name = list_layout.getMangledName().strView();
+
+				// Get the list type from the context, if it has been previously defined.
+				if (llvm::StructType* list_type
+				    = llvm::StructType::getTypeByName(llvm_context, list_type_name);
+				    list_type) {
+					return list_type;
+				}
+
+				// Otherwise, define the dynamic list type in LLVM, in line with the TSL definition.
+				llvm::StructType* list_type
+					= llvm::StructType::create(llvm_context, list_type_name);
+				list_type->setBody(
+					{
+						llvm::PointerType::getUnqual(llvm_context),
+						i64Type(llvm_context),
+						i64Type(llvm_context),
+						i64Type(llvm_context),
+					},
+					/*is_packed=*/false
+				);
+
+				// @TODO: #1842 Add layout verification, that the LLVM struct layout matches:
+				// - the TSL type layout, and
+				// - the struct defined in the built-ins module.
+
+				return list_type;
+			}
 			variant_case(tsl::ClassTypeLayout, class_layout) {
 				const auto class_name = class_layout.getMangledName().strView();
 
@@ -297,10 +324,10 @@ namespace compiler::backend_llvm {
 				// - First, create an opaque type.
 				llvm::StructType* struct_type = llvm::StructType::create(llvm_context, class_name);
 				// - Then, collect the member types.
-				const usize              num_fields = class_layout.getNumFields();
+				const usize              num_sub_layouts = class_layout.getNumSubLayouts();
 				std::vector<llvm::Type*> member_types;
-				member_types.reserve(num_fields);
-				for (usize layout_idx = 0; layout_idx < num_fields; layout_idx++) {
+				member_types.reserve(num_sub_layouts);
+				for (usize layout_idx = 0; layout_idx < num_sub_layouts; layout_idx++) {
 					const CRef<tsl::TypeLayout> field_layout
 						= class_layout.getFieldLayoutOfLayoutIndex(layout_idx);
 					member_types.push_back(typeFromLayout(module, field_layout));
@@ -314,11 +341,14 @@ namespace compiler::backend_llvm {
 				const llvm::StructLayout& struct_layout = *data_layout.getStructLayout(struct_type);
 
 				// - Then, check each field's offset.
-				for (usize layout_idx = 0; layout_idx < num_fields; layout_idx++) {
-					const Bytes expected_offset = class_layout.getOffsetOfFieldSymbol(
-						class_layout.getFieldSymbolOfLayoutIndex(layout_idx)
-					);
-					const auto actual_offset = Bytes(
+				for (usize layout_idx = 0; layout_idx < num_sub_layouts; layout_idx++) {
+					[[maybe_unused]] const Bytes expected_offset
+						= class_layout
+					          .getOffsetOfFieldSymbol(
+								  class_layout.getFieldSymbolOfLayoutIndex(layout_idx)
+							  )
+					          .value();
+					[[maybe_unused]] const auto actual_offset = Bytes(
 						struct_layout.getElementOffset(base::safeIntConv<unsigned>(layout_idx))
 					);
 					CORE_ASSERT(
@@ -644,40 +674,46 @@ namespace compiler::backend_llvm {
 			// If the projection chain is empty, we can return the base pointer directly.
 			if (not place.hasProjections()) return current_ptr;
 
-			llvm::Type*           current_type   = typeFromLayout(module, place.getBaseLayout());
-			CRef<tsl::TypeLayout> current_layout = place.getBaseLayout();
-
 			// Otherwise, we need to get the layout indices of the accessed fields.
-			// - First, collect the subsequent layout indices.
-			//   Recall that the first index in GEP is always 0, since GEP assumes we have an array.
-			std::vector<llvm::Value*> access_indices;
-			access_indices.push_back(llvm::ConstantInt::get(llvm::Type::getInt32Ty(context), 0));
+			llvm::Type*               current_type = typeFromLayout(module, place.getBaseLayout());
+			CRef<tsl::TypeLayout>     current_layout = place.getBaseLayout();
+			std::vector<llvm::Value*> gep_indices;
 
-			// A GEP constructor invoked when encountering a deref projection of when we went
-			// through all projections. Creates a GEP from all projection indicies up to this point
-			// so `load` can be performed on the address calculated up to this point.
-			auto flush_gep = [&]() {
-				if (access_indices.size() > 1) {
-					// Create a GEP if needed.
-					current_ptr  = builder.CreateGEP(current_type, current_ptr, access_indices);
-					current_type = typeFromLayout(module, current_layout);
-				}
-				access_indices.clear();
-				// Reset the new base, since GEP assumes we work on arrays.
-				access_indices.push_back(llvm::ConstantInt::get(llvm::Type::getInt32Ty(context), 0));
+			auto llvm_i32 = [&](u64 val) {
+				return llvm::ConstantInt::get(llvm::Type::getInt32Ty(context), val);
 			};
 
+			// A GEP constructor invoked when encountering a deref projection or when we went
+			// through all projections. Creates a GEP from all projection indices up to this point
+			// so `load` can be performed on the calculated address.
+			auto flush_gep = [&]() {
+				// Skip if GEP has no arguments.
+				if (gep_indices.empty()) return;
+				// Create a GEP if needed.
+				current_ptr  = builder.CreateGEP(current_type, current_ptr, gep_indices);
+				current_type = typeFromLayout(module, current_layout);
+				gep_indices.clear();
+			};
+
+			// In LLVM, the first index of a GEP on a pointer navigates "through" the pointer
+			// (treating it as an array). To access a structure's field, the first index
+			// must be 0. This helper ensures such a base index exists for projections that need them.
+			auto ensure_structural_base = [&]() {
+				if (gep_indices.empty()) gep_indices.push_back(llvm_i32(0));
+			};
 
 			for (const auto& projection: place.projection_chain) {
 				variant_match(projection.storage) {
 					variant_case(lir::LIRPlace::FieldProjection, field) {
+						ensure_structural_base();
+
 						const auto& current_class_layout
 							= std::get<tsl::ClassTypeLayout>(current_layout->getVariant());
-
 						const auto layout_idx
-							= current_class_layout.getLayoutIndexOfFieldSymbol(field.field_id);
+							= current_class_layout.getLayoutIndexOfFieldSymbol(field.field_id)
+						          .value();
 
-						access_indices.push_back(
+						gep_indices.push_back(
 							llvm::ConstantInt::get(llvm::Type::getInt32Ty(context), layout_idx)
 						);
 						current_layout
@@ -686,17 +722,46 @@ namespace compiler::backend_llvm {
 					variant_case(lir::LIRPlace::IndexProjection, index) {
 						// First load the index value.
 						llvm::Value* index_value = loadLIRValue(*index.index, builder);
-						// Then add it as the next argument to the GEP.
-						access_indices.push_back(index_value);
-						// Lastly, update the current layout.
 						variant_match(current_layout->getVariant()) {
 							variant_case(tsl::StaticArrayTypeLayout, static_array_layout) {
+								ensure_structural_base();
+								// Then add it as the next argument to the GEP.
+								gep_indices.push_back(index_value);
+								// Lastly, update the current layout.
 								current_layout = static_array_layout.getElementLayout();
 							}
 							variant_case(tsl::DynamicArrayTypeLayout, dynamic_array_layout) {
+								// @TODO: #1970 This branch currently performs an access to a 'data'
+								// field of the list, dereferences it and performs an index
+								// projection on the pointer to the heap data. If `List[T]` had a
+								// proper type interface (including a 'data' field which returns a
+								// `ref T` or `T*`), a dynamic array index access could be
+								// represented by `Field(Data), Deref, IndexProjection`. Then the
+								// whole implementation of this case for the DynamicArrayTypeLayout,
+								// would be the same as for static arrays. For now, this
+								// programmatically implements the thing described above.
+								ensure_structural_base();
+
+								// Add an additional FieldProjection('data') so we access the data
+								// field with one GEP. Note that data is at 0 index in the struct.
+								gep_indices.push_back(llvm_i32(0));
+
+								// Emit the current GEP to get pointer to the heap data.
+								flush_gep();
+
+								// Now load the actual data of the list. This now points directly to
+								// the data on the heap.
+								current_ptr = builder.CreateLoad(builder.getPtrTy(), current_ptr);
+
+								// Now push the actual index from the IndexProjection. This GEP now
+								// operates on the heap memory.
+								gep_indices.push_back(index_value);
+
+								// Lastly, update the types and layouts.
 								current_layout = dynamic_array_layout.getElementLayout();
+								current_type   = typeFromLayout(module, current_layout);
 							}
-							variant_default { CORE_PANIC("Indexing into non-array layout"); }
+							variant_default { CORE_PANIC("Indexing into a non-array layout"); }
 						}
 					}
 					variant_case_novalue(lir::LIRPlace::DerefProjection) {
@@ -752,6 +817,45 @@ namespace compiler::backend_llvm {
 				}
 				variant_case(lir::BlockRef, lir_block) { return block_mapping[lir_block].get(); }
 				variant_default { CORE_PANIC("unknown lir location type"); }
+			}
+			CORE_UNREACHABLE();
+		}
+
+		/**
+		 * @brief Gets a LLVM pointer to the given LIRValue.
+		 *
+		 * This is used when a pointer to data is required (e.g., `builtin_list_push(list*, void*,
+		 * uint64_t)`, requires a pointer to the inserted value for the implementation to work for
+		 * generic list).
+		 *
+		 * - For `LIRPlace`, it returns the calculated address via `gepPointerFromLIRPlace`.
+		 * - For `LIRConstant`, it loads the constant value into a created temporary and returns the
+		 * address of the temporary.
+		 * - Panics for other LIRValue variants (like BlockRef or FunctionLiteral).
+		 *
+		 * @param lir_location The LIRValue to obtain a pointer for.
+		 * @param builder The LLVM IRBuilder to use for generating instructions.
+		 * @return `llvm::Value*` with the pointer to the data.
+		 */
+		auto loadLIRValueToPointer(const lir::LIRValue& lir_location, llvm::IRBuilder<>& builder)
+			-> llvm::Value* {
+			variant_match(lir_location.getVariant()) {
+				variant_case(lir::LIRPlace, place) {
+					return gepPointerFromLIRPlace(place, builder);
+				}
+				variant_case(lir::LIRConstant, constant) {
+					llvm::Value* val = loadLIRValue(lir_location, builder);
+					auto* alloca = builder.CreateAlloca(val->getType(), nullptr, "tmp_const_ptr");
+					builder.CreateStore(val, alloca);
+					return alloca;
+				}
+				variant_case(lir::FunctionLiteral, func) {
+					llvm::Value* val = loadLIRValue(lir_location, builder);
+					auto* alloca = builder.CreateAlloca(val->getType(), nullptr, "tmp_func_ptr");
+					builder.CreateStore(val, alloca);
+					return alloca;
+				}
+				variant_default { CORE_PANIC("Cannot get pointer to BlockRef"); }
 			}
 			CORE_UNREACHABLE();
 		}
@@ -934,6 +1038,17 @@ namespace compiler::backend_llvm {
 			CORE_UNREACHABLE();
 		}
 
+		/**
+		 * @brief Retrieves or inserts a built-in function prototype in the LLVM module.
+		 */
+		auto loadBuiltin(
+			const std::string_view             name,
+			llvm::Type*                        ret_type,
+			std::initializer_list<llvm::Type*> args
+		) -> llvm::FunctionCallee {
+			return module->getOrInsertFunction(name, llvm::FunctionType::get(ret_type, args, false));
+		}
+
 #define LIR_2_LLVM_BINARY_OPERATION_CASE(op)                                       \
 	{                                                                              \
 		const auto lhs   = loadLIRValue(lir_instruction.arguments.at(0), builder); \
@@ -996,7 +1111,7 @@ namespace compiler::backend_llvm {
 				builder.CreateStore(llvm::Constant::getNullValue(type), ptr);
 				break;
 			}
-			case AllocBox: {
+			case BoxAlloc: {
 				// First, get the value to box.
 				const auto  value_to_box = loadLIRValue(lir_instruction.arguments.at(0), builder);
 				llvm::Type* pointee_type = value_to_box->getType();
@@ -1006,10 +1121,8 @@ namespace compiler::backend_llvm {
 				usize                   size        = data_layout.getTypeAllocSize(pointee_type);
 
 				// Get or insert the allocator.
-				llvm::FunctionCallee alloc_func = module->getOrInsertFunction(
-					"builtin_alloc",
-					llvm::FunctionType::get(builder.getPtrTy(), { builder.getInt64Ty() }, false)
-				);
+				auto alloc_func
+					= loadBuiltin("builtin_alloc", builder.getPtrTy(), { builder.getInt64Ty() });
 
 				// Actually call the allocator.
 				llvm::Value* size_val = builder.getInt64(size);
@@ -1023,21 +1136,84 @@ namespace compiler::backend_llvm {
 				storeOutput(lir_instruction.output.value(), allocated_ptr, builder);
 				break;
 			}
-			case FreeBox: {
-				const auto ptr_to_free = loadLIRValue(lir_instruction.arguments.at(0), builder);
+			case BoxFree: {
 				// @TODO: #1894 This may change based on the way we handle destructors.
+				const auto ptr_to_free = loadLIRValue(lir_instruction.arguments.at(0), builder);
 
-				// Get or insert the free.
-				llvm::FunctionCallee free_func = module->getOrInsertFunction(
-					"builtin_dealloc",
-					llvm::FunctionType::get(builder.getVoidTy(), { builder.getPtrTy() }, false)
-				);
+				// Get or insert the free function.
+				auto free_func
+					= loadBuiltin("builtin_dealloc", builder.getVoidTy(), { builder.getPtrTy() });
 
 				// Actually free the memory.
 				builder.CreateCall(free_func, { ptr_to_free });
 				break;
 			}
-			/// Integer arithmetic ///I
+			case ListPush:
+			case ListPop:
+			case ListLen:
+			case ListFree: {
+				llvm::Value* list_ptr
+					= loadLIRValueToPointer(lir_instruction.arguments.at(0), builder);
+
+				// Get the size of the List element. Needed to pass to the generic
+				// `builtin_list_push`/'builtin_list_pop' builtins.
+				auto get_elem_size = [&]() {
+					const auto& params
+						= std::get<lir::ListOperationParameters>(lir_instruction.extra_params);
+					return builder.getInt64(
+						static_cast<u64>(base::bits2bytes(params.element_layout->getSize()))
+					);
+				};
+
+				switch (lir_instruction.operation) {
+				case ListPush: {
+					llvm::Value* element_ptr
+						= loadLIRValueToPointer(lir_instruction.arguments.at(1), builder);
+
+					auto push_func = loadBuiltin(
+						"builtin_list_push",
+						builder.getVoidTy(),
+						{ builder.getPtrTy(), builder.getPtrTy(), builder.getInt64Ty() }
+					);
+
+					builder.CreateCall(push_func, { list_ptr, element_ptr, get_elem_size() });
+					break;
+				}
+				case ListPop: {
+					llvm::Value* count_val = loadLIRValue(lir_instruction.arguments.at(1), builder);
+
+					auto pop_func = loadBuiltin(
+						"builtin_list_pop",
+						builder.getVoidTy(),
+						{ builder.getPtrTy(), builder.getInt64Ty(), builder.getInt64Ty() }
+					);
+
+					builder.CreateCall(pop_func, { list_ptr, count_val, get_elem_size() });
+					break;
+				}
+				case ListLen: {
+					auto len_func = loadBuiltin(
+						"builtin_list_len", builder.getInt64Ty(), { builder.getPtrTy() }
+					);
+
+					llvm::Value* result = builder.CreateCall(len_func, { list_ptr });
+					storeOutput(lir_instruction.output.value(), result, builder);
+					break;
+				}
+				case ListFree: {
+					auto free_func = loadBuiltin(
+						"builtin_list_free", builder.getVoidTy(), { builder.getPtrTy() }
+					);
+
+					builder.CreateCall(free_func, { list_ptr });
+					break;
+				}
+				default:
+					CORE_UNREACHABLE();
+				}
+				break;
+			}
+			/// Integer arithmetic ///
 			case IntegerAdd:
 				LIR_2_LLVM_BINARY_OPERATION_CASE(Add)
 			case IntegerSub:
@@ -1195,9 +1371,12 @@ namespace compiler::backend_llvm {
 				break;
 			}
 			default:
-				std::cerr << "unknown lir operation (skip): "
-						  << base::enumToStr(lir_instruction.operation) << "\n";
-				// throw base::NotYetImplemented("some lir operation in llvm backend");
+				CORE_DEV_LOG(
+					Backend,
+					"Unknown LIR operation in LLVM backend, skipping: ",
+					base::enumToStr(lir_instruction.operation),
+					"\n"
+				);
 			}
 		}
 

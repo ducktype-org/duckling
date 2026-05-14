@@ -209,7 +209,7 @@ def run_case(
     # Run test.
     log_info_if_needed("Running the test case...", dry, verbose)
     test_output, test_err = dit_exec_command(
-        f"timeout {case.timeout}s sh -c \'{case.run}\'",
+        f"timeout {case.timeout}s bash -c \'{case.run}\'",
         cwd=test.cwd,
         input=test_input,
         exitcode=case.expected_exitcode,
@@ -307,6 +307,11 @@ def run_tests(
     """
     tree.append(node.name)
     all_stats = TestStatistics([], [], [])
+
+    # Check if the current node is relevant to the filter
+    current_path = "/".join(tree)
+    if not current_path.startswith(filter) and not filter.startswith(current_path):
+        return all_stats
 
     # Pre-node command
     if node.pre_node:

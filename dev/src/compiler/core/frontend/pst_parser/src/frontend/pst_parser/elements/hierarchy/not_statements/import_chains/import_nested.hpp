@@ -11,12 +11,12 @@ namespace pst {
 		NAMED_CHILD(nested_import, NestedImportList);
 
 	public:
-		explicit ImportNested(const dia::SourcePosition& position): ImportChain(position) {
+		explicit ImportNested(const LangParserState& state): ImportChain(state) {
 			this->element_kind = ElementKind::ImportNested;
 		}
 
 		[[nodiscard]]
-		const std::vector<tpc::Identifier>& getNames() const {
+		const std::vector<tpc::Identifier>& getNames() const final {
 			return names;
 		}
 

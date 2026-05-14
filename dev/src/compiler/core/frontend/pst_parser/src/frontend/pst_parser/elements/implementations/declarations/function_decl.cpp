@@ -6,15 +6,14 @@
 namespace pst {
 	// @TODO: make better
 	MBox<FunDecl> FunDecl::parse(LangParserState& state) {
-		auto position = state.getPosition();
-		auto out      = makeBox<FunDecl>(position);
+		auto out = makeBox<FunDecl>(state);
 
 		if (!assertStmtChoice<FunDecl>(state, state[0].is(Keyword::FunDecl))) return nullptr;
 
-		state.parse(out).all(Keyword::FunDecl, &out->name);
-		state.parse(out).one(&out->params);
+		PARSE().all(Keyword::FunDecl, &out->name);
+		PARSE().one(&out->params);
 
-		if (state.parse(out).tryEat(NamedOperator::SingleArrow)) state.parse(out).one(&out->ret);
+		if (PARSE().tryEat(NamedOperator::SingleArrow)) PARSE().one(&out->ret);
 
 		PST_RETURN out;
 	}
@@ -37,7 +36,7 @@ namespace pst {
 		return ret.map([](const auto& v) -> AccessLocked<ExprHolder> { return v.give(); });
 	}
 
-	LangElement::HashAlg& FunDecl::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& FunDecl::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, name);
 		addToHash(partial_hash, ret.has_value());
 		return partial_hash;

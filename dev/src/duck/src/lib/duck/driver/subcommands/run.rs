@@ -1,10 +1,11 @@
 use std::ffi::OsString;
 
-use crate::{DuckCtx, QuackResult, qp_bail};
+use crate::{DuckContext, QuackResult, qp_bail};
 use clap::{ArgMatches, Command, value_parser};
 
 use crate::duck::driver::cli_ext::{CommandExt, flag, multi, subcommand};
 
+/// Creates parser for the `run` subcommand.
 pub fn get_parser() -> Command {
     subcommand("run")
         .about("Build the current package and run it")
@@ -29,6 +30,7 @@ pub fn get_parser() -> Command {
         )
 }
 
-pub fn execute(_ctx: &DuckCtx, _matches: &ArgMatches) -> QuackResult<()> {
+/// Logic for executing the `run` subcommand.
+pub fn execute(_ctx: &DuckContext, _matches: &ArgMatches) -> QuackResult<()> {
     qp_bail!("implement run")
 }

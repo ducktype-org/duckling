@@ -27,6 +27,11 @@ namespace pst {
 		}
 
 		[[nodiscard]]
+		tpc::Identifier getNameIdent() const {
+			return name;
+		}
+
+		[[nodiscard]]
 		AccessLocked<ClassBlock> getBody() const {
 			return body.give();
 		}

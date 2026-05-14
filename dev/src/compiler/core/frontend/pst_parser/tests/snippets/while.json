@@ -27,67 +27,66 @@
 									"sourceStart": 6,
 									"sourceEnd": 20
 								},
-								"Comparison Chain": {
-									"sub-expressions": [
-										{
-											"position": {
-												"sourceStart": 6,
-												"sourceEnd": 10
-											},
-											"Binary Operator": {
-												"left_expr": {
-													"position": {
-														"sourceStart": 6,
-														"sourceEnd": 6
-													},
-													"Identifier Expression": {
-														"name": {
-															"Name": "a"
-														}
-													}
+								"Binary Operator": {
+									"left_expr": {
+										"position": {
+											"sourceStart": 6,
+											"sourceEnd": 10
+										},
+										"Binary Operator": {
+											"left_expr": {
+												"position": {
+													"sourceStart": 6,
+													"sourceEnd": 6
 												},
-												"operator": "+",
-												"right_expr": {
-													"position": {
-														"sourceStart": 10,
-														"sourceEnd": 10
-													},
-													"Identifier Expression": {
-														"name": {
-															"Name": "b"
-														}
+												"Identifier Expression": {
+													"name": {
+														"Name": "a"
 													}
 												}
-											}
-										},
-										{
-											"position": {
-												"sourceStart": 14,
-												"sourceEnd": 20
 											},
-											"Binary Operator": {
-												"left_expr": {
-													"position": {
-														"sourceStart": 14,
-														"sourceEnd": 14
-													},
-													"Numeric Value Expr": {
-														"number": "4"
-													}
+											"operator": "+",
+											"right_expr": {
+												"position": {
+													"sourceStart": 10,
+													"sourceEnd": 10
 												},
-												"operator": "+",
-												"right_expr": {
-													"position": {
-														"sourceStart": 18,
-														"sourceEnd": 20
-													},
-													"Numeric Value Expr": {
-														"number": "0.8"
+												"Identifier Expression": {
+													"name": {
+														"Name": "b"
 													}
 												}
 											}
 										}
-									]
+									},
+									"operator": "<",
+									"right_expr": {
+										"position": {
+											"sourceStart": 14,
+											"sourceEnd": 20
+										},
+										"Binary Operator": {
+											"left_expr": {
+												"position": {
+													"sourceStart": 14,
+													"sourceEnd": 14
+												},
+												"Numeric Value Expr": {
+													"number": "4"
+												}
+											},
+											"operator": "+",
+											"right_expr": {
+												"position": {
+													"sourceStart": 18,
+													"sourceEnd": 20
+												},
+												"Numeric Value Expr": {
+													"number": "0.8"
+												}
+											}
+										}
+									}
 								}
 							}
 						}

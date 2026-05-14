@@ -1,0 +1,17 @@
+Run: "@{duckc_path} repl"
+
+prompt: "duckling> "
+beginning: |
+  Duckling REPL
+  Type /help for available commands, /exit to quit.
+  Press Enter to submit. Press Alt+Enter for new line.
+
+end: "\nGoodbye!\n"
+instruction_prompt: "Instruction executed.\n"
+
+SubDirs:
+  - fundamentals
+  - intermediate_statements
+  - declarations
+  - script_loading
+  - variable_assignment

@@ -98,7 +98,7 @@ Accessing a variable can be achieved with `${{ ... }}` - a Github workflow expre
 Github has a marketplace for actions, which are open-source programs (scripts) specifically designed to make certain tasks easier.
 Outside actions we use:
 
-* `actions/checkout@v4` - puts a repository into the runner.
+* `actions/checkout@v6` - puts a repository into the runner.
   If you want to do a checkout from a different repository in our organization (like submodule), 
   you have to pass aditional options and use a personal access token.  
 * `actions/cache@v4` - an action responsible for storing files between workflow runs.

@@ -22,7 +22,9 @@ namespace dia_int {
 		diagnostics.emplace_back(message->buildDiagnosticFile());
 
 		if_opt_some(immediate_print_stream, stream) {
-			evaluateToTerminalMessage(diagnostics.back().refMut(), stream);
+			std::stringstream ss;  // For multithreading safety.
+			evaluateToTerminalMessage(diagnostics.back().refMut(), ss);
+			stream << ss.str();
 		}
 	}
 
@@ -65,8 +67,17 @@ namespace dia_int {
 		}
 	}
 
-	void Logger::collectDiagnostics(std::vector<CRef<dia_args::Diagnostic>>& out_messages) {
-		for (const auto& msg: diagnostics) out_messages.emplace_back(msg.refMut());
+	void Logger::collectDiagnostics(std::vector<CRef<dia_args::Diagnostic>>& out_messages) const {
+		for (const auto& msg: diagnostics) out_messages.emplace_back(msg.ref());
+	}
+
+	void Logger::collectAndUpdatePositionDiagnostics(
+		std::vector<CRef<dia_args::Diagnostic>>& out_messages, const UpdatePositionFunc& update_func
+	) {
+		for (const auto& msg: diagnostics) {
+			msg->updateCodeLocationComponents(update_func);
+			out_messages.emplace_back(msg.ref());
+		}
 	}
 
 	bool Logger::bad() const { return has_error; }
@@ -76,4 +87,5 @@ namespace dia_int {
 		has_error = has_error || other.has_error;
 		auto _    = std::move(other);
 	}
+
 }

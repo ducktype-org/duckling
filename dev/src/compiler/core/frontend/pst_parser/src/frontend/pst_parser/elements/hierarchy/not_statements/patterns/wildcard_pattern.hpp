@@ -11,7 +11,7 @@ namespace pst {
 		HashAlg& addElementDataToStableHash(HashAlg&) const override;
 
 	public:
-		explicit WildcardPattern(const dia::SourcePosition& position): AnalysisPattern(position) {
+		explicit WildcardPattern(const LangParserState& state): AnalysisPattern(state) {
 			this->element_kind = ElementKind::WildcardPattern;
 		}
 

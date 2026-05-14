@@ -6,12 +6,18 @@
 #include "implementations/preamble.hpp"
 
 namespace pst::internal {
-	dia::SourcePosition getPosition(LangParserState& state) { return state.getPosition(); }
+	dia::SourcePosition getPosition(const LangParserState& state) { return state.getPosition(); }
+
+	HashType getContextHash(const LangParserState& state) {
+		HashAlg partial_hash;
+		addToHash(partial_hash, *state.getContext());
+		return partial_hash.finalize();
+	}
 
 	void parseExprIntoHolder(
 		LangParserState& state, Ref<ExprHolder> out, ExprParseFun parse_fun, u64 length
 	) {
-		state.parse(out).autoFallbackLen(length).with(&out->expr, parse_fun);
+		PARSE().autoFallbackLen(length).with(&out->expr, parse_fun);
 	}
 
 	bool isSentinel(LangParserState& state, i64 fwd) {

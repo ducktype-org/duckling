@@ -4,11 +4,10 @@
 #include "preamble.hpp"
 
 namespace pst::expr {
-	MBox<ExprElement> LogicOr::parse(LangParserState& state, i64 length) {
-		if (!checkLength(state, length)) return nullptr;
+	MBox<ExprElement> LogicOr::parse(LangParserState& state) {
+		if (!checkNonEmpty(state)) return nullptr;
 
-		auto pos = dia::SourcePosition(state.getPosition(), state.getPosition(length - 1).getEnd());
-
+		i64 length = base::safeIntConv<i64>(state.ctokens().size());
 
 		bool or_found = false;
 		i64  or_fwd   = 0;
@@ -20,13 +19,13 @@ namespace pst::expr {
 				break;
 			}
 		}
-		if (!or_found) return Lower::parse(state, length);
+		if (!or_found) return Lower::parse(state);
 
-		auto out = makeBox<LogicOr>(pos);
+		auto out = makeBox<LogicOr>(state);
 
-		state.parse(out).with(&out->left, Lower::parse, +or_fwd);
-		state.parse(out).one(Keyword::Or);
-		state.parse(out).with(&out->right, Self::parse, length - or_fwd - 1);
+		PARSE().autoFallbackLen(or_fwd).with(&out->left, Lower::parse);
+		PARSE().one(Keyword::Or);
+		PARSE().with(&out->right, Self::parse);
 
 		PST_RETURN out;
 	}

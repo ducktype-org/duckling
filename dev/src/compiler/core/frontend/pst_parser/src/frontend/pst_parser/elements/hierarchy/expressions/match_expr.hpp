@@ -22,11 +22,11 @@ namespace pst::expr {
 		HashAlg& addElementDataToStableHash(HashAlg&) const override;
 
 	public:
-		explicit MatchExpr(const dia::SourcePosition& pos): ExprElement(pos, 810) {
+		explicit MatchExpr(const LangParserState& state): ExprElement(state, 810) {
 			this->element_kind = ElementKind::Match;
 		}
 
-		static MBox<ExprElement> parse(LangParserState& state, i64 length);
+		static MBox<ExprElement> parse(LangParserState& state);
 
 		~MatchExpr() override = default;
 		void dprint(std::ostream& out) const final;

@@ -2,6 +2,8 @@
 
 #include "options.hpp"
 
+#include <base/types/checked_okbad.hpp>
+
 namespace compiler::driver {
 
 	/**
@@ -15,6 +17,10 @@ namespace compiler::driver {
 	 * @note In the future this function may return some kind of handle
 	 * that will be used to interact with top-level driver operations
 	 * such as handling change in the source code input.
+	 *
+	 * @return Whether the initialization was successful or not.
+	 * In case of failure, diagnostic messages will be reported in the global logger.
+	 * Driver exit should still be called in the failure case.
 	 */
-	void initializeTheCompiler(CompilerModeOfOperationAndOptions options);
+	base::CheckedOkBad initializeTheCompiler(CompilerModeOfOperationAndOptions options);
 }

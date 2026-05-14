@@ -12,54 +12,54 @@ path = "src/lib/lib.rs"
 name = "duck"
 
 [dependencies]
-async-scoped = { version = "0.9.0", features = ["use-tokio"] }
-clap = { version = "4.5.54", features = ["cargo"] }
-clap_complete = { version = "4.5.65", optional = true }
-console = "0.16.2"
+clap = { version = "4.6.0", features = ["cargo"] }
+clap_complete = { version = "4.6.0", optional = true }
+console = "0.16.3"
+curl = "0.4.49"
 dialoguer = "0.12.0"
-futures = "0.3.32"
-git2 = "0.20.3"
-indicatif = "0.18.3"
+flate2 = { version = "1.1.9", default-features = false, features = ["zlib-rs"] }
+git2 = "0.20.4"
+indicatif = "0.18.4"
 itertools = "0.14.0"
-libc = "0.2.182"
+libc = "0.2.183"
 libgit2-sys = "0.18.3"
 libssh2-sys = "0.3.1"
-openssl = "0.10.75"
-openssl-sys = "0.9.111"
-ordered-float = "5.1.0" # We have to add it, because saphyr (YAML library) exposes this type explicitly, so we have to pull it in order to use it.
-paste = "1.0.15"
-reqwest = { version = "0.13.1", features = ["deflate", "gzip", "json", "multipart", "stream"] }
-rusqlite = "0.37.0"
-russcip = { version = "0.9.1", features = ["bundled"]}
-saphyr = "0.0.6"
-shellexpand = "3.1.1"
+openssl = "0.10.76"
+openssl-sys = "0.9.112"
+rusqlite = "0.39.0"
+russcip = "0.9.1"
+scip-sys = "0.1.26"
 serde = { version = "1.0.228", features = ["derive"] }
 serde-untagged = "0.1.9"
 serde_json = "1.0.149"
 serde_yaml_ng = "0.10.0"
-sha2 = "0.10.9"
+sha2 = "0.11.0"
+shellexpand = "3.1.2"
 soft-canonicalize = "0.5.4"
-tempfile = "3.24.0"
-tokio = { version = "1.49.0", features = ["full"] }
-tokio-rusqlite = "0.7.0"
-toml = "1.0.1"
+tar = { version = "0.4.45", default-features = false }
+tempfile = "3.27.0"
 tracing = "0.1.44"
-tracing-subscriber = { version = "0.3.22", features = ["env-filter"] }
+tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 url = { version = "2.5.8", features = ["serde"] }
-tar = "0.4.44"
-flate2 = "1.1.9"
 
 [target.'cfg(windows)'.dependencies]
-windows-sys = { version = "0.61", features = [ "Win32_Foundation", "Win32_System_Console"] }
+windows-sys = { version = "0.61.2", features = [ "Win32_Foundation", "Win32_System_Console"] }
 
 [dev-dependencies]
-wiremock = "0.6.5"
+httpmock = { version = "0.8.3", default-features = false }
 
 [features]
+# Hack around https://github.com/scipopt/scip-sys/issues/39
+default = ["bundled-scip"]
+
 shell-completion = ["dep:clap_complete"]
 
-bundled-all = ["bundled-sqlite3", "bundled-openssl", "bundled-git2", "bundled-ssh2"]
+bundled-all = ["bundled-sqlite3", "bundled-openssl", "bundled-git2", "bundled-ssh2", "bundled-curl", "static-scip"]
+bundled-curl = ["curl/static-curl", "curl/force-system-lib-on-osx"]
 bundled-git2 = ["libgit2-sys/vendored"]
 bundled-openssl = ["openssl/vendored"]
 bundled-sqlite3 = ["rusqlite/bundled"]
 bundled-ssh2 = ["libssh2-sys/vendored-openssl"]
+# NOTE: These two should not be enabled at the same time.
+bundled-scip = ["russcip/bundled"]
+static-scip = ["russcip/from-source"]

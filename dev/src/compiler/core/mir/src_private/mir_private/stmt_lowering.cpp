@@ -74,23 +74,31 @@ namespace compiler::mir {
 
 
 				expr_res.storeResultInGivenPlace(
-					MIRPlace(return_value), retrieve_value, flags, return_scope
+					MIRPlace(return_value), retrieve_value, flags, return_scope, {}
 				);
 
 				possible_result = return_value;
 			}
 
 			return_block->setTerminator(Instruction(
-				Operation::ReturnValue, {}, { possible_result.value() }, {}, return_scope
+				Operation::ReturnValue,
+				{},
+				{ possible_result.value() },
+				{},
+				return_scope,
+				{},
+				{ stmt.getPosition() }
 			));
 
 			output({ expr_res.begin });
 		}
 
-		void visitVoidReturnStmt(const hc::VoidReturnStmt&) override {
+		void visitVoidReturnStmt(const hc::VoidReturnStmt& stmt) override {
 			auto return_block = function.newBlock();
 			auto return_scope = function.newScope(parent_scope);
-			return_block->setTerminator({ Operation::ReturnVoid, {}, {}, {}, return_scope });
+			return_block->setTerminator(
+				{ Operation::ReturnVoid, {}, {}, {}, return_scope, {}, { stmt.getPosition() } }
+			);
 			output({ return_block });
 		}
 
@@ -146,7 +154,8 @@ namespace compiler::mir {
 						flagConstruct(possible_condition_res->get<MIRPlace>().getBase<MIRLocalRef>()
 				        ),
 					},
-					condition_scope
+					condition_scope,
+					{}
 				);
 			}
 
@@ -160,6 +169,8 @@ namespace compiler::mir {
 				},
 				{},
 				condition_scope,
+				{},
+				{ stmt.getPosition() },
 			});
 
 			output({ lowered_condition.begin });
@@ -205,7 +216,8 @@ namespace compiler::mir {
 					possible_result->get<MIRPlace>(),
 					get_condition_return,
 					{ flagConstruct(possible_result->get<MIRPlace>().getBase<MIRLocalRef>()) },
-					condition_scope
+					condition_scope,
+					{}
 				);
 			}
 
@@ -219,6 +231,8 @@ namespace compiler::mir {
 				},
 				{},
 				condition_scope,
+				{},
+				{ stmt.getPosition() },
 			});
 
 			output({ entry_block });
@@ -237,30 +251,20 @@ namespace compiler::mir {
 			// since we only know it here:
 			local->setLifetimeScope(parent_scope);
 
-			match_optional(stmt.initial_value) {
-				opt_some(value) {
-					auto local_construction_hole = continuation->addHole();
-					auto assignment_scope        = function.newScope(parent_scope);
-					auto expr_result = lowerExpr(*value, continuation, function, assignment_scope);
+			auto local_construction_hole = continuation->addHole();
+			auto assignment_scope        = function.newScope(parent_scope);
+			auto expr_result
+				= lowerExpr(*stmt.initial_value, continuation, function, assignment_scope);
 
-					expr_result.storeResultInGivenPlace(
-						MIRPlace(local),
-						local_construction_hole,
-						{ flagConstruct(local) },
-						assignment_scope
-					);
-					output({ expr_result.begin });
-					return;
-				}
-				opt_none {
-					// OK
-					// We don't need to do anything, the variable is uninitialized.
-					output({ continuation });
-					return;
-				}
-			}
-
-			CORE_UNREACHABLE();
+			expr_result.storeResultInGivenPlace(
+				MIRPlace(local),
+				local_construction_hole,
+				{ flagConstruct(local) },
+				assignment_scope,
+				{ stmt.getPosition() }
+			);
+			output({ expr_result.begin });
+			return;
 		}
 
 		void visitAssignmentStmt(const hc::AssignmentStmt& stmt) override {
@@ -287,12 +291,20 @@ namespace compiler::mir {
 			variant_match(left_val.getVariant()) {
 				variant_case(MIRPlace, place) {
 					right_result.storeResultInGivenPlace(
-						place, target_construction_hole, {}, assignment_scope
+						place, target_construction_hole, {}, assignment_scope, { stmt.getPosition() }
 					);
 					output({ left_result.begin });
 				}
 				variant_default { CORE_PANIC("Assignment to unsupported MIRValue kind."); }
 			}
+		}
+
+		void visitBlockStmt(const hc::BlockStmt& stmt) override {
+			auto block_scope = function.newScope(parent_scope);
+
+			auto block_body = lowerCodeBlock(stmt.body, continuation, function, block_scope);
+
+			output({ block_body.begin });
 		}
 	};
 

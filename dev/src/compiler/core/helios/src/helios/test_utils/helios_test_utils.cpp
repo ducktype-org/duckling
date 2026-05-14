@@ -9,7 +9,7 @@
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
-#include <helios_private/expressions/query_hout_of_expr.hpp>
+#include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
@@ -35,13 +35,16 @@ namespace compiler::helios::test_utils {
 		SymbolList result;
 		bool       first_symbol = true;
 		for (auto&& sym: symbols) {
-			auto symbol = first_symbol ? query::entryPoint<QueryLookupInScopeAndParents>(
-											 { scope, base::StrID(sym.c_str()), true }
-										 )
-			                           : query::entryPoint<QueryLookupInSymbol>(
-											 { result.back(), base::StrID(sym.c_str()), false }
+			auto symbol_qresult = first_symbol
+			                        ? query::entryPoint<QueryLookupInScopeAndParents>(
+										  { scope, base::StrID(sym.c_str()), true }
+									  )
+			                        : query::entryPoint<QueryLookupInSymbol>(
+										  { result.back(), base::StrID(sym.c_str()), false }
 
-										 );
+									  );
+
+			CRef<LookupResult> symbol = &symbol_qresult->valueOrThrow();
 			CORE_ASSERT(symbol->isSingle(), "Expected single symbol in chain lookup");
 
 			auto symbol_path_variant = symbol->getAsSingle().valueOrPanic();
@@ -93,7 +96,7 @@ namespace compiler::helios::test_utils {
 			}
 		};
 
-		auto            pst_stmt = symbolPst(sym).illegalAccess().value();
+		auto            pst_stmt = symbolPst(sym).value().illegalAccess().value();
 		GetHOUTExprTree visitor;
 		pst_stmt->acceptVisitor(visitor);
 
@@ -116,7 +119,7 @@ namespace compiler::helios::test_utils {
 			}
 		};
 
-		auto            pst_stmt = symbolPst(sym).illegalAccess().value();
+		auto            pst_stmt = symbolPst(sym).value().illegalAccess().value();
 		GetHOUTExprTree visitor;
 		pst_stmt->acceptVisitor(visitor);
 
@@ -126,7 +129,7 @@ namespace compiler::helios::test_utils {
 	ScopeID getFunctionBodyScope(SymID sym) {
 		return base::anyCast<ScopeID>(
 			query::utils::withContextCompute([&](query::Context& ctx) -> std::any {
-				auto func_pst = symbolPst(sym).unlock(ctx).dynamicCast<pst::Fun>().value();
+				auto func_pst = symbolPst(sym).value().unlock(ctx).dynamicCast<pst::Fun>().value();
 				auto fun_body = func_pst->getBody().unlock(ctx);
 				return ctx.query<QueryPrimaryCodeScopeFor>(fun_body);
 			})

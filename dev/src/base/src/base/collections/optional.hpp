@@ -192,12 +192,13 @@ namespace base {
 			  private_optional(value) {}
 
 		template<class... Args>
-		requires std::is_constructible_v<T, Args...> constexpr explicit Optional(Args&&... args
+		requires(sizeof...(Args) >= 2) && std::is_constructible_v<T, Args...>
+		constexpr explicit Optional(Args&&... args
 		) noexcept(std::is_nothrow_constructible_v<T, Args...>):
 			  private_optional(std::make_optional<T>(std::forward<Args>(args)...)) {}
 
 		template<class U = T>
-		requires std::is_constructible_v<T, U>
+		requires(!std::is_same_v<std::remove_cvref_t<U>, Optional>) && std::is_constructible_v<T, U>
 		constexpr Optional(U&& value) noexcept(std::is_nothrow_constructible_v<T, U&&>):
 			  private_optional(std::forward<U>(value)) {}
 
@@ -210,7 +211,8 @@ namespace base {
 		explicit constexpr operator bool() const noexcept { return has_value(); }
 
 		template<class U = T>
-		requires std::is_constructible_v<T, U> constexpr Optional& operator=(U&& value
+		requires(!std::is_same_v<std::remove_cvref_t<U>, Optional>) && std::is_constructible_v<T, U>
+		constexpr Optional& operator=(U&& value
 		) noexcept(std::is_nothrow_constructible_v<T, U&&> && std::is_nothrow_assignable_v<T, U&&>) {
 			private_optional = std::forward<U>(value);
 			return *this;

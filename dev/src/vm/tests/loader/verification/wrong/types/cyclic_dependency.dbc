@@ -1,0 +1,8 @@
+type data: Top {
+	l: i64,
+	r: Top
+}
+
+function main { i64, ptr_argv } -> { i64 } {
+	ret;
+}

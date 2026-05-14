@@ -1,53 +1,60 @@
-use std::{fmt, str::FromStr};
+//! A storage freezefile format.
+use std::fmt;
+use std::str::FromStr;
 
 use serde::{Deserialize, Serialize, de, ser};
 
-use crate::{
-    QuackError, QuackResultContext, StrId, qp_bail,
-    quackpack::core::{
-        FeatureName, Version,
-        storage::package_id::{GitId, LocalId, PackageId, RegistryId},
-        types_common::{ExpandedLocation, InternedExpandedLocation},
-    },
-};
+use crate::quackpack::core::solver::types_common::{ExpandedLocation, InternedExpandedLocation};
+use crate::quackpack::core::storage::package_id::{GitId, LocalId, PackageId, RegistryId};
+use crate::quackpack::core::{FeatureName, Version};
+use crate::{QuackError, QuackResultContext, StrId, qp_bail};
 
 #[derive(Debug, Deserialize, Serialize, Default, Clone, PartialEq, Eq, Hash)]
+/// General storage/venv freezefile.
 pub struct VenvFreeze {
     root: RootPackage,
     dependencies: Vec<FreezePackage>,
 }
 
 impl VenvFreeze {
+    /// Create a new [`VenvFreeze`].
     pub fn new(root: RootPackage, dependencies: Vec<FreezePackage>) -> Self {
         Self { root, dependencies }
     }
 
+    /// Get the root package of this freeze.
     pub fn root(&self) -> &RootPackage {
         &self.root
     }
 
+    /// A mutable counterpart to the [`root`](Self::root).
     pub fn root_mut(&mut self) -> &mut RootPackage {
         &mut self.root
     }
 
+    /// Set the root package of this freeze.
     pub fn set_root(&mut self, root: RootPackage) {
         self.root = root;
     }
 
+    /// Get the dependencies mentioned in this freeze.
     pub fn dependencies(&self) -> &[FreezePackage] {
         &self.dependencies
     }
 
+    /// A mutable counterpart to the [`dependencies`](Self::dependencies).
     pub fn dependencies_mut(&mut self) -> &mut Vec<FreezePackage> {
         &mut self.dependencies
     }
 
+    /// Set the dependencies in this freeze.
     pub fn set_dependencies(&mut self, dependencies: Vec<FreezePackage>) {
         self.dependencies = dependencies;
     }
 }
 
 #[derive(Debug, Deserialize, Serialize, Default, Clone, PartialEq, Eq, Hash)]
+/// A root package of the freeze.
 pub struct RootPackage {
     name: StrId,
     version: Version,
@@ -56,6 +63,7 @@ pub struct RootPackage {
 }
 
 impl RootPackage {
+    /// Create a new [`RootPackage`].
     pub fn new(
         name: StrId,
         version: Version,
@@ -70,52 +78,67 @@ impl RootPackage {
         }
     }
 
+    /// Cast this root package to the [`FreezeDep`].
+    pub fn as_freeze_dep(&self) -> FreezeDep {
+        FreezeDep {
+            name: self.name(),
+            version: self.version(),
+        }
+    }
+
+    /// Get the name of this package.
     pub fn name(&self) -> StrId {
         self.name
     }
 
+    /// Set the name of this package.
     pub fn set_name(&mut self, name: StrId) {
         self.name = name;
     }
 
+    /// Get the version of this package.
     pub fn version(&self) -> Version {
         self.version
     }
 
-    pub fn version_mut(&mut self) -> &mut Version {
-        &mut self.version
-    }
-
+    /// Set the version of this package.
     pub fn set_version(&mut self, version: Version) {
         self.version = version;
     }
 
-    pub fn features(&self) -> &[StrId] {
+    /// Get all possible features of this package, known at a time of creating this freeze.
+    pub fn features(&self) -> &[FeatureName] {
         &self.features
     }
 
+    /// A mutable counterpart to the [`features`](Self::features).
     pub fn features_mut(&mut self) -> &mut Vec<FeatureName> {
         &mut self.features
     }
 
+    /// Set the all known features of this package.
     pub fn set_features(&mut self, features: Vec<FeatureName>) {
         self.features = features;
     }
 
+    /// Get all direct dependencies of this package.
     pub fn dependencies(&self) -> &[FreezeDep] {
         &self.dependencies
     }
 
+    /// A mutable counterpart to the [`dependencies`](Self::dependencies).
     pub fn dependencies_mut(&mut self) -> &mut Vec<FreezeDep> {
         &mut self.dependencies
     }
 
+    /// Set the direct dependencies of this package.
     pub fn set_dependencies(&mut self, dependencies: Vec<FreezeDep>) {
         self.dependencies = dependencies;
     }
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Hash, Eq)]
+/// A non-root dependency in a freeze (transitive or direct).
 pub struct FreezePackage {
     name: StrId,
     version: Version,
@@ -125,6 +148,7 @@ pub struct FreezePackage {
 }
 
 impl FreezePackage {
+    /// Create a new [`FreezePackage`].
     pub fn new(
         name: StrId,
         version: Version,
@@ -141,58 +165,75 @@ impl FreezePackage {
         }
     }
 
+    /// Cast this dependency to the [`FreezeDep`].
+    pub fn as_freeze_dep(&self) -> FreezeDep {
+        FreezeDep {
+            name: self.name(),
+            version: self.version(),
+        }
+    }
+
+    /// Get the name of this dependency.
     pub fn name(&self) -> StrId {
         self.name
     }
 
+    /// Set the name of this dependency.
     pub fn set_name(&mut self, name: StrId) {
         self.name = name;
     }
 
+    /// Get the version of this dependency.
     pub fn version(&self) -> Version {
         self.version
     }
 
-    pub fn version_mut(&mut self) -> &mut Version {
-        &mut self.version
-    }
-
+    /// Set the version of this dependency.
     pub fn set_version(&mut self, version: Version) {
         self.version = version;
     }
 
-    pub fn features(&self) -> &[StrId] {
+    /// Get all possible features of this dependency.
+    pub fn features(&self) -> &[FeatureName] {
         &self.features
     }
 
+    /// A mutable counterpart to the [`features`](Self::features).
     pub fn features_mut(&mut self) -> &mut Vec<FeatureName> {
         &mut self.features
     }
 
+    /// Set all possible features of this dependency.
     pub fn set_features(&mut self, features: Vec<FeatureName>) {
         self.features = features;
     }
 
+    /// Get all direct dependencies of this dependency.
     pub fn dependencies(&self) -> &[FreezeDep] {
         &self.dependencies
     }
 
+    /// A mutable counterpart to the [`dependencies`](Self::dependencies).
     pub fn dependencies_mut(&mut self) -> &mut Vec<FreezeDep> {
         &mut self.dependencies
     }
 
+    /// Set the direct dependencies of this dependency.
     pub fn set_dependencies(&mut self, dependencies: Vec<FreezeDep>) {
         self.dependencies = dependencies;
     }
 
+    /// Get the source of this dependency.
     pub fn source(&self) -> InternedExpandedLocation {
         self.source
     }
 
+    /// Set the source of this dependency.
     pub fn set_source(&mut self, source: InternedExpandedLocation) {
         self.source = source;
     }
 
+    /// Cast self to the [`PackageId`].
     pub fn to_package_id(&self) -> PackageId {
         match self.source().as_ref() {
             ExpandedLocation::Registry { url, .. } => {
@@ -216,32 +257,34 @@ impl From<FreezePackage> for PackageId {
 
 #[derive(Debug, Default, Clone, Copy, Hash, Eq, PartialEq)]
 /// Dependency deserialized from format `<name> <version>`
+/// It's used as a values in dependencies's of a node.
 pub struct FreezeDep {
     name: StrId,
     version: Version,
 }
 
 impl FreezeDep {
+    /// Create a new [`FreezeDep`].
     pub fn new(name: StrId, version: Version) -> Self {
         Self { name, version }
     }
 
+    /// Get the name of this dependency.
     pub fn name(&self) -> StrId {
         self.name
     }
 
+    /// Set the name of this dependency.
     pub fn set_name(&mut self, name: StrId) {
         self.name = name;
     }
 
+    /// Get the version of this dependency.
     pub fn version(&self) -> Version {
         self.version
     }
 
-    pub fn version_mut(&mut self) -> &mut Version {
-        &mut self.version
-    }
-
+    /// Set the version of this dependency.
     pub fn set_version(&mut self, version: Version) {
         self.version = version;
     }

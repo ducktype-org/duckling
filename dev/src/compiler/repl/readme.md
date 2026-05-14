@@ -19,11 +19,11 @@ The REPL module enables interactive development by compiling and executing Duckl
 
 ```
 src/repl/
-├── repl_session.hpp       # Main REPL session interface
-├── repl_session.cpp       # Session implementation and input handling
-├── repl_structs.hpp       # Core data structures (ReplConfig, ReplResult, ReplStatement)
-├── repl_frontend.hpp      # Terminal I/O and line editing
-├── repl_frontend.cpp      # Frontend implementation with history navigation
+├── session.hpp            # Main REPL session interface
+├── session.cpp            # Session implementation and input handling
+├── helper_structs.hpp     # Core data structures (ReplConfig, ReplResult, ReplStatement)
+├── frontend.hpp           # Terminal I/O and line editing
+├── frontend.cpp           # Frontend implementation with history navigation
 ```
 
 Also some helpers are in other modules:
@@ -61,7 +61,7 @@ duckling> /exit
 ### Basic API Usage
 
 ```cpp
-#include <repl/repl_session.hpp>
+#include <repl/session.hpp>
 
 using namespace compiler::repl;
 
@@ -83,35 +83,13 @@ The REPL provides several built-in commands (all start with `/`):
 
 ### Multiline Mode
 
-For entering complex code blocks:
-
-1. Type `"""` (triple quotes) to enter multiline mode
-2. Enter your code across multiple lines
-3. Type `/end` on a new line to execute the block
-
-Example:
-```
-duckling> """
-      |fun factorial(n: i64) -> i64 = {
-      |    if (n <= 1) { return 1; }
-      |    return n * factorial(n - 1);
-      |}
-      |/end
-duckling> builtin_output_i64(factorial(5));
-=> 120
-```
+Just type Alt + Enter to create a new line.
 
 ### Custom Configuration
 
 ```cpp
 ReplConfig config;
 config.prompt = "duck> ";              // Primary prompt
-config.continuation = "  ... ";        // Multiline continuation prompt
-config.multiline_start = "```";        // Alternative multiline trigger
-config.multiline_end = "/end";        // Multiline end command
-
-ReplSession session(config);
-session.run();
 ```
 
 ### Programmatic Execution
@@ -162,11 +140,12 @@ struct ReplStatement {
 Configuration for REPL behavior:
 
 ```cpp
-struct ReplConfig {
-    std::string prompt = "duckling> ";       // Primary prompt
-    std::string continuation = "      |";    // Continuation prompt
-    std::string multiline_start = "\"\"\"";  // Multiline mode trigger
-    std::string multiline_end = "/end";      // Multiline mode end command
+struct ReplConfig final {
+    static constexpr std::string PROMPT
+        = "duckling> ";  /// Primary prompt shown before each input
+    static constexpr std::string CONTINUATION = "          ";  /// Prompt for continuation lines
+    static constexpr std::string HISTORY_MULTILINE_CONTINUATION
+        = "    ";  /// Prompt for history continuation.
 };
 ```
 
@@ -248,7 +227,7 @@ The REPL is integrated into the `duckc` compiler as a subcommand. The integratio
 .addSubcommand(
     clah::Clah("repl", "Start an interactive REPL session")
         .setHandler([](const clah::ParsingResult& options) -> int {
-            compiler::driver::initializeTheCompiler(/* ... */);
+            compiler::driver::initializeTheCompiler(/* ... */).status();
             compiler::repl::ReplSession session;
             return session.run();
         })

@@ -1,46 +1,38 @@
-use std::{
-    collections::HashMap,
-    path::{Path, PathBuf},
-};
+//! A storage management of gits.
+use std::path::{Path, PathBuf};
 
 use url::Url;
 
-use crate::{
-    QuackResult, StrId,
-    quackpack::core::{Git, git_access::GitAccess},
-    util_common::path_ops_ext::{MkdirOptions, PathOpsExt},
-};
-
-use super::package_id::{GitId, PackageId};
-
+use super::package_id::GitId;
 use super::paths::Storage;
-#[derive(Debug)]
+use crate::QuackResult;
+use crate::quackpack::core::solver::git_access::GitAccess;
+use crate::util::path_ops_ext::{MkdirOptions, PathOpsExt};
+#[derive(Debug, Clone, Copy)]
+/// An implementation of [`GitAccess`].
 pub struct StorageGitAccess<'paths> {
     paths: &'paths Storage,
-    _cached: HashMap<Git, GitId>,
 }
 
 impl<'paths> StorageGitAccess<'paths> {
-    pub fn new(paths: &'paths Storage, cached: HashMap<Git, GitId>) -> Self {
-        Self {
-            paths,
-            _cached: cached,
-        }
+    /// Create a new [`StorageGitAccess`].
+    pub fn new(paths: &'paths Storage) -> Self {
+        Self { paths }
     }
 }
 
-impl<'paths> GitAccess for StorageGitAccess<'paths> {
-    fn git_path(&self, url: Url, commit: StrId) -> PathBuf {
-        self.paths.pkg_dir(&PackageId::Git(GitId::new(url, commit)))
+impl GitAccess for StorageGitAccess<'_> {
+    fn git_path(&self, url: Url, commit: &str) -> PathBuf {
+        self.paths.pkg_dir(&GitId::new(url, commit.into()).into())
     }
 
-    fn is_stored(&self, url: Url, commit: StrId) -> bool {
+    fn is_stored(&self, url: Url, commit: &str) -> bool {
         self.paths
-            .is_package_stored(&PackageId::Git(GitId::new(url, commit)))
+            .is_package_stored(&GitId::new(url, commit.into()).into())
     }
 
-    fn store(&mut self, url: Url, commit: StrId, source_path: &Path) -> QuackResult<()> {
-        let id = PackageId::Git(GitId::new(url, commit));
+    fn store(&mut self, url: Url, commit: &str, source_path: &Path) -> QuackResult<()> {
+        let id = GitId::new(url, commit.into()).into();
         let dir = self.paths.pkg_dir(&id);
         if dir.exists() {
             dir.rmtree()?;

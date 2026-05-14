@@ -6,8 +6,8 @@
 #include <tester/tester.hpp>
 
 #include <vm/bytecode/validator/errors.hpp>
-#include <vm/core/process/exceptions.hpp>
-#include <vm/core/thread/vmvalue.hpp>
+#include <vm/core/safe/exceptions.hpp>
+#include <vm/core/vmvalue/vmvalue.hpp>
 #include <vm/utils/interpret.hpp>
 
 #include <limits>
@@ -69,7 +69,7 @@ private:
 	}
 
 	void emptyVariant() {
-		loadInvalidDbc("empty_variant.dbc", { vm::code::EmptyVariantError::ERR_MSG });
+		loadInvalidDbc("empty_variant.dbc", { vm::code::TooFewVariantAlternativesError::ERR_MSG });
 	}
 
 	void variantTypeTagTest() {
@@ -106,7 +106,8 @@ private:
 					+ ", reason: " + vm::api::errorToString(value.error())
 				);
 			}
-			const auto vm_value = value.value();
+			ASSERT_EQUAL(value.value().size(), 1);
+			const auto vm_value = value.value().at(0);
 			switch (type_tag_bits) {
 			case 8:
 				// Using uint8_t, because u8 is not integral

@@ -2,7 +2,7 @@
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/mangler/mangler.hpp>
-#include <helios/queries.hpp>
+#include <helios/queries/queries.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <mir/mir_lowering/mir_queries.hpp>
 
@@ -51,10 +51,10 @@ int main(int argc, const char* argv[]) {
 
 	for (auto& hout_glob: top_level.glob_data) {
 		query::utils::withContextDo([&](query::Context& ctx) {
-			lir::LIRGlobal lir_glob = lir::LIRGlobal::fromHOUT(ctx, hout_glob);
+			lir::LIRGlobal lir_glob = lir::LIRGlobal::fromHOUT(ctx, *hout_glob);
 			llvm_module.addGlobalToModule(lir_glob);
 
-			variant_match(hout_glob.value) {
+			variant_match(hout_glob->value) {
 				variant_case(helios::HOUTGlobalVariable, var) {
 					CRef mir_func
 						= &ctx.query<mir::LowerGlobalDataToMIRCtor>({ hout_glob })->valueOrThrow();

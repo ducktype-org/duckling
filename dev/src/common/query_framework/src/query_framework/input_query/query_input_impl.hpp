@@ -1,5 +1,7 @@
 #pragma once
 
+#include <base/except/exceptions.hpp>                            // IWYU pragma: export
+
 #include <query_framework/context/context.hpp>                   // IWYU pragma: export
 #include <query_framework/internal/context_access.hpp>           // IWYU pragma: export
 #include <query_framework/internal/query_data/query_id.hpp>      // IWYU pragma: export
@@ -17,7 +19,10 @@
 		::query::internal::ContextAccess::getState()->addSideInputNode(node_id);              \
 		return ::query::internal::SideInputMockValue{};                                       \
 	}                                                                                         \
-	auto query_type::internal_erase(::query::QueryStableHash) -> bool { return false; }       \
+	auto query_type::internal_load(::query::QueryStableHash) -> query_type::QResult {         \
+		CORE_UNREACHABLE();                                                                   \
+	}                                                                                         \
+	auto query_type::internal_erase(::query::QueryStableHash) -> bool { CORE_UNREACHABLE(); } \
 	static_assert(                                                                            \
 		not std::is_reference_v<query_type::QKey>,                                            \
 		"Query key type should not be a reference (use custom struct instead)"                \
@@ -26,7 +31,9 @@
 		::query::HasStablePerfectHash<query_type::QKey>,                                      \
 		"queryStablePerfectHash must be implemented for side inputs keys"                     \
 	);                                                                                        \
-	static_assert(query_type::QueryType::QUERY_DATA.verify(), "Query data is inconsistent."); \
+	static_assert(                                                                            \
+		query_type::QueryType::QUERY_DATA.verify().isOk(), "Query data is inconsistent."      \
+	);                                                                                        \
 	decltype(query_type::id) query_type::id                                                   \
 		= ::query::internal::registerQuery(query_type::QUERY_DATA);
 
@@ -67,6 +74,8 @@
 		::query::HasStablePerfectHash<query_type::QKey>,                                       \
 		"queryStablePerfectHash must be implemented for side inputs keys"                      \
 	);                                                                                         \
-	static_assert(query_type::QueryType::QUERY_DATA.verify(), "Query data is inconsistent.");  \
+	static_assert(                                                                             \
+		query_type::QueryType::QUERY_DATA.verify().isOk(), "Query data is inconsistent."       \
+	);                                                                                         \
 	decltype(query_type::id) query_type::id                                                    \
 		= ::query::internal::registerQuery(query_type::QUERY_DATA);

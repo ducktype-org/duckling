@@ -3,22 +3,31 @@
 #include "access.hpp"
 #include "element_kind.hpp"
 #include "elements/elements_list.hpp"
+#include "elements/lang_state_unmethods.hpp"
+#include "pst_config.hpp"
 #include "pst_id.hpp"
+#include "source_position_locked.hpp"
 
 #include <concurrent/base/collections/hash_map.hpp>
 
+#include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
+#include <base/misc/anycast.hpp>
 #include <base/pointers/box.hpp>
 #include <base/pointers/ref.hpp>
 
 #include <hashing/component_hash.hpp>
-#include <hashing/hash.hpp>
 #include <lexer/token.hpp>
 #include <token_parser_core/automatic.hpp>
 #include <token_parser_core/base_element.hpp>
 
+#include <any>
 #include <ranges>
 #include <variant>
+
+namespace dia_int {
+	class StablePosition;
+}
 
 namespace pst {
 	class Import;
@@ -28,25 +37,40 @@ namespace pst {
 
 	class PstVisitor;
 
-	class StablePosition;
+
+	class LangParserState;
+
+	/**
+	 * @brief Additional data optionally stored in root elements of the PST.
+	 * @TODO: #2397 probably move or remove it.
+	 */
+	struct AdditionalRootData final {
+		struct MacroExpansionParent final {
+			/**
+			 * @brief Optional source element of macro expansion the PST was generated from.
+			 */
+			AccessLocked<LangElement> expand_element;
+		};
+
+		struct ModuleParent final {
+			/**
+			 * @brief frontend::ModuleID the PST was generated from.
+			 */
+			std::any module_id;
+		};
+
+		/**
+		 * @brief Source of PST.
+		 * @note This is used mostly for determining the parent helios-scope of PST root elements.
+		 */
+		std::variant<MacroExpansionParent, ModuleParent> pst_parent;
+	};
 
 	/**
 	 * @brief Base Element for all of the PST elements.
 	 */
 	class LangElement: public tpc::Element {
-	protected:
-		/**
-		 * @brief Hash algorithm used for PST stable hashing
-		 * @TODO: #1337 Swap to CRC256
-		 */
-		using HashAlg = hashing::StatefulHash<hashing::SHA256>;
-
 	public:
-		/**
-		 * @brief Hash type for PST stable hashing
-		 */
-		using HashType = HashAlg::result_type;
-
 		using SubToken = base::CRef<lexer::Token>;
 
 		/**
@@ -74,8 +98,9 @@ namespace pst {
 
 		using SubElement = std::variant<SubToken, Child, NamedChild>;
 
-		explicit LangElement(const dia::SourcePosition& position):
-			  source_position(position),
+		explicit LangElement(const LangParserState& state):
+			  source_position(internal::getPosition(state)),
+			  context_hash(internal::getContextHash(state)),
 			  id(PstID::next()) {}
 
 		LangElement(const LangElement&) = delete;
@@ -85,13 +110,28 @@ namespace pst {
 		 * @brief Position covering the whole element.
 		 */
 		[[nodiscard]]
-		const dia::SourcePosition& getSourcePosition() const;
+		SourcePositionLocked getSourcePosition() const;
 
 		/**
 		 * @brief The stable position of an element.
 		 */
 		[[nodiscard]]
-		StablePosition getStablePosition() const;
+		dia_int::StablePosition getStablePosition() const;
+
+		/**
+		 * @brief Given a StablePosition of an element, returns the source position of the element.
+		 */
+		static dia::SourcePosition getActiveSourcePosition(
+			query::Context& ctx, const dia_int::StablePosition& pos
+		);
+
+		/**
+		 * @brief Given a StablePosition of an element, returns the source position of the element,
+		 * bypasses the query graph.
+		 */
+		static dia::SourcePosition getActiveSourcePositionIllegalAccess(
+			const dia_int::StablePosition& pos
+		);
 
 		/**
 		 * @brief Get pst node the by stable hash. Throws on non-existent hash.
@@ -229,6 +269,12 @@ namespace pst {
 		template<typename X>
 		friend class PSTAutomatic;
 
+		[[nodiscard]]
+		const AdditionalRootData& getAdditionalRootData() const {
+			CORE_ASSERT(additional_root_data.has_value(), "Element has no additional root data");
+			return additional_root_data.value();
+		}
+
 	protected:
 		/**
 		 * @brief Map from stable hash to lang element for all created elements.
@@ -245,19 +291,40 @@ namespace pst {
 
 		using InternalSubElement = std::variant<SubToken, InternalChild, InternalNamedChild>;
 
+		/************************\
+		|   LANG ELEMENT DATA    |
+		\************************/
+
 		dia::SourcePosition source_position;
-		std::vector<InternalSubElement>
-			sub_elements;  ///< All of the children elements meant for generic analysis of the tree.
-		base::Optional<AccessLocked<LangElement>>
-			parent;        ///< Parent element in PST if element is not root.
-		base::Optional<hashing::ComponentHash>
-			element_path_hash;  ///< The Path that uniquely identifies the
-		                        ///< element and allows to conserve some
-		                        ///< information between compilations. Has
-		                        ///< no value if it's incalculable.
-		base::Optional<HashType>
-			hash;  ///< The Hash that encodes the element path and data and allows to conserve some
-		           ///< information between compilations. Has no value if it's incalculable.
+		HashType            context_hash;
+
+		/**
+		 * All of the children elements meant for generic analysis of the tree.
+		 */
+		std::vector<InternalSubElement> sub_elements;
+
+		/**
+		 * Parent element in PST if element is not root.
+		 */
+		base::Optional<AccessLocked<LangElement>> parent;
+
+		/**
+		 * The Path that uniquely identifies the
+		 * element and allows to conserve some
+		 * information between compilations. Has
+		 * no value if it's incalculable.
+		 */
+		base::Optional<hashing::ComponentHash> element_path_hash;
+
+		/**
+		 * The Hash that encodes the element path and data and allows to conserve some
+		 * information between compilations. Has no value if it's incalculable.
+		 */
+		base::Optional<HashType> hash;
+
+		// @TODO: #2404 We should have a RootElement that stores this information instead of storing
+		// it in each element, but for now it is easier to keep it here.
+		base::Optional<AdditionalRootData> additional_root_data;
 
 		/**
 		 * @brief Kind of the element.
@@ -341,6 +408,17 @@ namespace pst {
 		void calcHash();
 
 		/**
+		 * @brief Puts the element in the global hash map, should be called at the end of hash
+		 * calculation. Separated from `calcHash` to allow for different hash calculation strategies.
+		 */
+		void putInPSTHashHashMap();
+
+		/**
+		 * @brief Calls `putInPSTHashHashMap` recursively for this element and all children.
+		 */
+		void putInPSTHashHashMapRecursive();
+
+		/**
 		 * @brief Calculates the whole hash for the element including common parts like path and
 		 * element type. Can be overriden for specific parent elements that add common information.
 		 */
@@ -350,19 +428,20 @@ namespace pst {
 		/**
 		 * @brief Calculates the signature of the whole PST sub-tree. Assumes the hashes are already
 		 * calculated.
+		 * @param partial_hash partial hash to add the signature to
 		 */
-		void calcSignature(LangElement::HashAlg& partial_hash) const;
+		void calcSignature(HashAlg& partial_hash) const;
 
 		/**
 		 * @brief Signs the hashes of the whole PST sub-tree with given signature.
 		 */
-		void signGenerated(LangElement::HashType& signature);
+		void signGenerated(const HashType& signature);
 
 		/**
 		 * @brief Used to add additional data that is generic to multiple elements for example in
 		 * Stmt.
 		 */
-		virtual LangElement::HashAlg& addGenericDataToHash(LangElement::HashAlg& partial_hash) const;
+		virtual HashAlg& addGenericDataToHash(HashAlg& partial_hash) const;
 
 		/**
 		 * @brief Adds the element specific information to the hash (Not generic ones such as number
@@ -413,6 +492,12 @@ namespace pst {
 		void setFirstToken(dia::SourcePosition pos);
 
 		void setParent(Ref<LangElement> parent) { this->parent = { parent }; }
+
+		/**
+		 * @brief Sets the additional root data for this element.
+		 * @note This should only be used for root elements of the PST.
+		 */
+		void setAdditionalRootData(AdditionalRootData data);
 
 	private:
 		PstID id = PstID::next();

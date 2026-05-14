@@ -33,13 +33,14 @@ export function activate(context: ExtensionContext) {
 		documentSelector: [{ scheme: "file", language: "duckling" }],
 		synchronize: {
 			// Notify the server about file changes to '.clientrc files contained in the workspace
-			fileEvents: workspace.createFileSystemWatcher("**/.clientrc")
+			fileEvents: workspace.createFileSystemWatcher("**/.clientrc"),
+			configurationSection: 'DucklingLanguageSupport'
 		}
 	};
 
 	// Create the language client and start the client.
 	client = new LanguageClient(
-		"DucklingLanguageServer",
+		"DucklingLanguageSupport",
 		"Duckling Server",
 		serverOptions,
 		clientOptions

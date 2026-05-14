@@ -2,6 +2,7 @@
 #include <frontend/pst_parser/elements/elements_common.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/all_class_elements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
+#include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
 #include <frontend/pst_parser/elements/hierarchy/lists/all_lists.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/all_statements.hpp>
@@ -68,7 +69,7 @@ class PSTErrorTests: public tester::TestSuite {
 
 		bool operator()() override {
 			auto parsed = pst::PST<pst::CodeBlock, Parser>::fromContentsWithArgs(
-				code, pst::PSTType::Program, hashing::ComponentHash{}, pst::BlockOrderType::Ordered
+				code, pst::PSTType::Program, hashing::ComponentHash{}
 			);
 			return (not parsed.hasErrors()) == good;
 		}
@@ -89,7 +90,7 @@ class PSTErrorTests: public tester::TestSuite {
 
 		bool operator()() override {
 			auto parsed = pst::PST<pst::CodeBlockOrStmt, Parser>::fromContentsWithArgs(
-				code, pst::PSTType::Program, hashing::ComponentHash{}, pst::BlockOrderType::Ordered
+				code, pst::PSTType::Program, hashing::ComponentHash{}
 			);
 			return (not parsed.hasErrors()) == good;
 		}
@@ -106,23 +107,19 @@ class PSTErrorTests: public tester::TestSuite {
 
 	template<std::derived_from<pst::ClassStmt> Element, bool good = true, typename Parser = Element>
 	struct ClassStmtExample: public GenExample {
-		pst::ClassContext context;
+		base::StrID class_name;
 
-		ClassStmtExample(std::string code, pst::ClassContext&& ctx):
-			  GenExample(std::move(code)),
-			  context(std::move(ctx)) {}
-
-		ClassStmtExample(std::string code):
-			  GenExample(std::move(code)),
-			  context{ .name = base::StrID("unnamed") } {}
+		ClassStmtExample(std::string code): GenExample(std::move(code)), class_name("unnamed") {}
 
 		ClassStmtExample(std::string code, const std::string& class_name):
 			  GenExample(std::move(code)),
-			  context{ .name = base::StrID(class_name.c_str()) } {}
+			  class_name(base::StrID(class_name.c_str())) {}
 
 		bool operator()() override {
 			auto parsed = pst::PST<Element, Parser>::fromContentsWithArgs(
-				this->code, pst::PSTType::Program, hashing::ComponentHash{}, context
+				this->code,
+				makeBox<pst::LangParserContext>(class_name, pst::BlockOrderType::Unordered),
+				hashing::ComponentHash{}
 			);
 			return (not parsed.hasErrors()) == good;
 		}
@@ -132,7 +129,7 @@ class PSTErrorTests: public tester::TestSuite {
 			std::stringstream ss;
 			ss << "Unexpected behaviour while parsing: `" << this->code << "` as ";
 			ss << base::typeName<Element>();
-			ss << " in class `" << context.name.str() << "`";
+			ss << " in class `" << class_name.str() << "`";
 			ss << " expected parsing to " << (good ? "succeed" : "fail") << ".";
 			return ss.str();
 		}
@@ -202,6 +199,7 @@ class PSTErrorTests: public tester::TestSuite {
 
 	Example<pst::Fun, true>      simple_function1{ "fun foo(x: i32, y: i32) -> (i32, i32) = {}" };
 	Example<pst::Fun, true>      simple_function2{ "fun foo(x: i32, y: i32 = 1) = {}" };
+	Example<pst::Fun, true>      simple_function3{ "fun foo(x: i32, y: i32 = 1,) = {}" };
 	Example<pst::Fun, false>     bad_function{ "fun foo(x: i32, y) = {}" };
 	Example<pst::FunDecl, true>  simple_fundecl1{ "fundecl foo(x: i32, y:i32) -> (i32, i32)" };
 	Example<pst::FunDecl, true>  simple_fundecl2{ "fundecl foo()" };
@@ -215,9 +213,10 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::Pattern, false> two_params_pattern{ "pattern Point(a: T, b: T) = {}" };
 	Example<pst::Pattern, false> trailing_comma_pattern{ "pattern Point(a: T,) = {}" };
 
-	Example<pst::If, true> simple_if{ "if (a == b) {c = d;}" };
-	Example<pst::If, true> simple_if_else{ "if (a == b) {c = d;} else {c = e;}" };
-	Example<pst::If, true> simple_if_else_no_blocks{ "if (a == b) c = d; else c = e;" };
+	Example<pst::If, true>  simple_if{ "if (a == b) {c = d;}" };
+	Example<pst::If, true>  simple_if_else{ "if (a == b) {c = d;} else {c = e;}" };
+	Example<pst::If, true>  simple_if_else_no_blocks{ "if (a == b) c = d; else c = e;" };
+	Example<pst::If, false> empty_if_condition{ "if () {}" };
 
 	Example<pst::Import, true>  simple_import{ "import std.math.sqrt as sqrt" };
 	Example<pst::Import, false> empty_import{ "import" };
@@ -254,6 +253,19 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::Stmt, false> empty_specifier{ "public;" };
 	Example<pst::Stmt, false> bad_extern_block{ "extern {class x{}};" };
 
+	Example<pst::UniversalExprHolder, true>  format1{ R"(f"{x} + {y} = {x + y}")" };
+	Example<pst::UniversalExprHolder, true>  format2{ R"(f"{x}{y}{z}")" };
+	Example<pst::UniversalExprHolder, true>  format3{ R"(f"nothing")" };
+	Example<pst::UniversalExprHolder, true>  format4{ R"(f"{x}{y} = z")" };
+	Example<pst::UniversalExprHolder, false> bad_format1{ R"(f"{;}")" };
+
+	Example<pst::Stmt, true> trailing_comma_attr_arg_list{
+		"@if_system(Windows,) print(\"windows\");"
+	};
+	Example<pst::Stmt, true> trailing_comma_call_list{ "print(\"windows\",);" };
+	Example<pst::Stmt, true> trailing_comma_nested_import{ "import A.B.(C,)" };
+	Example<pst::Stmt, true> trailing_comma_parameter_list{ "fun foo(a: A,) = {}" };
+	Example<pst::Stmt, true> trailing_comma_template_list{ "x.y:{1,};" };
 
 	Example<pst::For, true>  simple_for{ "for(a in a.b(x, y)) {}" };
 	Example<pst::For, true>  simple_typed_for{ "for(a: T, U in a + c) {}" };

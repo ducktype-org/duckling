@@ -14,7 +14,7 @@ namespace pst {
 		HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const override;
 
 	public:
-		explicit Block(const dia::SourcePosition& position): CodeDecl(position) {
+		explicit Block(const LangParserState& state): CodeDecl(state) {
 			element_kind = ElementKind::Block;
 		}
 
@@ -26,6 +26,12 @@ namespace pst {
 		std::string elementType() const override {
 			return "Block";
 		}
+
+		[[nodiscard]] pst::AccessLocked<CodeBlock> getCodeBlock() const {
+			return code_block.give();
+		}
+
+		[[nodiscard]] base::Optional<base::StrID> getName() const { return optional_name.value; }
 
 		[[nodiscard]]
 		DeclKind isDeclaration() const final {

@@ -12,8 +12,8 @@ namespace pst::expr {
 		NAMED_CHILD(expr, ExprElement);
 
 	public:
-		explicit SuffixOperator(const dia::SourcePosition& pos, Operator op, i64 precedence):
-			  ExprElement(pos, precedence),
+		explicit SuffixOperator(const LangParserState& state, Operator op, i64 precedence):
+			  ExprElement(state, precedence),
 			  op(op) {}
 
 		~SuffixOperator() override = default;

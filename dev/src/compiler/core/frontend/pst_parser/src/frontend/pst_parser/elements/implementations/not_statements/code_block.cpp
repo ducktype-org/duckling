@@ -7,13 +7,14 @@
 namespace pst {
 
 
-	MBox<CodeBlock> CodeBlock::parse(LangParserState& state, BlockOrderType order_type) {
+	MBox<CodeBlock> CodeBlock::parse(LangParserState& state) {
+		auto order_type = state.getContext()->block_order;
+
 		CORE_ASSERT(
 			order_type != BlockOrderType::Undefined, "Parsing with an undefined ordering type"
 		);
 
-		auto position = state.getPosition();
-		auto out      = makeBox<CodeBlock>(position);
+		auto out = makeBox<CodeBlock>(state);
 
 		out->type = order_type;
 
@@ -22,16 +23,16 @@ namespace pst {
 			return nullptr;
 		}
 
-		state.parse(out).goDown();
+		PARSE().goDown();
 
 		// @TODO: #1484 Rethink parser errors
 		PST_WHILE(state.notEmpty()) {
 			MBox<Stmt> stmt;
-			state.parse(out).one(&stmt);
+			PARSE().one(&stmt);
 
 			if (stmt) {
 				out->statements.emplace_back(nullptr);
-				state.parse(out).assign(&out->statements.back(), std::move(stmt));
+				PARSE().assign(&out->statements.back(), std::move(stmt));
 			}
 
 			PST_WHILE(state[0].is(Special::Semicolon)) {
@@ -40,7 +41,7 @@ namespace pst {
 			}
 		}
 
-		state.parse(out).goUpAndSkip();
+		PARSE().goUpAndSkip();
 
 		out->fillSymbols();
 
@@ -72,7 +73,8 @@ namespace pst {
 			auto ordered = hashing::ComponentHash(path, "ordered");
 			calcIndexedListChildPath<Stmt>({ statements }, ordered);
 		} else if (type == BlockOrderType::Unordered) {
-			calcOrderedListChildPath(statements, path);
+			auto unordered = hashing::ComponentHash(path, "unordered");
+			calcOrderedListChildPath(statements, unordered);
 		}
 	}
 
@@ -85,7 +87,7 @@ namespace pst {
 		out << "]";
 	}
 
-	LangElement::HashAlg& CodeBlock::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& CodeBlock::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, statements.size());
 		addToHash(partial_hash, type);
 		if (type == BlockOrderType::Unordered) {

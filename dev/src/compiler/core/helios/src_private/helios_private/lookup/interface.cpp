@@ -1,15 +1,16 @@
 #include "interface.hpp"
 
 #include <diagnostic_interactive/placeholder.hpp>
+#include <helios/tsh/type_interface.hpp>
 #include <helios_private/lookup/errors.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
-#include <typesystem/higher/type_interface.hpp>
 
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <query_framework/context/context.hpp>
+#include <query_framework/query_result.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 
 namespace compiler::helios {
@@ -37,11 +38,11 @@ namespace compiler::helios {
 	DECLARE_QUERY(
 		QueryLookupInTypeInstance,
 		KeyOf_LookupInTypeInstance,
-		CRef<LookupResult>,
-		({ .uses_qresult = false })
+		CRef<query::QResult<LookupResult>>,
+		({})
 	)
 
-	struct IMPLEMENT_QUERY(QueryLookupInTypeInstance, LookupResult) {
+	struct IMPLEMENT_QUERY(QueryLookupInTypeInstance, query::QResult<LookupResult>) {
 		static auto provide(query::Context& ctx, const QKey& key) -> PResult {
 			// @TODO: #1412 #1531 this a mock that works for now, make it better
 
@@ -59,7 +60,7 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLookupInTypeInstance);
 
-	CRef<LookupResult> HInterface::lookup(
+	CRef<query::QResult<LookupResult>> HInterface::lookup(
 		query::Context& ctx, base::StrID name, AdditionalLookupParameters params
 	) const {
 		variant_match(data) {
@@ -79,7 +80,11 @@ namespace compiler::helios {
 				return ctx.query<QueryLookupInTypeInstance>({ type.type, name });
 			}
 			variant_case(TypeMetaInterface, type) {
-				throw base::NotYetImplemented("HInterface::lookup for type");
+				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					"Type meta lookups are not implemented yet", ""
+				));
+				static query::QResult<LookupResult> failed_result = query::Failed();
+				return &failed_result;
 			}
 			variant_case(CustomInterface, custom) {
 				return custom.custom->lookup(ctx, name, params);
@@ -89,12 +94,12 @@ namespace compiler::helios {
 	}
 
 	query::QResult<SymbolList> HInterface::lookupExpectUnique(
-		dia::SourcePosition        error_position,
-		query::Context&            ctx,
-		base::StrID                name,
-		AdditionalLookupParameters params
+		const pst::ResolvesToPosition& error_position,
+		query::Context&                ctx,
+		base::StrID                    name,
+		AdditionalLookupParameters     params
 	) const {
-		auto lookup_result = lookup(ctx, name, params);
+		UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup(ctx, name, params));
 
 		auto get_as_single = lookup_result->getAsSingle();
 
@@ -112,10 +117,10 @@ namespace compiler::helios {
 				return dealiased_result;
 			}
 			variant_case(errors::Ambiguity, _) {
-				auto msg = makeBox<ShadowedVariableLookupError>(error_position);
+				auto msg = makeBox<ShadowedVariableLookupError>(error_position.resolve(ctx));
 				for (auto& leaf: lookup_result->leaves) {
 					if_opt_some(getSymRef(leaf)->getPSTDataOpt(), pst_data) {
-						auto decl_pos = pst_data->getElement().unlock(ctx)->getSourcePosition();
+						auto decl_pos = pst_data->getElement().unlock(ctx)->getStablePosition();
 						msg->addAttachedMessage(makeBox<ShadowingDeclarationNote>(decl_pos));
 					}
 				}
@@ -123,9 +128,9 @@ namespace compiler::helios {
 				return query::Failed();
 			}
 			variant_case(errors::SymbolNotFound, _) {
-				ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+				ctx.logInt(makeBox<dia_int::PlaceholderError>(
 					base::strConcat("Symbol '", name, "' not found in lookup"),
-					error_position,
+					error_position.resolve(ctx),
 					"",
 					"symbol lookup here"
 				));

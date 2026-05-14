@@ -1,24 +1,23 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::{
-    QuackResult, QuackResultContext,
-    quackpack::core::{
-        Dependency, Version,
-        types_common::{
-            ExpandedPackage, InternedExpandedLocation, InternedLocation, Location, Package,
-        },
-        version::CompatibilityCheck,
-    },
+use crate::quackpack::core::solver::types_common::{
+    ExpandedPackage, InternedExpandedLocation, InternedLocation, Location, Package,
 };
+use crate::quackpack::core::version::CompatibilityCheck;
+use crate::quackpack::core::{Dependency, Version};
+use crate::{QuackResult, QuackResultContext};
 
-pub fn get_possible_realisations(
+/// For a given dpendency entry from the manifest and
+/// given all the found versions of a package from some location,
+/// find all the packages satisfying the dependency.
+pub fn get_possible_realizations(
     dependency_description: &Dependency,
     versions_for_location: &HashMap<InternedExpandedLocation, HashSet<Option<Version>>>,
     location_resolver: &HashMap<InternedLocation, InternedExpandedLocation>,
 ) -> QuackResult<Vec<ExpandedPackage>> {
     if dependency_description.is_pinned() {
+        // For a pinned dependency only one package can be a realization.
         let version = dependency_description
-            .desc()
             .versions()
             .first()
             .context_internal("Pinned dependency should have exactly one version specified")?;
@@ -34,11 +33,12 @@ pub fn get_possible_realisations(
         ))) else {
             return Ok(vec![]);
         };
+        // Baseline versions are the versions specified in the manifest,
+        // with which we want to check the compatibility of the existing packages.
         let baseline_versions = if location.is_local() || location.is_git() {
             vec![None]
         } else {
             dependency_description
-                .desc()
                 .versions()
                 .iter()
                 .copied()
@@ -69,32 +69,26 @@ pub fn get_possible_realisations(
 
 #[cfg(test)]
 mod test {
-    use std::{
-        collections::{HashMap, HashSet},
-        path::PathBuf,
-    };
+    use std::collections::{HashMap, HashSet};
+    use std::path::PathBuf;
 
     use tempfile::{TempDir, tempdir};
     use url::Url;
 
-    use crate::{
-        DuckCtx, QpCtx, StrId,
-        quackpack::core::{
-            Version, parse_manifest,
-            types_common::{
-                ExpandedLocation, ExpandedPackage, InternedExpandedLocation, InternedLocation,
-                Location,
-            },
-            util::get_possible_realisations,
-        },
-        util_common::path_ops_ext::PathOpsExt,
+    use crate::quackpack::core::solver::types_common::{
+        ExpandedLocation, ExpandedPackage, Location,
     };
+    use crate::quackpack::core::solver::util::get_possible_realizations;
+    use crate::quackpack::core::{Version, parse_manifest};
+    use crate::util::path_ops_ext::PathOpsExt;
+    use crate::{DuckContext, StrId};
 
     fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {
         let dir = tempdir().unwrap();
         let manifest = dir.path().join("x");
         manifest.touch().unwrap();
         manifest.write(contents).unwrap();
+        dir.path().try_fsync_dir().unwrap();
         (dir, manifest)
     }
 
@@ -104,7 +98,7 @@ mod test {
             r#"
 metadata:
   name: a
-  version: 1
+  version: '1'
 
 dependencies:
   b:
@@ -112,22 +106,23 @@ dependencies:
     pinned: true
 "#,
         );
-        let ctx = DuckCtx::default();
-        let pkg = parse_manifest(&manifest_path, &QpCtx::new(&ctx)).unwrap();
+        let ctx = DuckContext::default();
+        let pkg = parse_manifest(&manifest_path, &ctx).unwrap();
         let manifest = pkg.manifest();
         let dependency = manifest
             .dependencies()
-            .all_dependencies()
-            .get(&StrId::new("b"))
+            .get_by_name(StrId::new("b"))
             .unwrap();
-        let location_b = InternedLocation::new(Location::Registry {
+        let location_b = Location::Registry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("b"),
-        });
-        let exp_location_b = InternedExpandedLocation::new(ExpandedLocation::Registry {
+        }
+        .into();
+        let exp_location_b = ExpandedLocation::Registry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("b"),
-        });
+        }
+        .into();
         let location_resolver = HashMap::from([(location_b, exp_location_b)]);
         let versions_for_location = HashMap::from([(
             exp_location_b,
@@ -140,7 +135,7 @@ dependencies:
                 Some(Version::new(2, 0, 3)),
             ]),
         )]);
-        let res = get_possible_realisations(dependency, &versions_for_location, &location_resolver)
+        let res = get_possible_realizations(dependency, &versions_for_location, &location_resolver)
             .unwrap();
         assert_eq!(
             res,
@@ -157,29 +152,30 @@ dependencies:
             r#"
 metadata:
   name: a
-  version: 1
+  version: '1'
 
 dependencies:
   b:
     version: 1.0.3
 "#,
         );
-        let ctx = DuckCtx::default();
-        let pkg = parse_manifest(&manifest_path, &QpCtx::new(&ctx)).unwrap();
+        let ctx = DuckContext::default();
+        let pkg = parse_manifest(&manifest_path, &ctx).unwrap();
         let manifest = pkg.manifest();
         let dependency = manifest
             .dependencies()
-            .all_dependencies()
-            .get(&StrId::new("b"))
+            .get_by_name(StrId::new("b"))
             .unwrap();
-        let location_b = InternedLocation::new(Location::Registry {
+        let location_b = Location::Registry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("b"),
-        });
-        let exp_location_b = InternedExpandedLocation::new(ExpandedLocation::Registry {
+        }
+        .into();
+        let exp_location_b = ExpandedLocation::Registry {
             url: Url::parse("http://localhost:9001").unwrap(),
             real_name: StrId::from("b"),
-        });
+        }
+        .into();
         let location_resolver = HashMap::from([(location_b, exp_location_b)]);
         let versions_for_location = HashMap::from([(
             exp_location_b,
@@ -192,7 +188,7 @@ dependencies:
                 Some(Version::new(2, 0, 3)),
             ]),
         )]);
-        let res = get_possible_realisations(dependency, &versions_for_location, &location_resolver)
+        let res = get_possible_realizations(dependency, &versions_for_location, &location_resolver)
             .unwrap();
         assert_eq!(
             HashSet::from_iter(res),

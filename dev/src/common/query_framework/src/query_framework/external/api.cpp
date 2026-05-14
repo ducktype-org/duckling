@@ -63,8 +63,9 @@ namespace query::external {
 	}
 
 	void invalidateQueries(
-		std::vector<InputData>&&               new_inputs,
-		base::Optional<std::vector<InputData>> previous_inputs_opt
+		std::vector<InputData>&&                    new_inputs,
+		base::Optional<std::vector<InputData>>      previous_inputs_opt,
+		base::Optional<Ref<std::vector<InputData>>> invalidated_inputs_opt
 	) {
 		auto state = ::query::internal::ContextAccess::getState();
 
@@ -81,6 +82,17 @@ namespace query::external {
 			start_nodes = internal::findRemovedInputsFromCurrentGraph(std::move(new_inputs));
 		}
 
+		// If requested, fill the invalidated_inputs vector with the inputs corresponding to the
+		// invalidated nodes.
+		if_opt_some(invalidated_inputs_opt, invalidated_inputs) {
+			std::ranges::copy(
+				start_nodes | std::views::transform([](const internal::NodeID& node) {
+					return InputData(node.q_id, node.hash.val);
+				}),
+				std::back_inserter(*invalidated_inputs)
+			);
+		}
+
 		// Step 1: Get all nodes to invalidate
 		auto nodes_to_invalidate = state->getGraph().getDependentNodes(start_nodes);
 
@@ -89,7 +101,11 @@ namespace query::external {
 
 		// Step 3: Erase values of the invalidated nodes from their cache
 		for (const auto& node: nodes_to_invalidate.dependents_recursive) {
-			node.q_id.getData().cache_data.erase_function(node.hash.val);
+			if (not node.q_id.getData().isInputQuery()) {
+				internal::ContextAccess::getState()->getTaskPool()->invalidateTask(node);
+				node.q_id.getData().cache_data.erase_function(node.hash.val);
+			}
+
 			state->getMetadataStorageMutable()->clearNodeMetadata(node);
 			state->clearDiagnosticForNode(node);
 		}

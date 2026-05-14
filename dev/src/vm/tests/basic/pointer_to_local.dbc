@@ -1,22 +1,22 @@
 type pointer: ptr_ptri64 ptr_i64
 
-function main { i64, ptr_argv } -> i64 {
-	# ret_val -> main ret_val
+function main { i64, ptr_argv } -> { i64 } {
+	# ret0 -> main ret0
 	# arg0 -> argc
 	# arg1 -> *argv
 
-	init_lany_type x, i64;
-	init_lany_type y, i64;
-	init_lany_type p, ptr_i64;
+	init_pany_type x, i64;
+	init_pany_type y, i64;
+	init_pany_type p, ptr_i64;
 
 	# First let's check if it works for ints.
-	ref_lptr_lany p, x;         # p := &x
-	mov_l64_imm y, 42;          # y := 42
-	store_lptr_lany p, y;   	# *p := y
-	output_l64 x;               # print(x)
+	ref_pptr_pany p, x;         # p := &x
+	mov_p64_imm y, 42;          # y := 42
+	store_pptr_pany p, y;   	# *p := y
+	output_p64 x;               # print(x)
 
-	init_lany_type q, ptr_ptri64;
-	ref_lptr_lany q, p;        # q := &p
+	init_pany_type q, ptr_ptri64;
+	ref_pptr_pany q, p;        # q := &p
 	# There are no instructions to check if that worked,
 	# so let's for now just check if it doesn't panic.
 	deinit;                     # q

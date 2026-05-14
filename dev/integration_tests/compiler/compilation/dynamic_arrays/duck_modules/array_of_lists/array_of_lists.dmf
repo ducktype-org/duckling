@@ -1,0 +1,51 @@
+class Point {
+    x: i64 = 1;
+    y: i64 = 2;
+}
+
+fun printPointList(l: ref List[Point]) -> () = {
+    var i = 0;
+    while (i < len l) {
+        builtin_output_i64(l[i].x);
+        builtin_output_i64(l[i].y);
+        i = i + 1;
+    }
+}
+
+fun arrayOfListsTest() -> () = {
+    var arrayOfLists: List[Point][2];
+
+    arrayOfLists[0] += Point(1, 2);
+    arrayOfLists[0] += Point(3, 4);
+    arrayOfLists[1] += Point(5, 6);
+    arrayOfLists[1] += Point(7, 8);
+    arrayOfLists[1] += Point(9, 10);
+
+    builtin_output_u64(len arrayOfLists[0]); # 2
+    builtin_output_u64(len arrayOfLists[1]); # 3
+
+    var p1 = arrayOfLists[0][1]; 
+    builtin_output_i64(p1.x); # 3
+    builtin_output_i64(p1.y); # 4
+
+    var p2 = arrayOfLists[1][2];
+    builtin_output_i64(p2.x); # 9
+    builtin_output_i64(p2.y); # 10
+
+    arrayOfLists[0][0].x = 100;
+    builtin_output_i64(arrayOfLists[0][0].x); # 100
+
+    var i = 0;
+    while (i < 2) {
+        builtin_output_i64(i64(i));
+        printPointList(&arrayOfLists[i]);
+        i = i + 1;
+    }
+}
+
+fun main() -> i32 = {
+    arrayOfListsTest();
+
+    return 0;
+}
+

@@ -2,7 +2,7 @@
 
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/type_of_data.hpp>
-#include <vm/bytecode/validator/type_context.hpp>
+#include <vm/bytecode/validator/valid_type/type_context.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
 
 namespace vm::code {
@@ -24,11 +24,6 @@ namespace vm::code {
 		ValidProgram& operator=(ValidProgram&&)      = default;
 
 		/**
-		 * @brief Creates a new ValidProgram with nothing inside.
-		 */
-		static ValidProgram empty();
-
-		/**
 		 * @brief Creates a new ValidProgram object with builtin types pre-inserted.
 		 */
 		static ValidProgram withBuiltins();
@@ -45,8 +40,7 @@ namespace vm::code {
 		 */
 		ValidProgram tryInsertCode(const CodeCollection& collection) const;
 
-
-		const ObjIdNameMap<TypeOfData>& types() const;
+		const valid_type::ValidTypeMap& types() const;
 
 		const TypeContext& getTypeContext() const;
 
@@ -69,7 +63,7 @@ namespace vm::code {
 		 * match the expected signatures. This map basically stores forward declarations of functions
 		 * available in the program, since `function_map` building is done after type verification.
 		 */
-		base::HashMap<base::StrID, FuncSignature> available_functions;
+		base::HashMap<base::StrID, FuncSignature> function_signatures;
 
 		/**
 		 * @brief Inserts code in-place.

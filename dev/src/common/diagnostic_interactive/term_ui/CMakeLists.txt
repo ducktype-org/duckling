@@ -9,6 +9,8 @@ add_library(TerminalUI
     src/diagnostic_interactive/term_ui/highlight.cpp
     src/diagnostic_interactive/term_ui/line.hpp
     src/diagnostic_interactive/term_ui/line.cpp
+    src/diagnostic_interactive/term_ui/module_flags/module_flags.hpp
+    src/diagnostic_interactive/term_ui/module_flags/module_flags.cpp
     src/diagnostic_interactive/term_ui/styles.hpp
     src/diagnostic_interactive/term_ui/styles.cpp
     src/diagnostic_interactive/term_ui/printers.hpp

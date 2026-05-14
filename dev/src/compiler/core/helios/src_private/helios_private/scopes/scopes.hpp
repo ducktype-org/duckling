@@ -59,8 +59,6 @@ namespace compiler::helios {
 	 * @todo: Right now RootScopes are empty, and in order to access proper module
 	 * symbols, one need to get scope of root element of the main module file.
 	 * This should be somehow refactored when multi-file modules will be introduced.
-	 * @todo: Currently root scopes are somewhat problematic.
-	 * See description of "root_element_file_back_map" for details.
 	 *
 	 * \query_thread_safe_if_cache_and_struct
 	 */
@@ -113,9 +111,7 @@ namespace compiler::helios {
 	 *
 	 * \query_thread_safe_if_cache
 	 */
-	DECLARE_QUERY(
-		QueryLookupInScope, KeyOf_LookupInScope, CRef<LookupResult>, ({ .uses_qresult = false })
-	);
+	DECLARE_QUERY(QueryLookupInScope, KeyOf_LookupInScope, CRef<query::QResult<LookupResult>>, ({}));
 
 	/**
 	 * @brief Performs lookup of single name inside given scope and its parents.
@@ -123,10 +119,7 @@ namespace compiler::helios {
 	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(
-		QueryLookupInScopeAndParents,
-		KeyOf_LookupInScope,
-		CRef<LookupResult>,
-		({ .uses_qresult = false })
+		QueryLookupInScopeAndParents, KeyOf_LookupInScope, CRef<query::QResult<LookupResult>>, ({})
 	);
 
 	/**
@@ -135,46 +128,42 @@ namespace compiler::helios {
 	 *
 	 * \query_thread_safe_if_cache
 	 */
-	DECLARE_QUERY(
-		QuerySymbolsInScope, ScopeID, CRef<std::vector<SymID>>, ({ .uses_qresult = false })
-	);
+	DECLARE_QUERY(QuerySymbolsInScope, ScopeID, CRef<query::QResult<std::vector<SymID>>>, ({}));
+
+	/**
+	 * @brief Value type for the QueryScopesInModule query.
+	 * See the QueryScopesInModule query for details.
+	 */
+	struct QueryScopesInModuleValue final {
+		struct Success final {
+			std::vector<ScopeID> scopes;
+		};
+
+		struct Failure final {
+			std::vector<ScopeID> partial_scopes;
+		};
+
+		std::variant<Success, Failure> value;
+	};
 
 	/**
 	 * @brief Query all scopes defined in a given module.
-	 * Note: Not implemented yet.
+	 * @note This query returns QueryScopesInModuleValue which contains all scopes in the module or
+	 * a partial list of scopes that where possible to obtain despite some other failures. The
+	 * semantics of this failed state are the same as of a failed QResult (i.e. errors were already
+	 * reported), but we still want to return the scopes that we managed to obtain. This is because
+	 * this query is used by the QueryModuleHOUT and if we just failed here, then almost all of the
+	 * compilation process would be halted and practically no HELIOS diagnostics would appear.
 	 *
 	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(
 		QueryScopesInModule,
 		frontend::ModuleID,
-		CRef<std::vector<ScopeID>>,
+		CRef<QueryScopesInModuleValue>,
 		({ .uses_qresult = false })
 	);
 
-	template<typename Element>
-	using ExpansionError = std::tuple<pst::AccessLocked<Element>, const Ref<dia_int::Logger>>;
-	template<typename Element>
-	using ExpansionResult
-		= query::QResult<std::variant<pst::AccessLocked<Element>, ExpansionError<Element>>>;
-
-	/**
-	 * @brief Query the expansion of an expand statement.
-	 *
-	 * @note This will have some issues for now. The potential errors from parsed subexpression
-	 * aren't available for now. There needs to be a small rework of errors and position first.
-	 *
-	 * \parallel owns its cache; creates PST via \ref pst::fromExpand (PST creation thread-safe)
-	 * \query_not_thread_safe
-	 */
-	DECLARE_QUERY(
-		QueryMacroExpansion,
-		pst::GenericPSTQueryKey<pst::Expand>,
-		ExpansionResult<pst::Stmt>,
-		({
-			.uses_qresult = false,
-		})
-	)
 
 	/**
 	 * @brief Root scope of main module file.

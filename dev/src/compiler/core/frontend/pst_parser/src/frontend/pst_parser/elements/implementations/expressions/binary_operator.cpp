@@ -16,7 +16,7 @@ namespace pst::expr {
 		out << "}";
 	}
 
-	LangElement::HashAlg& BinaryOperator::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& BinaryOperator::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, op);
 		return partial_hash;
 	}

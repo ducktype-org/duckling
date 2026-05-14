@@ -13,8 +13,8 @@ namespace pst {
 		NAMED_CHILD(value, CommaExprHolder);
 
 	public:
-		Expand(const dia::SourcePosition& position, CRef<LangParserContext> context):
-			  Stmt(StmtKind::Expand, position),
+		Expand(const LangParserState& state, CRef<LangParserContext> context):
+			  Stmt(StmtKind::Expand, state),
 			  context(makeBox<LangParserContext>(context)) {
 			this->element_kind = ElementKind::Expand;
 		}

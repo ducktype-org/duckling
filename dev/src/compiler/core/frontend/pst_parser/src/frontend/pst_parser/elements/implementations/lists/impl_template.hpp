@@ -122,9 +122,7 @@ namespace pst {
 			GetName                   getName,
 			class ParsingClass = ListElements>
 		static auto parseList(LangParserState& state) -> MBox<Self> {
-			auto position = state.getPosition();
-
-			Box<Self> out = makeBox<Self>(position);
+			Box<Self> out = makeBox<Self>(state);
 
 			// Handle opening brackets:
 			if constexpr (BRACKETS != lexer::Token::BracketType::None) {
@@ -134,7 +132,7 @@ namespace pst {
 					));
 					return nullptr;
 				}
-				state.parse(out).goDown();
+				PARSE().goDown();
 			}
 
 			usize expr_length{};
@@ -152,7 +150,7 @@ namespace pst {
 						expr_length++;
 					}
 
-					state.setFallback(expr_length);
+					PARSE().fallbackLen(expr_length);
 
 					if (expr_length == 0) {
 						// Handle empty field errors with sensible ranges
@@ -170,17 +168,17 @@ namespace pst {
 					}
 
 					MBox<ListElements> box;
-					state.parse(out).template with<ListElements>(&box, ParsingClass::parse);
+					PARSE().template with<ListElements>(&box, ParsingClass::parse);
 					if (box.toOpt()) {
 						out->elements.emplace_back(nullptr);
-						state.parse(out).assign(&out->elements.back(), std::move(box));
+						PARSE().assign(&out->elements.back(), std::move(box));
 					}
 
-					state.exitFallback();
+					PARSE().exitFallback();
 
 					if (isEnding(state.ctokens(), 0)) break;
 					if (isSeparator(state.ctokens(), 0)) {
-						state.parse(out).eatOne();
+						PARSE().eatOne();
 						if (isEnding(state.ctokens(), 0) && ALLOW_TRAILING_SEPARATOR) break;
 					} else
 						state.logInt(makeBox<NoSeparatorError<getName>>(state.getPosition()));
@@ -188,8 +186,7 @@ namespace pst {
 			}
 
 			// Handle closing brackets
-			if constexpr (BRACKETS != lexer::Token::BracketType::None)
-				state.parse(out).goUpAndSkip();
+			if constexpr (BRACKETS != lexer::Token::BracketType::None) PARSE().goUpAndSkip();
 
 			PST_RETURN out;
 		}

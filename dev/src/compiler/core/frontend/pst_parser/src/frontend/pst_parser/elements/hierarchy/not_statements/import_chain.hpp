@@ -10,12 +10,16 @@ namespace pst {
 	 */
 	class ImportChain: public NotStmt {
 	public:
-		explicit ImportChain(const dia::SourcePosition& position): NotStmt(position) {}
+		explicit ImportChain(const LangParserState& state): NotStmt(state) {}
 
 		[[nodiscard]]
 		std::string elementType() const override {
 			return "Import Chain";
 		}
+
+		[[nodiscard]]
+		virtual const std::vector<tpc::Identifier>& getNames() const
+			= 0;
 
 		static MBox<ImportChain> parse(LangParserState& state);
 	};

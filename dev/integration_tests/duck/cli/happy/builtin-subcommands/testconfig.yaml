@@ -8,20 +8,30 @@ Tests:
         test_cmd: build
         ExitCode: 1
         Err:
-          String: 'Error: implement build\n'
+          Run: 'echo "error: no manifest has been found from the \`$(pwd)\` to the \`/\`"'
       runs-builtin-alias:
         test_cmd: b
         ExitCode: 1
         Err:
-          String: 'Error: implement build\n'
+          Run: 'echo "error: no manifest has been found from the \`$(pwd)\` to the \`/\`"'
       runs-user-alias:
         test_cmd: my-custom-build-alias
         ExitCode: 1
         Err:
-          String: 'Error: implement build\n'
+          Run: 'echo "error: no manifest has been found from the \`$(pwd)\` to the \`/\`"'
+      runs-user-alias-as-an-array:
+        test_cmd: my-custom-build-alias-array
+        ExitCode: 1
+        Err:
+          Run: 'echo "error: no manifest has been found from the \`$(pwd)\` to the \`/\`"'
+      runs-user-alias-as-an-array:
+        test_cmd: my-custom-build-alias-array
+        ExitCode: 1
+        Err:
+          Run: 'echo "error: no manifest has been found from the \`$(pwd)\` to the \`/\`"'
       autofix-success:
         test_cmd: buil
         ExitCode: 1
         Err:
-          String: 'Error: implement build\n'
+          Run: 'echo "error: no manifest has been found from the \`$(pwd)\` to the \`/\`"'
 

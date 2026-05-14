@@ -19,7 +19,7 @@ namespace compiler::helios {
 	 * The main way to interact with scopes is through ScopeID and related functions/queries.
 	 */
 	struct ScopeData final {
-		std::optional<ScopeID> parent;
+		base::Optional<ScopeID> parent;
 
 		bool is_root;
 
@@ -27,7 +27,7 @@ namespace compiler::helios {
 		 * @brief PST element for which the scope was created.
 		 * Empty for root scope.
 		 */
-		base::Optional<pst::LangElement::HashType> related_pst_element_hash;
+		base::Optional<pst::HashType> related_pst_element_hash;
 
 		/**
 		 * @brief Module, the scope was defined in
@@ -46,11 +46,11 @@ namespace compiler::helios {
 		ScopeInternalID unstable_id;
 
 		ScopeData(
-			std::optional<ScopeID>                     parent,
-			bool                                       is_root,
-			base::Optional<pst::LangElement::HashType> related_pst_element_hash,
-			frontend::ModuleID                         parent_module,
-			u64                                        depth
+			base::Optional<ScopeID>       parent,
+			bool                          is_root,
+			base::Optional<pst::HashType> related_pst_element_hash,
+			frontend::ModuleID            parent_module,
+			u64                           depth
 		):
 			  parent(parent),
 			  is_root(is_root),

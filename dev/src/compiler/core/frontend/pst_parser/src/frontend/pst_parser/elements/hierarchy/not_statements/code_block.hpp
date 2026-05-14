@@ -29,11 +29,11 @@ namespace pst {
 	public:
 		DECLARE_CONST_ELEMENT_ITERATOR(statements, Stmt)
 
-		explicit CodeBlock(const dia::SourcePosition& position): NotStmt(position) {
+		explicit CodeBlock(const LangParserState& state): NotStmt(state) {
 			this->element_kind = ElementKind::CodeBlock;
 		}
 
-		static MBox<CodeBlock> parse(LangParserState& state, BlockOrderType order_type);
+		static MBox<CodeBlock> parse(LangParserState& state);
 		~CodeBlock() final = default;
 		void     dprint(std::ostream& out) const final;
 		HashAlg& addElementDataToStableHash(HashAlg&) const override;

@@ -18,7 +18,7 @@ namespace pst::expr {
 		visitor.visitPrefixOperator(*this);
 	}
 
-	LangElement::HashAlg& PrefixOperator::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& PrefixOperator::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, op);
 		return partial_hash;
 	}

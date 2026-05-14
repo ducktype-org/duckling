@@ -1,11 +1,12 @@
 #include "lir_structure.hpp"
 
+#include <frontend/pst_parser/lang_parser_element.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/mangler/mangler.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
+#include <helios/tsh/queries/types.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
-#include <typesystem/higher/queries/types.hpp>
-#include <typesystem/lower/queries.hpp>
+#include <tsl/queries.hpp>
 
 #include <base/collections/maps.hpp>
 #include <base/extend_cpp/variant_match.hpp>
@@ -14,18 +15,20 @@
 #include <set>
 
 namespace compiler::lir {
-	/**
-	 * @brief Creates LIR local data from MIR local data.
-	 * @important remember that LIRLocal should only be stored in a LIR function.
-	 *
-	 * @param ctx
-	 * @param mir_local
-	 * @return LIRLocal
-	 */
-	LIRLocal LIRLocal::fromMIR(query::Context& ctx, mir::MIRLocalRef mir_local) {
-		auto type_layout = ctx.query<tsl::QuerySymbolTypeLayout>(mir_local->type);
-
-		return LIRLocal{ mir_local->helios_id, type_layout, mir_local->parameter_index };
+	LIRLocal LIRLocal::fromMIR(
+		query::Context&           ctx,
+		const mir::MIRLocalRef    mir_local,
+		const base::Optional<u64> new_parameter_index
+	) {
+		auto             type_layout = ctx.query<tsl::QuerySymbolTypeLayout>(mir_local->type);
+		LIRLocalMetadata metadata;
+		if_opt_some(mir_local->helios_id, helios_id) {
+			metadata.source_code_name = helios::name(helios_id);
+			if_opt_some(helios::symbolPst(helios_id), pst_elem) {
+				metadata.position = pst_elem.unlock(ctx)->getStablePosition();
+			}
+		}
+		return LIRLocal{ mir_local->helios_id, type_layout, new_parameter_index, metadata };
 	}
 
 	LIRLocal LIRLocal::boolLocal(query::Context& ctx) {
@@ -84,7 +87,7 @@ namespace compiler::lir {
 						  const auto& class_layout
 							  = std::get<tsl::ClassTypeLayout>(current_layout->getVariant());
 						  const auto layout_idx
-							  = class_layout.getLayoutIndexOfFieldSymbol(field.field_id);
+							  = class_layout.getLayoutIndexOfFieldSymbol(field.field_id).value();
 						  current_layout = class_layout.getFieldLayoutOfLayoutIndex(layout_idx);
 					  }
 					  variant_case(IndexProjection, index) {
@@ -249,6 +252,10 @@ namespace compiler::lir {
 					output << "{ from:" << params.source_type.toString()
 						   << ", to:" << params.target_type.toString() << " }";
 				}
+				variant_case(ListOperationParameters, params) {
+					output << "{ element_layout:" << params.element_layout->toStringIdentification()
+						   << " }";
+				}
 			}
 			output << " ";
 		}
@@ -322,5 +329,13 @@ namespace compiler::lir {
 			= std::make_shared<std::vector<CRef<tsl::TypeLayout>>>(function.parameter_layouts),
 			.return_type_layout = function.return_type_layout
 		};
+	}
+
+	void LIRGlobal::debugPrint(query::Context& ctx, std::ostream& os) const {
+		os << "[LIR] Global ";
+		os << (type == LIRGlobalType::Constant ? "constant" : "variable") << ": ";
+		os << mangled_name.strView() << "\n";
+		os << "Type: " << layout->toStringDefinition(ctx) << "\n";
+		if (initial_value.has_value()) os << "Initial value: " << initial_value->toString() << "\n";
 	}
 }

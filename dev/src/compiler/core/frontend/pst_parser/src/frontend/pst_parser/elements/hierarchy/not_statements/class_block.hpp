@@ -27,11 +27,11 @@ namespace pst {
 	public:
 		DECLARE_CONST_ELEMENT_ITERATOR(statements, ClassStmt)
 
-		explicit ClassBlock(const dia::SourcePosition& pos): NotStmt(pos) {
+		explicit ClassBlock(const LangParserState& state): NotStmt(state) {
 			this->element_kind = ElementKind::ClassBlock;
 		}
 
-		static MBox<ClassBlock> parse(LangParserState& state, const ClassContext& ctx);
+		static MBox<ClassBlock> parse(LangParserState& state);
 
 		~ClassBlock() override = default;
 		void     dprint(std::ostream& out) const final;

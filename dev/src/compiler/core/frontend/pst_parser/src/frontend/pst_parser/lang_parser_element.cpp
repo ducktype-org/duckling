@@ -3,7 +3,6 @@
 #include "access.hpp"
 #include "elements/includes/basic.hpp"
 #include "lang_parser_state.hpp"
-#include "stable_position.hpp"
 
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
@@ -12,7 +11,7 @@ namespace pst {
 
 	base::Optional<AccessLocked<LangElement>> LangElement::getParent() const { return parent; }
 
-	const dia::SourcePosition& LangElement::getSourcePosition() const { return source_position; }
+	SourcePositionLocked LangElement::getSourcePosition() const { return { source_position }; }
 
 	void LangElement::calcElementPathHashRecursive() {
 		for (auto& el: sub_elements) {
@@ -90,13 +89,29 @@ namespace pst {
 	}
 
 	void LangElement::calcHash() {
-		hash = calcStableHash().finalize();
-		pst_hash_map.maybePut(hash.value(), AccessLocked<LangElement>(CRef<LangElement>(this)));
+		auto partial_hash = calcStableHash();
+		addToHash(partial_hash, context_hash);
+		hash = partial_hash.finalize();
+
 		// Can be used to turn on unstable hashing for testing purposes.
 		// hash = getID().asInt();
 	}
 
-	LangElement::HashAlg LangElement::calcStableHash() const {
+	void LangElement::putInPSTHashHashMapRecursive() {
+		putInPSTHashHashMap();
+		for (auto& sub_el: sub_elements) {
+			variant_match(sub_el) {
+				variant_case(InternalChild, el) { el->putInPSTHashHashMapRecursive(); }
+				variant_case(InternalNamedChild, el) { el.element->putInPSTHashHashMapRecursive(); }
+			}
+		}
+	}
+
+	void LangElement::putInPSTHashHashMap() {
+		pst_hash_map.putOrAssign(hash.value(), AccessLocked<LangElement>(CRef<LangElement>(this)));
+	}
+
+	HashAlg LangElement::calcStableHash() const {
 		HashAlg partial_hash = getElementPathHash().partial;
 		addToHash(partial_hash, elementType());
 		addGenericDataToHash(partial_hash);
@@ -104,19 +119,14 @@ namespace pst {
 		return partial_hash;
 	}
 
-	LangElement::HashAlg& LangElement::addGenericDataToHash(LangElement::HashAlg& partial_hash
-	) const {
-		return partial_hash;
-	}
+	HashAlg& LangElement::addGenericDataToHash(HashAlg& partial_hash) const { return partial_hash; }
 
-	void LangElement::calcSignature(LangElement::HashAlg& partial_hash) const {
+	void LangElement::calcSignature(HashAlg& partial_hash) const {
 		addToHash(partial_hash, hash->data);
 		for (auto& sub_el: sub_elements) {
 			variant_match(sub_el) {
-				variant_case(InternalChild, el) { addToHash(partial_hash, el->getHash().data); }
-				variant_case(InternalNamedChild, el) {
-					addToHash(partial_hash, el.element->getHash().data);
-				}
+				variant_case(InternalChild, el) { el->calcSignature(partial_hash); }
+				variant_case(InternalNamedChild, el) { el.element->calcSignature(partial_hash); }
 				variant_case(SubToken, el) {}
 				variant_default { CORE_PANIC("Unhandled variant case"); }
 			}
@@ -124,8 +134,8 @@ namespace pst {
 		addToHash(partial_hash, "hash_end");
 	}
 
-	void LangElement::signGenerated(LangElement::HashType& signature) {
-		LangElement::HashAlg new_hash;
+	void LangElement::signGenerated(const HashType& signature) {
+		HashAlg new_hash;
 		addToHash(new_hash, hash->data);
 		addToHash(new_hash, signature.data);
 		hash = new_hash.finalize();
@@ -152,7 +162,7 @@ namespace pst {
 		auto opt = el.toOpt();
 		if (opt) {
 			sub_elements.emplace_back(opt.value());
-			setLastToken(el->getSourcePosition());
+			setLastToken(el->getSourcePosition().illegalAccess());
 		}
 	}
 
@@ -160,7 +170,7 @@ namespace pst {
 		auto opt = el.toOpt();
 		if (opt) {
 			sub_elements.emplace_back(InternalNamedChild{ .name = name, .element = opt.value() });
-			setLastToken(el->getSourcePosition());
+			setLastToken(el->getSourcePosition().illegalAccess());
 		}
 	}
 
@@ -172,6 +182,12 @@ namespace pst {
 	void LangElement::setLastToken(dia::SourcePosition pos) {
 		if (not pos.isFileEnd() && pos.getEnd() > source_position.getEnd())
 			source_position = dia::SourcePosition(source_position, pos.getEnd());
+	}
+
+	void LangElement::setAdditionalRootData(AdditionalRootData data) {
+		CORE_ASSERT(!additional_root_data.has_value(), "Additional root data already set");
+		CORE_ASSERT(!parent.has_value(), "Only root elements can have additional root data");
+		additional_root_data.emplace(std::move(data));
 	}
 
 	void LangElement::acceptVisitor(PstVisitor&) const {
@@ -186,5 +202,52 @@ namespace pst {
 		return *pst_hash_map.at(stable_hash);
 	}
 
-	StablePosition LangElement::getStablePosition() const { return { getHash(), {} }; }
+	dia_int::StablePosition LangElement::getStablePosition() const {
+		return {
+			LangElement::getActiveSourcePosition,
+			LangElement::getActiveSourcePositionIllegalAccess,
+			getHash(),
+			{},
+		};
+	}
+
+	dia::SourcePosition LangElement::getActiveSourcePositionIllegalAccess(
+		const dia_int::StablePosition& pos
+	) {
+		auto first_pos = LangElement::getByStableHash(pos.begin_node)
+		                     .illegalAccess()
+		                     .value()
+		                     ->getSourcePosition()
+		                     .illegalAccess();
+
+		if (pos.end_node.has_value()) {
+			auto last_pos = LangElement::getByStableHash(pos.end_node.value())
+			                    .illegalAccess()
+			                    .value()
+			                    ->getSourcePosition()
+			                    .illegalAccess();
+			return dia::SourcePosition::merge(first_pos, last_pos);
+		} else {
+			return first_pos;
+		}
+	}
+
+	dia::SourcePosition LangElement::getActiveSourcePosition(
+		query::Context& ctx, const dia_int::StablePosition& pos
+	) {
+		auto first_pos = LangElement::getByStableHash(pos.begin_node)
+		                     .unlock(ctx)
+		                     ->getSourcePosition()
+		                     .unlock(ctx);
+
+		if (pos.end_node.has_value()) {
+			auto last_pos = LangElement::getByStableHash(pos.end_node.value())
+			                    .unlock(ctx)
+			                    ->getSourcePosition()
+			                    .unlock(ctx);
+			return dia::SourcePosition::merge(first_pos, last_pos);
+		} else {
+			return first_pos;
+		}
+	}
 }

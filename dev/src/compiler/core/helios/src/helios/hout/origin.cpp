@@ -1,25 +1,25 @@
 #include "origin.hpp"
 
+#include <diagnostic_interactive/stable_position.hpp>
 #include <frontend/pst_parser/lang_parser_element.hpp>
-#include <frontend/pst_parser/stable_position.hpp>
 
 #include <base/except/exceptions.hpp>
 
 #include <diagnostic/source_position.hpp>
 
 namespace compiler::helios::code {
-	base::Optional<dia::SourcePosition> ElementOrigin::getSourcePosition() const {
-		return source_position.map([](const pst::StablePosition& stable_pos) {
-			return stable_pos.getActiveSourcePosition();
+	base::Optional<dia::SourcePosition> ElementOrigin::getSourcePosition(query::Context& ctx) const {
+		return source_position.map([&ctx](const dia_int::StablePosition& pos) {
+			return pos.getActiveSourcePosition(ctx);
 		});
 	}
 
-	base::Optional<pst::StablePosition> ElementOrigin::getStablePosition() const {
+	base::Optional<dia_int::StablePosition> ElementOrigin::getStablePosition() const {
 		return source_position;
 	}
 
 	base::Optional<pst::AccessLocked<pst::LangElement>> ElementOrigin::getPSTElement() const {
-		return pst_element.map([](const pst::LangElement::HashType& hash) {
+		return pst_element.map([](const pst::HashType& hash) {
 			auto element = pst::LangElement::getByStableHash(hash);
 			return element;
 		});
@@ -33,22 +33,40 @@ namespace compiler::helios::code {
 		return { pst_element->getStablePosition(), pst_element->getHash(), false };
 	}
 
-	ElementOrigin pstOrigin(const ElementOrigin& origin, pst::Access<pst::LangElement> pst_element) {
+	ElementOrigin pstOriginOrdered(
+		const ElementOrigin& origin, pst::Access<pst::LangElement> element_to_the_right
+	) {
 		auto source_position = origin.getStablePosition();
-		if_opt_some(source_position, pos) { pos.extendWith(pst_element->getStablePosition()); }
-		if_opt_none(source_position) { source_position = pst_element->getStablePosition(); }
+		if_opt_some(source_position, pos) {
+			pos.extendWithSubsequentPos(element_to_the_right->getStablePosition());
+		}
+		if_opt_none(source_position) {
+			source_position = element_to_the_right->getStablePosition();
+		}
 		return { source_position, {}, false };
 	}
 
-	ElementOrigin multiplePstOrigin(const std::vector<pst::Access<pst::LangElement>>& pst_elements) {
-		CORE_ASSERT(!pst_elements.empty(), "pst_elements cannot be empty");
+	ElementOrigin elementOriginOrdered(const ElementOrigin& left, const ElementOrigin& right) {
+		auto lsp = left.getStablePosition();
+		auto rsp = right.getStablePosition();
+		if_opt_some(lsp, lpos) {
+			if_opt_some(rsp, rpos) { lpos.extendWithSubsequentPos(rpos); }
+			return { lpos, {}, false };
+		}
+		if_opt_none(lsp) { return { rsp, {}, rsp.empty() }; }
+		CORE_UNREACHABLE();
+	}
 
-		auto pos = pst_elements[0]->getStablePosition();
+	ElementOrigin multiplePstOriginOrdered(
+		const std::vector<pst::Access<pst::LangElement>>& ordered_pst_elements
+	) {
+		CORE_ASSERT(!ordered_pst_elements.empty(), "pst_elements cannot be empty");
 
-		for (usize i{ 1 }; i < pst_elements.size(); ++i)
-			pos.extendWith(pst_elements[i]->getStablePosition());
+		auto pos = ordered_pst_elements[0]->getStablePosition();
+
+		for (usize i{ 1 }; i < ordered_pst_elements.size(); ++i)
+			pos.extendWithSubsequentPos(ordered_pst_elements[i]->getStablePosition());
 
 		return { pos, {}, false };
 	}
-
 }

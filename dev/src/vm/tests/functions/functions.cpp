@@ -13,7 +13,7 @@ public:
 		TESTER_ADD_TEST(testBuiltinFunctions);
 		TESTER_ADD_TEST(testSimpleFunctionCall);
 		TESTER_ADD_TEST(testSimpleReturnValue);
-		TESTER_ADD_TEST(testReturnL32);
+		TESTER_ADD_TEST(testReturnLocal32);
 		TESTER_ADD_TEST(testDifferentSizedParams);
 		TESTER_ADD_TEST(testDoubleCall);
 		TESTER_ADD_TEST(testDeinitializeReturnValue);
@@ -23,6 +23,7 @@ public:
 		TESTER_ADD_TEST(testGraphJumps);
 		TESTER_ADD_TEST(testNoRet);
 		TESTER_ADD_TEST(testSignaturesValidation);
+		TESTER_ADD_TEST(testMainWithNoArguments);
 	}
 
 private:
@@ -36,9 +37,9 @@ private:
 		runTestOnVm("simple_return_value.dbc", "1234", "1234", {});
 	}
 
-	void testReturnL32() {
-		runTestOnVm("return_l32.dbc", "18", "18", {});
-		runTestOnVm("return_l32.dbc", "1234", "1234", {});
+	void testReturnLocal32() {
+		runTestOnVm("return_local32.dbc", "18", "18", {});
+		runTestOnVm("return_local32.dbc", "1234", "1234", {});
 	}
 
 	void testDifferentSizedParams() {
@@ -50,6 +51,8 @@ private:
 		runTestOnVm("double_call.dbc", "1 2 3 4", "10", {});
 		runTestOnVm("double_call.dbc", "123 456 789 100", "1468", {});
 	}
+
+	void testMainWithNoArguments() { runTestOnVm("main_no_args.dbc", "", "42", {}); }
 
 	void testDeinitializeReturnValue() {
 		loadInvalidDbc(

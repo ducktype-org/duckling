@@ -15,9 +15,9 @@
 #include <global_state/backend_options.hpp>
 #include <global_state/packages.hpp>
 #include <helios/hout/hout.hpp>
-#include <helios/queries.hpp>
+#include <helios/queries/queries.hpp>
 #include <linker/link.hpp>
-#include <repl/repl_session.hpp>
+#include <repl/session.hpp>
 #include <time_stats/time_stats.hpp>
 
 #include <base/except/exceptions.hpp>
@@ -30,13 +30,14 @@
 #include <filesystem/file.hpp>
 #include <filesystem/file_path.hpp>
 #include <init/init.hpp>
-#include <lexer/lexer.hpp>
+#include <logger/logger.hpp>
 #include <printer/stream_printer.hpp>
 #include <query_framework/entry/query_entry_point.hpp>
 #include <query_framework/entry/with_context_do.hpp>
 #include <query_framework/q_stats/q_stats.hpp>
 
 #include <iostream>
+#include <ranges>
 
 clah::Clah getStandardDucklingOptions() {
 	return clah::Clah("duckc", "The Duckling compiler")
@@ -64,7 +65,8 @@ clah::Clah getStandardDucklingOptions() {
  * Helper function for setting optimisation level in relevant subcommands.
  */
 clah::Parameter getLlvmOptLevelParam() {
-	return clah::ParamBuilder::ofValue(clah::StringParser::make("level"))
+	std::vector<std::string> llvm_opt_level_values{ "0", "1", "2", "3", "s", "z" };
+	return clah::ParamBuilder::ofValue(clah::CategoryParser::make("level", llvm_opt_level_values))
 	    .addLongName("llvm-opt")
 	    .addShortName('O')
 	    .addShortDesc("Set optimization level.")
@@ -75,7 +77,7 @@ clah::Parameter getLlvmOptLevelParam() {
 	    .build();
 }
 
-global_state::BackendOptions getBackendOptionsFromClap(const clah::ParsingResult& parsing_result) {
+global_state::BackendOptions getBackendOptionsFromClah(const clah::ParsingResult& parsing_result) {
 	using LLVMOptimizationLevel = global_state::BackendOptions::LLVMBackend::LLVMOptimizationLevel;
 	using enum LLVMOptimizationLevel;
 	static const base::HashMap<std::string, LLVMOptimizationLevel> str_to_llvm_opt_level{
@@ -95,7 +97,7 @@ global_state::BackendOptions getBackendOptionsFromClap(const clah::ParsingResult
 /**
  * Helper function to extract linking options from clah parsing result.
  */
-compiler::linker::LinkingOptions getLinkingOptionsFromClap(const clah::ParsingResult& parsing_result
+compiler::linker::LinkingOptions getLinkingOptionsFromClah(const clah::ParsingResult& parsing_result
 ) {
 	compiler::linker::LinkingOptions linking_options;
 
@@ -109,16 +111,76 @@ compiler::linker::LinkingOptions getLinkingOptionsFromClap(const clah::ParsingRe
 	return linking_options;
 }
 
-compiler::driver::options_types::DebugOptions getDebugOptionsFromClap(
-	const clah::ParsingResult& parsing_result
-) {
-	return compiler::driver::options_types::DebugOptions{
-		.dev_log_categories = parsing_result.getValue<std::vector<std::string>>("dev-logs")
-		                          .copyValueOr(std::vector<std::string>{}),
-		.immediate_print_diagnostics = true,
-		.dump_llvm_ir                = parsing_result.isFlag("dump-llvm-ir"),
-		.dump_llvm_asm               = parsing_result.isFlag("dump-llvm-asm"),
-	};
+/**
+ * @brief The CLI interface for the DebugOptions part of the driver.
+ */
+namespace debug_options {
+	using compiler::driver::options_types::DebugOptions;
+
+	auto getDebugDumpIROptions() -> const base::HashMap<std::string, bool DebugOptions::*>& {
+		static base::HashMap<std::string, bool DebugOptions::*> dump_field_mapping{
+			{ "asm", &DebugOptions::dump_asm }, { "llvm", &DebugOptions::dump_llvm },
+			{ "lir", &DebugOptions::dump_lir }, { "mir", &DebugOptions::dump_mir },
+			{ "hir", &DebugOptions::dump_hir },
+		};
+		return dump_field_mapping;
+	}
+
+	auto getDebugPrintIROptions() -> const base::HashMap<std::string, bool DebugOptions::*>& {
+		static base::HashMap<std::string, bool DebugOptions::*> print_field_mapping{
+			{ "lir", &DebugOptions::print_lir },
+			{ "mir", &DebugOptions::print_mir },
+			{ "hir", &DebugOptions::print_hir },
+		};
+		return print_field_mapping;
+	}
+
+	/**
+	 * @brief Return the array of clah::Parameter for the debug options of the driver, which can be
+	 * added to a Clah instance.
+	 */
+	auto getClahDebugParameters() {
+		std::vector<std::string> dump_categories = getDebugDumpIROptions() | std::views::keys
+		                                         | std::ranges::to<std::vector<std::string>>();
+		std::vector<std::string> print_categories = getDebugPrintIROptions() | std::views::keys
+		                                          | std::ranges::to<std::vector<std::string>>();
+
+		return std::array{
+			clah::ParamBuilder::ofValue(clah::CategoryListParser::make("categories", dump_categories)
+			)
+				.addLongName("dump-ir")
+				.addShortDesc("Dump to file the comma separated intermediate representations.")
+				.addLongDesc("Possible values are: asm, llvm, lir, mir, hir.")
+				.build(),
+			clah::ParamBuilder::ofValue(
+				clah::CategoryListParser::make("categories", print_categories)
+			)
+				.addLongName("print-ir")
+				.addShortDesc("Print to stdout the comma separated intermediate representations.")
+				.addLongDesc("Possible values are: lir, mir, hir.")
+				.build(),
+		};
+	}
+
+	/**
+	 * @brief Given parsing result from clah, extract the debug options for the driver.
+	 */
+	DebugOptions getDebugOptionsFromClah(const clah::ParsingResult& parsing_result) {
+		DebugOptions debug_options{
+			.dev_log_categories = parsing_result.getValue<std::vector<std::string>>("dev-logs")
+			                          .copyValueOr(std::vector<std::string>{}),
+			.immediate_print_diagnostics = true,
+		};
+
+		if (auto dump_categories = parsing_result.getValue<std::vector<std::string>>("dump-ir"))
+			for (const auto& category: dump_categories.value())
+				debug_options.*(getDebugDumpIROptions().at(category)) = true;
+		if (auto print_categories = parsing_result.getValue<std::vector<std::string>>("print-ir"))
+			for (const auto& category: print_categories.value())
+				debug_options.*(getDebugPrintIROptions().at(category)) = true;
+
+		return debug_options;
+	}
 }
 
 /**
@@ -131,11 +193,16 @@ clah::Clah getClahForMain() {
 			clah::Clah("lex", "Runs lexer on a single file and prints the result to cout.")
 				.addPositional(clah::FileParser::make("file"))
 				.setHandler([](const clah::ParsingResult& options) -> int {
-					compiler::driver::initializeTheCompiler(
+					auto init_result = compiler::driver::initializeTheCompiler(
 						compiler::driver::CompilerModeOfOperationAndOptions::BareMode{
-							.debug_options = getDebugOptionsFromClap(options),
+							.debug_options = debug_options::getDebugOptionsFromClah(options),
 						}
 					);
+
+					if (init_result.status().isBad()) {
+						compiler::driver::exit();
+						return 1;
+					}
 
 					auto file_to_lex = options.getPositional<fs::File>(0);
 
@@ -177,11 +244,16 @@ clah::Clah getClahForMain() {
 			clah::Clah("parse", "Runs parser on a single file and prints result in json to cout.")
 				.addPositional(clah::FileParser::make("file"))
 				.setHandler([](const clah::ParsingResult& options) -> int {
-					compiler::driver::initializeTheCompiler(
+					auto init_result = compiler::driver::initializeTheCompiler(
 						compiler::driver::CompilerModeOfOperationAndOptions::BareMode{
-							.debug_options = getDebugOptionsFromClap(options),
+							.debug_options = debug_options::getDebugOptionsFromClah(options),
 						}
 					);
+
+					if (init_result.status().isBad()) {
+						compiler::driver::exit();
+						return 1;
+					}
 
 					auto file_to_parse = options.getPositional<fs::File>(0);
 
@@ -204,37 +276,11 @@ clah::Clah getClahForMain() {
 					return exit_code;
 				})
 		)
-	    .addSubcommand(clah::Clah("get_hout", "Debug prints hout-unit of a module.")
-	                       .addPositional(clah::FileParser::make("module"))
-	                       .setHandler([](const clah::ParsingResult& options) -> int {
-							   compiler::driver::initializeTheCompiler(
-								   compiler::driver::CompilerModeOfOperationAndOptions::BareMode{
-									   .debug_options = getDebugOptionsFromClap(options),
-								   }
-							   );
-
-							   auto path_to_compile = options.getPositional<fs::File>(0);
-
-							   int exit_code = 0;
-
-							   // @TODO: error handling
-							   using namespace compiler;
-							   auto root
-								   = frontend::createModuleTreeWithRandomPackageID(path_to_compile);
-							   auto hout_units
-								   = query::entryPoint<helios::QueryModuleHOUTRecursively>(root)
-		                                 .valueOrPanicMsg("The hout creation failed");
-							   query::utils::withContextDo([&](query::Context& ctx) {
-								   for (const auto& hout_unit: hout_units)
-									   std::cout << hout_unit->debugPrint(ctx);
-							   });
-
-							   return exit_code;
-						   }))
 	    .addSubcommand(
 			clah::Clah("compile_module", "Compile given module into a binary.")
 				.addPositional(clah::FileParser::make("module"))
 				.add(getLlvmOptLevelParam())
+				.add(debug_options::getClahDebugParameters())
 				.add(clah::ParamBuilder::ofValue(clah::StringParser::make("name"))
 	                     .addShortName('n')
 	                     .addLongName("name")
@@ -242,18 +288,8 @@ clah::Clah getClahForMain() {
 	                     .optional()
 	                     .build())
 				.add(clah::ParamBuilder::ofFlag()
-	                     .addLongName("dump-llvm-ir")
-	                     .addShortDesc("Also dumps LLVM IR to a file (alongside main compilation).")
-	                     .build())
-				.add(clah::ParamBuilder::ofFlag()
 	                     .addLongName("dvm-backend")
 	                     .addShortDesc("Compile to DVM bytecode.")
-	                     .build())
-				.add(clah::ParamBuilder::ofFlag()
-	                     .addLongName("dump-llvm-asm")
-	                     .addShortDesc(
-							 "Also compiles to assembly file (alongside main compilation)."
-						 )
 	                     .build())
 				.add(clah::ParamBuilder::ofFlag()
 	                     .addLongName("no-incremental")
@@ -267,7 +303,7 @@ clah::Clah getClahForMain() {
                         base::generateRandomString(32)
                     );
 
-					compiler::driver::initializeTheCompiler(
+					auto init_result = compiler::driver::initializeTheCompiler(
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
 							.main_package_info = {
 								.package_name = package_name,
@@ -276,14 +312,19 @@ clah::Clah getClahForMain() {
 							.compilation_artifacts = {
 								.artifacts_path = fs::FilePath("./duck_build/"),
 							},
-							.backend_options = getBackendOptionsFromClap(options),
-							.debug_options = getDebugOptionsFromClap(options),
+							.backend_options = getBackendOptionsFromClah(options),
+							.debug_options = debug_options::getDebugOptionsFromClah(options),
 							.incremental   = { .enabled = !options.isFlag("no-incremental") },
 							.execution_options = {
 								.worker_count = 1,
 							},
 						}
 					);
+
+					if (init_result.status().isBad()) {
+						compiler::driver::exit();
+						return 1;
+					}
 
 					// @TODO: error handling. This should change in #1112.
 					using namespace compiler;
@@ -293,8 +334,7 @@ clah::Clah getClahForMain() {
 
 					auto root = global_state::getMainPackage().root_module;
 
-					auto output_artifact
-						= query::entryPoint<driver::CompileModule>({ root, backend_type });
+					(void) query::entryPoint<driver::CompileModule>({ root, backend_type, false });
 
 
 					compiler::driver::exit();
@@ -306,6 +346,7 @@ clah::Clah getClahForMain() {
 			clah::Clah("compile_package", "Compile given package into a binary.")
 				.addPositional(clah::FileParser::make("module"))
 				.add(getLlvmOptLevelParam())
+				.add(debug_options::getClahDebugParameters())
 				.add(clah::ParamBuilder::ofValue(clah::StringParser::make("name"))
 	                     .addShortName('n')
 	                     .addLongName("name")
@@ -359,15 +400,22 @@ clah::Clah getClahForMain() {
 	                     .optional()
 	                     .build())
 				.setHandler([](const clah::ParsingResult& options) -> int {
+					if (options.isFlag("no-incremental") && options.isFlag("print-graph")) {
+						CORE_USER_LOG(
+							"Error: --print-graph requires the query graph, which is "
+							"disabled by --no-incremental. These flags cannot be used "
+							"together.\n"
+						);
+						return 1;
+					}
+
 					auto path_to_compile = options.getPositional<fs::File>(0);
 					auto package_name    = options.getValue<std::string>("name").copyValueOr("");
 					CORE_ASSERT(package_name != "", "Package name must be specified");
 
-
 					auto worker_count = options.getValue<i64>("workers").copyValueOr(1);
 
-
-					compiler::driver::initializeTheCompiler(
+					auto init_result = compiler::driver::initializeTheCompiler(
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
 							.main_package_info = {
 								.package_name = package_name,
@@ -377,15 +425,21 @@ clah::Clah getClahForMain() {
 								.artifacts_path =
 									options.getValue<fs::FilePath>("artifact-location").copyValueOr("./duck_build/"),
 							},
-							.backend_options = getBackendOptionsFromClap(options),
-							.debug_options = getDebugOptionsFromClap(options),
+							.backend_options = getBackendOptionsFromClah(options),
+							.debug_options = debug_options::getDebugOptionsFromClah(options),
 							.incremental   = { .enabled = !options.isFlag("no-incremental") },
 							.execution_options = {
 								.worker_count = base::safeIntConv<u64>(worker_count),
 							},
 						}
 					);
-					const auto& linking_options = getLinkingOptionsFromClap(options);
+
+					if (init_result.status().isBad()) {
+						compiler::driver::exit();
+						return 1;
+					}
+
+					const auto& linking_options = getLinkingOptionsFromClah(options);
 
 
 					time_stats::TrackCategoryTime total_compilation_time(
@@ -446,7 +500,7 @@ clah::Clah getClahForMain() {
                     );
 					using namespace compiler;
 
-					compiler::driver::initializeTheCompiler(
+					auto init_result = compiler::driver::initializeTheCompiler(
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
 									.main_package_info = {
 										.package_name = package_name,
@@ -456,13 +510,18 @@ clah::Clah getClahForMain() {
 										.artifacts_path = fs::FilePath("./duck_build/"),
 									},
 									.backend_options = {},
-									.debug_options = getDebugOptionsFromClap(options),
+									.debug_options = debug_options::getDebugOptionsFromClah(options),
 									.incremental = {.enabled = !options.isFlag("no-incremental") },
 									.execution_options = {
 										.worker_count = 1,
 									},
-}
+						}
 					);
+
+					if (init_result.status().isBad()) {
+						compiler::driver::exit();
+						return 1;
+					}
 
 					auto root = frontend::createModuleTree(path_to_compile, package_name);
 
@@ -482,26 +541,180 @@ clah::Clah getClahForMain() {
 					return exit_code;
 				})
 		)
-	    .addSubcommand(clah::Clah("repl", "Start an interactive REPL session")
+	    .addSubcommand(
+			clah::Clah("compile_script", "Compile a .ds script file into a .dbc or executable.")
+				.addPositional(clah::FileParser::make("script"))
+				.add(getLlvmOptLevelParam())
+				.add(clah::ParamBuilder::ofValue(clah::FilePathParser::make("filepath"))
+	                     .addShortName('a')
+	                     .addLongName("artifact-location")
+	                     .addShortDesc("Path to the top-level folder with build artifacts")
+	                     .optional()
+	                     .build())
+				.add(clah::ParamBuilder::ofFlag()
+	                     .addLongName("dvm-backend")
+	                     .addShortDesc(
+							 "Compile to DVM bytecode (.dbc) instead of a native executable."
+						 )
+	                     .build())
+				.add(clah::ParamBuilder::ofValue(clah::StringParser::make("linker"))
+	                     .addLongName("linker")
+	                     .addShortDesc("Path to the linker executable.")
+	                     .optional()
+	                     .build())
+				.add(clah::ParamBuilder::ofFlag()
+	                     .addLongName("no-c-standard-library")
+	                     .addShortDesc("Don't link the C standard library (LLVM backend only).")
+	                     .build())
+				.add(clah::ParamBuilder::ofValue(clah::IntParser::make("worker count"))
+	                     .addShortName('w')
+	                     .addLongName("workers")
+	                     .addShortDesc("Worker count.")
+	                     .optional()
+	                     .build())
+				.setHandler([](const clah::ParsingResult& options) -> int {
+					using namespace compiler;
+
+					auto script_file  = options.getPositional<fs::File>(0);
+					auto backend_type = options.isFlag("dvm-backend") ? driver::BackendType::DVM
+		                                                              : driver::BackendType::LLVM;
+
+					auto worker_count = options.getValue<i64>("workers").copyValueOr(1);
+
+					auto mode = compiler::driver::CompilerModeOfOperationAndOptions::ScriptMode{
+						.script_file     = script_file,
+						.backend_options = getBackendOptionsFromClah(options),
+						.compilation_artifacts = {
+							.artifacts_path = options.getValue<fs::FilePath>("artifact-location")
+							                      .copyValueOr("./duck_build/"),
+						},
+						.debug_options     = debug_options::getDebugOptionsFromClah(options),
+						.execution_options = {
+							.worker_count = base::safeIntConv<u64>(worker_count),
+						},
+					};
+
+					auto init_result = compiler::driver::initializeTheCompiler(mode);
+					if (init_result.status().isBad()) {
+						compiler::driver::exit();
+						return 1;
+					}
+
+					const auto& linking_options = getLinkingOptionsFromClah(options);
+					auto        result = driver::compileScript(backend_type, linking_options);
+
+					compiler::driver::exit();
+					return result.isOk() ? 0 : 1;
+				})
+		)
+	    // Scripts can only be "run" on DVM for now, since compiling with LLVM would produce
+	    // artifacts. To compile to native executable, the compile_script command can be used.
+	    // This may change in the future.
+	    .addSubcommand(clah::Clah("run", "Compile a .ds script file and run it on DVM.")
+	                       .addPositional(clah::FileParser::make("script"))
+	                       .add(clah::ParamBuilder::ofValue(clah::IntParser::make("worker count"))
+	                                .addShortName('w')
+	                                .addLongName("workers")
+	                                .addShortDesc("Worker count.")
+	                                .optional()
+	                                .build())
 	                       .setHandler([](const clah::ParsingResult& options) -> int {
-							   compiler::driver::initializeTheCompiler(
+							   using namespace compiler;
+
+							   auto script_file  = options.getPositional<fs::File>(0);
+							   auto worker_count = options.getValue<i64>("workers").copyValueOr(1);
+							   // duckc run doesn't produce any artifacts for now, but this may be
+		                       // changed later by for example adding option to save compiled
+		                       // bytecode. Also, ScriptMode requires artifacts path, maybe this
+		                       // will be refactored later.
+							   auto run_temp_artifacts_path
+								   = fs::FileManager::createRandomTempDirectory().getFilePath();
+
+							   auto mode = compiler::driver::CompilerModeOfOperationAndOptions::ScriptMode{
+						.script_file     = script_file,
+						.backend_options = {}, // only dvm for now.
+						.compilation_artifacts = {
+							.artifacts_path = run_temp_artifacts_path,
+						},
+						.debug_options     = debug_options::getDebugOptionsFromClah(options),
+						.execution_options = {
+							.worker_count = base::safeIntConv<u64>(worker_count),
+						},
+					};
+
+							   auto init_result = compiler::driver::initializeTheCompiler(mode);
+							   if (init_result.status().isBad()) {
+								   compiler::driver::exit();
+								   return 1;
+							   }
+
+							   auto run_result = driver::runScriptOnDVM();
+
+							   compiler::driver::exit();
+							   if (!run_result.has_value()) {
+								   std::cerr << "Error: " << run_result.error() << "\n";
+								   return 1;
+							   }
+							   return run_result->exit_code;
+						   }))
+	    .addSubcommand(
+			clah::Clah("repl", "Start an interactive REPL session")
+				.add(clah::ParamBuilder::ofFlag()
+	                     .addLongName("no-completions")
+	                     .addShortDesc("Disable REPL autocompletions and hints.")
+	                     .build())
+				.setDefaultValueParser(clah::FileParser::make("script")
+	            )  // for optional script path.
+				.setHandler([](const clah::ParsingResult& options) -> int {
+					auto init_result = compiler::driver::initializeTheCompiler(
 								   compiler::driver::CompilerModeOfOperationAndOptions::ReplMode{
-									   .debug_options     = getDebugOptionsFromClap(options),
-									   .execution_options = { 1 },
+									   .debug_options = debug_options::getDebugOptionsFromClah(options),
+									   .execution_options = {
+										   .worker_count = 1,
+									   },
 								   }
 							   );
-							   compiler::repl::ReplSession session;
-							   int                         result = session.run();
-							   compiler::driver::exit();
-							   return result;
-						   }))
+					if (init_result.status().isBad()) {
+						compiler::driver::exit();
+						return 1;
+					}
+					compiler::repl::ReplSession session(!options.isFlag("no-completions"));
+
+					if (options.getExtraParameterCount() > 1) {
+						std::cerr << "Error: repl accepts at most one script path. "
+									 "Usage: duckc repl [script.ds]\n";
+						compiler::driver::exit();
+						return 1;
+					}
+
+					if (options.getExtraParameterCount() == 1) {
+						// Preload mode currently treats load failure as fatal: if the
+			            // script fails to load/compile, we print the error and exit
+			            // before entering the interactive REPL loop.
+						auto script_file = options.getExtra<fs::File>(0).value();
+						auto load_result
+							= session.loadScriptFile(script_file.getFilePath().string());
+						if (load_result.status == compiler::repl::ReplResult::Status::Error) {
+							std::cerr << load_result.message << "\n";
+							compiler::driver::exit();
+							return 1;
+						}
+					}
+
+					int result = session.run();
+					compiler::driver::exit();
+					return result;
+				})
+		)
 	    .addSubcommand(clah::Clah("dummy", "Dummy command (cli testing command).")
 	                       .setHandler([](const clah::ParsingResult& options) -> int {
-							   compiler::driver::initializeTheCompiler(
+							   (void) compiler::driver::initializeTheCompiler(
 								   compiler::driver::CompilerModeOfOperationAndOptions::BareMode{
-									   .debug_options = getDebugOptionsFromClap(options),
+									   .debug_options
+									   = debug_options::getDebugOptionsFromClah(options),
 								   }
-							   );
+							   )
+								   .status();
 							   return 0;
 						   }));
 }

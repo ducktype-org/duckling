@@ -1,22 +1,22 @@
+use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
 
+use crate::quackpack::core::solver::gathering::error_surpression::{
+    GathererComputation, GathererResult,
+};
+use crate::quackpack::core::solver::gathering::fetch_types::{
+    FetchFailure, FetchResponse, FetchSuccess, ManifestsRequest, NotPinnedFailure,
+    NotPinnedRequest, NotPinnedSuccess, PinnedFailure, PinnedRequest, PinnedSuccess,
+};
+use crate::quackpack::core::solver::types_common::{
+    ExpandedPackage, InternedExpandedLocation, InternedLocation, Location, Package,
+};
+use crate::quackpack::core::version::CompatibilityCheck;
+use crate::quackpack::core::{FeatureName, Manifest, Version};
+use crate::quackpack::util::str_id::QpJoin;
+use crate::util::error::MessageError;
 use crate::{
-    QuackResult, QuackResultContext, qp_bail, qp_bail_internal, qp_err, qp_internal,
-    quackpack::core::{
-        FeatureName, Manifest, Version,
-        gathering::{
-            error_surpression::{GathererComputation, GathererResult},
-            fetch_types::{
-                FetchResult, ManifestsRequest, NotPinnedRequest, NotPinnedResult, PinnedRequest,
-                PinnedResult,
-            },
-        },
-        types_common::{
-            ExpandedPackage, InternedExpandedLocation, InternedLocation, Location, Package,
-        },
-        version::CompatibilityCheck,
-    },
-    util_common::error::QuackMessage,
+    QuackError, QuackResult, QuackResultContext, qp_bail, qp_bail_internal, qp_err, qp_internal,
 };
 
 /// Gathered information about a particular package.
@@ -35,19 +35,17 @@ impl PackageData {
             return Ok(GathererComputation::only_success(vec![]));
         }
         let mut result: GathererComputation<Vec<ManifestsRequest>> = GathererComputation::empty();
-        for dependency in self.manifest.dependencies().all_dependencies().values() {
+        for dependency in self.manifest.dependencies().all_dependencies() {
             if !dependency.is_enabled_for(self.requested_features.iter().copied()) {
                 continue;
             }
             let location = Location::from(dependency);
             let location = InternedLocation::new(location);
             let features: HashSet<FeatureName> = HashSet::from_iter(
-                dependency
-                    .enabled_features(Vec::from_iter(self.requested_features.iter().copied())),
+                dependency.enabled_features(self.requested_features.iter().copied()),
             );
             if dependency.is_pinned() {
                 let version = dependency
-                    .desc()
                     .versions()
                     .first()
                     .copied()
@@ -58,7 +56,7 @@ impl PackageData {
                     features,
                 }));
             } else {
-                let versions = dependency.desc().versions().to_vec();
+                let versions = dependency.versions().to_vec();
                 result.0.push(ManifestsRequest::NotPinned(NotPinnedRequest {
                     location,
                     versions: if !versions.is_empty() {
@@ -264,27 +262,38 @@ impl GathererState {
         }
     }
 
-    /// After getting a result of a fetch, decides what further requests to make.
-    pub fn handle_response(
+    /// After getting a response to a fetch,
+    /// updates the state and decides what furhter requests to make.
+    pub fn handle_fetch_response(
         &mut self,
-        result: FetchResult,
+        response: FetchResponse,
     ) -> GathererResult<Vec<ManifestsRequest>> {
-        match result {
-            FetchResult::Pinned(pinned_result) => self.handle_response_pinned(pinned_result),
-            FetchResult::NotPinned(not_pinned_result) => {
-                self.handle_response_not_pinned(not_pinned_result)
-            }
+        match response {
+            FetchResponse::Success(success) => self.handle_fetch_success(success),
+            FetchResponse::Failed(failure) => self.handle_fetch_failure(failure),
         }
     }
 
-    /// Handles a result of a pinned fetch.
-    fn handle_response_pinned(
+    /// After getting a successful response to a fetch,
+    /// updates the state and decides what further requests to make.
+    fn handle_fetch_success(
         &mut self,
-        pinned_result: PinnedResult,
+        successful_response: FetchSuccess,
+    ) -> GathererResult<Vec<ManifestsRequest>> {
+        match successful_response {
+            FetchSuccess::Pinned(pinned) => self.handle_success_pinned(pinned),
+            FetchSuccess::NotPinned(not_pinned) => self.handle_success_not_pinned(not_pinned),
+        }
+    }
+
+    /// Handles a successful response to a pinned fetch.
+    fn handle_success_pinned(
+        &mut self,
+        pinned_success: PinnedSuccess,
     ) -> GathererResult<Vec<ManifestsRequest>> {
         let origin_package = Package {
-            location: pinned_result.origin_location,
-            version: Some(pinned_result.origin_version),
+            location: pinned_success.origin_location,
+            version: Some(pinned_success.origin_version),
         };
         let Some(state) = self.pinned_fetches.get_mut(&origin_package) else {
             qp_bail_internal!("Response with no associated request state");
@@ -295,50 +304,56 @@ impl GathererState {
         let requests = requests.clone();
         *state = QueryState::Done;
 
-        // If received result declares a different version, the request failed.
-        if Some(pinned_result.origin_version) != pinned_result.expanded_package.version {
+        // If received response declares a different version, the request failed.
+        if Some(pinned_success.origin_version) != pinned_success.expanded_package.version {
             return Ok(self
-                .fail_pinned(
+                .fail_incoherent_success_pinned(
                     origin_package,
                     "Fetched manifest's version differs from required",
                 )?
-                .context(format!(
-                    "While handling response for the fetch of {:?}",
-                    origin_package
+                .context(MessageError(
+                    format!(
+                        "While handling response for the fetch of {:?}",
+                        origin_package
+                    )
+                    .into(),
                 )));
         }
 
         self.location_resolver.insert(
-            pinned_result.origin_location,
-            pinned_result.expanded_package.location,
+            pinned_success.origin_location,
+            pinned_success.expanded_package.location,
         );
         self.insert_manifests([(
-            pinned_result.expanded_package,
-            pinned_result.fetched_manifest,
+            pinned_success.expanded_package,
+            pinned_success.fetched_manifest,
         )]);
         self.complete_requests(requests)
     }
 
-    /// Handles a failure of a pinned fetch.
-    fn fail_pinned<T, U: Default>(&mut self, pkg: Package, reason: T) -> GathererResult<U>
-    where
-        T: QuackMessage + Sized + 'static,
-    {
+    /// Creates errors for a successful pinned response incoherent with the request.
+    fn fail_incoherent_success_pinned<U: Default>(
+        &mut self,
+        pkg: Package,
+        reason: impl Into<Cow<'static, str>>,
+    ) -> GathererResult<U> {
         let Some(status) = self.pinned_fetches.get_mut(&pkg) else {
-            return Err(qp_internal!("Failed request with no status").context(reason));
+            return Err(
+                qp_internal!("Failed request with no status").context(MessageError(reason.into()))
+            );
         };
         *status = QueryState::Failed;
-        Ok(GathererComputation::empty().context(reason))
+        Ok(GathererComputation::empty().context(MessageError(reason.into())))
     }
 
-    /// Handles a result of a not pinned fetch.
-    fn handle_response_not_pinned(
+    /// Handles a successful response to a a not pinned fetch.
+    fn handle_success_not_pinned(
         &mut self,
-        not_pinned_result: NotPinnedResult,
+        not_pinned_response: NotPinnedSuccess,
     ) -> GathererResult<Vec<ManifestsRequest>> {
         let Some(state) = self
             .not_pinned_fetches
-            .get_mut(&not_pinned_result.origin_location)
+            .get_mut(&not_pinned_response.origin_location)
         else {
             qp_bail_internal!("Response with no associated request state");
         };
@@ -348,7 +363,7 @@ impl GathererState {
         let requests = requests.clone();
         *state = QueryState::Done;
 
-        let expanded_locs: HashSet<InternedExpandedLocation> = not_pinned_result
+        let expanded_locs: HashSet<InternedExpandedLocation> = not_pinned_response
             .fetched_manifests
             .keys()
             .map(|pkg| pkg.location)
@@ -357,36 +372,86 @@ impl GathererState {
             && let Some(expanded_loc) = expanded_locs.into_iter().next()
         {
             self.location_resolver
-                .insert(not_pinned_result.origin_location, expanded_loc);
-            self.insert_manifests(not_pinned_result.fetched_manifests);
+                .insert(not_pinned_response.origin_location, expanded_loc);
+            self.insert_manifests(not_pinned_response.fetched_manifests);
             self.complete_requests(requests)
         } else {
             Ok(self
-                .fail_not_pinned(not_pinned_result.origin_location, "Invalid fetch result")?
-                .context(format!(
-                    "While handling response for the fetch of {:?}",
-                    not_pinned_result.origin_location
+                .fail_incoherent_success_not_pinned(
+                    not_pinned_response.origin_location,
+                    "Invalid fetch response",
+                )?
+                .context(MessageError(
+                    format!(
+                        "While handling response for the fetch of {:?}",
+                        not_pinned_response.origin_location
+                    )
+                    .into(),
                 )))
         }
     }
 
-    /// Handles a failure of a not pinned fetch.
-    fn fail_not_pinned<T, U: Default>(
+    /// Creates errors for a successful not pinned response incoherent with the request.
+    fn fail_incoherent_success_not_pinned<U: Default>(
         &mut self,
         location: InternedLocation,
-        reason: T,
+        reason: impl Into<Cow<'static, str>>,
     ) -> GathererResult<U>
-    where
-        T: QuackMessage + Sized + 'static,
-    {
+where {
         let Some(status) = self.not_pinned_fetches.get_mut(&location) else {
-            return Err(qp_internal!("Failed request with no status").context(reason));
+            return Err(
+                qp_internal!("Failed request with no status").context(MessageError(reason.into()))
+            );
         };
         *status = QueryState::Failed;
-        Ok(GathererComputation::empty().context(reason))
+        Ok(GathererComputation::empty().context(MessageError(reason.into())))
     }
 
-    /// Inserts manifests gotten in a fetch result into the GathererState.
+    /// After a failed fetch, updates the state and decides what further requests to make.
+    fn handle_fetch_failure(
+        &mut self,
+        failure_response: FetchFailure,
+    ) -> GathererResult<Vec<ManifestsRequest>> {
+        match failure_response {
+            FetchFailure::Pinned(pinned_failure) => self.handle_failure_pinned(pinned_failure),
+            FetchFailure::NotPinned(not_pinned_failure) => {
+                self.handle_failure_not_pinned(not_pinned_failure)
+            }
+        }
+    }
+
+    /// Handles a failed pinned fetch.
+    fn handle_failure_pinned(
+        &mut self,
+        failure_pinned_response: PinnedFailure,
+    ) -> GathererResult<Vec<ManifestsRequest>> {
+        let origin_package = Package {
+            location: failure_pinned_response.origin_location,
+            version: Some(failure_pinned_response.origin_version),
+        };
+        let Some(state) = self.pinned_fetches.get_mut(&origin_package) else {
+            qp_bail_internal!("Response with no associated request state");
+        };
+        *state = QueryState::Failed;
+        Ok(GathererComputation::empty())
+    }
+
+    /// Handles a failed not pinned request.
+    fn handle_failure_not_pinned(
+        &mut self,
+        failure_not_pinned_response: NotPinnedFailure,
+    ) -> GathererResult<Vec<ManifestsRequest>> {
+        let Some(state) = self
+            .not_pinned_fetches
+            .get_mut(&failure_not_pinned_response.origin_location)
+        else {
+            qp_bail_internal!("Response with no associated request state");
+        };
+        *state = QueryState::Failed;
+        Ok(GathererComputation::empty())
+    }
+
+    /// Inserts manifests gotten in a fetch response into the GathererState.
     fn insert_manifests(
         &mut self,
         manifests: impl IntoIterator<Item = (ExpandedPackage, Box<Manifest>)>,
@@ -519,8 +584,15 @@ impl GathererState {
             requested_features.remove(feature);
         }
         if !nonexistent_features.is_empty() {
+            let package = pkg.location().descriptive_name();
+            let missing_features = nonexistent_features.join(", ");
+            let plural = if nonexistent_features.len() == 1 {
+                ""
+            } else {
+                "s"
+            };
             return Ok(GathererComputation::only_error(qp_err!(
-                "Package {pkg:?} does not have features {nonexistent_features:?}"
+                "package {package} does not have feature{plural} `{missing_features}`"
             )));
         }
         if !requested_features.is_empty() || !pkg_data.referenced_by_requests {
@@ -531,12 +603,29 @@ impl GathererState {
             Ok(GathererComputation::empty())
         }
     }
+}
 
-    pub fn into_gathered_info(mut self) -> QuackResult<GatheredInfo> {
+/// A struct containing all the information gathered by the gatherer.
+#[derive(Debug)]
+pub struct GatheredInfo {
+    /// The gathered manifests of the packages referenced in requests.
+    pub gathered_manifests: HashMap<ExpandedPackage, Box<Manifest>>,
+    /// The intersection of the manifest defined features and features referenced in the requests.
+    pub possible_features: HashMap<ExpandedPackage, HashSet<FeatureName>>,
+    /// The set of the possible versions of the packages satisfying a given location.
+    pub versions_for_location: HashMap<InternedExpandedLocation, HashSet<Option<Version>>>,
+    /// The translation from [`InternedLocation`] to [`InternedExpandedLocation`].
+    pub location_resolver: HashMap<InternedLocation, InternedExpandedLocation>,
+}
+
+impl TryFrom<GathererState> for GatheredInfo {
+    type Error = QuackError;
+
+    fn try_from(mut value: GathererState) -> QuackResult<Self> {
         let mut gathered_manifests = HashMap::new();
         let mut possible_features = HashMap::new();
         let mut unnecessary_pkgs = Vec::new();
-        for (pkg, data) in self.pkgs_data {
+        for (pkg, data) in value.pkgs_data {
             if data.referenced_by_requests {
                 gathered_manifests.insert(pkg, data.manifest);
                 possible_features.insert(pkg, data.requested_features);
@@ -545,7 +634,7 @@ impl GathererState {
             }
         }
         for pkg in unnecessary_pkgs {
-            let Some(versions) = self.versions_for_location.get_mut(&pkg.location) else {
+            let Some(versions) = value.versions_for_location.get_mut(&pkg.location) else {
                 qp_bail_internal!(
                     "Unncecessary package's location not present in the versions for location map"
                 );
@@ -555,15 +644,8 @@ impl GathererState {
         Ok(GatheredInfo {
             gathered_manifests,
             possible_features,
-            versions_for_location: self.versions_for_location,
-            location_resolver: self.location_resolver,
+            versions_for_location: value.versions_for_location,
+            location_resolver: value.location_resolver,
         })
     }
-}
-
-pub struct GatheredInfo {
-    pub gathered_manifests: HashMap<ExpandedPackage, Box<Manifest>>,
-    pub possible_features: HashMap<ExpandedPackage, HashSet<FeatureName>>,
-    pub versions_for_location: HashMap<InternedExpandedLocation, HashSet<Option<Version>>>,
-    pub location_resolver: HashMap<InternedLocation, InternedExpandedLocation>,
 }

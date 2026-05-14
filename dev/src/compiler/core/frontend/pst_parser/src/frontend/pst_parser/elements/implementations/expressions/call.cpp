@@ -4,8 +4,10 @@
 
 namespace pst::expr {
 
-	MBox<ExprElement> Call::parse(LangParserState& state, i64 length) {
-		if (!checkLength(state, length)) return nullptr;
+	MBox<ExprElement> Call::parse(LangParserState& state) {
+		if (!checkNonEmpty(state)) return nullptr;
+
+		i64 length = base::safeIntConv<i64>(state.ctokens().size());
 
 		if (not(length == 1
 		        && (state[0].isBracketGroup(lexer::Token::Round)
@@ -16,12 +18,12 @@ namespace pst::expr {
 			));
 		}
 
-		auto out  = makeBox<Call>(state.getPosition());
+		auto out  = makeBox<Call>(state);
 		out->type = state[0].getBracketType();
 
-		state.parse(out).goDown();
-		state.parse(out).one(&out->args);
-		state.parse(out).goUpAndSkip();
+		PARSE().goDown();
+		PARSE().one(&out->args);
+		PARSE().goUpAndSkip();
 
 		PST_RETURN out;
 	}
@@ -39,7 +41,7 @@ namespace pst::expr {
 		out << "}";
 	}
 
-	LangElement::HashAlg& Call::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& Call::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, type);
 		return partial_hash;
 	}

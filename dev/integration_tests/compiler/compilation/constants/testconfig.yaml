@@ -10,23 +10,10 @@ Tests:
         Output:
           String: "5\n5\n5\n55\n55\n123123\n42\n42\n314\n0\n0\n-100\n"
         ExitCode: 0
-  meta:
-    Cases:
-      llvm:
-        backend: llvm
-        Output:
-          String: "1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n13\n"
-        ExitCode: 0
   local:
     Cases:
-      llvm:
-        backend: llvm
+      all:
+        backend: all
         Output:
           String: "2\n"
         ExitCode: 0
-      # @TODO: #1849 enable this test case
-      # dvm:
-      #   backend: dvm
-      #   Output:
-      #     String: "2\n"
-      #   ExitCode: 0

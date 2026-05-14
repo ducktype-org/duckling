@@ -6,6 +6,8 @@
 
 #include <base/collections/optional.hpp>
 
+#include <query_framework/context/context_fd.hpp>
+
 namespace query::internal {
 	/**
 	 * Graph used to represent the set of active nodes and active edges in the query graph.
@@ -19,8 +21,29 @@ namespace query::internal {
 	 * storing pointers to data in the proper query graph, for always lock-free operations.
 	 */
 	class ActiveGraph final {
+	public:
+		/**
+		 * Helper struct representing a found query cycle.
+		 * See cycleCheck() for more details.
+		 */
+		struct QueryCycle final {
+			struct NodeCycleInfo final {
+				NodeID              node_id;
+				Ref<query::Context> node_context_ref;
+			};
+
+			std::vector<NodeCycleInfo> cycle_nodes;
+		};
+
+
+	private:
+		/**
+		 * Helper struct representing data stored for each active node in the graph.
+		 */
 		struct ActiveData final {
 			base::Optional<NodeID> active_edge;
+
+			Ref<query::Context> node_context_ref;
 
 			// @TODO: #1886 we will also need to store key refs here (in type-erased way),
 			// we might want to put in in multiple hash maps, as key operations will be
@@ -31,20 +54,13 @@ namespace query::internal {
 		concurrent::ConHashMap<NodeID, ActiveData> active_nodes;
 		std::atomic<u64>                           active_node_count = 0;
 
-		/**
-		 * Performs the following:
-		 * * if node_id is not present in the graph, return empty optional,
-		 * * if node_id does not currently have an active edge, return empty optional,
-		 * * otherwise return the node that the active edge of provided node points to.
-		 */
-		base::Optional<NodeID> walk(NodeID node_id) const;
 
 	public:
 		/**
 		 * Adds a node to the active query graph.
 		 * Panics if node is already present.
 		 */
-		void putNode(NodeID node_id);
+		void putNode(NodeID node_id, Ref<query::Context> node_context_ref);
 
 		/**
 		 * Removes a node from the active query graph.
@@ -71,14 +87,6 @@ namespace query::internal {
 		void setEdge(NodeID node_id, NodeID edge);
 
 		/**
-		 * Helper struct representing a found query cycle.
-		 * See cycleCheck() for more details.
-		 */
-		struct QueryCycle final {
-			std::vector<NodeID> cycle_nodes;
-		};
-
-		/**
 		 * Walks the given node, until there is a cycle, or it can't walk no more.
 		 * @return QueryCycle if a cycle was found AND the initial node was part of the cycle,
 		 *         empty optional otherwise.
@@ -87,6 +95,6 @@ namespace query::internal {
 		 *       It might seem not necessary, since we only detect cycles that node_id is part of,
 		 *       but it is still needed to prevent infinite looping on actual cycles.
 		 */
-		base::Optional<QueryCycle> cycleCheck(const NodeID node_id) const;
+		base::Optional<QueryCycle> cycleCheck(const NodeID initial_node_id) const;
 	};
 }

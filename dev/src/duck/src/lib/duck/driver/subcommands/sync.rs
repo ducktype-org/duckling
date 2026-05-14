@@ -1,13 +1,14 @@
-use crate::{DuckCtx, QuackResult, qp_bail};
 use clap::{ArgMatches, Command};
 
 use crate::duck::driver::cli_ext::{flag, subcommand};
+use crate::quackpack::subcommands::sync::{SyncOptions, sync};
+use crate::{DuckContext, QuackResult};
 
+/// Creates parser for the `sync` subcommand.
 pub fn get_parser() -> Command {
     subcommand("sync")
         .about("Synchronize the current venv")
         .arg(flag("frozen", "Don't update the freezefile"))
-        .arg(flag("offline", "Don't perform any network requests"))
         .arg(
             flag(
                 "overwrite",
@@ -19,8 +20,19 @@ pub fn get_parser() -> Command {
             flag("global", "Synchronize the global virtual environment")
                 .conflicts_with("overwrite"),
         )
+        .arg(flag(
+            "external-errors",
+            "Halt computation after encountering errors in foreign manifests",
+        ))
 }
 
-pub fn execute(_ctx: &DuckCtx, _matches: &ArgMatches) -> QuackResult<()> {
-    qp_bail!("implement sync")
+/// Logic for executing the `sync` subcommand.
+pub fn execute(ctx: &DuckContext, matches: &ArgMatches) -> QuackResult<()> {
+    let options = SyncOptions {
+        global: matches.get_flag("global"),
+        overwrite: matches.get_flag("overwrite"),
+        frozen: matches.get_flag("frozen"),
+        strict_errors: matches.get_flag("external-errors"),
+    };
+    sync(ctx, options)
 }

@@ -6,9 +6,9 @@ concurrency:
 
 on:
   push:
-    branches: [ "main", "dev" ]
+    branches: ["main", "dev"]
   pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
+    types: [opened, synchronize, reopened, ready_for_review, labeled]
   workflow_dispatch:
 
 env:
@@ -21,28 +21,54 @@ env:
   CCACHE_DIR: ${{ github.workspace }}/dev/.ccache
   BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
   IF_MAIN_PR: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main'}}
-  CXX_COMPILER: g++-14
-  CC_COMPILER: gcc-14
-  GCOV_VERSION: gcov-14
   BUILD_SYSTEM: Ninja
-  LINKER_TYPE: MOLD
 
 jobs:
-  determine-runners:
-    if: github.event.pull_request.draft == false
-    uses: ./.github/workflows/determine-runners.yml
-    with:
-      self-hosted-labels: '["debug", "release"]'
-      github-labels: '["ubuntu-24.04", "ubuntu-24.04"]'
-    secrets: inherit
+  # Determines the build matrix based on the event type.
+  # On regular PRs only Dev/gcc runs; on push, workflow_dispatch or approved reviews the full matrix runs.
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Determine build matrix
+        id: set-matrix
+        env:
+          GITHUB_CONTEXT: ${{ toJson(github) }}
+        run: |
+          MATRIX=$(python3 .github/workflows/setup-build-matrix.py \
+            --event-name "${{ github.event_name }}" \
+            --branch "${{ env.BRANCH_NAME }}" \
+            --repo "${{ github.repository }}" \
+            --pr-number "${{ github.event.pull_request.number || 0 }}" \
+            --github-token "${{ secrets.QUACKER_PAT }}")
+          echo "Determined build matrix: $MATRIX"
+          echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
 
   build:
-    if: github.event.pull_request.draft == false
-    needs: determine-runners
+    needs: [setup]
+    name: ${{ matrix.build-type }} / ${{ matrix.compiler.name }}
+    # This if condition is quite complex, so let's break it down:
+    # 1. Run on push (if not a draft PR) or workflow_dispatch events (these are not related to PRs).
+    # 2. Run on pull_request events only if the PR is not a draft, and either
+    #    it is not a labeling event or it is a labeling event but the label is
+    #    "Override Coverage Check"/"Run All Workflows". This allows to re-run the workflow on PRs
+    #    that were just labeled with the above labels, which is useful for
+    #    re-running the workflow.
+    if: >-
+      (github.event_name == 'push' && github.event.pull_request.draft == false) ||
+      github.event_name == 'workflow_dispatch'
+      ||
+      (
+        github.event.pull_request.draft == false &&
+        github.event_name == 'pull_request' &&
+        (github.event.action != 'labeled' || github.event.label.name == 'Override Coverage Check' || github.event.label.name == 'Run All Workflows')
+      )
 
     strategy:
-      matrix:
-        build-type: [Dev, DevOpt]  # (Release, Dev, RelWithDebInfo, etc.)
+      matrix: ${{ fromJson(needs.setup.outputs.matrix) }}
       fail-fast: false
 
     outputs:
@@ -56,24 +82,19 @@ jobs:
       itest-coverage-value: ${{ steps.test-coverage-itests.outputs.coverage-percent }}
       todo-count: ${{ steps.todo-counter.outputs.todo-count }}
 
-    timeout-minutes: 25  # (Per matrix run)
-    runs-on: ${{ matrix.build-type == 'Dev' && fromJson(needs.determine-runners.outputs.runners)[0] || fromJson(needs.determine-runners.outputs.runners)[1] }}
+    timeout-minutes: 40 # (Per matrix run)
+    runs-on:
+      group: SelfHostedRunners
+      labels: ${{ matrix.build-type == 'Dev' && 'debug' || 'release' }}
 
     env:
       BUILD_DEPLOYABLES: ${{ matrix.build-type == 'DevOpt' }}
-      COVERAGE_ENABLED: ${{ matrix.build-type == 'Dev' }}
+      COVERAGE_ENABLED: ${{ matrix.build-type == 'Dev' && matrix.compiler.name == 'gcc' }}
 
     steps:
-      - name: Set self-hosted flag
+      - name: Set self-hosted placeholder
         id: set-self-hosted
-        run: |
-          if [[ "${{ matrix.build-type }}" == "Dev" && "$(echo '${{ needs.determine-runners.outputs.runners }}' | jq -r '.[0].group')" == "SelfHostedRunners" ]]; then
-            echo "is-self-hosted=true" >> $GITHUB_OUTPUT
-          elif [[ "${{ matrix.build-type }}" == "DevOpt" && "$(echo '${{ needs.determine-runners.outputs.runners }}' | jq -r '.[1].group')" == "SelfHostedRunners" ]]; then
-            echo "is-self-hosted=true" >> $GITHUB_OUTPUT
-          else
-            echo "is-self-hosted=false" >> $GITHUB_OUTPUT
-          fi
+        run: echo "is-self-hosted=true" >> $GITHUB_OUTPUT
 
       - name: Set number of threads
         id: set-jobs
@@ -86,7 +107,7 @@ jobs:
             echo "jobs=2" >> $GITHUB_OUTPUT
           fi
 
-      - name: Clean workspace (self-hosted only)
+      - name: Clean workspace
         if: ${{ steps.set-self-hosted.outputs.is-self-hosted == 'true' }}
         run: |
           echo "Cleaning up workspace on self-hosted runner..."
@@ -95,7 +116,7 @@ jobs:
           echo "Workspace cleaned."
 
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Update apt
         run: sudo apt update
@@ -116,24 +137,26 @@ jobs:
         run: sudo apt -y install llvm-19 llvm-19-dev
 
       - name: Install clang
-        # Necessary to compile Duckling builtins to LLVM bitcode
+        # Note that it is also necessary to compile Duckling builtins to LLVM bitcode
         # Must be the same version as llvm
-        run: sudo apt -y install clang-19
+        run: sudo apt -y install clang-19 clang-tools-19
 
       - name: Install xxd
         # Necessary to embed LLVM bitcode into duckc source files.
         run: sudo apt -y install xxd
 
       - name: Install mold
+        if: ${{ matrix.compiler.linker == 'mold' }}
         run: sudo apt -y install mold
 
       - name: Install GCC 14 and gcov-14
-        run: sudo apt install -y ${{ env.CC_COMPILER }} ${{ env.CXX_COMPILER }} # gcov is included in gcc package
+        if: ${{ matrix.compiler.name == 'gcc' }}
+        run: sudo apt install -y ${{ matrix.compiler.cc }} ${{ matrix.compiler.cxx }} # gcov is included in gcc package
 
       - name: Install Ninja
         run: sudo apt -y install ninja-build
 
-      - name: Install Valgrind 
+      - name: Install Valgrind
         run: sudo apt -y install valgrind
 
       - name: Setup duck dependencies
@@ -141,9 +164,9 @@ jobs:
 
       - name: Check installations
         run: |
-          ${{ env.CXX_COMPILER }} --version
-          ${{ env.CC_COMPILER }} --version
-          ${{ env.GCOV_VERSION }} --version
+          ${{ matrix.compiler.cxx }} --version
+          ${{ matrix.compiler.cc }} --version
+          ${{ matrix.compiler.name == 'gcc' && format('{0} --version', matrix.compiler.gcov) || 'echo "No gcov for clang"' }}
 
       - name: Install ccache
         working-directory: ${{ env.WORKSPACE }}
@@ -164,19 +187,19 @@ jobs:
       # main branch misses, fallback to any branch's cache.
       - name: Restore build cache
         id: restore-build-cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         with:
           path: |
             ${{ env.CCACHE_DIR }}
-          key: ${{ runner.os }}-build-${{ matrix.build-type }}-${{ env.BRANCH_NAME }}-${{ steps.cache-timestamp.outputs.timestamp }}
+          key: ${{ runner.os }}-${{ matrix.compiler.cache-prefix }}-${{ matrix.build-type }}-${{ env.BRANCH_NAME }}-${{ steps.cache-timestamp.outputs.timestamp }}
           # If there is no match with the key, then it tries to partially
           # match with any of restore-keys (top to bottom).
           # Most recent entry is used when multiple match to the same key.
           # See readme for details.
-          restore-keys : |
-            ${{ runner.os }}-build-${{ matrix.build-type }}-${{ env.BRANCH_NAME }}
-            ${{ runner.os }}-build-${{ matrix.build-type }}-main
-            ${{ runner.os }}-build-${{ matrix.build-type }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.compiler.cache-prefix }}-${{ matrix.build-type }}-${{ env.BRANCH_NAME }}
+            ${{ runner.os }}-${{ matrix.compiler.cache-prefix }}-${{ matrix.build-type }}-main
+            ${{ runner.os }}-${{ matrix.compiler.cache-prefix }}-${{ matrix.build-type }}
 
       # Remove ccache folder to prevent cache snowball growth
       - name: Remove ccache on main
@@ -184,31 +207,43 @@ jobs:
         id: ccache-main-rm
         run: rm -rf ${CCACHE_DIR}
 
+      - name: Initialize project
+        working-directory: ${{ env.WORKSPACE }}
+        run: ./toolbox.py init
+
       # Enables coverage only in case of Debug build.
-      - name: Additional CMake flags
-        id: cmake-flags
+      - name: Additional setup-build flags
+        id: setup-build-flags
         # Env here is used for readability only
         env:
-          flags:
-            ${{ env.COVERAGE_ENABLED == 'true' && format('-D ENABLE_COVERAGE=ON -D GCOV_VERSION={0}', env.GCOV_VERSION) || '' }}
+          flags: ${{ env.COVERAGE_ENABLED == 'true' && format('--coverage --gcov-version {0}', matrix.compiler.gcov) || '--no-coverage' }}
         run: echo flags=${{ env.flags }} >> $GITHUB_OUTPUT
 
+        # JIT should be enabled if build type is DevOpt and compiler is clang, otherwise it should be disabled.
+      - name: Check should enable JIT
+        id: check-jit
+        run: |
+          echo jit-flag=$( [ "${{ matrix.build-type }}" = "DevOpt" ] &&
+                              [ "${{ matrix.compiler.name }}" = "clang" ] &&
+                               echo "--enable-jit" || echo "--no-enable-jit" ) >> $GITHUB_OUTPUT
+
+      # Configure CMake. Using toolbox instead of direct command, because it
+      # also enables CMake File API, which is necessary for integration tests.
+      # It also allows us to omit specifying all LLVM tools for JIT.
       - name: Configure CMake
         working-directory: ${{ env.WORKSPACE }}
         run: |
-          CTEST_PARALLEL_LEVEL=${{ steps.set-jobs.outputs.jobs }} \
-          cmake \
-              -B ${{ env.BUILD_DIR }} \
-              -G ${{ env.BUILD_SYSTEM }} \
-              -D CMAKE_CXX_COMPILER=${{ env.CXX_COMPILER }} \
-              -D CMAKE_C_COMPILER=${{ env.CC_COMPILER }} \
-              -D BUILD_DOCS=OFF \
-              -D CMAKE_BUILD_TYPE=${{ matrix.build-type }} \
-              -D DOWNLOAD_UBUNTU_ICU_BUILD=ON \
-              -D USE_CCACHE=ON \
-              -D STRIP_SYMBOL_INFORMATION=ON \
-              -D CMAKE_LINKER_TYPE=${{ env.LINKER_TYPE }} \
-              ${{ steps.cmake-flags.outputs.flags }}
+          ./toolbox.py setup-build \
+            -b ${{ env.BUILD_DIR }} \
+            -s ${{ env.BUILD_SYSTEM }} \
+            -c ${{ matrix.compiler.cc }} \
+            -x ${{ matrix.compiler.cxx }} \
+            -t ${{ matrix.build-type }} \
+            ${{ steps.check-jit.outputs.jit-flag }} \
+            ${{ steps.setup-build-flags.outputs.flags }} \
+            --linker ${{ matrix.compiler.linker }} \
+            --ccache \
+            --strip-symbol-information
 
       # Build all tests.
       # We additionally build coverage targets in case of coverage enabled,
@@ -249,7 +284,6 @@ jobs:
           echo "ccache:"
           du -hs ${{ env.CCACHE_DIR }}
 
-
       # Source:  https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/caching-dependencies-to-speed-up-workflows#force-deleting-cache-entries
       # This step deletes all the cache entries that are related to this branch,
       # and it is done in this moment in the script, right after building, because
@@ -267,27 +301,27 @@ jobs:
           echo "Deleting caches..."
           for cacheKey in $cacheKeysForPR
           do
-            if [[ $cacheKey == ${{ runner.os }}-build-${{ matrix.build-type }}-${{ env.BRANCH_NAME }}* ]]; then
+            if [[ $cacheKey == ${{ runner.os }}-${{ matrix.compiler.cache-prefix }}-${{ matrix.build-type }}-${{ env.BRANCH_NAME }}* ]]; then
               gh actions-cache delete $cacheKey -R $REPO --confirm
             fi
           done
           echo "Done"
         env:
-          GH_TOKEN: ${{ secrets.CACHE_DEL_PAT }}  # This env variable is used by the GH tool.
+          GH_TOKEN: ${{ secrets.CACHE_DEL_PAT }} # This env variable is used by the GH tool.
           REPO: ${{ github.repository }}
 
       # Manually cache the build before testing, but **after** cleaning.
       - name: Save build cache
         id: save-build-cache
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v5
         with:
           path: |
             ${{ env.CCACHE_DIR }}
           key: ${{ steps.restore-build-cache.outputs.cache-primary-key }}
 
       - name: Test
-        working-directory: ${{ env.BUILD_DIR }}
-        run: cmake --build ${{ env.BUILD_DIR }} -- test_parallel
+        working-directory: ${{ env.WORKSPACE }}
+        run: ./toolbox.py test -b ${{ env.BUILD_DIR }} -j ${{ steps.set-jobs.outputs.jobs }} --output-on-failure --timeout 60
 
       - name: Test Coverage
         id: test-coverage
@@ -296,7 +330,6 @@ jobs:
         run: |
           cmake --build ${{ env.BUILD_DIR }} -- coverage
           echo coverage-percent=$(python3 ${{ env.WORKSPACE }}/scripts/cmake/coverage_info_parser.py ${{ env.BUILD_DIR }}/coverage/index.html) > $GITHUB_OUTPUT
-
 
       - name: Delete coverage data files
         if: ${{ env.COVERAGE_ENABLED == 'true' }}
@@ -309,6 +342,13 @@ jobs:
         id: integration-tests
         working-directory: ${{ env.WORKSPACE }}
         run: ./toolbox.py itest -b ${{ env.BUILD_DIR }}
+
+      # failure() makes this step run even when a previous step has failed (which would otherwise
+      # cause all subsequent steps to be skipped). The additional conditions ensure this step only
+      # runs when at least one of the integration test steps actually failed.
+      - name: Cat itests log file on failure
+        if: ${{ failure() && (steps.integration-tests.outcome == 'failure') }}
+        run: cat /tmp/dit.log
 
       - name: Test Coverage After Integration Tests
         id: test-coverage-itests
@@ -337,7 +377,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Fetch origin/main
         run: git fetch origin main
@@ -358,7 +398,7 @@ jobs:
         uses: action-pack/set-variable@v1
         if: ${{ env.BRANCH_NAME == 'main' }}
         with:
-          name: 'MAIN_COVERAGE_VALUE'
+          name: "MAIN_COVERAGE_VALUE"
           value: ${{ needs.build.outputs.coverage-value }}
           token: ${{ secrets.QUACKER_PAT }}
 
@@ -366,7 +406,7 @@ jobs:
         uses: action-pack/set-variable@v1
         if: ${{ env.BRANCH_NAME == 'main' }}
         with:
-          name: 'MAIN_ITEST_COVERAGE_VALUE'
+          name: "MAIN_ITEST_COVERAGE_VALUE"
           value: ${{ needs.build.outputs.itest-coverage-value }}
           token: ${{ secrets.QUACKER_PAT }}
 
@@ -374,7 +414,7 @@ jobs:
         uses: action-pack/set-variable@v1
         if: ${{ env.BRANCH_NAME == 'main' }}
         with:
-          name: 'MAIN_TODO_COUNT'
+          name: "MAIN_TODO_COUNT"
           value: ${{ needs.build.outputs.todo-count }}
           token: ${{ secrets.QUACKER_PAT }}
 
@@ -414,10 +454,10 @@ jobs:
         if: ${{ env.IF_MAIN_PR == 'true' }}
         env:
           COV_FAIL_MSG: '❌❌❌ - **You have to write some more tests, so the coverage is at least as high as on the main branch!** \n\n 🆘 Run coverage tests: `./toolbox.py coverage` to get more information.'
-          COV_SUCC_MSG: '✅✅✅ - **Great job writing tests!**'
-          TODO_FAIL_MSG: '🙈🙈🙈 - You have **added ${{ steps.calc-todo-diff.outputs.value }}** TODO(s) to the repo! 🥴❌🥴'
-          TODO_SINGLE_GOOD_MSG: '👍👍👍 - You have **solved ${{ steps.calc-todo-diff-neg.outputs.value }}** TODO!'
-          TODO_MULTIPLE_AMAZED_MSG: '😍🤯🤯🤯😍 - You have **solved ${{ steps.calc-todo-diff-neg.outputs.value }}** TODOs!!! You are a hero! 🤩🥳🥳🥳🤩'
+          COV_SUCC_MSG: "✅✅✅ - **Great job writing tests!**"
+          TODO_FAIL_MSG: "🙈🙈🙈 - You have **added ${{ steps.calc-todo-diff.outputs.value }}** TODO(s) to the repo! 🥴❌🥴"
+          TODO_SINGLE_GOOD_MSG: "👍👍👍 - You have **solved ${{ steps.calc-todo-diff-neg.outputs.value }}** TODO!"
+          TODO_MULTIPLE_AMAZED_MSG: "😍🤯🤯🤯😍 - You have **solved ${{ steps.calc-todo-diff-neg.outputs.value }}** TODOs!!! You are a hero! 🤩🥳🥳🥳🤩"
 
         with:
           github-token: ${{ secrets.QUACKER_PAT }}

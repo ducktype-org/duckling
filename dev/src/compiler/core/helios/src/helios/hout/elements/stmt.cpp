@@ -15,6 +15,7 @@ namespace compiler::helios::code {
 	STMT_VISITOR(WhileStmt)
 	STMT_VISITOR(VariableStmt)
 	STMT_VISITOR(AssignmentStmt)
+	STMT_VISITOR(BlockStmt)
 
 	namespace {
 		constexpr usize INDENT_SIZE = 4;
@@ -74,12 +75,9 @@ namespace compiler::helios::code {
 
 		// this might not be correct:?
 		out << this->type.toString();
-		if (this->initial_value.has_value()) {
-			out << " = ";
-			this->initial_value.value()->debugPrint(out);
-		} else {
-			out << " = <no initial value provided>";
-		}
+		out << " = ";
+		this->initial_value->debugPrint(out);
+
 
 		out << ";\n";
 	}
@@ -90,5 +88,13 @@ namespace compiler::helios::code {
 		out << " = ";
 		new_value_expr->debugPrint(out);
 		out << ";\n";
+	}
+
+	void BlockStmt::debugPrint(std::ostream& out, usize indent) const {
+		addIndent(out, indent);
+		out << "{\n";
+		for (const auto& stmt: body.statements) stmt->debugPrint(out, indent + 1);
+		addIndent(out, indent);
+		out << "}\n";
 	}
 }

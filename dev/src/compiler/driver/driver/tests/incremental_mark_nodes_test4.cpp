@@ -36,7 +36,7 @@ private:
 			= fs::FilePath(std::filesystem::current_path() / k_artifacts_dir);
 
 		// Initialize with changed functions path (same package name as previous step)
-		compiler::driver::initializeTheCompiler(
+		auto init_result = compiler::driver::initializeTheCompiler(
             compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
                 .main_package_info = {
                     .package_name = std::string("mark_nodes_test_package"),
@@ -47,9 +47,12 @@ private:
 					.llvm_backend = global_state::BackendOptions::LLVMBackend{},
 				},
 				.debug_options         = {},
-				.incremental           = { .enabled = true }
+				.incremental           = { .enabled = true },
+				.execution_options     = { .worker_count = 1 },
             }
         );
+
+		ASSERT_TRUE(init_result.status().isOk());
 
 		auto prev_graph_opt = query::internal::ContextAccess::getState()->getPreviousGraph();
 		ASSERT_TRUE(prev_graph_opt.has_value());
@@ -92,10 +95,10 @@ private:
 
 		// Check the location of .o object in artifacts before compilation, it should be present
 		// because of previous compilation step
-		compiler::driver::KeyOf_CompileModule key{
-			.module_id    = module,
-			.backend_type = compiler::driver::BackendType::LLVM,
-		};
+		compiler::driver::KeyOf_CompileModule key{ .module_id = module,
+			                                       .backend_type
+			                                       = compiler::driver::BackendType::LLVM,
+			                                       .build_debug_info = false };
 
 		auto output_name = key.queryStablePerfectHash().toStringHex() + ".o";
 
@@ -108,7 +111,7 @@ private:
 				  ));
 		auto output_maybe = collection->fileArtifactAtMaybe(base::StrID(output_name.c_str()));
 
-		// vaidate that .o file from previous compilation is present before we run the compilation
+		// Validate that .o file from previous compilation is present before we run the compilation
 		// with changed source code
 		assertTrue(
 			output_maybe.has_value(), "Output file should be present in artifacts before compilation"
@@ -146,7 +149,7 @@ private:
 		// disc Check that there is no .o file in artifacts after compilation
 		auto output_maybe2 = collection->fileArtifactAtMaybe(base::StrID(output_name.c_str()));
 
-		// vaidate that .o file from previous compilation is present before we run the compilation
+		// Validate that .o file from previous compilation is present before we run the compilation
 		// with changed source code
 		assertFalse(
 			output_maybe2.has_value(),

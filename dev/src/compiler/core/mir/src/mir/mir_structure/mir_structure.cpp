@@ -35,6 +35,8 @@ namespace compiler::mir {
 		  helios_id(helios_id) {}
 
 	u64 Function::queryUnstablePerfectHash() const {
+		// There should be no collisions possible here, since both FunctionSymID and
+		// GlobalVariableCTOR just store SymID, which has a perfect hash.
 		variant_match(this->helios_id) {
 			variant_case(FunctionSymID, fun_sym) { return fun_sym.id.queryUnstablePerfectHash(); }
 			variant_case(GlobalVariableCTOR, global_ctor) {
@@ -110,11 +112,11 @@ namespace compiler::mir {
 			if (block.id == block_order[0]) os << " [entry]";
 			os << ":\n";
 			for (const auto& instruction: block.instructions) {
-				os << "     ";
+				os << "    ";
 				instruction.debugPrint(os);
 				os << "\n";
 			}
-			os << "     ";
+			os << "    ";
 			block.terminator.debugPrint(os);
 			os << "\n";
 		}
@@ -130,7 +132,7 @@ namespace compiler::mir {
 				   << ", to:" << params.target_type.toString();
 			}
 		}
-		os << "},";
+		os << "}";
 	}
 
 	void Instruction::debugPrint(std::ostream& os) const {
@@ -161,14 +163,14 @@ namespace compiler::mir {
 
 		separator = "";
 		os << "Flags[";
-		for ([[maybe_unused]] const auto& flag: flags) {
+		for (const auto& flag: flags) {
 			os << separator;
 			flag.debugPrint(os);
 			separator = ", ";
-			os << "],";
 		}
+		os << "], ";
 		debugPrintInstrParameters(os, extra_params);
-		os << " scope:" << scope->id;
+		os << ", scope:" << scope->id;
 
 		// restore flags
 		os.flags(output_flags);
@@ -179,8 +181,7 @@ namespace compiler::mir {
 		os << "Local(" << u64(id) << ")";
 		if (detailed) {
 			os << ": Helios Name: " << getName().strView();
-			os << ", Type: ";
-			os << type.toString();
+			os << ", Type: " << type.toString();
 			os << ", Lifetime Scope: " << scope.value()->id;
 			if (parameter_index.has_value()) os << ", Parameter Index: " << parameter_index.value();
 		}
@@ -189,9 +190,8 @@ namespace compiler::mir {
 	void MIRGlobal::debugPrint(std::ostream& os, bool detailed) const {
 		os << "Global(" << name(helios_id).strView() << ")";
 		if (detailed) {
-			os << ": Unstable hash: " << helios_id.queryUnstablePerfectHash();
-			os << ", Type: ";
-			os << type.toString();
+			os << ": Helios Name: " << name(helios_id).strView();
+			os << ", Type: " << type.toString();
 		}
 	}
 
@@ -234,7 +234,7 @@ namespace compiler::mir {
 		auto element_type = [&]() -> tsh::SymbolType<> {
 			switch (base_type.getKind()) {
 			case tsh::Kind::DynamicArray:
-				return base_type.as<tsh::StaticArrayAbstractType>().getElementType();
+				return base_type.as<tsh::DynamicArrayAbstractType>().getElementType();
 			case tsh::Kind::StaticArray:
 				return base_type.as<tsh::StaticArrayAbstractType>().getElementType();
 			default:

@@ -24,8 +24,8 @@ namespace pst::expr {
 		};
 
 	public:
-		explicit GeneralBinary(const dia::SourcePosition& pos, Operator op):
-			  BinaryOperator(pos, op, op.getGenBinOpPrecedence()) {}
+		explicit GeneralBinary(const LangParserState& state, Operator op):
+			  BinaryOperator(state, op, op.getGenBinOpPrecedence()) {}
 
 		/**
 		 * @brief
@@ -41,8 +41,9 @@ namespace pst::expr {
 
 		static MBox<ExprElement> parseRecursive(LangParserState& state, const BuilderExpr& expr);
 
-		static MBox<ExprElement> parse(LangParserState& state, i64 length);
+		static MBox<ExprElement> parse(LangParserState& state);
 
 		~GeneralBinary() override = default;
+		friend class ComparisonChain;
 	};
 }

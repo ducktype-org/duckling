@@ -1,6 +1,6 @@
 import submodule as SM;
 
-fun main() = {
+fun main() -> i64 = {
     SM.foo();
-    return;
+    return 0;
 }

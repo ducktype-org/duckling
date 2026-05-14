@@ -26,6 +26,11 @@ namespace pst {
 			return name.value;
 		}
 
+		[[nodiscard]]
+		tpc::Identifier getNameIdent() const {
+			return name;
+		}
+
 		bool trailingSemicolon() override;
 
 		[[nodiscard]]

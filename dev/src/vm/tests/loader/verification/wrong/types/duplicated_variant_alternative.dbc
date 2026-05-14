@@ -1,0 +1,5 @@
+type variant: my_var { i64, i64 }
+
+function main { } -> { i64 } {
+    ret;
+}

@@ -1,7 +1,9 @@
 #include "module_flags.hpp"
 
 namespace compiler::driver {
-	constinit bool llvm_dump_ir                   = false;
-	constinit bool llvm_dump_asm                  = false;
+	constinit DumpIROptions dump_ir_options;
+
+	constinit PrintIROptions print_ir_options;
+
 	constinit bool enable_incremental_compilation = false;
 }

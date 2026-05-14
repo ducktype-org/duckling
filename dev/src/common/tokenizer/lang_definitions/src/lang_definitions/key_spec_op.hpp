@@ -115,7 +115,7 @@ namespace lang_def {
 		Type,  // ...
 
 		// @TODO: do we need all of them?
-		Vec,
+		List,
 		Set,
 		Dict,
 		Array,
@@ -135,6 +135,8 @@ namespace lang_def {
 		Xor,
 
 		// General text prefix operators (Not doesn't count)
+		Len,  // @TODO: #1970 This being an operator may be temporary. This should probably be
+		      // removed one we can use builtin methods/fields.
 		Ref,
 		Box,
 		Copy,
@@ -271,7 +273,8 @@ namespace lang_def {
 		RUN_BEFORE_MAIN(init::registerForInit(key_spec_op::init));
 	}
 
-	void setKeywordMode(KeywordMode mode);
+	void        setKeywordMode(KeywordMode mode);
+	KeywordMode getKeywordMode();
 
 	Special                     strAsSpecial(base::StrID id);
 	Keyword                     strAsKeyword(base::StrID id);

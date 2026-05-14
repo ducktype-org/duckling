@@ -1,4 +1,5 @@
-﻿#include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
+﻿#include <diagnostic_interactive/stable_position.hpp>
+#include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <frontend/pst_parser/elements/hierarchy/lists/all_lists.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <frontend/pst_parser/pst.hpp>
@@ -186,6 +187,10 @@ private:
 
 	void testListParsing() { testJsonRelativePath("lists_ok.duck", "lists_ok.json"); }
 
+	void testFormatStrParsing() {
+		testJsonRelativePath("format_strings.duck", "format_strings.json");
+	}
+
 	void testFunDeclFFI() { testJsonRelativePath("ffi.duck", "ffi.json"); }
 
 	void testNumericLiteralParsing() {
@@ -194,7 +199,7 @@ private:
 
 	void testListParsingErrors() {
 		pst::PST<> pst = prepare(path("snippets/lists_err.duck"));
-		assertTrue(pst.getLogger()->errorCount() == 4, "Expected 4 errors");
+		assertTrue(pst.getLogger()->errorCount() == 3, "Expected 3 errors");
 	}
 
 	void testUsingErrors() {
@@ -204,7 +209,7 @@ private:
 
 	void testParamListErrors() {
 		pst::PST<> pst = prepare(path("snippets/params_err.duck"));
-		assertTrue(pst.getLogger()->errorCount() == 10, "Expected 10 errors");
+		assertTrue(pst.getLogger()->errorCount() == 7, "Expected 7 errors");
 	}
 
 	void testMissingSemiErr() {
@@ -254,7 +259,7 @@ private:
 	}
 
 	void testSimpleExpand() {
-		auto pos      = dia::SourcePosition::fakePosition();
+		auto pos      = dia_int::StablePosition::fakePosition();
 		auto contents = "var a: T = 5;";
 		auto pst
 			= pst::PST<>::fromExpand(pos, contents, pst::LangParserContext::programBaseContext());

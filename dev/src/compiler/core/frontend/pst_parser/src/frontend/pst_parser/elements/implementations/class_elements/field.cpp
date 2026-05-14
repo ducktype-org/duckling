@@ -3,20 +3,19 @@
 #include "preamble.hpp"
 
 namespace pst {
-	MBox<Field> Field::parse(LangParserState& state, const ClassContext& ctx) {
-		auto position = state.getPosition();
-		auto out      = makeBox<Field>(position, ctx);
+	MBox<Field> Field::parse(LangParserState& state) {
+		auto out = makeBox<Field>(state);
 
 		if (state[0].is(Keyword::Let)) {
 			out->is_mutable = false;
-			state.parse(out).one(Keyword::Let);
+			PARSE().one(Keyword::Let);
 		} else
-			state.parse(out).tryEat(Keyword::Var);
+			PARSE().tryEat(Keyword::Var);
 
-		state.parse(out).all(&out->name, NamedOperator::Colon);
-		state.parse(out).one(&out->type);
+		PARSE().all(&out->name, NamedOperator::Colon);
+		PARSE().one(&out->type);
 
-		if (state.parse(out).tryEat(NamedOperator::Assign)) state.parse(out).one(&out->init);
+		if (PARSE().tryEat(NamedOperator::Assign)) PARSE().one(&out->init);
 
 		PST_RETURN out;
 	}
@@ -43,7 +42,7 @@ namespace pst {
 		out << "}";
 	}
 
-	LangElement::HashAlg& Field::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& Field::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, is_mutable);
 		addToHash(partial_hash, name);
 		return partial_hash;

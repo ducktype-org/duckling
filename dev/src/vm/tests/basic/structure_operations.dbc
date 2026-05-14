@@ -1,0 +1,29 @@
+type data: Foo {
+    a: i64,
+    b: i64
+}
+
+function main { i64, ptr_argv } -> { i64 } {
+    init_pany_type s1, Foo;
+    init_pany_type a_ptr, ptr_i64;
+    init_pany_type val, i64;
+    mov_p64_imm val, 5;
+    structStore_pste_pany_field s1, val, Foo.a;
+    init_pany_type s2, Foo;
+    mov_pste_pste s2, s1;
+    init_pany_type val2, i64;
+    structLoad_pany_pste_field val2, s2, Foo.a;
+    output_p64 val2;
+    structLoad_pany_pste_field val2, s2, Foo.b;
+    output_p64 val2;
+
+    init_pany_type foo_b_ptr, ptr_i64;
+    structLea_pptr_pste_field foo_b_ptr, s2, Foo.b;
+    mov_p64_imm val, 6;
+    store_pptr_pany foo_b_ptr, val;
+    structLoad_pany_pste_field val2, s2, Foo.b;
+    output_p64 val2;
+
+
+    ret;
+}

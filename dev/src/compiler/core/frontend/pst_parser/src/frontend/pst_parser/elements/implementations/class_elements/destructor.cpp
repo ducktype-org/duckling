@@ -4,21 +4,23 @@
 #include "preamble.hpp"
 
 namespace pst {
-	MBox<Destructor> Destructor::parse(LangParserState& state, const ClassContext& ctx) {
-		auto position = state.getPosition();
-		auto out      = makeBox<Destructor>(position, ctx);
+	MBox<Destructor> Destructor::parse(LangParserState& state) {
+		auto out = makeBox<Destructor>(state);
 
-		state.parse(out).eatOne();
+		PARSE().eatOne();
 
 		tpc::Identifier ident;
-		state.parse(out).all(NamedOperator::Period, &ident);
+		PARSE().all(NamedOperator::Period, &ident);
 		out->kind = ident;
 
-		state.parse(out).goDown();
+		PARSE().goDown();
 		if (state.notEmpty()) state.logInt(makeBox<NonEmptyError>(state.getPosition()));
-		state.parse(out).goUpAndSkip();
+		PARSE().goUpAndSkip();
 
-		state.parse(out).one(NamedOperator::Assign).withDef(&out->body, BlockOrderType::Ordered);
+		PST_NEW_CONTEXT({
+			state.setContextBlockOrdering(BlockOrderType::Ordered);
+			PARSE().all(NamedOperator::Assign, &out->body);
+		})
 
 		PST_RETURN out;
 	}

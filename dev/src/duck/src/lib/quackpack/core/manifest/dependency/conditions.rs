@@ -1,8 +1,9 @@
+//! Conditions describing whether a dependency should be enabled.
 use std::collections::HashSet;
 
-use crate::QuackError;
+use crate::quackpack::core::FeatureName;
 use crate::quackpack::schemas::registry;
-use crate::{QuackResult, StrId, qp_bail, quackpack::core::FeatureName};
+use crate::{QuackError, QuackResult, StrId, qp_bail};
 
 #[derive(Clone, Debug)]
 /// Conditions required by a dependency or a feature flag in order to be enabled.
@@ -28,13 +29,13 @@ impl Conditions {
             Ok(())
         }
 
-        check_non_empty(&required_root_package_features, "package_features")?;
+        check_non_empty(&required_root_package_features, "package-features")?;
         Ok(Self {
             required_root_package_features,
         })
     }
 
-    /// Check if conditions are met for the given enabled features.
+    /// Check, if conditions are met for the given enabled features.
     /// This checks `any(system) and any(arch) and any(flags)`.
     // @TODO: #1353 Do we want to take an `impl IntoIterator`, or a `Vec`, or a `HashSet`?
     //  Connected with !TODO in `are_features_enabled`.
@@ -42,6 +43,7 @@ impl Conditions {
         self.are_features_enabled(enabled_features)
     }
 
+    /// Check, if enabled features for this package enable this dependency.
     fn are_features_enabled(
         &self,
         enabled_features: impl IntoIterator<Item = FeatureName>,
@@ -99,7 +101,7 @@ mod tests {
         let result = Conditions::new(Some(vec![]));
         assert_eq!(
             result.unwrap_err().to_string(),
-            "the field `package_features` is present but empty, if you don't want to specify it, remove it from the manifest"
+            "the field `package-features` is present but empty, if you don't want to specify it, remove it from the manifest"
         );
     }
 

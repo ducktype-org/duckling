@@ -10,7 +10,10 @@ namespace vm::api {
 
 	struct PauseError {};
 
-	struct RunError {};
+	struct RunError {
+		std::string error;
+		NLOHMANN_DEFINE_TYPE_INTRUSIVE(RunError, error);
+	};
 
 	struct JoinError {};
 
@@ -59,6 +62,14 @@ namespace vm::api {
 	 * @brief Converts the ApiError to a string representation in a JSON format.
 	 */
 	std::string errorToString(const ApiError& api_error);
+
+	/**
+	 * @brief Convert ApiError to an errno-like integer code (POSIX errno values).
+	 *
+	 * Maps API error variants to reasonable errno values so callers can return
+	 * the numeric error code instead of throwing exceptions.
+	 */
+	int errorToErrno(const ApiError& api_error);
 }
 
 JSON_REGISTER_TYPE_WITH_NAME(vm::api::ResumeError, "ResumeError");

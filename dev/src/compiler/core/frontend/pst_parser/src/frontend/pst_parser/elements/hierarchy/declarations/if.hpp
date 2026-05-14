@@ -16,7 +16,7 @@ namespace pst {
 		HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const override;
 
 	public:
-		explicit If(const dia::SourcePosition& position): CodeDecl(position) {
+		explicit If(const LangParserState& state): CodeDecl(state) {
 			element_kind = ElementKind::If;
 		}
 

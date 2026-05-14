@@ -1,0 +1,14 @@
+type class: Foo {
+
+}
+type pointer: ptr_foo Foo
+
+type class: Bar {
+    # extends: Foo, # Does not extend!
+}
+type pointer: ptr_bar Bar
+
+function test_downcast { ptr_foo } -> { ptr_bar } {
+    downcast_pptr_pptr ret0, arg0;
+    ret;
+}

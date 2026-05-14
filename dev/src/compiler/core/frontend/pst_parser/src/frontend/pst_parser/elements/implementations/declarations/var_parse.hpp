@@ -27,25 +27,24 @@ namespace pst {
 	 */
 	template<typename T, lang_def::Keyword key>
 	MBox<T> parseVariableTemplate(pst::LangParserState& state) {
-		auto position = state.getPosition();
-		auto out      = makeBox<T>(position);
+		auto out = makeBox<T>(state);
 
 		if (!assertStmtChoice<T>(state, state[0].is(key))) return nullptr;
 
-		state.parse(out).all(key, &out->name);
+		PARSE().all(key, &out->name);
 
 		bool has_type = false, has_value = false;
 
 		if (state[0].is(lang_def::NamedOperator::Colon)) {
-			state.parse(out).eatOne();
-			state.parse(out).one(&out->type);
+			PARSE().eatOne();
+			PARSE().one(&out->type);
 
 			has_type = true;
 		}
 
 		if (state[0].is(lang_def::NamedOperator::Assign)) {
-			state.parse(out).eatOne();
-			state.parse(out).one(&out->value);
+			PARSE().eatOne();
+			PARSE().one(&out->value);
 
 			has_value = true;
 		}

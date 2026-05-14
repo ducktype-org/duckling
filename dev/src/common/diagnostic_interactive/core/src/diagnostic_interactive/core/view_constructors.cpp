@@ -109,15 +109,11 @@ namespace dia_int {
 	) {
 		CodeSection section;
 		if (block.location.has_value()) {
-			section.file     = block.location->file;
-			section.line     = block.location->line;
-			section.col      = block.location->column;
-			section.end_line = block.location->end_line;
-			section.end_col  = block.location->end_column;
+			section.location = block.location.value();
 		} else {
-			section.file = "";
-			section.line = 0;
-			section.col  = 0;
+			section.location.file   = "";
+			section.location.line   = 0;
+			section.location.column = 0;
 		}
 
 		CodeSectionBuilder builder(section.lines);

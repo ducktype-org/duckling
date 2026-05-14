@@ -1,7 +1,7 @@
 fun foo(a: ref i64) = { a = a+1; }
 fun bar(a: ref i64) = foo(&a);
 
-fun main() -> i32 = {
+fun main() -> i64 = {
     var a: i32 = 1;
     builtin_output_i64(a);
 

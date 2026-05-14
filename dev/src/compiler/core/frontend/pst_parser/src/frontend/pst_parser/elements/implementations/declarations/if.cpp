@@ -6,18 +6,16 @@
 
 namespace pst {
 	MBox<If> If::parse(LangParserState& state) {
-		auto position = state.getPosition();
-		auto out      = makeBox<If>(position);
+		auto out = makeBox<If>(state);
 
 		if (!assertStmtChoice<If>(state, state[0].is(Keyword::If))) return nullptr;
 
-		state.parse(out)
-			.all(Keyword::If, &out->optional_name, &out->condition)
-			.withDef(&out->then_body, BlockOrderType::Ordered);
-		;
+		PST_NEW_CONTEXT({
+			state.setContextBlockOrdering(BlockOrderType::Ordered);
+			PARSE().all(Keyword::If, &out->optional_name, &out->condition, &out->then_body);
 
-		if (state.parse(out).tryEat(Keyword::Else))
-			state.parse(out).withDef(&out->else_body, BlockOrderType::Ordered);
+			if (PARSE().tryEat(Keyword::Else)) PARSE().one(&out->else_body);
+		})
 
 		PST_RETURN out;
 	}
@@ -36,7 +34,7 @@ namespace pst {
 		out << "}";
 	}
 
-	LangElement::HashAlg& If::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& If::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, else_body.has_value());
 		return partial_hash;
 	}

@@ -1,15 +1,248 @@
 {
-	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
-	"name": "Duckling",
-	"patterns": [
-		{
-			"include": "#keywords"
-		},
-		{
-			"include": "#strings"
-		}
-	],
-	"repository": {
-	},
-	"scopeName": "source.duckling"
+  "scopeName": "source.duckling",
+  "name": "Duckling",
+  "patterns": [
+    {
+      "include": "#comments"
+    },
+    {
+      "include": "#strings"
+    },
+    {
+      "include": "#numbers"
+    },
+    {
+      "include": "#attributes"
+    },
+    {
+      "include": "#keywords"
+    },
+    {
+      "include": "#declarations"
+    },
+    {
+      "include": "#types"
+    },
+    {
+      "include": "#constants"
+    },
+    {
+      "include": "#operatorsWord"
+    },
+    {
+      "include": "#functions"
+    },
+    {
+      "include": "#identifiers"
+    },
+    {
+      "include": "#operators"
+    },
+    {
+      "include": "#punctuation"
+    }
+  ],
+  "repository": {
+    "attributes": {
+      "patterns": [
+        {
+          "name": "support.function.builtin.duckling",
+          "match": "@(in|out|invariant|nodiscard|noreturn)\\b"
+        }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.duckling",
+          "match": "\\b(if|else|then|while|for|match|case|pattern|in|break|continue|result|defer|import|export|from|as|return|static|lambda|this|extends|implements|override|create|destroy|public|private|protected|pure|virtual|async|threadsafe|unique|leaking|debug|test|move|expand)\\b"
+        }
+      ]
+    },
+    "declarations": {
+      "patterns": [
+        {
+          "name": "keyword.declaration.duckling",
+          "match": "\\b(var|let|const|fun|class|interface|namespace|block|template|macro|alias|using)\\b"
+        }
+      ]
+    },
+    "types": {
+      "patterns": [
+        {
+          "name": "storage.type.duckling",
+          "match": "\\b(type|i8|i16|i32|i64|i128|u8|u16|u32|u64|u128|f16|f32|f64|f80|f128|void|unit|bool|byte|char|str)\\b"
+        }
+      ]
+    },
+    "constants": {
+      "patterns": [
+        {
+          "name": "constant.language.duckling",
+          "match": "\\b(true|false|null)\\b"
+        }
+      ]
+    },
+    "operatorsWord": {
+      "patterns": [
+        {
+          "name": "keyword.operator.word.duckling",
+          "match": "\\b(and|or|not|ref|box)\\b"
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "name": "constant.numeric.binary.duckling",
+          "match": "0b[01]+"
+        },
+        {
+          "name": "constant.numeric.octal.duckling",
+          "match": "0o[0-7]+"
+        },
+        {
+          "name": "constant.numeric.hex.duckling",
+          "match": "0x[0-9A-Fa-f]+"
+        },
+        {
+          "name": "constant.numeric.float.duckling",
+          "match": "[0-9]+\\.[0-9]*([eE][+-]?[0-9]+)?"
+        },
+        {
+          "name": "constant.numeric.float.duckling",
+          "match": "[0-9]*\\.[0-9]+([eE][+-]?[0-9]+)?"
+        },
+        {
+          "name": "constant.numeric.float.duckling",
+          "match": "[0-9]+[eE][+-]?[0-9]+"
+        },
+        {
+          "name": "constant.numeric.integer.duckling",
+          "match": "\\b[0-9]+\\b"
+        }
+      ]
+    },
+    "functions": {
+      "patterns": [
+        {
+          "name": "entity.name.function.duckling",
+          "match": "\\b[_a-zA-Z][_a-zA-Z0-9]*(?=\\s*\\()"
+        }
+      ]
+    },
+    "identifiers": {
+      "patterns": [
+        {
+          "name": "variable.other.duckling",
+          "match": "\\b[_a-zA-Z][_a-zA-Z0-9]*\\b(?!\\s*(\\.|::))"
+        }
+      ]
+    },
+    "operators": {
+      "patterns": [
+        {
+          "name": "keyword.operator.duckling",
+          "match": "[+\\-/*%=><|^*&@]"
+        }
+      ]
+    },
+    "punctuation": {
+      "patterns": [
+        {
+          "name": "punctuation.separator.duckling",
+          "match": "[;:,]"
+        },
+        {
+          "name": "punctuation.bracket.duckling",
+          "match": "[(){}\\[\\]]"
+        },
+        {
+          "name": "punctuation.accessor.duckling",
+          "match": "\\."
+        }
+      ]
+    },
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.block.duckling",
+          "begin": "#\\{",
+          "end": "#\\}",
+          "patterns": [
+            {
+              "match": "[^#{}]+",
+              "name": "comment.block.duckling"
+            },
+            {
+              "match": "#\\{",
+              "name": "comment.block.duckling"
+            },
+            {
+              "match": "#\\}",
+              "name": "comment.block.duckling"
+            }
+          ]
+        },
+        {
+          "name": "comment.line.number-sign.duckling",
+          "match": "#.*$"
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.interpolated.duckling",
+          "begin": "f\"",
+          "end": "\"",
+          "patterns": [
+            {
+              "name": "constant.character.escape.duckling",
+              "match": "\\\\."
+            },
+            {
+              "name": "punctuation.section.interpolation.begin.duckling",
+              "match": "{",
+              "push": "interpolation"
+            }
+          ]
+        },
+        {
+          "name": "string.quoted.double.duckling",
+          "begin": "\"",
+          "end": "\"",
+          "patterns": [
+            {
+              "name": "constant.character.escape.duckling",
+              "match": "\\\\."
+            }
+          ]
+        }
+      ]
+    },
+    "interpolation": {
+      "patterns": [
+        {
+          "name": "punctuation.section.interpolation.begin.duckling",
+          "match": "{",
+          "push": "#interpolation"
+        },
+        {
+          "name": "punctuation.section.interpolation.end.duckling",
+          "match": "}",
+          "pop": true
+        },
+        {
+          "include": "#keywords"
+        },
+        {
+          "include": "#identifiers"
+        },
+        {
+          "include": "#numbers"
+        }
+      ]
+    }
+  }
 }

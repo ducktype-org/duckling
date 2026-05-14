@@ -12,15 +12,18 @@ namespace compiler::helios::code {
 		IfStmt,
 		WhileStmt,
 		VariableStmt,
-		AssignmentStmt
+		AssignmentStmt,
+		BlockStmt
 	);
 	MAKE_VISITOR(HoutExpr,
 		LiteralUnitExpr,
 		LiteralNumericExpr,
 		LiteralBoolExpr,
+		LiteralCharExpr,
 		LiteralStringExpr,
 		LiteralTypeExpr,
 		IdentifierExpr,
+		ReusableExpr,
 		BinaryOperatorExpr,
 		UnaryOperatorExpr,
 		TernaryOperatorExpr,
@@ -37,6 +40,8 @@ namespace compiler::helios::code {
 		DerefExpr,
 		DefaultValueExpr,
 		CastExpr,
-		LiftToTypeExpr
+		LiftToTypeExpr,
+		ListPushExpr,
+		ListPopExpr
 	);
 }

@@ -5,13 +5,13 @@
  */
 
 
-#include <helios/queries.hpp>
+#include <helios/queries/queries.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
+#include <helios/tsh/queries/types.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <mir/mir_lowering/mir_queries.hpp>
-#include <typesystem/higher/queries/types.hpp>
-#include <typesystem/lower/queries.hpp>
+#include <tsl/queries.hpp>
 
 #include <base/extend_cpp/variant_match.hpp>
 
@@ -34,6 +34,7 @@ public:
 		TESTER_ADD_TEST(noTest);
 		TESTER_ADD_TEST(simpleBools);
 		TESTER_ADD_TEST(functionCallTest);
+		TESTER_ADD_TEST(functionCallMetadataTest);
 		TESTER_ADD_TEST(functionParametersTest);
 		TESTER_ADD_TEST(testGlobals);
 		TESTER_ADD_TEST(testFromFunctionLiterals);
@@ -41,6 +42,7 @@ public:
 		TESTER_ADD_TEST(testLifetimeFlags);
 		TESTER_ADD_TEST(referencesTest);
 		TESTER_ADD_TEST(staticArrayTest);
+		TESTER_ADD_TEST(dynamicArrayTest);
 		TESTER_ADD_TEST(metaFunctionsTest);
 		TESTER_ADD_TEST(simpleConstant);
 	}
@@ -58,7 +60,7 @@ private:
 			funcs{};
 		base::Map<
 			base::StrID,
-			std::tuple<helios::HOUTGlobalData, CRef<mir::Function>, CRef<lir::Function>>>
+			std::tuple<CRef<helios::HOUTGlobalData>, CRef<mir::Function>, CRef<lir::Function>>>
 			ctors{};
 
 		[[nodiscard]] CRef<helios::HOUTFunction> houtFunc(std::string_view name) const {
@@ -73,8 +75,8 @@ private:
 			return std::get<CRef<lir::Function>>(funcs.at(base::StrID(name.data())));
 		}
 
-		[[nodiscard]] helios::HOUTGlobalData houtGlobal(std::string_view name) const {
-			return std::get<helios::HOUTGlobalData>(ctors.at(base::StrID(name.data())));
+		[[nodiscard]] CRef<helios::HOUTGlobalData> houtGlobal(std::string_view name) const {
+			return std::get<CRef<helios::HOUTGlobalData>>(ctors.at(base::StrID(name.data())));
 		}
 
 		[[nodiscard]] CRef<mir::Function> mirGlobalCtor(std::string_view name) const {
@@ -109,13 +111,13 @@ private:
 				);
 			}
 			for (const auto& hout_glob: unit.glob_data) {
-				variant_match(hout_glob.value) {
+				variant_match(hout_glob->value) {
 					variant_case(helios::HOUTGlobalVariable, var) {
 						CRef mir_func = &ctx.query<mir::LowerGlobalDataToMIRCtor>({ hout_glob })
 						                     ->valueOrThrow();
 						auto lir_func = ctx.query<lir::LowerToLIRFunction>({ mir_func });
 						result.ctors.put(
-							hout_glob.original_name, std::make_tuple(hout_glob, mir_func, lir_func)
+							hout_glob->original_name, std::make_tuple(hout_glob, mir_func, lir_func)
 						);
 					}
 					variant_case(helios::HOUTGlobalConst, cnst) {
@@ -124,7 +126,7 @@ private:
 					variant_default {
 						fail(base::strConcat(
 							"Unexpected global data type in module: ",
-							hout_glob.original_name.strView()
+							hout_glob->original_name.strView()
 						));
 					}
 				}
@@ -145,7 +147,7 @@ private:
 			for (auto& local: foo_lir->local_list) {
 				if (local.helios_id.has_value() and helios::name(local.helios_id.value()) == "a") {
 					ASSERT_EQUAL(
-						local.layout->getSourceType(),
+						local.layout->getSourceType().getType(),
 						getIntegralType(
 							ctx, 64, compiler::tsh::IntegralAbstractType::Signedness::Signed
 						)
@@ -153,7 +155,7 @@ private:
 				}
 				if (local.helios_id.has_value() and helios::name(local.helios_id.value()) == "b") {
 					ASSERT_EQUAL(
-						local.layout->getSourceType(),
+						local.layout->getSourceType().getType(),
 						getIntegralType(
 							ctx, 32, compiler::tsh::IntegralAbstractType::Signedness::Signed
 						)
@@ -196,6 +198,102 @@ private:
 			foo_lir->debugPrint(ctx, std::cerr);
 			foo_mir->debugPrint(std::cerr);
 		});
+	}
+
+/**
+ * @brief Helper macro to assert position information with concise syntax.
+ * Extracts line/column info from position and validates against expected values.
+ */
+#define ASSERT_POSITION(                                                              \
+	pos, expected_start_line, expected_start_col, expected_end_line, expected_end_col \
+)                                                                                     \
+	do {                                                                              \
+		auto [start_line, start_col] = (pos).getStartLineColumn();                    \
+		auto [end_line, end_col]     = (pos).getEndLineColumn();                      \
+		ASSERT_EQUAL(start_line, expected_start_line);                                \
+		ASSERT_EQUAL(start_col, expected_start_col);                                  \
+		ASSERT_EQUAL(end_line, expected_end_line);                                    \
+		ASSERT_EQUAL(end_col, expected_end_col);                                      \
+	} while (false)
+
+	/**
+	 * @brief Test if the stable positions in LIR metadata are correct.
+	 * We check if the positions from metadata of the instructions are correct.
+	 */
+	void functionCallMetadataTest() {
+		auto module  = getLIROfModule(path("modules/function_calls"));
+		auto foo_lir = module.lirFunc("foo");
+
+		auto print_stable_position
+			= [&](const base::Optional<dia_int::StablePosition>& stable, std::string_view label) {
+				  if (!stable.has_value()) {
+					  std::cerr << "[LIR metadata] " << label << ": <none>\n";
+					  return;
+				  }
+
+				  auto position = stable.value().getActiveSourcePositionIllegalAccess();
+				  auto [start_line, start_column] = position.getStartLineColumn();
+				  auto [end_line, end_column]     = position.getEndLineColumn();
+				  auto source_start               = position.getStart();
+				  auto source_end                 = position.getEnd();
+
+				  std::cerr << "[LIR metadata] " << label << ": " << start_line << ":"
+							<< start_column << " -> " << end_line << ":" << end_column << " ["
+							<< source_start << ", " << source_end << "]\n";
+			  };
+
+		assertTrue(
+			foo_lir->metadata.position.has_value(), "Expected function metadata position in LIR foo"
+		);
+		print_stable_position(foo_lir->metadata.position, "foo.function");
+		ASSERT_EQUAL(foo_lir->metadata.source_code_name.value(), base::StrID("foo"));
+
+		assertTrue(!foo_lir->block_order.empty(), "Expected at least one LIR block");
+		const auto& block0 = *foo_lir->block_order[0];
+		assertTrue(block0.instructions.size() >= 4, "Expected at least 4 instructions in block 0");
+
+		const auto& first_instr  = block0.instructions[0];
+		const auto& second_instr = block0.instructions[1];
+		const auto& fourth_instr = block0.instructions[3];
+
+		print_stable_position(first_instr.metadata.position, "foo.block_0.instr_0");
+		print_stable_position(second_instr.metadata.position, "foo.block_0.instr_1");
+		print_stable_position(fourth_instr.metadata.position, "foo.block_0.instr_3");
+
+		auto first_pos
+			= first_instr.metadata.position.value().getActiveSourcePositionIllegalAccess();
+		auto second_pos
+			= second_instr.metadata.position.value().getActiveSourcePositionIllegalAccess();
+		auto fourth_pos
+			= fourth_instr.metadata.position.value().getActiveSourcePositionIllegalAccess();
+
+		auto [first_start_line, first_start_col] = first_pos.getStartLineColumn();
+		auto [first_end_line, first_end_col]     = first_pos.getEndLineColumn();
+		ASSERT_EQUAL(first_start_line, 5);
+		ASSERT_EQUAL(first_start_col, 5);
+		ASSERT_EQUAL(first_end_line, 5);
+		ASSERT_EQUAL(first_end_col, 21);
+
+		ASSERT_POSITION(second_pos, 7, 18, 7, 24);
+		ASSERT_POSITION(fourth_pos, 7, 5, 7, 30);
+
+		// Test local variable metadata
+		bool found_y = false;
+		for (const auto& local: foo_lir->local_list) {
+			if (!local.helios_id.has_value()) continue;
+
+			auto name = helios::name(local.helios_id.value());
+			if (name == base::StrID("y")) {
+				found_y = true;
+				ASSERT_EQUAL(local.metadata.source_code_name.value(), name);
+
+				// Verify source position matches variable declaration on line 7
+				ASSERT_POSITION(
+					local.metadata.position.value().getActiveSourcePositionIllegalAccess(), 7, 5, 7, 30
+				);
+			}
+		}
+		ASSERT_TRUE(found_y);
 	}
 
 	void functionParametersTest() {
@@ -269,7 +367,7 @@ private:
 				if (local.helios_id.has_value() && helios::name(local.helios_id.value()) == "a") {
 					found_a = true;
 					ASSERT_EQUAL(
-						local.layout->getSourceType(),
+						local.layout->getSourceType().getType(),
 						getIntegralType(
 							ctx, 32, compiler::tsh::IntegralAbstractType::Signedness::Signed
 						)
@@ -326,8 +424,8 @@ private:
 		auto some_global = module.houtGlobal("some_global");
 
 		withContextDo([&](query::Context& ctx) {
-			auto g_lir           = lir::LIRGlobal::fromHOUT(ctx, g);
-			auto some_global_lir = lir::LIRGlobal::fromHOUT(ctx, some_global);
+			auto g_lir           = lir::LIRGlobal::fromHOUT(ctx, *g);
+			auto some_global_lir = lir::LIRGlobal::fromHOUT(ctx, *some_global);
 			ASSERT_EQUAL(lir::LIRGlobalType::Variable, some_global_lir.type);
 			ASSERT_EQUAL(lir::LIRGlobalType::Variable, g_lir.type);
 			ASSERT_EQUAL(false, g_lir.initial_value.has_value());
@@ -341,13 +439,13 @@ private:
 		ASSERT_EQUAL(3, module.ctors.size());
 
 		auto my_int = module.houtGlobal("my_int");
-		ASSERT_TRUE(my_int.type.hasNoOpDestructor());
+		ASSERT_TRUE(my_int->type.hasNoOpDestructor());
 
 		auto my_bool = module.houtGlobal("my_bool");
-		ASSERT_TRUE(my_bool.type.hasNoOpDestructor());
+		ASSERT_TRUE(my_bool->type.hasNoOpDestructor());
 
 		auto my_float = module.houtGlobal("my_float");
-		ASSERT_TRUE(my_float.type.hasNoOpDestructor());
+		ASSERT_TRUE(my_float->type.hasNoOpDestructor());
 	}
 
 	void simpleConstant() {
@@ -358,10 +456,10 @@ private:
 		assertTrue(hout_unit.glob_data.size() == 1, "Expected one global data FIB_10");
 
 		auto fib_const_global_data = hout_unit.glob_data.at(0);
-		ASSERT_EQUAL(fib_const_global_data.original_name, base::StrID("FIB_10"));
+		ASSERT_EQUAL(fib_const_global_data->original_name, base::StrID("FIB_10"));
 
 		withContextDo([&](query::Context& ctx) {
-			auto lir_global = lir::LIRGlobal::fromHOUT(ctx, fib_const_global_data);
+			auto lir_global = lir::LIRGlobal::fromHOUT(ctx, *fib_const_global_data);
 			ASSERT_EQUAL(helios::name(lir_global.helios_id), base::StrID("FIB_10"));
 
 
@@ -528,6 +626,57 @@ private:
 		ASSERT_TRUE(found_zero_init_b);
 		ASSERT_TRUE(found_index_proj);
 		ASSERT_TRUE(found_nested_proj);
+	}
+
+	void dynamicArrayTest() {
+		auto module   = getLIROfModule(path("modules/dynamic_arrays"));
+		auto lir_func = module.lirFunc("dynamic_array_test");
+
+		using namespace compiler::lir;
+
+		bool found_zero_init        = false;
+		bool found_push_with_params = false;
+		bool found_pop_with_params  = false;
+		bool found_len              = false;
+		bool found_free             = false;
+
+		for (const auto& block: lir_func->block_order) {
+			for (const auto& instr: block->instructions) {
+				switch (instr.operation) {
+				case Operation::ZeroInitialize:
+					found_zero_init = true;
+					break;
+				case Operation::ListPush: {
+					ASSERT_TRUE(std::holds_alternative<ListOperationParameters>(instr.extra_params));
+					auto& params = std::get<ListOperationParameters>(instr.extra_params);
+					ASSERT_EQUAL(params.element_layout->getSize(), Bits(64));
+					found_push_with_params = true;
+					break;
+				}
+				case Operation::ListPop: {
+					ASSERT_TRUE(std::holds_alternative<ListOperationParameters>(instr.extra_params));
+					auto& params = std::get<ListOperationParameters>(instr.extra_params);
+					ASSERT_EQUAL(params.element_layout->getSize(), Bits(64));
+					found_pop_with_params = true;
+					break;
+				}
+				case Operation::ListLen:
+					found_len = true;
+					break;
+				case Operation::ListFree:
+					found_free = true;
+					break;
+				default:
+					break;
+				}
+			}
+		}
+
+		ASSERT_TRUE(found_zero_init);
+		ASSERT_TRUE(found_push_with_params);
+		ASSERT_TRUE(found_pop_with_params);
+		ASSERT_TRUE(found_len);
+		ASSERT_TRUE(found_free);
 	}
 
 	void metaFunctionsTest() {

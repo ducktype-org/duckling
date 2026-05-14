@@ -7,11 +7,10 @@ namespace pst {
 		if (!state[0].isIdentifier() || !state[1].isBracketGroup(lexer::Token::BracketType::Round))
 			return nullptr;
 
-		auto position = state.getPosition();
-		auto out      = makeBox<DeconstructorPattern>(position);
+		auto out = makeBox<DeconstructorPattern>(state);
 
-		state.parse(out).one(&out->deconstructor_name);
-		state.parse(out).one(&out->arguments);
+		PARSE().one(&out->deconstructor_name);
+		PARSE().one(&out->arguments);
 		PST_RETURN out;
 	}
 
@@ -25,8 +24,7 @@ namespace pst {
 		out << "]}";
 	}
 
-	LangElement::HashAlg& DeconstructorPattern::addElementDataToStableHash(HashAlg& partial_hash
-	) const {
+	HashAlg& DeconstructorPattern::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, deconstructor_name);
 		return partial_hash;
 	}

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <base/extend_cpp/variant_match.hpp>
+#include <base/types/bits_and_bytes.hpp>
 
 #include <string_id/string_id.hpp>
 
@@ -15,10 +16,10 @@ namespace vm::code {
 	struct PrimitiveType final: ElementBase {
 		PrimitiveType() = default;
 
-		PrimitiveType(const base::StrID name, const usize size): name(name), size(size) {}
+		PrimitiveType(const base::StrID name, const Bytes size): name(name), size(size) {}
 
 		base::StrID name;
-		usize       size{};
+		Bytes       size{};
 
 		bool operator==(const PrimitiveType& other) const {
 			return name == other.name && size == other.size;
@@ -136,14 +137,16 @@ namespace vm::code {
 	 * likely to change.
 	 */
 	struct FunctionType final: ElementBase {
-		FunctionType(base::StrID name, std::vector<base::StrID> parameters, base::StrID result):
+		FunctionType(
+			base::StrID name, std::vector<base::StrID> parameters, std::vector<base::StrID> result
+		):
 			  name(name),
 			  parameters(std::move(parameters)),
-			  result(result) {}
+			  result(std::move(result)) {}
 
 		base::StrID              name;
 		std::vector<base::StrID> parameters;
-		base::StrID              result;
+		std::vector<base::StrID> result;
 
 		bool operator==(const FunctionType& other) const {
 			return name == other.name && parameters == other.parameters && result == other.result;
@@ -158,10 +161,10 @@ namespace vm::code {
 	struct OpaqueType final: ElementBase {
 		OpaqueType() = default;
 
-		OpaqueType(const base::StrID name, const usize size): name(name), size(size) {}
+		OpaqueType(const base::StrID name, const Bytes size): name(name), size(size) {}
 
 		base::StrID name;
-		usize       size{};
+		Bytes       size{};
 
 		bool operator==(const OpaqueType& other) const {
 			return name == other.name && size == other.size;

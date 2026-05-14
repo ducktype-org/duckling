@@ -7,7 +7,7 @@ namespace pst {
 	 */
 	class AnalysisPattern: public NotStmt {
 	public:
-		explicit AnalysisPattern(const dia::SourcePosition& position): NotStmt(position) {
+		explicit AnalysisPattern(const LangParserState& state): NotStmt(state) {
 			this->element_kind = ElementKind::AnalysisPattern;
 		}
 

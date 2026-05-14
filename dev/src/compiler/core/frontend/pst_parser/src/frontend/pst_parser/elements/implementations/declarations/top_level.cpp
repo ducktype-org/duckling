@@ -4,13 +4,22 @@
 
 namespace pst {
 	MBox<TopLevel> TopLevel::parse(LangParserState& state) {
-		auto out = makeBox<TopLevel>(state.getPosition());
+		auto order_type = state.getContext()->block_order;
+
+		CORE_ASSERT(
+			order_type != BlockOrderType::Undefined, "Parsing with an undefined ordering type"
+		);
+
+		auto out = makeBox<TopLevel>(state);
+
+		out->type = order_type;
+
 		PST_WHILE(state.notEmpty()) {
 			MBox<Stmt> stmt;
-			state.parse(out).one(&stmt);
+			PARSE().one(&stmt);
 			if (stmt) {
 				out->statements.emplace_back(nullptr);
-				state.parse(out).assign(&out->statements.back(), std::move(stmt));
+				PARSE().assign(&out->statements.back(), std::move(stmt));
 			}
 			PST_WHILE(state[0].is(Special::Semicolon)) {
 				state.logInt(makeBox<error::DuplicateSemicolon>(state.getPosition()));
@@ -42,7 +51,14 @@ namespace pst {
 	}
 
 	void TopLevel::calcElementPathHashRecursive() {
-		calcOrderedListChildPath(statements, getElementPathHash());
+		auto path = getElementPathHash();
+		if (type == BlockOrderType::Ordered) {
+			auto ordered = hashing::ComponentHash(path, "ordered");
+			calcIndexedListChildPath<Stmt>({ statements }, ordered);
+		} else if (type == BlockOrderType::Unordered) {
+			auto unordered = hashing::ComponentHash(path, "unordered");
+			calcOrderedListChildPath(statements, unordered);
+		}
 	}
 
 	void TopLevel::acceptVisitor(PstVisitor&) const { CORE_PANIC("Visitng TopLevel statement"); }
@@ -57,7 +73,7 @@ namespace pst {
 		out << "]";
 	}
 
-	LangElement::HashAlg& TopLevel::addElementDataToStableHash(HashAlg& partial_hash) const {
+	HashAlg& TopLevel::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, statements.size());
 		addToHash(partial_hash, no_symbol.size());
 		addToHash(partial_hash, transparent.size());

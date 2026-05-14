@@ -2,9 +2,10 @@
 
 #include "mir_lifetime_scope.hpp"
 #include "mir_local_ref.hpp"
+#include "mir_metadata.hpp"
 
 #include <ctv/ctv.hpp>
-#include <typesystem/higher/types.hpp>
+#include <helios/tsh/types.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/collections/stable_container.hpp>
@@ -36,12 +37,16 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 	Assign,
 	AddressOf,
 
-	/** 
+	ListPush,
+	ListPop,
+	ListLen,
+
+	/**
 		FreeBox doesn't exist in MIR. It will get created from DestructIf in LIR
-		@TODO: #1894 This approach may be temporary and depends on how we handle 
+		@TODO: #1894 This approach may be temporary and depends on how we handle
 		destructors in the future. Remove the comment if the approach changes.
 	 */
-	AllocBox,
+	BoxAlloc,
 
 	/**
 		@brief Placeholder.
@@ -57,10 +62,10 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 	IntegerDiv,
 	IntegerMod,
 
-	IntegerLt,    // Less then
-	IntegerGt,    // Greater then
-	IntegerLteq,  // Less then or equal to
-	IntegerGteq,  // Greater then or equal to
+	IntegerLt,    // Less than
+	IntegerGt,    // Greater than
+	IntegerLteq,  // Less than or equal to
+	IntegerGteq,  // Greater than or equal to
 	IntegerEq,    // Equal to
 	IntegerNeq,   // Not equal to
 
@@ -70,17 +75,17 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 	FloatDiv,
 	FloatNeg,
 
-	FloatLt,    // Less then
-	FloatGt,    // Greater then
-	FloatLteq,  // Less then or equal to
-	FloatGteq,  // Greater then or equal to
+	FloatLt,    // Less than
+	FloatGt,    // Greater than
+	FloatLteq,  // Less than or equal to
+	FloatGteq,  // Greater than or equal to
 	FloatEq,    // Equal to
 	FloatNeq,   // Not equal to
 
 	BooleanAnd,
 	BooleanOr,
 	BooleanNot,
-	
+
 
 	/** Operations on meta types for compile time function evaluation */
 	MetaCreateBox,
@@ -93,7 +98,7 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 
 	/** Cast is also parametrized by the source type and the target type */
 	Cast,
-	
+
 	ZeroInitialize,
 
 	/** See readme.md for more info about destruct. */
@@ -395,7 +400,9 @@ namespace compiler::mir {
 		 * Construct a MIRPlace from a local or global variable.
 		 * @param base The base of the MIRPlace, which is a local or global variable.
 		 */
-		explicit MIRPlace(BaseVariant base): base(base), type(getBaseType()) {}
+		template<typename T>
+		explicit MIRPlace(T&& base) requires(std::is_constructible_v<BaseVariant, T>)
+			  : base(std::forward<T>(base)), type(getBaseType()) {}
 
 		/**
 		 * @brief Extend the MIRPlace structure by adding a new FieldProjection to the projection
@@ -600,6 +607,8 @@ namespace compiler::mir {
 
 		InstrParameters extra_params{ NoInstrParameters{} };
 
+		InstructionMetadata metadata;
+
 		// @TODO: each Instruction should have source position reference
 
 		/**
@@ -622,13 +631,15 @@ namespace compiler::mir {
 			std::vector<MIRValue>      arguments,
 			std::vector<OperationFlag> flags,
 			const ScopeRef             scope,
-			InstrParameters            extra_parameters = NoInstrParameters{}
+			InstrParameters            extra_parameters = NoInstrParameters{},
+			InstructionMetadata        metadata         = {}
 		):
 			  operation(operation),
 			  output(std::move(output)),
 			  arguments(std::move(arguments)),
 			  flags(std::move(flags)),
 			  extra_params(extra_parameters),
+			  metadata(metadata),
 			  scope(scope) {}
 
 		void debugPrint(std::ostream& os) const;
@@ -771,4 +782,4 @@ namespace compiler::mir {
 
 }
 
-ID_STD_HASH(compiler::mir::LocalID)
+ID_STD_HASH(compiler::mir::LocalID);

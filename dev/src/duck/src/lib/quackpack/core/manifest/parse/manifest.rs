@@ -1,26 +1,24 @@
-use std::{collections::HashMap, path::Path};
+//! Parsing of the manifest from its schema.
+use std::collections::HashMap;
+use std::path::Path;
 
 use tracing::debug;
 
-use super::dependency;
-
-use crate::{
-    QpCtx, QuackResult, QuackResultContext, StrId, qp_bail,
-    quackpack::{
-        core::{
-            CompilerSpecificOptions, Features, Manifest, PackageMetadata, Profiles, RootDescription,
-        },
-        schemas::manifest::{CompilerOptions, Manifest as ManifestSchema},
-    },
+use super::{Scope, dependency};
+use crate::quackpack::core::{
+    Features, Manifest, OptLevel, PackageMetadata, Profile, Profiles, ScopeGuard,
 };
-
-use super::Scope;
+use crate::quackpack::schemas::manifest::{
+    Manifest as ManifestSchema, OptLevel as SchemaOptLevel, Profile as ProfileSchema,
+};
+use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail};
 
 /// Parse [`Manifest`] from given [`ManifestSchema`].
+#[tracing::instrument(skip_all)]
 pub(crate) fn parse(
     schema: &ManifestSchema,
     root: &Path,
-    ctx: &QpCtx<'_>,
+    ctx: &DuckContext,
 ) -> QuackResult<Manifest> {
     let Some(ref metadata) = schema.metadata else {
         qp_bail!("missing the obligatory section `metadata`")
@@ -32,22 +30,19 @@ pub(crate) fn parse(
         qp_bail!("missing the obligatory key `metadata.name`")
     };
     debug!("package name is `{name}`, version is `{version}`");
-    let root_description = RootDescription::new(name.into(), version);
     let mut scope = Scope::new();
-    scope.push("dependencies".into());
-    let dependencies = dependency::parse(schema.dependencies.as_ref(), root, ctx, &mut scope)?;
-    scope.pop();
+    let guard = scope.push("dependencies".into());
+    let dependencies = dependency::parse(schema.dependencies.as_ref(), root, ctx, guard)?;
 
-    scope.push("dev_dependencies".into());
-    let dev_deps = dependency::parse(schema.dev_dependencies.as_ref(), root, ctx, &mut scope)?;
-    scope.pop();
+    let guard = scope.push("dev-dependencies".into());
+    let dev_deps = dependency::parse(schema.dev_dependencies.as_ref(), root, ctx, guard)?;
 
-    scope.push("features".into());
+    let guard = scope.push("features".into());
     let features = parse_features(schema.features.as_ref())
-        .with_context(|| format!("when parsing the field `{}`", scope.format()))?;
-    scope.pop();
+        .with_context(move || guard.make_context_string())?;
 
-    let profiles = Profiles::new(parse_compiler_flags(schema.profiles.as_ref()));
+    let guard = scope.push("profiles".into());
+    let profiles = parse_profiles(schema.profiles.as_ref(), guard)?;
 
     let authors = metadata
         .authors
@@ -61,7 +56,8 @@ pub(crate) fn parse(
     );
 
     Ok(Manifest::new(
-        root_description,
+        name.into(),
+        version,
         features,
         package_metadata,
         dependencies,
@@ -82,23 +78,65 @@ fn parse_features(features: Option<&HashMap<String, Vec<String>>>) -> QuackResul
     Features::new(as_hash_map)
 }
 
-/// Parse [`CompilerSpecificOptions`] from the given compiler flags mapping.
-fn parse_compiler_flags(
-    input: Option<&HashMap<String, CompilerOptions>>,
-) -> HashMap<StrId, CompilerSpecificOptions> {
+/// Parse [`Profiles`] from the given compiler flags mapping.
+fn parse_profiles(
+    input: Option<&HashMap<String, ProfileSchema>>,
+    mut scope: ScopeGuard<'_>,
+) -> QuackResult<Profiles> {
     let Some(input) = input else {
-        return HashMap::new();
+        return Ok(Profiles::default());
     };
-    input
-        .iter()
-        .map(|(k, v)| {
-            let opts = CompilerSpecificOptions::new(
-                v.compiler_flags
-                    .as_ref()
-                    .map(|vec| vec.iter().map(<&String>::into).collect())
-                    .unwrap_or_default(),
-            );
-            (k.into(), opts)
+    (|| {
+        let profiles_map: QuackResult<HashMap<StrId, Profile>> = input
+            .iter()
+            .map(|(k, v)| {
+                let guard = scope.push(k.into());
+                (parse_profile(v))
+                    .map(|new_v| (k.into(), new_v))
+                    .with_context(move || guard.make_context_string())
+            })
+            .collect();
+        Profiles::new(profiles_map?)
+    })()
+    .with_context(move || scope.make_context_string())
+}
+
+fn parse_profile(input: &ProfileSchema) -> QuackResult<Profile> {
+    let opt_level = if let Some(schema_opt_level) = &input.opt_level {
+        Some(match &schema_opt_level {
+            SchemaOptLevel::Number(0) => OptLevel::Zero,
+            SchemaOptLevel::Number(1) => OptLevel::One,
+            SchemaOptLevel::Number(2) => OptLevel::Two,
+            SchemaOptLevel::Number(3) => OptLevel::Three,
+            SchemaOptLevel::Number(n) => qp_bail!(
+                "Unknown optimization level `{n}`. Optimization levels are 0, 1, 2, 3, s (or S), z (or Z)."
+            ),
+            SchemaOptLevel::String(str) => match str.as_ref() {
+                "s" => OptLevel::S,
+                "S" => OptLevel::S,
+                "z" => OptLevel::Z,
+                "Z" => OptLevel::Z,
+                "0" => OptLevel::Zero,
+                "1" => OptLevel::One,
+                "2" => OptLevel::Two,
+                "3" => OptLevel::Three,
+                str => qp_bail!(
+                    "Unknown optimization level `{str}`. Optimization levels are 0, 1, 2, 3, s (or S), z (or Z)."
+                ),
+            },
         })
-        .collect()
+    } else {
+        None
+    };
+    let dvm_bytecode = input.dvm_bytecode;
+    let incremental = input.incremental;
+    let c_std = input.c_std;
+    let inherits = input.inherits.clone().map(Into::into);
+    Ok(Profile {
+        opt_level,
+        dvm_bytecode,
+        incremental,
+        c_std,
+        inherits,
+    })
 }

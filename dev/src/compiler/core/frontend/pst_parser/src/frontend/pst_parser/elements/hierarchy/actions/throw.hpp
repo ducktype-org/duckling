@@ -8,7 +8,7 @@ namespace pst {
 	 */
 	class Throw final: public Action {
 	public:
-		explicit Throw(const dia::SourcePosition& position): Action(position) {}
+		explicit Throw(const LangParserState& state): Action(state) {}
 
 		void dprint(std::ostream& out) const final;
 		~Throw() final = default;

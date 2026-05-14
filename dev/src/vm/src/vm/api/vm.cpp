@@ -157,6 +157,28 @@ namespace vm::api {
 		    .and_then(mapOrWrongResponseMove<response::VmValue>);
 	}
 
+	std::expected<response::NumberOfCurrentStackFrames, ApiError> debuggerGetNumberOfStackFrames(
+		PID pid, ThreadID thread_id
+	) {
+		return Supervisor::get()
+		    .doRequest(
+				SupervisorRequest(pid, request::DebuggerGetNumberOfCurrentStackFrames{ thread_id })
+			)
+		    .and_then(mapOrWrongResponse<response::NumberOfCurrentStackFrames>);
+	}
+
+	std::expected<response::StackFrameData, ApiError> debuggerGetStackFrameData(
+		PID pid, ThreadID thread_id, u64 frame_index
+	) {
+		return Supervisor::get()
+		    .doRequest(SupervisorRequest(
+				pid,
+				request::DebuggerGetStackFrameData{ .thread_id   = thread_id,
+		                                            .frame_index = frame_index }
+			))
+		    .and_then(mapOrWrongResponse<response::StackFrameData>);
+	}
+
 	std::expected<void, ApiError> attach(PID pid, std::istream& input, std::ostream& output) {
 		return Supervisor::get()
 		    .doRequest(SupervisorRequest(pid, request::Attach{ .istream = input, .ostream = output })
@@ -186,5 +208,13 @@ namespace vm::api {
 		return Supervisor::get()
 		    .doRequest(SupervisorRequest(pid, request::DeinitAndValidate{}))
 		    .and_then(mapOrWrongResponse<response::Boolean>);
+	}
+
+	std::expected<void, ApiError> attachStatusListener(
+		PID pid, Ref<events::Listener<ProcStatus>> listener
+	) {
+		return Supervisor::get()
+		    .doRequest(SupervisorRequest(pid, request::AttachStatusListener{ .listener = listener }))
+		    .transform(ignoreResponse);
 	}
 }

@@ -1,11 +1,12 @@
 add_files(
+    bytecode.cpp
     builtin_types.cpp
     builders/instruction_builder.cpp
     serializer/serializer.cpp
     validator/function_validator.cpp
     validator/type_validator.cpp
-    validator/type_context.cpp
-    validator/type_builder.cpp
+    validator/valid_type/type_context.cpp
+    validator/valid_type/valid_type.cpp
     validator/valid_program.cpp
 )
 set(vm_common_sources ${vm_common_sources} ${files} PARENT_SCOPE)

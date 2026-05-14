@@ -1,7 +1,8 @@
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/pst_parser/pst_query/pst_access_side_input.hpp>
 #include <helios/hout/hout.hpp>
-#include <helios/queries.hpp>
+#include <helios/queries/function_queries.hpp>
+#include <helios/queries/queries.hpp>
 
 #include <base/extend_cpp/defer.hpp>
 
@@ -60,7 +61,8 @@ int notMain(int argc, const char* const* argv) {
 
 	auto& top_level = query::entryPoint<helios::QueryTopLevelEntities>(root)->valueOrPanic();
 	query::utils::withContextDo([&](query::Context& ctx) {
-		std::cerr << top_level.debugPrint(ctx) << "\n\n";
+		top_level.debugPrint(ctx, std::cerr);
+		std::cerr << "\n\n";
 	});
 
 	std::cerr << "Inputs of entire hout:\n";

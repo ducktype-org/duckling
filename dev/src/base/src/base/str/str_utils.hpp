@@ -8,6 +8,8 @@
  * - `strConcat`
  * - `strSplit`
  * - `strReplaceAll`
+ * - `unescapeString`
+ * - `escapeString`
  *
  * ### Usage
  * @include str_utils_example.cpp
@@ -21,6 +23,7 @@
 
 #include <unicode/unistr.h>
 
+#include <expected>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -163,6 +166,38 @@ namespace base {
 	std::vector<std::string> strSplit(const std::string_view str, const std::string& delimiter = " ");
 
 	/**
+	 * @brief Trims leading whitespace from a string view.
+	 *
+	 * @param text Input string view.
+	 * @param ws_chars Characters treated as whitespace.
+	 * @return String view without leading whitespace.
+	 */
+	[[nodiscard]] constexpr std::string_view strTrimLeft(
+		std::string_view text, std::string_view ws_chars = " \t\r\n\f\v"
+	) {
+		auto first_not_ws = text.find_first_not_of(ws_chars);
+		if (first_not_ws == std::string_view::npos) return {};
+		return text.substr(first_not_ws);
+	}
+
+	/**
+	 * @brief Trims leading and trailing whitespace from a string view.
+	 *
+	 * @param text Input string view.
+	 * @param ws_chars Characters treated as whitespace.
+	 * @return String view without leading/trailing whitespace.
+	 */
+	[[nodiscard]] constexpr std::string_view strTrim(
+		std::string_view text, std::string_view ws_chars = " \t\r\n\f\v"
+	) {
+		auto first_not_ws = text.find_first_not_of(ws_chars);
+		if (first_not_ws == std::string_view::npos) return {};
+
+		auto last_not_ws = text.find_last_not_of(ws_chars);
+		return text.substr(first_not_ws, last_not_ws - first_not_ws + 1);
+	}
+
+	/**
 	 * @brief Generates a random alphanumeric string of the specified length.
 	 * @param length The length of the random string to generate.
 	 * @return A random alphanumeric string.
@@ -179,7 +214,7 @@ namespace base {
 		std::string value;
 	};
 
-	using UnescapeResult = std::variant<UnescapedString, UnknownEscapeSequence>;
+	using UnescapeResult = std::expected<UnescapedString, UnknownEscapeSequence>;
 
 	/**
 	 * @brief Unescapes a string containing C-style escape sequences.
@@ -200,7 +235,15 @@ namespace base {
 	 * - \' : Single quote
 	 * - \0 : Null character
 	 *
-	 * Unknown escape sequences result in a panic.
+	 * Unknown escape sequences result in an error, and the unescaping process is aborted. The error
+	 * contains the unknown escape sequence.
 	 */
 	UnescapeResult unescapeString(std::string_view raw);
+
+	/**
+	 * @brief Escapes special characters in a string using C-style escape sequences.
+	 * @param raw The raw string to escape.
+	 * @return The escaped string.
+	 */
+	std::string escapeString(std::string_view raw);
 }

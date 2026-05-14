@@ -1,3 +1,4 @@
+#include <driver/debug_info/debug_info.hpp>
 #include <driver/exit.hpp>
 #include <driver/initialize.hpp>
 #include <driver/module_flags/module_flags.hpp>
@@ -5,9 +6,10 @@
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
+#include <frontend/pst_parser/source_position_locked.hpp>
 #include <global_state/backend_options.hpp>
 #include <global_state/packages.hpp>
-#include <helios/queries.hpp>
+#include <helios/queries/queries.hpp>
 
 #include <artifacts/artifacts.hpp>
 #include <filesystem/file_path.hpp>
@@ -40,6 +42,7 @@ public:
 		// wont test what they are supposed to:
 		TESTER_ADD_TEST(graphConsistencyAfterOptimizationTest);
 		TESTER_ADD_TEST(objFileGenerated);
+		TESTER_ADD_TEST(debugInfoGenerated);
 		TESTER_ADD_TEST(assemblyAndLLVMGenerated);
 		TESTER_ADD_TEST(dvmBackendRuns);
 		TESTER_ADD_TEST(packageCompiles);
@@ -48,11 +51,12 @@ public:
 		TESTER_ADD_TEST(saveArtifactsTest);
 		TESTER_ADD_TEST(sideInputsTest);
 		TESTER_ADD_TEST(moduleChildSideInputsTest);
+		TESTER_ADD_TEST(sourcePositionInputDependencyForDvmDebugInfoInCompileEntirePackageTest);
 	}
 
 protected:
 	void beforeAll() override {
-		compiler::driver::initializeTheCompiler(
+		auto init_result = compiler::driver::initializeTheCompiler(
 			compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
 				.main_package_info = {
 					.package_name = package_name,
@@ -64,11 +68,12 @@ protected:
 				.backend_options = {
 					.llvm_backend = global_state::BackendOptions::LLVMBackend{},
 				},
-				.debug_options         = {},
-				.incremental           = {},
-				.execution_options     = {},
+				.debug_options         = { },
+				.incremental           = { },
+				.execution_options     = { .worker_count = 1 },
 			}
 		);
+		ASSERT_TRUE(init_result.status().isOk());
 	}
 
 private:
@@ -413,44 +418,85 @@ private:
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			// This method can fail on module verification
-			auto module_o = ctx.query<driver::CompileModule>({ module, driver::BackendType::LLVM })
-			                    .valueOrPanic();
+			auto artifacts
+				= ctx.query<driver::CompileModule>({ module, driver::BackendType::LLVM, false })
+			          ->valueOrPanic();
 
-			ASSERT_TRUE(module_o.file.exists());
+			ASSERT_TRUE(artifacts.object_art.file.exists());
+			ASSERT_TRUE(artifacts.debug_info.empty());
 
-			fs::FileManager::deleteFile(module_o.file);
+			fs::FileManager::deleteFile(artifacts.object_art.file);
+		});
+	}
+
+	void debugInfoGenerated() {
+		using namespace compiler;
+
+		auto module
+			= frontend::createModuleTree(fs::File(path("modules/functions_2")), package_name);
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			auto artifacts
+				= ctx.query<driver::CompileModule>({ module, driver::BackendType::DVM, true })
+			          ->valueOrPanic();
+
+			ASSERT_TRUE(artifacts.object_art.file.exists());
+			ASSERT_TRUE(artifacts.debug_info.has_value());
+
+			fs::FileManager::deleteFile(artifacts.object_art.file);
+			fs::FileManager::deleteFile(
+				artifacts.object_art.file.getFilePath().parentPath()
+				/ artifacts.object_art.file.stem().append(driver::DEBUG_INFO_STABLE_EXTENSION)
+			);
 		});
 	}
 
 	void assemblyAndLLVMGenerated() {
 		using namespace compiler;
 
-		compiler::driver::llvm_dump_ir  = true;
-		compiler::driver::llvm_dump_asm = true;
-		defer(compiler::driver::llvm_dump_ir = false; compiler::driver::llvm_dump_asm = false;);
+		compiler::driver::dump_ir_options.dump_asm  = true;
+		compiler::driver::dump_ir_options.dump_llvm = true;
+		compiler::driver::dump_ir_options.dump_lir  = true;
+		compiler::driver::dump_ir_options.dump_mir  = true;
+		compiler::driver::dump_ir_options.dump_hir  = true;
+		defer(compiler::driver::dump_ir_options.dump_asm  = false;
+		      compiler::driver::dump_ir_options.dump_llvm = false;
+		      compiler::driver::dump_ir_options.dump_lir  = false;
+		      compiler::driver::dump_ir_options.dump_mir  = false;
+		      compiler::driver::dump_ir_options.dump_hir  = false;);
 
 		auto module
-			= frontend::createModuleTree(fs::File(path("modules/functions_2")), package_name);
+			= frontend::createModuleTree(fs::File(path("modules/functions_3")), package_name);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			// This method can fail on module verification
-			auto module_o = ctx.query<driver::CompileModule>({ module, driver::BackendType::LLVM });
+			ctx.query<driver::CompileModule>({ module, driver::BackendType::LLVM, false });
 
-			auto module_name = base::StrID(
-				base::strConcat(
-					"module_", frontend::ModuleTree::getPathComponentHash(module).hash.toStringHex()
-				)
-					.c_str()
-			);
+			auto                  module_name = base::StrID(base::strConcat(
+                "module_",
+                compiler::frontend::ModuleTree::getPathComponentHash(module).hash.toStringHex()
+            ));
+			std::filesystem::path base_path   = artifacts_path / "duck_debug_artifacts";
 
-			auto asm_file     = module_name.str() + ".s";
-			auto llvm_ir_file = module_name.str() + ".ll";
 
-			assertTrue(std::filesystem::exists(asm_file), "Assembly file does not exist");
-			assertTrue(std::filesystem::exists(llvm_ir_file), "LLVM IR file does not exist");
+			auto asm_art  = base_path / (module_name.str() + ".s");
+			auto llvm_art = base_path / (module_name.str() + ".ll");
+			auto lir_art  = base_path / (module_name.str() + ".lir");
+			auto mir_art  = base_path / (module_name.str() + ".mir");
+			auto hir_art  = base_path / (module_name.str() + ".hir");
 
-			std::filesystem::remove(asm_file);
-			std::filesystem::remove(llvm_ir_file);
+
+			assertTrue(std::filesystem::exists(asm_art), "Assembly file does not exist");
+			assertTrue(std::filesystem::exists(llvm_art), "LLVM IR file does not exist");
+			assertTrue(std::filesystem::exists(lir_art), "LIR file does not exist");
+			assertTrue(std::filesystem::exists(mir_art), "MIR file does not exist");
+			assertTrue(std::filesystem::exists(hir_art), "HIR file does not exist");
+
+			std::filesystem::remove(asm_art);
+			std::filesystem::remove(llvm_art);
+			std::filesystem::remove(lir_art);
+			std::filesystem::remove(mir_art);
+			std::filesystem::remove(hir_art);
 		});
 	}
 
@@ -458,7 +504,7 @@ private:
 		using namespace compiler;
 
 		auto module
-			= frontend::createModuleTree(fs::File(path("modules/functions_3")), package_name);
+			= frontend::createModuleTree(fs::File(path("modules/functions_4")), package_name);
 
 
 		query::utils::withContextDo([&](query::Context& ctx) {
@@ -476,7 +522,7 @@ private:
 
 		global_state::PackageInfo package_info{
 			.root_module
-			= frontend::createModuleTree(fs::File(path("modules/functions_4")), package_name),
+			= frontend::createModuleTree(fs::File(path("modules/functions_5")), package_name),
 		};
 
 		driver::compileEntirePackage(
@@ -504,6 +550,12 @@ private:
 				.link_c_standard_library = true,
 			}
 		);
+
+		auto dvm_exe_path = artifacts_path / "package_dvm.dbc";
+		assertTrue(
+			std::filesystem::exists(dvm_exe_path),
+			base::strConcat("DVM executable file does not exist: ", dvm_exe_path.native())
+		);
 	}
 
 	void globalsTest() {
@@ -513,21 +565,23 @@ private:
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			// This method can fail on module verification
-			auto module_o = ctx.query<driver::CompileModule>({ module, driver::BackendType::LLVM })
-			                    .valueOrPanic();
+			auto artifacts
+				= ctx.query<driver::CompileModule>({ module, driver::BackendType::LLVM, false })
+			          ->valueOrPanic();
 
-			assertTrue(module_o.file.exists(), "Object file does not exist");
+			assertTrue(artifacts.object_art.file.exists(), "Object file does not exist");
 
-			std::filesystem::remove(module_o.file.getFilePath().getPath());
+			std::filesystem::remove(artifacts.object_art.file.getFilePath().getPath());
 		});
 
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			auto module_dbc = ctx.query<driver::CompileModule>({ module, driver::BackendType::DVM })
-			                      .valueOrPanic();
-			assertTrue(module_dbc.file.exists(), "Object file does not exist");
+			auto artifacts
+				= ctx.query<driver::CompileModule>({ module, driver::BackendType::DVM, false })
+			          ->valueOrPanic();
+			assertTrue(artifacts.object_art.file.exists(), "Object file does not exist");
 
-			std::filesystem::remove(module_dbc.file.getFilePath().getPath());
+			std::filesystem::remove(artifacts.object_art.file.getFilePath().getPath());
 
 			auto run_result = driver::runModuleOnDVM(ctx, module);
 			ASSERT_TRUE(run_result.has_value());
@@ -557,7 +611,7 @@ private:
 		);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			(void) ctx.query<driver::CompileModule>({ module, driver::BackendType::LLVM });
+			(void) ctx.query<driver::CompileModule>({ module, driver::BackendType::LLVM, false });
 		});
 
 		// Serialize current graph
@@ -697,13 +751,12 @@ private:
 	}
 
 	/**
-	 * @brief Tests the correctness of ModuleChildSideInput, SourceFileCountSideInput,
+	 * @brief Tests the correctness of ModuleChildSideInput,
 	 *        and SubmoduleCountSideInput dependencies in the query graph.
 	 *
 	 * This test compiles the imports_complicated module structure and verifies that:
 	 * 1. Each module depends on the correct ModuleChildSideInputs based on its imports
-	 * 2. Each module depends on SourceFileCountSideInput only for its own source files
-	 * 3. No module depends on SubmoduleCountSideInput (currently not used)
+	 * 2. No module depends on SubmoduleCountSideInput (currently not used)
 	 */
 	void moduleChildSideInputsTest() {
 		using namespace compiler;
@@ -778,27 +831,6 @@ private:
 			return count;
 		};
 
-		// Helper to check if module depends on SourceFileCountSideInput for a specific module
-		auto has_source_file_count_dep = [&](const std::vector<query::internal::NodeID>& deps,
-		                                     frontend::ModuleID module_id) -> bool {
-			auto hasher = frontend::ModuleTree::getPathComponentHash(module_id).partial;
-			auto files  = frontend::getModuleRef(module_id)->getSourceFiles().illegalAccess();
-			hashing::addToHash(hasher, static_cast<u64>(files.size()));
-			auto expected_id = query::internal::makeNodeID<frontend::QuerySourceFileCountSideInput>(
-				frontend::KeyOf_SourceFileCountSideInput{ hasher.finalize() }
-			);
-			return std::ranges::find(deps, expected_id) != deps.end();
-		};
-
-		// Helper to count how many SourceFileCountSideInput dependencies exist
-		auto count_source_file_count_inputs
-			= [](const std::vector<query::internal::NodeID>& deps) -> usize {
-			usize count = 0;
-			for (const auto& dep: deps)
-				if (dep.q_id.asInt() == frontend::QuerySourceFileCountSideInput::getID().asInt())
-					count++;
-			return count;
-		};
 
 		// Helper to count how many SubmoduleCountSideInput dependencies exist
 		auto count_submodule_count_inputs
@@ -932,32 +964,6 @@ private:
 
 		ASSERT_EQUAL_PRINT(0, count_child_side_inputs(d_deps));
 
-		// ================================================================================
-		// Test SourceFileCountSideInput dependencies
-		// Each module should depend on SourceFileCountSideInput only for its own source files
-		// ================================================================================
-
-		// Note: We check that each module depends on its own source file count
-		// The getSourceFiles() returns additional source files (not the main .dmf file)
-		// Most modules here only have a main file, so source files count is 0
-
-		// We verify the dependency exists for each module's own files
-		ASSERT_TRUE(has_source_file_count_dep(b_deps, b_id));
-		ASSERT_TRUE(has_source_file_count_dep(foo_deps, foo_id));
-		ASSERT_TRUE(has_source_file_count_dep(a_deps, a_id));
-		ASSERT_TRUE(has_source_file_count_dep(imports_complicated_deps, imports_complicated_id));
-		ASSERT_TRUE(has_source_file_count_dep(bar_deps, bar_id));
-		ASSERT_TRUE(has_source_file_count_dep(c_deps, c_id));
-		ASSERT_TRUE(has_source_file_count_dep(d_deps, d_id));
-
-		// Each module should have exactly 1 SourceFileCountSideInput dependency (only its own)
-		ASSERT_EQUAL_PRINT(1, count_source_file_count_inputs(b_deps));
-		ASSERT_EQUAL_PRINT(1, count_source_file_count_inputs(foo_deps));
-		ASSERT_EQUAL_PRINT(1, count_source_file_count_inputs(a_deps));
-		ASSERT_EQUAL_PRINT(1, count_source_file_count_inputs(imports_complicated_deps));
-		ASSERT_EQUAL_PRINT(1, count_source_file_count_inputs(bar_deps));
-		ASSERT_EQUAL_PRINT(1, count_source_file_count_inputs(c_deps));
-		ASSERT_EQUAL_PRINT(1, count_source_file_count_inputs(d_deps));
 
 		// ================================================================================
 		// Test SubmoduleCountSideInput dependencies
@@ -973,6 +979,51 @@ private:
 		ASSERT_EQUAL_PRINT(0, count_submodule_count_inputs(bar_deps));
 		ASSERT_EQUAL_PRINT(0, count_submodule_count_inputs(c_deps));
 		ASSERT_EQUAL_PRINT(0, count_submodule_count_inputs(d_deps));
+	}
+
+	void sourcePositionInputDependencyForDvmDebugInfoInCompileEntirePackageTest() {
+		using namespace compiler;
+
+		auto source_position_input = pst::SourcePositionLocked::getQueryInputNode();
+		auto source_position_node  = query::internal::NodeID(
+            source_position_input.q_id, query::internal::KeyHash{ source_position_input.hash }
+        );
+
+		auto has_source_position_dep = [&](const query::internal::NodeID& node_id) {
+			auto& graph = query::internal::ContextAccess::getState()->getGraph();
+			if (!graph.nodeExists(node_id)) return false;
+			auto deps = graph.getNodeDeps(node_id);
+			return std::ranges::find(deps, source_position_node) != deps.end();
+		};
+
+		global_state::PackageInfo dvm_package_info{
+			.root_module
+			= frontend::createModuleTree(fs::File(path("modules/functions_2")), "src_pos_dvm"),
+		};
+
+		driver::compileEntirePackage(
+			dvm_package_info,
+			driver::BackendType::DVM,
+			{
+				.linker_path             = {},
+				.additional_link_options = {},
+				.link_c_standard_library = true,
+			}
+		);
+		auto dvm_compile_node
+			= query::internal::makeNodeID<driver::CompileModule>(driver::KeyOf_CompileModule{
+				.module_id        = dvm_package_info.root_module,
+				.backend_type     = driver::BackendType::DVM,
+				.build_debug_info = true,
+			});
+		auto dvm_debug_node = query::internal::makeNodeID<driver::DebugInfoForModule>(
+			driver::KeyOf_DebugInfoForModule{
+				.module_id    = dvm_package_info.root_module,
+				.backend_type = driver::BackendType::DVM,
+			}
+		);
+		ASSERT_TRUE(not has_source_position_dep(dvm_compile_node));
+		ASSERT_TRUE(has_source_position_dep(dvm_debug_node));
 	}
 };
 

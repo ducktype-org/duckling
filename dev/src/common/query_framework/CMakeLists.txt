@@ -4,6 +4,8 @@ add_library(QueryFramework
 	src/query_framework/internal/query_graph/query_state.cpp
 	src/query_framework/internal/query_data/query_id.cpp
 	src/query_framework/internal/query_graph/node_marking.cpp
+	src/query_framework/internal/task_pool/task_pool.cpp
+	
 	src/query_framework/module_flags/module_flags.cpp
 
 	src/query_framework/external/api.cpp
@@ -30,3 +32,5 @@ duck_add_test(common query_framework tests/query_framework_test.cpp USES QueryFr
 duck_add_test(common active_graph tests/active_graph_test.cpp USES QueryFramework)
 duck_add_test(common concurrent_metadata_storage tests/concurrent_metadata_storage_test.cpp USES QueryFramework)
 duck_add_test(common query_invalidation tests/query_invalidation_test.cpp USES QueryFramework)
+duck_add_test(common task_pool tests/task_pool_test.cpp USES QueryFramework)
+duck_add_test(common cycle_detection_race tests/cycle_detection_race_test.cpp USES QueryFramework)

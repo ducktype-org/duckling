@@ -36,7 +36,7 @@ private:
 			= fs::FilePath(std::filesystem::current_path() / k_artifacts_dir);
 
 		// Initialize with changed functions path (same package name as previous step)
-		compiler::driver::initializeTheCompiler(
+		auto init_result = compiler::driver::initializeTheCompiler(
             compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
                 .main_package_info = {
                     .package_name = std::string("mark_nodes_test_package"),
@@ -48,9 +48,11 @@ private:
 				},
 				.debug_options         = {},
 				.incremental           = { .enabled = true },
-				.execution_options     = {},
+				.execution_options     = { .worker_count = 1 },
             }
         );
+
+		ASSERT_TRUE(init_result.status().isOk());
 
 		auto prev_graph_opt = query::internal::ContextAccess::getState()->getPreviousGraph();
 		ASSERT_TRUE(prev_graph_opt.has_value());
@@ -91,13 +93,16 @@ private:
 		);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			(void) ctx.query<driver::CompileModule>({ module, driver::BackendType::LLVM });
+			(void) ctx.query<driver::CompileModule>({ .module_id        = module,
+			                                          .backend_type     = driver::BackendType::LLVM,
+			                                          .build_debug_info = false });
 		});
 
 		// Build a NodeID for the CompileModule query with the exact key we used
 		compiler::driver::KeyOf_CompileModule key{
-			.module_id    = module,
-			.backend_type = compiler::driver::BackendType::LLVM,
+			.module_id        = module,
+			.backend_type     = compiler::driver::BackendType::LLVM,
+			.build_debug_info = false,
 		};
 		query::internal::NodeID root_node{
 			compiler::driver::CompileModule::getID(),

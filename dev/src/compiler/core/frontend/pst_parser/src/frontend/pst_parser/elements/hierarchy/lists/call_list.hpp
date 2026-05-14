@@ -9,7 +9,7 @@ namespace pst {
 	 */
 	class CallList final: public List<CallArgument, internal::NameGetters::callList> {
 	public:
-		explicit CallList(const dia::SourcePosition& pos): List(pos) {
+		explicit CallList(const LangParserState& state): List(state) {
 			this->element_kind = ElementKind::CallList;
 		}
 

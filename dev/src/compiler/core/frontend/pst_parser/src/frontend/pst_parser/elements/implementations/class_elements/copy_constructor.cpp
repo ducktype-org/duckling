@@ -4,18 +4,21 @@
 #include "preamble.hpp"
 
 namespace pst {
-	MBox<CopyConstructor> CopyConstructor::parse(LangParserState& state, const ClassContext& ctx) {
-		auto position = state.getPosition();
-		auto out      = makeBox<CopyConstructor>(position, ctx);
+	MBox<CopyConstructor> CopyConstructor::parse(LangParserState& state) {
+		auto out = makeBox<CopyConstructor>(state);
 
-		state.parse(out).eatOne();
+		PARSE().eatOne();
 
 		out->kind = Keyword::Copy;
-		state.parse(out).all(NamedOperator::Period, Keyword::Copy);
+		PARSE().all(NamedOperator::Period, Keyword::Copy);
 
-		state.parse(out).one(&out->params);
-		if (state.parse(out).tryEat(NamedOperator::Colon)) state.parse(out).one(&out->inits);
-		state.parse(out).one(NamedOperator::Assign).withDef(&out->body, BlockOrderType::Ordered);
+		PARSE().one(&out->params);
+		if (PARSE().tryEat(NamedOperator::Colon)) PARSE().one(&out->inits);
+
+		PST_NEW_CONTEXT({
+			state.setContextBlockOrdering(BlockOrderType::Ordered);
+			PARSE().all(NamedOperator::Assign, &out->body);
+		})
 
 		PST_RETURN out;
 	}
