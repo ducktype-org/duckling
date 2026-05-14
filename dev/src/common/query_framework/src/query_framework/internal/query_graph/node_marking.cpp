@@ -8,6 +8,7 @@
 #include <query_framework/internal/query_graph/query_graph.hpp>
 
 #include <algorithm>
+#include <ranges>
 
 namespace query::internal {
 
@@ -117,6 +118,7 @@ namespace query::internal {
 			);
 
 			CORE_ASSERT(node.q_id.registered(), "Node from previous graph must be registered.");
+
 			state->setPrevNodeColor(node, QueryState::PrevColor::Red);
 		};
 

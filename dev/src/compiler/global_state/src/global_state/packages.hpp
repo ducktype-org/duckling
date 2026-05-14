@@ -1,41 +1,48 @@
 #pragma once
 
 #include <frontend/module_tree/module_id.hpp>
+#include <frontend/packages/packages.hpp>
+
+#include <base/collections/optional.hpp>
+#include <base/pointers/ref.hpp>
+
+#include <string_id/string_id.hpp>
 
 #include <vector>
 
 namespace global_state {
 
 	/**
-	 * Global state for managing package information.
+	 * @brief Returns the list of registered top-level packages.
 	 */
-	struct PackageInfo {
-		compiler::frontend::ModuleID root_module;
-	};
+	const std::vector<compiler::frontend::packages::PackageInfo>& getPackages();
 
 	/**
-	 * Returns the list of registered packages. Included the main package.
-	 * @note The main package is always the first element in the returned vector.
+	 * @brief Returns the PackageInfo for a given package ID.
+	 * @return The PackageInfo associated with the provided package ID or empty optional if no
+	 * such package exists.
 	 */
-	const std::vector<PackageInfo>& getPackages();
+	base::Optional<base::CRef<compiler::frontend::packages::PackageInfo>> getPackageRefOpt(
+		base::StrID package_id
+	);
 
 	/**
-	 * Returns the main package info.
+	 * @brief Returns the PackageInfo for a given package ID.
+	 * @note Panics if no package with the given name exists.
 	 */
-	const PackageInfo& getMainPackage();
+	base::CRef<compiler::frontend::packages::PackageInfo> getPackageRef(base::StrID package_id);
 
 	namespace setters {
+		/** @brief Adds a package to the global state. */
+		void addPackage(const compiler::frontend::packages::PackageInfo& package_info);
+
 		/**
-		 * Adds a package to the global state.
+		 * @brief Adds a package with no dependencies (single-package convenience).
 		 */
 		void addPackage(compiler::frontend::ModuleID root_module);
 
-		/**
-		 * Removes a package from the global state by its root module ID.
-		 */
+		/** @brief Removes a package by its root module ID. */
 		void removePackage(compiler::frontend::ModuleID root_module);
-
-		/** Adds the main package to the global state. */
-		void addMainPackage(compiler::frontend::ModuleID root_module);
 	}
-}
+
+}  // namespace global_state

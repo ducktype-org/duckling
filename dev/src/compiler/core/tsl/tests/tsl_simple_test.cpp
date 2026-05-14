@@ -359,16 +359,46 @@ private:
 				tuple_layout->getSourceType().getType() == tuple_type,
 				"Layout should have source type as constructed."
 			);
+
+			CRef<TypeInterface> tuple_interface = tuple_type.getInterface(ctx);
+
+			const compiler::helios::SymID first = [&] {
+				const auto& matching = tuple_interface->getElementsWithName(base::StrID("_1"));
+				ASSERT_TRUE(matching.size() == 1);
+				return matching.at(0).getSymbol();
+			}();
+
+			const compiler::helios::SymID second = [&] {
+				const auto& matching = tuple_interface->getElementsWithName(base::StrID("_2"));
+				ASSERT_TRUE(matching.size() == 1);
+				return matching.at(0).getSymbol();
+			}();
+
+			const compiler::helios::SymID third = [&] {
+				const auto& matching = tuple_interface->getElementsWithName(base::StrID("_3"));
+				ASSERT_TRUE(matching.size() == 1);
+				return matching.at(0).getSymbol();
+			}();
+
 			variant_match(tuple_layout->getVariant()) {
-				variant_case(TupleTypeLayout, l) {
+				variant_case(ClassTypeLayout, l) {
 					assertTrue(
-						l.getOffsetOfComponentIndex(0) == Bytes(0)
-							&& l.getOffsetOfComponentIndex(1) == Bytes(2)
-							&& l.getOffsetOfComponentIndex(2) == Bytes(8),
+						l.getOffsetOfFieldSymbol(first) == Bytes(0)
+							&& l.getOffsetOfFieldSymbol(second) == Bytes(2)
+							&& l.getOffsetOfFieldSymbol(third) == Bytes(8),
 						"Tuple layout should align its component layouts."
 					);
+
+					for (const auto& field: { first, second, third }) {
+						assertTrue(
+							l.getFieldSymbolOfLayoutIndex(
+								l.getLayoutIndexOfFieldSymbol(field).value()
+							) == field,
+							"Layout field symbol to layout index mapping should be reversible."
+						);
+					}
 				}
-				variant_default { fail("Layout of tuple type should be tuple-like."); }
+				variant_default { fail("Layout of tuple type should be class-like."); }
 			}
 			testPrinting(tuple_layout, ctx, true);
 		});
