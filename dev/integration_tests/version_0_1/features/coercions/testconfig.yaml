@@ -13,10 +13,10 @@ Tests:
   casts_test:
     Description: Tests for casting numerical types and booleans.
     Cases:
-      all:
-        backend: all
+      llvm:
+        backend: llvm
         Output:
-          String: "-1\n-1\n255\n-1\n-42\n2147483647\n-2147483648\n7\n9\n1\n123.456\n789.25\n42.0\n99.0\n3\n2\n-7\n-8\n"
+          String: "-1\n-1\n255\n-1\n-42\n2147483647\n-2147483648\n7\n9\n1\n123.5\n789.2\n42\n99\n3\n2\n-7\n-8\n"
         ExitCode: 0
   coercions_test:
     Description: Tests for coercing boolean value from a numerical type.

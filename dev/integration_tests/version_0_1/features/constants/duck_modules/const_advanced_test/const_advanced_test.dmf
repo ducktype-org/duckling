@@ -12,6 +12,12 @@ const DOUBLED = BASE * 2;
 const TRIPLED = BASE * 3;
 const SUM_ALL = BASE + DOUBLED + TRIPLED;
 
+fun square(x: i64) -> i64 = {
+	return x * x;
+}
+
+const SQUARED = square(5);
+
 # Const in namespace
 namespace Config {
     const MAX_SIZE: i64 = 1024;
@@ -48,6 +54,8 @@ fun main() -> i64 = {
     # Test const in expressions with namespace
     let result = Config.MAX_SIZE - Config.MIN_SIZE;
     builtin_output_i64(result);              # 960
+
+    builtin_output_i64(SQUARED);             # 25
 
     return 0;
 }

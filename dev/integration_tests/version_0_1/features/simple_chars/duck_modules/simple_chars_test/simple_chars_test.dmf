@@ -31,12 +31,12 @@ fun main() -> i64 = {
     }
 
     # Test incrementation
-    if ('A' + 1 == 'B') {
+    if ('A' + 1u8 == 'B') {
         builtin_output_i64(3);        # 3
     }
 
     # Test decrementation
-    if ('d' - 1 == 'c') {
+    if ('d' - 1u8 == 'c') {
         builtin_output_i64(4);        # 4
     }
 

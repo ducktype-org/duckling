@@ -2,7 +2,7 @@
 # Tests const declarations with explicit types, type inference, const expressions, and namespace constants
 
 Tests:
-  constant_simple_declaration_test:
+  const_simple_declaration_test:
     Description: Tests for constant declarations.
     Cases:
       all:

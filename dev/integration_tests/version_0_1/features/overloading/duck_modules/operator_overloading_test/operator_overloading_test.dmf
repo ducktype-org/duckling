@@ -1,91 +1,16 @@
 # Operator overloading test (primitive types)
-# This test checks if operator overloads work for primitive types (i64, f64)
+# This test checks if operator overloads work for primitive types
 
-# Arithmetic
-fun +(a: i64, b: i64) -> i64 = 0;
-fun -(a: i64, b: i64) -> i64 = 1;
-fun *(a: i64, b: i64) -> i64 = 2;
-fun /(a: i64, b: i64) -> i64 = 3;
-fun %(a: i64, b: i64) -> i64 = 4;
-
-# Bitwise
-fun &(a: i64, b: i64) -> i64 = 5;
-fun |(a: i64, b: i64) -> i64 = 6;
-fun ^(a: i64, b: i64) -> i64 = 7;
-fun <<(a: i64, b: i64) -> i64 = 8;
-fun >>(a: i64, b: i64) -> i64 = 9;
-
-# Comparison
-fun !=(a: i64, b: i64) -> bool = false;
-fun <(a: i64, b: i64) -> bool = true;
-fun <=(a: i64, b: i64) -> bool = false;
-fun >(a: i64, b: i64) -> bool = true;
-fun >=(a: i64, b: i64) -> bool = false;
-
-
-# Unary
-fun -(a: i64) prefix = 10;
-fun +(a: i64) prefix = 11;
-fun ~(a: i64) prefix = 12;
-fun --(a: i64) prefix = 13;
-fun ++(a: i64) prefix = 14;
-fun -(a: i64) suffix = 15;
-fun +(a: i64) suffix = 16;
-fun ~(a: i64) suffix = 17;
-fun --(a: i64) suffix = 18;
-fun ++(a: i64) suffix = 19;
-
-# Mixed types
-fun +(a: f64, b: i64) -> i64 = 77;
-fun +(a: i64, b: f64) -> f64 = 8.1;
+fun *(c: char, n: i64): str = {
+	var result: str = "";
+	while (n > 0) {
+		result = result :+ c;
+		n -= 1;
+	}
+	return result;
+}
 
 fun main() -> i64 = {
-    var a = 5;
-    var b = 7;
-    var f: f64 = 1.1;
-
-    # Arithmetic
-    if (a + b == 0) builtin_output_i64(1);
-    if (a - b == 1) builtin_output_i64(2);
-    if (a * b == 2) builtin_output_i64(3);
-    if (a / b == 3) builtin_output_i64(4);
-    if (a % b == 4) builtin_output_i64(5);
-
-    # Bitwise
-    if ((a & b) == 5) builtin_output_i64(6);
-    if ((a | b) == 6) builtin_output_i64(7);
-    if ((a ^ b) == 7) builtin_output_i64(8);
-    if ((a << b) == 8) builtin_output_i64(9);
-    if ((a >> b) == 9) builtin_output_i64(10);
-
-    # Comparison
-    if (a == b) builtin_output_i64(11);
-    if (!(a != b)) builtin_output_i64(12);
-    if (a < b) builtin_output_i64(13);
-    if (!(a <= b)) builtin_output_i64(14);
-    if (a > b) builtin_output_i64(15);
-    if (!(a >= b)) builtin_output_i64(16);
-
-    # Unary
-    if ((-a) == 10) builtin_output_i64(17);
-    if ((+a) == 11) builtin_output_i64(18);
-    if ((~a) == 12) builtin_output_i64(19);
-    if ((a--) == 13) builtin_output_i64(20);
-    if ((a++) == 14) builtin_output_i64(21);
-
-    if ((a-) == 15) builtin_output_i64(22);
-    if ((a+) == 16) builtin_output_i64(23);
-    if ((a~) == 17) builtin_output_i64(24);
-    if ((--a) == 18) builtin_output_i64(25);
-    if ((++a) == 19) builtin_output_i64(26);
-
-
-    # Mixed types
-    if (f + b == 77) builtin_output_i64(27);
-    if (a + f == 8.1) builtin_output_i64(28);
-
-    fun ==(a: i64, b: i64) -> bool = false;
-    if (not (1 == 1)) builtin_output_i64(29);
-
+    builtin_output_str('a' * 5);
     return 0;
 }

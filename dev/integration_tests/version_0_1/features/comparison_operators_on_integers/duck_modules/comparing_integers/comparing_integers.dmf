@@ -5,7 +5,7 @@ fun count(x: i64) -> i64 = {
 
     counter = counter + 1;
     if (counter == 2) {
-        builtin_output_i64(999); # This should be ignored by the test framework.
+        builtin_output_i64(999); # This should not execute, because we use `reset()` defined below.
     }
     return x;
 }

@@ -71,39 +71,39 @@ SubDirs:
 #         WORKING FULLY
 #################################
   - comparison_operators_on_integers
-  - float_literals
-  - unit_type
+  - constants
   - ffi
+  - float_literals
+  - function_call
+  - namespace_declaration
+  - simple_ifs
+  - unit_type
 #################################
 #         ONLY LLVM WORKING
 #################################
-  # - namespace_declaration
-  # - simple_cffi
-  # - simple_ifs
-  - constant_simple_declaration
+  - simple_cffi
+  - coercions # (requires `builtin_output_f64` in DVM)
   # - first_class_typing
 #################################
 #         ONLY DVM WORKING
 #################################
-
+  # very funny
 #################################
 #         NOT WORKING
 # this is mainly due to the features not being implemented yet
 #################################
-  # - arithmetic_operators_on_integers
-  # - overloading
-  # - primitive_integers
-  # - function_call
-  # - type_deduction
-  # - function_definition
-  # - let_simple_declaration
-  # - alias_using_declaration
-  # - boolean_operators
-  # - coercions # @TODO: #2182
-  # - variable_simple_declaration
-  # - io_builtins
-  # - while_loops
-  # - primitive_booleans
-  # - class_declaration
-  # - simple_chars
-  # - simple_strings
+  # - arithmetic_operators_on_integers (requires exponentiation)
+  # - overloading (requires operator names, and, in one case, string `==` comparison)
+  # - primitive_integers (requires byte type)
+  # - type_deduction (requires deduction for fields with initializers)
+  # - function_definition (requires static variables in functions)
+  # - let_simple_declaration (requires proper shadowing handling)
+  # - alias_using_declaration (requires linked scopes for functions)
+  # - boolean_operators (requires short-circuit evaluation)
+  # - variable_simple_declaration (requires i128 and u128, also a VM bugfix)
+  # - io_builtins (requires format strings and a `print` function)
+  # - while_loops (requires break statements, DVM cannot perform 100M loop iters in one second)
+  # - primitive_booleans (requires xor)
+  # - class_declaration (requires DVM backend determinism)
+  # - simple_chars (requires strings in DVM, and -(char, u8) operator — reconsider adding it.)
+  # - simple_strings (requires string access operator and format strings)

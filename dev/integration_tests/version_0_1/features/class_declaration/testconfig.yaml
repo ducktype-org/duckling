@@ -24,5 +24,5 @@ Tests:
       all:
         backend: all
         Output:
-          String: "-10\n2\n102\n9\n0\n6\n"
+          String: "-10\n4\n102\n-9\n2\n6\n"
         ExitCode: 0

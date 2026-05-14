@@ -20,8 +20,8 @@ Tests:
           String: "10\n9\n13\n92\n39\n34\n1\n2\n32\n3\n4\n"
         ExitCode: 0
 
-  chars_borrowed_test:
-    Description: Test taken straight from compiler tests directory.
+  chars_interactive_test:
+    Description: Test taken straight from compiler tests directory, includes user input.
     Cases:
       all:
         backend: all

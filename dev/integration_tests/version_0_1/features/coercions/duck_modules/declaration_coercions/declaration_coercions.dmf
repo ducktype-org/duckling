@@ -10,7 +10,7 @@ var gvZero: i64 = 0;
 var gvOne: i64 = 1;
 var gvMOne: i64 = -1;
 
-fun main() -> i32 = {
+fun main() -> i64 = {
     const lcZero: i64 = 0;
     const lcOne: i64 = 1;
     const lcMOne: i64 = -1;
