@@ -1050,8 +1050,24 @@ namespace vm::persistent::detail {
 		 * @note requires that the root cannot contain each other
 		 */
 		NodeID lazyMergeTwoNodes(NodeID root_1, NodeID root_2) {
-			if (!root_1) return root_2;
-			if (!root_2) return root_1;
+			auto reduce = [&](NodeID node) -> NodeID {
+				if (!node) return node;
+				while (true) {
+					if_opt_some(child_entries.atRightOpt(node), children) {
+						if (children.right_child && children.left_child) return node;
+
+						node = children.right_child != EMPTY ? children.right_child
+						                                     : children.left_child;
+						continue;
+					}
+
+					CORE_ASSERT(leaf_entries.atRightOpt(node).has_value(), "we should be in leaf");
+					return node;
+				}
+			};
+
+			if (!root_1) return reduce(root_2);
+			if (!root_2) return reduce(root_1);
 
 			auto pos_1 = getPos(root_1);
 			auto pos_2 = getPos(root_2);
