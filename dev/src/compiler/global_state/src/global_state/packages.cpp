@@ -1,42 +1,50 @@
 #include "packages.hpp"
 
+#include <frontend/module_tree/functors.hpp>
+
 #include <base/collections/optional.hpp>
+#include <base/except/exceptions.hpp>
 
 namespace global_state {
 
+	using compiler::frontend::packages::PackageInfo;
+
 	namespace {
 		std::vector<PackageInfo> packages;
-		// Tracks whether a main package has been registered already
-		base::Optional<Ref<PackageInfo>> main_package{};
 	}
 
 	const std::vector<PackageInfo>& getPackages() { return packages; }
 
-	const PackageInfo& getMainPackage() {
-		CORE_ASSERT(
-			!main_package.empty(), "No packages have been registered, main package is missing!"
-		);
-		return *main_package.value().get();
+	base::CRef<PackageInfo> getPackageRef(base::StrID package_id) {
+		for (const auto& pkg: packages)
+			if (pkg.getPackageID() == package_id) return &pkg;
+		CORE_PANIC("Package with ID ", package_id, " not found in global state!");
+		CORE_UNREACHABLE();
+	}
+
+	base::Optional<base::CRef<PackageInfo>> getPackageRefOpt(base::StrID package_id) {
+		for (const auto& pkg: packages)
+			if (pkg.getPackageID() == package_id) return &pkg;
+		return {};
 	}
 
 	namespace setters {
+		void addPackage(const PackageInfo& package_info) { packages.push_back(package_info); }
+
 		void addPackage(compiler::frontend::ModuleID root_module) {
-			packages.push_back({ root_module });
+			packages.emplace_back(
+				root_module,
+				base::StrID("not_supported"),
+				std::vector<base::StrID>{},
+				std::vector<compiler::frontend::packages::PackageDependencyInfo>{}
+			);
 		}
 
 		void removePackage(compiler::frontend::ModuleID root_module) {
-			if_opt_some(main_package, main_pkg) {
-				if (main_pkg->root_module == root_module) main_package.reset();
-			}
 			std::erase_if(packages, [&](const PackageInfo& pkg) {
-				return pkg.root_module == root_module;
+				return pkg.getRootModule().illegalAccess().getID() == root_module;
 			});
 		}
-
-		void addMainPackage(compiler::frontend::ModuleID root_module) {
-			CORE_ASSERT(main_package.empty(), "Main package has already been added!");
-			packages.insert(packages.begin(), { root_module });
-			main_package.emplace(&packages.front());
-		}
 	}
-}
+
+}  // namespace global_state
