@@ -3,6 +3,7 @@
 
 #include <helios/symbols/symbol_id.hpp>
 #include <helios/tsh/abstract_type.hpp>
+#include <helios/tsh/types.hpp>
 
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_result.hpp>
@@ -54,4 +55,25 @@ namespace compiler::helios {
 	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(QueryClassSymbolData, SymID, CRef<QueryClassSymbolData_Result>, ({}))
+
+	/**
+	 * @brief Struct returned by the `QueryTupleTypeData` query.
+	 */
+	struct TupleTypeData {
+		/**
+		 * @briefTuple's generated fields.
+		 */
+		std::vector<SymID> members;
+	};
+
+	using QueryTupleTypeData_Result = query::QResult<TupleTypeData>;
+
+	/**
+	 * @brief Query all the information about a class definition.
+	 * Panics if the given `SymID` is not a class.
+	 * More information on `ClassSymbolData` in its definition.
+	 *
+	 * \query_thread_safe_if_cache
+	 */
+	DECLARE_QUERY(QueryTupleTypeData, tsh::TupleAbstractType, CRef<QueryTupleTypeData_Result>, ({}))
 }
