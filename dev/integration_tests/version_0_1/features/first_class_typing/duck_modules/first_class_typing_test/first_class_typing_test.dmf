@@ -1,46 +1,66 @@
-# Test first-class typing basics
-# Focus: type aliases and typed function signatures
+# Test types as first-class citizens
+# Focus: type aliases and functions taking and returning types
 
 # Note: Per docs, type aliases use const (types are values)
 # However, alias can be used for symbol aliasing
 
-class Vector2 {
-    x: i64 = 0;
-    y: i64 = 0;
+const my_i64 = i64;
+const another_i64 = i64;
+
+class A {
+	var a: i64;
+	fun foo() = {
+		builtin_output_string("A");
+		builtin_output_i64(a);
+	}
 }
 
-# Function signatures with explicit types
-fun addVectors(a: Vector2, b: Vector2) -> Vector2 = Vector2(a.x + b.x, a.y + b.y);
+class B {
+	var b: i64 = 1;
+	fun foo() = {
+		builtin_output_string("B");
+		builtin_output_i64(b);
+	}
+}
 
-fun scaleVector(v: Vector2, s: i64) -> Vector2 = Vector2(v.x * s, v.y * s);
+class C {
+	var c: i64;
+	fun foo() = {
+		builtin_output_string("C");
+		builtin_output_i64(c);
+	}
+}
 
-fun vectorLength(v: Vector2) -> i64 = v.x * v.x + v.y * v.y;
+fun foo(n: i64) -> type = {
+	if (n % 3 == 0) {
+		return A;
+	} else if (n % 3 == 1) {
+		return B;
+	} else {
+		return C;
+	}
+}
+
+fun make_reverse_tuple(t1: type, t2: type) -> type = (t2, t1);
 
 fun main() -> i64 = {
-    # Test typed class construction
-    var v1: Vector2 = Vector2(3, 4);
-    var v2: Vector2 = Vector2(1, 2);
+	var a: my_i64 = 1;
+	builtin_output_i64(a);  # 1
 
-    # Test typed function calls
-    var v3 = addVectors(v1, v2);
-    builtin_output_i64(v3.x);           # 4
-    builtin_output_i64(v3.y);           # 6
+	const b = my_i64 == another_i64;
+	builtin_output_i64(b);  # 1
 
-    # Test function returning typed class
-    var v4 = scaleVector(v1, 2);
-    builtin_output_i64(v4.x);           # 6
-    builtin_output_i64(v4.y);           # 8
+	var x: if false then A else B;
+	x.foo();  # B1
 
-    # Test function with typed parameter and return
-    builtin_output_i64(vectorLength(v1)); # 25
+	var y: foo(6);
+	y.foo();  # A0
 
-    # Test type declarations for primitives
-    var a: i64 = 100;
-    var b: i32 = i32(50);
-    var c: u64 = 200u64;
-    builtin_output_i64(a);              # 100
-    builtin_output_i64(i64(b));         # 50
-    builtin_output_i64(i64(c));         # 200
+	var z = foo(8)(8);  # Constructor of type C
+	z.foo();  # C8
+
+	var tup: make_reverse_tuple(i64, bool) = (true, 42);
+	builtin_output_string(tup.toString());  # (true, 42);
 
     return 0;
 }

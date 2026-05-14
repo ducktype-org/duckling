@@ -23,7 +23,7 @@ compare_runs_script: "@{dev_dir}/integration_tests/compiler/compilation/scripts/
 compile_dvm_backend_deterministically_cmd: "if [ '@{enable_conc_deterministic_tests}' = 'true' ]; then python3 @{compile_determinism_script} --duckc-path @{duckc_path} --module-name @{Name} --duckc-worker-count @{duckc_worker_count} --compile-options='@{compile_dvm_options}' --backend dvm; else true; fi"
 compile_llvm_backend_deterministically_cmd: "if [ '@{enable_conc_deterministic_tests}' = 'true' ]; then python3 @{compile_determinism_script} --duckc-path @{duckc_path} --module-name @{Name} --duckc-worker-count @{duckc_worker_count} --compile-options='@{compile_llvm_options}' --backend llvm; else true; fi"
 
-compile_dvm_backend_cmd:  "@{compile_dvm_backend_deterministically_cmd} && @{duckc_path} compile_package duck_modules/@{Name} -w @{duckc_worker_count} -a build -n package_@{Name} @{compile_dvm_options} --dvm-backend"
+compile_dvm_backend_cmd: "@{compile_dvm_backend_deterministically_cmd} && @{duckc_path} compile_package duck_modules/@{Name} -w @{duckc_worker_count} -a build -n package_@{Name} @{compile_dvm_options} --dvm-backend"
 compile_llvm_backend_cmd: "@{compile_llvm_backend_deterministically_cmd} && @{duckc_path} compile_package duck_modules/@{Name} -w @{duckc_worker_count} -a build -n package_@{Name} @{compile_llvm_options}"
 
 # "compile only" commands used by the all backend (determinism checks run separately before these).
@@ -67,9 +67,9 @@ Run: "
   esac;"
 
 SubDirs:
-#################################
-#         WORKING FULLY
-#################################
+  #################################
+  #         WORKING FULLY
+  #################################
   - comparison_operators_on_integers
   - constants
   - ffi
@@ -78,20 +78,19 @@ SubDirs:
   - namespace_declaration
   - simple_ifs
   - unit_type
-#################################
-#         ONLY LLVM WORKING
-#################################
+  #################################
+  #         ONLY LLVM WORKING
+  #################################
   - simple_cffi
   - coercions # (requires `builtin_output_f64` in DVM)
-  # - first_class_typing
-#################################
-#         ONLY DVM WORKING
-#################################
+  #################################
+  #         ONLY DVM WORKING
+  #################################
   # very funny
-#################################
-#         NOT WORKING
-# this is mainly due to the features not being implemented yet
-#################################
+  #################################
+  #         NOT WORKING
+  # this is mainly due to the features not being implemented yet
+  #################################
   # - arithmetic_operators_on_integers (requires exponentiation)
   # - overloading (requires operator names, and, in one case, string `==` comparison)
   # - primitive_integers (requires byte type)
@@ -107,3 +106,4 @@ SubDirs:
   # - class_declaration (requires DVM backend determinism)
   # - simple_chars (requires strings in DVM, and -(char, u8) operator — reconsider adding it.)
   # - simple_strings (requires string access operator and format strings)
+  # - first_class_typing (requires better constructor/method resolution, and proper tuple handling in compile-time)
