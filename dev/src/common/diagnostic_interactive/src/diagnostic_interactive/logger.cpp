@@ -43,6 +43,13 @@ namespace dia_int {
 		return count;
 	}
 
+	u64 Logger::warningCount() const {
+		u64 count = 0;
+		for (const auto& diag: diagnostics)
+			if (diag->main_message.metadata.type == "warning") count++;
+		return count;
+	}
+
 	bool Logger::hasErrors() const { return has_error; }
 
 	bool Logger::good() const { return not hasErrors(); }

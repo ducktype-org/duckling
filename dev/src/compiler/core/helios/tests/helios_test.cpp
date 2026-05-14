@@ -15,9 +15,9 @@
 #include <helios/mangler/mangler.hpp>
 #include <helios/queries/function_queries.hpp>
 #include <helios/queries/queries.hpp>
-#include <helios/symbols/query_class_symbol_data.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
+#include <helios/symbols/query_type_symbol_data.hpp>
 #include <helios/symbols/symbol_abi.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
@@ -65,6 +65,7 @@ public:
 		TESTER_ADD_TEST(testClassSymbolData);
 		TESTER_ADD_TEST(testClassInteractions);
 		TESTER_ADD_TEST(testTypeInstanceInterface);
+		TESTER_ADD_TEST(testTupleInterface);
 		TESTER_ADD_TEST(testHoutVariables);
 		TESTER_ADD_TEST(testReferences);
 		TESTER_ADD_TEST(testBoxes);
@@ -559,6 +560,60 @@ private:
 			CRef<LookupResult> empty_result
 				= &h_interface.lookup(ctx, base::StrID("non_existent_symbol"))->valueOrPanic();
 			ASSERT_TRUE(empty_result->isEmpty());
+		});
+	}
+
+	void testTupleInterface() {
+		auto [module_id, root_scope] = getModule(fs::File(path("test_modules/tuples")));
+
+		const auto tup = getChain("tup", root_scope).back();
+		const auto tup_abstract_type
+			= query::entryPoint<compiler::helios::QueryTypeOfSymbol>(tup)->valueOrThrow().getType();
+
+		const auto h_interface = compiler::helios::HInterface::ofTypeInstance(tup_abstract_type);
+
+		auto i32 = st(getIntegralTypeNoContext(32, Signed));
+		auto f32 = st(getFloatTypeNoContext(32));
+		auto str = st(compiler::tsh::getStringType());
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			using compiler::helios::LookupResult;
+
+			CRef<LookupResult> first_result
+				= &h_interface.lookup(ctx, base::StrID("_1"))->valueOrPanic();
+			ASSERT_TRUE(first_result->isSingle());
+			auto first_symbol = first_result->leaves.at(0);
+			ASSERT_EQUAL(kind(first_symbol), compiler::helios::SymbolKind::Field);
+			ASSERT_EQUAL(
+				ctx.query<compiler::helios::QueryTypeOfSymbol>(first_symbol)->valueOrThrow(), i32
+			);
+
+			CRef<LookupResult> second_result
+				= &h_interface.lookup(ctx, base::StrID("_2"))->valueOrPanic();
+			ASSERT_TRUE(second_result->isSingle());
+			auto second_symbol = second_result->leaves.at(0);
+			ASSERT_EQUAL(kind(second_symbol), compiler::helios::SymbolKind::Field);
+			ASSERT_EQUAL(
+				ctx.query<compiler::helios::QueryTypeOfSymbol>(second_symbol)->valueOrThrow(), f32
+			);
+
+			CRef<LookupResult> third_result
+				= &h_interface.lookup(ctx, base::StrID("_3"))->valueOrPanic();
+			ASSERT_TRUE(third_result->isSingle());
+			auto third_symbol = third_result->leaves.at(0);
+			ASSERT_EQUAL(kind(third_symbol), compiler::helios::SymbolKind::Field);
+			ASSERT_EQUAL(
+				ctx.query<compiler::helios::QueryTypeOfSymbol>(third_symbol)->valueOrThrow(), str
+			);
+
+			CRef<LookupResult> empty_result
+				= &h_interface.lookup(ctx, base::StrID("_0"))->valueOrPanic();
+			ASSERT_TRUE(empty_result->isEmpty());
+
+			const auto& hout
+				= ctx.query<compiler::helios::QueryModuleHOUT>(module_id)->valueOrThrow();
+			// Tuple ctor
+			assertEqual(1, hout.functions.size(), "Expected one function to be present");
 		});
 	}
 
@@ -1994,9 +2049,40 @@ private:
 		auto& hout
 			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
 
+		auto i32_type = getIntegralTypeNoContext(32, Signed);
 		auto i64_type = getIntegralTypeNoContext(64, Signed);
 
 		for (auto& function: hout.functions) {
+			if (function->declaration->original_name == base::StrID("tuples")) {
+				ASSERT_EQUAL(
+					query::entryPoint<compiler::tsh::QueryTupleType>({ { st(i32_type),
+				                                                         st(i64_type) } }),
+					function->declaration->return_type.getType()
+				);
+
+				auto ret_stmt = function->body->statements.back().ref();
+				auto ret_stmt_casted
+					= dynamic_cast<const compiler::helios::code::ReturnStmt*>(&*ret_stmt);
+				assertTrue(ret_stmt_casted != nullptr, "Return statement expected.");
+
+				auto ret_type = ret_stmt_casted->value->expression_type.getType();
+				ASSERT_EQUAL(function->declaration->return_type.getType(), ret_type);
+
+				auto tuple_expr = dynamic_cast<const compiler::helios::code::TupleExpr*>(
+					ret_stmt_casted->value.get()
+				);
+				assertTrue(tuple_expr != nullptr, "Tuple expression expected.");
+
+				int casts_found = 0;
+				for (const auto& el: tuple_expr->elements) {
+					auto cast_expr = dynamic_cast<const compiler::helios::code::CastExpr*>(&*el);
+					if (cast_expr != nullptr) casts_found++;
+				}
+				assertEqual(1, casts_found, "Expected one cast to happen in tuple coercion.");
+
+				continue;
+			}
+
 			ASSERT_EQUAL(i64_type, function->declaration->return_type.getType());
 
 			if (function->declaration->original_name == base::StrID("big_example")) {

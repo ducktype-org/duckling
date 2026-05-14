@@ -4,15 +4,16 @@
 #include "module_tree.hpp"
 
 #include <frontend/module_tree/access.hpp>
+#include <global_state/packages.hpp>
 
+#include <base/collections/optional.hpp>
+#include <base/str/str_utils.hpp>
 #include <base/types/bit256.hpp>
 #include <base/types/ints.hpp>
 
+#include <query_framework/context/context.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 #include <string_id/string_id.hpp>
-
-#include <cstddef>
-#include <iterator>
 
 namespace compiler::frontend {
 
@@ -26,6 +27,7 @@ namespace compiler::frontend {
 		// first step (in priority):
 		// * check children
 		// * check ancestors
+		// * check package dependencies
 
 		base::Optional<ModuleID> current_module;
 
@@ -40,6 +42,23 @@ namespace compiler::frontend {
 					break;
 				}
 				ancestor = ctx.query<QueryParentModule>(ancestor.value());
+			}
+		}
+
+		if (not current_module.has_value()) {
+			// Look up the dependency by alias in the current module's package.
+			// Uses getPackageDependencyByAlias so we register a dependency only on this specific
+			// (package, alias) edge instead of on every dependency of the package.
+			auto owner_pkg_id  = getModuleRef(from)->getPackage().unlock(ctx).getID();
+			auto owner_pkg_opt = global_state::getPackageRefOpt(owner_pkg_id);
+			if (not owner_pkg_opt.has_value()) return {};
+
+			auto dep_locked_opt
+				= owner_pkg_opt.value()->getPackageDependencyByAlias(path.at(0)).unlock(ctx);
+			if_opt_some(dep_locked_opt, dep_locked) {
+				auto dep_pkg_id       = dep_locked.unlock(ctx).getID();
+				auto dep_package_info = global_state::getPackageRef(dep_pkg_id);
+				current_module        = dep_package_info->getRootModule().unlock(ctx).getID();
 			}
 		}
 

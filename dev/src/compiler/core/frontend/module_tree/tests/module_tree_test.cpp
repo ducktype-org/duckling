@@ -2,6 +2,7 @@
 #include <frontend/module_tree/module_flags/module_flags.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
+#include <frontend/packages/access.hpp>
 
 #include <base/config/build_type.hpp>
 #include <base/except/exceptions.hpp>
@@ -80,7 +81,7 @@ private:
 		auto temp_file            = fs::FileManager::createRandomVirtualFile("fn main() {}\n");
 		auto dummy_module_builder = ModuleTreeBuilder::create();
 		dummy_module_builder->setName(base::StrID("dummy"));
-		dummy_module_builder->setPackageID("dummy_package");
+		dummy_module_builder->setPackageID(base::StrID("dummy_package"));
 		dummy_module_builder->setMainSourceFile(temp_file);
 		auto dummy_module = dummy_module_builder->finalize();
 		auto module_id    = dummy_module->getModuleID();
@@ -93,7 +94,7 @@ private:
 		// Test with no name (bad name)
 		auto temp_file2      = fs::FileManager::createRandomVirtualFile("fn main() {}\n");
 		auto no_name_builder = ModuleTreeBuilder::create();
-		no_name_builder->setPackageID("no_name_package");
+		no_name_builder->setPackageID(base::StrID("no_name_package"));
 		// do NOT set name
 		no_name_builder->setMainSourceFile(temp_file2);
 		auto        no_name_module = no_name_builder->finalize();
@@ -111,7 +112,8 @@ private:
 
 	void parseModule() {
 		auto pth = fs::File(path("test_module"));
-		auto mt  = ModuleTreeBuilder::create(pth, "test_package_id", test_regex, test_regex);
+		auto mt
+			= ModuleTreeBuilder::create(pth, base::StrID("test_package_id"), test_regex, test_regex);
 
 		ASSERT_TRUE(mt->hasMainSourceFile());
 		ASSERT_EQUAL(2, mt->getSubmodules().illegalAccess().size());
@@ -162,7 +164,7 @@ private:
 
 	void testOtherFeatures() {
 		auto pth = fs::File(path("test_module"));
-		auto mt  = ModuleTreeBuilder::create(pth, "another_package_id");
+		auto mt  = ModuleTreeBuilder::create(pth, base::StrID("another_package_id"));
 
 		ASSERT_EQUAL("test_module", mt->getName());
 		ASSERT_TRUE(mt->hasMainSourceFile());
@@ -247,8 +249,9 @@ private:
 	void testParseDirectoryLikeFsTree() {
 		// This test is adapted from the old FsTree parseDirectory test.
 		const auto root = fs::File(path("test_directory_tree"));
-		auto       mt
-			= ModuleTreeBuilder::create(root, "test_package_id23423423", test_regex, test_regex);
+		auto       mt   = ModuleTreeBuilder::create(
+            root, base::StrID("test_package_id23423423"), test_regex, test_regex
+        );
 
 		// Only files with valid names/extensions are included as source or other files.
 		// Check that only the correct files and directories are present as submodules or files.
@@ -309,7 +312,7 @@ private:
 		auto file3    = sub_dir2.createSubFile("File2 content", "subDir2.dmf");
 
 		// Create ModuleTree from the virtual root directory
-		auto mt = ModuleTreeBuilder::create(root, "virtual_package_id1312");
+		auto mt = ModuleTreeBuilder::create(root, base::StrID("virtual_package_id1312"));
 
 		// Test root module name
 		ASSERT_EQUAL(root.name(), mt->getName().strView());
@@ -358,7 +361,7 @@ private:
 		auto file4    = root_dir.createSubFile("other2 content", "other2.md");
 
 		// Build initial module tree
-		auto mt = ModuleTreeBuilder::create(root_dir, "modifier_test_package_id65");
+		auto mt = ModuleTreeBuilder::create(root_dir, base::StrID("modifier_test_package_id65"));
 		// Test addSourceFile
 
 
@@ -392,7 +395,8 @@ private:
 
 		// Test addSubmodule and setParent/removeParent
 		auto sub_dir = root_dir.createSubDirectory("submod");
-		auto sub_mod = ModuleTreeBuilder::create(sub_dir, "modifier_test_package_id65");
+		auto sub_mod
+			= ModuleTreeBuilder::create(sub_dir, base::StrID("modifier_test_package_id65"));
 		ModuleTreeModifier::addSubmodule(mt, sub_mod);
 		ASSERT_TRUE(hasSubmodule(mt->getSubmodules().illegalAccess(), sub_mod->getName()));
 		// Remove parent
@@ -418,8 +422,9 @@ private:
 			// Use unique variable names to avoid shadowing
 			auto removable_sub_dir   = root_dir.createSubDirectory("removable");
 			auto removable_main_file = removable_sub_dir.createSubFile("main", "removable.dmf");
-			auto removable_sub_mod
-				= ModuleTreeBuilder::create(removable_sub_dir, "modifier_test_package_id65");
+			auto removable_sub_mod   = ModuleTreeBuilder::create(
+                removable_sub_dir, base::StrID("modifier_test_package_id65")
+            );
 
 			// Add as submodule
 			ModuleTreeModifier::addSubmodule(mt, removable_sub_mod);
@@ -445,23 +450,23 @@ private:
 		{
 			// Test changePackageID
 			root_dir      = fs::FileManager::createRandomVirtualDirectory();
-			auto root_mod = ModuleTreeBuilder::create(root_dir, "original_package_id");
+			auto root_mod = ModuleTreeBuilder::create(root_dir, base::StrID("original_package_id"));
 			sub_dir       = root_dir.createSubDirectory("submod");
-			sub_mod       = ModuleTreeBuilder::create(sub_dir, "original_package_id");
+			sub_mod       = ModuleTreeBuilder::create(sub_dir, base::StrID("original_package_id"));
 			ModuleTreeModifier::addSubmodule(root_mod, sub_mod);
 
 			// Attempt to change package ID for non-root module (should throw)
 			bool exception_thrown = false;
 			try {
-				ModuleTreeModifier::changePackageID(sub_mod, "new_package_id");
+				ModuleTreeModifier::changePackageID(sub_mod, base::StrID("new_package_id"));
 			} catch (const std::exception&) { exception_thrown = true; }
 			ASSERT_TRUE(exception_thrown);
 
 			// std::cout << root_mod->getParentModule().value()->getName().strView() << '\n';
 			//  Change package ID for root module
-			ModuleTreeModifier::changePackageID(root_mod, "new_package_id");
-			ASSERT_EQUAL("new_package_id", root_mod->getPackageID().strView());
-			ASSERT_EQUAL("new_package_id", sub_mod->getPackageID().strView());
+			ModuleTreeModifier::changePackageID(root_mod, base::StrID("new_package_id"));
+			ASSERT_EQUAL("new_package_id", root_mod->getPackage().illegalAccess().getID().strView());
+			ASSERT_EQUAL("new_package_id", sub_mod->getPackage().illegalAccess().getID().strView());
 		}
 	}
 
@@ -470,7 +475,7 @@ private:
 
 		auto root_builder = ModuleTreeBuilder::create();
 		root_builder->setName(base::StrID("removal_root"));
-		root_builder->setPackageID("removal_pkg");
+		root_builder->setPackageID(base::StrID("removal_pkg"));
 		auto root_main = fs::FileManager::createRandomVirtualFile("fn root() {}");
 		cleanup_files.push_back(root_main);
 		root_builder->setMainSourceFile(root_main);
@@ -478,7 +483,7 @@ private:
 
 		auto child_builder = ModuleTreeBuilder::create();
 		child_builder->setName(base::StrID("removal_child"));
-		child_builder->setPackageID("removal_pkg");
+		child_builder->setPackageID(base::StrID("removal_pkg"));
 		auto child_main = fs::FileManager::createRandomVirtualFile("fn child() {}");
 		cleanup_files.push_back(child_main);
 		child_builder->setMainSourceFile(child_main);
@@ -486,7 +491,7 @@ private:
 
 		auto grand_child_builder = ModuleTreeBuilder::create();
 		grand_child_builder->setName(base::StrID("removal_grand"));
-		grand_child_builder->setPackageID("removal_pkg");
+		grand_child_builder->setPackageID(base::StrID("removal_pkg"));
 		auto grand_main = fs::FileManager::createRandomVirtualFile("fn grand() {}");
 		cleanup_files.push_back(grand_main);
 		grand_child_builder->setMainSourceFile(grand_main);
@@ -530,7 +535,7 @@ private:
 
 		auto root_builder = ModuleTreeBuilder::create();
 		root_builder->setName(base::StrID("recursive_root"));
-		root_builder->setPackageID("recursive_pkg");
+		root_builder->setPackageID(base::StrID("recursive_pkg"));
 		auto root_main = fs::FileManager::createRandomVirtualFile("fn root() {}");
 		cleanup_files.push_back(root_main);
 		root_builder->setMainSourceFile(root_main);
@@ -538,7 +543,7 @@ private:
 
 		auto child_builder = ModuleTreeBuilder::create();
 		child_builder->setName(base::StrID("recursive_child"));
-		child_builder->setPackageID("recursive_pkg");
+		child_builder->setPackageID(base::StrID("recursive_pkg"));
 		auto child_main = fs::FileManager::createRandomVirtualFile("fn child() {}");
 		cleanup_files.push_back(child_main);
 		child_builder->setMainSourceFile(child_main);
@@ -546,7 +551,7 @@ private:
 
 		auto grand_child_builder = ModuleTreeBuilder::create();
 		grand_child_builder->setName(base::StrID("recursive_grand"));
-		grand_child_builder->setPackageID("recursive_pkg");
+		grand_child_builder->setPackageID(base::StrID("recursive_pkg"));
 		auto grand_main = fs::FileManager::createRandomVirtualFile("fn grand() {}");
 		cleanup_files.push_back(grand_main);
 		grand_child_builder->setMainSourceFile(grand_main);
@@ -584,7 +589,7 @@ private:
 
 		// Set name
 		builder->setName(base::StrID("manual_mod"));
-		builder->setPackageID("manual_package_id456");
+		builder->setPackageID(base::StrID("manual_package_id456"));
 
 		// Create virtual files
 		auto root_dir   = fs::FileManager::createRandomVirtualDirectory();
@@ -599,7 +604,7 @@ private:
 		// Add submodule
 		auto sub_dir     = root_dir.createSubDirectory("subdir");
 		auto sub_builder = ModuleTreeBuilder::create();
-		sub_builder->setPackageID("manual_package_id456");
+		sub_builder->setPackageID(base::StrID("manual_package_id456"));
 		sub_builder->setName(base::StrID("subdir"));
 		auto sub_main = sub_dir.createSubFile("submain", "subdir.dmf");
 		sub_builder->setMainSourceFile(sub_main);
@@ -616,7 +621,7 @@ private:
 		// Test setParent
 		auto parent_builder = ModuleTreeBuilder::create();
 		parent_builder->setName(base::StrID("parent_mod"));
-		parent_builder->setPackageID("manual_package_id456");
+		parent_builder->setPackageID(base::StrID("manual_package_id456"));
 		auto parent_file = root_dir.createSubFile("parent", "parent_mod.dmf");
 		parent_builder->setMainSourceFile(parent_file);
 		auto parent_mod = parent_builder->finalize();
@@ -652,8 +657,8 @@ private:
 		auto md2 = root.createSubDirectory("md2");
 		(void) md2.createSubFile("main2", "md2.dmf");
 
-		auto mt1 = ModuleTreeBuilder::create(md1, "md1_package_id");
-		auto mt2 = ModuleTreeBuilder::create(md2, "md1_package_id");
+		auto mt1 = ModuleTreeBuilder::create(md1, base::StrID("md1_package_id"));
+		auto mt2 = ModuleTreeBuilder::create(md2, base::StrID("md1_package_id"));
 
 		ModuleTreeModifier::setParent(mt1, mt2);
 		bool exception_thrown = false;
@@ -677,8 +682,8 @@ private:
 		(void) sd1.createSubFile("subsub main", "subsub.dmf");
 
 		// Build two module trees from the same virtual directory and compare component hashes
-		auto mt1 = ModuleTreeBuilder::create(root, "root_package_id11e3");
-		auto mt2 = ModuleTreeBuilder::create(root, "root_package_id11e4");
+		auto mt1 = ModuleTreeBuilder::create(root, base::StrID("root_package_id11e3"));
+		auto mt2 = ModuleTreeBuilder::create(root, base::StrID("root_package_id11e4"));
 
 #if defined(BUILD_TYPE_DEV)
 		ASSERT_TRUE(
