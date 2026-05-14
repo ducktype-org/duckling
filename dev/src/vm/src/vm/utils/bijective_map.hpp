@@ -40,7 +40,7 @@ namespace vm::persistent::detail {
 			return left_right.size();
 		}
 
-		std::pair<bool, R> emplaceByLeft(L left, R rght) {
+		std::pair<bool, R> emplaceByLeft(const L& left, const R& rght) {
 			if (auto it = left_right.find(left); it != left_right.end())
 				return { false, it->second };
 
@@ -53,7 +53,7 @@ namespace vm::persistent::detail {
 			return { true, left_right[left] };
 		}
 
-		std::pair<bool, L> emplaceByRight(L left, R rght) {
+		std::pair<bool, L> emplaceByRight(const L& left, const R& rght) {
 			if (auto it = right_left.find(rght); it != right_left.end())
 				return { false, it->second };
 
@@ -66,7 +66,7 @@ namespace vm::persistent::detail {
 			return { true, right_left[rght] };
 		}
 
-		void pruneByRight(std::unordered_set<R> desired) {
+		void pruneByRight(const std::unordered_set<R>& desired) {
 			std::vector<std::pair<L, R>> to_erase;
 
 			for (auto& [l, r]: left_right)
@@ -78,7 +78,7 @@ namespace vm::persistent::detail {
 			}
 		}
 
-		void pruneByLeft(std::unordered_set<L> desired) {
+		void pruneByLeft(const std::unordered_set<L>& desired) {
 			std::vector<std::pair<L, R>> to_erase;
 
 			for (auto& [l, r]: left_right)
