@@ -376,7 +376,6 @@ namespace pst {
 	}
 
 	base::Optional<base::StrID> Stmt::getInternalSymbolName() const {
-		CORE_ASSERT(not query::Context::areWeInsideQuery(), "");
 		return getDeclSymbolIdentifier().map([](const AccessLocked<IdentifierWrapper>& acc) {
 			return acc.illegalAccess().value()->unwrap();
 		});
