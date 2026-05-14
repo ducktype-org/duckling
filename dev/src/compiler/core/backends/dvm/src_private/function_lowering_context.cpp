@@ -13,6 +13,7 @@
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
+#include <vm/bytecode/type_of_data.hpp>
 
 #include <ranges>
 
@@ -38,10 +39,11 @@ FunctionLoweringContext::FunctionLoweringContext(
 	base::Optional<debug_info::FunctionBuilder> fun_di_builder_opt
 ):
 	  program_context(program_context),
-	  function_return_type(program_context.lowerAndKeepTslType(return_type)),
+	  function_return_type(program_context.lowerAndKeepTslType(return_type)
+                               .map([](CRef<vm::code::TypeOfData> ref) { return *ref; })),
 	  function_parameter_types(
 		  parameter_types | std::views::transform([&](auto&& layout) {
-			  return program_context.lowerAndKeepTslType(layout);
+			  return **program_context.lowerAndKeepTslType(layout);
 		  })
 		  | std::ranges::to<std::vector>()
 	  ),
@@ -214,7 +216,7 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 					current_place = current_place.withAccessKind(DVMPlace::AccessKind::Pointer);
 				} else {
 					vm::code::TypeOfData vm_loaded_type
-						= program_context.lowerAndKeepTslType(current_layout);
+						= **program_context.lowerAndKeepTslType(current_layout);
 
 					DVMPlace loaded_val_tmp = pushTempLocal(vm_loaded_type, "deref_tmp");
 
@@ -239,7 +241,7 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 				const auto& class_layout
 					= std::get<tsl::ClassTypeLayout>(current_layout->getVariant());
 				const vm::code::TypeOfData& vm_class_type
-					= program_context.lowerAndKeepTslType(current_layout);
+					= **program_context.lowerAndKeepTslType(current_layout);
 
 				// Prepare the pointer to field type.
 				const usize field_index
@@ -247,7 +249,7 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 				CRef<tsl::TypeLayout> field_layout
 					= class_layout.getFieldLayoutOfLayoutIndex(field_index);
 				const vm::code::TypeOfData vm_field_type
-					= program_context.lowerAndKeepTslType(field_layout);
+					= **program_context.lowerAndKeepTslType(field_layout);
 
 				auto vm_field_name = base::strConcat("_", field_index);
 
@@ -283,7 +285,7 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 				// Prepare the pointer to field type.
 				CRef<tsl::TypeLayout>       element_layout = array_layout.getElementLayout();
 				const vm::code::TypeOfData& vm_element_type
-					= program_context.lowerAndKeepTslType(element_layout);
+					= **program_context.lowerAndKeepTslType(element_layout);
 				const vm::code::TypeOfData& ptr_to_element_type
 					= program_context.getOrInsertPointerType(vm_element_type);
 
@@ -307,7 +309,7 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 DVMValue FunctionLoweringContext::lowerLirValue(const lir::LIRValue& lir_value) {
 	variant_match(lir_value.getVariant()) {
 		variant_case(lir::LIRConstant, value) {
-			auto dvm_type = program_context.lowerAndKeepTslType(value.layout);
+			auto dvm_type = **program_context.lowerAndKeepTslType(value.layout);
 			return { lirConstantToImmediate(value, dvm_type, program_context.isCompTimeLowering()) };
 		}
 		variant_case(lir::LIRPlace, place) {
@@ -319,7 +321,7 @@ DVMValue FunctionLoweringContext::lowerLirValue(const lir::LIRValue& lir_value) 
 			} else {
 				// Otherwise it's indirect. We have to load it from memory into a stack variable.
 				const vm::code::TypeOfData& val_type
-					= program_context.lowerAndKeepTslType(place.layout);
+					= **program_context.lowerAndKeepTslType(place.layout);
 				DVMPlace tmp = pushTempLocal(val_type, "deref_load");
 				pushInstruction(
 					{ vm::code::builders::OpKind::load, tmp.asAnyArgument(), resolved.asArgument() }
@@ -347,14 +349,14 @@ const DVMPlace& FunctionLoweringContext::createLirLocalToDVMMapping(lir::LIRLoca
 		if_opt_some(lir_local->parameter_index, index) {
 			auto var_name = base::StrID(base::strConcat("arg", index));
 			auto var_type = program_context.lowerAndKeepTslType(lir_local->layout);
-			return { var_name, var_type, DVMPlace::AccessKind::Direct };
+			return { var_name, **var_type, DVMPlace::AccessKind::Direct };
 		}
 
 		if (lir_local->special_kind == lir::LIRLocalSpecialKind::ReturnValue)
 			return getFunctionReturnValueLocal();
 
 		auto var_name = base::StrID(base::strConcat("var", lir_local_to_dvm.size()));
-		auto var_type = program_context.lowerAndKeepTslType(lir_local->layout);
+		auto var_type = **program_context.lowerAndKeepTslType(lir_local->layout);
 		return { var_name, var_type, DVMPlace::AccessKind::Direct };
 	}();
 
@@ -405,9 +407,9 @@ vm::code::Function compiler::backend_vm::internal::FunctionLoweringContext::fini
 	for (const auto& param_type: function_parameter_types)
 		function.signature.parameters.emplace_back(vm::code::typeName(param_type));
 	function.signature.result_types = {};
-	// @TODO: #2499 Make lowerAndKeepTslType return an optional and remove the void type from here
-	if (auto type_name = vm::code::typeName(function_return_type); type_name != "void")
-		function.signature.result_types.emplace_back(type_name);
+	if_opt_some(function_return_type, ret_type) {
+		function.signature.result_types.emplace_back(vm::code::typeName(ret_type));
+	}
 	function.body = std::move(function_body);
 
 	if_opt_some(fun_di_builder_opt, builder) { builder.end(); }
@@ -416,15 +418,21 @@ vm::code::Function compiler::backend_vm::internal::FunctionLoweringContext::fini
 }
 
 DVMPlace FunctionLoweringContext::getFunctionReturnValueLocal() {
+	CORE_ASSERT(
+		function_return_type.has_value(),
+		"getFunctionReturnValueLocal() called on a function with no return type"
+	);
+
+	const auto& ret_type = *function_return_type;
 	if (function_name == "main") {
 		CORE_ASSERT(
 			function_return_type
-				== vm::code::TypeOfData{ vm::code::PrimitiveType(base::StrID("i64"), 8) },
+				== vm::code::TypeOfData{ vm::code::PrimitiveType(base::StrID("i64"), Bytes{ 8 }) },
 			"Main function must have i64 return type"
 		);
 	}
 	return { base::StrID("ret0"),
-		     function_return_type,
+		     ret_type,
 		     DVMPlace::AccessKind::Direct,
 		     DVMPlace::SpecialKind::ReturnValue };
 }

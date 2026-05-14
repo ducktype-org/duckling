@@ -8,6 +8,9 @@
 #include <debug_info/debug_info_builder.hpp>
 #include <tsl/type_layout.hpp>
 
+#include <base/str/str_utils.hpp>
+#include <base/types/bits_and_bytes.hpp>
+
 #include <logger/logger.hpp>
 
 #include <vm/bytecode/builtin_types.hpp>
@@ -30,20 +33,22 @@ compiler::backend_vm::internal::ProgramLoweringContext::ProgramLoweringContext(
                             : base::Optional<debug_info::DebugInfoBuilder>{})
 	  ) {}
 
-const vm::code::TypeOfData& ProgramLoweringContext::lowerAndKeepTslType(CRef<tsl::TypeLayout> layout
+base::Optional<CRef<vm::code::TypeOfData>> ProgramLoweringContext::lowerAndKeepTslType(
+	CRef<tsl::TypeLayout> layout
 ) {
 	if (auto maybe_name = type_storage.tsl_type_to_dvm_type_name.atMaybe(layout))
-		return type_storage.dvm_types.at(**maybe_name);
+		return CRef(&type_storage.dvm_types.at(**maybe_name));
 
-	vm::code::TypeOfData dvm_type  = lowerTslTypeInternal(layout);
+	auto maybe_dvm_type = lowerTslTypeInternal(layout);
+	if (!maybe_dvm_type.has_value()) return {};
+
+	vm::code::TypeOfData dvm_type  = *maybe_dvm_type;
 	base::StrID          type_name = vm::code::typeName(dvm_type);
 
-
 	IF_BUILD_TYPE_DEV({
-		auto maybe_dvm_type = type_storage.dvm_types.atMaybe(type_name);
+		auto maybe_type = type_storage.dvm_types.atMaybe(type_name);
 		CORE_ASSERT(
-			!maybe_dvm_type.has_value() || **maybe_dvm_type == dvm_type,
-			"Type mismatch in type lowering"
+			!maybe_type.has_value() || **maybe_type == dvm_type, "Type mismatch in type lowering"
 		);
 	});
 
@@ -60,7 +65,7 @@ const vm::code::TypeOfData& ProgramLoweringContext::lowerAndKeepTslType(CRef<tsl
 		builder.addType(type_name.str(), layout->getSourceType().toString());
 	}
 
-	return type_storage.dvm_types.at(type_name);
+	return CRef(&type_storage.dvm_types.at(type_name));
 }
 
 compiler::backend_vm::LoweredEntitiesSnapshot ProgramLoweringContext::captureLoweredEntitiesSnapshot(
@@ -85,11 +90,19 @@ const vm::code::TypeOfData& ProgramLoweringContext::getOrInsertPointerType(
 	return type_storage.dvm_types.at(pointer_name);
 }
 
-const DVMPlace& ProgramLoweringContext::getLirGlobal(CRef<lir::LIRGlobal> global) const {
-	if (auto maybe_global = global_name_to_dvm.atMaybe(global->mangled_name))
+const DVMPlace& ProgramLoweringContext::getLirGlobal(CRef<lir::LIRGlobal> lir_global) {
+	if (auto maybe_global = global_name_to_dvm.atMaybe(lir_global->mangled_name))
 		return **maybe_global;
-	else
-		CORE_PANIC("LIR global not previously lowered: ", global->mangled_name);
+	else {
+		const vm::code::TypeOfData& global_type = **lowerAndKeepTslType(lir_global->layout);
+
+		global_name_to_dvm.put(
+			lir_global->mangled_name,
+			DVMPlace(lir_global->mangled_name, global_type, DVMPlace::AccessKind::Direct)
+		);
+
+		return global_name_to_dvm.at(lir_global->mangled_name);
+	}
 }
 
 const vm::code::ExternalCFunction& ProgramLoweringContext::getExternCFunction(
@@ -188,14 +201,8 @@ const vm::code::GlobalData& ProgramLoweringContext::lowerAndKeepLirGlobal(
 	if (auto maybe_global = global_name_to_dvm_data.atMaybe(lir_global.mangled_name))
 		return **maybe_global;
 
-	auto global_type = lowerAndKeepTslType(lir_global.layout);
-
-	// Register the global variable itself before inserting ctor/dtor to handle
-	// recursive references.
-	global_name_to_dvm.put(
-		lir_global.mangled_name,
-		DVMPlace(lir_global.mangled_name, global_type, DVMPlace::AccessKind::Direct)
-	);
+	auto& global_type      = **lowerAndKeepTslType(lir_global.layout);
+	auto& dvm_global_place = getLirGlobal(&lir_global);  // Ensure the global is added to the map.
 
 	using vm::code::Identifier;
 
@@ -215,7 +222,7 @@ const vm::code::GlobalData& ProgramLoweringContext::lowerAndKeepLirGlobal(
 			global_type,
 			lir_global.initial_value.value(),
 			mini_ctor_name,
-			global_name_to_dvm.at(lir_global.mangled_name)
+			dvm_global_place
 		);
 		extra_bytecode_functions.push_back(std::move(mini_ctor));
 		ctor_name = Identifier(mini_ctor_name);
@@ -244,12 +251,6 @@ const vm::code::Function& ProgramLoweringContext::lowerAndKeepLirFunction(
 	if (auto maybe_name = lir_function_to_name.atMaybe(lir_function))
 		return dvm_functions_by_name.at(**maybe_name);
 
-	auto func_result_type = lowerAndKeepTslType(lir_function->return_type_layout);
-	std::vector<vm::code::TypeOfData> func_param_types;
-	for (const auto& param_layout: lir_function->parameter_layouts)
-		func_param_types.push_back(lowerAndKeepTslType(param_layout));
-
-
 	base::Optional<debug_info::FunctionBuilder> function_di_builder_opt;
 	if_opt_some(debug_info_builder, builder) {
 		function_di_builder_opt.emplace(builder.beginFunction(
@@ -258,7 +259,6 @@ const vm::code::Function& ProgramLoweringContext::lowerAndKeepLirFunction(
 			lir_function->metadata.position.map(mapDIPosition)
 		));
 	}
-
 
 	auto func_ctx = FunctionLoweringContext{ *this,
 		                                     lir_function->mangled_name,
@@ -299,35 +299,30 @@ void ProgramLoweringContext::insertExternCFunction(const vm::code::ExternalCFunc
 	extern_c_functions.put(extern_func.name.str, extern_func);
 }
 
-vm::code::TypeOfData ProgramLoweringContext::lowerTslTypeInternal(CRef<tsl::TypeLayout> layout) {
+base::Optional<vm::code::TypeOfData> ProgramLoweringContext::lowerTslTypeInternal(
+	CRef<tsl::TypeLayout> layout
+) {
 	variant_match(layout->getVariant()) {
-		variant_case_novalue(tsl::EmptyTypeLayout) {
-			return vm::code::PrimitiveType(base::StrID("void"), 1);
-		}
+		variant_case_novalue(tsl::EmptyTypeLayout) { return {}; }
 		variant_case_novalue(tsl::IntegralTypeLayout) {
-			auto bits = usize(layout->getSize());
-			if (bits == 1) bits = 8;  // Boolean case.
-			if (bits % 8 != 0) CORE_PANIC("Integral type size not divisible by 8");
-			usize       bytes = bits / 8;
-			std::string name  = "i" + std::to_string(bits);
-
+			Bits bits = layout->getSize();
+			if (bits == Bits{ 1 }) bits = Bits{ 8 };  // Boolean edge-case.
+			Bytes       bytes = base::bits2bytes(bits);
+			std::string name  = "i" + base::toString(bits.asInt());
 			return vm::code::PrimitiveType(base::StrID(name), bytes);
 		}
 		variant_case_novalue(tsl::FloatTypeLayout) {
-			auto bits = usize(layout->getSize());
-			CORE_ASSERT(
-				bits == 16 || bits == 32 || bits == 64 || bits == 80, "Invalid size of float: ", bits
-			);
-			usize       bytes = bits / 8;
-			std::string name  = "f" + std::to_string(bits);
-
+			Bits        bits  = layout->getSize();
+			Bytes       bytes = base::bits2bytes(bits);
+			std::string name  = "f" + base::toString(bits.asInt());
 			return vm::code::PrimitiveType(base::StrID(name), bytes);
 		}
 		variant_case_novalue(tsl::MetaTypeLayout) {
-			return vm::code::OpaqueType(base::StrID("opaque_ptr"), 8);
+			return vm::code::OpaqueType(base::StrID("opaque_ptr"), Bytes{ 8 });
 		}
 		variant_case(tsl::PointerTypeLayout, pointer_layout) {
-			auto pointee_type      = lowerAndKeepTslType(pointer_layout.getPointee());
+			const vm::code::TypeOfData& pointee_type
+				= **lowerAndKeepTslType(pointer_layout.getPointee());
 			auto pointer_type_name = base::strConcat("ptr_", typeName(pointee_type));
 			return vm::code::PointerType(base::StrID(pointer_type_name), typeName(pointee_type));
 		}
@@ -346,8 +341,8 @@ vm::code::TypeOfData ProgramLoweringContext::lowerTslTypeInternal(CRef<tsl::Type
 			*/
 			// @TODO: #2100 Change that to indexes.
 			for (usize i{ 0 }; i < num_fields; i++) {
-				const auto  field_layout  = class_layout.getFieldLayoutOfLayoutIndex(i);
-				const auto& vm_field_type = lowerAndKeepTslType(field_layout);
+				const auto field_layout = class_layout.getFieldLayoutOfLayoutIndex(i);
+				const vm::code::TypeOfData& vm_field_type = **lowerAndKeepTslType(field_layout);
 				fields.emplace_back(base::StrID(base::strConcat("_", i)), typeName(vm_field_type));
 			}
 
@@ -357,10 +352,10 @@ vm::code::TypeOfData ProgramLoweringContext::lowerTslTypeInternal(CRef<tsl::Type
 			};
 		}
 		variant_case(tsl::StaticArrayTypeLayout, array_layout) {
-			const auto  element_layout  = array_layout.getElementLayout();
-			const auto  vm_element_type = lowerAndKeepTslType(element_layout);
-			const usize num_elements    = array_layout.getElementCount();
-			auto        array_type_name
+			const auto                  element_layout  = array_layout.getElementLayout();
+			const vm::code::TypeOfData& vm_element_type = **lowerAndKeepTslType(element_layout);
+			const usize                 num_elements    = array_layout.getElementCount();
+			auto                        array_type_name
 				= base::strConcat("arr_", typeName(vm_element_type), "_", num_elements);
 
 			return vm::code::FixedSizeTableType{

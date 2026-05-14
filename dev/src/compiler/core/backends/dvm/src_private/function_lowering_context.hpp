@@ -24,7 +24,7 @@ namespace compiler::backend_vm::internal {
 	 *
 	 * This is a temporary helper used when a LIR global has an initial CTV value but no
 	 * explicit ctor function lowered from LIR.
-	 * @TODO: #1849 Remove this
+	 * @TODO: #1657 Remove this
 	 */
 	vm::code::Function createMiniGlobalCtorFromCTV(
 		ProgramLoweringContext&      program_context,
@@ -181,10 +181,10 @@ namespace compiler::backend_vm::internal {
 		base::Map<lir::LIRLocalRef, DVMPlace> lir_local_to_dvm;
 		base::Map<lir::BlockRef, base::StrID> block_to_label;
 
-		vm::code::TypeOfData               function_return_type;
-		std::vector<vm::code::TypeOfData>  function_parameter_types;
-		base::StrID                        function_name;
-		std::vector<vm::code::Instruction> function_body;
+		base::Optional<vm::code::TypeOfData> function_return_type;
+		std::vector<vm::code::TypeOfData>    function_parameter_types;
+		base::StrID                          function_name;
+		std::vector<vm::code::Instruction>   function_body;
 
 		usize next_temp_id = 0;
 
