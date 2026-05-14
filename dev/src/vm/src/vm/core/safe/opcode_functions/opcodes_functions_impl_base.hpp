@@ -1232,4 +1232,3 @@ namespace vm {
 #undef OPCODE_NAME
 #undef FUNCTION_ARGS
 #undef FUNCTION_CONT
-#undef FUNCTION_CONT
