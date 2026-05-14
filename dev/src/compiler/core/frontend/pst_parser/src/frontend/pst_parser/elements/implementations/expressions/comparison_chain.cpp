@@ -21,10 +21,9 @@ namespace pst::expr {
 		if (fwd == state.ctokens().size()) return Lower::parse(state);
 
 
-		auto length = state.ctokens().size();
 		// A chain with only one comparison operator should be returned as a binary operator
 		// because the generated code is much simpler that way.
-		if (skipToOp(state, fwd + 1) == length) {
+		if (skipToOp(state, fwd + 1) == state.ctokens().size()) {
 			auto op  = state[fwd].asBinaryOperator().value();
 			auto out = makeBox<GeneralBinary>(state, op);
 

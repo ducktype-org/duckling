@@ -24,6 +24,7 @@ namespace pst {
 
 		[[nodiscard]]
 		base::Optional<base::StrID> getInternalSymbolName() const final {
+			CORE_ASSERT(not query::Context::areWeInsideQuery(), "");
 			return base::StrID("destroy");
 		}
 

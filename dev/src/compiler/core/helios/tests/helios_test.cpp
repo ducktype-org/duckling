@@ -160,8 +160,6 @@ private:
 	void testConstants() {
 		auto [_, root_scope] = getModule(fs::File(path("test_modules/constants")));
 
-		std::println(std::cerr, "pointA");
-
 		ASSERT_EQUAL(1'107, getConstValueAs<i64>("M", root_scope));
 		ASSERT_EQUAL(1, getConstValueAs<i32>("N.X", root_scope));
 		ASSERT_EQUAL(1, getConstValueAs<i32>("A", root_scope));
@@ -176,14 +174,10 @@ private:
 		ASSERT_EQUAL(3, getConstValueAs<i64>("T2", root_scope));
 		ASSERT_EQUAL(30, getConstValueAs<i64>("F", root_scope));
 
-		std::println(std::cerr, "pointB");
-
 		// Floating point.
 		ASSERT_EQUAL(1.0f, getConstValueAs<f64>("F1", root_scope));
 		ASSERT_EQUAL(1.0l, getConstValueAs<f32>("F2", root_scope));
 		ASSERT_EQUAL(5.0l, getConstValueAs<f64>("F3", root_scope));
-
-		std::println(std::cerr, "pointC");
 
 		ASSERT_EQUAL(true, getConstValueAs<bool>("BOOL_TRUE", root_scope));
 		ASSERT_EQUAL(false, getConstValueAs<bool>("BOOL_FALSE", root_scope));
@@ -192,23 +186,13 @@ private:
 		ASSERT_EQUAL(true, getConstValueAs<bool>("TRUE_COMPARISON", root_scope));
 		ASSERT_EQUAL(false, getConstValueAs<bool>("FALSE_COMPARISON", root_scope));
 
-		std::println(std::cerr, "pointD");
-
 		ASSERT_EQUAL(42, getConstValueAs<i64>("VM_SIMPLE_CALL", root_scope));
-		std::println(std::cerr, "pointDA");
 		ASSERT_EQUAL(1'129, getConstValueAs<i64>("VM_SIMPLE_CALL_2", root_scope));
-		std::println(std::cerr, "pointDB");
 		ASSERT_EQUAL(55, getConstValueAs<i64>("FIB_10", root_scope));
-		std::println(std::cerr, "pointDC");
 		ASSERT_EQUAL(55, getConstValueAs<i32>("FIB_ON_I32_10", root_scope));
-		std::println(std::cerr, "pointDD");
 		ASSERT_EQUAL(58, getConstValueAs<i64>("COMPLEX_VM_CALL", root_scope));
-		std::println(std::cerr, "pointDE");
 		ASSERT_EQUAL(37, getConstValueAs<i64>("COMPLEX_VM_CALL_2", root_scope));
-		std::println(std::cerr, "pointDF");
 		ASSERT_EQUAL(1, getConstValueAs<i64>("COLLATZ", root_scope));
-
-		std::println(std::cerr, "pointE");
 	}
 
 	void testMetaCompTime() {

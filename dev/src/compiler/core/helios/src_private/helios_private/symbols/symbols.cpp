@@ -180,13 +180,15 @@ namespace compiler::helios {
 			auto stmt = pst->unlock(ctx).dynamicCast<pst::Stmt>();
 			if (!stmt) continue;
 
-			auto name = stmt.value()->getInternalSymbolName();
+			auto name = stmt.value()->getDeclSymbolIdentifier();
 			if (!name.has_value()) continue;
 
+			auto id = name->unlock(ctx)->unwrap();
+
 			if (!out.empty())
-				out = base::strConcat(name.value().str(), " -> ", out);
+				out = base::strConcat(id, " -> ", out);
 			else
-				out = name.value().str();
+				out = id.str();
 
 			// Get the parent of the current pst element
 		} while ((pst = pst.value().unlock(ctx)->getParent()));
