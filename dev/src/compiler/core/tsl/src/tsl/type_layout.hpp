@@ -482,106 +482,6 @@ namespace compiler::tsl {
 	};
 
 	/**
-	 * @brief Layout of a tuple type.
-	 */
-	class TupleTypeLayout final: public TypeLayoutABC {
-		/**
-		 * @brief The number of fields in the tuple layout.
-		 */
-		usize num_sub_layouts;
-
-		/**
-		 * @brief The component offsets, in bytes, if they exist.
-		 *
-		 * @note Not necessarily increasing. These offsets are given in the order of the components
-		 * in the source tuple type. This order may not be preserved in the layout.
-		 */
-		std::vector<base::Optional<Bytes>> component_offsets;
-
-		/**
-		 * @brief The component layout indices of the components in the original tuple type.
-		 * @note This is not used and not tested for now,
-		 * revisit and add tests in #802 (legit tuple types)
-		 */
-		std::vector<base::Optional<usize>> component_idx_to_layout_idx;
-
-		/**
-		 * @brief The component indices of the components in the original tuple type, sorted by
-		 * their order of appearance in the layout.
-		 */
-		std::vector<usize> layout_idx_to_component_idx;
-
-		/**
-		 * @brief The component layouts, in the order of appearance in the tuple layout.
-		 */
-		std::vector<CRef<TypeLayout>> layout_idx_to_layout;
-
-		// Delegate constructor.
-		explicit TupleTypeLayout(
-			struct TupleTypeLayoutConstructionHelper&& helper, query::Context& ctx
-		);
-
-		TupleTypeLayout(tsh::TupleAbstractType tuple_type, query::Context& ctx);
-
-		friend struct ImplementationOf_QueryAbstractTypeLayout;
-
-	public:
-		/**
-		 * @brief Get the number of components in the tuple layout.
-		 * @return The number of components in the tuple layout.
-		 */
-		[[nodiscard]]
-		usize getNumSubLayouts() const {
-			return num_sub_layouts;
-		}
-
-		/**
-		 * @brief Get the offset of a component from the original tuple type.
-		 * @note May be empty if the component has an empty layout.
-		 * @param index The index of a component in the original tuple type.
-		 * @return The offset of the component corresponding to the given index, in bytes.
-		 */
-		[[nodiscard]]
-		base::Optional<Bytes> getOffsetOfComponentIndex(const usize index) const {
-			return component_offsets.at(index);
-		}
-
-		/**
-		 * @brief Get the layout index from the component index in the original tuple type.
-		 * @param component_index The index of the component in the tuple type.
-		 * @return The index of the layout component corresponding to the given component index.
-		 */
-		[[nodiscard]]
-		base::Optional<usize> getLayoutIndexOfComponentIndex(const usize component_index) const {
-			return component_idx_to_layout_idx.at(component_index);
-		}
-
-		/**
-		 * @brief Get the component index in the original tuple type from the layout component index.
-		 * @param layout_index The index of the component in the layout order.
-		 * @return The index of the type component corresponding to the given offset index.
-		 */
-		[[nodiscard]]
-		usize getComponentIndexOfLayoutIndex(const usize layout_index) const {
-			return layout_idx_to_component_idx.at(layout_index);
-		}
-
-		/**
-		 * @brief Get the layout of a component from the layout.
-		 * @param layout_index The index of the component in the layout order.
-		 * @return The layout of the component corresponding to the given offset index.
-		 */
-		[[nodiscard]]
-		CRef<TypeLayout> getComponentLayoutOfLayoutIndex(const usize layout_index) const {
-			return layout_idx_to_layout.at(layout_index);
-		}
-
-		[[nodiscard]]
-		std::string toStringDefinition(query::Context& ctx, bool recursive, u32 indent)
-			const override;
-	};
-
-	/**
 	 * @brief Layout of class type.
 	 *
 	 * @todo Add vtable support.
@@ -620,6 +520,8 @@ namespace compiler::tsl {
 
 		ClassTypeLayout(tsh::ClassAbstractType class_type, query::Context& ctx);
 
+		ClassTypeLayout(tsh::TupleAbstractType tuple_type, query::Context& ctx);
+
 		friend struct ImplementationOf_QueryAbstractTypeLayout;
 
 	public:
@@ -633,7 +535,7 @@ namespace compiler::tsl {
 		}
 
 		/**
-		 * @brief Get the offset of a field from the original class type.
+		 * @brief Get the offset of a field from the original type.
 		 * @param symbol The symbol of a field.
 		 * @return The offset of the field corresponding to the given symbol, in bytes.
 		 */
@@ -761,7 +663,6 @@ namespace compiler::tsl {
 		IntegralTypeLayout,
 		FloatTypeLayout,
 		VariantTypeLayout,
-		TupleTypeLayout,
 		StringTypeLayout,
 		DynamicArrayTypeLayout,
 		StaticArrayTypeLayout,
