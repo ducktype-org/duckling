@@ -72,20 +72,10 @@ def tester_impl(
     if dry:
         return
 
-    total_test_count = len(succeeded) + len(failed) + len(disabled)
-    print(f"Ran test count: {total_test_count}")
-    print(f" - Succeeded: {len(succeeded)}")
-    print(f" - Disabled:  {len(disabled)}")
-    print(f" - Failed:    {len(failed)}")
-
     if len(failed):
-        failed_tests = map(lambda x: " - " + x, failed)
         exit_with_error(
-            f"{'(Fail fast) ' if fail_fast else ''}Failed tests:\n{'\n'.join(failed_tests)}\n"
-            + f"Please see log file '{log_file.absolute()}' for more info."
+            f"{'(Fail fast) ' if fail_fast else ''}Please see log file '{log_file.absolute()}' for more info."
         )
-    elif not clean:
-        print_success(f"All tests have run successfully!")
 
 
 def run_test(

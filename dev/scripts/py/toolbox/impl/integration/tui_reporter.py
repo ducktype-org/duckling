@@ -25,133 +25,220 @@ class FailureDetail:
     case_name: str
     error_msg: str
     stdout_expected: Optional[bytes] = None
-        # Simpler prefix-based collapsing algorithm:
-        # - Build mappings of completed leaves and their statuses
-        # - For each prefix up to depth 3, collect leaves under it
-        # - Collapse the highest-level prefix (smallest depth) when none of its leaves are in-progress
-        completed_leaves = [p for p, _ in completed]
-        leaf_status = {p: s for p, s in completed}
+    stdout_actual: Optional[bytes] = None
+    stderr_expected: Optional[bytes] = None
+    stderr_actual: Optional[bytes] = None
 
-        # Map prefix -> set(leaves)
-        from collections import defaultdict
-        leaves_by_prefix = defaultdict(set)
-        for leaf in completed_leaves:
-            parts = leaf.split("/")
-            for d in range(1, min(3, len(parts)) + 1):
-                prefix = "/".join(parts[:d])
-                leaves_by_prefix[prefix].add(leaf)
 
-        # Determine in-progress leaves (started but not completed)
-        in_progress_leaves = {s for s in started if s not in completed_set}
+@dataclass
+class Event:
+    """A single event in the test execution."""
+    timestamp: datetime
+    event_type: str  # "case_passed", "case_failed", "case_disabled", "test_started"
+    test_path: str
+    case_name: str = ""
+    details: str = ""
 
-        collapsed_prefixes = []
-        covered_leaves = set()
 
-        # Consider prefixes sorted by depth (shallow first)
-        prefixes = sorted(leaves_by_prefix.keys(), key=lambda x: x.count("/"))
-        for prefix in prefixes:
-            leaves = leaves_by_prefix[prefix]
-            # Skip if these leaves are already covered by a higher-level collapse
-            if leaves.issubset(covered_leaves):
-                continue
-            # Skip if any leaf under this prefix is in-progress
-            if any(l in in_progress_leaves for l in leaves):
-                continue
-            # Collapse this prefix: decide status
-            statuses = {leaf_status.get(l) for l in leaves}
+class IntegrationTuiReporter:
+    def _collect_completed_cases(self):
+        """
+        Collect all completed cases (passed, failed, disabled) as a set of paths.
+        Returns: List of tuples (path, status) where status is 'passed', 'failed', or 'disabled'.
+        """
+        completed = []
+        # Gather from events
+        for event in self.events:
+            if event.event_type == "case_passed":
+                completed.append((f"{event.test_path}/{event.case_name}".strip("/"), "passed"))
+            elif event.event_type == "case_failed":
+                completed.append((f"{event.test_path}/{event.case_name}".strip("/"), "failed"))
+            elif event.event_type == "case_disabled":
+                completed.append((f"{event.test_path}/{event.case_name}".strip("/"), "disabled"))
+        return completed
+
+    def _build_collapsed_tree(self, completed, in_progress=None):
+        """
+        Build a collapsed filetree from completed cases.
+        For nodes of depth ≤3: collapse when all descendants are complete and none are in-progress.
+        Otherwise, show the node itself and recurse into its children so non-collapsed nodes remain visible.
+        Returns a list of (path, status) for display.
+        """
+        started = set()
+        completed_set = set()
+        status_by_leaf = {}
+        start_order = {}
+        completion_order = {}
+
+        for event_index, event in enumerate(self.events):
+            if event.event_type in ("case_passed", "case_failed", "case_disabled"):
+                leaf = f"{event.test_path}/{event.case_name}".strip("/")
+                completed_set.add(leaf)
+                started.add(leaf)
+                completion_order.setdefault(leaf, event_index)
+                start_order.setdefault(leaf, event_index)
+            elif event.event_type in ("test_started", "node_started"):
+                path = event.test_path.strip("/")
+                started.add(path)
+                start_order.setdefault(path, event_index)
+
+        for path, status in completed:
+            status_by_leaf[path] = status
+
+        class Node:
+            def __init__(self):
+                self.children = {}
+                self.status = None
+                self.started = False
+                self.completed = False
+
+        root = Node()
+
+        def ensure_path(path: str):
+            node = root
+            prefix_parts = []
+            for part in path.split("/"):
+                prefix_parts.append(part)
+                if part not in node.children:
+                    node.children[part] = Node()
+                node = node.children[part]
+                current_path = "/".join(prefix_parts)
+                if current_path in started:
+                    node.started = True
+                if current_path in completed_set:
+                    node.completed = True
+            return node
+
+        # Populate tree from completed leaves and started prefixes
+        for path in completed_set:
+            node = ensure_path(path)
+            node.status = status_by_leaf.get(path)
+            node.completed = True
+            node.started = True
+
+        for path in started:
+            ensure_path(path).started = True
+
+        def aggregate_status(node: Node):
+            child_states = [aggregate_status(child) for child in node.children.values()]
+
+            if not node.children:
+                if node.completed:
+                    return node.status or "passed"
+                if node.started:
+                    return "in_progress"
+                return None
+
+            if node.started and not node.completed:
+                if "failed" in child_states:
+                    return "failed"
+                return "in_progress"
+
+            statuses = {s for s in child_states if s is not None}
+            if not statuses:
+                return "in_progress" if node.started else None
             if "failed" in statuses:
-                status = "failed"
-            elif "disabled" in statuses:
-                status = "disabled"
-            else:
-                status = "passed"
-            collapsed_prefixes.append((prefix, status))
-            covered_leaves.update(leaves)
+                return "failed"
+            if "in_progress" in statuses:
+                return "in_progress"
+            if "disabled" in statuses and len(statuses) == 1:
+                return "disabled"
+            if statuses == {"passed"}:
+                return "passed"
+            if "disabled" in statuses:
+                return "passed"
+            return "passed"
 
-        # Leaves that are not covered by any collapsed prefix should be shown individually
-        remaining = [(l, leaf_status[l]) for l in completed_leaves if l not in covered_leaves]
-
-        # Result = collapsed prefixes + remaining leaves (stable order)
-        result = collapsed_prefixes + remaining
-                if not all_descendants_started(v, prefix + [k], depth + 1):
-                    return False
-            # If this is a leaf, check if it's in started
-            if not [k for k in node if k != "__status__"]:
-                leaf_path = "/".join(prefix)
-                return leaf_path in started
-            return True
-
-        def all_descendants_are_leaves_and_complete(n):
-            children = [k for k in n if k != "__status__"]
-            if not children:
-                return "__status__" in n
-            for k in children:
-                if not all_descendants_are_leaves_and_complete(n[k]):
-                    return False
-            return True
-
-        def gather_all_statuses(n, statuses):
-            children = [k for k in n if k != "__status__"]
-            if not children and "__status__" in n:
-                statuses.add(n["__status__"])
-            for k in children:
-                gather_all_statuses(n[k], statuses)
-
-        def collapse(node, prefix, depth):
-            children = [k for k in node if k != "__status__"]
-            # If this is a leaf, always show it
-            if not children and "__status__" in node:
-                return [("/".join(prefix), node["__status__"])]
-
-            # Collapse internal nodes of depth <=3 if ALL descendants are complete
-            # and there are no started-but-not-completed descendants (in-progress).
-            # Do not collapse the root (empty prefix) — collapse only non-empty prefixes
-            def any_started_not_completed_prefix(pref):
-                # Check started set for any path under this prefix that is not yet completed
-                if not pref:
-                    return any(s not in completed_set for s in started)
-                base = pref + "/"
-                for s in started:
-                    if s == pref or s.startswith(base):
-                        if s not in completed_set:
-                            return True
+        def can_collapse(node: Node, depth: int):
+            if depth > 3:
                 return False
 
-            if depth <= 3 and children and prefix:
-                if all_descendants_complete(node, prefix, depth) and not any_started_not_completed_prefix("/".join(prefix)):
-                    statuses = set()
-                    gather_all_statuses(node, statuses)
-                    if "failed" in statuses:
-                        status = "failed"
-                    elif "disabled" in statuses:
-                        status = "disabled"
-                    else:
-                        status = "passed"
-                    return [("/".join(prefix), status)]
+            def all_leaf_descendants_complete(n: Node):
+                if not n.children:
+                    return n.completed
+                return all(all_leaf_descendants_complete(child) for child in n.children.values())
 
-            # Otherwise, show completed leaves under this node
-            rows = []
-            for k in node:
-                if k == "__status__":
-                    continue
-                rows.extend(collapse(node[k], prefix + [k], depth + 1))
-            return rows
+            def any_leaf_descendant_in_progress(n: Node):
+                if not n.children:
+                    return n.started and not n.completed
+                return any(any_leaf_descendant_in_progress(child) for child in n.children.values())
 
-        # Start collapsing from the root
-        result = collapse(tree, [], 1)
+            return node.children and all_leaf_descendants_complete(node) and not any_leaf_descendant_in_progress(node)
 
-        # Add in-progress node if provided
-        if in_progress:
-            result.append((in_progress, "in_progress"))
+        def collapsed_status(node: Node):
+            leaf_statuses = []
 
-        # Remove duplicates and sort for stable display
+            def gather(n: Node):
+                if not n.children:
+                    if n.completed and n.status is not None:
+                        leaf_statuses.append(n.status)
+                    return
+                for child in n.children.values():
+                    gather(child)
+
+            gather(node)
+            if "failed" in leaf_statuses:
+                return "failed"
+            if "disabled" in leaf_statuses and len(set(leaf_statuses)) == 1:
+                return "disabled"
+            return "passed"
+
+        def collapsed_order(node: Node, prefix_parts: list[str]):
+            orders = []
+
+            def gather(n: Node, current_parts: list[str]):
+                if not n.children:
+                    if n.completed:
+                        path = "/".join(current_parts)
+                        orders.append(completion_order.get(path, len(self.events)))
+                    return
+                for name, child in n.children.items():
+                    gather(child, current_parts + [name])
+
+            gather(node, prefix_parts)
+            return max(orders) if orders else len(self.events)
+
+        result = []
+
+        def walk(node: Node, prefix_parts: list[str], depth: int):
+            path = "/".join(prefix_parts)
+            if prefix_parts and can_collapse(node, depth):
+                result.append((path, collapsed_status(node), collapsed_order(node, prefix_parts)))
+                return
+
+            # Only append leaf nodes (not internal nodes with children)
+            if prefix_parts and path != "integration_tests" and not node.children:
+                status = aggregate_status(node)
+                if status is not None:
+                    order = completion_order.get(path, len(self.events))
+                    if status == "in_progress":
+                        order = start_order.get(path, len(self.events) + 1)
+                        if order == len(self.events):
+                            order = len(self.events) + 1
+                    result.append((path, status, order))
+
+            if not node.children:
+                return
+
+            for name, child in node.children.items():
+                walk(child, prefix_parts + [name], depth + 1)
+
+        for name, child in root.children.items():
+            walk(child, [name], 1)
+
         seen = set()
         final = []
-        for path, status in result:
-            if path and (path, status) not in seen:
-                final.append((path, status))
-                seen.add((path, status))
-        return final
+        if in_progress and in_progress != "integration_tests":
+            covered = any(path == in_progress or path.startswith(in_progress + "/") for path, _, _ in result)
+            if not covered:
+                result.append((in_progress, "in_progress", len(self.events) + 1))
+        for path, status, order in result:
+            if path and path not in seen:
+                final.append((path, status, order))
+                seen.add(path)
+
+        final.sort(key=lambda x: x[2])
+        return [(path, status) for path, status, _ in final]
 
     def __init__(self):
         self.console = Console() if HAS_RICH else None
@@ -195,7 +282,6 @@ class FailureDetail:
         self.passed_count += 1
         short_path = self._strip_prefix(test_path)
         self._add_event("case_passed", short_path, case_name, "✓ Passed")
-        
 
     def on_case_failed(self, test_path: str, case_name: str, error_msg: str,
                        stdout_expected: Optional[bytes] = None,
@@ -259,8 +345,8 @@ class FailureDetail:
         completed = self._collect_completed_cases()
         collapsed = self._build_collapsed_tree(completed)
         completed_table = Table(title="Completed Tests", show_header=True, header_style="bold")
-        completed_table.add_column("Test Node")
-        completed_table.add_column("Status", width=10)
+        completed_table.add_column("Test Node", width=100)
+        completed_table.add_column("Status", width=15)
         for path, status in collapsed:
             if not path:
                 display_path = "(root)"
@@ -369,18 +455,5 @@ class FailureDetail:
             )
             return
 
-        self.console.clear()
-        
-        # Final summary
-        summary_text = (
-            f"[bold cyan]Integration Tests Complete[/bold cyan]\n"
-            f"[green]Passed: {self.passed_count}[/green] | "
-            f"[red]Failed: {self.failed_count}[/red] | "
-            f"[yellow]Disabled: {self.disabled_count}[/yellow]"
-        )
-        self.console.print(Panel(summary_text, expand=False))
-        self.console.print()
-
-        # Failures section
-        if self.failures:
-            self._render_failures()
+        # Force one last redraw so the final tree/table reflects the finished run.
+        self._render_update()
