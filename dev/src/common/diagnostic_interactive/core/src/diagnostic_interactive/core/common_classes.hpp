@@ -9,7 +9,7 @@
 
 namespace dia_int {
 	struct CodeLocation {
-		std::string         file;
+		std::string         file{};
 		u64                 line;
 		u64                 column;
 		base::Optional<u64> end_line;
