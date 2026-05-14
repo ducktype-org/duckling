@@ -8,7 +8,7 @@ add_library(ModuleTree
 	src/frontend/module_tree/module_id.cpp
 )
 
-make_module(ModuleTree USES Filesystem PstParser QueryFramework)
+make_module(ModuleTree USES Filesystem PstParser QueryFramework GlobalState Packages)
 
 add_example(module_tree_example examples/module_tree_example.cpp USES ModuleTree)
 

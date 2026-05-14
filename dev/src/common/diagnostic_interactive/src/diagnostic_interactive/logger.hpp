@@ -62,6 +62,9 @@ namespace dia_int {
 
 		[[nodiscard]] u64 errorCount() const;
 
+		/** @brief Number of logged diagnostics with type "warning". */
+		[[nodiscard]] u64 warningCount() const;
+
 		/**
 		 * @brief Evaluate diagnostic to terminal message and print it to the given stream.
 		 * It is used internally by the Logger to print immediate messages, but also can be used
