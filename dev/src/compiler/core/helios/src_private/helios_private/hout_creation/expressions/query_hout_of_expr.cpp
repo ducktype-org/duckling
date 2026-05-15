@@ -225,7 +225,7 @@ namespace compiler::helios::code {
 			 */
 			[[nodiscard]]
 			Box<Expr> resolveBinaryOperator(
-				lexer::Operator op, Box<Expr> lhs, Box<Expr> rhs, ScopeID scope
+				pst::Access<pst::OperatorWrapper> op, Box<Expr> lhs, Box<Expr> rhs, ScopeID scope
 			) const {
 				const auto lhs_type = lhs->expression_type.getSymbolType();
 				const auto rhs_type = rhs->expression_type.getSymbolType();
@@ -241,9 +241,9 @@ namespace compiler::helios::code {
 
 				// Step 1. — special path for numeric promotions
 				if (isNumericType(lhs_type.getType()) && isNumericType(rhs_type.getType())
-				    && isNumericOperator(op)) {
+				    && isNumericOperator(op->unwrap())) {
 					auto numeric_builtin_opt
-						= findNumericBinaryBuiltin(ctx, op, lhs.ref(), rhs.ref());
+						= findNumericBinaryBuiltin(ctx, op->unwrap(), lhs.ref(), rhs.ref());
 					auto new_origin = elementOriginOrdered(lhs->origin, rhs->origin);
 
 					if_opt_some(numeric_builtin_opt, numeric_builtin) {
@@ -258,22 +258,24 @@ namespace compiler::helios::code {
 
 				// Step 2. — Regular lookup and overload resolution
 				const auto lookup_result
-					= HInterface::ofScopeWithParents(scope).lookup(ctx, op.value);
+					= HInterface::ofScopeWithParents(scope).lookup(ctx, op->unwrap().value);
 				// @TODO: #1412 fix dealias
 				auto all_candidates = lookup_result->valueOrThrow().leaves;
 				for (const auto [builtin_operator_sym, _]:
 				     *ctx.query<QueryRegularBinaryBuiltinSymbols>({})) {
-					if (name(builtin_operator_sym) == op.value)
+					if (name(builtin_operator_sym) == op->unwrap().value)
 						all_candidates.push_back(builtin_operator_sym);
 				}
-				return processBinaryOperatorCall(ctx, all_candidates, std::move(lhs), std::move(rhs))
+				return processBinaryOperatorCall(
+						   ctx, all_candidates, std::move(lhs), std::move(rhs), pstOrigin(op)
+				)
 				    .valueOrThrow();
 			}
 
 			void visitBinaryOperator(pst::Access<pst::expr::BinaryOperator> stmt) override {
 				// handle variants:
-				const auto op = stmt->getOperator().unlock(ctx)->unwrap();
-				if (op == lang_def::NamedOperator::Pipe) {
+				const auto op = stmt->getOperator().unlock(ctx);
+				if (op->unwrap() == lang_def::NamedOperator::Pipe) {
 					auto                   sub_exprs = getVariantSubExprs(ctx, stmt);
 					std::vector<Box<Expr>> all_subtypes;
 
@@ -592,7 +594,7 @@ namespace compiler::helios::code {
 				// Perform operator resolution for each operator in the chain. Reuse the expressions
 				// which are between two operators. The last expressions is not reused, but that's fine.
 				for (usize op_idx = 0; op_idx < operator_count; op_idx++) {
-					const auto op = stmt->getOperator(op_idx).unlock(ctx)->unwrap();
+					const auto op = stmt->getOperator(op_idx).unlock(ctx);
 					auto rhs = makeBox<ReusableExpr>(ctx, std::move(result_exprs.at(op_idx + 1)));
 					auto next_lhs = rhs->nextUse();
 
