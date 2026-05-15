@@ -1,7 +1,7 @@
 //! Fetcher cache for a fetched manifest.
 use std::path::Path;
 
-use tracing::debug;
+use tracing::{debug, trace};
 use url::Url;
 
 use super::types;
@@ -121,9 +121,11 @@ impl ManifestCache {
             CacheLocation::Memory => rusqlite::Connection::open_in_memory()?,
             CacheLocation::Path(path) => rusqlite::Connection::open(path)?,
         };
+        trace!("created connection");
         connection
             .create_table()
             .with_context(|| format!("failed to create a manifest cache table in {}", location))?;
+        trace!("created table");
         Ok(Self { connection })
     }
 
