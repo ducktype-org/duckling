@@ -1078,6 +1078,8 @@ namespace compiler::helios {
 			}
 
 			void visitTupleExpr(const code::TupleExpr& expr) override {
+				// Tuple expression is equivalent to a function call to the tuple constructor in MIR
+				called_functions.insert(expr.tuple_ctor_symbol);
 				for (const auto& sub_expr: expr.elements) sub_expr->acceptVisitor(*this);
 			}
 

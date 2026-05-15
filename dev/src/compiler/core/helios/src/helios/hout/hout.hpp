@@ -39,6 +39,7 @@ namespace compiler::helios {
 		struct ImplementationOf_QueryImplicitClassConstructor;
 		struct ImplementationOf_QueryDefaultClassConstructor;
 		struct ImplementationOf_QueryDefaultStaticArrayConstructor;
+		struct ImplementationOf_QueryTuplePackConstructor;
 	}
 
 	namespace code {
@@ -105,6 +106,7 @@ namespace compiler::helios {
 		);
 		friend struct ImplementationOf_QueryCodeOfFun;
 		friend defgen::ImplementationOf_QueryImplicitClassConstructor;
+		friend defgen::ImplementationOf_QueryTuplePackConstructor;
 		friend defgen::ImplementationOf_QueryDefaultClassConstructor;
 		friend defgen::ImplementationOf_QueryDefaultStaticArrayConstructor;
 		friend compiler::repl::ImplementationOf_QueryReplExpressionWrapper;
