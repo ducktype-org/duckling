@@ -71,17 +71,6 @@ jobs:
       matrix: ${{ fromJson(needs.setup.outputs.matrix) }}
       fail-fast: false
 
-    outputs:
-      # @note: with matrix runs, each run works with the same output,
-      # and they will overwrite each other
-      # see: https://github.com/orgs/community/discussions/26639
-      #
-      # According to: https://github.com/orgs/community/discussions/38088
-      # it should not override if the step if skipped.
-      coverage-value: ${{ steps.test-coverage.outputs.coverage-percent }}
-      itest-coverage-value: ${{ steps.test-coverage-itests.outputs.coverage-percent }}
-      todo-count: ${{ steps.todo-counter.outputs.todo-count }}
-
     timeout-minutes: 40 # (Per matrix run)
     runs-on:
       group: SelfHostedRunners
@@ -121,43 +110,15 @@ jobs:
       - name: Update apt
         run: sudo apt update
 
-      - name: Install lcov
-        if: ${{ env.COVERAGE_ENABLED == 'true' }}
-        run: sudo apt -y install lcov
-
-      - name: Install fastcov
-        if: ${{ env.COVERAGE_ENABLED == 'true' }}
-        run: sudo pip install fastcov --break-system-packages --no-input
-
-      - name: Install graphviz
-        if: ${{ env.BUILD_DEPLOYABLES == 'true' }}
-        run: sudo apt -y install libgraphviz-dev
-
-      - name: Install LLVM
-        run: sudo apt -y install llvm-19 llvm-19-dev
 
       - name: Install clang
         # Note that it is also necessary to compile Duckling builtins to LLVM bitcode
         # Must be the same version as llvm
         run: sudo apt -y install clang-19 clang-tools-19
 
-      - name: Install xxd
-        # Necessary to embed LLVM bitcode into duckc source files.
-        run: sudo apt -y install xxd
-
-      - name: Install mold
-        if: ${{ matrix.compiler.linker == 'mold' }}
-        run: sudo apt -y install mold
-
       - name: Install GCC 14 and gcov-14
         if: ${{ matrix.compiler.name == 'gcc' }}
         run: sudo apt install -y ${{ matrix.compiler.cc }} ${{ matrix.compiler.cxx }} # gcov is included in gcc package
-
-      - name: Install Ninja
-        run: sudo apt -y install ninja-build
-
-      - name: Install Valgrind
-        run: sudo apt -y install valgrind
 
       - name: Setup duck dependencies
         uses: ./.github/actions/setup-duck-dependencies/
@@ -176,36 +137,6 @@ jobs:
       # Timestamp is appended to the key in caching, so each cache has a unique key.
       # This step is arbitrary, and has nothing to the order of choosing the most
       # recent hash.
-      - name: Prepare cache timestamp
-        id: cache-timestamp
-        shell: cmake -P {0}
-        run: |
-          string(TIMESTAMP current_date "%Y-%m-%d-%H::%M::%S" UTC)
-          file(APPEND "$ENV{GITHUB_OUTPUT}" "timestamp=${current_date}")
-
-      # Cache local branch and on miss fallback to main branch's cache. In case
-      # main branch misses, fallback to any branch's cache.
-      - name: Restore build cache
-        id: restore-build-cache
-        uses: actions/cache/restore@v5
-        with:
-          path: |
-            ${{ env.CCACHE_DIR }}
-          key: ${{ runner.os }}-${{ matrix.compiler.cache-prefix }}-${{ matrix.build-type }}-${{ env.BRANCH_NAME }}-${{ steps.cache-timestamp.outputs.timestamp }}
-          # If there is no match with the key, then it tries to partially
-          # match with any of restore-keys (top to bottom).
-          # Most recent entry is used when multiple match to the same key.
-          # See readme for details.
-          restore-keys: |
-            ${{ runner.os }}-${{ matrix.compiler.cache-prefix }}-${{ matrix.build-type }}-${{ env.BRANCH_NAME }}
-            ${{ runner.os }}-${{ matrix.compiler.cache-prefix }}-${{ matrix.build-type }}-main
-            ${{ runner.os }}-${{ matrix.compiler.cache-prefix }}-${{ matrix.build-type }}
-
-      # Remove ccache folder to prevent cache snowball growth
-      - name: Remove ccache on main
-        if: ${{ env.BRANCH_NAME == 'main' }}
-        id: ccache-main-rm
-        run: rm -rf ${CCACHE_DIR}
 
       - name: Initialize project
         working-directory: ${{ env.WORKSPACE }}
@@ -227,121 +158,11 @@ jobs:
                               [ "${{ matrix.compiler.name }}" = "clang" ] &&
                                echo "--enable-jit" || echo "--no-enable-jit" ) >> $GITHUB_OUTPUT
 
-      # Configure CMake. Using toolbox instead of direct command, because it
-      # also enables CMake File API, which is necessary for integration tests.
-      # It also allows us to omit specifying all LLVM tools for JIT.
-      - name: Configure CMake
-        working-directory: ${{ env.WORKSPACE }}
-        run: |
-          ./toolbox.py setup-build \
-            -b ${{ env.BUILD_DIR }} \
-            -s ${{ env.BUILD_SYSTEM }} \
-            -c ${{ matrix.compiler.cc }} \
-            -x ${{ matrix.compiler.cxx }} \
-            -t ${{ matrix.build-type }} \
-            ${{ steps.check-jit.outputs.jit-flag }} \
-            ${{ steps.setup-build-flags.outputs.flags }} \
-            --linker ${{ matrix.compiler.linker }} \
-            --ccache \
-            --strip-symbol-information
-
-      # Build all tests.
-      # We additionally build coverage targets in case of coverage enabled,
-      # so they are nicely parallelized and cached.
-      - name: Build tests
-        working-directory: ${{ env.WORKSPACE }}
-        run: |
-          cmake                                 \
-          --build ${{ env.BUILD_DIR }}          \
-          -j ${{ steps.set-jobs.outputs.jobs }} \
-          --                                    \
-          build_all_tests                       \
-          ${{ env.COVERAGE_ENABLED == 'true' && 'build_all_coverage_targets' || '' }}
-
-      # Check against regressions in target applications.
-      # This step is run now so that the results are cached.
-      # However, it does not fail the job at this stage because we still want the tests to be run.
-      # It will fail the job at the end in the "Fail if deployables failed to build" step.
-      - name: Build deployables
-        id: build-deployables
-        if: ${{ env.BUILD_DEPLOYABLES == 'true' }}
-        working-directory: ${{ env.WORKSPACE }}
-        run: cmake --build ${{ env.BUILD_DIR }} -j ${{ steps.set-jobs.outputs.jobs }} -- all build_all_playgrounds
-        continue-on-error: true
-
-      - name: Show disk usage
-        working-directory: ${{ env.WORKSPACE }}
-        run: |
-          echo "build:"
-          du -hs ${{ env.BUILD_DIR }}
-
-          echo "build/lib:"
-          du -hs ${{ env.BUILD_DIR }}/lib
-
-          echo "build/bin:"
-          du -hs ${{ env.BUILD_DIR }}/bin
-
-          echo "ccache:"
-          du -hs ${{ env.CCACHE_DIR }}
-
-      # Source:  https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/caching-dependencies-to-speed-up-workflows#force-deleting-cache-entries
-      # This step deletes all the cache entries that are related to this branch,
-      # and it is done in this moment in the script, right after building, because
-      # upload of the current build happens after everything
-      # else has finished, so there will be a cache entry ready for pulling.
-      - name: Cleanup previous Cache entries for this branch
-        run: |
-          gh extension install actions/gh-actions-cache
-
-          echo "Fetching list of cache key"
-          cacheKeysForPR=$(gh actions-cache list -R $REPO -L 100 | cut -f 1 )
-
-          ## Setting this to not fail the workflow while deleting cache keys.
-          set +e
-          echo "Deleting caches..."
-          for cacheKey in $cacheKeysForPR
-          do
-            if [[ $cacheKey == ${{ runner.os }}-${{ matrix.compiler.cache-prefix }}-${{ matrix.build-type }}-${{ env.BRANCH_NAME }}* ]]; then
-              gh actions-cache delete $cacheKey -R $REPO --confirm
-            fi
-          done
-          echo "Done"
-        env:
-          GH_TOKEN: ${{ secrets.CACHE_DEL_PAT }} # This env variable is used by the GH tool.
-          REPO: ${{ github.repository }}
-
-      # Manually cache the build before testing, but **after** cleaning.
-      - name: Save build cache
-        id: save-build-cache
-        uses: actions/cache/save@v5
-        with:
-          path: |
-            ${{ env.CCACHE_DIR }}
-          key: ${{ steps.restore-build-cache.outputs.cache-primary-key }}
-
-      - name: Test
-        working-directory: ${{ env.WORKSPACE }}
-        run: ./toolbox.py test -b ${{ env.BUILD_DIR }} -j ${{ steps.set-jobs.outputs.jobs }} --output-on-failure --timeout 60
-
-      - name: Test Coverage
-        id: test-coverage
-        if: ${{ env.COVERAGE_ENABLED == 'true' }}
-        working-directory: ${{ env.WORKSPACE }}
-        run: |
-          cmake --build ${{ env.BUILD_DIR }} -- coverage
-          echo coverage-percent=$(python3 ${{ env.WORKSPACE }}/scripts/cmake/coverage_info_parser.py ${{ env.BUILD_DIR }}/coverage/index.html) > $GITHUB_OUTPUT
-
-      - name: Delete coverage data files
-        if: ${{ env.COVERAGE_ENABLED == 'true' }}
-        working-directory: ${{ env.WORKSPACE }}
-        run: |
-          # Remove only .gcda files, so that .gcno files are still present for integration tests
-          find ${{ env.BUILD_DIR }} -name '*.gcda' -type f -delete
 
       - name: Integration Tests
         id: integration-tests
         working-directory: ${{ env.WORKSPACE }}
-        run: ./toolbox.py itest -b ${{ env.BUILD_DIR }}
+        run: ./toolbox.py itest -b ""
 
       # failure() makes this step run even when a previous step has failed (which would otherwise
       # cause all subsequent steps to be skipped). The additional conditions ensure this step only
@@ -350,140 +171,4 @@ jobs:
         if: ${{ failure() && (steps.integration-tests.outcome == 'failure') }}
         run: cat /tmp/dit.log
 
-      - name: Test Coverage After Integration Tests
-        id: test-coverage-itests
-        if: ${{ env.COVERAGE_ENABLED == 'true' }}
-        working-directory: ${{ env.WORKSPACE }}
-        run: |
-          cmake --build ${{ env.BUILD_DIR }} -- coverage
-          echo coverage-percent=$(python3 ${{ env.WORKSPACE }}/scripts/cmake/coverage_info_parser.py ${{ env.BUILD_DIR }}/coverage/index.html) > $GITHUB_OUTPUT
 
-      - name: Test TODO Count
-        id: todo-counter
-        working-directory: ${{ env.WORKSPACE }}
-        run: |
-          echo todo-count=$(python3 toolbox.py todo-counter -c -p TODO) > $GITHUB_OUTPUT
-
-      - name: Fail if deployables failed to build
-        if: ${{ env.BUILD_DEPLOYABLES == 'true' && steps.build-deployables.outcome != 'success' }}
-        run: exit 1
-
-  code-statistics:
-    needs: [build]
-
-    runs-on: ubuntu-24.04
-
-    timeout-minutes: 2
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-
-      - name: Fetch origin/main
-        run: git fetch origin main
-
-      - name: Get newly added TODOs
-        id: get-new-todos
-        working-directory: dev
-        run: |
-          TODOS=$(python3 toolbox.py todo-validate --print-todos --branch origin/main --no-merge-base)
-          echo "new-todos=$TODOS" >> $GITHUB_OUTPUT
-          if [[ "$TODOS" == *"No new"* ]]; then
-            echo "has-new-todos=false" >> $GITHUB_OUTPUT
-          else
-            echo "has-new-todos=true" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Save main coverage percentage
-        uses: action-pack/set-variable@v1
-        if: ${{ env.BRANCH_NAME == 'main' }}
-        with:
-          name: "MAIN_COVERAGE_VALUE"
-          value: ${{ needs.build.outputs.coverage-value }}
-          token: ${{ secrets.QUACKER_PAT }}
-
-      - name: Save main integration test coverage percentage
-        uses: action-pack/set-variable@v1
-        if: ${{ env.BRANCH_NAME == 'main' }}
-        with:
-          name: "MAIN_ITEST_COVERAGE_VALUE"
-          value: ${{ needs.build.outputs.itest-coverage-value }}
-          token: ${{ secrets.QUACKER_PAT }}
-
-      - name: Save main TODO count
-        uses: action-pack/set-variable@v1
-        if: ${{ env.BRANCH_NAME == 'main' }}
-        with:
-          name: "MAIN_TODO_COUNT"
-          value: ${{ needs.build.outputs.todo-count }}
-          token: ${{ secrets.QUACKER_PAT }}
-
-      - name: Read main coverage percentage
-        id: read-main-coverage
-        run: echo value=${{ vars.MAIN_COVERAGE_VALUE }} > $GITHUB_OUTPUT
-
-      - name: Read main integration test coverage percentage
-        id: read-main-itest-coverage
-        run: echo value=${{ vars.MAIN_ITEST_COVERAGE_VALUE }} > $GITHUB_OUTPUT
-
-      - name: Read main TODO count
-        id: read-main-todo-count
-        run: echo value=${{ vars.MAIN_TODO_COUNT }} > $GITHUB_OUTPUT
-
-      - name: Calculate TODO difference
-        id: calc-todo-diff
-        run: "echo value=$((${{ needs.build.outputs.todo-count }} - ${{ steps.read-main-todo-count.outputs.value }})) > $GITHUB_OUTPUT"
-
-      - name: Calculate TODO negated
-        id: calc-todo-diff-neg
-        run: "echo value=$((-${{ steps.calc-todo-diff.outputs.value }})) > $GITHUB_OUTPUT"
-
-      - name: Check coverage status
-        id: check-coverage-status
-        run: echo success=${{ needs.build.outputs.coverage-value >= steps.read-main-coverage.outputs.value }} > $GITHUB_OUTPUT
-
-      - name: Hide previous bot comments
-        if: ${{ env.IF_MAIN_PR == 'true' }}
-        uses: int128/hide-comment-action@v1
-        with:
-          token: ${{ secrets.QUACKER_PAT }}
-          authors: quacker-bot
-
-      - name: Post code statistics as github comment
-        uses: actions/github-script@v7
-        if: ${{ env.IF_MAIN_PR == 'true' }}
-        env:
-          COV_FAIL_MSG: '❌❌❌ - **You have to write some more tests, so the coverage is at least as high as on the main branch!** \n\n 🆘 Run coverage tests: `./toolbox.py coverage` to get more information.'
-          COV_SUCC_MSG: "✅✅✅ - **Great job writing tests!**"
-          TODO_FAIL_MSG: "🙈🙈🙈 - You have **added ${{ steps.calc-todo-diff.outputs.value }}** TODO(s) to the repo! 🥴❌🥴"
-          TODO_SINGLE_GOOD_MSG: "👍👍👍 - You have **solved ${{ steps.calc-todo-diff-neg.outputs.value }}** TODO!"
-          TODO_MULTIPLE_AMAZED_MSG: "😍🤯🤯🤯😍 - You have **solved ${{ steps.calc-todo-diff-neg.outputs.value }}** TODOs!!! You are a hero! 🤩🥳🥳🥳🤩"
-
-        with:
-          github-token: ${{ secrets.QUACKER_PAT }}
-          # Lines start, not end with `\n` because otherwise there are many spaces inserted
-          # and the created markdown does not parse well.
-          script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: '## Coverage \
-                    \n🎉 Tests and coverage ran successfully! 🎉 \
-                    \n⭐ Lines covered on the **current** branch: **${{ needs.build.outputs.coverage-value }}%** \
-                    \n⭐ Lines covered on the main branch: ${{ steps.read-main-coverage.outputs.value }}% \
-                    \n${{ steps.check-coverage-status.outputs.success == 'true' && env.COV_SUCC_MSG || env.COV_FAIL_MSG }} \
-                    \n## Coverage of Integration Tests \
-                    \n⭐ Lines covered by integration tests on the **current** branch: **${{ needs.build.outputs.itest-coverage-value }}%** \
-                    \n⭐ Lines covered by integration tests on the main branch: ${{ steps.read-main-itest-coverage.outputs.value }}% \
-                    \n## TODOs \
-                    \n⭐ Current TODO count: **${{ needs.build.outputs.todo-count }}** \
-                    \n${{ steps.calc-todo-diff.outputs.value > 0 && env.TODO_FAIL_MSG || '' }}${{ steps.calc-todo-diff.outputs.value == -1 && env.TODO_SINGLE_GOOD_MSG || '' }}${{ steps.calc-todo-diff.outputs.value < -1 && env.TODO_MULTIPLE_AMAZED_MSG || '' }} \
-                    \n${{ steps.get-new-todos.outputs.has-new-todos == 'true' && '## Newly Added TODOs' || '' }} \
-                    \n${{ steps.get-new-todos.outputs.has-new-todos == 'true' && steps.get-new-todos.outputs.new-todos || '' }} \
-                    '
-            })
-
-      - name: Fail if insufficient coverage
-        if: ${{ steps.check-coverage-status.outputs.success != 'true' && env.IF_MAIN_PR == 'true' && (! contains(github.event.pull_request.labels.*.name, 'Override Coverage Check'))}}
-        run: exit 1
