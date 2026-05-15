@@ -594,7 +594,9 @@ namespace compiler::helios::code {
 				// Perform operator resolution for each operator in the chain. Reuse the expressions
 				// which are between two operators. The last expressions is not reused, but that's fine.
 				for (usize op_idx = 0; op_idx < operator_count; op_idx++) {
+					// clang-format off
 					const auto op = stmt->getOperator(op_idx).unlock(ctx);
+					// clang-format on
 					auto rhs = makeBox<ReusableExpr>(ctx, std::move(result_exprs.at(op_idx + 1)));
 					auto next_lhs = rhs->nextUse();
 

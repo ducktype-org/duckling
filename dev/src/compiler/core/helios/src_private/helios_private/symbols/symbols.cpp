@@ -375,9 +375,10 @@ namespace compiler::helios {
 			);
 		}
 		case pst::StmtKind::CopyConstructor: {
-      // left for code consistency
-      [[maybe_unused]]
-			auto constructor = stmt.dynamicCast<pst::CopyConstructor>().value();
+			// left for code consistency
+			[[maybe_unused]]
+			auto constructor
+				= stmt.dynamicCast<pst::CopyConstructor>().value();
 			return SymbolData::makePSTSymbolData(
 				{
 					.name = lang_def::keywordToStr(lang_def::Keyword::Copy),
