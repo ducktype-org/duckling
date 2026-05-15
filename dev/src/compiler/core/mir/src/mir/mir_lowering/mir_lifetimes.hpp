@@ -55,6 +55,16 @@ namespace compiler::mir {
 	 * where we should allocate and de-allocate memory for variables,
 	 * used by the DVM backend.
 	 *
+	 * The example of the `ScopeStart` and `Construct` being in different instructions:
+	 * ```
+	 * tmp = expression result (scope start x), (scope start tmp)
+	 * x = tmp (construct x) (scope end tmp)
+	 * ```
+	 * the `scope start x` has to be before the `scope start tmp`, because the `tmp `is
+	 * destroyed before the `x` and we want the start/end pairs to be like a stack.
+	 * The lifetime starts with the `construct`, but we have the memory allocated already at the
+	 * `scope start`.
+	 *
 	 * @see src/compiler/core/mir/init_deinit_dvm.md for more info.
 	 */
 	class AddScopeFlagsPass final: public LifetimePass {

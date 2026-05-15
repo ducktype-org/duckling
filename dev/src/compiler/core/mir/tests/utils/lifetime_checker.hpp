@@ -114,6 +114,7 @@ namespace compiler::mir::test_utils {
 				std::cerr << "Not all expected lifetime events were found in MIR. First unmatched "
 							 "event index: "
 						  << event_idx << ", total expected events: " << events.size() << "\n";
+				mir_func->debugPrint(std::cerr);
 				throw base::LogicError("Not all lifetime events were found in MIR");
 			}
 		}

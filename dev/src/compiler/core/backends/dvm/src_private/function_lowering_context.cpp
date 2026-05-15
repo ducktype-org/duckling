@@ -480,11 +480,11 @@ void compiler::backend_vm::internal::FunctionLoweringContext::pushInitsForInstr(
 }
 
 void compiler::backend_vm::internal::FunctionLoweringContext::pushDeinitsForInstr(
-	const std::vector<lir::ScopeFlag>& lifetime_flags, bool& deinits_pushed
+	const std::vector<lir::ScopeFlag>& scope_flags, bool& deinits_pushed
 ) {
 	if (deinits_pushed) return;
 
-	for (const auto& lifetime_flag: lifetime_flags) {
+	for (const auto& lifetime_flag: scope_flags) {
 		if (lifetime_flag.local->parameter_index.has_value())
 			continue;  // Parameters are deinited automatically.
 

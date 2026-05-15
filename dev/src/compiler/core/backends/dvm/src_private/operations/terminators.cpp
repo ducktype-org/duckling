@@ -8,7 +8,7 @@ namespace compiler::backend_vm::internal {
 	using namespace vm::code;
 
 	void InstructionLowerer::lower(const JumpOperation& op) {
-		ctx->pushDeinitsForInstr(op.lifetime_flags, this->pushed_deinits_for_instr);
+		ctx->pushDeinitsForInstr(op.scope_flags, this->pushed_deinits_for_instr);
 
 		ctx->pushInstruction({ OpKind::jmp, op.target.asArgument() });
 	}
@@ -19,7 +19,7 @@ namespace compiler::backend_vm::internal {
 
 			ctx->cleanUpRegisteredTemps();
 			// Branch instr has the deinits pushed between the condition evaluation and the jump.
-			ctx->pushDeinitsForInstr(op.lifetime_flags, this->pushed_deinits_for_instr);
+			ctx->pushDeinitsForInstr(op.scope_flags, this->pushed_deinits_for_instr);
 
 			if (cond == DVMImmediate::boolean(true))
 				ctx->pushInstruction({ OpKind::jmp, op.true_target.asArgument() });
@@ -30,7 +30,7 @@ namespace compiler::backend_vm::internal {
 
 			ctx->cleanUpRegisteredTemps();
 			// Branch instr has the deinits pushed between the condition evaluation and the jump.
-			ctx->pushDeinitsForInstr(op.lifetime_flags, this->pushed_deinits_for_instr);
+			ctx->pushDeinitsForInstr(op.scope_flags, this->pushed_deinits_for_instr);
 
 			ctx->pushInstruction({ OpKind::jmpIf, op.true_target.asArgument() });
 			ctx->pushInstruction({ OpKind::jmpIfNot, op.false_target.asArgument() });
@@ -38,7 +38,7 @@ namespace compiler::backend_vm::internal {
 	}
 
 	void InstructionLowerer::lower(const ReturnOperation& op) {
-		ctx->pushDeinitsForInstr(op.lifetime_flags, this->pushed_deinits_for_instr);
+		ctx->pushDeinitsForInstr(op.scope_flags, this->pushed_deinits_for_instr);
 
 		if (op.value.has_value() and op.value.value().is<DVMPlace>()
 		    and op.value.value().get<DVMPlace>().getSpecialKind()

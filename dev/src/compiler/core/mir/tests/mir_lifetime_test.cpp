@@ -87,7 +87,13 @@ private:
 			.expectScopeStart("4.tmp")  // The if condition temporary
 			.expectInstruction(compiler::mir::Operation::Branch)
 			.expectScopeEnd("4.tmp")
+			.expectDestruct("a")
 			.expectInstruction(compiler::mir::Operation::ReturnValue)
+			.expectScopeEnd("a")
+			// Second return
+			.expectDestruct("a")
+			.expectInstruction(compiler::mir::Operation::ReturnValue)
+			.expectScopeEnd("a")
 			.validate(foo_mir);
 
 		auto return_value = foo_mir->local_list[3];

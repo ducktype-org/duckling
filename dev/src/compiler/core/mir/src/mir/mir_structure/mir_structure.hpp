@@ -718,6 +718,11 @@ namespace compiler::mir {
 		[[nodiscard]]
 		ScopeRef beginScope() const;
 
+		/**
+		 * @brief Returns the first instruction of the block.
+		 * It may be the terminator instruction if the block is empty,
+		 * but it always exists, because every block has to have a terminator instruction.
+		 */
 		[[nodiscard]] Instruction& firstInstruction();
 	};
 

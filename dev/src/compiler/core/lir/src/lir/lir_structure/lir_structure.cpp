@@ -368,8 +368,8 @@ namespace compiler::lir {
 			return LIRLocalSpecialKind::Normal;
 	}
 
-	bool isTerminatorInstr(const Instruction& instr) {
-		switch (instr.operation) {
+	[[nodiscard]] bool Instruction::isTerminating() const {
+		switch (operation) {
 		case Operation::ReturnVoid:
 		case Operation::ReturnValue:
 		case Operation::Jump:

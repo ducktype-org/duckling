@@ -3,8 +3,10 @@
 #include "../mir_structure/mir_structure.hpp"
 
 namespace compiler::mir {
+	using LocalsByScopeMap = base::HashMap<ScopeRef, std::vector<MIRLocalRef>, ScopeRefHash>;
+
 	struct LifetimePassArgs {
-		std::map<ScopeRef, std::vector<MIRLocalRef>> locals_by_scope;
+		LocalsByScopeMap locals_by_scope;
 	};
 
 	ScopeRef lca(ScopeRef a, ScopeRef b) {
@@ -166,11 +168,11 @@ namespace compiler::mir {
 
 	template<OperationFlag::Flag scope_flag, bool reverse_local_order>
 	void addScopeFlagForScopes(
-		Instruction&                                        instr,
-		const std::map<ScopeRef, std::vector<MIRLocalRef>>& locals_by_scope,
-		const std::vector<ScopeRef>&                        starting_scopes
+		Instruction&                 instr,
+		const LocalsByScopeMap&      locals_by_scope,
+		const std::vector<ScopeRef>& scopes_ordered
 	) {
-		for (auto scope: starting_scopes) {
+		for (auto scope: scopes_ordered) {
 			if (not locals_by_scope.contains(scope)) continue;
 
 			auto& locals = locals_by_scope.at(scope);
@@ -204,9 +206,6 @@ namespace compiler::mir {
 		auto&                                         locals_by_scope = args.locals_by_scope;
 		base::HashMap<BlockID, std::vector<ScopeRef>> starting_scopes_by_block;
 
-
-		// No lifetime analysis here, since it is quite complex.
-		// See doc-comment of this function for details.
 
 		auto   first_block_id = function.block_order[0];
 		Block& first_block    = function.blocks[first_block_id];
@@ -292,7 +291,7 @@ namespace compiler::mir {
 
 		for (const auto& local: function.local_list)
 			if (local.scope.value() != function.no_lifetime_scope)
-				args.locals_by_scope[local.scope.value()].emplace_back(&local);
+				args.locals_by_scope.put(local.scope.value()).first->second.emplace_back(&local);
 
 		return args;
 	}

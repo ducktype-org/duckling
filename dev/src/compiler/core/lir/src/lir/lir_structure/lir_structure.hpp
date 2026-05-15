@@ -109,6 +109,9 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 	ReturnValue,
 	Jump,
 	Branch,
+	
+	// Nop can be useful when lowering the instruction flags and MIR instr translates
+	// to zero instructions in LIR, but we want to have the flags in correct place.
 	Nop
 )
 
@@ -557,9 +560,12 @@ namespace compiler::lir {
 			  arguments(std::move(arguments)),
 			  extra_params(extra_parameters),
 			  metadata(metadata) {}
-	};
 
-	bool isTerminatorInstr(const Instruction& instr);
+		/**
+		 * Whether the instruction can be the last instruction in the block (i.e. be a terminator).
+		 */
+		[[nodiscard]] bool isTerminating() const;
+	};
 
 	/**
 	 * @brief LIR block.

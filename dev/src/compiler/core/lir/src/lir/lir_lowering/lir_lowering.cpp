@@ -684,12 +684,6 @@ namespace compiler::lir {
 						"destructors, skipping",
 						"\n"
 					);
-					curr_block->instructions.emplace_back(
-						Operation::Nop,
-						base::Optional<LIRPlace>{},
-						std::vector<LIRValue>{},
-						mir_instruction.metadata
-					);
 
 					break;
 				}
@@ -731,21 +725,21 @@ namespace compiler::lir {
 					));
 				}
 				usize after_instruction_count = curr_block->instructions.size();
-
-				auto flags = lowerFlags(mir_instruction);
+				auto  flags                   = lowerFlags(mir_instruction);
 				if (!flags.empty()) {
+					usize instructions_added = after_instruction_count - before_instruction_count;
 					// If this fails, then it's no problem, we just have to adjust the code.
 					// The `ScopeStart` flags should be added to the first of the LIR instructions
 					// and the `ScopeEnd` flags should be added to the last of the LIR instructions.
 					// Now they are added to both in one place.
 					CORE_ASSERT(
-						after_instruction_count - before_instruction_count <= 1,
+						instructions_added <= 1,
 						base::strConcat(
 							"lowerFlags expected the increase to be less equal to 1, but it was ",
 							after_instruction_count - before_instruction_count
 						)
 					);
-					if (curr_block->instructions.size() == 0) {
+					if (instructions_added == 0) {
 						curr_block->instructions.emplace_back(
 							Operation::Nop,
 							base::Optional<LIRPlace>{},

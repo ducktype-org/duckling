@@ -308,8 +308,8 @@ namespace compiler::backend_vm::internal {
 				instr.arguments.size()
 			);
 			return JumpOperation{
-				.target         = lower_arg(instr.arguments[0]).get<DVMLabel>(),
-				.lifetime_flags = instr.scope_flags,
+				.target      = lower_arg(instr.arguments[0]).get<DVMLabel>(),
+				.scope_flags = instr.scope_flags,
 			};
 		}
 		case Branch: {
@@ -319,10 +319,10 @@ namespace compiler::backend_vm::internal {
 				instr.arguments.size()
 			);
 			return BranchOperation{
-				.condition      = lower_arg(instr.arguments[0]),
-				.true_target    = lower_arg(instr.arguments[1]).get<DVMLabel>(),
-				.false_target   = lower_arg(instr.arguments[2]).get<DVMLabel>(),
-				.lifetime_flags = instr.scope_flags,
+				.condition    = lower_arg(instr.arguments[0]),
+				.true_target  = lower_arg(instr.arguments[1]).get<DVMLabel>(),
+				.false_target = lower_arg(instr.arguments[2]).get<DVMLabel>(),
+				.scope_flags  = instr.scope_flags,
 			};
 		}
 		case ReturnValue:
@@ -334,9 +334,9 @@ namespace compiler::backend_vm::internal {
 			);
 
 			return ReturnOperation{
-				.value          = instr.arguments.size() == 1 ? lower_arg(instr.arguments[0])
-				                                              : base::Optional<DVMValue>(),
-				.lifetime_flags = instr.scope_flags,
+				.value       = instr.arguments.size() == 1 ? lower_arg(instr.arguments[0])
+				                                           : base::Optional<DVMValue>(),
+				.scope_flags = instr.scope_flags,
 			};
 		}
 		case Nop: {

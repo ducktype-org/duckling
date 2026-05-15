@@ -123,9 +123,9 @@ namespace compiler::backend_vm::internal {
 		/**
 		 * @brief Pushes the inits for the given lifetime flags.
 		 *
-		 * @param lifetime_flags
+		 * @param scope_flags
 		 */
-		void pushInitsForInstr(const std::vector<lir::ScopeFlag>& lifetime_flags);
+		void pushInitsForInstr(const std::vector<lir::ScopeFlag>& scope_flags);
 
 		/**
 		 * @brief Pushes the deinits for the given lifetime flags.
@@ -134,11 +134,11 @@ namespace compiler::backend_vm::internal {
 		 *
 		 * The typical place for deinits is after the instruction, but in some cases (e.g.
 		 * terminators) we may want to push the deinits before the instruction.
-		 * @param lifetime_flags
+		 * @param scope_flags
 		 * @param deinits_pushed The boolean flag that used to make sure deinits are only pushed once.
 		 */
 		void pushDeinitsForInstr(
-			const std::vector<lir::ScopeFlag>& lifetime_flags, bool& deinits_pushed
+			const std::vector<lir::ScopeFlag>& scope_flags, bool& deinits_pushed
 		);
 
 
