@@ -1,0 +1,151 @@
+{
+    "packages": [
+        {
+            "name": "lib_a",
+            "version": "0.1.0",
+            "path": "duck_modules/multi_package/lib_a",
+            "features": [ "use_mathlib" ]
+        },
+        {
+            "name": "lib_b",
+            "version": "0.1.0",
+            "path": "duck_modules/multi_package/lib_b",
+            "features": [ "use_mathlib", "use_lib_a" ],
+            "dependencies": [
+                { "name": "lib_a", "alias": "lib_a" },
+                { "name": "lib_c" }
+            ]
+        },
+        {
+            "name": "lib_c",
+            "version": "0.1.0",
+            "path": "duck_modules/multi_package/lib_c",
+            "features": [ "use_lib_b" ],
+            "dependencies": [
+                { "name": "lib_b" }
+            ]
+        },
+        {
+            "name": "app1",
+            "version": "0.1.0",
+            "path": "duck_modules/multi_package/app1",
+            "features": [],
+            "dependencies": [
+                { "name": "lib_a", "alias": "lib_a" },
+                { "name": "lib_c", "alias": "lib_b" }
+            ]
+        },
+        {
+            "name": "app2",
+            "version": "0.1.0",
+            "path": "duck_modules/multi_package/app2",
+            "dependencies": [
+                { "name": "lib_a", "alias": "lib_a" }
+            ]
+        },
+        {
+            "name": "app3",
+            "version": "0.1.0",
+            "path": "duck_modules/multi_package/app3",
+            "dependencies": [
+                { "name": "lib_a" },
+                { "name": "lib_b" }
+            ]
+        },
+        {
+            "name": "app3_alias",
+            "version": "0.1.0",
+            "path": "duck_modules/multi_package/app3",
+            "dependencies": [
+                { "name": "lib_a", "alias": "lib_b" },
+                { "name": "lib_b", "alias": "lib_a" }
+            ]
+        }
+    ],
+    "tasks": [
+        {
+            "package": "lib_a",
+            "strategy": "lib",
+            "output_file": "lib_a"
+        },
+        {
+            "package": "lib_b",
+            "strategy": "lib",
+            "output_file": "lib_b"
+        },
+        {
+            "package": "lib_c",
+            "strategy": "lib",
+            "output_file": "lib_c"
+        },
+        {
+            "package": "lib_a",
+            "strategy": "dvm",
+            "output_file": "lib_a_dvm"
+        },
+        {
+            "package": "lib_b",
+            "strategy": "dvm",
+            "output_file": "lib_b_dvm"
+        },
+        {
+            "package": "lib_c",
+            "strategy": "dvm",
+            "output_file": "lib_c_dvm"
+        },
+        {
+            "package": "app1",
+            "strategy": "dvm",
+            "output_file": "app1_dvm"
+        },
+        {
+            "package": "app2",
+            "strategy": "dvm",
+            "output_file": "app2_dvm"
+        },
+        {
+            "package": "app3",
+            "strategy": "dvm",
+            "output_file": "app3_dvm"
+        },
+        {
+            "package": "app3_alias",
+            "strategy": "dvm",
+            "output_file": "app3_alias_dvm"
+
+        },
+        {
+            "package": "app1",
+            "strategy": "native",
+            "output_file": "app1",
+            "linking_options": "build/lib_a.a build/lib_c.a build/lib_b.a"
+        },
+        {
+            "package": "app2",
+            "strategy": "native",
+            "output_file": "app2",
+            "linking_options": {
+                "additional_link_options": "build/lib_a.a",
+                "link_c_standard_library": true
+            }
+        },
+        {
+            "package": "app3",
+            "strategy": "native",
+            "output_file": "app3",
+            "linking_options": {
+                "additional_link_options": "build/lib_a.a build/lib_b.a build/lib_c.a",
+                "link_c_standard_library": true
+            }
+        },
+        {
+            "package": "app3_alias",
+            "strategy": "native",
+            "output_file": "app3_alias",
+            "linking_options": {
+                "additional_link_options": "build/lib_a.a build/lib_b.a build/lib_c.a",
+                "link_c_standard_library": true
+            }
+        }
+    ]
+}

@@ -149,6 +149,12 @@ namespace {
 				const auto struct_constant = llvm::ConstantStruct::get(struct_type, fields);
 				return struct_constant;
 			}
+			variant_case(compiler::ctv::CompileTimeValue::TupleCTV, tuple) {
+				// @TODO: #2506 Implement this
+				throw base::NotYetImplemented(base::strConcat(
+					"Conversion from CTV to LLVM constant for tuples is not implemented yet"
+				));
+			}
 			variant_default {
 				throw base::NotYetImplemented(base::strConcat(
 					"Conversion from CTV to LLVM constant for this type. Index in CTV "
@@ -230,10 +236,6 @@ namespace compiler::backend_llvm {
 	auto typeFromLayout(const Ref<llvm::Module> module, const CRef<tsl::TypeLayout> layout)
 		-> llvm::Type* {
 		auto& llvm_context = module->getContext();
-		// If the layout is empty, return the void type.
-		// Sometimes, empty layouts may appear in LIR, despite being eliminated during MIR -> LIR.
-		// This is because they are function return types. They should then be converted to void.
-		if (layout->getSize() == Bits(0)) return llvm::Type::getVoidTy(llvm_context);
 
 		variant_match(layout->getVariant()) {
 			variant_case_novalue(tsl::EmptyTypeLayout) {

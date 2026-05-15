@@ -1,0 +1,33 @@
+# Test configuration for arithmetic-operators-on-integers
+# Tests +, -, *, /, %, unary negation, precedence, and operations on various integer types
+
+Tests:
+  arithmetic_operators_test:
+    Description: Tests for arithmetic operators on integers.
+    Cases:
+      all:
+        backend: all
+        Output:
+          String: "30\n10\n200\n2\n0\n15\n15\n30\n5\n2\n-50\n50\n14\n20\n8\n2\n8\n2\n15\n1\n2\n130\n70\n10\n25\n24\n"
+        ExitCode: 0
+  overflow_integer_test:
+    Description: Tests unsigned integer overflow (wraparound).
+    Cases:
+      all:
+        backend: all
+        Output:
+          String: "0\n0\n0\n18446744073709551614\n4294967294\n65534\n18446744073709551615\n18446744069414584321\n18446744073709486081\n-9223372036854775808\n-2147483648\n-32768\n9223372036854775807\n2147483647\n32767\n-2\n-2\n-2\n0\n0\n0\n"
+        ExitCode: 0
+  exponents_test:
+    Description: Tests exponentiation operator (**) on integers.
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: "1024\n625\n27\n-27\n16\n16\n1\n42\n0\n1\n1\n-1\n4\n9\n9\n"
+        ExitCode: 0
+      dvm:
+        backend: dvm
+        Output:
+          String: "1024\n625\n27\n-27\n16\n16\n1\n42\n0\n1\n1\n-1\n4\n9\n9\n"
+        ExitCode: 0
