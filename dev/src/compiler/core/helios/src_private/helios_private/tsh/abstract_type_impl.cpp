@@ -28,6 +28,9 @@ namespace compiler::tsh {
 	 * @return The default interface for the given type.
 	 */
 	TypeInterface getDefaultTypeInterfaceForType(query::Context& ctx, const AbstractType type) {
+		// @TODO: #1956 Methods don't work for zero-sized types yet, due to taking ref to self
+		if (not type.carriesInformation(ctx)) return {};
+
 		using namespace helios::defgen;
 		auto get_generated_symbol
 			= [&](const base::StrID                                      name,
