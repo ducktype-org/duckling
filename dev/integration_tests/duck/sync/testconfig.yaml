@@ -8,6 +8,9 @@ SubDirs:
   - basic_project
   - basic_project_with_flags
   - project_with_cycle_in_flags
+  - project_with_absent_flag
+  - with_a_nonexistent_dep_feature
+  - with_a_nonexistent_local_dep
   - with_a_single_local_dep
   - with_a_single_local_dep_and_conditions
   - with_a_single_local_dep_and_conditions2

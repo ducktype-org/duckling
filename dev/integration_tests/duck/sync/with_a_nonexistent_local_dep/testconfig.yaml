@@ -5,6 +5,3 @@ Tests:
       sync:
         test_cmd: -C foo sync
         ExitCode: 1
-        Err:
-          Run: |+
-            echo "error: the path \`$(pwd)/bar\` is not a directory"

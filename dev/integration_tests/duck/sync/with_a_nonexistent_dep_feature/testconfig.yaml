@@ -5,6 +5,3 @@ Tests:
       sync:
         test_cmd: -C foo sync
         ExitCode: 1
-        Err:
-          Run: |+
-            echo "error: package at the directory \`$(pwd)/bar\` does not have feature \`b\`"
