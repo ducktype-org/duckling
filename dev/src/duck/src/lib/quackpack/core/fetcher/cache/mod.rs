@@ -10,6 +10,7 @@ use crate::quackpack::schemas::registry;
 #[cfg(test)]
 mod tests;
 
+use crate::util::path_ops_ext::PathOpsExt;
 use crate::{QuackResult, QuackResultContext};
 
 const SQL_ERROR_MESSAGE: &str = "failed to execute an SQL query";
@@ -119,7 +120,13 @@ impl ManifestCache {
         debug!("initializing fetcher cache at `{location:?}`");
         let connection = match location {
             CacheLocation::Memory => rusqlite::Connection::open_in_memory()?,
-            CacheLocation::Path(path) => rusqlite::Connection::open(path)?,
+            CacheLocation::Path(path) => {
+                // Create a file before opening a connection, or playing with SQLite queries.
+                // This should prevent hangs in CI/CD when creating a table: SQLite calls fsync, if
+                // a file doesn't exist, at sometimes it can take a long time inside a docker.
+                path.touch()?;
+                rusqlite::Connection::open(path)?
+            }
         };
         trace!("created connection");
         connection
