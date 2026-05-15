@@ -763,7 +763,7 @@ namespace compiler::helios::code {
 
 		const CallPstOrigin pst_origin{ .whole_call_origin = whole_call_origin,
 			                            .callee_origin     = op_origin,
-			                            .arguments_origin  = { lhs_origin, rhs_origin } };
+			                            .arguments_origin  = { lhs_origin, rhs_origin }, };
 		CallArguments       call_arguments{};
 		call_arguments.positional_arguments.emplace_back(std::move(lhs));
 		call_arguments.positional_arguments.emplace_back(std::move(rhs));
