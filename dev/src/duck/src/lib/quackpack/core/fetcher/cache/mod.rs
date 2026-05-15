@@ -120,17 +120,7 @@ impl ManifestCache {
         debug!("initializing fetcher cache at `{location:?}`");
         let connection = match location {
             CacheLocation::Memory => rusqlite::Connection::open_in_memory()?,
-            CacheLocation::Path(path) => {
-                // Create a file before opening a connection, or playing with SQLite queries.
-                // This should prevent hangs in CI/CD when creating a table: SQLite calls fsync, if
-                // a file doesn't exist, at sometimes it can take a long time inside a docker.
-                let file = path.touch()?;
-                trace!("sync start");
-                file.sync_all()?;
-                drop(file);
-                trace!("sync stop");
-                rusqlite::Connection::open(path)?
-            }
+            CacheLocation::Path(path) => rusqlite::Connection::open(path)?,
         };
         trace!("created connection");
         connection
