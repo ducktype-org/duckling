@@ -594,7 +594,6 @@ namespace compiler::helios::code {
 				// Perform operator resolution for each operator in the chain. Reuse the expressions
 				// which are between two operators. The last expressions is not reused, but that's fine.
 				for (usize op_idx = 0; op_idx < operator_count; op_idx++) {
-
 					// clang-format off
 					const auto op = stmt->getOperator(op_idx).unlock(ctx);
 					// clang-format on
