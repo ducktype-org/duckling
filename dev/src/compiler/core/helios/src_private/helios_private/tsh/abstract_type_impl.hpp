@@ -1,7 +1,5 @@
 #pragma once
 
-#include "queries.hpp"
-
 #include <helios/symbols/symbol_id.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/tsh/abstract_type.hpp>

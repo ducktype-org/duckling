@@ -3,6 +3,7 @@
  */
 
 #include <ctv/ctv.hpp>
+#include <helios/queries/function_queries.hpp>
 #include <helios/queries/queries.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
@@ -40,6 +41,7 @@ public:
 		TESTER_ADD_TEST(boxesTest);
 		TESTER_ADD_TEST(staticArraysTest);
 		TESTER_ADD_TEST(dynamicArraysTest);
+		TESTER_ADD_TEST(tupleTest);
 		TESTER_ADD_TEST(moveValidation);
 	}
 
@@ -898,6 +900,42 @@ private:
 		});
 	}
 
+	void tupleTest() {
+		auto [module, scope] = getModule(fs::File(path("modules/tuples")));
+
+		withContextDo([&](query::Context& ctx) {
+			auto& unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+			auto& hout_func = unit.functions.at(0);
+
+			auto& mir_func = (compiler::mir::Function&) ctx
+			                     .query<compiler::mir::LowerToMIRFunction>({ hout_func })
+			                     ->valueOrThrow();
+
+			bool found_tuple_ctor_call = false;
+
+			using namespace compiler::mir;
+
+			for (const auto& block_id: mir_func.block_order) {
+				for (const auto& instr: mir_func.blocks[block_id].instructions) {
+					switch (instr.operation) {
+					case Operation::Call: {
+						auto  ctor_id = instr.arguments.at(0).get<MIRFunctionLiteral>().helios_id;
+						auto& fun_decl
+							= ctx.query<compiler::helios::QueryDeclOfFun>(ctor_id)->valueOrThrow();
+						if (fun_decl.return_type.getType().getKind() == compiler::tsh::Kind::Tuple)
+							found_tuple_ctor_call = true;
+						break;
+					}
+					default:
+						break;
+					}
+				}
+			}
+
+			ASSERT_TRUE(found_tuple_ctor_call);
+		});
+	}
+
 	void moveValidation() {
 		// @note This test is very fragile and may require hotfixes even after unrelated changes.
 		// Proper tests can be written once 'move' is implemented. It should contain usage of 'if',
@@ -929,7 +967,7 @@ private:
 					                          .query<compiler::mir::LowerToMIRFunction>({ fun })
 					                          ->valueOrThrow();
 
-					CRef<compiler::mir::MIRLocal> tmp(mir_rep_good2.local_list[3]);
+					CRef<compiler::mir::MIRLocal> b_var(mir_rep_good2.local_list[2]);
 					compiler::mir::Instruction&   assignment
 						= mir_rep_good2.blocks[mir_rep_good2.block_order[1]].instructions[0];
 
@@ -944,7 +982,7 @@ private:
 					assertTrue(
 						assignment.arguments[0].isLocal(), "Fragile test, please fix (good2, local)"
 					);
-					assignment.flags.emplace_back(compiler::mir::OperationFlag::Flag::Move, tmp);
+					assignment.flags.emplace_back(compiler::mir::OperationFlag::Flag::Move, b_var);
 
 					ASSERT_TRUE(validateFunction(ctx, mir_rep_good2).isOk());
 				}

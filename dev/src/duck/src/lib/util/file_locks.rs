@@ -251,6 +251,6 @@ fn lock(
         return Ok(());
     }
     ctx.console()
-        .info(format!("waiting for file lock `{}`", path.display()));
+        .info(format!("waiting for file lock `{}`", path.display()))?;
     blocking().with_context(|| format!("failed to lock `{}`", path.display()))
 }

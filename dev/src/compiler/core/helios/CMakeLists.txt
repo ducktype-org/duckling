@@ -22,6 +22,7 @@ add_library(HELIOS STATIC
 	src_private/helios_private/comp_time/vm_evaluator.cpp
 	src_private/helios_private/comp_time/comptime_type_operations.cpp
 	src_private/helios_private/hout_creation/definition_generation/class_constructors.cpp
+	src_private/helios_private/hout_creation/definition_generation/tuple_constructor.cpp
 	src_private/helios_private/hout_creation/definition_generation/default_constructors.cpp
         src_private/helios_private/hout_creation/definition_generation/default_destructors.cpp
 	src_private/helios_private/hout_creation/definition_generation/to_string_methods.cpp
@@ -42,7 +43,7 @@ add_library(HELIOS STATIC
 	src/helios/mangler/mangler.cpp
 	src/helios/test_utils/helios_test_utils.cpp
 	src/helios/symbols/query_type_of_symbol.cpp
-	src/helios/symbols/query_class_symbol_data.cpp
+	src/helios/symbols/query_type_symbol_data.cpp
 	src/helios/symbols/query_type_from_definition.cpp
 	src/helios/symbols/query_class_of_member.cpp
 	src/helios/symbols/symbol_abi.cpp

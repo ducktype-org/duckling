@@ -54,7 +54,7 @@ Tests:
         Output:
           String: "42\n1\n"
         ExitCode: 0
-      # @TODO: #1849 #2483 reenable DVM case, currently it fails because of both
+      # @TODO: #2483 reenable DVM case, currently it fails because of both
       # the fact that we don't handle string compilation to DVM and that we don't handle
       # constants compilation to DVM.
       # dvm:

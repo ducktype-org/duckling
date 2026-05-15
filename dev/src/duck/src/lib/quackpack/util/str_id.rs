@@ -1,7 +1,7 @@
 //! A [`StrId`], an interned version of a string (also known as a fly string).
 //!
 //! It's trivially copyable.
-use std::borrow::{Borrow, Cow};
+use std::borrow::Cow;
 use std::collections::HashSet;
 use std::convert::Infallible;
 use std::ffi::{OsStr, OsString};
@@ -14,7 +14,7 @@ use std::sync::{Mutex, OnceLock};
 
 use serde::{Deserialize, Serialize};
 
-use crate::quackpack::util::PANIC_MESSAGE;
+use crate::util::extract::Extract;
 
 static STRID_CACHE: OnceLock<Mutex<HashSet<&'static str>>> = OnceLock::new();
 
@@ -92,20 +92,7 @@ impl From<&OsString> for StrId {
 
 impl From<Cow<'_, str>> for StrId {
     fn from(value: Cow<'_, str>) -> Self {
-        let mut cache = STRID_CACHE
-            .get_or_init(Default::default)
-            .lock()
-            // NOTE: `.unwrap()` should never panic: from docs:
-            // Errors
-            //
-            // If another user of this mutex panicked while holding the mutex,
-            // then this call will return an error once the mutex is acquired.
-            // The acquired mutex guard will be contained in the returned error.
-            //
-            // Panics
-            //
-            // This function might panic when called if the lock is already held by the current thread.
-            .expect(PANIC_MESSAGE);
+        let mut cache = STRID_CACHE.get_or_init(Default::default).lock().extract();
         let reference = cache.get(value.as_ref()).copied().unwrap_or_else(|| {
             let static_ref = value.into_owned().leak();
             cache.insert(static_ref);
@@ -143,7 +130,10 @@ impl PartialEq<String> for StrId {
 
 impl PartialEq<StrId> for StrId {
     fn eq(&self, other: &StrId) -> bool {
-        self.inner == other.inner
+        // If we have two equal StrIds, their underlying &str is equal.
+        // That &str is stored exactly once in STRID_CACHE, so we can compare by comparing pointers,
+        // which is faster.
+        std::ptr::eq(self.inner, other.inner)
     }
 }
 
@@ -187,15 +177,9 @@ impl AsRef<Path> for StrId {
     }
 }
 
-impl Borrow<str> for StrId {
-    fn borrow(&self) -> &str {
-        self.as_str()
-    }
-}
-
 impl Hash for StrId {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.inner.hash(state);
+        std::ptr::hash(self.inner, state);
     }
 }
 
@@ -242,6 +226,30 @@ impl<'de> Deserialize<'de> for StrId {
     }
 }
 
+/// A minimal substitute to [`std::slice::Join`].
+/// If [`std::slice::Join`] becomes stable, this can be changed to `impl Join`.
+pub trait QpJoin {
+    fn join(&self, sep: &str) -> String;
+}
+
+impl QpJoin for [StrId] {
+    fn join(&self, sep: &str) -> String {
+        if self.is_empty() {
+            return String::new();
+        }
+        let mut len = self.iter().map(|x| x.len()).sum();
+        len += (self.len() - 1) * sep.len();
+        let mut result = String::with_capacity(len);
+        for (i, x) in self.iter().enumerate() {
+            if i > 0 {
+                result.push_str(sep);
+            }
+            result.push_str(x.as_str());
+        }
+        result
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -256,5 +264,11 @@ mod tests {
         assert_eq!(a, "a".to_owned());
         assert_eq!(a.to_string(), "a");
         assert_eq!(a.as_str(), "a");
+    }
+
+    #[test]
+    fn join() {
+        let to_join = [StrId::from("a"), StrId::from("bb"), StrId::from("ζξ")];
+        assert_eq!(to_join.join(".😀"), "a.😀bb.😀ζξ");
     }
 }

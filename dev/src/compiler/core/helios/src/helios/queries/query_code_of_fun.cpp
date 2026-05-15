@@ -19,6 +19,7 @@
 #include <helios_private/errors/errors.hpp>
 #include <helios_private/hout_creation/definition_generation/class_constructors.hpp>
 #include <helios_private/hout_creation/definition_generation/default_constructors.hpp>
+#include <helios_private/hout_creation/definition_generation/tuple_constructor.hpp>
 #include <helios_private/hout_creation/definition_generation/to_string_methods.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/hout_creation/hout_stmt_compilation.hpp>
@@ -143,12 +144,18 @@ namespace compiler::helios {
 				variant_case(defgen::GeneratedSymbolData, gsd_data) {
 					variant_match(gsd_data.data) {
 						variant_case(defgen::GeneratedSymbolData::ImplicitConstructor, ctor) {
-							const auto& type = ctx.query<QueryTypeFromDefinition>(ctor.class_symbol)
-							                       ->valueOrThrow()
-							                       .getType()
-							                       .as<tsh::ClassAbstractType>();
-							return ctx.query<defgen::QueryImplicitClassConstructor>(type)
-							    ->valueOrThrow();
+							const auto& type = ctor.target_type;
+							if (type.getKind() == tsh::Kind::Class) {
+								const auto& class_type = type.as<tsh::ClassAbstractType>();
+								return ctx.query<defgen::QueryImplicitClassConstructor>(class_type)
+								    ->valueOrThrow();
+							} else if (type.getKind() == tsh::Kind::Tuple) {
+								const auto& tuple_type = type.as<tsh::TupleAbstractType>();
+								return ctx.query<defgen::QueryTuplePackConstructor>(tuple_type)
+								    ->valueOrThrow();
+							} else {
+								CORE_UNREACHABLE();
+							}
 						}
 						variant_case(defgen::GeneratedSymbolData::DefaultClassConstructor, ctor) {
 							const auto& type = ctx.query<QueryTypeFromDefinition>(ctor.class_symbol)

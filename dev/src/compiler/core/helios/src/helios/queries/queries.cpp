@@ -15,6 +15,7 @@
 #include <helios_private/errors/dia_interactive_elements.hpp>
 #include <helios_private/hout_creation/definition_generation/class_constructors.hpp>
 #include <helios_private/hout_creation/definition_generation/default_constructors.hpp>
+#include <helios_private/hout_creation/definition_generation/tuple_constructor.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
@@ -65,16 +66,26 @@ namespace compiler::helios {
 			std::vector<query::TaskHandle> scheduled_tasks;
 			std::vector<SymID>             class_symbols;
 			std::set<SymID>                default_ctors;
+			std::set<SymID>                additional_ctors;
 
 			auto register_ctor_if_needed = [&](SymID sym) {
 				const auto& symbol_type = ctx.query<QueryTypeOfSymbol>(sym)->valueOrThrow();
+				const auto& type        = symbol_type.getType();
+
+				// @TODO: #2509 Handle nested tuples
+				if (type.getKind() == tsh::Kind::Tuple) {
+					auto        tuple_type = type.as<tsh::TupleAbstractType>();
+					const auto& tuple_ctor
+						= ctx.query<defgen::QueryTuplePackConstructor>(tuple_type)->valueOrThrow();
+					additional_ctors.insert(tuple_ctor.declaration->original_symbol);
+					return;
+				}
 
 				// Don't insert any constructors if a type is trivially zero-initializable or not
 				// default constructible.
 				if (symbol_type.isTriviallyZeroInitializable(ctx)) return;
 				if (!symbol_type.isDefaultConstructible(ctx)) return;
 
-				const auto& type = symbol_type.getType();
 				if (type.getKind() == tsh::Kind::StaticArray) {
 					auto        arr_type = type.as<tsh::StaticArrayAbstractType>();
 					const auto& arr_ctor
@@ -140,7 +151,13 @@ namespace compiler::helios {
 				});
 			}
 
-			run_no_interrupt([&] { appendDefaultConstructors(out.functions, default_ctors, ctx); });
+			run_no_interrupt([&] {
+				appendDefaultConstructors(out.functions, default_ctors, ctx);
+				for (SymID ctor_sym: additional_ctors) {
+					const auto& hout_res = ctx.query<QueryCodeOfFun>(ctor_sym)->valueOrThrow();
+					out.functions.emplace_back(&hout_res);
+				}
+			});
 
 			for (auto handler: scheduled_tasks) {
 				// we "catch" failure here to continue gathering other functions:

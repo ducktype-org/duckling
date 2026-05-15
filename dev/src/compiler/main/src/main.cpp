@@ -6,9 +6,13 @@
  * @note: The ideas from here might be one day separated into a framework.
  */
 
+#include <archiver/archive.hpp>
+#include <driver/diagnostics/log_helpers.hpp>
 #include <driver/exit.hpp>
 #include <driver/initialize.hpp>
+#include <driver/manifest/manifest.hpp>
 #include <driver/operations/generic_operations.hpp>
+#include <driver/task/task.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/pst.hpp>
@@ -21,6 +25,7 @@
 #include <time_stats/time_stats.hpp>
 
 #include <base/except/exceptions.hpp>
+#include <base/extend_cpp/variant_match.hpp>
 #include <base/misc/int_conv.hpp>
 #include <base/str/str_utils.hpp>
 #include <base/types/ok_bad.hpp>
@@ -30,10 +35,13 @@
 #include <filesystem/file.hpp>
 #include <filesystem/file_path.hpp>
 #include <init/init.hpp>
+#include <logger/logger.hpp>
 #include <printer/stream_printer.hpp>
 #include <query_framework/entry/query_entry_point.hpp>
 #include <query_framework/entry/with_context_do.hpp>
 #include <query_framework/q_stats/q_stats.hpp>
+
+#include <nlohmann/json.hpp>
 
 #include <iostream>
 #include <ranges>
@@ -46,8 +54,8 @@ clah::Clah getStandardDucklingOptions() {
 	             .addShortDesc("Print version and exit")
 	             .build())
 	    // Note that dev-logs options are not handled in pre-handler below,
-	    // they should be handled in each command by getDebugOptionsFromClap and passed to
-	    // initializeTheCompiler.
+	    // they should be handled in each command by debug_options::getDebugOptionsFromClah and
+	    // passed to initializeTheCompiler.
 	    .add(clah::ParamBuilder::ofValue(clah::StringListParser::make("categories"))
 	             .addLongName("dev-logs")
 	             .addShortDesc("Enable developer logs for given categories.")
@@ -108,6 +116,17 @@ compiler::linker::LinkingOptions getLinkingOptionsFromClah(const clah::ParsingRe
 	linking_options.link_c_standard_library = not parsing_result.isFlag("no-c-standard-library");
 
 	return linking_options;
+}
+
+/**
+ * Helper function to extract archiving options from clah parsing result.
+ */
+compiler::archiver::ArchivingOptions getArchivingOptionsFromClap(
+	const clah::ParsingResult& parsing_result
+) {
+	compiler::archiver::ArchivingOptions archiving_options;
+	archiving_options.archiver_path = parsing_result.getValue<std::string>("archiver");
+	return archiving_options;
 }
 
 /**
@@ -304,16 +323,21 @@ clah::Clah getClahForMain() {
 
 					auto init_result = compiler::driver::initializeTheCompiler(
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
-							.main_package_info = {
-								.package_name = package_name,
-								.package_path = path_to_compile.getFilePath(),
+							.packages_info = {
+								compiler::frontend::packages::RawPackageInfo{
+									.package_name = base::StrID(package_name),
+									.version      = base::StrID("not_supported"),
+									.package_path = fs::FilePath(path_to_compile.getFilePath()),
+									.features     = {},
+									.dependencies  = {},
+								},
 							},
 							.compilation_artifacts = {
 								.artifacts_path = fs::FilePath("./duck_build/"),
 							},
-							.backend_options = getBackendOptionsFromClah(options),
-							.debug_options = debug_options::getDebugOptionsFromClah(options),
-							.incremental   = { .enabled = !options.isFlag("no-incremental") },
+							.backend_options   = getBackendOptionsFromClah(options),
+							.debug_options     = debug_options::getDebugOptionsFromClah(options),
+							.incremental       = { .enabled = !options.isFlag("no-incremental") },
 							.execution_options = {
 								.worker_count = 1,
 							},
@@ -331,7 +355,10 @@ clah::Clah getClahForMain() {
 					auto backend_type = options.isFlag("dvm-backend") ? driver::BackendType::DVM
 		                                                              : driver::BackendType::LLVM;
 
-					auto root = global_state::getMainPackage().root_module;
+					CORE_ASSERT(!global_state::getPackages().empty(), "No packages registered");
+					auto root
+						= global_state::getPackages().front().getRootModule().illegalAccess().getID(
+						);
 
 					(void) query::entryPoint<driver::CompileModule>({ root, backend_type, false });
 
@@ -380,6 +407,11 @@ clah::Clah getClahForMain() {
 	                     .addShortDesc("Path to the linker executable.")
 	                     .optional()
 	                     .build())
+				.add(clah::ParamBuilder::ofValue(clah::StringParser::make("archiver"))
+	                     .addLongName("archiver")
+	                     .addShortDesc("Path to the archiver executable.")
+	                     .optional()
+	                     .build())
 				.add(clah::ParamBuilder::ofFlag()
 	                     .addLongName("no-c-standard-library")
 	                     .addShortDesc(
@@ -398,7 +430,26 @@ clah::Clah getClahForMain() {
 	                     .addShortDesc("Worker count.")
 	                     .optional()
 	                     .build())
+				.add(clah::ParamBuilder::ofValue(clah::StringParser::make("output-file-name"))
+	                     .addShortName('o')
+	                     .addLongName("output-file-name")
+	                     .addShortDesc("Output artifact file name (without extension).")
+	                     .optional()
+	                     .build())
+				.add(clah::ParamBuilder::ofFlag()
+	                     .addLongName("emit-static-lib")
+	                     .addShortDesc("Emit a static library (.a) instead of an executable.")
+	                     .build())
 				.setHandler([](const clah::ParsingResult& options) -> int {
+					if (options.isFlag("no-incremental") && options.isFlag("print-graph")) {
+						CORE_USER_LOG(
+							"Error: --print-graph requires the query graph, which is "
+							"disabled by --no-incremental. These flags cannot be used "
+							"together.\n"
+						);
+						return 1;
+					}
+
 					auto path_to_compile = options.getPositional<fs::File>(0);
 					auto package_name    = options.getValue<std::string>("name").copyValueOr("");
 					CORE_ASSERT(package_name != "", "Package name must be specified");
@@ -407,17 +458,22 @@ clah::Clah getClahForMain() {
 
 					auto init_result = compiler::driver::initializeTheCompiler(
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
-							.main_package_info = {
-								.package_name = package_name,
-								.package_path = path_to_compile.getFilePath(),
+							.packages_info = {
+								compiler::frontend::packages::RawPackageInfo{
+									.package_name = base::StrID(package_name),
+									.version      = base::StrID("not_supported"),
+									.package_path = path_to_compile.getFilePath(),
+									.features     = {},
+									.dependencies = {},
+								},
 							},
 							.compilation_artifacts = {
 								.artifacts_path =
 									options.getValue<fs::FilePath>("artifact-location").copyValueOr("./duck_build/"),
 							},
-							.backend_options = getBackendOptionsFromClah(options),
-							.debug_options = debug_options::getDebugOptionsFromClah(options),
-							.incremental   = { .enabled = !options.isFlag("no-incremental") },
+							.backend_options   = getBackendOptionsFromClah(options),
+							.debug_options     = debug_options::getDebugOptionsFromClah(options),
+							.incremental       = { .enabled = !options.isFlag("no-incremental") },
 							.execution_options = {
 								.worker_count = base::safeIntConv<u64>(worker_count),
 							},
@@ -431,18 +487,46 @@ clah::Clah getClahForMain() {
 
 					const auto& linking_options = getLinkingOptionsFromClah(options);
 
+					compiler::driver::BuildTarget build_target;
+					if (options.isFlag("dvm-backend")) {
+						auto output_file_name = options.getValue<std::string>("output-file-name")
+			                                        .copyValueOr("package_dvm");
+
+						build_target = compiler::driver::BuildTargetDVM{
+							.output_file_stem = base::StrID(output_file_name.c_str()),
+						};
+					} else if (options.isFlag("emit-static-lib")) {
+						auto output_file_name = options.getValue<std::string>("output-file-name")
+			                                        .copyValueOr("package_llvm");
+
+						auto archiving_options = getArchivingOptionsFromClap(options);
+						build_target           = compiler::driver::BuildTargetLLVMStaticLibrary{
+									  .output_file_stem  = base::StrID(output_file_name.c_str()),
+									  .archiving_options = archiving_options,
+						};
+					} else {
+						auto output_file_name = options.getValue<std::string>("output-file-name")
+			                                        .copyValueOr("package_llvm");
+
+						build_target = compiler::driver::BuildTargetLLVMExecutable{
+							.output_file_stem = base::StrID(output_file_name.c_str()),
+							.linking_options  = linking_options,
+						};
+					}
 
 					time_stats::TrackCategoryTime total_compilation_time(
 						time_stats::TimeCategories::TotalCompilationTime
 					);
 
-					auto backend_type = options.isFlag("dvm-backend")
-		                                  ? compiler::driver::BackendType::DVM
-		                                  : compiler::driver::BackendType::LLVM;
-
-					base::OkBad result = compiler::driver::compileEntirePackage(
-						global_state::getMainPackage(), backend_type, linking_options
-					);
+					CORE_ASSERT(!global_state::getPackages().empty(), "No packages registered");
+					base::OkBad result = compiler::driver::compilePackages({
+						compiler::driver::PackageCompilationTask{
+							.root_module
+							= global_state::getPackages().front().getRootModule().illegalAccess().getID(
+							),
+							.build_target = build_target,
+						},
+					});
 
 					total_compilation_time.end();
 
@@ -460,6 +544,131 @@ clah::Clah getClahForMain() {
 					if (options.isFlag("print-graph"))
 						query::Context::getState().getGraph().debugPrintForDrawing(std::cerr);
 
+
+					return result.isOk() ? 0 : 1;
+				})
+		)
+	    .addSubcommand(
+			clah::Clah("compile_packages", "Compile package(s) described by a JSON manifest.")
+				.addPositional(clah::FileParser::make("manifest"))
+				.add(getLlvmOptLevelParam())
+				.add(clah::ParamBuilder::ofValue(clah::FilePathParser::make("filepath"))
+	                     .addShortName('a')
+	                     .addLongName("artifact-location")
+	                     .addShortDesc("Path to the top-level folder with build artifacts")
+	                     .optional()
+	                     .build())
+				.add(clah::ParamBuilder::ofFlag()
+	                     .addLongName("print-statistics")
+	                     .addShortDesc("Print execution time statistics.")
+	                     .build())
+				.add(clah::ParamBuilder::ofFlag()
+	                     .addLongName("print-graph")
+	                     .addShortDesc("Print the query graph after the compilation.")
+	                     .build())
+				.add(clah::ParamBuilder::ofFlag()
+	                     .addLongName("no-incremental")
+	                     .addShortDesc(
+							 "Disable incremental compilation (do not load previous query graph)."
+						 )
+	                     .build())
+				.add(clah::ParamBuilder::ofValue(clah::IntParser::make("worker count"))
+	                     .addShortName('w')
+	                     .addLongName("workers")
+	                     .addShortDesc("Worker count.")
+	                     .optional()
+	                     .build())
+				.setHandler([](const clah::ParsingResult& options) -> int {
+					auto manifest_file = options.getPositional<fs::File>(0);
+					auto worker_count  = options.getValue<i64>("workers").copyValueOr(1);
+
+					auto manifest_content = manifest_file.getContent();
+					auto file_content     = manifest_content.view();
+
+					nlohmann::json manifest_json;
+					try {
+						manifest_json = nlohmann::json::parse(
+							file_content.getBegin(), file_content.getBegin() + file_content.size()
+						);
+					} catch (const nlohmann::json::parse_error& e) {
+						CORE_USER_LOG(base::strConcat(
+							"Error: failed to parse manifest JSON: ", e.what(), "\n"
+						));
+						compiler::driver::exit();
+						return 1;
+					}
+
+					auto report   = compiler::driver::diagnostics::makeGlobalLoggerReporter();
+					auto manifest = compiler::driver::PackageCompilationManifest::fromJson(
+						manifest_json, report
+					);
+
+					if (!manifest.has_value()) {
+						compiler::driver::exit();
+						return 1;
+					}
+
+					(void) manifest->verify(report);
+
+					auto init_result = compiler::driver::initializeTheCompiler(
+						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
+							.packages_info = manifest->packages,
+							.compilation_artifacts = {
+								.artifacts_path =
+									options.getValue<fs::FilePath>("artifact-location").copyValueOr("./duck_build/"),
+							},
+							.backend_options   = getBackendOptionsFromClah(options),
+							.debug_options     = debug_options::getDebugOptionsFromClah(options),
+							.incremental       = { .enabled = !options.isFlag("no-incremental") },
+							.execution_options = {
+								.worker_count = base::safeIntConv<u64>(worker_count),
+							},
+						}
+					);
+
+					if (init_result.status().isBad()) {
+						compiler::driver::exit();
+						return 1;
+					}
+
+					std::vector<compiler::driver::PackageCompilationTask> compilation_tasks;
+					compilation_tasks.reserve(manifest->tasks.size());
+					for (const auto& raw_task: manifest->tasks) {
+						auto converted = compiler::driver::convertRawTaskToTask(raw_task, report);
+						if (!converted.has_value()) {
+							compiler::driver::exit();
+							return 1;
+						}
+						variant_match(converted->task_data) {
+							variant_case(compiler::driver::PackageCompilationTask, package_task) {
+								compilation_tasks.push_back(package_task);
+							}
+							variant_default { CORE_PANIC("Unsupported task type in manifest"); }
+						}
+					}
+
+					time_stats::TrackCategoryTime total_compilation_time(
+						time_stats::TimeCategories::TotalCompilationTime
+					);
+
+					CORE_ASSERT(!global_state::getPackages().empty(), "No packages registered");
+					base::OkBad result = compiler::driver::compilePackages(compilation_tasks);
+
+					total_compilation_time.end();
+
+					compiler::driver::exit();
+
+					if (options.isFlag("print-statistics")) {
+						if (not query::USE_STATS) {
+							std::cerr << "Warning: Query statistics are disabled at compile time. "
+										 "No query statistics will be printed.\n";
+						}
+						query::printStats();
+						time_stats::prettyPrintTimeStatistics();
+					}
+
+					if (options.isFlag("print-graph"))
+						query::Context::getState().getGraph().debugPrintForDrawing(std::cerr);
 
 					return result.isOk() ? 0 : 1;
 				})
@@ -492,9 +701,14 @@ clah::Clah getClahForMain() {
 
 					auto init_result = compiler::driver::initializeTheCompiler(
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
-									.main_package_info = {
-										.package_name = package_name,
-										.package_path = path_to_compile.getFilePath(),
+									.packages_info = {
+										compiler::frontend::packages::RawPackageInfo{
+											.package_name = base::StrID(package_name),
+											.version      = base::StrID("not_supported"),
+											.package_path = path_to_compile.getFilePath(),
+											.features     = {},
+											.dependencies = {},
+										},
 									},
 									.compilation_artifacts = {
 										.artifacts_path = fs::FilePath("./duck_build/"),
@@ -513,7 +727,8 @@ clah::Clah getClahForMain() {
 						return 1;
 					}
 
-					auto root = frontend::createModuleTree(path_to_compile, package_name);
+					auto root
+						= frontend::createModuleTree(path_to_compile, base::StrID(package_name));
 
 					int exit_code = 0;
 					query::utils::withContextDo([&](query::Context& ctx) {
@@ -711,7 +926,9 @@ clah::Clah getClahForMain() {
 
 int main(int argc, const char* argv[]) {
 	init::InitObject _;
-	auto             clah = getClahForMain();
+
+	compiler::driver::initializeGlobalLogger();
+	auto clah = getClahForMain();
 
 	try {
 		return clah.execute(base::safeIntConv<usize>(argc), argv);

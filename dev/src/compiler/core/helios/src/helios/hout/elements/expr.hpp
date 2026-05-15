@@ -449,6 +449,7 @@ namespace compiler::helios::code {
 	 */
 	struct TupleExpr: public Expr {
 		std::vector<base::Box<Expr>> elements;
+		SymID                        tuple_ctor_symbol;
 
 		TupleExpr(query::Context& ctx, ElementOrigin origin, std::vector<base::Box<Expr>> elements);
 
@@ -463,7 +464,8 @@ namespace compiler::helios::code {
 		TupleExpr(
 			tsh::ExpressionType<>        expression_type,
 			ElementOrigin                origin,
-			std::vector<base::Box<Expr>> elements
+			std::vector<base::Box<Expr>> elements,
+			SymID                        tuple_ctor_symbol
 		);
 	};
 

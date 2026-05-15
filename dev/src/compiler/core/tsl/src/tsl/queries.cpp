@@ -36,7 +36,7 @@ namespace compiler::tsl {
 			case Variant:
 				return VariantTypeLayout(key, ctx);
 			case Tuple:
-				return TupleTypeLayout(tsh::TupleAbstractType(key), ctx);
+				return ClassTypeLayout(tsh::TupleAbstractType(key), ctx);
 			case Class:
 				return ClassTypeLayout(tsh::ClassAbstractType(key), ctx);
 			default:

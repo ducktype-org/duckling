@@ -310,7 +310,7 @@ namespace {
 	) {
 		variant_match(type) {
 			variant_case(PrimitiveType, primitive) {
-				if (primitive.size == 0) throw InvalidPrimitiveSizeError(primitive);
+				if (primitive.size == Bytes{ 0 }) throw InvalidPrimitiveSizeError(primitive);
 			}
 			variant_case(PointerType, pointer) {
 				if (!tod_types.contains(pointer.inner))

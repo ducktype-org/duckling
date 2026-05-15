@@ -1,4 +1,5 @@
 #include "incremental_metadata_test_common.hpp"
+#include "test_utils.hpp"
 
 #include <driver/exit.hpp>
 #include <driver/initialize.hpp>
@@ -42,10 +43,10 @@ private:
 		// Initialize compiler (as in markPreviousLeavesGreenTest, first stage)
 		auto init_result= compiler::driver::initializeTheCompiler(
             compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
-                .main_package_info = {
-                    .package_name = std::string("mark_nodes_test_package"),
-                    .package_path = fs::FilePath(path("modules/incremental/org_functions/functions_1")),
-                },
+				.packages_info = { driver_test_utils::emptyRawPackageInfo(
+					"mark_nodes_test_package",
+					path("modules/incremental/org_functions/functions_1")
+				) },
                 .compilation_artifacts = {.artifacts_path = artifacts_path},
             	.backend_options = {
 					.llvm_backend = global_state::BackendOptions::LLVMBackend{},
@@ -61,7 +62,7 @@ private:
 		// First compilation creates a current graph
 		auto module = frontend::createModuleTree(
 			fs::File(path("modules/incremental/org_functions/functions_1")),
-			"mark_nodes_test_package"
+			base::StrID("mark_nodes_test_package")
 		);
 
 		// Get the submodule "submodule" id for compilation
@@ -78,9 +79,12 @@ private:
 		auto submodule_id = sub_module_locked.value().illegalAccess().getID();
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			(void) ctx.query<driver::CompileModule>({ module, driver::BackendType::LLVM, false });
-			(void
-			) ctx.query<driver::CompileModule>({ submodule_id, driver::BackendType::LLVM, false });
+			(void) ctx.query<driver::CompileModule>({ .module_id        = module,
+			                                          .backend_type     = driver::BackendType::LLVM,
+			                                          .build_debug_info = false });
+			(void) ctx.query<driver::CompileModule>({ .module_id        = submodule_id,
+			                                          .backend_type     = driver::BackendType::LLVM,
+			                                          .build_debug_info = false });
 
 			// Add metadata for persistence test
 			(void) ctx.query<MetadataPersistenceTestQuery>({ 42 });

@@ -12,7 +12,7 @@
 
 namespace compiler::linker {
 
-	base::OkBad link(
+	base::OkBad linkExecutable(
 		const artifacts::FileArtifact&              output,
 		const std::vector<artifacts::FileArtifact>& inputs,
 		const LinkingOptions&                       options

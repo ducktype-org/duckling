@@ -44,11 +44,12 @@ namespace vm::code::valid_type {
 			ValidTypeID inner;
 		};
 
+		STRONG_TYPEDEF_ID_DIRECT_CREATION(FieldID);
+
 		/**
 		 * @brief A field inside a Structure type.
 		 */
 		struct Field final {
-			STRONG_TYPEDEF_ID_DIRECT_CREATION(ID);
 			TypeSize    offset;
 			base::StrID name;
 			ValidTypeID type;
@@ -123,7 +124,7 @@ namespace vm::code::valid_type {
 			 * @note In case a class extends another class, fields of the superclass are inserted
 			 * into the vector right before the fields of the subclass.
 			 */
-			ObjIdNameMap<Field, Field::ID> fields;
+			ObjIdNameMap<Field, FieldID> fields;
 
 			/**
 			 * @brief Inheritance metadata for this structure type.

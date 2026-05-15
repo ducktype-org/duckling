@@ -74,7 +74,8 @@ namespace vm {
 		 * @brief A mapping between opcode ids and debug function pointers.
 		 */
 		static constexpr std::array<DebugOpFun*, OP_CASES_COUNT> DEBUG_OPFUNS{
-#define HANDLE_MICRO_INSTR(opcode) op_debug_##opcode,
+#define HANDLE_MICRO_INSTR(opcode) \
+	low::MicroOpcode::opcode == low::MicroOpcode::check_strategy ? op_debug_nop : op_debug_##opcode,
 #include <vm/core/safe/low_program/micro_instruction_definitions.hpp>
 
 
@@ -232,7 +233,7 @@ namespace vm {
 
 			// Set the view block
 			auto nested_data_ptr = variant_pointer;
-			nested_data_ptr.movePointer(static_cast<i64>(variant_type_tag_size));
+			nested_data_ptr.movePointer(variant_type_tag_size.asInt());
 			thread.process_memory.setNestedViewBlock(nested_data_ptr, wanted_type);
 
 			// Find type index
@@ -281,7 +282,7 @@ namespace vm {
 			) {
 
 			auto view_block_ref = thread.process_memory.getNestedViewBlock(
-				variant_pointer.movedPointer(static_cast<i64>(*variant_type->getTypeTagSizeBytes())),
+				variant_pointer.movedPointer(variant_type->getTypeTagSizeBytes()->asInt()),
 				wanted_type
 			);
 
