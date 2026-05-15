@@ -53,13 +53,14 @@ private:
 
 		vm::api::resume(pid).value();                 // "Resume failed (1)"
 		auto position = vm::api::pause(pid).value();  // "Pause failed (1)"
-		ASSERT_TRUE(6 <= position.instr_number && position.instr_number <= 9);
+		ASSERT_TRUE(position.instr_number == 9);
 
 		auto expected_next_line = [this](u64 x) -> u64 {
 			if (x == 6) return 7;
 			if (x == 7) return 8;
 			if (x == 8) return 9;
-			if (x == 9) return 6;
+			if (x == 9) return 10;
+			if (x == 10) return 6;
 			this->fail("Unexpected line number: " + std::to_string(x));
 			CORE_UNREACHABLE();
 		};
@@ -78,6 +79,9 @@ private:
 
 		auto line_number6 = stepAndGetLine(pid);
 		ASSERT_EQUAL_PRINT(expected_next_line(line_number5), line_number6);
+
+		auto line_number7 = stepAndGetLine(pid);
+		ASSERT_EQUAL_PRINT(expected_next_line(line_number6), line_number7);
 
 		vm::api::resume(pid).value();  // "Resume failed (1)"
 
