@@ -6,3 +6,12 @@ PreNode: ""
 
 SubDirs:
   - basic_project
+  - basic_project_with_flags
+  - project_with_cycle_in_flags
+  - with_a_single_local_dep
+  - with_a_single_local_dep_and_conditions
+  - with_a_single_local_dep_and_conditions2
+  - with_a_single_local_dep_and_flags
+  - with_a_single_local_dep_and_flags2
+  - with_exposed_freeze
+  - with_exposed_freeze_and_deps
