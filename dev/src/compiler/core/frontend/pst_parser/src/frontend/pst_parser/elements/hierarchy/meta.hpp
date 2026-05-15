@@ -198,10 +198,22 @@ namespace pst {
 		}
 
 		/**
-		 * @brief Get the symbol name declared by a given statement if it exists.
+		 * @brief Gets the symbol name used internally in pst for the purposes of guessing what
+		 * symbol is defined by a statement.
+		 *
+		 * Shouldn't be used outside of pst as it violates access.
+		 *
+		 * Uses getDeclSymbolIdentifier as the base implementation that can be overriden if for
+		 * example a keyword is used instead.
 		 */
 		[[nodiscard]]
-		virtual base::Optional<base::StrID> getDeclSymbolName() const {
+		virtual base::Optional<base::StrID> getInternalSymbolName() const;
+
+		/**
+		 * @brief Get the identifier declared by a given statement if it exists.
+		 */
+		[[nodiscard]]
+		virtual base::Optional<AccessLocked<IdentifierWrapper>> getDeclSymbolIdentifier() const {
 			return {};
 		}
 	};

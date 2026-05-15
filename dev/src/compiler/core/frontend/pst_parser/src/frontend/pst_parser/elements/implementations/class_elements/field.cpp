@@ -44,7 +44,6 @@ namespace pst {
 
 	HashAlg& Field::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, is_mutable);
-		addToHash(partial_hash, name);
 		return partial_hash;
 	}
 
