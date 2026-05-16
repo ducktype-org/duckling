@@ -4,42 +4,6 @@
 #include <vm/api/vm.hpp>
 
 namespace vm::debugger {
-
-	struct StackFrameHook {
-		u64 thread_id;
-		u64 frame_id;
-
-		bool operator==(const StackFrameHook&) const = default;
-	};
-
-	struct VariableHook {
-		VMValueRef ref;
-
-		bool operator==(const VariableHook&) const = default;
-	};
-
-	struct VariablesReference {
-		struct Nothing {};
-
-		u64                                                 id;
-		std::variant<StackFrameHook, VariableHook, Nothing> vr;
-
-		bool operator==(const VariablesReference&) const = default;
-	};
-
-	struct StackFrameInfo {
-		u64         frame_id;
-		base::StrID function_name;
-		u64         variables_reference;
-	};
-
-	struct VariableInfo {
-		base::StrID name;
-		std::string value;
-		std::string type;
-		u64         variables_reference;  // 0 if none
-	};
-
 	/**
 	 * @class Debugger
 	 * @brief Core for the VM debugger that manages debugging sessions.
@@ -75,10 +39,6 @@ namespace vm::debugger {
 		 * @brief Emits error message in human readable format on any error
 		 */
 		events::Emitter<std::string> on_error;
-
-		std::vector<VariablesReference> enumerated_variables_references;
-
-		void clearEnumeratedVariablesReferences();
 
 	public:
 		Debugger(const std::vector<std::string>& main_args = {});
@@ -124,9 +84,16 @@ namespace vm::debugger {
 		 */
 		void loadFile(const fs::File& filepath);
 
-		std::vector<StackFrameInfo> enumerateFrames(u64 thread_id = 0);
+		/**
+		 * @brief Returns number of stack frames
+		 */
+		u64 getNumberOfStackFrames();
 
-		std::vector<VariableInfo> dereferenceVariablesReference(u64 variables_reference);
+		/**
+		 * @brief Returns variables of stack frame
+		 */	
+		api::response::StackFrameData getStackFrameData(u64 frame_index);
+		
 		/**
 		 * @brief Pauses the VM
 		 */

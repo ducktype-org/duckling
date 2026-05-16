@@ -312,10 +312,10 @@ private:
 			return std::holds_alternative<vm::api::Paused>(debugger.getStatus());
 		}));
 
-		auto response = debugger.enumerateFrames();
-		ASSERT_EQUAL(response.size(), 9);
-		auto vars = debugger.dereferenceVariablesReference(1);
-		ASSERT_EQUAL(vars.size(), 1);
+		auto response = debugger.getNumberOfStackFrames();
+		ASSERT_EQUAL(response, 2);
+		auto info = debugger.getStackFrameData(1);
+		ASSERT_EQUAL(info.frame_vars.size(), 9);
 	}
 };
 
