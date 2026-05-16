@@ -183,6 +183,7 @@ namespace compiler::mir {
 			os << ": Helios Name: " << getName().strView();
 			os << ", Type: " << type.toString();
 			os << ", Lifetime Scope: " << scope.value()->id;
+			os << ", Lifetime Flags: " << lifetime_flags.toString(true);
 			if (parameter_index.has_value()) os << ", Parameter Index: " << parameter_index.value();
 		}
 	}
@@ -197,7 +198,7 @@ namespace compiler::mir {
 
 	base::StrID MIRLocal::getName() const {
 		if (helios_id.has_value()) return name(helios_id.value());
-		return base::StrID(base::strConcat(id.asInt(), ".tmp").c_str());
+		return base::StrID(base::strConcat(id.asInt(), ".tmp"));
 	}
 
 	void MIRLocal::setLifetimeScope(ScopeRef scope) {
@@ -296,6 +297,12 @@ namespace compiler::mir {
 		case Flag::Move:
 			os << "Move";
 			break;
+		case Flag::ScopeStart:
+			os << "ScopeStart";
+			break;
+		case Flag::ScopeEnd:
+			os << "ScopeEnd";
+			break;
 		}
 		os << " ";
 		local->debugPrint(os);
@@ -318,5 +325,10 @@ namespace compiler::mir {
 		}
 
 		return base::OK;
+	}
+
+	Instruction& Block::firstInstruction() {
+		if (instructions.empty()) return terminator;
+		return instructions.front();
 	}
 }
