@@ -49,9 +49,9 @@ namespace vm::persistent {
 		}
 
 		// basic method for validating input
-		ID validateInput(MemoryStateID state) const {
+		ID validateInput(MemoryStateID state, bool allow_weird_roots = false) const {
 			auto root = fromState(state);
-			validateNode(root);
+			validateRoot(root, allow_weird_roots);
 
 			return root;
 		}

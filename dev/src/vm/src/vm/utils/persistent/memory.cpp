@@ -21,7 +21,7 @@
 namespace vm::persistent {
 
 	std::vector<std::pair<usize, usize>> Memory::toVec(MemoryStateID state) const {
-		auto root = validateInput(state);
+		auto root = validateInput(state, true);
 
 		if (root == SegmentTree::EMPTY) return {};
 

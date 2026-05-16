@@ -490,10 +490,18 @@ namespace vm::persistent::detail {
 			CORE_UNREACHABLE();
 		}
 
+		std::pair<NodeID, NodeID> getChildren(NodeID node) const {
+			if_opt_some(child_entries.atRightOpt(node), [left COMMA right]) {
+				return { left, right };
+			}
+			if_opt_some(leaf_entries.atRightOpt(node), _) { return { EMPTY, EMPTY }; }
+			CORE_UNREACHABLE();
+		}
+
 		/**
 		 * @brief Checks if the id is a valid root of some tree
 		 */
-		void validateNode(NodeID root) const {
+		void validateRoot(NodeID root, bool weird_root = false) const {
 			if (!root_info.contains(root) && !leaf_entries.atRightOpt(root))
 				throw std::invalid_argument("got invalid state");
 
@@ -502,6 +510,11 @@ namespace vm::persistent::detail {
 			auto [height, offset] = getHeightOffset(root);
 			CORE_ASSERT(height < POS_T_SIZE, "all non-empty roots need to have valid height");
 			CORE_ASSERT(size <= (idxT(1) << height), "root's size is too large");
+			auto [l, r] = getChildren(root);
+			CORE_ASSERT(
+				weird_root || (l == EMPTY) == (r == EMPTY),
+				"either both are empty or both are non-empty"
+			);
 		}
 
 		/**
