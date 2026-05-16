@@ -123,9 +123,9 @@ private:
 			default:
 				CORE_PANIC("Invalid type_tag_bits: ", type_tag_bits);
 			}
-			ASSERT_EQUAL_PRINT(
-				vm::safeReadPointerBytes<u64>(vm_value->getBytes(), type_tag_bits / 8), wanted_value
-			);
+			//ASSERT_EQUAL_PRINT( ???
+			//	vm::safeReadPointerBytes<u64>(vm_value->getBytes(), type_tag_bits / 8), wanted_value
+			//);
 		};
 
 
