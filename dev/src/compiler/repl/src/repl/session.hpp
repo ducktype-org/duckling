@@ -72,7 +72,9 @@ namespace compiler::repl {
 		/**
 		 * @brief Return replay count requested via /reset -n.
 		 */
-		base::Optional<size_t> getResetReplayCount() const { return m_reset_replay_count; }
+		[[nodiscard]] base::Optional<size_t> getResetReplayCount() const {
+			return m_reset_replay_count;
+		}
 
 	private:
 		/**
