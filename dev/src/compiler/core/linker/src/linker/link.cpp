@@ -32,7 +32,10 @@ namespace compiler::linker {
 
 		command.addArg(options.additional_link_options);
 
-		if (options.link_c_standard_library) command.addArg("-lc");  // Link the C standard library.
+		if (options.link_c_standard_library)
+			command.addArg("-lc");  // Link the C standard library.<
+		if_opt_some(options.stdlib_link_options, stdlib_link_options)
+			command.addArg(stdlib_link_options);
 
 		command.addArg("-o");
 		command.addArg(output.file.getFilePath().native());

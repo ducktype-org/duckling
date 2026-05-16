@@ -25,6 +25,9 @@ namespace compiler::linker {
 		 * @brief Whether to link the C standard library.
 		 */
 		bool link_c_standard_library;
+
+
+		base::Optional<std::string> stdlib_link_options;
 	};
 
 	/**

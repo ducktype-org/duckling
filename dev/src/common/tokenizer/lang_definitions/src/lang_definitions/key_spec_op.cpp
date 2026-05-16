@@ -17,8 +17,7 @@ namespace lang_def {
 	KeywordMode getKeywordMode() { return keyword_mode; }
 
 	base::StrID makeStrID(std::string_view view) {
-		return base::StrID(base::RawView({ reinterpret_cast<const byte*>(view.data()), view.size() }
-		));
+		return base::StrID(base::RawView({ std::as_bytes(std::span{ view }) }));
 	}
 
 	// @TODO: what if there are many instances of one keyword (vec and vector)

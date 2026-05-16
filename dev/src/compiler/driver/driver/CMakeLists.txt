@@ -3,6 +3,8 @@ include(builtins.cmake)
 # - GENERATED_DIR: the directory of the generated builtin sources, and
 # - BUILTINS_EMBEDS: the list of generated source filenames in GENERATED_DIR
 
+option(DUCKLING_USE_FIXED_STD_PATH "Bake the default standard library path into the driver" ON)
+
 add_library(Driver
 	src_private/driver_private/backend_operations/compile_llvm.cpp
 	src_private/driver_private/backend_operations/compile_dvm.cpp
@@ -21,6 +23,7 @@ add_library(Driver
 	src/driver/diagnostics/log_helpers.cpp
 	src/driver/manifest/manifest.cpp
 	src/driver/task/task.cpp
+	src/driver/standard_library/standard_library.cpp
 	src/driver/repl_utils/repl_dvm_helpers.cpp
 	src/driver/repl_utils/script_helpers.cpp
 	src/driver/repl_utils/repl_split_helpers.cpp
@@ -28,6 +31,10 @@ add_library(Driver
 
 	${BUILTINS_EMBEDS}
 )
+
+if(DUCKLING_USE_FIXED_STD_PATH)
+	target_compile_definitions(Driver PRIVATE STD_FIXED_PATH=\"${CMAKE_SOURCE_DIR}/src/lib\")
+endif()
 
 add_dependencies(Driver builtins_embeds)
 

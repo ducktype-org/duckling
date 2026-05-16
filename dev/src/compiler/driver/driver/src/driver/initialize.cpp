@@ -9,6 +9,7 @@
 #include <driver/diagnostics/log_helpers.hpp>
 #include <driver/incremental_utils/collect_input.hpp>
 #include <driver/module_flags/module_flags.hpp>
+#include <driver/standard_library/standard_library.hpp>
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <global_state/artifacts_location.hpp>
@@ -78,12 +79,18 @@ namespace compiler::driver {
 		}
 
 		base::OkBad handlePackageOptions(
-			std::vector<compiler::frontend::packages::RawPackageInfo> packages_info
+			std::vector<compiler::frontend::packages::RawPackageInfo>& packages_info,
+			const options_types::StandardLibraryOptions&               standard_library_options
 		) {
 			auto report      = diagnostics::makeGlobalLoggerReporter();
 			bool had_failure = false;
 
 			compiler::frontend::packages::filterUndeclaredDependencies(packages_info, report);
+
+			if (auto path = resolveStdPath(standard_library_options, report)) {
+				addStandardLibraryPackages(*path, report);
+				if (addStandardLibraryDependencies(packages_info, report).isBad()) return base::BAD;
+			}
 
 			for (const auto& package_info: packages_info) {
 				auto pkg = compiler::frontend::packages::createPackageInfo(package_info, report);
@@ -208,8 +215,10 @@ namespace compiler::driver {
 				handleExecutionOptions(package_compilation_options.execution_options);
 				handleArtifactsOptions(package_compilation_options.compilation_artifacts);
 
-				auto package_success
-					= handlePackageOptions(package_compilation_options.packages_info);
+				auto package_success = handlePackageOptions(
+					package_compilation_options.packages_info,
+					package_compilation_options.standard_library_options
+				);
 
 				if (package_success.isBad()) return base::BAD;
 

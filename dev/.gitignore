@@ -18,7 +18,6 @@ coverage.info
 
 # bin:
 bin/
-lib/
 
 # python cache:
 __pycache__/

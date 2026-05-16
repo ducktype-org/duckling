@@ -1,5 +1,7 @@
 #include "task.hpp"
 
+#include "driver/standard_library/standard_library.hpp"
+
 #include <driver/diagnostics/log_helpers.hpp>
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
@@ -85,6 +87,7 @@ namespace compiler::driver {
 				.linker_path             = {},
 				.additional_link_options = {},
 				.link_c_standard_library = true,
+				.stdlib_link_options     = getStdLibLinkingArgs(),
 			};
 			if (json.contains("linking_options")) {
 				const auto& linking_json = json["linking_options"];
