@@ -11,7 +11,13 @@
 			},
 			"Function": {
 				"name": {
-					"Name": "A"
+					"position": {
+						"sourceStart": 6,
+						"sourceEnd": 6
+					},
+					"Identifier Wrapper": {
+						"value": "A"
+					}
 				},
 				"parameters": {
 					"position": {
@@ -32,7 +38,15 @@
 								"sourceEnd": 15
 							},
 							"Keyword Expression": {
-								"keyword": "i32"
+								"keyword": {
+									"position": {
+										"sourceStart": 13,
+										"sourceEnd": 15
+									},
+									"Keyword Wrapper": {
+										"value": "i32"
+									}
+								}
 							}
 						}
 					}
@@ -59,7 +73,13 @@
 			},
 			"Function": {
 				"name": {
-					"Name": "A"
+					"position": {
+						"sourceStart": 26,
+						"sourceEnd": 26
+					},
+					"Identifier Wrapper": {
+						"value": "A"
+					}
 				},
 				"parameters": {
 					"position": {
@@ -89,7 +109,15 @@
 										"number": "1"
 									}
 								},
-								"operator": "+",
+								"operator": {
+									"position": {
+										"sourceStart": 35,
+										"sourceEnd": 35
+									},
+									"Operator Wrapper": {
+										"value": "+"
+									}
+								},
 								"right_expr": {
 									"position": {
 										"sourceStart": 37,
@@ -125,7 +153,13 @@
 			},
 			"Function": {
 				"name": {
-					"Name": "A"
+					"position": {
+						"sourceStart": 48,
+						"sourceEnd": 48
+					},
+					"Identifier Wrapper": {
+						"value": "A"
+					}
 				},
 				"parameters": {
 					"position": {
@@ -153,7 +187,15 @@
 											"sourceEnd": 57
 										},
 										"Keyword Expression": {
-											"keyword": "i32"
+											"keyword": {
+												"position": {
+													"sourceStart": 55,
+													"sourceEnd": 57
+												},
+												"Keyword Wrapper": {
+													"value": "i32"
+												}
+											}
 										}
 									},
 									{
@@ -162,7 +204,15 @@
 											"sourceEnd": 62
 										},
 										"Keyword Expression": {
-											"keyword": "i32"
+											"keyword": {
+												"position": {
+													"sourceStart": 60,
+													"sourceEnd": 62
+												},
+												"Keyword Wrapper": {
+													"value": "i32"
+												}
+											}
 										}
 									}
 								]
@@ -192,7 +242,13 @@
 			},
 			"Function": {
 				"name": {
-					"Name": "A"
+					"position": {
+						"sourceStart": 73,
+						"sourceEnd": 73
+					},
+					"Identifier Wrapper": {
+						"value": "A"
+					}
 				},
 				"parameters": {
 					"position": {
@@ -220,7 +276,15 @@
 											"sourceEnd": 82
 										},
 										"Keyword Expression": {
-											"keyword": "i32"
+											"keyword": {
+												"position": {
+													"sourceStart": 80,
+													"sourceEnd": 82
+												},
+												"Keyword Wrapper": {
+													"value": "i32"
+												}
+											}
 										}
 									},
 									{
@@ -238,7 +302,15 @@
 													"number": "1"
 												}
 											},
-											"operator": "+",
+											"operator": {
+												"position": {
+													"sourceStart": 87,
+													"sourceEnd": 87
+												},
+												"Operator Wrapper": {
+													"value": "+"
+												}
+											},
 											"right_expr": {
 												"position": {
 													"sourceStart": 89,
@@ -263,7 +335,13 @@
 												},
 												"Identifier Expression": {
 													"name": {
-														"Name": "abc"
+														"position": {
+															"sourceStart": 93,
+															"sourceEnd": 95
+														},
+														"Identifier Wrapper": {
+															"value": "abc"
+														}
 													}
 												}
 											}
@@ -276,7 +354,13 @@
 										},
 										"Identifier Expression": {
 											"name": {
-												"Name": "x"
+												"position": {
+													"sourceStart": 99,
+													"sourceEnd": 99
+												},
+												"Identifier Wrapper": {
+													"value": "x"
+												}
 											}
 										}
 									}
@@ -307,7 +391,13 @@
 			},
 			"Function": {
 				"name": {
-					"Name": "A"
+					"position": {
+						"sourceStart": 110,
+						"sourceEnd": 110
+					},
+					"Identifier Wrapper": {
+						"value": "A"
+					}
 				},
 				"parameters": {
 					"position": {
@@ -335,7 +425,15 @@
 											"sourceEnd": 119
 										},
 										"Keyword Expression": {
-											"keyword": "i32"
+											"keyword": {
+												"position": {
+													"sourceStart": 117,
+													"sourceEnd": 119
+												},
+												"Keyword Wrapper": {
+													"value": "i32"
+												}
+											}
 										}
 									},
 									{
@@ -353,7 +451,15 @@
 													"number": "1"
 												}
 											},
-											"operator": "+",
+											"operator": {
+												"position": {
+													"sourceStart": 124,
+													"sourceEnd": 124
+												},
+												"Operator Wrapper": {
+													"value": "+"
+												}
+											},
 											"right_expr": {
 												"position": {
 													"sourceStart": 126,
@@ -378,7 +484,13 @@
 												},
 												"Identifier Expression": {
 													"name": {
-														"Name": "abc"
+														"position": {
+															"sourceStart": 130,
+															"sourceEnd": 132
+														},
+														"Identifier Wrapper": {
+															"value": "abc"
+														}
 													}
 												}
 											}
@@ -391,7 +503,13 @@
 										},
 										"Identifier Expression": {
 											"name": {
-												"Name": "x"
+												"position": {
+													"sourceStart": 136,
+													"sourceEnd": 136
+												},
+												"Identifier Wrapper": {
+													"value": "x"
+												}
 											}
 										}
 									}

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../not_statements/wrapper_elements/operator_wrapper.hpp"
 #include "expr_common.hpp"
 #include "prefix_operator.hpp"
 
@@ -12,8 +13,7 @@ namespace pst::expr {
 		using Self  = LogicNot;
 
 	public:
-		explicit LogicNot(const LangParserState& state):
-			  PrefixOperator(state, lang_def::keywordToStr(Keyword::Not), 730) {}
+		explicit LogicNot(const LangParserState& state): PrefixOperator(state, 730) {}
 
 		static MBox<ExprElement> parse(LangParserState& state);
 

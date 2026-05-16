@@ -41,6 +41,7 @@
 
 #include <diagnostic/highlight_positions.hpp>
 #include <filesystem/file.hpp>
+#include <logger/logger.hpp>
 #include <query_framework/context/context.hpp>
 #include <query_framework/entry/query_entry_point.hpp>
 #include <query_framework/entry/with_context_do.hpp>
@@ -2522,7 +2523,7 @@ private:
 		         pst::Keyword                                              keyword) -> bool {
 			for (const auto& spec: specifiers) {
 				auto unlocked = spec.unlock(ctx);
-				if (unlocked->getSpecifier() == keyword) return true;
+				if (unlocked->getSpecifier().unlock(ctx)->unwrap() == keyword) return true;
 			}
 			return false;
 		};
@@ -2535,7 +2536,8 @@ private:
 
 			for (size_t i = 0; i < specifiers.size(); ++i) {
 				auto unlocked = specifiers[i].unlock(ctx);
-				if (unlocked->getSpecifier() != expected_order[i]) return false;
+				if (unlocked->getSpecifier().unlock(ctx)->unwrap() != expected_order[i])
+					return false;
 			}
 			return true;
 		};
@@ -3035,7 +3037,8 @@ private:
 		auto get_pst_variable_by_name
 			= [&](base::StrID name) -> base::Optional<pst::Access<pst::Variable>> {
 			for (const auto& var: all_variables)
-				if (var.illegalAccess().value()->getName() == name) return var.illegalAccess();
+				if (var.illegalAccess().value()->getName().illegalAccess().value()->unwrap() == name)
+					return var.illegalAccess();
 			return {};
 		};
 
@@ -3098,7 +3101,8 @@ private:
 		auto get_pst_function_by_name
 			= [&](base::StrID name) -> base::Optional<pst::Access<pst::Fun>> {
 			for (const auto& fun: all_pst_functions)
-				if (fun.illegalAccess().value()->getName() == name) return fun.illegalAccess();
+				if (fun.illegalAccess().value()->getName().illegalAccess().value()->unwrap() == name)
+					return fun.illegalAccess();
 			return {};
 		};
 

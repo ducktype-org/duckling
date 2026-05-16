@@ -12,7 +12,7 @@ namespace pst {
 
 		PST_NEW_CONTEXT({
 			state.setContextBlockOrdering(BlockOrderType::Ordered);
-			PARSE().all(Keyword::If, &out->optional_name, &out->condition, &out->then_body);
+			PARSE().all(Keyword::If, &out->name, &out->condition, &out->then_body);
 
 			if (PARSE().tryEat(Keyword::Else)) PARSE().one(&out->else_body);
 		})
@@ -21,9 +21,14 @@ namespace pst {
 	}
 
 	void If::dprint(std::ostream& out) const {
-		out << "{\"name\":";
-		nullAwareDprint(optional_name, out);
-		out << ",\"condition\":";
+		out << "{";
+
+		if (name.has_value()) {
+			out << "\"name\":";
+			nullAwareDprint(name.value(), out);
+			out << ",";
+		}
+		out << "\"condition\":";
 		nullAwareDprint(condition, out);
 		out << ",\"then body\":";
 		nullAwareDprint(then_body, out);
@@ -31,6 +36,7 @@ namespace pst {
 			out << ",\"else body\":";
 			nullAwareDprint(else_body.value(), out);
 		}
+
 		out << "}";
 	}
 

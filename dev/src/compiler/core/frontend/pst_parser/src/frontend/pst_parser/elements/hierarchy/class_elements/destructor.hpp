@@ -22,6 +22,11 @@ namespace pst {
 			return "Class Destructor";
 		}
 
+		[[nodiscard]]
+		base::Optional<base::StrID> getInternalSymbolName() const final {
+			return base::StrID("destroy");
+		}
+
 		void acceptVisitor(PstVisitor& visitor) const override;
 	};
 }
