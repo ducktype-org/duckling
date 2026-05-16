@@ -79,7 +79,6 @@ namespace vm {
 	}
 
 	void Memory::freeBlockData(Ref<Block> block) {
-		CORE_ASSERT(!block->deallocated, "Trying to free an already deallocated block");
 		for (const auto child: block->children_blocks | std::views::values) freeBlockData(child);
 
 		runDataDestructors(block);
