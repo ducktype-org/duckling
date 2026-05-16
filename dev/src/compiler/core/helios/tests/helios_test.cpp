@@ -100,6 +100,7 @@ public:
 		TESTER_ADD_TEST(testCastsHout);
 		TESTER_ADD_TEST(testTypeLifting);
 		TESTER_ADD_TEST(testHoutElementsOrigin);
+		TESTER_ADD_TEST(testAliases);
 
 		// this is at the end
 		// so we test all the scopes created in helios tests:
@@ -108,8 +109,6 @@ public:
 	}
 
 private:
-	// @TODO: test_modules/aliases are not used in tests
-
 	using enum compiler::tsh::Mutability;
 	using enum compiler::tsh::IntegralAbstractType::Signedness;
 
@@ -3135,6 +3134,15 @@ private:
 		check_function_origin(base::StrID("b"));
 
 		query::utils::withContextDo([&](query::Context& ctx) { hout.debugPrint(ctx, std::cout); });
+	}
+
+	void testAliases() {
+        // @TODO: #1412 make this less of a stub once proper dealias lands
+		auto [_, root_scope] = getModule(fs::File(path("test_modules/aliases")));
+
+		auto nonwild_using        = getChain("c", root_scope);
+		auto nonwild_using_target = getChain("M.c", root_scope);
+		ASSERT_EQUAL(nonwild_using, nonwild_using_target);
 	}
 
 	void testScopeParentsAndDepth() {
