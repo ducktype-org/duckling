@@ -3141,7 +3141,7 @@ private:
 	}
 
 	void testAliases() {
-        // @TODO: #1412 make this less of a stub once proper dealias lands
+		// @TODO: #1412 make this less of a stub once proper dealias lands
 		auto [_, root_scope] = getModule(fs::File(path("test_modules/aliases")));
 
 		auto nonwild_using        = getChain("c", root_scope);
