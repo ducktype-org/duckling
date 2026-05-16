@@ -91,9 +91,9 @@ namespace vm::debugger {
 
 		/**
 		 * @brief Returns variables of stack frame
-		 */	
+		 */
 		api::response::StackFrameData getStackFrameData(u64 frame_index);
-		
+
 		/**
 		 * @brief Pauses the VM
 		 */

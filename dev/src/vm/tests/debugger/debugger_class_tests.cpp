@@ -300,11 +300,10 @@ private:
 
 		std::condition_variable cv;
 
-		events::Listener<vm::api::ProcStatus> status_listener(
-			[&](const vm::api::ProcStatus& status) {
-				if (status.index() == altIndex(vm::api::Paused)) cv.notify_one();
-			}
-		);
+		events::Listener<vm::api::ProcStatus> status_listener([&](const vm::api::ProcStatus& status
+		                                                      ) {
+			if (status.index() == altIndex(vm::api::Paused)) cv.notify_one();
+		});
 		debugger.attachOnVMChangesStatusListener(status_listener);
 		debugger.runMain();
 		std::unique_lock lk(m);

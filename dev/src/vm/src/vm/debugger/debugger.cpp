@@ -118,12 +118,14 @@ namespace vm::debugger {
 	}
 
 	u64 Debugger::getNumberOfStackFrames() {
-	return vm::api::debuggerGetNumberOfStackFrames(pid, api::ThreadID(0))
-				.transform_error([&](const vm::api::ApiError& api_error) {
-					throw std::runtime_error(vm::api::errorToString(api_error));
-					return api_error;
-				})
-				.value().number_of_stack_frames;	}
+		return vm::api::debuggerGetNumberOfStackFrames(pid, api::ThreadID(0))
+		    .transform_error([&](const vm::api::ApiError& api_error) {
+				throw std::runtime_error(vm::api::errorToString(api_error));
+				return api_error;
+			})
+		    .value()
+		    .number_of_stack_frames;
+	}
 
 	void Debugger::pause() {
 		vm::api::getExecutionStatus(pid)
