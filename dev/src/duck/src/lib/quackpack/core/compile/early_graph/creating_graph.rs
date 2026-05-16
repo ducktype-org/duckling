@@ -1,4 +1,4 @@
-//! Entrypoints for creating a new [`EarlyDag`] and friends.
+//! Entrypoints for creating a new [`EarlyGraph`] and friends.
 
 use tracing::debug;
 
@@ -11,27 +11,27 @@ use crate::quackpack::core::storage::package_id::PackageId;
 use crate::quackpack::core::storage::paths::Storage;
 use crate::{DuckContext, QuackResultContext, qp_bail, qp_bail_internal};
 
-impl DependencyDag {
-    /// Create new [`DependencyDag`] from the given freeze.
+impl DependencyGraph {
+    /// Create new [`DependencyGraph`] from the given freeze.
     ///
     /// This method checks that the graph is complete, and that it is, in fact, a DAG.
     #[tracing::instrument(skip_all)]
     pub fn new(freeze: &VenvFreeze) -> QuackResult<Self> {
         let root = freeze.root();
-        let mut dag = HashMap::new();
-        dag.insert(
+        let mut graph = HashMap::new();
+        graph.insert(
             root.as_freeze_dep(),
             DependencyNode::new(root.dependencies().iter().copied()),
         );
         for dep in freeze.dependencies() {
-            dag.insert(
+            graph.insert(
                 dep.as_freeze_dep(),
                 DependencyNode::new(dep.dependencies().iter().copied()),
             );
         }
         let root = root.as_freeze_dep();
-        Self::check_is_dag(root, &dag)?;
-        Ok(Self { root, dag })
+        Self::check_is_dag(root, &graph)?;
+        Ok(Self { root, graph })
     }
 
     /// Helpers for [`new`](Self::new).
@@ -181,8 +181,8 @@ fn parse_dependency(
     Ok(CompilerPackage::new(package, pkg_type))
 }
 
-impl EarlyDag {
-    /// Creates a new [`EarlyDag`] from the given [`BuildContext`].
+impl EarlyGraph {
+    /// Creates a new [`EarlyGraph`] from the given [`BuildContext`].
     ///
     /// Also note that:
     /// - no features are expanded (including the root package),
@@ -190,7 +190,7 @@ impl EarlyDag {
     #[tracing::instrument(skip_all)]
     pub fn new_early(bcx: &BuildContext<'_, '_>) -> QuackResult<Self> {
         // `new` checks for cycles.
-        let graph = DependencyDag::new(&bcx.freeze)?;
+        let graph = DependencyGraph::new(&bcx.freeze)?;
         let mut packages = HashMap::new();
         packages.insert(
             bcx.freeze.root().as_freeze_dep(),
@@ -221,7 +221,7 @@ impl EarlyDag {
             }
         }
         Ok(Self {
-            dag: graph,
+            graph,
             packages: PackagesSet { inner: packages },
         })
     }

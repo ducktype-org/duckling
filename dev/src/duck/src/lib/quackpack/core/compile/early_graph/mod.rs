@@ -10,8 +10,8 @@ use crate::quackpack::core::storage::freeze::FreezeDep;
 use crate::util::error::MessageError;
 use crate::{QuackError, QuackResult};
 
-pub mod creating_dag;
-pub mod modifying_dag;
+pub mod creating_graph;
+pub mod modifying_graph;
 
 /// Common helper for creating a consistent error.
 fn bail_cycle_message(cycle: &[FreezeDep]) -> QuackError {
@@ -47,17 +47,17 @@ impl PackagesSet {
 }
 
 #[derive(Debug)]
-/// Dependency DAG ([`DependencyDag`]) + packages cache ([`PackagesSet`]).
-pub struct EarlyDag {
+/// Dependency graph ([`DependencyGraph`]) + packages cache ([`PackagesSet`]).
+pub struct EarlyGraph {
     packages: PackagesSet,
-    dag: DependencyDag,
+    graph: DependencyGraph,
 }
 
 #[derive(Debug, PartialEq, Eq)]
-/// DAG representing dependency-dependant relations.
-pub struct DependencyDag {
+/// Graph representing dependency-dependant relations.
+pub struct DependencyGraph {
     root: FreezeDep,
-    dag: HashMap<FreezeDep, DependencyNode>,
+    graph: HashMap<FreezeDep, DependencyNode>,
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Default)]
@@ -68,20 +68,20 @@ pub struct DependencyNode {
     dependencies: Vec<FreezeDep>,
 }
 
-impl DependencyDag {
-    /// Get the root package of this DAG.
+impl DependencyGraph {
+    /// Get the root package of this graph.
     pub fn root(&self) -> FreezeDep {
         self.root
     }
 
     /// Get the [`DependencyNode`] for the given package.
     pub fn dependencies_for_package(&self, package: &FreezeDep) -> &DependencyNode {
-        self.dag
+        self.graph
             .get(package)
             .expect(MISSING_DEPENDENCY_IN_DAG_MESSAGE)
     }
 
-    /// Sort topologically this DAG.
+    /// Sort topologically this graph.
     ///
     /// This method returns an error, if it encounters a cycle.
     pub fn topo_sort_order(&self) -> QuackResult<Vec<FreezeDep>> {
@@ -121,7 +121,7 @@ impl DependencyDag {
             order.push(current);
             Ok(())
         }
-        visit_impl(self.root, &self.dag, &mut states, &mut order)?;
+        visit_impl(self.root, &self.graph, &mut states, &mut order)?;
         order.reverse();
         Ok(order)
     }
@@ -139,7 +139,7 @@ impl DependencyNode {
     }
 }
 
-impl EarlyDag {
+impl EarlyGraph {
     /// Get the [`CompilerPackage`] for the given `name`.
     pub fn package(&self, name: &FreezeDep) -> &CompilerPackage {
         self.packages.package(name)
@@ -150,8 +150,8 @@ impl EarlyDag {
         self.packages.package_mut(name)
     }
 
-    /// Get the underlying [`DependencyDag`].
-    pub fn dag(&self) -> &DependencyDag {
-        &self.dag
+    /// Get the underlying [`DependencyGraph`].
+    pub fn graph(&self) -> &DependencyGraph {
+        &self.graph
     }
 }

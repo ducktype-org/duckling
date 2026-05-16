@@ -1,7 +1,7 @@
 //! Main entrypoint for compiling an entire project.
 //!
 //! Notable modules are:
-//! - [`early_dag`][]: creating and modifying dependency graphs; notably, it checks for cycles,
+//! - [`early_graph`][]: creating and modifying dependency graphs; notably, it checks for cycles,
 //!   expands features, and removes disabled dependencies,
 //! - [`duckc`][]: executing the compiler itself, it handles different compiler execution modes.
 use std::path::PathBuf;
@@ -17,11 +17,11 @@ use crate::quackpack::core::{FeatureName, PackageContext};
 pub mod artifacts_layout;
 pub mod compiler_package;
 pub mod duckc;
-pub mod early_dag;
+pub mod early_graph;
 pub mod profiles;
 
 use duckc::*;
-use early_dag::*;
+use early_graph::*;
 
 const MISSING_DEPENDENCY_IN_DAG_MESSAGE: &str = "missing dependency in the map";
 const MISSING_DEPENDENCY_IN_MANIFEST_MESSAGE: &str =
@@ -46,7 +46,7 @@ pub fn compile(
     compilation_type: CompilationType,
 ) -> QuackResult<ArtifactsDir> {
     debug!(bcx = ?bcx, "compiling");
-    let mut graph = EarlyDag::new_early(&bcx)?;
+    let mut graph = EarlyGraph::new_early(&bcx)?;
     graph.populate_features(&bcx.used_features)?;
     graph.remove_disabled_dependencies();
     let duckc = Duckc::new(bcx.pcx.ctx());

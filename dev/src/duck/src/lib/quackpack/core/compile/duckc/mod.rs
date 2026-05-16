@@ -19,7 +19,7 @@ use tempfile::TempDir;
 
 use super::BuildContext;
 use super::compiler_package::CompilerPackage;
-use crate::quackpack::core::compile::early_dag::EarlyDag;
+use crate::quackpack::core::compile::early_graph::EarlyGraph;
 use crate::quackpack::core::storage::freeze::FreezeDep;
 use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail, qp_bail_internal};
 
@@ -62,7 +62,7 @@ impl Duckc {
     /// Compile the `graph` with the given `compilation_type` and `bcx`.
     pub fn compile(
         &self,
-        graph: &EarlyDag,
+        graph: &EarlyGraph,
         compilation_type: CompilationType,
         bcx: &BuildContext<'_, '_>,
     ) -> QuackResult<ArtifactsDir> {
@@ -75,11 +75,13 @@ impl Duckc {
     /// Specific steps for compiling only the root package using [`process_builder`] backend.
     fn compile_root_package_only(
         &self,
-        graph: &EarlyDag,
+        graph: &EarlyGraph,
         bcx: &BuildContext<'_, '_>,
     ) -> QuackResult<ArtifactsDir> {
-        let this = graph.package(&graph.dag().root());
-        let deps = graph.dag().dependencies_for_package(&graph.dag().root());
+        let this = graph.package(&graph.graph().root());
+        let deps = graph
+            .graph()
+            .dependencies_for_package(&graph.graph().root());
         bail_if_has_deps(deps.dependencies())?;
         bail_if_has_explicit_aliases(this)?;
         let this = this.package();
@@ -113,11 +115,13 @@ impl Duckc {
     /// Specific steps for compiling a standalone script using [`process_builder`] backend.
     fn compile_standalone_script(
         &self,
-        graph: &EarlyDag,
+        graph: &EarlyGraph,
         bcx: &BuildContext<'_, '_>,
     ) -> QuackResult<ArtifactsDir> {
-        let venv = graph.package(&graph.dag().root());
-        let deps = graph.dag().dependencies_for_package(&graph.dag().root());
+        let venv = graph.package(&graph.graph().root());
+        let deps = graph
+            .graph()
+            .dependencies_for_package(&graph.graph().root());
         bail_if_has_deps(deps.dependencies())?;
         bail_if_has_explicit_aliases(venv)?;
         let script_path = bcx

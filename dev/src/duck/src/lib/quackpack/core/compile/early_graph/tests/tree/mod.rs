@@ -5,7 +5,7 @@ use setup::*;
 
 use crate::quackpack::core::PackageLoader;
 use crate::quackpack::core::compile::BuildContext;
-use crate::quackpack::core::compile::early_dag::{DependencyNode, EarlyDag};
+use crate::quackpack::core::compile::early_graph::{DependencyNode, EarlyGraph};
 use crate::quackpack::core::compile::profiles::Profile;
 use crate::quackpack::core::storage::paths::Storage;
 
@@ -24,10 +24,10 @@ fn creates_valid_initial_graph() {
         profile,
         script_path: None,
     };
-    let graph = EarlyDag::new_early(&bcx).unwrap();
-    assert_eq!(graph.dag.root.to_string(), "root 1.0.0");
+    let graph = EarlyGraph::new_early(&bcx).unwrap();
+    assert_eq!(graph.graph.root.to_string(), "root 1.0.0");
     assert_eq!(
-        graph.dag.dag,
+        graph.graph.graph,
         HashMap::from_iter([
             (
                 "root 1.0.0".parse().unwrap(),
@@ -61,7 +61,7 @@ fn expands_valid_features1() {
         profile,
         script_path: None,
     };
-    let mut graph = EarlyDag::new_early(&bcx).unwrap();
+    let mut graph = EarlyGraph::new_early(&bcx).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
     let root_features = graph
         .package(&"root 1.0.0".parse().unwrap())
@@ -103,7 +103,7 @@ fn expands_valid_features2() {
         profile,
         script_path: None,
     };
-    let mut graph = EarlyDag::new_early(&bcx).unwrap();
+    let mut graph = EarlyGraph::new_early(&bcx).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
     let root_features = graph
         .package(&"root 1.0.0".parse().unwrap())
@@ -151,7 +151,7 @@ fn expands_valid_features3() {
         profile,
         script_path: None,
     };
-    let mut graph = EarlyDag::new_early(&bcx).unwrap();
+    let mut graph = EarlyGraph::new_early(&bcx).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
     let root_features = graph
         .package(&"root 1.0.0".parse().unwrap())
@@ -196,7 +196,7 @@ fn errors_with_nonexistent_features() {
         profile,
         script_path: None,
     };
-    let mut graph = EarlyDag::new_early(&bcx).unwrap();
+    let mut graph = EarlyGraph::new_early(&bcx).unwrap();
     let err = graph.populate_features(&bcx.used_features).unwrap_err();
     assert_eq!(
         err.to_string(),
@@ -220,12 +220,12 @@ fn removes_inactive_deps1() {
         profile,
         script_path: None,
     };
-    let mut graph = EarlyDag::new_early(&bcx).unwrap();
+    let mut graph = EarlyGraph::new_early(&bcx).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
     graph.remove_disabled_dependencies();
-    assert_eq!(graph.dag.root.to_string(), "root 1.0.0");
+    assert_eq!(graph.graph.root.to_string(), "root 1.0.0");
     assert_eq!(
-        graph.dag.dag,
+        graph.graph.graph,
         HashMap::from_iter([
             (
                 "root 1.0.0".parse().unwrap(),
@@ -253,12 +253,12 @@ fn removes_inactive_deps2() {
         profile,
         script_path: None,
     };
-    let mut graph = EarlyDag::new_early(&bcx).unwrap();
+    let mut graph = EarlyGraph::new_early(&bcx).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
     graph.remove_disabled_dependencies();
-    assert_eq!(graph.dag.root.to_string(), "root 1.0.0");
+    assert_eq!(graph.graph.root.to_string(), "root 1.0.0");
     assert_eq!(
-        graph.dag.dag,
+        graph.graph.graph,
         HashMap::from_iter([
             (
                 "root 1.0.0".parse().unwrap(),
@@ -289,12 +289,12 @@ fn removes_inactive_deps3() {
         profile,
         script_path: None,
     };
-    let mut graph = EarlyDag::new_early(&bcx).unwrap();
+    let mut graph = EarlyGraph::new_early(&bcx).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
     graph.remove_disabled_dependencies();
-    assert_eq!(graph.dag.root.to_string(), "root 1.0.0");
+    assert_eq!(graph.graph.root.to_string(), "root 1.0.0");
     assert_eq!(
-        graph.dag.dag,
+        graph.graph.graph,
         HashMap::from_iter([
             (
                 "root 1.0.0".parse().unwrap(),
@@ -328,12 +328,12 @@ fn removes_inactive_deps4() {
         profile,
         script_path: None,
     };
-    let mut graph = EarlyDag::new_early(&bcx).unwrap();
+    let mut graph = EarlyGraph::new_early(&bcx).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
     graph.remove_disabled_dependencies();
-    assert_eq!(graph.dag.root.to_string(), "root 1.0.0");
+    assert_eq!(graph.graph.root.to_string(), "root 1.0.0");
     assert_eq!(
-        graph.dag.dag,
+        graph.graph.graph,
         HashMap::from_iter([
             (
                 "root 1.0.0".parse().unwrap(),
@@ -367,7 +367,7 @@ fn cycle_in_freeze() {
         profile,
         script_path: None,
     };
-    let err = EarlyDag::new_early(&bcx).unwrap_err();
+    let err = EarlyGraph::new_early(&bcx).unwrap_err();
     assert_eq!(
         err.to_string(),
         "malformed freezefile: cycle `root 1.0.0` -> `foo 1.0.0` -> `bar 1.0.0` -> `foo 1.0.0`"
@@ -389,7 +389,7 @@ fn missing_direct_dep_in_freeze() {
         profile,
         script_path: None,
     };
-    let err = EarlyDag::new_early(&bcx).unwrap_err();
+    let err = EarlyGraph::new_early(&bcx).unwrap_err();
     assert_eq!(
         err.to_string(),
         "malformed freezefile: missing direct dependency `foo 1.0.0`"
@@ -411,7 +411,7 @@ fn missing_transitive_dep_in_freeze() {
         profile,
         script_path: None,
     };
-    let err = EarlyDag::new_early(&bcx).unwrap_err();
+    let err = EarlyGraph::new_early(&bcx).unwrap_err();
     assert_eq!(
         err.to_string(),
         "malformed freezefile: missing transitive dependency `bar 1.0.0`"

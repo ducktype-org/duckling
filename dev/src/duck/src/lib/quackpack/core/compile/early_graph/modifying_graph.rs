@@ -1,4 +1,4 @@
-//! Helpers for modifying an existing [`EarlyDag`] (and its members).
+//! Helpers for modifying an existing [`EarlyGraph`] (and its members).
 
 use tracing::debug;
 
@@ -6,11 +6,11 @@ use super::*;
 use crate::quackpack::core::FeatureName;
 use crate::quackpack::core::compile::MISSING_DEPENDENCY_IN_MANIFEST_MESSAGE;
 
-impl DependencyDag {
-    /// Same as [`EarlyDag::remove_disabled_dependencies`].
+impl DependencyGraph {
+    /// Same as [`EarlyGraph::remove_disabled_dependencies`].
     #[tracing::instrument(skip_all)]
     pub fn remove_disabled_dependencies(&mut self, packages: &PackagesSet) {
-        for (k, v) in self.dag.iter_mut() {
+        for (k, v) in self.graph.iter_mut() {
             let mut to_remove = HashSet::new();
             let this = packages.package(k);
             for dep in &v.dependencies {
@@ -35,12 +35,12 @@ impl DependencyDag {
     }
 }
 
-impl EarlyDag {
+impl EarlyGraph {
     /// Recursively populate enabled features, starting from the root of the graph.
     #[tracing::instrument(skip_all)]
     pub fn populate_features(&mut self, root_features: &[FeatureName]) -> QuackResult<()> {
-        debug!(root = %self.dag.root(), features = ?root_features, "populating root");
-        let root_package = self.package_mut(&self.dag.root());
+        debug!(root = %self.graph.root(), features = ?root_features, "populating root");
+        let root_package = self.package_mut(&self.graph.root());
         root_package.add_new_features(root_features.iter().copied())?;
 
         #[tracing::instrument(skip_all)]
@@ -72,11 +72,11 @@ impl EarlyDag {
         }
 
         let order = self
-            .dag
+            .graph
             .topo_sort_order()
             .expect("we've verified that there are no cycles");
         for dep in order {
-            populate_impl(dep, &self.dag.dag, &mut self.packages)?;
+            populate_impl(dep, &self.graph.graph, &mut self.packages)?;
         }
         Ok(())
     }
@@ -89,6 +89,6 @@ impl EarlyDag {
     /// This method should be called __after__ [`populate_features`](Self::populate_features).
     #[tracing::instrument(skip_all)]
     pub fn remove_disabled_dependencies(&mut self) {
-        self.dag.remove_disabled_dependencies(&self.packages)
+        self.graph.remove_disabled_dependencies(&self.packages)
     }
 }
