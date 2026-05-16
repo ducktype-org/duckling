@@ -37,9 +37,6 @@ namespace compiler::repl {
 			TESTER_ADD_TEST(testReplHistoryCommandThroughProcessLine);
 			TESTER_ADD_TEST(testReplUnknownCommandThroughHandleCommand);
 			TESTER_ADD_TEST(testReplClearCommandDoesNotResetSessionState);
-			TESTER_ADD_TEST(testReplResetAbsoluteReplay);
-			TESTER_ADD_TEST(testReplResetRelativeReplay);
-			TESTER_ADD_TEST(testReplResetSyntaxErrors);
 			TESTER_ADD_TEST(testReplProcessLineWithCode);
 			TESTER_ADD_TEST(testReplInstructionExecution);
 			TESTER_ADD_TEST(testReplCommandDetection);
@@ -51,6 +48,9 @@ namespace compiler::repl {
 			TESTER_ADD_TEST(testReplArithmeticExpressions);
 			TESTER_ADD_TEST(testReplVariableLookup);
 			TESTER_ADD_TEST(testReplUnsupportedActionClassification);
+			TESTER_ADD_TEST(testReplResetAbsoluteReplay);
+			TESTER_ADD_TEST(testReplResetRelativeReplay);
+			TESTER_ADD_TEST(testReplResetSyntaxErrors);
 		}
 
 		void beforeAll() override {
