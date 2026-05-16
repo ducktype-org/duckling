@@ -10,7 +10,7 @@ namespace pst {
 	 */
 	class Class final: public Decl {
 	private:
-		tpc::Identifier name;
+		NAMED_CHILD(name, IdentifierWrapper);
 		NAMED_CHILD(base, ExtendsExprHolder);
 		NAMED_CHILD(implements, ImplementsList);
 		NAMED_CHILD(body, ClassBlock);
@@ -22,13 +22,8 @@ namespace pst {
 		DECL_CHILD_CONSTRUCTOR(Class, ElementKind::Class);
 
 		[[nodiscard]]
-		base::StrID getName() const {
-			return name.value;
-		}
-
-		[[nodiscard]]
-		tpc::Identifier getNameIdent() const {
-			return name;
+		AccessLocked<IdentifierWrapper> getName() const {
+			return name.give();
 		}
 
 		[[nodiscard]]
@@ -47,7 +42,7 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		base::Optional<base::StrID> getDeclSymbolName() const final {
+		base::Optional<AccessLocked<IdentifierWrapper>> getDeclSymbolIdentifier() const final {
 			return getName();
 		}
 

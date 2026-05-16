@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../not_statements/wrapper_elements/keyword_wrapper.hpp"  // IWYU pragma: keep
 #include "expr_common.hpp"
 
 namespace pst::expr {
@@ -7,7 +8,7 @@ namespace pst::expr {
 	 * @brief Element that represents an keyword literal in an expression
 	 */
 	class KeywordLiteral final: public ExprElement {
-		Keyword keyword = Keyword::NotAKeyword;
+		NAMED_CHILD(keyword, KeywordWrapper);
 		NAMED_CHILD_OPT(template_specifier, ExprElement);
 
 	public:
@@ -21,8 +22,8 @@ namespace pst::expr {
 		HashAlg& addElementDataToStableHash(HashAlg&) const override;
 
 		[[nodiscard]]
-		Keyword getKeyword() const {
-			return keyword;
+		AccessLocked<KeywordWrapper> getKeyword() const {
+			return keyword.give();
 		}
 
 		[[nodiscard]]
