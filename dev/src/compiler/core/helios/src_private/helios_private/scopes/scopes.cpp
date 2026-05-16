@@ -97,6 +97,8 @@ namespace compiler::helios {
 
 		case pst::ElementKind::Import:
 		case pst::ElementKind::ImportIdentifierAs:
+		case pst::ElementKind::ImportStarHides:
+		case pst::ElementKind::ImportNested:
 		case pst::ElementKind::DottedName:
 		// I don't know if this is correct
 		case pst::ElementKind::StmtSpecifier:
@@ -647,8 +649,11 @@ namespace compiler::helios {
 						auto wild_result_qresult
 							= HInterface::ofSymbol(sym).lookup(ctx, key.name, { true });
 						UNPACK_QRESULT_CREF(CRef<LookupResult> wild_result = &, wild_result_qresult);
-						if (!wild_result->isEmpty())
-							result.children.push_back(wild_result->toNode(sym));
+						if (!wild_result->isEmpty()) {
+							result.leaves.insert(
+								result.leaves.end(), wild_result->leaves.begin(), wild_result->leaves.end()
+							);
+						}
 					}
 				} else if (isAlias(sym) && name(sym) == key.name) {
 					// @TODO: #1412 fix dealias

@@ -1,1 +1,3 @@
-fun a() = 20;
+fun a() = {
+    builtin_output_i64(42);
+}

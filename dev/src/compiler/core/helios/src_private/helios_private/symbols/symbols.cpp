@@ -328,6 +328,30 @@ namespace compiler::helios {
 					},
 					pst_data
 				);
+			} else if (auto import_star = import_chain.dynamicCast<pst::ImportStarHides>()) {
+				// import a.b.c.*;
+				auto& names = import_star.value()->getNames();
+				return SymbolData::makePSTSymbolData(
+					{
+						.name        = names.back().value,
+						.kind        = SymbolKind::Import,
+						.is_wildcard = true,
+						.is_alias    = false,
+					},
+					pst_data
+				);
+			} else if (auto import_nested = import_chain.dynamicCast<pst::ImportNested>()) {
+				// import a.b.c(...);
+				auto& names = import_nested.value()->getNames();
+				return SymbolData::makePSTSymbolData(
+					{
+						.name        = names.back().value,
+						.kind        = SymbolKind::Import,
+						.is_wildcard = false,
+						.is_alias    = false,
+					},
+					pst_data
+				);
 			} else {
 				throw base::NotYetImplemented(
 					"Not handled type of import chain in makeSymbolFromStatement"
@@ -733,13 +757,28 @@ namespace compiler::helios {
 			void visitImport(pst::Access<pst::Import> import_stmt) final {
 				// @TODO: proper error handling
 
-				auto names = import_stmt.dynamicCast<pst::Import>()
-				                 .value()
-				                 ->getImportChain()
-				                 .dynamicCast<pst::ImportIdentifierAs>()
-				                 .unlock(ctx)
-				                 ->getNames();
-				std::vector<base::StrID> module_path{ names.begin(), names.end() };
+				auto import_stmt_ptr = import_stmt.dynamicCast<pst::Import>().value();
+				auto import_chain = import_stmt_ptr->getImportChain().unlock(ctx);
+				
+				std::vector<base::StrID> module_path;
+
+				// Handle different import chain types
+				if (auto import_as = import_chain.dynamicCast<pst::ImportIdentifierAs>()) {
+					auto names = import_as.value()->getNames();
+					module_path = std::vector<base::StrID>{ names.begin(), names.end() };
+				} else if (auto import_star = import_chain.dynamicCast<pst::ImportStarHides>()) {
+					auto names = import_star.value()->getNames();
+					module_path = std::vector<base::StrID>{ names.begin(), names.end() };
+				} else if (auto import_nested = import_chain.dynamicCast<pst::ImportNested>()) {
+					auto names = import_nested.value()->getNames();
+					module_path = std::vector<base::StrID>{ names.begin(), names.end() };
+				} else {
+					ctx.logInt(makeBox<dia_int::PlaceholderError>(
+						"Unknown import chain type.", import_stmt->getStablePosition()
+					));
+					output(query::Failed());
+					return;
+				}
 
 				auto maybe_imported_module
 					= frontend::getRelativeModule(ctx, module(scope(key)), module_path);
