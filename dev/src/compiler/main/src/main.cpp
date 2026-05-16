@@ -622,8 +622,6 @@ clah::Clah getClahForMain() {
 			clah::Clah("compile_packages", "Compile package(s) described by a JSON manifest.")
 				.addPositional(clah::FileParser::make("manifest"))
 				.add(getLlvmOptLevelParam())
-				.add(getClahStandardLibraryOptions())
-				.addCustomVerification(verifyStandardLibraryOptions)
 				.add(clah::ParamBuilder::ofValue(clah::FilePathParser::make("filepath"))
 	                     .addShortName('a')
 	                     .addLongName("artifact-location")
@@ -651,6 +649,7 @@ clah::Clah getClahForMain() {
 	                     .optional()
 	                     .build())
 				.setHandler([](const clah::ParsingResult& options) -> int {
+					// @TODO make standard library options work here (the problem is with passing the linking options)
 					auto manifest_file = options.getPositional<fs::File>(0);
 					auto worker_count  = options.getValue<i64>("workers").copyValueOr(1);
 
@@ -724,11 +723,9 @@ clah::Clah getClahForMain() {
 						time_stats::TimeCategories::TotalCompilationTime
 					);
 
-					if (not options.isFlag("no-std")) {
-						compiler::driver::compilePackages(
-							compiler::driver::getStandardLibraryCompilationTasks()
-						);
-					}
+					compiler::driver::compilePackages(
+						compiler::driver::getStandardLibraryCompilationTasks()
+					);
 
 					CORE_ASSERT(!global_state::getPackages().empty(), "No packages registered");
 					base::OkBad result = compiler::driver::compilePackages(compilation_tasks);
