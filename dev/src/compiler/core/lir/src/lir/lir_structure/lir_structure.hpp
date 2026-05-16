@@ -517,7 +517,9 @@ namespace compiler::lir {
 	};
 
 	/**
-	 * @brief The operation flags of the instruction.
+	 * @brief The scope flags of the instruction.
+	 * It's a flag that indicates the start and end of a variable's scope,
+	 * for efficient local stack allocation in the backend.
 	 * The only user is for now the DVM Backend, which uses it to generate `init` and `deinit`
 	 * instructions.
 	 */
