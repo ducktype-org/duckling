@@ -1,0 +1,23 @@
+fun main() -> u64 = {
+    var a: u128;
+    if (a != 0u128) {
+        return 1;
+    }
+    var b: u64;
+    if (b != 0u64) {
+        return 2;
+    }
+    var c: u32;
+    if (c != 0u32) {
+        return 3;
+    }
+    var d: u16;
+    if (d != 0u16) {
+        return 4;
+    }
+    var e: u8;
+    if (e != 0u8) {
+        return 5;
+    }
+    return 0;
+}

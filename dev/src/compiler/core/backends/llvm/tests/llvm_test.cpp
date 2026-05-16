@@ -43,6 +43,7 @@ public:
 		TESTER_ADD_TEST(classTest);
 		TESTER_ADD_TEST(stringsTest);
 		TESTER_ADD_TEST(ffiTest);
+		TESTER_ADD_TEST(tuplesTest);
 	}
 
 protected:
@@ -488,6 +489,16 @@ private:
 		bool has_i16_to_i64
 			= std::regex_search(ir, std::regex{ R"((sext|zext)\s+i16\s+%\S+\s+to\s+i64)" });
 		assertTrue(has_i16_to_i64, "Expected sext/zext i16-> i64 in IR");
+	}
+
+	void tuplesTest() {
+		auto        llvm_module = getLLVMModuleFromPath("modules/tuples");
+		std::string ir          = llvm_module.dumpLLVMToString();
+
+		// Ckeck if tuple types are present
+		assertTrue(
+			std::regex_search(ir, std::regex{ R"(%T.*E)" }), "Expected tuple struct definition"
+		);
 	}
 };
 

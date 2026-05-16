@@ -3,6 +3,7 @@
 #include "queries.hpp"
 
 #include <helios/mangler/mangler.hpp>
+#include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/tsh/type_interface.hpp>
 
 #include <base/extend_cpp/variant_match.hpp>
@@ -323,88 +324,8 @@ namespace compiler::tsl {
 		return ss.str();
 	}
 
-	struct TupleTypeLayoutConstructionHelper final {
-		tsh::TupleAbstractType tuple_type;
-		/**
-		 * The layouts of the components in the abstract tuple type.
-		 */
-		std::vector<CRef<TypeLayout>> component_layouts;
-		/**
-		 * The offsets of the components in the abstract tuple type.
-		 * If the component has empty layout, then the optional is empty.
-		 * Note, the offsets are not necessarily increasing.
-		 */
-		std::vector<base::Optional<Bytes>> component_offsets;
-		/**
-		 * Mapping from the order of appearance of sub-objects in the layout
-		 * to the index of the component in the abstract tuple type.
-		 * @note Empty layouts are not included in the tuple layout, so this mapping may be
-		 * shorter than `component_layouts`. Otherwise, this is effectively a permutation.
-		 */
-		std::vector<usize> layout_idx_to_component_idx;
-		/**
-		 * The layouts of the sub-objects, in the order of appearance in the tuple layout.
-		 */
-		std::vector<CRef<TypeLayout>> layout_idx_to_component_layout;
-		Bits                          total_size;
-
-		TupleTypeLayoutConstructionHelper(
-			const tsh::TupleAbstractType tuple_type, query::Context& ctx
-		):
-			  tuple_type(tuple_type),
-			  component_layouts(getLayoutVector(tuple_type.getComponents(), ctx)),
-			  component_offsets(alignOffsetsForLayoutVector(component_layouts)),
-			  layout_idx_to_component_idx(offsetsToPermutation(component_offsets)),
-			  total_size(offsetsToTotalSize(component_offsets, component_layouts)) {
-			layout_idx_to_component_layout.reserve(layout_idx_to_component_idx.size());
-			for (const auto component_idx: layout_idx_to_component_idx)
-				layout_idx_to_component_layout.push_back(component_layouts.at(component_idx));
-		}
-	};
-
-	TupleTypeLayout::TupleTypeLayout(const tsh::TupleAbstractType tuple_type, query::Context& ctx):
-		  TupleTypeLayout(TupleTypeLayoutConstructionHelper(tuple_type, ctx), ctx) {}
-
-	TupleTypeLayout::TupleTypeLayout(TupleTypeLayoutConstructionHelper&& helper, query::Context& ctx):
-		  TypeLayoutABC(helper.total_size, tsh::SymbolType<>::withDefaults(helper.tuple_type), ctx),
-		  num_sub_layouts(helper.layout_idx_to_component_idx.size()),
-		  component_offsets(std::move(helper).component_offsets),
-		  layout_idx_to_component_idx(std::move(helper).layout_idx_to_component_idx),
-		  layout_idx_to_layout(std::move(helper).layout_idx_to_component_layout) {
-		component_idx_to_layout_idx.resize(helper.component_layouts.size());
-		for (u32 i = 0; i < num_sub_layouts; i++)
-			component_idx_to_layout_idx.at(layout_idx_to_component_idx.at(i)) = i;
-	}
-
-	std::string TupleTypeLayout::toStringDefinition(
-		query::Context& ctx, const bool recursive, const u32 indent
-	) const {
-		const tsh::TupleAbstractType tuple_type = getSourceType().getType();
-		std::stringstream            ss{};
-
-		// Display the tuple header and components
-		ss << getIndent(indent) << "tuple {\n";
-		for (const auto component_idx: layout_idx_to_component_idx) {
-			const base::Optional<Bytes> component_offset = getOffsetOfComponentIndex(component_idx);
-			const tsh::SymbolType<> component_type = tuple_type.getComponents().at(component_idx);
-			auto component_layout = ctx.query<QuerySymbolTypeLayout>(component_type);
-			if (recursive)
-				ss << component_layout->toStringDefinition(ctx, recursive, indent + 1);
-			else
-				ss << getIndent(indent + 1) << component_layout->toStringIdentification();
-			// Display the offset
-			ss << " @ " << (component_offset ? base::toString(component_offset.value()) : "nowhere")
-			   << "\n";
-		}
-
-		// Display the total size
-		ss << getIndent(indent) << "} : " << base::toString(getSize());
-
-		return ss.str();
-	}
-
 	struct ClassTypeLayoutConstructionHelper final {
-		tsh::ClassAbstractType class_type;
+		tsh::AbstractType type;
 		/**
 		 * The fields of the class, in declaration order.
 		 */
@@ -459,9 +380,21 @@ namespace compiler::tsl {
 		ClassTypeLayoutConstructionHelper(
 			const tsh::ClassAbstractType class_type, query::Context& ctx
 		):
-			  class_type(class_type),
+			  type(class_type),
 			  field_elements(getFieldsOfInterface(class_type.getInterface(ctx))),
 			  field_layouts(getLayoutVector(getElementTypes(field_elements, ctx), ctx)),
+			  field_offsets(alignOffsetsForLayoutVector(field_layouts)),
+			  layout_idx_to_field_idx(offsetsToPermutation(field_offsets)),
+			  layout_idx_to_sym_id(getLayoutIndicesToSymIDs(field_elements, field_offsets)),
+			  total_size(offsetsToTotalSize(field_offsets, field_layouts)),
+			  max_alignment(maxTypeLayoutAlignmentInVector(field_layouts)) {}
+
+		ClassTypeLayoutConstructionHelper(
+			const tsh::TupleAbstractType tuple_type, query::Context& ctx
+		):
+			  type(tuple_type),
+			  field_elements(getFieldsOfInterface(tuple_type.getInterface(ctx))),
+			  field_layouts(getLayoutVector(tuple_type.getComponents(), ctx)),
 			  field_offsets(alignOffsetsForLayoutVector(field_layouts)),
 			  layout_idx_to_field_idx(offsetsToPermutation(field_offsets)),
 			  layout_idx_to_sym_id(getLayoutIndicesToSymIDs(field_elements, field_offsets)),
@@ -472,11 +405,14 @@ namespace compiler::tsl {
 	ClassTypeLayout::ClassTypeLayout(const tsh::ClassAbstractType class_type, query::Context& ctx):
 		  ClassTypeLayout(ClassTypeLayoutConstructionHelper(class_type, ctx), ctx) {}
 
+	ClassTypeLayout::ClassTypeLayout(const tsh::TupleAbstractType tuple_type, query::Context& ctx):
+		  ClassTypeLayout(ClassTypeLayoutConstructionHelper(tuple_type, ctx), ctx) {}
+
 	ClassTypeLayout::ClassTypeLayout(ClassTypeLayoutConstructionHelper&& helper, query::Context& ctx):
 		  TypeLayoutABC(
 			  helper.total_size,
 			  helper.max_alignment,
-			  tsh::SymbolType<>::withDefaults(helper.class_type),
+			  tsh::SymbolType<>::withDefaults(helper.type),
 			  ctx
 		  ),
 		  num_sub_layouts(helper.layout_idx_to_field_idx.size()),
@@ -515,15 +451,15 @@ namespace compiler::tsl {
 	std::string ClassTypeLayout::toStringDefinition(
 		query::Context& ctx, const bool recursive, const u32 indent
 	) const {
-		const tsh::SymbolType<tsh::ClassAbstractType> class_type = getSourceType();
-		std::stringstream                             ss{};
+		const tsh::SymbolType<> class_type = getSourceType();
+		std::stringstream       ss{};
 
 		// Display the class header and components
 		ss << getIndent(indent) << class_type.toString() << " {\n";
 		for (const auto field_sym_id: layout_idx_to_sym_id) {
 			const base::Optional<Bytes> field_offset = getOffsetOfFieldSymbol(field_sym_id);
 			const tsh::SymbolType<>     field_type
-				= class_type.getType().getMemberType(field_sym_id, ctx);
+				= ctx.query<helios::QueryTypeOfSymbol>(field_sym_id)->valueOrThrow();
 			const auto field_layout = ctx.query<QuerySymbolTypeLayout>(field_type);
 			if (recursive)
 				ss << field_layout->toStringDefinition(ctx, recursive, indent + 1);

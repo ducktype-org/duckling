@@ -25,7 +25,13 @@
 								"star": "false",
 								"names": [
 									{
-										"Name": "ATRR"
+										"position": {
+											"sourceStart": 1,
+											"sourceEnd": 4
+										},
+										"Identifier Wrapper": {
+											"value": "ATRR"
+										}
 									},
 								]
 							}
@@ -35,7 +41,13 @@
 			],
 			"Function": {
 				"name": {
-					"Name": "c"
+					"position": {
+						"sourceStart": 10,
+						"sourceEnd": 10
+					},
+					"Identifier Wrapper": {
+						"value": "c"
+					}
 				},
 				"parameters": {
 					"position": {
@@ -80,11 +92,25 @@
 													},
 													"Identifier Expression": {
 														"name": {
-															"Name": "x"
+															"position": {
+																"sourceStart": 19,
+																"sourceEnd": 19
+															},
+															"Identifier Wrapper": {
+																"value": "x"
+															}
 														}
 													}
 												},
-												"assignment type": "=",
+												"assignment type": {
+													"position": {
+														"sourceStart": 21,
+														"sourceEnd": 21
+													},
+													"Operator Wrapper": {
+														"value": "="
+													}
+												},
 												"assigned value": {
 													"position": {
 														"sourceStart": 23,
@@ -123,11 +149,25 @@
 													},
 													"Identifier Expression": {
 														"name": {
-															"Name": "y"
+															"position": {
+																"sourceStart": 27,
+																"sourceEnd": 27
+															},
+															"Identifier Wrapper": {
+																"value": "y"
+															}
 														}
 													}
 												},
-												"assignment type": "=",
+												"assignment type": {
+													"position": {
+														"sourceStart": 29,
+														"sourceEnd": 29
+													},
+													"Operator Wrapper": {
+														"value": "="
+													}
+												},
 												"assigned value": {
 													"position": {
 														"sourceStart": 31,

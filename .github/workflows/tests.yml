@@ -49,6 +49,7 @@ jobs:
 
   build:
     needs: [setup]
+    name: ${{ matrix.build-type }} / ${{ matrix.compiler.name }}
     # This if condition is quite complex, so let's break it down:
     # 1. Run on push (if not a draft PR) or workflow_dispatch events (these are not related to PRs).
     # 2. Run on pull_request events only if the PR is not a draft, and either
@@ -206,28 +207,43 @@ jobs:
         id: ccache-main-rm
         run: rm -rf ${CCACHE_DIR}
 
+      - name: Initialize project
+        working-directory: ${{ env.WORKSPACE }}
+        run: ./toolbox.py init
+
       # Enables coverage only in case of Debug build.
-      - name: Additional CMake flags
-        id: cmake-flags
+      - name: Additional setup-build flags
+        id: setup-build-flags
         # Env here is used for readability only
         env:
-          flags: ${{ env.COVERAGE_ENABLED == 'true' && format('-D ENABLE_COVERAGE=ON -D GCOV_VERSION={0}', matrix.compiler.gcov) || '' }}
+          flags: ${{ env.COVERAGE_ENABLED == 'true' && format('--coverage --gcov-version {0}', matrix.compiler.gcov) || '--no-coverage' }}
         run: echo flags=${{ env.flags }} >> $GITHUB_OUTPUT
 
+        # JIT should be enabled if build type is DevOpt and compiler is clang, otherwise it should be disabled.
+      - name: Check should enable JIT
+        id: check-jit
+        run: |
+          echo jit-flag=$( [ "${{ matrix.build-type }}" = "DevOpt" ] &&
+                              [ "${{ matrix.compiler.name }}" = "clang" ] &&
+                               echo "--enable-jit" || echo "--no-enable-jit" ) >> $GITHUB_OUTPUT
+
+      # Configure CMake. Using toolbox instead of direct command, because it
+      # also enables CMake File API, which is necessary for integration tests.
+      # It also allows us to omit specifying all LLVM tools for JIT.
       - name: Configure CMake
         working-directory: ${{ env.WORKSPACE }}
         run: |
-          cmake \
-              -B ${{ env.BUILD_DIR }} \
-              -G ${{ env.BUILD_SYSTEM }} \
-              -D CMAKE_CXX_COMPILER=${{ matrix.compiler.cxx }} \
-              -D CMAKE_C_COMPILER=${{ matrix.compiler.cc }} \
-              -D BUILD_DOCS=OFF \
-              -D CMAKE_BUILD_TYPE=${{ matrix.build-type }} \
-              -D USE_CCACHE=ON \
-              -D STRIP_SYMBOL_INFORMATION=ON \
-              ${{ matrix.compiler.name == 'gcc' && format('-D CMAKE_LINKER_TYPE={0}', matrix.compiler.linker) || '' }} \
-              ${{ steps.cmake-flags.outputs.flags }}
+          ./toolbox.py setup-build \
+            -b ${{ env.BUILD_DIR }} \
+            -s ${{ env.BUILD_SYSTEM }} \
+            -c ${{ matrix.compiler.cc }} \
+            -x ${{ matrix.compiler.cxx }} \
+            -t ${{ matrix.build-type }} \
+            ${{ steps.check-jit.outputs.jit-flag }} \
+            ${{ steps.setup-build-flags.outputs.flags }} \
+            --linker ${{ matrix.compiler.linker }} \
+            --ccache \
+            --strip-symbol-information
 
       # Build all tests.
       # We additionally build coverage targets in case of coverage enabled,
@@ -306,7 +322,6 @@ jobs:
       - name: Test
         working-directory: ${{ env.WORKSPACE }}
         run: ./toolbox.py test -b ${{ env.BUILD_DIR }} -j ${{ steps.set-jobs.outputs.jobs }} --output-on-failure --timeout 60
-      
 
       - name: Test Coverage
         id: test-coverage

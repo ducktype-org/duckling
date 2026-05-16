@@ -167,6 +167,10 @@ namespace compiler::helios {
 
 		case pst::ElementKind::ExprStmt:
 			return ElementScopeKind::Transparent;
+		case pst::ElementKind::OperatorWrapper:
+		case pst::ElementKind::IdentifierWrapper:
+		case pst::ElementKind::KeywordWrapper:
+			return ElementScopeKind::Transparent;
 
 		case pst::ElementKind::ExprElement:
 		case pst::ElementKind::RoundGroupExpr:
@@ -377,10 +381,6 @@ namespace compiler::helios {
 			output.scopes.reserve(1'024);  // there will usually be a lot of scopes
 
 			getScopes(ctx, main_file, &output);
-
-			// fetch scopes from other module files
-			auto source_files = ctx.query<frontend::QuerySourceFiles>(key);
-			for (auto file: *source_files) getScopes(ctx, file, &output);
 
 			// eliminate duplicates with sort:
 			std::ranges::sort(output.scopes);

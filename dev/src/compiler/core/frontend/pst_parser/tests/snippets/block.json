@@ -10,7 +10,6 @@
 				"sourceEnd": 7
 			},
 			"Block": {
-				"optional name": "<ANONYMOUS>",
 				"code block": {
 					"position": {
 						"sourceStart": 6,
@@ -26,8 +25,14 @@
 				"sourceEnd": 19
 			},
 			"Block": {
-				"optional name": {
-					"Name": "B"
+				"name": {
+					"position": {
+						"sourceStart": 16,
+						"sourceEnd": 16
+					},
+					"Identifier Wrapper": {
+						"value": "B"
+					}
 				},
 				"code block": {
 					"position": {
@@ -44,8 +49,14 @@
 				"sourceEnd": 38
 			},
 			"Block": {
-				"optional name": {
-					"Name": "B"
+				"name": {
+					"position": {
+						"sourceStart": 28,
+						"sourceEnd": 28
+					},
+					"Identifier Wrapper": {
+						"value": "B"
+					}
 				},
 				"code block": {
 					"position": {
@@ -77,11 +88,25 @@
 												},
 												"Identifier Expression": {
 													"name": {
-														"Name": "a"
+														"position": {
+															"sourceStart": 33,
+															"sourceEnd": 33
+														},
+														"Identifier Wrapper": {
+															"value": "a"
+														}
 													}
 												}
 											},
-											"operator": "++"
+											"operator": {
+												"position": {
+													"sourceStart": 34,
+													"sourceEnd": 35
+												},
+												"Operator Wrapper": {
+													"value": "++"
+												}
+											}
 										}
 									}
 								}
