@@ -116,7 +116,7 @@ base::Optional<vm::InterpretedDataVariant> vm::VMValueRef::readData() const {
 			TypeCRef inner_type = variant_kind.alternatives.at(alternative_index);
 
 			auto view_block_ref = memory->getNestedViewBlock(
-				pointed_data.movedPointer(static_cast<i64>(variant_kind.type_tag_size)), inner_type
+				pointed_data.movedPointer(static_cast<i64>(variant_kind.payload_offset)), inner_type
 			);
 
 			match_optional(view_block_ref.toOpt()) {

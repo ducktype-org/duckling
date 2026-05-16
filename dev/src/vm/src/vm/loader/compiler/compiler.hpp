@@ -113,6 +113,8 @@ namespace vm::loader::compiler {
 			/// Total required size for the local stack frame, in bytes.
 			usize local_stack_size  = 0;
 			usize local_block_count = 0;
+			usize return_stack_size = 0;
+			usize shared_stack_size = 0;
 		};
 
 		/**

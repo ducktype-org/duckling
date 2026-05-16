@@ -32,7 +32,7 @@ namespace vm::low {
 		usize local_block_count;
 
 		usize arg_size;
-		// The total summed size of all return values.
+		// Size of the return-value prefix of the shared call area, including alignment padding.
 		usize                 ret_size;
 		std::vector<TypeCRef> parameters;
 		std::vector<TypeCRef> result_types;

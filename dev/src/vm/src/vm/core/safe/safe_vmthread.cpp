@@ -141,6 +141,7 @@ namespace vm {
 			                             .result_types = func.result_types };
 
 		const u64 called_function_id = process_program->getFunctions().idOf(func.name).value();
+		usize     shared_stack_size  = 0;
 
 		for (auto [idx, res]: std::views::enumerate(func.result_types)) {
 			// Initialize an exit code/return value spot. In case of non-void functions the
@@ -149,9 +150,11 @@ namespace vm {
 			start_function.bc.push_back(
 				MAKE_BYTECODE_INSTRUCTION(init_bany_type, (u64) idx, safeReadObjectBytes<u64>(res))
 			);
+			shared_stack_size
+				= align_up(shared_stack_size, res->getAlignment()) + res->getSize().asInt();
 		}
 
-		start_function.local_stack_size += func.ret_size;
+		start_function.ret_size = shared_stack_size;
 
 		for (u64 i = 0; i < func_args.size(); i++) {
 			const auto& arg_value = func_args[i];
@@ -179,10 +182,12 @@ namespace vm {
 			start_function.bc.push_back(
 				MAKE_BYTECODE_INSTRUCTION(initFromVmValue, std::bit_cast<u64>(arg_value.get()), 0)
 			);
-			start_function.local_stack_size += arg_type->getSize().asInt();
 			start_function.parameters.push_back(arg_value->type);
-			start_function.arg_size += arg_value->type->getSize().asInt();
+			shared_stack_size
+				= align_up(shared_stack_size, arg_type->getAlignment()) + arg_type->getSize().asInt();
 		}
+		start_function.arg_size         = shared_stack_size - start_function.ret_size;
+		start_function.local_stack_size = shared_stack_size;
 
 
 		start_function.bc.insert(
@@ -279,6 +284,7 @@ namespace vm {
 
 		// Now fill in the argv table.
 		if (main_has_args) {
+			//CORE_PANIC("UNIMPLEMENTED");
 			for (const auto& [argv_index, arg]:
 			     std::views::zip(std::ranges::views::iota(0u), args)) {
 				start_function.bc.insert(
@@ -477,6 +483,8 @@ namespace vm {
 		frame->current_function           = &start_function;
 		frame->local_block_ref_stack_base = runtime_data.block_ref_stack_base;
 		frame->local_block_ref_stack_end  = runtime_data.block_ref_stack_base;
+		frame->local_stack_head_history_base = runtime_data.local_stack_head_history_base;
+		frame->local_stack_head_history_end  = runtime_data.local_stack_head_history_base;
 
 		const auto* instr = start_function.bc.data();
 

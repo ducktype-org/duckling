@@ -15,7 +15,6 @@
 #include <vm/core/safe/safe_vmthread.hpp>
 #include <vm/core/safe/type_metadata/type.hpp>
 #include <vm/module_flags/module_flags.hpp>
-
 #ifdef USE_TAIL_CALLS
 	#define OPFUN_ARGS OPFUN_TC_ARGS
 #else
@@ -139,6 +138,14 @@ namespace vm {
 			auto shared_blocks_count = arg_count + ret_count;
 			u64  prev_frame_block_ref_count
 				= u64(frame->local_block_ref_stack_end - frame->local_block_ref_stack_base);
+			u64 prev_frame_history_count
+				= u64(
+					frame->local_stack_head_history_end - frame->local_stack_head_history_base
+				);
+			CORE_ASSERT(
+				prev_frame_block_ref_count == prev_frame_history_count,
+				"Local block stack and stack-head history are out of sync before function call"
+			);
 
 			// Save current registers and flow.
 			frame->instr       = instr + 1;
@@ -160,6 +167,9 @@ namespace vm {
 			local_stack += prev_frame->local_stack_head - shared_stack_space_size;
 			frame->local_block_ref_stack_base = prev_frame->local_block_ref_stack_base
 			                                  + (prev_frame_block_ref_count - shared_blocks_count);
+			frame->local_stack_head_history_base
+				= prev_frame->local_stack_head_history_base
+				+ (prev_frame_block_ref_count - shared_blocks_count);
 
 			// Assumes that local_stack_size = ret_val + passed_args + new_local_args.
 			if (local_stack + called_func.local_stack_size >= runtime_data.local_stack_end)
@@ -167,15 +177,20 @@ namespace vm {
 			if (frame->local_block_ref_stack_base + called_func.local_block_count
 			    >= runtime_data.block_ref_stack_end)
 				throw exceptions::VMStackOverflowException();
+			if (frame->local_stack_head_history_base + called_func.local_block_count
+			    >= runtime_data.local_stack_head_history_end)
+				throw exceptions::VMStackOverflowException();
 
-			frame->local_stack_head          = shared_stack_space_size;
-			frame->local_block_ref_stack_end = prev_frame->local_block_ref_stack_end;
+			frame->local_stack_head             = shared_stack_space_size;
+			frame->local_block_ref_stack_end    = prev_frame->local_block_ref_stack_end;
+			frame->local_stack_head_history_end = prev_frame->local_stack_head_history_end;
 
 			// Remove the argument blocks from caller's block stack. Only the return value stays in
 			// the block stack.
 			// @note: We require that the callee can't deinitialize the return value passed by the
 			// caller.
 			prev_frame->local_block_ref_stack_end -= arg_count;
+			prev_frame->local_stack_head_history_end -= arg_count;
 			prev_frame->local_stack_head -= called_func.arg_size;
 		}
 
@@ -191,15 +206,27 @@ namespace vm {
 				SafeVMThread&                             thread,
 				TypeCRef                                  type
 			) {
-			auto data_ptr = local_stack + frame->local_stack_head;
-			auto block    = thread.process_memory.allocateDummy(type, data_ptr);
+			auto previous_head = frame->local_stack_head;
+			auto data_offset   = align_up(previous_head, type->getAlignment());
+			auto data_ptr      = local_stack + data_offset;
+			auto block         = thread.process_memory.allocateDummy(type, data_ptr);
+			auto block_count   = u64(frame->local_block_ref_stack_end - frame->local_block_ref_stack_base);
+			auto history_count = u64(
+				frame->local_stack_head_history_end - frame->local_stack_head_history_base
+			);
+			CORE_ASSERT(
+				block_count == history_count,
+				"Local block stack and stack-head history are out of sync before init"
+			);
 
 			thread.process_memory.increaseBlockRefcount(block
 			);  // so that nobody can delete our block
 
 			*frame->local_block_ref_stack_end = block.get();
+			*frame->local_stack_head_history_end = previous_head;
 			frame->local_block_ref_stack_end += 1;
-			frame->local_stack_head += type->getSize().asInt();
+			frame->local_stack_head_history_end += 1;
+			frame->local_stack_head = data_offset + type->getSize().asInt();
 		}
 
 		static
@@ -208,12 +235,23 @@ namespace vm {
 #endif
 			void
 			performDeinit(Frame*& frame, SafeVMThread& thread) {
+			auto block_count = u64(frame->local_block_ref_stack_end - frame->local_block_ref_stack_base);
+			auto history_count
+				= u64(frame->local_stack_head_history_end - frame->local_stack_head_history_base);
+			CORE_ASSERT(block_count > 0, "Trying to deinitialize an empty local block stack");
+			CORE_ASSERT(
+				history_count > 0, "Trying to deinitialize an empty stack-head history"
+			);
+			CORE_ASSERT(
+				block_count == history_count,
+				"Local block stack and stack-head history are out of sync before deinit"
+			);
 			auto block = frame->local_block_ref_stack_end[-1];
-			auto type  = thread.process_memory.getBlockType(block);
 
 			thread.process_memory.freeBlockData(block);
 			thread.process_memory.decreaseBlockRefcount(block);
-			frame->local_stack_head -= type->getSize().asInt();
+			frame->local_stack_head = frame->local_stack_head_history_end[-1];
+			frame->local_stack_head_history_end -= 1;
 			frame->local_block_ref_stack_end -= 1;
 		}
 
@@ -229,10 +267,11 @@ namespace vm {
 				TypeCRef      variant_type
 			) {
 			auto variant_type_tag_size = variant_type->getTypeTagSizeBytes().value();
+			auto variant_payload_offset = variant_type->getVariantPayloadOffsetBytes().value();
 
 			// Set the view block
 			auto nested_data_ptr = variant_pointer;
-			nested_data_ptr.movePointer(variant_type_tag_size.asInt());
+			nested_data_ptr.movePointer(variant_payload_offset.asInt());
 			thread.process_memory.setNestedViewBlock(nested_data_ptr, wanted_type);
 
 			// Find type index
@@ -281,7 +320,9 @@ namespace vm {
 			) {
 
 			auto view_block_ref = thread.process_memory.getNestedViewBlock(
-				variant_pointer.movedPointer(variant_type->getTypeTagSizeBytes()->asInt()),
+				variant_pointer.movedPointer(
+					variant_type->getVariantPayloadOffsetBytes()->asInt()
+				),
 				wanted_type
 			);
 

@@ -1,13 +1,30 @@
 #pragma once
 
 #include <base/types/ints.hpp>
+#include <base/except/exceptions.hpp>
 
 #include <array>
+#include <cstddef>
 #include <cstring>
 #include <new>
 #include <type_traits>
 
 namespace vm {
+
+	template <std::size_t Alignment, typename T>
+	constexpr bool is_aligned(const T* ptr) noexcept {
+		return (reinterpret_cast<std::uintptr_t>(ptr) & (Alignment - 1)) == 0;
+	}
+
+	constexpr usize align_up(usize value, usize alignment) noexcept {
+		return alignment == 0 ? value : ((value + alignment - 1) / alignment) * alignment;
+	}
+
+	template <typename T>
+	constexpr bool is_naturally_aligned(const T* ptr) noexcept {
+		return is_aligned<alignof(T)>(ptr);
+	}
+
 	/**
 	 * @brief Safely reads an object of type T from a raw byte buffer.
 	 *
@@ -25,6 +42,10 @@ namespace vm {
 	template<typename T>
 	[[nodiscard]] T safeReadPointerBytes(const byte* ptr, usize offset = 0)
 		requires std::is_trivially_copyable_v<T> {
+		CORE_ASSERT(
+			is_naturally_aligned<T>(reinterpret_cast<const T*>(ptr + offset)),
+			"Unaligned access in safeReadPointerBytes"
+		);
 		// @note: We create a byte array aligned as type T to prevent alignment-related UBs.
 		// Doing it like below makes it impossible to "reinterpret" values of type T with private
 		// constructors, thus the workaround:
@@ -55,6 +76,10 @@ namespace vm {
 	template<typename T>
 	void safeWriteBytes(byte* dest, const T& value, usize offset = 0)
 		requires(std::is_trivially_copyable_v<T>) {
+		CORE_ASSERT(
+			is_naturally_aligned<T>(reinterpret_cast<const T*>(dest + offset)),
+			"Unaligned access in safeWriteBytes"
+		);
 		std::memcpy(dest + offset, &value, sizeof(T));
 	}
 

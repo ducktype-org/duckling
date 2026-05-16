@@ -7,6 +7,7 @@
 
 #include <vm/bytecode/validator/errors.hpp>
 #include <vm/core/safe/type_metadata/definitions.hpp>
+#include <vm/utils/interpret.hpp>
 
 #include <algorithm>
 
@@ -74,6 +75,7 @@ namespace vm {
 
 		kind_type = Kind::Primitive;
 		size      = pass_size;
+		aligment  = std::min<size_t>(std::max<usize>(pass_size.asInt(), 1), alignof(std::max_align_t));
 		kind      = kind::Primitive();
 		if (name == "void") am_i_instantiable = false;
 	}
@@ -83,6 +85,7 @@ namespace vm {
 		state = State::Defined;
 
 		size      = POINTER_SIZE;
+		aligment  = alignof(Pointer);
 		kind_type = Kind::Pointer;
 		kind      = kind::Pointer{ inner };
 	}
@@ -92,6 +95,7 @@ namespace vm {
 		state = State::Defined;
 
 		kind_type = Kind::FixedSizeTable;
+		aligment  = inner->getAlignment();
 		kind      = kind::FixedSizeTable{ .inner_type = inner, .element_count = element_count };
 	}
 
@@ -100,6 +104,7 @@ namespace vm {
 		state = State::Defined;
 
 		kind_type         = Kind::DynamicTable;
+		aligment          = inner->getAlignment();
 		kind              = kind::DynamicTable{ .inner_type = inner };
 		am_i_instantiable = false;
 	}
@@ -132,6 +137,7 @@ namespace vm {
 		for (const auto& type: variants_definitions) variant.alternatives.push_back(type);
 
 		variant.type_tag_size = type_tag_size;
+		variant.payload_offset = type_tag_size;
 		kind                  = variant;
 	}
 
@@ -140,6 +146,7 @@ namespace vm {
 		state = State::Defined;
 
 		size      = POINTER_SIZE;
+		aligment  = alignof(Pointer);
 		kind_type = Kind::Function;
 		kind      = kind::Function{ .parameters   = std::move(parameters),
 			                        .result_types = std::move(result) };
@@ -151,6 +158,7 @@ namespace vm {
 
 		kind_type = Kind::Opaque;
 		size      = pass_size;
+		aligment  = std::min<size_t>(std::max<usize>(pass_size.asInt(), 1), alignof(std::max_align_t));
 		kind      = kind::Opaque{};
 	}
 
@@ -165,29 +173,39 @@ namespace vm {
 		variant_match(kind) {
 			variant_case(kind::FixedSizeTable, fixed_size_table) {
 				fixed_size_table.inner_type->finalize();
+				this->aligment = fixed_size_table.inner_type->getAlignment();
 				this->size
 					= fixed_size_table.inner_type->getSize() * fixed_size_table.element_count;
 			}
 			variant_case(kind::Data, data) {
 				// calculate offset and size
 				Offset offset(0);
+				size_t max_alignment = 1;
 				for (auto& field: data.fields) {
-					field.offset = offset;
 					field.type->finalize();
+					auto field_alignment = field.type->getAlignment();
+					max_alignment        = std::max(max_alignment, field_alignment);
+					offset               = Bytes(align_up(offset.asInt(), field_alignment));
+					field.offset         = offset;
 					offset += field.type->getSize();
 				}
-				this->size = offset;
+				this->aligment = max_alignment;
+				this->size     = Bytes(align_up(offset.asInt(), max_alignment));
 				if_opt_some(data.inheritance_metadata, imd) { inheritsFromImpl(imd); }
 				isInstantiableImpl(data);
 			}
 			variant_case(kind::Variant, variant) {
 				// calculate size
 				TypeSize data_size(0);
+				size_t   max_alignment = 1;
 				for (auto& alternative: variant.alternatives) {
 					alternative->finalize();
+					max_alignment = std::max(max_alignment, alternative->getAlignment());
 					data_size = std::max(data_size, alternative->getSize());
 				}
-				this->size = variant.type_tag_size + data_size;
+				variant.payload_offset = Bytes(align_up(variant.type_tag_size.asInt(), max_alignment));
+				this->aligment         = max_alignment;
+				this->size             = variant.payload_offset + data_size;
 				isInstantiableImpl(variant);
 			}
 		}
@@ -309,6 +327,12 @@ namespace vm {
 	base::Optional<Bytes> Type::getTypeTagSizeBytes() const {
 		return get<kind::Variant>().map([](CRef<kind::Variant> variant) {
 			return variant->type_tag_size;
+		});
+	}
+
+	base::Optional<Bytes> Type::getVariantPayloadOffsetBytes() const {
+		return get<kind::Variant>().map([](CRef<kind::Variant> variant) {
+			return variant->payload_offset;
 		});
 	}
 

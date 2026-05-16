@@ -39,6 +39,7 @@ namespace vm {
 
 		base::StrID name;
 		TypeSize    size      = TypeSize(-1);
+		size_t aligment = 8;
 		Kind        kind_type = Kind::None;
 		TypeID      id{};
 		bool        am_i_instantiable = true;
@@ -112,6 +113,11 @@ namespace vm {
 			return size;
 		}
 
+		[[nodiscard]]
+		size_t getAlignment() const {
+			return aligment;
+		}
+
 		template<class T>
 		base::Optional<CRef<T>> get() const {
 			if (std::holds_alternative<T>(kind)) return &std::get<T>(kind);
@@ -149,6 +155,7 @@ namespace vm {
 
 		// variant
 		base::Optional<Bytes>                 getTypeTagSizeBytes() const;
+		base::Optional<Bytes>                 getVariantPayloadOffsetBytes() const;
 		base::Optional<std::vector<TypeCRef>> getVariantAlternatives() const;
 
 

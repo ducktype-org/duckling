@@ -10,6 +10,7 @@ namespace vm {
 		std::vector<Frame>     frame_stack;
 		std::vector<std::byte> local_stack;
 		std::vector<Block*>    block_ref_stack;
+		std::vector<u64>       local_stack_head_history;
 
 	public:
 		static constexpr u64 FRAMES_LENGTH = 16'384;
@@ -34,12 +35,17 @@ namespace vm {
 		ThreadStack():
 			  frame_stack(FRAMES_LENGTH),
 			  local_stack(STACK_LENGTH),
-			  block_ref_stack(BLOCK_REF_STACK_LENGTH) {}
+			  block_ref_stack(BLOCK_REF_STACK_LENGTH),
+			  local_stack_head_history(BLOCK_REF_STACK_LENGTH) {}
 
 		auto getFrameStack() -> Ref<std::vector<Frame>> { return &frame_stack; }
 
 		auto getLocalStack() -> Ref<std::vector<std::byte>> { return &local_stack; }
 
 		auto getBlockRefStack() -> Ref<std::vector<Block*>> { return &block_ref_stack; }
+
+		auto getLocalStackHeadHistory() -> Ref<std::vector<u64>> {
+			return &local_stack_head_history;
+		}
 	};
 }

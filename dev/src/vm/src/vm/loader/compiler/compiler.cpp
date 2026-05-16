@@ -166,36 +166,49 @@ namespace vm::loader::compiler {
 	void Compiler::calculateOffsets(FunctionCompilationContext& ctx) {
 		decltype(ctx.locals_map) result;
 		std::vector<usize>       type_size_stack;
+		std::vector<usize>       padding_used;
 		usize                    curr_stack_size = 0;
 		usize                    max_stack_size  = 0;
 		usize                    max_block_count = 0;
 
 		auto push = [&](opargs::PlaceAny local, opargs::Type type) {
+			auto type_ref   = low_program.types->at(type.type_name);
+			auto type_size  = type_ref->getSize().asInt();
+			auto type_align = type_ref->getAlignment();
+			size_t padding  = align_up(curr_stack_size, type_align) - curr_stack_size;
+			auto aligned_offset = curr_stack_size + padding;
+
 			if_opt_some(result.atMaybe(local.var_name), entry) {
-				if (entry->offset != curr_stack_size) {
+				if (entry->offset != aligned_offset) {
 					CORE_PANIC(
 						"DuplicatedLocalNameError - used a variable again at a different offset "
 						"which wasn't detected by the function validator"
 					);
 				}
 			}
-
-			auto type_ref = low_program.types->at(type.type_name);
 			result.put(
 				local.var_name,
-				{ .offset = curr_stack_size, .block_idx = type_size_stack.size(), .type = type_ref }
+				{ .offset = aligned_offset, .block_idx = type_size_stack.size(), .type = type_ref }
 			);
-			auto type_size = type_ref->getSize().asInt();
+			padding_used.push_back(padding);
 			type_size_stack.push_back(type_size);
-			curr_stack_size += type_size;
+			curr_stack_size += padding + type_size;
 			max_stack_size  = std::max(max_stack_size, curr_stack_size);
 			max_block_count = std::max(max_block_count, type_size_stack.size());
 		};
 
 		auto pop = [&]() {
+			CORE_ASSERT(
+				type_size_stack.size() == padding_used.size(),
+				"Compiler stack state is inconsistent while calculating offsets"
+			);
+			CORE_ASSERT(!type_size_stack.empty(), "Compiler tried to pop an empty stack");
 			auto type_size = type_size_stack.back();
+			auto padding   = padding_used.back();
 			type_size_stack.pop_back();
+			padding_used.pop_back();
 			curr_stack_size -= type_size;
+			curr_stack_size -= padding;
 		};
 
 		auto seek_method_param_count = [&](const base::StrID& method_name) -> base::Optional<u64> {
@@ -229,18 +242,25 @@ namespace vm::loader::compiler {
 		using namespace std::views;
 		for (auto [idx, ret_type]: enumerate(func_signature.result_types))
 			push(base::StrID(base::strConcat("ret", idx).c_str()), ret_type.str);
+		ctx.return_stack_size = curr_stack_size;
 		for (auto [idx, param_type]: enumerate(func_signature.parameters))
 			push(base::StrID(base::strConcat("arg", idx).c_str()), param_type.str);
-		// instruction index, stack state, stack size
-		std::vector<std::tuple<usize, decltype(type_size_stack), usize>> dfs_stack{
-			{ ctx.function.body.size(), {}, 0 }  // sentinel
+		ctx.shared_stack_size = curr_stack_size;
+		// instruction index, type stack state, padding stack state, stack size
+		std::vector<std::tuple<
+			usize,
+			decltype(type_size_stack),
+			decltype(padding_used),
+			usize>>
+			dfs_stack{
+				{ ctx.function.body.size(), {}, {}, 0 }  // sentinel
 		};
 		std::vector<bool> visited_instructions(ctx.function.body.size());
 		usize             index = 0;
 
 		while (index != ctx.function.body.size()) {
 			if (visited_instructions[index]) {
-				std::tie(index, type_size_stack, curr_stack_size) = dfs_stack.back();
+				std::tie(index, type_size_stack, padding_used, curr_stack_size) = dfs_stack.back();
 				dfs_stack.pop_back();
 				continue;
 			}
@@ -260,17 +280,24 @@ namespace vm::loader::compiler {
 				instr_case(Op_jmpIf_label, instr) {
 					index++;
 					dfs_stack.emplace_back(
-						label_positions[instr.label.label_name], type_size_stack, curr_stack_size
+						label_positions[instr.label.label_name],
+						type_size_stack,
+						padding_used,
+						curr_stack_size
 					);
 				}
 				instr_case(Op_jmpIfNot_label, instr) {
 					index++;
 					dfs_stack.emplace_back(
-						label_positions[instr.label.label_name], type_size_stack, curr_stack_size
+						label_positions[instr.label.label_name],
+						type_size_stack,
+						padding_used,
+						curr_stack_size
 					);
 				}
 				instr_case(Op_ret, instr) {
-					std::tie(index, type_size_stack, curr_stack_size) = dfs_stack.back();
+					std::tie(index, type_size_stack, padding_used, curr_stack_size)
+						= dfs_stack.back();
 					dfs_stack.pop_back();
 				}
 				instr_case(Op_call_func, instr) {
@@ -305,7 +332,8 @@ namespace vm::loader::compiler {
 					index++;
 				}
 				instr_case(Op_ret_tailcall_func, instr) {
-					std::tie(index, type_size_stack, curr_stack_size) = dfs_stack.back();
+					std::tie(index, type_size_stack, padding_used, curr_stack_size)
+						= dfs_stack.back();
 					dfs_stack.pop_back();
 				}
 				instr_default { index++; }
@@ -327,23 +355,19 @@ namespace vm::loader::compiler {
 			calculateOffsets(ctx);
 
 			// Calculate the functions metadata.
-			code::FuncSignature   signature       = function.signature;
-			usize                 parameters_size = 0;
+			code::FuncSignature   signature = function.signature;
 			std::vector<TypeCRef> parameters;
 			parameters.reserve(signature.parameters.size());
 
 			for (const auto& param: signature.parameters) {
 				auto type = low_program.types->at(param.str);
 				parameters.emplace_back(type);
-				parameters_size += type->getSize().asInt();
 			}
 
 			low::MicroBytecode bytecode = lowerInstructions(ctx);
 
-			u64                   ret_type_sum = 0;
 			std::vector<TypeCRef> result_types = {};
 			for (auto& ret: signature.result_types) {
-				ret_type_sum += low_program.types->at(ret)->getSize().asInt();
 				result_types.emplace_back(low_program.types->at(ret));
 			}
 
@@ -352,8 +376,8 @@ namespace vm::loader::compiler {
 			                      .bc                = std::move(bytecode),
 			                      .local_stack_size  = ctx.local_stack_size,
 			                      .local_block_count = ctx.local_block_count,
-			                      .arg_size          = parameters_size,
-			                      .ret_size          = ret_type_sum,
+			                      .arg_size          = ctx.shared_stack_size - ctx.return_stack_size,
+			                      .ret_size          = ctx.return_stack_size,
 			                      .parameters        = std::move(parameters),
 			                      .result_types      = std::move(result_types) },
 				function.name
@@ -366,9 +390,12 @@ namespace vm::loader::compiler {
 			base::Optional<base::StrID> ctor_name, dtor_name;
 			if (global.ctor_name.has_value()) ctor_name = global.ctor_name->str;
 			if (global.dtor_name.has_value()) dtor_name = global.dtor_name->str;
+			auto type = low_program.types->at(global.type);
+			program_ctx.global_buffer_size
+				= Bytes(align_up(program_ctx.global_buffer_size.asInt(), type->getAlignment()));
 
 			low::LowGlobalData data{
-				.type                 = low_program.types->at(global.type),
+				.type                 = type,
 				.ctor_name            = ctor_name,
 				.dtor_name            = dtor_name,
 				.global_buffer_offset = program_ctx.global_buffer_size.asInt(),
@@ -416,13 +443,11 @@ namespace vm::loader::compiler {
 											   return low_program.types->at(param_name);
 										   })
 			                             | std::ranges::to<std::vector<TypeCRef>>();
-			auto param_size_sum = std::ranges::fold_left(
-				params | std::views::transform([](const auto& param) {
-					return param->getSize().asInt();
-				}),
-				0,
-				std::plus()
-			);
+			usize param_size_sum = 0;
+			for (const auto& param: params) {
+				param_size_sum = align_up(param_size_sum, param->getAlignment());
+				param_size_sum += param->getSize().asInt();
+			}
 
 			std::vector<TypeCRef> rets = new_func.signature.result_types
 			                           | std::views::transform([this](const auto& param_name) {

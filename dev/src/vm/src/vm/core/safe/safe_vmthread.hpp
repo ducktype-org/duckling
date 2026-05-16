@@ -62,6 +62,9 @@ namespace vm {
 		Block** block_ref_stack_base;  /// Pointer to the start of `block_ref_stack_reserved`.
 		Block** block_ref_stack_end;   /// Pointer to the first value not allocated.
 
+		u64* local_stack_head_history_base;  /// Pointer to the start of init history stack.
+		u64* local_stack_head_history_end;   /// Pointer to the first value not allocated.
+
 		std::byte* global_data_buffer_base;    /// Pointer to the start of global data buffer.
 		Block** global_block_ref_buffer_base;  /// Pointer to the start of global block ref buffer.
 
@@ -74,6 +77,11 @@ namespace vm {
 			  block_ref_stack_base(stack->getBlockRefStack()->data()),
 			  block_ref_stack_end(
 				  stack->getBlockRefStack()->data() + stack->getBlockRefStack()->size()
+			  ),
+			  local_stack_head_history_base(stack->getLocalStackHeadHistory()->data()),
+			  local_stack_head_history_end(
+				  stack->getLocalStackHeadHistory()->data()
+				  + stack->getLocalStackHeadHistory()->size()
 			  ),
 			  global_data_buffer_base(global_buffer_pointers.data_buffer_base),
 			  global_block_ref_buffer_base(global_buffer_pointers.blocks_buffer_base) {}
