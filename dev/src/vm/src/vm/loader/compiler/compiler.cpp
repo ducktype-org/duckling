@@ -160,7 +160,7 @@ namespace vm::loader::compiler {
 		if (attach_mapping) {
 			for (const auto& instr: ctx.function.body) {
 				auto [begin, end] = builder.add(instr);
-				ctx.instruction_mapping.push_back({ begin, end });
+				ctx.instruction_mapping.emplace_back(begin, end);
 			}
 		} else {
 			for (const auto& instr: ctx.function.body) builder.add(instr);
