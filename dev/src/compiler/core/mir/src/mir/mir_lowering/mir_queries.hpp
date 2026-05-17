@@ -4,7 +4,7 @@
 
 #include <helios/hout/hout.hpp>
 #include <helios/symbols/symbol_id.hpp>
-
+#include <frontend/module_tree/module_id.hpp>
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_result.hpp>
 
@@ -56,10 +56,16 @@ namespace compiler::mir {
 	 */
 	DECLARE_QUERY(IsComptimeOnly, helios::SymID, CRef<ComptimeStatusResult>, ({}))
 
+	struct ModuleComptimeMap {
+		std::unordered_map<helios::SymID, ComptimeStatus> map;
+	};
+
+	using ModuleComptimeMapResult = query::QResult<ModuleComptimeMap>;
+
 	/**
-	 * @brief Internal recursive query for call graph analysis.
+	 * @brief Internal query, to calculate comptime status.
 	 */
-	DECLARE_QUERY(ComptimeStatusRecursive, helios::SymID, CRef<ComptimeStatusResult>, ({}))
+	DECLARE_QUERY(ComptimeStatusCalculate, ::compiler::frontend::ModuleID, CRef<ModuleComptimeMapResult>, ({}))
 	/**
 	 * @brief Lower a HOUTFunction to a "Pre" MIRFunction.
 	 * It creates MIR function, but does not perform lifetime analysis and or any checks.
