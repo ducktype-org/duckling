@@ -89,6 +89,9 @@ pub enum PackageCompilationStrategy {
         #[serde(skip_serializing_if = "Option::is_none")]
         archive_options: Option<ArchiverOptions>,
     },
+    /// Compile to an LLVM object (`.o` file).
+    #[serde(rename = "obj")]
+    EmitLLVMObject {},
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
