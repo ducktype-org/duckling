@@ -1,5 +1,6 @@
 #pragma once
 
+#include <frontend/packages/packages.hpp>
 #include <global_state/backend_options.hpp>
 
 #include <filesystem/file.hpp>
@@ -13,6 +14,8 @@ namespace compiler::driver {
 	 * Definition of options that are used by the compiler to control its behavior.
 	 */
 	namespace options_types {
+		struct DependencyInfo;
+
 		/**
 		 * Options used to control debug related behavior like
 		 * logging, dump of intermediate representations, etc.
@@ -21,9 +24,18 @@ namespace compiler::driver {
 			// options mapping to logger categories:
 			std::vector<std::string> dev_log_categories;
 			bool                     immediate_print_diagnostics = true;
-			// options mapping to driver module flags:
-			bool dump_llvm_ir  = false;
-			bool dump_llvm_asm = false;
+
+			// Debug dumping to file options
+			bool dump_llvm = false;
+			bool dump_asm  = false;
+			bool dump_lir  = false;
+			bool dump_mir  = false;
+			bool dump_hir  = false;
+
+			// Debug printing to stdout options
+			bool print_lir = false;
+			bool print_mir = false;
+			bool print_hir = false;
 		};
 
 		/**
@@ -48,32 +60,9 @@ namespace compiler::driver {
 		struct ArtifactsOptions final {
 			fs::FilePath artifacts_path;
 
-			// struct IncrementalCompilation {
-			//     bool enabled;
-			//     bool show_stats;
-			// };
-			// IncrementalCompilation incremental_compilation;
 			// bool rm_artifacts_before_compilation = false;
 			// bool rm_artifacts_after_compilation = false;
 		};
-
-		struct PackageInfo final {
-			std::string  package_name;
-			fs::FilePath package_path;
-		};
-
-		// struct DependencyInfo {
-		//     struct CompilationStrategy {
-		//         struct InlineCompilation { };
-		//         struct Precompiled {
-		//             // this might be inlined or not:
-		//             std::string precompilation_path;
-		//         };
-		//         std::variant<InlineCompilation, Precompiled> strategy;
-		//     };
-		//     PackageInfo package_info;
-		//     CompilationStrategy compilation_strategy;
-		// };
 	};
 
 	/**
@@ -100,13 +89,12 @@ namespace compiler::driver {
 		 * and its dependencies.
 		 */
 		struct PackageCompilationMode final {
-			options_types::PackageInfo      main_package_info;
-			options_types::ArtifactsOptions compilation_artifacts;
-			// std::vector<options_types::DependencyInfo> dependencies;
-			global_state::BackendOptions      backend_options;
-			options_types::DebugOptions       debug_options;
-			options_types::IncrementalOptions incremental;
-			options_types::ExecutionOptions   execution_options;
+			std::vector<compiler::frontend::packages::RawPackageInfo> packages_info;
+			options_types::ArtifactsOptions                           compilation_artifacts;
+			global_state::BackendOptions                              backend_options;
+			options_types::DebugOptions                               debug_options;
+			options_types::IncrementalOptions                         incremental;
+			options_types::ExecutionOptions                           execution_options;
 		};
 
 		/**
@@ -126,6 +114,7 @@ namespace compiler::driver {
 		 * instead of executing immediately.
 		 *
 		 * Like ReplMode, does not set up a main package or incremental compilation.
+		 * The script file is extracted to global_state::ScriptContext during initialization.
 		 */
 		struct ScriptMode final {
 			fs::File                        script_file;

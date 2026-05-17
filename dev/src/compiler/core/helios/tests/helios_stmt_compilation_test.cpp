@@ -6,17 +6,17 @@
  * called through QueryModuleHOUT.
  */
 
+#include <../src_private/helios_private/hout_creation/hout_stmt_compilation.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/function.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/queries/queries.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
-#include <helios_private/hout_code_generation/hout_stmt_compilation.hpp>
+#include <helios/tsh/queries/types.hpp>
+#include <helios_private/pst_layer/stmts_from_aggregate.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
-#include <helios_private/utils/pst_walkers.hpp>
-#include <typesystem/higher/queries/types.hpp>
 
 #include <base/except/exceptions.hpp>
 
@@ -39,6 +39,7 @@ public:
 		TESTER_ADD_TEST(testVariableDeclarations);
 		TESTER_ADD_TEST(testReturnStatements);
 		TESTER_ADD_TEST(testAssignmentAndExpressions);
+		TESTER_ADD_TEST(testBlockExpr);
 	}
 
 private:
@@ -53,6 +54,7 @@ private:
 		usize return_count      = 0;
 		usize void_return_count = 0;
 		usize expr_stmt_count   = 0;
+		usize block_stmt_count  = 0;
 
 		void visitVariableStmt(const code::VariableStmt&) override { variable_count++; }
 
@@ -61,6 +63,8 @@ private:
 		void visitIfStmt(const code::IfStmt&) override { if_count++; }
 
 		void visitWhileStmt(const code::WhileStmt&) override { while_count++; }
+
+		void visitBlockStmt(const code::BlockStmt&) override { block_stmt_count++; }
 
 		void visitReturnStmt(const code::ReturnStmt&) override { return_count++; }
 
@@ -83,7 +87,7 @@ private:
 	) {
 		// Locate the function symbol
 		auto root_scope = queryRootScopeOfMainModuleFile(ctx, module_id);
-		auto symbols    = *ctx.query<QuerySymbolsInScope>(root_scope);
+		auto symbols    = ctx.query<QuerySymbolsInScope>(root_scope)->valueOrPanic();
 
 		base::Optional<SymID> fun_sym_opt;
 		for (auto sym: symbols) {
@@ -100,7 +104,6 @@ private:
 
 		auto body_stmts = getStmtsFromStmtAggregate(ctx, fun_pst->getBody());
 		CORE_ASSERT(!body_stmts.empty(), "Function body must have at least one statement");
-		CORE_ASSERT(stmt_index < body_stmts.size(), "Requested statement index out of range");
 
 		// Compile the first body statement in isolation
 		auto return_type = custom_return_type.has_value() ? custom_return_type.value()
@@ -109,8 +112,11 @@ private:
 																tsh::ReferenceKind::Direct,
 																tsh::Mutability::Mutable,
 															};
-
-		return houtgen::compileSingleStatement(ctx, body_stmts.at(stmt_index), return_type);
+		body_stmts.at(stmt_index)
+			.illegalAccess()
+			.value()
+			->debugPrint(std::cerr);  // value().elementType()();
+		return compileSingleStatement(ctx, body_stmts.at(stmt_index), return_type);
 	}
 
 	/**
@@ -360,6 +366,64 @@ private:
 				ASSERT_EQUAL(c.expr_stmt_count, 1u);
 			});
 		}
+	}
+
+	void testBlockExpr() {
+		auto module_id = frontend::createModuleTreeFromContents(
+			R"(
+				fun foo() = {
+					{
+						var a = 1;
+					};
+					{
+						var a = 1;
+					};
+				}
+			)",
+			"test_pkg"
+		);
+		query::utils::withContextDo([&](query::Context& ctx) {
+			auto block = compileSingleStatementOfFirstFun(ctx, module_id);
+			ASSERT_EQUAL(block.statements.size(), 1);
+			StmtKindCounter c;
+			block.statements.at(0)->acceptVisitor(c);
+			ASSERT_EQUAL(c.block_stmt_count, 1);
+
+
+			auto block2 = compileSingleStatementOfFirstFun(ctx, module_id, 1);
+			ASSERT_EQUAL(block2.statements.size(), 1);
+			StmtKindCounter c2;
+			block2.statements.at(0)->acceptVisitor(c2);
+			ASSERT_EQUAL(c2.block_stmt_count, 1);
+		});
+
+		module_id = frontend::createModuleTreeFromContents(
+			R"(
+				fun foo() = {
+					block {
+						var a = 1;
+					}
+					block second {
+						var a = 1;
+					}
+				}
+			)",
+			"test_pkg"
+		);
+		query::utils::withContextDo([&](query::Context& ctx) {
+			auto block = compileSingleStatementOfFirstFun(ctx, module_id);
+			ASSERT_EQUAL(block.statements.size(), 1);
+			StmtKindCounter c;
+			block.statements.at(0)->acceptVisitor(c);
+			ASSERT_EQUAL(c.block_stmt_count, 1);
+
+
+			auto block2 = compileSingleStatementOfFirstFun(ctx, module_id, 1);
+			ASSERT_EQUAL(block2.statements.size(), 1);
+			StmtKindCounter c2;
+			block2.statements.at(0)->acceptVisitor(c2);
+			ASSERT_EQUAL(c2.block_stmt_count, 1);
+		});
 	}
 };
 

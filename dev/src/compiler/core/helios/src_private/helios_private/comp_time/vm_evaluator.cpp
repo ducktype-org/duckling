@@ -1,12 +1,13 @@
 #include "vm_evaluator.hpp"
 
 #include <backends/dvm/dvm_backend.hpp>
+#include <helios/tsh/types.hpp>
 #include <helios_private/comp_time/comptime_type_operations.hpp>
-#include <typesystem/higher/types.hpp>
 
 #include <vm/api/vm.hpp>
 #include <vm/bytecode/validator/errors.hpp>
-#include <vm/core/thread/vmvalue.hpp>
+#include <vm/bytecode/validator/valid_program.hpp>
+#include <vm/core/vmvalue/vmvalue.hpp>
 
 #include <expected>
 #include <mutex>
@@ -43,7 +44,9 @@ namespace {
 					    // compiler::tsh::SymbolType) we should perform this conversion based on the
 					    // `SymbolType` not C++ type sizes.
 						base::StrID dvm_type_name;
-						if constexpr (sizeof(NumT) <= 2)
+						if constexpr (sizeof(NumT) <= 1)
+							dvm_type_name = base::StrID("i8");
+						else if (sizeof(NumT) <= 2)
 							dvm_type_name = base::StrID("i16");
 						else if constexpr (sizeof(NumT) <= 4)
 							dvm_type_name = base::StrID("i32");
@@ -64,7 +67,7 @@ namespace {
 				);
 			}
 			variant_case(bool, val) {
-				auto maybe_vm_value = get_vm_value(base::StrID("byte"));
+				auto maybe_vm_value = get_vm_value(base::StrID("i8"));
 				if (!maybe_vm_value) return maybe_vm_value;
 				(*maybe_vm_value)->writeBytes<bool>(val);
 				return maybe_vm_value;
@@ -161,11 +164,14 @@ namespace {
 			return CompileTimeValue{ *meta_ptr };
 		}
 		default: {
-			throw base::NotYetImplemented{ base::strConcat(
-				"VMValue to CTV conversion for type: ",
-				base::enumToStr(kind),
-				" is not implemented yet."
-			) };
+			return std::unexpected(VmEvaluationError(
+				VmEvaluationError::Kind::ReturnConversionFailed,
+				base::strConcat(
+					"VMValue to CTV conversion for type: ",
+					base::enumToStr(kind),
+					" is not implemented yet."
+				)
+			));
 		}
 		}
 	}
@@ -271,7 +277,7 @@ namespace {
 		const std::vector<CRef<compiler::lir::Function>>& all_lir_functions,
 		query::Context&                                   query_ctx
 	) {
-		compiler::backend_vm::DVMCodeBuilder m(query_ctx);
+		compiler::backend_vm::DVMCodeBuilder m(query_ctx, false, true);
 
 		// Insert comptime context intto the module, for the module to pass the validation. This code
 		// although loaded here multiple times will be deduplicated by `CompTimeDVM::loadCode()`
@@ -280,6 +286,7 @@ namespace {
 
 		for (const auto& lir_function: all_lir_functions) m.insertLirFunction(lir_function);
 		auto bytecode = m.build();
+
 		return comptime_dvm.loadCode(bytecode);
 	}
 
@@ -343,7 +350,11 @@ namespace {
 		// Free the owned arguments.
 		for (const auto& arg: owned_args) arg->freeData();
 
-		auto exit_value = maybe_exit_value.value();
+		CORE_ASSERT(
+			maybe_exit_value.value().size() == 1,
+			"Compiler support for multiple values not implemented"
+		);
+		auto exit_value = maybe_exit_value.value().at(0);
 		return vmValueToCtv(return_type, exit_value);
 	}
 }

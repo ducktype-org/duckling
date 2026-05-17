@@ -30,7 +30,22 @@ This means that it is possible for hashes of different types that are represente
 to be the same (e.g. `pair<int, int>{1, 2}` and `struct{x=1, y=2}` might end up hashing to the same value).
 One must be careful when using hashing for different types.
 
-There are three ways to enable a hashing support for a class (if possible, the first two should be preferred):
+There are four ways to enable a hashing support for a class (if possible, the first three should be preferred):
+
+`HASHING_CAN_HASH_BY_REPRESENTATION`
+------------------------------------
+
+If your type has a unique representation in memory, you can simply add a static member to it:
+~~~~~cpp
+struct S {
+    u64 x;
+    static constexpr base::Monostate HASHING_CAN_HASH_BY_REPRESENTATION = {};
+};
+~~~~~
+
+With this member, the module will know that it can treat your type as a sequence of bytes and hash it directly.
+Note that this might now always be the correct way to hash your type, even if it has a unique representation.
+
 
 `hashDecompose()`
 -----------------

@@ -26,7 +26,7 @@ LLVM_INCLUDE_END()
 #include <ctv/numeric_value.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
-#include <typesystem/lower/type_layout.hpp>
+#include <tsl/type_layout.hpp>
 
 #include <base/collections/maps.hpp>
 #include <base/extend_cpp/variant_match.hpp>
@@ -149,6 +149,12 @@ namespace {
 				const auto struct_constant = llvm::ConstantStruct::get(struct_type, fields);
 				return struct_constant;
 			}
+			variant_case(compiler::ctv::CompileTimeValue::TupleCTV, tuple) {
+				// @TODO: #2506 Implement this
+				throw base::NotYetImplemented(base::strConcat(
+					"Conversion from CTV to LLVM constant for tuples is not implemented yet"
+				));
+			}
 			variant_default {
 				throw base::NotYetImplemented(base::strConcat(
 					"Conversion from CTV to LLVM constant for this type. Index in CTV "
@@ -230,10 +236,6 @@ namespace compiler::backend_llvm {
 	auto typeFromLayout(const Ref<llvm::Module> module, const CRef<tsl::TypeLayout> layout)
 		-> llvm::Type* {
 		auto& llvm_context = module->getContext();
-		// If the layout is empty, return the void type.
-		// Sometimes, empty layouts may appear in LIR, despite being eliminated during MIR -> LIR.
-		// This is because they are function return types. They should then be converted to void.
-		if (layout->getSize() == Bits(0)) return llvm::Type::getVoidTy(llvm_context);
 
 		variant_match(layout->getVariant()) {
 			variant_case_novalue(tsl::EmptyTypeLayout) {
@@ -257,7 +259,7 @@ namespace compiler::backend_llvm {
 				}
 			}
 			variant_case(tsl::StringTypeLayout, string_layout) {
-				const auto string_type_name = "str";
+				const auto string_type_name = string_layout.getMangledName().strView();
 
 				// Get the string type from the context, if it has been previously defined.
 				if (llvm::StructType* string_type
@@ -286,9 +288,7 @@ namespace compiler::backend_llvm {
 				return string_type;
 			}
 			variant_case(tsl::DynamicArrayTypeLayout, list_layout) {
-				const auto list_type_name = base::strConcat(
-					"list.", list_layout.getElementLayout()->toStringIdentification()
-				);
+				const auto list_type_name = list_layout.getMangledName().strView();
 
 				// Get the list type from the context, if it has been previously defined.
 				if (llvm::StructType* list_type
@@ -330,10 +330,10 @@ namespace compiler::backend_llvm {
 				// - First, create an opaque type.
 				llvm::StructType* struct_type = llvm::StructType::create(llvm_context, class_name);
 				// - Then, collect the member types.
-				const usize              num_fields = class_layout.getNumFields();
+				const usize              num_sub_layouts = class_layout.getNumSubLayouts();
 				std::vector<llvm::Type*> member_types;
-				member_types.reserve(num_fields);
-				for (usize layout_idx = 0; layout_idx < num_fields; layout_idx++) {
+				member_types.reserve(num_sub_layouts);
+				for (usize layout_idx = 0; layout_idx < num_sub_layouts; layout_idx++) {
 					const CRef<tsl::TypeLayout> field_layout
 						= class_layout.getFieldLayoutOfLayoutIndex(layout_idx);
 					member_types.push_back(typeFromLayout(module, field_layout));
@@ -347,11 +347,14 @@ namespace compiler::backend_llvm {
 				const llvm::StructLayout& struct_layout = *data_layout.getStructLayout(struct_type);
 
 				// - Then, check each field's offset.
-				for (usize layout_idx = 0; layout_idx < num_fields; layout_idx++) {
-					const Bytes expected_offset = class_layout.getOffsetOfFieldSymbol(
-						class_layout.getFieldSymbolOfLayoutIndex(layout_idx)
-					);
-					const auto actual_offset = Bytes(
+				for (usize layout_idx = 0; layout_idx < num_sub_layouts; layout_idx++) {
+					[[maybe_unused]] const Bytes expected_offset
+						= class_layout
+					          .getOffsetOfFieldSymbol(
+								  class_layout.getFieldSymbolOfLayoutIndex(layout_idx)
+							  )
+					          .value();
+					[[maybe_unused]] const auto actual_offset = Bytes(
 						struct_layout.getElementOffset(base::safeIntConv<unsigned>(layout_idx))
 					);
 					CORE_ASSERT(
@@ -713,7 +716,8 @@ namespace compiler::backend_llvm {
 						const auto& current_class_layout
 							= std::get<tsl::ClassTypeLayout>(current_layout->getVariant());
 						const auto layout_idx
-							= current_class_layout.getLayoutIndexOfFieldSymbol(field.field_id);
+							= current_class_layout.getLayoutIndexOfFieldSymbol(field.field_id)
+						          .value();
 
 						gep_indices.push_back(
 							llvm::ConstantInt::get(llvm::Type::getInt32Ty(context), layout_idx)
@@ -1372,6 +1376,9 @@ namespace compiler::backend_llvm {
 
 				break;
 			}
+			case Nop:
+				// No instruction to generate, just skip.
+				break;
 			default:
 				CORE_DEV_LOG(
 					Backend,

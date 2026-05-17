@@ -1,11 +1,14 @@
 //! Our implementations of the [`Handler`] trait.
 
-use std::{fs::File, io::Write, path::Path};
+use std::fs::File;
+use std::io::Write;
+use std::path::Path;
 
 use curl::easy::Handler;
 use serde::Deserialize;
 
-use crate::{QuackResult, util_common::path_ops_ext::PathOpsExt};
+use crate::QuackResult;
+use crate::util::path_ops_ext::PathOpsExt;
 
 #[derive(Clone, Debug, Default)]
 /// A basic collector which saves the entire HTTP response as a vector of `u8`.

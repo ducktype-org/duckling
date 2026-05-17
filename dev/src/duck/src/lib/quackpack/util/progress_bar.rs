@@ -7,13 +7,15 @@
 //! [^flutter]: <https://pub.dev/packages/flutter_bloc>
 
 use std::collections::{BTreeMap, HashSet};
+use std::sync::RwLock;
 
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
 use itertools::Itertools;
-use std::sync::RwLock;
 use tracing::debug;
 
-use crate::{StrId, duck::util::terminal::Terminal, quackpack::util::PANIC_MESSAGE};
+use crate::StrId;
+use crate::duck::util::terminal::Terminal;
+use crate::util::extract::Extract;
 
 const DEFAULT_REFRESH_RATE_HZ: u8 = 20;
 
@@ -82,7 +84,7 @@ impl DownloadingPackagesProgressBarManager {
             );
             return;
         }
-        let mut state = self.state.write().expect(PANIC_MESSAGE);
+        let mut state = self.state.write().extract();
         if state.reverse_map.contains_key(&pkg) {
             debug!("download of package `{pkg}` has already started");
             return;
@@ -111,7 +113,7 @@ impl DownloadingPackagesProgressBarManager {
             );
             return;
         }
-        let mut state = self.state.write().expect(PANIC_MESSAGE);
+        let mut state = self.state.write().extract();
 
         let Some(id) = state.reverse_map.remove(&pkg) else {
             debug!("download of package `{pkg}` hasn't started");

@@ -4,6 +4,7 @@
 
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/hout/visitors.hpp>
+#include <mir/mir_structure/mir_local_ref.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 
 #include <base/collections/optional.hpp>
@@ -35,7 +36,7 @@ namespace compiler::mir {
 
 		base::Optional<StmtLowerRes> out;
 
-		void output(StmtLowerRes value) {
+		void output(const StmtLowerRes& value) {
 			CORE_ASSERT(this->out.empty(), "Output already set.");
 			this->out.emplace(value);
 		}
@@ -64,10 +65,10 @@ namespace compiler::mir {
 				auto res_type = possible_result.has_value() ? possible_result->get<MIRPlace>().type
 				                                            : expr_res.getResultType();
 
-				auto return_value = function.addNoLifetimeTmp(res_type);
+				auto return_value = function.addReturnTmp(res_type);
 
 				// Set move flag only if value exists.
-				std::vector flags = { flagConstruct(return_value) };
+				std::vector<OperationFlag> flags = {};
 				if (possible_result.has_value())
 					flags.push_back(flagMove(possible_result->get<MIRPlace>().getBase<MIRLocalRef>()
 					));
@@ -145,7 +146,7 @@ namespace compiler::mir {
 				// Condition result must be stored in special temporary value, so we can use it
 				// after the actual condition result is destroyed. Create extra temporary and assign
 				// to it in-place or with extra move.
-				possible_condition_res = function.addNoLifetimeBoolTmp();
+				possible_condition_res = function.addConditionTmp(condition_scope);
 
 				lowered_condition.storeResultInGivenPlace(
 					possible_condition_res->get<MIRPlace>(),
@@ -210,7 +211,7 @@ namespace compiler::mir {
 				get_condition_return.fillNop(condition_scope);
 
 			} else {
-				possible_result = function.addNoLifetimeBoolTmp();
+				possible_result = function.addConditionTmp(condition_scope);
 
 				expr_result.storeResultInGivenPlace(
 					possible_result->get<MIRPlace>(),
@@ -251,31 +252,20 @@ namespace compiler::mir {
 			// since we only know it here:
 			local->setLifetimeScope(parent_scope);
 
-			match_optional(stmt.initial_value) {
-				opt_some(value) {
-					auto local_construction_hole = continuation->addHole();
-					auto assignment_scope        = function.newScope(parent_scope);
-					auto expr_result = lowerExpr(*value, continuation, function, assignment_scope);
+			auto local_construction_hole = continuation->addHole();
+			auto assignment_scope        = function.newScope(parent_scope);
+			auto expr_result
+				= lowerExpr(*stmt.initial_value, continuation, function, assignment_scope);
 
-					expr_result.storeResultInGivenPlace(
-						MIRPlace(local),
-						local_construction_hole,
-						{ flagConstruct(local) },
-						assignment_scope,
-						{ stmt.getPosition() }
-					);
-					output({ expr_result.begin });
-					return;
-				}
-				opt_none {
-					// OK
-					// We don't need to do anything, the variable is uninitialized.
-					output({ continuation });
-					return;
-				}
-			}
-
-			CORE_UNREACHABLE();
+			expr_result.storeResultInGivenPlace(
+				MIRPlace(local),
+				local_construction_hole,
+				{ flagConstruct(local) },
+				assignment_scope,
+				{ stmt.getPosition() }
+			);
+			output({ expr_result.begin });
+			return;
 		}
 
 		void visitAssignmentStmt(const hc::AssignmentStmt& stmt) override {
@@ -309,6 +299,14 @@ namespace compiler::mir {
 				variant_default { CORE_PANIC("Assignment to unsupported MIRValue kind."); }
 			}
 		}
+
+		void visitBlockStmt(const hc::BlockStmt& stmt) override {
+			auto block_scope = function.newScope(parent_scope);
+
+			auto block_body = lowerCodeBlock(stmt.body, continuation, function, block_scope);
+
+			output({ block_body.begin });
+		}
 	};
 
 	StmtLowerRes lowerStmt(
@@ -329,6 +327,7 @@ namespace compiler::mir {
 		ScopeRef             parent_scope
 	) {
 		StmtLowerRes last_result{ continuation };
+
 		for (auto& stmt: code_block.statements | std::views::reverse) {
 			last_result  = lowerStmt(*stmt, continuation, function, parent_scope);
 			continuation = last_result.begin;

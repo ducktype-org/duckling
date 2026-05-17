@@ -91,6 +91,10 @@ public:
 		TESTER_ADD_TEST(multiThreadedMaybeCallOnTest<2>);
 		TESTER_ADD_TEST(multiThreadedMaybeCallOnTest<4>);
 
+		TESTER_ADD_TEST(multiThreadedCallOnTest<1>);
+		TESTER_ADD_TEST(multiThreadedCallOnTest<2>);
+		TESTER_ADD_TEST(multiThreadedCallOnTest<4>);
+
 		TESTER_ADD_TEST(multiThreadedPutOrAssignTest<1>);
 		TESTER_ADD_TEST(multiThreadedPutOrAssignTest<2>);
 		TESTER_ADD_TEST(multiThreadedPutOrAssignTest<4>);
@@ -189,7 +193,7 @@ private:
 
 			for (u64 i = 0; i < count; i++) {
 				auto v       = rng() % 1'000'000;
-				auto put_res = map.maybePut(v, v * 10);
+				auto put_res = map.maybePut(BigObject<13>(v), BigObject<16>(v * 10));
 
 				if (put_res != nullptr) {
 					ASSERT_EQUAL(put_res->key, v);
@@ -281,7 +285,7 @@ private:
 		for (u64 i = 0; i < thread_count; i++) {
 			threads.emplace_back([&map]() {
 				for (u64 j = 0; j < OPS_PER_THREAD; j++)
-					map.maybePutAndUpdate(1ULL, 0ULL, [](Ref<u64> v) { *v += 10; });
+					map.maybePutAndUpdate(u64(1), u64(0), [](Ref<u64> v) { *v += 10; });
 			});
 		}
 
@@ -306,7 +310,7 @@ private:
 
 		for (u64 i = 0; i < thread_count; i++) {
 			threads.emplace_back([&map, i]() {
-				for (u64 j = 0; j < OPS_PER_THREAD; j++) map.update(1, j * thread_count + i);
+				for (u64 j = 0; j < OPS_PER_THREAD; j++) map.update(u64(1), j * thread_count + i);
 			});
 		}
 
@@ -734,6 +738,47 @@ private:
 					// keys >= KEY_RANGE*2 should not be present
 					fail("Accessed const key that should not be present: " + std::to_string(key));
 				}
+			}
+		}
+	}
+
+	template<u64 thread_count>
+	void multiThreadedCallOnTest() {
+		constexpr u64 OPS_PER_THREAD = 10'000;
+		constexpr u64 KEY_RANGE      = 5'000;
+
+		concurrent::ConHashMap<u64, u64> map;
+
+		// fill the map
+		for (u64 i = 0; i < KEY_RANGE; i++) map.put(i, i * 10);
+
+		// Each thread tries to callOn keys [0, KEY_RANGE).
+		std::vector<std::jthread> threads;
+		threads.reserve(thread_count);
+		std::vector<std::vector<std::pair<u64, u64>>> accessed_values(thread_count);
+
+		for (u64 thread_id = 0; thread_id < thread_count; thread_id++) {
+			threads.emplace_back([&map, &accessed_values, thread_id]() {
+				for (u64 j = 0; j < OPS_PER_THREAD; j++) {
+					u64 key = (j * thread_id * 1'000'000'007) % KEY_RANGE;
+
+					map.callOn(key, [&accessed_values, thread_id, key](Ref<u64> value_ref) {
+						accessed_values[thread_id].emplace_back(key, *value_ref);
+						if (*value_ref == key * 10)
+							*value_ref += 1;  // if it's an original value, update it
+					});
+				}
+			});
+		}
+		for (auto& t: threads) t.join();
+
+		// Verify that accessed keys are correct and that original values were updated.
+		for (const auto& thread_values: accessed_values) {
+			for (const auto& [key, value]: thread_values) {
+				ASSERT_TRUE(key < KEY_RANGE);
+				ASSERT_TRUE(value == key * 10 || value == key * 10 + 1);
+				ASSERT_TRUE(map.contains(key));
+				ASSERT_EQUAL(map.getCopy(key), key * 10 + 1);
 			}
 		}
 	}

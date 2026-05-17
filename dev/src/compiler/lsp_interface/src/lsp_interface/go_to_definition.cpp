@@ -59,7 +59,7 @@ namespace lsp {
 	}
 
 	Definition::Definition(const pst::LangElement* element) {
-		auto source_position = element->getSourcePosition();
+		auto source_position = element->getSourcePosition().illegalAccess();
 		this->uri   = source_position.getSource()->getFile().getFilePath().toPhysicalPath().uri();
 		this->start = source_position.getStartLineColumn();
 		this->end   = source_position.getEndLineColumn();
@@ -80,7 +80,7 @@ namespace lsp {
 		usize addend = include_symbold_before_offset ? 1 : 0;
 
 		for (auto sub: element->viewChildren()) {
-			auto curr_position = sub.illegalAccess().value()->getSourcePosition();
+			auto curr_position = sub.illegalAccess().value()->getSourcePosition().illegalAccess();
 			if (curr_position.getStart() <= offset && curr_position.getEnd() + addend >= offset)
 				return findElement(sub, offset, include_symbold_before_offset);
 		}

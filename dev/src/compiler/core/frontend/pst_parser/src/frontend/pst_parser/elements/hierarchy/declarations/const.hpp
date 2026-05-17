@@ -7,7 +7,7 @@ namespace pst {
 	 * @brief Const compile time variable declaration.
 	 */
 	class Const final: public Decl {
-		tpc::Identifier name;
+		NAMED_CHILD(name, IdentifierWrapper);
 		NAMED_CHILD_OPT(type, CommaExprHolder);
 		NAMED_CHILD_OPT(value, CommaExprHolder);
 
@@ -22,13 +22,8 @@ namespace pst {
 		static MBox<Const> parse(LangParserState& state);
 
 		[[nodiscard]]
-		base::StrID getName() const {
-			return name.value;
-		}
-
-		[[nodiscard]]
-		tpc::Identifier getNameIdent() const {
-			return name;
+		AccessLocked<IdentifierWrapper> getName() const {
+			return name.give();
 		}
 
 		bool trailingSemicolon() override;
@@ -46,7 +41,7 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		base::Optional<base::StrID> getDeclSymbolName() const final {
+		base::Optional<AccessLocked<IdentifierWrapper>> getDeclSymbolIdentifier() const final {
 			return getName();
 		}
 

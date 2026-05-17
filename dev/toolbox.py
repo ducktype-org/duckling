@@ -67,6 +67,6 @@ if __name__ == "__main__":
 
     # Disable traceback for shorter error messages.
     # Comment this line when debugging.
-    sys.tracebacklimit = 0
+    # sys.tracebacklimit = 0
 
-    cli()
+    cli(max_content_width=120)

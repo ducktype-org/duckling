@@ -43,6 +43,13 @@ namespace dia_int {
 		return count;
 	}
 
+	u64 Logger::warningCount() const {
+		u64 count = 0;
+		for (const auto& diag: diagnostics)
+			if (diag->main_message.metadata.type == "warning") count++;
+		return count;
+	}
+
 	bool Logger::hasErrors() const { return has_error; }
 
 	bool Logger::good() const { return not hasErrors(); }
@@ -67,8 +74,17 @@ namespace dia_int {
 		}
 	}
 
-	void Logger::collectDiagnostics(std::vector<CRef<dia_args::Diagnostic>>& out_messages) {
-		for (const auto& msg: diagnostics) out_messages.emplace_back(msg.refMut());
+	void Logger::collectDiagnostics(std::vector<CRef<dia_args::Diagnostic>>& out_messages) const {
+		for (const auto& msg: diagnostics) out_messages.emplace_back(msg.ref());
+	}
+
+	void Logger::collectAndUpdatePositionDiagnostics(
+		std::vector<CRef<dia_args::Diagnostic>>& out_messages, const UpdatePositionFunc& update_func
+	) {
+		for (const auto& msg: diagnostics) {
+			msg->updateCodeLocationComponents(update_func);
+			out_messages.emplace_back(msg.ref());
+		}
 	}
 
 	bool Logger::bad() const { return has_error; }
@@ -78,4 +94,5 @@ namespace dia_int {
 		has_error = has_error || other.has_error;
 		auto _    = std::move(other);
 	}
+
 }

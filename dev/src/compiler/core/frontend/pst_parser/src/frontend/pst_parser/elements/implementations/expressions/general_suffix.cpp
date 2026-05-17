@@ -10,12 +10,11 @@ namespace pst::expr {
 		if (iter == 0) return Lower::parse(state);
 
 		i64  length = base::safeIntConv<i64>(state.ctokens().size());
-		auto out
-			= makeBox<GeneralSuffix>(state, state[base::safeIntConv<i64>(length) - 1].getValue());
+		auto out    = makeBox<GeneralSuffix>(state);
 
 		PARSE().autoFallbackLen(length - 1).with(&out->expr, parseRecursive, iter - 1);
 
-		PARSE().eatOne();
+		PARSE().one(&out->op);
 
 		PST_RETURN out;
 	}

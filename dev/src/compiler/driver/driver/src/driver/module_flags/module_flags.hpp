@@ -1,21 +1,34 @@
 #pragma once
 
 namespace compiler::driver {
-	/**
-	 * This is a debug option.
-	 * If set, LLVM IR output will be dumped to a file in CompileModule query.
-	 * It will not be placed in the output artifacts, rather it will be saved to a file in the
-	 * current working directory.
-	 */
-	extern constinit bool llvm_dump_ir;
+
+	struct DumpIROptions {
+		bool dump_llvm = false;
+		bool dump_asm  = false;
+		bool dump_lir  = false;
+		bool dump_mir  = false;
+		bool dump_hir  = false;
+	};
 
 	/**
 	 * This is a debug option.
-	 * If set, Assembly output will be dumped to a file in CompileModule query.
-	 * It will not be placed in the output artifacts, rather it will be saved to a file in the
-	 * current working directory.
+	 * If set, the selected IR output will be dumped to a file in the `duck_debug_artifacts`
+	 * directory in the `compileModule` query.
 	 */
-	extern constinit bool llvm_dump_asm;
+	extern constinit DumpIROptions dump_ir_options;
+
+	struct PrintIROptions {
+		bool print_lir = false;
+		bool print_mir = false;
+		bool print_hir = false;
+	};
+
+	/**
+	 * This is a debug option.
+	 * If set, the compiler will print to output the selected IR
+	 * in the `compileModule` query.
+	 */
+	extern constinit PrintIROptions print_ir_options;
 
 	/**
 	 * If set, incremental compilation is enabled.

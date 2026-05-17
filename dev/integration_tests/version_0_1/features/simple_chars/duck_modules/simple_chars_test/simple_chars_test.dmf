@@ -1,0 +1,44 @@
+fun main() -> i64 = {
+    # Test char type declaration
+    var ch: char = 'A';
+
+    # Test char to integer conversion
+    var ascii: i64 = i64(ch);
+    builtin_output_i64(ascii);        # 65 (ASCII for 'A')
+
+    # Test different char values
+    ch = 'Z';
+    builtin_output_i64(i64(ch));      # 90 (ASCII for 'Z')
+
+    ch = '0';
+    builtin_output_i64(i64(ch));      # 48 (ASCII for '0')
+
+    ch = '9';
+    builtin_output_i64(i64(ch));      # 57 (ASCII for '9')
+
+    # Test char comparison
+    var a: char = 'a';
+    var b: char = 'b';
+    if (a < b) {
+        builtin_output_i64(1);        # 1
+    }
+
+    # Test char equality
+    var c1: char = 'X';
+    var c2: char = 'X';
+    if (c1 == c2) {
+        builtin_output_i64(2);        # 2
+    }
+
+    # Test incrementation
+    if ('A' + 1u8 == 'B') {
+        builtin_output_i64(3);        # 3
+    }
+
+    # Test decrementation
+    if ('d' - 1u8 == 'c') {
+        builtin_output_i64(4);        # 4
+    }
+
+    return 0;
+}

@@ -2,8 +2,10 @@
 
 #include "dvm_value.hpp"
 
+#include <backends/dvm/repl_lowering_snapshot.hpp>
+#include <debug_info/debug_info_builder.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
-#include <typesystem/lower/type_layout.hpp>
+#include <tsl/type_layout.hpp>
 
 #include <query_framework/context/context_fd.hpp>
 
@@ -23,20 +25,14 @@ namespace compiler::backend_vm::internal {
 
 	public:
 		/**
-		 * @brief Construct with no initial context.
-		 *
-		 * Context can be set later via setContext() when a query context is active.
-		 */
-		ProgramLoweringContext(): query_ctx_for_errors(std::nullopt) {}
-
-		/**
 		 * @brief Construct with an initial query context (backward compatible).
 		 *
 		 * This constructor is provided for backward compatibility with existing call sites.
 		 * The context reference should remain valid for the lifetime of this object.
 		 */
-		explicit ProgramLoweringContext(query::Context& query_ctx):
-			  query_ctx_for_errors(&query_ctx) {}
+		explicit ProgramLoweringContext(
+			query::Context& query_ctx, bool build_debug_info, bool is_comp_time_lowering
+		);
 
 		/**
 		 * @brief Set the query context for error reporting during compilation.
@@ -77,15 +73,28 @@ namespace compiler::backend_vm::internal {
 		/**
 		 * @brief Lowers a LIR type layout into VM bytecode type representation.
 		 * It caches the result, so inserts the type into the program only if needed.
+		 * @return The DVM type corresponding to the TypeLayout or an empty optional for
+		 * `tsl::EmptyTypeLayout`, representing Unit / empty-layout return types that do not
+		 * have a DVM counterpart.
 		 */
-		const vm::code::TypeOfData& lowerAndKeepTslType(CRef<tsl::TypeLayout> layout);
+		base::Optional<CRef<vm::code::TypeOfData>> lowerAndKeepTslType(CRef<tsl::TypeLayout> layout);
 
 		/**
-		 * @brief Retrieves the DVM global variable corresponding to the given LIR global.
-		 * @note The LIR global must have been previously declared using insertLirGlobal,
-		 * panics otherwise.
+		 * @brief Creates and inserts a pointer type into the program lowering context.
+		 * It caches the result, so inserts the type into the program only if needed.
 		 */
-		[[nodiscard]] const DVMGlobal& getLirGlobal(CRef<lir::LIRGlobal> lir_global) const;
+		const vm::code::TypeOfData& getOrInsertPointerType(const vm::code::TypeOfData& pointee_type);
+
+		/**
+		 * @brief Retrieves or lazily creates the DVM place for the given LIR global.
+		 *
+		 * This lookup is not purely observational: it may insert and cache a placeholder entry
+		 * for the global. It is needed to reference globals from different modules.
+		 *
+		 * @note Returning a DVM place here does not necessarily mean that the corresponding
+		 * vm::code::GlobalData has already been lowered for that global name.
+		 */
+		const DVMPlace& getLirGlobal(CRef<lir::LIRGlobal> lir_global);
 
 		/**
 		 * @brief Retrieves the extern C function with the given name.
@@ -107,19 +116,67 @@ namespace compiler::backend_vm::internal {
 		void insertRawBytecodeDefinitions(const vm::code::CodeCollection& bytecode);
 
 		/**
-		 * @brief Produces the final bytecode program.
+		 * @brief Capture current counts of lowered entities.
+		 */
+		[[nodiscard]] compiler::backend_vm::LoweredEntitiesSnapshot captureLoweredEntitiesSnapshot(
+		) const;
+
+		/**
+		 * @brief Collect newly lowered types/functions/extra functions since a snapshot.
+		 */
+		[[nodiscard]] vm::code::CodeCollection collectNewCodeSince(
+			const compiler::backend_vm::LoweredEntitiesSnapshot& snapshot
+		) const;
+
+		/**
+		 * @brief Produces the per-module bytecode collection.
+		 *
+		 * Assembles all lowered functions, globals, types, and extern C functions into a
+		 * CodeCollection. No validation is performed here.
+		 *
 		 * @note It does not consume internal state and can be called multiple times.
 		 */
-		std::expected<vm::code::CodeCollection, std::string> validateAndProduceProgram();
+		vm::code::CodeCollection produceCodeCollection();
+
+		/**
+		 * @brief Builds the debug info for the module
+		 * if the class was constructed with debug info building enabled,
+		 * returns nullopt otherwise.
+		 * @note It leaves the internal debug info builder in an empty state,
+		 * so subsequent calls to this method will return nullopt.
+		 */
+		[[nodiscard]] base::Optional<debug_info::DebugInfo> buildDebugInfo();
+
+		[[nodiscard]] bool isCompTimeLowering() const;
 
 	private:
-		vm::code::TypeOfData lowerTslTypeInternal(CRef<tsl::TypeLayout> layout);
+		base::Optional<vm::code::TypeOfData> lowerTslTypeInternal(CRef<tsl::TypeLayout> layout);
+
+		/// Whether we are lowering the code to be loaded by the VM for compile time evaluation,
+		/// or for the final output module. This affects how certain compile time values (e.g.
+		/// symbol types) are lowered.
+		bool is_comp_time_lowering;
 
 		// Using ValidProgram here would be inefficient due to the need for frequent code verifications.
 
-		base::Map<CRef<lir::Function>, vm::code::Function> lir_function_to_dvm;
+		struct TypeStorage {
+			// Mapping from TSL layouts to names of DVM types which exist in `dvm_types`.
+			base::Map<CRef<tsl::TypeLayout>, base::StrID> tsl_type_to_dvm_type_name;
+			// Main container for all types in the module.
+			base::HashMap<base::StrID, vm::code::TypeOfData> dvm_types;
+		};
 
-		base::Map<CRef<tsl::TypeLayout>, vm::code::TypeOfData> tsl_type_to_dvm;
+		// A set of types allowing for insertion of both TSL types and manual insertion of types.
+		TypeStorage type_storage;
+		// Maintains insertion order for types so REPL can emit only new types.
+		std::vector<base::StrID> lowered_type_order;
+		// Maintains insertion order for functions so REPL can emit only new functions.
+		std::vector<base::StrID> lowered_function_order;
+		// Maintains insertion order for globals so REPL can emit only new globals.
+		std::vector<base::StrID> lowered_global_order;
+
+		base::Map<CRef<lir::Function>, base::StrID> lir_function_to_name;
+		base::Map<base::StrID, vm::code::Function>  dvm_functions_by_name;
 
 		// Extern function name to definition.
 		base::Map<base::StrID, vm::code::ExternalCFunction> extern_c_functions;
@@ -128,7 +185,10 @@ namespace compiler::backend_vm::internal {
 		std::vector<vm::code::Function> extra_bytecode_functions;
 
 		// Using names as keys to avoid issues with CRef hash/equality.
-		base::HashMap<base::StrID, DVMGlobal>            global_name_to_dvm;
+		base::HashMap<base::StrID, DVMPlace>             global_name_to_dvm;
 		base::HashMap<base::StrID, vm::code::GlobalData> global_name_to_dvm_data;
+
+		// Optional debug info builder.
+		base::Optional<debug_info::DebugInfoBuilder> debug_info_builder;
 	};
 }

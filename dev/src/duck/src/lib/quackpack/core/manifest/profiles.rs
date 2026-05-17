@@ -2,6 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use crate::quackpack::core::compile::profiles::PREDEFINED_PROFILES;
 use crate::quackpack::schemas::registry;
+use crate::quackpack::util::str_id::QpJoin;
 use crate::{QuackError, QuackResult, StrId, qp_bail, qp_bail_internal, qp_err};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -9,7 +10,7 @@ use crate::{QuackError, QuackResult, StrId, qp_bail, qp_bail_internal, qp_err};
 /// All fields are wrapped in [`Option`],
 /// since this is a tight abstraction over the real, yaml manifest entry.
 /// Expansion of inheritance and providing defaults is done in the
-/// [`compile::profiles`](`crate::quackpack::core::compile::profiles`) module.
+/// [`compile::profiles`](crate::quackpack::core::compile::profiles) module.
 pub struct Profile {
     pub opt_level: Option<OptLevel>,
     pub dvm_bytecode: Option<bool>,

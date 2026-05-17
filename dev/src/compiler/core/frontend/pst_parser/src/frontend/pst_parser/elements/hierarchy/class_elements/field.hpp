@@ -8,8 +8,8 @@ namespace pst {
 	 * @brief Class field element.
 	 */
 	class Field final: public ClassStmt {
-		bool            is_mutable = true;
-		tpc::Identifier name;
+		bool is_mutable = true;
+		NAMED_CHILD(name, IdentifierWrapper);
 		NAMED_CHILD(type, CommaExprHolder);
 		NAMED_CHILD_OPT(init, CommaExprHolder);
 
@@ -33,11 +33,9 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		base::StrID getName() const {
-			return name.value;
+		AccessLocked<IdentifierWrapper> getName() const {
+			return name.give();
 		}
-
-		[[nodiscard]] tpc::Identifier getNameIdent() const { return name; }
 
 		[[nodiscard]]
 		AccessLocked<ExprHolder> getType() const {
@@ -56,7 +54,7 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		base::Optional<base::StrID> getDeclSymbolName() const final {
+		base::Optional<AccessLocked<IdentifierWrapper>> getDeclSymbolIdentifier() const final {
 			return getName();
 		}
 

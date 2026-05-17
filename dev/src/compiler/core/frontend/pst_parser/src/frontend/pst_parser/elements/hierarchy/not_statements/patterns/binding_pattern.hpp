@@ -6,7 +6,7 @@ namespace pst {
 	 * @brief Represents an binding pattern, which binds a value to a new variable.
 	 */
 	class BindingPattern final: public AnalysisPattern {
-		tpc::Identifier name;
+		NAMED_CHILD(name, IdentifierWrapper);
 
 	protected:
 		HashAlg& addElementDataToStableHash(HashAlg&) const override;
@@ -21,7 +21,10 @@ namespace pst {
 		static MBox<BindingPattern> parse(LangParserState& state);
 		void                        dprint(std::ostream& out) const final;
 
-		[[nodiscard]] base::StrID getName() const { return name.value; }
+		[[nodiscard]]
+		AccessLocked<IdentifierWrapper> getName() const {
+			return name.give();
+		}
 
 		[[nodiscard]]
 		std::string elementType() const override {

@@ -1,0 +1,17 @@
+
+import sub;
+
+const s = "fun foo() = 42;";
+const b = true;
+
+namespace N {
+    expand if b then s else "fun foo(x: i64) = 0";
+
+    expand sub.s;
+}
+
+fun main() -> i64 = {
+    builtin_output_i64(N.foo());
+    builtin_output_i64(N.fromSub());
+    return 0;
+}

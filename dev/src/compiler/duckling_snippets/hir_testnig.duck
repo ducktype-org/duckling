@@ -1,7 +1,0 @@
-block {
-	fun A() {}
-	fun B() {}
-	fun C() {
-		fun D() {}
-	}
-}

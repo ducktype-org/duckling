@@ -1,38 +1,14 @@
-use clap::{Arg, ArgAction, ArgMatches, Command, ValueHint, builder::ValueParser};
+use std::any::Any;
 
-use crate::{StrId, quackpack::core::Package};
+use clap::{Arg, ArgAction, ArgMatches, Command};
+
+use crate::StrId;
+use crate::quackpack::core::Package;
 
 const DEFAULT_PROFILE: &str = "dev";
 
 pub trait CommandExt: Sized {
     fn _arg_impl(self, arg: Arg) -> Self;
-
-    /// Add the `--global` flag, which uses a global venv.
-    fn add_global_venv(self) -> Self {
-        self._arg_impl(flag("global", "Add packages to the global venv"))
-    }
-
-    /// Add the optional `-F`/`--features` flag which collects all features.
-    fn add_features(self, help: &'static str) -> Self {
-        self._arg_impl(multi("features", help).short('F'))
-    }
-
-    /// Same as [`add_features`](Self::add_features), but `-F`/`--features` flag conflicts with
-    /// `with`.
-    fn add_features_conflicting(self, help: &'static str, with: &'static str) -> Self {
-        self._arg_impl(multi("features", help).short('F').conflicts_with(with))
-    }
-
-    /// Adds `--packages` flag, which collects names of packages.
-    fn add_packages(self, help: &'static str) -> Self {
-        self._arg_impl(multi("packages", help))
-    }
-
-    /// Adds conflicting `--local`, `--git` flags.
-    fn add_local_git_deps(self, local_help: &'static str, git_help: &'static str) -> Self {
-        self._arg_impl(flag("local", local_help).conflicts_with("git"))
-            ._arg_impl(flag("git", git_help).conflicts_with("local"))
-    }
 
     /// Adds `--profile` flag, conflicting with `--release`.
     fn add_profile(self) -> Self {
@@ -46,52 +22,6 @@ pub trait CommandExt: Sized {
         self._arg_impl(flag("release", "Alias for `--profile=release`").conflicts_with("profile"))
     }
 
-    /// Adds `-v`/`--verbose` flags, conflicting with `--quiet`.
-    fn add_verbose(self) -> Self {
-        self._arg_impl(
-            flag("verbose", "Use more verbose output")
-                .conflicts_with("quiet")
-                .short('v'),
-        )
-    }
-
-    /// Adds `-q`/`--quiet` flags, conflicting with `--verbose`.
-    fn add_quiet(self) -> Self {
-        self._arg_impl(
-            flag("quiet", "Suppress all output")
-                .short('q')
-                .conflicts_with("verbose"),
-        )
-    }
-
-    /// Adds `-C`/`--directory` flag, for changing the current directory before making any actions.
-    fn add_chdir(self) -> Self {
-        self._arg_impl(
-            optional(
-                "directory",
-                "Change to <DIRECTORY> before performing any actions",
-            )
-            .value_name("DIRECTORY")
-            .value_parser(ValueParser::path_buf())
-            .value_hint(ValueHint::DirPath)
-            .short('C'),
-        )
-    }
-
-    /// Adds `--color` flag.
-    fn add_color(self) -> Self {
-        self._arg_impl(
-            optional("color", "Control the colored output")
-                .value_parser(["always", "never", "auto"])
-                .default_value("auto"),
-        )
-    }
-
-    /// Adds `--offline` flag.
-    fn add_offline(self) -> Self {
-        self._arg_impl(flag("offline", "Don't perform any network requests"))
-    }
-
     /// Adds `-j`/`--jobs` flags, for specifying number of threads to use.
     fn add_jobs(self) -> Self {
         self._arg_impl(
@@ -103,11 +33,6 @@ pub trait CommandExt: Sized {
             .value_name("N")
             .value_parser(1..),
         )
-    }
-
-    /// Adds `--dev` flag.
-    fn add_dev(self, dev_help: &'static str) -> Self {
-        self._arg_impl(flag("dev", dev_help))
     }
 }
 
@@ -132,7 +57,10 @@ pub fn optional(name: &'static str, help: &'static str) -> Arg {
 
 /// Create an argument which takes multiple values.
 pub fn multi(name: &'static str, help: &'static str) -> Arg {
-    Arg::new(name).help(help).action(ArgAction::Append)
+    Arg::new(name)
+        .help(help)
+        .long(name)
+        .action(ArgAction::Append)
 }
 
 /// Create a new subcommand.
@@ -141,6 +69,10 @@ pub fn subcommand(name: &'static str) -> Command {
 }
 
 /// Get selected profile from `args`.
+/// Note:
+/// -----
+/// This function is only for selecting the profile for building/running packages.
+/// Running scripts uses different logic.
 pub fn profile_from_matches(args: &ArgMatches) -> StrId {
     if args.get_flag("release") {
         "release".into()
@@ -164,5 +96,37 @@ pub fn features_from_matches(args: &ArgMatches, pkg: &Package) -> Vec<StrId> {
         cli_features.map(StrId::from).collect()
     } else {
         vec![]
+    }
+}
+
+pub trait ArgMatchesExt {
+    /// Safe wrapper around [`get_flag`](ArgMatches::get_flag), with a fallback.
+    fn safe_get_flag(&self, name: &str) -> bool;
+    /// Safe wrapper around [`try_get_one`](ArgMatches::try_get_one), with a fallback.
+    fn safe_get_one<T: Any + Send + Sync + Clone + Default + 'static>(&self, id: &str) -> T;
+}
+
+impl ArgMatchesExt for ArgMatches {
+    fn safe_get_flag(&self, name: &str) -> bool {
+        ignore_clap_errors(self.try_get_one::<bool>(name))
+            .copied()
+            .unwrap_or_default()
+    }
+
+    fn safe_get_one<T: Any + Send + Sync + Clone + Default + 'static>(&self, id: &str) -> T {
+        ignore_clap_errors(self.try_get_one(id))
+            .cloned()
+            .unwrap_or_default()
+    }
+}
+
+#[track_caller]
+/// Ignore [`UnknownArgument`](clap::parser::MatchesError::UnknownArgument), returning the default value,
+/// and panic on other errors.
+fn ignore_clap_errors<T: Default>(result: Result<T, clap::parser::MatchesError>) -> T {
+    match result {
+        Ok(val) => val,
+        Err(clap::parser::MatchesError::UnknownArgument { .. }) => T::default(),
+        Err(e) => panic!("cli flag used incorrectly: {}", e),
     }
 }

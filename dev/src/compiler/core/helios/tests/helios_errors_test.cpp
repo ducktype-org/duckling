@@ -1,17 +1,17 @@
 
+#include <diagnostic_interactive/stable_position.hpp>
 #include <frontend/module_tree/module_id.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <helios/queries/queries.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
+#include <helios/tsh/queries/types.hpp>
+#include <helios/tsh/types.hpp>
 #include <helios_private/errors/errors.hpp>
-#include <helios_private/expressions/errors.hpp>
+#include <helios_private/hout_creation/expressions/errors.hpp>
 #include <helios_private/symbols/symbols.hpp>
-#include <typesystem/higher/queries/types.hpp>
-#include <typesystem/higher/types.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
-#include <base/extend_cpp/variant_match.hpp>
 #include <base/pointers/box.hpp>
 
 #include <diagnostic/highlight_positions.hpp>
@@ -32,6 +32,8 @@ class HeliosErrorsTests: public tester::TestSuite {
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(testErrorLogging);
+		TESTER_ADD_TEST(testErrorLoggingExpandStatements);
+		TESTER_ADD_TEST(testErrorLoggingCyclicErrors);
 		TESTER_ADD_TEST(testErrorBadExpr);
 		TESTER_ADD_TEST(testDiagnosticErrorsCorrectness);
 	}
@@ -88,6 +90,10 @@ private:
 		});
 	}
 
+	/**
+	 * Generic error logging tests.
+	 * Add additional test cases for more specific categories.
+	 */
 	void testErrorLogging() {
 		// ============================ No operator found ============================
 		checkForErrorOnCompileModule(
@@ -426,7 +432,7 @@ private:
 
 		// ========================== Lexer errors ==========================
 
-		// // We don't see errors here, because they are produced by the lexer, not query:
+		// We don't see errors here, because they are produced by the lexer, not query:
 		checkForErrorOnCompileModule(
 			R"(
 				fun main() -> i64 = {
@@ -438,6 +444,20 @@ private:
 			0
 		);
 
+		// ========================== Parsing errors ==========================
+
+		// We don't see errors here, because they are produced by the parser, not query:
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() = {
+					if Loop <= 1 { # no parenthesis around condition
+					
+					}
+				}
+			)",
+			{},
+			0
+		);
 
 		// ========================== Comp time errors ==========================
 
@@ -450,6 +470,55 @@ private:
 			1
 		);
 
+		// ========================== Default initialization errors ==========================
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() -> i64 = {
+					var x: ref i64;
+					return 0;
+				}
+			)",
+			{ "Type `ref i64` cannot be default initialized" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() -> i64 = {
+					var x: box i64;
+					return 0;
+				}
+			)",
+			{ "Type `box i64` cannot be default initialized" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				class Inner { non_defaultable: ref i64; }
+				class Outer { inner: Inner; }
+
+				fun main() -> i64 = {
+					var o: Outer;
+					return 0;
+				}
+			)",
+			{ "Type `Class Outer` cannot be default initialized" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				class Inner { non_defaultable: ref i64; }
+
+				fun main() -> i64 = {
+				var arr: Inner[2];
+					return 0;
+				}
+			)",
+			{ "Type `Class Inner[2]` cannot be default initialized" },
+			1
+		);
 
 		// ============================ Other errors ============================
 		checkForErrorOnCompileModule(
@@ -491,6 +560,7 @@ private:
 			{ "Immutable variables must have an initial value." },
 			1
 		);
+
 
 		checkForErrorOnCompileModule(
 			R"(
@@ -645,7 +715,7 @@ private:
 					l[0] = 123;
 				}
 			)",
-			{ "Index operator base must be indexable" },
+			{ "Type `List` cannot be default initialized" },
 			1
 		);
 
@@ -758,21 +828,6 @@ private:
 
 		checkForErrorOnCompileModule(
 			R"(
-				fun foo() = {
-					var a: i64 = 0;
-					&a;
-
-					return a;
-				}
-
-				const bar = foo();
-			)",
-			{ "Feature not implemented", "pointer types" },
-			1
-		);
-
-		checkForErrorOnCompileModule(
-			R"(
 				class A { x: i64 = 0; }
 				const a = A();
 
@@ -780,7 +835,7 @@ private:
 					return 0;
 				}
 			)",
-			{ "Feature not implemented", "compile time evaluation" },
+			{ "Feature not implemented", "Compile time" },
 			1
 		);
 
@@ -793,6 +848,306 @@ private:
 				}
 			)",
 			{ "Feature not implemented", "zero-sized classes" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				class A { a: i64 = 1; }
+				fun main() -> i64 = {
+					var a: (i32, A);
+					return 0;
+				}
+			)",
+			{ "Feature not implemented", "Generating default constructors for", "tuple types" },
+			1
+		);
+
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() -> i64 = {
+					var a: List[i32];
+					var b = a;
+					return 0;
+				};
+			)",
+			{ "Copy constructor for non-trivially-copyable type `List[i32]`" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				class U { list: List[i32]; }
+				class T { u: U; }
+
+				fun main() -> i64 = {
+					var a: T;
+					var b = a;
+					return 0;
+				};
+			)",
+			{ "Copy constructor for non-trivially-copyable type `Class T`" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun foo() -> List[i32] = {
+				    var a: List[i32];
+				    return a;
+				}
+				fun main() -> i64 = {
+				    var list = foo();
+				    return 0;
+				}
+			)",
+			{ "Copy constructor for non-trivially-copyable type `List[i32]`", "return a", "foo()" },
+			2
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun foo(list: List[i32]) -> i32 = {
+				    return 1;
+				}
+				fun main() -> i64 = {
+					var list: List[i32];
+				    foo(list);
+				    return 0;
+				}
+			)",
+			{ "Copy constructor for non-trivially-copyable type `List[i32]`" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun foo(list: ref List[i32]) -> i32 = {
+				    var list_copy: List[i32] = list;
+				    return list[0];
+				}
+				fun main() -> i64 = {
+				    var list: List[i32];
+				    foo(&list);
+				    return 0;
+				}
+			)",
+			{ "Copy constructor for non-trivially-copyable type `List[i32]`" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				class U { list: List[i32]; }
+				class T { u: U }
+				fun main() -> i64 = {
+					var a: T;
+				    var b = a.u.list; 
+					return 0;
+				}
+			)",
+			{ "Copy constructor for non-trivially-copyable type `List[i32]`" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				class U { list: List[i32]; }
+				class T { u: U }
+				fun main() -> i64 = {
+					var list: List[i32];
+					var a: T = T(U(&list));
+					return 0;
+				}
+			)",
+			{ "Copy constructor for non-trivially-copyable type `List[i32]`",
+		      "This was caused by the need" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() -> i64 = {
+    				var nested: List[List[i32]];
+    				var inner: List[i32];
+    				nested += inner;    
+    				return 0;
+				}
+			)",
+			{ "Copy constructor for non-trivially-copyable type `List[i32]`" },
+			1
+		);
+
+		// Blocks are having correct scopes
+		checkForErrorOnCompileModule(
+			R"(
+				block globals {
+					var x = 0;
+				}
+				fun main() = {
+					{
+						var x = 20;
+					};
+					block inner {
+						var x = 30;
+					}
+					x;
+				}
+		)",
+			{ "Symbol", "not found" },
+			1
+		);
+	}
+
+	/**
+	 * Test error logging related to errors in expanded statements or inside the expanded code.
+	 */
+	void testErrorLoggingExpandStatements() {
+		// @TODO: #2213 Update the values in the test cases below.
+
+		// ======= PARSE ERRORS IN EXPAND STATEMENTS =======
+
+		checkForErrorOnCompileModule(
+			R"(
+				expand "fun foo";
+			)",
+			{ "Macro", "expansion" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				expand " expand \" fun a \"  ";
+			)",
+			{ "Macro", "expansion" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				expand " namespace N { fun a }  ";
+			)",
+			{ "Macro", "expansion" },
+			1
+		);
+
+
+		// ======= ERRORS RELATED TO EXPANDED CODE =======
+
+		checkForErrorOnCompileModule(
+			R"(
+				expand "fun bar() = 10;";
+				expand "fun bar(x: i64 = 0) = 10;";
+
+				fun main() -> i64 = {
+					bar(); # ambiguous call, both overloads match
+					return 0;
+				}
+			)",
+			{},
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				expand "fun foo(x: i64) = 10 + y;"; # error: `y` is not defined
+			)",
+			{ "y", "not found" },
+			1
+		);
+
+		// ======= ERRORS IN EXPANSION EXPRESSION =======
+
+		checkForErrorOnCompileModule(
+			R"(
+				expand 1;
+			)",
+			{ "i32", "string" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				expand y;
+			)",
+			{ "y", "not found" },
+			1
+		);
+
+		// ======= ERRORS IN EXPANDED CODE DOES NOT PREVENT OTHER DIAGNOSTICS =======
+
+		checkForErrorOnCompileModule(
+			R"(
+				expand "fun foo(x: i64) -> i64 = 10 + y;";
+
+				fun bar() = {
+					return foo(1, 1);
+				}
+
+			)",
+			{},
+			2
+		);
+
+		checkForErrorOnCompileModule(
+			R"(	
+				namespace N { expand y; }
+
+				fun foo() = z;
+			)",
+			{ "y", "z", "not found" },
+			2
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				class T {
+					x: i64 = 1;
+
+					fun m1() = {
+						expand "return y";
+					}
+
+					fun m2() = {
+						expand "return z";
+					}
+				}
+
+				fun main() = {
+					return w;
+				}
+
+			)",
+			{ "y", "z", "w", "not found" },
+			3
+		);
+	}
+
+	/**
+	 * Test error logging related to errors on cyclic compilation.
+	 */
+	void testErrorLoggingCyclicErrors() {
+		checkForErrorOnCompileModule(
+			R"(
+				const a = b;
+				const b = a;
+			)",
+			{ "cycle" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun foo() = {
+					return bar();
+				}
+
+				fun bar() = {
+					return foo();
+				}
+			)",
+			{ "cycle" },
 			1
 		);
 	}
@@ -877,7 +1232,7 @@ private:
 			// UndefinedBinaryOperatorError
 			testDiagnosticMessage<UndefinedBinaryOperatorError>(
 				ss,
-				dia::SourcePosition::fakePosition(),
+				dia_int::StablePosition::fakePosition(),
 				"+",
 				makeBox<InteractiveType>(ctx, st),
 				makeBox<InteractiveType>(ctx, st)
@@ -885,32 +1240,32 @@ private:
 
 			// UndefinedUnaryOperatorError
 			testDiagnosticMessage<UndefinedUnaryOperatorError>(
-				ss, dia::SourcePosition::fakePosition(), "-", makeBox<InteractiveType>(ctx, st)
+				ss, dia_int::StablePosition::fakePosition(), "-", makeBox<InteractiveType>(ctx, st)
 			);
 
 			// InvalidNumericLiteralError
 			testDiagnosticMessage<InvalidNumericLiteralError>(
-				ss, dia::SourcePosition::fakePosition()
+				ss, dia_int::StablePosition::fakePosition()
 			);
 
 			// NumericLiteralTooLargeError
 			testDiagnosticMessage<NumericLiteralTooLargeError>(
-				ss, dia::SourcePosition::fakePosition()
+				ss, dia_int::StablePosition::fakePosition()
 			);
 
 			// LiteralDoesNotFitError
 			testDiagnosticMessage<LiteralDoesNotFitError>(
-				ss, dia::SourcePosition::fakePosition(), "signed integer"
+				ss, dia_int::StablePosition::fakePosition(), "signed integer"
 			);
 
 			// SingleStmtFunctionMustBeExprError
 			testDiagnosticMessage<SingleStmtFunctionMustBeExprError>(
-				ss, dia::SourcePosition::fakePosition()
+				ss, dia_int::StablePosition::fakePosition()
 			);
 
 			// ImmutableVariableNoInitError
 			testDiagnosticMessage<ImmutableVariableNoInitError>(
-				ss, dia::SourcePosition::fakePosition()
+				ss, dia_int::StablePosition::fakePosition()
 			);
 		});
 	}

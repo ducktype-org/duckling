@@ -27,11 +27,23 @@ namespace compiler::repl {
 		TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 			TESTER_ADD_TEST(testReplSessionInitialization);
 			TESTER_ADD_TEST(testReplProcessLineWithCommand);
+			TESTER_ADD_TEST(testReplCommandAliasesThroughProcessLine);
+			TESTER_ADD_TEST(testReplExitCommandAliasesThroughProcessLine);
+			TESTER_ADD_TEST(testReplHistoryCommandThroughProcessLine);
+			TESTER_ADD_TEST(testReplUnknownCommandThroughHandleCommand);
+			TESTER_ADD_TEST(testReplClearCommandDoesNotResetSessionState);
+			TESTER_ADD_TEST(testReplClearHistoryResetsSessionState);
 			TESTER_ADD_TEST(testReplProcessLineWithCode);
+			TESTER_ADD_TEST(testReplInstructionExecution);
 			TESTER_ADD_TEST(testReplCommandDetection);
 			TESTER_ADD_TEST(testReplHistoryTracking);
+			TESTER_ADD_TEST(testLoadScriptFileMissingPath);
+			TESTER_ADD_TEST(testLoadScriptFileInvalidContents);
+			TESTER_ADD_TEST(testLoadScriptFileExecutesStatements);
+			TESTER_ADD_TEST(testLoadCommandExecutesScript);
 			TESTER_ADD_TEST(testReplArithmeticExpressions);
 			TESTER_ADD_TEST(testReplVariableLookup);
+			TESTER_ADD_TEST(testReplUnsupportedActionClassification);
 		}
 
 	private:
@@ -74,6 +86,94 @@ namespace compiler::repl {
 			);
 		}
 
+		void testReplCommandAliasesThroughProcessLine() {
+			ReplSession session;
+
+			std::vector<std::string_view> aliases = { "/h", "/help", "/clear", "/c" };
+
+			for (auto alias: aliases) {
+				auto result = session.processLine(alias);
+				assertTrue(
+					result.status == ReplResult::Status::Success,
+					std::string("Alias command should return success: ") + std::string(alias)
+				);
+			}
+		}
+
+		void testReplExitCommandAliasesThroughProcessLine() {
+			for (auto exit_alias: std::vector<std::string_view>{ "/q", "/quit", "/exit" }) {
+				ReplSession session;
+
+				auto result = session.processLine(exit_alias);
+
+				assertTrue(
+					result.status == ReplResult::Status::Exit,
+					std::string("Exit alias should return exit status: ") + std::string(exit_alias)
+				);
+				assertTrue(session.m_should_exit, "Exit alias should set m_should_exit flag");
+			}
+		}
+
+		void testReplHistoryCommandThroughProcessLine() {
+			ReplSession session;
+
+			auto result = session.processLine("/history");
+
+			assertTrue(
+				result.status == ReplResult::Status::Success,
+				"/history should be processed as a successful command"
+			);
+			assertFalse(session.m_should_exit, "/history should not mark session for exit");
+		}
+
+		void testReplUnknownCommandThroughHandleCommand() {
+			ReplSession session;
+
+			auto handled = session.handleCommand("/does-not-exist");
+
+			assertFalse(handled, "Unknown command should not be reported as handled");
+			assertFalse(session.m_should_exit, "Unknown command should not mark session for exit");
+		}
+
+		void testReplClearCommandDoesNotResetSessionState() {
+			ReplSession session;
+
+			session.processLine("var x: i32 = 10;");
+
+			auto history_size_before_clear = session.m_history.size();
+			auto line_counter_before_clear = session.m_line_counter;
+
+			auto clear_result = session.processLine("/clear");
+
+			assertTrue(
+				clear_result.status == ReplResult::Status::Success,
+				"/clear should be processed as a successful command"
+			);
+			assertTrue(
+				session.m_history.size() == history_size_before_clear,
+				"/clear should not modify REPL statement history"
+			);
+			assertTrue(
+				session.m_line_counter == line_counter_before_clear,
+				"/clear should not reset REPL line counter"
+			);
+		}
+
+		void testReplClearHistoryResetsSessionState() {
+			ReplSession session;
+
+			session.processLine("1 + 2");
+			session.processLine("3 + 4");
+
+			assertTrue(!session.m_history.empty(), "History should contain entries before clear");
+			assertTrue(session.m_line_counter > 0, "Line counter should increase before clear");
+
+			session.clearHistory();
+
+			assertTrue(session.m_history.empty(), "clearHistory should remove all history entries");
+			assertTrue(session.m_line_counter == 0, "clearHistory should reset line counter");
+		}
+
 		/**
 		 * @brief Test that ReplSession can process code input.
 		 *
@@ -94,6 +194,21 @@ namespace compiler::repl {
 			);
 		}
 
+		void testReplInstructionExecution() {
+			ReplSession session;
+
+			auto result = session.processLine("while (0 == 1) {}");
+
+			assertTrue(
+				result.status == ReplResult::Status::Success,
+				"Instruction statement should execute successfully"
+			);
+			assertTrue(
+				session.m_history.size() == 1,
+				"Instruction execution should add one entry to history"
+			);
+		}
+
 		/**
 		 * @brief Test command detection through isCommand.
 		 *
@@ -104,7 +219,8 @@ namespace compiler::repl {
 			ReplSession session;
 
 			// Test various inputs to verify command detection
-			std::vector<std::string_view> commands = { "/exit", "/help", "/history" };
+			std::vector<std::string_view> commands
+				= { "/exit", "/help", "/h", "/history", "/hist", "/clear", "/c" };
 
 			std::vector<std::string_view> code_snippets = { "var x = 4;", "x;", "" };
 
@@ -148,6 +264,101 @@ namespace compiler::repl {
 				session.m_lowering_context.has_value(),
 				"Lowering context should be initialized for REPL execution"
 			);
+		}
+
+		void testLoadScriptFileMissingPath() {
+			ReplSession session;
+
+			auto result = session.loadScriptFile("   \t");
+
+			assertTrue(
+				result.status == ReplResult::Status::Error,
+				"Loading script with empty path should fail"
+			);
+			assertTrue(
+				result.message.find("Missing script path") != std::string::npos,
+				"Error should explain that script path is missing"
+			);
+			assertFalse(
+				session.m_suppress_repl_feedback_during_script_load,
+				"Output suppression should be restored"
+			);
+		}
+
+		void testLoadScriptFileInvalidContents() {
+			ReplSession session;
+			auto        script_file = fs::FileManager::createRandomTempFile("var x = ;");
+
+			auto result = session.loadScriptFile(script_file.getFilePath().string());
+
+			fs::FileManager::deleteFile(script_file);
+
+			assertTrue(
+				result.status == ReplResult::Status::Error, "Loading invalid script should fail"
+			);
+			assertTrue(
+				!result.message.empty(), "Invalid script should produce a useful error message"
+			);
+			assertFalse(
+				session.m_suppress_repl_feedback_during_script_load,
+				"Output suppression should be restored"
+			);
+		}
+
+		void testLoadScriptFileExecutesStatements() {
+			ReplSession session;
+
+			auto script_file = fs::FileManager::createRandomTempFile(
+				"var loaded_x: i32 = 1;\nloaded_x = 10;\nbuiltin_output_i64(loaded_x + 3);"
+			);
+			auto script_path = std::string("   ") + script_file.getFilePath().string();
+
+			auto initial_history_size = session.m_history.size();
+
+			auto result = session.loadScriptFile(script_path);
+
+			assertTrue(
+				result.status == ReplResult::Status::Success, "Loading a valid script should succeed"
+			);
+
+			auto updated_history_size = session.m_history.size();
+			ASSERT_EQUAL(3UL, updated_history_size - initial_history_size);
+			assertFalse(
+				session.m_suppress_repl_feedback_during_script_load,
+				"Output suppression should be restored"
+			);
+
+			auto follow_up_result = session.processLine("1 + 1;");
+			assertTrue(
+				follow_up_result.status == ReplResult::Status::Success,
+				"Session should remain usable after script loading"
+			);
+
+			fs::FileManager::deleteFile(script_file);
+		}
+
+		void testLoadCommandExecutesScript() {
+			ReplSession session;
+
+			auto script_file = fs::FileManager::createRandomTempFile(
+				"var cmd_x: i32 = 7;\ncmd_x = cmd_x + 2;\nbuiltin_output_i64(cmd_x);"
+			);
+			auto command = std::string("/load ") + script_file.getFilePath().string();
+
+			auto result = session.processLine(command);
+
+			assertTrue(
+				result.status == ReplResult::Status::Success,
+				"/load command should be handled successfully"
+			);
+
+			auto follow_up_result = session.processLine("2 + 3;");
+			assertTrue(
+				follow_up_result.status == ReplResult::Status::Success,
+				"REPL should continue processing input after /load"
+			);
+
+			fs::FileManager::deleteFile(script_file);
 		}
 
 		/**
@@ -257,6 +468,36 @@ namespace compiler::repl {
 				session.m_history.size() == expected_history_size,
 				"REPL session history should track all variable operations"
 			);
+		}
+
+		/**
+		 * @brief Test that unsupported action statements return explicit classification errors.
+		 */
+		void testReplUnsupportedActionClassification() {
+			ReplSession session;
+
+			auto assert_unsupported_action = [&](std::string_view input) {
+				auto result = session.processLine(input);
+				assertTrue(
+					result.status == ReplResult::Status::Error,
+					"Unsupported action should produce an error status"
+				);
+				assertTrue(
+					result.message.find("Unsupported single statement kind for REPL classification")
+						!= std::string::npos,
+					"Expected explicit unsupported classification error"
+				);
+				assertTrue(
+					result.message.find("Action") != std::string::npos,
+					"Expected error to include statement kind"
+				);
+			};
+
+			assert_unsupported_action("continue;");
+			assert_unsupported_action("return 5;");
+			assert_unsupported_action("break;");
+			assert_unsupported_action("throw 5;");
+			assert_unsupported_action("return;");
 		}
 
 	public:

@@ -1,8 +1,7 @@
 //! `sync` subcommand execution logic.
-use crate::{
-    DuckCtx, QuackResult,
-    quackpack::core::{AllowGlobalPackage, PackageLoader, storage},
-};
+use crate::quackpack::core::storage::{self, StorageSyncOptions};
+use crate::quackpack::core::{AllowGlobalPackage, PackageLoader};
+use crate::{DuckContext, QuackResult};
 
 #[derive(Debug, Default, Clone, Copy)]
 /// All options that can be passed to sync.
@@ -19,12 +18,19 @@ pub struct SyncOptions {
 
 /// Synchronize a virtual environment found from CWD, if `options.global` is false, otherwise use a
 /// global environment.
-pub fn sync(ctx: &DuckCtx, options: SyncOptions) -> QuackResult<()> {
+pub fn sync(ctx: &DuckContext, options: SyncOptions) -> QuackResult<()> {
     let pkg = if options.global {
         PackageLoader::global_package(ctx)?
     } else {
         PackageLoader::find_from_cwd(ctx, AllowGlobalPackage::No)?
     };
-    storage::sync(&pkg, options)?;
+    storage::sync(
+        &pkg,
+        StorageSyncOptions {
+            overwrite: options.overwrite,
+            frozen: options.frozen,
+            strict_errors: options.strict_errors,
+        },
+    )?;
     Ok(())
 }

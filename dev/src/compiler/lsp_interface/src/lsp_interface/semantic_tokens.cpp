@@ -36,6 +36,15 @@
 #include <unordered_set>
 
 namespace lsp {
+	namespace {
+		base::Optional<dia::SourcePosition> getOriginPosition(
+			const compiler::helios::code::ElementOrigin& origin
+		) {
+			return origin.getStablePosition().map([](const dia_int::StablePosition& stable_pos) {
+				return stable_pos.getActiveSourcePositionIllegalAccess();
+			});
+		}
+	}
 
 	SemanticToken::SemanticToken(CRef<lexer::Token> source, StandardTokenType type):
 		  source_token(source),
@@ -57,7 +66,7 @@ namespace lsp {
 			return sT::Number;
 		case lTT::String:
 			return sT::String;
-		case lTT::FormattedString:
+		case lTT::FormatString:
 			return sT::String;
 		case lTT::Operator:
 			return sT::Operator;
@@ -177,9 +186,14 @@ namespace lsp {
 			auto chain_locked = elem->getImportChain();
 			if_opt_none(chain_locked.illegalAccess()) return;
 			auto chain = chain_locked.illegalAccess().value();
-			auto names = chain->getNames();
-
-			for (auto name: names) out(name.position, StandardTokenType::Namespace);
+			for (usize idx = 0; idx < chain->numberOfNames(); idx++) {
+				out(chain->getNameByIndex(idx)
+				        .illegalAccess()
+				        .value()
+				        ->getSourcePosition()
+				        .illegalAccess(),
+				    StandardTokenType::Namespace);
+			}
 		}
 
 		void visitUsing(pst::Access<pst::Using>) override {
@@ -191,40 +205,49 @@ namespace lsp {
 		}
 
 		void visitNamespace(pst::Access<pst::Namespace> elem) override {
-			out(elem->getNameIdent().position, StandardTokenType::Namespace);
+			out(elem->getName().illegalAccess().value()->getSourcePosition().illegalAccess(),
+			    StandardTokenType::Namespace);
 		}
 
 		void visitClass(pst::Access<pst::Class> elem) override {
-			out(elem->getNameIdent().position, StandardTokenType::Class);
+			out(elem->getName().illegalAccess().value()->getSourcePosition().illegalAccess(),
+			    StandardTokenType::Class);
 		}
 
 		void visitFun(pst::Access<pst::Fun> elem) override {
-			out(elem->getNameIdentifier().position, StandardTokenType::Function);
+			out(elem->getName().illegalAccess().value()->getSourcePosition().illegalAccess(),
+			    StandardTokenType::Function);
 		}
 
 		void visitFunDecl(pst::Access<pst::FunDecl> elem) override {
-			out(elem->getNameIdentifier().position, StandardTokenType::Function);
+			out(elem->getName().illegalAccess().value()->getSourcePosition().illegalAccess(),
+			    StandardTokenType::Function);
 		}
 
 		void visitVariable(pst::Access<pst::Variable> elem) override {
-			out(elem->getNameIdent().position, StandardTokenType::Variable);
+			out(elem->getName().illegalAccess().value()->getSourcePosition().illegalAccess(),
+			    StandardTokenType::Variable);
 		}
 
 		void visitMethod(pst::Access<pst::Method> elem) override {
-			out(elem->getNameIdentifier().position, StandardTokenType::Method);
+			out(elem->getName().illegalAccess().value()->getSourcePosition().illegalAccess(),
+			    StandardTokenType::Method);
 		}
 
 		void visitField(pst::Access<pst::Field> elem) override {
-			out(elem->getNameIdent().position, StandardTokenType::Property);
+			out(elem->getName().illegalAccess().value()->getSourcePosition().illegalAccess(),
+			    StandardTokenType::Property);
 		}
 
 		void visitParam(pst::Access<pst::Param> elem) override {
-			out(elem->getNameIdent().position, StandardTokenType::Parameter);
+			out(elem->getName().illegalAccess().value()->getSourcePosition().illegalAccess(),
+			    StandardTokenType::Parameter);
 		}
 
 		void visitCallArgument(pst::Access<pst::CallArgument> elem) override {
-			if_opt_some(elem->getArgName().value, _) {
-				out(elem->getArgName().position, StandardTokenType::Parameter);
+			if_opt_some(elem->getArgName(), _) {
+				out(elem->getArgName()->illegalAccess().value()->getSourcePosition().illegalAccess(),
+				    StandardTokenType::Parameter);
 			}
 		}
 
@@ -240,7 +263,8 @@ namespace lsp {
 				if (symbol_type.getType().getKind() == compiler::tsh::Kind::Meta)
 					token_type = StandardTokenType::Type;
 			});
-			out(elem->getNameIdent().position, token_type);
+			out(elem->getName().illegalAccess().value()->getSourcePosition().illegalAccess(),
+			    token_type);
 		}
 	};
 
@@ -273,7 +297,7 @@ namespace lsp {
 			hout_expr->acceptVisitor(visitor);
 			result.default_identifier_type.emplace(StandardTokenType::Namespace);
 
-			if_opt_some(hout_expr->origin.getSourcePosition(), whole_expr_pos) {
+			if_opt_some(getOriginPosition(hout_expr->origin), whole_expr_pos) {
 				// Filter the results.pre-calculated to only keep the tokens that are inside the
 				// expression position. This is needed because things like "default parameter value"
 				// are in the HOUT in the call, but their source position is in the function declaration.
@@ -304,7 +328,7 @@ namespace lsp {
 		}
 
 		void visitIdentifierExpr(const code::IdentifierExpr& elem) override {
-			auto maybe_position = elem.origin.getSourcePosition();
+			auto maybe_position = getOriginPosition(elem.origin);
 			if_opt_none(maybe_position) return;
 			auto position = maybe_position.value();
 
@@ -391,7 +415,7 @@ namespace lsp {
 		void visitAccessExpr(const code::AccessExpr& elem) override {
 			elem.base->acceptVisitor(*this);
 
-			auto maybe_position = elem.origin.getSourcePosition();
+			auto maybe_position = getOriginPosition(elem.origin);
 			if_opt_none(maybe_position) return;
 			out(maybe_position.value(), StandardTokenType::Property);
 		}

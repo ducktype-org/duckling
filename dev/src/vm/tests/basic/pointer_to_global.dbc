@@ -1,0 +1,42 @@
+global_data global_data_val i64 {};
+global_data global_data_ptr ptr_i64 {};
+
+function main { i64, ptr_argv } -> { i64 } {
+	init_pany_type l_ptr_to_global, ptr_i64;
+	init_pany_type local_val, i64;
+	init_pany_type verifier_val, i64;
+	init_pany_type l_ptr_copy, ptr_i64;
+	init_pany_type l_ptr_from_global, ptr_i64;
+
+	ref_pptr_pany l_ptr_to_global, global_data_val;
+	mov_p64_imm local_val, 42;
+	store_pptr_pany l_ptr_to_global, local_val;
+
+	mov_p64_p64 verifier_val, global_data_val;
+	output_p64 verifier_val;                       	# 42
+	
+	mov_pptr_pptr l_ptr_copy, l_ptr_to_global;
+	mov_p64_imm local_val, 99;
+	store_pptr_pany l_ptr_copy, local_val;
+
+	mov_p64_p64 verifier_val, global_data_val;
+	output_p64 verifier_val;            			# 99 
+	
+	mov_pptr_pptr global_data_ptr, l_ptr_copy;
+	setNull_pptr l_ptr_to_global;
+	setNull_pptr l_ptr_copy;
+	
+	mov_pptr_pptr l_ptr_from_global, global_data_ptr;
+	mov_p64_imm local_val, 1337;
+	store_pptr_pany l_ptr_from_global, local_val;
+
+	mov_p64_p64 verifier_val, global_data_val;
+	output_p64 verifier_val;                          # 1337
+
+	load_pany_pptr verifier_val, l_ptr_from_global;
+	output_p64 verifier_val;                          # 1337
+
+	mov_p64_p64 ret0, verifier_val;
+
+	ret;
+}

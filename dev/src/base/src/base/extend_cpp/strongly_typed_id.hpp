@@ -10,6 +10,7 @@
 
 #include <atomic>               // IWYU pragma: export
 #include <compare>              // IWYU pragma: export
+#include <ostream>
 
 /**
  * @brief Macro used to create Strong ID types.
@@ -60,6 +61,9 @@
 		auto                 operator<=>(const NAME&) const = default;       \
 		inline bool          isBad() const { return id == BAD_ID; }          \
 		inline bool          isGood() const { return id != BAD_ID; }         \
+	};                                                                       \
+	inline std::ostream& operator<<(std::ostream& os, const NAME& id) {      \
+		return os << #NAME << "(" << id.asInt() << ")";                      \
 	}
 
 /**
@@ -106,6 +110,9 @@
 		auto        operator<=>(const NAME&) const = default;            \
 		inline bool isBad() const { return id == BAD_ID; }               \
 		inline bool isGood() const { return id != BAD_ID; }              \
+	};                                                                   \
+	inline std::ostream& operator<<(std::ostream& os, const NAME& id) {  \
+		return os << #NAME << "(" << id.asInt() << ")";                  \
 	}
 
 

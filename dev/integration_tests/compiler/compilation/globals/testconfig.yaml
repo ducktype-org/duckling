@@ -1,0 +1,16 @@
+
+Tests:
+  globals:
+    Cases:
+      all:
+        backend: all
+        Output:
+          String: "4\n1\n3\n4\n"
+        ExitCode: 0
+  submodules:
+    Cases:
+      all:
+        backend: all
+        Output:
+          String: "30\n"
+        ExitCode: 0

@@ -7,7 +7,7 @@ namespace pst {
 	 * @brief Block declaration
 	 */
 	class Block final: public CodeDecl {
-		tpc::OptionalIdentifier optional_name;
+		NAMED_CHILD_OPT(name, IdentifierWrapper);
 		NAMED_CHILD(code_block, CodeBlock);
 
 	protected:
@@ -27,14 +27,18 @@ namespace pst {
 			return "Block";
 		}
 
-		[[nodiscard]]
-		DeclKind isDeclaration() const final {
-			return (optional_name.value ? DeclKind::Symbol : DeclKind::None);
+		[[nodiscard]] pst::AccessLocked<CodeBlock> getCodeBlock() const {
+			return code_block.give();
 		}
 
 		[[nodiscard]]
-		base::Optional<base::StrID> getDeclSymbolName() const final {
-			return optional_name.value;
+		DeclKind isDeclaration() const final {
+			return (name.has_value() ? DeclKind::Symbol : DeclKind::None);
+		}
+
+		[[nodiscard]]
+		base::Optional<AccessLocked<IdentifierWrapper>> getDeclSymbolIdentifier() const final {
+			return name.map([](const auto& x) { return x.give(); });
 		}
 
 		void acceptVisitor(PstVisitor& visitor) const override;

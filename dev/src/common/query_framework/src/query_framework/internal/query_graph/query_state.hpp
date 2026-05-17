@@ -10,6 +10,7 @@
 
 #include <base/collections/maps.hpp>
 #include <base/collections/optional.hpp>
+#include <base/except/exceptions.hpp>
 #include <base/pointers/box.hpp>
 #include <base/pointers/ref.hpp>
 
@@ -104,11 +105,13 @@ namespace query::internal {
 		 * @brief Returns read-only reference to the query graph.
 		 */
 		[[nodiscard]]
-		const QueryGraph& getGraph() const {
-			return query_graph;
-		}
+		const QueryGraph& getGraph() const;
 
-		QueryGraph& getGraphMutable() { return query_graph; }
+		/**
+		 * @brief Returns mutable reference to the query graph.
+		 */
+		[[nodiscard]]
+		QueryGraph& getGraphMutable();
 
 		/**
 		 * @brief Returns read-only reference to the graph from previous compilation.
@@ -148,8 +151,6 @@ namespace query::internal {
 
 		/**
 		 * @brief Returns the amount of currently active queries.
-		 * @TODO: #1933 go over usages and remove/changes them. Probably we can remove this
-		 * functionality after that alltogether.
 		 */
 		[[nodiscard]]
 		u64 activeQueryCount() const;

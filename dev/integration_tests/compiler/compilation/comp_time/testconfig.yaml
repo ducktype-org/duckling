@@ -1,0 +1,61 @@
+Tests:
+  recursive_comp_time_eval:
+    # @TODO: #2448 Investigate why deterministic compilation check fails for this test
+    enable_conc_deterministic_tests: "false"
+    Cases:
+      all:
+        backend: all
+        Output:
+          String: ""
+        ExitCode: 0
+
+  comp_time_references:
+    Cases:
+      all:
+        backend: all
+        Output:
+          String: "124\n"
+        ExitCode: 0
+
+  class_type_eval:
+    # @TODO: #2448 Investigate why deterministic compilation check fails for this test
+    enable_conc_deterministic_tests: "false"
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: "1\n2\n3\n1\n3\n4\n111\n111\n1\n"
+        ExitCode: 0
+
+  type_eval:
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: ""
+        ExitCode: 0
+
+  type_evaluation:
+    Cases:
+      # @TODO: #2431 Enable DVM on this test
+      llvm:
+        backend: llvm
+        Output:
+          String: ""
+        ExitCode: 42
+
+  classes_in_comp_time:
+    Cases:
+      all:
+        backend: all
+        Output:
+          String: "11\n"
+        ExitCode: 0
+
+  arrays_in_comp_time:
+    Cases:
+      all:
+        backend: all
+        Output:
+          String: "6\n"
+        ExitCode: 0

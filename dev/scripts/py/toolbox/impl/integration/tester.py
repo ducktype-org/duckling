@@ -33,7 +33,6 @@ def tester_impl(
         verbose: bool,
         log_file: str | Path,
         build_dir: str,
-        duckc_worker_count: int,
 ):
     """
     The driver function of Duckling Integration Tests framework.
@@ -55,7 +54,6 @@ def tester_impl(
     user_values = {
         "build_dir": str(Path(build_dir).absolute()),
         "dev_dir": str(get_dev_directory()),
-        "duckc_worker_count": str(duckc_worker_count),
     }
 
     test_set = load_tests("integration_tests", user_values=user_values)
@@ -211,7 +209,7 @@ def run_case(
     # Run test.
     log_info_if_needed("Running the test case...", dry, verbose)
     test_output, test_err = dit_exec_command(
-        f"timeout {case.timeout}s sh -c \'{case.run}\'",
+        f"timeout {case.timeout}s bash -c \'{case.run}\'",
         cwd=test.cwd,
         input=test_input,
         exitcode=case.expected_exitcode,

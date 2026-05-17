@@ -1,0 +1,7 @@
+metadata:
+  name: foo
+  version: '1.0.0'
+
+features:
+  flag: [absent]
+  
