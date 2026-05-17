@@ -1,6 +1,5 @@
 #include <events/emitter.hpp>
 
-#include "vm/core/vmvalue/vmvalueref.hpp"
 #include <vm/api/vm.hpp>
 
 namespace vm::debugger {

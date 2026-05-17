@@ -6,7 +6,6 @@
 
 #include "vm/api/data/status.hpp"
 #include "vm/api/data/thread_id.hpp"
-#include "vm/bytecode/validator/valid_type/finalized_kinds.hpp"
 #include <vm/api/vm.hpp>
 
 inline std::string statusToString(const vm::api::ProcStatus& status) {

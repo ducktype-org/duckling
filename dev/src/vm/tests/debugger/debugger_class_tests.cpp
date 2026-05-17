@@ -315,6 +315,16 @@ private:
 		ASSERT_EQUAL(response, 2);
 		auto info = debugger.getStackFrameData(1);
 		ASSERT_EQUAL(info.frame_vars.size(), 9);
+		ASSERT_EQUAL_PRINT(info.frame_vars[0].value.str(), "0");          // ret0
+		ASSERT_EQUAL_PRINT(info.frame_vars[1].value.str(), "0");          // arg0
+		ASSERT_EQUAL_PRINT(info.frame_vars[2].value.str(), "null");       // arg1
+		ASSERT_EQUAL_PRINT(info.frame_vars[3].value.str(), "<pointer>");  // struct_pointer
+		ASSERT_EQUAL_PRINT(info.frame_vars[4].value.str(), "<pointer>");  // dyntable_pointer
+		ASSERT_EQUAL_PRINT(
+			info.frame_vars[5].value.str(), "<pointer>"
+		);  // fixtable_pointer		ASSERT_EQUAL_PRINT(info.frame_vars[6].value.str(), "<pointer>");
+		ASSERT_EQUAL_PRINT(info.frame_vars[7].value.str(), "<pointer>");  // variant_pointer
+		ASSERT_EQUAL_PRINT(info.frame_vars[8].value.str(), "42");         // new_variant_data_value
 	}
 };
 
