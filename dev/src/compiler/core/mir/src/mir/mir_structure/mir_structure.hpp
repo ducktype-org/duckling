@@ -163,20 +163,13 @@ MAKE_FLAG_TYPE(compiler::mir, LifetimeFlag, LifetimeFlags,
 namespace compiler::mir {
 	enum class ComptimeStatus : uint32_t { Uncomputed = 0, Runtime = 1, ComptimeOnly = 2 };
 
-	inline bool isMetaOp(Operation op) {
-		switch (op) {
-		case Operation::MetaCreateBox:
-		case Operation::MetaCreateRef:
-		case Operation::MetaCreateConst:
-		case Operation::MetaCreateTuple:
-		case Operation::MetaCreateVariant:
-		case Operation::MetaEq:
-		case Operation::MetaNeq:
-			return true;
-		default:
-			return false;
-		}
-	}
+	bool isMetaOp(Operation op);
+	/**
+	 * @brief Checks if the given abstract type is compile-time only (comptime-only).
+	 * * @note This checks the type in a shallow way by its Kind only. For example, 
+	 * tuples containing Meta components will not count as a ComptimeOnly type for now.
+	*/
+	bool isComptimeOnlyType(const tsh::AbstractType& type);
 	struct MIRValue;
 
 	/**
@@ -753,8 +746,6 @@ namespace compiler::mir {
 	/**
 	 * @brief Function in MIR.
 	 */
-	bool isComptimeOnlyType(const tsh::AbstractType& type);
-
 	struct Function final {
 		/**
 		 * This name is only used for debugging and error logging and is not mangled (and is not

@@ -75,4 +75,6 @@ namespace compiler::mir {
 	 * @note Exposed in the interface mostly for tests
 	 */
 	DECLARE_QUERY(LowerToPreMIRFunction, helios::SymID, CRef<LowerToMIRFunctionResult>, ({}))
+
+	const Function& lowerToPreMIRFunction(query::Context& ctx, CRef<helios::HOUTFunction> function);
 }

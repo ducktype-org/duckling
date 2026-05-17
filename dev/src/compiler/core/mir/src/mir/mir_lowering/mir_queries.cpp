@@ -5,26 +5,27 @@
 #include "mir_validation.hpp"
 
 #include <diagnostic_interactive/placeholder.hpp>
+#include <frontend/module_tree/queries.hpp>
+#include <frontend/pst_parser/lang_parser_element.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/mangler/mangler.hpp>
+#include <helios/queries/function_queries.hpp>
 #include <helios/queries/queries.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <mir_private/expr_lowering.hpp>
 #include <mir_private/mir_builders.hpp>
 #include <mir_private/stmt_lowering.hpp>
-#include <helios/tsh/queries/types.hpp>
-#include <helios/queries/function_queries.hpp>
+
 #include <base/str/str_utils.hpp>
-#include <frontend/pst_parser/lang_parser_element.hpp>
-#include <frontend/module_tree/queries.hpp>
+
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_result.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 
 #include <stack>
 #include <unordered_set>
-#include <iostream>
+
 namespace compiler::mir {
 	namespace hc = helios::code;
 
@@ -112,30 +113,10 @@ namespace compiler::mir {
 		void visitAssignmentStmt(const hc::AssignmentStmt&) override {}
 	};
 
-	Function lowerToPreMIRFunction(query::Context& ctx, CRef<helios::HOUTFunction> function) {
-		FunctionBuilder function_builder{
-			ctx,
-			FunctionSymID{ function->declaration->original_symbol },
-		};
-		function_builder.setName(function->declaration->original_name);
-
-		LocalVarCollectionVisitor visitor{ function_builder };
-		visitor.collect(function);
-
-		auto last_block = function_builder.newBlock();
-		last_block->setTerminator(
-			{ Operation::FunctionEnd, {}, {}, {}, function_builder.getTopLevelScope() }
-		);
-
-		// build cfg+quad step by step:
-		auto first_block = lowerCodeBlock(
-			*function->body, last_block, function_builder, function_builder.getTopLevelScope()
-		);
-
-		function_builder.setEntry(first_block.begin);
-
-		return function_builder.build();
-	}
+	const Function& lowerToPreMIRFunction(query::Context& ctx, CRef<helios::HOUTFunction> function) {
+        auto res = ctx.query<LowerToPreMIRFunction>(function->declaration->original_symbol);
+        return res.get()->valueOrPanic();
+    }
 
 	/**
 	 * @brief Deletes from mir Function (from block_order and blocks) unreachable blocks.
@@ -248,10 +229,7 @@ namespace compiler::mir {
 			auto assign_instr = last_block->addHole();
 
 			auto lowerexpr_res = lowerExpr(
-				*global_init_expr,
-				last_block,
-				function_builder,
-				function_builder.getTopLevelScope()
+				*global_init_expr, last_block, function_builder, function_builder.getTopLevelScope()
 			);
 
 			assign_instr.fill(Instruction{
@@ -260,6 +238,8 @@ namespace compiler::mir {
 				{ lowerexpr_res.getResult(function_builder) },
 				{},
 				function_builder.getTopLevelScope(),
+				{},
+				{}
 			});
 
 			function_builder.setEntry(lowerexpr_res.begin);
@@ -283,10 +263,46 @@ namespace compiler::mir {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(LowerGlobalDataToMIRCtor)
 
+	struct IMPLEMENT_QUERY(LowerToPreMIRFunction, LowerToMIRFunctionResult) {
+		static Function build(Context& ctx, CRef<helios::HOUTFunction> function) {
+            FunctionBuilder function_builder{
+                ctx,
+                FunctionSymID{ function->declaration->original_symbol },
+            };
+            function_builder.setName(function->declaration->original_name);
+
+            LocalVarCollectionVisitor visitor{ function_builder };
+            visitor.collect(function);
+
+            auto last_block = function_builder.newBlock();
+            last_block->setTerminator(
+                { Operation::FunctionEnd, {}, {}, {}, function_builder.getTopLevelScope() }
+            );
+
+            auto first_block = lowerCodeBlock(
+                *function->body, last_block, function_builder, function_builder.getTopLevelScope()
+            );
+
+            function_builder.setEntry(first_block.begin);
+
+            return function_builder.build();
+        }
+
+        static auto provide(Context& ctx, const QKey& key) -> PResult {
+            auto hout_func_q = ctx.query<helios::QueryCodeOfFun>(key);
+            if (hout_func_q.get()->hasFailed()) return query::Failed();
+
+            return build(ctx, base::CRef<helios::HOUTFunction>(&hout_func_q.get()->valueOrPanic()));
+        }
+
+		QUERY_AUTO_CACHE_CREF
+	};
+	QUERY_IMPLEMENTATION_BOILERPLATE(LowerToPreMIRFunction)
+
 	struct IMPLEMENT_QUERY(LowerToMIRFunction, LowerToMIRFunctionResult) {
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
 			// first step: lowering to pre-mir (cfg+quad)
-			auto function_no_lifetime = lowerToPreMIRFunction(ctx, key.function);
+			auto function_no_lifetime = ImplementationOf_LowerToPreMIRFunction::build(ctx, key.function);
 
 			// second step: lifetime stuff
 			auto function_with_destructors
@@ -309,48 +325,37 @@ namespace compiler::mir {
 	};
 	QUERY_IMPLEMENTATION_BOILERPLATE(LowerToMIRFunction)
 
-	struct IMPLEMENT_QUERY(LowerToPreMIRFunction, LowerToMIRFunctionResult) {
-        static auto provide(Context& ctx, const QKey& key) -> PResult {
-            auto hout_func_q = ctx.query<helios::QueryCodeOfFun>(key);
-            if (hout_func_q.get()->hasFailed()) return query::Failed();
-
-            return lowerToPreMIRFunction(ctx, base::CRef<helios::HOUTFunction>(&hout_func_q.get()->valueOrPanic()));
-        }
-
-        QUERY_AUTO_CACHE_CREF
-    };
-    QUERY_IMPLEMENTATION_BOILERPLATE(LowerToPreMIRFunction)
-
 	ComptimeStatus isComptimeOnly(query::Context& ctx, helios::SymID sym_id) {
-        auto decl_q = ctx.query<helios::QueryDeclOfFun>(sym_id);
-        if (decl_q.get()->hasFailed()) return ComptimeStatus::Runtime;
-        const auto& decl = decl_q.get()->valueOrPanic();
+		auto decl_q = ctx.query<helios::QueryDeclOfFun>(sym_id);
+		if (decl_q.get()->hasFailed()) return ComptimeStatus::Runtime;
+		const auto& decl = decl_q.get()->valueOrPanic();
 
-        auto pst_elem_opt = decl.origin.getPSTElement();
-        if (!pst_elem_opt.has_value()) return ComptimeStatus::Runtime;
+		auto pst_elem_opt = decl.origin.getPSTElement();
+		if (!pst_elem_opt.has_value()) return ComptimeStatus::Runtime;
 
-        auto root_element = pst_elem_opt.value();
-        while (root_element.unlock(ctx)->getParent().has_value()) {
-            root_element = root_element.unlock(ctx)->getParent().value();
-        }
+		auto root_element = pst_elem_opt.value();
+		while (root_element.unlock(ctx)->getParent().has_value())
+			root_element = root_element.unlock(ctx)->getParent().value();
 
-        const auto& additional_root_data = root_element.unlock(ctx)->getAdditionalRootData();
+		const auto& additional_root_data = root_element.unlock(ctx)->getAdditionalRootData();
 
-        variant_match(additional_root_data.pst_parent) {
-            variant_case(::pst::AdditionalRootData::ModuleParent, module_parent) {
-                auto mod_id = base::anyCast<::compiler::frontend::ModuleID>(module_parent.module_id);
-                
-                auto module_comptime_map = ctx.query<ComptimeStatusCalculate>(mod_id);
-                if (module_comptime_map.get()->hasFailed()) return ComptimeStatus::Runtime;
-                
-                const auto& actual_map = module_comptime_map.get()->valueOrPanic().map;
-                if (actual_map.contains(sym_id)) return actual_map.at(sym_id);
-            }
-            variant_default {}
-        }
+		variant_match(additional_root_data.pst_parent) {
+			variant_case(::pst::AdditionalRootData::ModuleParent, module_parent) {
+				auto mod_id
+					= base::anyCast<::compiler::frontend::ModuleID>(module_parent.module_id);
 
-        return ComptimeStatus::Runtime;
-    }
+				auto module_comptime_map = ctx.query<ComptimeStatusCalculate>(mod_id);
+				if (module_comptime_map.get()->hasFailed()) return ComptimeStatus::Runtime;
+
+				const auto& actual_map = module_comptime_map.get()->valueOrPanic().map;
+				if (actual_map.contains(sym_id)) return actual_map.at(sym_id);
+			}
+			variant_default {}
+		}
+
+		return ComptimeStatus::Runtime;
+	}
+
 	query::QResult<ModuleComptimeMap> comptimeStatusCalculate(
 		query::Context& ctx, ::compiler::frontend::ModuleID mod_id
 	) {
@@ -370,7 +375,7 @@ namespace compiler::mir {
 			if (pre_mir_q.get()->hasFailed()) continue;
 
 			const Function& mir_func        = pre_mir_q.get()->valueOrPanic();
-			bool     is_patient_zero = false;
+			bool            is_patient_zero = false;
 
 			if (isComptimeOnlyType(mir_func.return_type.getType())) is_patient_zero = true;
 			if (!is_patient_zero) {
@@ -402,9 +407,10 @@ namespace compiler::mir {
 
 				for (const auto& instr: block.instructions) {
 					if (instr.operation == Operation::Call) {
-						auto callee = instr.arguments.at(0).get<compiler::mir::MIRFunctionLiteral>();
-                        helios::SymID callee_id = callee.helios_id;
-                        reverse_call_graph[callee_id].push_back(sym_id);
+						auto callee
+							= instr.arguments.at(0).get<compiler::mir::MIRFunctionLiteral>();
+						helios::SymID callee_id = callee.helios_id;
+						reverse_call_graph[callee_id].push_back(sym_id);
 					}
 				}
 			}

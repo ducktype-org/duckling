@@ -332,10 +332,25 @@ namespace compiler::mir {
 		if (instructions.empty()) return terminator;
 		return instructions.front();
 	}
+
 	bool isComptimeOnlyType(const tsh::AbstractType& type) {
 		using Kind = tsh::Kind;
 		auto k     = type.getKind();
 		return k == Kind::Meta || k == Kind::Namespace || k == Kind::Module
 		    || k == Kind::TypeTemplate;
+	}
+	bool isMetaOp(Operation op){
+		switch (op) {
+		case Operation::MetaCreateBox:
+		case Operation::MetaCreateRef:
+		case Operation::MetaCreateConst:
+		case Operation::MetaCreateTuple:
+		case Operation::MetaCreateVariant:
+		case Operation::MetaEq:
+		case Operation::MetaNeq:
+			return true;
+		default:
+			return false;
+		}
 	}
 }
