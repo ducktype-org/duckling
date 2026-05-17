@@ -2,9 +2,10 @@
 
 #include "../mir_structure/mir_structure.hpp"
 
+#include <frontend/module_tree/module_id.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/symbols/symbol_id.hpp>
-#include <frontend/module_tree/module_id.hpp>
+
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_result.hpp>
 
@@ -65,7 +66,9 @@ namespace compiler::mir {
 	/**
 	 * @brief Internal query, to calculate comptime status.
 	 */
-	DECLARE_QUERY(ComptimeStatusCalculate, ::compiler::frontend::ModuleID, CRef<ModuleComptimeMapResult>, ({}))
+	DECLARE_QUERY(
+		ComptimeStatusCalculate, ::compiler::frontend::ModuleID, CRef<ModuleComptimeMapResult>, ({})
+	)
 	/**
 	 * @brief Lower a HOUTFunction to a "Pre" MIRFunction.
 	 * It creates MIR function, but does not perform lifetime analysis and or any checks.

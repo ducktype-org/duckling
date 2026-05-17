@@ -13,8 +13,8 @@
 #include <mir_private/expr_lowering.hpp>
 #include <mir_private/mir_builders.hpp>
 #include <mir_private/stmt_lowering.hpp>
-#include <tsh/queries/types.hpp>
-
+#include <helios/tsh/queries/types.hpp>
+#include <helios/queries/function_queries.hpp>
 #include <base/str/str_utils.hpp>
 #include <frontend/pst_parser/lang_parser_element.hpp>
 #include <frontend/module_tree/queries.hpp>
@@ -248,7 +248,7 @@ namespace compiler::mir {
 			auto assign_instr = last_block->addHole();
 
 			auto lowerexpr_res = lowerExpr(
-				*global_init_expr->get(),
+				*global_init_expr,
 				last_block,
 				function_builder,
 				function_builder.getTopLevelScope()
@@ -329,17 +329,28 @@ namespace compiler::mir {
         auto pst_elem_opt = decl.origin.getPSTElement();
         if (!pst_elem_opt.has_value()) return ComptimeStatus::Runtime;
 
-        ::compiler::frontend::ModuleID mod_id = ::compiler::frontend::extendQueryModuleIDOfPST(ctx, pst_elem_opt.value());
+        auto root_element = pst_elem_opt.value();
+        while (root_element.unlock(ctx)->getParent().has_value()) {
+            root_element = root_element.unlock(ctx)->getParent().value();
+        }
 
-        auto module_comptime_map = ctx.query<ComptimeStatusCalculate>(mod_id);
-        if (module_comptime_map.get()->hasFailed()) return ComptimeStatus::Runtime;
-        
-        const auto& actual_map = module_comptime_map.get()->valueOrPanic().map;
-        if (actual_map.contains(sym_id)) return actual_map.at(sym_id);
+        const auto& additional_root_data = root_element.unlock(ctx)->getAdditionalRootData();
+
+        variant_match(additional_root_data.pst_parent) {
+            variant_case(::pst::AdditionalRootData::ModuleParent, module_parent) {
+                auto mod_id = base::anyCast<::compiler::frontend::ModuleID>(module_parent.module_id);
+                
+                auto module_comptime_map = ctx.query<ComptimeStatusCalculate>(mod_id);
+                if (module_comptime_map.get()->hasFailed()) return ComptimeStatus::Runtime;
+                
+                const auto& actual_map = module_comptime_map.get()->valueOrPanic().map;
+                if (actual_map.contains(sym_id)) return actual_map.at(sym_id);
+            }
+            variant_default {}
+        }
 
         return ComptimeStatus::Runtime;
-	}
-
+    }
 	query::QResult<ModuleComptimeMap> comptimeStatusCalculate(
 		query::Context& ctx, ::compiler::frontend::ModuleID mod_id
 	) {
