@@ -201,36 +201,32 @@ namespace compiler::mir {
 	}
 
 	base::OkBad validateNoComptimeTypes(query::Context& ctx, const Function& fun) {
-        variant_match(fun.helios_id) {
-            variant_case(FunctionSymID, f_id) { 
-                (void) ctx.query<IsComptimeOnly>(f_id.id); 
-            }
-            variant_default {}
-        }
-        if (fun.comptime_status == ComptimeStatus::ComptimeOnly) {
-            variant_match(fun.helios_id) {
-                variant_case(FunctionSymID, f_id) {
-                    if (helios::name(f_id.id) == base::StrID("main")) {
-                        ctx.logInt(makeBox<dia_int::PlaceholderError>(
-                            "The 'main' function cannot be marked as compile-time only.",
-                            ""
-                        ));
-                        return base::BAD;
-                    }
-                }
-                
-                variant_case(GlobalVariableCTOR, g_id) {
-                    ctx.logInt(makeBox<dia_int::PlaceholderError>(
-                        "Global variable constructors cannot be marked as compile-time only.",
-                        ""
-                    ));
-                    return base::BAD;
-                }
-            }
-        }
+		variant_match(fun.helios_id) {
+			variant_case(FunctionSymID, f_id) { (void) ctx.query<IsComptimeOnly>(f_id.id); }
+			variant_default {}
+		}
+		if (fun.comptime_status == ComptimeStatus::ComptimeOnly) {
+			variant_match(fun.helios_id) {
+				variant_case(FunctionSymID, f_id) {
+					if (helios::name(f_id.id) == base::StrID("main")) {
+						ctx.logInt(makeBox<dia_int::PlaceholderError>(
+							"The 'main' function cannot be marked as compile-time only.", ""
+						));
+						return base::BAD;
+					}
+				}
 
-        return base::OK;
-    }
+				variant_case(GlobalVariableCTOR, g_id) {
+					ctx.logInt(makeBox<dia_int::PlaceholderError>(
+						"Global variable constructors cannot be marked as compile-time only.", ""
+					));
+					return base::BAD;
+				}
+			}
+		}
+
+		return base::OK;
+	}
 
 	base::OkBad validateFunction(query::Context& ctx, const Function& fun) {
 		bool all_ok = validateMoves(ctx, fun).isOk() && validateShadowing(ctx, fun).isOk()
