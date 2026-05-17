@@ -71,17 +71,20 @@ pub enum PackageCompilationStrategy {
     /// Compile this task into a DVM file.
     // Name has to be `Dvm`, as `DVM` (with "snake_case") would be rendered as "d_v_m".
     Dvm {
-        /// Set an explicit output filename. By default `package_dvm` is used.
-        #[serde(skip_serializing_if = "Option::is_none")]
-        output_file: Option<PathBuf>,
+        /// Path to the output file.
+        output_file: PathBuf,
     },
-    Native {
+    /// Compile this task into a native binary.
+    #[serde(rename = "native")]
+    Binary {
         /// Path to the output file.
         output_file: PathBuf,
         /// Additional linking options.
         #[serde(skip_serializing_if = "Option::is_none")]
         linking_options: Option<LinkerOptions>,
     },
+    /// Compile this task into a `.a` library. Note, that the produced artifacts might reference
+    /// unresolved symbols (i.e. it can require additional produced `.a` libraries during linking).
     Lib {
         /// Path to the output file.
         output_file: PathBuf,
@@ -267,10 +270,6 @@ mod tests {
       "output_file": "out.dvm"
     },
     {
-      "package": "dep-hash",
-      "strategy": "dvm"
-    },
-    {
       "package": "dep2-hash",
       "strategy": "lib",
       "output_file": "out.so",
@@ -345,7 +344,7 @@ mod tests {
         vec![
             PackageCompilationTask {
                 package_id: "a".into(),
-                strategy: PackageCompilationStrategy::Native {
+                strategy: PackageCompilationStrategy::Binary {
                     output_file: PathBuf::from("out.exe"),
                     linking_options: Some(LinkerOptions::Complex(ComplexLinkerOptions {
                         linker: None,
@@ -356,14 +355,14 @@ mod tests {
             },
             PackageCompilationTask {
                 package_id: "a".into(),
-                strategy: PackageCompilationStrategy::Native {
+                strategy: PackageCompilationStrategy::Binary {
                     output_file: PathBuf::from("out.exe"),
                     linking_options: Some(LinkerOptions::RawLinkerArgs("-lfoo".into())),
                 },
             },
             PackageCompilationTask {
                 package_id: "a".into(),
-                strategy: PackageCompilationStrategy::Native {
+                strategy: PackageCompilationStrategy::Binary {
                     output_file: PathBuf::from("out.exe"),
                     linking_options: None,
                 },
@@ -371,12 +370,8 @@ mod tests {
             PackageCompilationTask {
                 package_id: "dep-hash".into(),
                 strategy: PackageCompilationStrategy::Dvm {
-                    output_file: Some(PathBuf::from("out.dvm")),
+                    output_file: PathBuf::from("out.dvm"),
                 },
-            },
-            PackageCompilationTask {
-                package_id: "dep-hash".into(),
-                strategy: PackageCompilationStrategy::Dvm { output_file: None },
             },
             PackageCompilationTask {
                 package_id: "dep2-hash".into(),
@@ -733,48 +728,48 @@ mod tests {
             PackageCompilationTask {
                 package_id: "lib_a".into(),
                 strategy: PackageCompilationStrategy::Dvm {
-                    output_file: Some(PathBuf::from("lib_a_dvm")),
+                    output_file: PathBuf::from("lib_a_dvm"),
                 },
             },
             PackageCompilationTask {
                 package_id: "lib_b".into(),
                 strategy: PackageCompilationStrategy::Dvm {
-                    output_file: Some(PathBuf::from("lib_b_dvm")),
+                    output_file: PathBuf::from("lib_b_dvm"),
                 },
             },
             PackageCompilationTask {
                 package_id: "lib_c".into(),
                 strategy: PackageCompilationStrategy::Dvm {
-                    output_file: Some(PathBuf::from("lib_c_dvm")),
+                    output_file: PathBuf::from("lib_c_dvm"),
                 },
             },
             PackageCompilationTask {
                 package_id: "app1".into(),
                 strategy: PackageCompilationStrategy::Dvm {
-                    output_file: Some(PathBuf::from("app1_dvm")),
+                    output_file: PathBuf::from("app1_dvm"),
                 },
             },
             PackageCompilationTask {
                 package_id: "app2".into(),
                 strategy: PackageCompilationStrategy::Dvm {
-                    output_file: Some(PathBuf::from("app2_dvm")),
+                    output_file: PathBuf::from("app2_dvm"),
                 },
             },
             PackageCompilationTask {
                 package_id: "app3".into(),
                 strategy: PackageCompilationStrategy::Dvm {
-                    output_file: Some(PathBuf::from("app3_dvm")),
+                    output_file: PathBuf::from("app3_dvm"),
                 },
             },
             PackageCompilationTask {
                 package_id: "app3_alias".into(),
                 strategy: PackageCompilationStrategy::Dvm {
-                    output_file: Some(PathBuf::from("app3_alias_dvm")),
+                    output_file: PathBuf::from("app3_alias_dvm"),
                 },
             },
             PackageCompilationTask {
                 package_id: "app1".into(),
-                strategy: PackageCompilationStrategy::Native {
+                strategy: PackageCompilationStrategy::Binary {
                     output_file: PathBuf::from("app1"),
                     linking_options: Some(LinkerOptions::RawLinkerArgs(
                         "build/lib_a.a build/lib_c.a build/lib_b.a".into(),
@@ -783,7 +778,7 @@ mod tests {
             },
             PackageCompilationTask {
                 package_id: "app2".into(),
-                strategy: PackageCompilationStrategy::Native {
+                strategy: PackageCompilationStrategy::Binary {
                     output_file: PathBuf::from("app2"),
                     linking_options: Some(LinkerOptions::Complex(ComplexLinkerOptions {
                         linker: None,
@@ -794,7 +789,7 @@ mod tests {
             },
             PackageCompilationTask {
                 package_id: "app3".into(),
-                strategy: PackageCompilationStrategy::Native {
+                strategy: PackageCompilationStrategy::Binary {
                     output_file: PathBuf::from("app3"),
                     linking_options: Some(LinkerOptions::Complex(ComplexLinkerOptions {
                         linker: None,
@@ -807,7 +802,7 @@ mod tests {
             },
             PackageCompilationTask {
                 package_id: "app3_alias".into(),
-                strategy: PackageCompilationStrategy::Native {
+                strategy: PackageCompilationStrategy::Binary {
                     output_file: PathBuf::from("app3_alias"),
                     linking_options: Some(LinkerOptions::Complex(ComplexLinkerOptions {
                         linker: None,
