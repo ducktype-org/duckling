@@ -27,7 +27,7 @@ pub struct Package {
     /// unique id.
     /// Has to be unique in terms of the entire [`packages`](DuckcMultiPackage::packages) vector.
     pub id: StrId,
-    /// Version of a package we're currently compiling.
+    /// Version of the package we're currently compiling.
     pub version: Version,
     /// Enabled features for this package.
     pub features: Vec<FeatureName>,
@@ -42,10 +42,10 @@ pub struct Package {
 /// A single package's dependency, in a duckc-friendly format.
 pub struct Dependency {
     #[serde(rename = "name")]
-    /// ID of a package. Note, that there must a package with `id = self.id` in a [`packages`](DuckcMultiPackage::packages) vector.
+    /// ID of the dependency. Note, that there must a package with `id = self.id` in a [`packages`](DuckcMultiPackage::packages) vector.
     pub id: StrId,
     #[serde(rename = "alias", skip_serializing_if = "Option::is_none")]
-    /// How should this package be named, when resolving imports.
+    /// How should this dependency be named, when resolving imports.
     pub explicit_import_name: Option<StrId>,
 }
 
