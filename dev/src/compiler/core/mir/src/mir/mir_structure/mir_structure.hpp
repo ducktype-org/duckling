@@ -133,6 +133,33 @@ namespace compiler::mir {
 
 ID_STD_HASH(::compiler::mir::BlockID);
 
+/**
+ * @brief These are flag types attached to the MIRLocal
+ * used to mark that we want some behaviour in the MIR passes or not on the variable.
+ *
+ * May also denote some properties of the variable, like whether it is a return value or not.
+ */
+MAKE_FLAG_TYPE(compiler::mir, LifetimeFlag, LifetimeFlags,
+	/// We do not generate destructor for this local.
+	/// Used by the return value temporary, as it's destructor would have to be after the return.
+	NoDestructor,
+
+	/// Do not validate use-after-free for this local. Currently not used.
+	NoUseAfterFreeValidation,
+
+	/// We do not add the `ScopeStart` and `ScopeEnd` flags for this local.
+	/// Used for return value and parameters, as their scope is always valid in the function.
+	NoScopeFlags,
+
+	/// Mark this local as a return value temporary, which can be used by the pipeline to handle it differently.
+	/// DVM treats the return value tmp differently.
+	ReturnTmpValue,
+	
+	/// Mark this local as a condition temporary, which can be used by the pipeline to handle it differently.
+	/// Not used.
+	ConditionTmpValue
+)
+
 namespace compiler::mir {
 	struct MIRValue;
 
@@ -153,7 +180,7 @@ namespace compiler::mir {
 		helios::SymID helios_id;
 	};
 
-	STRONG_TYPEDEF_ID(LocalID);
+	STRONG_TYPEDEF_ID_DIRECT_CREATION(LocalID);
 
 	/**
 	 * @brief Description of a MIR Local variable, like a function argument or simply local
@@ -190,6 +217,7 @@ namespace compiler::mir {
 		 */
 		base::Optional<ScopeRef> scope;
 
+		LifetimeFlags lifetime_flags{};
 		/**
 		 * If this local is a function parameter, this field contains the index of the parameter.
 		 */
@@ -202,25 +230,35 @@ namespace compiler::mir {
 		/**
 		 * @brief Constructor for a local variables with a HELIOS SymID.
 		 */
-		MIRLocal(helios::SymID helios_id, tsh::SymbolType<> type):
-			  id(LocalID::next()),
+		MIRLocal(
+			LocalID id, helios::SymID helios_id, tsh::SymbolType<> type, LifetimeFlags lifetime_flags
+		):
+			  id(id),
 			  helios_id(helios_id),
-			  type(type) {}
+			  type(type),
+			  lifetime_flags(lifetime_flags) {}
 
 		/**
 		 * @brief Constructor for a local variables with a HELIOS SymID that are the function
 		 * parameters.
 		 */
-		MIRLocal(helios::SymID helios_id, tsh::SymbolType<> type, u64 parameter_index):
-			  id(LocalID::next()),
+		MIRLocal(
+			LocalID           id,
+			helios::SymID     helios_id,
+			tsh::SymbolType<> type,
+			LifetimeFlags     lifetime_flags,
+			u64               parameter_index
+		):
+			  id(id),
 			  helios_id(helios_id),
 			  type(type),
+			  lifetime_flags(lifetime_flags),
 			  parameter_index(parameter_index) {}
 
 		/**
 		 * @brief Constructor for temporary values.
 		 */
-		MIRLocal(tsh::SymbolType<> type): id(LocalID::next()), helios_id({}), type(type) {}
+		MIRLocal(LocalID id, tsh::SymbolType<> type): id(id), helios_id({}), type(type) {}
 
 		/**
 		 * Setter of lifetime scope of this local.
@@ -541,7 +579,7 @@ namespace compiler::mir {
 	 * * does operation move some variable
 	 */
 	struct OperationFlag final {
-		enum class Flag { Construct, Destruct, Move };
+		enum class Flag { ScopeStart, ScopeEnd, Construct, Destruct, Move };
 		Flag        flag;
 		MIRLocalRef local;
 
@@ -603,6 +641,7 @@ namespace compiler::mir {
 		std::vector<MIRValue> arguments;
 
 		// construct, destruct, move.
+		// the order is significant for the `ScopeStart` and `ScopeEnd` flags
 		std::vector<OperationFlag> flags;
 
 		InstrParameters extra_params{ NoInstrParameters{} };
@@ -678,6 +717,13 @@ namespace compiler::mir {
 
 		[[nodiscard]]
 		ScopeRef beginScope() const;
+
+		/**
+		 * @brief Returns the first instruction of the block.
+		 * It may be the terminator instruction if the block is empty,
+		 * but it always exists, because every block has to have a terminator instruction.
+		 */
+		[[nodiscard]] Instruction& firstInstruction();
 	};
 
 	struct FunctionSymID final {

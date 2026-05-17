@@ -14,10 +14,12 @@ use crate::quackpack::core::storage::freeze::VenvFreeze;
 use crate::quackpack::core::storage::paths::Storage;
 use crate::quackpack::core::{FeatureName, PackageContext};
 
+pub mod artifacts_layout;
 pub mod compiler_package;
 pub mod duckc;
 pub mod early_dag;
 pub mod profiles;
+
 use duckc::*;
 use early_dag::*;
 

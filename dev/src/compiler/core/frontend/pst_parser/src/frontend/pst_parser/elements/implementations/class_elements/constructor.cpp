@@ -8,14 +8,15 @@ namespace pst {
 	MBox<Constructor> Constructor::parse(LangParserState& state) {
 		auto out = makeBox<Constructor>(state);
 
+		CORE_ASSERT(state[0].is(state.getContext()->class_name), "Bad constructor parsing entry");
+
 		PARSE().eatOne();
 
-		if (state[0].isBracketGroup(Token::Round))
-			out->kind = tpc::Identifier{ .value = base::StrID("create") };
-		else {
-			tpc::Identifier ident;
+		if (!state[0].isBracketGroup(Token::Round)) {
+			MBox<IdentifierWrapper> ident;
 			PARSE().all(NamedOperator::Period, &ident);
-			out->kind = ident;
+			out->ident.emplace();
+			PARSE().assign(&out->ident, std::move(ident));
 		}
 
 		PARSE().one(&out->params);
@@ -32,7 +33,7 @@ namespace pst {
 	void Constructor::dprint(std::ostream& out) const {
 		out << "{";
 		out << "\"name\":";
-		out << "\"" << getName().strView() << "\"";
+		out << "\"" << getInternalSymbolName().value().str() << "\"";
 		out << ",\"params\":";
 		nullAwareDprint(params, out);
 		out << ",\"inits\":";

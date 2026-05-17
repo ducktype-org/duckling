@@ -6,13 +6,15 @@
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/tsh/queries/types.hpp>
+#include <helios/tsh/types.hpp>
 
 #include <base/except/exceptions.hpp>
+#include <base/str/str_utils.hpp>
 
 namespace compiler::helios {
 	namespace defgen {
 		base::Bit256 GeneratedSymbolData::ImplicitConstructor::queryUnstablePerfectHash() const {
-			return { class_symbol.queryUnstablePerfectHash() };
+			return { target_type.queryUnstablePerfectHash() };
 		}
 
 		base::Bit256 GeneratedSymbolData::DefaultClassConstructor::queryUnstablePerfectHash() const {
@@ -34,6 +36,10 @@ namespace compiler::helios {
 
 		base::Bit256 GeneratedSymbolData::SelfParameter::queryUnstablePerfectHash() const {
 			return { method_symbol.queryUnstablePerfectHash(), scope.queryUnstablePerfectHash() };
+		}
+
+		base::Bit256 GeneratedSymbolData::Field::queryUnstablePerfectHash() const {
+			return { parent_type.queryUnstablePerfectHash(), index };
 		}
 
 		base::Bit256 GeneratedSymbolData::Variable::queryUnstablePerfectHash() const {
@@ -66,19 +72,15 @@ namespace compiler::helios {
 		tsh::SymbolType<> GeneratedSymbolData::getType(query::Context& ctx) const {
 			variant_match(data) {
 				variant_case(ImplicitConstructor, ctor) {
-					const auto class_type
-						= ctx.query<QueryTypeFromDefinition>({ ctor.class_symbol })
-					          ->valueOrThrow()
-					          .getType()
-					          .as<tsh::ClassAbstractType>();
+					const auto target_type = ctor.target_type;
 
 					// @TODO: #1328 Properly handle value categories in class constructors.
-					auto class_fields = class_type.getInterface(ctx)->getFieldsView();
+					auto fields = target_type.getInterface(ctx)->getFieldsView();
 					std::vector<tsh::SymbolType<>> param_types;
-					for (const auto& field: class_fields) param_types.push_back(field.getType(ctx));
+					for (const auto& field: fields) param_types.push_back(field.getType(ctx));
 
 					const tsh::SymbolType<> return_type{
-						class_type,
+						target_type,
 						tsh::ReferenceKind::Direct,
 						tsh::Mutability::Mutable,
 					};
@@ -164,6 +166,17 @@ namespace compiler::helios {
 					};
 					return param_symbol_type;
 				}
+				variant_case(Field, field) {
+					// @TODO: #2515 Implament other cases
+					switch (field.parent_type.getKind()) {
+					case tsh::Kind::Tuple:
+						return field.parent_type.as<tsh::TupleAbstractType>().getComponents().at(
+							field.index
+						);
+					default:
+						CORE_UNREACHABLE();
+					}
+				}
 				variant_case(Variable, var) { return var.type; }
 				variant_case(ReplExpressionWrapper, repl) {
 					const auto function_abstract_type = ctx.query<tsh::QueryFunctionType>({
@@ -228,6 +241,9 @@ namespace compiler::helios {
 					CORE_PANIC("Can't get scope of generated parameter yet.");
 				}
 				variant_case(SelfParameter, param) { return param.scope; }
+				variant_case(Field, field) {
+					CORE_PANIC("Can't get scope of generated field yet.");
+				}
 				variant_case(Variable, var) {
 					CORE_PANIC("Can't get scope of generated variable yet.");
 				}
@@ -251,6 +267,7 @@ namespace compiler::helios {
 				variant_case(BuiltinOperator, op) { return {}; }
 				variant_case(Parameter, param) { return {}; }
 				variant_case(SelfParameter, param) { return param.scope; }
+				variant_case(Field, field) { return {}; }
 				variant_case(Variable, var) { return {}; }
 				variant_case(ReplExpressionWrapper, repl) { return {}; }
 				variant_case(ReplInstructionWrapper, repl) { return {}; }
@@ -307,6 +324,7 @@ namespace compiler::helios {
 			variant_case_novalue(defgen::GeneratedSymbolData::SelfParameter) {
 				kind = SymbolKind::Parameter;
 			}
+			variant_case_novalue(defgen::GeneratedSymbolData::Field) { kind = SymbolKind::Field; }
 			variant_case_novalue(defgen::GeneratedSymbolData::Variable) {
 				kind = SymbolKind::Variable;
 			}

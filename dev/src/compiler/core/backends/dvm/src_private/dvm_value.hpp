@@ -87,10 +87,24 @@ namespace compiler::backend_vm::internal {
 	public:
 		enum class AccessKind : uint8_t { Direct, Pointer };
 
-		DVMPlace(base::StrID name, vm::code::TypeOfData type, AccessKind access_kind):
+		/**
+		 * Some places have special meaning, like ReturnValue, knowing this allows for
+		 * better codegen (for example in return instruction).
+		 *
+		 * The `ConditionTmp` kind is not currently used.
+		 */
+		enum class SpecialKind : uint8_t { ReturnValue, ConditionTmp, Normal };
+
+		DVMPlace(
+			base::StrID          name,
+			vm::code::TypeOfData type,
+			AccessKind           access_kind,
+			SpecialKind          special_kind = SpecialKind::Normal
+		):
 			  name(name),
 			  type(std::move(type)),
-			  access_kind(access_kind) {}
+			  access_kind(access_kind),
+			  special_kind(special_kind) {}
 
 		bool operator==(const DVMPlace& other) const = default;
 		operator vm::opargs::OpCodeArg() const;
@@ -101,6 +115,12 @@ namespace compiler::backend_vm::internal {
 
 		DVMPlace withAccessKind(AccessKind kind) { return { name, type, kind }; }
 
+		DVMPlace withSpecialKind(SpecialKind special) {
+			return { name, type, access_kind, special };
+		}
+
+		[[nodiscard]] SpecialKind getSpecialKind() const { return special_kind; }
+
 		[[nodiscard]] vm::opargs::OpCodeArg asArgument() const;
 		[[nodiscard]] vm::opargs::OpCodeArg asAnyArgument() const;
 
@@ -108,6 +128,7 @@ namespace compiler::backend_vm::internal {
 		base::StrID          name;
 		vm::code::TypeOfData type;
 		AccessKind           access_kind;
+		SpecialKind          special_kind;
 	};
 
 	class DVMValue {

@@ -18,6 +18,9 @@ add_library(Driver
 	src/driver/operations/generic_operations.cpp
 	src/driver/initialize.cpp
 	src/driver/exit.cpp
+	src/driver/diagnostics/log_helpers.cpp
+	src/driver/manifest/manifest.cpp
+	src/driver/task/task.cpp
 	src/driver/repl_utils/repl_dvm_helpers.cpp
 	src/driver/repl_utils/script_helpers.cpp
 	src/driver/repl_utils/repl_split_helpers.cpp
@@ -28,9 +31,11 @@ add_library(Driver
 
 add_dependencies(Driver builtins_embeds)
 
-make_module(Driver USES Base QueryFramework SystemCommand HELIOS MIR LIR LLVMBackend DVMBackend LibVM Artifacts GlobalState Lexer Diagnostic Linker ModuleTree CompilerTimeStats Repl)
+make_module(Driver USES Base QueryFramework SystemCommand HELIOS MIR LIR LLVMBackend DVMBackend LibVM Artifacts GlobalState Lexer Diagnostic Linker Archiver ModuleTree Packages CompilerTimeStats Repl JSON)
 
 duck_add_test(compiler driver tests/driver_test.cpp USES Driver Artifacts)
+duck_add_test(compiler manifest_json tests/manifest_json_test.cpp USES Driver)
+duck_add_test(compiler driver_packages tests/driver_packages_test.cpp USES Driver Artifacts)
 duck_add_test_custom(compiler incremental_mark_nodes_test1 tests/incremental_mark_nodes_test1.cpp USES Driver Artifacts)
 duck_add_test_custom(compiler incremental_mark_nodes_test2 tests/incremental_mark_nodes_test2.cpp USES Driver Artifacts)
 duck_add_test_custom(compiler incremental_mark_nodes_test3 tests/incremental_mark_nodes_test3.cpp USES Driver Artifacts)
