@@ -117,6 +117,10 @@ namespace vm::persistent {
 		constexpr static MemoryStateID EMPTY = MemoryStateID{ u64(detail::SegmentTree::EMPTY) };
 
 		using ConflictPolicy = std::function<base::Optional<usize>(usize, usize, usize)>;
+		inline const static ConflictPolicy DEFAULT_CONFLICT_POLICY
+			= ConflictPolicy{ [](usize, usize, usize) -> base::Optional<usize> {
+				  throw std::invalid_argument("no conflicts allowed");
+			  } };
 
 		/**
 		 * @brief sets multiple values at certain idxs
@@ -160,7 +164,11 @@ namespace vm::persistent {
 		/**
 		 * @brief merge two instances of memory, accoring to conflict policy
 		 */
-		MemoryStateID merge(MemoryStateID root_1, MemoryStateID root_2, ConflictPolicy policy);
+		MemoryStateID merge(
+			MemoryStateID  root_1,
+			MemoryStateID  root_2,
+			ConflictPolicy policy = DEFAULT_CONFLICT_POLICY
+		);
 
 		/**
 		 * @brief erase all the active idx which are outside of given interval

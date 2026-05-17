@@ -16,8 +16,6 @@
 #include <ranges>
 #include <stdexcept>
 #include <type_traits>
-#include <unordered_set>
-#include <vector>
 
 namespace vm::persistent::detail {
 	STRONG_TYPEDEF_INT(NodeID, usize);
@@ -109,7 +107,12 @@ namespace vm::persistent::detail {
 		 * @note empty position has position higher than everyone else
 		 */
 		static constexpr usize heightFromPos(posT pos) {
-			return POS_T_SIZE - usize(std::bit_width(pos));
+			auto depth = usize(std::bit_width(pos));
+			CORE_ASSERT(
+				depth <= POS_T_SIZE, "depth is always smaller then bit-length of memory address"
+			);
+
+			return POS_T_SIZE - depth;
 		}
 
 		/**
@@ -120,49 +123,136 @@ namespace vm::persistent::detail {
 		static constexpr idxT offsetFromPos(posT pos) {
 			auto h = heightFromPos(pos);
 			if (h >= POS_T_SIZE) return 0;
-			return (pos << h) & OFFSET_MASK;
+
+			auto shifted = (pos << h);
+			CORE_ASSERT(shifted & TOP_BIT, "After the shift, top bit must be set");
+
+			auto ans = shifted & OFFSET_MASK;
+			CORE_ASSERT(ans < IDX_END, "Returned idx must be smaller than end of idxs");
+
+			return ans;
 		}
 
 		/**
 		 * @brief helper function for getting height of lca for two tree positions
+		 * @note when one of the given positions is 0, then we return the height of the other
+		 * @note when both positions are 0, returned height is `POS_T_SIZE`
 		 */
 		static constexpr usize getLCAHeight(posT pos_1, posT pos_2) {
 			if (pos_1 > pos_2) std::swap(pos_1, pos_2);
 			auto h_2 = heightFromPos(pos_2);
+
 			if (pos_1 == 0) return h_2;
+			CORE_ASSERT(pos_1 && pos_2, "At this point, both positions are non-empty");
+
 			auto h_1 = heightFromPos(pos_1);
-			CORE_ASSERT(h_1 >= h_2, "pos_1 should be higher tahn pos_2");
+			CORE_ASSERT(h_1 >= h_2, "At this point, pos_1 should be higher than pos_2");
+
 			pos_2 >>= (h_1 - h_2);
-			return h_1 + (usize) std::bit_width(pos_1 ^ pos_2);
+			CORE_ASSERT(
+				std::bit_width(pos_1) == std::bit_width(pos_2),
+				"At this point, both positions must be at the same depth"
+			);
+
+			auto ans = (usize) std::bit_width(pos_1 ^ pos_2);
+			CORE_ASSERT(
+				(pos_1 >> ans) == (pos_2 >> ans),
+				"Since both are at the same height, they must be equal if we shift by partial "
+				"result"
+			);
+
+			ans += h_1;
+			return ans;
 		}
 
 		/**
 		 * @brief helper function for getting position of lca for two tree positions
+		 * @note when one of the given positions is 0, then we return the position of the other
 		 */
 		static constexpr posT getLCAPos(posT pos_1, posT pos_2) {
+			if (pos_1 == 0 && pos_2 == 0) return 0;
 			if (pos_1 == 0) std::swap(pos_1, pos_2);
+
+			CORE_ASSERT(pos_1 != 0, "At this point, pos_1 cannot be 0");
+
 			usize lca_h = getLCAHeight(pos_1, pos_2);
 			usize h_1   = heightFromPos(pos_1);
+			CORE_ASSERT(lca_h >= h_1, "Height of lca must be >= than height of first node");
+
 			return pos_1 >> (lca_h - h_1);
 		}
 
 		/**
 		 * @brief helper function for determining if one position in subtree of another
+		 * @note when maybe_child is zero, function will always return true
+		 * @note unless maybe child is zero, root == 0 implies that function will return false
 		 */
 		static constexpr bool inSubtree(posT maybe_child, posT root) {
 			return (root == getLCAPos(root, maybe_child));
 		}
 
+		/**
+		 * @brief helper function for determining first node, whose subtree fits within range
+		 * [left_idx, right_idx) interval
+		 */
 		static constexpr posT firstNodeForRange(idxT left_idx, idxT right_idx) {
-			CORE_ASSERT(left_idx <= right_idx, "Received wrong interval");
+			CORE_ASSERT(left_idx < right_idx, "Received wrong invalid/empty");
 			CORE_ASSERT(right_idx <= IDX_END, "Expecting a valid interval");
+			CORE_ASSERT((left_idx & TOP_BIT) == 0, "Follows from previous assertions");
 
-			auto right_guard = right_idx & OFFSET_MASK;  // to handle right_idx == IDX_END
-			auto left_pos    = left_idx | TOP_BIT;
+			auto left_pos   = left_idx | TOP_BIT;
+			auto max_height = (usize) std::bit_width(left_pos & (-left_pos));
 
-			// max_height == height of lsb or TOP_BIT when left_idx == 0
-			auto max_height     = (usize) std::bit_width(left_pos & (-left_pos));
+			CORE_ASSERT(
+				max_height > 0, "There must be at least one 1 in binary representation of left_pos"
+			);
+			CORE_ASSERT(
+				max_height <= POS_T_SIZE, "General limit on the height of node is size of address"
+			);
+			CORE_ASSERT(
+				(left_idx == 0) == (max_height == POS_T_SIZE),
+				"max_height == size of address if and only if left_idx == 0"
+			);
+
+			if (usize lsb_idx = max_height - 1; true) {
+				posT mask = 1;
+				mask <<= lsb_idx;
+				CORE_ASSERT(mask & left_pos, "max_height digit from right is 1");
+
+				mask -= 1;
+				CORE_ASSERT(
+					(mask & left_pos) == 0, "all bits with idx smaller tha (max_height - 1) are 0"
+				);
+			}
+
+			auto right_guard = right_idx & OFFSET_MASK;
+			CORE_ASSERT(
+				(right_guard != right_idx) == (right_idx == IDX_END),
+				"we modify right_guard only when right_idx == IDX_END"
+			);
+
 			auto height_of_diff = (usize) std::bit_width(left_idx ^ right_guard);
+
+			CORE_ASSERT(height_of_diff > 0, "indexes must differ on at least one position");
+			CORE_ASSERT(height_of_diff < POS_T_SIZE, "the difference cannot be at the top bit");
+
+			if (usize diff_idx = height_of_diff - 1; true) {
+				posT diff_bit = 1;
+				diff_bit <<= diff_idx;
+				CORE_ASSERT(
+					(diff_bit & left_idx) != (diff_bit & right_guard),
+					"left idx and right_guard must differ at diff_idx"
+				);
+				CORE_ASSERT(
+					((diff_bit & left_idx) != 0) == (right_idx == IDX_END),
+					"The only case when left_idx has 1 at diff_idx is when right_idx was end"
+				);
+				CORE_ASSERT(
+					left_idx >> height_of_diff == right_guard >> height_of_diff,
+					"After shifting by the height of difference, both left_idx and right guard are "
+					"the same"
+				);
+			}
 
 			usize final_height = std::min(height_of_diff, max_height) - 1;
 
@@ -170,10 +260,10 @@ namespace vm::persistent::detail {
 		}
 
 		/**
-		 * @brief Get the tree psitions of nodes responsible for range [lefft_idx, right_idx)
+		 * @brief Get the tree positions of nodes responsible for range [lefft_idx, right_idx)
 		 */
 		static constexpr std::deque<posT> getPosForRange(idxT left_idx, idxT right_idx) {
-			CORE_ASSERT(left_idx <= right_idx, "Received wrong interval");
+			CORE_ASSERT(left_idx < right_idx, "Received wrong invalid/empty");
 			CORE_ASSERT(right_idx <= IDX_END, "Expecting a valid interval");
 
 			std::deque<posT> ans = {};
@@ -182,6 +272,11 @@ namespace vm::persistent::detail {
 				posT pos = firstNodeForRange(left_idx, right_idx);
 				ans.emplace_back(pos);
 				auto height = heightFromPos(pos);
+
+				CORE_ASSERT(
+					height < POS_T_SIZE, "height for valid nodes is smaller than size of address"
+				);
+
 				left_idx += (idxT(1) << height);
 			}
 
@@ -196,7 +291,7 @@ namespace vm::persistent::detail {
 		 * determine qualifiers
 		 */
 		template<typename segTreeT>
-		requires SameWNoQual<SegmentTree, segTreeT> struct ReconstructCtx {
+		requires SameWNoQual<SegmentTree, segTreeT> struct RebuildCtx {
 			segTreeT* mem;
 			posT      root_pos{};
 			posT      node_pos{};
@@ -217,7 +312,14 @@ namespace vm::persistent::detail {
 				usize lca_h       = getLCAHeight(desired_pos, node_pos);
 				usize h           = heightFromPos(node_pos);
 				usize height_diff = lca_h - h;
-				for (usize i = (desired_pos == root_pos ? 0 : 1); i < height_diff; i++) {
+
+				usize depth_to_lca = (desired_pos == root_pos ? 0 : 1);
+				CORE_ASSERT(
+					siblings.size() >= height_diff,
+					"Rebuild ctx must have enough siblings to elavate to lca level"
+				);
+
+				for (usize i = depth_to_lca; i < height_diff; i++) {
 					if constexpr (RECONSTRUCT) {
 						auto left = node, right = siblings.front();
 						if (node_pos & 1) std::swap(left, right);
@@ -226,16 +328,21 @@ namespace vm::persistent::detail {
 						node = ancestors.front();
 						ancestors.pop_front();
 					}
+
 					siblings.pop_front();
 					node_pos >>= 1;
 				}
 
 				if (!inSubtree(desired_pos, node_pos)) {
-					CORE_ASSERT(siblings.size(), "We need to have at least one sibling");
+					CORE_ASSERT(
+						siblings.size(),
+						"We need to have at least one sibling (the one at our current height)"
+					);
 					std::swap(node, siblings.front());
 					node_pos ^= 1;
 				}
 
+				CORE_ASSERT(node_pos != 0, "we are not in position of empty node");
 				CORE_ASSERT(inSubtree(desired_pos, node_pos), "we are above desired pos");
 
 				while (node_pos != desired_pos) {
@@ -279,19 +386,26 @@ namespace vm::persistent::detail {
 			 */
 			[[nodiscard]]
 			std::pair<usize, std::deque<std::pair<posT, NodeID>>> inOrder(posT upto_here) const {
+				CORE_ASSERT(
+					inSubtree(node_pos, upto_here),
+					"Passed argument should be an ancestor of current position"
+				);
+
+				CORE_ASSERT(
+					inSubtree(upto_here, root_pos),
+					"Passed argument should be a descendant of the root"
+				);
+
 				std::deque<std::pair<posT, NodeID>> ans = {};
-				{
-					auto before = getSiblingsOnSide(Dir::Left, upto_here);
-					for (auto el: before) ans.emplace_back(el);
-				}
+
+				auto before = getSiblingsOnSide(Dir::Left, upto_here);
+				for (auto el: before) ans.emplace_back(el);
 
 				usize idx = ans.size();
 				ans.emplace_back(node_pos, node);
 
-				{
-					auto after = getSiblingsOnSide(Dir::Right, upto_here);
-					for (auto el: after) ans.emplace_back(el);
-				}
+				auto after = getSiblingsOnSide(Dir::Right, upto_here);
+				for (auto el: after) ans.emplace_back(el);
 
 				return { idx, ans };
 			}
@@ -323,12 +437,16 @@ namespace vm::persistent::detail {
 						"current position must remain inside the subtree of target root"
 					);
 
-					if (bool(cur_pos & 1) == (dir == Dir::Left))
-						ans.emplace_front(cur_pos ^ 1, sibling);
+					bool is_right     = (cur_pos & 1);
+					bool wants_left   = (dir == Dir::Left);
+					bool take_sibling = (is_right == wants_left);
+
+					if (take_sibling) ans.emplace_front(cur_pos ^ 1, sibling);
+
 					cur_pos >>= 1;
 				}
 
-				if (dir != Dir::Right) std::ranges::reverse(ans);
+				if (dir == Dir::Right) std::ranges::reverse(ans);
 
 				return ans;
 			}
@@ -337,7 +455,7 @@ namespace vm::persistent::detail {
 		BijectiveMap<ChildEntry, NodeID, ChildEntryH> child_entries{};
 		BijectiveMap<LeafEntry, NodeID, LeafEntryH>   leaf_entries{};
 
-		base::HashMap<NodeID, BranchEntry> root_info{};
+		base::HashMap<NodeID, BranchEntry> branch_info{};
 		NodeID                             next_node_id = NodeID{ 1 };
 
 	protected:
@@ -358,6 +476,7 @@ namespace vm::persistent::detail {
 			 * @note works even if Path was pointing to idx which wasn't active in `root` state of
 			 * Memory
 			 */
+			[[nodiscard("When is false, the path must be discarded")]]
 			bool moveToValid(Dir move_dir, usize skip = 0) {
 				CORE_ASSERT(trace.size(), "there must be a leaf on the path");
 
@@ -369,7 +488,10 @@ namespace vm::persistent::detail {
 
 					usize orig_idx = idx;
 					if (idx & mask) idx ^= mask;
-					if (bool(orig_idx & mask) == (move_dir == Dir::Right)) continue;
+
+					bool is_right   = orig_idx & mask;
+					bool goes_right = (move_dir == Dir::Right);
+					if (is_right == goes_right) continue;
 
 					auto right = mem->getChild(move_dir, node_id);
 					if (auto amount = mem->getSize(right); amount <= skip)
@@ -433,9 +555,9 @@ namespace vm::persistent::detail {
 		 * subtree
 		 */
 		std::pair<usize, idxT> getHeightOffset(NodeID state) const {
-			if_opt_some(root_info.atMaybeCopy(state), entry) {
+			if_opt_some(branch_info.atMaybeCopy(state), entry) {
 				auto pos = entry.position;
-				CORE_ASSERT(!(pos & LEAF_MASK), "top bit would imply that node is leaf");
+				CORE_ASSERT((pos & LEAF_MASK) == 0, "Branch position must have designated bit off");
 
 				return {
 					heightFromPos(pos),
@@ -455,7 +577,13 @@ namespace vm::persistent::detail {
 		 * @brief Return number of active leaves in subtree
 		 */
 		usize getSize(NodeID state) const {
-			if_opt_some(root_info.atMaybeCopy(state), entry) { return entry.size; }
+			if_opt_some(branch_info.atMaybeCopy(state), entry) {
+				CORE_ASSERT(
+					(entry.size == 0) == (state == EMPTY),
+					"the only branch which is empty has a designated ID"
+				);
+				return entry.size;
+			}
 			if_opt_some(leaf_entries.atRightOpt(state), _) { return 1UL; }
 			CORE_UNREACHABLE();
 		}
@@ -464,8 +592,17 @@ namespace vm::persistent::detail {
 		 * @brief Return position in the tree of given node
 		 */
 		posT getPos(NodeID state) const {
-			if_opt_some(root_info.atMaybeCopy(state), entry) { return entry.position; }
-			if_opt_some(leaf_entries.atRightOpt(state), entry) { return LEAF_MASK | entry.idx; }
+			if_opt_some(branch_info.atMaybeCopy(state), entry) {
+				CORE_ASSERT(
+					(entry.position & LEAF_MASK) == 0, "Branch position must have designated bit off"
+				);
+				return entry.position;
+			}
+			if_opt_some(leaf_entries.atRightOpt(state), entry) {
+				CORE_ASSERT((entry.idx & LEAF_MASK) == 0, "Leaf idx must have designated bit off");
+
+				return LEAF_MASK | entry.idx;
+			}
 			CORE_UNREACHABLE();
 		}
 
@@ -473,10 +610,24 @@ namespace vm::persistent::detail {
 		 * @brief Return idx of leftmost and rightmost idx of active leavs in fiven subtree
 		 */
 		std::pair<idxT, idxT> getRange(NodeID state) const {
-			if_opt_some(root_info.atMaybeCopy(state), entry) {
+			if_opt_some(branch_info.atMaybeCopy(state), entry) {
+				CORE_ASSERT(
+					entry.left_bound <= entry.right_bound, "Branch bounds should have a valid range"
+				);
+				CORE_ASSERT(
+					(state == EMPTY) == (entry.left_bound == entry.right_bound),
+					"should have an empty range only for a designated ID"
+				);
+
+				CORE_ASSERT(
+					entry.right_bound <= IDX_END, "Right bound must be smaller than end of idxs"
+				);
+
 				return { entry.left_bound, entry.right_bound };
 			}
 			if_opt_some(leaf_entries.atRightOpt(state), entry) {
+				CORE_ASSERT(entry.idx < IDX_END, "Leaf idx must be smaller than end of idxs");
+
 				return { entry.idx, entry.idx + 1 };
 			}
 			CORE_UNREACHABLE();
@@ -502,14 +653,16 @@ namespace vm::persistent::detail {
 		 * @brief Checks if the id is a valid root of some tree
 		 */
 		void validateRoot(NodeID root, bool weird_root = false) const {
-			if (!root_info.contains(root) && !leaf_entries.atRightOpt(root))
+			if (!branch_info.contains(root) && !leaf_entries.atRightOpt(root))
 				throw std::invalid_argument("got invalid state");
 
 			if (root == EMPTY) return;
+
 			auto size             = (idxT) getSize(root);
 			auto [height, offset] = getHeightOffset(root);
 			CORE_ASSERT(height < POS_T_SIZE, "all non-empty roots need to have valid height");
 			CORE_ASSERT(size <= (idxT(1) << height), "root's size is too large");
+
 			auto [l, r] = getChildren(root);
 			CORE_ASSERT(
 				weird_root || (l == EMPTY) == (r == EMPTY),
@@ -518,57 +671,56 @@ namespace vm::persistent::detail {
 		}
 
 		/**
-		 * @brief emplaces a new node from given children.
-		 * @note node can be either constructed, or returned previous (depeding if there already was
-		 * node with given subtrees)
+		 * @brief emplaces a new node, which has given nodes as children (a branch).
+		 * @note node can be either constructed, or returned previously constructed (depeding if
+		 * there already was node with given subtrees)
 		 */
-		NodeID constructBranch(NodeID left, NodeID right) {
+		NodeID emplaceBranch(NodeID left, NodeID right) {
+			CORE_ASSERT(left || right, "One of the children must be non-empty");
 			auto pos_left = getPos(left), pos_right = getPos(right);
 			CORE_ASSERT(pos_right != 1 && pos_left != 1, "top node cannot be ever passed");
 			CORE_ASSERT(
-				(pos_left >> 1) == (pos_right >> 1) || left == EMPTY || right == EMPTY,
-				"Children are of different hights"
+				((pos_left & 1) == 0 && (pos_left + 1) == pos_right) || left == EMPTY
+					|| right == EMPTY,
+				"Unless one of them is empty, children must be siblings in terms of position"
 			);
 
 			auto children       = ChildEntry{ .left_child = left, .right_child = right };
 			auto [is_new, node] = child_entries.emplaceByLeft(children, next_node_id);
 
-			idxT left_bound = 0, right_bound = 0;
-			if (!left) {
-				auto [l, r] = getRange(right);
-				left_bound  = l;
-				right_bound = r;
-			} else if (!right) {
-				auto [l, r] = getRange(left);
-				left_bound  = l;
-				right_bound = r;
-			} else {
-				left_bound  = getRange(left).first;
-				right_bound = getRange(right).second;
-			}
+			if (!is_new) return node;
 
-			if (is_new) {
-				root_info.emplace(
-					node,
-					BranchEntry{
-						.size        = getSize(left) + getSize(right),
-						.position    = (pos_left | pos_right) >> 1,
-						.left_bound  = left_bound,
-						.right_bound = right_bound,
-					}
-				);
-				next_node_id++;
-			}
+			idxT left_bound = 0, right_bound = 0;
+
+			NodeID src_left  = left ? left : right;
+			NodeID src_right = right ? right : left;
+
+			left_bound  = getRange(src_left).first;
+			right_bound = getRange(src_right).second;
+
+			CORE_ASSERT(left_bound < right_bound, "We need that the range is valid & non-empty");
+
+			branch_info.emplace(
+				node,
+				BranchEntry{
+					.size        = getSize(left) + getSize(right),
+					.position    = (pos_left | pos_right) >> 1,
+					.left_bound  = left_bound,
+					.right_bound = right_bound,
+				}
+			);
+			next_node_id++;
 
 			return node;
 		}
 
 		/**
-		 * @brief emplaces a new leaf from idx and held valie.
-		 * @note node can be either constructed, or returned previous (depeding if there already was
-		 * node with given idx and value)
+		 * @brief emplaces a new new from idx and value (a leaf).
+		 * @note node can be either constructed, or returned previously constructed (depeding if
+		 * there already was node with given idx and value)
 		 */
-		NodeID constructLeaf(idxT idx, valT var_id) {
+		NodeID emplaceLeaf(idxT idx, valT var_id) {
+			CORE_ASSERT(idx < IDX_END, "idx of the leaf must be small enough");
 			auto leaf_entry = LeafEntry{
 				.idx   = idx,
 				.value = var_id,
@@ -638,10 +790,12 @@ namespace vm::persistent::detail {
 
 			static constexpr bool RECONSTRUCT = std::is_same_v<ResT, NodeID>;
 
-			CORE_ASSERT(root_1 && root_2, "Both of the states must be non-empty");
-
 			auto pos_1 = obj.getPos(root_1);
 			auto pos_2 = obj.getPos(root_2);
+
+			if (root_1 == EMPTY && root_2 == EMPTY) return merge_policy.the_same(EMPTY, 1);
+			if (root_1 == EMPTY) return merge_policy.only_2(root_2, pos_2);
+			if (root_2 == EMPTY) return merge_policy.only_1(root_1, pos_1);
 
 			if (offsetFromPos(pos_2) < offsetFromPos(pos_1)) {
 				std::swap(pos_1, pos_2);
@@ -665,30 +819,31 @@ namespace vm::persistent::detail {
 
 				if_opt_some(mem->leaf_entries.atRightOpt(node_1), leaf_entry1) {
 					CORE_ASSERT(
-						pos & LEAF_MASK, "leaves have a designated bit on in their position"
+						pos & LEAF_MASK,
+						"When merging two leaves, position must have the leaf bit on"
 					);
 					auto maybe_entry2 = mem->leaf_entries.atRightOpt(node_2);
-					CORE_ASSERT(maybe_entry2.has_value(), "both must be leaves");
+					CORE_ASSERT(
+						maybe_entry2.has_value(),
+						"When one node is a leaf, other also must be a leaf"
+					);
 					auto leaf_entry2    = *maybe_entry2;
 					auto [idx_1, val_1] = leaf_entry1;
 					auto [idx_2, val_2] = leaf_entry2;
-					CORE_ASSERT(idx_1 == idx_2, "leaves must be of the same index");
-					CORE_ASSERT(
-						val_1 != val_2,
-						"if values were the same, we would handle this in prev edgecase"
-					);
+					CORE_ASSERT(idx_1 == idx_2, "Merged leaves must be of the same index");
+					CORE_ASSERT(val_1 != val_2, "At this point, values should be different");
 
 					return merge_policy.confilicts(idx_1, val_1, val_2);
 				}
 
 				CORE_ASSERT(
-					!mem->leaf_entries.atRightOpt(node_1).has_value(),
-					"both nodes must be leaves or not"
+					!mem->leaf_entries.atRightOpt(node_2).has_value(),
+					"When one node is not a leaf, the other node also must be a leaf"
 				);
 				CORE_ASSERT(
 					mem->child_entries.atRightOpt(node_1).has_value()
 						&& mem->child_entries.atRightOpt(node_2).has_value(),
-					"both nodes need to have children"
+					"At this point, both nodes should be branches and have children"
 				);
 				auto [left_1, right_1] = mem->child_entries.atRight(node_1);
 				auto [left_2, right_2] = mem->child_entries.atRight(node_2);
@@ -699,10 +854,14 @@ namespace vm::persistent::detail {
 					auto rec_right = self(pos_right, right_1, right_2);
 
 					CORE_ASSERT(
-						!rec_left || inSubtree(mem->getPos(rec_left), pos_left), "stay in subtree"
+						rec_left == EMPTY || inSubtree(mem->getPos(rec_left), pos_left),
+						"The left subtree which is being constructed, should remain within left "
+						"subtree"
 					);
 					CORE_ASSERT(
-						!rec_right || inSubtree(mem->getPos(rec_right), pos_right), "stay in subtree"
+						rec_right == EMPTY || inSubtree(mem->getPos(rec_right), pos_right),
+						"The right subtree which is being constructed, should remain within right "
+						"subtree"
 					);
 
 					return mem->lazyMergeTwoNodes(rec_left, rec_right);
@@ -713,55 +872,58 @@ namespace vm::persistent::detail {
 				}
 			};
 
-			auto lca = getLCAPos(pos_1, pos_2);
+			auto lca_pos = getLCAPos(pos_1, pos_2);
 
-			ReconstructCtx<BaseT> neigh = {
+			RebuildCtx<BaseT> neigh = {
 				.mem      = &obj,
-				.root_pos = lca,
-				.node_pos = lca,
+				.root_pos = lca_pos,
+				.node_pos = lca_pos,
 				.node     = EMPTY,
 				.siblings = {},
 			};
 
-			auto handle_list = [&](const auto& list,
-			                       usize       special_idx,
-			                       posT        special_pos,
-			                       NodeID      special_val,
-			                       bool        special_skip) {
-				for (usize i = 0; i < list.size(); i++) {
-					auto [pos, node] = list.at(i);
-					bool special     = (i == special_idx);
+			auto handle_list =
+				[&](const auto& list, usize special_idx, posT special_pos, NodeID special_val) {
+					for (usize i = 0; i < list.size(); i++) {
+						auto [orig_pos, node] = list.at(i);
+						bool special          = (i == special_idx);
 
-					if (special) {
-						CORE_ASSERT(pos == special_pos, "This is our node");
-						if (special_skip) continue;
+						if (special) CORE_ASSERT(orig_pos == special_pos, "This is our node");
+
+						NodeID corresponding = special ? special_val : EMPTY;
+
+						if constexpr (!RECONSTRUCT)
+							detail_merge(orig_pos, node, corresponding);
+						else {
+							usize relative_h = heightFromPos(orig_pos) - heightFromPos(special_pos);
+							CORE_ASSERT(
+								relative_h < neigh.siblings.size(),
+								"Height diff must refer to some sibling"
+							);
+							auto& dst = special ? neigh.node : neigh.siblings.at(relative_h);
+							dst       = detail_merge(orig_pos, node, corresponding);
+							CORE_ASSERT(
+								dst == EMPTY || inSubtree(st.getPos(dst), orig_pos),
+								"returned node must fit within original subtree"
+							);
+						}
 					}
-
-					NodeID corresponding = special ? special_val : EMPTY;
-
-					if constexpr (!RECONSTRUCT)
-						detail_merge(pos, node, corresponding);
-					else {
-						usize relative_h = heightFromPos(pos) - heightFromPos(special_pos);
-						CORE_ASSERT(
-							relative_h < neigh.siblings.size(),
-							"Height diff must refer to some sibling"
-						);
-						auto& dst = special ? neigh.node : neigh.siblings.at(relative_h);
-						dst       = detail_merge(pos, node, corresponding);
-					}
-				}
-			};
+				};
 
 			neigh.moveNodeTo(pos_1);
 			neigh.node                    = root_1;
-			auto [node_1_idx, in_order_1] = neigh.inOrder(lca);
+			auto [node_1_idx, in_order_1] = neigh.inOrder(lca_pos);
 			in_order_1.pop_back();
 
-			handle_list(in_order_1, node_1_idx, pos_1, EMPTY, inSubtree(pos_2, pos_1));
+			CORE_ASSERT(
+				in_order_1.empty() == (lca_pos == pos_1),
+				"The only case when in_order is empty is when pos_1 is lca"
+			);
+
+			handle_list(in_order_1, node_1_idx, pos_1, EMPTY);
 
 			neigh.moveNodeTo(pos_2);
-			auto [node_2_idx, in_order_2] = neigh.inOrder(lca);
+			auto [node_2_idx, in_order_2] = neigh.inOrder(lca_pos);
 
 			if (!inSubtree(pos_2, pos_1)) {
 				CORE_ASSERT(in_order_2.size() >= 2, "There must be sth going on");
@@ -770,10 +932,10 @@ namespace vm::persistent::detail {
 				node_2_idx--;
 			}
 
-			handle_list(in_order_2, node_2_idx, pos_2, root_2, false);
+			handle_list(in_order_2, node_2_idx, pos_2, root_2);
 
 			if constexpr (RECONSTRUCT) {
-				neigh.moveNodeTo(lca);
+				neigh.moveNodeTo(lca_pos);
 				return neigh.node;
 			}
 		}
@@ -798,35 +960,39 @@ namespace vm::persistent::detail {
 
 			static constexpr bool RECONSTRUCT = std::is_same_v<ResT, NodeID>;
 
-			CORE_ASSERT(ranges.size(), "we need at least one range");
+			CORE_ASSERT(ranges.size(), "We require at least one range");
 			for (auto [l, r]: ranges) CORE_ASSERT(l < r, "Interval must be valid & non-empty");
 
 			for (usize i = 0; i + 1 < ranges.size(); i++) {
 				auto [l1, r1] = ranges.at(i);
 				auto [l2, r2] = ranges.at(i + 1);
 
-				CORE_ASSERT(r1 <= l2, "the intervals have to be disjoint");
+				CORE_ASSERT(r1 <= l2, "The intervals have to be disjoint and in order");
 			}
 
 			idxT left_idx  = ranges.front().first;
 			idxT right_idx = ranges.back().second;
 
-			CORE_ASSERT(right_idx <= IDX_END, "last range must finish before the memory end");
-
 			if (root) {
 				auto [height, offset] = obj.getHeightOffset(root);
-				CORE_ASSERT(height < POS_T_SIZE, "This is always the case for normal nodes");
+				CORE_ASSERT(
+					height < POS_T_SIZE,
+					"For non-empty nodes, size of address is general limit for height"
+				);
 
 				left_idx  = std::min(left_idx, offset);
 				right_idx = std::max(right_idx, offset + (usize(1) << height));
 			}
+
+			CORE_ASSERT(left_idx < right_idx, "The full range must be valid & non-empty");
+			CORE_ASSERT(right_idx <= IDX_END, "Last range must finish before the end of idxs");
 
 			posT left_pos  = left_idx | LEAF_MASK;
 			posT right_pos = (right_idx - 1) | LEAF_MASK;
 
 			auto lca_pos = getLCAPos(left_pos, right_pos);
 
-			ReconstructCtx<BaseT> neigh = {
+			RebuildCtx<BaseT> neigh = {
 				.mem      = &obj,
 				.root_pos = lca_pos,
 				.node_pos = lca_pos,
@@ -845,8 +1011,7 @@ namespace vm::persistent::detail {
 					"Currently tracked position must be at the starting position for current range"
 				);
 
-				for (; range_nodes.size(); range_nodes.pop_front()) {
-					auto pos = range_nodes.front();
+				for (auto pos: range_nodes) {
 					neigh.moveNodeTo(pos);
 
 					if constexpr (RECONSTRUCT)
@@ -1011,8 +1176,8 @@ namespace vm::persistent::detail {
 		 * @note when one of the roor is empty, other is returned
 		 * @note requires that the root cannot contain each other
 		 */
-		NodeID lazyMergeTwoNodes(NodeID root_1, NodeID root_2) {
-			auto reduce = [&](NodeID node) -> NodeID {
+		NodeID lazyMergeTwoNodes(NodeID node_1, NodeID node_2) {
+			auto reduce_to_root = [&](NodeID node) -> NodeID {
 				if (!node) return node;
 				while (true) {
 					if_opt_some(child_entries.atRightOpt(node), children) {
@@ -1028,11 +1193,11 @@ namespace vm::persistent::detail {
 				}
 			};
 
-			if (!root_1) return reduce(root_2);
-			if (!root_2) return reduce(root_1);
+			if (!node_1) return reduce_to_root(node_2);
+			if (!node_2) return reduce_to_root(node_1);
 
-			auto pos_1 = getPos(root_1);
-			auto pos_2 = getPos(root_2);
+			auto pos_1 = getPos(node_1);
+			auto pos_2 = getPos(node_2);
 
 			CORE_ASSERT(
 				!inSubtree(pos_1, pos_2) && !inSubtree(pos_2, pos_1),
@@ -1050,19 +1215,19 @@ namespace vm::persistent::detail {
 
 			for (; (pos_1 >> 1) != lca; pos_1 >>= 1)
 				if (pos_1 & 1)
-					root_1 = constructBranch(EMPTY, root_1);
+					node_1 = emplaceBranch(EMPTY, node_1);
 				else
-					root_1 = constructBranch(root_1, EMPTY);
+					node_1 = emplaceBranch(node_1, EMPTY);
 
 			for (; (pos_2 >> 1) != lca; pos_2 >>= 1)
 				if (pos_2 & 1)
-					root_2 = constructBranch(EMPTY, root_2);
+					node_2 = emplaceBranch(EMPTY, node_2);
 				else
-					root_2 = constructBranch(root_2, EMPTY);
+					node_2 = emplaceBranch(node_2, EMPTY);
 
 			CORE_ASSERT(pos_2 == pos_1 + 1, "after all those operations they should be siblings");
 
-			return constructBranch(root_1, root_2);
+			return emplaceBranch(node_1, node_2);
 		}
 
 	public:
@@ -1070,7 +1235,7 @@ namespace vm::persistent::detail {
 		 * @brief Construct a new Segment Tree object
 		 */
 		SegmentTree() {
-			root_info.put(
+			branch_info.put(
 				EMPTY,
 				BranchEntry{
 					.size        = 0,

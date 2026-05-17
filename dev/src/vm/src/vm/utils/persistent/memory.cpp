@@ -86,7 +86,7 @@ namespace vm::persistent {
 				.confilicts =
 					[&](usize idx, usize val_1, usize val_2) {
 						match_optional(policy(idx, val_1, val_2)) {
-							opt_some(val) { return constructLeaf(idx, val); }
+							opt_some(val) { return emplaceLeaf(idx, val); }
 							opt_none { return detail::SegmentTree::EMPTY; }
 						}
 						CORE_UNREACHABLE();
@@ -150,7 +150,7 @@ namespace vm::persistent {
 				auto [idx, val] = vals.front();
 				vals.pop_front();
 				CORE_ASSERT(cur_idx == idx, "expected other idx");
-				return constructLeaf(idx, val);
+				return emplaceLeaf(idx, val);
 			}
 		);
 

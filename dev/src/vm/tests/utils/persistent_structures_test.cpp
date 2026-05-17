@@ -209,6 +209,19 @@ public:
 			return l;
 		});
 		checker(op10, { { 1, 5 }, { 2, 7 }, { 8'484, 173 }, { 8'008'135, 69 } });
+
+		auto op11 = mem.merge(op10, empt, [](usize, usize l, usize) -> base::Optional<usize> {
+			return l;
+		});
+		checker(op11, { { 1, 5 }, { 2, 7 }, { 8'484, 173 }, { 8'008'135, 69 } });
+
+		auto op12 = mem.merge(op10, empt, [](usize, usize l, usize) -> base::Optional<usize> {
+			return l;
+		});
+		checker(op12, { { 1, 5 }, { 2, 7 }, { 8'484, 173 }, { 8'008'135, 69 } });
+
+		ASSERT_EQUAL(op10, op11);
+		ASSERT_EQUAL(op11, op12);
 	}
 
 	void testVector() {
