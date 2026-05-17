@@ -166,9 +166,9 @@ namespace compiler::mir {
 	bool isMetaOp(Operation op);
 	/**
 	 * @brief Checks if the given abstract type is compile-time only (comptime-only).
-	 * * @note This checks the type in a shallow way by its Kind only. For example, 
+	 * * @note This checks the type in a shallow way by its Kind only. For example,
 	 * tuples containing Meta components will not count as a ComptimeOnly type for now.
-	*/
+	 */
 	bool isComptimeOnlyType(const tsh::AbstractType& type);
 	struct MIRValue;
 

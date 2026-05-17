@@ -114,9 +114,9 @@ namespace compiler::mir {
 	};
 
 	const Function& lowerToPreMIRFunction(query::Context& ctx, CRef<helios::HOUTFunction> function) {
-        auto res = ctx.query<LowerToPreMIRFunction>(function->declaration->original_symbol);
-        return res.get()->valueOrPanic();
-    }
+		auto res = ctx.query<LowerToPreMIRFunction>(function->declaration->original_symbol);
+		return res.get()->valueOrPanic();
+	}
 
 	/**
 	 * @brief Deletes from mir Function (from block_order and blocks) unreachable blocks.
@@ -239,8 +239,7 @@ namespace compiler::mir {
 				{},
 				function_builder.getTopLevelScope(),
 				{},
-				{}
-			});
+				{} });
 
 			function_builder.setEntry(lowerexpr_res.begin);
 
@@ -265,35 +264,35 @@ namespace compiler::mir {
 
 	struct IMPLEMENT_QUERY(LowerToPreMIRFunction, LowerToMIRFunctionResult) {
 		static Function build(Context& ctx, CRef<helios::HOUTFunction> function) {
-            FunctionBuilder function_builder{
-                ctx,
-                FunctionSymID{ function->declaration->original_symbol },
-            };
-            function_builder.setName(function->declaration->original_name);
+			FunctionBuilder function_builder{
+				ctx,
+				FunctionSymID{ function->declaration->original_symbol },
+			};
+			function_builder.setName(function->declaration->original_name);
 
-            LocalVarCollectionVisitor visitor{ function_builder };
-            visitor.collect(function);
+			LocalVarCollectionVisitor visitor{ function_builder };
+			visitor.collect(function);
 
-            auto last_block = function_builder.newBlock();
-            last_block->setTerminator(
-                { Operation::FunctionEnd, {}, {}, {}, function_builder.getTopLevelScope() }
-            );
+			auto last_block = function_builder.newBlock();
+			last_block->setTerminator(
+				{ Operation::FunctionEnd, {}, {}, {}, function_builder.getTopLevelScope() }
+			);
 
-            auto first_block = lowerCodeBlock(
-                *function->body, last_block, function_builder, function_builder.getTopLevelScope()
-            );
+			auto first_block = lowerCodeBlock(
+				*function->body, last_block, function_builder, function_builder.getTopLevelScope()
+			);
 
-            function_builder.setEntry(first_block.begin);
+			function_builder.setEntry(first_block.begin);
 
-            return function_builder.build();
-        }
+			return function_builder.build();
+		}
 
-        static auto provide(Context& ctx, const QKey& key) -> PResult {
-            auto hout_func_q = ctx.query<helios::QueryCodeOfFun>(key);
-            if (hout_func_q.get()->hasFailed()) return query::Failed();
+		static auto provide(Context& ctx, const QKey& key) -> PResult {
+			auto hout_func_q = ctx.query<helios::QueryCodeOfFun>(key);
+			if (hout_func_q.get()->hasFailed()) return query::Failed();
 
-            return build(ctx, base::CRef<helios::HOUTFunction>(&hout_func_q.get()->valueOrPanic()));
-        }
+			return build(ctx, base::CRef<helios::HOUTFunction>(&hout_func_q.get()->valueOrPanic()));
+		}
 
 		QUERY_AUTO_CACHE_CREF
 	};
@@ -302,7 +301,8 @@ namespace compiler::mir {
 	struct IMPLEMENT_QUERY(LowerToMIRFunction, LowerToMIRFunctionResult) {
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
 			// first step: lowering to pre-mir (cfg+quad)
-			auto function_no_lifetime = ImplementationOf_LowerToPreMIRFunction::build(ctx, key.function);
+			auto function_no_lifetime
+				= ImplementationOf_LowerToPreMIRFunction::build(ctx, key.function);
 
 			// second step: lifetime stuff
 			auto function_with_destructors

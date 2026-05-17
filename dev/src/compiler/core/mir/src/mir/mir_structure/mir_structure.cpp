@@ -339,7 +339,8 @@ namespace compiler::mir {
 		return k == Kind::Meta || k == Kind::Namespace || k == Kind::Module
 		    || k == Kind::TypeTemplate;
 	}
-	bool isMetaOp(Operation op){
+
+	bool isMetaOp(Operation op) {
 		switch (op) {
 		case Operation::MetaCreateBox:
 		case Operation::MetaCreateRef:
