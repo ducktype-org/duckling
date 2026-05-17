@@ -44,9 +44,9 @@ pub struct Dependency {
     #[serde(rename = "name")]
     /// ID of the dependency. Note, that there must a package with `id = self.id` in a [`packages`](DuckcMultiPackage::packages) vector.
     pub id: StrId,
-    #[serde(rename = "alias", skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     /// How should this dependency be named, when resolving imports.
-    pub explicit_import_name: Option<StrId>,
+    pub alias: Option<StrId>,
 }
 
 // `compiler/driver/driver/src/driver/task/task.cpp` deserializes `RawTask` as `RawPackageCompilationTask`.
@@ -310,11 +310,11 @@ mod tests {
                 dependencies: vec![
                     Dependency {
                         id: "dep-hash".into(),
-                        explicit_import_name: Some("bar".into()),
+                        alias: Some("bar".into()),
                     },
                     Dependency {
                         id: "dep2-hash".into(),
-                        explicit_import_name: Some("foo".into()),
+                        alias: Some("foo".into()),
                     },
                 ],
             },
@@ -325,7 +325,7 @@ mod tests {
                 path_to_the_src_directory: PathBuf::default(),
                 dependencies: vec![Dependency {
                     id: "dep2-hash".into(),
-                    explicit_import_name: Some("foo-aliased".into()),
+                    alias: Some("foo-aliased".into()),
                 }],
             },
             Package {
@@ -625,11 +625,11 @@ mod tests {
                 dependencies: vec![
                     Dependency {
                         id: "lib_a".into(),
-                        explicit_import_name: Some("lib_a".into()),
+                        alias: Some("lib_a".into()),
                     },
                     Dependency {
                         id: "lib_c".into(),
-                        explicit_import_name: None,
+                        alias: None,
                     },
                 ],
             },
@@ -640,7 +640,7 @@ mod tests {
                 path_to_the_src_directory: PathBuf::from("duck_modules/multi_package/lib_c"),
                 dependencies: vec![Dependency {
                     id: "lib_b".into(),
-                    explicit_import_name: None,
+                    alias: None,
                 }],
             },
             Package {
@@ -651,11 +651,11 @@ mod tests {
                 dependencies: vec![
                     Dependency {
                         id: "lib_a".into(),
-                        explicit_import_name: Some("lib_a".into()),
+                        alias: Some("lib_a".into()),
                     },
                     Dependency {
                         id: "lib_c".into(),
-                        explicit_import_name: Some("lib_b".into()),
+                        alias: Some("lib_b".into()),
                     },
                 ],
             },
@@ -666,7 +666,7 @@ mod tests {
                 path_to_the_src_directory: PathBuf::from("duck_modules/multi_package/app2"),
                 dependencies: vec![Dependency {
                     id: "lib_a".into(),
-                    explicit_import_name: Some("lib_a".into()),
+                    alias: Some("lib_a".into()),
                 }],
             },
             Package {
@@ -677,11 +677,11 @@ mod tests {
                 dependencies: vec![
                     Dependency {
                         id: "lib_a".into(),
-                        explicit_import_name: None,
+                        alias: None,
                     },
                     Dependency {
                         id: "lib_b".into(),
-                        explicit_import_name: None,
+                        alias: None,
                     },
                 ],
             },
@@ -693,11 +693,11 @@ mod tests {
                 dependencies: vec![
                     Dependency {
                         id: "lib_a".into(),
-                        explicit_import_name: Some("lib_b".into()),
+                        alias: Some("lib_b".into()),
                     },
                     Dependency {
                         id: "lib_b".into(),
-                        explicit_import_name: Some("lib_a".into()),
+                        alias: Some("lib_a".into()),
                     },
                 ],
             },
