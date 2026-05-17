@@ -5,6 +5,7 @@ use std::collections::VecDeque;
 use tracing::debug;
 
 use super::*;
+use crate::StrId;
 use crate::quackpack::core::FeatureName;
 use crate::quackpack::core::compile::MISSING_DEPENDENCY_IN_MANIFEST_MESSAGE;
 use crate::util::extend::QpExtend;
