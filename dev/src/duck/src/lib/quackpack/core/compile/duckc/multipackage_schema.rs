@@ -820,4 +820,72 @@ mod tests {
             },
         ]
     }
+
+    #[test]
+    fn one_package() {
+        let multi = MultiPackage {
+            packages: vec![Package {
+                id: "root".into(),
+                version: Version::new(1, 0, 0),
+                features: vec![],
+                path_to_the_src_directory: PathBuf::from("root"),
+                dependencies: vec![],
+            }],
+            tasks: vec![],
+        };
+        let serialized = serde_json::to_string_pretty(&multi).unwrap();
+        assert_eq!(
+            serialized,
+            r#"{
+  "packages": [
+    {
+      "name": "root",
+      "version": "1.0.0",
+      "features": [],
+      "path": "root",
+      "dependencies": []
+    }
+  ],
+  "tasks": []
+}"#
+        )
+    }
+
+    #[test]
+    fn one_package_one_task() {
+        let multi = MultiPackage {
+            packages: vec![Package {
+                id: "root".into(),
+                version: Version::new(1, 0, 0),
+                features: vec![],
+                path_to_the_src_directory: PathBuf::from("root"),
+                dependencies: vec![],
+            }],
+            tasks: vec![PackageCompilationTask {
+                package_id: "root".into(),
+                strategy: PackageCompilationStrategy::EmitLLVMObject {},
+            }],
+        };
+        let serialized = serde_json::to_string_pretty(&multi).unwrap();
+        assert_eq!(
+            serialized,
+            r#"{
+  "packages": [
+    {
+      "name": "root",
+      "version": "1.0.0",
+      "features": [],
+      "path": "root",
+      "dependencies": []
+    }
+  ],
+  "tasks": [
+    {
+      "package": "root",
+      "strategy": "obj"
+    }
+  ]
+}"#
+        )
+    }
 }
