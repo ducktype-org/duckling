@@ -87,3 +87,11 @@ impl Unit {
         format!("{}-{}-{}", name, version, id)
     }
 }
+
+impl PartialEq for Unit {
+    fn eq(&self, other: &Self) -> bool {
+        Arc::ptr_eq(&self.inner, &other.inner)
+    }
+}
+
+impl Eq for Unit {}
