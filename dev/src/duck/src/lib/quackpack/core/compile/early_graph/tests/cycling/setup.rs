@@ -15,7 +15,8 @@ pub fn setup_mock_storage() -> (DuckContext, TempDir) {
     let setup = || {
         let tmpdir_root = TempDir::new().unwrap();
         setup_mock_packages(&tmpdir_root.path().join("storage"));
-        setup_mock_root_package(&tmpdir_root.path().join("root"));
+        setup_mock_root_package(&tmpdir_root.path());
+        setup_mock_cycle_package(&tmpdir_root.path());
         // Also overwrite DUCK_HOME, so we'll use the default configuration options.
         // SAFETY: Setup is single threaded, and `Env` in `DuckContext`, copies all envs.
         unsafe {
@@ -64,6 +65,8 @@ pub fn setup_mock_packages(root: &Path) {
 ///     bar
 ///    / with feature `use_baz`
 ///  baz
+///
+///  cycle
 /// ```
 /// Should be use with [`freeze`] freeze.
 fn packages_names_and_manifests() -> &'static [(&'static str, &'static str)] {
@@ -114,7 +117,7 @@ metadata:
 /// Setup mock root package with a following scenario:
 ///
 /// ```no_run
-///     root
+///     root — cycle if root has cycle
 ///    /    \
 ///   foo   bar + use_baz, if root has use_bar_with_baz
 ///   + use_baz, if root has use_foo_with_baz
@@ -122,9 +125,12 @@ metadata:
 ///
 /// There's also an extra feature `nonexistent`.
 fn setup_mock_root_package(root: &Path) {
-    root.join("src").join("main.duck").touch().unwrap();
-    root.join(PackageLoader::MANIFEST_NAME)
-        .write(
+    let pkg_root = root.join("root");
+    let cycle_root = root.join("cycle");
+    pkg_root.join("src").join("main.duck").touch().unwrap();
+    pkg_root
+        .join(PackageLoader::MANIFEST_NAME)
+        .write(format!(
             "
 metadata:
   name: root
@@ -143,22 +149,52 @@ dependencies:
     features:
       - use_baz:
           package-features: [use_bar_with_baz]
+  cycle:
+    source:
+      path: {:?}
+    conditions:
+      package-features: [cycle]
 features:
   use_bar_with_baz: []
   use_foo_with_baz: []
   full: [use_foo_with_baz, use_bar_with_baz]
   nonexistent: []
+  cycle: []
         ",
-        )
+            cycle_root.to_string_lossy()
+        ))
         .unwrap();
-    root.try_fsync_dir().unwrap();
+    pkg_root.try_fsync_dir().unwrap();
+}
+
+fn setup_mock_cycle_package(root: &Path) {
+    let pkg_root = root.join("cycle");
+    let root_root = root.join("root");
+    pkg_root.join("src").join("main.duck").touch().unwrap();
+    pkg_root
+        .join(PackageLoader::MANIFEST_NAME)
+        .write(format!(
+            "
+metadata:
+  name: cycle
+  version: 1.0.0
+
+dependencies:
+  root:
+    source:
+      path: {:?}
+        ",
+            root_root.to_string_lossy()
+        ))
+        .unwrap();
+    pkg_root.try_fsync_dir().unwrap();
 }
 
 /// Generate mock [`VenvFreeze`].
 ///
 /// This function should be generally used in order to create
 /// [`BuildContext`](super::BuildContext).
-pub fn freeze() -> VenvFreeze {
+pub fn freeze(root: &Path) -> VenvFreeze {
     VenvFreeze::new(
         RootPackage::new(
             "root".into(),
@@ -168,10 +204,12 @@ pub fn freeze() -> VenvFreeze {
                 "full".into(),
                 "nonexistent".into(),
                 "use_foo_with_baz".into(),
+                "cycle".into(),
             ],
             vec![
                 FreezeDep::new("foo".into(), Version::new(1, 0, 0)),
                 FreezeDep::new("bar".into(), Version::new(1, 0, 0)),
+                FreezeDep::new("cycle".into(), Version::new(1, 0, 0)),
             ],
         ),
         vec![
@@ -208,57 +246,13 @@ pub fn freeze() -> VenvFreeze {
                 }
                 .into(),
             ),
-        ],
-    )
-}
-
-pub fn freeze_with_cycle() -> VenvFreeze {
-    VenvFreeze::new(
-        RootPackage::new(
-            "root".into(),
-            Version::new(1, 0, 0),
-            vec![
-                "use_bar_with_baz".into(),
-                "full".into(),
-                "nonexistent".into(),
-                "use_foo_with_baz".into(),
-            ],
-            vec![
-                FreezeDep::new("foo".into(), Version::new(1, 0, 0)),
-                FreezeDep::new("bar".into(), Version::new(1, 0, 0)),
-            ],
-        ),
-        vec![
             FreezePackage::new(
-                "foo".into(),
-                Version::new(1, 0, 0),
-                vec!["use_baz".into()],
-                vec![FreezeDep::new("bar".into(), Version::new(1, 0, 0))],
-                ExpandedLocation::Registry {
-                    url: Fetcher::DEFAULT_REGISTRY_URL.parse().unwrap(),
-                    real_name: "foo".into(),
-                }
-                .into(),
-            ),
-            FreezePackage::new(
-                "bar".into(),
-                Version::new(1, 0, 0),
-                vec!["use_baz".into()],
-                vec![FreezeDep::new("foo".into(), Version::new(1, 0, 0))],
-                ExpandedLocation::Registry {
-                    url: Fetcher::DEFAULT_REGISTRY_URL.parse().unwrap(),
-                    real_name: "bar".into(),
-                }
-                .into(),
-            ),
-            FreezePackage::new(
-                "baz".into(),
+                "cycle".into(),
                 Version::new(1, 0, 0),
                 vec![],
-                vec![],
-                ExpandedLocation::Registry {
-                    url: Fetcher::DEFAULT_REGISTRY_URL.parse().unwrap(),
-                    real_name: "baz".into(),
+                vec![FreezeDep::new("root".into(), Version::new(1, 0, 0))],
+                ExpandedLocation::Local {
+                    absolute_path: root.join("cycle"),
                 }
                 .into(),
             ),

@@ -4,20 +4,13 @@ use std::collections::{HashMap, HashSet};
 
 use itertools::Itertools;
 
+use crate::QuackResult;
 use crate::quackpack::core::compile::MISSING_DEPENDENCY_IN_DAG_MESSAGE;
 use crate::quackpack::core::compile::compiler_package::CompilerPackage;
 use crate::quackpack::core::storage::freeze::FreezeDep;
-use crate::util::error::MessageError;
-use crate::{QuackError, QuackResult};
 
 pub mod creating_graph;
 pub mod modifying_graph;
-
-/// Common helper for creating a consistent error.
-fn bail_cycle_message(cycle: &[FreezeDep]) -> QuackError {
-    let cycle = cycle.iter().map(|dep| format!("`{}`", dep)).join(" -> ");
-    MessageError(format!("malformed freezefile: cycle {cycle}").into()).into()
-}
 
 #[cfg(test)]
 mod tests;
@@ -79,51 +72,6 @@ impl DependencyGraph {
         self.graph
             .get(package)
             .expect(MISSING_DEPENDENCY_IN_DAG_MESSAGE)
-    }
-
-    /// Sort topologically this graph.
-    ///
-    /// This method returns an error, if it encounters a cycle.
-    pub fn topo_sort_order(&self) -> QuackResult<Vec<FreezeDep>> {
-        #[derive(Debug, Eq, PartialEq)]
-        enum State {
-            Entered,
-            Left,
-        }
-
-        let mut states = HashMap::new();
-        let mut order = vec![];
-        fn visit_impl(
-            current: FreezeDep,
-            dag: &HashMap<FreezeDep, DependencyNode>,
-            states: &mut HashMap<FreezeDep, State>,
-            order: &mut Vec<FreezeDep>,
-        ) -> QuackResult<()> {
-            let previous_state = states.insert(current, State::Entered);
-            debug_assert_ne!(
-                previous_state,
-                Some(State::Left),
-                "we shouldn't revisit nodes"
-            );
-            if previous_state == Some(State::Entered) {
-                return Err(bail_cycle_message(order));
-            }
-            let deps = dag
-                .get(&current)
-                .expect("we've verified that there are dependencies");
-            for dep in deps.dependencies() {
-                if states.get(dep) != Some(&State::Left) {
-                    visit_impl(*dep, dag, states, order)?;
-                }
-            }
-
-            states.insert(current, State::Left);
-            order.push(current);
-            Ok(())
-        }
-        visit_impl(self.root, &self.graph, &mut states, &mut order)?;
-        order.reverse();
-        Ok(order)
     }
 }
 

@@ -232,8 +232,6 @@ fn removes_inactive_deps1() {
                 DependencyNode::new(vec!["foo 1.0.0".parse().unwrap()])
             ),
             ("foo 1.0.0".parse().unwrap(), DependencyNode::new(vec![])),
-            ("bar 1.0.0".parse().unwrap(), DependencyNode::new(vec![])),
-            ("baz 1.0.0".parse().unwrap(), DependencyNode::new(vec![])),
         ])
     );
 }
@@ -269,7 +267,6 @@ fn removes_inactive_deps2() {
                 DependencyNode::new(vec!["bar 1.0.0".parse().unwrap()])
             ),
             ("bar 1.0.0".parse().unwrap(), DependencyNode::new(vec![])),
-            ("baz 1.0.0".parse().unwrap(), DependencyNode::new(vec![])),
         ])
     );
 }
@@ -349,28 +346,6 @@ fn removes_inactive_deps4() {
             ),
             ("baz 1.0.0".parse().unwrap(), DependencyNode::new(vec![])),
         ])
-    );
-}
-
-#[test]
-fn cycle_in_freeze() {
-    let (ctx, root) = setup_mock_storage();
-
-    let package = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
-    let profile =
-        Profile::construct_profile("dev".into(), package.package().manifest().profiles()).unwrap();
-    let bcx = BuildContext {
-        pcx: &package,
-        freeze: freeze_with_cycle(),
-        storage: Storage::new(ctx.default_storage_root().into_not_locked_path()),
-        used_features: vec![],
-        profile,
-        script_path: None,
-    };
-    let err = EarlyGraph::new_early(&bcx).unwrap_err();
-    assert_eq!(
-        err.to_string(),
-        "malformed freezefile: cycle `root 1.0.0` -> `foo 1.0.0` -> `bar 1.0.0` -> `foo 1.0.0`"
     );
 }
 

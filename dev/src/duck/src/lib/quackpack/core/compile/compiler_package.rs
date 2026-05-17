@@ -92,6 +92,25 @@ impl CompilerPackage {
         Ok(())
     }
 
+    pub fn mock_add_features(
+        &self,
+        features: impl IntoIterator<Item = FeatureName>,
+    ) -> QuackResult<HashSet<FeatureName>> {
+        let features = self
+            .package
+            .manifest()
+            .features()
+            .expand_features(features)
+            .with_context(|| {
+                format!(
+                    "while expanding features of the {} `{}`",
+                    self.pkg_type,
+                    self.package.manifest().name()
+                )
+            })?;
+        Ok(features)
+    }
+
     /// Get the underlying [`Package`].
     pub fn package(&self) -> &Package {
         &self.package

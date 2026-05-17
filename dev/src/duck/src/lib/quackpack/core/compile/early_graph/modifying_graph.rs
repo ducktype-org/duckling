@@ -3,13 +3,16 @@
 use tracing::debug;
 
 use super::*;
+use crate::StrId;
 use crate::quackpack::core::FeatureName;
 use crate::quackpack::core::compile::MISSING_DEPENDENCY_IN_MANIFEST_MESSAGE;
+use crate::util::extend::QpExtend;
 
 impl DependencyGraph {
     /// Same as [`EarlyGraph::remove_disabled_dependencies`].
     #[tracing::instrument(skip_all)]
     pub fn remove_disabled_dependencies(&mut self, packages: &PackagesSet) {
+        let mut enabled_deps = HashSet::from([self.root]);
         for (k, v) in self.graph.iter_mut() {
             let mut to_remove = HashSet::new();
             let this = packages.package(k);
@@ -28,10 +31,13 @@ impl DependencyGraph {
                 );
                 if !is_enabled {
                     to_remove.insert(*dep);
+                } else {
+                    enabled_deps.insert(*dep);
                 }
             }
             v.dependencies.retain(|dep| !to_remove.contains(dep));
         }
+        self.graph.retain(|dep, _| enabled_deps.contains(dep));
     }
 }
 
@@ -39,25 +45,30 @@ impl EarlyGraph {
     /// Recursively populate enabled features, starting from the root of the graph.
     #[tracing::instrument(skip_all)]
     pub fn populate_features(&mut self, root_features: &[FeatureName]) -> QuackResult<()> {
-        debug!(root = %self.graph.root(), features = ?root_features, "populating root");
         let root_package = self.package_mut(&self.graph.root());
-        root_package.add_new_features(root_features.iter().copied())?;
+        let root_features = root_package.mock_add_features(root_features.iter().copied())?;
+        debug!(
+            "starting features of root are: `{}`",
+            root_features.iter().join(" ")
+        );
+        let mut added_features = HashMap::from([(self.graph.root, root_features)]);
 
         #[tracing::instrument(skip_all)]
         fn populate_impl(
             current: FreezeDep,
-            dag: &HashMap<FreezeDep, DependencyNode>,
-            packages: &mut PackagesSet,
+            graph: &HashMap<FreezeDep, DependencyNode>,
+            packages: &PackagesSet,
+            added_features: &mut HashMap<FreezeDep, HashSet<StrId>>,
         ) -> QuackResult<()> {
             let this = packages.package(&current);
-            let this_features = this.enabled_features().clone();
-            let this = this.package().clone();
-            let node = dag
+            let this_features = added_features.entry(current).or_default().clone();
+            let node = graph
                 .get(&current)
                 .expect("we've verified that there are dependencies");
             for dep in &node.dependencies {
                 let enabled_features = {
                     let entry_in_dep_manifest = this
+                        .package()
                         .manifest()
                         .dependencies()
                         .get_by_name(dep.name())
@@ -65,18 +76,26 @@ impl EarlyGraph {
                     entry_in_dep_manifest.enabled_features(this_features.iter().copied())
                 };
                 debug!(node = %dep, features = ?enabled_features, "populating node");
-                let entry = packages.package_mut(dep);
-                entry.add_new_features(enabled_features)?;
+                let entry = packages.package(dep);
+                let expanded_features = entry.mock_add_features(enabled_features)?;
+                let dep_features = added_features.entry(*dep).or_default();
+                if dep_features.is_extended_by(expanded_features) {
+                    populate_impl(*dep, graph, packages, added_features)?;
+                }
             }
             Ok(())
         }
 
-        let order = self
-            .graph
-            .topo_sort_order()
-            .expect("we've verified that there are no cycles");
-        for dep in order {
-            populate_impl(dep, &self.graph.graph, &mut self.packages)?;
+        populate_impl(
+            self.graph().root,
+            &self.graph().graph,
+            &self.packages,
+            &mut added_features,
+        )?;
+
+        for (id, pkg) in self.packages.inner.iter_mut() {
+            let features = added_features.entry(*id).or_default();
+            pkg.add_new_features(features.iter().copied())?;
         }
         Ok(())
     }

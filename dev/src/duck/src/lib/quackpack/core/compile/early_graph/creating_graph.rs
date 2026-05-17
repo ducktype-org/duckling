@@ -14,7 +14,7 @@ use crate::{DuckContext, QuackResultContext, qp_bail, qp_bail_internal};
 impl DependencyGraph {
     /// Create new [`DependencyGraph`] from the given freeze.
     ///
-    /// This method checks that the graph is complete, and that it is, in fact, a DAG.
+    /// This method checks that the graph is complete (all edge targets have their neighbours lists).
     #[tracing::instrument(skip_all)]
     pub fn new(freeze: &VenvFreeze) -> QuackResult<Self> {
         let root = freeze.root();
@@ -30,15 +30,8 @@ impl DependencyGraph {
             );
         }
         let root = root.as_freeze_dep();
-        Self::check_is_dag(root, &graph)?;
+        Self::check_is_complete_graph(root, &graph)?;
         Ok(Self { root, graph })
-    }
-
-    /// Helpers for [`new`](Self::new).
-    fn check_is_dag(root: FreezeDep, dag: &HashMap<FreezeDep, DependencyNode>) -> QuackResult<()> {
-        Self::check_is_complete_graph(root, dag)?;
-        Self::check_no_cycles(root, dag)?;
-        Ok(())
     }
 
     /// Checks, whether `graph` rooted at `root` is complete.
@@ -61,54 +54,6 @@ impl DependencyGraph {
             }
         }
         Ok(())
-    }
-
-    /// Checks, that the `graph` rooted at `root` doesn't have cycles.
-    #[tracing::instrument(skip_all)]
-    fn check_no_cycles(
-        root: FreezeDep,
-        dag: &HashMap<FreezeDep, DependencyNode>,
-    ) -> QuackResult<()> {
-        debug!(%root, graph = ?dag, "checking cycles");
-        #[derive(Debug, Eq, PartialEq)]
-        enum State {
-            Entered,
-            Left,
-        }
-
-        let mut states = HashMap::new();
-        let mut order = vec![];
-        fn visit_impl(
-            current: FreezeDep,
-            dag: &HashMap<FreezeDep, DependencyNode>,
-            states: &mut HashMap<FreezeDep, State>,
-            order: &mut Vec<FreezeDep>,
-        ) -> QuackResult<()> {
-            order.push(current);
-            let previous_state = states.insert(current, State::Entered);
-            debug_assert_ne!(
-                previous_state,
-                Some(State::Left),
-                "we shouldn't revisit nodes"
-            );
-            if previous_state == Some(State::Entered) {
-                return Err(bail_cycle_message(order));
-            }
-            let deps = dag
-                .get(&current)
-                .expect("we've verified that there are dependencies");
-            for dep in deps.dependencies() {
-                if states.get(dep) != Some(&State::Left) {
-                    visit_impl(*dep, dag, states, order)?;
-                }
-            }
-
-            states.insert(current, State::Left);
-            let previous = order.pop();
-            debug_assert_eq!(previous, Some(current));
-            Ok(())
-        }
-        visit_impl(root, dag, &mut states, &mut order)
     }
 }
 
