@@ -27,7 +27,6 @@ namespace compiler::mir {
 		  name(name),
 		  return_type(return_type),
 		  parameter_types(std::move(parameter_types)),
-		  comptime_status(ComptimeStatus::Uncomputed),
 		  blocks(std::move(blocks)),
 		  block_order(std::move(block_order)),
 		  local_list(std::move(local_list)),
