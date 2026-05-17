@@ -177,9 +177,7 @@ CRef<vm::low::LowVMProgram> vm::loader::Loader::getProgram() const {
 	return compiler.getLowProgram();
 }
 
-vm::loader::Loader::Loader() {
-	compiler.recompile(validated_high_program, true);
-}  // TODO: reconsider attach_mapping here
+vm::loader::Loader::Loader() { compiler.recompile(validated_high_program, true); }
 
 base::CRef<vm::code::ValidProgram> vm::loader::Loader::getHighProgram() const {
 	return &validated_high_program;
@@ -216,11 +214,12 @@ std::expected<vm::loader::Loader::BytecodePosition, vm::loader::Loader::MappingE
 	};
 }
 
-base::Optional<dia::SourcePosition> vm::loader::Loader::mapCodeCollectionPositionToFilePosition(
-	base::StrID function_id, usize instruction_index
-) const {
+std::expected<base::Optional<dia::SourcePosition>, vm::loader::Loader::MappingException> vm::
+	loader::Loader::mapCodeCollectionPositionToFilePosition(
+		base::StrID function_id, usize instruction_index
+	) const {
 	const auto& maybe_high_function = getHighProgram()->functions().atMaybe(function_id);
-	if (maybe_high_function.empty()) return {};  // TODO: throw: invalid position
+	if (maybe_high_function.empty()) return std::unexpected(NoFunction);
 
 	return maybe_high_function.value()->body.at(instruction_index).visit([](auto&& instr) {
 		return instr.bytecode_pos;

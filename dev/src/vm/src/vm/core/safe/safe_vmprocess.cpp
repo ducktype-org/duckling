@@ -276,9 +276,11 @@ namespace vm {
 			if (maybe_high_position.has_value()) {
 				auto high_position = maybe_high_position.value();
 				instr_number       = high_position.instruction_index;
-				source_position    = loader.mapCodeCollectionPositionToFilePosition(
-                    high_position.function_id, high_position.instruction_index
-                );
+				source_position    = loader
+				                      .mapCodeCollectionPositionToFilePosition(
+										  high_position.function_id, high_position.instruction_index
+									  )
+				                      .value_or(std::nullopt);
 			}
 
 			return api::Response(api::response::CodePosition{
