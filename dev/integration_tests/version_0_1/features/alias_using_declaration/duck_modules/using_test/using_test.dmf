@@ -1,0 +1,48 @@
+# Test using declaration - imports symbols into current scope
+# Per docs: using N.x; is equivalent to: alias x = N.x;
+# using N.*; imports all symbols from N
+
+namespace Math {
+    var pi: i64 = 3;  # Simplified for integer testing
+
+    fun double(x: i64) -> i64 = x * 2;
+    fun triple(x: i64) -> i64 = x * 3;
+    fun square(x: i64) -> i64 = x * x;
+}
+
+namespace Utils {
+    fun increment(x: i64) -> i64 = x + 1;
+    fun decrement(x: i64) -> i64 = x - 1;
+}
+
+fun main() -> i64 = {
+    # Using single name import
+    using Math.double;
+    builtin_output_i64(double(5));    # 10
+
+    # Using wildcard import for all symbols
+    using Math.*;
+    builtin_output_i64(triple(4));    # 12
+    builtin_output_i64(square(3));    # 9
+    builtin_output_i64(pi);           # 3
+
+    # Using from another namespace
+    using Utils.*;
+    builtin_output_i64(increment(10)); # 11
+    builtin_output_i64(decrement(10)); # 9
+
+    # Combining operations
+    let result = double(square(2));   # double(4) = 8
+    builtin_output_i64(result);       # 8
+
+    class A {
+        firstarg: i32;
+        secondarg: f64;
+    }
+
+    var a = A(2, 3);
+    using a.*;
+    builtin_output_i64(firstarg);      # 2
+
+    return 0;
+}

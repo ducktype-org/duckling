@@ -8,7 +8,7 @@ namespace pst {
 	 * @brief Function declaration
 	 */
 	class FunDecl final: public Decl {
-		tpc::Identifier name;
+		NAMED_CHILD(name, IdentifierWrapper);
 		NAMED_CHILD(params, ParamList);
 		NAMED_CHILD_OPT(ret, CommaExprHolder);
 
@@ -20,11 +20,9 @@ namespace pst {
 		DECL_CHILD_CONSTRUCTOR(FunDecl, ElementKind::FunDecl);
 
 		[[nodiscard]]
-		base::StrID getName() const {
-			return name.value;
+		AccessLocked<IdentifierWrapper> getName() const {
+			return name.give();
 		}
-
-		[[nodiscard]] tpc::Identifier getNameIdentifier() const { return name; }
 
 		[[nodiscard]]
 		AccessLocked<ParamList> getParams() const {
@@ -49,7 +47,7 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		base::Optional<base::StrID> getDeclSymbolName() const final {
+		base::Optional<AccessLocked<IdentifierWrapper>> getDeclSymbolIdentifier() const final {
 			return getName();
 		}
 

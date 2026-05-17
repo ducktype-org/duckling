@@ -6,7 +6,8 @@ namespace pst {
 	MBox<CallArgument> CallArgument::parse(LangParserState& state) {
 		auto out = makeBox<CallArgument>(state);
 		if (state[1].is(lang_def::NamedOperator::Assign)) {
-			PARSE().one(&out->arg_name);
+			out->arg_name.emplace();
+			PARSE().one(&out->arg_name.value());
 			PARSE().one(lang_def::NamedOperator::Assign);
 		}
 
@@ -16,15 +17,17 @@ namespace pst {
 
 	void CallArgument::dprint(std::ostream& out) const {
 		out << "{";
-		out << R"("name": )";
-		nullAwareDprint(arg_name, out);
-		out << R"(, "value":)";
+		if (arg_name.has_value()) {
+			out << R"("name": )";
+			nullAwareDprint(arg_name.value(), out);
+			out << ",";
+		}
+		out << R"("value":)";
 		nullAwareDprint(arg, out);
 		out << "}";
 	}
 
 	HashAlg& CallArgument::addElementDataToStableHash(HashAlg& partial_hash) const {
-		addToHash(partial_hash, arg_name);
 		return partial_hash;
 	}
 

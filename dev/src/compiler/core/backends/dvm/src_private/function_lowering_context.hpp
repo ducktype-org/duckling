@@ -58,11 +58,6 @@ namespace compiler::backend_vm::internal {
 		void pushTerminator(const lir::Instruction& lir_terminator);
 		void pushInstruction(const lir::Instruction& lir_instruction);
 
-		[[deprecated(
-			"@TODO: #1656 Move this temporary helper when inits/deinits are handled correctly to "
-			"pushInstruction's implementation of init"
-		)]]
-		void pushInit(lir::LIRLocalRef lir_local);
 
 		/**
 		 * @brief Translates a LIRPlace to a DVMPlace. In case of direct values returns a place
@@ -84,6 +79,13 @@ namespace compiler::backend_vm::internal {
 		 */
 		void registerFunctionParameter(lir::LIRLocalRef lir_func_param);
 
+		/**
+		 * @brief Register a LIR local as a DVM local.
+		 *
+		 * @param lir_local
+		 */
+		void registerFunctionLocal(lir::LIRLocalRef lir_local);
+
 		DVMPlace getFunctionReturnValueLocal();
 
 		vm::code::Function finish() &&;
@@ -97,8 +99,9 @@ namespace compiler::backend_vm::internal {
 
 		base::StrID getBlockLabel(lir::BlockRef block);
 
-		const DVMPlace&               insertLirLocal(lir::LIRLocalRef local);
 		[[nodiscard]] const DVMPlace& getLirLocal(lir::LIRLocalRef local) const;
+
+		const DVMPlace& getOrInsertLirLocal(lir::LIRLocalRef local);
 
 		/**
 		 * @brief Makes sure a given @p value is a place and places it in a temporary if needed
@@ -117,9 +120,38 @@ namespace compiler::backend_vm::internal {
 			const base::Optional<DVMPlace>& maybe_dest_place, const DVMValue& src_value
 		);
 
+		/**
+		 * @brief Pushes the inits for the given lifetime flags.
+		 *
+		 * @param scope_flags
+		 */
+		void pushInitsForInstr(const std::vector<lir::ScopeFlag>& scope_flags);
+
+		/**
+		 * @brief Pushes the deinits for the given lifetime flags.
+		 * Works together with `pushed_deinits_for_instr` to ensure deinits are only pushed once per
+		 * instruction.
+		 *
+		 * The typical place for deinits is after the instruction, but in some cases (e.g.
+		 * terminators) we may want to push the deinits before the instruction.
+		 * @param scope_flags
+		 * @param deinits_pushed The boolean flag that used to make sure deinits are only pushed once.
+		 */
+		void pushDeinitsForInstr(
+			const std::vector<lir::ScopeFlag>& scope_flags, bool& deinits_pushed
+		);
+
+
 		void pushInstruction(const vm::code::Instruction& instruction);
 
 		void pushInstruction(const vm::code::builders::InstructionBuilder& instruction);
+
+		/// Push single init instruction
+		void pushInit(lir::LIRLocalRef lir_local);
+
+		/// Push single deinit instruction. Local is not needed, but we may want to keep that
+		/// information for the future.
+		void pushDeinit(lir::LIRLocalRef);
 
 		/**
 		 * @brief Removes all existing temporaries added by pushTempLocal, e.g. temps created when

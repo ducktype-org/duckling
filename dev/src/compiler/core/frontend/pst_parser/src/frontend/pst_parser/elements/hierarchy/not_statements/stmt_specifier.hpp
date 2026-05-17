@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../meta.hpp"
+#include "wrapper_elements/keyword_wrapper.hpp"
 
 namespace pst {
 	/**
@@ -13,7 +14,7 @@ namespace pst {
 	 *  - extern ("C") {...}
 ..	 */
 	class StmtSpecifier final: public NotStmt {
-		Keyword specifier = Keyword::NotAKeyword;
+		NAMED_CHILD(specifier, KeywordWrapper);
 		NAMED_CHILD_OPT(call_list, CallList);
 
 	public:
@@ -39,8 +40,8 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		Keyword getSpecifier() const {
-			return specifier;
+		AccessLocked<KeywordWrapper> getSpecifier() const {
+			return specifier.give();
 		}
 
 		[[nodiscard]]

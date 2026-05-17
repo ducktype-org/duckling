@@ -17,34 +17,32 @@ namespace pst::expr {
 	MBox<ExprElement> ComparisonChain::parse(LangParserState& state) {
 		if (!checkNonEmpty(state)) return nullptr;
 
-		i64 length = base::safeIntConv<i64>(state.ctokens().size());
-
 		i64 fwd = skipToOp(state, 0);
-		if (fwd == length) return Lower::parse(state);
+		if (fwd == state.ctokens().size()) return Lower::parse(state);
+
 
 		// A chain with only one comparison operator should be returned as a binary operator
 		// because the generated code is much simpler that way.
-		if (skipToOp(state, fwd + 1) == length) {
+		if (skipToOp(state, fwd + 1) == state.ctokens().size()) {
 			auto op  = state[fwd].asBinaryOperator().value();
 			auto out = makeBox<GeneralBinary>(state, op);
 
 			PARSE().autoFallbackLen(fwd).with(&out->left, Lower::parse);
-			PARSE().one(op);
-			PARSE().autoFallbackLen(length - fwd - 1).with(&out->right, Lower::parse);
+			PARSE().one(&out->op);
+			PARSE().with(&out->right, Lower::parse);
 
 			PST_RETURN out;
 		}
 
 		auto out = makeBox<ComparisonChain>(state);
 
-		PST_WHILE(fwd < length) {
+		PST_WHILE(fwd < state.ctokens().size()) {
 			out->sub_expr.emplace_back(nullptr);
 			PARSE().autoFallbackLen(fwd).with(&out->sub_expr.back(), Lower::parse);
 
-			out->operators.push_back(state[0].asBinaryOperator().value());
-			PARSE().eatOne();
+			out->operators.emplace_back(nullptr);
+			PARSE().autoFallbackLen(1UL).with(&out->operators.back(), OperatorWrapper::parse);
 
-			length -= fwd + 1;
 			fwd = skipToOp(state, 0);
 		}
 
@@ -66,6 +64,17 @@ namespace pst::expr {
 				first = false;
 			nullAwareDprint(expr, out);
 		}
+		out << "],";
+
+		out << R"("operators": [)";
+		first = true;
+		for (auto& op: operators) {
+			if (!first)
+				out << ", ";
+			else
+				first = false;
+			nullAwareDprint(op, out);
+		}
 		out << "]";
 
 		out << "}";
@@ -73,7 +82,7 @@ namespace pst::expr {
 
 	HashAlg& ComparisonChain::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, sub_expr.size());
-		addToHash(partial_hash, operators);
+		addToHash(partial_hash, operators.size());
 		return partial_hash;
 	}
 
@@ -82,6 +91,12 @@ namespace pst::expr {
 	}
 
 	void ComparisonChain::calcElementPathHashRecursive() {
-		calcIndexedListChildPath<ExprElement>({ sub_expr }, getElementPathHash());
+		auto path          = getElementPathHash();
+		auto sub_expr_path = hashing::ComponentHash(path, "value");
+
+		calcIndexedListChildPath<ExprElement>({ sub_expr }, sub_expr_path);
+		auto op_path = hashing::ComponentHash(path, "operator");
+
+		calcIndexedListChildPath<OperatorWrapper>({ operators }, op_path);
 	}
 }

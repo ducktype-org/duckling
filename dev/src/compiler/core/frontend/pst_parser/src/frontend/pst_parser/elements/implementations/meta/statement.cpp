@@ -374,4 +374,10 @@ namespace pst {
 		if (prefixes.specifiers.size() > 0)
 			setFirstToken(prefixes.specifiers.front().internal()->source_position);
 	}
+
+	base::Optional<base::StrID> Stmt::getInternalSymbolName() const {
+		return getDeclSymbolIdentifier().map([](const AccessLocked<IdentifierWrapper>& acc) {
+			return acc.illegalAccess().value()->unwrap();
+		});
+	}
 }

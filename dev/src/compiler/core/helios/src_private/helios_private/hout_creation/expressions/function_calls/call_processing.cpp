@@ -643,7 +643,7 @@ namespace compiler::helios::code {
 			UNPACK_QRESULT_MOVE(auto arg_expr =, arg_expr_result);
 
 			if (arg.unlock(ctx)->isNamedArg()) {
-				base::StrID arg_name = arg.unlock(ctx)->getArgName().value.value();
+				base::StrID arg_name = arg.unlock(ctx)->getArgName().value().unlock(ctx)->unwrap();
 				for (auto&& [existing_name, _]: named_arguments) {
 					if (existing_name == arg_name) {
 						auto error = RepeatedNamedArgument{ arg_index };
@@ -749,7 +749,11 @@ namespace compiler::helios::code {
 	}
 
 	query::QResult<Box<Expr>> processBinaryOperatorCall(
-		query::Context& ctx, const std::vector<SymID>& candidates, Box<Expr> lhs, Box<Expr> rhs
+		query::Context&           ctx,
+		const std::vector<SymID>& candidates,
+		Box<Expr>                 lhs,
+		Box<Expr>                 rhs,
+		ElementOrigin             op_origin
 	) {
 		// Obtain the call source positions
 		const auto lhs_origin = lhs->origin;
@@ -758,11 +762,9 @@ namespace compiler::helios::code {
 		const auto whole_call_origin = elementOriginOrdered(lhs->origin, rhs->origin);
 
 		const CallPstOrigin pst_origin{
-			// @TODO: #2075 Giving the callee the position of the entire call is not
-			// strictly correct, but currently has no adverse effects. Fix this.
 			.whole_call_origin = whole_call_origin,
-			.callee_origin     = whole_call_origin,
-			.arguments_origin  = { lhs_origin, rhs_origin }
+			.callee_origin     = op_origin,
+			.arguments_origin  = { lhs_origin, rhs_origin },
 		};
 		CallArguments call_arguments{};
 		call_arguments.positional_arguments.emplace_back(std::move(lhs));

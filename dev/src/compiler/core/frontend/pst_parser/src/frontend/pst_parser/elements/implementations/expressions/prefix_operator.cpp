@@ -7,7 +7,7 @@ namespace pst::expr {
 		out << "{";
 
 		out << R"("operator": )";
-		tpc::nullAwareDprint(op, out);
+		nullAwareDprint(op, out);
 		out << R"(, "expression": )";
 		nullAwareDprint(expr, out);
 
@@ -19,11 +19,10 @@ namespace pst::expr {
 	}
 
 	HashAlg& PrefixOperator::addElementDataToStableHash(HashAlg& partial_hash) const {
-		addToHash(partial_hash, op);
 		return partial_hash;
 	}
 
-	lexer::Operator PrefixOperator::getOperator() const { return op; }
+	AccessLocked<OperatorWrapper> PrefixOperator::getOperator() const { return op.give(); }
 
 	AccessLocked<ExprElement> PrefixOperator::getExpr() const { return expr.give(); }
 }

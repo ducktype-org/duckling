@@ -18,17 +18,41 @@
 					"Import Identifier As Chain": {
 						"names": [
 							{
-								"Name": "aaaa"
+								"position": {
+									"sourceStart": 7,
+									"sourceEnd": 10
+								},
+								"Identifier Wrapper": {
+									"value": "aaaa"
+								}
 							},
 							{
-								"Name": "bbb"
+								"position": {
+									"sourceStart": 12,
+									"sourceEnd": 14
+								},
+								"Identifier Wrapper": {
+									"value": "bbb"
+								}
 							},
 							{
-								"Name": "c"
+								"position": {
+									"sourceStart": 16,
+									"sourceEnd": 16
+								},
+								"Identifier Wrapper": {
+									"value": "c"
+								}
 							},
 						],
 						"as": {
-							"Name": "D"
+							"position": {
+								"sourceStart": 21,
+								"sourceEnd": 21
+							},
+							"Identifier Wrapper": {
+								"value": "D"
+							}
 						}
 					}
 				}
@@ -48,10 +72,22 @@
 					"Import Star Hides Chain": {
 						"names": [
 							{
-								"Name": "dasdsa"
+								"position": {
+									"sourceStart": 32,
+									"sourceEnd": 37
+								},
+								"Identifier Wrapper": {
+									"value": "dasdsa"
+								}
 							},
 							{
-								"Name": "dasd"
+								"position": {
+									"sourceStart": 39,
+									"sourceEnd": 42
+								},
+								"Identifier Wrapper": {
+									"value": "dasd"
+								}
 							},
 						],
 					}
@@ -72,11 +108,23 @@
 					"Import Identifier As Chain": {
 						"names": [
 							{
-								"Name": "aaaa"
+								"position": {
+									"sourceStart": 55,
+									"sourceEnd": 58
+								},
+								"Identifier Wrapper": {
+									"value": "aaaa"
+								}
 							},
 						],
 						"as": {
-							"Name": "σααα"
+							"position": {
+								"sourceStart": 63,
+								"sourceEnd": 66
+							},
+							"Identifier Wrapper": {
+								"value": "σααα"
+							}
 						}
 					}
 				}
@@ -96,16 +144,40 @@
 					"Import Identifier As Chain": {
 						"names": [
 							{
-								"Name": "a"
+								"position": {
+									"sourceStart": 77,
+									"sourceEnd": 77
+								},
+								"Identifier Wrapper": {
+									"value": "a"
+								}
 							},
 							{
-								"Name": "b"
+								"position": {
+									"sourceStart": 79,
+									"sourceEnd": 79
+								},
+								"Identifier Wrapper": {
+									"value": "b"
+								}
 							},
 							{
-								"Name": "c"
+								"position": {
+									"sourceStart": 81,
+									"sourceEnd": 81
+								},
+								"Identifier Wrapper": {
+									"value": "c"
+								}
 							},
 							{
-								"Name": "d"
+								"position": {
+									"sourceStart": 83,
+									"sourceEnd": 83
+								},
+								"Identifier Wrapper": {
+									"value": "d"
+								}
 							},
 						],
 					}
@@ -126,17 +198,41 @@
 					"Import Identifier As Chain": {
 						"names": [
 							{
-								"Name": "ἄλφα"
+								"position": {
+									"sourceStart": 94,
+									"sourceEnd": 97
+								},
+								"Identifier Wrapper": {
+									"value": "ἄλφα"
+								}
 							},
 							{
-								"Name": "βῆτα"
+								"position": {
+									"sourceStart": 99,
+									"sourceEnd": 102
+								},
+								"Identifier Wrapper": {
+									"value": "βῆτα"
+								}
 							},
 							{
-								"Name": "γάμμα"
+								"position": {
+									"sourceStart": 104,
+									"sourceEnd": 108
+								},
+								"Identifier Wrapper": {
+									"value": "γάμμα"
+								}
 							},
 						],
 						"as": {
-							"Name": "U"
+							"position": {
+								"sourceStart": 113,
+								"sourceEnd": 113
+							},
+							"Identifier Wrapper": {
+								"value": "U"
+							}
 						}
 					}
 				}
@@ -156,10 +252,22 @@
 					"Import Star Hides Chain": {
 						"names": [
 							{
-								"Name": "ἄλφα"
+								"position": {
+									"sourceStart": 124,
+									"sourceEnd": 127
+								},
+								"Identifier Wrapper": {
+									"value": "ἄλφα"
+								}
 							},
 							{
-								"Name": "βῆτα"
+								"position": {
+									"sourceStart": 129,
+									"sourceEnd": 132
+								},
+								"Identifier Wrapper": {
+									"value": "βῆτα"
+								}
 							},
 						],
 					}
@@ -180,10 +288,22 @@
 					"Import Nested": {
 						"names": [
 							{
-								"Name": "A"
+								"position": {
+									"sourceStart": 145,
+									"sourceEnd": 145
+								},
+								"Identifier Wrapper": {
+									"value": "A"
+								}
 							},
 							{
-								"Name": "B"
+								"position": {
+									"sourceStart": 147,
+									"sourceEnd": 147
+								},
+								"Identifier Wrapper": {
+									"value": "B"
+								}
 							},
 						],
 						"nested_import": {
@@ -200,7 +320,13 @@
 									"Import Identifier As Chain": {
 										"names": [
 											{
-												"Name": "C"
+												"position": {
+													"sourceStart": 150,
+													"sourceEnd": 150
+												},
+												"Identifier Wrapper": {
+													"value": "C"
+												}
 											},
 										],
 									}
@@ -226,7 +352,13 @@
 													"Import Identifier As Chain": {
 														"names": [
 															{
-																"Name": "D"
+																"position": {
+																	"sourceStart": 153,
+																	"sourceEnd": 153
+																},
+																"Identifier Wrapper": {
+																	"value": "D"
+																}
 															},
 														],
 													}
@@ -239,7 +371,13 @@
 													"Import Identifier As Chain": {
 														"names": [
 															{
-																"Name": "E"
+																"position": {
+																	"sourceStart": 156,
+																	"sourceEnd": 156
+																},
+																"Identifier Wrapper": {
+																	"value": "E"
+																}
 															},
 														],
 													}
@@ -268,17 +406,41 @@
 					"Import Identifier As Chain": {
 						"names": [
 							{
-								"Name": "A"
+								"position": {
+									"sourceStart": 170,
+									"sourceEnd": 170
+								},
+								"Identifier Wrapper": {
+									"value": "A"
+								}
 							},
 							{
-								"Name": "B"
+								"position": {
+									"sourceStart": 172,
+									"sourceEnd": 172
+								},
+								"Identifier Wrapper": {
+									"value": "B"
+								}
 							},
 							{
-								"Name": "C"
+								"position": {
+									"sourceStart": 174,
+									"sourceEnd": 174
+								},
+								"Identifier Wrapper": {
+									"value": "C"
+								}
 							},
 						],
 						"as": {
-							"Name": "D"
+							"position": {
+								"sourceStart": 179,
+								"sourceEnd": 179
+							},
+							"Identifier Wrapper": {
+								"value": "D"
+							}
 						}
 					}
 				}
@@ -298,21 +460,51 @@
 					"Import Star Hides Chain": {
 						"names": [
 							{
-								"Name": "A"
+								"position": {
+									"sourceStart": 190,
+									"sourceEnd": 190
+								},
+								"Identifier Wrapper": {
+									"value": "A"
+								}
 							},
 							{
-								"Name": "B"
+								"position": {
+									"sourceStart": 192,
+									"sourceEnd": 192
+								},
+								"Identifier Wrapper": {
+									"value": "B"
+								}
 							},
 						],
 						"hides": [
 							{
-								"Name": "D"
+								"position": {
+									"sourceStart": 202,
+									"sourceEnd": 202
+								},
+								"Identifier Wrapper": {
+									"value": "D"
+								}
 							},
 							{
-								"Name": "G"
+								"position": {
+									"sourceStart": 206,
+									"sourceEnd": 206
+								},
+								"Identifier Wrapper": {
+									"value": "G"
+								}
 							},
 							{
-								"Name": "C"
+								"position": {
+									"sourceStart": 209,
+									"sourceEnd": 209
+								},
+								"Identifier Wrapper": {
+									"value": "C"
+								}
 							},
 						],
 					}

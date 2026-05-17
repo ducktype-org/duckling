@@ -1,0 +1,53 @@
+metadata:
+  type: "warning"
+  family: "misc"
+  name: "placeholder"
+  code: "0"
+  active_from: "0.0.1"
+  active_until: "now"
+  template_type: "message"
+
+
+params:
+  header_message:
+    description: "The header message of the placeholder warning."
+
+  description:
+    description: "The detailed description of the placeholder warning."
+
+  code:
+    description: "The code snippet where the placeholder is located."
+    optional: true
+
+  code_location:
+    description: "Location of the code snippet."
+    component_type: "code_location"
+
+  pointer_message_content:
+    description: "The pointer message indicating the cause location."
+    optional: true
+
+
+header_message:
+  param: "header_message"
+
+
+description:
+  - param: "description"
+  - case:
+      is_param_provided: "code"
+    of:
+      true:
+        - codeblock:
+            param: "code"
+          location:
+            param: "code_location"
+      false: []
+
+
+pointer_messages:
+  cause:
+    priority: 1
+    type: "warning"
+    content:
+      param: "pointer_message_content"
