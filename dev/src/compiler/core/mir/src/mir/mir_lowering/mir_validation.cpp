@@ -201,65 +201,36 @@ namespace compiler::mir {
 	}
 
 	base::OkBad validateNoComptimeTypes(query::Context& ctx, const Function& fun) {
-		variant_match(fun.helios_id) {
-			variant_case(FunctionSymID, f_id) {
-				auto status_q = ctx.query<IsComptimeOnly>(f_id.id);
-				if (!status_q.get()->hasFailed()
-				    && status_q.get()->valueOrPanic() == ComptimeStatus::ComptimeOnly) {
-					if (helios::name(f_id.id) == base::StrID("main")) {
-						ctx.logInt(makeBox<dia_int::PlaceholderError>(
-							"The 'main' function cannot be marked as compile-time only "
-							"(comptime-only).",
-							""
-						));
-						return base::BAD;
-					}
-				}
-			}
+        variant_match(fun.helios_id) {
+            variant_case(FunctionSymID, f_id) { 
+                (void) ctx.query<IsComptimeOnly>(f_id.id); 
+            }
+            variant_default {}
+        }
+        if (fun.comptime_status == ComptimeStatus::ComptimeOnly) {
+            variant_match(fun.helios_id) {
+                variant_case(FunctionSymID, f_id) {
+                    if (helios::name(f_id.id) == base::StrID("main")) {
+                        ctx.logInt(makeBox<dia_int::PlaceholderError>(
+                            "The 'main' function cannot be marked as compile-time only.",
+                            ""
+                        ));
+                        return base::BAD;
+                    }
+                }
+                
+                variant_case(GlobalVariableCTOR, g_id) {
+                    ctx.logInt(makeBox<dia_int::PlaceholderError>(
+                        "Global variable constructors cannot be marked as compile-time only.",
+                        ""
+                    ));
+                    return base::BAD;
+                }
+            }
+        }
 
-			variant_case(GlobalVariableCTOR, g_id) {
-				bool is_global_comptime = false;
-
-				if (isComptimeOnlyType(fun.return_type.getType())) is_global_comptime = true;
-
-				if (!is_global_comptime) {
-					for (const auto& local: fun.local_list) {
-						if (isComptimeOnlyType(local.type.getType())) {
-							is_global_comptime = true;
-							break;
-						}
-					}
-				}
-
-				if (!is_global_comptime) {
-					for (auto block_id: fun.block_order) {
-						if (!fun.blocks.contains(block_id)) continue;
-						const auto& block = fun.blocks.at(block_id);
-						for (const auto& instr: block->instructions) {
-							if (isMetaOp(instr.operation)) {
-								is_global_comptime = true;
-								break;
-							}
-						}
-						if (is_global_comptime) break;
-					}
-				}
-
-				if (is_global_comptime) {
-					ctx.logInt(makeBox<dia_int::PlaceholderError>(
-						"Global variable initializers/constructors cannot contain compile-time "
-						"only expressions or types.",
-						""
-					));
-					return base::BAD;
-				}
-			}
-
-			variant_default {}
-		}
-
-		return base::OK;
-	}
+        return base::OK;
+    }
 
 	base::OkBad validateFunction(query::Context& ctx, const Function& fun) {
 		bool all_ok = validateMoves(ctx, fun).isOk() && validateShadowing(ctx, fun).isOk()
