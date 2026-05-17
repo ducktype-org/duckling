@@ -4,8 +4,6 @@
 
 #include <base/extend_cpp/variant_match.hpp>
 
-#include "vm/api/data/status.hpp"
-#include "vm/api/data/thread_id.hpp"
 #include <vm/api/vm.hpp>
 
 inline std::string statusToString(const vm::api::ProcStatus& status) {
