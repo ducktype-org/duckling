@@ -57,12 +57,15 @@ namespace vm::loader {
 		/**
 		 * @brief Injects new code from given file paths to the current program state.
 		 */
-		std::expected<void, LoaderLogger> loadAndCompile(const std::vector<fs::File>& file_path);
+		std::expected<void, LoaderLogger> loadAndCompile(
+			const std::vector<fs::File>& file_path, bool attach_mapping
+		);
 
 		/**
 		 * @brief Injects new code from a given high-level code representation.
 		 */
-		std::expected<void, LoaderLogger> loadAndCompile(const code::CodeCollection& code_collection
+		std::expected<void, LoaderLogger> loadAndCompile(
+			const code::CodeCollection& code_collection, bool attach_mapping
 		);
 
 		CRef<code::ValidProgram> getHighProgram() const;
@@ -77,5 +80,22 @@ namespace vm::loader {
 		static std::expected<code::CodeCollection, std::string> parseCodeCollectionFromFiles(
 			const std::vector<fs::File>& files
 		);
+
+		struct BytecodePosition {
+			base::StrID function_id;
+			usize       instruction_index;
+		};
+
+		enum MappingException {
+			MissingMapping,
+			NoFunction,
+		};
+
+		std::expected<BytecodePosition, MappingException> mapLowVMProgramPositionToCodeCollectionPosition(
+			base::StrID function_id, usize instruction_index
+		) const;
+		base::Optional<dia::SourcePosition> mapCodeCollectionPositionToFilePosition(
+			base::StrID function_id, usize instruction_index
+		) const;
 	};
 }

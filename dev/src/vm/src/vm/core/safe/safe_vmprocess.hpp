@@ -33,6 +33,8 @@ namespace vm {
 		friend class VMValueRef;
 
 	private:
+		const api::ProcessOptions options;
+
 		std::shared_mutex rw_global;
 		/**
 		 * @brief A loader instance for this SafeVMProcess. Stores the high level and low level
@@ -148,7 +150,7 @@ namespace vm {
 		void updateGlobalDataMemory(CRef<low::ILowVMProgram> program);
 
 	public:
-		SafeVMProcess(PID my_pid);
+		SafeVMProcess(PID my_pid, api::ProcessOptions options = {});
 
 		Memory& getMemory();
 

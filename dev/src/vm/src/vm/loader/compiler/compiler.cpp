@@ -152,10 +152,19 @@ namespace vm::loader::compiler {
 		}
 	}
 
-	low::MicroBytecode Compiler::lowerInstructions(FunctionCompilationContext& ctx) {
+	low::MicroBytecode Compiler::lowerInstructions(
+		FunctionCompilationContext& ctx, bool attach_mapping
+	) {
 		detail::MicroBytecodeBuilder builder{ *this, ctx };
 
-		for (const auto& instr: ctx.function.body) builder.add(instr);
+		if (attach_mapping) {
+			for (const auto& instr: ctx.function.body) {
+				auto [begin, end] = builder.add(instr);
+				ctx.instruction_mapping.push_back({ begin, end });
+			}
+		} else {
+			for (const auto& instr: ctx.function.body) builder.add(instr);
+		}
 
 		auto [micro_bytecode, label_map] = builder.build();
 		linkLabelArguments(micro_bytecode, label_map);
@@ -317,7 +326,9 @@ namespace vm::loader::compiler {
 		ctx.local_block_count = max_block_count;
 	}
 
-	void Compiler::compileNewFunctions(const std::vector<code::Function>& new_functions) {
+	void Compiler::compileNewFunctions(
+		const std::vector<code::Function>& new_functions, bool attach_mapping
+	) {
 		// Forward declare all functions
 		for (const auto& function: new_functions)
 			program_ctx.function_forward_declarations.insert(function, function.name);
@@ -338,7 +349,7 @@ namespace vm::loader::compiler {
 				parameters_size += type->getSize().asInt();
 			}
 
-			low::MicroBytecode bytecode = lowerInstructions(ctx);
+			low::MicroBytecode bytecode = lowerInstructions(ctx, attach_mapping);
 
 			u64                   ret_type_sum = 0;
 			std::vector<TypeCRef> result_types = {};
@@ -347,15 +358,21 @@ namespace vm::loader::compiler {
 				result_types.emplace_back(low_program.types->at(ret));
 			}
 
+			base::Optional<std::vector<std::pair<usize, usize>>> instruction_mapping;
+			if (attach_mapping) instruction_mapping = std::move(ctx.instruction_mapping);
+
 			low_program.functions.insert(
-				low::LowFuncData{ .name              = function.name,
-			                      .bc                = std::move(bytecode),
-			                      .local_stack_size  = ctx.local_stack_size,
-			                      .local_block_count = ctx.local_block_count,
-			                      .arg_size          = parameters_size,
-			                      .ret_size          = ret_type_sum,
-			                      .parameters        = std::move(parameters),
-			                      .result_types      = std::move(result_types) },
+				low::LowFuncData{
+					.name                = function.name,
+					.bc                  = std::move(bytecode),
+					.local_stack_size    = ctx.local_stack_size,
+					.local_block_count   = ctx.local_block_count,
+					.arg_size            = parameters_size,
+					.ret_size            = ret_type_sum,
+					.parameters          = std::move(parameters),
+					.result_types        = std::move(result_types),
+					.instruction_mapping = std::move(instruction_mapping),
+				},
 				function.name
 			);
 		}
@@ -443,7 +460,7 @@ namespace vm::loader::compiler {
 		}
 	}
 
-	void Compiler::recompile(const code::ValidProgram& high_program) {
+	void Compiler::recompile(const code::ValidProgram& high_program, bool attach_mapping) {
 		compileNewTypes(high_program.getTypeContext());
 
 		auto new_c_functions = high_program.extCFunctions()
@@ -459,7 +476,7 @@ namespace vm::loader::compiler {
 		auto new_functions = high_program.functions()
 		                   | std::views::drop(low_program.functions.size())
 		                   | std::ranges::to<std::vector<code::Function>>();
-		compileNewFunctions(new_functions);
+		compileNewFunctions(new_functions, attach_mapping);
 	}
 
 	CRef<low::LowVMProgram> Compiler::getLowProgram() const { return &low_program; }

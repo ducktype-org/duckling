@@ -32,8 +32,12 @@ namespace vm {
 		std::unique_lock                          lock(rw_global);
 		std::expected<void, loader::LoaderLogger> code_result = [&] {
 			variant_match(source) {
-				variant_case(std::vector<fs::File>, files) { return loader.loadAndCompile(files); }
-				variant_case(code::CodeCollection, code) { return loader.loadAndCompile(code); }
+				variant_case(std::vector<fs::File>, files) {
+					return loader.loadAndCompile(files, options.enable_mapping);
+				}
+				variant_case(code::CodeCollection, code) {
+					return loader.loadAndCompile(code, options.enable_mapping);
+				}
 			}
 			CORE_UNREACHABLE();
 		}();
@@ -138,8 +142,9 @@ namespace vm {
 		return Box<VmValue>::fromPointer(new VmValue(*this, type, src));
 	}
 
-	SafeVMProcess::SafeVMProcess(const PID my_pid):
+	SafeVMProcess::SafeVMProcess(const PID my_pid, api::ProcessOptions options):
 		  IVMProcess(my_pid),
+		  options(options),
 		  loaded_program(&loaded_program_copy),
 		  loaded_program_copy(loader.getProgram()) {
 		vm_threads.add(*this);
@@ -213,8 +218,41 @@ namespace vm {
 	base::Optional<api::ApiError> SafeVMProcess::stepVMThread(api::ThreadID thread_id) {
 		auto opt_thread = getVMThreadByID(thread_id);
 		if (!opt_thread) return api::ApiError{ api::OtherError{ "Thread not found" } };
-		auto response = opt_thread.value()->step();
-		if (!response) return api::ApiError{ api::OtherError{ "step error" } };
+
+		auto low_position = opt_thread.value()->getCurrentPosition();
+		if (!low_position) return low_position.error();
+
+		auto [function_id, low_instruction_index] = low_position.value();
+
+		auto function = getLoadedProgram()->getFunctions().atMaybe(function_id);
+		if (!function)
+			return api::ApiError{ api::OtherError{
+				"step error: can't step function that is not in loaded program" } };
+
+		auto mapping = function.value()->instruction_mapping;
+		if (mapping.empty())
+			return api::ApiError{ api::OtherError{ "step error: missing mapping" } };
+
+		auto high_position = loader.mapLowVMProgramPositionToCodeCollectionPosition(
+			function.value()->name, low_instruction_index
+		);
+		if (!high_position)
+			return api::ApiError{ api::OtherError{ "step error: missing mapping" } };
+
+		auto [begin, end] = mapping.value()[high_position.value().instruction_index];
+
+		// We do one step, then we go until we're outside the exclusive range (begin, end).
+		// Naive approach "while (in range [begin, end)) { microstep(); }" would fail on function
+		// jumping to itself.
+		do {
+			auto response = opt_thread.value()->step();
+			if (!response) return api::ApiError{ api::OtherError{ "step error" } };
+
+			low_position = opt_thread.value()->getCurrentPosition();
+			if (!low_position) return low_position.error();
+		} while (low_position.value().first == function_id && begin < low_position.value().second
+		         && low_position.value().second < end);
+
 		return {};
 	}
 
@@ -224,7 +262,31 @@ namespace vm {
 		auto opt_thread = getVMThreadByID(thread_id);
 		if (!opt_thread)
 			return std::unexpected(api::ApiError{ api::OtherError{ "Thread not found" } });
-		return opt_thread.value()->getCurrentPosition();
+		return opt_thread.value()->getCurrentPosition().transform([&](auto arg) {
+			auto [low_function_id, low_instruction_index] = arg;
+
+			auto function_name = getLoadedProgram()->getFunctions()[low_function_id].name;
+			base::Optional<u64>                 instr_number;
+			base::Optional<dia::SourcePosition> source_position;
+
+			auto maybe_high_position = loader.mapLowVMProgramPositionToCodeCollectionPosition(
+				function_name, low_instruction_index
+			);
+
+			if (maybe_high_position.has_value()) {
+				auto high_position = maybe_high_position.value();
+				instr_number       = high_position.instruction_index;
+				source_position    = loader.mapCodeCollectionPositionToFilePosition(
+                    high_position.function_id, high_position.instruction_index
+                );
+			}
+
+			return api::Response(api::response::CodePosition{
+				.function_name   = function_name,
+				.instr_number    = instr_number,
+				.source_position = source_position,
+			});
+		});
 	}
 
 	void SafeVMProcess::waitForBreakpoint() {

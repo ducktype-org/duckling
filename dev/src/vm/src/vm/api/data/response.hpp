@@ -5,6 +5,8 @@
 
 #include <base/pointers/box.hpp>
 
+#include <diagnostic/source_position.hpp>
+
 #include <vm/core/vmvalue/vmvalueref.hpp>
 
 // NOLINTBEGIN(readability-identifier-naming)
@@ -48,9 +50,12 @@ namespace vm::api {
 		};
 
 		struct CodePosition {
-			u64 function_id;
-			u64 instr_number;
-			NLOHMANN_DEFINE_TYPE_INTRUSIVE(CodePosition, instr_number, function_id);
+			base::StrID                         function_name;
+			base::Optional<u64>                 instr_number;
+			base::Optional<dia::SourcePosition> source_position;
+			NLOHMANN_DEFINE_TYPE_INTRUSIVE(
+				CodePosition, function_name, instr_number, source_position
+			);
 		};
 
 		struct NumberOfCurrentStackFrames {

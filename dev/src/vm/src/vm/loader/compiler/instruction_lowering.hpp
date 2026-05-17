@@ -85,8 +85,12 @@ namespace vm::loader::compiler::detail {
 			return { std::move(result), std::move(label_id_to_offset) };
 		}
 
-		/// Add a new high instruction.
-		void add(const code::Instruction& instruction);
+		/**
+		 * @brief Add a new high instruction.
+		 * @return A pair containing the begin and end indices of the added instruction.
+		 * The end index is exclusive, so the instruction occupies the range [begin, end).
+		 */
+		std::pair<usize, usize> add(const code::Instruction& instruction);
 
 
 	private:
@@ -143,10 +147,11 @@ namespace vm::loader::compiler::detail {
 		}
 	};
 
-	void MicroBytecodeBuilder::add(const code::Instruction& instruction) {
+	std::pair<usize, usize> MicroBytecodeBuilder::add(const code::Instruction& instruction) {
 #if (BUILD_TYPE_DEV_DEBUG)
 		current_high_instruction_representation = code::instructionToString(instruction);
 #endif
+		usize instruction_begin_index = next_instruction_index;
 
 		push_step_gil_on_next_add_low = true;
 
@@ -620,5 +625,7 @@ namespace vm::loader::compiler::detail {
 			}
 		}
 		POP_DIAGNOSTIC
+
+		return { instruction_begin_index, next_instruction_index };
 	}
 }

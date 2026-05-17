@@ -594,7 +594,7 @@ namespace vm {
 		}
 	}
 
-	std::expected<api::Response, api::ApiError> SafeVMThread::getCurrentPosition() {
+	std::expected<std::pair<u64, u64>, api::ApiError> SafeVMThread::getCurrentPosition() {
 		variant_match(getStatus()) {
 			variant_case_novalue(api::Paused) {
 				auto frame = runtime_data.frame_stack_current;
@@ -603,9 +603,10 @@ namespace vm {
 				for (const auto& [idx, func]:
 				     std::views::enumerate(process_program->getFunctions())) {
 					if (func.bc.data() <= instr && instr < func.bc.data() + func.bc.size()) {
-						return api::Response(api::response::CodePosition{
-							.function_id  = static_cast<u64>(idx),  // Assuming function_id is int
-							.instr_number = static_cast<u64>(instr - func.bc.data()) });
+						return std::make_pair(
+							static_cast<u64>(idx),  // Assuming function_id is int
+							static_cast<u64>(instr - func.bc.data())
+						);
 					}
 				}
 			}

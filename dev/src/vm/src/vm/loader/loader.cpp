@@ -98,7 +98,8 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::parseFiles(
 	CORE_UNREACHABLE();
 }
 
-std::expected<void, LoaderLogger> Loader::loadAndCompile(const code::CodeCollection& code_collection
+std::expected<void, LoaderLogger> Loader::loadAndCompile(
+	const code::CodeCollection& code_collection, bool attach_mapping
 ) {
 	// Skip if no new code was added.
 	if (code_collection.functions.empty() && code_collection.types.empty()
@@ -115,7 +116,7 @@ std::expected<void, LoaderLogger> Loader::loadAndCompile(const code::CodeCollect
 
 		// @note: After successfully inserting code into `validated_high_program` we compile it to
 		// the low level representation. This step cannot fail since the code was already validated.
-		compiler.recompile(validated_high_program);
+		compiler.recompile(validated_high_program, attach_mapping);
 		return {};
 	} catch (code::StackStructureMismatchError& e) {
 		log.logMap(
@@ -163,9 +164,12 @@ std::expected<void, LoaderLogger> Loader::loadAndCompile(const code::CodeCollect
 	return std::unexpected(std::move(log));
 }
 
-std::expected<void, LoaderLogger> Loader::loadAndCompile(const std::vector<fs::File>& file_paths) {
+std::expected<void, LoaderLogger> Loader::loadAndCompile(
+	const std::vector<fs::File>& file_paths, bool attach_mapping
+) {
 	auto opt_code_collection = parseFiles(file_paths);
-	if (opt_code_collection.has_value()) return loadAndCompile(*opt_code_collection);
+	if (opt_code_collection.has_value())
+		return loadAndCompile(*opt_code_collection, attach_mapping);
 	return std::unexpected(std::move(opt_code_collection).error());
 }
 
@@ -173,7 +177,9 @@ CRef<vm::low::LowVMProgram> vm::loader::Loader::getProgram() const {
 	return compiler.getLowProgram();
 }
 
-vm::loader::Loader::Loader() { compiler.recompile(validated_high_program); }
+vm::loader::Loader::Loader() {
+	compiler.recompile(validated_high_program, true);
+}  // TODO: reconsider attach_mapping here
 
 base::CRef<vm::code::ValidProgram> vm::loader::Loader::getHighProgram() const {
 	return &validated_high_program;
@@ -186,5 +192,37 @@ std::expected<vm::code::CodeCollection, std::string> vm::loader::Loader::parseCo
 		std::stringstream ss;
 		logger.dump(ss);
 		return ss.str();
+	});
+}
+
+std::expected<vm::loader::Loader::BytecodePosition, vm::loader::Loader::MappingException> vm::
+	loader::Loader::mapLowVMProgramPositionToCodeCollectionPosition(
+		base::StrID function_id, usize instruction_index
+	) const {
+	auto maybe_function = getProgram()->getFunctions().atMaybe(function_id);
+	if (maybe_function.empty()) return std::unexpected(NoFunction);
+	if (maybe_function.value()->instruction_mapping.empty()) return std::unexpected(MissingMapping);
+
+	auto& mapping = maybe_function.value()->instruction_mapping.value();
+	auto  candidate
+		= std::upper_bound(
+			  mapping.begin(), mapping.end(), std::make_pair(instruction_index, usize(-1))
+		  )
+	    - 1;
+
+	return BytecodePosition{
+		.function_id       = function_id,
+		.instruction_index = usize(candidate - mapping.begin()),
+	};
+}
+
+base::Optional<dia::SourcePosition> vm::loader::Loader::mapCodeCollectionPositionToFilePosition(
+	base::StrID function_id, usize instruction_index
+) const {
+	const auto& maybe_high_function = getHighProgram()->functions().atMaybe(function_id);
+	if (maybe_high_function.empty()) return {};  // TODO: throw: invalid position
+
+	return maybe_high_function.value()->body.at(instruction_index).visit([](auto&& instr) {
+		return instr.bytecode_pos;
 	});
 }

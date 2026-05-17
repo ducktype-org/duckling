@@ -25,7 +25,8 @@ public:
 
 private:
 	vm::PID loadProgram(std::string_view path_name) {
-		auto process_pid_response = vm::api::spawn();
+		auto process_pid_response
+			= vm::api::spawn(vm::api::ProcessOptions{ .enable_mapping = true });
 		assertTrue(process_pid_response.has_value(), "Spawn failed (loadProgram)");
 		auto pid = process_pid_response.value().pid;
 
@@ -48,25 +49,25 @@ private:
 		// work correctly.
 		auto execution_position
 			= vm::api::waitForBreakpoint(pid).value();  // "Wait for breakpoint failed (1)"
-		// Because of stepGILs are inserted, there are more instructions.
-		ASSERT_EQUAL_PRINT(2, execution_position.instr_number);
+		// Because of stepGILs are inserted, there are more instructions. UPDATE: Because of mapping
+		// not anymore
+		ASSERT_TRUE(execution_position.instr_number.has_value());
+		ASSERT_EQUAL_PRINT(1, execution_position.instr_number.value());
 
 		vm::api::resume(pid).value();                 // "Resume failed (1)"
 		auto position = vm::api::pause(pid).value();  // "Pause failed (1)"
-		ASSERT_TRUE(position.instr_number == 9);
+		ASSERT_TRUE(position.instr_number.has_value());
+		ASSERT_EQUAL_PRINT(position.instr_number.value(), 5);
 
 		auto expected_next_line = [this](u64 x) -> u64 {
-			if (x == 6) return 7;
-			if (x == 7) return 8;
-			if (x == 8) return 9;
-			if (x == 9) return 10;
-			if (x == 10) return 6;
+			if (x == 4) return 5;
+			if (x == 5) return 4;
 			this->fail("Unexpected line number: " + std::to_string(x));
 			CORE_UNREACHABLE();
 		};
 
 		auto line_number2 = stepAndGetLine(pid);
-		ASSERT_EQUAL_PRINT(expected_next_line(position.instr_number), line_number2);
+		ASSERT_EQUAL_PRINT(expected_next_line(position.instr_number.value()), line_number2);
 
 		auto line_number3 = stepAndGetLine(pid);
 		ASSERT_EQUAL_PRINT(expected_next_line(line_number2), line_number3);
@@ -92,7 +93,8 @@ private:
 		vm::api::step(base::safeIntConv<vm::PID>(pid)).value();  // "Step failed"
 		auto execution_position = vm::api::getCurrentPosition(base::safeIntConv<vm::PID>(pid))
 		                              .value();                  // "Get current position failed"
-		return execution_position.instr_number;
+		ASSERT_TRUE(execution_position.instr_number.has_value());
+		return execution_position.instr_number.value();
 	}
 };
 

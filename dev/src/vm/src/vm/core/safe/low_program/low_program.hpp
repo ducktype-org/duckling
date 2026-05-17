@@ -36,6 +36,9 @@ namespace vm::low {
 		usize                 ret_size;
 		std::vector<TypeCRef> parameters;
 		std::vector<TypeCRef> result_types;
+
+		/// Mapping of fatbytecode instruction indices to microbytecode instruction indice ranges.
+		base::Optional<std::vector<std::pair<usize, usize>>> instruction_mapping{};
 	};
 
 	/**

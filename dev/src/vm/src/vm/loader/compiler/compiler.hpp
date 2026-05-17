@@ -47,7 +47,7 @@ namespace vm::loader::compiler {
 		 * functions, etc.) is a stable prefix of the new set. Passing a completely unrelated
 		 * `ValidProgram` will lead to an invalid internal state and incorrect compilation.
 		 */
-		void recompile(const code::ValidProgram& high_program);
+		void recompile(const code::ValidProgram& high_program, bool attach_mapping);
 
 		/**
 		 * @brief Provides read-only access to the internally managed `LowVMProgram`.
@@ -113,6 +113,9 @@ namespace vm::loader::compiler {
 			/// Total required size for the local stack frame, in bytes.
 			usize local_stack_size  = 0;
 			usize local_block_count = 0;
+
+			/// Bytecode to Microbytecode mapping
+			std::vector<std::pair<usize, usize>> instruction_mapping{};
 		};
 
 		/**
@@ -148,7 +151,9 @@ namespace vm::loader::compiler {
 		 * @param new_functions A vector containing the new `Function` objects for newly added
 		 * functions.
 		 */
-		void compileNewFunctions(const std::vector<code::Function>& new_functions);
+		void compileNewFunctions(
+			const std::vector<code::Function>& new_functions, bool attach_mapping
+		);
 
 		/**
 		 * @brief Compiles newly added ExternCFunctions and adds the compiled functions to the
@@ -183,7 +188,7 @@ namespace vm::loader::compiler {
 		 * symbolic arguments to numeric values.
 		 * @return The converted list of instructions.
 		 */
-		low::MicroBytecode lowerInstructions(FunctionCompilationContext& ctx);
+		low::MicroBytecode lowerInstructions(FunctionCompilationContext& ctx, bool attach_mapping);
 
 		/**
 		 * @brief Translates a single high-level instruction argument (`opargs::OpCodeArg`)

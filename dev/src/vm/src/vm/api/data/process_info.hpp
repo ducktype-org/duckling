@@ -13,6 +13,10 @@ namespace vm {
 
 			NLOHMANN_DEFINE_TYPE_INTRUSIVE(ProcessInfo, pid);
 		};
+
+		struct ProcessOptions {
+			bool enable_mapping = false;
+		};
 	}
 }
 
