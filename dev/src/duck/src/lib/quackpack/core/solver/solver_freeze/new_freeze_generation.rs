@@ -122,12 +122,9 @@ impl SolverFreeze {
                 > 0
                 || !was_realization_present
             {
-<<<<<<< HEAD
-=======
                 // We trigger the recursive search, only if either:
                 //  * `realization` was only now marked as necessary,
                 //  * we marked some new features of `realization` as necessary.
->>>>>>> dc040d0d2 ([QuackPack] Fix: bugs inside solver (#2769))
                 self.mark_children_as_necessary(*realization, manifests, new_pkg_freezes)?;
             }
         }
