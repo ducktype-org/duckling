@@ -93,14 +93,14 @@ namespace vm::api {
 namespace nlohmann {
 	template<typename T>
 	struct adl_serializer<base::Optional<T>> {
-		static void to_json(json& j, const base::Optional<T>& opt) {
+		static void to_json(json& j, const base::Optional<T>& opt) {  // NOLINT(readability-identifier-naming)
 			if (opt.has_value())
 				j = *opt;
 			else
 				j = nullptr;
 		}
 
-		static void from_json(const json& j, base::Optional<T>& opt) {
+		static void from_json(const json& j, base::Optional<T>& opt) {  // NOLINT(readability-identifier-naming)
 			if (j.is_null())
 				opt = std::nullopt;
 			else
