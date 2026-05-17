@@ -6,6 +6,7 @@ use crate::quackpack::core::solver::solver_freeze::{SolverFreeze, SolverPackageF
 use crate::quackpack::core::solver::solving::FoundSolution;
 use crate::quackpack::core::solver::types_common::ExpandedPackage;
 use crate::quackpack::core::{FeatureName, Manifest};
+use crate::util::extend::QpExtend;
 use crate::{QuackResult, QuackResultContext, StrId};
 
 impl SolverFreeze {
@@ -109,15 +110,8 @@ impl SolverFreeze {
             let was_realization_present = new_pkg_freezes.contains_key(realization);
             let child_new_freeze = new_pkg_freezes.entry(*realization).or_default();
 
-            if forced_features
-                .iter()
-                .any(|forced| !child_new_freeze.features.contains(forced))
-                || !was_realization_present
+            if child_new_freeze.features.is_extended_by(forced_features) || !was_realization_present
             {
-                // We trigger the recursive search, only if either:
-                //  * `realization` was only now marked as necessary,
-                //  * we marked some new features of `realization` as necessary.
-                child_new_freeze.features.extend(forced_features);
                 self.mark_children_as_necessary(*realization, manifests, new_pkg_freezes)?;
             }
         }
