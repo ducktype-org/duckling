@@ -71,3 +71,13 @@ namespace vm::code::valid_type {
 		Bytes size_when_ptr_is_16_bytes;
 	};
 }
+
+namespace std {
+	template<>
+	struct hash<vm::code::valid_type::TypeSize> {
+		usize operator()(const vm::code::valid_type::TypeSize& type_size) const {
+			return std::hash<Bytes>{}(type_size.assumePointerSize(Bytes(8)))
+			     + std::hash<Bytes>{}(type_size.assumePointerSize(Bytes(16)));
+		}
+	};
+};
