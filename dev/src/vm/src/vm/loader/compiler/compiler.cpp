@@ -155,15 +155,14 @@ namespace vm::loader::compiler {
 	low::MicroBytecode Compiler::lowerInstructions(FunctionCompilationContext& ctx) {
 		detail::MicroBytecodeBuilder builder{ *this, ctx };
 
-		usize state     = 0;
-		auto& func_body = ctx.function.body;
+		usize state          = 0;
+		auto& func_body      = ctx.function.body;
 		auto& stack_database = ctx.function.local_stack;
 
-		for (usize i = 0; i < func_body.size();) {
-			
-			
+		for (usize i = 0; i < func_body.size();)
+
+
 			for (; i < next_change; i++) builder.add(func_body[i]);
-		}
 
 		auto [micro_bytecode, label_map] = builder.build();
 		linkLabelArguments(micro_bytecode, label_map);
