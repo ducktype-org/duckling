@@ -46,4 +46,8 @@ namespace compiler::helios {
 		 */
 		void appendList(const SymbolList& other);
 	};
+
+	constexpr bool operator==(const SymbolList& lhs, const SymbolList& rhs) {
+		return lhs.list == rhs.list;
+	}
 }
