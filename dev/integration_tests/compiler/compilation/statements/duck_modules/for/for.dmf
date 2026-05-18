@@ -1,8 +1,19 @@
 # for [loop-name]([var|let] <iter name>[: <iter type>] in <collection>) <statement>;
 
 fun main() -> i64 = {
+    var static_arr: i64[3];
+    static_arr[0] = 1;
+    static_arr[1] = 2;
+    static_arr[3] = 3;
+    
+    for (x: i64 in static_arr) {
+        builtin_output_i64(x);
+    }
 
-
+    # var dyn_arr: [i64] = [1, 2, 3, 4];
+    # for (let y: i64 in dyn_arr) {
+    #     sum = sum + y;
+    # }
 
     return 0;
 }

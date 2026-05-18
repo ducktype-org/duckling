@@ -1,5 +1,7 @@
 #include "symbol_data.hpp"
 
+#include "helios_private/symbols/generated_symbol_data.hpp"
+
 #include <helios/scope_id.hpp>
 #include <helios/symbols/query_class_of_member.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
@@ -333,7 +335,9 @@ namespace compiler::helios {
 				kind = SymbolKind::Parameter;
 			}
 			variant_case_novalue(defgen::GeneratedSymbolData::Field) { kind = SymbolKind::Field; }
-			variant_case_novalue(defgen::GeneratedSymbolData::Variable) {
+			variant_case_novalue(
+				defgen::GeneratedSymbolData::Variable, defgen::GeneratedSymbolData::ControlFlowLocal
+			) {
 				kind = SymbolKind::Variable;
 			}
 			variant_default { CORE_UNREACHABLE(); }
