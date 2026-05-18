@@ -17,22 +17,22 @@ namespace vm::debugger {
 	 */
 	class Debugger final {
 	private:
-		vm::PID                  pid;
+		PID                      pid;
 		std::vector<std::string> main_args;
 
-		events::Listener<vm::api::ProcStatus> updater;
+		events::Listener<api::ProcStatus> updater;
 
 		// Event handlers for the debugger:
 
 		/**
 		 * @brief Emits current VM status when VM changes status
 		 */
-		events::Emitter<vm::api::ProcStatus> on_vm_changes_status;
+		events::Emitter<api::ProcStatus> on_status_changed;
 
 		/**
 		 * @brief Emits exit value as VMValue when VM completes execution
 		 */
-		events::Emitter<vm::api::ExitValue> on_vm_completes_execution;
+		events::Emitter<api::ExitValue> on_execution_completed;
 
 		/**
 		 * @brief Emits error message in human readable format on any error
@@ -54,12 +54,12 @@ namespace vm::debugger {
 		/**
 		 * @brief Attach Listener to Emitter that emits current VM status when VM changes status
 		 */
-		void attachOnVMChangesStatusListener(events::Listener<vm::api::ProcStatus>& listener);
+		void attachOnVMChangesStatusListener(events::Listener<api::ProcStatus>& listener);
 
 		/**
 		 * @brief Attach Listener to Emitter that emits return value when VM completes execution
 		 */
-		void attachOnVMCompletesExecutionListener(events::Listener<vm::api::ExitValue>& listener);
+		void attachOnVMCompletesExecutionListener(events::Listener<api::ExitValue>& listener);
 
 		/**
 		 * @brief Attach Listener to Emitter that emits error message when any error raises
@@ -71,7 +71,7 @@ namespace vm::debugger {
 		/**
 		 * @brief Runs the main function.
 		 */
-		void runMain();
+		std::expected<void, vm::api::ApiError> runMain();
 
 		/**
 		 * @brief Gets the current status of the VM.
@@ -82,16 +82,16 @@ namespace vm::debugger {
 		/**
 		 * @brief Loads the file
 		 */
-		void loadFile(const fs::File& filepath);
+		std::expected<void, vm::api::ApiError> loadFile(const fs::File& filepath);
 
 		/**
 		 * @brief Pauses the VM
 		 */
-		void pause();
+		std::expected<api::response::CodePosition, api::ApiError> pause();
 
 		/**
 		 * @brief Resumes the VM
 		 */
-		void resume();
+		std::expected<void, api::ApiError> resume();
 	};
 }

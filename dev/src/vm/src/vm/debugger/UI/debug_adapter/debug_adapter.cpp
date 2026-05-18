@@ -2,12 +2,11 @@
 
 #include <iostream>
 
-namespace vm::debug_adapter {
-
+namespace vm::debugger::debug_adapter {
 	constexpr std::string_view HEADER_PREFIX = "Content-Length: ";
 
 	DebugAdapter::DebugAdapter():
-		  status_change_listener([this](const vm::api::ProcStatus& status) {
+		  status_change_listener([this](const api::ProcStatus& status) {
 			  std::string message = "";
 			  std::visit(
 				  [&message](auto&& arg) {

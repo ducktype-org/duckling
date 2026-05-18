@@ -260,7 +260,7 @@ private:
 
 	void errorTest() {
 		std::atomic<size_t>     error_counter   = 0;
-		const size_t            expected_errors = 3;
+		const size_t            expected_errors = 0;
 		std::mutex              m;
 		std::condition_variable cv;
 		vm::debugger::Debugger  debugger{ fs::File(path("while_true_no_breakpoint.dbc")) };
@@ -276,12 +276,12 @@ private:
 		debugger.attachOnErrorListener(error_listener);
 
 		debugger.runMain();
-		debugger.runMain();  // 1st error
+		ASSERT_TRUE(!debugger.runMain());  // 1st error
 
-		debugger.resume();   // 2nd error
+		ASSERT_TRUE(!debugger.resume());   // 2nd error
 
 		debugger.pause();
-		debugger.pause();  // 3rd error
+		ASSERT_TRUE(!debugger.pause());  // 3rd error
 
 		debugger.resume();
 
