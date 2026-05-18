@@ -92,6 +92,8 @@
 #include <array>
 #include <expected>
 #include <functional>
+#include <mutex>
+#include <shared_mutex>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -125,7 +127,7 @@ namespace state_machine {
 	 * @tparam ErrorT Error type used by guards and actions.
 	 */
 	template<base::IsVariant States, base::IsVariant Events, typename ErrorT = std::string>
-	class StateMachineDefinition {
+	class StateMachineDefinition final {
 	public:
 		friend class StateMachine<States, Events, ErrorT>;
 		using ActionResultT       = std::expected<States, ErrorT>;
@@ -441,7 +443,7 @@ namespace state_machine {
 	 *                the definition's `ErrorT`.
 	 */
 	template<typename States, typename Events, typename ErrorT = std::string>
-	class StateMachine {
+	class StateMachine final {
 	public:
 		using ResultT          = base::Optional<std::expected<void, ErrorT>>;
 		using StateMachineDef  = StateMachineDefinition<States, Events, ErrorT>;
@@ -545,4 +547,73 @@ namespace state_machine {
 		CRef<StateMachineDef> definition;  ///< The definition the state machine was configured with.
 	};
 
+	/**
+	 * @brief Thread-safe wrapper around `StateMachine`.
+	 *
+	 * Handles access to an underlying `StateMachine` with a `std::shared_mutex`.
+	 * Mutating operations (`handleEvent`) take an exclusive lock; read accessors
+	 * (`withState`, `getStateCopy`) take a shared lock and may run concurrently
+	 * as long as no event is being handled.
+	 *
+	 * @tparam States Variant of state alternatives. Must match the
+	 *                definition's `States`.
+	 * @tparam Events Variant of event alternatives. Must match the
+	 *                definition's `Events`.
+	 * @tparam ErrorT Error type used by guards and actions. Must match
+	 *                the definition's `ErrorT`.
+	 */
+	template<typename States, typename Events, typename ErrorT = std::string>
+	class AtomicStateMachine final {
+	public:
+		using InnerMachine    = StateMachine<States, Events, ErrorT>;
+		using ResultT         = typename InnerMachine::ResultT;
+		using StateMachineDef = typename InnerMachine::StateMachineDef;
+
+		AtomicStateMachine(States initial_state, CRef<StateMachineDef> def):
+			  machine(std::move(initial_state), def) {}
+
+		AtomicStateMachine(const AtomicStateMachine&)            = delete;
+		AtomicStateMachine& operator=(const AtomicStateMachine&) = delete;
+		AtomicStateMachine(AtomicStateMachine&&)                 = delete;
+		AtomicStateMachine& operator=(AtomicStateMachine&&)      = delete;
+
+		/**
+		 * @brief Dispatches an event to the machine under a lock.
+		 * See `StateMachine::handleEvent` for more info.
+		 */
+		ResultT handleEvent(const Events& event) {
+			std::unique_lock lock(mutex);
+			return machine.handleEvent(event);
+		}
+
+		/**
+		 * @brief Runs a callback over the current state under a lock.
+		 * @note The reference passed to `f` is only valid for the duration of the call.
+		 * @note `f` must not invoke `handleEvent` on this machine.
+		 *
+		 * @tparam F  Callable invocable with `const States&`.
+		 * @param  f  Callback invoked with the current state.
+		 * @return    Whatever `f` returns.
+		 */
+		template<typename F>
+		requires std::is_invocable_v<F, const States&>
+		auto withState(F&& f) const -> decltype(auto) {
+			std::shared_lock lock(mutex);
+			return std::forward<F>(f)(machine.getState());
+		}
+
+		/**
+		 * @brief Returns a copy of the current state.
+		 * Available only when `States` is copy-constructible, otherwise use `withState`.
+		 * @return The current machine state.
+		 */
+		States getStateCopy() const requires std::copy_constructible<States> {
+			std::shared_lock lock(mutex);
+			return machine.getState();
+		}
+
+	private:
+		mutable std::shared_mutex mutex;
+		InnerMachine              machine;
+	};
 }

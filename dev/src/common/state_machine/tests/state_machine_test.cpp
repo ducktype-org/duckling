@@ -1,9 +1,12 @@
 #include <state_machine/state_machine.hpp>
 
+#include <base/pointers/box.hpp>
+
 #include <tester/tester.hpp>
 
 #include <expected>
 #include <string>
+#include <thread>
 #include <variant>
 
 class StateMachineTest: public tester::TestSuite {
@@ -12,6 +15,7 @@ class StateMachineTest: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+		// Basic state machine tests
 		TESTER_ADD_TEST(basicTransitionTest);
 		TESTER_ADD_TEST(noTransitionTest);
 		TESTER_ADD_TEST(multipleSourceStatesTest);
@@ -25,12 +29,20 @@ public:
 		TESTER_ADD_TEST(getStateReturnsCurrentTest);
 		TESTER_ADD_TEST(definitionSharingTest);
 
+		// Atomic state transitions
 		TESTER_ADD_TEST(basicAtomicTransitionTest);
 		TESTER_ADD_TEST(atomicNoSetStateLeavesStateUnchangedTest);
 		TESTER_ADD_TEST(atomicPrevStateStableAfterSetStateTest);
 		TESTER_ADD_TEST(atomicMultipleSourceStatesTest);
 		TESTER_ADD_TEST(atomicAllStatesTransitionTest);
 		TESTER_ADD_TEST(atomicFailedActionTest);
+
+		// AtomicStateMachine
+		TESTER_ADD_TEST(atomicBasicTest);
+		TESTER_ADD_TEST(atomicGetStateCopy);
+		TESTER_ADD_TEST(atomicMoveOnlyStateTest);
+		TESTER_ADD_TEST(atomicConcurrentHandleEventTest);
+		TESTER_ADD_TEST(atomicHandleEventAtomicWithSetStateTest);
 	}
 
 	~StateMachineTest() override = default;
@@ -404,6 +416,139 @@ private:
 		assertTrue(!res.value().has_value(), "Action should fail");
 		assertTrue(res.value().error() == "action failed", "Error message should be propagated");
 		assertTrue(std::holds_alternative<Red>(m.getState()), "State should be unchanged");
+	}
+
+	using AtomicLightMachine   = state_machine::AtomicStateMachine<LightState, LightEvent>;
+	using AtomicCounterMachine = state_machine::AtomicStateMachine<CounterState, CounterEvent>;
+
+	void atomicBasicTest() {
+		LightDefinition def;
+		def.addTransition<Red, Tick>([](const Red&, const Tick&) -> LightState { return Green{}; });
+
+		AtomicLightMachine m(Red{}, &def);
+		auto               res = m.handleEvent(Tick{});
+		assertTrue(res.has_value() && res.value().has_value(), "Transition should succeed");
+		assertTrue(
+			m.withState([](const LightState& s) { return std::holds_alternative<Green>(s); }),
+			"Should be Green after Tick"
+		);
+	}
+
+	void atomicGetStateCopy() {
+		CounterDefinition def;
+		def.addTransition<Empty, Init>([](const Empty&, const Init& init) -> CounterState {
+			return Counter{ init.start };
+		});
+		def.addTransition<Counter, Increment>(
+			[](const Counter& c, const Increment& inc) -> CounterState {
+				return Counter{ c.value + inc.by };
+			}
+		);
+
+		AtomicCounterMachine m(Empty{}, &def);
+		m.handleEvent(Init{ 10 });
+
+		CounterState state = m.getStateCopy();
+		m.handleEvent(Increment{ 5 });
+
+		assertTrue(
+			std::get<Counter>(state).value == 10, "Previous state must not see the increment"
+		);
+		assertTrue(
+			m.withState([](const CounterState& s) { return std::get<Counter>(s).value; }) == 15,
+			"State should increment"
+		);
+	}
+
+	void atomicMoveOnlyStateTest() {
+		struct Empty {};
+
+		struct WithPtr {
+			base::Box<i32> p;
+		};
+
+		using S = std::variant<Empty, WithPtr>;
+
+		struct Init {};
+
+		using E = std::variant<Init>;
+
+		using Def = state_machine::StateMachineDefinition<S, E>;
+		using AM  = state_machine::AtomicStateMachine<S, E>;
+
+		Def def;
+		def.addTransition<Empty, Init>([](const Empty&, const Init&) -> S {
+			return WithPtr{ base::makeBox<i32>(42) };
+		});
+
+		AM   m(Empty{}, &def);
+		auto res = m.handleEvent(Init{});
+		assertTrue(res.has_value() && res.value().has_value(), "Transition should succeed");
+
+		i32 observed = m.withState([](const S& s) -> i32 { return *std::get<WithPtr>(s).p; });
+		assertTrue(observed == 42, "withState works with move-only states");
+	}
+
+	void atomicConcurrentHandleEventTest() {
+		// Many threads incrementing the same counter with handleEvent.
+		CounterDefinition def;
+		def.addTransition<Empty, Init>([](const Empty&, const Init& init) -> CounterState {
+			return Counter{ init.start };
+		});
+		def.addTransition<Counter, Increment>(
+			[](const Counter& c, const Increment& inc) -> CounterState {
+				return Counter{ c.value + inc.by };
+			}
+		);
+
+		AtomicCounterMachine m(Empty{}, &def);
+		m.handleEvent(Init{ 0 });
+
+		constexpr int N_THREADS    = 8;
+		constexpr int N_PER_THREAD = 1'000;
+
+		std::vector<std::thread> threads;
+		threads.reserve(N_THREADS);
+		for (int i = 0; i < N_THREADS; ++i) {
+			threads.emplace_back([&m] {
+				for (int j = 0; j < N_PER_THREAD; ++j) m.handleEvent(Increment{ 1 });
+			});
+		}
+		for (auto& t: threads) t.join();
+
+		i32 final_value
+			= m.withState([](const CounterState& s) { return std::get<Counter>(s).value; });
+		assertTrue(final_value == N_THREADS * N_PER_THREAD, "All increments should be performed");
+	}
+
+	void atomicHandleEventAtomicWithSetStateTest() {
+		// An action that calls `set_state` must complete before the next `handleEvent`
+		// sees the new state.
+		CounterDefinition def;
+		def.addAtomicTransition<Counter, Increment>(
+			[](const Counter& c, const Increment& inc, const CounterSetStateFn& set_state
+		    ) -> std::expected<void, std::string> {
+				set_state(Counter{ c.value + inc.by });
+				return {};
+			}
+		);
+
+		AtomicCounterMachine m(Counter{ 0 }, &def);
+
+		constexpr int            N_THREADS    = 8;
+		constexpr int            N_PER_THREAD = 500;
+		std::vector<std::thread> threads;
+		threads.reserve(N_THREADS);
+		for (int i = 0; i < N_THREADS; ++i) {
+			threads.emplace_back([&m] {
+				for (int j = 0; j < N_PER_THREAD; ++j) m.handleEvent(Increment{ 1 });
+			});
+		}
+		for (auto& t: threads) t.join();
+
+		i32 final_value
+			= m.withState([](const CounterState& s) { return std::get<Counter>(s).value; });
+		assertTrue(final_value == N_THREADS * N_PER_THREAD, "All increments should be performed");
 	}
 };
 

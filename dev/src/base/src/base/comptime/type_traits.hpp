@@ -62,7 +62,20 @@ namespace base {
 			}
 		};
 
+		template<typename T, template<typename...> typename Template>
+		inline constexpr bool IsInstantiationOf_v = false;
+
+		template<template<typename...> typename Template, typename... Args>
+		inline constexpr bool IsInstantiationOf_v<Template<Args...>, Template> = true;
+
+		template<typename T, template<typename, auto> class Template>
+		inline constexpr bool IsInstantiationOfTypeValue_v = false;
+
+		template<template<typename, auto> class Template, typename U, auto V>
+		inline constexpr bool IsInstantiationOfTypeValue_v<Template<U, V>, Template> = true;
+
 		// Source - https://stackoverflow.com/a/52303687
+		// {
 		template<typename>
 		struct Tag {};
 
@@ -77,26 +90,25 @@ namespace base {
 				return std::variant<Tag<Types>...>(Tag<T>{}).index();
 			}
 		};
+
+		// }
 	}
 
 	/**
 	 * @brief Checks if type `T` is an instantiation of template `Template`.
-	 * @note This concept works only for templates that have only type template parameters
+	 * @note This concept works only for templates that have only type template parameters.
+	 *       Works for move-only and non-default-constructible `T`
 	 */
 	template<typename T, template<typename...> typename Template>
-	concept IsInstantiationOf = requires(T t) {
-		[]<typename... Args>(Template<Args...>) requires std::is_same_v<Template<Args...>, T> {}(t);
-	};
+	concept IsInstantiationOf = internal::IsInstantiationOf_v<T, Template>;
 
 	/**
 	 * @brief Checks if type `T` is an instantiation of template `Template`.
 	 * @note This concept works only for templates that take one type and one value template
-	 * parameter
+	 * parameter.
 	 */
 	template<typename T, template<typename, auto> class Template>
-	concept IsInstantiationOfTypeValue = requires(T t) {
-		[]<typename U, auto V>(Template<U, V>) requires std::is_same_v<Template<U, V>, T> {}(t);
-	};
+	concept IsInstantiationOfTypeValue = internal::IsInstantiationOfTypeValue_v<T, Template>;
 
 	/**
 	 * @brief Checks if type `T` is the same as one of the types in `Types...`
