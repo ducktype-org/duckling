@@ -523,8 +523,12 @@ namespace state_machine {
 
 					auto action_result = atomic_action(prev_state, event, set_state);
 
-					// If the action failed or it didn't modify the state, we move back the
-					// saved, previous state.
+					// Restore on failure or if the `set_state` callback wasn't called. After this
+					// branch current_state is always in a valid state — either assigned by
+					// `set_state` or moved back from `prev_state. clang-analyzer can't see that
+					// `set_state` pairs (state_changed=true) with (current_state := new_state)
+					// since it can't see through the callback and causes `Moved-from object is
+					// copied`, thus the NOLINT in getStateCopy().
 					if (!action_result.has_value() || !state_changed)
 						current_state = std::move(prev_state);
 
@@ -609,6 +613,9 @@ namespace state_machine {
 		 */
 		States getStateCopy() const requires std::copy_constructible<States> {
 			std::shared_lock lock(mutex);
+			// See the comment in StateMachine::handleEvent() in RawAtomicAction case to understand
+			// why this is here.
+			// NOLINTNEXTLINE(clang-analyzer-cplusplus.Move)
 			return machine.getState();
 		}
 

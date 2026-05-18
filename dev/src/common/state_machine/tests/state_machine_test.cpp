@@ -5,6 +5,7 @@
 #include <tester/tester.hpp>
 
 #include <expected>
+#include <memory>
 #include <string>
 #include <thread>
 #include <variant>
@@ -464,7 +465,7 @@ private:
 		struct Empty {};
 
 		struct WithPtr {
-			base::Box<i32> p;
+			std::unique_ptr<i32> p;
 		};
 
 		using S = std::variant<Empty, WithPtr>;
@@ -478,7 +479,7 @@ private:
 
 		Def def;
 		def.addTransition<Empty, Init>([](const Empty&, const Init&) -> S {
-			return WithPtr{ base::makeBox<i32>(42) };
+			return WithPtr{ std::make_unique<i32>(42) };
 		});
 
 		AM   m(Empty{}, &def);
