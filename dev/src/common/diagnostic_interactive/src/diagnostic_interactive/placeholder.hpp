@@ -142,4 +142,33 @@ namespace dia_int {
 		 */
 		PlaceholderNote(std::string header_message, std::string description = "");
 	};
+
+	class PlaceholderWarning final: public MessageBase {
+		Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "warning",
+				     .family        = "misc",
+				     .name          = "placeholder" };
+		}
+
+	public:
+		PlaceholderWarning(
+			std::string                         header_message,
+			base::Optional<dia::SourcePosition> source_position         = {},
+			std::string                         description             = "",
+			base::Optional<std::string>         pointer_message_content = "here"
+		);
+
+		PlaceholderWarning(
+			std::string                             header_message,
+			base::Optional<dia_int::StablePosition> source_position         = {},
+			std::string                             description             = "",
+			base::Optional<std::string>             pointer_message_content = "here"
+		);
+
+		/**
+		 * @brief Alias because not providing a source_position leads to ambiguity.
+		 */
+		PlaceholderWarning(std::string header_message, std::string description = "");
+	};
 }

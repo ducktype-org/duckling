@@ -8,34 +8,52 @@ namespace compiler::backend_vm::internal {
 	using namespace vm::code;
 
 	void InstructionLowerer::lower(const JumpOperation& op) {
+		ctx->pushDeinitsForInstr(op.scope_flags, this->pushed_deinits_for_instr);
+
 		ctx->pushInstruction({ OpKind::jmp, op.target.asArgument() });
 	}
 
 	void InstructionLowerer::lower(const BranchOperation& op) {
 		if (op.condition.is<DVMImmediate>()) {
 			auto cond = op.condition.get<DVMImmediate>();
+
 			ctx->cleanUpRegisteredTemps();
+			// Branch instr has the deinits pushed between the condition evaluation and the jump.
+			ctx->pushDeinitsForInstr(op.scope_flags, this->pushed_deinits_for_instr);
+
 			if (cond == DVMImmediate::boolean(true))
 				ctx->pushInstruction({ OpKind::jmp, op.true_target.asArgument() });
 			else
 				ctx->pushInstruction({ OpKind::jmp, op.false_target.asArgument() });
 		} else {
 			ctx->pushInstruction({ OpKind::cmpEq, op.condition, vm::opargs::Immediate{ 1 } });
+
 			ctx->cleanUpRegisteredTemps();
+			// Branch instr has the deinits pushed between the condition evaluation and the jump.
+			ctx->pushDeinitsForInstr(op.scope_flags, this->pushed_deinits_for_instr);
+
 			ctx->pushInstruction({ OpKind::jmpIf, op.true_target.asArgument() });
 			ctx->pushInstruction({ OpKind::jmpIfNot, op.false_target.asArgument() });
 		}
 	}
 
 	void InstructionLowerer::lower(const ReturnOperation& op) {
-		if_opt_some(op.value, ret_val) {
+		ctx->pushDeinitsForInstr(op.scope_flags, this->pushed_deinits_for_instr);
+
+		if (op.value.has_value() and op.value.value().is<DVMPlace>()
+		    and op.value.value().get<DVMPlace>().getSpecialKind()
+		            == DVMPlace::SpecialKind::ReturnValue) {
 			// Since VM does not support `return X;` operation, we must move the value to
 			// the ret_val local and then return.
+			ctx->pushInstruction({ OpKind::ret });
+			return;
+		}
+
+		if_opt_some(op.value, ret_val) {
 			ctx->pushInstruction(
 				{ OpKind::mov, ctx->getFunctionReturnValueLocal().asArgument(), ret_val }
 			);
 		}
-		ctx->cleanUpRegisteredTemps();
 		ctx->pushInstruction({ OpKind::ret });
 	}
 }

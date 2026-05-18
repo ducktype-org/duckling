@@ -24,11 +24,4 @@ namespace tpc {
 	}
 
 	void nullAwareDprint(Operator op, std::ostream& out) { out << "\"" << op.str() << "\""; }
-
-	void nullAwareDprint(OptionalIdentifier ident, std::ostream& out) {
-		if (ident.value.has_value())
-			identifierDprint(ident.value.value(), out);
-		else
-			out << "\"<ANONYMOUS>\"";
-	}
 }

@@ -1376,6 +1376,9 @@ namespace compiler::backend_llvm {
 
 				break;
 			}
+			case Nop:
+				// No instruction to generate, just skip.
+				break;
 			default:
 				CORE_DEV_LOG(
 					Backend,

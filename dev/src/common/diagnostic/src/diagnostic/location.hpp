@@ -38,8 +38,14 @@ namespace dia {
 		virtual LocationType getLocationType() const
 			= 0;
 
-
 		virtual ~Location() = default;
+
+		template<typename T>
+		[[nodiscard]]
+		base::Optional<CRef<T>> as() const {
+			if (auto* casted = dynamic_cast<const T*>(this)) return { casted };
+			return {};
+		}
 	};
 
 	/**
@@ -84,6 +90,8 @@ namespace dia {
 		}
 
 		MacroLocation(const dia_int::StablePosition& parent, Ref<tokenizer::TokenSource> source);
+
+		[[nodiscard]] dia_int::StablePosition getMacroParentNode() const;
 
 	private:
 		dia_int::StablePosition     parent;

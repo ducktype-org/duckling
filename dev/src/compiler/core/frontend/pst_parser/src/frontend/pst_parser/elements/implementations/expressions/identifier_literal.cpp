@@ -32,7 +32,6 @@ namespace pst::expr {
 	}
 
 	HashAlg& IdentifierLiteral::addElementDataToStableHash(HashAlg& partial_hash) const {
-		addToHash(partial_hash, name);
 		addToHash(partial_hash, template_specifier.has_value());
 		return partial_hash;
 	}
