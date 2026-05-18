@@ -1,7 +1,9 @@
 #pragma once
 
+#include "vm/core/fast/program/instructions/executable.hpp"
 #include "vm/core/fast/program/program.hpp"
 #include "vm/core/fast/runtime.hpp"
+#include "vm/core/process/interface_types.hpp"
 #include <vm/core/thread/ivmthread.hpp>
 #include <vm/utils/vm_not_implemented.hpp>
 
@@ -29,17 +31,16 @@ namespace vm::fast {
 		ThreadRuntimeData runtime_data;
 
 		exec::ExecFunctionCollection functions;
-		ProgramBase                  program;
+
+		MRef<ProgramBase> program;
 
 		exec::ExecFunction createStartFunctionFor(
-			const exec::ExecFunction& function, const FunctionRunArguments& run_arguments
+			const exec::ExecFunction& function, const RunArguments& run_arguments
 		);
 
-		u64 createStartAndExecuteFunction(
-			const exec::ExecFunction& function, const FunctionRunArguments& run_arguments
+		i64 createStartAndExecuteFunction(
+			const exec::ExecFunction& function, const RunArguments& run_arguments
 		);
-		u64 executeFunction(
-			const exec::ExecFunction& function, const FunctionRunArguments& run_arguments
-		);
+		i64 executeFunction(const exec::ExecFunction& function, const RunArguments& run_arguments);
 	};
 }

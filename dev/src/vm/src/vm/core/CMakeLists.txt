@@ -18,9 +18,7 @@ add_files(
 	safe/concurrency/synchronization_primitives.cpp
 
 	fast/fast_vmprocess.cpp
-	fast/fast_vmthread.cpp
 	fast/program/type.cpp
-	fast/program/relocator.cpp
 )
 
 set(vm_common_sources ${vm_common_sources} ${files} PARENT_SCOPE)
@@ -32,6 +30,9 @@ add_files(
 	safe/safe_vmthread.cpp
 	vmvalue/vmvalue.cpp
 	vmvalue/vmvalueref.cpp
+
+	fast/fast_vmthread.cpp
+	fast/program/relocator.cpp
 )
 
 set(vm_config_dependent_sources ${vm_config_dependent_sources} ${files} PARENT_SCOPE)

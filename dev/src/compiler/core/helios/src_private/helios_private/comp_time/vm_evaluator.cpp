@@ -11,6 +11,7 @@
 
 #include <expected>
 #include <mutex>
+#include "base/except/exceptions.hpp"
 
 namespace {
 	using namespace compiler::helios;
@@ -252,11 +253,11 @@ namespace {
 		vm::code::CodeCollection filterOutLoaded(const vm::code::CodeCollection& code) {
 			vm::code::CodeCollection filtered;
 			auto                     by_name = [](const auto& item) -> base::StrID {
-                using T = std::decay_t<decltype(item)>;
-                if constexpr (std::is_same_v<T, vm::code::TypeOfData>)
-                    return vm::code::typeName(item);
-                else
-                    return item.name;
+				using T = std::decay_t<decltype(item)>;
+				if constexpr (std::is_same_v<T, vm::code::TypeOfData>)
+					return vm::code::typeName(item);
+				else
+					return item.name;
 			};
 
 			auto insert_if_new = [&](const auto& source, auto& destination, auto name_getter) {
@@ -350,12 +351,18 @@ namespace {
 		// Free the owned arguments.
 		for (const auto& arg: owned_args) arg->freeData();
 
-		CORE_ASSERT(
-			maybe_exit_value.value().size() == 1,
-			"Compiler support for multiple values not implemented"
-		);
-		auto exit_value = maybe_exit_value.value().at(0);
-		return vmValueToCtv(return_type, exit_value);
+		variant_match(maybe_exit_value.value()) {
+			variant_case(std::vector<Ref<vm::VmValue>>, values) {
+				CORE_ASSERT(
+					values.size() == 1,
+					"Compiler support for multiple values not implemented"
+				);
+				auto exit_value = values.at(0);
+				return vmValueToCtv(return_type, exit_value);
+			}
+			variant_default { CORE_PANIC("Unexpected non-vector return value from VM"); }
+		}
+		CORE_UNREACHABLE();
 	}
 }
 

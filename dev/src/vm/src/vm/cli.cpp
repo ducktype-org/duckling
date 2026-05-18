@@ -2,6 +2,7 @@
 
 #include <diagnostic_interactive/module_flags/module_flags.hpp>
 
+#include "base/except/exceptions.hpp"
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <vm/api/api.hpp>
@@ -42,13 +43,21 @@ int cli(const fs::File& filepath, const std::vector<std::string>& args) {
 	          .and_then([&] { return vm::api::join(pid); })
 	          .and_then([&] { return vm::api::getExitValue(pid); })
 	          .transform([&](vm::api::ExitValue vm_values) {
-				  CORE_ASSERT(vm_values.size() == 1, "Program returned more than one return value");
-				  auto& vm_value = vm_values.at(0);
-				  CORE_ASSERT(
-					  vm_value->type->getName() == base::StrID("i64"),
-					  "DVM program returned and exit value different than i64"
-				  );
-				  return vm_value->readBytes<i64>();
+				  variant_match(vm_values) {
+					  variant_case(i64, exit_code) { return exit_code; }
+					  variant_case(std::vector<Ref<vm::VmValue>>, values) {
+						  CORE_ASSERT(
+							  values.size() == 1, "Program returned more than one return value"
+						  );
+						  auto& vm_value = values.at(0);
+						  CORE_ASSERT(
+							  vm_value->type->getName() == base::StrID("i64"),
+							  "DVM program returned and exit value different than i64"
+						  );
+						  return vm_value->readBytes<i64>();
+					  }
+				  }
+				  CORE_UNREACHABLE();
 			  })
 	          .transform_error(convertError);
 

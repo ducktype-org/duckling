@@ -12,6 +12,7 @@ namespace vm::fast {
 
 	class ThreadRuntimeData {
 	public:
+		ThreadRuntimeData() = default;
 		ThreadRuntimeData(const ThreadRuntimeData&)            = delete;
 		ThreadRuntimeData(ThreadRuntimeData&&)                 = default;
 		ThreadRuntimeData& operator=(const ThreadRuntimeData&) = delete;

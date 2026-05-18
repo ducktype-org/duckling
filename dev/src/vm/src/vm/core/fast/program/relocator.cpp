@@ -55,7 +55,7 @@ namespace {
 	}
 
 	[[maybe_unused]] exec::arg::Type relocateType(TRANSLATOR_ARGUMENTS(Type)) {
-		return program.types.at(TypeID(reloc_arg.asInt()));
+		return program.types.at(TypeID(reloc_arg.asInt())).get();
 	}
 
 	// @TODO: Remove the maybe_unused attributes.
@@ -110,9 +110,7 @@ exec::ExecFunctionCollection exec::linkFunctions(
 	ExecFunctionCollection exec_functions;
 
 	// "Forward declare"
-	exec_functions.reserve(reloc_functions.size());
-	for (const FunctionInfo& func: program.functions)
-		exec_functions.push_back(ExecFunction{ .id = func.id, .data = {} });
+	exec_functions.resize(reloc_functions.size());
 
 	// Relocate the instructions and fill the executable functions with them.
 	for (const auto& [reloc_function, func_info]:

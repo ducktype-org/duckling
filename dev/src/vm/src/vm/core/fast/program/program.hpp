@@ -3,8 +3,6 @@
 #include "ids.hpp"
 #include "type.hpp"
 
-#include <vm/core/fast/program/instructions/executable.hpp>
-#include <vm/core/fast/program/instructions/relocatable.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
 
 namespace vm::fast {
@@ -53,23 +51,4 @@ namespace vm::fast {
 
 		Bytes global_buffer_size = Bytes(0);
 	};
-
-	namespace reloc {
-		struct RelocFunction {
-			FunctionID               id;
-			std::vector<Instruction> data;
-		};
-
-		using RelocFunctionCollection = std::vector<RelocFunction>;
-	}
-
-	namespace exec {
-		struct ExecFunction {
-			FunctionID               id;
-			std::vector<Instruction> data;
-		};
-
-		using ExecFunctionCollection = std::vector<ExecFunction>;
-	}
-
 }

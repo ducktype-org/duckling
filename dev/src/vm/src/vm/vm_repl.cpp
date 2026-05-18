@@ -75,8 +75,10 @@ void DuckVMRepl::run() {
 			processGlobalOutput(line);
 		} else if (lstrip(line).starts_with("!")) {
 			processExecuteInstruction(line);
-		} else if (line.find('(') != std::string::npos && line.find(')') != std::string::npos
-		           && line.find('(') < line.find(')')) {
+		} else if (
+			line.find('(') != std::string::npos && line.find(')') != std::string::npos
+			&& line.find('(') < line.find(')')
+		) {
 			processFunctionCall(line);
 		} else {
 			std::cout << "Invalid input: \"" << line << "\"\n";
@@ -165,11 +167,17 @@ i64 DuckVMRepl::runOnVm(const std::string& func_name, OwnedArgumentList& func_ar
 
 	auto exit_code_response = vm::api::getExitValue(pid);
 	if (!exit_code_response.has_value()) throw ReplEmptyExitCodeException();
-	CORE_ASSERT(exit_code_response.value().size() == 1, "REPL expects only one response value");
-	// @TODO: Improve this to allow other types as well. This should change in #1132.
-	if (exit_code_response.value().at(0)->type->getName() != base::StrID("i64"))
-		throw ReplWrongReturnTypeException();
-	return exit_code_response.value().at(0)->readBytes<i64>();
+	variant_match(exit_code_response.value()) {
+		variant_case(i64, exit_value) { return exit_value; }
+		variant_case(std::vector<Ref<vm::VmValue>>, values) {
+			CORE_ASSERT(values.size() == 1, "REPL expects only one response value");
+			// @TODO: #1132 Improve this to allow other types as well. This should change in #1132.
+			if (values.at(0)->type->getName() != base::StrID("i64"))
+				throw ReplWrongReturnTypeException();
+			return values.at(0)->readBytes<i64>();
+		}
+	}
+	CORE_UNREACHABLE();
 }
 
 void DuckVMRepl::loadAndRun(const std::string& code) {

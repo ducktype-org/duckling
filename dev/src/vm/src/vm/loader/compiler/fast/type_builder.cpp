@@ -88,7 +88,7 @@ namespace {
 	}
 }
 
-void rebuildFastTypeCollection(
+void vm::loader::compiler::fast::rebuildFastTypeCollection(
 	Ref<vm::fast::TypeCollection> type_collection, const valid_type::ValidTypeMap& type_ctx
 ) {
 	std::vector<CRef<valid_type::ValidType>> new_types_vec

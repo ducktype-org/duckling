@@ -2,9 +2,11 @@
 
 #include "../ids.hpp"
 
-#include <base/comptime/type_traits.hpp>
 #include <base/comptime/is_complete.hpp>
+#include <base/comptime/type_traits.hpp>
 #include <base/extend_cpp/strongly_typed_id.hpp>
+
+#include <vector>
 
 namespace vm::fast::reloc {
 	namespace arg {
@@ -25,4 +27,10 @@ namespace vm::fast::reloc {
 #define ARG_NAMESPACE arg::
 #include "instr_structures.hpp"
 #undef ARG_NAMESPACE
+
+	struct RelocFunction {
+		std::vector<Instruction> data;
+	};
+
+	using RelocFunctionCollection = std::vector<RelocFunction>;
 }

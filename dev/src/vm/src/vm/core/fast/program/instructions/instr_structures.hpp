@@ -15,6 +15,12 @@ namespace instr_structs {
 	#define ARG_NAMESPACE
 #endif
 
+#ifndef ID_TYPE
+	#define ID_TYPE_DEFAULT
+	#define ID_TYPE()               InstrID
+	#define MAKE_ID_FROM_NAME(NAME) InstrID::NAME
+#endif
+
 #define _DETAIL_CREATE_MEMBER(type, name) ARG_NAMESPACE type name;
 #define HANDLE_INSTR_ARGS(NAME, ...)                        \
 	struct NAME {                                           \
@@ -28,7 +34,7 @@ namespace instr_structs {
 }
 
 struct Instruction {
-	InstrID id;
+	ID_TYPE() id;
 
 	union {
 #define HANDLE_INSTR(NAME) instr_structs::NAME CAT(instr_, NAME);
@@ -40,18 +46,19 @@ struct Instruction {
 namespace maker {
 #define HANDLE_ARG(type, name)       ARG_NAMESPACE type name,
 #define HANDLE_ARG_LAST(type, name)  ARG_NAMESPACE type name
-#define HANDLE_CONS(type, name)      std::move(name),
-#define HANDLE_CONS_LAST(type, name) std::move(name)
-#define HANDLE_INSTR_ARGS(NAME, ...)                                                       \
-	constexpr Instruction NAME(                                                            \
-		FOR_EACH_CUSTOM_LAST(HANDLE_ARG EXPAND, HANDLE_ARG_LAST EXPAND, __VA_ARGS__)       \
-	) {                                                                                    \
-		Instruction instr;                                                                 \
-		instr.id                = InstrID::NAME;                                           \
-		CAT(instr.instr_, NAME) = instr_structs::NAME(                                     \
-			FOR_EACH_CUSTOM_LAST(HANDLE_CONS EXPAND, HANDLE_CONS_LAST EXPAND, __VA_ARGS__) \
-		);                                                                                 \
-		return instr;                                                                      \
+#define HANDLE_CONS(type, name)      .name = std::move(name),
+#define HANDLE_CONS_LAST(type, name) .name = std::move(name)
+#define HANDLE_INSTR_ARGS(NAME, ...)                                                 \
+	constexpr Instruction NAME(                                                      \
+		FOR_EACH_CUSTOM_LAST(HANDLE_ARG EXPAND, HANDLE_ARG_LAST EXPAND, __VA_ARGS__) \
+	) {                                                                              \
+		Instruction instr{                                                           \
+			.id                = MAKE_ID_FROM_NAME(NAME),                            \
+			.CAT(instr_, NAME) = instr_structs::NAME{ FOR_EACH_CUSTOM_LAST(          \
+				HANDLE_CONS EXPAND, HANDLE_CONS_LAST EXPAND, __VA_ARGS__             \
+			) },                                                                     \
+		};                                                                           \
+		return instr;                                                                \
 	}
 #include "instruction_definitions.hpp"
 #undef HANDLE_ARG
@@ -64,6 +71,12 @@ namespace maker {
 #ifdef ARG_NAMESPACE_DEFAULT
 	#undef ARG_NAMESPACE_DEFAULT
 	#undef ARG_NAMESPACE
+#endif
+
+#ifdef ID_TYPE_DEFAULT
+	#undef ID_TYPE_DEFAULT
+	#undef ID_TYPE
+	#undef MAKE_ID_FROM_NAME
 #endif
 
 // NOLINTEND

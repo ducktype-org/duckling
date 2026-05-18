@@ -18,6 +18,8 @@
 #include <vm/api/vm.hpp>
 #include <vm/bytecode/bytecode.hpp>
 
+#include <variant>
+
 namespace compiler::repl {
 	// Platform portability check: DVM assumes bool is 1 byte (stored as i8).
 	// float and double sizes are already validated in base/types/floats.hpp.
@@ -177,19 +179,27 @@ namespace compiler::repl {
 		    .and_then([&] { return vm::api::getExitValue(pid); })
 		    .transform_error(vm::api::errorToString)
 		    .and_then(
-				[type_view](vm::api::ExitValue exit_values
-		        ) -> std::expected<std::string, std::string> {
+				[type_view](
+					vm::api::ExitValue exit_values
+				) -> std::expected<std::string, std::string> {
+					CORE_ASSERT(
+						std::holds_alternative<std::vector<Ref<vm::VmValue>>>(exit_values),
+						"Expecting exit values to be a vector of VmValue references"
+					);
+					const auto& exit_values_vec
+						= std::get<std::vector<Ref<vm::VmValue>>>(exit_values);
 					if (type_view == "()") {
 						CORE_ASSERT(
-							exit_values.empty(), "Expecting no return values for unit return type"
+							exit_values_vec.empty(),
+							"Expecting no return values for unit return type"
 						);
 						return { "" };
 					}
 
 					CORE_ASSERT(
-						exit_values.size() == 1, "Expecting only one return value from the DVM"
+						exit_values_vec.size() == 1, "Expecting only one return value from the DVM"
 					);
-					auto& exit_value = exit_values.at(0);
+					auto& exit_value = exit_values_vec.at(0);
 					if (type_view == "i32")
 						return std::to_string(exit_value->readBytes<i32>());
 					else if (type_view == "i64")

@@ -27,13 +27,14 @@
 	#define DEF_INSTR(name, ...) HANDLE_INSTR_ARGS(INSTR_NAME(name, __VA_ARGS__), __VA_ARGS__)
 #endif
 
-DEF_INSTR(push64)
-DEF_INSTR(pop64)
+DEF_INSTR(init, (Type, type))
+DEF_INSTR(deinit)
 DEF_INSTR(mov, (Place64, dst), (Immediate, src))
 DEF_INSTR(mov, (Place64, dst), (Place64, src))
 DEF_INSTR(add, (Place64, dst), (Place64, src))
 DEF_INSTR(cmpEq, (Place64, a), (Place64, b))
 DEF_INSTR(jumpIf, (JumpDestination, target))
+DEF_INSTR(call, (Function, func))
 
 DEF_INSTR(exit)
 

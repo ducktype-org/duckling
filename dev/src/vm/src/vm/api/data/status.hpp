@@ -15,7 +15,8 @@ namespace vm::api {
 
 	struct NotStarted {};
 
-	using ExitValue = std::vector<Ref<VmValue>>;
+	// @TODO: #2720 Change it back to std::vector
+	using ExitValue = std::variant<i64, std::vector<Ref<VmValue>>>;
 
 	struct ExecutionCompleted {
 		ExitValue exit_value;

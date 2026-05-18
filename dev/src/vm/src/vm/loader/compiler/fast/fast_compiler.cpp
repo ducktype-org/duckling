@@ -46,7 +46,6 @@ void fast::FastCompiler::compileNewFunctions(const std::vector<Function>& new_fu
 	for(const Function& function: new_functions) {
 		detail::FunctionStackContext ctx = calculateStackContext(function);
 		vm::fast::reloc::RelocFunction reloc_func{
-			.id   = vm::fast::FunctionID(program.functions.size()),
 			.data = lowerInstructions(high_program, ctx)
 		};
 	}
