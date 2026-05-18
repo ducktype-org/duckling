@@ -333,8 +333,8 @@ namespace vm {
 							anyArrayStore_pptr_bany, 8, 4
 						),  // argv_internal[ix] := ptr_tmp_store
 						MAKE_BYTECODE_INSTRUCTION(ext_p64_type, 32, str_ptr_type_arg),
-						MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),  // deinit char_tmp_store
-						MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),  // deinit ptr_tmp_store
+							MAKE_BYTECODE_INSTRUCTION(deinit, 56, 0),  // deinit char_tmp_store
+							MAKE_BYTECODE_INSTRUCTION(deinit, 40, 0),  // deinit ptr_tmp_store
 					}
 				);
 			}
@@ -394,11 +394,11 @@ namespace vm {
 			start_function.bc.end(),
 			{
 				MAKE_BYTECODE_INSTRUCTION(free_pptr, 8, 0),  // free *argv_internal
-				MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),     // deinit ptr_tmp_store
-				MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),     // deinit main_ret_val
-				MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),     // deinit ix
-				MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),     // deinit argc_internal
-				MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),     // deinit *argv_internal
+				MAKE_BYTECODE_INSTRUCTION(deinit, 48, 0),    // deinit ptr_tmp_store
+				MAKE_BYTECODE_INSTRUCTION(deinit, 40, 0),    // deinit main_ret_val
+				MAKE_BYTECODE_INSTRUCTION(deinit, 32, 0),    // deinit ix
+				MAKE_BYTECODE_INSTRUCTION(deinit, 24, 0),    // deinit argc_internal
+				MAKE_BYTECODE_INSTRUCTION(deinit, 8, 0),     // deinit *argv_internal
 				// At this point only the start function return value (which is the program exit
 		        // code) remains on the stack.
 				MAKE_BYTECODE_INSTRUCTION(exit, 0, 0),

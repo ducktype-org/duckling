@@ -115,6 +115,8 @@ namespace vm::loader::compiler {
 			usize local_block_count = 0;
 			usize return_stack_size = 0;
 			usize shared_stack_size = 0;
+			usize current_instruction_index = 0;
+			std::vector<usize> deinit_restore_offsets{};
 		};
 
 		/**

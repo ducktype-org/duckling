@@ -155,7 +155,10 @@ namespace vm::loader::compiler {
 	low::MicroBytecode Compiler::lowerInstructions(FunctionCompilationContext& ctx) {
 		detail::MicroBytecodeBuilder builder{ *this, ctx };
 
-		for (const auto& instr: ctx.function.body) builder.add(instr);
+		for (auto [idx, instr]: std::views::enumerate(ctx.function.body)) {
+			ctx.current_instruction_index = idx;
+			builder.add(instr);
+		}
 
 		auto [micro_bytecode, label_map] = builder.build();
 		linkLabelArguments(micro_bytecode, label_map);
@@ -170,6 +173,7 @@ namespace vm::loader::compiler {
 		usize                    curr_stack_size = 0;
 		usize                    max_stack_size  = 0;
 		usize                    max_block_count = 0;
+		ctx.deinit_restore_offsets = std::vector<usize>(ctx.function.body.size(), 0);
 
 		auto push = [&](opargs::PlaceAny local, opargs::Type type) {
 			auto type_ref   = low_program.types->at(type.type_name);
@@ -274,6 +278,7 @@ namespace vm::loader::compiler {
 				}
 				instr_case(Op_deinit, instr) {
 					pop();
+					ctx.deinit_restore_offsets[index] = curr_stack_size;
 					index++;
 				}
 				instr_case(Op_jmp_label, instr) { index = label_positions[instr.label.label_name]; }

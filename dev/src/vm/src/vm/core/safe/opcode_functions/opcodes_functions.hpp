@@ -234,11 +234,14 @@ namespace vm {
 			__attribute__((always_inline))
 #endif
 			void
-			performDeinit(Frame*& frame, SafeVMThread& thread) {
-			auto block_count = u64(frame->local_block_ref_stack_end - frame->local_block_ref_stack_base);
+			performDeinit(Frame*& frame, SafeVMThread& thread, u64 restored_stack_head) {
+			auto block_count
+				= u64(frame->local_block_ref_stack_end - frame->local_block_ref_stack_base);
 			auto history_count
 				= u64(frame->local_stack_head_history_end - frame->local_stack_head_history_base);
-			CORE_ASSERT(block_count > 0, "Trying to deinitialize an empty local block stack");
+			CORE_ASSERT(
+				block_count > 0, "Trying to deinitialize an empty local block stack"
+			);
 			CORE_ASSERT(
 				history_count > 0, "Trying to deinitialize an empty stack-head history"
 			);
@@ -250,9 +253,18 @@ namespace vm {
 
 			thread.process_memory.freeBlockData(block);
 			thread.process_memory.decreaseBlockRefcount(block);
-			frame->local_stack_head = frame->local_stack_head_history_end[-1];
+			frame->local_stack_head = restored_stack_head;
 			frame->local_stack_head_history_end -= 1;
 			frame->local_block_ref_stack_end -= 1;
+		}
+
+		static
+#ifndef BUILD_TYPE_DEV_DEBUG
+			__attribute__((always_inline))
+#endif
+			void
+			performDeinit(Frame*& frame, SafeVMThread& thread) {
+			performDeinit(frame, thread, frame->local_stack_head_history_end[-1]);
 		}
 
 		static

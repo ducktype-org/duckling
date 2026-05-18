@@ -546,7 +546,7 @@ namespace vm {
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(deinit)(FUNCTION_ARGS) {
-		{ performDeinit(frame, thread); }
+		{ performDeinit(frame, thread, READ_FROM_DIRECT_ARG(u64, instr->arg0)); }
 		FUNCTION_CONT(1);
 	}
 
