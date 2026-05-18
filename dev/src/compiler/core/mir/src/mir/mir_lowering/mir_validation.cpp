@@ -217,7 +217,6 @@ namespace compiler::mir {
 				if (has_invalid_type) {
 					ctx.logInt(makeBox<dia_int::PlaceholderError>(
 						"Global variable initializers/constructors cannot use or produce "
-					    "compile-time only (comptime-only) types.",
 						""
 					));
 					return base::BAD;
