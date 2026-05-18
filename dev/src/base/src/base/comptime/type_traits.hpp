@@ -65,16 +65,16 @@ namespace base {
 		// Source - https://stackoverflow.com/a/11251376/
 		// {
 		template<typename T, template<typename...> typename Template>
-		inline constexpr bool IsInstantiationOf_v = false;
+		inline constexpr bool IS_INSTANTIATION_OF_V = false;
 
 		template<template<typename...> typename Template, typename... Args>
-		inline constexpr bool IsInstantiationOf_v<Template<Args...>, Template> = true;
+		inline constexpr bool IS_INSTANTIATION_OF_V<Template<Args...>, Template> = true;
 
 		template<typename T, template<typename, auto> class Template>
-		inline constexpr bool IsInstantiationOfTypeValue_v = false;
+		inline constexpr bool IS_INSTANTIATION_OF_TYPE_VALUE_V = false;
 
 		template<template<typename, auto> class Template, typename U, auto V>
-		inline constexpr bool IsInstantiationOfTypeValue_v<Template<U, V>, Template> = true;
+		inline constexpr bool IS_INSTANTIATION_OF_TYPE_VALUE_V<Template<U, V>, Template> = true;
 
 		// }
 
@@ -104,7 +104,7 @@ namespace base {
 	 *       Works for move-only and non-default-constructible `T`
 	 */
 	template<typename T, template<typename...> typename Template>
-	concept IsInstantiationOf = internal::IsInstantiationOf_v<T, Template>;
+	concept IsInstantiationOf = internal::IS_INSTANTIATION_OF_V<T, Template>;
 
 	/**
 	 * @brief Checks if type `T` is an instantiation of template `Template`.
@@ -112,7 +112,7 @@ namespace base {
 	 * parameter.
 	 */
 	template<typename T, template<typename, auto> class Template>
-	concept IsInstantiationOfTypeValue = internal::IsInstantiationOfTypeValue_v<T, Template>;
+	concept IsInstantiationOfTypeValue = internal::IS_INSTANTIATION_OF_TYPE_VALUE_V<T, Template>;
 
 	/**
 	 * @brief Checks if type `T` is the same as one of the types in `Types...`

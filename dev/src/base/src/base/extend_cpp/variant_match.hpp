@@ -107,7 +107,7 @@ namespace base {
 
 #define variant_match_novalue_extra_case(type) \
 	[[fallthrough]];                           \
-	case (::base::internal::variantTypeIndex<decltype(internal_value), type>()):
+	case (::base::variantTypeIndex<decltype(internal_value), type>()):
 
 #define variant_case_novalue(type, ...)                           \
 	break;                                                        \

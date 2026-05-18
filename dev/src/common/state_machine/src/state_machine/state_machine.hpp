@@ -480,61 +480,61 @@ namespace state_machine {
 		 *           reported an error. The state is not changed.
 		 */
 		ResultT handleEvent(const Events& event) {
-			return std::visit(
-				[&](auto&& inner_state, auto&& inner_event) -> ResultT {
-					using State           = std::decay_t<decltype(inner_state)>;
-					using Event           = std::decay_t<decltype(inner_event)>;
-					auto maybe_transition = definition->template getTransition<State, Event>();
-					if (!maybe_transition.has_value()) return std::nullopt;
-
-					const auto& transition = maybe_transition.value();
-
-					// Check the guard first, if one was registered.
-					if (transition->guard.has_value()) {
-						auto guard_result = (*transition->guard)(current_state, event);
-						if (!guard_result.has_value())
-							return std::unexpected(std::move(guard_result.error()));
-					}
-
-					variant_match(transition->action) {
-						variant_case(RawAction, raw_action) {
-							// Standard action. Action returns the new state.
-							auto action_result = raw_action(current_state, event);
-							if (!action_result.has_value())
-								return std::unexpected(std::move(action_result.error()));
-
-							current_state = std::move(action_result.value());
-							return std::expected<void, ErrorT>{};
-						}
-						variant_case(RawAtomicAction, atomic_action) {
-							// Atomic action. Save the previous state so it remains valid for the
-						    // action body after setState has changed the current state.
-							States prev_state    = std::move(current_state);
-							bool   state_changed = false;
-
-							SetStateCallback set_state = [this, &state_changed](States new_state) {
-								current_state = std::move(new_state);
-								state_changed = true;
-							};
-
-							auto action_result = atomic_action(prev_state, event, set_state);
-
-							// If the action failed or it didn't modify the state, we move back the
-						    // saved, previous state.
-							if (!action_result.has_value() || !state_changed)
-								current_state = std::move(prev_state);
-
-							if (!action_result.has_value())
-								return std::unexpected(std::move(action_result.error()));
-
-							return std::expected<void, ErrorT>{};
-						}
-						variant_default { CORE_UNREACHABLE(); }
-					}
+			auto maybe_transition = std::visit(
+				[&](auto&& inner_state, auto&& inner_event) {
+					using State = std::decay_t<decltype(inner_state)>;
+					using Event = std::decay_t<decltype(inner_event)>;
+					return definition->template getTransition<State, Event>();
 				},
 				current_state,
 				event
 			);
+
+			if (!maybe_transition.has_value()) return std::nullopt;
+			const auto& transition = maybe_transition.value();
+
+			// Check the guard first, if one was registered.
+			if (transition->guard.has_value()) {
+				auto guard_result = (*transition->guard)(current_state, event);
+				if (!guard_result.has_value())
+					return std::unexpected(std::move(guard_result.error()));
+			}
+
+			variant_match(transition->action) {
+				variant_case(RawAction, raw_action) {
+					// Standard action. Action returns the new state.
+					auto action_result = raw_action(current_state, event);
+					if (!action_result.has_value())
+						return std::unexpected(std::move(action_result.error()));
+
+					current_state = std::move(action_result.value());
+					return std::expected<void, ErrorT>{};
+				}
+				variant_case(RawAtomicAction, atomic_action) {
+					// Atomic action. Save the previous state so it remains valid for the
+					// action body after setState has changed the current state.
+					States prev_state    = std::move(current_state);
+					bool   state_changed = false;
+
+					SetStateCallback set_state = [this, &state_changed](States new_state) {
+						current_state = std::move(new_state);
+						state_changed = true;
+					};
+
+					auto action_result = atomic_action(prev_state, event, set_state);
+
+					// If the action failed or it didn't modify the state, we move back the
+					// saved, previous state.
+					if (!action_result.has_value() || !state_changed)
+						current_state = std::move(prev_state);
+
+					if (!action_result.has_value())
+						return std::unexpected(std::move(action_result.error()));
+
+					return std::expected<void, ErrorT>{};
+				}
+				variant_default { CORE_UNREACHABLE(); }
+			}
 		}
 
 		/**
