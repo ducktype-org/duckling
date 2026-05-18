@@ -239,19 +239,21 @@ namespace vm {
 		// Naive approach "while (in range [begin, end)) { microstep(); }" would fail on instruction
 		// jumping to itself.
 
-		auto [begin, end]              = mapping[high_position.instruction_index];
-		auto [original_function_id, _] = low_position;
-		auto in_exclusive_range        = [&](const auto& pos) {
-            return pos.first == original_function_id && begin < pos.second && pos.second < end;
+		u64   orig_func_id       = low_position.first;
+		usize orig_instr_begin   = mapping[high_position.instruction_index].first;
+		usize orig_instr_end     = mapping[high_position.instruction_index].second;
+		auto  in_exclusive_range = [=](const std::pair<u64, u64>& pos) {
+            return pos.first == orig_func_id && orig_instr_begin < pos.second
+                && pos.second < orig_instr_end;
 		};
 
 		do {
 			auto response = thread->step();
 			if (!response) return api::ApiError{ api::OtherError{ "step error" } };
 
-			auto pos = thread->getCurrentPosition();
-			if (!pos) return pos.error();
-			low_position = pos.value();
+			auto maybe_new_lp = thread->getCurrentPosition();
+			if (!maybe_new_lp) return maybe_new_lp.error();
+			low_position = maybe_new_lp.value();
 		} while (in_exclusive_range(low_position));
 
 		return std::nullopt;
