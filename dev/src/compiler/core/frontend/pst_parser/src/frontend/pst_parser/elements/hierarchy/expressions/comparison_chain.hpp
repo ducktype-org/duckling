@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../not_statements/wrapper_elements/operator_wrapper.hpp"
 #include "expr_common.hpp"
 
 namespace pst::expr {
@@ -12,8 +13,8 @@ namespace pst::expr {
 	class ComparisonChain final: public ExprElement {
 		using Lower = GeneralBinary;
 
-		std::vector<AccessInternalAnonymous<ExprElement>> sub_expr;
-		std::vector<Operator>                             operators;
+		std::vector<AccessInternalAnonymous<ExprElement>>     sub_expr;
+		std::vector<AccessInternalAnonymous<OperatorWrapper>> operators;
 
 		static i64 skipToOp(const LangParserState& state, i64 base);
 
@@ -28,8 +29,13 @@ namespace pst::expr {
 		static MBox<ExprElement> parse(LangParserState& state);
 
 		[[nodiscard]]
-		const auto& getOperators() const {
-			return operators;
+		u64 numberOfSubExpressions() const {
+			return sub_expr.size();
+		}
+
+		[[nodiscard]]
+		auto getOperator(u64 index) const {
+			return operators.at(index).give();
 		}
 
 		[[nodiscard]]

@@ -12,8 +12,7 @@ namespace pst::expr {
 
 		auto out = makeBox<LogicNot>(state);
 
-		PARSE().one(Keyword::Not);
-		PARSE().with(&out->expr, Self::parse);
+		PARSE().one(&out->op).with(&out->expr, Self::parse);
 
 		PST_RETURN out;
 	}

@@ -9,13 +9,12 @@ namespace pst::expr {
 		out << R"("expression": )";
 		nullAwareDprint(expr, out);
 		out << R"(, "operator": )";
-		tpc::nullAwareDprint(op, out);
+		nullAwareDprint(op, out);
 
 		out << "}";
 	}
 
 	HashAlg& SuffixOperator::addElementDataToStableHash(HashAlg& partial_hash) const {
-		addToHash(partial_hash, op);
 		return partial_hash;
 	}
 
@@ -23,7 +22,7 @@ namespace pst::expr {
 		visitor.visitSuffixOperator(*this);
 	}
 
-	lexer::Operator SuffixOperator::getOperator() const { return op; }
+	AccessLocked<OperatorWrapper> SuffixOperator::getOperator() const { return op.give(); }
 
 	AccessLocked<ExprElement> SuffixOperator::getExpr() const { return expr.give(); }
 }

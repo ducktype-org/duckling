@@ -8,7 +8,7 @@ namespace pst {
 	 */
 	class If final: public CodeDecl {
 		NAMED_CHILD(condition, RoundGroupExpr);
-		tpc::OptionalIdentifier optional_name;
+		NAMED_CHILD_OPT(name, IdentifierWrapper);
 		NAMED_CHILD(then_body, CodeBlockOrStmt);
 		NAMED_CHILD_OPT(else_body, CodeBlockOrStmt);
 
@@ -46,12 +46,12 @@ namespace pst {
 
 		[[nodiscard]]
 		DeclKind isDeclaration() const final {
-			return (optional_name.value ? DeclKind::Symbol : DeclKind::None);
+			return (name.has_value() ? DeclKind::Symbol : DeclKind::None);
 		}
 
 		[[nodiscard]]
-		base::Optional<base::StrID> getDeclSymbolName() const final {
-			return optional_name.value;
+		base::Optional<AccessLocked<IdentifierWrapper>> getDeclSymbolIdentifier() const final {
+			return name.map([](const auto& acc) { return acc.give(); });
 		}
 
 		void acceptVisitor(PstVisitor& visitor) const override;

@@ -11,7 +11,13 @@
 			},
 			"If": {
 				"name": {
-					"Name": "MyName"
+					"position": {
+						"sourceStart": 3,
+						"sourceEnd": 8
+					},
+					"Identifier Wrapper": {
+						"value": "MyName"
+					}
 				},
 				"condition": {
 					"position": {
@@ -43,11 +49,25 @@
 												},
 												"Identifier Expression": {
 													"name": {
-														"Name": "a"
+														"position": {
+															"sourceStart": 10,
+															"sourceEnd": 10
+														},
+														"Identifier Wrapper": {
+															"value": "a"
+														}
 													}
 												}
 											},
-											"operator": "+",
+											"operator": {
+												"position": {
+													"sourceStart": 12,
+													"sourceEnd": 12
+												},
+												"Operator Wrapper": {
+													"value": "+"
+												}
+											},
 											"right_expr": {
 												"position": {
 													"sourceStart": 14,
@@ -55,13 +75,27 @@
 												},
 												"Identifier Expression": {
 													"name": {
-														"Name": "b"
+														"position": {
+															"sourceStart": 14,
+															"sourceEnd": 14
+														},
+														"Identifier Wrapper": {
+															"value": "b"
+														}
 													}
 												}
 											}
 										}
 									},
-									"operator": ">",
+									"operator": {
+										"position": {
+											"sourceStart": 16,
+											"sourceEnd": 16
+										},
+										"Operator Wrapper": {
+											"value": ">"
+										}
+									},
 									"right_expr": {
 										"position": {
 											"sourceStart": 18,
@@ -111,11 +145,25 @@
 													},
 													"Identifier Expression": {
 														"name": {
-															"Name": "c"
+															"position": {
+																"sourceStart": 24,
+																"sourceEnd": 24
+															},
+															"Identifier Wrapper": {
+																"value": "c"
+															}
 														}
 													}
 												},
-												"assignment type": "=",
+												"assignment type": {
+													"position": {
+														"sourceStart": 26,
+														"sourceEnd": 26
+													},
+													"Operator Wrapper": {
+														"value": "="
+													}
+												},
 												"assigned value": {
 													"position": {
 														"sourceStart": 28,
@@ -144,7 +192,6 @@
 							"sourceEnd": 83
 						},
 						"If": {
-							"name": "<ANONYMOUS>",
 							"condition": {
 								"position": {
 									"sourceStart": 44,
@@ -175,11 +222,25 @@
 															},
 															"Identifier Expression": {
 																"name": {
-																	"Name": "a"
+																	"position": {
+																		"sourceStart": 45,
+																		"sourceEnd": 45
+																	},
+																	"Identifier Wrapper": {
+																		"value": "a"
+																	}
 																}
 															}
 														},
-														"operator": "+",
+														"operator": {
+															"position": {
+																"sourceStart": 47,
+																"sourceEnd": 47
+															},
+															"Operator Wrapper": {
+																"value": "+"
+															}
+														},
 														"right_expr": {
 															"position": {
 																"sourceStart": 49,
@@ -187,13 +248,27 @@
 															},
 															"Identifier Expression": {
 																"name": {
-																	"Name": "b"
+																	"position": {
+																		"sourceStart": 49,
+																		"sourceEnd": 49
+																	},
+																	"Identifier Wrapper": {
+																		"value": "b"
+																	}
 																}
 															}
 														}
 													}
 												},
-												"operator": "==",
+												"operator": {
+													"position": {
+														"sourceStart": 51,
+														"sourceEnd": 52
+													},
+													"Operator Wrapper": {
+														"value": "=="
+													}
+												},
 												"right_expr": {
 													"position": {
 														"sourceStart": 54,
@@ -243,11 +318,25 @@
 																},
 																"Identifier Expression": {
 																	"name": {
-																		"Name": "c"
+																		"position": {
+																			"sourceStart": 60,
+																			"sourceEnd": 60
+																		},
+																		"Identifier Wrapper": {
+																			"value": "c"
+																		}
 																	}
 																}
 															},
-															"assignment type": "=",
+															"assignment type": {
+																"position": {
+																	"sourceStart": 62,
+																	"sourceEnd": 62
+																},
+																"Operator Wrapper": {
+																	"value": "="
+																}
+															},
 															"assigned value": {
 																"position": {
 																	"sourceStart": 64,
@@ -294,18 +383,40 @@
 														},
 														"Identifier Expression": {
 															"name": {
-																"Name": "c"
+																"position": {
+																	"sourceStart": 77,
+																	"sourceEnd": 77
+																},
+																"Identifier Wrapper": {
+																	"value": "c"
+																}
 															}
 														}
 													},
-													"assignment type": "=",
+													"assignment type": {
+														"position": {
+															"sourceStart": 79,
+															"sourceEnd": 79
+														},
+														"Operator Wrapper": {
+															"value": "="
+														}
+													},
 													"assigned value": {
 														"position": {
 															"sourceStart": 81,
 															"sourceEnd": 82
 														},
 														"Prefix Operator": {
-															"operator": "-",
+															"operator": {
+																"position": {
+																	"sourceStart": 81,
+																	"sourceEnd": 81
+																},
+																"Operator Wrapper": {
+																	"value": "-"
+																}
+															},
 															"expression": {
 																"position": {
 																	"sourceStart": 82,

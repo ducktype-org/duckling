@@ -26,22 +26,6 @@ namespace tpc {
 	};
 
 	/**
-	 * @brief Struct for storing optional identifiers
-	 */
-	struct OptionalIdentifier final {
-		base::Optional<base::StrID> value;
-
-		dia::SourcePosition position = dia::SourcePosition::fakePosition();
-
-		friend constexpr void addToHash(
-			hashing::hash_algorithm auto& h, const OptionalIdentifier& t
-		) noexcept {
-			addToHash(h, t.value.has_value());
-			if (t.value) addToHash(h, t.value->strView());
-		}
-	};
-
-	/**
 	 * @brief Struct for storing string value
 	 *
 	 * @note This should work for now with basic characters and c++ escape sequences.

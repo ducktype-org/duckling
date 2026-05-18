@@ -9,16 +9,10 @@ namespace pst {
 	MBox<DottedName> DottedName::parse(LangParserState& state) {
 		auto out = makeBox<DottedName>(state);
 		do {
-			bool            is_id = state[0].isIdentifier();
-			tpc::Identifier next;
-			PARSE().one(&next);
-			if (is_id) out->names.push_back(next);
-			// If not special meaning, assume wrong type
-			else if (!state[0].is(lang_def::NamedOperator::Period)
-			         && !state[0].is(lang_def::NamedOperator::PeriodStar)
-			         && !state[0].is(lang_def::Special::Semicolon)) {
-				state.tokens().next();
-			}
+			MBox<IdentifierWrapper> id;
+			PARSE().one(&id);
+			out->names.emplace_back();
+			PARSE().assign(&out->names.back(), std::move(id));
 		}
 		PST_WHILE(PARSE().tryEat(lang_def::NamedOperator::Period));
 
@@ -38,7 +32,7 @@ namespace pst {
 		out << R"("names": [)";
 
 		for (const auto& name: names) {
-			tpc::nullAwareDprint(name, out);
+			nullAwareDprint(name, out);
 			out << ", ";
 		}
 
@@ -46,8 +40,12 @@ namespace pst {
 	}
 
 	HashAlg& DottedName::addElementDataToStableHash(HashAlg& partial_hash) const {
-		addToHash(partial_hash, names);
+		addToHash(partial_hash, names.size());
 		addToHash(partial_hash, star);
 		return partial_hash;
+	}
+
+	void DottedName::calcElementPathHashRecursive() {
+		calcIndexedListChildPath<IdentifierWrapper>({ names }, getElementPathHash());
 	}
 }

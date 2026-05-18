@@ -10,7 +10,6 @@
 				"sourceEnd": 35
 			},
 			"While": {
-				"name": "<ANONYMOUS>",
 				"condition": {
 					"position": {
 						"sourceStart": 5,
@@ -41,11 +40,25 @@
 												},
 												"Identifier Expression": {
 													"name": {
-														"Name": "a"
+														"position": {
+															"sourceStart": 6,
+															"sourceEnd": 6
+														},
+														"Identifier Wrapper": {
+															"value": "a"
+														}
 													}
 												}
 											},
-											"operator": "+",
+											"operator": {
+												"position": {
+													"sourceStart": 8,
+													"sourceEnd": 8
+												},
+												"Operator Wrapper": {
+													"value": "+"
+												}
+											},
 											"right_expr": {
 												"position": {
 													"sourceStart": 10,
@@ -53,13 +66,27 @@
 												},
 												"Identifier Expression": {
 													"name": {
-														"Name": "b"
+														"position": {
+															"sourceStart": 10,
+															"sourceEnd": 10
+														},
+														"Identifier Wrapper": {
+															"value": "b"
+														}
 													}
 												}
 											}
 										}
 									},
-									"operator": "<",
+									"operator": {
+										"position": {
+											"sourceStart": 12,
+											"sourceEnd": 12
+										},
+										"Operator Wrapper": {
+											"value": "<"
+										}
+									},
 									"right_expr": {
 										"position": {
 											"sourceStart": 14,
@@ -75,7 +102,15 @@
 													"number": "4"
 												}
 											},
-											"operator": "+",
+											"operator": {
+												"position": {
+													"sourceStart": 16,
+													"sourceEnd": 16
+												},
+												"Operator Wrapper": {
+													"value": "+"
+												}
+											},
 											"right_expr": {
 												"position": {
 													"sourceStart": 18,
@@ -127,11 +162,25 @@
 													},
 													"Identifier Expression": {
 														"name": {
-															"Name": "c"
+															"position": {
+																"sourceStart": 28,
+																"sourceEnd": 28
+															},
+															"Identifier Wrapper": {
+																"value": "c"
+															}
 														}
 													}
 												},
-												"operator": "-",
+												"operator": {
+													"position": {
+														"sourceStart": 30,
+														"sourceEnd": 30
+													},
+													"Operator Wrapper": {
+														"value": "-"
+													}
+												},
 												"right_expr": {
 													"position": {
 														"sourceStart": 32,
@@ -139,7 +188,13 @@
 													},
 													"Identifier Expression": {
 														"name": {
-															"Name": "d"
+															"position": {
+																"sourceStart": 32,
+																"sourceEnd": 32
+															},
+															"Identifier Wrapper": {
+																"value": "d"
+															}
 														}
 													}
 												}
