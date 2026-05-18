@@ -54,9 +54,12 @@ namespace compiler::helios::defgen {
 			// - Declare result variable.
 			const auto  result_symbol_type = ctor_decl.return_type;
 			const SymID result_symbol      = ctx.query<QueryGeneratedSymbol>({
-					 .name = base::StrID("__result"),
-					 .generated_symbol_data
-                = GeneratedSymbolData{ Variable{ ctor_symbol, 0, result_symbol_type } },
+					 .name                  = base::StrID("__result"),
+					 .generated_symbol_data = GeneratedSymbolData{ Variable{
+						 .function_symbol = ctor_symbol,
+						 .variable_index  = 0,
+						 .type            = result_symbol_type,
+                } },
             });
 
 			// By default all fields with no initial value are zeroed.
@@ -161,11 +164,14 @@ namespace compiler::helios::defgen {
 			std::vector<Box<code::Stmt>> body{};
 
 			// var res: T[N];
-			const SymID res_sym = ctx.query<QueryGeneratedSymbol>(
-				{ .name = base::StrID("__result"),
-			      .generated_symbol_data
-			      = GeneratedSymbolData{ Variable{ ctor_symbol, 0, array_sym_type } } }
-			);
+			const SymID res_sym
+				= ctx.query<QueryGeneratedSymbol>({ .name = base::StrID("__result"),
+			                                        .generated_symbol_data
+			                                        = GeneratedSymbolData{ Variable{
+														.function_symbol = ctor_symbol,
+														.variable_index  = 0,
+														.type            = array_sym_type,
+													} } });
 			body.emplace_back(makeBox<code::VariableStmt>(
 				code::generatedOrigin(),
 				makeBox<code::DefaultValueExpr>(ctx, code::generatedOrigin(), array_type),
@@ -181,11 +187,14 @@ namespace compiler::helios::defgen {
 					                               tsh::ReferenceKind::Direct,
 					                               tsh::Mutability::Mutable };
 				// var i: i64 = 0;
-				const SymID i_sym = ctx.query<QueryGeneratedSymbol>(
-					{ .name = base::StrID("__i"),
-				      .generated_symbol_data
-				      = GeneratedSymbolData{ Variable{ ctor_symbol, 1, u64_type } } }
-				);
+				const SymID i_sym
+					= ctx.query<QueryGeneratedSymbol>({ .name = base::StrID("__i"),
+				                                        .generated_symbol_data
+				                                        = GeneratedSymbolData{ Variable{
+															.function_symbol = ctor_symbol,
+															.variable_index  = 1,
+															.type            = u64_type,
+														} } });
 				auto zero_val = numeric_value::NumericValue::createOfType(u64_abs_type)
 				                    .expect("u64 creation failed");
 				body.emplace_back(makeBox<code::VariableStmt>(

@@ -143,6 +143,8 @@ namespace compiler::helios {
 			}
 
 			void visitWhile(pst::Access<pst::While> stmt) final { visitRecursion(stmt->getBody()); }
+
+			void visitFor(pst::Access<pst::For> stmt) final { visitRecursion(stmt->getBody()); }
 		};
 
 		static auto provide(Context& ctx, QKey key) -> PResult {

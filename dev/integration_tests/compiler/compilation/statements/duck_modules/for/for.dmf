@@ -1,0 +1,8 @@
+# for [loop-name]([var|let] <iter name>[: <iter type>] in <collection>) <statement>;
+
+fun main() -> i64 = {
+
+
+
+    return 0;
+}

@@ -1,5 +1,9 @@
 #include "scopes.hpp"
 
+#include "frontend/pst_parser/access.hpp"
+#include "helios_private/hout_creation/expressions/query_hout_of_expr.hpp"
+#include "helios_private/symbols/generated_symbol_data.hpp"
+
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
@@ -532,11 +536,35 @@ namespace compiler::helios {
 				output(std::vector<SymID>{});
 			}
 
-			void visitFor(pst::Access<pst::For>) override {
-				// Scope of "for →(...)← {}"
-				// @TODO: #2096 add for loop variables to the scope
-				// and add them here.
-				output(std::vector<SymID>{});
+			u64 forStableIndex(pst::Access<pst::For> stmt) { return stmt->getID().asInt(); }
+
+			SymID getForIteratorSymbol(query::Context& ctx, pst::Access<pst::For> stmt) {
+				using GeneratedSymbolData = defgen::GeneratedSymbolData;
+				using Variable            = GeneratedSymbolData::Variable;
+
+				const SymID fun_sym = 0;  // TODOP: How to get that.
+				const u64   for_id  = forStableIndex(stmt);
+
+				auto iter_type_pst  = stmt->getIteratorType().unlock(ctx)->getExpr();
+				auto iter_type_hout = ctx.query<QueryHoutOfExpr>({ iter_type_pst })->valueOrPanic();
+
+				auto iter_type = iter_type_hout->expression_type.getSymbolType();
+
+				return ctx.query<defgen::QueryGeneratedSymbol>({ .name = stmt->getIteratorName(),
+				                                                 .generated_symbol_data
+				                                                 = GeneratedSymbolData{
+																	 Variable{
+																		 .function_symbol = fun_sym,
+																		 .variable_index  = for_id,
+																		 .type = iter_type,
+																	 },
+																 } });
+			}
+
+			void visitFor(pst::Access<pst::For> for_stmt) override {
+				std::vector<SymID> out;
+				out.emplace_back(getForIteratorSymbol(ctx, for_stmt));
+				output(std::move(out));
 			}
 
 			void visitExprStmt(pst::Access<pst::ExprStmt>) override {
