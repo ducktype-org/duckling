@@ -202,35 +202,22 @@ namespace compiler::mir {
 
 	base::OkBad validateNoComptimeTypes(query::Context& ctx, const Function& fun) {
 		variant_match(fun.helios_id) {
-			variant_case(FunctionSymID, f_id) {
-				auto status_q = ctx.query<IsComptimeOnly>(f_id.id);
-				if (!status_q.get()->hasFailed()
-				    && status_q.get()->valueOrPanic() == ComptimeStatus::ComptimeOnly) {
-					if (helios::name(f_id.id) == base::StrID("main")) {
-						ctx.logInt(makeBox<dia_int::PlaceholderError>(
-							"The 'main' function cannot be marked as compile-time only ", ""
-						));
-						return base::BAD;
-					}
-				}
-			}
-
 			variant_case(GlobalVariableCTOR, g_id) {
-				bool has_invalid_comptime_type = isComptimeOnlyType(fun.return_type.getType());
+				bool has_invalid_type = isComptimeOnlyType(fun.return_type.getType());
 
-				if (!has_invalid_comptime_type) {
+				if (!has_invalid_type) {
 					for (const auto& local: fun.local_list) {
 						if (isComptimeOnlyType(local.type.getType())) {
-							has_invalid_comptime_type = true;
+							has_invalid_type = true;
 							break;
 						}
 					}
 				}
 
-				if (has_invalid_comptime_type) {
+				if (has_invalid_type) {
 					ctx.logInt(makeBox<dia_int::PlaceholderError>(
 						"Global variable initializers/constructors cannot use or produce "
-					    "compile-time only types",
+					    "compile-time only (comptime-only) types.",
 						""
 					));
 					return base::BAD;

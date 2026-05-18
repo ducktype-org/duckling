@@ -12,6 +12,7 @@
 #include <helios/mangler/mangler.hpp>
 #include <helios/queries/function_queries.hpp>
 #include <helios/queries/queries.hpp>
+#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <mir_private/expr_lowering.hpp>
 #include <mir_private/mir_builders.hpp>
@@ -435,7 +436,14 @@ namespace compiler::mir {
 				}
 			}
 		}
-
+		for (const auto& [sym_id, status]: result.map) {
+			if (status == ComptimeStatus::ComptimeOnly
+			    && helios::name(sym_id) == base::StrID("main")) {
+				ctx.logInt(makeBox<dia_int::PlaceholderError>(
+					"The 'main' function cannot be marked as compile-time only (comptime-only).", ""
+				));
+			}
+		}
 		return result;
 	}
 
