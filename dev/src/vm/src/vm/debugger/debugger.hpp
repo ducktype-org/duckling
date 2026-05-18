@@ -1,3 +1,5 @@
+#pragma once
+
 #include <events/emitter.hpp>
 
 #include <vm/api/vm.hpp>
