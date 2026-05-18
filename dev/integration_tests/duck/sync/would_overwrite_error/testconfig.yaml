@@ -1,0 +1,17 @@
+Tests:
+  sync:
+    Description: 
+    Cases:
+      sync:
+        test_cmd: duck -C foo sync && duck -C foo_but_different_dir sync
+        Err:
+          Run: |+
+            echo "error: tried to overwrite an existing virtual environment from another location
+            
+            note: synchronizing a package at \`$(pwd)/foo_but_different_dir\` would overwrite a venv of a package at \`$(pwd)/foo\`
+            
+            hint: use \`--overwrite\` to force an overwrite"
+        Output:
+          String: 'info: successfully synchronized venv \`foo\`\n'
+        ExitCode: 1
+        

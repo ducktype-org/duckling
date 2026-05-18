@@ -1,8 +1,7 @@
 load_cargo: . ${CARGO_HOME:-$HOME/.cargo}/env
 cwd_duck_root: cd `git rev-parse --show-toplevel`/dev/src/duck/
 build_duck: cargo --locked build
-duck_exe_path: '`git rev-parse --show-toplevel`/dev/src/duck/target/debug/duck'
-color: never
+duck_exe_dir: '`git rev-parse --show-toplevel`/dev/src/duck/target/debug/'
 prepare: ""
 before_cmd: "true"
 
@@ -15,7 +14,7 @@ PreNode: |
 PreTest: |
   @{prepare}
 
-Run: bash -c "@{before_cmd} && @{duck_exe_path} --color=@{color} @{test_cmd}"
+Run: '@{before_cmd} && export PATH="@{duck_exe_dir}:$PATH" && @{test_cmd}'
 
 SubDirs:
   - cli

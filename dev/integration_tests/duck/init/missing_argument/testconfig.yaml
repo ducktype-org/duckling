@@ -3,7 +3,7 @@ Tests:
     Description: name/path is required
     Cases:
       init:
-        test_cmd: init
+        test_cmd: duck init
         ExitCode: 1
         Err:
           String: |+

@@ -332,8 +332,13 @@ fn sync_overwrite_fail() {
     .unwrap_err();
     assert_eq!(
         err.to_string(),
-        "use `--overwrite` to force an overwrite
-tried to overwrite an existing virtual environment from another location"
+        format!(
+            "tried to overwrite an existing virtual environment from another location
+synchronizing a package at `{}` would overwrite a venv of a package at `{}`
+use `--overwrite` to force an overwrite",
+            pcx2.package().root_directory().display(),
+            pcx.package().root_directory().display()
+        )
     );
 }
 

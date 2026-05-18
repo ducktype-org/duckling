@@ -7,7 +7,7 @@ use std::time::SystemTime;
 
 use flate2::read::GzDecoder;
 use tar::Archive;
-use tracing::debug;
+use tracing::{debug, error};
 
 use crate::quackpack::core::fetcher::Fetcher;
 use crate::quackpack::core::fetcher::types::PackageWithUrl;
@@ -24,8 +24,9 @@ use crate::quackpack::core::storage::paths::Storage;
 use crate::quackpack::core::storage::venv::{Venv, VenvData};
 use crate::quackpack::core::storage::venv_id::{ToVenvId, VenvId};
 use crate::quackpack::core::{BranchOrTag, Git, Package, PackageContext, PackageLoader, storage};
+use crate::util::error::MessageError;
 use crate::util::path_ops_ext::PathOpsExt;
-use crate::{QuackResult, QuackResultContext, qp_bail, qp_bail_internal, qp_err};
+use crate::{QuackError, QuackResult, QuackResultContext, qp_bail, qp_bail_internal};
 
 const MAX_BLOB_RETRY_COUNT: i32 = 3;
 
@@ -138,26 +139,49 @@ fn check_if_overwrites(
     {
         return Ok(());
     }
-    let package =
-        PackageLoader::find_at_exact_directory(venv.data().last_known_directory(), pcx.ctx());
-    let replaces = match package {
-        Ok(package) => package.package().manifest().name() == id.name() && !id.is_global(),
+    let dir = venv.data().last_known_directory();
+    let package = PackageLoader::find_at_exact_directory(dir, pcx.ctx());
+    let (replaces, note) = match package {
+        Ok(package) => {
+            let replaces = package.to_venv_id() == id && !id.is_global();
+            let note = if replaces {
+                Some(format!(
+                    "synchronizing a package at `{}` would overwrite a venv of a package at `{}`",
+                    pcx.package().root_directory().display(),
+                    dir.display()
+                ))
+            } else {
+                None
+            };
+            (replaces, note)
+        }
         Err(e) => {
+            error!(path = %dir.display(), "failed to a package: {e} ({e:?})");
             if let Some(io_error) = e.downcast_ref_in_chain::<io::Error>() {
                 // Maybe we missed something, check, if package has been moved.
-                ![io::ErrorKind::NotFound, io::ErrorKind::NotADirectory].contains(&io_error.kind())
+                let replaces = ![io::ErrorKind::NotFound, io::ErrorKind::NotADirectory]
+                    .contains(&io_error.kind());
+                (replaces, None)
             } else {
                 // Other error, maybe we failed to deserialize?
                 // Safely assume, that package still exists.
-                true
+                let note = format!(
+                    "failed to load a package at `{}`, assuming it still exists",
+                    dir.display()
+                );
+                (true, Some(note))
             }
         }
     };
     if replaces {
-        Err(
-            qp_err!("tried to overwrite an existing virtual environment from another location")
-                .add_hint("use `--overwrite` to force an overwrite"),
-        )
+        let mut error = QuackError::hint("use `--overwrite` to force an overwrite");
+        if let Some(note) = note {
+            error = error.add_note(note);
+        }
+        error = error.context(MessageError::new(
+            "tried to overwrite an existing virtual environment from another location",
+        ));
+        Err(error)
     } else {
         Ok(())
     }
