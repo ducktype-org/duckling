@@ -104,10 +104,7 @@ private:
 			                   ->valueOrThrow();
 			ASSERT_TRUE(c_ctor.name.strView() == "constructor_of_c");
 
-			const auto& foo_mir = ctx.query<compiler::mir::LowerToPreMIRFunction>(
-										 functions.at(0)->declaration->original_symbol
-			)
-			                          ->valueOrPanic();
+			auto& foo_mir = compiler::mir::lowerToPreMIRFunction(ctx, functions.at(0));
 			ASSERT_EQUAL(foo_mir.name, base::StrID("foo"));
 
 			// Test locals:
@@ -168,10 +165,7 @@ private:
 			ASSERT_TRUE(foo_mir.validateBlockIDs().isOk());
 
 			// Simple assignment tests
-			const auto& goo_mir = ctx.query<compiler::mir::LowerToPreMIRFunction>(
-										 functions.at(1)->declaration->original_symbol
-			)
-			                          ->valueOrPanic();
+			auto& goo_mir = compiler::mir::lowerToPreMIRFunction(ctx, functions.at(1));
 			ASSERT_EQUAL(goo_mir.name, base::StrID("goo"));
 
 			ASSERT_EQUAL(goo_mir.local_list.size(), 2);
