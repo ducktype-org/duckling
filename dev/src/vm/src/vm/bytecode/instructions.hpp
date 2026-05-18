@@ -51,7 +51,9 @@ namespace vm::code {
 
 	namespace detail {
 		// This structure allows us to easily define the `IsInstruction` concept.
-		struct InstructionBase: ElementBase {};
+		struct InstructionBase: ElementBase {
+			usize instr_idx = 0;
+		};
 
 		// Helper useful for getting rid of the leading comma resulting from `FOR_EACH`.
 		template<typename THead, typename... TTail>
