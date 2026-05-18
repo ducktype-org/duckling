@@ -28,7 +28,7 @@ namespace query {
 		main_query_state.logDiagnosticForNode(my_node, std::move(diagnostic));
 	}
 
-	void Context::logFromLogger(dia_int::Logger& logger) {
+	void Context::moveDiagnosticsFrom(dia_int::Logger& logger) {
 		assertActive();
 		main_query_state.logDiagnosticFromLoggerForNode(my_node, logger);
 	}

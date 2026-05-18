@@ -341,7 +341,7 @@ namespace query {
 		 * @brief Logs and moves all messages from a provided logger
 		 * into current query node logger.
 		 */
-		void logFromLogger(dia_int::Logger& logger);
+		void moveDiagnosticsFrom(dia_int::Logger& logger);
 
 		/**
 		 * @brief Collect all diagnostics from the main query state into the provided output vector.

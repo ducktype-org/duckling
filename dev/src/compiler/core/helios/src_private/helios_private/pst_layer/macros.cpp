@@ -48,7 +48,7 @@ namespace compiler::helios {
 				);
 				bool parse_errors = pst.hasErrors();
 
-				ctx.logFromLogger(*pst.getLoggerMut());
+				ctx.moveDiagnosticsFrom(*pst.getLoggerMut());
 				if (parse_errors) return query::Failed();
 
 				if (pst.getRootElement().unlockOpt(ctx).has_value()) {
