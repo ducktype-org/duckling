@@ -11,12 +11,12 @@ namespace persistent {
 	class LocalStackDbBuilder;
 
 	template<typename VarT, typename ValT>
-	class LocalStackDatabase;
+	class LocalStackDb;
 
 	STRONG_TYPEDEF_INT(StackStateID, u64);
 
 	template<typename VarT, typename ValT>
-	class LocalStackDatabase {
+	class LocalStackDb {
 		friend LocalStackDbBuilder<VarT, ValT>;
 
 		//// Vals - immutable parts (usually decltype info)
@@ -67,7 +67,7 @@ namespace persistent {
 
 		base::HashMap<StackStateID, StackState> states;
 
-		LocalStackDatabase(
+		LocalStackDb(
 			decltype(val_entries)       values_entry,
 			decltype(name_to_decl_info) name_to_decl_info,
 			decltype(var_entries)       var_entries,
@@ -83,12 +83,12 @@ namespace persistent {
 			  states(std::move(states)) {}
 
 	public:
-		LocalStackDatabase() = default;
+		LocalStackDb() = default;
 	};
 
 	template<typename VarT, typename ValT>
 	class LocalStackDbBuilder {
-		using Prod = LocalStackDatabase<VarT, ValT>;
+		using Prod = LocalStackDb<VarT, ValT>;
 
 		using ValNodeID = Prod::ValNodeID;
 		using Lifetime  = Prod::Lifetime;
