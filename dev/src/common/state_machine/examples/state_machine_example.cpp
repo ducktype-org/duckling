@@ -76,11 +76,11 @@ public:
 
 	void printStatus() const {
 		variant_match(machine.getState()) {
-			variant_case_novalue(state::NotStarted) std::cout << "State: NotStarted\n";
-			variant_case_novalue(state::Ready) std::cout << "State: Ready\n";
-			variant_case_novalue(state::Running) std::cout << "State: Running\n";
-			variant_case_novalue(state::Paused) std::cout << "State: Paused\n";
-			variant_case(state::Panicked, p) std::cout << "State: Panicked(" << p.msg << ")\n";
+			variant_case_novalue(state::NotStarted) { std::cout << "State: NotStarted\n"; }
+			variant_case_novalue(state::Ready) { std::cout << "State: Ready\n"; }
+			variant_case_novalue(state::Running) { std::cout << "State: Running\n"; }
+			variant_case_novalue(state::Paused) { std::cout << "State: Paused\n"; }
+			variant_case(state::Panicked, p) { std::cout << "State: Panicked(" << p.msg << ")\n"; }
 			variant_default { CORE_UNREACHABLE(); }
 		}
 	}

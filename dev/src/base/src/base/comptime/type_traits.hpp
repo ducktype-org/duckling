@@ -62,6 +62,8 @@ namespace base {
 			}
 		};
 
+		// Source - https://stackoverflow.com/a/11251376/
+		// {
 		template<typename T, template<typename...> typename Template>
 		inline constexpr bool IsInstantiationOf_v = false;
 
@@ -73,6 +75,8 @@ namespace base {
 
 		template<template<typename, auto> class Template, typename U, auto V>
 		inline constexpr bool IsInstantiationOfTypeValue_v<Template<U, V>, Template> = true;
+
+		// }
 
 		// Source - https://stackoverflow.com/a/52303687
 		// {
