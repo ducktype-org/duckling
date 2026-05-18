@@ -1,5 +1,7 @@
 #include "symbols.hpp"
 
+#include "helios_private/symbols/generated_symbol_data.hpp"
+
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/all_class_elements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
@@ -196,6 +198,28 @@ namespace compiler::helios {
 		out              = base::strConcat(module_name.str(), " -> ", out);
 
 		return out;
+	}
+
+	SymID getForIteratorSymbol(query::Context& ctx, pst::Access<pst::For> stmt) {
+		using GeneratedSymbolData = defgen::GeneratedSymbolData;
+		using ControlFlowLocal    = GeneratedSymbolData::ControlFlowLocal;
+
+		// TODOP: Coercions!
+		auto iter_name      = stmt->getIteratorIdentifier().unlock(ctx)->unwrap();
+		auto iter_type_pst  = stmt->getIteratorType().unlock(ctx)->getExpr();
+		auto iter_type_hout = ctx.query<QueryHoutOfExpr>({ iter_type_pst })->valueOrThrow().ref();
+		auto iter_type      = iter_type_hout->expression_type.getSymbolType();
+
+		auto for_scope = ctx.query<QueryPrimaryCodeScopeFor>({ stmt });
+
+		return ctx.query<defgen::QueryGeneratedSymbol>({
+			.name                  = iter_name,
+			.generated_symbol_data = GeneratedSymbolData{ ControlFlowLocal{
+				.owning_scope = for_scope,
+				.role         = iter_name,
+				.type         = iter_type,
+			} },
+		});
 	}
 
 	/**

@@ -121,6 +121,21 @@ namespace compiler::helios::defgen {
 		};
 
 		/**
+		 * Represents a compiler-generated variable (not parameter) in a function. This function may
+		 * itself be compiler-generated, such as the `ImplicitConstructor`.
+		 * TODOP: Docs.
+		 */
+		struct ControlFlowLocal final {
+			ScopeID     owning_scope;
+			base::StrID role;
+			// @TODO: #2515 Remove this
+			tsh::SymbolType<> type;
+
+			[[nodiscard]]
+			base::Bit256 queryUnstablePerfectHash() const;
+		};
+
+		/**
 		 * Represents a compiler-generated function wrapper for REPL expressions.
 		 * This is used to wrap single REPL expressions in a synthetic function.
 		 * @note this does not store any function data, since this symbol is created when
@@ -194,6 +209,7 @@ namespace compiler::helios::defgen {
 			SelfParameter,
 			Field,
 			Variable,
+			ControlFlowLocal,
 			ReplExpressionWrapper,
 			ReplInstructionWrapper,
 			ScriptMainWrapper>;

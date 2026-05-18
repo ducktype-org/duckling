@@ -11,6 +11,9 @@
 #include <base/except/exceptions.hpp>
 #include <base/str/str_utils.hpp>
 
+#include "hashing/hash.hpp"
+#include "hashing/hashing_algorithms.hpp"
+
 namespace compiler::helios {
 	namespace defgen {
 		base::Bit256 GeneratedSymbolData::ImplicitConstructor::queryUnstablePerfectHash() const {
@@ -44,6 +47,10 @@ namespace compiler::helios {
 
 		base::Bit256 GeneratedSymbolData::Variable::queryUnstablePerfectHash() const {
 			return { function_symbol.queryUnstablePerfectHash(), variable_index };
+		}
+
+		base::Bit256 GeneratedSymbolData::ControlFlowLocal::queryUnstablePerfectHash() const {
+			return hashing::justHash<hashing::SHA256>(owning_scope.queryUnstablePerfectHash(), role);
 		}
 
 		// Hash includes both counter and return_type to ensure different wrappers are distinguished.
@@ -86,8 +93,8 @@ namespace compiler::helios {
 					};
 
 					const auto ctor_abstract_type = ctx.query<tsh::QueryFunctionType>({
-						std::move(param_types),
-						return_type,
+						.parameter_types = std::move(param_types),
+						.result_type     = return_type,
 					});
 
 					return tsh::SymbolType<>{
@@ -111,8 +118,8 @@ namespace compiler::helios {
 					};
 
 					const auto ctor_abstract_type = ctx.query<tsh::QueryFunctionType>({
-						{},
-						return_type,
+						.parameter_types = {},
+						.result_type     = return_type,
 					});
 
 					return tsh::SymbolType<>{
@@ -129,8 +136,8 @@ namespace compiler::helios {
 					};
 
 					const auto ctor_abstract_type = ctx.query<tsh::QueryFunctionType>({
-						{},
-						return_type,
+						.parameter_types = {},
+						.result_type     = return_type,
 					});
 
 					return tsh::SymbolType<>{
@@ -167,7 +174,7 @@ namespace compiler::helios {
 					return param_symbol_type;
 				}
 				variant_case(Field, field) {
-					// @TODO: #2515 Implament other cases
+					// @TODO: #2515 Implement other cases
 					switch (field.parent_type.getKind()) {
 					case tsh::Kind::Tuple:
 						return field.parent_type.as<tsh::TupleAbstractType>().getComponents().at(
@@ -178,10 +185,11 @@ namespace compiler::helios {
 					}
 				}
 				variant_case(Variable, var) { return var.type; }
+				variant_case(ControlFlowLocal, local) { return local.type; }
 				variant_case(ReplExpressionWrapper, repl) {
 					const auto function_abstract_type = ctx.query<tsh::QueryFunctionType>({
-						{},
-						repl.return_type,
+						.parameter_types = {},
+						.result_type     = repl.return_type,
 					});
 					return tsh::SymbolType<>{
 						function_abstract_type,
@@ -247,6 +255,7 @@ namespace compiler::helios {
 				variant_case(Variable, var) {
 					CORE_PANIC("Can't get scope of generated variable yet.");
 				}
+				variant_case(ControlFlowLocal, local) { return local.owning_scope; }
 				variant_case(ReplExpressionWrapper, repl) {
 					CORE_PANIC("Can't get scope of repl expr wrapper yet.");
 				}
@@ -269,6 +278,7 @@ namespace compiler::helios {
 				variant_case(SelfParameter, param) { return param.scope; }
 				variant_case(Field, field) { return {}; }
 				variant_case(Variable, var) { return {}; }
+				variant_case(ControlFlowLocal, var) { return getScope(); }
 				variant_case(ReplExpressionWrapper, repl) { return {}; }
 				variant_case(ReplInstructionWrapper, repl) { return {}; }
 				variant_case(ScriptMainWrapper, script) { return script.scope; }

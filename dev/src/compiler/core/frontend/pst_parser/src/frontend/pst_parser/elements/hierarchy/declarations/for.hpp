@@ -3,11 +3,10 @@
 #include "frontend/pst_parser/access.hpp"
 #include "frontend/pst_parser/elements/hierarchy/expr_holders.hpp"
 #include "frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp"
+#include "frontend/pst_parser/elements/hierarchy/not_statements/wrapper_elements/identifier_wrapper.hpp"
 #include "preamble.hpp"
 
 #include "base/collections/optional.hpp"
-
-#include "string_id/string_id.hpp"
 
 namespace pst {
 	/**
@@ -47,15 +46,15 @@ namespace pst {
 			return name.map([](const auto& acc) { return acc.give(); });
 		}
 
-		[[nodiscard]] base::StrID getIteratorName() const { return iterator.value; }
-
-		[[nodiscard]] AccessLocked<ExprHolder> getIteratorType() const {
-			return type.internal()->getExpr();
+		[[nodiscard]] AccessLocked<IdentifierWrapper> getIteratorIdentifier() const {
+			return iterator.give();
 		}
 
-		[[nodiscard]] AccessLocked<ExprHolder> getIterable() const {
-			return iterable.internal()->getExpr();
+		[[nodiscard]] AccessLocked<ForTypeExprHolder> getIteratorType() const {
+			return type.give();
 		}
+
+		[[nodiscard]] AccessLocked<CommaExprHolder> getIterable() const { return iterable.give(); }
 
 		[[nodiscard]] AccessLocked<CodeBlockOrStmt> getBody() const { return body.give(); }
 

@@ -6,10 +6,8 @@
 #include "helios/tsh/kind.hpp"
 #include "helios/tsh/mutability.hpp"
 #include "helios/tsh/types.hpp"
+#include "helios_private/scopes/scopes.hpp"
 #include "helios_private/symbols/generated_symbol_data.hpp"
-#include "tsh/kind.hpp"
-#include "tsh/mutability.hpp"
-#include "tsh/types.hpp"
 
 #include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/elements/hierarchy/actions/all_actions.hpp>
@@ -22,7 +20,6 @@
 #include <frontend/pst_parser/elements/hierarchy/statements/expr_stmt.hpp>
 #include <frontend/pst_parser/pst_visitor.hpp>
 #include <helios/hout/elements.hpp>
-#include <helios/hout/elements/stmt.hpp>
 #include <helios/hout/origin.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/tsh/queries/types.hpp>
@@ -376,18 +373,17 @@ namespace compiler::helios {
 
 			// Preamble. Get some basic data.
 			using GeneratedSymbolData = defgen::GeneratedSymbolData;
-			using Variable            = GeneratedSymbolData::Variable;
+			using ControlFlowLocal    = GeneratedSymbolData::ControlFlowLocal;
 
-			const auto  loop_origin = code::pstOrigin(stmt);
-			const auto  gen_origin  = code::generatedOrigin();
-			const SymID fun_sym
-				= findEnclosingFunctionSymbol(ctx, stmt);  // TODOP: How to get that.
-			const u64 for_id = forStableIndex(stmt);
+			const auto loop_origin = code::pstOrigin(stmt);
+			const auto gen_origin  = code::generatedOrigin();
+
+
+			const ScopeID for_scope = ctx.query<QueryPrimaryCodeScopeFor>({ stmt });
 
 			// Get the iterable and it's type.
-			auto iterable_pst = stmt->getIterable().unlock(ctx)->getExpr();
-			auto iterable_hout
-				= ctx.query<QueryHoutOfExpr>({ iterable_pst })->valueOrThrow()->clone();
+			auto iterable_pst  = stmt->getIterable().unlock(ctx)->getExpr();
+			auto iterable_hout = ctx.query<QueryHoutOfExpr>({ iterable_pst })->valueOrThrow().ref();
 			auto iterable_type = iterable_hout->expression_type.getSymbolType();
 			auto iterable_kind = iterable_type.getType().getKind();
 
@@ -397,7 +393,7 @@ namespace compiler::helios {
 					base::strConcat(
 						"`for` statements for non-array type: ", iterable_type.toString()
 					),
-					stmt->getSourcePosition()
+					stmt->getStablePosition()
 				));
 				is_failed = true;
 				return;
@@ -412,48 +408,50 @@ namespace compiler::helios {
 			auto element_type = [&]() {
 				switch (iterable_kind) {
 				case tsh::Kind::DynamicArray:
-					return iterable_type.getType().as<tsh::DynamicArrayAbstractType>.getElementType(
+					return iterable_type.getType().as<tsh::DynamicArrayAbstractType>().getElementType(
 					);
 				case tsh::Kind::StaticArray:
-					return iterable_type.getType().as<tsh::StaticArrayAbstractType>.getElementType();
+					return iterable_type.getType().as<tsh::StaticArrayAbstractType>().getElementType(
+					);
+				default:
+					CORE_UNREACHABLE();
 				}
 			}();
 
 			// Coerce the iterator to the element type.
-			auto iter_type_pst  = stmt->getIteratorType().unlock(ctx)->getExpr();
-			auto iter_type_hout = getHoutOfExprWithExpectedType(ctx, iter_type_pst, element_type);
-			auto iter_type      = iter_type_hout->expression_type.getSymbolType();
+			auto iter_type_pst = stmt->getIteratorType().unlock(ctx)->getExpr();
+			auto iter_type_hout
+				= getHoutOfExprWithExpectedType(ctx, iter_type_pst, element_type).valueOrThrow();
+			auto iter_type = iter_type_hout->expression_type.getSymbolType();
 
 
 			// Create the needed symbols.
-			auto create_var = [&](base::StrID name, tsh::SymbolType<> type) {
-				return ctx.query<
-					defgen::QueryGeneratedSymbol>({ .name                  = name,
-				                                    .generated_symbol_data = GeneratedSymbolData{
-														Variable{
-															.function_symbol
-															= fun_sym,  // TODOP: Figure this out.
-															.variable_index
-															= for_id,   // TODOP: Figure this out.
-															.type = type,
-														},
-													} });
+			auto create_var = [&](base::StrID role, tsh::SymbolType<> type) {
+				return ctx.query<defgen::QueryGeneratedSymbol>({ .name = role,
+				                                                 .generated_symbol_data
+				                                                 = GeneratedSymbolData{
+																	 ControlFlowLocal{
+																		 .owning_scope = for_scope,
+																		 .role         = role,
+																		 .type         = type,
+																	 },
+																 } });
 			};
 
 
 			// Create needed symbols.
-			auto col_sym  = create_var(base::StrID("__collection"), iterable_type);
-			auto idx_sym  = create_var(base::StrID("__index"), u64_mut_type);
-			auto len_sym  = create_var(base::StrID("__len"), u64_immut_type);
-			auto iter_sym = getForIteratorSymbol(ctx, stmt);
+			SymID col_sym  = create_var(base::StrID("__collection"), iterable_type);
+			SymID idx_sym  = create_var(base::StrID("__index"), u64_mut_type);
+			SymID len_sym  = create_var(base::StrID("__len"), u64_immut_type);
+			SymID iter_sym = getForIteratorSymbol(ctx, stmt);
 
 			// Desugar the loop.
 			code::CodeBlock outer{};
 			// Create a temp for the collection for it to be evaluated only once before the loop.
 			// var __collection = <iterable>
-			outer.statements.emplace_back(makeBox<code::VariableStmt>(
-				loop_origin, std::move(iterable_hout), iterable_type, col_sym
-			));
+			outer.statements.emplace_back(
+				makeBox<code::VariableStmt>(loop_origin, iterable_hout, iterable_type, col_sym)
+			);
 
 			// var __idx: u64 = 0
 			outer.statements.emplace_back(makeBox<code::VariableStmt>(
@@ -464,14 +462,14 @@ namespace compiler::helios {
 			));
 
 			// let __len: u64 = <len __collection> / <constant>
-			Box<code::Expr> len_expr = [&]() -> Box<code::Expr> {
+			auto len_expr = [&]() -> Box<code::Expr> {
 				switch (iterable_kind) {
 				case tsh::Kind::DynamicArray: {
 					return makeBox<code::UnaryOperatorExpr>(
 						ctx,
 						code::generatedOrigin(),
 						code::BuiltinUnary::Len,
-						makeBox<code::IdentifierExpr>(ctx, gen_origin, col_sym),
+						makeBox<code::IdentifierExpr>(ctx, gen_origin, col_sym)
 					);
 				}
 				case tsh::Kind::StaticArray: {
@@ -491,10 +489,7 @@ namespace compiler::helios {
 				}
 			}();
 			outer.statements.emplace_back(makeBox<code::VariableStmt>(
-				loop_origin,
-				std::move(len_expr),
-				u64_type.withMutability(tsh::Mutability::Immutable),
-				len_sym
+				loop_origin, std::move(len_expr), u64_immut_type, len_sym
 			));
 
 			// while(__idx < __len) {
@@ -510,12 +505,11 @@ namespace compiler::helios {
 
 			// __idx < __len
 			auto condition = makeBox<code::BinaryOperatorExpr>(
-				ctx, gen_origin, code::BuiltinBinary::IntegerLt, idx_ref(), len_ref(),
+				ctx, gen_origin, code::BuiltinBinary::IntegerLt, idx_ref(), len_ref()
 			);
 
 			// Prepare the body.
 			code::CodeBlock while_body{};
-
 
 			// let <user_var> = __collection[__idx];
 			while_body.statements.emplace_back(makeBox<code::VariableStmt>(
@@ -532,7 +526,7 @@ namespace compiler::helios {
 			auto one = makeBox<code::LiteralNumericExpr>(
 				ctx,
 				gen_origin,
-				numeric_value::NumericValue::createOfType<u64>(u64_mut.getType(), 1).value()
+				numeric_value::NumericValue::createOfType<u64>(u64_mut_type.getType(), 1).value()
 			);
 
 			while_body.statements.emplace_back(makeBox<code::AssignmentStmt>(
