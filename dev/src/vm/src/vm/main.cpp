@@ -87,7 +87,7 @@ clah::Clah getVmClah() {
 							   for (usize argc = 0; argc < options.getExtraParameterCount(); argc++)
 								   args.push_back(*options.getExtra<std::string>(argc));
 
-							   auto cli = vm::cli::CLIDebugger(file, args);
+							   auto cli = vm::debugger::cli::CLIDebugger(file, args);
 							   return cli.run();
 						   }))
 	    .addSubcommand(clah::Clah("debug_adapter", "Start the VM debug adapter.")
