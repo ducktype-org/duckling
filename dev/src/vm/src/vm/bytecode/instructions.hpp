@@ -326,11 +326,10 @@ namespace vm::code {
 	[[fallthrough]];                        \
 	case (type::OPCODE):
 
-#define instr_case_novalue(type, ...)                        \
-	break;                                                   \
-	case (type::OPCODE):                                     \
-		FOR_EACH(instr_case_novalue_extra_case, __VA_ARGS__) \
-		if (true)
+#define instr_case_novalue(type, ...)                          \
+	break;                                                     \
+	FOR_EACH(instr_case_novalue_extra_case, type, __VA_ARGS__) \
+	if (true)
 
 #define instr_default \
 	break;            \
