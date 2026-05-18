@@ -1,0 +1,9 @@
+fun patient_zero(t: type) -> type = box t;
+
+fun infected_middleman(t: type) -> type = patient_zero(t);
+
+fun infected_top_level(t: type) -> type = infected_middleman(t);
+
+fun healthy_runtime_function() = {
+    return 42;
+}

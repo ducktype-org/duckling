@@ -41,6 +41,7 @@ public:
 		TESTER_ADD_TEST(staticArraysTest);
 		TESTER_ADD_TEST(dynamicArraysTest);
 		TESTER_ADD_TEST(tupleTest);
+		TESTER_ADD_TEST(comptimeOnlyQueryTest);
 	}
 
 private:
@@ -908,6 +909,52 @@ private:
 			}
 
 			ASSERT_TRUE(found_tuple_ctor_call);
+		});
+	}
+
+	void comptimeOnlyQueryTest() {
+		auto [module, scope] = getModule(fs::File(path("modules/comptime_only_test")));
+
+		withContextDo([&](query::Context& ctx) {
+			auto& unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+
+			const compiler::helios::SymID* patient_zero_sym = nullptr;
+			const compiler::helios::SymID* middleman_sym    = nullptr;
+			const compiler::helios::SymID* top_level_sym    = nullptr;
+			const compiler::helios::SymID* healthy_sym      = nullptr;
+
+			for (const auto& fun: unit.functions) {
+				auto name = fun->declaration->original_name.str();
+				if (name == "patient_zero")
+					patient_zero_sym = &fun->declaration->original_symbol;
+				else if (name == "infected_middleman")
+					middleman_sym = &fun->declaration->original_symbol;
+				else if (name == "infected_top_level")
+					top_level_sym = &fun->declaration->original_symbol;
+				else if (name == "healthy_runtime_function")
+					healthy_sym = &fun->declaration->original_symbol;
+			}
+
+			ASSERT_TRUE(patient_zero_sym != nullptr);
+			ASSERT_TRUE(middleman_sym != nullptr);
+			ASSERT_TRUE(top_level_sym != nullptr);
+			ASSERT_TRUE(healthy_sym != nullptr);
+
+			auto q_zero = ctx.query<compiler::mir::IsComptimeOnly>(*patient_zero_sym);
+			ASSERT_EQUAL(q_zero.get()->hasFailed(), false);
+			ASSERT_EQUAL(q_zero.get()->valueOrPanic(), compiler::mir::ComptimeStatus::Runtime);
+
+			auto q_mid = ctx.query<compiler::mir::IsComptimeOnly>(*middleman_sym);
+			ASSERT_EQUAL(q_mid.get()->hasFailed(), false);
+			ASSERT_EQUAL(q_mid.get()->valueOrPanic(), compiler::mir::ComptimeStatus::Runtime);
+
+			auto q_top = ctx.query<compiler::mir::IsComptimeOnly>(*top_level_sym);
+			ASSERT_EQUAL(q_top.get()->hasFailed(), false);
+			ASSERT_EQUAL(q_top.get()->valueOrPanic(), compiler::mir::ComptimeStatus::Runtime);
+
+			auto q_clean = ctx.query<compiler::mir::IsComptimeOnly>(*healthy_sym);
+			ASSERT_EQUAL(q_clean.get()->hasFailed(), false);
+			ASSERT_EQUAL(q_clean.get()->valueOrPanic(), compiler::mir::ComptimeStatus::Runtime);
 		});
 	}
 };
