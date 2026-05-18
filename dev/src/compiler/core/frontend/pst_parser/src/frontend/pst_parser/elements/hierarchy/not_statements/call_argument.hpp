@@ -9,7 +9,7 @@ namespace pst {
 	 * @brief Call argument, handles both named and normal arguments.
 	 */
 	class CallArgument final: public NotStmt {
-		tpc::OptionalIdentifier arg_name;
+		NAMED_CHILD_OPT(arg_name, IdentifierWrapper);
 		NAMED_CHILD(arg, UniversalExprHolderLowerLevel);
 
 	protected:
@@ -29,12 +29,12 @@ namespace pst {
 
 		[[nodiscard]]
 		bool isNamedArg() const {
-			return arg_name.value.has_value();
+			return arg_name.has_value();
 		}
 
 		[[nodiscard]]
-		tpc::OptionalIdentifier getArgName() const {
-			return arg_name;
+		base::Optional<AccessLocked<IdentifierWrapper>> getArgName() const {
+			return arg_name.map([](const auto& acc) { return acc.give(); });
 		}
 
 		[[nodiscard]]

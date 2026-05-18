@@ -9,7 +9,7 @@ namespace pst::expr {
 		out << R"("left_expr": )";
 		nullAwareDprint(left, out);
 		out << R"(, "operator": )";
-		tpc::nullAwareDprint(op, out);
+		nullAwareDprint(op, out);
 		out << R"(, "right_expr": )";
 		nullAwareDprint(right, out);
 
@@ -17,7 +17,6 @@ namespace pst::expr {
 	}
 
 	HashAlg& BinaryOperator::addElementDataToStableHash(HashAlg& partial_hash) const {
-		addToHash(partial_hash, op);
 		return partial_hash;
 	}
 
@@ -29,5 +28,5 @@ namespace pst::expr {
 
 	AccessLocked<ExprElement> BinaryOperator::getRightOperand() const { return right.give(); }
 
-	lexer::Operator BinaryOperator::getOperator() const { return op; }
+	AccessLocked<OperatorWrapper> BinaryOperator::getOperator() const { return op.give(); }
 }

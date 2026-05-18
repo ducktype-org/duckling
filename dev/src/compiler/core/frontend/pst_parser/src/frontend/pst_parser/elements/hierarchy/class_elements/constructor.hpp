@@ -10,6 +10,7 @@ namespace pst {
 	 * @brief Class constructor element.
 	 */
 	class Constructor final: public ClassSpecial {
+		NAMED_CHILD_OPT(ident, IdentifierWrapper);  ///< If no value it's "create" is implied
 		NAMED_CHILD(params, ParamList);
 		NAMED_CHILD(inits, InitList);
 		NAMED_CHILD(body, CodeBlock);
@@ -24,6 +25,24 @@ namespace pst {
 		[[nodiscard]]
 		std::string elementType() const override {
 			return "Class Constructor";
+		}
+
+		[[nodiscard]]
+		base::Optional<AccessLocked<IdentifierWrapper>> getIdentifier() const {
+			return ident.map([](const auto& acc) { return acc.give(); });
+		}
+
+		[[nodiscard]]
+		base::Optional<base::StrID> getInternalSymbolName() const final {
+			if (ident)
+				return ident->internal()->unwrap();
+			else
+				return base::StrID("create");
+		}
+
+		[[nodiscard]]
+		base::Optional<AccessLocked<IdentifierWrapper>> getDeclSymbolIdentifier() const final {
+			return ident.map([](const auto& acc) { return acc.give(); });
 		}
 
 		void acceptVisitor(PstVisitor& visitor) const override;

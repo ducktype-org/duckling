@@ -13,7 +13,6 @@ namespace tpc {
 	using lexer::Operator;
 
 	void nullAwareDprint(Identifier, std::ostream& out);
-	void nullAwareDprint(OptionalIdentifier, std::ostream& out);
 	void nullAwareDprint(Keyword, std::ostream& out);
 	void nullAwareDprint(Operator, std::ostream& out);
 	void nullAwareDprint(Special, std::ostream& out);

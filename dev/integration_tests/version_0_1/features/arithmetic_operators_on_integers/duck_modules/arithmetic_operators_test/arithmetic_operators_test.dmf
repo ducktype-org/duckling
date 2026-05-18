@@ -1,0 +1,70 @@
+# Test arithmetic operators on integers
+# Per docs: +, -, *, /, %, and unary -
+
+fun main() -> i64 = {
+    # Testing addition
+    var a: i64 = 10;
+    var b: i64 = 20;
+    builtin_output_i64(a + b); # 30
+
+    # Testing subtraction
+    builtin_output_i64(b - a); # 10
+
+    # Testing multiplication
+    builtin_output_i64(a * b); # 200
+
+    # Testing division
+    builtin_output_i64(b / a); # 2
+
+    # Testing modulo
+    builtin_output_i64(b % a); # 0
+
+    # Testing compound operations
+    a = a + 5; # a = 15
+    builtin_output_i64(a); # 15
+
+    b = b - 5; # b = 15
+    builtin_output_i64(b); # 15
+
+    a = a * 2; # a = 30
+    builtin_output_i64(a); # 30
+
+    b = b / 3; # b = 5
+    builtin_output_i64(b); # 5
+
+    a = a % 7; # a = 2
+    builtin_output_i64(a); # 2
+
+    # Test unary negation
+    var neg = -50;
+    builtin_output_i64(neg);     # -50
+    builtin_output_i64(-neg);    # 50
+
+    # Test operator precedence
+    builtin_output_i64(2 + 3 * 4);       # 14 (not 20)
+    builtin_output_i64((2 + 3) * 4);     # 20
+    builtin_output_i64(10 - 4 / 2);      # 8
+    builtin_output_i64(10 % 3 + 1);      # 2
+
+    # Test with different integer types
+    var x: i32 = i32(5);
+    var y: i32 = i32(3);
+    builtin_output_i64(i64(x + y));      # 8
+    builtin_output_i64(i64(x - y));      # 2
+    builtin_output_i64(i64(x * y));      # 15
+    builtin_output_i64(i64(x / y));      # 1
+    builtin_output_i64(i64(x % y));      # 2
+
+    # Test with unsigned
+    var u1: u64 = 100u64;
+    var u2: u64 = 30u64;
+    builtin_output_u64(u1 + u2);         # 130
+    builtin_output_u64(u1 - u2);         # 70
+
+    # Test chained operations
+    builtin_output_i64(1 + 2 + 3 + 4);   # 10
+    builtin_output_i64(100 - 50 - 25);   # 25
+    builtin_output_i64(2 * 3 * 4);       # 24
+
+    return 0;
+}
