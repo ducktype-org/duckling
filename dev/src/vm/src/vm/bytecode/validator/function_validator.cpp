@@ -1608,9 +1608,9 @@ public:
 
 		std::vector<Instruction> out;
 		for (usize idx = 0; idx < function.body.size(); idx++) {
-			if (visited_instructions[idx]){
+			if (visited_instructions[idx]) {
 				auto instruction = function.body[idx];
-				instruction.visit([&](auto&& i){ i.instr_idx = idx; });
+				instruction.visit([&](auto&& i) { i.instr_idx = idx; });
 				out.push_back(instruction);
 			}
 		}
