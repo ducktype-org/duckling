@@ -84,7 +84,7 @@
 #define opt_some(_value_name)                                           \
 	PUSH_DIAGNOSTIC                                                     \
 	NO_SHADOW                                                           \
-	if (bool _perform_if = _internal_optional.has_value(), _perform_if) \
+	if (bool _perform_if = _internal_optional.has_value(); _perform_if) \
 		if (auto&& _value_name = *_internal_optional; true) POP_DIAGNOSTIC
 
 #define opt_some_move(_value_name)                                      \
