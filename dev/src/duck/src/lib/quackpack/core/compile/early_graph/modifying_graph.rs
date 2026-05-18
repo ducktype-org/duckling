@@ -86,6 +86,9 @@ impl EarlyGraph {
             Ok(())
         }
 
+        // Starting from the root we proceed in a recursive manner.
+        // We look at the features of the current node and for each dependency look what features are forced.
+        // If some new feature appears we transition to that dependency and repeat the procedure.
         populate_impl(
             self.graph().root,
             &self.graph().graph,
