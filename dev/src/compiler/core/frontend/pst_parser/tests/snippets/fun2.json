@@ -11,7 +11,13 @@
 			},
 			"Function": {
 				"name": {
-					"Name": "foo"
+					"position": {
+						"sourceStart": 5,
+						"sourceEnd": 7
+					},
+					"Identifier Wrapper": {
+						"value": "foo"
+					}
 				},
 				"parameters": {
 					"position": {
@@ -27,7 +33,13 @@
 							"Parameter": {
 								"Parameter": {
 									"name": {
-										"Name": "a"
+										"position": {
+											"sourceStart": 9,
+											"sourceEnd": 9
+										},
+										"Identifier Wrapper": {
+											"value": "a"
+										}
 									},
 									"type": {
 										"position": {
@@ -41,7 +53,15 @@
 													"sourceEnd": 14
 												},
 												"Keyword Expression": {
-													"keyword": "i32"
+													"keyword": {
+														"position": {
+															"sourceStart": 12,
+															"sourceEnd": 14
+														},
+														"Keyword Wrapper": {
+															"value": "i32"
+														}
+													}
 												}
 											}
 										}
@@ -57,7 +77,13 @@
 							"Parameter": {
 								"Parameter": {
 									"name": {
-										"Name": "b"
+										"position": {
+											"sourceStart": 17,
+											"sourceEnd": 17
+										},
+										"Identifier Wrapper": {
+											"value": "b"
+										}
 									},
 									"type": {
 										"position": {
@@ -71,7 +97,15 @@
 													"sourceEnd": 22
 												},
 												"Keyword Expression": {
-													"keyword": "f32"
+													"keyword": {
+														"position": {
+															"sourceStart": 20,
+															"sourceEnd": 22
+														},
+														"Keyword Wrapper": {
+															"value": "f32"
+														}
+													}
 												}
 											}
 										}
@@ -104,7 +138,13 @@
 			},
 			"Function": {
 				"name": {
-					"Name": "foo"
+					"position": {
+						"sourceStart": 35,
+						"sourceEnd": 37
+					},
+					"Identifier Wrapper": {
+						"value": "foo"
+					}
 				},
 				"parameters": {
 					"position": {
@@ -120,7 +160,13 @@
 							"Parameter": {
 								"Parameter": {
 									"name": {
-										"Name": "a"
+										"position": {
+											"sourceStart": 39,
+											"sourceEnd": 39
+										},
+										"Identifier Wrapper": {
+											"value": "a"
+										}
 									},
 									"type": {
 										"position": {
@@ -134,7 +180,15 @@
 													"sourceEnd": 44
 												},
 												"Keyword Expression": {
-													"keyword": "i32"
+													"keyword": {
+														"position": {
+															"sourceStart": 42,
+															"sourceEnd": 44
+														},
+														"Keyword Wrapper": {
+															"value": "i32"
+														}
+													}
 												}
 											}
 										}
@@ -150,7 +204,13 @@
 							"Parameter": {
 								"Parameter": {
 									"name": {
-										"Name": "b"
+										"position": {
+											"sourceStart": 47,
+											"sourceEnd": 47
+										},
+										"Identifier Wrapper": {
+											"value": "b"
+										}
 									},
 									"type": {
 										"position": {
@@ -164,7 +224,15 @@
 													"sourceEnd": 52
 												},
 												"Keyword Expression": {
-													"keyword": "f32"
+													"keyword": {
+														"position": {
+															"sourceStart": 50,
+															"sourceEnd": 52
+														},
+														"Keyword Wrapper": {
+															"value": "f32"
+														}
+													}
 												}
 											}
 										}
@@ -214,7 +282,13 @@
 			},
 			"Function": {
 				"name": {
-					"Name": "foo"
+					"position": {
+						"sourceStart": 69,
+						"sourceEnd": 71
+					},
+					"Identifier Wrapper": {
+						"value": "foo"
+					}
 				},
 				"parameters": {
 					"position": {
@@ -230,7 +304,13 @@
 							"Parameter": {
 								"Parameter": {
 									"name": {
-										"Name": "a"
+										"position": {
+											"sourceStart": 73,
+											"sourceEnd": 73
+										},
+										"Identifier Wrapper": {
+											"value": "a"
+										}
 									},
 									"type": {
 										"position": {
@@ -244,7 +324,15 @@
 													"sourceEnd": 78
 												},
 												"Keyword Expression": {
-													"keyword": "f32"
+													"keyword": {
+														"position": {
+															"sourceStart": 76,
+															"sourceEnd": 78
+														},
+														"Keyword Wrapper": {
+															"value": "f32"
+														}
+													}
 												}
 											}
 										}
@@ -260,7 +348,13 @@
 							"Parameter": {
 								"Parameter": {
 									"name": {
-										"Name": "b"
+										"position": {
+											"sourceStart": 81,
+											"sourceEnd": 81
+										},
+										"Identifier Wrapper": {
+											"value": "b"
+										}
 									},
 									"type": {
 										"position": {
@@ -274,7 +368,15 @@
 													"sourceEnd": 86
 												},
 												"Keyword Expression": {
-													"keyword": "i32"
+													"keyword": {
+														"position": {
+															"sourceStart": 84,
+															"sourceEnd": 86
+														},
+														"Keyword Wrapper": {
+															"value": "i32"
+														}
+													}
 												}
 											}
 										}
@@ -324,7 +426,13 @@
 			},
 			"Function": {
 				"name": {
-					"Name": "foo"
+					"position": {
+						"sourceStart": 104,
+						"sourceEnd": 106
+					},
+					"Identifier Wrapper": {
+						"value": "foo"
+					}
 				},
 				"parameters": {
 					"position": {
@@ -340,7 +448,13 @@
 							"Parameter": {
 								"Parameter": {
 									"name": {
-										"Name": "a"
+										"position": {
+											"sourceStart": 108,
+											"sourceEnd": 108
+										},
+										"Identifier Wrapper": {
+											"value": "a"
+										}
 									},
 									"type": {
 										"position": {
@@ -355,7 +469,13 @@
 												},
 												"Identifier Expression": {
 													"name": {
-														"Name": "A"
+														"position": {
+															"sourceStart": 111,
+															"sourceEnd": 111
+														},
+														"Identifier Wrapper": {
+															"value": "A"
+														}
 													}
 												}
 											}

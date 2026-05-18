@@ -8,13 +8,12 @@ namespace pst::expr {
 	 */
 	class SuffixOperator: public ExprElement {
 	protected:
-		Operator op;
+		NAMED_CHILD(op, OperatorWrapper);
 		NAMED_CHILD(expr, ExprElement);
 
 	public:
-		explicit SuffixOperator(const LangParserState& state, Operator op, i64 precedence):
-			  ExprElement(state, precedence),
-			  op(op) {}
+		explicit SuffixOperator(const LangParserState& state, i64 precedence):
+			  ExprElement(state, precedence) {}
 
 		~SuffixOperator() override = default;
 		void     dprint(std::ostream& out) const final;
@@ -27,7 +26,7 @@ namespace pst::expr {
 		}
 
 		[[nodiscard]]
-		lexer::Operator getOperator() const;
+		AccessLocked<OperatorWrapper> getOperator() const;
 		[[nodiscard]]
 		AccessLocked<ExprElement> getExpr() const;
 	};

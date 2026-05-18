@@ -11,7 +11,13 @@
 			},
 			"Class": {
 				"name": {
-					"Name": "xxx"
+					"position": {
+						"sourceStart": 8,
+						"sourceEnd": 10
+					},
+					"Identifier Wrapper": {
+						"value": "xxx"
+					}
 				},
 				"Base": {
 					"position": {
@@ -26,7 +32,13 @@
 							},
 							"Identifier Expression": {
 								"name": {
-									"Name": "aaa"
+									"position": {
+										"sourceStart": 20,
+										"sourceEnd": 22
+									},
+									"Identifier Wrapper": {
+										"value": "aaa"
+									}
 								}
 							}
 						}
@@ -51,7 +63,13 @@
 									},
 									"Identifier Expression": {
 										"name": {
-											"Name": "bbb"
+											"position": {
+												"sourceStart": 35,
+												"sourceEnd": 37
+											},
+											"Identifier Wrapper": {
+												"value": "bbb"
+											}
 										}
 									}
 								}
@@ -70,7 +88,13 @@
 									},
 									"Identifier Expression": {
 										"name": {
-											"Name": "cccc"
+											"position": {
+												"sourceStart": 40,
+												"sourceEnd": 43
+											},
+											"Identifier Wrapper": {
+												"value": "cccc"
+											}
 										}
 									}
 								}
@@ -92,7 +116,13 @@
 							"Class Field": {
 								"is mutable": "true",
 								"name": {
-									"Name": "x"
+									"position": {
+										"sourceStart": 48,
+										"sourceEnd": 48
+									},
+									"Identifier Wrapper": {
+										"value": "x"
+									}
 								},
 								"type": {
 									"position": {
@@ -106,7 +136,15 @@
 												"sourceEnd": 53
 											},
 											"Keyword Expression": {
-												"keyword": "i32"
+												"keyword": {
+													"position": {
+														"sourceStart": 51,
+														"sourceEnd": 53
+													},
+													"Keyword Wrapper": {
+														"value": "i32"
+													}
+												}
 											}
 										}
 									}
@@ -125,14 +163,28 @@
 										"sourceEnd": 63
 									},
 									"StmtSpecifier": {
-										"specifier": "private",
+										"specifier": {
+											"position": {
+												"sourceStart": 57,
+												"sourceEnd": 63
+											},
+											"Keyword Wrapper": {
+												"value": "private"
+											}
+										},
 									}
 								},
 							],
 							"Class Field": {
 								"is mutable": "true",
 								"name": {
-									"Name": "y"
+									"position": {
+										"sourceStart": 65,
+										"sourceEnd": 65
+									},
+									"Identifier Wrapper": {
+										"value": "y"
+									}
 								},
 								"type": {
 									"position": {
@@ -146,7 +198,15 @@
 												"sourceEnd": 70
 											},
 											"Keyword Expression": {
-												"keyword": "i32"
+												"keyword": {
+													"position": {
+														"sourceStart": 68,
+														"sourceEnd": 70
+													},
+													"Keyword Wrapper": {
+														"value": "i32"
+													}
+												}
 											}
 										}
 									}
@@ -177,7 +237,13 @@
 							},
 							"Class Method": {
 								"name": {
-									"Name": "foo"
+									"position": {
+										"sourceStart": 83,
+										"sourceEnd": 85
+									},
+									"Identifier Wrapper": {
+										"value": "foo"
+									}
 								},
 								"parameters": {
 									"position": {
@@ -193,7 +259,13 @@
 											"Parameter": {
 												"Parameter": {
 													"name": {
-														"Name": "a"
+														"position": {
+															"sourceStart": 87,
+															"sourceEnd": 87
+														},
+														"Identifier Wrapper": {
+															"value": "a"
+														}
 													},
 													"type": {
 														"position": {
@@ -207,7 +279,15 @@
 																	"sourceEnd": 92
 																},
 																"Keyword Expression": {
-																	"keyword": "i64"
+																	"keyword": {
+																		"position": {
+																			"sourceStart": 90,
+																			"sourceEnd": 92
+																		},
+																		"Keyword Wrapper": {
+																			"value": "i64"
+																		}
+																	}
 																}
 															}
 														}
@@ -223,7 +303,13 @@
 											"Parameter": {
 												"Parameter": {
 													"name": {
-														"Name": "c"
+														"position": {
+															"sourceStart": 95,
+															"sourceEnd": 95
+														},
+														"Identifier Wrapper": {
+															"value": "c"
+														}
 													},
 													"type": {
 														"position": {
@@ -238,7 +324,13 @@
 																},
 																"Identifier Expression": {
 																	"name": {
-																		"Name": "yyy"
+																		"position": {
+																			"sourceStart": 98,
+																			"sourceEnd": 100
+																		},
+																		"Identifier Wrapper": {
+																			"value": "yyy"
+																		}
 																	}
 																}
 															}
@@ -285,7 +377,13 @@
 																	},
 																	"Identifier Expression": {
 																		"name": {
-																			"Name": "goo"
+																			"position": {
+																				"sourceStart": 109,
+																				"sourceEnd": 111
+																			},
+																			"Identifier Wrapper": {
+																				"value": "goo"
+																			}
 																		}
 																	}
 																},
@@ -309,7 +407,6 @@
 																							"sourceEnd": 113
 																						},
 																						"Call argument": {
-																							"name": "<ANONYMOUS>",
 																							"value": {
 																								"position": {
 																									"sourceStart": 113,
@@ -323,7 +420,13 @@
 																										},
 																										"Identifier Expression": {
 																											"name": {
-																												"Name": "a"
+																												"position": {
+																													"sourceStart": 113,
+																													"sourceEnd": 113
+																												},
+																												"Identifier Wrapper": {
+																													"value": "a"
+																												}
 																											}
 																										}
 																									}
@@ -358,13 +461,27 @@
 										"sourceEnd": 127
 									},
 									"StmtSpecifier": {
-										"specifier": "private",
+										"specifier": {
+											"position": {
+												"sourceStart": 121,
+												"sourceEnd": 127
+											},
+											"Keyword Wrapper": {
+												"value": "private"
+											}
+										},
 									}
 								},
 							],
 							"Class Method": {
 								"name": {
-									"Name": "goo"
+									"position": {
+										"sourceStart": 133,
+										"sourceEnd": 135
+									},
+									"Identifier Wrapper": {
+										"value": "goo"
+									}
 								},
 								"parameters": {
 									"position": {
@@ -380,7 +497,13 @@
 											"Parameter": {
 												"Parameter": {
 													"name": {
-														"Name": "z"
+														"position": {
+															"sourceStart": 137,
+															"sourceEnd": 137
+														},
+														"Identifier Wrapper": {
+															"value": "z"
+														}
 													},
 													"type": {
 														"position": {
@@ -394,7 +517,15 @@
 																	"sourceEnd": 142
 																},
 																"Keyword Expression": {
-																	"keyword": "i64"
+																	"keyword": {
+																		"position": {
+																			"sourceStart": 140,
+																			"sourceEnd": 142
+																		},
+																		"Keyword Wrapper": {
+																			"value": "i64"
+																		}
+																	}
 																}
 															}
 														}
@@ -416,7 +547,15 @@
 												"sourceEnd": 150
 											},
 											"Keyword Expression": {
-												"keyword": "i64"
+												"keyword": {
+													"position": {
+														"sourceStart": 148,
+														"sourceEnd": 150
+													},
+													"Keyword Wrapper": {
+														"value": "i64"
+													}
+												}
 											}
 										}
 									}
@@ -456,11 +595,25 @@
 																	},
 																	"Identifier Expression": {
 																		"name": {
-																			"Name": "x"
+																			"position": {
+																				"sourceStart": 158,
+																				"sourceEnd": 158
+																			},
+																			"Identifier Wrapper": {
+																				"value": "x"
+																			}
 																		}
 																	}
 																},
-																"assignment type": "=",
+																"assignment type": {
+																	"position": {
+																		"sourceStart": 160,
+																		"sourceEnd": 160
+																	},
+																	"Operator Wrapper": {
+																		"value": "="
+																	}
+																},
 																"assigned value": {
 																	"position": {
 																		"sourceStart": 162,
@@ -468,7 +621,13 @@
 																	},
 																	"Identifier Expression": {
 																		"name": {
-																			"Name": "z"
+																			"position": {
+																				"sourceStart": 162,
+																				"sourceEnd": 162
+																			},
+																			"Identifier Wrapper": {
+																				"value": "z"
+																			}
 																		}
 																	}
 																}
@@ -497,7 +656,13 @@
 																},
 																"Identifier Expression": {
 																	"name": {
-																		"Name": "y"
+																		"position": {
+																			"sourceStart": 174,
+																			"sourceEnd": 174
+																		},
+																		"Identifier Wrapper": {
+																			"value": "y"
+																		}
 																	}
 																}
 															}
@@ -530,10 +695,22 @@
 											"star": "false",
 											"names": [
 												{
-													"Name": "std"
+													"position": {
+														"sourceStart": 188,
+														"sourceEnd": 190
+													},
+													"Identifier Wrapper": {
+														"value": "std"
+													}
 												},
 												{
-													"Name": "math"
+													"position": {
+														"sourceStart": 192,
+														"sourceEnd": 195
+													},
+													"Identifier Wrapper": {
+														"value": "math"
+													}
 												},
 											]
 										}
@@ -553,7 +730,15 @@
 										"sourceEnd": 205
 									},
 									"StmtSpecifier": {
-										"specifier": "public",
+										"specifier": {
+											"position": {
+												"sourceStart": 200,
+												"sourceEnd": 205
+											},
+											"Keyword Wrapper": {
+												"value": "public"
+											}
+										},
 									}
 								},
 							],
@@ -576,7 +761,15 @@
 														"sourceEnd": 235
 													},
 													"Alias": {
-														"name": "sqrt",
+														"name": {
+															"position": {
+																"sourceStart": 217,
+																"sourceEnd": 220
+															},
+															"Identifier Wrapper": {
+																"value": "sqrt"
+															}
+														},
 														"points_to": {
 															"position": {
 																"sourceStart": 222,
@@ -586,13 +779,31 @@
 																"star": "false",
 																"names": [
 																	{
-																		"Name": "std"
+																		"position": {
+																			"sourceStart": 222,
+																			"sourceEnd": 224
+																		},
+																		"Identifier Wrapper": {
+																			"value": "std"
+																		}
 																	},
 																	{
-																		"Name": "math"
+																		"position": {
+																			"sourceStart": 226,
+																			"sourceEnd": 229
+																		},
+																		"Identifier Wrapper": {
+																			"value": "math"
+																		}
 																	},
 																	{
-																		"Name": "sqrt"
+																		"position": {
+																			"sourceStart": 231,
+																			"sourceEnd": 234
+																		},
+																		"Identifier Wrapper": {
+																			"value": "sqrt"
+																		}
 																	},
 																]
 															}
@@ -622,7 +833,13 @@
 															"Parameter": {
 																"Parameter": {
 																	"name": {
-																		"Name": "c"
+																		"position": {
+																			"sourceStart": 251,
+																			"sourceEnd": 251
+																		},
+																		"Identifier Wrapper": {
+																			"value": "c"
+																		}
 																	},
 																	"type": {
 																		"position": {
@@ -636,7 +853,15 @@
 																					"sourceEnd": 255
 																				},
 																				"Keyword Expression": {
-																					"keyword": "i64"
+																					"keyword": {
+																						"position": {
+																							"sourceStart": 253,
+																							"sourceEnd": 255
+																						},
+																						"Keyword Wrapper": {
+																							"value": "i64"
+																						}
+																					}
 																				}
 																			}
 																		}
@@ -671,7 +896,13 @@
 																			},
 																			"Identifier Expression": {
 																				"name": {
-																					"Name": "aaa"
+																					"position": {
+																						"sourceStart": 259,
+																						"sourceEnd": 261
+																					},
+																					"Identifier Wrapper": {
+																						"value": "aaa"
+																					}
 																				}
 																			}
 																		},
@@ -695,7 +926,6 @@
 																									"sourceEnd": 263
 																								},
 																								"Call argument": {
-																									"name": "<ANONYMOUS>",
 																									"value": {
 																										"position": {
 																											"sourceStart": 263,
@@ -709,7 +939,13 @@
 																												},
 																												"Identifier Expression": {
 																													"name": {
-																														"Name": "c"
+																														"position": {
+																															"sourceStart": 263,
+																															"sourceEnd": 263
+																														},
+																														"Identifier Wrapper": {
+																															"value": "c"
+																														}
 																													}
 																												}
 																											}
@@ -758,11 +994,25 @@
 																				},
 																				"Identifier Expression": {
 																					"name": {
-																						"Name": "x"
+																						"position": {
+																							"sourceStart": 273,
+																							"sourceEnd": 273
+																						},
+																						"Identifier Wrapper": {
+																							"value": "x"
+																						}
 																					}
 																				}
 																			},
-																			"assignment type": "=",
+																			"assignment type": {
+																				"position": {
+																					"sourceStart": 275,
+																					"sourceEnd": 275
+																				},
+																				"Operator Wrapper": {
+																					"value": "="
+																				}
+																			},
 																			"assigned value": {
 																				"position": {
 																					"sourceStart": 277,
@@ -770,7 +1020,13 @@
 																				},
 																				"Identifier Expression": {
 																					"name": {
-																						"Name": "c"
+																						"position": {
+																							"sourceStart": 277,
+																							"sourceEnd": 277
+																						},
+																						"Identifier Wrapper": {
+																							"value": "c"
+																						}
 																					}
 																				}
 																			}
@@ -833,11 +1089,25 @@
 																					},
 																					"Identifier Expression": {
 																						"name": {
-																							"Name": "x"
+																							"position": {
+																								"sourceStart": 306,
+																								"sourceEnd": 306
+																							},
+																							"Identifier Wrapper": {
+																								"value": "x"
+																							}
 																						}
 																					}
 																				},
-																				"assignment type": "=",
+																				"assignment type": {
+																					"position": {
+																						"sourceStart": 308,
+																						"sourceEnd": 308
+																					},
+																					"Operator Wrapper": {
+																						"value": "="
+																					}
+																				},
 																				"assigned value": {
 																					"position": {
 																						"sourceStart": 310,
@@ -902,11 +1172,25 @@
 																				},
 																				"Identifier Expression": {
 																					"name": {
-																						"Name": "x"
+																						"position": {
+																							"sourceStart": 338,
+																							"sourceEnd": 338
+																						},
+																						"Identifier Wrapper": {
+																							"value": "x"
+																						}
 																					}
 																				}
 																			},
-																			"assignment type": "=",
+																			"assignment type": {
+																				"position": {
+																					"sourceStart": 340,
+																					"sourceEnd": 340
+																				},
+																				"Operator Wrapper": {
+																					"value": "="
+																				}
+																			},
 																			"assigned value": {
 																				"position": {
 																					"sourceStart": 342,

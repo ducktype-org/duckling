@@ -113,15 +113,22 @@ namespace compiler::backend_vm::internal {
 			// a CMP b;
 			// mov x, 0;
 			// cmov x, 1;
-			auto tmp_res = ctx->pushTempLocal(
-				vm::code::PrimitiveType(base::StrID("i8"), Bytes{ 1 }), "cmp_tmp"
-			);
+			auto                     result_type = DVMImmediate::u8(u8(0)).type;
+			base::Optional<DVMPlace> dest_opt;
+
+			if (op.dest.has_value() && op.dest->isDirect())
+				// If the destination is a direct place, we can use it directly without creating a temp.
+				dest_opt = op.dest;
+			else
+				dest_opt = ctx->pushTempLocal(result_type, "cmp_tmp");
+
+			DVMPlace tmp_res = dest_opt.value();
+
 			ctx->pushInstruction({ op.op, op.lhs, op.rhs });
 			ctx->pushInstruction({ OpKind::mov, tmp_res, DVMImmediate::u8(u8(0)) });
 			ctx->pushInstruction({ OpKind::cmov, tmp_res, DVMImmediate::u8(u8(1)) });
 			return { tmp_res };
 		}();
-
 		ctx->maybeStoreResult(op.dest, result_val);
 	}
 }
