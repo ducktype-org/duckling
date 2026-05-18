@@ -155,28 +155,15 @@ namespace vm::loader::compiler {
 	low::MicroBytecode Compiler::lowerInstructions(FunctionCompilationContext& ctx) {
 		detail::MicroBytecodeBuilder builder{ *this, ctx };
 
-		auto it = ctx.stack_changes.begin();
-		CORE_ASSERT(it != ctx.stack_changes.end(), "there should be change initializing stack");
-
 		usize state     = 0;
 		auto& func_body = ctx.function.body;
+		auto& stack_database = ctx.function.local_stack;
 
 		for (usize i = 0; i < func_body.size();) {
-			state = it->second;
-			ctx.locals_map.changeState(state);
-
-			it++;
-			usize next_change = 0;
-
-			if (it == ctx.stack_changes.end()) [[unlikely]]
-				next_change = func_body.size();
-			else
-				next_change = it->first;
-
+			
+			
 			for (; i < next_change; i++) builder.add(func_body[i]);
 		}
-
-		CORE_ASSERT(it == ctx.stack_changes.end(), "we should have passed all stack changes");
 
 		auto [micro_bytecode, label_map] = builder.build();
 		linkLabelArguments(micro_bytecode, label_map);

@@ -1607,8 +1607,14 @@ public:
 		validateFunctionEnd();
 
 		std::vector<Instruction> out;
-		for (auto [instruction, visited]: std::views::zip(function.body, visited_instructions))
-			if (visited) out.push_back(instruction);
+		for (usize idx = 0; idx < function.body.size(); idx++) {
+			if (visited_instructions[idx]){
+				auto instruction = function.body[idx];
+				instruction.visit([&](auto&& i){ i.instr_idx = idx; });
+				out.push_back(instruction);
+			}
+		}
+
 		return out;
 	}
 };
