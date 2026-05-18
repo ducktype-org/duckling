@@ -195,9 +195,13 @@ std::expected<vm::code::CodeCollection, std::string> vm::loader::Loader::parseCo
 
 std::expected<vm::loader::Loader::BytecodePosition, vm::loader::Loader::MappingException> vm::
 	loader::Loader::mapLowVMProgramPositionToCodeCollectionPosition(
-		base::StrID function_id, usize instruction_index
+		std::variant<u64, base::StrID> function_identifier, usize instruction_index
 	) const {
-	auto maybe_function = getProgram()->getFunctions().atMaybe(function_id);
+	auto maybe_function = std::visit(
+		[&](const auto& key) { return getProgram()->getFunctions().atMaybe(key); },
+		function_identifier
+	);
+
 	if (maybe_function.empty()) return std::unexpected(NoFunction);
 	if (maybe_function.value()->instruction_mapping.empty()) return std::unexpected(MissingMapping);
 
@@ -206,19 +210,33 @@ std::expected<vm::loader::Loader::BytecodePosition, vm::loader::Loader::MappingE
 		= std::ranges::upper_bound(mapping, std::make_pair(instruction_index, usize(-1))) - 1;
 
 	return BytecodePosition{
-		.function_id       = function_id,
+		.function_name     = maybe_function.value()->name,
 		.instruction_index = usize(candidate - mapping.begin()),
 	};
 }
 
+std::expected<vm::loader::Loader::BytecodePosition, vm::loader::Loader::MappingException> vm::
+	loader::Loader::mapLowVMProgramPositionToCodeCollectionPosition(std::pair<u64, u64> position
+    ) const {
+	auto [function_id, instruction_index] = position;
+	return mapLowVMProgramPositionToCodeCollectionPosition(function_id, instruction_index);
+}
+
 std::expected<base::Optional<dia::SourcePosition>, vm::loader::Loader::MappingException> vm::
 	loader::Loader::mapCodeCollectionPositionToFilePosition(
-		base::StrID function_id, usize instruction_index
+		base::StrID function_name, usize instruction_index
 	) const {
-	const auto& maybe_high_function = getHighProgram()->functions().atMaybe(function_id);
+	const auto& maybe_high_function = getHighProgram()->functions().atMaybe(function_name);
 	if (maybe_high_function.empty()) return std::unexpected(NoFunction);
 
 	return maybe_high_function.value()->body.at(instruction_index).visit([](auto&& instr) {
 		return instr.bytecode_pos;
 	});
+}
+
+std::expected<base::Optional<dia::SourcePosition>, vm::loader::Loader::MappingException> vm::
+	loader::Loader::mapCodeCollectionPositionToFilePosition(BytecodePosition position) const {
+	return mapCodeCollectionPositionToFilePosition(
+		position.function_name, position.instruction_index
+	);
 }

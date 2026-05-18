@@ -82,7 +82,7 @@ namespace vm::loader {
 		);
 
 		struct BytecodePosition {
-			base::StrID function_id;
+			base::StrID function_name;
 			usize       instruction_index;
 		};
 
@@ -92,10 +92,19 @@ namespace vm::loader {
 		};
 
 		std::expected<BytecodePosition, MappingException> mapLowVMProgramPositionToCodeCollectionPosition(
-			base::StrID function_id, usize instruction_index
+			std::variant<u64, base::StrID> function_identifier, usize instruction_index
 		) const;
+
+		std::expected<BytecodePosition, MappingException> mapLowVMProgramPositionToCodeCollectionPosition(
+			std::pair<u64, u64> position
+		) const;
+
 		std::expected<base::Optional<dia::SourcePosition>, MappingException> mapCodeCollectionPositionToFilePosition(
 			base::StrID function_id, usize instruction_index
+		) const;
+
+		std::expected<base::Optional<dia::SourcePosition>, MappingException> mapCodeCollectionPositionToFilePosition(
+			BytecodePosition position
 		) const;
 	};
 }

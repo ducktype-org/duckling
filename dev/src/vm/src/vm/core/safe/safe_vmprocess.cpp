@@ -262,32 +262,30 @@ namespace vm {
 		auto opt_thread = getVMThreadByID(thread_id);
 		if (!opt_thread)
 			return std::unexpected(api::ApiError{ api::OtherError{ "Thread not found" } });
-		return opt_thread.value()->getCurrentPosition().transform([&](auto arg) {
-			auto [low_function_id, low_instruction_index] = arg;
+		return opt_thread.value()->getCurrentPosition().transform([&](auto low_position) {
+			api::response::CodePosition code_position;
 
+			// Obtain function name
+			auto [low_function_id, low_instruction_index] = low_position;
 			auto function_name = getLoadedProgram()->getFunctions()[low_function_id].name;
-			base::Optional<u64>                 instr_number;
-			base::Optional<dia::SourcePosition> source_position;
 
-			auto maybe_high_position = loader.mapLowVMProgramPositionToCodeCollectionPosition(
-				function_name, low_instruction_index
-			);
+			code_position.function_name = function_name;
 
-			if (maybe_high_position.has_value()) {
-				auto high_position = maybe_high_position.value();
-				instr_number       = high_position.instruction_index;
-				source_position    = loader
-				                      .mapCodeCollectionPositionToFilePosition(
-										  high_position.function_id, high_position.instruction_index
-									  )
-				                      .value_or(std::nullopt);
-			}
+			// Try to obtain high position
+			auto maybe_hp = loader.mapLowVMProgramPositionToCodeCollectionPosition(low_position);
+			if_opt_none(maybe_hp) return code_position;
+			auto high_position = maybe_hp.value();
 
-			return api::Response(api::response::CodePosition{
-				.function_name   = function_name,
-				.instr_number    = instr_number,
-				.source_position = source_position,
-			});
+			code_position.instr_number = high_position.instruction_index;
+
+			// Try to obtain source position
+			auto maybe_sp = loader.mapCodeCollectionPositionToFilePosition(high_position);
+			if_opt_none(maybe_sp) return code_position;
+			auto source_position = maybe_sp.value();
+
+			code_position.source_position = source_position;
+
+			return code_position;
 		});
 	}
 
