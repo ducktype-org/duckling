@@ -216,77 +216,85 @@ namespace vm {
 	}
 
 	base::Optional<api::ApiError> SafeVMProcess::stepVMThread(api::ThreadID thread_id) {
+		// Try to obtain thread
 		auto opt_thread = getVMThreadByID(thread_id);
 		if (!opt_thread) return api::ApiError{ api::OtherError{ "Thread not found" } };
+		auto thread = opt_thread.value();
 
-		auto low_position = opt_thread.value()->getCurrentPosition();
-		if (!low_position) return low_position.error();
+		// Try to obtain low position
+		auto maybe_lp = thread->getCurrentPosition();
+		if (!maybe_lp) return maybe_lp.error();
+		auto low_position = maybe_lp.value();
 
-		auto [function_id, low_instruction_index] = low_position.value();
+		// Try to obtain high position
+		auto maybe_hp = loader.mapLowVMProgramPositionToCodeCollectionPosition(low_position);
+		if (!maybe_hp) return api::ApiError{ api::OtherError{ "step error: missing mapping" } };
+		auto high_position = maybe_hp.value();
 
-		auto function = getLoadedProgram()->getFunctions().atMaybe(function_id);
-		if (!function)
-			return api::ApiError{ api::OtherError{
-				"step error: can't step function that is not in loaded program" } };
-
-		auto mapping = function.value()->instruction_mapping;
-		if (mapping.empty())
-			return api::ApiError{ api::OtherError{ "step error: missing mapping" } };
-
-		auto high_position = loader.mapLowVMProgramPositionToCodeCollectionPosition(
-			function.value()->name, low_instruction_index
-		);
-		if (!high_position)
-			return api::ApiError{ api::OtherError{ "step error: missing mapping" } };
-
-		auto [begin, end] = mapping.value()[high_position.value().instruction_index];
+		// Obtain function mapping (no checks because high_position did the same already)
+		auto function = getLoadedProgram()->getFunctions().at(high_position.function_name);
+		auto mapping  = function->instruction_mapping.value();
 
 		// We do one step, then we go until we're outside the exclusive range (begin, end).
-		// Naive approach "while (in range [begin, end)) { microstep(); }" would fail on function
+		// Naive approach "while (in range [begin, end)) { microstep(); }" would fail on instruction
 		// jumping to itself.
+
+		auto [begin, end]              = mapping[high_position.instruction_index];
+		auto [original_function_id, _] = low_position;
+		auto in_exclusive_range        = [&](const auto& pos) {
+            return pos.first == original_function_id && begin < pos.second && pos.second < end;
+		};
+
 		do {
-			auto response = opt_thread.value()->step();
+			auto response = thread->step();
 			if (!response) return api::ApiError{ api::OtherError{ "step error" } };
 
-			low_position = opt_thread.value()->getCurrentPosition();
-			if (!low_position) return low_position.error();
-		} while (low_position.value().first == function_id && begin < low_position.value().second
-		         && low_position.value().second < end);
+			auto pos = thread->getCurrentPosition();
+			if (!pos) return pos.error();
+			low_position = pos.value();
+		} while (in_exclusive_range(low_position));
 
-		return {};
+		return std::nullopt;
 	}
 
 	std::expected<api::Response, api::ApiError> SafeVMProcess::getVMThreadCurrentPosition(
 		api::ThreadID thread_id
 	) {
+		// Try to obtain thread
 		auto opt_thread = getVMThreadByID(thread_id);
-		if (!opt_thread)
-			return std::unexpected(api::ApiError{ api::OtherError{ "Thread not found" } });
-		return opt_thread.value()->getCurrentPosition().transform([&](auto low_position) {
-			api::response::CodePosition code_position;
+		if (!opt_thread) return std::unexpected(api::OtherError{ "Thread not found" });
+		auto thread = opt_thread.value();
 
-			// Obtain function name
-			auto [low_function_id, low_instruction_index] = low_position;
-			auto function_name = getLoadedProgram()->getFunctions()[low_function_id].name;
+		// Try to obtain low position
+		auto maybe_lp = thread->getCurrentPosition();
+		if (!maybe_lp) return std::unexpected(maybe_lp.error());
+		auto low_position = maybe_lp.value();
 
-			code_position.function_name = function_name;
+		// Obtain function name
+		auto [function_id, _] = low_position;
+		auto function_name    = getLoadedProgram()->getFunctions()[function_id].name;
 
-			// Try to obtain high position
-			auto maybe_hp = loader.mapLowVMProgramPositionToCodeCollectionPosition(low_position);
-			if_opt_none(maybe_hp) return code_position;
-			auto high_position = maybe_hp.value();
+		api::response::CodePosition code_position = {
+			.function_name   = function_name,
+			.instr_number    = std::nullopt,
+			.source_position = std::nullopt,
+		};
 
-			code_position.instr_number = high_position.instruction_index;
+		// Try to obtain high position
+		auto maybe_hp = loader.mapLowVMProgramPositionToCodeCollectionPosition(low_position);
+		if_opt_none(maybe_hp) return code_position;
+		auto high_position = maybe_hp.value();
 
-			// Try to obtain source position
-			auto maybe_sp = loader.mapCodeCollectionPositionToFilePosition(high_position);
-			if_opt_none(maybe_sp) return code_position;
-			auto source_position = maybe_sp.value();
+		code_position.instr_number = high_position.instruction_index;
 
-			code_position.source_position = source_position;
+		// Try to obtain source position
+		auto maybe_sp = loader.mapCodeCollectionPositionToFilePosition(high_position);
+		if_opt_none(maybe_sp) return code_position;
+		auto source_position = maybe_sp.value();
 
-			return code_position;
-		});
+		code_position.source_position = source_position;
+
+		return code_position;
 	}
 
 	void SafeVMProcess::waitForBreakpoint() {
