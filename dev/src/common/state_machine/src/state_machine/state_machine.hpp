@@ -154,7 +154,7 @@ namespace state_machine {
 		template<typename State, typename Event>
 		requires base::IsVariantMember<State, States> && base::IsVariantMember<Event, Events>
 		using StronglyTypedAtomicAction
-			= std::function<ActionResultT(const State&, const Event&, const SetStateCallback&)>;
+			= std::function<AtomicActionResultT(const State&, const Event&, const SetStateCallback&)>;
 
 		template<typename State, typename Event>
 		requires base::IsVariantMember<State, States> && base::IsVariantMember<Event, Events>
@@ -507,13 +507,24 @@ namespace state_machine {
 						variant_case(RawAtomicAction, atomic_action) {
 							// Atomic action. Save the previous state so it remains valid for the
 						    // action body after setState has changed the current state.
-							States           prev_state = current_state;
-							SetStateCallback set_state  = [this](States new_state) {
-                                current_state = std::move(new_state);
+							States prev_state    = std::move(current_state);
+							bool   state_changed = false;
+
+							SetStateCallback set_state = [this, &state_changed](States new_state) {
+								current_state = std::move(new_state);
+								state_changed = true;
 							};
+
 							auto action_result = atomic_action(prev_state, event, set_state);
+
+							// If the action failed or it didn't modify the state, we move back the
+						    // saved, previous state.
+							if (!action_result.has_value() || !state_changed)
+								current_state = std::move(prev_state);
+
 							if (!action_result.has_value())
 								return std::unexpected(std::move(action_result.error()));
+
 							return std::expected<void, ErrorT>{};
 						}
 						variant_default { CORE_UNREACHABLE(); }

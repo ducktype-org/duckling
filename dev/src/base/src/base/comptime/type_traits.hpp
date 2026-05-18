@@ -62,27 +62,20 @@ namespace base {
 			}
 		};
 
+		// Source - https://stackoverflow.com/a/52303687
+		template<typename>
+		struct Tag {};
+
 		template<typename Variant, typename T>
 		struct VariantTypeIndexAux {
-			// placeholder to suppress the error about missing function
-			static constexpr usize findIndex() { return 0; }
-
 			static_assert(false, "variantTypeIndex() can be used only for variant");
 		};
 
 		template<typename T, typename... Types>
 		struct VariantTypeIndexAux<std::variant<Types...>, T> {
 			static constexpr usize findIndex() {
-				usize index = std::numeric_limits<usize>::max();
-
-				// increase index until matching T
-				bool missing_type = not((index++, std::is_same_v<T, Types>) or ...);
-
-				// when no T in variant, returns sizeof...(Types)
-				return index + missing_type;
+				return std::variant<Tag<Types>...>(Tag<T>{}).index();
 			}
-
-			static_assert(findIndex() < sizeof...(Types), "Type not found in variant");
 		};
 	}
 
