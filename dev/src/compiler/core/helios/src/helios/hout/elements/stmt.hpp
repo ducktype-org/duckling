@@ -179,4 +179,13 @@ namespace compiler::helios::code {
 		void debugPrint(std::ostream& out, usize indent = 0) const final;
 		void acceptVisitor(HoutStmtVisitor&) const override;
 	};
+
+	struct BlockStmt final: public Stmt {
+		CodeBlock body;
+
+		BlockStmt(ElementOrigin origin, CodeBlock body): Stmt(origin), body(std::move(body)) {}
+
+		void debugPrint(std::ostream& out, usize indent = 0) const final;
+		void acceptVisitor(HoutStmtVisitor&) const override;
+	};
 }

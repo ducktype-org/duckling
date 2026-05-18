@@ -59,7 +59,6 @@
 	(__VA_ARGS__)
 #endif
 
-
 // ========= MOV OPERATIONS ========
 
 DEF_MICRO_INSTR(mov_p8_imm, vm::low::opargs::Place8, vm::low::opargs::Immediate)
@@ -506,50 +505,61 @@ DEF_MICRO_INSTR(
 
 // ========= ARRAY OPERATIONS ========
 
-// expects `ext_p64` to be the next instruction
+// generic `lea` for both fixed size and dynamic tables.
+// expects `ext_p64_type` (index, element type) to be the next instruction
 DEF_MICRO_INSTR(
 	anyArrayLea_pptr_pptr,
 	vm::low::opargs::PlacePtr /* destination */,
 	vm::low::opargs::PlacePtr /* table_ptr,
-    vm::low::opargs::Place64 	 index */
+    vm::low::opargs::Place64 	 index
+    vm::low::opargs::Type	 	 element_type */
 )
-// expects `ext_p64` to be the next instruction
+
+// generic `load` for both fixed size and dynamic tables.
+// expects `ext_p64_type` (index, element type) to be the next instruction
 DEF_MICRO_INSTR(
 	anyArrayLoad_bany_pptr,
 	vm::low::opargs::PlaceBlockAny /* destination */,
 	vm::low::opargs::PlacePtr /* table_ptr,
-    vm::low::opargs::Place64 	 index */
+    vm::low::opargs::Place64 	 index
+    vm::low::opargs::Type	     element_type */
 )
 
-// expects `ext_p64` to be the next instruction
+// generic `store` for both fixed size and dynamic tables.
+// expects `ext_p64_type` (index, element type) to be the next instruction
 DEF_MICRO_INSTR(
 	anyArrayStore_pptr_bany,
 	vm::low::opargs::PlacePtr /* table_ptr */,
 	vm::low::opargs::PlaceBlockAny /* source,
-    vm::low::opargs::Place64 	 index */
+    vm::low::opargs::Place64 	 index
+    vm::low::opargs::Type	     element_type */
 )
 
-// expects `ext_p64` to be the next instruction
+// expects `ext_p64_type` (index, element type) to be the next instruction
 DEF_MICRO_INSTR(
 	fixedSizeTableLea_pptr_bfst,
 	vm::low::opargs::PlacePtr /* destination */,
 	vm::low::opargs::PlaceBlockFSTable /* table_ptr,
-    vm::low::opargs::Place64 	 index */
+    vm::low::opargs::Place64 	 index
+    vm::low::opargs::Type	     element_type */
 )
-// expects `ext_p64` to be the next instruction
+
+// expects `ext_p64_type` (index, element type) to be the next instruction
 DEF_MICRO_INSTR(
 	fixedSizeTableLoad_bany_bfst,
 	vm::low::opargs::PlaceBlockAny /* destination */,
 	vm::low::opargs::PlaceBlockFSTable /* table_ptr,
-    vm::low::opargs::Place64 	 index */
+    vm::low::opargs::Place64 	 index
+    vm::low::opargs::Type	     element_type */
 )
 
-// expects `ext_p64` to be the next instruction
+// expects `ext_p64_type` (index, element type) to be the next instruction
 DEF_MICRO_INSTR(
 	fixedSizeTableStore_bfst_bany,
 	vm::low::opargs::PlaceBlockFSTable /* table_ptr */,
 	vm::low::opargs::PlaceBlockAny /* source,
-    vm::low::opargs::Place64 	 index */
+    vm::low::opargs::Place64 	 index
+    vm::low::opargs::Type	     element_type */
 )
 
 /**
@@ -565,7 +575,7 @@ DEF_MICRO_INSTR(
 	dynTableReAlloc_pptr_type,
 	vm::low::opargs::PlacePtr /* table_ptr */,
 	vm::low::opargs::Type /* table_type ,
-vm::low::opargs::Place64     new_elem_count */
+    vm::low::opargs::Place64     new_elem_count */
 )
 
 /**
@@ -648,6 +658,7 @@ DEF_MICRO_INSTR(ext_p64, vm::low::opargs::Place64)
 DEF_MICRO_INSTR(ext_imm, vm::low::opargs::Immediate)
 DEF_MICRO_INSTR(ext_type, vm::low::opargs::Type)
 DEF_MICRO_INSTR(ext_field, vm::low::opargs::Field)
+DEF_MICRO_INSTR(ext_p64_type, vm::low::opargs::Place64, vm::low::opargs::Type)
 DEF_MICRO_INSTR(ext_type_field, vm::low::opargs::Type, vm::low::opargs::Field)
 DEF_MICRO_INSTR(ext_type_p64, vm::low::opargs::Type, vm::low::opargs::Place64)
 DEF_MICRO_INSTR(ext_type_type, vm::low::opargs::Type, vm::low::opargs::Type)
@@ -660,7 +671,7 @@ DEF_MICRO_INSTR(ft_write, vm::low::opargs::PlacePtr, vm::low::opargs::Immediate)
 
 // ========= MISC ========
 
-
+DEF_MICRO_INSTR(check_strategy)
 DEF_MICRO_INSTR(nop)
 
 // terminates execution

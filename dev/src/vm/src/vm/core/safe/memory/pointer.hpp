@@ -9,11 +9,7 @@
 
 namespace vm {
 
-	template<typename EntryT>
-	class BasicBlock;
-
-	template<typename EntryT, typename BlockT>
-	class IMemory;
+	class Block;
 
 	/**
 	 * @brief Basic pointer used in the VM.
@@ -23,36 +19,32 @@ namespace vm {
 	 * to avoid circular dependencies and because it requires nontrivial logic.
 	 * It's good to think that the Memory class governs the pointers.
 	 */
-	template<typename EntryT>
-	class BasicPointer final {
+	class Pointer final {
 	private:
-		MRef<BasicBlock<EntryT>> block;
-		u64                      offset;
+		MRef<Block> block;
+		u64         offset;
 
-		BasicPointer(): block(nullptr), offset(0) {}
+		Pointer(): block(nullptr), offset(0) {}
 
-		template<typename E, typename B>
-		friend class IMemory;
+		friend class Memory;
 
 	public:
-		BasicPointer(Ref<BasicBlock<EntryT>> block, u64 offset): block(block.get()), offset(offset) {}
+		Pointer(Ref<Block> block, u64 offset): block(block.get()), offset(offset) {}
 
-		void movePointer(i64 move_by) {
+		void movePointer(u64 move_by) {
 			if (block == nullptr) throw exceptions::VMNullPointerAccessException();
-			if (move_by < 0 && base::safeIntConv<u64>(-move_by) > offset)
-				throw exceptions::VMNegativeOffsetException();
-			offset = base::safeIntConv<u64>(base::safeIntConv<i64>(offset) + move_by);
+			offset += move_by;
 		}
 
 		[[nodiscard]]
-		BasicPointer movedPointer(i64 move_by) const {
-			BasicPointer cpy(*this);
+		Pointer movedPointer(u64 move_by) const {
+			Pointer cpy(*this);
 			cpy.movePointer(move_by);
 			return cpy;
 		}
 
 		[[nodiscard]]
-		auto getBlock() const -> Ref<BasicBlock<EntryT>> {
+		auto getBlock() const -> Ref<Block> {
 			if (block == nullptr) throw exceptions::VMNullPointerAccessException();
 			return &*block;
 		}
@@ -69,12 +61,10 @@ namespace vm {
 
 		operator bool() const { return !isNull(); }
 
-		static BasicPointer null() { return {}; }
+		static Pointer null() { return {}; }
 
-		constexpr bool operator==(const BasicPointer&) const = default;
+		constexpr bool operator==(const Pointer&) const = default;
 	};
-
-	using Pointer = BasicPointer<std::byte>;
 
 	static_assert(sizeof(Pointer) == 16);
 }

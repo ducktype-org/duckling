@@ -1,6 +1,7 @@
-if(JIT_ENABLED)
-	add_subdirectory(jit)
-endif()
+if (JIT_ENABLED)
+	add_subdirectory(jit/)
+	set(jit_dependency ${jit_dependency} PARENT_SCOPE)
+endif ()
 
 add_files(
 	supervisor/supervisor.cpp
@@ -28,13 +29,7 @@ add_files(
 	safe/safe_vmthread.cpp
 	vmvalue/vmvalue.cpp
 	vmvalue/vmvalueref.cpp
-	jit/jit_compiler.cpp
 )
 
 set(vm_config_dependent_sources ${vm_config_dependent_sources} ${files} PARENT_SCOPE)
-
-add_files(
-	jit/opcodes_bitcode_source.cpp
-)
-
-set(jit_dependency ${jit_dependency} ${files} PARENT_SCOPE)
+set(jit_dependency ${jit_dependency} PARENT_SCOPE)

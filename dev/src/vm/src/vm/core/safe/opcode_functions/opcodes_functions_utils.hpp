@@ -87,6 +87,10 @@ inline static void writeToPlace(
 	getBlockRefFromArg(                                                                          \
 		frame->local_block_ref_stack_base, thread.runtime_data.global_block_ref_buffer_base, ARG \
 	)
+/**
+ * @brief Helper macro for reading a value from a immediate argument.
+ */
+#define READ_FROM_DIRECT_ARG(TYPE, ARG) safeReadObjectBytes<TYPE>(ARG)
 
 /**
  * @brief Reads a value of a given TYPE from the beginning of the given view.
@@ -148,28 +152,6 @@ inline static void writeToView(base::ModRawView view, const T& value) {
 #define OPFUN_CONT(i)                                                                     \
 	IF_TC({ MUST_TAIL return instr[i].tc_opfun(&instr[i], local_stack, frame, thread); }) \
 	IF_NOT_TC({ instr += i; })
-// NOLINTEND(cppcoreguidelines-pro-type-union-access)
-
-/**
- * @brief Same as #OPFUN_CONT, but this also handles execution strategy check.
- */
-// NOLINTBEGIN(cppcoreguidelines-pro-type-union-access)
-#define OPFUN_CONT_CHECK_STRATEGY(i)                                                  \
-	IF_TC({                                                                           \
-		if constexpr (!IGNORE_EXECUTION_STRATEGY) {                                   \
-			if (thread.getExecutionRequestPendingFlag())                              \
-				return handle_execution_break(&instr[i], local_stack, frame, thread); \
-		}                                                                             \
-		MUST_TAIL return instr[i].tc_opfun(&instr[i], local_stack, frame, thread);    \
-	})                                                                                \
-	IF_NOT_TC({                                                                       \
-		instr += i;                                                                   \
-		if constexpr (!IGNORE_EXECUTION_STRATEGY) {                                   \
-			if (thread.getExecutionRequestPendingFlag()) [[unlikely]] {               \
-				return handle_execution_break(instr, local_stack, frame, thread);     \
-			}                                                                         \
-		}                                                                             \
-	})
 // NOLINTEND(cppcoreguidelines-pro-type-union-access)
 
 // Prevent \ warning

@@ -9,9 +9,9 @@ namespace pst::expr {
 
 		if (!state[0].isPrefixOperator()) return Lower::parse(state);
 
-		auto out = makeBox<GeneralPrefix>(state, state[0].getValue());
+		auto out = makeBox<GeneralPrefix>(state);
 
-		PARSE().eatOne().with(&out->expr, parse);
+		PARSE().one(&out->op).with(&out->expr, parse);
 
 		PST_RETURN out;
 	}

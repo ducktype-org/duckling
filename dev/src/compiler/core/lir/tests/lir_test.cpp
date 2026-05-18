@@ -405,27 +405,33 @@ private:
 	}
 
 	void testFromFunctionLiterals() {
-		auto module           = getLIROfModule(path("modules/globals"));
-		auto g_ctor           = module.lirGlobalCtor("g");
-		auto some_global_ctor = module.lirGlobalCtor("some_global");
+		auto module            = getLIROfModule(path("modules/globals"));
+		auto g_ctor            = module.lirGlobalCtor("g");
+		auto some_global_ctor  = module.lirGlobalCtor("some_global");
+		auto global_tuple_ctor = module.lirGlobalCtor("global_tuple");
 
 		withContextDo([&](query::Context& ctx) {
 			std::stringstream foo_str;
 			lir::createFunctionInvoker(
-				ctx, { g_ctor, some_global_ctor }, base::StrID("_MODULE_CTOR_globals")
+				ctx,
+				{ g_ctor, some_global_ctor, global_tuple_ctor },
+				base::StrID("_MODULE_CTOR_globals")
 			)
 				.debugPrint(ctx, foo_str);
 		});
 	}
 
 	void testLIRGlobal() {
-		auto module      = getLIROfModule(path("modules/globals"));
-		auto g           = module.houtGlobal("g");
-		auto some_global = module.houtGlobal("some_global");
+		auto module       = getLIROfModule(path("modules/globals"));
+		auto g            = module.houtGlobal("g");
+		auto some_global  = module.houtGlobal("some_global");
+		auto global_tuple = module.houtGlobal("global_tuple");
 
 		withContextDo([&](query::Context& ctx) {
-			auto g_lir           = lir::LIRGlobal::fromHOUT(ctx, *g);
-			auto some_global_lir = lir::LIRGlobal::fromHOUT(ctx, *some_global);
+			auto g_lir            = lir::LIRGlobal::fromHOUT(ctx, *g);
+			auto some_global_lir  = lir::LIRGlobal::fromHOUT(ctx, *some_global);
+			auto global_tuple_lir = lir::LIRGlobal::fromHOUT(ctx, *global_tuple);
+			ASSERT_EQUAL(lir::LIRGlobalType::Variable, global_tuple_lir.type);
 			ASSERT_EQUAL(lir::LIRGlobalType::Variable, some_global_lir.type);
 			ASSERT_EQUAL(lir::LIRGlobalType::Variable, g_lir.type);
 			ASSERT_EQUAL(false, g_lir.initial_value.has_value());

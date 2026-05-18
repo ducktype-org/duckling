@@ -257,4 +257,14 @@ namespace vm {
 			ShadowGlobalBufferPointers  shadow_global_buffer_pointers
 		);
 	};
+
+	/**
+	 * @brief This is a low level function to run the interpreter, until the `exit` instruction
+	 * appears. Probably shouldn't be called directly, look into `executeFunction` first.
+	 *
+	 * @param instr - the first instruction that to be executed
+	 */
+	void runInterpreter(
+		const MicroInstruction* instr, std::byte*& local_stack, Frame*& frame, SafeVMThread& thread
+	);
 }

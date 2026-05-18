@@ -18,6 +18,7 @@
 #include <query_framework/internal/query_data/query_id.hpp>
 #include <query_framework/internal/query_graph/node_id.hpp>
 #include <query_framework/internal/query_graph/query_graph.hpp>
+#include <query_framework/module_flags/module_flags.hpp>
 #include <query_framework/q_stats/q_stats.hpp>
 
 #include <algorithm>
@@ -111,17 +112,37 @@ namespace {
 }
 
 namespace query::internal {
+
+
+	const QueryGraph& QueryState::getGraph() const {
+		CORE_ASSERT(query::enable_query_graph, "Query graph must be enabled to access the graph.");
+		return query_graph;
+	}
+
+	QueryGraph& QueryState::getGraphMutable() {
+		CORE_ASSERT(query::enable_query_graph, "Query graph must be enabled to access the graph.");
+		return query_graph;
+	}
+
 	void QueryState::addGraphNode(NodeID node_id) {
-		CORE_ASSERT(!query_graph.node_deps->contains(node_id), "Node already exists in the graph");
-		query_graph.node_deps->put(node_id, QueryGraph::ChildrenData{});
+		if (query::enable_query_graph) {
+			CORE_ASSERT(
+				!query_graph.node_deps->contains(node_id), "Node already exists in the graph"
+			);
+			query_graph.node_deps->put(node_id, QueryGraph::ChildrenData{});
+		}
 	}
 
 	void QueryState::addSideInputNode(NodeID node_id) {
-		CORE_ASSERT(node_id.q_id.getData().isInputQuery(), "Node is not an input query");
-		query_graph.node_deps->maybePut(node_id, QueryGraph::ChildrenData{});
+		if (query::enable_query_graph) {
+			CORE_ASSERT(node_id.q_id.getData().isInputQuery(), "Node is not an input query");
+			query_graph.node_deps->maybePut(node_id, QueryGraph::ChildrenData{});
+		}
 	}
 
-	void QueryState::addDependency(NodeID from, NodeID to) { query_graph.addDependency(from, to); }
+	void QueryState::addDependency(NodeID from, NodeID to) {
+		if (query::enable_query_graph) query_graph.addDependency(from, to);
+	}
 
 	base::Optional<CRef<QueryGraph>> QueryState::getPreviousGraph() const {
 		if (!previous.has_value()) return base::Optional<CRef<QueryGraph>>{};

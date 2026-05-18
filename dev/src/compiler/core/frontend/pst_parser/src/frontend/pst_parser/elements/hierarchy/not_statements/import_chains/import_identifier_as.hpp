@@ -7,8 +7,8 @@ namespace pst {
 	 * @brief Import chain of the form `A.B.C` or `A.B.C as X`
 	 */
 	class ImportIdentifierAs final: public ImportChain {
-		std::vector<tpc::Identifier>    names;
-		base::Optional<tpc::Identifier> as;
+		std::vector<AccessInternalAnonymous<IdentifierWrapper>> names;
+		NAMED_CHILD_OPT(as, IdentifierWrapper);
 
 	public:
 		explicit ImportIdentifierAs(const LangParserState& state): ImportChain(state) {
@@ -16,18 +16,13 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		const std::vector<tpc::Identifier>& getNames() const final {
-			return names;
+		usize numberOfNames() const final {
+			return names.size();
 		}
 
 		[[nodiscard]]
-		auto begin() const {
-			return names.cbegin();
-		}
-
-		[[nodiscard]]
-		auto end() const {
-			return names.cend();
+		AccessLocked<IdentifierWrapper> getNameByIndex(usize index) const final {
+			return names[index].give();
 		}
 
 		[[nodiscard]]
@@ -43,12 +38,13 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		base::Optional<tpc::Identifier> asWhat() const {
-			return as;
+		base::Optional<AccessLocked<IdentifierWrapper>> asWhat() const {
+			return as.map([](const auto& acc) { return acc.give(); });
 		}
 
 		void dprint(std::ostream& out) const final;
 		~ImportIdentifierAs() final = default;
 		HashAlg& addElementDataToStableHash(HashAlg&) const override;
+		void     calcElementPathHashRecursive() override;
 	};
 }

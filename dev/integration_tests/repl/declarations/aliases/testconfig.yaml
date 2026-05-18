@@ -4,13 +4,12 @@
 
 Tests:
   basic_declarations:
-    Enabled: "false"
     Cases:
       basic_declarations:
         Input:
           File: "basic_declarations/basic_declarations.rtf"
         Output:
-          String: "@{beginning}\n42@{end}"
+          String: "@{beginning}\n@{instruction_prompt}=> 42\n@{end}"
     
   possible_conflicts:
     Enabled: "false"

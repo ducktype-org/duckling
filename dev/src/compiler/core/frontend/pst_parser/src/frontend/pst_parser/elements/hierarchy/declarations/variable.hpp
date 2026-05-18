@@ -7,7 +7,7 @@ namespace pst {
 	 * @brief Variable declaration
 	 */
 	class Variable final: public Decl {
-		tpc::Identifier name;
+		NAMED_CHILD(name, IdentifierWrapper);
 		NAMED_CHILD_OPT(type, CommaExprHolder);
 		NAMED_CHILD_OPT(value, CommaExprHolder);
 		bool is_const = true;
@@ -22,13 +22,8 @@ namespace pst {
 		DECL_CHILD_CONSTRUCTOR(Variable, ElementKind::Variable);
 
 		[[nodiscard]]
-		base::StrID getName() const {
-			return name.value;
-		}
-
-		[[nodiscard]]
-		tpc::Identifier getNameIdent() const {
-			return name;
+		AccessLocked<IdentifierWrapper> getName() const {
+			return name.give();
 		}
 
 		bool trailingSemicolon() override;
@@ -51,7 +46,7 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		base::Optional<base::StrID> getDeclSymbolName() const final {
+		base::Optional<AccessLocked<IdentifierWrapper>> getDeclSymbolIdentifier() const final {
 			return getName();
 		}
 

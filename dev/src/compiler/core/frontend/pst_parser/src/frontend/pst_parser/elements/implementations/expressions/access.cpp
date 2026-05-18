@@ -19,8 +19,6 @@ namespace pst::expr {
 
 		auto out = makeBox<Access>(state);
 
-		out->type = state[0].getValue();
-
 		// This should never occur if access parsing is called well
 		if (!state[0].asBinaryOperator().map([](auto x) { return x.isAccessOp(); }
 		    ).copyValueOr(false)) {
@@ -29,8 +27,7 @@ namespace pst::expr {
 			));
 		}
 
-		PARSE().eatOne();  // `.` or `.?`
-		PARSE().one(&out->name);
+		PARSE().all(&out->type, &out->name);
 
 		if (state.ctokens().size() >= 2 && state[0].is(NamedOperator::Colon)
 		    && state[1].isBracketGroup(Token::Curly))
@@ -42,7 +39,8 @@ namespace pst::expr {
 	void Access::dprint(std::ostream& out) const {
 		out << "{";
 
-		out << R"("type": ")" << type.strView() << "\"";
+		out << R"("type": )";
+		nullAwareDprint(type, out);
 		out << R"(, "name": )";
 		nullAwareDprint(name, out);
 		if (template_specifier) {
@@ -54,15 +52,9 @@ namespace pst::expr {
 	}
 
 	HashAlg& Access::addElementDataToStableHash(HashAlg& partial_hash) const {
-		addToHash(partial_hash, type.strView());
-		addToHash(partial_hash, name);
 		addToHash(partial_hash, template_specifier.has_value());
 		return partial_hash;
 	}
 
 	void Access::acceptExprVisitor(PstExprVisitor& visitor) const { visitor.visitAccess(*this); }
-
-	base::StrID Access::getType() const { return type; }
-
-	const tpc::Identifier& Access::getName() const { return name; }
 }

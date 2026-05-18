@@ -3,6 +3,11 @@
 #include "../mir_structure/mir_structure.hpp"
 
 namespace compiler::mir {
+	using LocalsByScopeMap = base::HashMap<ScopeRef, std::vector<MIRLocalRef>, ScopeRefHash>;
+
+	struct LifetimePassArgs {
+		LocalsByScopeMap locals_by_scope;
+	};
 
 	ScopeRef lca(ScopeRef a, ScopeRef b) {
 		auto depth_a = a->depth;
@@ -49,22 +54,30 @@ namespace compiler::mir {
 		return result;
 	}
 
-	Function addDestructors(query::Context&, Function function) {
+	/**
+	 * @brief Get the starting scopes between two consecutive instructions.
+	 *
+	 * The order of scopes is the same as the the order of variables they
+	 * would create (i.e. the first scope in the list is the one that creates variables that are
+	 * created first).
+	 */
+	std::vector<ScopeRef> getStartingScopes(ScopeRef begin, ScopeRef end) {
+		return getEndingScopes(end, begin) | std::views::reverse | std::ranges::to<std::vector>();
+	}
+
+	void AddDestructorsPass::run(query::Context&, Function& function, const LifetimePassArgs& args) {
 		// Idea of implementation: for each block we iterate over instructions
 		// and add destructors after each instruction (often 0 of them),
 		// based on scopes that ends there.
 		// context is unused, but left since it might be useful in the future.
 		// preserving block order is important, because of how MIR BlockIDs works
 
-		std::map<ScopeRef, std::vector<MIRLocalRef>> locals_by_scope;
-		for (auto& local: function.local_list)
-			if (local.scope.value() != function.no_lifetime_scope)
-				locals_by_scope[local.scope.value()].emplace_back(&local);
-
 		// No lifetime analysis here, since it is quite complex.
 		// See doc-comment of this function for details.
 
+		auto&                                 locals_by_scope = args.locals_by_scope;
 		std::vector<std::vector<Instruction>> new_blocks_instructions;
+
 		for (auto& block_id: function.block_order) {
 			// each block is considered independently
 			auto& block = function.blocks[block_id];
@@ -74,6 +87,8 @@ namespace compiler::mir {
 
 			// lambdas used just to not duplicate code:
 			auto add_destructor = [&](ScopeRef instr_scope, MIRLocalRef local) {
+				if (local->lifetime_flags.contains(LifetimeFlag::NoDestructor)) return;
+
 				new_instructions.push_back(Instruction{
 					Operation::DestructIf,
 					{},
@@ -84,10 +99,11 @@ namespace compiler::mir {
 					instr_scope,
 				});
 			};
-			auto add_destructors = [&](const auto& ending_scopes, ScopeRef instr_scope) {
+			auto add_destructors = [&](const auto& ending_scopes) {
 				for (auto scope: ending_scopes) {
-					auto& locals = locals_by_scope[scope];
-					for (auto& local: locals) add_destructor(instr_scope, local);
+					if (not locals_by_scope.contains(scope)) continue;
+					auto& locals = locals_by_scope.at(scope);
+					for (auto& local: locals | std::views::reverse) add_destructor(scope, local);
 				}
 			};
 
@@ -101,7 +117,7 @@ namespace compiler::mir {
 
 				auto ending_scopes = getEndingScopes(instr.scope, next_instr.scope);
 
-				add_destructors(ending_scopes, instr.scope);
+				add_destructors(ending_scopes);
 			}
 
 			// we handle terminator in special way,
@@ -113,7 +129,7 @@ namespace compiler::mir {
 				// the function ends
 				auto ending_scopes
 					= getEndingScopes(terminator.scope, function.lifetime_scope_tree.root);
-				add_destructors(ending_scopes, terminator.scope);
+				add_destructors(ending_scopes);
 			} else {
 				base::Optional<std::vector<ScopeRef>> ending_scopes;
 
@@ -138,7 +154,7 @@ namespace compiler::mir {
 					}
 				}
 
-				add_destructors(ending_scopes.value(), terminator.scope);
+				add_destructors(ending_scopes.value());
 			}
 
 			new_blocks_instructions.push_back(std::move(new_instructions));
@@ -148,6 +164,146 @@ namespace compiler::mir {
 			auto block_id                          = function.block_order[i];
 			function.blocks[block_id].instructions = std::move(new_blocks_instructions[i]);
 		}
+	}
+
+	template<OperationFlag::Flag scope_flag, bool reverse_local_order>
+	void addScopeFlagForScopes(
+		Instruction&                 instr,
+		const LocalsByScopeMap&      locals_by_scope,
+		const std::vector<ScopeRef>& scopes_ordered
+	) {
+		for (auto scope: scopes_ordered) {
+			if (not locals_by_scope.contains(scope)) continue;
+
+			auto& locals = locals_by_scope.at(scope);
+			auto  proj   = [&]() -> decltype(auto) {
+                if constexpr (reverse_local_order)
+                    return std::views::reverse;
+                else
+                    return std::views::all;
+			}();
+
+			for (auto& local: locals | proj) {
+				if (local->lifetime_flags.contains(LifetimeFlag::NoScopeFlags)) continue;
+				instr.flags.push_back(OperationFlag{ .flag = scope_flag, .local = local });
+			}
+		}
+	}
+
+	constexpr auto addStartScopeFlags  // NOLINT
+		= addScopeFlagForScopes<OperationFlag::Flag::ScopeStart, false>;
+
+	constexpr auto addEndScopeFlags  // NOLINT
+		= addScopeFlagForScopes<OperationFlag::Flag::ScopeEnd, true>;
+
+	void AddScopeFlagsPass::run(query::Context&, Function& function, const LifetimePassArgs& args) {
+		// Idea of implementation: for each block we iterate over instructions
+		// and add destructors after each instruction (often 0 of them),
+		// based on scopes that ends there.
+		// context is unused, but left since it might be useful in the future.
+		// preserving block order is important, because of how MIR BlockIDs works
+
+		auto&                                         locals_by_scope = args.locals_by_scope;
+		base::HashMap<BlockID, std::vector<ScopeRef>> starting_scopes_by_block;
+
+
+		auto   first_block_id = function.block_order[0];
+		Block& first_block    = function.blocks[first_block_id];
+		addStartScopeFlags(
+			first_block.firstInstruction(),
+			locals_by_scope,
+			getStartingScopes(
+				function.lifetime_scope_tree.root, first_block.firstInstruction().scope
+			)
+		);
+
+		for (auto& block_id: function.block_order) {
+			// each block is considered independently
+			auto& block = function.blocks[block_id];
+
+
+			for (u64 i = 0; i < block.instructions.size(); i++) {
+				auto& instr      = block.instructions.at(i);
+				auto& next_instr = i < block.instructions.size() - 1 ? block.instructions.at(i + 1)
+				                                                     : block.terminator;
+
+				// We add the start scope flags at the beginning of the second instruction.
+				auto starting_scopes = getStartingScopes(instr.scope, next_instr.scope);
+				addStartScopeFlags(next_instr, locals_by_scope, starting_scopes);
+
+				// We add the end scope flags at the end of the first instruction we compare
+				auto ending_scopes = getEndingScopes(instr.scope, next_instr.scope);
+				addEndScopeFlags(instr, locals_by_scope, ending_scopes);
+			}
+
+			auto& terminator = block.terminator;
+			auto  successors = getTerminatorSuccessors(terminator);
+			if (successors.empty()) {
+				// End scope flags for function end
+				auto ending_scopes
+					= getEndingScopes(terminator.scope, function.lifetime_scope_tree.root);
+				addEndScopeFlags(terminator, locals_by_scope, ending_scopes);
+				continue;
+			}
+
+			// Successors not empty
+			base::Optional<std::vector<ScopeRef>> ending_scopes;
+
+			// We add the end scope flags at the end of the terminator,
+			// and start scope flags at the beginning of the first instruction of the successor blocks.
+			for (auto succ: successors) {
+				auto& succ_block = function.blocks[succ];
+				auto  succ_ending_scopes
+					= getEndingScopes(terminator.scope, succ_block.beginScope());
+
+				if (ending_scopes.has_value()) {
+					// we have to validate that all paths have the same ending scopes
+					// otherwise this implementation is incorrect
+					CORE_ASSERT(ending_scopes == succ_ending_scopes, "Different ending scopes");
+				} else {
+					ending_scopes.emplace(std::move(succ_ending_scopes));
+					addEndScopeFlags(terminator, locals_by_scope, ending_scopes.value());
+				}
+
+				auto starting_scopes
+					= getStartingScopes(terminator.scope, succ_block.firstInstruction().scope);
+
+				if (auto existing_starting_scopes = starting_scopes_by_block.atMaybe(succ)) {
+					CORE_ASSERT(
+						*existing_starting_scopes.value() == starting_scopes,
+						"Different starting scopes for the same block"
+					);
+				} else {
+					addStartScopeFlags(
+						succ_block.firstInstruction(), locals_by_scope, starting_scopes
+					);
+					starting_scopes_by_block.put(succ, std::move(starting_scopes));
+				}
+			}
+		}
+	}
+
+	/**
+	 * @brief Constructs LifetimePassArgs for given function.
+	 */
+	LifetimePassArgs constructLifetimePassArgs(const Function& function) {
+		LifetimePassArgs args;
+
+		for (const auto& local: function.local_list)
+			if (local.scope.value() != function.no_lifetime_scope)
+				args.locals_by_scope.put(local.scope.value()).first->second.emplace_back(&local);
+
+		return args;
+	}
+
+	Function runAllLifetimePasses(query::Context& ctx, Function function) {
+		auto args = constructLifetimePassArgs(function);
+
+		// The order here probably does not matter, but maybe for more safety
+		// we should have AddScopeFlagsPass{} run after AddDestructorsPass{},
+		// so that no destructors are run after scope end flags.
+		AddDestructorsPass{}.run(ctx, function, args);
+		AddScopeFlagsPass{}.run(ctx, function, args);
 
 		return function;
 	}
