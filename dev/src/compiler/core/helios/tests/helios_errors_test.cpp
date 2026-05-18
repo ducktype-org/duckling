@@ -45,11 +45,13 @@ private:
 	 *
 	 * It creates a virtual file from the `module_content` argument
 	 * and creates a module tree from it every function call.
+	 * The `present_phrases` are checked to be present in the logged
+	 * error messages in the given order.
 	 *
 	 * @TODO: #2213 Add PST errors handling here.
 	 *
 	 * @param module_content The content of the module main source file.
-	 * @param present_phrases List of phrases that should be present in the logged errors.
+	 * @param present_phrases List of phrases that should be present in the logged errors in order.
 	 * @param logged_msg_count Expected number of logged error messages.
 	 */
 	void checkForErrorOnCompileModule(

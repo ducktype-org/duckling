@@ -28,11 +28,13 @@ namespace dia_int {
 	) {
 		auto [line, column]         = pos.getStartLineColumn();
 		auto [end_line, end_column] = pos.getEndLineColumn();
-		return { .file       = pos.getSource()->getFile().getFilePath().string(),
-			     .line       = (u64) line,
-			     .column     = (u64) column,
-			     .end_line   = end_line,
-			     .end_column = end_column };
+		return {
+			.file       = pos.getSource()->getFile().getFilePath().string(),
+			.line       = (u64) line,
+			.column     = (u64) column,
+			.end_line   = end_line,
+			.end_column = end_column,
+		};
 	}
 
 	CodeLocationArgument::FileLocation CodeLocationArgument::FileLocation::fromStablePosition(
@@ -109,6 +111,10 @@ namespace dia_int {
 		}
 	}
 
+	/**
+	 * @brief Note with the "Code expanded from here" message, noting the
+	 * position of the `expand` PST node, where the code was expanded from.
+	 */
 	class ExpandedFromNote final: public MessageWithCodeFragmentAndCause {
 		Metadata getMetadata() const final {
 			return { .template_type = "message",

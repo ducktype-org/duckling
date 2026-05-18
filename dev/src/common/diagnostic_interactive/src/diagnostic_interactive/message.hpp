@@ -100,6 +100,12 @@ namespace dia_int {
 
 	class CodeLocationArgument final: public Argument {
 	public:
+		/**
+		 * @brief This intermediate structure is needed,
+		 * to log errors from places where there is no access
+		 * to the `SourcePosition` or `StablePosition`, like
+		 * for example during the tokenization.
+		 */
 		struct FileLocation {
 			std::string                    file;
 			u64                            line;
@@ -131,7 +137,8 @@ namespace dia_int {
 		};
 
 		/**
-		 * @brief Function to get the parent position of the position inside the macro expansion.
+		 * @brief Function to get the parent position of the position inside the macro expansion
+		 * (only one step).
 		 * If the position is not inside the macro expansion, returns nullopt.
 		 */
 		static base::Optional<StablePosition> getMacroLocationSource(dia::SourcePosition);
@@ -161,6 +168,12 @@ namespace dia_int {
 
 		CodeLocationArgument(std::string name, dia_int::StablePosition position);
 
+		/**
+		 * @brief Here the flow uses the local member fields to keep the information between the
+		 * constructor of the class and `getValue`. The main `SourcePosition` processing happens
+		 * in the constructor of the class and in the `getValue` we just use the preprocessed
+		 * information to create a `dia_args::Component` and add the attached messages if needed.
+		 */
 		Box<dia_args::Component> getValue(MessageBase&) override;
 	};
 
