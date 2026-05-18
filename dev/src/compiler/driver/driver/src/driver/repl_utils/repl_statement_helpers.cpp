@@ -21,11 +21,11 @@ namespace compiler::repl {
 		std::string_view                          module_name_prefix
 	) {
 		auto builder = frontend::ModuleTreeBuilder::create();
-		builder->setPackageID(base::generateRandomString(32));
+		builder->setPackageID(base::StrID(base::generateRandomString(32)));
 		builder->setMainSourceFile(fs::FileManager::createRandomVirtualFile(input));
 
 		auto module_name = base::strConcat(module_name_prefix, std::to_string(line_counter));
-		builder->setName(base::StrID(module_name.c_str()));
+		builder->setName(base::StrID(module_name));
 
 		frontend::ReplData repl_data;
 		if (parent_module_id.has_value()) repl_data.m_repl_module_parent = parent_module_id.value();

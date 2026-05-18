@@ -21,7 +21,7 @@ namespace pst {
 		if (PARSE().tryEat(Keyword::Implements)) PARSE().one(&out->implements);
 
 		PST_NEW_CONTEXT({
-			state.setContextClassName(out->name);
+			state.setContextClassName(out->name.internal()->unwrap());
 			state.setContextBlockOrdering(BlockOrderType::Unordered);
 			PARSE().one(&out->body);
 		})
@@ -45,10 +45,7 @@ namespace pst {
 		out << "}";
 	}
 
-	HashAlg& Class::addElementDataToStableHash(HashAlg& partial_hash) const {
-		addToHash(partial_hash, name);
-		return partial_hash;
-	}
+	HashAlg& Class::addElementDataToStableHash(HashAlg& partial_hash) const { return partial_hash; }
 
 	void Class::acceptVisitor(PstVisitor& visitor) const { visitor.visitClass(*this); }
 }

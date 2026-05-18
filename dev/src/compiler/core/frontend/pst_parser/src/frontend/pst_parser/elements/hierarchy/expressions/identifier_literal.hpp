@@ -7,7 +7,7 @@ namespace pst::expr {
 	 * @brief Element that represents an identifier literal in an expression
 	 */
 	class IdentifierLiteral final: public ExprElement {
-		tpc::Identifier name;
+		NAMED_CHILD(name, IdentifierWrapper);
 		NAMED_CHILD_OPT(template_specifier, ExprElement);
 
 	public:
@@ -21,8 +21,8 @@ namespace pst::expr {
 		HashAlg& addElementDataToStableHash(HashAlg&) const override;
 
 		[[nodiscard]]
-		const tpc::Identifier& getName() const {
-			return name;
+		AccessLocked<IdentifierWrapper> getName() const {
+			return name.give();
 		}
 
 		[[nodiscard]]

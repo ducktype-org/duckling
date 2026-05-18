@@ -94,6 +94,7 @@ namespace vm::loader::compiler::detail {
 		 * @brief Whether to add a step Gil instruction before the next low instruction.
 		 */
 		bool push_step_gil_on_next_add_low = true;
+		bool is_control_flow               = true;
 
 		TypeCRef getPlaceType(const opargs::ArgumentType auto p) const {
 			if (auto maybe_val = ctx.locals_map.atMaybe(p.var_name)) return maybe_val.value()->type;
@@ -117,6 +118,11 @@ namespace vm::loader::compiler::detail {
 			if (push_step_gil_on_next_add_low) {
 				push_step_gil_on_next_add_low = false;
 				addLow<Op_stepGil>();
+			}
+
+			if (is_control_flow) {
+				is_control_flow = false;
+				addLow<Op_check_strategy>();
 			}
 
 			[&]<typename... LowArgs>(std::tuple<LowArgs...>*) {
@@ -143,6 +149,23 @@ namespace vm::loader::compiler::detail {
 #endif
 
 		push_step_gil_on_next_add_low = true;
+
+		// Mark control flow instruction
+		// @TODO: #2692 make it an instruction's trait
+		PUSH_DIAGNOSTIC
+		UNHANDLED_ENUM
+		instr_match(instruction) {
+			instr_case(high::Op_jmp_label, _) { is_control_flow = true; }
+			instr_case(high::Op_jmpIf_label, _) { is_control_flow = true; }
+			instr_case(high::Op_jmpIfNot_label, _) { is_control_flow = true; }
+			instr_case(high::Op_call_builtinfunc, _) { is_control_flow = true; }
+			instr_case(high::Op_call_cfunc, _) { is_control_flow = true; }
+			instr_case(high::Op_call_func, _) { is_control_flow = true; }
+			instr_case(high::Op_virtual_call_pptr_method, _) { is_control_flow = true; }
+			instr_default { is_control_flow = false; }
+		}
+		POP_DIAGNOSTIC
+
 
 		PUSH_DIAGNOSTIC
 		UNHANDLED_ENUM
