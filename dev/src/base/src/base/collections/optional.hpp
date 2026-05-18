@@ -81,28 +81,28 @@
 	NO_SHADOW                    \
 	if (auto&& _internal_optional = (optional); true) POP_DIAGNOSTIC
 
-#define opt_some(_value_name)                                           \
-	PUSH_DIAGNOSTIC                                                     \
-	NO_SHADOW                                                           \
-	if (bool _perform_if = _internal_optional.has_value(); _perform_if) \
+#define opt_some(_value_name)           \
+	PUSH_DIAGNOSTIC                     \
+	NO_SHADOW                           \
+	if (_internal_optional.has_value()) \
 		if (auto&& _value_name = *_internal_optional; true) POP_DIAGNOSTIC
 
-#define opt_some_move(_value_name)                                      \
-	PUSH_DIAGNOSTIC                                                     \
-	NO_SHADOW                                                           \
-	if (bool _perform_if = _internal_optional.has_value(); _perform_if) \
+#define opt_some_move(_value_name)      \
+	PUSH_DIAGNOSTIC                     \
+	NO_SHADOW                           \
+	if (_internal_optional.has_value()) \
 		if (auto&& _value_name = *std::move(_internal_optional); true) POP_DIAGNOSTIC
 
-#define opt_err(_err_name)                                               \
-	PUSH_DIAGNOSTIC                                                      \
-	NO_SHADOW                                                            \
-	if (bool _perform_if = !_internal_optional.has_value(); _perform_if) \
+#define opt_err(_err_name)               \
+	PUSH_DIAGNOSTIC                      \
+	NO_SHADOW                            \
+	if (!_internal_optional.has_value()) \
 		if (auto&& _err_name = _internal_optional.error(); true) POP_DIAGNOSTIC
 
-#define opt_err_move(_err_name)                                          \
-	PUSH_DIAGNOSTIC                                                      \
-	NO_SHADOW                                                            \
-	if (bool _perform_if = !_internal_optional.has_value(); _perform_if) \
+#define opt_err_move(_err_name)          \
+	PUSH_DIAGNOSTIC                      \
+	NO_SHADOW                            \
+	if (!_internal_optional.has_value()) \
 		if (auto&& _err_name = std::move(_internal_optional).error(); true) POP_DIAGNOSTIC
 
 #define opt_none    \
