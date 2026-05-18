@@ -20,7 +20,7 @@ namespace vm::debugger::debug_adapter {
 			  this->sendEvent("output", { { "category", "console" }, { "output", message } });
 		  }),
 		  debugger() {
-		debugger.attachOnVMChangesStatusListener(status_change_listener);
+		debugger.attachOnStatusChangedListener(status_change_listener);
 	}
 
 	DebugAdapter DebugAdapter::get() { return {}; }
@@ -132,7 +132,10 @@ namespace vm::debugger::debug_adapter {
 
 	void DebugAdapter::handleLaunch(const nlohmann::json& req) {
 		std::string program = req["arguments"]["program"];
-		debugger.loadFile(fs::File(program));
+		debugger.loadFile(fs::File(program)).transform_error([&](const api::ApiError& api_error) {
+			throw std::runtime_error(api::errorToString(api_error));
+			return api_error;
+		});
 
 		sendResponse(req, true);
 

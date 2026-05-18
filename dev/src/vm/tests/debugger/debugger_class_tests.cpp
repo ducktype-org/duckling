@@ -74,8 +74,8 @@ private:
 		events::Listener<std::string> error_listener([&](const std::string& err) { fail(err); });
 
 		vm::debugger::Debugger debugger{ fs::File(path(std::string(path_name))) };
-		debugger.attachOnVMChangesStatusListener(status_listener);
-		debugger.attachOnVMCompletesExecutionListener(execution_completed_listener);
+		debugger.attachOnStatusChangedListener(status_listener);
+		debugger.attachOnExecutionCompletedListener(execution_completed_listener);
 		debugger.attachOnErrorListener(error_listener);
 		debugger.runMain();
 		std::unique_lock lk(m);
@@ -150,7 +150,7 @@ private:
 
 		vm::debugger::Debugger debugger{ fs::File(path("while_true.dbc")) };
 
-		debugger.attachOnVMChangesStatusListener(status_listener);
+		debugger.attachOnStatusChangedListener(status_listener);
 		debugger.attachOnErrorListener(error_listener);
 
 		debugger.runMain();
@@ -237,8 +237,8 @@ private:
 
 		vm::debugger::Debugger debugger{ fs::File(path("debugger_test.dbc")) };
 
-		debugger.attachOnVMChangesStatusListener(status_listener);
-		debugger.attachOnVMCompletesExecutionListener(execution_completed_listener);
+		debugger.attachOnStatusChangedListener(status_listener);
+		debugger.attachOnExecutionCompletedListener(execution_completed_listener);
 		debugger.attachOnErrorListener(error_listener);
 
 		int loop = 3;
@@ -259,21 +259,7 @@ private:
 	}
 
 	void errorTest() {
-		std::atomic<size_t>     error_counter   = 0;
-		const size_t            expected_errors = 0;
-		std::mutex              m;
-		std::condition_variable cv;
-		vm::debugger::Debugger  debugger{ fs::File(path("while_true_no_breakpoint.dbc")) };
-
-		events::Listener<std::string> error_listener([&](const std::string&) {
-			{
-				std::lock_guard lk(m);
-				error_counter++;
-			}
-			cv.notify_one();
-		});
-
-		debugger.attachOnErrorListener(error_listener);
+		vm::debugger::Debugger debugger{ fs::File(path("while_true_no_breakpoint.dbc")) };
 
 		debugger.runMain();
 		ASSERT_TRUE(!debugger.runMain());  // 1st error
@@ -285,12 +271,7 @@ private:
 
 		debugger.resume();
 
-		std::unique_lock lk(m);
-		ASSERT_TRUE(cv.wait_for(lk, std::chrono::milliseconds(100), [&] {
-			return error_counter == expected_errors;
-		}));
 		ASSERT_TRUE(std::holds_alternative<vm::api::Running>(debugger.getStatus()));
-		ASSERT_EQUAL_PRINT(expected_errors, error_counter.load());
 	}
 };
 

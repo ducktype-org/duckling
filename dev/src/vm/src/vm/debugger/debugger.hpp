@@ -56,12 +56,12 @@ namespace vm::debugger {
 		/**
 		 * @brief Attach Listener to Emitter that emits current VM status when VM changes status
 		 */
-		void attachOnVMChangesStatusListener(events::Listener<api::ProcStatus>& listener);
+		void attachOnStatusChangedListener(events::Listener<api::ProcStatus>& listener);
 
 		/**
 		 * @brief Attach Listener to Emitter that emits return value when VM completes execution
 		 */
-		void attachOnVMCompletesExecutionListener(events::Listener<api::ExitValue>& listener);
+		void attachOnExecutionCompletedListener(events::Listener<api::ExitValue>& listener);
 
 		/**
 		 * @brief Attach Listener to Emitter that emits error message when any error raises

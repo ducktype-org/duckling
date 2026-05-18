@@ -33,19 +33,18 @@ namespace vm::debugger {
 		api::spawn()
 			.and_then([&](const api::ProcessInfo& info) {
 				pid = info.pid;
-
-				return std::expected<void, api::ApiError>{};
+				return api::attachStatusListener(pid, &updater);
 			})
-			.and_then([&] { return api::attachStatusListener(pid, &updater); })
-			.transform_error([&](const api::ApiError& api_error) {
+			.transform_error([&](const api::ApiError& api_error) -> std::monostate {
 				throw std::runtime_error(api::errorToString(api_error));
-				return api_error;
 			});
 	}
 
 	Debugger::Debugger(const fs::File& filepath, const std::vector<std::string>& main_args):
 		  Debugger(main_args) {
-		loadFile(filepath);
+		loadFile(filepath).transform_error([&](const api::ApiError& api_error) -> std::monostate {
+			throw std::runtime_error(api::errorToString(api_error));
+		});
 	}
 
 	Debugger::~Debugger() {
@@ -56,11 +55,11 @@ namespace vm::debugger {
 		});
 	}
 
-	void Debugger::attachOnVMChangesStatusListener(events::Listener<api::ProcStatus>& listener) {
+	void Debugger::attachOnStatusChangedListener(events::Listener<api::ProcStatus>& listener) {
 		on_status_changed.attachListener(listener);
 	}
 
-	void Debugger::attachOnVMCompletesExecutionListener(events::Listener<api::ExitValue>& listener) {
+	void Debugger::attachOnExecutionCompletedListener(events::Listener<api::ExitValue>& listener) {
 		on_execution_completed.attachListener(listener);
 	}
 
@@ -70,18 +69,16 @@ namespace vm::debugger {
 
 	std::expected<void, vm::api::ApiError> Debugger::runMain() {
 		return api::getExecutionStatus(pid)
-		    .and_then([&](const api::ProcStatus& status) {
+		    .and_then([&](const api::ProcStatus& status) -> std::expected<void, api::ApiError> {
 				variant_match(status) {
 					variant_case_novalue(api::ExecutionCompleted) { return api::join(pid); }
-					variant_case_novalue(api::NotStarted) {
-						return std::expected<void, api::ApiError>{};
+					variant_case_novalue(api::NotStarted) { return {}; }
+					variant_default {
+						return std::unexpected(api::ApiError{ api::OtherError{
+							"Wrong VM state to run: got " + statusToString(status)
+							+ ", allowed states are NotStarted and ExecutionCompleted." } });
 					}
 				}
-
-				return std::expected<void, api::ApiError>{ std::unexpected(api::ApiError{
-					api::OtherError{ "Wrong VM state to run: got " + statusToString(status)
-				                     + ", allowed states are NotStarted and ExecutionCompleted." } }
-				) };
 			})
 		    .and_then([&] { return api::run(pid, main_args); });
 	}
@@ -89,9 +86,8 @@ namespace vm::debugger {
 	api::ProcStatus Debugger::getStatus() {
 		// will never fail when pid is correct
 		return api::getExecutionStatus(pid)
-		    .transform_error([&](const api::ApiError& api_error) {
+		    .transform_error([&](const api::ApiError& api_error) -> std::monostate {
 				throw std::runtime_error(api::errorToString(api_error));
-				return api_error;
 			})
 		    .value();
 	}
@@ -101,27 +97,26 @@ namespace vm::debugger {
 	}
 
 	std::expected<api::response::CodePosition, api::ApiError> Debugger::pause() {
-		return api::getExecutionStatus(pid)
-		    .and_then([&](const api::ProcStatus& status) {
-				if (std::holds_alternative<api::Running>(status))
-					return std::expected<void, api::ApiError>{};
+		return api::getExecutionStatus(pid).and_then(
+			[&](const api::ProcStatus& status
+		    ) -> std::expected<api::response::CodePosition, api::ApiError> {
+				if (std::holds_alternative<api::Running>(status)) return api::pause(pid);
 
-				return std::expected<void, api::ApiError>{ std::unexpected(api::ApiError{
+				return std::unexpected(api::ApiError{
 					api::OtherError{ "Wrong VM state to pause: got " + statusToString(status)
-				                     + ", allowed state is Running." } }) };
-			})
-		    .and_then([&] { return api::pause(pid); });
+			                         + ", allowed state is Running." } });
+			}
+		);
 	}
 
 	std::expected<void, api::ApiError> Debugger::resume() {
 		return api::getExecutionStatus(pid)
-		    .and_then([&](const api::ProcStatus& status) {
-				if (std::holds_alternative<api::Paused>(status))
-					return std::expected<void, api::ApiError>{};
+		    .and_then([&](const api::ProcStatus& status) -> std::expected<void, api::ApiError> {
+				if (std::holds_alternative<api::Paused>(status)) return {};
 
-				return std::expected<void, api::ApiError>{ std::unexpected(api::ApiError{
+				return std::unexpected(api::ApiError{
 					api::OtherError{ "Wrong VM state to resume: got " + statusToString(status)
-				                     + ", allowed state is Paused." } }) };
+			                         + ", allowed state is Paused." } });
 			})
 		    .and_then([&] { return api::resume(pid); });
 	}
