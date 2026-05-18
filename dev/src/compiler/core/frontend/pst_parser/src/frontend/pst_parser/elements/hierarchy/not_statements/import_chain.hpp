@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../meta.hpp"
+#include "wrapper_elements/identifier_wrapper.hpp"
 
 namespace pst {
 	/**
@@ -18,7 +19,11 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		virtual const std::vector<tpc::Identifier>& getNames() const
+		virtual usize numberOfNames() const
+			= 0;
+
+		[[nodiscard]]
+		virtual AccessLocked<IdentifierWrapper> getNameByIndex(usize index) const
 			= 0;
 
 		static MBox<ImportChain> parse(LangParserState& state);

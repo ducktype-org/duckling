@@ -73,8 +73,11 @@ namespace compiler::backend_vm::internal {
 		/**
 		 * @brief Lowers a LIR type layout into VM bytecode type representation.
 		 * It caches the result, so inserts the type into the program only if needed.
+		 * @return The DVM type corresponding to the TypeLayout or an empty optional for
+		 * `tsl::EmptyTypeLayout`, representing Unit / empty-layout return types that do not
+		 * have a DVM counterpart.
 		 */
-		const vm::code::TypeOfData& lowerAndKeepTslType(CRef<tsl::TypeLayout> layout);
+		base::Optional<CRef<vm::code::TypeOfData>> lowerAndKeepTslType(CRef<tsl::TypeLayout> layout);
 
 		/**
 		 * @brief Creates and inserts a pointer type into the program lowering context.
@@ -83,11 +86,15 @@ namespace compiler::backend_vm::internal {
 		const vm::code::TypeOfData& getOrInsertPointerType(const vm::code::TypeOfData& pointee_type);
 
 		/**
-		 * @brief Retrieves the DVM global variable corresponding to the given LIR global.
-		 * @note The LIR global must have been previously declared using insertLirGlobal,
-		 * panics otherwise.
+		 * @brief Retrieves or lazily creates the DVM place for the given LIR global.
+		 *
+		 * This lookup is not purely observational: it may insert and cache a placeholder entry
+		 * for the global. It is needed to reference globals from different modules.
+		 *
+		 * @note Returning a DVM place here does not necessarily mean that the corresponding
+		 * vm::code::GlobalData has already been lowered for that global name.
 		 */
-		[[nodiscard]] const DVMPlace& getLirGlobal(CRef<lir::LIRGlobal> lir_global) const;
+		const DVMPlace& getLirGlobal(CRef<lir::LIRGlobal> lir_global);
 
 		/**
 		 * @brief Retrieves the extern C function with the given name.
@@ -143,7 +150,7 @@ namespace compiler::backend_vm::internal {
 		[[nodiscard]] bool isCompTimeLowering() const;
 
 	private:
-		vm::code::TypeOfData lowerTslTypeInternal(CRef<tsl::TypeLayout> layout);
+		base::Optional<vm::code::TypeOfData> lowerTslTypeInternal(CRef<tsl::TypeLayout> layout);
 
 		/// Whether we are lowering the code to be loaded by the VM for compile time evaluation,
 		/// or for the final output module. This affects how certain compile time values (e.g.

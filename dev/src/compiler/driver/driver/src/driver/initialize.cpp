@@ -6,6 +6,7 @@
 #include <diagnostic_interactive/logger.hpp>
 #include <diagnostic_interactive/module_flags/module_flags.hpp>
 #include <diagnostic_interactive/placeholder.hpp>
+#include <driver/diagnostics/log_helpers.hpp>
 #include <driver/incremental_utils/collect_input.hpp>
 #include <driver/module_flags/module_flags.hpp>
 #include <frontend/module_tree/functors.hpp>
@@ -26,19 +27,13 @@
 #include <query_framework/external/api.hpp>
 #include <query_framework/module_flags/module_flags.hpp>
 
+#include <iostream>
+
 namespace compiler::driver {
 
 
 	namespace {
 		constinit bool is_initialized = false;
-
-		void handleLoggerInitialization() {
-			// We might want to configure it differently in the future:
-			dia_int::configureImmediatePrint(&std::cerr);
-			dia_int::configureTerminalPrinterColors(true);
-
-			global_state::setters::setGlobalLogger(makeBox<dia_int::Logger>());
-		}
 
 		void handleDebugOptions(const options_types::DebugOptions& debug_options) {
 			if (not debug_options.dev_log_categories.empty()) logger::enable_dev_logs = true;
@@ -82,25 +77,22 @@ namespace compiler::driver {
 			);
 		}
 
-		base::OkBad handlePackageOptions(const options_types::PackageInfo& package_info) {
-			// Create the module tree for the main package and add it to global state
-			auto root_module = compiler::frontend::createModuleTree(
-				package_info.package_path, package_info.package_name
-			);
-			if (!getModuleRef(root_module)->hasMainSourceFile()) {
-				auto module_name = getModuleRef(root_module)->getName();
-				global_state::getGlobalLogger()->log(makeBox<dia_int::PlaceholderError>(
-					"Main package does not have a main source file.",
-					base::strConcat(
-						"The main source file is required for compilation. Please add a ",
-						module_name,
-						".dmf file to the main module directory."
-					)
-				));
-				return base::BAD;
+		base::OkBad handlePackageOptions(
+			std::vector<compiler::frontend::packages::RawPackageInfo> packages_info
+		) {
+			auto report      = diagnostics::makeGlobalLoggerReporter();
+			bool had_failure = false;
+
+			compiler::frontend::packages::filterUndeclaredDependencies(packages_info, report);
+
+			for (const auto& package_info: packages_info) {
+				auto pkg = compiler::frontend::packages::createPackageInfo(package_info, report);
+				if (pkg)
+					global_state::setters::addPackage(*pkg);
+				else
+					had_failure = true;
 			}
-			global_state::setters::addMainPackage(root_module);
-			return base::OK;
+			return had_failure ? base::BAD : base::OK;
 		}
 
 		/**
@@ -145,8 +137,10 @@ namespace compiler::driver {
 				query::external::setPreviousMetadataFromRawBytes(span);
 
 				// We need to parse all files before compilation to collect all PST elements.
-				for (auto mid: global_state::getPackages())
-					compiler::frontend::parseAllFilesInModuleTree(mid.root_module);
+				for (const auto& package_info: global_state::getPackages())
+					compiler::frontend::parseAllFilesInModuleTree(
+						package_info.getRootModule().illegalAccess().getID()
+					);
 
 				// Collect all Inputs and Side inputs and perform red-green sweep.
 				// This must be called after loading both the graph and metadata, as metadata
@@ -200,7 +194,6 @@ namespace compiler::driver {
 
 		variant_match(options.mode) {
 			variant_case(CompilerModeOfOperationAndOptions::BareMode, bare_options) {
-				handleLoggerInitialization();
 				handleDebugOptions(bare_options.debug_options);
 			}
 			variant_case(
@@ -211,14 +204,12 @@ namespace compiler::driver {
 				// in places where the compiler is left in a state
 				// that could result in panics/errors during exit.
 
-				handleLoggerInitialization();
-
 				handleDebugOptions(package_compilation_options.debug_options);
 				handleExecutionOptions(package_compilation_options.execution_options);
 				handleArtifactsOptions(package_compilation_options.compilation_artifacts);
 
 				auto package_success
-					= handlePackageOptions(package_compilation_options.main_package_info);
+					= handlePackageOptions(package_compilation_options.packages_info);
 
 				if (package_success.isBad()) return base::BAD;
 
@@ -226,12 +217,10 @@ namespace compiler::driver {
 				handleIncrementalOptions(package_compilation_options.incremental);
 			}
 			variant_case(CompilerModeOfOperationAndOptions::ReplMode, repl_options) {
-				handleLoggerInitialization();
 				handleDebugOptions(repl_options.debug_options);
 				handleExecutionOptions(repl_options.execution_options);
 			}
 			variant_case(CompilerModeOfOperationAndOptions::ScriptMode, script_options) {
-				handleLoggerInitialization();
 				handleDebugOptions(script_options.debug_options);
 				handleExecutionOptions(script_options.execution_options);
 				handleArtifactsOptions(script_options.compilation_artifacts);
@@ -241,5 +230,13 @@ namespace compiler::driver {
 			variant_default { CORE_PANIC("Unknown compiler mode of operation"); }
 		}
 		return base::OK;
+	}
+
+	void initializeGlobalLogger() {
+		// We might want to configure it differently in the future:
+		dia_int::configureImmediatePrint(&std::cerr);
+		dia_int::configureTerminalPrinterColors(true);
+
+		global_state::setters::setGlobalLogger(makeBox<dia_int::Logger>());
 	}
 }

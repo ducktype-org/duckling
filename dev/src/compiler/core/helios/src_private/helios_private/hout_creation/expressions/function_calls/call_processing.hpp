@@ -1,5 +1,6 @@
 #pragma once
 
+#include <frontend/pst_parser/elements/elements_list.hpp>
 #include <helios/hout/elements/expr.hpp>
 
 #include <base/pointers/box.hpp>
@@ -58,9 +59,14 @@ namespace compiler::helios::code {
 	 * @param candidates Contains all candidate functions that could be called.
 	 * @param lhs The preprocessed left-hand side argument of the operator call.
 	 * @param rhs The preprocessed right-hand side argument of the operator call.
+	 * @param op_origin Operator origin used for calle origin.
 	 */
 	query::QResult<Box<Expr>> processBinaryOperatorCall(
-		query::Context& ctx, const std::vector<SymID>& candidates, Box<Expr> lhs, Box<Expr> rhs
+		query::Context&           ctx,
+		const std::vector<SymID>& candidates,
+		Box<Expr>                 lhs,
+		Box<Expr>                 rh,
+		ElementOrigin             op_origin
 	);
 
 	/**

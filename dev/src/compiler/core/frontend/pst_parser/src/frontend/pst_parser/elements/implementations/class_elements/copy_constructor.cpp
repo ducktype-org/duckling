@@ -7,9 +7,12 @@ namespace pst {
 	MBox<CopyConstructor> CopyConstructor::parse(LangParserState& state) {
 		auto out = makeBox<CopyConstructor>(state);
 
+		CORE_ASSERT(
+			state[0].is(state.getContext()->class_name), "Bad copy constructor parsing entry"
+		);
+
 		PARSE().eatOne();
 
-		out->kind = Keyword::Copy;
 		PARSE().all(NamedOperator::Period, Keyword::Copy);
 
 		PARSE().one(&out->params);
@@ -26,7 +29,7 @@ namespace pst {
 	void CopyConstructor::dprint(std::ostream& out) const {
 		out << "{";
 		out << "\"name\":";
-		out << "\"" << getName().strView() << "\"";
+		out << "\"" << getInternalSymbolName()->str() << "\"";
 		out << ",\"params\":";
 		nullAwareDprint(params, out);
 		out << ",\"inits\":";

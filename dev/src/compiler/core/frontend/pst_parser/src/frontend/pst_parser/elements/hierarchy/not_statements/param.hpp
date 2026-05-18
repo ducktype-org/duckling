@@ -7,7 +7,7 @@ namespace pst {
 	 * @brief Declaration of a single function or pattern argument.
 	 */
 	class Param final: public NotStmt {
-		tpc::Identifier name;
+		NAMED_CHILD(name, IdentifierWrapper);
 		NAMED_CHILD(type, UniversalExprHolder);
 		NAMED_CHILD_OPT(initial, UniversalExprHolder);
 
@@ -32,11 +32,9 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		base::StrID getName() const {
-			return name.value;
+		AccessLocked<IdentifierWrapper> getName() const {
+			return name.give();
 		}
-
-		[[nodiscard]] tpc::Identifier getNameIdent() const { return name; }
 
 		[[nodiscard]]
 		base::Optional<AccessLocked<UniversalExprHolder>> getValue() const;

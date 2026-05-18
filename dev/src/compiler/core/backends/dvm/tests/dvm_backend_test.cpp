@@ -36,6 +36,7 @@ public:
 		// TESTER_ADD_TEST(recordsTest);
 		TESTER_ADD_TEST(staticArrayTest);
 		TESTER_ADD_TEST(unitsTest);
+		TESTER_ADD_TEST(initsDeinitsTest);
 	}
 
 protected:
@@ -58,8 +59,11 @@ private:
 				auto lir_glob = lir::LIRGlobal::fromHOUT(ctx, *hout_glob);
 				variant_match(hout_glob->value) {
 					variant_case(helios::HOUTGlobalVariable, var) {
+						if (not hout_glob->type.getType().carriesInformation(ctx)) continue;
+
 						CRef mir_func = &ctx.query<mir::LowerGlobalDataToMIRCtor>({ hout_glob })
 						                     ->valueOrThrow();
+
 						auto lir_func = ctx.query<lir::LowerToLIRFunction>({ mir_func });
 						m.insertLirGlobal(
 							lir_glob,
@@ -160,6 +164,8 @@ private:
 	}
 
 	void unitsTest() { runTest("modules/units", {}, {}, {}, 0); }
+
+	void initsDeinitsTest() { runTest("modules/inits_deinits", {}, { "100\n" }, {}, 0); }
 };
 
 

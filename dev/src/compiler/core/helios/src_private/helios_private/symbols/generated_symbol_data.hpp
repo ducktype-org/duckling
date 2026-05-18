@@ -19,13 +19,16 @@ namespace compiler::helios::defgen {
 	 */
 	struct GeneratedSymbolData final {
 		/**
-		 * Represents a compiler-generated implicit constructor for a class.
+		 * Represents a compiler-generated implicit constructor for a class (or other type such as a
+		 * tuple).
 		 *
-		 * The implicit constructor is a function that takes parameters for each field of the class
-		 * and returns an instance of the class with those fields initialised accordingly.
+		 * The implicit constructor is a function that takes parameters for each field of the type
+		 * and returns an instance of the type with those fields initialised accordingly.
+		 *
+		 * @note Different types, such as tuples, might have an implicit ctor as well.
 		 */
 		struct ImplicitConstructor final {
-			SymID class_symbol;  // The symbol of the class this constructor belongs to.
+			tsh::AbstractType target_type;  // The type of the object this constructor belongs to.
 
 			[[nodiscard]]
 			base::Bit256 queryUnstablePerfectHash() const;
@@ -91,12 +94,26 @@ namespace compiler::helios::defgen {
 		};
 
 		/**
+		 * Represents a compiler-generated field in a type. That type does not need to be a class.
+		 * For example, the `_1`, `_2`, etc. fields in tuples.
+		 */
+		struct Field final {
+			tsh::AbstractType parent_type;  // The type that the field belongs to
+			// @TODO: #2515 Remove this
+			u64 index;  // The index of the generated field
+
+			[[nodiscard]]
+			base::Bit256 queryUnstablePerfectHash() const;
+		};
+
+		/**
 		 * Represents a compiler-generated variable (not parameter) in a function. This function may
 		 * itself be compiler-generated, such as the `ImplicitConstructor`.
 		 */
 		struct Variable final {
-			SymID function_symbol;   // The symbol of the function this variable belongs to.
-			u64   variable_index;    // The index of the variable in the function's body.
+			SymID function_symbol;  // The symbol of the function this variable belongs to.
+			u64   variable_index;   // The index of the variable in the function's body.
+			// @TODO: #2515 Remove this
 			tsh::SymbolType<> type;  // The type of the variable.
 
 			[[nodiscard]]
@@ -175,6 +192,7 @@ namespace compiler::helios::defgen {
 			BuiltinOperator,
 			Parameter,
 			SelfParameter,
+			Field,
 			Variable,
 			ReplExpressionWrapper,
 			ReplInstructionWrapper,
@@ -195,8 +213,9 @@ namespace compiler::helios::defgen {
 		 */
 		[[nodiscard]] bool isDefaultConstructor() const {
 			variant_match(data) {
-				variant_case_novalue(DefaultClassConstructor) { return true; }
-				variant_case_novalue(DefaultStaticArrayConstructor) { return true; }
+				variant_case_novalue(DefaultClassConstructor, DefaultStaticArrayConstructor) {
+					return true;
+				}
 				variant_default { return false; }
 			}
 		}

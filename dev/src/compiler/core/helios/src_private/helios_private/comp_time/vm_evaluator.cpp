@@ -6,6 +6,7 @@
 
 #include <vm/api/vm.hpp>
 #include <vm/bytecode/validator/errors.hpp>
+#include <vm/bytecode/validator/valid_program.hpp>
 #include <vm/core/vmvalue/vmvalue.hpp>
 
 #include <expected>
@@ -285,6 +286,7 @@ namespace {
 
 		for (const auto& lir_function: all_lir_functions) m.insertLirFunction(lir_function);
 		auto bytecode = m.build();
+
 		return comptime_dvm.loadCode(bytecode);
 	}
 

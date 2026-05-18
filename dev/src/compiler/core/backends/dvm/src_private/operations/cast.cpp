@@ -89,7 +89,7 @@ namespace compiler::backend_vm::internal {
 	void InstructionLowerer::lower(const CastOperation& op) {
 		// Operation in form a = OP b (like mov)
 		auto operation   = getOpKindFromLIRLayouts(op.cast_params);
-		auto target_type = ctx->program_context.lowerAndKeepTslType(op.cast_params.target_layout);
+		auto target_type = **ctx->program_context.lowerAndKeepTslType(op.cast_params.target_layout);
 
 		// If the source is an immediate, we place it in a local and perform a cast on it.
 		DVMPlace src_arg = ctx->forceToPlace(op.src, "cast_src_tmp");

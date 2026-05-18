@@ -1,15 +1,13 @@
-#ifdef ENABLE_JIT  // @TODO: #2312 Remove the #ifdef
+#include "../memory/memory.hpp"
+#include "../stencils/import_stencils.hpp"
 
-	#include "../memory/memory.hpp"
-	#include "../stencils/import_stencils.hpp"
+#include <base/pointers/box.hpp>
+#include <base/preproc/diagnostics.hpp>
 
-	#include <base/pointers/box.hpp>
-	#include <base/preproc/diagnostics.hpp>
+#include <tester/tester.hpp>
 
-	#include <tester/tester.hpp>
-
-	#include <cstring>
-	#include <string>
+#include <cstring>
+#include <string>
 
 using vm::jit::cnp::JitFuncMemory;
 using vm::jit::cnp::StencilData;
@@ -19,28 +17,31 @@ PUSH_DIAGNOSTIC
 ALLOW_EXTENSIONS
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays)
 constexpr static char FULL_ELF[] = {
-	#if __has_embed("wrapper-so")
-		#embed "mock_stencils-so"
-	#else
+// Linter doesn't actually build mock_stencils-so so it would be unavailable.
+#if __has_embed("mock_stencils-so")
+	#embed "mock_stencils-so"
+#else
 	0
-	#endif
+#endif
 };
 POP_DIAGNOSTIC
 
 static auto stencils
 	= Stencils{ .stencils_binary    = std::bit_cast<std::array<byte, sizeof(FULL_ELF)>>(FULL_ELF),
 	            .stencils_data = std::array {
-	#if __has_include(<mock_stencils-nm>)
-		#include <mock_stencils-nm>
-	#else
+
+// Linter doesn't actually build <mock_stencils-nm> so it would be unavailable.
+#if __has_include(<mock_stencils-nm>)
+	#include <mock_stencils-nm>
+#else
 			StencilData{}
-	#endif
+#endif
 					}
 				 }.load();
 
 class JitMemoryTest: public tester::TestSuite {
-	#undef TESTER_CLASS
-	#define TESTER_CLASS JitMemoryTest
+#undef TESTER_CLASS
+#define TESTER_CLASS JitMemoryTest
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
@@ -119,5 +120,3 @@ private:
 };
 
 TESTER_COMMON_MAIN("/src/vm/tests/jit/");
-
-#endif

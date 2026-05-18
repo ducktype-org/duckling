@@ -68,4 +68,10 @@ namespace compiler::mir {
 	};
 
 	using ScopeRef = LifetimeScopeTree::ScopeRef;
+
+	struct ScopeRefHash final {
+		size_t operator()(const ScopeRef scope) const noexcept {
+			return std::hash<u64>{}(scope->id);
+		}
+	};
 }

@@ -11,9 +11,8 @@ Tests:
 
   comp_time_references:
     Cases:
-      # @TODO: #1849 Add a DVM case when this is fixed.
-      llvm:
-        backend: llvm
+      all:
+        backend: all
         Output:
           String: "124\n"
         ExitCode: 0
@@ -25,7 +24,7 @@ Tests:
       llvm:
         backend: llvm
         Output:
-          String: "1\n2\n3\n4\n111\n111\n1\n"
+          String: "1\n2\n3\n1\n3\n4\n111\n111\n1\n"
         ExitCode: 0
 
   type_eval:

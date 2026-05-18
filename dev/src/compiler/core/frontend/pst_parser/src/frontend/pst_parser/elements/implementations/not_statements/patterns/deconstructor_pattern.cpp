@@ -4,13 +4,9 @@
 
 namespace pst {
 	MBox<DeconstructorPattern> DeconstructorPattern::parse(LangParserState& state) {
-		if (!state[0].isIdentifier() || !state[1].isBracketGroup(lexer::Token::BracketType::Round))
-			return nullptr;
-
 		auto out = makeBox<DeconstructorPattern>(state);
 
-		PARSE().one(&out->deconstructor_name);
-		PARSE().one(&out->arguments);
+		PARSE().all(&out->deconstructor_name, &out->arguments);
 		PST_RETURN out;
 	}
 
@@ -25,7 +21,6 @@ namespace pst {
 	}
 
 	HashAlg& DeconstructorPattern::addElementDataToStableHash(HashAlg& partial_hash) const {
-		addToHash(partial_hash, deconstructor_name);
 		return partial_hash;
 	}
 

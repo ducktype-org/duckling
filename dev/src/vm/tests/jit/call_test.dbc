@@ -1,0 +1,71 @@
+function add1000 { i64 }-> { i64 } {
+	mov_p64_imm             ret0, 1000;
+	add_p64_p64             ret0, arg0;
+	ret;
+}
+
+function add1100 { i64 }-> { i64 } {
+	mov_p64_imm    		    ret0, 100;
+
+	init_pany_type 			add1000_ret0, i64; # [16, 24) add1000 ret0
+	init_pany_type 			add1000_arg0, i64; # [24, 32) add1000 arg0
+	mov_p64_p64			    add1000_arg0, arg0;
+	call_func               add1000;
+
+	add_p64_p64             ret0,   add1000_ret0;
+	ret;
+}
+
+function add1110 { i64 }-> { i64 } {
+	mov_p64_imm    		    ret0, 10;
+
+	init_pany_type 			add1100_ret0, i64;
+	init_pany_type 			add1100_arg0, i64;
+	mov_p64_p64			    add1100_arg0, arg0;
+
+	call_func               add1100;
+
+	add_p64_p64    		    ret0, add1100_ret0; # += add1100
+
+	deinit; # add1100 ret0
+	deinit; # arg0
+	ret;
+}
+
+function main { i64, ptr_argv }-> { i64 } {
+    # ret0 -> main ret0
+    # arg0 -> argc
+    # arg1 -> *argv
+
+    # Read counter from STDIN
+    init_pany_type counter, i64;
+    input_p64 counter;
+
+# Loop until counter equals 0
+label loop_start;
+    
+    cmpEq_p64_imm counter, 0;
+    jmpIf_label loop_end;
+
+	init_pany_type 			add1110_ret0, i64;
+	init_pany_type 			add1110_arg0, i64;
+
+	mov_p64_p64             add1110_arg0, counter;
+	call_func          		add1100;
+
+    output_p64              add1110_ret0;
+    deinit; # add1110_ret0
+
+    add_p64_imm counter, -1;
+    jmp_label loop_start;
+
+label loop_end;
+    
+    # Return 0
+    mov_p64_imm ret0, 0;
+    
+    deinit; # counter
+    deinit; # *argv
+    deinit; # argc
+    ret;
+}

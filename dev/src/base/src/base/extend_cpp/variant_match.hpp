@@ -43,6 +43,7 @@
 
 #include <base/comptime/type_traits.hpp>
 #include <base/preproc/diagnostics.hpp>
+#include <base/preproc/for_each.hpp>
 #include <base/types/ints.hpp>
 
 #include <type_traits>
@@ -104,10 +105,14 @@ namespace base {
 	case (::base::variantTypeIndex<decltype(internal_value), type>()): \
 		if ([[maybe_unused]] auto&& name = std::get<type>(internal_value); true) POP_DIAGNOSTIC
 
-#define variant_case_novalue(type)                                     \
-	break;                                                             \
-	case (::base::variantTypeIndex<decltype(internal_value), type>()): \
-		if (true)
+#define variant_match_novalue_extra_case(type) \
+	[[fallthrough]];                           \
+	case (::base::internal::variantTypeIndex<decltype(internal_value), type>()):
+
+#define variant_case_novalue(type, ...)                           \
+	break;                                                        \
+	FOR_EACH(variant_match_novalue_extra_case, type, __VA_ARGS__) \
+	if (true)
 
 #define variant_default \
 	break;              \
