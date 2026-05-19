@@ -105,24 +105,14 @@ namespace vm::debugger {
 		return api::loadFiles(pid, { filepath });
 	}
 
-
-	api::response::StackFrameData Debugger::getStackFrameData(u64 frame_index) {
-		return api::debuggerGetStackFrameData(pid, api::ThreadID(0), frame_index)
-		    .transform_error([&](const api::ApiError& api_error) {
-				throw std::runtime_error(api::errorToString(api_error));
-				return api_error;
-			})
-		    .value();
+	std::expected<u64, api::ApiError> Debugger::getNumberOfStackFrames(api::ThreadID thread_id) {
+		return api::debuggerGetNumberOfStackFrames(pid, thread_id)
+			.transform([](api::response::NumberOfCurrentStackFrames nosf) { return nosf.number_of_stack_frames; });
 	}
 
-	u64 Debugger::getNumberOfStackFrames() {
-		return api::debuggerGetNumberOfStackFrames(pid, api::ThreadID(0))
-		    .transform_error([&](const api::ApiError& api_error) {
-				throw std::runtime_error(api::errorToString(api_error));
-				return api_error;
-			})
-		    .value()
-		    .number_of_stack_frames;
+
+	std::expected<api::response::StackFrameData, api::ApiError> Debugger::getStackFrameData(api::ThreadID thread_id, u64 frame_index) {
+		return api::debuggerGetStackFrameData(pid, thread_id, frame_index);
 	}
 
 	std::expected<api::response::CodePosition, api::ApiError> Debugger::pause() {

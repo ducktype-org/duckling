@@ -285,16 +285,18 @@ private:
 		                                                      ) {
 			if (status.index() == altIndex(vm::api::Paused)) cv.notify_one();
 		});
-		debugger.attachOnVMChangesStatusListener(status_listener);
+		debugger.attachOnStatusChangedListener(status_listener);
 		debugger.runMain();
 		std::unique_lock lk(m);
 		ASSERT_TRUE(cv.wait_for(lk, std::chrono::milliseconds(100), [&] {
 			return std::holds_alternative<vm::api::Paused>(debugger.getStatus());
 		}));
 
-		auto response = debugger.getNumberOfStackFrames();
+		auto main_thread_id = vm::api::ThreadID(0);
+
+		auto response = debugger.getNumberOfStackFrames(main_thread_id).value();
 		ASSERT_EQUAL(2, response);
-		auto info = debugger.getStackFrameData(1);
+		auto info = debugger.getStackFrameData(main_thread_id, 1).value();
 		ASSERT_EQUAL(9, info.frame_vars.size());
 		ASSERT_EQUAL_PRINT("0", info.frame_vars[0].value.str());          // ret0
 		ASSERT_EQUAL_PRINT("0", info.frame_vars[1].value.str());          // arg0
