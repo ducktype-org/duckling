@@ -93,7 +93,9 @@ namespace vm::debugger {
 		/**
 		 * @brief Returns variables of stack frame
 		 */
-		std::expected<api::response::StackFrameData, api::ApiError> getStackFrameData(api::ThreadID thread_id, u64 frame_index);
+		std::expected<api::response::StackFrameData, api::ApiError> getStackFrameData(
+			api::ThreadID thread_id, u64 frame_index
+		);
 
 		/**
 		 * @brief Pauses the VM

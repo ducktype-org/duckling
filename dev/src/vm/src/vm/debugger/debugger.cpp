@@ -107,11 +107,14 @@ namespace vm::debugger {
 
 	std::expected<u64, api::ApiError> Debugger::getNumberOfStackFrames(api::ThreadID thread_id) {
 		return api::debuggerGetNumberOfStackFrames(pid, thread_id)
-			.transform([](api::response::NumberOfCurrentStackFrames nosf) { return nosf.number_of_stack_frames; });
+		    .transform([](api::response::NumberOfCurrentStackFrames nosf) {
+				return nosf.number_of_stack_frames;
+			});
 	}
 
-
-	std::expected<api::response::StackFrameData, api::ApiError> Debugger::getStackFrameData(api::ThreadID thread_id, u64 frame_index) {
+	std::expected<api::response::StackFrameData, api::ApiError> Debugger::getStackFrameData(
+		api::ThreadID thread_id, u64 frame_index
+	) {
 		return api::debuggerGetStackFrameData(pid, thread_id, frame_index);
 	}
 

@@ -14,10 +14,10 @@ class VmDebuggerTest: public tester::TestSuite {
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		// @TODO: #1222 Re-enable the tests after fixing the API.
-		// TESTER_ADD_TEST(noRunTest);
 		// TESTER_ADD_TEST(getStatusWait);
 		// TESTER_ADD_TEST(continuePauseTest);
 
+		TESTER_ADD_TEST(noRunTest);
 		TESTER_ADD_TEST(runAndGetStatus);
 		TESTER_ADD_TEST(getStatusBreakpoint);
 		TESTER_ADD_TEST(rerunTest);
