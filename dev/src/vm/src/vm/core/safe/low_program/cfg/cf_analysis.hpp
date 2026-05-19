@@ -29,4 +29,4 @@ namespace vm::low::cf {
 	 * @return Sorted list of basic-block beginnings.
 	 */
 	[[nodiscard]] std::vector<usize> basicBlockBeginnings(const low::MicroBytecode& bc);
-}  // namespace vm::low::cf
+}  // namespace vm::low::cfg
