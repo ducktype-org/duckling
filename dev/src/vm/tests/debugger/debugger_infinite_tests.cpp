@@ -48,15 +48,11 @@ private:
 		// work correctly.
 		auto execution_position
 			= vm::api::waitForBreakpoint(pid).value();  // "Wait for breakpoint failed (1)"
-		// Because of stepGILs are inserted, there are more instructions. UPDATE: Because of mapping
-		// not anymore
-		ASSERT_TRUE(execution_position.instr_number.has_value());
-		ASSERT_EQUAL_PRINT(1, execution_position.instr_number.value());
+		ASSERT_EQUAL_PRINT(1, execution_position.instr_number);
 
 		vm::api::resume(pid).value();                 // "Resume failed (1)"
 		auto position = vm::api::pause(pid).value();  // "Pause failed (1)"
-		ASSERT_TRUE(position.instr_number.has_value());
-		ASSERT_EQUAL_PRINT(position.instr_number.value(), 5);
+		ASSERT_EQUAL_PRINT(position.instr_number, 5);
 
 		auto expected_next_line = [this](u64 x) -> u64 {
 			if (x == 4) return 5;
@@ -66,7 +62,7 @@ private:
 		};
 
 		auto line_number2 = stepAndGetLine(pid);
-		ASSERT_EQUAL_PRINT(expected_next_line(position.instr_number.value()), line_number2);
+		ASSERT_EQUAL_PRINT(expected_next_line(position.instr_number), line_number2);
 
 		auto line_number3 = stepAndGetLine(pid);
 		ASSERT_EQUAL_PRINT(expected_next_line(line_number2), line_number3);
@@ -92,8 +88,7 @@ private:
 		vm::api::step(base::safeIntConv<vm::PID>(pid)).value();  // "Step failed"
 		auto execution_position = vm::api::getCurrentPosition(base::safeIntConv<vm::PID>(pid))
 		                              .value();                  // "Get current position failed"
-		ASSERT_TRUE(execution_position.instr_number.has_value());
-		return execution_position.instr_number.value();
+		return execution_position.instr_number;
 	}
 };
 

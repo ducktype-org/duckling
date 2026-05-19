@@ -73,13 +73,13 @@ private:
 
 		auto execution_position
 			= vm::api::waitForBreakpoint(pid).value();  // "Wait for breakpoint failed (1)"
-		ASSERT_EQUAL_PRINT(6, execution_position.instr_number.value());
+		ASSERT_EQUAL_PRINT(6, execution_position.instr_number);
 
 		vm::api::resume(pid).value();  // "Resume failed (1)"
 
 		execution_position
 			= vm::api::waitForBreakpoint(pid).value();  // "Wait for breakpoint failed (1)"
-		ASSERT_EQUAL_PRINT(10, execution_position.instr_number.value());
+		ASSERT_EQUAL_PRINT(10, execution_position.instr_number);
 
 		vm::api::resume(pid).value();  // "Resume failed (2)"
 
@@ -108,7 +108,7 @@ private:
 
 		execution_position
 			= vm::api::waitForBreakpoint(pid).value();  // "Wait for breakpoint failed (2)"
-		ASSERT_EQUAL_PRINT(10, execution_position.instr_number.value());
+		ASSERT_EQUAL_PRINT(10, execution_position.instr_number);
 
 		vm::api::resume(pid).value();  // "Resume failed (2)"
 
@@ -120,8 +120,7 @@ private:
 		auto execution_position = vm::api::getCurrentPosition(base::safeIntConv<vm::PID>(pid))
 		                              .value();                  // "Get current position failed"
 
-		ASSERT_TRUE(execution_position.instr_number.has_value());
-		return execution_position.instr_number.value();
+		return execution_position.instr_number;
 	}
 
 	template<typename FiedDataType>

@@ -137,10 +137,11 @@ namespace vm {
 			                             .local_stack_size = 0,
 			                             .local_block_count
 			                             = func.result_types.size() + func.parameters.size(),
-			                             .arg_size     = 0,
-			                             .ret_size     = func.ret_size,
-			                             .parameters   = {},
-			                             .result_types = func.result_types };
+			                             .arg_size            = 0,
+			                             .ret_size            = func.ret_size,
+			                             .parameters          = {},
+			                             .result_types        = func.result_types,
+			                             .instruction_mapping = {} };
 
 		const u64 called_function_id = process_program->getFunctions().idOf(func.name).value();
 
@@ -230,14 +231,15 @@ namespace vm {
 		auto        str_ptr_type     = types.at(base::StrID("ptr_string"));
 		auto        byte_type        = types.at(base::StrID("byte"));
 
-		low::LowFuncData start_function{ .name              = base::StrID("vm_start_function"),
-			                             .bc                = {},
-			                             .local_stack_size  = 72,
-			                             .local_block_count = 7,
-			                             .arg_size          = 0,
-			                             .ret_size          = func.ret_size,
-			                             .parameters        = {},
-			                             .result_types      = func.result_types };
+		low::LowFuncData start_function{ .name                = base::StrID("vm_start_function"),
+			                             .bc                  = {},
+			                             .local_stack_size    = 72,
+			                             .local_block_count   = 7,
+			                             .arg_size            = 0,
+			                             .ret_size            = func.ret_size,
+			                             .parameters          = {},
+			                             .result_types        = func.result_types,
+			                             .instruction_mapping = {} };
 
 		// TypeIDs to pass to opcodes.
 		u64 argv_type_arg     = safeReadObjectBytes<u64>(argv_type);
@@ -604,7 +606,7 @@ namespace vm {
 				     std::views::enumerate(process_program->getFunctions())) {
 					if (func.bc.data() <= instr && instr < func.bc.data() + func.bc.size()) {
 						return low::LowCodePosition{
-							.function_name     = func.name,
+							.function          = &func,
 							.instruction_index = static_cast<u64>(instr - func.bc.data()),
 						};
 					}

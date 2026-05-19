@@ -190,52 +190,32 @@ std::expected<vm::code::CodeCollection, std::string> vm::loader::Loader::parseCo
 }
 
 std::expected<vm::loader::Loader::FatBytecodePosition, vm::loader::Loader::MappingException> vm::
-	loader::Loader::mapLowVMProgramPositionToCodeCollectionPosition(
-		std::variant<u64, base::StrID> function_identifier, usize instruction_index
-	) const {
-	auto maybe_function = std::visit(
-		[&](const auto& key) { return getProgram()->getFunctions().atMaybe(key); },
-		function_identifier
-	);
+	loader::Loader::mapLowVMProgramPositionToCodeCollectionPosition(vm::low::LowCodePosition position
+    ) const {
+	auto& mapping = position.function->instruction_mapping;
+	auto  it      = std::ranges::upper_bound(
+        mapping,
+        vm::low::LowFuncData::InstructionRange{ position.instruction_index,
+                                                std::numeric_limits<usize>::max() }
+    );
 
-	if (maybe_function.empty()) return std::unexpected(NoFunction);
-	if (maybe_function.value()->instruction_mapping.empty()) return std::unexpected(MissingMapping);
+	if (it == mapping.begin()) return std::unexpected(MissingMapping);
 
-	auto& mapping = maybe_function.value()->instruction_mapping.value();
-	auto  candidate
-		= std::ranges::upper_bound(
-			  mapping, vm::low::LowFuncData::InstructionRange{ instruction_index, usize(-1) }
-		  )
-	    - 1;
+	auto candidate = it - 1;
+	if (!candidate->contains(position.instruction_index)) return std::unexpected(MissingMapping);
 
 	return FatBytecodePosition{
-		.function_name     = maybe_function.value()->name,
+		.function_name     = position.function->name,
 		.instruction_index = usize(candidate - mapping.begin()),
 	};
 }
 
-std::expected<vm::loader::Loader::FatBytecodePosition, vm::loader::Loader::MappingException> vm::
-	loader::Loader::mapLowVMProgramPositionToCodeCollectionPosition(vm::low::LowCodePosition position
-    ) const {
-	auto [function_id, instruction_index] = position;
-	return mapLowVMProgramPositionToCodeCollectionPosition(function_id, instruction_index);
-}
-
-std::expected<base::Optional<dia::SourcePosition>, vm::loader::Loader::MappingException> vm::
-	loader::Loader::mapCodeCollectionPositionToFilePosition(
-		base::StrID function_name, usize instruction_index
-	) const {
-	const auto& maybe_high_function = getHighProgram()->functions().atMaybe(function_name);
-	if (maybe_high_function.empty()) return std::unexpected(NoFunction);
-
-	return maybe_high_function.value()->body.at(instruction_index).visit([](auto&& instr) {
-		return instr.bytecode_pos;
-	});
-}
-
 std::expected<base::Optional<dia::SourcePosition>, vm::loader::Loader::MappingException> vm::
 	loader::Loader::mapCodeCollectionPositionToFilePosition(FatBytecodePosition position) const {
-	return mapCodeCollectionPositionToFilePosition(
-		position.function_name, position.instruction_index
-	);
+	const auto& maybe_high_function = getHighProgram()->functions().atMaybe(position.function_name);
+	if (maybe_high_function.empty()) return std::unexpected(NoFunction);
+
+	return maybe_high_function.value()->body.at(position.instruction_index).visit([](auto&& instr) {
+		return instr.bytecode_pos;
+	});
 }

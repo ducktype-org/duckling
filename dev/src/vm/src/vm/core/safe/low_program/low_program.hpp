@@ -19,11 +19,6 @@ namespace vm::loader::compiler {
 namespace vm::low {
 	using MicroBytecode = std::vector<MicroInstruction>;
 
-	struct LowCodePosition {
-		base::StrID function_name;
-		u64         instruction_index;
-	};
-
 	/**
 	 * @brief Micro bytecode representation of function data.
 	 */
@@ -49,6 +44,8 @@ namespace vm::low {
 		struct InstructionRange {
 			usize begin, end;
 			auto  operator<=>(const InstructionRange&) const = default;
+
+			inline bool contains(usize index) const { return begin <= index && index < end; }
 		};
 
 		/**
@@ -56,7 +53,12 @@ namespace vm::low {
 		 * ranges.
 		 * @note Vector indexes correspond to FatBytecode instruction indexes
 		 */
-		base::Optional<std::vector<InstructionRange>> instruction_mapping{};
+		std::vector<InstructionRange> instruction_mapping;
+	};
+
+	struct LowCodePosition {
+		CRef<LowFuncData> function;
+		usize             instruction_index;
 	};
 
 	/**

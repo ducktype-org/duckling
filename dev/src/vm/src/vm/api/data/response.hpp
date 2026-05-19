@@ -51,7 +51,7 @@ namespace vm::api {
 
 		struct CodePosition {
 			base::StrID                         function_name;
-			base::Optional<u64>                 instr_number;
+			u64                                 instr_number;
 			base::Optional<dia::SourcePosition> source_position;
 			NLOHMANN_DEFINE_TYPE_INTRUSIVE(CodePosition, function_name, instr_number);
 		};

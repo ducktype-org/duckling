@@ -221,24 +221,21 @@ namespace vm {
 		if (!maybe_lp) return maybe_lp.error();
 		auto low_position = maybe_lp.value();
 
-		// Try to obtain high position
-		auto maybe_hp = loader.mapLowVMProgramPositionToCodeCollectionPosition(low_position);
-		if (!maybe_hp) return api::ApiError{ api::OtherError{ "step error: missing mapping" } };
-		auto high_position = maybe_hp.value();
+		auto                               function    = low_position.function;
+		auto                               mapping     = function->instruction_mapping;
+		low::LowFuncData::InstructionRange instr_range = { 0, std::numeric_limits<usize>::max() };
 
-		// Obtain function mapping (no checks because high_position did the same already)
-		auto function = getLoadedProgram()->getFunctions().at(high_position.function_name);
-		auto mapping  = function->instruction_mapping.value();
+		// Try to obtain high position and optimize instruction range to step over
+		auto maybe_hp = loader.mapLowVMProgramPositionToCodeCollectionPosition(low_position);
+		if (maybe_hp) instr_range = mapping[maybe_hp->instruction_index];
 
 		// We do one step, then we go until we're outside the exclusive range (begin, end).
 		// Naive approach "while (in range [begin, end)) { microstep(); }" would fail on instruction
 		// jumping to itself.
 
-		base::StrID orig_func_name              = low_position.function_name;
-		auto [orig_instr_begin, orig_instr_end] = mapping[high_position.instruction_index];
-		auto in_exclusive_range                 = [=](const low::LowCodePosition& pos) {
-            return pos.function_name == orig_func_name && orig_instr_begin < pos.instruction_index
-                && pos.instruction_index < orig_instr_end;
+		auto in_exclusive_range = [=](const low::LowCodePosition& pos) {
+			return pos.function == function && instr_range.begin < pos.instruction_index
+			    && pos.instruction_index < instr_range.end;
 		};
 
 		do {
@@ -266,25 +263,22 @@ namespace vm {
 		if (!maybe_lp) return std::unexpected(maybe_lp.error());
 		auto low_position = maybe_lp.value();
 
-		// Obtain function name
-		auto [function_name, _] = low_position;
-
 		api::response::CodePosition code_position = {
-			.function_name   = function_name,
-			.instr_number    = std::nullopt,
+			.function_name   = low_position.function->name,
+			.instr_number    = 0,
 			.source_position = std::nullopt,
 		};
 
 		// Try to obtain high position
 		auto maybe_hp = loader.mapLowVMProgramPositionToCodeCollectionPosition(low_position);
-		if_opt_none(maybe_hp) return code_position;
+		if (!maybe_hp) return code_position;
 		auto high_position = maybe_hp.value();
 
 		code_position.instr_number = high_position.instruction_index;
 
 		// Try to obtain source position
 		auto maybe_sp = loader.mapCodeCollectionPositionToFilePosition(high_position);
-		if_opt_none(maybe_sp) return code_position;
+		if (!maybe_sp) return code_position;
 		auto source_position = maybe_sp.value();
 
 		code_position.source_position = source_position;

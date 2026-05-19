@@ -89,15 +89,7 @@ namespace vm::loader {
 		};
 
 		std::expected<FatBytecodePosition, MappingException> mapLowVMProgramPositionToCodeCollectionPosition(
-			std::variant<u64, base::StrID> function_identifier, usize instruction_index
-		) const;
-
-		std::expected<FatBytecodePosition, MappingException> mapLowVMProgramPositionToCodeCollectionPosition(
 			low::LowCodePosition position
-		) const;
-
-		std::expected<base::Optional<dia::SourcePosition>, MappingException> mapCodeCollectionPositionToFilePosition(
-			base::StrID function_id, usize instruction_index
 		) const;
 
 		std::expected<base::Optional<dia::SourcePosition>, MappingException> mapCodeCollectionPositionToFilePosition(
