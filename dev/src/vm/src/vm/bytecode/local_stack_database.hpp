@@ -126,6 +126,8 @@ namespace vm::code {
 
 		base::StrID getTypeName(StackStateID state, base::StrID name) const;
 
+		base::StrID getTypeName(StackStateID state, usize idx) const;
+
 		bool eqTypes(StackStateID state_1, StackStateID state_2);
 
 		LocalStackDb();

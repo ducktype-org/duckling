@@ -55,8 +55,12 @@ usize ls_db::getIdxOf(StackStateID state, base::StrID name) const {
 }
 
 base::StrID ls_db::getTypeName(StackStateID state, base::StrID name) const {
-	auto typestack_id = stack_state_to_substacks.at(u64(state)).second;
 	auto idx          = getIdxOf(state, name);
+	return getTypeName(state, idx);
+}
+
+base::StrID ls_db::getTypeName(StackStateID state, usize idx) const {
+	auto typestack_id = stack_state_to_substacks.at(u64(state)).second;
 	return typestack.at(typestack_id, idx);
 }
 
