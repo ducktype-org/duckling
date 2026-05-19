@@ -239,10 +239,10 @@ namespace vm {
 		// Naive approach "while (in range [begin, end)) { microstep(); }" would fail on instruction
 		// jumping to itself.
 
-		u64 orig_func_id                        = low_position.function_id;
+		base::StrID orig_func_name              = low_position.function_name;
 		auto [orig_instr_begin, orig_instr_end] = mapping[high_position.instruction_index];
 		auto in_exclusive_range                 = [=](const low::LowCodePosition& pos) {
-            return pos.function_id == orig_func_id && orig_instr_begin < pos.instruction_index
+            return pos.function_name == orig_func_name && orig_instr_begin < pos.instruction_index
                 && pos.instruction_index < orig_instr_end;
 		};
 
@@ -272,8 +272,7 @@ namespace vm {
 		auto low_position = maybe_lp.value();
 
 		// Obtain function name
-		auto [function_id, _] = low_position;
-		auto function_name    = getLoadedProgram()->getFunctions()[function_id].name;
+		auto [function_name, _] = low_position;
 
 		api::response::CodePosition code_position = {
 			.function_name   = function_name,

@@ -20,8 +20,8 @@ namespace vm::low {
 	using MicroBytecode = std::vector<MicroInstruction>;
 
 	struct LowCodePosition {
-		u64 function_id;
-		u64 instruction_index;
+		base::StrID function_name;
+		u64         instruction_index;
 	};
 
 	/**

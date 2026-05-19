@@ -604,8 +604,8 @@ namespace vm {
 				     std::views::enumerate(process_program->getFunctions())) {
 					if (func.bc.data() <= instr && instr < func.bc.data() + func.bc.size()) {
 						return low::LowCodePosition{
-							.function_id = static_cast<u64>(idx),  // Assuming function_id is int
-							.instruction_index = static_cast<u64>(instr - func.bc.data())
+							.function_name     = func.name,
+							.instruction_index = static_cast<u64>(instr - func.bc.data()),
 						};
 					}
 				}
