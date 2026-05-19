@@ -43,11 +43,18 @@ ls_db::tp_size ls_db::getByteOffset(StackStateID state, base::StrID name) const 
 	return getNameEntry(state, name).size_in_bytes;
 }
 
+bool ls_db::contains(StackStateID state, base::StrID name) const {
+	try {
+		getNameEntry(state, name);
+		return true;
+	} catch (std::invalid_argument& e) { return false; }
+}
+
 usize ls_db::getIdxOf(StackStateID state, base::StrID name) const {
 	return getNameEntry(state, name).size_in_blocks;
 }
 
-CRef<vm::code::valid_type::ValidType> ls_db::getType(StackStateID state, base::StrID name) const {
+base::StrID ls_db::getTypeName(StackStateID state, base::StrID name) const {
 	auto typestack_id = stack_state_to_substacks.at(u64(state)).second;
 	auto idx          = getIdxOf(state, name);
 	return typestack.at(typestack_id, idx);
@@ -176,13 +183,11 @@ ls_db_bld::TypeStackID ls_db_bld::getTypeStackId(StackStateID state) const {
 	CORE_UNREACHABLE();
 }
 
-StackStateID ls_db_bld::push(
-	StackStateID state, base::StrID name, CRef<valid_type::ValidType> type
-) {
+vm::code::StackStateID ls_db_bld::push(StackStateID state, base::StrID name, base::StrID type) {
 	auto node_id = getTreeNodeId(state);
 	auto child   = Child{
 		  .name        = name,
-		  .byte_offset = tree[node_id].byte_depth + type->getSize(),
+		  .byte_offset = tree[node_id].byte_depth + types_ctx.at(type)->getSize(),
 	};
 
 	auto new_node_id = tree[node_id].emplaceChild(child, tree.size());
@@ -193,7 +198,7 @@ StackStateID ls_db_bld::push(
 				.children   = {},
 				.depth      = tree[node_id].depth + 1,
 				.prev       = node_id,
-				.byte_depth = tree[node_id].byte_depth + type->getSize(),
+				.byte_depth = tree[node_id].byte_depth + types_ctx.at(type)->getSize(),
 			}
 		);
 	}
@@ -209,25 +214,27 @@ StackStateID ls_db_bld::push(
 	return StackStateID{ to_lazy_process.size() };
 }
 
-StackStateID ls_db_bld::pop(StackStateID state) {
+vm::code::StackStateID ls_db_bld::pop(StackStateID state, usize amount) {
 	auto node_id = getTreeNodeId(state);
-	CORE_ASSERT(node_id != 0, "We are not trying to remove the root");
-	auto new_node_id = tree[node_id].prev;
+
+	auto new_node_id = node_id;
+	for (usize i = 0; i < amount; i++) {
+		CORE_ASSERT(new_node_id != 0, "We are not trying to remove the root");
+		new_node_id = tree[new_node_id].prev;
+	}
 
 	to_lazy_process.emplace_back(
 		TypeOp{
 			.name_stack_id = new_node_id,
 			.idx_prev      = u64{ state },
-			.op            = PopOp{},
+			.op            = PopOp{ .amount = amount },
 		}
 	);
 
 	return StackStateID{ to_lazy_process.size() };
 }
 
-StackStateID ls_db_bld::change(
-	StackStateID state, base::StrID name, CRef<valid_type::ValidType> type
-) {
+vm::code::StackStateID ls_db_bld::change(StackStateID state, base::StrID name, base::StrID type) {
 	auto node_id = getTreeNodeId(state);
 
 	to_lazy_process.emplace_back(
@@ -244,6 +251,11 @@ StackStateID ls_db_bld::change(
 	return StackStateID{ to_lazy_process.size() };
 }
 
+usize ls_db_bld::size(StackStateID state) const {
+	auto node_id = getTreeNodeId(state);
+	return tree[node_id].depth;
+}
+
 vm::code::LocalStackDb ls_db_bld::finalize() {
 	usize order = 0;
 
@@ -252,7 +264,7 @@ vm::code::LocalStackDb ls_db_bld::finalize() {
 	std::vector<std::pair<NameStackID, TypeStackID>> stack_state_to_substacks{
 		to_lazy_process.size()
 	};
-	persistent::DummyVector<CRef<valid_type::ValidType>> typestack{};
+	persistent::DummyVector<base::StrID> typestack{};
 
 
 	auto dfs = [&](auto&&                                   self,
@@ -311,7 +323,9 @@ vm::code::LocalStackDb ls_db_bld::finalize() {
 
 		variant_match(oper.op) {
 			variant_case_novalue(CompletedOp) { CORE_UNREACHABLE(); }
-			variant_case(PopOp, pop_oper) { new_typestack_id = typestack.pop(prev_typestack_id); }
+			variant_case(PopOp, pop_oper) {
+				new_typestack_id = typestack.pop(prev_typestack_id, pop_oper.amount);
+			}
 			variant_case(PushOp, push_oper) {
 				new_typestack_id = typestack.push(prev_typestack_id, push_oper.type);
 			}

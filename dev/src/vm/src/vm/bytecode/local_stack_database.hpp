@@ -17,9 +17,6 @@
 #include <stdexcept>
 #include <variant>
 
-class LocalStackDbBuilder;
-STRONG_TYPEDEF_INT(StackStateID, u64);
-
 namespace vm::persistent {
 
 	template<typename T>
@@ -90,6 +87,8 @@ namespace vm::persistent {
 
 namespace vm::code {
 
+	STRONG_TYPEDEF_INT(StackStateID, u64);
+
 	class LocalStackDbBuilder;
 
 	class LocalStackDb {
@@ -115,15 +114,17 @@ namespace vm::code {
 		NameStackEntry getNameEntry(StackStateID state, base::StrID name) const;
 
 	public:
+		static constexpr usize       EMPTY            = 0;
 		static constexpr NameStackID EMPTY_NAME_STACK = 0;
-		static constexpr TypeStackID EMPTY_TYPE_STACK
-			= persistent::DummyVector<CRef<valid_type::ValidType>>::EMPTY;
+		static constexpr TypeStackID EMPTY_TYPE_STACK = persistent::DummyVector<base::StrID>::EMPTY;
 
 		tp_size getByteOffset(StackStateID state, base::StrID name) const;
 
+		bool contains(StackStateID state, base::StrID name) const;
+
 		usize getIdxOf(StackStateID state, base::StrID name) const;
 
-		CRef<valid_type::ValidType> getType(StackStateID state, base::StrID name) const;
+		base::StrID getTypeName(StackStateID state, base::StrID name) const;
 
 		bool eqTypes(StackStateID state_1, StackStateID state_2);
 
@@ -131,10 +132,10 @@ namespace vm::code {
 
 	private:
 		using NameMap = std::map<Lifetime, NameStackID>;
-		base::HashMap<base::StrID, NameMap>                  name_to_namestack_id{};
-		std::vector<NameStackEntry>                          namestack_entries{};
-		std::vector<std::pair<NameStackID, TypeStackID>>     stack_state_to_substacks{};
-		persistent::DummyVector<CRef<valid_type::ValidType>> typestack{};
+		base::HashMap<base::StrID, NameMap>              name_to_namestack_id{};
+		std::vector<NameStackEntry>                      namestack_entries{};
+		std::vector<std::pair<NameStackID, TypeStackID>> stack_state_to_substacks{};
+		persistent::DummyVector<base::StrID>             typestack{};
 
 		LocalStackDb(
 			const decltype(name_to_namestack_id)&     name_to_id,
@@ -175,14 +176,16 @@ namespace vm::code {
 		};
 
 		struct PushOp {
-			CRef<valid_type::ValidType> type;
+			base::StrID type;
 		};
 
-		struct PopOp {};
+		struct PopOp {
+			usize amount;
+		};
 
 		struct ChangeOp {
-			base::StrID                 var_name;
-			CRef<valid_type::ValidType> type;
+			base::StrID var_name;
+			base::StrID type;
 		};
 
 		struct CompletedOp {
@@ -195,8 +198,9 @@ namespace vm::code {
 			std::variant<PushOp, PopOp, ChangeOp, CompletedOp> op;
 		};
 
-		std::vector<TreeNode> tree = {};
-		std::vector<TypeOp>   to_lazy_process {
+		const valid_type::ValidTypeMap& types_ctx;
+		std::vector<TreeNode>           tree = {};
+		std::vector<TypeOp>   to_lazy_process = {
 			TypeOp {
 				.name_stack_id = LocalStackDb::EMPTY_NAME_STACK,
 				.idx_prev = 0, 
@@ -213,11 +217,18 @@ namespace vm::code {
 		TypeStackID getTypeStackId(StackStateID state) const;
 
 	public:
-		StackStateID push(StackStateID state, base::StrID name, CRef<valid_type::ValidType> type);
+		LocalStackDbBuilder(const valid_type::ValidTypeMap& types_ctx): types_ctx(types_ctx) {}
 
-		StackStateID pop(StackStateID state);
+		static constexpr StackStateID EMPTY = StackStateID{0};
 
-		StackStateID change(StackStateID state, base::StrID name, CRef<valid_type::ValidType> type);
+		StackStateID push(StackStateID state, base::StrID name, base::StrID type);
+
+		StackStateID pop(StackStateID state, usize amount = 1);
+
+		StackStateID change(StackStateID state, base::StrID name, base::StrID type);
+
+		[[nodiscard]]
+		usize size(StackStateID state) const;
 
 		LocalStackDb finalize();
 	};
