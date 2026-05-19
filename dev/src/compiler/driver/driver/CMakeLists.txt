@@ -33,7 +33,7 @@ add_library(Driver
 )
 
 if(DUCKLING_USE_FIXED_STD_PATH)
-	target_compile_definitions(Driver PRIVATE STD_FIXED_PATH=\"${CMAKE_SOURCE_DIR}/src/lib\")
+	target_compile_definitions(Driver PRIVATE STD_FIXED_PATH="${CMAKE_SOURCE_DIR}/src/lib")
 endif()
 
 add_dependencies(Driver builtins_embeds)
@@ -42,6 +42,7 @@ make_module(Driver USES Base QueryFramework SystemCommand HELIOS MIR LIR LLVMBac
 
 duck_add_test(compiler driver tests/driver_test.cpp USES Driver Artifacts)
 duck_add_test(compiler manifest_json tests/manifest_json_test.cpp USES Driver)
+duck_add_test(compiler driver_std_packages tests/driver_std_packages_test.cpp USES Driver Artifacts)
 duck_add_test(compiler driver_packages tests/driver_packages_test.cpp USES Driver Artifacts)
 duck_add_test_custom(compiler incremental_mark_nodes_test1 tests/incremental_mark_nodes_test1.cpp USES Driver Artifacts)
 duck_add_test_custom(compiler incremental_mark_nodes_test2 tests/incremental_mark_nodes_test2.cpp USES Driver Artifacts)
@@ -52,3 +53,4 @@ duck_add_test_custom(compiler incremental_mark_nodes_test4 tests/incremental_mar
 set_tests_properties(incremental_mark_nodes_test2 PROPERTIES DEPENDS incremental_mark_nodes_test1)
 set_tests_properties(incremental_mark_nodes_test3 PROPERTIES DEPENDS incremental_mark_nodes_test2)
 set_tests_properties(incremental_mark_nodes_test4 PROPERTIES DEPENDS incremental_mark_nodes_test3)
+target_include_directories(driver_std_packages_test PRIVATE src_private)

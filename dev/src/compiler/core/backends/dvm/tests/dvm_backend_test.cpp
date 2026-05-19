@@ -1,6 +1,14 @@
+#include "driver/manifest/manifest.hpp"
+#include "frontend/module_tree/functors.hpp"
+#include "frontend/module_tree/module_id.hpp"
+#include "frontend/packages/packages.hpp"
+#include "global_state/packages.hpp"
+
 #include <backends/dvm/dvm_backend.hpp>
+#include <driver/initialize.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
+#include <global_state/global_logger.hpp>
 #include <helios/queries/queries.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
@@ -16,6 +24,8 @@
 #include <vm/bytecode/serializer/serializer.hpp>
 
 #include <utility>
+
+using namespace compiler::driver;
 
 class DVMBackendTest final: public VmTestSuite {
 #undef TESTER_CLASS
@@ -39,17 +49,66 @@ public:
 	}
 
 protected:
-	void testWithLIR(query::Context& ctx, CRef<compiler::lir::Function> lir_function);
+	void         testWithLIR(query::Context& ctx, CRef<compiler::lir::Function> lir_function);
+	fs::FilePath artifacts_path = fs::FileManager::createRandomTempDirectory().getFilePath();
+	base::Optional<compiler::frontend::ModuleID> root_module_id;
+
+	void beforeAll() override {
+		// Initialize the compiler to have the ability to import from the standard library
+		global_state::setters::setGlobalLogger(makeBox<dia_int::Logger>());
+		compiler::frontend::packages::RawPackageInfo main_pkg{
+			.package_name = base::StrID("test_package"),
+			.version      = base::StrID("0.1.0"),
+			.package_path = fs::FilePath(path("modules/")),
+			.features     = {},
+			.dependencies = {},
+		};
+		auto init_result = compiler::driver::initializeTheCompiler(
+			compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
+				.packages_info = {main_pkg},
+				.compilation_artifacts = {
+					.artifacts_path = artifacts_path,
+				},
+				.backend_options = {
+					.llvm_backend = {},
+				},
+				.debug_options         = {},
+				.incremental           = {},
+				.execution_options     = { .worker_count = 1 },
+				.global_linking_options = { .std_lib_type = compiler::driver::options_types::GlobalLinkingOptions::DefaultStd{} },
+			}
+		);
+		root_module_id = global_state::getPackages().back().getRootModule().illegalAccess().getID();
+		assertTrue(init_result.status().isOk(), "Compiler initialization failed");
+	}
 
 private:
+	compiler::frontend::ModuleID findSubmodule(
+		compiler::frontend::ModuleID start_module, const std::vector<std::string>& path
+	) {
+		compiler::frontend::ModuleID current_module = start_module;
+		for (const auto& part: path) {
+			current_module = compiler::frontend::getModuleRef(current_module)
+			                     ->getSubmoduleByName(base::StrID(part))
+			                     .illegalAccess()
+			                     ->illegalAccess()
+			                     .getID();
+		}
+		return current_module;
+	}
+
 	auto getModuleFromPath(std::string module_path) {
 		using namespace compiler;
 
 		vm::code::CodeCollection code;
+		std::vector<std::string> path_parts = module_path | std::views::split('/')
+		                                    | std::views::transform([](auto&& part) {
+												  return std::string(part.begin(), part.end());
+											  })
+		                                    | std::ranges::to<std::vector>();
+		auto module = findSubmodule(root_module_id.value(), path_parts);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			auto module
-				= frontend::createModuleTreeWithRandomPackageID(fs::File(path(module_path)));
 			auto& top_level = ctx.query<helios::QueryTopLevelEntities>(module)->valueOrPanic();
 
 			backend_vm::DVMCodeBuilder m(ctx, false, false);
@@ -121,25 +180,25 @@ private:
 		runTestOnVm(code, input, output, args, exit_code);
 	}
 
-	void simpleTest() { runTest("modules/simple", {}, {}, {}, 42); }
+	void simpleTest() { runTest("simple", {}, {}, {}, 42); }
 
-	void functionCallsTest() { runTest("modules/function_calls", {}, {}, {}, 4); }
+	void functionCallsTest() { runTest("function_calls", {}, {}, {}, 4); }
 
-	void builtinFuncsTest() { runTest("modules/builtin_funcs", "9", "81\n82\n", {}, 82); }
+	void builtinFuncsTest() { runTest("builtin_funcs", "9", "81\n82\n", {}, 82); }
 
 	void globalVariablesTest() {
 		runTest(
-			"modules/globals", {}, "10\n42\n99\n99\n42\n99\n43\n-42\n-41\n41\n777\n1\n0\n", {}, 0
+			"globals", {}, "10\n42\n99\n99\n42\n99\n43\n-42\n-41\n41\n777\n1\n0\n", {}, 0
 		);
 	}
 
-	void booleanOperationsTest() { runTest("modules/boolean_operations", {}, {}, {}, 1); }
+	void booleanOperationsTest() { runTest("boolean_operations", {}, {}, {}, 1); }
 
-	void comparisonsTest() { runTest("modules/comparisons", {}, {}, {}, 55); }
+	void comparisonsTest() { runTest("comparisons", {}, {}, {}, 55); }
 
 	void referencesTest() {
 		runTest(
-			"modules/references",
+			"references",
 			{},
 			"10\n20\n20\n20\n20\n21\n16\n20\n-20\n-20\n-40\n-"
 			"30\n222\n111\n222\n400\n400\n400\n500\n",
@@ -150,7 +209,7 @@ private:
 
 	void recordsTest() {
 		runTest(
-			"modules/records",
+			"records",
 			{},
 			"10\n20\n-1\n-2\n5\n15\n42\n50\n100\n101\n0\n300\n99\n2000\n0\n1\n",
 			{},
@@ -159,10 +218,10 @@ private:
 	}
 
 	void staticArrayTest() {
-		runTest("modules/static_arrays", {}, "1\n100\n200\n300\n600\n20\n42\n11\n13\n4\n", {}, 0);
+		runTest("static_arrays", {}, "1\n100\n200\n300\n600\n20\n42\n11\n13\n4\n", {}, 0);
 	}
 
-	void unitsTest() { runTest("modules/units", {}, {}, {}, 0); }
+	void unitsTest() { runTest("units", {}, {}, {}, 0); }
 };
 
 

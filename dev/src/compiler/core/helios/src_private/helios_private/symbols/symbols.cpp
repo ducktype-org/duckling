@@ -141,7 +141,6 @@ namespace compiler::helios {
 	base::Optional<ScopeID> maybeScope(SymID id) {
 		variant_match(getSymRef(id)->other) {
 			variant_case(PstSymbolData, pst_data) { return pst_data.scope; }
-			variant_case_novalue(builtin::BuiltinFunctionData) { return {}; }
 			variant_case(defgen::GeneratedSymbolData, gen_data) { return gen_data.maybeScope(); }
 			variant_default { CORE_PANIC("Unhandled symbol kind"); }
 		}
@@ -522,176 +521,6 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySymbolOfSTMT);
 
-	namespace builtin {
-		namespace {
-			/**
-			 * Query all builtin symbols.
-			 *
-			 * \query_thread_safe_if_cache_and_struct
-			 */
-			DECLARE_QUERY(
-				QueryGlobalBuiltinSymbols,
-				query::EmptyKey,
-				CRef<std::vector<SymID>>,
-				({ .uses_qresult = false })
-			);
-
-			/**
-			 * @brief PResult for QueryGlobalBuiltinSymbols.
-			 * It stores both SymbolData and SymID references to them,
-			 * to avoid recomputing SymIDs on each query call.
-			 *
-			 * @importnat Once the PResult is constructed, the data inside vectors
-			 *            should remain stable, so that SymIDs references remain valid.
-			 *            For this reason we delete copy constructor and copy assignment.
-			 */
-			struct QueryGlobalBuiltinSymbols_PResult {
-				std::vector<SymbolData> data;
-				std::vector<SymID>      data_refs;
-
-				QueryGlobalBuiltinSymbols_PResult(std::vector<SymbolData>&& data):
-					  data(std::move(data)),
-					  data_refs() {
-					// we construct data_refs here to ensure stability of references:
-					for (auto& sym_data: this->data)
-						data_refs.push_back(GetSymRef_Functor::make(&sym_data));
-				}
-
-				QueryGlobalBuiltinSymbols_PResult(const QueryGlobalBuiltinSymbols_PResult&)
-					= delete;
-				QueryGlobalBuiltinSymbols_PResult(QueryGlobalBuiltinSymbols_PResult&&) = default;
-				QueryGlobalBuiltinSymbols_PResult& operator=(const QueryGlobalBuiltinSymbols_PResult&)
-					= delete;
-			};
-
-			struct IMPLEMENT_QUERY(QueryGlobalBuiltinSymbols, QueryGlobalBuiltinSymbols_PResult) {
-				static auto provide(Context& ctx, QKey) -> PResult {
-					std::vector<SymbolData> output_symbol_data;
-
-					auto char_type = tsh::SymbolType<>(
-						tsh::getCharType(), tsh::ReferenceKind::Direct, tsh::Mutability::Mutable
-					);
-					auto i32_type = tsh::SymbolType<>(
-						tsh::getIntegralType(ctx, 32, tsh::IntegralAbstractType::Signedness::Signed),
-						tsh::ReferenceKind::Direct,
-						tsh::Mutability::Mutable
-					);
-					auto i64_type = tsh::SymbolType<>(
-						tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed),
-						tsh::ReferenceKind::Direct,
-						tsh::Mutability::Mutable
-					);
-					auto u64_type = tsh::SymbolType<>(
-						tsh::getIntegralType(
-							ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned
-						),
-						tsh::ReferenceKind::Direct,
-						tsh::Mutability::Mutable
-					);
-					auto f64_type = tsh::SymbolType<>(
-						tsh::getFloatType(ctx, 64),
-						tsh::ReferenceKind::Direct,
-						tsh::Mutability::Mutable
-					);
-					auto str_type = tsh::SymbolType<>(
-						tsh::getStringType(), tsh::ReferenceKind::Direct, tsh::Mutability::Mutable
-					);
-
-					[[maybe_unused]]
-					auto unit_type
-						= tsh::SymbolType<>(
-							tsh::getUnitType(), tsh::ReferenceKind::Direct, tsh::Mutability::Mutable
-						);
-
-					std::array function_data
-						= { std::make_pair(
-								base::StrID("builtin_input_char"),
-								ctx.query<tsh::QueryFunctionType>({ {}, char_type })
-							),
-						    std::make_pair(
-								base::StrID("builtin_output_char"),
-								ctx.query<tsh::QueryFunctionType>({ { char_type }, i32_type })
-							),
-						    std::make_pair(
-								base::StrID("builtin_input_i64"),
-								ctx.query<tsh::QueryFunctionType>({ {}, i64_type })
-							),
-						    std::make_pair(
-								base::StrID("builtin_output_i64"),
-								ctx.query<tsh::QueryFunctionType>({ { i64_type }, i64_type })
-							),
-						    std::make_pair(
-								base::StrID("builtin_input_u64"),
-								ctx.query<tsh::QueryFunctionType>({ {}, u64_type })
-							),
-						    std::make_pair(
-								base::StrID("builtin_output_u64"),
-								ctx.query<tsh::QueryFunctionType>({ { u64_type }, i32_type })
-							),
-						    std::make_pair(
-								base::StrID("builtin_input_f64"),
-								ctx.query<tsh::QueryFunctionType>({ {}, f64_type })
-							),
-						    std::make_pair(
-								base::StrID("builtin_output_f64"),
-								ctx.query<tsh::QueryFunctionType>({ { f64_type }, i32_type })
-							),
-						    std::make_pair(
-								base::StrID("builtin_input_string"),
-								ctx.query<tsh::QueryFunctionType>({ {}, str_type })
-							),
-						    std::make_pair(
-								base::StrID("builtin_output_string"),
-								ctx.query<tsh::QueryFunctionType>({ { str_type }, i32_type })
-							) };
-
-					for (auto& [name, type]: function_data) {
-						auto sym_data
-							= SymbolData::makeBuiltinFunction(name, BuiltinFunctionData{ type });
-
-						output_symbol_data.emplace_back(sym_data);
-					}
-
-					return QueryGlobalBuiltinSymbols_PResult{ std::move(output_symbol_data) };
-				}
-
-				QUERY_AUTO_CACHE_CONSTRUCT_BY_LAMBDA([](CRef<PResult> p_result) -> QResult {
-					return &p_result->data_refs;
-				})
-
-			private:
-				/**
-				 * @brief This is a helper function for getAllHeliosSymbols.
-				 * Use only inside that function (and only for debug/test purposes)!
-				 */
-				static std::vector<SymID> getAllCachedSymbols() {
-					// This implementation is fragile, adjust if needed.
-
-					std::vector<SymID> out;
-
-					for (auto& [key, cache_entry]: cache)
-						for (auto sym_id: cache_entry.data.data_refs) out.emplace_back(sym_id);
-					return out;
-				}
-
-				// for getAllCachedSymbols:
-				friend std::vector<SymID> compiler::helios::getAllHeliosSymbols();
-			};
-
-			QUERY_IMPLEMENTATION_BOILERPLATE(QueryGlobalBuiltinSymbols);
-		}
-
-		LookupResult lookupGlobalBuiltins(query::Context& ctx, base::StrID name) {
-			LookupResult output{};
-
-			auto builtins = ctx.query<QueryGlobalBuiltinSymbols>({});
-
-			for (auto sym: *builtins)
-				if (name == getSymRef(sym)->common.name) output.leaves.push_back(sym);
-
-			return output;
-		}
-	}
 
 	struct IMPLEMENT_QUERY(QueryLookupInSymbol, query::QResult<LookupResult>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
@@ -945,12 +774,6 @@ namespace compiler::helios {
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			std::vector<pst::AccessLocked<pst::StmtSpecifier>> specifiers;
-
-			if (std::holds_alternative<builtin::BuiltinFunctionData>(getSymRef(key)->other)) {
-				// Builtin functions have no specifiers
-				return {};
-			}
-
 			if (std::holds_alternative<defgen::GeneratedSymbolData>(getSymRef(key)->other)) {
 				// Generated symbols have no specifiers (for now)
 				return {};
@@ -1134,9 +957,15 @@ namespace compiler::helios {
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			CORE_ASSERT(
-				kind(key) == SymbolKind::Function,
+				kind(key) == SymbolKind::Function
+				|| kind(key) == SymbolKind::Method
+				|| kind(key) == SymbolKind::FunctionDeclaration,
 				"Query function dependencies called on non-function symbol"
 			);
+			if (kind(key) == SymbolKind::FunctionDeclaration) {
+				// For function declarations we return empty dependencies, since they don't have a body.
+				return std::vector<SymID>{};
+			}
 
 
 			auto collect_deps = [&]() {
@@ -1152,10 +981,6 @@ namespace compiler::helios {
 				variant_case_novalue(PstSymbolData) {
 					// Just a PST function.
 					return collect_deps();
-				}
-				variant_case(builtin::BuiltinFunctionData, btd_data) {
-					// Builtin functions have no dependencies
-					return {};
 				}
 				variant_case(defgen::GeneratedSymbolData, gsd_data) {
 					CORE_ASSERT(
@@ -1221,16 +1046,13 @@ namespace compiler::helios {
 		);
 
 		auto pst_symbols = ImplementationOf_QuerySymbolOfSTMT::getAllCachedSymbols();
-		auto builtin_symbols
-			= builtin::ImplementationOf_QueryGlobalBuiltinSymbols::getAllCachedSymbols();
 		auto generated_symbols
 			= defgen::ImplementationOf_QueryGeneratedSymbol::getAllCachedSymbols();
 
 		std::vector<SymID> output;
-		output.reserve(pst_symbols.size() + builtin_symbols.size() + generated_symbols.size());
+		output.reserve(pst_symbols.size() + generated_symbols.size());
 
 		output.insert(output.end(), pst_symbols.begin(), pst_symbols.end());
-		output.insert(output.end(), builtin_symbols.begin(), builtin_symbols.end());
 		output.insert(output.end(), generated_symbols.begin(), generated_symbols.end());
 
 		return output;

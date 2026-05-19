@@ -159,11 +159,15 @@ namespace compiler::driver {
 			// Temporary directory for the `.a` files for the standard library is just a root
 			// collection, where every ".a" file is located.
 			std::string result
-				= "-L" + global_state::getRootCollection()->getDirectoryPath().string();
+				= "-L" + getStdLibrariesDirectory().string();
 			for (const auto& config: STD_PACKAGES_CONFIG)
 				result += " -l:" + std::string(config.name) + ".a";
 			return result;
 		}
 		return {};
+	}
+
+	fs::FilePath getStdLibrariesDirectory() {
+		return global_state::getRootCollection()->getDirectoryPath();
 	}
 }

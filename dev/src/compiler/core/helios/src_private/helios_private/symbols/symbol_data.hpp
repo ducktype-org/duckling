@@ -74,7 +74,7 @@ namespace compiler::helios {
 	 */
 	struct SymbolData final {
 		using OtherData
-			= std::variant<PstSymbolData, builtin::BuiltinFunctionData, defgen::GeneratedSymbolData>;
+			= std::variant<PstSymbolData, defgen::GeneratedSymbolData>;
 
 		SymbolData(CommonSymbolData common, OtherData other);
 
@@ -84,10 +84,6 @@ namespace compiler::helios {
 
 		static SymbolData makePSTSymbolData(CommonSymbolData common_data, PstSymbolData pst_data);
 
-		static SymbolData makeBuiltinFunction(
-			base::StrID name, builtin::BuiltinFunctionData builtin_data
-		);
-
 		static SymbolData makeGeneratedSymbol(
 			base::StrID name, defgen::GeneratedSymbolData generated_data
 		);
@@ -96,9 +92,6 @@ namespace compiler::helios {
 		ScopeID getScope() const {
 			variant_match(other) {
 				variant_case(PstSymbolData, pst_data) { return pst_data.scope; }
-				variant_case_novalue(builtin::BuiltinFunctionData) {
-					base::NotYetImplemented("Can't get scope of builtin function.");
-				}
 				variant_case(defgen::GeneratedSymbolData, gen_data) { return gen_data.getScope(); }
 				variant_default { CORE_UNREACHABLE(); }
 			}

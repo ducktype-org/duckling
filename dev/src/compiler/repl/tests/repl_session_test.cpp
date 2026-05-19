@@ -309,7 +309,7 @@ namespace compiler::repl {
 			ReplSession session;
 
 			auto script_file = fs::FileManager::createRandomTempFile(
-				"var loaded_x: i32 = 1;\nloaded_x = 10;\nbuiltin_output_i64(loaded_x + 3);"
+				"var loaded_x: i32 = 1;\nloaded_x = 10;"
 			);
 			auto script_path = std::string("   ") + script_file.getFilePath().string();
 
@@ -322,7 +322,7 @@ namespace compiler::repl {
 			);
 
 			auto updated_history_size = session.m_history.size();
-			ASSERT_EQUAL(3UL, updated_history_size - initial_history_size);
+			ASSERT_EQUAL(2UL, updated_history_size - initial_history_size);
 			assertFalse(
 				session.m_suppress_repl_feedback_during_script_load,
 				"Output suppression should be restored"
@@ -341,7 +341,7 @@ namespace compiler::repl {
 			ReplSession session;
 
 			auto script_file = fs::FileManager::createRandomTempFile(
-				"var cmd_x: i32 = 7;\ncmd_x = cmd_x + 2;\nbuiltin_output_i64(cmd_x);"
+				"var cmd_x: i32 = 7;\ncmd_x = cmd_x + 2;"
 			);
 			auto command = std::string("/load ") + script_file.getFilePath().string();
 

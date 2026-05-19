@@ -634,8 +634,6 @@ namespace compiler::helios {
 					= is_repl_module
 				   && ctx.query<frontend::QueryReplModuleParent>(module_id).has_value();
 
-				if (!repl_has_parent) return builtin::lookupGlobalBuiltins(ctx, key.name);
-
 				// For REPL modules with parents, skip duplicating builtins here.
 				// They will be resolved via the parent chain in QueryLookupInScopeAndParents.
 				return LookupResult{};

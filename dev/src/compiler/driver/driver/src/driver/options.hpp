@@ -77,12 +77,12 @@ namespace compiler::driver {
 			 * The type of standard library to use, or
 			 * no standard library at all.
 			 */
-			std::variant<NoStd, DefaultStd, CustomStd> std_lib_type;
+			std::variant<NoStd, DefaultStd, CustomStd> std_lib_type = NoStd{};
 
 			/**
 			 * Whether to link the C standard library.
 			 */
-			bool link_c_standard_library;
+			bool link_c_standard_library = false;
 		};
 	}
 

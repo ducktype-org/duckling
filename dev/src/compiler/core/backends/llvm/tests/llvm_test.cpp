@@ -13,6 +13,7 @@
 #include <query_framework/context/context.hpp>
 #include <query_framework/entry/with_context_do.hpp>
 #include <tester/tester.hpp>
+#include "diagnostic_interactive/module_flags/module_flags.hpp"
 
 #include <regex>
 #include <utility>
@@ -51,6 +52,7 @@ protected:
 		global_state::setters::setBackendOptions({
 			.llvm_backend = { global_state::BackendOptions::LLVMBackend{} },
 		});
+		dia_int::configureImmediatePrint(&std::cerr);
 	}
 
 private:
@@ -73,11 +75,11 @@ private:
 					variant_case(helios::HOUTGlobalVariable, var) {
 						CRef mir_func = &ctx.query<mir::LowerGlobalDataToMIRCtor>({ hout_glob })
 						                     ->valueOrThrow();
-						mir_func->debugPrint(std::cerr);
-						std::cerr << "\n\n\n";
+						// mir_func->debugPrint(std::cerr);
+						// std::cerr << "\n\n\n";
 						auto lir_func = ctx.query<lir::LowerToLIRFunction>({ mir_func });
-						lir_func->debugPrint(ctx, std::cerr);
-						std::cerr << "\n\n\n";
+						// lir_func->debugPrint(ctx, std::cerr);
+						// std::cerr << "\n\n\n";
 						ctors.push_back(lir_func);
 						llvm_module.addFunctionToModule(ctx, lir_func);
 					}
@@ -163,7 +165,7 @@ private:
 
 	void functionCalls() {
 		runTestForModule("modules/calls_simple", 3);
-		runTestForModule("modules/calls", 3, 5);
+		runTestForModule("modules/calls", 3, 4);
 	}
 
 	void parseFromIRCodeTest() {
@@ -199,16 +201,16 @@ private:
 		runTestForModule("modules/units/unit2", 2, 2);
 		runTestForModule("modules/units/unit3", 1, 1);
 		runTestForModule("modules/units/unit4", 1, 2);
-		runTestForModule("modules/units/unit_simple", 2, 3);
-		runTestForModule("modules/units/unit_class", 3, 4);
+		runTestForModule("modules/units/unit_simple", 2, 2);
+		runTestForModule("modules/units/unit_class", 3, 3);
 		runTestForModule("modules/units/unit_simple_multiple_modules", 1, 2);
 	}
 
 	void classTest() { runTestForModule("modules/classes/records", 10, 11); }
 
-	void stringsTest() { runTestForModule("modules/strings", 1, 3); }
+	void stringsTest() { runTestForModule("modules/strings", 2, 2); }
 
-	void ffiTest() { runTestForModule("modules/ffi", 1, 2); }
+	void ffiTest() { runTestForModule("modules/ffi", 1, 1); }
 
 	void referencesTest() {
 		auto        llvm_module = getLLVMModuleFromPath("modules/references");

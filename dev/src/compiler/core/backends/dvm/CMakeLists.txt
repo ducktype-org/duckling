@@ -16,6 +16,6 @@ add_library(DVMBackend STATIC
     src_private/operations/address_of.cpp
 )
 
-make_module(DVMBackend USES Base QueryFramework LIR LibVM Logger DebugInfo)
+make_module(DVMBackend USES Base QueryFramework LIR Driver LibVM Logger DebugInfo)
 
 duck_add_test(compiler dvm_backend tests/dvm_backend_test.cpp USES DVMBackend LibVM VmTester_sc)

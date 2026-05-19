@@ -51,14 +51,21 @@ namespace compiler::frontend {
 			// (package, alias) edge instead of on every dependency of the package.
 			auto owner_pkg_id  = getModuleRef(from)->getPackage().unlock(ctx).getID();
 			auto owner_pkg_opt = global_state::getPackageRefOpt(owner_pkg_id);
+			
+			// The only situation where owner_pkg_opt would not have value is in the tests.
 			if (not owner_pkg_opt.has_value()) return {};
+			auto owner_pkg = owner_pkg_opt.value();
 
-			auto dep_locked_opt
-				= owner_pkg_opt.value()->getPackageDependencyByAlias(path.at(0)).unlock(ctx);
-			if_opt_some(dep_locked_opt, dep_locked) {
-				auto dep_pkg_id       = dep_locked.unlock(ctx).getID();
-				auto dep_package_info = global_state::getPackageRef(dep_pkg_id);
-				current_module        = dep_package_info->getRootModule().unlock(ctx).getID();
+			if (owner_pkg_id == path.at(0)) {
+				current_module = owner_pkg->getRootModule().unlock(ctx).getID();
+			} else {
+				auto dep_locked_opt
+					= owner_pkg->getPackageDependencyByAlias(path.at(0)).unlock(ctx);
+				if_opt_some(dep_locked_opt, dep_locked) {
+					auto dep_pkg_id       = dep_locked.unlock(ctx).getID();
+					auto dep_package_info = global_state::getPackageRef(dep_pkg_id);
+					current_module        = dep_package_info->getRootModule().unlock(ctx).getID();
+				}
 			}
 		}
 

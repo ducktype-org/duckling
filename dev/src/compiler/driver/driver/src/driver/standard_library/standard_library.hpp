@@ -28,4 +28,6 @@ namespace compiler::driver {
 	base::Optional<std::string> getStdLibLinkingArgs(
 		const options_types::GlobalLinkingOptions& linking_options
 	);
+
+	fs::FilePath getStdLibrariesDirectory();
 }

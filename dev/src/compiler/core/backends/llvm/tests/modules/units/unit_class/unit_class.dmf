@@ -9,7 +9,6 @@ class Unit {}
 let a: Unit = Unit();
 
 fun foo(u: Unit) -> Unit = {
-    builtin_output_i64(1);
     return u;
 }
 

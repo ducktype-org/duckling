@@ -540,9 +540,6 @@ namespace compiler::helios {
 							}
 						}
 					}
-					variant_case(builtin::BuiltinFunctionData, builtin) {
-						return getBuiltinDecl(ctx, key);
-					}
 					variant_default { CORE_UNREACHABLE(); }
 				}
 				CORE_UNREACHABLE();

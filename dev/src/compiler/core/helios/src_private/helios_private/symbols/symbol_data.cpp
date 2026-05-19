@@ -289,18 +289,6 @@ namespace compiler::helios {
 		return { common_data, pst_data };
 	}
 
-	SymbolData SymbolData::makeBuiltinFunction(
-		const base::StrID name, builtin::BuiltinFunctionData builtin_data
-	) {
-		return {
-			{
-				.name = name,
-				.kind = SymbolKind::Function,
-			},
-			builtin_data,
-		};
-	}
-
 	SymbolData SymbolData::makeGeneratedSymbol(
 		const base::StrID name, defgen::GeneratedSymbolData generated_data
 	) {

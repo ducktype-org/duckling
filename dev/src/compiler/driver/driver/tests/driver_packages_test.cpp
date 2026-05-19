@@ -19,6 +19,7 @@
 
 #include <filesystem/file_path.hpp>
 #include <tester/tester.hpp>
+#include "diagnostic_interactive/module_flags/module_flags.hpp"
 
 #include <json/json.hpp>
 
@@ -66,6 +67,7 @@ public:
 protected:
 	void beforeAll() override {
 		global_state::setters::setGlobalLogger(makeBox<dia_int::Logger>());
+		dia_int::configureImmediatePrint(&std::cerr);
 
 		manifest = loadManifest();
 
@@ -81,6 +83,7 @@ protected:
 				.debug_options         = {},
 				.incremental           = {},
 				.execution_options     = { .worker_count = 1 },
+				.global_linking_options = {},
 			}
 		);
 
@@ -108,11 +111,8 @@ private:
 			"Manifest verification failed"
 		);
 
-		for (auto& package_info: manifest_opt->packages) {
-			package_info.package_path = fs::FilePath(
-				path(base::strConcat("modules/packages/", package_info.package_name.str()))
-			);
-		}
+		for (auto& package_info: manifest_opt->packages)
+			package_info.package_path = fs::FilePath(path(package_info.package_path.string()));
 
 		return std::move(*manifest_opt);
 	}
@@ -160,7 +160,9 @@ private:
 
 		for (const auto& raw_task: manifest.tasks) {
 			auto task_opt = driver::convertRawTaskToTask(
-				raw_task, compiler::driver::diagnostics::makeGlobalLoggerReporter()
+				raw_task,
+				driver::options_types::GlobalLinkingOptions{},
+				compiler::driver::diagnostics::makeGlobalLoggerReporter()
 			);
 			ASSERT_TRUE(task_opt.has_value());
 			ASSERT_TRUE(task_opt->type == driver::TaskType::PackageCompilation);
@@ -204,7 +206,9 @@ private:
 		};
 
 		auto result = driver::convertRawTaskToTask(
-			raw, compiler::driver::diagnostics::makeGlobalLoggerReporter()
+			raw,
+			driver::options_types::GlobalLinkingOptions{},
+			compiler::driver::diagnostics::makeGlobalLoggerReporter()
 		);
 		ASSERT_TRUE(!result.has_value());
 		ASSERT_TRUE(global_state::getGlobalLogger()->hasErrors());
