@@ -205,7 +205,7 @@ namespace vm::jit {
 					}
 
 					// Here we are calling instruction originating from bc file or debug
-					// instruction. Create Switch case parameter.
+					// instruction. Make instruction* point to switch case version of microinstruction.
 					setInstructionPtr<true>(function_to_compile, ir_builder, instr_idx);
 					ir_builder.CreateCall(
 						llvm_data.types.opfun.get(),
