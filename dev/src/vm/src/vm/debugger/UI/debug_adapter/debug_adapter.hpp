@@ -6,7 +6,7 @@
 
 #include <mutex>
 
-namespace vm::debug_adapter {
+namespace vm::debugger::debug_adapter {
 	/**
 	 * @class DebugAdapter
 	 * @brief Implements the Debug Adapter Protocol (DAP) for the VM.
@@ -27,11 +27,11 @@ namespace vm::debug_adapter {
 		void run();
 
 	private:
-		events::Listener<vm::api::ProcStatus> status_change_listener;
-		vm::debugger::Debugger                debugger;
-		std::string                           input_buffer;
-		int                                   next_seq = 1;
-		std::mutex                            output_mutex;
+		events::Listener<api::ProcStatus> status_change_listener;
+		Debugger                          debugger;
+		std::string                       input_buffer;
+		int                               next_seq = 1;
+		std::mutex                        output_mutex;
 
 		// DAP I/O
 		void send(const nlohmann::json& msg);
