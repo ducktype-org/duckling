@@ -72,18 +72,18 @@ namespace vm::debugger {
 		/**
 		 * @brief Runs the main function.
 		 */
-		std::expected<void, vm::api::ApiError> runMain();
+		std::expected<void, api::ApiError> runMain();
 
 		/**
 		 * @brief Gets the current status of the VM.
 		 * @return The current status of the VM.
 		 */
-		[[nodiscard]] vm::api::ProcStatus getStatus();
+		[[nodiscard]] api::ProcStatus getStatus();
 
 		/**
 		 * @brief Loads the file
 		 */
-		std::expected<void, vm::api::ApiError> loadFile(const fs::File& filepath);
+		std::expected<void, api::ApiError> loadFile(const fs::File& filepath);
 
 		/**
 		 * @brief Returns number of stack frames
