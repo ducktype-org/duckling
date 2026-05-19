@@ -3,6 +3,7 @@
 #include "ctv/numeric_value.hpp"
 #include "helios/hout/elements/expr.hpp"
 #include "helios/hout/elements/stmt.hpp"
+#include "helios/symbols/symbol_id_utils.hpp"
 #include "helios/tsh/kind.hpp"
 #include "helios/tsh/mutability.hpp"
 #include "helios/tsh/types.hpp"
@@ -368,7 +369,7 @@ namespace compiler::helios {
 
 		void visitFor(pst::Access<pst::For> stmt) override {
 			std::cout << "======== LOWERING FOR ========\n";
-			stmt->debugPrint(std::cout);
+			// stmt->debugPrint(std::cout);
 			std::cout << '\n';
 
 			// Preamble. Get some basic data.
@@ -418,10 +419,13 @@ namespace compiler::helios {
 				}
 			}();
 
+
+			auto meta_type = tsh::SymbolType<>::withDefaults(tsh::getMetaType());
+
 			// Coerce the iterator to the element type.
 			auto iter_type_pst = stmt->getIteratorType().unlock(ctx)->getExpr();
 			auto iter_type_hout
-				= getHoutOfExprWithExpectedType(ctx, iter_type_pst, element_type).valueOrThrow();
+				= getHoutOfExprWithExpectedType(ctx, iter_type_pst, meta_type).valueOrThrow();
 			auto iter_type = iter_type_hout->expression_type.getSymbolType();
 
 

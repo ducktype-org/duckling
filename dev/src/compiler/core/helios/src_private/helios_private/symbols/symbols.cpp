@@ -1,5 +1,7 @@
 #include "symbols.hpp"
 
+#include "frontend/pst_parser/elements/hierarchy/meta.hpp"
+#include "helios/tsh/symbol_type.hpp"
 #include "helios_private/symbols/generated_symbol_data.hpp"
 
 #include <frontend/module_tree/queries.hpp>
@@ -33,6 +35,7 @@
 
 #include <functional>
 #include <unordered_set>
+#include <variant>
 #include <vector>
 
 namespace compiler::helios {
@@ -77,6 +80,21 @@ namespace compiler::helios {
 
 	bool isGlobalVar(query::Context& ctx, SymID id) {
 		CORE_ASSERT(getSymRef(id)->common.kind == SymbolKind::Variable, "Not a variable.");
+
+		// TODOP: Here.
+		CRef<SymbolData> symbol_data = getSymRef(id);
+		if (std::holds_alternative<defgen::GeneratedSymbolData>(symbol_data->other)) {
+			auto gsd = std::get<defgen::GeneratedSymbolData>(symbol_data->other);
+			variant_match(gsd.data) {
+				variant_case_novalue(
+					defgen::GeneratedSymbolData::SelfParameter,
+					defgen::GeneratedSymbolData::Field,
+					defgen::GeneratedSymbolData::Variable,
+					defgen::GeneratedSymbolData::ControlFlowLocal
+				) return false;
+			}
+		}
+
 
 		// We go up the PST until we find a statement that determines whether the variable is global
 		// or not.
@@ -205,10 +223,13 @@ namespace compiler::helios {
 		using ControlFlowLocal    = GeneratedSymbolData::ControlFlowLocal;
 
 		// TODOP: Coercions!
-		auto iter_name      = stmt->getIteratorIdentifier().unlock(ctx)->unwrap();
-		auto iter_type_pst  = stmt->getIteratorType().unlock(ctx)->getExpr();
-		auto iter_type_hout = ctx.query<QueryHoutOfExpr>({ iter_type_pst })->valueOrThrow().ref();
-		auto iter_type      = iter_type_hout->expression_type.getSymbolType();
+		auto iter_name     = stmt->getIteratorIdentifier().unlock(ctx)->unwrap();
+		auto iter_type_pst = stmt->getIteratorType().unlock(ctx)->getExpr();
+		// auto iter_type_hout = ctx.query<QueryHoutOfExpr>({ iter_type_pst })->valueOrThrow().ref();
+		auto meta_type = tsh::SymbolType<>::withDefaults(tsh::getMetaType());
+		auto iter_type_hout
+			= getHoutOfExprWithExpectedType(ctx, iter_type_pst, meta_type).valueOrThrow();
+		auto iter_type = iter_type_hout->expression_type.getSymbolType();
 
 		auto for_scope = ctx.query<QueryPrimaryCodeScopeFor>({ stmt });
 
@@ -429,6 +450,7 @@ namespace compiler::helios {
 			// CodeDecl include things like named ifs, whiles, fors and code blocks.
 			// Note that this function should only be called if the statement creates a symbol, so
 			// we can assume that it is only named ones.
+			// TODOP: Here? Probably not
 			return SymbolData::makePSTSymbolData(
 				{
 					.name = stmt->getDeclSymbolIdentifier()->unlock(ctx)->unwrap(),
@@ -1085,7 +1107,6 @@ namespace compiler::helios {
 				for (const auto& sub_stmt: stmt.body.statements) sub_stmt->acceptVisitor(*this);
 			}
 
-			// TODOP: Here
 			void visitBlockStmt(const code::BlockStmt& stmt) override {
 				for (const auto& sub_stmt: stmt.body.statements) sub_stmt->acceptVisitor(*this);
 			}
