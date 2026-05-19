@@ -56,15 +56,15 @@ namespace vm::jit {
 		llvm::ModuleAnalysisManager mam;
 		pb.registerModuleAnalyses(mam);
 
-		// Registers all available CGSCC (Call Graph Strongly Connected Component) passes. 
+		// Registers all available CGSCC (Call Graph Strongly Connected Component) passes.
 		llvm::CGSCCAnalysisManager cgam;
 		pb.registerCGSCCAnalyses(cgam);
 
-		// Register all available function analysis passes. 
+		// Register all available function analysis passes.
 		llvm::FunctionAnalysisManager fam;
 		pb.registerFunctionAnalyses(fam);
 
-		// Register all available loop analysis passes. 
+		// Register all available loop analysis passes.
 		llvm::LoopAnalysisManager lam;
 		pb.registerLoopAnalyses(lam);
 
