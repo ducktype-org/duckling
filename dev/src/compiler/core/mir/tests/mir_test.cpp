@@ -975,11 +975,12 @@ private:
 			                     : compiler::mir::ComptimeStatus::Runtime;
 			ASSERT_EQUAL(status_main, compiler::mir::ComptimeStatus::ComptimeOnly);
 
-			auto main_comptime_status = ctx.query<compiler::mir::IsComptimeOnly>(*main_sym);
-			// In the test environment, the PST tree is not generated, so the main function
-			// is not marked as comptime-only and should be treated as a runtime function.
-			ASSERT_EQUAL(main_comptime_status, compiler::mir::ComptimeStatus::Runtime);
-
+			auto main_comptime_status_q = ctx.query<compiler::mir::IsComptimeOnly>(*main_sym);
+            auto main_comptime_status   = main_comptime_status_q->valueOrPanic();
+            
+            // In the test environment, the PST tree is not generated, so the main function
+            // is not marked as comptime-only and should be treated as a runtime function.
+            ASSERT_EQUAL(main_comptime_status, compiler::mir::ComptimeStatus::Runtime);
 			std::vector<base::CRef<dia_int::dia_args::Diagnostic>> diagnostics;
 			query::Context::collectAllDiagnostic(diagnostics);
 
@@ -993,7 +994,7 @@ private:
 				}
 			}
 
-			ASSERT_TRUE(found_main_error);
+			ASSERT_EQUAL(found_main_error, true);
 		});
 	}
 };
