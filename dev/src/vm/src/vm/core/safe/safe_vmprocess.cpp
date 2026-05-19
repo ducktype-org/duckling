@@ -239,12 +239,11 @@ namespace vm {
 		// Naive approach "while (in range [begin, end)) { microstep(); }" would fail on instruction
 		// jumping to itself.
 
-		u64   orig_func_id       = low_position.first;
-		usize orig_instr_begin   = mapping[high_position.instruction_index].begin;
-		usize orig_instr_end     = mapping[high_position.instruction_index].end;
-		auto  in_exclusive_range = [=](const std::pair<u64, u64>& pos) {
-            return pos.first == orig_func_id && orig_instr_begin < pos.second
-                && pos.second < orig_instr_end;
+		u64 orig_func_id                        = low_position.function_id;
+		auto [orig_instr_begin, orig_instr_end] = mapping[high_position.instruction_index];
+		auto in_exclusive_range                 = [=](const low::LowCodePosition& pos) {
+            return pos.function_id == orig_func_id && orig_instr_begin < pos.instruction_index
+                && pos.instruction_index < orig_instr_end;
 		};
 
 		do {

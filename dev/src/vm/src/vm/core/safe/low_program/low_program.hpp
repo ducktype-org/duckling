@@ -19,6 +19,11 @@ namespace vm::loader::compiler {
 namespace vm::low {
 	using MicroBytecode = std::vector<MicroInstruction>;
 
+	struct LowCodePosition {
+		u64 function_id;
+		u64 instruction_index;
+	};
+
 	/**
 	 * @brief Micro bytecode representation of function data.
 	 */

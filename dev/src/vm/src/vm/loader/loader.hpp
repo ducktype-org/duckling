@@ -96,7 +96,7 @@ namespace vm::loader {
 		) const;
 
 		std::expected<BytecodePosition, MappingException> mapLowVMProgramPositionToCodeCollectionPosition(
-			std::pair<u64, u64> position
+			low::LowCodePosition position
 		) const;
 
 		std::expected<base::Optional<dia::SourcePosition>, MappingException> mapCodeCollectionPositionToFilePosition(

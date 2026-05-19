@@ -219,7 +219,7 @@ std::expected<vm::loader::Loader::BytecodePosition, vm::loader::Loader::MappingE
 }
 
 std::expected<vm::loader::Loader::BytecodePosition, vm::loader::Loader::MappingException> vm::
-	loader::Loader::mapLowVMProgramPositionToCodeCollectionPosition(std::pair<u64, u64> position
+	loader::Loader::mapLowVMProgramPositionToCodeCollectionPosition(vm::low::LowCodePosition position
     ) const {
 	auto [function_id, instruction_index] = position;
 	return mapLowVMProgramPositionToCodeCollectionPosition(function_id, instruction_index);
