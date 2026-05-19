@@ -28,10 +28,13 @@ namespace vm::debug_adapter {
 
 	private:
 		events::Listener<vm::api::ProcStatus> status_change_listener;
-		vm::debugger::Debugger                debugger;
-		std::string                           input_buffer;
-		int                                   next_seq = 1;
-		std::mutex                            output_mutex;
+		events::Listener<vm::api::ExitValue>  completion_listener;
+		events::Listener<std::string>         error_listener;
+
+		vm::debugger::Debugger debugger;
+		std::string            input_buffer;
+		int                    next_seq = 1;
+		std::mutex             output_mutex;
 
 		// DAP I/O
 		void send(const nlohmann::json& msg);
@@ -47,5 +50,7 @@ namespace vm::debug_adapter {
 		void handleLaunch(const nlohmann::json& req);
 		void handleThreads(const nlohmann::json& req);
 		void handleDisconnect(const nlohmann::json& req);
+		void handlePause(const nlohmann::json& req);
+		void handleContinue(const nlohmann::json& req);
 	};
 }

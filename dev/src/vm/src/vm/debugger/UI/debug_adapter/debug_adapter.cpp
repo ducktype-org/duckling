@@ -16,12 +16,48 @@ namespace vm::debug_adapter {
 				  },
 				  status
 			  );
-
 			  message += "\n";
+
 			  this->sendEvent("output", { { "category", "console" }, { "output", message } });
 		  }),
+
+		  completion_listener([this](const vm::api::ExitValue& exit_val) {
+			  std::string return_str = "[";
+			  bool        is_first   = true;
+
+			  for (auto val: exit_val) {
+				  if (!is_first) return_str += ", ";
+				  is_first = false;
+
+				  if_opt_some(val->readData(), data) {
+					  variant_match(data) {
+						  variant_case(vm::interpreted_data_variant::Primitive, primitive) {
+							  return_str += std::to_string(primitive.value);
+						  }
+					  }
+				  }
+			  }
+			  return_str += "]";
+
+			  std::string message = "VM returned: " + return_str + "\n";
+
+			  this->sendEvent("output", { { "category", "console" }, { "output", message } });
+
+			  this->sendEvent("exited", { { "exitCode", 0 } });
+
+			  this->sendEvent("terminated", {});
+		  }),
+
+		  error_listener([this](const std::string& err) {
+			  std::string message = "Error: " + err + "\n";
+
+			  this->sendEvent("output", { { "category", "stderr" }, { "output", message } });
+		  }),
+
 		  debugger() {
 		debugger.attachOnVMChangesStatusListener(status_change_listener);
+		debugger.attachOnErrorListener(error_listener);
+		debugger.attachOnVMCompletesExecutionListener(completion_listener);
 	}
 
 	DebugAdapter DebugAdapter::get() { return {}; }
@@ -83,6 +119,10 @@ namespace vm::debug_adapter {
 			handleThreads(req);
 		else if (cmd == "disconnect")
 			handleDisconnect(req);
+		else if (cmd == "pause")
+			handlePause(req);
+		else if (cmd == "continue")
+			handleContinue(req);
 		else
 			sendResponse(req, false, { { "message", "Unknown command" } });
 	}
@@ -152,5 +192,15 @@ namespace vm::debug_adapter {
 	void DebugAdapter::handleDisconnect(const nlohmann::json& req) {
 		sendResponse(req, true);
 		sendEvent("terminated");
+	}
+
+	void DebugAdapter::handlePause(const nlohmann::json& req) {
+		debugger.pause();
+		sendResponse(req, true);
+	}
+
+	void DebugAdapter::handleContinue(const nlohmann::json& req) {
+		debugger.resume();
+		sendResponse(req, true);
 	}
 }
