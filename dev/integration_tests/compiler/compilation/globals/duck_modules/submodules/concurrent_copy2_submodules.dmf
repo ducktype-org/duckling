@@ -1,6 +1,0 @@
-import submodules.sub;
-
-fun main_copy2() -> i64 = {
-    builtin_output_i64(sub.global);
-    return 0;
-}
