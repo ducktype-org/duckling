@@ -81,7 +81,7 @@ namespace vm::loader {
 			const std::vector<fs::File>& files
 		);
 
-		struct BytecodePosition {
+		struct FatBytecodePosition {
 			base::StrID function_name;
 			usize       instruction_index;
 		};
@@ -91,11 +91,11 @@ namespace vm::loader {
 			NoFunction,
 		};
 
-		std::expected<BytecodePosition, MappingException> mapLowVMProgramPositionToCodeCollectionPosition(
+		std::expected<FatBytecodePosition, MappingException> mapLowVMProgramPositionToCodeCollectionPosition(
 			std::variant<u64, base::StrID> function_identifier, usize instruction_index
 		) const;
 
-		std::expected<BytecodePosition, MappingException> mapLowVMProgramPositionToCodeCollectionPosition(
+		std::expected<FatBytecodePosition, MappingException> mapLowVMProgramPositionToCodeCollectionPosition(
 			low::LowCodePosition position
 		) const;
 
@@ -104,7 +104,7 @@ namespace vm::loader {
 		) const;
 
 		std::expected<base::Optional<dia::SourcePosition>, MappingException> mapCodeCollectionPositionToFilePosition(
-			BytecodePosition position
+			FatBytecodePosition position
 		) const;
 	};
 }

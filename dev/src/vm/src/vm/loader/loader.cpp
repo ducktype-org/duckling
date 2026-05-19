@@ -193,7 +193,7 @@ std::expected<vm::code::CodeCollection, std::string> vm::loader::Loader::parseCo
 	});
 }
 
-std::expected<vm::loader::Loader::BytecodePosition, vm::loader::Loader::MappingException> vm::
+std::expected<vm::loader::Loader::FatBytecodePosition, vm::loader::Loader::MappingException> vm::
 	loader::Loader::mapLowVMProgramPositionToCodeCollectionPosition(
 		std::variant<u64, base::StrID> function_identifier, usize instruction_index
 	) const {
@@ -212,13 +212,13 @@ std::expected<vm::loader::Loader::BytecodePosition, vm::loader::Loader::MappingE
 		  )
 	    - 1;
 
-	return BytecodePosition{
+	return FatBytecodePosition{
 		.function_name     = maybe_function.value()->name,
 		.instruction_index = usize(candidate - mapping.begin()),
 	};
 }
 
-std::expected<vm::loader::Loader::BytecodePosition, vm::loader::Loader::MappingException> vm::
+std::expected<vm::loader::Loader::FatBytecodePosition, vm::loader::Loader::MappingException> vm::
 	loader::Loader::mapLowVMProgramPositionToCodeCollectionPosition(vm::low::LowCodePosition position
     ) const {
 	auto [function_id, instruction_index] = position;
@@ -238,7 +238,7 @@ std::expected<base::Optional<dia::SourcePosition>, vm::loader::Loader::MappingEx
 }
 
 std::expected<base::Optional<dia::SourcePosition>, vm::loader::Loader::MappingException> vm::
-	loader::Loader::mapCodeCollectionPositionToFilePosition(BytecodePosition position) const {
+	loader::Loader::mapCodeCollectionPositionToFilePosition(FatBytecodePosition position) const {
 	return mapCodeCollectionPositionToFilePosition(
 		position.function_name, position.instruction_index
 	);
