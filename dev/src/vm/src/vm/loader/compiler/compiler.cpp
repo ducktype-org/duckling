@@ -336,8 +336,7 @@ namespace vm::loader::compiler {
 
 			// Calculate the functions metadata.
 			code::FuncSignature   signature       = function.signature;
-			u64                   parameters_size        = 0;
-			u64                   parameters_shadow_size = 0;
+			usize                 parameters_size = 0;
 			std::vector<TypeCRef> parameters;
 			parameters.reserve(signature.parameters.size());
 
@@ -345,20 +344,15 @@ namespace vm::loader::compiler {
 				auto type = low_program.types->at(param.str);
 				parameters.emplace_back(type);
 				parameters_size += type->getSize().asInt();
-				parameters_shadow_size += type->getShadowSize();
 			}
-
 
 			low::MicroBytecode bytecode = lowerInstructions(ctx);
 
-			u64                   ret_type_sum        = 0;
-			u64                   ret_shadow_size_sum = 0;
-			std::vector<TypeCRef> result_types        = {};
+			u64                   ret_type_sum = 0;
+			std::vector<TypeCRef> result_types = {};
 			for (auto& ret: signature.result_types) {
-				auto type = low_program.types->at(ret);
-				ret_type_sum += type->getSize().asInt();
-				ret_shadow_size_sum += type->getShadowSize();
-				result_types.emplace_back(type);
+				ret_type_sum += low_program.types->at(ret)->getSize().asInt();
+				result_types.emplace_back(low_program.types->at(ret));
 			}
 
 			low_program.functions.insert(

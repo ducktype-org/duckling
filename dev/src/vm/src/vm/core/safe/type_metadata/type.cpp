@@ -74,7 +74,6 @@ namespace vm {
 
 		kind_type = Kind::Primitive;
 		size      = pass_size;
-        shadow_size = 1;
 		kind      = kind::Primitive();
 		if (name == "void") am_i_instantiable = false;
 	}
@@ -84,7 +83,6 @@ namespace vm {
 		state = State::Defined;
 
 		size      = POINTER_SIZE;
-        shadow_size = 1;
 		kind_type = Kind::Pointer;
 		kind      = kind::Pointer{ inner };
 	}
@@ -143,7 +141,6 @@ namespace vm {
 		state = State::Defined;
 
 		size      = POINTER_SIZE;
-        shadow_size = 1;
 		kind_type = Kind::Function;
 		kind      = kind::Function{ .parameters   = std::move(parameters),
 			                        .result_types = std::move(result) };
@@ -155,7 +152,6 @@ namespace vm {
 
 		kind_type = Kind::Opaque;
 		size      = pass_size;
-        shadow_size = 1;
 		kind      = kind::Opaque{};
 	}
 
@@ -172,7 +168,6 @@ namespace vm {
 				fixed_size_table.inner_type->finalize();
 				this->size
 					= fixed_size_table.inner_type->getSize() * fixed_size_table.element_count;
-                this->shadow_size = static_cast<ShadowOffset>(fixed_size_table.inner_type->getShadowSize() * fixed_size_table.element_count);
 			}
 			variant_case(kind::Data, data) {
 				// calculate offset and size
@@ -183,25 +178,20 @@ namespace vm {
 					field.shadow_offset = shadow_offset;
 					field.type->finalize();
 					offset += field.type->getSize();
-					shadow_offset += field.type->getShadowSize();
+					shadow_offset += 1;
 				}
 				this->size = offset;
-                this->shadow_size = shadow_offset;
 				if_opt_some(data.inheritance_metadata, imd) { inheritsFromImpl(imd); }
 				isInstantiableImpl(data);
 			}
 			variant_case(kind::Variant, variant) {
 				// calculate size
 				TypeSize data_size(0);
-                ShadowOffset shadow_data_size(0);
 				for (auto& alternative: variant.alternatives) {
 					alternative->finalize();
 					data_size = std::max(data_size, alternative->getSize());
-                    shadow_data_size = std::max(shadow_data_size, alternative->getShadowSize());
 				}
 				this->size = variant.type_tag_size + data_size;
-                // 1 for type tag + max of alternatives
-                this->shadow_size = 1 + shadow_data_size;
 				isInstantiableImpl(variant);
 			}
 		}

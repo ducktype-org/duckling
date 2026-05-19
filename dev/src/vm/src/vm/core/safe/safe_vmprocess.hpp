@@ -33,8 +33,6 @@ namespace vm {
 		friend class VmValue;
 		friend class VMValueRef;
 		friend class SafeVMThread;
-		friend class OpFuns;
-		friend class builtins::FunctionHandlers;
 
 	private:
 		std::shared_mutex rw_global;

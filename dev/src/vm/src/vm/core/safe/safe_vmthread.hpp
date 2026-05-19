@@ -65,9 +65,6 @@ namespace vm {
 		Block** block_ref_stack_base;  /// Pointer to the start of `block_ref_stack_reserved`.
 		Block** block_ref_stack_end;   /// Pointer to the first value not allocated.
 
-		ShadowBlock** block_shadow_ref_stack_base;
-		ShadowBlock** block_shadow_ref_stack_end;
-
 		std::byte* global_data_buffer_base;    /// Pointer to the start of global data buffer.
 		Block** global_block_ref_buffer_base;  /// Pointer to the start of global block ref buffer.
 
@@ -89,10 +86,6 @@ namespace vm {
 			  block_ref_stack_base(stack->getBlockRefStack()->data()),
 			  block_ref_stack_end(
 				  stack->getBlockRefStack()->data() + stack->getBlockRefStack()->size()
-			  ),
-			  block_shadow_ref_stack_base(stack->getBlockShadowRefStack()->data()),
-			  block_shadow_ref_stack_end(
-				  stack->getBlockShadowRefStack()->data() + stack->getBlockShadowRefStack()->size()
 			  ),
 			  global_data_buffer_base(global_buffer_pointers.data_buffer_base),
 			  global_block_ref_buffer_base(global_buffer_pointers.blocks_buffer_base),

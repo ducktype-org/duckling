@@ -485,9 +485,6 @@ namespace vm {
 		frame->local_block_ref_stack_base = runtime_data.block_ref_stack_base;
 		frame->local_block_ref_stack_end  = runtime_data.block_ref_stack_base;
 
-		frame->local_shadow_block_ref_stack_base = runtime_data.block_shadow_ref_stack_base;
-		frame->local_shadow_block_ref_stack_end  = runtime_data.block_shadow_ref_stack_base;
-
 		const auto* instr = start_function.bc.data();
 
 		runInterpreter(instr, local_stack, frame, *this);
@@ -518,14 +515,6 @@ namespace vm {
 			auto& block = *block_ptr;
 			process_memory.freeBlockData(block);
 			process_memory.decreaseBlockRefcount(block);
-		}
-
-		for (auto block_ptr = frame->local_shadow_block_ref_stack_base + orig_block_stack_size;
-		     block_ptr < frame->local_shadow_block_ref_stack_end;
-		     block_ptr++) {
-			auto& block = *block_ptr;
-			safe_process.shadow_memory.freeBlockData(block);
-			safe_process.shadow_memory.decreaseBlockRefcount(block);
 		}
 		*orig_frame_ptr = orig_frame_cpy;
 

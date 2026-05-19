@@ -8,10 +8,9 @@ namespace vm {
 	template<typename EntryT>
 	class BasicThreadStack final {
 	private:
-		std::vector<Frame>                  frame_stack;
-		std::vector<EntryT>                 local_stack;
+		std::vector<Frame>     frame_stack;
+		std::vector<EntryT>    local_stack;
 		std::vector<BasicBlock<EntryT>*>    block_ref_stack;
-		std::vector<ShadowBlock*>           block_shadow_ref_stack;
 
 	public:
 		static constexpr u64 FRAMES_LENGTH = 16'384;
@@ -36,18 +35,13 @@ namespace vm {
 		BasicThreadStack():
 			  frame_stack(FRAMES_LENGTH),
 			  local_stack(STACK_LENGTH),
-			  block_ref_stack(BLOCK_REF_STACK_LENGTH),
-			  block_shadow_ref_stack(BLOCK_REF_STACK_LENGTH) {}
+			  block_ref_stack(BLOCK_REF_STACK_LENGTH) {}
 
 		auto getFrameStack() -> Ref<std::vector<Frame>> { return &frame_stack; }
 
 		auto getLocalStack() -> Ref<std::vector<EntryT>> { return &local_stack; }
 
 		auto getBlockRefStack() -> Ref<std::vector<BasicBlock<EntryT>*>> { return &block_ref_stack; }
-
-		auto getBlockShadowRefStack() -> Ref<std::vector<ShadowBlock*>> {
-			return &block_shadow_ref_stack;
-		}
 	};
 
 	using ThreadStack = BasicThreadStack<std::byte>;
