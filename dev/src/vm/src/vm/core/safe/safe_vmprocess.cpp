@@ -186,7 +186,6 @@ namespace vm {
 			for (const auto& vm_value: owned_vm_values) vm_value->freeData();
 
 			memory.deinitGlobals();
-			shadow_memory.deinitGlobals();
 		} catch (exceptions::VMRuntimeException& e) {
 			std::cerr << " - VM has detected issues during program\'s deinitialization: "
 					  << e.what() << '\n';
@@ -365,18 +364,8 @@ namespace vm {
 				.global_count           = global_buffer_config.global_count,
 			});
 
-		ShadowGlobalBufferPointers shadow_global_buffer_pointers = shadow_memory.initializeNewGlobalBlocks(
-			ShadowMemory::GlobalBlocksConfig{ .global_data_offsets    = std::move(global_offsets),
-		                                      .global_blocks_idxs     = std::move(global_indices),
-		                                      .global_types           = std::move(global_types),
-		                                      .total_global_data_size = global_buffer_config.buffer_size,
-		                                      .global_count           = global_buffer_config.global_count }
-		);
-
 		for (auto& thread: vm_threads)
-			thread.updateGlobalDataBufferPointers(
-				new_global_buffer_pointers, shadow_global_buffer_pointers
-			);
+			thread.updateGlobalDataBufferPointers(new_global_buffer_pointers);
 	}
 
 	GIL& SafeVMProcess::getGIL() { return gil; }

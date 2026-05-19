@@ -52,9 +52,7 @@ namespace vm {
 		  IVMThread(thread_id, process),
 		  runtime_data(
 			  process.getMemory().initializeFrameStack(),
-			  process.shadow_memory.initializeFrameStack(),
-			  process.getMemory().getGlobalDataMemory(),
-			  process.shadow_memory.getGlobalDataMemory()
+			  process.getMemory().getGlobalDataMemory()
 		  ),
 		  safe_process(process),
 		  process_memory(process.getMemory()),
@@ -661,11 +659,9 @@ namespace vm {
 	}
 
 	void SafeVMThread::updateGlobalDataBufferPointers(
-		GlobalBufferPointersGeneric global_buffer_pointers,
-		ShadowGlobalBufferPointers  shadow_global_buffer_pointers
+		GlobalBufferPointersGeneric global_buffer_pointers
 	) {
-		runtime_data.global_data_buffer_base        = global_buffer_pointers.data_buffer_base;
-		runtime_data.global_block_ref_buffer_base   = global_buffer_pointers.blocks_buffer_base;
-		runtime_data.shadow_global_data_buffer_base = shadow_global_buffer_pointers.data_buffer_base;
+		runtime_data.global_data_buffer_base      = global_buffer_pointers.data_buffer_base;
+		runtime_data.global_block_ref_buffer_base = global_buffer_pointers.blocks_buffer_base;
 	}
 }

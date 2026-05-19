@@ -13,7 +13,6 @@
 #include <vm/core/safe/concurrency/synchronization_primitives.hpp>
 #include <vm/core/safe/low_program/low_program.hpp>
 #include <vm/core/safe/safe_vmthread.hpp>
-#include <vm/core/process/concurrency/fast_track/shadow_memory.hpp>
 #include <vm/loader/loader.hpp>
 
 #include <expected>
@@ -51,7 +50,6 @@ namespace vm {
 		low::LowVMProgramCopy loaded_program_copy;
 
 		Memory       memory;
-		ShadowMemory shadow_memory;
 
 		GIL                       gil;
 		SynchronizationPrimitives synchronization_primitives;

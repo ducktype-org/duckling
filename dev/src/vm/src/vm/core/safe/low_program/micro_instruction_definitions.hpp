@@ -666,9 +666,6 @@ DEF_MICRO_INSTR(ext_type_type, vm::low::opargs::Type, vm::low::opargs::Type)
 
 // ========= Fast Track Definitions ========
 
-DEF_MICRO_INSTR(ft_read, vm::low::opargs::PlacePtr, vm::low::opargs::Immediate)
-DEF_MICRO_INSTR(ft_write, vm::low::opargs::PlacePtr, vm::low::opargs::Immediate)
-
 // ========= MISC ========
 
 DEF_MICRO_INSTR(check_strategy)
