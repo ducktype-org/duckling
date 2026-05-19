@@ -2,6 +2,8 @@
 
 #include <poll.h>
 
+#include <base/extend_cpp/variant_match.hpp>
+
 #include <vm/api/vm.hpp>
 
 inline std::string statusToString(const vm::api::ProcStatus& status) {
@@ -110,6 +112,25 @@ namespace vm::debugger {
 	void Debugger::loadFile(const fs::File& filepath) {
 		auto result = vm::api::loadFiles(pid, { filepath });
 		if (!result.has_value()) throw std::runtime_error(vm::api::errorToString(result.error()));
+	}
+
+	api::response::StackFrameData Debugger::getStackFrameData(u64 frame_index) {
+		return vm::api::debuggerGetStackFrameData(pid, api::ThreadID(0), frame_index)
+		    .transform_error([&](const vm::api::ApiError& api_error) {
+				throw std::runtime_error(vm::api::errorToString(api_error));
+				return api_error;
+			})
+		    .value();
+	}
+
+	u64 Debugger::getNumberOfStackFrames() {
+		return vm::api::debuggerGetNumberOfStackFrames(pid, api::ThreadID(0))
+		    .transform_error([&](const vm::api::ApiError& api_error) {
+				throw std::runtime_error(vm::api::errorToString(api_error));
+				return api_error;
+			})
+		    .value()
+		    .number_of_stack_frames;
 	}
 
 	void Debugger::pause() {

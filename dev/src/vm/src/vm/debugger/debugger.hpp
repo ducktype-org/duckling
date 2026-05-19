@@ -41,7 +41,6 @@ namespace vm::debugger {
 		 */
 		events::Emitter<std::string> on_error;
 
-
 	public:
 		Debugger(const std::vector<std::string>& main_args = {});
 		Debugger(const fs::File& filepath, const std::vector<std::string>& main_args = {});
@@ -85,6 +84,16 @@ namespace vm::debugger {
 		 * @brief Loads the file
 		 */
 		void loadFile(const fs::File& filepath);
+
+		/**
+		 * @brief Returns number of stack frames
+		 */
+		u64 getNumberOfStackFrames();
+
+		/**
+		 * @brief Returns variables of stack frame
+		 */
+		api::response::StackFrameData getStackFrameData(u64 frame_index);
 
 		/**
 		 * @brief Pauses the VM
