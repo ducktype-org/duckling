@@ -72,9 +72,10 @@ namespace vm {
 		CORE_ASSERT(state == State::Declared, "Bad type define");
 		state = State::Defined;
 
-		kind_type = Kind::Primitive;
-		size      = pass_size;
-		kind      = kind::Primitive();
+		kind_type   = Kind::Primitive;
+		size        = pass_size;
+		shadow_size = 1;
+		kind        = kind::Primitive();
 		if (name == "void") am_i_instantiable = false;
 	}
 
@@ -82,9 +83,10 @@ namespace vm {
 		CORE_ASSERT(state == State::Declared, "Bad type define");
 		state = State::Defined;
 
-		size      = POINTER_SIZE;
-		kind_type = Kind::Pointer;
-		kind      = kind::Pointer{ inner };
+		size        = POINTER_SIZE;
+		shadow_size = 1;
+		kind_type   = Kind::Pointer;
+		kind        = kind::Pointer{ inner };
 	}
 
 	void Type::defineFixedSizeTable(TypeRef inner, u64 element_count) {
@@ -100,6 +102,7 @@ namespace vm {
 		state = State::Defined;
 
 		kind_type         = Kind::DynamicTable;
+		shadow_size       = 1;
 		kind              = kind::DynamicTable{ .inner_type = inner };
 		am_i_instantiable = false;
 	}
@@ -140,9 +143,10 @@ namespace vm {
 		CORE_ASSERT(state == State::Declared, "Bad type define");
 		state = State::Defined;
 
-		size      = POINTER_SIZE;
-		kind_type = Kind::Function;
-		kind      = kind::Function{ .parameters   = std::move(parameters),
+		size        = POINTER_SIZE;
+		shadow_size = 1;
+		kind_type   = Kind::Function;
+		kind        = kind::Function{ .parameters   = std::move(parameters),
 			                        .result_types = std::move(result) };
 	}
 
@@ -150,9 +154,10 @@ namespace vm {
 		CORE_ASSERT(state == State::Declared, "Bad type define");
 		state = State::Defined;
 
-		kind_type = Kind::Opaque;
-		size      = pass_size;
-		kind      = kind::Opaque{};
+		kind_type   = Kind::Opaque;
+		size        = pass_size;
+		shadow_size = 1;
+		kind        = kind::Opaque{};
 	}
 
 	void Type::finalize() {
@@ -168,6 +173,8 @@ namespace vm {
 				fixed_size_table.inner_type->finalize();
 				this->size
 					= fixed_size_table.inner_type->getSize() * fixed_size_table.element_count;
+				this->shadow_size
+					= base::safeIntConv<ShadowSize>(fixed_size_table.inner_type->getShadowSize() * fixed_size_table.element_count);
 			}
 			variant_case(kind::Data, data) {
 				// calculate offset and size
@@ -178,22 +185,27 @@ namespace vm {
 					field.shadow_offset = shadow_offset;
 					field.type->finalize();
 					offset += field.type->getSize();
-					shadow_offset += 1;
+					shadow_offset += field.type->getShadowSize();
 				}
-				this->size = offset;
+				this->size        = offset;
+				this->shadow_size = shadow_offset;
 				if_opt_some(data.inheritance_metadata, imd) { inheritsFromImpl(imd); }
 				isInstantiableImpl(data);
 			}
 			variant_case(kind::Variant, variant) {
 				// calculate size
-				TypeSize data_size(0);
+				TypeSize   data_size(0);
+				ShadowSize max_shadow_size(0);
 				for (auto& alternative: variant.alternatives) {
 					alternative->finalize();
-					data_size = std::max(data_size, alternative->getSize());
+					data_size       = std::max(data_size, alternative->getSize());
+					max_shadow_size = std::max(max_shadow_size, alternative->getShadowSize());
 				}
-				this->size = variant.type_tag_size + data_size;
+				this->size        = variant.type_tag_size + data_size;
+				this->shadow_size = 1 + max_shadow_size;
 				isInstantiableImpl(variant);
 			}
+			variant_default {}
 		}
 	}
 

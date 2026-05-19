@@ -39,6 +39,7 @@ namespace vm {
 
 		base::StrID name;
 		TypeSize    size      = TypeSize(-1);
+		ShadowSize  shadow_size = ShadowSize(-1);
 		Kind        kind_type = Kind::None;
 		TypeID      id{};
 		bool        am_i_instantiable = true;
@@ -110,6 +111,12 @@ namespace vm {
 		TypeSize getSize() const {
 			CORE_ASSERT(size != TypeSize(-1), "getSize called before type finalization");
 			return size;
+		}
+
+		[[nodiscard]]
+		ShadowSize getShadowSize() const {
+			CORE_ASSERT(shadow_size != ShadowSize(-1), "getShadowSize called before type finalization");
+			return shadow_size;
 		}
 
 		template<class T>
