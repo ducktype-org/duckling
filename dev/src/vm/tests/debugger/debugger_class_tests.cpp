@@ -14,14 +14,15 @@ class VmDebuggerTest: public tester::TestSuite {
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		// @TODO: #1222 Re-enable the tests after fixing the API.
-		// TESTER_ADD_TEST(noRunTest);
 		// TESTER_ADD_TEST(getStatusWait);
 		// TESTER_ADD_TEST(continuePauseTest);
 
+		TESTER_ADD_TEST(noRunTest);
 		TESTER_ADD_TEST(runAndGetStatus);
 		TESTER_ADD_TEST(getStatusBreakpoint);
 		TESTER_ADD_TEST(rerunTest);
 		TESTER_ADD_TEST(errorTest);
+		TESTER_ADD_TEST(memoryTest);
 	}
 
 private:
@@ -74,8 +75,8 @@ private:
 		events::Listener<std::string> error_listener([&](const std::string& err) { fail(err); });
 
 		vm::debugger::Debugger debugger{ fs::File(path(std::string(path_name))) };
-		debugger.attachOnVMChangesStatusListener(status_listener);
-		debugger.attachOnVMCompletesExecutionListener(execution_completed_listener);
+		debugger.attachOnStatusChangedListener(status_listener);
+		debugger.attachOnExecutionCompletedListener(execution_completed_listener);
 		debugger.attachOnErrorListener(error_listener);
 		debugger.runMain();
 		std::unique_lock lk(m);
@@ -150,7 +151,7 @@ private:
 
 		vm::debugger::Debugger debugger{ fs::File(path("while_true.dbc")) };
 
-		debugger.attachOnVMChangesStatusListener(status_listener);
+		debugger.attachOnStatusChangedListener(status_listener);
 		debugger.attachOnErrorListener(error_listener);
 
 		debugger.runMain();
@@ -237,8 +238,8 @@ private:
 
 		vm::debugger::Debugger debugger{ fs::File(path("debugger_test.dbc")) };
 
-		debugger.attachOnVMChangesStatusListener(status_listener);
-		debugger.attachOnVMCompletesExecutionListener(execution_completed_listener);
+		debugger.attachOnStatusChangedListener(status_listener);
+		debugger.attachOnExecutionCompletedListener(execution_completed_listener);
 		debugger.attachOnErrorListener(error_listener);
 
 		int loop = 3;
@@ -259,38 +260,54 @@ private:
 	}
 
 	void errorTest() {
-		std::atomic<size_t>     error_counter   = 0;
-		const size_t            expected_errors = 3;
-		std::mutex              m;
-		std::condition_variable cv;
-		vm::debugger::Debugger  debugger{ fs::File(path("while_true_no_breakpoint.dbc")) };
-
-		events::Listener<std::string> error_listener([&](const std::string&) {
-			{
-				std::lock_guard lk(m);
-				error_counter++;
-			}
-			cv.notify_one();
-		});
-
-		debugger.attachOnErrorListener(error_listener);
+		vm::debugger::Debugger debugger{ fs::File(path("while_true_no_breakpoint.dbc")) };
 
 		debugger.runMain();
-		debugger.runMain();  // 1st error
+		ASSERT_TRUE(!debugger.runMain());  // 1st error
 
-		debugger.resume();   // 2nd error
+		ASSERT_TRUE(!debugger.resume());   // 2nd error
 
 		debugger.pause();
-		debugger.pause();  // 3rd error
+		ASSERT_TRUE(!debugger.pause());  // 3rd error
 
 		debugger.resume();
 
+		ASSERT_TRUE(std::holds_alternative<vm::api::Running>(debugger.getStatus()));
+	}
+
+	void memoryTest() {
+		vm::debugger::Debugger debugger{ fs::File(path("breakpoint_all_types.dbc")) };
+		std::mutex             m;
+
+		std::condition_variable cv;
+
+		events::Listener<vm::api::ProcStatus> status_listener([&](const vm::api::ProcStatus& status
+		                                                      ) {
+			if (status.index() == altIndex(vm::api::Paused)) cv.notify_one();
+		});
+		debugger.attachOnStatusChangedListener(status_listener);
+		debugger.runMain();
 		std::unique_lock lk(m);
 		ASSERT_TRUE(cv.wait_for(lk, std::chrono::milliseconds(100), [&] {
-			return error_counter == expected_errors;
+			return std::holds_alternative<vm::api::Paused>(debugger.getStatus());
 		}));
-		ASSERT_TRUE(std::holds_alternative<vm::api::Running>(debugger.getStatus()));
-		ASSERT_EQUAL_PRINT(expected_errors, error_counter.load());
+
+		auto main_thread_id = vm::api::ThreadID(0);
+
+		auto response = debugger.getNumberOfStackFrames(main_thread_id).value();
+		ASSERT_EQUAL(2, response);
+		auto info = debugger.getStackFrameData(main_thread_id, 1).value();
+		ASSERT_EQUAL(9, info.frame_vars.size());
+		ASSERT_EQUAL_PRINT("0", info.frame_vars[0].value.str());          // ret0
+		ASSERT_EQUAL_PRINT("0", info.frame_vars[1].value.str());          // arg0
+		ASSERT_EQUAL_PRINT("null", info.frame_vars[2].value.str());       // arg1
+		ASSERT_EQUAL_PRINT("<pointer>", info.frame_vars[3].value.str());  // struct_pointer
+		ASSERT_EQUAL_PRINT("<pointer>", info.frame_vars[4].value.str());  // dyntable_pointer
+		ASSERT_EQUAL_PRINT(
+			"<pointer>", info.frame_vars[5].value.str()
+		);  // fixtable_pointer		ASSERT_EQUAL_PRINT("<pointer>", info.frame_vars[6].value.str());
+		ASSERT_EQUAL_PRINT("<pointer>", info.frame_vars[7].value.str());  // variant_pointer
+		ASSERT_EQUAL_PRINT("42", info.frame_vars[8].value.str());         // new_variant_data_value
 	}
 };
 
