@@ -49,28 +49,23 @@ namespace vm::jit {
 		}
 
 
-		llvm::PassBuilder pb;
-		// For maximum optimization:
-
-		// Register all available module analyses passess.
-		llvm::ModuleAnalysisManager mam;
-		pb.registerModuleAnalyses(mam);
-
-		// Registers all available CGSCC (Call Graph Strongly Connected Component) passes.
-		llvm::CGSCCAnalysisManager cgam;
-		pb.registerCGSCCAnalyses(cgam);
-
-		// Register all available function analysis passes.
+		llvm::PassBuilder             pb;
+		llvm::LoopAnalysisManager     lam;
 		llvm::FunctionAnalysisManager fam;
+		llvm::CGSCCAnalysisManager    cgam;
+		llvm::ModuleAnalysisManager   mam;
+
+		// For maximum optimization:
+		// Register all available module analyses passess.
+		pb.registerModuleAnalyses(mam);
+		// Registers all available CGSCC (Call Graph Strongly Connected Component) passes.
+		pb.registerCGSCCAnalyses(cgam);
+		// Register all available function analysis passes.
 		pb.registerFunctionAnalyses(fam);
-
 		// Register all available loop analysis passes.
-		llvm::LoopAnalysisManager lam;
 		pb.registerLoopAnalyses(lam);
-
 		// Connects all passess together, so they are not independent and can share analysis.
 		pb.crossRegisterProxies(lam, fam, cgam, mam);
-
 		// Register all O3 optimizations.
 		auto mpm = pb.buildPerModuleDefaultPipeline(llvm::OptimizationLevel::O3);
 		mpm.run(m, mam);
