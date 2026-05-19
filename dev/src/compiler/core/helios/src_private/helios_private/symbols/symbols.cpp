@@ -1,7 +1,9 @@
 #include "symbols.hpp"
 
 #include "frontend/pst_parser/elements/hierarchy/meta.hpp"
+#include "helios/tsh/kind.hpp"
 #include "helios/tsh/symbol_type.hpp"
+#include "helios/tsh/types.hpp"
 #include "helios_private/symbols/generated_symbol_data.hpp"
 
 #include <frontend/module_tree/queries.hpp>
@@ -222,16 +224,46 @@ namespace compiler::helios {
 		using GeneratedSymbolData = defgen::GeneratedSymbolData;
 		using ControlFlowLocal    = GeneratedSymbolData::ControlFlowLocal;
 
-		// TODOP: Coercions!
-		auto iter_name     = stmt->getIteratorIdentifier().unlock(ctx)->unwrap();
-		auto iter_type_pst = stmt->getIteratorType().unlock(ctx)->getExpr();
-		// auto iter_type_hout = ctx.query<QueryHoutOfExpr>({ iter_type_pst })->valueOrThrow().ref();
-		auto meta_type = tsh::SymbolType<>::withDefaults(tsh::getMetaType());
-		auto iter_type_hout
-			= getHoutOfExprWithExpectedType(ctx, iter_type_pst, meta_type).valueOrThrow();
-		auto iter_type = iter_type_hout->expression_type.getSymbolType();
-
+		auto iter_name = stmt->getIteratorIdentifier().unlock(ctx)->unwrap();
 		auto for_scope = ctx.query<QueryPrimaryCodeScopeFor>({ stmt });
+
+		// Get the element type from the iterable.
+		auto iterable_pst  = stmt->getIterable().unlock(ctx)->getExpr();
+		auto iterable_hout = ctx.query<QueryHoutOfExpr>({ iterable_pst })->valueOrThrow().ref();
+		tsh::SymbolType<> iterable_type = iterable_hout->expression_type.getSymbolType();
+		auto              iterable_kind = iterable_type.getType().getKind();
+
+		auto element_type = [&]() -> tsh::SymbolType<> {
+			switch (iterable_kind) {
+			case tsh::Kind::DynamicArray:
+				return iterable_type.getType().as<tsh::DynamicArrayAbstractType>().getElementType();
+			case tsh::Kind::StaticArray:
+				return iterable_type.getType().as<tsh::StaticArrayAbstractType>().getElementType();
+			default:
+				// TODOP: this panic should not happen i think?
+				CORE_UNREACHABLE();
+			}
+		}();
+		// TODOP: Some kind of good error which regards the inner element if the collection specificaly
+
+		// Get the type if it exists.
+		auto type_holder         = stmt->getIteratorType().unlock(ctx);
+		auto maybe_iter_type_pst = type_holder->getExpr().unlockOpt(ctx);
+
+		tsh::SymbolType<> iter_type = [&]() -> tsh::SymbolType<> {
+			match_optional(maybe_iter_type_pst) {
+				opt_some(type) {
+					// If a type exists we use it.
+					auto type_ctv = getTypeCTVFromPST(ctx, type);
+					return type_ctv.valueOrThrow().get<tsh::SymbolType<>>().value();
+				}
+				opt_none {
+					// Otherwise we infer it from the element type.
+					return element_type;
+				}
+			}
+			CORE_UNREACHABLE();
+		}();
 
 		return ctx.query<defgen::QueryGeneratedSymbol>({
 			.name                  = iter_name,
@@ -783,10 +815,9 @@ namespace compiler::helios {
 				auto                         pointed = using_stmt->getPointed().unlock(ctx);
 				usize                        size    = pointed->numberOfNames();
 				std::vector<tpc::Identifier> pointed_to_names(size);
-				for (usize i = 0; i < size; i++) {
+				for (usize i = 0; i < size; i++)
 					pointed_to_names[i]
 						= { .value = pointed->getNameByIndex(i).unlock(ctx)->unwrap() };
-				}
 
 				auto lookup_res = lookupChain(
 					ctx,

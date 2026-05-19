@@ -3,7 +3,6 @@
 #include "ctv/numeric_value.hpp"
 #include "helios/hout/elements/expr.hpp"
 #include "helios/hout/elements/stmt.hpp"
-#include "helios/symbols/symbol_id_utils.hpp"
 #include "helios/tsh/kind.hpp"
 #include "helios/tsh/mutability.hpp"
 #include "helios/tsh/types.hpp"
@@ -41,8 +40,6 @@
 
 #include "string_id/string_id.hpp"
 #include <query_framework/query_errors.hpp>
-
-#include <algorithm>
 
 namespace compiler::helios {
 
@@ -388,6 +385,9 @@ namespace compiler::helios {
 			auto iterable_type = iterable_hout->expression_type.getSymbolType();
 			auto iterable_kind = iterable_type.getType().getKind();
 
+			std::cout << "iterable type: " << iterable_type.toString() << '\n';
+
+
 			if (iterable_kind != tsh::Kind::DynamicArray
 			    && iterable_kind != tsh::Kind::StaticArray) {
 				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
@@ -404,30 +404,7 @@ namespace compiler::helios {
 			auto u64_mut_type = tsh::SymbolType<>::withDefaults(
 				tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned)
 			);
-			auto u64_immut_type = u64_mut_type.withMutability(tsh::Mutability::Mutable);
-
-			auto element_type = [&]() {
-				switch (iterable_kind) {
-				case tsh::Kind::DynamicArray:
-					return iterable_type.getType().as<tsh::DynamicArrayAbstractType>().getElementType(
-					);
-				case tsh::Kind::StaticArray:
-					return iterable_type.getType().as<tsh::StaticArrayAbstractType>().getElementType(
-					);
-				default:
-					CORE_UNREACHABLE();
-				}
-			}();
-
-
-			auto meta_type = tsh::SymbolType<>::withDefaults(tsh::getMetaType());
-
-			// Coerce the iterator to the element type.
-			auto iter_type_pst = stmt->getIteratorType().unlock(ctx)->getExpr();
-			auto iter_type_hout
-				= getHoutOfExprWithExpectedType(ctx, iter_type_pst, meta_type).valueOrThrow();
-			auto iter_type = iter_type_hout->expression_type.getSymbolType();
-
+			auto u64_immut_type = u64_mut_type.withMutability(tsh::Mutability::Immutable);
 
 			// Create the needed symbols.
 			auto create_var = [&](base::StrID role, tsh::SymbolType<> type) {
@@ -442,12 +419,14 @@ namespace compiler::helios {
 																 } });
 			};
 
-
 			// Create needed symbols.
-			SymID col_sym  = create_var(base::StrID("__collection"), iterable_type);
-			SymID idx_sym  = create_var(base::StrID("__index"), u64_mut_type);
-			SymID len_sym  = create_var(base::StrID("__len"), u64_immut_type);
-			SymID iter_sym = getForIteratorSymbol(ctx, stmt);
+			SymID             col_sym   = create_var(base::StrID("__collection"), iterable_type);
+			SymID             idx_sym   = create_var(base::StrID("__index"), u64_mut_type);
+			SymID             len_sym   = create_var(base::StrID("__len"), u64_immut_type);
+			SymID             iter_sym  = getForIteratorSymbol(ctx, stmt);
+			tsh::SymbolType<> iter_type = ctx.query<QueryTypeOfSymbol>(iter_sym)->valueOrThrow();
+
+			std::cout << "iterator type: " << iter_type.toString() << '\n';
 
 			// Desugar the loop.
 			code::CodeBlock outer{};
@@ -460,7 +439,7 @@ namespace compiler::helios {
 			// var __idx: u64 = 0
 			outer.statements.emplace_back(makeBox<code::VariableStmt>(
 				loop_origin,
-				makeBox<code::DefaultValueExpr>(ctx, code::generatedOrigin(), u64_mut_type.getType()),
+				makeBox<code::DefaultValueExpr>(ctx, gen_origin, u64_mut_type.getType()),
 				u64_mut_type,
 				idx_sym
 			));
@@ -471,7 +450,7 @@ namespace compiler::helios {
 				case tsh::Kind::DynamicArray: {
 					return makeBox<code::UnaryOperatorExpr>(
 						ctx,
-						code::generatedOrigin(),
+						gen_origin,
 						code::BuiltinUnary::Len,
 						makeBox<code::IdentifierExpr>(ctx, gen_origin, col_sym)
 					);
@@ -547,7 +526,7 @@ namespace compiler::helios {
 			);
 
 			// Emit it in a block so variable names don't collide if two fors are in the same function.
-			output(code::BlockStmt(loop_origin, std::move(while_body)));
+			output(code::BlockStmt(loop_origin, std::move(outer)));
 		}
 
 		void visitFun(pst::Access<pst::Fun> function) override {

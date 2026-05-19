@@ -6,7 +6,7 @@ fun main() -> i64 = {
     static_arr[1] = 2;
     static_arr[3] = 3;
     
-    for (x: i64 in static_arr) {
+    for (x in static_arr) {
         builtin_output_i64(x);
     }
 

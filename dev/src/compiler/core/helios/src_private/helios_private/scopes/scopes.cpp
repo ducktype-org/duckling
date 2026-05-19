@@ -1,6 +1,7 @@
 #include "scopes.hpp"
 
 #include "frontend/pst_parser/access.hpp"
+#include "frontend/pst_parser/element_kind.hpp"
 #include "helios_private/hout_creation/expressions/query_hout_of_expr.hpp"
 #include "helios_private/symbols/generated_symbol_data.hpp"
 
@@ -183,11 +184,18 @@ namespace compiler::helios {
 
 		case pst::ElementKind::ExprHolder: {
 			auto expr_parent = element->getParent().value().unlockOpt(ctx);
-			if (expr_parent.has_value()
-			    && expr_parent.value()->getElementKind() == pst::ElementKind::Expand) {
-				// This is a special case.
-				// Elements in macro expansions should have their scope parent be the grandparent.
-				return ElementScopeKind::ParentTransparent;
+			if (expr_parent.has_value()) {
+				auto parent_kind = expr_parent.value()->getElementKind();
+				if (parent_kind == pst::ElementKind::Expand
+				    || parent_kind == pst::ElementKind::For) {
+					// This is a special case:
+					// - In case of macros - expansions should have their scope parent be the
+					// grandparent.
+					// - In case of for - iterable and iterator-type-annotation must be evaluated in
+					//	the For's enclosing scope, NOT inside For-scope. The For's
+					//  own scope contains the iterator symbol.
+					return ElementScopeKind::ParentTransparent;
+				}
 			}
 			return ElementScopeKind::Transparent;
 		}
