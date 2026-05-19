@@ -115,7 +115,7 @@ namespace vm::loader::compiler {
 			usize local_block_count = 0;
 
 			/// Bytecode to Microbytecode mapping
-			std::vector<std::pair<usize, usize>> instruction_mapping{};
+			std::vector<vm::low::LowFuncData::InstructionRange> instruction_mapping{};
 		};
 
 		/**

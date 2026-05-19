@@ -207,7 +207,10 @@ std::expected<vm::loader::Loader::BytecodePosition, vm::loader::Loader::MappingE
 
 	auto& mapping = maybe_function.value()->instruction_mapping.value();
 	auto  candidate
-		= std::ranges::upper_bound(mapping, std::make_pair(instruction_index, usize(-1))) - 1;
+		= std::ranges::upper_bound(
+			  mapping, vm::low::LowFuncData::InstructionRange{ instruction_index, usize(-1) }
+		  )
+	    - 1;
 
 	return BytecodePosition{
 		.function_name     = maybe_function.value()->name,

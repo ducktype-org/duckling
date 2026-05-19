@@ -37,8 +37,21 @@ namespace vm::low {
 		std::vector<TypeCRef> parameters;
 		std::vector<TypeCRef> result_types;
 
-		/// Mapping of fatbytecode instruction indices to microbytecode instruction indice ranges.
-		base::Optional<std::vector<std::pair<usize, usize>>> instruction_mapping{};
+		/**
+		 * @brief Range of instructions
+		 * @note Represents inclusive-exclusive range [`begin`, `end`)
+		 */
+		struct InstructionRange {
+			usize begin, end;
+			auto  operator<=>(const InstructionRange&) const = default;
+		};
+
+		/**
+		 * @brief Mapping of fatbytecode instruction indices to microbytecode instruction indice
+		 * ranges.
+		 * @note Vector indexes correspond to FatBytecode instruction indexes
+		 */
+		base::Optional<std::vector<InstructionRange>> instruction_mapping{};
 	};
 
 	/**

@@ -358,7 +358,7 @@ namespace vm::loader::compiler {
 				result_types.emplace_back(low_program.types->at(ret));
 			}
 
-			base::Optional<std::vector<std::pair<usize, usize>>> instruction_mapping;
+			base::Optional<std::vector<low::LowFuncData::InstructionRange>> instruction_mapping;
 			if (attach_mapping) instruction_mapping = std::move(ctx.instruction_mapping);
 
 			low_program.functions.insert(

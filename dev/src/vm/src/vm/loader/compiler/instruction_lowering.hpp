@@ -87,10 +87,10 @@ namespace vm::loader::compiler::detail {
 
 		/**
 		 * @brief Add a new high instruction.
-		 * @return A pair containing the begin and end indices of the added instruction.
+		 * @return InstructionRange of the added instruction.
 		 * The end index is exclusive, so the instruction occupies the range [begin, end).
 		 */
-		std::pair<usize, usize> add(const code::Instruction& instruction);
+		low::LowFuncData::InstructionRange add(const code::Instruction& instruction);
 
 
 	private:
@@ -147,7 +147,8 @@ namespace vm::loader::compiler::detail {
 		}
 	};
 
-	std::pair<usize, usize> MicroBytecodeBuilder::add(const code::Instruction& instruction) {
+	low::LowFuncData::InstructionRange MicroBytecodeBuilder::add(const code::Instruction& instruction
+	) {
 #if (BUILD_TYPE_DEV_DEBUG)
 		current_high_instruction_representation = code::instructionToString(instruction);
 #endif
