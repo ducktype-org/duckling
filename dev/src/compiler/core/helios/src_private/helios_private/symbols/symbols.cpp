@@ -758,19 +758,19 @@ namespace compiler::helios {
 				// @TODO: proper error handling
 
 				auto import_stmt_ptr = import_stmt.dynamicCast<pst::Import>().value();
-				auto import_chain = import_stmt_ptr->getImportChain().unlock(ctx);
-				
+				auto import_chain    = import_stmt_ptr->getImportChain().unlock(ctx);
+
 				std::vector<base::StrID> module_path;
 
 				// Handle different import chain types
 				if (auto import_as = import_chain.dynamicCast<pst::ImportIdentifierAs>()) {
-					auto names = import_as.value()->getNames();
+					auto names  = import_as.value()->getNames();
 					module_path = std::vector<base::StrID>{ names.begin(), names.end() };
 				} else if (auto import_star = import_chain.dynamicCast<pst::ImportStarHides>()) {
-					auto names = import_star.value()->getNames();
+					auto names  = import_star.value()->getNames();
 					module_path = std::vector<base::StrID>{ names.begin(), names.end() };
 				} else if (auto import_nested = import_chain.dynamicCast<pst::ImportNested>()) {
-					auto names = import_nested.value()->getNames();
+					auto names  = import_nested.value()->getNames();
 					module_path = std::vector<base::StrID>{ names.begin(), names.end() };
 				} else {
 					ctx.logInt(makeBox<dia_int::PlaceholderError>(

@@ -649,9 +649,7 @@ namespace compiler::helios {
 						auto wild_result_qresult
 							= HInterface::ofSymbol(sym).lookup(ctx, key.name, { true });
 						UNPACK_QRESULT_CREF(CRef<LookupResult> wild_result = &, wild_result_qresult);
-						if (!wild_result->isEmpty()) {
-							result.merge(*wild_result);
-						}
+						if (!wild_result->isEmpty()) result.merge(*wild_result);
 					}
 				} else if (isAlias(sym) && name(sym) == key.name) {
 					// @TODO: #1412 fix dealias

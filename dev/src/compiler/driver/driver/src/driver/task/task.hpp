@@ -1,5 +1,7 @@
 #pragma once
 
+#include "driver/options.hpp"
+
 #include <archiver/archive.hpp>
 #include <frontend/module_tree/module_id.hpp>
 #include <global_state/packages.hpp>
@@ -135,6 +137,16 @@ namespace compiler::driver {
 	 * @note This function requires presence of the package specified in the task in global_state
 	 */
 	base::Optional<Task> convertRawTaskToTask(
-		const RawTask& raw_task, const task::DiagnosticReporter& report
+		const RawTask&                             raw_task,
+		const options_types::GlobalLinkingOptions& global_linking_options,
+		const task::DiagnosticReporter&            report
+	);
+
+	/**
+	 * @brief Set global linking options to linker::LinkingOptions.
+	 */
+	linker::LinkingOptions mergeBothLinkingOptions(
+		const linker::LinkingOptions&              local_options,
+		const options_types::GlobalLinkingOptions& global_linking_options
 	);
 }

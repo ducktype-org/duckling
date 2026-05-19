@@ -64,7 +64,7 @@ namespace compiler::driver {
 			// bool rm_artifacts_after_compilation = false;
 		};
 
-		struct StandardLibraryOptions final {
+		struct GlobalLinkingOptions final {
 			struct NoStd final {};
 
 			struct DefaultStd final {};
@@ -73,7 +73,16 @@ namespace compiler::driver {
 				fs::FilePath std_path;
 			};
 
-			std::variant<NoStd, DefaultStd, CustomStd> std_lib_type = DefaultStd{};
+			/**
+			 * The type of standard library to use, or
+			 * no standard library at all.
+			 */
+			std::variant<NoStd, DefaultStd, CustomStd> std_lib_type;
+
+			/**
+			 * Whether to link the C standard library.
+			 */
+			bool link_c_standard_library;
 		};
 	}
 
@@ -107,7 +116,7 @@ namespace compiler::driver {
 			options_types::DebugOptions                               debug_options;
 			options_types::IncrementalOptions                         incremental;
 			options_types::ExecutionOptions                           execution_options;
-			options_types::StandardLibraryOptions                     standard_library_options;
+			options_types::GlobalLinkingOptions                       global_linking_options;
 		};
 
 		/**
@@ -130,12 +139,12 @@ namespace compiler::driver {
 		 * The script file is extracted to global_state::ScriptContext during initialization.
 		 */
 		struct ScriptMode final {
-			fs::File                              script_file;
-			global_state::BackendOptions          backend_options;
-			options_types::ArtifactsOptions       compilation_artifacts;
-			options_types::DebugOptions           debug_options;
-			options_types::ExecutionOptions       execution_options;
-			options_types::StandardLibraryOptions standard_library_options;
+			fs::File                            script_file;
+			global_state::BackendOptions        backend_options;
+			options_types::ArtifactsOptions     compilation_artifacts;
+			options_types::DebugOptions         debug_options;
+			options_types::ExecutionOptions     execution_options;
+			options_types::GlobalLinkingOptions global_linking_options;
 		};
 
 		/**

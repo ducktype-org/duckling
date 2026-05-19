@@ -1,12 +1,13 @@
 #include "standard_library.hpp"
 
+#include "global_state/artifacts_location.hpp"
+
 #include <driver_private/standard_library/standard_library.hpp>
 #include <global_state/packages.hpp>
 
 #include "base/types/ok_bad.hpp"
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/str/str_utils.hpp>
-#include "global_state/artifacts_location.hpp"
 
 #include <algorithm>
 
@@ -22,34 +23,23 @@ namespace compiler::driver {
 	}
 
 	base::Optional<fs::FilePath> resolveStdPath(
-		const options_types::StandardLibraryOptions& standard_library_options,
-		frontend::packages::DiagnosticReporter&      report
+		const options_types::GlobalLinkingOptions& standard_library_options
 	) {
 		base::Optional<fs::FilePath> path;
 		variant_match(standard_library_options.std_lib_type) {
-			variant_case(options_types::StandardLibraryOptions::NoStd, _) { return {}; }
-			variant_case(options_types::StandardLibraryOptions::CustomStd, custom_std) {
+			variant_case(options_types::GlobalLinkingOptions::NoStd, _) { return {}; }
+			variant_case(options_types::GlobalLinkingOptions::CustomStd, custom_std) {
 				path = custom_std.std_path;
 			}
-			variant_case(options_types::StandardLibraryOptions::DefaultStd, _) {
+			variant_case(options_types::GlobalLinkingOptions::DefaultStd, _) {
 				path = resolveDefaultStdPath();
 			}
 			variant_default { CORE_UNREACHABLE(); }
 		}
-		if_opt_some(path, std_path) {
-			if (!std_path.exists()) {
-				report(
-					"Standard library path does not exist.",
-					base::strConcat("Expected standard library root at: ", std_path.string()),
-					true
-				);
-				return {};
-			}
-		}
 		return path;
 	}
 
-	void addStandardLibraryPackages(
+	base::OkBad addStandardLibraryPackages(
 		const fs::FilePath& std_path, frontend::packages::DiagnosticReporter& report
 	) {
 		using compiler::frontend::packages::RawDependencyInfo;
@@ -63,7 +53,7 @@ namespace compiler::driver {
 					base::strConcat("Expected standard library package at: ", package_path.string()),
 					true
 				);
-				continue;
+				return base::BAD;
 			}
 			RawPackageInfo raw_package_info{
 				.package_name = base::StrID(config.name),
@@ -82,9 +72,10 @@ namespace compiler::driver {
 
 			auto package_info
 				= compiler::frontend::packages::createPackageInfo(raw_package_info, report);
-			if (!package_info.has_value()) return;
+			if (!package_info.has_value()) return base::BAD;
 			global_state::setters::addPackage(*package_info);
 		}
+		return base::OK;
 	}
 
 	namespace {
@@ -138,7 +129,9 @@ namespace compiler::driver {
 			auto pkg = std::find_if(
 				global_state::getPackages().begin(),
 				global_state::getPackages().end(),
-				[&](const auto& pkg_info) { return pkg_info.getPackageID() == base::StrID(config.name); }
+				[&](const auto& pkg_info) {
+					return pkg_info.getPackageID() == base::StrID(config.name);
+				}
 			);
 			CORE_ASSERT(
 				pkg != global_state::getPackages().end(),
@@ -159,11 +152,18 @@ namespace compiler::driver {
 		return tasks;
 	}
 
-    std::string getStdLibLinkingArgs() {
-        std::string result = "-L" + global_state::getRootCollection()->getDirectoryPath().string();
-        for (const auto& config: STD_PACKAGES_CONFIG) {
-            result += " -l:" + std::string(config.name) + ".a";
-        }
-        return result;
-    }
+	base::Optional<std::string> getStdLibLinkingArgs(
+		const options_types::GlobalLinkingOptions& linking_options
+	) {
+		if_opt_some(resolveStdPath(linking_options), _) {
+			// Temporary directory for the `.a` files for the standard library is just a root
+			// collection, where every ".a" file is located.
+			std::string result
+				= "-L" + global_state::getRootCollection()->getDirectoryPath().string();
+			for (const auto& config: STD_PACKAGES_CONFIG)
+				result += " -l:" + std::string(config.name) + ".a";
+			return result;
+		}
+		return {};
+	}
 }

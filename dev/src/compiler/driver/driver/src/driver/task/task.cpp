@@ -1,6 +1,7 @@
 #include "task.hpp"
 
 #include "driver/standard_library/standard_library.hpp"
+#include "linker/link.hpp"
 
 #include <driver/diagnostics/log_helpers.hpp>
 #include <frontend/module_tree/functors.hpp>
@@ -246,8 +247,31 @@ namespace compiler::driver {
 		};
 	}
 
+	/**
+	 * @brief Helper function that merges global linking options with task-specific linking options
+	 * for a given`BuildTarget`.
+	 */
+	BuildTarget convertBuildTargetForTask(
+		const BuildTarget&                         raw_target,
+		const options_types::GlobalLinkingOptions& global_linking_options
+	) {
+		variant_match(raw_target) {
+			variant_case(BuildTargetLLVMExecutable, llvm_exec_target) {
+				return BuildTargetLLVMExecutable{
+					.output_file_stem = llvm_exec_target.output_file_stem,
+					.linking_options  = mergeBothLinkingOptions(
+                        llvm_exec_target.linking_options, global_linking_options
+                    ),
+				};
+			}
+			variant_default { return raw_target; }
+		}
+	}
+
 	base::Optional<Task> convertRawTaskToTask(
-		const RawTask& raw_task, const task::DiagnosticReporter& report
+		const RawTask&                             raw_task,
+		const options_types::GlobalLinkingOptions& global_linking_options,
+		const task::DiagnosticReporter&            report
 	) {
 		variant_match(raw_task.task_data) {
 			variant_case(RawPackageCompilationTask, raw_package_task) {
@@ -256,11 +280,15 @@ namespace compiler::driver {
 
 				if (!root_module_opt.has_value()) return {};
 
+				auto build_target = convertBuildTargetForTask(
+					raw_package_task.build_target, global_linking_options
+				);
+
 				return Task{
 					.type      = TaskType::PackageCompilation,
 					.task_data = PackageCompilationTask{
 						.root_module = *root_module_opt,
-						.build_target = raw_package_task.build_target,
+						.build_target = build_target,
 					},
 				};
 			}
@@ -269,4 +297,13 @@ namespace compiler::driver {
 		CORE_UNREACHABLE();
 	}
 
+	linker::LinkingOptions mergeBothLinkingOptions(
+		const linker::LinkingOptions&              local_options,
+		const options_types::GlobalLinkingOptions& global_linking_options
+	) {
+		linker::LinkingOptions options  = local_options;
+		options.link_c_standard_library = global_linking_options.link_c_standard_library;
+		options.stdlib_link_options     = getStdLibLinkingArgs(global_linking_options);
+		return options;
+	}
 }  // namespace compiler::driver

@@ -80,15 +80,16 @@ namespace compiler::driver {
 
 		base::OkBad handlePackageOptions(
 			std::vector<compiler::frontend::packages::RawPackageInfo>& packages_info,
-			const options_types::StandardLibraryOptions&               standard_library_options
+			const options_types::GlobalLinkingOptions&                 global_linking_options
 		) {
 			auto report      = diagnostics::makeGlobalLoggerReporter();
 			bool had_failure = false;
 
 			compiler::frontend::packages::filterUndeclaredDependencies(packages_info, report);
 
-			if (auto path = resolveStdPath(standard_library_options, report)) {
-				addStandardLibraryPackages(*path, report);
+			// Adding standard library packages
+			if (auto path = resolveStdPath(global_linking_options)) {
+				if (addStandardLibraryPackages(*path, report).isBad()) return base::BAD;
 				if (addStandardLibraryDependencies(packages_info, report).isBad()) return base::BAD;
 			}
 
@@ -217,7 +218,7 @@ namespace compiler::driver {
 
 				auto package_success = handlePackageOptions(
 					package_compilation_options.packages_info,
-					package_compilation_options.standard_library_options
+					package_compilation_options.global_linking_options
 				);
 
 				if (package_success.isBad()) return base::BAD;
