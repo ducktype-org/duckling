@@ -47,7 +47,7 @@ namespace vm::loader::compiler {
 		 * functions, etc.) is a stable prefix of the new set. Passing a completely unrelated
 		 * `ValidProgram` will lead to an invalid internal state and incorrect compilation.
 		 */
-		void recompile(const code::ValidProgram& high_program, bool attach_mapping);
+		void recompile(const code::ValidProgram& high_program);
 
 		/**
 		 * @brief Provides read-only access to the internally managed `LowVMProgram`.
@@ -151,9 +151,7 @@ namespace vm::loader::compiler {
 		 * @param new_functions A vector containing the new `Function` objects for newly added
 		 * functions.
 		 */
-		void compileNewFunctions(
-			const std::vector<code::Function>& new_functions, bool attach_mapping
-		);
+		void compileNewFunctions(const std::vector<code::Function>& new_functions);
 
 		/**
 		 * @brief Compiles newly added ExternCFunctions and adds the compiled functions to the
@@ -188,7 +186,7 @@ namespace vm::loader::compiler {
 		 * symbolic arguments to numeric values.
 		 * @return The converted list of instructions.
 		 */
-		low::MicroBytecode lowerInstructions(FunctionCompilationContext& ctx, bool attach_mapping);
+		low::MicroBytecode lowerInstructions(FunctionCompilationContext& ctx);
 
 		/**
 		 * @brief Translates a single high-level instruction argument (`opargs::OpCodeArg`)

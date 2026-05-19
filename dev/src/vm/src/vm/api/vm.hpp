@@ -17,7 +17,7 @@ namespace vm::api {
 	 * @return The response containing the PID of the newly created process or an API error if the
 	 * process wasn't created.
 	 */
-	std::expected<ProcessInfo, ApiError> spawn(ProcessConfig config = {});
+	std::expected<ProcessInfo, ApiError> spawn();
 
 	/**
 	 * @brief Get the execution status of the process run on DVM.

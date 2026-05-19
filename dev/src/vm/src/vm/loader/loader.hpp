@@ -57,15 +57,12 @@ namespace vm::loader {
 		/**
 		 * @brief Injects new code from given file paths to the current program state.
 		 */
-		std::expected<void, LoaderLogger> loadAndCompile(
-			const std::vector<fs::File>& file_path, bool attach_mapping
-		);
+		std::expected<void, LoaderLogger> loadAndCompile(const std::vector<fs::File>& file_path);
 
 		/**
 		 * @brief Injects new code from a given high-level code representation.
 		 */
-		std::expected<void, LoaderLogger> loadAndCompile(
-			const code::CodeCollection& code_collection, bool attach_mapping
+		std::expected<void, LoaderLogger> loadAndCompile(const code::CodeCollection& code_collection
 		);
 
 		CRef<code::ValidProgram> getHighProgram() const;

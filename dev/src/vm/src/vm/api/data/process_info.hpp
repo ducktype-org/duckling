@@ -13,15 +13,6 @@ namespace vm {
 
 			NLOHMANN_DEFINE_TYPE_INTRUSIVE(ProcessInfo, pid);
 		};
-
-		/**
-		 * @brief ProcessConfig serves as configuration which has to be initialized when spawning
-		 * the process and can't be changed once the process is spawned.
-		 */
-		struct ProcessConfig {
-			/// Enables FatBytecode to MicroBytecode mapping
-			bool enable_mapping = false;
-		};
 	}
 }
 
