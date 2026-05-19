@@ -32,6 +32,7 @@ add_files(
 	vmvalue/vmvalueref.cpp
 
 	fast/fast_vmthread.cpp
+	fast/eval/instruction_functions.cpp
 	fast/program/relocator.cpp
 )
 

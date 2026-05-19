@@ -2,6 +2,7 @@
 
 #include "base/pointers/box.hpp"
 
+#include <deque>
 #include <vector>
 
 namespace vm::fast {
@@ -10,13 +11,21 @@ namespace vm::fast {
 		struct Instruction;
 	}
 
-	class ThreadRuntimeData {
+	struct Frame {
+		bool flag = false;
+		/// Instruction pointer, has to live in frame for easy function calls
+		const exec::Instruction* ip    = nullptr;
+
+		void reset() { flag = false; ip = nullptr; }
+	};
+
+	class ThreadRuntimeState {
 	public:
-		ThreadRuntimeData() = default;
-		ThreadRuntimeData(const ThreadRuntimeData&)            = delete;
-		ThreadRuntimeData(ThreadRuntimeData&&)                 = default;
-		ThreadRuntimeData& operator=(const ThreadRuntimeData&) = delete;
-		ThreadRuntimeData& operator=(ThreadRuntimeData&&)      = default;
+		ThreadRuntimeState()                                     = default;
+		ThreadRuntimeState(const ThreadRuntimeState&)            = delete;
+		ThreadRuntimeState(ThreadRuntimeState&&)                 = delete;
+		ThreadRuntimeState& operator=(const ThreadRuntimeState&) = delete;
+		ThreadRuntimeState& operator=(ThreadRuntimeState&&)      = delete;
 
 		constexpr static usize LOCAL_STACK_SIZE = 8 * 1'024 * 1'024;  // 8 MB
 
@@ -24,25 +33,29 @@ namespace vm::fast {
 		Box<std::array<byte, LOCAL_STACK_SIZE>> local_stack_memory
 			= makeBox<std::array<byte, LOCAL_STACK_SIZE>>();
 
-	public:
-		std::byte* local_stack_head
-			= local_stack_memory->data();  /// Pointer to the first free byte in the local stack.
+		std::deque<Frame> frame_stack{ Frame() };
 
-		const std::byte* local_stack_base
+	public:
+		Frame*                   top_frame = nullptr;
+
+
+		std::byte* const local_stack_base
 			= local_stack_memory->data();  /// Pointer to the start of the local stack.
-		const std::byte* local_stack_end
+		std::byte* const local_stack_end
 			= local_stack_memory->data()
 		    + LOCAL_STACK_SIZE;  /// Pointer to the end of the local stack.
-	};
 
-	struct Frame {
-		bool flag;
+		// @TODO: #2729 This should be a valid pointer.
+		std::byte* const global_data_buffer_base = nullptr;
 
-		const exec::Instruction* ip;
+		void pushFrame() {
+			frame_stack.emplace_back();
+			top_frame = &frame_stack.back();
+		}
 
-		void reset() {
-			flag = false;
-			ip   = nullptr;
+		void popFrame() {
+			frame_stack.pop_back();
+			top_frame = &frame_stack.back();
 		}
 	};
 

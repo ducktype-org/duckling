@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vm/bytecode/validator/valid_program.hpp>
+#include <vm/core/fast/program/instructions/relocatable.hpp>
 #include <vm/core/fast/program/program.hpp>
 #include <vm/loader/compiler/compiler.hpp>
 

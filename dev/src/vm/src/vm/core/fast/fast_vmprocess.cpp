@@ -1,12 +1,13 @@
 #include "fast_vmprocess.hpp"
 
+#include "vm/core/fast/program/relocator.hpp"
 #include "vm/loader/logger.hpp"
 #include <vm/core/process/vmprocess.hpp>
 #include <vm/utils/vm_not_implemented.hpp>
 
 namespace vm::fast {
 	FastVMProcess::FastVMProcess(PID pid): IVMProcess(pid) {
-		vm_threads.add(*this);
+		vm_threads.add(*this, compiler.getProgramBase(), &functions);
 	}
 
 	Ref<VmValue> FastVMProcess::createVmValue([[maybe_unused]] vm::TypeCRef type) {
@@ -59,6 +60,9 @@ namespace vm::fast {
 
 		if (code_result.has_value()) {
 			compiler.recompile();
+			functions = exec::linkFunctions(
+				*compiler.getProgramBase(), *compiler.getRelocatableFunctions()
+			);
 			return api::Response(api::response::Empty());
 		} else {
 			std::stringstream ss;
@@ -77,8 +81,9 @@ namespace vm::fast {
 
 		if (!response) {
 			// thread.setThreadCtx("");
-			return std::unexpected(api::ApiError{
-				api::RunError{ "Failed to spawn thread for function: " + func_name } });
+			return std::unexpected(
+				api::ApiError{ api::RunError{ "Failed to spawn thread for function: " + func_name } }
+			);
 		}
 		return api::Response(thread.getThreadID());
 	}
@@ -94,10 +99,12 @@ namespace vm::fast {
 		// thread.setThreadCtx("");
 		variant_match(getStatus()) {
 			variant_case(api::ExecutionCompleted, completed) { return completed.exit_value; }
-			variant_default return std::unexpected(api::StateError(
-				hasExecutionStarted(getStatus()) ? "Execution did not complete"
-												 : "Execution did not start"
-			));
+			variant_default return std::unexpected(
+				api::StateError(
+					hasExecutionStarted(getStatus()) ? "Execution did not complete"
+													 : "Execution did not start"
+				)
+			);
 		}
 		CORE_UNREACHABLE();
 	}
@@ -120,7 +127,6 @@ namespace vm::fast {
 		if_opt_some(vm_threads.maybeGet(thread_id), thread) return thread;
 		return std::nullopt;
 	}
-
 
 	std::expected<api::Response, api::StateError> FastVMProcess::getExitCode() {
 		// @TODO: #2102 Implement this pure virtual method.
@@ -146,7 +152,8 @@ namespace vm::fast {
 		throw vm::VMNotImplemented("Method `resumeVMThread` is not implemented.");
 	}
 
-	base::Optional<api::ApiError> FastVMProcess::stepVMThread([[maybe_unused]] api::ThreadID thread_id
+	base::Optional<api::ApiError> FastVMProcess::stepVMThread(
+		[[maybe_unused]] api::ThreadID thread_id
 	) {
 		// @TODO: #2102 Implement this pure virtual method.
 		throw vm::VMNotImplemented("Method `stepVMThread` is not implemented.");

@@ -21,6 +21,11 @@ CRef<vm::fast::ProgramBase> vm::loader::compiler::fast::FastCompiler::getProgram
 	return &program;
 }
 
+CRef<vm::fast::reloc::RelocFunctionCollection> vm::loader::compiler::fast::FastCompiler::
+	getRelocatableFunctions() const {
+	return &reloc_functions;
+}
+
 void fast::FastCompiler::compileNewTypes(const std::vector<valid_type::ValidType>& new_types) {
 	if (std::ranges::empty(new_types)) return;
 
@@ -43,11 +48,9 @@ void fast::FastCompiler::compileNewGlobals(const std::vector<GlobalData>& new_gl
 }
 
 void fast::FastCompiler::compileNewFunctions(const std::vector<Function>& new_functions) {
-	for(const Function& function: new_functions) {
-		detail::FunctionStackContext ctx = calculateStackContext(function);
-		vm::fast::reloc::RelocFunction reloc_func{
-			.data = lowerInstructions(high_program, ctx)
-		};
+	for (const Function& function: new_functions) {
+		detail::FunctionStackContext   ctx = calculateStackContext(function);
+		vm::fast::reloc::RelocFunction reloc_func{ .data = lowerInstructions(high_program, ctx) };
 	}
 }
 

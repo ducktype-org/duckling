@@ -15,11 +15,13 @@ namespace {
 		const std::vector<CRef<valid_type::ValidType>>& new_types
 	) {
 		for (CRef<valid_type::ValidType> type: new_types) {
+			Bytes size(0);
+			if (!type->isKind<vm::code::valid_type::finalized::DynamicTable>())
+				size = type->getSize().assumePointerSize(Bytes(8));
+
 			type_collection->insert(
 				vm::fast::Type::declareType(
-					type->getName(),
-					vm::fast::TypeID(type->getID().asInt()),
-					type->getSize().assumePointerSize(Bytes(8))
+					type->getName(), vm::fast::TypeID(type->getID().asInt()), size
 				),
 				type->getName()
 			);

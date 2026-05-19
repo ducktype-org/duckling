@@ -12,9 +12,16 @@
 
 using namespace vm;
 
-vm::fast::FastVMThread::FastVMThread(api::ThreadID thread_id, FastVMProcess& process):
+vm::fast::FastVMThread::FastVMThread(
+	api::ThreadID                      thread_id,
+	FastVMProcess&                     process,
+	CRef<ProgramBase>                  program,
+	CRef<exec::ExecFunctionCollection> functions
+):
 	  IVMThread(thread_id, process),
-	  fast_process(process) {}
+	  fast_process(process),
+	  functions(functions),
+	  program(program) {}
 
 std::expected<api::Response, api::ApiError> vm::fast::FastVMThread::getCurrentPosition() {
 	return std::unexpected(
@@ -39,8 +46,8 @@ void vm::fast::FastVMThread::run(const std::string& func_name, const RunArgument
 	}
 
 	try {
-		Ref<FunctionInfo>         func_info = program->functions.at(base::StrID(func_name.data()));
-		const exec::ExecFunction& func      = functions.at(func_info->id.asInt());
+		CRef<FunctionInfo>         func_info = program->functions.at(base::StrID(func_name.data()));
+		const exec::ExecFunction& func      = functions->at(func_info->id.asInt());
 
 		const i64 exit_value = createStartAndExecuteFunction(func, args);
 		respondExecutionRequest(api::ExecutionCompleted{ exit_value });
@@ -64,17 +71,24 @@ vm::fast::exec::ExecFunction vm::fast::FastVMThread::createStartFunctionFor(
 	// @TODO: 2720 Make use of RunArguments in the start function creation and execution.
 	// Keep in mind #2727.
 	variant_match(run_arguments) {
-		variant_case_novalue(ProgramRunArguments, FunctionRunArguments) {
-			throw VMNotImplemented(
-				"Start function creation for specific RunArguments is not implemented yet."
-			);
+		variant_case(ProgramRunArguments, program_args) {
+			if (!program_args.empty())
+				throw VMNotImplemented(
+					"Start function creation for specific RunArguments is not implemented yet."
+				);
+		}
+		variant_case(FunctionRunArguments, function_args) {
+			if (!function_args.empty())
+				throw VMNotImplemented(
+					"Start function creation for specific RunArguments is not implemented yet."
+				);
 		}
 	}
 
 	using namespace vm::fast::exec;
 	exec::ExecFunction start_function{};
 	start_function.data = {
-		maker::init_type(program->types.at(base::StrID("i64")).get()),
+		maker::init_imm(program->types.at(base::StrID("i64"))->getSize().asInt()),
 		maker::call_func(&function),
 		maker::exit(),
 	};
@@ -91,6 +105,5 @@ i64 vm::fast::FastVMThread::createStartAndExecuteFunction(
 i64 vm::fast::FastVMThread::executeFunction(
 	const exec::ExecFunction& function, const RunArguments& run_arguments
 ) {
-	// TODO: Implement this method.
-	throw vm::VMNotImplemented("Method `executeFunction` is not implemented.");
+	return 0;
 }

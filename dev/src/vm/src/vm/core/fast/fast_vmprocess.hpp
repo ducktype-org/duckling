@@ -107,5 +107,7 @@ namespace vm::fast {
 
 		loader::Loader                       loader;
 		loader::compiler::fast::FastCompiler compiler{ *loader.getHighProgram() };
+
+		exec::ExecFunctionCollection functions;
 	};
 }

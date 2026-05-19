@@ -6,7 +6,6 @@
 #include <base/comptime/type_traits.hpp>
 #include <base/types/ints.hpp>
 
-#include <vm/core/config.hpp>
 #include <vm/core/fast/program/type.hpp>
 
 namespace vm::fast::exec {
@@ -29,7 +28,7 @@ namespace vm::fast::exec {
 	}
 
 #ifdef USE_TAIL_CALLS
-	#error tails calls are not yet supported
+#else
 #endif
 
 #define ARG_NAMESPACE arg::

@@ -12,7 +12,12 @@ namespace vm::fast {
 
 	class FastVMThread: public vm::IVMThread {
 	public:
-		FastVMThread(api::ThreadID thread_id, FastVMProcess& process);
+		FastVMThread(
+			api::ThreadID                      thread_id,
+			FastVMProcess&                     process,
+			CRef<ProgramBase>                  program,
+			CRef<exec::ExecFunctionCollection> functions
+		);
 
 		std::expected<api::Response, api::ApiError> getCurrentPosition() override;
 
@@ -28,11 +33,10 @@ namespace vm::fast {
 	private:
 		FastVMProcess& fast_process;
 
-		ThreadRuntimeData runtime_data;
+		ThreadRuntimeState runtime_data;
 
-		exec::ExecFunctionCollection functions;
-
-		MRef<ProgramBase> program;
+		CRef<exec::ExecFunctionCollection> functions;
+		CRef<ProgramBase>                  program;
 
 		exec::ExecFunction createStartFunctionFor(
 			const exec::ExecFunction& function, const RunArguments& run_arguments

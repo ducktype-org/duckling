@@ -1,4 +1,4 @@
 function main {} -> { i64 } {
-    mov_p64_imm ret_val 123;
+    mov_p64_imm ret0, 123;
     ret;
 }

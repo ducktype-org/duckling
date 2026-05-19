@@ -51,7 +51,9 @@ namespace {
 	) {
 		const ptrdiff_t current_offset = current_function_reloc.data.data() - &current_instruction;
 		const ptrdiff_t target_offset  = current_offset + reloc_arg;
-		return current_function.data.data() + target_offset;
+		return current_function.data.data() + target_offset
+		     - 1;  // -1 because the instruction pointer will be incremented after executing the
+		           // instruction.
 	}
 
 	[[maybe_unused]] exec::arg::Type relocateType(TRANSLATOR_ARGUMENTS(Type)) {
