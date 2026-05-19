@@ -163,7 +163,7 @@ base::CRef<vm::code::valid_type::ValidType> vm::VMValueRef::getType() const {
 	return types.at(type_id);
 }
 
-std::string vm::VMValueRef::str() {
+std::string vm::VMValueRef::str() const {
 	auto var = readData();
 	if (!var.has_value()) return "<none>";
 
