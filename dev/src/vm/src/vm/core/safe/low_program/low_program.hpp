@@ -25,7 +25,9 @@ namespace vm::low {
 	 */
 	struct LowFuncData {
 		base::StrID   name;
+#ifdef ENABLE_JIT
 		cf::ControlFlowGraph cfg;
+#endif
 		MicroBytecode bc;
 
 		/// The maximum size of the local variables on stack required by the function frame.
