@@ -2,12 +2,11 @@
 
 #include <iostream>
 
-namespace vm::debug_adapter {
-
+namespace vm::debugger::debug_adapter {
 	constexpr std::string_view HEADER_PREFIX = "Content-Length: ";
 
 	DebugAdapter::DebugAdapter():
-		  status_change_listener([this](const vm::api::ProcStatus& status) {
+		  status_change_listener([this](const api::ProcStatus& status) {
 			  std::string message = "";
 			  std::visit(
 				  [&message](auto&& arg) {
@@ -55,9 +54,7 @@ namespace vm::debug_adapter {
 		  }),
 
 		  debugger() {
-		debugger.attachOnVMChangesStatusListener(status_change_listener);
-		debugger.attachOnErrorListener(error_listener);
-		debugger.attachOnVMCompletesExecutionListener(completion_listener);
+		debugger.attachOnStatusChangedListener(status_change_listener);
 	}
 
 	DebugAdapter DebugAdapter::get() { return {}; }
@@ -173,7 +170,10 @@ namespace vm::debug_adapter {
 
 	void DebugAdapter::handleLaunch(const nlohmann::json& req) {
 		std::string program = req["arguments"]["program"];
-		debugger.loadFile(fs::File(program));
+		debugger.loadFile(fs::File(program)).transform_error([&](const api::ApiError& api_error) {
+			throw std::runtime_error(api::errorToString(api_error));
+			return api_error;
+		});
 
 		sendResponse(req, true);
 

@@ -6,7 +6,7 @@
 
 #include <mutex>
 
-namespace vm::debug_adapter {
+namespace vm::debugger::debug_adapter {
 	/**
 	 * @class DebugAdapter
 	 * @brief Implements the Debug Adapter Protocol (DAP) for the VM.
