@@ -144,7 +144,6 @@ namespace compiler::driver {
 			options_types::ArtifactsOptions     compilation_artifacts;
 			options_types::DebugOptions         debug_options;
 			options_types::ExecutionOptions     execution_options;
-			options_types::GlobalLinkingOptions global_linking_options;
 		};
 
 		/**

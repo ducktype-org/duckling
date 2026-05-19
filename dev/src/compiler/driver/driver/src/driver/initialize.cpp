@@ -187,6 +187,26 @@ namespace compiler::driver {
 		}
 	}
 
+	/**
+	 * Creates a dummy "repl_session" package and root module
+	 * This is a hack to make the import from different packages work in the REPL,
+	 * as the module lookup relies on the global package registry.
+	 * The module is otherwise unused.
+	 */
+	std::vector<compiler::frontend::packages::RawPackageInfo> getScriptStubPackage() {
+		auto package_root_file = fs::FileManager::createRandomVirtualFile("", ".dmf");
+		std::vector<compiler::frontend::packages::RawPackageInfo> repl_packages_info{
+			compiler::frontend::packages::RawPackageInfo{
+				.package_name = base::StrID("repl_session"),
+				.version      = base::StrID("0.1.0"),
+				.package_path = package_root_file.getFilePath(),
+				.features     = {},
+				.dependencies = {},
+			},
+		};
+		return repl_packages_info;
+	}
+
 	base::CheckedOkBad initializeTheCompiler(CompilerModeOfOperationAndOptions options) {
 		time_stats::TrackCategoryTime driver_initialization_time(
 			time_stats::TimeCategories::DriverInitialization
@@ -227,27 +247,13 @@ namespace compiler::driver {
 				handleIncrementalOptions(package_compilation_options.incremental);
 			}
 			variant_case(CompilerModeOfOperationAndOptions::ReplMode, repl_options) {
-				// Create a dummy "repl_session" package and root module
-				// This is a hack to make the import from different packages work in the REPL,
-				// as the module lookup relies on the global package registry.
-				auto package_root_file = fs::FileManager::createRandomVirtualFile("", ".dmf");
-				std::vector<compiler::frontend::packages::RawPackageInfo> repl_packages_info{
-					compiler::frontend::packages::RawPackageInfo{
-						.package_name = base::StrID("repl_session"),
-						.version      = base::StrID("0.1.0"),
-						.package_path = package_root_file.getFilePath(),
-						.features     = {},
-						.dependencies = {},
-					},
-				};
+				auto                                repl_packages_info = getScriptStubPackage();
 				options_types::GlobalLinkingOptions repl_linking_options{
 					.std_lib_type = options_types::GlobalLinkingOptions::DefaultStd{},
 				};
 
-				auto package_success = handlePackageOptions(
-					repl_packages_info,
-					repl_linking_options
-				);
+				auto package_success
+					= handlePackageOptions(repl_packages_info, repl_linking_options);
 				if (package_success.isBad()) return base::BAD;
 
 
@@ -255,9 +261,18 @@ namespace compiler::driver {
 				handleExecutionOptions(repl_options.execution_options);
 			}
 			variant_case(CompilerModeOfOperationAndOptions::ScriptMode, script_options) {
+				auto                                repl_packages_info = getScriptStubPackage();
+				options_types::GlobalLinkingOptions repl_linking_options{
+					.std_lib_type = options_types::GlobalLinkingOptions::DefaultStd{},
+				};
+
+
 				handleDebugOptions(script_options.debug_options);
 				handleExecutionOptions(script_options.execution_options);
 				handleArtifactsOptions(script_options.compilation_artifacts);
+				auto package_success
+					= handlePackageOptions(repl_packages_info, repl_linking_options);
+				if (package_success.isBad()) return base::BAD;
 				handleBackendOptions(script_options.backend_options);
 				handleScriptContext(script_options.script_file);
 			}

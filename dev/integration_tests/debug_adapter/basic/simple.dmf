@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 function main {} -> { i64 } {
 
 	init_pany_type     x, i64;

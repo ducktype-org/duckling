@@ -841,8 +841,7 @@ clah::Clah getClahForMain() {
 			clah::Clah("compile_script", "Compile a .ds script file into a .dbc or executable.")
 				.addPositional(clah::FileParser::make("script"))
 				.add(getLlvmOptLevelParam())
-				.add(getClahGlobalLinkingOptions())
-				.addCustomVerification(verifyGlobalLinkingOptions)
+				.add(getClahLinkingOptions())
 				.add(clah::ParamBuilder::ofValue(clah::FilePathParser::make("filepath"))
 	                     .addShortName('a')
 	                     .addLongName("artifact-location")
@@ -854,15 +853,6 @@ clah::Clah getClahForMain() {
 	                     .addShortDesc(
 							 "Compile to DVM bytecode (.dbc) instead of a native executable."
 						 )
-	                     .build())
-				.add(clah::ParamBuilder::ofValue(clah::StringParser::make("linker"))
-	                     .addLongName("linker")
-	                     .addShortDesc("Path to the linker executable.")
-	                     .optional()
-	                     .build())
-				.add(clah::ParamBuilder::ofFlag()
-	                     .addLongName("no-c-standard-library")
-	                     .addShortDesc("Don't link the C standard library (LLVM backend only).")
 	                     .build())
 				.add(clah::ParamBuilder::ofValue(clah::IntParser::make("worker count"))
 	                     .addShortName('w')
@@ -890,7 +880,6 @@ clah::Clah getClahForMain() {
 						.execution_options = {
 							.worker_count = base::safeIntConv<u64>(worker_count),
 						},
-						.global_linking_options = getGlobalLinkingOptionsFromClah(options),
 					};
 
 					auto init_result = compiler::driver::initializeTheCompiler(mode);
@@ -941,7 +930,6 @@ clah::Clah getClahForMain() {
 						.execution_options = {
 							.worker_count = base::safeIntConv<u64>(worker_count),
 						},
-						.global_linking_options = getGlobalLinkingOptionsFromClah(options),
 					};
 
 							   auto init_result = compiler::driver::initializeTheCompiler(mode);
