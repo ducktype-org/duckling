@@ -330,7 +330,6 @@ namespace compiler::mir {
 		auto decl_q = ctx.query<helios::QueryDeclOfFun>(sym_id);
 		if (decl_q.get()->hasFailed()) return ComptimeStatus::Runtime;
 		const auto& decl = decl_q.get()->valueOrPanic();
-
 		auto pst_elem_opt = decl.origin.getPSTElement();
 		if (!pst_elem_opt.has_value()) return ComptimeStatus::Runtime;
 
@@ -339,7 +338,6 @@ namespace compiler::mir {
 			root_element = root_element.unlock(ctx)->getParent().value();
 
 		const auto& additional_root_data = root_element.unlock(ctx)->getAdditionalRootData();
-
 		variant_match(additional_root_data.pst_parent) {
 			variant_case(::pst::AdditionalRootData::ModuleParent, module_parent) {
 				auto mod_id
@@ -361,14 +359,12 @@ namespace compiler::mir {
 		query::Context& ctx, ::compiler::frontend::ModuleID mod_id
 	) {
 		ModuleComptimeMap result;
-
 		std::unordered_map<helios::SymID, std::vector<helios::SymID>> reverse_call_graph;
 		std::queue<helios::SymID>                                     infection_queue;
 
 		auto hunit_q = ctx.query<helios::QueryModuleHOUT>(mod_id);
 		if (hunit_q.get()->hasFailed()) return result;
 		const auto& hunit = hunit_q.get()->valueOrPanic();
-
 		for (const auto& hout_func: hunit.functions) {
 			helios::SymID sym_id = hout_func->declaration->original_symbol;
 
@@ -377,7 +373,6 @@ namespace compiler::mir {
 
 			const Function& mir_func        = pre_mir_q.get()->valueOrPanic();
 			bool            is_patient_zero = false;
-
 			if (isComptimeOnlyType(mir_func.return_type.getType())) is_patient_zero = true;
 			if (!is_patient_zero) {
 				for (const auto& local: mir_func.local_list) {

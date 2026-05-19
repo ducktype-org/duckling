@@ -1,9 +1,24 @@
-fun patient_zero(t: type) -> type = box t;
+fun patient_zero(x: i64) -> i64 = {
+    let _ = box i64; 
+    return x;
+}
 
-fun infected_middleman(t: type) -> type = patient_zero(t);
+fun infection_chain_level_1(x: i64) -> i64 = {
+    return patient_zero(x);
+}
 
-fun infected_top_level(t: type) -> type = infected_middleman(t);
+fun infection_chain_level_2(x: i64) -> i64 = {
+    return infection_chain_level_1(x); 
+}
 
-fun healthy_runtime_function() = {
-    return 42;
+fun regular_runtime_function(x: i64) -> i64 = {
+    let a = x + 10;
+    return a; 
+}
+
+fun main() -> i64 = {
+    var a: i64 = 42;
+    let result = infection_chain_level_2(a);
+    let _ = regular_runtime_function(a);
+    return result;
 }

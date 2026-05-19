@@ -15,6 +15,7 @@
 #include <query_framework/context/context.hpp>
 #include <query_framework/entry/with_context_do.hpp>
 #include <tester/tester.hpp>
+#include <diagnostic_interactive/core/diagnostic_arguments.hpp>
 
 using namespace compiler::tsh;
 using namespace compiler::helios::test_utils;
@@ -913,50 +914,68 @@ private:
 	}
 
 	void comptimeOnlyQueryTest() {
-		auto [module, scope] = getModule(fs::File(path("modules/comptime_only_test")));
+        auto [module, scope] = getModule(fs::File(path("modules/comptime_only_test")));
 
-		withContextDo([&](query::Context& ctx) {
-			auto& unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+        withContextDo([&](query::Context& ctx) {
+            auto& unit 
+                = ctx.query<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
 
-			const compiler::helios::SymID* patient_zero_sym = nullptr;
-			const compiler::helios::SymID* middleman_sym    = nullptr;
-			const compiler::helios::SymID* top_level_sym    = nullptr;
-			const compiler::helios::SymID* healthy_sym      = nullptr;
+            const compiler::helios::SymID* patient_zero_sym = nullptr;
+            const compiler::helios::SymID* level_1_sym = nullptr;
+            const compiler::helios::SymID* level_2_sym = nullptr;
+            const compiler::helios::SymID* runtime_sym = nullptr;
+            const compiler::helios::SymID* main_sym = nullptr;
 
-			for (const auto& fun: unit.functions) {
-				auto name = fun->declaration->original_name.str();
-				if (name == "patient_zero")
-					patient_zero_sym = &fun->declaration->original_symbol;
-				else if (name == "infected_middleman")
-					middleman_sym = &fun->declaration->original_symbol;
-				else if (name == "infected_top_level")
-					top_level_sym = &fun->declaration->original_symbol;
-				else if (name == "healthy_runtime_function")
-					healthy_sym = &fun->declaration->original_symbol;
-			}
+            for (const auto& fun : unit.functions) {
+                auto name = fun->declaration->original_name.str();
+                if (name == "patient_zero")                 patient_zero_sym = &fun->declaration->original_symbol;
+                else if (name == "infection_chain_level_1") level_1_sym = &fun->declaration->original_symbol;
+                else if (name == "infection_chain_level_2") level_2_sym = &fun->declaration->original_symbol;
+                else if (name == "regular_runtime_function")  runtime_sym = &fun->declaration->original_symbol;
+                else if (name == "main")                      main_sym = &fun->declaration->original_symbol;
+            }
 
-			ASSERT_TRUE(patient_zero_sym != nullptr);
-			ASSERT_TRUE(middleman_sym != nullptr);
-			ASSERT_TRUE(top_level_sym != nullptr);
-			ASSERT_TRUE(healthy_sym != nullptr);
+            ASSERT_TRUE(patient_zero_sym != nullptr);
+            ASSERT_TRUE(level_1_sym != nullptr);
+            ASSERT_TRUE(level_2_sym != nullptr);
+            ASSERT_TRUE(runtime_sym != nullptr);
+            ASSERT_TRUE(main_sym != nullptr);
 
-			auto q_zero = ctx.query<compiler::mir::IsComptimeOnly>(*patient_zero_sym);
-			ASSERT_EQUAL(q_zero.get()->hasFailed(), false);
-			ASSERT_EQUAL(q_zero.get()->valueOrPanic(), compiler::mir::ComptimeStatus::Runtime);
+			auto comptime_map_q = ctx.query<compiler::mir::ComptimeStatusCalculate>(module);
+            ASSERT_TRUE(!comptime_map_q.get()->hasFailed());
+            
+            const auto& result_map = comptime_map_q.get()->valueOrPanic().map;
+		
+            auto status_zero = result_map.contains(*patient_zero_sym) ? result_map.at(*patient_zero_sym) : compiler::mir::ComptimeStatus::Runtime;
+            ASSERT_EQUAL(status_zero, compiler::mir::ComptimeStatus::ComptimeOnly);
 
-			auto q_mid = ctx.query<compiler::mir::IsComptimeOnly>(*middleman_sym);
-			ASSERT_EQUAL(q_mid.get()->hasFailed(), false);
-			ASSERT_EQUAL(q_mid.get()->valueOrPanic(), compiler::mir::ComptimeStatus::Runtime);
+            auto status_lvl1 = result_map.contains(*level_1_sym) ? result_map.at(*level_1_sym) : compiler::mir::ComptimeStatus::Runtime;
+            ASSERT_EQUAL(status_lvl1, compiler::mir::ComptimeStatus::ComptimeOnly);
 
-			auto q_top = ctx.query<compiler::mir::IsComptimeOnly>(*top_level_sym);
-			ASSERT_EQUAL(q_top.get()->hasFailed(), false);
-			ASSERT_EQUAL(q_top.get()->valueOrPanic(), compiler::mir::ComptimeStatus::Runtime);
+            auto status_lvl2 = result_map.contains(*level_2_sym) ? result_map.at(*level_2_sym) : compiler::mir::ComptimeStatus::Runtime;
+            ASSERT_EQUAL(status_lvl2, compiler::mir::ComptimeStatus::ComptimeOnly);
 
-			auto q_clean = ctx.query<compiler::mir::IsComptimeOnly>(*healthy_sym);
-			ASSERT_EQUAL(q_clean.get()->hasFailed(), false);
-			ASSERT_EQUAL(q_clean.get()->valueOrPanic(), compiler::mir::ComptimeStatus::Runtime);
-		});
-	}
+            auto status_rt = result_map.contains(*runtime_sym) ? result_map.at(*runtime_sym) : compiler::mir::ComptimeStatus::Runtime;
+            ASSERT_EQUAL(status_rt, compiler::mir::ComptimeStatus::Runtime);
+
+            auto status_main = result_map.contains(*main_sym) ? result_map.at(*main_sym) : compiler::mir::ComptimeStatus::Runtime;
+            ASSERT_EQUAL(status_main, compiler::mir::ComptimeStatus::ComptimeOnly);
+
+            std::vector<base::CRef<dia_int::dia_args::Diagnostic>> diagnostics;
+            query::Context::collectAllDiagnostic(diagnostics);
+            
+            bool found_main_error = false;
+            for (const auto& diag : diagnostics) {
+                std::string json_str = diag.get()->main_message.toJson().dump();
+                if (json_str.find("The 'main' function cannot be marked as compile-time only") != std::string::npos) {
+                    found_main_error = true;
+                    break;
+                }
+            }
+
+            ASSERT_TRUE(found_main_error);
+        });
+    }
 };
 
 TESTER_COMMON_MAIN("/src/compiler/core/mir/tests/")
