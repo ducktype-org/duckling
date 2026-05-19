@@ -21,11 +21,32 @@ namespace vm::fast {
 
 	class FastExecutor {
 	public:
-#define HANDLE_INSTR(NAME) static constexpr void Instr_##NAME(INSTRFUN_ARGS(NAME));
+#define HANDLE_INSTR(NAME) static void Instr_##NAME(INSTRFUN_ARGS(NAME));
 #include <vm/core/fast/program/instructions/instruction_definitions.hpp>
 #undef HANDLE_INSTR
 
-		static constexpr int eval(INSTRFUN_ARGS_BASE);
+		constexpr static int eval(INSTRFUN_ARGS_BASE) {
+			bool run = true;
+			while (run) {
+				switch (state.currentInstruction().id) {
+#define HANDLE_INSTR(NAME)                                                    \
+	case vm::fast::InstrID::NAME: {                                           \
+		if constexpr (std::string_view(#NAME) != "exit") {                    \
+			Instr_##NAME(state, local_stack, frame, frame->ip->instr_##NAME); \
+		} else {                                                              \
+			run = false;                                                      \
+		}                                                                     \
+		break;                                                                \
+	}
+#include <vm/core/fast/program/instructions/instruction_definitions.hpp>
+#undef HANDLE_INSTR
+				default:
+					return 1;
+					break;
+				}
+			}
+			return 0;
+		}
 	};
 
 }

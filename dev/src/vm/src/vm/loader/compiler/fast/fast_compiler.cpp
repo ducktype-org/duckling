@@ -49,8 +49,40 @@ void fast::FastCompiler::compileNewGlobals(const std::vector<GlobalData>& new_gl
 
 void fast::FastCompiler::compileNewFunctions(const std::vector<Function>& new_functions) {
 	for (const Function& function: new_functions) {
-		detail::FunctionStackContext   ctx = calculateStackContext(function);
-		vm::fast::reloc::RelocFunction reloc_func{ .data = lowerInstructions(high_program, ctx) };
+		detail::FunctionStackContext ctx = calculateStackContext(function);
+		program.functions.insert(
+			vm::fast::FunctionInfo{
+				.name        = function.name,
+				.id          = vm::fast::FunctionID(program.functions.size()),
+				.return_size = std::ranges::fold_left(
+					function.signature.result_types
+						| std::views::transform([this](const auto& result_name) {
+							  return program.types.at(result_name)->getSize();
+						  }),
+					Bytes(0),
+					std::plus()
+				),
+				.args_size = std::ranges::fold_left(
+					function.signature.parameters
+						| std::views::transform([this](const auto& param_name) {
+							  return program.types.at(param_name)->getSize();
+						  }),
+					Bytes(0),
+					std::plus()
+				),
+				.arg_types    = function.signature.parameters
+		                      | std::views::transform([this](const auto& param_name) {
+								 return program.types.at(param_name)->getID();
+								})
+		                      | std::ranges::to<std::vector<vm::fast::TypeID>>(),
+				.result_types = function.signature.result_types
+		                      | std::views::transform([this](const auto& result_name) {
+									return program.types.at(result_name)->getID();
+								})
+		                      | std::ranges::to<std::vector<vm::fast::TypeID>>() },
+			function.name
+		);
+		reloc_functions.emplace_back(lowerInstructions(high_program, ctx));
 	}
 }
 

@@ -19,10 +19,8 @@ namespace vm::fast {
 		base::StrID name;
 		FunctionID  id;
 
-		/// The maximum size of the local variables on stack required by the function frame.
-		Bytes local_stack_size;
-		// The total summed size of all return values.
-		usize ret_size;
+		Bytes return_size;
+		Bytes args_size;
 
 		std::vector<TypeID> arg_types;
 		std::vector<TypeID> result_types;

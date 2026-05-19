@@ -112,8 +112,10 @@ namespace vm::fast {
 	std::expected<api::Response, api::ApiError> FastVMProcess::join(
 		[[maybe_unused]] api::ThreadID thread_id
 	) {
-		// @TODO: #2102 Implement this pure virtual method.
-		throw vm::VMNotImplemented("Method `join` is not implemented.");
+		auto opt_thread = getVMThreadByID(thread_id);
+		if (!opt_thread)
+			return std::unexpected(api::ApiError{ api::OtherError{ "Thread not found" } });
+		return opt_thread.value()->join();
 	}
 
 	std::expected<api::Response, api::ApiError> FastVMProcess::stop() {
@@ -129,14 +131,10 @@ namespace vm::fast {
 	}
 
 	std::expected<api::Response, api::StateError> FastVMProcess::getExitCode() {
-		// @TODO: #2102 Implement this pure virtual method.
-		throw vm::VMNotImplemented("Method `getExitCode` is not implemented.");
+		return getMainVMThread().getExitValue();
 	}
 
-	std::expected<api::Response, api::ApiError> FastVMProcess::deinitAndValidate() {
-		// @TODO: #2102 Implement this pure virtual method.
-		throw vm::VMNotImplemented("Method `deinitAndValidate` is not implemented.");
-	}
+	std::expected<api::Response, api::ApiError> FastVMProcess::deinitAndValidate() { return {}; }
 
 	base::Optional<api::ApiError> FastVMProcess::pauseVMThread(
 		[[maybe_unused]] api::ThreadID thread_id

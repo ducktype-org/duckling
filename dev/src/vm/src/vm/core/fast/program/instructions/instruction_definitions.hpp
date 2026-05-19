@@ -34,8 +34,8 @@ DEF_INSTR(mov, (Place64, dst), (Place64, src))
 DEF_INSTR(add, (Place64, dst), (Place64, src))
 DEF_INSTR(cmpEq, (Place64, a), (Place64, b))
 DEF_INSTR(jumpIf, (JumpDestination, target))
-DEF_INSTR(call, (Function, func))
-DEF_INSTR(ret)
+DEF_INSTR(call, (Function, func), (Immediate, stack_diff))
+DEF_INSTR(ret, (Immediate, stack_cleanup_size))
 
 DEF_INSTR(exit)
 

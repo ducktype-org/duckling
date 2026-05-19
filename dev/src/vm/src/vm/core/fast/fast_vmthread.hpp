@@ -23,6 +23,7 @@ namespace vm::fast {
 
 		[[nodiscard]] u64 getNumberOfCurrentStackFrames() const override;
 
+		[[nodiscard]] i64 getExitValue() const;
 	protected:
 		void run(const std::string& func_name, const RunArguments& run_arguments) override;
 
@@ -31,6 +32,8 @@ namespace vm::fast {
 		void execGlobalDestructors() override;
 
 	private:
+		i64 exit_value;
+
 		FastVMProcess& fast_process;
 
 		ThreadRuntimeState runtime_data;

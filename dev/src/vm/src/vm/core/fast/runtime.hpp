@@ -2,7 +2,8 @@
 
 #include "base/pointers/box.hpp"
 
-#include <deque>
+#include "vm/core/fast/program/instructions/executable.hpp"
+
 #include <vector>
 
 namespace vm::fast {
@@ -14,9 +15,13 @@ namespace vm::fast {
 	struct Frame {
 		bool flag = false;
 		/// Instruction pointer, has to live in frame for easy function calls
-		const exec::Instruction* ip    = nullptr;
+		const exec::Instruction* ip = nullptr;
 
-		void reset() { flag = false; ip = nullptr; }
+		/// Pointer to the currently executing function, used for calls and returns.
+		const exec::ExecFunction* func = nullptr;
+
+		byte* local_stack_base
+			= nullptr;  /// Pointer to the start of the local stack for this frame.
 	};
 
 	class ThreadRuntimeState {
@@ -33,12 +38,11 @@ namespace vm::fast {
 		Box<std::array<byte, LOCAL_STACK_SIZE>> local_stack_memory
 			= makeBox<std::array<byte, LOCAL_STACK_SIZE>>();
 
-		std::deque<Frame> frame_stack{ Frame() };
+		std::vector<Frame> frame_stack = std::vector<Frame>(LOCAL_STACK_SIZE);
+
+		Frame* top_frame = frame_stack.data();
 
 	public:
-		Frame*                   top_frame = nullptr;
-
-
 		std::byte* const local_stack_base
 			= local_stack_memory->data();  /// Pointer to the start of the local stack.
 		std::byte* const local_stack_end
@@ -48,22 +52,19 @@ namespace vm::fast {
 		// @TODO: #2729 This should be a valid pointer.
 		std::byte* const global_data_buffer_base = nullptr;
 
-		void pushFrame() {
-			frame_stack.emplace_back();
-			top_frame = &frame_stack.back();
+		Frame* pushFrame(const exec::ExecFunction* function, byte* local_stack_base) {
+			top_frame++;
+			*top_frame = Frame{ .flag             = false,
+				                .ip               = function->data.data(),
+				                .func             = function,
+				                .local_stack_base = local_stack_base };
+			return top_frame;
 		}
 
-		void popFrame() {
-			frame_stack.pop_back();
-			top_frame = &frame_stack.back();
-		}
+		void popFrame() { top_frame--; }
+
+		[[nodiscard]] const exec::Instruction& currentInstruction() const { return *top_frame->ip; }
+
+		constexpr void incrementInstruction(usize progress_by) { top_frame->ip += progress_by; }
 	};
-
-	class ProcessRuntimeData {
-	public:
-
-	private:
-		std::vector<byte> global_data_buffer{};
-	};
-
 }

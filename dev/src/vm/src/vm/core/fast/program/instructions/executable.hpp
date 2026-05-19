@@ -8,6 +8,10 @@
 
 #include <vm/core/fast/program/type.hpp>
 
+namespace vm::fast {
+	struct FunctionInfo;
+}
+
 namespace vm::fast::exec {
 	struct ExecFunction;
 	struct Instruction;
@@ -37,6 +41,7 @@ namespace vm::fast::exec {
 
 	struct ExecFunction {
 		std::vector<Instruction> data;
+		const FunctionInfo*            info;
 	};
 
 	using ExecFunctionCollection = std::vector<ExecFunction>;

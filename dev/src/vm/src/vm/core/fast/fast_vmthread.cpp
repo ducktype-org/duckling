@@ -5,6 +5,7 @@
 #include "vm/core/fast/program/instructions/executable.hpp"
 #include "vm/core/fast/program/program.hpp"
 #include "vm/core/process/interface_types.hpp"
+#include "vm/core/safe/type_metadata/definitions.hpp"
 #include "vm/core/thread/ivmthread.hpp"
 #include "vm/core/thread/kill_process_exception.hpp"
 #include "vm/utils/vm_not_implemented.hpp"
@@ -50,7 +51,7 @@ void vm::fast::FastVMThread::run(const std::string& func_name, const RunArgument
 		CRef<FunctionInfo>        func_info = program->functions.at(base::StrID(func_name.data()));
 		const exec::ExecFunction& func      = functions->at(func_info->id.asInt());
 
-		const i64 exit_value = createStartAndExecuteFunction(func, args);
+		exit_value = createStartAndExecuteFunction(func, args);
 		respondExecutionRequest(api::ExecutionCompleted{ exit_value });
 	} catch (const vm::KillProcessException& e) {
 		respondExecutionRequest(api::ExecutionPanicked{ e.what() });
@@ -65,6 +66,8 @@ void vm::fast::FastVMThread::execGlobalDestructors() {
 	// TODO: Implement this pure virtual method.
 	throw vm::VMNotImplemented("Method `execGlobalDestructors` is not implemented.");
 }
+
+[[nodiscard]] i64 vm::fast::FastVMThread::getExitValue() const { return exit_value; }
 
 vm::fast::exec::ExecFunction vm::fast::FastVMThread::createStartFunctionFor(
 	const exec::ExecFunction& function, const RunArguments& run_arguments
@@ -88,9 +91,10 @@ vm::fast::exec::ExecFunction vm::fast::FastVMThread::createStartFunctionFor(
 
 	using namespace vm::fast::exec;
 	exec::ExecFunction start_function{};
-	start_function.data = {
-		maker::init_imm(program->types.at(base::StrID("i64"))->getSize().asInt()),
-		maker::call_func(&function),
+	usize ret_and_args_size = function.info->return_size.asInt() + function.info->args_size.asInt();
+	start_function.data     = {
+		maker::init_imm(ret_and_args_size),
+		maker::call_func_imm(&function, ret_and_args_size),
 		maker::exit(),
 	};
 	return start_function;
@@ -104,11 +108,11 @@ i64 vm::fast::FastVMThread::createStartAndExecuteFunction(
 }
 
 i64 vm::fast::FastVMThread::executeFunction(
-	const exec::ExecFunction& function, const RunArguments& run_arguments
+	const exec::ExecFunction& start_function, const RunArguments& run_arguments
 ) {
-	Frame* frame      = runtime_data.top_frame;
-	frame->ip         = function.data.data();
-	byte* local_stack = runtime_data.local_stack_base;
+	std::cout << "Expecting result at local stack base: " << runtime_data.local_stack_base << '\n';
+	Frame* frame       = runtime_data.pushFrame(&start_function, runtime_data.local_stack_base);
+	byte*  local_stack = runtime_data.local_stack_base;
 	FastExecutor::eval(runtime_data, local_stack, frame);
 	return *reinterpret_cast<i64*>(runtime_data.local_stack_base);
 }

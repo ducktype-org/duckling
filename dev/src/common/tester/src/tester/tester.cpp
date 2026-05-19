@@ -141,8 +141,8 @@ namespace tester {
 	}
 
 	void TestSuite::runTest(TestType test) {
+		(this->*test)();
 		try {
-			(this->*test)();
 		} catch (const CritTestError& e) {
 		} catch (const base::Panic& panic) {
 			curr_global_res->success = false;

@@ -2,6 +2,7 @@
 
 #include <tester/tester.hpp>
 
+#include "vm/api/data/api_error.hpp"
 #include "vm/api/data/process_info.hpp"
 #include "vm/api/vm.hpp"
 #include <vm/bytecode/validator/errors.hpp>
@@ -33,8 +34,12 @@ private:
 		auto pid        = spawnFastAndLoad(file_name);
 		auto run_result = vm::api::run(pid, {});
 		ASSERT_TRUE(run_result.has_value());
-		ASSERT_TRUE(vm::api::join(pid).has_value());
+		auto join_result = vm::api::join(pid);
+		ASSERT_TRUE(join_result.has_value());
 		auto exit_value = vm::api::getExitValue(pid);
+		if(!exit_value.has_value()) {
+			std::cerr << vm::api::errorToString(exit_value.error()) << '\n';
+		}
 		ASSERT_TRUE(exit_value.has_value());
 		variant_match(exit_value.value()) {
 			variant_case(i64, value) { ASSERT_EQUAL_PRINT(value, exit_code); }
