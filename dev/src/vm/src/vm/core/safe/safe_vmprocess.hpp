@@ -33,7 +33,7 @@ namespace vm {
 		friend class VMValueRef;
 
 	private:
-		const api::ProcessOptions options;
+		const api::ProcessConfig config;
 
 		std::shared_mutex rw_global;
 		/**
@@ -150,7 +150,7 @@ namespace vm {
 		void updateGlobalDataMemory(CRef<low::ILowVMProgram> program);
 
 	public:
-		SafeVMProcess(PID my_pid, api::ProcessOptions options = {});
+		SafeVMProcess(PID my_pid, api::ProcessConfig config = {});
 
 		Memory& getMemory();
 

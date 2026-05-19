@@ -33,10 +33,10 @@ namespace vm {
 		std::expected<void, loader::LoaderLogger> code_result = [&] {
 			variant_match(source) {
 				variant_case(std::vector<fs::File>, files) {
-					return loader.loadAndCompile(files, options.enable_mapping);
+					return loader.loadAndCompile(files, config.enable_mapping);
 				}
 				variant_case(code::CodeCollection, code) {
-					return loader.loadAndCompile(code, options.enable_mapping);
+					return loader.loadAndCompile(code, config.enable_mapping);
 				}
 			}
 			CORE_UNREACHABLE();
@@ -142,9 +142,9 @@ namespace vm {
 		return Box<VmValue>::fromPointer(new VmValue(*this, type, src));
 	}
 
-	SafeVMProcess::SafeVMProcess(const PID my_pid, api::ProcessOptions options):
+	SafeVMProcess::SafeVMProcess(const PID my_pid, api::ProcessConfig config):
 		  IVMProcess(my_pid),
-		  options(options),
+		  config(config),
 		  loaded_program(&loaded_program_copy),
 		  loaded_program_copy(loader.getProgram()) {
 		vm_threads.add(*this);
