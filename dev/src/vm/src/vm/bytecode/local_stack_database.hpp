@@ -83,7 +83,7 @@ namespace vm::persistent {
 
 		[[nodiscard]]
 		usize size(usize state) const {
-			return validateState(state).size();
+			return validateState(state).second.size();
 		}
 
 		DummyVector() { copies.emplace_back(base::Optional<usize>{}, std::vector<T>{}); }
@@ -94,7 +94,7 @@ namespace vm::persistent {
 		std::vector<base::HashMap<Key, Val, Hasher>> copies;
 
 		[[nodiscard]]
-		base::HashMap<Key, Val, Hasher>& validateState(usize state) const {
+		auto& validateState(usize state) const {
 			CORE_ASSERT(state < copies.size(), "We don't have a copy of given state");
 			return copies.at(state);
 		}
@@ -123,7 +123,7 @@ namespace vm::persistent {
 			auto copy = validateState(state);
 
 			if (copy.contains(k)) throw std::invalid_argument("overriding a present value");
-			copy.insert(k, v);
+			copy.put(k, v);
 
 			return copies.size() - 1;
 		}
@@ -241,19 +241,21 @@ namespace vm::code {
 
 		struct TreeNode {
 			base::HashMap<Child, NameStackID, ChildHash> children{};
-			usize                                        name_map_id = 0;
-			usize                                        size        = 0;
-			NameStackID                                  prev_node   = 0;
+			usize                                        name_map_id   = 0;
+			usize                                        name_stack_id = 0;
+			usize                                        size          = 0;
+			NameStackID                                  prev_node     = 0;
 			tp_size byte_depth = tp_size{ Bytes{ 0 }, Bytes{ 0 } };
 
 			NameStackID emplaceChild(const Child& child, NameStackID new_id);
 		};
 
 		const valid_type::ValidTypeMap& types_ctx;
-		std::vector<TreeNode>           tree = {};
+		std::vector<TreeNode>           tree = { TreeNode{} };
 
 		persistent::DummyHashMap<base::StrID, usize>     name_to_idx;
 		persistent::DummyVector<base::StrID>             typenames;
+		persistent::DummyVector<base::StrID>             var_names;
 		std::vector<std::pair<NameStackID, TypeStackID>> states
 			= { std::make_pair(LocalStackDb::EMPTY_NAME_STACK, LocalStackDb::EMPTY_TYPE_STACK) };
 
@@ -272,7 +274,16 @@ namespace vm::code {
 		base::StrID typeOf(StackStateID state, base::StrID name) const;
 
 		[[nodiscard]]
+		base::StrID typeOf(StackStateID state, usize idx) const;
+
+		[[nodiscard]]
 		usize size(StackStateID state) const;
+
+		[[nodiscard]]
+		bool contains(StackStateID state, base::StrID name) const;
+
+		[[nodiscard]]
+		base::StrID getName(StackStateID state, usize idx) const;
 
 		LocalStackDb finalize();
 	};

@@ -227,14 +227,17 @@ vm::code::StackStateID ls_db_bld::push(StackStateID state, base::StrID name, bas
 	if (new_nametree_node_id == tree.size()) {
 		auto name_map_id    = tree[node_id].name_map_id;
 		auto new_namemap_id = name_to_idx.insert(name_map_id, name, tree[node_id].size);
+		auto var_name_id    = tree[node_id].name_stack_id;
+		auto new_varname_id = var_names.push(var_name_id, name);
 
 		tree.emplace_back(
 			TreeNode{
-				.children    = {},
-				.name_map_id = new_namemap_id,
-				.size        = tree[node_id].size + 1,
-				.prev_node   = node_id,
-				.byte_depth  = tree[node_id].byte_depth + types_ctx.at(type)->getSize(),
+				.children      = {},
+				.name_map_id   = new_namemap_id,
+				.name_stack_id = new_varname_id,
+				.size          = tree[node_id].size + 1,
+				.prev_node     = node_id,
+				.byte_depth    = tree[node_id].byte_depth + types_ctx.at(type)->getSize(),
 			}
 		);
 	}
@@ -274,6 +277,14 @@ vm::code::StackStateID ls_db_bld::change(StackStateID state, base::StrID name, b
 	return StackStateID{ states.size() - 1 };
 }
 
+base::StrID ls_db_bld::typeOf(StackStateID state, usize idx) const {
+	auto [node_id, typestack_id] = states.at(u64{ state });
+	CORE_ASSERT(idx < typenames.size(typestack_id), "idx should be valid");
+
+	return typenames.at(typestack_id, idx);
+}
+
+
 base::StrID ls_db_bld::typeOf(StackStateID state, base::StrID name) const {
 	auto [node_id, typestack_id] = states.at(u64{ state });
 	auto name_map_id             = tree[node_id].name_map_id;
@@ -282,14 +293,29 @@ base::StrID ls_db_bld::typeOf(StackStateID state, base::StrID name) const {
 		throw std::invalid_argument("No such variable at given instance");
 
 	auto idx = name_to_idx.at(name_map_id, name);
-	CORE_ASSERT(idx < typenames.size(typestack_id), "idx should be valid");
 
-	return typenames.at(typestack_id, idx);
+	return typeOf(state, idx);
 }
 
 usize ls_db_bld::size(StackStateID state) const {
 	auto [node_id, typestack_id] = states.at(u64{ state });
 	return tree[node_id].size;
+}
+
+bool ls_db_bld::contains(StackStateID state, base::StrID name) const {
+	auto [node_id, typestack_id] = states.at(u64{ state });
+	auto name_map_id             = tree[node_id].name_map_id;
+
+	return name_to_idx.contains(name_map_id, name);
+}
+
+base::StrID ls_db_bld::getName(StackStateID state, usize idx) const {
+	auto [node_id, typestack_id] = states.at(u64{ state });
+
+	CORE_ASSERT(idx < tree[node_id].size, "We need this to be true for name retrieval");
+	auto varname_stack_id = tree[node_id].name_stack_id;
+
+	return var_names.at(varname_stack_id, idx);
 }
 
 vm::code::LocalStackDb ls_db_bld::finalize() {
