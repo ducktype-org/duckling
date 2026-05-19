@@ -329,8 +329,8 @@ namespace compiler::mir {
 	ComptimeStatus isComptimeOnly(query::Context& ctx, helios::SymID sym_id) {
 		auto decl_q = ctx.query<helios::QueryDeclOfFun>(sym_id);
 		if (decl_q.get()->hasFailed()) return ComptimeStatus::Runtime;
-		const auto& decl = decl_q.get()->valueOrPanic();
-		auto pst_elem_opt = decl.origin.getPSTElement();
+		const auto& decl         = decl_q.get()->valueOrPanic();
+		auto        pst_elem_opt = decl.origin.getPSTElement();
 		if (!pst_elem_opt.has_value()) return ComptimeStatus::Runtime;
 
 		auto root_element = pst_elem_opt.value();
@@ -358,7 +358,7 @@ namespace compiler::mir {
 	query::QResult<ModuleComptimeMap> comptimeStatusCalculate(
 		query::Context& ctx, ::compiler::frontend::ModuleID mod_id
 	) {
-		ModuleComptimeMap result;
+		ModuleComptimeMap                                             result;
 		std::unordered_map<helios::SymID, std::vector<helios::SymID>> reverse_call_graph;
 		std::queue<helios::SymID>                                     infection_queue;
 
