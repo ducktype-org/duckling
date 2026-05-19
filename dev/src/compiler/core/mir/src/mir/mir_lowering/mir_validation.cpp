@@ -3,7 +3,6 @@
 #include "mir_lifetimes.hpp"
 #include "mir_queries.hpp"
 
-#include <bits/stdc++.h>
 #include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/elements/includes/basic.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
