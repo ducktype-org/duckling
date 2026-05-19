@@ -7,11 +7,11 @@ namespace pst {
 	MBox<Destructor> Destructor::parse(LangParserState& state) {
 		auto out = makeBox<Destructor>(state);
 
+		CORE_ASSERT(state[0].is(state.getContext()->class_name), "Bad destructor parsing entry");
+
 		PARSE().eatOne();
 
-		tpc::Identifier ident;
-		PARSE().all(NamedOperator::Period, &ident);
-		out->kind = ident;
+		PARSE().all(NamedOperator::Period, Keyword::Destroy);
 
 		PARSE().goDown();
 		if (state.notEmpty()) state.logInt(makeBox<NonEmptyError>(state.getPosition()));
