@@ -22,6 +22,7 @@ public:
 		TESTER_ADD_TEST(getStatusBreakpoint);
 		TESTER_ADD_TEST(rerunTest);
 		TESTER_ADD_TEST(errorTest);
+		TESTER_ADD_TEST(memoryTest);
 	}
 
 private:
@@ -272,6 +273,39 @@ private:
 		debugger.resume();
 
 		ASSERT_TRUE(std::holds_alternative<vm::api::Running>(debugger.getStatus()));
+	}
+
+	void memoryTest() {
+		vm::debugger::Debugger debugger{ fs::File(path("breakpoint_all_types.dbc")) };
+		std::mutex             m;
+
+		std::condition_variable cv;
+
+		events::Listener<vm::api::ProcStatus> status_listener([&](const vm::api::ProcStatus& status
+		                                                      ) {
+			if (status.index() == altIndex(vm::api::Paused)) cv.notify_one();
+		});
+		debugger.attachOnVMChangesStatusListener(status_listener);
+		debugger.runMain();
+		std::unique_lock lk(m);
+		ASSERT_TRUE(cv.wait_for(lk, std::chrono::milliseconds(100), [&] {
+			return std::holds_alternative<vm::api::Paused>(debugger.getStatus());
+		}));
+
+		auto response = debugger.getNumberOfStackFrames();
+		ASSERT_EQUAL(2, response);
+		auto info = debugger.getStackFrameData(1);
+		ASSERT_EQUAL(9, info.frame_vars.size());
+		ASSERT_EQUAL_PRINT("0", info.frame_vars[0].value.str());          // ret0
+		ASSERT_EQUAL_PRINT("0", info.frame_vars[1].value.str());          // arg0
+		ASSERT_EQUAL_PRINT("null", info.frame_vars[2].value.str());       // arg1
+		ASSERT_EQUAL_PRINT("<pointer>", info.frame_vars[3].value.str());  // struct_pointer
+		ASSERT_EQUAL_PRINT("<pointer>", info.frame_vars[4].value.str());  // dyntable_pointer
+		ASSERT_EQUAL_PRINT(
+			"<pointer>", info.frame_vars[5].value.str()
+		);  // fixtable_pointer		ASSERT_EQUAL_PRINT("<pointer>", info.frame_vars[6].value.str());
+		ASSERT_EQUAL_PRINT("<pointer>", info.frame_vars[7].value.str());  // variant_pointer
+		ASSERT_EQUAL_PRINT("42", info.frame_vars[8].value.str());         // new_variant_data_value
 	}
 };
 

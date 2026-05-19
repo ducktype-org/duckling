@@ -2,6 +2,8 @@
 
 #include <poll.h>
 
+#include <base/extend_cpp/variant_match.hpp>
+
 #include <vm/api/vm.hpp>
 
 namespace {
@@ -102,6 +104,44 @@ namespace vm::debugger {
 		    ) -> std::expected<api::response::CodePosition, api::ApiError> {
 				if (std::holds_alternative<api::Running>(status)) return api::pause(pid);
 
+
+	api::response::StackFrameData Debugger::getStackFrameData(u64 frame_index) {
+		return vm::api::debuggerGetStackFrameData(pid, api::ThreadID(0), frame_index)
+		    .transform_error([&](const vm::api::ApiError& api_error) {
+				throw std::runtime_error(vm::api::errorToString(api_error));
+				return api_error;
+			})
+		    .value();
+	}
+
+	std::expected<void, api::ApiError> Debugger::loadFile(const fs::File& filepath) {
+		return api::loadFiles(pid, { filepath });
+	}
+
+	api::response::StackFrameData Debugger::getStackFrameData(u64 frame_index) {
+		return vm::api::debuggerGetStackFrameData(pid, api::ThreadID(0), frame_index)
+		    .transform_error([&](const vm::api::ApiError& api_error) {
+				throw std::runtime_error(vm::api::errorToString(api_error));
+				return api_error;
+			})
+		    .value();
+	}
+
+	u64 Debugger::getNumberOfStackFrames() {
+		return vm::api::debuggerGetNumberOfStackFrames(pid, api::ThreadID(0))
+		    .transform_error([&](const vm::api::ApiError& api_error) {
+				throw std::runtime_error(vm::api::errorToString(api_error));
+				return api_error;
+			})
+		    .value()
+		    .number_of_stack_frames;
+	}
+
+	std::expected<api::response::CodePosition, api::ApiError> Debugger::pause() {
+		return api::getExecutionStatus(pid).and_then(
+			[&](const api::ProcStatus& status
+		    ) -> std::expected<api::response::CodePosition, api::ApiError> {
+				if (std::holds_alternative<api::Running>(status)) return api::pause(pid);
 				return std::unexpected(api::ApiError{
 					api::OtherError{ "Wrong VM state to pause: got " + statusToString(status)
 			                         + ", allowed state is Running." } });
