@@ -304,7 +304,12 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		const Ref<dia_int::Logger> getLogger() const {
+		CRef<dia_int::Logger> getLogger() const {
+			return file->getIntLogger();
+		}
+
+		[[nodiscard]]
+		Ref<dia_int::Logger> getLoggerMut() {
 			return file->getIntLogger();
 		}
 
