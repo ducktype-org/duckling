@@ -322,8 +322,9 @@ private:
 		ASSERT_EQUAL_PRINT(info.frame_vars[4].value.str(), "<pointer>");  // dyntable_pointer
 		ASSERT_EQUAL_PRINT(
 			info.frame_vars[5].value.str(), "<pointer>"
-		);  // fixtable_pointer		ASSERT_EQUAL_PRINT(info.frame_vars[6].value.str(), "<pointer>");
-		ASSERT_EQUAL_PRINT(info.frame_vars[7].value.str(), "<pointer>");  // variant_pointer
+		);  // fixtable_pointer
+		ASSERT_EQUAL_PRINT(info.frame_vars[6].value.str(), "<pointer>");  // variant_pointer
+		ASSERT_EQUAL_PRINT(info.frame_vars[7].value.str(), "<pointer>");  // variant_data_pointer
 		ASSERT_EQUAL_PRINT(info.frame_vars[8].value.str(), "42");         // new_variant_data_value
 	}
 };
