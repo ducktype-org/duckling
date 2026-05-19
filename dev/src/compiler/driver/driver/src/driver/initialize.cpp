@@ -227,6 +227,30 @@ namespace compiler::driver {
 				handleIncrementalOptions(package_compilation_options.incremental);
 			}
 			variant_case(CompilerModeOfOperationAndOptions::ReplMode, repl_options) {
+				// Create a dummy "repl_session" package and root module
+				// This is a hack to make the import from different packages work in the REPL,
+				// as the module lookup relies on the global package registry.
+				auto package_root_file = fs::FileManager::createRandomVirtualFile("", ".dmf");
+				std::vector<compiler::frontend::packages::RawPackageInfo> repl_packages_info{
+					compiler::frontend::packages::RawPackageInfo{
+						.package_name = base::StrID("repl_session"),
+						.version      = base::StrID("0.1.0"),
+						.package_path = package_root_file.getFilePath(),
+						.features     = {},
+						.dependencies = {},
+					},
+				};
+				options_types::GlobalLinkingOptions repl_linking_options{
+					.std_lib_type = options_types::GlobalLinkingOptions::DefaultStd{},
+				};
+
+				auto package_success = handlePackageOptions(
+					repl_packages_info,
+					repl_linking_options
+				);
+				if (package_success.isBad()) return base::BAD;
+
+
 				handleDebugOptions(repl_options.debug_options);
 				handleExecutionOptions(repl_options.execution_options);
 			}
