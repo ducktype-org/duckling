@@ -62,6 +62,10 @@ namespace vm {
 	};
 
 	using Block = BasicBlock<std::byte>;
+
+	struct ShadowEntry;
+	using ShadowBlock = BasicBlock<ShadowEntry>;
+
 	using BlockGeneric = Block;
 }
 

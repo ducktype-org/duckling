@@ -1,0 +1,59 @@
+type data: Leaf { val: i64 }
+type fixed_size_table: LeafArray Leaf 2
+type data: Node { arr: LeafArray }
+type fixed_size_table: NodeArray Node 2
+type data: Root { arr: NodeArray }
+
+type pointer: ptr_i64 i64
+type pointer: ptr_Leaf Leaf
+type pointer: ptr_LeafArray LeafArray
+type pointer: ptr_Node Node
+type pointer: ptr_NodeArray NodeArray
+
+function main {} -> { i64 } {
+    init_pany_type root, Root;
+    
+    # root.arr[1].arr[0].val = 42
+    
+    init_pany_type p_node_arr, ptr_NodeArray;
+    structLea_pptr_pste_field p_node_arr, root, Root.arr;
+    
+    init_pany_type p_node, ptr_Node;
+    init_pany_type idx1, i64;
+    mov_p64_imm idx1, 1;
+    fixedSizeTableLea_pptr_pptr_p64 p_node, p_node_arr, idx1;
+    
+    init_pany_type p_leaf_arr, ptr_LeafArray;
+    structLea_pptr_pptr_field p_leaf_arr, p_node, Node.arr;
+    
+    init_pany_type p_leaf, ptr_Leaf;
+    init_pany_type idx2, i64;
+    mov_p64_imm idx2, 0;
+    fixedSizeTableLea_pptr_pptr_p64 p_leaf, p_leaf_arr, idx2;
+    
+    init_pany_type p_val, ptr_i64;
+    structLea_pptr_pptr_field p_val, p_leaf, Leaf.val;
+    
+    init_pany_type val, i64;
+    mov_p64_imm val, 42;
+    store_pptr_pany p_val, val;
+    
+    init_pany_type check, i64;
+    load_pany_pptr check, p_val;
+    output_p64 check; # 42
+    
+    # Now try to access root.arr[0].arr[1].val = 1337
+    mov_p64_imm idx1, 0;
+    fixedSizeTableLea_pptr_pptr_p64 p_node, p_node_arr, idx1;
+    structLea_pptr_pptr_field p_leaf_arr, p_node, Node.arr;
+    mov_p64_imm idx2, 1;
+    fixedSizeTableLea_pptr_pptr_p64 p_leaf, p_leaf_arr, idx2;
+    structLea_pptr_pptr_field p_val, p_leaf, Leaf.val;
+    
+    mov_p64_imm val, 1337;
+    store_pptr_pany p_val, val;
+    load_pany_pptr check, p_val;
+    output_p64 check; # 1337
+
+    ret;
+}

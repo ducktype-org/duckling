@@ -61,6 +61,17 @@ namespace vm {
 		BlockGeneric** local_block_ref_stack_end = nullptr;
 
 		/**
+		 * @brief Base of the stack of shadow block IDs used by the function created with init_type
+		 * and destroyed with deinit.
+		 */
+		ShadowBlock** local_shadow_block_ref_stack_base = nullptr;
+
+		/**
+		 * @brief The pointer to the first free position on the shadow block stack.
+		 */
+		ShadowBlock** local_shadow_block_ref_stack_end = nullptr;
+
+		/**
 		 * @brief First free byte in the local stack.
 		 * Used when new block is created on the local stack.
 		 */

@@ -757,14 +757,20 @@ namespace vm {
 		// ======================== Requests ========================
 
 		[[nodiscard]]
-		auto requestBlockID(Ref<BlockT> block) -> BlockID {
+		auto requestBlockID(Ref<BlockT> block) const -> BlockID {
 			return block->id;
 		}
 
 		[[nodiscard]]
-		auto requestBlockData(BlockID id) -> base::TypedModRawView<const EntryT> {
-			auto b = getBlock(id);
+		auto requestBlockData(BlockID id) const -> base::TypedModRawView<const EntryT> {
+			auto b = const_cast<IMemory*>(this)->getBlock(id);
 			return { b->data.view.getBegin(), b->data.view.size() };
+		}
+
+		[[nodiscard]]
+		auto requestMutableBlockData(BlockID id) -> base::TypedModRawView<EntryT> {
+			auto b = getBlock(id);
+			return b->data.view;
 		}
 
 		[[nodiscard]]

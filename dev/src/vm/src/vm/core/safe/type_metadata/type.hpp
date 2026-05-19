@@ -39,6 +39,7 @@ namespace vm {
 
 		base::StrID name;
 		TypeSize    size      = TypeSize(-1);
+        ShadowOffset shadow_size = ShadowOffset(-1);
 		Kind        kind_type = Kind::None;
 		TypeID      id{};
 		bool        am_i_instantiable = true;
@@ -111,6 +112,12 @@ namespace vm {
 			CORE_ASSERT(size != TypeSize(-1), "getSize called before type finalization");
 			return size;
 		}
+
+        [[nodiscard]]
+        ShadowOffset getShadowSize() const {
+            CORE_ASSERT(shadow_size != ShadowOffset(-1), "getShadowSize called before type finalization");
+            return shadow_size;
+        }
 
 		template<class T>
 		base::Optional<CRef<T>> get() const {
