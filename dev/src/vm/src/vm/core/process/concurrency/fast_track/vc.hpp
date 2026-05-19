@@ -19,6 +19,7 @@ namespace vm {
 	class VectorClock {
 	private:
 		std::vector<i32> clocks;
+		u32              ref_count = 0;
 
 		/**
 		 * @brief Ensures capacity for thread t: |VC| >= t + 1.
@@ -30,6 +31,23 @@ namespace vm {
 		 * @brief Default constructor. VC = \lambda t. 0.
 		 */
 		VectorClock() = default;
+
+		/**
+		 * @brief Manual reference counting for Shared mode in ShadowEntry.
+		 */
+		void incRef() { ref_count++; }
+		void decRef() {
+			if (--ref_count == 0) delete this;
+		}
+
+		/**
+		 * @brief Factory method for heap-allocated VCs used in Shared mode.
+		 */
+		static VectorClock* createShared() {
+			auto* vc = new VectorClock();
+			vc->incRef();
+			return vc;
+		}
 
 		/**
 		 * @brief Read component: VC(t).

@@ -55,6 +55,16 @@ namespace vm {
 		std::unique_lock lock(rw_global);
 		SafeVMThread&    thread = getEmptyThread();
 		thread.setThreadCtx(func_name);
+
+		// FastTrack Fork: Parent's current state is joined into child's initial VC
+		// We assume the caller (often main thread or another worker) is represented by some active thread
+		// or we use the 'main' thread as the default parent for the initial fork.
+		// For built-in spawn, 'getMainVMThread()' or similar is used to get parent context.
+		// Here we simply propagate the parent's current VC if possible.
+		// Note: This needs careful mapping of 'which thread is calling runFunction'.
+		// For simplicity in Phase 3, we use the main thread as the reference parent.
+		thread.forkVC(getMainVMThread().getVC());
+
 		bool response = thread.spawnThreadAndRun(func_name, run_arguments);
 
 		if (!response) {

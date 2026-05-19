@@ -116,7 +116,16 @@ namespace vm::builtins {
 
 	i64 FunctionHandlers::builtinStartThread(SafeVMThread& thread) {
 		thread.releaseGil();
+		
+		// FastTrack Fork: Parent's current VC is the initial VC for the child
+		// (handled by getEmptyThread/spawnThreadAndRun logic implicitly if we pass it, 
+		// but here we just ensure the child is aware)
+		
 		auto result = vm::api::runFunction(thread.safe_process.getPID(), thread.getThreadCtx());
+		
+		// After spawning, parent increments its own clock to establish happens-before with future actions
+		thread.onRelease(const_cast<VectorClock&>(thread.getVC())); // Manual increment
+
 		thread.acquireGil();
 		if (!result.has_value()) return -vm::api::errorToErrno(result.error());
 		return static_cast<i64>(result.value().asInt());
@@ -124,7 +133,16 @@ namespace vm::builtins {
 
 	i64 FunctionHandlers::builtinJoinThread(SafeVMThread& thread, u64 thread_id) {
 		thread.releaseGil();
+		
+		auto target_thread_opt = thread.safe_process.getVMThreadByID(api::ThreadID{ thread_id });
+		
 		auto result = vm::api::join(thread.safe_process.getPID(), api::ThreadID{ thread_id });
+		
+		if (result.has_value() && target_thread_opt) {
+			// FastTrack Join: Joinee's VC joined into Joiner's VC
+			thread.joinVC(target_thread_opt.value()->getVC());
+		}
+
 		thread.acquireGil();
 		if (!result.has_value()) return -vm::api::errorToErrno(result.error());
 		return 0;  // success

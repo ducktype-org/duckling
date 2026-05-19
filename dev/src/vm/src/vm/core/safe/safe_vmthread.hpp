@@ -227,12 +227,30 @@ namespace vm {
 		void onAcquire(const VectorClock& lock_vc) { vc |= lock_vc; }
 
 		/**
+		 * @brief FastTrack Join event.
+		 */
+		void joinVC(const VectorClock& other_vc) { vc |= other_vc; }
+
+		/**
+		 * @brief FastTrack Fork event.
+		 */
+		void forkVC(const VectorClock& parent_vc) {
+			vc |= parent_vc;
+			vc[getThreadID()] = 1;
+		}
+
+		/**
 		 * @brief FastTrack Release event.
 		 */
 		void onRelease(VectorClock& lock_vc) {
 			lock_vc = vc;
 			vc[getThreadID()]++;
 		}
+
+		/**
+		 * @brief Gets the thread's vector clock.
+		 */
+		const VectorClock& getVC() const { return vc; }
 
 		/**
 		 * @brief Gets name of the function that will be used in builtin spawn thread.

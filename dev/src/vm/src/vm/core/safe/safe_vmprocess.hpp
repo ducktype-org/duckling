@@ -76,18 +76,23 @@ namespace vm {
 		SafeVMThread& getMainVMThread();
 
 		/**
-		 * @brief Returns thread by id and if id doesn't exist or it is equal 0
-		 * then it returns main thread
-		 */
-		base::Optional<Ref<SafeVMThread>> getVMThreadByID(api::ThreadID thread_id);
-
-		/**
 		 * @brief Returns reference to either existing empty thread or
 		 * creates new thread without worker and returns it
 		 */
 		SafeVMThread& getEmptyThread();
 
 		base::Optional<api::ApiError> assertProcessCanRespond();
+
+	public:
+		SafeVMProcess(PID my_pid);
+
+		/**
+		 * @brief Returns thread by id and if id doesn't exist or it is equal 0
+		 * then it returns main thread
+		 */
+		base::Optional<Ref<SafeVMThread>> getVMThreadByID(api::ThreadID thread_id);
+
+		Memory& getMemory();
 
 		std::expected<api::Response, api::LoadProgramError> loadProgram(
 			const std::variant<std::vector<fs::File>, code::CodeCollection>& source
@@ -140,21 +145,6 @@ namespace vm {
 
 		std::vector<api::ThreadID> getAllThreadIDs() override;
 
-		/**
-		 * @brief Updates the memory for globals of this process after loading a program with new
-		 * globals. Works in incremental way. Only supports adding new globals, not removing or
-		 * changing existing ones.
-		 *
-		 * Should be called after loading a new globals.
-		 * @param program The program with the new globals.
-		 */
-		void updateGlobalDataMemory(CRef<low::ILowVMProgram> program);
-
-	public:
-		SafeVMProcess(PID my_pid);
-
-		Memory& getMemory();
-
 		Ref<VmValue> createVmValue(TypeCRef type) override;
 
 		Ref<VmValue> createVmValue(TypeCRef type, Pointer src) override;
@@ -174,5 +164,15 @@ namespace vm {
 		 * @brief Get the synchronization primitives of the process.
 		 */
 		SynchronizationPrimitives& getSynchronizationPrimitives();
+
+		/**
+		 * @brief Updates the memory for globals of this process after loading a program with new
+		 * globals. Works in incremental way. Only supports adding new globals, not removing or
+		 * changing existing ones.
+		 *
+		 * Should be called after loading a new globals.
+		 * @param program The program with the new globals.
+		 */
+		void updateGlobalDataMemory(CRef<low::ILowVMProgram> program);
 	};
 }
