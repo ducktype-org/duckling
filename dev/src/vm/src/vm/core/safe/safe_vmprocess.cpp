@@ -223,7 +223,10 @@ namespace vm {
 
 		auto                               function    = low_position.function;
 		auto                               mapping     = function->instruction_mapping;
-		low::LowFuncData::InstructionRange instr_range = { 0, std::numeric_limits<usize>::max() };
+		low::LowFuncData::InstructionRange instr_range = {
+			.begin = 0,
+			.end   = std::numeric_limits<usize>::max(),
+		};
 
 		// Try to obtain high position and optimize instruction range to step over
 		auto maybe_hp = loader.mapLowVMProgramPositionToCodeCollectionPosition(low_position);

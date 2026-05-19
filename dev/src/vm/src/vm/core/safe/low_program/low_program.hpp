@@ -45,7 +45,7 @@ namespace vm::low {
 			usize begin, end;
 			auto  operator<=>(const InstructionRange&) const = default;
 
-			inline bool contains(usize index) const { return begin <= index && index < end; }
+			[[nodiscard]] bool contains(usize index) const { return begin <= index && index < end; }
 		};
 
 		/**

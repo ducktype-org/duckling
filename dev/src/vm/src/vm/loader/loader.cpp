@@ -195,8 +195,10 @@ std::expected<vm::loader::Loader::FatBytecodePosition, vm::loader::Loader::Mappi
 	auto& mapping = position.function->instruction_mapping;
 	auto  it      = std::ranges::upper_bound(
         mapping,
-        vm::low::LowFuncData::InstructionRange{ position.instruction_index,
-                                                std::numeric_limits<usize>::max() }
+        vm::low::LowFuncData::InstructionRange{
+				  .begin = position.instruction_index,
+				  .end   = std::numeric_limits<usize>::max(),
+        }
     );
 
 	if (it == mapping.begin()) return std::unexpected(MissingMapping);
