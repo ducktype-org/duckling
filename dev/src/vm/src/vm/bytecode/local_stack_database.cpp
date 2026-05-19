@@ -64,6 +64,12 @@ base::StrID ls_db::getTypeName(StackStateID state, usize idx) const {
 	return typestack.at(typestack_id, idx);
 }
 
+usize ls_db::size(StackStateID state) const {
+	auto name_state_id = stack_state_to_substacks.at(u64(state)).first;
+	return namestack_entries.at(name_state_id).size_in_blocks;
+}
+
+
 bool ls_db::eqTypes(StackStateID state_1, StackStateID state_2) {
 	auto typestack_id_1 = stack_state_to_substacks.at(u64(state_1)).second;
 	auto typestack_id_2 = stack_state_to_substacks.at(u64(state_2)).second;
