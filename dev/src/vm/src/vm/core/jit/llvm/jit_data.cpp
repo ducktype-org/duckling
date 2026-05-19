@@ -113,6 +113,7 @@ LlvmData::LlvmTypes findOrCreateTypes(std::unique_ptr<llvm::orc::ThreadSafeConte
 	auto microinstruction_ty = Ref(llvm::StructType::create(
 		*g_context->getContext(),
 		{
+			// Layout of microinstructions struct in switch case version.
 			llvm::Type::getInt64Ty(*g_context->getContext()),  // opcode
 			llvm::Type::getInt64Ty(*g_context->getContext()),  // arg0
 			llvm::Type::getInt64Ty(*g_context->getContext())   // arg1
