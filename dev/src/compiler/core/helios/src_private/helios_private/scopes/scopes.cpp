@@ -650,9 +650,7 @@ namespace compiler::helios {
 							= HInterface::ofSymbol(sym).lookup(ctx, key.name, { true });
 						UNPACK_QRESULT_CREF(CRef<LookupResult> wild_result = &, wild_result_qresult);
 						if (!wild_result->isEmpty()) {
-							result.leaves.insert(
-								result.leaves.end(), wild_result->leaves.begin(), wild_result->leaves.end()
-							);
+							result.merge(*wild_result);
 						}
 					}
 				} else if (isAlias(sym) && name(sym) == key.name) {

@@ -87,7 +87,7 @@ namespace compiler::driver {
 				.linker_path             = {},
 				.additional_link_options = {},
 				.link_c_standard_library = true,
-				.stdlib_link_options     = getStdLibLinkingArgs(),
+				.stdlib_link_options     = {},
 			};
 			if (json.contains("linking_options")) {
 				const auto& linking_json = json["linking_options"];
