@@ -20,13 +20,16 @@
 
 using ls_db = vm::code::LocalStackDb;
 
-ls_db::NameStackEntry ls_db::getNameEntry(StackStateID state, base::StrID name) const {
+ls_db::NameStackEntry ls_db::getNameEntryByName(StackStateID state, base::StrID name) const {
 	auto name_state_id = stack_state_to_substacks.at(u64(state)).first;
 
-	auto& occurences = name_to_namestack_id.at(name);
-	auto  entry      = namestack_entries.at(name_state_id);
+	auto entry = namestack_entries.at(name_state_id);
 
-	auto it = occurences.lower_bound(entry.lifetime);
+	if (!name_to_namestack.contains(name))
+		throw std::invalid_argument("Received completely unknown name");
+
+	auto& occurences = name_to_namestack.at(name);
+	auto  it         = occurences.lower_bound(entry.lifetime);
 
 	if (it == occurences.end()) throw std::invalid_argument("No such name at given stack");
 
@@ -39,23 +42,41 @@ ls_db::NameStackEntry ls_db::getNameEntry(StackStateID state, base::StrID name) 
 	return namestack_entries.at(val_stack_id);
 }
 
+ls_db::NameStackEntry ls_db::getNameEntryByIdx(StackStateID state, usize idx) const {
+	auto name_state_id = stack_state_to_substacks.at(u64(state)).first;
+
+	auto  entry      = namestack_entries.at(name_state_id);
+	auto& occurences = nodes_at_depth.at(idx);
+
+	auto it = occurences.lower_bound(entry.lifetime);
+
+	if (auto [init, deinit] = it->first;
+	    init > entry.lifetime.deinit_idx || deinit < entry.lifetime.init_idx) {
+		throw std::invalid_argument("Variable with given name is not present at the stack instance");
+	}
+
+	auto val_stack_id = it->second;
+	return namestack_entries.at(val_stack_id);
+}
+
 ls_db::tp_size ls_db::getByteOffset(StackStateID state, base::StrID name) const {
-	return getNameEntry(state, name).size_in_bytes;
+	auto entry = getNameEntryByName(state, name);
+	return entry.size_in_bytes - entry.size_of_last;
 }
 
 bool ls_db::contains(StackStateID state, base::StrID name) const {
 	try {
-		getNameEntry(state, name);
+		getNameEntryByName(state, name);
 		return true;
 	} catch (std::invalid_argument& e) { return false; }
 }
 
-usize ls_db::getIdxOf(StackStateID state, base::StrID name) const {
-	return getNameEntry(state, name).size_in_blocks;
+usize ls_db::getIdx(StackStateID state, base::StrID name) const {
+	return getNameEntryByName(state, name).size_in_blocks - 1;
 }
 
 base::StrID ls_db::getTypeName(StackStateID state, base::StrID name) const {
-	auto idx          = getIdxOf(state, name);
+	auto idx = getIdx(state, name);
 	return getTypeName(state, idx);
 }
 
@@ -69,6 +90,10 @@ usize ls_db::size(StackStateID state) const {
 	return namestack_entries.at(name_state_id).size_in_blocks;
 }
 
+base::StrID ls_db::getName(StackStateID state, usize idx) const {
+	auto entry = getNameEntryByIdx(state, idx);
+	return entry.name_of_last;
+}
 
 bool ls_db::eqTypes(StackStateID state_1, StackStateID state_2) {
 	auto typestack_id_1 = stack_state_to_substacks.at(u64(state_1)).second;
@@ -80,13 +105,13 @@ bool ls_db::eqTypes(StackStateID state_1, StackStateID state_2) {
 ls_db::LocalStackDb() = default;
 
 ls_db::LocalStackDb(
-	const decltype(name_to_namestack_id)&     name_to_id,
+	const decltype(name_to_namestack)&        name_to_namestack,
 	const decltype(namestack_entries)&        entries,
 	const decltype(stack_state_to_substacks)& stack_state_to_name_states,
 	const decltype(typestack)&                typestack
 
 ):
-	  name_to_namestack_id(name_to_id),
+	  name_to_namestack(name_to_namestack),
 	  namestack_entries(entries),
 	  stack_state_to_substacks(stack_state_to_name_states),
 	  typestack(typestack) {
@@ -104,7 +129,11 @@ ls_db::LocalStackDb(
 		intervals.at(r0) = true;
 	}
 
+	usize max_depth = 0;
+
 	for (const auto& [id, curr_entry]: enumerate(entries) | drop(1)) {
+		max_depth = std::max(max_depth, curr_entry.size_in_blocks);
+
 		auto prev_entry_id = curr_entry.prev;
 		CORE_ASSERT(prev_entry_id < id, "Previous state must have been created before current");
 		number_of_children[prev_entry_id]++;
@@ -145,7 +174,7 @@ ls_db::LocalStackDb(
 	}
 
 
-	for (const auto& [name, maps]: name_to_id) {
+	for (const auto& [name, maps]: name_to_namestack) {
 		counted_ids += maps.size();
 
 		CORE_ASSERT(maps.size(), "Each name must have at least correlated namestack state");
@@ -170,6 +199,10 @@ ls_db::LocalStackDb(
 	}
 
 	CORE_ASSERT(counted_ids + 1 == entries.size(), "We have a equal number of ids and ");
+
+	nodes_at_depth.resize(max_depth, {});
+	for (auto [id, entry]: enumerate(entries))
+		nodes_at_depth.at(entry.size_in_blocks - 1).emplace(entry.lifetime, NameStackID(id));
 }
 
 using ls_db_bld = vm::code::LocalStackDbBuilder;
@@ -181,89 +214,82 @@ ls_db_bld::NameStackID ls_db_bld::TreeNode::emplaceChild(const Child& child, Nam
 	return new_id;
 }
 
-ls_db_bld::NameStackID ls_db_bld::getTreeNodeId(StackStateID state) const {
-	return to_lazy_process.at(u64{ state }).name_stack_id;
-}
-
-ls_db_bld::TypeStackID ls_db_bld::getTypeStackId(StackStateID state) const {
-	variant_match(to_lazy_process.at(u64{ state }).op) {
-		variant_case(CompletedOp, calculated) { return calculated.type_stack_id; }
-		variant_default { CORE_UNREACHABLE(); }
-	}
-	CORE_UNREACHABLE();
-}
-
 vm::code::StackStateID ls_db_bld::push(StackStateID state, base::StrID name, base::StrID type) {
-	auto node_id = getTreeNodeId(state);
-	auto child   = Child{
-		  .name        = name,
-		  .byte_offset = tree[node_id].byte_depth + types_ctx.at(type)->getSize(),
+	auto [node_id, typestack_id] = states.at(u64{ state });
+
+	auto child = Child{
+		.name        = name,
+		.byte_offset = tree[node_id].byte_depth + types_ctx.at(type)->getSize(),
 	};
 
-	auto new_node_id = tree[node_id].emplaceChild(child, tree.size());
+	auto new_nametree_node_id = tree[node_id].emplaceChild(child, tree.size());
 
-	if (new_node_id == tree.size()) {
+	if (new_nametree_node_id == tree.size()) {
+		auto name_map_id    = tree[node_id].name_map_id;
+		auto new_namemap_id = name_to_idx.insert(name_map_id, name, tree[node_id].size);
+
 		tree.emplace_back(
 			TreeNode{
-				.children   = {},
-				.depth      = tree[node_id].depth + 1,
-				.prev       = node_id,
-				.byte_depth = tree[node_id].byte_depth + types_ctx.at(type)->getSize(),
+				.children    = {},
+				.name_map_id = new_namemap_id,
+				.size        = tree[node_id].size + 1,
+				.prev_node   = node_id,
+				.byte_depth  = tree[node_id].byte_depth + types_ctx.at(type)->getSize(),
 			}
 		);
 	}
 
-	to_lazy_process.emplace_back(
-		TypeOp{
-			.name_stack_id = new_node_id,
-			.idx_prev      = u64{ state },
-			.op            = PushOp{ .type = type },
-		}
-	);
+	auto new_typestack_state_id = typenames.push(typestack_id, type);
 
-	return StackStateID{ to_lazy_process.size() };
+	states.emplace_back(new_nametree_node_id, new_typestack_state_id);
+
+	return StackStateID{ states.size() - 1 };
 }
 
 vm::code::StackStateID ls_db_bld::pop(StackStateID state, usize amount) {
-	auto node_id = getTreeNodeId(state);
+	auto [node_id, typestack_id] = states.at(u64{ state });
 
-	auto new_node_id = node_id;
+	auto new_nametree_node_id = node_id;
 	for (usize i = 0; i < amount; i++) {
-		CORE_ASSERT(new_node_id != 0, "We are not trying to remove the root");
-		new_node_id = tree[new_node_id].prev;
+		CORE_ASSERT(new_nametree_node_id != 0, "We are not trying to remove the root");
+		new_nametree_node_id = tree[new_nametree_node_id].prev_node;
 	}
 
-	to_lazy_process.emplace_back(
-		TypeOp{
-			.name_stack_id = new_node_id,
-			.idx_prev      = u64{ state },
-			.op            = PopOp{ .amount = amount },
-		}
-	);
+	auto new_typestack_state_id = typenames.pop(typestack_id, amount);
 
-	return StackStateID{ to_lazy_process.size() };
+	states.emplace_back(new_nametree_node_id, new_typestack_state_id);
+
+	return StackStateID{ states.size() - 1 };
 }
 
 vm::code::StackStateID ls_db_bld::change(StackStateID state, base::StrID name, base::StrID type) {
-	auto node_id = getTreeNodeId(state);
+	auto [node_id, typestack_id] = states.at(u64{ state });
 
-	to_lazy_process.emplace_back(
-				TypeOp{
-					.name_stack_id = node_id,
-					.idx_prev = u64{ state },
-					.op       = ChangeOp{
-						.var_name = name,
-						.type     = type,
-					}, 
-				}
-			);
+	auto name_map_id            = tree[node_id].name_map_id;
+	auto idx                    = name_to_idx.at(name_map_id, name);
+	auto new_typestack_state_id = typenames.change(typestack_id, idx, type);
 
-	return StackStateID{ to_lazy_process.size() };
+	states.emplace_back(node_id, new_typestack_state_id);
+
+	return StackStateID{ states.size() - 1 };
+}
+
+base::StrID ls_db_bld::typeOf(StackStateID state, base::StrID name) const {
+	auto [node_id, typestack_id] = states.at(u64{ state });
+	auto name_map_id             = tree[node_id].name_map_id;
+
+	if (!name_to_idx.contains(name_map_id, name))
+		throw std::invalid_argument("No such variable at given instance");
+
+	auto idx = name_to_idx.at(name_map_id, name);
+	CORE_ASSERT(idx < typenames.size(typestack_id), "idx should be valid");
+
+	return typenames.at(typestack_id, idx);
 }
 
 usize ls_db_bld::size(StackStateID state) const {
-	auto node_id = getTreeNodeId(state);
-	return tree[node_id].depth;
+	auto [node_id, typestack_id] = states.at(u64{ state });
+	return tree[node_id].size;
 }
 
 vm::code::LocalStackDb ls_db_bld::finalize() {
@@ -271,104 +297,56 @@ vm::code::LocalStackDb ls_db_bld::finalize() {
 
 	base::HashMap<base::StrID, NameMap>              name_to_namestack_id{};
 	std::vector<NameStackEntry>                      namestack_entries(tree.size());
-	std::vector<std::pair<NameStackID, TypeStackID>> stack_state_to_substacks{
-		to_lazy_process.size()
-	};
-	persistent::DummyVector<base::StrID> typestack{};
+	std::vector<std::pair<NameStackID, TypeStackID>> stack_state_to_substacks{ states.size() };
 
 
 	auto dfs = [&](auto&&                                   self,
 	               NameStackID                              node_id,
-	               NameStackID                              prev,
-	               base::HashMap<base::StrID, NameStackID>& names) -> void {
+	               base::HashMap<base::StrID, NameStackID>& names) -> Lifetime {
 		CORE_ASSERT(node_id < tree.size(), "this should be true");
 		Lifetime node_lifetime{};
 		node_lifetime.init_idx = order;
 		order++;
 
 		for (auto& [child, next_node]: tree[node_id].children) {
-			if (names.contains(child.name))
-				throw std::invalid_argument("found a duplicate var-name in the same stack");
+			CORE_ASSERT(!names.contains(child.name), "we should never have repeating names");
 
 			names.emplace(child.name, next_node);
 
-			self(self, next_node, node_id, names);
+			auto next_lifetime = self(self, next_node, names);
+
+			name_to_namestack_id.put(child.name, {});
+			name_to_namestack_id.at(child.name).emplace(next_lifetime, next_node);
+
+			namestack_entries.at(next_node) = NameStackEntry{
+				.lifetime       = next_lifetime,
+				.prev           = node_id,
+				.size_in_bytes  = tree[next_node].byte_depth,
+				.size_in_blocks = tree[next_node].size,
+				.size_of_last   = tree[next_node].byte_depth - tree[node_id].byte_depth,
+				.name_of_last   = child.name,
+			};
+
 			names.erase(child.name);
 		}
 
 		node_lifetime.deinit_idx = order;
 		order++;
 
-		namestack_entries.at(node_id) = NameStackEntry{
-			.lifetime       = node_lifetime,
-			.prev           = prev,
-			.size_in_bytes  = tree[node_id].byte_depth,
-			.size_in_blocks = tree[node_id].depth,
-		};
 
-		for (auto& [child, next_node]: tree[node_id].children) {
-			name_to_namestack_id.put(child.name, {});
-			name_to_namestack_id.at(child.name).emplace(node_lifetime, node_id);
-		}
+		return node_lifetime;
 	};
 
 	base::HashMap<base::StrID, NameStackID> names = {};
 
-	dfs(dfs, 0, 0, names);
+	auto root_lifetime = dfs(dfs, 0, names);
 
+	namestack_entries.at(0) = NameStackEntry{
+		.lifetime = root_lifetime,
+	};
 
-	CORE_ASSERT(to_lazy_process.size(), "we need to have at least empty (already calculated) root");
-
-	using namespace std::views;
-	for (auto [idx, oper]: enumerate(to_lazy_process) | drop(1)) {
-		auto prev = oper.idx_prev;
-
-		TypeStackID prev_typestack_id{};
-		TypeStackID new_typestack_id{};
-
-		variant_match(to_lazy_process.at(prev).op) {
-			variant_case(CompletedOp, calculated) { prev_typestack_id = calculated.type_stack_id; }
-			variant_default { CORE_UNREACHABLE(); }
-		}
-
-		variant_match(oper.op) {
-			variant_case_novalue(CompletedOp) { CORE_UNREACHABLE(); }
-			variant_case(PopOp, pop_oper) {
-				new_typestack_id = typestack.pop(prev_typestack_id, pop_oper.amount);
-			}
-			variant_case(PushOp, push_oper) {
-				new_typestack_id = typestack.push(prev_typestack_id, push_oper.type);
-			}
-			variant_case(ChangeOp, change_oper) {
-				auto curr_lifetime = namestack_entries.at(oper.name_stack_id).lifetime;
-
-				auto& occurences = name_to_namestack_id.at(change_oper.var_name);
-
-				auto it = occurences.lower_bound(curr_lifetime);
-
-				if (it == occurences.end())
-					throw std::invalid_argument("No such name at given stack");
-
-				if (auto [init, deinit] = it->first;
-				    init > curr_lifetime.deinit_idx || deinit < curr_lifetime.init_idx) {
-					throw std::invalid_argument(
-						"Variable with given name is not present at the stack instance"
-					);
-				}
-
-				auto val_stack_id = it->second;
-
-				usize name_to_idx_mangling = namestack_entries.at(val_stack_id).size_in_blocks;
-				new_typestack_id
-					= typestack.change(prev_typestack_id, name_to_idx_mangling, change_oper.type);
-			}
-		}
-
-		stack_state_to_substacks.at(usize(idx))
-			= std::make_pair(oper.name_stack_id, new_typestack_id);
-	}
 
 	return LocalStackDb(
-		name_to_namestack_id, namestack_entries, stack_state_to_substacks, typestack
+		name_to_namestack_id, namestack_entries, stack_state_to_substacks, typenames
 	);
 }

@@ -15,7 +15,7 @@
 #include <functional>
 #include <optional>
 #include <stdexcept>
-#include <variant>
+#include <utility>
 
 namespace vm::persistent {
 
@@ -81,7 +81,69 @@ namespace vm::persistent {
 			return validateState(state).second.at(idx);
 		}
 
+		[[nodiscard]]
+		usize size(usize state) const {
+			return validateState(state).size();
+		}
+
 		DummyVector() { copies.emplace_back(base::Optional<usize>{}, std::vector<T>{}); }
+	};
+
+	template<typename Key, typename Val, typename Hasher = std::hash<Key>>
+	class DummyHashMap {
+		std::vector<base::HashMap<Key, Val, Hasher>> copies;
+
+		[[nodiscard]]
+		base::HashMap<Key, Val, Hasher>& validateState(usize state) const {
+			CORE_ASSERT(state < copies.size(), "We don't have a copy of given state");
+			return copies.at(state);
+		}
+
+	public:
+		static constexpr usize EMPTY = 0;
+
+		[[nodiscard]]
+		usize erase(usize state, const std::vector<Key>& removed_keys) {
+			auto copy = validateState(state);
+
+			for (auto removed_key: removed_keys) {
+				if (!copy.contains(removed_key))
+					throw std::invalid_argument("Trying to remove a non present key");
+
+				copy.erase(removed_key);
+			}
+
+			copies.emplace_back(copy);
+
+			return copies.size() - 1;
+		}
+
+		[[nodiscard]]
+		usize insert(usize state, const Key& k, const Val& v) {
+			auto copy = validateState(state);
+
+			if (copy.contains(k)) throw std::invalid_argument("overriding a present value");
+			copy.insert(k, v);
+
+			return copies.size() - 1;
+		}
+
+		[[nodiscard]]
+		const Val& at(usize state, const Key& k) const {
+			return validateState(state).at(k);
+		}
+
+		[[nodiscard]]
+		bool contains(usize state, const Key& k) const {
+			return validateState(state).contains(k);
+		}
+
+		[[nodiscard]]
+		usize size(usize state) const {
+			return validateState(state).size();
+		}
+
+		DummyHashMap() { copies.emplace_back(base::HashMap<Key, Val, Hasher>{}); }
 	};
 }
 
@@ -109,9 +171,13 @@ namespace vm::code {
 			NameStackID prev = 0;
 			tp_size     size_in_bytes{};
 			usize       size_in_blocks{};
+			tp_size     size_of_last{};
+			base::StrID name_of_last = base::StrID{ "" };
 		};
 
-		NameStackEntry getNameEntry(StackStateID state, base::StrID name) const;
+		NameStackEntry getNameEntryByName(StackStateID state, base::StrID name) const;
+
+		NameStackEntry getNameEntryByIdx(StackStateID state, usize idx) const;
 
 	public:
 		static constexpr usize       EMPTY            = 0;
@@ -122,11 +188,13 @@ namespace vm::code {
 
 		bool contains(StackStateID state, base::StrID name) const;
 
-		usize getIdxOf(StackStateID state, base::StrID name) const;
+		usize getIdx(StackStateID state, base::StrID name) const;
 
 		base::StrID getTypeName(StackStateID state, base::StrID name) const;
 
 		base::StrID getTypeName(StackStateID state, usize idx) const;
+
+		base::StrID getName(StackStateID state, usize idx) const;
 
 		usize size(StackStateID state) const;
 
@@ -136,13 +204,14 @@ namespace vm::code {
 
 	private:
 		using NameMap = std::map<Lifetime, NameStackID>;
-		base::HashMap<base::StrID, NameMap>              name_to_namestack_id{};
+		base::HashMap<base::StrID, NameMap>              name_to_namestack{};
 		std::vector<NameStackEntry>                      namestack_entries{};
 		std::vector<std::pair<NameStackID, TypeStackID>> stack_state_to_substacks{};
 		persistent::DummyVector<base::StrID>             typestack{};
+		std::vector<NameMap>                             nodes_at_depth;
 
 		LocalStackDb(
-			const decltype(name_to_namestack_id)&     name_to_id,
+			const decltype(name_to_namestack)&        name_to_id,
 			const decltype(namestack_entries)&        entries,
 			const decltype(stack_state_to_substacks)& stack_state_to_name_states,
 			const decltype(typestack)&                typestack
@@ -172,64 +241,35 @@ namespace vm::code {
 
 		struct TreeNode {
 			base::HashMap<Child, NameStackID, ChildHash> children{};
-			usize                                        depth = 0;
-			NameStackID                                  prev  = 0;
-			tp_size byte_depth                                 = tp_size{ Bytes{ 0 }, Bytes{ 0 } };
+			usize                                        name_map_id = 0;
+			usize                                        size        = 0;
+			NameStackID                                  prev_node   = 0;
+			tp_size byte_depth = tp_size{ Bytes{ 0 }, Bytes{ 0 } };
 
 			NameStackID emplaceChild(const Child& child, NameStackID new_id);
 		};
 
-		struct PushOp {
-			base::StrID type;
-		};
-
-		struct PopOp {
-			usize amount;
-		};
-
-		struct ChangeOp {
-			base::StrID var_name;
-			base::StrID type;
-		};
-
-		struct CompletedOp {
-			TypeStackID type_stack_id;
-		};
-
-		struct TypeOp {
-			NameStackID                                        name_stack_id;
-			usize                                              idx_prev;
-			std::variant<PushOp, PopOp, ChangeOp, CompletedOp> op;
-		};
-
 		const valid_type::ValidTypeMap& types_ctx;
 		std::vector<TreeNode>           tree = {};
-		std::vector<TypeOp>   to_lazy_process = {
-			TypeOp {
-				.name_stack_id = LocalStackDb::EMPTY_NAME_STACK,
-				.idx_prev = 0, 
-				.op = CompletedOp {
-					.type_stack_id = LocalStackDb::EMPTY_TYPE_STACK,
-				},
-			}
-		};
 
-		[[nodiscard]]
-		NameStackID getTreeNodeId(StackStateID state) const;
-
-		[[nodiscard]]
-		TypeStackID getTypeStackId(StackStateID state) const;
+		persistent::DummyHashMap<base::StrID, usize>     name_to_idx;
+		persistent::DummyVector<base::StrID>             typenames;
+		std::vector<std::pair<NameStackID, TypeStackID>> states
+			= { std::make_pair(LocalStackDb::EMPTY_NAME_STACK, LocalStackDb::EMPTY_TYPE_STACK) };
 
 	public:
 		LocalStackDbBuilder(const valid_type::ValidTypeMap& types_ctx): types_ctx(types_ctx) {}
 
-		static constexpr StackStateID EMPTY = StackStateID{0};
+		static constexpr StackStateID EMPTY = StackStateID{ 0 };
 
 		StackStateID push(StackStateID state, base::StrID name, base::StrID type);
 
 		StackStateID pop(StackStateID state, usize amount = 1);
 
 		StackStateID change(StackStateID state, base::StrID name, base::StrID type);
+
+		[[nodiscard]]
+		base::StrID typeOf(StackStateID state, base::StrID name) const;
 
 		[[nodiscard]]
 		usize size(StackStateID state) const;
