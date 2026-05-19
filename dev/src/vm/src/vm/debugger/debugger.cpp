@@ -18,6 +18,7 @@ namespace vm::debugger {
 	Debugger::Debugger(const std::vector<std::string>& main_args):
 		  main_args(main_args),
 		  updater([&](const vm::api::ProcStatus& status) {
+			  on_vm_changes_status.emitEvent(status);
 			  variant_match(status) {
 				  variant_case(vm::api::ExecutionCompleted, completed) {
 					  on_vm_completes_execution.emitEvent(completed.exit_value);
@@ -26,7 +27,6 @@ namespace vm::debugger {
 					  on_error.emitEvent(panicked.error_message);
 				  }
 			  }
-			  on_vm_changes_status.emitEvent(status);
 		  }) {
 		vm::api::spawn()
 			.and_then([&](const vm::api::ProcessInfo& info) {
@@ -48,10 +48,19 @@ namespace vm::debugger {
 
 	Debugger::~Debugger() {
 		updater.detach();
-		vm::api::kill(pid).transform_error([&](const vm::api::ApiError& api_error) {
-			on_error.emitEvent(vm::api::errorToString(api_error));
-			return api_error;
-		});
+		vm::api::getExecutionStatus(pid)
+			.and_then([&](const vm::api::ProcStatus& status) {
+				if (!std::holds_alternative<api::NotStarted>(status))
+					return std::expected<void, vm::api::ApiError>{};
+
+				return std::expected<void, vm::api::ApiError>{ std::unexpected(vm::api::ApiError{
+					vm::api::OtherError{ "VM was not even runned..." } }) };
+			})
+			.and_then([&] { return vm::api::kill(pid); })
+			.transform_error([&](const vm::api::ApiError& api_error) {
+				on_error.emitEvent(vm::api::errorToString(api_error));
+				return api_error;
+			});
 	}
 
 	void Debugger::attachOnVMChangesStatusListener(events::Listener<vm::api::ProcStatus>& listener) {

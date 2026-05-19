@@ -40,6 +40,8 @@ namespace vm::debugger::cli {
 		  }),
 		  debugger(main_args) {
 		debugger.attachOnVMChangesStatusListener(status_change_listener);
+		debugger.attachOnErrorListener(error_listener);
+		debugger.attachOnVMCompletesExecutionListener(exit_value_listener);
 	}
 	
 	CLIDebugger::CLIDebugger(const fs::File& filepath, const std::vector<std::string>& main_args):
