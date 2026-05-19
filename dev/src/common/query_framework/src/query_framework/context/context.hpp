@@ -18,6 +18,8 @@
 #include <query_framework/internal/query_graph/query_state.hpp>
 #include <query_framework/internal/query_metadata/metadata_storage.hpp>
 
+#include <atomic>
+
 namespace query {
 
 	namespace internal {
@@ -47,8 +49,8 @@ namespace query {
 	 */
 	struct Context final {
 	private:
-		internal::NodeID my_node;
-		bool             active = true;
+		internal::NodeID  my_node;
+		std::atomic<bool> active = true;
 
 		/**
 		 * A flag indicating that the query node associated with this context is part of a cycle in
@@ -125,7 +127,7 @@ namespace query {
 					if (maybe_cycle.has_value()) {
 						// We hit a cycle!
 
-						for (auto node_info: maybe_cycle.value().cycle_nodes) {
+						for (const auto& node_info: maybe_cycle.value().cycle_nodes) {
 							// This is a critical part of the cycle handling.
 							// We mark all nodes on the cycle as cyclic, so that query
 							// implementations can react to that if needed.
@@ -147,7 +149,7 @@ namespace query {
 								[&maybe_cycle]() -> std::string {
 									std::string result;
 									auto        cycle = maybe_cycle.value();
-									for (auto node_info: cycle.cycle_nodes) {
+									for (const auto& node_info: cycle.cycle_nodes) {
 										result += "  - Query node ";
 										result += base::strConcat(
 											node_info.node_id.q_id.getData().name,
