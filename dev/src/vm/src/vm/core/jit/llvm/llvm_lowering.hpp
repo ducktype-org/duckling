@@ -1,6 +1,5 @@
 #pragma once
 
-#include "../cf_graph.hpp"
 #include "../jit_compiler.hpp"
 #include "jit_data.hpp"
 
@@ -8,6 +7,7 @@
 
 #include <base/collections/optional.hpp>
 
+#include <vm/core/safe/low_program/cfg/cf_graph.hpp>
 #include <vm/core/safe/low_program/instruction.hpp>
 
 #include <algorithm>
@@ -44,7 +44,7 @@ namespace vm::jit {
 		llvm::Value* frame_arg;
 		llvm::Value* thread_arg;
 
-		cf::ControlFlowGraph           cfg;
+		vm::low::cf::ControlFlowGraph           cfg;
 		std::vector<llvm::BasicBlock*> llvm_blocks;
 
 		LLVMBuilder(llvm::Module* module, llvm::LLVMContext& ctx): llvm_ctx(ctx), module(module) {
@@ -123,7 +123,7 @@ namespace vm::jit {
 			}
 		}
 
-		void lowerConditionalJump(const cf::BasicBlock& block, llvm::IRBuilder<>& ir_builder) {
+		void lowerConditionalJump(const vm::low::cf::BasicBlock& block, llvm::IRBuilder<>& ir_builder) {
 			auto& llvm_data         = llvmData();
 			u32   flags_field_index = 0;
 
@@ -138,7 +138,7 @@ namespace vm::jit {
 				= ir_builder.CreateStructGEP(llvm_data.types.flag_data.get(), flags_ptr, 0);
 			llvm::Value* flag_value = ir_builder.CreateLoad(ir_builder.getInt1Ty(), flag_ptr);
 
-			if (block.edgeKind() == cf::OutEdges::Kind::JmpIfNot)
+			if (block.edgeKind() == vm::low::cf::OutEdges::Kind::JmpIfNot)
 				flag_value = ir_builder.CreateNot(flag_value);
 
 			ir_builder.CreateCondBr(
@@ -148,23 +148,23 @@ namespace vm::jit {
 
 		void lowerBlock(
 			const low::LowFuncData&          function_to_compile,
-			const cf::BasicBlock&            block,
+			const vm::low::cf::BasicBlock&            block,
 			std::unordered_set<std::string>& used_opfuns
 		) {
 			llvm::IRBuilder<> ir_builder(llvm_blocks[block.id]);
 			lowerBasicBlock(function_to_compile, ir_builder, block.start, block.end, used_opfuns);
 
 			switch (block.edgeKind()) {
-			case cf::OutEdges::Kind::Default: {
+			case vm::low::cf::OutEdges::Kind::Default: {
 				ir_builder.CreateBr(llvm_blocks[block.next()]);
 				break;
 			}
-			case cf::OutEdges::Kind::JmpIf:
-			case cf::OutEdges::Kind::JmpIfNot: {
+			case vm::low::cf::OutEdges::Kind::JmpIf:
+			case vm::low::cf::OutEdges::Kind::JmpIfNot: {
 				lowerConditionalJump(block, ir_builder);
 				break;
 			}
-			case cf::OutEdges::Kind::End:
+			case vm::low::cf::OutEdges::Kind::End:
 			default: {
 				ir_builder.CreateRetVoid();
 				break;
@@ -174,7 +174,7 @@ namespace vm::jit {
 
 		void lowerFunction(const low::LowFuncData& function_to_compile) {
 			auto& llvm_data = llvmData();
-			cfg             = cf::ControlFlowGraph(function_to_compile);
+			const auto& cfg = function_to_compile.cfg;
 
 			// Create LLVM basic blocks for each VM block
 			for (usize block_idx = 0; block_idx < cfg.size(); ++block_idx) {

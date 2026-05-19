@@ -3,8 +3,9 @@
  * @brief Implementation of control-flow graph construction.
  */
 #include "cf_graph.hpp"
+#include "cf_analysis.hpp"
 
-namespace vm::jit::cf {
+namespace vm::low::cf {
 
 	OutEdges::OutEdges(): to{ 0, 0 } {}
 
@@ -84,8 +85,8 @@ namespace vm::jit::cf {
 
 	usize BasicBlock::edgeCount() const { return succ.size(); }
 
-	ControlFlowGraph::ControlFlowGraph(const low::LowFuncData& function) {
-		createCFG(function, basicBlockBeginnings(function));
+	ControlFlowGraph::ControlFlowGraph(const low::MicroBytecode& bc) {
+		createCFG(bc, basicBlockBeginnings(bc));
 	}
 
 	usize ControlFlowGraph::size() const { return blocks.size(); }
@@ -96,7 +97,7 @@ namespace vm::jit::cf {
 	}
 
 	void ControlFlowGraph::createCFG(
-		const low::LowFuncData& function, const std::vector<usize>& block_beginnings
+		const low::MicroBytecode& bc, const std::vector<usize>& block_beginnings
 	) {
 		blocks.clear();
 		blocks.reserve(block_beginnings.size());
@@ -123,18 +124,18 @@ namespace vm::jit::cf {
 			blocks.emplace_back(id, start, end);
 		}
 		blocks.emplace_back(
-			block_beginnings.size() - 1, block_beginnings.back(), function.bc.size()
+			block_beginnings.size() - 1, block_beginnings.back(), bc.size()
 		);
 
 		for (const auto& block: blocks) {
-			const vm::MicroInstruction& last_instr  = function.bc[block.end - 1];
+			const vm::MicroInstruction& last_instr  = bc[block.end - 1];
 			low::MicroOpcode            last_opcode = getInstructionOpcode(last_instr);
 
 			switch (last_opcode) {
 			case low::MicroOpcode::jmp_label: {
 				const usize jump_target = jumpTarget(block.end, last_instr.arg0);
 				CORE_ASSERT(
-					jump_target < function.bc.size(), "Jump target points past last instruction"
+					jump_target < bc.size(), "Jump target points past last instruction"
 				);
 				usize target_block_idx = instr_to_block(jump_target);
 				blocks[block.id].setDefaultEdge(target_block_idx);
@@ -143,7 +144,7 @@ namespace vm::jit::cf {
 			case low::MicroOpcode::jmpIf_label: {
 				const usize jump_target = jumpTarget(block.end, last_instr.arg0);
 				CORE_ASSERT(
-					jump_target < function.bc.size(), "Jump target points past last instruction"
+					jump_target < bc.size(), "Jump target points past last instruction"
 				);
 				usize jmp_target = instr_to_block(jump_target);
 				blocks[block.id].setCondEdge(OutEdges::Kind::JmpIf, jmp_target, block.id + 1);
@@ -152,7 +153,7 @@ namespace vm::jit::cf {
 			case low::MicroOpcode::jmpIfNot_label: {
 				const usize jump_target = jumpTarget(block.end, last_instr.arg0);
 				CORE_ASSERT(
-					jump_target < function.bc.size(), "Jump target points past last instruction"
+					jump_target < bc.size(), "Jump target points past last instruction"
 				);
 				usize jmp_target = instr_to_block(jump_target);
 				blocks[block.id].setCondEdge(OutEdges::Kind::JmpIfNot, jmp_target, block.id + 1);
@@ -164,7 +165,7 @@ namespace vm::jit::cf {
 				break;
 			}
 			default: {
-				if (block.end < function.bc.size()) {
+				if (block.end < bc.size()) {
 					// If the block does not end with a jump, add a default edge to the next block
 					blocks[block.id].setDefaultEdge(block.id + 1);
 				}
@@ -214,4 +215,4 @@ namespace vm::jit::cf {
 
 		return subgraph;
 	}
-}  // vm::jit::cf
+}  // namespace vm::low::cf

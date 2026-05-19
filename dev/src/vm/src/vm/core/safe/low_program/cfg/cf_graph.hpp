@@ -5,15 +5,16 @@
 #pragma once
 
 #include <vm/bytecode/bytecode.hpp>
-#include <vm/core/jit/cf_analysis.hpp>
-#include <vm/core/safe/low_program/low_program.hpp>
+#include "../instruction.hpp"
 
-#include <algorithm>
 #include <array>
-#include <functional>
 #include <vector>
 
-namespace vm::jit::cf {
+namespace vm::low {
+	// Reintroduce the alias to avoid circular dependency with `low_program.hpp`.
+	using MicroBytecode = std::vector<MicroInstruction>;
+
+namespace cf {
 	/**
 	 * @brief Identifier of a basic block in the control-flow graph.
 	 */
@@ -170,19 +171,19 @@ namespace vm::jit::cf {
 
 		/**
 		 * @brief Builds graph blocks and edges from block beginnings.
-		 * @param function Lowered function containing bytecode.
+		 * @param bc Micro-bytecode of lowered function.
 		 * @param block_beginnings Sorted block start instruction offsets.
 		 */
-		void createCFG(const low::LowFuncData& function, const std::vector<usize>& block_beginnings);
+		void createCFG(const low::MicroBytecode& bc, const std::vector<usize>& block_beginnings);
 
 	public:
 		ControlFlowGraph() = default;
 
 		/**
 		 * @brief Creates a control-flow graph from lowered function data.
-		 * @param function Lowered function to analyze.
+		 * @param bc Micro-bytecode of lowered function to analyze.
 		 */
-		ControlFlowGraph(const low::LowFuncData& function);
+		ControlFlowGraph(const low::MicroBytecode& bc);
 
 		/**
 		 * @brief Returns number of blocks in the graph.
@@ -203,4 +204,6 @@ namespace vm::jit::cf {
 		 */
 		[[nodiscard]] ControlFlowGraph subgraph(const std::vector<BlockID>& block_ids) const;
 	};
-}  // vm::jit::cf
+}  // vm::low::cf
+
+} // vm::low

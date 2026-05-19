@@ -5,13 +5,12 @@
 #pragma once
 
 #include <vm/bytecode/bytecode.hpp>
-#include <vm/core/safe/low_program/low_program.hpp>
+#include "../low_program.hpp"
 
 #include <bit>
-#include <functional>
 #include <vector>
 
-namespace vm::jit::cf {
+namespace vm::low::cf {
 	/**
 	 * @brief Computes absolute jump target from next-instruction offset and encoded delta.
 	 * @param next_offset Offset of the instruction immediately after the jump.
@@ -26,8 +25,8 @@ namespace vm::jit::cf {
 
 	/**
 	 * @brief Finds instruction offsets where basic blocks start.
-	 * @param function Lowered function to analyze.
+	 * @param bc Micro-bytecode of lowered function to analyze.
 	 * @return Sorted list of basic-block beginnings.
 	 */
-	[[nodiscard]] std::vector<usize> basicBlockBeginnings(const low::LowFuncData& function);
-}  // namespace vm::jit::cf
+	[[nodiscard]] std::vector<usize> basicBlockBeginnings(const low::MicroBytecode& bc);
+}  // namespace vm::low::cf

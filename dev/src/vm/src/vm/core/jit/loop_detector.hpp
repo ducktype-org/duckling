@@ -4,7 +4,7 @@
  */
 #pragma once
 
-#include "cf_graph.hpp"
+#include <vm/core/safe/low_program/cfg/cf_graph.hpp>
 
 #include <limits>
 #include <vector>

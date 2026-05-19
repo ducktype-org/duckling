@@ -1,4 +1,3 @@
-#include "../cf_analysis.hpp"
 #include "../jit_compiler.hpp"
 #include "jit_data.hpp"
 #include "jit_utils.hpp"
@@ -7,6 +6,7 @@
 
 #include <llvm_helpers/llvm_helpers.hpp>
 
+#include <vm/core/safe/low_program/cfg/cf_analysis.hpp>
 #include <vm/core/safe/low_program/instruction.hpp>
 
 LLVM_INCLUDE_BEGIN()

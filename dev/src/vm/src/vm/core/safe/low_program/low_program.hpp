@@ -4,6 +4,7 @@
 #pragma once
 
 #include "instruction.hpp"
+#include "cfg/cf_graph.hpp"
 
 #include <base/pointers/box.hpp>
 
@@ -24,6 +25,7 @@ namespace vm::low {
 	 */
 	struct LowFuncData {
 		base::StrID   name;
+		cf::ControlFlowGraph cfg;
 		MicroBytecode bc;
 
 		/// The maximum size of the local variables on stack required by the function frame.

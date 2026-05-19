@@ -349,6 +349,7 @@ namespace vm::loader::compiler {
 
 			low_program.functions.insert(
 				low::LowFuncData{ .name              = function.name,
+								  .cfg				 = vm::low::cf::ControlFlowGraph(bytecode),
 			                      .bc                = std::move(bytecode),
 			                      .local_stack_size  = ctx.local_stack_size,
 			                      .local_block_count = ctx.local_block_count,
