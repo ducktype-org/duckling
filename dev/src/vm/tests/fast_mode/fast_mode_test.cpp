@@ -2,6 +2,8 @@
 
 #include <tester/tester.hpp>
 
+#include "vm/api/data/process_info.hpp"
+#include "vm/api/vm.hpp"
 #include <vm/bytecode/validator/errors.hpp>
 
 class VmFunctionsTests: public VmTestSuite {
@@ -12,7 +14,7 @@ public:
 	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(testSimple); }
 
 private:
-	void spawnFastAndLoad(const std::string& dbc_filename) {
+	vm::PID spawnFastAndLoad(const std::string& dbc_filename) {
 		auto pid = initProcess(
 			{
 				.mode = vm::api::ProcessMode::Fast,
@@ -20,13 +22,27 @@ private:
 		);
 		auto file        = fs::File(path(dbc_filename));
 		auto load_result = vm::api::loadFiles(pid, { file });
-        if(!load_result.has_value()) {
-            std::cerr << std::format("Error loading file: {}\n", errorToString(load_result.error()));
-        }
+		if (!load_result.has_value()) {
+			std::cerr << std::format("Error loading file: {}\n", errorToString(load_result.error()));
+		}
 		ASSERT_TRUE(load_result.has_value());
+		return pid;
 	}
 
-	void testSimple() { spawnFastAndLoad("simple.dbc"); }
+	void testFast(const std::string& file_name, i64 exit_code) {
+		auto pid        = spawnFastAndLoad(file_name);
+		auto run_result = vm::api::run(pid, {});
+		ASSERT_TRUE(run_result.has_value());
+		ASSERT_TRUE(vm::api::join(pid).has_value());
+		auto exit_value = vm::api::getExitValue(pid);
+		ASSERT_TRUE(exit_value.has_value());
+		variant_match(exit_value.value()) {
+			variant_case(i64, value) { ASSERT_EQUAL_PRINT(value, exit_code); }
+			variant_default { fail("Unexpected exit value type"); }
+		}
+	}
+
+	void testSimple() { testFast("simple.dbc", 42); }
 };
 
 TESTER_COMMON_MAIN("/src/vm/tests/fast_mode/");

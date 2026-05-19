@@ -30,10 +30,9 @@ add_files(
 	safe/safe_vmthread.cpp
 	vmvalue/vmvalue.cpp
 	vmvalue/vmvalueref.cpp
-
-	fast/fast_vmthread.cpp
 	fast/eval/instruction_functions.cpp
 	fast/program/relocator.cpp
+	fast/fast_vmthread.cpp
 )
 
 set(vm_config_dependent_sources ${vm_config_dependent_sources} ${files} PARENT_SCOPE)

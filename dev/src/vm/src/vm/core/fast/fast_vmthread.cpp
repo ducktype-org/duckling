@@ -8,6 +8,7 @@
 #include "vm/core/thread/ivmthread.hpp"
 #include "vm/core/thread/kill_process_exception.hpp"
 #include "vm/utils/vm_not_implemented.hpp"
+#include <vm/core/fast/eval/evaluator.hpp>
 
 
 using namespace vm;
@@ -46,7 +47,7 @@ void vm::fast::FastVMThread::run(const std::string& func_name, const RunArgument
 	}
 
 	try {
-		CRef<FunctionInfo>         func_info = program->functions.at(base::StrID(func_name.data()));
+		CRef<FunctionInfo>        func_info = program->functions.at(base::StrID(func_name.data()));
 		const exec::ExecFunction& func      = functions->at(func_info->id.asInt());
 
 		const i64 exit_value = createStartAndExecuteFunction(func, args);
@@ -105,5 +106,9 @@ i64 vm::fast::FastVMThread::createStartAndExecuteFunction(
 i64 vm::fast::FastVMThread::executeFunction(
 	const exec::ExecFunction& function, const RunArguments& run_arguments
 ) {
-	return 0;
+	Frame* frame      = runtime_data.top_frame;
+	frame->ip         = function.data.data();
+	byte* local_stack = runtime_data.local_stack_base;
+	FastExecutor::eval(runtime_data, local_stack, frame);
+	return *reinterpret_cast<i64*>(runtime_data.local_stack_base);
 }
