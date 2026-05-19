@@ -2,6 +2,7 @@
 
 #include <vm/core/safe/memory/memory.hpp>
 #include "shadow_entry.hpp"
+#include "shadow_pointer.hpp"
 
 namespace vm {
 
@@ -15,11 +16,6 @@ namespace vm {
 	 * @brief Shadow memory block.
 	 */
 	using ShadowBlock = BasicBlock<ShadowEntry>;
-
-	/**
-	 * @brief Shadow memory pointer.
-	 */
-	using ShadowPointer = BasicPointer<ShadowEntry>;
 
 	/**
 	 * @brief Shadow thread stack.

@@ -33,7 +33,13 @@ namespace vm::low {
 
 		usize arg_size;
 		// The total summed size of all return values.
-		usize                 ret_size;
+		usize ret_size;
+
+		usize arg_shadow_size;
+		usize arg_pointer_size;
+		usize ret_shadow_size;
+		usize ret_pointer_size;
+
 		std::vector<TypeCRef> parameters;
 		std::vector<TypeCRef> result_types;
 	};

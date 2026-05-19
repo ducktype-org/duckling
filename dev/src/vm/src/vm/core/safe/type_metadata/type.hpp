@@ -40,6 +40,7 @@ namespace vm {
 		base::StrID name;
 		TypeSize    size      = TypeSize(-1);
 		ShadowSize  shadow_size = ShadowSize(-1);
+		PointerSize pointer_size = PointerSize(-1);
 		Kind        kind_type = Kind::None;
 		TypeID      id{};
 		bool        am_i_instantiable = true;
@@ -119,6 +120,12 @@ namespace vm {
 			return shadow_size;
 		}
 
+		[[nodiscard]]
+		PointerSize getPointerSize() const {
+			CORE_ASSERT(pointer_size != PointerSize(-1), "getPointerSize called before type finalization");
+			return pointer_size;
+		}
+
 		template<class T>
 		base::Optional<CRef<T>> get() const {
 			if (std::holds_alternative<T>(kind)) return &std::get<T>(kind);
@@ -153,6 +160,8 @@ namespace vm {
 		base::Optional<Offset> getFieldOffsetByName(base::StrID field_name) const;
         [[nodiscard]]
         base::Optional<ShadowOffset> getFieldShadowOffsetByName(base::StrID field_name) const;
+		[[nodiscard]]
+		base::Optional<PointerOffset> getFieldPointerOffsetByName(base::StrID field_name) const;
 		[[nodiscard]]
 		base::Optional<CRef<std::vector<kind::FieldDesc>>> getFields() const;
 

@@ -135,15 +135,18 @@ namespace vm {
 			));
 		}
 
-		low::LowFuncData start_function{ .name             = base::StrID("vm_start_function"),
-			                             .bc               = {},
-			                             .local_stack_size = 0,
-			                             .local_block_count
-			                             = func.result_types.size() + func.parameters.size(),
-			                             .arg_size     = 0,
-			                             .ret_size     = func.ret_size,
-			                             .parameters   = {},
-			                             .result_types = func.result_types };
+		low::LowFuncData start_function{ .name              = base::StrID("vm_start_function"),
+			                             .bc                = {},
+			                             .local_stack_size  = 0,
+			                             .local_block_count = func.result_types.size() + func.parameters.size(),
+			                             .arg_size          = 0,
+			                             .ret_size          = func.ret_size,
+			                             .arg_shadow_size   = 0,
+			                             .arg_pointer_size  = 0,
+			                             .ret_shadow_size   = func.ret_shadow_size,
+			                             .ret_pointer_size  = func.ret_pointer_size,
+			                             .parameters        = {},
+			                             .result_types      = func.result_types };
 
 		const u64 called_function_id = process_program->getFunctions().idOf(func.name).value();
 
@@ -239,6 +242,10 @@ namespace vm {
 			                             .local_block_count = 7,
 			                             .arg_size          = 0,
 			                             .ret_size          = func.ret_size,
+			                             .arg_shadow_size   = 0,
+			                             .arg_pointer_size  = 0,
+			                             .ret_shadow_size   = func.ret_shadow_size,
+			                             .ret_pointer_size  = func.ret_pointer_size,
 			                             .parameters        = {},
 			                             .result_types      = func.result_types };
 
@@ -479,9 +486,13 @@ namespace vm {
 		auto orig_block_stack_size
 			= usize(frame->local_block_ref_stack_end - frame->local_block_ref_stack_base);
 
-		frame->current_function           = &start_function;
-		frame->local_block_ref_stack_base = runtime_data.block_ref_stack_base;
-		frame->local_block_ref_stack_end  = runtime_data.block_ref_stack_base;
+		frame->current_function            = &start_function;
+		frame->local_block_ref_stack_base  = runtime_data.block_ref_stack_base;
+		frame->local_block_ref_stack_end   = runtime_data.block_ref_stack_base;
+		frame->local_shadow_data_stack     = runtime_data.shadow_data_stack_base;
+		frame->local_shadow_pointer_stack  = runtime_data.shadow_pointer_stack_base;
+		frame->local_shadow_data_head      = 0;
+		frame->local_shadow_pointer_head   = 0;
 
 		const auto* instr = start_function.bc.data();
 

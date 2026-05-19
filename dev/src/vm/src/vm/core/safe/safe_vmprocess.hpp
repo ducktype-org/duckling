@@ -49,7 +49,9 @@ namespace vm {
 
 		low::LowVMProgramCopy loaded_program_copy;
 
-		Memory       memory;
+		Memory                 memory;
+		IMemory<ShadowEntry>   shadow_data_memory;
+		IMemory<ShadowPointer> shadow_pointer_memory;
 
 		GIL                       gil;
 		SynchronizationPrimitives synchronization_primitives;

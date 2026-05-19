@@ -61,6 +61,9 @@ namespace vm {
 		std::byte* local_stack_base;   /// Pointer to the start of `local_stack_reserved`.
 		std::byte* local_stack_end;    /// Pointer to the first value not allocated.
 
+		ShadowEntry*   shadow_data_stack_base;    /// Pointer to the start of shadow data stack.
+		ShadowPointer* shadow_pointer_stack_base; /// Pointer to the start of shadow pointer stack.
+
 		Block** block_ref_stack_base;  /// Pointer to the start of `block_ref_stack_reserved`.
 		Block** block_ref_stack_end;   /// Pointer to the first value not allocated.
 
@@ -76,6 +79,8 @@ namespace vm {
 			  frame_stack_current(stack->getFrameStack()->data()),
 			  local_stack_base(stack->getLocalStack()->data()),
 			  local_stack_end(stack->getLocalStack()->data() + stack->getLocalStack()->size()),
+			  shadow_data_stack_base(stack->getShadowDataStack()->data()),
+			  shadow_pointer_stack_base(stack->getShadowPointerStack()->data()),
 			  block_ref_stack_base(stack->getBlockRefStack()->data()),
 			  block_ref_stack_end(
 				  stack->getBlockRefStack()->data() + stack->getBlockRefStack()->size()

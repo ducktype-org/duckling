@@ -72,10 +72,11 @@ namespace vm {
 		CORE_ASSERT(state == State::Declared, "Bad type define");
 		state = State::Defined;
 
-		kind_type   = Kind::Primitive;
-		size        = pass_size;
-		shadow_size = 1;
-		kind        = kind::Primitive();
+		kind_type    = Kind::Primitive;
+		size         = pass_size;
+		shadow_size  = 1;
+		pointer_size = 0;
+		kind         = kind::Primitive();
 		if (name == "void") am_i_instantiable = false;
 	}
 
@@ -83,10 +84,11 @@ namespace vm {
 		CORE_ASSERT(state == State::Declared, "Bad type define");
 		state = State::Defined;
 
-		size        = POINTER_SIZE;
-		shadow_size = 1;
-		kind_type   = Kind::Pointer;
-		kind        = kind::Pointer{ inner };
+		size         = POINTER_SIZE;
+		shadow_size  = 1;
+		pointer_size = 1;
+		kind_type    = Kind::Pointer;
+		kind         = kind::Pointer{ inner };
 	}
 
 	void Type::defineFixedSizeTable(TypeRef inner, u64 element_count) {
@@ -103,6 +105,7 @@ namespace vm {
 
 		kind_type         = Kind::DynamicTable;
 		shadow_size       = 1;
+		pointer_size      = 1;
 		kind              = kind::DynamicTable{ .inner_type = inner };
 		am_i_instantiable = false;
 	}
@@ -119,8 +122,10 @@ namespace vm {
 		for (auto [sub_name, sub_type]: fields_definitions) {
 			data.field_name_map.put(sub_name, data.fields.size());
 			// offset is set during finalization
-			data.fields.emplace_back(kind::FieldDesc{
-				.offset = Offset(0), .shadow_offset = ShadowOffset(0), .type = sub_type });
+			data.fields.emplace_back(kind::FieldDesc{ .offset         = Offset(0),
+				.shadow_offset  = ShadowOffset(0),
+				.pointer_offset = PointerOffset(0),
+				.type           = sub_type });
 		}
 		data.inheritance_metadata = std::move(inheritance_metadata);
 		kind                      = data;
@@ -143,10 +148,11 @@ namespace vm {
 		CORE_ASSERT(state == State::Declared, "Bad type define");
 		state = State::Defined;
 
-		size        = POINTER_SIZE;
-		shadow_size = 1;
-		kind_type   = Kind::Function;
-		kind        = kind::Function{ .parameters   = std::move(parameters),
+		size         = POINTER_SIZE;
+		shadow_size  = 1;
+		pointer_size = 1;
+		kind_type    = Kind::Function;
+		kind         = kind::Function{ .parameters   = std::move(parameters),
 			                        .result_types = std::move(result) };
 	}
 
@@ -154,10 +160,11 @@ namespace vm {
 		CORE_ASSERT(state == State::Declared, "Bad type define");
 		state = State::Defined;
 
-		kind_type   = Kind::Opaque;
-		size        = pass_size;
-		shadow_size = 1;
-		kind        = kind::Opaque{};
+		kind_type    = Kind::Opaque;
+		size         = pass_size;
+		shadow_size  = 1;
+		pointer_size = 0;
+		kind         = kind::Opaque{};
 	}
 
 	void Type::finalize() {
@@ -175,34 +182,43 @@ namespace vm {
 					= fixed_size_table.inner_type->getSize() * fixed_size_table.element_count;
 				this->shadow_size
 					= base::safeIntConv<ShadowSize>(fixed_size_table.inner_type->getShadowSize() * fixed_size_table.element_count);
+				this->pointer_size
+					= base::safeIntConv<PointerSize>(fixed_size_table.inner_type->getPointerSize() * fixed_size_table.element_count);
 			}
 			variant_case(kind::Data, data) {
 				// calculate offset and size
-				Offset       offset(0);
-				ShadowOffset shadow_offset(0);
+				Offset        offset(0);
+				ShadowOffset  shadow_offset(0);
+				PointerOffset pointer_offset(0);
 				for (auto& field: data.fields) {
-					field.offset        = offset;
-					field.shadow_offset = shadow_offset;
+					field.offset         = offset;
+					field.shadow_offset  = shadow_offset;
+					field.pointer_offset = pointer_offset;
 					field.type->finalize();
 					offset += field.type->getSize();
 					shadow_offset += field.type->getShadowSize();
+					pointer_offset += field.type->getPointerSize();
 				}
-				this->size        = offset;
-				this->shadow_size = shadow_offset;
+				this->size         = offset;
+				this->shadow_size  = shadow_offset;
+				this->pointer_size = pointer_offset;
 				if_opt_some(data.inheritance_metadata, imd) { inheritsFromImpl(imd); }
 				isInstantiableImpl(data);
 			}
 			variant_case(kind::Variant, variant) {
 				// calculate size
-				TypeSize   data_size(0);
-				ShadowSize max_shadow_size(0);
+				TypeSize    data_size(0);
+				ShadowSize  max_shadow_size(0);
+				PointerSize max_pointer_size(0);
 				for (auto& alternative: variant.alternatives) {
 					alternative->finalize();
-					data_size       = std::max(data_size, alternative->getSize());
-					max_shadow_size = std::max(max_shadow_size, alternative->getShadowSize());
+					data_size        = std::max(data_size, alternative->getSize());
+					max_shadow_size  = std::max(max_shadow_size, alternative->getShadowSize());
+					max_pointer_size = std::max(max_pointer_size, alternative->getPointerSize());
 				}
-				this->size        = variant.type_tag_size + data_size;
-				this->shadow_size = 1 + max_shadow_size;
+				this->size         = variant.type_tag_size + data_size;
+				this->shadow_size  = 1 + max_shadow_size;
+				this->pointer_size = max_pointer_size;
 				isInstantiableImpl(variant);
 			}
 			variant_default {}
@@ -248,6 +264,17 @@ namespace vm {
 		);
 
     }
+
+	base::Optional<PointerOffset> Type::getFieldPointerOffsetByName(base::StrID field_name) const {
+		return get<kind::Data>().flatMap(
+			[field_name](CRef<kind::Data> data) -> base::Optional<PointerOffset> {
+				if_opt_some(data->field_name_map.atMaybe(field_name), field_index) {
+					return data->fields[*field_index].pointer_offset;
+				}
+				return {};
+			}
+		);
+	}
 
 	base::Optional<CRef<std::vector<kind::FieldDesc>>> Type::getFields() const {
 		return get<kind::Data>().map([](CRef<kind::Data> data) { return CRef(&data->fields); });

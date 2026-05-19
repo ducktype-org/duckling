@@ -335,8 +335,10 @@ namespace vm::loader::compiler {
 			calculateOffsets(ctx);
 
 			// Calculate the functions metadata.
-			code::FuncSignature   signature       = function.signature;
-			usize                 parameters_size = 0;
+			code::FuncSignature   signature                = function.signature;
+			usize                 parameters_size          = 0;
+			usize                 parameters_shadow_size   = 0;
+			usize                 parameters_pointer_size  = 0;
 			std::vector<TypeCRef> parameters;
 			parameters.reserve(signature.parameters.size());
 
@@ -344,26 +346,37 @@ namespace vm::loader::compiler {
 				auto type = low_program.types->at(param.str);
 				parameters.emplace_back(type);
 				parameters_size += type->getSize().asInt();
+				parameters_shadow_size += type->getShadowSize();
+				parameters_pointer_size += type->getPointerSize();
 			}
 
 			low::MicroBytecode bytecode = lowerInstructions(ctx);
 
-			u64                   ret_type_sum = 0;
-			std::vector<TypeCRef> result_types = {};
+			u64                   ret_type_sum    = 0;
+			u64                   ret_shadow_sum  = 0;
+			u64                   ret_pointer_sum = 0;
+			std::vector<TypeCRef> result_types    = {};
 			for (auto& ret: signature.result_types) {
-				ret_type_sum += low_program.types->at(ret)->getSize().asInt();
-				result_types.emplace_back(low_program.types->at(ret));
+				auto type = low_program.types->at(ret);
+				ret_type_sum += type->getSize().asInt();
+				ret_shadow_sum += type->getShadowSize();
+				ret_pointer_sum += type->getPointerSize();
+				result_types.emplace_back(type);
 			}
 
 			low_program.functions.insert(
-				low::LowFuncData{ .name              = function.name,
-			                      .bc                = std::move(bytecode),
-			                      .local_stack_size  = ctx.local_stack_size,
-			                      .local_block_count = ctx.local_block_count,
-			                      .arg_size          = parameters_size,
-			                      .ret_size          = ret_type_sum,
-			                      .parameters        = std::move(parameters),
-			                      .result_types      = std::move(result_types) },
+				low::LowFuncData{ .name               = function.name,
+			                      .bc                 = std::move(bytecode),
+			                      .local_stack_size   = ctx.local_stack_size,
+			                      .local_block_count  = ctx.local_block_count,
+			                      .arg_size           = parameters_size,
+			                      .ret_size           = ret_type_sum,
+			                      .arg_shadow_size    = parameters_shadow_size,
+			                      .arg_pointer_size   = parameters_pointer_size,
+			                      .ret_shadow_size    = ret_shadow_sum,
+			                      .ret_pointer_size   = ret_pointer_sum,
+			                      .parameters         = std::move(parameters),
+			                      .result_types       = std::move(result_types) },
 				function.name
 			);
 		}

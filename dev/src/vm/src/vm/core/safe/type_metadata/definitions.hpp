@@ -12,6 +12,8 @@ namespace vm {
 	using Offset = Bytes;
     using ShadowOffset = u32;
     using ShadowSize = u32;
+    using PointerOffset = u32;
+    using PointerSize = u32;
 
 	class Type;
 

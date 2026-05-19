@@ -14,6 +14,7 @@ namespace vm::kind {
 	struct FieldDesc {
 		Offset  offset;
         ShadowOffset shadow_offset;
+        PointerOffset pointer_offset;
 		TypeRef type;
 	};
 

@@ -14,6 +14,8 @@
 
 #include <vm/core/safe/memory/block.hpp>
 #include <vm/core/safe/memory/pointer.hpp>
+#include <vm/core/process/concurrency/fast_track/shadow_entry.hpp>
+#include <vm/core/process/concurrency/fast_track/shadow_pointer.hpp>
 
 #include <cstddef>
 
@@ -50,6 +52,16 @@ namespace vm {
 		std::byte* local_stack = nullptr;
 
 		/**
+		 * @brief Memory array where the local shadow data is stored.
+		 */
+		ShadowEntry* local_shadow_data_stack = nullptr;
+
+		/**
+		 * @brief Memory array where the local shadow pointers are stored.
+		 */
+		ShadowPointer* local_shadow_pointer_stack = nullptr;
+
+		/**
 		 * @brief Base of the stack of block IDs used by the function created with init_type
 		 * and destroyed with deinit.
 		 */
@@ -65,6 +77,16 @@ namespace vm {
 		 * Used when new block is created on the local stack.
 		 */
 		u64 local_stack_head = 0;
+
+		/**
+		 * @brief First free entry in the local shadow data stack.
+		 */
+		u32 local_shadow_data_head = 0;
+
+		/**
+		 * @brief First free entry in the local shadow pointer stack.
+		 */
+		u32 local_shadow_pointer_head = 0;
 
 		/**
 		 * @brief Function linked to the frame.
