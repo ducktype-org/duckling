@@ -9,27 +9,6 @@
 
 #include <vm/core/vmvalue/vmvalueref.hpp>
 
-// NOLINTBEGIN(readability-identifier-naming)
-template<>
-struct nlohmann::adl_serializer<base::RawView> {
-	static void to_json(json& j, const base::RawView& e) { j = e.stringView(); }
-
-	static void from_json(const json&, const base::RawView&) {
-		CORE_PANIC("Parsing data from JSON into base::RawView is not supported (maybe yet).");
-	}
-};
-
-template<typename T>
-struct nlohmann::adl_serializer<base::Box<T>> {
-	static void to_json(json& j, const base::Box<T>& box) { j = *box; }
-
-	static void from_json(const json&, base::Box<T>&) {
-		CORE_PANIC("Parsing data from JSON into Box<T> not supported (yet).");
-	}
-};
-
-// NOLINTEND(readability-identifier-naming)
-
 namespace vm::api {
 	namespace response {
 		struct Empty {};

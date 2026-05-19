@@ -627,6 +627,6 @@ namespace vm::loader::compiler::detail {
 		}
 		POP_DIAGNOSTIC
 
-		return { instruction_begin_index, next_instruction_index };
+		return { .begin = instruction_begin_index, .end = next_instruction_index };
 	}
 }
