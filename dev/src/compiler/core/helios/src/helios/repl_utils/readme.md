@@ -16,6 +16,8 @@ The primary components in this flow are:
 - Expression wrappers emit `ReturnStmt` for value expressions; void-typed expression path emits `ExprStmt`.
 - Instruction wrappers compile statement body with unit return type and append explicit `VoidReturnStmt`.
 - Script main wrapper sequences wrapper calls for side effects and satisfies executable entrypoint conventions.
+- Wrapper functions are lowered incrementally via DVM `ReplLoweringContext`, which snapshots the
+	program state and emits only newly-lowered code for each REPL/script statement batch.
 
 ## Related Documentation
 

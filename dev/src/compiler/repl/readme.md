@@ -10,7 +10,7 @@ The primary components in this flow are:
 
 1. **User Input (CLI/API):** Input is entered interactively (`duckc repl`) or preloaded from script (`duckc repl script.ds`, `/load <file.ds>`).
 2. **[`ReplSession`](./src/repl/session.hpp):** Main orchestrator. Handles commands, splits code into statements, creates statement modules, and routes execution.
-3. **[`ReplFrontend`](./src/repl/frontend.hpp):** Terminal interaction layer (replxx or minimal implementation), including history display and help.
+3. **[`ReplFrontend`](./src/repl/frontend.hpp):** Terminal interaction layer (replxx or minimal implementation), including history, display, return values and help.
 4. **Driver REPL Helpers (`driver/repl_utils`):** Statement splitting/classification, HOUT-to-DVM compilation, and code loading.
 5. **HELIOS REPL Helpers (`helios/repl_utils`):** Wrapper-function generation for executable statements.
 6. **DVM Process:** Receives newly compiled code and executes wrapper functions.
@@ -19,6 +19,8 @@ Execution model notes:
 - Input can contain multiple top-level statements.
 - Each statement is executed in order.
 - Execution is non-transactional: if statement N fails, earlier statements remain applied.
+- Symbol lookup across REPL history uses a parent-module chain; root-scope lookup falls back
+  to the parent REPL module via HELIOS `QueryLookupInScopeAndParents`.
 
 ## Features
 
@@ -142,8 +144,10 @@ For each statement:
 3. The statement is classified as expression, instruction, or definition.
 4. Expression/instruction paths generate wrapper functions; definition path loads module HOUT.
 5. HOUT is lowered to LIR and compiled to DVM bytecode.
-6. New code is loaded into current DVM process.
-7. Wrapper executes (for executable statements) and result is printed when supported.
+6. Lowering uses `ReplLoweringContext` to emit only newly-lowered entities
+  (see `core/backends/dvm/README.md`).
+7. New code is loaded into current DVM process.
+8. Wrapper executes (for executable statements) and result is printed when supported.
 
 ### Statement Kinds
 
@@ -177,3 +181,5 @@ Assignments are routed as instructions.
 - Printed expression results currently support only selected primitive types and unit.
 - Complex structured values are not pretty-printed yet.
 - Expression result extraction still uses per-type conversion logic in driver REPL helpers.
+- REPL does not allow for overwriting already defined symbols or functions.
+  
