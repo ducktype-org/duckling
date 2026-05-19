@@ -49,8 +49,8 @@ namespace query {
 	 */
 	struct Context final {
 	private:
-		internal::NodeID  my_node;
-		std::atomic<bool> active = true;
+		internal::NodeID my_node;
+		bool             active = true;
 
 		/**
 		 * A flag indicating that the query node associated with this context is part of a cycle in

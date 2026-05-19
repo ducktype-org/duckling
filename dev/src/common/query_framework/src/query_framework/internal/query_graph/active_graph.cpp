@@ -7,8 +7,10 @@ namespace query::internal {
 	void ActiveGraph::putNode(NodeID node_id, std::shared_ptr<query::Context> node_context_ref) {
 		active_nodes.put(
 			node_id,
-			{ .active_edge      = base::Optional<NodeID>(),
-		      .node_context_ref = std::move(node_context_ref) }
+			{
+				.active_edge      = base::Optional<NodeID>(),
+				.node_context_ref = std::move(node_context_ref),
+			}
 		);
 		active_node_count++;
 	}
