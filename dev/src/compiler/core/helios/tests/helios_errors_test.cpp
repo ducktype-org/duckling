@@ -1013,31 +1013,32 @@ private:
 		// @TODO: #2213 Update the values in the test cases below.
 
 		// ======= PARSE ERRORS IN EXPAND STATEMENTS =======
+		checkForErrorOnCompileModule(
+			R"(
+				expand "fun foo";
+			)",
+			{ "Code expanded from here." },
+			1
+		);
 
-		// @TODO: #2710 after this the tests should pass
-		// checkForErrorOnCompileModule(
-		// 	R"(
-		// 		expand "fun foo";
-		// 	)",
-		// 	{  "Code expanded from here." },
-		// 	1
-		// );
+		// Here we check for the parse error msg and two `expanded from` notes.
+		checkForErrorOnCompileModule(
+			R"(
+				expand " expand \" fun a \"  ";
+			)",
+			{ "Opening bracket ( of a function parameter list expected after here.",
+		      "Code expanded from here.",
+		      "Code expanded from here." },
+			1
+		);
 
-		// checkForErrorOnCompileModule(
-		// 	R"(
-		// 		expand " expand \" fun a \"  ";
-		// 	)",
-		// 	{  "Code expanded from here." },
-		// 	1
-		// );
-
-		// checkForErrorOnCompileModule(
-		// 	R"(
-		// 		expand " namespace N { fun a }  ";
-		// 	)",
-		// 	{ "Code expanded from here." },
-		// 	1
-		// );
+		checkForErrorOnCompileModule(
+			R"(
+				expand " namespace N { fun a }  ";
+			)",
+			{ "Code expanded from here." },
+			1
+		);
 
 
 		// ======= ERRORS RELATED TO EXPANDED CODE =======

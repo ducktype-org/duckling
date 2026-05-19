@@ -338,6 +338,12 @@ namespace query {
 		void logInt(Box<dia_int::MessageBase> diagnostic);
 
 		/**
+		 * @brief Logs and moves all messages from a provided logger
+		 * into current query node logger.
+		 */
+		void moveDiagnosticsFrom(dia_int::Logger& logger);
+
+		/**
 		 * @brief Collect all diagnostics from the main query state into the provided output vector.
 		 * @warning @non_thread_safe
 		 * It must not be called concurrently with any method that modifies the underlying collection.
