@@ -26,7 +26,10 @@ namespace compiler::linker {
 		 */
 		bool link_c_standard_library;
 
-
+		/**
+		 * @brief String that contains the options for linking the standard library.
+		 * Empty if we don't use the standard library.
+		 */
 		base::Optional<std::string> stdlib_link_options;
 	};
 

@@ -308,9 +308,8 @@ namespace compiler::repl {
 		void testLoadScriptFileExecutesStatements() {
 			ReplSession session;
 
-			auto script_file = fs::FileManager::createRandomTempFile(
-				"var loaded_x: i32 = 1;\nloaded_x = 10;"
-			);
+			auto script_file
+				= fs::FileManager::createRandomTempFile("var loaded_x: i32 = 1;\nloaded_x = 10;");
 			auto script_path = std::string("   ") + script_file.getFilePath().string();
 
 			auto initial_history_size = session.m_history.size();
@@ -340,9 +339,8 @@ namespace compiler::repl {
 		void testLoadCommandExecutesScript() {
 			ReplSession session;
 
-			auto script_file = fs::FileManager::createRandomTempFile(
-				"var cmd_x: i32 = 7;\ncmd_x = cmd_x + 2;"
-			);
+			auto script_file
+				= fs::FileManager::createRandomTempFile("var cmd_x: i32 = 7;\ncmd_x = cmd_x + 2;");
 			auto command = std::string("/load ") + script_file.getFilePath().string();
 
 			auto result = session.processLine(command);

@@ -815,7 +815,8 @@ namespace compiler::frontend {
 						);
 					file_ref->getPST();
 
-					if (parsed_files_count.fetch_add(1, std::memory_order_relaxed) + 1 == files_to_parse.size()) {
+					if (parsed_files_count.fetch_add(1, std::memory_order_relaxed) + 1
+					    == files_to_parse.size()) {
 						std::lock_guard<std::mutex> lock(wait_mtx);
 						all_files_parsed = true;
 						wait_cv.notify_one();

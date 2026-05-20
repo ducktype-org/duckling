@@ -1,3 +1,5 @@
+#include "diagnostic_interactive/module_flags/module_flags.hpp"
+
 #include <backends/llvm/llvm_backend.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
@@ -13,7 +15,6 @@
 #include <query_framework/context/context.hpp>
 #include <query_framework/entry/with_context_do.hpp>
 #include <tester/tester.hpp>
-#include "diagnostic_interactive/module_flags/module_flags.hpp"
 
 #include <regex>
 #include <utility>
@@ -75,11 +76,11 @@ private:
 					variant_case(helios::HOUTGlobalVariable, var) {
 						CRef mir_func = &ctx.query<mir::LowerGlobalDataToMIRCtor>({ hout_glob })
 						                     ->valueOrThrow();
-						// mir_func->debugPrint(std::cerr);
-						// std::cerr << "\n\n\n";
+						mir_func->debugPrint(std::cerr);
+						std::cerr << "\n\n\n";
 						auto lir_func = ctx.query<lir::LowerToLIRFunction>({ mir_func });
-						// lir_func->debugPrint(ctx, std::cerr);
-						// std::cerr << "\n\n\n";
+						lir_func->debugPrint(ctx, std::cerr);
+						std::cerr << "\n\n\n";
 						ctors.push_back(lir_func);
 						llvm_module.addFunctionToModule(ctx, lir_func);
 					}

@@ -139,11 +139,11 @@ namespace compiler::driver {
 		 * The script file is extracted to global_state::ScriptContext during initialization.
 		 */
 		struct ScriptMode final {
-			fs::File                            script_file;
-			global_state::BackendOptions        backend_options;
-			options_types::ArtifactsOptions     compilation_artifacts;
-			options_types::DebugOptions         debug_options;
-			options_types::ExecutionOptions     execution_options;
+			fs::File                        script_file;
+			global_state::BackendOptions    backend_options;
+			options_types::ArtifactsOptions compilation_artifacts;
+			options_types::DebugOptions     debug_options;
+			options_types::ExecutionOptions execution_options;
 		};
 
 		/**

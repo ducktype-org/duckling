@@ -1,8 +1,9 @@
 #include "lookup_result.hpp"
-#include <algorithm>
 
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
+
+#include <algorithm>
 
 namespace compiler::helios {
 
@@ -53,15 +54,16 @@ namespace compiler::helios {
 		for (auto&& [_, inner]: children) res += inner.symbolCount();
 		return res;
 	}
-	template <typename T>
-	std::vector<T> mergeSet(std::vector<T> a, std::vector<T> b) {
-    std::ranges::sort(a);
-    std::ranges::sort(b);
 
-    std::vector<T> result;
-    std::ranges::set_union(a, b, std::back_inserter(result));
-    return result;
-}
+	template<typename T>
+	std::vector<T> mergeSet(std::vector<T> a, std::vector<T> b) {
+		std::ranges::sort(a);
+		std::ranges::sort(b);
+
+		std::vector<T> result;
+		std::ranges::set_union(a, b, std::back_inserter(result));
+		return result;
+	}
 
 	void LookupResult::merge(LookupResult other) {
 		leaves = mergeSet(std::move(leaves), std::move(other.leaves));

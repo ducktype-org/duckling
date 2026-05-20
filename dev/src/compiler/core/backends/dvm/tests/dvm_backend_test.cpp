@@ -53,8 +53,11 @@ protected:
 	fs::FilePath artifacts_path = fs::FileManager::createRandomTempDirectory().getFilePath();
 	base::Optional<compiler::frontend::ModuleID> root_module_id;
 
+	/**
+	 * Initialize the compiler to have the ability to import from the standard library in tests.
+	 * Treats the `modules` directory as a single package with each test module as a submodule.
+	 */
 	void beforeAll() override {
-		// Initialize the compiler to have the ability to import from the standard library
 		global_state::setters::setGlobalLogger(makeBox<dia_int::Logger>());
 		compiler::frontend::packages::RawPackageInfo main_pkg{
 			.package_name = base::StrID("test_package"),
@@ -83,6 +86,11 @@ protected:
 	}
 
 private:
+	/**
+	 * Given module path from root module finds the submodule and returns its ID.
+	 * It works like that because the whole `modules` directory is a single package root
+	 * and each test module is a submodule of that package.
+	 */
 	compiler::frontend::ModuleID findSubmodule(
 		compiler::frontend::ModuleID start_module, const std::vector<std::string>& path
 	) {
@@ -187,9 +195,7 @@ private:
 	void builtinFuncsTest() { runTest("builtin_funcs", "9", "81\n82\n", {}, 82); }
 
 	void globalVariablesTest() {
-		runTest(
-			"globals", {}, "10\n42\n99\n99\n42\n99\n43\n-42\n-41\n41\n777\n1\n0\n", {}, 0
-		);
+		runTest("globals", {}, "10\n42\n99\n99\n42\n99\n43\n-42\n-41\n41\n777\n1\n0\n", {}, 0);
 	}
 
 	void booleanOperationsTest() { runTest("boolean_operations", {}, {}, {}, 1); }
@@ -209,11 +215,7 @@ private:
 
 	void recordsTest() {
 		runTest(
-			"records",
-			{},
-			"10\n20\n-1\n-2\n5\n15\n42\n50\n100\n101\n0\n300\n99\n2000\n0\n1\n",
-			{},
-			0
+			"records", {}, "10\n20\n-1\n-2\n5\n15\n42\n50\n100\n101\n0\n300\n99\n2000\n0\n1\n", {}, 0
 		);
 	}
 

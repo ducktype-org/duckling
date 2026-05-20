@@ -158,8 +158,7 @@ namespace compiler::driver {
 		if_opt_some(resolveStdPath(linking_options), _) {
 			// Temporary directory for the `.a` files for the standard library is just a root
 			// collection, where every ".a" file is located.
-			std::string result
-				= "-L" + getStdLibrariesDirectory().string();
+			std::string result = "-L" + getStdBinariesDirectory().string();
 			for (const auto& config: STD_PACKAGES_CONFIG)
 				result += " -l:" + std::string(config.name) + ".a";
 			return result;
@@ -167,7 +166,7 @@ namespace compiler::driver {
 		return {};
 	}
 
-	fs::FilePath getStdLibrariesDirectory() {
+	fs::FilePath getStdBinariesDirectory() {
 		return global_state::getRootCollection()->getDirectoryPath();
 	}
 }

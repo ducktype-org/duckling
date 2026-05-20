@@ -73,8 +73,7 @@ namespace compiler::helios {
 	 * SymbolData is by design a "read-only" structure.
 	 */
 	struct SymbolData final {
-		using OtherData
-			= std::variant<PstSymbolData, defgen::GeneratedSymbolData>;
+		using OtherData = std::variant<PstSymbolData, defgen::GeneratedSymbolData>;
 
 		SymbolData(CommonSymbolData common, OtherData other);
 

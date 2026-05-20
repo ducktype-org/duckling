@@ -1,5 +1,6 @@
 Tests:
-  default-std:
+  # We test if using std works by default.
+  default_std:
     module_to_compile: "uses_std"
     Cases:
       uses_std:
@@ -7,7 +8,8 @@ Tests:
         Output:
           String: "10\n"
 
-  no-std:
+  # We test if not using std when disabling it in the compiler works.
+  no_std:
     module_to_compile: "no_std"
     compile_dvm_options: "--no-std"
     compile_llvm_options: "--no-std"
@@ -15,7 +17,9 @@ Tests:
       all:
         backend: all
 
-  custom-std:
+  # In custom std instead of the default one we have a different implementation
+  # of builtin_output that output 20 for the same `no_std` user code.
+  custom_std:
     module_to_compile: "uses_std"
     compile_dvm_options: "--custom-std-path custom_std"
     compile_llvm_options: "--custom-std-path custom_std"
@@ -25,7 +29,8 @@ Tests:
         Output:
           String: "20\n"
 
-  no-std-fails:
+  # We test if disabling the std and using it in the user code causes the expected compile error.
+  no_std_fails:
     module_to_compile: "uses_std"
     PreCase: "@{clean_cmd} && mkdir build"
     Cases:
@@ -34,4 +39,15 @@ Tests:
         ExitCode: 1
       llvm:
         Run: "@{duckc_path} compile_package duck_modules/@{module_to_compile} -a build -n package_@{module_to_compile} -w @{duckc_worker_count} --no-std"
+        ExitCode: 1
+
+  both_options_fail:
+    module_to_compile: "no_std"
+    PreCase: "@{clean_cmd} && mkdir build"
+    Cases:
+      dvm:
+        Run: "@{duckc_path} compile_package duck_modules/@{module_to_compile} -a build -n package_@{module_to_compile} -w @{duckc_worker_count} --no-std --custom-std-path custom_std --dvm-backend"
+        ExitCode: 1
+      llvm:
+        Run: "@{duckc_path} compile_package duck_modules/@{module_to_compile} -a build -n package_@{module_to_compile} -w @{duckc_worker_count} --no-std --custom-std-path custom_std"
         ExitCode: 1

@@ -39,6 +39,12 @@ public:
 	}
 
 protected:
+	/**
+	 * @brief Global setup executed once before all tests.
+	 *
+	 * - Initializes global logger
+	 * - Initializes the compiler in package compilation mode
+	 */
 	void beforeAll() override {
 		global_state::setters::setGlobalLogger(makeBox<dia_int::Logger>());
 		const auto     manifest_path = fs::FilePath(path("modules/packages/manifest.json"));
@@ -73,7 +79,7 @@ protected:
 				.global_linking_options = { .std_lib_type = driver::options_types::GlobalLinkingOptions::DefaultStd{} },
 			}
 		);
-        assertTrue(init_result.status().isOk(), "Compiler initialization failed");
+		assertTrue(init_result.status().isOk(), "Compiler initialization failed");
 	}
 
 	void afterAll() override {
@@ -82,6 +88,9 @@ protected:
 	}
 
 private:
+	/**
+	 * @brief Verifies presence and dependency relationships of standard packages.
+	 */
 	void verifyStdPackagesAndDependencies() {
 		const auto& global_packages = global_state::getPackages();
 
@@ -123,6 +132,9 @@ private:
 		}
 	}
 
+	/**
+	 * @brief Verifies that standard library linking options are correctly applied to tasks.
+	 */
 	void verifyStdLinkingOptionsInConvertedTasks() {
 		driver::options_types::GlobalLinkingOptions global_opts{
 			.std_lib_type = driver::options_types::GlobalLinkingOptions::DefaultStd{}
@@ -154,6 +166,9 @@ private:
 		}
 	}
 
+	/**
+	 * @brief Compiles all standard library packages and verifies output artifacts.
+	 */
 	void compileStdPackages() {
 		auto tasks = driver::getStandardLibraryCompilationTasks();
 
@@ -163,7 +178,7 @@ private:
 		// Verify expected artifacts
 		for (const auto& config: driver::STD_PACKAGES_CONFIG) {
 			auto a_output_path
-				= driver::getStdLibrariesDirectory() / (std::string(config.name) + ".a");
+				= driver::getStdBinariesDirectory() / (std::string(config.name) + ".a");
 			auto dbc_output_path = artifacts_path.getPath() / (std::string(config.name) + ".dbc");
 
 			assertTrue(

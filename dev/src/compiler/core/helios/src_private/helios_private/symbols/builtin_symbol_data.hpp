@@ -2,5 +2,4 @@
 
 #include <helios/tsh/types.hpp>
 
-namespace compiler::helios::builtin {
-}
+namespace compiler::helios::builtin {}
