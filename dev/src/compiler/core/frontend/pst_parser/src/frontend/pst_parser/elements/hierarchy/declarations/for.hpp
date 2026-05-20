@@ -18,6 +18,7 @@ namespace pst {
 		NAMED_CHILD(type, ForTypeExprHolder);
 		NAMED_CHILD(iterable, CommaExprHolder);
 		NAMED_CHILD(body, CodeBlockOrStmt);
+		base::Optional<bool> is_const;
 
 	protected:
 		HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const override;
@@ -57,6 +58,8 @@ namespace pst {
 		[[nodiscard]] AccessLocked<CommaExprHolder> getIterable() const { return iterable.give(); }
 
 		[[nodiscard]] AccessLocked<CodeBlockOrStmt> getBody() const { return body.give(); }
+
+		[[nodiscard]] base::Optional<bool> getIsConst() const { return is_const; }
 
 		void acceptVisitor(PstVisitor& visitor) const override;
 	};

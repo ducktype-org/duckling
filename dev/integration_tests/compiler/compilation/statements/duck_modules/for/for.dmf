@@ -166,32 +166,22 @@ fun main() -> i64 = {
     for (x in ref_sarr) { # Works beautifully because of reference collapsing.
         builtin_output_i64(x);
     }
-     
-
     
-    # for (let x in static_arr) {
-    #     builtin_output_i64(x);
-    # }
-    # for (let x: i64 in static_arr) {
-    #     builtin_output_i64(x);
-    # }
+    for (let x in static_arr) {
+        builtin_output_i64(x);
+    }
+
+    for (let x: i64 in static_arr) {
+        builtin_output_i64(x);
+    }
     
-    # for (var x: i64 in static_arr) {
-    #     builtin_output_i64(x);
-    # }
+    for (var x in static_arr) {
+        builtin_output_i64(x);
+    }
 
-#     for (var x: i64 in static_arr) {
-#         builtin_output_i64(x);
-#     }
-
-#     for (let x: i64 in static_arr) {
-#         builtin_output_i64(x);
-#     }
-
-    # var dyn_arr: [i64] = [1, 2, 3, 4];
-    # for (let y: i64 in dyn_arr) {
-    #     sum = sum + y;
-    # }
+    for (var x: i64 in static_arr) {
+        builtin_output_i64(x);
+    }
 
     return 0;
 }
