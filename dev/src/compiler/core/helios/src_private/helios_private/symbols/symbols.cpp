@@ -2,6 +2,7 @@
 
 #include "frontend/pst_parser/elements/hierarchy/meta.hpp"
 #include "helios/tsh/kind.hpp"
+#include "helios/tsh/mutability.hpp"
 #include "helios/tsh/symbol_type.hpp"
 #include "helios/tsh/types.hpp"
 #include "helios_private/symbols/generated_symbol_data.hpp"
@@ -260,6 +261,16 @@ namespace compiler::helios {
             // Otherwise we infer it from the element type.
             return element_type;
 		}();
+
+		if (auto maybe_is_const = stmt->getIsConst(); maybe_is_const.has_value()) {
+			iter_type = iter_type.withMutability(
+				maybe_is_const.value() ? tsh::Mutability::Immutable : tsh::Mutability::Mutable
+			);
+		} else {
+			// If no let/var exists the element type is the same as the array element type. Is array
+			// stores a const than the iterator is const.
+		}
+
 
 		return ctx.query<defgen::QueryGeneratedSymbol>({
 			.name                  = iter_name,
