@@ -1,7 +1,8 @@
 #pragma once
 // Heavily inspired by (actually copied from): https://www.scs.stanford.edu/~dm/blog/va-opt.html
 
-#define PARENS ()
+#define PARENS        ()
+#define FIRST(a, ...) a
 
 #define AUX_EXPAND0(...) AUX_EXPAND4(AUX_EXPAND4(AUX_EXPAND4(AUX_EXPAND4(__VA_ARGS__))))
 #define AUX_EXPAND4(...) AUX_EXPAND3(AUX_EXPAND3(AUX_EXPAND3(AUX_EXPAND3(__VA_ARGS__))))

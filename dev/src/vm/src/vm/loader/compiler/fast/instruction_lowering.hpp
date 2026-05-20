@@ -7,6 +7,8 @@
 
 namespace vm::loader::compiler::fast {
 	std::vector<vm::fast::reloc::Instruction> lowerInstructions(
-		const vm::code::ValidProgram& high_program, const detail::FunctionStackContext& ctx
+		const vm::code::ValidProgram&       high_program,
+		const detail::FunctionStackContext& ctx,
+		const vm::fast::FunctionInfo&       func_info
 	);
 }

@@ -35,7 +35,7 @@
 /**
  * @brief If that can be used in macros
  */
-#define IF(cond, t, e) CONCAT(IF_, cond)(t, e)
+#define IF_THEN_ELSE(cond, t, e) CONCAT(IF_, cond)(t, e)
 #define IF_false(t, e) e
 #define IF_true(t, e)  t
 

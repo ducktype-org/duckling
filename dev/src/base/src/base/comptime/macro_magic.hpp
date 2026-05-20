@@ -15,46 +15,84 @@
 #define EVAL5(...) __VA_ARGS__
 
 #define EMPTY()
-#define DEFER(id) id EMPTY()
+#define DEFER(id)     id EMPTY()
 #define OBSTRUCT(...) __VA_ARGS__ DEFER(EMPTY)()
 
 #define EXPAND(...) __VA_ARGS__
-#define PAREN(...) (__VA_ARGS__)
-#define PARENS ()
+#define PARENS      ()
 
-#define CAT_PRIMITIVE(a, b) a ## b
+#define CAT_PRIMITIVE(a, ...) a##__VA_ARGS__
 
-#define CAT_1(a) a
-#define CAT_2(a, b) CAT_PRIMITIVE(a, b)
-#define CAT_3(a, b, c) CAT_2(CAT_2(a, b), c)
-#define CAT_4(a, b, c, d) CAT_2(CAT_3(a, b, c), d)
-#define CAT_5(a, b, c, d, e) CAT_2(CAT_4(a, b, c, d), e)
-#define CAT_6(a, b, c, d, e, f) CAT_2(CAT_5(a, b, c, d, e), f)
-#define CAT_7(a, b, c, d, e, f, g) CAT_2(CAT_6(a, b, c, d, e, f), g)
-#define CAT_8(a, b, c, d, e, f, g, h) CAT_2(CAT_7(a, b, c, d, e, f, g), h)
-#define CAT_9(a, b, c, d, e, f, g, h, i) CAT_2(CAT_8(a, b, c, d, e, f, g, h), i)
-#define CAT_10(a, b, c, d, e, f, g, h, i, j) CAT_2(CAT_9(a, b, c, d, e, f, g, h, i), j)
-#define CAT_11(a, b, c, d, e, f, g, h, i, j, k) CAT_2(CAT_10(a, b, c, d, e, f, g, h, i, j), k)
+#define CAT_1(a)                                   a
+#define CAT_2(a, b)                                CAT_PRIMITIVE(a, b)
+#define CAT_3(a, b, c)                             CAT_2(CAT_2(a, b), c)
+#define CAT_4(a, b, c, d)                          CAT_2(CAT_3(a, b, c), d)
+#define CAT_5(a, b, c, d, e)                       CAT_2(CAT_4(a, b, c, d), e)
+#define CAT_6(a, b, c, d, e, f)                    CAT_2(CAT_5(a, b, c, d, e), f)
+#define CAT_7(a, b, c, d, e, f, g)                 CAT_2(CAT_6(a, b, c, d, e, f), g)
+#define CAT_8(a, b, c, d, e, f, g, h)              CAT_2(CAT_7(a, b, c, d, e, f, g), h)
+#define CAT_9(a, b, c, d, e, f, g, h, i)           CAT_2(CAT_8(a, b, c, d, e, f, g, h), i)
+#define CAT_10(a, b, c, d, e, f, g, h, i, j)       CAT_2(CAT_9(a, b, c, d, e, f, g, h, i), j)
+#define CAT_11(a, b, c, d, e, f, g, h, i, j, k)    CAT_2(CAT_10(a, b, c, d, e, f, g, h, i, j), k)
 #define CAT_12(a, b, c, d, e, f, g, h, i, j, k, l) CAT_2(CAT_11(a, b, c, d, e, f, g, h, i, j, k), l)
-#define CAT_13(a, b, c, d, e, f, g, h, i, j, k, l, m) CAT_2(CAT_12(a, b, c, d, e, f, g, h, i, j, k, l), m)
-#define CAT_14(a, b, c, d, e, f, g, h, i, j, k, l, m, n) CAT_2(CAT_13(a, b, c, d, e, f, g, h, i, j, k, l, m), n)
-#define CAT_15(a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) CAT_2(CAT_14(a, b, c, d, e, f, g, h, i, j, k, l, m, n), o)
-#define CAT_16(a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p) CAT_2(CAT_15(a, b, c, d, e, f, g, h, i, j, k, l, m, n, o), p)
+#define CAT_13(a, b, c, d, e, f, g, h, i, j, k, l, m) \
+	CAT_2(CAT_12(a, b, c, d, e, f, g, h, i, j, k, l), m)
+#define CAT_14(a, b, c, d, e, f, g, h, i, j, k, l, m, n) \
+	CAT_2(CAT_13(a, b, c, d, e, f, g, h, i, j, k, l, m), n)
+#define CAT_15(a, b, c, d, e, f, g, h, i, j, k, l, m, n, o) \
+	CAT_2(CAT_14(a, b, c, d, e, f, g, h, i, j, k, l, m, n), o)
+#define CAT_16(a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p) \
+	CAT_2(CAT_15(a, b, c, d, e, f, g, h, i, j, k, l, m, n, o), p)
 
-#define CAT_DISPATCH_IMPL(_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16, MACRO, ...) MACRO
-#define CAT_DISPATCH(...) CAT_DISPATCH_IMPL(__VA_ARGS__, CAT_16, CAT_15, CAT_14, CAT_13, CAT_12, CAT_11, CAT_10, CAT_9, CAT_8, CAT_7, CAT_6, CAT_5, CAT_4, CAT_3, CAT_2, CAT_1)
+#define CAT_DISPATCH_IMPL(                                                            \
+	_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, _16, MACRO, ... \
+)                                                                                     \
+	MACRO
+#define CAT_DISPATCH(...) \
+	CAT_DISPATCH_IMPL(    \
+		__VA_ARGS__,      \
+		CAT_16,           \
+		CAT_15,           \
+		CAT_14,           \
+		CAT_13,           \
+		CAT_12,           \
+		CAT_11,           \
+		CAT_10,           \
+		CAT_9,            \
+		CAT_8,            \
+		CAT_7,            \
+		CAT_6,            \
+		CAT_5,            \
+		CAT_4,            \
+		CAT_3,            \
+		CAT_2,            \
+		CAT_1             \
+	)
 
 #define CAT(...) CAT_DISPATCH(__VA_ARGS__)(__VA_ARGS__)
 
-#define COMPL(b) PRIMITIVE_CAT(COMPL_, b)
+#define COMPL(b) CAT_PRIMITIVE(COMPL_, b)
 #define COMPL_0  1
 #define COMPL_1  0
 
-#define BITAND(x)   PRIMITIVE_CAT(BITAND_, x)
+#define BITAND(x)   CAT_PRIMITIVE(BITAND_, x)
 #define BITAND_0(y) 0
 #define BITAND_1(y) y
 
-#define INC(x) PRIMITIVE_CAT(INC_, x)
+#define BITOR(x)   CAT_PRIMITIVE(BITOR_, x)
+#define BITOR_0(y) y
+#define BITOR_1(y) 1
+
+#define BITOR_2(a, b)       BITOR(a)(b)
+#define BITOR_3(a, b, c)    BITOR_2(BITOR_2(a, b), c)
+#define BITOR_4(a, b, c, d) BITOR_2(BITOR_3(a, b, c), d)
+#define BITOR_DISPATCH(...) \
+	BITOR_DISPATCH_IMPL(__VA_ARGS__, BITOR_4, BITOR_3, BITOR_2, EXPAND) 
+#define BITOR_DISPATCH_IMPL(_1, _2, _3, _4, NAME, ...) NAME
+
+#define BITOR_ALL(...) BITOR_DISPATCH(__VA_ARGS__)(__VA_ARGS__)
+
+#define INC(x) CAT_PRIMITIVE(INC_, x)
 #define INC_0  1
 #define INC_1  2
 #define INC_2  3
@@ -66,7 +104,7 @@
 #define INC_8  9
 #define INC_9  9
 
-#define DEC(x) PRIMITIVE_CAT(DEC_, x)
+#define DEC(x) CAT_PRIMITIVE(DEC_, x)
 #define DEC_0  0
 #define DEC_1  0
 #define DEC_2  1
@@ -89,19 +127,20 @@
 #define IS_PAREN(x)         CHECK(IS_PAREN_PROBE x)
 #define IS_PAREN_PROBE(...) PROBE(~)
 
-#define NOT(x) CHECK(PRIMITIVE_CAT(NOT_, x))
+#define NOT(x) CHECK(CAT_PRIMITIVE(NOT_, x))
 #define NOT_0  PROBE(~)
 
-#define IIF(c) PRIMITIVE_CAT(IIF_, c)
+#define IIF(c)        CAT_PRIMITIVE(IIF_, c)
 #define IIF_0(t, ...) __VA_ARGS__
 #define IIF_1(t, ...) t
 
-#define BOOL(x) COMPL(NOT(x))
-#define CONST_IF(c)   IIF(BOOL(c))
+#define BOOL(x)     COMPL(NOT(x))
+#define CONST_IF(c) IIF(BOOL(c))
 
+#define IF(c) IIF(BOOL(c))
 
 #define EAT(...)
-#define WHEN(c)     IF(c)(EXPAND, EAT)
+#define WHEN(c) IF(c)(EXPAND, EAT)
 
 
 /**
@@ -131,6 +170,8 @@
  * #define COMPARE_bar(x) x
  */
 #define IS_COMPARABLE(x) IS_PAREN(CAT(COMPARE_, x)(()))
+
+#define PRIMITIVE_COMPARE(x, y) IS_PAREN(COMPARE_##x(COMPARE_##y)(()))
 
 #define NOT_EQUAL(x, y) \
 	IIF(BITAND(IS_COMPARABLE(x))(IS_COMPARABLE(y)))(PRIMITIVE_COMPARE, 1 EAT)(x, y)

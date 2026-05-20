@@ -3,6 +3,7 @@
  * @brief This file contains the definitions of all fast instructions.
  * Note that unlike in other places, here we are not appending argument names to the instruction
  * name, as this is performed automatically.
+ * @author Mateusz Kołpa
  */
 
 #include "argument_definitions.hpp"
@@ -34,8 +35,15 @@ DEF_INSTR(mov, (Place64, dst), (Place64, src))
 DEF_INSTR(add, (Place64, dst), (Place64, src))
 DEF_INSTR(cmpEq, (Place64, a), (Place64, b))
 DEF_INSTR(jumpIf, (JumpDestination, target))
-DEF_INSTR(call, (Function, func), (Immediate, stack_diff))
-DEF_INSTR(ret, (Immediate, stack_cleanup_size))
+DEF_INSTR(
+	call,
+	(Function, func),
+	(
+		Immediate, stack_diff /* How much the stack needs to be adjusted, which is
+                                 equal to size of ret+args */
+	)
+)
+DEF_INSTR(ret, (Immediate, function_return_size))
 
 DEF_INSTR(exit)
 

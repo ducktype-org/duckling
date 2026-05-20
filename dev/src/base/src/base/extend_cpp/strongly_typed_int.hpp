@@ -118,7 +118,7 @@
 		STRONG_TYPEDEF_INT_MAKE_OPERATION_AUX(-, SELF_T)                                           \
 		STRONG_TYPEDEF_INT_MAKE_INPLACE_OPERATION_AUX(+=, +)                                       \
 		STRONG_TYPEDEF_INT_MAKE_INPLACE_OPERATION_AUX(-=, -)                                       \
-		IF(DIMENSIONAL,                                                                            \
+		IF_THEN_ELSE(DIMENSIONAL,                                                                            \
 		   STRONG_TYPEDEF_INT_MAKE_SCALAR_OPERATION_AUX(*, SELF_T)                                 \
 		       STRONG_TYPEDEF_INT_MAKE_SCALAR_OPERATION_AUX(/, SELF_T)                             \
 		           STRONG_TYPEDEF_INT_MAKE_INPLACE_SCALAR_OPERATION_AUX(*=, *)                     \

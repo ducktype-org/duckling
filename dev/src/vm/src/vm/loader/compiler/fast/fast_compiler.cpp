@@ -82,7 +82,9 @@ void fast::FastCompiler::compileNewFunctions(const std::vector<Function>& new_fu
 		                      | std::ranges::to<std::vector<vm::fast::TypeID>>() },
 			function.name
 		);
-		reloc_functions.emplace_back(lowerInstructions(high_program, ctx));
+		reloc_functions.emplace_back(
+			lowerInstructions(high_program, ctx, *program.functions.at(function.name))
+		);
 	}
 }
 

@@ -1,8 +1,6 @@
 #include <base/comptime/macro_magic.hpp>
 #include <base/preproc/for_each.hpp>
 
-#define FIRST(a, ...)     a
-
 #define ARG_NAME_SHORT(arg)             FIRST CAT(INFO_, FIRST arg)()
 #define COMMA_ARG_NAME_SHORT_FLOOR(arg) , DEFER(CAT)(_, ARG_NAME_SHORT(arg))
 

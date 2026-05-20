@@ -15,7 +15,7 @@
 namespace vm::loader::compiler::safe {
 
 	static usize getIntTypeSize(const code::valid_type::TypeSize& size) {
-		return static_cast<usize>(size.assumePointerSize(Bytes(8)));
+		return static_cast<usize>(size.assumePointerSize(Bytes(16)));
 	}
 
 	namespace detail {

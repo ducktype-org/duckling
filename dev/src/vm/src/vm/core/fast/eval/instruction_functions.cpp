@@ -90,7 +90,7 @@ IMPL(
 IMPL(
 	ret_imm,
 	{
-		local_stack -= instr.stack_cleanup_size;
+		local_stack = frame->local_stack_base + instr.function_return_size;
 		state.popFrame();
 		// After popping the frame, the instruction pointer will be set to the caller's next
 	    // instruction, so we don't need to do anything else here.
