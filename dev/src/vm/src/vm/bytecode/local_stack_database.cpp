@@ -15,35 +15,37 @@
 #include <vm/bytecode/validator/valid_type/valid_type.hpp>
 
 #include <ranges>
-#include <stdexcept>
 
 
 using ls_db = vm::code::LocalStackDb;
 
-ls_db::NameStackEntry ls_db::getNameEntryByName(StackStateID state, base::StrID name) const {
-	auto name_state_id = stack_state_to_substacks.at(u64(state)).first;
+base::Optional<ls_db::NameStackEntry> ls_db::getNameEntryByName(
+	StackStateID state, base::StrID name
+) const {
+	auto name_state_id = validateState(state).first;
 
 	auto entry = namestack_entries.at(name_state_id);
 
-	if (!name_to_namestack.contains(name))
-		throw std::invalid_argument("Received completely unknown name");
+	if (!name_to_namestack.contains(name)) return std::nullopt;
 
 	auto& occurences = name_to_namestack.at(name);
 	auto  it         = occurences.lower_bound(entry.lifetime);
 
-	if (it == occurences.end()) throw std::invalid_argument("No such name at given stack");
+	if (it == occurences.end()) return std::nullopt;
 
 	if (auto [init, deinit] = it->first;
 	    init > entry.lifetime.deinit_idx || deinit < entry.lifetime.init_idx) {
-		throw std::invalid_argument("Variable with given name is not present at the stack instance");
+		return std::nullopt;
 	}
 
 	auto val_stack_id = it->second;
 	return namestack_entries.at(val_stack_id);
 }
 
-ls_db::NameStackEntry ls_db::getNameEntryByIdx(StackStateID state, usize idx) const {
-	auto name_state_id = stack_state_to_substacks.at(u64(state)).first;
+base::Optional<ls_db::NameStackEntry> ls_db::getNameEntryByIdx(StackStateID state, usize idx) const {
+	auto name_state_id = validateState(state).first;
+
+	if (idx >= nodes_at_depth.size()) return std::nullopt;
 
 	auto  entry      = namestack_entries.at(name_state_id);
 	auto& occurences = nodes_at_depth.at(idx);
@@ -52,57 +54,67 @@ ls_db::NameStackEntry ls_db::getNameEntryByIdx(StackStateID state, usize idx) co
 
 	if (auto [init, deinit] = it->first;
 	    init > entry.lifetime.deinit_idx || deinit < entry.lifetime.init_idx) {
-		throw std::invalid_argument("Variable with given name is not present at the stack instance");
+		return std::nullopt;
 	}
 
 	auto val_stack_id = it->second;
 	return namestack_entries.at(val_stack_id);
 }
 
-ls_db::tp_size ls_db::getByteOffset(StackStateID state, base::StrID name) const {
-	auto entry = getNameEntryByName(state, name);
-	return entry.size_in_bytes - entry.size_of_last;
+base::Optional<ls_db::tp_size> ls_db::getByteOffset(StackStateID state, base::StrID name) const {
+	match_optional(getNameEntryByName(state, name)) {
+		opt_some(entry) { return entry.size_in_bytes - entry.size_of_last; }
+		opt_none { return std::nullopt; }
+	}
+	CORE_UNREACHABLE();
 }
 
 bool ls_db::contains(StackStateID state, base::StrID name) const {
-	try {
-		getNameEntryByName(state, name);
-		return true;
-	} catch (std::invalid_argument& e) { return false; }
+	return getNameEntryByName(state, name).has_value();
 }
 
-usize ls_db::getIdx(StackStateID state, base::StrID name) const {
-	return getNameEntryByName(state, name).size_in_blocks - 1;
+base::Optional<usize> ls_db::getIdx(StackStateID state, base::StrID name) const {
+	match_optional(getNameEntryByName(state, name)) {
+		opt_some(entry) { return entry.size_in_blocks - 1; }
+		opt_none { return std::nullopt; }
+	}
+	CORE_UNREACHABLE();
 }
 
-base::StrID ls_db::getTypeName(StackStateID state, base::StrID name) const {
-	auto idx = getIdx(state, name);
-	return getTypeName(state, idx);
+base::Optional<base::StrID> ls_db::getTypeName(StackStateID state, base::StrID name) const {
+	match_optional(getIdx(state, name)) {
+		opt_some(idx) { return getTypeName(state, idx); }
+		opt_none { return std::nullopt; }
+	}
+	CORE_UNREACHABLE();
 }
 
-base::StrID ls_db::getTypeName(StackStateID state, usize idx) const {
-	auto typestack_id = stack_state_to_substacks.at(u64(state)).second;
+base::Optional<base::StrID> ls_db::getTypeName(StackStateID state, usize idx) const {
+	auto typestack_id = validateState(state).second;
 	return typestack.at(typestack_id, idx);
 }
 
 usize ls_db::size(StackStateID state) const {
-	auto name_state_id = stack_state_to_substacks.at(u64(state)).first;
+	auto name_state_id = validateState(state).first;
 	return namestack_entries.at(name_state_id).size_in_blocks;
 }
 
-base::StrID ls_db::getName(StackStateID state, usize idx) const {
-	auto entry = getNameEntryByIdx(state, idx);
-	return entry.name_of_last;
+base::Optional<base::StrID> ls_db::getName(StackStateID state, usize idx) const {
+	match_optional(getNameEntryByIdx(state, idx)) {
+		opt_some(entry) { return entry.name_of_last; }
+		opt_none { return std::nullopt; }
+	}
+	CORE_UNREACHABLE();
 }
 
 ls_db::tp_size ls_db::byteSize(StackStateID state) const {
-	auto name_state_id = stack_state_to_substacks.at(u64(state)).first;
+	auto name_state_id = validateState(state).first;
 	return namestack_entries.at(name_state_id).size_in_bytes;
 }
 
 bool ls_db::eqTypes(StackStateID state_1, StackStateID state_2) const {
-	auto typestack_id_1 = stack_state_to_substacks.at(u64(state_1)).second;
-	auto typestack_id_2 = stack_state_to_substacks.at(u64(state_2)).second;
+	auto typestack_id_1 = validateState(state_1).second;
+	auto typestack_id_2 = validateState(state_2).second;
 
 	return typestack.eq(typestack_id_1, typestack_id_2);
 }
@@ -269,7 +281,7 @@ vm::code::StackStateID ls_db_bld::pop(StackStateID state, usize amount) {
 }
 
 vm::code::StackStateID ls_db_bld::change(StackStateID state, base::StrID name, base::StrID type) {
-	auto [node_id, typestack_id] = states.at(u64{ state });
+	auto [node_id, typestack_id] = validateState(state);
 
 	auto name_map_id            = tree[node_id].name_map_id;
 	auto idx                    = name_to_idx.at(name_map_id, name);
@@ -280,19 +292,19 @@ vm::code::StackStateID ls_db_bld::change(StackStateID state, base::StrID name, b
 	return StackStateID{ states.size() - 1 };
 }
 
-base::StrID ls_db_bld::typeOf(StackStateID state, usize idx) const {
-	auto [node_id, typestack_id] = states.at(u64{ state });
-	CORE_ASSERT(idx < typenames.size(typestack_id), "idx should be valid");
+base::Optional<base::StrID> ls_db_bld::typeOf(StackStateID state, usize idx) const {
+	auto [node_id, typestack_id] = validateState(state);
+
+	if (idx >= typenames.size(typestack_id)) return std::nullopt;
 
 	return typenames.at(typestack_id, idx);
 }
 
-base::StrID ls_db_bld::typeOf(StackStateID state, base::StrID name) const {
-	auto [node_id, typestack_id] = states.at(u64{ state });
-	auto name_map_id             = tree[node_id].name_map_id;
+base::Optional<base::StrID> ls_db_bld::typeOf(StackStateID state, base::StrID name) const {
+	auto node_id     = validateState(state).first;
+	auto name_map_id = tree[node_id].name_map_id;
 
-	if (!name_to_idx.contains(name_map_id, name))
-		throw std::invalid_argument("No such variable at given instance");
+	if (!name_to_idx.contains(name_map_id, name)) return std::nullopt;
 
 	auto idx = name_to_idx.at(name_map_id, name);
 
@@ -300,28 +312,29 @@ base::StrID ls_db_bld::typeOf(StackStateID state, base::StrID name) const {
 }
 
 usize ls_db_bld::size(StackStateID state) const {
-	auto [node_id, typestack_id] = states.at(u64{ state });
+	auto node_id = validateState(state).first;
 	return tree[node_id].size;
 }
 
 bool ls_db_bld::contains(StackStateID state, base::StrID name) const {
-	auto [node_id, typestack_id] = states.at(u64{ state });
-	auto name_map_id             = tree[node_id].name_map_id;
+	auto node_id     = validateState(state).first;
+	auto name_map_id = tree[node_id].name_map_id;
 
 	return name_to_idx.contains(name_map_id, name);
 }
 
 bool ls_db_bld::eqTypes(StackStateID state_1, StackStateID state_2) const {
-	auto typestack_id_1 = states.at(u64(state_1)).second;
-	auto typestack_id_2 = states.at(u64(state_2)).second;
+	auto typestack_id_1 = validateState(state_1).second;
+	auto typestack_id_2 = validateState(state_2).second;
 
 	return typenames.eq(typestack_id_1, typestack_id_2);
 }
 
-base::StrID ls_db_bld::getName(StackStateID state, usize idx) const {
-	auto [node_id, typestack_id] = states.at(u64{ state });
+base::Optional<base::StrID> ls_db_bld::getName(StackStateID state, usize idx) const {
+	auto [node_id, typestack_id] = validateState(state);
 
-	CORE_ASSERT(idx < tree[node_id].size, "We need this to be true for name retrieval");
+	if (idx > tree[node_id].size) return std::nullopt;
+
 	auto varname_stack_id = tree[node_id].name_stack_id;
 
 	return var_names.at(varname_stack_id, idx);

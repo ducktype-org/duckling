@@ -175,26 +175,33 @@ namespace vm::code {
 			base::StrID name_of_last = base::StrID{ "" };
 		};
 
-		NameStackEntry getNameEntryByName(StackStateID state, base::StrID name) const;
+		base::Optional<NameStackEntry> getNameEntryByName(StackStateID state, base::StrID name) const;
 
-		NameStackEntry getNameEntryByIdx(StackStateID state, usize idx) const;
+		base::Optional<NameStackEntry> getNameEntryByIdx(StackStateID state, usize idx) const;
+
+		[[nodiscard]]
+		auto validateState(StackStateID state) const {
+			CORE_ASSERT(u64{ state } < stack_state_to_substacks.size(), "State must be valid");
+			return stack_state_to_substacks.at(u64{ state });
+		}
+
 
 	public:
-		static constexpr usize       EMPTY            = 0;
-		static constexpr NameStackID EMPTY_NAME_STACK = 0;
+		static constexpr StackStateID EMPTY            = StackStateID{ 0 };
+		static constexpr NameStackID  EMPTY_NAME_STACK = 0;
 		static constexpr TypeStackID EMPTY_TYPE_STACK = persistent::DummyVector<base::StrID>::EMPTY;
 
-		tp_size getByteOffset(StackStateID state, base::StrID name) const;
+		base::Optional<tp_size> getByteOffset(StackStateID state, base::StrID name) const;
 
 		bool contains(StackStateID state, base::StrID name) const;
 
-		usize getIdx(StackStateID state, base::StrID name) const;
+		base::Optional<usize> getIdx(StackStateID state, base::StrID name) const;
 
-		base::StrID getTypeName(StackStateID state, base::StrID name) const;
+		base::Optional<base::StrID> getTypeName(StackStateID state, base::StrID name) const;
 
-		base::StrID getTypeName(StackStateID state, usize idx) const;
+		base::Optional<base::StrID> getTypeName(StackStateID state, usize idx) const;
 
-		base::StrID getName(StackStateID state, usize idx) const;
+		base::Optional<base::StrID> getName(StackStateID state, usize idx) const;
 
 		usize size(StackStateID state) const;
 
@@ -252,6 +259,11 @@ namespace vm::code {
 			NameStackID emplaceChild(const Child& child, NameStackID new_id);
 		};
 
+		[[nodiscard]]
+		auto validateState(StackStateID state) const {
+			return states.at(u64{ state });
+		}
+
 		const valid_type::ValidTypeMap& types_ctx;
 		std::vector<TreeNode>           tree = { TreeNode{} };
 
@@ -273,10 +285,10 @@ namespace vm::code {
 		StackStateID change(StackStateID state, base::StrID name, base::StrID type);
 
 		[[nodiscard]]
-		base::StrID typeOf(StackStateID state, base::StrID name) const;
+		base::Optional<base::StrID> typeOf(StackStateID state, base::StrID name) const;
 
 		[[nodiscard]]
-		base::StrID typeOf(StackStateID state, usize idx) const;
+		base::Optional<base::StrID> typeOf(StackStateID state, usize idx) const;
 
 		[[nodiscard]]
 		usize size(StackStateID state) const;
@@ -288,7 +300,7 @@ namespace vm::code {
 		bool eqTypes(StackStateID state_1, StackStateID state_2) const;
 
 		[[nodiscard]]
-		base::StrID getName(StackStateID state, usize idx) const;
+		base::Optional<base::StrID> getName(StackStateID state, usize idx) const;
 
 		LocalStackDb finalize();
 	};
