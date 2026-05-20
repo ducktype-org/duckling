@@ -2,7 +2,7 @@
 {"event":"initialized","seq":2,"type":"event"}
 {"command":"launch","request_seq":2,"seq":3,"success":true,"type":"response"}
 {"body":{"category":"console","output":"Running\n"},"event":"output","seq":4,"type":"event"}
-{"body":{"category":"console","output":"ExecutionCompleted\n"},"event":"output","seq":5,"type":"event"}
-{"body":{"category":"console","output":"VM returned: [0]\n"},"event":"output","seq":6,"type":"event"}
-{"body":{"exitCode":0},"event":"exited","seq":7,"type":"event"}
-{"event":"terminated","seq":8,"type":"event"}
+{"body":{"category":"console","output":"Paused\n"},"event":"output","seq":5,"type":"event"}
+{"command":"pause","request_seq":3,"seq":6,"success":true,"type":"response"}
+{"body":{"allThreadsStopped":true,"reason":"pause","threadId":1},"event":"stopped","seq":7,"type":"event"}
+{"body":{"category":"console","output":"Running\n"},"event":"output","seq":8,"type":"event"}

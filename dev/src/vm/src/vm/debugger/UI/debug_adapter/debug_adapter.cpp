@@ -1,5 +1,7 @@
 #include "debug_adapter.hpp"
 
+#include "vm/api/data/api_error.hpp"
+
 #include <iostream>
 
 namespace vm::debugger::debug_adapter {
@@ -55,6 +57,8 @@ namespace vm::debugger::debug_adapter {
 
 		  debugger() {
 		debugger.attachOnStatusChangedListener(status_change_listener);
+		debugger.attachOnErrorListener(error_listener);
+		debugger.attachOnExecutionCompletedListener(completion_listener);
 	}
 
 	DebugAdapter DebugAdapter::get() { return {}; }
@@ -139,15 +143,22 @@ namespace vm::debugger::debug_adapter {
 	void DebugAdapter::sendResponse(
 		const nlohmann::json& req, bool success, const nlohmann::json& body
 	) {
-		send({ { "type", "response" },
-		       { "request_seq", req["seq"] },
-		       { "success", success },
-		       { "command", req["command"] },
-		       { "body", body } });
+		nlohmann::json message = { { "type", "response" },
+			                       { "request_seq", req["seq"] },
+			                       { "success", success },
+			                       { "command", req["command"] } };
+
+		if (!body.is_null() && !body.empty()) message["body"] = body;
+
+		send(message);
 	}
 
 	void DebugAdapter::sendEvent(const std::string& event, const nlohmann::json& body) {
-		send({ { "type", "event" }, { "event", event }, { "body", body } });
+		nlohmann::json message = { { "type", "event" }, { "event", event } };
+
+		if (!body.is_null() && !body.empty()) message["body"] = body;
+
+		send(message);
 	}
 
 	// ------------------- Handlers -------------------
@@ -161,7 +172,7 @@ namespace vm::debugger::debug_adapter {
 
 		sendResponse(req, true, capabilities);
 
-		sendEvent("initialized", nlohmann::json::object());
+		sendEvent("initialized");
 	}
 
 	void DebugAdapter::handleConfigurationDone(const nlohmann::json& req) {
@@ -169,13 +180,18 @@ namespace vm::debugger::debug_adapter {
 	}
 
 	void DebugAdapter::handleLaunch(const nlohmann::json& req) {
-		std::string program = req["arguments"]["program"];
-		debugger.loadFile(fs::File(program)).transform_error([&](const api::ApiError& api_error) {
-			throw std::runtime_error(api::errorToString(api_error));
-			return api_error;
-		});
+		std::string program     = req["arguments"]["program"];
+		auto        load_result = debugger.loadFile(fs::File(program));
 
-		sendResponse(req, true);
+		if (!load_result.has_value()) {
+			std::string error_msg = "Failed to load file '" + program
+			                      + "': " + api::errorToString(load_result.error());
+
+			sendResponse(req, false, { { "message", error_msg } });
+			return;
+		}
+
+		sendResponse(req, true, {});
 
 		// Immediately run the VM for test purpose for now
 		debugger.runMain();
@@ -195,12 +211,29 @@ namespace vm::debugger::debug_adapter {
 	}
 
 	void DebugAdapter::handlePause(const nlohmann::json& req) {
-		debugger.pause();
+		auto result = debugger.pause();
+
+		if (!result.has_value()) {
+			std::string error_msg = "Failed to pause: " + api::errorToString(result.error());
+			sendResponse(req, false, { { "message", error_msg } });
+			return;
+		}
+
 		sendResponse(req, true);
+
+		sendEvent(
+			"stopped", { { "reason", "pause" }, { "threadId", 1 }, { "allThreadsStopped", true } }
+		);
 	}
 
 	void DebugAdapter::handleContinue(const nlohmann::json& req) {
-		debugger.resume();
+		auto result = debugger.resume();
+		if (!result.has_value()) {
+			std::string error_msg = "Failed to resume: " + api::errorToString(result.error());
+			sendResponse(req, false, { { "message", error_msg } });
+			return;
+		}
+
 		sendResponse(req, true);
 	}
 }
