@@ -592,6 +592,8 @@ clah::Clah getClahForMain() {
 					);
 
 					if (not options.isFlag("no-std")) {
+						// For now we always compile the standard library on demand,
+			            // note that it will be always cached.
 						compiler::driver::compilePackages(
 							compiler::driver::getStandardLibraryCompilationTasks()
 						);
@@ -737,9 +739,13 @@ clah::Clah getClahForMain() {
 						time_stats::TimeCategories::TotalCompilationTime
 					);
 
-					compiler::driver::compilePackages(
-						compiler::driver::getStandardLibraryCompilationTasks()
-					);
+					if (not options.isFlag("no-std")) {
+						// For now we always compile the standard library on demand,
+			            // note that it will be always cached.
+						compiler::driver::compilePackages(
+							compiler::driver::getStandardLibraryCompilationTasks()
+						);
+					}
 
 					CORE_ASSERT(!global_state::getPackages().empty(), "No packages registered");
 					base::OkBad result = compiler::driver::compilePackages(compilation_tasks);
