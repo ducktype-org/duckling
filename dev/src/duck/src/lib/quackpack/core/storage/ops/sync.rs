@@ -146,7 +146,7 @@ fn check_if_overwrites(
             let replaces = package.to_venv_id() == id && !id.is_global();
             let note = if replaces {
                 Some(format!(
-                    "synchronizing a package at `{}` would overwrite a venv of a package at `{}`",
+                    "synchronizing the package at `{}` would overwrite the venv of the package at `{}`",
                     pcx.package().root_directory().display(),
                     dir.display()
                 ))

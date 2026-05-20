@@ -8,7 +8,7 @@ Tests:
           Run: |+
             echo "error: tried to overwrite an existing virtual environment from another location
             
-            note: synchronizing a package at \`$(pwd)/foo_but_different_dir\` would overwrite a venv of a package at \`$(pwd)/foo\`
+            note: synchronizing the package at \`$(pwd)/foo_but_different_dir\` would overwrite the venv of the package at \`$(pwd)/foo\`
             
             hint: use \`--overwrite\` to force an overwrite"
         Output:

@@ -334,7 +334,7 @@ fn sync_overwrite_fail() {
         err.to_string(),
         format!(
             "tried to overwrite an existing virtual environment from another location
-synchronizing a package at `{}` would overwrite a venv of a package at `{}`
+synchronizing the package at `{}` would overwrite the venv of the package at `{}`
 use `--overwrite` to force an overwrite",
             pcx2.package().root_directory().display(),
             pcx.package().root_directory().display()
