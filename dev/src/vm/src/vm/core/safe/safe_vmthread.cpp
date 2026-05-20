@@ -489,8 +489,8 @@ namespace vm {
 		frame->current_function           = &start_function;
 		frame->local_block_ref_stack_base = runtime_data.block_ref_stack_base;
 		frame->local_block_ref_stack_end  = runtime_data.block_ref_stack_base;
-		frame->local_stack_head_history_base = runtime_data.local_stack_head_history_base;
-		frame->local_stack_head_history_end  = runtime_data.local_stack_head_history_base;
+		//frame->local_stack_head_history_base = runtime_data.local_stack_head_history_base;
+		//frame->local_stack_head_history_end  = runtime_data.local_stack_head_history_base;
 
 		const auto* instr = start_function.bc.data();
 

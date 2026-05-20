@@ -138,15 +138,8 @@ namespace vm {
 			auto shared_blocks_count = arg_count + ret_count;
 			u64  prev_frame_block_ref_count
 				= u64(frame->local_block_ref_stack_end - frame->local_block_ref_stack_base);
-			u64 prev_frame_history_count
-				= u64(
-					frame->local_stack_head_history_end - frame->local_stack_head_history_base
-				);
-			CORE_ASSERT(
-				prev_frame_block_ref_count == prev_frame_history_count,
-				"Local block stack and stack-head history are out of sync before function call"
-			);
-
+			
+			
 			// Save current registers and flow.
 			frame->instr       = instr + 1;
 			frame->local_stack = local_stack;
@@ -167,30 +160,21 @@ namespace vm {
 			local_stack += prev_frame->local_stack_head - shared_stack_space_size;
 			frame->local_block_ref_stack_base = prev_frame->local_block_ref_stack_base
 			                                  + (prev_frame_block_ref_count - shared_blocks_count);
-			frame->local_stack_head_history_base
-				= prev_frame->local_stack_head_history_base
-				+ (prev_frame_block_ref_count - shared_blocks_count);
-
 			// Assumes that local_stack_size = ret_val + passed_args + new_local_args.
 			if (local_stack + called_func.local_stack_size >= runtime_data.local_stack_end)
 				throw exceptions::VMStackOverflowException();
 			if (frame->local_block_ref_stack_base + called_func.local_block_count
 			    >= runtime_data.block_ref_stack_end)
 				throw exceptions::VMStackOverflowException();
-			if (frame->local_stack_head_history_base + called_func.local_block_count
-			    >= runtime_data.local_stack_head_history_end)
-				throw exceptions::VMStackOverflowException();
 
 			frame->local_stack_head             = shared_stack_space_size;
 			frame->local_block_ref_stack_end    = prev_frame->local_block_ref_stack_end;
-			frame->local_stack_head_history_end = prev_frame->local_stack_head_history_end;
 
 			// Remove the argument blocks from caller's block stack. Only the return value stays in
 			// the block stack.
 			// @note: We require that the callee can't deinitialize the return value passed by the
 			// caller.
 			prev_frame->local_block_ref_stack_end -= arg_count;
-			prev_frame->local_stack_head_history_end -= arg_count;
 			prev_frame->local_stack_head -= called_func.arg_size;
 		}
 
@@ -207,31 +191,24 @@ namespace vm {
 				TypeCRef                                  type
 			) {
 			auto previous_head = frame->local_stack_head;
-			auto data_offset   = align_up(previous_head, 8); // for now
+			//auto data_offset   = align_up(previous_head, 8); // for now
 			//std::cout<<local_stack<<'\n';
 			//std::cout<<data_offset<<" "<<type->getAlignment()<<" "<<previous_head<<std::endl;
 			//std::cout<<instr->arg0<<' '<<data_offset<<'\n';
-			std::cout<<instr->arg0<<' '<<data_offset<<'\n';
-			CORE_ASSERT(instr->arg0 == data_offset, "Data offset should be already calculated by the compiler");
-			auto data_ptr      = local_stack + data_offset;
-			std::cout<<"CREATING AT "<<data_ptr<<'\n';
+			//std::cout<<instr->arg0<<' '<<data_offset<<'\n';
+			//CORE_ASSERT(instr->arg0 == data_offset, "Data offset should be already calculated by the compiler");
+			auto data_offset      = instr->arg0;
+			auto data_ptr         = local_stack + data_offset;
+			//std::cout<<"CREATING AT "<<data_ptr<<'\n';
 			auto block         = thread.process_memory.allocateDummy(type, data_ptr);
 			auto block_count   = u64(frame->local_block_ref_stack_end - frame->local_block_ref_stack_base);
-			auto history_count = u64(
-				frame->local_stack_head_history_end - frame->local_stack_head_history_base
-			);
-			CORE_ASSERT(
-				block_count == history_count,
-				"Local block stack and stack-head history are out of sync before init"
-			);
+
 
 			thread.process_memory.increaseBlockRefcount(block
 			);  // so that nobody can delete our block
 
 			*frame->local_block_ref_stack_end = block.get();
-			*frame->local_stack_head_history_end = previous_head;
 			frame->local_block_ref_stack_end += 1;
-			frame->local_stack_head_history_end += 1;
 			frame->local_stack_head = data_offset + type->getSize().asInt();
 		}
 
@@ -240,38 +217,28 @@ namespace vm {
 			__attribute__((always_inline))
 #endif
 			void
-			performDeinit(Frame*& frame, SafeVMThread& thread, u64 restored_stack_head) {
+			performDeinit(Frame*& frame, SafeVMThread& thread) {
 			auto block_count
 				= u64(frame->local_block_ref_stack_end - frame->local_block_ref_stack_base);
-			auto history_count
-				= u64(frame->local_stack_head_history_end - frame->local_stack_head_history_base);
-			CORE_ASSERT(
+		CORE_ASSERT(
 				block_count > 0, "Trying to deinitialize an empty local block stack"
 			);
-			CORE_ASSERT(
-				history_count > 0, "Trying to deinitialize an empty stack-head history"
-			);
-			CORE_ASSERT(
-				block_count == history_count,
-				"Local block stack and stack-head history are out of sync before deinit"
-			);
 			auto block = frame->local_block_ref_stack_end[-1];
-
+			auto type  = thread.process_memory.getBlockType(block);
 			thread.process_memory.freeBlockData(block);
 			thread.process_memory.decreaseBlockRefcount(block);
-			frame->local_stack_head = restored_stack_head;
-			frame->local_stack_head_history_end -= 1;
+			frame->local_stack_head -= type->getSize().asInt();
 			frame->local_block_ref_stack_end -= 1;
 		}
 
-		static
-#ifndef BUILD_TYPE_DEV_DEBUG
-			__attribute__((always_inline))
-#endif
-			void
-			performDeinit(Frame*& frame, SafeVMThread& thread) {
-			performDeinit(frame, thread, frame->local_stack_head_history_end[-1]);
-		}
+//		static
+//#ifndef BUILD_TYPE_DEV_DEBUG
+//			__attribute__((always_inline))
+//#endif
+//			void
+//			performDeinit(Frame*& frame, SafeVMThread& thread) {
+//			performDeinit(frame, thread, frame->local_stack_head_history_end[-1]);
+//		}
 
 		static
 #ifndef BUILD_TYPE_DEV_DEBUG
