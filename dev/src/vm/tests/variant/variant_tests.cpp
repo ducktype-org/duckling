@@ -18,6 +18,7 @@ class VmVariantTest: public VmTestSuite {
 
 public:
 	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+		
 		TESTER_ADD_TEST(verySimpleVariant);
 		TESTER_ADD_TEST(simpleVariant0);
 		TESTER_ADD_TEST(simpleVariant1);

@@ -207,8 +207,14 @@ namespace vm {
 				TypeCRef                                  type
 			) {
 			auto previous_head = frame->local_stack_head;
-			auto data_offset   = align_up(previous_head, type->getAlignment());
+			auto data_offset   = align_up(previous_head, 8); // for now
+			//std::cout<<local_stack<<'\n';
+			//std::cout<<data_offset<<" "<<type->getAlignment()<<" "<<previous_head<<std::endl;
+			//std::cout<<instr->arg0<<' '<<data_offset<<'\n';
+			std::cout<<instr->arg0<<' '<<data_offset<<'\n';
+			CORE_ASSERT(instr->arg0 == data_offset, "Data offset should be already calculated by the compiler");
 			auto data_ptr      = local_stack + data_offset;
+			std::cout<<"CREATING AT "<<data_ptr<<'\n';
 			auto block         = thread.process_memory.allocateDummy(type, data_ptr);
 			auto block_count   = u64(frame->local_block_ref_stack_end - frame->local_block_ref_stack_base);
 			auto history_count = u64(

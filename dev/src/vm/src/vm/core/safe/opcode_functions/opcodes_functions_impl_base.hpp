@@ -1221,7 +1221,7 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(initFromVmValue)(FUNCTION_ARGS) {
 		{
-			const VmValue& vm_value = *std::bit_cast<const VmValue*>(instr->arg0);
+			const VmValue& vm_value = *std::bit_cast<const VmValue*>(instr->arg1);
 			performInit(instr, local_stack, frame, thread, vm_value.type);
 			vm_value.exportData({ Ref(frame->local_block_ref_stack_end[-1]), 0 });
 		}

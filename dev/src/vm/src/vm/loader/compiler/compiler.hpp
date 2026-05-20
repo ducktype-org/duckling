@@ -117,6 +117,7 @@ namespace vm::loader::compiler {
 			usize shared_stack_size = 0;
 			usize current_instruction_index = 0;
 			std::vector<usize> deinit_restore_offsets{};
+			std::vector<usize> offsets_of_init{};
 		};
 
 		/**

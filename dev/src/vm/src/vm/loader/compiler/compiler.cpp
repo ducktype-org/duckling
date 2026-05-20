@@ -314,12 +314,16 @@ namespace vm::loader::compiler {
 		usize                    max_stack_size  = 0;
 		usize                    max_block_count = 0;
 		ctx.deinit_restore_offsets = std::vector<usize>(ctx.function.body.size(), 0);
+		ctx.offsets_of_init = std::vector<usize>(ctx.function.body.size(), 0);
+
+		// todo reorganize and make better
+		usize             index = 0;
 
 		auto push = [&](opargs::PlaceAny local, opargs::Type type) {
 			auto type_ref   = low_program.types->at(type.type_name);
 			auto type_size  = type_ref->getSize().asInt();
 			//auto type_align = must_be_fully_alligned.contains(local.var_name) ? 8 : type_ref->getAlignment();
-			auto type_align = 8;
+			auto type_align = 8;	
 			size_t padding  = align_up(curr_stack_size, type_align) - curr_stack_size;
 			auto aligned_offset = curr_stack_size + padding;
 
@@ -335,6 +339,7 @@ namespace vm::loader::compiler {
 				local.var_name,
 				{ .offset = aligned_offset, .block_idx = type_size_stack.size(), .type = type_ref }
 			);
+			ctx.offsets_of_init[index] = aligned_offset;
 			padding_used.push_back(padding);
 			type_size_stack.push_back(type_size);
 			curr_stack_size += padding + type_size;
@@ -386,7 +391,7 @@ namespace vm::loader::compiler {
 				{ ctx.function.body.size(), {}, {}, 0 }  // sentinel
 		};
 		std::vector<bool> visited_instructions(ctx.function.body.size());
-		usize             index = 0;
+
 
 		while (index != ctx.function.body.size()) {
 			if (visited_instructions[index]) {

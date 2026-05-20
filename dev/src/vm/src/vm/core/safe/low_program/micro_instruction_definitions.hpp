@@ -410,7 +410,8 @@ DEF_MICRO_INSTR(ret)
 // ========= STACK OPERATIONS ========
 
 // initialize local variable on local stack with given type
-DEF_MICRO_INSTR(init_bany_type, vm::low::opargs::PlaceBlockAny, vm::low::opargs::Type)
+// Offset at which should be created...
+DEF_MICRO_INSTR(init_bany_type, vm::low::opargs::Immediate, vm::low::opargs::Type)
 // pop variable from local stack and restore the stack head to the specified offset
 DEF_MICRO_INSTR(deinit, vm::low::opargs::Immediate)
 
