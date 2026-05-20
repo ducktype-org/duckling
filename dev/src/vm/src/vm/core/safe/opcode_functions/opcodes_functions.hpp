@@ -184,25 +184,17 @@ namespace vm {
 #endif
 			void
 			performInit(
-				[[maybe_unused]] const MicroInstruction*& instr,
+				const MicroInstruction*& instr,
 				std::byte*&                               local_stack,
 				Frame*&                                   frame,
 				SafeVMThread&                             thread,
 				TypeCRef                                  type
 			) {
-			auto previous_head = frame->local_stack_head;
-
-			auto data_offset      = instr->arg0;
-			auto data_ptr         = local_stack + data_offset;
-			auto block         = thread.process_memory.allocateDummy(type, data_ptr);
-			auto block_count   = u64(frame->local_block_ref_stack_end - frame->local_block_ref_stack_base);
-
-
-			thread.process_memory.increaseBlockRefcount(block);  // so that nobody can delete our block
-
+			auto block         = thread.process_memory.allocateDummy(type, local_stack + instr->arg0);
+			thread.process_memory.increaseBlockRefcount(block);
 			*frame->local_block_ref_stack_end = block.get();
 			frame->local_block_ref_stack_end += 1;
-			frame->local_stack_head = data_offset + type->getSize().asInt();
+			frame->local_stack_head = instr->arg0 + type->getSize().asInt();
 		}
 
 		static
@@ -211,11 +203,7 @@ namespace vm {
 #endif
 			void
 			performDeinit(Frame*& frame, SafeVMThread& thread) {
-			auto block_count
-				= u64(frame->local_block_ref_stack_end - frame->local_block_ref_stack_base);
-		CORE_ASSERT(
-				block_count > 0, "Trying to deinitialize an empty local block stack"
-			);
+
 			auto block = frame->local_block_ref_stack_end[-1];
 			auto type  = thread.process_memory.getBlockType(block);
 			thread.process_memory.freeBlockData(block);

@@ -289,7 +289,6 @@ namespace vm {
 
 		// Now fill in the argv table.
 		if (main_has_args) {
-			//CORE_PANIC("UNIMPLEMENTED");
 			for (const auto& [argv_index, arg]:
 			     std::views::zip(std::ranges::views::iota(0u), args)) {
 				start_function.bc.insert(

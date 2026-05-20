@@ -64,6 +64,7 @@ namespace vm {
 		 * @brief First free byte in the local stack.
 		 * Used when new block is created on the local stack.
 		 */
+		// TODO remove, it is only used when calling functions, and can be calculated at lowering
 		u64 local_stack_head = 0;
 
 		/**
