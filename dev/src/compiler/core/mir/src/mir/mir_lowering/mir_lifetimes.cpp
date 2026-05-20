@@ -1,6 +1,7 @@
 #include "mir_lifetimes.hpp"
 
 #include "../mir_structure/mir_structure.hpp"
+#include "mir/mir_structure/mir_lifetime_scope.hpp"
 
 #include "base/extend_cpp/variant_match.hpp"
 
@@ -68,13 +69,25 @@ namespace compiler::mir {
 	}
 
 	void AddDestructorsPass::run(query::Context&, Function& function, const LifetimePassArgs& args) {
-		// Idea of implementation: for each block we iterate over instructions
-		// and add destructors after each instruction (often 0 of them),
-		// based on scopes that ends there.
-		// context is unused, but left since it might be useful in the future.
-		// preserving block order is important, because of how MIR BlockIDs works
-		// TODOP: Expand this comment.
-
+		// Idea of implementation:
+		// For each block we iterate over instructions and add destructors after each instruction
+		// (often 0 of them), based on scopes that ends there.
+		//
+		// The pass is divided into two steps:
+		// 1) Iterate through all instructions in the block. If moving from one instruction to the
+		// 	  next crosses a scope boundary, we insert the necessary destructors between them.
+		// 2) Handling terminators is more complex because they can have multiple successors with
+		//	different ending scopes. The general logic is to insert a new intermediate block for
+		// every path that crosses a scope boundary. This block contains only the destructors
+		// specific to that path and a `Jump` to the actual destination.
+		//
+		// OPT: Additionally, a simple optimization to not create a lot of blocks in simple cases
+		// (like if-else with no ending scopes inside) is implemented. First, we check if all
+		// outgoing edges require the same set of destructors. If that's true we append the
+		// destructors directly to the current block to avoid creating unnecessary blocks.
+		//
+		// Context is unused, but left since it might be useful in the future.
+		// Preserving block order is important, because of how MIR BlockIDs works.
 		// No lifetime analysis here, since it is quite complex.
 		// See doc-comment of this function for details.
 
@@ -172,54 +185,82 @@ namespace compiler::mir {
 					if (!found) unique_successors.push_back(s);
 				}
 
+				base::Optional<std::vector<ScopeRef>>         first_path_ending_scopes;
+				bool                                          paths_identical  = true;
+				bool                                          boundary_crossed = false;
+				base::HashMap<BlockID, std::vector<ScopeRef>> ending_scopes_per_succ;
+
 				for (auto succ: unique_successors) {
 					auto succ_begin_scope  = function.blocks[succ].beginScope();
 					auto succ_ending_scope = getEndingScopes(terminator.scope, succ_begin_scope);
 					auto succ_starting_scopes
 						= getStartingScopes(terminator.scope, succ_begin_scope);
 
-					// If no scope boundary is crossed, the edge is clean.
-					if (succ_ending_scope.empty() && succ_starting_scopes.empty()) continue;
+					if (!succ_ending_scope.empty() && !succ_starting_scopes.empty())
+						boundary_crossed = true;
 
-					// Otherwise we have crossed a scope boundary. We have to split the edge into an
-					// intermediate block.
-					BlockID                  new_block_id = get_new_block_id();
-					std::vector<Instruction> new_block_instructions;
+					// Opt: Check if all path lead to the same ending scope.
+					if (!first_path_ending_scopes.has_value())
+						first_path_ending_scopes = succ_ending_scope;
+					else if (*first_path_ending_scopes != succ_ending_scope)
+						paths_identical = false;
+					ending_scopes_per_succ.put(succ, std::move(succ_ending_scope));
+				}
 
-					// Enter the block and preserve the caller scope.
-					new_block_instructions.push_back(Instruction{
-						Operation::Nop, {}, {}, {}, terminator.scope });
+				if (paths_identical && boundary_crossed) {
+					// Opt: If all paths require the same destructors we don't create a new block
+					// and insert them directly to the current block.
+					add_destructors_to_instr_vec(first_path_ending_scopes.value(), new_instructions);
+				} else if (!paths_identical) {
+					// Paths are not identical. Create a new block and insert destructors there.
+					for (auto succ: unique_successors) {
+						auto  succ_begin_scope  = function.blocks[succ].beginScope();
+						auto& succ_ending_scope = ending_scopes_per_succ.at(succ);
+						auto  succ_starting_scopes
+							= getStartingScopes(terminator.scope, succ_begin_scope);
 
-					// Add all needed destructors.
-					add_destructors_to_instr_vec(succ_ending_scope, new_block_instructions);
+						// If no scope boundary is crossed, the edge is clean.
+						if (succ_ending_scope.empty() && succ_starting_scopes.empty()) continue;
 
-					Instruction new_block_terminator{
-						Operation::Jump, {}, { MIRValue(succ) }, {}, succ_begin_scope
-					};
+						// Otherwise we have crossed a scope boundary. We have to split the edge
+						// into an intermediate block.
+						BlockID                  new_block_id = get_new_block_id();
+						std::vector<Instruction> new_block_instructions;
 
-					// Add the new block.
-					function.blocks.put(
-						new_block_id,
-						Block{
-							.id           = new_block_id,
-							.instructions = std::move(new_block_instructions),
-							.terminator   = std::move(new_block_terminator),
-						}
-					);
+						// Enter the block and preserve the caller scope.
+						new_block_instructions.push_back(Instruction{
+							Operation::Nop, {}, {}, {}, terminator.scope });
 
-					new_blocks_order.push_back(new_block_id);
+						// Add all needed destructors.
+						add_destructors_to_instr_vec(succ_ending_scope, new_block_instructions);
 
-					// Modify the caller terminator to jump through the newly created block.
-					for (auto& arg: terminator.arguments) {
-						variant_match(arg.getVariant()) {
-							variant_case(BlockID, block) {
-								if (block == succ) arg = MIRValue(new_block_id);
+						Instruction new_block_terminator{
+							Operation::Jump, {}, { MIRValue(succ) }, {}, succ_begin_scope
+						};
+
+						// Add the new block.
+						function.blocks.put(
+							new_block_id,
+							Block{
+								.id           = new_block_id,
+								.instructions = std::move(new_block_instructions),
+								.terminator   = std::move(new_block_terminator),
+							}
+						);
+
+						new_blocks_order.push_back(new_block_id);
+
+						// Modify the caller terminator to jump through the newly created block.
+						for (auto& arg: terminator.arguments) {
+							variant_match(arg.getVariant()) {
+								variant_case(BlockID, block) {
+									if (block == succ) arg = MIRValue(new_block_id);
+								}
 							}
 						}
 					}
 				}
 			}
-
 			new_blocks_instructions.push_back(std::move(new_instructions));
 		}
 
@@ -228,6 +269,7 @@ namespace compiler::mir {
 			function.blocks[block_id].instructions = std::move(new_blocks_instructions[i]);
 		}
 
+		// Block order might have changed if new blocks where added.
 		function.block_order = std::move(new_blocks_order);
 	}
 
