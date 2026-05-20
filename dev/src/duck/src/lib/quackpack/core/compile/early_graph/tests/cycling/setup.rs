@@ -151,7 +151,7 @@ dependencies:
           package-features: [use_bar_with_baz]
   cycle:
     source:
-      path: {:?}
+      path: {}
     conditions:
       package-features: [cycle]
 features:
@@ -161,7 +161,7 @@ features:
   nonexistent: []
   cycle: []
         ",
-            cycle_root.to_string_lossy()
+            cycle_root.display()
         ))
         .unwrap();
     pkg_root.try_fsync_dir().unwrap();
