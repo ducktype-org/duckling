@@ -125,6 +125,8 @@ namespace vm::persistent {
 			if (copy.contains(k)) throw std::invalid_argument("overriding a present value");
 			copy.put(k, v);
 
+			copies.emplace_back(copy);
+
 			return copies.size() - 1;
 		}
 
