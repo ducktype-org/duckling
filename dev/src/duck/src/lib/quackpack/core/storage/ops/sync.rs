@@ -141,10 +141,10 @@ fn check_if_overwrites(
     }
     let dir = venv.data().last_known_directory();
     let package = PackageLoader::find_at_exact_directory(dir, pcx.ctx());
-    let (replaces, note) = match package {
+    let (replaces, context) = match package {
         Ok(package) => {
             let replaces = package.to_venv_id() == id && !id.is_global();
-            let note = if replaces {
+            let context = if replaces {
                 Some(format!(
                     "synchronizing the package at `{}` would overwrite the venv of the package at `{}`",
                     pcx.package().root_directory().display(),
@@ -153,7 +153,7 @@ fn check_if_overwrites(
             } else {
                 None
             };
-            (replaces, note)
+            (replaces, context)
         }
         Err(e) => {
             error!(path = %dir.display(), "failed to load the package: {e} ({e:?})");
@@ -165,22 +165,24 @@ fn check_if_overwrites(
             } else {
                 // Other error, maybe we failed to deserialize?
                 // Safely assume, that package still exists.
-                let note = format!(
-                    "failed to load a package at `{}`, assuming it still exists",
+                let context = format!(
+                    "failed to load a package at `{}`, assuming it still exists with the name `{id}`",
                     dir.display()
                 );
-                (true, Some(note))
+                (true, Some(context))
             }
         }
     };
     if replaces {
         let mut error = QuackError::hint("use `--overwrite` to force an overwrite");
-        if let Some(note) = note {
-            error = error.add_note(note);
+        let same_ids_message = format!("the packages share the same name `{id}`");
+        error = error.context(MessageError::new(same_ids_message));
+        if let Some(context) = context {
+            error = error.context(MessageError::new(context));
         }
-        error = error.context(MessageError::new(
-            "tried to overwrite an existing virtual environment from another location",
-        ));
+        let tried_to_override_message =
+            "tried to overwrite an existing virtual environment from another location";
+        error = error.context(MessageError::new(tried_to_override_message));
         Err(error)
     } else {
         Ok(())
