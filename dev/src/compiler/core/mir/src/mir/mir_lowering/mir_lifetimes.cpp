@@ -406,9 +406,9 @@ namespace compiler::mir {
 	Function runAllLifetimePasses(query::Context& ctx, Function function) {
 		auto args = constructLifetimePassArgs(function);
 
-		// The order here probably does not matter, but maybe for more safety
-		// we should have AddScopeFlagsPass{} run after AddDestructorsPass{},
-		// so that no destructors are run after scope end flags.
+		// The order here does matter. AddDestructorPass{} performs a transformation on the CFG
+		// which adds an important invariant that all successors of a block have the same ending
+		// scopes. This assumption is then used when adding ScopeFlags.
 		AddDestructorsPass{}.run(ctx, function, args);
 		AddScopeFlagsPass{}.run(ctx, function, args);
 
