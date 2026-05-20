@@ -662,8 +662,6 @@ clah::Clah getClahForMain() {
 	                     .optional()
 	                     .build())
 				.setHandler([](const clah::ParsingResult& options) -> int {
-					// @TODO make standard library options work here (the problem is with passing
-		            // the linking options)
 					auto manifest_file = options.getPositional<fs::File>(0);
 					auto worker_count  = options.getValue<i64>("workers").copyValueOr(1);
 
