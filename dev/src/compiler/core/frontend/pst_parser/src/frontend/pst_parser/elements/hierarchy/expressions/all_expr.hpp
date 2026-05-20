@@ -6,6 +6,7 @@
 #include "binary_operator.hpp"      // IWYU pragma: export
 #include "block_expr.hpp"           // IWYU pragma: export
 #include "call.hpp"                 // IWYU pragma: export
+#include "cast_as.hpp"              // IWYU pragma: export
 #include "chain_expr.hpp"           // IWYU pragma: export
 #include "char_value.hpp"           // IWYU pragma: export
 #include "comma.hpp"                // IWYU pragma: export

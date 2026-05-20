@@ -112,6 +112,7 @@ namespace pst {
 		class LogicNot;
 		class LogicAnd;
 		class LogicOr;
+		class CastAs;
 		class Ternary;
 		class Comma;
 		class Assignment;

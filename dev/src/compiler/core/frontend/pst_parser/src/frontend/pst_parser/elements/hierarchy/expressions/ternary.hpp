@@ -3,6 +3,10 @@
 #include "expr_common.hpp"
 
 namespace pst::expr {
+	class CastAs;
+}
+
+namespace pst::expr {
 	/**
 	 * @brief Ternary expression(`if condition then if_true else if_else`).
 	 *
@@ -13,7 +17,7 @@ namespace pst::expr {
 	 * would cause parsing problems.
 	 */
 	class Ternary final: public ExprElement {
-		using Lower = LogicOr;
+		using Lower = CastAs;
 
 		NAMED_CHILD(condition, ExprElement);
 		NAMED_CHILD(if_true, ExprElement);

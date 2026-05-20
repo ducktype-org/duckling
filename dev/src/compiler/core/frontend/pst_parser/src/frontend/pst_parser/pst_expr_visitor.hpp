@@ -28,6 +28,7 @@ namespace pst::expr {
 		MatchExpr,
 		ComparisonChain,
 		Ternary,
+		CastAs,
 		Comma,
 		Assignment
 	);

@@ -3,6 +3,7 @@
 #include "coercions.hpp"
 #include "errors.hpp"
 #include "function_calls/call_processing.hpp"
+#include "helios_private/comp_time/comp_time.hpp"
 #include "hout_of_subexpr.hpp"
 #include "numeric_literals.hpp"
 
@@ -540,6 +541,19 @@ namespace compiler::helios::code {
 					));
 					// failed
 				}
+			}
+
+			void visitCastAs(pst::Access<pst::expr::CastAs> stmt) override {
+				const auto meta_type = tsh::SymbolType<>::withDefaults(tsh::getMetaType());
+
+				auto value_expr = subExprFromPST(ctx, stmt->getValueExpression()).valueOrThrow();
+				auto type_expr  = subExprFromPSTWithType(ctx, stmt->getTypeExpression(), meta_type).valueOrThrow();
+				auto type_ctv = ctx.query<QueryEvaluateHOUTExpression>({ type_expr.ref() });
+				auto symbol_type = type_ctv.valueOrThrow().get<tsh::SymbolType<>>().value();
+
+				node = makeBox<CastExpr>(
+					ctx, pstOrigin(stmt), std::move(value_expr), symbol_type
+				);
 			}
 
 			void visitTernary(pst::Access<pst::expr::Ternary> stmt) override {
