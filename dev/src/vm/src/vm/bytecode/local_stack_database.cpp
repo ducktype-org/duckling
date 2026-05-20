@@ -95,7 +95,7 @@ base::StrID ls_db::getName(StackStateID state, usize idx) const {
 	return entry.name_of_last;
 }
 
-ls_db::tp_size ls_db::ByteSize(StackStateID state) const {
+ls_db::tp_size ls_db::byteSize(StackStateID state) const {
 	auto name_state_id = stack_state_to_substacks.at(u64(state)).first;
 	return namestack_entries.at(name_state_id).size_in_bytes;
 }
