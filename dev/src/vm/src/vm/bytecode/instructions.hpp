@@ -29,6 +29,7 @@
 #include <base/pointers/box.hpp>
 #include <base/preproc/for_each.hpp>
 
+#include <vm/bytecode/local_stack_database.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 
 // Useful for turning a name to a properly qualified type name in X-macros.
@@ -53,6 +54,7 @@ namespace vm::code {
 		// This structure allows us to easily define the `IsInstruction` concept.
 		struct InstructionBase: ElementBase {
 			usize instr_idx = 0;
+			StackStateID stack_state{};
 		};
 
 		// Helper useful for getting rid of the leading comma resulting from `FOR_EACH`.
