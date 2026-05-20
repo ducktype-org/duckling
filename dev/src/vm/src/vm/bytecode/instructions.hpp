@@ -53,7 +53,7 @@ namespace vm::code {
 	namespace detail {
 		// This structure allows us to easily define the `IsInstruction` concept.
 		struct InstructionBase: ElementBase {
-			usize instr_idx = 0;
+			usize        instr_idx = 0;
 			StackStateID stack_state{};
 		};
 

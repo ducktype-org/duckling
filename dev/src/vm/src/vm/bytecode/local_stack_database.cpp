@@ -235,16 +235,14 @@ vm::code::StackStateID ls_db_bld::push(StackStateID state, base::StrID name, bas
 		auto var_name_id    = tree[node_id].name_stack_id;
 		auto new_varname_id = var_names.push(var_name_id, name);
 
-		tree.emplace_back(
-			TreeNode{
-				.children      = {},
-				.name_map_id   = new_namemap_id,
-				.name_stack_id = new_varname_id,
-				.size          = tree[node_id].size + 1,
-				.prev_node     = node_id,
-				.byte_depth    = tree[node_id].byte_depth + types_ctx.at(type)->getSize(),
-			}
-		);
+		tree.emplace_back(TreeNode{
+			.children      = {},
+			.name_map_id   = new_namemap_id,
+			.name_stack_id = new_varname_id,
+			.size          = tree[node_id].size + 1,
+			.prev_node     = node_id,
+			.byte_depth    = tree[node_id].byte_depth + types_ctx.at(type)->getSize(),
+		});
 	}
 
 	auto new_typestack_state_id = typenames.push(typestack_id, type);
@@ -288,7 +286,6 @@ base::StrID ls_db_bld::typeOf(StackStateID state, usize idx) const {
 
 	return typenames.at(typestack_id, idx);
 }
-
 
 base::StrID ls_db_bld::typeOf(StackStateID state, base::StrID name) const {
 	auto [node_id, typestack_id] = states.at(u64{ state });
@@ -338,9 +335,8 @@ vm::code::LocalStackDb ls_db_bld::finalize() {
 	std::vector<std::pair<NameStackID, TypeStackID>> stack_state_to_substacks{ states.size() };
 
 
-	auto dfs = [&](auto&&                                   self,
-	               NameStackID                              node_id,
-	               base::HashMap<base::StrID, NameStackID>& names) -> Lifetime {
+	auto dfs = [&](auto&& self, NameStackID node_id, base::HashMap<base::StrID, NameStackID>& names
+	           ) -> Lifetime {
 		CORE_ASSERT(node_id < tree.size(), "this should be true");
 		Lifetime node_lifetime{};
 		node_lifetime.init_idx = order;
