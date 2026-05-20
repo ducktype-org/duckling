@@ -41,6 +41,7 @@
 
 #include <diagnostic/highlight_positions.hpp>
 #include <filesystem/file.hpp>
+#include <logger/logger.hpp>
 #include <query_framework/context/context.hpp>
 #include <query_framework/entry/query_entry_point.hpp>
 #include <query_framework/entry/with_context_do.hpp>
@@ -99,6 +100,7 @@ public:
 		TESTER_ADD_TEST(testCastsHout);
 		TESTER_ADD_TEST(testTypeLifting);
 		TESTER_ADD_TEST(testHoutElementsOrigin);
+		TESTER_ADD_TEST(testAliases);
 
 		// this is at the end
 		// so we test all the scopes created in helios tests:
@@ -107,8 +109,6 @@ public:
 	}
 
 private:
-	// @TODO: test_modules/aliases are not used in tests
-
 	using enum compiler::tsh::Mutability;
 	using enum compiler::tsh::IntegralAbstractType::Signedness;
 
@@ -2482,7 +2482,7 @@ private:
 		         pst::Keyword                                              keyword) -> bool {
 			for (const auto& spec: specifiers) {
 				auto unlocked = spec.unlock(ctx);
-				if (unlocked->getSpecifier() == keyword) return true;
+				if (unlocked->getSpecifier().unlock(ctx)->unwrap() == keyword) return true;
 			}
 			return false;
 		};
@@ -2495,7 +2495,8 @@ private:
 
 			for (size_t i = 0; i < specifiers.size(); ++i) {
 				auto unlocked = specifiers[i].unlock(ctx);
-				if (unlocked->getSpecifier() != expected_order[i]) return false;
+				if (unlocked->getSpecifier().unlock(ctx)->unwrap() != expected_order[i])
+					return false;
 			}
 			return true;
 		};
@@ -2995,7 +2996,8 @@ private:
 		auto get_pst_variable_by_name
 			= [&](base::StrID name) -> base::Optional<pst::Access<pst::Variable>> {
 			for (const auto& var: all_variables)
-				if (var.illegalAccess().value()->getName() == name) return var.illegalAccess();
+				if (var.illegalAccess().value()->getName().illegalAccess().value()->unwrap() == name)
+					return var.illegalAccess();
 			return {};
 		};
 
@@ -3058,7 +3060,8 @@ private:
 		auto get_pst_function_by_name
 			= [&](base::StrID name) -> base::Optional<pst::Access<pst::Fun>> {
 			for (const auto& fun: all_pst_functions)
-				if (fun.illegalAccess().value()->getName() == name) return fun.illegalAccess();
+				if (fun.illegalAccess().value()->getName().illegalAccess().value()->unwrap() == name)
+					return fun.illegalAccess();
 			return {};
 		};
 
@@ -3094,6 +3097,15 @@ private:
 		check_function_origin(base::StrID("b"));
 
 		query::utils::withContextDo([&](query::Context& ctx) { hout.debugPrint(ctx, std::cout); });
+	}
+
+	void testAliases() {
+		// @TODO: #1412 make this less of a stub once proper dealias lands
+		auto [_, root_scope] = getModule(fs::File(path("test_modules/aliases")));
+
+		auto nonwild_using        = getChain("c", root_scope);
+		auto nonwild_using_target = getChain("M.c", root_scope);
+		ASSERT_EQUAL(nonwild_using, nonwild_using_target);
 	}
 
 	void testScopeParentsAndDepth() {

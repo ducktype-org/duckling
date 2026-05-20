@@ -28,7 +28,7 @@ namespace compiler::helios {
 			base::Optional<pst::AccessLocked<pst::ImplementsList>> implements;
 
 			void visitClass(pst::Access<pst::Class> stmt) final {
-				name = stmt->getName();
+				name = stmt->getName().unlock(ctx)->unwrap();
 				if (auto base = stmt->getBase().unlockOpt(ctx))
 					base_class = base.value()->getExpr().unlock(ctx);
 				if (auto implements = stmt->getImplements().unlockOpt(ctx))

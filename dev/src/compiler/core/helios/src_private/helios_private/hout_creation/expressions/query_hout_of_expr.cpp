@@ -87,7 +87,7 @@ namespace compiler::helios::code {
 		) {
 			if (auto bin_op_opt = expr.unlock(ctx).dynamicCast<pst::expr::BinaryOperator>()) {
 				auto bin_op = bin_op_opt.value();
-				if (bin_op->getOperator() == lang_def::NamedOperator::Pipe) {
+				if (bin_op->getOperator().unlock(ctx)->unwrap() == lang_def::NamedOperator::Pipe) {
 					getVariantSubExprsInPlace(ctx, bin_op->getLeftOperand(), sub_exprs_append);
 					getVariantSubExprsInPlace(ctx, bin_op->getRightOperand(), sub_exprs_append);
 				}
@@ -104,7 +104,8 @@ namespace compiler::helios::code {
 			query::Context& ctx, pst::AccessLocked<pst::expr::BinaryOperator> expr
 		) {
 			CORE_ASSERT(
-				expr.unlock(ctx)->getOperator() == lang_def::NamedOperator::Pipe,
+				expr.unlock(ctx)->getOperator().unlock(ctx)->unwrap()
+					== lang_def::NamedOperator::Pipe,
 				"Not a variant operator"
 			);
 			std::vector<pst::AccessLocked<pst::ExprElement>> sub_exprs;
@@ -224,7 +225,7 @@ namespace compiler::helios::code {
 			 */
 			[[nodiscard]]
 			Box<Expr> resolveBinaryOperator(
-				lexer::Operator op, Box<Expr> lhs, Box<Expr> rhs, ScopeID scope
+				pst::Access<pst::OperatorWrapper> op, Box<Expr> lhs, Box<Expr> rhs, ScopeID scope
 			) const {
 				const auto lhs_type = lhs->expression_type.getSymbolType();
 				const auto rhs_type = rhs->expression_type.getSymbolType();
@@ -240,9 +241,9 @@ namespace compiler::helios::code {
 
 				// Step 1. — special path for numeric promotions
 				if (isNumericType(lhs_type.getType()) && isNumericType(rhs_type.getType())
-				    && isNumericOperator(op)) {
+				    && isNumericOperator(op->unwrap())) {
 					auto numeric_builtin_opt
-						= findNumericBinaryBuiltin(ctx, op, lhs.ref(), rhs.ref());
+						= findNumericBinaryBuiltin(ctx, op->unwrap(), lhs.ref(), rhs.ref());
 					auto new_origin = elementOriginOrdered(lhs->origin, rhs->origin);
 
 					if_opt_some(numeric_builtin_opt, numeric_builtin) {
@@ -257,22 +258,24 @@ namespace compiler::helios::code {
 
 				// Step 2. — Regular lookup and overload resolution
 				const auto lookup_result
-					= HInterface::ofScopeWithParents(scope).lookup(ctx, op.value);
+					= HInterface::ofScopeWithParents(scope).lookup(ctx, op->unwrap().value);
 				// @TODO: #1412 fix dealias
 				auto all_candidates = lookup_result->valueOrThrow().leaves;
 				for (const auto [builtin_operator_sym, _]:
 				     *ctx.query<QueryRegularBinaryBuiltinSymbols>({})) {
-					if (name(builtin_operator_sym) == op.value)
+					if (name(builtin_operator_sym) == op->unwrap().value)
 						all_candidates.push_back(builtin_operator_sym);
 				}
-				return processBinaryOperatorCall(ctx, all_candidates, std::move(lhs), std::move(rhs))
+				return processBinaryOperatorCall(
+						   ctx, all_candidates, std::move(lhs), std::move(rhs), pstOrigin(op)
+				)
 				    .valueOrThrow();
 			}
 
 			void visitBinaryOperator(pst::Access<pst::expr::BinaryOperator> stmt) override {
 				// handle variants:
-				const auto op = stmt->getOperator();
-				if (op == lang_def::NamedOperator::Pipe) {
+				const auto op = stmt->getOperator().unlock(ctx);
+				if (op->unwrap() == lang_def::NamedOperator::Pipe) {
 					auto                   sub_exprs = getVariantSubExprs(ctx, stmt);
 					std::vector<Box<Expr>> all_subtypes;
 
@@ -327,7 +330,7 @@ namespace compiler::helios::code {
 
 			void visitKeywordLiteral(pst::Access<pst::expr::KeywordLiteral> stmt) override {
 				using enum tsh::IntegralAbstractType::Signedness;
-				switch (stmt->getKeyword()) {
+				switch (stmt->getKeyword().unlock(ctx)->unwrap()) {
 				// true, false:
 				case pst::Keyword::True:
 					node = makeBox<LiteralBoolExpr>(ctx, pstOrigin(stmt), true);
@@ -495,7 +498,8 @@ namespace compiler::helios::code {
 				auto inner      = std::move(inner_res).valueOrThrow();
 				auto inner_type = inner->expression_type.getSymbolType();
 
-				if (stmt->getOperator() == lang_def::NamedOperator::Ampersand) {
+				if (stmt->getOperator().unlock(ctx)->unwrap()
+				    == lang_def::NamedOperator::Ampersand) {
 					// @TODO: #1956 remove the check bellow.
 					// This is a temporary check to prevent us from taking reference of types that
 					// do not carry information.
@@ -522,14 +526,16 @@ namespace compiler::helios::code {
 					return;
 				}
 
-				auto builtin = unaryBuiltin(stmt->getOperator(), std::move(inner), pstOrigin(stmt));
+				auto builtin = unaryBuiltin(
+					stmt->getOperator().unlock(ctx)->unwrap(), std::move(inner), pstOrigin(stmt)
+				);
 				if (builtin.has_value()) {
 					node = std::move(builtin).value();
 					return;
 				} else {
 					ctx.logInt(makeBox<UndefinedUnaryOperatorError>(
 						stmt->getStablePosition(),
-						stmt->getOperator().str(),
+						stmt->getOperator().unlock(ctx)->unwrap().str(),
 						makeBox<InteractiveType>(ctx, inner_type)
 					));
 					// failed
@@ -561,9 +567,8 @@ namespace compiler::helios::code {
 			void visitComparisonChain(pst::Access<pst::expr::ComparisonChain> stmt) override {
 				using namespace ::std::views;
 
-				const auto& pst_operators  = stmt->getOperators();
-				auto        operator_count = usize(std::ranges::size(pst_operators));
-				usize       expr_count     = operator_count + 1;
+				auto  expr_count     = usize(stmt->numberOfSubExpressions());
+				usize operator_count = expr_count - 1;
 
 				std::vector<Box<Expr>> result_exprs;
 				result_exprs.reserve(expr_count);
@@ -589,7 +594,10 @@ namespace compiler::helios::code {
 				// Perform operator resolution for each operator in the chain. Reuse the expressions
 				// which are between two operators. The last expressions is not reused, but that's fine.
 				for (usize op_idx = 0; op_idx < operator_count; op_idx++) {
-					const auto op = pst_operators.at(op_idx);
+					// clang-format off
+					const auto op = stmt->getOperator(op_idx).unlock(ctx);
+					// clang-format on
+
 					auto rhs = makeBox<ReusableExpr>(ctx, std::move(result_exprs.at(op_idx + 1)));
 					auto next_lhs = rhs->nextUse();
 
@@ -603,7 +611,7 @@ namespace compiler::helios::code {
 			}
 
 			void visitAssignment(pst::Access<pst::expr::Assignment> stmt) override {
-				auto op = stmt->getAssignmentType();
+				auto op = stmt->getAssignmentType().unlock(ctx)->unwrap();
 
 				auto var = stmt->getVariables();
 				auto val = stmt->getValue();
@@ -672,7 +680,7 @@ namespace compiler::helios::code {
 
 				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 					base::strConcat(
-						"'", op, "' assignment for type: '", location_type.toString(), "'."
+						"'", op.str(), "' assignment for type: '", location_type.toString(), "'."
 					),
 					stmt->getStablePosition()
 				));

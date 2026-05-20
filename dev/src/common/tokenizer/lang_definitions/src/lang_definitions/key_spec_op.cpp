@@ -147,6 +147,8 @@ namespace lang_def {
 			{ Keyword::Extends, "extends", KeywordFlags() },
 			{ Keyword::Implements, "implements", KeywordFlags() },
 			{ Keyword::Self, "self", KeywordFlags() },
+
+			{ Keyword::Destroy, "destroy", KeywordFlags() },
 		});
 
 	constexpr auto BC_KEYWORDS_ARRAY

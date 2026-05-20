@@ -243,7 +243,7 @@ private:
 
 			void visitParam(pst::Access<pst::Param> param) override {
 				counter++;
-				good_name = param->getName() == expected_name;
+				good_name = param->getName().illegalAccess().value()->unwrap() == expected_name;
 			}
 		};
 

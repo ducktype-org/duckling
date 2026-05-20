@@ -493,20 +493,9 @@ namespace compiler::helios {
 							variant_case_novalue(defgen::GeneratedSymbolData::BuiltinOperator) {
 								return getBuiltinDecl(ctx, key);
 							}
-							variant_case_novalue(defgen::GeneratedSymbolData::ReplExpressionWrapper
-							) {
-								auto function_type = ctx.query<QueryTypeOfSymbol>({ key })
-								                         ->valueOrThrow()
-								                         .getType()
-								                         .as<tsh::FunctionAbstractType>();
-								return HOUTFunctionDeclaration{
-									key,
-									function_type.getResultType(),
-									{},
-									code::generatedOrigin(),
-								};
-							}
-							variant_case_novalue(defgen::GeneratedSymbolData::ReplInstructionWrapper
+							variant_case_novalue(
+								defgen::GeneratedSymbolData::ReplExpressionWrapper,
+								defgen::GeneratedSymbolData::ReplInstructionWrapper
 							) {
 								auto function_type = ctx.query<QueryTypeOfSymbol>({ key })
 								                         ->valueOrThrow()

@@ -46,6 +46,7 @@ public:
 		// TESTER_ADD_TEST(recordsTest);
 		TESTER_ADD_TEST(staticArrayTest);
 		TESTER_ADD_TEST(unitsTest);
+		TESTER_ADD_TEST(initsDeinitsTest);
 	}
 
 protected:
@@ -224,6 +225,8 @@ private:
 	}
 
 	void unitsTest() { runTest("units", {}, {}, {}, 0); }
+
+	void initsDeinitsTest() { runTest("inits_deinits", {}, { "100\n" }, {}, 0); }
 };
 
 

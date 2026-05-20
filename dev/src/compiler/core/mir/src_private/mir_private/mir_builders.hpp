@@ -2,6 +2,7 @@
 
 #include <helios/hout/elements/expr.hpp>
 #include <mir/mir_structure/mir_lifetime_scope.hpp>
+#include <mir/mir_structure/mir_local_ref.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 
 #include <base/collections/optional.hpp>
@@ -95,6 +96,11 @@ namespace compiler::mir {
 		base::StableHashMap<helios::code::HOUTExprID, MIRLocalMutRef> reusable_expr_locals;
 		tsh::FunctionAbstractType                                     function_type;
 
+		/// Local id does not use global counter, since we want to keep the same id's
+		/// in tests and in single run of the compiler (and in tests if global counter
+		/// it would increment with each function compiler).
+		u64 next_local_id{ 0 };
+
 		LifetimeScopeTree lifetime_scope_tree;
 
 		/**
@@ -166,20 +172,22 @@ namespace compiler::mir {
 
 		/**
 		 * Creates an anonymous temporary local value.
-		 * Sets its lifetime scope to no_lifetime_scope. This may be useful in special
-		 * circumstances, such as values which are returned from a function.
+		 * It sets the proper special meaning to the local variable
+		 * and proper local lifetime flags. The return value place
+		 * should not have destructors nor scope flags.
 		 */
 		[[nodiscard]]
-		MIRLocalMutRef addNoLifetimeTmp(tsh::SymbolType<> type);
+		MIRLocalMutRef addReturnTmp(tsh::SymbolType<> type);
 
 		/**
-		 * Add a temporary local value of type bool.
-		 * Sets its lifetime scope to no_lifetime_scope.
-		 * Used for example by if/while lowering to store
-		 * the result of the condition.
+		 * Add a temporary local value of type bool
+		 * as a condition result temporary. It is used to store the result
+		 * of conditions in ifs and loops, so that the condition value can
+		 * be destructed properly and this local will not be destructed, as
+		 * it is needed in the branching instruction.
 		 */
 		[[nodiscard]]
-		MIRLocalMutRef addNoLifetimeBoolTmp();
+		MIRLocalMutRef addConditionTmp(ScopeRef scope);
 
 		/**
 		 * Finds the location of a local variable in the function. Does not check the global scope.
