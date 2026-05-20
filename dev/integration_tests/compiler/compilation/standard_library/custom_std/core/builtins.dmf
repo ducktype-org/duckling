@@ -1,0 +1,9 @@
+namespace real {
+    extern("C") {
+        fundecl builtin_output_i64(x: i64) -> i64;
+    }
+}
+
+fun builtin_output_i64(x: i64) -> i64 = {
+    return real::builtin_output_i64(x * 2);
+}

@@ -521,7 +521,6 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySymbolOfSTMT);
 
-
 	struct IMPLEMENT_QUERY(QueryLookupInSymbol, query::QResult<LookupResult>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			switch (key.symbol.ref->common.kind) {
@@ -597,9 +596,6 @@ namespace compiler::helios {
 					module_path = std::vector<base::StrID>{ names.begin(), names.end() };
 				} else if (auto import_star = import_chain.dynamicCast<pst::ImportStarHides>()) {
 					auto names  = import_star.value()->getNames();
-					module_path = std::vector<base::StrID>{ names.begin(), names.end() };
-				} else if (auto import_nested = import_chain.dynamicCast<pst::ImportNested>()) {
-					auto names  = import_nested.value()->getNames();
 					module_path = std::vector<base::StrID>{ names.begin(), names.end() };
 				} else {
 					ctx.logInt(makeBox<dia_int::PlaceholderError>(
@@ -957,9 +953,8 @@ namespace compiler::helios {
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			CORE_ASSERT(
-				kind(key) == SymbolKind::Function
-				|| kind(key) == SymbolKind::Method
-				|| kind(key) == SymbolKind::FunctionDeclaration,
+				kind(key) == SymbolKind::Function || kind(key) == SymbolKind::Method
+					|| kind(key) == SymbolKind::FunctionDeclaration,
 				"Query function dependencies called on non-function symbol"
 			);
 			if (kind(key) == SymbolKind::FunctionDeclaration) {
