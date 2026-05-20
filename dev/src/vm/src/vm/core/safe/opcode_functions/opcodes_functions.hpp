@@ -191,21 +191,14 @@ namespace vm {
 				TypeCRef                                  type
 			) {
 			auto previous_head = frame->local_stack_head;
-			//auto data_offset   = align_up(previous_head, 8); // for now
-			//std::cout<<local_stack<<'\n';
-			//std::cout<<data_offset<<" "<<type->getAlignment()<<" "<<previous_head<<std::endl;
-			//std::cout<<instr->arg0<<' '<<data_offset<<'\n';
-			//std::cout<<instr->arg0<<' '<<data_offset<<'\n';
-			//CORE_ASSERT(instr->arg0 == data_offset, "Data offset should be already calculated by the compiler");
+
 			auto data_offset      = instr->arg0;
 			auto data_ptr         = local_stack + data_offset;
-			//std::cout<<"CREATING AT "<<data_ptr<<'\n';
 			auto block         = thread.process_memory.allocateDummy(type, data_ptr);
 			auto block_count   = u64(frame->local_block_ref_stack_end - frame->local_block_ref_stack_base);
 
 
-			thread.process_memory.increaseBlockRefcount(block
-			);  // so that nobody can delete our block
+			thread.process_memory.increaseBlockRefcount(block);  // so that nobody can delete our block
 
 			*frame->local_block_ref_stack_end = block.get();
 			frame->local_block_ref_stack_end += 1;
@@ -230,15 +223,6 @@ namespace vm {
 			frame->local_stack_head -= type->getSize().asInt();
 			frame->local_block_ref_stack_end -= 1;
 		}
-
-//		static
-//#ifndef BUILD_TYPE_DEV_DEBUG
-//			__attribute__((always_inline))
-//#endif
-//			void
-//			performDeinit(Frame*& frame, SafeVMThread& thread) {
-//			performDeinit(frame, thread, frame->local_stack_head_history_end[-1]);
-//		}
 
 		static
 #ifndef BUILD_TYPE_DEV_DEBUG

@@ -322,8 +322,8 @@ namespace vm::loader::compiler {
 		auto push = [&](opargs::PlaceAny local, opargs::Type type) {
 			auto type_ref   = low_program.types->at(type.type_name);
 			auto type_size  = type_ref->getSize().asInt();
-			//auto type_align = must_be_fully_alligned.contains(local.var_name) ? 8 : type_ref->getAlignment();
-			auto type_align = 8;	
+			auto type_align = must_be_fully_alligned.contains(local.var_name) ? 8 : type_ref->getAlignment();
+			//auto type_align = 8;	
 			size_t padding  = align_up(curr_stack_size, type_align) - curr_stack_size;
 			auto aligned_offset = curr_stack_size + padding;
 
