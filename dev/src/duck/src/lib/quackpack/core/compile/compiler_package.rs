@@ -93,7 +93,7 @@ impl CompilerPackage {
     }
 
     /// As [`CompilerPackage::add_new_features`], but returns the set of features that would be added.
-    pub fn mock_add_features(
+    pub fn features_that_would_be_added(
         &self,
         features: impl IntoIterator<Item = FeatureName>,
     ) -> QuackResult<HashSet<FeatureName>> {

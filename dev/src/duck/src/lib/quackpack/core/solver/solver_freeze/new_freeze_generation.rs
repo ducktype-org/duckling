@@ -110,7 +110,11 @@ impl SolverFreeze {
             let was_realization_present = new_pkg_freezes.contains_key(realization);
             let child_new_freeze = new_pkg_freezes.entry(*realization).or_default();
 
-            if child_new_freeze.features.is_extended_by(forced_features) || !was_realization_present
+            if child_new_freeze
+                .features
+                .extend_and_get_diff_size(forced_features)
+                > 0
+                || !was_realization_present
             {
                 self.mark_children_as_necessary(*realization, manifests, new_pkg_freezes)?;
             }
