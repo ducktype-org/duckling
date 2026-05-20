@@ -1,9 +1,6 @@
 #include "mir_lifetimes.hpp"
 
 #include "../mir_structure/mir_structure.hpp"
-#include "mir/mir_structure/mir_lifetime_scope.hpp"
-
-#include "base/extend_cpp/variant_match.hpp"
 
 namespace compiler::mir {
 	using LocalsByScopeMap = base::HashMap<ScopeRef, std::vector<MIRLocalRef>, ScopeRefHash>;
@@ -168,11 +165,9 @@ namespace compiler::mir {
 			} else {
 				// Here we handle situations where a branch may cause two different sets of
 				// destructors being performed. For example breaking from a loop etc.
-				// TODOP: Link a proper itest here.
 
 				// For blocks with successors, we identify all unique outgoing edges.
 				// This is needed to create only one block for Branch COND, B1, B1
-				// TODOP: Write a test for that somehow?
 				std::vector<BlockID> unique_successors;
 				for (auto s: successors) {
 					bool found = false;
