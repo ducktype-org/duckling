@@ -1,6 +1,5 @@
-#include "diagnostic_interactive/module_flags/module_flags.hpp"
-
 #include <backends/llvm/llvm_backend.hpp>
+#include <diagnostic_interactive/module_flags/module_flags.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <global_state/backend_options.hpp>

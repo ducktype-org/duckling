@@ -1,7 +1,6 @@
-#include "diagnostic_interactive/module_flags/module_flags.hpp"
-
 #include <archiver/archive.hpp>
 #include <diagnostic_interactive/logger.hpp>
+#include <diagnostic_interactive/module_flags/module_flags.hpp>
 #include <driver/diagnostics/log_helpers.hpp>
 #include <driver/exit.hpp>
 #include <driver/initialize.hpp>

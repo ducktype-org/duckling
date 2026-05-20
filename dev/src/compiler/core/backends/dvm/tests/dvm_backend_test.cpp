@@ -1,14 +1,13 @@
-#include "driver/manifest/manifest.hpp"
-#include "frontend/module_tree/functors.hpp"
-#include "frontend/module_tree/module_id.hpp"
-#include "frontend/packages/packages.hpp"
-#include "global_state/packages.hpp"
-
 #include <backends/dvm/dvm_backend.hpp>
 #include <driver/initialize.hpp>
+#include <driver/manifest/manifest.hpp>
+#include <frontend/module_tree/functors.hpp>
+#include <frontend/module_tree/module_id.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
+#include <frontend/packages/packages.hpp>
 #include <global_state/global_logger.hpp>
+#include <global_state/packages.hpp>
 #include <helios/queries/queries.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <lir/lir_structure/lir_structure.hpp>

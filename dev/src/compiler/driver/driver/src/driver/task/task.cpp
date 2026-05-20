@@ -1,12 +1,11 @@
 #include "task.hpp"
 
-#include "driver/standard_library/standard_library.hpp"
-#include "linker/link.hpp"
-
 #include <driver/diagnostics/log_helpers.hpp>
+#include <driver/standard_library/standard_library.hpp>
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <global_state/packages.hpp>
+#include <linker/link.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>

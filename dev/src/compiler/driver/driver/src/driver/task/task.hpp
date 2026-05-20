@@ -1,8 +1,7 @@
 #pragma once
 
-#include "driver/options.hpp"
-
 #include <archiver/archive.hpp>
+#include <driver/options.hpp>
 #include <frontend/module_tree/module_id.hpp>
 #include <global_state/packages.hpp>
 #include <linker/link.hpp>
