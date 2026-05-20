@@ -225,10 +225,7 @@ def main() -> int:
     results_dir = workdir / "results"
     results_dir.mkdir(parents=True, exist_ok=True)
 
-    generator_specs = [
-        ("unique", 1),
-        ("repeated", None),
-    ]
+    generator_specs = ["unique", "repeated"]
 
     scenarios = {
         "script-llvm": lambda script_path, module_path: [
@@ -287,7 +284,7 @@ def main() -> int:
     )
 
     for function_count in args.function_counts:
-        for generator_name, _ in generator_specs:
+        for generator_name in generator_specs:
             # unique: call each function once; repeated: call same function N times
             if generator_name == "unique":
                 call_repetitions = 1

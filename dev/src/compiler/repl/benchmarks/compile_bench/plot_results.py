@@ -14,12 +14,9 @@ import csv
 from collections import defaultdict
 from pathlib import Path
 
-import matplotlib.pyplot as plt
-
 
 def load_results(csv_path: Path):
     data = defaultdict(lambda: defaultdict(dict))
-    meta = defaultdict(lambda: defaultdict(dict))
 
     with csv_path.open(encoding="ascii") as f:
         r = csv.DictReader(f)
@@ -35,11 +32,11 @@ def load_results(csv_path: Path):
             except Exception:
                 avg = float(row.get("avg_s", 0.0))
             data[scen][gen][n] = avg
-            meta[scen][gen][n] = {"reps": row.get("reps", "")}
-    return data, meta
+    return data
 
 
-def plot_combined(data, out_dir: Path):
+def plot_combined(data, out_dir: Path, plt):
+
     # Create a single combined PNG with two subplots: one for `unique` and one
     # for `repeated`. Each subplot shows the four scenario lines (if present).
     gens_to_plot = ["unique", "repeated"]
@@ -100,6 +97,19 @@ if __name__ == "__main__":
         print("CSV not found:", args.csv)
         raise SystemExit(1)
 
-    data, meta = load_results(args.csv)
+    try:
+        data = load_results(args.csv)
+    except Exception as exc:
+        print("Failed to read CSV:", exc)
+        raise SystemExit(1)
+
+    try:
+        import matplotlib.pyplot as plt
+    except ImportError as exc:
+        print(
+            "matplotlib is required to plot results. Install it and rerun the script."
+        )
+        raise SystemExit(1) from exc
+
     out_dir = args.csv.parent
-    plot_combined(data, out_dir)
+    plot_combined(data, out_dir, plt)
