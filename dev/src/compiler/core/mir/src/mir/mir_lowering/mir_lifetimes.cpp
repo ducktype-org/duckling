@@ -2,6 +2,8 @@
 
 #include "../mir_structure/mir_structure.hpp"
 
+#include "base/extend_cpp/variant_match.hpp"
+
 namespace compiler::mir {
 	using LocalsByScopeMap = base::HashMap<ScopeRef, std::vector<MIRLocalRef>, ScopeRefHash>;
 
@@ -71,14 +73,27 @@ namespace compiler::mir {
 		// based on scopes that ends there.
 		// context is unused, but left since it might be useful in the future.
 		// preserving block order is important, because of how MIR BlockIDs works
+		// TODOP: Expand this comment.
 
 		// No lifetime analysis here, since it is quite complex.
 		// See doc-comment of this function for details.
 
 		auto&                                 locals_by_scope = args.locals_by_scope;
 		std::vector<std::vector<Instruction>> new_blocks_instructions;
+		std::vector<BlockID>                  new_blocks_order;
+
+		// Util for getting a crispy fresh MIR block.
+		u64  next_id_val      = function.blocks.size() + 1;
+		auto get_new_block_id = [&]() {
+			while (function.blocks.contains(BlockID(next_id_val))) next_id_val++;
+			return BlockID(next_id_val++);
+		};
+
 
 		for (auto& block_id: function.block_order) {
+			// Add THIS block to our new block order.
+			new_blocks_order.push_back(block_id);
+
 			// each block is considered independently
 			auto& block = function.blocks[block_id];
 
@@ -86,10 +101,12 @@ namespace compiler::mir {
 			new_instructions.reserve(block.instructions.size());
 
 			// lambdas used just to not duplicate code:
-			auto add_destructor = [&](ScopeRef instr_scope, MIRLocalRef local) {
+			auto add_destructor_to_instr_vec = [&](ScopeRef                  instr_scope,
+			                                       MIRLocalRef               local,
+			                                       std::vector<Instruction>& instructions) {
 				if (local->lifetime_flags.contains(LifetimeFlag::NoDestructor)) return;
 
-				new_instructions.push_back(Instruction{
+				instructions.push_back(Instruction{
 					Operation::DestructIf,
 					{},
 					{ local },
@@ -99,13 +116,18 @@ namespace compiler::mir {
 					instr_scope,
 				});
 			};
-			auto add_destructors = [&](const auto& ending_scopes) {
-				for (auto scope: ending_scopes) {
-					if (not locals_by_scope.contains(scope)) continue;
-					auto& locals = locals_by_scope.at(scope);
-					for (auto& local: locals | std::views::reverse) add_destructor(scope, local);
-				}
-			};
+
+			auto add_destructors_to_instr_vec
+				= [&](const auto& ending_scopes, std::vector<Instruction>& instructions) {
+					  for (const auto& scope: ending_scopes) {
+						  if (not locals_by_scope.contains(scope)) continue;
+						  auto& locals = locals_by_scope.at(scope);
+						  // Add destructors in reverse order.
+						  for (auto& local: locals | std::views::reverse)
+							  add_destructor_to_instr_vec(scope, local, instructions);
+					  }
+				  };
+
 
 			for (u64 i = 0; i < block.instructions.size(); i++) {
 				const auto& instr      = block.instructions.at(i);
@@ -117,7 +139,7 @@ namespace compiler::mir {
 
 				auto ending_scopes = getEndingScopes(instr.scope, next_instr.scope);
 
-				add_destructors(ending_scopes);
+				add_destructors_to_instr_vec(ending_scopes, new_instructions);
 			}
 
 			// we handle terminator in special way,
@@ -129,32 +151,73 @@ namespace compiler::mir {
 				// the function ends
 				auto ending_scopes
 					= getEndingScopes(terminator.scope, function.lifetime_scope_tree.root);
-				add_destructors(ending_scopes);
+				add_destructors_to_instr_vec(ending_scopes, new_instructions);
 			} else {
-				base::Optional<std::vector<ScopeRef>> ending_scopes;
+				// Here we handle situations where a branch may cause two different sets of
+				// destructors being performed. For example breaking from a loop etc.
+				// TODOP: Link a proper itest here.
 
-				// we have to validate here that each path has the same ending scopes
-				// @todo there are two possible futures:
-				// * It will remain a valid assumption (intuitively it should, but some weird cases
-				// might break it).
-				//   Assume it is, and ensure it in MIR-Lowering
-				// * It will not be a valid assumption, and we will have to change this
-				// implementation. This hole for is just for this validation. Maybe we should have
-				// some conditional compilation here based on debug/release modes
-				for (auto succ: successors) {
-					auto succ_ending_scopes
-						= getEndingScopes(terminator.scope, function.blocks[succ].beginScope());
-
-					if (ending_scopes.has_value()) {
-						// we have to validate that all paths have the same ending scopes
-						// otherwise this implementation is incorrect
-						CORE_ASSERT(ending_scopes == succ_ending_scopes, "Different ending scopes");
-					} else {
-						ending_scopes.emplace(std::move(succ_ending_scopes));
+				// For blocks with successors, we identify all unique outgoing edges.
+				// This is needed to create only one block for Branch COND, B1, B1
+				// TODOP: Write a test for that somehow?
+				std::vector<BlockID> unique_successors;
+				for (auto s: successors) {
+					bool found = false;
+					for (auto u: unique_successors) {
+						if (u == s) {
+							found = true;
+							break;
+						}
 					}
+					if (!found) unique_successors.push_back(s);
 				}
 
-				add_destructors(ending_scopes.value());
+				for (auto succ: unique_successors) {
+					auto succ_begin_scope  = function.blocks[succ].beginScope();
+					auto succ_ending_scope = getEndingScopes(terminator.scope, succ_begin_scope);
+					auto succ_starting_scopes
+						= getStartingScopes(terminator.scope, succ_begin_scope);
+
+					// If no scope boundary is crossed, the edge is clean.
+					if (succ_ending_scope.empty() && succ_starting_scopes.empty()) continue;
+
+					// Otherwise we have crossed a scope boundary. We have to split the edge into an
+					// intermediate block.
+					BlockID                  new_block_id = get_new_block_id();
+					std::vector<Instruction> new_block_instructions;
+
+					// Enter the block and preserve the caller scope.
+					new_block_instructions.push_back(Instruction{
+						Operation::Nop, {}, {}, {}, terminator.scope });
+
+					// Add all needed destructors.
+					add_destructors_to_instr_vec(succ_ending_scope, new_block_instructions);
+
+					Instruction new_block_terminator{
+						Operation::Jump, {}, { MIRValue(succ) }, {}, succ_begin_scope
+					};
+
+					// Add the new block.
+					function.blocks.put(
+						new_block_id,
+						Block{
+							.id           = new_block_id,
+							.instructions = std::move(new_block_instructions),
+							.terminator   = std::move(new_block_terminator),
+						}
+					);
+
+					new_blocks_order.push_back(new_block_id);
+
+					// Modify the caller terminator to jump through the newly created block.
+					for (auto& arg: terminator.arguments) {
+						variant_match(arg.getVariant()) {
+							variant_case(BlockID, block) {
+								if (block == succ) arg = MIRValue(new_block_id);
+							}
+						}
+					}
+				}
 			}
 
 			new_blocks_instructions.push_back(std::move(new_instructions));
@@ -164,6 +227,8 @@ namespace compiler::mir {
 			auto block_id                          = function.block_order[i];
 			function.blocks[block_id].instructions = std::move(new_blocks_instructions[i]);
 		}
+
+		function.block_order = std::move(new_blocks_order);
 	}
 
 	template<OperationFlag::Flag scope_flag, bool reverse_local_order>
