@@ -1,7 +1,7 @@
 #pragma once
 
-#include <base/types/ints.hpp>
 #include <base/except/exceptions.hpp>
+#include <base/types/ints.hpp>
 
 #include <array>
 #include <cstddef>
@@ -11,7 +11,7 @@
 
 namespace vm {
 
-	template <std::size_t Alignment, typename T>
+	template<std::size_t Alignment, typename T>
 	constexpr bool is_aligned(const T* ptr) noexcept {
 		return (reinterpret_cast<std::uintptr_t>(ptr) & (Alignment - 1)) == 0;
 	}
@@ -20,7 +20,7 @@ namespace vm {
 		return alignment == 0 ? value : ((value + alignment - 1) / alignment) * alignment;
 	}
 
-	template <typename T>
+	template<typename T>
 	constexpr bool is_naturally_aligned(const T* ptr) noexcept {
 		return is_aligned<alignof(T)>(ptr);
 	}

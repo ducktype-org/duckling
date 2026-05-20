@@ -181,8 +181,10 @@ namespace vm::loader::compiler {
 		CORE_UNREACHABLE();
 	}
 
-	std::unordered_set<base::StrID> Compiler::detectParamsAndReturnedVars(FunctionCompilationContext& ctx) {
-		std::vector<base::StrID> stack;
+	std::unordered_set<base::StrID> Compiler::detectParamsAndReturnedVars(
+		FunctionCompilationContext& ctx
+	) {
+		std::vector<base::StrID>        stack;
 		std::unordered_set<base::StrID> res;
 
 		auto push = [&](opargs::PlaceAny local, bool is_arg_or_ret) {
@@ -213,14 +215,10 @@ namespace vm::loader::compiler {
 			push(base::StrID(base::strConcat("ret", idx).c_str()), true);
 		for (auto [idx, param_type]: enumerate(func_signature.parameters))
 			push(base::StrID(base::strConcat("arg", idx).c_str()), true);
-		
+
 		// instruction index, type stack state, padding stack state, stack size
-		std::vector<std::tuple<
-			usize,
-			decltype(stack)
-			>>
-			dfs_stack{
-				{ ctx.function.body.size(), {}}  // sentinel
+		std::vector<std::tuple<usize, decltype(stack)>> dfs_stack{
+			{ ctx.function.body.size(), {} }  // sentinel
 		};
 		usize index = 0;
 
@@ -233,7 +231,7 @@ namespace vm::loader::compiler {
 				continue;
 			}
 			visited_states.insert({ stack, index });
-			
+
 			instr_match(ctx.function.body[index]) {
 				using namespace code::instructions;
 				instr_case(Op_init_pany_type, instr) {
@@ -247,17 +245,11 @@ namespace vm::loader::compiler {
 				instr_case(Op_jmp_label, instr) { index = label_positions[instr.label.label_name]; }
 				instr_case(Op_jmpIf_label, instr) {
 					index++;
-					dfs_stack.emplace_back(
-						label_positions[instr.label.label_name],
-						stack
-					);
+					dfs_stack.emplace_back(label_positions[instr.label.label_name], stack);
 				}
 				instr_case(Op_jmpIfNot_label, instr) {
 					index++;
-					dfs_stack.emplace_back(
-						label_positions[instr.label.label_name],
-						stack
-					);
+					dfs_stack.emplace_back(label_positions[instr.label.label_name], stack);
 				}
 				instr_case(Op_ret, instr) {
 					std::tie(index, stack) = dfs_stack.back();
@@ -306,26 +298,27 @@ namespace vm::loader::compiler {
 
 	void Compiler::calculateOffsets(FunctionCompilationContext& ctx) {
 		auto must_be_fully_alligned = detectParamsAndReturnedVars(ctx);
-		
+
 		decltype(ctx.locals_map) result;
 		std::vector<usize>       type_size_stack;
 		std::vector<usize>       padding_used;
 		usize                    curr_stack_size = 0;
 		usize                    max_stack_size  = 0;
 		usize                    max_block_count = 0;
-		ctx.deinit_restore_offsets = std::vector<usize>(ctx.function.body.size(), 0);
-		ctx.offsets_of_init = std::vector<usize>(ctx.function.body.size(), 0);
+		ctx.deinit_restore_offsets               = std::vector<usize>(ctx.function.body.size(), 0);
+		ctx.offsets_of_init                      = std::vector<usize>(ctx.function.body.size(), 0);
 
 		// todo reorganize and make better
-		usize             index = 0;
+		usize index = 0;
 
 		auto push = [&](opargs::PlaceAny local, opargs::Type type) {
-			auto type_ref   = low_program.types->at(type.type_name);
-			auto type_size  = type_ref->getSize().asInt();
-			auto type_align = must_be_fully_alligned.contains(local.var_name) ? 8 : type_ref->getAlignment();
-			//auto type_align = 8;	
-			size_t padding  = align_up(curr_stack_size, type_align) - curr_stack_size;
-			auto aligned_offset = curr_stack_size + padding;
+			auto type_ref  = low_program.types->at(type.type_name);
+			auto type_size = type_ref->getSize().asInt();
+			auto type_align
+				= must_be_fully_alligned.contains(local.var_name) ? 8 : type_ref->getAlignment();
+			// auto type_align = 8;
+			size_t padding        = align_up(curr_stack_size, type_align) - curr_stack_size;
+			auto   aligned_offset = curr_stack_size + padding;
 
 			if_opt_some(result.atMaybe(local.var_name), entry) {
 				if (entry->offset != aligned_offset) {
@@ -382,14 +375,10 @@ namespace vm::loader::compiler {
 			push(base::StrID(base::strConcat("arg", idx).c_str()), param_type.str);
 		ctx.shared_stack_size = curr_stack_size;
 		// instruction index, type stack state, padding stack state, stack size
-		std::vector<std::tuple<
-			usize,
-			decltype(type_size_stack),
-			decltype(padding_used),
-			usize>>
+		std::vector<std::tuple<usize, decltype(type_size_stack), decltype(padding_used), usize>>
 			dfs_stack{
 				{ ctx.function.body.size(), {}, {}, 0 }  // sentinel
-		};
+			};
 		std::vector<bool> visited_instructions(ctx.function.body.size());
 
 
@@ -503,19 +492,18 @@ namespace vm::loader::compiler {
 			low::MicroBytecode bytecode = lowerInstructions(ctx);
 
 			std::vector<TypeCRef> result_types = {};
-			for (auto& ret: signature.result_types) {
+			for (auto& ret: signature.result_types)
 				result_types.emplace_back(low_program.types->at(ret));
-			}
 
 			low_program.functions.insert(
 				low::LowFuncData{ .name              = function.name,
 			                      .bc                = std::move(bytecode),
 			                      .local_stack_size  = ctx.local_stack_size,
 			                      .local_block_count = ctx.local_block_count,
-			                      .arg_size          = ctx.shared_stack_size - ctx.return_stack_size,
-			                      .ret_size          = ctx.return_stack_size,
-			                      .parameters        = std::move(parameters),
-			                      .result_types      = std::move(result_types) },
+			                      .arg_size     = ctx.shared_stack_size - ctx.return_stack_size,
+			                      .ret_size     = ctx.return_stack_size,
+			                      .parameters   = std::move(parameters),
+			                      .result_types = std::move(result_types) },
 				function.name
 			);
 		}

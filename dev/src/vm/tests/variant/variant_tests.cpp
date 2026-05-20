@@ -18,7 +18,6 @@ class VmVariantTest: public VmTestSuite {
 
 public:
 	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		
 		TESTER_ADD_TEST(verySimpleVariant);
 		TESTER_ADD_TEST(simpleVariant0);
 		TESTER_ADD_TEST(simpleVariant1);
@@ -124,7 +123,7 @@ private:
 			default:
 				CORE_PANIC("Invalid type_tag_bits: ", type_tag_bits);
 			}
-			//ASSERT_EQUAL_PRINT( ???
+			// ASSERT_EQUAL_PRINT( ???
 			//	vm::safeReadPointerBytes<u64>(vm_value->getBytes(), type_tag_bits / 8), wanted_value
 			//);
 		};

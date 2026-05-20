@@ -111,11 +111,11 @@ namespace vm::loader::compiler {
 			/// and type.
 			base::HashMap<base::StrID, LocalEntry> locals_map{};
 			/// Total required size for the local stack frame, in bytes.
-			usize local_stack_size  = 0;
-			usize local_block_count = 0;
-			usize return_stack_size = 0;
-			usize shared_stack_size = 0;
-			usize current_instruction_index = 0;
+			usize              local_stack_size          = 0;
+			usize              local_block_count         = 0;
+			usize              return_stack_size         = 0;
+			usize              shared_stack_size         = 0;
+			usize              current_instruction_index = 0;
 			std::vector<usize> deinit_restore_offsets{};
 			std::vector<usize> offsets_of_init{};
 		};
@@ -162,15 +162,15 @@ namespace vm::loader::compiler {
 		void compileNewExtCFunctions(const std::vector<code::ExternalCFunction>& new_functions);
 
 		/**
-		 * 
+		 *
 		 */
 		base::Optional<u64> seek_method_param_count(const base::StrID& method_name) const;
 
 		/**
-		 * 
+		 *
 		 */
 		std::unordered_set<base::StrID> detectParamsAndReturnedVars(FunctionCompilationContext& ctx);
-		
+
 		/**
 		 * @brief Calculates the stack offsets of stack variables.
 		 * Since in ValidProgram variables are represented by names not indexes on the stack.

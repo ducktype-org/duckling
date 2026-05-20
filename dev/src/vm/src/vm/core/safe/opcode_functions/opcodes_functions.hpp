@@ -138,8 +138,8 @@ namespace vm {
 			auto shared_blocks_count = arg_count + ret_count;
 			u64  prev_frame_block_ref_count
 				= u64(frame->local_block_ref_stack_end - frame->local_block_ref_stack_base);
-			
-			
+
+
 			// Save current registers and flow.
 			frame->instr       = instr + 1;
 			frame->local_stack = local_stack;
@@ -167,8 +167,8 @@ namespace vm {
 			    >= runtime_data.block_ref_stack_end)
 				throw exceptions::VMStackOverflowException();
 
-			frame->local_stack_head             = shared_stack_space_size;
-			frame->local_block_ref_stack_end    = prev_frame->local_block_ref_stack_end;
+			frame->local_stack_head          = shared_stack_space_size;
+			frame->local_block_ref_stack_end = prev_frame->local_block_ref_stack_end;
 
 			// Remove the argument blocks from caller's block stack. Only the return value stays in
 			// the block stack.
@@ -185,12 +185,12 @@ namespace vm {
 			void
 			performInit(
 				const MicroInstruction*& instr,
-				std::byte*&                               local_stack,
-				Frame*&                                   frame,
-				SafeVMThread&                             thread,
-				TypeCRef                                  type
+				std::byte*&              local_stack,
+				Frame*&                  frame,
+				SafeVMThread&            thread,
+				TypeCRef                 type
 			) {
-			auto block         = thread.process_memory.allocateDummy(type, local_stack + instr->arg0);
+			auto block = thread.process_memory.allocateDummy(type, local_stack + instr->arg0);
 			thread.process_memory.increaseBlockRefcount(block);
 			*frame->local_block_ref_stack_end = block.get();
 			frame->local_block_ref_stack_end += 1;
@@ -223,7 +223,7 @@ namespace vm {
 				TypeCRef      wanted_type,
 				TypeCRef      variant_type
 			) {
-			auto variant_type_tag_size = variant_type->getTypeTagSizeBytes().value();
+			auto variant_type_tag_size  = variant_type->getTypeTagSizeBytes().value();
 			auto variant_payload_offset = variant_type->getVariantPayloadOffsetBytes().value();
 
 			// Set the view block
@@ -277,9 +277,7 @@ namespace vm {
 			) {
 
 			auto view_block_ref = thread.process_memory.getNestedViewBlock(
-				variant_pointer.movedPointer(
-					variant_type->getVariantPayloadOffsetBytes()->asInt()
-				),
+				variant_pointer.movedPointer(variant_type->getVariantPayloadOffsetBytes()->asInt()),
 				wanted_type
 			);
 

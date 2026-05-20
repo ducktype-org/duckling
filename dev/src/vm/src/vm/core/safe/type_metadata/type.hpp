@@ -39,7 +39,7 @@ namespace vm {
 
 		base::StrID name;
 		TypeSize    size      = TypeSize(-1);
-		size_t aligment = 8;
+		size_t      aligment  = 8;
 		Kind        kind_type = Kind::None;
 		TypeID      id{};
 		bool        am_i_instantiable = true;

@@ -75,8 +75,9 @@ namespace vm {
 
 		kind_type = Kind::Primitive;
 		size      = pass_size;
-		aligment  = std::min<size_t>(std::max<usize>(pass_size.asInt(), 1), alignof(std::max_align_t));
-		kind      = kind::Primitive();
+		aligment
+			= std::min<size_t>(std::max<usize>(pass_size.asInt(), 1), alignof(std::max_align_t));
+		kind = kind::Primitive();
 		if (name == "void") am_i_instantiable = false;
 	}
 
@@ -136,9 +137,9 @@ namespace vm {
 		auto variant = kind::Variant{};
 		for (const auto& type: variants_definitions) variant.alternatives.push_back(type);
 
-		variant.type_tag_size = type_tag_size;
+		variant.type_tag_size  = type_tag_size;
 		variant.payload_offset = type_tag_size;
-		kind                  = variant;
+		kind                   = variant;
 	}
 
 	void Type::defineFunction(std::vector<TypeCRef> parameters, std::vector<TypeCRef> result) {
@@ -158,8 +159,9 @@ namespace vm {
 
 		kind_type = Kind::Opaque;
 		size      = pass_size;
-		aligment  = std::min<size_t>(std::max<usize>(pass_size.asInt(), 1), alignof(std::max_align_t));
-		kind      = kind::Opaque{};
+		aligment
+			= std::min<size_t>(std::max<usize>(pass_size.asInt(), 1), alignof(std::max_align_t));
+		kind = kind::Opaque{};
 	}
 
 	void Type::finalize() {
@@ -201,11 +203,12 @@ namespace vm {
 				for (auto& alternative: variant.alternatives) {
 					alternative->finalize();
 					max_alignment = std::max(max_alignment, alternative->getAlignment());
-					data_size = std::max(data_size, alternative->getSize());
+					data_size     = std::max(data_size, alternative->getSize());
 				}
-				variant.payload_offset = Bytes(align_up(variant.type_tag_size.asInt(), max_alignment));
-				this->aligment         = max_alignment;
-				this->size             = variant.payload_offset + data_size;
+				variant.payload_offset
+					= Bytes(align_up(variant.type_tag_size.asInt(), max_alignment));
+				this->aligment = max_alignment;
+				this->size     = variant.payload_offset + data_size;
 				isInstantiableImpl(variant);
 			}
 		}

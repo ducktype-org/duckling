@@ -391,10 +391,10 @@ namespace vm {
 
 			// Similar as in call_func, but we deinit the arguments blocks as well,
 			// but without the return value.
-			for (u64 i = 0; i < arg_count; i++){
-				CORE_ASSERT(frame->local_stack_head%8==0, "");
+			for (u64 i = 0; i < arg_count; i++) {
+				CORE_ASSERT(frame->local_stack_head % 8 == 0, "");
 				performDeinit(frame, thread);
-				frame->local_stack_head-= frame->local_stack_head%8;
+				frame->local_stack_head -= frame->local_stack_head % 8;
 			}
 		}
 
@@ -434,22 +434,23 @@ namespace vm {
 				if (!is_void) {
 					auto ext_result_destination
 						= Ref(frame->local_block_ref_stack_base[result_value_idx]);
-					auto result_view = thread.process_memory.getBlockViewUnsafe(ext_result_destination);
-					result_pointer   = result_view.getBegin();
+					auto result_view
+						= thread.process_memory.getBlockViewUnsafe(ext_result_destination);
+					result_pointer = result_view.getBegin();
 				}
 				byte* args_pointer = nullptr;
 				if (arg_count != 0) {
 					auto first_arg_idx   = result_value_idx + (is_void ? 0 : 1);
 					auto first_arg_block = Ref(frame->local_block_ref_stack_base[first_arg_idx]);
-					auto first_arg_view  = thread.process_memory.getBlockViewUnsafe(first_arg_block);
-					args_pointer         = first_arg_view.getBegin();
+					auto first_arg_view = thread.process_memory.getBlockViewUnsafe(first_arg_block);
+					args_pointer        = first_arg_view.getBegin();
 				}
 
 				ext_func->function_pointer(result_pointer, args_pointer);
 
-				for (u64 i = 0; i < arg_count; i++){
+				for (u64 i = 0; i < arg_count; i++) {
 					performDeinit(frame, thread);
-					frame->local_stack_head-= frame->local_stack_head%8;
+					frame->local_stack_head -= frame->local_stack_head % 8;
 				}
 			}
 		}
@@ -554,8 +555,8 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(deinit)(FUNCTION_ARGS) {
 		{
-			performDeinit(frame, thread); 
-			frame->local_stack_head -=  READ_FROM_DIRECT_ARG(u64, instr->arg0);
+			performDeinit(frame, thread);
+			frame->local_stack_head -= READ_FROM_DIRECT_ARG(u64, instr->arg0);
 		}
 		FUNCTION_CONT(1);
 	}

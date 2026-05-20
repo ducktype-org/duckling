@@ -142,7 +142,7 @@ namespace vm {
 
 		const u64 called_function_id = process_program->getFunctions().idOf(func.name).value();
 		usize     shared_stack_size  = 0;
-		size_t offset = 0;
+		size_t    offset             = 0;
 
 		for (auto [idx, res]: std::views::enumerate(func.result_types)) {
 			// Initialize an exit code/return value spot. In case of non-void functions the
@@ -153,14 +153,14 @@ namespace vm {
 			);
 			shared_stack_size
 				= align_up(shared_stack_size, res->getAlignment()) + res->getSize().asInt();
-			offset = shared_stack_size; // todo improve
+			offset = shared_stack_size;  // todo improve
 		}
 
 		start_function.ret_size = shared_stack_size;
-		if (offset%8!=0) offset += 8 - offset%8; // tmp
+		if (offset % 8 != 0) offset += 8 - offset % 8;  // tmp
 
 		for (u64 i = 0; i < func_args.size(); i++) {
-			std::cout<<"ADDING VM VALUE ARG "<<i<<'\n';
+			std::cout << "ADDING VM VALUE ARG " << i << '\n';
 			const auto& arg_value = func_args[i];
 			auto        arg_type  = func.parameters[i];
 
@@ -183,13 +183,13 @@ namespace vm {
 				));
 			}
 
-			start_function.bc.push_back(
-				MAKE_BYTECODE_INSTRUCTION(initFromVmValue, offset, std::bit_cast<u64>(arg_value.get()))
-			);
-			offset += 8; // todo sizeof??
+			start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(
+				initFromVmValue, offset, std::bit_cast<u64>(arg_value.get())
+			));
+			offset += 8;  // todo sizeof??
 			start_function.parameters.push_back(arg_value->type);
-			shared_stack_size
-				= align_up(shared_stack_size, arg_type->getAlignment()) + arg_type->getSize().asInt();
+			shared_stack_size = align_up(shared_stack_size, arg_type->getAlignment())
+			                  + arg_type->getSize().asInt();
 		}
 		start_function.arg_size         = shared_stack_size - start_function.ret_size;
 		start_function.local_stack_size = shared_stack_size;
@@ -337,8 +337,8 @@ namespace vm {
 							anyArrayStore_pptr_bany, 8, 4
 						),  // argv_internal[ix] := ptr_tmp_store
 						MAKE_BYTECODE_INSTRUCTION(ext_p64_type, 32, str_ptr_type_arg),
-							MAKE_BYTECODE_INSTRUCTION(deinit, 56, 0),  // deinit char_tmp_store
-							MAKE_BYTECODE_INSTRUCTION(deinit, 40, 0),  // deinit ptr_tmp_store
+						MAKE_BYTECODE_INSTRUCTION(deinit, 56, 0),  // deinit char_tmp_store
+						MAKE_BYTECODE_INSTRUCTION(deinit, 40, 0),  // deinit ptr_tmp_store
 					}
 				);
 			}
@@ -438,7 +438,7 @@ namespace vm {
 			switch (static_cast<low::MicroOpcode>(instr->nontc_opcode)) {
 	#define HANDLE_MICRO_INSTR(opcode_name)                                                         \
 	case low::MicroOpcode::opcode_name: {                                                           \
-		std::cout<<"Executing opcode: " << #opcode_name << std::endl;                              \
+		std::cout << "Executing opcode: " << #opcode_name << std::endl;                             \
 		vm::OpFuns::op_##opcode_name(instr, local_stack, frame, thread);                            \
 		if constexpr (::vm::ENABLE_VM_DETAIL_LOGGING)                                               \
 			CORE_DEV_LOG(                                                                           \
