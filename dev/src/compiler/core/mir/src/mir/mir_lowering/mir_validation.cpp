@@ -175,6 +175,7 @@ namespace compiler::mir {
 							                               ? std::tuple{ base::Ref(&local), def }
 							                               : std::tuple{ def, base::Ref(&local) };
 
+							// TODOP: This is broken.
 							auto get_pos = [&](auto local_ref) {
 								return helios::symbolPst(local_ref->helios_id.value())
 								    .value()

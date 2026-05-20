@@ -417,7 +417,10 @@ namespace compiler::helios {
 
 			// Create the needed symbols.
 			auto create_var = [&](base::StrID role, tsh::SymbolType<> type) {
-				return ctx.query<defgen::QueryGeneratedSymbol>({ .name = role,
+				auto unique = for_scope.queryUnstablePerfectHash();
+				auto name   = base::StrID(base::strConcat(role, unique));
+
+				return ctx.query<defgen::QueryGeneratedSymbol>({ .name = name,
 				                                                 .generated_symbol_data
 				                                                 = GeneratedSymbolData{
 																	 ControlFlowLocal{
