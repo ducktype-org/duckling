@@ -88,26 +88,12 @@ namespace vm::detail {
 		static constexpr usize VALUE = 1;
 	};
 
-	template<typename T>
-	struct safe_alignof {
-		static constexpr usize VALUE = alignof(T);
-	};
-
-	template<>
-	struct safe_alignof<void> {
-		static constexpr usize VALUE = 1;
-	};
-
 }
 
 #define VM_EXT_C_INTO_VM_TYPE_NAME(Type, VmType, Name) VM_EXT_C_VM_TYPE_NAME(VmType),
+#define VM_EXT_C_INTO_FIELDS(Type, VmType, Name)       Type Name;
 #define VM_EXT_C_INTO_PARAMS(Type, VmType, Name)       , Type Name
-#define VM_EXT_C_INTO_ARGS(Type, VmType, Name)         , Name
-
-#define VM_EXT_C_READ_ARG(Type, VmType, Name)                                       \
-	stack_offset = vm::align_up(stack_offset, vm::detail::safe_alignof<Type>::VALUE); \
-	[[maybe_unused]] auto Name = vm::safeReadPointerBytes<Type>(data, stack_offset); \
-	stack_offset += vm::detail::safe_sizeof<Type>::VALUE;
+#define VM_EXT_C_INTO_ARGS(Type, VmType, Name)         , func_args->Name
 
 #define VM_EXT_C_PLACE_VALIDATION(Type, VmType, Name)                               \
 	auto tp_##Name = vm::api::getType(pid, VmType);                                 \
@@ -119,12 +105,7 @@ namespace vm::detail {
 			#VmType,                                                                \
 			tp_##Name->type->getSize().asInt()                                      \
 		);                                                                          \
-	vm_arg_type_size_sum = vm::align_up(vm_arg_type_size_sum, tp_##Name->type->getAlignment()); \
-	vm_arg_type_size_sum += tp_##Name->type->getSize().asInt();                     \
-	cpp_arg_type_size_sum = vm::align_up(                                             \
-		cpp_arg_type_size_sum, vm::detail::safe_alignof<Type>::VALUE                  \
-	);                                                                               \
-	cpp_arg_type_size_sum += vm::detail::safe_sizeof<Type>::VALUE;
+	vm_arg_type_size_sum += tp_##Name->type->getSize();
 
 #define VM_EXT_C_PUT2(arg1, arg2) arg1 arg2
 
@@ -149,6 +130,12 @@ namespace vm::detail {
  */
 #define DEF_VM_EXT_C_FUNC(ResCType, ResVmType, FuncName, ...)                                           \
 	struct FuncName {                                                                                   \
+		struct FunctionData {                                                                           \
+			FOR_EACH_ARG(VM_EXT_C_PUT2, VM_EXT_C_INTO_FIELDS, __VA_ARGS__)                              \
+		} __attribute__((packed));                                                                      \
+		static_assert(                                                                                  \
+			sizeof(FunctionData) != 0, "Cannot create extern functions without arguments"               \
+		);                                                                                              \
 		static ResCType       call([[maybe_unused]] u64 _                                               \
 		                               FOR_EACH_ARG(VM_EXT_C_PUT2, VM_EXT_C_INTO_PARAMS, __VA_ARGS__)); \
 		constexpr static void wrapper(std::byte* storage, std::byte* data) {                            \
@@ -165,20 +152,18 @@ namespace vm::detail {
 					vm::safeWriteBytes(storage, f());                                                   \
 				}                                                                                       \
 			}([&] {                                                                                     \
-				[[maybe_unused]] usize stack_offset = 0;                                                 \
-				FOR_EACH_ARG(VM_EXT_C_PUT2, VM_EXT_C_READ_ARG, __VA_ARGS__)                             \
+				[[maybe_unused]] auto func_args = reinterpret_cast<FunctionData*>(data);                \
 				return FuncName::call(                                                                  \
 					0ULL FOR_EACH_ARG(VM_EXT_C_PUT2, VM_EXT_C_INTO_ARGS, __VA_ARGS__)                   \
 				);                                                                                      \
 			});                                                                                         \
 		}                                                                                               \
 		static vm::code::FuncSignature getSignature(vm::PID pid) {                                      \
-			usize vm_arg_type_size_sum  = 0;                                                            \
-			usize cpp_arg_type_size_sum = 0;                                                            \
-			if constexpr (!std::is_void_v<ResCType>) {                                                  \
+			Bytes vm_arg_type_size_sum(0);                                                              \
+			if (base::StrID(VM_EXT_C_VM_TYPE_NAME(ResVmType)) != "void") {                              \
 				VM_EXT_C_PLACE_VALIDATION(ResCType, ResVmType, result)                                  \
-				vm_arg_type_size_sum -= tp_result->type->getSize().asInt(); /* result lives elsewhere */ \
-				cpp_arg_type_size_sum -= vm::detail::safe_sizeof<ResCType>::VALUE;                      \
+				vm_arg_type_size_sum                                                                    \
+					-= tp_result->type->getSize(); /* undo what we've done to the sum */                \
 			}                                                                                           \
 			FOR_EACH_ARG(VM_EXT_C_PUT2, VM_EXT_C_PLACE_VALIDATION, __VA_ARGS__);                        \
 			vm::code::FuncSignature signature;                                                          \
@@ -188,11 +173,12 @@ namespace vm::detail {
 			signature.parameters                                                                        \
 				= { FOR_EACH_ARG(VM_EXT_C_PUT2, VM_EXT_C_INTO_VM_TYPE_NAME, __VA_ARGS__) };             \
 			CORE_ASSERT(                                                                                \
-				vm_arg_type_size_sum == cpp_arg_type_size_sum,                                          \
-				"Extern function argument alignment does not match stack structure in the VM: ",        \
-				vm_arg_type_size_sum,                                                                   \
+				vm_arg_type_size_sum.asInt() == sizeof(FunctionData)                                    \
+					|| (vm_arg_type_size_sum.asInt() == 0 && sizeof(FunctionData) == 1),                \
+				"FunctionData\'s fields alignment does not match stack structure in the VM: ",          \
+				vm_arg_type_size_sum.asInt(),                                                           \
 				"!=",                                                                                   \
-				cpp_arg_type_size_sum                                                                   \
+				sizeof(FunctionData)                                                                    \
 			);                                                                                          \
 			return signature;                                                                           \
 		}                                                                                               \
