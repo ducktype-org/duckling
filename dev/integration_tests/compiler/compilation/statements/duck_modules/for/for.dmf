@@ -4,11 +4,62 @@ fun main() -> i64 = {
     var static_arr: i64[3];
     static_arr[0] = 1;
     static_arr[1] = 2;
-    static_arr[3] = 3;
+    static_arr[2] = 3;
     
+    for (x: i64 in static_arr) {
+        builtin_output_i64(x);
+    }
+    builtin_output_i64(8888888888);
+
     for (x in static_arr) {
         builtin_output_i64(x);
     }
+
+    builtin_output_i64(8888888888);
+
+    # for (x: f32 in static_arr) {
+    #     builtin_output_f64(x);
+    # }
+    
+    var dyn_arr: List[i32];
+    dyn_arr += 1;
+    dyn_arr += 2;
+    dyn_arr += 3;
+
+    for (x in dyn_arr) {
+        builtin_output_i64(x);
+    }
+
+    builtin_output_i64(8888888888);
+
+    var a = 1;
+    var dyn_ref_arr: List[ref i32];
+    dyn_ref_arr += &a;
+    dyn_ref_arr += &a;
+    dyn_ref_arr += &a;
+    
+    for (x in dyn_ref_arr) {
+        builtin_output_i64(x);
+        x = x + 1;
+    }
+
+    builtin_output_i64(8888888888);
+
+    for (x: i32 in dyn_ref_arr) {
+        builtin_output_i64(x);
+    }
+
+    
+    # for (let x in static_arr) {
+    #     builtin_output_i64(x);
+    # }
+    # for (let x: i64 in static_arr) {
+    #     builtin_output_i64(x);
+    # }
+    
+    # for (var x: i64 in static_arr) {
+    #     builtin_output_i64(x);
+    # }
 
 #     for (var x: i64 in static_arr) {
 #         builtin_output_i64(x);

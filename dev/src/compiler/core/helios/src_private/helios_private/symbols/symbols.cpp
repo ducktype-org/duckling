@@ -247,22 +247,18 @@ namespace compiler::helios {
 		// TODOP: Some kind of good error which regards the inner element if the collection specificaly
 
 		// Get the type if it exists.
-		auto type_holder         = stmt->getIteratorType().unlock(ctx);
-		auto maybe_iter_type_pst = type_holder->getExpr().unlockOpt(ctx);
-
-		tsh::SymbolType<> iter_type = [&]() -> tsh::SymbolType<> {
-			match_optional(maybe_iter_type_pst) {
-				opt_some(type) {
-					// If a type exists we use it.
-					auto type_ctv = getTypeCTVFromPST(ctx, type);
-					return type_ctv.valueOrThrow().get<tsh::SymbolType<>>().value();
-				}
-				opt_none {
-					// Otherwise we infer it from the element type.
-					return element_type;
-				}
-			}
-			CORE_UNREACHABLE();
+		auto              type_holder_opt = stmt->getIteratorType().unlockOpt(ctx);
+		tsh::SymbolType<> iter_type       = [&]() -> tsh::SymbolType<> {
+            if (type_holder_opt.has_value()) {
+                auto maybe_iter_type_pst = type_holder_opt.value()->getExpr().unlockOpt(ctx);
+                if (maybe_iter_type_pst.has_value()) {
+                    // If a type exists we use it.
+                    auto type_ctv = getTypeCTVFromPST(ctx, maybe_iter_type_pst.value());
+                    return type_ctv.valueOrThrow().get<tsh::SymbolType<>>().value();
+                }
+            }
+            // Otherwise we infer it from the element type.
+            return element_type;
 		}();
 
 		return ctx.query<defgen::QueryGeneratedSymbol>({

@@ -6,6 +6,7 @@
 #include "helios/tsh/kind.hpp"
 #include "helios/tsh/mutability.hpp"
 #include "helios/tsh/types.hpp"
+#include "helios_private/hout_creation/expressions/coercions.hpp"
 #include "helios_private/scopes/scopes.hpp"
 #include "helios_private/symbols/generated_symbol_data.hpp"
 
@@ -40,6 +41,8 @@
 
 #include "string_id/string_id.hpp"
 #include <query_framework/query_errors.hpp>
+
+#include <utility>
 
 namespace compiler::helios {
 
@@ -376,12 +379,17 @@ namespace compiler::helios {
 			const auto loop_origin = code::pstOrigin(stmt);
 			const auto gen_origin  = code::generatedOrigin();
 
-
 			const ScopeID for_scope = ctx.query<QueryPrimaryCodeScopeFor>({ stmt });
 
 			// Get the iterable and it's type.
-			auto iterable_pst  = stmt->getIterable().unlock(ctx)->getExpr();
-			auto iterable_hout = ctx.query<QueryHoutOfExpr>({ iterable_pst })->valueOrThrow().ref();
+			auto iterable_pst = stmt->getIterable().unlock(ctx)->getExpr();
+
+			auto iterable_hout_res = ctx.query<QueryHoutOfExpr>({ iterable_pst });
+			if (iterable_hout_res->hasFailed()) {
+				is_failed = true;
+				return;
+			}
+			auto iterable_hout = iterable_hout_res->valueOrThrow()->clone();
 			auto iterable_type = iterable_hout->expression_type.getSymbolType();
 			auto iterable_kind = iterable_type.getType().getKind();
 
@@ -405,6 +413,7 @@ namespace compiler::helios {
 				tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned)
 			);
 			auto u64_immut_type = u64_mut_type.withMutability(tsh::Mutability::Immutable);
+			auto col_type       = iterable_type.withReferenceKind(tsh::ReferenceKind::Ref);
 
 			// Create the needed symbols.
 			auto create_var = [&](base::StrID role, tsh::SymbolType<> type) {
@@ -420,7 +429,7 @@ namespace compiler::helios {
 			};
 
 			// Create needed symbols.
-			SymID             col_sym   = create_var(base::StrID("__collection"), iterable_type);
+			SymID             col_sym   = create_var(base::StrID("__collection"), col_type);
 			SymID             idx_sym   = create_var(base::StrID("__index"), u64_mut_type);
 			SymID             len_sym   = create_var(base::StrID("__len"), u64_immut_type);
 			SymID             iter_sym  = getForIteratorSymbol(ctx, stmt);
@@ -431,10 +440,14 @@ namespace compiler::helios {
 			// Desugar the loop.
 			code::CodeBlock outer{};
 			// Create a temp for the collection for it to be evaluated only once before the loop.
-			// var __collection = <iterable>
-			outer.statements.emplace_back(
-				makeBox<code::VariableStmt>(loop_origin, iterable_hout, iterable_type, col_sym)
-			);
+			// TODOP: What if collection is a r-value;
+			// var __collection: ref T = &<iterable>
+			outer.statements.emplace_back(makeBox<code::VariableStmt>(
+				loop_origin,
+				makeBox<code::RefOfExpr>(ctx, gen_origin, std::move(iterable_hout)),
+				col_type,
+				col_sym
+			));
 
 			// var __idx: u64 = 0
 			outer.statements.emplace_back(makeBox<code::VariableStmt>(
@@ -452,7 +465,9 @@ namespace compiler::helios {
 						ctx,
 						gen_origin,
 						code::BuiltinUnary::Len,
-						makeBox<code::IdentifierExpr>(ctx, gen_origin, col_sym)
+						makeBox<code::DerefExpr>(
+							ctx, gen_origin, makeBox<code::IdentifierExpr>(ctx, gen_origin, col_sym)
+						)
 					);
 				}
 				case tsh::Kind::StaticArray: {
@@ -485,6 +500,8 @@ namespace compiler::helios {
 			auto idx_ref = [&] { return makeBox<code::IdentifierExpr>(ctx, gen_origin, idx_sym); };
 			auto len_ref = [&] { return makeBox<code::IdentifierExpr>(ctx, gen_origin, len_sym); };
 			auto col_ref = [&] { return makeBox<code::IdentifierExpr>(ctx, gen_origin, col_sym); };
+			auto derefed_col_ref
+				= [&] { return makeBox<code::DerefExpr>(ctx, gen_origin, col_ref()); };
 
 			// __idx < __len
 			auto condition = makeBox<code::BinaryOperatorExpr>(
@@ -494,13 +511,49 @@ namespace compiler::helios {
 			// Prepare the body.
 			code::CodeBlock while_body{};
 
+			Box<code::Expr> element_expr
+				= makeBox<code::IndexExpr>(ctx, gen_origin, derefed_col_ref(), idx_ref());
+			std::cout << "Element expr:\n";
+			element_expr->debugPrint(std::cout);
+			std::cout << '\n';
+
+			tsh::SymbolType<> element_sym_type = element_expr->expression_type.getSymbolType();
+
+			auto coercion_res = canCoerce(ctx, element_sym_type, iter_type);
+			if (coercion_res.hasFailed()) {
+				is_failed = true;
+				return;
+			}
+
+			variant_match(coercion_res.valueOrThrow().getVariant()) {
+				variant_case(Coercion, coercion) {
+					element_expr = coercion.coerce(ctx, std::move(element_expr));
+				}
+				variant_default {
+					ctx.logInt(makeBox<dia_int::PlaceholderError>(
+						base::strConcat(
+							"Cannot coerce collection element type '",
+							element_sym_type.toString(),
+							"' to iterator type '",
+							iter_type.toString(),
+							"'."
+						),
+						stmt->getIterable().unlock(ctx)->getStablePosition()
+					));
+					is_failed = true;
+					return;
+				}
+			}
+
+			std::cout << "Element expr after coercion:\n";
+			element_expr->debugPrint(std::cout);
+			std::cout << '\n';
+
+
 			// let <user_var> = __collection[__idx];
-			while_body.statements.emplace_back(makeBox<code::VariableStmt>(
-				loop_origin,
-				makeBox<code::IndexExpr>(ctx, loop_origin, col_ref(), idx_ref()),
-				iter_type,
-				iter_sym
-			));
+			while_body.statements.emplace_back(
+				makeBox<code::VariableStmt>(loop_origin, element_expr->clone(), iter_type, iter_sym)
+			);
 
 			auto body = processBlock(ctx, stmt->getBody(), return_type);
 			for (auto& s: body.statements) while_body.statements.emplace_back(std::move(s));
