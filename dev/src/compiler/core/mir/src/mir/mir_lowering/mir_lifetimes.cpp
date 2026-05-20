@@ -84,7 +84,6 @@ namespace compiler::mir {
 		// destructors directly to the current block to avoid creating unnecessary blocks.
 		//
 		// Context is unused, but left since it might be useful in the future.
-		// Preserving block order is important, because of how MIR BlockIDs works.
 		// No lifetime analysis here, since it is quite complex.
 		// See doc-comment of this function for details.
 
