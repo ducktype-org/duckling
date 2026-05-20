@@ -33,6 +33,7 @@
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
+#include "query_framework/query_errors.hpp"
 #include <query_framework/standard_query/query_impl.hpp>
 #include <string_id/string_id.hpp>
 
@@ -241,11 +242,17 @@ namespace compiler::helios {
 			case tsh::Kind::StaticArray:
 				return iterable_type.getType().as<tsh::StaticArrayAbstractType>().getElementType();
 			default:
-				// TODOP: this panic should not happen i think?
+				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					base::strConcat(
+						"`for` statements for non-array type: ", iterable_type.toString()
+					),
+					stmt->getIterable().unlock(ctx)->getStablePosition()
+					// TODOP: getIterablePostition() does not work I think.
+				));
+				query::throwFailed();
 				CORE_UNREACHABLE();
 			}
 		}();
-		// TODOP: Some kind of good error which regards the inner element if the collection specificaly
 
 		// Get the type if it exists.
 		auto              type_holder_opt = stmt->getIteratorType().unlockOpt(ctx);

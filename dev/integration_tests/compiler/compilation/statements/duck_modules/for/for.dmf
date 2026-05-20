@@ -185,6 +185,8 @@ fun main() -> i64 = {
     for (var x: i64 in static_arr) {
         builtin_output_i64(x);
     }
+    
+    for (x in 5) {}
 
     return 0;
 }
