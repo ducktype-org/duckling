@@ -7,12 +7,12 @@ Tests:
         Input:
           File: "if_statement/print_in_if.rtf"
         Output:
-          String: "@{beginning}\n42\n@{instruction_prompt}@{end}"
+          String: "@{beginning}\n42\n@{end}"
       nested_modifications:
         Input:
           File: "if_statement/nested_modifications.rtf"
         Output:
-          String: "@{beginning}\n@{instruction_prompt}=> 6\n@{end}"
+          String: "@{beginning}\n=> 6\n@{end}"
 
   while_statement:
     Cases:
@@ -20,14 +20,14 @@ Tests:
         Input:
           File: "while_statement/basic_while_usage.rtf"
         Output:
-          String: "@{beginning}\n0\n1\n2\n3\n4\n5\n@{instruction_prompt}@{end}"
+          String: "@{beginning}\n0\n1\n2\n3\n4\n5\n@{end}"
       modifying_variable:
         Input:
           File: "while_statement/modifying_variable.rtf"
         Output:
-          String: "@{beginning}\n@{instruction_prompt}=> 42\n@{end}"
+          String: "@{beginning}\n=> 42\n@{end}"
       modifying_with_function:
         Input:
           File: "while_statement/modifying_with_function.rtf"
         Output:
-          String: "@{beginning}\n42\n42\n42\n42\n42\n42\n@{instruction_prompt}@{end}"
+          String: "@{beginning}\n42\n42\n42\n42\n42\n42\n@{end}"

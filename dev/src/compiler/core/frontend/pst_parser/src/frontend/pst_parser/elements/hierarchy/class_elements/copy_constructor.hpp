@@ -36,6 +36,11 @@ namespace pst {
 			return "Copy Constructor";
 		}
 
+		[[nodiscard]]
+		base::Optional<base::StrID> getInternalSymbolName() const final {
+			return base::StrID("copy");
+		}
+
 		void acceptVisitor(PstVisitor& visitor) const override;
 	};
 }

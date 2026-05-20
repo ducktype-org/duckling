@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../not_statements/wrapper_elements/operator_wrapper.hpp"
 #include "expr_common.hpp"
 
 namespace pst::expr {
@@ -9,13 +10,12 @@ namespace pst::expr {
 	class BinaryOperator: public ExprElement {
 	protected:
 		NAMED_CHILD(left, ExprElement);
-		Operator op;
+		NAMED_CHILD(op, OperatorWrapper);
 		NAMED_CHILD(right, ExprElement);
 
 	public:
-		explicit BinaryOperator(const LangParserState& state, Operator op, i64 precedence):
-			  ExprElement(state, precedence),
-			  op(op) {}
+		explicit BinaryOperator(const LangParserState& state, i64 precedence):
+			  ExprElement(state, precedence) {}
 
 		~BinaryOperator() override = default;
 		void     dprint(std::ostream& out) const final;
@@ -27,7 +27,7 @@ namespace pst::expr {
 		[[nodiscard]]
 		AccessLocked<ExprElement> getRightOperand() const;
 		[[nodiscard]]
-		lexer::Operator getOperator() const;
+		AccessLocked<OperatorWrapper> getOperator() const;
 
 		[[nodiscard]]
 		std::string elementType() const override {

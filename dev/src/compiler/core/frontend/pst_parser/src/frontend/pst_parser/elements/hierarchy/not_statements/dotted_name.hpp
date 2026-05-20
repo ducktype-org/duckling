@@ -9,8 +9,8 @@ namespace pst {
 	 * used for imports
 	 */
 	class DottedName final: public NotStmt {
-		std::vector<tpc::Identifier> names;
-		bool                         star = false;
+		std::vector<AccessInternalAnonymous<IdentifierWrapper>> names;
+		bool                                                    star = false;
 
 	public:
 		explicit DottedName(const LangParserState& state): NotStmt(state) {
@@ -18,8 +18,13 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		const std::vector<tpc::Identifier>& getNames() const {
-			return names;
+		usize numberOfNames() const {
+			return names.size();
+		}
+
+		[[nodiscard]]
+		const AccessLocked<IdentifierWrapper> getNameByIndex(usize index) const {
+			return names[index].give();
 		}
 
 		[[nodiscard]]
@@ -45,5 +50,6 @@ namespace pst {
 		void dprint(std::ostream& out) const final;
 		~DottedName() final = default;
 		HashAlg& addElementDataToStableHash(HashAlg&) const override;
+		void     calcElementPathHashRecursive() override;
 	};
 }

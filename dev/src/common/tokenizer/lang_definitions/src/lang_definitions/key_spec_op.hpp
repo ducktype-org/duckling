@@ -143,6 +143,8 @@ namespace lang_def {
 		Move,
 		Refof,
 
+		Destroy,
+
 		// Class specific:
 		Public,
 		Private,
