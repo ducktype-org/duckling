@@ -372,6 +372,10 @@ namespace compiler::helios::code {
 		FloatNegation,
 		BooleanNot,
 		Ref,
+		Ptr,
+		ManyPtr,
+		CPtr,
+		Slice,
 		Box,
 		Const,
 		Len,  // @TODO: #1970 Probably remove that in the future.

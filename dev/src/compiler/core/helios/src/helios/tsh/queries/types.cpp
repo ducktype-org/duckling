@@ -122,6 +122,26 @@ namespace compiler::tsh {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryPointerType)
 
+	struct IMPLEMENT_QUERY(QueryManyPointerType, ManyPointerAbstractType::Impl) {
+		static auto provide(Context&, const QKey key) -> PResult {
+			return ManyPointerAbstractTypeImpl(key);
+		}
+
+		QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryManyPointerType)
+
+		struct IMPLEMENT_QUERY(QueryCPointerType, CPointerAbstractType::Impl) {
+		static auto provide(Context&, const QKey key) -> PResult {
+			return CPointerAbstractTypeImpl(key);
+		}
+
+		QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryCPointerType)
+
 	struct IMPLEMENT_QUERY(QueryDynamicArrayType, DynamicArrayAbstractType::Impl) {
 		static auto provide(Context&, const QKey key) -> PResult { return { key }; }
 

@@ -608,6 +608,10 @@ namespace compiler::tsl {
 		// Hence, the use of a nullable ref.
 		MCRef<TypeLayout> pointee{};
 
+		enum class PointerKind { SinglePointer, ManyPointer, CPointer };
+
+		PointerKind pointer_kind;
+
 		/**
 		 * @brief Construct a PointerLayout for a RawPointer.
 		 * @param raw_pointer_type The source RawPointer.
@@ -615,7 +619,8 @@ namespace compiler::tsl {
 		explicit PointerTypeLayout(
 			const tsh::RawPointerAbstractType raw_pointer_type, query::Context& ctx
 		):
-			  TypeLayoutABC(POINTER_SIZE, tsh::SymbolType<>::withDefaults(raw_pointer_type), ctx) {}
+			  TypeLayoutABC(POINTER_SIZE, tsh::SymbolType<>::withDefaults(raw_pointer_type), ctx),
+			  pointer_kind(PointerKind::SinglePointer) {}
 
 		/**
 		 * @brief Construct a PointerLayout from a typed Pointer.
@@ -623,6 +628,20 @@ namespace compiler::tsl {
 		 * @param ctx The query::Context for constructing the TypeLayout of the pointee.
 		 */
 		PointerTypeLayout(tsh::PointerAbstractType pointer_type, query::Context& ctx);
+
+		/**
+		 * @brief Construct a PointerLayout from a typed ManyPointer.
+		 * @param pointer_type The source typed ManyPointer.
+		 * @param ctx The query::Context for constructing the TypeLayout of the pointee.
+		 */
+		PointerTypeLayout(tsh::ManyPointerAbstractType pointer_type, query::Context& ctx);
+
+		/**
+		 * @brief Construct a PointerLayout from a typed CPointer.
+		 * @param pointer_type The source typed CPointer.
+		 * @param ctx The query::Context for constructing the TypeLayout of the pointee.
+		 */
+		PointerTypeLayout(tsh::CPointerAbstractType pointer_type, query::Context& ctx);
 
 		/**
 		 * @brief Construct a PointerLayout from a SymbolType, provided that it is not DIRECT.

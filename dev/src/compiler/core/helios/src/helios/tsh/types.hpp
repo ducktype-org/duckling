@@ -25,6 +25,8 @@ namespace compiler::tsh {
 	class FloatAbstractTypeImpl;
 	class RawPointerAbstractTypeImpl;
 	class PointerAbstractTypeImpl;
+	class ManyPointerAbstractTypeImpl;
+	class CPointerAbstractTypeImpl;
 	class StringAbstractTypeImpl;
 	class TupleAbstractTypeImpl;
 	class FunctionAbstractTypeImpl;
@@ -195,14 +197,20 @@ namespace compiler::tsh {
 	};
 
 	/**
-	 * @brief The (typed) Pointer types.
+	 * @brief The (typed) pointer to single types.
 	 *
 	 * A value of this type is simply a memory address.
 	 * However, it is statically known what the type of the pointee is.
 	 */
 	class PointerAbstractType final: public AbstractType {
 	public:
-		SETUP_TYPE_WITH_BASE(PointerAbstractType, AbstractType)
+		using Impl    = PointerAbstractTypeImpl;
+		using Pimpl   = Ref<Impl>;
+		using CPimpl  = CRef<Impl>;
+		using BImpl   = AbstractTypeImpl;
+		using Base    = AbstractType;
+		using BPimpl  = Ref<BImpl>;
+		using CBPimpl = CRef<BImpl>;
 
 		/**
 		 * @brief Gets the underlying symbol type of the Pointer type.
@@ -218,9 +226,73 @@ namespace compiler::tsh {
 		[[nodiscard]]
 		AbstractType getUnderlyingType() const;
 
-		CONSTRUCT_WITH_CHECKED_CAST(PointerAbstractType)
+		template<std ::derived_from<AbstractType> ABSTRACT_TYPE>
+		explicit(false) PointerAbstractType(const ABSTRACT_TYPE& other):
+			  Base((const CBPimpl) other.getPimpl()) {
+			checkDynamicCast<PointerAbstractType>(other.getPimpl());
+		}
 
 		CONSTRUCT_FROM_IMPLEMENTATION(PointerAbstractType)
+	};
+
+	/**
+	 * @brief The pointer to many types.
+	 * It has different layout in the DBC backend than basic pointer.
+	 *
+	 * A value of this type is simply a memory address.
+	 * However, it is statically known what the type of the pointee is.
+	 */
+	class ManyPointerAbstractType final: public AbstractType {
+	public:
+		SETUP_TYPE_WITH_BASE(ManyPointerAbstractType, AbstractType)
+
+		/**
+		 * @brief Gets the underlying symbol type of the Pointer type.
+		 * @return The underlying symbol type of the Pointer type.
+		 */
+		[[nodiscard]]
+		SymbolType<> getPointee() const;
+
+		/**
+		 * @brief Gets the underlying type of the Pointer type.
+		 * @return The underlying type.
+		 */
+		[[nodiscard]]
+		AbstractType getUnderlyingType() const;
+
+		CONSTRUCT_WITH_CHECKED_CAST(ManyPointerAbstractType)
+
+		CONSTRUCT_FROM_IMPLEMENTATION(ManyPointerAbstractType)
+	};
+
+	/**
+	 * @brief The C pointer type.
+	 * It has different layout in the DBC backend than basic pointer.
+	 *
+	 * A value of this type is simply a memory address.
+	 * However, it is statically known what the type of the pointee is.
+	 */
+	class CPointerAbstractType final: public AbstractType {
+	public:
+		SETUP_TYPE_WITH_BASE(CPointerAbstractType, AbstractType)
+
+		/**
+		 * @brief Gets the underlying symbol type of the Pointer type.
+		 * @return The underlying symbol type of the Pointer type.
+		 */
+		[[nodiscard]]
+		SymbolType<> getPointee() const;
+
+		/**
+		 * @brief Gets the underlying type of the Pointer type.
+		 * @return The underlying type.
+		 */
+		[[nodiscard]]
+		AbstractType getUnderlyingType() const;
+
+		CONSTRUCT_WITH_CHECKED_CAST(CPointerAbstractType)
+
+		CONSTRUCT_FROM_IMPLEMENTATION(CPointerAbstractType)
 	};
 
 	/*******************\

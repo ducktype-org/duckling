@@ -139,6 +139,10 @@ namespace lang_def {
 		      // removed one we can use builtin methods/fields.
 		Ref,
 		Box,
+		Ptr,
+		CPtr,
+		ManyPtr,
+		Slice,
 		Copy,
 		Move,
 		Refof,

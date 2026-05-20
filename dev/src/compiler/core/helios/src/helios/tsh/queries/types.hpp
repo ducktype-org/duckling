@@ -95,6 +95,20 @@ namespace compiler::tsh {
 	 */
 	DECLARE_QUERY(QueryPointerType, SymbolType<>, PointerAbstractType, ({ .uses_qresult = false }))
 
+	/**
+	 * @brief Query to get a typed many pointer type.
+	 *
+	 * \query_thread_safe
+	 */
+	DECLARE_QUERY(QueryManyPointerType, SymbolType<>, PointerAbstractType, ({ .uses_qresult = false }))
+
+	/**
+	 * @brief Query to get a typed c pointer type.
+	 *
+	 * \query_thread_safe
+	 */
+	DECLARE_QUERY(QueryCPointerType, SymbolType<>, PointerAbstractType, ({ .uses_qresult = false }))
+
 
 	/**
 	 * @brief Query to get the DynamicArray type.

@@ -219,6 +219,18 @@ namespace compiler::tsh {
 		return &empty;
 	}
 
+	CRef<TypeInterface> ManyPointerAbstractTypeImpl::getInterface(query::Context&) const {
+		// note: we can extend interface later if needed
+		static TypeInterface empty{};
+		return &empty;
+	}
+
+	CRef<TypeInterface> CPointerAbstractTypeImpl::getInterface(query::Context&) const {
+		// note: we can extend interface later if needed
+		static TypeInterface empty{};
+		return &empty;
+	}
+
 	CRef<TypeInterface> StringAbstractTypeImpl::getInterface(query::Context&) const {
 		throw base::NotYetImplemented("String type interface not yet implemented");
 	}

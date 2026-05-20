@@ -1,5 +1,6 @@
 #include "type_layout.hpp"
 
+#include "helios/tsh/types.hpp"
 #include "queries.hpp"
 
 #include <helios/mangler/mangler.hpp>
@@ -480,11 +481,27 @@ namespace compiler::tsl {
 		const tsh::PointerAbstractType pointer_type, query::Context& ctx
 	):
 		  TypeLayoutABC(POINTER_SIZE, tsh::SymbolType<>::withDefaults(pointer_type), ctx),
-		  pointee(ctx.query<QueryAbstractTypeLayout>(pointer_type.getUnderlyingType())) {}
+		  pointee(ctx.query<QueryAbstractTypeLayout>(pointer_type.getUnderlyingType())),
+		  pointer_kind(PointerKind::SinglePointer) {}
+
+	PointerTypeLayout::PointerTypeLayout(
+		const tsh::ManyPointerAbstractType pointer_type, query::Context& ctx
+	):
+		  TypeLayoutABC(POINTER_SIZE, tsh::SymbolType<>::withDefaults(pointer_type), ctx),
+		  pointee(ctx.query<QueryAbstractTypeLayout>(pointer_type.getUnderlyingType())),
+		  pointer_kind(PointerKind::ManyPointer) {}
+
+	PointerTypeLayout::PointerTypeLayout(
+		const tsh::CPointerAbstractType pointer_type, query::Context& ctx
+	):
+		  TypeLayoutABC(POINTER_SIZE, tsh::SymbolType<>::withDefaults(pointer_type), ctx),
+		  pointee(ctx.query<QueryAbstractTypeLayout>(pointer_type.getUnderlyingType())),
+		  pointer_kind(PointerKind::CPointer) {}
 
 	PointerTypeLayout::PointerTypeLayout(const tsh::SymbolType<> symbol_type, query::Context& ctx):
 		  TypeLayoutABC(POINTER_SIZE, symbol_type, ctx),
-		  pointee(ctx.query<QueryAbstractTypeLayout>(symbol_type.getType())) {
+		  pointee(ctx.query<QueryAbstractTypeLayout>(symbol_type.getType())),
+		  pointer_kind(PointerKind::SinglePointer) {
 		CORE_ASSERT(
 			symbol_type.getRefKind() != tsh::ReferenceKind::Direct,
 			"Construction of pointer layout from symbol type "
