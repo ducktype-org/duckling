@@ -156,7 +156,7 @@ fn check_if_overwrites(
             (replaces, note)
         }
         Err(e) => {
-            error!(path = %dir.display(), "failed to a package: {e} ({e:?})");
+            error!(path = %dir.display(), "failed to load the package: {e} ({e:?})");
             if let Some(io_error) = e.downcast_ref_in_chain::<io::Error>() {
                 // Maybe we missed something, check, if package has been moved.
                 let replaces = ![io::ErrorKind::NotFound, io::ErrorKind::NotADirectory]
