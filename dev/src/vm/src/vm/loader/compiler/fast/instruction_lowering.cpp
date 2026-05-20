@@ -82,20 +82,23 @@ namespace {
 		// These macros detect if an instruction uses a label argument, and if so, replaces the
 		// label ID with the offset calculated above.
 
+		auto get_offset = [&](i64 label_id, const vm::fast::reloc::Instruction& instr) -> i64 {
+			ptrdiff_t current_instr_offset = &instr - new_instructions.data();
+			i64       label_offset         = label_id_to_offset.at(label_id);
+			return label_offset - current_instr_offset;
+		};
 
 #define CHECK_GOOD(tp)      EQUAL(JumpDestination, tp),
 #define CHECK_GOOD_LAST(tp) EQUAL(JumpDestination, tp)
 #define FIRST_PAREN(a, ...) (a)
 
-#define COND(...)                                                                    \
+#define COND(...)                                                                      \
 	BITOR_ALL(FOR_EACH_CUSTOM_LAST(                                                    \
 		CHECK_GOOD FIRST_PAREN EXPAND, CHECK_GOOD_LAST FIRST_PAREN EXPAND, __VA_ARGS__ \
 	))
 
-#define ADD_LABEL_TRANSLATOR(field_tp, field_name)                 \
-	IF(EQUAL(JumpDestination, field_tp))(                          \
-		inner.field_name = label_id_to_offset.at(inner.field_name) \
-	);
+#define ADD_LABEL_TRANSLATOR(field_tp, field_name) \
+	IF(EQUAL(JumpDestination, field_tp))(inner.field_name = get_offset(inner.field_name, instr));
 
 #define BODY(NAME, ...)                                           \
 	case vm::fast::InstrID::NAME: {                               \
@@ -142,6 +145,8 @@ std::vector<vm::fast::reloc::Instruction> vm::loader::compiler::fast::lowerInstr
 				const Bytes stack_diff = func_info.args_size + func_info.return_size;
 				PUSH(call_func_imm, call.function, stack_diff.asInt());
 			}
+			instr_case(high::Op_input_p64, input) PUSH(input_p64, input.dst);
+			instr_case(high::Op_output_p64, output) PUSH(output_p64, output.src);
 			instr_case(high::Op_ret, ret) PUSH(ret_imm, func_info.return_size.asInt());
 			instr_case(high::Op_cmpEq_p64_p64, cmp) PUSH(cmpEq_p64_p64, cmp.lhs, cmp.rhs);
 			instr_case(high::Op_label, label) {

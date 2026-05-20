@@ -108,11 +108,10 @@ i64 vm::fast::FastVMThread::createStartAndExecuteFunction(
 }
 
 i64 vm::fast::FastVMThread::executeFunction(
-	const exec::ExecFunction& start_function, const RunArguments& run_arguments
+	const exec::ExecFunction& start_function, const RunArguments&
 ) {
-	std::cout << "Expecting result at local stack base: " << runtime_data.local_stack_base << '\n';
 	Frame* frame       = runtime_data.pushFrame(&start_function, runtime_data.local_stack_base);
 	byte*  local_stack = runtime_data.local_stack_base;
-	FastExecutor::eval(runtime_data, local_stack, frame);
+	FastExecutor::eval(runtime_data, local_stack, frame, *this);
 	return *reinterpret_cast<i64*>(runtime_data.local_stack_base);
 }

@@ -30,24 +30,28 @@ private:
 		return pid;
 	}
 
-	void testFast(const std::string& file_name, i64 exit_code) {
+	void testFast(
+		const std::string& file_name, std::string input, std::string output, i64 exit_code
+	) {
 		auto pid        = spawnFastAndLoad(file_name);
 		auto run_result = vm::api::run(pid, {});
 		ASSERT_TRUE(run_result.has_value());
 		auto join_result = vm::api::join(pid);
 		ASSERT_TRUE(join_result.has_value());
 		auto exit_value = vm::api::getExitValue(pid);
-		if(!exit_value.has_value()) {
+		if (!exit_value.has_value())
 			std::cerr << vm::api::errorToString(exit_value.error()) << '\n';
-		}
 		ASSERT_TRUE(exit_value.has_value());
 		variant_match(exit_value.value()) {
 			variant_case(i64, value) { ASSERT_EQUAL_PRINT(value, exit_code); }
 			variant_default { fail("Unexpected exit value type"); }
 		}
+
 	}
 
-	void testSimple() { testFast("simple.dbc", 42); }
+	void testSimple() { testFast("simple.dbc", "", "", 42); }
+
+	void testFib() { testFast("simple.dbc", "5", "3", 0); }
 };
 
 TESTER_COMMON_MAIN("/src/vm/tests/fast_mode/");

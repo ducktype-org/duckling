@@ -1,10 +1,9 @@
 #include "evaluator.hpp"
 
-#include "vm/core/fast/program/instructions/executable.hpp"
-#include <vm/core/fast/program/program.hpp>
+#include "vm/api/data/status.hpp"
+#include <vm/core/fast/fast_vmthread.hpp>
 #include <vm/core/fast/utils.hpp>
-
-#include <iostream>
+#include <vm/core/process/vmprocess.hpp>
 
 #define IMPL(NAME, body, progress_count)                             \
 	void vm::fast::FastExecutor::Instr_##NAME(INSTRFUN_ARGS(NAME)) { \
@@ -30,7 +29,6 @@ IMPL(
 	mov_p64_imm,
 	{
 		byte* const dst = getBytePtrToPlace(instr.dst);
-		std::cout << "Moving immediate value " << instr.imm << " to destination: " << dst << '\n';
 		memcpy(dst, &instr.imm, sizeof(u64));
 	},
 	1
@@ -57,6 +55,44 @@ IMPL(
 		memcpy(&src_val, src, sizeof(u64));
 		dst_val += src_val;
 		memcpy(dst, &dst_val, sizeof(u64));
+	},
+	1
+)
+
+IMPL(
+	sub_p64_p64,
+	{
+		byte* const dst = getBytePtrToPlace(instr.dst);
+		byte* const src = getBytePtrToPlace(instr.src);
+		u64         dst_val;
+		u64         src_val;
+		memcpy(&dst_val, dst, sizeof(u64));
+		memcpy(&src_val, src, sizeof(u64));
+		dst_val -= src_val;
+		memcpy(dst, &dst_val, sizeof(u64));
+	},
+	1
+)
+
+IMPL(
+	output_p64,
+	{
+		byte* const src = getBytePtrToPlace(instr.src);
+		u64         value;
+		memcpy(&value, src, sizeof(u64));
+		thread.getMyProcess().getIO().writeOutput(value);
+	},
+	1
+)
+
+IMPL(
+	input_p64,
+	{
+		thread.getMyProcess().setStatus(api::Sleeping{});
+		i64   io_value = thread.getMyProcess().getIO().getInput<i64>(thread);
+		byte* dst      = getBytePtrToPlace(instr.dst);
+		memcpy(dst, &io_value, sizeof(u64));
+		thread.getMyProcess().setStatus(api::Running{});
 	},
 	1
 )
