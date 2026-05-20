@@ -152,9 +152,8 @@ namespace compiler::mir {
 				add_destructors_to_instr_vec(ending_scopes, new_instructions);
 			}
 
-			// we handle terminator in special way,
-			// because its successors are a set, not a single object:
-
+			// We handle terminator in special way, because its successors are a set, not a single
+			// object.
 			auto& terminator = block.terminator;
 			auto  successors = getTerminatorSuccessors(terminator);
 			if (successors.empty()) {
@@ -165,27 +164,11 @@ namespace compiler::mir {
 			} else {
 				// Here we handle situations where a branch may cause two different sets of
 				// destructors being performed. For example breaking from a loop etc.
-
-				// For blocks with successors, we identify all unique outgoing edges.
-				// This is needed to create only one block for Branch COND, B1, B1
-				std::vector<BlockID> unique_successors;
-				for (auto s: successors) {
-					bool found = false;
-					for (auto u: unique_successors) {
-						if (u == s) {
-							found = true;
-							break;
-						}
-					}
-					if (!found) unique_successors.push_back(s);
-				}
-
 				base::Optional<std::vector<ScopeRef>>         first_path_ending_scopes;
 				bool                                          paths_identical  = true;
 				bool                                          boundary_crossed = false;
 				base::HashMap<BlockID, std::vector<ScopeRef>> ending_scopes_per_succ;
-
-				for (auto succ: unique_successors) {
+				for (auto succ: successors) {
 					auto succ_begin_scope  = function.blocks[succ].beginScope();
 					auto succ_ending_scope = getEndingScopes(terminator.scope, succ_begin_scope);
 					auto succ_starting_scopes
@@ -208,7 +191,7 @@ namespace compiler::mir {
 					add_destructors_to_instr_vec(first_path_ending_scopes.value(), new_instructions);
 				} else if (!paths_identical) {
 					// Paths are not identical. Create a new block and insert destructors there.
-					for (auto succ: unique_successors) {
+					for (auto succ: successors) {
 						auto  succ_begin_scope  = function.blocks[succ].beginScope();
 						auto& succ_ending_scope = ending_scopes_per_succ.at(succ);
 						auto  succ_starting_scopes
@@ -222,7 +205,8 @@ namespace compiler::mir {
 						BlockID                  new_block_id = get_new_block_id();
 						std::vector<Instruction> new_block_instructions;
 
-						// Enter the block and preserve the caller scope.
+						// Enter the block and preserve the caller scope to have a clear place where
+						// scope changes.
 						new_block_instructions.push_back(Instruction{
 							Operation::Nop, {}, {}, {}, terminator.scope });
 
@@ -401,7 +385,7 @@ namespace compiler::mir {
 	Function runAllLifetimePasses(query::Context& ctx, Function function) {
 		auto args = constructLifetimePassArgs(function);
 
-		// The order here does matter. AddDestructorPass{} performs a transformation on the CFG
+		// The order here does matter. AddDestructorsPass{} performs a transformation on the CFG
 		// which adds an important invariant that all successors of a block have the same ending
 		// scopes. This assumption is then used when adding ScopeFlags.
 		AddDestructorsPass{}.run(ctx, function, args);
