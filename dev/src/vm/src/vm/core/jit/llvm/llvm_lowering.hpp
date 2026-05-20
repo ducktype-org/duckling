@@ -44,7 +44,7 @@ namespace vm::jit {
 		llvm::Value* frame_arg;
 		llvm::Value* thread_arg;
 
-		vm::low::cf::ControlFlowGraph           cfg;
+		vm::low::cf::ControlFlowGraph  cfg;
 		std::vector<llvm::BasicBlock*> llvm_blocks;
 
 		LLVMBuilder(llvm::Module* module, llvm::LLVMContext& ctx): llvm_ctx(ctx), module(module) {
@@ -84,7 +84,7 @@ namespace vm::jit {
 		}
 
 		void lowerBasicBlock(
-			const low::LowFuncData&          function_to_compile,
+			const low::MicroBytecode&        bc,
 			llvm::IRBuilder<>&               ir_builder,
 			usize                            start,
 			usize                            end,
@@ -92,7 +92,7 @@ namespace vm::jit {
 		) {
 			auto& llvm_data = llvmData();
 			for (usize instr_idx = start; instr_idx < end; ++instr_idx) {
-				const vm::MicroInstruction& mi     = function_to_compile.bc.at(instr_idx);
+				const vm::MicroInstruction& mi     = bc.at(instr_idx);
 				auto                        opcode = vm::getInstructionOpcode(mi);
 				switch (opcode) {
 				case vm::low::MicroOpcode::jit_call_entrypoint:
@@ -123,7 +123,9 @@ namespace vm::jit {
 			}
 		}
 
-		void lowerConditionalJump(const vm::low::cf::BasicBlock& block, llvm::IRBuilder<>& ir_builder) {
+		void lowerConditionalJump(
+			const vm::low::cf::BasicBlock& block, llvm::IRBuilder<>& ir_builder
+		) {
 			auto& llvm_data         = llvmData();
 			u32   flags_field_index = 0;
 
@@ -147,12 +149,12 @@ namespace vm::jit {
 		}
 
 		void lowerBlock(
-			const low::LowFuncData&          function_to_compile,
-			const vm::low::cf::BasicBlock&            block,
+			const low::MicroBytecode&        bc,
+			const vm::low::cf::BasicBlock&   block,
 			std::unordered_set<std::string>& used_opfuns
 		) {
 			llvm::IRBuilder<> ir_builder(llvm_blocks[block.id]);
-			lowerBasicBlock(function_to_compile, ir_builder, block.start, block.end, used_opfuns);
+			lowerBasicBlock(bc, ir_builder, block.start, block.end, used_opfuns);
 
 			switch (block.edgeKind()) {
 			case vm::low::cf::OutEdges::Kind::Default: {
@@ -172,9 +174,8 @@ namespace vm::jit {
 			}
 		}
 
-		void lowerFunction(const low::LowFuncData& function_to_compile) {
+		void lowerCFG(const low::cf::ControlFlowGraph& cfg, const low::MicroBytecode& bc) {
 			auto& llvm_data = llvmData();
-			const auto& cfg = function_to_compile.cfg;
 
 			// Create LLVM basic blocks for each VM block
 			for (usize block_idx = 0; block_idx < cfg.size(); ++block_idx) {
@@ -184,7 +185,7 @@ namespace vm::jit {
 				llvm_blocks.push_back(block);
 			}
 
-			if (function_to_compile.bc.empty()) {
+			if (bc.empty()) {
 				llvm::IRBuilder<> ir_builder(
 					llvm::BasicBlock::Create(llvm_ctx, "entry", user_func_wrapper)
 				);
@@ -197,7 +198,7 @@ namespace vm::jit {
 
 			for (usize block_idx = 0; block_idx < llvm_blocks.size(); ++block_idx)
 				lowerBlock(
-					function_to_compile, cfg.getBlock(block_idx), used_opfuns
+					bc, cfg.getBlock(block_idx), used_opfuns
 				);  // lowerBlock(function_to_compile, block_idx, used_opfuns);
 
 			auto used_opfuns_filter = [&](const llvm::GlobalValue* gv) -> bool {

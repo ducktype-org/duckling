@@ -3,8 +3,8 @@
  */
 #pragma once
 
-#include "instruction.hpp"
 #include "cfg/cf_graph.hpp"
+#include "instruction.hpp"
 
 #include <base/pointers/box.hpp>
 
@@ -24,7 +24,7 @@ namespace vm::low {
 	 * @brief Micro bytecode representation of function data.
 	 */
 	struct LowFuncData {
-		base::StrID   name;
+		base::StrID name;
 #ifdef ENABLE_JIT
 		cf::ControlFlowGraph cfg;
 #endif

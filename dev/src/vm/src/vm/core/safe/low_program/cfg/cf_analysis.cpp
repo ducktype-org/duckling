@@ -4,9 +4,10 @@
  */
 #include "cf_analysis.hpp"
 
-#include <vm/bytecode/instructions.hpp>
 #include "../instruction.hpp"
 #include "../opcodes.hpp"
+
+#include <vm/bytecode/instructions.hpp>
 
 #include <algorithm>
 

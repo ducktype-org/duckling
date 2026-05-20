@@ -348,9 +348,9 @@ namespace vm::loader::compiler {
 			}
 
 			low_program.functions.insert(
-				low::LowFuncData{ .name              = function.name,
+				low::LowFuncData{ .name = function.name,
 #ifdef ENABLE_JIT
-								  .cfg				 = vm::low::cf::ControlFlowGraph(bytecode),
+			                      .cfg = vm::low::cf::ControlFlowGraph(bytecode),
 #endif
 			                      .bc                = std::move(bytecode),
 			                      .local_stack_size  = ctx.local_stack_size,

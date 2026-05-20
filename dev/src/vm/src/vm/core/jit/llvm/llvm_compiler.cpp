@@ -28,7 +28,9 @@ LLVM_INCLUDE_END()
 
 namespace vm::jit {
 
-	MRef<JitOpFun> compileLLVM(const low::LowFuncData& function_to_compile) {
+	MRef<JitOpFun> compileLLVM(
+		const low::cf::ControlFlowGraph& cfg, const low::MicroBytecode& bc, const base::StrID& name
+	) {
 		auto&                         llvm_data = llvmData();
 		llvm::orc::ThreadSafeContext& tsctx     = *llvm_data.g_context;
 
@@ -36,15 +38,14 @@ namespace vm::jit {
 		// This is necessary to avoid duplicate definitions.
 		static u64 compile_serial = 0;
 
-		const std::string symbol_name
-			= function_to_compile.name.str() + "." + std::to_string(compile_serial++);
+		const std::string symbol_name = name.str() + "." + std::to_string(compile_serial++);
 		std::unique_ptr<llvm::Module> new_module;
 
 		llvm::LLVMContext& ctx = *tsctx.getContext();
 
 		new_module = setupModule(symbol_name, ctx);
 
-		LLVMBuilder(new_module.get(), ctx).lowerFunction(function_to_compile);
+		LLVMBuilder(new_module.get(), ctx).lowerCFG(cfg, bc);
 
 		auto&                       lljit = *llvm_data.lljit_instance;
 		llvm::orc::ThreadSafeModule tsm(std::move(new_module), tsctx);

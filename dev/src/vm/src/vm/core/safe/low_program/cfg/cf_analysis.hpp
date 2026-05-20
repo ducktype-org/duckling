@@ -4,8 +4,9 @@
  */
 #pragma once
 
-#include <vm/bytecode/bytecode.hpp>
 #include "../low_program.hpp"
+
+#include <vm/bytecode/bytecode.hpp>
 
 #include <bit>
 #include <vector>
