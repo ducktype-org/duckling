@@ -182,9 +182,9 @@ metadata:
 dependencies:
   root:
     source:
-      path: {:?}
+      path: {}
         ",
-            root_root.to_string_lossy()
+            root_root.display()
         ))
         .unwrap();
     pkg_root.try_fsync_dir().unwrap();
