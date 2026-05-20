@@ -373,9 +373,6 @@ fn cycle() {
     };
     let mut graph = EarlyGraph::new_early(&bcx).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
-    for (i, j) in graph.graph.graph.iter() {
-        println!("{i} {j:?}");
-    }
     graph.remove_disabled_dependencies();
     assert_eq!(graph.graph.root.to_string(), "root 1.0.0");
     assert_eq!(
