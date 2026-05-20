@@ -198,7 +198,7 @@ namespace vm::code {
 
 		usize size(StackStateID state) const;
 
-		bool eqTypes(StackStateID state_1, StackStateID state_2);
+		bool eqTypes(StackStateID state_1, StackStateID state_2) const;
 
 		LocalStackDb();
 

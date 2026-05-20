@@ -95,7 +95,7 @@ base::StrID ls_db::getName(StackStateID state, usize idx) const {
 	return entry.name_of_last;
 }
 
-bool ls_db::eqTypes(StackStateID state_1, StackStateID state_2) {
+bool ls_db::eqTypes(StackStateID state_1, StackStateID state_2) const {
 	auto typestack_id_1 = stack_state_to_substacks.at(u64(state_1)).second;
 	auto typestack_id_2 = stack_state_to_substacks.at(u64(state_2)).second;
 
