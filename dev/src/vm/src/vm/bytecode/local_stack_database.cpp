@@ -309,6 +309,13 @@ bool ls_db_bld::contains(StackStateID state, base::StrID name) const {
 	return name_to_idx.contains(name_map_id, name);
 }
 
+bool ls_db_bld::eqTypes(StackStateID state_1, StackStateID state_2) const {
+	auto typestack_id_1 = states.at(u64(state_1)).second;
+	auto typestack_id_2 = states.at(u64(state_2)).second;
+
+	return typenames.eq(typestack_id_1, typestack_id_2);
+}
+
 base::StrID ls_db_bld::getName(StackStateID state, usize idx) const {
 	auto [node_id, typestack_id] = states.at(u64{ state });
 

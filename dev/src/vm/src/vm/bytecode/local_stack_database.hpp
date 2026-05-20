@@ -283,6 +283,9 @@ namespace vm::code {
 		bool contains(StackStateID state, base::StrID name) const;
 
 		[[nodiscard]]
+		bool eqTypes(StackStateID state_1, StackStateID state_2) const;
+
+		[[nodiscard]]
 		base::StrID getName(StackStateID state, usize idx) const;
 
 		LocalStackDb finalize();
