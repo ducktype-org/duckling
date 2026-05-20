@@ -206,7 +206,7 @@ namespace vm::api {
 	);
 
 	/**
-	 * @brief Attaches Listener to the on_status_change Emitter
+	 * @brief Attaches Listener to the on_status_changed Emitter
 	 * @return Nothing if attached succesfully
 	 */
 	std::expected<void, ApiError> attachStatusListener(

@@ -47,9 +47,9 @@ namespace vm {
 		std::condition_variable_any status_cv;
 
 		/**
-		 * @brief Emits current status when VM changes status
+		 * @brief Emits after the process status has changed.
 		 */
-		events::Emitter<api::ProcStatus> on_status_change;
+		events::Emitter<api::ProcStatus> on_status_changed;
 
 		IVMProcess(PID my_pid);
 
