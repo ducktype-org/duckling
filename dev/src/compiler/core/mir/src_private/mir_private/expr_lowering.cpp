@@ -427,11 +427,35 @@ namespace compiler::mir {
 			);
 		}
 
+		bool isEmptyCast(const hc::CastExpr& expr) {
+			if (expr.source_expr->expression_type.getSymbolType() == expr.target_type) return true;
+
+			// If a cast is numeric, then it is not empty
+			auto is_direct_numeric = [](const tsh::SymbolType<>& type) {
+				bool is_numeric = (type.getType().getKind() == tsh::Kind::Integral)
+				               or (type.getType().getKind() == tsh::Kind::Float);
+				bool is_direct = type.getRefKind() == tsh::ReferenceKind::Direct;
+				return is_numeric and is_direct;
+			};
+			if (is_direct_numeric(expr.source_expr->expression_type.getSymbolType())
+			    and is_direct_numeric(expr.target_type)) {
+				return false;
+			}
+
+			return true;
+		}
+
 		void visitCastExpr(const hc::CastExpr& expr) override {
+			// Maybe in the future the cast expr can be converted into more specific instructions.
+			if (isEmptyCast(expr)) {
+				// If the cast doesn't change the representation, simply ignore it.
+				output(lowerSubExpr(*expr.source_expr, continuation));
+				return;
+			}
+
 			auto       cast        = continuation->addHole();
 			auto       lowered     = lowerSubExpr(*expr.source_expr, continuation);
 			const auto res_lowered = lowered.getResult(function);
-
 			return noValueOutput(
 				lowered.begin,
 				cast,

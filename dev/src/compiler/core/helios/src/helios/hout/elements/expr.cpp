@@ -6,6 +6,7 @@
 #include "expr.hpp"
 
 #include "../visitors.hpp"
+#include "helios/tsh/expression_type.hpp"
 
 #include <concurrent/base/collections/hash_map.hpp>
 #include <helios/mangler/mangler.hpp>
@@ -628,6 +629,9 @@ namespace compiler::helios::code {
 		case BuiltinUnary::BooleanNot:
 		case BuiltinUnary::Ref:
 		case BuiltinUnary::Box:
+		case BuiltinUnary::Ptr:
+		case BuiltinUnary::CPtr:
+		case BuiltinUnary::ManyPtr:
 		case BuiltinUnary::Const:
 			// For most of the unary operators the result is the same as their argument type:
 			// (Int -> Int, Bool -> Bool, Meta -> Meta, etc.)
@@ -1010,15 +1014,28 @@ namespace compiler::helios::code {
 		return makeBox<BoxOfExpr>(expression_type, origin, inner->clone());
 	}
 
+	tsh::ExpressionType<> getDerefExprType(CRef<Expr> inner) {
+		auto sym_type = inner->expression_type.getSymbolType();
+		if (sym_type.getRefKind() == tsh::ReferenceKind::Ref
+		    || sym_type.getRefKind() == tsh::ReferenceKind::Box) {
+			return tsh::ExpressionType<>(
+				sym_type.withReferenceKind(tsh::ReferenceKind::Direct),
+				tsh::ValueCategory(tsh::PrimaryCategory::Local)
+			);
+		}
+		// RefKind is now Direct
+
+		if (sym_type.getType().getKind() == tsh::Kind::Pointer) {
+			return tsh::ExpressionType<>(
+				// get the pointee type here
+				tsh::ValueCategory(tsh::PrimaryCategory::Local)
+			);
+		}
+		// ...
+	}
+
 	DerefExpr::DerefExpr(query::Context&, ElementOrigin origin, Box<Expr> inner):
-		  Expr(
-			  tsh::ExpressionType<>(
-				  inner->expression_type.getSymbolType().getPointeeSymbolType(
-				  ),  // Remove the ref / box specifier.
-				  tsh::ValueCategory(tsh::PrimaryCategory::Local)
-			  ),
-			  origin
-		  ),
+		  Expr(getDerefExprType(inner.ref()), origin),
 		  inner(std::move(inner)) {}
 
 	DerefExpr::DerefExpr(

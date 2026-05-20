@@ -3,6 +3,7 @@
 #include "coercions.hpp"
 #include "errors.hpp"
 #include "function_calls/call_processing.hpp"
+#include "helios/tsh/symbol_type.hpp"
 #include "helios_private/comp_time/comp_time.hpp"
 #include "hout_of_subexpr.hpp"
 #include "numeric_literals.hpp"
@@ -486,8 +487,7 @@ namespace compiler::helios::code {
 
 			void visitPrefixOperator(pst::Access<pst::expr::PrefixOperator> stmt) override {
 				// @NOTE: This is a mockup
-				auto inner_res = subExprFromPST(ctx, stmt->getExpr());
-				if (inner_res.hasFailed()) return;  // failed
+				auto inner = subExprFromPST(ctx, stmt->getExpr()).valueOrThrow();
 
 				// @todo here we should:
 				// * lookup for user defined operators
@@ -496,7 +496,6 @@ namespace compiler::helios::code {
 				// For now we support just builtins
 
 				// if no function call is found, we try to use builtin operators:
-				auto inner      = std::move(inner_res).valueOrThrow();
 				auto inner_type = inner->expression_type.getSymbolType();
 
 				if (stmt->getOperator().unlock(ctx)->unwrap()
@@ -525,6 +524,16 @@ namespace compiler::helios::code {
 					}
 					node = makeBox<RefOfExpr>(ctx, pstOrigin(stmt), std::move(inner));
 					return;
+				} else if (stmt->getOperator().unlock(ctx)->unwrap()
+				           == lang_def::NamedOperator::Multiply) {
+					if (not tsh::isPointerKind(inner_type.getType().getKind())) {
+						ctx.logInt(makeBox<dia_int::PlaceholderError>(
+							"Tried to dereference a non-pointer type", stmt->getStablePosition()
+						));
+						return;
+					}
+					node = makeBox<DerefExpr>(ctx, pstOrigin(stmt), std::move(inner));
+					return;
 				}
 
 				auto builtin = unaryBuiltin(
@@ -543,17 +552,46 @@ namespace compiler::helios::code {
 				}
 			}
 
+			void checkCastIsValid(
+				pst::Access<pst::expr::CastAs> stmt,
+				const tsh::SymbolType<>&       from,
+				const tsh::SymbolType<>&       to
+			) {
+				if (from == to) return;  // trivial cast, always valid
+
+				// For now we allow casts between numeric types and from any type to a Meta type.
+				// In the future, we will likely want to allow more casts (e.g. to allow users to
+				// define their own custom casts), but this is a good starting point.
+				if ((isNumericType(from.getType()) && isNumericType(to.getType()))
+				    || to.getType() == tsh::getMetaType()) {
+					return;
+				}
+
+				if (from.getRefKind() == tsh::ReferenceKind::Ref
+				    && to.getType().getKind() == tsh::Kind::Pointer) {
+					return;  // allow explicit casts from ref T to ptr T
+				}
+
+				ctx.logInt(makeBox<dia_int::PlaceholderError>(
+					base::strConcat(
+						"Invalid cast from type ", from.toString(), " to type ", to.toString()
+					),
+					stmt->getStablePosition()
+				));
+				query::throwFailed();
+			}
+
 			void visitCastAs(pst::Access<pst::expr::CastAs> stmt) override {
 				const auto meta_type = tsh::SymbolType<>::withDefaults(tsh::getMetaType());
 
 				auto value_expr = subExprFromPST(ctx, stmt->getValueExpression()).valueOrThrow();
-				auto type_expr  = subExprFromPSTWithType(ctx, stmt->getTypeExpression(), meta_type).valueOrThrow();
-				auto type_ctv = ctx.query<QueryEvaluateHOUTExpression>({ type_expr.ref() });
+				auto type_expr  = subExprFromPSTWithType(ctx, stmt->getTypeExpression(), meta_type)
+				                     .valueOrThrow();
+				auto type_ctv    = ctx.query<QueryEvaluateHOUTExpression>({ type_expr.ref() });
 				auto symbol_type = type_ctv.valueOrThrow().get<tsh::SymbolType<>>().value();
 
-				node = makeBox<CastExpr>(
-					ctx, pstOrigin(stmt), std::move(value_expr), symbol_type
-				);
+				checkCastIsValid(stmt, value_expr->expression_type.getSymbolType(), symbol_type);
+				node = makeBox<CastExpr>(ctx, pstOrigin(stmt), std::move(value_expr), symbol_type);
 			}
 
 			void visitTernary(pst::Access<pst::expr::Ternary> stmt) override {
