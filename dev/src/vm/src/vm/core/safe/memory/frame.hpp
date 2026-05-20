@@ -61,16 +61,6 @@ namespace vm {
 		Block** local_block_ref_stack_end = nullptr;
 
 		/**
-		 * @brief Base of the history stack storing previous local_stack_head values for each init.
-		 */
-		u64* local_stack_head_history_base = nullptr;
-
-		/**
-		 * @brief The pointer to the first free position on the local_stack_head history stack.
-		 */
-		u64* local_stack_head_history_end = nullptr;
-
-		/**
 		 * @brief First free byte in the local stack.
 		 * Used when new block is created on the local stack.
 		 */
