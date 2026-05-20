@@ -31,9 +31,9 @@ namespace dia_int {
 
 		[[nodiscard]] bool bad() const;
 
-		void terminalPrint(std::ostream& out = std::cerr);
+		void terminalPrint(std::ostream& out = std::cerr) const;
 
-		void dumpLog(bool, std::ostream& out) { terminalPrint(out); }
+		void dumpLog(bool, std::ostream& out) const { terminalPrint(out); }
 
 		/**
 		 * @brief Collect all logged diagnostics into the provided output vector.
@@ -77,10 +77,10 @@ namespace dia_int {
 		);
 
 		/**
-		 * @brief Merge another Logger into this one, moving all diagnostics.
-		 * Invalidates the other Logger.
+		 * @brief Log diagnostics from another Logger into this one.
+		 * The other Logger is emptied.
 		 */
-		void mergeWith(Logger&& other);
+		void logFromLogger(Logger& other);
 	};
 
 	/**
