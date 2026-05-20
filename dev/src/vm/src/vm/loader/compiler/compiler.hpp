@@ -161,6 +161,16 @@ namespace vm::loader::compiler {
 		void compileNewExtCFunctions(const std::vector<code::ExternalCFunction>& new_functions);
 
 		/**
+		 * 
+		 */
+		base::Optional<u64> seek_method_param_count(const base::StrID& method_name) const;
+
+		/**
+		 * 
+		 */
+		std::unordered_set<base::StrID> detectParamsAndReturnedVars(FunctionCompilationContext& ctx);
+		
+		/**
 		 * @brief Calculates the stack offsets of stack variables.
 		 * Since in ValidProgram variables are represented by names not indexes on the stack.
 		 * This function creates an offset map which is used in `lowerInstructions` to change the

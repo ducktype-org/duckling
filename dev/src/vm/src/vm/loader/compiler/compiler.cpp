@@ -166,7 +166,147 @@ namespace vm::loader::compiler {
 		return micro_bytecode;
 	}
 
+	base::Optional<u64> Compiler::seek_method_param_count(const base::StrID& method_name) const {
+		// @todo: https://github.com/ducktype-org/duckling/issues/962
+		auto it = std::ranges::find_if(*low_program.types, [&](const auto& type) {
+			if_opt_some(type.getInheritanceMetadata(), inh_meta) {
+				return (*inh_meta).available_methods.contains(method_name);
+			}
+			return false;
+		});
+		if (it != low_program.types->end()) {
+			auto inh_meta = it->getInheritanceMetadata().value();
+			return inh_meta->available_methods[method_name]->getParameterCount();
+		}
+		CORE_UNREACHABLE();
+	}
+
+	std::unordered_set<base::StrID> Compiler::detectParamsAndReturnedVars(FunctionCompilationContext& ctx) {
+		std::vector<base::StrID> stack;
+		std::unordered_set<base::StrID> res;
+
+		auto push = [&](opargs::PlaceAny local, bool is_arg_or_ret) {
+			if (is_arg_or_ret) res.insert(local.var_name);
+			stack.push_back(local.var_name);
+		};
+
+		auto pop = [&](bool is_arg_or_ret) {
+			if (is_arg_or_ret) res.insert(stack.back());
+			stack.pop_back();
+		};
+
+		// Label positions in high bytecode, used only for graph traversing
+		// in this function. Not used when lowering to microbytecode.
+		base::HashMap<base::StrID, usize> label_positions{};
+		for (auto [idx, instr]: std::views::enumerate(ctx.function.body)) {
+			instr_match(instr) {
+				instr_case(code::instructions::Op_label, label) {
+					label_positions.put(label.label.label_name, idx);
+				}
+				instr_default {}
+			}
+		}
+
+		code::FuncSignature func_signature = ctx.function.signature;
+		using namespace std::views;
+		for (auto [idx, ret_type]: enumerate(func_signature.result_types))
+			push(base::StrID(base::strConcat("ret", idx).c_str()), true);
+		for (auto [idx, param_type]: enumerate(func_signature.parameters))
+			push(base::StrID(base::strConcat("arg", idx).c_str()), true);
+		
+		// instruction index, type stack state, padding stack state, stack size
+		std::vector<std::tuple<
+			usize,
+			decltype(stack)
+			>>
+			dfs_stack{
+				{ ctx.function.body.size(), {}}  // sentinel
+		};
+		usize index = 0;
+
+		std::set<std::pair<decltype(stack), usize>> visited_states;
+
+		while (index != ctx.function.body.size()) {
+			if (visited_states.contains({ stack, index })) {
+				std::tie(index, stack) = dfs_stack.back();
+				dfs_stack.pop_back();
+				continue;
+			}
+			visited_states.insert({ stack, index });
+			
+			instr_match(ctx.function.body[index]) {
+				using namespace code::instructions;
+				instr_case(Op_init_pany_type, instr) {
+					push(instr.var, false);
+					index++;
+				}
+				instr_case(Op_deinit, instr) {
+					pop(false);
+					index++;
+				}
+				instr_case(Op_jmp_label, instr) { index = label_positions[instr.label.label_name]; }
+				instr_case(Op_jmpIf_label, instr) {
+					index++;
+					dfs_stack.emplace_back(
+						label_positions[instr.label.label_name],
+						stack
+					);
+				}
+				instr_case(Op_jmpIfNot_label, instr) {
+					index++;
+					dfs_stack.emplace_back(
+						label_positions[instr.label.label_name],
+						stack
+					);
+				}
+				instr_case(Op_ret, instr) {
+					std::tie(index, stack) = dfs_stack.back();
+					dfs_stack.pop_back();
+				}
+				instr_case(Op_call_func, instr) {
+					usize number_of_params = program_ctx.function_forward_declarations
+					                             .at(instr.function.function_name)
+					                             ->signature.parameters.size();
+					for (usize i = 0; i < number_of_params; i++) pop(true);
+					index++;
+				}
+				instr_case(Op_call_builtinfunc, instr) {
+					for (usize i = 0;
+					     i < builtins::getBuiltinFunctionSignature(instr.function.function_name)
+					             .value()
+					             ->parameters.size();
+					     i++) {
+						pop(true);
+					}
+					index++;
+				}
+				instr_case(Op_call_cfunc, instr) {
+					for (usize i = 0;
+					     i < program_ctx.ext_c_functions.at(instr.function.function_name)
+					             ->signature.parameters.size();
+					     i++) {
+						pop(true);
+					}
+					index++;
+				}
+				instr_case(Op_virtual_call_pptr_method, instr) {
+					for (usize i = 0; i < *seek_method_param_count(instr.method.method_name); i++)
+						pop(true);
+					index++;
+				}
+				instr_case(Op_ret_tailcall_func, instr) {
+					std::tie(index, stack) = dfs_stack.back();
+					dfs_stack.pop_back();
+				}
+				instr_default { index++; }
+			}
+		}
+		return res;
+	}
+
 	void Compiler::calculateOffsets(FunctionCompilationContext& ctx) {
+		auto must_be_fully_alligned = detectParamsAndReturnedVars(ctx);
+		
 		decltype(ctx.locals_map) result;
 		std::vector<usize>       type_size_stack;
 		std::vector<usize>       padding_used;
@@ -178,7 +318,8 @@ namespace vm::loader::compiler {
 		auto push = [&](opargs::PlaceAny local, opargs::Type type) {
 			auto type_ref   = low_program.types->at(type.type_name);
 			auto type_size  = type_ref->getSize().asInt();
-			auto type_align = type_ref->getAlignment();
+			//auto type_align = must_be_fully_alligned.contains(local.var_name) ? 8 : type_ref->getAlignment();
+			auto type_align = 8;
 			size_t padding  = align_up(curr_stack_size, type_align) - curr_stack_size;
 			auto aligned_offset = curr_stack_size + padding;
 
@@ -213,21 +354,6 @@ namespace vm::loader::compiler {
 			padding_used.pop_back();
 			curr_stack_size -= type_size;
 			curr_stack_size -= padding;
-		};
-
-		auto seek_method_param_count = [&](const base::StrID& method_name) -> base::Optional<u64> {
-			// @todo: https://github.com/ducktype-org/duckling/issues/962
-			auto it = std::ranges::find_if(*low_program.types, [&](const auto& type) {
-				if_opt_some(type.getInheritanceMetadata(), inh_meta) {
-					return (*inh_meta).available_methods.contains(method_name);
-				}
-				return false;
-			});
-			if (it != low_program.types->end()) {
-				auto inh_meta = it->getInheritanceMetadata().value();
-				return inh_meta->available_methods[method_name]->getParameterCount();
-			}
-			CORE_UNREACHABLE();
 		};
 
 		// Label positions in high bytecode, used only for graph traversing

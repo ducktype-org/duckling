@@ -391,7 +391,10 @@ namespace vm {
 
 			// Similar as in call_func, but we deinit the arguments blocks as well,
 			// but without the return value.
-			for (u64 i = 0; i < arg_count; i++) performDeinit(frame, thread);
+			for (u64 i = 0; i < arg_count; i++){
+				CORE_ASSERT(frame->local_stack_head%8==0, "");
+				performDeinit(frame, thread);
+			}
 		}
 
 		FUNCTION_CONT(1);
