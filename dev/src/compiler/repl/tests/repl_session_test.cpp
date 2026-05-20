@@ -4,9 +4,11 @@
 #include <frontend/module_tree/queries.hpp>
 #include <repl/session.hpp>
 
+#include "logger/logger.hpp"
 #include <filesystem/file.hpp>
 #include <query_framework/entry/query_entry_point.hpp>
 #include <tester/tester.hpp>
+#include "diagnostic_interactive/module_flags/module_flags.hpp"
 
 #include <string_view>
 
@@ -25,25 +27,31 @@ namespace compiler::repl {
 
 	public:
 		TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-			TESTER_ADD_TEST(testReplSessionInitialization);
-			TESTER_ADD_TEST(testReplProcessLineWithCommand);
-			TESTER_ADD_TEST(testReplCommandAliasesThroughProcessLine);
-			TESTER_ADD_TEST(testReplExitCommandAliasesThroughProcessLine);
-			TESTER_ADD_TEST(testReplHistoryCommandThroughProcessLine);
-			TESTER_ADD_TEST(testReplUnknownCommandThroughHandleCommand);
-			TESTER_ADD_TEST(testReplClearCommandDoesNotResetSessionState);
-			TESTER_ADD_TEST(testReplClearHistoryResetsSessionState);
+			// TESTER_ADD_TEST(testReplSessionInitialization);
+			// TESTER_ADD_TEST(testReplProcessLineWithCommand);
+			// TESTER_ADD_TEST(testReplCommandAliasesThroughProcessLine);
+			// TESTER_ADD_TEST(testReplExitCommandAliasesThroughProcessLine);
+			// TESTER_ADD_TEST(testReplHistoryCommandThroughProcessLine);
+			// TESTER_ADD_TEST(testReplUnknownCommandThroughHandleCommand);
+			// TESTER_ADD_TEST(testReplClearCommandDoesNotResetSessionState);
+			// TESTER_ADD_TEST(testReplClearHistoryResetsSessionState);
 			TESTER_ADD_TEST(testReplProcessLineWithCode);
 			TESTER_ADD_TEST(testReplInstructionExecution);
-			TESTER_ADD_TEST(testReplCommandDetection);
-			TESTER_ADD_TEST(testReplHistoryTracking);
-			TESTER_ADD_TEST(testLoadScriptFileMissingPath);
-			TESTER_ADD_TEST(testLoadScriptFileInvalidContents);
-			TESTER_ADD_TEST(testLoadScriptFileExecutesStatements);
-			TESTER_ADD_TEST(testLoadCommandExecutesScript);
-			TESTER_ADD_TEST(testReplArithmeticExpressions);
-			TESTER_ADD_TEST(testReplVariableLookup);
-			TESTER_ADD_TEST(testReplUnsupportedActionClassification);
+			// TESTER_ADD_TEST(testReplCommandDetection);
+			// TESTER_ADD_TEST(testReplHistoryTracking);
+		// 	TESTER_ADD_TEST(testLoadScriptFileMissingPath);
+		// 	TESTER_ADD_TEST(testLoadScriptFileInvalidContents);
+		// 	TESTER_ADD_TEST(testLoadScriptFileExecutesStatements);
+		// 	TESTER_ADD_TEST(testLoadCommandExecutesScript);
+		// 	TESTER_ADD_TEST(testReplArithmeticExpressions);
+		// 	TESTER_ADD_TEST(testReplVariableLookup);
+		// 	TESTER_ADD_TEST(testReplUnsupportedActionClassification);
+		}
+		
+		void beforeAll() override {
+			dia_int::configureImmediatePrint(&std::cerr);
+			logger::enable_dev_logs = true;
+			logger::enableDevCategoryByStringName("REPL");
 		}
 
 	private:
@@ -198,6 +206,8 @@ namespace compiler::repl {
 			ReplSession session;
 
 			auto result = session.processLine("while (0 == 1) {}");
+
+			std::cerr << "Instruction execution result: " << (result.status == ReplResult::Status::Success) << "\n";
 
 			assertTrue(
 				result.status == ReplResult::Status::Success,

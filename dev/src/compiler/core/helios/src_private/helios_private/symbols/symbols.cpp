@@ -342,7 +342,7 @@ namespace compiler::helios {
 			} else if (auto import_star = import_chain.dynamicCast<pst::ImportStarHides>()) {
 				// import a.b.c.*;
 				usize count = import_star.value()->numberOfNames();
-				auto name = import_star.value()->getNameByIndex(count - 1).unlock(ctx)->unwrap();
+				auto  name  = import_star.value()->getNameByIndex(count - 1).unlock(ctx)->unwrap();
 				return SymbolData::makePSTSymbolData(
 					{
 						.name        = name,
@@ -355,7 +355,7 @@ namespace compiler::helios {
 			} else if (auto import_nested = import_chain.dynamicCast<pst::ImportNested>()) {
 				// import a.b.c(...);
 				usize count = import_nested.value()->numberOfNames();
-				auto name = import_nested.value()->getNameByIndex(count - 1).unlock(ctx)->unwrap();
+				auto  name = import_nested.value()->getNameByIndex(count - 1).unlock(ctx)->unwrap();
 				return SymbolData::makePSTSymbolData(
 					{
 						.name        = name,
@@ -618,12 +618,11 @@ namespace compiler::helios {
 
 				std::vector<base::StrID> module_path;
 
-				auto unlock_all_names = [&](auto import_chain) {
-					usize size = import_chain->numberOfNames();
+				auto unlock_all_names = [&](auto import_chain_casted) {
+					usize                    size = import_chain_casted->numberOfNames();
 					std::vector<base::StrID> names(size);
-					for (usize i = 0; i < size; i++) {
-						names[i] = import_chain->getNameByIndex(i).unlock(ctx)->unwrap();
-					}
+					for (usize i = 0; i < size; i++)
+						names[i] = import_chain_casted->getNameByIndex(i).unlock(ctx)->unwrap();
 					return names;
 				};
 
