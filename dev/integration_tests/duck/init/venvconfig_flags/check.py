@@ -35,8 +35,8 @@ try:
   assert_eq(venv_config, real_venv_config)
 
   check_src_from_root(root)
-  check_gitignore_from_root(root)
+  check_no_gitignore_from_root(root)
 
-  check_is_git_root(root)
+  check_not_git_root(root)
 finally:
   shutil.rmtree(root)
