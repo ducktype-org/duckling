@@ -28,7 +28,10 @@ namespace compiler::helios::desugaring {
 			query::Context&       ctx;
 			pst::Access<pst::For> stmt;
 			ScopeID               for_scope;
-			code::ElementOrigin   loop_origin;
+
+			code::ElementOrigin loop_origin;
+			code::ElementOrigin iterable_origin;
+			code::ElementOrigin iterator_origin;
 
 			tsh::SymbolType<> u64_mut_type;
 			tsh::SymbolType<> u64_immut_type;
@@ -44,8 +47,8 @@ namespace compiler::helios::desugaring {
 			query::Context& ctx, pst::Access<pst::For> stmt
 		) {
 			// Get the iterable and it's type.
-			auto iterable_pst      = stmt->getIterable().unlock(ctx)->getExpr();
-			auto iterable_hout_res = ctx.query<QueryHoutOfExpr>({ iterable_pst });
+			auto iterable_pst      = stmt->getIterable().unlock(ctx);
+			auto iterable_hout_res = ctx.query<QueryHoutOfExpr>({ iterable_pst->getExpr() });
 			if (iterable_hout_res->hasFailed()) return {};
 
 			Box<code::Expr>      iterable_hout = iterable_hout_res->valueOrThrow()->clone();
@@ -75,6 +78,8 @@ namespace compiler::helios::desugaring {
 				.stmt                  = stmt,
 				.for_scope             = ctx.query<QueryPrimaryCodeScopeFor>({ stmt }),
 				.loop_origin           = code::pstOrigin(stmt),
+				.iterable_origin       = code::pstOrigin(iterable_pst),
+				.iterator_origin       = code::pstOrigin(stmt->getIteratorIdentifier().unlock(ctx)),
 				.u64_mut_type          = u64_mut,
 				.u64_immut_type        = u64_mut.withMutability(tsh::Mutability::Immutable),
 				.iterable_type         = iterable_type,
@@ -109,12 +114,12 @@ namespace compiler::helios::desugaring {
 		// var __collection: ref T = &<iterable>      (l-value iterable)
 		// var __collection: T     = <iterable>       (r-value iterable)
 		Box<code::Stmt> buildCollectionVar(ForDesugarCtx& ctx, SymID col_sym) {
-			const auto gen = code::generatedOrigin();
-
 			Box<code::Expr> collection_expr = [&]() -> Box<code::Expr> {
 				if (ctx.collection_is_l_value) {
 					// If the collection if it's an l-value we operate on it through a ref.
-					return makeBox<code::RefOfExpr>(ctx.ctx, gen, std::move(ctx.iterable_hout));
+					return makeBox<code::RefOfExpr>(
+						ctx.ctx, code::generatedOrigin(), std::move(ctx.iterable_hout)
+					);
 				} else {
 					// If the collection is a r-value we store it in the `__collection` variable
 					// directly.
@@ -123,16 +128,17 @@ namespace compiler::helios::desugaring {
 			}();
 
 			return makeBox<code::VariableStmt>(
-				ctx.loop_origin, std::move(collection_expr), ctx.col_type, col_sym
+				ctx.iterable_origin, std::move(collection_expr), ctx.col_type, col_sym
 			);
 		}
 
 		// var __idx: u64 = 0
 		Box<code::Stmt> buildIndexVar(const ForDesugarCtx& ctx, SymID idx_sym) {
-			const auto gen = code::generatedOrigin();
 			return makeBox<code::VariableStmt>(
-				ctx.loop_origin,
-				makeBox<code::DefaultValueExpr>(ctx.ctx, gen, ctx.u64_mut_type.getType()),
+				code::generatedOrigin(),
+				makeBox<code::DefaultValueExpr>(
+					ctx.ctx, code::generatedOrigin(), ctx.u64_mut_type.getType()
+				),
 				ctx.u64_mut_type,
 				idx_sym
 			);
@@ -265,7 +271,7 @@ namespace compiler::helios::desugaring {
 
 			// let <user_var> = __collection[__idx];
 			body.statements.emplace_back(makeBox<code::VariableStmt>(
-				ctx.loop_origin, std::move(element_expr.value()), iter_type, iter_sym
+				ctx.iterator_origin, std::move(element_expr.value()), iter_type, iter_sym
 			));
 
 			// <body>;
@@ -356,15 +362,9 @@ namespace compiler::helios::desugaring {
 	base::Optional<code::BlockStmt> desugarFor(
 		query::Context& ctx, pst::Access<pst::For> stmt, const BodyProcessor& process_body
 	) {
-		std::cout << "DESUGAR\n";
 		auto ctx_opt = buildForDesugarCtx(ctx, stmt);
 		if (!ctx_opt.has_value()) return {};
 		auto& for_ctx = ctx_opt.value();
-
-		if (for_ctx.collection_is_l_value)
-			std::cout << "LVALUE\n";
-		else
-			std::cout << "RVALUE\n";
 
 		// Create the needed symbols.
 		SymID col_sym  = makeForLocal(for_ctx, base::StrID("__collection"), for_ctx.col_type);
