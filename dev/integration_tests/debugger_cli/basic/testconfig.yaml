@@ -18,4 +18,10 @@ Tests:
           String: "run\npause\ncontinue\np\nc\nq" 
         Output:
           File: "run.out"
+      errors:
+        Input:
+          String: "r\nr\nresume\np\np\nq"
+        Output:
+          File: "error.out"
+
     

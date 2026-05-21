@@ -67,12 +67,24 @@ namespace vm::debugger::cli {
 			}
 
 			if (stripped_line == "run" || stripped_line == "r") {
-				debugger.runMain();
+				debugger.runMain().transform_error([&](const api::ApiError& api_error) {
+					std::lock_guard lk(output_mutex);
+					std::cout << "Run failed..." << std::endl;
+					return api_error;
+				});
 			} else if (stripped_line == "pause" || stripped_line == "p") {
-				debugger.pause();
+				debugger.pause().transform_error([&](const api::ApiError& api_error) {
+					std::lock_guard lk(output_mutex);
+					std::cout << "Pause failed..." << std::endl;
+					return api_error;
+				});
 			} else if (stripped_line == "continue" || stripped_line == "c"
 			           || stripped_line == "resume") {
-				debugger.resume();
+				debugger.resume().transform_error([&](const api::ApiError& api_error) {
+					std::lock_guard lk(output_mutex);
+					std::cout << "Resume failed..." << std::endl;
+					return api_error;
+				});
 			} else if (stripped_line == "help" || stripped_line == "h") {
 				help();
 			} else if (stripped_line == "status" || stripped_line == "s") {
