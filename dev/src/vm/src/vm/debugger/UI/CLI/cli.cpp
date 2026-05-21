@@ -46,7 +46,10 @@ namespace vm::debugger::cli {
 
 	CLIDebugger::CLIDebugger(const fs::File& filepath, const std::vector<std::string>& main_args):
 		  CLIDebugger(main_args) {
-		debugger.loadFile(filepath);
+		debugger.loadFile(filepath).transform_error([&](const api::ApiError& api_error) {
+			throw std::runtime_error("Failed to load file.");
+			return api_error;
+		});
 	}
 
 	int CLIDebugger::run() {
@@ -57,8 +60,7 @@ namespace vm::debugger::cli {
 		std::string line;
 		std::string stripped_line;
 
-		while (true) {
-			std::getline(std::cin, line);
+		while (std::getline(std::cin, line)) {
 			stripped_line = strip(line);
 
 			if (stripped_line == "quit" || stripped_line == "q" || stripped_line == "exit") {
@@ -92,6 +94,8 @@ namespace vm::debugger::cli {
 				status();
 			}
 		}
+
+		return 0;
 	}
 
 	void CLIDebugger::help() {
