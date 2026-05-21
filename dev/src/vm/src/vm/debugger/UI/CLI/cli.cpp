@@ -16,14 +16,14 @@ namespace vm::debugger::cli {
 			  std::visit(
 				  [&](auto&& arg) {
 					  using T = std::decay_t<decltype(arg)>;
-					  std::cout << "New status: " << TypeParseTraits<T>::NAME.data() << std::endl;
+					  std::cout << "New status: " << TypeParseTraits<T>::NAME.data() << "\n";
 				  },
 				  status
 			  );
 		  }),
 		  error_listener([this](const std::string& err) {
 			  std::lock_guard lk(output_mutex);
-			  std::cout << "Error: " << err << std::endl;
+			  std::cout << "Error: " << err << "\n";
 		  }),
 		  exit_value_listener([this](const api::ExitValue& exit_val) {
 			  std::lock_guard lk(output_mutex);
@@ -31,7 +31,7 @@ namespace vm::debugger::cli {
 				  if_opt_some(val->readData(), data) {
 					  variant_match(data) {
 						  variant_case(idv::Primitive, primitive) {
-							  std::cout << "VM returned: " << primitive.value << std::endl;
+							  std::cout << "VM returned: " << primitive.value << "\n";
 						  }
 					  }
 				  }
@@ -62,27 +62,27 @@ namespace vm::debugger::cli {
 
 			if (stripped_line == "quit" || stripped_line == "q" || stripped_line == "exit") {
 				std::lock_guard lk(output_mutex);
-				std::cout << "Exiting debugger...\n" << std::endl;
+				std::cout << "Exiting debugger...\n\n";
 				return 0;
 			}
 
 			if (stripped_line == "run" || stripped_line == "r") {
 				debugger.runMain().transform_error([&](const api::ApiError& api_error) {
 					std::lock_guard lk(output_mutex);
-					std::cout << "Run failed..." << std::endl;
+					std::cout << "Run failed...\n";
 					return api_error;
 				});
 			} else if (stripped_line == "pause" || stripped_line == "p") {
 				debugger.pause().transform_error([&](const api::ApiError& api_error) {
 					std::lock_guard lk(output_mutex);
-					std::cout << "Pause failed..." << std::endl;
+					std::cout << "Pause failed...\n";
 					return api_error;
 				});
 			} else if (stripped_line == "continue" || stripped_line == "c"
 			           || stripped_line == "resume") {
 				debugger.resume().transform_error([&](const api::ApiError& api_error) {
 					std::lock_guard lk(output_mutex);
-					std::cout << "Resume failed..." << std::endl;
+					std::cout << "Resume failed...\n";
 					return api_error;
 				});
 			} else if (stripped_line == "help" || stripped_line == "h") {
@@ -104,7 +104,7 @@ namespace vm::debugger::cli {
 					 "  (c)ontinue  - resume VM execution\n"
 
 					 "  (s)tatus    - write current VM status\n"
-				  << std::endl;
+				  << "\n";
 	}
 
 	void CLIDebugger::status() {
@@ -113,7 +113,7 @@ namespace vm::debugger::cli {
 			[&](auto&& arg) {
 				using T = std::decay_t<decltype(arg)>;
 				std::lock_guard lk(output_mutex);
-				std::cout << "Current status: " << TypeParseTraits<T>::NAME.data() << std::endl;
+				std::cout << "Current status: " << TypeParseTraits<T>::NAME.data() << "\n";
 			},
 			response
 		);
