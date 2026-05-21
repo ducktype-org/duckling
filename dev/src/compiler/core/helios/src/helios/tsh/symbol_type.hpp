@@ -288,11 +288,14 @@ namespace compiler::tsh {
 			return SymbolType(abstract_type, reference_kind, new_mutability, leakage, uniqueness);
 		}
 
+		/**
+		 * @brief Utility to get the pointee type from the current symbol type.
+		 * Works both with reference RefKind and pointer abstract types.
+		 * The RefKind of this symbol is considered first and the abstract type is only considered
+		 * if the RefKind is Direct.
+		 */
 		[[nodiscard]]
-		SymbolType getPointeeSymbolType() const {
-			CORE_ASSERT(reference_kind != ReferenceKind::Direct, "Cannot dereference a Direct type");
-			return withReferenceKind(ReferenceKind::Direct);
-		}
+		SymbolType getPointeeSymbolType() const;
 
 		/**
 		 * @brief Three-way comparison with another SymbolType.
@@ -363,4 +366,6 @@ namespace compiler::tsh {
 		Leakage       leakage;
 		Uniqueness    uniqueness;
 	};
+
+	extern template auto SymbolType<AbstractType>::getPointeeSymbolType() const -> SymbolType<AbstractType>;
 }

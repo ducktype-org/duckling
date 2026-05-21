@@ -79,6 +79,8 @@ namespace compiler::backend_vm::internal {
 		 */
 		base::Optional<CRef<vm::code::TypeOfData>> lowerAndKeepTslType(CRef<tsl::TypeLayout> layout);
 
+		CRef<vm::code::TypeOfData> keepVMType(vm::code::TypeOfData dvm_type);
+
 		/**
 		 * @brief Creates and inserts a pointer type into the program lowering context.
 		 * It caches the result, so inserts the type into the program only if needed.

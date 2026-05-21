@@ -103,6 +103,8 @@ namespace compiler::backend_vm::internal {
 
 		const DVMPlace& getOrInsertLirLocal(lir::LIRLocalRef local);
 
+		DVMPlace loadFromPlace(const DVMPlace& place, const vm::code::TypeOfData& pointee_type);
+
 		/**
 		 * @brief Makes sure a given @p value is a place and places it in a temporary if needed
 		 * (e.g. the value is an Immediate). If the given value is already a place, it does nothing

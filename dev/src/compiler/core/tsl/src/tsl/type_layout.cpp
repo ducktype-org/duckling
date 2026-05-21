@@ -1,6 +1,6 @@
 #include "type_layout.hpp"
 
-#include "helios/tsh/types.hpp"
+#include <helios/tsh/types.hpp>
 #include "queries.hpp"
 
 #include <helios/mangler/mangler.hpp>

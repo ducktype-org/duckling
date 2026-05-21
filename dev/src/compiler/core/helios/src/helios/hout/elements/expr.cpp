@@ -6,7 +6,8 @@
 #include "expr.hpp"
 
 #include "../visitors.hpp"
-#include "helios/tsh/expression_type.hpp"
+#include <helios/tsh/abstract_type.hpp>
+#include <helios/tsh/expression_type.hpp>
 
 #include <concurrent/base/collections/hash_map.hpp>
 #include <helios/mangler/mangler.hpp>
@@ -1014,28 +1015,14 @@ namespace compiler::helios::code {
 		return makeBox<BoxOfExpr>(expression_type, origin, inner->clone());
 	}
 
-	tsh::ExpressionType<> getDerefExprType(CRef<Expr> inner) {
-		auto sym_type = inner->expression_type.getSymbolType();
-		if (sym_type.getRefKind() == tsh::ReferenceKind::Ref
-		    || sym_type.getRefKind() == tsh::ReferenceKind::Box) {
-			return tsh::ExpressionType<>(
-				sym_type.withReferenceKind(tsh::ReferenceKind::Direct),
-				tsh::ValueCategory(tsh::PrimaryCategory::Local)
-			);
-		}
-		// RefKind is now Direct
-
-		if (sym_type.getType().getKind() == tsh::Kind::Pointer) {
-			return tsh::ExpressionType<>(
-				// get the pointee type here
-				tsh::ValueCategory(tsh::PrimaryCategory::Local)
-			);
-		}
-		// ...
-	}
-
 	DerefExpr::DerefExpr(query::Context&, ElementOrigin origin, Box<Expr> inner):
-		  Expr(getDerefExprType(inner.ref()), origin),
+		  Expr(
+			  tsh::ExpressionType<>(
+				  inner->expression_type.getSymbolType().getPointeeSymbolType(),
+				  inner->expression_type.getValueCategory()
+			  ),
+			  origin
+		  ),
 		  inner(std::move(inner)) {}
 
 	DerefExpr::DerefExpr(

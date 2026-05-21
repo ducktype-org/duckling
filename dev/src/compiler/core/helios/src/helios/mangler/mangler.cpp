@@ -505,6 +505,18 @@ namespace compiler::helios::mangler {
 				"P", ctx.query<QueryMangledType>({ type.getPointee() })->valueOrThrow().str(), "E"
 			);
 		}
+		
+		static std::string mangle(query::Context& ctx, tsh::ManyPointerAbstractType type) {
+			return base::strConcat(
+				"MP", ctx.query<QueryMangledType>({ type.getPointee() })->valueOrThrow().str(), "E"
+			);
+		}
+		
+		static std::string mangle(query::Context& ctx, tsh::CPointerAbstractType type) {
+			return base::strConcat(
+				"CP", ctx.query<QueryMangledType>({ type.getPointee() })->valueOrThrow().str(), "E"
+			);
+		}
 
 		static std::string mangle(query::Context&, tsh::StringAbstractType) { return "s"; }
 
@@ -584,6 +596,10 @@ namespace compiler::helios::mangler {
 				return mangle(ctx, type.as<tsh::RawPointerAbstractType>());
 			case Pointer:
 				return mangle(ctx, type.as<tsh::PointerAbstractType>());
+			case ManyPointer:
+				return mangle(ctx, type.as<tsh::ManyPointerAbstractType>());
+			case CPointer:
+				return mangle(ctx, type.as<tsh::CPointerAbstractType>());
 			case String:
 				return mangle(ctx, type.as<tsh::StringAbstractType>());
 			case Function:
