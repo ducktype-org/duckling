@@ -47,11 +47,10 @@ fun main() -> i64 = {
         builtin_output_i64(x);  # 1, 2
     }
     
-    # TODOP: R-Value collections
-    # printSeparator(); 
-    # for (x in get_arr()) {      # This works by accident on LLVM, errors on DVM. We should probably move the value into a temporary if it's r-value?
-    #     builtin_output_i64(x);  # 100, 200
-    # }
+    printSeparator(); 
+    for (x in get_arr()) {      # This moves the r-value to a variable and doesn't operate on a reference like the others.
+        builtin_output_i64(x);  # 100, 200
+    }
 
     printSeparator(); 
     var ref_sarr = &static_arr;

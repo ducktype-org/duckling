@@ -76,7 +76,7 @@ namespace compiler::helios {
 	/**
 	 * @return PST element symbol was created from.
 	 */
-	base::Optional<pst::AccessLocked<pst::LangElement>> symbolPst(SymID);
+	base::Optional<pst::AccessLocked<pst::LangElement>> maybeSymbolPst(SymID);
 
 	/**
 	 * @return PST element symbol was created from,

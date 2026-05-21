@@ -39,7 +39,7 @@ Tests:
       all:
         backend: all
         Output:
-          String: "888\n1\n2\n888\n123\n123\n888\n1\n2\n888\n1\n2\n888\n1\n1\n2\n2\n1\n2\n888\n1\n2\n3\n4\n888\n1\n0\n"
+          String: "888\n1\n2\n888\n123\n123\n888\n1\n2\n888\n100\n200\n888\n1\n2\n888\n1\n1\n2\n2\n1\n2\n888\n1\n2\n3\n4\n888\n1\n0\n"
         ExitCode: 0
 
   for_dynamic:

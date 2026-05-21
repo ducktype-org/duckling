@@ -75,7 +75,7 @@ namespace compiler::helios::defgen {
 
 			// - Assign each field with the initializing expression or a default value expression.
 			for (const auto& field: fields) {
-				const auto field_pst_data = symbolPst(field.getSymbol())
+				const auto field_pst_data = maybeSymbolPst(field.getSymbol())
 				                                .value()
 				                                .unlock(ctx)
 				                                .dynamicCast<pst::Field>()

@@ -633,81 +633,6 @@ private:
 			);
 		}
 
-		// ============================ Other errors ============================
-		{
-			checkForErrorOnCompileModule(
-				R"(fun a() = 100000000000000000000000;)", { "Numeric literal value is too large" }, 1
-			);
-			checkForErrorOnCompileModule(
-				R"(fun a() = 1000i8;)",
-				{ "Literal doesn't fit in the declared signed integer type." },
-				1
-			);
-			checkForErrorOnCompileModule(
-				R"(
-				fun main() -> i64 = {
-					builtin_output_string("This is an unknown escape sequence: \c");
-					return 0;
-				}
-			)",
-				{ "unknown escape sequence" },
-				1
-			);
-
-			checkForErrorOnCompileModule(
-				R"(
-				fun main() -> i64 = {
-					var n = 42;
-                    if (true) {
-                        var n = 24;
-                        builtin_output_i64(n);
-                    }
-				}
-			)",
-				{ "Variable name is ambiguous, because it has been defined multiple times.",
-			      "Found declaration:" },
-				1
-			);
-
-			// We don't see any query errors here, because they are logged by the PST:
-			checkForErrorOnCompileModule(
-				R"(
-				fun main() -> i64 = {
-					if () {}
-					return 0;
-				}
-			)",
-				{},
-				0
-			);
-
-			// Check for multiple errors, note that we only see 1 error, because the other one is
-			// logged by the PST.
-			checkForErrorOnCompileModule(
-				R"(
-				fun main() -> i64 = {
-					if () {}
-					return 0;
-				}
-
-				fun foo() -> i64 = {
-					return "a";
-				}
-			)",
-				{},
-				1
-			);
-
-			checkForErrorOnCompileModule(
-				R"(
-				import foo;
-
-				let x = foo.z;
-			)",
-				{ "Module not found." },
-				1
-			);
-		}
 		// ============================ Static Arrays ============================
 		{
 			checkForErrorOnCompileModule(
@@ -1066,9 +991,84 @@ private:
 			);
 		}
 
-		// Blocks are having correct scopes
-		checkForErrorOnCompileModule(
-			R"(
+		// ============================ Other errors ============================
+		{
+			checkForErrorOnCompileModule(
+				R"(fun a() = 100000000000000000000000;)", { "Numeric literal value is too large" }, 1
+			);
+			checkForErrorOnCompileModule(
+				R"(fun a() = 1000i8;)",
+				{ "Literal doesn't fit in the declared signed integer type." },
+				1
+			);
+			checkForErrorOnCompileModule(
+				R"(
+				fun main() -> i64 = {
+					builtin_output_string("This is an unknown escape sequence: \c");
+					return 0;
+				}
+			)",
+				{ "unknown escape sequence" },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				R"(
+				fun main() -> i64 = {
+					var n = 42;
+                    if (true) {
+                        var n = 24;
+                        builtin_output_i64(n);
+                    }
+				}
+			)",
+				{ "Variable name is ambiguous, because it has been defined multiple times.",
+			      "Found declaration:" },
+				1
+			);
+
+			// We don't see any query errors here, because they are logged by the PST:
+			checkForErrorOnCompileModule(
+				R"(
+				fun main() -> i64 = {
+					if () {}
+					return 0;
+				}
+			)",
+				{},
+				0
+			);
+
+			// Check for multiple errors, note that we only see 1 error, because the other one is
+			// logged by the PST.
+			checkForErrorOnCompileModule(
+				R"(
+				fun main() -> i64 = {
+					if () {}
+					return 0;
+				}
+
+				fun foo() -> i64 = {
+					return "a";
+				}
+			)",
+				{},
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				R"(
+				import foo;
+
+				let x = foo.z;
+			)",
+				{ "Module not found." },
+				1
+			);
+
+			// Blocks are having correct scopes
+			checkForErrorOnCompileModule(
+				R"(
 				block globals {
 					var x = 0;
 				}
@@ -1081,10 +1081,11 @@ private:
 					}
 					x;
 				}
-		)",
-			{ "Symbol", "not found" },
-			1
-		);
+			)",
+				{ "Symbol", "not found" },
+				1
+			);
+		}
 	}
 
 	/**

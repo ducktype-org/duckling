@@ -76,17 +76,15 @@ namespace compiler::helios {
 	bool isGlobalVar(query::Context& ctx, SymID id) {
 		CORE_ASSERT(getSymRef(id)->common.kind == SymbolKind::Variable, "Not a variable.");
 
-		// TODOP: Here.
+		// Generated symbol might have appeared here when adding new generated locals into the
+		// function when desugaring for loops. We filter them out here since rest of the function
+		// assumes we have a PST symbol.
 		CRef<SymbolData> symbol_data = getSymRef(id);
 		if (std::holds_alternative<defgen::GeneratedSymbolData>(symbol_data->other)) {
 			auto gsd = std::get<defgen::GeneratedSymbolData>(symbol_data->other);
 			variant_match(gsd.data) {
-				variant_case_novalue(
-					defgen::GeneratedSymbolData::SelfParameter,
-					defgen::GeneratedSymbolData::Field,
-					defgen::GeneratedSymbolData::Variable,
-					defgen::GeneratedSymbolData::ControlFlowLocal
-				) return false;
+				variant_case_novalue(defgen::GeneratedSymbolData::ControlFlowLocal) return false;
+				variant_default CORE_PANIC("Unhandled generated symbol in `isGlobalVar()`");
 			}
 		}
 
@@ -167,12 +165,6 @@ namespace compiler::helios {
 		return getSymRef(id)->stmtCast(ctx);
 	}
 
-	base::Optional<pst::AccessLocked<pst::LangElement>> symbolPst(SymID id) {
-		return getSymRef(id)->getPSTDataOpt().map([](auto pst_data) {
-			return pst_data->getElement();
-		});
-	}
-
 	base::Optional<pst::AccessLocked<pst::LangElement>> maybeSymbolPst(SymID id) {
 		return getSymRef(id)->getPSTDataOpt().map([](CRef<PstSymbolData> data) {
 			return data->getElement();
@@ -189,7 +181,7 @@ namespace compiler::helios {
 		// 6. Prepend the module name
 
 		std::string                                         out = "";
-		base::Optional<pst::AccessLocked<pst::LangElement>> pst = symbolPst(sym);
+		base::Optional<pst::AccessLocked<pst::LangElement>> pst = maybeSymbolPst(sym);
 		do {
 			if (!pst.value().unlock(ctx)->getParent()) break;
 			auto stmt = pst->unlock(ctx).dynamicCast<pst::Stmt>();

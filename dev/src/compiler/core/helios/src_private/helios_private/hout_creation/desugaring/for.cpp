@@ -7,6 +7,7 @@
 #include "helios/hout/origin.hpp"
 #include "helios/symbols/query_type_of_symbol.hpp"
 #include "helios/symbols/symbol_id.hpp"
+#include "helios/tsh/kind.hpp"
 #include "helios/tsh/queries/types.hpp"
 #include "helios/tsh/symbol_type.hpp"
 #include "helios/tsh/value_category.hpp"
@@ -34,6 +35,7 @@ namespace compiler::helios::desugaring {
 
 			// Iterable info.
 			tsh::SymbolType<> iterable_type;
+			bool              collection_is_l_value;
 			tsh::SymbolType<> col_type;
 			Box<code::Expr>   iterable_hout;
 		};
@@ -46,9 +48,13 @@ namespace compiler::helios::desugaring {
 			auto iterable_hout_res = ctx.query<QueryHoutOfExpr>({ iterable_pst });
 			if (iterable_hout_res->hasFailed()) return {};
 
-			auto iterable_hout = iterable_hout_res->valueOrThrow()->clone();
-			auto iterable_type = iterable_hout->expression_type.getSymbolType();
-			auto kind          = iterable_type.getType().getKind();
+			Box<code::Expr>      iterable_hout = iterable_hout_res->valueOrThrow()->clone();
+			tsh::SymbolType<>    iterable_type = iterable_hout->expression_type.getSymbolType();
+			tsh::Kind            kind          = iterable_type.getType().getKind();
+			tsh::PrimaryCategory value_category
+				= iterable_hout->expression_type.getValueCategory().getCategory();
+			bool iterable_is_r_value = value_category == tsh::PrimaryCategory::Literal
+			                        || value_category == tsh::PrimaryCategory::Temporary;
 
 			if (kind != tsh::Kind::DynamicArray && kind != tsh::Kind::StaticArray) {
 				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
@@ -65,15 +71,18 @@ namespace compiler::helios::desugaring {
 			);
 
 			return ForDesugarCtx{
-				.ctx            = ctx,
-				.stmt           = stmt,
-				.for_scope      = ctx.query<QueryPrimaryCodeScopeFor>({ stmt }),
-				.loop_origin    = code::pstOrigin(stmt),
-				.u64_mut_type   = u64_mut,
-				.u64_immut_type = u64_mut.withMutability(tsh::Mutability::Immutable),
-				.iterable_type  = iterable_type,
-				.col_type       = iterable_type.withReferenceKind(tsh::ReferenceKind::Ref),
-				.iterable_hout  = std::move(iterable_hout),
+				.ctx                   = ctx,
+				.stmt                  = stmt,
+				.for_scope             = ctx.query<QueryPrimaryCodeScopeFor>({ stmt }),
+				.loop_origin           = code::pstOrigin(stmt),
+				.u64_mut_type          = u64_mut,
+				.u64_immut_type        = u64_mut.withMutability(tsh::Mutability::Immutable),
+				.iterable_type         = iterable_type,
+				.collection_is_l_value = not iterable_is_r_value,
+				.col_type              = iterable_is_r_value
+				                           ? iterable_type
+				                           : iterable_type.withReferenceKind(tsh::ReferenceKind::Ref),
+				.iterable_hout         = std::move(iterable_hout),
 			};
 		}
 
@@ -103,16 +112,13 @@ namespace compiler::helios::desugaring {
 			const auto gen = code::generatedOrigin();
 
 			Box<code::Expr> collection_expr = [&]() -> Box<code::Expr> {
-				tsh::PrimaryCategory value_category
-					= ctx.iterable_hout->expression_type.getValueCategory().getCategory();
-				if (value_category == tsh::PrimaryCategory::Literal
-				    || value_category == tsh::PrimaryCategory::Temporary) {
+				if (ctx.collection_is_l_value) {
+					// If the collection if it's an l-value we operate on it through a ref.
+					return makeBox<code::RefOfExpr>(ctx.ctx, gen, std::move(ctx.iterable_hout));
+				} else {
 					// If the collection is a r-value we store it in the `__collection` variable
 					// directly.
 					return std::move(ctx.iterable_hout);
-				} else {
-					// If the collection if it's an l-value we operate on it through a ref.
-					return makeBox<code::RefOfExpr>(ctx.ctx, gen, std::move(ctx.iterable_hout));
 				}
 			}();
 
@@ -140,13 +146,20 @@ namespace compiler::helios::desugaring {
 			auto len_expr = [&]() -> Box<code::Expr> {
 				switch (ctx.iterable_type.getType().getKind()) {
 				case tsh::Kind::DynamicArray: {
+					auto collection_expr = [&]() -> Box<code::Expr> {
+						if (ctx.collection_is_l_value) {
+							// If collection was an l-value we have to dereference it since we
+							// operate on it through a ref.
+							return makeBox<code::DerefExpr>(
+								ctx.ctx, gen, makeBox<code::IdentifierExpr>(ctx.ctx, gen, col_sym)
+							);
+						} else {
+							return makeBox<code::IdentifierExpr>(ctx.ctx, gen, col_sym);
+						}
+					}();
+
 					return makeBox<code::UnaryOperatorExpr>(
-						ctx.ctx,
-						gen,
-						code::BuiltinUnary::Len,
-						makeBox<code::DerefExpr>(
-							ctx.ctx, gen, makeBox<code::IdentifierExpr>(ctx.ctx, gen, col_sym)
-						)
+						ctx.ctx, gen, code::BuiltinUnary::Len, std::move(collection_expr)
 					);
 				}
 				case tsh::Kind::StaticArray: {
@@ -230,14 +243,20 @@ namespace compiler::helios::desugaring {
 			auto idx_ref   = [&] { return makeBox<code::IdentifierExpr>(ctx.ctx, gen, idx_sym); };
 
 			// __collection[__idx]
-			Box<code::Expr> raw_element = makeBox<code::IndexExpr>(
-				ctx.ctx,
-				gen,
-				makeBox<code::DerefExpr>(
-					ctx.ctx, gen, makeBox<code::IdentifierExpr>(ctx.ctx, gen, col_sym)
-				),
-				idx_ref()
-			);
+
+			Box<code::Expr> collection_expr = [&]() -> Box<code::Expr> {
+				if (ctx.collection_is_l_value) {
+					// If collection was an l-value we have to dereference it since we
+					// operate on it through a ref.
+					return makeBox<code::DerefExpr>(
+						ctx.ctx, gen, makeBox<code::IdentifierExpr>(ctx.ctx, gen, col_sym)
+					);
+				} else {
+					return makeBox<code::IdentifierExpr>(ctx.ctx, gen, col_sym);
+				}
+			}();
+			Box<code::Expr> raw_element
+				= makeBox<code::IndexExpr>(ctx.ctx, gen, std::move(collection_expr), idx_ref());
 
 			auto element_expr = coerceElementToIter(ctx, std::move(raw_element), iter_type);
 			if (!element_expr.has_value()) return {};
@@ -253,6 +272,7 @@ namespace compiler::helios::desugaring {
 			auto user_body = process_body(ctx.stmt->getBody());
 			for (auto& s: user_body.statements) body.statements.emplace_back(std::move(s));
 
+			// @TODO: #2465 When adding `continue` etc. remember to not jump over the increment line.
 			// __idx = __idx + 1;
 			auto one = makeBox<code::LiteralNumericExpr>(
 				ctx.ctx,
@@ -336,9 +356,15 @@ namespace compiler::helios::desugaring {
 	base::Optional<code::BlockStmt> desugarFor(
 		query::Context& ctx, pst::Access<pst::For> stmt, const BodyProcessor& process_body
 	) {
+		std::cout << "DESUGAR\n";
 		auto ctx_opt = buildForDesugarCtx(ctx, stmt);
 		if (!ctx_opt.has_value()) return {};
 		auto& for_ctx = ctx_opt.value();
+
+		if (for_ctx.collection_is_l_value)
+			std::cout << "LVALUE\n";
+		else
+			std::cout << "RVALUE\n";
 
 		// Create the needed symbols.
 		SymID col_sym  = makeForLocal(for_ctx, base::StrID("__collection"), for_ctx.col_type);

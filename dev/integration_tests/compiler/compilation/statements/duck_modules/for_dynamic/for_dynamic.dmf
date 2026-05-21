@@ -1,4 +1,3 @@
-# TODOP: Future continue issue jumping over the index incrementation.
 # TODOP: Shadowing
 
 fun printSeparator() -> () = {

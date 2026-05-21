@@ -201,7 +201,7 @@ namespace compiler::helios::mangler {
 			} else {
 				std::vector<std::string> path_parts;
 
-				auto ancestor     = symbolPst(symbol_id).value().unlock(ctx);
+				auto ancestor     = maybeSymbolPst(symbol_id).value().unlock(ctx);
 				auto ancestor_opt = getPSTElementParent(ctx, ancestor);
 
 				while (ancestor_opt.isLangElement()) {

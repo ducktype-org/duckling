@@ -107,8 +107,11 @@ namespace compiler::helios::defgen {
 		};
 
 		/**
-		 * Represents a compiler-generated variable (not parameter) in a function. This function may
-		 * itself be compiler-generated, such as the `ImplicitConstructor`.
+		 * Represents a compiler-generated variable (not parameter) in a function inside a compiler
+		 * generated function, such as the `ImplicitConstructor`. This variable is uniquely
+		 * identified by it's index and belongs to a generated function.
+		 * @note When inserting variables into regular (not generated functions), where getting a
+		 * `variable_index` is unachievable use `ControlFlowLocal`.
 		 */
 		struct Variable final {
 			SymID function_symbol;  // The symbol of the function this variable belongs to.
@@ -121,15 +124,23 @@ namespace compiler::helios::defgen {
 		};
 
 		/**
-		 * Represents a compiler-generated variable (not parameter) in a function. This function may
-		 * itself be compiler-generated, such as the `ImplicitConstructor`.
-		 * TODOP: Docs.
+		 * @brief Represents a compiler-generated local variable injected into a specific scope
+		 * during desugaring.
+		 *
+		 * Unlike `Variable`, which is used for synthesizing whole function bodies,
+		 * `ControlFlowLocal` is used when lowering complex statements (like `for` loops) into
+		 * simpler building blocks. It represents auxiliary variables (e.g., iterators, hidden
+		 * collection references, loop counters) that live within a specific scope.
+		 *
+		 * These variables identified by the scope they belong to and their `role` (typically their
+		 * name).
 		 */
 		struct ControlFlowLocal final {
-			ScopeID     owning_scope;
-			base::StrID role;
+			ScopeID     owning_scope;  /// Scope that this local belongs to.
+			base::StrID role;  /// Role of the variable (typically it's name). Needed to distinguish
+			                   /// between many Locals inserted into the same scope.
 			// @TODO: #2515 Remove this
-			tsh::SymbolType<> type;
+			tsh::SymbolType<> type;  /// The type of the variable;
 
 			[[nodiscard]]
 			base::Bit256 queryUnstablePerfectHash() const;

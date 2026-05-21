@@ -175,19 +175,34 @@ namespace compiler::mir {
 							                               ? std::tuple{ base::Ref(&local), def }
 							                               : std::tuple{ def, base::Ref(&local) };
 
-							// TODOP: This is broken.
 							auto get_pos = [&](auto local_ref) {
-								return helios::symbolPst(local_ref->helios_id.value())
-								    .value()
-								    .unlock(ctx)
-								    ->getStablePosition();
+								return helios::maybeSymbolPst(local_ref->helios_id.value())
+								    .map([&](const auto& pst) {
+										return pst.unlock(ctx)->getStablePosition();
+									});
 							};
-							auto msg = makeBox<VariableShadowingError>(get_pos(shadowing));
-							msg->addAttachedMessage(
-								makeBox<ShadowedDeclarationNote>(get_pos(shadowed))
-							);
-							ctx.logInt(std::move(msg));
-							return base::BAD;
+							auto shadowing_pos = get_pos(shadowing);
+							auto shadowed_pos  = get_pos(shadowed);
+
+							if (shadowing_pos && shadowed_pos) {
+								auto msg = makeBox<VariableShadowingError>(*shadowing_pos);
+								msg->addAttachedMessage(
+									makeBox<ShadowedDeclarationNote>(*shadowed_pos)
+								);
+								ctx.logInt(std::move(msg));
+								return base::BAD;
+							} else {
+								ctx.logInt(makeBox<dia_int::PlaceholderError>(
+									"Variable shadowing detected.",
+									base::strConcat(
+										"The exact code location is unavailable because the "
+										"variable is compiler generated. ",
+										"The shadowing happened for the symbol `",
+										shadowing->getName(),
+										"`."
+									)
+								));
+							}
 						}
 					}
 					prev_defs->emplace_back(&local);

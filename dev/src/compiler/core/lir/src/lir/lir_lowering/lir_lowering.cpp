@@ -849,7 +849,7 @@ namespace compiler::lir {
 				FunctionMetadata metadata;
 				auto&            mir_func = key.function;
 				if (auto func_id = std::get_if<mir::FunctionSymID>(&mir_func->helios_id)) {
-					if (auto pst_elem = helios::symbolPst(func_id->id)) {
+					if (auto pst_elem = helios::maybeSymbolPst(func_id->id)) {
 						metadata.position         = (*pst_elem).unlock(ctx)->getStablePosition();
 						metadata.source_code_name = helios::name(func_id->id);
 					}
