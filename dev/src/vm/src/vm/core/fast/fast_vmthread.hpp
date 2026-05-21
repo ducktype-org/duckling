@@ -32,7 +32,7 @@ namespace vm::fast {
 		void execGlobalDestructors() override;
 
 	private:
-		i64 exit_value;
+		i64 exit_value = 0;
 
 		FastVMProcess& fast_process;
 

@@ -5,7 +5,6 @@
 #include "vm/core/fast/program/instructions/executable.hpp"
 #include "vm/core/fast/program/program.hpp"
 #include "vm/core/process/interface_types.hpp"
-#include "vm/core/safe/type_metadata/definitions.hpp"
 #include "vm/core/thread/ivmthread.hpp"
 #include "vm/core/thread/kill_process_exception.hpp"
 #include "vm/utils/vm_not_implemented.hpp"
