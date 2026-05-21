@@ -190,7 +190,6 @@ namespace compiler::mir {
 									makeBox<ShadowedDeclarationNote>(*shadowed_pos)
 								);
 								ctx.logInt(std::move(msg));
-								return base::BAD;
 							} else {
 								ctx.logInt(makeBox<dia_int::PlaceholderError>(
 									"Variable shadowing detected.",
@@ -203,6 +202,7 @@ namespace compiler::mir {
 									)
 								));
 							}
+							return base::BAD;
 						}
 					}
 					prev_defs->emplace_back(&local);

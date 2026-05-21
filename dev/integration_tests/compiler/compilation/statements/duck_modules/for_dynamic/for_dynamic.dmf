@@ -1,5 +1,3 @@
-# TODOP: Shadowing
-
 fun printSeparator() -> () = {
     builtin_output_i64(888);
 }

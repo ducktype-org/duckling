@@ -1,26 +1,25 @@
 #include "for.hpp"
 
-#include "frontend/pst_parser/access.hpp"
-#include "frontend/pst_parser/elements/hierarchy/declarations/for.hpp"
-#include "helios/hout/elements/expr.hpp"
-#include "helios/hout/elements/stmt.hpp"
-#include "helios/hout/origin.hpp"
-#include "helios/symbols/query_type_of_symbol.hpp"
-#include "helios/symbols/symbol_id.hpp"
-#include "helios/tsh/kind.hpp"
-#include "helios/tsh/queries/types.hpp"
-#include "helios/tsh/symbol_type.hpp"
-#include "helios/tsh/value_category.hpp"
-#include "helios_private/comp_time/comp_time.hpp"
-#include "helios_private/hout_creation/expressions/coercions.hpp"
-#include "helios_private/hout_creation/expressions/query_hout_of_expr.hpp"
-#include "helios_private/scopes/scopes.hpp"
-#include "helios_private/symbols/symbols.hpp"
+#include <frontend/pst_parser/access.hpp>
+#include <helios/hout/elements/expr.hpp>
+#include <helios/hout/elements/stmt.hpp>
+#include <helios/hout/origin.hpp>
+#include <helios/symbols/query_type_of_symbol.hpp>
+#include <helios/symbols/symbol_id.hpp>
+#include <helios/tsh/kind.hpp>
+#include <helios/tsh/queries/types.hpp>
+#include <helios/tsh/symbol_type.hpp>
+#include <helios/tsh/value_category.hpp>
+#include <helios_private/comp_time/comp_time.hpp>
+#include <helios_private/hout_creation/expressions/coercions.hpp>
+#include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
+#include <helios_private/scopes/scopes.hpp>
+#include <helios_private/symbols/symbols.hpp>
 
-#include "base/collections/optional.hpp"
+#include <base/collections/optional.hpp>
 
-#include "query_framework/context/context.hpp"
-#include "string_id/string_id.hpp"
+#include <query_framework/context/context.hpp>
+#include <string_id/string_id.hpp>
 
 namespace compiler::helios::desugaring {
 	namespace {
