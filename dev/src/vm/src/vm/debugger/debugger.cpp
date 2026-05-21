@@ -53,12 +53,10 @@ namespace vm::debugger {
 		vm::api::getExecutionStatus(pid)
 			.and_then([&](const vm::api::ProcStatus& status) {
 				if (!std::holds_alternative<api::NotStarted>(status))
-					return std::expected<void, vm::api::ApiError>{};
+					return vm::api::kill(pid);
 
-				return std::expected<void, vm::api::ApiError>{ std::unexpected(vm::api::ApiError{
-					vm::api::OtherError{ "VM was not even runned..." } }) };
+				return std::expected<void, vm::api::ApiError>{};
 			})
-			.and_then([&] { return vm::api::kill(pid); })
 			.transform_error([&](const vm::api::ApiError& api_error) {
 				on_error.emitEvent(vm::api::errorToString(api_error));
 				return api_error;

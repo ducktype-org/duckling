@@ -61,7 +61,11 @@ namespace vm::debugger::cli {
 			std::getline(std::cin, line);
 			stripped_line = strip(line);
 
-			if (stripped_line == "quit" || stripped_line == "q" || stripped_line == "exit") return 0;
+			if (stripped_line == "quit" || stripped_line == "q" || stripped_line == "exit") {
+				std::lock_guard lk(output_mutex);
+				std::cout << "Exiting debugger...\n" << std::endl;
+				return 0;
+			}
 
 			if (stripped_line == "run" || stripped_line == "r") {
 				debugger.runMain();
