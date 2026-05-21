@@ -19,8 +19,8 @@ namespace {
 namespace vm::debugger {
 	Debugger::Debugger(const std::vector<std::string>& main_args):
 		  main_args(main_args),
-		  updater([&](const vm::api::ProcStatus& status) {
-			  on_vm_changes_status.emitEvent(status);
+		  updater([&](const api::ProcStatus& status) {
+			  on_status_changed.emitEvent(status);
 			  variant_match(status) {
 				  variant_case(api::ExecutionCompleted, completed) {
 					  on_execution_completed.emitEvent(completed.exit_value);
@@ -49,15 +49,15 @@ namespace vm::debugger {
 
 	Debugger::~Debugger() {
 		updater.detach();
-		vm::api::getExecutionStatus(pid)
-			.and_then([&](const vm::api::ProcStatus& status) {
+		api::getExecutionStatus(pid)
+			.and_then([&](const api::ProcStatus& status) {
 				if (!std::holds_alternative<api::NotStarted>(status))
-					return vm::api::kill(pid);
+					return api::kill(pid);
 
-				return std::expected<void, vm::api::ApiError>{};
+				return std::expected<void, api::ApiError>{};
 			})
-			.transform_error([&](const vm::api::ApiError& api_error) {
-				on_error.emitEvent(vm::api::errorToString(api_error));
+			.transform_error([&](const api::ApiError& api_error) {
+				on_error.emitEvent(api::errorToString(api_error));
 				return api_error;
 			});
 	}

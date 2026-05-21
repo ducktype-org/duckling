@@ -9,7 +9,7 @@ namespace {
 }
 
 namespace vm::debugger::cli {
-	namespace idv = vm::interpreted_data_variant;
+	namespace idv = interpreted_data_variant;
 
 	CLIDebugger::CLIDebugger(const std::vector<std::string>& main_args):
 		  status_change_listener([this](const api::ProcStatus& status) {
@@ -39,9 +39,9 @@ namespace vm::debugger::cli {
 			}
 		  }),
 		  debugger(main_args) {
-		debugger.attachOnVMChangesStatusListener(status_change_listener);
+		debugger.attachOnStatusChangedListener (status_change_listener);
 		debugger.attachOnErrorListener(error_listener);
-		debugger.attachOnVMCompletesExecutionListener(exit_value_listener);
+		debugger.attachOnExecutionCompletedListener(exit_value_listener);
 	}
 	
 	CLIDebugger::CLIDebugger(const fs::File& filepath, const std::vector<std::string>& main_args):
