@@ -75,7 +75,6 @@
 #include <expected>
 #include <functional>
 #include <mutex>
-#include <shared_mutex>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -363,7 +362,7 @@ namespace state_machine {
 		 * See `StateMachine::handleEvent` for more info.
 		 */
 		ResultT handleEvent(const Events& event) {
-			std::unique_lock lock(mutex);
+			std::lock_guard lock(mutex);
 			return machine.handleEvent(event);
 		}
 
@@ -379,7 +378,7 @@ namespace state_machine {
 		template<typename F>
 		requires std::is_invocable_v<F, const States&>
 		auto withState(F&& f) const -> decltype(auto) {
-			std::shared_lock lock(mutex);
+			std::lock_guard lock(mutex);
 			return std::forward<F>(f)(machine.getState());
 		}
 
@@ -389,12 +388,12 @@ namespace state_machine {
 		 * @return The current machine state.
 		 */
 		States getStateCopy() const requires std::copy_constructible<States> {
-			std::shared_lock lock(mutex);
+			std::lock_guard lock(mutex);
 			return machine.getState();
 		}
 
 	private:
-		mutable std::shared_mutex mutex;
-		InnerMachine              machine;
+		mutable std::mutex mutex;
+		InnerMachine       machine;
 	};
 }
