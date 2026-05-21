@@ -1,12 +1,5 @@
 #include "symbols.hpp"
 
-#include "frontend/pst_parser/elements/hierarchy/meta.hpp"
-#include "helios/tsh/kind.hpp"
-#include "helios/tsh/mutability.hpp"
-#include "helios/tsh/symbol_type.hpp"
-#include "helios/tsh/types.hpp"
-#include "helios_private/symbols/generated_symbol_data.hpp"
-
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/all_class_elements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
@@ -33,13 +26,11 @@
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
-#include "query_framework/query_errors.hpp"
 #include <query_framework/standard_query/query_impl.hpp>
 #include <string_id/string_id.hpp>
 
 #include <functional>
 #include <unordered_set>
-#include <variant>
 #include <vector>
 
 namespace compiler::helios {
@@ -496,7 +487,6 @@ namespace compiler::helios {
 			// CodeDecl include things like named ifs, whiles, fors and code blocks.
 			// Note that this function should only be called if the statement creates a symbol, so
 			// we can assume that it is only named ones.
-			// TODOP: Here? Probably not
 			return SymbolData::makePSTSymbolData(
 				{
 					.name = stmt->getDeclSymbolIdentifier()->unlock(ctx)->unwrap(),

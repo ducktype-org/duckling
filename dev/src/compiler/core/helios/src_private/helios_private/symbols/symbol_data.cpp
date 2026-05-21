@@ -1,7 +1,5 @@
 #include "symbol_data.hpp"
 
-#include "helios_private/symbols/generated_symbol_data.hpp"
-
 #include <helios/scope_id.hpp>
 #include <helios/symbols/query_class_of_member.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
@@ -12,9 +10,6 @@
 
 #include <base/except/exceptions.hpp>
 #include <base/str/str_utils.hpp>
-
-#include "hashing/hash.hpp"
-#include "hashing/hashing_algorithms.hpp"
 
 namespace compiler::helios {
 	namespace defgen {

@@ -1,12 +1,8 @@
 #pragma once
 
-#include "frontend/pst_parser/access.hpp"
-#include "frontend/pst_parser/elements/hierarchy/expr_holders.hpp"
-#include "frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp"
-#include "frontend/pst_parser/elements/hierarchy/not_statements/wrapper_elements/identifier_wrapper.hpp"
 #include "preamble.hpp"
 
-#include "base/collections/optional.hpp"
+#include <base/collections/optional.hpp>
 
 namespace pst {
 	/**

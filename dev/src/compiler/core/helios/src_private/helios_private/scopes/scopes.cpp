@@ -1,10 +1,5 @@
 #include "scopes.hpp"
 
-#include "frontend/pst_parser/access.hpp"
-#include "frontend/pst_parser/element_kind.hpp"
-#include "helios_private/hout_creation/expressions/query_hout_of_expr.hpp"
-#include "helios_private/symbols/generated_symbol_data.hpp"
-
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
@@ -543,8 +538,6 @@ namespace compiler::helios {
 				// and add them here.
 				output(std::vector<SymID>{});
 			}
-
-			u64 forStableIndex(pst::Access<pst::For> stmt) { return stmt->getID().asInt(); }
 
 			void visitFor(pst::Access<pst::For> for_stmt) override {
 				std::vector<SymID> out;

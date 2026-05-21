@@ -4,7 +4,6 @@
  */
 #pragma once
 
-#include "frontend/pst_parser/access.hpp"
 #include "generated_symbol_data.hpp"
 
 #include <ctv/ctv.hpp>
@@ -14,7 +13,6 @@
 
 #include <base/types/bit256.hpp>
 
-#include "query_framework/context/context.hpp"
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_result.hpp>
 #include <string_id/string_id.hpp>

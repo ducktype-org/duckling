@@ -1,15 +1,5 @@
 #include "hout_stmt_compilation.hpp"
 
-#include "ctv/numeric_value.hpp"
-#include "helios/hout/elements/expr.hpp"
-#include "helios/hout/elements/stmt.hpp"
-#include "helios/tsh/kind.hpp"
-#include "helios/tsh/mutability.hpp"
-#include "helios/tsh/types.hpp"
-#include "helios_private/hout_creation/expressions/coercions.hpp"
-#include "helios_private/scopes/scopes.hpp"
-#include "helios_private/symbols/generated_symbol_data.hpp"
-
 #include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/elements/hierarchy/actions/all_actions.hpp>
 #include <frontend/pst_parser/elements/hierarchy/actions/return.hpp>
@@ -29,20 +19,16 @@
 #include <helios_private/errors/dia_interactive_elements.hpp>
 #include <helios_private/errors/errors.hpp>
 #include <helios_private/hout_creation/definition_generation/default_constructors.hpp>
+#include <helios_private/hout_creation/expressions/coercions.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/pst_layer/stmts_from_aggregate.hpp>
+#include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
-#include "base/except/exceptions.hpp"
-#include "base/pointers/box.hpp"
-#include "base/str/str_utils.hpp"
 #include <base/collections/optional.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
-#include "string_id/string_id.hpp"
 #include <query_framework/query_errors.hpp>
-
-#include <utility>
 
 namespace compiler::helios {
 
@@ -368,10 +354,6 @@ namespace compiler::helios {
 		}
 
 		void visitFor(pst::Access<pst::For> stmt) override {
-			std::cout << "======== LOWERING FOR ========\n";
-			// stmt->debugPrint(std::cout);
-			std::cout << '\n';
-
 			// Preamble. Get some basic data.
 			using GeneratedSymbolData = defgen::GeneratedSymbolData;
 			using ControlFlowLocal    = GeneratedSymbolData::ControlFlowLocal;
@@ -392,9 +374,6 @@ namespace compiler::helios {
 			auto iterable_hout = iterable_hout_res->valueOrThrow()->clone();
 			auto iterable_type = iterable_hout->expression_type.getSymbolType();
 			auto iterable_kind = iterable_type.getType().getKind();
-
-			std::cout << "iterable type: " << iterable_type.toString() << '\n';
-
 
 			if (iterable_kind != tsh::Kind::DynamicArray
 			    && iterable_kind != tsh::Kind::StaticArray) {
@@ -417,6 +396,8 @@ namespace compiler::helios {
 
 			// Create the needed symbols.
 			auto create_var = [&](base::StrID role, tsh::SymbolType<> type) {
+				// Compose the name with the current scope hash, so we don't have naming collisions
+				// with nested loops.
 				auto unique = for_scope.queryUnstablePerfectHash();
 				auto name   = base::StrID(base::strConcat(role, unique));
 
@@ -438,8 +419,6 @@ namespace compiler::helios {
 			SymID             iter_sym  = getForIteratorSymbol(ctx, stmt);
 			tsh::SymbolType<> iter_type = ctx.query<QueryTypeOfSymbol>(iter_sym)->valueOrThrow();
 
-			std::cout << "iterator type: " << iter_type.toString() << '\n';
-
 			// Desugar the loop.
 			code::CodeBlock outer{};
 			// Create a temp for the collection for it to be evaluated only once before the loop.
@@ -460,6 +439,7 @@ namespace compiler::helios {
 				idx_sym
 			));
 
+			// Length is calculated once before the loop.
 			// let __len: u64 = <len __collection> / <constant>
 			auto len_expr = [&]() -> Box<code::Expr> {
 				switch (iterable_kind) {
@@ -581,7 +561,8 @@ namespace compiler::helios {
 				makeBox<code::WhileStmt>(loop_origin, std::move(condition), std::move(while_body))
 			);
 
-			// Emit it in a block so variable names don't collide if two fors are in the same function.
+			// Emit it in a block so variable names don't collide if two fors are in the same
+			// function and for the collection scope to be not accessible from outside the for loop.
 			output(code::BlockStmt(loop_origin, std::move(outer)));
 		}
 
