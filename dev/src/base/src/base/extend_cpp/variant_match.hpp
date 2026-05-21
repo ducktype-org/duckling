@@ -109,10 +109,10 @@ namespace base {
 	[[fallthrough]];                           \
 	case (::base::variantTypeIndex<decltype(internal_value), type>()):
 
-#define variant_case_novalue(type, ...)                                          \
-	break;                                                                       \
-	case (::base::internal::alternativeIndex<decltype(internal_value), type>()): \
-		FOR_EACH(variant_match_novalue_extra_case, __VA_ARGS__)                  \
+#define variant_case_novalue(type, ...)                                \
+	break;                                                             \
+	case (::base::variantTypeIndex<decltype(internal_value), type>()): \
+		FOR_EACH(variant_match_novalue_extra_case, __VA_ARGS__)        \
 		if (true)
 
 #define variant_default \

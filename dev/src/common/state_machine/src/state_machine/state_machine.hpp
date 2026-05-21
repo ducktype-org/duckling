@@ -130,55 +130,26 @@ namespace state_machine {
 	class StateMachineDefinition final {
 	public:
 		friend class StateMachine<States, Events, ErrorT>;
-		using ActionResultT       = std::expected<States, ErrorT>;
-		using AtomicActionResultT = std::expected<void, ErrorT>;
-		using GuardResultT        = std::expected<void, ErrorT>;
-
-		/**
-		 * @brief Callback type handed to atomic actions so they can
-		 * publish a new state into the owning `StateMachine`. This function is expected to call
-		 * `setState()` when updating the new state.
-		 */
-		using SetStateCallback = std::function<void(States)>;
+		using ActionResultT = std::expected<States, ErrorT>;
 
 	private:
 		// Type-erased handlers, so they can all be stored in the same array.
-		using RawAction       = std::function<ActionResultT(const States&, const Events&)>;
-		using RawAtomicAction = std::function<
-			AtomicActionResultT(const States&, const Events&, const SetStateCallback&)>;
-		using RawGuard = std::function<GuardResultT(const States&, const Events&)>;
-
+		using RawAction = std::function<ActionResultT(const States&, const Events&)>;
 
 		template<typename State, typename Event>
 		requires base::IsVariantMember<State, States> && base::IsVariantMember<Event, Events>
 		using StronglyTypedAction = std::function<ActionResultT(const State&, const Event&)>;
 
-		template<typename State, typename Event>
-		requires base::IsVariantMember<State, States> && base::IsVariantMember<Event, Events>
-		using StronglyTypedAtomicAction
-			= std::function<AtomicActionResultT(const State&, const Event&, const SetStateCallback&)>;
-
-		template<typename State, typename Event>
-		requires base::IsVariantMember<State, States> && base::IsVariantMember<Event, Events>
-		using StronglyTypedGuard = std::function<GuardResultT(const State&, const Event&)>;
-
 		template<typename Event>
 		using GenericAction = std::function<ActionResultT(const States&, const Event&)>;
-		template<typename Event>
-		using GenericAtomicAction
-			= std::function<AtomicActionResultT(const States&, const Event&, const SetStateCallback&)>;
-		template<typename Event>
-		using GenericGuard = std::function<GuardResultT(const States&, const Event&)>;
 
 		/**
 		 * @brief Represents a single transition entry for a (State, Event) pair.
 		 */
 		struct TransitionEntry {
-			std::variant<RawAction, RawAtomicAction>
-				action;  ///< Either a standard action that returns the new state, or an atomic action
-			             ///< that publishes the new state via a `setState` callback handed to it.
-			base::Optional<RawGuard>
-				guard;  ///< Optional guard to additionally validate if the transition is allowed.
+			RawAction action;  ///< Either a standard action that returns the new state, or an
+			                   ///< atomic action that publishes the new state via a `setState`
+			                   ///< callback handed to it.
 		};
 
 		static constexpr usize NUM_STATES = std::variant_size_v<States>;
@@ -210,10 +181,7 @@ namespace state_machine {
 		 */
 		template<typename State, typename Event>
 		requires base::IsVariantMember<State, States> && base::IsVariantMember<Event, Events>
-		void addTransition(
-			StronglyTypedAction<State, Event>                action,
-			base::Optional<StronglyTypedGuard<State, Event>> guard = {}
-		) {
+		void addTransition(StronglyTypedAction<State, Event> action) {
 			const usize state_idx = base::variantTypeIndex<States, State>();
 			const usize event_idx = base::variantTypeIndex<Events, Event>();
 			ASSERT_TRANSITION_NOT_REGISTERED(state_idx, event_idx);
@@ -223,16 +191,7 @@ namespace state_machine {
 				return action(std::get<State>(s), std::get<Event>(e));
 			};
 
-			base::Optional<RawGuard> raw_guard{};
-			if (guard.has_value()) {
-				raw_guard =
-					[guard = std::move(*guard)](const States& s, const Events& e) -> GuardResultT {
-					return guard(std::get<State>(s), std::get<Event>(e));
-				};
-			}
-
-			transitions.at(state_idx).at(event_idx)
-				= TransitionEntry{ std::move(raw_action), std::move(raw_guard) };
+			transitions.at(state_idx).at(event_idx) = TransitionEntry{ std::move(raw_action) };
 		}
 
 		/**
@@ -249,10 +208,8 @@ namespace state_machine {
 		template<typename Event, typename... FromStates>
 		requires(base::IsVariantMember<FromStates, States> && ...)
 		     && base::IsVariantMember<Event, Events>
-		void addTransitions(
-			const GenericAction<Event>& action, const base::Optional<GenericGuard<Event>>& guard = {}
-		) {
-			(addTransitionInternal<FromStates, Event>(action, guard), ...);
+		void addTransitions(const GenericAction<Event>& action) {
+			(addTransitionInternal<FromStates, Event>(action), ...);
 		}
 
 		/**
@@ -265,78 +222,10 @@ namespace state_machine {
 		 * @tparam Event Triggering event type. Must be an alternative of `Events`.
 		 */
 		template<typename Event>
-		requires base::IsVariantMember<Event, Events> void addTransitionFromAllStates(
-			const GenericAction<Event>& action, const base::Optional<GenericGuard<Event>>& guard = {}
-		) {
-			[this, &action, &guard]<usize... Is>(std::index_sequence<Is...>) {
-				(this->addTransitionInternal<std::variant_alternative_t<Is, States>, Event>(
-					 action, guard
-				 ),
-				 ...);
-			}(std::make_index_sequence<NUM_STATES>{});
-		}
-
-		// =========================================================
-		// Atomic transitions
-		// =========================================================
-
-		/**
-		 * @brief Atomic counterpart for `addTransition`. See its docs for more info.
-		 */
-		template<typename State, typename Event>
-		requires base::IsVariantMember<State, States> && base::IsVariantMember<Event, Events>
-		void addAtomicTransition(
-			StronglyTypedAtomicAction<State, Event>          action,
-			base::Optional<StronglyTypedGuard<State, Event>> guard = {}
-		) {
-			const usize state_idx = base::variantTypeIndex<States, State>();
-			const usize event_idx = base::variantTypeIndex<Events, Event>();
-			ASSERT_TRANSITION_NOT_REGISTERED(state_idx, event_idx);
-
-			RawAtomicAction raw_action
-				= [action = std::move(action)](
-					  const States& s, const Events& e, const SetStateCallback& set_state
-				  ) -> AtomicActionResultT {
-				return action(std::get<State>(s), std::get<Event>(e), set_state);
-			};
-
-			base::Optional<RawGuard> raw_guard{};
-			if (guard.has_value()) {
-				raw_guard =
-					[guard = std::move(*guard)](const States& s, const Events& e) -> GuardResultT {
-					return guard(std::get<State>(s), std::get<Event>(e));
-				};
-			}
-
-			transitions.at(state_idx).at(event_idx)
-				= TransitionEntry{ std::move(raw_action), std::move(raw_guard) };
-		}
-
-		/**
-		 * @brief Atomic counter part of `addTransitions`. See its docs for more info.
-		 */
-		template<typename Event, typename... FromStates>
-		requires(base::IsVariantMember<FromStates, States> && ...)
-		     && base::IsVariantMember<Event, Events>
-		void addAtomicTransitions(
-			const GenericAtomicAction<Event>&          action,
-			const base::Optional<GenericGuard<Event>>& guard = {}
-		) {
-			(addAtomicTransitionInternal<FromStates, Event>(action, guard), ...);
-		}
-
-		/**
-		 * @brief Atomic counter part of `addTransitionFromEveryState`. See its docs for more info.
-		 */
-		template<typename Event>
-		requires base::IsVariantMember<Event, Events> void addAtomicTransitionFromAllStates(
-			const GenericAtomicAction<Event>&          action,
-			const base::Optional<GenericGuard<Event>>& guard = {}
-		) {
-			[this, &action, &guard]<usize... Is>(std::index_sequence<Is...>) {
-				(this->addAtomicTransitionInternal<std::variant_alternative_t<Is, States>, Event>(
-					 action, guard
-				 ),
+		requires base::IsVariantMember<Event, Events>
+		void addTransitionFromAllStates(const GenericAction<Event>& action) {
+			[this, &action]<usize... Is>(std::index_sequence<Is...>) {
+				(this->addTransitionInternal<std::variant_alternative_t<Is, States>, Event>(action),
 				 ...);
 			}(std::make_index_sequence<NUM_STATES>{});
 		}
@@ -369,9 +258,7 @@ namespace state_machine {
 		 * transition table.
 		 */
 		template<typename State, typename Event>
-		void addTransitionInternal(
-			const GenericAction<Event>& action, const base::Optional<GenericGuard<Event>> guard
-		) {
+		void addTransitionInternal(const GenericAction<Event>& action) {
 			const usize state_idx = base::variantTypeIndex<States, State>();
 			const usize event_idx = base::variantTypeIndex<Events, Event>();
 			ASSERT_TRANSITION_NOT_REGISTERED(state_idx, event_idx);
@@ -381,48 +268,7 @@ namespace state_machine {
 				return action(s, std::get<Event>(e));
 			};
 
-			// Wrapper over guard so it can be stored next to strongly-typed guards.
-			base::Optional<RawGuard> raw_guard = std::nullopt;
-			if (guard.has_value()) {
-				raw_guard = [guard = *guard](const States& s, const Events& e) -> GuardResultT {
-					return guard(std::get<State>(s), std::get<Event>(e));
-				};
-			}
-
-			transitions.at(state_idx).at(event_idx)
-				= TransitionEntry{ std::move(raw_action), std::move(raw_guard) };
-		}
-
-		/**
-		 * @brief Atomic counterpart of `addTransitionInternal`.
-		 *
-		 * Shared logic used by `addAtomicTransitions` and
-		 * `addAtomicTransitionFromAllStates`.
-		 */
-		template<typename State, typename Event>
-		void addAtomicTransitionInternal(
-			const GenericAtomicAction<Event>& action, const base::Optional<GenericGuard<Event>> guard
-		) {
-			const usize state_idx = base::variantTypeIndex<States, State>();
-			const usize event_idx = base::variantTypeIndex<Events, Event>();
-			ASSERT_TRANSITION_NOT_REGISTERED(state_idx, event_idx);
-
-			// Wrapper over action so it can be stored next to strongly-typed actions.
-			RawAtomicAction raw_action
-				= [action](
-					  const States& s, const Events& e, const SetStateCallback& set_state
-				  ) -> AtomicActionResultT { return action(s, std::get<Event>(e), set_state); };
-
-			// Wrapper over guard so it can be stored next to strongly-typed guards.
-			base::Optional<RawGuard> raw_guard = std::nullopt;
-			if (guard.has_value()) {
-				raw_guard = [guard = *guard](const States& s, const Events& e) -> GuardResultT {
-					return guard(std::get<State>(s), std::get<Event>(e));
-				};
-			}
-
-			transitions.at(state_idx).at(event_idx)
-				= TransitionEntry{ std::move(raw_action), std::move(raw_guard) };
+			transitions.at(state_idx).at(event_idx) = TransitionEntry{ std::move(raw_action) };
 		}
 	};
 
@@ -445,11 +291,9 @@ namespace state_machine {
 	template<typename States, typename Events, typename ErrorT = std::string>
 	class StateMachine final {
 	public:
-		using ResultT          = base::Optional<std::expected<void, ErrorT>>;
-		using StateMachineDef  = StateMachineDefinition<States, Events, ErrorT>;
-		using SetStateCallback = typename StateMachineDef::SetStateCallback;
-		using RawAction        = typename StateMachineDef::RawAction;
-		using RawAtomicAction  = typename StateMachineDef::RawAtomicAction;
+		using ResultT         = base::Optional<std::expected<void, ErrorT>>;
+		using StateMachineDef = StateMachineDefinition<States, Events, ErrorT>;
+		using RawAction       = typename StateMachineDef::RawAction;
 
 		/**
 		 * @brief Constructs a state machine in the given initial state.
@@ -492,53 +336,15 @@ namespace state_machine {
 
 			if (!maybe_transition.has_value()) return std::nullopt;
 			const auto& transition = maybe_transition.value();
+			const auto& raw_action = transition->action;
 
-			// Check the guard first, if one was registered.
-			if (transition->guard.has_value()) {
-				auto guard_result = (*transition->guard)(current_state, event);
-				if (!guard_result.has_value())
-					return std::unexpected(std::move(guard_result.error()));
-			}
+			// Standard action. Action returns the new state.
+			auto action_result = raw_action(current_state, event);
+			if (!action_result.has_value())
+				return std::unexpected(std::move(action_result.error()));
 
-			variant_match(transition->action) {
-				variant_case(RawAction, raw_action) {
-					// Standard action. Action returns the new state.
-					auto action_result = raw_action(current_state, event);
-					if (!action_result.has_value())
-						return std::unexpected(std::move(action_result.error()));
-
-					current_state = std::move(action_result.value());
-					return std::expected<void, ErrorT>{};
-				}
-				variant_case(RawAtomicAction, atomic_action) {
-					// Atomic action. Save the previous state so it remains valid for the
-					// action body after setState has changed the current state.
-					States prev_state    = std::move(current_state);
-					bool   state_changed = false;
-
-					SetStateCallback set_state = [this, &state_changed](States new_state) {
-						current_state = std::move(new_state);
-						state_changed = true;
-					};
-
-					auto action_result = atomic_action(prev_state, event, set_state);
-
-					// Restore on failure or if the `set_state` callback wasn't called. After this
-					// branch current_state is always in a valid state — either assigned by
-					// `set_state` or moved back from `prev_state. clang-analyzer can't see that
-					// `set_state` pairs (state_changed=true) with (current_state := new_state)
-					// since it can't see through the callback and causes `Moved-from object is
-					// copied`, thus the NOLINT in getStateCopy().
-					if (!action_result.has_value() || !state_changed)
-						current_state = std::move(prev_state);
-
-					if (!action_result.has_value())
-						return std::unexpected(std::move(action_result.error()));
-
-					return std::expected<void, ErrorT>{};
-				}
-				variant_default { CORE_UNREACHABLE(); }
-			}
+			current_state = std::move(action_result.value());
+			return std::expected<void, ErrorT>{};
 		}
 
 		/**
@@ -613,9 +419,6 @@ namespace state_machine {
 		 */
 		States getStateCopy() const requires std::copy_constructible<States> {
 			std::shared_lock lock(mutex);
-			// See the comment in StateMachine::handleEvent() in RawAtomicAction case to understand
-			// why this is here.
-			// NOLINTNEXTLINE(clang-analyzer-cplusplus.Move)
 			return machine.getState();
 		}
 
