@@ -8,6 +8,8 @@
 
 #include <query_framework/context/context_fd.hpp>
 
+#include <memory>
+
 namespace query::internal {
 	/**
 	 * Graph used to represent the set of active nodes and active edges in the query graph.
@@ -28,8 +30,8 @@ namespace query::internal {
 		 */
 		struct QueryCycle final {
 			struct NodeCycleInfo final {
-				NodeID              node_id;
-				Ref<query::Context> node_context_ref;
+				NodeID                          node_id;
+				std::shared_ptr<query::Context> node_context_ref;
 			};
 
 			std::vector<NodeCycleInfo> cycle_nodes;
@@ -43,7 +45,7 @@ namespace query::internal {
 		struct ActiveData final {
 			base::Optional<NodeID> active_edge;
 
-			Ref<query::Context> node_context_ref;
+			std::shared_ptr<query::Context> node_context_ref;
 
 			// @TODO: #1886 we will also need to store key refs here (in type-erased way),
 			// we might want to put in in multiple hash maps, as key operations will be
@@ -60,7 +62,7 @@ namespace query::internal {
 		 * Adds a node to the active query graph.
 		 * Panics if node is already present.
 		 */
-		void putNode(NodeID node_id, Ref<query::Context> node_context_ref);
+		void putNode(NodeID node_id, std::shared_ptr<query::Context> node_context_ref);
 
 		/**
 		 * Removes a node from the active query graph.

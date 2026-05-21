@@ -20,7 +20,9 @@
 #include <vm/loader/compiler/compiler.hpp>
 #include <vm/loader/logger.hpp>
 
+#include <algorithm>
 #include <expected>
+#include <limits>
 #include <vector>
 
 using namespace vm::loader;
@@ -186,5 +188,41 @@ std::expected<vm::code::CodeCollection, std::string> vm::loader::Loader::parseCo
 		std::stringstream ss;
 		logger.dump(ss);
 		return ss.str();
+	});
+}
+
+std::expected<vm::loader::Loader::FatBytecodePosition, vm::loader::Loader::MappingException> vm::
+	loader::Loader::mapLowVMProgramPositionToCodeCollectionPosition(vm::low::LowCodePosition position
+    ) const {
+	auto& mapping = position.function->instruction_mapping;
+
+	// We need to find the first instruction range that starts after the given instruction index,
+	// then check if the previous one contains it
+	auto it = std::ranges::upper_bound(
+		mapping,
+		vm::low::LowFuncData::InstructionRange{
+			.begin = position.instruction_index,
+			.end   = std::numeric_limits<usize>::max(),
+		}
+	);
+
+	if (it == mapping.begin()) return std::unexpected(MissingMapping);
+
+	auto candidate = it - 1;
+	if (!candidate->contains(position.instruction_index)) return std::unexpected(MissingMapping);
+
+	return FatBytecodePosition{
+		.function_name     = position.function->name,
+		.instruction_index = usize(candidate - mapping.begin()),
+	};
+}
+
+std::expected<base::Optional<dia::SourcePosition>, vm::loader::Loader::MappingException> vm::
+	loader::Loader::mapCodeCollectionPositionToFilePosition(FatBytecodePosition position) const {
+	const auto& maybe_high_function = getHighProgram()->functions().atMaybe(position.function_name);
+	if (maybe_high_function.empty()) return std::unexpected(NoFunction);
+
+	return maybe_high_function.value()->body.at(position.instruction_index).visit([](auto&& instr) {
+		return instr.bytecode_pos;
 	});
 }
