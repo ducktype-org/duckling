@@ -9,6 +9,7 @@
  *    transitions for a given pair of `States`/`Events` variants.
  *  * `StateMachine` - a runtime instance that owns the current state and
  *    dispatches incoming events.
+ *  * `AtomicStateMachine` - a thread-safe wrapper around `StateMachine`
  *
  * Functionalities
  * ===============
@@ -19,10 +20,9 @@
  * A state machine is parameterized by three template arguments:
  *  * `States` - an `std::variant` whose alternatives are the states the
  *    machine can be in. Each alternative may carry its own data.
- *  * `Events` - an `std::variant` whose alternatives are the events that
- *    can be dispatched to the machine.
- *  * `ErrorT` - error type used by guards and actions. Defaults to
- *    `std::string`.
+ *  * `Events` - an `std::variant` whose alternatives are the events that can be dispatched to the
+ * 	   machine.
+ *  * `ErrorT` - error type used by actions. Defaults to `std::string`.
  *
  * Configuring transitions
  * -----------------------
@@ -36,43 +36,25 @@
  *  * `addTransitionFromAllStates<Event>` - registers a transition for the
  *    given event from every state in the `States` variant. Useful for
  *    events that are always valid (e.g. `Kill` in case of DVM).
- * Three additional overloads are provided in which each action publishes the new state through a
- * `setState` callback (see `thread_safe_vm_example.cpp`):
- *  * `addAtomicTransition<State, Event>`
- *  * `addAtomicTransitions<Event, FromStates...>`
- *  * `addAtomicTransitionFromAllStates<Event>`
  *
- * Actions and guards
+ * Actions
  * ------------------
  *
- * Each transition is composed of two callables:
- *  * `action` - executed when the transition is performed.
- *    - Standard actions return `std::expected<States, ErrorT>` - the new
- *      state on success or an error on failure.
- *    - Atomic actions take an additional `setState` callback of type
- *      `std::function<void(States)>` and return
- *      `std::expected<void, ErrorT>`. They are expected to call
- *      `setState(new_state)` when they decide to publish a new state.
- *  * `guard` (optional) - executed before the action. Returns
- *    `std::expected<void, ErrorT>` and may veto the transition by
- *    returning an error.
- *
- * If a guard returns an error the action is not executed and the machine
- * stays in its current state.
+ * Each transition is composed of a callable:
+ *  * `action` - executed when the transition is performed. Returns `std::expected<States, ErrorT>`
+ * 	  - the new state on success or an error on failure.
  *
  * Handling events
  * ---------------
  *
  * `StateMachine::handleEvent(event)` returns a
  * `base::Optional<std::expected<void, ErrorT>>`:
- *  * `std::nullopt` - when the machine is in a state for which the action
- * 	  is not specified as a valid transition. The machine is unchanged.
- *  * `std::expected<void, ErrorT>{}` - the transition fired successfully
- *    and the state was updated. For standard actions, the state has been
- * 	  updated to the value the action returned. For atomic actions, the state
- *	  was updated iff the action called `setState`.
- *  * `std::unexpected(error)` - the guard or the action reported an
- *    error. The machine stays in its current state.
+ *  * `std::nullopt` - when the machine is in a state for which the action is not specified as a
+ * 	   valid transition. The machine is unchanged.
+ *  * `std::expected<void, ErrorT>{}` - the transition fired successfully and the state was updated.
+ * 	   For standard actions, the state has been updated to the value the action returned.
+ *  * `std::unexpected(error)` - the action reported an error. The machine stays in its current
+ * state.
  *
  * Retrieving the current state
  * ----------------------------
@@ -124,7 +106,7 @@ namespace state_machine {
 	 *
 	 * @tparam States Variant of state alternatives.
 	 * @tparam Events Variant of event alternatives.
-	 * @tparam ErrorT Error type used by guards and actions.
+	 * @tparam ErrorT Error type used by actions.
 	 */
 	template<base::IsVariant States, base::IsVariant Events, typename ErrorT = std::string>
 	class StateMachineDefinition final {
@@ -147,16 +129,14 @@ namespace state_machine {
 		 * @brief Represents a single transition entry for a (State, Event) pair.
 		 */
 		struct TransitionEntry {
-			RawAction action;  ///< Either a standard action that returns the new state, or an
-			                   ///< atomic action that publishes the new state via a `setState`
-			                   ///< callback handed to it.
+			RawAction action;  ///< Action that returns the new state.
 		};
 
 		static constexpr usize NUM_STATES = std::variant_size_v<States>;
 		static constexpr usize NUM_EVENTS = std::variant_size_v<Events>;
 		/**
 		 * @brief An allowed transitions map. For each (State, Event) pair stores the optional
-		 * (Action, Guard) pair to be performed on transition. Empty optional means that this
+		 * `Action` to be performed on the transition. Empty optional means that this
 		 * `Event` in the `State` is not allowed.
 		 */
 		std::array<std::array<base::Optional<TransitionEntry>, NUM_EVENTS>, NUM_STATES> transitions;
@@ -175,9 +155,6 @@ namespace state_machine {
 		 *               the new state on success, or
 		 *               `std::unexpected(error)` on failure. The new state
 		 *               is allowed to be a different alternative of `States`.
-		 * @param guard  Optional callable evaluated before `action`. May
-		 *               veto the transition by returning
-		 *               `std::unexpected(error)`.
 		 */
 		template<typename State, typename Event>
 		requires base::IsVariantMember<State, States> && base::IsVariantMember<Event, Events>
@@ -197,8 +174,7 @@ namespace state_machine {
 		/**
 		 * @brief Registers the same transition for several source states.
 		 *
-		 * Useful when the same `(action, guard)` should fire from any of
-		 * several states.
+		 * Useful when the same `Action` should fire from any of several states.
 		 *
 		 * @tparam Event      Triggering event type. Must be an alternative
 		 *                    of `Events`.
@@ -281,12 +257,9 @@ namespace state_machine {
 	 * `StateMachineDefinition`. Events are dispatched through
 	 * `handleEvent`.
 	 *
-	 * @tparam States Variant of state alternatives. Must match the
-	 *                definition's `States`.
-	 * @tparam Events Variant of event alternatives. Must match the
-	 *                definition's `Events`.
-	 * @tparam ErrorT Error type used by guards and actions. Must match
-	 *                the definition's `ErrorT`.
+	 * @tparam States Variant of state alternatives. Must match the definition's `States`.
+	 * @tparam Events Variant of event alternatives. Must match the definition's `Events`.
+	 * @tparam ErrorT Error type used by actions. Must match the definition's `ErrorT`.
 	 */
 	template<typename States, typename Events, typename ErrorT = std::string>
 	class StateMachine final {
@@ -309,19 +282,17 @@ namespace state_machine {
 		 * @brief Dispatches an event to the machine.
 		 *
 		 * Looks up the entry for `(current_state, event)`, then:
-		 *  1. evaluates the guard if present; on error returns
+		 *  1. evaluates the action; on error returns
 		 *     `std::unexpected(error)` and does not change state,
-		 *  2. evaluates the action; on error returns
-		 *     `std::unexpected(error)` and does not change state,
-		 *  3. on success moves the new state into the machine and returns
+		 *  2. on success moves the new state into the machine and returns
 		 *     `std::expected<void, ErrorT>{}`.
 		 *
 		 * @return * `std::nullopt` if no transition is registered for the
 		 *           current `(state, event)` pair.
 		 *         * `std::expected<void, ErrorT>{}` if the transition
 		 *           fired successfully.
-		 *         * `std::unexpected(error)` if the guard or the action
-		 *           reported an error. The state is not changed.
+		 *         * `std::unexpected(error)` if the action reported an error. The state is not
+		 * changed.
 		 */
 		ResultT handleEvent(const Events& event) {
 			auto maybe_transition = std::visit(
