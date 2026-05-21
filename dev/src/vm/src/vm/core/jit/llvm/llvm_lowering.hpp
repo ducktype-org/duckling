@@ -9,8 +9,10 @@
 #include <base/collections/optional.hpp>
 
 #include <vm/core/safe/low_program/instruction.hpp>
+#include <vm/core/safe/opcode_functions/opcodes_functions.hpp>
 
 #include <algorithm>
+#include <cstdint>
 #include <string>
 #include <unordered_set>
 #include <vector>
@@ -83,6 +85,87 @@ namespace vm::jit {
 			return callee;
 		}
 
+		/**
+		 * @brief Returns the number of microinstructions (structures) used to execute
+		 * the given opcode.
+		 * @details This includes the opcode itself, so the result is equal to
+		 * 1 plus the number of exts instructions that follow it.
+		 */
+		size_t argumentsUsedByOpcodeCnt(const low::LowFuncData& function_to_compile, usize idx) {
+			size_t res = 1;
+			while (idx + res < function_to_compile.bc.size()
+			       and isOpcodeNonExecutable(getInstructionOpcode(function_to_compile.bc[idx + res])
+			       )) {
+				++res;
+			}
+			return res;
+		}
+
+		/**
+		 * @brief Sets the instruction argument so that it points to a compile-time
+		 * constant table of arguments.
+		 * @details The template parameter specifies whether the parameter should use
+		 * the SC or TC version.
+		 */
+		template<bool switch_case_instr>
+		void setInstructionPtr(
+			const low::LowFuncData& function_to_compile, llvm::IRBuilder<>& builder, usize idx
+		) {
+			auto& llvm_data = llvmData();
+
+			usize length = argumentsUsedByOpcodeCnt(function_to_compile, idx);
+			std::vector<llvm::Constant*> elems;
+
+			// Fill table with all needed instruction's arguments.
+			for (size_t i = 0; i < length; ++i) {
+				const auto&                  inst   = function_to_compile.bc.at(idx + i);
+				const auto&                  opcode = (u64) getInstructionOpcode(inst);
+				std::vector<llvm::Constant*> fields;
+
+				if constexpr (switch_case_instr) {
+					fields.push_back(llvm::ConstantInt::get(llvm::Type::getInt64Ty(llvm_ctx), opcode)
+					);
+				} else {
+					fields.push_back(llvm::ConstantInt::get(
+						llvm::Type::getInt64Ty(llvm_ctx),
+						reinterpret_cast<u64>(OpFuns::OPFUNS.at(opcode))
+					));
+				}
+
+				fields.push_back(llvm::ConstantInt::get(llvm::Type::getInt64Ty(llvm_ctx), inst.arg0)
+				);
+
+				fields.push_back(llvm::ConstantInt::get(llvm::Type::getInt64Ty(llvm_ctx), inst.arg1)
+				);
+
+				llvm::Constant* c
+					= llvm::ConstantStruct::get(llvm_data.types.microinstruction.get(), fields);
+				elems.push_back(c);
+			}
+			llvm::ArrayType* arr_ty
+				= llvm::ArrayType::get(llvm_data.types.microinstruction.get(), elems.size());
+
+			llvm::Constant* arr_const = llvm::ConstantArray::get(arr_ty, elems);
+
+			auto needed_bc = new llvm::GlobalVariable(
+				*module,
+				arr_ty,
+				true,  // isConstant
+				llvm::GlobalValue::PrivateLinkage,
+				arr_const,
+				base::toString(function_to_compile.name) + "_bc"
+			);
+
+			llvm::Value* zero = builder.getInt32(0);
+
+			// pointer to bc
+			llvm::Value* bc_ptr
+				= builder.CreateInBoundsGEP(arr_ty, needed_bc, { zero, zero }, "bc_ptr");
+
+			// instr becomes pointer to pointer to created compile time bc array.
+			builder.CreateStore(bc_ptr, instr_arg);
+		}
+
 		void lowerBasicBlock(
 			const low::LowFuncData&          function_to_compile,
 			llvm::IRBuilder<>&               ir_builder,
@@ -98,6 +181,12 @@ namespace vm::jit {
 				case vm::low::MicroOpcode::jit_call_entrypoint:
 				case vm::low::MicroOpcode::call_func:
 				case vm::low::MicroOpcode::virtual_call_pptr_method: {
+					// Trampoline uses VM functions, instructions have to have correct type.
+#ifdef USE_SWITCH_CASE
+					setInstructionPtr<true>(function_to_compile, ir_builder, instr_idx);
+#else
+					setInstructionPtr<false>(function_to_compile, ir_builder, instr_idx);
+#endif
 					ir_builder.CreateCall(
 						llvm_data.types.opfun.get(),
 						getOrCreateOpcodeFunction("trampoline"),
@@ -114,6 +203,10 @@ namespace vm::jit {
 						}
 						opt_none { opfun_name = low::OPCODE_NAMES.at(static_cast<u64>(opcode)); }
 					}
+
+					// Here we are calling instruction originating from bc file or debug
+					// instruction. Make instruction* point to switch case version of microinstruction.
+					setInstructionPtr<true>(function_to_compile, ir_builder, instr_idx);
 					ir_builder.CreateCall(
 						llvm_data.types.opfun.get(),
 						getOrCreateOpcodeFunction(opfun_name),
@@ -182,14 +275,6 @@ namespace vm::jit {
 					llvm_ctx, "block_" + std::to_string(block_idx), user_func_wrapper
 				);
 				llvm_blocks.push_back(block);
-			}
-
-			if (function_to_compile.bc.empty()) {
-				llvm::IRBuilder<> ir_builder(
-					llvm::BasicBlock::Create(llvm_ctx, "entry", user_func_wrapper)
-				);
-				ir_builder.CreateRetVoid();
-				return;
 			}
 
 			// Helper structure to track called opfuns.
