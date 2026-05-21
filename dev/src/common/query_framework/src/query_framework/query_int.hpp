@@ -17,7 +17,6 @@
 
 
 #include <string_view>  // IWYU pragma: export
-#include <base/preproc/remove_parentheses.hpp>
 
 // clang-format on
 
@@ -67,15 +66,15 @@ namespace query::internal {
  * This way there are no issues with commas in macro arguments.
  * Lack of parentheses should produce compilation errors.
  */
-#define DECLARE_QUERY(query_type, key, value, tags)                \
-	DECLARE_QUERY_AUX(                                             \
-		query_type,                                                \
-		key,                                                       \
-		value,                                                     \
-		::query::internal::QueryData(                              \
-			::query::internal::QueryKind::Normal,                  \
-			#query_type,                                           \
-			::query::internal::QueryTags REMOVE_PARENTHESES(tags), \
-			{ .erase_function = query_type::internal_erase }       \
-		)                                                          \
+#define DECLARE_QUERY(query_type, key, value, tags)          \
+	DECLARE_QUERY_AUX(                                       \
+		query_type,                                          \
+		key,                                                 \
+		value,                                               \
+		::query::internal::QueryData(                        \
+			::query::internal::QueryKind::Normal,            \
+			#query_type,                                     \
+			::query::internal::QueryTags EXPAND tags,        \
+			{ .erase_function = query_type::internal_erase } \
+		)                                                    \
 	)
