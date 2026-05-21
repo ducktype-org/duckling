@@ -160,6 +160,10 @@ namespace vm::code {
 
 	class LocalStackDbBuilder;
 
+	/**
+	 * @brief A class representing an immutable database for the stack. Each state of the stack has
+	 * it is assigned ID, which has to be passed as a key to query the database
+	 */
 	class LocalStackDb {
 		friend LocalStackDbBuilder;
 		using tp_size = valid_type::TypeSize;
@@ -231,14 +235,19 @@ namespace vm::code {
 		std::vector<NameMap>                             nodes_at_depth;
 
 		LocalStackDb(
-			const decltype(name_to_namestack)&        name_to_id,
-			const decltype(namestack_entries)&        entries,
-			const decltype(stack_state_to_substacks)& stack_state_to_name_states,
-			const decltype(typestack)&                typestack
+			const decltype(name_to_namestack)& name_to_id,
+			const decltype(namestack_entries)& entries,
+			decltype(stack_state_to_substacks) stack_state_to_name_states,
+			decltype(typestack)                typestack
 
 		);
 	};
 
+	/**
+	 * @brief this structure records the pops and pushes to the stack, and later constructs an
+	 * immutable local database which contains all the information
+	 * @note It allows for the same operations as local stack databes, though a bit slower
+	 */
 	class LocalStackDbBuilder {
 		using tp_size        = LocalStackDb::tp_size;
 		using Lifetime       = LocalStackDb::Lifetime;

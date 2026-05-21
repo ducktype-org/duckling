@@ -93,6 +93,11 @@ struct LocalStackEntry {
 	}
 };
 
+/**
+ * @brief A wrapper class for both factory for local stack and the local stack databse itself.
+ * @note This is so that it can be used both on completed and currently builded local-stack. This
+ * way, building a database can be done before, during or after validation.
+ */
 class LocalStack {
 	// the following are CRefs instead of const& to allow copy/move.
 
@@ -220,6 +225,7 @@ public:
 		CORE_UNREACHABLE();
 	}
 
+	[[nodiscard]]
 	bool contains(base::StrID local_name) const {
 		variant_match(source) {
 			variant_case(Ref<LocalStackDbBuilder>, bld_ref) {
@@ -232,6 +238,7 @@ public:
 		CORE_UNREACHABLE();
 	}
 
+	[[nodiscard]]
 	CRef<valid_type::ValidType> at(base::StrID local_name) const {
 		base::StrID name_of_type{};
 
@@ -247,7 +254,8 @@ public:
 		return types_ctx->at(name_of_type);
 	}
 
-	bool eqStack(StackStateID stack_state_1, StackStateID stack_state_2) {
+	[[nodiscard]]
+	bool eqStack(StackStateID stack_state_1, StackStateID stack_state_2) const {
 		variant_match(source) {
 			variant_case(Ref<LocalStackDbBuilder>, bld_ref) {
 				return bld_ref->eqTypes(stack_state_1, stack_state_2)
@@ -274,7 +282,7 @@ class FunctionValidator {
 	const ObjIdNameMap<ExternalCFunction>&           ext_c_signatures;
 	const Function&                                  function;
 
-	std::vector<base::Optional<StackStateID>>            stack_at_instr;
+	std::vector<base::Optional<StackStateID>>            stack_before_instr;
 	base::HashMap<base::StrID, usize>                    index_of_label;
 	base::HashMap<base::StrID, std::vector<Instruction>> jumps_to_label;
 
@@ -1544,7 +1552,7 @@ class FunctionValidator {
 
 	void validateFunctionEnd() const {
 		if (function.body.empty()
-		    || (stack_at_instr.back().has_value()
+		    || (stack_before_instr.back().has_value()
 		        && !std::ranges::contains(VALID_LAST_OPCODES, function.body.back().opcode()))) {
 			throw PathWithoutEndError(function.name);
 		}
@@ -1597,7 +1605,7 @@ class FunctionValidator {
 			function.signature.result_types.size()
 		);
 
-		stack_at_instr.resize(function.body.size(), std::nullopt);
+		stack_before_instr.resize(function.body.size(), std::nullopt);
 		std::vector<std::tuple<usize, LocalStack>> dfs_stack{
 			{ function.body.size(), local_stack }  // sentinel
 		};
@@ -1612,17 +1620,19 @@ class FunctionValidator {
 
 			instr_match(instructions[index]) {
 				instr_case(Op_init_pany_type, instr) {
+					// this is the only exception from the rule "save stack state before instruction"
+					// it is needed to properly lower the name of the variable for the compilation
 					local_stack.push(instr.var, instr.type);
-					stack_at_instr[index] = local_stack.getState();
+					stack_before_instr[index] = local_stack.getState();
 					index++;
 				}
 				instr_case(Op_deinit, instr) {
-					stack_at_instr[index] = local_stack.getState();
+					stack_before_instr[index] = local_stack.getState();
 					local_stack.pop(instr);
 					index++;
 				}
 				instr_case(Op_label, instr) {
-					match_optional(stack_at_instr[index]) {
+					match_optional(stack_before_instr[index]) {
 						opt_some(label_state) {
 							if (!local_stack.eqStack(label_state, local_stack.getState()))
 								throw StackStructureMismatchError(
@@ -1632,61 +1642,59 @@ class FunctionValidator {
 							dfs_stack.pop_back();
 						}
 						opt_none {
-							stack_at_instr[index] = local_stack.getState();
+							stack_before_instr[index] = local_stack.getState();
 							index++;
 						}
 					}
 				}
 				instr_case(Op_jmp_label, instr) {
-					stack_at_instr[index] = local_stack.getState();
-					index                 = getLabelTarget(instr.label);
+					stack_before_instr[index] = local_stack.getState();
+					index                     = getLabelTarget(instr.label);
 				}
 				instr_case(Op_jmpIf_label, instr) {
-					stack_at_instr[index] = local_stack.getState();
+					stack_before_instr[index] = local_stack.getState();
 					index++;
 					dfs_stack.emplace_back(getLabelTarget(instr.label), local_stack);
 				}
 				instr_case(Op_jmpIfNot_label, instr) {
-					stack_at_instr[index] = local_stack.getState();
+					stack_before_instr[index] = local_stack.getState();
 					index++;
 					dfs_stack.emplace_back(getLabelTarget(instr.label), local_stack);
 				}
 				instr_case(Op_ret, instr) {
-					stack_at_instr[index]        = local_stack.getState();
+					stack_before_instr[index]    = local_stack.getState();
 					std::tie(index, local_stack) = dfs_stack.back();
 					dfs_stack.pop_back();
 				}
 				instr_case(Op_call_func, instr) {
+					stack_before_instr[index] = local_stack.getState();
 					validateCallAndPop(local_stack, instr);
-					stack_at_instr[index] = local_stack.getState();
 					index++;
 				}
 				instr_case(Op_call_builtinfunc, instr) {
+					stack_before_instr[index] = local_stack.getState();
 					validateCallAndPop(local_stack, instr);
-					stack_at_instr[index] = local_stack.getState();
 					index++;
 				}
 				instr_case(Op_call_cfunc, instr) {
+					stack_before_instr[index] = local_stack.getState();
 					validateCallAndPop(local_stack, instr);
-					stack_at_instr[index] = local_stack.getState();
 					index++;
 				}
 				instr_case(Op_virtual_call_pptr_method, instr) {
-					// this is exception about the state
-					// we can't disqualify params, because we need ptr argument for compilation
-					stack_at_instr[index] = local_stack.getState();
+					stack_before_instr[index] = local_stack.getState();
 					validateMethodCallAndPop(local_stack, instr);
 					index++;
 				}
 				instr_case(Op_ret_tailcall_func, instr) {
-					stack_at_instr[index] = local_stack.getState();
+					stack_before_instr[index] = local_stack.getState();
 					validateTailcall(local_stack, instr, function.signature);
 					std::tie(index, local_stack) = dfs_stack.back();
 					dfs_stack.pop_back();
 				}
 #define HANDLE_CAST(SIZE)                                          \
 	instr_case(Op_cast_p##SIZE##_type, instr) {                    \
-		stack_at_instr[index] = local_stack.getState();            \
+		stack_before_instr[index] = local_stack.getState();        \
 		local_stack.castPrimitive(instr.value, instr.target_type); \
 		index++;                                                   \
 	}
@@ -1694,7 +1702,7 @@ class FunctionValidator {
 				FOR_EACH(HANDLE_CAST, 8, 16, 32, 64)
 #undef HANDLE_CAST
 				instr_default {
-					stack_at_instr[index] = local_stack.getState();
+					stack_before_instr[index] = local_stack.getState();
 					index++;
 				}
 			}
@@ -1739,7 +1747,7 @@ public:
 
 		std::vector<Instruction> out;
 		for (usize idx = 0; idx < function.body.size(); idx++) {
-			if_opt_some(stack_at_instr[idx], state) {
+			if_opt_some(stack_before_instr[idx], state) {
 				auto instruction = function.body[idx];
 				instruction.visit([&](auto&& i) {
 					i.instr_idx   = idx;

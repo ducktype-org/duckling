@@ -126,17 +126,21 @@ bool ls_db::eqNames(StackStateID state_1, StackStateID state_2) const {
 
 ls_db::LocalStackDb() = default;
 
+/**
+ * @brief Constructor serves mostly to check whether passed structures are valid (mostly checks the
+ * lifetimes and the relation between nodes in the name tree)
+ */
 ls_db::LocalStackDb(
-	const decltype(name_to_namestack)&        name_to_namestack,
-	const decltype(namestack_entries)&        entries,
-	const decltype(stack_state_to_substacks)& stack_state_to_name_states,
-	const decltype(typestack)&                typestack
+	const decltype(name_to_namestack)& name_to_namestack,
+	const decltype(namestack_entries)& entries,
+	decltype(stack_state_to_substacks) stack_state_to_name_states,
+	decltype(typestack)                typestack
 
 ):
 	  name_to_namestack(name_to_namestack),
 	  namestack_entries(entries),
-	  stack_state_to_substacks(stack_state_to_name_states),
-	  typestack(typestack) {
+	  stack_state_to_substacks(std::move(stack_state_to_name_states)),
+	  typestack(std::move(typestack)) {
 	CORE_ASSERT(entries.size(), "we need to have at least one entry (just root)");
 	usize             counted_ids = 0;
 	std::vector<bool> intervals(entries.size() * 2, false);
@@ -228,6 +232,20 @@ ls_db::LocalStackDb(
 	for (auto [id, entry]: enumerate(entries) | drop(1)) {
 		CORE_ASSERT(entry.size_in_blocks > 0, "stack is non-empty for each variable");
 		nodes_at_depth.at(entry.size_in_blocks - 1).emplace(entry.lifetime, NameStackID(id));
+	}
+
+	for (auto& layer: nodes_at_depth) {
+		CORE_ASSERT(layer.size(), "each layer must be non-empty");
+
+		auto prev_lifetime = layer.begin()->first;
+		for (auto [lifetime, id]: layer) {
+			CORE_ASSERT(
+				prev_lifetime.deinit_idx < lifetime.init_idx
+					|| lifetime.deinit_idx < prev_lifetime.init_idx,
+				"in each layer, lifetimes of variables are separate"
+			);
+			prev_lifetime = lifetime;
+		}
 	}
 }
 
