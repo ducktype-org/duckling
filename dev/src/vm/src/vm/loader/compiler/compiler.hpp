@@ -112,6 +112,9 @@ namespace vm::loader::compiler {
 			/// Total required size for the local stack frame, in bytes.
 			usize local_stack_size  = 0;
 			usize local_block_count = 0;
+
+			/// Bytecode to Microbytecode mapping
+			std::vector<vm::low::LowFuncData::InstructionRange> instruction_mapping{};
 		};
 
 		/**
