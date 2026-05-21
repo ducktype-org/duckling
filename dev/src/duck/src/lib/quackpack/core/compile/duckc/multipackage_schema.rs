@@ -50,7 +50,10 @@ pub struct Dependency {
 }
 
 // `compiler/driver/driver/src/driver/task/task.cpp` deserializes `RawTask` as `RawPackageCompilationTask`.
+// (`compiler/driver/driver/src/driver/manifest/manifest.hpp`, which actually defines the JSON format,
+// expects `std::vector<RawTask>`, so we actually want to know, how JSON should look).
 // So, from JSON POV, they are the same type.
+// (The referenced file is actually how duckc deserializes file, i.e. how it should look).
 pub type Task = PackageCompilationTask;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
