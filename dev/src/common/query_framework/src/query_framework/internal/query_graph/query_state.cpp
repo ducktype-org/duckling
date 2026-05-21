@@ -985,6 +985,16 @@ namespace query::internal {
 		);
 	}
 
+	void QueryState::logDiagnosticFromLoggerForNode(NodeID node_id, dia_int::Logger& src_logger) {
+		diagnostic_loggers.maybePutAndUpdate(
+			node_id,
+			makeBox<dia_int::Logger>(),
+			[&](Ref<Box<dia_int::Logger>> dst_logger) {
+				dst_logger->refMut()->logFromLogger(src_logger);
+			}
+		);
+	}
+
 	void QueryState::clearDiagnosticForNode(NodeID node_id) { diagnostic_loggers.erase(node_id); }
 
 	CRef<concurrent::ConHashMap<NodeID, Box<dia_int::Logger>>> QueryState::getDiagnosticLoggers(
