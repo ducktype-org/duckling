@@ -112,7 +112,6 @@ i64 vm::fast::FastVMThread::executeFunction(
 ) {
 	Frame* frame       = runtime_data.pushFrame(&start_function, runtime_data.local_stack_base);
 	byte*  local_stack = runtime_data.local_stack_base;
-	std::cout << "Expecting value at local stack base: " << runtime_data.local_stack_base << std::endl;
 	FastExecutor::eval(runtime_data, local_stack, frame, *this);
 	return *reinterpret_cast<i64*>(runtime_data.local_stack_base);
 }

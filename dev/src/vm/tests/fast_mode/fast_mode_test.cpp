@@ -13,10 +13,10 @@ class VmFunctionsTests: public VmTestSuite {
 
 public:
 	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		// TESTER_ADD_TEST(testSimple);
-		// TESTER_ADD_TEST(testControlFlow);
+		TESTER_ADD_TEST(testSimple);
+		TESTER_ADD_TEST(testControlFlow);
 		TESTER_ADD_TEST(testFunctionCallWithArgs);
-		// TESTER_ADD_TEST(testFibIter);
+		TESTER_ADD_TEST(testFibIter);
 		TESTER_ADD_TEST(testFibRec);
 	}
 

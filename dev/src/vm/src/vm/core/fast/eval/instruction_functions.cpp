@@ -7,7 +7,7 @@
 
 #define IMPL(NAME) void vm::fast::FastExecutor::Instr_##NAME(INSTRFUN_ARGS(NAME))
 
-#define PROGRESS_BY(progress_count) std::cout << "Stack after: " << __FUNCTION__ << ": " << local_stack << std::endl; state.incrementInstruction(progress_count)
+#define PROGRESS_BY(progress_count) state.incrementInstruction(progress_count)
 
 #define getBytePtrToPlace(ARG) \
 	decodePlace(ARG, frame->local_stack_base, state.global_data_buffer_base)
@@ -18,7 +18,6 @@
 // @TODO: Make local_stack be the stack_base_pointer
 
 IMPL(init_imm) {
-	std::cout << "Initializing " << instr.size << " bytes at " << static_cast<void*>(local_stack) << std::endl;
 	std::memset(local_stack, 0, instr.size);
 	local_stack += instr.size;
 	PROGRESS_BY(1);
@@ -31,7 +30,6 @@ IMPL(deinit_imm) {
 
 IMPL(mov_p64_imm) {
 	WRITE_PLACE(instr.dst, instr.imm);
-	std::cout << "Moving immediate value " << instr.imm << " to " << getBytePtrToPlace(instr.dst) << std::endl;
 	PROGRESS_BY(1);
 }
 
@@ -43,8 +41,6 @@ IMPL(mov_p64_p64) {
 IMPL(add_p64_p64) {
 	u64 dst_val = READ_PLACE(u64, instr.dst);
 	u64 src_val = READ_PLACE(u64, instr.src);
-	std::cout << "Adding to " << getBytePtrToPlace(instr.dst) << " value " << src_val << " from " << getBytePtrToPlace(instr.src)
-	          << std::endl;
 	WRITE_PLACE(instr.dst, dst_val + src_val);
 	PROGRESS_BY(1);
 }
@@ -91,7 +87,6 @@ IMPL(input_p64) {
 	i64 io_value = thread.getMyProcess().getIO().getInput<i64>(thread);
 	WRITE_PLACE(instr.dst, io_value);
 	thread.getMyProcess().setStatus(api::Running{});
-	std::cout << "Reading input value " << io_value << " to " << getBytePtrToPlace(instr.dst) << std::endl;
 	PROGRESS_BY(1);
 }
 
@@ -109,15 +104,13 @@ IMPL(cmpEq_p64_imm) {
 }
 
 IMPL(cmpGt_p64_p64) {
-	byte* const a = getBytePtrToPlace(instr.a);
-	byte* const b = getBytePtrToPlace(instr.b);
-	frame->flag   = memcmp(a, b, sizeof(u64)) > 0;
+	frame->flag = READ_PLACE(i64, instr.a) > READ_PLACE(i64, instr.b);
 	PROGRESS_BY(1);
 }
 
 IMPL(cmpGt_p64_imm) {
 	u64 a       = READ_PLACE(u64, instr.a);
-	frame->flag = a > instr.b;
+	frame->flag = a > i64(instr.b);
 	PROGRESS_BY(1);
 }
 
@@ -142,13 +135,14 @@ IMPL(call_func_imm) {
 	frame->ip++;
 	// Next, push a new frame for the called function. The instruction pointer of the new frame
 	// will be set to the start of the called function. The local stack for the new frame should
-	// be set to the address of the first return value.	frame = state.pushFrame(instr.func, flocal_stack- instr.stack_diff);
+	// be set to the address of the first return value.
+	frame = state.pushFrame(instr.func, local_stack - instr.stack_diff);
 	PROGRESS_BY(0);
 }
 
 IMPL(ret_imm) {
 	local_stack = frame->local_stack_base + instr.function_return_size;
-	frame = state.popFrame();
+	frame       = state.popFrame();
 	// After popping the frame, the instruction pointer will be set to the caller's next
 	// instruction, so we don't need to do anything else here.
 	PROGRESS_BY(0);

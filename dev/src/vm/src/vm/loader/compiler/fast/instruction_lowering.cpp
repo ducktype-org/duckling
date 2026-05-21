@@ -205,7 +205,7 @@ std::vector<vm::fast::reloc::Instruction> vm::loader::compiler::fast::lowerInstr
 			instr_case(high::Op_cmpGt_p64_p64, cmp) PUSH(cmpGt_p64_p64, cmp.lhs, cmp.rhs);
 			instr_case(high::Op_cmpGt_p64_imm, cmp) PUSH(cmpGt_p64_imm, cmp.lhs, cmp.rhs);
 			instr_case(high::Op_jmpIf_label, jmp) PUSH(jmpIf_dest, jmp.label);
-			instr_case(high::Op_jmpIfNot_label, jmp) PUSH(jmpIf_dest, jmp.label);
+			instr_case(high::Op_jmpIfNot_label, jmp) PUSH(jmpIfNot_dest, jmp.label);
 			instr_case(high::Op_jmp_label, jmp) PUSH(jmp_dest, jmp.label);
 			instr_case(high::Op_label, label) {
 				const i64 id = makeJumpDestination(ctx, label.label);
