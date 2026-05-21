@@ -1,5 +1,8 @@
 #include "hout_stmt_compilation.hpp"
 
+#include "helios/hout/elements/stmt.hpp"
+#include "helios_private/hout_creation/desugaring/for.hpp"
+
 #include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/elements/hierarchy/actions/all_actions.hpp>
 #include <frontend/pst_parser/elements/hierarchy/actions/return.hpp>
@@ -354,207 +357,18 @@ namespace compiler::helios {
 		}
 
 		void visitFor(pst::Access<pst::For> stmt) override {
-			// Preamble. Get some basic data.
-			using GeneratedSymbolData = defgen::GeneratedSymbolData;
-			using ControlFlowLocal    = GeneratedSymbolData::ControlFlowLocal;
-
-			const auto loop_origin = code::pstOrigin(stmt);
-			const auto gen_origin  = code::generatedOrigin();
-
-			const ScopeID for_scope = ctx.query<QueryPrimaryCodeScopeFor>({ stmt });
-
-			// Get the iterable and it's type.
-			auto iterable_pst = stmt->getIterable().unlock(ctx)->getExpr();
-
-			auto iterable_hout_res = ctx.query<QueryHoutOfExpr>({ iterable_pst });
-			if (iterable_hout_res->hasFailed()) {
-				is_failed = true;
-				return;
-			}
-			auto iterable_hout = iterable_hout_res->valueOrThrow()->clone();
-			auto iterable_type = iterable_hout->expression_type.getSymbolType();
-			auto iterable_kind = iterable_type.getType().getKind();
-
-			if (iterable_kind != tsh::Kind::DynamicArray
-			    && iterable_kind != tsh::Kind::StaticArray) {
-				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-					base::strConcat(
-						"`for` statements for non-array type: ", iterable_type.toString()
-					),
-					stmt->getStablePosition()
-				));
-				is_failed = true;
-				return;
-			}
-
-			// Helper types.
-			auto u64_mut_type = tsh::SymbolType<>::withDefaults(
-				tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned)
-			);
-			auto u64_immut_type = u64_mut_type.withMutability(tsh::Mutability::Immutable);
-			auto col_type       = iterable_type.withReferenceKind(tsh::ReferenceKind::Ref);
-
-			// Create the needed symbols.
-			auto create_var = [&](base::StrID role, tsh::SymbolType<> type) {
-				// Compose the name with the current scope hash, so we don't have naming collisions
-				// with nested loops.
-				auto unique = for_scope.queryUnstablePerfectHash();
-				auto name   = base::StrID(base::strConcat(role, unique));
-
-				return ctx.query<defgen::QueryGeneratedSymbol>({ .name = name,
-				                                                 .generated_symbol_data
-				                                                 = GeneratedSymbolData{
-																	 ControlFlowLocal{
-																		 .owning_scope = for_scope,
-																		 .role         = role,
-																		 .type         = type,
-																	 },
-																 } });
-			};
-
-			// Create needed symbols.
-			SymID             col_sym   = create_var(base::StrID("__collection"), col_type);
-			SymID             idx_sym   = create_var(base::StrID("__index"), u64_mut_type);
-			SymID             len_sym   = create_var(base::StrID("__len"), u64_immut_type);
-			SymID             iter_sym  = getForIteratorSymbol(ctx, stmt);
-			tsh::SymbolType<> iter_type = ctx.query<QueryTypeOfSymbol>(iter_sym)->valueOrThrow();
-
-			// Desugar the loop.
-			code::CodeBlock outer{};
-			// Create a temp for the collection for it to be evaluated only once before the loop.
-			// TODOP: What if collection is a r-value;
-			// var __collection: ref T = &<iterable>
-			outer.statements.emplace_back(makeBox<code::VariableStmt>(
-				loop_origin,
-				makeBox<code::RefOfExpr>(ctx, gen_origin, std::move(iterable_hout)),
-				col_type,
-				col_sym
-			));
-
-			// var __idx: u64 = 0
-			outer.statements.emplace_back(makeBox<code::VariableStmt>(
-				loop_origin,
-				makeBox<code::DefaultValueExpr>(ctx, gen_origin, u64_mut_type.getType()),
-				u64_mut_type,
-				idx_sym
-			));
-
-			// Length is calculated once before the loop.
-			// let __len: u64 = <len __collection> / <constant>
-			auto len_expr = [&]() -> Box<code::Expr> {
-				switch (iterable_kind) {
-				case tsh::Kind::DynamicArray: {
-					return makeBox<code::UnaryOperatorExpr>(
-						ctx,
-						gen_origin,
-						code::BuiltinUnary::Len,
-						makeBox<code::DerefExpr>(
-							ctx, gen_origin, makeBox<code::IdentifierExpr>(ctx, gen_origin, col_sym)
-						)
-					);
-				}
-				case tsh::Kind::StaticArray: {
-					auto size
-						= iterable_type.getType().as<tsh::StaticArrayAbstractType>().getSize();
-					return makeBox<code::LiteralNumericExpr>(
-						ctx,
-						gen_origin,
-						numeric_value::NumericValue::createOfType<u64>(
-							u64_immut_type.getType(), size
-						)
-							.value()
-					);
-				}
-				default:
-					CORE_UNREACHABLE();
-				}
-			}();
-			outer.statements.emplace_back(makeBox<code::VariableStmt>(
-				loop_origin, std::move(len_expr), u64_immut_type, len_sym
-			));
-
-			// while(__idx < __len) {
-			// 		let <iter> = __collection[__idx];
-			// 		<body>;
-			// 		__idx = __idx + 1;
-			// }
-
-			// Prepare the condition.
-			auto idx_ref = [&] { return makeBox<code::IdentifierExpr>(ctx, gen_origin, idx_sym); };
-			auto len_ref = [&] { return makeBox<code::IdentifierExpr>(ctx, gen_origin, len_sym); };
-			auto col_ref = [&] { return makeBox<code::IdentifierExpr>(ctx, gen_origin, col_sym); };
-			auto derefed_col_ref
-				= [&] { return makeBox<code::DerefExpr>(ctx, gen_origin, col_ref()); };
-
-			// __idx < __len
-			auto condition = makeBox<code::BinaryOperatorExpr>(
-				ctx, gen_origin, code::BuiltinBinary::IntegerLt, idx_ref(), len_ref()
-			);
-
-			// Prepare the body.
-			code::CodeBlock while_body{};
-
-			Box<code::Expr> element_expr
-				= makeBox<code::IndexExpr>(ctx, gen_origin, derefed_col_ref(), idx_ref());
-			tsh::SymbolType<> element_sym_type = element_expr->expression_type.getSymbolType();
-
-			auto coercion_res = canCoerce(ctx, element_sym_type, iter_type);
-			if (coercion_res.hasFailed()) {
-				is_failed = true;
-				return;
-			}
-
-			variant_match(coercion_res.valueOrThrow().getVariant()) {
-				variant_case(Coercion, coercion) {
-					element_expr = coercion.coerce(ctx, std::move(element_expr));
-				}
-				variant_default {
-					ctx.logInt(makeBox<dia_int::PlaceholderError>(
-						base::strConcat(
-							"Cannot coerce collection element type '",
-							element_sym_type.toString(),
-							"' to iterator type '",
-							iter_type.toString(),
-							"'."
-						),
-						stmt->getIterable().unlock(ctx)->getStablePosition()
-					));
-					is_failed = true;
-					return;
-				}
-			}
-
-			// let <user_var> = __collection[__idx];
-			while_body.statements.emplace_back(
-				makeBox<code::VariableStmt>(loop_origin, element_expr->clone(), iter_type, iter_sym)
-			);
-
-			auto body = processBlock(ctx, stmt->getBody(), return_type);
-			for (auto& s: body.statements) while_body.statements.emplace_back(std::move(s));
-
-			// __idx += 1
-			auto one = makeBox<code::LiteralNumericExpr>(
+			auto result = desugaring::desugarFor(
 				ctx,
-				gen_origin,
-				numeric_value::NumericValue::createOfType<u64>(u64_mut_type.getType(), 1).value()
+				stmt,
+				[&](pst::AccessLocked<pst::CodeBlockOrStmt> body_pst) -> code::CodeBlock {
+					return processBlock(ctx, body_pst, return_type);
+				}
 			);
-
-			while_body.statements.emplace_back(makeBox<code::AssignmentStmt>(
-				gen_origin,
-				idx_ref(),
-				makeBox<code::BinaryOperatorExpr>(
-					ctx, gen_origin, code::BuiltinBinary::IntegerAdd, idx_ref(), std::move(one)
-				)
-			));
-
-
-			outer.statements.emplace_back(
-				makeBox<code::WhileStmt>(loop_origin, std::move(condition), std::move(while_body))
-			);
-
-			// Emit it in a block so variable names don't collide if two fors are in the same
-			// function and for the collection scope to be not accessible from outside the for loop.
-			output(code::BlockStmt(loop_origin, std::move(outer)));
+			if (!result.has_value()) {
+				is_failed = true;
+				return;
+			}
+			output(std::move(result.value()));
 		}
 
 		void visitFun(pst::Access<pst::Fun> function) override {

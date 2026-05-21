@@ -28,11 +28,6 @@ namespace compiler::helios {
 	std::vector<SymID> getAllHeliosSymbols();
 
 	/**
-	 * @brief Returns SymID of the uses-declared iterator of a For stmt.
-	 */
-	SymID getForIteratorSymbol(query::Context& ctx, pst::Access<pst::For> stmt);
-
-	/**
 	 * @brief Query symbol associated with given element in PST
 	 *
 	 * \query_thread_safe_if_cache_and_struct

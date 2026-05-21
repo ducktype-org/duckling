@@ -14,6 +14,7 @@
 #include <frontend/pst_parser/lang_parser_element.hpp>
 #include <frontend/pst_parser/pst_visitor.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
+#include <helios_private/hout_creation/desugaring/for.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/lookup/lookup_result.hpp>
 #include <helios_private/pst_layer/for_all.hpp>
@@ -541,7 +542,7 @@ namespace compiler::helios {
 
 			void visitFor(pst::Access<pst::For> for_stmt) override {
 				std::vector<SymID> out;
-				out.emplace_back(getForIteratorSymbol(ctx, for_stmt));
+				out.emplace_back(desugaring::getForIteratorSymbol(ctx, for_stmt));
 				output(std::move(out));
 			}
 
