@@ -113,10 +113,6 @@ std::expected<void, LoaderLogger> Loader::loadAndCompile(const code::CodeCollect
 		// loader stays unchanged.
 		validated_high_program = validated_high_program.tryInsertCode(code_collection);
 
-		// // @note: After successfully inserting code into `validated_high_program` we compile it
-		// to
-		// // the low level representation. This step cannot fail since the code was already
-		// validated. compiler.recompile(validated_high_program);
 		return {};
 	} catch (code::StackStructureMismatchError& e) {
 		log.logMap(
