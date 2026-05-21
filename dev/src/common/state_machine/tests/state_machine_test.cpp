@@ -9,6 +9,7 @@
 #include <string>
 #include <thread>
 #include <variant>
+#include <vector>
 
 class StateMachineTest: public tester::TestSuite {
 #undef TESTER_CLASS

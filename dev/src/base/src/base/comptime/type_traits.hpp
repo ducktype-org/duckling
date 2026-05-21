@@ -80,12 +80,18 @@ namespace base {
 
 		// Source - https://stackoverflow.com/a/52303687
 		// {
+
+		template<typename...>
+		inline constexpr bool DEPENDENT_FALSE_V = false;
+
 		template<typename>
 		struct Tag {};
 
 		template<typename Variant, typename T>
 		struct VariantTypeIndexAux {
-			static_assert(false, "variantTypeIndex() can be used only for variant");
+			static_assert(
+				DEPENDENT_FALSE_V<Variant>, "variantTypeIndex() can be used only for variant"
+			);
 		};
 
 		template<typename T, typename... Types>
@@ -230,9 +236,6 @@ namespace base {
 
 	/**
 	 * @brief Returns the index of `T` in a `std::variant` at compile time.
-	 *
-	 * Falls back to `std::variant_size_v<Variant>` (an out-of-range
-	 * value) when `T` is not an alternative of the variant.
 	 */
 	template<typename VariantT, typename T>
 	constexpr usize variantTypeIndex() {

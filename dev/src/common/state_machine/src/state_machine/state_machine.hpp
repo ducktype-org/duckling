@@ -75,6 +75,7 @@
 #include <expected>
 #include <functional>
 #include <mutex>
+#include <string>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -330,10 +331,7 @@ namespace state_machine {
 	/**
 	 * @brief Thread-safe wrapper around `StateMachine`.
 	 *
-	 * Handles access to an underlying `StateMachine` with a `std::shared_mutex`.
-	 * Mutating operations (`handleEvent`) take an exclusive lock; read accessors
-	 * (`withState`, `getStateCopy`) take a shared lock and may run concurrently
-	 * as long as no event is being handled.
+	 * Handles access to an underlying `StateMachine` with a `std::mutex`.
 	 *
 	 * @tparam States Variant of state alternatives. Must match the
 	 *                definition's `States`.
