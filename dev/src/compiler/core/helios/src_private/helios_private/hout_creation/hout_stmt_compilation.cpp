@@ -496,10 +496,6 @@ namespace compiler::helios {
 
 			Box<code::Expr> element_expr
 				= makeBox<code::IndexExpr>(ctx, gen_origin, derefed_col_ref(), idx_ref());
-			std::cout << "Element expr:\n";
-			element_expr->debugPrint(std::cout);
-			std::cout << '\n';
-
 			tsh::SymbolType<> element_sym_type = element_expr->expression_type.getSymbolType();
 
 			auto coercion_res = canCoerce(ctx, element_sym_type, iter_type);
@@ -527,11 +523,6 @@ namespace compiler::helios {
 					return;
 				}
 			}
-
-			std::cout << "Element expr after coercion:\n";
-			element_expr->debugPrint(std::cout);
-			std::cout << '\n';
-
 
 			// let <user_var> = __collection[__idx];
 			while_body.statements.emplace_back(

@@ -233,13 +233,6 @@ namespace compiler::helios {
 			case tsh::Kind::StaticArray:
 				return iterable_type.getType().as<tsh::StaticArrayAbstractType>().getElementType();
 			default:
-				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-					base::strConcat(
-						"`for` statements for non-array type: ", iterable_type.toString()
-					),
-					stmt->getIterable().unlock(ctx)->getStablePosition()
-					// TODOP: getIterablePostition() does not work I think.
-				));
 				query::throwFailed();
 				CORE_UNREACHABLE();
 			}

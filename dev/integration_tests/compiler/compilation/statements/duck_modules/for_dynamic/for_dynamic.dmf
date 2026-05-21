@@ -1,0 +1,105 @@
+# TODOP: Future continue issue jumping over the index incrementation.
+
+fun printSeparator() -> () = {
+    builtin_output_i64(888);
+}
+
+fun look(list: ref List[i32], target: i64) -> bool = {
+    for (x in list) {
+        if (x == target) {
+            return true;
+        }
+    }
+    return false;
+}
+
+fun bad() -> () = {
+    # for (x: f32 in static_arr) {
+    #     builtin_output_f64(x);
+    # }
+    # 
+    
+    # TODOP: This doesn't work and there is no way to make it work currently.
+    # builtin_output_i64(888888888812398123);
+    # for (x: ref i32 in dyn_arr) {
+    #     builtin_output_i64(x);
+    # }
+    # dyn_arr -= 1;
+    #
+    # var dyn_const_arr: List[const i32];
+    # dyn_const_arr += 1;
+    # dyn_const_arr += 1;
+    # dyn_const_arr += 1;
+    # for (x in dyn_const_arr) {
+    #     builtin_output_i64(x);
+    #     x = 2; # This will cause appropriate error when mutating the immutable.
+    # }
+    
+    # for (x: const i32 in dyn_arr) {
+    #     builtin_output_i64(x);
+    #     x = 2; # This will cause appropriate error when mutating the immutable.
+    # }
+
+    # for (let x in static_arr) {
+    #     builtin_output_i64(x);
+    #     x = 123; # Causes error as it should
+    # }
+    # for (x in 5) {}
+    # TODOP: Shadowing.
+}
+
+
+fun main() -> i64 = {
+    var dyn_arr: List[i32];
+    dyn_arr += 1; dyn_arr += 2;
+    
+    var a = 1;
+    var dyn_ref_arr: List[ref i32];
+    dyn_ref_arr += &a; dyn_ref_arr += &a;
+
+    # ===== Dynamic Arrays =====
+    printSeparator(); 
+    for (x in dyn_arr) {        # Type inferred to `i32`
+        builtin_output_i64(x);  # 1, 2
+    }
+
+    printSeparator(); 
+    for (x in dyn_ref_arr) {    # Type inferred to `ref i32`
+        builtin_output_i64(x);  # 1, 11
+        x = x + 10;             # Should mutate the next array elements.
+    }
+
+    printSeparator(); 
+    for (x in dyn_ref_arr) {
+        builtin_output_i64(x);  # 21, 21
+        dyn_ref_arr += &a;      # This won't cause an infinite loop since we calculate len once.
+    }
+
+    printSeparator(); 
+    for (x in dyn_ref_arr) {
+        builtin_output_i64(x);  # 21, 21, 21, 21
+        dyn_ref_arr -= 3;       # This works by accident, since our lists don't shrink.
+    }
+
+    printSeparator(); 
+    builtin_output_i64(i64(len dyn_ref_arr)); # 0
+
+    printSeparator(); 
+    builtin_output_i64(look(&dyn_arr, 1)); # 1
+    builtin_output_i64(look(&dyn_arr, 0)); # 0
+    
+    # ===== Nested fors =====
+    
+    # @TODO: #2000 This should work but we don't have copies. Enable once implemented.
+    # var dyn_matrix: List[List[i64]];
+    # var dyn_a: List[i64]; var dyn_b: List[i64];
+    # dyn_a += 1; dyn_b += 1;
+    # dyn_matrix += dyn_a; dyn_matrix += dyn_b;
+    # for (row in dyn_matrix) {
+    #     for (col in row) {
+    #         builtin_output_i64(col);
+    #     }
+    # }
+
+    return 0;
+}

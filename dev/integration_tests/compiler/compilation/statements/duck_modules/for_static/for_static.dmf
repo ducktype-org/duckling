@@ -1,0 +1,101 @@
+fun printSeparator() -> () = {
+    builtin_output_i64(888);
+}
+
+fun get_arr() -> i32[2] = {
+    var l: i32[2]; 
+    l[0] = 100;
+    l[1] = 200;
+    return l;
+}
+
+fun look(arr: i64[2], target: i64) -> bool = {
+    for (x in arr) {
+        if (x == target) {
+            return true;
+        }
+    }
+    return false;
+}
+
+fun bad() -> () = {
+    
+    
+    # TODOP: This doesn't work and there is no way to make it work currently.
+    # builtin_output_i64(888888888812398123);
+    # for (x: ref i32 in dyn_arr) {
+    #     builtin_output_i64(x);
+    # }
+    # dyn_arr -= 1;
+    #
+
+    # for (x in 5) {}
+    # TODOP: Shadowing.
+}
+
+
+fun main() -> i64 = {
+    var static_arr: i64[2];
+    static_arr[0] = 1; static_arr[1] = 2;
+
+    var matrix: i64[2][2];
+    matrix[0][0] = 1; matrix[0][1] = 2;
+    matrix[1][0] = 3; matrix[1][1] = 4;
+    
+    # ===== Static Arrays =====
+    printSeparator(); 
+    for (x: i64 in static_arr) {
+        builtin_output_i64(x);  # 1, 2
+    }
+
+    printSeparator(); 
+    for (x in static_arr) {     # Type inferred from the element type.
+        x = 123;                # Mutation should work, since static_arr stores non-const
+        builtin_output_i64(x);  # 123, 123
+    }
+
+    for (var x in static_arr) {
+        x = 123;                # Mutation should work.
+    }
+
+    printSeparator(); 
+    for (let x: i64 in static_arr) {
+        builtin_output_i64(x);  # 1, 2
+    }
+    
+    # TODOP: R-Value collections
+    # printSeparator(); 
+    # for (x in get_arr()) {      # This works by accident. We should probably move the value into a temporary if it's r-value?
+    #     builtin_output_i64(x);  # 100, 200
+    # }
+
+    printSeparator(); 
+    var ref_sarr = &static_arr;
+    for (x in ref_sarr) {       # Works beautifully because of reference collapsing.
+        builtin_output_i64(x);  # 1, 2
+    }
+
+    # TODOP: Future continue issue jumping over the index incrementation.
+    
+    # ===== Nested fors =====
+    printSeparator(); 
+    for (x in static_arr) {
+        builtin_output_i64(x);      # 1, 2
+        for (y in static_arr) {
+            builtin_output_i64(y);  # 1, 2
+        }
+    }
+
+    printSeparator(); 
+    for (row in matrix) {
+        for (col in row) {
+            builtin_output_i64(col); # 1, 2, 3, 4
+        }
+    }
+    
+    printSeparator(); 
+    builtin_output_i64(look(&static_arr, 1)); # 1
+    builtin_output_i64(look(&static_arr, 0)); # 0
+
+    return 0;
+}
