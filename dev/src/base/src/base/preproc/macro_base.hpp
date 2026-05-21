@@ -7,6 +7,8 @@
  */
 #pragma once
 
+// NOLINTBEGIN(modernize-macro-to-enum,cppcoreguidelines-macro-to-enum)
+
 #define EVAL(...)  EVAL1(EVAL1(EVAL1(__VA_ARGS__)))
 #define EVAL1(...) EVAL2(EVAL2(EVAL2(__VA_ARGS__)))
 #define EVAL2(...) EVAL3(EVAL3(EVAL3(__VA_ARGS__)))
@@ -97,3 +99,5 @@
  * @brief If that can be used in macros
  */
 #define IF(c) IIF(BOOL(c))
+
+// NOLINTEND(modernize-macro-to-enum,cppcoreguidelines-macro-to-enum)
