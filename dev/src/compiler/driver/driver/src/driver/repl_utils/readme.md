@@ -18,7 +18,7 @@ The primary components in this flow are:
 - Definition statements do not use executable wrappers; they are loaded from module HOUT.
 - DVM loading uses persistent `ReplLoweringContext` owned by caller; helpers require active context consistency.
 - The lowering path snapshots the context and loads only newly-lowered types/functions/globals
-	via `captureLoweredEntitiesSnapshot()` + `collectNewCodeSince()`.
+	via `captureLoweredEntitiesSnapshot()` + `collectNewCodeSince(snapshot)`.
 - Callers must pair `setContext()` and `invalidateContext()` around `compileAndLoad()` so the
   lowering context never keeps stale query references.
 
