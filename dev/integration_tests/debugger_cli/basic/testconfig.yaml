@@ -1,0 +1,21 @@
+Tests:
+  debugger_cli_basic:
+    Run: "@{build_dir}/bin/VM debug inf_loop.dbc"
+    TimeOut: 5 
+    Cases:
+      status_exit:
+        Input:
+          String: "status\ns\nexit" 
+        Output:
+          File: "start.out"
+      help_quit:
+        Input:
+          String: "help\nh\nquit" 
+        Output:
+          File: "help.out"
+      run_pause_continue:
+        Input:
+          String: "run\npause\ncontinue\np\nc\nq" 
+        Output:
+          File: "run.out"
+    
