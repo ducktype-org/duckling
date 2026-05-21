@@ -17,7 +17,7 @@ namespace vm {
 		return process_table.at(pid).refMut();
 	}
 
-	std::expected<PID, api::ApiError> Supervisor::newProcess(const api::ProcessOptions& options) {
+	std::expected<PID, api::ApiError> Supervisor::newProcess(const api::ProcessConfig& options) {
 		std::unique_lock lock(rw_process_table);
 		PID              pid = next++;
 		switch (options.mode) {
@@ -65,6 +65,6 @@ namespace vm {
 	Supervisor::~Supervisor() {
 		// @TODO: #1354 add asserts here, that the processes are stopped and if not then cerr the
 		// warnings about it.
-		for (auto& [pid, proc]: process_table) proc->doRequest(api::request::DeinitAndValidate{});
+		for (auto& [pid, proc]: process_table) (void) proc->doRequest(api::request::DeinitAndValidate{});
 	}
 }

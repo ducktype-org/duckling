@@ -1,5 +1,6 @@
 #pragma once
 
+#include <iostream>
 #include <base/types/ints.hpp>
 
 namespace vm::fast {

@@ -22,11 +22,13 @@ void showVersion() {
 
 clah::Clah getVmClah() {
 	return clah::Clah("VM", "The Duckling Virtual Machine.")
-	    .add(clah::ParamBuilder::ofFlag()
-	             .addShortName('v')
-	             .addLongName("version")
-	             .addShortDesc("Shows version and config")
-	             .build())
+	    .add(
+			clah::ParamBuilder::ofFlag()
+				.addShortName('v')
+				.addLongName("version")
+				.addShortDesc("Shows version and config")
+				.build()
+		)
 	    .setPreHandler([](const clah::ParsingResult& options) {
 			if (options.isFlag("version")) {
 				showVersion();
@@ -34,11 +36,13 @@ clah::Clah getVmClah() {
 			}
 		})
 #ifdef BUILD_TYPE_DEV_DEBUG
-	    .add(clah::ParamBuilder::ofFlag()
-	             .addShortName('d')
-	             .addLongName("debug-logs")
-	             .addShortDesc("Enables DVM debug logs.")
-	             .build())
+	    .add(
+			clah::ParamBuilder::ofFlag()
+				.addShortName('d')
+				.addLongName("debug-logs")
+				.addShortDesc("Enables DVM debug logs.")
+				.build()
+		)
 	    .setPreHandler([](const clah::ParsingResult& options) {
 			if (options.isFlag("debug-logs")) {
 				std::cerr << "Debug logs enabled.\n";
@@ -49,44 +53,66 @@ clah::Clah getVmClah() {
 			}
 		})
 #endif
-	    .addSubcommand(clah::Clah("server", "Launch DVM as a http server.")
-	                       .add(clah::ParamBuilder::ofValue(clah::IntParser::make())
-	                                .addShortName('p')
-	                                .addLongName("port")
-	                                .addShortDesc("Port to listen on.")
-	                                .required()
-	                                .build())
-	                       .setHandler([](const clah::ParsingResult& options) -> int {
-							   vm::Supervisor::get();
-							   auto port = options.getValue<i64>("port").value();
-							   server(i32(port));
-							   return 0;
-						   }))
-	    .addSubcommand(clah::Clah("run", "Run a .dbc file.")
-	                       .addPositional(clah::FileParser::make("file"))
-	                       .setDefaultValueParser(clah::StringParser::make("program_argument"))
-	                       .setHandler([](const clah::ParsingResult& options) {
-							   vm::Supervisor::get();
-							   auto                     file = options.getPositional<fs::File>(0);
-							   std::vector<std::string> args;
-							   args.reserve(options.getExtraParameterCount());
-							   for (usize argc = 0; argc < options.getExtraParameterCount(); argc++)
-								   args.push_back(*options.getExtra<std::string>(argc));
+	    .addSubcommand(
+			clah::Clah("server", "Launch DVM as a http server.")
+				.add(
+					clah::ParamBuilder::ofValue(clah::IntParser::make())
+						.addShortName('p')
+						.addLongName("port")
+						.addShortDesc("Port to listen on.")
+						.required()
+						.build()
+				)
+				.setHandler([](const clah::ParsingResult& options) -> int {
+					vm::Supervisor::get();
+					auto port = options.getValue<i64>("port").value();
+					server(i32(port));
+					return 0;
+				})
+		)
+	    .addSubcommand(
+			clah::Clah("run", "Run a .dbc file.")
+				.addPositional(clah::FileParser::make("file"))
+				.add(
+					clah::ParamBuilder::ofFlag()
+						.addLongName("fast-mode")
+						.addShortDesc(
+							"Fast mode for the VM, which does not perform certain runtime checks."
+						)
+						.build()
+				)
+				.setDefaultValueParser(clah::StringParser::make("program_argument"))
+				.setHandler([](const clah::ParsingResult& options) {
+					vm::Supervisor::get();
+					auto                     file = options.getPositional<fs::File>(0);
+					std::vector<std::string> args;
+					args.reserve(options.getExtraParameterCount());
+					for (usize argc = 0; argc < options.getExtraParameterCount(); argc++)
+						args.push_back(*options.getExtra<std::string>(argc));
 
-							   return cli(file, args);
-						   }))
-	    .addSubcommand(clah::Clah("debug_adapter", "Start the VM debug adapter.")
-	                       .setHandler([](const clah::ParsingResult&) -> int {
-							   vm::Supervisor::get();
-							   vm::debugger::debug_adapter::DebugAdapter::get().run();
-							   return 0;
-						   }))
-	    .addSubcommand(clah::Clah("repl", "Start the VM in REPL mode.")
-	                       .setHandler([](const clah::ParsingResult&) -> int {
-							   vm::Supervisor::get();
-							   DuckVMRepl::get().run();
-							   return 0;
-						   }));
+					vm::api::ProcessConfig process_options{};
+					if (options.isFlag("fast-mode"))
+						process_options.mode = vm::api::ProcessMode::Fast;
+
+					return cli(file, args, process_options);
+				})
+		)
+	    .addSubcommand(
+			clah::Clah("debug_adapter", "Start the VM debug adapter.")
+				.setHandler([](const clah::ParsingResult&) -> int {
+					vm::Supervisor::get();
+					vm::debugger::debug_adapter::DebugAdapter::get().run();
+					return 0;
+				})
+		)
+	    .addSubcommand(
+			clah::Clah("repl", "Start the VM in REPL mode.")
+				.setHandler([](const clah::ParsingResult&) -> int {
+					vm::Supervisor::get();
+					DuckVMRepl::get().run();
+					return 0;
+				})
+		);
 }
 
 int main(int argc, const char** argv) {
@@ -96,27 +122,33 @@ int main(int argc, const char** argv) {
 	try {
 		return clah.execute(base::safeIntConv<usize>(argc), argv);
 	} catch (const base::Exception& e) {
-		printer::StreamPrinter::print({
-			{ "[ERROR] ", printer::Color::Red },
-			{ "DVM Exception was caught with message:\n", printer::Color::Default },
-			{ e.what(), printer::Color::Default },
-			{ "\nAborting\n", printer::Color::Default },
-		});
+		printer::StreamPrinter::print(
+			{
+				{ "[ERROR] ", printer::Color::Red },
+				{ "DVM Exception was caught with message:\n", printer::Color::Default },
+				{ e.what(), printer::Color::Default },
+				{ "\nAborting\n", printer::Color::Default },
+			}
+		);
 		return 1;
 	} catch (const std::exception& e) {
-		printer::StreamPrinter::print({
-			{ "[ERROR] ", printer::Color::Red },
-			{ "Unexpected Exception was caught with message:\n", printer::Color::Default },
-			{ e.what(), printer::Color::Default },
-			{ "\nAborting\n", printer::Color::Default },
-		});
+		printer::StreamPrinter::print(
+			{
+				{ "[ERROR] ", printer::Color::Red },
+				{ "Unexpected Exception was caught with message:\n", printer::Color::Default },
+				{ e.what(), printer::Color::Default },
+				{ "\nAborting\n", printer::Color::Default },
+			}
+		);
 		return 1;
 	} catch (...) {
-		printer::StreamPrinter::print({
-			{ "[ERROR] ", printer::Color::Red },
-			{ "Unexpected Exception not inheriting from std::exception was caught.\n",
-		      printer::Color::Default },
-		});
+		printer::StreamPrinter::print(
+			{
+				{ "[ERROR] ", printer::Color::Red },
+				{ "Unexpected Exception not inheriting from std::exception was caught.\n",
+		          printer::Color::Default },
+			}
+		);
 		return 1;
 	}
 }

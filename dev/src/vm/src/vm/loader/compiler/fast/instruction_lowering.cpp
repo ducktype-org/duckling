@@ -7,6 +7,9 @@
 #include "vm/bytecode/opcode_args.hpp"
 #include "vm/core/fast/program/instructions/relocatable.hpp"
 
+#include <optional>
+#include <stack>
+
 using namespace vm::loader::compiler;
 using namespace vm::fast::reloc;
 
@@ -17,6 +20,7 @@ namespace {
 
 	struct Context {
 		const vm::code::ValidProgram&       high_program;
+		const vm::fast::ProgramBase&        program;
 		const detail::FunctionStackContext& stack_ctx;
 
 		base::HashMap<base::StrID, i64> label_ids{};
@@ -76,16 +80,16 @@ namespace {
 	 */
 	void translateLabels(
 		std::vector<vm::fast::reloc::Instruction>& new_instructions,
-		const base::HashMap<i64, i64>&             label_id_to_offset
+		const base::HashMap<i64, usize>&           label_id_to_offset
 	) {
 		// Now, change label IDs to offsets.
 		// These macros detect if an instruction uses a label argument, and if so, replaces the
 		// label ID with the offset calculated above.
 
 		auto get_offset = [&](i64 label_id, const vm::fast::reloc::Instruction& instr) -> i64 {
-			ptrdiff_t current_instr_offset = &instr - new_instructions.data();
-			i64       label_offset         = label_id_to_offset.at(label_id);
-			return label_offset - current_instr_offset;
+			i64       target_offset  = static_cast<i64>(label_id_to_offset.at(label_id));
+			ptrdiff_t current_offset = &instr - new_instructions.data();
+			return target_offset - current_offset;
 		};
 
 #define CHECK_GOOD(tp)      EQUAL(JumpDestination, tp),
@@ -102,7 +106,7 @@ namespace {
 
 #define BODY(NAME, ...)                                           \
 	case vm::fast::InstrID::NAME: {                               \
-		auto& inner = instr.CAT(instr_, NAME);                    \
+		[[maybe_unused]] auto& inner = instr.CAT(instr_, NAME);   \
 		FOR_EACH(ADD_LABEL_TRANSLATOR EXPAND, __VA_ARGS__) break; \
 	}
 
@@ -119,36 +123,89 @@ namespace {
 	}
 }
 
-#define PUSH(name, ...) \
-	new_instructions.push_back(MakerHelper_##name(ctx __VA_OPT__(, ) __VA_ARGS__))
+#define PUSH(name, ...)                                                                 \
+	do {                                                                                \
+		new_instructions.push_back(MakerHelper_##name(ctx __VA_OPT__(, ) __VA_ARGS__)); \
+		/* prev = new_instructions.back(); */                                           \
+	} while (0)
 
 std::vector<vm::fast::reloc::Instruction> vm::loader::compiler::fast::lowerInstructions(
 	const vm::code::ValidProgram&       high_program,
+	const vm::fast::ProgramBase&        program,
 	const detail::FunctionStackContext& stack_ctx,
 	const vm::fast::FunctionInfo&       func_info
 ) {
 	std::vector<vm::fast::reloc::Instruction> new_instructions;
 
-	Context ctx{
-		.high_program = high_program,
-		.stack_ctx    = stack_ctx,
-	};
+	Context ctx{ .high_program = high_program, .program = program, .stack_ctx = stack_ctx };
 
 	namespace high = vm::code::instructions;
-	base::HashMap<i64, i64> label_id_to_offset;
+	base::HashMap<i64, usize> label_id_to_offset;
+
+	std::stack<vm::fast::TypeID> type_stack
+		= func_info.arg_types | std::ranges::to<std::stack<vm::fast::TypeID>>();
+
+	base::Optional<Ref<vm::fast::reloc::Instruction>> prev_instr = std::nullopt;
 	for (const code::Instruction& instruction: stack_ctx.function.body) {
 		instr_match(instruction) {
+			instr_case(high::Op_init_pany_type, init) {
+				auto type      = high_program.types().at(init.type.type_name);
+				auto type_size = getIntTypeSize(type->getSize());
+				type_stack.emplace(type->getID().asInt());
+				match_optional(prev_instr) {
+					// If previous is the same as current, then increase
+					// the number of bytes to initialize instead of pushing a new instruction.
+					opt_some(prev) {
+						if (prev->id == vm::fast::InstrID::init_imm) {
+							// If the previous instruction is also an init, we can merge them into one.
+							prev->instr_init_imm.size += type_size;
+							break;
+						}
+					}
+					opt_none { PUSH(init_imm, type_size); }
+				}
+			}
+			instr_case(high::Op_deinit, deinit) {
+				vm::fast::TypeID type_id   = type_stack.top();
+				usize            type_size = program.types.at(type_id)->getSize().asInt();
+				type_stack.pop();
+				match_optional(prev_instr) {
+					// If previous is the same as current, then increase
+					// the number of bytes to deinitialize instead of pushing a new instruction.
+					opt_some(prev) {
+						if (prev->id == vm::fast::InstrID::deinit_imm) {
+							// If the previous instruction is also a deinit, we can merge them into one.
+							prev->instr_deinit_imm.size += type_size;
+							break;
+						}
+					}
+					opt_none { PUSH(deinit_imm, type_size); }
+				}
+			}
 			instr_case(high::Op_mov_p64_p64, mov) PUSH(mov_p64_p64, mov.dst, mov.src);
 			instr_case(high::Op_mov_p64_imm, mov) PUSH(mov_p64_imm, mov.dst, mov.src);
 			instr_case(high::Op_add_p64_p64, add) PUSH(add_p64_p64, add.dst, add.src);
+			instr_case(high::Op_add_p64_imm, add) PUSH(add_p64_imm, add.dst, add.src);
+			instr_case(high::Op_sub_p64_p64, sub) PUSH(sub_p64_p64, sub.dst, sub.src);
+			instr_case(high::Op_sub_p64_imm, sub) PUSH(sub_p64_imm, sub.dst, sub.src);
+			instr_case(high::Op_mod_p64_p64, mod) PUSH(mod_p64_p64, mod.dst, mod.src);
+			instr_case(high::Op_mod_p64_imm, mod) PUSH(mod_p64_imm, mod.dst, mod.src);
 			instr_case(high::Op_call_func, call) {
-				const Bytes stack_diff = func_info.args_size + func_info.return_size;
+				const vm::fast::FunctionInfo& called_func_info
+					= *program.functions.at(call.function.function_name);
+				const Bytes stack_diff = called_func_info.args_size + called_func_info.return_size;
 				PUSH(call_func_imm, call.function, stack_diff.asInt());
 			}
 			instr_case(high::Op_input_p64, input) PUSH(input_p64, input.dst);
 			instr_case(high::Op_output_p64, output) PUSH(output_p64, output.src);
 			instr_case(high::Op_ret, ret) PUSH(ret_imm, func_info.return_size.asInt());
 			instr_case(high::Op_cmpEq_p64_p64, cmp) PUSH(cmpEq_p64_p64, cmp.lhs, cmp.rhs);
+			instr_case(high::Op_cmpEq_p64_imm, cmp) PUSH(cmpEq_p64_imm, cmp.lhs, cmp.rhs);
+			instr_case(high::Op_cmpGt_p64_p64, cmp) PUSH(cmpGt_p64_p64, cmp.lhs, cmp.rhs);
+			instr_case(high::Op_cmpGt_p64_imm, cmp) PUSH(cmpGt_p64_imm, cmp.lhs, cmp.rhs);
+			instr_case(high::Op_jmpIf_label, jmp) PUSH(jmpIf_dest, jmp.label);
+			instr_case(high::Op_jmpIfNot_label, jmp) PUSH(jmpIf_dest, jmp.label);
+			instr_case(high::Op_jmp_label, jmp) PUSH(jmp_dest, jmp.label);
 			instr_case(high::Op_label, label) {
 				const i64 id = makeJumpDestination(ctx, label.label);
 				label_id_to_offset.put(id, new_instructions.size());
@@ -158,6 +215,10 @@ std::vector<vm::fast::reloc::Instruction> vm::loader::compiler::fast::lowerInstr
 					"Instruction lowering not implemented for instruction: ", instruction.name()
 				);
 			}
+			// Set prev_instr if prev_instr is not the same as the top instruction.
+			// If they are equal then no instructions were added (e.g. label), so we reset
+			// prev_instr. if (prev_instr != Ref(&new_instructions.back())) 	prev_instr =
+			// &new_instructions.back(); else 	prev_instr = std::nullopt;
 		}
 	}
 

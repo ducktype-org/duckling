@@ -26,10 +26,10 @@ namespace vm::fast {
 #include <vm/core/fast/program/instructions/instruction_definitions.hpp>
 #undef HANDLE_INSTR
 
-		constexpr static int eval(INSTRFUN_ARGS_BASE) {
+		constexpr static void eval(INSTRFUN_ARGS_BASE) {
 			bool run = true;
 			while (run) {
-				switch (state.currentInstruction().id) {
+				switch (frame->ip->id) {
 #define HANDLE_INSTR(NAME)                                                            \
 	case vm::fast::InstrID::NAME: {                                                   \
 		if constexpr (std::string_view(#NAME) != "exit") {                            \
@@ -42,11 +42,9 @@ namespace vm::fast {
 #include <vm/core/fast/program/instructions/instruction_definitions.hpp>
 #undef HANDLE_INSTR
 				default:
-					return 1;
-					break;
+					CORE_PANIC("Unknown instruction ID: ", static_cast<u64>(frame->ip->id));
 				}
 			}
-			return 0;
 		}
 	};
 

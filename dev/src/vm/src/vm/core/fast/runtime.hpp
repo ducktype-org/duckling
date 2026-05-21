@@ -38,7 +38,7 @@ namespace vm::fast {
 		Box<std::array<byte, LOCAL_STACK_SIZE>> local_stack_memory
 			= makeBox<std::array<byte, LOCAL_STACK_SIZE>>();
 
-		std::vector<Frame> frame_stack = std::vector<Frame>(LOCAL_STACK_SIZE);
+		std::vector<Frame> frame_stack = std::vector<Frame>(LOCAL_STACK_SIZE / sizeof(Frame));
 
 		Frame* top_frame = frame_stack.data();
 
@@ -61,7 +61,11 @@ namespace vm::fast {
 			return top_frame;
 		}
 
-		void popFrame() { top_frame--; }
+		Frame* popFrame() {
+			CORE_ASSERT(top_frame > frame_stack.data(), "Cannot pop frame from an empty stack");
+			top_frame--;
+			return top_frame;
+		}
 
 		[[nodiscard]] const exec::Instruction& currentInstruction() const { return *top_frame->ip; }
 

@@ -3,7 +3,7 @@
 namespace vm::api {
 	enum class ProcessMode { Safe, Fast };
 
-	struct ProcessOptions {
+	struct ProcessConfig {
 		ProcessMode mode = ProcessMode::Safe;
 	};
 }

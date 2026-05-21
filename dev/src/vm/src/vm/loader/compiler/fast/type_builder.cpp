@@ -3,7 +3,6 @@
 #include "base/except/exceptions.hpp"
 
 #include "vm/bytecode/validator/valid_type/valid_type_id.hpp"
-#include "vm/utils/vm_not_implemented.hpp"
 #include <vm/bytecode/validator/valid_type/valid_type.hpp>
 
 using namespace vm::code;
@@ -65,7 +64,10 @@ namespace {
 						);
 				}
 				variant_case(valid_type::finalized::Structure, structure) {
-					throw vm::VMNotImplemented("Structure type definition not implemented yet");
+					// @TODO: #2719 Implement structure type definition.
+					throw base::NotYetImplemented(
+						"Structure type definition is not implemented yet."
+					);
 				}
 				variant_case(valid_type::finalized::Variant, variant) {
 					type_collection->at(type.getName())

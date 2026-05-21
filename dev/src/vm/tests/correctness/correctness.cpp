@@ -12,6 +12,7 @@ public:
 		TESTER_ADD_TEST(testFibIter);
 		TESTER_ADD_TEST(testFibRec);
 		TESTER_ADD_TEST(testTailCall);
+
 	}
 
 private:

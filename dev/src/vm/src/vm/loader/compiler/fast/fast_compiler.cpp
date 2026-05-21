@@ -56,34 +56,34 @@ void fast::FastCompiler::compileNewFunctions(const std::vector<Function>& new_fu
 				.id          = vm::fast::FunctionID(program.functions.size()),
 				.return_size = std::ranges::fold_left(
 					function.signature.result_types
-						| std::views::transform([this](const auto& result_name) {
-							  return program.types.at(result_name)->getSize();
+						| std::views::transform([this](const auto& result_type) {
+							  return program.types.at(result_type)->getSize();
 						  }),
 					Bytes(0),
 					std::plus()
 				),
 				.args_size = std::ranges::fold_left(
 					function.signature.parameters
-						| std::views::transform([this](const auto& param_name) {
-							  return program.types.at(param_name)->getSize();
+						| std::views::transform([this](const auto& param_type) {
+							  return program.types.at(param_type)->getSize();
 						  }),
 					Bytes(0),
 					std::plus()
 				),
 				.arg_types    = function.signature.parameters
-		                      | std::views::transform([this](const auto& param_name) {
-								 return program.types.at(param_name)->getID();
+		                      | std::views::transform([this](const auto& param_type) {
+								 return program.types.at(param_type)->getID();
 								})
 		                      | std::ranges::to<std::vector<vm::fast::TypeID>>(),
 				.result_types = function.signature.result_types
-		                      | std::views::transform([this](const auto& result_name) {
-									return program.types.at(result_name)->getID();
+		                      | std::views::transform([this](const auto& result_type) {
+									return program.types.at(result_type)->getID();
 								})
 		                      | std::ranges::to<std::vector<vm::fast::TypeID>>() },
 			function.name
 		);
 		reloc_functions.emplace_back(
-			lowerInstructions(high_program, ctx, *program.functions.at(function.name))
+			lowerInstructions(high_program, program, ctx, *program.functions.at(function.name))
 		);
 	}
 }

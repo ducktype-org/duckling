@@ -134,7 +134,7 @@ namespace vm::fast {
 		return getMainVMThread().getExitValue();
 	}
 
-	std::expected<api::Response, api::ApiError> FastVMProcess::deinitAndValidate() { return {}; }
+	std::expected<api::Response, api::ApiError> FastVMProcess::deinitAndValidate() { return true; }
 
 	base::Optional<api::ApiError> FastVMProcess::pauseVMThread(
 		[[maybe_unused]] api::ThreadID thread_id
@@ -179,8 +179,8 @@ namespace vm::fast {
 	}
 
 	void FastVMProcess::notifyPausedVMThread([[maybe_unused]] api::ThreadID thread_id) {
-		// @TODO: #2102 Implement this pure virtual method.
-		throw vm::VMNotImplemented("Method `notifyPausedVMThread` is not implemented.");
+		auto opt_thread = getVMThreadByID(thread_id);
+		if (opt_thread) opt_thread.value()->notifyPaused();
 	}
 
 	void FastVMProcess::waitForBreakpoint() {
@@ -203,8 +203,9 @@ namespace vm::fast {
 	}
 
 	std::vector<api::ThreadID> FastVMProcess::getAllThreadIDs() {
-		// @TODO: #2102 Implement this pure virtual method.
-		throw vm::VMNotImplemented("Method `getAllThreadIDs` is not implemented.");
+		std::vector<api::ThreadID> thread_ids;
+		for (const auto& thread: vm_threads) thread_ids.push_back(thread.getThreadID());
+		return thread_ids;
 	}
 
 	api::ThreadID FastVMProcess::getMainThreadID() {

@@ -34,6 +34,8 @@ namespace vm::api {
 			int operator()(const StateError&) const noexcept { return EINVAL; }
 
 			int operator()(const NotImplementedError&) const noexcept { return ENOSYS; }
+
+			int operator()(const UnsupportedOperation&) const noexcept { return ENOTSUP; }
 		};
 
 		return std::visit(Visitor{}, api_error);

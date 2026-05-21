@@ -45,10 +45,13 @@ namespace vm::api {
 		NLOHMANN_DEFINE_TYPE_INTRUSIVE(StateError, why);
 	};
 
+	struct UnsupportedOperation {
+		std::string why;
+		NLOHMANN_DEFINE_TYPE_INTRUSIVE(UnsupportedOperation, why);
+	};
+
 	/**
 	 * @brief Represents an error indicating that a feature is not yet implemented.
-	 * @note After having received this error, the process is in undefined state, so it should be
-	 * killed.
 	 */
 	struct NotImplementedError {
 		std::string why;
@@ -67,7 +70,8 @@ namespace vm::api {
 		ProcessNotFound,
 		WrongResponse,
 		StateError,
-		NotImplementedError>;
+		NotImplementedError,
+		UnsupportedOperation>;
 
 	/**
 	 * @brief Converts the ApiError to a string representation in a JSON format.
@@ -95,3 +99,4 @@ JSON_REGISTER_TYPE_WITH_NAME(vm::api::ProcessNotFound, "ProcessNotFound");
 JSON_REGISTER_TYPE_WITH_NAME(vm::api::WrongResponse, "WrongResponse");
 JSON_REGISTER_TYPE_WITH_NAME(vm::api::StateError, "StateError");
 JSON_REGISTER_TYPE_WITH_NAME(vm::api::NotImplementedError, "NotImplementedError");
+JSON_REGISTER_TYPE_WITH_NAME(vm::api::UnsupportedOperation, "UnsupportedOperation");

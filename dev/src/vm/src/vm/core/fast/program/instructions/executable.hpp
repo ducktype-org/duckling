@@ -23,7 +23,7 @@ namespace vm::fast::exec {
 		using Place32         = u64;
 		using Place64         = u64;
 		using Function        = const vm::fast::exec::ExecFunction*;
-		using JumpDestination = const Instruction*;  // Pointer to the next instruction.
+		using JumpDestination = i64;  // Pointer to the next instruction.
 		using Type            = const Type*;
 
 #define HANDLE_ARG_DEF(arg) VALIDATE_ARG_EXISTS(arg)

@@ -31,7 +31,7 @@ namespace {
 		return reloc_arg;                                                                     \
 	}
 
-	FOR_EACH(TRIVIAL_TRANSLATION, Immediate, Place8, Place16, Place32, Place64)
+	FOR_EACH(TRIVIAL_TRANSLATION, Immediate, Place8, Place16, Place32, Place64, JumpDestination)
 #undef TRIVIAL_TRANSLATION
 
 	/**
@@ -40,18 +40,6 @@ namespace {
 	 */
 	[[maybe_unused]] exec::arg::Function relocateFunction(TRANSLATOR_ARGUMENTS(Function)) {
 		return &exec_functions[reloc_arg.asInt()];
-	}
-
-	/**
-	 * @brief Relocates a jump destination by calculating a pointer to the instruction in the
-	 * executable function based on the relative offset in the relocatable instruction.
-	 */
-	[[maybe_unused]] exec::arg::JumpDestination relocateJumpDestination(
-		TRANSLATOR_ARGUMENTS(JumpDestination)
-	) {
-		const ptrdiff_t current_offset = current_function_reloc.data.data() - &current_instruction;
-		const ptrdiff_t target_offset  = current_offset + reloc_arg;
-		return current_function.data.data() + target_offset;
 	}
 
 	[[maybe_unused]] exec::arg::Type relocateType(TRANSLATOR_ARGUMENTS(Type)) {
