@@ -1,7 +1,7 @@
 #include "symbol_type.hpp"
 
-#include "helios/tsh/abstract_type.hpp"
-#include "helios/tsh/types.hpp"
+#include <helios/tsh/abstract_type.hpp>
+#include <helios/tsh/types.hpp>
 
 namespace compiler::tsh {
 
@@ -26,5 +26,6 @@ namespace compiler::tsh {
 		return get_pointee_type(abstract_type);
 	}
 
-	template auto SymbolType<AbstractType>::getPointeeSymbolType() const -> SymbolType<AbstractType>;
+	template auto SymbolType<AbstractType>::getPointeeSymbolType() const
+		-> SymbolType<AbstractType>;
 }

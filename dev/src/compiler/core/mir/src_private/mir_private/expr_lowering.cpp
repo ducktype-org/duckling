@@ -441,6 +441,8 @@ namespace compiler::mir {
 			    and is_direct_numeric(expr.target_type)) {
 				return false;
 			}
+			// If a cast is to a CPointer type then it is not empty
+			if (expr.target_type.getType().getKind() == tsh::Kind::CPointer) return false;
 
 			return true;
 		}

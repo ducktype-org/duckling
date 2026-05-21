@@ -6,15 +6,16 @@
 #include "expr.hpp"
 
 #include "../visitors.hpp"
-#include <helios/tsh/abstract_type.hpp>
-#include <helios/tsh/expression_type.hpp>
 
 #include <concurrent/base/collections/hash_map.hpp>
 #include <helios/mangler/mangler.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
+#include <helios/tsh/abstract_type.hpp>
+#include <helios/tsh/expression_type.hpp>
 #include <helios/tsh/queries.hpp>
+#include <helios/tsh/types.hpp>
 #include <helios_private/symbols/generated_symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
@@ -819,6 +820,8 @@ namespace compiler::helios::code {
 						  return base_type.as<tsh::DynamicArrayAbstractType>().getElementType();
 					  case tsh::Kind::StaticArray:
 						  return base_type.as<tsh::StaticArrayAbstractType>().getElementType();
+					  case tsh::Kind::ManyPointer:
+						  return base_type.as<tsh::ManyPointerAbstractType>().getPointee();
 					  default:
 						  CORE_PANIC("Cannot index a non-array like type");
 					  }

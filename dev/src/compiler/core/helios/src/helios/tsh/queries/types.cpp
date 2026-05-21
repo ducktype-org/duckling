@@ -132,7 +132,7 @@ namespace compiler::tsh {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryManyPointerType)
 
-		struct IMPLEMENT_QUERY(QueryCPointerType, CPointerAbstractType::Impl) {
+	struct IMPLEMENT_QUERY(QueryCPointerType, CPointerAbstractType::Impl) {
 		static auto provide(Context&, const QKey key) -> PResult {
 			return CPointerAbstractTypeImpl(key);
 		}

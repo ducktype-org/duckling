@@ -767,6 +767,27 @@ namespace compiler::backend_llvm {
 								current_layout = dynamic_array_layout.getElementLayout();
 								current_type   = typeFromLayout(module, current_layout);
 							}
+							variant_case(tsl::PointerTypeLayout, pointer_layout) {
+								// Finish any struct/array GEP first
+								flush_gep();
+
+								// Load the pointer value (because current_ptr points to storage)
+								current_ptr = builder.CreateLoad(builder.getPtrTy(), current_ptr);
+
+								// Now build a NEW GEP for pointer arithmetic
+								current_ptr = builder.CreateGEP(
+									typeFromLayout(module, pointer_layout.getPointee()),
+									current_ptr,
+									index_value
+								);
+
+								// Clear indices because we emitted the GEP directly
+								gep_indices.clear();
+
+								// Update layout/type
+								current_layout = pointer_layout.getPointee();
+								current_type   = typeFromLayout(module, current_layout);
+							}
 							variant_default { CORE_PANIC("Indexing into a non-array layout"); }
 						}
 					}

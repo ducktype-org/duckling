@@ -338,7 +338,8 @@ base::Optional<vm::code::TypeOfData> ProgramLoweringContext::lowerTslTypeInterna
 				vm::code::DynamicTableType dyntable_type(
 					base::StrID(dyntable_type_name), typeName(pointee_type)
 				);
-				keepVMType(dyntable_type);  // Ensure the dynamic table type is stored in the context.
+				keepVMType(dyntable_type
+				);  // Ensure the dynamic table type is stored in the context.
 				auto pointer_type_name = base::strConcat("ptr_", dyntable_type_name);
 				return vm::code::PointerType(
 					base::StrID(pointer_type_name), typeName(dyntable_type)

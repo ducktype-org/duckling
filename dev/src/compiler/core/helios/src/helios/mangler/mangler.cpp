@@ -505,13 +505,13 @@ namespace compiler::helios::mangler {
 				"P", ctx.query<QueryMangledType>({ type.getPointee() })->valueOrThrow().str(), "E"
 			);
 		}
-		
+
 		static std::string mangle(query::Context& ctx, tsh::ManyPointerAbstractType type) {
 			return base::strConcat(
 				"MP", ctx.query<QueryMangledType>({ type.getPointee() })->valueOrThrow().str(), "E"
 			);
 		}
-		
+
 		static std::string mangle(query::Context& ctx, tsh::CPointerAbstractType type) {
 			return base::strConcat(
 				"CP", ctx.query<QueryMangledType>({ type.getPointee() })->valueOrThrow().str(), "E"

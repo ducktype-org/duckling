@@ -476,20 +476,21 @@ namespace compiler::helios {
 									val.withMutability(tsh::Mutability::Immutable)
 								};
 							case Ptr:
-								return ctv::CompileTimeValue{
-									tsh::SymbolType<>::withDefaults(ctx.query<tsh::QueryPointerType>({ val }))
-								};
+								return ctv::CompileTimeValue{ tsh::SymbolType<>::withDefaults(
+									ctx.query<tsh::QueryPointerType>({ val })
+								) };
 							case ManyPtr:
-								return ctv::CompileTimeValue{
-									tsh::SymbolType<>::withDefaults(ctx.query<tsh::QueryManyPointerType>({ val }))
-								};
+								return ctv::CompileTimeValue{ tsh::SymbolType<>::withDefaults(
+									ctx.query<tsh::QueryManyPointerType>({ val })
+								) };
 							case CPtr:
-								return ctv::CompileTimeValue{
-									tsh::SymbolType<>::withDefaults(ctx.query<tsh::QueryCPointerType>({ val }))
-								};
+								return ctv::CompileTimeValue{ tsh::SymbolType<>::withDefaults(
+									ctx.query<tsh::QueryCPointerType>({ val })
+								) };
 							// case Slice:
 							// 	return ctv::CompileTimeValue{
-							// 		tsh::SymbolType<>::withDefaults(ctx.query<tsh::QuerySliceType>({ val }))
+							// 		tsh::SymbolType<>::withDefaults(ctx.query<tsh::QuerySliceType>({
+							// val }))
 							// 	};
 							default:
 								ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(

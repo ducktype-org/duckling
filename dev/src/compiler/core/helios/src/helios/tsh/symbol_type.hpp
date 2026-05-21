@@ -367,5 +367,6 @@ namespace compiler::tsh {
 		Uniqueness    uniqueness;
 	};
 
-	extern template auto SymbolType<AbstractType>::getPointeeSymbolType() const -> SymbolType<AbstractType>;
+	extern template auto SymbolType<AbstractType>::getPointeeSymbolType() const
+		-> SymbolType<AbstractType>;
 }

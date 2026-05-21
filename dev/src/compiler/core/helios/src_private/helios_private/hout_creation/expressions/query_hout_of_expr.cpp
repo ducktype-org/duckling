@@ -3,8 +3,6 @@
 #include "coercions.hpp"
 #include "errors.hpp"
 #include "function_calls/call_processing.hpp"
-#include <helios/tsh/symbol_type.hpp>
-#include <helios_private/comp_time/comp_time.hpp>
 #include "hout_of_subexpr.hpp"
 #include "numeric_literals.hpp"
 
@@ -16,6 +14,8 @@
 #include <helios/hout/elements/expr.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/tsh/queries.hpp>
+#include <helios/tsh/symbol_type.hpp>
+#include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/errors/dia_interactive_elements.hpp>
 #include <helios_private/hout_creation/expressions/builtin_operators.hpp>
 #include <helios_private/hout_creation/expressions/chain_expr.hpp>
@@ -552,24 +552,35 @@ namespace compiler::helios::code {
 				}
 			}
 
-			void checkCastIsValid(
+			void assertCastIsValid(
 				pst::Access<pst::expr::CastAs> stmt,
 				const tsh::SymbolType<>&       from,
 				const tsh::SymbolType<>&       to
 			) {
 				if (from == to) return;  // trivial cast, always valid
 
-				// For now we allow casts between numeric types and from any type to a Meta type.
-				// In the future, we will likely want to allow more casts (e.g. to allow users to
-				// define their own custom casts), but this is a good starting point.
-				if ((isNumericType(from.getType()) && isNumericType(to.getType()))
-				    || to.getType() == tsh::getMetaType()) {
-					return;
-				}
+				// For now we allow casts between numeric types
+				if (isNumericType(from.getType()) && isNumericType(to.getType())) return;
 
 				if (from.getRefKind() == tsh::ReferenceKind::Ref
 				    && to.getType().getKind() == tsh::Kind::Pointer) {
 					return;  // allow explicit casts from ref T to ptr T
+				}
+				if (from.getRefKind() == tsh::ReferenceKind::Box
+				    && to.getType().getKind() == tsh::Kind::Pointer) {
+					return;  // allow explicit casts from ref T to many ptr T
+				}
+				if (from.getRefKind() == tsh::ReferenceKind::Direct
+				    && to.getRefKind() == tsh::ReferenceKind::Direct) {
+					// Allow from Pointer and from ManyPointer to CPointer.
+					if (from.getType().getKind() == tsh::Kind::Pointer
+					    && to.getType().getKind() == tsh::Kind::CPointer) {
+						return;
+					}
+					if (from.getType().getKind() == tsh::Kind::ManyPointer
+					    && to.getType().getKind() == tsh::Kind::CPointer) {
+						return;
+					}
 				}
 
 				ctx.logInt(makeBox<dia_int::PlaceholderError>(
@@ -578,7 +589,6 @@ namespace compiler::helios::code {
 					),
 					stmt->getStablePosition()
 				));
-				query::throwFailed();
 			}
 
 			void visitCastAs(pst::Access<pst::expr::CastAs> stmt) override {
@@ -590,7 +600,7 @@ namespace compiler::helios::code {
 				auto type_ctv    = ctx.query<QueryEvaluateHOUTExpression>({ type_expr.ref() });
 				auto symbol_type = type_ctv.valueOrThrow().get<tsh::SymbolType<>>().value();
 
-				checkCastIsValid(stmt, value_expr->expression_type.getSymbolType(), symbol_type);
+				assertCastIsValid(stmt, value_expr->expression_type.getSymbolType(), symbol_type);
 				node = makeBox<CastExpr>(ctx, pstOrigin(stmt), std::move(value_expr), symbol_type);
 			}
 

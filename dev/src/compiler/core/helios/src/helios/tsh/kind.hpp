@@ -48,6 +48,7 @@ MAKE_STRINGIFYABLE_ENUM(compiler::tsh, u32, Kind
 
 namespace compiler::tsh {
 	inline bool isPointerKind(const Kind kind) {
-		return kind == Kind::RawPointer || kind == Kind::Pointer || kind == Kind::ManyPointer || kind == Kind::CPointer;
+		return kind == Kind::RawPointer || kind == Kind::Pointer || kind == Kind::ManyPointer
+		    || kind == Kind::CPointer;
 	}
 }

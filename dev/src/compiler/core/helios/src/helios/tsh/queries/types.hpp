@@ -100,7 +100,9 @@ namespace compiler::tsh {
 	 *
 	 * \query_thread_safe
 	 */
-	DECLARE_QUERY(QueryManyPointerType, SymbolType<>, ManyPointerAbstractType, ({ .uses_qresult = false }))
+	DECLARE_QUERY(
+		QueryManyPointerType, SymbolType<>, ManyPointerAbstractType, ({ .uses_qresult = false })
+	)
 
 	/**
 	 * @brief Query to get a typed c pointer type.

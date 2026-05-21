@@ -577,8 +577,8 @@ namespace compiler::tsh {
 		 */
 		static constexpr Kind STATIC_KIND = Kind::ManyPointer;
 
-
-		explicit ManyPointerAbstractTypeImpl(const SymbolType<> component): PointerAbstractTypeImpl(component) {
+		explicit ManyPointerAbstractTypeImpl(const SymbolType<> component):
+			  PointerAbstractTypeImpl(component) {
 			representation = base::strConcat("manyptr(", component.toString(), ")");
 		}
 
@@ -598,11 +598,11 @@ namespace compiler::tsh {
 		 */
 		static constexpr Kind STATIC_KIND = Kind::CPointer;
 
-
-		explicit CPointerAbstractTypeImpl(const SymbolType<> component): PointerAbstractTypeImpl(component) {
+		explicit CPointerAbstractTypeImpl(const SymbolType<> component):
+			  PointerAbstractTypeImpl(component) {
 			representation = base::strConcat("cptr(", component.toString(), ")");
 		}
-		
+
 		[[nodiscard]]
 		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
 	};
