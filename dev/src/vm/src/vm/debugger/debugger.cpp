@@ -51,8 +51,7 @@ namespace vm::debugger {
 		updater.detach();
 		api::getExecutionStatus(pid)
 			.and_then([&](const api::ProcStatus& status) {
-				if (!std::holds_alternative<api::NotStarted>(status))
-					return api::kill(pid);
+				if (!std::holds_alternative<api::NotStarted>(status)) return api::kill(pid);
 
 				return std::expected<void, api::ApiError>{};
 			})

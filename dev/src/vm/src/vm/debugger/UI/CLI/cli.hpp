@@ -20,18 +20,18 @@ namespace vm::debugger::cli {
 		CLIDebugger& operator=(const CLIDebugger&) = delete;
 		CLIDebugger(CLIDebugger&&)                 = delete;
 		CLIDebugger& operator=(CLIDebugger&&)      = delete;
-		~CLIDebugger() = default;
+		~CLIDebugger()                             = default;
 
 		int run();
+
 	private:
 		events::Listener<api::ProcStatus> status_change_listener;
-		events::Listener<std::string> error_listener;
-		events::Listener<api::ExitValue> exit_value_listener;
-		Debugger                debugger;
-		std::mutex                            output_mutex;
+		events::Listener<std::string>     error_listener;
+		events::Listener<api::ExitValue>  exit_value_listener;
+		Debugger                          debugger;
+		std::mutex                        output_mutex;
 
 		void help();
 		void status();
-
 	};
 }
