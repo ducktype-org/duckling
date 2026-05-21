@@ -1,5 +1,3 @@
-#pragma once
-
 #include "local_stack_database.hpp"
 
 #include <base/collections/maps.hpp>
@@ -33,7 +31,7 @@ base::Optional<ls_db::NameStackEntry> ls_db::getNameEntryByName(
 
 	if (it == occurences.end()) return std::nullopt;
 
-	if (auto [init, deinit] = it->first;
+	if (auto [deinit, init] = it->first;
 	    init > entry.lifetime.deinit_idx || deinit < entry.lifetime.init_idx) {
 		return std::nullopt;
 	}
@@ -119,6 +117,13 @@ bool ls_db::eqTypes(StackStateID state_1, StackStateID state_2) const {
 	return typestack.eq(typestack_id_1, typestack_id_2);
 }
 
+bool ls_db::eqNames(StackStateID state_1, StackStateID state_2) const {
+	auto typestack_id_1 = validateState(state_1).first;
+	auto typestack_id_2 = validateState(state_2).first;
+
+	return typestack_id_1 == typestack_id_2;
+}
+
 ls_db::LocalStackDb() = default;
 
 ls_db::LocalStackDb(
@@ -136,7 +141,7 @@ ls_db::LocalStackDb(
 	usize             counted_ids = 0;
 	std::vector<bool> intervals(entries.size() * 2, false);
 
-	std::vector<usize> number_of_children(entries.size());
+	std::vector<usize> number_of_associated(entries.size());
 	using namespace std::views;
 
 	{
@@ -153,7 +158,6 @@ ls_db::LocalStackDb(
 
 		auto prev_entry_id = curr_entry.prev;
 		CORE_ASSERT(prev_entry_id < id, "Previous state must have been created before current");
-		number_of_children[prev_entry_id]++;
 		const auto& prev_entry = entries[prev_entry_id];
 
 		auto [curr_r, curr_l] = curr_entry.lifetime;
@@ -198,13 +202,14 @@ ls_db::LocalStackDb(
 
 		for (auto& [lifetime, id]: maps) {
 			CORE_ASSERT(id < entries.size(), "id has to point to valid name-stack entry");
-			CORE_ASSERT(number_of_children[id] != 0, "There are still slots available for children");
-			number_of_children[id]--;
+			CORE_ASSERT(number_of_associated[id] == 0, "There are still slots available for children");
+			number_of_associated[id] = 1;
 			CORE_ASSERT(entries.at(id).lifetime == lifetime, "keys must match with entries");
 		}
 
 		auto it            = maps.begin();
 		auto prev_lifetime = it->first;
+		++it;
 
 		for (; it != maps.end(); ++it) {
 			CORE_ASSERT(
@@ -218,8 +223,10 @@ ls_db::LocalStackDb(
 	CORE_ASSERT(counted_ids + 1 == entries.size(), "We have a equal number of ids and ");
 
 	nodes_at_depth.resize(max_depth, {});
-	for (auto [id, entry]: enumerate(entries))
+	for (auto [id, entry]: enumerate(entries) | drop(1)) {
+		CORE_ASSERT(entry.size_in_blocks > 0, "stack is non-empty for each variable");
 		nodes_at_depth.at(entry.size_in_blocks - 1).emplace(entry.lifetime, NameStackID(id));
+	}
 }
 
 using ls_db_bld = vm::code::LocalStackDbBuilder;
@@ -247,14 +254,16 @@ vm::code::StackStateID ls_db_bld::push(StackStateID state, base::StrID name, bas
 		auto var_name_id    = tree[node_id].name_stack_id;
 		auto new_varname_id = var_names.push(var_name_id, name);
 
-		tree.emplace_back(TreeNode{
-			.children      = {},
-			.name_map_id   = new_namemap_id,
-			.name_stack_id = new_varname_id,
-			.size          = tree[node_id].size + 1,
-			.prev_node     = node_id,
-			.byte_depth    = tree[node_id].byte_depth + types_ctx.at(type)->getSize(),
-		});
+		tree.emplace_back(
+			TreeNode{
+				.children      = {},
+				.name_map_id   = new_namemap_id,
+				.name_stack_id = new_varname_id,
+				.size          = tree[node_id].size + 1,
+				.prev_node     = node_id,
+				.byte_depth    = tree[node_id].byte_depth + types_ctx.at(type)->getSize(),
+			}
+		);
 	}
 
 	auto new_typestack_state_id = typenames.push(typestack_id, type);
@@ -267,6 +276,8 @@ vm::code::StackStateID ls_db_bld::push(StackStateID state, base::StrID name, bas
 vm::code::StackStateID ls_db_bld::pop(StackStateID state, usize amount) {
 	auto [node_id, typestack_id] = states.at(u64{ state });
 
+	auto start_size = size(state);
+
 	auto new_nametree_node_id = node_id;
 	for (usize i = 0; i < amount; i++) {
 		CORE_ASSERT(new_nametree_node_id != 0, "We are not trying to remove the root");
@@ -277,7 +288,10 @@ vm::code::StackStateID ls_db_bld::pop(StackStateID state, usize amount) {
 
 	states.emplace_back(new_nametree_node_id, new_typestack_state_id);
 
-	return StackStateID{ states.size() - 1 };
+	auto ans = StackStateID{ states.size() - 1 };
+	CORE_ASSERT(size(ans) + amount == start_size, "We popped the values");
+
+	return ans;
 }
 
 vm::code::StackStateID ls_db_bld::change(StackStateID state, base::StrID name, base::StrID type) {
@@ -330,6 +344,16 @@ bool ls_db_bld::eqTypes(StackStateID state_1, StackStateID state_2) const {
 	return typenames.eq(typestack_id_1, typestack_id_2);
 }
 
+bool ls_db_bld::eqNames(StackStateID state_1, StackStateID state_2) const {
+	auto node_id_1 = validateState(state_1).first;
+	auto node_id_2 = validateState(state_2).first;
+
+	auto name_map_id_1 = tree[node_id_1].name_map_id;
+	auto name_map_id_2 = tree[node_id_2].name_map_id;
+
+	return name_to_idx.eq(name_map_id_1, name_map_id_2);
+}
+
 base::Optional<base::StrID> ls_db_bld::getName(StackStateID state, usize idx) const {
 	auto [node_id, typestack_id] = validateState(state);
 
@@ -345,11 +369,11 @@ vm::code::LocalStackDb ls_db_bld::finalize() {
 
 	base::HashMap<base::StrID, NameMap>              name_to_namestack_id{};
 	std::vector<NameStackEntry>                      namestack_entries(tree.size());
-	std::vector<std::pair<NameStackID, TypeStackID>> stack_state_to_substacks{ states.size() };
 
 
-	auto dfs = [&](auto&& self, NameStackID node_id, base::HashMap<base::StrID, NameStackID>& names
-	           ) -> Lifetime {
+	auto dfs = [&](auto&&                                   self,
+	               NameStackID                              node_id,
+	               base::HashMap<base::StrID, NameStackID>& names) -> Lifetime {
 		CORE_ASSERT(node_id < tree.size(), "this should be true");
 		Lifetime node_lifetime{};
 		node_lifetime.init_idx = order;
@@ -394,6 +418,6 @@ vm::code::LocalStackDb ls_db_bld::finalize() {
 
 
 	return LocalStackDb(
-		name_to_namestack_id, namestack_entries, stack_state_to_substacks, typenames
+		name_to_namestack_id, namestack_entries, states, typenames
 	);
 }

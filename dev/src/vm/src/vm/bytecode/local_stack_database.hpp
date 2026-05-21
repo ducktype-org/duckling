@@ -145,6 +145,11 @@ namespace vm::persistent {
 			return validateState(state).size();
 		}
 
+		[[nodiscard]]
+		bool eq(usize state_1, usize state_2) const {
+			return validateState(state_1) == validateState(state_2);
+		}
+
 		DummyHashMap() { copies.emplace_back(base::HashMap<Key, Val, Hasher>{}); }
 	};
 }
@@ -209,7 +214,11 @@ namespace vm::code {
 
 		tp_size byteSize(StackStateID state) const;
 
+		[[nodiscard]]
 		bool eqTypes(StackStateID state_1, StackStateID state_2) const;
+
+		[[nodiscard]]
+		bool eqNames(StackStateID state_1, StackStateID state_2) const;
 
 		LocalStackDb();
 
@@ -300,6 +309,9 @@ namespace vm::code {
 
 		[[nodiscard]]
 		bool eqTypes(StackStateID state_1, StackStateID state_2) const;
+
+		[[nodiscard]]
+		bool eqNames(StackStateID state_1, StackStateID state_2) const;
 
 		[[nodiscard]]
 		base::Optional<base::StrID> getName(StackStateID state, usize idx) const;
