@@ -56,7 +56,7 @@ use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
 use serde::{Deserialize, Serialize};
-use tracing::debug;
+use tracing::{debug, trace};
 
 use crate::quackpack::core::storage::freeze::{self, VenvFreeze};
 use crate::quackpack::core::storage::paths::Storage;
@@ -175,6 +175,7 @@ impl VenvData {
     /// Save to the given path.
     #[tracing::instrument(skip(self))]
     fn save_to(&self, path: &Path) -> QuackResult<()> {
+        trace!("saving venv data");
         let data = serde_json::to_string(self)?;
         let checksum = hash::sha256_string(&data);
         let mut file = path.touch()?;
@@ -324,6 +325,7 @@ impl Venv {
         venv_id: VenvId,
         ctx: &DuckContext,
     ) -> QuackResult<Option<Self>> {
+        trace!(id = %venv_id, "loading venv");
         let _lock = storage
             .data_locks()
             .open_exclusive(venv_id, ctx)
@@ -414,6 +416,7 @@ impl Venv {
     /// by calling [`fix_and_load`](Self::fix_and_load) before.
     #[tracing::instrument(skip_all)]
     pub fn save_to(&self, storage: &Storage, ctx: &DuckContext) -> QuackResult<()> {
+        trace!(id = %self.id, "saving venv");
         let _lock = storage
             .data_locks()
             .open_exclusive(self.id, ctx)
