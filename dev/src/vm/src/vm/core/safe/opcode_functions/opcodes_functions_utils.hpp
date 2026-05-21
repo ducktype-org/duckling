@@ -9,6 +9,7 @@
 #include <vm/core/safe/memory/block.hpp>
 #include <vm/core/safe/memory/frame.hpp>
 #include <vm/utils/interpret.hpp>
+#include <vm/core/safe/safe_vmthread.hpp>
 
 namespace vm {
 }
@@ -143,17 +144,25 @@ inline static bool isGlobalPlace(u64 place_arg) {
 }
 
 [[nodiscard]] [[gnu::always_inline]]
-inline static vm::ShadowPointer& getShadowPointerRef(vm::Frame* frame, u64 place_arg) {
+inline static vm::ShadowPointer& getShadowPointerRef(vm::Frame* frame, vm::SafeVMThread& thread, u64 place_arg) {
 	u32 index = getShadowPointerIndex(place_arg);
 	if (isGlobalPlace(place_arg)) {
-		static vm::ShadowPointer dummy;
-		return dummy;
+		return thread.getGlobalShadowPointerBase()[index];
 	} else {
 		return frame->local_shadow_pointer_stack[index];
 	}
 }
 
-#define GET_SHADOW_POINTER_REF(ARG) getShadowPointerRef(frame, ARG)
+#define GET_SHADOW_POINTER_REF(ARG) getShadowPointerRef(frame, thread, ARG)
+
+inline static vm::ShadowEntry* getShadowEntryPtr(vm::Frame* frame, vm::SafeVMThread& thread, u64 place_arg) {
+	u64 offset = place_arg & ~(1ULL << 63);
+	if (isGlobalPlace(place_arg)) {
+		return thread.getGlobalShadowDataBase() + offset;
+	} else {
+		return frame->local_shadow_data_stack + offset;
+	}
+}
 
 
 

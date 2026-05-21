@@ -14,6 +14,7 @@
 #include <vm/core/safe/low_program/low_program.hpp>
 #include <vm/core/safe/safe_vmthread.hpp>
 #include <vm/loader/loader.hpp>
+#include <vm/api/settings.hpp>
 
 #include <expected>
 #include <string>
@@ -83,8 +84,12 @@ namespace vm {
 
 		base::Optional<api::ApiError> assertProcessCanRespond();
 
+		api::ProcessSettings       settings_;
+		std::vector<ShadowEntry>   global_shadow_data;
+		std::vector<ShadowPointer> global_shadow_pointer;
+
 	public:
-		SafeVMProcess(PID my_pid);
+		SafeVMProcess(PID my_pid, const api::ProcessSettings& settings = {});
 
 		/**
 		 * @brief Returns thread by id and if id doesn't exist or it is equal 0

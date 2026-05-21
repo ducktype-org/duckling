@@ -6,6 +6,7 @@
 #include <vm/core/safe/low_program/low_program.hpp>
 #include <vm/core/safe/low_program/micro_instruction_args.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
+#include <vm/api/settings.hpp>
 
 namespace vm::loader::compiler {
 	namespace detail {
@@ -30,6 +31,7 @@ namespace vm::loader::compiler {
 
 	public:
 		Compiler() = default;
+		explicit Compiler(const api::ProcessSettings& settings);
 
 		/**
 		 * @brief Incrementally recompiles and updates the internal `LowVMProgram`.
@@ -120,6 +122,7 @@ namespace vm::loader::compiler {
 		 */
 		vm::low::LowVMProgram     low_program;
 		ProgramCompilationContext program_ctx;
+		api::ProcessSettings      settings_;
 
 		/**
 		 * @brief Processes newly added types and adds them to the existing type_metadata.

@@ -4,6 +4,7 @@
 #include <base/pointers/ref.hpp>
 
 #include <vm/api/api.hpp>
+#include <vm/api/settings.hpp>
 
 #include <expected>
 #include <shared_mutex>
@@ -30,7 +31,7 @@ namespace vm {
 		// Each of the following methods should synchronize access to the processTable, but should
 		// not synchronize usage of each of the processes. Each process synchronizes its resources
 		// by itself
-		std::expected<PID, api::ApiError>                    newProcess();
+		std::expected<PID, api::ApiError>                    newProcess(const api::ProcessSettings& settings = {});
 		std::expected<api::response::Boolean, api::ApiError> deinitAndValidate(PID pid);
 		std::expected<api::Response, api::ApiError> doRequest(const api::SupervisorRequest& request);
 		std::expected<void, api::ApiError> killProcess(PID pid);

@@ -1423,7 +1423,99 @@ namespace vm {
 		}
 		FUNCTION_CONT(2);
 	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ft_placeRead)(FUNCTION_ARGS) {
+		{
+			ShadowEntry* entry = getShadowEntryPtr(frame, thread, instr->arg0);
+			entry->processRead(thread.getThreadID(), thread.getVC()[thread.getThreadID()], thread.getVC());
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ft_placeWrite)(FUNCTION_ARGS) {
+		{
+			ShadowEntry* entry = getShadowEntryPtr(frame, thread, instr->arg0);
+			entry->processWrite(thread.getThreadID(), thread.getVC()[thread.getThreadID()], thread.getVC());
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ft_ref_pptr_bany)(FUNCTION_ARGS) {
+		{
+			const auto dst     = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
+			auto       block   = READ_BLOCK_REF_FROM_ARG(instr->arg1);
+			const auto new_dst = thread.process_memory.updatePointerAssignment(dst, { block, 0 });
+			WRITE_TO_PLACE_ARG(Pointer, instr->arg0, new_dst);
+
+			ShadowPointer shadow_ptr;
+			u64 src_place = instr->arg1;
+			u64 offset = src_place & ~(1ULL << 63);
+
+			if (isGlobalPlace(src_place)) {
+				shadow_ptr.data_base = thread.runtime_data.global_shadow_data_buffer_base;
+				shadow_ptr.logical_idx = static_cast<u32>(offset);
+				shadow_ptr.pointer_base = thread.runtime_data.global_shadow_pointer_buffer_base;
+				shadow_ptr.pointer_idx = getShadowPointerIndex(src_place);
+			} else {
+				shadow_ptr.data_base = frame->local_shadow_data_stack;
+				shadow_ptr.logical_idx = static_cast<u32>(offset);
+				shadow_ptr.pointer_base = frame->local_shadow_pointer_stack;
+				shadow_ptr.pointer_idx = getShadowPointerIndex(src_place);
+			}
+			GET_SHADOW_POINTER_REF(instr->arg0) = shadow_ptr;
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ft_structRead)(FUNCTION_ARGS) {
+		{
+			ShadowPointer shadow_ptr = GET_SHADOW_POINTER_REF(instr->arg0);
+			if (!shadow_ptr.isNull()) {
+				u32 shadow_offset = static_cast<u32>(instr->arg1);
+				ShadowEntry* entry = shadow_ptr.data_base + shadow_ptr.logical_idx + shadow_offset;
+				entry->processRead(thread.getThreadID(), thread.getVC()[thread.getThreadID()], thread.getVC());
+			}
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ft_structWrite)(FUNCTION_ARGS) {
+		{
+			ShadowPointer shadow_ptr = GET_SHADOW_POINTER_REF(instr->arg0);
+			if (!shadow_ptr.isNull()) {
+				u32 shadow_offset = static_cast<u32>(instr->arg1);
+				ShadowEntry* entry = shadow_ptr.data_base + shadow_ptr.logical_idx + shadow_offset;
+				entry->processWrite(thread.getThreadID(), thread.getVC()[thread.getThreadID()], thread.getVC());
+			}
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ft_arrayRead)(FUNCTION_ARGS) {
+		{
+			ShadowPointer shadow_ptr = GET_SHADOW_POINTER_REF(instr->arg0);
+			if (!shadow_ptr.isNull()) {
+				u64 idx = READ_FROM_PLACE_ARG(u64, instr->arg1);
+				ShadowEntry* entry = shadow_ptr.data_base + shadow_ptr.logical_idx + idx;
+				entry->processRead(thread.getThreadID(), thread.getVC()[thread.getThreadID()], thread.getVC());
+			}
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ft_arrayWrite)(FUNCTION_ARGS) {
+		{
+			ShadowPointer shadow_ptr = GET_SHADOW_POINTER_REF(instr->arg0);
+			if (!shadow_ptr.isNull()) {
+				u64 idx = READ_FROM_PLACE_ARG(u64, instr->arg1);
+				ShadowEntry* entry = shadow_ptr.data_base + shadow_ptr.logical_idx + idx;
+				entry->processWrite(thread.getThreadID(), thread.getVC()[thread.getThreadID()], thread.getVC());
+			}
+		}
+		FUNCTION_CONT(1);
+	}
 }
+
 
 #undef OPCODE_NAME
 #undef FUNCTION_ARGS

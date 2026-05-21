@@ -148,8 +148,10 @@ namespace vm {
 		return Box<VmValue>::fromPointer(new VmValue(*this, type, src));
 	}
 
-	SafeVMProcess::SafeVMProcess(const PID my_pid):
+	SafeVMProcess::SafeVMProcess(const PID my_pid, const api::ProcessSettings& settings):
 		  IVMProcess(my_pid),
+		  settings_(settings),
+		  loader(settings),
 		  loaded_program(&loaded_program_copy),
 		  loaded_program_copy(loader.getProgram()) {
 		vm_threads.add(*this);
@@ -373,6 +375,11 @@ namespace vm {
 				.total_global_data_size = global_buffer_config.buffer_size,
 				.global_count           = global_buffer_config.global_count,
 			});
+
+		if (settings_.enable_fast_track) {
+			global_shadow_data.resize(global_buffer_config.buffer_size.asInt());
+			global_shadow_pointer.resize(global_buffer_config.buffer_size.asInt() / sizeof(Pointer));
+		}
 
 		for (auto& thread: vm_threads)
 			thread.updateGlobalDataBufferPointers(new_global_buffer_pointers);

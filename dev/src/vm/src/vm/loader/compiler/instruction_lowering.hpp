@@ -141,6 +141,37 @@ namespace vm::loader::compiler::detail {
 			usize lid = compiler.lowerArgument<opargs::Label, low::opargs::Label>(ctx, label);
 			label_id_to_offset.put(lid, next_instruction_index);
 		}
+
+		void ftRead(const opargs::ArgumentType auto place) {
+			if (compiler.settings_.enable_fast_track) {
+				addLow<Op_ft_placeRead>(place);
+			}
+		}
+
+		void ftWrite(const opargs::ArgumentType auto place) {
+			if (compiler.settings_.enable_fast_track) {
+				addLow<Op_ft_placeWrite>(place);
+			}
+		}
+
+		void addLowRaw(low::MicroOpcode opcode, u64 arg0 = 0, u64 arg1 = 0) {
+			if (push_step_gil_on_next_add_low) {
+				push_step_gil_on_next_add_low = false;
+				addLow<Op_stepGil>();
+			}
+
+			if (is_control_flow) {
+				is_control_flow = false;
+				addLow<Op_check_strategy>();
+			}
+
+			result.push_back(makeLowInstruction(opcode, arg0, arg1));
+#if (BUILD_TYPE_DEV_DEBUG)
+			result.back().opcode_id      = opcode;
+			result.back().representation = current_high_instruction_representation;
+#endif
+			next_instruction_index++;
+		}
 	};
 
 	void MicroBytecodeBuilder::add(const code::Instruction& instruction) {
@@ -171,21 +202,33 @@ namespace vm::loader::compiler::detail {
 		UNHANDLED_ENUM
 		instr_match(instruction) {
 			instr_case(high::Op_mov_p8_imm, i) { addLow<Op_mov_p8_imm>(i.dst, i.src); }
-			instr_case(high::Op_mov_p8_p8, i) { addLow<Op_mov_p8_p8>(i.dst, i.src); }
+			instr_case(high::Op_mov_p8_p8, i) {
+				ftRead(i.src); ftWrite(i.dst);
+				addLow<Op_mov_p8_p8>(i.dst, i.src);
+			}
 			instr_case(high::Op_cmov_p8_p8, i) { addLow<Op_cmov_p8_p8>(i.dst, i.src); }
 			instr_case(high::Op_cmov_p8_imm, i) { addLow<Op_cmov_p8_imm>(i.dst, i.src); }
 			instr_case(high::Op_mov_p16_imm, i) { addLow<Op_mov_p16_imm>(i.dst, i.src); }
-			instr_case(high::Op_mov_p16_p16, i) { addLow<Op_mov_p16_p16>(i.dst, i.src); }
+			instr_case(high::Op_mov_p16_p16, i) {
+				ftRead(i.src); ftWrite(i.dst);
+				addLow<Op_mov_p16_p16>(i.dst, i.src);
+			}
 			instr_case(high::Op_cmov_p16_p16, i) { addLow<Op_cmov_p16_p16>(i.dst, i.src); }
 			instr_case(high::Op_cmov_p16_imm, i) { addLow<Op_cmov_p16_imm>(i.dst, i.src); }
 			instr_case(high::Op_mov_p32_imm, i) { addLow<Op_mov_p32_imm>(i.dst, i.src); }
-			instr_case(high::Op_mov_p32_p32, i) { addLow<Op_mov_p32_p32>(i.dst, i.src); }
+			instr_case(high::Op_mov_p32_p32, i) {
+				ftRead(i.src); ftWrite(i.dst);
+				addLow<Op_mov_p32_p32>(i.dst, i.src);
+			}
 			instr_case(high::Op_cmov_p32_p32, i) { addLow<Op_cmov_p32_p32>(i.dst, i.src); }
 			instr_case(high::Op_cmov_p32_imm, i) { addLow<Op_cmov_p32_imm>(i.dst, i.src); }
 			instr_case(high::Op_mov_p64_imm, i) { addLow<Op_mov_p64_imm>(i.dst, i.src); }
-			instr_case(high::Op_mov_p64_p64, i) { addLow<Op_mov_p64_p64>(i.dst, i.src); }
-			instr_case(high::Op_cmov_p64_p64, i) { addLow<Op_cmov_p64_p64>(i.dst, i.src); }
+			instr_case(high::Op_mov_p64_p64, i) {
+				ftRead(i.src); ftWrite(i.dst);
+				addLow<Op_mov_p64_p64>(i.dst, i.src);
+			}
 			instr_case(high::Op_cmov_p64_imm, i) { addLow<Op_cmov_p64_imm>(i.dst, i.src); }
+			instr_case(high::Op_cmov_p64_p64, i) { addLow<Op_cmov_p64_p64>(i.dst, i.src); }
 			instr_case(high::Op_mov_pptr_pptr, i) { addLow<Op_mov_pptr_pptr>(i.dst, i.src); }
 			instr_case(high::Op_setNull_pptr, i) { addLow<Op_setNull_pptr>(i.dst); }
 			instr_case(high::Op_mov_popq_popq, i) {
@@ -196,14 +239,38 @@ namespace vm::loader::compiler::detail {
 			instr_case(high::Op_mov_popq_imm, i) { addLow<Op_mov_popq_imm>(i.dst, i.src); }
 			instr_case(high::Op_mov_pste_pste, i) { addLow<Op_mov_bste_bste>(i.dst, i.src); }
 			instr_case(high::Op_mov_pfst_pfst, i) { addLow<Op_mov_bfst_bfst>(i.dst, i.src); }
-			instr_case(high::Op_add_p64_p64, i) { addLow<Op_add_p64_p64>(i.dst, i.src); }
-			instr_case(high::Op_add_p64_imm, i) { addLow<Op_add_p64_imm>(i.dst, i.src); }
-			instr_case(high::Op_add_p32_p32, i) { addLow<Op_add_p32_p32>(i.dst, i.src); }
-			instr_case(high::Op_add_p32_imm, i) { addLow<Op_add_p32_imm>(i.dst, i.src); }
-			instr_case(high::Op_add_p16_p16, i) { addLow<Op_add_p16_p16>(i.dst, i.src); }
-			instr_case(high::Op_add_p16_imm, i) { addLow<Op_add_p16_imm>(i.dst, i.src); }
-			instr_case(high::Op_add_p8_p8, i) { addLow<Op_add_p8_p8>(i.dst, i.src); }
-			instr_case(high::Op_add_p8_imm, i) { addLow<Op_add_p8_imm>(i.dst, i.src); }
+			instr_case(high::Op_add_p64_p64, i) {
+				ftRead(i.src); ftRead(i.dst); ftWrite(i.dst);
+				addLow<Op_add_p64_p64>(i.dst, i.src);
+			}
+			instr_case(high::Op_add_p64_imm, i) {
+				ftRead(i.dst); ftWrite(i.dst);
+				addLow<Op_add_p64_imm>(i.dst, i.src);
+			}
+			instr_case(high::Op_add_p32_p32, i) {
+				ftRead(i.src); ftRead(i.dst); ftWrite(i.dst);
+				addLow<Op_add_p32_p32>(i.dst, i.src);
+			}
+			instr_case(high::Op_add_p32_imm, i) {
+				ftRead(i.dst); ftWrite(i.dst);
+				addLow<Op_add_p32_imm>(i.dst, i.src);
+			}
+			instr_case(high::Op_add_p16_p16, i) {
+				ftRead(i.src); ftRead(i.dst); ftWrite(i.dst);
+				addLow<Op_add_p16_p16>(i.dst, i.src);
+			}
+			instr_case(high::Op_add_p16_imm, i) {
+				ftRead(i.dst); ftWrite(i.dst);
+				addLow<Op_add_p16_imm>(i.dst, i.src);
+			}
+			instr_case(high::Op_add_p8_p8, i) {
+				ftRead(i.src); ftRead(i.dst); ftWrite(i.dst);
+				addLow<Op_add_p8_p8>(i.dst, i.src);
+			}
+			instr_case(high::Op_add_p8_imm, i) {
+				ftRead(i.dst); ftWrite(i.dst);
+				addLow<Op_add_p8_imm>(i.dst, i.src);
+			}
 			instr_case(high::Op_sub_p64_p64, i) { addLow<Op_sub_p64_p64>(i.dst, i.src); }
 			instr_case(high::Op_sub_p64_imm, i) { addLow<Op_sub_p64_imm>(i.dst, i.src); }
 			instr_case(high::Op_sub_p32_p32, i) { addLow<Op_sub_p32_p32>(i.dst, i.src); }
@@ -461,7 +528,13 @@ namespace vm::loader::compiler::detail {
 				addLow<Op_store_pptr_bany>(i.dst_ptr, i.src);
 			}
 			instr_case(high::Op_load_pany_pptr, i) { addLow<Op_load_bany_pptr>(i.dst, i.src_ptr); }
-			instr_case(high::Op_ref_pptr_pany, i) { addLow<Op_ref_pptr_bany>(i.dst_ptr, i.src); }
+			instr_case(high::Op_ref_pptr_pany, i) {
+				if (compiler.settings_.enable_fast_track) {
+					addLow<Op_ft_ref_pptr_bany>(i.dst_ptr, i.src);
+				} else {
+					addLow<Op_ref_pptr_bany>(i.dst_ptr, i.src);
+				}
+			}
 			instr_case(high::Op_ref_pptr_pvnt, i) { addLow<Op_ref_pptr_bany>(i.dst_ptr, i.src); }
 			instr_case(high::Op_structLea_pptr_pptr_field, i) {
 				addLow<Op_structLea_pptr_pptr>(i.dst_ptr, i.src_data_ptr);

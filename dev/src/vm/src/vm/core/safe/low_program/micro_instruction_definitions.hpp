@@ -689,6 +689,17 @@ DEF_MICRO_INSTR(ft_memCopy, vm::low::opargs::PlacePtr, vm::low::opargs::PlacePtr
 // 4.4: Allocation & Initialization
 DEF_MICRO_INSTR(ft_alloc_pptr_type, vm::low::opargs::PlacePtr, vm::low::opargs::Type)
 
+// 5.1: Direct Place Instrumentation
+DEF_MICRO_INSTR(ft_placeRead, vm::low::opargs::PlaceAny)
+DEF_MICRO_INSTR(ft_placeWrite, vm::low::opargs::PlaceAny)
+DEF_MICRO_INSTR(ft_ref_pptr_bany, vm::low::opargs::PlacePtr, vm::low::opargs::PlaceBlockAny)
+
+// 5.2: Direct Heap/Struct Instrumentation
+DEF_MICRO_INSTR(ft_structRead, vm::low::opargs::PlacePtr, vm::low::opargs::ShadowField)
+DEF_MICRO_INSTR(ft_structWrite, vm::low::opargs::PlacePtr, vm::low::opargs::ShadowField)
+DEF_MICRO_INSTR(ft_arrayRead, vm::low::opargs::PlacePtr, vm::low::opargs::Place64)
+DEF_MICRO_INSTR(ft_arrayWrite, vm::low::opargs::PlacePtr, vm::low::opargs::Place64)
+
 // ========= MISC ========
 
 DEF_MICRO_INSTR(check_strategy)

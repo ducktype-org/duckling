@@ -173,7 +173,7 @@ CRef<vm::low::LowVMProgram> vm::loader::Loader::getProgram() const {
 	return compiler.getLowProgram();
 }
 
-vm::loader::Loader::Loader() { compiler.recompile(validated_high_program); }
+vm::loader::Loader::Loader(const api::ProcessSettings& settings) : compiler(settings) { compiler.recompile(validated_high_program); }
 
 base::CRef<vm::code::ValidProgram> vm::loader::Loader::getHighProgram() const {
 	return &validated_high_program;

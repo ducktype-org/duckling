@@ -70,8 +70,10 @@ namespace vm::low::opargs {
 	/** @brief Stores byte offset of local opaque value on the frame local stack or the global
 	 * buffer. */
 	DEFINE_MICRO_ARG_TYPE(PlaceOpq, "popq", vm::opargs::PlaceOpq);
+	/** @brief Stores byte offset of any local/global variable. */
+	DEFINE_MICRO_ARG_TYPE(PlaceAny, "pany", vm::opargs::Place8, vm::opargs::Place16, vm::opargs::Place32, vm::opargs::Place64, vm::opargs::PlacePtr, vm::opargs::PlaceOpq);
 
-#define VM_MICRO_INSTR_ARG_PLACE_OFFSET_TYPES Place8, Place16, Place32, Place64, PlacePtr, PlaceOpq
+#define VM_MICRO_INSTR_ARG_PLACE_OFFSET_TYPES Place8, Place16, Place32, Place64, PlacePtr, PlaceOpq, PlaceAny
 
 	/**
 	 * The PlaceBlock types store the index of the block reference for globals and locals.

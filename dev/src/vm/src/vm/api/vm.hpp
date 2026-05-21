@@ -11,13 +11,15 @@
 #include <vm/core/process/interface_types.hpp>
 #include <vm/core/vmvalue/vmvalue.hpp>
 
+#include <vm/api/settings.hpp>
+
 namespace vm::api {
 	/**
 	 * @brief Create new process in DVM.
 	 * @return The response containing the PID of the newly created process or an API error if the
 	 * process wasn't created.
 	 */
-	std::expected<ProcessInfo, ApiError> spawn();
+	std::expected<ProcessInfo, ApiError> spawn(const ProcessSettings& settings = {});
 
 	/**
 	 * @brief Get the execution status of the process run on DVM.

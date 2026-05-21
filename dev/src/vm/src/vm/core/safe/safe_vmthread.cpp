@@ -674,6 +674,11 @@ namespace vm {
 	) {
 		runtime_data.global_data_buffer_base      = global_buffer_pointers.data_buffer_base;
 		runtime_data.global_block_ref_buffer_base = global_buffer_pointers.blocks_buffer_base;
+
+		if (safe_process.settings_.enable_fast_track) {
+			runtime_data.global_shadow_data_buffer_base = safe_process.global_shadow_data.data();
+			runtime_data.global_shadow_pointer_buffer_base = safe_process.global_shadow_pointer.data();
+		}
 	}
 
 	IMemory<ShadowEntry>& SafeVMThread::getShadowDataMemory() {

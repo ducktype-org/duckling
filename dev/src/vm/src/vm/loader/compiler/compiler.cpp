@@ -485,4 +485,5 @@ namespace vm::loader::compiler {
 
 	CRef<low::LowVMProgram> Compiler::getLowProgram() const { return &low_program; }
 
+	Compiler::Compiler(const api::ProcessSettings& settings) : settings_(settings) {}
 }

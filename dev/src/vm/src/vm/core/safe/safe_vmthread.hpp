@@ -70,6 +70,9 @@ namespace vm {
 		std::byte* global_data_buffer_base;    /// Pointer to the start of global data buffer.
 		Block** global_block_ref_buffer_base;  /// Pointer to the start of global block ref buffer.
 
+		ShadowEntry*   global_shadow_data_buffer_base = nullptr;
+		ShadowPointer* global_shadow_pointer_buffer_base = nullptr;
+
 		RuntimeData(
 			Ref<ThreadStack>           stack,
 			GlobalBufferPointersGeneric global_buffer_pointers
@@ -270,6 +273,22 @@ namespace vm {
 		 * reallocated and the pointers change.
 		 */
 		void updateGlobalDataBufferPointers(GlobalBufferPointersGeneric global_buffer_pointers);
+
+		/**
+		 * @brief Returns the base pointer for the global shadow data buffer.
+		 * Used by FastTrack instrumentation helpers to resolve global place shadow entries.
+		 */
+		[[nodiscard]] ShadowEntry* getGlobalShadowDataBase() const {
+			return runtime_data.global_shadow_data_buffer_base;
+		}
+
+		/**
+		 * @brief Returns the base pointer for the global shadow pointer buffer.
+		 * Used by FastTrack instrumentation helpers to resolve global place shadow pointers.
+		 */
+		[[nodiscard]] ShadowPointer* getGlobalShadowPointerBase() const {
+			return runtime_data.global_shadow_pointer_buffer_base;
+		}
 	};
 
 	/**

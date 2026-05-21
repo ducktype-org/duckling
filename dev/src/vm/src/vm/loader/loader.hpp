@@ -8,6 +8,7 @@
 #include <vm/bytecode/validator/valid_program.hpp>
 #include <vm/core/safe/low_program/low_program.hpp>
 #include <vm/loader/compiler/compiler.hpp>
+#include <vm/api/settings.hpp>
 
 #include <expected>
 
@@ -44,7 +45,7 @@ namespace vm::loader {
 		);
 
 	public:
-		explicit Loader();
+		explicit Loader(const api::ProcessSettings& settings = {});
 
 		/**
 		 * @brief Returns a pointer to the low-level program representation of the current loader
