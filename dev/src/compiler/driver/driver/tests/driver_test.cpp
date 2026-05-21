@@ -10,6 +10,7 @@
 #include <global_state/backend_options.hpp>
 #include <global_state/packages.hpp>
 #include <helios/queries/queries.hpp>
+#include <linker/link.hpp>
 
 #include <artifacts/artifacts.hpp>
 #include <filesystem/file_path.hpp>
@@ -58,9 +59,14 @@ protected:
 	void beforeAll() override {
 		auto init_result = compiler::driver::initializeTheCompiler(
 			compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
-				.main_package_info = {
-					.package_name = package_name,
-					.package_path = fs::FilePath(path("modules/functions_1")),
+				.packages_info = {
+					{
+						.package_name = base::StrID(package_name),
+						.version      = base::StrID("not_supported"),
+						.package_path  = fs::FilePath(path("modules/functions_1")),
+						.features     = {},
+						.dependencies = {},
+					},
 				},
 				.compilation_artifacts = {
 					.artifacts_path = artifacts_path,
@@ -203,18 +209,24 @@ private:
 			package_id += "_";
 			package_id += std::to_string(precompile_suffix++);
 
-			global_state::PackageInfo package_info{
-				.root_module
-				= frontend::createModuleTree(fs::File(path(info.module_path)), package_id),
-			};
+			compiler::frontend::packages::PackageInfo package_info(
+				frontend::createModuleTree(
+					fs::File(path(info.module_path)), base::StrID(package_id.c_str())
+				),
+				base::StrID("not_supported"),
+				{},
+				{}
+			);
 
 			driver::compileEntirePackage(
 				package_info,
-				driver::BackendType::LLVM,
-				{
-					.linker_path             = {},
-					.additional_link_options = {},
-					.link_c_standard_library = true,
+				driver::BuildTargetLLVMExecutable{
+					.output_file_stem = base::StrID("package_llvm"),
+					.linking_options  = linker::LinkingOptions{
+						.linker_path = {},
+						.additional_link_options = {},
+						.link_c_standard_library = true,
+					},
 				}
 			);
 		}
@@ -413,8 +425,9 @@ private:
 	void objFileGenerated() {
 		using namespace compiler;
 
-		auto module
-			= frontend::createModuleTree(fs::File(path("modules/functions_1")), package_name);
+		auto module = frontend::createModuleTree(
+			fs::File(path("modules/functions_1")), base::StrID(package_name)
+		);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			// This method can fail on module verification
@@ -432,8 +445,9 @@ private:
 	void debugInfoGenerated() {
 		using namespace compiler;
 
-		auto module
-			= frontend::createModuleTree(fs::File(path("modules/functions_2")), package_name);
+		auto module = frontend::createModuleTree(
+			fs::File(path("modules/functions_2")), base::StrID(package_name)
+		);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto artifacts
@@ -465,8 +479,9 @@ private:
 		      compiler::driver::dump_ir_options.dump_mir  = false;
 		      compiler::driver::dump_ir_options.dump_hir  = false;);
 
-		auto module
-			= frontend::createModuleTree(fs::File(path("modules/functions_3")), package_name);
+		auto module = frontend::createModuleTree(
+			fs::File(path("modules/functions_3")), base::StrID(package_name)
+		);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			// This method can fail on module verification
@@ -503,8 +518,9 @@ private:
 	void dvmBackendRuns() {
 		using namespace compiler;
 
-		auto module
-			= frontend::createModuleTree(fs::File(path("modules/functions_4")), package_name);
+		auto module = frontend::createModuleTree(
+			fs::File(path("modules/functions_4")), base::StrID(package_name)
+		);
 
 
 		query::utils::withContextDo([&](query::Context& ctx) {
@@ -520,18 +536,24 @@ private:
 
 		// this also checks if llvm IR lib compile and link into the executable:
 
-		global_state::PackageInfo package_info{
-			.root_module
-			= frontend::createModuleTree(fs::File(path("modules/functions_5")), package_name),
-		};
+		compiler::frontend::packages::PackageInfo package_info(
+			frontend::createModuleTree(
+				fs::File(path("modules/functions_5")), base::StrID(package_name)
+			),
+			base::StrID("not_supported"),
+			{},
+			{}
+		);
 
 		driver::compileEntirePackage(
 			package_info,
-			driver::BackendType::LLVM,
-			{
-				.linker_path             = {},
-				.additional_link_options = {},
-				.link_c_standard_library = true,
+			driver::BuildTargetLLVMExecutable{
+				.output_file_stem = base::StrID("package_llvm"),
+				.linking_options  = linker::LinkingOptions{
+					.linker_path = {},
+					.additional_link_options = {},
+					.link_c_standard_library = true,
+				},
 			}
 		);
 
@@ -541,15 +563,7 @@ private:
 			base::strConcat("Executable file does not exist: ", exe_path.native())
 		);
 
-		driver::compileEntirePackage(
-			package_info,
-			driver::BackendType::DVM,
-			{
-				.linker_path             = {},
-				.additional_link_options = {},
-				.link_c_standard_library = true,
-			}
-		);
+		driver::compileEntirePackage(package_info, driver::BuildTargetDVM{});
 
 		auto dvm_exe_path = artifacts_path / "package_dvm.dbc";
 		assertTrue(
@@ -561,7 +575,9 @@ private:
 	void globalsTest() {
 		using namespace compiler;
 
-		auto module = frontend::createModuleTree(fs::File(path("modules/globals")), package_name);
+		auto module = frontend::createModuleTree(
+			fs::File(path("modules/globals")), base::StrID(package_name)
+		);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			// This method can fail on module verification
@@ -593,7 +609,7 @@ private:
 		using namespace compiler;
 
 		auto module = frontend::createModuleTree(
-			fs::File(path("modules/globals_initialization")), package_name
+			fs::File(path("modules/globals_initialization")), base::StrID(package_name)
 		);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
@@ -607,7 +623,7 @@ private:
 		using namespace compiler;
 
 		auto module = frontend::createModuleTree(
-			fs::File(path("modules/functions_1")), "artifacts_test_package"
+			fs::File(path("modules/functions_1")), base::StrID("artifacts_test_package")
 		);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
@@ -643,23 +659,29 @@ private:
 	void sideInputsTest() {
 		using namespace compiler;
 
-		global_state::PackageInfo package_info{
-			.root_module
-			= frontend::createModuleTree(fs::File(path("modules/import_simple")), "import_simple"),
-		};
+		compiler::frontend::packages::PackageInfo package_info(
+			frontend::createModuleTree(
+				fs::File(path("modules/import_simple")), base::StrID("import_simple")
+			),
+			base::StrID("not_supported"),
+			{},
+			{}
+		);
 
 		driver::compileEntirePackage(
 			package_info,
-			driver::BackendType::LLVM,
-			{
-				.linker_path             = {},
-				.additional_link_options = {},
-				.link_c_standard_library = true,
+			driver::BuildTargetLLVMExecutable{
+				.output_file_stem = base::StrID("package_llvm"),
+				.linking_options  = linker::LinkingOptions{
+					.linker_path = {},
+					.additional_link_options = {},
+					.link_c_standard_library = true,
+				},
 			}
 		);
 
 		// Get root module ID
-		auto root_id = package_info.root_module;
+		auto root_id = package_info.getRootModule().illegalAccess().getID();
 
 		// Find submodule ID
 		auto root_ref   = frontend::getModuleRef(root_id);
@@ -761,19 +783,25 @@ private:
 	void moduleChildSideInputsTest() {
 		using namespace compiler;
 
-		global_state::PackageInfo package_info{
-			.root_module = frontend::createModuleTree(
-				fs::File(path("modules/imports_complicated")), "imports_complicated_test"
+		compiler::frontend::packages::PackageInfo package_info(
+			frontend::createModuleTree(
+				fs::File(path("modules/imports_complicated")),
+				base::StrID("imports_complicated_test")
 			),
-		};
+			base::StrID("not_supported"),
+			{},
+			{}
+		);
 
 		driver::compileEntirePackage(
 			package_info,
-			driver::BackendType::LLVM,
-			{
-				.linker_path             = {},
-				.additional_link_options = {},
-				.link_c_standard_library = true,
+			driver::BuildTargetLLVMExecutable{
+				.output_file_stem = base::StrID("package_llvm"),
+				.linking_options  = linker::LinkingOptions{
+					.linker_path = {},
+					.additional_link_options = {},
+					.link_c_standard_library = true,
+				},
 			}
 		);
 
@@ -781,7 +809,7 @@ private:
 		// Helper lambdas
 		// ================================================================================
 
-		auto root_id  = package_info.root_module;
+		auto root_id  = package_info.getRootModule().illegalAccess().getID();
 		auto root_ref = frontend::getModuleRef(root_id);
 
 		// Helper to get mutable module reference
@@ -996,29 +1024,25 @@ private:
 			return std::ranges::find(deps, source_position_node) != deps.end();
 		};
 
-		global_state::PackageInfo dvm_package_info{
-			.root_module
-			= frontend::createModuleTree(fs::File(path("modules/functions_2")), "src_pos_dvm"),
-		};
-
-		driver::compileEntirePackage(
-			dvm_package_info,
-			driver::BackendType::DVM,
-			{
-				.linker_path             = {},
-				.additional_link_options = {},
-				.link_c_standard_library = true,
-			}
+		compiler::frontend::packages::PackageInfo dvm_package_info(
+			frontend::createModuleTree(
+				fs::File(path("modules/functions_2")), base::StrID("src_pos_dvm")
+			),
+			base::StrID("not_supported"),
+			{},
+			{}
 		);
+
+		driver::compileEntirePackage(dvm_package_info, driver::BuildTargetDVM{});
 		auto dvm_compile_node
 			= query::internal::makeNodeID<driver::CompileModule>(driver::KeyOf_CompileModule{
-				.module_id        = dvm_package_info.root_module,
+				.module_id        = dvm_package_info.getRootModule().illegalAccess().getID(),
 				.backend_type     = driver::BackendType::DVM,
 				.build_debug_info = true,
 			});
 		auto dvm_debug_node = query::internal::makeNodeID<driver::DebugInfoForModule>(
 			driver::KeyOf_DebugInfoForModule{
-				.module_id    = dvm_package_info.root_module,
+				.module_id    = dvm_package_info.getRootModule().illegalAccess().getID(),
 				.backend_type = driver::BackendType::DVM,
 			}
 		);

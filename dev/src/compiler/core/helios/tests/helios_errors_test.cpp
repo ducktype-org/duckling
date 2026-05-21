@@ -45,11 +45,13 @@ private:
 	 *
 	 * It creates a virtual file from the `module_content` argument
 	 * and creates a module tree from it every function call.
+	 * The `present_phrases` are checked to be present in the logged
+	 * error messages in the given order.
 	 *
 	 * @TODO: #2213 Add PST errors handling here.
 	 *
 	 * @param module_content The content of the module main source file.
-	 * @param present_phrases List of phrases that should be present in the logged errors.
+	 * @param present_phrases List of phrases that should be present in the logged errors in order.
 	 * @param logged_msg_count Expected number of logged error messages.
 	 */
 	void checkForErrorOnCompileModule(
@@ -59,35 +61,39 @@ private:
 	) {
 		frontend::ModuleID module_id
 			= frontend::createModuleTreeFromContents(module_content, "test_package");
-		query::utils::withContextDo([&](query::Context& ctx) {
-			auto result = ctx.query<helios::QueryModuleHOUT>(module_id);
-			assertTrue(result->hasFailed(), "Expected HOUT query to fail for module content.");
-			auto logger = query::Context::dumpToOneLoggerAndClear();
 
-			// @TODO: #2213 we should do something smarted here, and see if the sum of pst and
-			// query errors is ok:
+		auto result = base::anyCast<CRef<query::QResult<helios::HOUTUnit>>>(
+			query::utils::withContextCompute([&](query::Context& ctx) {
+				return ctx.query<helios::QueryModuleHOUT>(module_id);
+			})
+		);
+		assertTrue(result->hasFailed(), "Expected HOUT query to fail for module content.");
+		auto logger = query::Context::dumpToOneLoggerAndClear();
+
+		// @TODO: #2213 we should do something smarted here, and see if the sum of pst and
+		// query errors is ok:
+		assertTrue(logger->hasErrors() or logged_msg_count == 0, "Expected errors to be logged.");
+
+		std::stringstream logged_messages;
+		logger->terminalPrint(logged_messages);
+		std::cerr << "Logged messages:\n" << logged_messages.str() << "\n";
+		auto msg_count = logger->messageCount();
+		assertEqual(
+			msg_count,
+			logged_msg_count,
+			"Expected logged message count to be " + std::to_string(logged_msg_count) + ", but got "
+				+ std::to_string(msg_count)
+		);
+		size_t      current_pos = 0;
+		std::string logged_str  = logged_messages.str();
+		for (const auto& phrase: present_phrases) {
+			size_t found_pos = logged_str.find(phrase, current_pos);
 			assertTrue(
-				logger->hasErrors() or logged_msg_count == 0, "Expected errors to be logged."
+				found_pos != std::string::npos,
+				"Expected logged messages to contain phrase in order: " + std::string(phrase)
 			);
-
-			std::stringstream logged_messages;
-			logger->terminalPrint(logged_messages);
-			std::cerr << "Logged messages:\n" << logged_messages.str() << "\n";
-			auto msg_count = logger->messageCount();
-			assertEqual(
-				msg_count,
-				logged_msg_count,
-				"Expected logged message count to be " + std::to_string(logged_msg_count)
-					+ ", but got " + std::to_string(msg_count)
-			);
-			for (const auto& phrase: present_phrases) {
-				std::string logged_str = logged_messages.str();
-				assertTrue(
-					logged_str.find(phrase.data()) != std::string::npos,
-					"Expected logged messages to contain phrase: " + std::string(phrase)
-				);
-			}
-		});
+			if (found_pos != std::string::npos) current_pos = found_pos + phrase.length();
+		}
 	}
 
 	/**
@@ -1007,20 +1013,22 @@ private:
 		// @TODO: #2213 Update the values in the test cases below.
 
 		// ======= PARSE ERRORS IN EXPAND STATEMENTS =======
-
 		checkForErrorOnCompileModule(
 			R"(
 				expand "fun foo";
 			)",
-			{ "Macro", "expansion" },
+			{ "Code expanded from here." },
 			1
 		);
 
+		// Here we check for the parse error msg and two `expanded from` notes.
 		checkForErrorOnCompileModule(
 			R"(
 				expand " expand \" fun a \"  ";
 			)",
-			{ "Macro", "expansion" },
+			{ "Opening bracket ( of a function parameter list expected after here.",
+		      "Code expanded from here.",
+		      "Code expanded from here." },
 			1
 		);
 
@@ -1028,7 +1036,7 @@ private:
 			R"(
 				expand " namespace N { fun a }  ";
 			)",
-			{ "Macro", "expansion" },
+			{ "Code expanded from here." },
 			1
 		);
 
@@ -1119,8 +1127,37 @@ private:
 				}
 
 			)",
-			{ "y", "z", "w", "not found" },
-			3
+			{ "not found" },
+			3  // The order of the errors is not deterministic, so we just check the count here.
+		);
+		// Here I test two things, one if the `code expanded from here`
+		// is generated and second if the error position is correct,
+		// the position of the `exact candidate` should be the position of the 'expand'.
+		checkForErrorOnCompileModule(
+			R"(
+				const str_a = "expand \"fun foo() -> i64 = 1 + 1;\"; ";
+				const str_b = "fun foo() -> i32 = 1 + 1;";
+				namespace N {
+					expand str_a;
+					expand str_b;
+				}
+
+				fun foo() = builtin_output_i64(N.foo());
+			)",
+			{
+				"Call failed",
+				"Found exact candidate.",
+				".dmf:5:6",
+				"Code expanded from here.",
+				".dmf:5:6",
+				"Code expanded from here.",
+				".dmf:5:6",
+				"Found exact candidate.",
+				".dmf:6:6",
+				"Code expanded from here.",
+				".dmf:6:6",
+			},
+			1
 		);
 	}
 

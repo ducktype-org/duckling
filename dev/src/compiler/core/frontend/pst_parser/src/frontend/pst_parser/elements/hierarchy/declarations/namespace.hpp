@@ -4,7 +4,7 @@
 
 namespace pst {
 	class Namespace final: public Decl {
-		tpc::Identifier name;
+		NAMED_CHILD(name, IdentifierWrapper);
 		NAMED_CHILD(body, CodeBlock);
 
 	protected:
@@ -14,13 +14,8 @@ namespace pst {
 		DECL_CHILD_CONSTRUCTOR(Namespace, ElementKind::Namespace);
 
 		[[nodiscard]]
-		base::StrID getName() const {
-			return name.value;
-		}
-
-		[[nodiscard]]
-		tpc::Identifier getNameIdent() const {
-			return name;
+		AccessLocked<IdentifierWrapper> getName() const {
+			return name.give();
 		}
 
 		[[nodiscard]]
@@ -38,7 +33,7 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		base::Optional<base::StrID> getDeclSymbolName() const final {
+		base::Optional<AccessLocked<IdentifierWrapper>> getDeclSymbolIdentifier() const final {
 			return getName();
 		}
 
