@@ -142,8 +142,7 @@ IMPL(call_func_imm) {
 	frame->ip++;
 	// Next, push a new frame for the called function. The instruction pointer of the new frame
 	// will be set to the start of the called function. The local stack for the new frame should
-	// be set to the address of the first return value.
-	frame = state.pushFrame(instr.func, local_stack - instr.stack_diff);
+	// be set to the address of the first return value.	frame = state.pushFrame(instr.func, flocal_stack- instr.stack_diff);
 	PROGRESS_BY(0);
 }
 

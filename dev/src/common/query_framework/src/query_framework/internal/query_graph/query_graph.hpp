@@ -10,7 +10,6 @@
 #include <base/config/build_type.hpp>
 #include <base/pointers/box.hpp>
 #include <base/pointers/ref.hpp>
-#include <base/preproc/utils.hpp>
 
 #include <ostream>
 #include <type_traits>

@@ -1,6 +1,7 @@
 #include "instruction_lowering.hpp"
 
 #include "base/preproc/for_each.hpp"
+#include "base/preproc/equal.hpp"
 
 #include "vm/bytecode/bytecode.hpp"
 #include "vm/bytecode/instructions.hpp"

@@ -1,4 +1,4 @@
-#include <base/comptime/macro_magic.hpp>
+#include <base/preproc/cat.hpp>
 #include <base/preproc/for_each.hpp>
 
 #define ARG_NAME_SHORT(arg)             FIRST CAT(INFO_, FIRST arg)()
