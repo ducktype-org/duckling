@@ -4,7 +4,7 @@ SubDirs:
   - basic_project
   - basic_project_renamed
   - missing_argument
-  - no_git
   - reinitialization
   - reinitialization_renamed
   - venvconfig_flags
+  - with_git
