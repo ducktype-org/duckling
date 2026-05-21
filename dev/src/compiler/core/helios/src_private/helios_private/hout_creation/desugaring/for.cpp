@@ -9,6 +9,7 @@
 #include "helios/symbols/symbol_id.hpp"
 #include "helios/tsh/queries/types.hpp"
 #include "helios/tsh/symbol_type.hpp"
+#include "helios/tsh/value_category.hpp"
 #include "helios_private/comp_time/comp_time.hpp"
 #include "helios_private/hout_creation/expressions/coercions.hpp"
 #include "helios_private/hout_creation/expressions/query_hout_of_expr.hpp"
@@ -22,281 +23,255 @@
 
 namespace compiler::helios::desugaring {
 	namespace {
-		class ForDesugarer final {
-		private:
+		struct ForDesugarCtx {
 			query::Context&       ctx;
 			pst::Access<pst::For> stmt;
 			ScopeID               for_scope;
-
-			code::ElementOrigin loop_origin;
-			code::ElementOrigin gen_origin;
-
-			tsh::Kind         iterable_kind;
-			tsh::SymbolType<> iterable_type;
-			Box<code::Expr>   iterable_hout;
+			code::ElementOrigin   loop_origin;
 
 			tsh::SymbolType<> u64_mut_type;
 			tsh::SymbolType<> u64_immut_type;
+
+			// Iterable info.
+			tsh::SymbolType<> iterable_type;
 			tsh::SymbolType<> col_type;
-
-		public:
-			ForDesugarer(
-				query::Context&       ctx,
-				pst::Access<pst::For> stmt,
-				Box<code::Expr>       iterable_hout,
-				tsh::SymbolType<>     iterable_type,
-				tsh::Kind             iterable_kind
-			):
-				  ctx(ctx),
-				  stmt(stmt),
-				  for_scope(ctx.query<QueryPrimaryCodeScopeFor>({ stmt })),
-				  loop_origin(code::pstOrigin(stmt)),
-				  gen_origin(code::generatedOrigin()),
-				  iterable_kind(iterable_kind),
-				  iterable_type(iterable_type),
-				  iterable_hout(std::move(iterable_hout)),
-				  u64_mut_type(tsh::SymbolType<>::withDefaults(
-					  tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned)
-				  )),
-				  u64_immut_type(u64_mut_type.withMutability(tsh::Mutability::Immutable)),
-				  col_type(iterable_type.withReferenceKind(tsh::ReferenceKind::Ref)) {}
-
-			base::Optional<code::BlockStmt> desugar(const BodyProcessor& process_body) {
-				if (!initializeIterable()) return {};
-
-				if (iterable_kind != tsh::Kind::DynamicArray
-				    && iterable_kind != tsh::Kind::StaticArray) {
-					ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-						base::strConcat(
-							"`for` statements for non-array type: ", iterable_type.toString()
-						),
-						stmt->getStablePosition()
-					));
-					return {};
-				}
-				initializeHelperTypes();
-
-				// Create the needed symbols.
-				SymID             col_sym  = makeForLocal(base::StrID("__collection"), col_type);
-				SymID             idx_sym  = makeForLocal(base::StrID("__index"), u64_mut_type);
-				SymID             len_sym  = makeForLocal(base::StrID("__len"), u64_immut_type);
-				SymID             iter_sym = getForIteratorSymbol(ctx, stmt);
-				tsh::SymbolType<> iter_type
-					= ctx.query<QueryTypeOfSymbol>(iter_sym)->valueOrThrow();
-
-				code::CodeBlock outer{};
-				// Create a temp for the collection for it to be evaluated only once before the loop.
-				// TODOP: Handle r-values
-				// var __collection: ref T = &<iterable>
-				outer.statements.emplace_back(buildCollectionVar(col_sym));
-				// var __idx: u64 = 0
-				outer.statements.emplace_back(buildIndexVar(idx_sym));
-				// let __len: u64 = <len __collection> / <constant>
-				outer.statements.emplace_back(buildLengthVar(len_sym, col_sym));
-
-				// Desugar the loop.
-				// while(__idx < __len) {
-				// 		let <iter> = __collection[__idx];
-				// 		<body>;
-				// 		__idx = __idx + 1;
-				// }
-				auto condition = buildCondition(idx_sym, len_sym);
-				auto while_body
-					= buildWhileBody(col_sym, idx_sym, iter_sym, iter_type, process_body);
-
-				if (!while_body.has_value()) return {};
-
-				outer.statements.emplace_back(makeBox<code::WhileStmt>(
-					loop_origin, std::move(condition), std::move(while_body.value())
-				));
-
-				// Emit it in a block so variable names don't collide if two fors are in the same
-				// function and for the collection scope to be not accessible from outside the for loop.
-				return code::BlockStmt(loop_origin, std::move(outer));
-			}
-
-		private:
-			bool initializeIterable() {
-				// Get the iterable and it's type.
-				auto iterable_pst      = stmt->getIterable().unlock(ctx)->getExpr();
-				auto iterable_hout_res = ctx.query<QueryHoutOfExpr>({ iterable_pst });
-				if (iterable_hout_res->hasFailed()) return false;
-
-				iterable_hout = iterable_hout_res->valueOrThrow()->clone();
-				iterable_type = iterable_hout->expression_type.getSymbolType();
-				iterable_kind = iterable_type.getType().getKind();
-				return true;
-			}
-
-			void initializeHelperTypes() {
-				u64_mut_type = tsh::SymbolType<>::withDefaults(
-					tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned)
-				);
-				u64_immut_type = u64_mut_type.withMutability(tsh::Mutability::Immutable);
-				col_type       = iterable_type.withReferenceKind(tsh::ReferenceKind::Ref);
-			}
-
-			SymID makeForLocal(base::StrID role, tsh::SymbolType<> type) {
-				// Compose the name with the current scope hash, so we don't have naming collisions
-				// with nested loops.
-				auto unique = for_scope.queryUnstablePerfectHash();
-				auto name   = base::StrID(base::strConcat(role, unique));
-
-				using GeneratedSymbolData = defgen::GeneratedSymbolData;
-				using ControlFlowLocal    = GeneratedSymbolData::ControlFlowLocal;
-
-				return ctx.query<defgen::QueryGeneratedSymbol>({ .name = name,
-				                                                 .generated_symbol_data
-				                                                 = GeneratedSymbolData{
-																	 ControlFlowLocal{
-																		 .owning_scope = for_scope,
-																		 .role         = role,
-																		 .type         = type,
-																	 },
-																 } });
-			}
-
-			Box<code::Stmt> buildCollectionVar(SymID col_sym) {
-				// TODOP: What if collection is a r-value;
-				return makeBox<code::VariableStmt>(
-					loop_origin,
-					makeBox<code::RefOfExpr>(ctx, gen_origin, std::move(iterable_hout)),
-					col_type,
-					col_sym
-				);
-			}
-
-			Box<code::Stmt> buildIndexVar(SymID idx_sym) {
-				return makeBox<code::VariableStmt>(
-					loop_origin,
-					makeBox<code::DefaultValueExpr>(ctx, gen_origin, u64_mut_type.getType()),
-					u64_mut_type,
-					idx_sym
-				);
-			}
-
-			Box<code::Stmt> buildLengthVar(SymID len_sym, SymID col_sym) {
-				// Length is calculated once before the loop.
-				auto len_expr = [&]() -> Box<code::Expr> {
-					switch (iterable_kind) {
-					case tsh::Kind::DynamicArray: {
-						return makeBox<code::UnaryOperatorExpr>(
-							ctx,
-							gen_origin,
-							code::BuiltinUnary::Len,
-							makeBox<code::DerefExpr>(
-								ctx,
-								gen_origin,
-								makeBox<code::IdentifierExpr>(ctx, gen_origin, col_sym)
-							)
-						);
-					}
-					case tsh::Kind::StaticArray: {
-						auto size
-							= iterable_type.getType().as<tsh::StaticArrayAbstractType>().getSize();
-						return makeBox<code::LiteralNumericExpr>(
-							ctx,
-							gen_origin,
-							compiler::numeric_value::NumericValue::createOfType<u64>(
-								u64_immut_type.getType(), size
-							)
-								.value()
-						);
-					}
-					default:
-						CORE_UNREACHABLE();
-					}
-				}();
-				return makeBox<code::VariableStmt>(
-					loop_origin, std::move(len_expr), u64_immut_type, len_sym
-				);
-			}
-
-			Box<code::Expr> buildCondition(SymID idx_sym, SymID len_sym) {
-				return makeBox<code::BinaryOperatorExpr>(
-					ctx,
-					gen_origin,
-					code::BuiltinBinary::IntegerLt,
-					makeBox<code::IdentifierExpr>(ctx, gen_origin, idx_sym),
-					makeBox<code::IdentifierExpr>(ctx, gen_origin, len_sym)
-				);
-			}
-
-			base::Optional<code::CodeBlock> buildWhileBody(
-				SymID                col_sym,
-				SymID                idx_sym,
-				SymID                iter_sym,
-				tsh::SymbolType<>    iter_type,
-				const BodyProcessor& process_body
-			) {
-				code::CodeBlock while_body{};
-
-				auto col_ref
-					= [&] { return makeBox<code::IdentifierExpr>(ctx, gen_origin, col_sym); };
-				auto idx_ref
-					= [&] { return makeBox<code::IdentifierExpr>(ctx, gen_origin, idx_sym); };
-				auto derefed_col_ref
-					= [&] { return makeBox<code::DerefExpr>(ctx, gen_origin, col_ref()); };
-
-				Box<code::Expr> element_expr
-					= makeBox<code::IndexExpr>(ctx, gen_origin, derefed_col_ref(), idx_ref());
-				tsh::SymbolType<> element_sym_type = element_expr->expression_type.getSymbolType();
-
-				auto coercion_res = canCoerce(ctx, element_sym_type, iter_type);
-				if (coercion_res.hasFailed()) return {};
-
-				bool coercion_success = true;
-				variant_match(coercion_res.valueOrThrow().getVariant()) {
-					variant_case(Coercion, coercion) {
-						element_expr = coercion.coerce(ctx, std::move(element_expr));
-					}
-					variant_default {
-						ctx.logInt(makeBox<dia_int::PlaceholderError>(
-							base::strConcat(
-								"Cannot coerce collection element type '",
-								element_sym_type.toString(),
-								"' to iterator type '",
-								iter_type.toString(),
-								"'."
-							),
-							stmt->getIterable().unlock(ctx)->getStablePosition()
-						));
-						coercion_success = false;
-					}
-				}
-
-				if (!coercion_success) return {};
-
-				// let <user_var> = __collection[__idx];
-				while_body.statements.emplace_back(makeBox<code::VariableStmt>(
-					loop_origin, std::move(element_expr), iter_type, iter_sym
-				));
-
-				// <body>;
-				auto body = process_body(stmt->getBody());
-				for (auto& s: body.statements) while_body.statements.emplace_back(std::move(s));
-
-				// __idx = __idx + 1;
-				auto one = makeBox<code::LiteralNumericExpr>(
-					ctx,
-					gen_origin,
-					compiler::numeric_value::NumericValue::createOfType<u64>(
-						u64_mut_type.getType(), 1
-					)
-						.value()
-				);
-
-				while_body.statements.emplace_back(makeBox<code::AssignmentStmt>(
-					gen_origin,
-					idx_ref(),
-					makeBox<code::BinaryOperatorExpr>(
-						ctx, gen_origin, code::BuiltinBinary::IntegerAdd, idx_ref(), std::move(one)
-					)
-				));
-
-				return while_body;
-			}
+			Box<code::Expr>   iterable_hout;
 		};
+
+		base::Optional<ForDesugarCtx> buildForDesugarCtx(
+			query::Context& ctx, pst::Access<pst::For> stmt
+		) {
+			// Get the iterable and it's type.
+			auto iterable_pst      = stmt->getIterable().unlock(ctx)->getExpr();
+			auto iterable_hout_res = ctx.query<QueryHoutOfExpr>({ iterable_pst });
+			if (iterable_hout_res->hasFailed()) return {};
+
+			auto iterable_hout = iterable_hout_res->valueOrThrow()->clone();
+			auto iterable_type = iterable_hout->expression_type.getSymbolType();
+			auto kind          = iterable_type.getType().getKind();
+
+			if (kind != tsh::Kind::DynamicArray && kind != tsh::Kind::StaticArray) {
+				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					base::strConcat(
+						"`for` statements for non-array type: ", iterable_type.toString()
+					),
+					stmt->getStablePosition()
+				));
+				return {};
+			}
+
+			auto u64_mut = tsh::SymbolType<>::withDefaults(
+				tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned)
+			);
+
+			return ForDesugarCtx{
+				.ctx            = ctx,
+				.stmt           = stmt,
+				.for_scope      = ctx.query<QueryPrimaryCodeScopeFor>({ stmt }),
+				.loop_origin    = code::pstOrigin(stmt),
+				.u64_mut_type   = u64_mut,
+				.u64_immut_type = u64_mut.withMutability(tsh::Mutability::Immutable),
+				.iterable_type  = iterable_type,
+				.col_type       = iterable_type.withReferenceKind(tsh::ReferenceKind::Ref),
+				.iterable_hout  = std::move(iterable_hout),
+			};
+		}
+
+		SymID makeForLocal(const ForDesugarCtx& ctx, base::StrID role, tsh::SymbolType<> type) {
+			// Compose the name with the current scope hash, so we don't have naming collisions
+			// with nested loops.
+			auto unique = ctx.for_scope.queryUnstablePerfectHash();
+			auto name   = base::StrID(base::strConcat(role, unique));
+
+			using GeneratedSymbolData = defgen::GeneratedSymbolData;
+			using ControlFlowLocal    = GeneratedSymbolData::ControlFlowLocal;
+
+			return ctx.ctx.query<defgen::QueryGeneratedSymbol>({
+				.name                  = name,
+				.generated_symbol_data = GeneratedSymbolData{ ControlFlowLocal{
+					.owning_scope = ctx.for_scope,
+					.role         = role,
+					.type         = type,
+				} },
+			});
+		}
+
+		// Create a temp for the collection for it to be evaluated only once before the loop.
+		// var __collection: ref T = &<iterable>      (l-value iterable)
+		// var __collection: T     = <iterable>       (r-value iterable)
+		Box<code::Stmt> buildCollectionVar(ForDesugarCtx& ctx, SymID col_sym) {
+			const auto gen = code::generatedOrigin();
+
+			Box<code::Expr> collection_expr = [&]() -> Box<code::Expr> {
+				tsh::PrimaryCategory value_category
+					= ctx.iterable_hout->expression_type.getValueCategory().getCategory();
+				if (value_category == tsh::PrimaryCategory::Literal
+				    || value_category == tsh::PrimaryCategory::Temporary) {
+					// If the collection is a r-value we store it in the `__collection` variable
+					// directly.
+					return std::move(ctx.iterable_hout);
+				} else {
+					// If the collection if it's an l-value we operate on it through a ref.
+					return makeBox<code::RefOfExpr>(ctx.ctx, gen, std::move(ctx.iterable_hout));
+				}
+			}();
+
+			return makeBox<code::VariableStmt>(
+				ctx.loop_origin, std::move(collection_expr), ctx.col_type, col_sym
+			);
+		}
+
+		// var __idx: u64 = 0
+		Box<code::Stmt> buildIndexVar(const ForDesugarCtx& ctx, SymID idx_sym) {
+			const auto gen = code::generatedOrigin();
+			return makeBox<code::VariableStmt>(
+				ctx.loop_origin,
+				makeBox<code::DefaultValueExpr>(ctx.ctx, gen, ctx.u64_mut_type.getType()),
+				ctx.u64_mut_type,
+				idx_sym
+			);
+		}
+
+		// Length is calculated once before the loop.
+		// let __len: u64 = <len __collection> / <constant>
+		Box<code::Stmt> buildLengthVar(const ForDesugarCtx& ctx, SymID len_sym, SymID col_sym) {
+			const auto gen = code::generatedOrigin();
+
+			auto len_expr = [&]() -> Box<code::Expr> {
+				switch (ctx.iterable_type.getType().getKind()) {
+				case tsh::Kind::DynamicArray: {
+					return makeBox<code::UnaryOperatorExpr>(
+						ctx.ctx,
+						gen,
+						code::BuiltinUnary::Len,
+						makeBox<code::DerefExpr>(
+							ctx.ctx, gen, makeBox<code::IdentifierExpr>(ctx.ctx, gen, col_sym)
+						)
+					);
+				}
+				case tsh::Kind::StaticArray: {
+					auto size
+						= ctx.iterable_type.getType().as<tsh::StaticArrayAbstractType>().getSize();
+					return makeBox<code::LiteralNumericExpr>(
+						ctx.ctx,
+						gen,
+						compiler::numeric_value::NumericValue::createOfType<u64>(
+							ctx.u64_immut_type.getType(), size
+						)
+							.value()
+					);
+				}
+				default:
+					CORE_UNREACHABLE();
+				}
+			}();
+
+			return makeBox<code::VariableStmt>(
+				ctx.loop_origin, std::move(len_expr), ctx.u64_immut_type, len_sym
+			);
+		}
+
+		// __idx < __len
+		Box<code::Expr> buildCondition(const ForDesugarCtx& ctx, SymID idx_sym, SymID len_sym) {
+			const auto gen = code::generatedOrigin();
+			return makeBox<code::BinaryOperatorExpr>(
+				ctx.ctx,
+				gen,
+				code::BuiltinBinary::IntegerLt,
+				makeBox<code::IdentifierExpr>(ctx.ctx, gen, idx_sym),
+				makeBox<code::IdentifierExpr>(ctx.ctx, gen, len_sym)
+			);
+		}
+
+		// Apply implicit coercion from the collection's element type to the
+		// user-declared iterator type. Returns nullopt and logs an error if no
+		// coercion exists.
+		base::Optional<Box<code::Expr>> coerceElementToIter(
+			const ForDesugarCtx& ctx, Box<code::Expr> element_expr, tsh::SymbolType<> iter_type
+		) {
+			auto element_sym_type = element_expr->expression_type.getSymbolType();
+			auto coercion_res     = canCoerce(ctx.ctx, element_sym_type, iter_type);
+			if (coercion_res.hasFailed()) return {};
+
+			base::Optional<Box<code::Expr>> result;
+			variant_match(coercion_res.valueOrThrow().getVariant()) {
+				variant_case(Coercion, coercion) {
+					result = coercion.coerce(ctx.ctx, std::move(element_expr));
+				}
+				variant_default {
+					ctx.ctx.logInt(makeBox<dia_int::PlaceholderError>(
+						base::strConcat(
+							"Cannot coerce collection element type '",
+							element_sym_type.toString(),
+							"' to iterator type '",
+							iter_type.toString(),
+							"'."
+						),
+						ctx.stmt->getIterable().unlock(ctx.ctx)->getStablePosition()
+					));
+				}
+			}
+			return result;
+		}
+
+		// Build the body of the while loop:
+		//   let <iter> = __collection[__idx];
+		//   <body>;
+		//   __idx = __idx + 1;
+		base::Optional<code::CodeBlock> buildWhileBody(
+			const ForDesugarCtx& ctx,
+			SymID                col_sym,
+			SymID                idx_sym,
+			SymID                iter_sym,
+			tsh::SymbolType<>    iter_type,
+			const BodyProcessor& process_body
+		) {
+			const auto gen = code::generatedOrigin();
+			auto idx_ref   = [&] { return makeBox<code::IdentifierExpr>(ctx.ctx, gen, idx_sym); };
+
+			// __collection[__idx]
+			Box<code::Expr> raw_element = makeBox<code::IndexExpr>(
+				ctx.ctx,
+				gen,
+				makeBox<code::DerefExpr>(
+					ctx.ctx, gen, makeBox<code::IdentifierExpr>(ctx.ctx, gen, col_sym)
+				),
+				idx_ref()
+			);
+
+			auto element_expr = coerceElementToIter(ctx, std::move(raw_element), iter_type);
+			if (!element_expr.has_value()) return {};
+
+			code::CodeBlock body{};
+
+			// let <user_var> = __collection[__idx];
+			body.statements.emplace_back(makeBox<code::VariableStmt>(
+				ctx.loop_origin, std::move(element_expr.value()), iter_type, iter_sym
+			));
+
+			// <body>;
+			auto user_body = process_body(ctx.stmt->getBody());
+			for (auto& s: user_body.statements) body.statements.emplace_back(std::move(s));
+
+			// __idx = __idx + 1;
+			auto one = makeBox<code::LiteralNumericExpr>(
+				ctx.ctx,
+				gen,
+				compiler::numeric_value::NumericValue::createOfType<u64>(
+					ctx.u64_mut_type.getType(), 1
+				)
+					.value()
+			);
+			body.statements.emplace_back(makeBox<code::AssignmentStmt>(
+				gen,
+				idx_ref(),
+				makeBox<code::BinaryOperatorExpr>(
+					ctx.ctx, gen, code::BuiltinBinary::IntegerAdd, idx_ref(), std::move(one)
+				)
+			));
+
+			return body;
+		}
 	}
 
 	SymID getForIteratorSymbol(query::Context& ctx, pst::Access<pst::For> stmt) {
@@ -344,10 +319,9 @@ namespace compiler::helios::desugaring {
 				maybe_is_const.value() ? tsh::Mutability::Immutable : tsh::Mutability::Mutable
 			);
 		} else {
-			// If no let/var exists the element type is the same as the array element type. Is array
-			// stores a const than the iterator is const.
+			// If no let/var exists the element type is the same as the array element type. If the
+			// array stores a const than the iterator is const.
 		}
-
 
 		return ctx.query<defgen::QueryGeneratedSymbol>({
 			.name                  = iter_name,
@@ -362,15 +336,41 @@ namespace compiler::helios::desugaring {
 	base::Optional<code::BlockStmt> desugarFor(
 		query::Context& ctx, pst::Access<pst::For> stmt, const BodyProcessor& process_body
 	) {
-		auto iterable_pst      = stmt->getIterable().unlock(ctx)->getExpr();
-		auto iterable_hout_res = ctx.query<QueryHoutOfExpr>({ iterable_pst });
-		if (iterable_hout_res->hasFailed()) return {};
+		auto ctx_opt = buildForDesugarCtx(ctx, stmt);
+		if (!ctx_opt.has_value()) return {};
+		auto& for_ctx = ctx_opt.value();
 
-		auto iterable_hout = iterable_hout_res->valueOrThrow()->clone();
-		auto iterable_type = iterable_hout->expression_type.getSymbolType();
-		auto iterable_kind = iterable_type.getType().getKind();
+		// Create the needed symbols.
+		SymID col_sym  = makeForLocal(for_ctx, base::StrID("__collection"), for_ctx.col_type);
+		SymID idx_sym  = makeForLocal(for_ctx, base::StrID("__index"), for_ctx.u64_mut_type);
+		SymID len_sym  = makeForLocal(for_ctx, base::StrID("__len"), for_ctx.u64_immut_type);
+		SymID iter_sym = getForIteratorSymbol(ctx, stmt);
+		tsh::SymbolType<> iter_type = ctx.query<QueryTypeOfSymbol>(iter_sym)->valueOrThrow();
 
-		return ForDesugarer{ ctx, stmt, std::move(iterable_hout), iterable_type, iterable_kind }
-		    .desugar(process_body);
+		// Build the while body first so we bail out on coercion failure before
+		// consuming the iterable expression into the __collection variable.
+		auto while_body
+			= buildWhileBody(for_ctx, col_sym, idx_sym, iter_sym, iter_type, process_body);
+		if (!while_body.has_value()) return {};
+
+		// Desugar the loop.
+		// while(__idx < __len) {
+		// 		let <iter> = __collection[__idx];
+		// 		<body>;
+		// 		__idx = __idx + 1;
+		// }
+		code::CodeBlock outer{};
+		outer.statements.emplace_back(buildCollectionVar(for_ctx, col_sym));
+		outer.statements.emplace_back(buildIndexVar(for_ctx, idx_sym));
+		outer.statements.emplace_back(buildLengthVar(for_ctx, len_sym, col_sym));
+		outer.statements.emplace_back(makeBox<code::WhileStmt>(
+			for_ctx.loop_origin,
+			buildCondition(for_ctx, idx_sym, len_sym),
+			std::move(while_body.value())
+		));
+
+		// Emit it in a block so variable names don't collide if two fors are in the same
+		// function and for the collection scope to be not accessible from outside the for loop.
+		return code::BlockStmt(for_ctx.loop_origin, std::move(outer));
 	}
 }
