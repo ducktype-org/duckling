@@ -20,7 +20,9 @@
 #include <vm/loader/compiler/compiler.hpp>
 #include <vm/loader/logger.hpp>
 
+#include <algorithm>
 #include <expected>
+#include <limits>
 #include <vector>
 
 using namespace vm::loader;
@@ -193,13 +195,16 @@ std::expected<vm::loader::Loader::FatBytecodePosition, vm::loader::Loader::Mappi
 	loader::Loader::mapLowVMProgramPositionToCodeCollectionPosition(vm::low::LowCodePosition position
     ) const {
 	auto& mapping = position.function->instruction_mapping;
-	auto  it      = std::ranges::upper_bound(
-        mapping,
-        vm::low::LowFuncData::InstructionRange{
-				  .begin = position.instruction_index,
-				  .end   = std::numeric_limits<usize>::max(),
-        }
-    );
+
+	// We need to find the first instruction range that starts after the given instruction index,
+	// then check if the previous one contains it
+	auto it = std::ranges::upper_bound(
+		mapping,
+		vm::low::LowFuncData::InstructionRange{
+			.begin = position.instruction_index,
+			.end   = std::numeric_limits<usize>::max(),
+		}
+	);
 
 	if (it == mapping.begin()) return std::unexpected(MissingMapping);
 

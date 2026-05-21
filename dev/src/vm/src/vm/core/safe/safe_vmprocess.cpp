@@ -221,8 +221,11 @@ namespace vm {
 		if (!maybe_lp) return maybe_lp.error();
 		auto low_position = maybe_lp.value();
 
-		auto                               function    = low_position.function;
-		auto                               mapping     = function->instruction_mapping;
+		auto function = low_position.function;
+		auto mapping  = function->instruction_mapping;
+
+		// Default instruction range to step over is the whole function, in case we fail to obtain
+		// high position
 		low::LowFuncData::InstructionRange instr_range = {
 			.begin = 0,
 			.end   = std::numeric_limits<usize>::max(),

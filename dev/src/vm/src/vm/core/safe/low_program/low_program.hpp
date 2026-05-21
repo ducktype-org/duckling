@@ -49,7 +49,7 @@ namespace vm::low {
 		};
 
 		/**
-		 * @brief Mapping of fatbytecode instruction indices to microbytecode instruction indice
+		 * @brief Mapping of fatbytecode instruction indexes to microbytecode instruction indexes
 		 * ranges.
 		 * @note Vector indexes correspond to FatBytecode instruction indexes
 		 */
