@@ -7,6 +7,5 @@ function main {} -> { i64 } {
 	init_pany_type     	y, 		i64;
 	deinit; # y
 
-    mov_p64_imm			ret0,	42;
 	ret;
 }
