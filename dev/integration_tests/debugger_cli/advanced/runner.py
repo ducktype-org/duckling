@@ -41,9 +41,6 @@ while True:
     if "returned" in msg:
         break
 
-vm_process.stdin.write("q\n")
-vm_process.stdin.flush()
-
 # -1 to not print additional "\n"
 print(full_output[:-1])
 vm_process.terminate()

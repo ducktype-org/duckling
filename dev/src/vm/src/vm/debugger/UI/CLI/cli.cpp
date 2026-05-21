@@ -12,20 +12,21 @@ namespace vm::debugger::cli {
 	namespace idv = interpreted_data_variant;
 
 	CLIDebugger::CLIDebugger(const std::vector<std::string>& main_args):
-		  status_change_listener([](const api::ProcStatus& status) {
+		  status_change_listener([&](const api::ProcStatus& status) {
 			  std::visit(
 				  [&](auto&& arg) {
 					  using T = std::decay_t<decltype(arg)>;
+					  std::lock_guard lk(output_mutex);
 					  std::cout << "New status: " << TypeParseTraits<T>::NAME.data() << "\n";
 				  },
 				  status
 			  );
 		  }),
-		  error_listener([this](const std::string& err) {
+		  error_listener([&](const std::string& err) {
 			  std::lock_guard lk(output_mutex);
 			  std::cout << "Error: " << err << "\n";
 		  }),
-		  exit_value_listener([this](const api::ExitValue& exit_val) {
+		  exit_value_listener([&](const api::ExitValue& exit_val) {
 			  std::lock_guard lk(output_mutex);
 			  for (auto val: exit_val) {
 				  if_opt_some(val->readData(), data) {
