@@ -59,6 +59,9 @@ namespace vm {
 
 	public:
 		BasicBlock(BlockID id, BlockData<EntryT> data): id(id), data(data) {}
+
+		[[nodiscard]] EntryT* getData() { return data.view.getBegin(); }
+		[[nodiscard]] const EntryT* getData() const { return data.view.getBegin(); }
 	};
 
 	using Block = BasicBlock<std::byte>;

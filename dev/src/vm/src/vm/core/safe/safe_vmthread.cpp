@@ -675,4 +675,12 @@ namespace vm {
 		runtime_data.global_data_buffer_base      = global_buffer_pointers.data_buffer_base;
 		runtime_data.global_block_ref_buffer_base = global_buffer_pointers.blocks_buffer_base;
 	}
+
+	IMemory<ShadowEntry>& SafeVMThread::getShadowDataMemory() {
+		return safe_process.shadow_data_memory;
+	}
+
+	IMemory<ShadowPointer>& SafeVMThread::getShadowPointerMemory() {
+		return safe_process.shadow_pointer_memory;
+	}
 }

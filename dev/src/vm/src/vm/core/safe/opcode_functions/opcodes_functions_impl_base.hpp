@@ -1227,6 +1227,202 @@ namespace vm {
 		}
 		FUNCTION_CONT(1);
 	}
+	// ========= FAST TRACK IMPLEMENTATIONS ========
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ft_structLea_pptr_pptr)(FUNCTION_ARGS) {
+		{
+			const auto dst    = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
+			auto       src    = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
+			auto       offset = static_cast<usize>(instr[1].arg0);
+			u32 shadow_offset = static_cast<u32>(instr[2].arg0);
+			u32 pointer_offset = static_cast<u32>(instr[2].arg1);
+
+			const Pointer new_dst = thread.process_memory.updatePointerAssignment(
+				dst, { src.getBlock(), src.getOffset() + offset }
+			);
+			WRITE_TO_PLACE_ARG(Pointer, instr->arg0, new_dst);
+
+			ShadowPointer src_shadow = GET_SHADOW_POINTER_REF(instr->arg1);
+			ShadowPointer dst_shadow = src_shadow;
+			if (!dst_shadow.isNull()) {
+				dst_shadow.logical_idx += shadow_offset;
+				dst_shadow.pointer_idx += pointer_offset;
+			}
+			GET_SHADOW_POINTER_REF(instr->arg0) = dst_shadow;
+		}
+		FUNCTION_CONT(3);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ft_tableIdxLea_pptr_pptr)(FUNCTION_ARGS) {
+		{
+			const auto dst       = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
+			auto       table_ptr = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
+			auto       index     = READ_FROM_DIRECT_ARG(u64, instr[1].arg0);
+			auto       elem_type = READ_FROM_DIRECT_ARG(TypeCRef, instr[1].arg1);
+
+			const Pointer new_dst = thread.process_memory.updatePointerAssignment(
+				dst, { table_ptr.getBlock(), table_ptr.getOffset() + (index * elem_type->getSize().asInt()) }
+			);
+			WRITE_TO_PLACE_ARG(Pointer, instr->arg0, new_dst);
+
+			ShadowPointer table_shadow = GET_SHADOW_POINTER_REF(instr->arg1);
+			ShadowPointer dst_shadow = table_shadow;
+			if (!dst_shadow.isNull()) {
+				dst_shadow.logical_idx += static_cast<u32>(index * elem_type->getShadowSize());
+				dst_shadow.pointer_idx += static_cast<u32>(index * elem_type->getPointerSize());
+			}
+			GET_SHADOW_POINTER_REF(instr->arg0) = dst_shadow;
+		}
+		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ft_ptrAdd_pptr_pptr)(FUNCTION_ARGS) {
+		{
+			const auto dst       = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
+			auto       src       = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
+			auto       index     = READ_FROM_DIRECT_ARG(u64, instr[1].arg0);
+			auto       elem_type = READ_FROM_DIRECT_ARG(TypeCRef, instr[1].arg1);
+
+			const Pointer new_dst = thread.process_memory.updatePointerAssignment(
+				dst, { src.getBlock(), src.getOffset() + (index * elem_type->getSize().asInt()) }
+			);
+			WRITE_TO_PLACE_ARG(Pointer, instr->arg0, new_dst);
+
+			ShadowPointer src_shadow = GET_SHADOW_POINTER_REF(instr->arg1);
+			ShadowPointer dst_shadow = src_shadow;
+			if (!dst_shadow.isNull()) {
+				dst_shadow.logical_idx += static_cast<u32>(index * elem_type->getShadowSize());
+				dst_shadow.pointer_idx += static_cast<u32>(index * elem_type->getPointerSize());
+			}
+			GET_SHADOW_POINTER_REF(instr->arg0) = dst_shadow;
+		}
+		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ft_ptrSub_pptr_pptr)(FUNCTION_ARGS) {
+		{
+			const auto dst       = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
+			auto       src       = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
+			auto       index     = READ_FROM_DIRECT_ARG(u64, instr[1].arg0);
+			auto       elem_type = READ_FROM_DIRECT_ARG(TypeCRef, instr[1].arg1);
+
+			const Pointer new_dst = thread.process_memory.updatePointerAssignment(
+				dst, { src.getBlock(), src.getOffset() - (index * elem_type->getSize().asInt()) }
+			);
+			WRITE_TO_PLACE_ARG(Pointer, instr->arg0, new_dst);
+
+			ShadowPointer src_shadow = GET_SHADOW_POINTER_REF(instr->arg1);
+			ShadowPointer dst_shadow = src_shadow;
+			if (!dst_shadow.isNull()) {
+				dst_shadow.logical_idx -= static_cast<u32>(index * elem_type->getShadowSize());
+				dst_shadow.pointer_idx -= static_cast<u32>(index * elem_type->getPointerSize());
+			}
+			GET_SHADOW_POINTER_REF(instr->arg0) = dst_shadow;
+		}
+		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ft_read)(FUNCTION_ARGS) {
+		{
+			ShadowPointer shadow_ptr = GET_SHADOW_POINTER_REF(instr->arg0);
+			if (!shadow_ptr.isNull()) {
+				ShadowEntry* entry = shadow_ptr.data_base + shadow_ptr.logical_idx;
+				entry->processRead(thread.getThreadID(), thread.getVC()[thread.getThreadID()], thread.getVC());
+			}
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ft_write)(FUNCTION_ARGS) {
+		{
+			ShadowPointer shadow_ptr = GET_SHADOW_POINTER_REF(instr->arg0);
+			if (!shadow_ptr.isNull()) {
+				ShadowEntry* entry = shadow_ptr.data_base + shadow_ptr.logical_idx;
+				entry->processWrite(thread.getThreadID(), thread.getVC()[thread.getThreadID()], thread.getVC());
+			}
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ft_load_pptr_pptr)(FUNCTION_ARGS) {
+		{
+			auto dst_pointer = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
+			auto src_pointer = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
+			
+			const Pointer new_dst = thread.process_memory.updatePointerAssignment(
+				dst_pointer, { src_pointer.getBlock(), src_pointer.getOffset() }
+			);
+			WRITE_TO_PLACE_ARG(Pointer, instr->arg0, new_dst);
+
+			GET_SHADOW_POINTER_REF(instr->arg0) = GET_SHADOW_POINTER_REF(instr->arg1);
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ft_store_pptr_pptr)(FUNCTION_ARGS) {
+		{
+			auto dst_pointer = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
+			auto src_pointer = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
+			
+			const Pointer new_dst = thread.process_memory.updatePointerAssignment(
+				dst_pointer, { src_pointer.getBlock(), src_pointer.getOffset() }
+			);
+			WRITE_TO_PLACE_ARG(Pointer, instr->arg0, new_dst);
+
+			GET_SHADOW_POINTER_REF(instr->arg0) = GET_SHADOW_POINTER_REF(instr->arg1);
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ft_memCopy)(FUNCTION_ARGS) {
+		{
+			auto dst_pointer = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
+			auto src_pointer = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
+			auto type = READ_FROM_DIRECT_ARG(TypeCRef, instr[1].arg0);
+
+			thread.process_memory.copyPointedData(dst_pointer, src_pointer, type);
+			
+			ShadowPointer dst_shadow = GET_SHADOW_POINTER_REF(instr->arg0);
+			ShadowPointer src_shadow = GET_SHADOW_POINTER_REF(instr->arg1);
+			
+			if (!dst_shadow.isNull() && !src_shadow.isNull()) {
+				for(u32 i = 0; i < type->getShadowSize(); ++i) {
+					*(dst_shadow.data_base + dst_shadow.logical_idx + i) = *(src_shadow.data_base + src_shadow.logical_idx + i);
+				}
+				for(u32 i = 0; i < type->getPointerSize(); ++i) {
+					*(dst_shadow.pointer_base + dst_shadow.pointer_idx + i) = *(src_shadow.pointer_base + src_shadow.pointer_idx + i);
+				}
+			}
+		}
+		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ft_alloc_pptr_type)(FUNCTION_ARGS) {
+		{
+			auto dst  = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
+			auto type = READ_FROM_DIRECT_ARG(TypeCRef, instr[1].arg0);
+
+			auto block = thread.process_memory.allocateHeap(type);
+			const Pointer new_dst = thread.process_memory.updatePointerAssignment(dst, { block, 0 });
+			WRITE_TO_PLACE_ARG(Pointer, instr->arg0, new_dst);
+
+			// Shadow allocation assumes getters on thread
+			ShadowPointer shadow_ptr;
+			if (type->getShadowSize() > 0) {
+				auto shadow_block = thread.getShadowDataMemory().allocateHeap(type);
+				shadow_ptr.data_base = reinterpret_cast<ShadowEntry*>(shadow_block->getData());
+				shadow_ptr.logical_idx = 0;
+			}
+			if (type->getPointerSize() > 0) {
+				auto shadow_ptr_block = thread.getShadowPointerMemory().allocateHeap(type);
+				shadow_ptr.pointer_base = reinterpret_cast<ShadowPointer*>(shadow_ptr_block->getData());
+				shadow_ptr.pointer_idx = 0;
+			}
+
+			GET_SHADOW_POINTER_REF(instr->arg0) = shadow_ptr;
+		}
+		FUNCTION_CONT(2);
+	}
 }
 
 #undef OPCODE_NAME

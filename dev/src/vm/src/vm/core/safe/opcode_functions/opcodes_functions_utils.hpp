@@ -7,6 +7,7 @@
 #include <base/types/ints.hpp>
 
 #include <vm/core/safe/memory/block.hpp>
+#include <vm/core/safe/memory/frame.hpp>
 #include <vm/utils/interpret.hpp>
 
 namespace vm {
@@ -127,6 +128,33 @@ template<typename T>
 inline static void writeToView(base::ModRawView view, const T& value) {
 	vm::safeWriteBytes<T>(view.getBegin(), value);
 }
+
+/**
+ * @brief FastTrack helper functions for shadow pointer mapping and propagation.
+ */
+[[nodiscard]] [[gnu::always_inline]]
+inline static u32 getShadowPointerIndex(u64 place_arg) {
+	return static_cast<u32>((place_arg & ~(1ULL << 63)) / sizeof(vm::Pointer));
+}
+
+[[nodiscard]] [[gnu::always_inline]]
+inline static bool isGlobalPlace(u64 place_arg) {
+	return (place_arg >> 63) != 0;
+}
+
+[[nodiscard]] [[gnu::always_inline]]
+inline static vm::ShadowPointer& getShadowPointerRef(vm::Frame* frame, u64 place_arg) {
+	u32 index = getShadowPointerIndex(place_arg);
+	if (isGlobalPlace(place_arg)) {
+		static vm::ShadowPointer dummy;
+		return dummy;
+	} else {
+		return frame->local_shadow_pointer_stack[index];
+	}
+}
+
+#define GET_SHADOW_POINTER_REF(ARG) getShadowPointerRef(frame, ARG)
+
 
 
 

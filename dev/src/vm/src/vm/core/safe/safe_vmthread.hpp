@@ -98,6 +98,9 @@ namespace vm {
 
 		VectorClock vc;
 
+		IMemory<ShadowEntry>& getShadowDataMemory();
+		IMemory<ShadowPointer>& getShadowPointerMemory();
+
 		/**
 		 * @brief Link to parent process.
 		 */

@@ -666,6 +666,29 @@ DEF_MICRO_INSTR(ext_type_type, vm::low::opargs::Type, vm::low::opargs::Type)
 
 // ========= Fast Track Definitions ========
 
+// 4.1: Propagation Instructions
+// expects `ext_field` to be the next instruction
+DEF_MICRO_INSTR(ft_structLea_pptr_pptr, vm::low::opargs::PlacePtr, vm::low::opargs::PlacePtr)
+
+// expects `ext_p64_type` to be the next instruction
+DEF_MICRO_INSTR(ft_tableIdxLea_pptr_pptr, vm::low::opargs::PlacePtr, vm::low::opargs::PlacePtr)
+
+// expects `ext_p64_type` to be the next instruction
+DEF_MICRO_INSTR(ft_ptrAdd_pptr_pptr, vm::low::opargs::PlacePtr, vm::low::opargs::PlacePtr)
+DEF_MICRO_INSTR(ft_ptrSub_pptr_pptr, vm::low::opargs::PlacePtr, vm::low::opargs::PlacePtr)
+
+// 4.2: Instrumentation Instructions
+DEF_MICRO_INSTR(ft_read, vm::low::opargs::PlacePtr)
+DEF_MICRO_INSTR(ft_write, vm::low::opargs::PlacePtr)
+
+// 4.3: Data Movement Instructions
+DEF_MICRO_INSTR(ft_load_pptr_pptr, vm::low::opargs::PlacePtr, vm::low::opargs::PlacePtr)
+DEF_MICRO_INSTR(ft_store_pptr_pptr, vm::low::opargs::PlacePtr, vm::low::opargs::PlacePtr)
+DEF_MICRO_INSTR(ft_memCopy, vm::low::opargs::PlacePtr, vm::low::opargs::PlacePtr)
+
+// 4.4: Allocation & Initialization
+DEF_MICRO_INSTR(ft_alloc_pptr_type, vm::low::opargs::PlacePtr, vm::low::opargs::Type)
+
 // ========= MISC ========
 
 DEF_MICRO_INSTR(check_strategy)
