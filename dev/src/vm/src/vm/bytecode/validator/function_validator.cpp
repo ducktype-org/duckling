@@ -12,6 +12,7 @@
 
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/instructions.hpp>
+#include <vm/bytecode/local_stack_database.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
 #include <vm/bytecode/validator/valid_type/type_context.hpp>
@@ -93,13 +94,12 @@ struct LocalStackEntry {
 };
 
 class LocalStack {
-	std::vector<LocalStackEntry> stack_state;
-
 	// the following are CRefs instead of const& to allow copy/move.
 
-	CRef<valid_type::ValidTypeMap>                          types_ctx;
-	base::HashMap<base::StrID, CRef<valid_type::ValidType>> local_name_to_type;
-	usize                                                   number_of_ret_vals = 0;
+	CRef<valid_type::ValidTypeMap>                             types_ctx;
+	std::variant<CRef<LocalStackDb>, Ref<LocalStackDbBuilder>> source;
+	StackStateID                                               stack_state;
+	usize                                                      number_of_ret_vals = 0;
 
 public:
 	LocalStack(const LocalStack&)            = default;
@@ -107,26 +107,43 @@ public:
 	LocalStack& operator=(const LocalStack&) = default;
 	LocalStack& operator=(LocalStack&&)      = default;
 
-	LocalStack(const FuncSignature& signature, const valid_type::ValidTypeMap& types_ctx):
+	LocalStack(
+		const valid_type::ValidTypeMap& types_ctx,
+		Ref<LocalStackDbBuilder>        src,
+		StackStateID                    state,
+		usize                           number_of_rets
+	):
 		  types_ctx(&types_ctx),
-		  number_of_ret_vals(signature.result_types.size()) {
-		using namespace std::views;
-		for (auto [idx, ret]: enumerate(signature.result_types))
-			push(base::StrID(base::strConcat("ret", idx).c_str()), ret.str);
+		  source(src),
+		  stack_state(state),
+		  number_of_ret_vals(number_of_rets) {}
 
-		for (auto [idx, param]: enumerate(signature.parameters))
-			push(base::StrID(base::strConcat("arg", idx).c_str()), param.str);
+	[[nodiscard]]
+	StackStateID getState() const {
+		return stack_state;
 	}
 
-	const std::vector<LocalStackEntry>& getStackState() const { return stack_state; }
+	[[nodiscard]]
+	std::vector<LocalStackEntry> getStackState() const {
+		auto                         vec_size = size();
+		std::vector<LocalStackEntry> ans;
+		ans.reserve(vec_size);
+		for (usize i = 0; i < vec_size; i++) ans.push_back(front(i));
+		return ans;
+	}
 
 	void push(const opargs::PlaceAny& local, const opargs::Type& type) {
-		auto tp = types_ctx->at(type.type_name);
+		variant_match(source) {
+			variant_case(Ref<LocalStackDbBuilder>, bld_ref) {
+				if (bld_ref->contains(stack_state, local.var_name))
+					throw DuplicatedLocalNameError(local);
 
-		if (local_name_to_type.contains(local.var_name)) throw DuplicatedLocalNameError(local);
-
-		stack_state.emplace_back(local.var_name, tp);
-		local_name_to_type.put(local.var_name, tp);
+				auto new_state = bld_ref->push(stack_state, local.var_name, type.type_name);
+				stack_state    = new_state;
+				return;
+			}
+		}
+		CORE_UNREACHABLE();
 	}
 
 	/**
@@ -136,33 +153,112 @@ public:
 	 */
 	template<DeinitializingInstruction InstructionType>
 	void pop(const InstructionType& cause) {
-		if (stack_state.size() == number_of_ret_vals) throw RetValDeinitError(cause);
-		const auto& top = stack_state.back();
-		local_name_to_type.erase(top.local_name);
-		stack_state.pop_back();
+		variant_match(source) {
+			variant_case(Ref<LocalStackDbBuilder>, bld_ref) {
+				auto size = bld_ref->size(stack_state);
+				if (size == number_of_ret_vals) throw RetValDeinitError(cause);
+				auto new_state = bld_ref->pop(stack_state);
+				auto new_size  = bld_ref->size(new_state);
+				CORE_ASSERT(new_size + 1 == size, "we expect that the size must be valid");
+				stack_state = new_state;
+				return;
+			}
+		}
+		CORE_UNREACHABLE();
 	}
 
-	usize size() const { return stack_state.size(); }
-
-	const LocalStackEntry& back(usize i = 0) const {
-		return stack_state.at(stack_state.size() - 1 - i);
+	[[nodiscard]]
+	usize size() const {
+		variant_match(source) {
+			variant_case(Ref<LocalStackDbBuilder>, bld_ref) { return bld_ref->size(stack_state); }
+			variant_case(CRef<LocalStackDb>, db_ref) { return db_ref->size(stack_state); }
+		}
+		CORE_UNREACHABLE();
 	}
 
-	const LocalStackEntry& front(usize i = 0) const { return stack_state.at(i); }
+	[[nodiscard]]
+	LocalStackEntry back(usize i = 0) const {
+		usize size = 0;
+		variant_match(source) {
+			variant_case(Ref<LocalStackDbBuilder>, bld_ref) { size = bld_ref->size(stack_state); }
+			variant_case(CRef<LocalStackDb>, db_ref) { size = db_ref->size(stack_state); }
+		}
+
+		CORE_ASSERT(i < size, "we want idx to be smaller than size");
+
+		return front(size - i - 1);
+	}
+
+	[[nodiscard]]
+	LocalStackEntry front(usize idx = 0) const {
+		variant_match(source) {
+			variant_case(Ref<LocalStackDbBuilder>, bld_ref) {
+				return LocalStackEntry{
+					.local_name = *bld_ref->getName(stack_state, idx),
+					.type       = types_ctx->at(*bld_ref->typeOf(stack_state, idx)),
+				};
+			}
+			variant_case(CRef<LocalStackDb>, db_ref) {
+				return LocalStackEntry{
+					.local_name = *db_ref->getName(stack_state, idx),
+					.type       = types_ctx->at(*db_ref->getTypeName(stack_state, idx)),
+				};
+			}
+		}
+		CORE_UNREACHABLE();
+	}
 
 	void castPrimitive(const opargs::OpCodePrimitiveArg& local, const opargs::Type& type) {
-		auto  local_name = VISIT(local, l, return l.var_name);
-		auto& curr_type  = local_name_to_type.at(local_name);
-		auto  new_type   = types_ctx->at(type.type_name);
-		curr_type        = new_type;
-		for (auto& entry: stack_state)
-			if (entry.local_name == local_name) entry.type = new_type;
+		variant_match(source) {
+			variant_case(Ref<LocalStackDbBuilder>, bld_ref) {
+				auto local_name = VISIT(local, l, return l.var_name);
+				auto new_state  = bld_ref->change(stack_state, local_name, type.type_name);
+				stack_state     = new_state;
+				return;
+			}
+		}
+		CORE_UNREACHABLE();
 	}
 
-	bool contains(base::StrID local_name) const { return local_name_to_type.contains(local_name); }
+	bool contains(base::StrID local_name) const {
+		variant_match(source) {
+			variant_case(Ref<LocalStackDbBuilder>, bld_ref) {
+				return bld_ref->contains(stack_state, local_name);
+			}
+			variant_case(CRef<LocalStackDb>, db_ref) {
+				return db_ref->contains(stack_state, local_name);
+			}
+		}
+		CORE_UNREACHABLE();
+	}
 
 	CRef<valid_type::ValidType> at(base::StrID local_name) const {
-		return local_name_to_type.at(local_name);
+		base::StrID name_of_type{};
+
+		variant_match(source) {
+			variant_case(Ref<LocalStackDbBuilder>, bld_ref) {
+				name_of_type = *bld_ref->typeOf(stack_state, local_name);
+			}
+			variant_case(CRef<LocalStackDb>, db_ref) {
+				name_of_type = *db_ref->getTypeName(stack_state, local_name);
+			}
+		}
+
+		return types_ctx->at(name_of_type);
+	}
+
+	bool eqStack(StackStateID stack_state_1, StackStateID stack_state_2) {
+		variant_match(source) {
+			variant_case(Ref<LocalStackDbBuilder>, bld_ref) {
+				return bld_ref->eqTypes(stack_state_1, stack_state_2)
+				    && bld_ref->eqNames(stack_state_1, stack_state_2);
+			}
+			variant_case(CRef<LocalStackDb>, db_ref) {
+				return db_ref->eqTypes(stack_state_1, stack_state_2)
+				    && db_ref->eqNames(stack_state_1, stack_state_2);
+			}
+		}
+		CORE_UNREACHABLE();
 	}
 };
 
@@ -178,10 +274,9 @@ class FunctionValidator {
 	const ObjIdNameMap<ExternalCFunction>&           ext_c_signatures;
 	const Function&                                  function;
 
-	std::vector<bool>                                        visited_instructions;
-	base::HashMap<base::StrID, std::vector<LocalStackEntry>> stack_at_label;
-	base::HashMap<base::StrID, usize>                        index_of_label;
-	base::HashMap<base::StrID, std::vector<Instruction>>     jumps_to_label;
+	std::vector<base::Optional<StackStateID>>            stack_at_instr;
+	base::HashMap<base::StrID, usize>                    index_of_label;
+	base::HashMap<base::StrID, std::vector<Instruction>> jumps_to_label;
 
 	template<CallingInstruction CallInstructionType>
 	void validateCallAndPop(LocalStack& local_stack, const CallInstructionType& instr) {
@@ -208,8 +303,8 @@ class FunctionValidator {
 			local_stack.pop(instr);
 		}
 
-		for (auto [idx, reslt]: zip(iota(0u), reslts | reverse))
-			if (local_stack.back(idx).type->getName() != reslt.str)
+		for (auto [idx, reslt]: enumerate(reslts | reverse))
+			if (local_stack.back(usize(idx)).type->getName() != reslt.str)
 				throw InvalidFunctionCallArgumentsError(generic_arg);
 	}
 
@@ -1449,7 +1544,7 @@ class FunctionValidator {
 
 	void validateFunctionEnd() const {
 		if (function.body.empty()
-		    || (visited_instructions.back()
+		    || (stack_at_instr.back().has_value()
 		        && !std::ranges::contains(VALID_LAST_OPCODES, function.body.back().opcode()))) {
 			throw PathWithoutEndError(function.name);
 		}
@@ -1480,9 +1575,29 @@ class FunctionValidator {
 		}
 	}
 
-	void traverseControlFlowGraph() {
-		LocalStack local_stack(function.signature, types_ctx);
-		visited_instructions.resize(function.body.size());
+	LocalStackDb traverseControlFlowGraph() {
+		LocalStackDbBuilder builder(types_ctx);
+
+		auto start_state = LocalStackDbBuilder::EMPTY;
+		using namespace std::views;
+		for (auto [idx, ret]: enumerate(function.signature.result_types))
+			start_state = builder.push(
+				start_state, base::StrID(base::strConcat("ret", idx).c_str()), ret.str
+			);
+
+		for (auto [idx, param]: enumerate(function.signature.parameters))
+			start_state = builder.push(
+				start_state, base::StrID(base::strConcat("arg", idx).c_str()), param.str
+			);
+
+		LocalStack local_stack(
+			types_ctx,
+			Ref<LocalStackDbBuilder>{ &builder },
+			start_state,
+			function.signature.result_types.size()
+		);
+
+		stack_at_instr.resize(function.body.size(), std::nullopt);
 		std::vector<std::tuple<usize, LocalStack>> dfs_stack{
 			{ function.body.size(), local_stack }  // sentinel
 		};
@@ -1495,20 +1610,21 @@ class FunctionValidator {
 
 			validateArgTypesNonTrivially(instructions[index], local_stack);
 
-			visited_instructions[index] = true;
 			instr_match(instructions[index]) {
 				instr_case(Op_init_pany_type, instr) {
 					local_stack.push(instr.var, instr.type);
+					stack_at_instr[index] = local_stack.getState();
 					index++;
 				}
 				instr_case(Op_deinit, instr) {
+					stack_at_instr[index] = local_stack.getState();
 					local_stack.pop(instr);
 					index++;
 				}
 				instr_case(Op_label, instr) {
-					match_optional(stack_at_label.atMaybe(instr.label.label_name)) {
+					match_optional(stack_at_instr[index]) {
 						opt_some(label_state) {
-							if (*label_state != local_stack.getStackState())
+							if (!local_stack.eqStack(label_state, local_stack.getState()))
 								throw StackStructureMismatchError(
 									instr, jumps_to_label.at(instr.label.label_name)
 								);
@@ -1516,56 +1632,75 @@ class FunctionValidator {
 							dfs_stack.pop_back();
 						}
 						opt_none {
-							stack_at_label.put(instr.label.label_name, local_stack.getStackState());
+							stack_at_instr[index] = local_stack.getState();
 							index++;
 						}
 					}
 				}
-				instr_case(Op_jmp_label, instr) { index = getLabelTarget(instr.label); }
+				instr_case(Op_jmp_label, instr) {
+					stack_at_instr[index] = local_stack.getState();
+					index                 = getLabelTarget(instr.label);
+				}
 				instr_case(Op_jmpIf_label, instr) {
+					stack_at_instr[index] = local_stack.getState();
 					index++;
 					dfs_stack.emplace_back(getLabelTarget(instr.label), local_stack);
 				}
 				instr_case(Op_jmpIfNot_label, instr) {
+					stack_at_instr[index] = local_stack.getState();
 					index++;
 					dfs_stack.emplace_back(getLabelTarget(instr.label), local_stack);
 				}
 				instr_case(Op_ret, instr) {
+					stack_at_instr[index]        = local_stack.getState();
 					std::tie(index, local_stack) = dfs_stack.back();
 					dfs_stack.pop_back();
 				}
 				instr_case(Op_call_func, instr) {
 					validateCallAndPop(local_stack, instr);
+					stack_at_instr[index] = local_stack.getState();
 					index++;
 				}
 				instr_case(Op_call_builtinfunc, instr) {
 					validateCallAndPop(local_stack, instr);
+					stack_at_instr[index] = local_stack.getState();
 					index++;
 				}
 				instr_case(Op_call_cfunc, instr) {
 					validateCallAndPop(local_stack, instr);
+					stack_at_instr[index] = local_stack.getState();
 					index++;
 				}
 				instr_case(Op_virtual_call_pptr_method, instr) {
+					// this is exception about the state
+					// we can't disqualify params, because we need ptr argument for compilation
+					stack_at_instr[index] = local_stack.getState();
 					validateMethodCallAndPop(local_stack, instr);
 					index++;
 				}
 				instr_case(Op_ret_tailcall_func, instr) {
+					stack_at_instr[index] = local_stack.getState();
 					validateTailcall(local_stack, instr, function.signature);
 					std::tie(index, local_stack) = dfs_stack.back();
 					dfs_stack.pop_back();
 				}
 #define HANDLE_CAST(SIZE)                                          \
 	instr_case(Op_cast_p##SIZE##_type, instr) {                    \
+		stack_at_instr[index] = local_stack.getState();            \
 		local_stack.castPrimitive(instr.value, instr.target_type); \
 		index++;                                                   \
 	}
 
 				FOR_EACH(HANDLE_CAST, 8, 16, 32, 64)
 #undef HANDLE_CAST
-				instr_default { index++; }
+				instr_default {
+					stack_at_instr[index] = local_stack.getState();
+					index++;
+				}
 			}
 		}
+
+		return builder.finalize();
 	}
 
 	void validateSignature() {
@@ -1596,22 +1731,25 @@ public:
 		  ext_c_signatures(ext_c_signatures),
 		  function(function) {}
 
-	std::vector<Instruction> validateAndExtractReachableCode() {
+	std::tuple<std::vector<Instruction>, LocalStackDb> validateAndExtractReachableCode() {
 		validateSignature();
 		preprocessLabels();
-		traverseControlFlowGraph();
+		auto db = traverseControlFlowGraph();
 		validateFunctionEnd();
 
 		std::vector<Instruction> out;
 		for (usize idx = 0; idx < function.body.size(); idx++) {
-			if (visited_instructions[idx]) {
+			if_opt_some(stack_at_instr[idx], state) {
 				auto instruction = function.body[idx];
-				instruction.visit([&](auto&& i) { i.instr_idx = idx; });
+				instruction.visit([&](auto&& i) {
+					i.instr_idx   = idx;
+					i.stack_state = state;
+				});
 				out.push_back(instruction);
 			}
 		}
 
-		return out;
+		return { out, db };
 	}
 };
 
@@ -1628,8 +1766,9 @@ vm::code::Function vm::code::detail::validateAndExtractReachableCode(
 	FunctionValidator validator(types, globals_map, signatures, ext_c_signatures, function);
 
 	Function new_function;
-	new_function.name         = function.name;
-	new_function.body         = validator.validateAndExtractReachableCode();
+	new_function.name = function.name;
+	std::tie(new_function.body, new_function.local_stack)
+		= validator.validateAndExtractReachableCode();
 	new_function.bytecode_pos = function.bytecode_pos;
 	new_function.signature    = signature;
 

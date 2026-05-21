@@ -57,16 +57,16 @@ namespace vm::loader::compiler {
 
 		DEFINE_LOWER_ARGUMENT_IMPL_FOR_FAMILY(
 			low::opargs::PlaceDataArgumentType,
-			if(auto maybe_val = ctx.locals_map.atMaybe(opcode_arg.var_name)) {
-				return maybe_val.value()->offset;
+			if_opt_some(ctx.function.local_stack->getByteOffset(ctx.curr_state, opcode_arg.var_name), offset) {
+				return offset.assumePointerSize(ctx.pointer_size).asInt();
 			}
 			return compiler.low_program.getGlobals().at(opcode_arg.var_name)->global_buffer_offset | (1ULL << 63);
 		);
 
 		DEFINE_LOWER_ARGUMENT_IMPL_FOR_FAMILY(
 			low::opargs::PlaceBlockArgumentType,
-			if(auto maybe_val = ctx.locals_map.atMaybe(opcode_arg.var_name)) {
-				return maybe_val.value()->block_idx;
+			if(auto maybe_val = ctx.function.local_stack->getIdx(ctx.curr_state, opcode_arg.var_name)) {
+				return *maybe_val;
 			}
 			return compiler.low_program.getGlobals().at(opcode_arg.var_name)->global_block_idx | (1ULL << 63);
 		);
@@ -155,14 +155,10 @@ namespace vm::loader::compiler {
 	low::MicroBytecode Compiler::lowerInstructions(FunctionCompilationContext& ctx) {
 		detail::MicroBytecodeBuilder builder{ *this, ctx };
 
-		usize state          = 0;
-		auto& func_body      = ctx.function.body;
-		auto& stack_database = ctx.function.local_stack;
-
-		for (usize i = 0; i < func_body.size();)
-
-
-			for (; i < next_change; i++) builder.add(func_body[i]);
+		for (auto& instr: ctx.function.body) {
+			ctx.curr_state = instr.visit([](auto&& i) { return i.stack_state; });
+			builder.add(instr);
+		}
 
 		auto [micro_bytecode, label_map] = builder.build();
 		linkLabelArguments(micro_bytecode, label_map);
@@ -171,176 +167,21 @@ namespace vm::loader::compiler {
 	}
 
 	void Compiler::calculateOffsets(FunctionCompilationContext& ctx) {
-		decltype(ctx.locals_map) result;
-		std::vector<usize>       type_size_stack;
-		usize                    curr_stack_size = 0;
-		usize                    max_stack_size  = 0;
-		usize                    max_block_count = 0;
+		usize max_stack_size  = 0;
+		usize max_block_count = 0;
 
-		auto push = [&](opargs::PlaceAny local, opargs::Type type) {
-			if_opt_some(result.atMaybe(local.var_name), entry) {
-				if (entry->offset != curr_stack_size) {
-					CORE_PANIC(
-						"DuplicatedLocalNameError - used a variable again at a different offset "
-						"which wasn't detected by the function validator"
-					);
-				}
-			}
+		CORE_ASSERT(ctx.function.local_stack, "A given function should have passed the validation");
+		auto& db = *ctx.function.local_stack;
 
-			auto type_ref = low_program.types->at(type.type_name);
-			result.put(
-				local.var_name,
-				{ .offset = curr_stack_size, .block_idx = type_size_stack.size(), .type = type_ref }
-			);
-			auto type_size = type_ref->getSize().asInt();
-			type_size_stack.push_back(type_size);
-			curr_stack_size += type_size;
-			max_stack_size  = std::max(max_stack_size, curr_stack_size);
-			max_block_count = std::max(max_block_count, type_size_stack.size());
-		};
+		for (auto instr: ctx.function.body) {
+			auto state = instr.visit([&](auto&& i) { return i.stack_state; });
 
-		auto pop = [&]() { stack_top = result.pop(); };
-
-		auto seek_method_param_count = [&](const base::StrID& method_name) -> base::Optional<u64> {
-			// @todo: https://github.com/ducktype-org/duckling/issues/962
-			auto it = std::ranges::find_if(*low_program.types, [&](const auto& type) {
-				if_opt_some(type.getInheritanceMetadata(), inh_meta) {
-					return (*inh_meta).available_methods.contains(method_name);
-				}
-				return false;
-			});
-			if (it != low_program.types->end()) {
-				auto inh_meta = it->getInheritanceMetadata().value();
-				return inh_meta->available_methods[method_name]->getParameterCount();
-			}
-			CORE_UNREACHABLE();
-		};
-
-		// Label positions in high bytecode, used only for graph traversing
-		// in this function. Not used when lowering to microbytecode.
-		base::HashMap<base::StrID, usize> label_positions{};
-		for (auto [idx, instr]: std::views::enumerate(ctx.function.body)) {
-			instr_match(instr) {
-				instr_case(code::instructions::Op_label, label) {
-					label_positions.put(label.label.label_name, idx);
-				}
-				instr_default {}
-			}
+			max_block_count = std::max(max_block_count, db.size(state));
+			max_stack_size  = std::max(
+                max_stack_size, db.byteSize(state).assumePointerSize(ctx.pointer_size).asInt()
+            );
 		}
 
-		code::FuncSignature func_signature = ctx.function.signature;
-		using namespace std::views;
-		for (auto [idx, ret_type]: enumerate(func_signature.result_types))
-			push(base::StrID(base::strConcat("ret", idx).c_str()), ret_type.str);
-		for (auto [idx, param_type]: enumerate(func_signature.parameters))
-			push(base::StrID(base::strConcat("arg", idx).c_str()), param_type.str);
-
-		// instruction index, stack state
-		std::vector<std::tuple<usize, usize>> dfs_stack{
-			{ ctx.function.body.size(), 0 }  // sentinel
-		};
-		std::vector<bool>  visited_instructions(ctx.function.body.size());
-		std::vector<usize> stack_state(ctx.function.body.size());
-		usize              index = 0;
-
-		while (index != ctx.function.body.size()) {
-			if (visited_instructions[index]) {
-				std::tie(index, stack_top) = dfs_stack.back();
-				dfs_stack.pop_back();
-				continue;
-			}
-			visited_instructions[index] = true;
-
-			instr_match(ctx.function.body[index]) {
-				using namespace code::instructions;
-				instr_case(Op_init_pany_type, instr) {
-					push(instr.var, instr.type);
-					stack_state[index] = stack_top;
-					index++;
-				}
-				instr_case(Op_deinit, instr) {
-					stack_state[index] = stack_top;
-					pop();
-					index++;
-				}
-				instr_case(Op_jmp_label, instr) {
-					stack_state[index] = stack_top;
-					index              = label_positions[instr.label.label_name];
-				}
-				instr_case(Op_jmpIf_label, instr) {
-					stack_state[index] = stack_top;
-					index++;
-					dfs_stack.emplace_back(label_positions[instr.label.label_name], stack_top);
-				}
-				instr_case(Op_jmpIfNot_label, instr) {
-					stack_state[index] = stack_top;
-					index++;
-					dfs_stack.emplace_back(label_positions[instr.label.label_name], stack_top);
-				}
-				instr_case_novalue(Op_ret, Op_ret_tailcall_func) {
-					stack_state[index]         = stack_top;
-					std::tie(index, stack_top) = dfs_stack.back();
-					result.changeState(stack_top);
-					dfs_stack.pop_back();
-				}
-				instr_case(Op_call_func, instr) {
-					stack_state[index]     = stack_top;
-					usize number_of_params = program_ctx.function_forward_declarations
-					                             .at(instr.function.function_name)
-					                             ->signature.parameters.size();
-					for (usize i = 0; i < number_of_params; i++) pop();
-					index++;
-				}
-				instr_case(Op_call_builtinfunc, instr) {
-					stack_state[index] = stack_top;
-					for (usize i = 0;
-					     i < builtins::getBuiltinFunctionSignature(instr.function.function_name)
-					             .value()
-					             ->parameters.size();
-					     i++) {
-						pop();
-					}
-					index++;
-				}
-				instr_case(Op_call_cfunc, instr) {
-					stack_state[index] = stack_top;
-					for (usize i = 0;
-					     i < program_ctx.ext_c_functions.at(instr.function.function_name)
-					             ->signature.parameters.size();
-					     i++) {
-						pop();
-					}
-					index++;
-				}
-				instr_case(Op_virtual_call_pptr_method, instr) {
-					for (usize i = 0; i < *seek_method_param_count(instr.method.method_name); i++)
-						pop();
-					index++;
-				}
-				instr_default {
-					stack_state[index] = stack_top;
-					index++;
-				}
-			}
-		}
-
-		// sanity check
-		for (auto vis: visited_instructions)
-			CORE_ASSERT(vis, "All instructions should have been visited");
-
-		std::map<usize, usize> stack_changes{};
-
-		usize stack_val = stack_state[0];
-		stack_changes.emplace(0, stack_val);
-
-		for (size_t i = 0; i < stack_state.size(); i++) {
-			if (stack_state[i] != stack_val) {
-				stack_val = stack_state[i];
-				stack_changes.emplace(i, stack_val);
-			}
-		}
-
-		ctx.locals_map        = std::move(result);
 		ctx.local_stack_size  = max_stack_size;
 		ctx.local_block_count = max_block_count;
 	}

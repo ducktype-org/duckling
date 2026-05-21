@@ -98,6 +98,8 @@ namespace vm::loader::compiler {
 
 			/// The high level function definition.
 			const code::Function& function;
+			Bytes                 pointer_size = Bytes{ 16 };
+			code::StackStateID    curr_state   = code::LocalStackDb::EMPTY;
 			/// Temporary label IDs used before label linking.
 			base::HashMap<base::StrID, usize> label_id_map;
 
@@ -107,9 +109,6 @@ namespace vm::loader::compiler {
 				TypeCRef type;
 			};
 
-			/// A mapping from a local variable's name to its offset on the function's local stack
-			/// and type.
-			base::HashMap<base::StrID, LocalEntry> locals_map{};
 			/// Total required size for the local stack frame, in bytes.
 			usize local_stack_size  = 0;
 			usize local_block_count = 0;

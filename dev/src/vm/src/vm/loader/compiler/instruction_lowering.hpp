@@ -97,7 +97,8 @@ namespace vm::loader::compiler::detail {
 		bool is_control_flow               = true;
 
 		TypeCRef getPlaceType(const opargs::ArgumentType auto p) const {
-			if (auto maybe_val = ctx.locals_map.atMaybe(p.var_name)) return maybe_val.value()->type;
+			if (auto maybe_val = ctx.function.local_stack->getTypeName(ctx.curr_state, p.var_name))
+				return compiler.low_program.getTypes().at(*maybe_val);
 			return compiler.getLowProgram()->getGlobals().at(p.var_name)->type;
 		}
 
@@ -406,18 +407,22 @@ namespace vm::loader::compiler::detail {
 			}
 			instr_case(high::Op_variantSetInner_pptr_type, i) {
 				addLow<Op_variantSetInner_pptr_type>(i.variant_ptr, i.inner_type);
-				opargs::Type variant_type = ctx.locals_map.at(i.variant_ptr.var_name)
-				                                .type->getInnerType()
-				                                .value()
-				                                ->getName();
+				auto type_name
+					= *ctx.function.local_stack->getTypeName(ctx.curr_state, i.variant_ptr.var_name);
+
+				opargs::Type variant_type
+					= compiler.low_program.getTypes().at(type_name)->getInnerType().value()->getName(
+					);
 				addLow<Op_ext_type>(variant_type);
 			}
 			instr_case(high::Op_variantGetInner_pptr_pptr_type, i) {
 				addLow<Op_variantGetInner_pptr_pptr>(i.dst_ptr, i.variant_ptr);
-				opargs::Type variant_type = ctx.locals_map.at(i.variant_ptr.var_name)
-				                                .type->getInnerType()
-				                                .value()
-				                                ->getName();
+				auto type_name
+					= *ctx.function.local_stack->getTypeName(ctx.curr_state, i.variant_ptr.var_name);
+
+				opargs::Type variant_type
+					= compiler.low_program.getTypes().at(type_name)->getInnerType().value()->getName(
+					);
 				addLow<Op_ext_type_type>(i.expected_type, variant_type);
 			}
 			instr_case(high::Op_label, i) { addLabel(i.label); }
