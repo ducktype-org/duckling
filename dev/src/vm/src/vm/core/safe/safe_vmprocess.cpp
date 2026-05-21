@@ -39,6 +39,7 @@ namespace vm {
 		}();
 
 		if (code_result.has_value()) {
+			compiler.recompile();
 			loaded_program_copy.selfUpdate();
 			updateGlobalDataMemory(&loaded_program_copy);
 			return api::Response(api::response::Empty());
@@ -141,7 +142,7 @@ namespace vm {
 	SafeVMProcess::SafeVMProcess(const PID my_pid):
 		  IVMProcess(my_pid),
 		  loaded_program(&loaded_program_copy),
-		  loaded_program_copy(loader.getProgram()) {
+		  loaded_program_copy(compiler.getLowProgram()) {
 		vm_threads.add(*this);
 	}
 

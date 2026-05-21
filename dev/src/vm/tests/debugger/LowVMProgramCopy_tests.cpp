@@ -2,6 +2,7 @@
 
 #include <tester/tester.hpp>
 
+#include <vm/loader/compiler/safe/safe_compiler.hpp>
 #include <vm/loader/loader.hpp>
 
 #include <chrono>
@@ -20,13 +21,16 @@ private:
 	 * @brief Checks if editing opcodes works correctly.
 	 */
 	void lowVMProgramCopyReplaceOpcode() {
-		vm::loader::Loader          loader;
-		CRef<vm::low::LowVMProgram> program = loader.getProgram();
-		vm::low::LowVMProgramCopy   program_copy(program);
+		vm::loader::Loader                       loader;
+		vm::loader::compiler::safe::SafeCompiler compiler(*loader.getHighProgram());
+		CRef<vm::low::LowVMProgram>              program = compiler.getLowProgram();
+		vm::low::LowVMProgramCopy                program_copy(program);
 
 		ASSERT_EQUAL(program_copy.getOriginalProgram(), program);
 
-		loader.loadAndCompile({ { path("breakpoint.dbc") } });
+		ASSERT_TRUE(loader.loadAndCompile({ { path("breakpoint.dbc") } }).has_value());
+		compiler.recompile();
+
 		ASSERT_TRUE(program->getFunctions().size());
 		ASSERT_EQUAL_PRINT(program_copy.getFunctions().size(), 0);
 

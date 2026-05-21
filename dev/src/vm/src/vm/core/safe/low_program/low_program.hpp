@@ -12,8 +12,8 @@
 #include <vm/core/safe/type_metadata/type_metadata.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
 
-namespace vm::loader::compiler {
-	class Compiler;
+namespace vm::loader::compiler::safe {
+	class SafeCompiler;
 }
 
 namespace vm::low {
@@ -128,7 +128,7 @@ namespace vm::low {
 	 */
 	class LowVMProgram final: public ILowVMProgram {
 	public:
-		friend class vm::loader::compiler::Compiler;
+		friend class vm::loader::compiler::safe::SafeCompiler;
 
 		const TypeMetadata& getTypes() const override { return *types; }
 
@@ -161,6 +161,7 @@ namespace vm::low {
 
 		// Contains all method names in the program. It's used by the executor to determine the
 		// names of called functions.
+		// @TODO: #2685 This is redundant, u64 is as fast as base::StrID.
 		base::HashMap<u64, base::StrID> method_name_pool{};
 	};
 

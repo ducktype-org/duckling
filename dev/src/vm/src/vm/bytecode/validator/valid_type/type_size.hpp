@@ -44,6 +44,17 @@ namespace vm::code::valid_type {
 			return *this;
 		}
 
+		TypeSize operator-(const TypeSize& other) const {
+			return { size_when_ptr_is_8_bytes - other.size_when_ptr_is_8_bytes,
+				     size_when_ptr_is_16_bytes - other.size_when_ptr_is_16_bytes };
+		}
+
+		TypeSize operator-=(const TypeSize& other) {
+			size_when_ptr_is_8_bytes -= other.size_when_ptr_is_8_bytes;
+			size_when_ptr_is_16_bytes -= other.size_when_ptr_is_16_bytes;
+			return *this;
+		}
+
 		TypeSize operator*(usize multiplier) const {
 			return { size_when_ptr_is_8_bytes * multiplier, size_when_ptr_is_16_bytes * multiplier };
 		}
@@ -71,3 +82,10 @@ namespace vm::code::valid_type {
 		Bytes size_when_ptr_is_16_bytes;
 	};
 }
+
+template<>
+struct std::hash<vm::code::valid_type::TypeSize> {
+	size_t operator()(const vm::code::valid_type::TypeSize& type_size) const {
+		return type_size.assumePointerSize(Bytes(16)).asInt();
+	}
+};
