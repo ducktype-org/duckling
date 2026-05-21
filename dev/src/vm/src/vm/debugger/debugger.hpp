@@ -19,22 +19,22 @@ namespace vm::debugger {
 	 */
 	class Debugger final {
 	private:
-		vm::PID                  pid;
+		PID                      pid;
 		std::vector<std::string> main_args;
 
-		events::Listener<vm::api::ProcStatus> updater;
+		events::Listener<api::ProcStatus> updater;
 
 		// Event handlers for the debugger:
 
 		/**
 		 * @brief Emits current VM status when VM changes status
 		 */
-		events::Emitter<vm::api::ProcStatus> on_vm_changes_status;
+		events::Emitter<api::ProcStatus> on_status_changed;
 
 		/**
 		 * @brief Emits exit value as VMValue when VM completes execution
 		 */
-		events::Emitter<vm::api::ExitValue> on_vm_completes_execution;
+		events::Emitter<api::ExitValue> on_execution_completed;
 
 		/**
 		 * @brief Emits error message in human readable format on any error
@@ -55,12 +55,12 @@ namespace vm::debugger {
 		/**
 		 * @brief Attach Listener to Emitter that emits current VM status when VM changes status
 		 */
-		void attachOnVMChangesStatusListener(events::Listener<vm::api::ProcStatus>& listener);
+		void attachOnStatusChangedListener(events::Listener<api::ProcStatus>& listener);
 
 		/**
 		 * @brief Attach Listener to Emitter that emits return value when VM completes execution
 		 */
-		void attachOnVMCompletesExecutionListener(events::Listener<vm::api::ExitValue>& listener);
+		void attachOnExecutionCompletedListener(events::Listener<api::ExitValue>& listener);
 
 		/**
 		 * @brief Attach Listener to Emitter that emits error message when any error raises
@@ -72,37 +72,39 @@ namespace vm::debugger {
 		/**
 		 * @brief Runs the main function.
 		 */
-		void runMain();
+		std::expected<void, api::ApiError> runMain();
 
 		/**
 		 * @brief Gets the current status of the VM.
 		 * @return The current status of the VM.
 		 */
-		[[nodiscard]] vm::api::ProcStatus getStatus();
+		[[nodiscard]] api::ProcStatus getStatus();
 
 		/**
 		 * @brief Loads the file
 		 */
-		void loadFile(const fs::File& filepath);
+		std::expected<void, api::ApiError> loadFile(const fs::File& filepath);
 
 		/**
 		 * @brief Returns number of stack frames
 		 */
-		u64 getNumberOfStackFrames();
+		std::expected<u64, api::ApiError> getNumberOfStackFrames(api::ThreadID thread_id);
 
 		/**
 		 * @brief Returns variables of stack frame
 		 */
-		api::response::StackFrameData getStackFrameData(u64 frame_index);
+		std::expected<api::response::StackFrameData, api::ApiError> getStackFrameData(
+			api::ThreadID thread_id, u64 frame_index
+		);
 
 		/**
 		 * @brief Pauses the VM
 		 */
-		void pause();
+		std::expected<api::response::CodePosition, api::ApiError> pause();
 
 		/**
 		 * @brief Resumes the VM
 		 */
-		void resume();
+		std::expected<void, api::ApiError> resume();
 	};
 }

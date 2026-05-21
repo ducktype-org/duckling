@@ -225,8 +225,8 @@ namespace compiler::repl {
 		/**
 		 * Suppress per-statement REPL feedback while ingesting a script into session state.
 		 *
-		 * When true, REPL bookkeeping messages like "=> <value>" and
-		 * "Instruction executed." are hidden for statements executed by `loadScriptFile`.
+		 * When true, REPL bookkeeping messages like expression results are hidden for
+		 * statements executed by `loadScriptFile`.
 		 *
 		 * @note This flag is only enabled inside script-loading flow (`/load` and
 		 *       `duckc repl <script>` preload). Standard interactive REPL input keeps

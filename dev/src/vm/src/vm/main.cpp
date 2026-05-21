@@ -93,7 +93,7 @@ clah::Clah getVmClah() {
 	    .addSubcommand(clah::Clah("debug_adapter", "Start the VM debug adapter.")
 	                       .setHandler([](const clah::ParsingResult&) -> int {
 							   vm::Supervisor::get();
-							   vm::debug_adapter::DebugAdapter::get().run();
+							   vm::debugger::debug_adapter::DebugAdapter::get().run();
 							   return 0;
 						   }))
 	    .addSubcommand(clah::Clah("repl", "Start the VM in REPL mode.")

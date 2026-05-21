@@ -59,7 +59,7 @@ namespace query::internal {
 		);
 
 		auto node_id = makeNodeID<QueryIntType>(key);
-		auto context = ContextAccess::make(node_id);
+		auto context = ContextAccess::makeShared(node_id);
 
 		// @FUTURE: provide legit acd here
 		ACD acd;
@@ -111,7 +111,7 @@ namespace query::internal {
 		// actual cycle checks are done in ctx.query
 		// @TODO: #1887 might want to put it under one more layer of abstraction:
 		ContextAccess::getState()->addGraphNode(node_id);
-		ContextAccess::getState()->getActiveGraph()->putNode(node_id, &context);
+		ContextAccess::getState()->getActiveGraph()->putNode(node_id, context);
 		CORE_DEV_LOG(Query, "[QUERY \"", QueryIntType::QUERY_DATA.name, "\"]: Calculating.\n");
 
 		// EPILOG
@@ -126,14 +126,16 @@ namespace query::internal {
 
 		try {
 			if constexpr (QueryImplType::CAN_BE_LOADED_FROM_DISK && QueryImplType::USES_QRESULT) {
-				auto provide_result = QueryImplType::provide(context, key);
+				auto provide_result = QueryImplType::provide(*context, key);
 				if (provide_result.hasFailed()) {
 					// Here we need to delete artifact from disk
 					QueryImplType::deleteFromDisc(key);
 				}
 				return QueryImplType::store(perfect_hash, provide_result, acd);
 			} else {
-				return QueryImplType::store(perfect_hash, QueryImplType::provide(context, key), acd);
+				return QueryImplType::store(
+					perfect_hash, QueryImplType::provide(*context, key), acd
+				);
 			}
 		} catch (const QueryCycleException& qce) {
 			CORE_DEV_LOG(
