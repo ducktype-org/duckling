@@ -269,6 +269,7 @@ namespace compiler::helios::defgen {
 	// -----------------------------------------------------------
 	struct IMPLEMENT_QUERY(QueryDefaultInitializerExpr, query::QResult<Box<code::Expr>>) {
 		static PResult provide(Context& ctx, const QKey sym_type) {
+			std::cout << "\tQueryDefaultInitializerExpr" << std::endl;
 			CORE_ASSERT(
 				sym_type.isDefaultConstructible(ctx),
 				"QueryDefaultInitializerExpr called on non default constructible type"

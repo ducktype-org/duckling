@@ -98,7 +98,7 @@ namespace compiler::helios::code {
 					}
 				}
 				return tsh::SymbolType<>{
-					tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned),
+					tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed),
 					tsh::ReferenceKind::Direct,
 					tsh::Mutability::Immutable
 				};
