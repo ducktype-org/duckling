@@ -156,7 +156,7 @@ namespace vm::loader::compiler {
 		detail::MicroBytecodeBuilder builder{ *this, ctx };
 
 		for (auto& instr: ctx.function.body) {
-			ctx.curr_state = instr.visit([](auto&& i) { return i.stack_state; });
+			ctx.curr_state         = instr.visit([](auto&& i) { return i.stack_state; });
 			auto instruction_range = builder.add(instr);
 			ctx.instruction_mapping.push_back(instruction_range);
 		}
