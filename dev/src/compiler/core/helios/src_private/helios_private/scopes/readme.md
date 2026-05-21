@@ -47,6 +47,6 @@ todo: semantic of QueryPrimaryCodeScopeFor vs scope(SymOf(pst))
 
 This will be set, with follow ups PRs
 
-## Related Dosumentation
+## Related Documentation
 - [REPL Module](../../../../../repl/readme.md)
 
