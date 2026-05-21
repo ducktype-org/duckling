@@ -1,5 +1,7 @@
 #pragma once
 
+#include "macro_base.hpp"
+
 #define WHEN(c) IF(c)(EXPAND, EAT)
 
 /**

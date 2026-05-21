@@ -2,7 +2,7 @@
 #include "macro_base.hpp"
 
 /**
- * @brief For a token to be "compareable" it needs to be defined as a macro that takes one argument
+ * @brief For a token to be "comparable" it needs to be defined as a macro that takes one argument
  * and expands to that argument.
  * For example:
  * #define COMPARE_foo(x) x

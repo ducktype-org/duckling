@@ -15,6 +15,7 @@
 #include <query_framework/utils/simple_keys.hpp>             // IWYU pragma: export
 #include <query_framework/utils/query_hash.hpp>              // IWYU pragma: export
 
+#include <base/preproc/macro_base.hpp>
 
 #include <string_view>  // IWYU pragma: export
 
