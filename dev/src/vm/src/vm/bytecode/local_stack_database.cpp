@@ -238,7 +238,7 @@ ls_db::LocalStackDb(
 		CORE_ASSERT(layer.size(), "each layer must be non-empty");
 
 		auto prev_lifetime = layer.begin()->first;
-		for (auto [lifetime, id]: layer) {
+		for (auto [lifetime, id]: layer | drop(1)) {
 			CORE_ASSERT(
 				prev_lifetime.deinit_idx < lifetime.init_idx
 					|| lifetime.deinit_idx < prev_lifetime.init_idx,
