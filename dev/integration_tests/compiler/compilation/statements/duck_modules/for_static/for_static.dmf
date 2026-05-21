@@ -18,22 +18,6 @@ fun look(arr: i64[2], target: i64) -> bool = {
     return false;
 }
 
-fun bad() -> () = {
-    
-    
-    # TODOP: This doesn't work and there is no way to make it work currently.
-    # builtin_output_i64(888888888812398123);
-    # for (x: ref i32 in dyn_arr) {
-    #     builtin_output_i64(x);
-    # }
-    # dyn_arr -= 1;
-    #
-
-    # for (x in 5) {}
-    # TODOP: Shadowing.
-}
-
-
 fun main() -> i64 = {
     var static_arr: i64[2];
     static_arr[0] = 1; static_arr[1] = 2;
@@ -65,7 +49,7 @@ fun main() -> i64 = {
     
     # TODOP: R-Value collections
     # printSeparator(); 
-    # for (x in get_arr()) {      # This works by accident. We should probably move the value into a temporary if it's r-value?
+    # for (x in get_arr()) {      # This works by accident on LLVM, errors on DVM. We should probably move the value into a temporary if it's r-value?
     #     builtin_output_i64(x);  # 100, 200
     # }
 
@@ -74,8 +58,6 @@ fun main() -> i64 = {
     for (x in ref_sarr) {       # Works beautifully because of reference collapsing.
         builtin_output_i64(x);  # 1, 2
     }
-
-    # TODOP: Future continue issue jumping over the index incrementation.
     
     # ===== Nested fors =====
     printSeparator(); 

@@ -1,4 +1,5 @@
 # TODOP: Future continue issue jumping over the index incrementation.
+# TODOP: Shadowing
 
 fun printSeparator() -> () = {
     builtin_output_i64(888);
@@ -12,42 +13,6 @@ fun look(list: ref List[i32], target: i64) -> bool = {
     }
     return false;
 }
-
-fun bad() -> () = {
-    # for (x: f32 in static_arr) {
-    #     builtin_output_f64(x);
-    # }
-    # 
-    
-    # TODOP: This doesn't work and there is no way to make it work currently.
-    # builtin_output_i64(888888888812398123);
-    # for (x: ref i32 in dyn_arr) {
-    #     builtin_output_i64(x);
-    # }
-    # dyn_arr -= 1;
-    #
-    # var dyn_const_arr: List[const i32];
-    # dyn_const_arr += 1;
-    # dyn_const_arr += 1;
-    # dyn_const_arr += 1;
-    # for (x in dyn_const_arr) {
-    #     builtin_output_i64(x);
-    #     x = 2; # This will cause appropriate error when mutating the immutable.
-    # }
-    
-    # for (x: const i32 in dyn_arr) {
-    #     builtin_output_i64(x);
-    #     x = 2; # This will cause appropriate error when mutating the immutable.
-    # }
-
-    # for (let x in static_arr) {
-    #     builtin_output_i64(x);
-    #     x = 123; # Causes error as it should
-    # }
-    # for (x in 5) {}
-    # TODOP: Shadowing.
-}
-
 
 fun main() -> i64 = {
     var dyn_arr: List[i32];
@@ -99,6 +64,10 @@ fun main() -> i64 = {
     #     for (col in row) {
     #         builtin_output_i64(col);
     #     }
+    # }
+    # This doesn't work since `[]` doesn't return a ref, so currently this feature is just not supported.
+    # for (x: ref i32 in dyn_arr) {
+    #     builtin_output_i64(x);
     # }
 
     return 0;
