@@ -33,6 +33,7 @@ pub fn setup_logger() {
     let layer = layer()
         .with_timer(Uptime::default())
         .with_ansi(true)
+        .with_writer(std::io::stderr)
         .with_filter(subscriber);
 
     registry().with(layer).init();
