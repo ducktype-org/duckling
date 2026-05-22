@@ -152,7 +152,7 @@ namespace vm {
 				MAKE_BYTECODE_INSTRUCTION(init_bany_type, offset, safeReadObjectBytes<u64>(res))
 			);
 			shared_stack_size
-				= align_up(shared_stack_size, res->getAlignment()) + res->getSize().asInt();
+				= align_up(shared_stack_size, res->getStackAlignment()) + res->getSize().asInt();
 			offset = shared_stack_size;  // todo improve
 		}
 
@@ -188,7 +188,7 @@ namespace vm {
 			));
 			offset += 8;  // todo sizeof??
 			start_function.parameters.push_back(arg_value->type);
-			shared_stack_size = align_up(shared_stack_size, arg_type->getAlignment())
+			shared_stack_size = align_up(shared_stack_size, arg_type->getStackAlignment())
 			                  + arg_type->getSize().asInt();
 		}
 		start_function.arg_size         = shared_stack_size - start_function.ret_size;

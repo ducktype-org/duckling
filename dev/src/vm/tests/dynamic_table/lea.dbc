@@ -1,4 +1,4 @@
-type dynamic_table: dtablei64 i64
+type dynamic_table: dtablei64 i32
 type pointer: dptr_i64 dtablei64
 
 function main { i64, ptr_argv } -> { i64 } {

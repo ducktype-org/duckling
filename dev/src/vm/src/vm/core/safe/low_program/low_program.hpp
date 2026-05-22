@@ -31,8 +31,9 @@ namespace vm::low {
 		/// The maximum count of blocks required by the function frame.
 		usize local_block_count;
 
+		// Size of all argumentes, every variable is aligned with the maximum alignment requirement.
 		usize arg_size;
-		// Size of the return-value prefix of the shared call area, including alignment padding.
+		// Size of the return-value prefix, every variable is aligned with the maximum alignment requirement.
 		usize                 ret_size;
 		std::vector<TypeCRef> parameters;
 		std::vector<TypeCRef> result_types;

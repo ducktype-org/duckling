@@ -75,8 +75,7 @@ namespace vm {
 
 		kind_type = Kind::Primitive;
 		size      = pass_size;
-		aligment
-			= std::min<size_t>(std::max<usize>(pass_size.asInt(), 1), alignof(std::max_align_t));
+		stack_alligment = pass_size.asInt();
 		kind = kind::Primitive();
 		if (name == "void") am_i_instantiable = false;
 	}
@@ -86,7 +85,7 @@ namespace vm {
 		state = State::Defined;
 
 		size      = POINTER_SIZE;
-		aligment  = alignof(Pointer);
+		stack_alligment = alignof(Pointer);
 		kind_type = Kind::Pointer;
 		kind      = kind::Pointer{ inner };
 	}
@@ -96,16 +95,15 @@ namespace vm {
 		state = State::Defined;
 
 		kind_type = Kind::FixedSizeTable;
-		aligment  = inner->getAlignment();
+		stack_alligment = inner->getStackAlignment();
 		kind      = kind::FixedSizeTable{ .inner_type = inner, .element_count = element_count };
 	}
 
 	void Type::defineDynamicTable(TypeRef inner) {
 		CORE_ASSERT(state == State::Declared, "Bad type define");
 		state = State::Defined;
-
 		kind_type         = Kind::DynamicTable;
-		aligment          = inner->getAlignment();
+		//aligment          = inner->getAlignment();
 		kind              = kind::DynamicTable{ .inner_type = inner };
 		am_i_instantiable = false;
 	}
@@ -118,6 +116,11 @@ namespace vm {
 		state = State::Defined;
 
 		kind_type = Kind::Data;
+		stack_alligment =  std::ranges::max(
+			fields_definitions | std::views::transform([](const auto& field) {
+				return field.second->getStackAlignment();
+			})
+		);
 		auto data = kind::Data{};
 		for (auto [sub_name, sub_type]: fields_definitions) {
 			data.field_name_map.put(sub_name, data.fields.size());
@@ -135,10 +138,16 @@ namespace vm {
 
 		kind_type    = Kind::Variant;
 		auto variant = kind::Variant{};
+		auto max_alligment = std::ranges::max(
+			variants_definitions | std::views::transform([](const auto& version) {
+				return version->getStackAlignment();
+			})
+		);
+		stack_alligment        = std::max(max_alligment, (size_t) type_tag_size.asInt());
 		for (const auto& type: variants_definitions) variant.alternatives.push_back(type);
 
 		variant.type_tag_size  = type_tag_size;
-		variant.payload_offset = type_tag_size;
+		variant.payload_offset = Bytes(align_up(type_tag_size.asInt(), max_alligment));
 		kind                   = variant;
 	}
 
@@ -147,7 +156,7 @@ namespace vm {
 		state = State::Defined;
 
 		size      = POINTER_SIZE;
-		aligment  = alignof(Pointer);
+		//aligment  = alignof(Pointer);
 		kind_type = Kind::Function;
 		kind      = kind::Function{ .parameters   = std::move(parameters),
 			                        .result_types = std::move(result) };
@@ -159,8 +168,8 @@ namespace vm {
 
 		kind_type = Kind::Opaque;
 		size      = pass_size;
-		aligment
-			= std::min<size_t>(std::max<usize>(pass_size.asInt(), 1), alignof(std::max_align_t));
+		//aligment
+		//	= std::min<size_t>(std::max<usize>(pass_size.asInt(), 1), alignof(std::max_align_t));
 		kind = kind::Opaque{};
 	}
 
@@ -175,7 +184,7 @@ namespace vm {
 		variant_match(kind) {
 			variant_case(kind::FixedSizeTable, fixed_size_table) {
 				fixed_size_table.inner_type->finalize();
-				this->aligment = fixed_size_table.inner_type->getAlignment();
+				//this->aligment = fixed_size_table.inner_type->getAlignment();
 				this->size
 					= fixed_size_table.inner_type->getSize() * fixed_size_table.element_count;
 			}
@@ -185,13 +194,13 @@ namespace vm {
 				size_t max_alignment = 1;
 				for (auto& field: data.fields) {
 					field.type->finalize();
-					auto field_alignment = field.type->getAlignment();
+					auto field_alignment = field.type->getStackAlignment();
 					max_alignment        = std::max(max_alignment, field_alignment);
 					offset               = Bytes(align_up(offset.asInt(), field_alignment));
 					field.offset         = offset;
 					offset += field.type->getSize();
 				}
-				this->aligment = max_alignment;
+				//this->aligment = max_alignment;
 				this->size     = Bytes(align_up(offset.asInt(), max_alignment));
 				if_opt_some(data.inheritance_metadata, imd) { inheritsFromImpl(imd); }
 				isInstantiableImpl(data);
@@ -202,12 +211,12 @@ namespace vm {
 				size_t   max_alignment = 1;
 				for (auto& alternative: variant.alternatives) {
 					alternative->finalize();
-					max_alignment = std::max(max_alignment, alternative->getAlignment());
+					max_alignment = std::max(max_alignment, alternative->getStackAlignment());
 					data_size     = std::max(data_size, alternative->getSize());
 				}
 				variant.payload_offset
 					= Bytes(align_up(variant.type_tag_size.asInt(), max_alignment));
-				this->aligment = max_alignment;
+				//this->aligment = max_alignment;
 				this->size     = variant.payload_offset + data_size;
 				isInstantiableImpl(variant);
 			}
