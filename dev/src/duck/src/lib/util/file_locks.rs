@@ -3,7 +3,7 @@ use std::fs::{File, OpenOptions, TryLockError};
 use std::io::{self, Read, Seek, Write};
 use std::path::{Display, Path, PathBuf};
 
-use tracing::debug;
+use tracing::{debug, trace};
 
 use crate::util::path_ops_ext::{MkdirOptions, PathOpsExt};
 use crate::{DuckContext, QuackError, QuackResult, QuackResultContext};
@@ -231,6 +231,7 @@ impl FileLockManager {
 
 /// Try to acquire a non-blocking lock.
 fn try_lock(path: &Path, f: impl FnOnce() -> Result<(), TryLockError>) -> QuackResult<bool> {
+    trace!(path = %path.display(), "trying to lock");
     match f() {
         Ok(()) => Ok(true),
         Err(TryLockError::WouldBlock) => Ok(false),
@@ -248,8 +249,10 @@ fn lock(
     blocking: impl FnOnce() -> io::Result<()>,
 ) -> QuackResult<()> {
     if try_lock(path, non_blocking)? {
+        trace!(path = %path.display(), "locked nonblocking");
         return Ok(());
     }
+    trace!(path = %path.display(), "locking blocking");
     ctx.console()
         .info(format!("waiting for file lock `{}`", path.display()))?;
     blocking().with_context(|| format!("failed to lock `{}`", path.display()))

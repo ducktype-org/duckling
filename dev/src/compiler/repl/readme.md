@@ -1,251 +1,185 @@
 # REPL Module
 
-Interactive Read-Eval-Print Loop (REPL) for the Duckling programming language. Provides an interactive environment for executing Duckling code, evaluating expressions, and exploring language features in real-time.
+Interactive Read-Eval-Print Loop (REPL) for the Duckling programming language.
 
 ## Overview
 
-The REPL module enables interactive development by compiling and executing Duckling code incrementally. Each input is processed through the full HELIOS compiler pipeline and executed on the Duckling Virtual Machine (DVM), with support for both single-line expressions and multi-line definitions.
+The REPL compiles and executes Duckling input incrementally. It runs on a dedicated DVM process and keeps session state between statements.
+
+The primary components in this flow are:
+
+1. **User Input (CLI/API):** Input is entered interactively (`duckc repl`) or preloaded from script (`duckc repl script.ds`, `/load <file.ds>`).
+2. **[`ReplSession`](./src/repl/session.hpp):** Main orchestrator. Handles commands, splits code into statements, creates statement modules, and routes execution.
+3. **[`ReplFrontend`](./src/repl/frontend.hpp):** Terminal interaction layer (replxx or minimal implementation), including history, display, return values and help.
+4. **Driver REPL Helpers (`driver/repl_utils`):** Statement splitting/classification, HOUT-to-DVM compilation, and code loading.
+5. **HELIOS REPL Helpers (`helios/repl_utils`):** Wrapper-function generation for executable statements.
+6. **DVM Process:** Receives newly compiled code and executes wrapper functions.
+
+Execution model notes:
+- Input can contain multiple top-level statements.
+- Each statement is executed in order.
+- Execution is non-transactional: if statement N fails, earlier statements remain applied.
+- Symbol lookup across REPL history uses a parent-module chain; root-scope lookup falls back
+  to the parent REPL module via HELIOS `QueryLookupInScopeAndParents`.
 
 ## Features
 
-- **Interactive Execution**: Evaluate expressions and see results immediately
-- **Incremental Compilation**: Compile and load definitions into a persistent environment
-- **Statement History**: Track all executed statements with full module retention
-- **Multiline Input**: Support for complex code blocks with dedicated multiline mode
-- **Built-in Commands**: Convenient commands for history, help, and session management
-- **Full Pipeline Integration**: Uses the complete HELIOS → LIR → DVM compilation pipeline
+- Interactive expression/instruction execution
+- Incremental definition loading into session state
+- Statement history with retained per-statement module context
+- Multi-statement input support
+- Script preload and `/load` command
+- Full HELIOS -> LIR -> DVM path for execution
 
 ## Structure
 
 ```
 src/repl/
-├── session.hpp            # Main REPL session interface
-├── session.cpp            # Session implementation and input handling
-├── helper_structs.hpp     # Core data structures (ReplConfig, ReplResult, ReplStatement)
-├── frontend.hpp           # Terminal I/O and line editing
-├── frontend.cpp           # Frontend implementation with history navigation
+├── session.hpp            # REPL session interface
+├── session.cpp            # Session orchestration and execution flow
+├── helper_structs.hpp     # ReplConfig, ReplResult, ReplStatement
+├── frontend.hpp           # Frontend abstraction
+├── frontend.cpp           # Frontend delegation
+└── frontend_implementations/
+   ├── replxx.*            # Rich frontend (completions/highlighting/history)
+   └── minimal.*           # Minimal terminal frontend
 ```
-
-Also some helpers are in other modules:
-
-```
-compiler/core/helios/repl_utils/
-├── repl_queries.hpp       # HOUT expression wrapper generation
-├── repl_queries.cpp       # HOUT expression wrapper generation
-```
-
-```
-compiler/driver/repl_utils/
-├── repl_dvm_helpers.hpp       # DVM compilation and execution utilities
-├── repl_dvm_helpers.cpp       # LIR lowering and bytecode generation
-```
-
 
 ## Usage
 
 ### Running the REPL
 
-From the command line:
 ```bash
 ./duckc repl
 ```
 
-This launches an interactive session where you can enter Duckling code:
-```
-duckling> let x = 42;
-duckling> builtin_output_i64(x + 8);
-=> 50
-duckling> /exit
+Optional script preload:
+
+```bash
+./duckc repl script.ds
 ```
 
-### Basic API Usage
+Disable completions/hints:
+
+```bash
+./duckc repl --no-completions
+```
+
+### Commands
+
+| Command | Aliases | Description |
+|---------|---------|-------------|
+| `/help` | `/?`, `/h` | Show help |
+| `/exit` | `/quit`, `/q` | Exit session |
+| `/history` | `/hist` | Print entered statements |
+| `/clear` | `/c` | Clear terminal screen |
+| `/load <file.ds>` | - | Load script into current session |
+
+### Editing
+
+- REPLXX frontend:
+  - `Enter` submits input
+  - `Alt + Enter` inserts newline
+- Minimal frontend:
+  - `Alt + Enter` inserts newline
+
+### Programmatic Use
 
 ```cpp
 #include <repl/session.hpp>
 
 using namespace compiler::repl;
 
-// Create and run a REPL session with default configuration
-ReplSession session;
-session.run();
-```
-
-### REPL Commands
-
-The REPL provides several built-in commands (all start with `/`):
-
-| Command | Aliases | Description |
-|---------|---------|-------------|
-| `/help` | `/?` | Display help message with available commands |
-| `/exit` | `/quit`, `/q` | Exit the REPL session |
-| `/history` | `/h` | Show all executed statements with line numbers |
-| `/clear` | `/c` | Clear the statement history |
-
-### Multiline Mode
-
-Just type Alt + Enter to create a new line.
-
-### Custom Configuration
-
-```cpp
-ReplConfig config;
-config.prompt = "duck> ";              // Primary prompt
-```
-
-### Programmatic Execution
-
-```cpp
 ReplSession session;
 
-// Execute code programmatically
-ReplResult result = session.executeInput("let x = 42;");
-
-if (result.status == ReplResult::Status::Success) {
-    std::cout << "Execution successful!\n";
+auto load_result = session.loadScriptFile("./bootstrap.ds");
+if (load_result.status == ReplResult::Status::Error) {
+    std::cerr << load_result.message << "\n";
+    return 1;
 }
 
-// Access execution history
-for (const auto& stmt : session.getHistory()) {
-    std::cout << "Statement: " << stmt.source_code << "\n";
-}
+return session.run();
 ```
 
 ## Core Types
 
 ### ReplSession
 
-Main class managing the interactive session. Maintains execution history, DVM process, and handles all user input.
-
-**Key Methods:**
-- `int run()` - Start the interactive REPL loop (blocking)
-- `ReplResult processLine(const std::string& line)` - Process a single line of input
-- `ReplResult executeInput(const std::string& input)` - Execute code as expression or definition
-- `const std::vector<ReplStatement>& getHistory()` - Access execution history
-- `void clearHistory()` - Reset history and line counter
+Main public API:
+- `int run()`
+- `ReplResult loadScriptFile(std::string_view file_path)`
 
 ### ReplStatement
 
-Represents a single executed statement with its associated module:
+Stores one executed statement and its associated module context.
 
 ```cpp
 struct ReplStatement {
-    std::string                     source_code;  // Original source code
-    base::Ref<frontend::ModuleTree> module;       // Associated module tree
-    frontend::ModuleID              module_id;    // Unique module identifier
+    std::string                      source_code;
+    base::CRef<frontend::ModuleTree> module;
+    frontend::ModuleID               module_id;
 };
 ```
 
 ### ReplConfig
 
-Configuration for REPL behavior:
-
-```cpp
-struct ReplConfig final {
-    static constexpr std::string PROMPT
-        = "duckling> ";  /// Primary prompt shown before each input
-    static constexpr std::string CONTINUATION = "          ";  /// Prompt for continuation lines
-    static constexpr std::string HISTORY_MULTILINE_CONTINUATION
-        = "    ";  /// Prompt for history continuation.
-};
-```
+Prompt-related constants used by frontend implementations.
 
 ### ReplResult
 
-Result of processing input:
-
 ```cpp
 struct ReplResult {
-    enum class Status { 
-        Success,         // Execution completed successfully
-        Error,           // Compilation or execution error
-        Exit,            // User requested exit
-        IncompleteInput  // Input needs continuation (multiline)
-    };
-    
-    Status      status;      // Result status
-    std::string message;     // Error/status message
-    i32         exit_code;   // DVM exit code (for expressions)
+    enum class Status { Success, Error, Exit, IncompleteInput };
+    Status      status;
+    std::string message;
 };
 ```
 
-## Implementation Details
+## Execution Flow
 
-### Compilation Pipeline
+For each statement:
 
-1. **Input Processing**: User input is parsed to determine if it's a command or code
-2. **Module Creation**: Code is wrapped in a virtual in-memory module
-3. **PST Parsing**: Source is parsed into a Parse Syntax Tree (PST)
-4. **Expression Detection**: System determines if input is a single expression or definition
-5. **HOUT Generation**:
-   - **Expressions**: Wrapped in a synthetic function returning the expression value
-   - **Definitions**: Compiled as top-level declarations
-6. **LIR Lowering**: HOUT is lowered to Low Intermediate Representation (LIR)
-7. **DVM Compilation**: LIR is compiled to DVM bytecode
-8. **Execution**: Bytecode is loaded and executed on the DVM
-9. **Result Handling**: Expression results are extracted and displayed
+1. Input is split into top-level statements.
+2. A statement module is created (with REPL parent link to previous statement module when available).
+3. The statement is classified as expression, instruction, or definition.
+4. Expression/instruction paths generate wrapper functions; definition path loads module HOUT.
+5. HOUT is lowered to LIR and compiled to DVM bytecode.
+6. Lowering uses `ReplLoweringContext` to emit only newly-lowered entities
+  (see `core/backends/dvm/README.md`).
+7. New code is loaded into current DVM process.
+8. Wrapper executes (for executable statements) and result is printed when supported.
 
-### Expression Evaluation
+### Statement Kinds
 
-Single expressions are automatically wrapped in a function that returns their value:
+- **Expression:** evaluated through generated wrapper returning a value.
+- **Instruction:** executed for side effects via generated unit-returning wrapper.
+- **Definition:** loaded into session state without wrapper execution.
 
-```duckling
-# User input
-42 + 8
+Assignments are routed as instructions.
 
-# Internally becomes
-fun __repl_expr_wrapper__0() -> i64 = {
-    return 42 + 8;
-}
-```
+### Supported Printed Result Types
 
-The function is executed on the DVM, and the return value is extracted and displayed.
+- `i32`
+- `i64`
+- `f32`
+- `f64`
+- `bool`
+- `()` (unit; prints "Function executed." for expressions or "Instruction executed." for instructions)
 
-### Supported Types
+## Related Documentation
 
-Expression results are currently supported for the following types:
-- `i32` - 32-bit signed integer
-- `i64` - 64-bit signed integer
-- `f32` - 32-bit floating point
-- `f64` - 64-bit floating point
-- `bool` - Boolean values
-- `void` - No return value (void expressions execute without output)
+- [Compiler Overview](../readme.md)
+- [Driver REPL Utilities](../driver/driver/src/driver/repl_utils/readme.md)
+- [Script Execution](../driver/driver/src/driver/repl_utils/readme.md#script-execution)
+- [HELIOS REPL Utilities](../core/helios/src/helios/repl_utils/readme.md)
+- [PST Parser Statement Extraction Helpers](../core/frontend/pst_parser/readme.md#statement-extraction-helpers)
+- [Driver Module](../driver/driver/readme.md)
+- [VM Overview](../../vm/readme.md)
 
-### History Management
+## Limitations
 
-The REPL maintains a complete history of executed statements:
-- Each statement retains its associated module in memory
-- Statements are numbered sequentially starting from 1
-- History can be viewed with `/history` or cleared with `/clear`
-- Previously defined symbols remain accessible in subsequent statements
-
-## Integration
-
-The REPL is integrated into the `duckc` compiler as a subcommand. The integration initializes the compiler environment and launches the REPL session:
-
-```cpp
-// In duckc main.cpp
-.addSubcommand(
-    clah::Clah("repl", "Start an interactive REPL session")
-        .setHandler([](const clah::ParsingResult& options) -> int {
-            compiler::driver::initializeTheCompiler(/* ... */).status();
-            compiler::repl::ReplSession session;
-            return session.run();
-        })
-)
-```
-
-## Limitations and Future Work
-
-Current limitations:
-- Expression result display is limited to primitive types
-- No support for displaying complex types (structs, arrays, etc.)
-- History is not persisted between sessions
-- Limited line editing capabilities (no multi-line history navigation)
-- Lookup and tab completion not implemented
-
-Potential future enhancements:
-- Persistent history across sessions
-- Enhanced line editing with GNU Readline or similar
-- Display support for complex data structures
-- Tab completion for symbols and keywords
-- Syntax highlighting in the terminal
+- Printed expression results currently support only selected primitive types and unit.
+- Complex structured values are not pretty-printed yet.
+- Expression result extraction still uses per-type conversion logic in driver REPL helpers.
+- REPL does not allow for overwriting already defined symbols or functions.
+  
