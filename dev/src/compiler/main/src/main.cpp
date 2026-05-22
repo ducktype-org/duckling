@@ -80,9 +80,9 @@ namespace {
 		}
 
 		if (!seen_repl) return;
-		new_args.push_back("-n");
+		new_args.emplace_back("-n");
 		new_args.push_back(std::to_string(replay_count));
-		if (silent) new_args.push_back("--history-entries-silent");
+		if (silent) new_args.emplace_back("--history-entries-silent");
 
 		g_argv = std::move(new_args);
 	}

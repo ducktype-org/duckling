@@ -226,7 +226,7 @@ namespace compiler::repl {
 		state.reset();
 		state.lines.clear();
 
-		std::istringstream stream(std::string(entry));
+		std::istringstream stream{ std::string(entry) };
 		std::string        line;
 		while (std::getline(stream, line)) state.lines.push_back(line);
 		if (state.lines.empty()) state.lines.emplace_back("");

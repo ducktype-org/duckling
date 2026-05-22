@@ -181,7 +181,8 @@ namespace compiler::repl {
 				fflush(stdout);
 				m_saved_stdout = dup(STDOUT_FILENO);
 				if (m_saved_stdout != -1) {
-					int dev_null = open("/dev/null", O_WRONLY);
+					int dev_null
+						= open("/dev/null", O_WRONLY);  // NOLINT(cppcoreguidelines-pro-type-vararg)
 					if (dev_null != -1) {
 						dup2(dev_null, STDOUT_FILENO);
 						close(dev_null);
