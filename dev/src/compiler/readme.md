@@ -17,7 +17,8 @@ More information about files and directories can be found in the Doxygen documen
 * [element_class_hierarchy](./core/pst_parser/element_class_hierarchy.md)
 * [core/pst_parser](./core/pst_parser/readme.md)
 * [core/typesystem](./core/typesystem/readme.md)
-* [driver](./driver/readme.md)
+* [driver](./driver/driver/readme.md)
+* [repl](./repl/readme.md)
 * [duckling_snippets](./duckling_snippets/readme.md)
 * [lsp_interface](./lsp_interface/README.md)
 

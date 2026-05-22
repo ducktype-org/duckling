@@ -3,22 +3,19 @@ Tests:
     Description: can initialise a new project with different venvconfig flags
     Cases:
       expose_freezefile:
-        test_cmd: |+
-          init --expose-freezefile foo
+        test_cmd: duck init --expose-freezefile foo
         Output:
           Run: |+
             echo "info: successfully created a new project \`foo\` at \`$(pwd)/foo\`"
         PostCase: python3 check.py expose_freezefile
       ephemeral:
-        test_cmd: |+
-          init --ephemeral foo
+        test_cmd: duck init --ephemeral foo
         Output:
           Run: |+
             echo "info: successfully created a new project \`foo\` at \`$(pwd)/foo\`"
         PostCase: python3 check.py ephemeral
       local_storage:
-        test_cmd: |+
-          init --local-storage foo
+        test_cmd: duck init --local-storage foo
         Output:
           Run: |+
             echo "info: successfully created a new project \`foo\` at \`$(pwd)/foo\`"

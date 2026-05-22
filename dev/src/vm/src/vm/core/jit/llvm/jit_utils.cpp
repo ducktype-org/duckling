@@ -2,8 +2,6 @@
 
 #include <llvm_helpers/llvm_helpers.hpp>
 
-#include <base/collections/optional.hpp>
-
 #include <functional>
 
 LLVM_INCLUDE_BEGIN()
