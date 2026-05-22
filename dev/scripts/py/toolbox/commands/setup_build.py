@@ -209,15 +209,23 @@ def configure_presets(ctx, param, value):
 @option(
     "--llvm-version",
     type=str,
-    default="19",
+    default=None,
     metavar="VERSION",
-    help="Default version of llvm tools",
+    help="Default version of llvm tools (defaults to clang major or 22).",
+)
+@option(
+    "--llvm-dir",
+    type=str,
+    default=None,
+    metavar="PATH",
+    help="Path to LLVMConfig.cmake directory (overrides auto-detection).",
 )
 @llvm_tools_version_options
 def setup_build(*args, **kwargs):
     """Makes a build folder"""
 
     global_version = kwargs.pop("llvm_version")
+    llvm_dir = kwargs.pop("llvm_dir")
     llvm_tools_list = {}
     for tool in LLVM_TOOLS:
         given = kwargs.pop(tool.param(), None)
@@ -225,6 +233,8 @@ def setup_build(*args, **kwargs):
 
     setup_build_impl(
         *args,
+        llvm_version=global_version,
+        llvm_dir=llvm_dir,
         llvm_tools_list=llvm_tools_list,
         **kwargs,
     )

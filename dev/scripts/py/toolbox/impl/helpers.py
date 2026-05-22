@@ -337,9 +337,37 @@ def supports_cmake_linker_type():
     return current >= required
 
 
+def cmake_linker_type_from_name(linker: str) -> str:
+    # Normalize common linker names to CMAKE_LINKER_TYPE values.
+    normalized = linker.lower()
+    mapping = {
+        "mold": "MOLD",
+        "lld": "LLD",
+        "ld.lld": "LLD",
+        "gold": "GOLD",
+        "ld.gold": "GOLD",
+        "ld": "GNU",
+        "ld.bfd": "GNU",
+        "gnu": "GNU",
+    }
+    return mapping.get(normalized, linker.upper())
+
+
 def should_add_linker_flags(linker: str):
     if linker == "default":
         return False
+    normalized = linker.lower()
+    if normalized in {"ld", "ld.bfd", "gnu"}:
+        return False
+    if supports_cmake_linker_type():
+        if normalized in {
+            "mold",
+            "lld",
+            "ld.lld",
+            "gold",
+            "ld.gold",
+        }:
+            return True
     if shutil.which(linker) is not None:
         return True
     exit_with_error(
@@ -418,6 +446,29 @@ def infer_gcov_from_compiler(cxx_compiler):
 
     # Final fallback
     return "llvm-cov" if is_clang else "gcov"
+
+
+def infer_llvm_major_from_compiler(cxx_compiler: str | None) -> str | None:
+    if cxx_compiler is None:
+        return None
+
+    compiler_name = cxx_compiler.split("/")[-1]
+    is_clang = "clang++" in compiler_name or "clang" in compiler_name
+    if not is_clang:
+        return None
+
+    match = CLANG_VERSION_PATTERN.search(cxx_compiler)
+    if match:
+        return match.group(1)
+
+    try:
+        version = get_program_version(cxx_compiler)
+        if version:
+            return version.split(".")[0]
+    except (FileNotFoundError, sp.SubprocessError, OSError):
+        pass
+
+    return None
 
 
 def default_gcov_from_ctx():

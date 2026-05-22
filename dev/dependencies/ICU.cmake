@@ -133,7 +133,7 @@ else()
 endif()
 
 add_library(unicode INTERFACE)
-target_link_libraries(unicode INTERFACE ICU::i18n ICU::uc ICU::io ICU::data)
+target_link_libraries(unicode INTERFACE ICU::io ICU::i18n ICU::uc ICU::data)
 
 message("-- ICU version: ${ICU_VERSION}")
 message("-- ICU include dirs: ${ICU_INCLUDE_DIRS}")

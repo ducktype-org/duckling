@@ -8,6 +8,8 @@ from .helpers import (
     check_if_compilers_are_compatible,
     supports_cmake_linker_type,
     should_add_linker_flags,
+    cmake_linker_type_from_name,
+    infer_llvm_major_from_compiler,
     exit_with_error,
 )
 
@@ -36,9 +38,15 @@ def setup_build_impl(
     llvm_tools_list,
     embed_assets,
     build_static_icu,
+    llvm_version,
+    llvm_dir,
 ):
 
     check_if_compilers_are_compatible(cxx_compiler, cc_compiler)
+
+    inferred_llvm_major = infer_llvm_major_from_compiler(cxx_compiler)
+    if llvm_version is None:
+        llvm_version = inferred_llvm_major if inferred_llvm_major else "22"
 
     # If LTO is enabled, ensure we're using Clang and LLD
     if enable_link_time_optimization:
@@ -97,9 +105,17 @@ def setup_build_impl(
     if clang_for_builtins:
         cmd_parts.append(f"-D CLANG_BIN={clang_for_builtins}")
 
+    if llvm_version:
+        cmd_parts.append(f"-D DUCKLING_LLVM_PREFERRED_VERSION={llvm_version}")
+    if llvm_dir:
+        cmd_parts.append(f"-D DUCKLING_LLVM_PREFERRED_DIR={llvm_dir}")
+        cmd_parts.append(f"-D LLVM_DIR={llvm_dir}")
+
     if should_add_linker_flags(linker):
         if supports_cmake_linker_type():
-            cmd_parts.append(f"-D CMAKE_LINKER_TYPE={linker.upper()}")
+            linker_type = cmake_linker_type_from_name(linker)
+            if linker_type in {"MOLD", "LLD", "GOLD"}:
+                cmd_parts.append(f"-D CMAKE_LINKER_TYPE={linker_type}")
         else:
             cmd_parts.append(f'-D CMAKE_EXE_LINKER_FLAGS="-fuse-ld={linker.lower()}"')
 
