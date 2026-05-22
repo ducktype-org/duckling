@@ -10,6 +10,7 @@
 //!   communication with the compiler.
 
 mod compilation_type;
+pub mod multipackage_schema;
 mod process_builder;
 
 use std::convert::Infallible;
