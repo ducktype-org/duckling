@@ -94,8 +94,7 @@ namespace vm::jit {
 		size_t argumentsUsedByOpcodeCnt(const low::MicroBytecode& bc, usize idx) {
 			size_t res = 1;
 			while (idx + res < bc.size()
-			       and isOpcodeNonExecutable(getInstructionOpcode(bc[idx + res])
-			       )) {
+			       and isOpcodeNonExecutable(getInstructionOpcode(bc[idx + res]))) {
 				++res;
 			}
 			return res;
@@ -109,11 +108,14 @@ namespace vm::jit {
 		 */
 		template<bool switch_case_instr>
 		void setInstructionPtr(
-			const low::MicroBytecode& bc, llvm::IRBuilder<>& builder, usize idx, const base::StrID& func_or_loop_name
+			const low::MicroBytecode& bc,
+			llvm::IRBuilder<>&        builder,
+			usize                     idx,
+			const base::StrID&        func_or_loop_name
 		) {
 			auto& llvm_data = llvmData();
 
-			usize length = argumentsUsedByOpcodeCnt(bc, idx);
+			usize                        length = argumentsUsedByOpcodeCnt(bc, idx);
 			std::vector<llvm::Constant*> elems;
 
 			// Fill table with all needed instruction's arguments.
@@ -171,7 +173,7 @@ namespace vm::jit {
 			llvm::IRBuilder<>&               ir_builder,
 			usize                            start,
 			usize                            end,
-			const base::StrID& func_or_loop_name,
+			const base::StrID&               func_or_loop_name,
 			std::unordered_set<std::string>& used_opfuns
 		) {
 			auto& llvm_data = llvmData();
@@ -243,7 +245,7 @@ namespace vm::jit {
 		}
 
 		void lowerBlock(
-			const base::StrID& func_or_loop_name,
+			const base::StrID&               func_or_loop_name,
 			const low::MicroBytecode&        bc,
 			const vm::low::cf::BasicBlock&   block,
 			std::unordered_set<std::string>& used_opfuns
@@ -269,7 +271,11 @@ namespace vm::jit {
 			}
 		}
 
-		void lowerCFG(const low::cf::ControlFlowGraph& cfg, const low::MicroBytecode& bc, const base::StrID& func_or_loop_name) {
+		void lowerCFG(
+			const low::cf::ControlFlowGraph& cfg,
+			const low::MicroBytecode&        bc,
+			const base::StrID&               func_or_loop_name
+		) {
 			auto& llvm_data = llvmData();
 
 			// Create LLVM basic blocks for each VM block

@@ -7,7 +7,7 @@
 
 #include <base/pointers/ref.hpp>
 
-#include "vm/core/safe/low_program/cfg/cf_graph.hpp"
+#include <vm/core/safe/low_program/cfg/cf_graph.hpp>
 #include <vm/core/safe/low_program/low_program.hpp>
 
 #ifdef BUILD_TYPE_RELEASE
