@@ -8,6 +8,7 @@
 #include <cstring>
 #include <new>
 #include <type_traits>
+#include <iostream>
 
 namespace vm {
 
@@ -76,7 +77,9 @@ namespace vm {
 	template<typename T>
 	void safeWriteBytes(byte* dest, const T& value, usize offset = 0)
 		requires(std::is_trivially_copyable_v<T>) {
-		CORE_ASSERT(
+		std::cout<<offset<<'\n';
+		std::cout<<(intptr_t)(dest)<<'\n';
+			CORE_ASSERT(
 			is_naturally_aligned<T>(reinterpret_cast<const T*>(dest + offset)),
 			"Unaligned access in safeWriteBytes"
 		);

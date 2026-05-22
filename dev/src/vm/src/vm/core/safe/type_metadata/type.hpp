@@ -12,14 +12,24 @@
 #include <json/json.hpp>
 
 #include <variant>
-
+#include <iostream>
 namespace vm {
 	class TypeMetadata;
 
 	class Type final {
 	public:
 		constexpr static TypeSize POINTER_SIZE = Bytes(sizeof(Pointer));
-		constexpr static size_t MAX_ALIGMENT = 8; // todo
+
+		
+		/**
+		 * @note Objects stored on stack are 
+		 * primitives (u64 has max aligment out of those)
+		 * Pointer
+		 * Opaque which are treated as bytes (aligment 1)
+		 * Data and Fixed size table which has aligment of the most alinged field/inner type
+		 * Variant which has aligment of the most alinged alternative or type tag size (which is smaller than u64)
+		 */
+		constexpr static size_t MAX_ALIGMENT = std::max(alignof(Pointer), alignof(u64));
 
 		enum class Kind {
 			None,
@@ -116,36 +126,6 @@ namespace vm {
 
 		[[nodiscard]]
 		size_t getStackAlignment() const {
-			variant_match(kind){
-				variant_case(kind::Primitive, primitive) {
-					CORE_ASSERT(stack_alligment.has_value(), "Primitive type doesn't have stack allignment set");
-					return stack_alligment.value();
-				}
-				variant_case(kind::Pointer, pointer) {
-					CORE_ASSERT(stack_alligment.has_value(), "Pointer type doesn't have stack allignment set");
-					return stack_alligment.value();
-				}
-				variant_case(kind::FixedSizeTable, table) {
-					CORE_ASSERT(stack_alligment.has_value(), "FixedSizeTable type doesn't have stack allignment set");
-					return stack_alligment.value();
-				}
-				variant_case(kind::DynamicTable, table) {
-					CORE_ASSERT(stack_alligment.has_value(), "DynamicTable type doesn't have stack allignment set");
-					return stack_alligment.value();
-				}
-				variant_case(kind::Variant, variant) {
-					CORE_ASSERT(stack_alligment.has_value(), "Variant type doesn't have stack allignment set");
-					return stack_alligment.value();
-				}
-				variant_case(kind::Data, data) {
-					CORE_ASSERT(stack_alligment.has_value(), "Data type doesn't have stack allignment set");
-					return stack_alligment.value();
-				}
-				variant_default {
-					CORE_PANIC("getStackAlignment called for type that is not stored on stack or before finalization");
-				}
-			}
-			
 			match_optional(stack_alligment) {
 				opt_some(allignment) { return allignment; }
 				opt_none { CORE_PANIC("getStackAlignment called for type that is not stored on stack or before finalization"); }
