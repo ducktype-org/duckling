@@ -145,5 +145,4 @@ namespace vm::debugger {
 	std::expected<api::response::CodePosition, api::ApiError> Debugger::getCurrentPosition() {
 		return api::getCurrentPosition(pid);
 	}
-
 }
