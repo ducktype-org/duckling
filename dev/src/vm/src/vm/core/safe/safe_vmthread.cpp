@@ -31,8 +31,22 @@
 #include <vector>
 
 namespace vm {
-#define MAKE_BYTECODE_INSTRUCTION(OPCODE_NAME, ARG_0, ARG_1) \
-	makeLowInstruction(low::MicroOpcode::OPCODE_NAME, ARG_0, ARG_1)
+
+#if defined(ENABLE_JIT) and not defined(BUILD_TYPE_RELEASE)
+	// When testing JIT, compile all calls from the start function. Specifically main.
+	#define MAKE_BYTECODE_INSTRUCTION(OPCODE_NAME, ARG_0, ARG_1)         \
+		makeLowInstruction(                                              \
+			low::MicroOpcode::OPCODE_NAME == low::MicroOpcode::call_func \
+				? low::MicroOpcode::jit_call_entrypoint                  \
+				: low::MicroOpcode::OPCODE_NAME,                         \
+			ARG_0,                                                       \
+			ARG_1                                                        \
+		)
+
+#else
+	#define MAKE_BYTECODE_INSTRUCTION(OPCODE_NAME, ARG_0, ARG_1) \
+		makeLowInstruction(low::MicroOpcode::OPCODE_NAME, ARG_0, ARG_1)
+#endif
 
 	SafeVMThread::SafeVMThread(api::ThreadID thread_id, SafeVMProcess& process):
 		  IVMThread(thread_id, process),
@@ -45,6 +59,8 @@ namespace vm {
 
 	/**
 	 * @brief Tail call written function that handles the execution pause request.
+	 * @details Assumes that the instruction in the frame is to be executed before AND after running
+	 * this function.
 	 */
 	RETURN_TYPE OpFuns::handle_execution_break(OPFUN_ARGS) {
 		{
@@ -58,7 +74,7 @@ namespace vm {
 			instr       = frame->instr;
 			local_stack = frame->local_stack;
 		}
-		OPFUN_CONT(1);
+		OPFUN_CONT(0);
 	}
 
 	/**
@@ -82,13 +98,13 @@ namespace vm {
 	 */
 	void SafeVMThread::executeOneStep() {
 		Frame*     frame       = runtime_data.frame_stack_current;
-		std::byte* local_stack = frame->local_stack;
 		auto*      instr       = frame->instr;
+		std::byte* local_stack = frame->local_stack;
 
-		auto opcode = std::to_underlying(getInstructionOpcode(*instr));
+		low::MicroOpcode opcode = getInstructionOpcode(*instr);
 
 		// Execute the instruction by calling the debug opcode function.
-		OpFuns::DEBUG_OPFUNS.at(opcode)(instr, local_stack, frame, *this);
+		OpFuns::DEBUG_OPFUNS.at(std::to_underlying(opcode))(instr, local_stack, frame, *this);
 
 		runtime_data.frame_stack_current = frame;
 		frame->local_stack               = local_stack;
@@ -121,10 +137,11 @@ namespace vm {
 			                             .local_stack_size = 0,
 			                             .local_block_count
 			                             = func.result_types.size() + func.parameters.size(),
-			                             .arg_size     = 0,
-			                             .ret_size     = func.ret_size,
-			                             .parameters   = {},
-			                             .result_types = func.result_types };
+			                             .arg_size            = 0,
+			                             .ret_size            = func.ret_size,
+			                             .parameters          = {},
+			                             .result_types        = func.result_types,
+			                             .instruction_mapping = {} };
 
 		const u64 called_function_id = process_program->getFunctions().idOf(func.name).value();
 
@@ -214,14 +231,15 @@ namespace vm {
 		auto        str_ptr_type     = types.at(base::StrID("ptr_string"));
 		auto        byte_type        = types.at(base::StrID("byte"));
 
-		low::LowFuncData start_function{ .name              = base::StrID("vm_start_function"),
-			                             .bc                = {},
-			                             .local_stack_size  = 72,
-			                             .local_block_count = 7,
-			                             .arg_size          = 0,
-			                             .ret_size          = func.ret_size,
-			                             .parameters        = {},
-			                             .result_types      = func.result_types };
+		low::LowFuncData start_function{ .name                = base::StrID("vm_start_function"),
+			                             .bc                  = {},
+			                             .local_stack_size    = 72,
+			                             .local_block_count   = 7,
+			                             .arg_size            = 0,
+			                             .ret_size            = func.ret_size,
+			                             .parameters          = {},
+			                             .result_types        = func.result_types,
+			                             .instruction_mapping = {} };
 
 		// TypeIDs to pass to opcodes.
 		u64 argv_type_arg     = safeReadObjectBytes<u64>(argv_type);
@@ -265,7 +283,8 @@ namespace vm {
 
 		// Now fill in the argv table.
 		if (main_has_args) {
-			for (const auto& [argv_index, arg]: std::views::enumerate(args)) {
+			for (const auto& [argv_index, arg]:
+			     std::views::zip(std::ranges::views::iota(0u), args)) {
 				start_function.bc.insert(
 					start_function.bc.end(),
 					{
@@ -294,7 +313,7 @@ namespace vm {
 					      MAKE_BYTECODE_INSTRUCTION(
 							  anyArrayStore_pptr_bany, 40, 5
 						  ),  // ptr_tmp_store[ix] := char_tmp_store
-					      MAKE_BYTECODE_INSTRUCTION(ext_p64, 32, 0),
+					      MAKE_BYTECODE_INSTRUCTION(ext_p64_type, 32, byte_type_arg),
 					      MAKE_BYTECODE_INSTRUCTION(add_p64_imm, 32, 1) }
 					);
 				}
@@ -306,14 +325,12 @@ namespace vm {
 						MAKE_BYTECODE_INSTRUCTION(
 							anyArrayStore_pptr_bany, 40, 5
 						),  // ptr_tmp_store[ix] := char_tmp_store
-						MAKE_BYTECODE_INSTRUCTION(ext_p64, 32, 0),
-						MAKE_BYTECODE_INSTRUCTION(
-							mov_p64_imm, 32, base::safeIntConv<u64>(argv_index)
-						),  // ix := argv_index
+						MAKE_BYTECODE_INSTRUCTION(ext_p64_type, 32, byte_type_arg),
+						MAKE_BYTECODE_INSTRUCTION(mov_p64_imm, 32, argv_index),  // ix := argv_index
 						MAKE_BYTECODE_INSTRUCTION(
 							anyArrayStore_pptr_bany, 8, 4
 						),  // argv_internal[ix] := ptr_tmp_store
-						MAKE_BYTECODE_INSTRUCTION(ext_p64, 32, 0),
+						MAKE_BYTECODE_INSTRUCTION(ext_p64_type, 32, str_ptr_type_arg),
 						MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),  // deinit char_tmp_store
 						MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),  // deinit ptr_tmp_store
 					}
@@ -363,7 +380,7 @@ namespace vm {
 					MAKE_BYTECODE_INSTRUCTION(
 						anyArrayLoad_bany_pptr, 5, 8
 					),  // ptr_tmp_store := argv_internal[ix]
-					MAKE_BYTECODE_INSTRUCTION(ext_p64, 32, 0),
+					MAKE_BYTECODE_INSTRUCTION(ext_p64_type, 32, str_ptr_type_arg),
 					MAKE_BYTECODE_INSTRUCTION(free_pptr, 48, 0),    // free ptr_tmp_store
 					MAKE_BYTECODE_INSTRUCTION(add_p64_imm, 32, 1),  // ++ix
 				}
@@ -388,44 +405,38 @@ namespace vm {
 		return start_function;
 	}
 
+	SafeVMThread::ScopedGilGuard::ScopedGilGuard(SafeVMThread& t): thread(t) {
+		thread.acquireGil();
+	}
+
+	SafeVMThread::ScopedGilGuard::~ScopedGilGuard() {
+		if (thread.has_gil) thread.releaseGil();
+	}
+
 #if defined(__clang__)
-// @TODO: suppress code deduplication in Clang
+// @TODO: #2582 suppress code deduplication in Clang
 #elif defined(__GNUG__)
 	#pragma GCC push_options
 	#pragma GCC optimize("-fno-crossjumping")
 #endif
 	// NOLINTBEGIN(cppcoreguidelines-avoid-goto)
 	// NOLINTBEGIN(cppcoreguidelines-pro-bounds-constant-array-index)
-	std::vector<Ref<VmValue>> SafeVMThread::executeFunction(
-		const low::LowFuncData& start_function, const low::LowFuncData& func
+	void runInterpreter(
+		const MicroInstruction* instr, std::byte*& local_stack, Frame*& frame, SafeVMThread& thread
 	) {
-		acquireGil();
-		// Frame of the called function.
-		Frame*     frame          = runtime_data.frame_stack_current;
-		Frame*     orig_frame_ptr = frame;
-		Frame      orig_frame_cpy = *runtime_data.frame_stack_current;
-		std::byte* local_stack    = frame->local_stack;
-		if (local_stack == nullptr) local_stack = runtime_data.local_stack_base;
-		auto orig_block_stack_size
-			= usize(frame->local_block_ref_stack_end - frame->local_block_ref_stack_base);
-
-		frame->current_function           = &start_function;
-		frame->local_block_ref_stack_base = runtime_data.block_ref_stack_base;
-		frame->local_block_ref_stack_end  = runtime_data.block_ref_stack_base;
-
-		const auto* instr = start_function.bc.data();
-
 #ifdef USE_TAIL_CALLS
-		instr->tc_opfun(instr, local_stack, frame, *this);
+		return instr->tc_opfun(instr, local_stack, frame, thread);
 
-#elif defined(USE_SWITCH_CASE)
+#elifdef USE_SWITCH_CASE
 		while (true) {
 			switch (static_cast<low::MicroOpcode>(instr->nontc_opcode)) {
 	#define HANDLE_MICRO_INSTR(opcode_name)                                                         \
 	case low::MicroOpcode::opcode_name: {                                                           \
-		vm::OpFuns::op_##opcode_name(instr, local_stack, frame, *this);                             \
+		vm::OpFuns::op_##opcode_name(instr, local_stack, frame, thread);                            \
 		if constexpr (::vm::ENABLE_VM_DETAIL_LOGGING)                                               \
-			CORE_DEV_LOG(DVMDetails, "opcode, ", #opcode_name, ", ", getThreadID().asInt(), ";\n"); \
+			CORE_DEV_LOG(                                                                           \
+				DVMDetails, "opcode, ", #opcode_name, ", ", thread.getThreadID().asInt(), ";\n"     \
+			);                                                                                      \
 		if constexpr (constexpr std::string_view opcode_str = #opcode_name; opcode_str == "exit") { \
 			goto End;                                                                               \
 		} else {                                                                                    \
@@ -442,6 +453,38 @@ namespace vm {
 		}
 	End:
 #endif
+	}
+
+	// NOLINTEND(cppcoreguidelines-pro-bounds-constant-array-index)
+	// NOLINTEND(cppcoreguidelines-avoid-goto)
+
+#if defined(__clang__)
+// @TODO: #2582 suppress code deduplication in Clang
+#elif defined(__GNUG__)
+	#pragma GCC pop_options
+#endif
+
+	std::vector<Ref<VmValue>> SafeVMThread::executeFunction(
+		const low::LowFuncData& start_function, const low::LowFuncData& func
+	) {
+		ScopedGilGuard gil_guard(*this);
+
+		// Frame of the called function.
+		Frame*     frame          = runtime_data.frame_stack_current;
+		Frame*     orig_frame_ptr = frame;
+		Frame      orig_frame_cpy = *runtime_data.frame_stack_current;
+		std::byte* local_stack    = frame->local_stack;
+		if (local_stack == nullptr) local_stack = runtime_data.local_stack_base;
+		auto orig_block_stack_size
+			= usize(frame->local_block_ref_stack_end - frame->local_block_ref_stack_base);
+
+		frame->current_function           = &start_function;
+		frame->local_block_ref_stack_base = runtime_data.block_ref_stack_base;
+		frame->local_block_ref_stack_end  = runtime_data.block_ref_stack_base;
+
+		const auto* instr = start_function.bc.data();
+
+		runInterpreter(instr, local_stack, frame, *this);
 
 		CORE_ASSERT(
 			frame == orig_frame_ptr,
@@ -472,21 +515,10 @@ namespace vm {
 		}
 		*orig_frame_ptr = orig_frame_cpy;
 
-		releaseGil();
-
 		return exit_value_storage.value();
 	}
 
 	// executeFunction end
-
-	// NOLINTEND(cppcoreguidelines-pro-bounds-constant-array-index)
-	// NOLINTEND(cppcoreguidelines-avoid-goto)
-
-#if defined(__clang__)
-// @TODO: suppress code deduplication in Clang
-#elif defined(__GNUG__)
-	#pragma GCC pop_options
-#endif
 
 	/**
 	 * @brief Starts the execution of a function with a given name and arguments.
@@ -564,7 +596,7 @@ namespace vm {
 		}
 	}
 
-	std::expected<api::Response, api::ApiError> SafeVMThread::getCurrentPosition() {
+	std::expected<low::LowCodePosition, api::ApiError> SafeVMThread::getCurrentPosition() {
 		variant_match(getStatus()) {
 			variant_case_novalue(api::Paused) {
 				auto frame = runtime_data.frame_stack_current;
@@ -573,9 +605,10 @@ namespace vm {
 				for (const auto& [idx, func]:
 				     std::views::enumerate(process_program->getFunctions())) {
 					if (func.bc.data() <= instr && instr < func.bc.data() + func.bc.size()) {
-						return api::Response(api::response::CodePosition{
-							.function_id  = static_cast<u64>(idx),  // Assuming function_id is int
-							.instr_number = static_cast<u64>(instr - func.bc.data()) });
+						return low::LowCodePosition{
+							.function          = &func,
+							.instruction_index = static_cast<u64>(instr - func.bc.data()),
+						};
 					}
 				}
 			}

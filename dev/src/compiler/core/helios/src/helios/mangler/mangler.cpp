@@ -209,10 +209,14 @@ namespace compiler::helios::mangler {
 
 					if (ancestor->getElementKind() == pst::ElementKind::Namespace) {
 						auto namespace_v = ancestor.dynamicCast<pst::Namespace>().value();
-						path_parts.push_back(identifier(namespace_v->getName().strView()));
+						path_parts.push_back(
+							identifier(namespace_v->getName().unlock(ctx)->unwrap().strView())
+						);
 					} else if (ancestor->getElementKind() == pst::ElementKind::Class) {
 						auto class_v = ancestor.dynamicCast<pst::Class>().value();
-						path_parts.push_back(identifier(class_v->getName().strView()));
+						path_parts.push_back(
+							identifier(class_v->getName().unlock(ctx)->unwrap().strView())
+						);
 					}
 
 					ancestor_opt = getPSTElementParent(ctx, ancestor);
@@ -294,9 +298,11 @@ namespace compiler::helios::mangler {
 						// If the symbol is generated, it has no path.
 						variant_match(gen_data.data) {
 							variant_case(defgen::GeneratedSymbolData::ImplicitConstructor, ctor) {
-								const auto path_to_class = path(ctx, ctor.class_symbol);
-								const auto ctor_suffix   = "Hic" + func(ctx, symbol_id) + "E";
-								return path_to_class + ctor_suffix;
+								const auto mangled_class = ctx.query<QueryMangledType>(
+									tsh::SymbolType<>::withDefaults(ctor.target_type)
+								);
+								const auto ctor_suffix = "Hic" + func(ctx, symbol_id) + "E";
+								return mangled_class->valueOrThrow().str() + ctor_suffix;
 							}
 							variant_case(
 								defgen::GeneratedSymbolData::DefaultClassConstructor, ctor

@@ -102,11 +102,11 @@ impl Duckc {
             .set_package_artifacts_dir(this)
             .update_with_profile(&bcx.profile);
         // We need to lock a file, we can't lock a directory.
-        let _lock = this.artifacts_directory().open_exclusive(".duck_lock", bcx.pcx.ctx()).with_context(|| format!("failed to acquire an exclusive lock for spawning a duckc in order to compile a package `{}`", this.as_freeze_dep()))?;
+        let _lock = this.artifacts_directory().acquire_global_lock(bcx.pcx.ctx()).with_context(|| format!("failed to acquire an exclusive lock for spawning a duckc in order to compile a package `{}`", this.as_freeze_dep()))?;
         bcx.pcx
             .ctx()
             .console()
-            .info_verbose(format!("Running `{}`", builder));
+            .info_verbose(format!("Running `{}`", builder))?;
         builder.execute(|| format!("failed to compile package `{}`", this.as_freeze_dep()))?;
         Ok(ArtifactsDir::Default)
     }

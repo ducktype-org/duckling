@@ -1,4 +1,5 @@
 use std::collections::{HashMap, HashSet};
+use std::hash::Hash;
 use std::ops::Deref;
 use std::path::PathBuf;
 use std::sync::{Mutex, OnceLock};
@@ -9,12 +10,12 @@ use crate::quackpack::core::solver::types_common::expanded::InternedExpandedLoca
 use crate::quackpack::core::solver::types_common::{ExpandedLocation, ExpandedPackage};
 use crate::quackpack::core::version::CompatibilityCheck;
 use crate::quackpack::core::{BranchOrTag, Dependency, Source, Version};
-use crate::quackpack::util::PANIC_MESSAGE;
+use crate::util::extract::Extract;
 use crate::{QuackResult, StrId, qp_bail_internal};
 
 static INTERNED_LOCATION_CACHE: OnceLock<Mutex<HashSet<&'static Location>>> = OnceLock::new();
 
-#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy)]
 /// Interned version of [`Location`].
 pub struct InternedLocation {
     inner: &'static Location,
@@ -25,17 +26,7 @@ impl InternedLocation {
         let mut cache = INTERNED_LOCATION_CACHE
             .get_or_init(Default::default)
             .lock()
-            // NOTE: `.unwrap()` should never panic: from docs:
-            // Errors
-            //
-            // If another user of this mutex panicked while holding the mutex,
-            // then this call will return an error once the mutex is acquired.
-            // The acquired mutex guard will be contained in the returned error.
-            //
-            // Panics
-            //
-            // This function might panic when called if the lock is already held by the current thread.
-            .expect(PANIC_MESSAGE);
+            .extract();
         let reference = cache.get(&source).copied().unwrap_or_else(|| {
             let static_ref = Box::leak(Box::new(source));
             cache.insert(static_ref);
@@ -62,6 +53,23 @@ impl Deref for InternedLocation {
 impl AsRef<Location> for InternedLocation {
     fn as_ref(&self) -> &'static Location {
         self.inner
+    }
+}
+
+impl PartialEq for InternedLocation {
+    fn eq(&self, other: &Self) -> bool {
+        // If we have two equal InternedLocations, their underlying &Location is equal.
+        // That &Location is stored exactly once in INTERNED_LOCATION_CACHE, so we can compare by comparing pointers,
+        // which is faster.
+        std::ptr::eq(self.inner, other.inner)
+    }
+}
+
+impl Eq for InternedLocation {}
+
+impl Hash for InternedLocation {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        std::ptr::hash(self.inner, state);
     }
 }
 
@@ -116,7 +124,7 @@ impl From<&Dependency> for Location {
             },
             Source::Git(git) => Self::Git {
                 url: git.url().clone(),
-                branch_or_tag: git.branch_or_tag(),
+                branch_or_tag: git.branch_or_tag().clone(),
                 rev: git.rev(),
             },
         }

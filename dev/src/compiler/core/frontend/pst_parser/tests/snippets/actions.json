@@ -16,13 +16,27 @@
 						"sourceEnd": 5
 					},
 					"StmtSpecifier": {
-						"specifier": "public",
+						"specifier": {
+							"position": {
+								"sourceStart": 0,
+								"sourceEnd": 5
+							},
+							"Keyword Wrapper": {
+								"value": "public"
+							}
+						},
 					}
 				},
 			],
 			"Function": {
 				"name": {
-					"Name": "foo"
+					"position": {
+						"sourceStart": 11,
+						"sourceEnd": 13
+					},
+					"Identifier Wrapper": {
+						"value": "foo"
+					}
 				},
 				"parameters": {
 					"position": {
@@ -50,7 +64,13 @@
 								},
 								"Let": {
 									"name": {
-										"Name": "a"
+										"position": {
+											"sourceStart": 26,
+											"sourceEnd": 26
+										},
+										"Identifier Wrapper": {
+											"value": "a"
+										}
 									},
 									"mutable": false,
 									"type": {
@@ -66,7 +86,13 @@
 												},
 												"Identifier Expression": {
 													"name": {
-														"Name": "T"
+														"position": {
+															"sourceStart": 29,
+															"sourceEnd": 29
+														},
+														"Identifier Wrapper": {
+															"value": "T"
+														}
 													}
 												}
 											}
@@ -117,7 +143,13 @@
 														},
 														"Identifier Expression": {
 															"name": {
-																"Name": "a"
+																"position": {
+																	"sourceStart": 43,
+																	"sourceEnd": 43
+																},
+																"Identifier Wrapper": {
+																	"value": "a"
+																}
 															}
 														}
 													},
@@ -128,9 +160,23 @@
 																"sourceEnd": 49
 															},
 															"Access Expression": {
-																"type": ".",
+																"type": {
+																	"position": {
+																		"sourceStart": 44,
+																		"sourceEnd": 44
+																	},
+																	"Operator Wrapper": {
+																		"value": "."
+																	}
+																},
 																"name": {
-																	"Name": "close"
+																	"position": {
+																		"sourceStart": 45,
+																		"sourceEnd": 49
+																	},
+																	"Identifier Wrapper": {
+																		"value": "close"
+																	}
 																}
 															}
 														},
@@ -164,7 +210,13 @@
 								},
 								"While": {
 									"name": {
-										"Name": "A"
+										"position": {
+											"sourceStart": 62,
+											"sourceEnd": 62
+										},
+										"Identifier Wrapper": {
+											"value": "A"
+										}
 									},
 									"condition": {
 										"position": {
@@ -183,7 +235,15 @@
 														"sourceEnd": 68
 													},
 													"Keyword Expression": {
-														"keyword": "true"
+														"keyword": {
+															"position": {
+																"sourceStart": 65,
+																"sourceEnd": 68
+															},
+															"Keyword Wrapper": {
+																"value": "true"
+															}
+														}
 													}
 												}
 											}
@@ -207,7 +267,13 @@
 													},
 													"While": {
 														"name": {
-															"Name": "B"
+															"position": {
+																"sourceStart": 81,
+																"sourceEnd": 81
+															},
+															"Identifier Wrapper": {
+																"value": "B"
+															}
 														},
 														"condition": {
 															"position": {
@@ -226,7 +292,15 @@
 																			"sourceEnd": 87
 																		},
 																		"Keyword Expression": {
-																			"keyword": "true"
+																			"keyword": {
+																				"position": {
+																					"sourceStart": 84,
+																					"sourceEnd": 87
+																				},
+																				"Keyword Wrapper": {
+																					"value": "true"
+																				}
+																			}
 																		}
 																	}
 																}
@@ -263,7 +337,13 @@
 																						},
 																						"Identifier Expression": {
 																							"name": {
-																								"Name": "A"
+																								"position": {
+																									"sourceStart": 101,
+																									"sourceEnd": 101
+																								},
+																								"Identifier Wrapper": {
+																									"value": "A"
+																								}
 																							}
 																						}
 																					}
@@ -300,7 +380,13 @@
 																						},
 																						"Identifier Expression": {
 																							"name": {
-																								"Name": "B"
+																								"position": {
+																									"sourceStart": 127,
+																									"sourceEnd": 127
+																								},
+																								"Identifier Wrapper": {
+																									"value": "B"
+																								}
 																							}
 																						}
 																					}
@@ -337,7 +423,13 @@
 																						},
 																						"Identifier Expression": {
 																							"name": {
-																								"Name": "A"
+																								"position": {
+																									"sourceStart": 155,
+																									"sourceEnd": 155
+																								},
+																								"Identifier Wrapper": {
+																									"value": "A"
+																								}
 																							}
 																						}
 																					}
@@ -374,7 +466,13 @@
 																						},
 																						"Identifier Expression": {
 																							"name": {
-																								"Name": "B"
+																								"position": {
+																									"sourceStart": 182,
+																									"sourceEnd": 182
+																								},
+																								"Identifier Wrapper": {
+																									"value": "B"
+																								}
 																							}
 																						}
 																					}

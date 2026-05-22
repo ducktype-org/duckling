@@ -86,16 +86,15 @@ namespace vm {
 		 * @return true if the program is in the end stopped.
 		 */
 		virtual bool stop();
-
+		/**
+		 * @brief Check if thread has an active execution thread handle.
+		 * @return true if exec_thread is active and joinable.
+		 */
+		[[nodiscard]] virtual bool hasActiveThread() const;
 		/**
 		 * @brief Waits for the execution thread to finish and returns final response.
 		 */
 		virtual std::expected<api::Response, api::ApiError> join();
-
-		/**
-		 * @brief Returns current execution position if the thread is paused.
-		 */
-		virtual std::expected<api::Response, api::ApiError> getCurrentPosition() = 0;
 
 		virtual bool isPauseRequested();
 

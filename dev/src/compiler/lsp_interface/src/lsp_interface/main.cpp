@@ -289,7 +289,7 @@ int main(int argc, const char** argv) {
 	// Initialize the command-line argument parser with help flag and port parameter
 	auto clah = getLspDaemonCLI();
 
-	query::track_reverse_graph                     = true;
+	query::setTrackReverseGraph(true);
 	compiler::frontend::use_module_modifier_remove = true;
 
 	init::InitObject _;

@@ -53,18 +53,17 @@
 #include <cmath>
 #include <limits>
 
-
+// jitable_interface.py depends on the instructions exact, fully-qualified names
 #ifdef DEBUG_OPCODES
-	#define OPCODE_NAME(name)                  op_debug_##name
-	#define FUNCTION_ARGS                      OPFUN_REF_ARGS
-	#define FUNCTION_CONT(step)                instr += step;
-	#define FUNCTION_CONT_CHECK_STRATEGY(step) instr += step;
+	#define OPCODE_NAME(name)   op_debug_##name
+	#define FUNCTION_ARGS       OPFUN_REF_ARGS
+	#define FUNCTION_CONT(step) instr += step;
+	#define OP_FUN              vm::DebugOpFun
 #else
-	#define OPCODE_NAME(name)                  op_##name
-	#define FUNCTION_ARGS                      OPFUN_ARGS
-	#define FUNCTION_CONT(step)                OPFUN_CONT(step)
-	#define FUNCTION_CONT_CHECK_STRATEGY(step) OPFUN_CONT_CHECK_STRATEGY(step)
-	#define OP_FUN                             vm::OpFun
+	#define OPCODE_NAME(name)   op_##name
+	#define FUNCTION_ARGS       OPFUN_ARGS
+	#define FUNCTION_CONT(step) OPFUN_CONT(step)
+	#define OP_FUN              vm::OpFun
 #endif
 
 namespace vm {
@@ -84,15 +83,24 @@ namespace vm {
 	// the body after the next tail call, which then becomes a regular function
 	// call and may cause the stack to explode.
 
-	// `op_exit` is the only opcode without the `FUNCTION_CONT` or `FUNCTION_CONT_CHECK_STRATEGY`
-	// macro. This means, every other instruction will jump to the next at the end of it with
-	// `FUNCTION_CONT`/`FUNCTION_CONT_CHECK_STRATEGY`, so the the only way to end execution is to
+	// `op_exit` is the only opcode without the `FUNCTION_CONT` macro. This means,
+	// every other instruction will jump to the next at the end of it with
+	// `FUNCTION_CONT`, so the the only way to end execution is to
 	// use this opcode. It also requires different macro surrounding the function call in the
 	// switch case because in this approach we can't end execution from
 	// within the function, but we have to add some instructions on the outside of it. Hence we use
 	// the `OP_CASE_END` macro that adds `goto End` instruction, residing after opcode function,
 	// inside interpreter loop.
 	RETURN_TYPE OpFuns::OPCODE_NAME(exit)(FUNCTION_ARGS) { IF_TC(return;) }
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(check_strategy)(FUNCTION_ARGS) {
+		{
+			++instr;
+			if (thread.getExecutionRequestPendingFlag())
+				return handle_execution_break(instr, local_stack, frame, thread);
+		}
+		FUNCTION_CONT(0);
+	}
 
 #define DEFINE_MOVE_OPS(BITS_SIZE, TYPE)                                                       \
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_p##BITS_SIZE##_imm)(FUNCTION_ARGS) {                   \
@@ -138,7 +146,7 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_p##BITS_SIZE##_imm)(FUNCTION_ARGS) {          \
 		{                                                                                \
 			auto       lhs = READ_FROM_PLACE_ARG(TYPE, instr->arg0);                     \
-			const auto rhs = safeReadObjectBytes<TYPE>(instr->arg1);                     \
+			const auto rhs = READ_FROM_DIRECT_ARG(TYPE, instr->arg1);                    \
 			lhs        OP static_cast<TYPE>(rhs);                                        \
 			WRITE_TO_PLACE_ARG(TYPE, instr->arg0, lhs);                                  \
 		}                                                                                \
@@ -159,7 +167,7 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_p##BITS_SIZE##_imm)(FUNCTION_ARGS) {           \
 		{                                                                                 \
 			auto lhs = READ_FROM_PLACE_ARG(TYPE, instr->arg0);                            \
-			auto rhs = safeReadObjectBytes<TYPE>(instr->arg1);                            \
+			auto rhs = READ_FROM_DIRECT_ARG(TYPE, instr->arg1);                           \
 			if (rhs == static_cast<TYPE>(0)) throw exceptions::VMZeroDivisionException(); \
 			lhs = static_cast<TYPE>(lhs OP rhs);                                          \
 			WRITE_TO_PLACE_ARG(TYPE, instr->arg0, lhs);                                   \
@@ -202,22 +210,22 @@ namespace vm {
 	FOR_EACH(DEFINE_FLOAT_N_ARITHMETIC, 64, 32)
 
 
-#define DEFINE_BOOLEAN_OP(NAME, OP)                                             \
-	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_p8##_p8)(FUNCTION_ARGS) {            \
-		{                                                                       \
-			const bool lhs = (READ_FROM_PLACE_ARG(u8, instr->arg0) != u8{ 0 }); \
-			const bool rhs = (READ_FROM_PLACE_ARG(u8, instr->arg1) != u8{ 0 }); \
-			WRITE_TO_PLACE_ARG(u8, instr->arg0, static_cast<u8>(lhs OP rhs));   \
-		}                                                                       \
-		FUNCTION_CONT(1);                                                       \
-	}                                                                           \
-	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_p8##_imm)(FUNCTION_ARGS) {           \
-		{                                                                       \
-			const bool lhs = (READ_FROM_PLACE_ARG(u8, instr->arg0) != u8{ 0 }); \
-			const bool rhs = (safeReadObjectBytes<u8>(instr->arg1) != u8{ 0 }); \
-			WRITE_TO_PLACE_ARG(u8, instr->arg0, static_cast<u8>(lhs OP rhs));   \
-		}                                                                       \
-		FUNCTION_CONT(1);                                                       \
+#define DEFINE_BOOLEAN_OP(NAME, OP)                                              \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_p8##_p8)(FUNCTION_ARGS) {             \
+		{                                                                        \
+			const bool lhs = (READ_FROM_PLACE_ARG(u8, instr->arg0) != u8{ 0 });  \
+			const bool rhs = (READ_FROM_PLACE_ARG(u8, instr->arg1) != u8{ 0 });  \
+			WRITE_TO_PLACE_ARG(u8, instr->arg0, static_cast<u8>(lhs OP rhs));    \
+		}                                                                        \
+		FUNCTION_CONT(1);                                                        \
+	}                                                                            \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_p8##_imm)(FUNCTION_ARGS) {            \
+		{                                                                        \
+			const bool lhs = (READ_FROM_PLACE_ARG(u8, instr->arg0) != u8{ 0 });  \
+			const bool rhs = (READ_FROM_DIRECT_ARG(u8, instr->arg1) != u8{ 0 }); \
+			WRITE_TO_PLACE_ARG(u8, instr->arg0, static_cast<u8>(lhs OP rhs));    \
+		}                                                                        \
+		FUNCTION_CONT(1);                                                        \
 	}
 
 	DEFINE_BOOLEAN_OP(log_and, &&)
@@ -243,7 +251,7 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_p##BITS_SIZE##_imm)(FUNCTION_ARGS) {          \
 		{                                                                                \
 			frame->flags.flag = READ_FROM_PLACE_ARG(TYPE, instr->arg0)                   \
-				OP safeReadObjectBytes<TYPE>(instr->arg1);                               \
+				OP READ_FROM_DIRECT_ARG(TYPE, instr->arg1);                              \
 		}                                                                                \
 		FUNCTION_CONT(1);                                                                \
 	}
@@ -282,21 +290,21 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(jmp_label)(FUNCTION_ARGS) {
 		{ instr += instr->arg0; }
-		FUNCTION_CONT_CHECK_STRATEGY(1);
+		FUNCTION_CONT(1);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(jmpIf_label)(FUNCTION_ARGS) {
 		{
 			if (frame->flags.flag) instr += instr->arg0;
 		}
-		FUNCTION_CONT_CHECK_STRATEGY(1);
+		FUNCTION_CONT(1);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(jmpIfNot_label)(FUNCTION_ARGS) {
 		{
 			if (!frame->flags.flag) instr += instr->arg0;
 		}
-		FUNCTION_CONT_CHECK_STRATEGY(1);
+		FUNCTION_CONT(1);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(call_func)(FUNCTION_ARGS) {
@@ -307,9 +315,8 @@ namespace vm {
 		// instructions. For future returns, the first instruction that should be executed after
 		// call is saved on frame so that `op_ret`s have to move forward zero instructions after
 		// restoring `instr` from frame.
-		FUNCTION_CONT_CHECK_STRATEGY(0);
+		FUNCTION_CONT(0);
 	}
-
 #ifdef ENABLE_JIT
 	RETURN_TYPE OpFuns::OPCODE_NAME(jit_call_entrypoint)(FUNCTION_ARGS) {
 		{
@@ -344,7 +351,7 @@ namespace vm {
 				run_compiled();
 			}
 		}
-		FUNCTION_CONT_CHECK_STRATEGY(0);
+		FUNCTION_CONT(0);
 	}
 #endif
 
@@ -399,7 +406,7 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(call_cfunc)(FUNCTION_ARGS) {
 		{
-			auto ext_func = safeReadObjectBytes<CRef<low::LowExternCFunction>>(instr->arg0);
+			auto ext_func = READ_FROM_DIRECT_ARG(CRef<low::LowExternCFunction>, instr->arg0);
 
 			auto arg_count = ext_func->parameters.size();
 			bool is_void   = ext_func->result_types.size() == 0;
@@ -475,7 +482,7 @@ namespace vm {
 
 			performFunctionCall(instr, local_stack, frame, thread, function_id);
 		}
-		FUNCTION_CONT_CHECK_STRATEGY(0);
+		FUNCTION_CONT(0);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(ret_tailcall_func)(FUNCTION_ARGS) {
@@ -488,7 +495,7 @@ namespace vm {
 			if (local_stack + function.local_stack_size > thread.runtime_data.local_stack_end)
 				throw exceptions::VMStackOverflowException();
 		}
-		FUNCTION_CONT_CHECK_STRATEGY(0);
+		FUNCTION_CONT(0);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(ret)(FUNCTION_ARGS) {
@@ -529,13 +536,13 @@ namespace vm {
 			local_stack = frame->local_stack;
 		}
 		// Here the argument is `0` because of the convention defined in the op_call_func.
-		FUNCTION_CONT_CHECK_STRATEGY(0);
+		FUNCTION_CONT(0);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(init_bany_type)(FUNCTION_ARGS) {
 		{
 			performInit(
-				instr, local_stack, frame, thread, safeReadObjectBytes<TypeCRef>(instr->arg1)
+				instr, local_stack, frame, thread, READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1)
 			);
 		}
 		FUNCTION_CONT(1);
@@ -607,6 +614,10 @@ namespace vm {
 		CORE_PANIC("ext_field not consumed by previous instruction");
 	}
 
+	RETURN_TYPE OpFuns::OPCODE_NAME(ext_p64_type)(FUNCTION_ARGS) {
+		CORE_PANIC("ext_p64_type not consumed by previous instruction");
+	}
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(ext_type_field)(FUNCTION_ARGS) {
 		CORE_PANIC("ext_type_field not consumed by previous instruction");
 	}
@@ -622,7 +633,7 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(alloc_pptr_type)(FUNCTION_ARGS) {
 		{
 			const auto dst     = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
-			auto       type    = safeReadObjectBytes<TypeCRef>(instr->arg1);
+			auto       type    = READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1);
 			auto       block   = thread.process_memory.allocateHeap(type);
 			const auto new_dst = thread.process_memory.updatePointerAssignment(dst, { block, 0 });
 			WRITE_TO_PLACE_ARG(Pointer, instr->arg0, new_dst);
@@ -675,7 +686,7 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_popq_imm)(FUNCTION_ARGS) {
 		{
 			// @TODO: #1728 remove this evil instruction
-			void* value = safeReadObjectBytes<void*>(instr->arg1);
+			void* value = READ_FROM_DIRECT_ARG(void*, instr->arg1);
 			WRITE_TO_PLACE_ARG(void*, instr->arg0, value);
 		}
 		FUNCTION_CONT(1);
@@ -716,7 +727,7 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(setVTable_pptr_type)(FUNCTION_ARGS) {
 		{
 			auto pointer = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
-			auto type    = safeReadObjectBytes<TypeCRef>(instr->arg1);
+			auto type    = READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1);
 
 			// Objects hold vtable pointer as their first field.
 			auto view = thread.process_memory.getPointerData(pointer, sizeof(Type*));
@@ -738,8 +749,8 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(variantSetInner_bvnt_type)(FUNCTION_ARGS) {
 		{
 			auto variant_block = READ_BLOCK_REF_FROM_ARG(instr->arg0);
-			auto alt_type      = safeReadObjectBytes<TypeCRef>(instr->arg1);
-			auto variant_type  = safeReadObjectBytes<TypeCRef>(instr[1].arg0);
+			auto alt_type      = READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1);
+			auto variant_type  = READ_FROM_DIRECT_ARG(TypeCRef, instr[1].arg0);
 			OpFuns::setVariantType(thread, Pointer(variant_block, 0), alt_type, variant_type);
 		}
 		FUNCTION_CONT(2);
@@ -749,8 +760,8 @@ namespace vm {
 		{
 			const auto dst           = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
 			auto       variant_block = READ_BLOCK_REF_FROM_ARG(instr->arg1);
-			auto       alt_type      = safeReadObjectBytes<TypeCRef>(instr[1].arg0);
-			auto       variant_type  = safeReadObjectBytes<TypeCRef>(instr[1].arg1);
+			auto       alt_type      = READ_FROM_DIRECT_ARG(TypeCRef, instr[1].arg0);
+			auto       variant_type  = READ_FROM_DIRECT_ARG(TypeCRef, instr[1].arg1);
 
 			const auto new_dst = thread.process_memory.updatePointerAssignment(
 				dst, OpFuns::getVariantPtr(thread, Pointer(variant_block, 0), alt_type, variant_type)
@@ -763,8 +774,8 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(variantSetInner_pptr_type)(FUNCTION_ARGS) {
 		{
 			auto variant_pointer = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
-			auto alt_type        = safeReadObjectBytes<TypeCRef>(instr->arg1);
-			auto variant_type    = safeReadObjectBytes<TypeCRef>(instr[1].arg0);
+			auto alt_type        = READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1);
+			auto variant_type    = READ_FROM_DIRECT_ARG(TypeCRef, instr[1].arg0);
 			OpFuns::setVariantType(thread, variant_pointer, alt_type, variant_type);
 		}
 		FUNCTION_CONT(2);
@@ -774,8 +785,8 @@ namespace vm {
 		{
 			const auto dst             = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
 			auto       variant_pointer = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
-			auto       alt_type        = safeReadObjectBytes<TypeCRef>(instr[1].arg0);
-			auto       variant_type    = safeReadObjectBytes<TypeCRef>(instr[1].arg1);
+			auto       alt_type        = READ_FROM_DIRECT_ARG(TypeCRef, instr[1].arg0);
+			auto       variant_type    = READ_FROM_DIRECT_ARG(TypeCRef, instr[1].arg1);
 
 			const auto new_dst = thread.process_memory.updatePointerAssignment(
 				dst, OpFuns::getVariantPtr(thread, variant_pointer, alt_type, variant_type)
@@ -802,7 +813,7 @@ namespace vm {
 			const auto dst = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
 			const auto src = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
 
-			auto dst_type = safeReadObjectBytes<TypeCRef>(instr[1].arg0);
+			auto dst_type = READ_FROM_DIRECT_ARG(TypeCRef, instr[1].arg0);
 
 			// Classes are guaranteed to hold vtable pointer as their first field.
 			auto        view         = thread.process_memory.getPointerData(src, sizeof(Type*));
@@ -861,7 +872,7 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(structStore_pptr_bany)(FUNCTION_ARGS) {
 		{
 			auto dst_pointer  = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
-			auto field_offset = safeReadObjectBytes<i64>(instr[1].arg0);
+			auto field_offset = READ_FROM_DIRECT_ARG(u64, instr[1].arg0);
 			dst_pointer.movePointer(field_offset);
 
 			auto src_block   = READ_BLOCK_REF_FROM_ARG(instr->arg1);
@@ -880,7 +891,7 @@ namespace vm {
 			auto dst_pointer = Pointer(dst_block, 0);
 
 			auto src_pointer  = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
-			auto field_offset = safeReadObjectBytes<i64>(instr[1].arg0);
+			auto field_offset = READ_FROM_DIRECT_ARG(u64, instr[1].arg0);
 			src_pointer.movePointer(field_offset);
 
 			auto type = Memory::getBlockType(dst_block);
@@ -894,7 +905,7 @@ namespace vm {
 		{
 			const auto dst       = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
 			const auto src_block = READ_BLOCK_REF_FROM_ARG(instr->arg1);
-			auto       offset    = static_cast<usize>(instr[1].arg0);
+			auto       offset    = READ_FROM_DIRECT_ARG(u64, instr[1].arg0);
 
 			const Pointer new_dst
 				= thread.process_memory.updatePointerAssignment(dst, { src_block, offset });
@@ -908,7 +919,7 @@ namespace vm {
 			auto dst_block   = READ_BLOCK_REF_FROM_ARG(instr->arg0);
 			auto dst_pointer = Pointer(dst_block, 0);
 
-			auto field_offset = safeReadObjectBytes<i64>(instr[1].arg0);
+			auto field_offset = READ_FROM_DIRECT_ARG(u64, instr[1].arg0);
 			dst_pointer.movePointer(field_offset);
 
 			auto src_block   = READ_BLOCK_REF_FROM_ARG(instr->arg1);
@@ -929,7 +940,7 @@ namespace vm {
 			auto src_block   = READ_BLOCK_REF_FROM_ARG(instr->arg1);
 			auto src_pointer = Pointer(src_block, 0);
 
-			auto field_offset = safeReadObjectBytes<i64>(instr[1].arg0);
+			auto field_offset = READ_FROM_DIRECT_ARG(u64, instr[1].arg0);
 			src_pointer.movePointer(field_offset);
 
 			auto type = Memory::getBlockType(dst_block);
@@ -941,11 +952,11 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(anyArrayLea_pptr_pptr)(FUNCTION_ARGS) {
 		{
-			auto     dst          = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
-			auto     tbl_pointer  = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
-			TypeCRef element_type = *Memory::getBlockType(tbl_pointer.getBlock())->getInnerType();
-			u64      index        = READ_FROM_PLACE_ARG(u64, instr[1].arg0);
-			auto     data_offset  = usize(element_type->getSize() * index);
+			auto dst         = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
+			auto tbl_pointer = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
+			u64  index       = READ_FROM_PLACE_ARG(u64, instr[1].arg0);
+			auto elem_type   = READ_FROM_DIRECT_ARG(TypeCRef, instr[1].arg1);
+			u64  data_offset = elem_type->getSize().asInt() * index;
 
 			const Pointer new_dst = thread.process_memory.updatePointerAssignment(
 				dst, { tbl_pointer.getBlock(), tbl_pointer.getOffset() + data_offset }
@@ -957,16 +968,17 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(anyArrayStore_pptr_bany)(FUNCTION_ARGS) {
 		{
-			auto     tbl_pointer  = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
-			TypeCRef element_type = *Memory::getBlockType(tbl_pointer.getBlock())->getInnerType();
-			i64      index        = READ_FROM_PLACE_ARG(i64, instr[1].arg0);
-			i64      data_offset  = index * static_cast<i64>(element_type->getSize());
+			auto tbl_pointer = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
+			u64  index       = READ_FROM_PLACE_ARG(u64, instr[1].arg0);
+			auto elem_type   = READ_FROM_DIRECT_ARG(TypeCRef, instr[1].arg1);
+			u64  data_offset = index * elem_type->getSize().asInt();
+
 			tbl_pointer.movePointer(data_offset);
 
 			Ref<Block> src_block   = READ_BLOCK_REF_FROM_ARG(instr->arg1);
 			auto       src_pointer = Pointer(src_block, 0);
 
-			thread.process_memory.copyPointedData(tbl_pointer, src_pointer, element_type);
+			thread.process_memory.copyPointedData(tbl_pointer, src_pointer, elem_type);
 		}
 		FUNCTION_CONT(2);
 	}
@@ -976,23 +988,24 @@ namespace vm {
 			Ref<Block> dst_block   = READ_BLOCK_REF_FROM_ARG(instr->arg0);
 			Pointer    dst_pointer = Pointer(dst_block, 0);
 			auto       tbl_pointer = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
+			u64        index       = READ_FROM_PLACE_ARG(u64, instr[1].arg0);
+			auto       elem_type   = READ_FROM_DIRECT_ARG(TypeCRef, instr[1].arg1);
+			u64        data_offset = index * elem_type->getSize().asInt();
 
-			auto     index        = READ_FROM_PLACE_ARG(i64, instr[1].arg0);
-			TypeCRef element_type = *Memory::getBlockType(tbl_pointer.getBlock())->getInnerType();
-			tbl_pointer.movePointer(index * static_cast<i64>(element_type->getSize()));
+			tbl_pointer.movePointer(data_offset);
 
-			thread.process_memory.copyPointedData(dst_pointer, tbl_pointer, element_type);
+			thread.process_memory.copyPointedData(dst_pointer, tbl_pointer, elem_type);
 		}
 		FUNCTION_CONT(2);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(fixedSizeTableLea_pptr_bfst)(FUNCTION_ARGS) {
 		{
-			const auto dst          = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
-			Ref<Block> tbl_block    = READ_BLOCK_REF_FROM_ARG(instr->arg1);
-			TypeCRef   element_type = *Memory::getBlockType(tbl_block)->getInnerType();
-			u64        index        = READ_FROM_PLACE_ARG(u64, instr[1].arg0);
-			u64        data_offset  = index * static_cast<u64>(element_type->getSize());
+			const auto dst         = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
+			Ref<Block> tbl_block   = READ_BLOCK_REF_FROM_ARG(instr->arg1);
+			u64        index       = READ_FROM_PLACE_ARG(u64, instr[1].arg0);
+			auto       elem_type   = READ_FROM_DIRECT_ARG(TypeCRef, instr[1].arg1);
+			u64        data_offset = index * elem_type->getSize().asInt();
 
 			const Pointer new_dst
 				= thread.process_memory.updatePointerAssignment(dst, { tbl_block, data_offset });
@@ -1005,32 +1018,30 @@ namespace vm {
 		{
 			Ref<Block> dst_block   = READ_BLOCK_REF_FROM_ARG(instr->arg0);
 			auto       dst_pointer = Pointer(dst_block, 0);
+			Ref<Block> tbl_block   = READ_BLOCK_REF_FROM_ARG(instr->arg1);
+			u64        index       = READ_FROM_PLACE_ARG(u64, instr[1].arg0);
+			auto       elem_type   = READ_FROM_DIRECT_ARG(TypeCRef, instr[1].arg1);
+			u64        data_offset = index * elem_type->getSize().asInt();
 
-			Ref<Block> tbl_block = READ_BLOCK_REF_FROM_ARG(instr->arg1);
+			auto src_pointer = Pointer(tbl_block, data_offset);
 
-			TypeCRef element_type = Memory::getBlockType(dst_block);
-			u64      index        = READ_FROM_PLACE_ARG(u64, instr[1].arg0);
-			auto     src_pointer
-				= Pointer(tbl_block, index * static_cast<u64>(element_type->getSize()));
-
-			thread.process_memory.copyPointedData(dst_pointer, src_pointer, element_type);
+			thread.process_memory.copyPointedData(dst_pointer, src_pointer, elem_type);
 		}
 		FUNCTION_CONT(2);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(fixedSizeTableStore_bfst_bany)(FUNCTION_ARGS) {
 		{
-			Ref<Block> dst_block = READ_BLOCK_REF_FROM_ARG(instr->arg0);
-			Ref<Block> src_block = READ_BLOCK_REF_FROM_ARG(instr->arg1);
+			Ref<Block> dst_block   = READ_BLOCK_REF_FROM_ARG(instr->arg0);
+			Ref<Block> src_block   = READ_BLOCK_REF_FROM_ARG(instr->arg1);
+			u64        index       = READ_FROM_PLACE_ARG(u64, instr[1].arg0);
+			auto       elem_type   = READ_FROM_DIRECT_ARG(TypeCRef, instr[1].arg1);
+			u64        data_offset = index * elem_type->getSize().asInt();
 
-			TypeCRef element_type = Memory::getBlockType(src_block);
-			u64      index        = READ_FROM_PLACE_ARG(u64, instr[1].arg0);
-			auto     dst_pointer
-				= Pointer(dst_block, index * static_cast<u64>(element_type->getSize()));
-
+			auto dst_pointer = Pointer(dst_block, data_offset);
 			auto src_pointer = Pointer(src_block, 0);
 
-			thread.process_memory.copyPointedData(dst_pointer, src_pointer, element_type);
+			thread.process_memory.copyPointedData(dst_pointer, src_pointer, elem_type);
 		}
 		FUNCTION_CONT(2);
 	}
@@ -1038,7 +1049,7 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(dynTableReAlloc_pptr_type)(FUNCTION_ARGS) {
 		{
 			auto tbl_pointer    = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
-			auto pointed_type   = safeReadObjectBytes<TypeCRef>(instr->arg1);
+			auto pointed_type   = READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1);
 			auto new_elem_count = READ_FROM_PLACE_ARG(u64, instr[1].arg0);
 
 			if (new_elem_count == 0) {
@@ -1221,4 +1232,3 @@ namespace vm {
 #undef OPCODE_NAME
 #undef FUNCTION_ARGS
 #undef FUNCTION_CONT
-#undef FUNCTION_CONT_CHECK_STRATEGY

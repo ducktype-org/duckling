@@ -223,8 +223,29 @@ namespace compiler::mir {
 			output(lowerSubExpr(*expr.inner, continuation));
 		}
 
-		void visitTupleExpr(const hc::TupleExpr&) override {
-			throw base::NotYetImplemented("tuple constructor");
+		void visitTupleExpr(const hc::TupleExpr& expr) override {
+			// Tuple packing is a call to implicit tuple constructor
+			auto call = continuation->addHole();
+
+			auto                  current = continuation;
+			std::vector<MIRValue> args;
+			args.reserve(1 + expr.elements.size());  // ctor + each element
+
+			auto ctor_symid = expr.tuple_ctor_symbol;
+			args.emplace_back(MIRFunctionLiteral{ ctor_symid });
+
+			for (const auto& element: expr.elements) {
+				auto lowered_element = lowerSubExpr(*element, continuation);
+				args.push_back(lowered_element.getResult(function));
+				current = lowered_element.begin;
+			}
+
+			return noValueOutput(
+				continuation,
+				call,
+				Instruction{ Operation::Call, {}, args, {}, expr_scope, {}, { expr.getPosition() } },
+				expr.expression_type.getSymbolType()
+			);
 		}
 
 		void visitVariantTypeConstructorExpr(const hc::VariantTypeConstructorExpr& expr) override {

@@ -1,0 +1,11 @@
+PostCase: python3 check.py
+
+Tests:
+  init:
+    Description: can initialise a new project with --no-git flag
+    Cases:
+      init:
+        test_cmd: init --git foo
+        Output:
+          Run: |+
+            echo "info: successfully created a new project \`foo\` at \`$(pwd)/foo\`"

@@ -1,0 +1,12 @@
+# Test configuration for namespace-declaration
+# Tests namespace declaration, nested namespaces, and access specifiers
+
+Tests:
+  namespace_declaration_test:
+    Description: Tests for namespace declaration and usage.
+    Cases:
+      all:
+        backend: all
+        Output:
+          String: "1\n2\n30\n12\n42\n100\n10\n50\n100\n"
+        ExitCode: 0
