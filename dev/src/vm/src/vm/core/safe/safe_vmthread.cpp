@@ -599,12 +599,12 @@ namespace vm {
 	std::expected<low::LowCodePosition, api::ApiError> SafeVMThread::getCurrentPosition() {
 		variant_match(getStatus()) {
 			variant_case_novalue(api::Paused) {
-				auto frame = runtime_data.frame_stack_current;
-				auto& func = *frame->current_function;
-				auto instr = frame->instr;
+				auto  frame = runtime_data.frame_stack_current;
+				auto& func  = *frame->current_function;
+				auto  instr = frame->instr;
 
 				return low::LowCodePosition{
-					.function = &func,
+					.function          = &func,
 					.instruction_index = static_cast<u64>(frame->instr - func.bc.data()),
 				};
 			}
