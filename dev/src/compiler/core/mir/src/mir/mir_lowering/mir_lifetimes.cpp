@@ -74,14 +74,13 @@ namespace compiler::mir {
 		// 1) Iterate through all instructions in the block. If moving from one instruction to the
 		// 	  next crosses a scope boundary, we insert the necessary destructors between them.
 		// 2) Handling terminators is more complex because they can have multiple successors with
-		//	different ending scopes. The general logic is to insert a new intermediate block for
-		// every path that crosses a scope boundary. This block contains only the destructors
-		// specific to that path and a `Jump` to the actual destination.
+		//	  different ending scopes. The general logic is to insert a new intermediate block for
+		// 	  every path that crosses a scope boundary. This block contains only the destructors
+		//    specific to that path and a `Jump` to the actual destination.
 		//
-		// OPT: Additionally, a simple optimization to not create a lot of blocks in simple cases
-		// (like if-else with no ending scopes inside) is implemented. First, we check if all
-		// outgoing edges require the same set of destructors. If that's true we append the
-		// destructors directly to the current block to avoid creating unnecessary blocks.
+		// OPT: Additionally, a simple optimization to not create a lot of blocks and insert
+		// destructors into the current block in simple cases (like if-else with no ending scopes
+		// inside) is implemented. For more info look at the big comment below.
 		//
 		// Context is unused, but left since it might be useful in the future.
 		// No lifetime analysis here, since it is quite complex.
@@ -98,6 +97,33 @@ namespace compiler::mir {
 			return BlockID(next_id_val++);
 		};
 
+		// lambdas used just to not duplicate code:
+		auto add_destructor_to_instr_vec
+			= [&](ScopeRef instr_scope, MIRLocalRef local, std::vector<Instruction>& instructions) {
+				  if (local->lifetime_flags.contains(LifetimeFlag::NoDestructor)) return;
+
+				  instructions.push_back(Instruction{
+					  Operation::DestructIf,
+					  {},
+					  { local },
+					  {
+						  OperationFlag{ .flag = OperationFlag::Flag::Destruct, .local = local },
+					  },
+					  instr_scope,
+				  });
+			  };
+
+		auto add_destructors_to_instr_vec
+			= [&](const auto& ending_scopes, std::vector<Instruction>& instructions) {
+				  for (const auto& scope: ending_scopes) {
+					  if (not locals_by_scope.contains(scope)) continue;
+					  auto& locals = locals_by_scope.at(scope);
+					  // Add destructors in reverse order.
+					  for (auto& local: locals | std::views::reverse)
+						  add_destructor_to_instr_vec(scope, local, instructions);
+				  }
+			  };
+
 
 		for (auto& block_id: function.block_order) {
 			// Add THIS block to our new block order.
@@ -108,34 +134,6 @@ namespace compiler::mir {
 
 			std::vector<Instruction> new_instructions;
 			new_instructions.reserve(block.instructions.size());
-
-			// lambdas used just to not duplicate code:
-			auto add_destructor_to_instr_vec = [&](ScopeRef                  instr_scope,
-			                                       MIRLocalRef               local,
-			                                       std::vector<Instruction>& instructions) {
-				if (local->lifetime_flags.contains(LifetimeFlag::NoDestructor)) return;
-
-				instructions.push_back(Instruction{
-					Operation::DestructIf,
-					{},
-					{ local },
-					{
-						OperationFlag{ .flag = OperationFlag::Flag::Destruct, .local = local },
-					},
-					instr_scope,
-				});
-			};
-
-			auto add_destructors_to_instr_vec
-				= [&](const auto& ending_scopes, std::vector<Instruction>& instructions) {
-					  for (const auto& scope: ending_scopes) {
-						  if (not locals_by_scope.contains(scope)) continue;
-						  auto& locals = locals_by_scope.at(scope);
-						  // Add destructors in reverse order.
-						  for (auto& local: locals | std::views::reverse)
-							  add_destructor_to_instr_vec(scope, local, instructions);
-					  }
-				  };
 
 
 			for (u64 i = 0; i < block.instructions.size(); i++) {
@@ -167,37 +165,54 @@ namespace compiler::mir {
 				bool                                          paths_identical  = true;
 				bool                                          boundary_crossed = false;
 				base::HashMap<BlockID, std::vector<ScopeRef>> ending_scopes_per_succ;
-				for (auto succ: successors) {
-					auto succ_begin_scope  = function.blocks[succ].beginScope();
-					auto succ_ending_scope = getEndingScopes(terminator.scope, succ_begin_scope);
-					auto succ_starting_scopes
-						= getStartingScopes(terminator.scope, succ_begin_scope);
 
-					if (!succ_ending_scope.empty() && !succ_starting_scopes.empty())
-						boundary_crossed = true;
+				for (auto succ: successors) {
+					auto succ_begin_scope   = function.blocks[succ].beginScope();
+					auto succ_ending_scopes = getEndingScopes(terminator.scope, succ_begin_scope);
+
+					if (!succ_ending_scopes.empty()) boundary_crossed = true;
 
 					// Opt: Check if all path lead to the same ending scope.
 					if (!first_path_ending_scopes.has_value())
-						first_path_ending_scopes = succ_ending_scope;
-					else if (*first_path_ending_scopes != succ_ending_scope)
+						first_path_ending_scopes = succ_ending_scopes;
+					else if (*first_path_ending_scopes != succ_ending_scopes)
 						paths_identical = false;
-					ending_scopes_per_succ.put(succ, std::move(succ_ending_scope));
+					ending_scopes_per_succ.put(succ, std::move(succ_ending_scopes));
 				}
 
-				if (paths_identical && boundary_crossed) {
+				// Opt: Appending destructors directly to the current block, without creating an
+				// intermediate is only safe when:
+				// - all paths have the ending scopes
+				// - either no boundary is crossed at all, or the only scope that ends here is the
+				//   terminator's scope. The first element of `getEndingScopes(terminator.scope)`
+				//   is always terminator.scope itself, so checking size() == 1 && front() ==
+				//   terminator.scope is equivalent to "the only ending scope is the terminator's".
+				//
+				// If we instead appended destructors from deeper scopes directly before the
+				// terminator, the second pass would observe a scope transition between those
+				// destructors and the terminator and would emit unneeded ScopeStart/ScopeEnd flags
+				// around it.
+				bool safe_to_opt = paths_identical
+				                && (!boundary_crossed
+				                    || (first_path_ending_scopes->size() == 1
+				                        && first_path_ending_scopes->front() == terminator.scope));
+
+				if (safe_to_opt) {
 					// Opt: If all paths require the same destructors we don't create a new block
 					// and insert them directly to the current block.
-					add_destructors_to_instr_vec(first_path_ending_scopes.value(), new_instructions);
-				} else if (!paths_identical) {
-					// Paths are not identical. Create a new block and insert destructors there.
+					if (boundary_crossed)
+						add_destructors_to_instr_vec(
+							first_path_ending_scopes.value(), new_instructions
+						);
+				} else {
+					// Paths are not identical or there would be a scope regression. Create a new
+					// block and insert destructors there.
 					for (auto succ: successors) {
-						auto  succ_begin_scope  = function.blocks[succ].beginScope();
-						auto& succ_ending_scope = ending_scopes_per_succ.at(succ);
-						auto  succ_starting_scopes
-							= getStartingScopes(terminator.scope, succ_begin_scope);
+						auto  succ_begin_scope   = function.blocks[succ].beginScope();
+						auto& succ_ending_scopes = ending_scopes_per_succ.at(succ);
 
 						// If no scope boundary is crossed, the edge is clean.
-						if (succ_ending_scope.empty() && succ_starting_scopes.empty()) continue;
+						if (succ_ending_scopes.empty()) continue;
 
 						// Otherwise we have crossed a scope boundary. We have to split the edge
 						// into an intermediate block.
@@ -210,7 +225,7 @@ namespace compiler::mir {
 							Operation::Nop, {}, {}, {}, terminator.scope });
 
 						// Add all needed destructors.
-						add_destructors_to_instr_vec(succ_ending_scope, new_block_instructions);
+						add_destructors_to_instr_vec(succ_ending_scopes, new_block_instructions);
 
 						Instruction new_block_terminator{
 							Operation::Jump, {}, { MIRValue(succ) }, {}, succ_begin_scope

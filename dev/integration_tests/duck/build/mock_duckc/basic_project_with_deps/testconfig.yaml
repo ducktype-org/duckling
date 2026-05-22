@@ -3,7 +3,7 @@ Tests:
     Description: can build a project with dependencies
     Cases:
       build:
-        test_cmd: -C foo build
+        test_cmd: duck -C foo build
         ExitCode: 1
         Output:
           String: 'info: successfully synchronized venv \`foo\`\n'
