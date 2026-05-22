@@ -15,6 +15,7 @@ RUN apt-get update -y && \
     pkg-config \
     xxd \
     ssh \
+    gh \
     # Python
     python3 \
     python3-pip \
