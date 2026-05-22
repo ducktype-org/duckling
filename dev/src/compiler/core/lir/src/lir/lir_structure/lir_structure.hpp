@@ -3,13 +3,13 @@
 #include "function_forward.hpp"  // IWYU pragma: keep
 
 #include <ctv/ctv.hpp>
-#include <frontend/pst_parser/stable_position.hpp>
+#include <diagnostic_interactive/stable_position.hpp>
 #include <helios/hout/hout_fd.hpp>
 #include <helios/symbols/symbol_abi.hpp>
 #include <helios/symbols/symbol_id.hpp>
 #include <mir/mir_structure/mir_local_ref.hpp>
 #include <mir/mir_structure/mir_metadata.hpp>
-#include <typesystem/lower/type_layout.hpp>
+#include <tsl/type_layout.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/collections/stable_container.hpp>
@@ -20,6 +20,7 @@
 #include <query_framework/context/context_fd.hpp>
 
 #include <memory>
+#include <ostream>
 #include <utility>
 
 // Doc style is intentional, caused by inexplicable funkiness in how Doxygen interacts with macros.
@@ -107,7 +108,22 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 	ReturnVoid,
 	ReturnValue,
 	Jump,
-	Branch
+	Branch,
+	
+	// Nop can be useful when lowering the instruction flags and MIR instr translates
+	// to zero instructions in LIR, but we want to have the flags in correct place.
+	Nop
+)
+
+/// A helper tag that indicates that a value has some special meaning
+/// that can be used by the lower layers.
+MAKE_STRINGIFYABLE_ENUM(compiler::lir, u32, LIRLocalSpecialKind,
+	/// Normal local.
+	Normal,
+	/// This is the return value temporary local.
+	ReturnValue,
+	/// This is a condition result temporary local.
+	ConditionTmp
 )
 
 namespace compiler::lir {
@@ -139,6 +155,17 @@ namespace compiler::lir {
 	};
 
 	/**
+	 * @brief Metadata for LIR local variables or function arguments.
+	 * Used by the backends for the DebugInfo.
+	 */
+	struct LIRLocalMetadata {
+		base::Optional<base::StrID>             source_code_name;
+		base::Optional<dia_int::StablePosition> position;
+	};
+
+	LIRLocalSpecialKind specialKindFromMIR(const mir::MIRLocal& mir_local);
+
+	/**
 	 * @brief Description of a LIR Local variable or function argument.
 	 * @note This structure should only be stored directly in LIR Function, as part of the
 	 * description of a function. Other uses should use LocalRef to reference the variable
@@ -157,26 +184,50 @@ namespace compiler::lir {
 		 */
 		base::Optional<u64> parameter_index;
 
+		LIRLocalMetadata metadata;
+
+		LIRLocalSpecialKind special_kind;
+
 	private:
 		LIRLocal(
 			const base::Optional<helios::SymID> helios_id,
 			const CRef<tsl::TypeLayout>         layout,
-			const base::Optional<u64>           parameter_index
+			const base::Optional<u64>           parameter_index,
+			LIRLocalMetadata                    metadata,
+			LIRLocalSpecialKind                 special_kind = LIRLocalSpecialKind::Normal
 		):
 			  helios_id(helios_id),
 			  layout(layout),
-			  parameter_index(parameter_index) {}
+			  parameter_index(parameter_index),
+			  metadata(metadata),
+			  special_kind(special_kind) {}
 
-		explicit LIRLocal(const CRef<tsl::TypeLayout> layout): helios_id({}), layout(layout) {}
+		explicit LIRLocal(const CRef<tsl::TypeLayout> layout):
+			  helios_id({}),
+			  layout(layout),
+			  special_kind(LIRLocalSpecialKind::Normal) {}
 
 		friend Function;
 		friend LIRLocalRef;
 
 	public:
 		/**
+		 * @brief Creates LIR local data from MIR local data.
+		 * @important remember that LIRLocal should only be stored in a LIR function.
 		 * @note Do not use this function outside of LIR lowering.
+		 *
+		 * @param ctx
+		 * @param mir_local
+		 * @param new_parameter_index If the local is a parameter, this should be its index in the
+		 * LIR function's parameter list. This is needed to adjust for discarded parameters with
+		 * information-less types.
+		 * @return LIRLocal
 		 */
-		static LIRLocal fromMIR(query::Context& ctx, mir::MIRLocalRef mir_local);
+		static LIRLocal fromMIR(
+			query::Context&     ctx,
+			mir::MIRLocalRef    mir_local,
+			base::Optional<u64> new_parameter_index = {}
+		);
 
 		/**
 		 * @brief Crates unique local with bool-type, and without
@@ -235,6 +286,9 @@ namespace compiler::lir {
 		 * value of the global.
 		 */
 		static LIRGlobal fromHOUT(query::Context& ctx, const helios::HOUTGlobalData& helios_id);
+
+
+		void debugPrint(query::Context& ctx, std::ostream& os) const;
 	};
 
 	/**
@@ -407,6 +461,14 @@ namespace compiler::lir {
 		const T& get() const {
 			return std::get<T>(value);
 		}
+
+		/**
+		 * @brief Whether a LIRValue holds a type T.
+		 */
+		template<class T>
+		[[nodiscard]] bool is() const {
+			return std::holds_alternative<T>(value);
+		}
 	};
 
 	/**
@@ -447,11 +509,26 @@ namespace compiler::lir {
 		= std::variant<NoInstrParameters, CastParameters, ListOperationParameters>;
 
 	struct InstructionMetadata {
-		base::Optional<pst::StablePosition> position;
+		base::Optional<dia_int::StablePosition> position;
 
 		InstructionMetadata(const mir::InstructionMetadata& other): position(other.position) {}
 
 		InstructionMetadata() = default;
+	};
+
+	/**
+	 * @brief The scope flags of the instruction.
+	 * It's a flag that indicates the start and end of a variable's scope,
+	 * for efficient local stack allocation in the backend.
+	 * The only user is for now the DVM Backend, which uses it to generate `init` and `deinit`
+	 * instructions.
+	 */
+	struct ScopeFlag {
+		enum class Flag { ScopeStart, ScopeEnd };
+		Flag        flag;
+		LIRLocalRef local;
+
+		bool operator==(const ScopeFlag& other) const = default;
 	};
 
 	/**
@@ -463,6 +540,8 @@ namespace compiler::lir {
 		std::vector<LIRValue>    arguments;
 		InstrParameters          extra_params{ NoInstrParameters{} };
 		InstructionMetadata      metadata;
+
+		std::vector<ScopeFlag> scope_flags;
 
 
 		Instruction()                       = default;
@@ -483,6 +562,11 @@ namespace compiler::lir {
 			  arguments(std::move(arguments)),
 			  extra_params(extra_parameters),
 			  metadata(metadata) {}
+
+		/**
+		 * Whether the instruction can be the last instruction in the block (i.e. be a terminator).
+		 */
+		[[nodiscard]] bool isTerminating() const;
 	};
 
 	/**
@@ -496,8 +580,8 @@ namespace compiler::lir {
 	};
 
 	struct FunctionMetadata {
-		base::Optional<pst::StablePosition> position;
-		base::Optional<base::StrID>         source_code_name;
+		base::Optional<dia_int::StablePosition> position;
+		base::Optional<base::StrID>             source_code_name;
 	};
 
 	/**

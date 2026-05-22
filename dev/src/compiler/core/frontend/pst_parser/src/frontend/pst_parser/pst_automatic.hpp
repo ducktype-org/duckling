@@ -7,9 +7,11 @@
  * value and skips it, otherwise it logs an error
  *  - for Identifier* it ensures the next token is an identifier and parses it to the specified
  * location and skips it, otherwise it logs an error
- *  - for OptionalIdentifier* it parses an identifier into the specified location and skips. If
- * There is no identifier next it doesn't do anything
+ *  - for Optional<AccessInternal<IdentifierWrapper>>* it parses an identifier into the specified
+ * location and skips. If There is no identifier next it doesn't do anything
  *  - for Box<T>* it calls the parser of T object into the specified location
+ *  - for AccessInternal(Anonymous)<T>* it calls the parser of T object into the specified location
+ * while doing additional work to connect it with the parent element.
  *
  * all() takes the state and any number of additional arguments and calls parseOne on those
  * arguments from left to right.
@@ -144,20 +146,6 @@ namespace pst {
 		}
 
 		/**
-		 * @brief Parses an identifier to @p result. Skips on success, does nothing on failure.
-		 * @param result The place to store the parsed identifier.
-		 */
-		PSTAutomatic& one(tpc::OptionalIdentifier* result) {
-			PST_AUTOMATIC_SKIP(*this);
-			if (state.ctokens().peek().isIdentifier()) {
-				el->addToken(state[0]);
-				result->position = state.getPosition();
-				result->value    = state.tokens().next().getValue();
-			}
-			return *this;
-		}
-
-		/**
 		 * @brief Parses a string to @p result. Skips on success, does nothing on failure.
 		 * @param result The place to store the parsed string.
 		 */
@@ -256,13 +244,27 @@ namespace pst {
 		}
 
 		/**
+		 * @brief Specialization for optional of identifier wrappers
+		 */
+		template<std::derived_from<LangElement> T, base::TemplateStringLiteral name>
+		requires std::same_as<T, IdentifierWrapper>
+		PSTAutomatic& one(base::Optional<AccessInternal<T, name>>* result) {
+			PST_AUTOMATIC_SKIP(*this);
+			if (state.ctokens().peek().isIdentifier()) with(result, T::parse);
+			return *this;
+		}
+
+		/**
 		 * @brief Assigned an already parsed subtree to a variable with all of the automation.
 		 *
 		 * @param sink Place to store the new value(works with optionals).
 		 * @param fun The value.
 		 */
-		template<std::derived_from<LangElement> El, base::TemplateStringLiteral name>
-		PSTAutomatic& assign(AccessInternal<El, name>* sink, MBox<El>&& sub_tree) {
+		template<
+			std::derived_from<LangElement> El,
+			base::TemplateStringLiteral    name,
+			std::derived_from<LangElement> El2>
+		PSTAutomatic& assign(AccessInternal<El, name>* sink, MBox<El2>&& sub_tree) {
 			if (sub_tree) {
 				sub_tree->setParent(el);
 				std::string str_name(name.value);
@@ -278,8 +280,11 @@ namespace pst {
 		 * @param sink Place to store the new value(works with optionals).
 		 * @param fun The value.
 		 */
-		template<std::derived_from<LangElement> El, base::TemplateStringLiteral name>
-		PSTAutomatic& assign(base::Optional<AccessInternal<El, name>>* sink, MBox<El>&& sub_tree) {
+		template<
+			std::derived_from<LangElement> El,
+			base::TemplateStringLiteral    name,
+			std::derived_from<LangElement> El2>
+		PSTAutomatic& assign(base::Optional<AccessInternal<El, name>>* sink, MBox<El2>&& sub_tree) {
 			if (sub_tree) {
 				sub_tree->setParent(el);
 				std::string str_name(name.value);
@@ -295,8 +300,8 @@ namespace pst {
 		 * @param sink Place to store the new value(works with optionals).
 		 * @param fun The value.
 		 */
-		template<std::derived_from<LangElement> El>
-		PSTAutomatic& assign(AccessInternalAnonymous<El>* sink, MBox<El>&& sub_tree) {
+		template<std::derived_from<LangElement> El, std::derived_from<LangElement> El2>
+		PSTAutomatic& assign(AccessInternalAnonymous<El>* sink, MBox<El2>&& sub_tree) {
 			if (sub_tree) {
 				sub_tree->setParent(el);
 				el->addChild(sub_tree);
@@ -311,8 +316,10 @@ namespace pst {
 		 * @param sink Place to store the new value(works with optionals).
 		 * @param fun The value.
 		 */
-		template<std::derived_from<LangElement> El>
-		PSTAutomatic& assign(base::Optional<AccessInternalAnonymous<El>>* sink, MBox<El>&& sub_tree) {
+		template<std::derived_from<LangElement> El, std::derived_from<LangElement> El2>
+		PSTAutomatic& assign(
+			base::Optional<AccessInternalAnonymous<El>>* sink, MBox<El2>&& sub_tree
+		) {
 			if (sub_tree) {
 				sub_tree->setParent(el);
 				el->addChild(sub_tree);

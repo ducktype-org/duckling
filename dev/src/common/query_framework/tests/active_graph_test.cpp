@@ -86,6 +86,7 @@ private:
 		);
 
 		auto node_ids_fixtures = generateNodeIDs(TEST_NODE_COUNT);
+		auto context_fixture = query::internal::ContextAccess::makeShared(node_ids_fixtures.at(0));
 
 		// We spawn THREAD_COUNT threads that will concurrently create a full cycle
 
@@ -103,7 +104,7 @@ private:
 			threads.emplace_back([&, range_begin, range_end]() {
 				for (u64 i = range_begin; i < range_end; ++i) {
 					const auto& node_id = node_ids_fixtures[i];
-					active_graph.putNode(node_id);
+					active_graph.putNode(node_id, context_fixture);
 					active_graph.setEdge(
 						node_id, node_ids_fixtures[(i + 1) % node_ids_fixtures.size()]
 					);
@@ -152,20 +153,21 @@ private:
 		query::internal::ActiveGraph active_graph;
 
 		auto node_ids_fixtures = generateNodeIDs(2);
+		auto context_fixture = query::internal::ContextAccess::makeShared(node_ids_fixtures.at(0));
 
 		// empty graph sanity checks:
 		auto was_cycle_empty = active_graph.cycleCheck(node_ids_fixtures.at(0));
 		ASSERT_TRUE(was_cycle_empty.empty());
 
 		// edge to itself:
-		active_graph.putNode(node_ids_fixtures.at(0));
+		active_graph.putNode(node_ids_fixtures.at(0), context_fixture);
 		active_graph.setEdge(node_ids_fixtures.at(0), node_ids_fixtures.at(0));
 		auto was_cycle_loop = active_graph.cycleCheck(node_ids_fixtures.at(0));
 		ASSERT_TRUE(was_cycle_loop.has_value());
 		ASSERT_TRUE(was_cycle_loop.value().cycle_nodes.size() == 1);
-		ASSERT_TRUE(was_cycle_loop.value().cycle_nodes.at(0) == node_ids_fixtures.at(0));
+		ASSERT_TRUE(was_cycle_loop.value().cycle_nodes.at(0).node_id == node_ids_fixtures.at(0));
 
-		active_graph.putNode(node_ids_fixtures.at(1));
+		active_graph.putNode(node_ids_fixtures.at(1), context_fixture);
 		active_graph.setEdge(node_ids_fixtures.at(1), node_ids_fixtures.at(0));
 		auto was_cycle_loop_indirect = active_graph.cycleCheck(node_ids_fixtures.at(1));
 		ASSERT_TRUE(was_cycle_loop_indirect.empty());

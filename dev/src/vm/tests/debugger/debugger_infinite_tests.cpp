@@ -48,35 +48,36 @@ private:
 		// work correctly.
 		auto execution_position
 			= vm::api::waitForBreakpoint(pid).value();  // "Wait for breakpoint failed (1)"
-		assertEqual(1, execution_position.instr_number, "Line number is not correct");
+		ASSERT_EQUAL_PRINT(1, execution_position.instr_number);
 
 		vm::api::resume(pid).value();                 // "Resume failed (1)"
 		auto position = vm::api::pause(pid).value();  // "Pause failed (1)"
-		assertTrue(
-			3 <= position.instr_number && position.instr_number <= 4, "Line number is not correct"
-		);
+		ASSERT_EQUAL_PRINT(position.instr_number, 5);
 
 		auto expected_next_line = [this](u64 x) -> u64 {
-			if (x == 3) return 4;
-			if (x == 4) return 3;
-			this->fail("Unexpected line number");
+			if (x == 4) return 5;
+			if (x == 5) return 4;
+			this->fail("Unexpected line number: " + std::to_string(x));
 			CORE_UNREACHABLE();
 		};
 
 		auto line_number2 = stepAndGetLine(pid);
-		assertEqual(
-			expected_next_line(position.instr_number), line_number2, "Line number is not correct (2)"
-		);
+		ASSERT_EQUAL_PRINT(expected_next_line(position.instr_number), line_number2);
 
 		auto line_number3 = stepAndGetLine(pid);
-		assertEqual(
-			expected_next_line(line_number2), line_number3, "Line number is not correct (3)"
-		);
+		ASSERT_EQUAL_PRINT(expected_next_line(line_number2), line_number3);
 
 		auto line_number4 = stepAndGetLine(pid);
-		assertEqual(
-			expected_next_line(line_number3), line_number4, "Line number is not correct (4)"
-		);
+		ASSERT_EQUAL_PRINT(expected_next_line(line_number3), line_number4);
+
+		auto line_number5 = stepAndGetLine(pid);
+		ASSERT_EQUAL_PRINT(expected_next_line(line_number4), line_number5);
+
+		auto line_number6 = stepAndGetLine(pid);
+		ASSERT_EQUAL_PRINT(expected_next_line(line_number5), line_number6);
+
+		auto line_number7 = stepAndGetLine(pid);
+		ASSERT_EQUAL_PRINT(expected_next_line(line_number6), line_number7);
 
 		vm::api::resume(pid).value();  // "Resume failed (1)"
 

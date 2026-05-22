@@ -28,7 +28,10 @@ namespace pst {
 		for (auto& element: elements) {
 			IF_BUILD_TYPE_DEV({
 				std::string path = element.illegalAccess().value()->getElementPathHash().str();
-				if (paths.contains(path)) return base::BAD;
+				if (paths.contains(path)) {
+					std::cerr << "BAD path: " << path << "\n";
+					return base::BAD;
+				}
 				paths.insert(path);
 			});
 

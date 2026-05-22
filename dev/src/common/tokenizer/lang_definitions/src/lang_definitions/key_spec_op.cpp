@@ -14,6 +14,8 @@ namespace lang_def {
 
 	void setKeywordMode(KeywordMode mode) { keyword_mode = mode; }
 
+	KeywordMode getKeywordMode() { return keyword_mode; }
+
 	base::StrID makeStrID(std::string_view view) {
 		return base::StrID(base::RawView({ reinterpret_cast<const byte*>(view.data()), view.size() }
 		));
@@ -146,6 +148,8 @@ namespace lang_def {
 			{ Keyword::Extends, "extends", KeywordFlags() },
 			{ Keyword::Implements, "implements", KeywordFlags() },
 			{ Keyword::Self, "self", KeywordFlags() },
+
+			{ Keyword::Destroy, "destroy", KeywordFlags() },
 		});
 
 	constexpr auto BC_KEYWORDS_ARRAY

@@ -1,0 +1,11 @@
+PostCase: python3 check.py
+
+Tests:
+  sync:
+    Description: can sync a project with dependency and conditions
+    Cases:
+      sync:
+        test_cmd: duck -C foo sync
+        Output:
+          String: 'info: successfully synchronized venv \`foo\`\n'
+        

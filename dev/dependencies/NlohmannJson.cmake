@@ -1,6 +1,6 @@
 include(FetchContent)
 
-set(NLOHMANN_JSON_TAG "v3.12.0")
+set(NLOHMANN_JSON_TAG "v3.12.0")  # released 2025-04-11
 
 FetchContent_Declare(
 	nlohmann_json

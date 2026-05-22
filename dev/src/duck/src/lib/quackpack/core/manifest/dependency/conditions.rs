@@ -1,9 +1,9 @@
 //! Conditions describing whether a dependency should be enabled.
 use std::collections::HashSet;
 
-use crate::QuackError;
+use crate::quackpack::core::FeatureName;
 use crate::quackpack::schemas::registry;
-use crate::{QuackResult, StrId, qp_bail, quackpack::core::FeatureName};
+use crate::{QuackError, QuackResult, StrId, qp_bail};
 
 #[derive(Clone, Debug)]
 /// Conditions required by a dependency or a feature flag in order to be enabled.
@@ -29,7 +29,7 @@ impl Conditions {
             Ok(())
         }
 
-        check_non_empty(&required_root_package_features, "package_features")?;
+        check_non_empty(&required_root_package_features, "package-features")?;
         Ok(Self {
             required_root_package_features,
         })
@@ -101,7 +101,7 @@ mod tests {
         let result = Conditions::new(Some(vec![]));
         assert_eq!(
             result.unwrap_err().to_string(),
-            "the field `package_features` is present but empty, if you don't want to specify it, remove it from the manifest"
+            "the field `package-features` is present but empty, if you don't want to specify it, remove it from the manifest"
         );
     }
 

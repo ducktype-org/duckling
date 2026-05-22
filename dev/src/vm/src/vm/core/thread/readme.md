@@ -1,5 +1,5 @@
 # DVM — VMThread and VMValue module
-## [`VMThread`](./vmthread.hpp)
+## [`VMThread`](./safe_vmthread.hpp)
 The `VMThread` is the primary execution engine of DVM. While a `VMProcess` manages the overall environment
 for a program, the `VMThread` is the component that actually interprets and executes the
 [low-level bytecode](./low_program/low_program.hpp) instructions, one by one. Each `VMThread` represents
@@ -40,7 +40,7 @@ provides a executor architectures :
       // instr_t *instr - instruction pointer
       // std::byte *stack - local stack
       // frame_t *frame - current frame
-      static u64 op_mov_l64_imm(const MicroInstruction*& instr, std::byte*& stack, Frame*& frame, VMThread& thread) {
+      static u64 op_mov_p64_imm(const MicroInstruction*& instr, std::byte*& stack, Frame*& frame, VMThread& thread) {
         deref<u64>(stack, instr->arg0) = instr->arg1;
         // instr[1].fn is a pointer to the implementation of the next instruction.
         return instr[1].fn(&instr[1], stack, frame, thread);

@@ -19,13 +19,8 @@ namespace vm::code {
 #define LOCAL_TO_STRING(Tp) \
 	std::string toString(vm::opargs::Tp arg) { return arg.var_name.str(); }
 
-	FOR_EACH(LOCAL_TO_STRING, VM_OPARG_LOCAL_TYPES);
+	FOR_EACH(LOCAL_TO_STRING, VM_OPARG_PLACE_TYPES);
 #undef LOCAL_TO_STRING
-
-#define GLOBAL_TO_STRING(Tp) \
-	std::string toString(vm::opargs::Tp arg) { return arg.global_data_name.str(); }
-
-	FOR_EACH(GLOBAL_TO_STRING, VM_OPARG_GLOBAL_TYPES);
 
 	std::string toString(opargs::Type arg) { return arg.type_name.str(); }
 
@@ -113,7 +108,14 @@ namespace vm::code {
 				out << param.str.strView();
 				first = false;
 			}
-			out << " } -> " << function.signature.result_type.str.strView() << " {\n";
+			out << " } -> { ";
+			first = true;
+			for (const auto& param: function.signature.result_types) {
+				if (!first) out << ", ";
+				out << param.str.strView();
+				first = false;
+			}
+			out << " } {\n";
 
 			indentUp();
 			displayCode();
@@ -132,7 +134,7 @@ namespace vm::code {
 			void operator()(const PrimitiveType& type) const {
 				out << "type primitive: ";
 				out << type.name.strView() << " ";
-				out << type.size;
+				out << type.size.asInt();
 			}
 
 			void operator()(const PointerType& type) const {
@@ -154,8 +156,12 @@ namespace vm::code {
 				out << type.inner.strView();
 			}
 
-			void operator()(const DataType&) const {
-				throw base::NotYetImplemented("DataType serialization");
+			void operator()(const DataType& type) const {
+				out << "type data: ";
+				out << type.name.strView() << " {\n";
+				for (auto field: type.fields)
+					out << "    " << field.name.strView() << ": " << field.type.strView() << ",\n";
+				out << "}\n";
 			}
 
 			void operator()(const VariantType&) const {
@@ -165,30 +171,34 @@ namespace vm::code {
 			void operator()(const FunctionType& fun) const {
 				// type fun: main {} int64
 				out << "type fun: ";
-				out << fun.name.strView() << " {";
+				out << fun.name.strView() << " { ";
 				bool first = true;
 				for (const auto& param: fun.parameters) {
-					if (first)
-						out << " ";
-					else
-						out << ", ";
+					if (!first) out << ", ";
 					out << param.strView();
 					first = false;
 				}
-				out << " } -> " << fun.result.strView();
+				out << " } -> { ";
+				first = true;
+				for (const auto& reslts: fun.result) {
+					if (!first) out << ", ";
+					out << reslts.strView();
+					first = false;
+				}
+				out << " }";
 			}
 
 			void operator()(const OpaqueType& type) const {
 				out << "type opaque: ";
 				out << type.name.strView() << " ";
-				out << type.size;
+				out << type.size.asInt();
 			}
 
 			void operator()(const ClassType& clazz) const {
 				out << "type class:  " << clazz.name.strView() << "{\n";
 				out << "    fields: [";
 				for (auto field: clazz.fields)
-					out << field.name.strView() << ": " << field.name.strView() << ", ";
+					out << field.name.strView() << ": " << field.type.strView() << ", ";
 				out << "]\n";
 				out << "    abstract: " << clazz.is_abstract << ";\n";
 				if (clazz.extends.has_value())
@@ -248,30 +258,30 @@ namespace vm::code {
 		}
 	};
 
-	void serialize(const Function& function, std::ostream& out) {
+	void serializeFunction(const Function& function, std::ostream& out) {
 		FunctionSerializer serializer(out, function);
 		serializer.display();
 		out << '\n';
 	}
 
-	void serialize(const TypeOfData& type, std::ostream& out) {
+	void serializeType(const TypeOfData& type, std::ostream& out) {
 		TypeSerializer serializer(out, type);
 		serializer.display();
 		out << '\n';
 	}
 
-	void serialize(const GlobalData& global_data, std::ostream& out) {
+	void serializeGlobal(const GlobalData& global_data, std::ostream& out) {
 		GlobalDataSerializer serializer(out, global_data);
 		serializer.display();
 		out << '\n';
 	}
 
-	void serialize(const CodeCollection& code, std::ostream& out) {
-		for (const auto& type: code.types) serialize(type, out);
+	void serializeCode(const CodeCollection& code, std::ostream& out) {
+		for (const auto& type: code.types) serializeType(type, out);
 		out << '\n';
-		for (const auto& global_data: code.global_data) serialize(global_data, out);
+		for (const auto& global_data: code.global_data) serializeGlobal(global_data, out);
 		out << '\n';
-		for (const auto& func: code.functions) serialize(func, out);
+		for (const auto& func: code.functions) serializeFunction(func, out);
 		out << '\n';
 	}
 

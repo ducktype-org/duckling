@@ -8,9 +8,13 @@
 #include "../visitors.hpp"
 
 #include <concurrent/base/collections/hash_map.hpp>
+#include <helios/mangler/mangler.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
+#include <helios/symbols/symbol_id.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
-#include <typesystem/higher/queries.hpp>
+#include <helios/tsh/queries.hpp>
+#include <helios_private/symbols/generated_symbol_data.hpp>
+#include <helios_private/symbols/symbols.hpp>
 
 #include <query_framework/context/context.hpp>
 
@@ -534,15 +538,24 @@ namespace compiler::helios::code {
 			  },
 			  origin
 		  ),
-		  elements(std::move(elements)) {}
+		  elements(std::move(elements)),
+		  tuple_ctor_symbol(ctx.query<defgen::QueryGeneratedSymbol>(
+			  { .name = ctx.query<mangler::QueryMangledType>(expression_type.getSymbolType())
+	                        ->valueOrThrow(),
+	            .generated_symbol_data
+	            = defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::ImplicitConstructor{
+					expression_type.getType() } } }
+		  )) {}
 
 	TupleExpr::TupleExpr(
 		tsh::ExpressionType<>        expression_type,
 		ElementOrigin                origin,
-		std::vector<base::Box<Expr>> elements
+		std::vector<base::Box<Expr>> elements,
+		SymID                        tuple_ctor_symbol
 	):
 		  Expr(expression_type, origin),
-		  elements(std::move(elements)) {}
+		  elements(std::move(elements)),
+		  tuple_ctor_symbol(tuple_ctor_symbol) {}
 
 	void TupleExpr::debugPrint(std::ostream& out) const {
 		out << "(";
@@ -558,7 +571,7 @@ namespace compiler::helios::code {
 		std::vector<base::Box<Expr>> elements;
 		elements.reserve(this->elements.size());
 		for (const auto& elem: this->elements) elements.push_back(elem->clone());
-		return makeBox<TupleExpr>(expression_type, origin, std::move(elements));
+		return makeBox<TupleExpr>(expression_type, origin, std::move(elements), tuple_ctor_symbol);
 	}
 
 	VariantTypeConstructorExpr::VariantTypeConstructorExpr(
@@ -1024,14 +1037,22 @@ namespace compiler::helios::code {
 		return makeBox<DerefExpr>(expression_type, origin, inner->clone());
 	}
 
-	DefaultValueExpr::DefaultValueExpr(query::Context&, ElementOrigin origin, tsh::SymbolType<> type):
+	DefaultValueExpr::DefaultValueExpr(query::Context&, ElementOrigin origin, tsh::AbstractType type):
 		  Expr(
-			  tsh::ExpressionType<>(type, tsh::ValueCategory(tsh::PrimaryCategory::Literal)), origin
+			  tsh::ExpressionType<>(
+				  tsh::SymbolType<>{
+					  type,
+					  tsh::ReferenceKind::Direct,
+					  tsh::Mutability::Immutable,
+				  },
+				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
+			  ),
+			  origin
 		  ),
 		  type(type) {}
 
 	DefaultValueExpr::DefaultValueExpr(
-		tsh::ExpressionType<> expression_type, ElementOrigin origin, tsh::SymbolType<> type
+		tsh::ExpressionType<> expression_type, ElementOrigin origin, tsh::AbstractType type
 	):
 		  Expr(expression_type, origin),
 		  type(type) {}

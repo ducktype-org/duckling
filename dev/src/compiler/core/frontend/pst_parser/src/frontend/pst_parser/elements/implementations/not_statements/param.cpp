@@ -36,7 +36,6 @@ namespace pst {
 	}
 
 	HashAlg& Param::addElementDataToStableHash(HashAlg& partial_hash) const {
-		addToHash(partial_hash, name);
 		addToHash(partial_hash, initial.has_value());
 		return partial_hash;
 	}

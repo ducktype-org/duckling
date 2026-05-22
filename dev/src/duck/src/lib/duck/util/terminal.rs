@@ -1,17 +1,27 @@
-use std::fmt::Display;
-use std::io::Read;
-use std::io::Write;
+use std::fmt::{self, Display};
+use std::io::{Read, Write};
+use std::str::FromStr;
 
 use console::{Term, WithoutAnsi, colors_enabled, colors_enabled_stderr, style};
+use dialoguer::Input;
 
 use crate::duck::util::indent::indent;
+use crate::{QuackResult, QuackResultContext};
 
-#[derive(Debug)]
 /// A struct which is responsible for printing to stdout/stderr.
 pub struct Terminal {
     term: Term,
     verbosity: Verbosity,
     colors_enabled: bool,
+}
+
+impl fmt::Debug for Terminal {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Terminal")
+            .field("verbosity", &self.verbosity)
+            .field("colors_enabled", &self.colors_enabled)
+            .finish_non_exhaustive()
+    }
 }
 
 #[derive(Debug, Default)]
@@ -34,7 +44,7 @@ macro_rules! delegate_styles {
         /// Print a
         #[doc = stringify!($name)]
         /// message to the terminal.
-       pub fn $name(&self, text: impl ::std::fmt::Display) {
+       pub fn $name(&self, text: impl ::std::fmt::Display) -> QuackResult<()> {
            let full_text = format!("{} {}", style($value)$(.$opt())*, text);
            let full_text = indent_without_first_line(full_text, $value.len() + 1);
            self.print(full_text)
@@ -44,7 +54,7 @@ macro_rules! delegate_styles {
         /// Print a verbose
         #[doc = stringify!($name)]
         /// message to the terminal.
-       pub fn $verbose(&self, text: impl ::std::fmt::Display) {
+       pub fn $verbose(&self, text: impl ::std::fmt::Display) -> QuackResult<()> {
            let full_text = format!("{} {}", style($value)$(.$opt())*, text);
            let full_text = indent_without_first_line(full_text, $value.len() + 1);
            self.print_verbose(full_text)
@@ -98,26 +108,27 @@ impl Terminal {
     /// Print a generic message to the terminal.
     ///
     /// If [`Verbosity`] is [`Quiet`](Verbosity::Quiet), this has no effect.
-    pub fn print(&self, text: impl Display) {
+    pub fn print(&self, text: impl Display) -> QuackResult<()> {
         if self.verbosity.is_quiet() {
-            return;
+            return Ok(());
         }
 
         let text = text.to_string();
         if !self.colors_enabled {
-            let _ = self.term.write_line(&WithoutAnsi::new(&text).to_string());
+            self.term.write_line(&WithoutAnsi::new(&text).to_string())
         } else {
-            let _ = self.term.write_line(&text);
+            self.term.write_line(&text)
         }
+        .context("failed to print a message")
     }
 
     #[inline]
     /// Print a generic verbose message to the terminal.
     ///
     /// If [`Verbosity`] is not [`Verbose`](Verbosity::Verbose), this has no effect.
-    pub fn print_verbose(&self, text: impl Display) {
+    pub fn print_verbose(&self, text: impl Display) -> QuackResult<()> {
         if !self.verbosity.is_verbose() {
-            return;
+            return Ok(());
         }
         self.print(text)
     }
@@ -125,42 +136,42 @@ impl Terminal {
     delegate_styles! {
         FunctionName: error,
         VerboseName: error_verbose,
-        Prefix: "Error:",
+        Prefix: "error:",
         OptionalStyles: red + bold,
     }
 
     delegate_styles! {
         FunctionName: warning,
         VerboseName: warning_verbose,
-        Prefix: "Warning:",
+        Prefix: "warning:",
         OptionalStyles: yellow + bold,
     }
 
     delegate_styles! {
         FunctionName: info,
         VerboseName: info_verbose,
-        Prefix: "Info:",
+        Prefix: "info:",
         OptionalStyles: cyan + bold,
     }
 
     delegate_styles! {
         FunctionName: note,
         VerboseName: note_verbose,
-        Prefix: "Note:",
+        Prefix: "note:",
         OptionalStyles: cyan + bold,
     }
 
     delegate_styles! {
         FunctionName: hint,
         VerboseName: hint_verbose,
-        Prefix: "Hint:",
+        Prefix: "hint:",
         OptionalStyles: cyan + bold,
     }
 
     delegate_styles! {
         FunctionName: critical,
         VerboseName: critical_verbose,
-        Prefix: "Critical:",
+        Prefix: "critical:",
         OptionalStyles: red + bold + reverse,
     }
 
@@ -172,6 +183,62 @@ impl Terminal {
     /// Get the underlying [`Term`] used for printing.
     pub fn term(&self) -> &Term {
         &self.term
+    }
+
+    /// Get a [`String`] input from the user.
+    pub fn prompt_once(&self, prompt: impl Into<String>) -> QuackResult<String> {
+        Ok(Input::new()
+            .with_prompt(prompt)
+            .interact_text_on(&self.term)?)
+    }
+
+    /// Get a [`String`] input from the user, with a default value supplied.
+    pub fn prompt_once_with_default(
+        &self,
+        prompt: impl Into<String>,
+        default: String,
+    ) -> QuackResult<String> {
+        Ok(Input::new()
+            .with_prompt(prompt)
+            .default(default)
+            .interact_text_on(&self.term)?)
+    }
+
+    /// Prompt user for an input until it can be correctly deserialized.
+    pub fn prompt_until_valid<T>(&self, prompt: impl Into<String> + Clone) -> T
+    where
+        T: ToString + FromStr + Clone,
+        <T as std::str::FromStr>::Err: std::fmt::Display,
+    {
+        loop {
+            let input = Input::<'_, T>::new()
+                .with_prompt(prompt.clone())
+                .interact_text_on(&self.term);
+            if let Ok(t) = input {
+                return t;
+            }
+        }
+    }
+
+    /// Prompt user for an input until it can be correctly deserialized, with a default value supplied.
+    pub fn prompt_until_valid_with_default<T>(
+        &self,
+        prompt: impl Into<String> + Clone,
+        default: T,
+    ) -> T
+    where
+        T: ToString + FromStr + Clone,
+        <T as std::str::FromStr>::Err: std::fmt::Display,
+    {
+        loop {
+            let input = Input::<'_, T>::new()
+                .with_prompt(prompt.clone())
+                .default(default.clone())
+                .interact_text_on(self.term());
+            if let Ok(t) = input {
+                return t;
+            }
+        }
     }
 }
 

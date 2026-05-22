@@ -8,10 +8,10 @@
 #include <helios/hout/hout.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/mangler/mangler.hpp>
+#include <helios/tsh/queries/types.hpp>
 #include <mir_private/expr_lowering.hpp>
 #include <mir_private/mir_builders.hpp>
 #include <mir_private/stmt_lowering.hpp>
-#include <typesystem/higher/queries/types.hpp>
 
 #include <base/str/str_utils.hpp>
 
@@ -30,7 +30,7 @@ namespace compiler::mir {
 	}
 
 	u64 KeyOf_LowerGlobalDataToMIRFunction::queryUnstablePerfectHash() const {
-		return global_data.helios_symbol.queryUnstablePerfectHash();
+		return global_data->helios_symbol.queryUnstablePerfectHash();
 	}
 
 	/**
@@ -49,6 +49,8 @@ namespace compiler::mir {
 		 * variables.
 		 */
 		void goOverCodeBlock(const hc::CodeBlock& code_block) {
+			// This order is important for the correct order of the destructors and
+			// scoping flags.
 			for (const auto& stmt: code_block.statements) stmt->acceptVisitor(*this);
 		}
 
@@ -93,6 +95,8 @@ namespace compiler::mir {
 		}
 
 		void visitWhileStmt(const hc::WhileStmt& stmt) override { goOverCodeBlock(stmt.body); }
+
+		void visitBlockStmt(const hc::BlockStmt& stmt) override { goOverCodeBlock(stmt.body); }
 
 		// Explicit empty boilerplate. Expected changes when block expressions are implemented.
 
@@ -195,22 +199,25 @@ namespace compiler::mir {
 			function.blocks[last_block_id].terminator.operation = Operation::ReturnVoid;
 			return function;
 		} else {
-			ctx.logInt(makeBox<dia_int::PlaceholderHeaderError>(base::strConcat(
-				"The function `",
-				function.name,
-				"` is missing a return statement or does not always return."
-			)));
+			ctx.logInt(makeBox<dia_int::PlaceholderError>(
+				base::strConcat(
+					"The function `",
+					function.name,
+					"` is missing a return statement or does not always return."
+				),
+				""
+			));
 			return query::Failed();
 		}
 	}
 
 	struct IMPLEMENT_QUERY(LowerGlobalDataToMIRCtor, LowerGlobalDataToMIRFunctionResult) {
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
-			if (std::holds_alternative<helios::HOUTGlobalConst>(key.global_data.value))
+			if (std::holds_alternative<helios::HOUTGlobalConst>(key.global_data->value))
 				CORE_PANIC("Creating ctors for constant variables are not implemented yet.");
 
 			auto global_init_expr
-				= std::get<helios::HOUTGlobalVariable>(key.global_data.value).initial_value->ref();
+				= std::get<helios::HOUTGlobalVariable>(key.global_data->value).initial_value.ref();
 
 			auto function_type = ctx.query<tsh::QueryFunctionType>({
 				{},
@@ -224,10 +231,10 @@ namespace compiler::mir {
 			// first step: lowering to pre-mir (cfg+quad)
 			// create function builder
 			FunctionBuilder function_builder{ ctx,
-				                              GlobalVariableCTOR{ key.global_data.helios_symbol },
+				                              GlobalVariableCTOR{ key.global_data->helios_symbol },
 				                              function_type };
 			function_builder.setName(base::StrID(
-				base::strConcat("constructor_of_", key.global_data.original_name.strView()).c_str()
+				base::strConcat("constructor_of_", key.global_data->original_name.strView()).c_str()
 			));
 
 			auto last_block = function_builder.newBlock();
@@ -246,7 +253,7 @@ namespace compiler::mir {
 
 			assign_instr.fill(Instruction{
 				Operation::Assign,
-				{ MIRGlobal({ key.global_data.helios_symbol, key.global_data.type }) },
+				{ MIRGlobal({ key.global_data->helios_symbol, key.global_data->type }) },
 				{ lowerexpr_res.getResult(function_builder) },
 				{},
 				function_builder.getTopLevelScope(),
@@ -257,7 +264,8 @@ namespace compiler::mir {
 			auto function_no_lifetime = function_builder.build();
 
 			// second step: lifetime stuff
-			auto function_with_destructors = addDestructors(ctx, std::move(function_no_lifetime));
+			auto function_with_destructors
+				= runAllLifetimePasses(ctx, std::move(function_no_lifetime));
 
 			// eliminating unreachable blocks
 			auto function_reachable = eliminateUnreachable(std::move(function_with_destructors));
@@ -278,7 +286,8 @@ namespace compiler::mir {
 			auto function_no_lifetime = lowerToPreMIRFunction(ctx, key.function);
 
 			// second step: lifetime stuff
-			auto function_with_destructors = addDestructors(ctx, std::move(function_no_lifetime));
+			auto function_with_destructors
+				= runAllLifetimePasses(ctx, std::move(function_no_lifetime));
 
 			// eliminating unreachable blocks
 			auto function_reachable = eliminateUnreachable(std::move(function_with_destructors));

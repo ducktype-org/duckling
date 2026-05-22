@@ -1,13 +1,11 @@
-use tempfile::{TempDir, tempdir};
-
 use git2::{DescribeOptions, IndexAddOption, Repository, Signature};
+use tempfile::{TempDir, tempdir};
 use url::Url;
 
-use crate::{
-    DuckCtx,
-    quackpack::core::{BranchOrTag, Git, PackageLoader, fetcher::git::GitClient},
-    util_common::path_ops_ext::PathOpsExt,
-};
+use crate::DuckContext;
+use crate::quackpack::core::fetcher::git::GitClient;
+use crate::quackpack::core::{BranchOrTag, Git, PackageLoader};
+use crate::util::path_ops_ext::PathOpsExt;
 
 fn generate_local_git_repo() -> TempDir {
     let tmpdir = tempdir().unwrap();
@@ -20,9 +18,10 @@ fn generate_local_git_repo() -> TempDir {
     manifest
         .as_path()
         .write(
-            "metadata:
+            "\
+metadata:
   name: fixtured_git_dependency
-  version: 1",
+  version: '1'",
         )
         .unwrap();
 
@@ -62,7 +61,7 @@ fn clone_local_repo() {
         None,
     );
 
-    let ctx = DuckCtx::default();
+    let ctx = DuckContext::default();
     let _ = GitClient::clone_blocking(&source, &target, &ctx).unwrap();
 
     assert!(target.exists());
@@ -85,7 +84,7 @@ fn clone_local_repo_with_branch() {
         None,
     );
 
-    let ctx = DuckCtx::default();
+    let ctx = DuckContext::default();
     let _ = GitClient::clone_blocking(&source, &target, &ctx).unwrap();
 
     let repo = Repository::open(&target).unwrap();
@@ -103,7 +102,7 @@ fn clone_local_repo_with_tag() {
         None,
     );
 
-    let ctx = DuckCtx::default();
+    let ctx = DuckContext::default();
     let _ = GitClient::clone_blocking(&source, &target, &ctx).unwrap();
 
     let repo = Repository::open(&target).unwrap();
@@ -129,7 +128,7 @@ fn clone_local_repo_with_rev() {
         BranchOrTag::Default,
         Some(original_commit.id().to_string().into()),
     );
-    let ctx = DuckCtx::default();
+    let ctx = DuckContext::default();
     let _ = GitClient::clone_blocking(&source, &target, &ctx).unwrap();
 
     let repo = Repository::open(&target).unwrap();

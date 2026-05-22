@@ -1,10 +1,16 @@
 load_cargo: . ${CARGO_HOME:-$HOME/.cargo}/env
 cwd_duck_root: cd `git rev-parse --show-toplevel`/dev/src/duck/
 build_duck: cargo --locked build
-duck_exe_path: '`git rev-parse --show-toplevel`/dev/src/duck/target/debug/duck'
-color: never
+duck_exe_dir: '`git rev-parse --show-toplevel`/dev/src/duck/target/debug/'
 prepare: ""
 before_cmd: "true"
+
+# Sometimes we hit a test timeout in itests, but only in CI.
+# It's because when we create a fetcher cache (an SQLite database), we execute a statement to create a basic table.
+# This causes SQLite to create a file and some other stuff. It also calls fsync on a parent directory.
+# This can be slow in CI/CD running under Docker, so increase artificially the timeout.
+# 5 seconds seems to be enough.
+timeout_default: 5
 
 PreNode: |
   @{load_cargo}
@@ -15,7 +21,10 @@ PreNode: |
 PreTest: |
   @{prepare}
 
-Run: bash -c "@{before_cmd} && @{duck_exe_path} --color=@{color} @{test_cmd}"
+Run: '@{before_cmd} && export PATH="@{duck_exe_dir}:$PATH" && @{test_cmd}'
 
 SubDirs:
   - cli
+  - sync
+  - init
+  - build

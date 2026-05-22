@@ -1,0 +1,15 @@
+Tests:
+  init:
+    Description: name/path is required
+    Cases:
+      init:
+        test_cmd: duck init
+        ExitCode: 1
+        Err:
+          String: |+
+            error: the following required arguments were not provided:
+              <path>
+            
+            Usage: duck init <path>
+            
+            For more information, try '--help'.

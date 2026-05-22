@@ -12,8 +12,8 @@
 
 namespace dia_int {
 
-	void Logger::terminalPrint(std::ostream& out) {
-		for (auto& diagnostic: diagnostics) evaluateToTerminalMessage(diagnostic.refMut(), out);
+	void Logger::terminalPrint(std::ostream& out) const {
+		for (auto& diagnostic: diagnostics) evaluateToTerminalMessage(diagnostic.ref(), out);
 	}
 
 	void Logger::log(Box<MessageBase> message) {
@@ -23,7 +23,7 @@ namespace dia_int {
 
 		if_opt_some(immediate_print_stream, stream) {
 			std::stringstream ss;  // For multithreading safety.
-			evaluateToTerminalMessage(diagnostics.back().refMut(), ss);
+			evaluateToTerminalMessage(diagnostics.back().ref(), ss);
 			stream << ss.str();
 		}
 	}
@@ -40,6 +40,13 @@ namespace dia_int {
 		u64 count = 0;
 		for (const auto& diag: diagnostics)
 			if (diag->main_message.metadata.type == "error") count++;
+		return count;
+	}
+
+	u64 Logger::warningCount() const {
+		u64 count = 0;
+		for (const auto& diag: diagnostics)
+			if (diag->main_message.metadata.type == "warning") count++;
 		return count;
 	}
 
@@ -67,15 +74,27 @@ namespace dia_int {
 		}
 	}
 
-	void Logger::collectDiagnostics(std::vector<CRef<dia_args::Diagnostic>>& out_messages) {
-		for (const auto& msg: diagnostics) out_messages.emplace_back(msg.refMut());
+	void Logger::collectDiagnostics(std::vector<CRef<dia_args::Diagnostic>>& out_messages) const {
+		for (const auto& msg: diagnostics) out_messages.emplace_back(msg.ref());
+	}
+
+	void Logger::collectAndUpdatePositionDiagnostics(
+		std::vector<CRef<dia_args::Diagnostic>>& out_messages, const UpdatePositionFunc& update_func
+	) {
+		for (const auto& msg: diagnostics) {
+			msg->updateCodeLocationComponents(update_func);
+			out_messages.emplace_back(msg.ref());
+		}
 	}
 
 	bool Logger::bad() const { return has_error; }
 
-	void Logger::mergeWith(Logger&& other) {
+	void Logger::logFromLogger(Logger& other) {
 		std::ranges::move(other.diagnostics, std::back_inserter(diagnostics));
-		has_error = has_error || other.has_error;
-		auto _    = std::move(other);
+		has_error |= other.has_error;
+
+		other.diagnostics.clear();
+		other.has_error = false;
 	}
+
 }

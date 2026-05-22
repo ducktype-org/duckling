@@ -20,7 +20,9 @@
 #include <vm/loader/compiler/compiler.hpp>
 #include <vm/loader/logger.hpp>
 
+#include <algorithm>
 #include <expected>
+#include <limits>
 #include <vector>
 
 using namespace vm::loader;
@@ -70,16 +72,18 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::parseFiles(
 					func_name.bytecode_pos = func->name.position;
 					function.name          = func_name;
 
-					code::Identifier result_type;
-					result_type.str                = func->result_type.value;
-					result_type.bytecode_pos       = func->result_type.position;
-					function.signature.result_type = result_type;
-
 					for (const auto& param: func->parameters) {
 						code::Identifier param_id;
 						param_id.str          = param.value;
 						param_id.bytecode_pos = param.position;
 						function.signature.parameters.emplace_back(param_id);
+					}
+
+					for (const auto& reslt: func->result_types) {
+						code::Identifier result_type_id;
+						result_type_id.str          = reslt.value;
+						result_type_id.bytecode_pos = reslt.position;
+						function.signature.result_types.emplace_back(result_type_id);
 					}
 
 					for (const auto& instr: func->code->opcodes)
@@ -118,7 +122,7 @@ std::expected<void, LoaderLogger> Loader::loadAndCompile(const code::CodeCollect
 	} catch (code::StackStructureMismatchError& e) {
 		log.logMap(
 			e.label,
-			[&](Box<dia_int::PlaceholderCodeError>& err) {
+			[&](Box<dia_int::PlaceholderError>& err) {
 				for (const auto& instruction: e.jumps)
 					instruction.visit([&](auto&& i) {
 						log.addNote(
@@ -172,3 +176,53 @@ CRef<vm::low::LowVMProgram> vm::loader::Loader::getProgram() const {
 }
 
 vm::loader::Loader::Loader() { compiler.recompile(validated_high_program); }
+
+base::CRef<vm::code::ValidProgram> vm::loader::Loader::getHighProgram() const {
+	return &validated_high_program;
+}
+
+std::expected<vm::code::CodeCollection, std::string> vm::loader::Loader::parseCodeCollectionFromFiles(
+	const std::vector<fs::File>& files
+) {
+	return parseFiles(files).transform_error([](LoaderLogger logger) {
+		std::stringstream ss;
+		logger.dump(ss);
+		return ss.str();
+	});
+}
+
+std::expected<vm::loader::Loader::FatBytecodePosition, vm::loader::Loader::MappingException> vm::
+	loader::Loader::mapLowVMProgramPositionToCodeCollectionPosition(vm::low::LowCodePosition position
+    ) const {
+	auto& mapping = position.function->instruction_mapping;
+
+	// We need to find the first instruction range that starts after the given instruction index,
+	// then check if the previous one contains it
+	auto it = std::ranges::upper_bound(
+		mapping,
+		vm::low::LowFuncData::InstructionRange{
+			.begin = position.instruction_index,
+			.end   = std::numeric_limits<usize>::max(),
+		}
+	);
+
+	if (it == mapping.begin()) return std::unexpected(MissingMapping);
+
+	auto candidate = it - 1;
+	if (!candidate->contains(position.instruction_index)) return std::unexpected(MissingMapping);
+
+	return FatBytecodePosition{
+		.function_name     = position.function->name,
+		.instruction_index = usize(candidate - mapping.begin()),
+	};
+}
+
+std::expected<base::Optional<dia::SourcePosition>, vm::loader::Loader::MappingException> vm::
+	loader::Loader::mapCodeCollectionPositionToFilePosition(FatBytecodePosition position) const {
+	const auto& maybe_high_function = getHighProgram()->functions().atMaybe(position.function_name);
+	if (maybe_high_function.empty()) return std::unexpected(NoFunction);
+
+	return maybe_high_function.value()->body.at(position.instruction_index).visit([](auto&& instr) {
+		return instr.bytecode_pos;
+	});
+}

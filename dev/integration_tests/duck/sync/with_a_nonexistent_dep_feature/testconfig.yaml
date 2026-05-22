@@ -1,0 +1,10 @@
+Tests:
+  sync:
+    Description: cannot sync a project with a nonexistent dependency feature
+    Cases:
+      sync:
+        test_cmd: duck -C foo sync
+        ExitCode: 1
+        Err:
+          Run: |+
+            echo "error: package at the directory \`$(pwd)/bar\` does not have feature \`b\`"

@@ -12,9 +12,9 @@
 #include <frontend/pst_parser/lang_parser_element.hpp>
 #include <frontend/pst_parser/pst_visitor.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
+#include <helios/tsh/queries/types.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
-#include <typesystem/higher/queries/types.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
@@ -37,7 +37,7 @@ namespace compiler::helios {
 	) {
 		auto call_arg = arg.unlock(ctx);
 
-		if (call_arg->getArgName().value.has_value())
+		if (call_arg->getArgName())
 			throw base::NotYetImplemented("Naming arguments in extern() is not supported yet.");
 
 		auto expr_holder = call_arg->getArg().unlock(ctx).dynamicCast<pst::ExprHolder>().value();
@@ -47,9 +47,9 @@ namespace compiler::helios {
 
 		match_optional(str_lit_opt) {
 			opt_none {
-				ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+				ctx.logInt(makeBox<dia_int::PlaceholderError>(
 					"Expected string literal in extern() call argument",
-					arg.unlock(ctx)->getSourcePosition()
+					arg.unlock(ctx)->getStablePosition()
 				));
 				return query::Failed();
 			}
@@ -65,9 +65,9 @@ namespace compiler::helios {
 			                                                    extern_args.unlock(ctx)->end() };
 
 		if (args.empty()) {
-			ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+			ctx.logInt(makeBox<dia_int::PlaceholderError>(
 				"extern() requires at least one argument specifying the ABI",
-				extern_args.unlock(ctx)->getSourcePosition()
+				extern_args.unlock(ctx)->getStablePosition()
 			));
 			return query::Failed();
 		}
@@ -81,15 +81,15 @@ namespace compiler::helios {
 			} else if (args.size() == 1) {  // `extern("C")` case
 				return CAbi{};
 			} else {
-				ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+				ctx.logInt(makeBox<dia_int::PlaceholderError>(
 					"Too many arguments for C ABI in extern()",
-					extern_args.unlock(ctx)->getSourcePosition()
+					extern_args.unlock(ctx)->getStablePosition()
 				));
 				return query::Failed();
 			}
 		} else {
-			ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
-				"Unsupported ABI specified in extern()", extern_args.unlock(ctx)->getSourcePosition()
+			ctx.logInt(makeBox<dia_int::PlaceholderError>(
+				"Unsupported ABI specified in extern()", extern_args.unlock(ctx)->getStablePosition()
 			));
 			return query::Failed();
 		}
@@ -100,7 +100,16 @@ namespace compiler::helios {
 			auto sym_ref = getSymRef(key);
 
 			// Builtin functions are implemented in C/C++ and use the C ABI.
-			if (std::holds_alternative<builtin::BuiltinFunctionData>(sym_ref->other)) return CAbi{};
+			variant_match(sym_ref->other) {
+				variant_case_novalue(builtin::BuiltinFunctionData) { return CAbi{}; }
+				variant_case(defgen::GeneratedSymbolData, gen_data) {
+					variant_match(gen_data.data) {
+						variant_case_novalue(defgen::GeneratedSymbolData::BuiltinOperator) {
+							return CAbi{};
+						}
+					}
+				}
+			}
 
 			// @TODO: #895 fix it when we add script based package targets
 			if (name(key) == "main" && isGlobalFun(key)) {
@@ -110,13 +119,14 @@ namespace compiler::helios {
 
 			auto specifiers = ctx.query<QuerySpecifiersOfSymbol>(key);
 			for (auto specifier: *specifiers) {
-				if (specifier.unlock(ctx)->getSpecifier() == pst::Keyword::Extern) {
+				if (specifier.unlock(ctx)->getSpecifier().unlock(ctx)->unwrap()
+				    == pst::Keyword::Extern) {
 					match_optional(specifier.unlock(ctx)->getArgs()) {
 						opt_some(args) { return getSymbolABI(ctx, args); }
 						opt_none {
-							ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+							ctx.logInt(makeBox<dia_int::PlaceholderError>(
 								"extern symbol requires ABI specification passed as an argument",
-								specifier.unlock(ctx)->getSourcePosition()
+								specifier.unlock(ctx)->getStablePosition()
 							));
 							return query::Failed();
 						}

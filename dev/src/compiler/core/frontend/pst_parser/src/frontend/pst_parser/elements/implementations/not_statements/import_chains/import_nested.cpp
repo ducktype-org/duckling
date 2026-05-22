@@ -7,10 +7,12 @@ namespace pst {
 	MBox<ImportNested> ImportNested::parse(LangParserState& state) {
 		auto out = makeBox<ImportNested>(state);
 
-		tpc::Identifier id;
+		MBox<IdentifierWrapper> id;
+
 		PST_WHILE(state[0].isIdentifier()) {
 			PARSE().all(&id, NamedOperator::Period);
-			out->names.push_back(id);
+			out->names.emplace_back(nullptr);
+			PARSE().assign(&out->names.back(), std::move(id));
 		}
 		PARSE().one(&out->nested_import);
 
@@ -34,7 +36,12 @@ namespace pst {
 	}
 
 	HashAlg& ImportNested::addElementDataToStableHash(HashAlg& partial_hash) const {
-		addToHash(partial_hash, names);
+		addToHash(partial_hash, names.size());
 		return partial_hash;
+	}
+
+	void ImportNested::calcElementPathHashRecursive() {
+		calcIndexedListChildPath<IdentifierWrapper>({ names }, getElementPathHash());
+		calcNamedChildPath(nested_import, getElementPathHash());
 	}
 }

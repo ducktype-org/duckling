@@ -29,19 +29,29 @@ namespace compiler::frontend {
 	DECLARE_QUERY(QueryParentModule, ModuleID, base::Optional<ModuleID>, ({ .uses_qresult = false }))
 
 	/**
+	 * @brief Query whether the module was produced by the REPL pipeline.
+	 *
+	 * \query_thread_safe
+	 */
+	DECLARE_QUERY(QueryIsReplModule, ModuleID, bool, ({ .uses_qresult = false }))
+
+	/**
+	 * @brief Query parent link in the REPL module chain (if any).
+	 *
+	 * Returns empty optional for non-REPL modules as well as for the first REPL module.
+	 *
+	 * \query_thread_safe
+	 */
+	DECLARE_QUERY(
+		QueryReplModuleParent, ModuleID, base::Optional<ModuleID>, ({ .uses_qresult = false })
+	)
+
+	/**
 	 * @brief Query main source file of a module.
 	 *
 	 * \query_thread_safe
 	 */
 	DECLARE_QUERY(QueryMainSourceFile, ModuleID, FileID, ({ .uses_qresult = false }))
-
-	/**
-	 * @brief Query sources files of a module (without main source file).
-	 *
-	 * \query_thread_safe_if_cache
-	 */
-	DECLARE_QUERY(QuerySourceFiles, ModuleID, CRef<std::vector<FileID>>, ({ .uses_qresult = false }))
-
 
 	using QuerySubmodules_Result = CRef<base::HashMap<base::StrID, ModuleID>>;
 	/**
@@ -51,16 +61,6 @@ namespace compiler::frontend {
 	 * \query_thread_safe
 	 */
 	DECLARE_QUERY(QuerySubmodules, ModuleID, QuerySubmodules_Result, ({ .uses_qresult = false }))
-
-	/**
-	 * @brief Side input controlling dependency on number of source files in a module.
-	 * Key includes module path hash and source file count.
-	 * This is needed to properly invalidate queries that depend on the number of source files
-	 * in the module when some query will need access to source files list (eg. getSourceFiles).
-	 * @note This is not needed for getMainSourceFile, because main source file is accessed via
-	 * separate query.
-	 */
-	DECLARE_QUERY_SIDE_INPUT(QuerySourceFileCountSideInput, KeyOf_SourceFileCountSideInput)
 
 	/**
 	 * @brief Side input controlling dependency on number of submodules in a module.
@@ -112,12 +112,6 @@ namespace compiler::frontend {
 	 */
 	CRef<pst::PST<>> getFilePST(::query::Context& ctx, FileID file_id);
 
-	/**
-	 * @brief Returns ModuleID
-	 * Assumes that @p element is a TopLevel element of some File parsed with interface of Frontend
-	 * module.
-	 */
-	ModuleID extendQueryModuleIDOfPST(query::Context&, pst::AccessLocked<pst::LangElement> element);
 
 	/**
 	 * @brief Query extension used to

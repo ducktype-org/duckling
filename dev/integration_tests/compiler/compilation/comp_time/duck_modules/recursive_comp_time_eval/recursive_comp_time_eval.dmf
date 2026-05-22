@@ -1,0 +1,16 @@
+fun getTypeFromCondition(b: bool) = {
+    if (b) return i64;
+    else return f64;
+}
+
+fun fibb(n: i64) -> i64 = {
+    if (n == 0) return 1;
+    if (n == 1) return 1;
+    return fibb(n - 1) + fibb(n - 2);
+}
+
+fun main() -> i64 = {
+    var a: if fibb(12) > 0 then i64 else f64 = 0;
+    var b: getTypeFromCondition(true) = 0;
+    return 0;
+}

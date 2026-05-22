@@ -1,4 +1,5 @@
-﻿#include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
+﻿#include <diagnostic_interactive/stable_position.hpp>
+#include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <frontend/pst_parser/elements/hierarchy/lists/all_lists.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <frontend/pst_parser/pst.hpp>
@@ -186,6 +187,10 @@ private:
 
 	void testListParsing() { testJsonRelativePath("lists_ok.duck", "lists_ok.json"); }
 
+	void testFormatStrParsing() {
+		testJsonRelativePath("format_strings.duck", "format_strings.json");
+	}
+
 	void testFunDeclFFI() { testJsonRelativePath("ffi.duck", "ffi.json"); }
 
 	void testNumericLiteralParsing() {
@@ -238,7 +243,7 @@ private:
 
 			void visitParam(pst::Access<pst::Param> param) override {
 				counter++;
-				good_name = param->getName() == expected_name;
+				good_name = param->getName().illegalAccess().value()->unwrap() == expected_name;
 			}
 		};
 
@@ -254,7 +259,7 @@ private:
 	}
 
 	void testSimpleExpand() {
-		auto pos      = dia::SourcePosition::fakePosition();
+		auto pos      = dia_int::StablePosition::fakePosition();
 		auto contents = "var a: T = 5;";
 		auto pst
 			= pst::PST<>::fromExpand(pos, contents, pst::LangParserContext::programBaseContext());

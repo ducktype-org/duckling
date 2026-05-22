@@ -6,7 +6,7 @@
 
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/validator/valid_program.hpp>
-#include <vm/core/thread/low_program/low_program.hpp>
+#include <vm/core/safe/low_program/low_program.hpp>
 #include <vm/loader/compiler/compiler.hpp>
 
 #include <expected>
@@ -39,7 +39,7 @@ namespace vm::loader {
 		 * @return Either the parsed `CodeCollection` on success, or a `LoaderLogger` with parsing
 		 * errors on failure.
 		 */
-		std::expected<code::CodeCollection, LoaderLogger> parseFiles(
+		static std::expected<code::CodeCollection, LoaderLogger> parseFiles(
 			const std::vector<fs::File>& files
 		);
 
@@ -64,5 +64,36 @@ namespace vm::loader {
 		 */
 		std::expected<void, LoaderLogger> loadAndCompile(const code::CodeCollection& code_collection
 		);
+
+		CRef<code::ValidProgram> getHighProgram() const;
+
+		/**
+		 * @brief Parses .dbc files and returns the combined CodeCollection without validation,
+		 * or a string error message on failure. Main user is the compiler driver.
+		 *
+		 * @return Either the parsed `CodeCollection` on success, or a string error message on
+		 * failure.
+		 */
+		static std::expected<code::CodeCollection, std::string> parseCodeCollectionFromFiles(
+			const std::vector<fs::File>& files
+		);
+
+		struct FatBytecodePosition {
+			base::StrID function_name;
+			usize       instruction_index;
+		};
+
+		enum MappingException {
+			MissingMapping,
+			NoFunction,
+		};
+
+		std::expected<FatBytecodePosition, MappingException> mapLowVMProgramPositionToCodeCollectionPosition(
+			low::LowCodePosition position
+		) const;
+
+		std::expected<base::Optional<dia::SourcePosition>, MappingException> mapCodeCollectionPositionToFilePosition(
+			FatBytecodePosition position
+		) const;
 	};
 }

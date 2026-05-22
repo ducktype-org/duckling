@@ -38,7 +38,7 @@ namespace compiler::repl {
 	 */
 	class ReplFrontend final {
 	public:
-		ReplFrontend();
+		explicit ReplFrontend(bool completions_enabled = true);
 		~ReplFrontend() = default;
 
 		/**
@@ -57,6 +57,11 @@ namespace compiler::repl {
 		 * @brief Prints the history of previously entered inputs.
 		 */
 		void printHistory() const;
+
+		/**
+		 * @brief Clears the terminal screen.
+		 */
+		void clearScreen();
 
 		/**
 		 * @brief Clears the history of previously entered inputs.

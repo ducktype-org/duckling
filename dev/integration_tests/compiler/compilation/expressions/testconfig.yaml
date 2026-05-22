@@ -3,47 +3,35 @@
 Tests:
   ternary:
     Cases:
-      dvm:
-        backend: dvm
+      all:
+        backend: all
         Output:
-          String: "9\n9\n9\n18\n4\n"
-      llvm:
-        backend: llvm
-        Output:
-          String: "9\n9\n9\n18\n4\n"
-  single-comparison: # Any type of comparison between two values.
+          String: "9\n9\n9\n18\n4\n2\n"
+
+  single_comparison: # Any type of comparison between two values.
     Cases:
-      dvm:
-        backend: dvm
-        Output:
-          String: ""
-        ExitCode: 0
-      llvm:
-        backend: llvm
+      all:
+        backend: all
         Output:
           String: ""
         ExitCode: 0
 
-  comparison-chain:
+  comparison_chain:
     Cases:
-#      @TODO: #2179 Re-enable when ops on globals are implemented.
-#      dvm:
-#        backend: dvm
-#        Output:
-#          String: ""
-#        ExitCode: 0
-      llvm:
-        backend: llvm
+      all:
+        backend: all
         Output:
           String: ""
         ExitCode: 0
+
   unit_simple:
     Cases:
-      llvm:
-        backend: llvm
+      all:
+        backend: all
         Output:
           String: "1\n1\n"
         ExitCode: 0
+
   unit_simple_multiple_modules:
     Cases:
       llvm:
@@ -54,116 +42,74 @@ Tests:
 
   casts:
     Cases:
-      dvm:
-        backend: dvm
-        Output:
-          String: "-1\n255\n-1\n-42\n2147483647\n-2147483648\n7\n9\n1\n"
-        ExitCode: 0
-      llvm:
-        backend: llvm
+      all:
+        backend: all
         Output:
           String: "-1\n255\n-1\n-42\n2147483647\n-2147483648\n7\n9\n1\n"
         ExitCode: 0
 
   floating_point_arithmetic:
     Cases:
-      dvm:
-        backend: dvm
-        Output:
-          String: ""
-        ExitCode: 0
-      llvm:
-        backend: llvm
+      all:
+        backend: all
         Output:
           String: ""
         ExitCode: 0
 
   floating_point_comparisons:
     Cases:
-      dvm:
-        backend: dvm
-        Output:
-          String: ""
-        ExitCode: 0
-      llvm:
-        backend: llvm
+      all:
+        backend: all
         Output:
           String: ""
         ExitCode: 0
 
   unsigned_integers:
     Cases:
-      dvm:
-        backend: dvm
-        Output:
-          String: ""
-        ExitCode: 0
-      llvm:
-        backend: llvm
+      all:
+        backend: all
         Output:
           String: ""
         ExitCode: 0
 
   signed_integers:
     Cases:
-      dvm:
-        backend: dvm
-        Output:
-          String: ""
-        ExitCode: 0
-      llvm:
-        backend: llvm
+      all:
+        backend: all
         Output:
           String: ""
         ExitCode: 0
 
   float_32:
     Cases:
-      dvm:
-        backend: dvm
-        Output:
-          String: ""
-        ExitCode: 0
-      llvm:
-        backend: llvm
+      all:
+        backend: all
         Output:
           String: ""
         ExitCode: 0
 
   coercions:
     Cases:
-      dvm:
-        backend: dvm
-        Output:
-          String: ""
-        ExitCode: 0
-      llvm:
-        backend: llvm
+      all:
+        backend: all
         Output:
           String: ""
         ExitCode: 0
 
-  default_init:
+  no_output:
     Cases:
-      # @TODO: #1916 When arrays are handled in DVM, add a DVM case.
-      # @TODO: #1560 When records are handled in DVM, add a DVM case.
-      llvm:
-        backend: llvm
+      all:
+        backend: all
         Output:
-          String: "0\n0\n0\n0\n0\n0\n"
+          String: ""
         ExitCode: 0
 
   zero_init:
     Cases:
-      llvm:
-        backend: llvm
+      all:
+        backend: all
         Output:
-          String: "0\n0\n"
-        ExitCode: 0
-      dvm:
-        backend: dvm
-        Output:
-          String: "0\n0\n"
+          String: "0\n0\n0\n0\n0\n0\n0\n"
         ExitCode: 0
 
   strings:
@@ -173,7 +119,7 @@ Tests:
         Input:
           String: "Test"
         Output:
-          String: "Test\nHello, world!\n"
+          String: "Test\nHello, world!\nab\nbcd\nHello, world!\n"
 
   chars:
     Cases:
@@ -183,3 +129,4 @@ Tests:
           String: "Xd;"
         Output:
           String: "Enter a character: The provided character is uppercase.\nIts lowercase counterpart is: x\nEnter a character: The provided character is lowercase.\nIts uppercase counterpart is: D\nEnter a character: The provided character is not a letter.\n"
+          

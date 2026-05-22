@@ -31,8 +31,7 @@ namespace pst::expr {
 
 		PARSE().autoFallbackLen(place).with(&out->variables, Lower::parse);
 
-		out->type = state[0].getValue();
-		PARSE().eatOne();
+		PARSE().one(&out->type);
 
 		PARSE().with(&out->value, Lower::parse);
 
@@ -44,7 +43,8 @@ namespace pst::expr {
 
 		out << R"("assigned variables": )";
 		nullAwareDprint(variables, out);
-		out << R"(, "assignment type": ")" << type.strView() << "\"";
+		out << R"(, "assignment type": )";
+		nullAwareDprint(type, out);
 		out << R"(, "assigned value": )";
 		nullAwareDprint(value, out);
 
@@ -52,7 +52,6 @@ namespace pst::expr {
 	}
 
 	HashAlg& Assignment::addElementDataToStableHash(HashAlg& partial_hash) const {
-		addToHash(partial_hash, type.strView());
 		return partial_hash;
 	}
 

@@ -12,7 +12,12 @@ Tests:
         Input:
           File: "basic_declarations/basic_declarations.rtf"
         Output: 
-          String : "@{begining}\n=> 42\n@{end}"
+          String : "@{beginning}\n=> 42\n@{end}"
+      basic_declarations2:
+        Input:
+          File: "basic_declarations/basic_declarations2.rtf"
+        Output: 
+          String : "@{beginning}\n=> 3.140000\n@{end}"
 
   interactions:
     Cases:
@@ -20,7 +25,12 @@ Tests:
         Input:
           File: "interactions/interactions.rtf"
         Output:
-          String: "@{begining}\n=> 42\n@{end}"
+          String: "@{beginning}\n=> 42\n@{end}"
+      interactions2:
+        Input:
+          File: "interactions/interactions2.rtf"
+        Output:
+          String: "@{beginning}\n=> 6.000000\n@{end}"
 
   multiple_calls:
     Cases:
@@ -28,4 +38,4 @@ Tests:
         Input:
           File: "multiple_calls/multiple_calls.rtf"
         Output:
-          String: "@{begining}\n@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans2}@{ans2}@{ans2small}@{ans2small}@{ans2small}@{end}"
+          String: "@{beginning}\n@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans2}@{ans2}@{ans2small}@{ans2small}@{ans2small}@{end}"

@@ -3,7 +3,7 @@
 #include <ctv/numeric_value.hpp>
 #include <helios/hout/origin.hpp>
 #include <helios/symbols/symbol_id.hpp>
-#include <typesystem/higher/expression_type.hpp>
+#include <helios/tsh/expression_type.hpp>
 
 #include <base/pointers/box.hpp>
 #include <base/pointers/shared_box.hpp>
@@ -64,7 +64,7 @@ namespace compiler::helios::code {
 			return id;
 		}
 
-		[[nodiscard]] base::Optional<pst::StablePosition> getPosition() const {
+		[[nodiscard]] base::Optional<dia_int::StablePosition> getPosition() const {
 			return origin.getStablePosition();
 		}
 
@@ -444,6 +444,7 @@ namespace compiler::helios::code {
 	 */
 	struct TupleExpr: public Expr {
 		std::vector<base::Box<Expr>> elements;
+		SymID                        tuple_ctor_symbol;
 
 		TupleExpr(query::Context& ctx, ElementOrigin origin, std::vector<base::Box<Expr>> elements);
 
@@ -458,7 +459,8 @@ namespace compiler::helios::code {
 		TupleExpr(
 			tsh::ExpressionType<>        expression_type,
 			ElementOrigin                origin,
-			std::vector<base::Box<Expr>> elements
+			std::vector<base::Box<Expr>> elements,
+			SymID                        tuple_ctor_symbol
 		);
 	};
 
@@ -748,9 +750,9 @@ namespace compiler::helios::code {
 	 * Used for implicit variable initialization. This gets then mapped to `llvm::getNullValue(type)`.
 	 */
 	struct DefaultValueExpr final: public Expr {
-		tsh::SymbolType<> type;
+		tsh::AbstractType type;
 
-		DefaultValueExpr(query::Context& ctx, ElementOrigin origin, tsh::SymbolType<> type);
+		DefaultValueExpr(query::Context& ctx, ElementOrigin origin, tsh::AbstractType type);
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
 
@@ -760,7 +762,7 @@ namespace compiler::helios::code {
 		FRIEND_MAKEBOX
 
 		DefaultValueExpr(
-			tsh::ExpressionType<> expression_type, ElementOrigin origin, tsh::SymbolType<> type
+			tsh::ExpressionType<> expression_type, ElementOrigin origin, tsh::AbstractType type
 		);
 	};
 

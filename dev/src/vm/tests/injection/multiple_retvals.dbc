@@ -1,0 +1,9 @@
+function unsafe_div { i64, i64 } -> { i64, i64 } {
+	mov_p64_p64			ret0, arg1;
+	mov_p64_p64			ret1, arg1;
+	
+	div_p64_p64 		ret0, arg0;
+	mod_p64_p64 		ret1, arg0;
+
+	ret;
+}

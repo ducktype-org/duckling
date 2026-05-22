@@ -1,0 +1,91 @@
+type pointer: ptr_i64 i64
+type pointer: ptr_struct AllTypeKindsStruct
+
+type dynamic_table: dyntable_i64 i64
+type pointer: ptr_dyntable_i64 dyntable_i64
+
+type fixed_size_table: fixtable_i64 i64 7
+type pointer: ptr_fixtable_i64 fixtable_i64
+
+type variant: simple_variant { i64, i32 }
+type pointer: ptr_simple_variant simple_variant
+
+type data: AllTypeKindsStruct {
+	# Primitive
+	var_byte: byte,
+	var_i16: i16,
+	var_i32: i32,
+	var_i64: i64,
+
+	# Pointer
+	var_pointer: ptr_struct,
+
+	# Tables
+	var_dyntable_pointer: ptr_dyntable_i64,
+	var_fixtable_pointer: ptr_fixtable_i64,
+
+	# Variant
+	var_variant: simple_variant
+}
+
+
+function main { i64, ptr_argv } -> { i64 } {
+	# ret0 -> main ret0
+	# arg0 -> argc
+	# arg1 -> *argv
+
+
+	# AllTypeKindsStruct* struct_pointer = new AllTypeKindsStruct();
+	init_pany_type		struct_pointer, ptr_struct;
+	alloc_pptr_type		struct_pointer, AllTypeKindsStruct;
+	
+	init_pany_type		dyntable_pointer, ptr_dyntable_i64;
+	init_pany_type		fixtable_pointer, ptr_fixtable_i64;
+	
+
+	# struct_pointer->var_pointer = struct_pointer;
+	structStore_pptr_pany_field struct_pointer, struct_pointer, AllTypeKindsStruct.var_pointer;
+
+	# struct_pointer->var_dyntable_pointer = new dyntable_i64(5);
+	init_pany_type	new_dyntable_size, i64;
+	mov_p64_imm		new_dyntable_size, 5;
+	dynTableReAlloc_pptr_type_p64	dyntable_pointer, dyntable_i64, new_dyntable_size;
+	structStore_pptr_pany_field		struct_pointer, dyntable_pointer, AllTypeKindsStruct.var_dyntable_pointer;
+	deinit; # new_dyntable_size
+
+	# struct_pointer->var_fixtable_pointer = new fixed_size_table();
+	alloc_pptr_type					fixtable_pointer, fixtable_i64;
+	structStore_pptr_pany_field		struct_pointer, fixtable_pointer, AllTypeKindsStruct.var_fixtable_pointer;
+
+	# struct_pointer->var_variant = 0i64;
+	init_pany_type				variant_pointer, ptr_simple_variant;
+	structLea_pptr_pptr_field	variant_pointer, struct_pointer, AllTypeKindsStruct.var_variant;
+	variantSetInner_pptr_type	variant_pointer, i64;
+
+	# struct_pointer->var_variant = 42i64;
+	init_pany_type					variant_data_pointer, ptr_i64;
+	variantGetInner_pptr_pptr_type	variant_data_pointer, variant_pointer, i64;
+	
+	init_pany_type	new_variant_data_value, i64;
+	mov_p64_imm		new_variant_data_value, 42;
+	store_pptr_pany	variant_data_pointer, new_variant_data_value;
+
+
+	breakpoint;
+
+
+	# free(struct_pointer);
+	free_pptr	fixtable_pointer;
+	free_pptr	dyntable_pointer;
+	free_pptr	struct_pointer;
+
+	deinit; # new_variant_data_value
+	deinit; # variant_data_pointer
+	deinit; # variant_pointer
+	deinit; # fixtable_pointer
+	deinit; # dyntable_pointer
+	deinit; # struct_pointer
+	deinit; # *argv
+	deinit; # argc
+	ret;
+}

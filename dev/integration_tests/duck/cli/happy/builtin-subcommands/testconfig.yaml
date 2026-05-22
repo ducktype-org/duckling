@@ -5,23 +5,33 @@ Tests:
     Description: Checks a lot of basic flows, such as happy, builtin alias, auto fix...
     Cases:
       runs-builtin-command:
-        test_cmd: build
+        test_cmd: duck build
         ExitCode: 1
         Err:
-          Run: 'echo "Error: no manifest has been found from the \`$(pwd)\` to the \`/\`"'
+          Run: 'echo "error: no manifest has been found from the \`$(pwd)\` to the \`/\`"'
       runs-builtin-alias:
-        test_cmd: b
+        test_cmd: duck b
         ExitCode: 1
         Err:
-          Run: 'echo "Error: no manifest has been found from the \`$(pwd)\` to the \`/\`"'
+          Run: 'echo "error: no manifest has been found from the \`$(pwd)\` to the \`/\`"'
       runs-user-alias:
-        test_cmd: my-custom-build-alias
+        test_cmd: duck my-custom-build-alias
         ExitCode: 1
         Err:
-          Run: 'echo "Error: no manifest has been found from the \`$(pwd)\` to the \`/\`"'
+          Run: 'echo "error: no manifest has been found from the \`$(pwd)\` to the \`/\`"'
+      runs-user-alias-as-an-array:
+        test_cmd: duck my-custom-build-alias-array
+        ExitCode: 1
+        Err:
+          Run: 'echo "error: no manifest has been found from the \`$(pwd)\` to the \`/\`"'
+      runs-user-alias-as-an-array:
+        test_cmd: duck my-custom-build-alias-array
+        ExitCode: 1
+        Err:
+          Run: 'echo "error: no manifest has been found from the \`$(pwd)\` to the \`/\`"'
       autofix-success:
-        test_cmd: buil
+        test_cmd: duck buil
         ExitCode: 1
         Err:
-          Run: 'echo "Error: no manifest has been found from the \`$(pwd)\` to the \`/\`"'
+          Run: 'echo "error: no manifest has been found from the \`$(pwd)\` to the \`/\`"'
 

@@ -3,12 +3,15 @@
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/validator/valid_program.hpp>
 #include <vm/bytecode/validator/valid_type/type_context.hpp>
-#include <vm/core/thread/low_program/low_program.hpp>
+#include <vm/core/safe/low_program/low_program.hpp>
+#include <vm/core/safe/low_program/micro_instruction_args.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
 
 namespace vm::loader::compiler {
 	namespace detail {
 		class MicroBytecodeBuilder;
+		template<typename ToType>
+		struct LowerArgumentImpl;
 	}
 
 	/**
@@ -22,6 +25,8 @@ namespace vm::loader::compiler {
 	 */
 	class Compiler {
 		friend class detail::MicroBytecodeBuilder;
+		template<typename ToType>
+		friend struct detail::LowerArgumentImpl;
 
 	public:
 		Compiler() = default;
@@ -74,6 +79,15 @@ namespace vm::loader::compiler {
 			 * index.
 			 */
 			ObjIdNameMap<code::ExternalCFunction> ext_c_functions;
+
+			/**
+			 * @brief Count of the global variables compiled up to this point.
+			 */
+			usize global_count = 0;
+			/**
+			 * @brief Total size of the globals compiled up to this point, in bytes.
+			 */
+			Bytes global_buffer_size = Bytes(0);
 		};
 
 		/**
@@ -89,6 +103,7 @@ namespace vm::loader::compiler {
 
 			struct LocalEntry {
 				u64      offset;
+				u64      block_idx;
 				TypeCRef type;
 			};
 
@@ -96,7 +111,11 @@ namespace vm::loader::compiler {
 			/// and type.
 			base::HashMap<base::StrID, LocalEntry> locals_map{};
 			/// Total required size for the local stack frame, in bytes.
-			usize local_stack_size = 0;
+			usize local_stack_size  = 0;
+			usize local_block_count = 0;
+
+			/// Bytecode to Microbytecode mapping
+			std::vector<vm::low::LowFuncData::InstructionRange> instruction_mapping{};
 		};
 
 		/**
@@ -180,7 +199,8 @@ namespace vm::loader::compiler {
 		 * @param opcode_arg The symbolic argument to translate.
 		 * @return The 64-bit numeric value of the argument.
 		 */
-		u64 lowerArgument(FunctionCompilationContext& local_ctx, const opargs::OpCodeArg& opcode_arg);
+		template<opargs::ArgumentType FromType, low::opargs::ArgumentType ToType>
+		u64 lowerArgument(FunctionCompilationContext& local_ctx, const FromType& opcode_arg);
 	};
 
 }

@@ -2,8 +2,8 @@
 use url::form_urlencoded::Serializer;
 use url::{Url, UrlQuery};
 
+use crate::QuackResult;
 use crate::quackpack::core::fetcher::types;
-use crate::{QuackResult, QuackResultContext, StrId};
 
 /// A helper trait for getting URLs for communicating with a registry instance.
 pub trait UrlExt: Sized {
@@ -14,7 +14,7 @@ pub trait UrlExt: Sized {
     fn _query_pairs_mut(&mut self) -> Serializer<'_, UrlQuery<'_>>;
 
     /// Get the URL for querying multimetadata of the package `package_name`.
-    fn for_multi_metadata(&self, package_name: StrId) -> QuackResult<Self> {
+    fn for_multi_metadata(&self, package_name: &str) -> QuackResult<Self> {
         self._join(&format!("/packages/{package_name}"))
     }
 
@@ -42,9 +42,9 @@ pub trait UrlExt: Sized {
 
     #[allow(dead_code)]
     /// Get the URL for publishing a new package.
-    fn for_new_package(&self) -> QuackResult<Self> {
+    fn for_new_package(&self) -> Self {
         self._join("/packages")
-            .context_internal("we control queries statically...?")
+            .expect("we control queries statically...?")
     }
 
     #[allow(dead_code)]
@@ -79,7 +79,9 @@ mod tests {
             version: package_version.parse().unwrap(),
         };
         assert_eq!(
-            url.for_multi_metadata(package.id).unwrap().as_str(),
+            url.for_multi_metadata(package.id.as_str())
+                .unwrap()
+                .as_str(),
             format!("{base}/packages/{package_name}")
         );
 
@@ -103,10 +105,7 @@ mod tests {
             format!("{base}/packages?q=foo+bar")
         );
 
-        assert_eq!(
-            url.for_new_package().unwrap().as_str(),
-            format!("{base}/packages")
-        );
+        assert_eq!(url.for_new_package().as_str(), format!("{base}/packages"));
 
         assert_eq!(
             url.for_new_blob(&package).unwrap().as_str(),

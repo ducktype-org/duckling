@@ -1,4 +1,5 @@
 add_files(
+    bytecode.cpp
     builtin_types.cpp
     builders/instruction_builder.cpp
     serializer/serializer.cpp

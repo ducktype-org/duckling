@@ -1,0 +1,10 @@
+PostCase: python3 check.py
+Tests:
+  sync:
+    Description: can sync a project with features cycle
+    Cases:
+      sync:
+        test_cmd: duck -C foo sync
+        Output:
+          String: 'info: successfully synchronized venv \`foo\`\n'
+        

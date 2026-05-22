@@ -146,7 +146,6 @@ namespace dia {
 		const printer::PrinterContentsSeq& reason
 	) const {
 		printer::PrinterOStream str;
-		location->printMessage(str, *this, reason);
 		return str.getContents();
 	}
 
@@ -182,5 +181,9 @@ namespace dia {
 	bool SourcePosition::operator==(const SourcePosition& other) const {
 		return getLocation() == other.getLocation() && getStart() == other.getStart()
 		    && getEnd() == other.getEnd();
+	}
+
+	std::string SourcePosition::content() const {
+		return getSource()->getCharRange(getStart(), getEnd() + 1).stdString();
 	}
 }

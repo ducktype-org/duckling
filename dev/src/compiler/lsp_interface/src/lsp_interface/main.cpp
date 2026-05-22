@@ -31,7 +31,6 @@ POP_DIAGNOSTIC;
 #include <filesystem/file.hpp>
 #include <filesystem/file_path.hpp>
 #include <init/init.hpp>
-#include <lexer/lexer.hpp>
 #include <query_framework/entry/with_context_do.hpp>
 #include <query_framework/module_flags/module_flags.hpp>
 
@@ -290,7 +289,7 @@ int main(int argc, const char** argv) {
 	// Initialize the command-line argument parser with help flag and port parameter
 	auto clah = getLspDaemonCLI();
 
-	query::track_reverse_graph                     = true;
+	query::setTrackReverseGraph(true);
 	compiler::frontend::use_module_modifier_remove = true;
 
 	init::InitObject _;

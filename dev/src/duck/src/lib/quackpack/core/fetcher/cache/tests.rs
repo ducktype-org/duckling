@@ -1,12 +1,11 @@
 use std::path::PathBuf;
 
-use super::*;
 use tempfile::{TempDir, tempdir};
 
-use crate::{
-    quackpack::core::{Version, fetcher::types::PackageWithUrl},
-    quackpack::schemas::registry,
-};
+use super::*;
+use crate::quackpack::core::Version;
+use crate::quackpack::core::fetcher::types::PackageWithUrl;
+use crate::quackpack::schemas::registry;
 
 fn create_sample_metadata() -> registry::Manifest {
     const JSON: &str = r#"{
@@ -17,23 +16,24 @@ fn create_sample_metadata() -> registry::Manifest {
         "license": "GPS",
         "description": ""
     },
-    "dependencies": {
-        "pkg1": {
+    "dependencies": [
+        {
+            "name": "pkg1",
             "version": ["2.3.4"],
             "source": {
                 "inner": {
                     "type": "registry",
-                    "registry_url": "xd"
+                    "registry-url": "xd"
                 }
             },
             "features": [],
             "pinned": false,
             "conditions": {
-                "package_features": []
+                "package-features": []
             }
         }
-    },
-    "dev_dependencies": {},
+    ],
+    "dev-dependencies": [],
     "features": {},
     "profiles": {}
 }

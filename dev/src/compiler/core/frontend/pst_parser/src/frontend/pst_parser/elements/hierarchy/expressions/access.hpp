@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../not_statements/wrapper_elements/operator_wrapper.hpp"
 #include "expr_common.hpp"
 
 namespace pst::expr {
@@ -8,8 +9,8 @@ namespace pst::expr {
 	 * .?][name][optionally template specifier]`
 	 */
 	class Access final: public ExprElement {
-		base::StrID     type;  ///< either `.` or `.?` or `::`
-		tpc::Identifier name;
+		NAMED_CHILD(type, OperatorWrapper);  ///< either `.` or `.?` or `::`
+		NAMED_CHILD(name, IdentifierWrapper);
 		NAMED_CHILD_OPT(template_specifier, ExprElement);
 
 	public:
@@ -28,9 +29,14 @@ namespace pst::expr {
 		}
 
 		[[nodiscard]]
-		base::StrID getType() const;
+		AccessLocked<OperatorWrapper> getType() const {
+			return type.give();
+		}
+
 		[[nodiscard]]
-		const tpc::Identifier& getName() const;
+		AccessLocked<IdentifierWrapper> getName() const {
+			return name.give();
+		}
 
 		[[nodiscard]]
 		base::Optional<AccessLocked<ExprElement>> getTemplateSpecifier() const {

@@ -16,9 +16,10 @@
 #include <vm/bytecode/serializer/serializer.hpp>
 #include <vm/bytecode/validator/valid_type/type_context.hpp>
 #include <vm/bytecode/validator/valid_type/valid_type.hpp>
-#include <vm/core/process/builtin_functions.hpp>
+#include <vm/core/builtin_functions.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
 
+#include <ranges>
 #include <variant>
 
 using namespace vm;
@@ -36,7 +37,7 @@ namespace {
 		Op_call_func,
 		Op_call_builtinfunc,
 		Op_call_cfunc,
-		Op_virtual_call_lptr_method>;
+		Op_virtual_call_pptr_method>;
 	using CallingInstructions = std::tuple<Op_call_func, Op_call_builtinfunc, Op_call_cfunc>;
 
 	template<typename T>
@@ -98,6 +99,7 @@ class LocalStack {
 
 	CRef<valid_type::ValidTypeMap>                          types_ctx;
 	base::HashMap<base::StrID, CRef<valid_type::ValidType>> local_name_to_type;
+	usize                                                   number_of_ret_vals = 0;
 
 public:
 	LocalStack(const LocalStack&)            = default;
@@ -106,15 +108,19 @@ public:
 	LocalStack& operator=(LocalStack&&)      = default;
 
 	LocalStack(const FuncSignature& signature, const valid_type::ValidTypeMap& types_ctx):
-		  types_ctx(&types_ctx) {
-		push(base::StrID("ret_val"), signature.result_type.str);
-		for (auto [idx, param]: std::views::enumerate(signature.parameters))
+		  types_ctx(&types_ctx),
+		  number_of_ret_vals(signature.result_types.size()) {
+		using namespace std::views;
+		for (auto [idx, ret]: enumerate(signature.result_types))
+			push(base::StrID(base::strConcat("ret", idx).c_str()), ret.str);
+
+		for (auto [idx, param]: enumerate(signature.parameters))
 			push(base::StrID(base::strConcat("arg", idx).c_str()), param.str);
 	}
 
 	const std::vector<LocalStackEntry>& getStackState() const { return stack_state; }
 
-	void push(const opargs::StackLocalAny& local, const opargs::Type& type) {
+	void push(const opargs::PlaceAny& local, const opargs::Type& type) {
 		auto tp = types_ctx->at(type.type_name);
 
 		if (local_name_to_type.contains(local.var_name)) throw DuplicatedLocalNameError(local);
@@ -130,7 +136,7 @@ public:
 	 */
 	template<DeinitializingInstruction InstructionType>
 	void pop(const InstructionType& cause) {
-		if (stack_state.size() == 1) throw RetValDeinitError(cause);
+		if (stack_state.size() == number_of_ret_vals) throw RetValDeinitError(cause);
 		const auto& top = stack_state.back();
 		local_name_to_type.erase(top.local_name);
 		stack_state.pop_back();
@@ -138,9 +144,11 @@ public:
 
 	usize size() const { return stack_state.size(); }
 
-	const LocalStackEntry& back() const { return stack_state.back(); }
+	const LocalStackEntry& back(usize i = 0) const {
+		return stack_state.at(stack_state.size() - 1 - i);
+	}
 
-	const LocalStackEntry& front() const { return stack_state.front(); }
+	const LocalStackEntry& front(usize i = 0) const { return stack_state.at(i); }
 
 	void castPrimitive(const opargs::OpCodePrimitiveArg& local, const opargs::Type& type) {
 		auto  local_name = VISIT(local, l, return l.var_name);
@@ -187,17 +195,22 @@ class FunctionValidator {
             return &signatures.at(instr.function.function_name);
 		}();
 
-		bool check_ret_val = signature->result_type.str != base::StrID("void");
+		auto& params = signature->parameters;
+		auto& reslts = signature->result_types;
 
-		if (signature->parameters.size() > local_stack.size() + check_ret_val)
+		if (params.size() + reslts.size() > local_stack.size())
 			throw InvalidFunctionCallArgumentsError(generic_arg);
-		for (auto param: signature->parameters | std::views::reverse) {
+
+		using namespace std::views;
+		for (auto param: params | reverse) {
 			if (local_stack.back().type->getName() != param.str)
 				throw InvalidFunctionCallArgumentsError(generic_arg);
 			local_stack.pop(instr);
 		}
-		if (check_ret_val && local_stack.back().type->getName() != signature->result_type.str)
-			throw InvalidFunctionCallArgumentsError(generic_arg);
+
+		for (auto [idx, reslt]: zip(iota(0u), reslts | reverse))
+			if (local_stack.back(idx).type->getName() != reslt.str)
+				throw InvalidFunctionCallArgumentsError(generic_arg);
 	}
 
 	/**
@@ -207,13 +220,13 @@ class FunctionValidator {
 	 * - The argument is only the name of the method and we need to find an implementation
 	 *   corresponding to that name.
 	 * - The first argument on the stack should be pointer which points to the same type as the
-	 *   pointer passed as the `obj_ptr` (an argument to `virtual_call_lptr_method`).
+	 *   pointer passed as the `obj_ptr` (an argument to `virtual_call_pptr_method`).
 	 *   Since virtual_method map contains only the signatures of methods, the implementations of
 	 *   them may declare a pointer to a different type (only a pointer to SELF - subclass can
 	 * differ). Validating just the pointer type name like in normal function calls would simply
 	 * don't work.
 	 */
-	void validateMethodCallAndPop(LocalStack& local_stack, const Op_virtual_call_lptr_method& instr) {
+	void validateMethodCallAndPop(LocalStack& local_stack, const Op_virtual_call_pptr_method& instr) {
 		// @TODO: #962 This implementation seeking occurs in a couple of places. Think of a better
 		// way. EDIT: After valid_type::ValidType was added, it's simpler but still could be improved.
 		CRef<valid_type::finalized::Function> method_signature = [&] {
@@ -228,17 +241,19 @@ class FunctionValidator {
 			return function_type->getKindAs<valid_type::finalized::Function>();
 		}();
 
-		auto generic_arg   = opargs::OpCodeArg{ instr.method };
-		bool check_ret_val = types_ctx.at(method_signature->result)->getName() != "void";
+		auto generic_arg = opargs::OpCodeArg{ instr.method };
+
+		auto& params = method_signature->parameters;
+		auto& reslts = method_signature->result_types;
 
 		// Too many parameters.
-		if (method_signature->parameters.size() > local_stack.size() + check_ret_val)
+		if (params.size() + reslts.size() > local_stack.size())
 			throw InvalidFunctionCallArgumentsError(generic_arg);
 
+		using namespace std::views;
 		// Check individual parameter's types. The first parameter is special, because it should be
 		// a pointer to the same type as the pointer passed as `obj_ptr`.
-		for (auto param_id:
-		     method_signature->parameters | std::views::drop(1) | std::views::reverse) {
+		for (auto param_id: params | drop(1) | reverse) {
 			if (local_stack.back().type->getID() != param_id)
 				throw InvalidFunctionCallArgumentsError(generic_arg);
 			local_stack.pop(instr);
@@ -253,8 +268,9 @@ class FunctionValidator {
 			throw InvalidFunctionCallArgumentsError(generic_arg);
 		local_stack.pop(instr);
 
-		if (check_ret_val && local_stack.back().type->getID() != method_signature->result)
-			throw InvalidFunctionCallArgumentsError(generic_arg);
+		for (auto [idx, reslt]: zip(iota(0u), reslts | reverse))
+			if (local_stack.back(idx).type->getID() != reslt)
+				throw InvalidFunctionCallArgumentsError(generic_arg);
 	}
 
 	void validateTailcall(
@@ -268,20 +284,47 @@ class FunctionValidator {
 		auto generic_arg = VISIT(func_arg, f, return opargs::OpCodeArg{ f });
 		auto signature   = signatures.at(fun_name);
 
-		if (!(signature.result_type.str == current_signature.result_type.str
+		if (!(signature.result_types == current_signature.result_types
 		      && signature.parameters == current_signature.parameters))
 			throw InvalidTailcallSignatureError(generic_arg);
 
-		if (signature.parameters.size() + 1 != local_stack.size())
+		auto& params = signature.parameters;
+		auto& reslts = signature.result_types;
+
+		if (params.size() + reslts.size() != local_stack.size())
 			throw InvalidTailcallArgumentsError(generic_arg);
 
-		if (local_stack.front().type->getName() != signature.result_type.str)
-			throw InvalidTailcallArgumentsError(generic_arg);
-		for (auto [param, stack_elem]: std::views::zip(
-				 signature.parameters, local_stack.getStackState() | std::views::drop(1)
-			 ))
+		using namespace std::views;
+		for (auto [reslt, stack_elem]:
+		     zip(reslts, local_stack.getStackState() | take(reslts.size())))
+
+			if (stack_elem.type->getName() != reslt.str)
+				throw InvalidTailcallArgumentsError(generic_arg);
+
+		for (auto [param, stack_elem]:
+		     zip(params, local_stack.getStackState() | drop(reslts.size())))
 			if (stack_elem.type->getName() != param.str)
 				throw InvalidTailcallArgumentsError(generic_arg);
+	}
+
+	template<typename PlaceT>
+	CRef<valid_type::ValidType> validateAndGetPlaceType(
+		const PlaceT& place, const LocalStack& current_stack
+	) const {
+		bool is_local  = current_stack.contains(place.var_name);
+		bool is_global = globals.contains(place.var_name);
+		if (is_local && is_global) throw DuplicatedLocalNameError(place);
+		if (!is_local && !is_global) throw UnknownLocalNameError(place);
+		return is_local ? current_stack.at(place.var_name)
+		                : types_ctx.at(globals.at(place.var_name)->type);
+	}
+
+	template<typename PlaceT>
+	CRef<valid_type::ValidType> getPlaceType(const PlaceT& place, const LocalStack& current_stack)
+		const {
+		bool is_local = current_stack.contains(place.var_name);
+		return is_local ? current_stack.at(place.var_name)
+		                : types_ctx.at(globals.at(place.var_name)->type);
 	}
 
 	/**
@@ -294,82 +337,46 @@ class FunctionValidator {
 	void validateArgTypes(const Instruction& instruction, const LocalStack& current_stack) const {
 		for (auto arg: instruction.args()) {
 			variant_match(arg) {
-#define STACK_LOCAL_CASE(BIT_COUNT)                                                        \
-	variant_case(CRef<opargs::StackLocal##BIT_COUNT>, local) {                             \
-		if (!current_stack.contains(local->var_name)) throw UnknownLocalNameError(*local); \
-		CRef<valid_type::ValidType> entry = current_stack.at(local->var_name);             \
-		variant_match(entry->getKind()) {                                                  \
+#define PLACE_CASE(BIT_COUNT)                                                              \
+	variant_case(CRef<opargs::Place##BIT_COUNT>, place) {                                  \
+		CRef<valid_type::ValidType> type = validateAndGetPlaceType(*place, current_stack); \
+		variant_match(type->getKind()) {                                                   \
 			variant_case(valid_type::finalized::Primitive, primitive_type) {               \
 				if (base::bytes2bits(primitive_type.size).asInt() != BIT_COUNT)            \
-					throw InvalidArgumentSizeError(*local);                                \
+					throw InvalidArgumentSizeError(*place);                                \
 			}                                                                              \
-			variant_default { throw InvalidArgumentTypeError(*local); }                    \
+			variant_default { throw InvalidArgumentTypeError(*place); }                    \
 		}                                                                                  \
 	}
-#define GLOBAL_CASE(BIT_COUNT)                                                                  \
-	variant_case(CRef<opargs::Global##BIT_COUNT>, global) {                                     \
-		if (!globals.contains(global->global_data_name)) throw UnknownGlobalNameError(*global); \
-		CRef<GlobalData>            entry = globals.at(global->global_data_name);               \
-		CRef<valid_type::ValidType> type  = types_ctx.at(entry->type);                          \
-		variant_match(type->getKind()) {                                                        \
-			variant_case(valid_type::finalized::Primitive, primitive_type) {                    \
-				if (base::bytes2bits(primitive_type.size).asInt() != BIT_COUNT)                 \
-					throw InvalidArgumentSizeError(*global);                                    \
-			}                                                                                   \
-			variant_default { throw InvalidArgumentTypeError(*global); }                        \
-		}                                                                                       \
-	}
-				GLOBAL_CASE(8);
-				GLOBAL_CASE(16);
-				GLOBAL_CASE(32);
-				GLOBAL_CASE(64);
+				PLACE_CASE(8);
+				PLACE_CASE(16);
+				PLACE_CASE(32);
+				PLACE_CASE(64);
 
-				variant_case(CRef<opargs::GlobalPtr>, global) {
-					if (!globals.contains(global->global_data_name))
-						throw UnknownGlobalNameError(*global);
-					CRef<GlobalData>            entry = globals.at(global->global_data_name);
-					CRef<valid_type::ValidType> type  = types_ctx.at(entry->type);
-					if (type->isKind<valid_type::finalized::Primitive>())
-						throw InvalidArgumentTypeError(*global);
-				}
-				variant_case(CRef<opargs::GlobalOpq>, global_opq) {
-					if (!globals.contains(global_opq->global_data_name))
-						throw UnknownGlobalNameError(*global_opq);
-					CRef<GlobalData>            entry = globals.at(global_opq->global_data_name);
-					CRef<valid_type::ValidType> type  = types_ctx.at(entry->type);
-					if (!type->isKind<valid_type::finalized::Opaque>())
-						throw InvalidArgumentTypeError(*global_opq);
-				}
-
-				STACK_LOCAL_CASE(8);
-				STACK_LOCAL_CASE(16);
-				STACK_LOCAL_CASE(32);
-				STACK_LOCAL_CASE(64);
-				variant_case(CRef<opargs::StackLocalPtr>, local) {
-					if (!current_stack.contains(local->var_name))
-						throw UnknownLocalNameError(*local);
-					CRef<valid_type::ValidType> type = current_stack.at(local->var_name);
+				variant_case(CRef<opargs::PlacePtr>, place) {
+					CRef<valid_type::ValidType> type
+						= validateAndGetPlaceType(*place, current_stack);
 					if (!type->isKind<valid_type::finalized::Pointer>())
-						throw InvalidArgumentTypeError(*local);
+						throw InvalidArgumentTypeError(*place);
 				}
-				variant_case(CRef<opargs::StackLocalAny>, local) {
+				variant_case(CRef<opargs::PlaceAny>, place) {
+					bool is_local  = current_stack.contains(place->var_name);
+					bool is_global = globals.contains(place->var_name);
+					if (is_local && is_global) throw DuplicatedLocalNameError(*place);
 					instr_match(instruction) {
-						instr_case_novalue(Op_init_lany_type) {
-							if (current_stack.contains(local->var_name))
-								throw DuplicatedLocalNameError(*local);
+						instr_case_novalue(Op_init_pany_type) {
+							if (is_local || is_global) throw DuplicatedLocalNameError(*place);
 						}
 						variant_default {
-							if (!current_stack.contains(local->var_name))
-								throw UnknownLocalNameError(*local);
+							if (!is_local && !is_global) throw UnknownLocalNameError(*place);
 						}
 					}
 				}
-				variant_case(CRef<opargs::StackLocalOpq>, local) {
-					if (!current_stack.contains(local->var_name))
-						throw UnknownLocalNameError(*local);
-					CRef<valid_type::ValidType> type = current_stack.at(local->var_name);
+				variant_case(CRef<opargs::PlaceOpq>, place) {
+					CRef<valid_type::ValidType> type
+						= validateAndGetPlaceType(*place, current_stack);
 					if (!type->isKind<valid_type::finalized::Opaque>())
-						throw InvalidArgumentTypeError(*local);
+						throw InvalidArgumentTypeError(*place);
 				}
 				variant_case_novalue(CRef<opargs::Immediate>) {}
 				variant_case(CRef<opargs::Type>, type_value) {
@@ -420,12 +427,11 @@ class FunctionValidator {
 					}
 				}
 
-				variant_case(CRef<opargs::StackLocalVnt>, variant) {
-					if (!current_stack.contains(variant->var_name))
-						throw UnknownLocalNameError(*variant);
-					CRef<valid_type::ValidType> type = current_stack.at(variant->var_name);
+				variant_case(CRef<opargs::PlaceVnt>, place) {
+					CRef<valid_type::ValidType> type
+						= validateAndGetPlaceType(*place, current_stack);
 					if (!type->isKind<valid_type::finalized::Variant>())
-						throw InvalidArgumentTypeError(*variant);
+						throw InvalidArgumentTypeError(*place);
 				}
 
 				variant_case(CRef<opargs::Field>, field) {
@@ -444,12 +450,18 @@ class FunctionValidator {
 					}
 				}
 
-				variant_case(CRef<opargs::StackLocalStructure>, local_struct) {
-					if (!current_stack.contains(local_struct->var_name))
-						throw UnknownLocalNameError(*local_struct);
-					CRef<valid_type::ValidType> type = current_stack.at(local_struct->var_name);
+				variant_case(CRef<opargs::PlaceStructure>, place) {
+					CRef<valid_type::ValidType> type
+						= validateAndGetPlaceType(*place, current_stack);
 					if (!type->isKind<valid_type::finalized::Structure>())
-						throw InvalidArgumentTypeError(*local_struct);
+						throw InvalidArgumentTypeError(*place);
+				}
+
+				variant_case(CRef<opargs::PlaceFSTable>, place) {
+					CRef<valid_type::ValidType> type
+						= validateAndGetPlaceType(*place, current_stack);
+					if (!type->isKind<valid_type::finalized::FixedSizeTable>())
+						throw InvalidArgumentTypeError(*place);
 				}
 
 				// All possible opargs must be handled. Unhandled opargs panic.
@@ -462,29 +474,23 @@ class FunctionValidator {
 
 	/**
 	 * @brief Validates that all primitive arguments of the instruction are of the same type. Used
-	 * for instructions which require this, e.g. `mov_l8_l8` - both arguments must be of the same
+	 * for instructions which require this, e.g. `mov_p8_p8` - both arguments must be of the same
 	 * primitive type - Invalid combination is (e.g. `i32` and `u32`).
 	 * @param instruction Instruction that is validated.
 	 */
-	void validateStackPrimitiveArgumentsSameType(
+	void validatePlacePrimitiveArgumentsSameType(
 		const Instruction& instruction, const LocalStack& current_stack
 	) const {
 		std::vector<valid_type::ValidTypeID> primitive_args;
 
 		for (auto arg: instruction.args()) {
 			variant_match(arg) {
-#define STACK_LOCAL_CASE_PRIMITIVE_VALIDATION(BIT_COUNT)                      \
-	variant_case(CRef<opargs::StackLocal##BIT_COUNT>, local) {                \
-		primitive_args.push_back(current_stack.at(local->var_name)->getID()); \
+#define PLACE_CASE_PRIMITIVE_VALIDATION(BIT_COUNT)                              \
+	variant_case(CRef<opargs::Place##BIT_COUNT>, place) {                       \
+		primitive_args.push_back(getPlaceType(*place, current_stack)->getID()); \
 	}
 
-#define GLOBAL_CASE_PRIMITIVE_VALIDATION(BIT_COUNT)                    \
-	variant_case(CRef<opargs::Global##BIT_COUNT>, global) {            \
-		CRef<GlobalData> entry = globals.at(global->global_data_name); \
-		primitive_args.push_back(types_ctx.at(entry->type)->getID());  \
-	}
-				FOR_EACH(STACK_LOCAL_CASE_PRIMITIVE_VALIDATION, 8, 16, 32, 64)
-				FOR_EACH(GLOBAL_CASE_PRIMITIVE_VALIDATION, 8, 16, 32, 64)
+				FOR_EACH(PLACE_CASE_PRIMITIVE_VALIDATION, 8, 16, 32, 64)
 				variant_default { continue; }
 			}
 		}
@@ -506,644 +512,570 @@ class FunctionValidator {
 		PUSH_DIAGNOSTIC
 		UNHANDLED_ENUM
 		instr_match(instruction) {
-			instr_case(Op_init_lany_type, instr) { validateArgInstantiable(instr.type); }
-			instr_case(Op_alloc_lptr_type, instr) {
+			instr_case(Op_init_pany_type, instr) { validateArgInstantiable(instr.type); }
+			instr_case(Op_alloc_pptr_type, instr) {
 				validateArgInstantiable(instr.type);
-				CRef<valid_type::ValidType> variable = current_stack.at(instr.ptr.var_name);
+				CRef<valid_type::ValidType> variable = getPlaceType(instr.ptr, current_stack);
 				CRef<valid_type::finalized::Pointer> pointer
 					= variable->getKindAs<valid_type::finalized::Pointer>();
 				if (types_ctx.at(pointer->inner)->getName() != instr.type.type_name)
 					throw PointerTypeMismatchError(instr);
 			}
-			instr_case(Op_upcast_lptr_lptr, instr) {
+			instr_case(Op_upcast_pptr_pptr, instr) {
 				validateClassCast<InvalidUpcastError>(instr, current_stack);
 			}
-			instr_case(Op_cast_l8_type, instr) {
+			instr_case(Op_cast_p8_type, instr) {
 				validatePrimitiveCast(instr.value, instr.target_type, instruction, current_stack);
 			}
-			instr_case(Op_cast_l16_type, instr) {
+			instr_case(Op_cast_p16_type, instr) {
 				validatePrimitiveCast(instr.value, instr.target_type, instruction, current_stack);
 			}
-			instr_case(Op_cast_l32_type, instr) {
+			instr_case(Op_cast_p32_type, instr) {
 				validatePrimitiveCast(instr.value, instr.target_type, instruction, current_stack);
 			}
-			instr_case(Op_cast_l64_type, instr) {
+			instr_case(Op_cast_p64_type, instr) {
 				validatePrimitiveCast(instr.value, instr.target_type, instruction, current_stack);
 			}
-
 			instr_case_novalue(Comment) {}
-			instr_case(Op_mov_l8_imm, instr) {
-				if (instr.dst.var_name == base::StrID("ret_val")
-				    && function.signature.result_type.str == base::StrID("void"))
-					throw VoidRetValAssignmentError(instr);
+			instr_case_novalue(Op_mov_p8_imm) {}
+			instr_case(Op_mov_p8_p8, instr) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case(Op_mov_l8_l8, instr) {
-				if (instr.dst.var_name == base::StrID("ret_val")
-				    && function.signature.result_type.str == base::StrID("void"))
-					throw VoidRetValAssignmentError(instr);
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case(Op_cmov_p8_p8, instr) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case(Op_cmov_l8_l8, instr) {
-				if (instr.dst.var_name == base::StrID("ret_val")
-				    && function.signature.result_type.str == base::StrID("void"))
-					throw VoidRetValAssignmentError(instr);
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_cmov_p8_imm, Op_mov_p16_imm) {}
+			instr_case_novalue(Op_mov_p16_p16) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case(Op_cmov_l8_imm, instr) {
-				if (instr.dst.var_name == base::StrID("ret_val")
-				    && function.signature.result_type.str == base::StrID("void"))
-					throw VoidRetValAssignmentError(instr);
+			instr_case_novalue(Op_cmov_p16_p16) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_mov_l16_imm) {}
-			instr_case_novalue(Op_mov_l16_l16) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_cmov_p16_imm, Op_mov_p32_imm) {}
+			instr_case_novalue(Op_mov_p32_p32) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_cmov_l16_l16) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_cmov_p32_p32) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_cmov_l16_imm) {}
-			instr_case_novalue(Op_mov_l32_imm) {}
-			instr_case_novalue(Op_mov_l32_l32) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_cmov_p32_imm, Op_mov_p64_imm) {}
+			instr_case_novalue(Op_mov_p64_p64) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_cmov_l32_l32) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_cmov_p64_p64) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_cmov_l32_imm) {}
-			instr_case_novalue(Op_mov_l64_imm) {}
-			instr_case_novalue(Op_mov_l64_l64) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
-			}
-			instr_case_novalue(Op_cmov_l64_l64) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
-			}
-			instr_case_novalue(Op_cmov_l64_imm) {}
-			instr_case_novalue(Op_mov_g64_g64) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
-			}
-			instr_case_novalue(Op_mov_g64_l64) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
-			}
-			instr_case_novalue(Op_mov_g64_imm) {}
-			instr_case_novalue(Op_mov_g32_g32) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
-			}
-			instr_case_novalue(Op_mov_g32_l32) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
-			}
-			instr_case_novalue(Op_mov_g32_imm) {}
-			instr_case_novalue(Op_mov_g16_g16) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
-			}
-			instr_case_novalue(Op_mov_g16_l16) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
-			}
-			instr_case_novalue(Op_mov_g16_imm) {}
-			instr_case_novalue(Op_mov_g8_g8) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
-			}
-			instr_case_novalue(Op_mov_g8_l8) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
-			}
-			instr_case_novalue(Op_mov_g8_imm) {}
-			instr_case(Op_mov_lptr_lptr, instr) {
-				auto src_type = current_stack.at(instr.src.var_name)->getName();
-				auto dst_type = current_stack.at(instr.dst.var_name)->getName();
-				if (src_type != dst_type) throw PointerTypeMismatchError(instr);
-			}
-			instr_case(Op_mov_gptr_lptr, instr) {
-				auto src_type = current_stack.at(instr.src.var_name)->getName();
-				auto dst_type = globals.at(instr.dst.global_data_name)->type.str;
-				if (src_type != dst_type) throw PointerTypeMismatchError(instr);
-			}
-			instr_case(Op_mov_lptr_gptr, instr) {
-				auto src_type = globals.at(instr.src.global_data_name)->type.str;
-				auto dst_type = current_stack.at(instr.dst.var_name)->getName();
-				if (src_type != dst_type) throw PointerTypeMismatchError(instr);
-			}
-			instr_case_novalue(Op_mov_l64_g64) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
-			}
-			instr_case_novalue(Op_mov_l32_g32) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
-			}
-			instr_case_novalue(Op_mov_l16_g16) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
-			}
-			instr_case_novalue(Op_mov_l8_g8) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
-			}
-			instr_case_novalue(Op_mov_lopq_lopq) {}
-			instr_case_novalue(Op_mov_lopq_gopq) {}
-			instr_case_novalue(Op_mov_gopq_lopq) {}
-			instr_case_novalue(Op_mov_lopq_imm) {}
+			instr_case_novalue(Op_cmov_p64_imm) {}
 
-			instr_case(Op_mov_lste_lste, instr) {
-				// Validate that both sides are the same structs.
-				auto dst_type = current_stack.at(instr.dst.var_name)->getName();
-				auto src_type = current_stack.at(instr.src.var_name)->getName();
-				if (dst_type != src_type) throw StructTypeMismatchError(instr);
-			}
-			instr_case(Op_mov_lste_gste, instr) {
-				// Validate that both sides are the same structs.
-				auto dst_type = current_stack.at(instr.dst.var_name)->getName();
-				auto src_type = globals.at(instr.src.global_data_name)->type.str;
-				if (dst_type != src_type) throw StructTypeMismatchError(instr);
-			}
-			instr_case(Op_mov_gste_lste, instr) {
-				// Validate that both sides are the same structs.
-				auto dst_type = globals.at(instr.dst.global_data_name)->type.str;
-				auto src_type = current_stack.at(instr.src.var_name)->getName();
-				if (dst_type != src_type) throw StructTypeMismatchError(instr);
-			}
-			instr_case(Op_mov_gste_gste, instr) {
-				// Validate that both sides are the same structs.
-				auto dst_type = globals.at(instr.dst.global_data_name)->type.str;
-				auto src_type = globals.at(instr.src.global_data_name)->type.str;
-				if (dst_type != src_type) throw StructTypeMismatchError(instr);
+			instr_case(Op_mov_pptr_pptr, instr) {
+				auto src_type = getPlaceType(instr.src, current_stack)->getName();
+				auto dst_type = getPlaceType(instr.dst, current_stack)->getName();
+				if (src_type != dst_type) throw PointerTypeMismatchError(instr);
 			}
 
-			instr_case_novalue(Op_setNull_lptr) {}
+			instr_case_novalue(Op_mov_popq_popq, Op_mov_popq_imm) {}
+
+			instr_case(Op_mov_pste_pste, instr) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
+			}
+			instr_case(Op_mov_pfst_pfst, instr) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
+			}
+
+			instr_case_novalue(Op_setNull_pptr) {}
 
 			// Sign Extension
-			instr_case_novalue(Op_sext_l16_l8) {}
-			instr_case_novalue(Op_sext_l32_l8) {}
-			instr_case_novalue(Op_sext_l64_l8) {}
-			instr_case_novalue(Op_sext_l32_l16) {}
-			instr_case_novalue(Op_sext_l64_l16) {}
-			instr_case_novalue(Op_sext_l64_l32) {}
+			instr_case_novalue(
+				Op_sext_p16_p8,
+				Op_sext_p32_p8,
+				Op_sext_p64_p8,
+				Op_sext_p32_p16,
+				Op_sext_p64_p16,
+				Op_sext_p64_p32
+			) {}
 
 			// Zero Extension
-			instr_case_novalue(Op_zext_l16_l8) {}
-			instr_case_novalue(Op_zext_l32_l8) {}
-			instr_case_novalue(Op_zext_l64_l8) {}
-			instr_case_novalue(Op_zext_l32_l16) {}
-			instr_case_novalue(Op_zext_l64_l16) {}
-			instr_case_novalue(Op_zext_l64_l32) {}
+			instr_case_novalue(
+				Op_zext_p16_p8,
+				Op_zext_p32_p8,
+				Op_zext_p64_p8,
+				Op_zext_p32_p16,
+				Op_zext_p64_p16,
+				Op_zext_p64_p32
+			) {}
 
 			// Truncation
-			instr_case_novalue(Op_trunc_l8_l16) {}
-			instr_case_novalue(Op_trunc_l8_l32) {}
-			instr_case_novalue(Op_trunc_l8_l64) {}
-			instr_case_novalue(Op_trunc_l16_l32) {}
-			instr_case_novalue(Op_trunc_l16_l64) {}
-			instr_case_novalue(Op_trunc_l32_l64) {}
+			instr_case_novalue(
+				Op_trunc_p8_p16,
+				Op_trunc_p8_p32,
+				Op_trunc_p8_p64,
+				Op_trunc_p16_p32,
+				Op_trunc_p16_p64,
+				Op_trunc_p32_p64
+			) {}
 
 			// Int to Float
-			instr_case_novalue(Op_sitofp_l32_l8) {}
-			instr_case_novalue(Op_uitofp_l32_l8) {}
-			instr_case_novalue(Op_sitofp_l32_l16) {}
-			instr_case_novalue(Op_uitofp_l32_l16) {}
-			instr_case_novalue(Op_sitofp_l32_l32) {}
-			instr_case_novalue(Op_uitofp_l32_l32) {}
-			instr_case_novalue(Op_sitofp_l32_l64) {}
-			instr_case_novalue(Op_uitofp_l32_l64) {}
+			instr_case_novalue(
+				Op_sitofp_p32_p8,
+				Op_uitofp_p32_p8,
+				Op_sitofp_p32_p16,
+				Op_uitofp_p32_p16,
+				Op_sitofp_p32_p32,
+				Op_uitofp_p32_p32,
+				Op_sitofp_p32_p64,
+				Op_uitofp_p32_p64
+			) {}
 
-			instr_case_novalue(Op_sitofp_l64_l8) {}
-			instr_case_novalue(Op_uitofp_l64_l8) {}
-			instr_case_novalue(Op_sitofp_l64_l16) {}
-			instr_case_novalue(Op_uitofp_l64_l16) {}
-			instr_case_novalue(Op_sitofp_l64_l32) {}
-			instr_case_novalue(Op_uitofp_l64_l32) {}
-			instr_case_novalue(Op_sitofp_l64_l64) {}
-			instr_case_novalue(Op_uitofp_l64_l64) {}
+			instr_case_novalue(
+				Op_sitofp_p64_p8,
+				Op_uitofp_p64_p8,
+				Op_sitofp_p64_p16,
+				Op_uitofp_p64_p16,
+				Op_sitofp_p64_p32,
+				Op_uitofp_p64_p32,
+				Op_sitofp_p64_p64,
+				Op_uitofp_p64_p64
+			) {}
 
 			// Float to Int
-			instr_case_novalue(Op_fptosi_l8_l32) {}
-			instr_case_novalue(Op_fptoui_l8_l32) {}
-			instr_case_novalue(Op_fptosi_l16_l32) {}
-			instr_case_novalue(Op_fptoui_l16_l32) {}
-			instr_case_novalue(Op_fptosi_l32_l32) {}
-			instr_case_novalue(Op_fptoui_l32_l32) {}
-			instr_case_novalue(Op_fptosi_l64_l32) {}
-			instr_case_novalue(Op_fptoui_l64_l32) {}
+			instr_case_novalue(
+				Op_fptosi_p8_p32,
+				Op_fptoui_p8_p32,
+				Op_fptosi_p16_p32,
+				Op_fptoui_p16_p32,
+				Op_fptosi_p32_p32,
+				Op_fptoui_p32_p32,
+				Op_fptosi_p64_p32,
+				Op_fptoui_p64_p32
+			) {}
 
-			instr_case_novalue(Op_fptosi_l8_l64) {}
-			instr_case_novalue(Op_fptoui_l8_l64) {}
-			instr_case_novalue(Op_fptosi_l16_l64) {}
-			instr_case_novalue(Op_fptoui_l16_l64) {}
-			instr_case_novalue(Op_fptosi_l32_l64) {}
-			instr_case_novalue(Op_fptoui_l32_l64) {}
-			instr_case_novalue(Op_fptosi_l64_l64) {}
-			instr_case_novalue(Op_fptoui_l64_l64) {}
+			instr_case_novalue(
+				Op_fptosi_p8_p64,
+				Op_fptoui_p8_p64,
+				Op_fptosi_p16_p64,
+				Op_fptoui_p16_p64,
+				Op_fptosi_p32_p64,
+				Op_fptoui_p32_p64,
+				Op_fptosi_p64_p64,
+				Op_fptoui_p64_p64
+			) {}
 
 			// Float to float
-			instr_case_novalue(Op_fpext_l64_l32) {}
-			instr_case_novalue(Op_fptrunc_l32_l64) {}
+			instr_case_novalue(Op_fpext_p64_p32, Op_fptrunc_p32_p64) {}
 
-			instr_case_novalue(Op_add_l64_l64) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_add_p64_p64) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_add_l64_imm) {}
-			instr_case_novalue(Op_sub_l64_l64) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_add_p64_imm) {}
+			instr_case_novalue(Op_sub_p64_p64) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_sub_l64_imm) {}
-			instr_case_novalue(Op_mul_l64_l64) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_sub_p64_imm) {}
+			instr_case_novalue(Op_mul_p64_p64) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_mul_l64_imm) {}
-			instr_case_novalue(Op_mod_l64_l64) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_mul_p64_imm) {}
+			instr_case_novalue(Op_mod_p64_p64) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_mod_l64_imm) {}
-			instr_case_novalue(Op_div_l64_l64) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_mod_p64_imm) {}
+			instr_case_novalue(Op_div_p64_p64) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_div_l64_imm) {}
-			instr_case_novalue(Op_neg_l64) {}
+			instr_case_novalue(Op_div_p64_imm) {}
+			instr_case_novalue(Op_neg_p64) {}
 
-			instr_case_novalue(Op_add_l32_l32) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_add_p32_p32) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_add_l32_imm) {}
-			instr_case_novalue(Op_sub_l32_l32) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_add_p32_imm) {}
+			instr_case_novalue(Op_sub_p32_p32) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_sub_l32_imm) {}
-			instr_case_novalue(Op_mul_l32_l32) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_sub_p32_imm) {}
+			instr_case_novalue(Op_mul_p32_p32) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_mul_l32_imm) {}
-			instr_case_novalue(Op_mod_l32_l32) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_mul_p32_imm) {}
+			instr_case_novalue(Op_mod_p32_p32) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_mod_l32_imm) {}
-			instr_case_novalue(Op_div_l32_l32) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_mod_p32_imm) {}
+			instr_case_novalue(Op_div_p32_p32) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_div_l32_imm) {}
-			instr_case_novalue(Op_neg_l32) {}
+			instr_case_novalue(Op_div_p32_imm) {}
+			instr_case_novalue(Op_neg_p32) {}
 
-			instr_case_novalue(Op_add_l16_l16) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_add_p16_p16) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_add_l16_imm) {}
-			instr_case_novalue(Op_sub_l16_l16) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_add_p16_imm) {}
+			instr_case_novalue(Op_sub_p16_p16) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_sub_l16_imm) {}
-			instr_case_novalue(Op_mul_l16_l16) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_sub_p16_imm) {}
+			instr_case_novalue(Op_mul_p16_p16) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_mul_l16_imm) {}
-			instr_case_novalue(Op_mod_l16_l16) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_mul_p16_imm) {}
+			instr_case_novalue(Op_mod_p16_p16) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_mod_l16_imm) {}
-			instr_case_novalue(Op_div_l16_l16) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_mod_p16_imm) {}
+			instr_case_novalue(Op_div_p16_p16) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_div_l16_imm) {}
-			instr_case_novalue(Op_neg_l16) {}
+			instr_case_novalue(Op_div_p16_imm) {}
+			instr_case_novalue(Op_neg_p16) {}
 
-			instr_case_novalue(Op_add_l8_l8) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_add_p8_p8) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_add_l8_imm) {}
-			instr_case_novalue(Op_sub_l8_l8) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_add_p8_imm) {}
+			instr_case_novalue(Op_sub_p8_p8) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_sub_l8_imm) {}
-			instr_case_novalue(Op_mul_l8_l8) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_sub_p8_imm) {}
+			instr_case_novalue(Op_mul_p8_p8) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_mul_l8_imm) {}
-			instr_case_novalue(Op_mod_l8_l8) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_mul_p8_imm) {}
+			instr_case_novalue(Op_mod_p8_p8) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_mod_l8_imm) {}
-			instr_case_novalue(Op_div_l8_l8) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_mod_p8_imm) {}
+			instr_case_novalue(Op_div_p8_p8) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_div_l8_imm) {}
-			instr_case_novalue(Op_neg_l8) {}
+			instr_case_novalue(Op_div_p8_imm) {}
+			instr_case_novalue(Op_neg_p8) {}
 
-			instr_case_novalue(Op_cmpEq_l64_l64) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_cmpEq_p64_p64) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_cmpEq_l64_imm) {}
-			instr_case_novalue(Op_cmpNeq_l64_l64) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_cmpEq_p64_imm) {}
+			instr_case_novalue(Op_cmpNeq_p64_p64) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_cmpNeq_l64_imm) {}
-			instr_case_novalue(Op_cmpEq_l32_l32) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_cmpNeq_p64_imm) {}
+			instr_case_novalue(Op_cmpEq_p32_p32) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_cmpEq_l32_imm) {}
-			instr_case_novalue(Op_cmpNeq_l32_l32) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_cmpEq_p32_imm) {}
+			instr_case_novalue(Op_cmpNeq_p32_p32) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_cmpNeq_l32_imm) {}
-			instr_case_novalue(Op_cmpEq_l16_l16) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_cmpNeq_p32_imm) {}
+			instr_case_novalue(Op_cmpEq_p16_p16) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_cmpEq_l16_imm) {}
-			instr_case_novalue(Op_cmpNeq_l16_l16) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_cmpEq_p16_imm) {}
+			instr_case_novalue(Op_cmpNeq_p16_p16) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_cmpNeq_l16_imm) {}
-			instr_case_novalue(Op_cmpEq_l8_l8) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_cmpNeq_p16_imm) {}
+			instr_case_novalue(Op_cmpEq_p8_p8) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_cmpEq_l8_imm) {}
-			instr_case_novalue(Op_cmpNeq_l8_l8) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_cmpEq_p8_imm) {}
+			instr_case_novalue(Op_cmpNeq_p8_p8) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_cmpNeq_l8_imm) {}
+			instr_case_novalue(Op_cmpNeq_p8_imm) {}
 
-			instr_case_novalue(Op_cmpGt_l64_l64) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_cmpGt_p64_p64) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_cmpGt_l64_imm) {}
-			instr_case_novalue(Op_cmpGe_l64_l64) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_cmpGt_p64_imm) {}
+			instr_case_novalue(Op_cmpGe_p64_p64) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_cmpGe_l64_imm) {}
-			instr_case_novalue(Op_cmpGt_l32_l32) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_cmpGe_p64_imm) {}
+			instr_case_novalue(Op_cmpGt_p32_p32) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_cmpGt_l32_imm) {}
-			instr_case_novalue(Op_cmpGe_l32_l32) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_cmpGt_p32_imm) {}
+			instr_case_novalue(Op_cmpGe_p32_p32) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_cmpGe_l32_imm) {}
-			instr_case_novalue(Op_cmpGt_l16_l16) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_cmpGe_p32_imm) {}
+			instr_case_novalue(Op_cmpGt_p16_p16) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_cmpGt_l16_imm) {}
-			instr_case_novalue(Op_cmpGe_l16_l16) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_cmpGt_p16_imm) {}
+			instr_case_novalue(Op_cmpGe_p16_p16) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_cmpGe_l16_imm) {}
-			instr_case_novalue(Op_cmpGt_l8_l8) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_cmpGe_p16_imm) {}
+			instr_case_novalue(Op_cmpGt_p8_p8) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_cmpGt_l8_imm) {}
-			instr_case_novalue(Op_cmpGe_l8_l8) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_cmpGt_p8_imm) {}
+			instr_case_novalue(Op_cmpGe_p8_p8) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_cmpGe_l8_imm) {}
+			instr_case_novalue(Op_cmpGe_p8_imm) {}
 
-			instr_case_novalue(Op_ucmpGt_l64_l64) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_ucmpGt_p64_p64) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_ucmpGt_l64_imm) {}
-			instr_case_novalue(Op_ucmpGe_l64_l64) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_ucmpGt_p64_imm) {}
+			instr_case_novalue(Op_ucmpGe_p64_p64) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_ucmpGe_l64_imm) {}
-			instr_case_novalue(Op_ucmpGt_l32_l32) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_ucmpGe_p64_imm) {}
+			instr_case_novalue(Op_ucmpGt_p32_p32) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_ucmpGt_l32_imm) {}
-			instr_case_novalue(Op_ucmpGe_l32_l32) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_ucmpGt_p32_imm) {}
+			instr_case_novalue(Op_ucmpGe_p32_p32) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_ucmpGe_l32_imm) {}
-			instr_case_novalue(Op_ucmpGt_l16_l16) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_ucmpGe_p32_imm) {}
+			instr_case_novalue(Op_ucmpGt_p16_p16) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_ucmpGt_l16_imm) {}
-			instr_case_novalue(Op_ucmpGe_l16_l16) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_ucmpGt_p16_imm) {}
+			instr_case_novalue(Op_ucmpGe_p16_p16) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_ucmpGe_l16_imm) {}
-			instr_case_novalue(Op_ucmpGt_l8_l8) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_ucmpGe_p16_imm) {}
+			instr_case_novalue(Op_ucmpGt_p8_p8) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_ucmpGt_l8_imm) {}
-			instr_case_novalue(Op_ucmpGe_l8_l8) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_ucmpGt_p8_imm) {}
+			instr_case_novalue(Op_ucmpGe_p8_p8) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_ucmpGe_l8_imm) {}
+			instr_case_novalue(Op_ucmpGe_p8_imm) {}
 
-			instr_case_novalue(Op_cmpLt_l64_l64) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_cmpLt_p64_p64) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_cmpLt_l64_imm) {}
-			instr_case_novalue(Op_cmpLe_l64_l64) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_cmpLt_p64_imm) {}
+			instr_case_novalue(Op_cmpLe_p64_p64) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_cmpLe_l64_imm) {}
-			instr_case_novalue(Op_cmpLt_l32_l32) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_cmpLe_p64_imm) {}
+			instr_case_novalue(Op_cmpLt_p32_p32) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_cmpLt_l32_imm) {}
-			instr_case_novalue(Op_cmpLe_l32_l32) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_cmpLt_p32_imm) {}
+			instr_case_novalue(Op_cmpLe_p32_p32) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_cmpLe_l32_imm) {}
-			instr_case_novalue(Op_cmpLt_l16_l16) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_cmpLe_p32_imm) {}
+			instr_case_novalue(Op_cmpLt_p16_p16) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_cmpLt_l16_imm) {}
-			instr_case_novalue(Op_cmpLe_l16_l16) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_cmpLt_p16_imm) {}
+			instr_case_novalue(Op_cmpLe_p16_p16) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_cmpLe_l16_imm) {}
-			instr_case_novalue(Op_cmpLt_l8_l8) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_cmpLe_p16_imm) {}
+			instr_case_novalue(Op_cmpLt_p8_p8) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_cmpLt_l8_imm) {}
-			instr_case_novalue(Op_cmpLe_l8_l8) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_cmpLt_p8_imm) {}
+			instr_case_novalue(Op_cmpLe_p8_p8) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_cmpLe_l8_imm) {}
+			instr_case_novalue(Op_cmpLe_p8_imm) {}
 
-			instr_case_novalue(Op_ucmpLt_l64_l64) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_ucmpLt_p64_p64) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_ucmpLt_l64_imm) {}
-			instr_case_novalue(Op_ucmpLe_l64_l64) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_ucmpLt_p64_imm) {}
+			instr_case_novalue(Op_ucmpLe_p64_p64) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_ucmpLe_l64_imm) {}
-			instr_case_novalue(Op_ucmpLt_l32_l32) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_ucmpLe_p64_imm) {}
+			instr_case_novalue(Op_ucmpLt_p32_p32) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_ucmpLt_l32_imm) {}
-			instr_case_novalue(Op_ucmpLe_l32_l32) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_ucmpLt_p32_imm) {}
+			instr_case_novalue(Op_ucmpLe_p32_p32) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_ucmpLe_l32_imm) {}
-			instr_case_novalue(Op_ucmpLt_l16_l16) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_ucmpLe_p32_imm) {}
+			instr_case_novalue(Op_ucmpLt_p16_p16) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_ucmpLt_l16_imm) {}
-			instr_case_novalue(Op_ucmpLe_l16_l16) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_ucmpLt_p16_imm) {}
+			instr_case_novalue(Op_ucmpLe_p16_p16) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_ucmpLe_l16_imm) {}
-			instr_case_novalue(Op_ucmpLt_l8_l8) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_ucmpLe_p16_imm) {}
+			instr_case_novalue(Op_ucmpLt_p8_p8) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_ucmpLt_l8_imm) {}
-			instr_case_novalue(Op_ucmpLe_l8_l8) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_ucmpLt_p8_imm) {}
+			instr_case_novalue(Op_ucmpLe_p8_p8) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_ucmpLe_l8_imm) {}
+			instr_case_novalue(Op_ucmpLe_p8_imm) {}
 
-			instr_case_novalue(Op_fcmpEq_l64_l64) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_fcmpEq_p64_p64) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_fcmpEq_l64_imm) {}
-			instr_case_novalue(Op_fcmpNeq_l64_l64) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_fcmpEq_p64_imm) {}
+			instr_case_novalue(Op_fcmpNeq_p64_p64) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_fcmpNeq_l64_imm) {}
-			instr_case_novalue(Op_fcmpGt_l64_l64) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_fcmpNeq_p64_imm) {}
+			instr_case_novalue(Op_fcmpGt_p64_p64) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_fcmpGt_l64_imm) {}
-			instr_case_novalue(Op_fcmpGe_l64_l64) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_fcmpGt_p64_imm) {}
+			instr_case_novalue(Op_fcmpGe_p64_p64) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_fcmpGe_l64_imm) {}
-			instr_case_novalue(Op_fcmpLt_l64_l64) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_fcmpGe_p64_imm) {}
+			instr_case_novalue(Op_fcmpLt_p64_p64) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_fcmpLt_l64_imm) {}
-			instr_case_novalue(Op_fcmpLe_l64_l64) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_fcmpLt_p64_imm) {}
+			instr_case_novalue(Op_fcmpLe_p64_p64) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_fcmpLe_l64_imm) {}
+			instr_case_novalue(Op_fcmpLe_p64_imm) {}
 
-			instr_case_novalue(Op_fcmpEq_l32_l32) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_fcmpEq_p32_p32) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_fcmpEq_l32_imm) {}
-			instr_case_novalue(Op_fcmpNeq_l32_l32) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_fcmpEq_p32_imm) {}
+			instr_case_novalue(Op_fcmpNeq_p32_p32) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_fcmpNeq_l32_imm) {}
-			instr_case_novalue(Op_fcmpGt_l32_l32) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_fcmpNeq_p32_imm) {}
+			instr_case_novalue(Op_fcmpGt_p32_p32) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_fcmpGt_l32_imm) {}
-			instr_case_novalue(Op_fcmpGe_l32_l32) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_fcmpGt_p32_imm) {}
+			instr_case_novalue(Op_fcmpGe_p32_p32) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_fcmpGe_l32_imm) {}
-			instr_case_novalue(Op_fcmpLt_l32_l32) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_fcmpGe_p32_imm) {}
+			instr_case_novalue(Op_fcmpLt_p32_p32) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_fcmpLt_l32_imm) {}
-			instr_case_novalue(Op_fcmpLe_l32_l32) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_fcmpLt_p32_imm) {}
+			instr_case_novalue(Op_fcmpLe_p32_p32) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_fcmpLe_l32_imm) {}
+			instr_case_novalue(Op_fcmpLe_p32_imm) {}
 
-			instr_case_novalue(Op_cmpNull_lptr) {}
+			instr_case_novalue(Op_cmpNull_pptr) {}
 
-			instr_case_novalue(Op_fadd_l64_l64) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_fadd_p64_p64) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_fadd_l64_imm) {}
-			instr_case_novalue(Op_fadd_l32_l32) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_fadd_p64_imm) {}
+			instr_case_novalue(Op_fadd_p32_p32) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_fadd_l32_imm) {}
+			instr_case_novalue(Op_fadd_p32_imm) {}
 
-			instr_case_novalue(Op_fsub_l64_l64) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_fsub_p64_p64) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_fsub_l64_imm) {}
-			instr_case_novalue(Op_fsub_l32_l32) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_fsub_p64_imm) {}
+			instr_case_novalue(Op_fsub_p32_p32) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_fsub_l32_imm) {}
+			instr_case_novalue(Op_fsub_p32_imm) {}
 
-			instr_case_novalue(Op_fmul_l64_l64) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_fmul_p64_p64) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_fmul_l64_imm) {}
-			instr_case_novalue(Op_fmul_l32_l32) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_fmul_p64_imm) {}
+			instr_case_novalue(Op_fmul_p32_p32) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_fmul_l32_imm) {}
+			instr_case_novalue(Op_fmul_p32_imm) {}
 
-			instr_case_novalue(Op_fdiv_l64_l64) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_fdiv_p64_p64) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_fdiv_l64_imm) {}
-			instr_case_novalue(Op_fdiv_l32_l32) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_fdiv_p64_imm) {}
+			instr_case_novalue(Op_fdiv_p32_p32) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_fdiv_l32_imm) {}
+			instr_case_novalue(Op_fdiv_p32_imm) {}
 
-			instr_case_novalue(Op_fneg_l64) {}
-			instr_case_novalue(Op_fneg_l32) {}
+			instr_case_novalue(Op_fneg_p64) {}
+			instr_case_novalue(Op_fneg_p32) {}
 
-			instr_case_novalue(Op_umul_l64_l64) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_umul_p64_p64) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_umul_l64_imm) {}
-			instr_case_novalue(Op_umod_l64_l64) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_umul_p64_imm) {}
+			instr_case_novalue(Op_umod_p64_p64) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_umod_l64_imm) {}
-			instr_case_novalue(Op_udiv_l64_l64) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_umod_p64_imm) {}
+			instr_case_novalue(Op_udiv_p64_p64) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_udiv_l64_imm) {}
+			instr_case_novalue(Op_udiv_p64_imm) {}
 
-			instr_case_novalue(Op_umul_l32_l32) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_umul_p32_p32) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_umul_l32_imm) {}
-			instr_case_novalue(Op_umod_l32_l32) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_umul_p32_imm) {}
+			instr_case_novalue(Op_umod_p32_p32) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_umod_l32_imm) {}
-			instr_case_novalue(Op_udiv_l32_l32) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_umod_p32_imm) {}
+			instr_case_novalue(Op_udiv_p32_p32) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_udiv_l32_imm) {}
+			instr_case_novalue(Op_udiv_p32_imm) {}
 
-			instr_case_novalue(Op_umul_l16_l16) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_umul_p16_p16) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_umul_l16_imm) {}
-			instr_case_novalue(Op_umod_l16_l16) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_umul_p16_imm) {}
+			instr_case_novalue(Op_umod_p16_p16) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_umod_l16_imm) {}
-			instr_case_novalue(Op_udiv_l16_l16) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_umod_p16_imm) {}
+			instr_case_novalue(Op_udiv_p16_p16) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_udiv_l16_imm) {}
+			instr_case_novalue(Op_udiv_p16_imm) {}
 
-			instr_case_novalue(Op_umul_l8_l8) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_umul_p8_p8) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_umul_l8_imm) {}
-			instr_case_novalue(Op_umod_l8_l8) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_umul_p8_imm) {}
+			instr_case_novalue(Op_umod_p8_p8) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_umod_l8_imm) {}
-			instr_case_novalue(Op_udiv_l8_l8) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_umod_p8_imm) {}
+			instr_case_novalue(Op_udiv_p8_p8) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_udiv_l8_imm) {}
+			instr_case_novalue(Op_udiv_p8_imm) {}
 
-			instr_case_novalue(Op_log_and_l8_l8) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_log_and_p8_p8) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_log_and_l8_imm) {}
-			instr_case_novalue(Op_log_or_l8_l8) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_log_and_p8_imm) {}
+			instr_case_novalue(Op_log_or_p8_p8) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_log_or_l8_imm) {}
-			instr_case_novalue(Op_log_xor_l8_l8) {
-				validateStackPrimitiveArgumentsSameType(instruction, current_stack);
+			instr_case_novalue(Op_log_or_p8_imm) {}
+			instr_case_novalue(Op_log_xor_p8_p8) {
+				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_log_xor_l8_imm) {}
-			instr_case_novalue(Op_log_not_l8) {}
+			instr_case_novalue(Op_log_xor_p8_imm) {}
+			instr_case_novalue(Op_log_not_p8) {}
 
 
-			instr_case(Op_variantSetInner_lvnt_type, instr) {
-				const auto variant_type = current_stack.at(instr.variant.var_name)
+			instr_case(Op_variantSetInner_pvnt_type, instr) {
+				const auto variant_type = getPlaceType(instr.variant, current_stack)
 				                              ->getKindAs<valid_type::finalized::Variant>();
 				valid_type::ValidTypeID wanted_type
 					= types_ctx.at(instr.inner_type.type_name)->getID();
@@ -1151,10 +1083,10 @@ class FunctionValidator {
 				if (!variant_type->alternatives_set.contains(wanted_type))
 					throw VariantTypeMismatchError(instr);
 			}
-			instr_case(Op_variantGetInner_lptr_lvnt_type, instr) {
-				const auto variant_type = current_stack.at(instr.variant.var_name)
+			instr_case(Op_variantGetInner_pptr_pvnt_type, instr) {
+				const auto variant_type = getPlaceType(instr.variant, current_stack)
 				                              ->getKindAs<valid_type::finalized::Variant>();
-				const auto pointer_type = current_stack.at(instr.dst_ptr.var_name)
+				const auto pointer_type = getPlaceType(instr.dst_ptr, current_stack)
 				                              ->getKindAs<valid_type::finalized::Pointer>();
 				auto wanted_type = types_ctx.at(pointer_type->inner);
 				if (!variant_type->alternatives_set.contains(wanted_type->getID()))
@@ -1163,8 +1095,8 @@ class FunctionValidator {
 				if (instr.expected_type != wanted_type->getName())
 					throw VariantTypeMismatchError(instr);
 			}
-			instr_case(Op_variantSetInner_lptr_type, instr) {
-				const auto variant_pointer = current_stack.at(instr.variant_ptr.var_name)
+			instr_case(Op_variantSetInner_pptr_type, instr) {
+				const auto variant_pointer = getPlaceType(instr.variant_ptr, current_stack)
 				                                 ->getKindAs<valid_type::finalized::Pointer>();
 
 				const auto variant_type = expectPointerType<valid_type::finalized::Variant>(
@@ -1175,13 +1107,13 @@ class FunctionValidator {
 				if (!variant_type->alternatives_set.contains(wanted_type->getID()))
 					throw VariantTypeMismatchError(instr);
 			}
-			instr_case(Op_variantGetInner_lptr_lptr_type, instr) {
-				const auto pointer_type = current_stack.at(instr.dst_ptr.var_name)
+			instr_case(Op_variantGetInner_pptr_pptr_type, instr) {
+				const auto pointer_type = getPlaceType(instr.dst_ptr, current_stack)
 				                              ->getKindAs<valid_type::finalized::Pointer>();
 				auto wanted_type = types_ctx.at(pointer_type->inner);
 
 
-				const auto variant_pointer = current_stack.at(instr.variant_ptr.var_name)
+				const auto variant_pointer = getPlaceType(instr.variant_ptr, current_stack)
 				                                 ->getKindAs<valid_type::finalized::Pointer>();
 				const auto variant_type = expectPointerType<valid_type::finalized::Variant>(
 					variant_pointer, types_ctx, instr
@@ -1193,17 +1125,12 @@ class FunctionValidator {
 				if (instr.expected_type != wanted_type->getName())
 					throw VariantTypeMismatchError(instr);
 			}
-			instr_case_novalue(Op_label) {}
-			instr_case_novalue(Op_jmp_label) {}
-			instr_case_novalue(Op_jmpIf_label) {}
-			instr_case_novalue(Op_jmpIfNot_label) {}
-			instr_case_novalue(Op_call_func) {}
-			instr_case_novalue(Op_call_builtinfunc) {}
-			instr_case_novalue(Op_call_cfunc) {}
+			instr_case_novalue(Op_label, Op_jmp_label, Op_jmpIf_label, Op_jmpIfNot_label) {}
+			instr_case_novalue(Op_call_func, Op_call_builtinfunc, Op_call_cfunc) {}
 			instr_case_novalue(Op_set_threadctx) {}
-			instr_case(Op_virtual_call_lptr_method, instr) {
+			instr_case(Op_virtual_call_pptr_method, instr) {
 				// For a method call to be valid it has to be present in the interface.
-				const auto pointer_type = current_stack.at(instr.object_ptr.var_name)
+				const auto pointer_type = getPlaceType(instr.object_ptr, current_stack)
 				                              ->getKindAs<valid_type::finalized::Pointer>();
 				const auto& inner_pointer_type = types_ctx.at(pointer_type->inner);
 				const auto  obj_type
@@ -1215,57 +1142,60 @@ class FunctionValidator {
 				if (!inh_meta.available_methods.contains(instr.method.method_name))
 					throw InvalidVirtualCallError(instr);
 			}
-			instr_case_novalue(Op_ret_tailcall_func) {}
-			instr_case_novalue(Op_ret) {}
-			instr_case_novalue(Op_deinit) {}
-			instr_case_novalue(Op_input_l64) {}
-			instr_case_novalue(Op_output_l64) {}
-			instr_case_novalue(Op_input_l32) {}
-			instr_case_novalue(Op_output_l32) {}
-			instr_case(Op_setVTable_lptr_type, instr) {
-				const auto pointer_type = current_stack.at(instr.object_ptr.var_name)
+			instr_case_novalue(Op_ret_tailcall_func, Op_ret, Op_deinit) {}
+			instr_case_novalue(Op_input_p64, Op_output_p64, Op_input_p32, Op_output_p32) {}
+			instr_case(Op_setVTable_pptr_type, instr) {
+				const auto pointer_type = getPlaceType(instr.object_ptr, current_stack)
 				                              ->getKindAs<valid_type::finalized::Pointer>();
 				if (pointer_type->inner != types_ctx.at(instr.type.type_name)->getID())
 					throw VTableTypeMismatchError(instr);
 			}
-			instr_case(Op_resetVTable_lptr, instr) {
-				const auto pointer_type = current_stack.at(instr.object_ptr.var_name)
+			instr_case(Op_resetVTable_pptr, instr) {
+				const auto pointer_type = getPlaceType(instr.object_ptr, current_stack)
 				                              ->getKindAs<valid_type::finalized::Pointer>();
 				const auto structure = expectPointerType<valid_type::finalized::Structure>(
 					pointer_type, types_ctx, instr
 				);
 				if (!structure->inheritance_metadata) throw NotAClassTypeError(instr);
 			}
-			instr_case(Op_downcast_lptr_lptr, instr) {
+			instr_case(Op_downcast_pptr_pptr, instr) {
 				validateClassCast<InvalidDowncastError>(instr, current_stack);
 			}
-			instr_case_novalue(Op_free_lptr) {}
-			instr_case(Op_store_lptr_lany, instr) {
-				const auto pointer_type = current_stack.at(instr.dst_ptr.var_name)
+			instr_case_novalue(Op_free_pptr) {}
+			instr_case(Op_store_pptr_pany, instr) {
+				const auto pointer_type = getPlaceType(instr.dst_ptr, current_stack)
 				                              ->getKindAs<valid_type::finalized::Pointer>();
-				CRef<valid_type::ValidType> other_type = current_stack.at(instr.src.var_name);
+				CRef<valid_type::ValidType> other_type = getPlaceType(instr.src, current_stack);
 				if (pointer_type->inner != other_type->getID())
 					throw PointerTypeMismatchError(instr);
 			}
-			instr_case(Op_load_lany_lptr, instr) {
-				const auto pointer_type = current_stack.at(instr.src_ptr.var_name)
+			instr_case(Op_load_pany_pptr, instr) {
+				const auto pointer_type = getPlaceType(instr.src_ptr, current_stack)
 				                              ->getKindAs<valid_type::finalized::Pointer>();
-				CRef<valid_type::ValidType> other_type = current_stack.at(instr.dst.var_name);
+				CRef<valid_type::ValidType> other_type = getPlaceType(instr.dst, current_stack);
 				if (pointer_type->inner != other_type->getID())
 					throw PointerTypeMismatchError(instr);
 			}
-			instr_case(Op_ref_lptr_lany, instr) {
-				const auto pointer_type = current_stack.at(instr.dst_ptr.var_name)
+			instr_case(Op_ref_pptr_pany, instr) {
+				const auto pointer_type = getPlaceType(instr.dst_ptr, current_stack)
 				                              ->getKindAs<valid_type::finalized::Pointer>();
-				CRef<valid_type::ValidType> other_type = current_stack.at(instr.src.var_name);
+				CRef<valid_type::ValidType> other_type = getPlaceType(instr.src, current_stack);
 				if (pointer_type->inner != other_type->getID())
 					throw PointerTypeMismatchError(instr);
 			}
-			instr_case(Op_structLea_lptr_lptr_field, instr) {
-				const auto destination = current_stack.at(instr.dst_ptr.var_name)
+			instr_case(Op_ref_pptr_pvnt, instr) {
+				const auto pointer_type = getPlaceType(instr.dst_ptr, current_stack)
+				                              ->getKindAs<valid_type::finalized::Pointer>();
+				const auto&                 global_entry = globals.at(instr.src.var_name);
+				CRef<valid_type::ValidType> global_type  = types_ctx.at(global_entry->type);
+				if (pointer_type->inner != global_type->getID())
+					throw PointerTypeMismatchError(instr);
+			}
+			instr_case(Op_structLea_pptr_pptr_field, instr) {
+				const auto destination = getPlaceType(instr.dst_ptr, current_stack)
 				                             ->getKindAs<valid_type::finalized::Pointer>();
 
-				const auto ztruct_pointer = current_stack.at(instr.src_data_ptr.var_name)
+				const auto ztruct_pointer = getPlaceType(instr.src_data_ptr, current_stack)
 				                                ->getKindAs<valid_type::finalized::Pointer>();
 				const auto ztruct = expectPointerType<valid_type::finalized::Structure>(
 					ztruct_pointer, types_ctx, instr
@@ -1279,10 +1209,10 @@ class FunctionValidator {
 					instr
 				);
 			}
-			instr_case(Op_structLoad_lany_lptr_field, instr) {
-				const auto& destination = current_stack.at(instr.dst.var_name);
+			instr_case(Op_structLoad_pany_pptr_field, instr) {
+				const auto& destination = getPlaceType(instr.dst, current_stack);
 
-				const auto ztruct_pointer = current_stack.at(instr.src_data_ptr.var_name)
+				const auto ztruct_pointer = getPlaceType(instr.src_data_ptr, current_stack)
 				                                ->getKindAs<valid_type::finalized::Pointer>();
 				const auto ztruct = expectPointerType<valid_type::finalized::Structure>(
 					ztruct_pointer, types_ctx, instr
@@ -1296,10 +1226,10 @@ class FunctionValidator {
 					instr
 				);
 			}
-			instr_case(Op_structStore_lptr_lany_field, instr) {
-				const auto& source = current_stack.at(instr.src.var_name);
+			instr_case(Op_structStore_pptr_pany_field, instr) {
+				const auto& source = getPlaceType(instr.src, current_stack);
 
-				const auto ztruct_pointer = current_stack.at(instr.dst_data_ptr.var_name)
+				const auto ztruct_pointer = getPlaceType(instr.dst_data_ptr, current_stack)
 				                                ->getKindAs<valid_type::finalized::Pointer>();
 				const auto ztruct = expectPointerType<valid_type::finalized::Structure>(
 					ztruct_pointer, types_ctx, instr
@@ -1310,17 +1240,17 @@ class FunctionValidator {
 				);
 			}
 
-			instr_case(Op_structLea_lptr_lste_field, instr) {
-				auto dst = current_stack.at(instr.dst_ptr.var_name)
+			instr_case(Op_structLea_pptr_pste_field, instr) {
+				auto dst = getPlaceType(instr.dst_ptr, current_stack)
 				               ->getKindAs<valid_type::finalized::Pointer>();
-				auto src        = current_stack.at(instr.src_data_struct.var_name);
+				auto src        = getPlaceType(instr.src_data_struct, current_stack);
 				auto src_struct = src->getKindAs<valid_type::finalized::Structure>();
 				validateStructFieldType(*src, *src_struct, instr.field, dst->inner, instr);
 			}
-			instr_case(Op_structLoad_lany_lste_field, instr) {
-				auto target_type = types_ctx.at(current_stack.at(instr.dst.var_name)->getID());
+			instr_case(Op_structLoad_pany_pste_field, instr) {
+				auto target_type = types_ctx.at(getPlaceType(instr.dst, current_stack)->getID());
 				auto source_type
-					= types_ctx.at(current_stack.at(instr.src_data_struct.var_name)->getID());
+					= types_ctx.at(getPlaceType(instr.src_data_struct, current_stack)->getID());
 				validateStructFieldType(
 					*source_type,
 					*source_type->getKindAs<valid_type::finalized::Structure>(),
@@ -1329,10 +1259,10 @@ class FunctionValidator {
 					instr
 				);
 			}
-			instr_case(Op_structStore_lste_lany_field, instr) {
+			instr_case(Op_structStore_pste_pany_field, instr) {
 				auto target_type
-					= types_ctx.at(current_stack.at(instr.dst_data_struct.var_name)->getID());
-				auto source_type = types_ctx.at(current_stack.at(instr.src.var_name)->getID());
+					= types_ctx.at(getPlaceType(instr.dst_data_struct, current_stack)->getID());
+				auto source_type = types_ctx.at(getPlaceType(instr.src, current_stack)->getID());
 				validateStructFieldType(
 					*target_type,
 					*target_type->getKindAs<valid_type::finalized::Structure>(),
@@ -1341,12 +1271,11 @@ class FunctionValidator {
 					instr
 				);
 			}
-
-			instr_case(Op_fixedSizeTableLea_lptr_lptr_l64, instr) {
-				const auto destination = current_stack.at(instr.dst_ptr.var_name)
+			instr_case(Op_fixedSizeTableLea_pptr_pptr_p64, instr) {
+				const auto destination = getPlaceType(instr.dst_ptr, current_stack)
 				                             ->getKindAs<valid_type::finalized::Pointer>();
 
-				const auto table_pointer = current_stack.at(instr.src_table_ptr.var_name)
+				const auto table_pointer = getPlaceType(instr.src_table_ptr, current_stack)
 				                               ->getKindAs<valid_type::finalized::Pointer>();
 				const auto table_type = expectPointerType<valid_type::finalized::FixedSizeTable>(
 					table_pointer, types_ctx, instr
@@ -1355,11 +1284,60 @@ class FunctionValidator {
 				if (destination->inner != table_type->inner)
 					throw FixedSizeTableTypeMismatchError(instr);
 			}
-			instr_case(Op_dynTableLea_lptr_lptr_l64, instr) {
-				const auto destination = current_stack.at(instr.dst_ptr.var_name)
+			instr_case(Op_fixedSizeTableLoad_pany_pptr_p64, instr) {
+				const auto& destination = getPlaceType(instr.dst, current_stack);
+
+				const auto table_pointer = getPlaceType(instr.src_table_ptr, current_stack)
+				                               ->getKindAs<valid_type::finalized::Pointer>();
+				const auto table_type = expectPointerType<valid_type::finalized::FixedSizeTable>(
+					table_pointer, types_ctx, instr
+				);
+
+				if (destination->getID() != table_type->inner)
+					throw FixedSizeTableTypeMismatchError(instr);
+			}
+			instr_case(Op_fixedSizeTableStore_pptr_pany_p64, instr) {
+				const auto& source = getPlaceType(instr.src, current_stack);
+
+				const auto table_pointer = getPlaceType(instr.dst_table_ptr, current_stack)
+				                               ->getKindAs<valid_type::finalized::Pointer>();
+				const auto table_type = expectPointerType<valid_type::finalized::FixedSizeTable>(
+					table_pointer, types_ctx, instr
+				);
+
+				if (table_type->inner != source->getID())
+					throw FixedSizeTableTypeMismatchError(instr);
+			}
+			instr_case(Op_fixedSizeTableLea_pptr_pfst_p64, instr) {
+				const auto destination = getPlaceType(instr.dst_ptr, current_stack)
+				                             ->getKindAs<valid_type::finalized::Pointer>();
+				const auto table_type = getPlaceType(instr.src_table, current_stack)
+				                            ->getKindAs<valid_type::finalized::FixedSizeTable>();
+
+				if (destination->inner != table_type->inner)
+					throw FixedSizeTableTypeMismatchError(instr);
+			}
+			instr_case(Op_fixedSizeTableLoad_pany_pfst_p64, instr) {
+				const auto& destination = getPlaceType(instr.dst, current_stack);
+				const auto  table_type  = getPlaceType(instr.src_table, current_stack)
+				                            ->getKindAs<valid_type::finalized::FixedSizeTable>();
+
+				if (destination->getID() != table_type->inner)
+					throw FixedSizeTableTypeMismatchError(instr);
+			}
+			instr_case(Op_fixedSizeTableStore_pfst_pany_p64, instr) {
+				const auto& source     = getPlaceType(instr.src, current_stack);
+				const auto  table_type = getPlaceType(instr.dst_table, current_stack)
+				                            ->getKindAs<valid_type::finalized::FixedSizeTable>();
+
+				if (table_type->inner != source->getID())
+					throw FixedSizeTableTypeMismatchError(instr);
+			}
+			instr_case(Op_dynTableLea_pptr_pptr_p64, instr) {
+				const auto destination = getPlaceType(instr.dst_ptr, current_stack)
 				                             ->getKindAs<valid_type::finalized::Pointer>();
 
-				const auto table_pointer = current_stack.at(instr.src_table_ptr.var_name)
+				const auto table_pointer = getPlaceType(instr.src_table_ptr, current_stack)
 				                               ->getKindAs<valid_type::finalized::Pointer>();
 				const auto table_type = expectPointerType<valid_type::finalized::DynamicTable>(
 					table_pointer, types_ctx, instr
@@ -1368,21 +1346,9 @@ class FunctionValidator {
 				if (destination->inner != table_type->inner)
 					throw DynamicTableTypeMismatchError(instr);
 			}
-			instr_case(Op_fixedSizeTableLoad_lany_lptr_l64, instr) {
-				const auto& destination = current_stack.at(instr.dst.var_name);
-
-				const auto table_pointer = current_stack.at(instr.src_table_ptr.var_name)
-				                               ->getKindAs<valid_type::finalized::Pointer>();
-				const auto table_type = expectPointerType<valid_type::finalized::FixedSizeTable>(
-					table_pointer, types_ctx, instr
-				);
-
-				if (destination->getID() != table_type->inner)
-					throw FixedSizeTableTypeMismatchError(instr);
-			}
-			instr_case(Op_dynTableLoad_lany_lptr_l64, instr) {
-				const auto& destination   = current_stack.at(instr.dst.var_name);
-				const auto  table_pointer = current_stack.at(instr.src_table_ptr.var_name)
+			instr_case(Op_dynTableLoad_pany_pptr_p64, instr) {
+				const auto& destination   = getPlaceType(instr.dst, current_stack);
+				const auto  table_pointer = getPlaceType(instr.src_table_ptr, current_stack)
 				                               ->getKindAs<valid_type::finalized::Pointer>();
 				const auto table_type = expectPointerType<valid_type::finalized::DynamicTable>(
 					table_pointer, types_ctx, instr
@@ -1390,21 +1356,9 @@ class FunctionValidator {
 				if (destination->getID() != table_type->inner)
 					throw DynamicTableTypeMismatchError(instr);
 			}
-			instr_case(Op_fixedSizeTableStore_lptr_lany_l64, instr) {
-				const auto& source = current_stack.at(instr.src.var_name);
-
-				const auto table_pointer = current_stack.at(instr.dst_table_ptr.var_name)
-				                               ->getKindAs<valid_type::finalized::Pointer>();
-				const auto table_type = expectPointerType<valid_type::finalized::FixedSizeTable>(
-					table_pointer, types_ctx, instr
-				);
-
-				if (table_type->inner != source->getID())
-					throw FixedSizeTableTypeMismatchError(instr);
-			}
-			instr_case(Op_dynTableStore_lptr_lany_l64, instr) {
-				const auto& source        = current_stack.at(instr.src.var_name);
-				const auto  table_pointer = current_stack.at(instr.dst_table_ptr.var_name)
+			instr_case(Op_dynTableStore_pptr_pany_p64, instr) {
+				const auto& source        = getPlaceType(instr.src, current_stack);
+				const auto  table_pointer = getPlaceType(instr.dst_table_ptr, current_stack)
 				                               ->getKindAs<valid_type::finalized::Pointer>();
 				const auto table_type = expectPointerType<valid_type::finalized::DynamicTable>(
 					table_pointer, types_ctx, instr
@@ -1413,8 +1367,8 @@ class FunctionValidator {
 				if (table_type->inner != source->getID())
 					throw DynamicTableTypeMismatchError(instr);
 			}
-			instr_case(Op_dynTableReAlloc_lptr_type_l64, instr) {
-				const auto table_pointer = current_stack.at(instr.dst_table_ptr.var_name)
+			instr_case(Op_dynTableReAlloc_pptr_type_p64, instr) {
+				const auto table_pointer = getPlaceType(instr.dst_table_ptr, current_stack)
 				                               ->getKindAs<valid_type::finalized::Pointer>();
 				expectPointerType<valid_type::finalized::DynamicTable>(
 					table_pointer, types_ctx, instr
@@ -1425,8 +1379,8 @@ class FunctionValidator {
 				if (allocated_type != table_pointer->inner)
 					throw InvalidArgumentTypeError(instr.table_type);
 			}
-			instr_case(Op_strOutput_lptr, instr) {
-				const auto table_pointer = current_stack.at(instr.string_ptr.var_name)
+			instr_case(Op_strOutput_pptr, instr) {
+				const auto table_pointer = getPlaceType(instr.string_ptr, current_stack)
 				                               ->getKindAs<valid_type::finalized::Pointer>();
 				const auto table_type = expectPointerType<valid_type::finalized::DynamicTable>(
 					table_pointer, types_ctx, instr
@@ -1434,10 +1388,7 @@ class FunctionValidator {
 				if (types_ctx.at(table_type->inner)->getName() != "byte")
 					throw DynamicTableTypeMismatchError(instr);
 			}
-			instr_case_novalue(Op_nop) {}
-			instr_case_novalue(Op_exit) {}
-			instr_case_novalue(Op_breakpoint) {}
-			instr_case_novalue(Op_initFromVmValue) {}
+			instr_case_novalue(Op_nop, Op_exit, Op_breakpoint, Op_initFromVmValue) {}
 		}
 		POP_DIAGNOSTIC
 	}
@@ -1452,11 +1403,11 @@ class FunctionValidator {
 	}
 
 	template<class Error, class Instr>
-	requires(std::is_same_v<Instr, std::remove_cvref_t<Op_upcast_lptr_lptr>> || std::is_same_v<Instr, std::remove_cvref_t<Op_downcast_lptr_lptr>>)
+	requires(std::is_same_v<Instr, std::remove_cvref_t<Op_upcast_pptr_pptr>> || std::is_same_v<Instr, std::remove_cvref_t<Op_downcast_pptr_pptr>>)
 	void validateClassCast(const Instr& instruction, const LocalStack& current_stack) const {
-		auto higher_ptr_tod = current_stack.at(instruction.dst.var_name);
-		auto lower_ptr_tod  = current_stack.at(instruction.src.var_name);
-		if constexpr (std::is_same_v<Instr, std::remove_cvref_t<Op_downcast_lptr_lptr>>)
+		auto higher_ptr_tod = getPlaceType(instruction.dst, current_stack);
+		auto lower_ptr_tod  = getPlaceType(instruction.src, current_stack);
+		if constexpr (std::is_same_v<Instr, std::remove_cvref_t<Op_downcast_pptr_pptr>>)
 			std::swap(higher_ptr_tod, lower_ptr_tod);
 
 		// Higher or lower in terms of inheritance hierarchy tree, base/superclass is "higher".
@@ -1487,7 +1438,7 @@ class FunctionValidator {
 		const LocalStack&                 current_stack
 	) const {
 		// These are guaranteed to exist by `validateArgTypes`.
-		const auto curr_type      = current_stack.at(VISIT(local, l, return l.var_name));
+		const auto curr_type      = VISIT(local, l, return getPlaceType(l, current_stack));
 		const auto new_type       = types_ctx.at(type.type_name);
 		const auto curr_primitive = curr_type->getKindAs<valid_type::finalized::Primitive>();
 
@@ -1546,7 +1497,7 @@ class FunctionValidator {
 
 			visited_instructions[index] = true;
 			instr_match(instructions[index]) {
-				instr_case(Op_init_lany_type, instr) {
+				instr_case(Op_init_pany_type, instr) {
 					local_stack.push(instr.var, instr.type);
 					index++;
 				}
@@ -1595,7 +1546,7 @@ class FunctionValidator {
 					validateCallAndPop(local_stack, instr);
 					index++;
 				}
-				instr_case(Op_virtual_call_lptr_method, instr) {
+				instr_case(Op_virtual_call_pptr_method, instr) {
 					validateMethodCallAndPop(local_stack, instr);
 					index++;
 				}
@@ -1605,7 +1556,7 @@ class FunctionValidator {
 					dfs_stack.pop_back();
 				}
 #define HANDLE_CAST(SIZE)                                          \
-	instr_case(Op_cast_l##SIZE##_type, instr) {                    \
+	instr_case(Op_cast_p##SIZE##_type, instr) {                    \
 		local_stack.castPrimitive(instr.value, instr.target_type); \
 		index++;                                                   \
 	}
@@ -1618,16 +1569,17 @@ class FunctionValidator {
 	}
 
 	void validateSignature() {
-		if (function.name.str == base::StrID("main")
-		    && function.signature.result_type.str != base::StrID("i64")) {
-			throw InvalidMainReturnType(function.signature);
+		if (function.name.str == base::StrID("main")) {
+			if (function.signature.result_types.size() != 1)
+				throw InvalidMainReturnType(function.signature, false);
+			if (function.signature.result_types[0].str != base::StrID("i64"))
+				throw InvalidMainReturnType(function.signature, true);
 		}
-		for (const auto& param_type: function.signature.parameters) {
+		for (const auto& param_type: function.signature.parameters)
 			if (!types_ctx.contains(param_type)) throw UnknownTypeError(opargs::Type{ param_type });
-			if (param_type.str == base::StrID("void")) throw VoidTypeArgumentError(function.name);
-		}
-		if (!types_ctx.contains(function.signature.result_type.str))
-			throw UnknownTypeError(opargs::Type{ function.signature.result_type.str });
+
+		for (const auto& reslts: function.signature.result_types)
+			if (!types_ctx.contains(reslts)) throw UnknownTypeError(opargs::Type{ reslts });
 	}
 
 public:

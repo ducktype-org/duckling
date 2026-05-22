@@ -1,4 +1,19 @@
+duckc_path: "@{build_dir}/bin/duckc"
+dvm_path: "@{build_dir}/bin/VM"
+
+is_jit_enabled: "cmake -L -N @{build_dir} | grep JIT_ENABLED | cut -d \"=\" -f 2"
+
+# If JIT is enabled then set timeout to 10s
+timeout_jit: 10
+# If you want to override timeout is it preferred that you set this variable
+# instead of changing the value of TimeOut directly (lazy evaluation).
+timeout_default: 2
+TimeOut: "$([ \"$(@{is_jit_enabled})\" = \"ON\" ] && echo @{timeout_jit} || echo @{timeout_default})"
+
 SubDirs:
     - compiler
     - duck
     - repl
+    - debug_adapter
+    - scripts
+    - version_0_1

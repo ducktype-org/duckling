@@ -19,7 +19,7 @@ namespace compiler::helios {
 	 * The main way to interact with scopes is through ScopeID and related functions/queries.
 	 */
 	struct ScopeData final {
-		std::optional<ScopeID> parent;
+		base::Optional<ScopeID> parent;
 
 		bool is_root;
 
@@ -46,7 +46,7 @@ namespace compiler::helios {
 		ScopeInternalID unstable_id;
 
 		ScopeData(
-			std::optional<ScopeID>        parent,
+			base::Optional<ScopeID>       parent,
 			bool                          is_root,
 			base::Optional<pst::HashType> related_pst_element_hash,
 			frontend::ModuleID            parent_module,

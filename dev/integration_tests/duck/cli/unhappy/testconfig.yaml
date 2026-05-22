@@ -3,27 +3,30 @@ Tests:
     Description: Checks a lot of basic errors
     Cases:
       autofix-fail:
-        test_cmd: x
+        test_cmd: duck x
         ExitCode: 1
         Err:
           String: |
-            Error: No such command as \`x\`. Did you mean:
+            error: No such command as \`x\`. Did you mean:
                    - \`b\`
                    - \`r\`?
 
       invalid-subcmd:
-        test_cmd: not-a-subcmd
+        test_cmd: duck not-a-subcmd
         ExitCode: 1
         Err:
-          String: 'Error: No such command: \`not-a-subcmd\`\n'
+          String: 'error: No such command: \`not-a-subcmd\`\n'
 
       invalid-config:
         before_cmd: export DUCK_HOME=.
-        test_cmd: "not-a-command 2>&1 | head -n4 " # Get first for lines, but we lose exit code and stderr
-        ExitCode: 0
-        Output:
-          String: |
-            Error: when trying to check the maximum typos fixing distance
-
+        test_cmd: duck not-a-command
+        ExitCode: 1
+        Err:
+          Run: |+
+            echo "error: when trying to check the maximum typos fixing distance
+            
               Caused by:
-                the key \`security.typos.max_distance\` expects an integer, not a string
+                the key \`security.typos.max_distance\` expects a positive integer, not a string
+            
+              Caused by:
+                when parsing the configuration at \`$(pwd)/config.yaml\`"

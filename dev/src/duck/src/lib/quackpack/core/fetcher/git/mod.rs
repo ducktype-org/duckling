@@ -2,13 +2,13 @@
 
 use std::path::Path;
 
-use crate::{
-    DuckCtx, QuackResult, QuackResultContext, StrId,
-    quackpack::core::{BranchOrTag, Git, PackageLoader, fetcher::types::GitCloneResponse},
-};
+use git2::build::RepoBuilder;
+use git2::{Oid, Repository};
+use tracing::debug;
 
-use git2::Oid;
-use git2::{Repository, build::RepoBuilder};
+use crate::quackpack::core::fetcher::types::GitCloneResponse;
+use crate::quackpack::core::{BranchOrTag, Git, PackageLoader};
+use crate::{DuckContext, QuackResult, QuackResultContext};
 
 #[cfg(test)]
 mod tests;
@@ -20,10 +20,11 @@ pub struct GitClient {}
 
 impl GitClient {
     /// Clone a repository pointed by `source` into `destination`, and parse a package it contains.
+    #[tracing::instrument(skip(ctx))]
     pub fn clone_blocking(
         source: &Git,
         destination: &Path,
-        ctx: &DuckCtx,
+        ctx: &DuckContext,
     ) -> QuackResult<GitCloneResponse> {
         let mut builder = RepoBuilder::new();
 
@@ -36,6 +37,7 @@ impl GitClient {
         let repository = match builder.clone(source.url().as_str(), destination) {
             Ok(repository) => repository,
             Err(e) => {
+                debug!("failed to clone: {e}");
                 // We've failed to clone a repository, try to fallback to a non-shallow clone.
                 if !source.can_shallow_clone() {
                     return Err(e.into());
@@ -47,9 +49,11 @@ impl GitClient {
             }
         };
 
+        debug!("will checkout to tag...");
+
         // Prefer specific commits over tags.
         if let Some(commit) = source.rev() {
-            repository.checkout_commit(commit).with_context(|| {
+            repository.checkout_commit(commit.as_str()).with_context(|| {
                 format!(
                     "when performing a checkout of a repository cloned from `{}` to a commit `{}`",
                     source.url(),
@@ -57,7 +61,7 @@ impl GitClient {
                 )
             })?;
         } else if let BranchOrTag::Tag(tag) = source.branch_or_tag() {
-            repository.checkout_tag(tag).with_context(|| {
+            repository.checkout_tag(tag.as_str()).with_context(|| {
                 format!(
                     "when performing a checkout of a repository cloned from `{}` to a tag `{}`",
                     source.url(),
@@ -85,15 +89,16 @@ impl GitClient {
 /// A helper trait for repository methods.
 trait RepositoryExt {
     /// Checkout `self` into a given commit.
-    fn checkout_commit(&self, commit: StrId) -> QuackResult<()>;
+    fn checkout_commit(&self, commit: &str) -> QuackResult<()>;
     /// Checkout `self` into a given tag.
-    fn checkout_tag(&self, tag: StrId) -> QuackResult<()>;
+    fn checkout_tag(&self, tag: &str) -> QuackResult<()>;
 }
 
 impl RepositoryExt for Repository {
-    fn checkout_commit(&self, commit: StrId) -> QuackResult<()> {
+    #[tracing::instrument(skip(self))]
+    fn checkout_commit(&self, commit: &str) -> QuackResult<()> {
         let oid =
-            Oid::from_str(&commit).with_context(|| format!("`{commit}` is not a valid Oid"))?;
+            Oid::from_str(commit).with_context(|| format!("`{commit}` is not a valid Oid"))?;
         let commit = self
             .find_commit(oid)
             .with_context(|| format!("repository does not have a commit `{}", commit))?;
@@ -103,7 +108,8 @@ impl RepositoryExt for Repository {
         Ok(())
     }
 
-    fn checkout_tag(&self, tag: StrId) -> QuackResult<()> {
+    #[tracing::instrument(skip(self))]
+    fn checkout_tag(&self, tag: &str) -> QuackResult<()> {
         let refname = format!("refs/tags/{}", tag);
         let reference = self
             .find_reference(&refname)

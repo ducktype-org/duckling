@@ -57,12 +57,27 @@ namespace pst {
 			 * expression statement.
 			 */
 			static bool isStmtEnd(const TokenStream& state, i64 fwd) {
-				return state[fwd].is(Token::Type::Sentinel) || state[fwd].is(Special::AtSign)
-				    || state[fwd - 1].is(Special::Semicolon)
-				    || keywordFlags(state[fwd].asKeyword())
-				           .contains(lang_def::KeywordFlagsOptions::IsStmtStart)
-				    || keywordFlags(state[fwd].asKeyword())
-				           .contains(lang_def::KeywordFlagsOptions::IsSpecifier);
+				if (state[fwd].is(Token::Type::Sentinel)) return true;
+
+				if (state[fwd].is(Special::AtSign)) return true;
+
+				if (state[fwd - 1].is(Special::Semicolon)) return true;
+
+				if (keywordFlags(state[fwd].asKeyword())
+				        .contains(lang_def::KeywordFlagsOptions::IsStmtStart))
+					return true;
+
+				if (keywordFlags(state[fwd].asKeyword())
+				        .contains(lang_def::KeywordFlagsOptions::IsSpecifier))
+					return true;
+
+				// When we have two curly bracket blocks as consecutive tokens, it probably means
+				// that the user intended to write two statements
+				if (state[fwd - 1].isBracketGroup(lexer::Token::BracketType::Curly)
+				    && state[fwd].isBracketGroup(lexer::Token::BracketType::Curly))
+					return true;
+
+				return false;
 			}
 		};
 
@@ -346,7 +361,7 @@ namespace pst {
 		}
 
 		if (prefixes.attributes.size() > 0)
-			setFirstToken(prefixes.attributes.front().internal()->getSourcePosition());
+			setFirstToken(prefixes.attributes.front().internal()->source_position);
 
 		// Move specifiers
 		prefixes.specifiers.resize(specifiers.size());
@@ -357,6 +372,12 @@ namespace pst {
 		}
 
 		if (prefixes.specifiers.size() > 0)
-			setFirstToken(prefixes.specifiers.front().internal()->getSourcePosition());
+			setFirstToken(prefixes.specifiers.front().internal()->source_position);
+	}
+
+	base::Optional<base::StrID> Stmt::getInternalSymbolName() const {
+		return getDeclSymbolIdentifier().map([](const AccessLocked<IdentifierWrapper>& acc) {
+			return acc.illegalAccess().value()->unwrap();
+		});
 	}
 }

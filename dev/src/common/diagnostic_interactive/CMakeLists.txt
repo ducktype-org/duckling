@@ -7,6 +7,7 @@ add_subdirectory(lsp_ui)
 add_library(DiagnosticInteractive STATIC
         src/diagnostic_interactive/message.cpp
         src/diagnostic_interactive/logger.cpp
+        src/diagnostic_interactive/stable_position.cpp
         src/diagnostic_interactive/placeholder.cpp
         src/diagnostic_interactive/module_flags/module_flags.cpp
 )

@@ -1,4 +1,5 @@
-use clap::{Command, crate_name, crate_version};
+use clap::builder::ValueParser;
+use clap::{Command, ValueHint, crate_name, crate_version};
 
 pub mod cli_args_preprocessing;
 pub(crate) mod cli_ext;
@@ -7,30 +8,49 @@ pub mod run;
 pub mod styles;
 pub mod subcommands;
 
-use cli_ext::CommandExt;
-
+use crate::duck::driver::cli_ext::{flag, optional};
 use crate::duck::driver::styles::get_styles;
 
 /// Create main cli parser.
 fn cli() -> Command {
+    let style = *styles::get_styles().get_literal();
+    let after_help = format!(
+        "To run a script you can also use syntax `{style}duck [OPTIONS] <path-to-script>{style:#}`"
+    );
     Command::new(crate_name!())
         .version(crate_version!())
-        .add_verbose()
-        .add_quiet()
-        .add_chdir()
-        .add_color()
-        .add_offline()
+        .arg(
+            flag("verbose", "Use more verbose output")
+                .conflicts_with("quiet")
+                .short('v')
+                .global(true),
+        )
+        .arg(
+            flag("quiet", "Suppress all output")
+                .short('q')
+                .conflicts_with("verbose")
+                .global(true),
+        )
+        .arg(
+            optional(
+                "directory",
+                "Change to <DIRECTORY> before performing any actions",
+            )
+            .value_name("DIRECTORY")
+            .value_parser(ValueParser::path_buf())
+            .value_hint(ValueHint::DirPath)
+            .short('C'),
+        )
+        .arg(
+            optional("color", "Control the colored output")
+                .value_parser(["always", "never", "auto"])
+                .global(true),
+        )
+        .arg(flag("offline", "Don't perform any network requests").global(true))
         .allow_external_subcommands(true)
         .subcommands(subcommands::subcommands())
         .styles(get_styles())
-}
-
-/// Same as [`cli`], but ignores any errors and `help`/`--help` early exits.
-fn cli_no_err() -> Command {
-    cli()
-        .disable_help_subcommand(true)
-        .disable_help_flag(true)
-        .ignore_errors(true)
+        .after_help(after_help)
 }
 
 #[cfg(test)]
@@ -39,7 +59,6 @@ mod tests {
     #[test]
     fn validate_parser() {
         cli().debug_assert();
-        cli_no_err().debug_assert();
     }
 
     #[test]

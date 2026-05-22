@@ -40,7 +40,7 @@ class Wrapper {
     }
 }
 
-fun main() = {
+fun main() -> i64 = {
     var obj1 = Simple();
     builtin_output_i64(obj1.exampleField);
 

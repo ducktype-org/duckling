@@ -11,10 +11,13 @@
  * - base::IsInstantiationOf
  * - base::IsNumber
  * - base::IsOfSameClass
+ * - base::IsVariantMember
+ * - base::IsVariant
  *
  * Functions:
  * ----------
  * - base::typeName
+ * - base::variantTypeIndex
  *
  * Variables:
  * ----------
@@ -32,6 +35,9 @@
  */
 #pragma once
 
+#include <base/types/ints.hpp>
+
+#include <limits>
 #include <string_view>
 #include <tuple>
 #include <type_traits>
@@ -55,26 +61,64 @@ namespace base {
 				return (std::holds_alternative<Ts>(v) || ...);
 			}
 		};
+
+		// Source - https://stackoverflow.com/a/11251376/
+		// {
+		template<typename T, template<typename...> typename Template>
+		inline constexpr bool IS_INSTANTIATION_OF_V = false;
+
+		template<template<typename...> typename Template, typename... Args>
+		inline constexpr bool IS_INSTANTIATION_OF_V<Template<Args...>, Template> = true;
+
+		template<typename T, template<typename, auto> class Template>
+		inline constexpr bool IS_INSTANTIATION_OF_TYPE_VALUE_V = false;
+
+		template<template<typename, auto> class Template, typename U, auto V>
+		inline constexpr bool IS_INSTANTIATION_OF_TYPE_VALUE_V<Template<U, V>, Template> = true;
+
+		// }
+
+		// Source - https://stackoverflow.com/a/52303687
+		// {
+
+		template<typename...>
+		inline constexpr bool DEPENDENT_FALSE_V = false;
+
+		template<typename>
+		struct Tag {};
+
+		template<typename Variant, typename T>
+		struct VariantTypeIndexAux {
+			static_assert(
+				DEPENDENT_FALSE_V<Variant>, "variantTypeIndex() can be used only for variant"
+			);
+		};
+
+		template<typename T, typename... Types>
+		struct VariantTypeIndexAux<std::variant<Types...>, T> {
+			static constexpr usize findIndex() {
+				return std::variant<Tag<Types>...>(Tag<T>{}).index();
+			}
+		};
+
+		// }
 	}
 
 	/**
 	 * @brief Checks if type `T` is an instantiation of template `Template`.
-	 * @note This concept works only for templates that have only type template parameters
+	 * @note This concept works only for templates that have only type template parameters.
+	 *       Works for move-only and non-default-constructible `T`
 	 */
 	template<typename T, template<typename...> typename Template>
-	concept IsInstantiationOf = requires(T t) {
-		[]<typename... Args>(Template<Args...>) requires std::is_same_v<Template<Args...>, T> {}(t);
-	};
+	concept IsInstantiationOf = internal::IS_INSTANTIATION_OF_V<T, Template>;
 
 	/**
 	 * @brief Checks if type `T` is an instantiation of template `Template`.
 	 * @note This concept works only for templates that take one type and one value template
-	 * parameter
+	 * parameter.
 	 */
 	template<typename T, template<typename, auto> class Template>
-	concept IsInstantiationOfTypeValue = requires(T t) {
-		[]<typename U, auto V>(Template<U, V>) requires std::is_same_v<Template<U, V>, T> {}(t);
-	};
+	concept IsInstantiationOfTypeValue = internal::IS_INSTANTIATION_OF_TYPE_VALUE_V<T, Template>;
 
 	/**
 	 * @brief Checks if type `T` is the same as one of the types in `Types...`
@@ -117,7 +161,7 @@ namespace base {
 	 * @tparam VariantT The `std::variant` type.
 	 */
 	template<typename T, typename VariantT>
-	struct is_variant_member;
+	struct is_variant_member: std::false_type {};
 
 	template<typename T, typename... Types>
 	struct is_variant_member<T, std::variant<Types...>>:
@@ -136,6 +180,12 @@ namespace base {
 	 */
 	template<typename T, typename Var>
 	concept IsVariantMember = IS_VARIANT_MEMBER_V<T, Var>;
+
+	/**
+	 * @brief Concept that checks if a type `T` is a `std::variant`.
+	 */
+	template<typename T>
+	concept IsVariant = IsInstantiationOf<std::remove_cvref_t<T>, std::variant>;
 
 	/**
 	 * @brief Type trait to check if a type `T` is present in a tuple `Tup`.
@@ -183,6 +233,15 @@ namespace base {
 	 */
 	template<bool A, bool B>
 	concept Implication = !A || B;
+
+	/**
+	 * @brief Returns the index of `T` in a `std::variant` at compile time.
+	 */
+	template<typename VariantT, typename T>
+	constexpr usize variantTypeIndex() {
+		using ClearedVariantT = std::remove_cvref_t<VariantT>;
+		return internal::VariantTypeIndexAux<ClearedVariantT, T>::findIndex();
+	}
 
 	/**
 	 * @brief Returns the name of the passed type `T`.

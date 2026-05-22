@@ -9,7 +9,7 @@
 #include <vm/api/data/response.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/core/process/interface_types.hpp>
-#include <vm/core/thread/vmvalue.hpp>
+#include <vm/core/vmvalue/vmvalue.hpp>
 
 namespace vm::api {
 	/**
@@ -187,4 +187,28 @@ namespace vm::api {
 	 * @return Response containing a Box containing the newly allocated VmValue of the specified type.
 	 */
 	std::expected<response::VmValue, ApiError> getVmValue(PID pid, const std::string& type_name);
+
+	/**
+	 * @brief Get the number of current stack frames.
+	 * @return The response containing the number of stack frames or an API error.
+	 */
+	std::expected<response::NumberOfCurrentStackFrames, ApiError> debuggerGetNumberOfStackFrames(
+		PID pid, ThreadID thread_id
+	);
+
+	/**
+	 * @brief Get the variables of a stack frame with a given index.
+	 * @return The response containing the variables of the stack frame or an API error.
+	 */
+	std::expected<response::StackFrameData, ApiError> debuggerGetStackFrameData(
+		PID pid, ThreadID thread_id, u64 stack_frame_number
+	);
+
+	/**
+	 * @brief Attaches Listener to the on_status_changed Emitter
+	 * @return Nothing if attached succesfully
+	 */
+	std::expected<void, ApiError> attachStatusListener(
+		PID pid, Ref<events::Listener<ProcStatus>> listener
+	);
 }
