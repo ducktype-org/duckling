@@ -62,11 +62,11 @@ Other IDEs offer similar functionality. For example, **CLion** provides [support
 
 To avoid issues caused by differences between host and container environments (e.g., virtual environment paths), initialize the repository inside the container only.
 
-From `/duckling/dev`:
+You can use provided `toolbox` command that runs `toolbox.py` script always with workdir set to `/duckling/dev`.
 
 ```shell
-./toolbox.py init
-./toolbox.py setup-build
+toolbox init
+toolbox setup-build
 ```
 
 
@@ -88,7 +88,7 @@ By default, the dev container config file and run script mount three directories
 
 - `dockling-dev/home_ubuntu` → `/home/ubuntu` - to make your home directory in the container persistent, so your configuration stays. You can access it or delete it from outside of the container.
 
-- `$HOME/.ssh` → `/home/ubuntu/.ssh` - for your git to authenticate with github
+- `$HOME/.ssh` → `/home/ubuntu/.ssh` - for your git to authenticate with GitHub.
 
 ### Non-Interactive Usage
 
