@@ -600,17 +600,13 @@ namespace vm {
 		variant_match(getStatus()) {
 			variant_case_novalue(api::Paused) {
 				auto frame = runtime_data.frame_stack_current;
+				auto& func = *frame->current_function;
 				auto instr = frame->instr;
 
-				for (const auto& [idx, func]:
-				     std::views::enumerate(process_program->getFunctions())) {
-					if (func.bc.data() <= instr && instr < func.bc.data() + func.bc.size()) {
-						return low::LowCodePosition{
-							.function          = &func,
-							.instruction_index = static_cast<u64>(instr - func.bc.data()),
-						};
-					}
-				}
+				return low::LowCodePosition{
+					.function = &func,
+					.instruction_index = static_cast<u64>(frame->instr - func.bc.data()),
+				};
 			}
 			variant_default {
 				return std::unexpected(api::ApiError{
