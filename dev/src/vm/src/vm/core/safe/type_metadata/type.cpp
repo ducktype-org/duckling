@@ -207,7 +207,6 @@ namespace vm {
 					= Bytes(align_up(variant.type_tag_size.asInt(), max_alignment));
 				this->stack_alligment = max_alignment;
 				this->size	 = variant.payload_offset + data_size;
-				this->size     = variant.payload_offset + data_size;
 				isInstantiableImpl(variant);
 			}
 		}

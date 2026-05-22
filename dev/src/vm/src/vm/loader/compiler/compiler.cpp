@@ -305,8 +305,7 @@ namespace vm::loader::compiler {
 		usize                    curr_stack_size = 0;
 		usize                    max_stack_size  = 0;
 		usize                    max_block_count = 0;
-		ctx.deinit_restore_offsets               = std::vector<usize>(ctx.function.body.size(), 0);
-		ctx.offsets_of_init                      = std::vector<usize>(ctx.function.body.size(), 0);
+		ctx.offset_at_instructions               = std::vector<usize>(ctx.function.body.size(), -1);
 
 		// todo reorganize and make better
 		usize index = 0;
@@ -332,7 +331,7 @@ namespace vm::loader::compiler {
 				local.var_name,
 				{ .offset = aligned_offset, .block_idx = type_size_stack.size(), .type = type_ref }
 			);
-			ctx.offsets_of_init[index] = aligned_offset;
+			ctx.offset_at_instructions[index] = aligned_offset;
 			padding_used.push_back(padding);
 			type_size_stack.push_back(type_size);
 			curr_stack_size += padding + type_size;
@@ -398,7 +397,7 @@ namespace vm::loader::compiler {
 				}
 				instr_case(Op_deinit, instr) {
 					pop();
-					ctx.deinit_restore_offsets[index] = curr_stack_size;
+					ctx.offset_at_instructions[index] = curr_stack_size;
 					index++;
 				}
 				instr_case(Op_jmp_label, instr) { index = label_positions[instr.label.label_name]; }
@@ -426,6 +425,7 @@ namespace vm::loader::compiler {
 					dfs_stack.pop_back();
 				}
 				instr_case(Op_call_func, instr) {
+					ctx.offset_at_instructions[index] = curr_stack_size;
 					usize number_of_params = program_ctx.function_forward_declarations
 					                             .at(instr.function.function_name)
 					                             ->signature.parameters.size();
@@ -452,6 +452,7 @@ namespace vm::loader::compiler {
 					index++;
 				}
 				instr_case(Op_virtual_call_pptr_method, instr) {
+					ctx.offset_at_instructions[index] = curr_stack_size;
 					for (usize i = 0; i < *seek_method_param_count(instr.method.method_name); i++)
 						pop();
 					index++;

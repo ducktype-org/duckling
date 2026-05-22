@@ -415,13 +415,13 @@ namespace vm::loader::compiler::detail {
 			instr_case(high::Op_ret, i) { addLow<Op_ret>(); }
 			instr_case(high::Op_init_pany_type, i) {
 				addLow<Op_init_bany_type>(
-					vm::opargs::Immediate{ ctx.offsets_of_init.at(ctx.current_instruction_index) },
+					vm::opargs::Immediate{ ctx.offset_at_instructions.at(ctx.current_instruction_index) },
 					i.type
 				);
 			}
 			instr_case(high::Op_deinit, i) {
 				addLow<Op_deinit>(vm::opargs::Immediate{
-					ctx.deinit_restore_offsets.at(ctx.current_instruction_index) });
+					ctx.offset_at_instructions.at(ctx.current_instruction_index) });
 			}
 			instr_case(high::Op_input_p64, i) { addLow<Op_input_p64>(i.dst); }
 			instr_case(high::Op_output_p64, i) { addLow<Op_output_p64>(i.src); }
