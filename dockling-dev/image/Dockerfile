@@ -6,6 +6,7 @@ RUN apt-get update -y && \
     apt-get install -y --no-install-recommends \
     # Basic tools
     ca-certificates \
+    bash-completion \
     curl \
     git \
     wget \
@@ -28,6 +29,8 @@ RUN apt-get update -y && \
     clang++-19 \
     clang-format-19 \
     clang-tidy-19 \
+    # Linker used by gh runners
+    mold \
     # Build tools
     cmake \
     ninja-build \
@@ -50,6 +53,9 @@ RUN apt-get update -y && \
     update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-14 100 && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
+
+RUN echo 'source /usr/share/bash-completion/bash_completion' >> /etc/bash.bashrc
+COPY toolbox-completion.bash /etc/bash_completion.d/toolbox
 
 SHELL ["/bin/bash", "-c"]
 WORKDIR /duckling
