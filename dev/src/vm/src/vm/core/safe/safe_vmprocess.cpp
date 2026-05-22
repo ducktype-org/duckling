@@ -408,6 +408,45 @@ namespace vm {
 		return getMainVMThread().getThreadID();
 	}
 
+	std::expected<api::Response, api::ApiError> SafeVMProcess::setBreakpoint(
+		base::StrID function_name, usize instruction_index, bool enable
+	) {
+		// Try to obtain original function
+		auto maybe_original_function = loaded_program->getFunctions().atMaybe(function_name);
+		if (!maybe_original_function)
+			return std::unexpected(api::OtherError{ "setBreakpoint: Function does not exist" });
+		auto original_function = *maybe_original_function;
+
+		// Try to obtain function copy (should never fail)
+		auto maybe_function_copy = loaded_program_copy.getFunctions().atMaybe(function_name);
+		if (!maybe_function_copy)
+			return std::unexpected(api::OtherError{ "setBreakpoint: Function does not exist" });
+		auto function_copy = *maybe_function_copy;
+
+		// Try to obtain micro index
+		if (original_function->instruction_mapping.size() <= instruction_index)
+			return std::unexpected(api::OtherError{ "setBreakpoint: Function too short" });
+		usize micro_instruction_index
+			= original_function->instruction_mapping[instruction_index].begin;
+
+		// Ensure micro index is in range
+		if (original_function->bc.size() <= micro_instruction_index
+		    || function_copy->bc.size() <= micro_instruction_index) [[unlikely]]
+			return std::unexpected(api::OtherError{ "setBreakpoint: Broken mapping" });
+
+		auto new_opcode = enable
+		                    ? vm::low::MicroOpcode::breakpoint
+		                    : getInstructionOpcode(original_function->bc[micro_instruction_index]);
+
+		// Try to replace the opcode
+		auto maybe_old_opcode
+			= loaded_program_copy.replaceOpcode(function_name, micro_instruction_index, new_opcode);
+		if (!maybe_old_opcode) [[unlikely]]
+			return std::unexpected(api::OtherError{ "setBreakpoint: Failed to set breakpoint" });
+
+		return api::response::Empty{};
+	}
+
 	void SafeVMProcess::updateGlobalDataMemory(CRef<low::ILowVMProgram> program) {
 		using namespace std::ranges;
 		auto global_buffer_config = program->getGlobalBufferConfig();

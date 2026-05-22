@@ -1200,7 +1200,6 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(breakpoint)(FUNCTION_ARGS) {
 		{
-			instr += 1;
 			save_execution_state(instr, local_stack, frame, thread);
 
 			thread.handleBreakpoint();
@@ -1211,7 +1210,28 @@ namespace vm {
 			instr       = frame->instr;
 			local_stack = frame->local_stack;
 		}
-		FUNCTION_CONT(0);
+
+		low::MicroOpcode opcode = getInstructionOpcode(*instr);
+		if (opcode == low::MicroOpcode::breakpoint) {
+			const auto* program_copy
+				= dynamic_cast<const low::LowVMProgramCopy*>(thread.process_program.get());
+			if (!program_copy) [[unlikely]]
+				CORE_PANIC(
+					"Breakpoints in original program are not supported. Breakpoints need backup "
+					"program."
+				);
+
+			auto original_instr
+				= program_copy->getOriginalProgram()
+			          ->getFunctions()
+			          .at(frame->current_function->name)
+			          ->bc[static_cast<size_t>(frame->instr - &frame->current_function->bc[0])];
+
+			opcode = getInstructionOpcode(original_instr);
+		}
+		MUST_TAIL return OpFuns::OPFUNS.at(std::to_underlying(opcode))(
+			instr, local_stack, frame, thread
+		);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(stepGil)(FUNCTION_ARGS) {
