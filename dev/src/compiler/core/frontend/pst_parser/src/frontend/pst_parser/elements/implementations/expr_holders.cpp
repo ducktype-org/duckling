@@ -59,5 +59,4 @@ namespace pst {
 	MBox<ExprElement> ExprParserHelper::parseCastAs(LangParserState& state) {
 		return expr::CastAs::parse(state);
 	}
-
 }
