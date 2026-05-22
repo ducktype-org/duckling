@@ -10,9 +10,14 @@
 				"sourceEnd": 45
 			},
 			"For": {
-				"name": "<ANONYMOUS>",
 				"identifier": {
-					"Name": "a"
+					"position": {
+						"sourceStart": 4,
+						"sourceEnd": 4
+					},
+					"Identifier Wrapper": {
+						"value": "a"
+					}
 				},
 				"type": {
 					"position": {
@@ -34,7 +39,13 @@
 										},
 										"Identifier Expression": {
 											"name": {
-												"Name": "T"
+												"position": {
+													"sourceStart": 7,
+													"sourceEnd": 7
+												},
+												"Identifier Wrapper": {
+													"value": "T"
+												}
 											}
 										}
 									},
@@ -45,7 +56,13 @@
 										},
 										"Identifier Expression": {
 											"name": {
-												"Name": "U"
+												"position": {
+													"sourceStart": 10,
+													"sourceEnd": 10
+												},
+												"Identifier Wrapper": {
+													"value": "U"
+												}
 											}
 										}
 									}
@@ -73,7 +90,13 @@
 									},
 									"Identifier Expression": {
 										"name": {
-											"Name": "x"
+											"position": {
+												"sourceStart": 15,
+												"sourceEnd": 15
+											},
+											"Identifier Wrapper": {
+												"value": "x"
+											}
 										}
 									}
 								},
@@ -84,9 +107,23 @@
 											"sourceEnd": 17
 										},
 										"Access Expression": {
-											"type": ".",
+											"type": {
+												"position": {
+													"sourceStart": 16,
+													"sourceEnd": 16
+												},
+												"Operator Wrapper": {
+													"value": "."
+												}
+											},
 											"name": {
-												"Name": "b"
+												"position": {
+													"sourceStart": 17,
+													"sourceEnd": 17
+												},
+												"Identifier Wrapper": {
+													"value": "b"
+												}
 											}
 										}
 									},
@@ -109,7 +146,6 @@
 															"sourceEnd": 23
 														},
 														"Call argument": {
-															"name": "<ANONYMOUS>",
 															"value": {
 																"position": {
 																	"sourceStart": 19,
@@ -129,11 +165,25 @@
 																				},
 																				"Identifier Expression": {
 																					"name": {
-																						"Name": "c"
+																						"position": {
+																							"sourceStart": 19,
+																							"sourceEnd": 19
+																						},
+																						"Identifier Wrapper": {
+																							"value": "c"
+																						}
 																					}
 																				}
 																			},
-																			"operator": "+",
+																			"operator": {
+																				"position": {
+																					"sourceStart": 21,
+																					"sourceEnd": 21
+																				},
+																				"Operator Wrapper": {
+																					"value": "+"
+																				}
+																			},
 																			"right_expr": {
 																				"position": {
 																					"sourceStart": 23,
@@ -141,7 +191,13 @@
 																				},
 																				"Identifier Expression": {
 																					"name": {
-																						"Name": "d"
+																						"position": {
+																							"sourceStart": 23,
+																							"sourceEnd": 23
+																						},
+																						"Identifier Wrapper": {
+																							"value": "d"
+																						}
 																					}
 																				}
 																			}
@@ -157,7 +213,6 @@
 															"sourceEnd": 26
 														},
 														"Call argument": {
-															"name": "<ANONYMOUS>",
 															"value": {
 																"position": {
 																	"sourceStart": 26,
@@ -171,7 +226,13 @@
 																		},
 																		"Identifier Expression": {
 																			"name": {
-																				"Name": "w"
+																				"position": {
+																					"sourceStart": 26,
+																					"sourceEnd": 26
+																				},
+																				"Identifier Wrapper": {
+																					"value": "w"
+																				}
 																			}
 																		}
 																	}
@@ -223,7 +284,13 @@
 													},
 													"Identifier Expression": {
 														"name": {
-															"Name": "print"
+															"position": {
+																"sourceStart": 35,
+																"sourceEnd": 39
+															},
+															"Identifier Wrapper": {
+																"value": "print"
+															}
 														}
 													}
 												},
@@ -247,7 +314,6 @@
 																			"sourceEnd": 41
 																		},
 																		"Call argument": {
-																			"name": "<ANONYMOUS>",
 																			"value": {
 																				"position": {
 																					"sourceStart": 41,
@@ -261,7 +327,13 @@
 																						},
 																						"Identifier Expression": {
 																							"name": {
-																								"Name": "a"
+																								"position": {
+																									"sourceStart": 41,
+																									"sourceEnd": 41
+																								},
+																								"Identifier Wrapper": {
+																									"value": "a"
+																								}
 																							}
 																						}
 																					}

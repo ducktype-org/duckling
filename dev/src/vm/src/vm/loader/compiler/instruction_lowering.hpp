@@ -85,8 +85,12 @@ namespace vm::loader::compiler::detail {
 			return { std::move(result), std::move(label_id_to_offset) };
 		}
 
-		/// Add a new high instruction.
-		void add(const code::Instruction& instruction);
+		/**
+		 * @brief Add a new high instruction.
+		 * @return InstructionRange of the added instruction.
+		 * The end index is exclusive, so the instruction occupies the range [begin, end).
+		 */
+		low::LowFuncData::InstructionRange add(const code::Instruction& instruction);
 
 
 	private:
@@ -94,6 +98,7 @@ namespace vm::loader::compiler::detail {
 		 * @brief Whether to add a step Gil instruction before the next low instruction.
 		 */
 		bool push_step_gil_on_next_add_low = true;
+		bool is_control_flow               = true;
 
 		TypeCRef getPlaceType(const opargs::ArgumentType auto p) const {
 			if (auto maybe_val = ctx.locals_map.atMaybe(p.var_name)) return maybe_val.value()->type;
@@ -119,6 +124,11 @@ namespace vm::loader::compiler::detail {
 				addLow<Op_stepGil>();
 			}
 
+			if (is_control_flow) {
+				is_control_flow = false;
+				addLow<Op_check_strategy>();
+			}
+
 			[&]<typename... LowArgs>(std::tuple<LowArgs...>*) {
 				result.push_back(
 					makeLowInstruction(T::OPCODE, lowerLowArg<LowArgs>(std::forward<Args>(args))...)
@@ -137,12 +147,31 @@ namespace vm::loader::compiler::detail {
 		}
 	};
 
-	void MicroBytecodeBuilder::add(const code::Instruction& instruction) {
+	low::LowFuncData::InstructionRange MicroBytecodeBuilder::add(const code::Instruction& instruction
+	) {
 #if (BUILD_TYPE_DEV_DEBUG)
 		current_high_instruction_representation = code::instructionToString(instruction);
 #endif
+		usize instruction_begin_index = next_instruction_index;
 
 		push_step_gil_on_next_add_low = true;
+
+		// Mark control flow instruction
+		// @TODO: #2692 make it an instruction's trait
+		PUSH_DIAGNOSTIC
+		UNHANDLED_ENUM
+		instr_match(instruction) {
+			instr_case(high::Op_jmp_label, _) { is_control_flow = true; }
+			instr_case(high::Op_jmpIf_label, _) { is_control_flow = true; }
+			instr_case(high::Op_jmpIfNot_label, _) { is_control_flow = true; }
+			instr_case(high::Op_call_builtinfunc, _) { is_control_flow = true; }
+			instr_case(high::Op_call_cfunc, _) { is_control_flow = true; }
+			instr_case(high::Op_call_func, _) { is_control_flow = true; }
+			instr_case(high::Op_virtual_call_pptr_method, _) { is_control_flow = true; }
+			instr_default { is_control_flow = false; }
+		}
+		POP_DIAGNOSTIC
+
 
 		PUSH_DIAGNOSTIC
 		UNHANDLED_ENUM
@@ -605,5 +634,7 @@ namespace vm::loader::compiler::detail {
 			}
 		}
 		POP_DIAGNOSTIC
+
+		return { .begin = instruction_begin_index, .end = next_instruction_index };
 	}
 }

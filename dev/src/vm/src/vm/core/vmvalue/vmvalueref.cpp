@@ -162,3 +162,22 @@ base::CRef<vm::code::valid_type::ValidType> vm::VMValueRef::getType() const {
 	auto types   = my_process->loader.getHighProgram()->types();
 	return types.at(type_id);
 }
+
+std::string vm::VMValueRef::str() const {
+	auto var = readData();
+	if (!var.has_value()) return "<none>";
+
+	variant_match(var.value()) {
+		variant_case(interpreted_data_variant::Primitive, val) { return std::to_string(val.value); }
+		variant_case(interpreted_data_variant::Pointer, val) {
+			if (!val.referenced.has_value()) return "null";
+			return "<pointer>";
+		}
+		variant_case_novalue(interpreted_data_variant::Table) { return "<table>"; }
+		variant_case_novalue(interpreted_data_variant::Data) { return "<data>"; }
+		variant_case_novalue(interpreted_data_variant::Variant) { return "<variant>"; }
+		variant_case_novalue(interpreted_data_variant::Function) { return "<function>"; }
+		variant_case_novalue(interpreted_data_variant::Opaque) { return "<opaque>"; }
+	}
+	return "<unknown>";
+}

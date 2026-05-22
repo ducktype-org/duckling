@@ -92,10 +92,10 @@ namespace compiler::helios {
 		void visitUsing(pst::Access<pst::Using>) override {}
 
 		void handleAssignmentExpr(pst::Access<pst::expr::Assignment> assignment) {
-			auto op = assignment->getAssignmentType();
+			auto op = assignment->getAssignmentType().unlock(ctx)->unwrap();
 			if (op != base::StrID("=") && op != base::StrID("+=") && op != base::StrID("-=")) {
 				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-					base::strConcat("This assignment type: '", op, "'."),
+					base::strConcat("This assignment type: '", op.str(), "'."),
 					assignment->getStablePosition()
 				));
 				query::throwFailed();
@@ -164,7 +164,9 @@ namespace compiler::helios {
 			}
 
 			ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-				base::strConcat("'", op, "' assignment for type: '", location_type.toString(), "'."),
+				base::strConcat(
+					"'", op.str(), "' assignment for type: '", location_type.toString(), "'."
+				),
 				assignment->getStablePosition()
 			));
 			query::throwFailed();

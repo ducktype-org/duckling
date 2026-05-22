@@ -16,3 +16,4 @@ SubDirs:
     - repl
     - debug_adapter
     - scripts
+    - version_0_1

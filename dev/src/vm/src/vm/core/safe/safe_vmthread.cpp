@@ -59,6 +59,8 @@ namespace vm {
 
 	/**
 	 * @brief Tail call written function that handles the execution pause request.
+	 * @details Assumes that the instruction in the frame is to be executed before AND after running
+	 * this function.
 	 */
 	RETURN_TYPE OpFuns::handle_execution_break(OPFUN_ARGS) {
 		{
@@ -72,7 +74,7 @@ namespace vm {
 			instr       = frame->instr;
 			local_stack = frame->local_stack;
 		}
-		OPFUN_CONT(1);
+		OPFUN_CONT(0);
 	}
 
 	/**
@@ -96,13 +98,13 @@ namespace vm {
 	 */
 	void SafeVMThread::executeOneStep() {
 		Frame*     frame       = runtime_data.frame_stack_current;
-		std::byte* local_stack = frame->local_stack;
 		auto*      instr       = frame->instr;
+		std::byte* local_stack = frame->local_stack;
 
-		auto opcode = std::to_underlying(getInstructionOpcode(*instr));
+		low::MicroOpcode opcode = getInstructionOpcode(*instr);
 
 		// Execute the instruction by calling the debug opcode function.
-		OpFuns::DEBUG_OPFUNS.at(opcode)(instr, local_stack, frame, *this);
+		OpFuns::DEBUG_OPFUNS.at(std::to_underlying(opcode))(instr, local_stack, frame, *this);
 
 		runtime_data.frame_stack_current = frame;
 		frame->local_stack               = local_stack;
@@ -135,10 +137,11 @@ namespace vm {
 			                             .local_stack_size = 0,
 			                             .local_block_count
 			                             = func.result_types.size() + func.parameters.size(),
-			                             .arg_size     = 0,
-			                             .ret_size     = func.ret_size,
-			                             .parameters   = {},
-			                             .result_types = func.result_types };
+			                             .arg_size            = 0,
+			                             .ret_size            = func.ret_size,
+			                             .parameters          = {},
+			                             .result_types        = func.result_types,
+			                             .instruction_mapping = {} };
 
 		const u64 called_function_id = process_program->getFunctions().idOf(func.name).value();
 		usize     shared_stack_size  = 0;
@@ -238,14 +241,15 @@ namespace vm {
 		auto        str_ptr_type     = types.at(base::StrID("ptr_string"));
 		auto        byte_type        = types.at(base::StrID("byte"));
 
-		low::LowFuncData start_function{ .name              = base::StrID("vm_start_function"),
-			                             .bc                = {},
-			                             .local_stack_size  = 72,
-			                             .local_block_count = 7,
-			                             .arg_size          = 0,
-			                             .ret_size          = func.ret_size,
-			                             .parameters        = {},
-			                             .result_types      = func.result_types };
+		low::LowFuncData start_function{ .name                = base::StrID("vm_start_function"),
+			                             .bc                  = {},
+			                             .local_stack_size    = 72,
+			                             .local_block_count   = 7,
+			                             .arg_size            = 0,
+			                             .ret_size            = func.ret_size,
+			                             .parameters          = {},
+			                             .result_types        = func.result_types,
+			                             .instruction_mapping = {} };
 
 		// TypeIDs to pass to opcodes.
 		u64 argv_type_arg     = safeReadObjectBytes<u64>(argv_type);
@@ -603,7 +607,7 @@ namespace vm {
 		}
 	}
 
-	std::expected<api::Response, api::ApiError> SafeVMThread::getCurrentPosition() {
+	std::expected<low::LowCodePosition, api::ApiError> SafeVMThread::getCurrentPosition() {
 		variant_match(getStatus()) {
 			variant_case_novalue(api::Paused) {
 				auto frame = runtime_data.frame_stack_current;
@@ -612,9 +616,10 @@ namespace vm {
 				for (const auto& [idx, func]:
 				     std::views::enumerate(process_program->getFunctions())) {
 					if (func.bc.data() <= instr && instr < func.bc.data() + func.bc.size()) {
-						return api::Response(api::response::CodePosition{
-							.function_id  = static_cast<u64>(idx),  // Assuming function_id is int
-							.instr_number = static_cast<u64>(instr - func.bc.data()) });
+						return low::LowCodePosition{
+							.function          = &func,
+							.instruction_index = static_cast<u64>(instr - func.bc.data()),
+						};
 					}
 				}
 			}

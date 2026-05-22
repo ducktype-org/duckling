@@ -53,14 +53,6 @@ namespace compiler::frontend {
 	 */
 	DECLARE_QUERY(QueryMainSourceFile, ModuleID, FileID, ({ .uses_qresult = false }))
 
-	/**
-	 * @brief Query sources files of a module (without main source file).
-	 *
-	 * \query_thread_safe_if_cache
-	 */
-	DECLARE_QUERY(QuerySourceFiles, ModuleID, CRef<std::vector<FileID>>, ({ .uses_qresult = false }))
-
-
 	using QuerySubmodules_Result = CRef<base::HashMap<base::StrID, ModuleID>>;
 	/**
 	 * @brief Query map of children modules aka submodules
@@ -69,16 +61,6 @@ namespace compiler::frontend {
 	 * \query_thread_safe
 	 */
 	DECLARE_QUERY(QuerySubmodules, ModuleID, QuerySubmodules_Result, ({ .uses_qresult = false }))
-
-	/**
-	 * @brief Side input controlling dependency on number of source files in a module.
-	 * Key includes module path hash and source file count.
-	 * This is needed to properly invalidate queries that depend on the number of source files
-	 * in the module when some query will need access to source files list (eg. getSourceFiles).
-	 * @note This is not needed for getMainSourceFile, because main source file is accessed via
-	 * separate query.
-	 */
-	DECLARE_QUERY_SIDE_INPUT(QuerySourceFileCountSideInput, KeyOf_SourceFileCountSideInput)
 
 	/**
 	 * @brief Side input controlling dependency on number of submodules in a module.

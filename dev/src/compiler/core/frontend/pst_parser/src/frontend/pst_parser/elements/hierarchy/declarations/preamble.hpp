@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../not_statements/wrapper_elements/identifier_wrapper.hpp"  // IWYU pragma: export
 #include "../statements/declaration.hpp"
 
 #define DECL_CHILD_CONSTRUCTOR(class_name, element_type_)                         \

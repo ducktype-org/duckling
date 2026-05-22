@@ -149,6 +149,12 @@ namespace {
 				const auto struct_constant = llvm::ConstantStruct::get(struct_type, fields);
 				return struct_constant;
 			}
+			variant_case(compiler::ctv::CompileTimeValue::TupleCTV, tuple) {
+				// @TODO: #2506 Implement this
+				throw base::NotYetImplemented(base::strConcat(
+					"Conversion from CTV to LLVM constant for tuples is not implemented yet"
+				));
+			}
 			variant_default {
 				throw base::NotYetImplemented(base::strConcat(
 					"Conversion from CTV to LLVM constant for this type. Index in CTV "
@@ -1370,6 +1376,9 @@ namespace compiler::backend_llvm {
 
 				break;
 			}
+			case Nop:
+				// No instruction to generate, just skip.
+				break;
 			default:
 				CORE_DEV_LOG(
 					Backend,

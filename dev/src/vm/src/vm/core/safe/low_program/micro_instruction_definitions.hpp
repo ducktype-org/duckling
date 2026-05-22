@@ -665,7 +665,7 @@ DEF_MICRO_INSTR(ext_type_type, vm::low::opargs::Type, vm::low::opargs::Type)
 
 // ========= MISC ========
 
-
+DEF_MICRO_INSTR(check_strategy)
 DEF_MICRO_INSTR(nop)
 
 // terminates execution

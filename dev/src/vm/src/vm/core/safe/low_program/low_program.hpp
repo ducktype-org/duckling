@@ -37,6 +37,29 @@ namespace vm::low {
 		usize                 ret_size;
 		std::vector<TypeCRef> parameters;
 		std::vector<TypeCRef> result_types;
+
+		/**
+		 * @brief Range of instructions
+		 * @note Represents inclusive-exclusive range [`begin`, `end`)
+		 */
+		struct InstructionRange {
+			usize begin, end;
+			auto  operator<=>(const InstructionRange&) const = default;
+
+			[[nodiscard]] bool contains(usize index) const { return begin <= index && index < end; }
+		};
+
+		/**
+		 * @brief Mapping of fatbytecode instruction indexes to microbytecode instruction indexes
+		 * ranges.
+		 * @note Vector indexes correspond to FatBytecode instruction indexes
+		 */
+		std::vector<InstructionRange> instruction_mapping;
+	};
+
+	struct LowCodePosition {
+		CRef<LowFuncData> function;
+		usize             instruction_index;
 	};
 
 	/**

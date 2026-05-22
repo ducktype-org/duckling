@@ -119,6 +119,9 @@ namespace vm::loader::compiler {
 
 			// Stores head of the stack at the moment of instructions: inits, deinits, calls.
 			std::vector<usize> offset_at_instructions{};
+
+			/// Bytecode to Microbytecode mapping
+			std::vector<vm::low::LowFuncData::InstructionRange> instruction_mapping{};
 		};
 
 		/**

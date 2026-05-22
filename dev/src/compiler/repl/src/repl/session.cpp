@@ -344,14 +344,13 @@ namespace compiler::repl {
 				auto run_result = vm::api::runFunction(m_dvm_pid, wrapper_func_name, {})
 				                      .and_then([&](auto) { return vm::api::join(m_dvm_pid); })
 				                      .transform_error(vm::api::errorToString);
-				if (run_result.has_value()) {
-					if (!m_suppress_repl_feedback_during_script_load)
-						std::cout << "Instruction executed.\n";
-				} else {
+				if (!run_result.has_value()) {
 					error_message = "Runtime error: " + run_result.error();
 					had_error     = true;
 					return;
 				}
+
+				CORE_DEV_LOG(REPL, "Instruction executed.\n");
 			} catch (const base::Panic& e) {
 				error_message = "Compilation/execution error: " + std::string(e.what());
 				had_error     = true;

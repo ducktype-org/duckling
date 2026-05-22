@@ -157,7 +157,8 @@ namespace vm::loader::compiler {
 
 		for (auto [idx, instr]: std::views::enumerate(ctx.function.body)) {
 			ctx.current_instruction_index = idx;
-			builder.add(instr);
+			auto instruction_range = builder.add(instr);
+			ctx.instruction_mapping.push_back(instruction_range);
 		}
 
 		auto [micro_bytecode, label_map] = builder.build();
@@ -504,7 +505,9 @@ namespace vm::loader::compiler {
 			                      .arg_size     = ctx.shared_stack_size - ctx.return_stack_size,
 			                      .ret_size     = ctx.return_stack_size,
 			                      .parameters   = std::move(parameters),
-			                      .result_types = std::move(result_types) },
+			                      .result_types = std::move(result_types),	
+								  .instruction_mapping = std::move(ctx.instruction_mapping)
+				},
 				function.name
 			);
 		}

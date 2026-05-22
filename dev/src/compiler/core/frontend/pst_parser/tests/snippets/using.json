@@ -18,13 +18,31 @@
 					"star": "false",
 					"names": [
 						{
-							"Name": "aaaa"
+							"position": {
+								"sourceStart": 6,
+								"sourceEnd": 9
+							},
+							"Identifier Wrapper": {
+								"value": "aaaa"
+							}
 						},
 						{
-							"Name": "bbb"
+							"position": {
+								"sourceStart": 11,
+								"sourceEnd": 13
+							},
+							"Identifier Wrapper": {
+								"value": "bbb"
+							}
 						},
 						{
-							"Name": "c"
+							"position": {
+								"sourceStart": 15,
+								"sourceEnd": 15
+							},
+							"Identifier Wrapper": {
+								"value": "c"
+							}
 						},
 					]
 				}
@@ -44,10 +62,22 @@
 					"star": "true",
 					"names": [
 						{
-							"Name": "dasdsa"
+							"position": {
+								"sourceStart": 25,
+								"sourceEnd": 30
+							},
+							"Identifier Wrapper": {
+								"value": "dasdsa"
+							}
 						},
 						{
-							"Name": "dasd"
+							"position": {
+								"sourceStart": 32,
+								"sourceEnd": 35
+							},
+							"Identifier Wrapper": {
+								"value": "dasd"
+							}
 						},
 					]
 				}
@@ -67,7 +97,13 @@
 					"star": "false",
 					"names": [
 						{
-							"Name": "aaaa"
+							"position": {
+								"sourceStart": 47,
+								"sourceEnd": 50
+							},
+							"Identifier Wrapper": {
+								"value": "aaaa"
+							}
 						},
 					]
 				}
@@ -87,16 +123,40 @@
 					"star": "false",
 					"names": [
 						{
-							"Name": "a"
+							"position": {
+								"sourceStart": 60,
+								"sourceEnd": 60
+							},
+							"Identifier Wrapper": {
+								"value": "a"
+							}
 						},
 						{
-							"Name": "b"
+							"position": {
+								"sourceStart": 62,
+								"sourceEnd": 62
+							},
+							"Identifier Wrapper": {
+								"value": "b"
+							}
 						},
 						{
-							"Name": "c"
+							"position": {
+								"sourceStart": 64,
+								"sourceEnd": 64
+							},
+							"Identifier Wrapper": {
+								"value": "c"
+							}
 						},
 						{
-							"Name": "d"
+							"position": {
+								"sourceStart": 66,
+								"sourceEnd": 66
+							},
+							"Identifier Wrapper": {
+								"value": "d"
+							}
 						},
 					]
 				}
@@ -116,13 +176,31 @@
 					"star": "false",
 					"names": [
 						{
-							"Name": "ἄλφα"
+							"position": {
+								"sourceStart": 76,
+								"sourceEnd": 79
+							},
+							"Identifier Wrapper": {
+								"value": "ἄλφα"
+							}
 						},
 						{
-							"Name": "βῆτα"
+							"position": {
+								"sourceStart": 81,
+								"sourceEnd": 84
+							},
+							"Identifier Wrapper": {
+								"value": "βῆτα"
+							}
 						},
 						{
-							"Name": "γάμμα"
+							"position": {
+								"sourceStart": 86,
+								"sourceEnd": 90
+							},
+							"Identifier Wrapper": {
+								"value": "γάμμα"
+							}
 						},
 					]
 				}
@@ -142,10 +220,22 @@
 					"star": "true",
 					"names": [
 						{
-							"Name": "ἄλφα"
+							"position": {
+								"sourceStart": 100,
+								"sourceEnd": 103
+							},
+							"Identifier Wrapper": {
+								"value": "ἄλφα"
+							}
 						},
 						{
-							"Name": "βῆτα"
+							"position": {
+								"sourceStart": 105,
+								"sourceEnd": 108
+							},
+							"Identifier Wrapper": {
+								"value": "βῆτα"
+							}
 						},
 					]
 				}
