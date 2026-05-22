@@ -1,2 +1,0 @@
-VMThread has panicked: Data was freed
-{"data":{"error":"Execution panicked with error: Data was freed"},"type":"OtherError"}block.refcount != 0, BlockID=0
