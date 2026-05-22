@@ -568,7 +568,7 @@ namespace compiler::helios::code {
 				}
 				if (from.getRefKind() == tsh::ReferenceKind::Box
 				    && to.getType().getKind() == tsh::Kind::Pointer) {
-					return;  // allow explicit casts from ref T to many ptr T
+					return;  // allow explicit casts from box T to ptr T
 				}
 				if (from.getRefKind() == tsh::ReferenceKind::Direct
 				    && to.getRefKind() == tsh::ReferenceKind::Direct) {
@@ -581,6 +581,21 @@ namespace compiler::helios::code {
 					    && to.getType().getKind() == tsh::Kind::CPointer) {
 						return;
 					}
+
+					// Temporarily allow casts from CPointer to Pointer and ManyPointer, with a warning.
+					if (from.getType().getKind() == tsh::Kind::CPointer) {
+						ctx.logInt(makeBox<dia_int::PlaceholderWarning>(
+							"Casts from CPointer will be disabled in the future and only work on "
+							"native targets.",
+							stmt->getStablePosition(),
+							"There will be a different syntax for such casts in the future."
+						));
+						// I do not like this syntax "as" to work on some targets and not work on
+						// others. I would like to have some syntax, so that the user has to write
+						// `native_cptr_cast<ptr T>(original_ctype)` or `@native v as ptr T`
+						// to make it explicit that this cast is only supported on native target.
+						return;
+					}
 				}
 
 				ctx.logInt(makeBox<dia_int::PlaceholderError>(
@@ -589,6 +604,7 @@ namespace compiler::helios::code {
 					),
 					stmt->getStablePosition()
 				));
+				query::throwFailed();
 			}
 
 			void visitCastAs(pst::Access<pst::expr::CastAs> stmt) override {

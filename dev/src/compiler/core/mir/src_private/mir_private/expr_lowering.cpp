@@ -430,21 +430,21 @@ namespace compiler::mir {
 		bool isEmptyCast(const hc::CastExpr& expr) {
 			if (expr.source_expr->expression_type.getSymbolType() == expr.target_type) return true;
 
-			// If a cast is numeric, then it is not empty
-			auto is_direct_numeric = [](const tsh::SymbolType<>& type) {
-				bool is_numeric = (type.getType().getKind() == tsh::Kind::Integral)
-				               or (type.getType().getKind() == tsh::Kind::Float);
-				bool is_direct = type.getRefKind() == tsh::ReferenceKind::Direct;
-				return is_numeric and is_direct;
-			};
-			if (is_direct_numeric(expr.source_expr->expression_type.getSymbolType())
-			    and is_direct_numeric(expr.target_type)) {
-				return false;
+			// If cast is from ref T to ptr T it is empty
+			if (expr.source_expr->expression_type.getSymbolType().getRefKind()
+			        == tsh::ReferenceKind::Ref
+			    && expr.target_type.getType().getKind() == tsh::Kind::Pointer) {
+				return true;
 			}
-			// If a cast is to a CPointer type then it is not empty
-			if (expr.target_type.getType().getKind() == tsh::Kind::CPointer) return false;
 
-			return true;
+			// If cast is from box T to ptr T it is empty
+			if (expr.source_expr->expression_type.getSymbolType().getRefKind()
+			        == tsh::ReferenceKind::Box
+			    && expr.target_type.getType().getKind() == tsh::Kind::Pointer) {
+				return true;
+			}
+
+			return false;
 		}
 
 		void visitCastExpr(const hc::CastExpr& expr) override {

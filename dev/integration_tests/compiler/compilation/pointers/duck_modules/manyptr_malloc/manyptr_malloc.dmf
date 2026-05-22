@@ -1,0 +1,16 @@
+extern("C") fundecl malloc(size: i64) -> manyptr i32;
+extern("C") fundecl free(p: manyptr i32);
+
+fun main() -> i64 = {
+    var z: manyptr i32 = malloc(4 * 3);
+    z[0] = 1;
+    z[1] = 2 + z[0];
+    z[2] = 3 + z[1] + z[0];
+
+    builtin_output_i64(z[0]);
+    builtin_output_i64(z[1]);
+    builtin_output_i64(z[2]);
+    free(z);
+
+    return 0;
+}
