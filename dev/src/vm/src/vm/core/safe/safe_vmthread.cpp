@@ -601,7 +601,6 @@ namespace vm {
 			variant_case_novalue(api::Paused) {
 				auto  frame = runtime_data.frame_stack_current;
 				auto& func  = *frame->current_function;
-				auto  instr = frame->instr;
 
 				return low::LowCodePosition{
 					.function          = &func,
