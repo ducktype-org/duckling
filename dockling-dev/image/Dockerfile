@@ -55,7 +55,7 @@ SHELL ["/bin/bash", "-c"]
 WORKDIR /duckling
 
 ENV LLVM_DIR=/usr/lib/llvm-19
-ENV PATH=/usr/lib/llvm-19/bin:$PATH
+ENV PATH=/duckling/dockling-dev/bin:/usr/lib/llvm-19/bin:$PATH
 
 USER 1000:1000
 

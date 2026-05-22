@@ -1,0 +1,4 @@
+#!/usr/bin/bash
+
+cd /duckling/dev
+./toolbox.py $@

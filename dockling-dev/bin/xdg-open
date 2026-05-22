@@ -1,0 +1,6 @@
+#!/usr/bin/bash
+
+echo "=== XDG-OPEN ==="
+echo "Workdir: $(pwd)"
+echo "URL: $@"
+echo "================"
