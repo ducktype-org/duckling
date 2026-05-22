@@ -64,6 +64,12 @@ WORKDIR /duckling
 ENV LLVM_DIR=/usr/lib/llvm-19
 ENV PATH=/duckling/dockling-dev/bin:/usr/lib/llvm-19/bin:$PATH
 
-USER 1000:1000
+ARG UID=1000
+ARG GID=1000
+
+RUN groupmod -g ${GID} ubuntu && \
+    usermod -u ${UID} -g ${GID} ubuntu
+
+USER ubuntu
 
 CMD ["/bin/bash"]

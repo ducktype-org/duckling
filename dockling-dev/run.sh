@@ -20,7 +20,6 @@ mkdir -p "$SCRIPT_DIR/home_ubuntu"
 exec docker run "${TTY_FLAGS[@]}" --rm \
 	--name dockling \
 	--hostname dockling \
-	--user "$USER_GROUP" \
 	--cap-add=SYS_PTRACE \
 	-v "$PROJECT_DIR:/duckling/" \
 	-v "$SCRIPT_DIR/home_ubuntu/:/home/ubuntu/" \
