@@ -27,6 +27,8 @@ jobs:
   # Determines the build matrix based on the event type.
   # On regular PRs only Dev/gcc runs; on push, workflow_dispatch or approved reviews the full matrix runs.
   setup:
+    if: github.event.pull_request.draft == false
+    
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
