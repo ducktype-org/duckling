@@ -32,7 +32,7 @@ namespace compiler::backend_vm::internal {
 		// In this case we assume we have a very general quadruple of the form:
 		// output = arg1 OP arg2;
 
-		auto is_different_from_arg = [](const DVMPlace& place, const DVMValue& arg) {
+		auto is_different_from_arg = [](const DVMPlace& place, const DVMValue& arg) -> bool {
 			return place.isDirect() and !(DVMValue{ place } == arg);
 		};
 		
