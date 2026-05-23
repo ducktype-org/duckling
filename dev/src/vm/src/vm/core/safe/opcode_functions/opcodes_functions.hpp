@@ -106,7 +106,8 @@ namespace vm {
 		 * @note The function has to be inlined since it's used by the `call_func` and
 		 * `virtual_call` opcodes and breaks tailcalling of opcode function if not inlined.
 		 */
-		static
+		template<size_t number_of_exts = 0>
+		 static
 #ifndef BUILD_TYPE_DEV_DEBUG
 			__attribute__((always_inline))
 #endif
@@ -133,7 +134,7 @@ namespace vm {
 
 			// Size of the shared stack space between called functions.
 			auto shared_stack_space_size = called_func.arg_size + called_func.ret_size;
-
+			
 			auto arg_count           = called_func.parameters.size();
 			auto ret_count           = called_func.result_types.size();
 			auto shared_blocks_count = arg_count + ret_count;
@@ -142,12 +143,14 @@ namespace vm {
 
 
 			// Save current registers and flow.
-			frame->instr       = instr + 1;
+			frame->instr       = instr + 1 + number_of_exts;
 			frame->local_stack = local_stack;
 
 			// Save the last frame
 			auto* prev_frame = frame;
-
+			std::cout<<frame->local_stack_head<<" "<<instr->arg0<<"\n";
+			CORE_ASSERT(frame->local_stack_head == instr->arg0, "xdd");
+			//std::cout<<"TEST: "<<instr[0].arg0<<' '<<instr[0].arg1<<' '<<instr[1].arg0<<' '<<instr[1].arg1<<' '<<instr[-1].arg0<<'\n';
 			frame++;
 			frame->current_function = &called_func;
 

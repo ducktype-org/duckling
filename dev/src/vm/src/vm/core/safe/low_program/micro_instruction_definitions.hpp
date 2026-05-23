@@ -392,10 +392,10 @@ DEF_MICRO_INSTR(jmpIfNot_label, vm::low::opargs::Label)
 
 // ========= FUNCTION OPERATIONS ========
 
-DEF_MICRO_INSTR(call_func, vm::low::opargs::FunctionID)
+DEF_MICRO_INSTR(call_func, vm::low::opargs::Immediate, vm::low::opargs::FunctionID)
 #ifdef ENABLE_JIT
 // call a function, with the possibility to compile it later
-DEF_MICRO_INSTR(jit_call_entrypoint, vm::low::opargs::FunctionID)
+DEF_MICRO_INSTR(jit_call_entrypoint, vm::low::opargs::Immediate, vm::low::opargs::FunctionID)
 #endif
 DEF_MICRO_INSTR(call_builtinfunc, vm::low::opargs::BuiltinFunctionID)
 DEF_MICRO_INSTR(call_cfunc, vm::low::opargs::ExtCFunction)
@@ -434,7 +434,7 @@ DEF_MICRO_INSTR(upcast_pptr_pptr, vm::low::opargs::PlacePtr, vm::low::opargs::Pl
 // tries to cast pointed object to its subclass, requires that ext_64 is next
 DEF_MICRO_INSTR(downcast_pptr_pptr, vm::low::opargs::PlacePtr, vm::low::opargs::PlacePtr)
 // calls a method of specified name on an a pointer. Performs the dynamic dispatch.
-DEF_MICRO_INSTR(virtual_call_pptr_method, vm::low::opargs::PlacePtr, vm::low::opargs::MethodName)
+DEF_MICRO_INSTR(virtual_call_pptr_method, vm::low::opargs::Immediate, vm::low::opargs::MethodName)
 
 // ========= GENERAL POINTER OPERATIONS ========
 
@@ -658,6 +658,7 @@ DEF_MICRO_INSTR(ext_p64, vm::low::opargs::Place64)
 DEF_MICRO_INSTR(ext_imm, vm::low::opargs::Immediate)
 DEF_MICRO_INSTR(ext_type, vm::low::opargs::Type)
 DEF_MICRO_INSTR(ext_field, vm::low::opargs::Field)
+DEF_MICRO_INSTR(ext_pptr, vm::low::opargs::PlacePtr)
 DEF_MICRO_INSTR(ext_p64_type, vm::low::opargs::Place64, vm::low::opargs::Type)
 DEF_MICRO_INSTR(ext_type_field, vm::low::opargs::Type, vm::low::opargs::Field)
 DEF_MICRO_INSTR(ext_type_p64, vm::low::opargs::Type, vm::low::opargs::Place64)

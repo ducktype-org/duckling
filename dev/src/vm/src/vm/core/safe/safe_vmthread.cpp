@@ -146,7 +146,6 @@ namespace vm {
 		const u64 called_function_id = process_program->getFunctions().idOf(func.name).value();
 		usize     shared_stack_size  = 0;
 		size_t    offset             = 0;
-
 		for (auto [idx, res]: std::views::enumerate(func.result_types)) {
 			// Initialize an exit code/return value spot. In case of non-void functions the
 			// exit_code is the return value of the function. Void functions always return with the
@@ -155,13 +154,13 @@ namespace vm {
 				MAKE_BYTECODE_INSTRUCTION(init_bany_type, offset, safeReadObjectBytes<u64>(res))
 			);
 			shared_stack_size
-				= align_up(shared_stack_size, res->getStackAlignment()) + res->getSize().asInt();
+				= align_up(shared_stack_size, 8) + res->getSize().asInt();
 			offset = shared_stack_size;  // todo improve
 		}
 
 		start_function.ret_size = shared_stack_size;
-		if (offset % 8 != 0) offset += 8 - offset % 8;  // tmp
-
+		//if (offset % 8 != 0) offset += 8 - offset % 8;  // tmp
+		std::cout<<"offset "<<offset<<'\n';
 		for (u64 i = 0; i < func_args.size(); i++) {
 			std::cout << "ADDING VM VALUE ARG " << i << '\n';
 			const auto& arg_value = func_args[i];
@@ -185,24 +184,24 @@ namespace vm {
 					arg_value->type->getName().str()
 				));
 			}
-
+			shared_stack_size = align_up(shared_stack_size, 8);
 			start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(
-				initFromVmValue, offset, std::bit_cast<u64>(arg_value.get())
+				initFromVmValue, shared_stack_size, std::bit_cast<u64>(arg_value.get())
 			));
-			offset += 8;  // todo sizeof??
 			start_function.parameters.push_back(arg_value->type);
-			shared_stack_size = align_up(shared_stack_size, arg_type->getStackAlignment())
-			                  + arg_type->getSize().asInt();
+			shared_stack_size +=arg_type->getSize().asInt(); // value is passed as argument, must be fully alligned
+
+			offset = shared_stack_size;
 		}
 		start_function.arg_size         = shared_stack_size - start_function.ret_size;
 		start_function.local_stack_size = shared_stack_size;
-
+		std::cout<<"tmp "<<start_function.local_stack_size<<'\n';
 
 		start_function.bc.insert(
 			start_function.bc.end(),
 			{
 				MAKE_BYTECODE_INSTRUCTION(stepGil, 0, 0),  // We need to acquire GIL
-				MAKE_BYTECODE_INSTRUCTION(call_func, called_function_id, 0),
+				MAKE_BYTECODE_INSTRUCTION(call_func, offset, called_function_id),
 				// @note: Only one block is left on the stack in this place, so there is no need for
 		        // any deinits. It's being deinitialized by the thread after obtaining the return
 		        // value/exit_code.
@@ -373,7 +372,7 @@ namespace vm {
 			start_function.bc.end(),
 			{
 				MAKE_BYTECODE_INSTRUCTION(stepGil, 0, 0),  // We need to acquire GIL
-				MAKE_BYTECODE_INSTRUCTION(call_func, called_function_id, 0),  // call main
+				MAKE_BYTECODE_INSTRUCTION(call_func, main_has_args ? 72 : 48, called_function_id),  // call main
 				MAKE_BYTECODE_INSTRUCTION(mov_p64_p64, 0, 40),  // ret_val := main_ret_val
 				MAKE_BYTECODE_INSTRUCTION(mov_p64_imm, 32, 0),  // ix := 0
 				MAKE_BYTECODE_INSTRUCTION(

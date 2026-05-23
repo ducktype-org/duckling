@@ -180,7 +180,7 @@ namespace vm::loader::compiler {
 		/**
 		 * @brief Detects all variables which are used as arguments or return values in calls.
 		 */
-		std::unordered_set<base::StrID> detectParamsAndReturnedVars(FunctionCompilationContext& ctx);
+		std::unordered_set<base::StrID> detectParamsAndReturnedVars(FunctionCompilationContext& ctx) const;
 
 		/**
 		 * @brief Calculates the stack offsets of stack variables.

@@ -157,6 +157,7 @@ namespace vm::loader::compiler {
 
 		for (auto [idx, instr]: std::views::enumerate(ctx.function.body)) {
 			ctx.current_instruction_index = idx;
+			std::cout<<ctx.current_instruction_index<<" "<<ctx.offset_at_instructions[idx]<<"\n";
 			auto instruction_range        = builder.add(instr);
 			ctx.instruction_mapping.push_back(instruction_range);
 		}
@@ -203,7 +204,7 @@ namespace vm::loader::compiler {
 
 	std::unordered_set<base::StrID> Compiler::detectParamsAndReturnedVars(
 		FunctionCompilationContext& ctx
-	) {
+	) const{
 		std::vector<base::StrID>        stack;
 		std::unordered_set<base::StrID> res;
 
@@ -329,14 +330,14 @@ namespace vm::loader::compiler {
 
 	void Compiler::calculateOffsets(FunctionCompilationContext& ctx) {
 		auto must_be_fully_alligned = detectParamsAndReturnedVars(ctx);
-
+		std::cout<<"function: "<<ctx.function.name.str.str()<<'\n';
 		decltype(ctx.locals_map) result;
 		std::vector<usize>       type_size_stack;
 		std::vector<usize>       padding_used;
 		usize                    curr_stack_size = 0;
 		usize                    max_stack_size  = 0;
 		usize                    max_block_count = 0;
-		ctx.offset_at_instructions               = std::vector<usize>(ctx.function.body.size(), -1);
+		ctx.offset_at_instructions               = std::vector<usize>(ctx.function.body.size(), 2137);
 
 		// todo reorganize and make better
 		usize index = 0;
@@ -420,6 +421,7 @@ namespace vm::loader::compiler {
 				instr_case(Op_deinit, instr) {
 					pop();
 					ctx.offset_at_instructions[index] = curr_stack_size;
+					std::cout<<"After deinit "<<curr_stack_size<<'\n';
 					index++;
 				}
 				instr_case(Op_jmp_label, instr) { index = label_positions[instr.label.label_name]; }
@@ -447,6 +449,7 @@ namespace vm::loader::compiler {
 					dfs_stack.pop_back();
 				}
 				instr_case(Op_call_func, instr) {
+					std::cout<<"OFFSET AT CALL: "<<curr_stack_size<<'\n';
 					ctx.offset_at_instructions[index] = curr_stack_size;
 					usize number_of_params            = program_ctx.function_forward_declarations
 					                             .at(instr.function.function_name)
@@ -455,6 +458,7 @@ namespace vm::loader::compiler {
 					index++;
 				}
 				instr_case(Op_call_builtinfunc, instr) {
+					std::cout<<index<<"BILTIN\n";
 					for (usize i = 0;
 					     i < builtins::getBuiltinFunctionSignature(instr.function.function_name)
 					             .value()
@@ -477,6 +481,7 @@ namespace vm::loader::compiler {
 					auto [param_count, ret_count]
 						= *seek_method_param_ret_count(instr.method.method_name);
 					ctx.offset_at_instructions[index] = curr_stack_size;
+					std::cout<<"reporting Offset "<<curr_stack_size<<'\n';
 					for (usize i = 0; i < param_count; i++) pop();
 					index++;
 				}

@@ -308,7 +308,7 @@ namespace vm {
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(call_func)(FUNCTION_ARGS) {
-		{ performFunctionCall(instr, local_stack, frame, thread, instr->arg0); }
+		{ performFunctionCall(instr, local_stack, frame, thread, instr->arg1); }
 		// After acquiring the `executing_code` of the new function we have instruction pointer
 		// (`instr`) pointing at the first instruction of the new function, so moving forward by one
 		// would mean that we skipped the first instruction. That's why we move forward zero
@@ -475,7 +475,8 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(virtual_call_pptr_method)(FUNCTION_ARGS) {
 		{
-			const auto pointer = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
+			//CORE_PANIC("unimplemented");
+			const auto pointer = READ_FROM_PLACE_ARG(Pointer, instr[1].arg0);
 
 			// Objects are guaranteed to hold inheritance metadata pointers as their first field.
 			// This is verified by static verification.
@@ -492,7 +493,7 @@ namespace vm {
 			const usize function_id
 				= *thread.process_program->getFunctions().idOf(implementation_name);
 
-			performFunctionCall(instr, local_stack, frame, thread, function_id);
+			performFunctionCall<1>(instr, local_stack, frame, thread, function_id);
 		}
 		FUNCTION_CONT(0);
 	}
@@ -553,6 +554,7 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(init_bany_type)(FUNCTION_ARGS) {
 		{
+			std::cout<<"INIT AT "<<instr->arg0<<'\n';
 			performInit(
 				instr, local_stack, frame, thread, READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1)
 			);
@@ -563,7 +565,8 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(deinit)(FUNCTION_ARGS) {
 		{
 			performDeinit(frame, thread);
-			frame->local_stack_head -= READ_FROM_DIRECT_ARG(u64, instr->arg0);
+			frame->local_stack_head = READ_FROM_DIRECT_ARG(u64, instr->arg0);
+			std::cout<<"AFTER DEINIT "<<frame->local_stack_head<<'\n';
 		}
 		FUNCTION_CONT(1);
 	}
@@ -626,6 +629,10 @@ namespace vm {
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(ext_field)(FUNCTION_ARGS) {
+		CORE_PANIC("ext_field not consumed by previous instruction");
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ext_pptr)(FUNCTION_ARGS) {
 		CORE_PANIC("ext_field not consumed by previous instruction");
 	}
 
