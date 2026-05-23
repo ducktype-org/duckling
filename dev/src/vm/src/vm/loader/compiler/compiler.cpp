@@ -188,34 +188,7 @@ namespace vm::loader::compiler {
 		CORE_UNREACHABLE();
 	}
 
-	std::unordered_set<base::StrID> Compiler::detectParamsAndReturnedVars(
-		FunctionCompilationContext& ctx
-	) {
-		std::vector<base::StrID>        stack;
-		std::unordered_set<base::StrID> res;
-
-		auto push = [&](opargs::PlaceAny local, bool is_arg_or_ret) {
-			if (is_arg_or_ret) res.insert(local.var_name);
-			stack.push_back(local.var_name);
-		};
-
-		auto pop = [&](bool is_arg_or_ret) {
-			if (is_arg_or_ret) res.insert(stack.back());
-			stack.pop_back();
-		};
-
-		auto register_top_of_stack_as_arg_or_ret = [&](size_t cnt) {
-			for (i64 i = static_cast<i64>(stack.size()) - cnt; i < stack.size(); i++)
-				res.insert(stack[i]);
-		};
-
-		auto handle_call = [&](size_t args_cnt, size_t ret_cnt) {
-			for (size_t i = 0; i < args_cnt; ++i) pop(true);
-			register_top_of_stack_as_arg_or_ret(ret_cnt);
-		};
-
-		// Label positions in high bytecode, used only for graph traversing
-		// in this function. Not used when lowering to microbytecode.
+	base::HashMap<base::StrID, usize> Compiler::calculate_labels_mapping(FunctionCompilationContext& ctx) const{
 		base::HashMap<base::StrID, usize> label_positions{};
 		for (auto [idx, instr]: std::views::enumerate(ctx.function.body)) {
 			instr_match(instr) {
@@ -225,16 +198,49 @@ namespace vm::loader::compiler {
 				instr_default {}
 			}
 		}
+		return label_positions;
+	}
 
-		code::FuncSignature func_signature = ctx.function.signature;
-		using namespace std::views;
-		for (auto [idx, ret_type]: enumerate(func_signature.result_types))
-			push(base::StrID(base::strConcat("ret", idx).c_str()), true);
-		for (auto [idx, param_type]: enumerate(func_signature.parameters))
-			push(base::StrID(base::strConcat("arg", idx).c_str()), true);
+	std::unordered_set<base::StrID> Compiler::detectParamsAndReturnedVars(
+		FunctionCompilationContext& ctx
+	) {
+		std::vector<base::StrID>        stack;
+		std::unordered_set<base::StrID> res;
 
-		// instruction index, type stack state, padding stack state, stack size
+		auto push = [&](opargs::PlaceAny local) {
+			stack.push_back(local.var_name);
+		};
+
+		auto pop = [&]() {
+			stack.pop_back();
+		};
+
+		auto register_top_of_stack_as_arg_or_ret = [&](size_t cnt = 1) {
+			CORE_ASSERT(stack.size() >= cnt, "Invalid bytecode structure which was not detected at validation.");
+			for (size_t i=0; i<cnt; ++i)
+				res.insert(stack[stack.size() - 1 - i]);
+		};
+
+		// Pops all arguments, registers all arguments and return values.
+		auto handle_non_tailcall = [&](size_t args_cnt, size_t ret_cnt) {
+			register_top_of_stack_as_arg_or_ret(args_cnt + ret_cnt);
+			for (size_t i = 0; i < args_cnt; ++i) pop();
+		};
+
+		base::HashMap<base::StrID, usize> label_positions = calculate_labels_mapping(ctx);
+
+		const code::FuncSignature& func_signature = ctx.function.signature;
+		
+		// Add return values and params to stack, all of them must be fully alligned.
+		for (auto [idx, ret_type]: std::views::enumerate(func_signature.result_types))
+			push(base::StrID(base::strConcat("ret", idx).c_str()));
+		for (auto [idx, param_type]: std::views::enumerate(func_signature.parameters))
+			push(base::StrID(base::strConcat("arg", idx).c_str()));
+		register_top_of_stack_as_arg_or_ret(func_signature.result_types.size() + func_signature.parameters.size());
+
+		// After validation at each label stack has same state.
 		base::HashMap<usize, decltype(stack)>           stack_at_label;
+
 		std::vector<std::tuple<usize, decltype(stack)>> dfs_stack{
 			{ ctx.function.body.size(), {} }  // sentinel
 		};
@@ -245,7 +251,7 @@ namespace vm::loader::compiler {
 				using namespace code::instructions;
 				instr_case(Op_label, instr) {
 					match_optional(stack_at_label.atMaybe(index)) {
-						opt_some(_) {
+						opt_some(_) { // State was already visited.
 							std::tie(index, stack) = dfs_stack.back();
 							dfs_stack.pop_back();
 						}
@@ -256,11 +262,11 @@ namespace vm::loader::compiler {
 					}
 				}
 				instr_case(Op_init_pany_type, instr) {
-					push(instr.var, false);
+					push(instr.var);
 					index++;
 				}
 				instr_case(Op_deinit, instr) {
-					pop(false);
+					pop();
 					index++;
 				}
 				instr_case(Op_jmp_label, instr) { index = label_positions[instr.label.label_name]; }
@@ -282,7 +288,7 @@ namespace vm::loader::compiler {
 					                           ->signature;
 					auto param_count = signature.parameters.size();
 					auto ret_count   = signature.result_types.size();
-					handle_call(param_count, ret_count);
+					handle_non_tailcall(param_count, ret_count);
 					index++;
 				}
 				instr_case(Op_call_builtinfunc, instr) {
@@ -290,7 +296,7 @@ namespace vm::loader::compiler {
 						= builtins::getBuiltinFunctionSignature(instr.function.function_name).value();
 					auto param_count = signature->parameters.size();
 					auto ret_count   = signature->result_types.size();
-					handle_call(param_count, ret_count);
+					handle_non_tailcall(param_count, ret_count);
 					index++;
 				}
 				instr_case(Op_call_cfunc, instr) {
@@ -298,16 +304,20 @@ namespace vm::loader::compiler {
 						= program_ctx.ext_c_functions.at(instr.function.function_name)->signature;
 					auto param_count = signature.parameters.size();
 					auto ret_count   = signature.result_types.size();
-					handle_call(param_count, ret_count);
+					handle_non_tailcall(param_count, ret_count);
 					index++;
 				}
 				instr_case(Op_virtual_call_pptr_method, instr) {
 					auto [param_count, ret_count]
 						= *seek_method_param_ret_count(instr.method.method_name);
-					handle_call(param_count, ret_count);
+					handle_non_tailcall(param_count, ret_count);
 					index++;
 				}
 				instr_case(Op_ret_tailcall_func, instr) {
+					// Stack contains exactly parameters and ret values of that call.
+					// Everything is passed and must be fully alligned.
+					register_top_of_stack_as_arg_or_ret(stack.size());
+
 					std::tie(index, stack) = dfs_stack.back();
 					dfs_stack.pop_back();
 				}
@@ -375,17 +385,7 @@ namespace vm::loader::compiler {
 			curr_stack_size -= padding;
 		};
 
-		// Label positions in high bytecode, used only for graph traversing
-		// in this function. Not used when lowering to microbytecode.
-		base::HashMap<base::StrID, usize> label_positions{};
-		for (auto [idx, instr]: std::views::enumerate(ctx.function.body)) {
-			instr_match(instr) {
-				instr_case(code::instructions::Op_label, label) {
-					label_positions.put(label.label.label_name, idx);
-				}
-				instr_default {}
-			}
-		}
+		base::HashMap<base::StrID, usize> label_positions = calculate_labels_mapping(ctx);
 
 		code::FuncSignature func_signature = ctx.function.signature;
 		using namespace std::views;

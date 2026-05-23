@@ -172,6 +172,12 @@ namespace vm::loader::compiler {
 		) const;
 
 		/**
+		 * @brief Calculates labels positions in high bytecode.
+		 * @note Used only for graph traversing, not for lowering.
+		 */
+		base::HashMap<base::StrID, usize> calculate_labels_mapping(FunctionCompilationContext& ctx) const;
+
+		/**
 		 * @brief Detects all variables which are used as arguments or return values in calls.
 		 */
 		std::unordered_set<base::StrID> detectParamsAndReturnedVars(FunctionCompilationContext& ctx);
