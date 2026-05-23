@@ -214,7 +214,8 @@ namespace vm::persistent::detail {
 				"max_height == size of address if and only if left_idx == 0"
 			);
 
-			if (usize lsb_idx = max_height - 1; true) {
+			{
+				usize lsb_idx = max_height - 1;
 				posT mask = 1;
 				mask <<= lsb_idx;
 				CORE_ASSERT(mask & left_pos, "max_height digit from right is 1");
@@ -236,7 +237,8 @@ namespace vm::persistent::detail {
 			CORE_ASSERT(height_of_diff > 0, "indexes must differ on at least one position");
 			CORE_ASSERT(height_of_diff < POS_T_SIZE, "the difference cannot be at the top bit");
 
-			if (usize diff_idx = height_of_diff - 1; true) {
+			{
+				usize diff_idx = height_of_diff - 1;
 				posT diff_bit = 1;
 				diff_bit <<= diff_idx;
 				CORE_ASSERT(
@@ -943,6 +945,7 @@ namespace vm::persistent::detail {
 		/**
 		 * @brief helper function for modifying a multiple ranges in memory
 		 * @note can be mutable or unmutable, depending of return type of range builder
+		 * @note ranges are right opened [l, r) where l < r, and we expect at least one range.
 		 */
 		template<typename ResT, typename SelfT>
 		ResT rebuildRanges(
