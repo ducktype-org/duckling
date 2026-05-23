@@ -40,7 +40,7 @@ namespace compiler::backend_vm::internal {
 
 		if (op.dest && op.dest->isDirect() && is_different_from_arg(*op.dest, op.lhs)
 		    && is_different_from_arg(*op.dest, op.rhs)) {
-			// If instruction is of the form: a = b OP c and a is different then b and c, then
+			// If instruction is of the form: a = b OP c and a is different than b and c, then
 			// we transform it to:
 			// a = b;
 			// a = a OP c;
@@ -48,7 +48,8 @@ namespace compiler::backend_vm::internal {
 			ctx->pushInstruction({ op.op, *op.dest, op.rhs });
 		} else {
 			// If the output is accessed through a pointer, or doesn't exist, we perform operations
-			// on the temporary.
+// If the output is accessed through a pointer or the output and the argument operate are the same place, or doesn't exist, we perform operations
+// on the temporary.
 			auto tmp = ctx->forceToPlace(op.lhs, "bin_tmp");
 			ctx->pushInstruction({ op.op, tmp, op.rhs });
 			ctx->maybeStoreResult(op.dest, { tmp });
