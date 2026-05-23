@@ -108,6 +108,11 @@ namespace vm::debugger {
 		std::expected<void, api::ApiError> resume();
 
 		/**
+		 * @brief Returns current position
+		 */
+		std::expected<api::response::CodePosition, api::ApiError> getCurrentPosition();
+
+		/**
 		 * @brief Sets breakpoint
 		 */
 		std::expected<void, api::ApiError> setBreakpoint(
