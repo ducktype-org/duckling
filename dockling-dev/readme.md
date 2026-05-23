@@ -5,7 +5,11 @@
 
 Ensure that Docker is installed on your system. Follow [the official documentation](https://docs.docker.com/get-started/get-docker/) or use the official installation script available at:
 
-[https://get.docker.com/](https://get.docker.com/)
+- [https://get.docker.com/](https://get.docker.com/) for standard (rootful) instalation
+
+or
+
+- [https://get.docker.com/rootless](https://get.docker.com/rootless) for [rootless mode](https://docs.docker.com/engine/security/rootless/) instalation
 
 Example installation workflow:
 
