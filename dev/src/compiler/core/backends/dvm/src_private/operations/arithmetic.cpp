@@ -46,7 +46,8 @@ namespace compiler::backend_vm::internal {
 			ctx->pushInstruction({ op.op, *op.dest, op.rhs });
 		} else {
 			// If the output is accessed through a pointer, or doesn't exist, we perform operations
-			// on the temporary.
+// If the output is accessed through a pointer or the output and the argument operate are the same place, or doesn't exist, we perform operations
+// on the temporary.
 			auto tmp = ctx->forceToPlace(op.lhs, "bin_tmp");
 			ctx->pushInstruction({ op.op, tmp, op.rhs });
 			ctx->maybeStoreResult(op.dest, { tmp });
