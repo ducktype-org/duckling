@@ -25,15 +25,16 @@ namespace vm {
 		std::size_t space = sizeof(T);
 		// This function does not modify memory to with ptr points. It is legal to cast away const.
 		void* ptr_copy = const_cast<void*>(reinterpret_cast<const void*>(ptr));
-		return std::align(alignof(T), sizeof(T), ptr_copy, space) == reinterpret_cast<const void*>(ptr);
+		return std::align(alignof(T), sizeof(T), ptr_copy, space)
+		    == reinterpret_cast<const void*>(ptr);
 	}
 
 	/**
 	 * @brief Safely reads an object of type T from a raw byte buffer.
 	 *
-	 * @note Assumes object of type T exists at location ptr+offset. Interpreted program passed 
-	 * validation so before every safeReadPointerBytes there is safeWriteBytes which uses placement new 
-	 * and creates actual object there.
+	 * @note Assumes object of type T exists at location ptr+offset. Interpreted program passed
+	 * validation so before every safeReadPointerBytes there is safeWriteBytes which uses placement
+	 * new and creates actual object there.
 	 *
 	 * @tparam T The target type to construct. Must be trivially copyable.
 	 * @param ptr A pointer to the beginning of the source byte buffer.
@@ -43,13 +44,10 @@ namespace vm {
 	template<typename T>
 	[[nodiscard]] T safeReadPointerBytes(const byte* ptr, usize offset = 0)
 		requires std::is_trivially_copyable_v<T> {
-		CORE_ASSERT(
-			is_aligned<T>(ptr + offset),
-			"Unaligned access in safeReadPointerBytes"
-		);
+		CORE_ASSERT(is_aligned<T>(ptr + offset), "Unaligned access in safeReadPointerBytes");
 		// After reinterpret cast the pointer to points to object of type T. T is type
 		// accessible to T, we can dereference.
-		return *reinterpret_cast<const T*>(ptr+offset);
+		return *reinterpret_cast<const T*>(ptr + offset);
 	}
 
 	/**
@@ -64,15 +62,13 @@ namespace vm {
 	 * @param offset An optional offset in bytes from the start of the buffer.
 	 */
 	template<typename T>
-    void safeWriteBytes(byte* dest, const T& value, usize offset = 0)
-        requires(std::is_trivially_copyable_v<T>) {
-		CORE_ASSERT(
-			is_aligned<T>(dest + offset),
-			"Unaligned access in safeReadPointerBytes"
-		);
+	void safeWriteBytes(byte* dest, const T& value, usize offset = 0)
+		requires(std::is_trivially_copyable_v<T>) {
+		CORE_ASSERT(is_aligned<T>(dest + offset), "Unaligned access in safeReadPointerBytes");
 
-        ::new(reinterpret_cast<void*>(dest + offset)) T(value);
-    }
+		::new (reinterpret_cast<void*>(dest + offset)) T(value);
+	}
+
 	/**
 	 * @brief Safely reinterprets a source object's bytes as a new object of type T.
 	 *

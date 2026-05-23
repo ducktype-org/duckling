@@ -111,7 +111,7 @@ namespace vm::low::opargs {
 	/** @brief Stores constant computed value, calculated at lowering time. */
 	DEFINE_MICRO_ARG_TYPE(ComputedConstant, "const", usize);
 
-	
+
 	/**
 	 * @brief Storage class for any kind of micro instruction argument.
 	 */

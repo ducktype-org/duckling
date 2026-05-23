@@ -441,7 +441,7 @@ DEF_MICRO_INSTR(
 	virtual_call_pptr_method,
 	vm::low::opargs::ComputedConstant,
 	vm::low::opargs::MethodName /*
-	vm::low::opargs::ext_pptr	stack offset at the moment of call */
+    vm::low::opargs::ext_pptr	stack offset at the moment of call */
 )
 
 // ========= GENERAL POINTER OPERATIONS ========

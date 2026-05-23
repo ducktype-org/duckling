@@ -144,7 +144,7 @@ namespace vm {
 			                             .instruction_mapping = {} };
 
 		const u64 called_function_id = process_program->getFunctions().idOf(func.name).value();
-		usize     stack_size = 0;
+		usize     stack_size         = 0;
 		for (auto [idx, res]: std::views::enumerate(func.result_types)) {
 			// Initialize an exit code/return value spot. In case of non-void functions the
 			// exit_code is the return value of the function. Void functions always return with the
@@ -159,7 +159,6 @@ namespace vm {
 		start_function.ret_size = stack_size;
 
 		for (u64 i = 0; i < func_args.size(); i++) {
-
 			const auto& arg_value = func_args[i];
 			auto        arg_type  = func.parameters[i];
 
@@ -188,7 +187,6 @@ namespace vm {
 			start_function.parameters.push_back(arg_value->type);
 			stack_size += arg_type->getSize().asInt(
 			);  // value is passed as argument, must be fully alligned
-
 		}
 		start_function.arg_size         = stack_size - start_function.ret_size;
 		start_function.local_stack_size = stack_size;
@@ -370,7 +368,7 @@ namespace vm {
 				MAKE_BYTECODE_INSTRUCTION(stepGil, 0, 0),  // We need to acquire GIL
 				MAKE_BYTECODE_INSTRUCTION(
 					call_func, main_has_args ? 72 : 48, called_function_id
-				),                                              // call main, size of stack differs if main takes argumentes.
+				),  // call main, size of stack differs if main takes argumentes.
 				MAKE_BYTECODE_INSTRUCTION(mov_p64_p64, 0, 40),  // ret_val := main_ret_val
 				MAKE_BYTECODE_INSTRUCTION(mov_p64_imm, 32, 0),  // ix := 0
 				MAKE_BYTECODE_INSTRUCTION(

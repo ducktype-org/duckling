@@ -433,13 +433,11 @@ namespace vm::loader::compiler::detail {
 			instr_case(high::Op_call_func, i) {
 #ifdef ENABLE_JIT
 				addLow<Op_jit_call_entrypoint>(
-					ctx.offset_at_instructions.at(ctx.current_instruction_index),
-					i.function
+					ctx.offset_at_instructions.at(ctx.current_instruction_index), i.function
 				);
 #else
 				addLow<Op_call_func>(
-					ctx.offset_at_instructions.at(ctx.current_instruction_index),
-					i.function
+					ctx.offset_at_instructions.at(ctx.current_instruction_index), i.function
 				);
 #endif
 			}
@@ -450,13 +448,11 @@ namespace vm::loader::compiler::detail {
 			instr_case(high::Op_ret, i) { addLow<Op_ret>(); }
 			instr_case(high::Op_init_pany_type, i) {
 				addLow<Op_init_bany_type>(
-					ctx.offset_at_instructions.at(ctx.current_instruction_index),
-					i.type
+					ctx.offset_at_instructions.at(ctx.current_instruction_index), i.type
 				);
 			}
 			instr_case(high::Op_deinit, i) {
-				addLow<Op_deinit>(
-					ctx.offset_at_instructions.at(ctx.current_instruction_index));
+				addLow<Op_deinit>(ctx.offset_at_instructions.at(ctx.current_instruction_index));
 			}
 			instr_case(high::Op_input_p64, i) { addLow<Op_input_p64>(i.dst); }
 			instr_case(high::Op_output_p64, i) { addLow<Op_output_p64>(i.src); }
@@ -474,8 +470,7 @@ namespace vm::loader::compiler::detail {
 			}
 			instr_case(high::Op_virtual_call_pptr_method, i) {
 				addLow<Op_virtual_call_pptr_method>(
-					ctx.offset_at_instructions.at(ctx.current_instruction_index),
-					i.method
+					ctx.offset_at_instructions.at(ctx.current_instruction_index), i.method
 				);
 				addLow<Op_ext_pptr>(i.object_ptr);
 			}

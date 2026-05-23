@@ -33,7 +33,7 @@ namespace vm::opargs {
 	/**
 	 * @brief Represents `imm` argument.
 	 */
-	struct Immediate final : code::ElementBase {
+	struct Immediate final: code::ElementBase {
 		static constexpr std::string_view OP_SHORT = "imm";
 
 		Immediate() = default;
