@@ -68,6 +68,11 @@ RUN apt-get update -y && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
+# install rust
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+RUN chmod o+rx /root
+RUN chmod -R o+r /root/.cargo
+
 RUN echo 'source /usr/share/bash-completion/bash_completion' >> /etc/bash.bashrc
 COPY bash_completion/* /etc/bash_completion.d/
 COPY bin/* /bin/
@@ -82,7 +87,7 @@ SHELL ["/bin/bash", "-c"]
 WORKDIR /duckling
 
 ENV LLVM_DIR=/usr/lib/llvm-19
-ENV PATH=/usr/lib/llvm-19/bin:$PATH
+ENV PATH=/root/.cargo/bin:/usr/lib/llvm-19/bin:$PATH
 ENV HOME=/home/ubuntu
 
 ARG UID=1000

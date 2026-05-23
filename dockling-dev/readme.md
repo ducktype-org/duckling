@@ -61,6 +61,15 @@ Other IDEs offer similar functionality. For example, **CLion** provides [support
 
 ## Initial Project Setup (Inside Container)
 
+## Rust
+
+Pick your favourite taste of rust <3 (required for `duck` and therefore for integration tests)
+```shell
+rustup default stable
+```
+
+## Toolbox
+
 To avoid issues caused by differences between host and container environments (e.g., virtual environment paths), initialize the repository inside the container only.
 
 You can use provided `toolbox` command (with bash autocompletion!) that runs `toolbox.py` script with workdir automatically set to `/duckling/dev`.

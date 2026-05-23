@@ -5,8 +5,6 @@
 		"dockerfile": "../../dockling-dev/image/Dockerfile",
 		"context": "../../dockling-dev/image",
 		"args": {
-			"UID": "${localEnv:UID:1000}",
-			"GID": "${localEnv:UID:1000}",
 			"DEFAULT_USER": "root"
 		}
 	},
