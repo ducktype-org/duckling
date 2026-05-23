@@ -144,7 +144,7 @@ namespace vm {
 			                             .instruction_mapping = {} };
 
 		const u64 called_function_id = process_program->getFunctions().idOf(func.name).value();
-		usize     stack_size;
+		usize     stack_size = 0;
 		for (auto [idx, res]: std::views::enumerate(func.result_types)) {
 			// Initialize an exit code/return value spot. In case of non-void functions the
 			// exit_code is the return value of the function. Void functions always return with the
@@ -290,7 +290,6 @@ namespace vm {
 		if (main_has_args) {
 			for (const auto& [argv_index, arg]:
 			     std::views::zip(std::ranges::views::iota(0u), args)) {
-				CORE_ASSERT(cnt==1, "xd");
 				start_function.bc.insert(
 					start_function.bc.end(),
 					{

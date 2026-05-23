@@ -3,7 +3,6 @@
 #include "kinds.hpp"
 
 #include <base/collections/optional.hpp>
-#include <base/extend_cpp/variant_match.hpp>
 #include <base/types/bits_and_bytes.hpp>
 
 #include <string_id/string_id.hpp>
@@ -12,7 +11,6 @@
 
 #include <json/json.hpp>
 
-#include <iostream>
 #include <variant>
 
 namespace vm {

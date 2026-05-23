@@ -196,7 +196,7 @@ namespace vm {
 				TypeCRef                 type
 			) {
 			auto block = thread.process_memory.allocateDummy(type, local_stack + instr->arg0);
-			thread.process_memory.increaseBlockRefcount(block);
+			thread.process_memory.increaseBlockRefcount(block); // so that nobody can delete our block
 			*frame->local_block_ref_stack_end = block.get();
 			frame->local_block_ref_stack_end += 1;
 		}

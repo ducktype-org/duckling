@@ -12,28 +12,28 @@
 
 namespace vm {
 
-	template<std::size_t Alignment, typename T>
-	constexpr bool is_aligned(const T* ptr) noexcept {
-		return (reinterpret_cast<std::uintptr_t>(ptr) & (Alignment - 1)) == 0;
-	}
-
 	constexpr usize align_up(usize value, usize alignment) noexcept {
 		return alignment == 0 ? value : ((value + alignment - 1) / alignment) * alignment;
 	}
 
+	/**
+	 * @brief Checks if byte is sufficiently aligned for type T.
+	 * @note replace with std::is_sufficiently_aligned, available since C++26
+	 */
 	template<typename T>
-	constexpr bool is_naturally_aligned(const T* ptr) noexcept {
-		return is_aligned<alignof(T)>(ptr);
+	constexpr bool is_aligned(const byte* ptr) noexcept {
+		std::size_t space = sizeof(T);
+		// This function does not modify memory to with ptr points. It is legal to cast away const.
+		void* ptr_copy = const_cast<void*>(reinterpret_cast<const void*>(ptr));
+		return std::align(alignof(T), sizeof(T), ptr_copy, space) == reinterpret_cast<const void*>(ptr);
 	}
 
 	/**
 	 * @brief Safely reads an object of type T from a raw byte buffer.
 	 *
-	 * @note This function performs a bitwise copy from the buffer into a new
-	 * object of type T. The `memcpy` operation is optimized by compilers to a single machine
-	 * instruction for trivially copyable types.
-	 * @note Type T must be trivially copyable.
-	 * @warning Well defined if compiled with C++20 or newer, otherwise UB.
+	 * @note Assumes object of type T exists at location ptr+offset. Interpreted program passed 
+	 * validation so before every safeReadPointerBytes there is safeWriteBytes which uses placement new 
+	 * and creates actual object there.
 	 *
 	 * @tparam T The target type to construct. Must be trivially copyable.
 	 * @param ptr A pointer to the beginning of the source byte buffer.
@@ -44,30 +44,19 @@ namespace vm {
 	[[nodiscard]] T safeReadPointerBytes(const byte* ptr, usize offset = 0)
 		requires std::is_trivially_copyable_v<T> {
 		CORE_ASSERT(
-			is_naturally_aligned<T>(reinterpret_cast<const T*>(ptr + offset)),
+			is_aligned<T>(ptr + offset),
 			"Unaligned access in safeReadPointerBytes"
 		);
-		// @note: We create a byte array aligned as type T to prevent alignment-related UBs.
-		// Doing it like below makes it impossible to "reinterpret" values of type T with private
-		// constructors, thus the workaround:
-		// T value;
-		// std::memcpy(&value, ptr + offset, sizeof(T));
-
-		alignas(T) std::array<byte, sizeof(T)> buffer;
-		std::memcpy(buffer.data(), ptr + offset, sizeof(T));
-
-		// @note: Reinterpret the buffer as a pointer to T and dereference it.
-		// std::launder is necessary to tell the compiler that the object's lifetime
-		// has begun at this memory location, and it can safely access the new value.
-		return *std::launder(reinterpret_cast<T*>(buffer.data()));
+		// After reinterpret cast the pointer to points to object of type T. T is type
+		// accessible to T, we can dereference.
+		return *reinterpret_cast<const T*>(ptr+offset);
 	}
 
 	/**
 	 * @brief Safely writes the byte representation of an object to a buffer.
-	 * @note This function performs a bitwise copy from the buffer into a new
-	 * object of type T. It is compiled with strict aliasing rules and memory alignment.
-	 * The `memcpy` operation is optimized by compilers to a single machine instruction for
-	 * trivially copyable types.
+	 * @note Creates object of type T at desired place using placement new.
+	 * Actual object is created, its lifetime starts. We can treat this memory
+	 * as if object of type T is stored there, without violatin strict aliasing.
 	 *
 	 * @tparam T The type of the object to write. Must be trivially copyable.
 	 * @param dest A pointer to the beginning of the destination byte buffer.
@@ -75,17 +64,15 @@ namespace vm {
 	 * @param offset An optional offset in bytes from the start of the buffer.
 	 */
 	template<typename T>
-	void safeWriteBytes(byte* dest, const T& value, usize offset = 0)
-		requires(std::is_trivially_copyable_v<T>) {
-		std::cout << offset << '\n';
-		std::cout << (intptr_t) (dest) << '\n';
+    void safeWriteBytes(byte* dest, const T& value, usize offset = 0)
+        requires(std::is_trivially_copyable_v<T>) {
 		CORE_ASSERT(
-			is_naturally_aligned<T>(reinterpret_cast<const T*>(dest + offset)),
-			"Unaligned access in safeWriteBytes"
+			is_aligned<T>(dest + offset),
+			"Unaligned access in safeReadPointerBytes"
 		);
-		std::memcpy(dest + offset, &value, sizeof(T));
-	}
 
+        ::new(reinterpret_cast<void*>(dest + offset)) T(value);
+    }
 	/**
 	 * @brief Safely reinterprets a source object's bytes as a new object of type T.
 	 *
