@@ -144,24 +144,22 @@ namespace vm {
 			                             .instruction_mapping = {} };
 
 		const u64 called_function_id = process_program->getFunctions().idOf(func.name).value();
-		usize     shared_stack_size  = 0;
-		size_t    offset             = 0;
+		usize     stack_size;
 		for (auto [idx, res]: std::views::enumerate(func.result_types)) {
 			// Initialize an exit code/return value spot. In case of non-void functions the
 			// exit_code is the return value of the function. Void functions always return with the
 			// exit_code = 0.
+			stack_size = align_up(stack_size, Type::MAX_ALIGMENT);
 			start_function.bc.push_back(
-				MAKE_BYTECODE_INSTRUCTION(init_bany_type, offset, safeReadObjectBytes<u64>(res))
+				MAKE_BYTECODE_INSTRUCTION(init_bany_type, stack_size, safeReadObjectBytes<u64>(res))
 			);
-			shared_stack_size = align_up(shared_stack_size, 8) + res->getSize().asInt();
-			offset            = shared_stack_size;  // todo improve
+			stack_size += res->getSize().asInt();
 		}
 
-		start_function.ret_size = shared_stack_size;
-		// if (offset % 8 != 0) offset += 8 - offset % 8;  // tmp
-		std::cout << "offset " << offset << '\n';
+		start_function.ret_size = stack_size;
+
 		for (u64 i = 0; i < func_args.size(); i++) {
-			std::cout << "ADDING VM VALUE ARG " << i << '\n';
+
 			const auto& arg_value = func_args[i];
 			auto        arg_type  = func.parameters[i];
 
@@ -183,25 +181,23 @@ namespace vm {
 					arg_value->type->getName().str()
 				));
 			}
-			shared_stack_size = align_up(shared_stack_size, 8);
+			stack_size = align_up(stack_size, Type::MAX_ALIGMENT);
 			start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(
-				initFromVmValue, shared_stack_size, std::bit_cast<u64>(arg_value.get())
+				initFromVmValue, stack_size, std::bit_cast<u64>(arg_value.get())
 			));
 			start_function.parameters.push_back(arg_value->type);
-			shared_stack_size += arg_type->getSize().asInt(
+			stack_size += arg_type->getSize().asInt(
 			);  // value is passed as argument, must be fully alligned
 
-			offset = shared_stack_size;
 		}
-		start_function.arg_size         = shared_stack_size - start_function.ret_size;
-		start_function.local_stack_size = shared_stack_size;
-		std::cout << "tmp " << start_function.local_stack_size << '\n';
+		start_function.arg_size         = stack_size - start_function.ret_size;
+		start_function.local_stack_size = stack_size;
 
 		start_function.bc.insert(
 			start_function.bc.end(),
 			{
 				MAKE_BYTECODE_INSTRUCTION(stepGil, 0, 0),  // We need to acquire GIL
-				MAKE_BYTECODE_INSTRUCTION(call_func, offset, called_function_id),
+				MAKE_BYTECODE_INSTRUCTION(call_func, stack_size, called_function_id),
 				// @note: Only one block is left on the stack in this place, so there is no need for
 		        // any deinits. It's being deinitialized by the thread after obtaining the return
 		        // value/exit_code.
@@ -294,6 +290,7 @@ namespace vm {
 		if (main_has_args) {
 			for (const auto& [argv_index, arg]:
 			     std::views::zip(std::ranges::views::iota(0u), args)) {
+				CORE_ASSERT(cnt==1, "xd");
 				start_function.bc.insert(
 					start_function.bc.end(),
 					{
@@ -374,7 +371,7 @@ namespace vm {
 				MAKE_BYTECODE_INSTRUCTION(stepGil, 0, 0),  // We need to acquire GIL
 				MAKE_BYTECODE_INSTRUCTION(
 					call_func, main_has_args ? 72 : 48, called_function_id
-				),                                              // call main
+				),                                              // call main, size of stack differs if main takes argumentes.
 				MAKE_BYTECODE_INSTRUCTION(mov_p64_p64, 0, 40),  // ret_val := main_ret_val
 				MAKE_BYTECODE_INSTRUCTION(mov_p64_imm, 32, 0),  // ix := 0
 				MAKE_BYTECODE_INSTRUCTION(

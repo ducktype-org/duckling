@@ -142,7 +142,6 @@ namespace vm {
 			u64  prev_frame_block_ref_count
 				= u64(frame->local_block_ref_stack_end - frame->local_block_ref_stack_base);
 
-
 			// Save current registers and flow.
 			frame->instr       = instr + 1 + number_of_exts;
 			frame->local_stack = local_stack;
