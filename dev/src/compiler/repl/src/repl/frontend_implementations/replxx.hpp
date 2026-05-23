@@ -37,10 +37,10 @@ namespace compiler::repl {
 		/// Get the path to the persistent history file (~/.duckling_repl_history).
 		static std::string getHistoryFilePath();
 
-		replxx::Replxx m_replxx;
+		replxx::Replxx m_replxx{};
 		bool           m_completions_enabled;
 
 		/// Set of user-defined identifiers collected from previous inputs (for completion).
-		std::set<std::string> m_user_words;
+		std::set<std::string> m_user_words{};
 	};
 }
