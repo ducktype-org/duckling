@@ -444,7 +444,8 @@ namespace vm::loader::compiler::detail {
 			instr_case(high::Op_ret, i) { addLow<Op_ret>(); }
 			instr_case(high::Op_init_pany_type, i) {
 				addLow<Op_init_bany_type>(
-					vm::opargs::Immediate{ ctx.offset_at_instructions.at(ctx.current_instruction_index) },
+					vm::opargs::Immediate{
+						ctx.offset_at_instructions.at(ctx.current_instruction_index) },
 					i.type
 				);
 			}

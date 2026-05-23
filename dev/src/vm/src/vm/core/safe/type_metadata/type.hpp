@@ -3,16 +3,18 @@
 #include "kinds.hpp"
 
 #include <base/collections/optional.hpp>
-#include <base/types/bits_and_bytes.hpp>
 #include <base/extend_cpp/variant_match.hpp>
+#include <base/types/bits_and_bytes.hpp>
+
 #include <string_id/string_id.hpp>
 
 #include <vm/core/safe/memory/pointer.hpp>
 
 #include <json/json.hpp>
 
-#include <variant>
 #include <iostream>
+#include <variant>
+
 namespace vm {
 	class TypeMetadata;
 
@@ -20,14 +22,15 @@ namespace vm {
 	public:
 		constexpr static TypeSize POINTER_SIZE = Bytes(sizeof(Pointer));
 
-		
+
 		/**
-		 * @note Objects stored on stack are 
+		 * @note Objects stored on stack are
 		 * primitives (u64 has max aligment out of those)
 		 * Pointer
 		 * Opaque which are treated as bytes (aligment 1)
 		 * Data and Fixed size table which has aligment of the most alinged field/inner type
-		 * Variant which has aligment of the most alinged alternative or type tag size (which is smaller than u64)
+		 * Variant which has aligment of the most alinged alternative or type tag size (which is
+		 * smaller than u64)
 		 */
 		constexpr static size_t MAX_ALIGMENT = std::max(alignof(Pointer), alignof(u64));
 
@@ -48,12 +51,13 @@ namespace vm {
 
 		State state = State::Declared;
 
-		base::StrID name;
-		TypeSize    size      = TypeSize(-1);
-		base::Optional<size_t> stack_alligment = std::nullopt; // Only types stored on stack need this.
-		Kind        kind_type = Kind::None;
-		TypeID      id{};
-		bool        am_i_instantiable = true;
+		base::StrID            name;
+		TypeSize               size = TypeSize(-1);
+		base::Optional<size_t> stack_alligment
+			= std::nullopt;  // Only types stored on stack need this.
+		Kind   kind_type = Kind::None;
+		TypeID id{};
+		bool   am_i_instantiable = true;
 
 		std::variant<
 			std::monostate,
@@ -128,7 +132,12 @@ namespace vm {
 		size_t getStackAlignment() const {
 			match_optional(stack_alligment) {
 				opt_some(allignment) { return allignment; }
-				opt_none { CORE_PANIC("getStackAlignment called for type that is not stored on stack or before finalization"); }
+				opt_none {
+					CORE_PANIC(
+						"getStackAlignment called for type that is not stored on stack or before "
+					    "finalization"
+					);
+				}
 			}
 			CORE_UNREACHABLE();
 		}

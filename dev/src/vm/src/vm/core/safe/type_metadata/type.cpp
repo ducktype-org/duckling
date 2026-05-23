@@ -73,10 +73,10 @@ namespace vm {
 		CORE_ASSERT(state == State::Declared, "Bad type define");
 		state = State::Defined;
 
-		kind_type = Kind::Primitive;
-		size      = pass_size;
+		kind_type       = Kind::Primitive;
+		size            = pass_size;
 		stack_alligment = pass_size.asInt();
-		kind = kind::Primitive();
+		kind            = kind::Primitive();
 		if (name == "void") am_i_instantiable = false;
 	}
 
@@ -84,10 +84,10 @@ namespace vm {
 		CORE_ASSERT(state == State::Declared, "Bad type define");
 		state = State::Defined;
 
-		size      = POINTER_SIZE;
+		size            = POINTER_SIZE;
 		stack_alligment = alignof(Pointer);
-		kind_type = Kind::Pointer;
-		kind      = kind::Pointer{ inner };
+		kind_type       = Kind::Pointer;
+		kind            = kind::Pointer{ inner };
 	}
 
 	void Type::defineFixedSizeTable(TypeRef inner, u64 element_count) {
@@ -100,8 +100,8 @@ namespace vm {
 
 	void Type::defineDynamicTable(TypeRef inner) {
 		CORE_ASSERT(state == State::Declared, "Bad type define");
-		state = State::Defined;
-		kind_type         = Kind::DynamicTable;
+		state     = State::Defined;
+		kind_type = Kind::DynamicTable;
 
 		kind              = kind::DynamicTable{ .inner_type = inner };
 		am_i_instantiable = false;
@@ -134,17 +134,17 @@ namespace vm {
 		auto variant = kind::Variant{};
 		for (const auto& type: variants_definitions) variant.alternatives.push_back(type);
 
-		variant.type_tag_size  = type_tag_size;
-		
-		kind                   = variant;
+		variant.type_tag_size = type_tag_size;
+
+		kind = variant;
 	}
 
 	void Type::defineFunction(std::vector<TypeCRef> parameters, std::vector<TypeCRef> result) {
 		CORE_ASSERT(state == State::Declared, "Bad type define");
 		state = State::Defined;
 
-		size      = POINTER_SIZE;
-		
+		size = POINTER_SIZE;
+
 		kind_type = Kind::Function;
 		kind      = kind::Function{ .parameters   = std::move(parameters),
 			                        .result_types = std::move(result) };
@@ -154,9 +154,9 @@ namespace vm {
 		CORE_ASSERT(state == State::Declared, "Bad type define");
 		state = State::Defined;
 
-		kind_type = Kind::Opaque;
-		size      = pass_size;
-		stack_alligment = 1; // Opaque are treated as bytes.
+		kind_type       = Kind::Opaque;
+		size            = pass_size;
+		stack_alligment = 1;  // Opaque are treated as bytes.
 
 		kind = kind::Opaque{};
 	}
@@ -189,7 +189,7 @@ namespace vm {
 					offset += field.type->getSize();
 				}
 
-				this->size     = Bytes(align_up(offset.asInt(), max_alignment));
+				this->size            = Bytes(align_up(offset.asInt(), max_alignment));
 				this->stack_alligment = max_alignment;
 				if_opt_some(data.inheritance_metadata, imd) { inheritsFromImpl(imd); }
 				isInstantiableImpl(data);
@@ -206,7 +206,7 @@ namespace vm {
 				variant.payload_offset
 					= Bytes(align_up(variant.type_tag_size.asInt(), max_alignment));
 				this->stack_alligment = max_alignment;
-				this->size	 = variant.payload_offset + data_size;
+				this->size            = variant.payload_offset + data_size;
 				isInstantiableImpl(variant);
 			}
 		}

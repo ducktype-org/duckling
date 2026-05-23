@@ -157,7 +157,7 @@ namespace vm::loader::compiler {
 
 		for (auto [idx, instr]: std::views::enumerate(ctx.function.body)) {
 			ctx.current_instruction_index = idx;
-			auto instruction_range = builder.add(instr);
+			auto instruction_range        = builder.add(instr);
 			ctx.instruction_mapping.push_back(instruction_range);
 		}
 
@@ -167,7 +167,9 @@ namespace vm::loader::compiler {
 		return micro_bytecode;
 	}
 
-	base::Optional<u64> Compiler::seek_method_param_count(const base::StrID& method_name) const {
+	base::Optional<std::pair<u64, u64>> Compiler::seek_method_param_ret_count(
+		const base::StrID& method_name
+	) const {
 		// @todo: https://github.com/ducktype-org/duckling/issues/962
 		auto it = std::ranges::find_if(*low_program.types, [&](const auto& type) {
 			if_opt_some(type.getInheritanceMetadata(), inh_meta) {
@@ -177,7 +179,11 @@ namespace vm::loader::compiler {
 		});
 		if (it != low_program.types->end()) {
 			auto inh_meta = it->getInheritanceMetadata().value();
-			return inh_meta->available_methods[method_name]->getParameterCount();
+			auto param    = inh_meta->available_methods[method_name]->getParameterCount();
+			auto ret      = inh_meta->available_methods[method_name]->getResultTypeCount();
+			if (!param)
+				return std::nullopt;  // Either both param and ret are present or both are not.
+			return std::make_pair(*param, *ret);
 		}
 		CORE_UNREACHABLE();
 	}
@@ -196,6 +202,16 @@ namespace vm::loader::compiler {
 		auto pop = [&](bool is_arg_or_ret) {
 			if (is_arg_or_ret) res.insert(stack.back());
 			stack.pop_back();
+		};
+
+		auto register_top_of_stack_as_arg_or_ret = [&](size_t cnt) {
+			for (i64 i = static_cast<i64>(stack.size()) - cnt; i < stack.size(); i++)
+				res.insert(stack[i]);
+		};
+
+		auto handle_call = [&](size_t args_cnt, size_t ret_cnt) {
+			for (size_t i = 0; i < args_cnt; ++i) pop(true);
+			register_top_of_stack_as_arg_or_ret(ret_cnt);
 		};
 
 		// Label positions in high bytecode, used only for graph traversing
@@ -218,23 +234,27 @@ namespace vm::loader::compiler {
 			push(base::StrID(base::strConcat("arg", idx).c_str()), true);
 
 		// instruction index, type stack state, padding stack state, stack size
+		base::HashMap<usize, decltype(stack)>           stack_at_label;
 		std::vector<std::tuple<usize, decltype(stack)>> dfs_stack{
 			{ ctx.function.body.size(), {} }  // sentinel
 		};
 		usize index = 0;
 
-		std::set<std::pair<decltype(stack), usize>> visited_states;
-
 		while (index != ctx.function.body.size()) {
-			if (visited_states.contains({ stack, index })) {
-				std::tie(index, stack) = dfs_stack.back();
-				dfs_stack.pop_back();
-				continue;
-			}
-			visited_states.insert({ stack, index });
-
 			instr_match(ctx.function.body[index]) {
 				using namespace code::instructions;
+				instr_case(Op_label, instr) {
+					match_optional(stack_at_label.atMaybe(index)) {
+						opt_some(_) {
+							std::tie(index, stack) = dfs_stack.back();
+							dfs_stack.pop_back();
+						}
+						opt_none {
+							stack_at_label.put(index, stack);
+							index++;
+						}
+					}
+				}
 				instr_case(Op_init_pany_type, instr) {
 					push(instr.var, false);
 					index++;
@@ -257,34 +277,34 @@ namespace vm::loader::compiler {
 					dfs_stack.pop_back();
 				}
 				instr_case(Op_call_func, instr) {
-					usize number_of_params = program_ctx.function_forward_declarations
-					                             .at(instr.function.function_name)
-					                             ->signature.parameters.size();
-					for (usize i = 0; i < number_of_params; i++) pop(true);
+					const auto signature = program_ctx.function_forward_declarations
+					                           .at(instr.function.function_name)
+					                           ->signature;
+					auto param_count = signature.parameters.size();
+					auto ret_count   = signature.result_types.size();
+					handle_call(param_count, ret_count);
 					index++;
 				}
 				instr_case(Op_call_builtinfunc, instr) {
-					for (usize i = 0;
-					     i < builtins::getBuiltinFunctionSignature(instr.function.function_name)
-					             .value()
-					             ->parameters.size();
-					     i++) {
-						pop(true);
-					}
+					const auto signature
+						= builtins::getBuiltinFunctionSignature(instr.function.function_name).value();
+					auto param_count = signature->parameters.size();
+					auto ret_count   = signature->result_types.size();
+					handle_call(param_count, ret_count);
 					index++;
 				}
 				instr_case(Op_call_cfunc, instr) {
-					for (usize i = 0;
-					     i < program_ctx.ext_c_functions.at(instr.function.function_name)
-					             ->signature.parameters.size();
-					     i++) {
-						pop(true);
-					}
+					const auto signature
+						= program_ctx.ext_c_functions.at(instr.function.function_name)->signature;
+					auto param_count = signature.parameters.size();
+					auto ret_count   = signature.result_types.size();
+					handle_call(param_count, ret_count);
 					index++;
 				}
 				instr_case(Op_virtual_call_pptr_method, instr) {
-					for (usize i = 0; i < *seek_method_param_count(instr.method.method_name); i++)
-						pop(true);
+					auto [param_count, ret_count]
+						= *seek_method_param_ret_count(instr.method.method_name);
+					handle_call(param_count, ret_count);
 					index++;
 				}
 				instr_case(Op_ret_tailcall_func, instr) {
@@ -312,10 +332,11 @@ namespace vm::loader::compiler {
 		usize index = 0;
 
 		auto push = [&](opargs::PlaceAny local, opargs::Type type) {
-			auto type_ref  = low_program.types->at(type.type_name);
-			auto type_size = type_ref->getSize().asInt();
-			auto type_align
-				= must_be_fully_alligned.contains(local.var_name) ? 8 : type_ref->getStackAlignment();
+			auto type_ref   = low_program.types->at(type.type_name);
+			auto type_size  = type_ref->getSize().asInt();
+			auto type_align = must_be_fully_alligned.contains(local.var_name)
+			                    ? 8
+			                    : type_ref->getStackAlignment();
 			// auto type_align = 8;
 			size_t padding        = align_up(curr_stack_size, type_align) - curr_stack_size;
 			auto   aligned_offset = curr_stack_size + padding;
@@ -427,7 +448,7 @@ namespace vm::loader::compiler {
 				}
 				instr_case(Op_call_func, instr) {
 					ctx.offset_at_instructions[index] = curr_stack_size;
-					usize number_of_params = program_ctx.function_forward_declarations
+					usize number_of_params            = program_ctx.function_forward_declarations
 					                             .at(instr.function.function_name)
 					                             ->signature.parameters.size();
 					for (usize i = 0; i < number_of_params; i++) pop();
@@ -453,9 +474,10 @@ namespace vm::loader::compiler {
 					index++;
 				}
 				instr_case(Op_virtual_call_pptr_method, instr) {
+					auto [param_count, ret_count]
+						= *seek_method_param_ret_count(instr.method.method_name);
 					ctx.offset_at_instructions[index] = curr_stack_size;
-					for (usize i = 0; i < *seek_method_param_count(instr.method.method_name); i++)
-						pop();
+					for (usize i = 0; i < param_count; i++) pop();
 					index++;
 				}
 				instr_case(Op_ret_tailcall_func, instr) {
@@ -505,9 +527,8 @@ namespace vm::loader::compiler {
 			                      .arg_size     = ctx.shared_stack_size - ctx.return_stack_size,
 			                      .ret_size     = ctx.return_stack_size,
 			                      .parameters   = std::move(parameters),
-			                      .result_types = std::move(result_types),	
-								  .instruction_mapping = std::move(ctx.instruction_mapping)
-				},
+			                      .result_types = std::move(result_types),
+			                      .instruction_mapping = std::move(ctx.instruction_mapping) },
 				function.name
 			);
 		}

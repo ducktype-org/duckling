@@ -191,7 +191,8 @@ namespace vm {
 				SafeVMThread&            thread,
 				TypeCRef                 type
 			) {
-			std::cout<<"local stack "<<(intptr_t)local_stack<<" frame "<<instr->arg0<<"\n";
+			std::cout << "local stack " << (intptr_t) local_stack << " frame " << instr->arg0
+					  << "\n";
 			auto block = thread.process_memory.allocateDummy(type, local_stack + instr->arg0);
 			thread.process_memory.increaseBlockRefcount(block);
 			*frame->local_block_ref_stack_end = block.get();

@@ -111,11 +111,11 @@ namespace vm::loader::compiler {
 			/// and type.
 			base::HashMap<base::StrID, LocalEntry> locals_map{};
 			/// Total required size for the local stack frame, in bytes.
-			usize              local_stack_size          = 0;
-			usize              local_block_count         = 0;
-			usize              return_stack_size         = 0;
-			usize              shared_stack_size         = 0;
-			usize              current_instruction_index = 0;
+			usize local_stack_size          = 0;
+			usize local_block_count         = 0;
+			usize return_stack_size         = 0;
+			usize shared_stack_size         = 0;
+			usize current_instruction_index = 0;
 
 			// Stores head of the stack at the moment of instructions: inits, deinits, calls.
 			std::vector<usize> offset_at_instructions{};
@@ -166,12 +166,13 @@ namespace vm::loader::compiler {
 		void compileNewExtCFunctions(const std::vector<code::ExternalCFunction>& new_functions);
 
 		/**
-		 *
+		 * @brief Seeks the number of parameters and return values of a method with the given name.
 		 */
-		base::Optional<u64> seek_method_param_count(const base::StrID& method_name) const;
+		base::Optional<std::pair<u64, u64>> seek_method_param_ret_count(const base::StrID& method_name
+		) const;
 
 		/**
-		 *
+		 * @brief Detects all variables which are used as arguments or return values in calls.
 		 */
 		std::unordered_set<base::StrID> detectParamsAndReturnedVars(FunctionCompilationContext& ctx);
 
