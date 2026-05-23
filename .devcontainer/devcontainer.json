@@ -7,10 +7,10 @@
 
 	"runArgs": [ "--cap-add=SYS_PTRACE", "--hostname", "dockling"],
 
-	"initializeCommand": "mkdir -p ${localWorkspaceFolder}/dockling-dev/home_ubuntu",
+	"initializeCommand": "mkdir -p ${localWorkspaceFolder}/dockling-dev/home",
 
 	"mounts": [
-		"source=${localWorkspaceFolder}/dockling-dev/home_ubuntu/,target=/home/ubuntu/,type=bind",
+		"source=${localWorkspaceFolder}/dockling-dev/home/,target=/home/ubuntu/,type=bind",
 		"source=${localEnv:HOME}/.ssh,target=/home/ubuntu/.ssh,type=bind"
 	]
 }
