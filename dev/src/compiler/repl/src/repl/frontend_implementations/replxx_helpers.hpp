@@ -33,10 +33,10 @@ namespace compiler::repl::replxx_helpers {
 	 * that user paste some strange characters that occupy more than 1 byte. And this
 	 * function converts input bytes into array of chars that map 1-1 with colors.
 	 *
-	 * \param input - a UTF-8 encoded string.
-	 * \param constant_byte - the character to substitute for multi-byte code points.
+	 * @param input - a UTF-8 encoded string.
+	 * @param constant_byte - the character to substitute for multi-byte code points.
 	 * By default it is '\1' - doesn't fall into any category and will be default color.
-	 * \return A string whose .length() perfectly matches the number of code points.
+	 * @return A string whose .length() perfectly matches the number of code points.
 	 */
 	std::string mapUtf8CodePoints(const std::string& input, char constant_byte = '\1');
 }
