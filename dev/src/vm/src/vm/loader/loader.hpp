@@ -77,5 +77,23 @@ namespace vm::loader {
 		static std::expected<code::CodeCollection, std::string> parseCodeCollectionFromFiles(
 			const std::vector<fs::File>& files
 		);
+
+		struct FatBytecodePosition {
+			base::StrID function_name;
+			usize       instruction_index;
+		};
+
+		enum MappingException {
+			MissingMapping,
+			NoFunction,
+		};
+
+		std::expected<FatBytecodePosition, MappingException> mapLowVMProgramPositionToCodeCollectionPosition(
+			low::LowCodePosition position
+		) const;
+
+		std::expected<base::Optional<dia::SourcePosition>, MappingException> mapCodeCollectionPositionToFilePosition(
+			FatBytecodePosition position
+		) const;
 	};
 }

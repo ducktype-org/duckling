@@ -3,11 +3,11 @@ Tests:
     Description: can build a project with conditional dependencies
     Cases:
       build_without_bar:
-        test_cmd: -C foo build
+        test_cmd: duck -C foo build
         Output:
           String: 'info: successfully synchronized venv \`foo\`\n'
       build_with_bar:
-        test_cmd: -C foo build --features use-bar
+        test_cmd: duck -C foo build --features use-bar
         ExitCode: 1
         Output:
           String: 'info: successfully synchronized venv \`foo\`\n'
