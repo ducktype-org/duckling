@@ -141,4 +141,8 @@ namespace vm::debugger {
 			})
 		    .and_then([&] { return api::resume(pid); });
 	}
+
+	std::expected<api::response::CodePosition, api::ApiError> Debugger::getCurrentPosition() {
+		return api::getCurrentPosition(pid);
+	}
 }
