@@ -11,6 +11,7 @@ namespace compiler::driver {
 
 	/**
 	 * LIRGlobal with its optional constructor and destructor functions.
+	 #2246 this should go
 	 */
 	struct LIRModuleGlobal final {
 		lir::LIRGlobal lir_global;

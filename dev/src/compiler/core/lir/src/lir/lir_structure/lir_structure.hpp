@@ -245,6 +245,10 @@ namespace compiler::lir {
 	 * @brief Global variable/constant in LIR.
 	 */
 	struct LIRGlobal final {
+		// #2246 do something about this
+		// see #1657
+
+
 		/**
 		 * @brief HELIOS id of the variable.
 		 */

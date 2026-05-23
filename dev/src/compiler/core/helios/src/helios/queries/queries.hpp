@@ -50,6 +50,7 @@ namespace compiler::helios {
 	 *
 	 * \parallel key helpers like isGlobalVar don’t modify globals
 	 * \query_thread_safe_if_cache
+	 // #2246 remove this?
 	 */
 	DECLARE_QUERY(QueryTopLevelEntities, frontend::ModuleID, CRef<query::QResult<HOUTUnit>>, ({}))
 }

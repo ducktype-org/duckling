@@ -133,6 +133,9 @@ int main(int argc, const char* argv[]) {
 		});
 	}
 
+	// #2246 PIPELINE LOGIC HERE
+	// just remove playgrounds?
+
 	for (auto& fun: top_level.functions) {
 		CRef mir_fun
 			= &query::entryPoint<compiler::mir::LowerToMIRFunction>({ fun })->valueOrThrow();

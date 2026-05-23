@@ -59,6 +59,8 @@ private:
 
 		backend_llvm::Module             llvm_module(base::StrID("test_module"));
 		std::vector<CRef<lir::Function>> ctors;
+		
+		// #2246 PIPELINE LOGIC HERE
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto module

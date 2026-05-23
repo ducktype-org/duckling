@@ -22,6 +22,7 @@ namespace compiler::driver {
 
 	/**
 	 * @brief Query that converts HOUTUnit to LIRModuleData.
+	 #2246 this should go!
 	 */
 	DECLARE_QUERY(
 		CompileHOUTUnitToLIRModuleData,

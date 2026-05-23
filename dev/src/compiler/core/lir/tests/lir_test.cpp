@@ -91,6 +91,9 @@ private:
 	/**
 	 * Compiles the module at given path to LIR, returning also HOUT and MIR counterparts of
 	 * functions. Note that it does not include globals/constants in the result (only functions).
+	 
+	 // #2246 PIPELINE LOGIC HERE
+	 
 	 */
 	LIRModuleResult getLIROfModule(std::string_view module_path) {
 		auto [module, scope] = getModule(fs::File(module_path));
@@ -465,6 +468,7 @@ private:
 		ASSERT_EQUAL(fib_const_global_data->original_name, base::StrID("FIB_10"));
 
 		withContextDo([&](query::Context& ctx) {
+			// #2246 PIPELINE LOGIC HERE
 			auto lir_global = lir::LIRGlobal::fromHOUT(ctx, *fib_const_global_data);
 			ASSERT_EQUAL(helios::name(lir_global.helios_id), base::StrID("FIB_10"));
 

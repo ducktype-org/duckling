@@ -793,6 +793,8 @@ namespace compiler::helios {
 			result.functions.reserve(dependencies->size());
 
 			for (const SymID& func_id: *dependencies) {
+				// #2246 PIPELINE LOGIC HERE
+				
 				// @TODO: #826 Change this code to a single query once it gets implemented.
 				auto& hout_func = ctx.query<QueryCodeOfFun>(func_id)->valueOrThrow();
 				auto& mir_func = ctx.query<mir::LowerToMIRFunction>({ &hout_func })->valueOrThrow();

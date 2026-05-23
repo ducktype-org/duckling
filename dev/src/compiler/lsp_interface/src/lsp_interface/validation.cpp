@@ -158,6 +158,9 @@ namespace lsp {
 			= getParserDiagnosticsFromModuleTree(root_module);
 
 		// We run the semantic analysis if there is no parsing errors.
+
+		// #2246 use pipeline module here?
+		// or not
 		if (isModuleTreeParsedSuccessfully(root_module))
 			query::entryPoint<helios::QueryModuleHOUTRecursively>(root_module->getModuleID());
 

@@ -11,12 +11,14 @@ namespace compiler::driver {
 
 	/**
 	 * @brief Compiles the LIRModuleData to LLVM Module.
+	 #2246 this should be moved to backend probably, or some pipeline module/submodule
 	 */
 	backend_llvm::Module compileLIRModuleToLLVM(query::Context& ctx, CRef<LIRModuleData> lir_module);
 
 
 	/**
 	 * Compile builtin LLVM library into an object file.
+	 #2246 this should be moved to backend probably, or some pipeline module/submodule
 	 */
 	artifacts::FileArtifact emitBuiltinLLVMObjectFile();
 }

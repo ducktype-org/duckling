@@ -41,6 +41,8 @@ private:
 	) {
 		frontend::ModuleID module_id
 			= frontend::createModuleTreeFromContents(module_content, "test_package");
+		
+		// #2246 ensure the correct pipeline usage here
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto hout_result = ctx.query<helios::QueryModuleHOUT>(module_id);
 			assertTrue(

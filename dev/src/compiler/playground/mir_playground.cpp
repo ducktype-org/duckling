@@ -46,6 +46,8 @@ int notMain(int argc, const char* const* argv) {
 
 	auto root = frontend::createModuleTreeWithRandomPackageID(path_to_compile);
 
+	// #2246 remove playgrounds? 
+
 	const auto& top_level = query::entryPoint<helios::QueryModuleHOUT>(root)->valueOrPanic();
 
 	for (auto& glob_data: top_level.glob_data) {

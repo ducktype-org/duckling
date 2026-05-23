@@ -49,8 +49,12 @@ private:
 		vm::code::CodeCollection code;
 
 		query::utils::withContextDo([&](query::Context& ctx) {
+
+			// #2246 PIPELINE LOGIC HERE
+			
 			auto module
 				= frontend::createModuleTreeWithRandomPackageID(fs::File(path(module_path)));
+			// #2246 remove query top level entities, it is super random!
 			auto& top_level = ctx.query<helios::QueryTopLevelEntities>(module)->valueOrPanic();
 
 			backend_vm::DVMCodeBuilder m(ctx, false, false);

@@ -58,6 +58,7 @@ namespace compiler::driver {
 		return output_file;
 	}
 
+	// #2246 PIPELINE LOGIC HERE
 	struct IMPLEMENT_QUERY(CompileHOUTUnitToLIRModuleData, query::QResult<LIRModuleData>) {
 		static auto provide(query::Context& ctx, CompileHOUTUnitToLIRModuleDataKey key) -> PResult {
 			const auto& hout_unit   = *key.hout_unit.get();
@@ -170,6 +171,7 @@ namespace compiler::driver {
 	struct IMPLEMENT_QUERY(CompileToLIRModuleData, query::QResult<LIRModuleData>) {
 		QUERY_AUTO_CACHE_CREF
 
+		// #2246 this should go
 		static auto provide(query::Context& ctx, frontend::ModuleID module_id) -> PResult {
 			const auto& hout_unit = ctx.query<helios::QueryModuleHOUT>(module_id)->valueOrThrow();
 
