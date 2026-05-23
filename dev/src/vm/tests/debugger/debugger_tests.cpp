@@ -69,8 +69,11 @@ private:
 	 */
 	void pausesOnBreakpointAndResumes() {
 		auto pid = loadProgram("breakpoint.dbc");
-		for (auto breakpoint: { 5, 8 })
-			vm::api::setBreakpoint(pid, base::StrID("main"), static_cast<u64>(breakpoint), true);
+		for (auto breakpoint: { 5ULL, 8ULL })
+			ASSERT_TRUE(
+				vm::api::setBreakpoint(pid, base::StrID("main"), breakpoint, true).has_value()
+			);
+
 		vm::api::run(pid).value();  // "Run failed (1)"
 
 		auto execution_position
@@ -93,8 +96,10 @@ private:
 	 */
 	void executesStepByStep() {
 		auto pid = loadProgram("breakpoint.dbc");
-		for (auto breakpoint: { 5, 8 })
-			vm::api::setBreakpoint(pid, base::StrID("main"), static_cast<u64>(breakpoint), true);
+		for (auto breakpoint: { 5ULL, 8ULL })
+			ASSERT_TRUE(
+				vm::api::setBreakpoint(pid, base::StrID("main"), breakpoint, true).has_value()
+			);
 
 		vm::api::run(pid).value();  // "Run failed (1)"
 

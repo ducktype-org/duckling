@@ -417,11 +417,8 @@ namespace vm {
 			return std::unexpected(api::OtherError{ "setBreakpoint: Function does not exist" });
 		auto original_function = *maybe_original_function;
 
-		// Try to obtain function copy (should never fail)
-		auto maybe_function_copy = loaded_program_copy.getFunctions().atMaybe(function_name);
-		if (!maybe_function_copy)
-			return std::unexpected(api::OtherError{ "setBreakpoint: Function does not exist" });
-		auto function_copy = *maybe_function_copy;
+		// Obtain function copy (should never fail)
+		auto function_copy = loaded_program_copy.getFunctions().at(function_name);
 
 		// Try to obtain micro index
 		if (original_function->instruction_mapping.size() <= instruction_index)
@@ -429,10 +426,10 @@ namespace vm {
 		usize micro_instruction_index
 			= original_function->instruction_mapping[instruction_index].begin;
 
-		// Ensure micro index is in range
+		// Ensure micro index is in range (can happen when last FatBC instruction compiles to nothing)
 		if (original_function->bc.size() <= micro_instruction_index
-		    || function_copy->bc.size() <= micro_instruction_index) [[unlikely]]
-			return std::unexpected(api::OtherError{ "setBreakpoint: Broken mapping" });
+		    || function_copy->bc.size() <= micro_instruction_index)
+			return std::unexpected(api::OtherError{ "setBreakpoint: No code after breakpoint" });
 
 		auto new_opcode = enable
 		                    ? vm::low::MicroOpcode::breakpoint

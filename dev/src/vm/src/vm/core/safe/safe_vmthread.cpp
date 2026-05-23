@@ -105,11 +105,7 @@ namespace vm {
 		if (opcode == low::MicroOpcode::breakpoint) {
 			const auto* program_copy
 				= dynamic_cast<const low::LowVMProgramCopy*>(process_program.get());
-			if (!program_copy) [[unlikely]]
-				CORE_PANIC(
-					"Breakpoints in original program are not supported. Breakpoints need backup "
-					"program."
-				);
+			CORE_ASSERT(program_copy, "Breakpoints should be only in LowVMProgramCopy.");
 
 			auto original_instr
 				= program_copy->getOriginalProgram()
