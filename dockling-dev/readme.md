@@ -28,20 +28,17 @@ sudo sh install-docker.sh
 ```
 
 
-## Building the Development Image
+## Running container
+
+Two supported workflows are available:
+
+### 1. Docker CLI
 
 Build the `dockling-dev` image:
 
 ```shell
 dockling-dev/build.sh
 ```
-
-
-## Running the Container
-
-Two supported workflows are available:
-
-### 1. Docker CLI
 
 Run the container directly:
 
@@ -57,16 +54,16 @@ You may also attach to the running container using tools such as Visual Studio C
 
 ### 2. VS Code Dev Containers
 
-Install the [Dev Containers](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) extension for Visual Studio Code and use **“Reopen in Container”**.
+Install the [Dev Containers](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) extension for Visual Studio Code and use **“Reopen in Container”** command (from automiatic pop-up or command palette under F1 key), then choose devcontainer corresponding to your docker instalation.
 
 Other IDEs offer similar functionality. For example, **CLion** provides [support for development containers](https://www.jetbrains.com/help/clion/connect-to-devcontainer.html).
 
 
-## Initial Setup (Inside Container)
+## Initial Project Setup (Inside Container)
 
 To avoid issues caused by differences between host and container environments (e.g., virtual environment paths), initialize the repository inside the container only.
 
-You can use provided `toolbox` command that runs `toolbox.py` script always with workdir set to `/duckling/dev`.
+You can use provided `toolbox` command (with bash autocompletion!) that runs `toolbox.py` script with workdir automatically set to `/duckling/dev`.
 
 ```shell
 toolbox init
@@ -83,6 +80,12 @@ ninja all
 ```
 
 ## Good To Know
+
+### Toolbox command
+
+`toolbox` always runs `toolbox.py` in `/duckling/dev`.
+
+This mean can use `toolbox` comand like `toolbox test -b build` no matter what directory are you in as long as `/duckling/dev/build` exists
 
 ### Mounts
 
