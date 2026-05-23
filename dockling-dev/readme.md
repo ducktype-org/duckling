@@ -98,13 +98,13 @@ This mean can use `toolbox` comand like `toolbox test -b build` no matter what d
 
 ### Mounts
 
-By default, the dev container config file and run script mount three directories:
+By default, *the dev container configuration* and *`run.sh` script* mount three directories:
 
 - duckling repo → `/duckling`
 
-- `dockling-dev/home_ubuntu` → `/home/ubuntu` - to make your home directory in the container persistent, so your configuration stays. You can access it or delete it from outside of the container.
+- `dockling-dev/home` → `/home/ubuntu` - to make your home directory in the container persistent, so your configuration is preserved between runs. You can access it and/or delete it from outside of the container.
 
-- `$HOME/.ssh` → `/home/ubuntu/.ssh` - for your git to authenticate with GitHub.
+- `$HOME/.ssh` → `/home/ubuntu/.ssh` - allows Git inside the container to authenticate with GitHub. **SECURITY DISCLAIMER: this directory usually stores confidential data. Mounting it means it's accesible by programs running inside the container the same way it is accessible from any other program running on your system.**
 
 ### Non-Interactive Usage
 
