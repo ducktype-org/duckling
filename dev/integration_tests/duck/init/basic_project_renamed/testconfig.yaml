@@ -5,7 +5,7 @@ Tests:
     Description: can initialise a new project
     Cases:
       init:
-        test_cmd: init foo --name bar
+        test_cmd: duck init foo --name bar
         Output:
           Run: |+
             echo "info: successfully created a new project \`bar\` at \`$(pwd)/foo\`"

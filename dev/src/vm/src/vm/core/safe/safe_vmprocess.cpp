@@ -211,20 +211,85 @@ namespace vm {
 	}
 
 	base::Optional<api::ApiError> SafeVMProcess::stepVMThread(api::ThreadID thread_id) {
+		// Try to obtain thread
 		auto opt_thread = getVMThreadByID(thread_id);
 		if (!opt_thread) return api::ApiError{ api::OtherError{ "Thread not found" } };
-		auto response = opt_thread.value()->step();
-		if (!response) return api::ApiError{ api::OtherError{ "step error" } };
-		return {};
+		auto thread = opt_thread.value();
+
+		// Try to obtain low position
+		auto maybe_lp = thread->getCurrentPosition();
+		if (!maybe_lp) return maybe_lp.error();
+		auto low_position = maybe_lp.value();
+
+		auto function = low_position.function;
+		auto mapping  = function->instruction_mapping;
+
+		// Default instruction range to step over is the whole function, in case we fail to obtain
+		// high position
+		low::LowFuncData::InstructionRange instr_range = {
+			.begin = 0,
+			.end   = std::numeric_limits<usize>::max(),
+		};
+
+		// Try to obtain high position and optimize instruction range to step over
+		auto maybe_hp = loader.mapLowVMProgramPositionToCodeCollectionPosition(low_position);
+		if (maybe_hp) instr_range = mapping[maybe_hp->instruction_index];
+
+		// We do one step, then we go until we're outside the exclusive range (begin, end).
+		// Naive approach "while (in range [begin, end)) { microstep(); }" would fail on instruction
+		// jumping to itself.
+
+		auto in_exclusive_range = [=](const low::LowCodePosition& pos) {
+			return pos.function == function && instr_range.begin < pos.instruction_index
+			    && pos.instruction_index < instr_range.end;
+		};
+
+		do {
+			auto response = thread->step();
+			if (!response) return api::ApiError{ api::OtherError{ "step error" } };
+
+			auto maybe_new_lp = thread->getCurrentPosition();
+			if (!maybe_new_lp) return maybe_new_lp.error();
+			low_position = maybe_new_lp.value();
+		} while (in_exclusive_range(low_position));
+
+		return std::nullopt;
 	}
 
 	std::expected<api::Response, api::ApiError> SafeVMProcess::getVMThreadCurrentPosition(
 		api::ThreadID thread_id
 	) {
+		// Try to obtain thread
 		auto opt_thread = getVMThreadByID(thread_id);
-		if (!opt_thread)
-			return std::unexpected(api::ApiError{ api::OtherError{ "Thread not found" } });
-		return opt_thread.value()->getCurrentPosition();
+		if (!opt_thread) return std::unexpected(api::OtherError{ "Thread not found" });
+		auto thread = opt_thread.value();
+
+		// Try to obtain low position
+		auto maybe_lp = thread->getCurrentPosition();
+		if (!maybe_lp) return std::unexpected(maybe_lp.error());
+		auto low_position = maybe_lp.value();
+
+		api::response::CodePosition code_position = {
+			.function_name   = low_position.function->name,
+			.instr_number    = 0,
+			.source_position = std::nullopt,
+		};
+
+		// Try to obtain high position
+		auto maybe_hp = loader.mapLowVMProgramPositionToCodeCollectionPosition(low_position);
+		if (!maybe_hp) return code_position;
+		auto high_position = maybe_hp.value();
+
+		code_position.instr_number = high_position.instruction_index;
+
+		// Try to obtain source position
+		auto maybe_sp = loader.mapCodeCollectionPositionToFilePosition(high_position);
+		if (!maybe_sp) return code_position;
+		auto source_position = maybe_sp.value();
+
+		code_position.source_position = source_position;
+
+		return code_position;
 	}
 
 	void SafeVMProcess::waitForBreakpoint() {
