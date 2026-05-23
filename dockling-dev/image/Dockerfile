@@ -66,8 +66,11 @@ ENV PATH=/duckling/dockling-dev/bin:/usr/lib/llvm-19/bin:$PATH
 
 ARG UID=1000
 ARG GID=1000
+ARG DEFAULT_USER=ubuntu
 
 RUN groupmod -g ${GID} ubuntu && \
     usermod -u ${UID} -g ${GID} ubuntu
+
+USER ${DEFAULT_USER}
 
 CMD ["/bin/bash"]
