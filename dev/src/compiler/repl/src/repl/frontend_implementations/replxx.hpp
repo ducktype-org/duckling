@@ -11,7 +11,9 @@
 namespace compiler::repl {
 	class FrontendReplxxImplementation final {
 	public:
-		explicit FrontendReplxxImplementation(bool completions_enabled = true);
+		explicit FrontendReplxxImplementation(
+			bool completions_enabled = true, bool bracketed_paste_enabled = true
+		);
 		~FrontendReplxxImplementation();
 
 		void        printWelcome() const;

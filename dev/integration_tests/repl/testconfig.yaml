@@ -1,10 +1,9 @@
-Run: "@{duckc_path} repl"
+Run: "@{duckc_path} repl --disable-bracketed-paste"
 
 prompt: "duckling> "
-repl_prefix: "\x1b[?2004h"
 welcome_message: "Duckling REPL\nType /help for available commands, /exit to quit.\nPress Enter to submit. Press Alt+Enter for new line.\n"
-beginning: "@{repl_prefix}@{welcome_message}"
-end: "\x1b[?2004l\nGoodbye!\n"
+beginning: "@{welcome_message}"
+end: "\nGoodbye!\n"
 instruction_prompt: "Instruction executed.\n"
 
 SubDirs:

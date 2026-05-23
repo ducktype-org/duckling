@@ -51,7 +51,9 @@ namespace compiler::repl {
 
 	// ─── Construction / destruction ──────────────────────────────────────────────
 
-	FrontendReplxxImplementation::FrontendReplxxImplementation(bool completions_enabled):
+	FrontendReplxxImplementation::FrontendReplxxImplementation(
+		bool completions_enabled, bool bracketed_paste_enabled
+	):
 		  m_completions_enabled(completions_enabled) {
 		m_replxx.set_max_history_size(1'000);
 		m_replxx.set_word_break_characters(" \t\n;,+-/*%^&|~<>=!?@#$:(){}[]");
@@ -62,7 +64,10 @@ namespace compiler::repl {
 		m_replxx.set_beep_on_ambiguous_completion(false);
 		m_replxx.set_max_hint_rows(8);
 		m_replxx.set_hint_delay(0);
-		m_replxx.enable_bracketed_paste();
+		if (bracketed_paste_enabled)
+			m_replxx.enable_bracketed_paste();
+		else
+			m_replxx.disable_bracketed_paste();
 
 		// Load persistent history from file.
 		m_replxx.history_load(getHistoryFilePath());

@@ -38,7 +38,9 @@ namespace {
 namespace compiler::repl {
 	class FrontendMinImplementation final {
 	public:
-		explicit FrontendMinImplementation(bool completions_enabled = true);
+		explicit FrontendMinImplementation(
+			bool completions_enabled = false, bool bracketed_paste_enabled = false
+		);
 		~FrontendMinImplementation() = default;
 
 		void        printWelcome() const;
