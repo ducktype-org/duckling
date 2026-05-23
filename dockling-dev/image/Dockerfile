@@ -70,6 +70,4 @@ ARG GID=1000
 RUN groupmod -g ${GID} ubuntu && \
     usermod -u ${UID} -g ${GID} ubuntu
 
-USER ubuntu
-
 CMD ["/bin/bash"]
