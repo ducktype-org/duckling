@@ -398,11 +398,8 @@ namespace vm {
 
 			// Similar as in call_func, but we deinit the arguments blocks as well,
 			// but without the return value.
-			for (u64 i = 0; i < arg_count; i++) {
-				CORE_ASSERT(frame->local_stack_head % 8 == 0, "");
+			for (u64 i = 0; i < arg_count; i++)
 				performDeinit(frame, thread);
-				frame->local_stack_head -= frame->local_stack_head % 8;
-			}
 		}
 
 		FUNCTION_CONT(1);
@@ -455,10 +452,8 @@ namespace vm {
 
 				ext_func->function_pointer(result_pointer, args_pointer);
 
-				for (u64 i = 0; i < arg_count; i++) {
+				for (u64 i = 0; i < arg_count; i++)
 					performDeinit(frame, thread);
-					frame->local_stack_head -= frame->local_stack_head % 8;
-				}
 			}
 		}
 
@@ -565,8 +560,6 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(deinit)(FUNCTION_ARGS) {
 		{
 			performDeinit(frame, thread);
-			frame->local_stack_head = READ_FROM_DIRECT_ARG(u64, instr->arg0);
-			std::cout<<"AFTER DEINIT "<<frame->local_stack_head<<'\n';
 		}
 		FUNCTION_CONT(1);
 	}
