@@ -135,7 +135,7 @@ namespace vm {
 				opt_none {
 					CORE_PANIC(
 						"getStackAlignment called for type that is not stored on stack or before "
-					    "finalization"
+						"finalization"
 					);
 				}
 			}
@@ -178,7 +178,8 @@ namespace vm {
 		base::Optional<CRef<std::vector<kind::FieldDesc>>> getFields() const;
 
 		// variant
-		base::Optional<Bytes>                 getTypeTagSizeBytes() const;
+		base::Optional<Bytes> getTypeTagSizeBytes() const;
+		/// @note that includes type tag size + padding.
 		base::Optional<Bytes>                 getVariantPayloadOffsetBytes() const;
 		base::Optional<std::vector<TypeCRef>> getVariantAlternatives() const;
 

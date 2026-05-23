@@ -157,8 +157,9 @@ namespace vm::loader::compiler {
 
 		for (auto [idx, instr]: std::views::enumerate(ctx.function.body)) {
 			ctx.current_instruction_index = idx;
-			std::cout<<ctx.current_instruction_index<<" "<<ctx.offset_at_instructions[idx]<<"\n";
-			auto instruction_range        = builder.add(instr);
+			std::cout << ctx.current_instruction_index << " " << ctx.offset_at_instructions[idx]
+					  << "\n";
+			auto instruction_range = builder.add(instr);
 			ctx.instruction_mapping.push_back(instruction_range);
 		}
 
@@ -189,7 +190,9 @@ namespace vm::loader::compiler {
 		CORE_UNREACHABLE();
 	}
 
-	base::HashMap<base::StrID, usize> Compiler::calculate_labels_mapping(FunctionCompilationContext& ctx) const{
+	base::HashMap<base::StrID, usize> Compiler::calculate_labels_mapping(
+		FunctionCompilationContext& ctx
+	) const {
 		base::HashMap<base::StrID, usize> label_positions{};
 		for (auto [idx, instr]: std::views::enumerate(ctx.function.body)) {
 			instr_match(instr) {
@@ -204,22 +207,20 @@ namespace vm::loader::compiler {
 
 	std::unordered_set<base::StrID> Compiler::detectParamsAndReturnedVars(
 		FunctionCompilationContext& ctx
-	) const{
+	) const {
 		std::vector<base::StrID>        stack;
 		std::unordered_set<base::StrID> res;
 
-		auto push = [&](opargs::PlaceAny local) {
-			stack.push_back(local.var_name);
-		};
+		auto push = [&](opargs::PlaceAny local) { stack.push_back(local.var_name); };
 
-		auto pop = [&]() {
-			stack.pop_back();
-		};
+		auto pop = [&]() { stack.pop_back(); };
 
 		auto register_top_of_stack_as_arg_or_ret = [&](size_t cnt = 1) {
-			CORE_ASSERT(stack.size() >= cnt, "Invalid bytecode structure which was not detected at validation.");
-			for (size_t i=0; i<cnt; ++i)
-				res.insert(stack[stack.size() - 1 - i]);
+			CORE_ASSERT(
+				stack.size() >= cnt,
+				"Invalid bytecode structure which was not detected at validation."
+			);
+			for (size_t i = 0; i < cnt; ++i) res.insert(stack[stack.size() - 1 - i]);
 		};
 
 		// Pops all arguments, registers all arguments and return values.
@@ -231,16 +232,18 @@ namespace vm::loader::compiler {
 		base::HashMap<base::StrID, usize> label_positions = calculate_labels_mapping(ctx);
 
 		const code::FuncSignature& func_signature = ctx.function.signature;
-		
+
 		// Add return values and params to stack, all of them must be fully alligned.
 		for (auto [idx, ret_type]: std::views::enumerate(func_signature.result_types))
 			push(base::StrID(base::strConcat("ret", idx).c_str()));
 		for (auto [idx, param_type]: std::views::enumerate(func_signature.parameters))
 			push(base::StrID(base::strConcat("arg", idx).c_str()));
-		register_top_of_stack_as_arg_or_ret(func_signature.result_types.size() + func_signature.parameters.size());
+		register_top_of_stack_as_arg_or_ret(
+			func_signature.result_types.size() + func_signature.parameters.size()
+		);
 
 		// After validation at each label stack has same state.
-		base::HashMap<usize, decltype(stack)>           stack_at_label;
+		base::HashMap<usize, decltype(stack)> stack_at_label;
 
 		std::vector<std::tuple<usize, decltype(stack)>> dfs_stack{
 			{ ctx.function.body.size(), {} }  // sentinel
@@ -252,7 +255,7 @@ namespace vm::loader::compiler {
 				using namespace code::instructions;
 				instr_case(Op_label, instr) {
 					match_optional(stack_at_label.atMaybe(index)) {
-						opt_some(_) { // State was already visited.
+						opt_some(_) {  // State was already visited.
 							std::tie(index, stack) = dfs_stack.back();
 							dfs_stack.pop_back();
 						}
@@ -330,14 +333,14 @@ namespace vm::loader::compiler {
 
 	void Compiler::calculateOffsets(FunctionCompilationContext& ctx) {
 		auto must_be_fully_alligned = detectParamsAndReturnedVars(ctx);
-		std::cout<<"function: "<<ctx.function.name.str.str()<<'\n';
+		std::cout << "function: " << ctx.function.name.str.str() << '\n';
 		decltype(ctx.locals_map) result;
 		std::vector<usize>       type_size_stack;
 		std::vector<usize>       padding_used;
 		usize                    curr_stack_size = 0;
 		usize                    max_stack_size  = 0;
 		usize                    max_block_count = 0;
-		ctx.offset_at_instructions               = std::vector<usize>(ctx.function.body.size(), 2137);
+		ctx.offset_at_instructions = std::vector<usize>(ctx.function.body.size(), 2'137);
 
 		// todo reorganize and make better
 		usize index = 0;
@@ -421,7 +424,7 @@ namespace vm::loader::compiler {
 				instr_case(Op_deinit, instr) {
 					pop();
 					ctx.offset_at_instructions[index] = curr_stack_size;
-					std::cout<<"After deinit "<<curr_stack_size<<'\n';
+					std::cout << "After deinit " << curr_stack_size << '\n';
 					index++;
 				}
 				instr_case(Op_jmp_label, instr) { index = label_positions[instr.label.label_name]; }
@@ -449,7 +452,7 @@ namespace vm::loader::compiler {
 					dfs_stack.pop_back();
 				}
 				instr_case(Op_call_func, instr) {
-					std::cout<<"OFFSET AT CALL: "<<curr_stack_size<<'\n';
+					std::cout << "OFFSET AT CALL: " << curr_stack_size << '\n';
 					ctx.offset_at_instructions[index] = curr_stack_size;
 					usize number_of_params            = program_ctx.function_forward_declarations
 					                             .at(instr.function.function_name)
@@ -458,7 +461,7 @@ namespace vm::loader::compiler {
 					index++;
 				}
 				instr_case(Op_call_builtinfunc, instr) {
-					std::cout<<index<<"BILTIN\n";
+					std::cout << index << "BILTIN\n";
 					for (usize i = 0;
 					     i < builtins::getBuiltinFunctionSignature(instr.function.function_name)
 					             .value()
@@ -481,7 +484,7 @@ namespace vm::loader::compiler {
 					auto [param_count, ret_count]
 						= *seek_method_param_ret_count(instr.method.method_name);
 					ctx.offset_at_instructions[index] = curr_stack_size;
-					std::cout<<"reporting Offset "<<curr_stack_size<<'\n';
+					std::cout << "reporting Offset " << curr_stack_size << '\n';
 					for (usize i = 0; i < param_count; i++) pop();
 					index++;
 				}

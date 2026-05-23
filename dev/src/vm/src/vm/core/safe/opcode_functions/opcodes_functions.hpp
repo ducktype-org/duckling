@@ -15,6 +15,7 @@
 #include <vm/core/safe/safe_vmthread.hpp>
 #include <vm/core/safe/type_metadata/type.hpp>
 #include <vm/module_flags/module_flags.hpp>
+
 #ifdef USE_TAIL_CALLS
 	#define OPFUN_ARGS OPFUN_TC_ARGS
 #else
@@ -98,16 +99,17 @@ namespace vm {
 		 * specified id.
 		 *
 		 * After this function:
-		 * `instr` should be pointer to the instruction in the new function,
-		 * `frame` should be pointer to the next frame,
-		 * `local_stack` should be pointer to the local stack of the new function.
-		 * Old values of `instr` nad `local_stack` should be saved on the frame of the caller.
-		 *
+		 * `instr` should be pointer to the instruction in the new function. arg0 of this
+		 * instruction should be first free byte of the stack. `frame` should be pointer to the next
+		 * frame, `local_stack` should be pointer to the local stack of the new function. Old values
+		 * of `instr` nad `local_stack` should be saved on the frame of the caller.
+		 * @param number_of_exts - the number of exts after instruction. instr will be increased by
+		 * that number + 1.
 		 * @note The function has to be inlined since it's used by the `call_func` and
 		 * `virtual_call` opcodes and breaks tailcalling of opcode function if not inlined.
 		 */
 		template<size_t number_of_exts = 0>
-		 static
+		static
 #ifndef BUILD_TYPE_DEV_DEBUG
 			__attribute__((always_inline))
 #endif
@@ -134,10 +136,9 @@ namespace vm {
 
 			// Size of the shared stack space between called functions.
 			auto shared_stack_space_size = called_func.arg_size + called_func.ret_size;
-			
-			auto arg_count           = called_func.parameters.size();
-			auto ret_count           = called_func.result_types.size();
-			auto shared_blocks_count = arg_count + ret_count;
+			auto arg_count               = called_func.parameters.size();
+			auto ret_count               = called_func.result_types.size();
+			auto shared_blocks_count     = arg_count + ret_count;
 			u64  prev_frame_block_ref_count
 				= u64(frame->local_block_ref_stack_end - frame->local_block_ref_stack_base);
 
@@ -155,7 +156,6 @@ namespace vm {
 			if (frame + 1 >= runtime_data.frame_stack_end)
 				throw exceptions::VMStackOverflowException();
 
-
 			// New local_stack address is the local_stack_head (all typed initialized by the caller
 			// up to this point) - the size of ret_vals and arguments passed to callee.
 			local_stack += instr->arg0 - shared_stack_space_size;
@@ -164,7 +164,7 @@ namespace vm {
 
 			// Update values passed as arguments.
 			instr = called_func.bc.data();
-			
+
 			// Assumes that local_stack_size = ret_val + passed_args + new_local_args.
 			if (local_stack + called_func.local_stack_size >= runtime_data.local_stack_end)
 				throw exceptions::VMStackOverflowException();
@@ -181,6 +181,9 @@ namespace vm {
 			prev_frame->local_block_ref_stack_end -= arg_count;
 		}
 
+		/**
+		 * @brief Initializes value of given type at offset instr->arg0 of local stack.
+		 */
 		static
 #ifndef BUILD_TYPE_DEV_DEBUG
 			__attribute__((always_inline))
@@ -193,23 +196,24 @@ namespace vm {
 				SafeVMThread&            thread,
 				TypeCRef                 type
 			) {
-			std::cout << "local stack " << (intptr_t) local_stack << " frame " << instr->arg0
-					  << "\n";
 			auto block = thread.process_memory.allocateDummy(type, local_stack + instr->arg0);
 			thread.process_memory.increaseBlockRefcount(block);
 			*frame->local_block_ref_stack_end = block.get();
 			frame->local_block_ref_stack_end += 1;
 		}
 
+		/**
+		 * @brief Deinitializes value at the top of stack.
+		 */
 		static
 #ifndef BUILD_TYPE_DEV_DEBUG
 			__attribute__((always_inline))
 #endif
 			void
 			performDeinit(Frame*& frame, SafeVMThread& thread) {
-
 			auto block = frame->local_block_ref_stack_end[-1];
 			auto type  = thread.process_memory.getBlockType(block);
+
 			thread.process_memory.freeBlockData(block);
 			thread.process_memory.decreaseBlockRefcount(block);
 			frame->local_block_ref_stack_end -= 1;

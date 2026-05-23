@@ -398,8 +398,7 @@ namespace vm {
 
 			// Similar as in call_func, but we deinit the arguments blocks as well,
 			// but without the return value.
-			for (u64 i = 0; i < arg_count; i++)
-				performDeinit(frame, thread);
+			for (u64 i = 0; i < arg_count; i++) performDeinit(frame, thread);
 		}
 
 		FUNCTION_CONT(1);
@@ -452,8 +451,7 @@ namespace vm {
 
 				ext_func->function_pointer(result_pointer, args_pointer);
 
-				for (u64 i = 0; i < arg_count; i++)
-					performDeinit(frame, thread);
+				for (u64 i = 0; i < arg_count; i++) performDeinit(frame, thread);
 			}
 		}
 
@@ -470,7 +468,7 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(virtual_call_pptr_method)(FUNCTION_ARGS) {
 		{
-			//CORE_PANIC("unimplemented");
+			// CORE_PANIC("unimplemented");
 			const auto pointer = READ_FROM_PLACE_ARG(Pointer, instr[1].arg0);
 
 			// Objects are guaranteed to hold inheritance metadata pointers as their first field.
@@ -549,7 +547,7 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(init_bany_type)(FUNCTION_ARGS) {
 		{
-			std::cout<<"INIT AT "<<instr->arg0<<'\n';
+			std::cout << "INIT AT " << instr->arg0 << '\n';
 			performInit(
 				instr, local_stack, frame, thread, READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1)
 			);
@@ -558,9 +556,7 @@ namespace vm {
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(deinit)(FUNCTION_ARGS) {
-		{
-			performDeinit(frame, thread);
-		}
+		{ performDeinit(frame, thread); }
 		FUNCTION_CONT(1);
 	}
 

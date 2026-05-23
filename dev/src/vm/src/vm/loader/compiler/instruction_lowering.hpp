@@ -432,11 +432,17 @@ namespace vm::loader::compiler::detail {
 			instr_case(high::Op_jmpIfNot_label, i) { addLow<Op_jmpIfNot_label>(i.label); }
 			instr_case(high::Op_call_func, i) {
 #ifdef ENABLE_JIT
-				addLow<Op_jit_call_entrypoint>(vm::opargs::Immediate{
-						ctx.offset_at_instructions.at(ctx.current_instruction_index) }, i.function);
+				addLow<Op_jit_call_entrypoint>(
+					vm::opargs::Immediate{
+						ctx.offset_at_instructions.at(ctx.current_instruction_index) },
+					i.function
+				);
 #else
-				addLow<Op_call_func>(vm::opargs::Immediate{
-						ctx.offset_at_instructions.at(ctx.current_instruction_index) }, i.function);
+				addLow<Op_call_func>(
+					vm::opargs::Immediate{
+						ctx.offset_at_instructions.at(ctx.current_instruction_index) },
+					i.function
+				);
 #endif
 			}
 			instr_case(high::Op_call_builtinfunc, i) { addLow<Op_call_builtinfunc>(i.function); }
@@ -470,8 +476,11 @@ namespace vm::loader::compiler::detail {
 				addLow<Op_ext_type>(variant_type);
 			}
 			instr_case(high::Op_virtual_call_pptr_method, i) {
-				addLow<Op_virtual_call_pptr_method>(vm::opargs::Immediate{
-						ctx.offset_at_instructions.at(ctx.current_instruction_index) }, i.method);
+				addLow<Op_virtual_call_pptr_method>(
+					vm::opargs::Immediate{
+						ctx.offset_at_instructions.at(ctx.current_instruction_index) },
+					i.method
+				);
 				addLow<Op_ext_pptr>(i.object_ptr);
 			}
 			instr_case(high::Op_alloc_pptr_type, i) { addLow<Op_alloc_pptr_type>(i.ptr, i.type); }

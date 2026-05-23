@@ -153,14 +153,13 @@ namespace vm {
 			start_function.bc.push_back(
 				MAKE_BYTECODE_INSTRUCTION(init_bany_type, offset, safeReadObjectBytes<u64>(res))
 			);
-			shared_stack_size
-				= align_up(shared_stack_size, 8) + res->getSize().asInt();
-			offset = shared_stack_size;  // todo improve
+			shared_stack_size = align_up(shared_stack_size, 8) + res->getSize().asInt();
+			offset            = shared_stack_size;  // todo improve
 		}
 
 		start_function.ret_size = shared_stack_size;
-		//if (offset % 8 != 0) offset += 8 - offset % 8;  // tmp
-		std::cout<<"offset "<<offset<<'\n';
+		// if (offset % 8 != 0) offset += 8 - offset % 8;  // tmp
+		std::cout << "offset " << offset << '\n';
 		for (u64 i = 0; i < func_args.size(); i++) {
 			std::cout << "ADDING VM VALUE ARG " << i << '\n';
 			const auto& arg_value = func_args[i];
@@ -189,13 +188,14 @@ namespace vm {
 				initFromVmValue, shared_stack_size, std::bit_cast<u64>(arg_value.get())
 			));
 			start_function.parameters.push_back(arg_value->type);
-			shared_stack_size +=arg_type->getSize().asInt(); // value is passed as argument, must be fully alligned
+			shared_stack_size += arg_type->getSize().asInt(
+			);  // value is passed as argument, must be fully alligned
 
 			offset = shared_stack_size;
 		}
 		start_function.arg_size         = shared_stack_size - start_function.ret_size;
 		start_function.local_stack_size = shared_stack_size;
-		std::cout<<"tmp "<<start_function.local_stack_size<<'\n';
+		std::cout << "tmp " << start_function.local_stack_size << '\n';
 
 		start_function.bc.insert(
 			start_function.bc.end(),
@@ -372,7 +372,9 @@ namespace vm {
 			start_function.bc.end(),
 			{
 				MAKE_BYTECODE_INSTRUCTION(stepGil, 0, 0),  // We need to acquire GIL
-				MAKE_BYTECODE_INSTRUCTION(call_func, main_has_args ? 72 : 48, called_function_id),  // call main
+				MAKE_BYTECODE_INSTRUCTION(
+					call_func, main_has_args ? 72 : 48, called_function_id
+				),                                              // call main
 				MAKE_BYTECODE_INSTRUCTION(mov_p64_p64, 0, 40),  // ret_val := main_ret_val
 				MAKE_BYTECODE_INSTRUCTION(mov_p64_imm, 32, 0),  // ix := 0
 				MAKE_BYTECODE_INSTRUCTION(
