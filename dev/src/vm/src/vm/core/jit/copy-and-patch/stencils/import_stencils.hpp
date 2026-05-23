@@ -18,7 +18,6 @@ namespace vm::jit::cnp {
 	 */
 	struct StencilData {
 		const char*              name;
-		const char*              type;
 		usize                    place;
 		usize                    size;
 		std::vector<StencilHole> to_patch   = {};

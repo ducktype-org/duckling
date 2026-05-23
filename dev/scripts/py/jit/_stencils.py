@@ -6,6 +6,22 @@ import enum
 import dataclasses
 import _schema
 
+
+def list_quote(elements):
+    return "{" + ", ".join(elements) + "}"
+
+
+def _signed(value: int) -> int:
+    value %= 1 << 64
+    if value & (1 << 63):
+        value -= 1 << 64
+    return value
+
+
+def byte_to_c(byte) -> str:
+    return f"0x{byte:02x}"
+
+
 @enum.unique
 class HoleValue(enum.Enum):
     """
@@ -24,7 +40,7 @@ class HoleValue(enum.Enum):
 
     # Program counter, instruction number in the current function
     PC = enum.auto()
-    
+
     ARG0 = enum.auto()
 
     ARG1 = enum.auto()
@@ -34,6 +50,7 @@ class HoleValue(enum.Enum):
     GOT = enum.auto()
     # A hardcoded value of zero (used for symbol lookups):
     ZERO = enum.auto()
+
 
 def symbol_to_value(symbol: str) -> HoleValue:
     """
@@ -51,9 +68,9 @@ def symbol_to_value(symbol: str) -> HoleValue:
         return HoleValue.JMP_FUNCTION
     if symbol == "_pc":
         return HoleValue.PC
-    
-    
-    return HoleValue.ZERO
+    else:
+        return HoleValue.ZERO
+
 
 @dataclasses.dataclass
 class Hole:
@@ -71,15 +88,16 @@ class Hole:
     # ...plus this addend:
     addend: int
 
-    def as_c(self) -> str:
-        """Dump this hole as an initialization of a C Hole struct."""
-        parts = [
-            f"{self.offset:#x}",
-            f"HoleKind::{self.kind}",
-            f"HoleValueType::{self.value.name}",
-            f"{_signed(self.addend):#x}",
-        ]
-        return f"{{{', '.join(parts)}}}"
+    def to_c(self) -> str:
+        return list_quote(
+            [
+                f"{self.offset:#x}",
+                f"HoleKind::{self.kind}",
+                f"HoleValueType::{self.value.name}",
+                f"{_signed(self.addend):#x}",
+            ]
+        )
+
 
 @dataclasses.dataclass
 class Stencil:
@@ -88,11 +106,27 @@ class Stencil:
     Analogous to a section or segment in an object file.
     """
 
-    body: bytearray = dataclasses.field(default_factory=bytearray, init=False)
-    holes: list[Hole] = dataclasses.field(default_factory=list, init=False)
+    name: str
+    place: int
+    size: int
+    holes: list[Hole]
 
-def _signed(value: int) -> int:
-    value %= 1 << 64
-    if value & (1 << 63):
-        value -= 1 << 64
-    return value
+    def to_c(self) -> str:
+        return "StencilData " + list_quote(
+            [
+                f'.name = "{self.name}"',
+                f".place = {self.place}",
+                f".size = {self.size}",
+                ".to_patch = " + list_quote(hole.to_c() for hole in self.holes),
+                ".relocation = {}",
+            ]
+        )
+
+
+def stencils_to_c(stencils, binary) -> str:
+    return list_quote(
+        [
+            ".stencils_binary = " + list_quote([byte_to_c(byte) for byte in binary]),
+            ".stencils_data = " + list_quote([stencil.to_c() for stencil in stencils]),
+        ]
+    )

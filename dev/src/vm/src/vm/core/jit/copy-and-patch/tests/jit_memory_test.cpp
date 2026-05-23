@@ -13,31 +13,14 @@ using vm::jit::cnp::JitFuncMemory;
 using vm::jit::cnp::StencilData;
 using vm::jit::cnp::Stencils;
 
-PUSH_DIAGNOSTIC
-ALLOW_EXTENSIONS
-// NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays)
-constexpr static char FULL_ELF[] = {
-// Linter doesn't actually build mock_stencils-so so it would be unavailable.
-#if __has_embed("mock_stencils-so")
-	#embed "mock_stencils-so"
-#else
-	0
-#endif
-};
-POP_DIAGNOSTIC
-
-static auto stencils
-	= Stencils{ .stencils_binary    = std::bit_cast<std::array<byte, sizeof(FULL_ELF)>>(FULL_ELF),
-	            .stencils_data = std::array {
-
-// Linter doesn't actually build <mock_stencils-nm> so it would be unavailable.
-#if __has_include(<mock_stencils-nm>)
-	#include <mock_stencils-nm>
-#else
-			StencilData{}
-#endif
-					}
-				 }.load();
+static auto stencils =
+	#if __has_include(<mock_stencils-nm>)
+		#include <mock_stencils-nm>
+	#else
+// Linter doesn't actually build mock_stencils-nm so it would be unavailable.
+		Stencils{}
+	#endif
+.load();
 
 class JitMemoryTest: public tester::TestSuite {
 #undef TESTER_CLASS

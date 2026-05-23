@@ -8,5 +8,5 @@ int goo(int x) {
 
 int hoo(int x) {
     extern int _arg0;
-    return x + (intptr_t)_arg0;
+    return x + (intptr_t)&_arg0;
 }

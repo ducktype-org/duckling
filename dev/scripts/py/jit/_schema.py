@@ -23,11 +23,11 @@ class ELFRelocation(typing.TypedDict):
 
     Addend: int
     Offset: int
-    Symbol: dict[typing.Literal["Value"], str]
-    Type: dict[typing.Literal["Value"], HoleKind]
+    Symbol: dict[typing.Literal["Name"], str]
+    Type: dict[typing.Literal["Name"], HoleKind]
 
 class ELFSymbol(typing.TypedDict):
-    Name: dict[typing.Literal["Value"], str]
+    Name: dict[typing.Literal["Name"], str]
     Value: int
 
 
@@ -36,10 +36,11 @@ class ELFSection(typing.TypedDict):
 
     Index: int
     Name: ELFSymbol
+    Type: dict[typing.Literal["Value"], str]
     Flags: dict[typing.Literal["Flags"], list[dict[typing.Literal["Name"], str]]]
+    Offset: int
+    Size: int
     Info: int
     Relocations: list[dict[typing.Literal["Relocation"], ELFRelocation]]
-    SectionData: dict[typing.Literal["Bytes"], list[int]]
     Symbols: list[dict[typing.Literal["Symbol"], ELFSymbol]]
-    Type: dict[typing.Literal["Value"], str]
-    
+    SectionData: dict[typing.Literal["Bytes"], list[int]]
