@@ -23,7 +23,7 @@ namespace compiler::repl {
 #else
 	using FrontendImplementationType                               = FrontendMinImplementation;
 	static constexpr bool FRONTEND_DEFAULT_COMPLETIONS_ENABLED     = false;
-	static constexpr bool FRONTEND_DEFAULT_BRACKETED_PASTE_ENABLED = false;
+	static constexpr bool FRONTEND_DEFAULT_BRACKETED_PASTE_ENABLED = true;
 #endif
 
 	/**

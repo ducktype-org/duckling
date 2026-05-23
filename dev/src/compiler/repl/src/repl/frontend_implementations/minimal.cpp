@@ -191,11 +191,10 @@ namespace compiler::repl {
 		  m_hist_idx(0),
 		  m_sequence_to_align_cursor_to_multiline_start(
 			  std::format("{}[{}C", ESC, ReplConfig::CONTINUATION.size())
-		  ) {
+		  ),
+		  m_bracketed_paste_enabled(bracketed_paste_enabled) {
 		if (completions_enabled)
 			std::cerr << "Warning: minimal REPL frontend does not support completions.\n";
-		if (bracketed_paste_enabled)
-			std::cerr << "Warning: minimal REPL frontend does not support bracketed paste.\n";
 	}
 
 	void FrontendMinImplementation::printWelcome() const {
@@ -205,9 +204,14 @@ namespace compiler::repl {
 
 	std::string FrontendMinImplementation::readLine() {
 		std::cout << ReplConfig::PROMPT;
+		std::cout.flush();
+
+		if (m_bracketed_paste_enabled) writeStr(ESC "[?2004h");
 
 		RawTerminalMode terminal_guard;
 		auto            line = internalReadLine();
+
+		if (m_bracketed_paste_enabled) writeStr(ESC "[?2004l");
 
 		return line;
 	}
@@ -281,16 +285,23 @@ namespace compiler::repl {
 		while (true) {
 			char c = 0;
 			if (!readChar(c)) break;
-			if (c == NEWLINE_CHAR || c == CARRIAGE_RETURN_CHAR)  // Commit.
-				break;
-			else if (c == BACKSPACE_CHAR)
-				onBackspace();
-			else if (c == ESC_CHAR)
+			if (c == ESC_CHAR) {
 				onEscapeSequence();
-			else if (c >= PRINTABLE_MIN && c <= PRINTABLE_MAX)
-				onPrintableChar(c);
+			} else if (m_in_bracketed_paste) {
+				if (c == NEWLINE_CHAR || c == CARRIAGE_RETURN_CHAR)
+					onNewLine();
+				else if (c >= PRINTABLE_MIN && c <= PRINTABLE_MAX)
+					onPrintableChar(c);
+			} else {
+				if (c == NEWLINE_CHAR || c == CARRIAGE_RETURN_CHAR)  // Commit.
+					break;
+				else if (c == BACKSPACE_CHAR)
+					onBackspace();
+				else if (c >= PRINTABLE_MIN && c <= PRINTABLE_MAX)
+					onPrintableChar(c);
+			}
 
-			refreshScreen();
+			if (!m_in_bracketed_paste) refreshScreen();
 		}
 
 		saveToHistory();
@@ -353,7 +364,20 @@ namespace compiler::repl {
 				onArrowLeft();
 			else if (seq2 == ARROW_RIGHT_CODE)
 				onArrowRight();
-			else if (seq2 == '1') {
+			else if (seq2 == '2') {
+				char seq3 = 0, seq4 = 0, seq5 = 0;
+				if (!readChar(seq3)) return;
+				if (seq3 == '0') {
+					if (!readChar(seq4)) return;
+					if (seq4 == '0') {
+						if (!readChar(seq5)) return;
+						if (seq5 == '~') m_in_bracketed_paste = true;
+					} else if (seq4 == '1') {
+						if (!readChar(seq5)) return;
+						if (seq5 == '~') m_in_bracketed_paste = false;
+					}
+				}
+			} else if (seq2 == '1') {
 				char seq3 = 0, seq4 = 0, seq5 = 0;
 				if (!readChar(seq3)) return;
 				if (seq3 == ';') {
