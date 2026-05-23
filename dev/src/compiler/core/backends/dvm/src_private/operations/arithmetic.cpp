@@ -35,8 +35,9 @@ namespace compiler::backend_vm::internal {
 		auto is_different_from_arg = [](const DVMPlace& place, const DVMValue& arg) -> bool {
 			return place.isDirect() and !(DVMValue{ place } == arg);
 		};
-		
-		if (op.dest && op.dest->isDirect() && is_different_from_arg(*op.dest, op.lhs) && is_different_from_arg(*op.dest, op.rhs)) {
+
+		if (op.dest && op.dest->isDirect() && is_different_from_arg(*op.dest, op.lhs)
+		    && is_different_from_arg(*op.dest, op.rhs)) {
 			// If instruction is of the form: a = b OP c and a is different then b and c, then
 			// we transform it to:
 			// a = b;
