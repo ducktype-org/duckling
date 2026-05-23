@@ -305,6 +305,15 @@ private:
 			return std::holds_alternative<vm::api::Paused>(debugger.getStatus());
 		}));
 
+		// Code position Test
+		auto pos_response = debugger.getCurrentPosition();
+		ASSERT_TRUE(pos_response.has_value());
+		auto code_position = pos_response.value();
+		ASSERT_EQUAL_PRINT("main", code_position.function_name);
+		ASSERT_EQUAL_PRINT(21, code_position.instr_number);
+		ASSERT_TRUE(code_position.source_position.has_value());
+
+
 		auto main_thread_id = vm::api::ThreadID(0);
 
 		auto response = debugger.getNumberOfStackFrames(main_thread_id).value();
