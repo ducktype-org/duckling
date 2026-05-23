@@ -63,6 +63,7 @@ WORKDIR /duckling
 
 ENV LLVM_DIR=/usr/lib/llvm-19
 ENV PATH=/duckling/dockling-dev/bin:/usr/lib/llvm-19/bin:$PATH
+ENV HOME=/home/ubuntu
 
 ARG UID=1000
 ARG GID=1000
