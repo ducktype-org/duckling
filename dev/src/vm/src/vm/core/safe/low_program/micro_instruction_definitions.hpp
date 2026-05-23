@@ -392,11 +392,13 @@ DEF_MICRO_INSTR(jmpIfNot_label, vm::low::opargs::Label)
 
 // ========= FUNCTION OPERATIONS ========
 
-DEF_MICRO_INSTR(call_func, vm::low::opargs::Immediate, vm::low::opargs::FunctionID)
+// ComputedConstant represent stack offset at the moment of call.
+DEF_MICRO_INSTR(call_func, vm::low::opargs::ComputedConstant, vm::low::opargs::FunctionID)
 #ifdef ENABLE_JIT
 // call a function, with the possibility to compile it later
-DEF_MICRO_INSTR(jit_call_entrypoint, vm::low::opargs::Immediate, vm::low::opargs::FunctionID)
+DEF_MICRO_INSTR(jit_call_entrypoint, vm::low::opargs::ComputedConstant, vm::low::opargs::FunctionID)
 #endif
+
 DEF_MICRO_INSTR(call_builtinfunc, vm::low::opargs::BuiltinFunctionID)
 DEF_MICRO_INSTR(call_cfunc, vm::low::opargs::ExtCFunction)
 
@@ -409,10 +411,11 @@ DEF_MICRO_INSTR(ret)
 
 // ========= STACK OPERATIONS ========
 
+// ComputedConstant represent stack offset at which operation is performed.
 // initialize local variable on local stack with given type at specified offset.
-DEF_MICRO_INSTR(init_bany_type, vm::low::opargs::Immediate, vm::low::opargs::Type)
+DEF_MICRO_INSTR(init_bany_type, vm::low::opargs::ComputedConstant, vm::low::opargs::Type)
 // deinitialize local variable on local stack at specified offset.
-DEF_MICRO_INSTR(deinit, vm::low::opargs::Immediate)
+DEF_MICRO_INSTR(deinit, vm::low::opargs::ComputedConstant)
 
 // ========= IO OPERATIONS ========
 
@@ -434,7 +437,12 @@ DEF_MICRO_INSTR(upcast_pptr_pptr, vm::low::opargs::PlacePtr, vm::low::opargs::Pl
 // tries to cast pointed object to its subclass, requires that ext_64 is next
 DEF_MICRO_INSTR(downcast_pptr_pptr, vm::low::opargs::PlacePtr, vm::low::opargs::PlacePtr)
 // calls a method of specified name on an a pointer. Performs the dynamic dispatch.
-DEF_MICRO_INSTR(virtual_call_pptr_method, vm::low::opargs::Immediate, vm::low::opargs::MethodName)
+DEF_MICRO_INSTR(
+	virtual_call_pptr_method,
+	vm::low::opargs::ComputedConstant,
+	vm::low::opargs::MethodName /*
+	vm::low::opargs::ext_pptr	stack offset at the moment of call */
+)
 
 // ========= GENERAL POINTER OPERATIONS ========
 

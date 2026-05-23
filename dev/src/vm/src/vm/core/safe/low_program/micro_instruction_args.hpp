@@ -108,7 +108,10 @@ namespace vm::low::opargs {
 	DEFINE_MICRO_ARG_TYPE(MethodName, "method", vm::opargs::MethodName);
 	/** @brief Stores relative instruction jump offset after label linking. */
 	DEFINE_MICRO_ARG_TYPE(Label, "label", vm::opargs::Label);
+	/** @brief Stores constant computed value, calculated at lowering time. */
+	DEFINE_MICRO_ARG_TYPE(ComputedConstant, "const", usize);
 
+	
 	/**
 	 * @brief Storage class for any kind of micro instruction argument.
 	 */
@@ -122,7 +125,8 @@ namespace vm::low::opargs {
 		BuiltinFunctionID,
 		ExtCFunction,
 		MethodName,
-		Label>;
+		Label,
+		ComputedConstant>;
 	using InstructionArgCRef = base::CRefifyParams<InstructionArg>;
 
 	using InstructionPlaceDataArg  = std::variant<VM_MICRO_INSTR_ARG_PLACE_OFFSET_TYPES>;
