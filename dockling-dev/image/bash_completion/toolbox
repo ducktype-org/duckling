@@ -157,7 +157,7 @@ _toolbox_flag_meta() {
 # ----------------------------
 _toolbox_path_completion() {
     local cur="$1"
-    local base_dir="$2"
+    local base_dir="/duckling/dev"
 
     (
         cd -- "$base_dir" 2>/dev/null || exit 0
@@ -254,7 +254,7 @@ _toolbox_completion() {
 
             # file/dir completion
             PATH)
-                mapfile -t candidates < <(_toolbox_path_completion "$cur" "$PWD")
+                mapfile -t candidates < <(_toolbox_path_completion "$cur")
 
                 COMPREPLY=()
                 for c in "${candidates[@]}"; do

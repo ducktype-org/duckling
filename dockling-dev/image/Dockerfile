@@ -70,6 +70,9 @@ RUN apt-get update -y && \
     rm -rf /var/lib/apt/lists/*
 
 # install rust
+ENV RUSTUP_HOME=/var/rustup
+ENV RUSTUP_TOOLCHAIN=stable
+ENV RUSTUP_AUTO_INSTALL=1
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 RUN chmod o+rx /root
 RUN chmod -R o+r /root/.cargo
