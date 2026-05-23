@@ -1,0 +1,283 @@
+#############################################
+# Toolbox dynamic bash completion engine
+# - parses `toolbox --help`
+# - extracts commands + flags
+# - infers flag types (CHOICES / PATH / INTEGER)
+# - supports cached help parsing
+# - supports short stacked flags (-mb → -b)
+#############################################
+
+
+# ----------------------------
+# Cache directory for help outputs
+# ----------------------------
+_toolbox_cache_dir() {
+    echo "${XDG_CACHE_HOME:-$HOME/.cache}/toolbox-completion"
+}
+
+
+# ----------------------------
+# Get (and cache) help output for a subcommand
+# ----------------------------
+_toolbox_help_file() {
+    local cmd="$1"
+    local cache_dir cache_file
+
+    cache_dir="$(_toolbox_cache_dir)"
+    mkdir -p "$cache_dir"
+
+    cache_file="$cache_dir/${cmd}.help"
+
+    # cache miss → generate help once
+    if [[ ! -s "$cache_file" ]]; then
+        toolbox "$cmd" --help 2>/dev/null > "$cache_file" || return 1
+    fi
+
+    printf '%s\n' "$cache_file"
+}
+
+
+# ----------------------------
+# Extract top-level commands from `toolbox --help`
+# ----------------------------
+_toolbox_commands() {
+    toolbox --help 2>/dev/null | awk '
+        /^Commands:/ {in_cmds=1; next}
+        in_cmds && /^[[:space:]]+[a-zA-Z0-9-]+/ {print $1}
+        in_cmds && NF==0 {in_cmds=0}
+    '
+    echo "--help"
+}
+
+
+# ----------------------------
+# Parse options section of `toolbox <cmd> --help`
+# Produces rows:
+#   flag   type   payload
+# where:
+#   type = CHOICES | PATH | INTEGER | NONE
+# ----------------------------
+_toolbox_option_rows() {
+    local cmd="$1"
+    local help_file
+
+    help_file="$(_toolbox_help_file "$cmd")" || return 1
+
+    awk '
+        # helper: trim whitespace
+        function trim(s) {
+            gsub(/^[[:space:]]+|[[:space:]]+$/, "", s)
+            return s
+        }
+
+        # emit both short and long flags
+        function emit_flags(spec, kind, payload,   n, i, arr, tok) {
+
+            # normalize " -a / --alpha " → "-a,--alpha"
+            gsub(/[[:space:]]\/[[:space:]]/, ",", spec)
+
+            n = split(spec, arr, /,/)
+
+            for (i = 1; i <= n; i++) {
+                tok = trim(arr[i])
+
+                # strip trailing description
+                sub(/[[:space:]].*$/, "", tok)
+
+                if (tok ~ /^-/) {
+                    print tok "\t" kind "\t" payload
+                }
+            }
+        }
+
+        # start of options section
+        /^Options:/ { in_opts = 1; next }
+
+        in_opts {
+            line = $0
+            sub(/^[[:space:]]+/, "", line)
+
+            # skip empty / non-option lines
+            if (line == "") next
+            if (line !~ /^-/) next
+
+            # isolate flag declaration part (before description)
+            spec = line
+            sub(/[[:space:]]{2,}.*/, "", spec)
+
+            kind = "NONE"
+            payload = ""
+
+            # enum-like flags: [...|...]
+            if (spec ~ /\[[^][]+\]/) {
+                kind = "CHOICES"
+                payload = spec
+                sub(/.*\[/, "", payload)
+                sub(/\].*/, "", payload)
+
+            # integer flags
+            } else if (spec ~ /[[:space:]]INTEGER([[:space:]]|$)/) {
+                kind = "INTEGER"
+
+            # path-like flags
+            } else if (spec ~ /[[:space:]](TEXT|PATH|FILE|DIR|DIRECTORY)([[:space:]]|$)/) {
+                kind = "PATH"
+            }
+
+            emit_flags(spec, kind, payload)
+        }
+
+        in_opts && NF == 0 { in_opts = 0 }
+    ' "$help_file"
+}
+
+
+# ----------------------------
+# Return only flag names (deduplicated)
+# ----------------------------
+_toolbox_flags() {
+    _toolbox_option_rows "$1" | awk -F'\t' '{print $1}' | sort -u
+}
+
+
+# ----------------------------
+# Return metadata for a flag:
+#   kind + payload
+# ----------------------------
+_toolbox_flag_meta() {
+    local cmd="$1"
+    local flag="$2"
+
+    _toolbox_option_rows "$cmd" | awk -F'\t' -v f="$flag" '$1 == f {print $2 "\t" $3; exit}'
+}
+
+
+# ----------------------------
+# Path completion relative to base directory
+# ----------------------------
+_toolbox_path_completion() {
+    local cur="$1"
+    local base_dir="/duckling/dev"
+
+    (
+        cd -- "$base_dir" 2>/dev/null || exit 0
+        compgen -f -- "$cur"
+    )
+}
+
+
+# ----------------------------
+# Normalize stacked short flags:
+#   -mb → -b
+# ----------------------------
+_toolbox_normalize_flag() {
+    local f="$1"
+
+    if [[ "$f" == -* && "$f" != --* && ${#f} -gt 2 ]]; then
+        echo "-${f: -1}"
+    else
+        echo "$f"
+    fi
+}
+
+
+# ----------------------------
+# Main completion entrypoint
+# ----------------------------
+_toolbox_completion() {
+    local cur prev cmd meta kind payload
+    local -a candidates choices
+
+    _init_completion || return
+
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    prev="${COMP_WORDS[COMP_CWORD-1]}"
+    cmd="${COMP_WORDS[1]}"
+
+    # normalize stacked flags (-mb → -b)
+    prev="$(_toolbox_normalize_flag "$prev")"
+
+    # ----------------------------
+    # 1. COMMAND COMPLETION
+    # ----------------------------
+    if [[ $COMP_CWORD -eq 1 ]]; then
+        mapfile -t candidates < <(_toolbox_commands)
+
+        COMPREPLY=()
+        for c in "${candidates[@]}"; do
+            [[ $c == "$cur"* ]] && COMPREPLY+=("$c")
+        done
+        return
+    fi
+
+    # ----------------------------
+    # 2. FLAG NAME COMPLETION
+    # ----------------------------
+    if [[ "$cur" == -* ]]; then
+        local cur_norm
+        cur_norm="$(_toolbox_normalize_flag "$cur")"
+
+        mapfile -t candidates < <(_toolbox_flags "$cmd")
+
+        COMPREPLY=()
+
+        for c in "${candidates[@]}"; do
+            if [[ "$cur_norm" != "$cur" ]]; then
+                # stacked flag case (-mb)
+                [[ $c == "$cur_norm" ]] && COMPREPLY+=("$cur")
+            else
+                [[ $c == "$cur"* ]] && COMPREPLY+=("$c")
+            fi
+        done
+        return
+    fi
+
+    # ----------------------------
+    # 3. FLAG VALUE COMPLETION
+    # ----------------------------
+    if [[ "$prev" == -* ]]; then
+        meta="$(_toolbox_flag_meta "$cmd" "$prev")"
+        kind="${meta%%$'\t'*}"
+        payload="${meta#*$'\t'}"
+
+        case "$kind" in
+            # enum values
+            CHOICES)
+                IFS='|' read -r -a choices <<< "$payload"
+
+                COMPREPLY=()
+                for c in "${choices[@]}"; do
+                    [[ $c == "$cur"* ]] && COMPREPLY+=("$c")
+                done
+                return
+                ;;
+
+            # file/dir completion
+            PATH)
+                mapfile -t candidates < <(_toolbox_path_completion "$cur")
+
+                COMPREPLY=()
+                for c in "${candidates[@]}"; do
+                    [[ $c == "$cur"* ]] && COMPREPLY+=("$c")
+                done
+                return
+                ;;
+
+            # no completion for integers
+            INTEGER)
+                COMPREPLY=()
+                return
+                ;;
+        esac
+    fi
+
+    # if no better idea, then at least flags
+    mapfile -t candidates < <(_toolbox_flags "$cmd")
+    COMPREPLY=()
+    for c in "${candidates[@]}"; do
+        COMPREPLY+=("$c")
+    done
+}
+
+# register completion for toolbox binary
+complete -F _toolbox_completion toolbox
