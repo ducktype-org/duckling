@@ -13,13 +13,12 @@ using vm::jit::cnp::JitFuncMemory;
 using vm::jit::cnp::StencilData;
 using vm::jit::cnp::Stencils;
 
-static auto stencils =
+static auto stencils = Stencils {
 	#if __has_include(<mock_stencils-nm>)
 		#include <mock_stencils-nm>
-	#else
-// Linter doesn't actually build mock_stencils-nm so it would be unavailable.
-		Stencils{}
 	#endif
+// Linter doesn't actually build mock_stencils-nm so it would be unavailable.
+}
 .load();
 
 class JitMemoryTest: public tester::TestSuite {

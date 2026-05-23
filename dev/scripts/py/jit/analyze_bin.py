@@ -67,7 +67,7 @@ def parse(llvm_readobj: str, binary: str, verbose: bool):
 
     print(f"sections: {len(sections)}")
     return [
-        print(section["Section"]["Name"]["Name"]), parse_stencil_section(section["Section"])
+        parse_stencil_section(section["Section"])
         for section in sections
         if is_stencil_section(section["Section"]["Name"]["Name"])
     ]

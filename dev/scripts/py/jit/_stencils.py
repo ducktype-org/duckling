@@ -124,9 +124,11 @@ class Stencil:
 
 
 def stencils_to_c(stencils, binary) -> str:
-    return list_quote(
+    return ", ".join(
         [
             ".stencils_binary = " + list_quote([byte_to_c(byte) for byte in binary]),
-            ".stencils_data = " + list_quote([stencil.to_c() for stencil in stencils]),
+            ".stencils_data = std::to_array<StencilData>("
+            + list_quote([stencil.to_c() for stencil in stencils])
+            + ")",
         ]
     )
