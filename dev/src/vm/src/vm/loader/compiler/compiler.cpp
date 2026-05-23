@@ -616,7 +616,7 @@ namespace vm::loader::compiler {
 				low::LowExternCFunction{
 					.name               = new_func.name,
 					.function_pointer   = new_func.function_pointer,
-					.parameter_size_sum = param_size_sum,
+					//.parameter_size_sum = param_size_sum,
 					.parameters         = std::move(params),
 					.result_types       = std::move(rets),
 				},

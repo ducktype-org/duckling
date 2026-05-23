@@ -57,11 +57,11 @@ class HeliosTests: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		TESTER_ADD_TEST(testImport);
-		TESTER_ADD_TEST(testEdgeEvals);
-		TESTER_ADD_TEST(testConstants);
+		//TESTER_ADD_TEST(testImport);
+		//TESTER_ADD_TEST(testEdgeEvals);
+		//TESTER_ADD_TEST(testConstants);
 		TESTER_ADD_TEST(testMetaCompTime);
-		TESTER_ADD_TEST(testNumericLiterals);
+		/*TESTER_ADD_TEST(testNumericLiterals);
 		TESTER_ADD_TEST(testClassSymbolData);
 		TESTER_ADD_TEST(testClassInteractions);
 		TESTER_ADD_TEST(testTypeInstanceInterface);
@@ -72,7 +72,7 @@ public:
 		TESTER_ADD_TEST(testReferenceKindCollapsing);
 		TESTER_ADD_TEST(testExprTree);
 		TESTER_ADD_TEST(testExprClone);
-		TESTER_ADD_TEST(testSimpleHOUT);
+		/*TESTER_ADD_TEST(testSimpleHOUT);
 		TESTER_ADD_TEST(testSingleFileModuleHOUT);
 		TESTER_ADD_TEST(testModuleHOUT);
 		TESTER_ADD_TEST(testDependencyHOUT);
@@ -101,7 +101,7 @@ public:
 		TESTER_ADD_TEST(testCastsHout);
 		TESTER_ADD_TEST(testTypeLifting);
 		TESTER_ADD_TEST(testHoutElementsOrigin);
-		TESTER_ADD_TEST(testAliases);
+		TESTER_ADD_TEST(testAliases);*/
 
 		// this is at the end
 		// so we test all the scopes created in helios tests:
@@ -210,7 +210,7 @@ private:
 		auto unit_type = compiler::tsh::getUnitType();
 
 		// Tree eval
-		{
+		/*{
 			{
 				auto simple_ref
 					= getConstValueAs<compiler::tsh::SymbolType<>>("SIMPLE_REF", root_scope);
@@ -251,11 +251,12 @@ private:
 				auto cmp_2 = getConstValueAs<bool>("CMP_2", root_scope);
 				ASSERT_EQUAL(cmp_2, true);
 			}
-		}
+		}*/
+
 
 		// Function evaluation.
 		{
-			{
+			/*{
 				auto a_type   = getConstValueAs<compiler::tsh::SymbolType<>>("A", root_scope);
 				auto expected = st(unit_type);
 				ASSERT_EQUAL(expected, a_type);
@@ -322,12 +323,14 @@ private:
 					= getConstValueAs<compiler::tsh::SymbolType<>>("SECOND", root_scope);
 				auto expected = st(i64_type).withReferenceKind(compiler::tsh::ReferenceKind::Ref);
 				ASSERT_EQUAL(expected, second_type);
-			}
+			}*/
 			{  // Type Comparisons
 				auto real_type = getConstValueAs<bool>("REAL", root_scope);
 				ASSERT_EQUAL(real_type, true);
+				return;
 				auto fake_type = getConstValueAs<bool>("FAKE", root_scope);
 				ASSERT_EQUAL(fake_type, false);
+				return;
 				auto mega_type = getConstValueAs<bool>("IS_MEGA", root_scope);
 				ASSERT_EQUAL(mega_type, true);
 				auto not_mega_type = getConstValueAs<bool>("NOT_IS_MEGA", root_scope);

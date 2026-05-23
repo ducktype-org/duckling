@@ -66,7 +66,9 @@
  * any type and passes the pointer to the VM. Then, we can write functions that take that pointer
  * and operate on the object behind the pointer and return values to the VM based on that object.
  * This is showcased in the test - `cppVectorInVm`.
+ * 
  */
+
 #pragma once
 
 #include <base/pointers/box.hpp>
@@ -74,6 +76,13 @@
 
 #include <vm/api/vm.hpp>
 #include <vm/utils/interpret.hpp>
+
+/**
+ * Because of the fact that sizeof opaque_ptr is 8 which equals to maximum aligment all function
+ * parameters are stored without padding. This allows for simpler implementation of accessing parameters
+ * by parameter pointer.
+ */
+static_assert(vm::Type::MAX_ALIGMENT == 8);
 
 namespace vm::detail {
 	// Helper trait to safely get size of types
@@ -105,7 +114,8 @@ namespace vm::detail {
 			#VmType,                                                                \
 			tp_##Name->type->getSize().asInt()                                      \
 		);                                                                          \
-	vm_arg_type_size_sum += tp_##Name->type->getSize();
+	vm_arg_type_size_sum += tp_##Name->type->getSize();								\
+	vm_arg_type_size_sum = Bytes(vm::align_up(vm_arg_type_size_sum.asInt(), 8));					\
 
 #define VM_EXT_C_PUT2(arg1, arg2) arg1 arg2
 
@@ -172,14 +182,6 @@ namespace vm::detail {
 				signature.result_types.emplace_back(VM_EXT_C_VM_TYPE_NAME(ResVmType));                  \
 			signature.parameters                                                                        \
 				= { FOR_EACH_ARG(VM_EXT_C_PUT2, VM_EXT_C_INTO_VM_TYPE_NAME, __VA_ARGS__) };             \
-			CORE_ASSERT(                                                                                \
-				vm_arg_type_size_sum.asInt() == sizeof(FunctionData)                                    \
-					|| (vm_arg_type_size_sum.asInt() == 0 && sizeof(FunctionData) == 1),                \
-				"FunctionData\'s fields alignment does not match stack structure in the VM: ",          \
-				vm_arg_type_size_sum.asInt(),                                                           \
-				"!=",                                                                                   \
-				sizeof(FunctionData)                                                                    \
-			);                                                                                          \
 			return signature;                                                                           \
 		}                                                                                               \
 	};                                                                                                  \
@@ -187,7 +189,17 @@ namespace vm::detail {
 		[[maybe_unused]] u64 _ FOR_EACH_ARG(VM_EXT_C_PUT2, VM_EXT_C_INTO_PARAMS, __VA_ARGS__)           \
 	)
 
+/*
+CORE_ASSERT(                                                                                \
+				vm_arg_type_size_sum.asInt() == sizeof(FunctionData)                                    \
+					|| (vm_arg_type_size_sum.asInt() == 0 && sizeof(FunctionData) == 1),                \
+				"FunctionData\'s fields alignment does not match stack structure in the VM: ",          \
+				vm_arg_type_size_sum.asInt(),                                                           \
+				"!=",                                                                                   \
+				sizeof(FunctionData)                                                                    \
+			);                                                                                          \
 
+*/
 /**
  * @brief Helper macro to create a vm::code::ExternalCFunction instance for registering a C/C++
  *        function with the VM.

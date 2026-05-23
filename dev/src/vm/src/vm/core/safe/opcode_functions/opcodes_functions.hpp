@@ -100,10 +100,11 @@ namespace vm {
 		 *
 		 * After this function:
 		 * `instr` should be pointer to the instruction in the new function. arg0 of this
-		 * instruction should be first free byte of the stack. `frame` should be pointer to the next
-		 * frame, `local_stack` should be pointer to the local stack of the new function. Old values
-		 * of `instr` nad `local_stack` should be saved on the frame of the caller.
-		 * @param number_of_exts - the number of exts after instruction. instr will be increased by
+		 * instruction should be first free byte of the stack,
+		 * `frame` should be pointer to the next frame,
+		 * `local_stack` should be pointer to the local stack of the new function. 
+		 * Old values of `instr` and `local_stack` should be saved on the frame of the caller.
+		 * `number_of_exts` should be the number of exts after instruction. instr will be increased by
 		 * that number + 1.
 		 * @note The function has to be inlined since it's used by the `call_func` and
 		 * `virtual_call` opcodes and breaks tailcalling of opcode function if not inlined.
@@ -198,6 +199,7 @@ namespace vm {
 			auto block = thread.process_memory.allocateDummy(type, local_stack + instr->arg0);
 			thread.process_memory.increaseBlockRefcount(block
 			);  // so that nobody can delete our block
+
 			*frame->local_block_ref_stack_end = block.get();
 			frame->local_block_ref_stack_end += 1;
 		}
