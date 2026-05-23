@@ -33,7 +33,9 @@ namespace compiler::backend_vm::internal {
 		// output = arg1 OP arg2;
 
 		auto is_different_from_arg = [](const DVMPlace& place, const DVMValue& arg) -> bool {
-			return place.isDirect() and !(DVMValue{ place } == arg);
+			// We keep place.isDirect() check here as well, even though it's present in the condition below,
+			// as this is logically needed, to ensure that place is different from arg.
+			return place.isDirect() && !(DVMValue{ place } == arg);
 		};
 
 		if (op.dest && op.dest->isDirect() && is_different_from_arg(*op.dest, op.lhs)
