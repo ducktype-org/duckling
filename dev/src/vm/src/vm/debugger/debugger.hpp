@@ -106,5 +106,10 @@ namespace vm::debugger {
 		 * @brief Resumes the VM
 		 */
 		std::expected<void, api::ApiError> resume();
+
+		/**
+		 * @brief Returns current position
+		 */
+		std::expected<api::response::CodePosition, api::ApiError> getCurrentPosition();
 	};
 }
