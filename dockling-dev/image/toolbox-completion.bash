@@ -30,7 +30,7 @@ _toolbox_help_file() {
 
     # cache miss → generate help once
     if [[ ! -s "$cache_file" ]]; then
-        toolbox "$cmd" --help 2>/dev/null > "$cache_file" || return 0
+        toolbox "$cmd" --help 2>/dev/null > "$cache_file" || return 1
     fi
 
     printf '%s\n' "$cache_file"
@@ -46,6 +46,7 @@ _toolbox_commands() {
         in_cmds && /^[[:space:]]+[a-zA-Z0-9-]+/ {print $1}
         in_cmds && NF==0 {in_cmds=0}
     '
+    echo "--help"
 }
 
 
@@ -60,7 +61,7 @@ _toolbox_option_rows() {
     local cmd="$1"
     local help_file
 
-    help_file="$(_toolbox_help_file "$cmd")" || return 0
+    help_file="$(_toolbox_help_file "$cmd")" || return 1
 
     awk '
         # helper: trim whitespace
