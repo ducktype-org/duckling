@@ -5,10 +5,16 @@
 #include <vector>
 
 namespace compiler::repl::replxx_helpers {
-	/// Extract a word (identifier-like) ending at position \p pos in \p input.
+	/**
+	 * Extract a word (identifier-like) ending at position \p pos in \p input.
+	 * This is used, when we are at position pos and we want to extract a word
+	 * that ends on this position.
+	 */
 	std::string extractWordEndingAt(const std::string& input, size_t pos);
 
-	/// Extract all identifier-like tokens from \p text.
+	/**
+	 * Extract all identifier-like tokens from \p text.
+	 */
 	std::vector<std::string> tokenizeIdentifiers(const std::string& text);
 
 	/**
@@ -22,6 +28,10 @@ namespace compiler::repl::replxx_helpers {
 	 * is represented by exactly 1 byte.
 	 * Single-byte characters are kept as-is, while multi-byte characters
 	 * are replaced by a specified constant byte.
+	 * This is needed because replxx highlighting callback gets as input array of bytes
+	 * of the text and array of colors for characters to be printed. And it can happen
+	 * that user paste some strange characters that occupy more than 1 byte. And this
+	 * function converts input bytes into array of chars that map 1-1 with colors.
 	 *
 	 * \param input - a UTF-8 encoded string.
 	 * \param constant_byte - the character to substitute for multi-byte code points.
