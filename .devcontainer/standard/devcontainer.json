@@ -1,6 +1,15 @@
 {
-	"name": "Dockling Dev",
-	"image": "dockling-dev",
+	"name": "Dockling Dev - Standard",
+	// "image": "dockling-dev",
+	"build": {
+		"dockerfile": "../../dockling-dev/image/Dockerfile",
+		"context": "../../dockling-dev/image",
+		"args": {
+			"UID": "${localEnv:UID:1000}",
+			"GID": "${localEnv:UID:1000}",
+			"DEFAULT_USER": "ubuntu"
+		}
+	},
 
 	"workspaceMount": "source=${localWorkspaceFolder},target=/duckling,type=bind,consistency=cached",
 	"workspaceFolder": "/duckling",

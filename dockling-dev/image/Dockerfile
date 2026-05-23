@@ -30,6 +30,7 @@ RUN apt-get update -y && \
     clang++-19 \
     clang-format-19 \
     clang-tidy-19 \
+    clangd-19 \
     # Linker used by gh runners
     mold \
     # Build tools
@@ -48,6 +49,18 @@ RUN apt-get update -y && \
     # Libraries
     libzstd-dev \
     zlib1g-dev \
+    # Additional
+    jq \
+    build-essential \
+    libssl-dev \
+    libffi-dev \
+    libicu74 \
+    valgrind \
+    libsqlite3-dev \
+    libgfortran5 \
+    software-properties-common \
+    rsync \
+    nlohmann-json3-dev \
     && \
     # Make g++-14 default
     update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-14 100 && \
@@ -56,11 +69,12 @@ RUN apt-get update -y && \
     rm -rf /var/lib/apt/lists/*
 
 RUN echo 'source /usr/share/bash-completion/bash_completion' >> /etc/bash.bashrc
-COPY toolbox-completion.bash /etc/bash_completion.d/toolbox
+COPY bash_completion/* /etc/bash_completion.d/
+COPY bin/* /bin/
 
 # RUN echo 'PS1="\[\e[1;32m\]\u@\h\[\e[0m\]:\[\e[1;34m\]\w\[\e[0m\]\$ "' >> /etc/bash.bashrc
-# RUN echo 'PS1="\[\e[1;33m\]\$(git branch --show-current 2>/dev/null)\[\e[0m\] \[\e[1;34m\]\w\[\e[0m\] \$ "' >> /etc/bash.bashrc
-RUN echo 'PS1="\[\e[1;33m\]\$(sed '\''s/ref: refs\/heads\///'\'' /duckling/.git/HEAD 2>/dev/null)\[\e[0m\] \[\e[1;34m\]\w\[\e[0m\] \$ "' >> /etc/bash.bashrc
+# RUN echo 'PS1="\[\e[1;92m\]\$(git branch --show-current 2>/dev/null)\[\e[0m\] \[\e[1;34m\]\w\[\e[0m\] \$ "' >> /etc/bash.bashrc
+RUN echo 'PS1="\[\e[1;92m\]\$(sed '\''s/ref: refs\/heads\///'\'' /duckling/.git/HEAD 2>/dev/null)\[\e[0m\] \[\e[1;34m\]\w\[\e[0m\] \$ "' >> /etc/bash.bashrc
 RUN echo 'alias grep="grep --color=auto"' >> /etc/bash.bashrc
 RUN echo 'alias ls="ls --color=auto"' >> /etc/bash.bashrc
 
@@ -68,7 +82,7 @@ SHELL ["/bin/bash", "-c"]
 WORKDIR /duckling
 
 ENV LLVM_DIR=/usr/lib/llvm-19
-ENV PATH=/duckling/dockling-dev/bin:/usr/lib/llvm-19/bin:$PATH
+ENV PATH=/usr/lib/llvm-19/bin:$PATH
 ENV HOME=/home/ubuntu
 
 ARG UID=1000

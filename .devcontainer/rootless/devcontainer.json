@@ -1,0 +1,25 @@
+{
+	"name": "Dockling Dev - Rootless",
+	// "image": "dockling-dev",
+	"build": {
+		"dockerfile": "../../dockling-dev/image/Dockerfile",
+		"context": "../../dockling-dev/image",
+		"args": {
+			"UID": "${localEnv:UID:1000}",
+			"GID": "${localEnv:UID:1000}",
+			"DEFAULT_USER": "root"
+		}
+	},
+
+	"workspaceMount": "source=${localWorkspaceFolder},target=/duckling,type=bind,consistency=cached",
+	"workspaceFolder": "/duckling",
+
+	"runArgs": [ "--cap-add=SYS_PTRACE", "--hostname", "dockling"],
+
+	"initializeCommand": "mkdir -p ${localWorkspaceFolder}/dockling-dev/home",
+
+	"mounts": [
+		"source=${localWorkspaceFolder}/dockling-dev/home/,target=/home/ubuntu/,type=bind",
+		"source=${localEnv:HOME}/.ssh,target=/home/ubuntu/.ssh,type=bind"
+	]
+}
