@@ -5,9 +5,6 @@
 	"workspaceMount": "source=${localWorkspaceFolder},target=/duckling,type=bind,consistency=cached",
 	"workspaceFolder": "/duckling",
 
-	"remoteUser": "ubuntu",
-	"updateRemoteUserUID": true,
-
 	"runArgs": [ "--cap-add=SYS_PTRACE", "--hostname", "dockling"],
 
 	"initializeCommand": "mkdir -p ${localWorkspaceFolder}/dockling-dev/home_ubuntu",
