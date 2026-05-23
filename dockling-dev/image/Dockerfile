@@ -16,6 +16,7 @@ RUN apt-get update -y && \
     xxd \
     ssh \
     gh \
+    less \
     # Python
     python3 \
     python3-pip \
