@@ -33,8 +33,8 @@ namespace compiler::backend_vm::internal {
 		// output = arg1 OP arg2;
 
 		auto is_different_from_arg = [](const DVMPlace& place, const DVMValue& arg) -> bool {
-			// We keep place.isDirect() check here as well, even though it's present in the condition below,
-			// as this is logically needed, to ensure that place is different from arg.
+			// We keep place.isDirect() check here as well, even though it's present in the condition
+			// below, as this is logically needed, to ensure that place is different from arg.
 			return place.isDirect() && !(DVMValue{ place } == arg);
 		};
 
@@ -48,8 +48,8 @@ namespace compiler::backend_vm::internal {
 			ctx->pushInstruction({ op.op, *op.dest, op.rhs });
 		} else {
 			// If the output is accessed through a pointer, or doesn't exist, we perform operations
-// If the output is accessed through a pointer or the output and the argument operate are the same place, or doesn't exist, we perform operations
-// on the temporary.
+			// If the output is accessed through a pointer or the output and the argument operate
+			// are the same place, or doesn't exist, we perform operations on the temporary.
 			auto tmp = ctx->forceToPlace(op.lhs, "bin_tmp");
 			ctx->pushInstruction({ op.op, tmp, op.rhs });
 			ctx->maybeStoreResult(op.dest, { tmp });
