@@ -58,6 +58,12 @@ RUN apt-get update -y && \
 RUN echo 'source /usr/share/bash-completion/bash_completion' >> /etc/bash.bashrc
 COPY toolbox-completion.bash /etc/bash_completion.d/toolbox
 
+# RUN echo 'PS1="\[\e[1;32m\]\u@\h\[\e[0m\]:\[\e[1;34m\]\w\[\e[0m\]\$ "' >> /etc/bash.bashrc
+# RUN echo 'PS1="\[\e[1;33m\]\$(git branch --show-current 2>/dev/null)\[\e[0m\] \[\e[1;34m\]\w\[\e[0m\] \$ "' >> /etc/bash.bashrc
+RUN echo 'PS1="\[\e[1;33m\]\$(sed '\''s/ref: refs\/heads\///'\'' /duckling/.git/HEAD 2>/dev/null)\[\e[0m\] \[\e[1;34m\]\w\[\e[0m\] \$ "' >> /etc/bash.bashrc
+RUN echo 'alias grep="grep --color=auto"' >> /etc/bash.bashrc
+RUN echo 'alias ls="ls --color=auto"' >> /etc/bash.bashrc
+
 SHELL ["/bin/bash", "-c"]
 WORKDIR /duckling
 
