@@ -49,15 +49,8 @@ namespace vm::debugger::debug_adapter {
 			  this->sendEvent("terminated", {});
 		  }),
 
-		  error_listener([this](const std::string& err) {
-			  std::string message = "Error: " + err + "\n";
-
-			  this->sendEvent("output", { { "category", "stderr" }, { "output", message } });
-		  }),
-
 		  debugger() {
 		debugger.attachOnStatusChangedListener(status_change_listener);
-		debugger.attachOnErrorListener(error_listener);
 		debugger.attachOnExecutionCompletedListener(completion_listener);
 	}
 

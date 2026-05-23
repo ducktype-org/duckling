@@ -28,6 +28,7 @@ recorded_facts = set()
 while True:
     raw_msg = read_dap_message(vm_process.stdout)
     if raw_msg is None:
+        print("Fail")
         break
 
     try:
@@ -53,7 +54,18 @@ while True:
         sys.stderr.flush()
         break
 
-vm_process.stdin.write(format_dap('{"seq":4,"type":"request","command":"continue","arguments":{}}'))
+vm_process.stdin.write(format_dap('{"seq":4,"type":"request","command":"pause","arguments":{}}'))
+
+while True:
+    raw_msg = read_dap_message(vm_process.stdout)
+
+    if raw_msg is None:
+        print("Fail")
+        break
+    if "Failed" in raw_msg:
+        break
+
+vm_process.stdin.write(format_dap('{"seq":5,"type":"request","command":"continue","arguments":{}}'))
 
 expected_continue_facts = {
     "continue_response_success",
@@ -65,15 +77,15 @@ recorded_facts.clear()
 while True:
     raw_msg = read_dap_message(vm_process.stdout)
     if raw_msg is None:
+        print("Fail")
         break
-
     try:
         msg = json.loads(raw_msg)
     except json.JSONDecodeError:
         continue
 
     # Fact A: Received successful response for the continue request
-    if msg.get("type") == "response" and msg.get("request_seq") == 4 and msg.get("success") is True:
+    if msg.get("type") == "response" and msg.get("request_seq") == 5 and msg.get("success") is True:
         recorded_facts.add("continue_response_success")
 
     # Fact B: Your status_change_listener printed "Running" to the console again
@@ -84,6 +96,17 @@ while True:
     if expected_continue_facts.issubset(recorded_facts):
         sys.stderr.write("--> SUCCESS: VM successfully resumed execution!\n")
         sys.stderr.flush()
+        break
+
+vm_process.stdin.write(format_dap('{"seq":6,"type":"request","command":"continue","arguments":{}}'))
+
+while True:
+    raw_msg = read_dap_message(vm_process.stdout)
+    if raw_msg is None:
+        print("Fail")
+        break
+
+    if "Failed" in raw_msg:
         break
 
 print("SUCCESS")
