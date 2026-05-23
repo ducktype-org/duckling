@@ -5,7 +5,7 @@ Tests:
     Description: can sync a new project
     Cases:
       sync:
-        test_cmd: -C foo sync
+        test_cmd: duck -C foo sync
         Output:
           String: 'info: successfully synchronized venv \`foo\`\n'
         
