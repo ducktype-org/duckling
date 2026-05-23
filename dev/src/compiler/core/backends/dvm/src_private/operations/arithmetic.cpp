@@ -31,8 +31,13 @@ namespace compiler::backend_vm::internal {
 	void InstructionLowerer::lower(const BinaryOperation& op) {
 		// In this case we assume we have a very general quadruple of the form:
 		// output = arg1 OP arg2;
-		if (op.dest && op.dest->isDirect()) {
-			// If instruction is of the form: a = b OP c, then
+
+		auto is_different_from_arg = [](const DVMPlace& place, const DVMValue& arg) {
+			return place.isDirect() and !(DVMValue{ place } == arg);
+		};
+		
+		if (op.dest && op.dest->isDirect() && is_different_from_arg(*op.dest, op.lhs) && is_different_from_arg(*op.dest, op.rhs)) {
+			// If instruction is of the form: a = b OP c and a is different then b and c, then
 			// we transform it to:
 			// a = b;
 			// a = a OP c;
