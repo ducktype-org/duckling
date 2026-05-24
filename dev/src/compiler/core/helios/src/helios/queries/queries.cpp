@@ -71,36 +71,36 @@ namespace compiler::helios {
 			std::set<SymID>                additional_ctors;
 			std::set<base::StrID>          processed_mangled_names;
 
-			auto                           register_ctor_if_needed = [&](SymID sym) {
-                const auto& symbol_type = ctx.query<QueryTypeOfSymbol>(sym)->valueOrThrow();
-                const auto& type = symbol_type.getType();
+			auto register_ctor_if_needed = [&](SymID sym) {
+				const auto& symbol_type = ctx.query<QueryTypeOfSymbol>(sym)->valueOrThrow();
+				const auto& type        = symbol_type.getType();
 
-                // @TODO: #2509 Handle nested tuples
-                if (type.getKind() == tsh::Kind::Tuple) {
-                    auto        tuple_type = type.as<tsh::TupleAbstractType>();
-                    const auto& tuple_ctor
-                        = ctx.query<defgen::QueryTuplePackConstructor>(tuple_type)->valueOrThrow();
-                    additional_ctors.insert(tuple_ctor.declaration->original_symbol);
-                    return;
-                }
+				// @TODO: #2509 Handle nested tuples
+				if (type.getKind() == tsh::Kind::Tuple) {
+					auto        tuple_type = type.as<tsh::TupleAbstractType>();
+					const auto& tuple_ctor
+						= ctx.query<defgen::QueryTuplePackConstructor>(tuple_type)->valueOrThrow();
+					additional_ctors.insert(tuple_ctor.declaration->original_symbol);
+					return;
+				}
 
-                // Don't insert any constructors if a type is trivially zero-initializable or not
-                // default constructible.
-                if (symbol_type.isTriviallyZeroInitializable(ctx)) return;
-                if (!symbol_type.isDefaultConstructible(ctx)) return;
+				// Don't insert any constructors if a type is trivially zero-initializable or not
+				// default constructible.
+				if (symbol_type.isTriviallyZeroInitializable(ctx)) return;
+				if (!symbol_type.isDefaultConstructible(ctx)) return;
 
-                if (type.getKind() == tsh::Kind::StaticArray) {
-                    auto        arr_type = type.as<tsh::StaticArrayAbstractType>();
-                    const auto& arr_ctor
-                        = ctx.query<defgen::QueryDefaultStaticArrayConstructor>(arr_type)
-                              ->valueOrThrow();
-                    default_ctors.insert(arr_ctor.declaration->original_symbol);
-                } else if (type.getKind() == tsh::Kind::Class) {
-                    auto        class_type = type.as<tsh::ClassAbstractType>();
-                    const auto& class_ctor
-                        = ctx.query<defgen::QueryDefaultClassConstructor>(class_type)->valueOrThrow();
-                    default_ctors.insert(class_ctor.declaration->original_symbol);
-                }
+				if (type.getKind() == tsh::Kind::StaticArray) {
+					auto        arr_type = type.as<tsh::StaticArrayAbstractType>();
+					const auto& arr_ctor
+						= ctx.query<defgen::QueryDefaultStaticArrayConstructor>(arr_type)
+					          ->valueOrThrow();
+					default_ctors.insert(arr_ctor.declaration->original_symbol);
+				} else if (type.getKind() == tsh::Kind::Class) {
+					auto        class_type = type.as<tsh::ClassAbstractType>();
+					const auto& class_ctor
+						= ctx.query<defgen::QueryDefaultClassConstructor>(class_type)->valueOrThrow();
+					default_ctors.insert(class_ctor.declaration->original_symbol);
+				}
 			};
 			auto register_ctor_if_needed_no_interrupt
 				= [&run_no_interrupt, &register_ctor_if_needed](SymID sym) {
