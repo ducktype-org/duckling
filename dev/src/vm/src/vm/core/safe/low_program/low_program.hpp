@@ -248,12 +248,13 @@ namespace vm::low {
 		 * @returns Original opcode from provided location on success and `nullopt` if location does
 		 * not exist.
 		 */
+		template<typename FID>
 		base::Optional<MicroOpcode> replaceOpcode(
-			usize function_id, usize instruction_index, MicroOpcode opcode
+			FID function_id, usize instruction_index, MicroOpcode opcode
 		) {
 			if (!functions.contains(function_id)) return std::nullopt;
 
-			auto& microbytecode = functions[function_id].bc;
+			auto& microbytecode = functions.at(function_id)->bc;
 			if (microbytecode.size() <= instruction_index) return std::nullopt;
 
 			auto&       instruction     = microbytecode[instruction_index];
