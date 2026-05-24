@@ -32,11 +32,11 @@ class HeliosErrorsTests: public tester::TestSuite {
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(testDuplicatedFunctionDeclaration);
-		/*TESTER_ADD_TEST(testErrorLogging);
+		TESTER_ADD_TEST(testErrorLogging);
 		TESTER_ADD_TEST(testErrorLoggingExpandStatements);
 		TESTER_ADD_TEST(testErrorLoggingCyclicErrors);
 		TESTER_ADD_TEST(testErrorBadExpr);
-		TESTER_ADD_TEST(testDiagnosticErrorsCorrectness);*/
+		TESTER_ADD_TEST(testDiagnosticErrorsCorrectness);
 	}
 
 private:
