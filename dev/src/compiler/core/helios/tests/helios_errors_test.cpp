@@ -52,8 +52,8 @@ private:
 	 * @TODO: #2213 Add PST errors handling here.
 	 *
 	 * @param module_content The content of the module main source file.
-	 * @param present_phrases List of phrases that should be present in the logged errors in order.
 	 * @param logged_msg_count Expected number of logged error messages.
+	 * @param present_phrases List of phrases that should be present in the logged errors in order.
 	 */
 	void checkForErrorOnCompileModule(
 		std::string_view                     module_content,
@@ -1314,7 +1314,7 @@ private:
                 fun a() -> i64 = { return 1; }
                 fun a() -> i64 = { return 2; }
             )",
-			{ "symbol 'a' is already defined" },
+			{ "Symbol 'a' is already defined." },
 			1
 		);
 	}

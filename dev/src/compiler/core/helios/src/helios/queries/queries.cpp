@@ -1,6 +1,5 @@
 #include "queries.hpp"
 
-#include <diagnostic_interactive/duplicated_definition.hpp>
 #include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/hout/elements.hpp>
@@ -8,6 +7,7 @@
 #include <helios/mangler/mangler.hpp>
 #include <helios/queries/function_queries.hpp>
 #include <helios/queries/global_data_queries.hpp>
+#include <helios_private/errors/duplicated_definition.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>

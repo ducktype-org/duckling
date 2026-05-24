@@ -10,7 +10,6 @@ add_library(DiagnosticInteractive STATIC
         src/diagnostic_interactive/stable_position.cpp
         src/diagnostic_interactive/placeholder.cpp
         src/diagnostic_interactive/module_flags/module_flags.cpp
-        src/diagnostic_interactive/duplicated_definition.cpp
 )
 make_module(DiagnosticInteractive USES  TerminalUI DiagnosticInteractiveCore Diagnostic Logger)
 

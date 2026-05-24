@@ -16,9 +16,9 @@ params:
     component_type: "text"
 
 header_message:
-  - "symbol '"
+  - "Symbol '"
   - param: "symbol_name"
-  - "' is already defined" 
+  - "' is already defined." 
 
 pointer_messages:
   cause:

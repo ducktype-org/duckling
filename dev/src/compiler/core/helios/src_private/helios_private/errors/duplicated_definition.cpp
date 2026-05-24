@@ -5,12 +5,12 @@
 namespace dia_int {
 
 	DuplicatedDefinitionError::DuplicatedDefinitionError(
-		const std::string&                      symbol_name,
+		std::string_view                        symbol_name,
 		base::Optional<dia_int::StablePosition> source_position,
-		const std::string&                      pointer_message_content
+		std::string_view                        pointer_message_content
 	):
 		  MessageBase() {
-		addArgument<TextArgument>("symbol_name", symbol_name);
+		addArgument<TextArgument>("symbol_name", std::string(symbol_name));
 
 		if_opt_some(source_position, pos) {
 			addArgument<CodeArgument>("code", pos);
@@ -18,7 +18,9 @@ namespace dia_int {
 			addPointerMessage("cause", pos);
 		}
 
-		addArgument<TextArgument>("pointer_message_content", pointer_message_content);
+		addArgument<TextArgument>(
+            "pointer_message_content", std::string(pointer_message_content)
+        );
 	}
 
 }

@@ -22,9 +22,9 @@ namespace dia_int {
 
 	public:
 		DuplicatedDefinitionError(
-			const std::string&                      symbol_name,
+			std::string_view                        symbol_name,
 			base::Optional<dia_int::StablePosition> source_position,
-			const std::string&                      pointer_message_content = "here"
+			std::string_view                        pointer_message_content = "here"
 		);
 	};
 
