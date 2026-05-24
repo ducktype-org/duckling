@@ -93,8 +93,7 @@ namespace vm {
 		CORE_ASSERT(state == State::Declared, "Bad type define");
 		state     = State::Defined;
 		kind_type = Kind::FixedSizeTable;
-
-		kind = kind::FixedSizeTable{ .inner_type = inner, .element_count = element_count };
+		kind      = kind::FixedSizeTable{ .inner_type = inner, .element_count = element_count };
 	}
 
 	void Type::defineDynamicTable(TypeRef inner) {
