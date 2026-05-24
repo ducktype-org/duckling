@@ -103,6 +103,19 @@ namespace vm {
 		std::byte* local_stack = frame->local_stack;
 
 		low::MicroOpcode opcode = getInstructionOpcode(*instr);
+		if (opcode == low::MicroOpcode::breakpoint) {
+			const auto* program_copy
+				= dynamic_cast<const low::LowVMProgramCopy*>(process_program.get());
+			CORE_ASSERT(program_copy, "Breakpoints should be only in LowVMProgramCopy.");
+
+			auto original_instr
+				= program_copy->getOriginalProgram()
+			          ->getFunctions()
+			          .at(frame->current_function->name)
+			          ->bc[static_cast<size_t>(frame->instr - &frame->current_function->bc[0])];
+
+			opcode = getInstructionOpcode(original_instr);
+		}
 
 		// Execute the instruction by calling the debug opcode function.
 		OpFuns::DEBUG_OPFUNS.at(std::to_underlying(opcode))(instr, local_stack, frame, *this);
