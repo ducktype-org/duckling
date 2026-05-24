@@ -30,23 +30,27 @@
 #include <string>
 #include <vector>
 
+#include <iostream>
+
 namespace vm {
 
-#if defined(ENABLE_JIT) and not defined(BUILD_TYPE_RELEASE)
-	// When testing JIT, compile all calls from the start function. Specifically main.
-	#define MAKE_BYTECODE_INSTRUCTION(OPCODE_NAME, ARG_0, ARG_1)         \
-		makeLowInstruction(                                              \
-			low::MicroOpcode::OPCODE_NAME == low::MicroOpcode::call_func \
-				? low::MicroOpcode::jit_call_entrypoint                  \
-				: low::MicroOpcode::OPCODE_NAME,                         \
-			ARG_0,                                                       \
-			ARG_1                                                        \
-		)
+// #if defined(ENABLE_JIT) and not defined(BUILD_TYPE_RELEASE)
+// 	// When testing JIT, compile all calls from the start function. Specifically main.
+// 	#define MAKE_BYTECODE_INSTRUCTION(OPCODE_NAME, ARG_0, ARG_1)         \
+// 		makeLowInstruction(                                              \
+// 			low::MicroOpcode::OPCODE_NAME == low::MicroOpcode::call_func \
+// 				? low::MicroOpcode::jit_call_entrypoint                  \
+// 				: low::MicroOpcode::OPCODE_NAME,                         \
+// 			ARG_0,                                                       \
+// 			ARG_1                                                        \
+// 		)
 
-#else
-	#define MAKE_BYTECODE_INSTRUCTION(OPCODE_NAME, ARG_0, ARG_1) \
-		makeLowInstruction(low::MicroOpcode::OPCODE_NAME, ARG_0, ARG_1)
-#endif
+// #else
+// 	#define MAKE_BYTECODE_INSTRUCTION(OPCODE_NAME, ARG_0, ARG_1) \
+// 		makeLowInstruction(low::MicroOpcode::OPCODE_NAME, ARG_0, ARG_1)
+// #endif
+#define MAKE_BYTECODE_INSTRUCTION(OPCODE_NAME, ARG_0, ARG_1) \
+	    makeLowInstruction(low::MicroOpcode::OPCODE_NAME, ARG_0, ARG_1)
 
 	SafeVMThread::SafeVMThread(api::ThreadID thread_id, SafeVMProcess& process):
 		  IVMThread(thread_id, process),
@@ -432,6 +436,7 @@ namespace vm {
 			switch (static_cast<low::MicroOpcode>(instr->nontc_opcode)) {
 	#define HANDLE_MICRO_INSTR(opcode_name)                                                         \
 	case low::MicroOpcode::opcode_name: {                                                           \
+		std::cout << "Interpreter executing opcode: " << #opcode_name << "\n";\
 		vm::OpFuns::op_##opcode_name(instr, local_stack, frame, thread);                            \
 		if constexpr (::vm::ENABLE_VM_DETAIL_LOGGING)                                               \
 			CORE_DEV_LOG(                                                                           \

@@ -395,7 +395,7 @@ DEF_MICRO_INSTR(jmpIfNot_label, vm::low::opargs::Label)
 DEF_MICRO_INSTR(call_func, vm::low::opargs::FunctionID)
 #ifdef ENABLE_JIT
 // call a function, with the possibility to compile it later
-DEF_MICRO_INSTR(jit_call_entrypoint, vm::low::opargs::FunctionID)
+DEF_MICRO_INSTR(jit_entrypoint)
 #endif
 DEF_MICRO_INSTR(call_builtinfunc, vm::low::opargs::BuiltinFunctionID)
 DEF_MICRO_INSTR(call_cfunc, vm::low::opargs::ExtCFunction)

@@ -53,6 +53,8 @@
 #include <cmath>
 #include <limits>
 
+#include <iostream>
+
 // jitable_interface.py depends on the instructions exact, fully-qualified names
 #ifdef DEBUG_OPCODES
 	#define OPCODE_NAME(name)   op_debug_##name
@@ -318,20 +320,23 @@ namespace vm {
 		FUNCTION_CONT(0);
 	}
 #ifdef ENABLE_JIT
-	RETURN_TYPE OpFuns::OPCODE_NAME(jit_call_entrypoint)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(jit_entrypoint)(FUNCTION_ARGS) {
 		{
 			auto& jit_data = thread.jit_data;
-			auto  func_id  = instr->arg0;
-			auto& func_obj = thread.process_program->getFunctions()[func_id];
+			auto& current_func_obj = *frame->current_function;
+			auto current_func_id = thread.process_program->getFunctions().idOf(current_func_obj.name).value();
+			//auto& func_obj = thread.process_program->getFunctions()[func_id];
 
 			// @TODO: #2126 manage the size when inserting new code
-			if (jit_data.size() <= func_id) jit_data.resize(2 * func_id + 2);
+			if (jit_data.size() <= current_func_id) jit_data.resize(2 * current_func_id + 2);
 
-			jit::JitFuncData& my_data = jit_data[func_id];
+			jit::JitFuncData& my_data = jit_data[current_func_id];
 
 			auto run_compiled = [&]() {
-				performFunctionCall(instr, local_stack, frame, thread, func_id);
+				// performFunctionCall(instr, local_stack, frame, thread, current_func_id);
+				std::cout << "Running compiled function " << current_func_obj.name.str() << "\n";
 				(*my_data.func_ptr)(&instr, &local_stack, &frame, &thread);
+				std::cout << "Returned from compiled function " << current_func_obj.name.str() << "\n";
 			};
 
 			if (my_data.func_ptr) {
@@ -340,10 +345,10 @@ namespace vm {
 			} else if (0 < my_data.until_compilation) {
 				// should be compiled later
 				--my_data.until_compilation;
-				performFunctionCall(instr, local_stack, frame, thread, func_id);
+				// performFunctionCall(instr, local_stack, frame, thread, current_func_id);
 			} else {
 				// should be compiled now
-				MRef<jit::JitOpFun> compiled = jit::compileLLVM(func_obj);
+				MRef<jit::JitOpFun> compiled = jit::compileLLVM(current_func_obj);
 
 				CORE_ASSERT(compiled, "Compiled function pointer shouldn't be nullptr");
 				my_data.func_ptr = compiled;

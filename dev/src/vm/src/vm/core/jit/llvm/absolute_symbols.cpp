@@ -23,7 +23,7 @@ void registerAbsoluteJITSymbols(llvm::orc::LLJIT& lljit) {
 		std::pair{ "jmp_label", &vm::OpFuns::op_debug_jmp_label },
 		std::pair{ "jmpIfNot_label", &vm::OpFuns::op_debug_jmpIfNot_label },
 		std::pair{ "jmpIf_label", &vm::OpFuns::op_debug_jmpIf_label },
-		std::pair{ "jit_call_entrypoint", &vm::OpFuns::op_debug_jit_call_entrypoint },
+		std::pair{ "jit_entrypoint", &vm::OpFuns::op_debug_jit_entrypoint },
 		std::pair{ "call_func", &vm::OpFuns::op_debug_call_func },
 		std::pair{ "call_builtinfunc", &vm::OpFuns::op_debug_call_builtinfunc },
 		std::pair{ "virtual_call_pptr_method", &vm::OpFuns::op_debug_virtual_call_pptr_method },
