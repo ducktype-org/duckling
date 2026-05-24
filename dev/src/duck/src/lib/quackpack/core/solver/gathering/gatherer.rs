@@ -102,6 +102,8 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
 
     /// Helper for [`Gatherer::explore()`], creates a dummy [`ManifestsRequest`] for the root package to update the state
     /// and returns a dummy [`FetchResponse`], to create a starting point for the [`Gatherer::explore()`] function.
+    ///
+    /// Note: We assume that `root_features` are expanded.
     #[tracing::instrument(skip_all, fields(root_path))]
     fn fetch_root(
         &self,

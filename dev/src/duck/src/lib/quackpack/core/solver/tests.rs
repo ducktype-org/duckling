@@ -377,7 +377,7 @@ dependencies:
 /// Only *a* in version 2.0.0 has that feature and should be chosen to the new freeze.
 ///
 /// Note:
-/// [`SolverMode::Merciful`] is used in this test.
+/// [`SolverMode::supress_foreign_manifests_errors`] is set to true in this test.
 fn no_longer_working_dependency() {
     let (ctx, _root) = setup_duck_ctx();
     let server = create_mock_server();

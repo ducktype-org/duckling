@@ -137,6 +137,7 @@ impl<'a> SolverEngine<'a> {
             self.model
                 .require_package_with_feature(&main_pkg.0, feature)?;
         }
+        self.force_features_expansion()?;
         self.model.solve()
     }
 
@@ -301,6 +302,36 @@ impl<'a> SolverEngine<'a> {
             }
             self.model
                 .require_satisfying_dep_feature(edge, parent_feature, forced)?;
+        }
+        Ok(())
+    }
+
+    /// For all not previous-freeze present features adds constraints for features expansion
+    /// (the presence of expandable feature forces the presence of expanded feature).
+    /// Note: The constraints are added only if the feature expands to something more than itself.
+    fn force_features_expansion(&mut self) -> QuackResult<()> {
+        for (pkg, features) in self.input.all_possible_features.iter() {
+            for feature in features {
+                if let Some(preexisting) = self.input.preexisting_features.get(pkg)
+                    && preexisting.contains(feature)
+                {
+                    continue;
+                }
+                let manifest = self
+                    .input
+                    .gathered_manifests
+                    .get(pkg)
+                    .context_internal("Package without manifest")?;
+                let mut expanded = manifest
+                    .features()
+                    .expand_features(once(*feature))
+                    .context_internal("No such feature")?;
+                expanded.remove(feature);
+                if !expanded.is_empty() {
+                    self.model
+                        .require_features_expansion(*pkg, *feature, expanded)?;
+                }
+            }
         }
         Ok(())
     }
@@ -880,5 +911,103 @@ features:
                     (exp_pkg_c, HashSet::from([FeatureName::new("xdd")]))
                 ])
         )
+    }
+
+    #[test]
+    /// Tests implication of form `a` requires `b` with `f`, which expands to `g`, with `a` required.
+    fn feature_expansion() {
+        let (_dir_a, path_a) = prepare_manifest(
+            r#"
+metadata:
+  name: a
+  version: '1'
+
+dependencies:
+  b:
+    version: '2'
+    features:
+    - f
+"#,
+        );
+        let (_dir_b, path_b) = prepare_manifest(
+            r#"
+metadata:
+  name: b
+  version: '2'
+
+features:
+  f: [g]
+  g: []
+"#,
+        );
+        let ctx = DuckContext::default();
+        let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
+        let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
+        let location_a = InternedLocation::new(Location::Registry {
+            url: Url::parse("http://localhost:9001").unwrap(),
+            real_name: StrId::from("a"),
+        });
+        let location_b = InternedLocation::new(Location::Registry {
+            url: Url::parse("http://localhost:9001").unwrap(),
+            real_name: StrId::from("b"),
+        });
+        let exp_location_a = ExpandedLocation::Registry {
+            url: Url::parse("http://localhost:9001").unwrap(),
+            real_name: StrId::from("a"),
+        }
+        .into();
+        let exp_location_b = ExpandedLocation::Registry {
+            url: Url::parse("http://localhost:9001").unwrap(),
+            real_name: StrId::from("b"),
+        }
+        .into();
+        let exp_pkg_a = ExpandedPackage {
+            location: exp_location_a,
+            version: Some(Version::new(1, 0, 0)),
+        };
+        let exp_pkg_b = ExpandedPackage {
+            location: exp_location_b,
+            version: Some(Version::new(2, 0, 0)),
+        };
+        let gathered_manifests = HashMap::from([
+            (exp_pkg_a, Box::new(manifest_a.manifest().clone())),
+            (exp_pkg_b, Box::new(manifest_b.manifest().clone())),
+        ]);
+        let all_possible_features = HashMap::from([
+            (exp_pkg_a, HashSet::new()),
+            (exp_pkg_b, ["f".into(), "g".into()].into()),
+        ]);
+        let versions_for_location = HashMap::from([
+            (exp_location_a, HashSet::from([Some(Version::new(1, 0, 0))])),
+            (exp_location_b, HashSet::from([Some(Version::new(2, 0, 0))])),
+        ]);
+        let location_resolver =
+            HashMap::from([(location_a, exp_location_a), (location_b, exp_location_b)]);
+
+        let input = SolverInput {
+            gathered_manifests,
+            all_possible_features,
+            versions_for_location,
+            location_resolver,
+            preexisting_packages: HashSet::new(),
+            preexisting_features: HashMap::new(),
+            preexisting_dependencies: HashMap::new(),
+        };
+
+        let main_pkg = (exp_pkg_a, HashSet::new());
+        let output = SolverEngine::run_engine(input, &main_pkg).unwrap();
+        assert!(output.new_packages == HashSet::from([exp_pkg_a, exp_pkg_b]));
+        assert!(output.new_features == [(exp_pkg_b, ["f".into(), "g".into()].into()),].into());
+        assert!(
+            output.new_edges
+                == HashMap::from([(
+                    DependencyEdge {
+                        parent: exp_pkg_a,
+                        dependency_loc: exp_location_b,
+                        manifest_child_name: StrId::new("b"),
+                    },
+                    Some(Version::new(2, 0, 0))
+                )])
+        );
     }
 }

@@ -69,6 +69,10 @@ In such case, we have to choose a different realisation of the dependency than `
 n * var(P, F_i) - var(Q, G_1) - ... - var(Q, G_n) <= 0
 ```
 
+### Features expansion
+For every package `P` and every its feature `F` such that either `P` or `F` is not present in the previous freeze,
+if `F` expands to some features `F_1`, ..., `F_n` we add that `F` implies `F_1`, ..., `F_n` to the linear program.
+
 Outcome
 -------
 The [``solver engine``](solver_engine.rs) yields which new packages (outside of `Prev`) have to be added, with what features (and what features to add to `Prev`) and what new dependencies have been realised and how.
