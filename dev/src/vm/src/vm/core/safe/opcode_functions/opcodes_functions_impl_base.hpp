@@ -321,7 +321,7 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(jit_call_entrypoint)(FUNCTION_ARGS) {
 		{
 			auto& jit_data = thread.jit_data;
-			auto  func_id  = instr->arg0;
+			auto  func_id  = instr->arg1;
 			auto& func_obj = thread.process_program->getFunctions()[func_id];
 
 			// @TODO: #2126 manage the size when inserting new code
