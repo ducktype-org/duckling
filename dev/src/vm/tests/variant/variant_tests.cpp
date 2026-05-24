@@ -109,23 +109,28 @@ private:
 			ASSERT_EQUAL(value.value().size(), 1);
 			const auto vm_value = value.value().at(0);
 			switch (type_tag_bits) {
-			case 8:
+			case 8: {
 				// Using uint8_t, because u8 is not integral
 				ASSERT_EQUAL_PRINT(
 					vm_value->readBytes<uint8_t>(), base::safeIntConv<uint8_t>(wanted_type_tag_value)
 				);
+				auto type_tag
+					= static_cast<usize>(vm::safeReadPointerBytes<uint8_t>(vm_value->getBytes(), 0));
+				ASSERT_EQUAL_PRINT(type_tag, wanted_type_tag_value);
 				break;
-			case 16:
+			}
+			case 16: {
 				ASSERT_EQUAL_PRINT(
 					vm_value->readBytes<u16>(), base::safeIntConv<u16>(wanted_type_tag_value)
 				);
+				auto type_tag
+					= static_cast<usize>(vm::safeReadPointerBytes<u16>(vm_value->getBytes(), 0));
+				ASSERT_EQUAL_PRINT(type_tag, wanted_type_tag_value);
 				break;
+			}
 			default:
 				CORE_PANIC("Invalid type_tag_bits: ", type_tag_bits);
 			}
-			// ASSERT_EQUAL_PRINT( ???
-			//	vm::safeReadPointerBytes<u64>(vm_value->getBytes(), type_tag_bits / 8), wanted_value
-			//);
 		};
 
 

@@ -1,12 +1,9 @@
 #pragma once
 
-#include <base/except/exceptions.hpp>
 #include <base/types/ints.hpp>
 
 #include <array>
-#include <cstddef>
 #include <cstring>
-#include <iostream>
 #include <new>
 #include <type_traits>
 
@@ -50,7 +47,7 @@ namespace vm {
 	 * @brief Safely writes the byte representation of an object to a buffer.
 	 * @note Creates object of type T at desired place using placement new.
 	 * Actual object is created, its lifetime starts. We can treat this memory
-	 * as if object of type T is stored there, without violatin strict aliasing.
+	 * as if object of type T is stored there, without violating strict aliasing.
 	 *
 	 * @tparam T The type of the object to write. Must be trivially copyable.
 	 * @param dest A pointer to the beginning of the destination byte buffer.

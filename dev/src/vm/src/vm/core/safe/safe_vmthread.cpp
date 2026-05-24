@@ -145,7 +145,7 @@ namespace vm {
 
 		const u64 called_function_id = process_program->getFunctions().idOf(func.name).value();
 
-		usize     stack_size         = 0;
+		usize stack_size = 0;
 		for (auto [idx, res]: std::views::enumerate(func.result_types)) {
 			// Initialize an exit code/return value spot. In case of non-void functions the
 			// exit_code is the return value of the function. Void functions always return with the

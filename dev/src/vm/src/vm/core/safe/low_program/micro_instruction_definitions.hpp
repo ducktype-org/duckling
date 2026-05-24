@@ -439,9 +439,9 @@ DEF_MICRO_INSTR(downcast_pptr_pptr, vm::low::opargs::PlacePtr, vm::low::opargs::
 // calls a method of specified name on an a pointer. Performs the dynamic dispatch.
 DEF_MICRO_INSTR(
 	virtual_call_pptr_method,
-	vm::low::opargs::ComputedConstant, // Stack offset at the moment of call.
-	vm::low::opargs::MethodName /*
-    vm::low::opargs::ext_pptr	pointer */
+	vm::low::opargs::ComputedConstant,  // Stack offset at the moment of call.
+	vm::low::opargs::MethodName         /*
+            vm::low::opargs::ext_pptr	pointer */
 )
 
 // ========= GENERAL POINTER OPERATIONS ========

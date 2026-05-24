@@ -91,10 +91,10 @@ namespace vm {
 
 	void Type::defineFixedSizeTable(TypeRef inner, u64 element_count) {
 		CORE_ASSERT(state == State::Declared, "Bad type define");
-		state = State::Defined;
+		state     = State::Defined;
 		kind_type = Kind::FixedSizeTable;
 
-		kind      = kind::FixedSizeTable{ .inner_type = inner, .element_count = element_count };
+		kind = kind::FixedSizeTable{ .inner_type = inner, .element_count = element_count };
 	}
 
 	void Type::defineDynamicTable(TypeRef inner) {
@@ -134,14 +134,14 @@ namespace vm {
 		for (const auto& type: variants_definitions) variant.alternatives.push_back(type);
 
 		variant.type_tag_size = type_tag_size;
-		kind = variant;
+		kind                  = variant;
 	}
 
 	void Type::defineFunction(std::vector<TypeCRef> parameters, std::vector<TypeCRef> result) {
 		CORE_ASSERT(state == State::Declared, "Bad type define");
 		state = State::Defined;
 
-		size = POINTER_SIZE;
+		size      = POINTER_SIZE;
 		kind_type = Kind::Function;
 		kind      = kind::Function{ .parameters   = std::move(parameters),
 			                        .result_types = std::move(result) };
@@ -154,7 +154,7 @@ namespace vm {
 		kind_type       = Kind::Opaque;
 		size            = pass_size;
 		stack_alligment = 1;  // Opaque are treated as bytes.
-		kind = kind::Opaque{};
+		kind            = kind::Opaque{};
 	}
 
 	void Type::finalize() {
