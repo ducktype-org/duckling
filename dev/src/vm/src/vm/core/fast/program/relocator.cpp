@@ -31,7 +31,9 @@ namespace {
 		return reloc_arg;                                                                     \
 	}
 
-	FOR_EACH(TRIVIAL_TRANSLATION, Immediate, Place8, Place16, Place32, Place64, JumpDestination)
+	FOR_EACH(
+		TRIVIAL_TRANSLATION, Immediate, Place8, Place16, Place32, Place64, PlaceAny, JumpDestination
+	)
 #undef TRIVIAL_TRANSLATION
 
 	/**

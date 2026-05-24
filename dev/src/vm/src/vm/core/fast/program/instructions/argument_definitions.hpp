@@ -41,6 +41,9 @@ DEF_ARG(Place32)
 DEF_ARG(Place64)
 #define COMPARE_Place64(x) x
 #define INFO_Place64()     (p64)
+DEF_ARG(PlaceAny)
+#define COMPARE_PlaceAny(x) x
+#define INFO_PlaceAny()     (pany)
 DEF_ARG(Function)
 #define COMPARE_Function(x) x
 #define INFO_Function()     (func)

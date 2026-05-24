@@ -75,7 +75,7 @@ void fast::FastCompiler::compileNewFunctions(const std::vector<Function>& new_fu
 								 return program.types.at(param_type)->getID();
 								})
 		                      | std::ranges::to<std::vector<vm::fast::TypeID>>(),
-				.result_types = function.signature.result_types
+				.return_types = function.signature.result_types
 		                      | std::views::transform([this](const auto& result_type) {
 									return program.types.at(result_type)->getID();
 								})

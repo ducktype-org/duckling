@@ -1,11 +1,12 @@
 #include "instruction_lowering.hpp"
 
-#include "base/preproc/for_each.hpp"
 #include "base/preproc/equal.hpp"
+#include "base/preproc/for_each.hpp"
 
 #include "vm/bytecode/bytecode.hpp"
 #include "vm/bytecode/instructions.hpp"
 #include "vm/bytecode/opcode_args.hpp"
+#include "vm/core/fast/program/ids.hpp"
 #include "vm/core/fast/program/instructions/relocatable.hpp"
 
 #include <optional>
@@ -23,6 +24,7 @@ namespace {
 		const vm::code::ValidProgram&       high_program;
 		const vm::fast::ProgramBase&        program;
 		const detail::FunctionStackContext& stack_ctx;
+		const vm::fast::FunctionInfo&       func_info;
 
 		base::HashMap<base::StrID, i64> label_ids{};
 	};
@@ -40,6 +42,12 @@ namespace {
 	arg::Function makeFunction(Context& ctx, const vm::opargs::FunctionName& func) {
 		return vm::fast::FunctionID(ctx.high_program.functions().idOf(func.function_name).value());
 	}
+
+	arg::PlaceAny makePlaceAny(Context& ctx, const vm::opargs::PlaceAny& place) {
+		return getIntTypeSize(ctx.stack_ctx.locals_map.at(place.var_name).offset);
+	}
+
+	arg::PlaceAny makePlaceAny(Context&, u64 place_any) { return place_any; }
 
 	/**
 	 * @brief Converts a label argument into a label ID
@@ -122,6 +130,35 @@ namespace {
 			}
 		}
 	}
+
+	class Stack {
+	public:
+		Stack(Context& ctx): ctx(ctx) {
+			for (const vm::fast::TypeID& type: ctx.func_info.return_types) push(type);
+			for (const vm::fast::TypeID& type: ctx.func_info.arg_types) push(type);
+		}
+
+		void push(vm::fast::TypeID type_id) {
+			types.push(type_id);
+			types_size += ctx.program.types.at(type_id)->getSize().asInt();
+		}
+
+		vm::fast::TypeID pop() {
+			auto type = types.top();
+			types.pop();
+			types_size -= ctx.program.types.at(type)->getSize().asInt();
+			return type;
+		}
+
+		[[nodiscard]] vm::fast::TypeID top() const { return types.top(); }
+
+		[[nodiscard]] usize getTypesSize() const { return types_size; }
+
+	private:
+		usize                        types_size = 0;
+		Context&                     ctx;
+		std::stack<vm::fast::TypeID> types{};
+	};
 }
 
 #define PUSH(name, ...)                                                                 \
@@ -138,13 +175,15 @@ std::vector<vm::fast::reloc::Instruction> vm::loader::compiler::fast::lowerInstr
 ) {
 	std::vector<vm::fast::reloc::Instruction> new_instructions;
 
-	Context ctx{ .high_program = high_program, .program = program, .stack_ctx = stack_ctx };
+	Context ctx{ .high_program = high_program,
+		         .program      = program,
+		         .stack_ctx    = stack_ctx,
+		         .func_info    = func_info };
 
 	namespace high = vm::code::instructions;
 	base::HashMap<i64, usize> label_id_to_offset;
 
-	std::stack<vm::fast::TypeID> type_stack
-		= func_info.arg_types | std::ranges::to<std::stack<vm::fast::TypeID>>();
+	Stack type_stack(ctx);
 
 	base::Optional<Ref<vm::fast::reloc::Instruction>> prev_instr = std::nullopt;
 	for (const code::Instruction& instruction: stack_ctx.function.body) {
@@ -152,36 +191,12 @@ std::vector<vm::fast::reloc::Instruction> vm::loader::compiler::fast::lowerInstr
 			instr_case(high::Op_init_pany_type, init) {
 				auto type      = high_program.types().at(init.type.type_name);
 				auto type_size = getIntTypeSize(type->getSize());
-				type_stack.emplace(type->getID().asInt());
-				match_optional(prev_instr) {
-					// If previous is the same as current, then increase
-					// the number of bytes to initialize instead of pushing a new instruction.
-					opt_some(prev) {
-						if (prev->id == vm::fast::InstrID::init_imm) {
-							// If the previous instruction is also an init, we can merge them into one.
-							prev->instr_init_imm.size += type_size;
-							break;
-						}
-					}
-					opt_none { PUSH(init_imm, type_size); }
-				}
+				type_stack.push(vm::fast::TypeID(type->getID().asInt()));
+				PUSH(init_pany_imm, init.var, type_size);
 			}
 			instr_case(high::Op_deinit, deinit) {
-				vm::fast::TypeID type_id   = type_stack.top();
-				usize            type_size = program.types.at(type_id)->getSize().asInt();
+				// Skip, no deinit
 				type_stack.pop();
-				match_optional(prev_instr) {
-					// If previous is the same as current, then increase
-					// the number of bytes to deinitialize instead of pushing a new instruction.
-					opt_some(prev) {
-						if (prev->id == vm::fast::InstrID::deinit_imm) {
-							// If the previous instruction is also a deinit, we can merge them into one.
-							prev->instr_deinit_imm.size += type_size;
-							break;
-						}
-					}
-					opt_none { PUSH(deinit_imm, type_size); }
-				}
 			}
 			instr_case(high::Op_mov_p64_p64, mov) PUSH(mov_p64_p64, mov.dst, mov.src);
 			instr_case(high::Op_mov_p64_imm, mov) PUSH(mov_p64_imm, mov.dst, mov.src);
@@ -194,8 +209,11 @@ std::vector<vm::fast::reloc::Instruction> vm::loader::compiler::fast::lowerInstr
 			instr_case(high::Op_call_func, call) {
 				const vm::fast::FunctionInfo& called_func_info
 					= *program.functions.at(call.function.function_name);
-				const Bytes stack_diff = called_func_info.args_size + called_func_info.return_size;
-				PUSH(call_func_imm, call.function, stack_diff.asInt());
+				const usize func_ret_args_size
+					= (called_func_info.args_size + called_func_info.return_size).asInt();
+				const usize stack_top = type_stack.getTypesSize();
+				PUSH(call_func_imm, call.function, stack_top - func_ret_args_size);
+				for (usize i = 0; i < func_info.arg_types.size(); i++) type_stack.pop();
 			}
 			instr_case(high::Op_input_p64, input) PUSH(input_p64, input.dst);
 			instr_case(high::Op_output_p64, output) PUSH(output_p64, output.src);

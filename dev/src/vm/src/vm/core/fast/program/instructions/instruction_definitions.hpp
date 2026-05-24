@@ -28,8 +28,7 @@
 	#define DEF_INSTR(name, ...) HANDLE_INSTR_ARGS(INSTR_NAME(name, __VA_ARGS__), __VA_ARGS__)
 #endif
 
-DEF_INSTR(init, (Immediate, size))
-DEF_INSTR(deinit, (Immediate, size))
+DEF_INSTR(init, (PlaceAny, dst), (Immediate, size))
 DEF_INSTR(mov, (Place64, dst), (Immediate, imm))
 DEF_INSTR(mov, (Place64, dst), (Place64, src))
 DEF_INSTR(add, (Place64, dst), (Place64, src))

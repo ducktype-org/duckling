@@ -22,6 +22,7 @@ namespace vm::fast::exec {
 		using Place16         = u64;
 		using Place32         = u64;
 		using Place64         = u64;
+		using PlaceAny        = u64;
 		using Function        = const vm::fast::exec::ExecFunction*;
 		using JumpDestination = i64;  // Pointer to the next instruction.
 		using Type            = const Type*;
@@ -41,7 +42,7 @@ namespace vm::fast::exec {
 
 	struct ExecFunction {
 		std::vector<Instruction> data;
-		const FunctionInfo*            info;
+		const FunctionInfo*      info;
 	};
 
 	using ExecFunctionCollection = std::vector<ExecFunction>;

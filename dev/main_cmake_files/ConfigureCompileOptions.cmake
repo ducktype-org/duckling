@@ -13,7 +13,7 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 	message("-- GNU compiler")
 
 	if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 14)
-        message(WARNING 
+        message(WARNING
 				"We know the project won't compile on versions lower than 14. "
 				"If it is a mistake feel free to ignore this.")
     endif()
@@ -40,7 +40,7 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL
 	message("-- ${CMAKE_CXX_COMPILER_ID} compiler")
 
 	if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 19)
-		message(WARNING 
+		message(WARNING
 				"We know the project won't compile on versions lower than 19. "
 				"If it is a mistake feel free to ignore this.")
 	elseif (CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 16.3)
@@ -88,7 +88,7 @@ set(CMAKE_CXX_FLAGS_DEV        "-O0 -DBUILD_TYPE_DEV")
 set(CMAKE_CXX_FLAGS_DEVDEBUG   "-O0 -DBUILD_TYPE_DEV -g -DBUILD_TYPE_DEV_DEBUG")
 set(CMAKE_CXX_FLAGS_DEVOPT     "-O3 -DBUILD_TYPE_DEV")
 set(CMAKE_CXX_FLAGS_RELEASE    "-O0 -DBUILD_TYPE_RELEASE -DNDEBUG")
-set(CMAKE_CXX_FLAGS_RELEASEOPT "-O3 -DBUILD_TYPE_RELEASE -DNDEBUG")
+set(CMAKE_CXX_FLAGS_RELEASEOPT "-O3 -DBUILD_TYPE_RELEASE -g -DNDEBUG")
 set(CMAKE_CXX_FLAGS_DEBUG      ${CMAKE_CXX_FLAGS_DEVDEBUG})
 
 

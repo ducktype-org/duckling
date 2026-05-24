@@ -9,22 +9,22 @@
 
 #define PROGRESS_BY(progress_count) state.incrementInstruction(progress_count)
 
-#define getBytePtrToPlace(ARG) \
-	decodePlace(ARG, frame->local_stack_base, state.global_data_buffer_base)
+#define getBytePtrToPlace(ARG) local_stack + ARG
 
-#define READ_PLACE(type, arg) safeReadPointerBytes<type>(getBytePtrToPlace(arg))
-#define WRITE_PLACE(arg, val) safeWriteBytes(getBytePtrToPlace(arg), val)
+#define READ_PLACE(type, arg) *reinterpret_cast<type*>(getBytePtrToPlace(arg))
+#define WRITE_PLACE(arg, val) \
+	*reinterpret_cast<std::remove_cvref_t<decltype(val)>*>(getBytePtrToPlace(arg)) = val
+
+// #define getBytePtrToPlace(ARG) \
+// 	decodePlace(ARG, local_stack, state.global_data_buffer_base)
+// #define READ_PLACE(type, arg) safeReadPointerBytes<type>(getBytePtrToPlace(arg))
+// #define WRITE_PLACE(arg, val) safeWriteBytes(getBytePtrToPlace(arg), val)
 
 // @TODO: Make local_stack be the stack_base_pointer
 
-IMPL(init_imm) {
-	std::memset(local_stack, 0, instr.size);
-	local_stack += instr.size;
-	PROGRESS_BY(1);
-}
-
-IMPL(deinit_imm) {
-	local_stack -= instr.size;
+IMPL(init_pany_imm) {
+	// Init will never happen for global
+	std::memset(local_stack + instr.dst, 0, instr.size);
 	PROGRESS_BY(1);
 }
 
@@ -133,16 +133,21 @@ IMPL(call_func_imm) {
 	// First increase the instruction pointer to point to the next instruction,
 	// so that when function returns, it will return to the correct place.
 	frame->ip++;
-	// Next, push a new frame for the called function. The instruction pointer of the new frame
-	// will be set to the start of the called function. The local stack for the new frame should
-	// be set to the address of the first return value.
-	frame = state.pushFrame(instr.func, local_stack - instr.stack_diff);
+	// Next, adjust the local stack so that local_stack begins
+	// at the first return value of the called function.
+	local_stack += instr.stack_diff;
+	// Lastly, push a new frame for the called function. The instruction pointer of the new frame
+	// will be set to the start of the called function.
+	frame = state.pushFrame(instr.func, local_stack);
+
+	// Note that we do not progress the instruction pointer here
+	// because frame is already set to the called function's first instruction.
 	PROGRESS_BY(0);
 }
 
 IMPL(ret_imm) {
-	local_stack = frame->local_stack_base + instr.function_return_size;
 	frame       = state.popFrame();
+	local_stack = frame->local_stack_base;
 	// After popping the frame, the instruction pointer will be set to the caller's next
 	// instruction, so we don't need to do anything else here.
 	PROGRESS_BY(0);

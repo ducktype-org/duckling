@@ -15,6 +15,7 @@ namespace vm::fast::reloc {
 		using Place16         = u64;
 		using Place32         = u64;
 		using Place64         = u64;
+		using PlaceAny        = u64;
 		using Function        = FunctionID;
 		using JumpDestination = i64;  // Relative instruction jump offset after label linking.
 		using Type            = TypeID;

@@ -23,7 +23,7 @@ namespace vm::fast {
 		Bytes args_size;
 
 		std::vector<TypeID> arg_types;
-		std::vector<TypeID> result_types;
+		std::vector<TypeID> return_types;
 	};
 
 	struct GlobalData {

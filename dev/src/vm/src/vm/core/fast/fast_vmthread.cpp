@@ -92,8 +92,8 @@ vm::fast::exec::ExecFunction vm::fast::FastVMThread::createStartFunctionFor(
 	exec::ExecFunction start_function{};
 	usize ret_and_args_size = function.info->return_size.asInt() + function.info->args_size.asInt();
 	start_function.data     = {
-		maker::init_imm(ret_and_args_size),
-		maker::call_func_imm(&function, ret_and_args_size),
+		maker::init_pany_imm(0, ret_and_args_size),
+		maker::call_func_imm(&function, 0),
 		maker::exit(),
 	};
 	return start_function;

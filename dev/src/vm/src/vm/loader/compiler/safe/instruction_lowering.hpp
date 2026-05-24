@@ -174,7 +174,6 @@ namespace vm::loader::compiler::safe::detail {
 		}
 		POP_DIAGNOSTIC
 
-
 		PUSH_DIAGNOSTIC
 		UNHANDLED_ENUM
 		instr_match(instruction) {
