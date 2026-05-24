@@ -113,7 +113,9 @@ private:
 							}
 			)
 			                .has_value());
-			ASSERT_TRUE(vm::api::loadFiles(pid, { fs::File(path("extern_test_unaligned.dbc")) }).has_value());
+			ASSERT_TRUE(
+				vm::api::loadFiles(pid, { fs::File(path("extern_test_unaligned.dbc")) }).has_value()
+			);
 			return pid;
 		};
 

@@ -614,11 +614,11 @@ namespace vm::loader::compiler {
 
 			low_program.extern_c_functions.insert(
 				low::LowExternCFunction{
-					.name               = new_func.name,
-					.function_pointer   = new_func.function_pointer,
+					.name             = new_func.name,
+					.function_pointer = new_func.function_pointer,
 					//.parameter_size_sum = param_size_sum,
-					.parameters         = std::move(params),
-					.result_types       = std::move(rets),
+					.parameters   = std::move(params),
+					.result_types = std::move(rets),
 				},
 				new_func.name
 			);

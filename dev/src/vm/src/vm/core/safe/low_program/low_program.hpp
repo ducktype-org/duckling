@@ -89,7 +89,7 @@ namespace vm::low {
 	struct LowExternCFunction {
 		base::StrID name;
 		void (*function_pointer)(std::byte*, std::byte*) = nullptr;
-		//usize                 parameter_size_sum;
+		// usize                 parameter_size_sum;
 		std::vector<TypeCRef> parameters;
 		std::vector<TypeCRef> result_types;
 	};

@@ -102,10 +102,10 @@ namespace vm {
 		 * `instr` should be pointer to the instruction in the new function. arg0 of this
 		 * instruction should be first free byte of the stack,
 		 * `frame` should be pointer to the next frame,
-		 * `local_stack` should be pointer to the local stack of the new function. 
+		 * `local_stack` should be pointer to the local stack of the new function.
 		 * Old values of `instr` and `local_stack` should be saved on the frame of the caller.
-		 * `number_of_exts` should be the number of exts after instruction. instr will be increased by
-		 * that number + 1.
+		 * `number_of_exts` should be the number of exts after instruction. instr will be increased
+		 * by that number + 1.
 		 * @note The function has to be inlined since it's used by the `call_func` and
 		 * `virtual_call` opcodes and breaks tailcalling of opcode function if not inlined.
 		 */

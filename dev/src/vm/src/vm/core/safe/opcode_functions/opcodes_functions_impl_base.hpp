@@ -440,28 +440,28 @@ namespace vm {
 				// Prepare arguments and call the function.
 				byte* result_pointer = result_view.getBegin();
 
-				
+
 				byte* args_pointer
 					= result_pointer
-				    + (is_void ? 0 : align_up(ext_func->result_types.at(0)->getSize().asInt(),8));
-				
+				    + (is_void ? 0 : align_up(ext_func->result_types.at(0)->getSize().asInt(), 8));
+
 
 				/*byte* result_pointer = nullptr;
 				if (!is_void) {
-					auto ext_result_destination
-						= Ref(frame->local_block_ref_stack_base[result_value_idx]);
-					auto result_view
-						= thread.process_memory.getBlockViewUnsafe(ext_result_destination);
-					result_pointer = result_view.getBegin();
+				    auto ext_result_destination
+				        = Ref(frame->local_block_ref_stack_base[result_value_idx]);
+				    auto result_view
+				        = thread.process_memory.getBlockViewUnsafe(ext_result_destination);
+				    result_pointer = result_view.getBegin();
 				}*/
 
 
 				/*byte* args_pointer = nullptr;
 				if (arg_count != 0) {
-					auto first_arg_idx   = result_value_idx + (is_void ? 0 : 1);
-					auto first_arg_block = Ref(frame->local_block_ref_stack_base[first_arg_idx]);
-					auto first_arg_view = thread.process_memory.getBlockViewUnsafe(first_arg_block);
-					args_pointer        = first_arg_view.getBegin();
+				    auto first_arg_idx   = result_value_idx + (is_void ? 0 : 1);
+				    auto first_arg_block = Ref(frame->local_block_ref_stack_base[first_arg_idx]);
+				    auto first_arg_view = thread.process_memory.getBlockViewUnsafe(first_arg_block);
+				    args_pointer        = first_arg_view.getBegin();
 				}*/
 
 				ext_func->function_pointer(result_pointer, args_pointer);
