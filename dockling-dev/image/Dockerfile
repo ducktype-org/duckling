@@ -101,6 +101,8 @@ ARG DEFAULT_USER=ubuntu
 RUN groupmod -g ${GID} ubuntu && \
     usermod -u ${UID} -g ${GID} ubuntu
 
+RUN rm -rf /root/.ssh && ln -s /home/ubuntu/.ssh /root/.ssh
+
 USER ${DEFAULT_USER}
 
 CMD ["/bin/bash"]
