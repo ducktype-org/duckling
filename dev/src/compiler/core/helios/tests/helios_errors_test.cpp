@@ -638,7 +638,7 @@ private:
 			R"(
 				const ARR_TYPE = i32[10.5];
 			)",
-			{ "Type `f32` cannot be converted to type `const u64`." },
+			{ "Static array size must be a non-negative integral value." },
 			1
 		);
 
@@ -646,7 +646,7 @@ private:
 			R"(
 				const ARR_TYPE = i32[-2];
 			)",
-			{ "Value cannot be converted to type `const u64` at compile-time." },
+			{ "Static array size must be a non-negative integral value." },
 			1
 		);
 
@@ -700,7 +700,7 @@ private:
 					l -= "sth";
 				}
 			)",
-			{ "Type `string` cannot be converted to type `u64`" },
+			{ "Type `string` cannot be converted to type `i64`" },
 			1
 		);
 
