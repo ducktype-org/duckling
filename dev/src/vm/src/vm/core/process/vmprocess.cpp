@@ -117,6 +117,12 @@ namespace vm {
 				return api::Response(api::response::Empty());
 			}
 
+			variant_case(api::request::SetBreakpoint, request) {
+				return setBreakpoint(
+					request.function_name, request.instruction_index, request.enable
+				);
+			}
+
 			variant_default { return api::Response(api::response::Empty()); }
 		}
 
