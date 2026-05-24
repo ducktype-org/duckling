@@ -218,8 +218,7 @@ metadata:
 dependencies:
   b:
     version: '2'
-    features: 
-    - xd
+    features: [xd]
   c:
     version: '3'
 "#,
@@ -332,8 +331,7 @@ metadata:
 dependencies:
   b:
     version: '2'
-    features: 
-    - xd
+    features: [xd]
 "#,
         );
         let (_dir_b, path_b) = prepare_manifest(
@@ -442,8 +440,7 @@ metadata:
 dependencies:
   b:
     version: '2'
-    features: 
-    - xd
+    features: [xd]
   c:
     version: '3'
 "#,

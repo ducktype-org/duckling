@@ -493,8 +493,7 @@ metadata:
 dependencies:
   a:
     version: '1'
-    features:
-    - xd
+    features: [xd]
 "#,
         );
         let ctx = DuckContext::default();
@@ -593,8 +592,7 @@ metadata:
 dependencies:
   b:
     version: '2'
-    features:
-    - xd
+    features: [xd]
 "#,
         );
         let (_dir_b, path_b) = prepare_manifest(
@@ -690,8 +688,7 @@ metadata:
 dependencies:
   b:
     version: '2'
-    features:
-    - xd
+    features: [xd]
 "#,
         );
         let (_dir_b, path_b) = prepare_manifest(
@@ -786,8 +783,7 @@ metadata:
 dependencies:
   b:
     version: '2'
-    features:
-    - xd
+    features: [xd]
 "#,
         );
         let (_dir_b, path_b) = prepare_manifest(
@@ -925,8 +921,7 @@ metadata:
 dependencies:
   b:
     version: '2'
-    features:
-    - f
+    features: [f]
 "#,
         );
         let (_dir_b, path_b) = prepare_manifest(

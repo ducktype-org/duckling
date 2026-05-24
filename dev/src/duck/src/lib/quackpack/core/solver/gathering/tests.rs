@@ -1017,8 +1017,7 @@ dependencies:
       registry-url: {}
     version: '1'
     pinned: true
-    features:
-    - expandable
+    features: [expandable]
 "#,
         &url
     ));
