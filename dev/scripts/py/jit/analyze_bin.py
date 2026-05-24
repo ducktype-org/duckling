@@ -29,7 +29,7 @@ def parse_relocation(relocation: _schema.ELFRelocation) -> _stencils.Hole:
 
 def parse_stencil_section(stencil_section: _schema.ELFSection) -> _stencils.Stencil:
     return _stencils.Stencil(
-        name=stencil_section["Name"]["Name"],
+        name=get_stencil_name(stencil_section),
         place=stencil_section["Offset"],
         size=stencil_section["Size"],
         holes=[
@@ -39,12 +39,18 @@ def parse_stencil_section(stencil_section: _schema.ELFSection) -> _stencils.Sten
     )
 
 
-def is_stencil_section(name: str) -> bool:
-    global lenient_sections
-    if lenient_sections:
-        return True
-    
-    return ".rela.ltext" in name and "stencil" in name
+def is_stencil_section(section: _schema.ELFSection) -> bool:
+    name = section["Name"]["Name"]
+    if not name.startswith(".ltext."):
+        return False
+
+    global all_sections
+    return True if all_sections else "stencil" in name
+
+
+def get_stencil_name(section: _schema.ELFSection) -> str:
+    name = section["Name"]["Name"]
+    return name[len(".ltext."): ]
 
 
 def parse(llvm_readobj: str, binary: str, verbose: bool):
@@ -56,34 +62,30 @@ def parse(llvm_readobj: str, binary: str, verbose: bool):
         "--section-relocations",
         "--section-symbols",
         "--sections",
-        f"{binary}",
+        f"{binary.name}",
     ]
     readobj_output = run_llvm(llvm_readobj, readobj_args, echo=verbose)
 
     file_info = json.loads(readobj_output)[0]
-    sections: list[dict[typing.Literal["Section"], _schema.ELFSection]] = file_info[
-        "Sections"
+    sections: list[_schema.ELFSection] = [
+        section["Section"] for section in file_info["Sections"]
     ]
 
     print(f"sections: {len(sections)}")
     return [
-        parse_stencil_section(section["Section"])
+        parse_stencil_section(section)
         for section in sections
-        if is_stencil_section(section["Section"]["Name"]["Name"])
+        if is_stencil_section(section)
     ]
 
 
-def generate_stencils(llvm_readobj: str, binary: str, output_file, verbose: bool):
+def generate_stencils(llvm_readobj: str, binary, output_file, verbose: bool):
     stencil_holes = parse(llvm_readobj, binary, verbose)
-    output_file.write(
-        _stencils.stencils_to_c(
-            stencil_holes, binary=bytes(binary, encoding="UTF-8")  # read file as bytes
-        )
-    )
+    output_file.write(_stencils.stencils_to_c(stencil_holes, binary=binary.read()))
 
 
 @click.command()
-@click.option("--lenient")
+@click.option("--accept-all-sections")
 @click.option(
     "--output",
     required=True,
@@ -91,11 +93,11 @@ def generate_stencils(llvm_readobj: str, binary: str, output_file, verbose: bool
     help="File where stencils will be written.",
 )
 @click.option("-v", "--verbose", is_flag=True)
-@click.argument("binary", type=click.Path(exists=True))
+@click.argument("binary", type=click.File("rb")) # rb = read binary
 @llvm_tools_version_options
-def main(llvm_readobj, output, binary, verbose, lenient, **kwargs):
-    global lenient_sections
-    lenient_sections = lenient
+def main(llvm_readobj, output, binary, verbose, accept_all_sections, **kwargs):
+    global all_sections
+    all_sections = accept_all_sections
     generate_stencils(llvm_readobj, binary, output, verbose)
 
 

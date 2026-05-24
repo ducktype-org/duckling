@@ -43,6 +43,7 @@ function(process_to_binary binary_file destination_file binary_artifact_prefix)
         "${CMAKE_SOURCE_DIR}/scripts/py/jit/analyze_bin.py"
         "${linked_out}"
         "--output=${nm_out}"
+        "--accept-all-sections"
         ${LLVM_TOOLS_ARGS}
         DEPENDS ${linked_out} ${CMAKE_SOURCE_DIR}/scripts/py/jit/analyze_bin.py
     )

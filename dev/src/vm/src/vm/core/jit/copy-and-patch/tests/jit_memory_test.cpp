@@ -12,6 +12,8 @@
 using vm::jit::cnp::JitFuncMemory;
 using vm::jit::cnp::StencilData;
 using vm::jit::cnp::Stencils;
+using vm::jit::cnp::StencilHole;
+using vm::jit::cnp::HoleType;
 
 static auto stencils = Stencils {
 	#if __has_include(<mock_stencils-nm>)

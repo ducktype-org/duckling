@@ -19,7 +19,7 @@ def _signed(value: int) -> int:
 
 
 def byte_to_c(byte) -> str:
-    return f"0x{byte:02x}"
+    return "std::byte{0x" + f"{byte:02x}" + "}"
 
 
 @enum.unique
@@ -89,12 +89,11 @@ class Hole:
     addend: int
 
     def to_c(self) -> str:
-        return list_quote(
+        return "StencilHole" + list_quote(
             [
-                f"{self.offset:#x}",
-                f"HoleKind::{self.kind}",
-                f"HoleValueType::{self.value.name}",
-                f"{_signed(self.addend):#x}",
+                f".offset = {self.offset}",
+                f".size = 32",
+                f".type = HoleType::Movable",
             ]
         )
 
@@ -124,9 +123,10 @@ class Stencil:
 
 
 def stencils_to_c(stencils, binary) -> str:
-    return ", ".join(
+    return ', '.join(
         [
-            ".stencils_binary = " + list_quote([byte_to_c(byte) for byte in binary]),
+            f".stencils_binary = std::array<std::byte, {len(binary)}>"
+            + list_quote([byte_to_c(byte) for byte in binary]),
             ".stencils_data = std::to_array<StencilData>("
             + list_quote([stencil.to_c() for stencil in stencils])
             + ")",
