@@ -439,8 +439,6 @@ namespace vm {
 
 				// Prepare arguments and call the function.
 				byte* result_pointer = result_view.getBegin();
-
-
 				byte* args_pointer
 					= result_pointer
 				    + (is_void

@@ -144,6 +144,7 @@ namespace vm {
 			                             .instruction_mapping = {} };
 
 		const u64 called_function_id = process_program->getFunctions().idOf(func.name).value();
+
 		usize     stack_size         = 0;
 		for (auto [idx, res]: std::views::enumerate(func.result_types)) {
 			// Initialize an exit code/return value spot. In case of non-void functions the
@@ -188,6 +189,7 @@ namespace vm {
 			stack_size += arg_type->getSize().asInt(
 			);  // value is passed as argument, must be fully alligned
 		}
+
 		start_function.arg_size         = stack_size - start_function.ret_size;
 		start_function.local_stack_size = stack_size;
 
@@ -437,7 +439,6 @@ namespace vm {
 			switch (static_cast<low::MicroOpcode>(instr->nontc_opcode)) {
 	#define HANDLE_MICRO_INSTR(opcode_name)                                                         \
 	case low::MicroOpcode::opcode_name: {                                                           \
-		std::cout << "Executing opcode: " << #opcode_name << std::endl;                             \
 		vm::OpFuns::op_##opcode_name(instr, local_stack, frame, thread);                            \
 		if constexpr (::vm::ENABLE_VM_DETAIL_LOGGING)                                               \
 			CORE_DEV_LOG(                                                                           \
