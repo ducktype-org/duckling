@@ -70,10 +70,23 @@ namespace compiler::helios {
 			std::set<SymID>                default_ctors;
 			std::set<SymID>                additional_ctors;
 			std::set<base::StrID>          processed_mangled_names;
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+			
+			auto                           register_ctor_if_needed = [&](SymID sym) {
+                const auto& symbol_type = ctx.query<QueryTypeOfSymbol>(sym)->valueOrThrow();
+                const auto& type = symbol_type.getType();
+=======
+>>>>>>> 977c085ad (formatting fix)
 
 			auto register_ctor_if_needed = [&](SymID sym) {
 				const auto& symbol_type = ctx.query<QueryTypeOfSymbol>(sym)->valueOrThrow();
 				const auto& type        = symbol_type.getType();
+<<<<<<< HEAD
+=======
+>>>>>>> ebaab29ba (formatting)
+>>>>>>> 977c085ad (formatting fix)
 
 				// @TODO: #2509 Handle nested tuples
 				if (type.getKind() == tsh::Kind::Tuple) {
