@@ -91,7 +91,7 @@ namespace vm::detail {
 }
 
 #define VM_EXT_C_INTO_VM_TYPE_NAME(CppType, VmType, Name) VM_EXT_C_VM_TYPE_NAME(VmType),
-#define VM_EXT_C_INTO_FIELDS(CppType, VmType, Name)       alignas(8) CppType Name;
+#define VM_EXT_C_INTO_FIELDS(CppType, VmType, Name)       alignas(vm::Type::MAX_ALIGNMENT) CppType Name;
 #define VM_EXT_C_INTO_PARAMS(CppType, VmType, Name) , CppType Name
 #define VM_EXT_C_INTO_ARGS(CppType, VmType, Name)   , func_args->Name
 
@@ -176,7 +176,7 @@ namespace vm::detail {
 				= { FOR_EACH_ARG(VM_EXT_C_PUT2, VM_EXT_C_INTO_VM_TYPE_NAME, __VA_ARGS__) };             \
 			CORE_ASSERT(                                                                                \
 				(vm_arg_type_size_sum.asInt() <= sizeof(FunctionData)                                   \
-			     && sizeof(FunctionData) - vm_arg_type_size_sum.asInt() < 8)                            \
+			     && sizeof(FunctionData) - vm_arg_type_size_sum.asInt() < vm::Type::MAX_ALIGNMENT)    \
 					|| (vm_arg_type_size_sum.asInt() == 0 && sizeof(FunctionData) == 1),                \
 				"FunctionData\'s fields alignment does not match stack structure in the VM: ",          \
 				vm_arg_type_size_sum.asInt(),                                                           \
