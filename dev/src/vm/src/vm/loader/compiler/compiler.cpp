@@ -155,7 +155,10 @@ namespace vm::loader::compiler {
 	low::MicroBytecode Compiler::lowerInstructions(FunctionCompilationContext& ctx) {
 		detail::MicroBytecodeBuilder builder{ *this, ctx };
 
-		for (const auto& instr: ctx.function.body) builder.add(instr);
+		for (const auto& instr: ctx.function.body) {
+			auto instruction_range = builder.add(instr);
+			ctx.instruction_mapping.push_back(instruction_range);
+		}
 
 		auto [micro_bytecode, label_map] = builder.build();
 		linkLabelArguments(micro_bytecode, label_map);
@@ -348,14 +351,17 @@ namespace vm::loader::compiler {
 			}
 
 			low_program.functions.insert(
-				low::LowFuncData{ .name              = function.name,
-			                      .bc                = std::move(bytecode),
-			                      .local_stack_size  = ctx.local_stack_size,
-			                      .local_block_count = ctx.local_block_count,
-			                      .arg_size          = parameters_size,
-			                      .ret_size          = ret_type_sum,
-			                      .parameters        = std::move(parameters),
-			                      .result_types      = std::move(result_types) },
+				low::LowFuncData{
+					.name                = function.name,
+					.bc                  = std::move(bytecode),
+					.local_stack_size    = ctx.local_stack_size,
+					.local_block_count   = ctx.local_block_count,
+					.arg_size            = parameters_size,
+					.ret_size            = ret_type_sum,
+					.parameters          = std::move(parameters),
+					.result_types        = std::move(result_types),
+					.instruction_mapping = std::move(ctx.instruction_mapping),
+				},
 				function.name
 			);
 		}
