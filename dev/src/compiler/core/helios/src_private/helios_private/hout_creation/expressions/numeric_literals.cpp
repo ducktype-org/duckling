@@ -119,7 +119,7 @@ namespace compiler::helios::code {
 			f64  parsed_value = 0;
 			auto result = std::from_chars(value.data(), value.data() + value.size(), parsed_value);
 			if (!handleFromCharsFailure(result, value, position, ctx)) return {};
-			return numeric_value::NumericValue(static_cast<f64>(parsed_value));
+			return numeric_value::NumericValue::createMinimized(parsed_value);
 		}
 	}
 

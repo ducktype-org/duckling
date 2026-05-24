@@ -4,6 +4,7 @@
 #include <frontend/module_tree/queries.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/hout/hout.hpp>
+#include <helios/mangler/mangler.hpp>
 #include <helios/queries/function_queries.hpp>
 #include <helios/queries/global_data_queries.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
@@ -25,6 +26,8 @@
 #include <query_framework/query_errors.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 #include <query_framework/utils/query_failed_try.hpp>
+
+#include <set>
 
 namespace compiler::helios {
 
@@ -66,37 +69,37 @@ namespace compiler::helios {
 			std::vector<SymID>             class_symbols;
 			std::set<SymID>                default_ctors;
 			std::set<SymID>                additional_ctors;
+			std::set<base::StrID>          processed_mangled_names;
+			auto                           register_ctor_if_needed = [&](SymID sym) {
+                const auto& symbol_type = ctx.query<QueryTypeOfSymbol>(sym)->valueOrThrow();
+                const auto& type = symbol_type.getType();
 
-			auto register_ctor_if_needed = [&](SymID sym) {
-				const auto& symbol_type = ctx.query<QueryTypeOfSymbol>(sym)->valueOrThrow();
-				const auto& type        = symbol_type.getType();
+                // @TODO: #2509 Handle nested tuples
+                if (type.getKind() == tsh::Kind::Tuple) {
+                    auto        tuple_type = type.as<tsh::TupleAbstractType>();
+                    const auto& tuple_ctor
+                        = ctx.query<defgen::QueryTuplePackConstructor>(tuple_type)->valueOrThrow();
+                    additional_ctors.insert(tuple_ctor.declaration->original_symbol);
+                    return;
+                }
 
-				// @TODO: #2509 Handle nested tuples
-				if (type.getKind() == tsh::Kind::Tuple) {
-					auto        tuple_type = type.as<tsh::TupleAbstractType>();
-					const auto& tuple_ctor
-						= ctx.query<defgen::QueryTuplePackConstructor>(tuple_type)->valueOrThrow();
-					additional_ctors.insert(tuple_ctor.declaration->original_symbol);
-					return;
-				}
+                // Don't insert any constructors if a type is trivially zero-initializable or not
+                // default constructible.
+                if (symbol_type.isTriviallyZeroInitializable(ctx)) return;
+                if (!symbol_type.isDefaultConstructible(ctx)) return;
 
-				// Don't insert any constructors if a type is trivially zero-initializable or not
-				// default constructible.
-				if (symbol_type.isTriviallyZeroInitializable(ctx)) return;
-				if (!symbol_type.isDefaultConstructible(ctx)) return;
-
-				if (type.getKind() == tsh::Kind::StaticArray) {
-					auto        arr_type = type.as<tsh::StaticArrayAbstractType>();
-					const auto& arr_ctor
-						= ctx.query<defgen::QueryDefaultStaticArrayConstructor>(arr_type)
-					          ->valueOrThrow();
-					default_ctors.insert(arr_ctor.declaration->original_symbol);
-				} else if (type.getKind() == tsh::Kind::Class) {
-					auto        class_type = type.as<tsh::ClassAbstractType>();
-					const auto& class_ctor
-						= ctx.query<defgen::QueryDefaultClassConstructor>(class_type)->valueOrThrow();
-					default_ctors.insert(class_ctor.declaration->original_symbol);
-				}
+                if (type.getKind() == tsh::Kind::StaticArray) {
+                    auto        arr_type = type.as<tsh::StaticArrayAbstractType>();
+                    const auto& arr_ctor
+                        = ctx.query<defgen::QueryDefaultStaticArrayConstructor>(arr_type)
+                              ->valueOrThrow();
+                    default_ctors.insert(arr_ctor.declaration->original_symbol);
+                } else if (type.getKind() == tsh::Kind::Class) {
+                    auto        class_type = type.as<tsh::ClassAbstractType>();
+                    const auto& class_ctor
+                        = ctx.query<defgen::QueryDefaultClassConstructor>(class_type)->valueOrThrow();
+                    default_ctors.insert(class_ctor.declaration->original_symbol);
+                }
 			};
 			auto register_ctor_if_needed_no_interrupt
 				= [&run_no_interrupt, &register_ctor_if_needed](SymID sym) {
@@ -155,7 +158,6 @@ namespace compiler::helios {
 					out.functions.emplace_back(&hout_res);
 				}
 			});
-
 			for (auto handler: scheduled_tasks) {
 				// we "catch" failure here to continue gathering other functions:
 				auto hout_function = ctx.await<QueryCodeOfFun>(handler);
@@ -163,7 +165,31 @@ namespace compiler::helios {
 					is_failed = true;
 					continue;
 				} else {
-					out.functions.emplace_back(&hout_function->valueOrPanic());
+					auto& func     = hout_function->valueOrPanic();
+					SymID func_sym = func.declaration->original_symbol;
+
+					base::StrID mangled_name
+						= ctx.query<compiler::helios::mangler::QueryMangledSymbol>({ func_sym });
+
+					if (mangled_name.isBad()) {
+						out.functions.emplace_back(&func);
+						continue;
+					}
+
+					if (processed_mangled_names.contains(mangled_name)) {
+						std::string error_msg
+							= "Symbol '" + std::string(func.declaration->original_name.strView())
+						    + "' is already defined.";
+
+						auto stable_pos = func.declaration->origin.getStablePosition().value();
+
+						ctx.logInt(makeBox<dia_int::PlaceholderError>(error_msg, stable_pos));
+						is_failed = true;
+						continue;
+					}
+
+					processed_mangled_names.insert(mangled_name);
+					out.functions.emplace_back(&func);
 				}
 			}
 
@@ -347,7 +373,6 @@ namespace compiler::helios {
 			// go over all top level symbols and get theirs hout
 			// store it in some vector or something
 			// lookup all and stuff
-
 			auto main_file_root_scope = queryRootScopeOfMainModuleFile(ctx, key);
 
 			Ref symbols_in_module_root

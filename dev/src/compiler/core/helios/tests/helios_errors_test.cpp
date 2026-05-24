@@ -31,6 +31,7 @@ class HeliosErrorsTests: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+		TESTER_ADD_TEST(testDuplicatedFunctionDeclaration);
 		TESTER_ADD_TEST(testErrorLogging);
 		TESTER_ADD_TEST(testErrorLoggingExpandStatements);
 		TESTER_ADD_TEST(testErrorLoggingCyclicErrors);
@@ -1305,6 +1306,17 @@ private:
 				ss, dia_int::StablePosition::fakePosition()
 			);
 		});
+	}
+
+	void testDuplicatedFunctionDeclaration() {
+		checkForErrorOnCompileModule(
+			R"(
+                fun a() -> i64 = { return 1; }
+                fun a() -> i64 = { return 2; }
+            )",
+			{ "already defined", "a" },
+			1
+		);
 	}
 };
 
