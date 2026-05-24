@@ -131,7 +131,7 @@ namespace vm::detail {
  */
 #define DEF_VM_EXT_C_FUNC(ResCType, ResVmType, FuncName, ...)                                           \
 	struct FuncName {                                                                                   \
-		// @TODO: #2764 Improve creating this struct, bring back __packed__                           \
+		/*@TODO: #2764 Improve creating this struct, bring back __packed__ */                         \
 		struct FunctionData {                                                                           \
 			FOR_EACH_ARG(VM_EXT_C_PUT2, VM_EXT_C_INTO_FIELDS, __VA_ARGS__)                              \
 		};                                                                                              \
