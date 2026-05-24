@@ -58,6 +58,10 @@ namespace vm {
 		  process_memory(process.getMemory()),
 		  process_program(process.getLoadedProgram()) {
 		vc[thread_id] = 1;
+		if (process.settings_.enable_fast_track) {
+			runtime_data.global_shadow_data_buffer_base = process.global_shadow_data.data();
+			runtime_data.global_shadow_pointer_buffer_base = process.global_shadow_pointer.data();
+		}
 	}
 
 	/**

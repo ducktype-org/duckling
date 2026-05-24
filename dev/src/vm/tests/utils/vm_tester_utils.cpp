@@ -9,8 +9,8 @@
 
 #include <variant>
 
-vm::PID VmTestSuite::initProcess() {
-	auto process_pid_response = vm::api::spawn();
+vm::PID VmTestSuite::initProcess(const vm::api::ProcessSettings& settings) {
+	auto process_pid_response = vm::api::spawn(settings);
 	ASSERT_TRUE(process_pid_response.has_value());
 	return process_pid_response->pid;
 }

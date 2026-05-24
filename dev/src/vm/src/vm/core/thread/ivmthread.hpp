@@ -31,7 +31,7 @@ namespace vm {
 			  my_process(my_process),
 			  thread_id(thread_id) {}
 
-		virtual ~IVMThread() = default;
+		virtual ~IVMThread();
 
 		/**
 		 * @brief Creates a new thread that runs the code.

@@ -522,7 +522,13 @@ namespace vm::loader::compiler::detail {
 			instr_case(high::Op_virtual_call_pptr_method, i) {
 				addLow<Op_virtual_call_pptr_method>(i.object_ptr, i.method);
 			}
-			instr_case(high::Op_alloc_pptr_type, i) { addLow<Op_alloc_pptr_type>(i.ptr, i.type); }
+			instr_case(high::Op_alloc_pptr_type, i) {
+				if (compiler.settings_.enable_fast_track) {
+					addLow<Op_ft_alloc_pptr_type>(i.ptr, i.type);
+				} else {
+					addLow<Op_alloc_pptr_type>(i.ptr, i.type);
+				}
+			}
 			instr_case(high::Op_free_pptr, i) { addLow<Op_free_pptr>(i.ptr); }
 			instr_case(high::Op_store_pptr_pany, i) {
 				addLow<Op_store_pptr_bany>(i.dst_ptr, i.src);

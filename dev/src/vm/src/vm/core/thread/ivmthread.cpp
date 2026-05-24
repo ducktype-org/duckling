@@ -3,6 +3,10 @@
 #include <vm/core/process/vmprocess.hpp>
 #include <vm/core/thread/kill_process_exception.hpp>
 
+vm::IVMThread::~IVMThread() {
+	joinExecutionThread();
+}
+
 std::expected<vm::api::Response, vm::api::ApiError> vm::IVMThread::join() {
 	if (!exec_thread || !exec_thread->joinable())
 		return std::unexpected(api::ApiError{ api::JoinError{} });

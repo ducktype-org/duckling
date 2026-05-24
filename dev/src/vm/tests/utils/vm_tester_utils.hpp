@@ -4,6 +4,7 @@
 
 #include <vm/api/api.hpp>
 #include <vm/api/data/api_error.hpp>
+#include <vm/api/settings.hpp>
 
 #include <expected>
 
@@ -24,7 +25,7 @@ protected:
 	};
 
 protected:
-	vm::PID initProcess();
+	vm::PID initProcess(const vm::api::ProcessSettings& settings = {});
 
 	void handleTestResult(const TestResult& test_result, i64 exit_code);
 

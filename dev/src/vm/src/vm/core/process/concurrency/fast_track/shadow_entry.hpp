@@ -9,6 +9,8 @@
 #include <variant>
 #include <iostream>
 
+#include <vm/core/safe/exceptions.hpp>
+
 namespace vm {
 
 	/**
@@ -140,10 +142,7 @@ namespace vm {
 
 	private:
 		void reportRace(const char* type, Epoch first, Epoch second) {
-			// TODO: Integrate with a proper reporting mechanism
-			std::cerr << "[FastTrack] RACE DETECTED: " << type 
-			          << " | First: " << first.tid().asInt() << "@" << first.clock()
-			          << " | Second: " << second.tid().asInt() << "@" << second.clock() << std::endl;
+			throw exceptions::VMDataRaceException();
 		}
 	};
 

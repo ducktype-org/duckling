@@ -1,0 +1,31 @@
+global_data counter i64 {};
+
+function inc {} -> {} {
+    init_pany_type temp, i64;
+    mov_p64_imm temp, 42;
+    mov_p64_p64 counter, temp;
+    deinit;
+    ret;
+}
+
+function main { i64, ptr_argv } -> { i64 } {
+    init_pany_type thread_id, i64;
+    set_threadctx inc;
+    call_builtinfunc builtin_start_thread;
+
+    init_pany_type join_ret, i64;
+    init_pany_type join_id, i64;
+    mov_p64_p64 join_id, thread_id;
+    call_builtinfunc builtin_join_thread;
+
+    # Properly synchronized: main thread writes to counter ONLY AFTER joining the child thread
+    init_pany_type temp2, i64;
+    mov_p64_imm temp2, 100;
+    mov_p64_p64 counter, temp2;
+
+    deinit; # temp2
+    deinit; # join_id
+    deinit; # join_ret
+    deinit; # thread_id
+    ret;
+}
