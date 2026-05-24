@@ -5,7 +5,6 @@
 
 namespace simple {
 	DEF_VM_EXT_C_FUNC(i32, "i32", add, (i32, "i32", a), (i32, "i32", b)) { return a + b; }
-	//DEF_VM_EXT_C_FUNC(i64, "i64", add, (i64, "i64", a), (i64, "i64", b)) { return a + b; }
 
 }
 

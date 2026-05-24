@@ -92,18 +92,18 @@ namespace vm::detail {
 
 }
 
-#define VM_EXT_C_INTO_VM_TYPE_NAME(Type, VmType, Name) VM_EXT_C_VM_TYPE_NAME(VmType),
-#define VM_EXT_C_INTO_FIELDS(Type, VmType, Name)       alignas(vm::Type::MAX_ALIGMENT) Type Name;
-#define VM_EXT_C_INTO_PARAMS(Type, VmType, Name)       , Type Name
-#define VM_EXT_C_INTO_ARGS(Type, VmType, Name)         , func_args->Name
+#define VM_EXT_C_INTO_VM_TYPE_NAME(CppType, VmType, Name) VM_EXT_C_VM_TYPE_NAME(VmType),
+#define VM_EXT_C_INTO_FIELDS(CppType, VmType, Name)       alignas(vm::Type::MAX_ALIGMENT) CppType Name;
+#define VM_EXT_C_INTO_PARAMS(CppType, VmType, Name)       , CppType Name
+#define VM_EXT_C_INTO_ARGS(CppType, VmType, Name)         , func_args->Name
 
-#define VM_EXT_C_PLACE_VALIDATION(Type, VmType, Name)                               \
+#define VM_EXT_C_PLACE_VALIDATION(CppType, VmType, Name)                               \
 	auto tp_##Name = vm::api::getType(pid, VmType);                                 \
 	if (!tp_##Name.has_value()) throw vm::ExtCVmTypeNotExists(#VmType);             \
-	if (tp_##Name->type->getSize().asInt() != vm::detail::safe_sizeof<Type>::VALUE) \
+	if (tp_##Name->type->getSize().asInt() != vm::detail::safe_sizeof<CppType>::VALUE) \
 		throw vm::ExtCArgumentSizeMismatch(                                         \
-			#Type,                                                                  \
-			vm::detail::safe_sizeof<Type>::VALUE,                                   \
+			#CppType,                                                               \
+			vm::detail::safe_sizeof<CppType>::VALUE,                                  \
 			#VmType,                                                                \
 			tp_##Name->type->getSize().asInt()                                      \
 		);                                                                          \
