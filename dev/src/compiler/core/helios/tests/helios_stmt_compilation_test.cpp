@@ -353,7 +353,7 @@ private:
 				R"(
 				fun foo() = {
 					var a: List[i32];
-					a -= 5u64;
+					a -= 5;
 				}
 			)",
 				"test_pkg"
