@@ -333,25 +333,31 @@ namespace vm::loader::compiler {
 
 	void Compiler::calculateOffsets(FunctionCompilationContext& ctx) {
 		auto must_be_fully_alligned = detectParamsAndReturnedVars(ctx);
-		std::cout << "function: " << ctx.function.name.str.str() << '\n';
+
 		decltype(ctx.locals_map) result;
 		std::vector<usize>       type_size_stack;
 		std::vector<usize>       padding_used;
 		usize                    curr_stack_size = 0;
 		usize                    max_stack_size  = 0;
 		usize                    max_block_count = 0;
-		ctx.offset_at_instructions = std::vector<usize>(ctx.function.body.size(), 2'137);
+		ctx.offset_at_instructions               = std::vector<usize>(ctx.function.body.size(), -1);
 
-		// todo reorganize and make better
 		usize index = 0;
+
+		// instruction index, type stack state, padding stack state, stack size
+		std::vector<std::tuple<usize, decltype(type_size_stack), decltype(padding_used), usize>>
+			dfs_stack{
+				{ ctx.function.body.size(), {}, {}, 0 }  // sentinel
+			};
+		std::vector<bool> visited_instructions(ctx.function.body.size());
 
 		auto push = [&](opargs::PlaceAny local, opargs::Type type) {
 			auto type_ref   = low_program.types->at(type.type_name);
 			auto type_size  = type_ref->getSize().asInt();
 			auto type_align = must_be_fully_alligned.contains(local.var_name)
-			                    ? 8
+			                    ? Type::MAX_ALIGNMENT
 			                    : type_ref->getStackAlignment();
-			// auto type_align = 8;
+
 			size_t padding        = Type::align_up(curr_stack_size, type_align) - curr_stack_size;
 			auto   aligned_offset = curr_stack_size + padding;
 
@@ -376,17 +382,17 @@ namespace vm::loader::compiler {
 		};
 
 		auto pop = [&]() {
-			CORE_ASSERT(
-				type_size_stack.size() == padding_used.size(),
-				"Compiler stack state is inconsistent while calculating offsets"
-			);
-			CORE_ASSERT(!type_size_stack.empty(), "Compiler tried to pop an empty stack");
 			auto type_size = type_size_stack.back();
 			auto padding   = padding_used.back();
 			type_size_stack.pop_back();
 			padding_used.pop_back();
 			curr_stack_size -= type_size;
 			curr_stack_size -= padding;
+		};
+
+		auto handle_call = [&](usize params_cnt) {
+			ctx.offset_at_instructions[index] = curr_stack_size;
+			for (usize i = 0; i < params_cnt; i++) pop();
 		};
 
 		base::HashMap<base::StrID, usize> label_positions = calculate_labels_mapping(ctx);
@@ -399,13 +405,6 @@ namespace vm::loader::compiler {
 		for (auto [idx, param_type]: enumerate(func_signature.parameters))
 			push(base::StrID(base::strConcat("arg", idx).c_str()), param_type.str);
 		ctx.shared_stack_size = curr_stack_size;
-		// instruction index, type stack state, padding stack state, stack size
-		std::vector<std::tuple<usize, decltype(type_size_stack), decltype(padding_used), usize>>
-			dfs_stack{
-				{ ctx.function.body.size(), {}, {}, 0 }  // sentinel
-			};
-		std::vector<bool> visited_instructions(ctx.function.body.size());
-
 
 		while (index != ctx.function.body.size()) {
 			if (visited_instructions[index]) {
@@ -423,8 +422,6 @@ namespace vm::loader::compiler {
 				}
 				instr_case(Op_deinit, instr) {
 					pop();
-					ctx.offset_at_instructions[index] = curr_stack_size;
-					std::cout << "After deinit " << curr_stack_size << '\n';
 					index++;
 				}
 				instr_case(Op_jmp_label, instr) { index = label_positions[instr.label.label_name]; }
@@ -452,40 +449,24 @@ namespace vm::loader::compiler {
 					dfs_stack.pop_back();
 				}
 				instr_case(Op_call_func, instr) {
-					std::cout << "OFFSET AT CALL: " << curr_stack_size << '\n';
-					ctx.offset_at_instructions[index] = curr_stack_size;
-					usize number_of_params            = program_ctx.function_forward_declarations
-					                             .at(instr.function.function_name)
-					                             ->signature.parameters.size();
-					for (usize i = 0; i < number_of_params; i++) pop();
+					handle_call(program_ctx.function_forward_declarations
+					                .at(instr.function.function_name)
+					                ->signature.parameters.size());
 					index++;
 				}
 				instr_case(Op_call_builtinfunc, instr) {
-					std::cout << index << "BILTIN\n";
-					for (usize i = 0;
-					     i < builtins::getBuiltinFunctionSignature(instr.function.function_name)
-					             .value()
-					             ->parameters.size();
-					     i++) {
-						pop();
-					}
+					handle_call(builtins::getBuiltinFunctionSignature(instr.function.function_name)
+					                .value()
+					                ->parameters.size());
 					index++;
 				}
 				instr_case(Op_call_cfunc, instr) {
-					for (usize i = 0;
-					     i < program_ctx.ext_c_functions.at(instr.function.function_name)
-					             ->signature.parameters.size();
-					     i++) {
-						pop();
-					}
+					handle_call(program_ctx.ext_c_functions.at(instr.function.function_name)
+					                ->signature.parameters.size());
 					index++;
 				}
 				instr_case(Op_virtual_call_pptr_method, instr) {
-					auto [param_count, ret_count]
-						= *seek_method_param_ret_count(instr.method.method_name);
-					ctx.offset_at_instructions[index] = curr_stack_size;
-					std::cout << "reporting Offset " << curr_stack_size << '\n';
-					for (usize i = 0; i < param_count; i++) pop();
+					handle_call(seek_method_param_ret_count(instr.method.method_name)->first);
 					index++;
 				}
 				instr_case(Op_ret_tailcall_func, instr) {
@@ -601,11 +582,6 @@ namespace vm::loader::compiler {
 											   return low_program.types->at(param_name);
 										   })
 			                             | std::ranges::to<std::vector<TypeCRef>>();
-			usize param_size_sum = 0;
-			for (const auto& param: params) {
-				param_size_sum = Type::align_up(param_size_sum, param->getStackAlignment());
-				param_size_sum += param->getSize().asInt();
-			}
 
 			std::vector<TypeCRef> rets = new_func.signature.result_types
 			                           | std::views::transform([this](const auto& param_name) {
@@ -617,9 +593,8 @@ namespace vm::loader::compiler {
 				low::LowExternCFunction{
 					.name             = new_func.name,
 					.function_pointer = new_func.function_pointer,
-					//.parameter_size_sum = param_size_sum,
-					.parameters   = std::move(params),
-					.result_types = std::move(rets),
+					.parameters       = std::move(params),
+					.result_types     = std::move(rets),
 				},
 				new_func.name
 			);

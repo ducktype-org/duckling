@@ -117,7 +117,8 @@ namespace vm::loader::compiler {
 			usize shared_stack_size         = 0;
 			usize current_instruction_index = 0;
 
-			// Stores head of the stack at the moment of instructions: inits, deinits, calls.
+			// Stores head of the stack at the moment of instructions: inits and calls.
+			// It is used in inits, standard calls and virtual calls.
 			std::vector<usize> offset_at_instructions{};
 
 			/// Bytecode to Microbytecode mapping

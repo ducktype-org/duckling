@@ -451,9 +451,7 @@ namespace vm::loader::compiler::detail {
 					ctx.offset_at_instructions.at(ctx.current_instruction_index), i.type
 				);
 			}
-			instr_case(high::Op_deinit, i) {
-				addLow<Op_deinit>(ctx.offset_at_instructions.at(ctx.current_instruction_index));
-			}
+			instr_case(high::Op_deinit, i) { addLow<Op_deinit>(); }
 			instr_case(high::Op_input_p64, i) { addLow<Op_input_p64>(i.dst); }
 			instr_case(high::Op_output_p64, i) { addLow<Op_output_p64>(i.src); }
 			instr_case(high::Op_input_p32, i) { addLow<Op_input_p32>(i.dst); }
