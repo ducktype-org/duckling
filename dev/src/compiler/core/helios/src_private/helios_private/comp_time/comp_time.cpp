@@ -162,11 +162,11 @@ namespace compiler::helios {
 					);
 					auto maybe_u64_size = maybe_size.coerceTo<u64>();
 					CORE_ASSERT(
-						maybe_u64_size.has_value() && maybe_u64_size.value() >= 0,
+						maybe_u64_size.has_value(),
 						"Static array type creation with negative size. This should be caught "
 						"earlier."
 					);
-					usize size = static_cast<usize>(maybe_u64_size.value());
+					auto size = static_cast<usize>(maybe_u64_size.value());
 					return CompileTimeValue{ sinkStaticArrayDimension(ctx, base_type, size) };
 				}
 			}
