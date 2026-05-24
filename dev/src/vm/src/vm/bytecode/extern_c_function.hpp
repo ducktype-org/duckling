@@ -92,7 +92,6 @@ namespace vm::detail {
 
 #define VM_EXT_C_INTO_VM_TYPE_NAME(CppType, VmType, Name) VM_EXT_C_VM_TYPE_NAME(VmType),
 #define VM_EXT_C_INTO_FIELDS(CppType, VmType, Name)       alignas(8) CppType Name;
-
 #define VM_EXT_C_INTO_PARAMS(CppType, VmType, Name) , CppType Name
 #define VM_EXT_C_INTO_ARGS(CppType, VmType, Name)   , func_args->Name
 
@@ -106,7 +105,7 @@ namespace vm::detail {
 			#VmType,                                                                   \
 			tp_##Name->type->getSize().asInt()                                         \
 		);                                                                             \
-	vm_arg_type_size_sum = Bytes(vm::align_up(vm_arg_type_size_sum.asInt(), 8));       \
+	vm_arg_type_size_sum = Bytes(vm::Type::fully_align_up(vm_arg_type_size_sum.asInt()));       \
 	vm_arg_type_size_sum += tp_##Name->type->getSize();
 
 #define VM_EXT_C_PUT2(arg1, arg2) arg1 arg2

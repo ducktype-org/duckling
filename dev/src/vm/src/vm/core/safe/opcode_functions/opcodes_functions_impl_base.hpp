@@ -443,7 +443,7 @@ namespace vm {
 
 				byte* args_pointer
 					= result_pointer
-				    + (is_void ? 0 : align_up(ext_func->result_types.at(0)->getSize().asInt(), 8));
+				    + (is_void ? 0 : Type::fully_align_up(ext_func->result_types.at(0)->getSize().asInt()));
 
 
 				/*byte* result_pointer = nullptr;

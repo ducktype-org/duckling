@@ -32,6 +32,22 @@ namespace vm {
 		 */
 		constexpr static size_t MAX_ALIGMENT = std::max(alignof(Pointer), alignof(u64));
 
+		/**
+		 * @brief Aligns value up, to the Type::MAX_ALIGMENT.
+		 * @note Specific version of function for MAX_ALIGMENT, because it is used in multiple
+		 * places, MAX_ALIGMENT is constexpr, so we can get more optimized function.
+		 */
+		constexpr static usize fully_align_up(usize value) {
+			return (value + MAX_ALIGMENT - 1) & ~(MAX_ALIGMENT - 1);
+		}
+
+		/**
+		 * @brief Aligns value up to the alignment. Alignment must be a power of 2.
+		 */
+		constexpr static usize align_up(usize value, size_t alignment) {
+			return (value + alignment - 1) & ~(alignment - 1);
+		}
+
 		enum class Kind {
 			None,
 			Primitive,

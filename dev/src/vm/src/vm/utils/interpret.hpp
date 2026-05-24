@@ -12,10 +12,6 @@
 
 namespace vm {
 
-	constexpr usize align_up(usize value, usize alignment) noexcept {
-		return alignment == 0 ? value : ((value + alignment - 1) / alignment) * alignment;
-	}
-
 	/**
 	 * @brief Checks if byte is sufficiently aligned for type T.
 	 * @note replace with std::is_sufficiently_aligned, available since C++26

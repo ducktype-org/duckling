@@ -352,7 +352,7 @@ namespace vm::loader::compiler {
 			                    ? 8
 			                    : type_ref->getStackAlignment();
 			// auto type_align = 8;
-			size_t padding        = align_up(curr_stack_size, type_align) - curr_stack_size;
+			size_t padding        = Type::align_up(curr_stack_size, type_align) - curr_stack_size;
 			auto   aligned_offset = curr_stack_size + padding;
 
 			if_opt_some(result.atMaybe(local.var_name), entry) {
@@ -549,7 +549,7 @@ namespace vm::loader::compiler {
 			if (global.dtor_name.has_value()) dtor_name = global.dtor_name->str;
 			auto type = low_program.types->at(global.type);
 			program_ctx.global_buffer_size
-				= Bytes(align_up(program_ctx.global_buffer_size.asInt(), type->getStackAlignment()));
+				= Bytes(Type::align_up(program_ctx.global_buffer_size.asInt(), type->getStackAlignment()));
 
 			low::LowGlobalData data{
 				.type                 = type,
@@ -602,7 +602,7 @@ namespace vm::loader::compiler {
 			                             | std::ranges::to<std::vector<TypeCRef>>();
 			usize param_size_sum = 0;
 			for (const auto& param: params) {
-				param_size_sum = align_up(param_size_sum, param->getStackAlignment());
+				param_size_sum = Type::align_up(param_size_sum, param->getStackAlignment());
 				param_size_sum += param->getSize().asInt();
 			}
 
