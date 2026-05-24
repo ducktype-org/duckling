@@ -18,9 +18,7 @@ namespace dia_int {
 			addPointerMessage("cause", pos);
 		}
 
-		addArgument<TextArgument>(
-            "pointer_message_content", std::string(pointer_message_content)
-        );
+		addArgument<TextArgument>("pointer_message_content", std::string(pointer_message_content));
 	}
 
 }
