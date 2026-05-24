@@ -93,22 +93,24 @@ namespace vm::detail {
 }
 
 #define VM_EXT_C_INTO_VM_TYPE_NAME(CppType, VmType, Name) VM_EXT_C_VM_TYPE_NAME(VmType),
-#define VM_EXT_C_INTO_FIELDS(CppType, VmType, Name)       alignas(vm::Type::MAX_ALIGMENT) CppType Name;
-#define VM_EXT_C_INTO_PARAMS(CppType, VmType, Name)       , CppType Name
-#define VM_EXT_C_INTO_ARGS(CppType, VmType, Name)         , func_args->Name
+#define VM_EXT_C_INTO_FIELDS(CppType, VmType, Name)       alignas(8) CppType Name;
+
+#define VM_EXT_C_INTO_PARAMS(CppType, VmType, Name) , CppType Name
+#define VM_EXT_C_INTO_ARGS(CppType, VmType, Name)   , func_args->Name
 
 #define VM_EXT_C_PLACE_VALIDATION(CppType, VmType, Name)                               \
-	auto tp_##Name = vm::api::getType(pid, VmType);                                 \
-	if (!tp_##Name.has_value()) throw vm::ExtCVmTypeNotExists(#VmType);             \
+	auto tp_##Name = vm::api::getType(pid, VmType);                                    \
+	if (!tp_##Name.has_value()) throw vm::ExtCVmTypeNotExists(#VmType);                \
 	if (tp_##Name->type->getSize().asInt() != vm::detail::safe_sizeof<CppType>::VALUE) \
-		throw vm::ExtCArgumentSizeMismatch(                                         \
-			#CppType,                                                               \
-			vm::detail::safe_sizeof<CppType>::VALUE,                                  \
-			#VmType,                                                                \
-			tp_##Name->type->getSize().asInt()                                      \
-		);                                                                          \
-	vm_arg_type_size_sum += tp_##Name->type->getSize();                             \
-	vm_arg_type_size_sum = Bytes(vm::align_up(vm_arg_type_size_sum.asInt(), 8));
+		throw vm::ExtCArgumentSizeMismatch(                                            \
+			#CppType,                                                                  \
+			vm::detail::safe_sizeof<CppType>::VALUE,                                   \
+			#VmType,                                                                   \
+			tp_##Name->type->getSize().asInt()                                         \
+		);                                                                             \
+	vm_arg_type_size_sum = Bytes(vm::align_up(vm_arg_type_size_sum.asInt(), 8));       \
+	vm_arg_type_size_sum += tp_##Name->type->getSize();
+
 
 #define VM_EXT_C_PUT2(arg1, arg2) arg1 arg2
 
@@ -176,7 +178,8 @@ namespace vm::detail {
 			signature.parameters                                                                        \
 				= { FOR_EACH_ARG(VM_EXT_C_PUT2, VM_EXT_C_INTO_VM_TYPE_NAME, __VA_ARGS__) };             \
 			CORE_ASSERT(                                                                                \
-				vm_arg_type_size_sum.asInt() == sizeof(FunctionData)                                    \
+				(vm_arg_type_size_sum.asInt() <= sizeof(FunctionData)                                   \
+			     && sizeof(FunctionData) - vm_arg_type_size_sum.asInt() < 8)                            \
 					|| (vm_arg_type_size_sum.asInt() == 0 && sizeof(FunctionData) == 1),                \
 				"FunctionData\'s fields alignment does not match stack structure in the VM: ",          \
 				vm_arg_type_size_sum.asInt(),                                                           \

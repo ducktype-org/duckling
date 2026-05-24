@@ -57,11 +57,11 @@ class HeliosTests: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		//TESTER_ADD_TEST(testImport);
-		//TESTER_ADD_TEST(testEdgeEvals);
-		//TESTER_ADD_TEST(testConstants);
+		TESTER_ADD_TEST(testImport);
+		TESTER_ADD_TEST(testEdgeEvals);
+		TESTER_ADD_TEST(testConstants);
 		TESTER_ADD_TEST(testMetaCompTime);
-		/*TESTER_ADD_TEST(testNumericLiterals);
+		TESTER_ADD_TEST(testNumericLiterals);
 		TESTER_ADD_TEST(testClassSymbolData);
 		TESTER_ADD_TEST(testClassInteractions);
 		TESTER_ADD_TEST(testTypeInstanceInterface);
@@ -72,7 +72,7 @@ public:
 		TESTER_ADD_TEST(testReferenceKindCollapsing);
 		TESTER_ADD_TEST(testExprTree);
 		TESTER_ADD_TEST(testExprClone);
-		/*TESTER_ADD_TEST(testSimpleHOUT);
+		TESTER_ADD_TEST(testSimpleHOUT);
 		TESTER_ADD_TEST(testSingleFileModuleHOUT);
 		TESTER_ADD_TEST(testModuleHOUT);
 		TESTER_ADD_TEST(testDependencyHOUT);
@@ -101,7 +101,7 @@ public:
 		TESTER_ADD_TEST(testCastsHout);
 		TESTER_ADD_TEST(testTypeLifting);
 		TESTER_ADD_TEST(testHoutElementsOrigin);
-		TESTER_ADD_TEST(testAliases);*/
+		TESTER_ADD_TEST(testAliases);
 
 		// this is at the end
 		// so we test all the scopes created in helios tests:
