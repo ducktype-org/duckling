@@ -144,9 +144,27 @@ namespace vm {
 		{
 			std::unique_lock<std::shared_mutex> lock(rw_status);
 			status = new_status;
-			on_status_change.emitEvent(status);
 		}
+		on_status_change.emitEvent(new_status);
 		status_cv.notify_all();
+	}
+
+	bool IVMProcess::setStatusIfNotTerminal(const api::ProcStatus& new_status) noexcept {
+		bool updated = false;
+		api::ProcStatus emitted_status;
+		{
+			std::unique_lock<std::shared_mutex> lock(rw_status);
+			if (!api::isStatusTerminal(status)) {
+				status = new_status;
+				emitted_status = new_status;
+				updated = true;
+			}
+		}
+		if (updated) {
+			on_status_change.emitEvent(emitted_status);
+			status_cv.notify_all();
+		}
+		return updated;
 	}
 
 	api::ProcStatus IVMProcess::getStatus() {

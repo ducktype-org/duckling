@@ -195,6 +195,12 @@ namespace vm {
 		void setStatus(const api::ProcStatus& new_status) noexcept;
 
 		/**
+		 * @brief Atomically set process status if it is not already terminal.
+		 * @return true if status was updated, false if status was already terminal.
+		 */
+		bool setStatusIfNotTerminal(const api::ProcStatus& new_status) noexcept;
+
+		/**
 		 * @brief Creates a VmValue of a given type and registers it in this VMProcess
 		 * The VmValue is owned by the VMProcess. VmValues created with this function are freed when
 		 * the process is deinitialized.

@@ -12,6 +12,9 @@ class VmThreadTest: public VmTestSuite {
 public:
 	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(multithreadingTest);
+		TESTER_ADD_TEST(multithreadZeroDivI32Test);
+		TESTER_ADD_TEST(multithreadZeroDivI64Test);
+		TESTER_ADD_TEST(mainThreadZeroDivWithWorkerTest);
 		TESTER_ADD_TEST(mutexTest);
 		TESTER_ADD_TEST(cvTest);
 		TESTER_ADD_TEST(reuseThreadTest);
@@ -22,6 +25,24 @@ private:
 		// We don't check result here - only if it finished sucessfully
 		// That's because this code is purposefully not deterministic - it has data race
 		runTestOnVm("multithreading.dbc", "", {}, {});
+	}
+
+	void multithreadZeroDivI32Test() {
+		// Spawn a thread that performs division by zero on i32 and verify VM panicked
+		auto result = runTestOnVmGetResult("multithread_zero_div.dbc");
+		assertExecutionPanickedWith(result, vm::exceptions::VMZeroDivisionException::ERR_MSG);
+	}
+
+	void multithreadZeroDivI64Test() {
+		// Spawn a thread that performs division by zero on i64 and verify VM panicked
+		auto result = runTestOnVmGetResult("multithread_zero_div_i64.dbc");
+		assertExecutionPanickedWith(result, vm::exceptions::VMZeroDivisionException::ERR_MSG);
+	}
+
+	void mainThreadZeroDivWithWorkerTest() {
+		// Start a worker thread, let it run, then verify the main thread panics.
+		auto result = runTestOnVmGetResult("main_thread_zero_div.dbc");
+		assertExecutionPanickedWith(result, vm::exceptions::VMZeroDivisionException::ERR_MSG);
 	}
 
 	void mutexTest() {

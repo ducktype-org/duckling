@@ -537,9 +537,12 @@ namespace vm {
 					process_memory.setGlobalInitialized(block_ref);
 				} catch (const KillProcessException& e) {
 					respondExecutionRequest(api::ExecutionPanicked{ e.what() });
+					return;
 				}
 			}
 		}
+
+		if (api::isStatusTerminal(safe_process.getCurrentStatus())) return;
 
 		try {
 			const auto& maybe_func
@@ -564,7 +567,12 @@ namespace vm {
 			}();
 
 			const auto exit_value = executeFunction(start_function, func);
-			respondExecutionRequest(api::ExecutionCompleted{ exit_value });
+			const auto current_status = safe_process.getCurrentStatus();
+			if (api::isStatusTerminal(current_status)) {
+				respondExecutionRequest(current_status);
+			} else {
+				respondExecutionRequest(api::ExecutionCompleted{ exit_value });
+			}
 		} catch (const KillProcessException& e) {
 			respondExecutionRequest(api::ExecutionPanicked{ e.what() });
 		}

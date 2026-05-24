@@ -1,0 +1,111 @@
+global_data lock mutex {};
+global_data cv condition_variable {};
+global_data started i64 {};
+global_data counter i64 {};
+
+function worker {} -> {} {
+    init_pany_type lock1, mutex;
+    mov_popq_popq lock1, lock;
+    call_builtinfunc builtin_lock_mutex;
+
+    mov_p64_imm started, 1;
+
+    init_pany_type cv_notify_started, condition_variable;
+    mov_popq_popq cv_notify_started, cv;
+    call_builtinfunc builtin_notify_all_cv;
+
+    init_pany_type unlock1, mutex;
+    mov_popq_popq unlock1, lock;
+    call_builtinfunc builtin_unlock_mutex;
+
+    init_pany_type i, i64;
+    mov_p64_imm i, 10000;
+
+    label LoopWork;
+        cmpGt_p64_imm i, 0;
+        jmpIfNot_label Done;
+
+        init_pany_type lock2, mutex;
+        mov_popq_popq lock2, lock;
+        call_builtinfunc builtin_lock_mutex;
+
+        init_pany_type tmp, i64;
+        mov_p64_p64 tmp, counter;
+        add_p64_imm tmp, 1;
+        mov_p64_p64 counter, tmp;
+
+        init_pany_type unlock2, mutex;
+        mov_popq_popq unlock2, lock;
+        call_builtinfunc builtin_unlock_mutex;
+
+        deinit;
+        sub_p64_imm i, 1;
+        jmp_label LoopWork;
+
+    label Done;
+    ret;
+}
+
+function main { i64, ptr_argv } -> { i64 } {
+    init_pany_type m, mutex;
+    call_builtinfunc builtin_create_mutex;
+    mov_popq_popq lock, m;
+
+    init_pany_type c, condition_variable;
+    call_builtinfunc builtin_create_cv;
+    mov_popq_popq cv, c;
+
+    mov_p64_imm started, 0;
+    mov_p64_imm counter, 0;
+
+    init_pany_type t_id, i64;
+    set_threadctx worker;
+    call_builtinfunc builtin_start_thread;
+
+    init_pany_type lock_wait, mutex;
+    mov_popq_popq lock_wait, lock;
+    call_builtinfunc builtin_lock_mutex;
+
+    label WaitStartedInit;
+        init_pany_type rv, i64;
+        init_pany_type cv_wait_started, condition_variable;
+        init_pany_type wait_lock_started, mutex;
+
+    label WaitStarted;
+        mov_p64_p64 rv, started;
+        cmpEq_p64_imm rv, 1;
+        jmpIf_label WorkerStarted;
+
+        mov_popq_popq cv_wait_started, cv;
+        mov_popq_popq wait_lock_started, lock;
+        call_builtinfunc builtin_wait_cv;
+        deinit;
+        jmp_label WaitStartedInit;
+
+    label WorkerStarted;
+    deinit;
+
+    init_pany_type unlock_main, mutex;
+    mov_popq_popq unlock_main, lock;
+    call_builtinfunc builtin_unlock_mutex;
+
+    init_pany_type t_ret, i64;
+    init_pany_type join_id, i64;
+    mov_p64_p64 join_id, t_id;
+    call_builtinfunc builtin_join_thread;
+
+    init_pany_type destroy_cv, condition_variable;
+    mov_popq_popq destroy_cv, cv;
+    call_builtinfunc builtin_destroy_cv;
+
+    init_pany_type destroy_m, mutex;
+    mov_popq_popq destroy_m, lock;
+    call_builtinfunc builtin_destroy_mutex;
+
+    init_pany_type a, i32;
+    init_pany_type b, i32;
+    mov_p32_imm a, 13;
+    mov_p32_imm b, 0;
+    div_p32_p32 a, b;
+    ret;
+}

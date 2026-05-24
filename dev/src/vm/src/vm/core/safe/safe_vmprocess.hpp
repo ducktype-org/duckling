@@ -152,6 +152,8 @@ namespace vm {
 
 		Memory& getMemory();
 
+		[[nodiscard]] api::ProcStatus getCurrentStatus() { return getStatus(); }
+
 		Ref<VmValue> createVmValue(TypeCRef type) override;
 
 		Ref<VmValue> createVmValue(TypeCRef type, Pointer src) override;
