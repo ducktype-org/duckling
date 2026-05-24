@@ -314,8 +314,7 @@ dependencies:
     version: '2'
     features:
     - xd:
-        package_features: 
-        - foo
+        package_features: [foo]
 
 features:
   foo: []
@@ -391,8 +390,7 @@ dependencies:
     version: '2'
     features:
     - xd:
-        package_features: 
-        - foo
+        package_features: [foo]
 
 features:
   foo: []

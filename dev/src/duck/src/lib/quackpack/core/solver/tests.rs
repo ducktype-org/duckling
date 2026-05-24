@@ -72,8 +72,8 @@ fn create_mock_server() -> MockServer {
     let a1 = registry::Manifest {
         metadata: registry::Metadata {
             version: Version::new(1, 0, 0),
-            authors: vec!["Patryk Rogalski".into()],
-            license: "GLWTSPL".into(),
+            authors: vec!["Carly Shillingford".into()],
+            license: "MIT".into(),
             name: "a".into(),
             description: "".into(),
         },
@@ -86,8 +86,8 @@ fn create_mock_server() -> MockServer {
     let a2 = registry::Manifest {
         metadata: registry::Metadata {
             version: Version::new(2, 0, 0),
-            authors: vec!["Patryk Rogalski".into()],
-            license: "GLWTSPL".into(),
+            authors: vec!["Carly Shillingford".into()],
+            license: "MIT".into(),
             name: "a".into(),
             description: "".into(),
         },
@@ -100,8 +100,8 @@ fn create_mock_server() -> MockServer {
     let b2 = registry::Manifest {
         metadata: registry::Metadata {
             version: Version::new(2, 0, 0),
-            authors: vec!["Patryk Rogalski".into()],
-            license: "GLWTSPL".into(),
+            authors: vec!["Carly Shillingford".into()],
+            license: "MIT".into(),
             name: "b".into(),
             description: "".into(),
         },

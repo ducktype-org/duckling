@@ -90,8 +90,8 @@ fn create_mock_server() -> MockServer {
     let foo1 = registry::Manifest {
         metadata: registry::Metadata {
             version: Version::new(1, 0, 0),
-            authors: vec!["Patryk Rogalski".into()],
-            license: "GLWTSPL".into(),
+            authors: vec!["Carly Shillingford".into()],
+            license: "MIT".into(),
             name: "foo".into(),
             description: "".into(),
         },
@@ -104,8 +104,8 @@ fn create_mock_server() -> MockServer {
     let foo2 = registry::Manifest {
         metadata: registry::Metadata {
             version: Version::new(2, 0, 0),
-            authors: vec!["Patryk Rogalski".into()],
-            license: "GLWTSPL".into(),
+            authors: vec!["Carly Shillingford".into()],
+            license: "MIT".into(),
             name: "foo".into(),
             description: "".into(),
         },
@@ -118,8 +118,8 @@ fn create_mock_server() -> MockServer {
     let bar3 = registry::Manifest {
         metadata: registry::Metadata {
             version: Version::new(3, 0, 0),
-            authors: vec!["Patryk Rogalski".into()],
-            license: "GLWTSPL".into(),
+            authors: vec!["Carly Shillingford".into()],
+            license: "MIT".into(),
             name: "bar".into(),
             description: "".into(),
         },
@@ -132,8 +132,8 @@ fn create_mock_server() -> MockServer {
     let bar411 = registry::Manifest {
         metadata: registry::Metadata {
             version: Version::new(4, 1, 1),
-            authors: vec!["Patryk Rogalski".into()],
-            license: "GLWTSPL".into(),
+            authors: vec!["Carly Shillingford".into()],
+            license: "MIT".into(),
             name: "bar".into(),
             description: "".into(),
         },
@@ -168,8 +168,8 @@ fn create_mock_server() -> MockServer {
     let xd1 = registry::Manifest {
         metadata: registry::Metadata {
             version: Version::new(1, 0, 0),
-            authors: vec!["Patryk Rogalski".into()],
-            license: "GLWTSPL".into(),
+            authors: vec!["Carly Shillingford".into()],
+            license: "MIT".into(),
             name: "xd".into(),
             description: "".into(),
         },
@@ -182,8 +182,8 @@ fn create_mock_server() -> MockServer {
     let dx2 = registry::Manifest {
         metadata: registry::Metadata {
             version: Version::new(2, 0, 0),
-            authors: vec!["Patryk Rogalski".into()],
-            license: "GLWTSPL".into(),
+            authors: vec!["Carly Shillingford".into()],
+            license: "MIT".into(),
             name: "dx".into(),
             description: "".into(),
         },
@@ -229,8 +229,8 @@ fn create_mock_server() -> MockServer {
     let a1 = registry::Manifest {
         metadata: registry::Metadata {
             version: Version::new(1, 0, 0),
-            authors: vec!["Patryk Rogalski".into()],
-            license: "GLWTSPL".into(),
+            authors: vec!["Carly Shillingford".into()],
+            license: "MIT".into(),
             name: "a".into(),
             description: "".into(),
         },
@@ -243,8 +243,8 @@ fn create_mock_server() -> MockServer {
     let a2 = registry::Manifest {
         metadata: registry::Metadata {
             version: Version::new(2, 0, 0),
-            authors: vec!["Patryk Rogalski".into()],
-            license: "GLWTSPL".into(),
+            authors: vec!["Carly Shillingford".into()],
+            license: "MIT".into(),
             name: "a".into(),
             description: "".into(),
         },
@@ -257,8 +257,8 @@ fn create_mock_server() -> MockServer {
     let b1 = registry::Manifest {
         metadata: registry::Metadata {
             version: Version::new(1, 0, 0),
-            authors: vec!["Patryk Rogalski".into()],
-            license: "GLWTSPL".into(),
+            authors: vec!["Carly Shillingford".into()],
+            license: "MIT".into(),
             name: "b".into(),
             description: "".into(),
         },
@@ -271,8 +271,8 @@ fn create_mock_server() -> MockServer {
     let c1 = registry::Manifest {
         metadata: registry::Metadata {
             version: Version::new(1, 0, 0),
-            authors: vec!["Patryk Rogalski".into()],
-            license: "GLWTSPL".into(),
+            authors: vec!["Carly Shillingford".into()],
+            license: "MIT".into(),
             name: "c".into(),
             description: "".into(),
         },
@@ -318,8 +318,8 @@ fn create_mock_server() -> MockServer {
     let u = registry::Manifest {
         metadata: registry::Metadata {
             version: Version::new(1, 0, 0),
-            authors: vec!["Patryk Rogalski".into()],
-            license: "GLWTSPL".into(),
+            authors: vec!["Carly Shillingford".into()],
+            license: "MIT".into(),
             name: "a".into(),
             description: "".into(),
         },
@@ -332,8 +332,8 @@ fn create_mock_server() -> MockServer {
     let v = registry::Manifest {
         metadata: registry::Metadata {
             version: Version::new(1, 0, 0),
-            authors: vec!["Patryk Rogalski".into()],
-            license: "GLWTSPL".into(),
+            authors: vec!["Carly Shillingford".into()],
+            license: "MIT".into(),
             name: "a".into(),
             description: "".into(),
         },
@@ -363,8 +363,8 @@ fn create_mock_server() -> MockServer {
     let n = registry::Manifest {
         metadata: registry::Metadata {
             version: Version::new(1, 0, 0),
-            authors: vec!["Patryk Rogalski".into()],
-            license: "GLWTSPL".into(),
+            authors: vec!["Carly Shillingford".into()],
+            license: "MIT".into(),
             name: "a".into(),
             description: "".into(),
         },
@@ -381,8 +381,8 @@ fn create_mock_server() -> MockServer {
     let m = registry::Manifest {
         metadata: registry::Metadata {
             version: Version::new(1, 0, 0),
-            authors: vec!["Patryk Rogalski".into()],
-            license: "GLWTSPL".into(),
+            authors: vec!["Carly Shillingford".into()],
+            license: "MIT".into(),
             name: "a".into(),
             description: "".into(),
         },
