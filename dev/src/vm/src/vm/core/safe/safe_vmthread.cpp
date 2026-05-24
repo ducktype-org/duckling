@@ -605,18 +605,13 @@ namespace vm {
 	std::expected<low::LowCodePosition, api::ApiError> SafeVMThread::getCurrentPosition() {
 		variant_match(getStatus()) {
 			variant_case_novalue(api::Paused) {
-				auto frame = runtime_data.frame_stack_current;
-				auto instr = frame->instr;
+				auto  frame = runtime_data.frame_stack_current;
+				auto& func  = *frame->current_function;
 
-				for (const auto& [idx, func]:
-				     std::views::enumerate(process_program->getFunctions())) {
-					if (func.bc.data() <= instr && instr < func.bc.data() + func.bc.size()) {
-						return low::LowCodePosition{
-							.function          = &func,
-							.instruction_index = static_cast<u64>(instr - func.bc.data()),
-						};
-					}
-				}
+				return low::LowCodePosition{
+					.function          = &func,
+					.instruction_index = static_cast<u64>(frame->instr - func.bc.data()),
+				};
 			}
 			variant_default {
 				return std::unexpected(api::ApiError{
