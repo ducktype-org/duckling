@@ -92,7 +92,7 @@ jobs:
       itest-coverage-value: ${{ steps.test-coverage-itests.outputs.coverage-percent }}
       todo-count: ${{ steps.todo-counter.outputs.todo-count }}
 
-    timeout-minutes: 40 # (Per matrix run)
+    timeout-minutes: 60 # (Per matrix run)
     runs-on:
       group: SelfHostedRunners
       labels: ${{ matrix.build-type == 'Dev' && 'debug' || 'release' }}
@@ -112,7 +112,7 @@ jobs:
           if [[ "${{ matrix.build-type }}" == "Dev" && "${{ steps.set-self-hosted.outputs.is-self-hosted }}" == "true" ]]; then
             echo "jobs=6" >> $GITHUB_OUTPUT
           elif [[ "${{ matrix.build-type }}" == "DevOpt" && "${{ steps.set-self-hosted.outputs.is-self-hosted }}" == "true" ]]; then
-            echo "jobs=3" >> $GITHUB_OUTPUT
+            echo "jobs=6" >> $GITHUB_OUTPUT
           else
             echo "jobs=2" >> $GITHUB_OUTPUT
           fi
