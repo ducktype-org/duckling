@@ -1,5 +1,6 @@
 #include "queries.hpp"
 
+#include <diagnostic_interactive/duplicated_definition.hpp>
 #include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/hout/elements.hpp>
@@ -69,13 +70,13 @@ namespace compiler::helios {
 			std::vector<SymID>             class_symbols;
 			std::set<SymID>                default_ctors;
 			std::set<SymID>                additional_ctors;
-			// Keeps track of mangled names processed within the current module 
-            // to detect duplicated function declarations at the HOUT level.
-			std::set<base::StrID>          processed_mangled_names;
-			
-			auto                           register_ctor_if_needed = [&](SymID sym) {
-                const auto& symbol_type = ctx.query<QueryTypeOfSymbol>(sym)->valueOrThrow();
-                const auto& type = symbol_type.getType();
+			// Keeps track of mangled names processed within the current module
+			// to detect duplicated function declarations at the HOUT level.
+			std::set<base::StrID> processed_mangled_names;
+
+			auto register_ctor_if_needed = [&](SymID sym) {
+				const auto& symbol_type = ctx.query<QueryTypeOfSymbol>(sym)->valueOrThrow();
+				const auto& type        = symbol_type.getType();
 
 				// @TODO: #2509 Handle nested tuples
 				if (type.getKind() == tsh::Kind::Tuple) {
@@ -180,13 +181,12 @@ namespace compiler::helios {
 					}
 
 					if (processed_mangled_names.contains(mangled_name)) {
-						std::string error_msg
-							= "Symbol '" + std::string(func.declaration->original_name.strView())
-						    + "' is already defined.";
+						auto stable_pos  = func.declaration->origin.getStablePosition().value();
+						auto symbol_name = std::string(func.declaration->original_name.strView());
 
-						auto stable_pos = func.declaration->origin.getStablePosition().value();
-
-						ctx.logInt(makeBox<dia_int::PlaceholderError>(error_msg, stable_pos));
+						ctx.logInt(makeBox<dia_int::DuplicatedDefinitionError>(
+							symbol_name, stable_pos, "here"
+						));
 						is_failed = true;
 						continue;
 					}

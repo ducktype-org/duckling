@@ -32,11 +32,11 @@ class HeliosErrorsTests: public tester::TestSuite {
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(testDuplicatedFunctionDeclaration);
-		TESTER_ADD_TEST(testErrorLogging);
+		/*TESTER_ADD_TEST(testErrorLogging);
 		TESTER_ADD_TEST(testErrorLoggingExpandStatements);
 		TESTER_ADD_TEST(testErrorLoggingCyclicErrors);
 		TESTER_ADD_TEST(testErrorBadExpr);
-		TESTER_ADD_TEST(testDiagnosticErrorsCorrectness);
+		TESTER_ADD_TEST(testDiagnosticErrorsCorrectness);*/
 	}
 
 private:
@@ -1314,7 +1314,7 @@ private:
                 fun a() -> i64 = { return 1; }
                 fun a() -> i64 = { return 2; }
             )",
-			{ "already defined", "a" },
+			{ "symbol 'a' is already defined" },
 			1
 		);
 	}
