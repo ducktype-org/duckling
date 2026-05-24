@@ -734,12 +734,12 @@ features:
             .clone()
             .find_maximal_correct_dep_solution(&manifests)
             .unwrap();
-        assert!(
-            new_freeze
-                == SolverFreeze {
-                    package_freezes: [(exp_pkg_a, prev_a_freeze)].into(),
-                    main_pkg: exp_pkg_a,
-                }
+        assert_eq!(
+            new_freeze,
+            SolverFreeze {
+                package_freezes: [(exp_pkg_a, prev_a_freeze)].into(),
+                main_pkg: exp_pkg_a,
+            }
         )
     }
 }

@@ -958,39 +958,39 @@ dependencies:
         real_name: "v".into(),
     }
     .into();
-    assert!(
-        gathered_info.versions_for_location
-            == HashMap::from([
-                (loc_root, [None].into()),
-                (loc_u, [Some(Version::new(1, 0, 0))].into()),
-                (loc_v, [Some(Version::new(1, 0, 0))].into()),
-            ])
+    assert_eq!(
+        gathered_info.versions_for_location,
+        HashMap::from([
+            (loc_root, [None].into()),
+            (loc_u, [Some(Version::new(1, 0, 0))].into()),
+            (loc_v, [Some(Version::new(1, 0, 0))].into()),
+        ])
     );
-    assert!(
-        gathered_info.possible_features
-            == HashMap::from([
-                (
-                    ExpandedPackage {
-                        location: loc_root,
-                        version: None,
-                    },
-                    [].into()
-                ),
-                (
-                    ExpandedPackage {
-                        location: loc_u,
-                        version: Some(1.into()),
-                    },
-                    ["v".into()].into()
-                ),
-                (
-                    ExpandedPackage {
-                        location: loc_v,
-                        version: Some(1.into()),
-                    },
-                    ["u".into()].into()
-                ),
-            ])
+    assert_eq!(
+        gathered_info.possible_features,
+        HashMap::from([
+            (
+                ExpandedPackage {
+                    location: loc_root,
+                    version: None,
+                },
+                [].into()
+            ),
+            (
+                ExpandedPackage {
+                    location: loc_u,
+                    version: Some(1.into()),
+                },
+                ["v".into()].into()
+            ),
+            (
+                ExpandedPackage {
+                    location: loc_v,
+                    version: Some(1.into()),
+                },
+                ["u".into()].into()
+            ),
+        ])
     )
 }
 
@@ -1047,38 +1047,38 @@ dependencies:
         real_name: "m".into(),
     }
     .into();
-    assert!(
-        gathered_info.versions_for_location
-            == HashMap::from([
-                (loc_root, [None].into()),
-                (loc_n, [Some(Version::new(1, 0, 0))].into()),
-                (loc_m, [Some(Version::new(1, 0, 0))].into()),
-            ])
+    assert_eq!(
+        gathered_info.versions_for_location,
+        HashMap::from([
+            (loc_root, [None].into()),
+            (loc_n, [Some(Version::new(1, 0, 0))].into()),
+            (loc_m, [Some(Version::new(1, 0, 0))].into()),
+        ])
     );
-    assert!(
-        gathered_info.possible_features
-            == HashMap::from([
-                (
-                    ExpandedPackage {
-                        location: loc_root,
-                        version: None,
-                    },
-                    [].into()
-                ),
-                (
-                    ExpandedPackage {
-                        location: loc_n,
-                        version: Some(1.into()),
-                    },
-                    ["expandable".into(), "expanded".into()].into()
-                ),
-                (
-                    ExpandedPackage {
-                        location: loc_m,
-                        version: Some(1.into()),
-                    },
-                    [].into()
-                ),
-            ])
+    assert_eq!(
+        gathered_info.possible_features,
+        HashMap::from([
+            (
+                ExpandedPackage {
+                    location: loc_root,
+                    version: None,
+                },
+                [].into()
+            ),
+            (
+                ExpandedPackage {
+                    location: loc_n,
+                    version: Some(1.into()),
+                },
+                ["expandable".into(), "expanded".into()].into()
+            ),
+            (
+                ExpandedPackage {
+                    location: loc_m,
+                    version: Some(1.into()),
+                },
+                [].into()
+            ),
+        ])
     )
 }

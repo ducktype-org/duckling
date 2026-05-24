@@ -996,18 +996,21 @@ features:
 
         let main_pkg = (exp_pkg_a, HashSet::new());
         let output = SolverEngine::run_engine(input, &main_pkg).unwrap();
-        assert!(output.new_packages == HashSet::from([exp_pkg_a, exp_pkg_b]));
-        assert!(output.new_features == [(exp_pkg_b, ["f".into(), "g".into()].into()),].into());
-        assert!(
-            output.new_edges
-                == HashMap::from([(
-                    DependencyEdge {
-                        parent: exp_pkg_a,
-                        dependency_loc: exp_location_b,
-                        manifest_child_name: StrId::new("b"),
-                    },
-                    Some(Version::new(2, 0, 0))
-                )])
+        assert_eq!(output.new_packages, HashSet::from([exp_pkg_a, exp_pkg_b]));
+        assert_eq!(
+            output.new_features,
+            [(exp_pkg_b, ["f".into(), "g".into()].into()),].into()
+        );
+        assert_eq!(
+            output.new_edges,
+            HashMap::from([(
+                DependencyEdge {
+                    parent: exp_pkg_a,
+                    dependency_loc: exp_location_b,
+                    manifest_child_name: StrId::new("b"),
+                },
+                Some(Version::new(2, 0, 0))
+            )])
         );
     }
 }
