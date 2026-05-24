@@ -162,6 +162,7 @@ namespace compiler::helios {
 					out.functions.emplace_back(&hout_res);
 				}
 			});
+
 			for (auto handler: scheduled_tasks) {
 				// we "catch" failure here to continue gathering other functions:
 				auto hout_function = ctx.await<QueryCodeOfFun>(handler);
