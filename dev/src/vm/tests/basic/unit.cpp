@@ -14,7 +14,7 @@ public:
 	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(globalInitializationTest);
 		TESTER_ADD_TEST(globalsTest);
-		/*TESTER_ADD_TEST(commandLineArguments);
+		TESTER_ADD_TEST(commandLineArguments);
 		TESTER_ADD_TEST(jump);
 		TESTER_ADD_TEST(return1337);
 		TESTER_ADD_TEST(initPrimitivesWithZero);
@@ -39,7 +39,7 @@ public:
 		TESTER_ADD_TEST(testSyncRun);
 		TESTER_ADD_TEST(structureOperations);
 		TESTER_ADD_TEST(fixedSizeTableOperations);
-		TESTER_ADD_TEST(nestedAggregateTypesCorrectness);*/
+		TESTER_ADD_TEST(nestedAggregateTypesCorrectness);
 	}
 
 private:

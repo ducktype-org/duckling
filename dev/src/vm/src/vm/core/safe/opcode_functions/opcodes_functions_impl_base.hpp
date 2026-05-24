@@ -443,26 +443,10 @@ namespace vm {
 
 				byte* args_pointer
 					= result_pointer
-				    + (is_void ? 0 : Type::fully_align_up(ext_func->result_types.at(0)->getSize().asInt()));
+				    + (is_void
+				           ? 0
+				           : Type::fully_align_up(ext_func->result_types.at(0)->getSize().asInt()));
 
-
-				/*byte* result_pointer = nullptr;
-				if (!is_void) {
-				    auto ext_result_destination
-				        = Ref(frame->local_block_ref_stack_base[result_value_idx]);
-				    auto result_view
-				        = thread.process_memory.getBlockViewUnsafe(ext_result_destination);
-				    result_pointer = result_view.getBegin();
-				}*/
-
-
-				/*byte* args_pointer = nullptr;
-				if (arg_count != 0) {
-				    auto first_arg_idx   = result_value_idx + (is_void ? 0 : 1);
-				    auto first_arg_block = Ref(frame->local_block_ref_stack_base[first_arg_idx]);
-				    auto first_arg_view = thread.process_memory.getBlockViewUnsafe(first_arg_block);
-				    args_pointer        = first_arg_view.getBegin();
-				}*/
 
 				ext_func->function_pointer(result_pointer, args_pointer);
 
@@ -561,7 +545,6 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(init_bany_type)(FUNCTION_ARGS) {
 		{
-			std::cout << "INIT AT " << instr->arg0 << '\n';
 			performInit(
 				instr, local_stack, frame, thread, READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1)
 			);
@@ -636,7 +619,7 @@ namespace vm {
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(ext_pptr)(FUNCTION_ARGS) {
-		CORE_PANIC("ext_field not consumed by previous instruction");
+		CORE_PANIC("ext_pptr not consumed by previous instruction");
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(ext_p64_type)(FUNCTION_ARGS) {

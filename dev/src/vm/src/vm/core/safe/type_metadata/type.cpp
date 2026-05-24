@@ -7,7 +7,6 @@
 
 #include <vm/bytecode/validator/errors.hpp>
 #include <vm/core/safe/type_metadata/definitions.hpp>
-#include <vm/utils/interpret.hpp>
 
 #include <algorithm>
 

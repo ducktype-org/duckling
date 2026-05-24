@@ -547,9 +547,10 @@ namespace vm::loader::compiler {
 			base::Optional<base::StrID> ctor_name, dtor_name;
 			if (global.ctor_name.has_value()) ctor_name = global.ctor_name->str;
 			if (global.dtor_name.has_value()) dtor_name = global.dtor_name->str;
-			auto type = low_program.types->at(global.type);
-			program_ctx.global_buffer_size
-				= Bytes(Type::align_up(program_ctx.global_buffer_size.asInt(), type->getStackAlignment()));
+			auto type                      = low_program.types->at(global.type);
+			program_ctx.global_buffer_size = Bytes(
+				Type::align_up(program_ctx.global_buffer_size.asInt(), type->getStackAlignment())
+			);
 
 			low::LowGlobalData data{
 				.type                 = type,
