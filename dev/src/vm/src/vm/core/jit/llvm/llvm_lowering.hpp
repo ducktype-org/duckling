@@ -155,7 +155,7 @@ namespace vm::jit {
 				true,  // isConstant
 				llvm::GlobalValue::PrivateLinkage,
 				arr_const,
-				base::toString(func_or_loop_name.str()) + "_bc"
+				func_or_loop_name.str() + "_bc"
 			);
 
 			llvm::Value* zero = builder.getInt32(0);
