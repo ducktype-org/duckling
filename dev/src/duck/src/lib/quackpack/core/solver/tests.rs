@@ -227,33 +227,33 @@ dependencies:
         panic!()
     };
     let new_freeze = solver.solve().unwrap().new_freeze;
-    assert!(new_freeze.main_pkg == root_pkg);
-    assert!(
-        new_freeze.package_freezes
-            == [
-                (
-                    root_pkg,
-                    SolverPackageFreeze {
-                        dependencies_realization: [("a".into(), a_pkg), ("b".into(), b_pkg)].into(),
-                        features: [].into()
-                    }
-                ),
-                (
-                    a_pkg,
-                    SolverPackageFreeze {
-                        dependencies_realization: [].into(),
-                        features: [].into()
-                    }
-                ),
-                (
-                    b_pkg,
-                    SolverPackageFreeze {
-                        dependencies_realization: [].into(),
-                        features: [].into()
-                    }
-                ),
-            ]
-            .into()
+    assert_eq!(new_freeze.main_pkg, root_pkg);
+    assert_eq!(
+        new_freeze.package_freezes,
+        [
+            (
+                root_pkg,
+                SolverPackageFreeze {
+                    dependencies_realization: [("a".into(), a_pkg), ("b".into(), b_pkg)].into(),
+                    features: [].into()
+                }
+            ),
+            (
+                a_pkg,
+                SolverPackageFreeze {
+                    dependencies_realization: [].into(),
+                    features: [].into()
+                }
+            ),
+            (
+                b_pkg,
+                SolverPackageFreeze {
+                    dependencies_realization: [].into(),
+                    features: [].into()
+                }
+            ),
+        ]
+        .into()
     )
 }
 
@@ -347,26 +347,26 @@ dependencies:
     else {
         panic!()
     };
-    assert!(answer.new_freeze.main_pkg == root_pkg);
-    assert!(
-        answer.new_freeze.package_freezes
-            == [
-                (
-                    root_pkg,
-                    SolverPackageFreeze {
-                        dependencies_realization: [("b".into(), b_pkg)].into(),
-                        features: [].into()
-                    }
-                ),
-                (
-                    b_pkg,
-                    SolverPackageFreeze {
-                        dependencies_realization: [].into(),
-                        features: [].into()
-                    }
-                ),
-            ]
-            .into()
+    assert_eq!(answer.new_freeze.main_pkg, root_pkg);
+    assert_eq!(
+        answer.new_freeze.package_freezes,
+        [
+            (
+                root_pkg,
+                SolverPackageFreeze {
+                    dependencies_realization: [("b".into(), b_pkg)].into(),
+                    features: [].into()
+                }
+            ),
+            (
+                b_pkg,
+                SolverPackageFreeze {
+                    dependencies_realization: [].into(),
+                    features: [].into()
+                }
+            ),
+        ]
+        .into()
     )
 }
 
@@ -458,25 +458,25 @@ dependencies:
         panic!()
     };
     let new_freeze = solver.solve().unwrap().new_freeze;
-    assert!(new_freeze.main_pkg == root_pkg);
-    assert!(
-        new_freeze.package_freezes
-            == [
-                (
-                    root_pkg,
-                    SolverPackageFreeze {
-                        dependencies_realization: [("a".into(), a2_pkg)].into(),
-                        features: [].into()
-                    }
-                ),
-                (
-                    a2_pkg,
-                    SolverPackageFreeze {
-                        dependencies_realization: [].into(),
-                        features: ["a".into()].into()
-                    }
-                ),
-            ]
-            .into()
+    assert_eq!(new_freeze.main_pkg, root_pkg);
+    assert_eq!(
+        new_freeze.package_freezes,
+        [
+            (
+                root_pkg,
+                SolverPackageFreeze {
+                    dependencies_realization: [("a".into(), a2_pkg)].into(),
+                    features: [].into()
+                }
+            ),
+            (
+                a2_pkg,
+                SolverPackageFreeze {
+                    dependencies_realization: [].into(),
+                    features: ["a".into()].into()
+                }
+            ),
+        ]
+        .into()
     )
 }

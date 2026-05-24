@@ -310,13 +310,13 @@ metadata:
         let freeze_a = new_freeze.package_freezes.get(&exp_pkg_a).unwrap();
         let freeze_b = new_freeze.package_freezes.get(&exp_pkg_b).unwrap();
         let freeze_c = new_freeze.package_freezes.get(&exp_pkg_c).unwrap();
-        assert!(
-            freeze_a.dependencies_realization
-                == HashMap::from([(StrId::new("b"), exp_pkg_b), (StrId::new("c"), exp_pkg_c),])
+        assert_eq!(
+            freeze_a.dependencies_realization,
+            HashMap::from([(StrId::new("b"), exp_pkg_b), (StrId::new("c"), exp_pkg_c),])
         );
         assert!(freeze_a.features.is_empty());
         assert!(freeze_b.dependencies_realization.is_empty());
-        assert!(freeze_b.features == HashSet::from([FeatureName::new("xd")]));
+        assert_eq!(freeze_b.features, HashSet::from([FeatureName::new("xd")]));
         assert!(freeze_c.dependencies_realization.is_empty());
         assert!(freeze_c.features.is_empty());
     }
@@ -422,10 +422,13 @@ metadata:
         let freeze_a = new_freeze.package_freezes.get(&exp_pkg_a).unwrap();
         let freeze_b = new_freeze.package_freezes.get(&exp_pkg_b).unwrap();
         assert!(!new_freeze.package_freezes.contains_key(&exp_pkg_c));
-        assert!(freeze_a.dependencies_realization == HashMap::from([(StrId::new("b"), exp_pkg_b)]));
+        assert_eq!(
+            freeze_a.dependencies_realization,
+            HashMap::from([(StrId::new("b"), exp_pkg_b)])
+        );
         assert!(freeze_a.features.is_empty());
         assert!(freeze_b.dependencies_realization.is_empty());
-        assert!(freeze_b.features == HashSet::from([FeatureName::new("xd")]));
+        assert_eq!(freeze_b.features, HashSet::from([FeatureName::new("xd")]));
     }
 
     #[test]
@@ -531,13 +534,13 @@ metadata:
         let freeze_a = new_freeze.package_freezes.get(&exp_pkg_a).unwrap();
         let freeze_b = new_freeze.package_freezes.get(&exp_pkg_b).unwrap();
         let freeze_c = new_freeze.package_freezes.get(&exp_pkg_c).unwrap();
-        assert!(
-            freeze_a.dependencies_realization
-                == HashMap::from([(StrId::new("b"), exp_pkg_b), (StrId::new("c"), exp_pkg_c),])
+        assert_eq!(
+            freeze_a.dependencies_realization,
+            HashMap::from([(StrId::new("b"), exp_pkg_b), (StrId::new("c"), exp_pkg_c),])
         );
         assert!(freeze_a.features.is_empty());
         assert!(freeze_b.dependencies_realization.is_empty());
-        assert!(freeze_b.features == HashSet::from([FeatureName::new("xd")]));
+        assert_eq!(freeze_b.features, HashSet::from([FeatureName::new("xd")]));
         assert!(freeze_c.dependencies_realization.is_empty());
         assert!(freeze_c.features.is_empty());
     }
@@ -639,9 +642,15 @@ metadata:
         let freeze_a = new_freeze.package_freezes.get(&exp_pkg_a).unwrap();
         let freeze_b = new_freeze.package_freezes.get(&exp_pkg_b).unwrap();
         let freeze_c = new_freeze.package_freezes.get(&exp_pkg_c).unwrap();
-        assert!(freeze_a.dependencies_realization == HashMap::from([(StrId::new("b"), exp_pkg_b)]));
+        assert_eq!(
+            freeze_a.dependencies_realization,
+            HashMap::from([(StrId::new("b"), exp_pkg_b)])
+        );
         assert!(freeze_a.features.is_empty());
-        assert!(freeze_b.dependencies_realization == HashMap::from([(StrId::new("c"), exp_pkg_c)]));
+        assert_eq!(
+            freeze_b.dependencies_realization,
+            HashMap::from([(StrId::new("c"), exp_pkg_c)])
+        );
         assert!(freeze_b.features.is_empty());
         assert!(freeze_c.dependencies_realization.is_empty());
         assert!(freeze_c.features.is_empty());
@@ -721,8 +730,11 @@ metadata:
         let new_freeze = prev_freeze.new_freeze(&manifests, solver_output).unwrap();
         let freeze_a = new_freeze.package_freezes.get(&exp_pkg_a).unwrap();
         let freeze_b = new_freeze.package_freezes.get(&exp_pkg_b).unwrap();
-        assert!(freeze_a.dependencies_realization == HashMap::from([(StrId::new("b"), exp_pkg_b)]));
-        assert!(freeze_a.features == ["xd".into()].into());
+        assert_eq!(
+            freeze_a.dependencies_realization,
+            HashMap::from([(StrId::new("b"), exp_pkg_b)])
+        );
+        assert_eq!(freeze_a.features, ["xd".into()].into());
         assert!(freeze_b.dependencies_realization.is_empty());
         assert!(freeze_b.features.is_empty());
     }

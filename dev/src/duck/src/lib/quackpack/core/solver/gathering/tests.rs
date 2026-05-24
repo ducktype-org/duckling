@@ -545,19 +545,19 @@ dependencies:
         real_name: "bar".into(),
     }
     .into();
-    assert!(
-        gathered_info.versions_for_location
-            == HashMap::from([
-                (loc_root, HashSet::from([None])),
-                (
-                    loc_foo,
-                    HashSet::from([Some(Version::new(1, 0, 0)), Some(Version::new(2, 0, 0))])
-                ),
-                (
-                    loc_bar,
-                    HashSet::from([Some(Version::new(3, 0, 0)), Some(Version::new(4, 1, 1))])
-                ),
-            ])
+    assert_eq!(
+        gathered_info.versions_for_location,
+        HashMap::from([
+            (loc_root, HashSet::from([None])),
+            (
+                loc_foo,
+                HashSet::from([Some(Version::new(1, 0, 0)), Some(Version::new(2, 0, 0))])
+            ),
+            (
+                loc_bar,
+                HashSet::from([Some(Version::new(3, 0, 0)), Some(Version::new(4, 1, 1))])
+            ),
+        ])
     );
     let packages = HashSet::from([
         ExpandedPackage {
@@ -581,47 +581,47 @@ dependencies:
             version: Some(Version::new(4, 1, 1)),
         },
     ]);
-    assert!(
+    assert_eq!(
+        packages,
         gathered_info
             .gathered_manifests
             .keys()
             .copied()
             .collect::<HashSet<ExpandedPackage>>()
-            == packages
     );
-    assert!(
+    assert_eq!(
+        packages,
         gathered_info
             .possible_features
             .keys()
             .copied()
             .collect::<HashSet<ExpandedPackage>>()
-            == packages
     );
     for (_, features) in gathered_info.possible_features {
         assert!(features.is_empty());
     }
-    assert!(
-        gathered_info.location_resolver
-            == HashMap::from([
-                (
-                    InternedLocation::new(Location::Local { path: root_path }),
-                    loc_root
-                ),
-                (
-                    InternedLocation::new(Location::Registry {
-                        url: url.clone(),
-                        real_name: "foo".into()
-                    }),
-                    loc_foo
-                ),
-                (
-                    InternedLocation::new(Location::Registry {
-                        url: url.clone(),
-                        real_name: "bar".into()
-                    }),
-                    loc_bar
-                ),
-            ])
+    assert_eq!(
+        gathered_info.location_resolver,
+        HashMap::from([
+            (
+                InternedLocation::new(Location::Local { path: root_path }),
+                loc_root
+            ),
+            (
+                InternedLocation::new(Location::Registry {
+                    url: url.clone(),
+                    real_name: "foo".into()
+                }),
+                loc_foo
+            ),
+            (
+                InternedLocation::new(Location::Registry {
+                    url: url.clone(),
+                    real_name: "bar".into()
+                }),
+                loc_bar
+            ),
+        ])
     )
 }
 
@@ -682,13 +682,13 @@ dependencies:
         real_name: "dx".into(),
     }
     .into();
-    assert!(
-        gathered_info.versions_for_location
-            == HashMap::from([
-                (loc_root, HashSet::from([None])),
-                (loc_xd, HashSet::from([Some(Version::new(1, 0, 0))])),
-                (loc_dx, HashSet::from([Some(Version::new(2, 0, 0))])),
-            ])
+    assert_eq!(
+        gathered_info.versions_for_location,
+        HashMap::from([
+            (loc_root, HashSet::from([None])),
+            (loc_xd, HashSet::from([Some(Version::new(1, 0, 0))])),
+            (loc_dx, HashSet::from([Some(Version::new(2, 0, 0))])),
+        ])
     );
 }
 
@@ -755,31 +755,31 @@ features:
         real_name: "dx".into(),
     }
     .into();
-    assert!(
-        gathered_info.possible_features
-            == HashMap::from([
-                (
-                    ExpandedPackage {
-                        location: loc_root,
-                        version: None,
-                    },
-                    ["my_feature".into()].into()
-                ),
-                (
-                    ExpandedPackage {
-                        location: loc_xd,
-                        version: Some(Version::new(1, 0, 0)),
-                    },
-                    ["dx".into()].into()
-                ),
-                (
-                    ExpandedPackage {
-                        location: loc_dx,
-                        version: Some(Version::new(2, 0, 0)),
-                    },
-                    ["root".into()].into()
-                ),
-            ])
+    assert_eq!(
+        gathered_info.possible_features,
+        HashMap::from([
+            (
+                ExpandedPackage {
+                    location: loc_root,
+                    version: None,
+                },
+                ["my_feature".into()].into()
+            ),
+            (
+                ExpandedPackage {
+                    location: loc_xd,
+                    version: Some(Version::new(1, 0, 0)),
+                },
+                ["dx".into()].into()
+            ),
+            (
+                ExpandedPackage {
+                    location: loc_dx,
+                    version: Some(Version::new(2, 0, 0)),
+                },
+                ["root".into()].into()
+            ),
+        ])
     );
 }
 #[test]
@@ -852,57 +852,57 @@ dependencies:
         real_name: "c".into(),
     }
     .into();
-    assert!(
-        gathered_info.versions_for_location
-            == HashMap::from([
-                (loc_root, [None].into()),
-                (
-                    loc_a,
-                    [Some(Version::new(1, 0, 0)), Some(Version::new(2, 0, 0))].into()
-                ),
-                (loc_b, [Some(Version::new(1, 0, 0))].into()),
-                (loc_c, [Some(Version::new(1, 0, 0))].into()),
-            ])
+    assert_eq!(
+        gathered_info.versions_for_location,
+        HashMap::from([
+            (loc_root, [None].into()),
+            (
+                loc_a,
+                [Some(Version::new(1, 0, 0)), Some(Version::new(2, 0, 0))].into()
+            ),
+            (loc_b, [Some(Version::new(1, 0, 0))].into()),
+            (loc_c, [Some(Version::new(1, 0, 0))].into()),
+        ])
     );
-    assert!(
-        gathered_info.possible_features
-            == HashMap::from([
-                (
-                    ExpandedPackage {
-                        location: loc_root,
-                        version: None,
-                    },
-                    [].into()
-                ),
-                (
-                    ExpandedPackage {
-                        location: loc_a,
-                        version: Some(1.into()),
-                    },
-                    ["f".into()].into()
-                ),
-                (
-                    ExpandedPackage {
-                        location: loc_a,
-                        version: Some(2.into()),
-                    },
-                    [].into()
-                ),
-                (
-                    ExpandedPackage {
-                        location: loc_b,
-                        version: Some(1.into()),
-                    },
-                    [].into()
-                ),
-                (
-                    ExpandedPackage {
-                        location: loc_c,
-                        version: Some(1.into()),
-                    },
-                    [].into()
-                ),
-            ])
+    assert_eq!(
+        gathered_info.possible_features,
+        HashMap::from([
+            (
+                ExpandedPackage {
+                    location: loc_root,
+                    version: None,
+                },
+                [].into()
+            ),
+            (
+                ExpandedPackage {
+                    location: loc_a,
+                    version: Some(1.into()),
+                },
+                ["f".into()].into()
+            ),
+            (
+                ExpandedPackage {
+                    location: loc_a,
+                    version: Some(2.into()),
+                },
+                [].into()
+            ),
+            (
+                ExpandedPackage {
+                    location: loc_b,
+                    version: Some(1.into()),
+                },
+                [].into()
+            ),
+            (
+                ExpandedPackage {
+                    location: loc_c,
+                    version: Some(1.into()),
+                },
+                [].into()
+            ),
+        ])
     )
 }
 

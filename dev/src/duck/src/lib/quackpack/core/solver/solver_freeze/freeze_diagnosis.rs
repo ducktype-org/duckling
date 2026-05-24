@@ -375,7 +375,7 @@ features:
             .clone()
             .find_maximal_correct_dep_solution(&manifests)
             .unwrap();
-        assert!(new_freeze == prev_freeze);
+        assert_eq!(new_freeze, prev_freeze);
     }
 
     #[test]
@@ -450,9 +450,9 @@ metadata:
             .find_maximal_correct_dep_solution(&manifests)
             .unwrap();
         let freeze_a = new_freeze.package_freezes.get(&exp_pkg_a).unwrap();
-        assert!(new_freeze.package_freezes.len() == 1);
+        assert_eq!(new_freeze.package_freezes.len(), 1);
         assert!(freeze_a.dependencies_realization.is_empty());
-        assert!(freeze_a.features == HashSet::from([FeatureName::new("foo")]));
+        assert_eq!(freeze_a.features, HashSet::from([FeatureName::new("foo")]));
     }
 
     #[test]
@@ -544,7 +544,7 @@ metadata:
             .unwrap();
         let freeze_a = new_freeze.package_freezes.get(&exp_pkg_a).unwrap();
         let freeze_c = new_freeze.package_freezes.get(&exp_pkg_c).unwrap();
-        assert!(new_freeze.package_freezes.len() == 2);
+        assert_eq!(new_freeze.package_freezes.len(), 2);
         assert!(freeze_a.dependencies_realization.is_empty());
         assert!(freeze_c.dependencies_realization.is_empty());
     }
@@ -665,7 +665,7 @@ metadata:
             .unwrap();
         let freeze_a = new_freeze.package_freezes.get(&exp_pkg_a).unwrap();
         let freeze_d = new_freeze.package_freezes.get(&exp_pkg_d).unwrap();
-        assert!(new_freeze.package_freezes.len() == 2);
+        assert_eq!(new_freeze.package_freezes.len(), 2);
         assert!(freeze_a.dependencies_realization.is_empty());
         assert!(freeze_d.dependencies_realization.is_empty());
     }
