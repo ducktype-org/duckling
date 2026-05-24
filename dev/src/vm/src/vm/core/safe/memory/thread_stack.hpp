@@ -2,14 +2,17 @@
 
 #include "frame.hpp"
 
+#include <vm/core/safe/type_metadata/type.hpp>
+
+#include <cstdlib>
 #include <vector>
 
 namespace vm {
 	class ThreadStack final {
 	private:
-		std::vector<Frame>     frame_stack;
-		std::vector<std::byte> local_stack;
-		std::vector<Block*>    block_ref_stack;
+		std::vector<Frame> frame_stack;
+		std::byte* local_stack;  // Memory is allocated manually, beacause it must be alligned.
+		std::vector<Block*> block_ref_stack;
 
 	public:
 		static constexpr u64 FRAMES_LENGTH = 16'384;
@@ -33,13 +36,19 @@ namespace vm {
 
 		ThreadStack():
 			  frame_stack(FRAMES_LENGTH),
-			  local_stack(STACK_LENGTH),
+			  local_stack(reinterpret_cast<std::byte*>(
+				  std::aligned_alloc(Type::MAX_ALIGNMENT, STACK_LENGTH)
+			  )),
 			  block_ref_stack(BLOCK_REF_STACK_LENGTH) {}
 
 		auto getFrameStack() -> Ref<std::vector<Frame>> { return &frame_stack; }
 
-		auto getLocalStack() -> Ref<std::vector<std::byte>> { return &local_stack; }
+		auto getLocalStackBegin() -> std::byte* { return local_stack; }
+
+		auto getLocalStackEnd() -> std::byte* { return local_stack + STACK_LENGTH; }
 
 		auto getBlockRefStack() -> Ref<std::vector<Block*>> { return &block_ref_stack; }
+
+		~ThreadStack() { std::free(local_stack); }
 	};
 }

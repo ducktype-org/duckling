@@ -214,7 +214,6 @@ namespace vm {
 			void
 			performDeinit(Frame*& frame, SafeVMThread& thread) {
 			auto block = frame->local_block_ref_stack_end[-1];
-			auto type  = thread.process_memory.getBlockType(block);
 
 			thread.process_memory.freeBlockData(block);
 			thread.process_memory.decreaseBlockRefcount(block);

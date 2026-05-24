@@ -37,14 +37,14 @@ namespace vm {
 		 * @note Specific version of function for MAX_ALIGNMENT, because it is used in multiple
 		 * places, MAX_ALIGNMENT is constexpr, so we can get more optimized function.
 		 */
-		constexpr static usize fully_align_up(usize value) {
+		constexpr static usize fullyAlignUp(usize value) {
 			return (value + MAX_ALIGNMENT - 1) & ~(MAX_ALIGNMENT - 1);
 		}
 
 		/**
 		 * @brief Aligns value up to the alignment. Alignment must be a power of 2.
 		 */
-		constexpr static usize align_up(usize value, size_t alignment) {
+		constexpr static usize alignUp(usize value, size_t alignment) {
 			return (value + alignment - 1) & ~(alignment - 1);
 		}
 
@@ -67,7 +67,7 @@ namespace vm {
 
 		base::StrID            name;
 		TypeSize               size = TypeSize(-1);
-		base::Optional<size_t> stack_alligment
+		base::Optional<size_t> stack_alignment
 			= std::nullopt;  // Only types stored on stack need this.
 		Kind   kind_type = Kind::None;
 		TypeID id{};
@@ -144,8 +144,8 @@ namespace vm {
 
 		[[nodiscard]]
 		size_t getStackAlignment() const {
-			match_optional(stack_alligment) {
-				opt_some(allignment) { return allignment; }
+			match_optional(stack_alignment) {
+				opt_some(alignment) { return alignment; }
 				opt_none {
 					CORE_PANIC(
 						"getStackAlignment called for type that is not stored on stack or before "

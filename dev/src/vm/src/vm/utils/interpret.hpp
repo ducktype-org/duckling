@@ -4,6 +4,7 @@
 
 #include <array>
 #include <cstring>
+#include <memory>
 #include <new>
 #include <type_traits>
 
@@ -14,10 +15,10 @@ namespace vm {
 	 * @note replace with std::is_sufficiently_aligned, available since C++26
 	 */
 	template<typename T>
-	constexpr bool is_aligned(const byte* ptr) noexcept {
+	constexpr bool isAligned(const byte* ptr) noexcept {
 		std::size_t space = sizeof(T);
 		// This function does not modify memory to with ptr points. It is legal to cast away const.
-		void* ptr_copy = const_cast<void*>(reinterpret_cast<const void*>(ptr));
+		void* ptr_copy = const_cast<void*>(reinterpret_cast<const void*>(ptr));  // NOLINT
 		return std::align(alignof(T), sizeof(T), ptr_copy, space)
 		    == reinterpret_cast<const void*>(ptr);
 	}
@@ -37,7 +38,7 @@ namespace vm {
 	template<typename T>
 	[[nodiscard]] T safeReadPointerBytes(const byte* ptr, usize offset = 0)
 		requires std::is_trivially_copyable_v<T> {
-		CORE_ASSERT(is_aligned<T>(ptr + offset), "Unaligned access in safeReadPointerBytes");
+		CORE_ASSERT(isAligned<T>(ptr + offset), "Unaligned access in safeReadPointerBytes");
 		// After reinterpret cast the pointer to points to object of type T. T is type
 		// accessible to T, we can dereference.
 		return *reinterpret_cast<const T*>(ptr + offset);
@@ -57,7 +58,7 @@ namespace vm {
 	template<typename T>
 	void safeWriteBytes(byte* dest, const T& value, usize offset = 0)
 		requires(std::is_trivially_copyable_v<T>) {
-		CORE_ASSERT(is_aligned<T>(dest + offset), "Unaligned access in safeReadPointerBytes");
+		CORE_ASSERT(isAligned<T>(dest + offset), "Unaligned access in safeReadPointerBytes");
 
 		::new (reinterpret_cast<void*>(dest + offset)) T(value);
 	}

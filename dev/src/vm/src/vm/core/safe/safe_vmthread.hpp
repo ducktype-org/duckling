@@ -69,8 +69,8 @@ namespace vm {
 			  frame_stack_base(stack->getFrameStack()->data()),
 			  frame_stack_end(stack->getFrameStack()->data() + stack->getFrameStack()->size()),
 			  frame_stack_current(stack->getFrameStack()->data()),
-			  local_stack_base(stack->getLocalStack()->data()),
-			  local_stack_end(stack->getLocalStack()->data() + stack->getLocalStack()->size()),
+			  local_stack_base(stack->getLocalStackBegin()),
+			  local_stack_end(stack->getLocalStackEnd()),
 			  block_ref_stack_base(stack->getBlockRefStack()->data()),
 			  block_ref_stack_end(
 				  stack->getBlockRefStack()->data() + stack->getBlockRefStack()->size()

@@ -169,14 +169,14 @@ namespace vm::loader::compiler {
 		/**
 		 * @brief Seeks the number of parameters and return values of a method with the given name.
 		 */
-		base::Optional<std::pair<u64, u64>> seek_method_param_ret_count(const base::StrID& method_name
+		base::Optional<std::pair<u64, u64>> seekMethodParamRetCount(const base::StrID& method_name
 		) const;
 
 		/**
 		 * @brief Calculates labels positions in high bytecode.
 		 * @note Used only for graph traversing, not for lowering.
 		 */
-		base::HashMap<base::StrID, usize> calculate_labels_mapping(FunctionCompilationContext& ctx
+		base::HashMap<base::StrID, usize> calculateLabelsMapping(FunctionCompilationContext& ctx
 		) const;
 
 		/**

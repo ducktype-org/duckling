@@ -167,10 +167,10 @@ namespace vm::loader::compiler {
 		return micro_bytecode;
 	}
 
-	base::Optional<std::pair<u64, u64>> Compiler::seek_method_param_ret_count(
+	base::Optional<std::pair<u64, u64>> Compiler::seekMethodParamRetCount(
 		const base::StrID& method_name
 	) const {
-		// @todo: https://github.com/ducktype-org/duckling/issues/962
+		// @TODO: #962 Optimize
 		auto it = std::ranges::find_if(*low_program.types, [&](const auto& type) {
 			if_opt_some(type.getInheritanceMetadata(), inh_meta) {
 				return (*inh_meta).available_methods.contains(method_name);
@@ -188,8 +188,7 @@ namespace vm::loader::compiler {
 		CORE_UNREACHABLE();
 	}
 
-	base::HashMap<base::StrID, usize> Compiler::calculate_labels_mapping(
-		FunctionCompilationContext& ctx
+	base::HashMap<base::StrID, usize> Compiler::calculateLabelsMapping(FunctionCompilationContext& ctx
 	) const {
 		base::HashMap<base::StrID, usize> label_positions{};
 		for (auto [idx, instr]: std::views::enumerate(ctx.function.body)) {
@@ -223,7 +222,7 @@ namespace vm::loader::compiler {
 			for (size_t i = 0; i < args_cnt; ++i) pop();
 		};
 
-		base::HashMap<base::StrID, usize> label_positions = calculate_labels_mapping(ctx);
+		base::HashMap<base::StrID, usize> label_positions = calculateLabelsMapping(ctx);
 
 		const code::FuncSignature& func_signature = ctx.function.signature;
 
@@ -307,7 +306,7 @@ namespace vm::loader::compiler {
 				}
 				instr_case(Op_virtual_call_pptr_method, instr) {
 					auto [param_count, ret_count]
-						= *seek_method_param_ret_count(instr.method.method_name);
+						= *seekMethodParamRetCount(instr.method.method_name);
 					handle_non_tailcall(param_count, ret_count);
 					index++;
 				}
@@ -352,7 +351,7 @@ namespace vm::loader::compiler {
 			                    ? Type::MAX_ALIGNMENT
 			                    : type_ref->getStackAlignment();
 
-			size_t padding        = Type::align_up(curr_stack_size, type_align) - curr_stack_size;
+			size_t padding        = Type::alignUp(curr_stack_size, type_align) - curr_stack_size;
 			auto   aligned_offset = curr_stack_size + padding;
 
 			if_opt_some(result.atMaybe(local.var_name), entry) {
@@ -389,7 +388,7 @@ namespace vm::loader::compiler {
 			for (usize i = 0; i < params_cnt; i++) pop();
 		};
 
-		base::HashMap<base::StrID, usize> label_positions = calculate_labels_mapping(ctx);
+		base::HashMap<base::StrID, usize> label_positions = calculateLabelsMapping(ctx);
 
 		code::FuncSignature func_signature = ctx.function.signature;
 		using namespace std::views;
@@ -460,7 +459,7 @@ namespace vm::loader::compiler {
 					index++;
 				}
 				instr_case(Op_virtual_call_pptr_method, instr) {
-					handle_call(seek_method_param_ret_count(instr.method.method_name)->first);
+					handle_call(seekMethodParamRetCount(instr.method.method_name)->first);
 					index++;
 				}
 				instr_case(Op_ret_tailcall_func, instr) {
@@ -524,7 +523,7 @@ namespace vm::loader::compiler {
 			if (global.dtor_name.has_value()) dtor_name = global.dtor_name->str;
 			auto type                      = low_program.types->at(global.type);
 			program_ctx.global_buffer_size = Bytes(
-				Type::align_up(program_ctx.global_buffer_size.asInt(), type->getStackAlignment())
+				Type::alignUp(program_ctx.global_buffer_size.asInt(), type->getStackAlignment())
 			);
 
 			low::LowGlobalData data{

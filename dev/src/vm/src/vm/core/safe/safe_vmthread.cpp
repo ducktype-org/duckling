@@ -163,7 +163,7 @@ namespace vm {
 			// Initialize an exit code/return value spot. In case of non-void functions the
 			// exit_code is the return value of the function. Void functions always return with the
 			// exit_code = 0.
-			stack_size = Type::fully_align_up(stack_size);
+			stack_size = Type::fullyAlignUp(stack_size);
 			start_function.bc.push_back(
 				MAKE_BYTECODE_INSTRUCTION(init_bany_type, stack_size, safeReadObjectBytes<u64>(res))
 			);
@@ -194,7 +194,7 @@ namespace vm {
 					arg_value->type->getName().str()
 				));
 			}
-			stack_size = Type::fully_align_up(stack_size);
+			stack_size = Type::fullyAlignUp(stack_size);
 			start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(
 				initFromVmValue, stack_size, std::bit_cast<u64>(arg_value.get())
 			));

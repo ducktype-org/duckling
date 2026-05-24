@@ -443,7 +443,7 @@ namespace vm {
 					= result_pointer
 				    + (is_void
 				           ? 0
-				           : Type::fully_align_up(ext_func->result_types.at(0)->getSize().asInt()));
+				           : Type::fullyAlignUp(ext_func->result_types.at(0)->getSize().asInt()));
 
 
 				ext_func->function_pointer(result_pointer, args_pointer);

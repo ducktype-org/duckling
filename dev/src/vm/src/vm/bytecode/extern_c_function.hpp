@@ -95,17 +95,17 @@ namespace vm::detail {
 #define VM_EXT_C_INTO_PARAMS(CppType, VmType, Name)       , CppType Name
 #define VM_EXT_C_INTO_ARGS(CppType, VmType, Name)         , func_args->Name
 
-#define VM_EXT_C_PLACE_VALIDATION(CppType, VmType, Name)                                  \
-	auto tp_##Name = vm::api::getType(pid, VmType);                                       \
-	if (!tp_##Name.has_value()) throw vm::ExtCVmTypeNotExists(#VmType);                   \
-	if (tp_##Name->type->getSize().asInt() != vm::detail::safe_sizeof<CppType>::VALUE)    \
-		throw vm::ExtCArgumentSizeMismatch(                                               \
-			#CppType,                                                                     \
-			vm::detail::safe_sizeof<CppType>::VALUE,                                      \
-			#VmType,                                                                      \
-			tp_##Name->type->getSize().asInt()                                            \
-		);                                                                                \
-	vm_arg_type_size_sum = Bytes(vm::Type::fully_align_up(vm_arg_type_size_sum.asInt())); \
+#define VM_EXT_C_PLACE_VALIDATION(CppType, VmType, Name)                                \
+	auto tp_##Name = vm::api::getType(pid, VmType);                                     \
+	if (!tp_##Name.has_value()) throw vm::ExtCVmTypeNotExists(#VmType);                 \
+	if (tp_##Name->type->getSize().asInt() != vm::detail::safe_sizeof<CppType>::VALUE)  \
+		throw vm::ExtCArgumentSizeMismatch(                                             \
+			#CppType,                                                                   \
+			vm::detail::safe_sizeof<CppType>::VALUE,                                    \
+			#VmType,                                                                    \
+			tp_##Name->type->getSize().asInt()                                          \
+		);                                                                              \
+	vm_arg_type_size_sum = Bytes(vm::Type::fullyAlignUp(vm_arg_type_size_sum.asInt())); \
 	vm_arg_type_size_sum += tp_##Name->type->getSize();
 
 #define VM_EXT_C_PUT2(arg1, arg2) arg1 arg2

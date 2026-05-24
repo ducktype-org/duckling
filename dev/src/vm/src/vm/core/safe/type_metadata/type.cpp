@@ -74,7 +74,7 @@ namespace vm {
 
 		kind_type       = Kind::Primitive;
 		size            = pass_size;
-		stack_alligment = pass_size.asInt();
+		stack_alignment = pass_size.asInt();
 		kind            = kind::Primitive();
 		if (name == "void") am_i_instantiable = false;
 	}
@@ -84,7 +84,7 @@ namespace vm {
 		state = State::Defined;
 
 		size            = POINTER_SIZE;
-		stack_alligment = alignof(Pointer);
+		stack_alignment = alignof(Pointer);
 		kind_type       = Kind::Pointer;
 		kind            = kind::Pointer{ inner };
 	}
@@ -152,7 +152,7 @@ namespace vm {
 
 		kind_type       = Kind::Opaque;
 		size            = pass_size;
-		stack_alligment = 1;  // Opaque are treated as bytes.
+		stack_alignment = 1;  // Opaque are treated as bytes.
 		kind            = kind::Opaque{};
 	}
 
@@ -167,7 +167,7 @@ namespace vm {
 		variant_match(kind) {
 			variant_case(kind::FixedSizeTable, fixed_size_table) {
 				fixed_size_table.inner_type->finalize();
-				this->stack_alligment = fixed_size_table.inner_type->getStackAlignment();
+				this->stack_alignment = fixed_size_table.inner_type->getStackAlignment();
 				this->size
 					= fixed_size_table.inner_type->getSize() * fixed_size_table.element_count;
 			}
@@ -179,13 +179,13 @@ namespace vm {
 					field.type->finalize();
 					auto field_alignment = field.type->getStackAlignment();
 					max_alignment        = std::max(max_alignment, field_alignment);
-					offset               = Bytes(align_up(offset.asInt(), field_alignment));
+					offset               = Bytes(alignUp(offset.asInt(), field_alignment));
 					field.offset         = offset;
 					offset += field.type->getSize();
 				}
 
-				this->size            = Bytes(align_up(offset.asInt(), max_alignment));
-				this->stack_alligment = max_alignment;
+				this->size            = Bytes(alignUp(offset.asInt(), max_alignment));
+				this->stack_alignment = max_alignment;
 				if_opt_some(data.inheritance_metadata, imd) { inheritsFromImpl(imd); }
 				isInstantiableImpl(data);
 			}
@@ -199,8 +199,8 @@ namespace vm {
 					data_size     = std::max(data_size, alternative->getSize());
 				}
 				variant.payload_offset
-					= Bytes(align_up(variant.type_tag_size.asInt(), max_alignment));
-				this->stack_alligment = max_alignment;
+					= Bytes(alignUp(variant.type_tag_size.asInt(), max_alignment));
+				this->stack_alignment = max_alignment;
 				this->size            = variant.payload_offset + data_size;
 				isInstantiableImpl(variant);
 			}
