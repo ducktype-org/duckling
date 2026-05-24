@@ -5,13 +5,15 @@
 #include <vm/core/safe/type_metadata/type.hpp>
 
 #include <cstdlib>
+#include <memory>
 #include <vector>
 
 namespace vm {
 	class ThreadStack final {
 	private:
 		std::vector<Frame> frame_stack;
-		std::byte* local_stack;  // Memory is allocated manually, beacause it must be alligned.
+		std::unique_ptr<std::byte>
+			local_stack;  // Memory is allocated manually, beacause it must be alligned.
 		std::vector<Block*> block_ref_stack;
 
 	public:
@@ -43,12 +45,10 @@ namespace vm {
 
 		auto getFrameStack() -> Ref<std::vector<Frame>> { return &frame_stack; }
 
-		auto getLocalStackBegin() -> std::byte* { return local_stack; }
+		auto getLocalStackBegin() -> std::byte* { return local_stack.get(); }
 
-		auto getLocalStackEnd() -> std::byte* { return local_stack + STACK_LENGTH; }
+		auto getLocalStackEnd() -> std::byte* { return local_stack.get() + STACK_LENGTH; }
 
 		auto getBlockRefStack() -> Ref<std::vector<Block*>> { return &block_ref_stack; }
-
-		~ThreadStack() { std::free(local_stack); }
 	};
 }
