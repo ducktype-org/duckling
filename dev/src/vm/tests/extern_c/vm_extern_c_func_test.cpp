@@ -4,8 +4,11 @@
 #include <vm/bytecode/extern_c_function.hpp>
 
 namespace simple {
-	DEF_VM_EXT_C_FUNC(i32, "i32", add, (i32, "i32", a), (i32, "i32", b)) { return a + b; }
+	DEF_VM_EXT_C_FUNC(i64, "i64", add, (i64, "i64", a), (i64, "i64", b)) { return a + b; }
+}
 
+namespace simple_unaligned {
+	DEF_VM_EXT_C_FUNC(i32, "i32", add, (i32, "i32", a), (i32, "i32", b)) { return a + b; }
 }
 
 namespace void_func {
@@ -66,10 +69,11 @@ class VmExternCppTest: public VmTestSuite {
 public:
 	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(simple);
-		/*TESTER_ADD_TEST(cppVectorInVm);
+		TESTER_ADD_TEST(simple_unaligned);
+		TESTER_ADD_TEST(cppVectorInVm);
 		TESTER_ADD_TEST(globalOpaques);
 		TESTER_ADD_TEST(voidTest);
-		TESTER_ADD_TEST(voidNoArgsTest);*/
+		TESTER_ADD_TEST(voidNoArgsTest);
 	}
 
 private:
@@ -87,14 +91,33 @@ private:
 							}
 			)
 			                .has_value());
-			auto xd = vm::api::loadFiles(pid, { fs::File(path("extern_test.dbc")) });
-			std::cout<<errorToString(xd.error())<<'\n';
-			//ASSERT_TRUE(vm::api::loadFiles(pid, { fs::File(path("extern_test.dbc")) }).has_value());
+			ASSERT_TRUE(vm::api::loadFiles(pid, { fs::File(path("extern_test.dbc")) }).has_value());
+			return pid;
+		};
+
+		runTestOnVm(get_ext_func_program(), { "1 2" }, { "3" });
+		runTestOnVm(get_ext_func_program(), { "5 3" }, { "8" });
+	}
+
+	void simple_unaligned() {
+		auto get_ext_func_program = [this]() {
+			auto pid = initProcess();
+			ASSERT_TRUE(vm::api::loadCode(
+							pid,
+							{
+								.functions   = {},
+								.types       = {},
+								.global_data = {},
+								.external_c_functions
+								= { VM_INSTANCE_EXT_C_FUNC(add, simple_unaligned::add, pid) },
+							}
+			)
+			                .has_value());
+			ASSERT_TRUE(vm::api::loadFiles(pid, { fs::File(path("extern_test_unaligned.dbc")) }).has_value());
 			return pid;
 		};
 
 		runTestOnVm(get_ext_func_program(), { "" }, { "25" });
-		//runTestOnVm(get_ext_func_program(), { "5 3" }, { "8" });
 	}
 
 	void cppVectorInVm() {
