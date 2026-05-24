@@ -5,6 +5,7 @@
 //! Parsing is implemented in the [`parse`] module.
 mod dependency;
 mod features;
+mod frontmatter;
 mod metadata;
 mod parse;
 mod profiles;

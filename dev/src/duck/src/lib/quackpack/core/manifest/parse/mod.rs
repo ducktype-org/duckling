@@ -12,6 +12,7 @@ use crate::util::path_ops_ext::PathOpsExt;
 use crate::{DuckContext, QuackResult, QuackResultContext, qp_internal};
 
 mod dependency;
+mod frontmatter;
 mod manifest;
 mod source;
 

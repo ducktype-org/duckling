@@ -79,7 +79,7 @@ fn parse_features(features: Option<&HashMap<String, Vec<String>>>) -> QuackResul
 }
 
 /// Parse [`Profiles`] from the given compiler flags mapping.
-fn parse_profiles(
+pub fn parse_profiles(
     input: Option<&HashMap<String, ProfileSchema>>,
     mut scope: ScopeGuard<'_>,
 ) -> QuackResult<Profiles> {
