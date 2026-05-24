@@ -9,11 +9,11 @@
 #include <limits>
 #include <vector>
 
-using vm::low::cf::BasicBlock;
-using vm::low::cf::BasicBlockID;
-using vm::low::cf::ControlFlowGraph;
-
 namespace vm::jit::cf {
+	using vm::low::cf::BasicBlock;
+	using vm::low::cf::BasicBlockID;
+	using vm::low::cf::ControlFlowGraph;
+
 	class LoopDetector;
 
 	/**
