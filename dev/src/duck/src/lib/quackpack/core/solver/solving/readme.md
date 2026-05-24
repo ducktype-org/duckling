@@ -71,7 +71,7 @@ n * var(P, F_i) - var(Q, G_1) - ... - var(Q, G_n) <= 0
 
 ### Features expansion
 For every package `P` and every its feature `F` such that either `P` or `F` is not present in the previous freeze,
-if `F` expands to some features `F_1`, ..., `F_n` we add that `F` implies `F_1`, ..., `F_n` to the linear program.
+if `F` expands to some features `F_1`, ..., `F_n != F` we add that `F` implies `F_1`, ..., `F_n` to the linear program.
 
 Outcome
 -------
