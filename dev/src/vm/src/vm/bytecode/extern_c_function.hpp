@@ -66,9 +66,7 @@
  * any type and passes the pointer to the VM. Then, we can write functions that take that pointer
  * and operate on the object behind the pointer and return values to the VM based on that object.
  * This is showcased in the test - `cppVectorInVm`.
- *
  */
-
 #pragma once
 
 #include <base/pointers/box.hpp>
@@ -111,7 +109,6 @@ namespace vm::detail {
 	vm_arg_type_size_sum = Bytes(vm::align_up(vm_arg_type_size_sum.asInt(), 8));       \
 	vm_arg_type_size_sum += tp_##Name->type->getSize();
 
-
 #define VM_EXT_C_PUT2(arg1, arg2) arg1 arg2
 
 #define VM_EXT_C_VM_TYPE_NAME(Type) \
@@ -135,6 +132,7 @@ namespace vm::detail {
  */
 #define DEF_VM_EXT_C_FUNC(ResCType, ResVmType, FuncName, ...)                                           \
 	struct FuncName {                                                                                   \
+		// @TODO: #2764 Improve creating this struct, bring back __packed__                           \
 		struct FunctionData {                                                                           \
 			FOR_EACH_ARG(VM_EXT_C_PUT2, VM_EXT_C_INTO_FIELDS, __VA_ARGS__)                              \
 		};                                                                                              \
