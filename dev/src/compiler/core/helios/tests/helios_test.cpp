@@ -253,7 +253,6 @@ private:
 			}
 		}
 
-
 		// Function evaluation.
 		{
 			{
