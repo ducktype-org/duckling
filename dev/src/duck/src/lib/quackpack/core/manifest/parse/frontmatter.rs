@@ -1,6 +1,7 @@
 use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
+use tracing::debug;
 
 use crate::quackpack::core::manifest::parse::manifest::parse_profiles;
 use crate::{
@@ -47,6 +48,11 @@ pub(crate) fn parse_frontmatter_impl(
     }
     paths.push(root.to_path_buf());
     if let Some(ref path) = schema.import {
+        debug!(
+            "frontmatter at `{}` imports from `{}`",
+            root.display(),
+            path.display()
+        );
         if schema.dependencies.is_some()
             || schema.dev_dependencies.is_some()
             || schema.profiles.is_some()
@@ -60,7 +66,9 @@ pub(crate) fn parse_frontmatter_impl(
             );
             qp_bail!(err);
         }
-        return parse_frontmatter(path, ctx);
+        // We join `root` with `path`, to make relative imports work
+        // (per `join` documentation, if `path` is absolute, `join` just returns it).
+        return parse_frontmatter(&root.join(path), ctx);
     }
 
     let mut scope = Scope::new();
