@@ -157,7 +157,7 @@ namespace vm::loader::compiler {
 
 		for (auto [idx, instr]: std::views::enumerate(ctx.function.body)) {
 			ctx.current_instruction_index = idx;
-			auto instruction_range = builder.add(instr);
+			auto instruction_range        = builder.add(instr);
 			ctx.instruction_mapping.push_back(instruction_range);
 		}
 
