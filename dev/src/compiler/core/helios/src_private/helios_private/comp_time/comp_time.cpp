@@ -160,7 +160,13 @@ namespace compiler::helios {
 						"Static array type creation with non-integral size. This should be caught "
 						"earlier."
 					);
-					usize size = static_cast<usize>(maybe_size.coerceTo<u64>().value());
+					auto maybe_u64_size = maybe_size.coerceTo<u64>();
+					CORE_ASSERT(
+						maybe_u64_size.has_value() && maybe_u64_size.value() >= 0,
+						"Static array type creation with negative size. This should be caught "
+					    "earlier."
+					);
+					usize size = static_cast<usize>(maybe_u64_size.value());
 					return CompileTimeValue{ sinkStaticArrayDimension(ctx, base_type, size) };
 				}
 			}
