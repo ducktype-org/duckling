@@ -157,8 +157,6 @@ namespace vm::loader::compiler {
 
 		for (auto [idx, instr]: std::views::enumerate(ctx.function.body)) {
 			ctx.current_instruction_index = idx;
-			std::cout << ctx.current_instruction_index << " " << ctx.offset_at_instructions[idx]
-					  << "\n";
 			auto instruction_range = builder.add(instr);
 			ctx.instruction_mapping.push_back(instruction_range);
 		}
@@ -216,10 +214,6 @@ namespace vm::loader::compiler {
 		auto pop = [&]() { stack.pop_back(); };
 
 		auto register_top_of_stack_as_arg_or_ret = [&](size_t cnt = 1) {
-			CORE_ASSERT(
-				stack.size() >= cnt,
-				"Invalid bytecode structure which was not detected at validation."
-			);
 			for (size_t i = 0; i < cnt; ++i) res.insert(stack[stack.size() - 1 - i]);
 		};
 
@@ -242,7 +236,7 @@ namespace vm::loader::compiler {
 			func_signature.result_types.size() + func_signature.parameters.size()
 		);
 
-		// After validation at each label stack has same state.
+		// At each label stack has same state.
 		base::HashMap<usize, decltype(stack)> stack_at_label;
 
 		std::vector<std::tuple<usize, decltype(stack)>> dfs_stack{
@@ -332,7 +326,7 @@ namespace vm::loader::compiler {
 	}
 
 	void Compiler::calculateOffsets(FunctionCompilationContext& ctx) {
-		auto must_be_fully_alligned = detectParamsAndReturnedVars(ctx);
+		const auto must_be_fully_alligned = detectParamsAndReturnedVars(ctx);
 
 		decltype(ctx.locals_map) result;
 		std::vector<usize>       type_size_stack;
