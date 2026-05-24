@@ -14,7 +14,7 @@ fun printPoint(p: ref Point) -> () = {
 
 fun printPointList(list: ref List[Point]) -> () = {
     var i = 0;
-    while(i < len list) {
+    while(i < len list) { # `i` is signed `len l` is unsigned
         printPoint(&list[i]);
         i = i + 1; 
     }

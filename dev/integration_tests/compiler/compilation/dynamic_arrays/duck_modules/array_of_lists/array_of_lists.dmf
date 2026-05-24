@@ -5,7 +5,7 @@ class Point {
 
 fun printPointList(l: ref List[Point]) -> () = {
     var i = 0;
-    while (i < len l) {
+    while (i < len l) { # `i` is signed `len l` is unsigned
         builtin_output_i64(l[i].x);
         builtin_output_i64(l[i].y);
         i = i + 1;
