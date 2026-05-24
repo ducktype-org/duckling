@@ -152,7 +152,7 @@ namespace vm {
 
 		kind_type       = Kind::Opaque;
 		size            = pass_size;
-		stack_alignment = 1;  // Opaque are treated as bytes.
+		stack_alignment = 8;  // Opaque are treated as void*, it must be aligned to 8.
 		kind            = kind::Opaque{};
 	}
 
