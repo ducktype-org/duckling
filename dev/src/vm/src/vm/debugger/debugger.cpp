@@ -145,4 +145,10 @@ namespace vm::debugger {
 	std::expected<api::response::CodePosition, api::ApiError> Debugger::getCurrentPosition() {
 		return api::getCurrentPosition(pid);
 	}
+
+	std::expected<void, api::ApiError> Debugger::setBreakpoint(
+		base::StrID function_name, u64 instr_number, bool enabled
+	) {
+		return api::setBreakpoint(pid, function_name, instr_number, enabled);
+	}
 }

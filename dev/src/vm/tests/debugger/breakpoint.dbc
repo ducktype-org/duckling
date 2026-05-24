@@ -8,12 +8,13 @@ function main { i64, ptr_argv } -> { i64 } {
 	init_pany_type 		c, i64;
 	mov_p64_imm  	a, 0;
 	mov_p64_imm  	b, 0;
-	breakpoint;
+
+	# breakpoint 5;
 	mov_p64_imm  	a, 0;
 	mov_p64_imm  	b, 0;
 	mov_p64_imm 	c, 0;
-	breakpoint;
 
+	# breakpoint 8;
 	deinit; # c
 	deinit; # b
 	deinit; # a
