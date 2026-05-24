@@ -69,6 +69,8 @@ namespace compiler::helios {
 			std::vector<SymID>             class_symbols;
 			std::set<SymID>                default_ctors;
 			std::set<SymID>                additional_ctors;
+			// Keeps track of mangled names processed within the current module 
+            // to detect duplicated function declarations at the HOUT level.
 			std::set<base::StrID>          processed_mangled_names;
 			
 			auto                           register_ctor_if_needed = [&](SymID sym) {
@@ -168,7 +170,7 @@ namespace compiler::helios {
 				} else {
 					auto& func     = hout_function->valueOrPanic();
 					SymID func_sym = func.declaration->original_symbol;
-
+					// NOTE: Utilizing the mangler here is a bit hacky, but should work without issues.
 					base::StrID mangled_name
 						= ctx.query<compiler::helios::mangler::QueryMangledSymbol>({ func_sym });
 
@@ -374,6 +376,7 @@ namespace compiler::helios {
 			// go over all top level symbols and get theirs hout
 			// store it in some vector or something
 			// lookup all and stuff
+
 			auto main_file_root_scope = queryRootScopeOfMainModuleFile(ctx, key);
 
 			Ref symbols_in_module_root
