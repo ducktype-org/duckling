@@ -233,7 +233,7 @@ jobs:
       - name: Check should enable JIT
         id: check-jit
         run: |
-          echo jit-flag=false >> $GITHUB_OUTPUT
+          echo jit-flag=--no-enable-jit >> $GITHUB_OUTPUT
       # @TODO: #2780 fix JIT builds
       #   echo jit-flag=$( [ "${{ matrix.build-type }}" = "DevOpt" ] &&
       #                       [ "${{ matrix.compiler.name }}" = "clang" ] &&
