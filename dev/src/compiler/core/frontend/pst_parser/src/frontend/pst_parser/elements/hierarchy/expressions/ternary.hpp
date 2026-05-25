@@ -3,10 +3,6 @@
 #include "expr_common.hpp"
 
 namespace pst::expr {
-	class CastAs;
-}
-
-namespace pst::expr {
 	/**
 	 * @brief Ternary expression(`if condition then if_true else if_else`).
 	 *

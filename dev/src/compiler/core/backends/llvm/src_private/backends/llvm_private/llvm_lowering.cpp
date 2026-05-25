@@ -774,15 +774,9 @@ namespace compiler::backend_llvm {
 								// Load the pointer value (because current_ptr points to storage)
 								current_ptr = builder.CreateLoad(builder.getPtrTy(), current_ptr);
 
-								// Now build a NEW GEP for pointer arithmetic
-								current_ptr = builder.CreateGEP(
-									typeFromLayout(module, pointer_layout.getPointee()),
-									current_ptr,
-									index_value
-								);
+								// Add an index for pointer arithmetic
+								gep_indices.push_back(index_value);
 
-								// Clear indices because we emitted the GEP directly
-								gep_indices.clear();
 
 								// Update layout/type
 								current_layout = pointer_layout.getPointee();

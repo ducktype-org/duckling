@@ -338,59 +338,40 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 						or current_layout->is<tsl::PointerTypeLayout>(),
 					"IndexProjection on non-array layout"
 				);
-				if (current_layout->is<tsl::StaticArrayTypeLayout>()) {
-					// Prepare the array type.
-					const auto& array_layout
-						= std::get<tsl::StaticArrayTypeLayout>(current_layout->getVariant());
 
-					DVMValue index_val = lowerLirValue(*index.index);
+				// Resolve element layout + opcode in one place
+				auto [element_layout, op_kind]
+					= [&]() -> std::pair<CRef<tsl::TypeLayout>, vm::code::builders::OpKind> {
+					if (current_layout->is<tsl::StaticArrayTypeLayout>()) {
+						const auto& array_layout
+							= std::get<tsl::StaticArrayTypeLayout>(current_layout->getVariant());
 
-					// Prepare the pointer to field type.
-					CRef<tsl::TypeLayout>       element_layout = array_layout.getElementLayout();
-					const vm::code::TypeOfData& vm_element_type
-						= **program_context.lowerAndKeepTslType(element_layout);
-					const vm::code::TypeOfData& ptr_to_element_type
-						= program_context.getOrInsertPointerType(vm_element_type);
+						return { array_layout.getElementLayout(),
+							     vm::code::builders::OpKind::fixedSizeTableLea };
+					}
 
-					// Create a temporary to the element
-					DVMPlace element_ptr_tmp = pushTempLocal(ptr_to_element_type, "index_addr");
-
-					pushInstruction({ vm::code::builders::OpKind::fixedSizeTableLea,
-					                  element_ptr_tmp,
-					                  current_place,
-					                  index_val.asArgument() });
-
-					current_place  = element_ptr_tmp.withAccessKind(DVMPlace::AccessKind::Pointer);
-					current_layout = element_layout;
-				}
-				if (current_layout->is<tsl::PointerTypeLayout>()) {
-					// In this case we have a pointer to the first element of the array and we need
-					// to perform pointer arithmetic to get to the indexed element.
-
-					// Prepare the pointer type.
 					const auto& pointer_layout
 						= std::get<tsl::PointerTypeLayout>(current_layout->getVariant());
 
-					DVMValue index_val = lowerLirValue(*index.index);
+					return { pointer_layout.getPointee(), vm::code::builders::OpKind::dynTableLea };
+				}();
 
-					// Prepare the pointer to field type.
-					CRef<tsl::TypeLayout>       element_layout = pointer_layout.getPointee();
-					const vm::code::TypeOfData& vm_element_type
-						= **program_context.lowerAndKeepTslType(element_layout);
-					const vm::code::TypeOfData& ptr_to_element_type
-						= program_context.getOrInsertPointerType(vm_element_type);
+				DVMValue index_val = lowerLirValue(*index.index);
 
-					// Create a temporary to the element
-					DVMPlace element_ptr_tmp = pushTempLocal(ptr_to_element_type, "index_addr");
+				// Prepare VM types
+				const vm::code::TypeOfData& vm_element_type
+					= **program_context.lowerAndKeepTslType(element_layout);
+				const vm::code::TypeOfData& ptr_to_element_type
+					= program_context.getOrInsertPointerType(vm_element_type);
 
-					pushInstruction({ vm::code::builders::OpKind::dynTableLea,
-					                  element_ptr_tmp,
-					                  current_place,
-					                  index_val.asArgument() });
+				// Create a temporary to the element
+				DVMPlace element_ptr_tmp = pushTempLocal(ptr_to_element_type, "index_addr");
 
-					current_place  = element_ptr_tmp.withAccessKind(DVMPlace::AccessKind::Pointer);
-					current_layout = element_layout;
-				}
+				// Emit instruction (now unified)
+				pushInstruction({ op_kind, element_ptr_tmp, current_place, index_val.asArgument() });
+
+				current_place  = element_ptr_tmp.withAccessKind(DVMPlace::AccessKind::Pointer);
+				current_layout = element_layout;
 			}
 		}
 	}

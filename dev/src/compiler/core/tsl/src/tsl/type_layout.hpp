@@ -745,6 +745,13 @@ namespace compiler::tsl {
 			return std::holds_alternative<T>(variant);
 		}
 
+		template<typename T>
+		[[nodiscard]]
+		const T& as() const {
+			CORE_ASSERT(is<T>(), "Invalid type layout variant access");
+			return std::get<T>(variant);
+		}
+
 		/**
 		 * @brief Get the total size of a layout, in bits.
 		 * @return The total size of a layout, in bits.

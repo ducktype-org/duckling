@@ -105,7 +105,7 @@ namespace compiler::tsh {
 	)
 
 	/**
-	 * @brief Query to get a typed c pointer type.
+	 * @brief Query to get a typed C pointer type.
 	 *
 	 * \query_thread_safe
 	 */

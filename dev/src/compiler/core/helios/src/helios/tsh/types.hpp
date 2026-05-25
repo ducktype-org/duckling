@@ -204,13 +204,7 @@ namespace compiler::tsh {
 	 */
 	class PointerAbstractType final: public AbstractType {
 	public:
-		using Impl    = PointerAbstractTypeImpl;
-		using Pimpl   = Ref<Impl>;
-		using CPimpl  = CRef<Impl>;
-		using BImpl   = AbstractTypeImpl;
-		using Base    = AbstractType;
-		using BPimpl  = Ref<BImpl>;
-		using CBPimpl = CRef<BImpl>;
+		SETUP_TYPE_WITH_BASE(PointerAbstractType, AbstractType)
 
 		/**
 		 * @brief Gets the underlying symbol type of the Pointer type.
@@ -226,11 +220,7 @@ namespace compiler::tsh {
 		[[nodiscard]]
 		AbstractType getUnderlyingType() const;
 
-		template<std ::derived_from<AbstractType> ABSTRACT_TYPE>
-		explicit(false) PointerAbstractType(const ABSTRACT_TYPE& other):
-			  Base((const CBPimpl) other.getPimpl()) {
-			checkDynamicCast<PointerAbstractType>(other.getPimpl());
-		}
+		CONSTRUCT_WITH_CHECKED_CAST(PointerAbstractType)
 
 		CONSTRUCT_FROM_IMPLEMENTATION(PointerAbstractType)
 	};
@@ -245,13 +235,13 @@ namespace compiler::tsh {
 	class ManyPointerAbstractType final: public AbstractType {
 	public:
 		SETUP_TYPE_WITH_BASE(ManyPointerAbstractType, AbstractType)
-
 		/**
-		 * @brief Gets the underlying symbol type of the Pointer type.
-		 * @return The underlying symbol type of the Pointer type.
+		 * @brief A pointer to many values of the same type.
+		 * It has different layout in the DVM than a basic pointer.
+		 *
+		 * A value of this type is simply a memory address.
+		 * It is statically known what the type of the pointee is.
 		 */
-		[[nodiscard]]
-		SymbolType<> getPointee() const;
 
 		/**
 		 * @brief Gets the underlying type of the Pointer type.
@@ -277,10 +267,10 @@ namespace compiler::tsh {
 		SETUP_TYPE_WITH_BASE(CPointerAbstractType, AbstractType)
 
 		/**
-		 * @brief Gets the underlying symbol type of the Pointer type.
-		 * @return The underlying symbol type of the Pointer type.
-		 */
-		[[nodiscard]]
+	 * It has different layout in the DVM than basic pointer.
+	 *
+	 * A value of this type is simply a memory address.
+	 * It is statically known what the type of the pointee is.
 		SymbolType<> getPointee() const;
 
 		/**

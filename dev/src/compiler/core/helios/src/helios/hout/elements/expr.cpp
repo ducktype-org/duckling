@@ -699,6 +699,22 @@ namespace compiler::helios::code {
 			out << "len ";
 			expr->debugPrint(out);
 			break;
+		case BuiltinUnary::Ptr:
+			out << "ptr ";
+			expr->debugPrint(out);
+			break;
+		case BuiltinUnary::CPtr:
+			out << "cptr ";
+			expr->debugPrint(out);
+			break;
+		case BuiltinUnary::ManyPtr:
+			out << "manyptr ";
+			expr->debugPrint(out);
+			break;
+		case BuiltinUnary::Slice:
+			out << "slice ";
+			expr->debugPrint(out);
+			break;
 		default:
 			CORE_PANIC("unsupported unary operation");
 		}

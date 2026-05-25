@@ -85,6 +85,7 @@ namespace {
 						     || pointer_layout.getPointerKind() == ManyPointer)
 						    && target_pointer_layout.getPointerKind() == CPointer) {
 							// @TODO: #2745 add support for this cast
+							CORE_PANIC("Casting to CPointer is not supported yet");
 						} else {
 							CORE_PANIC("Unsupported cast between different pointer kinds");
 						}
