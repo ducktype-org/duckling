@@ -12,9 +12,6 @@
 
 #pragma once
 
-// Default = false
-constexpr bool IGNORE_EXECUTION_STRATEGY = false;
-
 #if !(defined(USE_TAIL_CALLS) || defined(USE_SWITCH_CASE))
 	#error "Provide an execution strategy: USE_TAIL_CALLS or USE_SWITCH_CASE"
 #endif
