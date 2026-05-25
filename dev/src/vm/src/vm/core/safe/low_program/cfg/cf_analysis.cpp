@@ -4,26 +4,27 @@
  */
 #include "cf_analysis.hpp"
 
+#include "../instruction.hpp"
+#include "../opcodes.hpp"
+
 #include <vm/bytecode/instructions.hpp>
-#include <vm/core/safe/low_program/instruction.hpp>
-#include <vm/core/safe/low_program/opcodes.hpp>
 
 #include <algorithm>
 
 using namespace vm::code::instructions;
 
-namespace vm::jit::cf {
+namespace vm::low::cf {
 	/**
 	 * @brief Computes start offsets of all basic blocks in lowered bytecode.
-	 * @param function Lowered function to analyze.
+	 * @param bc Micro-bytecode of lowered function to analyze.
 	 * @return Sorted offsets where each basic block begins.
 	 */
-	std::vector<usize> basicBlockBeginnings(const low::LowFuncData& function) {
+	std::vector<usize> basicBlockBeginnings(const low::MicroBytecode& bc) {
 		std::vector<usize> block_beginnings = { 0 };  // First block always starts at position 0
 
-		for (usize index = 0; index < function.bc.size(); ++index) {
-			low::MicroOpcode opcode = getInstructionOpcode(function.bc[index]);
-			u64              arg0   = function.bc[index].arg0;
+		for (usize index = 0; index < bc.size(); ++index) {
+			low::MicroOpcode opcode = getInstructionOpcode(bc[index]);
+			u64              arg0   = bc[index].arg0;
 
 			switch (opcode) {
 			case low::MicroOpcode::jmp_label:
@@ -32,7 +33,7 @@ namespace vm::jit::cf {
 				const usize jump_target = jumpTarget(index + 1, arg0);
 
 				block_beginnings.push_back(index + 1);        // Next block starts after jump
-				if (jump_target < function.bc.size())
+				if (jump_target < bc.size())
 					block_beginnings.push_back(jump_target);  // Jump destination starts a new block
 				break;
 			}
@@ -53,10 +54,10 @@ namespace vm::jit::cf {
 			std::ranges::unique(block_beginnings).begin(), block_beginnings.end()
 		);
 
-		if (block_beginnings.back() == function.bc.size()) {
+		if (block_beginnings.back() == bc.size()) {
 			block_beginnings.pop_back(
 			);  // Remove the last block beginning if it points to the end of the bytecode
 		}
 		return block_beginnings;
 	}
-}  // namespace vm::jit::cf
+}  // namespace vm::low::cf
