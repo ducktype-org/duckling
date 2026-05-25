@@ -7,6 +7,7 @@
 #include <array>
 #include <cstddef>
 #include <cstring>
+#include <ranges>
 #include <span>
 #include <string_view>
 #include <vector>
@@ -74,7 +75,7 @@ namespace vm::jit::cnp {
 		[[nodiscard]] auto& stencilsData() const { return stencils.stencils_data; }
 
 		/**
-		 * @brief Copy and patch a stencil into a given address.
+		 * @brief Copy a stencil into a given address.
 		 */
 		byte* relocate(const StencilData& stencil_data, byte* new_address) {
 			auto binary = stencilBinary(stencil_data);
@@ -83,6 +84,27 @@ namespace vm::jit::cnp {
 			for (const StencilHole& hole: stencil_data.relocation)
 				hole.relocate(binary.data(), new_address);
 			return new_address + binary.size_bytes();
+		}
+
+		/**
+		 * @brief Copy and patch a stencil into a given address.
+		 */
+		byte* relocate_and_patch(
+			const StencilData& stencil_data, byte* new_address, std::vector<u64> patch_values
+		) {
+			CORE_ASSERT(
+				stencil_data.to_patch.size() == patch_values.size(),
+				stencil_data.to_patch.size() > patch_values.size()
+					? "Supplied too little values to patch"
+					: "Supplied too many values to patch"
+			);
+
+			auto ret = relocate(stencil_data, new_address);
+			for (auto [hole, value]: std::views::zip(stencil_data.to_patch, patch_values)) {
+				hole.patch(new_address, value);
+			}
+
+			return ret;
 		}
 
 	private:

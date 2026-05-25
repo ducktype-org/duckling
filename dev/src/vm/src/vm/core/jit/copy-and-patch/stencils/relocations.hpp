@@ -13,6 +13,8 @@ namespace vm::jit::cnp {
 		HoleType type;
 
 		void relocate(const byte* from, byte* to) const;
+		template<std::integral T>
+		void patch(byte* new_addr, T value) const;
 	};
 
 #ifdef __x86_64__
@@ -25,6 +27,11 @@ namespace vm::jit::cnp {
 			*reinterpret_cast<i64*>(to + offset) += (to - from);
 			break;
 		}
+	}
+
+	template<std::integral T>
+	void StencilHole::patch(byte* new_addr, T value) const {
+		*reinterpret_cast<T*>(new_addr + offset) += value;
 	}
 #else
 	#error "Relocation types unknown on your architecture"
