@@ -2,9 +2,9 @@
 
 #include "fast_vmthread.hpp"
 
-#include "base/collections/object_pool.hpp"
+#include <base/collections/object_pool.hpp>
 
-#include "vm/api/data/thread_id.hpp"
+#include <vm/api/data/thread_id.hpp>
 #include <vm/core/fast/program/program.hpp>
 #include <vm/core/process/vmprocess.hpp>
 #include <vm/loader/compiler/fast/fast_compiler.hpp>

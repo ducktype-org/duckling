@@ -1,14 +1,15 @@
 #pragma once
 
-#include "../compiler.hpp"
+#include "../ivm_compiler.hpp"
 
 #include <vm/bytecode/validator/valid_program.hpp>
 #include <vm/core/safe/low_program/low_program.hpp>
 #include <vm/core/safe/low_program/micro_instruction_args.hpp>
+#include <vm/loader/loader.hpp>
 
 namespace vm::loader::compiler::safe {
 	namespace detail {
-		class MicroBytecodeBuilder;
+		class SafeMicroBytecodeBuilder;
 		template<typename ToType>
 		struct LowerArgumentImpl;
 
@@ -34,29 +35,33 @@ namespace vm::loader::compiler::safe {
 		};
 	}
 
-	class SafeCompiler final: public vm::loader::compiler::Compiler {
-		friend class detail::MicroBytecodeBuilder;
+	class SafeCompiler final: public vm::loader::compiler::IVMCompiler {
+		friend class detail::SafeMicroBytecodeBuilder;
 		template<typename ToType>
 		friend struct detail::LowerArgumentImpl;
 
 	public:
 		SafeCompiler(const code::ValidProgram& high_program):
-			  vm::loader::compiler::Compiler(high_program) {}
+			  vm::loader::compiler::IVMCompiler(high_program) {
+			recompile();
+		}
 
 		/**
 		 * @brief Provides read-only access to the internally managed `LowVMProgram`.
 		 * @return A constant reference to the current, fully compiled low-level program.
 		 */
-		CRef<vm::low::LowVMProgram> getLowProgram() const;
+		[[nodiscard]] CRef<vm::low::LowVMProgram> getLowProgram() const;
+
+		[[nodiscard]] std::expected<FatBytecodePosition, MappingException>
+			mapLowVMProgramPositionToCodeCollectionPosition(low::LowCodePosition position) const;
 
 	protected:
-		ProgramSize getCurrentProgramSize() const override;
+		[[nodiscard]] ProgramSize getCurrentProgramSize() const override;
 
 		void compileNewTypes(const std::vector<code::valid_type::ValidType>& new_types) override;
 		void compileNewGlobals(const std::vector<code::GlobalData>& new_globals) override;
 		void compileNewFunctions(const std::vector<code::Function>& new_functions) override;
-		void compileNewExtCFunctions(
-			const std::vector<code::ExternalCFunction>& new_functions
+		void compileNewExtCFunctions(const std::vector<code::ExternalCFunction>& new_functions
 		) override;
 
 	private:
@@ -80,12 +85,13 @@ namespace vm::loader::compiler::safe {
 		);
 
 		/**
-		 * @brief Lowers instructions to micro-bytecode. Iterates through the label-less
-		 * instructions and translates them into a sequence of `MicroInstruction`, resolving all
-		 * symbolic arguments to numeric values.
-		 * @return The converted list of instructions.
+		 * @brief Lowers instructions to micro-bytecode. Iterates through the instructions and
+		 * translates them into a sequence of `MicroInstruction`s.
+		 * @return The converted list of instructions as well as the mapping from instruction
+		 * indices to instruction ranges in micro-bytecode.
 		 */
-		low::MicroBytecode lowerInstructions(
+
+		std::pair<low::MicroBytecode, std::vector<vm::low::LowFuncData::InstructionRange>> lowerInstructions(
 			const vm::loader::compiler::detail::FunctionStackContext& ctx
 		);
 

@@ -17,10 +17,8 @@
 #include <vm/bytecode/type_of_data.hpp>
 #include <vm/bytecode/validator/errors.hpp>
 #include <vm/bytecode/validator/valid_program.hpp>
-#include <vm/loader/compiler/compiler.hpp>
 #include <vm/loader/logger.hpp>
 
-#include <expected>
 #include <vector>
 
 using namespace vm::loader;
@@ -98,8 +96,7 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::parseFiles(
 	CORE_UNREACHABLE();
 }
 
-std::expected<void, LoaderLogger> Loader::loadAndCompile(
-	const code::CodeCollection& code_collection
+std::expected<void, LoaderLogger> Loader::loadAndValidate(const code::CodeCollection& code_collection
 ) {
 	// Skip if no new code was added.
 	if (code_collection.functions.empty() && code_collection.types.empty()
@@ -114,10 +111,6 @@ std::expected<void, LoaderLogger> Loader::loadAndCompile(
 		// loader stays unchanged.
 		validated_high_program = validated_high_program.tryInsertCode(code_collection);
 
-		// // @note: After successfully inserting code into `validated_high_program` we compile it
-		// to
-		// // the low level representation. This step cannot fail since the code was already
-		// validated. compiler.recompile(validated_high_program);
 		return {};
 	} catch (code::StackStructureMismatchError& e) {
 		log.logMap(
@@ -165,13 +158,11 @@ std::expected<void, LoaderLogger> Loader::loadAndCompile(
 	return std::unexpected(std::move(log));
 }
 
-std::expected<void, LoaderLogger> Loader::loadAndCompile(const std::vector<fs::File>& file_paths) {
+std::expected<void, LoaderLogger> Loader::loadAndValidate(const std::vector<fs::File>& file_paths) {
 	auto opt_code_collection = parseFiles(file_paths);
-	if (opt_code_collection.has_value()) return loadAndCompile(*opt_code_collection);
+	if (opt_code_collection.has_value()) return loadAndValidate(*opt_code_collection);
 	return std::unexpected(std::move(opt_code_collection).error());
 }
-
-vm::loader::Loader::Loader() {}
 
 base::CRef<vm::code::ValidProgram> vm::loader::Loader::getHighProgram() const {
 	return &validated_high_program;
@@ -184,5 +175,15 @@ std::expected<vm::code::CodeCollection, std::string> vm::loader::Loader::parseCo
 		std::stringstream ss;
 		logger.dump(ss);
 		return ss.str();
+	});
+}
+
+std::expected<base::Optional<dia::SourcePosition>, vm::loader::MappingException> vm::loader::
+	Loader::mapCodeCollectionPositionToFilePosition(FatBytecodePosition position) const {
+	const auto& maybe_high_function = getHighProgram()->functions().atMaybe(position.function_name);
+	if (maybe_high_function.empty()) return std::unexpected(MappingException::NoFunction);
+
+	return maybe_high_function.value()->body.at(position.instruction_index).visit([](auto&& instr) {
+		return instr.bytecode_pos;
 	});
 }

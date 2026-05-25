@@ -2,7 +2,7 @@
 
 #include "type_builder.hpp"
 
-#include "base/except/exceptions.hpp"
+#include <base/except/exceptions.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/loader/compiler/compiler.hpp>

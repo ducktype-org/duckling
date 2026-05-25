@@ -1,9 +1,9 @@
 #pragma once
 
-#include "vm/core/fast/program/instructions/executable.hpp"
-#include "vm/core/fast/program/program.hpp"
-#include "vm/core/fast/runtime.hpp"
-#include "vm/core/process/interface_types.hpp"
+#include <vm/core/fast/program/instructions/executable.hpp>
+#include <vm/core/fast/program/program.hpp>
+#include <vm/core/fast/runtime.hpp>
+#include <vm/core/process/interface_types.hpp>
 #include <vm/core/thread/ivmthread.hpp>
 #include <vm/utils/vm_not_implemented.hpp>
 

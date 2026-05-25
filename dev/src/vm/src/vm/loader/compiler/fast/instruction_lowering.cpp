@@ -1,13 +1,13 @@
 #include "instruction_lowering.hpp"
 
-#include "base/preproc/equal.hpp"
-#include "base/preproc/for_each.hpp"
+#include <base/preproc/equal.hpp>
+#include <base/preproc/for_each.hpp>
 
-#include "vm/bytecode/bytecode.hpp"
-#include "vm/bytecode/instructions.hpp"
-#include "vm/bytecode/opcode_args.hpp"
-#include "vm/core/fast/program/ids.hpp"
-#include "vm/core/fast/program/instructions/relocatable.hpp"
+#include <vm/bytecode/bytecode.hpp>
+#include <vm/bytecode/instructions.hpp>
+#include <vm/bytecode/opcode_args.hpp>
+#include <vm/core/fast/program/ids.hpp>
+#include <vm/core/fast/program/instructions/relocatable.hpp>
 
 #include <optional>
 #include <stack>

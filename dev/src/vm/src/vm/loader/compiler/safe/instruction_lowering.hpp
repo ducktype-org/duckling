@@ -64,13 +64,13 @@ namespace vm::loader::compiler::safe::detail {
 	 * Beside generating a vector of `MicroInstruction`s, this class also provides a map
 	 * from temporary label IDs to label offsets used later by `Compiler::linkLabelArguments`.
 	 */
-	class MicroBytecodeBuilder {
-		safe::SafeCompiler&                                             compiler;
+	class SafeMicroBytecodeBuilder {
+		safe::SafeCompiler&                                       compiler;
 		const vm::loader::compiler::detail::FunctionStackContext& ctx;
 
-		base::HashMap<usize, usize> label_id_to_offset{};
+		base::HashMap<usize, usize>       label_id_to_offset{};
 		base::HashMap<base::StrID, usize> label_name_to_id{};
-		usize                       next_instruction_index = 0;
+		usize                             next_instruction_index = 0;
 
 		low::MicroBytecode result;
 
@@ -79,8 +79,8 @@ namespace vm::loader::compiler::safe::detail {
 #endif
 
 	public:
-		MicroBytecodeBuilder(
-			safe::SafeCompiler&                                             compiler,
+		SafeMicroBytecodeBuilder(
+			safe::SafeCompiler&                                       compiler,
 			const vm::loader::compiler::detail::FunctionStackContext& ctx
 		):
 			  compiler{ compiler },
@@ -90,8 +90,12 @@ namespace vm::loader::compiler::safe::detail {
 			return { std::move(result), std::move(label_id_to_offset) };
 		}
 
-		/// Add a new high instruction.
-		void add(const code::Instruction& instruction);
+		/**
+		 * @brief Add a new high instruction.
+		 * @return InstructionRange of the added instruction.
+		 * The end index is exclusive, so the instruction occupies the range [begin, end).
+		 */
+		low::LowFuncData::InstructionRange add(const code::Instruction& instruction);
 
 
 	private:
@@ -146,15 +150,20 @@ namespace vm::loader::compiler::safe::detail {
 		}
 
 		void addLabel(opargs::Label label) {
-			usize lid = compiler.lowerArgument<opargs::Label, low::opargs::Label>(ctx, label_name_to_id, label);
+			usize lid = compiler.lowerArgument<opargs::Label, low::opargs::Label>(
+				ctx, label_name_to_id, label
+			);
 			label_id_to_offset.put(lid, next_instruction_index);
 		}
 	};
 
-	void MicroBytecodeBuilder::add(const code::Instruction& instruction) {
+	low::LowFuncData::InstructionRange SafeMicroBytecodeBuilder::add(
+		const code::Instruction& instruction
+	) {
 #if (BUILD_TYPE_DEV_DEBUG)
 		current_high_instruction_representation = code::instructionToString(instruction);
 #endif
+		usize instruction_begin_index = next_instruction_index;
 
 		push_step_gil_on_next_add_low = true;
 
@@ -173,6 +182,7 @@ namespace vm::loader::compiler::safe::detail {
 			instr_default { is_control_flow = false; }
 		}
 		POP_DIAGNOSTIC
+
 
 		PUSH_DIAGNOSTIC
 		UNHANDLED_ENUM
@@ -616,12 +626,13 @@ namespace vm::loader::compiler::safe::detail {
 			instr_case(high::Op_fpext_p64_p32, i) { addLow<Op_fpext_p64_p32>(i.dst, i.src); }
 			instr_case(high::Op_nop, i) { addLow<Op_nop>(); }
 			instr_case(high::Op_exit, i) { addLow<Op_exit>(); }
-			instr_case(high::Op_breakpoint, i) { addLow<Op_breakpoint>(); }
 			instr_case(high::Op_initFromVmValue, i) { addLow<Op_initFromVmValue>(); }
 			instr_case(high::Comment, i) {
 				// Do nothing
 			}
 		}
 		POP_DIAGNOSTIC
+
+		return { .begin = instruction_begin_index, .end = next_instruction_index };
 	}
 }

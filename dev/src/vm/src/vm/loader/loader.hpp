@@ -10,14 +10,21 @@
 #include <expected>
 
 namespace vm::loader {
+	struct FatBytecodePosition {
+		base::StrID function_name;
+		usize       instruction_index;
+	};
+
+	enum class MappingException {
+		MissingMapping,
+		NoFunction,
+	};
+
 	/**
 	 * @class Loader
 	 * @brief Class, that allows for loading programs in multiple forms.
 	 */
 	class Loader final {
-		/**
-		 * @brief The representation of the FatBytecode program.
-		 */
 		/**
 		 * @brief The validated high-level (fat bytecode) representation of the program.
 		 * This object is incrementally updated with new, validated code. It is initialized with the
@@ -35,17 +42,17 @@ namespace vm::loader {
 		);
 
 	public:
-		explicit Loader();
+		Loader() = default;
 
 		/**
 		 * @brief Injects new code from given file paths to the current program state.
 		 */
-		std::expected<void, LoaderLogger> loadAndCompile(const std::vector<fs::File>& file_path);
+		std::expected<void, LoaderLogger> loadAndValidate(const std::vector<fs::File>& file_path);
 
 		/**
 		 * @brief Injects new code from a given high-level code representation.
 		 */
-		std::expected<void, LoaderLogger> loadAndCompile(const code::CodeCollection& code_collection
+		std::expected<void, LoaderLogger> loadAndValidate(const code::CodeCollection& code_collection
 		);
 
 		CRef<code::ValidProgram> getHighProgram() const;
@@ -60,5 +67,9 @@ namespace vm::loader {
 		static std::expected<code::CodeCollection, std::string> parseCodeCollectionFromFiles(
 			const std::vector<fs::File>& files
 		);
+
+		std::expected<base::Optional<dia::SourcePosition>, MappingException> mapCodeCollectionPositionToFilePosition(
+			FatBytecodePosition position
+		) const;
 	};
 }

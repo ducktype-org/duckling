@@ -1,6 +1,6 @@
 #include "relocator.hpp"
 
-#include "base/except/exceptions.hpp"
+#include <base/except/exceptions.hpp>
 #include <base/preproc/for_each.hpp>
 
 #include <vm/core/fast/program/instructions/executable.hpp>
@@ -22,7 +22,7 @@ namespace {
 // Forward declare the argument translation functions.
 #define HANDLE_ARG_DEF(ARG_NAME) \
 	exec::arg::ARG_NAME relocate##ARG_NAME(TRANSLATOR_ARGUMENTS(ARG_NAME));
-#include "vm/core/fast/program/instructions/argument_definitions.hpp"
+#include <vm/core/fast/program/instructions/argument_definitions.hpp>
 #undef HANDLE_ARG_DEF
 
 // Define the translations

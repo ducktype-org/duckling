@@ -3,15 +3,15 @@
 #include <vm/core/fast/program/instructions/relocatable.hpp>
 #include <vm/core/fast/program/program.hpp>
 #include <vm/core/fast/program/type.hpp>
-#include <vm/loader/compiler/compiler.hpp>
+#include <vm/loader/compiler/ivm_compiler.hpp>
 
 namespace vm::loader::compiler::fast {
 	class FastCompiler final: public vm::loader::compiler::Compiler {
 	public:
 		FastCompiler(const code::ValidProgram& high_program);
 
-		CRef<vm::fast::ProgramBase>                    getProgramBase() const;
-		CRef<vm::fast::reloc::RelocFunctionCollection> getRelocatableFunctions() const;
+		[[nodiscard]] CRef<vm::fast::ProgramBase>                    getProgramBase() const;
+		[[nodiscard]] CRef<vm::fast::reloc::RelocFunctionCollection> getRelocatableFunctions() const;
 
 	protected:
 		void compileNewTypes(const std::vector<code::valid_type::ValidType>& new_types) override;
@@ -24,7 +24,7 @@ namespace vm::loader::compiler::fast {
 			const std::vector<code::ExternalCFunction>& new_functions
 		) override;
 
-		ProgramSize getCurrentProgramSize() const override;
+		[[nodiscard]] ProgramSize getCurrentProgramSize() const override;
 
 	private:
 		vm::fast::ProgramBase                    program;

@@ -2,9 +2,9 @@
 
 #include <tester/tester.hpp>
 
-#include "vm/api/data/api_error.hpp"
-#include "vm/api/data/process_info.hpp"
-#include "vm/api/vm.hpp"
+#include <vm/api/data/api_error.hpp>
+#include <vm/api/data/process_info.hpp>
+#include <vm/api/vm.hpp>
 #include <vm/bytecode/validator/errors.hpp>
 
 class VmFunctionsTests: public VmTestSuite {

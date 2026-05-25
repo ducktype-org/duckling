@@ -2,12 +2,12 @@
 
 #include "fast_vmprocess.hpp"
 
-#include "vm/core/fast/program/instructions/executable.hpp"
-#include "vm/core/fast/program/program.hpp"
-#include "vm/core/process/interface_types.hpp"
-#include "vm/core/thread/ivmthread.hpp"
-#include "vm/core/thread/kill_process_exception.hpp"
-#include "vm/utils/vm_not_implemented.hpp"
+#include <vm/core/fast/program/instructions/executable.hpp>
+#include <vm/core/fast/program/program.hpp>
+#include <vm/core/process/interface_types.hpp>
+#include <vm/core/thread/ivmthread.hpp>
+#include <vm/core/thread/kill_process_exception.hpp>
+#include <vm/utils/vm_not_implemented.hpp>
 #include <vm/core/fast/eval/evaluator.hpp>
 
 
