@@ -438,11 +438,11 @@ fn assert_root_features_are_expanded(
     root_manifest: &Manifest,
     root_features: &HashSet<FeatureName>,
 ) {
-    assert!(
+    assert_eq!(
         root_manifest
             .features()
             .expand_features(root_features.iter().copied())
-            .unwrap()
-            == *root_features
+            .unwrap(),
+        *root_features
     );
 }
