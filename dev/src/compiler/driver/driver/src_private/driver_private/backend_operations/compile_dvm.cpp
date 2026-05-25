@@ -8,7 +8,20 @@
 #include <backends/dvm/dvm_backend.hpp>
 #include <time_stats/time_stats.hpp>
 
+#include <logger/logger.hpp>
+
 namespace compiler::driver {
+	static bool LIRFunctionDealsWithStrings(const CRef<lir::Function> lir_function) {
+		auto is_string_layout = [](const CRef<tsl::TypeLayout> layout) -> bool {
+			return layout->getSourceType().getType().getKind() == tsh::Kind::String;
+		};
+		if (is_string_layout(lir_function->return_type_layout)) return true;
+		for (const auto& param_layout: lir_function->parameter_layouts) {
+			if (is_string_layout(param_layout)) return true;
+		}
+		return false;
+	}
+
 	DVMModuleData compileLIRModuleToDVM(
 		CRef<LIRModuleData> data, query::Context& query_ctx, bool build_debug_info
 	) {
@@ -19,7 +32,19 @@ namespace compiler::driver {
 		for (const auto& global: data->globals)
 			module.insertLirGlobal(global.lir_global, global.global_ctor, global.global_dtor);
 
-		for (const auto& lir_function: data->functions) module.insertLirFunction(lir_function);
+		for (const auto& lir_function: data->functions) {
+			// @TODO: #2483 Remove this filter (and the helper function) when strings work in DVM.
+			if (LIRFunctionDealsWithStrings(lir_function)) {
+				CORE_DEV_LOG(
+					Backend,
+					"Lowering function that deals with strings skipped: ",
+					lir_function->mangled_name,
+					"\n"
+				);
+				continue;
+			}
+			module.insertLirFunction(lir_function);
+		}
 
 		auto code_collection = module.build();
 
