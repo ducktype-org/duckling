@@ -15,7 +15,7 @@ namespace vm::code::valid_type {
 	 * architecture, but once pointer size is increased to 16 bytes, the pointers do not fit
 	 * anymore. This means valid_type::TypeSize is uncomparable - we can't choose a "larger" size
 	 * directly. This is why TypeSize has two separate fields for size when pointer size is 8 bytes
-	 * and when pointer size is 16 bytes, so that we can at least we can perform `fieldMax` on two
+	 * and when pointer size is 16 bytes, so that at least we can perform `fieldMax` on two
 	 * TypeSizes, which is useful for calculating the size of structures (mainly variant's data
 	 * field size).
 	 */

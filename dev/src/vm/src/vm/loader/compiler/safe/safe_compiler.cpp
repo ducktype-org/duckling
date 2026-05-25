@@ -150,17 +150,20 @@ namespace vm::loader::compiler::safe {
 		}
 	}
 
-	low::MicroBytecode SafeCompiler::lowerInstructions(
-		const vm::loader::compiler::detail::FunctionStackContext& ctx
-	) {
-		detail::MicroBytecodeBuilder builder{ *this, ctx };
+	std::pair<low::MicroBytecode, std::vector<vm::low::LowFuncData::InstructionRange>> SafeCompiler::
+		lowerInstructions(const vm::loader::compiler::detail::FunctionStackContext& ctx) {
+		detail::MicroBytecodeBuilder                        builder{ *this, ctx };
+		std::vector<vm::low::LowFuncData::InstructionRange> instruction_mapping;
 
-		for (const auto& instr: ctx.function.body) builder.add(instr);
+		for (const auto& instr: ctx.function.body) {
+			auto instruction_range = builder.add(instr);
+			instruction_mapping.push_back(instruction_range);
+		}
 
 		auto [micro_bytecode, label_map] = builder.build();
 		linkLabelArguments(micro_bytecode, label_map);
 
-		return micro_bytecode;
+		return { std::move(micro_bytecode), std::move(instruction_mapping) };
 	}
 
 	void SafeCompiler::compileNewFunctions(const std::vector<code::Function>& new_functions) {
@@ -168,7 +171,7 @@ namespace vm::loader::compiler::safe {
 			vm::loader::compiler::detail::FunctionStackContext ctx
 				= calculateStackContext(function);
 
-			low::MicroBytecode bytecode = lowerInstructions(ctx);
+			auto [bytecode, instruction_mapping] = lowerInstructions(ctx);
 
 			// Calculate the functions metadata.
 			code::FuncSignature        signature       = function.signature;
@@ -191,14 +194,15 @@ namespace vm::loader::compiler::safe {
 			}
 
 			low_program.functions.insert(
-				low::LowFuncData{ .name              = function.name,
-			                      .bc                = std::move(bytecode),
-			                      .local_stack_size  = getIntTypeSize(ctx.local_stack_size),
-			                      .local_block_count = ctx.local_block_count,
-			                      .arg_size          = getIntTypeSize(parameters_size),
-			                      .ret_size          = getIntTypeSize(ret_type_sum),
-			                      .parameters        = std::move(parameters),
-			                      .result_types      = std::move(result_types) },
+				low::LowFuncData{ .name                = function.name,
+			                      .bc                  = std::move(bytecode),
+			                      .local_stack_size    = getIntTypeSize(ctx.local_stack_size),
+			                      .local_block_count   = ctx.local_block_count,
+			                      .arg_size            = getIntTypeSize(parameters_size),
+			                      .ret_size            = getIntTypeSize(ret_type_sum),
+			                      .parameters          = std::move(parameters),
+			                      .result_types        = std::move(result_types),
+			                      .instruction_mapping = std::move(instruction_mapping) },
 				function.name
 			);
 		}
@@ -293,4 +297,31 @@ namespace vm::loader::compiler::safe {
 			);
 		}
 	}
+
+	std::expected<vm::loader::FatBytecodePosition, vm::loader::MappingException> SafeCompiler::
+		mapLowVMProgramPositionToCodeCollectionPosition(vm::low::LowCodePosition position) const {
+		auto& mapping = position.function->instruction_mapping;
+
+		// We need to find the first instruction range that starts after the given instruction
+		// index, then check if the previous one contains it
+		auto it = std::ranges::upper_bound(
+			mapping,
+			vm::low::LowFuncData::InstructionRange{
+				.begin = position.instruction_index,
+				.end   = std::numeric_limits<usize>::max(),
+			}
+		);
+
+		if (it == mapping.begin()) return std::unexpected(MappingException::MissingMapping);
+
+		auto candidate = it - 1;
+		if (!candidate->contains(position.instruction_index))
+			return std::unexpected(MappingException::MissingMapping);
+
+		return FatBytecodePosition{
+			.function_name     = position.function->name,
+			.instruction_index = usize(candidate - mapping.begin()),
+		};
+	}
+
 }

@@ -10,6 +10,16 @@
 #include <expected>
 
 namespace vm::loader {
+	struct FatBytecodePosition {
+		base::StrID function_name;
+		usize       instruction_index;
+	};
+
+	enum class MappingException {
+		MissingMapping,
+		NoFunction,
+	};
+
 	/**
 	 * @class Loader
 	 * @brief Class, that allows for loading programs in multiple forms.
@@ -60,5 +70,9 @@ namespace vm::loader {
 		static std::expected<code::CodeCollection, std::string> parseCodeCollectionFromFiles(
 			const std::vector<fs::File>& files
 		);
+
+		std::expected<base::Optional<dia::SourcePosition>, MappingException> mapCodeCollectionPositionToFilePosition(
+			FatBytecodePosition position
+		) const;
 	};
 }

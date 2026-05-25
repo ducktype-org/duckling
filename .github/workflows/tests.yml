@@ -27,6 +27,16 @@ jobs:
   # Determines the build matrix based on the event type.
   # On regular PRs only Dev/gcc runs; on push, workflow_dispatch or approved reviews the full matrix runs.
   setup:
+    if: >-
+      (github.event_name == 'push' && github.event.pull_request.draft == false) ||
+      github.event_name == 'workflow_dispatch'
+      ||
+      (
+        github.event.pull_request.draft == false &&
+        github.event_name == 'pull_request' &&
+        (github.event.action != 'labeled' || github.event.label.name == 'Override Coverage Check' || github.event.label.name == 'Run All Workflows')
+      )
+
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
@@ -82,7 +92,7 @@ jobs:
       itest-coverage-value: ${{ steps.test-coverage-itests.outputs.coverage-percent }}
       todo-count: ${{ steps.todo-counter.outputs.todo-count }}
 
-    timeout-minutes: 40 # (Per matrix run)
+    timeout-minutes: 60 # (Per matrix run)
     runs-on:
       group: SelfHostedRunners
       labels: ${{ matrix.build-type == 'Dev' && 'debug' || 'release' }}
@@ -102,7 +112,7 @@ jobs:
           if [[ "${{ matrix.build-type }}" == "Dev" && "${{ steps.set-self-hosted.outputs.is-self-hosted }}" == "true" ]]; then
             echo "jobs=6" >> $GITHUB_OUTPUT
           elif [[ "${{ matrix.build-type }}" == "DevOpt" && "${{ steps.set-self-hosted.outputs.is-self-hosted }}" == "true" ]]; then
-            echo "jobs=3" >> $GITHUB_OUTPUT
+            echo "jobs=6" >> $GITHUB_OUTPUT
           else
             echo "jobs=2" >> $GITHUB_OUTPUT
           fi

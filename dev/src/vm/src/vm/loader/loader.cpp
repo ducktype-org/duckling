@@ -17,10 +17,8 @@
 #include <vm/bytecode/type_of_data.hpp>
 #include <vm/bytecode/validator/errors.hpp>
 #include <vm/bytecode/validator/valid_program.hpp>
-#include <vm/loader/compiler/compiler.hpp>
 #include <vm/loader/logger.hpp>
 
-#include <expected>
 #include <vector>
 
 using namespace vm::loader;
@@ -166,7 +164,6 @@ std::expected<void, LoaderLogger> Loader::loadAndCompile(const std::vector<fs::F
 	return std::unexpected(std::move(opt_code_collection).error());
 }
 
-
 base::CRef<vm::code::ValidProgram> vm::loader::Loader::getHighProgram() const {
 	return &validated_high_program;
 }
@@ -178,5 +175,15 @@ std::expected<vm::code::CodeCollection, std::string> vm::loader::Loader::parseCo
 		std::stringstream ss;
 		logger.dump(ss);
 		return ss.str();
+	});
+}
+
+std::expected<base::Optional<dia::SourcePosition>, vm::loader::MappingException> vm::loader::
+	Loader::mapCodeCollectionPositionToFilePosition(FatBytecodePosition position) const {
+	const auto& maybe_high_function = getHighProgram()->functions().atMaybe(position.function_name);
+	if (maybe_high_function.empty()) return std::unexpected(MappingException::NoFunction);
+
+	return maybe_high_function.value()->body.at(position.instruction_index).visit([](auto&& instr) {
+		return instr.bytecode_pos;
 	});
 }

@@ -5,6 +5,7 @@
 #include <vm/bytecode/validator/valid_program.hpp>
 #include <vm/core/safe/low_program/low_program.hpp>
 #include <vm/core/safe/low_program/micro_instruction_args.hpp>
+#include <vm/loader/loader.hpp>
 
 namespace vm::loader::compiler::safe {
 	namespace detail {
@@ -51,6 +52,10 @@ namespace vm::loader::compiler::safe {
 		 */
 		CRef<vm::low::LowVMProgram> getLowProgram() const;
 
+		std::expected<FatBytecodePosition, MappingException> mapLowVMProgramPositionToCodeCollectionPosition(
+			low::LowCodePosition position
+		) const;
+
 	protected:
 		ProgramSize getCurrentProgramSize() const override;
 
@@ -81,12 +86,13 @@ namespace vm::loader::compiler::safe {
 		);
 
 		/**
-		 * @brief Lowers instructions to micro-bytecode. Iterates through the label-less
-		 * instructions and translates them into a sequence of `MicroInstruction`, resolving all
-		 * symbolic arguments to numeric values.
-		 * @return The converted list of instructions.
+		 * @brief Lowers instructions to micro-bytecode. Iterates through the instructions and
+		 * translates them into a sequence of `MicroInstruction`s.
+		 * @return The converted list of instructions as well as the mapping from instruction
+		 * indices to instruction ranges in micro-bytecode.
 		 */
-		low::MicroBytecode lowerInstructions(
+
+		std::pair<low::MicroBytecode, std::vector<vm::low::LowFuncData::InstructionRange>> lowerInstructions(
 			const vm::loader::compiler::detail::FunctionStackContext& ctx
 		);
 

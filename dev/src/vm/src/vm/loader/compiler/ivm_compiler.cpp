@@ -101,9 +101,9 @@ namespace vm::loader::compiler {
 			push(base::StrID(base::strConcat("arg", idx).c_str()), param_type.str);
 		// instruction index, stack state, stack size
 		std::vector<std::tuple<usize, decltype(type_size_stack), code::valid_type::TypeSize>>
-						  dfs_stack{
-							  { ctx.function.body.size(), {}, {} }  // sentinel
-						  };
+			dfs_stack{
+				{ ctx.function.body.size(), {}, {} }  // sentinel
+			};
 		std::vector<bool> visited_instructions(ctx.function.body.size());
 		usize             index = 0;
 

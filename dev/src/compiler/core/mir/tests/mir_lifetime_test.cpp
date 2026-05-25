@@ -37,6 +37,9 @@ public:
 		TESTER_ADD_TEST(lifetimeFlagsRepeatedBlocks);
 		TESTER_ADD_TEST(lifetimeFlagsSingleBlock);
 		TESTER_ADD_TEST(lifetimeFlagsNestedBlocks);
+		TESTER_ADD_TEST(newIntermediateBlockForDifferentEndingScopesTest);
+		TESTER_ADD_TEST(multipleIntermediateBlocksTest);
+		TESTER_ADD_TEST(optimizationForSameEndingScopesTest);
 	}
 
 private:
@@ -275,6 +278,37 @@ private:
 				}
 			}
 		});
+	}
+
+	i32 countIntermediateDestructorBlocks(CRef<compiler::mir::Function> func) {
+		i32 intermediate_blocks_count = 0;
+		for (const auto& block_id: func->block_order) {
+			const auto& block = func->blocks.at(block_id);
+			if (!block->instructions.empty()
+			    && block->instructions[0].operation == compiler::mir::Operation::Nop) {
+				if (block->terminator.operation == compiler::mir::Operation::Jump)
+					intermediate_blocks_count++;
+			}
+		}
+		return intermediate_blocks_count;
+	}
+
+	void newIntermediateBlockForDifferentEndingScopesTest() {
+		auto [module, scope] = getModule(fs::File(path("modules/destructor_insertion")));
+		auto a_mir           = getMIRFunctionByName(module, "A");
+		ASSERT_EQUAL_PRINT(2, countIntermediateDestructorBlocks(a_mir));
+	}
+
+	void multipleIntermediateBlocksTest() {
+		auto [module, scope] = getModule(fs::File(path("modules/destructor_insertion")));
+		auto b_mir           = getMIRFunctionByName(module, "B");
+		ASSERT_EQUAL_PRINT(4, countIntermediateDestructorBlocks(b_mir));
+	}
+
+	void optimizationForSameEndingScopesTest() {
+		auto [module, scope] = getModule(fs::File(path("modules/destructor_insertion")));
+		auto c_mir           = getMIRFunctionByName(module, "C");
+		ASSERT_EQUAL_PRINT(0, countIntermediateDestructorBlocks(c_mir));
 	}
 };
 
