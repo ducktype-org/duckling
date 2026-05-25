@@ -1,5 +1,4 @@
 #include "function_queries.hpp"
-#include "helios_private/hout_creation/definition_generation/default_destructors.hpp"
 
 #include <frontend/pst_parser/elements/hierarchy/actions/all_actions.hpp>
 #include <frontend/pst_parser/elements/hierarchy/actions/return.hpp>
@@ -20,6 +19,7 @@
 #include <helios_private/errors/errors.hpp>
 #include <helios_private/hout_creation/definition_generation/class_constructors.hpp>
 #include <helios_private/hout_creation/definition_generation/default_constructors.hpp>
+#include <helios_private/hout_creation/definition_generation/default_destructors.hpp>
 #include <helios_private/hout_creation/definition_generation/to_string_methods.hpp>
 #include <helios_private/hout_creation/definition_generation/tuple_constructor.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
@@ -168,7 +168,7 @@ namespace compiler::helios {
 						}
 						variant_case(defgen::GeneratedSymbolData::DefaultDestructor, dtor) {
 							return ctx.query<defgen::QueryDefaultDestructor>(dtor.owner_type)
-								->valueOrThrow();
+							    ->valueOrThrow();
 						}
 						variant_case(
 							defgen::GeneratedSymbolData::DefaultStaticArrayConstructor, ctor

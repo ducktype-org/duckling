@@ -48,32 +48,28 @@ namespace compiler::helios::defgen {
 						});
 
 						std::vector<Box<code::Expr>> args;
-						args.emplace_back(
-							makeBox<code::RefOfExpr>(
+						args.emplace_back(makeBox<code::RefOfExpr>(
+							ctx,
+							code::generatedOrigin(),
+							makeBox<code::AccessExpr>(
 								ctx,
 								code::generatedOrigin(),
-								makeBox<code::AccessExpr>(
-									ctx,
-									code::generatedOrigin(),
-									dereffed_self->clone(),
-									field.getSymbol()
-								)
+								dereffed_self->clone(),
+								field.getSymbol()
 							)
-						);
+						));
 
-						body.emplace_back(
-							makeBox<code::ExprStmt>(
+						body.emplace_back(makeBox<code::ExprStmt>(
+							code::generatedOrigin(),
+							makeBox<code::CallExpr>(
+								ctx,
 								code::generatedOrigin(),
-								makeBox<code::CallExpr>(
-									ctx,
-									code::generatedOrigin(),
-									makeBox<code::IdentifierExpr>(
-										ctx, code::generatedOrigin(), field_dtor_sym
-									),
-									std::move(args)
-								)
+								makeBox<code::IdentifierExpr>(
+									ctx, code::generatedOrigin(), field_dtor_sym
+								),
+								std::move(args)
 							)
-						);
+						));
 					}
 				}
 				break;

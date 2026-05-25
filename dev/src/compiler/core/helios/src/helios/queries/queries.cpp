@@ -204,9 +204,8 @@ namespace compiler::helios {
 				));
 			}
 
-			for (auto size: {32, 64}) {
+			for (auto size: { 32, 64 })
 				append_to_string_for_simple_type(tsh::getFloatType(ctx, u64(size)));
-			}
 
 			append_to_string_for_simple_type(tsh::getCharType());
 			append_to_string_for_simple_type(tsh::getBoolType());

@@ -337,8 +337,8 @@ str builtin_stringify_char(char c) {
 }
 
 str builtin_stringify_bool(bool b) {
-	const char* stringified = b ? "true" : "false";
-	const uint64_t length = b ? 4 : 5;
+	const char*    stringified = b ? "true" : "false";
+	const uint64_t length      = b ? 4 : 5;
 
 	auto result = str{
 		.data                = (char*) malloc(length),

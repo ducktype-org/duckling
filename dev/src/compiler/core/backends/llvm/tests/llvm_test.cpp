@@ -208,9 +208,7 @@ private:
 		runTestForModule("modules/units/unit_simple_multiple_modules", 1, 2);
 	}
 
-	void classTest() {
-		runTestForModule("modules/classes/records", 14, 16);
-	}
+	void classTest() { runTestForModule("modules/classes/records", 14, 16); }
 
 	void stringsTest() { runTestForModule("modules/strings", 1, 3); }
 

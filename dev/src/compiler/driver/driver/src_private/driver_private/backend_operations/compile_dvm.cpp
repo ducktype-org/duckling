@@ -16,9 +16,8 @@ namespace compiler::driver {
 			return layout->getSourceType().getType().getKind() == tsh::Kind::String;
 		};
 		if (is_string_layout(lir_function->return_type_layout)) return true;
-		for (const auto& param_layout: lir_function->parameter_layouts) {
+		for (const auto& param_layout: lir_function->parameter_layouts)
 			if (is_string_layout(param_layout)) return true;
-		}
 		return false;
 	}
 
