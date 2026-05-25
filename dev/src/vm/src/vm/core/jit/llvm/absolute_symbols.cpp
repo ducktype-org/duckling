@@ -20,9 +20,6 @@ void registerAbsoluteJITSymbols(llvm::orc::LLJIT& lljit) {
 	llvm::orc::SymbolMap host_symbols;
 
 	std::array hard_symbols = {
-		std::pair{ "jmp_label", &vm::OpFuns::op_debug_jmp_label },
-		std::pair{ "jmpIfNot_label", &vm::OpFuns::op_debug_jmpIfNot_label },
-		std::pair{ "jmpIf_label", &vm::OpFuns::op_debug_jmpIf_label },
 		std::pair{ "jit_entrypoint", &vm::OpFuns::op_debug_jit_entrypoint },
 		std::pair{ "call_func", &vm::OpFuns::op_debug_call_func },
 		std::pair{ "call_builtinfunc", &vm::OpFuns::op_debug_call_builtinfunc },
