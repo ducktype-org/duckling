@@ -7,8 +7,8 @@ import json
 import typing
 import bisect
 
-import _stencils
-import _schema
+from _stencils import Stencil, Hole, symbol_to_value, stencils_to_c
+from _schema import ELFRelocation, ELFSection
 
 from llvm_tools import llvm_tools_version_options
 
@@ -20,20 +20,18 @@ def run_llvm(tool: str, args, echo=False) -> str:
     return result.stdout
 
 
-def parse_relocation(
-    relocation: _schema.ELFRelocation, stencil: _stencils.Stencil
-) -> _stencils.Hole:
-    return _stencils.Hole(
+def parse_relocation(relocation: ELFRelocation, stencil: Stencil) -> Hole:
+    return Hole(
         offset=relocation["Offset"] - stencil.place,
         addend=relocation["Addend"],
-        value=_stencils.symbol_to_value(relocation["Symbol"]["Name"]),
+        value=symbol_to_value(relocation["Symbol"]["Name"]),
         kind=relocation["Type"]["Name"],
         symbol=relocation["Symbol"],
     )
 
 
-def parse_stencil_section(stencil_section: _schema.ELFSection) -> _stencils.Stencil:
-    output = _stencils.Stencil(
+def parse_stencil_section(stencil_section: ELFSection) -> Stencil:
+    output = Stencil(
         name=get_stencil_name(stencil_section),
         place=stencil_section["Offset"],
         size=stencil_section["Size"],
@@ -46,7 +44,7 @@ def parse_stencil_section(stencil_section: _schema.ELFSection) -> _stencils.Sten
     return output
 
 
-def is_stencil_section(section: _schema.ELFSection) -> bool:
+def is_stencil_section(section: ELFSection) -> bool:
     name = section["Name"]["Name"]
     if not name.startswith(".ltext."):
         return False
@@ -55,14 +53,12 @@ def is_stencil_section(section: _schema.ELFSection) -> bool:
     return True if all_sections else "stencil" in name
 
 
-def get_stencil_name(section: _schema.ELFSection) -> str:
+def get_stencil_name(section: ELFSection) -> str:
     name = section["Name"]["Name"]
     return name[len(".ltext.") :]
 
 
-def split_section_relocations(
-    section: _schema.ELFSection, stencils: list[_stencils.Stencil]
-):
+def split_section_relocations(section: ELFSection, stencils: list[Stencil]):
     stencil_offset = lambda stencil: stencil.place
     beginnings = sorted([stencil for stencil in stencils], key=stencil_offset)
     for wrapped_relocation in section["Relocations"]:
@@ -80,9 +76,7 @@ def split_section_relocations(
             stencil.holes.append(parse_relocation(relocation, stencil))
 
 
-def parse(
-    llvm_readobj: str, binary: str, verbose: bool, shared: bool
-) -> list[_stencils.Stencil]:
+def parse(llvm_readobj: str, binary: str, verbose: bool, shared: bool) -> list[Stencil]:
     readobj_args = [
         "--elf-output-style=JSON",
         "--expand-relocs",
@@ -96,7 +90,7 @@ def parse(
     readobj_output = run_llvm(llvm_readobj, readobj_args, echo=verbose)
 
     file_info = json.loads(readobj_output)[0]
-    sections: list[_schema.ELFSection] = [
+    sections: list[ELFSection] = [
         section["Section"] for section in file_info["Sections"]
     ]
 
@@ -125,7 +119,7 @@ def generate_stencils(
     llvm_readobj: str, binary, output_file, verbose: bool, shared: bool
 ):
     stencil_holes = parse(llvm_readobj, binary, verbose, shared)
-    output_file.write(_stencils.stencils_to_c(stencil_holes, binary=binary.read()))
+    output_file.write(stencils_to_c(stencil_holes, binary=binary.read()))
 
 
 @click.command()

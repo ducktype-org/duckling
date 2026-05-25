@@ -1,3 +1,5 @@
+file(GLOB analyze_deps "${CMAKE_SOURCE_DIR}/scripts/py/jit/*.py")
+
 # Analyze and process the `binary_file`, preparing to embed in `destination_file`
 function(process_to_binary binary_file destination_file binary_artifact_prefix)
     set(extra_deps ${ARGN})
@@ -46,7 +48,7 @@ function(process_to_binary binary_file destination_file binary_artifact_prefix)
         "--accept-all-sections"
         "--shared"
         ${LLVM_TOOLS_ARGS}
-        DEPENDS ${linked_out} ${CMAKE_SOURCE_DIR}/scripts/py/jit/analyze_bin.py
+        DEPENDS ${linked_out} ${analyze_deps}
     )
 
     set_source_files_properties("${linked_out}" "${nm_out}"
