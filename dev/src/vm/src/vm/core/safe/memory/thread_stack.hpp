@@ -47,9 +47,9 @@ namespace vm {
 			  block_ref_stack(BLOCK_REF_STACK_LENGTH),
 			  shadow_block_ref_stack(BLOCK_REF_STACK_LENGTH),
 			  shadow_pointer_block_ref_stack(BLOCK_REF_STACK_LENGTH),
+			  shadow_frame_stack(FRAMES_LENGTH),
 			  shadow_data_stack(STACK_LENGTH),
-			  shadow_pointer_stack(STACK_LENGTH),
-			  shadow_frame_stack(FRAMES_LENGTH) {}
+			  shadow_pointer_stack(STACK_LENGTH) {}
 
 		auto getFrameStack() -> Ref<std::vector<Frame>> { return &frame_stack; }
 

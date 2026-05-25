@@ -1,5 +1,6 @@
 #include "safe_vmprocess.hpp"
 
+#include <thread>
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
@@ -22,6 +23,8 @@
 #include <shared_mutex>
 #include <sstream>
 #include <variant>
+#include <iostream>
+#include <fstream>
 
 namespace vm {
 	Memory& SafeVMProcess::getMemory() { return memory; }
@@ -56,14 +59,36 @@ namespace vm {
 		SafeVMThread&    thread = getEmptyThread();
 		thread.setThreadCtx(func_name);
 
-		// FastTrack Fork: Parent's current state is joined into child's initial VC
-		// We assume the caller (often main thread or another worker) is represented by some active thread
-		// or we use the 'main' thread as the default parent for the initial fork.
-		// For built-in spawn, 'getMainVMThread()' or similar is used to get parent context.
-		// Here we simply propagate the parent's current VC if possible.
-		// Note: This needs careful mapping of 'which thread is calling runFunction'.
-		// For simplicity in Phase 3, we use the main thread as the reference parent.
-		thread.forkVC(getMainVMThread().getVC());
+		// FastTrack Fork: Parent's current state is joined into child's initial VC.
+		// Identify the actual calling/parent thread from the vm_threads pool by matching OS thread ID.
+		SafeVMThread* parent_thread = nullptr;
+		auto current_id = std::this_thread::get_id();
+		
+		std::ofstream log_file("/home/szymonp/Studia/Licencjat/duckling-zpp-4.1/dev/debug_threads.log", std::ios::app);
+		log_file << "[DEBUG] Spawning child thread for func: " << func_name 
+		         << ", current C++ thread ID: " << current_id << "\n";
+		
+		for (auto& t : vm_threads) {
+			log_file << "  [DEBUG] Thread ID: " << t.getThreadID();
+			if (t.hasActiveThread()) {
+				log_file << ", Native ID: " << t.getNativeThreadId();
+			} else {
+				log_file << ", No Active Thread";
+			}
+			log_file << "\n";
+			
+			if (t.hasActiveThread() && t.getNativeThreadId() == current_id) {
+				parent_thread = &t;
+			}
+		}
+
+		if (parent_thread) {
+			log_file << "  [DEBUG] Matched parent thread ID: " << parent_thread->getThreadID() << "\n";
+			thread.forkVC(parent_thread->getVC());
+		} else {
+			log_file << "  [DEBUG] No parent match. Falling back to main thread ID: " << getMainVMThread().getThreadID() << "\n";
+			thread.forkVC(getMainVMThread().getVC());
+		}
 
 		bool response = thread.spawnThreadAndRun(func_name, run_arguments);
 

@@ -91,6 +91,9 @@ namespace vm {
 		 * @return true if exec_thread is active and joinable.
 		 */
 		[[nodiscard]] virtual bool hasActiveThread() const;
+		[[nodiscard]] std::thread::id getNativeThreadId() const {
+			return exec_thread ? exec_thread->get_id() : std::thread::id{};
+		}
 		/**
 		 * @brief Waits for the execution thread to finish and returns final response.
 		 */

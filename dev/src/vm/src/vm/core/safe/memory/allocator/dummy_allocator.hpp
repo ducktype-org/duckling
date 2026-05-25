@@ -10,11 +10,21 @@
 #include <vm/core/safe/type_metadata/type.hpp>
 
 namespace vm {
+	struct ShadowEntry;
+	struct ShadowPointer;
+
 	template<typename EntryT>
 	class DummyAllocator final: public IAllocator<EntryT> {
 	public:
 		BlockData<EntryT> allocate(TypeCRef type, Ref<EntryT> data) {
-			auto size = type->getSize().asInt();
+			usize   size = 0;
+			if constexpr (std::is_same_v<EntryT, vm::ShadowEntry>) {
+				size = type->getShadowSize();
+			} else if constexpr (std::is_same_v<EntryT, vm::ShadowPointer>) {
+				size = type->getPointerSize();
+			} else {
+				size = type->getSize().asInt();
+			}
 			return BlockData<EntryT>{
 				type, base::TypedModRawView<EntryT>{ data.get(), size }, this
 			};

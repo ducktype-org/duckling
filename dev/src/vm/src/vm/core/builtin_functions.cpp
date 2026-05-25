@@ -117,14 +117,12 @@ namespace vm::builtins {
 	i64 FunctionHandlers::builtinStartThread(SafeVMThread& thread) {
 		thread.releaseGil();
 		
-		// FastTrack Fork: Parent's current VC is the initial VC for the child
-		// (handled by getEmptyThread/spawnThreadAndRun logic implicitly if we pass it, 
-		// but here we just ensure the child is aware)
-		
 		auto result = vm::api::runFunction(thread.safe_process.getPID(), thread.getThreadCtx());
 		
-		// After spawning, parent increments its own clock to establish happens-before with future actions
-		thread.onRelease(const_cast<VectorClock&>(thread.getVC())); // Manual increment
+		if (result.has_value() && thread.safe_process.getSettings().enable_fast_track) {
+			// After spawning, parent increments its own clock to establish happens-before with future actions
+			thread.onRelease(const_cast<VectorClock&>(thread.getVC())); // Manual increment
+		}
 
 		thread.acquireGil();
 		if (!result.has_value()) return -vm::api::errorToErrno(result.error());

@@ -160,6 +160,8 @@ namespace vm {
 
 		CRef<low::ILowVMProgram> getLoadedProgram() const { return loaded_program; }
 
+		const api::ProcessSettings& getSettings() const { return settings_; }
+
 		/**
 		 * @brief Get the GIL of the process.
 		 */

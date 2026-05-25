@@ -263,7 +263,7 @@ namespace vm {
 		 * @brief FastTrack Fork event.
 		 */
 		void forkVC(const VectorClock& parent_vc) {
-			vc |= parent_vc;
+			vc = parent_vc;
 			vc[getThreadID()] = 1;
 		}
 

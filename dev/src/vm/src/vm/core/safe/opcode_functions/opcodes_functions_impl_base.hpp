@@ -1251,15 +1251,8 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(ft_tableIdxLea_pptr_pptr)(FUNCTION_ARGS) {
 		{
-			const auto dst       = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
-			auto       table_ptr = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
 			auto       index     = READ_FROM_DIRECT_ARG(u64, instr[1].arg0);
 			auto       elem_type = READ_FROM_DIRECT_ARG(TypeCRef, instr[1].arg1);
-
-			const Pointer new_dst = thread.process_memory.updatePointerAssignment(
-				dst, { table_ptr.getBlock(), table_ptr.getOffset() + (index * elem_type->getSize().asInt()) }
-			);
-			WRITE_TO_PLACE_ARG(Pointer, instr->arg0, new_dst);
 
 			ShadowPointer table_shadow = GET_SHADOW_POINTER_REF(instr->arg1);
 			ShadowPointer dst_shadow = table_shadow;
@@ -1274,15 +1267,8 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(ft_ptrAdd_pptr_pptr)(FUNCTION_ARGS) {
 		{
-			const auto dst       = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
-			auto       src       = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
 			auto       index     = READ_FROM_DIRECT_ARG(u64, instr[1].arg0);
 			auto       elem_type = READ_FROM_DIRECT_ARG(TypeCRef, instr[1].arg1);
-
-			const Pointer new_dst = thread.process_memory.updatePointerAssignment(
-				dst, { src.getBlock(), src.getOffset() + (index * elem_type->getSize().asInt()) }
-			);
-			WRITE_TO_PLACE_ARG(Pointer, instr->arg0, new_dst);
 
 			ShadowPointer src_shadow = GET_SHADOW_POINTER_REF(instr->arg1);
 			ShadowPointer dst_shadow = src_shadow;
@@ -1297,15 +1283,8 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(ft_ptrSub_pptr_pptr)(FUNCTION_ARGS) {
 		{
-			const auto dst       = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
-			auto       src       = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
 			auto       index     = READ_FROM_DIRECT_ARG(u64, instr[1].arg0);
 			auto       elem_type = READ_FROM_DIRECT_ARG(TypeCRef, instr[1].arg1);
-
-			const Pointer new_dst = thread.process_memory.updatePointerAssignment(
-				dst, { src.getBlock(), src.getOffset() - (index * elem_type->getSize().asInt()) }
-			);
-			WRITE_TO_PLACE_ARG(Pointer, instr->arg0, new_dst);
 
 			ShadowPointer src_shadow = GET_SHADOW_POINTER_REF(instr->arg1);
 			ShadowPointer dst_shadow = src_shadow;
@@ -1320,14 +1299,6 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(ft_load_pptr_pptr)(FUNCTION_ARGS) {
 		{
-			auto dst_pointer = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
-			auto src_pointer = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
-			
-			const Pointer new_dst = thread.process_memory.updatePointerAssignment(
-				dst_pointer, { src_pointer.getBlock(), src_pointer.getOffset() }
-			);
-			WRITE_TO_PLACE_ARG(Pointer, instr->arg0, new_dst);
-
 			GET_SHADOW_POINTER_REF(instr->arg0) = GET_SHADOW_POINTER_REF(instr->arg1);
 		}
 		FUNCTION_CONT(1);
@@ -1335,14 +1306,6 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(ft_store_pptr_pptr)(FUNCTION_ARGS) {
 		{
-			auto dst_pointer = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
-			auto src_pointer = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
-			
-			const Pointer new_dst = thread.process_memory.updatePointerAssignment(
-				dst_pointer, { src_pointer.getBlock(), src_pointer.getOffset() }
-			);
-			WRITE_TO_PLACE_ARG(Pointer, instr->arg0, new_dst);
-
 			GET_SHADOW_POINTER_REF(instr->arg0) = GET_SHADOW_POINTER_REF(instr->arg1);
 		}
 		FUNCTION_CONT(1);
@@ -1350,12 +1313,8 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(ft_memCopy)(FUNCTION_ARGS) {
 		{
-			auto dst_pointer = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
-			auto src_pointer = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
 			auto type = READ_FROM_DIRECT_ARG(TypeCRef, instr[1].arg0);
 
-			thread.process_memory.copyPointedData(dst_pointer, src_pointer, type);
-			
 			ShadowPointer dst_shadow = GET_SHADOW_POINTER_REF(instr->arg0);
 			ShadowPointer src_shadow = GET_SHADOW_POINTER_REF(instr->arg1);
 			
@@ -1373,12 +1332,7 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(ft_alloc_pptr_type)(FUNCTION_ARGS) {
 		{
-			auto dst  = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
 			auto type = READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1);
-
-			auto block = thread.process_memory.allocateHeap(type);
-			const Pointer new_dst = thread.process_memory.updatePointerAssignment(dst, { block, 0 });
-			WRITE_TO_PLACE_ARG(Pointer, instr->arg0, new_dst);
 
 			// Shadow allocation assumes getters on thread
 			ShadowPointer shadow_ptr;
@@ -1406,7 +1360,9 @@ namespace vm {
 			auto type = READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1);
 
 			auto shadow_block = thread.getShadowDataMemory().allocateDummy(type, shadow_data_ptr);
+			thread.getShadowDataMemory().increaseBlockRefcount(shadow_block);
 			auto shadow_pointer_block = thread.getShadowPointerMemory().allocateDummy(type, shadow_ptr_data_ptr);
+			thread.getShadowPointerMemory().increaseBlockRefcount(shadow_pointer_block);
 
 			*sf->local_shadow_block_ref_stack_end = shadow_block.get();
 			sf->local_shadow_block_ref_stack_end += 1;
@@ -1534,11 +1490,6 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(ft_ref_pptr_bany)(FUNCTION_ARGS) {
 		{
-			const auto dst     = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
-			auto       block   = READ_BLOCK_REF_FROM_ARG(instr->arg1);
-			const auto new_dst = thread.process_memory.updatePointerAssignment(dst, { block, 0 });
-			WRITE_TO_PLACE_ARG(Pointer, instr->arg0, new_dst);
-
 			ShadowPointer shadow_ptr;
 			u64 src_place = instr->arg1;
 			u64 offset = src_place & ~(1ULL << 63);
@@ -1586,29 +1537,17 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	inline static u32 getElementShadowSize(vm::SafeVMThread& thread, Pointer tbl_pointer) {
-		if (tbl_pointer.isNull()) return 1;
-		auto block = tbl_pointer.getBlock();
-		auto tbl_type = Memory::getBlockType(block);
-		auto inner = tbl_type->getInnerType();
-		if (inner.has_value()) {
-			return static_cast<u32>((*inner)->getShadowSize());
-		}
-		return 1;
-	}
-
 	RETURN_TYPE OpFuns::OPCODE_NAME(ft_arrayRead)(FUNCTION_ARGS) {
 		{
 			ShadowPointer shadow_ptr = GET_SHADOW_POINTER_REF(instr->arg0);
 			if (!shadow_ptr.isNull()) {
 				u64 idx = READ_FROM_PLACE_ARG(u64, instr->arg1);
-				auto tbl_pointer = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
-				u32 elem_shadow_size = getElementShadowSize(thread, tbl_pointer);
-				ShadowEntry* entry = shadow_ptr.data_base + shadow_ptr.logical_idx + (idx * elem_shadow_size);
+				auto elem_type = READ_FROM_DIRECT_ARG(TypeCRef, instr[1].arg1);
+				ShadowEntry* entry = shadow_ptr.data_base + shadow_ptr.logical_idx + (idx * elem_type->getShadowSize());
 				entry->processRead(thread.getThreadID(), thread.getVC()[thread.getThreadID()], thread.getVC());
 			}
 		}
-		FUNCTION_CONT(1);
+		FUNCTION_CONT(2);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(ft_arrayWrite)(FUNCTION_ARGS) {
@@ -1616,13 +1555,12 @@ namespace vm {
 			ShadowPointer shadow_ptr = GET_SHADOW_POINTER_REF(instr->arg0);
 			if (!shadow_ptr.isNull()) {
 				u64 idx = READ_FROM_PLACE_ARG(u64, instr->arg1);
-				auto tbl_pointer = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
-				u32 elem_shadow_size = getElementShadowSize(thread, tbl_pointer);
-				ShadowEntry* entry = shadow_ptr.data_base + shadow_ptr.logical_idx + (idx * elem_shadow_size);
+				auto elem_type = READ_FROM_DIRECT_ARG(TypeCRef, instr[1].arg1);
+				ShadowEntry* entry = shadow_ptr.data_base + shadow_ptr.logical_idx + (idx * elem_type->getShadowSize());
 				entry->processWrite(thread.getThreadID(), thread.getVC()[thread.getThreadID()], thread.getVC());
 			}
 		}
-		FUNCTION_CONT(1);
+		FUNCTION_CONT(2);
 	}
 }
 

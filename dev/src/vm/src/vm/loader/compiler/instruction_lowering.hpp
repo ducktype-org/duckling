@@ -541,10 +541,9 @@ namespace vm::loader::compiler::detail {
 				addLow<Op_virtual_call_pptr_method>(i.object_ptr, i.method);
 			}
 			instr_case(high::Op_alloc_pptr_type, i) {
+				addLow<Op_alloc_pptr_type>(i.ptr, i.type);
 				if (compiler.settings_.enable_fast_track) {
 					addLow<Op_ft_alloc_pptr_type>(i.ptr, i.type);
-				} else {
-					addLow<Op_alloc_pptr_type>(i.ptr, i.type);
 				}
 			}
 			instr_case(high::Op_free_pptr, i) { addLow<Op_free_pptr>(i.ptr); }
@@ -553,10 +552,9 @@ namespace vm::loader::compiler::detail {
 			}
 			instr_case(high::Op_load_pany_pptr, i) { addLow<Op_load_bany_pptr>(i.dst, i.src_ptr); }
 			instr_case(high::Op_ref_pptr_pany, i) {
+				addLow<Op_ref_pptr_bany>(i.dst_ptr, i.src);
 				if (compiler.settings_.enable_fast_track) {
 					addLow<Op_ft_ref_pptr_bany>(i.dst_ptr, i.src);
-				} else {
-					addLow<Op_ref_pptr_bany>(i.dst_ptr, i.src);
 				}
 			}
 			instr_case(high::Op_ref_pptr_pvnt, i) { addLow<Op_ref_pptr_bany>(i.dst_ptr, i.src); }
@@ -598,32 +596,40 @@ namespace vm::loader::compiler::detail {
 	(*(*getPlaceType(ptr_arg)->getInnerType())->getInnerType())->getName()
 #define TABLE_VAL_ELEM_TYPE(val_arg) (*getPlaceType(val_arg)->getInnerType())->getName()
 			instr_case(high::Op_fixedSizeTableLea_pptr_pptr_p64, i) {
-				if (compiler.settings_.enable_fast_track) {
-					addLow<Op_ft_tableIdxLea_pptr_pptr>(i.dst_ptr, i.src_table_ptr);
-				} else {
-					addLow<Op_anyArrayLea_pptr_pptr>(i.dst_ptr, i.src_table_ptr);
-				}
+				addLow<Op_anyArrayLea_pptr_pptr>(i.dst_ptr, i.src_table_ptr);
 				addLow<Op_ext_p64_type>(
 					i.index, opargs::Type{ TABLE_PTR_ELEM_TYPE(i.src_table_ptr) }
 				);
+				if (compiler.settings_.enable_fast_track) {
+					addLow<Op_ft_tableIdxLea_pptr_pptr>(i.dst_ptr, i.src_table_ptr);
+					addLow<Op_ext_p64_type>(
+						i.index, opargs::Type{ TABLE_PTR_ELEM_TYPE(i.src_table_ptr) }
+					);
+				}
 			}
 			instr_case(high::Op_fixedSizeTableLoad_pany_pptr_p64, i) {
-				if (compiler.settings_.enable_fast_track) {
-					addLow<Op_ft_arrayRead>(i.src_table_ptr, i.index);
-				}
 				addLow<Op_anyArrayLoad_bany_pptr>(i.dst, i.src_table_ptr);
 				addLow<Op_ext_p64_type>(
 					i.index, opargs::Type{ TABLE_PTR_ELEM_TYPE(i.src_table_ptr) }
 				);
+				if (compiler.settings_.enable_fast_track) {
+					addLow<Op_ft_arrayRead>(i.src_table_ptr, i.index);
+					addLow<Op_ext_p64_type>(
+						i.index, opargs::Type{ TABLE_PTR_ELEM_TYPE(i.src_table_ptr) }
+					);
+				}
 			}
 			instr_case(high::Op_fixedSizeTableStore_pptr_pany_p64, i) {
-				if (compiler.settings_.enable_fast_track) {
-					addLow<Op_ft_arrayWrite>(i.dst_table_ptr, i.index);
-				}
 				addLow<Op_anyArrayStore_pptr_bany>(i.dst_table_ptr, i.src);
 				addLow<Op_ext_p64_type>(
 					i.index, opargs::Type{ TABLE_PTR_ELEM_TYPE(i.dst_table_ptr) }
 				);
+				if (compiler.settings_.enable_fast_track) {
+					addLow<Op_ft_arrayWrite>(i.dst_table_ptr, i.index);
+					addLow<Op_ext_p64_type>(
+						i.index, opargs::Type{ TABLE_PTR_ELEM_TYPE(i.dst_table_ptr) }
+					);
+				}
 			}
 			instr_case(high::Op_fixedSizeTableLea_pptr_pfst_p64, i) {
 				addLow<Op_fixedSizeTableLea_pptr_bfst>(i.dst_ptr, i.src_table);
@@ -638,32 +644,40 @@ namespace vm::loader::compiler::detail {
 				addLow<Op_ext_p64_type>(i.index, opargs::Type{ TABLE_VAL_ELEM_TYPE(i.dst_table) });
 			}
 			instr_case(high::Op_dynTableLea_pptr_pptr_p64, i) {
-				if (compiler.settings_.enable_fast_track) {
-					addLow<Op_ft_tableIdxLea_pptr_pptr>(i.dst_ptr, i.src_table_ptr);
-				} else {
-					addLow<Op_anyArrayLea_pptr_pptr>(i.dst_ptr, i.src_table_ptr);
-				}
+				addLow<Op_anyArrayLea_pptr_pptr>(i.dst_ptr, i.src_table_ptr);
 				addLow<Op_ext_p64_type>(
 					i.index, opargs::Type{ TABLE_PTR_ELEM_TYPE(i.src_table_ptr) }
 				);
+				if (compiler.settings_.enable_fast_track) {
+					addLow<Op_ft_tableIdxLea_pptr_pptr>(i.dst_ptr, i.src_table_ptr);
+					addLow<Op_ext_p64_type>(
+						i.index, opargs::Type{ TABLE_PTR_ELEM_TYPE(i.src_table_ptr) }
+					);
+				}
 			}
 			instr_case(high::Op_dynTableLoad_pany_pptr_p64, i) {
-				if (compiler.settings_.enable_fast_track) {
-					addLow<Op_ft_arrayRead>(i.src_table_ptr, i.index);
-				}
 				addLow<Op_anyArrayLoad_bany_pptr>(i.dst, i.src_table_ptr);
 				addLow<Op_ext_p64_type>(
 					i.index, opargs::Type{ TABLE_PTR_ELEM_TYPE(i.src_table_ptr) }
 				);
+				if (compiler.settings_.enable_fast_track) {
+					addLow<Op_ft_arrayRead>(i.src_table_ptr, i.index);
+					addLow<Op_ext_p64_type>(
+						i.index, opargs::Type{ TABLE_PTR_ELEM_TYPE(i.src_table_ptr) }
+					);
+				}
 			}
 			instr_case(high::Op_dynTableStore_pptr_pany_p64, i) {
-				if (compiler.settings_.enable_fast_track) {
-					addLow<Op_ft_arrayWrite>(i.dst_table_ptr, i.index);
-				}
 				addLow<Op_anyArrayStore_pptr_bany>(i.dst_table_ptr, i.src);
 				addLow<Op_ext_p64_type>(
 					i.index, opargs::Type{ TABLE_PTR_ELEM_TYPE(i.dst_table_ptr) }
 				);
+				if (compiler.settings_.enable_fast_track) {
+					addLow<Op_ft_arrayWrite>(i.dst_table_ptr, i.index);
+					addLow<Op_ext_p64_type>(
+						i.index, opargs::Type{ TABLE_PTR_ELEM_TYPE(i.dst_table_ptr) }
+					);
+				}
 			}
 			instr_case(high::Op_dynTableReAlloc_pptr_type_p64, i) {
 				addLow<Op_dynTableReAlloc_pptr_type>(i.dst_table_ptr, i.table_type);

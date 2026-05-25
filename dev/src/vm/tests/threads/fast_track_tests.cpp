@@ -16,8 +16,8 @@ public:
 		TESTER_ADD_TEST(fastTrackNoRaceTest);
 		TESTER_ADD_TEST(fastTrackDisabledRaceTest);
 		TESTER_ADD_TEST(extensiveNoRaceTest);
-		TESTER_ADD_TEST(extensiveHeapRaceTest);
 		TESTER_ADD_TEST(extensiveStackRaceTest);
+		TESTER_ADD_TEST(extensiveHeapRaceTest);
 	}
 
 private:
@@ -43,8 +43,7 @@ private:
 			
 			variant_match(exec_status.value()) {
 				variant_case(vm::api::ExecutionPanicked, panicked) {
-					got_race_panic = panicked.error_message.contains("Tried dividing by zero") ||
-					                 panicked.error_message.contains("[FastTrack] Data race detected");
+					got_race_panic = panicked.error_message.contains("[FastTrack] Data race detected");
 				}
 				variant_default {}
 			}
@@ -173,8 +172,7 @@ private:
 
 			variant_match(exec_status.value()) {
 				variant_case(vm::api::ExecutionPanicked, panicked) {
-					got_race_panic = panicked.error_message.contains("Tried dividing by zero") ||
-					                 panicked.error_message.contains("[FastTrack] Data race detected");
+					got_race_panic = panicked.error_message.contains("[FastTrack] Data race detected");
 				}
 				variant_default {}
 			}

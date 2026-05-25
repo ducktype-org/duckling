@@ -68,7 +68,7 @@ namespace vm::loader::compiler {
 			if(auto maybe_val = ctx.locals_map.atMaybe(opcode_arg.var_name)) {
 				return maybe_val.value()->shadow_offset;
 			}
-			return compiler.low_program.getGlobals().at(opcode_arg.var_name)->global_buffer_offset | (1ULL << 63);
+			return compiler.low_program.getGlobals().at(opcode_arg.var_name)->global_shadow_data_offset | (1ULL << 63);
 		);
 
 		DEFINE_LOWER_ARGUMENT_IMPL_FOR_FAMILY(
@@ -76,7 +76,7 @@ namespace vm::loader::compiler {
 			if(auto maybe_val = ctx.locals_map.atMaybe(opcode_arg.var_name)) {
 				return maybe_val.value()->shadow_pointer_offset;
 			}
-			return compiler.low_program.getGlobals().at(opcode_arg.var_name)->global_buffer_offset | (1ULL << 63);
+			return compiler.low_program.getGlobals().at(opcode_arg.var_name)->global_shadow_pointer_offset | (1ULL << 63);
 		);
 
 		DEFINE_LOWER_ARGUMENT_IMPL_FOR_FAMILY(

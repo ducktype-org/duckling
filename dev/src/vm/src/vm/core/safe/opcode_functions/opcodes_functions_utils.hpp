@@ -106,9 +106,9 @@ inline static bool isGlobalPlace(u64 place_arg) {
 inline static vm::ShadowPointer& getShadowPointerRef(vm::Frame* frame, vm::SafeVMThread& thread, u64 place_arg) {
 	u64 offset = place_arg & ~(1ULL << 63);
 	if (isGlobalPlace(place_arg)) {
-		return thread.getGlobalShadowPointerBase()[place_arg];
+		return thread.getGlobalShadowPointerBase()[offset];
 	} else {
-		return thread.getShadowFrame()->local_shadow_pointer_stack[place_arg];
+		return thread.getShadowFrame()->local_shadow_pointer_stack[offset];
 	}
 }
 
@@ -117,9 +117,9 @@ inline static vm::ShadowPointer& getShadowPointerRef(vm::Frame* frame, vm::SafeV
 inline static vm::ShadowEntry* getShadowEntryPtr(vm::Frame* frame, vm::SafeVMThread& thread, u64 place_arg) {
 	u64 offset = place_arg & ~(1ULL << 63);
 	if (isGlobalPlace(place_arg)) {
-		return thread.getGlobalShadowDataBase() + place_arg;
+		return thread.getGlobalShadowDataBase() + offset;
 	} else {
-		return thread.getShadowFrame()->local_shadow_data_stack + place_arg;
+		return thread.getShadowFrame()->local_shadow_data_stack + offset;
 	}
 }
 
