@@ -3,6 +3,7 @@
 #include <base/pointers/ref.hpp>
 #include <base/types/ints.hpp>
 
+#include <functional>
 #include <atomic>
 #include <condition_variable>
 #include <mutex>
@@ -15,7 +16,7 @@ namespace vm {
 		std::atomic<std::mutex*>    bound_mutex{ nullptr };
 
 	public:
-		void wait(std::mutex& mutex);
+		bool wait(std::mutex& mutex, const std::function<bool()>& should_interrupt);
 		void notifyOne();
 		void notifyAll();
 	};
