@@ -17,6 +17,7 @@
 #include <vm/core/vmvalue/vmvalue.hpp>
 
 #include <thread>
+#include <chrono>
 
 namespace vm::builtins {
 
@@ -141,12 +142,11 @@ namespace vm::builtins {
 		auto mutex = thread.safe_process.getSynchronizationPrimitives().getMutex(mutex_id);
 
 		thread.releaseGil();
-		while (!mutex->try_lock()) {
+		while (!mutex->try_lock_for(std::chrono::milliseconds{ 100 })) {
 			if (thread.isTerminateRequested()) {
 				thread.acquireGil();
 				throw vm::KillProcessException{};
 			}
-			std::this_thread::yield();
 		}
 		thread.acquireGil();
 	}
