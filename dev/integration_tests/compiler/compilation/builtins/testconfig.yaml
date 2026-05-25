@@ -11,7 +11,8 @@ Tests:
           String: "42\n-42\n18446744073709551615\n3.141\n-6.022e+23\n"
       # @TODO: #1782 Add dvm test when DVM supports more builtins.
   to_string:
-    llvm:
-      backend: llvm
-      Output:
-        String: "123.14truePerson(John Smith,42,1.69)"
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: "123.14dtruePerson(John Smith,42,1.69)"

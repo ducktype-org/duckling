@@ -200,6 +200,15 @@ namespace compiler::helios {
 				}
 			}
 
+			std::set<SymID> unique_funcs;
+			std::vector<CRef<HOUTFunction>> deduplicated_functions;
+			for (auto f : out.functions) {
+				if (unique_funcs.insert(f->declaration->original_symbol).second) {
+					deduplicated_functions.push_back(f);
+				}
+			}
+			out.functions = std::move(deduplicated_functions);
+
 			if (is_failed) return query::Failed();
 
 			return out;
@@ -342,6 +351,21 @@ namespace compiler::helios {
 
 			bool is_failed = false;
 
+			auto run_if_to_string = [](const SymID sym, auto&& action) {
+				auto sym_ref = getSymRef(sym);
+				variant_match(sym_ref->other) {
+					variant_case(defgen::GeneratedSymbolData, gsd) {
+						variant_match(gsd.data) {
+							variant_case_novalue(defgen::GeneratedSymbolData::ToStringMethod) {
+								action();
+							}
+							variant_default {}
+						}
+					}
+					variant_default {}
+				}
+			};
+
 			for (const auto& method: methods) {
 				// @TODO: #1956 remove this if when ZST refs are supported
 				// we fail here, because otherwise we try to lower a self pointer to a ZST type and
@@ -358,7 +382,6 @@ namespace compiler::helios {
 					return true;  // failed
 				}
 
-
 				auto method_sym  = method.getSymbol();
 				auto hout_method = ctx.query<QueryCodeOfFun>(method_sym);
 				if (hout_method->hasFailed()) {
@@ -366,6 +389,23 @@ namespace compiler::helios {
 					continue;
 				} else {
 					out_functions.emplace_back(&hout_method->valueOrPanic());
+
+					// If the method is a `toString`, collect its `toString` dependencies too.
+					run_if_to_string(method_sym, [&] {
+						auto transitive = ctx.query<QueryTransitiveFunctionCalls>(method_sym);
+						if (!transitive->hasFailed()) {
+							for (SymID dep : transitive->valueOrPanic()) {
+								run_if_to_string(dep, [&] {
+									auto dep_hout = ctx.query<QueryCodeOfFun>(dep);
+									if (dep_hout->hasFailed()) {
+										is_failed = true;
+									} else {
+										out_functions.emplace_back(&dep_hout->valueOrPanic());
+									}
+								});
+							}
+						}
+					});
 				}
 			}
 			return is_failed;

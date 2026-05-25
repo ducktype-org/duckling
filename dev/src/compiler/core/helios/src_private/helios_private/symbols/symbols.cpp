@@ -1158,6 +1158,12 @@ namespace compiler::helios {
 					return {};
 				}
 				variant_case(defgen::GeneratedSymbolData, gsd_data) {
+					variant_match(gsd_data.data) {
+						variant_case_novalue(defgen::GeneratedSymbolData::BuiltinOperator) {
+							// Builtin operators have no dependencies
+							return {};
+						}
+					}
 					CORE_ASSERT(
 						gsd_data.getType(ctx).getType().getKind() == tsh::Kind::Function,
 						"QueryDirectFunction calls called on a non-function symbol"
