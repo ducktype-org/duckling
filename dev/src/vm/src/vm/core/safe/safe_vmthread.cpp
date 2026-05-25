@@ -102,6 +102,19 @@ namespace vm {
 		std::byte* local_stack = frame->local_stack;
 
 		low::MicroOpcode opcode = getInstructionOpcode(*instr);
+		if (opcode == low::MicroOpcode::breakpoint) {
+			const auto* program_copy
+				= dynamic_cast<const low::LowVMProgramCopy*>(process_program.get());
+			CORE_ASSERT(program_copy, "Breakpoints should be only in LowVMProgramCopy.");
+
+			auto original_instr
+				= program_copy->getOriginalProgram()
+			          ->getFunctions()
+			          .at(frame->current_function->name)
+			          ->bc[static_cast<size_t>(frame->instr - &frame->current_function->bc[0])];
+
+			opcode = getInstructionOpcode(original_instr);
+		}
 
 		// Execute the instruction by calling the debug opcode function.
 		OpFuns::DEBUG_OPFUNS.at(std::to_underlying(opcode))(instr, local_stack, frame, *this);
@@ -599,18 +612,13 @@ namespace vm {
 	std::expected<low::LowCodePosition, api::ApiError> SafeVMThread::getCurrentPosition() {
 		variant_match(getStatus()) {
 			variant_case_novalue(api::Paused) {
-				auto frame = runtime_data.frame_stack_current;
-				auto instr = frame->instr;
+				auto  frame = runtime_data.frame_stack_current;
+				auto& func  = *frame->current_function;
 
-				for (const auto& [idx, func]:
-				     std::views::enumerate(process_program->getFunctions())) {
-					if (func.bc.data() <= instr && instr < func.bc.data() + func.bc.size()) {
-						return low::LowCodePosition{
-							.function          = &func,
-							.instruction_index = static_cast<u64>(instr - func.bc.data()),
-						};
-					}
-				}
+				return low::LowCodePosition{
+					.function          = &func,
+					.instruction_index = static_cast<u64>(frame->instr - func.bc.data()),
+				};
 			}
 			variant_default {
 				return std::unexpected(api::ApiError{

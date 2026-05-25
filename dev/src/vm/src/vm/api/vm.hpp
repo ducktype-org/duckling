@@ -211,4 +211,15 @@ namespace vm::api {
 	std::expected<void, ApiError> attachStatusListener(
 		PID pid, Ref<events::Listener<ProcStatus>> listener
 	);
+
+	/**
+	 * @brief Enables or disables breakpoint on a given instruction in a given function.
+	 * @return Nothing if the breakpoint was set successfully or an API error otherwise.
+	 * @note Enabling a breakpoint on an instruction that already has a breakpoint or disabling a
+	 * breakpoint on an instruction that doesn't have a breakpoint is considered successful and
+	 * doesn't return an error.
+	 */
+	std::expected<void, ApiError> setBreakpoint(
+		PID pid, base::StrID function_name, u64 instruction_index, bool enable
+	);
 }
