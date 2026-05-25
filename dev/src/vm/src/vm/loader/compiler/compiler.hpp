@@ -173,7 +173,7 @@ namespace vm::loader::compiler {
 		) const;
 
 		/**
-		 * @brief Calculates labels positions in high bytecode.
+		 * @brief Calculates label positions in high bytecode.
 		 * @note Used only for graph traversing, not for lowering.
 		 */
 		base::HashMap<base::StrID, usize> calculateLabelsMapping(FunctionCompilationContext& ctx
