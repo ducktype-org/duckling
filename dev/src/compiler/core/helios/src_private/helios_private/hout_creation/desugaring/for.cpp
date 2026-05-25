@@ -1,5 +1,8 @@
 #include "for.hpp"
 
+#include "helios/scope_id.hpp"
+#include "helios_private/scopes/scopes.hpp"
+
 #include <frontend/pst_parser/access.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/elements/stmt.hpp>
@@ -13,7 +16,6 @@
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/hout_creation/expressions/coercions.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
-#include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
 #include <base/collections/optional.hpp>
@@ -77,11 +79,12 @@ namespace compiler::helios::desugaring {
 				));
 				return {};
 			}
+			ScopeID for_scope = ctx.query<QueryPrimaryCodeScopeFor>({ stmt });
 
 			return ForDesugarCtx{
 				.ctx                   = ctx,
 				.stmt                  = stmt,
-				.for_scope             = ctx.query<QueryPrimaryCodeScopeFor>({ stmt }),
+				.for_scope             = for_scope,
 				.loop_origin           = code::pstOrigin(stmt),
 				.iterable_origin       = code::pstOrigin(iterable_pst),
 				.iterator_origin       = code::pstOrigin(stmt->getIteratorIdentifier().unlock(ctx)),
@@ -92,26 +95,6 @@ namespace compiler::helios::desugaring {
 				                           : iterable_type.withReferenceKind(tsh::ReferenceKind::Ref),
 				.iterable_hout         = std::move(iterable_hout),
 			};
-		}
-
-		SymID makeForLocal(const ForDesugarCtx& ctx, base::StrID role, tsh::SymbolType<> type) {
-			// Compose the name with the current scope hash, so we don't have naming collisions
-			// with nested loops.
-			auto unique = ctx.for_scope.queryUnstablePerfectHash();
-			auto name   = base::StrID(base::strConcat(role, unique));
-
-
-			return ctx.ctx.query<defgen::QueryGeneratedSymbol>({
-				.name = name,
-				.generated_symbol_data
-				= defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::ControlFlowLocal{
-					.owning_scope
-					= parent(ctx.for_scope).value(),  // Generated desugaring symbols live in the
-			                                          // `for`s parent scope.
-					.role = role,
-					.type = type,
-				} },
-			});
 		}
 
 		// var __idx: u64 = 0
@@ -276,6 +259,25 @@ namespace compiler::helios::desugaring {
 		return ctx.query<QuerySymbolOfSTMT>({ stmt->getIteratorIdentifier() }).valueOrThrow();
 	}
 
+	SymID makeForLocal(
+		query::Context& ctx, ScopeID for_scope, base::StrID role, tsh::SymbolType<> type
+	) {
+		// Compose the name with the current scope hash, so we don't have naming collisions
+		// with nested loops.
+		auto unique = for_scope.queryUnstablePerfectHash();
+		auto name   = base::StrID(base::strConcat(role, unique));
+
+		return ctx.query<defgen::QueryGeneratedSymbol>({
+			.name = name,
+			.generated_symbol_data
+			= defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::ControlFlowLocal{
+				.owning_scope = for_scope,
+				.role         = role,
+				.type         = type,
+			} },
+		});
+	}
+
 	base::Optional<code::BlockStmt> desugarFor(
 		query::Context& ctx, pst::Access<pst::For> stmt, const BodyProcessor& process_body
 	) {
@@ -284,8 +286,10 @@ namespace compiler::helios::desugaring {
 		auto& for_ctx = ctx_opt.value();
 
 		// Create the needed symbols.
-		SymID             idx_sym   = makeForLocal(for_ctx, base::StrID("__index"), getU64(ctx));
-		SymID             len_sym   = makeForLocal(for_ctx, base::StrID("__len"), getConstU64(ctx));
+		SymID idx_sym
+			= makeForLocal(for_ctx.ctx, for_ctx.for_scope, base::StrID("__index"), getU64(ctx));
+		SymID len_sym
+			= makeForLocal(for_ctx.ctx, for_ctx.for_scope, base::StrID("__len"), getConstU64(ctx));
 		SymID             iter_sym  = getForIteratorSymbol(ctx, stmt);
 		tsh::SymbolType<> iter_type = ctx.query<QueryTypeOfSymbol>(iter_sym)->valueOrThrow();
 

@@ -14,6 +14,7 @@
 #include <frontend/pst_parser/lang_parser_element.hpp>
 #include <frontend/pst_parser/pst_visitor.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
+#include <helios/tsh/queries/types.hpp>
 #include <helios_private/hout_creation/desugaring/for.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/lookup/lookup_result.hpp>
@@ -541,8 +542,20 @@ namespace compiler::helios {
 			}
 
 			void visitFor(pst::Access<pst::For> for_stmt) override {
+				ScopeID for_scope = ctx.query<QueryPrimaryCodeScopeFor>({ for_stmt });
+				auto    u64_mut   = tsh::SymbolType<>::withDefaults(
+                    tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned)
+                );
+				auto u64_immut = u64_mut.withMutability(tsh::Mutability::Immutable);
+
 				std::vector<SymID> out;
 				out.emplace_back(desugaring::getForIteratorSymbol(ctx, for_stmt));
+				out.emplace_back(
+					desugaring::makeForLocal(ctx, for_scope, base::StrID("__index"), u64_mut)
+				);
+				out.emplace_back(
+					desugaring::makeForLocal(ctx, for_scope, base::StrID("__len"), u64_immut)
+				);
 				output(std::move(out));
 			}
 
