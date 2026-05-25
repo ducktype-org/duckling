@@ -105,8 +105,14 @@ impl SolverFreeze {
             }
             let dep_name = dependency.effective_name();
             let realization = self.get_realization(&base_pkg, dep_name)?;
+            let dep_manifest = manifests
+                .get(realization)
+                .context_internal("Freeze package with no manifest")?;
             Self::add_realization(new_pkg_freezes, &base_pkg, dep_name, realization)?;
-            let forced_features = dependency.enabled_features(base_pkg_features.clone());
+            let forced_features = dep_manifest
+                .features()
+                .expand_features(dependency.enabled_features(base_pkg_features.clone()))
+                .context_internal("Unknown dependency feature")?;
             let was_realization_present = new_pkg_freezes.contains_key(realization);
             let child_new_freeze = new_pkg_freezes.entry(*realization).or_default();
 
@@ -116,6 +122,12 @@ impl SolverFreeze {
                 > 0
                 || !was_realization_present
             {
+<<<<<<< HEAD
+=======
+                // We trigger the recursive search, only if either:
+                //  * `realization` was only now marked as necessary,
+                //  * we marked some new features of `realization` as necessary.
+>>>>>>> dc040d0d2 ([QuackPack] Fix: bugs inside solver (#2769))
                 self.mark_children_as_necessary(*realization, manifests, new_pkg_freezes)?;
             }
         }
@@ -209,8 +221,7 @@ metadata:
 dependencies:
   b:
     version: '2'
-    features: 
-    - xd
+    features: [xd]
   c:
     version: '3'
 "#,
@@ -220,6 +231,9 @@ dependencies:
 metadata:
   name: b
   version: '2'
+
+features:
+  xd: []
 "#,
         );
         let (_dir_c, path_c) = prepare_manifest(
@@ -298,13 +312,13 @@ metadata:
         let freeze_a = new_freeze.package_freezes.get(&exp_pkg_a).unwrap();
         let freeze_b = new_freeze.package_freezes.get(&exp_pkg_b).unwrap();
         let freeze_c = new_freeze.package_freezes.get(&exp_pkg_c).unwrap();
-        assert!(
-            freeze_a.dependencies_realization
-                == HashMap::from([(StrId::new("b"), exp_pkg_b), (StrId::new("c"), exp_pkg_c),])
+        assert_eq!(
+            freeze_a.dependencies_realization,
+            HashMap::from([(StrId::new("b"), exp_pkg_b), (StrId::new("c"), exp_pkg_c),])
         );
         assert!(freeze_a.features.is_empty());
         assert!(freeze_b.dependencies_realization.is_empty());
-        assert!(freeze_b.features == HashSet::from([FeatureName::new("xd")]));
+        assert_eq!(freeze_b.features, HashSet::from([FeatureName::new("xd")]));
         assert!(freeze_c.dependencies_realization.is_empty());
         assert!(freeze_c.features.is_empty());
     }
@@ -320,8 +334,7 @@ metadata:
 dependencies:
   b:
     version: '2'
-    features: 
-    - xd
+    features: [xd]
 "#,
         );
         let (_dir_b, path_b) = prepare_manifest(
@@ -329,6 +342,9 @@ dependencies:
 metadata:
   name: b
   version: '2'
+
+features:
+  xd: []
 "#,
         );
         let (_dir_c, path_c) = prepare_manifest(
@@ -407,10 +423,13 @@ metadata:
         let freeze_a = new_freeze.package_freezes.get(&exp_pkg_a).unwrap();
         let freeze_b = new_freeze.package_freezes.get(&exp_pkg_b).unwrap();
         assert!(!new_freeze.package_freezes.contains_key(&exp_pkg_c));
-        assert!(freeze_a.dependencies_realization == HashMap::from([(StrId::new("b"), exp_pkg_b)]));
+        assert_eq!(
+            freeze_a.dependencies_realization,
+            HashMap::from([(StrId::new("b"), exp_pkg_b)])
+        );
         assert!(freeze_a.features.is_empty());
         assert!(freeze_b.dependencies_realization.is_empty());
-        assert!(freeze_b.features == HashSet::from([FeatureName::new("xd")]));
+        assert_eq!(freeze_b.features, HashSet::from([FeatureName::new("xd")]));
     }
 
     #[test]
@@ -424,8 +443,7 @@ metadata:
 dependencies:
   b:
     version: '2'
-    features: 
-    - xd
+    features: [xd]
   c:
     version: '3'
 "#,
@@ -435,6 +453,9 @@ dependencies:
 metadata:
   name: b
   version: '2'
+
+features:
+  xd: []
 "#,
         );
         let (_dir_c, path_c) = prepare_manifest(
@@ -513,13 +534,13 @@ metadata:
         let freeze_a = new_freeze.package_freezes.get(&exp_pkg_a).unwrap();
         let freeze_b = new_freeze.package_freezes.get(&exp_pkg_b).unwrap();
         let freeze_c = new_freeze.package_freezes.get(&exp_pkg_c).unwrap();
-        assert!(
-            freeze_a.dependencies_realization
-                == HashMap::from([(StrId::new("b"), exp_pkg_b), (StrId::new("c"), exp_pkg_c),])
+        assert_eq!(
+            freeze_a.dependencies_realization,
+            HashMap::from([(StrId::new("b"), exp_pkg_b), (StrId::new("c"), exp_pkg_c),])
         );
         assert!(freeze_a.features.is_empty());
         assert!(freeze_b.dependencies_realization.is_empty());
-        assert!(freeze_b.features == HashSet::from([FeatureName::new("xd")]));
+        assert_eq!(freeze_b.features, HashSet::from([FeatureName::new("xd")]));
         assert!(freeze_c.dependencies_realization.is_empty());
         assert!(freeze_c.features.is_empty());
     }
@@ -621,9 +642,15 @@ metadata:
         let freeze_a = new_freeze.package_freezes.get(&exp_pkg_a).unwrap();
         let freeze_b = new_freeze.package_freezes.get(&exp_pkg_b).unwrap();
         let freeze_c = new_freeze.package_freezes.get(&exp_pkg_c).unwrap();
-        assert!(freeze_a.dependencies_realization == HashMap::from([(StrId::new("b"), exp_pkg_b)]));
+        assert_eq!(
+            freeze_a.dependencies_realization,
+            HashMap::from([(StrId::new("b"), exp_pkg_b)])
+        );
         assert!(freeze_a.features.is_empty());
-        assert!(freeze_b.dependencies_realization == HashMap::from([(StrId::new("c"), exp_pkg_c)]));
+        assert_eq!(
+            freeze_b.dependencies_realization,
+            HashMap::from([(StrId::new("c"), exp_pkg_c)])
+        );
         assert!(freeze_b.features.is_empty());
         assert!(freeze_c.dependencies_realization.is_empty());
         assert!(freeze_c.features.is_empty());
@@ -703,8 +730,11 @@ metadata:
         let new_freeze = prev_freeze.new_freeze(&manifests, solver_output).unwrap();
         let freeze_a = new_freeze.package_freezes.get(&exp_pkg_a).unwrap();
         let freeze_b = new_freeze.package_freezes.get(&exp_pkg_b).unwrap();
-        assert!(freeze_a.dependencies_realization == HashMap::from([(StrId::new("b"), exp_pkg_b)]));
-        assert!(freeze_a.features == ["xd".into()].into());
+        assert_eq!(
+            freeze_a.dependencies_realization,
+            HashMap::from([(StrId::new("b"), exp_pkg_b)])
+        );
+        assert_eq!(freeze_a.features, ["xd".into()].into());
         assert!(freeze_b.dependencies_realization.is_empty());
         assert!(freeze_b.features.is_empty());
     }
