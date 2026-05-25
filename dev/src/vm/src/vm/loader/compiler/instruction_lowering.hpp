@@ -79,7 +79,11 @@ namespace vm::loader::compiler::detail {
 	public:
 		MicroBytecodeBuilder(Compiler& compiler, Compiler::FunctionCompilationContext& ctx):
 			  compiler{ compiler },
-			  ctx{ ctx } {}
+			  ctx{ ctx } {
+#ifdef ENABLE_JIT
+			addLow<Op_jit_entrypoint>();
+#endif
+		}
 
 		std::pair<low::MicroBytecode, decltype(label_id_to_offset)> build() {
 			return { std::move(result), std::move(label_id_to_offset) };
@@ -99,9 +103,6 @@ namespace vm::loader::compiler::detail {
 		 */
 		bool push_step_gil_on_next_add_low = true;
 		bool is_control_flow               = true;
-#ifdef ENABLE_JIT
-		bool function_beginning = true;
-#endif
 
 		TypeCRef getPlaceType(const opargs::ArgumentType auto p) const {
 			if (auto maybe_val = ctx.locals_map.atMaybe(p.var_name)) return maybe_val.value()->type;
@@ -122,13 +123,6 @@ namespace vm::loader::compiler::detail {
 
 		template<typename T, typename... Args>
 		requires AreTranslatableInstructionTagArgs<T, Args...> void addLow(Args&&... args) {
-#ifdef ENABLE_JIT
-			if (function_beginning) {
-				function_beginning = false;
-				addLow<Op_jit_entrypoint>();
-			}
-#endif
-
 			if (push_step_gil_on_next_add_low) {
 				push_step_gil_on_next_add_low = false;
 				addLow<Op_stepGil>();
@@ -144,8 +138,14 @@ namespace vm::loader::compiler::detail {
 					makeLowInstruction(T::OPCODE, lowerLowArg<LowArgs>(std::forward<Args>(args))...)
 				);
 #if (BUILD_TYPE_DEV_DEBUG)
-				result.back().opcode_id      = T::OPCODE;
-				result.back().representation = current_high_instruction_representation;
+	#ifdef ENABLE_JIT
+				if constexpr (!std::is_same_v<T, Op_jit_entrypoint>) {
+	#endif
+					result.back().opcode_id      = T::OPCODE;
+					result.back().representation = current_high_instruction_representation;
+	#ifdef ENABLE_JIT
+				}
+	#endif
 #endif
 				next_instruction_index++;
 			}(static_cast<T::ArgTypes*>(nullptr));
