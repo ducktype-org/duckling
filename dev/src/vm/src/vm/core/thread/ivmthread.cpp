@@ -67,7 +67,12 @@ void vm::IVMThread::setProcessStatus(const vm::api::ProcStatus& new_status) {
 	const bool is_terminal_failure = std::holds_alternative<api::ExecutionPanicked>(new_status)
 		|| std::holds_alternative<api::ExecutionStopped>(new_status);
 
-	if (is_main_thread || is_terminal_failure) {
+	if (is_main_thread) {
+		my_process.setStatus(new_status);
+		return;
+	}
+
+	if (is_terminal_failure) {
 		// Child threads should not move the whole process into a terminal success state.
 		// They may still publish a terminal failure so the process can stop as a whole.
 		my_process.setStatusIfNotTerminal(new_status);
