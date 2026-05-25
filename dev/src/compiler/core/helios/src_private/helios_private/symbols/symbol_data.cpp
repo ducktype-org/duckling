@@ -42,7 +42,8 @@ namespace compiler::helios {
 			return { parent_type.queryUnstablePerfectHash(), index };
 		}
 
-		base::Bit256 GeneratedSymbolData::Variable::queryUnstablePerfectHash() const {
+		base::Bit256 GeneratedSymbolData::GeneratedFunctionVariable::queryUnstablePerfectHash(
+		) const {
 			return { function_symbol.queryUnstablePerfectHash(), variable_index };
 		}
 
@@ -181,7 +182,7 @@ namespace compiler::helios {
 						CORE_UNREACHABLE();
 					}
 				}
-				variant_case(Variable, var) { return var.type; }
+				variant_case(GeneratedFunctionVariable, var) { return var.type; }
 				variant_case(ControlFlowLocal, local) { return local.type; }
 				variant_case(ReplExpressionWrapper, repl) {
 					const auto function_abstract_type = ctx.query<tsh::QueryFunctionType>({
@@ -249,7 +250,7 @@ namespace compiler::helios {
 				variant_case(Field, field) {
 					CORE_PANIC("Can't get scope of generated field yet.");
 				}
-				variant_case(Variable, var) {
+				variant_case(GeneratedFunctionVariable, var) {
 					CORE_PANIC("Can't get scope of generated variable yet.");
 				}
 				variant_case(ControlFlowLocal, local) { return local.owning_scope; }
@@ -274,7 +275,7 @@ namespace compiler::helios {
 				variant_case(Parameter, param) { return {}; }
 				variant_case(SelfParameter, param) { return param.scope; }
 				variant_case(Field, field) { return {}; }
-				variant_case(Variable, var) { return {}; }
+				variant_case(GeneratedFunctionVariable, var) { return {}; }
 				variant_case(ControlFlowLocal, var) { return getScope(); }
 				variant_case(ReplExpressionWrapper, repl) { return {}; }
 				variant_case(ReplInstructionWrapper, repl) { return {}; }
@@ -331,7 +332,8 @@ namespace compiler::helios {
 			}
 			variant_case_novalue(defgen::GeneratedSymbolData::Field) { kind = SymbolKind::Field; }
 			variant_case_novalue(
-				defgen::GeneratedSymbolData::Variable, defgen::GeneratedSymbolData::ControlFlowLocal
+				defgen::GeneratedSymbolData::GeneratedFunctionVariable,
+				defgen::GeneratedSymbolData::ControlFlowLocal
 			) {
 				kind = SymbolKind::Variable;
 			}

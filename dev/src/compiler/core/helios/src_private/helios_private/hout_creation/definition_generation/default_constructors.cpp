@@ -26,7 +26,7 @@ namespace compiler::helios::defgen {
 			auto        class_interface = class_type.getInterface(ctx);
 
 			using DefaultClassConstructor = GeneratedSymbolData::DefaultClassConstructor;
-			using Variable                = GeneratedSymbolData::Variable;
+			using Variable                = GeneratedSymbolData::GeneratedFunctionVariable;
 			using std::ranges::to;
 			using std::views::transform;
 
@@ -150,7 +150,7 @@ namespace compiler::helios::defgen {
 
 			using DefaultStaticArrayConstructor
 				= GeneratedSymbolData::DefaultStaticArrayConstructor;
-			using Variable = GeneratedSymbolData::Variable;
+			using Variable = GeneratedSymbolData::GeneratedFunctionVariable;
 
 			// Prepare the ctor symbol and declaration.
 			const SymID ctor_symbol = ctx.query<QueryGeneratedSymbol>({

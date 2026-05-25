@@ -113,7 +113,7 @@ namespace compiler::helios::defgen {
 		 * @note When inserting variables into regular (not generated functions), where getting a
 		 * `variable_index` is unachievable use `ControlFlowLocal`.
 		 */
-		struct Variable final {
+		struct GeneratedFunctionVariable final {
 			SymID function_symbol;  // The symbol of the function this variable belongs to.
 			u64   variable_index;   // The index of the variable in the function's body.
 			// @TODO: #2515 Remove this
@@ -219,7 +219,7 @@ namespace compiler::helios::defgen {
 			Parameter,
 			SelfParameter,
 			Field,
-			Variable,
+			GeneratedFunctionVariable,
 			ControlFlowLocal,
 			ReplExpressionWrapper,
 			ReplInstructionWrapper,
