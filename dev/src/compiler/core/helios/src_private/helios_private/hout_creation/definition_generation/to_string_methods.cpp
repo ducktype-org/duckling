@@ -43,15 +43,17 @@ namespace compiler::helios::defgen {
 			args.emplace_back(makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), self_param)
 			);
 
-			body.emplace_back(makeBox<code::ReturnStmt>(
-				code::generatedOrigin(),
-				makeBox<code::CallExpr>(
-					ctx,
+			body.emplace_back(
+				makeBox<code::ReturnStmt>(
 					code::generatedOrigin(),
-					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), builtin_sym),
-					std::move(args)
+					makeBox<code::CallExpr>(
+						ctx,
+						code::generatedOrigin(),
+						makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), builtin_sym),
+						std::move(args)
+					)
 				)
-			));
+			);
 		}
 
 		static void stringifyIntegral(
@@ -71,12 +73,14 @@ namespace compiler::helios::defgen {
 			const auto target_builtin_name = is_signed ? base::StrID("builtin_stringify_i64")
 			                                           : base::StrID("builtin_stringify_u64");
 
-			const auto target_int_type = tsh::SymbolType<>::withDefaults(tsh::getIntegralType(
-				ctx,
-				64,
-				is_signed ? tsh::IntegralAbstractType::Signedness::Signed
-						  : tsh::IntegralAbstractType::Signedness::Unsigned
-			));
+			const auto target_int_type = tsh::SymbolType<>::withDefaults(
+				tsh::getIntegralType(
+					ctx,
+					64,
+					is_signed ? tsh::IntegralAbstractType::Signedness::Signed
+							  : tsh::IntegralAbstractType::Signedness::Unsigned
+				)
+			);
 
 			const auto builtin_sym = ctx.query<QueryGeneratedSymbol>({
 				.name                  = target_builtin_name,
@@ -99,15 +103,17 @@ namespace compiler::helios::defgen {
 			std::vector<Box<code::Expr>> args;
 			args.emplace_back(std::move(arg_expr));
 
-			body.emplace_back(makeBox<code::ReturnStmt>(
-				code::generatedOrigin(),
-				makeBox<code::CallExpr>(
-					ctx,
+			body.emplace_back(
+				makeBox<code::ReturnStmt>(
 					code::generatedOrigin(),
-					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), builtin_sym),
-					std::move(args)
+					makeBox<code::CallExpr>(
+						ctx,
+						code::generatedOrigin(),
+						makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), builtin_sym),
+						std::move(args)
+					)
 				)
-			));
+			);
 		}
 
 		static void stringifyFloat(
@@ -145,15 +151,17 @@ namespace compiler::helios::defgen {
 			std::vector<Box<code::Expr>> args;
 			args.emplace_back(std::move(arg_expr));
 
-			body.emplace_back(makeBox<code::ReturnStmt>(
-				code::generatedOrigin(),
-				makeBox<code::CallExpr>(
-					ctx,
+			body.emplace_back(
+				makeBox<code::ReturnStmt>(
 					code::generatedOrigin(),
-					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), builtin_sym),
-					std::move(args)
+					makeBox<code::CallExpr>(
+						ctx,
+						code::generatedOrigin(),
+						makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), builtin_sym),
+						std::move(args)
+					)
 				)
-			));
+			);
 		}
 
 		static void stringifyChar(
@@ -180,15 +188,17 @@ namespace compiler::helios::defgen {
 			args.emplace_back(makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), self_param)
 			);
 
-			body.emplace_back(makeBox<code::ReturnStmt>(
-				code::generatedOrigin(),
-				makeBox<code::CallExpr>(
-					ctx,
+			body.emplace_back(
+				makeBox<code::ReturnStmt>(
 					code::generatedOrigin(),
-					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), builtin_sym),
-					std::move(args)
+					makeBox<code::CallExpr>(
+						ctx,
+						code::generatedOrigin(),
+						makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), builtin_sym),
+						std::move(args)
+					)
 				)
-			));
+			);
 		}
 
 		static void stringifyString(
@@ -198,14 +208,16 @@ namespace compiler::helios::defgen {
 		) {
 			const auto self_param = to_string_decl.parameters.at(0).helios_symbol;
 
-			body.emplace_back(makeBox<code::ReturnStmt>(
-				code::generatedOrigin(),
-				makeBox<code::DerefExpr>(
-					ctx,
+			body.emplace_back(
+				makeBox<code::ReturnStmt>(
 					code::generatedOrigin(),
-					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), self_param)
+					makeBox<code::DerefExpr>(
+						ctx,
+						code::generatedOrigin(),
+						makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), self_param)
+					)
 				)
-			));
+			);
 		}
 
 		static void stringifyClass(
@@ -248,14 +260,16 @@ namespace compiler::helios::defgen {
 					  .variable_index  = 0,
 					  .type            = string_type } } }
 			);
-			body.emplace_back(makeBox<code::VariableStmt>(
-				code::generatedOrigin(),
-				makeBox<code::LiteralStringExpr>(
-					ctx, code::generatedOrigin(), base::StrID(class_name.str() + "(")
-				),
-				string_type,
-				result_sym
-			));
+			body.emplace_back(
+				makeBox<code::VariableStmt>(
+					code::generatedOrigin(),
+					makeBox<code::LiteralStringExpr>(
+						ctx, code::generatedOrigin(), base::StrID(class_name.str() + "(")
+					),
+					string_type,
+					result_sym
+				)
+			);
 
 			// Main body: append the fields
 			const std::vector<tsh::InterfaceElement> fields
@@ -302,42 +316,50 @@ namespace compiler::helios::defgen {
 					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), result_sym)
 				);
 				v2.emplace_back(std::move(std::move(stringified_field)));
-				body.emplace_back(makeBox<code::AssignmentStmt>(
-					code::generatedOrigin(),
-					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), result_sym),
-					makeBox<code::CallExpr>(
-						ctx,
+				body.emplace_back(
+					makeBox<code::AssignmentStmt>(
 						code::generatedOrigin(),
-						makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), concat_sym),
-						std::move(v2)
+						makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), result_sym),
+						makeBox<code::CallExpr>(
+							ctx,
+							code::generatedOrigin(),
+							makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), concat_sym),
+							std::move(v2)
+						)
 					)
-				));
+				);
 
 				// Concatenate the separator or closing parenthesis
 				std::vector<Box<code::Expr>> v3;
 				v3.emplace_back(
 					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), result_sym)
 				);
-				v3.emplace_back(makeBox<code::LiteralStringExpr>(
-					ctx, code::generatedOrigin(), base::StrID(idx < num_fields - 1 ? "," : ")")
-				));
-				body.emplace_back(makeBox<code::AssignmentStmt>(
-					code::generatedOrigin(),
-					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), result_sym),
-					makeBox<code::CallExpr>(
-						ctx,
-						code::generatedOrigin(),
-						makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), concat_sym),
-						std::move(v3)
+				v3.emplace_back(
+					makeBox<code::LiteralStringExpr>(
+						ctx, code::generatedOrigin(), base::StrID(idx < num_fields - 1 ? "," : ")")
 					)
-				));
+				);
+				body.emplace_back(
+					makeBox<code::AssignmentStmt>(
+						code::generatedOrigin(),
+						makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), result_sym),
+						makeBox<code::CallExpr>(
+							ctx,
+							code::generatedOrigin(),
+							makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), concat_sym),
+							std::move(v3)
+						)
+					)
+				);
 			}
 
 			// Finally, return
-			body.emplace_back(makeBox<code::ReturnStmt>(
-				code::generatedOrigin(),
-				makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), result_sym)
-			));
+			body.emplace_back(
+				makeBox<code::ReturnStmt>(
+					code::generatedOrigin(),
+					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), result_sym)
+				)
+			);
 		}
 
 		static PResult provide(Context& ctx, const QKey owner_type) {
@@ -377,10 +399,14 @@ namespace compiler::helios::defgen {
 			default: {
 				std::string msg
 					= "Stringification not yet implemented for " + owner_type.toString();
-				body.emplace_back(makeBox<code::ReturnStmt>(
-					code::generatedOrigin(),
-					makeBox<code::LiteralStringExpr>(ctx, code::generatedOrigin(), base::StrID(msg))
-				));
+				body.emplace_back(
+					makeBox<code::ReturnStmt>(
+						code::generatedOrigin(),
+						makeBox<code::LiteralStringExpr>(
+							ctx, code::generatedOrigin(), base::StrID(msg)
+						)
+					)
+				);
 				break;
 			}
 			}

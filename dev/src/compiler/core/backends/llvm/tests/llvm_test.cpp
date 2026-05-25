@@ -209,8 +209,7 @@ private:
 	}
 
 	void classTest() {
-		// TODO: class destructor lowering fails, ex
-		runTestForModule("modules/classes/records", 10, 11);
+		runTestForModule("modules/classes/records", 14, 16);
 	}
 
 	void stringsTest() { runTestForModule("modules/strings", 1, 3); }
@@ -230,7 +229,7 @@ private:
 			ptr_loads++;
 			search_range = matches.suffix();
 		}
-		assertTrue(ptr_loads == 17, "Too few pointer loads");
+		assertTrue(ptr_loads == 18, "Too few pointer loads");
 	}
 
 	void boxesTest() {
