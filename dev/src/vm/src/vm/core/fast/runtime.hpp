@@ -35,8 +35,11 @@ namespace vm::fast {
 		constexpr static usize LOCAL_STACK_SIZE = 8 * 1'024 * 1'024;  // 8 MB
 
 	private:
-		Box<std::array<byte, LOCAL_STACK_SIZE>> local_stack_memory
-			= makeBox<std::array<byte, LOCAL_STACK_SIZE>>();
+		struct AlignedStackMemory {
+			alignas(8) std::array<byte, LOCAL_STACK_SIZE> data;
+		};
+
+		base::Box<AlignedStackMemory> local_stack_memory = makeBox<AlignedStackMemory>();
 
 		std::vector<Frame> frame_stack = std::vector<Frame>(LOCAL_STACK_SIZE / sizeof(Frame));
 
@@ -44,9 +47,9 @@ namespace vm::fast {
 
 	public:
 		std::byte* const local_stack_base
-			= local_stack_memory->data();  /// Pointer to the start of the local stack.
+			= local_stack_memory->data.data();  /// Pointer to the start of the local stack.
 		std::byte* const local_stack_end
-			= local_stack_memory->data()
+			= local_stack_memory->data.data()
 		    + LOCAL_STACK_SIZE;  /// Pointer to the end of the local stack.
 
 		// @TODO: #2729 This should be a valid pointer.
