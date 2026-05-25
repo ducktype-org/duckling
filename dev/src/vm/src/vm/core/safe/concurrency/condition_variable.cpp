@@ -16,7 +16,6 @@ namespace vm {
 		std::unique_lock<std::timed_mutex> lock(mutex, std::adopt_lock);
 		while (true) {
 			if (should_interrupt()) {
-				lock.release();
 				return true;
 			}
 			if (cv.wait_for(lock, std::chrono::milliseconds{ 100 }) == std::cv_status::no_timeout) {

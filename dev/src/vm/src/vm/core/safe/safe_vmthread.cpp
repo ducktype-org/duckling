@@ -569,9 +569,9 @@ namespace vm {
 			}
 		}
 
-		const auto current_status = safe_process.getCurrentStatus();
-		if (api::isStatusTerminal(current_status)) {
-			respondExecutionRequest(current_status);
+		const auto terminal_status = safe_process.getCurrentStatus();
+		if (api::isStatusTerminal(terminal_status)) {
+			respondExecutionRequest(terminal_status);
 			return;
 		}
 

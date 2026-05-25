@@ -16,7 +16,6 @@
 #include <vm/core/safe/type_metadata/definitions.hpp>
 #include <vm/core/vmvalue/vmvalue.hpp>
 
-#include <thread>
 #include <chrono>
 
 namespace vm::builtins {
