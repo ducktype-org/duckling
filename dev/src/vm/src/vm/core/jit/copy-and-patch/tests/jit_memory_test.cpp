@@ -10,6 +10,7 @@
 #include <string>
 
 using vm::jit::cnp::HoleType;
+using vm::jit::cnp::HoleValue;
 using vm::jit::cnp::JitFuncMemory;
 using vm::jit::cnp::StencilData;
 using vm::jit::cnp::StencilHole;
@@ -106,7 +107,12 @@ private:
 	void testPatching() {
 		auto foo_code = FIND_FUNC("must_patch");
 		auto memory   = JitFuncMemory::allocate(foo_code.size);
-		stencils.relocate_and_patch(foo_code, memory.addr, {9});
+		stencils.relocate_and_patch(foo_code, memory.addr, [](HoleValue value) {
+			if (value == HoleValue::ARG0)
+				return 9;
+			else
+				CORE_PANIC("Unexpected relocation");
+		});
 		memory.markExecutable();
 
 		auto must_patch = memory.intoFunc<int(int)>();

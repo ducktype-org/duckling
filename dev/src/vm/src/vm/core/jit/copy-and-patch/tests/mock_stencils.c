@@ -2,11 +2,11 @@
 #include <stdio.h>
 #include <stdint.h>
 
-__attribute__((weak)) extern int patchable;
+__attribute__((weak)) extern int _arg0;
 
 __attribute__((noinline)) int simple_function_plus_1(int x) {
 	if (x == 1234567) {
-		x += patchable;
+		x += _arg0;
 	}
 
 	return x + 1;
@@ -18,7 +18,7 @@ int calling_simple_odd(int x) {
 
 int recursive_fibonacci(int x) {
 	if (x == 1234567) {
-		x += patchable; // tests if an unfilled relocation can go through compilation 
+		x += _arg0; // tests if an unfilled relocation can go through compilation 
 	}
 
 	if (x <= 1)
@@ -39,7 +39,7 @@ int calling_fibonacci_sum(int x) {
 
 int* calling_libc(int x) {
 	if (x == 1234567) {
-		x += patchable; // tests if an unfilled relocation can go through compilation 
+		x += _arg0; // tests if an unfilled relocation can go through compilation 
 	}
 	
 	int* output = calloc(sizeof(int), x);
@@ -50,5 +50,5 @@ int* calling_libc(int x) {
 }
 
 int must_patch(int x) {
-	return x + (intptr_t)(&patchable);
+	return x + (intptr_t)(&_arg0);
 }

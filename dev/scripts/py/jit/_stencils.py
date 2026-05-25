@@ -94,6 +94,7 @@ class Hole:
                 f".offset = {self.offset}",
                 f".size = 4",
                 f".type = HoleType::Movable",
+                f".value = HoleValue::{self.value.name}"
             ]
         )
 

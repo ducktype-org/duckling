@@ -90,19 +90,11 @@ namespace vm::jit::cnp {
 		 * @brief Copy and patch a stencil into a given address.
 		 */
 		byte* relocate_and_patch(
-			const StencilData& stencil_data, byte* new_address, std::vector<u64> patch_values
+			const StencilData& stencil_data, byte* new_address, auto patch_values
 		) {
-			CORE_ASSERT(
-				stencil_data.to_patch.size() == patch_values.size(),
-				stencil_data.to_patch.size() > patch_values.size()
-					? "Supplied too little values to patch"
-					: "Supplied too many values to patch"
-			);
-
 			auto ret = relocate(stencil_data, new_address);
-			for (auto [hole, value]: std::views::zip(stencil_data.to_patch, patch_values)) {
-				hole.patch(new_address, value);
-			}
+			for (auto hole : stencil_data.to_patch)
+				hole.patch(new_address, patch_values(hole.value));
 
 			return ret;
 		}

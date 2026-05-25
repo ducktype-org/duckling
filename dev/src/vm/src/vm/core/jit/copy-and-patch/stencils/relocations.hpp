@@ -6,11 +6,13 @@
 
 namespace vm::jit::cnp {
 	enum class HoleType;
+	enum class HoleValue { ARG0, ARG1, CONTINUE_FUNCTION, JMP_FUNCTION, ZERO };
 
 	struct StencilHole {
-		int      offset;
-		int      size;
-		HoleType type;
+		int       offset;
+		int       size;
+		HoleType  type;
+		HoleValue value;
 
 		void relocate(const byte* from, byte* to) const;
 		template<std::integral T>
