@@ -33,40 +33,44 @@ namespace vm::code::valid_type {
 			  size_when_ptr_is_8_bytes(size_when_ptr_is_8_bytes),
 			  size_when_ptr_is_16_bytes(size_when_ptr_is_16_bytes) {}
 
-		TypeSize operator+(const TypeSize& other) const {
+		constexpr TypeSize operator+(const TypeSize& other) const {
 			return { size_when_ptr_is_8_bytes + other.size_when_ptr_is_8_bytes,
 				     size_when_ptr_is_16_bytes + other.size_when_ptr_is_16_bytes };
 		}
 
-		TypeSize operator+=(const TypeSize& other) {
+		constexpr TypeSize operator+=(const TypeSize& other) {
 			size_when_ptr_is_8_bytes += other.size_when_ptr_is_8_bytes;
 			size_when_ptr_is_16_bytes += other.size_when_ptr_is_16_bytes;
 			return *this;
 		}
 
-		TypeSize operator-(const TypeSize& other) const {
+		constexpr TypeSize operator-(const TypeSize& other) const {
+			CORE_ASSERT(
+				size_when_ptr_is_8_bytes >= other.size_when_ptr_is_8_bytes
+					&& size_when_ptr_is_16_bytes >= other.size_when_ptr_is_16_bytes,
+				"Underflow in TypeSize subtraction"
+			);
 			return { size_when_ptr_is_8_bytes - other.size_when_ptr_is_8_bytes,
 				     size_when_ptr_is_16_bytes - other.size_when_ptr_is_16_bytes };
 		}
 
-		TypeSize operator-=(const TypeSize& other) {
-			size_when_ptr_is_8_bytes -= other.size_when_ptr_is_8_bytes;
-			size_when_ptr_is_16_bytes -= other.size_when_ptr_is_16_bytes;
+		constexpr TypeSize operator-=(const TypeSize& other) {
+			*this = *this - other;
 			return *this;
 		}
 
-		TypeSize operator*(usize multiplier) const {
+		constexpr TypeSize operator*(usize multiplier) const {
 			return { size_when_ptr_is_8_bytes * multiplier, size_when_ptr_is_16_bytes * multiplier };
 		}
 
-		bool operator==(const TypeSize& other) const = default;
+		constexpr bool operator==(const TypeSize& other) const = default;
 
-		[[nodiscard]] TypeSize fieldMax(const TypeSize& other) const {
+		[[nodiscard]] constexpr TypeSize fieldMax(const TypeSize& other) const {
 			return { std::max(size_when_ptr_is_8_bytes, other.size_when_ptr_is_8_bytes),
 				     std::max(size_when_ptr_is_16_bytes, other.size_when_ptr_is_16_bytes) };
 		}
 
-		[[nodiscard]] Bytes assumePointerSize(Bytes pointer_size) const {
+		[[nodiscard]] constexpr Bytes assumePointerSize(Bytes pointer_size) const {
 			switch (usize(pointer_size)) {
 			case 8:
 				return size_when_ptr_is_8_bytes;

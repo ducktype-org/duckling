@@ -1,4 +1,4 @@
-#include "compiler.hpp"
+#include "ivm_compiler.hpp"
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
@@ -23,7 +23,7 @@
 
 namespace vm::loader::compiler {
 
-	detail::FunctionStackContext Compiler::calculateStackContext(const code::Function& function) {
+	detail::FunctionStackContext IVMCompiler::calculateStackContext(const code::Function& function) {
 		detail::FunctionStackContext            ctx(function);
 		decltype(ctx.locals_map)                result;
 		std::vector<code::valid_type::TypeSize> type_size_stack;
@@ -62,7 +62,7 @@ namespace vm::loader::compiler {
 		};
 
 		auto seek_method_param_count = [&](const base::StrID& method_name) -> u64 {
-			// @todo: https://github.com/ducktype-org/duckling/issues/962
+			// @TODO: #962 Get rid of that
 			for (const code::valid_type::ValidType& type:
 			     high_program.getTypeContext().getCurrentTypes()) {
 				if_opt_some(type.maybeGetKindAs<code::valid_type::finalized::Structure>(), strukt) {
@@ -101,9 +101,9 @@ namespace vm::loader::compiler {
 			push(base::StrID(base::strConcat("arg", idx).c_str()), param_type.str);
 		// instruction index, stack state, stack size
 		std::vector<std::tuple<usize, decltype(type_size_stack), code::valid_type::TypeSize>>
-			dfs_stack{
-				{ ctx.function.body.size(), {}, {} }  // sentinel
-			};
+						  dfs_stack{
+							  { ctx.function.body.size(), {}, {} }  // sentinel
+						  };
 		std::vector<bool> visited_instructions(ctx.function.body.size());
 		usize             index = 0;
 
@@ -187,14 +187,14 @@ namespace vm::loader::compiler {
 		return ctx;
 	}
 
-	Compiler::Compiler(const code::ValidProgram& high_program): high_program(high_program) {
+	IVMCompiler::IVMCompiler(const code::ValidProgram& high_program): high_program(high_program) {
 		// @note We can't call recompile here, because it calls a virtual function,
 		// and if we want to allow subclasses to call this constructor, the virtual function will be
 		// called before the subclass constructor is executed, which leads to undefined behavior.
 		// So every subclass constructor has to call recompile explicitly after calling this constructor.
 	}
 
-	void Compiler::recompile() {
+	void IVMCompiler::recompile() {
 		ProgramSize sizes = getCurrentProgramSize();
 
 		auto new_types = high_program.getTypeContext().getCurrentTypes()

@@ -55,15 +55,15 @@ namespace vm::loader::compiler {
 	 * This stateful approach avoids recompiling the entire program on each code
 	 * injection, compiling only the new elements (types, globals, and functions).
 	 */
-	class Compiler {
+	class IVMCompiler {
 	public:
 		/**
 		 * @brief Constructs a new Compiler that will source its information about the program from
 		 * `high_program`.
 		 */
-		Compiler(const code::ValidProgram& high_program);
+		IVMCompiler(const code::ValidProgram& high_program);
 
-		virtual ~Compiler() = default;
+		virtual ~IVMCompiler() = default;
 
 		/**
 		 * @brief Incrementally recompiles and updates the internal low-level program.

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../compiler.hpp"
+#include "../ivm_compiler.hpp"
 
 #include <vm/bytecode/validator/valid_program.hpp>
 #include <vm/core/safe/low_program/low_program.hpp>
@@ -34,14 +34,14 @@ namespace vm::loader::compiler::safe {
 		};
 	}
 
-	class SafeCompiler final: public vm::loader::compiler::Compiler {
+	class SafeCompiler final: public vm::loader::compiler::IVMCompiler {
 		friend class detail::MicroBytecodeBuilder;
 		template<typename ToType>
 		friend struct detail::LowerArgumentImpl;
 
 	public:
 		SafeCompiler(const code::ValidProgram& high_program):
-			  vm::loader::compiler::Compiler(high_program) {
+			  vm::loader::compiler::IVMCompiler(high_program) {
 			recompile();
 		}
 
