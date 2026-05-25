@@ -165,6 +165,10 @@ namespace vm {
 			local_stack += prev_frame->local_stack_head - shared_stack_space_size;
 			frame->local_block_ref_stack_base = prev_frame->local_block_ref_stack_base
 			                                  + (prev_frame_block_ref_count - shared_blocks_count);
+            frame->local_shadow_block_ref_stack_base = prev_frame->local_shadow_block_ref_stack_base +
+                (prev_frame_block_ref_count - shared_blocks_count); 
+            frame->local_shadow_pointer_block_ref_stack_base = prev_frame->local_shadow_pointer_block_ref_stack_base +
+                (prev_frame_block_ref_count - shared_blocks_count); 
 
 			// Assumes that local_stack_size = ret_val + passed_args + new_local_args.
 			if (local_stack + called_func.local_stack_size >= runtime_data.local_stack_end)
@@ -177,6 +181,8 @@ namespace vm {
 			frame->local_shadow_data_head    = base::safeIntConv<u32>(shared_shadow_data_size);
 			frame->local_shadow_pointer_head = base::safeIntConv<u32>(shared_shadow_pointer_size);
 			frame->local_block_ref_stack_end = prev_frame->local_block_ref_stack_end;
+			frame->local_shadow_block_ref_stack_end = prev_frame->local_shadow_block_ref_stack_end;
+			frame->local_shadow_pointer_block_ref_stack_end = prev_frame->local_shadow_pointer_block_ref_stack_end;
 
 			frame->local_shadow_data_stack
 				= prev_frame->local_shadow_data_stack
@@ -232,8 +238,6 @@ namespace vm {
 			thread.process_memory.decreaseBlockRefcount(block);
 
 			frame->local_stack_head -= type->getSize().asInt();
-			frame->local_shadow_data_head -= type->getShadowSize();
-			frame->local_shadow_pointer_head -= type->getPointerSize();
 			frame->local_block_ref_stack_end -= 1;
 		}
 

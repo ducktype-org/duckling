@@ -64,12 +64,30 @@ namespace vm::loader::compiler {
 		);
 
 		DEFINE_LOWER_ARGUMENT_IMPL_FOR_FAMILY(
+			low::opargs::ShadowPlaceDataArgumentType,
+			if(auto maybe_val = ctx.locals_map.atMaybe(opcode_arg.var_name)) {
+				return maybe_val.value()->shadow_offset;
+			}
+			return compiler.low_program.getGlobals().at(opcode_arg.var_name)->global_buffer_offset | (1ULL << 63);
+		);
+
+		DEFINE_LOWER_ARGUMENT_IMPL_FOR_FAMILY(
+			low::opargs::ShadowPointerPlaceDataArgumentType,
+			if(auto maybe_val = ctx.locals_map.atMaybe(opcode_arg.var_name)) {
+				return maybe_val.value()->shadow_pointer_offset;
+			}
+			return compiler.low_program.getGlobals().at(opcode_arg.var_name)->global_buffer_offset | (1ULL << 63);
+		);
+
+		DEFINE_LOWER_ARGUMENT_IMPL_FOR_FAMILY(
 			low::opargs::PlaceBlockArgumentType,
 			if(auto maybe_val = ctx.locals_map.atMaybe(opcode_arg.var_name)) {
 				return maybe_val.value()->block_idx;
 			}
 			return compiler.low_program.getGlobals().at(opcode_arg.var_name)->global_block_idx | (1ULL << 63);
 		);
+
+
 
 		DEFINE_LOWER_ARGUMENT_IMPL(
 			low::opargs::Type,
@@ -91,6 +109,14 @@ namespace vm::loader::compiler {
             return static_cast<u64>(*compiler.low_program.getTypes()
                                     .at(opcode_arg.type_name)
                                     ->getFieldShadowOffsetByName(opcode_arg.field_name));
+        );
+
+        DEFINE_LOWER_ARGUMENT_IMPL(
+            low::opargs::ShadowPointerField,
+            opargs::Field,
+            return static_cast<u64>(*compiler.low_program.getTypes()
+                                    .at(opcode_arg.type_name)
+                                    ->getFieldPointerOffsetByName(opcode_arg.field_name));
         );
 
 		DEFINE_LOWER_ARGUMENT_IMPL(
@@ -171,10 +197,83 @@ namespace vm::loader::compiler {
 		return micro_bytecode;
 	}
 
+	namespace {
+		void populateOffsets(
+			std::vector<u32>& data_offsets,
+			std::vector<u32>& ptr_offsets,
+			usize base_byte,
+			usize base_shadow,
+			usize base_ptr,
+			TypeCRef type
+		) {
+			variant_match(type->getKindVariant()) {
+				variant_case(kind::FixedSizeTable, fixed_size_table) {
+					auto inner = fixed_size_table.inner_type;
+					usize inner_sz = inner->getSize().asInt();
+					usize inner_sh = inner->getShadowSize();
+					usize inner_ptr = inner->getPointerSize();
+					for (usize el = 0; el < fixed_size_table.element_count; ++el) {
+						populateOffsets(
+							data_offsets,
+							ptr_offsets,
+							base_byte + el * inner_sz,
+							base_shadow + el * inner_sh,
+							base_ptr + el * inner_ptr,
+							inner
+						);
+					}
+				}
+				variant_case(kind::Data, data) {
+					for (const auto& field : data.fields) {
+						populateOffsets(
+							data_offsets,
+							ptr_offsets,
+							base_byte + field.offset.asInt(),
+							base_shadow + field.shadow_offset,
+							base_ptr + field.pointer_offset,
+							field.type
+						);
+					}
+				}
+				variant_case(kind::Variant, variant) {
+					for (usize i = 0; i < variant.type_tag_size.asInt(); ++i) {
+						if (base_byte + i < data_offsets.size()) {
+							data_offsets[base_byte + i] = static_cast<u32>(base_shadow);
+							ptr_offsets[base_byte + i] = static_cast<u32>(base_ptr);
+						}
+					}
+					for (const auto& alt : variant.alternatives) {
+						populateOffsets(
+							data_offsets,
+							ptr_offsets,
+							base_byte + variant.type_tag_size.asInt(),
+							base_shadow + 1,
+							base_ptr,
+							alt
+						);
+					}
+				}
+				variant_default {
+					usize sz = type->getSize().asInt();
+					for (usize i = 0; i < sz; ++i) {
+						if (base_byte + i < data_offsets.size()) {
+							data_offsets[base_byte + i] = static_cast<u32>(base_shadow);
+							ptr_offsets[base_byte + i] = static_cast<u32>(base_ptr);
+						}
+					}
+				}
+			}
+		}
+	}
+
 	void Compiler::calculateOffsets(FunctionCompilationContext& ctx) {
 		decltype(ctx.locals_map) result;
 		std::vector<usize>       type_size_stack;
+		std::vector<usize>       type_shadow_size_stack;
+		std::vector<usize>       type_shadow_pointer_size_stack;
 		usize                    curr_stack_size = 0;
+		usize                    curr_shadow_size = 0;
+		usize                    curr_shadow_pointer_size = 0;
 		usize                    max_stack_size  = 0;
 		usize                    max_block_count = 0;
 
@@ -191,11 +290,26 @@ namespace vm::loader::compiler {
 			auto type_ref = low_program.types->at(type.type_name);
 			result.put(
 				local.var_name,
-				{ .offset = curr_stack_size, .block_idx = type_size_stack.size(), .type = type_ref }
+				{
+					.offset = curr_stack_size,
+					.block_idx = type_size_stack.size(),
+					.type = type_ref,
+					.shadow_offset = curr_shadow_size,
+					.shadow_pointer_offset = curr_shadow_pointer_size
+				}
 			);
 			auto type_size = type_ref->getSize().asInt();
+			auto type_shadow = type_ref->getShadowSize();
+			auto type_ptr = type_ref->getPointerSize();
+
 			type_size_stack.push_back(type_size);
+			type_shadow_size_stack.push_back(type_shadow);
+			type_shadow_pointer_size_stack.push_back(type_ptr);
+
 			curr_stack_size += type_size;
+			curr_shadow_size += type_shadow;
+			curr_shadow_pointer_size += type_ptr;
+
 			max_stack_size  = std::max(max_stack_size, curr_stack_size);
 			max_block_count = std::max(max_block_count, type_size_stack.size());
 		};
@@ -204,6 +318,14 @@ namespace vm::loader::compiler {
 			auto type_size = type_size_stack.back();
 			type_size_stack.pop_back();
 			curr_stack_size -= type_size;
+
+			auto type_shadow = type_shadow_size_stack.back();
+			type_shadow_size_stack.pop_back();
+			curr_shadow_size -= type_shadow;
+
+			auto type_ptr = type_shadow_pointer_size_stack.back();
+			type_shadow_pointer_size_stack.pop_back();
+			curr_shadow_pointer_size -= type_ptr;
 		};
 
 		auto seek_method_param_count = [&](const base::StrID& method_name) -> base::Optional<u64> {
@@ -239,16 +361,33 @@ namespace vm::loader::compiler {
 			push(base::StrID(base::strConcat("ret", idx).c_str()), ret_type.str);
 		for (auto [idx, param_type]: enumerate(func_signature.parameters))
 			push(base::StrID(base::strConcat("arg", idx).c_str()), param_type.str);
-		// instruction index, stack state, stack size
-		std::vector<std::tuple<usize, decltype(type_size_stack), usize>> dfs_stack{
-			{ ctx.function.body.size(), {}, 0 }  // sentinel
+		
+		// instruction index, stack state, shadow stack state, pointer stack state, stack size, shadow size, pointer size
+		std::vector<std::tuple<
+			usize,
+			decltype(type_size_stack),
+			decltype(type_shadow_size_stack),
+			decltype(type_shadow_pointer_size_stack),
+			usize,
+			usize,
+			usize
+		>> dfs_stack{
+			{ ctx.function.body.size(), {}, {}, {}, 0, 0, 0 }  // sentinel
 		};
 		std::vector<bool> visited_instructions(ctx.function.body.size());
 		usize             index = 0;
 
 		while (index != ctx.function.body.size()) {
 			if (visited_instructions[index]) {
-				std::tie(index, type_size_stack, curr_stack_size) = dfs_stack.back();
+				std::tie(
+					index,
+					type_size_stack,
+					type_shadow_size_stack,
+					type_shadow_pointer_size_stack,
+					curr_stack_size,
+					curr_shadow_size,
+					curr_shadow_pointer_size
+				) = dfs_stack.back();
 				dfs_stack.pop_back();
 				continue;
 			}
@@ -268,17 +407,37 @@ namespace vm::loader::compiler {
 				instr_case(Op_jmpIf_label, instr) {
 					index++;
 					dfs_stack.emplace_back(
-						label_positions[instr.label.label_name], type_size_stack, curr_stack_size
+						label_positions[instr.label.label_name],
+						type_size_stack,
+						type_shadow_size_stack,
+						type_shadow_pointer_size_stack,
+						curr_stack_size,
+						curr_shadow_size,
+						curr_shadow_pointer_size
 					);
 				}
 				instr_case(Op_jmpIfNot_label, instr) {
 					index++;
 					dfs_stack.emplace_back(
-						label_positions[instr.label.label_name], type_size_stack, curr_stack_size
+						label_positions[instr.label.label_name],
+						type_size_stack,
+						type_shadow_size_stack,
+						type_shadow_pointer_size_stack,
+						curr_stack_size,
+						curr_shadow_size,
+						curr_shadow_pointer_size
 					);
 				}
 				instr_case(Op_ret, instr) {
-					std::tie(index, type_size_stack, curr_stack_size) = dfs_stack.back();
+					std::tie(
+						index,
+						type_size_stack,
+						type_shadow_size_stack,
+						type_shadow_pointer_size_stack,
+						curr_stack_size,
+						curr_shadow_size,
+						curr_shadow_pointer_size
+					) = dfs_stack.back();
 					dfs_stack.pop_back();
 				}
 				instr_case(Op_call_func, instr) {
@@ -313,7 +472,15 @@ namespace vm::loader::compiler {
 					index++;
 				}
 				instr_case(Op_ret_tailcall_func, instr) {
-					std::tie(index, type_size_stack, curr_stack_size) = dfs_stack.back();
+					std::tie(
+						index,
+						type_size_stack,
+						type_shadow_size_stack,
+						type_shadow_pointer_size_stack,
+						curr_stack_size,
+						curr_shadow_size,
+						curr_shadow_pointer_size
+					) = dfs_stack.back();
 					dfs_stack.pop_back();
 				}
 				instr_default { index++; }
@@ -323,6 +490,28 @@ namespace vm::loader::compiler {
 		ctx.locals_map        = std::move(result);
 		ctx.local_stack_size  = max_stack_size;
 		ctx.local_block_count = max_block_count;
+
+		ctx.shadow_data_offsets.assign(max_stack_size, 0);
+		ctx.shadow_pointer_offsets.assign(max_stack_size, 0);
+		for (const auto& [name, entry] : ctx.locals_map) {
+			populateOffsets(
+				ctx.shadow_data_offsets,
+				ctx.shadow_pointer_offsets,
+				entry.offset,
+				entry.shadow_offset,
+				entry.shadow_pointer_offset,
+				entry.type
+			);
+		}
+
+		ctx.block_shadow_data_offsets.assign(max_block_count, 0);
+		ctx.block_shadow_pointer_offsets.assign(max_block_count, 0);
+		for (const auto& [name, entry] : ctx.locals_map) {
+			if (entry.block_idx < max_block_count) {
+				ctx.block_shadow_data_offsets[entry.block_idx] = static_cast<u32>(entry.shadow_offset);
+				ctx.block_shadow_pointer_offsets[entry.block_idx] = static_cast<u32>(entry.shadow_pointer_offset);
+			}
+		}
 	}
 
 	void Compiler::compileNewFunctions(const std::vector<code::Function>& new_functions) {
@@ -365,7 +554,7 @@ namespace vm::loader::compiler {
 			}
 
 			low_program.functions.insert(
-				low::LowFuncData{ .name               = function.name,
+				low::LowFuncData{ .name                   = function.name,
 			                      .bc                 = std::move(bytecode),
 			                      .local_stack_size   = ctx.local_stack_size,
 			                      .local_block_count  = ctx.local_block_count,
@@ -376,7 +565,11 @@ namespace vm::loader::compiler {
 			                      .ret_shadow_size    = ret_shadow_sum,
 			                      .ret_pointer_size   = ret_pointer_sum,
 			                      .parameters         = std::move(parameters),
-			                      .result_types       = std::move(result_types) },
+			                      .result_types       = std::move(result_types),
+			                      .shadow_data_offsets = std::move(ctx.shadow_data_offsets),
+			                      .shadow_pointer_offsets = std::move(ctx.shadow_pointer_offsets),
+			                      .block_shadow_data_offsets = std::move(ctx.block_shadow_data_offsets),
+			                      .block_shadow_pointer_offsets = std::move(ctx.block_shadow_pointer_offsets) },
 				function.name
 			);
 		}
@@ -389,20 +582,49 @@ namespace vm::loader::compiler {
 			if (global.dtor_name.has_value()) dtor_name = global.dtor_name->str;
 
 			low::LowGlobalData data{
-				.type                 = low_program.types->at(global.type),
-				.ctor_name            = ctor_name,
-				.dtor_name            = dtor_name,
-				.global_buffer_offset = program_ctx.global_buffer_size.asInt(),
-				.global_block_idx     = program_ctx.global_count,
+				.type                         = low_program.types->at(global.type),
+				.ctor_name                    = ctor_name,
+				.dtor_name                    = dtor_name,
+				.global_buffer_offset         = program_ctx.global_buffer_size.asInt(),
+				.global_block_idx             = program_ctx.global_count,
+				.global_shadow_data_offset    = program_ctx.global_shadow_buffer_size,
+				.global_shadow_pointer_offset = program_ctx.global_pointer_buffer_size,
 			};
 			low_program.global_data.insert(data, global.name);
 
 			program_ctx.global_count += 1;
 			program_ctx.global_buffer_size += Bytes(data.type->getSize().asInt());
+			program_ctx.global_shadow_buffer_size += data.type->getShadowSize();
+			program_ctx.global_pointer_buffer_size += data.type->getPointerSize();
 		}
 
-		low_program.global_buffer_size = program_ctx.global_buffer_size;
-		low_program.global_count       = program_ctx.global_count;
+		low_program.global_buffer_size         = program_ctx.global_buffer_size;
+		low_program.global_count               = program_ctx.global_count;
+		low_program.global_shadow_buffer_size  = program_ctx.global_shadow_buffer_size;
+		low_program.global_shadow_pointer_size = program_ctx.global_pointer_buffer_size;
+
+		low_program.global_shadow_data_offsets.assign(program_ctx.global_buffer_size.asInt(), 0);
+		low_program.global_shadow_pointer_offsets.assign(program_ctx.global_buffer_size.asInt(), 0);
+		low_program.global_block_shadow_data_offsets.assign(program_ctx.global_count, 0);
+		low_program.global_block_shadow_pointer_offsets.assign(program_ctx.global_count, 0);
+
+		for (const auto& global: new_globals) {
+			auto name = global.name;
+			auto data = low_program.global_data.at(name);
+			populateOffsets(
+				low_program.global_shadow_data_offsets,
+				low_program.global_shadow_pointer_offsets,
+				data->global_buffer_offset,
+				data->global_shadow_data_offset,
+				data->global_shadow_pointer_offset,
+				data->type
+			);
+
+			if (data->global_block_idx < program_ctx.global_count) {
+				low_program.global_block_shadow_data_offsets[data->global_block_idx] = static_cast<u32>(data->global_shadow_data_offset);
+				low_program.global_block_shadow_pointer_offsets[data->global_block_idx] = static_cast<u32>(data->global_shadow_pointer_offset);
+			}
+		}
 	}
 
 	void Compiler::compileNewTypes(const code::TypeContext& ctx) {

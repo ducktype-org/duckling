@@ -90,6 +90,8 @@ namespace vm::loader::compiler {
 			 * @brief Total size of the globals compiled up to this point, in bytes.
 			 */
 			Bytes global_buffer_size = Bytes(0);
+			usize global_shadow_buffer_size = 0;
+			usize global_pointer_buffer_size = 0;
 		};
 
 		/**
@@ -107,6 +109,8 @@ namespace vm::loader::compiler {
 				u64      offset;
 				u64      block_idx;
 				TypeCRef type;
+				u64      shadow_offset;
+				u64      shadow_pointer_offset;
 			};
 
 			/// A mapping from a local variable's name to its offset on the function's local stack
@@ -115,6 +119,10 @@ namespace vm::loader::compiler {
 			/// Total required size for the local stack frame, in bytes.
 			usize local_stack_size  = 0;
 			usize local_block_count = 0;
+			std::vector<u32> shadow_data_offsets;
+			std::vector<u32> shadow_pointer_offsets;
+			std::vector<u32> block_shadow_data_offsets;
+			std::vector<u32> block_shadow_pointer_offsets;
 		};
 
 		/**

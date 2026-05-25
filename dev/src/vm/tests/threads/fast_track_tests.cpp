@@ -15,6 +15,9 @@ public:
 		TESTER_ADD_TEST(fastTrackRaceTest);
 		TESTER_ADD_TEST(fastTrackNoRaceTest);
 		TESTER_ADD_TEST(fastTrackDisabledRaceTest);
+		TESTER_ADD_TEST(extensiveNoRaceTest);
+		TESTER_ADD_TEST(extensiveHeapRaceTest);
+		TESTER_ADD_TEST(extensiveStackRaceTest);
 	}
 
 private:
@@ -96,6 +99,90 @@ private:
 		const auto validation_result = vm::api::deinitAndValidate(pid);
 		ASSERT_TRUE(validation_result.has_value());
 		ASSERT_TRUE(validation_result.value());
+	}
+
+	// ---------------------------------------------------------------
+	// Extensive tests: heap/stack/global + nested structs + tables
+	// ---------------------------------------------------------------
+
+	/** All reads/writes happen AFTER join – FastTrack must NOT report a race. */
+	void extensiveNoRaceTest() {
+		vm::api::ProcessSettings settings;
+		settings.enable_fast_track = true;
+		auto pid = initProcess(settings);
+
+		auto file = fs::File(path("minimal_no_race.dbc"));
+		auto load_res = vm::api::loadFiles(pid, { file });
+		ASSERT_TRUE(load_res.has_value());
+
+		// Must complete without any panic
+		runTestOnVm(pid, "", {}, {});
+	}
+
+	/** Main thread and child thread both write to the same nested heap struct
+	 *  array element without synchronisation – FastTrack MUST detect a race. */
+	void extensiveHeapRaceTest() {
+		vm::api::ProcessSettings settings;
+		settings.enable_fast_track = true;
+		auto pid = initProcess(settings);
+
+		auto file = fs::File(path("extensive_heap_race.dbc"));
+		auto load_res = vm::api::loadFiles(pid, { file });
+		ASSERT_TRUE(load_res.has_value());
+
+		auto result = runTestOnVmGetResult(pid, "", {}, {});
+
+		auto exec_status = vm::api::getExecutionStatus(pid);
+		bool got_race_panic = false;
+		if (exec_status.has_value()) {
+			nlohmann::json status_json = exec_status.value();
+			std::cout << "EXTENSIVE HEAP RACE STATUS: " << status_json.dump() << std::endl;
+
+			variant_match(exec_status.value()) {
+				variant_case(vm::api::ExecutionPanicked, panicked) {
+					got_race_panic = panicked.error_message.contains("Tried dividing by zero") ||
+					                 panicked.error_message.contains("[FastTrack] Data race detected");
+				}
+				variant_default {}
+			}
+		}
+		ASSERT_TRUE(got_race_panic);
+
+		const auto validation_result = vm::api::deinitAndValidate(pid);
+		ASSERT_TRUE(validation_result.has_value());
+	}
+
+	/** Main thread and child thread both write to the same stack variable via a
+	 *  shared pointer without synchronisation – FastTrack MUST detect a race. */
+	void extensiveStackRaceTest() {
+		vm::api::ProcessSettings settings;
+		settings.enable_fast_track = true;
+		auto pid = initProcess(settings);
+
+		auto file = fs::File(path("extensive_stack_race.dbc"));
+		auto load_res = vm::api::loadFiles(pid, { file });
+		ASSERT_TRUE(load_res.has_value());
+
+		auto result = runTestOnVmGetResult(pid, "", {}, {});
+
+		auto exec_status = vm::api::getExecutionStatus(pid);
+		bool got_race_panic = false;
+		if (exec_status.has_value()) {
+			nlohmann::json status_json = exec_status.value();
+			std::cout << "EXTENSIVE STACK RACE STATUS: " << status_json.dump() << std::endl;
+
+			variant_match(exec_status.value()) {
+				variant_case(vm::api::ExecutionPanicked, panicked) {
+					got_race_panic = panicked.error_message.contains("Tried dividing by zero") ||
+					                 panicked.error_message.contains("[FastTrack] Data race detected");
+				}
+				variant_default {}
+			}
+		}
+		ASSERT_TRUE(got_race_panic);
+
+		const auto validation_result = vm::api::deinitAndValidate(pid);
+		ASSERT_TRUE(validation_result.has_value());
 	}
 };
 

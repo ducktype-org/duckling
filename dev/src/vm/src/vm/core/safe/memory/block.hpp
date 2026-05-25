@@ -4,6 +4,8 @@
 #include <base/extend_cpp/strongly_typed_id.hpp>
 #include <base/types/ints.hpp>
 
+#include <vm/core/process/concurrency/fast_track/shadow_pointer.hpp>
+#include <vm/core/process/concurrency/fast_track/shadow_entry.hpp>
 #include <vm/core/safe/memory/allocator/block_data.hpp>
 
 namespace vm {
@@ -65,6 +67,8 @@ namespace vm {
 	};
 
 	using Block = BasicBlock<std::byte>;
+    using ShadowBlock = BasicBlock<ShadowEntry>;
+    using ShadowPointerBlock = BasicBlock<ShadowPointer>;
 	using BlockGeneric = Block;
 }
 

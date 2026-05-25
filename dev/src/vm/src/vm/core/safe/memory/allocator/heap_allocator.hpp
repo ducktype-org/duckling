@@ -24,6 +24,9 @@ namespace vm {
 	template<typename EntryT>
 	struct BlockData;
 
+	struct ShadowEntry;
+	struct ShadowPointer;
+
 	template<typename EntryT>
 	class HeapAllocator final: public IAllocator<EntryT> {
 		// It's a mock, it should be replaced with something faster.
@@ -31,7 +34,14 @@ namespace vm {
 
 	public:
 		BlockData<EntryT> allocate(TypeCRef type) {
-			auto    size = type->getSize().asInt();
+			usize   size = 0;
+			if constexpr (std::is_same_v<EntryT, vm::ShadowEntry>) {
+				size = type->getShadowSize();
+			} else if constexpr (std::is_same_v<EntryT, vm::ShadowPointer>) {
+				size = type->getPointerSize();
+			} else {
+				size = type->getSize().asInt();
+			}
 			auto    ptr  = heapAllocOrThrow<EntryT>(size);
 			allocated.emplace_back(ptr, size);
 			return BlockData<EntryT>{
@@ -46,7 +56,14 @@ namespace vm {
 		 *  to assign the correct type to the new `BlockData` object.
 		 */
 		BlockData<EntryT> dynTableAllocateN(TypeCRef table_type, TypeCRef inner_type, u64 n) {
-			auto    size = inner_type->getSize().asInt() * n;
+			usize   size = 0;
+			if constexpr (std::is_same_v<EntryT, vm::ShadowEntry>) {
+				size = inner_type->getShadowSize() * n;
+			} else if constexpr (std::is_same_v<EntryT, vm::ShadowPointer>) {
+				size = inner_type->getPointerSize() * n;
+			} else {
+				size = inner_type->getSize().asInt() * n;
+			}
 			EntryT* ptr  = heapAllocOrThrow<EntryT>(size);
 			allocated.emplace_back(ptr, size);
 			return BlockData<EntryT>{

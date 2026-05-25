@@ -201,7 +201,7 @@ namespace vm::loader::compiler::detail {
 		PUSH_DIAGNOSTIC
 		UNHANDLED_ENUM
 		instr_match(instruction) {
-			instr_case(high::Op_mov_p8_imm, i) { addLow<Op_mov_p8_imm>(i.dst, i.src); }
+			instr_case(high::Op_mov_p8_imm, i) { addLow<Op_mov_p8_imm>(i.dst, i.src);}
 			instr_case(high::Op_mov_p8_p8, i) {
 				ftRead(i.src); ftWrite(i.dst);
 				addLow<Op_mov_p8_p8>(i.dst, i.src);
@@ -503,8 +503,16 @@ namespace vm::loader::compiler::detail {
 			instr_case(high::Op_set_threadctx, i) { addLow<Op_set_threadctx>(i.function); }
 			instr_case(high::Op_ret_tailcall_func, i) { addLow<Op_ret_tailcall_func>(i.function); }
 			instr_case(high::Op_ret, i) { addLow<Op_ret>(); }
-			instr_case(high::Op_init_pany_type, i) { addLow<Op_init_bany_type>(i.var, i.type); }
+			instr_case(high::Op_init_pany_type, i) {
+                addLow<Op_init_bany_type>(i.var, i.type);
+                if(compiler.settings_.enable_fast_track){
+                    addLow<Op_ft_init_bany_type>(i.var, i.type);
+                }
+            }
 			instr_case(high::Op_deinit, i) { addLow<Op_deinit>(); }
+                if(compiler.settings_.enable_fast_track){
+                    addLow<Op_ft_deinit>();
+                }
 			instr_case(high::Op_input_p64, i) { addLow<Op_input_p64>(i.dst); }
 			instr_case(high::Op_output_p64, i) { addLow<Op_output_p64>(i.src); }
 			instr_case(high::Op_input_p32, i) { addLow<Op_input_p32>(i.dst); }
@@ -543,17 +551,12 @@ namespace vm::loader::compiler::detail {
 			}
 			instr_case(high::Op_ref_pptr_pvnt, i) { addLow<Op_ref_pptr_bany>(i.dst_ptr, i.src); }
 			instr_case(high::Op_structLea_pptr_pptr_field, i) {
-				if (compiler.settings_.enable_fast_track) {
-					addLow<Op_ft_structLea_pptr_pptr>(i.dst_ptr, i.src_data_ptr);
-					addLow<Op_ext_field>(i.field);
-					auto type_ref = compiler.getLowProgram()->getTypes().at(i.field.type_name);
-					auto shadow_offset = static_cast<u64>(*type_ref->getFieldShadowOffsetByName(i.field.field_name));
-					auto pointer_offset = static_cast<u64>(*type_ref->getFieldPointerOffsetByName(i.field.field_name));
-					addLowRaw(low::MicroOpcode::ext_imm, shadow_offset, pointer_offset);
-				} else {
 					addLow<Op_structLea_pptr_pptr>(i.dst_ptr, i.src_data_ptr);
 					addLow<Op_ext_field>(i.field);
-				}
+                    if(compiler.settings_.enable_fast_track){
+                        addLow<Op_ft_structLea_pptr_pptr>(i.dst_ptr, i.src_data_ptr);
+                        addLow<Op_ext_sfield_spfield>(i.field, i.field);
+                    }
 			}
 			instr_case(high::Op_structLoad_pany_pptr_field, i) {
 				if (compiler.settings_.enable_fast_track) {

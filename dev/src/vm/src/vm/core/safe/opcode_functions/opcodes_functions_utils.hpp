@@ -10,6 +10,7 @@
 #include <vm/core/safe/memory/frame.hpp>
 #include <vm/utils/interpret.hpp>
 #include <vm/core/safe/safe_vmthread.hpp>
+#include <vm/core/safe/low_program/low_program.hpp>
 
 namespace vm {
 }
@@ -94,6 +95,34 @@ inline static void writeToPlace(
  */
 #define READ_FROM_DIRECT_ARG(TYPE, ARG) safeReadObjectBytes<TYPE>(ARG)
 
+
+
+[[nodiscard]] [[gnu::always_inline]]
+inline static bool isGlobalPlace(u64 place_arg) {
+	return (place_arg >> 63) != 0;
+}
+
+[[nodiscard]] [[gnu::always_inline]]
+inline static vm::ShadowPointer& getShadowPointerRef(vm::Frame* frame, vm::SafeVMThread& thread, u64 place_arg) {
+	u64 offset = place_arg & ~(1ULL << 63);
+	if (isGlobalPlace(place_arg)) {
+		return thread.getGlobalShadowPointerBase()[place_arg];
+	} else {
+		return frame->local_shadow_pointer_stack[place_arg];
+	}
+}
+
+#define GET_SHADOW_POINTER_REF(ARG) getShadowPointerRef(frame, thread, ARG)
+
+inline static vm::ShadowEntry* getShadowEntryPtr(vm::Frame* frame, vm::SafeVMThread& thread, u64 place_arg) {
+	u64 offset = place_arg & ~(1ULL << 63);
+	if (isGlobalPlace(place_arg)) {
+		return thread.getGlobalShadowDataBase() + place_arg;
+	} else {
+		return frame->local_shadow_data_stack + place_arg;
+	}
+}
+
 /**
  * @brief Reads a value of a given TYPE from the beginning of the given view.
  */
@@ -129,43 +158,6 @@ template<typename T>
 inline static void writeToView(base::ModRawView view, const T& value) {
 	vm::safeWriteBytes<T>(view.getBegin(), value);
 }
-
-/**
- * @brief FastTrack helper functions for shadow pointer mapping and propagation.
- */
-[[nodiscard]] [[gnu::always_inline]]
-inline static u32 getShadowPointerIndex(u64 place_arg) {
-	return static_cast<u32>((place_arg & ~(1ULL << 63)) / sizeof(vm::Pointer));
-}
-
-[[nodiscard]] [[gnu::always_inline]]
-inline static bool isGlobalPlace(u64 place_arg) {
-	return (place_arg >> 63) != 0;
-}
-
-[[nodiscard]] [[gnu::always_inline]]
-inline static vm::ShadowPointer& getShadowPointerRef(vm::Frame* frame, vm::SafeVMThread& thread, u64 place_arg) {
-	u32 index = getShadowPointerIndex(place_arg);
-	if (isGlobalPlace(place_arg)) {
-		return thread.getGlobalShadowPointerBase()[index];
-	} else {
-		return frame->local_shadow_pointer_stack[index];
-	}
-}
-
-#define GET_SHADOW_POINTER_REF(ARG) getShadowPointerRef(frame, thread, ARG)
-
-inline static vm::ShadowEntry* getShadowEntryPtr(vm::Frame* frame, vm::SafeVMThread& thread, u64 place_arg) {
-	u64 offset = place_arg & ~(1ULL << 63);
-	if (isGlobalPlace(place_arg)) {
-		return thread.getGlobalShadowDataBase() + offset;
-	} else {
-		return frame->local_shadow_data_stack + offset;
-	}
-}
-
-
-
 
 #if defined(__clang_major__) && __clang_major__ >= 13
 	#define MUST_TAIL [[clang::musttail]]

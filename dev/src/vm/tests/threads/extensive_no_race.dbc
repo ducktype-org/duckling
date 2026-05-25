@@ -1,0 +1,136 @@
+type fixed_size_table: InnerArray i64 5
+type data: Level2 { pad_l2: i64, arr: InnerArray }
+type data: Level1 { pad_l1: i64, l2: Level2 }
+type data: Root   { pad_root: i64, l1: Level1 }
+
+type pointer: ptr_Root Root
+type pointer: ptr_Level1 Level1
+type pointer: ptr_Level2 Level2
+type pointer: ptr_InnerArray InnerArray
+type pointer: ptr_i64 i64
+
+global_data g_counter i64 {};
+global_data g_stack_ptr ptr_i64 {};
+global_data g_heap_ptr ptr_Root {};
+global_data g_table_ptr ptr_InnerArray {};
+
+function child_thread {} -> {} {
+    # 1. Global race test target
+    init_pany_type val1, i64;
+    mov_p64_imm val1, 42;
+    mov_p64_p64 g_counter, val1;
+
+    # 2. Stack race test target (write via stack pointer stored in g_stack_ptr)
+    init_pany_type local_stack_ptr, ptr_i64;
+    mov_pptr_pptr local_stack_ptr, g_stack_ptr;
+    store_pptr_pany local_stack_ptr, val1;
+
+    # 3. Heap race test target (write via heap pointer stored in g_heap_ptr)
+    init_pany_type local_heap_ptr, ptr_Root;
+    mov_pptr_pptr local_heap_ptr, g_heap_ptr;
+    init_pany_type p_l1, ptr_Level1;
+    structLea_pptr_pptr_field p_l1, local_heap_ptr, Root.l1;
+    init_pany_type p_l2, ptr_Level2;
+    structLea_pptr_pptr_field p_l2, p_l1, Level1.l2;
+    init_pany_type p_arr, ptr_InnerArray;
+    structLea_pptr_pptr_field p_arr, p_l2, Level2.arr;
+    init_pany_type p_val, ptr_i64;
+    init_pany_type idx, i64;
+    mov_p64_imm idx, 2;
+    fixedSizeTableLea_pptr_pptr_p64 p_val, p_arr, idx;
+    mov_p64_imm val1, 100;
+    store_pptr_pany p_val, val1;
+
+    # 4. Table race test target (write via table pointer stored in g_table_ptr)
+    init_pany_type local_table_ptr, ptr_InnerArray;
+    mov_pptr_pptr local_table_ptr, g_table_ptr;
+    init_pany_type p_tbl_val, ptr_i64;
+    mov_p64_imm idx, 4;
+    fixedSizeTableLea_pptr_pptr_p64 p_tbl_val, local_table_ptr, idx;
+    mov_p64_imm val1, 200;
+    store_pptr_pany p_tbl_val, val1;
+
+    deinit; # p_tbl_val
+    deinit; # local_table_ptr
+    deinit; # idx
+    deinit; # p_val
+    deinit; # p_arr
+    deinit; # p_l2
+    deinit; # p_l1
+    deinit; # local_heap_ptr
+    deinit; # local_stack_ptr
+    deinit; # val1
+    ret;
+}
+
+function main { i64, ptr_argv } -> { i64 } {
+    # Allocate stack target
+    init_pany_type stack_var, i64;
+    init_pany_type stack_ptr, ptr_i64;
+    ref_pptr_pany stack_ptr, stack_var;
+    mov_pptr_pptr g_stack_ptr, stack_ptr;
+
+    # Allocate heap target
+    init_pany_type heap_ptr, ptr_Root;
+    alloc_pptr_type heap_ptr, Root;
+    mov_pptr_pptr g_heap_ptr, heap_ptr;
+
+    # Allocate table target
+    init_pany_type stack_table, InnerArray;
+    init_pany_type table_ptr, ptr_InnerArray;
+    ref_pptr_pany table_ptr, stack_table;
+    mov_pptr_pptr g_table_ptr, table_ptr;
+
+    # Spawn thread
+    init_pany_type thread_id, i64;
+    set_threadctx child_thread;
+    call_builtinfunc builtin_start_thread;
+
+    # Properly join thread (Synchronization barrier)
+    init_pany_type join_ret, i64;
+    init_pany_type join_id, i64;
+    mov_p64_p64 join_id, thread_id;
+    call_builtinfunc builtin_join_thread;
+
+    # Read and write everything after join (No Race!)
+    init_pany_type temp, i64;
+    mov_p64_p64 temp, g_counter;
+    store_pptr_pany stack_ptr, temp;
+
+    init_pany_type p_l1, ptr_Level1;
+    structLea_pptr_pptr_field p_l1, heap_ptr, Root.l1;
+    init_pany_type p_l2, ptr_Level2;
+    structLea_pptr_pptr_field p_l2, p_l1, Level1.l2;
+    init_pany_type p_arr, ptr_InnerArray;
+    structLea_pptr_pptr_field p_arr, p_l2, Level2.arr;
+    init_pany_type p_val, ptr_i64;
+    init_pany_type idx, i64;
+    mov_p64_imm idx, 2;
+    fixedSizeTableLea_pptr_pptr_p64 p_val, p_arr, idx;
+    store_pptr_pany p_val, temp;
+
+    init_pany_type p_tbl_val, ptr_i64;
+    mov_p64_imm idx, 4;
+    fixedSizeTableLea_pptr_pptr_p64 p_tbl_val, table_ptr, idx;
+    store_pptr_pany p_tbl_val, temp;
+
+    # Clean up heap
+    free_pptr heap_ptr;
+
+    deinit; # p_tbl_val
+    deinit; # idx
+    deinit; # p_val
+    deinit; # p_arr
+    deinit; # p_l2
+    deinit; # p_l1
+    deinit; # temp
+    deinit; # join_id
+    deinit; # join_ret
+    deinit; # thread_id
+    deinit; # table_ptr
+    deinit; # stack_table
+    deinit; # heap_ptr
+    deinit; # stack_ptr
+    deinit; # stack_var
+    ret;
+}

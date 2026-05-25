@@ -289,6 +289,10 @@ namespace vm {
 		[[nodiscard]] ShadowPointer* getGlobalShadowPointerBase() const {
 			return runtime_data.global_shadow_pointer_buffer_base;
 		}
+
+		[[nodiscard]] CRef<vm::low::ILowVMProgram> getProgram() const {
+			return process_program;
+		}
 	};
 
 	/**

@@ -377,8 +377,8 @@ namespace vm {
 			});
 
 		if (settings_.enable_fast_track) {
-			global_shadow_data.resize(global_buffer_config.buffer_size.asInt());
-			global_shadow_pointer.resize(global_buffer_config.buffer_size.asInt() / sizeof(Pointer));
+			global_shadow_data.resize(global_buffer_config.global_shadow_buffer_size);
+			global_shadow_pointer.resize(global_buffer_config.global_pointer_buffer_size);
 		}
 
 		for (auto& thread: vm_threads)

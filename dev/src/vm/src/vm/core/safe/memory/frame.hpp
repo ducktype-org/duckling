@@ -65,12 +65,34 @@ namespace vm {
 		 * @brief Base of the stack of block IDs used by the function created with init_type
 		 * and destroyed with deinit.
 		 */
-		BlockGeneric** local_block_ref_stack_base = nullptr;
+		Block** local_block_ref_stack_base = nullptr;
 
 		/**
 		 * @brief The pointer to the first free position on the block stack.
 		 */
-		BlockGeneric** local_block_ref_stack_end = nullptr;
+		Block** local_block_ref_stack_end = nullptr;
+
+		/**
+		 * @brief Base of the stack of block IDs used by the function created with init_type
+		 * and destroyed with deinit.
+		 */
+		ShadowBlock** local_shadow_block_ref_stack_base = nullptr;
+
+		/**
+		 * @brief The pointer to the first free position on the block stack.
+		 */
+		ShadowBlock** local_shadow_block_ref_stack_end = nullptr;
+
+		/**
+		 * @brief Base of the stack of block IDs used by the function created with init_type
+		 * and destroyed with deinit.
+		 */
+		ShadowPointerBlock** local_shadow_pointer_block_ref_stack_base = nullptr;
+
+		/**
+		 * @brief The pointer to the first free position on the block stack.
+		 */
+		ShadowPointerBlock** local_shadow_pointer_block_ref_stack_end = nullptr;
 
 		/**
 		 * @brief First free byte in the local stack.

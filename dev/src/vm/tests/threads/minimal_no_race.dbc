@@ -1,0 +1,86 @@
+type fixed_size_table: InnerArray i64 5
+type data: Level2 { pad_l2: i64, arr: InnerArray }
+type data: Level1 { pad_l1: i64, l2: Level2 }
+type data: Root   { pad_root: i64, l1: Level1 }
+
+type pointer: ptr_Root Root
+type pointer: ptr_Level1 Level1
+type pointer: ptr_Level2 Level2
+type pointer: ptr_InnerArray InnerArray
+type pointer: ptr_i64 i64
+
+global_data g_counter i64 {};
+global_data g_heap_ptr ptr_Root {};
+global_data g_table_ptr ptr_InnerArray {};
+
+function child_thread {} -> {} {
+    # Just write global counter
+    init_pany_type val1, i64;
+    mov_p64_imm val1, 42;
+    mov_p64_p64 g_counter, val1;
+
+    # Also write to table via ptr
+    init_pany_type local_table_ptr, ptr_InnerArray;
+    mov_pptr_pptr local_table_ptr, g_table_ptr;
+    init_pany_type p_tbl_val, ptr_i64;
+    init_pany_type idx, i64;
+    mov_p64_imm idx, 4;
+    fixedSizeTableLea_pptr_pptr_p64 p_tbl_val, local_table_ptr, idx;
+    mov_p64_imm val1, 200;
+    store_pptr_pany p_tbl_val, val1;
+
+    deinit; # p_tbl_val
+    deinit; # local_table_ptr
+    deinit; # idx
+    deinit; # val1
+    ret;
+}
+
+function main { i64, ptr_argv } -> { i64 } {
+    # Allocate table target on stack
+    init_pany_type stack_table, InnerArray;
+    init_pany_type table_ptr, ptr_InnerArray;
+    ref_pptr_pany table_ptr, stack_table;
+    mov_pptr_pptr g_table_ptr, table_ptr;
+
+    # Allocate heap target
+    init_pany_type heap_ptr, ptr_Root;
+    alloc_pptr_type heap_ptr, Root;
+    mov_pptr_pptr g_heap_ptr, heap_ptr;
+
+    # Spawn thread
+    init_pany_type thread_id, i64;
+    set_threadctx child_thread;
+    call_builtinfunc builtin_start_thread;
+
+    # Join thread
+    init_pany_type join_ret, i64;
+    init_pany_type join_id, i64;
+    mov_p64_p64 join_id, thread_id;
+    call_builtinfunc builtin_join_thread;
+
+    # Read and write after join (No Race!)
+    init_pany_type temp, i64;
+    mov_p64_p64 temp, g_counter;
+
+    # Also write to table via ptr
+    init_pany_type p_tbl_val, ptr_i64;
+    init_pany_type idx, i64;
+    mov_p64_imm idx, 4;
+    fixedSizeTableLea_pptr_pptr_p64 p_tbl_val, table_ptr, idx;
+    store_pptr_pany p_tbl_val, temp;
+
+    # Clean up heap
+    free_pptr heap_ptr;
+
+    deinit; # p_tbl_val
+    deinit; # idx
+    deinit; # temp
+    deinit; # join_id
+    deinit; # join_ret
+    deinit; # thread_id
+    deinit; # heap_ptr
+    deinit; # table_ptr
+    deinit; # stack_table
+    ret;
+}
