@@ -60,7 +60,7 @@ namespace vm {
 		requires(std::is_trivially_copyable_v<T>) {
 		CORE_ASSERT(isAligned<T>(dest + offset), "Unaligned access in safeReadPointerBytes");
 
-		::new (reinterpret_cast<void*>(dest + offset)) T(value);
+		new (reinterpret_cast<void*>(dest + offset)) T(value);
 	}
 
 	/**
