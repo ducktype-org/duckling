@@ -13,35 +13,40 @@ namespace vm::debugger::cli {
 
 	CLIDebugger::CLIDebugger(const std::vector<std::string>& main_args):
 		  status_change_listener([&](const api::ProcStatus& status) {
-			  std::visit(
-				  [&](auto&& arg) {
-					  using T = std::decay_t<decltype(arg)>;
+			  variant_match(status) {
+				  variant_case(api::ExecutionCompleted, completed) {
 					  std::lock_guard lk(output_mutex);
-					  std::cout << "New status: " << TypeParseTraits<T>::NAME.data() << "\n";
-				  },
-				  status
-			  );
+					  std::cout << "VM completed execution.\n";
+					  for (auto val: completed.exit_value) {
+						  if_opt_some(val->readData(), data) {
+							  variant_match(data) {
+								  variant_case(idv::Primitive, primitive) {
+									  std::cout << "VM returned: " << primitive.value << "\n";
+								  }
+							  }
+						  }
+					  }
+				  }
+				  variant_default {
+					  std::visit(
+						  [&](auto&& arg) {
+							  using T = std::decay_t<decltype(arg)>;
+							  std::lock_guard lk(output_mutex);
+							  std::cout << "New status: " << TypeParseTraits<T>::NAME.data()
+										<< "\n";
+						  },
+						  status
+					  );
+				  }
+			  }
 		  }),
 		  error_listener([&](const std::string& err) {
 			  std::lock_guard lk(output_mutex);
 			  std::cout << "Error: " << err << "\n";
 		  }),
-		  exit_value_listener([&](const api::ExitValue& exit_val) {
-			  std::lock_guard lk(output_mutex);
-			  for (auto val: exit_val) {
-				  if_opt_some(val->readData(), data) {
-					  variant_match(data) {
-						  variant_case(idv::Primitive, primitive) {
-							  std::cout << "VM returned: " << primitive.value << "\n";
-						  }
-					  }
-				  }
-			  }
-		  }),
 		  debugger(main_args) {
 		debugger.attachOnStatusChangedListener(status_change_listener);
 		debugger.attachOnErrorListener(error_listener);
-		debugger.attachOnExecutionCompletedListener(exit_value_listener);
 	}
 
 	CLIDebugger::CLIDebugger(const fs::File& filepath, const std::vector<std::string>& main_args):
