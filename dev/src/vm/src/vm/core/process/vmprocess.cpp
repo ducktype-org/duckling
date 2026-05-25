@@ -151,7 +151,7 @@ namespace vm {
 			std::unique_lock<std::shared_mutex> lock(rw_status);
 			status = new_status;
 		}
-		on_status_change.emitEvent(new_status);
+		on_status_changed.emitEvent(new_status);
 		status_cv.notify_all();
 		if (api::isStatusTerminal(new_status)) onTerminalStatus(new_status);
 	}
@@ -168,7 +168,7 @@ namespace vm {
 			}
 		}
 		if (updated) {
-			on_status_change.emitEvent(emitted_status);
+			on_status_changed.emitEvent(emitted_status);
 			status_cv.notify_all();
 			if (api::isStatusTerminal(emitted_status)) onTerminalStatus(emitted_status);
 		}
