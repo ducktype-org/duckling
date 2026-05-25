@@ -30,6 +30,26 @@ namespace dia_int {
 }
 
 namespace pst {
+	struct CloneDummy {
+	private:
+		constexpr CloneDummy() = default;
+		friend constexpr CloneDummy makeCloneDummy();
+	};
+
+	constexpr CloneDummy makeCloneDummy() { return {}; }
+
+	constexpr CloneDummy CLONE = makeCloneDummy();
+}
+
+#define ELEMENT_CLONE_DEF(element, ...) \
+	private: \
+		explicit element(CloneDummy clone, element& other):\
+			  source_position(other.source_position),\
+			  context_hash(other.context_hash),\
+			  element_kind(other.element_kind),\
+			  id(PstID::next()) {}
+
+namespace pst {
 	class Import;
 
 	template<typename State>
