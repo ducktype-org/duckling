@@ -137,6 +137,8 @@ namespace vm {
 
 		std::vector<api::ThreadID> getAllThreadIDs() override;
 
+		void onTerminalStatus(const api::ProcStatus& status) noexcept override;
+
 		/**
 		 * @brief Updates the memory for globals of this process after loading a program with new
 		 * globals. Works in incremental way. Only supports adding new globals, not removing or

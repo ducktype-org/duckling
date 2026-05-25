@@ -1,0 +1,96 @@
+# Multiple threads stay alive while one thread divides by zero.
+#
+# Scenario:
+# - Two worker threads announce they are ready, then spin in a loop.
+# - Main waits until both workers are ready.
+# - Main then performs a zero division while the workers are still running.
+#
+# Expected behavior:
+# - The VM must panic with the zero-division exception.
+# - All threads should be terminated when the panic occurs.
+
+global_data lock mutex {};
+global_data cv condition_variable {};
+global_data ready i64 {};
+
+function worker {} -> {} {
+	init_pany_type		local_lock, mutex;
+	mov_popq_popq		local_lock, lock;
+	call_builtinfunc	builtin_lock_mutex;
+
+	init_pany_type		r, i64;
+	mov_p64_p64			r, ready;
+	add_p64_imm			r, 1;
+	mov_p64_p64			ready, r;
+
+	init_pany_type		cv_ready, condition_variable;
+	mov_popq_popq		cv_ready, cv;
+	call_builtinfunc	builtin_notify_all_cv;
+
+	init_pany_type		unlock_lock, mutex;
+	mov_popq_popq		unlock_lock, lock;
+	call_builtinfunc	builtin_unlock_mutex;
+
+	init_pany_type		spin, i64;
+	mov_p64_imm			spin, 1000000000;
+
+	label WorkLoop;
+		sub_p64_imm		spin, 1;
+		cmpGt_p64_imm	spin, 0;
+		jmpIf_label		WorkLoop;
+
+	ret;
+}
+
+function main { i64, ptr_argv } -> { i64 } {
+	init_pany_type		init_lock, mutex;
+	call_builtinfunc	builtin_create_mutex;
+	mov_popq_popq		lock, init_lock;
+
+	init_pany_type		init_cv, condition_variable;
+	call_builtinfunc	builtin_create_cv;
+	mov_popq_popq		cv, init_cv;
+
+	mov_p64_imm			ready, 0;
+
+	init_pany_type		worker1_id, i64;
+	set_threadctx		worker;
+	call_builtinfunc	builtin_start_thread;
+
+	init_pany_type		worker2_id, i64;
+	set_threadctx		worker;
+	call_builtinfunc	builtin_start_thread;
+
+	init_pany_type		lock_main, mutex;
+	mov_popq_popq		lock_main, lock;
+	call_builtinfunc	builtin_lock_mutex;
+
+	label WaitReadyInit;
+		init_pany_type	ready_value, i64;
+		init_pany_type	cv_wait, condition_variable;
+		init_pany_type	wait_lock, mutex;
+
+	label WaitReady;
+		mov_p64_p64		ready_value, ready;
+		cmpEq_p64_imm	ready_value, 2;
+		jmpIf_label		StartFaultThread;
+
+		mov_popq_popq	cv_wait, cv;
+		mov_popq_popq	wait_lock, lock;
+		call_builtinfunc builtin_wait_cv;
+		deinit;
+		jmp_label		WaitReadyInit;
+
+	label StartFaultThread;
+		deinit;
+		deinit;
+		deinit;
+
+	init_pany_type		a, i32;
+	init_pany_type		b, i32;
+	mov_p32_imm			a, 13;
+	mov_p32_imm			b, 0;
+	div_p32_p32			a, b;
+
+	ret;
+}

@@ -147,6 +147,7 @@ namespace vm {
 		}
 		on_status_change.emitEvent(new_status);
 		status_cv.notify_all();
+		if (api::isStatusTerminal(new_status)) onTerminalStatus(new_status);
 	}
 
 	bool IVMProcess::setStatusIfNotTerminal(const api::ProcStatus& new_status) noexcept {
@@ -163,6 +164,7 @@ namespace vm {
 		if (updated) {
 			on_status_change.emitEvent(emitted_status);
 			status_cv.notify_all();
+			if (api::isStatusTerminal(emitted_status)) onTerminalStatus(emitted_status);
 		}
 		return updated;
 	}

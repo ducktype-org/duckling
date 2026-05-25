@@ -21,6 +21,7 @@
 #include <mutex>
 #include <shared_mutex>
 #include <sstream>
+#include <thread>
 #include <variant>
 
 namespace vm {
@@ -106,6 +107,21 @@ namespace vm {
 		}
 
 		return api::response::Empty{};
+	}
+
+	void SafeVMProcess::onTerminalStatus(const api::ProcStatus& status) noexcept {
+		if (!api::isStatusTerminal(status)) return;
+
+		const auto current_thread_id = std::this_thread::get_id();
+		for (auto& thread: vm_threads) {
+			if (!thread.hasActiveThread()) continue;
+			if (thread.exec_thread && thread.exec_thread->get_id() == current_thread_id) continue;
+
+			const bool stop_requested = thread.stop();
+			if (!stop_requested) continue;
+
+			thread.joinExecutionThread();
+		}
 	}
 
 	base::Optional<api::ApiError> SafeVMProcess::assertProcessCanRespond() {

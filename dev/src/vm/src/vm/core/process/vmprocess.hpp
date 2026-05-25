@@ -178,6 +178,12 @@ namespace vm {
 
 		virtual api::ThreadID getMainThreadID() = 0;
 
+		/**
+		 * @brief Hook called after process status changes to a terminal one.
+		 * Called without holding `rw_status` lock.
+		 */
+		virtual void onTerminalStatus(const api::ProcStatus&) noexcept {}
+
 	public:
 		ProcIO& getIO();
 
