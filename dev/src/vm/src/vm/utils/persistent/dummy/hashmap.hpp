@@ -20,22 +20,6 @@ namespace vm::persistent {
 		static constexpr usize EMPTY = 0;
 
 		[[nodiscard]]
-		usize erase(usize state, const std::vector<Key>& removed_keys) {
-			auto copy = validateState(state);
-
-			for (auto removed_key: removed_keys) {
-				if (!copy.contains(removed_key))
-					throw std::invalid_argument("Trying to remove a non present key");
-
-				copy.erase(removed_key);
-			}
-
-			copies.emplace_back(copy);
-
-			return copies.size() - 1;
-		}
-
-		[[nodiscard]]
 		usize insert(usize state, const Key& k, const Val& v) {
 			auto copy = validateState(state);
 
@@ -55,11 +39,6 @@ namespace vm::persistent {
 		[[nodiscard]]
 		bool contains(usize state, const Key& k) const {
 			return validateState(state).contains(k);
-		}
-
-		[[nodiscard]]
-		usize size(usize state) const {
-			return validateState(state).size();
 		}
 
 		[[nodiscard]]
