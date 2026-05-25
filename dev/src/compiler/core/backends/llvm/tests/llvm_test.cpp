@@ -133,7 +133,10 @@ private:
 		llvm_module.debugPrint();
 
 		// verify integrity, then return for further checks.
-		assertTrue(llvm_module.verify().isOk(), "LLVM module verification failed");
+		assertTrue(
+			llvm_module.verify().isOk(),
+			"LLVM module verification failed (enable Backend dev logs to see details)"
+		);
 		return llvm_module;
 	}
 

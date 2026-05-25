@@ -284,6 +284,14 @@ namespace compiler::helios::defgen {
 						ctx, code::generatedOrigin(), std::move(accessed_field)
 					);
 				}
+				// But also if the accessed field is a reference to a simple type, we must deref it.
+				if (accessed_field->expression_type.getType().isSimple()
+				    and accessed_field->expression_type.getSymbolType().getRefKind()
+				            != tsh::ReferenceKind::Direct) {
+					accessed_field = makeBox<code::DerefExpr>(
+						ctx, code::generatedOrigin(), std::move(accessed_field)
+					);
+				}
 				reusable_self_expr = std::move(next_reusable_self_expr);
 
 				std::vector<Box<code::Expr>> v1;

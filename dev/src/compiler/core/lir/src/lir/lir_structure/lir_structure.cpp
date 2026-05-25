@@ -313,7 +313,8 @@ namespace compiler::lir {
 			local_id = function.getLocalVariableIDs();
 			block_id = function.getBlockIDs();
 
-			output << "[LIR] Function \"" << function.mangled_name.strView() << "\":\n";
+			output << "[LIR] Function \"" << function.mangled_name.strView()
+				   << (function.link_once ? " (link once)" : "") << "\":\n";
 
 			for (const auto& local: function.local_list) {
 				printLocalDesc(&local);
