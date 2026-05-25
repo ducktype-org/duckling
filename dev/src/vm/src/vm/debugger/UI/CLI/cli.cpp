@@ -51,13 +51,31 @@ namespace vm::debugger::cli {
 
 	CLIDebugger::CLIDebugger(const fs::File& filepath, const std::vector<std::string>& main_args):
 		  CLIDebugger(main_args) {
-		debugger.loadFile(filepath).transform_error([&](const api::ApiError& api_error) {
-			throw std::runtime_error("Failed to load file.");
-			return api_error;
-		});
+		load_result = debugger.loadFile(filepath);
 	}
 
 	int CLIDebugger::run() {
+		if (!load_result) {
+			std::cout << "Failed to load file\n";
+
+			variant_match(load_result.error()) {
+				variant_case(api::LoadProgramError, load_error) {
+					std::cout << "Error: " << load_error.why << "\n";
+				}
+				variant_default {
+					std::visit(
+						[&](auto&& arg) {
+							using T = std::decay_t<decltype(arg)>;
+							std::cout << "Error: " << TypeParseTraits<T>::NAME.data() << "\n";
+						},
+						load_result.error()
+					);
+				}
+			}
+
+			return -1;
+		}
+
 		std::cout << "++++++++++++++++++++++++++++\n"
 					 "+   Debugger has started   +\n"
 					 "++++++++++++++++++++++++++++\n";
@@ -100,7 +118,7 @@ namespace vm::debugger::cli {
 			}
 		}
 
-		return 0;
+		return -1;
 	}
 
 	void CLIDebugger::help() {
