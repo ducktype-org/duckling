@@ -33,12 +33,14 @@ pub enum ArtifactsType {
 
 #[derive(Debug)]
 struct UnitInner {
+    /// An internal, but unique identifier.
+    id: u64,
     /// Which package we're compiling.
     package: CompilerPackage,
     /// How have we got this package.
     storage_id: PackageId,
-    /// All __direct__ dependencies of this [`Unit`].
-    dependencies: Vec<Unit>,
+    /// ID's of all __direct__ dependencies of this [`Unit`].
+    dependencies_by_id: Vec<u64>,
     /// What artifacts should this unit produce.
     package_type: ArtifactsType,
 }
@@ -46,19 +48,26 @@ struct UnitInner {
 impl Unit {
     /// Create a new [`Unit`].
     pub fn new(
+        id: u64,
         package: CompilerPackage,
         storage_id: PackageId,
-        dependencies: Vec<Unit>,
+        dependencies: Vec<u64>,
         package_type: ArtifactsType,
     ) -> Self {
         Self {
             inner: Arc::new(UnitInner {
+                id,
                 package,
                 storage_id,
-                dependencies,
+                dependencies_by_id: dependencies,
                 package_type,
             }),
         }
+    }
+
+    /// Get the unique ID of this [`Unit`].
+    pub fn id(&self) -> u64 {
+        self.inner.id
     }
 
     /// Get the root package of this [`Unit`].
@@ -66,9 +75,9 @@ impl Unit {
         &self.inner.package
     }
 
-    /// Get the __direct__ dependencies of this [`Unit`].
-    pub fn deps(&self) -> &[Unit] {
-        &self.inner.dependencies
+    /// Get the ID's of all __direct__ dependencies of this [`Unit`].
+    pub fn deps_ids(&self) -> &[u64] {
+        &self.inner.dependencies_by_id
     }
 
     /// Get the type of produced artifacts by this [`Unit`].
