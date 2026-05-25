@@ -50,14 +50,13 @@ namespace vm::loader::compiler::safe {
 		 * @brief Provides read-only access to the internally managed `LowVMProgram`.
 		 * @return A constant reference to the current, fully compiled low-level program.
 		 */
-		CRef<vm::low::LowVMProgram> getLowProgram() const;
+		[[nodiscard]] CRef<vm::low::LowVMProgram> getLowProgram() const;
 
-		std::expected<FatBytecodePosition, MappingException> mapLowVMProgramPositionToCodeCollectionPosition(
-			low::LowCodePosition position
-		) const;
+		[[nodiscard]] std::expected<FatBytecodePosition, MappingException>
+			mapLowVMProgramPositionToCodeCollectionPosition(low::LowCodePosition position) const;
 
 	protected:
-		ProgramSize getCurrentProgramSize() const override;
+		[[nodiscard]] ProgramSize getCurrentProgramSize() const override;
 
 		void compileNewTypes(const std::vector<code::valid_type::ValidType>& new_types) override;
 		void compileNewGlobals(const std::vector<code::GlobalData>& new_globals) override;

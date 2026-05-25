@@ -3,6 +3,7 @@
 #include <base/except/exceptions.hpp>
 #include <base/types/bits_and_bytes.hpp>
 #include <base/types/ints.hpp>
+
 #include <hashing/hash.hpp>
 
 namespace vm::code::valid_type {
