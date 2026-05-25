@@ -11,7 +11,7 @@
 #include <logger/logger.hpp>
 
 namespace compiler::driver {
-	static bool LIRFunctionDealsWithStrings(const CRef<lir::Function> lir_function) {
+	static bool lirFunctionDealsWithStrings(const CRef<lir::Function> lir_function) {
 		auto is_string_layout = [](const CRef<tsl::TypeLayout> layout) -> bool {
 			return layout->getSourceType().getType().getKind() == tsh::Kind::String;
 		};
@@ -34,7 +34,7 @@ namespace compiler::driver {
 
 		for (const auto& lir_function: data->functions) {
 			// @TODO: #2483 Remove this filter (and the helper function) when strings work in DVM.
-			if (LIRFunctionDealsWithStrings(lir_function)) {
+			if (lirFunctionDealsWithStrings(lir_function)) {
 				CORE_DEV_LOG(
 					Backend,
 					"Lowering function that deals with strings skipped: ",
