@@ -28,6 +28,10 @@ namespace pst {
 	class FormatSubElement;
 	class FormatSubExpression;
 	class FormatSubString;
+	// Wrappers
+	class OperatorWrapper;
+	class IdentifierWrapper;
+	class KeywordWrapper;
 	// Patterns
 	class FlowPattern;
 	class AnalysisPattern;

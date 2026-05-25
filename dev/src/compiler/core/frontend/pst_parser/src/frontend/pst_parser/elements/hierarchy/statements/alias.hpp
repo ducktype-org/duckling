@@ -7,15 +7,15 @@ namespace pst {
 	 * @brief Alias statement.
 	 */
 	class Alias final: public Stmt {
-		tpc::Identifier name;
+		NAMED_CHILD(name, IdentifierWrapper);
 		NAMED_CHILD(points_to, DottedName);
 
 	public:
 		STMT_CHILD_CONSTRUCTOR(Alias, ElementKind::Alias);
 
 		[[nodiscard]]
-		base::StrID getName() const {
-			return name.value;
+		AccessLocked<IdentifierWrapper> getName() const {
+			return name.give();
 		}
 
 		[[nodiscard]]
@@ -41,8 +41,8 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		base::Optional<base::StrID> getDeclSymbolName() const final {
-			return name.value;
+		base::Optional<AccessLocked<IdentifierWrapper>> getDeclSymbolIdentifier() const final {
+			return getName();
 		}
 	};
 }

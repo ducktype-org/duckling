@@ -49,6 +49,8 @@ namespace compiler::mir {
 		 * variables.
 		 */
 		void goOverCodeBlock(const hc::CodeBlock& code_block) {
+			// This order is important for the correct order of the destructors and
+			// scoping flags.
 			for (const auto& stmt: code_block.statements) stmt->acceptVisitor(*this);
 		}
 
@@ -262,7 +264,8 @@ namespace compiler::mir {
 			auto function_no_lifetime = function_builder.build();
 
 			// second step: lifetime stuff
-			auto function_with_destructors = addDestructors(ctx, std::move(function_no_lifetime));
+			auto function_with_destructors
+				= runAllLifetimePasses(ctx, std::move(function_no_lifetime));
 
 			// eliminating unreachable blocks
 			auto function_reachable = eliminateUnreachable(std::move(function_with_destructors));
@@ -283,7 +286,8 @@ namespace compiler::mir {
 			auto function_no_lifetime = lowerToPreMIRFunction(ctx, key.function);
 
 			// second step: lifetime stuff
-			auto function_with_destructors = addDestructors(ctx, std::move(function_no_lifetime));
+			auto function_with_destructors
+				= runAllLifetimePasses(ctx, std::move(function_no_lifetime));
 
 			// eliminating unreachable blocks
 			auto function_reachable = eliminateUnreachable(std::move(function_with_destructors));

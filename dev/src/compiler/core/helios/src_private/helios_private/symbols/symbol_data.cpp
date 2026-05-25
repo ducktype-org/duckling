@@ -376,45 +376,29 @@ namespace compiler::helios {
 	) {
 		SymbolKind kind{};
 		variant_match(generated_data.data) {
-			variant_case_novalue(defgen::GeneratedSymbolData::ImplicitConstructor) {
+			variant_case_novalue(
+				defgen::GeneratedSymbolData::ImplicitConstructor,
+				defgen::GeneratedSymbolData::DefaultClassConstructor,
+				defgen::GeneratedSymbolData::DefaultStaticArrayConstructor,
+				defgen::GeneratedSymbolData::BuiltinOperator,
+				defgen::GeneratedSymbolData::ReplExpressionWrapper,
+				defgen::GeneratedSymbolData::ReplInstructionWrapper,
+				defgen::GeneratedSymbolData::ScriptMainWrapper,
+				defgen::GeneratedSymbolData::ToStringMethod,
+				defgen::GeneratedSymbolData::DefaultDestructor
+			) {
 				kind = SymbolKind::Function;
 			}
-			variant_case_novalue(defgen::GeneratedSymbolData::DefaultClassConstructor) {
-				kind = SymbolKind::Function;
-			}
-			variant_case_novalue(defgen::GeneratedSymbolData::DefaultStaticArrayConstructor) {
-				kind = SymbolKind::Function;
-			}
-			variant_case_novalue(defgen::GeneratedSymbolData::ToStringMethod) {
-				kind = SymbolKind::Method;
-			}
-			variant_case_novalue(defgen::GeneratedSymbolData::DefaultDestructor) {
-				kind = SymbolKind::Method;
-			}
-			variant_case_novalue(defgen::GeneratedSymbolData::BuiltinOperator) {
-				kind = SymbolKind::Function;
-			}
-			variant_case_novalue(defgen::GeneratedSymbolData::Parameter) {
-				kind = SymbolKind::Parameter;
-			}
-			variant_case_novalue(defgen::GeneratedSymbolData::SelfParameter) {
-				kind = SymbolKind::Parameter;
-			}
-			variant_case_novalue(defgen::GeneratedSymbolData::SelfParameterNoScope) {
+			variant_case_novalue(
+				defgen::GeneratedSymbolData::Parameter,
+				defgen::GeneratedSymbolData::SelfParameter,
+				defgen::GeneratedSymbolData::SelfParameterNoScope
+			) {
 				kind = SymbolKind::Parameter;
 			}
 			variant_case_novalue(defgen::GeneratedSymbolData::Field) { kind = SymbolKind::Field; }
 			variant_case_novalue(defgen::GeneratedSymbolData::Variable) {
 				kind = SymbolKind::Variable;
-			}
-			variant_case_novalue(defgen::GeneratedSymbolData::ReplExpressionWrapper) {
-				kind = SymbolKind::Function;
-			}
-			variant_case_novalue(defgen::GeneratedSymbolData::ReplInstructionWrapper) {
-				kind = SymbolKind::Function;
-			}
-			variant_case_novalue(defgen::GeneratedSymbolData::ScriptMainWrapper) {
-				kind = SymbolKind::Function;
 			}
 			variant_default { CORE_UNREACHABLE(); }
 		}

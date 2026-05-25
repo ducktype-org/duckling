@@ -7,8 +7,6 @@
  * value and skips it, otherwise it logs an error
  *  - for Identifier* it ensures the next token is an identifier and parses it to the specified
  * location and skips it, otherwise it logs an error
- *  - for OptionalIdentifier* it parses an identifier into the specified location and skips. If
- * There is no identifier next it doesn't do anything
  *  - for Box<T>* it calls the parser of T object into the specified location
  *
  * The optional argument ignorable additionally allows to control behaviour in case of error.
@@ -112,17 +110,6 @@ namespace tpc {
 				return;
 			}
 			result->value = state.tokens().next().getValue();
-		}
-
-		/**
-		 * @brief Parses an identifier to @p result. Skips on success, does nothing on failure.
-		 * @param result The place to store the parsed identifier.
-		 */
-		void one(OptionalIdentifier* result, bool = false) {
-			if (state.ctokens().peek().isIdentifier()) {
-				result->position = state.getPosition();
-				result->value    = state.tokens().next().getValue();
-			}
 		}
 
 		/**
@@ -253,7 +240,7 @@ namespace tpc {
 		}
 
 	public:
-		NoIdentifierError(dia::SourcePosition pos, std::string but_got);
+		NoIdentifierError(dia::SourcePosition pos, std::string_view but_got);
 	};
 
 	class NoKeywordError final: public dia_int::MessageWithCodeFragmentAndCause {
@@ -267,7 +254,21 @@ namespace tpc {
 		}
 
 	public:
-		NoKeywordError(dia::SourcePosition pos, std::string but_got);
+		NoKeywordError(dia::SourcePosition pos, std::string_view but_got);
+	};
+
+	class NoOperatorError final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return {
+				.template_type = "message",
+				.type          = "error",
+				.family        = "parser",
+				.name          = "no_operator",
+			};
+		}
+
+	public:
+		NoOperatorError(dia::SourcePosition pos, std::string_view but_got);
 	};
 
 	class NoStringError final: public dia_int::MessageWithCodeFragmentAndCause {

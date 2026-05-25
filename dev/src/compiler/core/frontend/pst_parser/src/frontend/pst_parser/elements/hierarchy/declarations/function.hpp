@@ -10,7 +10,7 @@ namespace pst {
 	 * @brief Function declaration
 	 */
 	class Fun final: public Decl {
-		tpc::Identifier name;
+		NAMED_CHILD(name, IdentifierWrapper);
 		NAMED_CHILD(params, ParamList);
 		NAMED_CHILD_OPT(ret, CommaExprHolder);
 		NAMED_CHILD(body, CodeBlockOrStmt);
@@ -22,16 +22,14 @@ namespace pst {
 		DECL_CHILD_CONSTRUCTOR(Fun, ElementKind::Fun);
 
 		[[nodiscard]]
-		base::StrID getName() const {
-			return name.value;
+		AccessLocked<IdentifierWrapper> getName() const {
+			return name.give();
 		}
 
 		[[nodiscard]]
 		AccessLocked<ParamList> getParams() const {
 			return params.give();
 		}
-
-		[[nodiscard]] tpc::Identifier getNameIdentifier() const { return name; }
 
 		/**
 		 * @note Optional of MCRef here is intentional
@@ -54,7 +52,7 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		base::Optional<base::StrID> getDeclSymbolName() const final {
+		base::Optional<AccessLocked<IdentifierWrapper>> getDeclSymbolIdentifier() const final {
 			return getName();
 		}
 

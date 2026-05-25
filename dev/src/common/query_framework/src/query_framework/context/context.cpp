@@ -28,6 +28,11 @@ namespace query {
 		main_query_state.logDiagnosticForNode(my_node, std::move(diagnostic));
 	}
 
+	void Context::moveDiagnosticsFrom(dia_int::Logger& logger) {
+		assertActive();
+		main_query_state.logDiagnosticFromLoggerForNode(my_node, logger);
+	}
+
 	void Context::collectAllDiagnostic(std::vector<CRef<dia_int::dia_args::Diagnostic>>& output) {
 		for (auto& [_, logger]: *main_query_state.getDiagnosticLoggers())
 			logger->collectDiagnostics(output);
@@ -45,7 +50,7 @@ namespace query {
 		Box<dia_int::Logger>          combined_logger = makeBox<dia_int::Logger>();
 		std::vector<internal::NodeID> node_ids;
 		for (auto& [node, logger]: *main_query_state.getDiagnosticLoggers()) {
-			combined_logger->mergeWith(std::move(*logger));
+			combined_logger->logFromLogger(*logger);
 			node_ids.push_back(node);
 		}
 		for (const auto& node_id: node_ids) main_query_state.clearDiagnosticForNode(node_id);

@@ -28,7 +28,10 @@ namespace compiler::lir {
 				metadata.position = pst_elem.unlock(ctx)->getStablePosition();
 			}
 		}
-		return LIRLocal{ mir_local->helios_id, type_layout, new_parameter_index, metadata };
+		LIRLocalSpecialKind special_kind = specialKindFromMIR(*mir_local);
+		return LIRLocal{
+			mir_local->helios_id, type_layout, new_parameter_index, metadata, special_kind
+		};
 	}
 
 	LIRLocal LIRLocal::boolLocal(query::Context& ctx) {
@@ -191,6 +194,8 @@ namespace compiler::lir {
 				output << ", helios_name: " << name(local->helios_id.value()).strView();
 			if (local->parameter_index.has_value())
 				output << ", parameter_index: " << local->parameter_index.value();
+			if (local->special_kind != LIRLocalSpecialKind::Normal)
+				output << ", kind: " << base::enumToStr(local->special_kind);
 			output << "\n";
 			output << "    LAYOUT:" << local->layout->toStringDefinition(ctx, true, 1) << "\n";
 		}
@@ -260,6 +265,20 @@ namespace compiler::lir {
 			output << " ";
 		}
 
+		void printInstructionLifetimeFlags(const std::vector<ScopeFlag>& flags) {
+			if (flags.empty()) return;
+
+			output << " [";
+			for (const auto& flag: flags) {
+				std::string flag_str
+					= (flag.flag == ScopeFlag::Flag::ScopeStart) ? "ScopeStart" : "ScopeEnd";
+				output << flag_str << "(";
+				printLocal(flag.local, output);
+				output << "), ";
+			}
+			output << "] ";
+		}
+
 		void printInstruction(const Instruction& instruction) {
 			// save flags to restore
 			auto output_flags = output.flags();
@@ -286,6 +305,7 @@ namespace compiler::lir {
 			output.flags(output_flags);
 
 			printInstructionExtraParams(instruction.extra_params);
+			printInstructionLifetimeFlags(instruction.scope_flags);
 		}
 
 		void debugPrint(const Function& function) {
@@ -338,5 +358,26 @@ namespace compiler::lir {
 		os << mangled_name.strView() << "\n";
 		os << "Type: " << layout->toStringDefinition(ctx) << "\n";
 		if (initial_value.has_value()) os << "Initial value: " << initial_value->toString() << "\n";
+	}
+
+	LIRLocalSpecialKind specialKindFromMIR(const mir::MIRLocal& mir_local) {
+		if (mir_local.lifetime_flags.contains(mir::LifetimeFlag::ReturnTmpValue))
+			return LIRLocalSpecialKind::ReturnValue;
+		else if (mir_local.lifetime_flags.contains(mir::LifetimeFlag::ConditionTmpValue))
+			return LIRLocalSpecialKind::ConditionTmp;
+		else
+			return LIRLocalSpecialKind::Normal;
+	}
+
+	[[nodiscard]] bool Instruction::isTerminating() const {
+		switch (operation) {
+		case Operation::ReturnVoid:
+		case Operation::ReturnValue:
+		case Operation::Jump:
+		case Operation::Branch:
+			return true;
+		default:
+			return false;
+		}
 	}
 }

@@ -209,10 +209,14 @@ namespace compiler::helios::mangler {
 
 					if (ancestor->getElementKind() == pst::ElementKind::Namespace) {
 						auto namespace_v = ancestor.dynamicCast<pst::Namespace>().value();
-						path_parts.push_back(identifier(namespace_v->getName().strView()));
+						path_parts.push_back(
+							identifier(namespace_v->getName().unlock(ctx)->unwrap().strView())
+						);
 					} else if (ancestor->getElementKind() == pst::ElementKind::Class) {
 						auto class_v = ancestor.dynamicCast<pst::Class>().value();
-						path_parts.push_back(identifier(class_v->getName().strView()));
+						path_parts.push_back(
+							identifier(class_v->getName().unlock(ctx)->unwrap().strView())
+						);
 					}
 
 					ancestor_opt = getPSTElementParent(ctx, ancestor);

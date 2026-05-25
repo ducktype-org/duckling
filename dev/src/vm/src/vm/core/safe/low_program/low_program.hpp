@@ -36,6 +36,29 @@ namespace vm::low {
 		usize                 ret_size;
 		std::vector<TypeCRef> parameters;
 		std::vector<TypeCRef> result_types;
+
+		/**
+		 * @brief Range of instructions
+		 * @note Represents inclusive-exclusive range [`begin`, `end`)
+		 */
+		struct InstructionRange {
+			usize begin, end;
+			auto  operator<=>(const InstructionRange&) const = default;
+
+			[[nodiscard]] bool contains(usize index) const { return begin <= index && index < end; }
+		};
+
+		/**
+		 * @brief Mapping of fatbytecode instruction indexes to microbytecode instruction indexes
+		 * ranges.
+		 * @note Vector indexes correspond to FatBytecode instruction indexes
+		 */
+		std::vector<InstructionRange> instruction_mapping;
+	};
+
+	struct LowCodePosition {
+		CRef<LowFuncData> function;
+		usize             instruction_index;
 	};
 
 	/**
@@ -224,12 +247,13 @@ namespace vm::low {
 		 * @returns Original opcode from provided location on success and `nullopt` if location does
 		 * not exist.
 		 */
+		template<typename FID>
 		base::Optional<MicroOpcode> replaceOpcode(
-			usize function_id, usize instruction_index, MicroOpcode opcode
+			FID function_id, usize instruction_index, MicroOpcode opcode
 		) {
 			if (!functions.contains(function_id)) return std::nullopt;
 
-			auto& microbytecode = functions[function_id].bc;
+			auto& microbytecode = functions.at(function_id)->bc;
 			if (microbytecode.size() <= instruction_index) return std::nullopt;
 
 			auto&       instruction     = microbytecode[instruction_index];

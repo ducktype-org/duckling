@@ -241,8 +241,9 @@ namespace compiler::helios::defgen {
 		 */
 		[[nodiscard]] bool isDefaultConstructor() const {
 			variant_match(data) {
-				variant_case_novalue(DefaultClassConstructor) { return true; }
-				variant_case_novalue(DefaultStaticArrayConstructor) { return true; }
+				variant_case_novalue(DefaultClassConstructor, DefaultStaticArrayConstructor) {
+					return true;
+				}
 				variant_default { return false; }
 			}
 		}

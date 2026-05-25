@@ -544,24 +544,21 @@ class FunctionValidator {
 			instr_case(Op_cmov_p8_p8, instr) {
 				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_cmov_p8_imm) {}
-			instr_case_novalue(Op_mov_p16_imm) {}
+			instr_case_novalue(Op_cmov_p8_imm, Op_mov_p16_imm) {}
 			instr_case_novalue(Op_mov_p16_p16) {
 				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
 			instr_case_novalue(Op_cmov_p16_p16) {
 				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_cmov_p16_imm) {}
-			instr_case_novalue(Op_mov_p32_imm) {}
+			instr_case_novalue(Op_cmov_p16_imm, Op_mov_p32_imm) {}
 			instr_case_novalue(Op_mov_p32_p32) {
 				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
 			instr_case_novalue(Op_cmov_p32_p32) {
 				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
-			instr_case_novalue(Op_cmov_p32_imm) {}
-			instr_case_novalue(Op_mov_p64_imm) {}
+			instr_case_novalue(Op_cmov_p32_imm, Op_mov_p64_imm) {}
 			instr_case_novalue(Op_mov_p64_p64) {
 				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
 			}
@@ -576,8 +573,7 @@ class FunctionValidator {
 				if (src_type != dst_type) throw PointerTypeMismatchError(instr);
 			}
 
-			instr_case_novalue(Op_mov_popq_popq) {}
-			instr_case_novalue(Op_mov_popq_imm) {}
+			instr_case_novalue(Op_mov_popq_popq, Op_mov_popq_imm) {}
 
 			instr_case(Op_mov_pste_pste, instr) {
 				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
@@ -589,70 +585,83 @@ class FunctionValidator {
 			instr_case_novalue(Op_setNull_pptr) {}
 
 			// Sign Extension
-			instr_case_novalue(Op_sext_p16_p8) {}
-			instr_case_novalue(Op_sext_p32_p8) {}
-			instr_case_novalue(Op_sext_p64_p8) {}
-			instr_case_novalue(Op_sext_p32_p16) {}
-			instr_case_novalue(Op_sext_p64_p16) {}
-			instr_case_novalue(Op_sext_p64_p32) {}
+			instr_case_novalue(
+				Op_sext_p16_p8,
+				Op_sext_p32_p8,
+				Op_sext_p64_p8,
+				Op_sext_p32_p16,
+				Op_sext_p64_p16,
+				Op_sext_p64_p32
+			) {}
 
 			// Zero Extension
-			instr_case_novalue(Op_zext_p16_p8) {}
-			instr_case_novalue(Op_zext_p32_p8) {}
-			instr_case_novalue(Op_zext_p64_p8) {}
-			instr_case_novalue(Op_zext_p32_p16) {}
-			instr_case_novalue(Op_zext_p64_p16) {}
-			instr_case_novalue(Op_zext_p64_p32) {}
+			instr_case_novalue(
+				Op_zext_p16_p8,
+				Op_zext_p32_p8,
+				Op_zext_p64_p8,
+				Op_zext_p32_p16,
+				Op_zext_p64_p16,
+				Op_zext_p64_p32
+			) {}
 
 			// Truncation
-			instr_case_novalue(Op_trunc_p8_p16) {}
-			instr_case_novalue(Op_trunc_p8_p32) {}
-			instr_case_novalue(Op_trunc_p8_p64) {}
-			instr_case_novalue(Op_trunc_p16_p32) {}
-			instr_case_novalue(Op_trunc_p16_p64) {}
-			instr_case_novalue(Op_trunc_p32_p64) {}
+			instr_case_novalue(
+				Op_trunc_p8_p16,
+				Op_trunc_p8_p32,
+				Op_trunc_p8_p64,
+				Op_trunc_p16_p32,
+				Op_trunc_p16_p64,
+				Op_trunc_p32_p64
+			) {}
 
 			// Int to Float
-			instr_case_novalue(Op_sitofp_p32_p8) {}
-			instr_case_novalue(Op_uitofp_p32_p8) {}
-			instr_case_novalue(Op_sitofp_p32_p16) {}
-			instr_case_novalue(Op_uitofp_p32_p16) {}
-			instr_case_novalue(Op_sitofp_p32_p32) {}
-			instr_case_novalue(Op_uitofp_p32_p32) {}
-			instr_case_novalue(Op_sitofp_p32_p64) {}
-			instr_case_novalue(Op_uitofp_p32_p64) {}
+			instr_case_novalue(
+				Op_sitofp_p32_p8,
+				Op_uitofp_p32_p8,
+				Op_sitofp_p32_p16,
+				Op_uitofp_p32_p16,
+				Op_sitofp_p32_p32,
+				Op_uitofp_p32_p32,
+				Op_sitofp_p32_p64,
+				Op_uitofp_p32_p64
+			) {}
 
-			instr_case_novalue(Op_sitofp_p64_p8) {}
-			instr_case_novalue(Op_uitofp_p64_p8) {}
-			instr_case_novalue(Op_sitofp_p64_p16) {}
-			instr_case_novalue(Op_uitofp_p64_p16) {}
-			instr_case_novalue(Op_sitofp_p64_p32) {}
-			instr_case_novalue(Op_uitofp_p64_p32) {}
-			instr_case_novalue(Op_sitofp_p64_p64) {}
-			instr_case_novalue(Op_uitofp_p64_p64) {}
+			instr_case_novalue(
+				Op_sitofp_p64_p8,
+				Op_uitofp_p64_p8,
+				Op_sitofp_p64_p16,
+				Op_uitofp_p64_p16,
+				Op_sitofp_p64_p32,
+				Op_uitofp_p64_p32,
+				Op_sitofp_p64_p64,
+				Op_uitofp_p64_p64
+			) {}
 
 			// Float to Int
-			instr_case_novalue(Op_fptosi_p8_p32) {}
-			instr_case_novalue(Op_fptoui_p8_p32) {}
-			instr_case_novalue(Op_fptosi_p16_p32) {}
-			instr_case_novalue(Op_fptoui_p16_p32) {}
-			instr_case_novalue(Op_fptosi_p32_p32) {}
-			instr_case_novalue(Op_fptoui_p32_p32) {}
-			instr_case_novalue(Op_fptosi_p64_p32) {}
-			instr_case_novalue(Op_fptoui_p64_p32) {}
+			instr_case_novalue(
+				Op_fptosi_p8_p32,
+				Op_fptoui_p8_p32,
+				Op_fptosi_p16_p32,
+				Op_fptoui_p16_p32,
+				Op_fptosi_p32_p32,
+				Op_fptoui_p32_p32,
+				Op_fptosi_p64_p32,
+				Op_fptoui_p64_p32
+			) {}
 
-			instr_case_novalue(Op_fptosi_p8_p64) {}
-			instr_case_novalue(Op_fptoui_p8_p64) {}
-			instr_case_novalue(Op_fptosi_p16_p64) {}
-			instr_case_novalue(Op_fptoui_p16_p64) {}
-			instr_case_novalue(Op_fptosi_p32_p64) {}
-			instr_case_novalue(Op_fptoui_p32_p64) {}
-			instr_case_novalue(Op_fptosi_p64_p64) {}
-			instr_case_novalue(Op_fptoui_p64_p64) {}
+			instr_case_novalue(
+				Op_fptosi_p8_p64,
+				Op_fptoui_p8_p64,
+				Op_fptosi_p16_p64,
+				Op_fptoui_p16_p64,
+				Op_fptosi_p32_p64,
+				Op_fptoui_p32_p64,
+				Op_fptosi_p64_p64,
+				Op_fptoui_p64_p64
+			) {}
 
 			// Float to float
-			instr_case_novalue(Op_fpext_p64_p32) {}
-			instr_case_novalue(Op_fptrunc_p32_p64) {}
+			instr_case_novalue(Op_fpext_p64_p32, Op_fptrunc_p32_p64) {}
 
 			instr_case_novalue(Op_add_p64_p64) {
 				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
@@ -1116,13 +1125,8 @@ class FunctionValidator {
 				if (instr.expected_type != wanted_type->getName())
 					throw VariantTypeMismatchError(instr);
 			}
-			instr_case_novalue(Op_label) {}
-			instr_case_novalue(Op_jmp_label) {}
-			instr_case_novalue(Op_jmpIf_label) {}
-			instr_case_novalue(Op_jmpIfNot_label) {}
-			instr_case_novalue(Op_call_func) {}
-			instr_case_novalue(Op_call_builtinfunc) {}
-			instr_case_novalue(Op_call_cfunc) {}
+			instr_case_novalue(Op_label, Op_jmp_label, Op_jmpIf_label, Op_jmpIfNot_label) {}
+			instr_case_novalue(Op_call_func, Op_call_builtinfunc, Op_call_cfunc) {}
 			instr_case_novalue(Op_set_threadctx) {}
 			instr_case(Op_virtual_call_pptr_method, instr) {
 				// For a method call to be valid it has to be present in the interface.
@@ -1138,13 +1142,8 @@ class FunctionValidator {
 				if (!inh_meta.available_methods.contains(instr.method.method_name))
 					throw InvalidVirtualCallError(instr);
 			}
-			instr_case_novalue(Op_ret_tailcall_func) {}
-			instr_case_novalue(Op_ret) {}
-			instr_case_novalue(Op_deinit) {}
-			instr_case_novalue(Op_input_p64) {}
-			instr_case_novalue(Op_output_p64) {}
-			instr_case_novalue(Op_input_p32) {}
-			instr_case_novalue(Op_output_p32) {}
+			instr_case_novalue(Op_ret_tailcall_func, Op_ret, Op_deinit) {}
+			instr_case_novalue(Op_input_p64, Op_output_p64, Op_input_p32, Op_output_p32) {}
 			instr_case(Op_setVTable_pptr_type, instr) {
 				const auto pointer_type = getPlaceType(instr.object_ptr, current_stack)
 				                              ->getKindAs<valid_type::finalized::Pointer>();
@@ -1389,10 +1388,7 @@ class FunctionValidator {
 				if (types_ctx.at(table_type->inner)->getName() != "byte")
 					throw DynamicTableTypeMismatchError(instr);
 			}
-			instr_case_novalue(Op_nop) {}
-			instr_case_novalue(Op_exit) {}
-			instr_case_novalue(Op_breakpoint) {}
-			instr_case_novalue(Op_initFromVmValue) {}
+			instr_case_novalue(Op_nop, Op_exit, Op_initFromVmValue) {}
 		}
 		POP_DIAGNOSTIC
 	}
