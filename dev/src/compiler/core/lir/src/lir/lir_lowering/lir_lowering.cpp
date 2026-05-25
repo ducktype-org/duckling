@@ -805,6 +805,21 @@ namespace compiler::lir {
 					CORE_UNREACHABLE();
 				}();
 
+				auto link_once = [&]() -> bool {
+					variant_match(key.function->helios_id) {
+						variant_case(mir::FunctionSymID, sym) {
+							if (not helios::symbolPst(sym.id)) {
+								// Symbol is generated, might result in duplicates across modules.
+								return true;
+							} else {
+								return false;
+							}
+						}
+						variant_case(mir::GlobalVariableCTOR, name) { return false; }
+					}
+					CORE_UNREACHABLE();
+				}();
+
 				auto mangled_name = [&]() {
 					variant_match(key.function->helios_id) {
 						variant_case(mir::FunctionSymID, name) {
@@ -831,6 +846,7 @@ namespace compiler::lir {
 
 				return Function{ .mangled_name       = mangled_name,
 					             .abi                = abi,
+					             .link_once          = link_once,
 					             .parameter_layouts  = std::move(parameter_types),
 					             .return_type_layout = return_type,
 					             .blocks             = std::move(blocks),
@@ -906,6 +922,7 @@ namespace compiler::lir {
 
 		return Function{ .mangled_name       = mangled_name,
 			             .abi                = helios::DefaultAbi{},
+			             .link_once          = false,
 			             .parameter_layouts  = {},
 			             .return_type_layout = return_type,
 			             .blocks             = std::move(blocks),
