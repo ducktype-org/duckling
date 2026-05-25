@@ -152,7 +152,7 @@ namespace vm::loader::compiler::safe {
 
 	std::pair<low::MicroBytecode, std::vector<vm::low::LowFuncData::InstructionRange>> SafeCompiler::
 		lowerInstructions(const vm::loader::compiler::detail::FunctionStackContext& ctx) {
-		detail::MicroBytecodeBuilder                        builder{ *this, ctx };
+		detail::SafeMicroBytecodeBuilder                        builder{ *this, ctx };
 		std::vector<vm::low::LowFuncData::InstructionRange> instruction_mapping;
 
 		for (const auto& instr: ctx.function.body) {

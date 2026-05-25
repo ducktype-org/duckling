@@ -64,7 +64,7 @@ namespace vm::loader::compiler::safe::detail {
 	 * Beside generating a vector of `MicroInstruction`s, this class also provides a map
 	 * from temporary label IDs to label offsets used later by `Compiler::linkLabelArguments`.
 	 */
-	class MicroBytecodeBuilder {
+	class SafeMicroBytecodeBuilder {
 		safe::SafeCompiler&                                       compiler;
 		const vm::loader::compiler::detail::FunctionStackContext& ctx;
 
@@ -79,7 +79,7 @@ namespace vm::loader::compiler::safe::detail {
 #endif
 
 	public:
-		MicroBytecodeBuilder(
+		SafeMicroBytecodeBuilder(
 			safe::SafeCompiler&                                       compiler,
 			const vm::loader::compiler::detail::FunctionStackContext& ctx
 		):
@@ -157,7 +157,7 @@ namespace vm::loader::compiler::safe::detail {
 		}
 	};
 
-	low::LowFuncData::InstructionRange MicroBytecodeBuilder::add(const code::Instruction& instruction
+	low::LowFuncData::InstructionRange SafeMicroBytecodeBuilder::add(const code::Instruction& instruction
 	) {
 #if (BUILD_TYPE_DEV_DEBUG)
 		current_high_instruction_representation = code::instructionToString(instruction);

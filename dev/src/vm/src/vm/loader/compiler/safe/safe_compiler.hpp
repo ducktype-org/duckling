@@ -9,7 +9,7 @@
 
 namespace vm::loader::compiler::safe {
 	namespace detail {
-		class MicroBytecodeBuilder;
+		class SafeMicroBytecodeBuilder;
 		template<typename ToType>
 		struct LowerArgumentImpl;
 
@@ -36,7 +36,7 @@ namespace vm::loader::compiler::safe {
 	}
 
 	class SafeCompiler final: public vm::loader::compiler::IVMCompiler {
-		friend class detail::MicroBytecodeBuilder;
+		friend class detail::SafeMicroBytecodeBuilder;
 		template<typename ToType>
 		friend struct detail::LowerArgumentImpl;
 

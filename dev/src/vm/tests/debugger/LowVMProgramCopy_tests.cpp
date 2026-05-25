@@ -28,7 +28,7 @@ private:
 
 		ASSERT_EQUAL(program_copy.getOriginalProgram(), program);
 
-		ASSERT_TRUE(loader.loadAndCompile({ { path("breakpoint.dbc") } }).has_value());
+		ASSERT_TRUE(loader.load({ { path("breakpoint.dbc") } }).has_value());
 		compiler.recompile();
 
 		ASSERT_TRUE(program->getFunctions().size());

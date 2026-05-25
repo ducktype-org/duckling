@@ -66,20 +66,10 @@ namespace vm::loader::compiler {
 		virtual ~IVMCompiler() = default;
 
 		/**
-		 * @brief Incrementally recompiles and updates the internal low-level program.
-		 * This is the main entry point for the compiler. It compares the provided `high_program`
-		 * with its internal state to identify new types, globals, and functions. It then
-		 * compiles only the new elements and adds them to the internal low-level program.
-		 *
-		 * @param high_program The new, complete, and validated high-level program representation.
-		 *
-		 * @note The compilation never fails as the given code was statically verified.
-		 *
-		 * @warning This function is stateful and operates incrementally. It is crucial
-		 * that `high_program` passed to this function is an extension of the one from the
-		 * previous call. The compiler assumes that the existing set of program elements (types,
-		 * functions, etc.) is a stable prefix of the new set. Passing a completely unrelated
-		 * `ValidProgram` will lead to an invalid internal state and incorrect compilation.
+		 * @brief Incrementally re-compiles and updates the internal low-level program.
+		 * This is the main entry point for the compiler. It compares the size of `high_program`
+		 * with sizes from `getCurrentProgramSize()` to identify new types, globals, and functions.
+		 * It then compiles only the new elements.
 		 */
 		void recompile();
 
@@ -119,7 +109,8 @@ namespace vm::loader::compiler {
 		 * @brief Compiles newly added ExternCFunctions and adds the compiled functions to the
 		 * internal `low_program.extern_c_functions`.
 		 */
-		virtual void compileNewExtCFunctions(const std::vector<code::ExternalCFunction>& new_functions
+		virtual void compileNewExtCFunctions(
+			const std::vector<code::ExternalCFunction>& new_functions
 		) = 0;
 
 		/**
