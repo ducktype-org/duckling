@@ -138,6 +138,9 @@ namespace vm {
 		std::vector<api::ThreadID> getAllThreadIDs() override;
 
 		void onTerminalStatus(const api::ProcStatus& status) noexcept override;
+		std::expected<api::Response, api::ApiError> setBreakpoint(
+			base::StrID function_name, usize instruction_index, bool enable
+		) override;
 
 		/**
 		 * @brief Updates the memory for globals of this process after loading a program with new

@@ -113,8 +113,14 @@ namespace vm {
 			variant_case_novalue(api::request::DeinitAndValidate) { return deinitAndValidate(); }
 
 			variant_case(api::request::AttachStatusListener, request) {
-				on_status_change.attachListener(request.listener);
+				on_status_changed.attachListener(request.listener);
 				return api::Response(api::response::Empty());
+			}
+
+			variant_case(api::request::SetBreakpoint, request) {
+				return setBreakpoint(
+					request.function_name, request.instruction_index, request.enable
+				);
 			}
 
 			variant_default { return api::Response(api::response::Empty()); }

@@ -9,7 +9,7 @@ Tests:
         Input:
           File: "basic_declarations/basic_declarations.rtf"
         Output:
-          String: "@{beginning}\n@{instruction_prompt}=> 42\n@{end}"
+          String: "@{beginning}\n=> 42\n@{end}"
     
   possible_conflicts:
     Enabled: "false"

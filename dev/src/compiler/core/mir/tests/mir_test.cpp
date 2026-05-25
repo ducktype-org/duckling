@@ -202,15 +202,16 @@ private:
 		withContextDo([&](query::Context& ctx) {
 			auto& unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
 			auto& functions = unit.functions;
-			ASSERT_EQUAL(3, functions.size());
-			ASSERT_EQUAL(base::StrID("foo"), functions.at(0)->declaration->original_name);
+			ASSERT_EQUAL_PRINT(3, functions.size());
+			ASSERT_EQUAL_PRINT(base::StrID("foo"), functions.at(0)->declaration->original_name);
 
 			auto& foo_mir
 				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(0) })->valueOrThrow();
 
-			ASSERT_EQUAL(foo_mir.name, base::StrID("foo"));
-			ASSERT_EQUAL(foo_mir.block_order.size(), 7);
-			ASSERT_EQUAL(foo_mir.local_list.size(), 5);
+
+			ASSERT_EQUAL_PRINT(foo_mir.name, base::StrID("foo"));
+			ASSERT_EQUAL_PRINT(foo_mir.block_order.size(), 7);
+			ASSERT_EQUAL_PRINT(foo_mir.local_list.size(), 5);
 
 			auto get_block_terminator
 				= [&](u64 block_id) { return foo_mir.blocks[BlockID(block_id)].terminator; };

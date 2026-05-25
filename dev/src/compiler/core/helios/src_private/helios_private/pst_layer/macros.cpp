@@ -46,8 +46,10 @@ namespace compiler::helios {
 				    // the expand path.
 					hashing::ComponentHash({}, expand->getHash().toStringHex())
 				);
+				bool parse_errors = pst.hasErrors();
 
-				if (pst.hasErrors()) return query::Failed();
+				ctx.moveDiagnosticsFrom(*pst.getLoggerMut());
+				if (parse_errors) return query::Failed();
 
 				if (pst.getRootElement().unlockOpt(ctx).has_value()) {
 					pst.setAdditionalRootData(pst::AdditionalRootData{

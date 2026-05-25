@@ -279,20 +279,25 @@ namespace compiler::helios {
 			);
 		}
 		case pst::StmtKind::Using: {
-			auto using_stmt = stmt.dynamicCast<pst::Using>().value();
+			auto  using_stmt  = stmt.dynamicCast<pst::Using>().value();
+			auto  pointed     = using_stmt->getPointed().unlock(ctx);
+			bool  is_wildcard = pointed->getStar();
+			usize size        = pointed->numberOfNames();
+
+			std::vector<tpc::Identifier> target(size);
+			for (usize i = 0; i < size; i++)
+				target[i] = { .value = pointed->getNameByIndex(i).unlock(ctx)->unwrap() };
+
 			return SymbolData::makePSTSymbolData(
 				{
-					.name        = base::StrID(base::strConcat(
-                                            "<USING> ",
-                                            using_stmt->getPointed()
-                                                .unlock(ctx)
-                                                ->getNameByIndex(0)
-                                                .unlock(ctx)
-                                                ->unwrap()
-                    )
-                                            .c_str()),
+					.name
+					= is_wildcard
+			            ? base::StrID(
+							  base::strConcat("<WILDCARD USING> ", target.front().value).c_str()
+						  )
+			            : target.back().value,
 					.kind        = SymbolKind::Using,
-					.is_wildcard = true,
+					.is_wildcard = is_wildcard,
 					.is_alias    = true,
 				},
 				pst_data
