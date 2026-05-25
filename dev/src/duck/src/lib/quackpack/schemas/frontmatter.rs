@@ -16,3 +16,9 @@ pub struct FrontMatter {
     /// `import:` root field
     pub import: Option<PathBuf>,
 }
+
+impl FrontMatter {
+    pub fn is_just_import(&self) -> bool {
+        self.dependencies.is_none() && self.dev_dependencies.is_none() && self.profiles.is_none()
+    }
+}
