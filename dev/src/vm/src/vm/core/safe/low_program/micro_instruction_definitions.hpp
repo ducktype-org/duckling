@@ -413,7 +413,7 @@ DEF_MICRO_INSTR(ret)
 
 // ComputedConstant represent stack offset at which operation is performed.
 // initialize local variable on local stack with given type at specified offset.
-DEF_MICRO_INSTR(init_bany_type, vm::low::opargs::ComputedConstant, vm::low::opargs::Type)
+DEF_MICRO_INSTR(init_cc_type, vm::low::opargs::ComputedConstant, vm::low::opargs::Type)
 // deinitialize local variable on the top of local stack.
 DEF_MICRO_INSTR(deinit)
 
