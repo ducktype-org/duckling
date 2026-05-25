@@ -62,6 +62,7 @@ RUN apt-get update -y && \
     software-properties-common \
     rsync \
     nlohmann-json3-dev \
+    nano \
     && \
     # Make g++-14 default
     update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-14 100 && \
@@ -100,6 +101,10 @@ ARG DEFAULT_USER=ubuntu
 
 RUN groupmod -g ${GID} ubuntu && \
     usermod -u ${UID} -g ${GID} ubuntu
+
+RUN if [ "$DEFAULT_USER" = "root" ]; then \
+        rm -rf /root/.ssh && ln -s /home/ubuntu/.ssh /root/.ssh; \
+    fi
 
 USER ${DEFAULT_USER}
 
