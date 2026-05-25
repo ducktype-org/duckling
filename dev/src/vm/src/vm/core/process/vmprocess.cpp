@@ -157,14 +157,14 @@ namespace vm {
 	}
 
 	bool IVMProcess::setStatusIfNotTerminal(const api::ProcStatus& new_status) noexcept {
-		bool updated = false;
+		bool            updated = false;
 		api::ProcStatus emitted_status;
 		{
 			std::unique_lock<std::shared_mutex> lock(rw_status);
 			if (!api::isStatusTerminal(status)) {
-				status = new_status;
+				status         = new_status;
 				emitted_status = new_status;
-				updated = true;
+				updated        = true;
 			}
 		}
 		if (updated) {

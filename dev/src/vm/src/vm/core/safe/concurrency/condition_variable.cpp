@@ -1,11 +1,13 @@
 #include "condition_variable.hpp"
 
-#include <chrono>
-
 #include <vm/core/safe/exceptions.hpp>
 
+#include <chrono>
+
 namespace vm {
-	bool ConditionVariable::wait(std::timed_mutex& mutex, const std::function<bool()>& should_interrupt) {
+	bool ConditionVariable::wait(
+		std::timed_mutex& mutex, const std::function<bool()>& should_interrupt
+	) {
 		std::timed_mutex* expected  = nullptr;
 		std::timed_mutex* mutex_ptr = &mutex;
 		if (!bound_mutex.compare_exchange_strong(expected, mutex_ptr) && expected != mutex_ptr)
@@ -15,9 +17,7 @@ namespace vm {
 
 		std::unique_lock<std::timed_mutex> lock(mutex, std::adopt_lock);
 		while (true) {
-			if (should_interrupt()) {
-				return true;
-			}
+			if (should_interrupt()) return true;
 			if (cv.wait_for(lock, std::chrono::milliseconds{ 100 }) == std::cv_status::no_timeout) {
 				lock.release();
 				return false;

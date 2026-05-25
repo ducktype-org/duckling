@@ -183,7 +183,8 @@ namespace vm {
 		 * Called without holding `rw_status` lock.
 		 */
 		virtual void onTerminalStatus(const api::ProcStatus&) noexcept {}
-		/** 
+
+		/**
 		 * @brief Enables or disables breakpoint on a given instruction in a given function.
 		 * @note Enabling a breakpoint on an instruction that already has a breakpoint or disabling
 		 * a breakpoint on an instruction that doesn't have a breakpoint is considered successful

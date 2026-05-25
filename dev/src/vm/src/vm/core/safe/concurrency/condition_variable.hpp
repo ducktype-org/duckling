@@ -3,16 +3,16 @@
 #include <base/pointers/ref.hpp>
 #include <base/types/ints.hpp>
 
-#include <functional>
 #include <atomic>
 #include <condition_variable>
+#include <functional>
 #include <mutex>
 
 namespace vm {
 
 	class ConditionVariable final {
 	private:
-		std::condition_variable_any      cv;
+		std::condition_variable_any    cv;
 		std::atomic<std::timed_mutex*> bound_mutex{ nullptr };
 
 	public:

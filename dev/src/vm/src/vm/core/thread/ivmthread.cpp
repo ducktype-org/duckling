@@ -63,9 +63,9 @@ void vm::IVMThread::respondExecutionRequest(const api::ProcStatus& response) {
 
 void vm::IVMThread::setProcessStatus(const vm::api::ProcStatus& new_status) {
 	setThreadStatus(new_status);
-	const bool is_main_thread = thread_id.asInt() == 0;
+	const bool is_main_thread      = thread_id.asInt() == 0;
 	const bool is_terminal_failure = std::holds_alternative<api::ExecutionPanicked>(new_status)
-		|| std::holds_alternative<api::ExecutionStopped>(new_status);
+	                              || std::holds_alternative<api::ExecutionStopped>(new_status);
 
 	if (is_main_thread) {
 		my_process.setStatus(new_status);

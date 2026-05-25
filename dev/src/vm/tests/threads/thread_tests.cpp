@@ -28,7 +28,7 @@ private:
 	void multithreadZeroDiv() {
 		// Spawn a thread that performs division by zero on i32 and verify VM panicked
 		assertExecutionPanickedWith(
-			runTestOnVmGetResult("multithread_zero_div.dbc"), 
+			runTestOnVmGetResult("multithread_zero_div.dbc"),
 			vm::exceptions::VMZeroDivisionException::ERR_MSG
 		);
 		// Spawn a thread that performs division by zero on i64 and verify VM panicked
@@ -38,7 +38,7 @@ private:
 		);
 		// Start a worker thread, let it run, then verify the main thread panics.
 		assertExecutionPanickedWith(
-			runTestOnVmGetResult("main_thread_zero_div.dbc"), 
+			runTestOnVmGetResult("main_thread_zero_div.dbc"),
 			vm::exceptions::VMZeroDivisionException::ERR_MSG
 		);
 		// Two threads in active zero-division with workers still alive

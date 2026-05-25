@@ -12,8 +12,8 @@
 #include <vm/core/safe/concurrency/synchronization_primitives.hpp>
 #include <vm/core/safe/safe_vmprocess.hpp>
 #include <vm/core/safe/safe_vmthread.hpp>
-#include <vm/core/thread/kill_process_exception.hpp>
 #include <vm/core/safe/type_metadata/definitions.hpp>
+#include <vm/core/thread/kill_process_exception.hpp>
 #include <vm/core/vmvalue/vmvalue.hpp>
 
 #include <chrono>
@@ -169,10 +169,9 @@ namespace vm::builtins {
 
 		thread.releaseGil();
 		try {
-			const bool interrupted = cv->wait(*mutex, [&thread] { return thread.isTerminateRequested(); });
-			if (interrupted) {
-				throw vm::KillProcessException{};
-			}
+			const bool interrupted
+				= cv->wait(*mutex, [&thread] { return thread.isTerminateRequested(); });
+			if (interrupted) throw vm::KillProcessException{};
 		} catch (const vm::exceptions::VMRuntimeException&) {
 			// Ensure the GIL is held again before propagating VM runtime exceptions.
 			thread.acquireGil();

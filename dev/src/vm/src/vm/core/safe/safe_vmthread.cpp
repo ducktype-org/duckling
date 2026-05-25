@@ -597,13 +597,12 @@ namespace vm {
 				CORE_UNREACHABLE();
 			}();
 
-			const auto exit_value = executeFunction(start_function, func);
+			const auto exit_value     = executeFunction(start_function, func);
 			const auto current_status = safe_process.getCurrentStatus();
-			if (api::isStatusTerminal(current_status)) {
+			if (api::isStatusTerminal(current_status))
 				respondExecutionRequest(current_status);
-			} else {
+			else
 				respondExecutionRequest(api::ExecutionCompleted{ exit_value });
-			}
 		} catch (const KillProcessException& e) {
 			respondExecutionRequest(api::ExecutionPanicked{ e.what() });
 		}
