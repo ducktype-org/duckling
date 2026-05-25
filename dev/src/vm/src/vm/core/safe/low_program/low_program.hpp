@@ -3,6 +3,7 @@
  */
 #pragma once
 
+#include "cfg/cf_graph.hpp"
 #include "instruction.hpp"
 
 #include <base/pointers/box.hpp>
@@ -23,7 +24,10 @@ namespace vm::low {
 	 * @brief Micro bytecode representation of function data.
 	 */
 	struct LowFuncData {
-		base::StrID   name;
+		base::StrID name;
+#ifdef ENABLE_JIT
+		cf::ControlFlowGraph cfg;
+#endif
 		MicroBytecode bc;
 
 		/// The maximum size of the local variables on stack required by the function frame.
@@ -247,12 +251,13 @@ namespace vm::low {
 		 * @returns Original opcode from provided location on success and `nullopt` if location does
 		 * not exist.
 		 */
+		template<typename FID>
 		base::Optional<MicroOpcode> replaceOpcode(
-			usize function_id, usize instruction_index, MicroOpcode opcode
+			FID function_id, usize instruction_index, MicroOpcode opcode
 		) {
 			if (!functions.contains(function_id)) return std::nullopt;
 
-			auto& microbytecode = functions[function_id].bc;
+			auto& microbytecode = functions.at(function_id)->bc;
 			if (microbytecode.size() <= instruction_index) return std::nullopt;
 
 			auto&       instruction     = microbytecode[instruction_index];

@@ -137,6 +137,10 @@ namespace vm {
 
 		std::vector<api::ThreadID> getAllThreadIDs() override;
 
+		std::expected<api::Response, api::ApiError> setBreakpoint(
+			base::StrID function_name, usize instruction_index, bool enable
+		) override;
+
 		/**
 		 * @brief Updates the memory for globals of this process after loading a program with new
 		 * globals. Works in incremental way. Only supports adding new globals, not removing or

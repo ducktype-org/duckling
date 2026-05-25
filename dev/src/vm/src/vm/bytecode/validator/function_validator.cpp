@@ -1388,7 +1388,7 @@ class FunctionValidator {
 				if (types_ctx.at(table_type->inner)->getName() != "byte")
 					throw DynamicTableTypeMismatchError(instr);
 			}
-			instr_case_novalue(Op_nop, Op_exit, Op_breakpoint, Op_initFromVmValue) {}
+			instr_case_novalue(Op_nop, Op_exit, Op_initFromVmValue) {}
 		}
 		POP_DIAGNOSTIC
 	}
