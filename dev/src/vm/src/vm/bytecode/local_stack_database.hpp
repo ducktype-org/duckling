@@ -11,10 +11,10 @@
 
 #include <vm/bytecode/validator/valid_type/type_size.hpp>
 #include <vm/bytecode/validator/valid_type/valid_type.hpp>
+#include <vm/utils/persistent/dummy/hashmap.hpp>
+#include <vm/utils/persistent/dummy/vector.hpp>
 
 #include <utility>
-#include <vm/utils/persistent/dummy/vector.hpp>
-#include <vm/utils/persistent/dummy/hashmap.hpp>
 
 namespace vm::code {
 

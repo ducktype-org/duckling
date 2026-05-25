@@ -4,7 +4,6 @@
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
-
 namespace vm::persistent {
 
 	template<typename Key, typename Val, typename Hasher = std::hash<Key>>
