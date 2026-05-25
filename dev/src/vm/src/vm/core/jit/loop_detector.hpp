@@ -4,12 +4,16 @@
  */
 #pragma once
 
-#include "cf_graph.hpp"
+#include <vm/core/safe/low_program/cfg/cf_graph.hpp>
 
 #include <limits>
 #include <vector>
 
 namespace vm::jit::cf {
+	using vm::low::cf::BasicBlock;
+	using vm::low::cf::BasicBlockID;
+	using vm::low::cf::ControlFlowGraph;
+
 	class LoopDetector;
 
 	/**
@@ -22,11 +26,15 @@ namespace vm::jit::cf {
 		 * @param cfg Original control-flow graph.
 		 * @param members Block IDs that are part of the loop.
 		 */
-		Loop(BlockID start_block, const ControlFlowGraph& cfg, const std::vector<BlockID>& members):
+		Loop(
+			BasicBlockID                     start_block,
+			const ControlFlowGraph&          cfg,
+			const std::vector<BasicBlockID>& members
+		):
 			  start_block(start_block),
 			  loop_cfg(cfg.subgraph(members)) {}
 
-		BlockID          start_block;
+		BasicBlockID     start_block;
 		ControlFlowGraph loop_cfg;
 	};
 
@@ -48,17 +56,17 @@ namespace vm::jit::cf {
 			calcPredecessors(cfg);
 			calcDominators(cfg);
 
-			std::vector<u32>     last_visited(cfg.size(), 0);
-			u32                  timestamp = 0;
-			std::vector<BlockID> stack;
-			usize                stack_ptr = 0;
+			std::vector<u32>          last_visited(cfg.size(), 0);
+			u32                       timestamp = 0;
+			std::vector<BasicBlockID> stack;
+			usize                     stack_ptr = 0;
 
-			for (BlockID bid = 0; bid < cfg.size(); ++bid) {
+			for (BasicBlockID bid = 0; bid < cfg.size(); ++bid) {
 				stack.clear();
 				stack_ptr = 0;
 				++timestamp;
 
-				for (BlockID pred: predecessors[bid]) {
+				for (BasicBlockID pred: predecessors[bid]) {
 					if (isDominatedBy(pred, bid)) {
 						last_visited[pred] = timestamp;
 						stack.push_back(pred);
@@ -66,7 +74,7 @@ namespace vm::jit::cf {
 				}
 
 				while (stack_ptr < stack.size()) {
-					BlockID current = stack[stack_ptr++];
+					BasicBlockID current = stack[stack_ptr++];
 					if (current == bid) continue;
 
 					for (const auto& next: predecessors[current]) {
@@ -87,16 +95,16 @@ namespace vm::jit::cf {
 		/**
 		 * @brief Sentinel value for undefined block identifiers.
 		 */
-		const BlockID undefined = std::numeric_limits<BlockID>::max();
+		const BasicBlockID undefined = std::numeric_limits<BasicBlockID>::max();
 
-		std::vector<bool>                 visited;
-		std::vector<u32>                  postorder;
-		std::vector<BlockID>              inv_postorder_map;
-		std::vector<std::vector<BlockID>> predecessors;
+		std::vector<bool>                      visited;
+		std::vector<u32>                       postorder;
+		std::vector<BasicBlockID>              inv_postorder_map;
+		std::vector<std::vector<BasicBlockID>> predecessors;
 
-		std::vector<BlockID>              imm_dom;
-		std::vector<std::vector<BlockID>> dom_tree;
-		std::vector<std::pair<u32, u32>>  dom_tree_timestamps;
+		std::vector<BasicBlockID>              imm_dom;
+		std::vector<std::vector<BasicBlockID>> dom_tree;
+		std::vector<std::pair<u32, u32>>       dom_tree_timestamps;
 
 		/**
 		 * @brief DFS traversal assigning postorder indices.
@@ -104,12 +112,12 @@ namespace vm::jit::cf {
 		 * @param bid Currently visited block.
 		 * @param ctr Running postorder counter.
 		 */
-		void postorderDfs(const ControlFlowGraph& cfg, BlockID bid, u32& ctr) {
+		void postorderDfs(const ControlFlowGraph& cfg, BasicBlockID bid, u32& ctr) {
 			visited[bid]            = true;
 			const BasicBlock& block = cfg.getBlock(bid);
 
 			for (usize i = 0; i < block.edgeCount(); ++i) {
-				BlockID target_id = block.edge(i);
+				BasicBlockID target_id = block.edge(i);
 				if (!visited[target_id]) postorderDfs(cfg, target_id, ctr);
 			}
 
@@ -134,12 +142,12 @@ namespace vm::jit::cf {
 		 * @param cfg Control-flow graph.
 		 */
 		void calcPredecessors(const ControlFlowGraph& cfg) {
-			predecessors.assign(cfg.size(), std::vector<BlockID>());
+			predecessors.assign(cfg.size(), std::vector<BasicBlockID>());
 
 			for (usize block_id = 0; block_id < cfg.size(); ++block_id) {
 				const BasicBlock& block = cfg.getBlock(block_id);
 				for (usize i = 0; i < block.edgeCount(); ++i) {
-					BlockID target_id = block.edge(i);
+					BasicBlockID target_id = block.edge(i);
 					predecessors[target_id].push_back(block_id);
 				}
 			}
@@ -151,7 +159,7 @@ namespace vm::jit::cf {
 		 * @param b2 Second block.
 		 * @return Nearest common dominator in current idom state.
 		 */
-		[[nodiscard]] BlockID intersect(BlockID b1, BlockID b2) const {
+		[[nodiscard]] BasicBlockID intersect(BasicBlockID b1, BasicBlockID b2) const {
 			while (b1 != b2) {
 				while (postorder[b1] < postorder[b2]) b1 = imm_dom[b1];
 				while (postorder[b2] < postorder[b1]) b2 = imm_dom[b2];
@@ -174,14 +182,14 @@ namespace vm::jit::cf {
 			while (changed) {
 				changed = false;
 				for (usize i = cfg.size() - 1; i > 0; --i) {
-					BlockID b = inv_postorder_map[i];
+					BasicBlockID b = inv_postorder_map[i];
 					CORE_ASSERT(
 						!predecessors[b].empty(), "All blocks except entry should have predecessors"
 					);
-					BlockID new_idom = predecessors[b][0];
+					BasicBlockID new_idom = predecessors[b][0];
 
 					for (usize j = 1; j < predecessors[b].size(); ++j) {
-						BlockID p = predecessors[b][j];
+						BasicBlockID p = predecessors[b][j];
 						if (imm_dom[p] != undefined) new_idom = intersect(p, new_idom);
 					}
 
@@ -198,9 +206,9 @@ namespace vm::jit::cf {
 		 * @param bid Current dominator tree node.
 		 * @param time Running DFS timestamp.
 		 */
-		void domTreeTimestampDfs(BlockID bid, u32& time) {
+		void domTreeTimestampDfs(BasicBlockID bid, u32& time) {
 			dom_tree_timestamps[bid].first = time++;
-			for (BlockID child_id: dom_tree[bid]) domTreeTimestampDfs(child_id, time);
+			for (BasicBlockID child_id: dom_tree[bid]) domTreeTimestampDfs(child_id, time);
 			dom_tree_timestamps[bid].second = time++;
 		}
 
@@ -211,9 +219,9 @@ namespace vm::jit::cf {
 		void calcDominators(const ControlFlowGraph& cfg) {
 			calcImmediateDominators(cfg);
 
-			dom_tree.assign(cfg.size(), std::vector<BlockID>());
+			dom_tree.assign(cfg.size(), std::vector<BasicBlockID>());
 			for (usize block_id = 1; block_id < cfg.size(); ++block_id) {
-				BlockID idom = imm_dom[block_id];
+				BasicBlockID idom = imm_dom[block_id];
 				dom_tree[idom].push_back(block_id);
 			}
 
@@ -230,7 +238,7 @@ namespace vm::jit::cf {
 		 * @return True if domid dominates bid.
 		 * @note Requires dominator timestamps to be precomputed.
 		 */
-		[[nodiscard]] bool isDominatedBy(BlockID bid, BlockID domid) const {
+		[[nodiscard]] bool isDominatedBy(BasicBlockID bid, BasicBlockID domid) const {
 			return dom_tree_timestamps[domid].first <= dom_tree_timestamps[bid].first
 			    && dom_tree_timestamps[bid].second <= dom_tree_timestamps[domid].second;
 		}
