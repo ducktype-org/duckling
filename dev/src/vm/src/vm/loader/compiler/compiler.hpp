@@ -167,12 +167,6 @@ namespace vm::loader::compiler {
 		void compileNewExtCFunctions(const std::vector<code::ExternalCFunction>& new_functions);
 
 		/**
-		 * @brief Seeks the number of parameters and return values of a method with the given name.
-		 */
-		base::Optional<std::pair<u64, u64>> seekMethodParamRetCount(const base::StrID& method_name
-		) const;
-
-		/**
 		 * @brief Calculates label positions in high bytecode.
 		 * @note Used only for graph traversing, not for lowering.
 		 */
