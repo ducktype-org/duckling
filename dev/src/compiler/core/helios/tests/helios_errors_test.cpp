@@ -425,6 +425,18 @@ private:
 				1
 			);
 
+			// @TODO: #1488 Enable this test when fixed.
+			// checkForErrorOnCompileModule(
+			// 	R"(
+			// 	fun main() = {
+			// 		var const_dyn_arr: List[const i32];
+			// 		# Mutable iterator, but array stores immutable
+			// 		for (var x in const_dyn_arr) {}
+			// 	}
+			// )",
+			// 	{ "Cannot coerce collection element type 'const i32' to iterator type 'i32'." },
+			// 	1
+			// );
 
 			checkForErrorOnCompileModule(
 				R"(
@@ -883,6 +895,17 @@ private:
 				};
 			)",
 				{ "Copy constructor for non-trivially-copyable type `List[i32]`" },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				R"(
+				fun main() -> i64 = {
+					var dyn_matrix: List[List[i64]];
+					for (row in dyn_matrix) {} # `row` creates a copy.
+				};
+			)",
+				{ "Copy constructor for non-trivially-copyable type `List[i64]`" },
 				1
 			);
 

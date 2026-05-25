@@ -32,15 +32,25 @@ namespace compiler::helios::desugaring {
 			code::ElementOrigin iterable_origin;
 			code::ElementOrigin iterator_origin;
 
-			tsh::SymbolType<> u64_mut_type;
-			tsh::SymbolType<> u64_immut_type;
-
 			// Iterable info.
 			tsh::SymbolType<> iterable_type;
 			bool              collection_is_l_value;
 			tsh::SymbolType<> col_type;
 			Box<code::Expr>   iterable_hout;
 		};
+
+		tsh::SymbolType<> getU64(query::Context& ctx) {
+			return tsh::SymbolType<>::withDefaults(
+				tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned)
+			);
+		}
+
+		tsh::SymbolType<> getConstU64(query::Context& ctx) {
+			return tsh::SymbolType<>::withDefaults(
+					   tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned)
+			)
+			    .withMutability(tsh::Mutability::Immutable);
+		}
 
 		base::Optional<ForDesugarCtx> buildForDesugarCtx(
 			query::Context& ctx, pst::Access<pst::For> stmt
@@ -68,10 +78,6 @@ namespace compiler::helios::desugaring {
 				return {};
 			}
 
-			auto u64_mut = tsh::SymbolType<>::withDefaults(
-				tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned)
-			);
-
 			return ForDesugarCtx{
 				.ctx                   = ctx,
 				.stmt                  = stmt,
@@ -79,8 +85,6 @@ namespace compiler::helios::desugaring {
 				.loop_origin           = code::pstOrigin(stmt),
 				.iterable_origin       = code::pstOrigin(iterable_pst),
 				.iterator_origin       = code::pstOrigin(stmt->getIteratorIdentifier().unlock(ctx)),
-				.u64_mut_type          = u64_mut,
-				.u64_immut_type        = u64_mut.withMutability(tsh::Mutability::Immutable),
 				.iterable_type         = iterable_type,
 				.collection_is_l_value = not iterable_is_r_value,
 				.col_type              = iterable_is_r_value
@@ -96,12 +100,11 @@ namespace compiler::helios::desugaring {
 			auto unique = ctx.for_scope.queryUnstablePerfectHash();
 			auto name   = base::StrID(base::strConcat(role, unique));
 
-			using GeneratedSymbolData = defgen::GeneratedSymbolData;
-			using ControlFlowLocal    = GeneratedSymbolData::ControlFlowLocal;
 
 			return ctx.ctx.query<defgen::QueryGeneratedSymbol>({
-				.name                  = name,
-				.generated_symbol_data = GeneratedSymbolData{ ControlFlowLocal{
+				.name = name,
+				.generated_symbol_data
+				= defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::ControlFlowLocal{
 					.owning_scope = ctx.for_scope,
 					.role         = role,
 					.type         = type,
@@ -136,9 +139,9 @@ namespace compiler::helios::desugaring {
 			return makeBox<code::VariableStmt>(
 				code::generatedOrigin(),
 				makeBox<code::DefaultValueExpr>(
-					ctx.ctx, code::generatedOrigin(), ctx.u64_mut_type.getType()
+					ctx.ctx, code::generatedOrigin(), getU64(ctx.ctx).getType()
 				),
-				ctx.u64_mut_type,
+				getU64(ctx.ctx),
 				idx_sym
 			);
 		}
@@ -174,7 +177,7 @@ namespace compiler::helios::desugaring {
 						ctx.ctx,
 						gen,
 						compiler::numeric_value::NumericValue::createOfType<u64>(
-							ctx.u64_immut_type.getType(), size
+							getConstU64(ctx.ctx).getType(), size
 						)
 							.value()
 					);
@@ -185,7 +188,7 @@ namespace compiler::helios::desugaring {
 			}();
 
 			return makeBox<code::VariableStmt>(
-				ctx.loop_origin, std::move(len_expr), ctx.u64_immut_type, len_sym
+				ctx.loop_origin, std::move(len_expr), getConstU64(ctx.ctx), len_sym
 			);
 		}
 
@@ -201,41 +204,9 @@ namespace compiler::helios::desugaring {
 			);
 		}
 
-		// Apply implicit coercion from the collection's element type to the
-		// user-declared iterator type. Returns nullopt and logs an error if no
-		// coercion exists.
-		base::Optional<Box<code::Expr>> coerceElementToIter(
-			const ForDesugarCtx& ctx, Box<code::Expr> element_expr, tsh::SymbolType<> iter_type
-		) {
-			auto element_sym_type = element_expr->expression_type.getSymbolType();
-			auto coercion_res     = canCoerce(ctx.ctx, element_sym_type, iter_type);
-			if (coercion_res.hasFailed()) return {};
-
-			base::Optional<Box<code::Expr>> result;
-			variant_match(coercion_res.valueOrThrow().getVariant()) {
-				variant_case(Coercion, coercion) {
-					result = coercion.coerce(ctx.ctx, std::move(element_expr));
-				}
-				variant_default {
-					ctx.ctx.logInt(makeBox<dia_int::PlaceholderError>(
-						base::strConcat(
-							"Cannot coerce collection element type '",
-							element_sym_type.toString(),
-							"' to iterator type '",
-							iter_type.toString(),
-							"'."
-						),
-						ctx.stmt->getIterable().unlock(ctx.ctx)->getStablePosition()
-					));
-				}
-			}
-			return result;
-		}
-
-		// Build the body of the while loop:
-		//   let <iter> = __collection[__idx];
-		//   <body>;
-		//   __idx = __idx + 1;
+		// let <iter> = __collection[__idx];
+		// <body>;
+		// __idx = __idx + 1;
 		base::Optional<code::CodeBlock> buildWhileBody(
 			const ForDesugarCtx& ctx,
 			SymID                col_sym,
@@ -263,7 +234,26 @@ namespace compiler::helios::desugaring {
 			Box<code::Expr> raw_element
 				= makeBox<code::IndexExpr>(ctx.ctx, gen, std::move(collection_expr), idx_ref());
 
-			auto element_expr = coerceElementToIter(ctx, std::move(raw_element), iter_type);
+			auto iter_pst_pos     = ctx.stmt->getIterable().unlock(ctx.ctx)->getStablePosition();
+			auto element_sym_type = raw_element->expression_type.getSymbolType();
+			auto element_expr     = coerceFromBox(
+                ctx.ctx,
+                std::move(raw_element),
+                iter_type,
+                iter_pst_pos,
+                [&](query::Context& error_ctx) {
+                    error_ctx.logInt(makeBox<dia_int::PlaceholderError>(
+                        base::strConcat(
+                            "Cannot coerce collection element type '",
+                            element_sym_type.toString(),
+                            "' to iterator type '",
+                            iter_type.toString(),
+                            "'."
+                        ),
+                        iter_pst_pos
+                    ));
+                }
+            );
 			if (!element_expr.has_value()) return {};
 
 			code::CodeBlock body{};
@@ -283,7 +273,7 @@ namespace compiler::helios::desugaring {
 				ctx.ctx,
 				gen,
 				compiler::numeric_value::NumericValue::createOfType<u64>(
-					ctx.u64_mut_type.getType(), 1
+					getU64(ctx.ctx).getType(), 1
 				)
 					.value()
 			);
@@ -319,9 +309,10 @@ namespace compiler::helios::desugaring {
 			case tsh::Kind::StaticArray:
 				return iterable_type.getType().as<tsh::StaticArrayAbstractType>().getElementType();
 			default:
+				// The unsupported collection error is logged in `desugarFor`, so here we just throw.
 				query::throwFailed();
-				CORE_UNREACHABLE();
 			}
+			CORE_UNREACHABLE();
 		}();
 
 		// Get the type if it exists.
@@ -367,8 +358,8 @@ namespace compiler::helios::desugaring {
 
 		// Create the needed symbols.
 		SymID col_sym  = makeForLocal(for_ctx, base::StrID("__collection"), for_ctx.col_type);
-		SymID idx_sym  = makeForLocal(for_ctx, base::StrID("__index"), for_ctx.u64_mut_type);
-		SymID len_sym  = makeForLocal(for_ctx, base::StrID("__len"), for_ctx.u64_immut_type);
+		SymID idx_sym  = makeForLocal(for_ctx, base::StrID("__index"), getU64(ctx));
+		SymID len_sym  = makeForLocal(for_ctx, base::StrID("__len"), getConstU64(ctx));
 		SymID iter_sym = getForIteratorSymbol(ctx, stmt);
 		tsh::SymbolType<> iter_type = ctx.query<QueryTypeOfSymbol>(iter_sym)->valueOrThrow();
 
@@ -379,6 +370,9 @@ namespace compiler::helios::desugaring {
 		if (!while_body.has_value()) return {};
 
 		// Desugar the loop.
+		// var __collection : ref i64[2] = &static_arr;
+		// var __index : u64 = 0u64;
+		// var __len: const u64 = 2; # or `len static_arr` in case of lists.
 		// while(__idx < __len) {
 		// 		let <iter> = __collection[__idx];
 		// 		<body>;

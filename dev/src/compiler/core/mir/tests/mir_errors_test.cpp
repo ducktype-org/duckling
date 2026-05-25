@@ -100,10 +100,24 @@ private:
 			1
 		);
 		checkForErrorOnCompileModule(
-			R"(fun shadowedArg(n: i64) = {
+			R"(fun shadowedVar() = {
 				var arr: i32[2];
                 var x = 42;
 				for (x in arr) {}
+            })",
+			{
+				"Variable declaration shadows a previous declaration.",
+				"The exact code location is unavailable",
+				"symbol `x`.",
+			},
+			1
+		);
+		checkForErrorOnCompileModule(
+			R"(fun shadowedIter() = {
+				var arr: i32[2];
+				for (x in arr) {
+					for (x in arr) {}
+				}
             })",
 			{
 				"Variable declaration shadows a previous declaration.",
