@@ -12,7 +12,7 @@
 
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/instructions.hpp>
-#include <vm/bytecode/local_stack_database.hpp>
+#include <vm/bytecode/local_stack_database_builder.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
 #include <vm/bytecode/validator/valid_type/type_context.hpp>

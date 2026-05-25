@@ -1,6 +1,7 @@
 add_files(
     bytecode.cpp
     local_stack_database.cpp
+    local_stack_database_builder.cpp
     builtin_types.cpp
     builders/instruction_builder.cpp
     serializer/serializer.cpp
