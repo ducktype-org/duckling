@@ -172,7 +172,6 @@ namespace vm::builtins {
 		try {
 			const bool interrupted = cv->wait(*mutex, [&thread] { return thread.isTerminateRequested(); });
 			if (interrupted) {
-				thread.acquireGil();
 				throw vm::KillProcessException{};
 			}
 		} catch (const vm::exceptions::VMRuntimeException&) {
