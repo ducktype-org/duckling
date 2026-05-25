@@ -274,7 +274,7 @@ namespace vm::loader::compiler::safe {
 											   return low_program.types->at(param_name);
 										   })
 			                             | std::ranges::to<std::vector<TypeCRef>>();
-			auto                  param_size_sum = std::ranges::fold_left(
+			auto param_size_sum = std::ranges::fold_left(
 				params | std::views::transform([](const auto& param) {
 					return param->getSize().asInt();
 				}),
