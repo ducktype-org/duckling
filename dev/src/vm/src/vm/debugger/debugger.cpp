@@ -49,6 +49,9 @@ namespace vm::debugger {
 
 	Debugger::~Debugger() {
 		updater.detach();
+
+		// @TODO: #1222 Remove checking status and always kill after fixing kill
+
 		api::getExecutionStatus(pid)
 			.and_then([&](const api::ProcStatus& status) {
 				if (!std::holds_alternative<api::NotStarted>(status)) return api::kill(pid);
