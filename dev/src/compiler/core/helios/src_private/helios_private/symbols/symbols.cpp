@@ -138,6 +138,25 @@ namespace compiler::helios {
 
 	ScopeID scope(SymID id) { return getSymRef(id)->getScope(); }
 
+	bool shouldLinkOnce(SymID id) {
+		variant_match(getSymRef(id)->other) {
+			variant_case_novalue(PstSymbolData) { return false; }
+			variant_case_novalue(builtin::BuiltinFunctionData) { return false; }
+			variant_case(defgen::GeneratedSymbolData, gen_data) {
+				variant_match(gen_data.data) {
+					variant_case_novalue(defgen::GeneratedSymbolData::BuiltinOperator) {
+						// BuiltinOperators (better name pending) are those functions which
+						// are defined in C++, and will need to be declared with external linkage.
+						return false;
+					}
+					variant_default { return true; }
+				}
+			}
+			variant_default { CORE_PANIC("Unhandled symbol kind"); }
+		}
+		CORE_UNREACHABLE();
+	}
+
 	base::Optional<ScopeID> maybeScope(SymID id) {
 		variant_match(getSymRef(id)->other) {
 			variant_case(PstSymbolData, pst_data) { return pst_data.scope; }

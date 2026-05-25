@@ -69,6 +69,7 @@ namespace compiler::lir {
 		auto symbol_abi = ctx.query<helios::QuerySymbolABI>(helios_id)->valueOrPanicMsg(
 			"Handling errors in MIR is not supported yet"
 		);
+		auto link_once    = helios::shouldLinkOnce(helios_id);
 		auto mangled_name = helios::mangler::getSimpleMangledName(ctx, helios_id);
 
 		auto return_type = mirReturnType2LirLayout(ctx, type.getResultType());
@@ -82,6 +83,7 @@ namespace compiler::lir {
 		return FunctionLiteral{
 			.mangled_name = mangled_name,
 			.abi          = symbol_abi,
+			.link_once    = link_once,
 			.parameter_layouts
 			= std::make_shared<std::vector<CRef<tsl::TypeLayout>>>(std::move(parameter_types)),
 			.return_type_layout = return_type,
@@ -834,12 +836,7 @@ namespace compiler::lir {
 				auto link_once = [&]() -> bool {
 					variant_match(key.function->helios_id) {
 						variant_case(mir::FunctionSymID, sym) {
-							if (not helios::symbolPst(sym.id)) {
-								// Symbol is generated, might result in duplicates across modules.
-								return true;
-							} else {
-								return false;
-							}
+							return helios::shouldLinkOnce(sym.id);
 						}
 						variant_case(mir::GlobalVariableCTOR, name) { return false; }
 					}

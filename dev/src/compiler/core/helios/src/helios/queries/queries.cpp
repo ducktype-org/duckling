@@ -200,13 +200,11 @@ namespace compiler::helios {
 				}
 			}
 
-			std::set<SymID> unique_funcs;
+			std::set<SymID>                 unique_funcs;
 			std::vector<CRef<HOUTFunction>> deduplicated_functions;
-			for (auto f : out.functions) {
-				if (unique_funcs.insert(f->declaration->original_symbol).second) {
+			for (auto f: out.functions)
+				if (unique_funcs.insert(f->declaration->original_symbol).second)
 					deduplicated_functions.push_back(f);
-				}
-			}
 			out.functions = std::move(deduplicated_functions);
 
 			if (is_failed) return query::Failed();
@@ -394,14 +392,13 @@ namespace compiler::helios {
 					run_if_to_string(method_sym, [&] {
 						auto transitive = ctx.query<QueryTransitiveFunctionCalls>(method_sym);
 						if (!transitive->hasFailed()) {
-							for (SymID dep : transitive->valueOrPanic()) {
+							for (SymID dep: transitive->valueOrPanic()) {
 								run_if_to_string(dep, [&] {
 									auto dep_hout = ctx.query<QueryCodeOfFun>(dep);
-									if (dep_hout->hasFailed()) {
+									if (dep_hout->hasFailed())
 										is_failed = true;
-									} else {
+									else
 										out_functions.emplace_back(&dep_hout->valueOrPanic());
-									}
 								});
 							}
 						}
