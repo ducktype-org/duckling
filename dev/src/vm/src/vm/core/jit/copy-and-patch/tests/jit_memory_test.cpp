@@ -34,6 +34,7 @@ public:
 		TESTER_ADD_TEST(testCallingSimple);
 		TESTER_ADD_TEST(testCallingRecursive);
 		TESTER_ADD_TEST(testCallingLibc);
+		TESTER_ADD_TEST(testPatching);
 	}
 
 private:
@@ -100,6 +101,16 @@ private:
 		auto calling_libc    = memory.intoFunc<int*(int)>();
 		auto from_jit_memory = base::Box<int>::fromPointer(std::invoke(calling_libc, 100));
 		for (int i = 0; i < 100; ++i) ASSERT_EQUAL(from_jit_memory.get()[i], i);
+	}
+
+	void testPatching() {
+		auto foo_code = FIND_FUNC("must_patch");
+		auto memory   = JitFuncMemory::allocate(foo_code.size);
+		stencils.relocate_and_patch(foo_code, memory.addr, {9});
+		memory.markExecutable();
+
+		auto must_patch = memory.intoFunc<int(int)>();
+		for (int i = 0; i < 100; ++i) ASSERT_EQUAL_PRINT(std::invoke(must_patch, i), i + 9);
 	}
 };
 
