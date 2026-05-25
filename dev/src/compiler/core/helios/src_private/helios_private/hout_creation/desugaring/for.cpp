@@ -73,7 +73,7 @@ namespace compiler::helios::desugaring {
 					base::strConcat(
 						"`for` statements for non-array type: ", iterable_type.toString()
 					),
-					stmt->getStablePosition()
+					code::pstOrigin(iterable_pst).getSourcePosition(ctx)
 				));
 				return {};
 			}
@@ -105,9 +105,11 @@ namespace compiler::helios::desugaring {
 				.name = name,
 				.generated_symbol_data
 				= defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::ControlFlowLocal{
-					.owning_scope = ctx.for_scope,
-					.role         = role,
-					.type         = type,
+					.owning_scope
+					= parent(ctx.for_scope).value(),  // Generated desugaring symbols live in the
+			                                          // `for`s parent scope.
+					.role = role,
+					.type = type,
 				} },
 			});
 		}
@@ -148,22 +150,27 @@ namespace compiler::helios::desugaring {
 
 		// Length is calculated once before the loop.
 		// let __len: u64 = <len __collection> / <constant>
-		Box<code::Stmt> buildLengthVar(const ForDesugarCtx& ctx, SymID len_sym, SymID col_sym) {
+		Box<code::Stmt> buildLengthVar(
+			const ForDesugarCtx&            ctx,
+			SymID                           len_sym,
+			base::Optional<Box<code::Expr>> iterable_reusable_opt
+		) {
 			const auto gen = code::generatedOrigin();
 
 			auto len_expr = [&]() -> Box<code::Expr> {
 				switch (ctx.iterable_type.getType().getKind()) {
 				case tsh::Kind::DynamicArray: {
 					auto collection_expr = [&]() -> Box<code::Expr> {
-						if (ctx.collection_is_l_value) {
-							// If collection was an l-value we have to dereference it since we
-							// operate on it through a ref.
+						// If the iterable is not direct, dereference it.
+						bool needs_deref
+							= ctx.iterable_type.getRefKind() != tsh::ReferenceKind::Direct
+						   || ctx.collection_is_l_value;
+						if (needs_deref) {
 							return makeBox<code::DerefExpr>(
-								ctx.ctx, gen, makeBox<code::IdentifierExpr>(ctx.ctx, gen, col_sym)
+								ctx.ctx, gen, std::move(*iterable_reusable_opt)
 							);
-						} else {
-							return makeBox<code::IdentifierExpr>(ctx.ctx, gen, col_sym);
 						}
+						return std::move(*iterable_reusable_opt);
 					}();
 
 					return makeBox<code::UnaryOperatorExpr>(
@@ -204,12 +211,12 @@ namespace compiler::helios::desugaring {
 			);
 		}
 
-		// let <iter> = __collection[__idx];
+		// let <iter> = <__collection_next_use>[__idx];
 		// <body>;
 		// __idx = __idx + 1;
 		base::Optional<code::CodeBlock> buildWhileBody(
 			const ForDesugarCtx& ctx,
-			SymID                col_sym,
+			Box<code::Expr>      collection_next_use,
 			SymID                idx_sym,
 			SymID                iter_sym,
 			tsh::SymbolType<>    iter_type,
@@ -218,21 +225,19 @@ namespace compiler::helios::desugaring {
 			const auto gen = code::generatedOrigin();
 			auto idx_ref   = [&] { return makeBox<code::IdentifierExpr>(ctx.ctx, gen, idx_sym); };
 
-			// __collection[__idx]
-
-			Box<code::Expr> collection_expr = [&]() -> Box<code::Expr> {
-				if (ctx.collection_is_l_value) {
-					// If collection was an l-value we have to dereference it since we
-					// operate on it through a ref.
-					return makeBox<code::DerefExpr>(
-						ctx.ctx, gen, makeBox<code::IdentifierExpr>(ctx.ctx, gen, col_sym)
-					);
-				} else {
-					return makeBox<code::IdentifierExpr>(ctx.ctx, gen, col_sym);
-				}
+			// If the iterable is not direct, we dereference it first.
+			Box<code::Expr> base_expr = [&]() -> Box<code::Expr> {
+				bool needs_deref = ctx.iterable_type.getRefKind() != tsh::ReferenceKind::Direct
+				                || ctx.collection_is_l_value;
+				if (needs_deref)
+					return makeBox<code::DerefExpr>(ctx.ctx, gen, std::move(collection_next_use));
+				return std::move(collection_next_use);
 			}();
+
+
+			// __collection[__idx]
 			Box<code::Expr> raw_element
-				= makeBox<code::IndexExpr>(ctx.ctx, gen, std::move(collection_expr), idx_ref());
+				= makeBox<code::IndexExpr>(ctx.ctx, gen, std::move(base_expr), idx_ref());
 
 			auto iter_pst_pos     = ctx.stmt->getIterable().unlock(ctx.ctx)->getStablePosition();
 			auto element_sym_type = raw_element->expression_type.getSymbolType();
@@ -290,9 +295,6 @@ namespace compiler::helios::desugaring {
 	}
 
 	SymID getForIteratorSymbol(query::Context& ctx, pst::Access<pst::For> stmt) {
-		using GeneratedSymbolData = defgen::GeneratedSymbolData;
-		using ControlFlowLocal    = GeneratedSymbolData::ControlFlowLocal;
-
 		auto iter_name = stmt->getIteratorIdentifier().unlock(ctx)->unwrap();
 		auto for_scope = ctx.query<QueryPrimaryCodeScopeFor>({ stmt });
 
@@ -340,8 +342,9 @@ namespace compiler::helios::desugaring {
 		}
 
 		return ctx.query<defgen::QueryGeneratedSymbol>({
-			.name                  = iter_name,
-			.generated_symbol_data = GeneratedSymbolData{ ControlFlowLocal{
+			.name = iter_name,
+			.generated_symbol_data
+			= defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::ControlFlowLocal{
 				.owning_scope = for_scope,
 				.role         = iter_name,
 				.type         = iter_type,
@@ -357,31 +360,56 @@ namespace compiler::helios::desugaring {
 		auto& for_ctx = ctx_opt.value();
 
 		// Create the needed symbols.
-		SymID col_sym  = makeForLocal(for_ctx, base::StrID("__collection"), for_ctx.col_type);
-		SymID idx_sym  = makeForLocal(for_ctx, base::StrID("__index"), getU64(ctx));
-		SymID len_sym  = makeForLocal(for_ctx, base::StrID("__len"), getConstU64(ctx));
-		SymID iter_sym = getForIteratorSymbol(ctx, stmt);
+		SymID             idx_sym   = makeForLocal(for_ctx, base::StrID("__index"), getU64(ctx));
+		SymID             len_sym   = makeForLocal(for_ctx, base::StrID("__len"), getConstU64(ctx));
+		SymID             iter_sym  = getForIteratorSymbol(ctx, stmt);
 		tsh::SymbolType<> iter_type = ctx.query<QueryTypeOfSymbol>(iter_sym)->valueOrThrow();
 
+		Box<code::Expr> reusable_inner = [&]() -> Box<code::Expr> {
+			if (for_ctx.collection_is_l_value) {
+				return makeBox<code::RefOfExpr>(
+					ctx, code::generatedOrigin(), std::move(for_ctx.iterable_hout)
+				);
+			}
+			return std::move(for_ctx.iterable_hout);
+		}();
+
+
+		auto iterable_reusable = makeBox<code::ReusableExpr>(ctx, std::move(reusable_inner), true);
+		auto iterable_next_use = iterable_reusable->nextUse();
+
 		// Build the while body first so we bail out on coercion failure before
-		// consuming the iterable expression into the __collection variable.
-		auto while_body
-			= buildWhileBody(for_ctx, col_sym, idx_sym, iter_sym, iter_type, process_body);
+		// consuming the iterable expression into the ReusableExpr.
+		auto while_body = buildWhileBody(
+			for_ctx, std::move(iterable_next_use), idx_sym, iter_sym, iter_type, process_body
+		);
 		if (!while_body.has_value()) return {};
 
 		// Desugar the loop.
-		// var __collection : ref i64[2] = &static_arr;
 		// var __index : u64 = 0u64;
-		// var __len: const u64 = 2; # or `len static_arr` in case of lists.
+		// var __len: const u64 = <constant> / len <iterable_reusable>;
 		// while(__idx < __len) {
-		// 		let <iter> = __collection[__idx];
+		// 		let <iter> = <iterable_reusable>[__idx];
 		// 		<body>;
 		// 		__idx = __idx + 1;
 		// }
 		code::CodeBlock outer{};
-		outer.statements.emplace_back(buildCollectionVar(for_ctx, col_sym));
 		outer.statements.emplace_back(buildIndexVar(for_ctx, idx_sym));
-		outer.statements.emplace_back(buildLengthVar(for_ctx, len_sym, col_sym));
+		if (for_ctx.iterable_type.getType().getKind() == tsh::Kind::StaticArray) {
+			// For StaticArray, __len evaluates to a compile-time constant, so it does not evaluate
+			// the collection itself. We execute `iterable_reusable` here in an ExprStmt
+			// solely to ensure `first_use` is evaluated before we start looping.
+			outer.statements.emplace_back(
+				makeBox<code::ExprStmt>(for_ctx.loop_origin, std::move(iterable_reusable))
+			);
+			outer.statements.emplace_back(buildLengthVar(for_ctx, len_sym, {}));
+		} else {
+			outer.statements.emplace_back(
+				buildLengthVar(for_ctx, len_sym, std::move(iterable_reusable))
+			);
+		}
+
+
 		outer.statements.emplace_back(makeBox<code::WhileStmt>(
 			for_ctx.loop_origin,
 			buildCondition(for_ctx, idx_sym, len_sym),

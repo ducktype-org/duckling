@@ -198,12 +198,40 @@ namespace compiler::mir {
 		return local_list.last();
 	}
 
+	ScopeRef lcaa(ScopeRef a, ScopeRef b) {
+		auto depth_a = a->depth;
+		auto depth_b = b->depth;
+
+		while (depth_a > depth_b) {
+			a = a->parent.toOpt().value();
+			depth_a--;
+		}
+		while (depth_b > depth_a) {
+			b = b->parent.toOpt().value();
+			depth_b--;
+		}
+		while (a != b) {
+			a = a->parent.toOpt().value();
+			b = b->parent.toOpt().value();
+		}
+
+		return a;
+	}
+
 	MIRLocalMutRef FunctionBuilder::getTmpForReusableExpr(
 		const helios::code::ReusableExpr& reusable_expr, const ScopeRef scope
 	) {
 		auto expr_id = reusable_expr.inner->getID();
-		if (auto found = reusable_expr_locals.atMaybeCopy(expr_id); found.has_value())
-			return found.value();
+		if (auto found = reusable_expr_locals.atMaybeCopy(expr_id); found.has_value()) {
+			auto tmp = found.value();
+			// We have to widen the lifetime to cover all uses of the reusable expression.
+			// When first_use and next_use live in different scopes (e.g. first_use before
+			// a loop, next_use inside its body) the lifetime must span both, otherwise
+			// the local gets pinned to the first scope we saw and writes from the other
+			// use end up outside its lifetime window.
+			tmp->scope.value() = lcaa(tmp->scope.value(), scope);
+			return tmp;
+		}
 
 		const auto symbol_type = reusable_expr.expression_type.getSymbolType();
 		auto       tmp         = addTmp(symbol_type, scope);
