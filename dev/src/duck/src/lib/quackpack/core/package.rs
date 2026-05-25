@@ -3,9 +3,11 @@ use std::fmt;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
+use crate::quackpack::core::FrontMatter;
 use crate::quackpack::core::Manifest;
 use crate::quackpack::core::compile::artifacts_layout::ArtifactsLayout;
 use crate::quackpack::core::storage::freeze::FreezeDep;
+use crate::quackpack::schemas::frontmatter::FrontMatter as FrontMatterSchema;
 use crate::quackpack::schemas::manifest::Manifest as ManifestSchema;
 
 #[derive(Clone)]
@@ -109,6 +111,42 @@ impl fmt::Debug for PackageInner {
             .field("artifacts_dir", &self.artifacts_dir.root_directory())
             .field("source_dir", &self.source_dir)
             .finish_non_exhaustive()
+    }
+}
+
+pub struct FrontMatterScript {
+    path: PathBuf,
+    original_schema: FrontMatterSchema,
+    frontmatter: FrontMatter,
+}
+
+impl FrontMatterScript {
+    /// Create a new [`FrontMatterScript`].
+    pub fn new(
+        path: PathBuf,
+        original_schema: FrontMatterSchema,
+        frontmatter: FrontMatter,
+    ) -> Self {
+        Self {
+            path,
+            original_schema,
+            frontmatter,
+        }
+    }
+
+    /// Get the path of the script.
+    pub fn script_file(&self) -> &Path {
+        &self.path
+    }
+
+    /// Get the schema of the script's frontmatter.
+    pub fn original_schema(&self) -> &FrontMatterSchema {
+        &self.original_schema
+    }
+
+    /// Get the script's frontmatter.
+    pub fn frontmatter(&self) -> &FrontMatter {
+        &self.frontmatter
     }
 }
 

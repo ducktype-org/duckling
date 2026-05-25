@@ -13,6 +13,7 @@ mod source;
 
 pub use dependency::*;
 pub use features::*;
+pub use frontmatter::*;
 pub use metadata::*;
 pub use parse::*;
 pub use profiles::*;

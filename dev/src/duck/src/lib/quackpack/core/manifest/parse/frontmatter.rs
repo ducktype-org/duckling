@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
 
 use regex::Regex;
@@ -6,6 +6,7 @@ use serde::Deserialize;
 use tracing::debug;
 
 use crate::QuackResultContext;
+use crate::quackpack::core::FrontMatterScript;
 use crate::quackpack::core::manifest::parse::manifest::parse_profiles;
 use crate::{
     DuckContext, QuackResult, qp_bail, qp_err,
@@ -22,13 +23,37 @@ use crate::{
 pub static FRONTMATTER_REGEX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new("<frontmatter>([^]*)</frontmatter>").unwrap());
 
+/// Parse a frontmatter of a script at a given `path`.
+pub fn parse_frontmatter(
+    path: PathBuf,
+    ctx: &DuckContext,
+) -> QuackResult<Option<FrontMatterScript>> {
+    debug!("starting parsing...");
+    parse_inner(path.clone(), ctx).with_context(|| {
+        format!(
+            "when trying to parse the frontmatter of the script at `{}`",
+            path.display()
+        )
+    })
+}
+
+/// Helper for [`parse_frontmatter`].
+fn parse_inner(path: PathBuf, ctx: &DuckContext) -> QuackResult<Option<FrontMatterScript>> {
+    if let Some((frontmatter, schema)) = parse(&path, ctx)? {
+        Ok(Some(FrontMatterScript::new(path, schema, frontmatter)))
+    } else {
+        Ok(None)
+    }
+}
+
 /// Deserialize a script frontmatter.
 #[tracing::instrument(skip(ctx))]
-pub fn parse_frontmatter(path: &Path, ctx: &DuckContext) -> QuackResult<Option<FrontMatter>> {
+fn parse(path: &Path, ctx: &DuckContext) -> QuackResult<Option<(FrontMatter, FrontMatterSchema)>> {
     let Some(schema) = generate_schema_script(path)? else {
         return Ok(None);
     };
-    Some(parse_schema_script(path, &schema, ctx)).transpose()
+    let frontmatter = parse_schema_script(path, &schema, ctx)?;
+    Ok(Some((frontmatter, schema)))
 }
 
 /// Generate a [`FrontMatterSchema`] from the script's contents.
