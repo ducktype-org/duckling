@@ -222,7 +222,7 @@ namespace vm::loader::compiler::detail {
 			}
 			instr_case(high::Op_cmov_p32_p32, i) { addLow<Op_cmov_p32_p32>(i.dst, i.src); }
 			instr_case(high::Op_cmov_p32_imm, i) { addLow<Op_cmov_p32_imm>(i.dst, i.src); }
-			instr_case(high::Op_mov_p64_imm, i) { addLow<Op_mov_p64_imm>(i.dst, i.src); }
+			instr_case(high::Op_mov_p64_imm, i) { addLow<Op_mov_p64_imm>(i.dst, i.src); ftWrite(i.dst);}
 			instr_case(high::Op_mov_p64_p64, i) {
 				ftRead(i.src); ftWrite(i.dst);
 				addLow<Op_mov_p64_p64>(i.dst, i.src);

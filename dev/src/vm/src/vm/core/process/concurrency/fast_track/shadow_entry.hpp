@@ -83,6 +83,12 @@ namespace vm {
 			return *this;
 		}
 
+        friend std::ostream& operator<<(std::ostream& ss, const ShadowEntry& e){
+            ss << "write: " << e.last_write.clock() << "@" << e.last_write.tid() << '\n';
+            ss << "read : " << e.last_read_epoch.clock() << "@" << e.last_read_epoch.tid();
+            return ss;
+        }
+
 		bool isShared() const { return last_read_vc != nullptr; }
 
 		/**

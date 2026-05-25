@@ -1,5 +1,6 @@
 #include "safe_vmprocess.hpp"
 
+#include <vm/core/safe/memory/block.hpp>
 #include <thread>
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
@@ -24,7 +25,6 @@
 #include <sstream>
 #include <variant>
 #include <iostream>
-#include <fstream>
 
 namespace vm {
 	Memory& SafeVMProcess::getMemory() { return memory; }
@@ -64,18 +64,17 @@ namespace vm {
 		SafeVMThread* parent_thread = nullptr;
 		auto current_id = std::this_thread::get_id();
 		
-		std::ofstream log_file("/home/szymonp/Studia/Licencjat/duckling-zpp-4.1/dev/debug_threads.log", std::ios::app);
-		log_file << "[DEBUG] Spawning child thread for func: " << func_name 
+		std::cerr << "[DEBUG] Spawning child thread for func: " << func_name 
 		         << ", current C++ thread ID: " << current_id << "\n";
 		
 		for (auto& t : vm_threads) {
-			log_file << "  [DEBUG] Thread ID: " << t.getThreadID();
+			std::cerr << "  [DEBUG] Thread ID: " << t.getThreadID();
 			if (t.hasActiveThread()) {
-				log_file << ", Native ID: " << t.getNativeThreadId();
+				std::cerr << ", Native ID: " << t.getNativeThreadId();
 			} else {
-				log_file << ", No Active Thread";
+				std::cerr << ", No Active Thread";
 			}
-			log_file << "\n";
+			std::cerr << "\n";
 			
 			if (t.hasActiveThread() && t.getNativeThreadId() == current_id) {
 				parent_thread = &t;
@@ -83,10 +82,10 @@ namespace vm {
 		}
 
 		if (parent_thread) {
-			log_file << "  [DEBUG] Matched parent thread ID: " << parent_thread->getThreadID() << "\n";
+			std::cerr << "  [DEBUG] Matched parent thread ID: " << parent_thread->getThreadID() << "\n";
 			thread.forkVC(parent_thread->getVC());
 		} else {
-			log_file << "  [DEBUG] No parent match. Falling back to main thread ID: " << getMainVMThread().getThreadID() << "\n";
+			std::cerr << "  [DEBUG] No parent match. Falling back to main thread ID: " << getMainVMThread().getThreadID() << "\n";
 			thread.forkVC(getMainVMThread().getVC());
 		}
 
@@ -180,6 +179,15 @@ namespace vm {
 		  loaded_program(&loaded_program_copy),
 		  loaded_program_copy(loader.getProgram()) {
 		vm_threads.add(*this);
+	}
+
+	SafeVMProcess::~SafeVMProcess() {
+		for (auto* block : global_shadow_blocks) {
+			shadow_data_memory.decreaseBlockRefcount(Ref(block));
+		}
+		for (auto* block : global_shadow_pointer_blocks) {
+			shadow_pointer_memory.decreaseBlockRefcount(Ref(block));
+		}
 	}
 
 	SafeVMThread& SafeVMProcess::getMainVMThread() { return *vm_threads.get(api::ThreadID{ 0 }); }
@@ -404,6 +412,31 @@ namespace vm {
 		if (settings_.enable_fast_track) {
 			global_shadow_data.resize(global_buffer_config.global_shadow_buffer_size);
 			global_shadow_pointer.resize(global_buffer_config.global_pointer_buffer_size);
+
+			for (auto* block : global_shadow_blocks) {
+				shadow_data_memory.decreaseBlockRefcount(Ref(block));
+			}
+			for (auto* block : global_shadow_pointer_blocks) {
+				shadow_pointer_memory.decreaseBlockRefcount(Ref(block));
+			}
+			global_shadow_blocks.clear();
+			global_shadow_pointer_blocks.clear();
+
+			for (const auto& [global, id, name] : program->getGlobals().allData()) {
+				auto block = shadow_data_memory.allocateDummy(
+					global->type,
+					global_shadow_data.data() + global->global_shadow_data_offset
+				);
+				shadow_data_memory.increaseBlockRefcount(block);
+				global_shadow_blocks.push_back(block.get());
+
+				auto ptr_block = shadow_pointer_memory.allocateDummy(
+					global->type,
+					global_shadow_pointer.data() + global->global_shadow_pointer_offset
+				);
+				shadow_pointer_memory.increaseBlockRefcount(ptr_block);
+				global_shadow_pointer_blocks.push_back(ptr_block.get());
+			}
 		}
 
 		for (auto& thread: vm_threads)

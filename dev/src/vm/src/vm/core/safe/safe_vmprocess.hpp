@@ -87,9 +87,15 @@ namespace vm {
 		api::ProcessSettings       settings_;
 		std::vector<ShadowEntry>   global_shadow_data;
 		std::vector<ShadowPointer> global_shadow_pointer;
+		std::vector<ShadowBlock*>  global_shadow_blocks;
+		std::vector<ShadowPointerBlock*> global_shadow_pointer_blocks;
 
 	public:
 		SafeVMProcess(PID my_pid, const api::ProcessSettings& settings = {});
+		~SafeVMProcess() override;
+
+		[[nodiscard]] Ref<ShadowBlock> getGlobalShadowBlock(u64 idx) { return { global_shadow_blocks.at(idx) }; }
+		[[nodiscard]] Ref<ShadowPointerBlock> getGlobalShadowPointerBlock(u64 idx) { return { global_shadow_pointer_blocks.at(idx) }; }
 
 		/**
 		 * @brief Returns thread by id and if id doesn't exist or it is equal 0

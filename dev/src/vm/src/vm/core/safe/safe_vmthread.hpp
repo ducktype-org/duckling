@@ -123,9 +123,6 @@ namespace vm {
 
 		VectorClock vc;
 
-		IMemory<ShadowEntry>& getShadowDataMemory();
-		IMemory<ShadowPointer>& getShadowPointerMemory();
-
 		/**
 		 * @brief Link to parent process.
 		 */
@@ -207,6 +204,12 @@ namespace vm {
 
 	public:
 		SafeVMThread(api::ThreadID thread_id, SafeVMProcess& process);
+
+		[[nodiscard]] SafeVMProcess& getProcess() { return safe_process; }
+		[[nodiscard]] const SafeVMProcess& getProcess() const { return safe_process; }
+
+		IMemory<ShadowEntry>& getShadowDataMemory();
+		IMemory<ShadowPointer>& getShadowPointerMemory();
 
 		/**
 		 * @brief Run a single function with given parameters.
