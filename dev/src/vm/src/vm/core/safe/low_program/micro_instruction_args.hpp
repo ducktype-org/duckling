@@ -109,7 +109,7 @@ namespace vm::low::opargs {
 	/** @brief Stores relative instruction jump offset after label linking. */
 	DEFINE_MICRO_ARG_TYPE(Label, "label", vm::opargs::Label);
 	/** @brief Stores constant computed value, calculated at lowering time. */
-	DEFINE_MICRO_ARG_TYPE(ComputedConstant, "const", usize);
+	DEFINE_MICRO_ARG_TYPE(ComputedConstant, "cc", usize);
 
 
 	/**
