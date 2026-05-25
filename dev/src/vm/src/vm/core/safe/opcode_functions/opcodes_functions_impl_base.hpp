@@ -320,9 +320,10 @@ namespace vm {
 #ifdef ENABLE_JIT
 	RETURN_TYPE OpFuns::OPCODE_NAME(jit_entrypoint)(FUNCTION_ARGS) {
 		{
-			auto& jit_data = thread.jit_data;
+			auto& jit_data         = thread.jit_data;
 			auto& current_func_obj = *frame->current_function;
-			auto current_func_id = thread.process_program->getFunctions().idOf(current_func_obj.name).value();
+			auto  current_func_id
+				= thread.process_program->getFunctions().idOf(current_func_obj.name).value();
 
 			// @TODO: #2126 manage the size when inserting new code
 			if (jit_data.size() <= current_func_id) jit_data.resize(2 * current_func_id + 2);
@@ -337,8 +338,9 @@ namespace vm {
 				--my_data.until_compilation;
 			} else {
 				// should be compiled now
-				MRef<jit::JitOpFun> compiled
-					= jit::compileLLVM(func_obj.cfg, func_obj.bc, func_obj.name);
+				MRef<jit::JitOpFun> compiled = jit::compileLLVM(
+					current_func_obj.cfg, current_func_obj.bc, current_func_obj.name
+				);
 
 				CORE_ASSERT(compiled, "Compiled function pointer shouldn't be nullptr");
 				my_data.func_ptr = compiled;

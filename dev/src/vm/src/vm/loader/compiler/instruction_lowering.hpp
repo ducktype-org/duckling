@@ -100,7 +100,7 @@ namespace vm::loader::compiler::detail {
 		bool push_step_gil_on_next_add_low = true;
 		bool is_control_flow               = true;
 #ifdef ENABLE_JIT
-		bool function_beginning			   = true;
+		bool function_beginning = true;
 #endif
 
 		TypeCRef getPlaceType(const opargs::ArgumentType auto p) const {
@@ -441,11 +441,11 @@ namespace vm::loader::compiler::detail {
 			instr_case(high::Op_jmpIf_label, i) { addLow<Op_jmpIf_label>(i.label); }
 			instr_case(high::Op_jmpIfNot_label, i) { addLow<Op_jmpIfNot_label>(i.label); }
 			instr_case(high::Op_call_func, i) {
-// #ifdef ENABLE_JIT
-// 				addLow<Op_jit_call_entrypoint>(i.function);
-// #else
-// 				addLow<Op_call_func>(i.function);
-// #endif
+				// #ifdef ENABLE_JIT
+				// 				addLow<Op_jit_call_entrypoint>(i.function);
+				// #else
+				// 				addLow<Op_call_func>(i.function);
+				// #endif
 				addLow<Op_call_func>(i.function);
 			}
 			instr_case(high::Op_call_builtinfunc, i) { addLow<Op_call_builtinfunc>(i.function); }

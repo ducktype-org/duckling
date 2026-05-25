@@ -49,7 +49,7 @@ namespace vm {
 // 		makeLowInstruction(low::MicroOpcode::OPCODE_NAME, ARG_0, ARG_1)
 // #endif
 #define MAKE_BYTECODE_INSTRUCTION(OPCODE_NAME, ARG_0, ARG_1) \
-	    makeLowInstruction(low::MicroOpcode::OPCODE_NAME, ARG_0, ARG_1)
+	makeLowInstruction(low::MicroOpcode::OPCODE_NAME, ARG_0, ARG_1)
 
 	SafeVMThread::SafeVMThread(api::ThreadID thread_id, SafeVMProcess& process):
 		  IVMThread(thread_id, process),
