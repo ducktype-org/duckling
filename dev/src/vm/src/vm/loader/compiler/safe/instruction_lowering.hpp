@@ -447,14 +447,7 @@ namespace vm::loader::compiler::safe::detail {
 			instr_case(high::Op_jmp_label, i) { addLow<Op_jmp_label>(i.label); }
 			instr_case(high::Op_jmpIf_label, i) { addLow<Op_jmpIf_label>(i.label); }
 			instr_case(high::Op_jmpIfNot_label, i) { addLow<Op_jmpIfNot_label>(i.label); }
-			instr_case(high::Op_call_func, i) {
-				// #ifdef ENABLE_JIT
-				// 				addLow<Op_jit_call_entrypoint>(i.function);
-				// #else
-				// 				addLow<Op_call_func>(i.function);
-				// #endif
-				addLow<Op_call_func>(i.function);
-			}
+			instr_case(high::Op_call_func, i) { addLow<Op_call_func>(i.function); }
 			instr_case(high::Op_call_builtinfunc, i) { addLow<Op_call_builtinfunc>(i.function); }
 			instr_case(high::Op_call_cfunc, i) { addLow<Op_call_cfunc>(i.function); }
 			instr_case(high::Op_set_threadctx, i) { addLow<Op_set_threadctx>(i.function); }
