@@ -4,6 +4,8 @@
 #include <base/types/bits_and_bytes.hpp>
 #include <base/types/ints.hpp>
 
+#include <hashing/hash.hpp>
+
 namespace vm::code::valid_type {
 	/**
 	 * @brief TypeSize represents the size of a type in bytes. It takes into account the fact that
@@ -15,12 +17,14 @@ namespace vm::code::valid_type {
 	 * architecture, but once pointer size is increased to 16 bytes, the pointers do not fit
 	 * anymore. This means valid_type::TypeSize is uncomparable - we can't choose a "larger" size
 	 * directly. This is why TypeSize has two separate fields for size when pointer size is 8 bytes
-	 * and when pointer size is 16 bytes, so that we can at least we can perform `fieldMax` on two
+	 * and when pointer size is 16 bytes, so that at least we can perform `fieldMax` on two
 	 * TypeSizes, which is useful for calculating the size of structures (mainly variant's data
 	 * field size).
 	 */
 	class TypeSize {
 	public:
+		static constexpr base::Monostate HASHING_CAN_HASH_BY_REPRESENTATION = {};
+
 		constexpr TypeSize() = default;
 
 		constexpr TypeSize(Bytes non_pointer_bytes, usize number_pointer_fields):
@@ -33,29 +37,44 @@ namespace vm::code::valid_type {
 			  size_when_ptr_is_8_bytes(size_when_ptr_is_8_bytes),
 			  size_when_ptr_is_16_bytes(size_when_ptr_is_16_bytes) {}
 
-		TypeSize operator+(const TypeSize& other) const {
+		constexpr TypeSize operator+(const TypeSize& other) const {
 			return { size_when_ptr_is_8_bytes + other.size_when_ptr_is_8_bytes,
 				     size_when_ptr_is_16_bytes + other.size_when_ptr_is_16_bytes };
 		}
 
-		TypeSize operator+=(const TypeSize& other) {
+		constexpr TypeSize operator+=(const TypeSize& other) {
 			size_when_ptr_is_8_bytes += other.size_when_ptr_is_8_bytes;
 			size_when_ptr_is_16_bytes += other.size_when_ptr_is_16_bytes;
 			return *this;
 		}
 
-		TypeSize operator*(usize multiplier) const {
+		constexpr TypeSize operator-(const TypeSize& other) const {
+			CORE_ASSERT(
+				size_when_ptr_is_8_bytes >= other.size_when_ptr_is_8_bytes
+					&& size_when_ptr_is_16_bytes >= other.size_when_ptr_is_16_bytes,
+				"Underflow in TypeSize subtraction"
+			);
+			return { size_when_ptr_is_8_bytes - other.size_when_ptr_is_8_bytes,
+				     size_when_ptr_is_16_bytes - other.size_when_ptr_is_16_bytes };
+		}
+
+		constexpr TypeSize operator-=(const TypeSize& other) {
+			*this = *this - other;
+			return *this;
+		}
+
+		constexpr TypeSize operator*(usize multiplier) const {
 			return { size_when_ptr_is_8_bytes * multiplier, size_when_ptr_is_16_bytes * multiplier };
 		}
 
-		bool operator==(const TypeSize& other) const = default;
+		constexpr bool operator==(const TypeSize& other) const = default;
 
-		[[nodiscard]] TypeSize fieldMax(const TypeSize& other) const {
+		[[nodiscard]] constexpr TypeSize fieldMax(const TypeSize& other) const {
 			return { std::max(size_when_ptr_is_8_bytes, other.size_when_ptr_is_8_bytes),
 				     std::max(size_when_ptr_is_16_bytes, other.size_when_ptr_is_16_bytes) };
 		}
 
-		[[nodiscard]] Bytes assumePointerSize(Bytes pointer_size) const {
+		[[nodiscard]] constexpr Bytes assumePointerSize(Bytes pointer_size) const {
 			switch (usize(pointer_size)) {
 			case 8:
 				return size_when_ptr_is_8_bytes;
