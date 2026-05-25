@@ -109,8 +109,7 @@ namespace vm::loader::compiler {
 		 * @brief Compiles newly added ExternCFunctions and adds the compiled functions to the
 		 * internal `low_program.extern_c_functions`.
 		 */
-		virtual void compileNewExtCFunctions(
-			const std::vector<code::ExternalCFunction>& new_functions
+		virtual void compileNewExtCFunctions(const std::vector<code::ExternalCFunction>& new_functions
 		) = 0;
 
 		/**

@@ -157,7 +157,8 @@ namespace vm::loader::compiler::safe::detail {
 		}
 	};
 
-	low::LowFuncData::InstructionRange SafeMicroBytecodeBuilder::add(const code::Instruction& instruction
+	low::LowFuncData::InstructionRange SafeMicroBytecodeBuilder::add(
+		const code::Instruction& instruction
 	) {
 #if (BUILD_TYPE_DEV_DEBUG)
 		current_high_instruction_representation = code::instructionToString(instruction);
