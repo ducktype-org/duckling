@@ -26,9 +26,6 @@ namespace vm::loader {
 	 */
 	class Loader final {
 		/**
-		 * @brief The representation of the FatBytecode program.
-		 */
-		/**
 		 * @brief The validated high-level (fat bytecode) representation of the program.
 		 * This object is incrementally updated with new, validated code. It is initialized with the
 		 * VM's built-in types.
