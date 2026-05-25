@@ -229,7 +229,7 @@ namespace compiler::helios {
 							.owner_type = type,
 						} },
 					}));
-				out_functions.push_back(&to_string_method->valueOrThrow());
+				out_functions.emplace_back(&to_string_method->valueOrThrow());
 			};
 
 			for (auto size: { 8, 16, 32, 64 }) {

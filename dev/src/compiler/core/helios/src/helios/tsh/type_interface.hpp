@@ -210,6 +210,7 @@ namespace compiler::tsh {
 		 * Check if the element list of the interface contains duplicates.
 		 * Note: it shouldn't. Use this for assertions in constructors.
 		 */
+		[[nodiscard]]
 		base::OkBad checkForDuplicates() const;
 
 	public:
