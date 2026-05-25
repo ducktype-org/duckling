@@ -53,8 +53,6 @@
 #include <cmath>
 #include <limits>
 
-#include <iostream>
-
 // jitable_interface.py depends on the instructions exact, fully-qualified names
 #ifdef DEBUG_OPCODES
 	#define OPCODE_NAME(name)   op_debug_##name
@@ -325,27 +323,18 @@ namespace vm {
 			auto& jit_data = thread.jit_data;
 			auto& current_func_obj = *frame->current_function;
 			auto current_func_id = thread.process_program->getFunctions().idOf(current_func_obj.name).value();
-			//auto& func_obj = thread.process_program->getFunctions()[func_id];
 
 			// @TODO: #2126 manage the size when inserting new code
 			if (jit_data.size() <= current_func_id) jit_data.resize(2 * current_func_id + 2);
 
 			jit::JitFuncData& my_data = jit_data[current_func_id];
 
-			auto run_compiled = [&]() {
-				// performFunctionCall(instr, local_stack, frame, thread, current_func_id);
-				std::cout << "Running compiled function " << current_func_obj.name.str() << "\n";
-				(*my_data.func_ptr)(&instr, &local_stack, &frame, &thread);
-				std::cout << "Returned from compiled function " << current_func_obj.name.str() << "\n";
-			};
-
 			if (my_data.func_ptr) {
 				// is already compiled
-				run_compiled();
+				(*my_data.func_ptr)(&instr, &local_stack, &frame, &thread);
 			} else if (0 < my_data.until_compilation) {
 				// should be compiled later
 				--my_data.until_compilation;
-				// performFunctionCall(instr, local_stack, frame, thread, current_func_id);
 			} else {
 				// should be compiled now
 				MRef<jit::JitOpFun> compiled = jit::compileLLVM(current_func_obj);
@@ -353,7 +342,7 @@ namespace vm {
 				CORE_ASSERT(compiled, "Compiled function pointer shouldn't be nullptr");
 				my_data.func_ptr = compiled;
 
-				run_compiled();
+				(*my_data.func_ptr)(&instr, &local_stack, &frame, &thread);
 			}
 		}
 		FUNCTION_CONT(0);

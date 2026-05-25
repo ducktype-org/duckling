@@ -30,8 +30,6 @@
 #include <string>
 #include <vector>
 
-#include <iostream>
-
 namespace vm {
 
 // #if defined(ENABLE_JIT) and not defined(BUILD_TYPE_RELEASE)
@@ -436,7 +434,6 @@ namespace vm {
 			switch (static_cast<low::MicroOpcode>(instr->nontc_opcode)) {
 	#define HANDLE_MICRO_INSTR(opcode_name)                                                         \
 	case low::MicroOpcode::opcode_name: {                                                           \
-		std::cout << "Interpreter executing opcode: " << #opcode_name << "\n";\
 		vm::OpFuns::op_##opcode_name(instr, local_stack, frame, thread);                            \
 		if constexpr (::vm::ENABLE_VM_DETAIL_LOGGING)                                               \
 			CORE_DEV_LOG(                                                                           \
