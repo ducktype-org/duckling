@@ -36,6 +36,12 @@ namespace vm {
 	private:
 		std::shared_mutex rw_global;
 
+		/**
+		 * @brief A loader instance for this SafeVMProcess. Stores the high level and low level
+		 * representation of the currently executed program. `loaded_program` references the low
+		 * representation which exists in this class.
+		 */
+		loader::Loader                       loader{};
 		loader::compiler::safe::SafeCompiler compiler{ *loader.getHighProgram() };
 
 		/**
