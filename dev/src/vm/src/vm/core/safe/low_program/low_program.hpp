@@ -3,6 +3,7 @@
  */
 #pragma once
 
+#include "cfg/cf_graph.hpp"
 #include "instruction.hpp"
 
 #include <base/pointers/box.hpp>
@@ -23,7 +24,10 @@ namespace vm::low {
 	 * @brief Micro bytecode representation of function data.
 	 */
 	struct LowFuncData {
-		base::StrID   name;
+		base::StrID name;
+#ifdef ENABLE_JIT
+		cf::ControlFlowGraph cfg;
+#endif
 		MicroBytecode bc;
 
 		/// The maximum size of the local variables on stack required by the function frame.

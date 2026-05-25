@@ -194,7 +194,10 @@ namespace vm::loader::compiler::safe {
 			}
 
 			low_program.functions.insert(
-				low::LowFuncData{ .name                = function.name,
+				low::LowFuncData{ .name = function.name,
+#ifdef ENABLE_JIT
+			                      .cfg = vm::low::cf::ControlFlowGraph(bytecode),
+#endif
 			                      .bc                  = std::move(bytecode),
 			                      .local_stack_size    = getIntTypeSize(ctx.local_stack_size),
 			                      .local_block_count   = ctx.local_block_count,
@@ -271,7 +274,7 @@ namespace vm::loader::compiler::safe {
 											   return low_program.types->at(param_name);
 										   })
 			                             | std::ranges::to<std::vector<TypeCRef>>();
-			auto param_size_sum = std::ranges::fold_left(
+			auto                  param_size_sum = std::ranges::fold_left(
 				params | std::views::transform([](const auto& param) {
 					return param->getSize().asInt();
 				}),
