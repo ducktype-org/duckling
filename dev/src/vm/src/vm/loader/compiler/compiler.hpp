@@ -112,9 +112,14 @@ namespace vm::loader::compiler {
 			base::HashMap<base::StrID, LocalEntry> locals_map{};
 			/// Total required size for the local stack frame, in bytes.
 			usize local_stack_size          = 0;
+			/// Total required size for the blocks.
 			usize local_block_count         = 0;
+			/// Size of the stack for the return values. Every value is fully aligned.
 			usize return_stack_size         = 0;
+			/// Size of the stack for both return values and arguments.
 			usize shared_stack_size         = 0;
+
+			/// Index of instruction that is currently lowered. Used in instruction lowering.
 			usize current_instruction_index = 0;
 
 			// Stores head of the stack at the moment of instructions: inits and calls.
