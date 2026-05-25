@@ -434,5 +434,5 @@ vm::code::LocalStackDb ls_db_bld::finalize() {
 	};
 
 
-	return LocalStackDb(name_to_namestack_id, namestack_entries, states, typenames);
+	return LocalStackDb{name_to_namestack_id, namestack_entries, states, typenames};
 }
