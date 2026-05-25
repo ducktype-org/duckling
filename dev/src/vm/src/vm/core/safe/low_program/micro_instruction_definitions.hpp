@@ -687,6 +687,8 @@ DEF_MICRO_INSTR(ft_memCopy, vm::low::opargs::PlacePtr, vm::low::opargs::PlacePtr
 DEF_MICRO_INSTR(ft_alloc_pptr_type, vm::low::opargs::PlacePtr, vm::low::opargs::Type)
 DEF_MICRO_INSTR(ft_init_bany_type, vm::low::opargs::PlaceBlockAny, vm::low::opargs::Type)
 DEF_MICRO_INSTR(ft_deinit)
+DEF_MICRO_INSTR(ft_call_func, vm::low::opargs::FunctionID)
+DEF_MICRO_INSTR(ft_ret)
 
 // 5.1: Direct Place Instrumentation
 DEF_MICRO_INSTR(ft_placeRead, vm::low::opargs::PlaceAny)

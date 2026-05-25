@@ -1400,43 +1400,118 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(ft_init_bany_type)(FUNCTION_ARGS) {
 		{
-            auto shadow_data_ptr = frame->local_shadow_data_stack + frame->local_shadow_data_head;
-            auto shadow_ptr_data_ptr = frame->local_shadow_pointer_stack + frame->local_shadow_pointer_head;
-            auto type = READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1);
+			auto* sf = thread.getShadowFrame();
+			auto shadow_data_ptr = sf->local_shadow_data_stack + sf->local_shadow_data_head;
+			auto shadow_ptr_data_ptr = sf->local_shadow_pointer_stack + sf->local_shadow_pointer_head;
+			auto type = READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1);
 
-            auto shadow_block = thread.getShadowDataMemory().allocateDummy(type, shadow_data_ptr);
-            auto shadow_pointer_block = thread.getShadowPointerMemory().allocateDummy(type, shadow_ptr_data_ptr);
+			auto shadow_block = thread.getShadowDataMemory().allocateDummy(type, shadow_data_ptr);
+			auto shadow_pointer_block = thread.getShadowPointerMemory().allocateDummy(type, shadow_ptr_data_ptr);
 
-            *frame->local_shadow_block_ref_stack_end = shadow_block.get();
-            frame->local_shadow_block_ref_stack_end += 1;
-			frame->local_shadow_data_head += type->getShadowSize();
+			*sf->local_shadow_block_ref_stack_end = shadow_block.get();
+			sf->local_shadow_block_ref_stack_end += 1;
+			sf->local_shadow_data_head += type->getShadowSize();
 
-            *frame->local_shadow_pointer_block_ref_stack_end = shadow_pointer_block.get();
-            frame->local_shadow_pointer_block_ref_stack_end += 1;
-			frame->local_shadow_pointer_head += type->getPointerSize();
+			*sf->local_shadow_pointer_block_ref_stack_end = shadow_pointer_block.get();
+			sf->local_shadow_pointer_block_ref_stack_end += 1;
+			sf->local_shadow_pointer_head += type->getPointerSize();
 		}
 		FUNCTION_CONT(1);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(ft_deinit)(FUNCTION_ARGS) {
 		{
-			auto block = frame->local_shadow_block_ref_stack_end[-1];
+			auto* sf = thread.getShadowFrame();
+			auto block = sf->local_shadow_block_ref_stack_end[-1];
 			auto type  = thread.getShadowDataMemory().getBlockType(block);
 
 			thread.getShadowDataMemory().freeBlockData(block);
 			thread.getShadowDataMemory().decreaseBlockRefcount(block);
 
-			frame->local_shadow_data_head -= type->getShadowSize();
-			frame->local_shadow_block_ref_stack_end -= 1;
+			sf->local_shadow_data_head -= type->getShadowSize();
+			sf->local_shadow_block_ref_stack_end -= 1;
 
-			auto block_ptr = frame->local_shadow_pointer_block_ref_stack_end[-1];
+			auto block_ptr = sf->local_shadow_pointer_block_ref_stack_end[-1];
 			auto type_ptr = thread.getShadowPointerMemory().getBlockType(block_ptr);
 
 			thread.getShadowPointerMemory().freeBlockData(block_ptr);
 			thread.getShadowPointerMemory().decreaseBlockRefcount(block_ptr);
 
-			frame->local_shadow_pointer_head -= type_ptr->getPointerSize();
-			frame->local_shadow_block_ref_stack_end -= 1;
+			sf->local_shadow_pointer_head -= type_ptr->getPointerSize();
+			sf->local_shadow_pointer_block_ref_stack_end -= 1;
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ft_call_func)(FUNCTION_ARGS) {
+		{
+			auto  function_id = static_cast<usize>(instr->arg0);
+			auto& called_func  = thread.process_program->getFunctions()[function_id];
+
+			auto& runtime_data = thread.runtime_data;
+			auto* prev_sf = runtime_data.shadow_frame_stack_current;
+
+			auto shared_shadow_data_size   = called_func.arg_shadow_size + called_func.ret_shadow_size;
+			auto shared_shadow_pointer_size = called_func.arg_pointer_size + called_func.ret_pointer_size;
+
+			auto arg_count           = called_func.parameters.size();
+			auto ret_count           = called_func.result_types.size();
+			auto shared_blocks_count = arg_count + ret_count;
+
+			u64 prev_block_ref_count = u64(prev_sf->local_shadow_block_ref_stack_end - prev_sf->local_shadow_block_ref_stack_base);
+
+			runtime_data.shadow_frame_stack_current++;
+			auto* sf = runtime_data.shadow_frame_stack_current;
+
+			if (sf + 1 >= runtime_data.shadow_frame_stack_end)
+				throw exceptions::VMStackOverflowException();
+
+			sf->local_shadow_block_ref_stack_base = prev_sf->local_shadow_block_ref_stack_base + (prev_block_ref_count - shared_blocks_count);
+			sf->local_shadow_pointer_block_ref_stack_base = prev_sf->local_shadow_pointer_block_ref_stack_base + (prev_block_ref_count - shared_blocks_count);
+
+			sf->local_shadow_data_head    = base::safeIntConv<u32>(shared_shadow_data_size);
+			sf->local_shadow_pointer_head = base::safeIntConv<u32>(shared_shadow_pointer_size);
+			sf->local_shadow_block_ref_stack_end = prev_sf->local_shadow_block_ref_stack_end;
+			sf->local_shadow_pointer_block_ref_stack_end = prev_sf->local_shadow_pointer_block_ref_stack_end;
+
+			sf->local_shadow_data_stack = prev_sf->local_shadow_data_stack + (prev_sf->local_shadow_data_head - shared_shadow_data_size);
+			sf->local_shadow_pointer_stack = prev_sf->local_shadow_pointer_stack + (prev_sf->local_shadow_pointer_head - shared_shadow_pointer_size);
+
+			prev_sf->local_shadow_block_ref_stack_end -= arg_count;
+			prev_sf->local_shadow_pointer_block_ref_stack_end -= arg_count;
+			prev_sf->local_shadow_data_head -= base::safeIntConv<u32>(called_func.arg_shadow_size);
+			prev_sf->local_shadow_pointer_head -= base::safeIntConv<u32>(called_func.arg_pointer_size);
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ft_ret)(FUNCTION_ARGS) {
+		{
+			auto* callee_sf = thread.runtime_data.shadow_frame_stack_current;
+			u64 ret_count = frame->current_function->result_types.size();
+
+			while (callee_sf->local_shadow_block_ref_stack_end > callee_sf->local_shadow_block_ref_stack_base) {
+				auto block = callee_sf->local_shadow_block_ref_stack_end[-1];
+				u64 block_ref_count = u64(callee_sf->local_shadow_block_ref_stack_end - callee_sf->local_shadow_block_ref_stack_base);
+				if (block_ref_count > ret_count) {
+					thread.getShadowDataMemory().freeBlockData(block);
+					thread.getShadowDataMemory().decreaseBlockRefcount(block);
+				}
+				callee_sf->local_shadow_block_ref_stack_end--;
+			}
+
+			while (callee_sf->local_shadow_pointer_block_ref_stack_end > callee_sf->local_shadow_pointer_block_ref_stack_base) {
+				auto block = callee_sf->local_shadow_pointer_block_ref_stack_end[-1];
+				u64 block_ref_count = u64(callee_sf->local_shadow_pointer_block_ref_stack_end - callee_sf->local_shadow_pointer_block_ref_stack_base);
+				if (block_ref_count > ret_count) {
+					thread.getShadowPointerMemory().freeBlockData(block);
+					thread.getShadowPointerMemory().decreaseBlockRefcount(block);
+				}
+				callee_sf->local_shadow_pointer_block_ref_stack_end--;
+			}
+
+			*callee_sf = ShadowFrame();
+			thread.runtime_data.shadow_frame_stack_current--;
 		}
 		FUNCTION_CONT(1);
 	}
@@ -1476,9 +1551,10 @@ namespace vm {
 				shadow_ptr.pointer_idx = program->getGlobalBlockShadowPointerOffsets()[offset];
 			} else {
 				const auto& func = frame->current_function;
-				shadow_ptr.data_base = frame->local_shadow_data_stack;
+				auto* sf = thread.getShadowFrame();
+				shadow_ptr.data_base = sf->local_shadow_data_stack;
 				shadow_ptr.logical_idx = func->block_shadow_data_offsets[offset];
-				shadow_ptr.pointer_base = frame->local_shadow_pointer_stack;
+				shadow_ptr.pointer_base = sf->local_shadow_pointer_stack;
 				shadow_ptr.pointer_idx = func->block_shadow_pointer_offsets[offset];
 			}
 			GET_SHADOW_POINTER_REF(instr->arg0) = shadow_ptr;

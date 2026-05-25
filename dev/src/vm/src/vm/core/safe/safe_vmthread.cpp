@@ -493,10 +493,18 @@ namespace vm {
 		frame->current_function            = &start_function;
 		frame->local_block_ref_stack_base  = runtime_data.block_ref_stack_base;
 		frame->local_block_ref_stack_end   = runtime_data.block_ref_stack_base;
-		frame->local_shadow_data_stack     = runtime_data.shadow_data_stack_base;
-		frame->local_shadow_pointer_stack  = runtime_data.shadow_pointer_stack_base;
-		frame->local_shadow_data_head      = 0;
-		frame->local_shadow_pointer_head   = 0;
+
+		if (safe_process.settings_.enable_fast_track) {
+			auto* sf = runtime_data.shadow_frame_stack_current;
+			sf->local_shadow_block_ref_stack_base = runtime_data.shadow_block_ref_stack_base;
+			sf->local_shadow_block_ref_stack_end  = runtime_data.shadow_block_ref_stack_base;
+			sf->local_shadow_pointer_block_ref_stack_base = runtime_data.shadow_pointer_block_ref_stack_base;
+			sf->local_shadow_pointer_block_ref_stack_end  = runtime_data.shadow_pointer_block_ref_stack_base;
+			sf->local_shadow_data_stack     = runtime_data.shadow_data_stack_base;
+			sf->local_shadow_pointer_stack  = runtime_data.shadow_pointer_stack_base;
+			sf->local_shadow_data_head      = 0;
+			sf->local_shadow_pointer_head   = 0;
+		}
 
 		const auto* instr = start_function.bc.data();
 

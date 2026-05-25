@@ -67,6 +67,15 @@ namespace vm {
 		Block** block_ref_stack_base;  /// Pointer to the start of `block_ref_stack_reserved`.
 		Block** block_ref_stack_end;   /// Pointer to the first value not allocated.
 
+		ShadowBlock** shadow_block_ref_stack_base = nullptr;
+		ShadowBlock** shadow_block_ref_stack_end = nullptr;
+		ShadowPointerBlock** shadow_pointer_block_ref_stack_base = nullptr;
+		ShadowPointerBlock** shadow_pointer_block_ref_stack_end = nullptr;
+
+		ShadowFrame* shadow_frame_stack_base = nullptr;
+		ShadowFrame* shadow_frame_stack_end = nullptr;
+		ShadowFrame* shadow_frame_stack_current = nullptr;
+
 		std::byte* global_data_buffer_base;    /// Pointer to the start of global data buffer.
 		Block** global_block_ref_buffer_base;  /// Pointer to the start of global block ref buffer.
 
@@ -88,6 +97,19 @@ namespace vm {
 			  block_ref_stack_end(
 				  stack->getBlockRefStack()->data() + stack->getBlockRefStack()->size()
 			  ),
+			  shadow_block_ref_stack_base(stack->getShadowBlockRefStack()->data()),
+			  shadow_block_ref_stack_end(
+				  stack->getShadowBlockRefStack()->data() + stack->getShadowBlockRefStack()->size()
+			  ),
+			  shadow_pointer_block_ref_stack_base(stack->getShadowPointerBlockRefStack()->data()),
+			  shadow_pointer_block_ref_stack_end(
+				  stack->getShadowPointerBlockRefStack()->data() + stack->getShadowPointerBlockRefStack()->size()
+			  ),
+			  shadow_frame_stack_base(stack->getShadowFrameStack()->data()),
+			  shadow_frame_stack_end(
+				  stack->getShadowFrameStack()->data() + stack->getShadowFrameStack()->size()
+			  ),
+			  shadow_frame_stack_current(stack->getShadowFrameStack()->data()),
 			  global_data_buffer_base(global_buffer_pointers.data_buffer_base),
 			  global_block_ref_buffer_base(global_buffer_pointers.blocks_buffer_base) {}
 	};
@@ -292,6 +314,10 @@ namespace vm {
 
 		[[nodiscard]] CRef<vm::low::ILowVMProgram> getProgram() const {
 			return process_program;
+		}
+
+		[[nodiscard]] ShadowFrame* getShadowFrame() const {
+			return runtime_data.shadow_frame_stack_current;
 		}
 	};
 

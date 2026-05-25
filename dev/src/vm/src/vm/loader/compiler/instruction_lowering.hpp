@@ -492,6 +492,9 @@ namespace vm::loader::compiler::detail {
 			instr_case(high::Op_jmpIf_label, i) { addLow<Op_jmpIf_label>(i.label); }
 			instr_case(high::Op_jmpIfNot_label, i) { addLow<Op_jmpIfNot_label>(i.label); }
 			instr_case(high::Op_call_func, i) {
+				if (compiler.settings_.enable_fast_track) {
+					addLow<Op_ft_call_func>(i.function);
+				}
 #ifdef ENABLE_JIT
 				addLow<Op_jit_call_entrypoint>(i.function);
 #else
@@ -502,17 +505,24 @@ namespace vm::loader::compiler::detail {
 			instr_case(high::Op_call_cfunc, i) { addLow<Op_call_cfunc>(i.function); }
 			instr_case(high::Op_set_threadctx, i) { addLow<Op_set_threadctx>(i.function); }
 			instr_case(high::Op_ret_tailcall_func, i) { addLow<Op_ret_tailcall_func>(i.function); }
-			instr_case(high::Op_ret, i) { addLow<Op_ret>(); }
+			instr_case(high::Op_ret, i) {
+				if (compiler.settings_.enable_fast_track) {
+					addLow<Op_ft_ret>();
+				}
+				addLow<Op_ret>();
+			}
 			instr_case(high::Op_init_pany_type, i) {
                 addLow<Op_init_bany_type>(i.var, i.type);
                 if(compiler.settings_.enable_fast_track){
                     addLow<Op_ft_init_bany_type>(i.var, i.type);
                 }
             }
-			instr_case(high::Op_deinit, i) { addLow<Op_deinit>(); }
-                if(compiler.settings_.enable_fast_track){
-                    addLow<Op_ft_deinit>();
-                }
+			instr_case(high::Op_deinit, i) {
+				addLow<Op_deinit>();
+				if (compiler.settings_.enable_fast_track) {
+					addLow<Op_ft_deinit>();
+				}
+			}
 			instr_case(high::Op_input_p64, i) { addLow<Op_input_p64>(i.dst); }
 			instr_case(high::Op_output_p64, i) { addLow<Op_output_p64>(i.src); }
 			instr_case(high::Op_input_p32, i) { addLow<Op_input_p32>(i.dst); }

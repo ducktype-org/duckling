@@ -16,6 +16,7 @@ namespace vm {
 		std::vector<BasicBlock<EntryT>*>    block_ref_stack;
 		std::vector<ShadowBlock*>          shadow_block_ref_stack;
 		std::vector<ShadowPointerBlock*>   shadow_pointer_block_ref_stack;
+		std::vector<ShadowFrame>           shadow_frame_stack;
 
 		std::vector<ShadowEntry>    shadow_data_stack;
 		std::vector<ShadowPointer>  shadow_pointer_stack;
@@ -47,7 +48,8 @@ namespace vm {
 			  shadow_block_ref_stack(BLOCK_REF_STACK_LENGTH),
 			  shadow_pointer_block_ref_stack(BLOCK_REF_STACK_LENGTH),
 			  shadow_data_stack(STACK_LENGTH),
-			  shadow_pointer_stack(STACK_LENGTH) {}
+			  shadow_pointer_stack(STACK_LENGTH),
+			  shadow_frame_stack(FRAMES_LENGTH) {}
 
 		auto getFrameStack() -> Ref<std::vector<Frame>> { return &frame_stack; }
 
@@ -62,6 +64,8 @@ namespace vm {
 		auto getShadowBlockRefStack() -> Ref<std::vector<ShadowBlock*>> { return &shadow_block_ref_stack; }
 
 		auto getShadowPointerBlockRefStack() -> Ref<std::vector<ShadowPointerBlock*>> { return &shadow_pointer_block_ref_stack; }
+
+		auto getShadowFrameStack() -> Ref<std::vector<ShadowFrame>> { return &shadow_frame_stack; }
 	};
 
 	using ThreadStack = BasicThreadStack<std::byte>;

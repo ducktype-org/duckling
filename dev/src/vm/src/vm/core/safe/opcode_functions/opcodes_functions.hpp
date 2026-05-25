@@ -134,8 +134,6 @@ namespace vm {
 
 			// Size of the shared stack space between called functions.
 			auto shared_stack_space_size   = called_func.arg_size + called_func.ret_size;
-			auto shared_shadow_data_size   = called_func.arg_shadow_size + called_func.ret_shadow_size;
-			auto shared_shadow_pointer_size = called_func.arg_pointer_size + called_func.ret_pointer_size;
 
 			auto arg_count           = called_func.parameters.size();
 			auto ret_count           = called_func.result_types.size();
@@ -146,8 +144,6 @@ namespace vm {
 			// Save current registers and flow.
 			frame->instr                     = instr + 1;
 			frame->local_stack               = local_stack;
-			frame->local_shadow_data_stack   = runtime_data.shadow_data_stack_base;
-			frame->local_shadow_pointer_stack = runtime_data.shadow_pointer_stack_base;
 
 			// Save the last frame
 			auto* prev_frame = frame;
@@ -165,10 +161,6 @@ namespace vm {
 			local_stack += prev_frame->local_stack_head - shared_stack_space_size;
 			frame->local_block_ref_stack_base = prev_frame->local_block_ref_stack_base
 			                                  + (prev_frame_block_ref_count - shared_blocks_count);
-            frame->local_shadow_block_ref_stack_base = prev_frame->local_shadow_block_ref_stack_base +
-                (prev_frame_block_ref_count - shared_blocks_count); 
-            frame->local_shadow_pointer_block_ref_stack_base = prev_frame->local_shadow_pointer_block_ref_stack_base +
-                (prev_frame_block_ref_count - shared_blocks_count); 
 
 			// Assumes that local_stack_size = ret_val + passed_args + new_local_args.
 			if (local_stack + called_func.local_stack_size >= runtime_data.local_stack_end)
@@ -178,18 +170,7 @@ namespace vm {
 				throw exceptions::VMStackOverflowException();
 
 			frame->local_stack_head           = shared_stack_space_size;
-			frame->local_shadow_data_head    = base::safeIntConv<u32>(shared_shadow_data_size);
-			frame->local_shadow_pointer_head = base::safeIntConv<u32>(shared_shadow_pointer_size);
 			frame->local_block_ref_stack_end = prev_frame->local_block_ref_stack_end;
-			frame->local_shadow_block_ref_stack_end = prev_frame->local_shadow_block_ref_stack_end;
-			frame->local_shadow_pointer_block_ref_stack_end = prev_frame->local_shadow_pointer_block_ref_stack_end;
-
-			frame->local_shadow_data_stack
-				= prev_frame->local_shadow_data_stack
-				+ (prev_frame->local_shadow_data_head - shared_shadow_data_size);
-			frame->local_shadow_pointer_stack
-				= prev_frame->local_shadow_pointer_stack
-				+ (prev_frame->local_shadow_pointer_head - shared_shadow_pointer_size);
 
 			// Remove the argument blocks from caller's block stack. Only the return value stays in
 			// the block stack.
@@ -197,8 +178,6 @@ namespace vm {
 			// caller.
 			prev_frame->local_block_ref_stack_end -= arg_count;
 			prev_frame->local_stack_head -= called_func.arg_size;
-			prev_frame->local_shadow_data_head -= base::safeIntConv<u32>(called_func.arg_shadow_size);
-			prev_frame->local_shadow_pointer_head -= base::safeIntConv<u32>(called_func.arg_pointer_size);
 		}
 
 		static
@@ -221,8 +200,6 @@ namespace vm {
 			*frame->local_block_ref_stack_end = block.get();
 			frame->local_block_ref_stack_end += 1;
 			frame->local_stack_head += type->getSize().asInt();
-			frame->local_shadow_data_head += type->getShadowSize();
-			frame->local_shadow_pointer_head += type->getPointerSize();
 		}
 
 		static
