@@ -92,8 +92,9 @@ private:
 		debugger.attachOnStatusChangedListener(status_listener);
 		debugger.attachOnExecutionCompletedListener(execution_completed_listener);
 		debugger.attachOnErrorListener(error_listener);
-		for (u64 breakpoint: breakpoints) debugger.setBreakpoint(base::StrID("main"), breakpoint);
-		debugger.runMain();
+		for (u64 breakpoint: breakpoints)
+			ASSERT_TRUE(debugger.setBreakpoint(base::StrID("main"), breakpoint).has_value());
+		ASSERT_TRUE(debugger.runMain().has_value());
 		std::unique_lock lk(m);
 		// timeout for the test
 		ASSERT_TRUE(cv.wait_for(lk, std::chrono::milliseconds(100), [&] {
@@ -166,12 +167,12 @@ private:
 		events::Listener<std::string> error_listener([&](const std::string& err) { fail(err); });
 
 		vm::debugger::Debugger debugger{ fs::File(path("while_true.dbc")) };
-		debugger.setBreakpoint(base::StrID("main"), 0);
+		ASSERT_TRUE(debugger.setBreakpoint(base::StrID("main"), 0).has_value());
 
 		debugger.attachOnStatusChangedListener(status_listener);
 		debugger.attachOnErrorListener(error_listener);
 
-		debugger.runMain();
+		ASSERT_TRUE(debugger.runMain().has_value());
 
 		{
 			std::unique_lock lk(m);
@@ -287,14 +288,14 @@ private:
 		debugger.pause();
 		ASSERT_TRUE(!debugger.pause());  // 3rd error
 
-		debugger.resume();
+		ASSERT_TRUE(debugger.resume().has_value());
 
 		ASSERT_TRUE(std::holds_alternative<vm::api::Running>(debugger.getStatus()));
 	}
 
 	void memoryTest() {
 		vm::debugger::Debugger debugger{ fs::File(path("breakpoint_all_types.dbc")) };
-		debugger.setBreakpoint(base::StrID("main"), 20);
+		ASSERT_TRUE(debugger.setBreakpoint(base::StrID("main"), 20).has_value());
 		std::mutex m;
 
 		std::condition_variable cv;

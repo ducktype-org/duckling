@@ -160,7 +160,7 @@ private:
 	 */
 	void vmApiMemoryAllTypes() {
 		auto pid = loadProgram("breakpoint_all_types.dbc");
-		vm::api::setBreakpoint(pid, base::StrID("main"), 20, true);
+		ASSERT_TRUE(vm::api::setBreakpoint(pid, base::StrID("main"), 20, true).has_value());
 		auto tid = vm::api::ThreadID(0);
 
 		ASSERT_TRUE(vm::api::run(pid).has_value());
