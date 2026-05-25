@@ -1058,29 +1058,34 @@ private:
 		{
 			assertFalse(
 				query::entryPoint<QueryImplicitCoercibilityOnAbstractType>({ u_int_3, int_3 }),
-				"Unsigned int should not be coercible into a signed int of the same size (positive values range is bigger so the coercion is lossy)."
+				"Unsigned int should not be coercible into a signed int of the same size (positive "
+			    "values range is bigger so the coercion is lossy)."
 			);
 
 			assertFalse(
 				query::entryPoint<QueryImplicitCoercibilityOnAbstractType>({ u_int_2, int_2 }),
-				"Unsigned int should not be coercible into a signed int of the same size (positive values range is bigger so the coercion is lossy)."
+				"Unsigned int should not be coercible into a signed int of the same size (positive "
+			    "values range is bigger so the coercion is lossy)."
 			);
 		}
 
 		{
 			assertFalse(
 				query::entryPoint<QueryImplicitCoercibilityOnAbstractType>({ int_2, u_int_2 }),
-				"Signed int should not be coercible into an unsigned int of the same size (coercion is lossy for negative values)."
+				"Signed int should not be coercible into an unsigned int of the same size "
+			    "(coercion is lossy for negative values)."
 			);
 
 			assertFalse(
 				query::entryPoint<QueryImplicitCoercibilityOnAbstractType>({ int_3, u_int_3 }),
-				"Signed int should not be coercible into an unsigned int of the same size (coercion is lossy for negative values)."
+				"Signed int should not be coercible into an unsigned int of the same size "
+			    "(coercion is lossy for negative values)."
 			);
 
 			assertFalse(
 				query::entryPoint<QueryImplicitCoercibilityOnAbstractType>({ int_3, u_int_2 }),
-				"Signed int should not be coercible into an unsigned int of the same size (coercion is lossy for negative values)."
+				"Signed int should not be coercible into an unsigned int of the same size "
+			    "(coercion is lossy for negative values)."
 			);
 		}
 

@@ -538,7 +538,7 @@ private:
 			{ "Type `i64` cannot be converted to type `u64`." },
 			1
 		);
-		
+
 		checkForErrorOnCompileModule(
 			R"(fun a() = 100000000000000000000000;)", { "Numeric literal value is too large" }, 1
 		);
