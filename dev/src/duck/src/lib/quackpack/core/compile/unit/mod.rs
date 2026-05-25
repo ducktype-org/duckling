@@ -34,11 +34,11 @@ pub enum ArtifactsType {
 #[derive(Debug)]
 struct UnitInner {
     /// An internal, but unique identifier.
-    id: u64,
+    unit_id: u64,
     /// Which package we're compiling.
     package: CompilerPackage,
     /// How have we got this package.
-    storage_id: PackageId,
+    package_id: PackageId,
     /// ID's of all __direct__ dependencies of this [`Unit`].
     dependencies_by_id: Vec<u64>,
     /// What artifacts should this unit produce.
@@ -48,17 +48,17 @@ struct UnitInner {
 impl Unit {
     /// Create a new [`Unit`].
     pub fn new(
-        id: u64,
+        unit_id: u64,
         package: CompilerPackage,
-        storage_id: PackageId,
+        package_id: PackageId,
         dependencies: Vec<u64>,
         package_type: ArtifactsType,
     ) -> Self {
         Self {
             inner: Arc::new(UnitInner {
-                id,
+                unit_id,
                 package,
-                storage_id,
+                package_id,
                 dependencies_by_id: dependencies,
                 package_type,
             }),
@@ -66,8 +66,8 @@ impl Unit {
     }
 
     /// Get the unique ID of this [`Unit`].
-    pub fn id(&self) -> u64 {
-        self.inner.id
+    pub fn unit_id(&self) -> u64 {
+        self.inner.unit_id
     }
 
     /// Get the root package of this [`Unit`].
@@ -76,7 +76,7 @@ impl Unit {
     }
 
     /// Get the ID's of all __direct__ dependencies of this [`Unit`].
-    pub fn deps_ids(&self) -> &[u64] {
+    pub fn deps_by_unit_id(&self) -> &[u64] {
         &self.inner.dependencies_by_id
     }
 
@@ -88,7 +88,7 @@ impl Unit {
     /// Get a unique (in terms of the current compilation graph) name, which can be used as a directory
     /// name for storing artifacts.
     pub fn unique_name(&self) -> String {
-        let id = self.inner.storage_id.storage_name();
+        let id = self.inner.package_id.storage_name();
         // Can we trim this hash?
         let id = sha256_string(id);
         let name = self.root_package().package().manifest().name();
