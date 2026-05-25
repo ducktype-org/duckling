@@ -46,7 +46,7 @@ private:
 			runTestOnVmGetResult("kill_threads_zero_division.dbc"),
 			vm::exceptions::VMZeroDivisionException::ERR_MSG
 		);
-		// Two threads deadlock and main dives by zero. To be removed after introducing
+		// Two threads deadlock and main divides by zero. To be removed after introducing
 		// deadlock detection.
 		assertExecutionPanickedWith(
 			runTestOnVmGetResult("deadlock_then_panic.dbc"),
