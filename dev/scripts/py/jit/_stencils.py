@@ -92,7 +92,7 @@ class Hole:
         return "StencilHole" + list_quote(
             [
                 f".offset = {self.offset}",
-                f".size = 32",
+                f".size = 4",
                 f".type = HoleType::Movable",
             ]
         )

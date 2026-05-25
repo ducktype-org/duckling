@@ -9,16 +9,16 @@
 #include <cstring>
 #include <string>
 
+using vm::jit::cnp::HoleType;
 using vm::jit::cnp::JitFuncMemory;
 using vm::jit::cnp::StencilData;
-using vm::jit::cnp::Stencils;
 using vm::jit::cnp::StencilHole;
-using vm::jit::cnp::HoleType;
+using vm::jit::cnp::Stencils;
 
 static auto stencils = Stencils {
-	#if __has_include(<mock_stencils-nm>)
-		#include <mock_stencils-nm>
-	#endif
+#if __has_include(<mock_stencils-nm>)
+	#include <mock_stencils-nm>
+#endif
 // Linter doesn't actually build mock_stencils-nm so it would be unavailable.
 }
 .load();
