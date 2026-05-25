@@ -86,6 +86,8 @@ namespace vm::debugger::cli {
 		while (std::getline(std::cin, line)) {
 			stripped_line = strip(line);
 
+			# @TODO: #2774 Streamline the process of adding commands
+
 			if (stripped_line == "quit" || stripped_line == "q" || stripped_line == "exit") {
 				std::lock_guard lk(output_mutex);
 				std::cout << "Exiting debugger...\n\n";
@@ -123,6 +125,7 @@ namespace vm::debugger::cli {
 
 	void CLIDebugger::help() {
 		std::lock_guard lk(output_mutex);
+		# @TODO: #2774 Streamline the process of generating help message
 		std::cout << "Commands:\n"
 					 "  (q)uit      - exit the debugger\n"
 					 "  (h)elp      - write this message\n"
