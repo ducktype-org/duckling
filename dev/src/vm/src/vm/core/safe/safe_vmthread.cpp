@@ -36,7 +36,7 @@ namespace vm {
 	// When testing JIT, compile all calls from the start function. Specifically main.
 	#define MAKE_BYTECODE_INSTRUCTION(OPCODE_NAME, ARG_0, ARG_1)         \
 		makeLowInstruction(                                              \
-			low::MicroOpcode::OPCODE_NAME == low::MicroOpcode::call_func \
+			low::MicroOpcode::OPCODE_NAME == low::MicroOpcode::call_cc_func \
 				? low::MicroOpcode::jit_call_entrypoint                  \
 				: low::MicroOpcode::OPCODE_NAME,                         \
 			ARG_0,                                                       \
@@ -210,7 +210,7 @@ namespace vm {
 			start_function.bc.end(),
 			{
 				MAKE_BYTECODE_INSTRUCTION(stepGil, 0, 0),  // We need to acquire GIL
-				MAKE_BYTECODE_INSTRUCTION(call_func, stack_size, called_function_id),
+				MAKE_BYTECODE_INSTRUCTION(call_cc_func, stack_size, called_function_id),
 				// @note: Only one block is left on the stack in this place, so there is no need for
 		        // any deinits. It's being deinitialized by the thread after obtaining the return
 		        // value/exit_code.
@@ -382,7 +382,7 @@ namespace vm {
 			{
 				MAKE_BYTECODE_INSTRUCTION(stepGil, 0, 0),  // We need to acquire GIL
 				MAKE_BYTECODE_INSTRUCTION(
-					call_func, main_has_args ? 72 : 48, called_function_id
+					call_cc_func, main_has_args ? 72 : 48, called_function_id
 				),  // call main, size of stack differs if main takes argumentes.
 				MAKE_BYTECODE_INSTRUCTION(mov_p64_p64, 0, 40),  // ret_val := main_ret_val
 				MAKE_BYTECODE_INSTRUCTION(mov_p64_imm, 32, 0),  // ix := 0

@@ -436,7 +436,7 @@ namespace vm::loader::compiler::detail {
 					ctx.offset_at_instructions.at(ctx.current_instruction_index), i.function
 				);
 #else
-				addLow<Op_call_func>(
+				addLow<Op_call_cc_func>(
 					ctx.offset_at_instructions.at(ctx.current_instruction_index), i.function
 				);
 #endif

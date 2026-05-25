@@ -25,17 +25,17 @@ namespace vm {
 		 * @note Objects stored on stack are
 		 * primitives (u64 has max aligment out of those)
 		 * Pointer
-		 * Opaque which are treated as bytes (aligment 1)
+		 * Opaque which are treated as void*
 		 * Data and Fixed size table which has aligment of the most alinged field/inner type
 		 * Variant which has aligment of the most alinged alternative or type tag size (which is
 		 * smaller than u64)
 		 */
-		constexpr static size_t MAX_ALIGNMENT = std::max(alignof(Pointer), alignof(u64));
+		constexpr static size_t MAX_ALIGNMENT = std::ranges::max({alignof(Pointer), alignof(u64), alignof(void*)});
 
 		/**
 		 * @brief Aligns value up, to the Type::MAX_ALIGNMENT.
 		 * @note Specific version of function for MAX_ALIGNMENT, because it is used in multiple
-		 * places, MAX_ALIGNMENT is constexpr, so we can get more optimized function.
+		 * places.
 		 */
 		constexpr static usize fullyAlignUp(usize value) {
 			return alignUp(value, MAX_ALIGNMENT);

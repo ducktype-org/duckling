@@ -307,7 +307,7 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(call_func)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(call_cc_func)(FUNCTION_ARGS) {
 		{ performFunctionCall(instr, local_stack, frame, thread, instr->arg1); }
 		// After acquiring the `executing_code` of the new function we have instruction pointer
 		// (`instr`) pointing at the first instruction of the new function, so moving forward by one
