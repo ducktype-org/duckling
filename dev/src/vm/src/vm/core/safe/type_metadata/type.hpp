@@ -25,7 +25,7 @@ namespace vm {
 		 * @note Objects stored on stack are
 		 * primitives (u64 has max alignment out of those)
 		 * Pointer
-		 * Opaque which are treated as void*
+		 * Opaque which is treated as void*
 		 * Data and Fixed size table which has alignment of the most alinged field/inner type
 		 * Variant which has alignment of the most alinged alternative or type tag size (which is
 		 * smaller than u64)
