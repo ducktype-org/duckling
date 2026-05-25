@@ -5,6 +5,7 @@ use std::path::PathBuf;
 use tempfile::{TempDir, tempdir};
 
 use super::parse_manifest;
+use crate::quackpack::core::manifest::parse::frontmatter::parse_frontmatter;
 use crate::quackpack::core::{BranchOrTag, OptLevel, Profile, Source, Version};
 use crate::util::path_ops_ext::PathOpsExt;
 use crate::{DuckContext, QpContext, StrId};
@@ -18,9 +19,30 @@ fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {
     (dir, manifest)
 }
 
+fn prepare_frontmatter(contents: &str) -> (TempDir, PathBuf) {
+    let dir = tempdir().unwrap();
+    let frontmatter = dir.path().join("x");
+    frontmatter.touch().unwrap();
+    frontmatter
+        .write(format!("<frontmatter>\n{}\n</frontmatter>", contents))
+        .unwrap();
+    dir.path().try_fsync_dir().unwrap();
+    (dir, frontmatter)
+}
+
 fn make_errors_message<const N: usize>(root: &TempDir, errors: [&str; N]) -> String {
     let mut vec = [format!(
         "when trying to parse the user manifest at `{}/x`",
+        root.path().display()
+    )]
+    .to_vec();
+    vec.extend(errors.iter().map(|&x| String::from(x)));
+    vec.join("\n")
+}
+
+fn make_errors_message_frontmatter<const N: usize>(root: &TempDir, errors: [&str; N]) -> String {
+    let mut vec = [format!(
+        "when trying to parse the frontmatter of the script at `{}/x`",
         root.path().display()
     )]
     .to_vec();
@@ -1047,4 +1069,89 @@ dependencies:
             ]
         )
     );
+}
+
+#[test]
+fn frontmatter() {
+    let (_dir, frontmatter_path) = prepare_frontmatter(
+        r#"
+dependencies:
+  a:
+    version: '1'
+"#,
+    );
+    let ctx = DuckContext::default();
+    let frontmatter = parse_frontmatter(frontmatter_path, &ctx).unwrap().unwrap();
+    let _ = frontmatter
+        .dependencies()
+        .get_by_name(StrId::new("a"))
+        .unwrap()
+        .clone();
+    assert_eq!(frontmatter.dependencies().all_dependencies().len(), 1);
+    assert_eq!(frontmatter.dev_dependencies().all_dependencies().len(), 0);
+    assert_eq!(frontmatter.profiles().get_profiles().len(), 0);
+}
+
+#[test]
+fn fails_frontmatter_with_import_and_other_fields() {
+    let (dir, frontmatter_path) = prepare_frontmatter(
+        r#"
+import: xd
+dependencies:
+  a:
+    version: '1'
+"#,
+    );
+    let ctx = DuckContext::default();
+    let err = parse_frontmatter(frontmatter_path.clone(), &ctx).unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        make_errors_message_frontmatter(
+            &dir,
+            [
+                "either remove the `import` field or all the other fields",
+                &format!(
+                    "script at `{}` imports a frontmatter but also specifies some of the frontmatter fields",
+                    frontmatter_path.display()
+                ),
+            ]
+        )
+    );
+}
+
+#[test]
+fn frontmatter_with_import() {
+    let dir = TempDir::new().unwrap();
+    let importing = dir.path().join("x");
+    let imported = dir.path().join("y");
+    importing.touch().unwrap();
+    importing
+        .write(
+            r#"
+<frontmatter>
+import: y
+</frontmatter>
+        "#,
+        )
+        .unwrap();
+    imported.touch().unwrap();
+    imported
+        .write(
+            r#"
+dependencies:
+  a:
+    version: '1'
+        "#,
+        )
+        .unwrap();
+    let ctx = DuckContext::default();
+    let frontmatter = parse_frontmatter(importing, &ctx).unwrap().unwrap();
+    let _ = frontmatter
+        .dependencies()
+        .get_by_name(StrId::new("a"))
+        .unwrap()
+        .clone();
+    assert_eq!(frontmatter.dependencies().all_dependencies().len(), 1);
+    assert_eq!(frontmatter.dev_dependencies().all_dependencies().len(), 0);
+    assert_eq!(frontmatter.profiles().get_profiles().len(), 0);
 }

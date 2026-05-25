@@ -21,7 +21,7 @@ use crate::{
 };
 
 pub static FRONTMATTER_REGEX: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new("<frontmatter>([^]*)</frontmatter>").unwrap());
+    LazyLock::new(|| Regex::new(r"<frontmatter>([\s\S]*)</frontmatter>").unwrap());
 
 /// Parse a frontmatter of a script at a given `path`.
 pub fn parse_frontmatter(
@@ -90,24 +90,28 @@ fn parse_schema_script(
 ) -> QuackResult<FrontMatter> {
     if let Some(ref import) = schema.import {
         debug!(
-            "Script at `{}` imports frontmatter at `{}`",
+            "script at `{}` imports frontmatter at `{}`",
             script_path.display(),
             import.display()
         );
         if !schema.is_just_import() {
             let mut err = qp_err!(
-                "Script at `{}` imports a frontmatter but also specifies some of the frontmatter fields",
+                "script at `{}` imports a frontmatter but also specifies some of the frontmatter fields",
                 script_path.display()
             );
-            err = err.add_hint("Either remove the `import` field or all the other fields");
+            err = err.add_hint("either remove the `import` field or all the other fields");
             qp_bail!(err);
         }
-        let imported_schema = generate_schema_yaml(import).context(format!(
-            "While reading the frontmatter imported by `{}`",
+        let root_path = script_path
+            .parent()
+            .expect("Script path should point to a file with parent");
+        let imported_path = root_path.join(import);
+        let imported_schema = generate_schema_yaml(&imported_path).context(format!(
+            "while reading the frontmatter imported by `{}`",
             script_path.display()
         ))?;
         return parse_schema_yaml(import, &imported_schema, ctx).context(format!(
-            "While parsing the frontmatter imported by `{}`",
+            "while parsing the frontmatter imported by `{}`",
             script_path.display()
         ));
     }

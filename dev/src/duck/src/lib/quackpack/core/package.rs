@@ -3,10 +3,10 @@ use std::fmt;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use crate::quackpack::core::FrontMatter;
 use crate::quackpack::core::Manifest;
 use crate::quackpack::core::compile::artifacts_layout::ArtifactsLayout;
 use crate::quackpack::core::storage::freeze::FreezeDep;
+use crate::quackpack::core::{Dependencies, FrontMatter, Profiles};
 use crate::quackpack::schemas::frontmatter::FrontMatter as FrontMatterSchema;
 use crate::quackpack::schemas::manifest::Manifest as ManifestSchema;
 
@@ -114,6 +114,7 @@ impl fmt::Debug for PackageInner {
     }
 }
 
+#[derive(Debug)]
 pub struct FrontMatterScript {
     path: PathBuf,
     original_schema: FrontMatterSchema,
@@ -147,6 +148,21 @@ impl FrontMatterScript {
     /// Get the script's frontmatter.
     pub fn frontmatter(&self) -> &FrontMatter {
         &self.frontmatter
+    }
+
+    /// Get the dependencies specified in the frontmatter.
+    pub fn dependencies(&self) -> &Dependencies {
+        self.frontmatter().dependencies()
+    }
+
+    /// Get the dev-dependencies specified in the frontmatter.
+    pub fn dev_dependencies(&self) -> &Dependencies {
+        self.frontmatter().dev_dependencies()
+    }
+
+    /// Get the profiles specified in the frontmatter.
+    pub fn profiles(&self) -> &Profiles {
+        self.frontmatter().profiles()
     }
 }
 
