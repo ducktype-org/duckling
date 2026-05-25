@@ -38,7 +38,7 @@ namespace vm {
 		 * places, MAX_ALIGNMENT is constexpr, so we can get more optimized function.
 		 */
 		constexpr static usize fullyAlignUp(usize value) {
-			return (value + MAX_ALIGNMENT - 1) & ~(MAX_ALIGNMENT - 1);
+			return alignUp(value, MAX_ALIGNMENT);
 		}
 
 		/**
