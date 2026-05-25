@@ -114,28 +114,6 @@ namespace compiler::helios::desugaring {
 			});
 		}
 
-		// Create a temp for the collection for it to be evaluated only once before the loop.
-		// var __collection: ref T = &<iterable>      (l-value iterable)
-		// var __collection: T     = <iterable>       (r-value iterable)
-		Box<code::Stmt> buildCollectionVar(ForDesugarCtx& ctx, SymID col_sym) {
-			Box<code::Expr> collection_expr = [&]() -> Box<code::Expr> {
-				if (ctx.collection_is_l_value) {
-					// If the collection if it's an l-value we operate on it through a ref.
-					return makeBox<code::RefOfExpr>(
-						ctx.ctx, code::generatedOrigin(), std::move(ctx.iterable_hout)
-					);
-				} else {
-					// If the collection is a r-value we store it in the `__collection` variable
-					// directly.
-					return std::move(ctx.iterable_hout);
-				}
-			}();
-
-			return makeBox<code::VariableStmt>(
-				ctx.iterable_origin, std::move(collection_expr), ctx.col_type, col_sym
-			);
-		}
-
 		// var __idx: u64 = 0
 		Box<code::Stmt> buildIndexVar(const ForDesugarCtx& ctx, SymID idx_sym) {
 			return makeBox<code::VariableStmt>(
@@ -295,61 +273,7 @@ namespace compiler::helios::desugaring {
 	}
 
 	SymID getForIteratorSymbol(query::Context& ctx, pst::Access<pst::For> stmt) {
-		auto iter_name = stmt->getIteratorIdentifier().unlock(ctx)->unwrap();
-		auto for_scope = ctx.query<QueryPrimaryCodeScopeFor>({ stmt });
-
-		// Get the element type from the iterable.
-		auto iterable_pst  = stmt->getIterable().unlock(ctx)->getExpr();
-		auto iterable_hout = ctx.query<QueryHoutOfExpr>({ iterable_pst })->valueOrThrow().ref();
-		tsh::SymbolType<> iterable_type = iterable_hout->expression_type.getSymbolType();
-		auto              iterable_kind = iterable_type.getType().getKind();
-
-		auto element_type = [&]() -> tsh::SymbolType<> {
-			switch (iterable_kind) {
-			case tsh::Kind::DynamicArray:
-				return iterable_type.getType().as<tsh::DynamicArrayAbstractType>().getElementType();
-			case tsh::Kind::StaticArray:
-				return iterable_type.getType().as<tsh::StaticArrayAbstractType>().getElementType();
-			default:
-				// The unsupported collection error is logged in `desugarFor`, so here we just throw.
-				query::throwFailed();
-			}
-			CORE_UNREACHABLE();
-		}();
-
-		// Get the type if it exists.
-		auto              type_holder_opt = stmt->getIteratorType().unlockOpt(ctx);
-		tsh::SymbolType<> iter_type       = [&]() -> tsh::SymbolType<> {
-            if (type_holder_opt.has_value()) {
-                auto maybe_iter_type_pst = type_holder_opt.value()->getExpr().unlockOpt(ctx);
-                if (maybe_iter_type_pst.has_value()) {
-                    // If a type exists we use it.
-                    auto type_ctv = getTypeCTVFromPST(ctx, maybe_iter_type_pst.value());
-                    return type_ctv.valueOrThrow().get<tsh::SymbolType<>>().value();
-                }
-            }
-            // Otherwise we infer it from the element type.
-            return element_type;
-		}();
-
-		if (auto maybe_is_const = stmt->getIsConst(); maybe_is_const.has_value()) {
-			iter_type = iter_type.withMutability(
-				maybe_is_const.value() ? tsh::Mutability::Immutable : tsh::Mutability::Mutable
-			);
-		} else {
-			// If no let/var exists the element type is the same as the array element type. If the
-			// array stores a const than the iterator is const.
-		}
-
-		return ctx.query<defgen::QueryGeneratedSymbol>({
-			.name = iter_name,
-			.generated_symbol_data
-			= defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::ControlFlowLocal{
-				.owning_scope = for_scope,
-				.role         = iter_name,
-				.type         = iter_type,
-			} },
-		});
+		return ctx.query<QuerySymbolOfSTMT>({ stmt->getIteratorIdentifier() }).valueOrThrow();
 	}
 
 	base::Optional<code::BlockStmt> desugarFor(

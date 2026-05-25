@@ -138,6 +138,79 @@ namespace compiler::helios {
 					param->getType().unlock(ctx)->getExpr().unlock(ctx), tsh::Mutability::Mutable
 				);
 			}
+
+			void visitIdentifierWrapper(pst::Access<pst::IdentifierWrapper> ident) final {
+				auto parent_opt = ident->getParent();
+				CORE_ASSERT(parent_opt.has_value(), "IdentifierWrapper without in type query");
+
+				auto parent_elem = parent_opt.value().unlock(ctx);
+				if (auto for_stmt_opt = parent_elem.dynamicCast<pst::For>()) {
+					handleForIterator(for_stmt_opt.value());
+					return;
+				}
+				CORE_PANIC("IdentifierWrapper with unsupported parent in QueryTypeOfSymbol");
+			}
+
+			void handleForIterator(pst::Access<pst::For> stmt) {
+				// Get the element type from the iterable.
+				auto iterable_pst  = stmt->getIterable().unlock(ctx)->getExpr();
+				auto iterable_hout = ctx.query<QueryHoutOfExpr>({ iterable_pst });
+				if (iterable_hout->hasFailed()) {
+					setFailed();
+					return;
+				}
+				tsh::SymbolType<> iterable_type
+					= iterable_hout->valueOrThrow()->expression_type.getSymbolType();
+
+				auto iterable_kind = iterable_type.getType().getKind();
+				auto element_type  = [&]() -> base::Optional<tsh::SymbolType<>> {
+                    switch (iterable_kind) {
+                    case tsh::Kind::DynamicArray:
+                        return iterable_type.getType()
+                            .as<tsh::DynamicArrayAbstractType>()
+                            .getElementType();
+                    case tsh::Kind::StaticArray:
+                        return iterable_type.getType()
+                            .as<tsh::StaticArrayAbstractType>()
+                            .getElementType();
+                    default:
+                        return {};
+                    }
+				}();
+				if (!element_type.has_value()) {
+					setFailed();
+					return;
+				}
+
+				// First assume that the iterator is the same as the element type of the array.
+				tsh::SymbolType<> iter_type = element_type.value();
+
+				// Now look for the explicit type annotation which will potentially override the
+				// deduced type.
+				if (auto type_holder_opt = stmt->getIteratorType().unlockOpt(ctx)) {
+					if (auto maybe_iter_type_pst
+					    = type_holder_opt.value()->getExpr().unlockOpt(ctx)) {
+						// If a type exists we use it.
+						auto type_ctv = getTypeCTVFromPST(ctx, maybe_iter_type_pst.value());
+						if (type_ctv.hasFailed()) {
+							setFailed();
+							return;
+						}
+						iter_type = type_ctv.valueOrThrow().get<tsh::SymbolType<>>().value();
+					}
+				}
+
+				if (auto maybe_is_const = stmt->getIsConst(); maybe_is_const.has_value()) {
+					iter_type = iter_type.withMutability(
+						maybe_is_const.value() ? tsh::Mutability::Immutable
+											   : tsh::Mutability::Mutable
+					);
+				} else {
+					// If no let/var exists the element type is the same as the array element type.
+					// If the array stores a const than the iterator is const.
+				}
+				setTypeOfSymbol(iter_type);
+			}
 		};
 
 		static auto handleFunction(Context& ctx, SymID sym) {

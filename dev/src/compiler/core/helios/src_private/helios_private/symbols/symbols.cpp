@@ -121,7 +121,8 @@ namespace compiler::helios {
 				case pst::ElementKind::Block:
 				case pst::ElementKind::ExprElement:
 				case pst::ElementKind::ExprHolder:
-				case pst::ElementKind::ExprStmt: {
+				case pst::ElementKind::ExprStmt:
+				case pst::ElementKind::IdentifierWrapper: {
 					auto pst_parent = getPSTElementParent(ctx, el);
 
 					CORE_ASSERT(
@@ -448,6 +449,26 @@ namespace compiler::helios {
 				PstSymbolData(scope, element->getHash())
 			);
 		}
+
+		if (auto ident_wrapper_opt = element.dynamicCast<pst::IdentifierWrapper>()) {
+			auto ident_wrapper = ident_wrapper_opt.value();
+			auto parent_opt    = ident_wrapper->getParent();
+			CORE_ASSERT(parent_opt.has_value(), "IdentifierWrapper without parent");
+
+			auto parent_elem = parent_opt.value().unlock(ctx);
+			if (auto for_parent_opt = parent_elem.dynamicCast<pst::For>()) {
+				return SymbolData::makePSTSymbolData(
+					{
+						.name = ident_wrapper->unwrap(),
+						.kind = SymbolKind::Variable,
+					},
+					PstSymbolData(scope, element->getHash())
+				);
+			} else {
+				CORE_PANIC("IdentifierWrapper in QuerySymbolOfStmt with unsupported parent");
+			}
+		}
+
 		CORE_PANIC("Not handled PST element in makeSymbolFromPSTElement");
 	}
 

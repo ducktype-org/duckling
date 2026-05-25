@@ -105,11 +105,7 @@ private:
                 var x = 42;
 				for (x in arr) {}
             })",
-			{
-				"Variable declaration shadows a previous declaration.",
-				"The exact code location is unavailable",
-				"symbol `x`.",
-			},
+			{ "Variable declaration shadows a previous declaration.", "Previous declaration:" },
 			1
 		);
 		checkForErrorOnCompileModule(
@@ -119,11 +115,7 @@ private:
 					for (x in arr) {}
 				}
             })",
-			{
-				"Variable declaration shadows a previous declaration.",
-				"The exact code location is unavailable",
-				"symbol `x`.",
-			},
+			{ "Variable declaration shadows a previous declaration.", "Previous declaration:" },
 			1
 		);
 	}

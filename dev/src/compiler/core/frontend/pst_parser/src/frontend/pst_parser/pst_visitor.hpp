@@ -30,6 +30,7 @@ namespace pst {
 		Pattern,
 		For,
 		Variable,
+		IdentifierWrapper,
 		If,
 		While,
 		Method,
