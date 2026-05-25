@@ -3,6 +3,7 @@
 #include <base/except/exceptions.hpp>
 #include <base/types/bits_and_bytes.hpp>
 #include <base/types/ints.hpp>
+#include <hashing/hash.hpp>
 
 namespace vm::code::valid_type {
 	/**
@@ -21,6 +22,8 @@ namespace vm::code::valid_type {
 	 */
 	class TypeSize {
 	public:
+		static constexpr base::Monostate HASHING_CAN_HASH_BY_REPRESENTATION = {};
+
 		constexpr TypeSize() = default;
 
 		constexpr TypeSize(Bytes non_pointer_bytes, usize number_pointer_fields):
@@ -86,10 +89,3 @@ namespace vm::code::valid_type {
 		Bytes size_when_ptr_is_16_bytes;
 	};
 }
-
-template<>
-struct std::hash<vm::code::valid_type::TypeSize> {
-	size_t operator()(const vm::code::valid_type::TypeSize& type_size) const {
-		return type_size.assumePointerSize(Bytes(16)).asInt();
-	}
-};
