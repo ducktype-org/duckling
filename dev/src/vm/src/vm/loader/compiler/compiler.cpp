@@ -167,27 +167,6 @@ namespace vm::loader::compiler {
 		return micro_bytecode;
 	}
 
-	base::Optional<std::pair<u64, u64>> Compiler::seekMethodParamRetCount(
-		const base::StrID& method_name
-	) const {
-		// @TODO: #962 Optimize
-		auto it = std::ranges::find_if(*low_program.types, [&](const auto& type) {
-			if_opt_some(type.getInheritanceMetadata(), inh_meta) {
-				return (*inh_meta).available_methods.contains(method_name);
-			}
-			return false;
-		});
-		if (it != low_program.types->end()) {
-			auto inh_meta = it->getInheritanceMetadata().value();
-			auto param    = inh_meta->available_methods[method_name]->getParameterCount();
-			auto ret      = inh_meta->available_methods[method_name]->getResultTypeCount();
-			if (!param)
-				return std::nullopt;  // Either both param and ret are present or both are not.
-			return std::make_pair(*param, *ret);
-		}
-		CORE_UNREACHABLE();
-	}
-
 	base::HashMap<base::StrID, usize> Compiler::calculateLabelsMapping(FunctionCompilationContext& ctx
 	) const {
 		base::HashMap<base::StrID, usize> label_positions{};
@@ -306,7 +285,8 @@ namespace vm::loader::compiler {
 				}
 				instr_case(Op_virtual_call_pptr_method, instr) {
 					auto [param_count, ret_count]
-						= *seekMethodParamRetCount(instr.method.method_name);
+						= low_program.types->seekMethodParamRetCount(instr.method.method_name)
+					          .value();
 					handle_non_tailcall(param_count, ret_count);
 					index++;
 				}
@@ -459,7 +439,9 @@ namespace vm::loader::compiler {
 					index++;
 				}
 				instr_case(Op_virtual_call_pptr_method, instr) {
-					handle_call(seekMethodParamRetCount(instr.method.method_name)->first);
+					handle_call(
+						low_program.types->seekMethodParamRetCount(instr.method.method_name)->first
+					);
 					index++;
 				}
 				instr_case(Op_ret_tailcall_func, instr) {

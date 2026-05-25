@@ -49,4 +49,24 @@ namespace vm {
 
 	TypeCRef TypeMetadata::at(base::StrID name) const { return types.at(name); }
 
+	base::Optional<std::pair<u64, u64>> TypeMetadata::seekMethodParamRetCount(
+		const base::StrID& method_name
+	) const {
+		// @TODO: #962 Optimize
+		auto it = std::ranges::find_if(types, [&](const auto& type) {
+			if_opt_some(type.getInheritanceMetadata(), inh_meta) {
+				return (*inh_meta).available_methods.contains(method_name);
+			}
+			return false;
+		});
+		if (it != types.end()) {
+			auto inh_meta = it->getInheritanceMetadata().value();
+			auto param    = inh_meta->available_methods[method_name]->getParameterCount();
+			auto ret      = inh_meta->available_methods[method_name]->getResultTypeCount();
+			if (!param)
+				return std::nullopt;  // Either both param and ret are present or both are not.
+			return std::make_pair(*param, *ret);
+		}
+		CORE_UNREACHABLE();
+	}
 }

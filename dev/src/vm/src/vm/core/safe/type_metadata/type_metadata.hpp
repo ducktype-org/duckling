@@ -72,5 +72,11 @@ namespace vm {
 		auto end() { return types.end(); }
 
 		usize size() { return types.size(); }
+
+		/**
+		 * @brief Seeks the number of parameters and return values of a method with the given name.
+		 */
+		base::Optional<std::pair<u64, u64>> seekMethodParamRetCount(const base::StrID& method_name
+		) const;
 	};
 }
