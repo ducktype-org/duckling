@@ -312,7 +312,7 @@ namespace vm::loader::compiler {
 				}
 				instr_case(Op_ret_tailcall_func, instr) {
 					// Stack contains exactly parameters and ret values of that call.
-					// Everything is passed and must be fully alligned.
+					// Everything is passed and must be fully aligned.
 					register_top_of_stack_as_arg_or_ret(stack.size());
 
 					std::tie(index, stack) = dfs_stack.back();
