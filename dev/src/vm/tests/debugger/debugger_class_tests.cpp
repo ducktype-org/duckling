@@ -43,7 +43,8 @@ private:
 	void testTemplate(
 		std::string_view          path_name,
 		const std::vector<int>&   expected_values,
-		const std::vector<usize>& expected_statuses
+		const std::vector<usize>& expected_statuses,
+		const std::vector<u64>&   breakpoints = {}
 	) {
 		std::atomic<size_t>     status_counter  = 0;
 		std::atomic<size_t>     ret_val_counter = 0;
@@ -91,6 +92,7 @@ private:
 		debugger.attachOnStatusChangedListener(status_listener);
 		debugger.attachOnExecutionCompletedListener(execution_completed_listener);
 		debugger.attachOnErrorListener(error_listener);
+		for (u64 breakpoint: breakpoints) debugger.setBreakpoint(base::StrID("main"), breakpoint);
 		debugger.runMain();
 		std::unique_lock lk(m);
 		// timeout for the test
@@ -130,7 +132,8 @@ private:
 			{
 				altIndex(vm::api::Running),
 				altIndex(vm::api::Paused),
-			}
+			},
+			{ 5, 8 }
 		);
 	}
 
@@ -163,6 +166,7 @@ private:
 		events::Listener<std::string> error_listener([&](const std::string& err) { fail(err); });
 
 		vm::debugger::Debugger debugger{ fs::File(path("while_true.dbc")) };
+		debugger.setBreakpoint(base::StrID("main"), 0);
 
 		debugger.attachOnStatusChangedListener(status_listener);
 		debugger.attachOnErrorListener(error_listener);
@@ -290,7 +294,8 @@ private:
 
 	void memoryTest() {
 		vm::debugger::Debugger debugger{ fs::File(path("breakpoint_all_types.dbc")) };
-		std::mutex             m;
+		debugger.setBreakpoint(base::StrID("main"), 20);
+		std::mutex m;
 
 		std::condition_variable cv;
 
@@ -304,6 +309,15 @@ private:
 		ASSERT_TRUE(cv.wait_for(lk, std::chrono::milliseconds(100), [&] {
 			return std::holds_alternative<vm::api::Paused>(debugger.getStatus());
 		}));
+
+		// Code position Test
+		auto pos_response = debugger.getCurrentPosition();
+		ASSERT_TRUE(pos_response.has_value());
+		auto code_position = pos_response.value();
+		ASSERT_EQUAL_PRINT("main", code_position.function_name);
+		ASSERT_EQUAL_PRINT(20, code_position.instr_number);
+		ASSERT_TRUE(code_position.source_position.has_value());
+
 
 		auto main_thread_id = vm::api::ThreadID(0);
 

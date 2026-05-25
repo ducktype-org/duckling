@@ -16,6 +16,7 @@
 #include <vm/api/data/status.hpp>
 #include <vm/core/safe/concurrency/gil.hpp>
 #include <vm/core/safe/exceptions.hpp>
+#include <vm/core/safe/low_program/cfg/cf_graph.hpp>
 #include <vm/core/safe/low_program/low_program.hpp>
 #include <vm/core/safe/low_program/opcodes.hpp>
 #include <vm/core/safe/memory/pointer.hpp>
@@ -102,6 +103,19 @@ namespace vm {
 		std::byte* local_stack = frame->local_stack;
 
 		low::MicroOpcode opcode = getInstructionOpcode(*instr);
+		if (opcode == low::MicroOpcode::breakpoint) {
+			const auto* program_copy
+				= dynamic_cast<const low::LowVMProgramCopy*>(process_program.get());
+			CORE_ASSERT(program_copy, "Breakpoints should be only in LowVMProgramCopy.");
+
+			auto original_instr
+				= program_copy->getOriginalProgram()
+			          ->getFunctions()
+			          .at(frame->current_function->name)
+			          ->bc[static_cast<size_t>(frame->instr - &frame->current_function->bc[0])];
+
+			opcode = getInstructionOpcode(original_instr);
+		}
 
 		// Execute the instruction by calling the debug opcode function.
 		OpFuns::DEBUG_OPFUNS.at(std::to_underlying(opcode))(instr, local_stack, frame, *this);
@@ -132,16 +146,21 @@ namespace vm {
 			));
 		}
 
-		low::LowFuncData start_function{ .name             = base::StrID("vm_start_function"),
-			                             .bc               = {},
-			                             .local_stack_size = 0,
-			                             .local_block_count
-			                             = func.result_types.size() + func.parameters.size(),
-			                             .arg_size            = 0,
-			                             .ret_size            = func.ret_size,
-			                             .parameters          = {},
-			                             .result_types        = func.result_types,
-			                             .instruction_mapping = {} };
+		low::LowFuncData start_function{
+			.name = base::StrID("vm_start_function"),
+#ifdef ENABLE_JIT
+			.cfg
+			= low::cf::ControlFlowGraph(),  // This is okay because we never JIT the start function.
+#endif
+			.bc                  = {},
+			.local_stack_size    = 0,
+			.local_block_count   = func.result_types.size() + func.parameters.size(),
+			.arg_size            = 0,
+			.ret_size            = func.ret_size,
+			.parameters          = {},
+			.result_types        = func.result_types,
+			.instruction_mapping = {}
+		};
 
 		const u64 called_function_id = process_program->getFunctions().idOf(func.name).value();
 
@@ -231,15 +250,21 @@ namespace vm {
 		auto        str_ptr_type     = types.at(base::StrID("ptr_string"));
 		auto        byte_type        = types.at(base::StrID("byte"));
 
-		low::LowFuncData start_function{ .name                = base::StrID("vm_start_function"),
-			                             .bc                  = {},
-			                             .local_stack_size    = 72,
-			                             .local_block_count   = 7,
-			                             .arg_size            = 0,
-			                             .ret_size            = func.ret_size,
-			                             .parameters          = {},
-			                             .result_types        = func.result_types,
-			                             .instruction_mapping = {} };
+		low::LowFuncData start_function{
+			.name = base::StrID("vm_start_function"),
+#ifdef ENABLE_JIT
+			.cfg
+			= low::cf::ControlFlowGraph(),  // This is okay because we never JIT the start function.
+#endif
+			.bc                  = {},
+			.local_stack_size    = 72,
+			.local_block_count   = 7,
+			.arg_size            = 0,
+			.ret_size            = func.ret_size,
+			.parameters          = {},
+			.result_types        = func.result_types,
+			.instruction_mapping = {}
+		};
 
 		// TypeIDs to pass to opcodes.
 		u64 argv_type_arg     = safeReadObjectBytes<u64>(argv_type);
@@ -599,18 +624,13 @@ namespace vm {
 	std::expected<low::LowCodePosition, api::ApiError> SafeVMThread::getCurrentPosition() {
 		variant_match(getStatus()) {
 			variant_case_novalue(api::Paused) {
-				auto frame = runtime_data.frame_stack_current;
-				auto instr = frame->instr;
+				auto  frame = runtime_data.frame_stack_current;
+				auto& func  = *frame->current_function;
 
-				for (const auto& [idx, func]:
-				     std::views::enumerate(process_program->getFunctions())) {
-					if (func.bc.data() <= instr && instr < func.bc.data() + func.bc.size()) {
-						return low::LowCodePosition{
-							.function          = &func,
-							.instruction_index = static_cast<u64>(instr - func.bc.data()),
-						};
-					}
-				}
+				return low::LowCodePosition{
+					.function          = &func,
+					.instruction_index = static_cast<u64>(frame->instr - func.bc.data()),
+				};
 			}
 			variant_default {
 				return std::unexpected(api::ApiError{

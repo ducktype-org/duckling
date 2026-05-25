@@ -27,6 +27,7 @@ add_library(HELIOS STATIC
 	src_private/helios_private/hout_creation/desugaring/for.cpp
 	src_private/helios_private/hout_creation/hout_stmt_compilation.cpp
 	src_private/helios_private/errors/dia_interactive_elements.cpp
+	src_private/helios_private/errors/duplicated_definition.cpp
 	src_private/helios_private/tsh/abstract_type_impl.cpp
 	src_private/helios_private/tsh/queries.cpp
 
