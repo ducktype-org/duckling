@@ -100,4 +100,9 @@
  */
 #define IF(c) IIF(BOOL(c))
 
+/**
+ * @brief Only expands whats next, if the condition is true, otherwise it will expand to nothing.
+ */
+#define WHEN(c) IF(c)(EXPAND, EAT)
+
 // NOLINTEND(modernize-macro-to-enum,cppcoreguidelines-macro-to-enum)
