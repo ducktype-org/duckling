@@ -27,11 +27,6 @@ impl FrontMatter {
         &self.dependencies
     }
 
-    /// Get mutable access to the dependencies.
-    pub fn dependencies_mut(&mut self) -> &mut Dependencies {
-        &mut self.dependencies
-    }
-
     /// Get the development dependencies.
     pub fn dev_dependencies(&self) -> &Dependencies {
         &self.dev_dependencies

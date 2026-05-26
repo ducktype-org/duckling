@@ -1155,3 +1155,29 @@ dependencies:
     assert_eq!(frontmatter.dev_dependencies().all_dependencies().len(), 0);
     assert_eq!(frontmatter.profiles().get_profiles().len(), 0);
 }
+
+#[test]
+fn fails_frontmatter_import_not_existing() {
+    let (dir, frontmatter_path) = prepare_frontmatter(
+        r#"
+import: y
+"#,
+    );
+    let ctx = DuckContext::default();
+    let err = parse_frontmatter(frontmatter_path.clone(), &ctx).unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        make_errors_message_frontmatter(
+            &dir,
+            [
+                &format!(
+                    "while reading the frontmatter imported by `{}` at `{}`",
+                    frontmatter_path.display(),
+                    dir.path().join("y").display(),
+                ),
+                &format!("failed to read `{}`", dir.path().join("y").display(),),
+                "No such file or directory (os error 2)",
+            ]
+        )
+    );
+}

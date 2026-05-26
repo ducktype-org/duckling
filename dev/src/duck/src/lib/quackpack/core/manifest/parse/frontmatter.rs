@@ -68,7 +68,7 @@ fn generate_schema_script(path: &Path) -> QuackResult<Option<FrontMatterSchema>>
 
 /// Helper for [`parse_schema_script`].
 /// Generate [`FrontMatterSchema`] from a yaml file, which was imported by another frontmatter.
-fn generate_schema_yaml(path: &Path) -> QuackResult<FrontMatterSchema> {
+fn generate_schema_imported(path: &Path) -> QuackResult<FrontMatterSchema> {
     let content = path.read_to_string()?;
     generate_schema(&content)
 }
@@ -94,7 +94,7 @@ fn parse_schema_script(
             script_path.display(),
             import.display()
         );
-        if !schema.is_just_import() {
+        if !schema.is_just_import_or_empty() {
             let mut err = qp_err!(
                 "script at `{}` imports a frontmatter but also specifies some of the frontmatter fields",
                 script_path.display()
@@ -106,14 +106,20 @@ fn parse_schema_script(
             .parent()
             .expect("Script path should point to a file with parent");
         let imported_path = root_path.join(import);
-        let imported_schema = generate_schema_yaml(&imported_path).context(format!(
-            "while reading the frontmatter imported by `{}`",
-            script_path.display()
-        ))?;
-        return parse_schema_yaml(import, &imported_schema, ctx).context(format!(
-            "while parsing the frontmatter imported by `{}`",
-            script_path.display()
-        ));
+        let imported_schema = generate_schema_imported(&imported_path).with_context(|| {
+            format!(
+                "while reading the frontmatter imported by `{}` at `{}`",
+                script_path.display(),
+                imported_path.display(),
+            )
+        })?;
+        return parse_schema_imported(import, &imported_schema, ctx).with_context(|| {
+            format!(
+                "while parsing the frontmatter imported by `{}` at `{}`",
+                script_path.display(),
+                imported_path.display(),
+            )
+        });
     }
     parse_schema(script_path, schema, ctx)
 }
@@ -121,14 +127,14 @@ fn parse_schema_script(
 /// Helper for [`parse_schema_script`].
 /// Generate [`FrontMatter`] from [`FrontMatterSchema`] of an imported yaml file.
 #[tracing::instrument(skip(schema, ctx))]
-fn parse_schema_yaml(
+fn parse_schema_imported(
     yaml_file_path: &Path,
     schema: &FrontMatterSchema,
     ctx: &DuckContext,
 ) -> QuackResult<FrontMatter> {
     if schema.import.is_some() {
         qp_bail!(
-            "Imported frontmatter at `{}` also wants to import, which is prohibited",
+            "Transitive import at `{}`, which is prohibited",
             yaml_file_path.display()
         );
     }

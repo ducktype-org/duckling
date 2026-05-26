@@ -13,12 +13,13 @@ pub struct FrontMatter {
     pub dev_dependencies: Option<Dependencies>,
     /// `profiles:` root field
     pub profiles: Option<HashMap<String, Profile>>,
-    /// `import:` root field
+    /// `import:` root field, relative to the parent folder of the script
     pub import: Option<PathBuf>,
 }
 
 impl FrontMatter {
-    pub fn is_just_import(&self) -> bool {
+    /// Checks whether at most the [`FrontMatter::import`] field is not [`None`].
+    pub fn is_just_import_or_empty(&self) -> bool {
         self.dependencies.is_none() && self.dev_dependencies.is_none() && self.profiles.is_none()
     }
 }
