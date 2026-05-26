@@ -1,0 +1,12 @@
+fun main() -> i64 = {
+    var a: ptr i32;
+    {
+        var b = 1;
+        a = &b as ptr i32;
+    };
+    {
+        var c = 2;
+        builtin_output_i64(*a);
+    };
+    return 0;
+}

@@ -39,6 +39,7 @@ public:
 
 		TESTER_ADD_TEST(testErrorLoggingExpandStatements);
 		TESTER_ADD_TEST(testErrorLoggingCyclicErrors);
+		TESTER_ADD_TEST(testPointerCastErrors);
 		TESTER_ADD_TEST(testErrorBadExpr);
 		TESTER_ADD_TEST(testDiagnosticErrorsCorrectness);
 	}
@@ -1296,6 +1297,97 @@ private:
 				}
 			)",
 			{ "cycle" },
+			1
+		);
+	}
+
+	void testPointerCastErrors() {
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() = {
+					var x: i32 = 10;
+					var p = x as ptr i32;
+				}
+			)",
+			{ "Invalid cast from type", "i32", "ptr i32" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() = {
+					var x: i32 = 10;
+					var r: ref i32 = &x;
+					var m = r as manyptr i32;
+				}
+			)",
+			{ "Invalid cast from type", "ref i32", "manyptr i32" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() = {
+					var b: box i32 = 10;
+					var m = b as manyptr i32;
+				}
+			)",
+			{ "Invalid cast from type", "box i32", "manyptr i32" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() = {
+					var x: i32 = 10;
+					var p: ptr i32 = &x as ptr i32;
+					var m = p as manyptr i32;
+				}
+			)",
+			{ "Invalid cast from type", "ptr i32", "manyptr i32" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() = {
+					var x: i32 = 10;
+					var p: ptr i32 = &x as ptr i32;
+					var q = p as ptr i64;
+				}
+			)",
+			{ "Invalid cast from type", "ptr i32", "ptr i64" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() = {
+					var x: i32 = 10;
+					var p = &x as ptr i64;
+				}
+			)",
+			{ "Invalid cast from type", "ref i32", "ptr i64" },
+			1
+		);
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() = {
+					var x: box i32 = 10;
+					var p = x as ptr i64;
+				}
+			)",
+			{ "Invalid cast from type", "box i32", "ptr i64" },
+			1
+		);
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() = {
+					var x = 10;
+					var y = *x;
+				}
+			)",
+			{ "Tried to dereference a non-pointer type" },
 			1
 		);
 	}

@@ -196,17 +196,25 @@ namespace compiler::helios::defgen {
 			));
 		}
 
-		static void stringifyClass(
+		static void stringifyUnit(
+			Context& ctx,
+			const HOUTFunctionDeclaration& /* to_string_decl */,
+			std::vector<Box<code::Stmt>>& body
+		) {
+			body.emplace_back(makeBox<code::ReturnStmt>(
+				code::generatedOrigin(),
+				makeBox<code::LiteralStringExpr>(ctx, code::generatedOrigin(), base::StrID("()"))
+			));
+		}
+
+		static void stringifyAggregate(
 			Context&                       ctx,
 			const HOUTFunctionDeclaration& to_string_decl,
-			std::vector<Box<code::Stmt>>&  body
+			std::vector<Box<code::Stmt>>&  body,
+			const base::StrID              prefix,
+			const CRef<tsh::TypeInterface> type_interface
 		) {
-			const auto class_type
-				= to_string_decl.parameters.at(0).type.getType().as<tsh::ClassAbstractType>();
-			const auto class_name      = name(class_type.getSymbol());
-			const auto class_interface = class_type.getInterface(ctx);
-			const auto concat_sym      = concatSym(ctx);
-
+			const auto concat_sym = concatSym(ctx);
 			// Create a reusable expression of the de-reffed self (self is passed by reference)
 			auto self_expr = makeBox<code::DerefExpr>(
 				ctx,
@@ -228,16 +236,14 @@ namespace compiler::helios::defgen {
 			);
 			body.emplace_back(makeBox<code::VariableStmt>(
 				code::generatedOrigin(),
-				makeBox<code::LiteralStringExpr>(
-					ctx, code::generatedOrigin(), base::StrID(class_name.str() + "(")
-				),
+				makeBox<code::LiteralStringExpr>(ctx, code::generatedOrigin(), prefix),
 				STRING_TYPE,
 				result_sym
 			));
 
 			// Main body: append the fields
 			const std::vector<tsh::InterfaceElement> fields
-				= class_interface->getFieldsView() | std::ranges::to<std::vector>();
+				= type_interface->getFieldsView() | std::ranges::to<std::vector>();
 			const auto num_fields = fields.size();
 
 			for (usize idx = 0; idx < num_fields; idx++) {
@@ -320,6 +326,33 @@ namespace compiler::helios::defgen {
 			));
 		}
 
+		static void stringifyTuple(
+			Context&                       ctx,
+			const HOUTFunctionDeclaration& to_string_decl,
+			std::vector<Box<code::Stmt>>&  body
+		) {
+			const auto tuple_type
+				= to_string_decl.parameters.at(0).type.getType().as<tsh::TupleAbstractType>();
+			const auto tuple_interface = tuple_type.getInterface(ctx);
+
+			stringifyAggregate(ctx, to_string_decl, body, base::StrID("("), tuple_interface);
+		}
+
+		static void stringifyClass(
+			Context&                       ctx,
+			const HOUTFunctionDeclaration& to_string_decl,
+			std::vector<Box<code::Stmt>>&  body
+		) {
+			const auto class_type
+				= to_string_decl.parameters.at(0).type.getType().as<tsh::ClassAbstractType>();
+			const auto class_name      = name(class_type.getSymbol());
+			const auto class_interface = class_type.getInterface(ctx);
+
+			stringifyAggregate(
+				ctx, to_string_decl, body, base::StrID(class_name.str() + "("), class_interface
+			);
+		}
+
 		static PResult provide(Context& ctx, const QKey owner_type) {
 			const auto  to_string_sym  = toStringSymForType(ctx, owner_type);
 			const auto& to_string_decl = ctx.query<QueryDeclOfFun>(to_string_sym)->valueOrThrow();
@@ -345,6 +378,14 @@ namespace compiler::helios::defgen {
 			}
 			case tsh::Kind::String: {
 				stringifyString(ctx, to_string_decl, body);
+				break;
+			}
+			case tsh::Kind::Unit: {
+				stringifyUnit(ctx, to_string_decl, body);
+				break;
+			}
+			case tsh::Kind::Tuple: {
+				stringifyTuple(ctx, to_string_decl, body);
 				break;
 			}
 			case tsh::Kind::Class: {

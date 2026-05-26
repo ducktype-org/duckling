@@ -339,6 +339,27 @@ namespace compiler::backend_vm::internal {
 				.scope_flags = instr.scope_flags,
 			};
 		}
+		case BoxAlloc: {
+			CORE_ASSERT(
+				instr.arguments.size() == 1,
+				"BoxAlloc operation expects 1 argument, got: ",
+				instr.arguments.size()
+			);
+			return BoxAllocOperation{
+				.src  = lower_arg(instr.arguments[0]),
+				.dest = lower_opt_dest(),
+			};
+		}
+		case BoxFree: {
+			CORE_ASSERT(
+				instr.arguments.size() == 1,
+				"BoxAlloc operation expects 1 argument, got: ",
+				instr.arguments.size()
+			);
+			return BoxFreeOperation{
+				.src = lower_arg(instr.arguments[0]),
+			};
+		}
 		case Nop: {
 			// No instruction to generate, just skip.
 			return NoOperation{};
