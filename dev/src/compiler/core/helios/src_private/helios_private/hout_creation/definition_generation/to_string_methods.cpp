@@ -212,9 +212,9 @@ namespace compiler::helios::defgen {
 			const HOUTFunctionDeclaration& to_string_decl,
 			std::vector<Box<code::Stmt>>&  body,
 			const base::StrID              prefix,
-			const CRef<tsh::TypeInterface> type_interface,
-			const SymID                    concat_sym
+			const CRef<tsh::TypeInterface> type_interface
 		) {
+			const auto concat_sym = concatSym(ctx);
 			// Create a reusable expression of the de-reffed self (self is passed by reference)
 			auto self_expr = makeBox<code::DerefExpr>(
 				ctx,
@@ -333,11 +333,8 @@ namespace compiler::helios::defgen {
 			const auto tuple_type
 				= to_string_decl.parameters.at(0).type.getType().as<tsh::TupleAbstractType>();
 			const auto tuple_interface = tuple_type.getInterface(ctx);
-			const auto concat_sym      = concatSym(ctx);
 
-			stringifyAggregate(
-				ctx, to_string_decl, body, base::StrID("("), tuple_interface, concat_sym
-			);
+			stringifyAggregate(ctx, to_string_decl, body, base::StrID("("), tuple_interface);
 		}
 
 		static void stringifyClass(
@@ -349,15 +346,9 @@ namespace compiler::helios::defgen {
 				= to_string_decl.parameters.at(0).type.getType().as<tsh::ClassAbstractType>();
 			const auto class_name      = name(class_type.getSymbol());
 			const auto class_interface = class_type.getInterface(ctx);
-			const auto concat_sym      = concatSym(ctx);
 
 			stringifyAggregate(
-				ctx,
-				to_string_decl,
-				body,
-				base::StrID(class_name.str() + "("),
-				class_interface,
-				concat_sym
+				ctx, to_string_decl, body, base::StrID(class_name.str() + "("), class_interface
 			);
 		}
 
