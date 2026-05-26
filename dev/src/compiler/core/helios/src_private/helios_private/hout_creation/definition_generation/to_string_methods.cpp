@@ -219,8 +219,9 @@ namespace compiler::helios::defgen {
 
 			// Prelude: the class name and opening parenthesis
 			const auto result_sym = ctx.query<QueryGeneratedSymbol>(
-				{ .name                  = base::StrID("__result"),
-			      .generated_symbol_data = GeneratedSymbolData{ GeneratedSymbolData::Variable{
+				{ .name = base::StrID("__result"),
+			      .generated_symbol_data
+			      = GeneratedSymbolData{ GeneratedSymbolData::GeneratedFunctionVariable{
 					  .function_symbol = to_string_decl.original_symbol,
 					  .variable_index  = 0,
 					  .type            = STRING_TYPE } } }
