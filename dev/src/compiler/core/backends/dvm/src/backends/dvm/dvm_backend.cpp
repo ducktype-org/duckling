@@ -33,11 +33,8 @@ namespace compiler::backend_vm {
 	}
 
 	void DVMCodeBuilder::insertLirGlobal(
-		const lir::LIRGlobal&               lir_global,
-		base::Optional<CRef<lir::Function>> global_ctor,
-		base::Optional<CRef<lir::Function>> global_dtor
-	) {
-		program_context->lowerAndKeepLirGlobal(lir_global, global_ctor, global_dtor);
+		const lir::LIRGlobalData&               lir_global) {
+		program_context->lowerAndKeepLirGlobal(lir_global);
 	}
 
 	void DVMCodeBuilder::insertRawBytecodeDefinitions(const vm::code::CodeCollection& bytecode) {

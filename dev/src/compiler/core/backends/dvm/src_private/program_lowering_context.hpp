@@ -65,9 +65,7 @@ namespace compiler::backend_vm::internal {
 		const vm::code::Function& lowerAndKeepLirFunction(CRef<lir::Function> lir_function);
 
 		const vm::code::GlobalData& lowerAndKeepLirGlobal(
-			const lir::LIRGlobal&               lir_global,
-			base::Optional<CRef<lir::Function>> global_ctor,
-			base::Optional<CRef<lir::Function>> global_dtor
+			const lir::LIRGlobalData& lir_global
 		);
 
 		/**

@@ -74,37 +74,35 @@ namespace compiler::repl {
 		CORE_DEV_LOG(
 			REPL,
 			"LIR data contains ",
-			lir_data->functions.size(),
+			lir_data->lir_unit.lir_functions.size(),
 			" functions and ",
-			lir_data->globals.size(),
+			lir_data->lir_unit.lir_globals.size(),
 			" globals\n"
 		);
-		for (const auto& global: lir_data->globals) {
-			CORE_DEV_LOG(REPL, "Global: ", global.lir_global.mangled_name.strView());
-			if (global.global_ctor.has_value())
-				CORE_DEV_LOG(
-					REPL, "  Has ctor: ", global.global_ctor.value()->mangled_name.strView()
-				);
-			if (global.global_dtor.has_value())
-				CORE_DEV_LOG(
-					REPL, "  Has dtor: ", global.global_dtor.value()->mangled_name.strView()
-				);
+		for (const auto& global: lir_data->lir_unit.lir_globals) {
+			CORE_DEV_LOG(REPL, "Global: ", global.global.mangled_name.strView());
+			// if (global.global_ctor.has_value())
+			// 	CORE_DEV_LOG(
+			// 		REPL, "  Has ctor: ", global.data_initialization.value()->mangled_name.strView()
+			// 	);
+			// if (global.global_dtor.has_value())
+			// 	CORE_DEV_LOG(
+			// 		REPL, "  Has dtor: ", global.global_dtor.value()->mangled_name.strView()
+			// 	);
 		}
-		for (const auto& func: lir_data->functions)
+		for (const auto& func: lir_data->lir_unit.lir_functions)
 			CORE_DEV_LOG(REPL, "Function: ", func->mangled_name.strView());
 
 		// @TODO: #2246 check if we can avoid repeating the logic from compileLirToModuleData.
 		// This is strictly connected to the loading dvm context.
 		// We mimic the same idea as in compiling a single module,
 		// but this time we append the new functions to the lowering context.
-		for (const auto& global: lir_data->globals) {
-			(void) lowering_context.lowerAndKeepLirGlobal(
-				global.lir_global, global.global_ctor, global.global_dtor
-			);
+		for (const auto& global: lir_data->lir_unit.lir_globals) {
+			(void) lowering_context.lowerAndKeepLirGlobal(global);
 		}
 
 		// Lower all functions
-		for (const auto& lir_function: lir_data->functions) {
+		for (const auto& lir_function: lir_data->lir_unit.lir_functions) {
 			CORE_DEV_LOG(REPL, "Lowering function: ", lir_function->mangled_name.strView(), "\n");
 			(void) lowering_context.lowerAndKeepLirFunction(lir_function);
 		}

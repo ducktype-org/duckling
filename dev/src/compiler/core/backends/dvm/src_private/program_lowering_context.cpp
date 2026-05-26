@@ -194,9 +194,7 @@ vm::code::CodeCollection ProgramLoweringContext::collectNewCodeSince(
 }
 
 const vm::code::GlobalData& ProgramLoweringContext::lowerAndKeepLirGlobal(
-	const lir::LIRGlobal&               lir_global,
-	base::Optional<CRef<lir::Function>> global_ctor,
-	base::Optional<CRef<lir::Function>> global_dtor
+	const lir::LIRGlobalData&               lir_global
 ) {
 	if (auto maybe_global = global_name_to_dvm_data.atMaybe(lir_global.mangled_name))
 		return **maybe_global;
