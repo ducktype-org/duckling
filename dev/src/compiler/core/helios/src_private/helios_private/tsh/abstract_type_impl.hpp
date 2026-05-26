@@ -536,7 +536,7 @@ namespace compiler::tsh {
 		Mutability mutability;
 	};
 
-	class PointerAbstractTypeImpl final: public AbstractTypeImpl {
+	class PointerAbstractTypeImpl: public AbstractTypeImpl {
 		SymbolType<> pointee;
 
 	public:
@@ -561,7 +561,7 @@ namespace compiler::tsh {
 		}
 
 		explicit PointerAbstractTypeImpl(const SymbolType<> component): pointee(component) {
-			representation = base::strConcat("pointer(", component.toString(), ")");
+			representation = base::strConcat("ptr ", component.toString());
 		}
 
 		[[nodiscard]]
@@ -578,6 +578,48 @@ namespace compiler::tsh {
 		[[nodiscard]] bool isCopyable(query::Context&) const override { return true; }
 
 		[[nodiscard]] bool isTriviallyCopyable(query::Context&) const override { return true; }
+
+		[[nodiscard]]
+		CRef<TypeInterface> getDeclaredInterface(query::Context& ctx) const override;
+	};
+
+	class ManyPointerAbstractTypeImpl final: public PointerAbstractTypeImpl {
+	public:
+		[[nodiscard]]
+		Kind getKind() const override {
+			return STATIC_KIND;
+		}
+
+		/**
+		 * @brief The Kind of types described by objects of this class.
+		 */
+		static constexpr Kind STATIC_KIND = Kind::ManyPointer;
+
+		explicit ManyPointerAbstractTypeImpl(const SymbolType<> component):
+			  PointerAbstractTypeImpl(component) {
+			representation = base::strConcat("manyptr ", component.toString());
+		}
+
+		[[nodiscard]]
+		CRef<TypeInterface> getDeclaredInterface(query::Context& ctx) const override;
+	};
+
+	class CPointerAbstractTypeImpl final: public PointerAbstractTypeImpl {
+	public:
+		[[nodiscard]]
+		Kind getKind() const override {
+			return STATIC_KIND;
+		}
+
+		/**
+		 * @brief The Kind of types described by objects of this class.
+		 */
+		static constexpr Kind STATIC_KIND = Kind::CPointer;
+
+		explicit CPointerAbstractTypeImpl(const SymbolType<> component):
+			  PointerAbstractTypeImpl(component) {
+			representation = base::strConcat("cptr ", component.toString());
+		}
 
 		[[nodiscard]]
 		CRef<TypeInterface> getDeclaredInterface(query::Context& ctx) const override;
