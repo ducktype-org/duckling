@@ -313,7 +313,8 @@ namespace compiler::lir {
 			local_id = function.getLocalVariableIDs();
 			block_id = function.getBlockIDs();
 
-			output << "[LIR] Function \"" << function.mangled_name.strView() << "\":\n";
+			output << "[LIR] Function \"" << function.mangled_name.strView() << "\""
+				   << (function.link_once ? " (link once)" : "") << ":\n";
 
 			for (const auto& local: function.local_list) {
 				printLocalDesc(&local);
@@ -345,6 +346,7 @@ namespace compiler::lir {
 		return FunctionLiteral{
 			.mangled_name = function.mangled_name,
 			.abi          = function.abi,
+			.link_once    = function.link_once,
 			.parameter_layouts
 			= std::make_shared<std::vector<CRef<tsl::TypeLayout>>>(function.parameter_layouts),
 			.return_type_layout = function.return_type_layout

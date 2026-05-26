@@ -10,12 +10,14 @@
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
+#include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/symbol_type.hpp>
 #include <helios/tsh/type_interface.hpp>
 #include <helios_private/errors/dia_interactive_elements.hpp>
 #include <helios_private/errors/duplicated_definition.hpp>
 #include <helios_private/hout_creation/definition_generation/class_constructors.hpp>
 #include <helios_private/hout_creation/definition_generation/default_constructors.hpp>
+#include <helios_private/hout_creation/definition_generation/to_string_methods.hpp>
 #include <helios_private/hout_creation/definition_generation/tuple_constructor.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
@@ -144,6 +146,8 @@ namespace compiler::helios {
 				}
 			}
 
+			appendToStringForSimpleTypes(out.functions, ctx);
+
 			for (auto class_sym: class_symbols) {
 				// we postpone this past function scheduling, as
 				// appendClassConstructors may be time consuming.
@@ -197,9 +201,47 @@ namespace compiler::helios {
 				}
 			}
 
+			std::set<SymID>                 unique_funcs;
+			std::vector<CRef<HOUTFunction>> deduplicated_functions;
+			for (auto f: out.functions)
+				if (unique_funcs.insert(f->declaration->original_symbol).second)
+					deduplicated_functions.push_back(f);
+			out.functions = std::move(deduplicated_functions);
+
 			if (is_failed) return query::Failed();
 
 			return out;
+		}
+
+		/**
+		 * @brief Appends the compiler-generated methods for simple types.
+		 * @param out_functions The vector of functions to be modified.
+		 * @param ctx The query context.
+		 */
+		static void appendToStringForSimpleTypes(
+			std::vector<CRef<HOUTFunction>>& out_functions, Context& ctx
+		) {
+			auto append_to_string_for_simple_type = [&](tsh::AbstractType type) {
+				const auto to_string_method
+					= ctx.query<QueryCodeOfFun>(defgen::toStringSymForType(ctx, type));
+				out_functions.emplace_back(&to_string_method->valueOrThrow());
+			};
+
+			for (auto size: { 8, 16, 32, 64 }) {
+				append_to_string_for_simple_type(tsh::getIntegralType(
+					ctx, u64(size), tsh::IntegralAbstractType::Signedness::Signed
+				));
+				append_to_string_for_simple_type(tsh::getIntegralType(
+					ctx, u64(size), tsh::IntegralAbstractType::Signedness::Unsigned
+				));
+			}
+
+			for (auto size: { 32, 64 })
+				append_to_string_for_simple_type(tsh::getFloatType(ctx, u64(size)));
+
+			append_to_string_for_simple_type(tsh::getCharType());
+			append_to_string_for_simple_type(tsh::getBoolType());
+			append_to_string_for_simple_type(tsh::getStringType());
 		}
 
 		/**
@@ -207,8 +249,8 @@ namespace compiler::helios {
 		 * the HOUT unit.
 		 *
 		 * @param out_functions The vector of functions to be modified.
-		 * @param ctors Symbol IDs of the top level default constructors generated for the symbols
-		 * in scope.
+		 * @param ctors Symbol IDs of the top level default constructors generated for the
+		 * symbols in scope.
 		 * @param ctx The query context.
 		 */
 		static void appendDefaultConstructors(
@@ -302,6 +344,21 @@ namespace compiler::helios {
 
 			bool is_failed = false;
 
+			auto run_if_to_string = [](const SymID sym, auto&& action) {
+				auto sym_ref = getSymRef(sym);
+				variant_match(sym_ref->other) {
+					variant_case(defgen::GeneratedSymbolData, gsd) {
+						variant_match(gsd.data) {
+							variant_case_novalue(defgen::GeneratedSymbolData::ToStringMethod) {
+								action();
+							}
+							variant_default {}
+						}
+					}
+					variant_default {}
+				}
+			};
+
 			for (const auto& method: methods) {
 				// @TODO: #1956 remove this if when ZST refs are supported
 				// we fail here, because otherwise we try to lower a self pointer to a ZST type and
@@ -318,7 +375,6 @@ namespace compiler::helios {
 					return true;  // failed
 				}
 
-
 				auto method_sym  = method.getSymbol();
 				auto hout_method = ctx.query<QueryCodeOfFun>(method_sym);
 				if (hout_method->hasFailed()) {
@@ -326,6 +382,22 @@ namespace compiler::helios {
 					continue;
 				} else {
 					out_functions.emplace_back(&hout_method->valueOrPanic());
+
+					// If the method is a `toString`, collect its `toString` dependencies too.
+					run_if_to_string(method_sym, [&] {
+						auto transitive = ctx.query<QueryTransitiveFunctionCalls>(method_sym);
+						if (!transitive->hasFailed()) {
+							for (SymID dep: transitive->valueOrPanic()) {
+								run_if_to_string(dep, [&] {
+									auto dep_hout = ctx.query<QueryCodeOfFun>(dep);
+									if (dep_hout->hasFailed())
+										is_failed = true;
+									else
+										out_functions.emplace_back(&dep_hout->valueOrPanic());
+								});
+							}
+						}
+					});
 				}
 			}
 			return is_failed;
