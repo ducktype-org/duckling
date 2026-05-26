@@ -198,6 +198,7 @@ jobs:
       - name: Restore build cache
         id: restore-build-cache
         uses: actions/cache/restore@v5
+        if: ${{ ! (matrix.compiler.name = 'clang' && contains(github.event.pull_request.labels.*.name, 'CLANG No Cache')) }}
         with:
           path: |
             ${{ env.CCACHE_DIR }}
@@ -213,7 +214,7 @@ jobs:
 
       # Remove ccache folder to prevent cache snowball growth
       - name: Remove ccache on main
-        if: ${{ env.BRANCH_NAME == 'main' || (matrix.compiler.name = 'clang' && contains(github.event.pull_request.labels.*.name, 'CLANG No Cache')) }}
+        if: ${{ env.BRANCH_NAME == 'main' }}
         id: ccache-main-rm
         run: rm -rf ${CCACHE_DIR}
 
