@@ -57,7 +57,7 @@ namespace compiler::mir {
 	 */
 	DECLARE_QUERY(IsComptimeOnly, helios::SymID, CRef<ComptimeStatusResult>, ({}))
 
-	struct ModuleComptimeMap {
+	struct ModuleComptimeMap final {
 		std::unordered_map<helios::SymID, ComptimeStatus> map;
 	};
 
