@@ -59,11 +59,7 @@ private:
 	compiler::backend_llvm::Module getLLVMModuleFromPath(std::string module_path) {
 		using namespace compiler;
 
-		backend_llvm::Module             llvm_module(base::StrID("test_module"));
-		std::vector<CRef<lir::Function>> ctors;
-
-		// @TODO: #2246 unify pipeline logic here, it should be easy after
-		// some elements of driver are moved to the LLVM backend
+		base::Optional<backend_llvm::Module> llvm_module_opt;
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto module
@@ -73,76 +69,18 @@ private:
 			auto mir_result = mir::lowerToMIRUnit(ctx, &module_hout).valueOrPanic();
 			auto lir_result = lir::lowerToLIRUnit(ctx, mir_result);
 
-			for (auto& hout_glob: module_hout.glob_data) {
-				if (!hout_glob->type.getType().carriesInformation(ctx)) continue;
-				lir::LIRGlobal lir_glob = lir::LIRGlobal::fromHOUT(ctx, *hout_glob);
-				llvm_module.addGlobalToModule(lir_glob);
-				variant_match(hout_glob->value) {
-					variant_case(helios::HOUTGlobalVariable, var) {
-						CRef mir_func = &ctx.query<mir::LowerGlobalDataToMIRCtor>({ hout_glob })
-						                     ->valueOrThrow();
-						mir_func->debugPrint(std::cerr);
-						std::cerr << "\n\n\n";
-						auto lir_func = ctx.query<lir::LowerToLIRFunction>({ mir_func });
-						lir_func->debugPrint(ctx, std::cerr);
-						std::cerr << "\n\n\n";
-						ctors.push_back(lir_func);
-						llvm_module.addFunctionToModule(ctx, lir_func);
-					}
-					variant_case(helios::HOUTGlobalConst, cnst) {
-						// @future #1554 -- const ctors will probably be added here
-					}
-					variant_default {
-						fail(base::strConcat(
-							"Unexpected global data type of: ", hout_glob->original_name
-						));
-					}
-				}
-			}
-
-			if (!ctors.empty()) {
-				// Add module ctors
-				auto module_ctor = lir::createFunctionInvoker(
-					ctx,
-					ctors,
-					compiler::helios::mangler::getSpecialMangledName<
-						compiler::helios::mangler::ManglingSymbolKind::ModuleConstructor>(
-						ctx,
-						compiler::helios::mangler::special_symbol_keys::LIRModuleID{
-							frontend::moduleName(module) }
-					)
-				);
-				llvm_module.addFunctionToModuleCtors(ctx, CRef<lir::Function>(&module_ctor));
-
-				// Add module dtors (for now empty)
-				// @TODO: add a legit dtors
-				auto module_dtor = lir::createFunctionInvoker(
-					ctx,
-					{},
-					compiler::helios::mangler::getSpecialMangledName<
-						compiler::helios::mangler::ManglingSymbolKind::ModuleDestructor>(
-						ctx,
-						compiler::helios::mangler::special_symbol_keys::LIRModuleID{
-							frontend::moduleName(module) }
-					)
-				);
-				llvm_module.addFunctionToModuleDtors(ctx, CRef<lir::Function>(&module_dtor));
-			}
-
-			for (auto& fun: lir_result.lir_functions) {
-				llvm_module.addFunctionToModule(ctx, fun);
-			}
+			llvm_module_opt.emplace(backend_llvm::Module::fromLIRUnit(ctx, lir_result, base::StrID("test_module")));
 		});
 
 		// debug print for coverage only:
-		llvm_module.debugPrint();
+		llvm_module_opt->debugPrint();
 
 		// verify integrity, then return for further checks.
 		assertTrue(
-			llvm_module.verify().isOk(),
+			llvm_module_opt->verify().isOk(),
 			"LLVM module verification failed (enable Backend dev logs to see details)"
 		);
-		return llvm_module;
+		return std::move(llvm_module_opt.value());
 	}
 
 	void runTestForModule(

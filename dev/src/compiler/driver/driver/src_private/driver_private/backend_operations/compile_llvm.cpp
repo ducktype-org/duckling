@@ -22,8 +22,7 @@ namespace compiler::driver {
 		query::Context& ctx, CRef<LIRUnitWithBackendName> lir_module
 	) {
 		time_stats::TrackCategoryTime _(time_stats::TimeCategories::BackendCompilation);
-
-		
+		return backend_llvm::Module::fromLIRUnit(ctx, lir_module->lir_unit, lir_module->module_id);
 	}
 
 	artifacts::FileArtifact emitBuiltinLLVMObjectFile() {
