@@ -278,7 +278,7 @@ namespace compiler::helios::code {
 		return makeBox<ReusableExpr>(inner_cloned, first_use);
 	}
 
-	Box<Expr> ReusableExpr::nextUse() const {
+	Box<ReusableExpr> ReusableExpr::nextUse() const {
 		return makeBox<ReusableExpr>(inner, /*first_use=*/false);
 	}
 
