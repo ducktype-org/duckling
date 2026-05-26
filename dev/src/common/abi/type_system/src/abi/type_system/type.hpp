@@ -28,7 +28,7 @@ namespace abi::type_system {
 
 	/**
 	 * @brief A C-compatible integer type, parameterised by its bit width and
-	 * signedness. Width must be one of 8, 16, 32 or 64 in the scope of this PR.
+	 * signedness. Width must be one of 8, 16, 32 or 64.
 	 */
 	struct IntType final {
 		u8   width_bits;
@@ -76,9 +76,7 @@ namespace abi::type_system {
 
 	/**
 	 * @brief Tagged union of every C-representable type the library
-	 * understands. New variants (e.g. floats, booleans) can be added as the
-	 * library grows; layout code uses `variant_match` so missing cases will
-	 * fail to compile.
+	 * understands.
 	 */
 	struct AbiType final {
 		std::variant<IntType, PointerType, ArrayType, StructType> value;

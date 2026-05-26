@@ -138,6 +138,10 @@ namespace compiler::tsh {
 		return toCPimpl(pimpl)->getSymbol();
 	}
 
+	compiler::helios::SymbolABI ClassAbstractType::getABI(query::Context& ctx) const {
+		return toCPimpl(pimpl)->getABI(ctx);
+	}
+
 	base::Optional<ClassAbstractType> ClassAbstractType::getBaseClassType(query::Context& ctx
 	) const {
 		return toCPimpl(pimpl)->getBaseClassType(ctx);

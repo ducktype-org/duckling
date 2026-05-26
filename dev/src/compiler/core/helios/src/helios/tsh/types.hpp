@@ -10,6 +10,7 @@
 #include "abstract_type.hpp"
 #include "symbol_type.hpp"
 
+#include <helios/symbols/symbol_abi.hpp>
 #include <helios/symbols/symbol_id.hpp>
 
 #include <base/collections/optional.hpp>
@@ -415,6 +416,15 @@ namespace compiler::tsh {
 		 */
 		[[nodiscard]]
 		compiler::helios::SymID getSymbol() const;
+
+		/**
+		 * @brief Returns the ABI of this class, derived from its `extern` specifiers.
+		 *
+		 * Returns `DefaultAbi` for plain classes and `CAbi` for classes annotated
+		 * with `extern("C")`.
+		 */
+		[[nodiscard]]
+		compiler::helios::SymbolABI getABI(query::Context& ctx) const;
 
 		/**
 		 * Gets the type of the base class.

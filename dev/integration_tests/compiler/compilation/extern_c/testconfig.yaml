@@ -1,0 +1,21 @@
+# Tests for `extern("C")` classes: layout compatibility, prefix and block
+# specifier forms, and diagnostics for non-C-compatible field types.
+
+# Determinism check trips on the parallel symbol-ABI query for some of these
+# tests; disabling matches the convention used by other class-related tests.
+enable_conc_deterministic_tests: "false"
+
+Tests:
+  extern_c_class_prefix:
+    Cases:
+      all:
+        backend: all
+        Output:
+          String: "7\n42\n"
+
+  extern_c_class_block:
+    Cases:
+      all:
+        backend: all
+        Output:
+          String: "3\n17\n11\n22\n"

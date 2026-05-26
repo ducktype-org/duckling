@@ -1,12 +1,22 @@
 #include "type_layout.hpp"
 
+#include "c_abi_converter.hpp"
+#include "c_abi_target.hpp"
 #include "queries.hpp"
 
+#include <abi/layout/compute_c_layout.hpp>
+#include <abi/type_system/type.hpp>
+#include <frontend/pst_parser/lang_parser_element.hpp>
+#include <helios/errors/field_not_c_compatible.hpp>
 #include <helios/mangler/mangler.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
+#include <helios/symbols/symbol_abi.hpp>
+#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/tsh/type_interface.hpp>
+#include <helios/tsh/types.hpp>
 
 #include <base/extend_cpp/variant_match.hpp>
+#include <base/pointers/box.hpp>
 
 #include <query_framework/context/context.hpp>
 
@@ -189,6 +199,98 @@ namespace compiler::tsl {
 				result.push_back(fields.at(field_idx).getSymbol());
 
 			return result;
+		}
+
+		/**
+		 * @brief Source position of the field's declaration, used to anchor
+		 * diagnostics about its type.
+		 */
+		dia_int::StablePosition fieldDiagnosticPosition(
+			compiler::helios::SymID field_sym, compiler::helios::SymID class_sym, query::Context& ctx
+		) {
+			auto field_pst = compiler::helios::symbolPst(field_sym);
+			if (field_pst.has_value()) return field_pst.value().unlock(ctx)->getStablePosition();
+			return compiler::helios::symbolPst(class_sym).value().unlock(ctx)->getStablePosition();
+		}
+
+		/**
+		 * @brief Result of picking a class layout: offsets in declaration order
+		 * plus the overall size and alignment.
+		 */
+		struct PickedClassLayout final {
+			std::vector<base::Optional<Bytes>> offsets;
+			Bits                               size;
+			Bytes                              alignment;
+		};
+
+		PickedClassLayout ducklingPickedLayout(const std::vector<CRef<TypeLayout>>& field_layouts) {
+			auto  offsets = alignOffsetsForLayoutVector(field_layouts);
+			Bits  total   = offsetsToTotalSize(offsets, field_layouts);
+			Bytes align   = maxTypeLayoutAlignmentInVector(field_layouts);
+			return PickedClassLayout{
+				.offsets   = std::move(offsets),
+				.size      = total,
+				.alignment = align,
+			};
+		}
+
+		/**
+		 * @brief Picks the proper layout for a class: the C-ABI computation
+		 * for classes annotated `extern("C")`, otherwise the natural-alignment
+		 * layout used everywhere else.
+		 *
+		 * On any conversion failure the function reports a diagnostic per
+		 * offending field and falls back to the natural-alignment layout so
+		 * compilation can keep going.
+		 */
+		PickedClassLayout pickClassLayout(
+			tsh::ClassAbstractType                    class_type,
+			const std::vector<tsh::InterfaceElement>& field_elements,
+			const std::vector<CRef<TypeLayout>>&      field_layouts,
+			query::Context&                           ctx
+		) {
+			const compiler::helios::SymbolABI abi = class_type.getABI(ctx);
+			if (!std::holds_alternative<compiler::helios::CAbi>(abi))
+				return ducklingPickedLayout(field_layouts);
+
+			std::vector<abi::type_system::Field> abi_fields;
+			abi_fields.reserve(field_elements.size());
+			bool any_failed = false;
+
+			for (const auto& element: field_elements) {
+				CAbiConversionResult conversion = tryConvertToCAbiType(element.getType(ctx), ctx);
+				if (!conversion.abi_type.has_value()) {
+					any_failed = true;
+					ctx.logInt(makeBox<compiler::helios::FieldNotCCompatibleError>(
+						ctx,
+						fieldDiagnosticPosition(element.getSymbol(), class_type.getSymbol(), ctx),
+						std::string(compiler::helios::name(element.getSymbol()).strView()),
+						element.getType(ctx),
+						std::move(conversion.reason)
+					));
+					continue;
+				}
+				abi_fields.push_back(abi::type_system::field(
+					base::Optional<std::string>{}, std::move(*conversion.abi_type)
+				));
+			}
+
+			if (any_failed) return ducklingPickedLayout(field_layouts);
+			if (abi_fields.empty()) return ducklingPickedLayout(field_layouts);
+
+			const abi::layout::ComputedLayout computed
+				= abi::layout::computeCLayout(compilerTargetABI(), abi_fields);
+
+			std::vector<base::Optional<Bytes>> result_offsets;
+			result_offsets.reserve(field_elements.size());
+			for (usize i = 0; i < field_elements.size(); ++i)
+				result_offsets.emplace_back(computed.field_offsets[i]);
+
+			return PickedClassLayout{
+				.offsets   = std::move(result_offsets),
+				.size      = base::bytes2bits(computed.size),
+				.alignment = computed.alignment,
+			};
 		}
 	}
 
@@ -383,11 +485,16 @@ namespace compiler::tsl {
 			  type(class_type),
 			  field_elements(getFieldsOfInterface(class_type.getInterface(ctx))),
 			  field_layouts(getLayoutVector(getElementTypes(field_elements, ctx), ctx)),
-			  field_offsets(alignOffsetsForLayoutVector(field_layouts)),
-			  layout_idx_to_field_idx(offsetsToPermutation(field_offsets)),
-			  layout_idx_to_sym_id(getLayoutIndicesToSymIDs(field_elements, field_offsets)),
-			  total_size(offsetsToTotalSize(field_offsets, field_layouts)),
-			  max_alignment(maxTypeLayoutAlignmentInVector(field_layouts)) {}
+			  total_size(0),
+			  max_alignment(1) {
+			PickedClassLayout picked
+				= pickClassLayout(class_type, field_elements, field_layouts, ctx);
+			field_offsets           = std::move(picked.offsets);
+			layout_idx_to_field_idx = offsetsToPermutation(field_offsets);
+			layout_idx_to_sym_id    = getLayoutIndicesToSymIDs(field_elements, field_offsets);
+			total_size              = picked.size;
+			max_alignment           = picked.alignment;
+		}
 
 		ClassTypeLayoutConstructionHelper(
 			const tsh::TupleAbstractType tuple_type, query::Context& ctx

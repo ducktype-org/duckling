@@ -1,0 +1,14 @@
+# Verifies that a class declared with `extern("C")` compiles and that its
+# fields can be constructed and read normally.
+
+extern("C") class Pair {
+    a: i32 = 0i32;
+    b: i64 = 0i64;
+}
+
+fun main() -> i64 = {
+    var p = Pair(i32(7), 42i64);
+    builtin_output_i64(i64(p.a));
+    builtin_output_i64(p.b);
+    return 0i64;
+}

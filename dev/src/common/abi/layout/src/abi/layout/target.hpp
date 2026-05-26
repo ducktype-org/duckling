@@ -1,14 +1,3 @@
-/**
- * @file target.hpp
- *
- * @brief Parameters required to compute a C-compatible layout for a given
- * target platform: an architecture identifier, endianness and the primitive
- * size/alignment information that the layout algorithm consults.
- *
- * The library ships ready-made presets for the two targets covered in this
- * PR (x86_64-linux and aarch64-linux). Callers are free to construct a
- * `TargetABI` by hand if they need something different.
- */
 #pragma once
 
 #include <base/types/bits_and_bytes.hpp>
@@ -24,9 +13,7 @@ namespace abi::layout {
 	enum class Endianness : uint8_t { Little, Big };
 
 	/**
-	 * @brief Identifies a target architecture. OS and vendor do not affect C
-	 * layout for the targets covered in this PR, so they are intentionally
-	 * absent.
+	 * @brief Identifies a target architecture.
 	 */
 	struct TargetTriple final {
 		Arch arch;
@@ -43,8 +30,8 @@ namespace abi::layout {
 
 		/**
 		 * @brief Returns the natural alignment in bytes for an integer of the
-		 * given bit width. For the integer widths in scope (8, 16, 32, 64)
-		 * natural alignment equals the size on both supported targets.
+		 * given bit width. Supported widths: 8, 16, 32, 64; for each, natural
+		 * alignment equals the size.
 		 */
 		[[nodiscard]]
 		Bytes naturalAlignmentForIntWidth(u8 width_bits) const;
