@@ -40,7 +40,6 @@ namespace compiler::driver {
 		return output_file;
 	}
 
-	// #2246 PIPELINE LOGIC HERE
 	struct IMPLEMENT_QUERY(CompileHOUTUnitToLIRModuleData, query::QResult<LIRUnitWithBackendName>) {
 		static auto provide(query::Context& ctx, CompileHOUTUnitToLIRModuleDataKey key) -> PResult {
 			const auto& hout_unit   = *key.hout_unit.get();
@@ -55,7 +54,6 @@ namespace compiler::driver {
 			}
 
 			mir::MIRUnit mir_unit = mir::lowerToMIRUnit(ctx, &hout_unit).valueOrThrow();
-
 
 			if (driver::print_ir_options.print_mir) {
 				mir_unit.debugPrint(ctx, std::cout);
@@ -94,7 +92,6 @@ namespace compiler::driver {
 		// #2246 this should go
 		static auto provide(query::Context& ctx, frontend::ModuleID module_id) -> PResult {
 			const auto& hout_unit = ctx.query<helios::QueryModuleHOUT>(module_id)->valueOrThrow();
-
 
 			auto module_name = base::StrID(base::strConcat(
 				"module_",

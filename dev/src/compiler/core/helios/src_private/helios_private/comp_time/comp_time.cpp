@@ -15,8 +15,11 @@
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
-#include <lir/lir_lowering/lir_lowering.hpp>
-#include <mir/mir_lowering/mir_queries.hpp>
+#include <helios/mangler/mangler.hpp>
+// #include <lir/lir_lowering/lir_lowering.hpp>
+#include <lir/lir_lowering/lir_unit.hpp>
+// #include <mir/mir_lowering/mir_queries.hpp>
+#include <mir/mir_lowering/mir_unit.hpp>
 
 #include <base/str/str_utils.hpp>
 
@@ -761,7 +764,7 @@ namespace compiler::helios {
 		 * - `functions` 	- a vector of all LIR functions to compile and load to DVM in order to
 		 * 					  evaluate `func_to_call`
 		 */
-		struct LIRBuildResult {
+		struct LIRBuildResult final {
 			std::string func_to_call;  // Mangled name of the function we evaluate.
 			std::vector<CRef<lir::Function>>
 				functions;             // List of LIR functions needed to evaluate `func_to_call`.
@@ -788,27 +791,32 @@ namespace compiler::helios {
 			// order to evaluate this one.
 			Ref dependencies
 				= &ctx.query<QueryTransitiveFunctionCalls>(function_sym_id)->valueOrThrow();
+	
+			auto mangled_name_function_to_call = ctx.query<mangler::QueryMangledSymbol>({function_sym_id});
 
-			LIRBuildResult result;
-			result.functions.reserve(dependencies->size());
-
-			for (const SymID& func_id: *dependencies) {
-				// #2246 PIPELINE LOGIC HERE
-				
-				// @TODO: #826 Change this code to a single query once it gets implemented.
+			// temporary hout unit used to lower functions to LIR
+			HOUTUnit hout_unit;
+			for (const SymID& func_id: *dependencies) {			
 				auto& hout_func = ctx.query<QueryCodeOfFun>(func_id)->valueOrThrow();
-				auto& mir_func = ctx.query<mir::LowerToMIRFunction>({ &hout_func })->valueOrThrow();
-
-				auto lir_func_result = ctx.query<lir::LowerToLIRFunction>({ &mir_func });
-
-				// When lowering the top level function, we store it's mangled name to know
-				// which function to call in the VM.
-				if (func_id == function_sym_id)
-					result.func_to_call = lir_func_result->mangled_name.str();
-
-				result.functions.push_back(lir_func_result);
+				hout_unit.functions.emplace_back(&hout_func);
 			}
-			return result;
+			auto lir_unit = lir::lowerToLIRUnit(
+				ctx,
+				mir::lowerToMIRUnit(ctx, &hout_unit).valueOrThrow()
+			);
+
+			// Note: the assumptions bellow might change,
+			// for example when we will add consts to comp time.
+			CORE_ASSERT(
+				lir_unit.lir_functions.size() == dependencies->size(),
+				"Number of lir functions should be the same as number of dependencies collected."
+			);
+			CORE_ASSERT(lir_unit.lir_globals.empty(), "LIR global variables are not supported in compile time evaluation.");
+
+			return LIRBuildResult {
+				.func_to_call = mangled_name_function_to_call.str(),
+				.functions    = std::move(lir_unit.lir_functions)
+			};
 		}
 
 		/**
