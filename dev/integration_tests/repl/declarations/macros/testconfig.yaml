@@ -12,7 +12,7 @@ Tests:
         Input:
           File: "basic_usage/nested_expand.rtf"
         Output:
-          String: "@{beginning}\n12\n=> 3\n@{end}"
+          String: "@{beginning}\n17\n=> 3\n@{end}"
 
   macros_and_namespaces:
     Cases:

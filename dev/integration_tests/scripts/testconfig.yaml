@@ -15,11 +15,15 @@ PreCase: "
   @{clean_cmd};
   if [ '@{mode}' = 'vm' ]; then
     cd @{folder} && @{duckc_path} compile_script @{Name}.ds --dvm-backend;
+  elif [ '@{mode}' = 'exe' ]; then
+    cd @{folder} && @{duckc_path} compile_script @{Name}.ds;
   fi"
 
 Run: "
   if [ '@{mode}' = 'vm' ]; then
     @{dvm_path} run @{folder}/duck_build/@{Name}.dbc;
+  elif [ '@{mode}' = 'exe' ]; then
+    @{folder}/duck_build/@{Name}.exe;
   else
     @{duckc_path} run @{folder}/@{Name}.ds;
   fi"
@@ -29,4 +33,5 @@ PostTest: "
 
 SubDirs:
   - basic_tests
+  - declarations
   - lists_and_arrays

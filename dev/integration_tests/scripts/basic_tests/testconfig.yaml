@@ -12,6 +12,10 @@ Tests:
         mode: vm
         Output: 
           String: "42\n"
+      exe:
+        mode: exe
+        Output: 
+          String: "42\n"
 
   function_declaration:
     folder: "function_declaration"
@@ -24,6 +28,10 @@ Tests:
         mode: vm
         Output: 
           String: "42\n"
+      exe:
+        mode: exe
+        Output: 
+          String: "42\n"
 
   simple_loop:
     folder: "simple_loop"
@@ -34,5 +42,9 @@ Tests:
           String: "6\n5\n4\n3\n2\n1\n"
       vm:
         mode: vm
+        Output: 
+          String: "6\n5\n4\n3\n2\n1\n"
+      exe:
+        mode: exe
         Output: 
           String: "6\n5\n4\n3\n2\n1\n"

@@ -13,6 +13,11 @@ Tests:
         mode: vm
         Output: 
           String: "6\n"
+      exe:
+        Enabled: "true"
+        mode: exe
+        Output: 
+          String: "6\n"
 
   list_access:
     Enabled: "false"
@@ -26,4 +31,8 @@ Tests:
         mode: vm
         Output: 
           String: "2\n4\n6\n"
-
+      exe:
+        Enabled: "true"
+        mode: exe
+        Output: 
+          String: "2\n4\n6\n"
