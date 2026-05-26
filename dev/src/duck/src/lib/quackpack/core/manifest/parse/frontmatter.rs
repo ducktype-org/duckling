@@ -23,7 +23,7 @@ use crate::{
 pub static FRONTMATTER_REGEX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^\s*<frontmatter>([\s\S]*)</frontmatter>").unwrap());
 pub static UNCLOSED_FRONTMATTER_REGEX: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^\s+<frontmatter>").unwrap());
+    LazyLock::new(|| Regex::new(r"^\s*<frontmatter>").unwrap());
 
 /// Parse a frontmatter of a script at a given `path`.
 pub fn parse_frontmatter(
