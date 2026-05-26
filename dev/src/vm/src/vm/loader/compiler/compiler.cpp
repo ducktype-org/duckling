@@ -305,7 +305,7 @@ namespace vm::loader::compiler {
 	}
 
 	void Compiler::calculateOffsets(FunctionCompilationContext& ctx) {
-		const auto must_be_fully_alligned = detectParamsAndReturnedVars(ctx);
+		const auto must_be_fully_aligned = detectParamsAndReturnedVars(ctx);
 
 		decltype(ctx.locals_map) result;
 		std::vector<usize>       type_size_stack;
