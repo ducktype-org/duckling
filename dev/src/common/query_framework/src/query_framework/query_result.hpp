@@ -7,7 +7,6 @@
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/pointers/ref.hpp>
-#include <base/preproc/utils.hpp>
 
 #include <type_traits>
 #include <variant>
@@ -188,7 +187,7 @@ namespace query {
 /**
  * @brief This is a unique variable per macro - assuming every macro is in a separate line.
  */
-#define RES_VAR_NAME CONCAT_2(result_storage_aBz4vq2_, __LINE__)
+#define RES_VAR_NAME CAT(result_storage_aBz4vq2_, __LINE__)
 
 /**
  * @brief Since C++ doesn't have an error-propagating operator, this macro
