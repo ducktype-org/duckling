@@ -568,9 +568,13 @@ namespace vm::loader::compiler::detail {
 					addLow<Op_ft_alloc_pptr_type>(i.ptr, i.type);
 				}
 			}
-			instr_case(high::Op_free_pptr, i) { addLow<Op_free_pptr>(i.ptr); }
+			instr_case(high::Op_free_pptr, i) {
+				addLow<Op_free_pptr>(i.ptr);
+				if (compiler.settings_.enable_fast_track) {
+					addLow<Op_ft_free_pptr>(i.ptr);
+				}
+			}
 			instr_case(high::Op_store_pptr_pany, i) {
-				addLow<Op_store_pptr_bany>(i.dst_ptr, i.src);
 				if (compiler.settings_.enable_fast_track) {
 					addLow<Op_ft_store_pptr_bany>(i.dst_ptr, i.src);
 					auto type = getPlaceType(i.src);
@@ -578,6 +582,7 @@ namespace vm::loader::compiler::detail {
 						addLow<Op_ft_store_pptr_pptr>(i.dst_ptr, opargs::PlacePtr{ i.src.var_name });
 					}
 				}
+				addLow<Op_store_pptr_bany>(i.dst_ptr, i.src);
 			}
 			instr_case(high::Op_load_pany_pptr, i) {
 				addLow<Op_load_bany_pptr>(i.dst, i.src_ptr);
@@ -594,7 +599,12 @@ namespace vm::loader::compiler::detail {
 					addLow<Op_ft_ref_pptr_bany>(i.dst_ptr, i.src);
 				}
 			}
-			instr_case(high::Op_ref_pptr_pvnt, i) { addLow<Op_ref_pptr_bany>(i.dst_ptr, i.src); }
+			instr_case(high::Op_ref_pptr_pvnt, i) {
+				addLow<Op_ref_pptr_bany>(i.dst_ptr, i.src);
+				if (compiler.settings_.enable_fast_track) {
+					addLow<Op_ft_ref_pptr_bany>(i.dst_ptr, i.src);
+				}
+			}
 			instr_case(high::Op_structLea_pptr_pptr_field, i) {
 					addLow<Op_structLea_pptr_pptr>(i.dst_ptr, i.src_data_ptr);
 					addLow<Op_ext_field>(i.field);

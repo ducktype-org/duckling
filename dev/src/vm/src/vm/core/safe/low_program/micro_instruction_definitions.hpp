@@ -689,6 +689,7 @@ DEF_MICRO_INSTR(ft_setNull_pptr, vm::low::opargs::PlaceShadowPointerAny)
 
 // 4.4: Allocation & Initialization
 DEF_MICRO_INSTR(ft_alloc_pptr_type, vm::low::opargs::PlaceShadowPointerAny, vm::low::opargs::Type)
+DEF_MICRO_INSTR(ft_free_pptr, vm::low::opargs::PlaceShadowPointerAny)
 DEF_MICRO_INSTR(ft_init_bany_type, vm::low::opargs::PlaceBlockAny, vm::low::opargs::Type)
 DEF_MICRO_INSTR(ft_deinit)
 DEF_MICRO_INSTR(ft_call_func, vm::low::opargs::FunctionID)

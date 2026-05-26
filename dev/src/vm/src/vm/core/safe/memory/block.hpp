@@ -64,6 +64,7 @@ namespace vm {
 
 		[[nodiscard]] EntryT* getData() { return data.view.getBegin(); }
 		[[nodiscard]] const EntryT* getData() const { return data.view.getBegin(); }
+		[[nodiscard]] bool isDeallocated() const { return deallocated; }
 	};
 
 	using Block = BasicBlock<std::byte>;

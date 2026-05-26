@@ -1318,6 +1318,9 @@ namespace vm {
 			auto type = Memory::getBlockType(src_block);
 
 			if (!dst_shadow.isNull()) {
+				if (dst_shadow.shadow_block->isDeallocated()) {
+					throw exceptions::VMDataRaceException();
+				}
 				auto tid = thread.getThreadID();
 				auto epoch = thread.getVC()[tid];
 
@@ -1411,6 +1414,40 @@ namespace vm {
 			}
 
 			GET_SHADOW_POINTER_REF(instr->arg0) = updateShadowPointerAssignment(thread, GET_SHADOW_POINTER_REF(instr->arg0), shadow_ptr);
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ft_free_pptr)(FUNCTION_ARGS) {
+		{
+			ShadowPointer& sp = GET_SHADOW_POINTER_REF(instr->arg0);
+
+			if (sp.shadow_block) {
+				auto block = sp.shadow_block.toOpt().value();
+				auto type  = thread.getShadowDataMemory().getBlockType(block);
+				auto tid = thread.getThreadID();
+				auto epoch = thread.getVC()[tid];
+				ShadowEntry* base = block->getData();
+				for (u32 i = 0; i < type->getShadowSize(); ++i) {
+					base[i].processWrite(tid, epoch, thread.getVC());
+					base[i].reset();
+				}
+				thread.getShadowDataMemory().freeBlockData(block);
+				thread.getShadowDataMemory().decreaseBlockRefcount(block);
+				// Null the field directly – do NOT call updateShadowPointerAssignment
+				// here, as that would decrease the refcount a second time.
+				sp.shadow_block = nullptr;
+			}
+
+			if (sp.shadow_pointer_block) {
+				auto block_ptr = sp.shadow_pointer_block.toOpt().value();
+				thread.getShadowPointerMemory().freeBlockData(block_ptr);
+				thread.getShadowPointerMemory().decreaseBlockRefcount(block_ptr);
+				sp.shadow_pointer_block = nullptr;
+			}
+
+			sp.logical_offset = 0;
+			sp.pointer_offset  = 0;
 		}
 		FUNCTION_CONT(1);
 	}
