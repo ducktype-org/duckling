@@ -536,18 +536,19 @@ namespace compiler::backend_llvm {
 				std::holds_alternative<ctv::CompileTimeValue>(lir_global.data_initialization),
 				"Constant global must have CompileTimeValue as initial value"
 			);
-			global->setInitializer(
-				ctvToLLVMConstant(
-					std::get<ctv::CompileTimeValue>(lir_global.data_initialization), 
-					global->getValueType(),
-					 module
-				)
-			);
+			global->setInitializer(ctvToLLVMConstant(
+				std::get<ctv::CompileTimeValue>(lir_global.data_initialization),
+				global->getValueType(),
+				module
+			));
 		} else {
 			// Initialise the global variable to null, since it will be initialised in the constructor:
 			CORE_ASSERT(
-				std::holds_alternative<lir::LIRGlobalData::CTorDtorPair>(lir_global.data_initialization),
-				"For now we assume, that each non-constant is non-CTV initialized, but this might change in the future"
+				std::holds_alternative<lir::LIRGlobalData::CTorDtorPair>(
+					lir_global.data_initialization
+				),
+				"For now we assume, that each non-constant is non-CTV initialized, but this might "
+			    "change in the future"
 			);
 			global->setInitializer(llvm::Constant::getNullValue(global->getValueType()));
 		}

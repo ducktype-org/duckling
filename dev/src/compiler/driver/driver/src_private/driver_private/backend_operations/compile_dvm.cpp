@@ -16,10 +16,10 @@ namespace compiler::driver {
 
 		backend_vm::DVMCodeBuilder module(query_ctx, build_debug_info, false);
 
-		for (const auto& global: data->lir_unit.lir_globals)
-			module.insertLirGlobal(global);
+		for (const auto& global: data->lir_unit.lir_globals) module.insertLirGlobal(global);
 
-		for (const auto& lir_function: data->lir_unit.lir_functions) module.insertLirFunction(lir_function);
+		for (const auto& lir_function: data->lir_unit.lir_functions)
+			module.insertLirFunction(lir_function);
 
 		auto code_collection = module.build();
 
