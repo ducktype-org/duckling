@@ -6,4 +6,4 @@ add_library(GlobalState
 	src/global_state/script_context.cpp
 )
 
-make_module(GlobalState USES Artifacts ModuleTree DiagnosticInteractive QueryFramework)
+make_module(GlobalState USES Artifacts ModuleTree Packages DiagnosticInteractive QueryFramework)

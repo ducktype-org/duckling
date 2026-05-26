@@ -1,12 +1,14 @@
 #include "abstract_type_impl.hpp"
 
+#include "queries.hpp"
+
 // @TODO: #2331 Remove these includes
 #include <frontend/pst_parser/elements/hierarchy/class_elements/field.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expr_holders.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
 #include <frontend/pst_parser/elements/hierarchy/lists/nested_import_list.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
-#include <helios/symbols/query_class_symbol_data.hpp>
+#include <helios/symbols/query_type_symbol_data.hpp>
 #include <helios/tsh/queries/implicit_coercibility.hpp>
 #include <helios/tsh/queries/types.hpp>
 
@@ -229,8 +231,8 @@ namespace compiler::tsh {
 		throw base::NotYetImplemented("Static array type interface not yet implemented");
 	}
 
-	CRef<TypeInterface> TupleAbstractTypeImpl::getInterface(query::Context&) const {
-		throw base::NotYetImplemented("Tuple type interface not yet implemented");
+	CRef<TypeInterface> TupleAbstractTypeImpl::getInterface(query::Context& ctx) const {
+		return &ctx.query<QueryInterfaceOfTuple>(this)->valueOrThrow();
 	}
 
 	CRef<TypeInterface> FunctionAbstractTypeImpl::getInterface(query::Context&) const {

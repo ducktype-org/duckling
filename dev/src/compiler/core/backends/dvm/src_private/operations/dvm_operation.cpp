@@ -11,6 +11,7 @@
 #include <base/collections/optional.hpp>
 
 #include <vm/bytecode/builtin_types.hpp>
+#include <vm/bytecode/type_of_data.hpp>
 
 #include <ranges>
 
@@ -71,14 +72,13 @@ namespace compiler::backend_vm::internal {
 	FunctionCallInfo FunctionCallInfo::fromLirFunction(
 		const lir::FunctionLiteral& func_literal, ProgramLoweringContext& program_context
 	) {
-		base::Optional<vm::code::TypeOfData> called_result_type = {};
-		if (!func_literal.return_type_layout->is<tsl::EmptyTypeLayout>())
-			called_result_type
-				= program_context.lowerAndKeepTslType(func_literal.return_type_layout);
+		base::Optional<vm::code::TypeOfData> called_result_type
+			= program_context.lowerAndKeepTslType(func_literal.return_type_layout)
+		          .map([](CRef<vm::code::TypeOfData> ref) { return *ref; });
 
 		std::vector<vm::code::TypeOfData> param_types
 			= *func_literal.parameter_layouts | std::views::transform([&](const auto& layout) {
-				  return program_context.lowerAndKeepTslType(layout);
+				  return **program_context.lowerAndKeepTslType(layout);
 			  })
 		    | std::ranges::to<std::vector>();
 
@@ -308,7 +308,8 @@ namespace compiler::backend_vm::internal {
 				instr.arguments.size()
 			);
 			return JumpOperation{
-				.target = lower_arg(instr.arguments[0]).get<DVMLabel>(),
+				.target      = lower_arg(instr.arguments[0]).get<DVMLabel>(),
+				.scope_flags = instr.scope_flags,
 			};
 		}
 		case Branch: {
@@ -321,6 +322,7 @@ namespace compiler::backend_vm::internal {
 				.condition    = lower_arg(instr.arguments[0]),
 				.true_target  = lower_arg(instr.arguments[1]).get<DVMLabel>(),
 				.false_target = lower_arg(instr.arguments[2]).get<DVMLabel>(),
+				.scope_flags  = instr.scope_flags,
 			};
 		}
 		case ReturnValue:
@@ -332,9 +334,14 @@ namespace compiler::backend_vm::internal {
 			);
 
 			return ReturnOperation{
-				.value = instr.arguments.size() == 1 ? lower_arg(instr.arguments[0])
-				                                     : base::Optional<DVMValue>(),
+				.value       = instr.arguments.size() == 1 ? lower_arg(instr.arguments[0])
+				                                           : base::Optional<DVMValue>(),
+				.scope_flags = instr.scope_flags,
 			};
+		}
+		case Nop: {
+			// No instruction to generate, just skip.
+			return NoOperation{};
 		}
 		default:
 			CORE_PANIC("Invalid operation: ", base::enumToStr(operation));

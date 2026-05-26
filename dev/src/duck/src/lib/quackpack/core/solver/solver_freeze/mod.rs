@@ -235,33 +235,32 @@ mod test {
         };
         let storage_freeze = VenvFreeze::new(root, vec![freeze_pkg_a, freeze_pkg_b]);
         let solver_freeze = SolverFreeze::try_from_venv_freeze(root_pkg, &storage_freeze).unwrap();
-        assert!(solver_freeze.main_pkg == root_pkg);
-        assert!(
-            solver_freeze.package_freezes
-                == HashMap::from([
-                    (
-                        root_pkg,
-                        SolverPackageFreeze {
-                            dependencies_realization: [("a".into(), pkg_a), ("b".into(), pkg_b)]
-                                .into(),
-                            features: ["f_root".into()].into(),
-                        }
-                    ),
-                    (
-                        pkg_a,
-                        SolverPackageFreeze {
-                            dependencies_realization: HashMap::new(),
-                            features: ["f_a".into()].into(),
-                        }
-                    ),
-                    (
-                        pkg_b,
-                        SolverPackageFreeze {
-                            dependencies_realization: [("a".into(), pkg_a)].into(),
-                            features: ["f_b1".into(), "f_b2".into()].into(),
-                        }
-                    ),
-                ])
+        assert_eq!(solver_freeze.main_pkg, root_pkg);
+        assert_eq!(
+            solver_freeze.package_freezes,
+            HashMap::from([
+                (
+                    root_pkg,
+                    SolverPackageFreeze {
+                        dependencies_realization: [("a".into(), pkg_a), ("b".into(), pkg_b)].into(),
+                        features: ["f_root".into()].into(),
+                    }
+                ),
+                (
+                    pkg_a,
+                    SolverPackageFreeze {
+                        dependencies_realization: HashMap::new(),
+                        features: ["f_a".into()].into(),
+                    }
+                ),
+                (
+                    pkg_b,
+                    SolverPackageFreeze {
+                        dependencies_realization: [("a".into(), pkg_a)].into(),
+                        features: ["f_b1".into(), "f_b2".into()].into(),
+                    }
+                ),
+            ])
         )
     }
 
@@ -384,16 +383,16 @@ features:
             .iter()
             .copied()
             .collect();
-        assert!(
-            root_deps
-                == HashSet::from([
-                    FreezeDep::new("a".into(), 1.into()),
-                    FreezeDep::new("b".into(), 2.into())
-                ])
+        assert_eq!(
+            root_deps,
+            HashSet::from([
+                FreezeDep::new("a".into(), 1.into()),
+                FreezeDep::new("b".into(), 2.into())
+            ])
         );
-        assert!(storage_freeze.root().features() == [StrId::new("f_root")]);
-        assert!(storage_freeze.root().name() == StrId::new("root"));
-        assert!(storage_freeze.root().version() == 3.into());
+        assert_eq!(storage_freeze.root().features(), [StrId::new("f_root")]);
+        assert_eq!(storage_freeze.root().name(), StrId::new("root"));
+        assert_eq!(storage_freeze.root().version(), 3.into());
         let pkg_freeze_a = FreezePackage::new(
             "a".into(),
             1.into(),
@@ -408,7 +407,7 @@ features:
             vec![FreezeDep::new("a".into(), 1.into())],
             exp_location_b,
         );
-        assert!(storage_freeze.dependencies().len() == 2);
+        assert_eq!(storage_freeze.dependencies().len(), 2);
         assert!(
             (storage_freeze.dependencies()[0] == pkg_freeze_a
                 && storage_freeze.dependencies()[1] == pkg_freeze_b)

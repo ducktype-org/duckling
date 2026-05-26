@@ -7,12 +7,21 @@ Tests:
         backend: all
         Output:
           String: "9\n9\n9\n18\n4\n2\n"
+
   single_comparison: # Any type of comparison between two values.
     Cases:
       all:
         backend: all
         Output:
           String: ""
+        ExitCode: 0
+
+  arithmetic:
+    Cases:
+      all:
+        backend: all
+        Output:
+          String: "1\n1\n30\n200\n3\n2\n"
         ExitCode: 0
 
   comparison_chain:
@@ -22,6 +31,7 @@ Tests:
         Output:
           String: ""
         ExitCode: 0
+
   unit_simple:
     Cases:
       all:
@@ -29,6 +39,7 @@ Tests:
         Output:
           String: "1\n1\n"
         ExitCode: 0
+
   unit_simple_multiple_modules:
     Cases:
       llvm:
@@ -95,13 +106,8 @@ Tests:
 
   no_output:
     Cases:
-      dvm:
-        backend: dvm
-        Output:
-          String: ""
-        ExitCode: 0
-      llvm:
-        backend: llvm
+      all:
+        backend: all
         Output:
           String: ""
         ExitCode: 0
@@ -111,7 +117,7 @@ Tests:
       all:
         backend: all
         Output:
-          String: "0\n0\n0\n0\n"
+          String: "0\n0\n0\n0\n0\n0\n0\n"
         ExitCode: 0
 
   strings:

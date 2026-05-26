@@ -186,9 +186,14 @@ namespace lsp {
 			auto chain_locked = elem->getImportChain();
 			if_opt_none(chain_locked.illegalAccess()) return;
 			auto chain = chain_locked.illegalAccess().value();
-			auto names = chain->getNames();
-
-			for (auto name: names) out(name.position, StandardTokenType::Namespace);
+			for (usize idx = 0; idx < chain->numberOfNames(); idx++) {
+				out(chain->getNameByIndex(idx)
+				        .illegalAccess()
+				        .value()
+				        ->getSourcePosition()
+				        .illegalAccess(),
+				    StandardTokenType::Namespace);
+			}
 		}
 
 		void visitUsing(pst::Access<pst::Using>) override {
@@ -200,40 +205,49 @@ namespace lsp {
 		}
 
 		void visitNamespace(pst::Access<pst::Namespace> elem) override {
-			out(elem->getNameIdent().position, StandardTokenType::Namespace);
+			out(elem->getName().illegalAccess().value()->getSourcePosition().illegalAccess(),
+			    StandardTokenType::Namespace);
 		}
 
 		void visitClass(pst::Access<pst::Class> elem) override {
-			out(elem->getNameIdent().position, StandardTokenType::Class);
+			out(elem->getName().illegalAccess().value()->getSourcePosition().illegalAccess(),
+			    StandardTokenType::Class);
 		}
 
 		void visitFun(pst::Access<pst::Fun> elem) override {
-			out(elem->getNameIdentifier().position, StandardTokenType::Function);
+			out(elem->getName().illegalAccess().value()->getSourcePosition().illegalAccess(),
+			    StandardTokenType::Function);
 		}
 
 		void visitFunDecl(pst::Access<pst::FunDecl> elem) override {
-			out(elem->getNameIdentifier().position, StandardTokenType::Function);
+			out(elem->getName().illegalAccess().value()->getSourcePosition().illegalAccess(),
+			    StandardTokenType::Function);
 		}
 
 		void visitVariable(pst::Access<pst::Variable> elem) override {
-			out(elem->getNameIdent().position, StandardTokenType::Variable);
+			out(elem->getName().illegalAccess().value()->getSourcePosition().illegalAccess(),
+			    StandardTokenType::Variable);
 		}
 
 		void visitMethod(pst::Access<pst::Method> elem) override {
-			out(elem->getNameIdentifier().position, StandardTokenType::Method);
+			out(elem->getName().illegalAccess().value()->getSourcePosition().illegalAccess(),
+			    StandardTokenType::Method);
 		}
 
 		void visitField(pst::Access<pst::Field> elem) override {
-			out(elem->getNameIdent().position, StandardTokenType::Property);
+			out(elem->getName().illegalAccess().value()->getSourcePosition().illegalAccess(),
+			    StandardTokenType::Property);
 		}
 
 		void visitParam(pst::Access<pst::Param> elem) override {
-			out(elem->getNameIdent().position, StandardTokenType::Parameter);
+			out(elem->getName().illegalAccess().value()->getSourcePosition().illegalAccess(),
+			    StandardTokenType::Parameter);
 		}
 
 		void visitCallArgument(pst::Access<pst::CallArgument> elem) override {
-			if_opt_some(elem->getArgName().value, _) {
-				out(elem->getArgName().position, StandardTokenType::Parameter);
+			if_opt_some(elem->getArgName(), _) {
+				out(elem->getArgName()->illegalAccess().value()->getSourcePosition().illegalAccess(),
+				    StandardTokenType::Parameter);
 			}
 		}
 
@@ -249,7 +263,8 @@ namespace lsp {
 				if (symbol_type.getType().getKind() == compiler::tsh::Kind::Meta)
 					token_type = StandardTokenType::Type;
 			});
-			out(elem->getNameIdent().position, token_type);
+			out(elem->getName().illegalAccess().value()->getSourcePosition().illegalAccess(),
+			    token_type);
 		}
 	};
 

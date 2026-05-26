@@ -8,7 +8,7 @@ namespace pst {
 	 * @brief Pattern declaration.
 	 */
 	class Pattern final: public Decl {
-		tpc::Identifier name;
+		NAMED_CHILD(name, IdentifierWrapper);
 		NAMED_CHILD(param, Param);
 		NAMED_CHILD_OPT(ret, CommaExprHolder);
 		NAMED_CHILD(body, CodeBlockOrStmt);
@@ -20,8 +20,8 @@ namespace pst {
 		DECL_CHILD_CONSTRUCTOR(Pattern, ElementKind::Pattern);
 
 		[[nodiscard]]
-		base::StrID getName() const {
-			return name.value;
+		AccessLocked<IdentifierWrapper> getName() const {
+			return name.give();
 		}
 
 		[[nodiscard]]
@@ -52,8 +52,8 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		base::Optional<base::StrID> getDeclSymbolName() const override {
-			return name.value;
+		base::Optional<AccessLocked<IdentifierWrapper>> getDeclSymbolIdentifier() const override {
+			return getName();
 		}
 
 		void acceptVisitor(PstVisitor& visitor) const override;

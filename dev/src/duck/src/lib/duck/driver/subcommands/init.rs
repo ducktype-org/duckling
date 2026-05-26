@@ -27,8 +27,8 @@ pub fn get_parser() -> Command {
             "Makes the synchronization export a freezefile and use the provided one",
         ))
         .arg(flag(
-            "no-git",
-            "Do not initialize a git repository in the projects root",
+            "git",
+            "initialize a git repository in the projects root",
         ))
         .arg(optional("name", "Override the package name"))
         .arg(
@@ -46,19 +46,16 @@ pub fn execute(ctx: &DuckContext, matches: &ArgMatches) -> QuackResult<()> {
         .get_one::<PathBuf>("path")
         .expect("required by clap")
         .resolve()?;
-    let name = match matches.get_one::<String>("name") {
-        Some(name) => name.into(),
-        None => at.file_name().expect("file without filename").into(),
-    };
+    let explicit_name = matches.get_one::<String>("name").map(String::as_str);
     init(InitOptions {
         ctx,
         at,
-        name,
+        explicit_name,
         as_venv: matches.get_flag("venv"),
         expose_freezefile: matches.get_flag("expose-freezefile"),
         local_storage: matches.get_flag("local-storage"),
         ephemeral: matches.get_flag("ephemeral"),
-        git: !matches.get_flag("no-git"),
+        git: matches.get_flag("git"),
         full: matches.get_flag("full"),
     })
 }

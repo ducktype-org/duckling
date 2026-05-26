@@ -122,6 +122,15 @@ namespace vm {
 #endif
 
 		/**
+		 * @brief RAII object guaranteeing the release of the GIL lock.
+		 */
+		struct ScopedGilGuard {
+			SafeVMThread& thread;
+			ScopedGilGuard(SafeVMThread& t);
+			~ScopedGilGuard();
+		};
+
+		/**
 		 * @brief Creates a list of instructions, which initialize the argv table and populate it
 		 * with given command line `args`, push the argc and *argv blocks onto mains local stack,
 		 * perform the call and deinitialize the argv table when main returns.
@@ -164,7 +173,7 @@ namespace vm {
 		 */
 		void run(const std::string& func_name, const RunArguments& run_arguments) override;
 
-		std::expected<api::Response, api::ApiError> getCurrentPosition() override;
+		std::expected<low::LowCodePosition, api::ApiError> getCurrentPosition();
 
 		friend class SafeVMProcess;
 		friend class OpFuns;
@@ -211,4 +220,14 @@ namespace vm {
 		 */
 		void updateGlobalDataBufferPointers(GlobalBufferPointers global_buffer_pointers);
 	};
+
+	/**
+	 * @brief This is a low level function to run the interpreter, until the `exit` instruction
+	 * appears. Probably shouldn't be called directly, look into `executeFunction` first.
+	 *
+	 * @param instr - the first instruction that to be executed
+	 */
+	void runInterpreter(
+		const MicroInstruction* instr, std::byte*& local_stack, Frame*& frame, SafeVMThread& thread
+	);
 }

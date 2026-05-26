@@ -453,6 +453,13 @@ namespace base {
 		}
 
 		[[nodiscard]]
+		CRef<DATA_T> at(const KEY_T& key) const {
+			return *atMaybe(key);
+		}
+
+		Ref<DATA_T> at(const KEY_T& key) { return *atMaybe(key); }
+
+		[[nodiscard]]
 		base::Optional<DATA_T> atMaybeCopy(const KEY_T& key) const RELEASE_NOEXCEPT {
 			auto hash = keyHash(key);
 			return atMaybeCopyAssumingHash(key, hash);

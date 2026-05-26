@@ -91,7 +91,7 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
                 for e in errors {
                     self.fetcher.ctx().error_console().info_verbose(format!(
                         "Error\n{e}\nsuppressed due to the Merciful mode of the solver",
-                    ));
+                    ))?;
                 }
             } else {
                 return Err(errors.into_iter().next().unwrap());
@@ -102,6 +102,8 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
 
     /// Helper for [`Gatherer::explore()`], creates a dummy [`ManifestsRequest`] for the root package to update the state
     /// and returns a dummy [`FetchResponse`], to create a starting point for the [`Gatherer::explore()`] function.
+    ///
+    /// Note: We assume that `root_features` are expanded.
     #[tracing::instrument(skip_all, fields(root_path))]
     fn fetch_root(
         &self,
@@ -110,6 +112,9 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
         root_features: HashSet<FeatureName>,
         state: &mut GathererState,
     ) -> QuackResult<FetchResponse> {
+        if cfg!(debug_assertions) {
+            assert_root_features_are_expanded(&root_manifest, &root_features);
+        }
         let root_loc = InternedLocation::new(Location::Local {
             path: root_path.clone(),
         });
@@ -156,7 +161,9 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
                         url,
                         branch_or_tag,
                         rev,
-                    } => Ok(self.fetch_git(&not_pinned_request, url, *branch_or_tag, *rev)),
+                    } => {
+                        Ok(self.fetch_git(&not_pinned_request, url, branch_or_tag, rev.as_deref()))
+                    }
                     Location::Local { path } => Ok(self.fetch_local(&not_pinned_request, path)),
                 }
             }
@@ -280,16 +287,16 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
         &mut self,
         request: &NotPinnedRequest,
         url: &Url,
-        branch_or_tag: BranchOrTag,
-        rev: Option<StrId>,
+        branch_or_tag: &BranchOrTag,
+        rev: Option<&str>,
     ) -> GathererComputation<FetchResponse> {
         debug!("fetching git");
         let fetch_failure = || {
             FetchResponse::Failed(FetchFailure::NotPinned(NotPinnedFailure {
                 origin_location: InternedLocation::new(Location::Git {
                     url: url.clone(),
-                    branch_or_tag,
-                    rev,
+                    branch_or_tag: branch_or_tag.clone(),
+                    rev: rev.map(StrId::from),
                 }),
             }))
         };
@@ -304,7 +311,7 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
             return GathererComputation::only_success(fetch_failure());
         }
 
-        let git_source = Git::new(url.clone(), branch_or_tag, rev);
+        let git_source = Git::new(url.clone(), branch_or_tag.clone(), rev.map(StrId::from));
         let fetcher_response: GathererComputation<Option<(GitCloneResponse, TempDir)>> =
             self.fetcher.clone_from_git(&git_source).into();
         let Some((cloned_pkg, path_where_cloned)) = fetcher_response.0 else {
@@ -317,10 +324,10 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
         .into();
         if !self
             .git_access
-            .is_stored(url.clone(), cloned_pkg.commit_hash)
+            .is_stored(url.clone(), &cloned_pkg.commit_hash)
             && let Err(e) = self.git_access.store(
                 url.clone(),
-                cloned_pkg.commit_hash,
+                &cloned_pkg.commit_hash,
                 path_where_cloned.path(),
             )
         {
@@ -345,8 +352,8 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
     fn try_get_cached_git(
         &self,
         url: &Url,
-        branch_or_tag: BranchOrTag,
-        rev: Option<StrId>,
+        branch_or_tag: &BranchOrTag,
+        rev: Option<&str>,
     ) -> Option<NotPinnedSuccess> {
         if matches!(branch_or_tag, BranchOrTag::Default)
             && let Some(commit) = rev
@@ -354,12 +361,12 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
         {
             let origin_location = InternedLocation::new(Location::Git {
                 url: url.clone(),
-                branch_or_tag,
-                rev,
+                branch_or_tag: branch_or_tag.clone(),
+                rev: rev.map(StrId::from),
             });
             let expanded_location = ExpandedLocation::Git {
                 url: url.clone(),
-                commit,
+                commit: commit.into(),
             }
             .into();
             let storage_local_request = NotPinnedRequest {
@@ -425,4 +432,17 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
             }
         }
     }
+}
+
+fn assert_root_features_are_expanded(
+    root_manifest: &Manifest,
+    root_features: &HashSet<FeatureName>,
+) {
+    assert_eq!(
+        root_manifest
+            .features()
+            .expand_features(root_features.iter().copied())
+            .unwrap(),
+        *root_features
+    );
 }

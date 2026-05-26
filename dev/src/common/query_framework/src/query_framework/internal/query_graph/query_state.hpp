@@ -10,6 +10,7 @@
 
 #include <base/collections/maps.hpp>
 #include <base/collections/optional.hpp>
+#include <base/except/exceptions.hpp>
 #include <base/pointers/box.hpp>
 #include <base/pointers/ref.hpp>
 
@@ -104,11 +105,13 @@ namespace query::internal {
 		 * @brief Returns read-only reference to the query graph.
 		 */
 		[[nodiscard]]
-		const QueryGraph& getGraph() const {
-			return query_graph;
-		}
+		const QueryGraph& getGraph() const;
 
-		QueryGraph& getGraphMutable() { return query_graph; }
+		/**
+		 * @brief Returns mutable reference to the query graph.
+		 */
+		[[nodiscard]]
+		QueryGraph& getGraphMutable();
 
 		/**
 		 * @brief Returns read-only reference to the graph from previous compilation.
@@ -310,6 +313,15 @@ namespace query::internal {
 		 * It creates a logger for the node if it doesn't exist and logs the message to it.
 		 */
 		void logDiagnosticForNode(NodeID node_id, Box<dia_int::MessageBase> diagnostic);
+
+		/**
+		 * @brief Logs diagnostic messages from a Logger for a specific node.
+		 *
+		 * Same as `logDiagnosticForNode(NodeID, Box<MessageBase>)` but
+		 * moves all diagnostics from the provided Logger into the node's logger,
+		 * leaving the provided Logger empty.
+		 */
+		void logDiagnosticFromLoggerForNode(NodeID node_id, dia_int::Logger& src_logger);
 
 		/**
 		 * @brief Clears all diagnostics for a specific node.

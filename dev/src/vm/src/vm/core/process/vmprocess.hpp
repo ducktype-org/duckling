@@ -47,9 +47,9 @@ namespace vm {
 		std::condition_variable_any status_cv;
 
 		/**
-		 * @brief Emits current status when VM changes status
+		 * @brief Emits after the process status has changed.
 		 */
-		events::Emitter<api::ProcStatus> on_status_change;
+		events::Emitter<api::ProcStatus> on_status_changed;
 
 		IVMProcess(PID my_pid);
 
@@ -177,6 +177,16 @@ namespace vm {
 		virtual std::vector<api::ThreadID> getAllThreadIDs() = 0;
 
 		virtual api::ThreadID getMainThreadID() = 0;
+
+		/**
+		 * @brief Enables or disables breakpoint on a given instruction in a given function.
+		 * @note Enabling a breakpoint on an instruction that already has a breakpoint or disabling
+		 * a breakpoint on an instruction that doesn't have a breakpoint is considered successful
+		 * and doesn't return an error.
+		 */
+		virtual std::expected<api::Response, api::ApiError> setBreakpoint(
+			base::StrID function_name, usize instruction_index, bool enable
+		) = 0;
 
 	public:
 		ProcIO& getIO();
