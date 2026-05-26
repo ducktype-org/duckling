@@ -289,6 +289,6 @@ namespace compiler::helios {
 			}
 			variant_default { CORE_PANIC("Unhandled coercion result variant."); }
 		}
+		return;
 	}
-
 }

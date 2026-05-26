@@ -179,6 +179,8 @@ namespace compiler::helios {
                     }
 				}();
 				if (!element_type.has_value()) {
+					// We don't log a NYI error here, since it's logged in the
+					// `desugaring::desugarFor()`.
 					setFailed();
 					return;
 				}

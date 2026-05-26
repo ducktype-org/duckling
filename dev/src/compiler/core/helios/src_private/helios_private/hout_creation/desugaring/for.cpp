@@ -256,6 +256,7 @@ namespace compiler::helios::desugaring {
 			auto unique = for_scope.queryUnstablePerfectHash();
 			auto name   = base::StrID(base::strConcat(role, unique));
 
+			// @TODO: #2799 Reconsider the generated symbols scope.
 			return ctx.query<defgen::QueryGeneratedSymbol>({
 				.name = name,
 				.generated_symbol_data

@@ -141,7 +141,7 @@ namespace compiler::helios::defgen {
 		 * @brief Represents a compiler-generated local variable injected into a specific scope
 		 * during desugaring.
 		 *
-		 * Unlike `Variable`, which is used for synthesizing whole function bodies,
+		 * Unlike `GeneratedFunctionVariable`, which is used for synthesizing whole function bodies,
 		 * `ControlFlowLocal` is used when lowering complex statements (like `for` loops) into
 		 * simpler building blocks. It represents auxiliary variables (e.g., iterators, hidden
 		 * collection references, loop counters) that live within a specific scope.
