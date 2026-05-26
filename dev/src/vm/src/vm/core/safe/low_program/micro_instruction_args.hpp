@@ -99,8 +99,15 @@ namespace vm::low::opargs {
 	 * or the global blocks buffer. */
 	DEFINE_MICRO_ARG_TYPE(PlaceBlockVariant, "bvnt", vm::opargs::PlaceVnt);
 
+	DEFINE_MICRO_ARG_TYPE(PlaceShadowBlockStructure, "psbste", vm::opargs::PlaceStructure);
+	DEFINE_MICRO_ARG_TYPE(PlaceShadowBlockFSTable, "psbarr", vm::opargs::PlaceFSTable);
+	DEFINE_MICRO_ARG_TYPE(PlaceShadowBlockVariant, "psbvnt", vm::opargs::PlaceVnt);
+
 #define VM_MICRO_INSTR_ARG_BLOCK_PLACE_TYPES \
 	PlaceBlockAny, PlaceBlockStructure, PlaceBlockVariant, PlaceBlockFSTable
+
+#define VM_MICRO_INSTR_ARG_SHADOW_BLOCK_PLACE_TYPES \
+	PlaceShadowBlockStructure, PlaceShadowBlockVariant, PlaceShadowBlockFSTable
 
 	/** @brief Stores TypeCRef (pointer) from type metadata. */
 	DEFINE_MICRO_ARG_TYPE(Type, "type", vm::opargs::Type);
@@ -127,6 +134,7 @@ namespace vm::low::opargs {
 	using InstructionArg = std::variant<
 		VM_MICRO_INSTR_ARG_PLACE_OFFSET_TYPES,
 		VM_MICRO_INSTR_ARG_BLOCK_PLACE_TYPES,
+		VM_MICRO_INSTR_ARG_SHADOW_BLOCK_PLACE_TYPES,
         VM_MICRO_INSTR_ARG_SHADOW_PLACE_OFFSET_TYPES,
         VM_MICRO_INSTR_ARG_SHADOW_POINTER_PLACE_OFFSET_TYPES,
 		Immediate,
@@ -145,6 +153,7 @@ namespace vm::low::opargs {
 	using InstructionShadowPlaceDataArg  = std::variant<VM_MICRO_INSTR_ARG_SHADOW_PLACE_OFFSET_TYPES>;
 	using InstructionShadowPointerPlaceDataArg  = std::variant<VM_MICRO_INSTR_ARG_SHADOW_POINTER_PLACE_OFFSET_TYPES>;
 	using InstructionPlaceBlockArg = std::variant<VM_MICRO_INSTR_ARG_BLOCK_PLACE_TYPES>;
+	using InstructionShadowPlaceBlockArg = std::variant<VM_MICRO_INSTR_ARG_SHADOW_BLOCK_PLACE_TYPES>;
 
 	using InstructionFunctionArg = std::variant<FunctionID, BuiltinFunctionID, ExtCFunction>;
 
@@ -155,6 +164,8 @@ namespace vm::low::opargs {
 	concept PlaceDataArgumentType = base::IsVariantMember<T, InstructionPlaceDataArg>;
 	template<typename T>
 	concept PlaceBlockArgumentType = base::IsVariantMember<T, InstructionPlaceBlockArg>;
+	template<typename T>
+	concept ShadowPlaceBlockArgumentType = base::IsVariantMember<T, InstructionShadowPlaceBlockArg>;
 	template<typename T>
 	concept ShadowPlaceDataArgumentType = base::IsVariantMember<T, InstructionShadowPlaceDataArg>;
 	template<typename T>

@@ -87,6 +87,14 @@ namespace vm::loader::compiler {
 			return compiler.low_program.getGlobals().at(opcode_arg.var_name)->global_block_idx | (1ULL << 63);
 		);
 
+		DEFINE_LOWER_ARGUMENT_IMPL_FOR_FAMILY(
+			low::opargs::ShadowPlaceBlockArgumentType,
+			if(auto maybe_val = ctx.locals_map.atMaybe(opcode_arg.var_name)) {
+				return maybe_val.value()->block_idx;
+			}
+			return compiler.low_program.getGlobals().at(opcode_arg.var_name)->global_block_idx | (1ULL << 63);
+		);
+
 
 
 		DEFINE_LOWER_ARGUMENT_IMPL(
