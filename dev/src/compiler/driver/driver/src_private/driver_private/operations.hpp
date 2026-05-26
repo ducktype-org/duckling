@@ -21,20 +21,20 @@ namespace compiler::driver {
 	};
 
 	/**
-	 * @brief Query that converts HOUTUnit to LIRModuleData.
+	 * @brief Query that converts HOUTUnit to LIRUnitWithBackendName.
 	 #2246 this should go!
 	 */
 	DECLARE_QUERY(
 		CompileHOUTUnitToLIRModuleData,
 		CompileHOUTUnitToLIRModuleDataKey,
-		CRef<query::QResult<LIRModuleData>>,
+		CRef<query::QResult<LIRUnitWithBackendName>>,
 		({})
 	)
 
 	/**
-	 * @brief Query that produces LIRModuleData for given Duckling module.
+	 * @brief Query that produces LIRUnitWithBackendName for given Duckling module.
 	 */
 	DECLARE_QUERY(
-		CompileToLIRModuleData, frontend::ModuleID, CRef<query::QResult<LIRModuleData>>, ({})
+		CompileToLIRModuleData, frontend::ModuleID, CRef<query::QResult<LIRUnitWithBackendName>>, ({})
 	)
 }

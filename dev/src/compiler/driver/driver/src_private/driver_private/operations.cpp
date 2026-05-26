@@ -38,8 +38,8 @@ namespace compiler::driver {
 	// 	}
 	// }
 
-	// void LIRModuleData::debugPrint(query::Context& ctx, std::ostream& os) const {
-	// 	os << "LIRModuleData for module: " << module_id.strView() << "\n";
+	// void LIRUnitWithBackendName::debugPrint(query::Context& ctx, std::ostream& os) const {
+	// 	os << "LIRUnitWithBackendName for module: " << module_id.strView() << "\n";
 	// 	os << "Functions:\n";
 	// 	for (const auto& func: functions) {
 	// 		func->debugPrint(ctx, os);
@@ -63,7 +63,7 @@ namespace compiler::driver {
 	}
 
 	// #2246 PIPELINE LOGIC HERE
-	struct IMPLEMENT_QUERY(CompileHOUTUnitToLIRModuleData, query::QResult<LIRModuleData>) {
+	struct IMPLEMENT_QUERY(CompileHOUTUnitToLIRModuleData, query::QResult<LIRUnitWithBackendName>) {
 		static auto provide(query::Context& ctx, CompileHOUTUnitToLIRModuleDataKey key) -> PResult {
 			const auto& hout_unit   = *key.hout_unit.get();
 			auto        module_name = key.module_name;
@@ -97,7 +97,7 @@ namespace compiler::driver {
 				});
 			}
 
-			auto lir_module = LIRModuleData{
+			auto lir_module = LIRUnitWithBackendName{
 				.module_id = module_name,
 				.lir_unit  = lir::lowerToLIRUnit(ctx, mir_unit),
 			};
@@ -119,7 +119,7 @@ namespace compiler::driver {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(CompileHOUTUnitToLIRModuleData);
 
-	struct IMPLEMENT_QUERY(CompileToLIRModuleData, query::QResult<LIRModuleData>) {
+	struct IMPLEMENT_QUERY(CompileToLIRModuleData, query::QResult<LIRUnitWithBackendName>) {
 		QUERY_AUTO_CACHE_CREF
 
 		// #2246 this should go
