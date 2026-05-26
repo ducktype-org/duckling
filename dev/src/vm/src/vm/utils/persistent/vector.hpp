@@ -28,9 +28,10 @@ namespace vm::persistent {
 	 * @tparam VarH hash object for VarT
 	 */
 	template<typename VarT, typename VarH = std::hash<VarT>>
-	class Vector final: private Memory {
+	class Vector final {
 		detail::BijectiveMap<VarT, usize, VarH> held_values{};
 		usize                                   next_val_id = 0;
+		Memory                                  inner;
 
 		// casting memory state to vector state
 		constexpr static VectorStateID toVecState(MemoryStateID state) {
@@ -50,11 +51,11 @@ namespace vm::persistent {
 			auto  state = toMemState(vec_state);
 			usize size{};
 			try {
-				size = Memory::size(state);
+				size = inner.size(state);
 			} catch (...) { CORE_PANIC("I need size"); }
 			usize l{}, r{};
 			try {
-				std::tie(l, r) = Memory::getRangeOf(state);
+				std::tie(l, r) = inner.getRangeOf(state);
 			} catch (...) { CORE_PANIC("I need size"); }
 
 			CORE_ASSERT(r == size, "Size of vector isn't consistent");
@@ -82,7 +83,7 @@ namespace vm::persistent {
 		 */
 		const VarT& access(VectorStateID state_id, usize idx) const {
 			auto state = validateState(state_id);
-			if_opt_some(Memory::access(state, idx), val_id) { return held_values.atRight(val_id); }
+			if_opt_some(inner.access(state, idx), val_id) { return held_values.atRight(val_id); }
 			CORE_UNREACHABLE();
 		}
 
@@ -92,7 +93,7 @@ namespace vm::persistent {
 		[[nodiscard]]
 		usize size(VectorStateID state_id) const {
 			auto state = validateState(state_id);
-			return Memory::size(state);
+			return inner.size(state);
 		}
 
 		/**
@@ -101,9 +102,9 @@ namespace vm::persistent {
 		[[nodiscard]]
 		VectorStateID push(VectorStateID state_id, const VarT& var) {
 			auto  state     = validateState(state_id);
-			auto  size      = Memory::size(state);
+			auto  size      = inner.size(state);
 			usize val_id    = emplaceNewVal(var);
-			auto  new_state = Memory::set(state, size, val_id);
+			auto  new_state = inner.set(state, size, val_id);
 
 			return toVecState(new_state);
 		}
@@ -117,7 +118,7 @@ namespace vm::persistent {
 			if (idx >= size(state_id)) throw std::invalid_argument("idx out of bounds");
 
 			usize val_id    = emplaceNewVal(var);
-			auto  new_state = Memory::set(state, idx, val_id);
+			auto  new_state = inner.set(state, idx, val_id);
 
 			return toVecState(new_state);
 		}
@@ -134,7 +135,7 @@ namespace vm::persistent {
 			if (right > size(state_id)) throw std::invalid_argument("right bound is too big");
 
 			auto state = validateState(state_id);
-			auto iter  = getPathTo(state, left);
+			auto iter  = inner.getPathTo(state, left);
 
 			std::vector<VarT> ans        = {};
 			bool              iter_valid = iter.pointsToValid();
@@ -146,7 +147,7 @@ namespace vm::persistent {
 
 				auto val_id = *iter.getValue();
 				ans.emplace_back(held_values.atRight(val_id));
-				iter_valid &= iter.moveToValid(Dir::Right);
+				iter_valid &= iter.moveToValid(Memory::Dir::Right);
 			}
 
 			return ans;
@@ -158,10 +159,10 @@ namespace vm::persistent {
 		 */
 		VectorStateID getPrefix(VectorStateID state_id, usize pref_size) {
 			auto state = validateState(state_id);
-			auto size  = Memory::size(state);
+			auto size  = inner.size(state);
 			if (pref_size > size) throw std::invalid_argument("trying to take too much");
 
-			auto new_state = Memory::slice(state, 0, pref_size);
+			auto new_state = inner.slice(state, 0, pref_size);
 
 			return toVecState(new_state);
 		}
@@ -172,10 +173,10 @@ namespace vm::persistent {
 		 */
 		VectorStateID pop(VectorStateID state_id, usize how_many_pop = 1) {
 			auto state = validateState(state_id);
-			auto size  = Memory::size(state);
+			auto size  = inner.size(state);
 			if (how_many_pop > size) throw std::invalid_argument("trying to pop too much");
 
-			auto new_state = Memory::slice(state, 0, size - how_many_pop);
+			auto new_state = inner.slice(state, 0, size - how_many_pop);
 
 			return toVecState(new_state);
 		}

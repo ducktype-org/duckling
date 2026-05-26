@@ -28,12 +28,14 @@ namespace vm::persistent {
 		typename ValT,
 		typename KeyH = std::hash<KeyT>,
 		typename ValH = std::hash<ValT>>
-	class HashMap final: private Memory {
+	class HashMap final {
 		detail::BijectiveMap<ValT, usize, ValH> held_values{};
 		detail::BijectiveMap<KeyT, usize, KeyH> held_keys{};
 
 		usize next_val_id = 0;
 		usize next_key_id = 0;
+
+		Memory inner;
 
 		// casting memory state to hashmap state
 		constexpr static HashMapStateID toMapState(MemoryStateID state) {
@@ -75,7 +77,7 @@ namespace vm::persistent {
 		 */
 		usize size(HashMapStateID state_id) const {
 			auto mem_state = toMemState(state_id);
-			return Memory::size(mem_state);
+			return inner.size(mem_state);
 		}
 
 		/**
@@ -85,8 +87,8 @@ namespace vm::persistent {
 			if (state_id == EMPTY) return {};
 
 			auto mem_state = toMemState(state_id);
-			auto [l, r]    = getRangeOf(mem_state);
-			auto iter      = getPathTo(mem_state, l);
+			auto [l, r]    = inner.getRangeOf(mem_state);
+			auto iter      = inner.getPathTo(mem_state, l);
 
 			base::HashMap<KeyT, ValT, KeyH> ans = {};
 
@@ -102,7 +104,7 @@ namespace vm::persistent {
 
 				CORE_ASSERT(success, "I need the value to be successfully emplaced");
 
-				keep_going &= iter.moveToValid(Dir::Right);
+				keep_going &= iter.moveToValid(Memory::Dir::Right);
 			}
 
 			return ans;
@@ -114,7 +116,7 @@ namespace vm::persistent {
 		bool contains(HashMapStateID state_id, const KeyT& key) const {
 			if_opt_some(held_keys.atLeftOpt(key), key_id) {
 				auto state = toMemState(state_id);
-				return Memory::active(state, key_id);
+				return inner.active(state, key_id);
 			}
 
 			return false;
@@ -126,7 +128,7 @@ namespace vm::persistent {
 		const ValT& access(HashMapStateID state_id, const KeyT& key) const {
 			auto state = toMemState(state_id);
 			if_opt_some(held_keys.atLeftOpt(key), key_id) {
-				if_opt_some(Memory::access(state, key_id), val_id) {
+				if_opt_some(inner.access(state, key_id), val_id) {
 					return held_values.atRight(val_id);
 				}
 			}
@@ -141,7 +143,7 @@ namespace vm::persistent {
 			auto state  = toMemState(state_id);
 			auto key_id = emplaceNewKey(key);
 			auto val_id = emplaceNewVal(var);
-			return toMapState(Memory::set(state, key_id, val_id));
+			return toMapState(inner.set(state, key_id, val_id));
 		}
 
 		/**
@@ -151,7 +153,7 @@ namespace vm::persistent {
 		HashMapStateID erase(HashMapStateID state_id, const KeyT& key) {
 			auto state  = toMemState(state_id);
 			auto key_id = emplaceNewKey(key);
-			return toMapState(Memory::erase(state, key_id));
+			return toMapState(inner.erase(state, key_id));
 		}
 
 		/**

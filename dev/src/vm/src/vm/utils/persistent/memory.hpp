@@ -30,9 +30,11 @@ namespace vm::persistent {
 	 * @note Implementation is based on persistent segement tree
 	 * @note can be thought of as unordered_map<MemoryStateID, MemoryStateView>
 	 */
-	class Memory: public detail::SegmentTree {
+	class Memory final {
 		friend MemoryStateView;
 		friend MemoryIterator;
+
+		detail::SegmentTree inner;
 
 		using Path = detail::SegmentTree::Path;
 		using ID   = detail::NodeID;
@@ -45,13 +47,13 @@ namespace vm::persistent {
 
 		// checks if the provided idx is valid ()
 		constexpr static void validateIdx(usize idx) {
-			if (idx >= detail::SegmentTree::IDX_END) throw std::invalid_argument("got too big idx");
+			if (idx >= IDX_END) throw std::invalid_argument("got too big idx");
 		}
 
 		// basic method for validating input
 		ID validateInput(MemoryStateID state, bool allow_weird_roots = false) const {
 			auto root = fromState(state);
-			validateRoot(root, allow_weird_roots);
+			inner.validateRoot(root, allow_weird_roots);
 
 			return root;
 		}
@@ -104,17 +106,19 @@ namespace vm::persistent {
 		 */
 		std::pair<usize, usize> getRangeOf(MemoryStateID state) const {
 			auto root = validateInput(state);
-			return getRange(root);
+			return inner.getRange(root);
 		}
 
 		/**
 		 * @brief returns a const iterator to given idx in given memory instance
 		 */
 		const Path getPathTo(MemoryStateID state, usize idx) const {
-			return detail::SegmentTree::getPathTo(fromState(state), idx);
+			return inner.getPathTo(fromState(state), idx);
 		}
 
 		constexpr static MemoryStateID EMPTY = MemoryStateID{ u64(detail::SegmentTree::EMPTY) };
+		constexpr static auto IDX_END = detail::SegmentTree::IDX_END;
+		using Dir = detail::SegmentTree::Dir;
 
 		using ConflictPolicy = std::function<base::Optional<usize>(usize, usize, usize)>;
 		inline const static ConflictPolicy DEFAULT_CONFLICT_POLICY

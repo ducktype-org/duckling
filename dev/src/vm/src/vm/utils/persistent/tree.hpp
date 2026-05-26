@@ -36,7 +36,7 @@ namespace vm::persistent::detail {
 	template<typename T1, typename T2>
 	concept SameWNoQual = std::is_same_v<std::remove_cvref_t<T1>, std::remove_cvref_t<T2>>;
 
-	class SegmentTree {
+	class SegmentTree final {
 		using posT = usize;
 		using valT = usize;
 
@@ -460,7 +460,7 @@ namespace vm::persistent::detail {
 		base::HashMap<NodeID, BranchEntry> branch_info{};
 		NodeID                             next_node_id = NodeID{ 1 };
 
-	protected:
+	public:
 		/**
 		 * @brief struture used to iterate over the unmutable memory
 		 */
@@ -1233,7 +1233,6 @@ namespace vm::persistent::detail {
 			return emplaceBranch(node_1, node_2);
 		}
 
-	public:
 		/**
 		 * @brief Construct a new Segment Tree object
 		 */
