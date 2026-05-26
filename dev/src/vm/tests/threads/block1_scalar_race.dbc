@@ -1,0 +1,38 @@
+global_data counter32 i32 {};
+
+function child_thread {} -> {} {
+    # Exposes missing ftWrite check on mov_p32_imm
+    mov_p32_imm counter32, 42;
+    ret;
+}
+
+function main { i64, ptr_argv } -> { i64 } {
+    init_pany_type thread_id, i64;
+    set_threadctx child_thread;
+    call_builtinfunc builtin_start_thread;
+
+    # Main thread writes concurrently using mov_p32_imm
+    mov_p32_imm counter32, 100;
+
+    init_pany_type join_ret, i64;
+    init_pany_type join_id, i64;
+    mov_p64_p64 join_id, thread_id;
+    call_builtinfunc builtin_join_thread;
+
+    cmpLt_p64_imm join_ret, 0;
+    jmpIf_label PanicLabel;
+
+    deinit; # join_id
+    deinit; # join_ret
+    deinit; # thread_id
+    ret;
+
+    label PanicLabel;
+    init_pany_type zero, i64;
+    mov_p64_imm zero, 0;
+    div_p64_p64 thread_id, zero;
+    deinit; # join_id
+    deinit; # join_ret
+    deinit; # thread_id
+    ret;
+}

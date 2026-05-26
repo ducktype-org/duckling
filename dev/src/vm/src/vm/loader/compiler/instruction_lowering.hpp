@@ -154,6 +154,18 @@ namespace vm::loader::compiler::detail {
 			}
 		}
 
+		void ftCRead(const opargs::ArgumentType auto place) {
+			if (compiler.settings_.enable_fast_track) {
+				addLow<Op_ft_placeCRead>(place);
+			}
+		}
+
+		void ftCWrite(const opargs::ArgumentType auto place) {
+			if (compiler.settings_.enable_fast_track) {
+				addLow<Op_ft_placeCWrite>(place);
+			}
+		}
+
 		void addLowRaw(low::MicroOpcode opcode, u64 arg0 = 0, u64 arg1 = 0) {
 			if (push_step_gil_on_next_add_low) {
 				push_step_gil_on_next_add_low = false;
@@ -201,34 +213,34 @@ namespace vm::loader::compiler::detail {
 		PUSH_DIAGNOSTIC
 		UNHANDLED_ENUM
 		instr_match(instruction) {
-			instr_case(high::Op_mov_p8_imm, i) { addLow<Op_mov_p8_imm>(i.dst, i.src);}
+			instr_case(high::Op_mov_p8_imm, i) { addLow<Op_mov_p8_imm>(i.dst, i.src); ftWrite(i.dst); }
 			instr_case(high::Op_mov_p8_p8, i) {
 				ftRead(i.src); ftWrite(i.dst);
 				addLow<Op_mov_p8_p8>(i.dst, i.src);
 			}
-			instr_case(high::Op_cmov_p8_p8, i) { addLow<Op_cmov_p8_p8>(i.dst, i.src); }
-			instr_case(high::Op_cmov_p8_imm, i) { addLow<Op_cmov_p8_imm>(i.dst, i.src); }
-			instr_case(high::Op_mov_p16_imm, i) { addLow<Op_mov_p16_imm>(i.dst, i.src); }
+			instr_case(high::Op_cmov_p8_p8, i) { addLow<Op_cmov_p8_p8>(i.dst, i.src); ftCRead(i.src); ftCWrite(i.dst); }
+			instr_case(high::Op_cmov_p8_imm, i) { addLow<Op_cmov_p8_imm>(i.dst, i.src); ftCWrite(i.dst); }
+			instr_case(high::Op_mov_p16_imm, i) { addLow<Op_mov_p16_imm>(i.dst, i.src); ftWrite(i.dst); }
 			instr_case(high::Op_mov_p16_p16, i) {
 				ftRead(i.src); ftWrite(i.dst);
 				addLow<Op_mov_p16_p16>(i.dst, i.src);
 			}
-			instr_case(high::Op_cmov_p16_p16, i) { addLow<Op_cmov_p16_p16>(i.dst, i.src); }
-			instr_case(high::Op_cmov_p16_imm, i) { addLow<Op_cmov_p16_imm>(i.dst, i.src); }
-			instr_case(high::Op_mov_p32_imm, i) { addLow<Op_mov_p32_imm>(i.dst, i.src); }
+			instr_case(high::Op_cmov_p16_p16, i) { addLow<Op_cmov_p16_p16>(i.dst, i.src); ftCRead(i.src); ftCWrite(i.dst); }
+			instr_case(high::Op_cmov_p16_imm, i) { addLow<Op_cmov_p16_imm>(i.dst, i.src); ftCWrite(i.dst); }
+			instr_case(high::Op_mov_p32_imm, i) { addLow<Op_mov_p32_imm>(i.dst, i.src); ftWrite(i.dst); }
 			instr_case(high::Op_mov_p32_p32, i) {
 				ftRead(i.src); ftWrite(i.dst);
 				addLow<Op_mov_p32_p32>(i.dst, i.src);
 			}
-			instr_case(high::Op_cmov_p32_p32, i) { addLow<Op_cmov_p32_p32>(i.dst, i.src); }
-			instr_case(high::Op_cmov_p32_imm, i) { addLow<Op_cmov_p32_imm>(i.dst, i.src); }
+			instr_case(high::Op_cmov_p32_p32, i) { addLow<Op_cmov_p32_p32>(i.dst, i.src); ftCRead(i.src); ftCWrite(i.dst); }
+			instr_case(high::Op_cmov_p32_imm, i) { addLow<Op_cmov_p32_imm>(i.dst, i.src); ftCWrite(i.dst); }
 			instr_case(high::Op_mov_p64_imm, i) { addLow<Op_mov_p64_imm>(i.dst, i.src); ftWrite(i.dst);}
 			instr_case(high::Op_mov_p64_p64, i) {
 				ftRead(i.src); ftWrite(i.dst);
 				addLow<Op_mov_p64_p64>(i.dst, i.src);
 			}
-			instr_case(high::Op_cmov_p64_imm, i) { addLow<Op_cmov_p64_imm>(i.dst, i.src); }
-			instr_case(high::Op_cmov_p64_p64, i) { addLow<Op_cmov_p64_p64>(i.dst, i.src); }
+			instr_case(high::Op_cmov_p64_imm, i) { addLow<Op_cmov_p64_imm>(i.dst, i.src); ftCWrite(i.dst); }
+			instr_case(high::Op_cmov_p64_p64, i) { addLow<Op_cmov_p64_p64>(i.dst, i.src); ftCRead(i.src); ftCWrite(i.dst); }
 			instr_case(high::Op_mov_pptr_pptr, i) {
 				addLow<Op_mov_pptr_pptr>(i.dst, i.src);
 				if (compiler.settings_.enable_fast_track) {

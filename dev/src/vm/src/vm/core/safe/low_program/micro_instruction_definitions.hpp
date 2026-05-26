@@ -697,6 +697,8 @@ DEF_MICRO_INSTR(ft_ret)
 // 5.1: Direct Place Instrumentation
 DEF_MICRO_INSTR(ft_placeRead, vm::low::opargs::PlaceShadowAny)
 DEF_MICRO_INSTR(ft_placeWrite, vm::low::opargs::PlaceShadowAny)
+DEF_MICRO_INSTR(ft_placeCRead, vm::low::opargs::PlaceShadowAny)
+DEF_MICRO_INSTR(ft_placeCWrite, vm::low::opargs::PlaceShadowAny)
 DEF_MICRO_INSTR(ft_ref_pptr_bany, vm::low::opargs::PlaceShadowPointerAny, vm::low::opargs::PlaceBlockAny)
 
 // 5.2: Direct Heap/Struct Instrumentation

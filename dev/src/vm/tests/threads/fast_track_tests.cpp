@@ -18,6 +18,14 @@ public:
 		TESTER_ADD_TEST(extensiveNoRaceTest);
 		TESTER_ADD_TEST(extensiveStackRaceTest);
 		TESTER_ADD_TEST(extensiveHeapRaceTest);
+		TESTER_ADD_TEST(block1ScalarRaceTest);
+		TESTER_ADD_TEST(block1CmovRaceTest);
+		TESTER_ADD_TEST(block1CmovNoRaceTest);
+		TESTER_ADD_TEST(block2FreeRaceTest);
+		TESTER_ADD_TEST(block3StructRaceTest);
+		TESTER_ADD_TEST(block4ArrayRaceTest);
+		TESTER_ADD_TEST(block5VariantRaceTest);
+		TESTER_ADD_TEST(block6OpaqueRaceTest);
 	}
 
 private:
@@ -180,6 +188,88 @@ private:
 
 		const auto validation_result = vm::api::deinitAndValidate(pid);
 		ASSERT_TRUE(validation_result.has_value());
+	}
+
+	void runRaceTest(const std::string& filename, const std::string& test_name) {
+		vm::api::ProcessSettings settings;
+		settings.enable_fast_track = true;
+		auto pid = initProcess(settings);
+
+		auto file = fs::File(path(filename));
+		auto load_res = vm::api::loadFiles(pid, { file });
+		ASSERT_TRUE(load_res.has_value());
+
+		auto result = runTestOnVmGetResult(pid, "", {}, {});
+
+		auto exec_status = vm::api::getExecutionStatus(pid);
+		bool got_race_panic = false;
+		if (exec_status.has_value()) {
+			nlohmann::json status_json = exec_status.value();
+			std::cout << test_name << " STATUS: " << status_json.dump() << std::endl;
+
+			variant_match(exec_status.value()) {
+				variant_case(vm::api::ExecutionPanicked, panicked) {
+					got_race_panic = panicked.error_message.contains("[FastTrack] Data race detected");
+				}
+				variant_default {}
+			}
+		}
+
+		if (got_race_panic) {
+			std::cout << test_name << ": OK (Race detected successfully)" << std::endl;
+		} else {
+			std::cout << test_name << ": FAIL (Race NOT detected - FastTrack Lowering Gap is active)" << std::endl;
+		}
+
+		ASSERT_TRUE(got_race_panic);
+
+		const auto validation_result = vm::api::deinitAndValidate(pid);
+		ASSERT_TRUE(validation_result.has_value());
+	}
+
+	void block1ScalarRaceTest() {
+		runRaceTest("block1_scalar_race.dbc", "block1ScalarRaceTest");
+	}
+
+	/** Two threads both cmov_p64_p64 / cmov_p64_imm to the same global with the
+	 *  condition always true and no synchronisation – FastTrack MUST detect a race. */
+	void block1CmovRaceTest() {
+		runRaceTest("block1_cmov_race.dbc", "block1CmovRaceTest");
+	}
+
+	/** Same cmov pattern but the child is joined before the main thread writes –
+	 *  FastTrack must NOT produce a false-positive race report. */
+	void block1CmovNoRaceTest() {
+		vm::api::ProcessSettings settings;
+		settings.enable_fast_track = true;
+		auto pid = initProcess(settings);
+
+		auto file = fs::File(path("block1_cmov_no_race.dbc"));
+		auto load_res = vm::api::loadFiles(pid, { file });
+		ASSERT_TRUE(load_res.has_value());
+
+		// Must complete without any race panic
+		runTestOnVm(pid, "", {}, {});
+	}
+
+	void block2FreeRaceTest() {
+		runRaceTest("block2_free_race.dbc", "block2FreeRaceTest");
+	}
+
+	void block3StructRaceTest() {
+		runRaceTest("block3_struct_race.dbc", "block3StructRaceTest");
+	}
+
+	void block4ArrayRaceTest() {
+		runRaceTest("block4_array_race.dbc", "block4ArrayRaceTest");
+	}
+
+	void block5VariantRaceTest() {
+		runRaceTest("block5_variant_race.dbc", "block5VariantRaceTest");
+	}
+
+	void block6OpaqueRaceTest() {
+		runRaceTest("block6_opaque_race.dbc", "block6OpaqueRaceTest");
 	}
 };
 

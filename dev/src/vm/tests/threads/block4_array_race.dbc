@@ -1,0 +1,63 @@
+type fixed_size_table: TableI64 i64 5
+type pointer: ptr_TableI64 TableI64
+type pointer: ptr_i64 i64
+
+global_data g_array_ptr ptr_TableI64 {};
+
+function child_thread {} -> {} {
+    init_pany_type local_arr_ptr, ptr_TableI64;
+    mov_pptr_pptr local_arr_ptr, g_array_ptr;
+
+    init_pany_type idx, i64;
+    mov_p64_imm idx, 2;
+    init_pany_type element_ptr, ptr_i64;
+    fixedSizeTableLea_pptr_pptr_p64 element_ptr, local_arr_ptr, idx;
+
+    init_pany_type val, i64;
+    mov_p64_imm val, 42;
+    store_pptr_pany element_ptr, val;
+
+    deinit;
+    ret;
+}
+
+function main { i64, ptr_argv } -> { i64 } {
+    init_pany_type local_array, TableI64;
+    init_pany_type array_ptr, ptr_TableI64;
+    ref_pptr_pany array_ptr, local_array;
+    mov_pptr_pptr g_array_ptr, array_ptr;
+
+    init_pany_type thread_id, i64;
+    set_threadctx child_thread;
+    call_builtinfunc builtin_start_thread;
+
+    init_pany_type idx2, i64;
+    mov_p64_imm idx2, 2;
+    init_pany_type val2, i64;
+    mov_p64_imm val2, 100;
+    fixedSizeTableStore_pfst_pany_p64 local_array, val2, idx2;
+
+    init_pany_type join_ret, i64;
+    init_pany_type join_id, i64;
+    mov_p64_p64 join_id, thread_id;
+    call_builtinfunc builtin_join_thread;
+
+    cmpLt_p64_imm join_ret, 0;
+    jmpIf_label PanicLabel;
+
+    deinit; # join_id
+    deinit; # join_ret
+    deinit; # thread_id
+    deinit; # local_array
+    ret;
+
+    label PanicLabel;
+    init_pany_type zero, i64;
+    mov_p64_imm zero, 0;
+    div_p64_p64 thread_id, zero;
+    deinit; # join_id
+    deinit; # join_ret
+    deinit; # thread_id
+    deinit; # local_array
+    ret;
+}

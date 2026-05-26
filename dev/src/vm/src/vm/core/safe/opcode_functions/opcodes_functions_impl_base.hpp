@@ -1563,6 +1563,22 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
+	RETURN_TYPE OpFuns::OPCODE_NAME(ft_placeCRead)(FUNCTION_ARGS) {
+		if (frame->flags.flag) {
+			ShadowEntry* entry = getShadowEntryPtr(frame, thread, instr->arg0);
+			entry->processRead(thread.getThreadID(), thread.getVC()[thread.getThreadID()], thread.getVC());
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ft_placeCWrite)(FUNCTION_ARGS) {
+		if (frame->flags.flag) {
+			ShadowEntry* entry = getShadowEntryPtr(frame, thread, instr->arg0);
+			entry->processWrite(thread.getThreadID(), thread.getVC()[thread.getThreadID()], thread.getVC());
+		}
+		FUNCTION_CONT(1);
+	}
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(ft_ref_pptr_bany)(FUNCTION_ARGS) {
 		{
 			ShadowPointer shadow_ptr;

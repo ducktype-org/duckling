@@ -1,0 +1,56 @@
+# Tests that FastTrack does NOT report a false race for cmov instructions
+# when the writes are properly synchronised (child joined before main writes).
+#
+# The condition is always true, so both threads write – but they are serialised
+# by the join barrier.  ft_placeCWrite must NOT raise a race here.
+
+global_data shared_val i64 {};
+
+function child_thread {} -> {} {
+    init_pany_type one, i64;
+    mov_p64_imm one, 1;
+    init_pany_type src, i64;
+    mov_p64_imm src, 99;
+
+    # condition is always true -> cmov always writes
+    cmpEq_p64_p64 one, one;
+    cmov_p64_p64 shared_val, src;
+
+    cmpEq_p64_p64 one, one;
+    cmov_p64_imm shared_val, 77;
+
+    deinit; # src
+    deinit; # one
+    ret;
+}
+
+function main { i64, ptr_argv } -> { i64 } {
+    init_pany_type thread_id, i64;
+    set_threadctx child_thread;
+    call_builtinfunc builtin_start_thread;
+
+    # Join FIRST – no concurrent access below this point
+    init_pany_type join_ret, i64;
+    init_pany_type join_id, i64;
+    mov_p64_p64 join_id, thread_id;
+    call_builtinfunc builtin_join_thread;
+
+    # Now safe to write via cmov
+    init_pany_type one, i64;
+    mov_p64_imm one, 1;
+    init_pany_type src2, i64;
+    mov_p64_imm src2, 55;
+
+    cmpEq_p64_p64 one, one;
+    cmov_p64_p64 shared_val, src2;   # safe: child is already joined
+
+    cmpEq_p64_p64 one, one;
+    cmov_p64_imm shared_val, 33;     # safe: child is already joined
+
+    deinit; # src2
+    deinit; # one
+    deinit; # join_id
+    deinit; # join_ret
+    deinit; # thread_id
+    ret;
+}

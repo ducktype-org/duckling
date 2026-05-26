@@ -1,0 +1,59 @@
+# Tests that FastTrack detects races through conditional move instructions.
+#
+# Two threads both perform cmov_p64_p64 and cmov_p64_imm on the same global
+# variable without synchronisation.  Because the condition is always true
+# (cmpEq 1, 1), the conditional write always executes – so there IS a race.
+#
+# The ft_placeCRead / ft_placeCWrite handlers must fire and report the race.
+
+global_data shared_val i64 {};
+
+function child_thread {} -> {} {
+    init_pany_type one, i64;
+    mov_p64_imm one, 1;
+    init_pany_type src, i64;
+    mov_p64_imm src, 99;
+
+    # condition is always true -> cmov always writes
+    cmpEq_p64_p64 one, one;
+    cmov_p64_p64 shared_val, src;    # race: write via cmov_p64_p64
+
+    # also exercise cmov_p64_imm
+    cmpEq_p64_p64 one, one;
+    cmov_p64_imm shared_val, 77;     # race: write via cmov_p64_imm
+
+    deinit; # src
+    deinit; # one
+    ret;
+}
+
+function main { i64, ptr_argv } -> { i64 } {
+    init_pany_type thread_id, i64;
+    set_threadctx child_thread;
+    call_builtinfunc builtin_start_thread;
+
+    # Main thread also does cmov writes concurrently
+    init_pany_type one, i64;
+    mov_p64_imm one, 1;
+    init_pany_type src2, i64;
+    mov_p64_imm src2, 55;
+
+    cmpEq_p64_p64 one, one;
+    cmov_p64_p64 shared_val, src2;   # concurrent write via cmov_p64_p64
+
+    cmpEq_p64_p64 one, one;
+    cmov_p64_imm shared_val, 33;     # concurrent write via cmov_p64_imm
+
+    # Join child
+    init_pany_type join_ret, i64;
+    init_pany_type join_id, i64;
+    mov_p64_p64 join_id, thread_id;
+    call_builtinfunc builtin_join_thread;
+
+    deinit; # join_id
+    deinit; # join_ret
+    deinit; # src2
+    deinit; # one
+    deinit; # thread_id
+    ret;
+}
