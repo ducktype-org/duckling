@@ -838,9 +838,11 @@ namespace compiler::mir {
 	};
 
 	struct MIRGlobalData final {
-		enum class Kind { Variable, Const };
+		enum class Kind { Variable, Constant };
 
 		helios::SymID helios_id;
+
+		// PR TODO: it this needed? 
 		tsh::SymbolType<> type;
 
 		Kind kind;
