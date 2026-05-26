@@ -1,7 +1,7 @@
 #pragma once
 
-#include <vm/core/fast/program/instructions/relocatable.hpp>
 #include <vm/core/fast/program/instructions/executable.hpp>
+#include <vm/core/fast/program/instructions/relocatable.hpp>
 #include <vm/core/fast/program/program.hpp>
 
 namespace vm::fast::exec {

@@ -2,13 +2,13 @@
 
 #include "fast_vmprocess.hpp"
 
+#include <vm/core/fast/eval/evaluator.hpp>
 #include <vm/core/fast/program/instructions/executable.hpp>
 #include <vm/core/fast/program/program.hpp>
 #include <vm/core/process/interface_types.hpp>
 #include <vm/core/thread/ivmthread.hpp>
 #include <vm/core/thread/kill_process_exception.hpp>
 #include <vm/utils/vm_not_implemented.hpp>
-#include <vm/core/fast/eval/evaluator.hpp>
 
 
 using namespace vm;
@@ -24,13 +24,6 @@ vm::fast::FastVMThread::FastVMThread(
 	  functions(functions),
 	  program(program) {}
 
-std::expected<api::Response, api::ApiError> vm::fast::FastVMThread::getCurrentPosition() {
-	return std::unexpected(
-		api::ApiError{
-			api::NotImplementedError{ "Method `getCurrentPosition` is not implemented." } }
-	);
-}
-
 [[nodiscard]] u64 vm::fast::FastVMThread::getNumberOfCurrentStackFrames() const {
 	throw vm::VMNotImplemented("Method `getNumberOfCurrentStackFrames` is not implemented.");
 }
@@ -39,10 +32,8 @@ void vm::fast::FastVMThread::run(const std::string& func_name, const RunArgument
 	respondExecutionRequest(api::Running{});
 
 	if (!program->functions.contains(base::StrID(func_name.data()))) {
-		respondExecutionRequest(
-			api::ExecutionPanicked{
-				base::strConcat("Called function '", func_name, "' does not exist.") }
-		);
+		respondExecutionRequest(api::ExecutionPanicked{
+			base::strConcat("Called function '", func_name, "' does not exist.") });
 		return;
 	}
 
@@ -62,7 +53,6 @@ void vm::fast::FastVMThread::executeOneStep() {
 }
 
 void vm::fast::FastVMThread::execGlobalDestructors() {
-	// TODO: Implement this pure virtual method.
 	throw vm::VMNotImplemented("Method `execGlobalDestructors` is not implemented.");
 }
 
@@ -71,7 +61,7 @@ void vm::fast::FastVMThread::execGlobalDestructors() {
 vm::fast::exec::ExecFunction vm::fast::FastVMThread::createStartFunctionFor(
 	const exec::ExecFunction& function, const RunArguments& run_arguments
 ) {
-	// @TODO: 2720 Make use of RunArguments in the start function creation and execution.
+	// @TODO: #2720 Make use of RunArguments in the start function creation and execution.
 	// Keep in mind #2727.
 	variant_match(run_arguments) {
 		variant_case(ProgramRunArguments, program_args) {
@@ -92,9 +82,9 @@ vm::fast::exec::ExecFunction vm::fast::FastVMThread::createStartFunctionFor(
 	exec::ExecFunction start_function{};
 	usize ret_and_args_size = function.info->return_size.asInt() + function.info->args_size.asInt();
 	start_function.data     = {
-		maker::init_pany_imm(0, ret_and_args_size),
-		maker::call_func_imm(&function, 0),
-		maker::exit(),
+        maker::init_pany_imm(0, ret_and_args_size),
+        maker::call_func_imm(&function, 0),
+        maker::exit(),
 	};
 	return start_function;
 }
@@ -106,9 +96,7 @@ i64 vm::fast::FastVMThread::createStartAndExecuteFunction(
 	return executeFunction(start_function, run_arguments);
 }
 
-i64 vm::fast::FastVMThread::executeFunction(
-	const exec::ExecFunction& start_function, const RunArguments&
-) {
+i64 vm::fast::FastVMThread::executeFunction(const exec::ExecFunction& start_function, const RunArguments&) {
 	Frame* frame       = runtime_data.pushFrame(&start_function, runtime_data.local_stack_base);
 	byte*  local_stack = runtime_data.local_stack_base;
 	FastExecutor::eval(runtime_data, local_stack, frame, *this);

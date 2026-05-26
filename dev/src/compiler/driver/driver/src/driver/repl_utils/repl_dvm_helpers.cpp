@@ -179,9 +179,8 @@ namespace compiler::repl {
 		    .and_then([&] { return vm::api::getExitValue(pid); })
 		    .transform_error(vm::api::errorToString)
 		    .and_then(
-				[type_view](
-					vm::api::ExitValue exit_values
-				) -> std::expected<std::string, std::string> {
+				[type_view](vm::api::ExitValue exit_values
+		        ) -> std::expected<std::string, std::string> {
 					CORE_ASSERT(
 						std::holds_alternative<std::vector<Ref<vm::VmValue>>>(exit_values),
 						"Expecting exit values to be a vector of VmValue references"

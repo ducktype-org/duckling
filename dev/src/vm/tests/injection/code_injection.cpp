@@ -82,17 +82,19 @@ private:
 		auto exit_code_response = vm::api::getExitValue(pid);
 		ASSERT_TRUE(exit_code_response.has_value());
 		const auto& exit_value = exit_code_response.value();
+		ASSERT_TRUE(std::holds_alternative<std::vector<Ref<vm::VmValue>>>(exit_value));
+		auto& exit_value_vec = std::get<std::vector<Ref<vm::VmValue>>>(exit_value);
 
 		match_optional(expected_return_values) {
 			opt_some(exp) {
-				ASSERT_EQUAL_PRINT(exp.size(), exit_value.size());
+				ASSERT_EQUAL_PRINT(exp.size(), exit_value_vec.size());
 				for (usize i{ 0 }; i < exp.size(); i++)
-					ASSERT_EQUAL_PRINT(exp.at(i), exit_value.at(i)->readBytes<i64>());
+					ASSERT_EQUAL_PRINT(exp.at(i), exit_value_vec.at(i)->readBytes<i64>());
 			}
 			opt_none {
 				// @note: If expected_exit_code is an empty optional, it's expected that a called
 				// function is void.
-				ASSERT_TRUE(exit_value.size() == 0);
+				ASSERT_TRUE(exit_value_vec.size() == 0);
 			}
 		}
 	}

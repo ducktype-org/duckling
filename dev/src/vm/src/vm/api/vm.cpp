@@ -217,4 +217,17 @@ namespace vm::api {
 		    .doRequest(SupervisorRequest(pid, request::AttachStatusListener{ .listener = listener }))
 		    .transform(ignoreResponse);
 	}
+
+	std::expected<void, ApiError> setBreakpoint(
+		PID pid, base::StrID function_name, u64 instruction_index, bool enable
+	) {
+		return Supervisor::get()
+		    .doRequest(SupervisorRequest(
+				pid,
+				request::SetBreakpoint{ .function_name     = function_name,
+		                                .instruction_index = instruction_index,
+		                                .enable            = enable }
+			))
+		    .transform(ignoreResponse);
+	}
 }

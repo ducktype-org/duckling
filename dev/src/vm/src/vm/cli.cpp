@@ -5,10 +5,10 @@
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
-#include <vm/api/data/process_options.hpp>
 #include <vm/api/api.hpp>
 #include <vm/api/data/api_error.hpp>
 #include <vm/api/data/process_info.hpp>
+#include <vm/api/data/process_options.hpp>
 
 #include <iostream>
 
@@ -27,7 +27,11 @@ int cli() {
 	return cli(fs::File(filepath));
 }
 
-int cli(const fs::File& filepath, const std::vector<std::string>& args, const vm::api::ProcessConfig& options) {
+int cli(
+	const fs::File&                 filepath,
+	const std::vector<std::string>& args,
+	const vm::api::ProcessConfig&   options
+) {
 	vm::PID pid{};
 	dia_int::configureTerminalPrinterColors(true);
 

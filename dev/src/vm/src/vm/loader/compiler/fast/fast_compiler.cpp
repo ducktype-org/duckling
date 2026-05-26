@@ -5,7 +5,7 @@
 #include <base/except/exceptions.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
-#include <vm/loader/compiler/compiler.hpp>
+#include <vm/loader/compiler/ivm_compiler.hpp>
 #include <vm/loader/compiler/fast/instruction_lowering.hpp>
 
 #include <algorithm>
@@ -15,14 +15,14 @@ using namespace vm::loader;
 using namespace vm::loader::compiler;
 
 compiler::fast::FastCompiler::FastCompiler(const ValidProgram& high_program):
-	  Compiler(high_program) {}
+	  IVMCompiler(high_program) {}
 
 CRef<vm::fast::ProgramBase> vm::loader::compiler::fast::FastCompiler::getProgramBase() const {
 	return &program;
 }
 
-CRef<vm::fast::reloc::RelocFunctionCollection> vm::loader::compiler::fast::FastCompiler::
-	getRelocatableFunctions() const {
+CRef<vm::fast::reloc::RelocFunctionCollection> vm::loader::compiler::fast::FastCompiler::getRelocatableFunctions(
+) const {
 	return &reloc_functions;
 }
 
@@ -70,11 +70,11 @@ void fast::FastCompiler::compileNewFunctions(const std::vector<Function>& new_fu
 					Bytes(0),
 					std::plus()
 				),
-				.arg_types    = function.signature.parameters
-		                      | std::views::transform([this](const auto& param_type) {
+				.arg_types = function.signature.parameters
+		                   | std::views::transform([this](const auto& param_type) {
 								 return program.types.at(param_type)->getID();
-								})
-		                      | std::ranges::to<std::vector<vm::fast::TypeID>>(),
+							 })
+		                   | std::ranges::to<std::vector<vm::fast::TypeID>>(),
 				.return_types = function.signature.result_types
 		                      | std::views::transform([this](const auto& result_type) {
 									return program.types.at(result_type)->getID();
@@ -114,7 +114,7 @@ void fast::FastCompiler::compileNewExtCFunctions(
 									   return program.types.at(param_name);
 								   })
 		                         | std::ranges::to<std::vector<vm::fast::TypeCRef>>(),
-				.result_type     = result_type
+				.result_type = result_type
 
 			},
 			func.name

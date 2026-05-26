@@ -85,7 +85,9 @@ private:
 		};
 
 		auto pid = initProcess();
-		vm::api::loadFiles(pid, { fs::File(path("variant_type_tag_test.dbc")) });
+		ASSERT_TRUE(
+			vm::api::loadFiles(pid, { fs::File(path("variant_type_tag_test.dbc")) }).has_value()
+		);
 
 		auto wanted_value   = std::numeric_limits<u64>::max();
 		auto vm_value_max64 = get_int_vm_value(pid, wanted_value);
@@ -106,8 +108,10 @@ private:
 					+ ", reason: " + vm::api::errorToString(value.error())
 				);
 			}
-			ASSERT_EQUAL(value.value().size(), 1);
-			const auto vm_value = value.value().at(0);
+			ASSERT_TRUE(std::holds_alternative<std::vector<Ref<vm::VmValue>>>(value.value()));
+			auto& value_vec = std::get<std::vector<Ref<vm::VmValue>>>(value.value());
+			ASSERT_EQUAL(value_vec.size(), 1);
+			const auto vm_value = value_vec.at(0);
 			switch (type_tag_bits) {
 			case 8:
 				// Using uint8_t, because u8 is not integral

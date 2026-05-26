@@ -2,8 +2,8 @@
 
 #include <base/except/exceptions.hpp>
 
-#include <vm/bytecode/validator/valid_type/valid_type_id.hpp>
 #include <vm/bytecode/validator/valid_type/valid_type.hpp>
+#include <vm/bytecode/validator/valid_type/valid_type_id.hpp>
 
 using namespace vm::code;
 using namespace vm::loader::compiler::fast;

@@ -3,6 +3,7 @@
  */
 #pragma once
 
+#include "cfg/cf_graph.hpp"
 #include "instruction.hpp"
 
 #include <base/pointers/box.hpp>
@@ -23,7 +24,10 @@ namespace vm::low {
 	 * @brief Micro bytecode representation of function data.
 	 */
 	struct LowFuncData {
-		base::StrID   name;
+		base::StrID name;
+#ifdef ENABLE_JIT
+		cf::ControlFlowGraph cfg;
+#endif
 		MicroBytecode bc;
 
 		/// The maximum size of the local variables on stack required by the function frame.
@@ -36,6 +40,29 @@ namespace vm::low {
 		usize                 ret_size;
 		std::vector<TypeCRef> parameters;
 		std::vector<TypeCRef> result_types;
+
+		/**
+		 * @brief Range of instructions
+		 * @note Represents inclusive-exclusive range [`begin`, `end`)
+		 */
+		struct InstructionRange {
+			usize begin, end;
+			auto  operator<=>(const InstructionRange&) const = default;
+
+			[[nodiscard]] bool contains(usize index) const { return begin <= index && index < end; }
+		};
+
+		/**
+		 * @brief Mapping of fatbytecode instruction indexes to microbytecode instruction indexes
+		 * ranges.
+		 * @note Vector indexes correspond to FatBytecode instruction indexes
+		 */
+		std::vector<InstructionRange> instruction_mapping;
+	};
+
+	struct LowCodePosition {
+		CRef<LowFuncData> function;
+		usize             instruction_index;
 	};
 
 	/**
@@ -72,19 +99,24 @@ namespace vm::low {
 	class ILowVMProgram {
 	public:
 		[[nodiscard]]
-		virtual const TypeMetadata& getTypes() const = 0;
+		virtual const TypeMetadata& getTypes() const
+			= 0;
 
 		[[nodiscard]]
-		virtual const ObjIdNameMap<LowFuncData, usize>& getFunctions() const = 0;
+		virtual const ObjIdNameMap<LowFuncData, usize>& getFunctions() const
+			= 0;
 
 		[[nodiscard]]
-		virtual const StableObjIdNameMap<LowExternCFunction>& getExternCFunctions() const = 0;
+		virtual const StableObjIdNameMap<LowExternCFunction>& getExternCFunctions() const
+			= 0;
 
 		[[nodiscard]]
-		virtual const ObjIdNameMap<LowGlobalData, GlobalDataID>& getGlobals() const = 0;
+		virtual const ObjIdNameMap<LowGlobalData, GlobalDataID>& getGlobals() const
+			= 0;
 
 		[[nodiscard]]
-		virtual const base::HashMap<u64, base::StrID>& getMethodNamePool() const = 0;
+		virtual const base::HashMap<u64, base::StrID>& getMethodNamePool() const
+			= 0;
 
 		/**
 		 * @brief Helper structure with the configuration for the global buffer in the program.
@@ -101,7 +133,8 @@ namespace vm::low {
 		 * @brief Get the global buffer configuration.
 		 */
 		[[nodiscard]]
-		virtual GlobalBufferConfig getGlobalBufferConfig() const = 0;
+		virtual GlobalBufferConfig getGlobalBufferConfig() const
+			= 0;
 
 		virtual ~ILowVMProgram() = default;
 	};
@@ -219,12 +252,13 @@ namespace vm::low {
 		 * @returns Original opcode from provided location on success and `nullopt` if location does
 		 * not exist.
 		 */
+		template<typename FID>
 		base::Optional<MicroOpcode> replaceOpcode(
-			usize function_id, usize instruction_index, MicroOpcode opcode
+			FID function_id, usize instruction_index, MicroOpcode opcode
 		) {
 			if (!functions.contains(function_id)) return std::nullopt;
 
-			auto& microbytecode = functions[function_id].bc;
+			auto& microbytecode = functions.at(function_id)->bc;
 			if (microbytecode.size() <= instruction_index) return std::nullopt;
 
 			auto&       instruction     = microbytecode[instruction_index];

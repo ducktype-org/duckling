@@ -25,16 +25,12 @@ namespace vm::fast {
 
 		Box<VmValue> createOwnedVmValue(vm::TypeCRef type, Pointer src) override;
 
-		std::expected<api::Response, api::ApiError> doRequest(
-			const api::RequestVariant& request
+		std::expected<api::Response, api::ApiError> doRequest(const api::RequestVariant& request
 		) override;
 
-		u64 getNextUninitializedGlobalId() const {
-			return next_to_initialize_global_id;
-		}
-		void addInitializedGlobals(u64 count) {
-			next_to_initialize_global_id += count;
-		}
+		u64 getNextUninitializedGlobalId() const { return next_to_initialize_global_id; }
+
+		void addInitializedGlobals(u64 count) { next_to_initialize_global_id += count; }
 
 	private:
 		std::expected<api::Response, api::LoadProgramError> loadProgram(
@@ -54,8 +50,11 @@ namespace vm::fast {
 		std::expected<api::Response, api::ApiError> stop() override;
 
 
-
 	protected:
+		std::expected<api::Response, api::ApiError> setBreakpoint(
+			base::StrID function_name, usize instruction_index, bool enable
+		) override;
+
 		std::expected<api::Response, api::StateError> getExitCode() override;
 
 		std::expected<api::Response, api::ApiError> deinitAndValidate() override;
@@ -66,8 +65,7 @@ namespace vm::fast {
 
 		base::Optional<api::ApiError> stepVMThread(api::ThreadID thread_id) override;
 
-		std::expected<api::Response, api::ApiError> getVMThreadCurrentPosition(
-			api::ThreadID thread_id
+		std::expected<api::Response, api::ApiError> getVMThreadCurrentPosition(api::ThreadID thread_id
 		) override;
 
 		std::expected<api::Response, api::ApiError> getNumberOfCurrentStackFrames(
@@ -82,12 +80,10 @@ namespace vm::fast {
 
 		void waitForBreakpoint() override;
 
-		std::expected<api::Response, api::ApiError> getTypeMetadata(
-			const std::string& type_name
+		std::expected<api::Response, api::ApiError> getTypeMetadata(const std::string& type_name
 		) override;
 
-		std::expected<api::Response, api::ApiError> getVMValueForType(
-			const std::string& type_name
+		std::expected<api::Response, api::ApiError> getVMValueForType(const std::string& type_name
 		) override;
 
 		std::vector<api::ThreadID> getAllThreadIDs() override;

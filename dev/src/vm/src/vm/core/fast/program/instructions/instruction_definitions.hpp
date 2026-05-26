@@ -49,10 +49,9 @@ DEF_INSTR(jmp, (JumpDestination, target))
 DEF_INSTR(
 	call,
 	(Function, func),
-	(
-		Immediate, stack_diff /* How much the stack needs to be adjusted, which is
-                                 equal to size of ret+args */
-	)
+	(Immediate, stack_diff /* How much the stack needs to be adjusted, which is
+                              equal to size of ret+args */
+    )
 )
 DEF_INSTR(ret, (Immediate, function_return_size))
 

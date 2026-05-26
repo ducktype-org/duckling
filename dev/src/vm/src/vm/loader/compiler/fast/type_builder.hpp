@@ -4,6 +4,7 @@
 
 namespace vm::loader::compiler::fast {
 	void rebuildFastTypeCollection(
-		Ref<vm::fast::TypeCollection> type_collection, const vm::code::valid_type::ValidTypeMap& type_ctx
+		Ref<vm::fast::TypeCollection>             type_collection,
+		const vm::code::valid_type::ValidTypeMap& type_ctx
 	);
 }

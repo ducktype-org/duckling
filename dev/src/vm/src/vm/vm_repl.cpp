@@ -75,10 +75,8 @@ void DuckVMRepl::run() {
 			processGlobalOutput(line);
 		} else if (lstrip(line).starts_with("!")) {
 			processExecuteInstruction(line);
-		} else if (
-			line.find('(') != std::string::npos && line.find(')') != std::string::npos
-			&& line.find('(') < line.find(')')
-		) {
+		} else if (line.find('(') != std::string::npos && line.find(')') != std::string::npos
+		           && line.find('(') < line.find(')')) {
 			processFunctionCall(line);
 		} else {
 			std::cout << "Invalid input: \"" << line << "\"\n";

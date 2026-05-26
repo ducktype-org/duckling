@@ -19,11 +19,10 @@ namespace vm::fast {
 			CRef<exec::ExecFunctionCollection> functions
 		);
 
-		std::expected<api::Response, api::ApiError> getCurrentPosition() override;
-
 		[[nodiscard]] u64 getNumberOfCurrentStackFrames() const override;
 
 		[[nodiscard]] i64 getExitValue() const;
+
 	protected:
 		void run(const std::string& func_name, const RunArguments& run_arguments) override;
 

@@ -20,7 +20,7 @@
 // #define READ_PLACE(type, arg) safeReadPointerBytes<type>(getBytePtrToPlace(arg))
 // #define WRITE_PLACE(arg, val) safeWriteBytes(getBytePtrToPlace(arg), val)
 
-// @TODO: Make local_stack be the stack_base_pointer
+// !TODO: Make local_stack be the stack_base_pointer
 
 IMPL(init_pany_imm) {
 	// Init will never happen for global

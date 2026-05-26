@@ -18,7 +18,7 @@
 #define DEFER(id)     id EMPTY()
 #define OBSTRUCT(...) __VA_ARGS__ DEFER(EMPTY)()
 
-#define COMMA ,
+#define COMMA         ,
 #define FIRST(a, ...) a
 
 #define EXPAND(...) __VA_ARGS__
@@ -38,10 +38,10 @@
 #define BITOR_0(y) y
 #define BITOR_1(y) 1
 
-#define BITOR_2(a, b)       BITOR(a)(b)
-#define BITOR_3(a, b, c)    BITOR_2(BITOR_2(a, b), c)
-#define BITOR_4(a, b, c, d) BITOR_2(BITOR_3(a, b, c), d)
-#define BITOR_DISPATCH(...) BITOR_DISPATCH_IMPL(__VA_ARGS__, BITOR_4, BITOR_3, BITOR_2, EXPAND)
+#define BITOR_2(a, b)                                  BITOR(a)(b)
+#define BITOR_3(a, b, c)                               BITOR_2(BITOR_2(a, b), c)
+#define BITOR_4(a, b, c, d)                            BITOR_2(BITOR_3(a, b, c), d)
+#define BITOR_DISPATCH(...)                            BITOR_DISPATCH_IMPL(__VA_ARGS__, BITOR_4, BITOR_3, BITOR_2, EXPAND)
 #define BITOR_DISPATCH_IMPL(_1, _2, _3, _4, NAME, ...) NAME
 
 #define BITOR_ALL(...) BITOR_DISPATCH(__VA_ARGS__)(__VA_ARGS__)

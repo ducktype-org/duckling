@@ -22,11 +22,9 @@ public:
 
 private:
 	vm::PID spawnFastAndLoad(const std::string& dbc_filename) {
-		auto pid = initProcess(
-			{
-				.mode = vm::api::ProcessMode::Fast,
-			}
-		);
+		auto pid         = initProcess({
+					.mode = vm::api::ProcessMode::Fast,
+        });
 		auto file        = fs::File(path(dbc_filename));
 		auto load_result = vm::api::loadFiles(pid, { file });
 		if (!load_result.has_value()) {
@@ -47,6 +45,7 @@ private:
 	}
 
 	void testSimple() { runTestOnFast("simple.dbc", "", "", 42); }
+
 	void testControlFlow() { runTestOnFast("control_flow.dbc", "", "50"); }
 
 	void testFunctionCallWithArgs() { runTestOnFast("function_with_args.dbc", "5 7", "12"); }

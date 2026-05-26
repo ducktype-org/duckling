@@ -4,7 +4,6 @@
 #include <base/collections/optional.hpp>
 #include <base/pointers/box.hpp>
 
-#include <vm/loader/compiler/safe/safe_compiler.hpp>
 #include <vm/api/data/api_error.hpp>
 #include <vm/api/data/request.hpp>
 #include <vm/api/data/status.hpp>
@@ -14,6 +13,7 @@
 #include <vm/core/safe/concurrency/synchronization_primitives.hpp>
 #include <vm/core/safe/low_program/low_program.hpp>
 #include <vm/core/safe/safe_vmthread.hpp>
+#include <vm/loader/compiler/safe/safe_compiler.hpp>
 #include <vm/loader/loader.hpp>
 
 #include <expected>
@@ -116,8 +116,7 @@ namespace vm {
 
 		base::Optional<api::ApiError> stepVMThread(api::ThreadID thread_id) override;
 
-		std::expected<api::Response, api::ApiError> getVMThreadCurrentPosition(
-			api::ThreadID thread_id
+		std::expected<api::Response, api::ApiError> getVMThreadCurrentPosition(api::ThreadID thread_id
 		) override;
 
 		void notifyPausedVMThread(api::ThreadID thread_id) override;
@@ -132,17 +131,19 @@ namespace vm {
 			api::ThreadID thread_id, u64 frame_index
 		) override;
 
-		std::expected<api::Response, api::ApiError> getTypeMetadata(
-			const std::string& type_name
+		std::expected<api::Response, api::ApiError> getTypeMetadata(const std::string& type_name
 		) override;
 
-		std::expected<api::Response, api::ApiError> getVMValueForType(
-			const std::string& type_name
+		std::expected<api::Response, api::ApiError> getVMValueForType(const std::string& type_name
 		) override;
 
 		api::ThreadID getMainThreadID() override;
 
 		std::vector<api::ThreadID> getAllThreadIDs() override;
+
+		std::expected<api::Response, api::ApiError> setBreakpoint(
+			base::StrID function_name, usize instruction_index, bool enable
+		) override;
 
 		/**
 		 * @brief Updates the memory for globals of this process after loading a program with new

@@ -46,11 +46,11 @@
 #include <query_framework/standard_query/query_impl.hpp>
 #include <string_id/string_id.hpp>
 
-#include <vm/core/vmvalue/vmvalue.hpp>
 #include <vm/api/vm.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
 #include <vm/bytecode/validator/errors.hpp>
 #include <vm/bytecode/validator/valid_program.hpp>
+#include <vm/core/vmvalue/vmvalue.hpp>
 #include <vm/loader/loader.hpp>
 
 #include <algorithm>
@@ -168,8 +168,8 @@ namespace compiler::driver {
 
 			auto output_names = getModuleOutputName(key);
 			auto code_output  = getQueryArtifactsCollection()->fileArtifactAtOrNew(
-				base::StrID(output_names.object_file.c_str())
-			);
+                base::StrID(output_names.object_file.c_str())
+            );
 
 			base::Optional<debug_info::DebugInfo>   debug_info_output;
 			base::Optional<artifacts::FileArtifact> debug_info_artifact;
@@ -208,11 +208,9 @@ namespace compiler::driver {
 			}
 			case BackendType::DVM: {
 				if_opt_some(output_names.debug_info_file, di_file) {
-					debug_info_artifact.emplace(
-						getQueryArtifactsCollection()->fileArtifactAtOrNew(
-							base::StrID(di_file.c_str())
-						)
-					);
+					debug_info_artifact.emplace(getQueryArtifactsCollection()->fileArtifactAtOrNew(
+						base::StrID(di_file.c_str())
+					));
 				}
 
 				auto serialize_to_artifact = [&](artifacts::FileArtifact& art,
@@ -381,9 +379,9 @@ namespace compiler::driver {
 					CORE_DEV_LOG(REPL, "compile_script: classified as definition\n");
 					const auto& hout_unit  = repl::getDefinitionHOUTUnit(ctx, module_id);
 					auto        lir_result = ctx.query<CompileHOUTUnitToLIRModuleData>({
-						&hout_unit,
-						module_name_id,
-					});
+                        &hout_unit,
+                        module_name_id,
+                    });
 					if (lir_result->hasFailed())
 						return std::unexpected("Failed to compile definition statement to LIR");
 					repl::appendScriptLIRModuleData(merged, lir_result->valueOrPanic());
@@ -523,8 +521,8 @@ namespace compiler::driver {
 
 				auto& script_context  = global_state::getScriptContext();
 				auto  output_artifact = global_state::getRootCollection()->fileArtifactAtOrNew(
-					base::StrID(base::strConcat(script_context.script_file.stem(), ".dbc").c_str())
-				);
+                    base::StrID(base::strConcat(script_context.script_file.stem(), ".dbc").c_str())
+                );
 				std::ofstream output_file(
 					output_artifact.file.getFilePath().getPath(), std::ios::binary
 				);
@@ -777,14 +775,12 @@ namespace compiler::driver {
 		std::vector<ScheduledModule> compile_handles;
 		compile_handles.reserve(modules_to_compile.size());
 		for (const auto& module: modules_to_compile) {
-			compile_handles.push_back(
-				{
-					module,
-					query::scheduleEntryPoint<CompileModule>(
-						{ module.module_id, module.backend, module.build_debug_info }
-					),
-				}
-			);
+			compile_handles.push_back({
+				module,
+				query::scheduleEntryPoint<CompileModule>(
+					{ module.module_id, module.backend, module.build_debug_info }
+				),
+			});
 		}
 
 		std::vector<ScheduledModule> debug_info_handles;
@@ -801,11 +797,10 @@ namespace compiler::driver {
 
 				// We schedule debug info here, to only schedule it for correctly compiled modules.
 				if (module.build_debug_info) {
-					debug_info_handles.push_back(
-						{ module,
-					      query::scheduleEntryPoint<DebugInfoForModule>({ module.module_id,
-					                                                      module.backend }) }
-					);
+					debug_info_handles.push_back({ module,
+					                               query::scheduleEntryPoint<DebugInfoForModule>(
+													   { module.module_id, module.backend }
+												   ) });
 				}
 			} else {
 				result = base::BAD;
@@ -832,11 +827,10 @@ namespace compiler::driver {
 		for (const auto& task: tasks) {
 			variant_match(task.build_target) {
 				variant_case(BuildTargetLLVMExecutable, target_exe) {
-					auto output_file = global_state::getRootCollection()->fileArtifactAtOrNew(
-						base::StrID(
+					auto output_file
+						= global_state::getRootCollection()->fileArtifactAtOrNew(base::StrID(
 							base::strConcat(target_exe.output_file_stem.strView(), ".exe").c_str()
-						)
-					);
+						));
 
 					llvm_objects_by_root_module.atMaybe(task.root_module)
 						.value()
@@ -862,11 +856,10 @@ namespace compiler::driver {
 					}
 				}
 				variant_case(BuildTargetLLVMStaticLibrary, target_lib) {
-					auto output_file = global_state::getRootCollection()->fileArtifactAtOrNew(
-						base::StrID(
+					auto output_file
+						= global_state::getRootCollection()->fileArtifactAtOrNew(base::StrID(
 							base::strConcat(target_lib.output_file_stem.strView(), ".a").c_str()
-						)
-					);
+						));
 
 					auto archive_result = archiver::createArchive(
 						output_file,

@@ -5,9 +5,9 @@
 
 #include <string_id/string_id.hpp>
 
+#include <vm/core/fast/program/ids.hpp>
 #include <vm/core/safe/type_metadata/inheritance_metadata.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
-#include <vm/core/fast/program/ids.hpp>
 
 namespace vm::fast {
 	struct Type;

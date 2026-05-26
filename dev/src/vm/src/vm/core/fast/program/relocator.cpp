@@ -40,15 +40,13 @@ namespace {
 	 * @brief Relocates a function argument (ID) by returning a pointer to the corresponding
 	 * executable function.
 	 */
-	[[maybe_unused]] exec::arg::Function relocateFunction(TRANSLATOR_ARGUMENTS(Function)) {
+	exec::arg::Function relocateFunction(TRANSLATOR_ARGUMENTS(Function)) {
 		return &exec_functions[reloc_arg.asInt()];
 	}
 
-	[[maybe_unused]] exec::arg::Type relocateType(TRANSLATOR_ARGUMENTS(Type)) {
+	exec::arg::Type relocateType(TRANSLATOR_ARGUMENTS(Type)) {
 		return program.types.at(TypeID(reloc_arg.asInt())).get();
 	}
-
-	// @TODO: Remove the maybe_unused attributes.
 
 #undef TRANSLATOR_ARGUMENTS
 }

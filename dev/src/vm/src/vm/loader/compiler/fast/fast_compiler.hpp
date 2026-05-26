@@ -6,11 +6,11 @@
 #include <vm/loader/compiler/ivm_compiler.hpp>
 
 namespace vm::loader::compiler::fast {
-	class FastCompiler final: public vm::loader::compiler::Compiler {
+	class FastCompiler final: public vm::loader::compiler::IVMCompiler {
 	public:
 		FastCompiler(const code::ValidProgram& high_program);
 
-		[[nodiscard]] CRef<vm::fast::ProgramBase>                    getProgramBase() const;
+		[[nodiscard]] CRef<vm::fast::ProgramBase> getProgramBase() const;
 		[[nodiscard]] CRef<vm::fast::reloc::RelocFunctionCollection> getRelocatableFunctions() const;
 
 	protected:
@@ -20,8 +20,7 @@ namespace vm::loader::compiler::fast {
 
 		void compileNewFunctions(const std::vector<code::Function>& new_functions) override;
 
-		void compileNewExtCFunctions(
-			const std::vector<code::ExternalCFunction>& new_functions
+		void compileNewExtCFunctions(const std::vector<code::ExternalCFunction>& new_functions
 		) override;
 
 		[[nodiscard]] ProgramSize getCurrentProgramSize() const override;

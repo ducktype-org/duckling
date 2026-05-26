@@ -18,3 +18,4 @@ SubDirs:
   - with_a_single_local_dep_and_flags2
   - with_exposed_freeze
   - with_exposed_freeze_and_deps
+  - would_overwrite_error

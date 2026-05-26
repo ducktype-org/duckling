@@ -60,13 +60,11 @@ void VmTestSuite::assertExecutionPanickedWith(
 		}
 		variant_default {
 			ASSERT_TRUE(!test_result.run_result.has_value());
-			fail(
-				base::strConcat(
-					"Expected ",
-					TypeParseTraits<vm::api::ExecutionPanicked>::NAME.data(),
-					", but found: " + to_string(nlohmann::json(test_result.run_result.error()))
-				)
-			);
+			fail(base::strConcat(
+				"Expected ",
+				TypeParseTraits<vm::api::ExecutionPanicked>::NAME.data(),
+				", but found: " + to_string(nlohmann::json(test_result.run_result.error()))
+			));
 		}
 	}
 }
