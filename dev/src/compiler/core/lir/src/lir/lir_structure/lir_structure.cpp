@@ -67,7 +67,6 @@ namespace compiler::lir {
 					type_layout,
 					mangled_name,
 					LIRGlobalType::Constant,
-					name.value,
 				};
 			}
 			variant_case(helios::HOUTGlobalVariable, name) {

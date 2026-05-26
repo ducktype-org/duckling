@@ -6,7 +6,7 @@
 #include <diagnostic_interactive/stable_position.hpp>
 #include <helios/hout/hout_fd.hpp>
 #include <helios/symbols/symbol_abi.hpp>
-#include <helios/symbols/symbol_id.hpp>  // TODO: demangle this, LIR structure should not operate on helios stuff (just use string names instead)
+#include <helios/symbols/symbol_id.hpp>  // @TODO: #2796 untable this if possible (LIR structure should not depend on symbols if possible)
 #include <mir/mir_structure/mir_local_ref.hpp>
 #include <mir/mir_structure/mir_metadata.hpp>
 #include <tsl/type_layout.hpp>
