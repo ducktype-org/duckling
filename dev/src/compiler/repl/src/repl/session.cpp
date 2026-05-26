@@ -46,8 +46,8 @@ namespace compiler::repl {
 	namespace {
 		constexpr std::string_view K_RESET_COMMAND = "/reset";
 		constexpr std::string_view K_RESET_ERROR_MSG
-			= "Usage: /reset [<count>|-<relative_count>] [--history-entries-silent]";
-		constexpr std::string_view K_RESET_SILENT_FLAG = "--history-entries-silent";
+			= "Usage: /reset [<count>|-<relative_count>] [--silent]";
+		constexpr std::string_view K_RESET_SILENT_FLAG = "--silent";
 
 		std::string getSessionHistoryFilePath() { return ".duckling_repl_session_history"; }
 

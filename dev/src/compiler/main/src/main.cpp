@@ -58,7 +58,7 @@ namespace {
 	 * @brief Update the stored argv so the REPL can restart with adjusted history options.
 	 *
 	 * Preserves the original executable and subcommand, removes any existing --history-entries and
-	 * --history-entries-silent arguments, which control reset behavior, and appends the requested
+	 * --silent arguments, which control reset behavior, and appends the requested
 	 * replay count and silence flag.
 	 *
 	 * @param replay_count Number of history entries to replay after restart.
@@ -84,7 +84,7 @@ namespace {
 				if (i + 1 < g_argv.size()) ++i;
 				continue;
 			}
-			if (arg == "--history-entries-silent") continue;
+			if (arg == "--silent") continue;
 
 			new_args.push_back(arg);
 		}
@@ -92,7 +92,7 @@ namespace {
 		if (!seen_repl) return;
 		new_args.emplace_back("-n");
 		new_args.push_back(std::to_string(replay_count));
-		if (silent) new_args.emplace_back("--history-entries-silent");
+		if (silent) new_args.emplace_back("--silent");
 
 		g_argv = std::move(new_args);
 	}
@@ -1015,9 +1015,9 @@ clah::Clah getClahForMain() {
 	                     .optional()
 	                     .build())
 				.add(clah::ParamBuilder::ofFlag()
-	                     .addLongName("history-entries-silent")
-	                     .addShortDesc("Replay history without output (internal).")
-	                     .build())
+		                     .addLongName("silent")
+		                     .addShortDesc("Replay history without output (internal).")
+		                     .build())
 				.setHandler([](const clah::ParsingResult& options) -> int {
 					auto init_result = compiler::driver::initializeTheCompiler(
 								   compiler::driver::CompilerModeOfOperationAndOptions::ReplMode{
@@ -1038,7 +1038,7 @@ clah::Clah getClahForMain() {
 						compiler::repl::ReplSession session(!options.isFlag("no-completions"));
 						auto replay_count_opt = options.getValue<i64>("history-entries");
 						i64  replay_count     = replay_count_opt.copyValueOr(0);
-						bool replay_silent    = options.isFlag("history-entries-silent");
+						bool replay_silent    = options.isFlag("silent");
 						if (replay_count_opt && replay_count < 0) {
 							std::cerr << "Error: history replay count must be non-negative.\n";
 							compiler::driver::exit();
