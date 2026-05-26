@@ -83,7 +83,7 @@ namespace compiler::lir {
 	}
 
 	LIRPlace::LIRPlace(BaseVariant base, std::vector<Projection> projection_chain):
-		  base(std::move(base)),
+		  base(base),
 		  layout([&]() -> CRef<tsl::TypeLayout> {
 			  // Calculate the end layout of LIRPlace. Start with the root layout and go through the
 		      // projections.
@@ -362,6 +362,38 @@ namespace compiler::lir {
 		os << mangled_name.strView() << "\n";
 		os << "Type: " << layout->toStringDefinition(ctx) << "\n";
 		// if (initial_value.has_value()) os << "Initial value: " << initial_value->toString() << "\n";
+	}
+
+	void LIRGlobalData::debugPrint(query::Context& ctx, std::ostream& os) const {
+		global.debugPrint(ctx, os);
+		os << "  Data Initialization: ";
+		variant_match(data_initialization) {
+			variant_case(ctv::CompileTimeValue, ctv) { os << ctv.toString(); }
+			variant_case(CTorDtorPair, ctor_dtor_pair) {
+				if_opt_some(ctor_dtor_pair.global_ctor, ctor) {
+					os << "  Global constructor:\n";
+					ctor->debugPrint(ctx, os);
+				}
+				if_opt_some(ctor_dtor_pair.global_dtor, dtor) {
+					os << "  Global destructor:\n";
+					dtor->debugPrint(ctx, os);
+				}
+			}
+		}
+	}
+
+	void LIRUnit::debugPrint(query::Context& ctx, std::ostream& os) const {
+		os << "LIRUnit: \n";
+		os << "Functions:\n";
+		for (const auto& func: lir_functions) {
+			func->debugPrint(ctx, os);
+			os << "\n";
+		}
+		os << "Globals:\n";
+		for (const auto& global: lir_globals) {
+			global.debugPrint(ctx, os);
+			os << "\n";
+		}
 	}
 
 	LIRLocalSpecialKind specialKindFromMIR(const mir::MIRLocal& mir_local) {

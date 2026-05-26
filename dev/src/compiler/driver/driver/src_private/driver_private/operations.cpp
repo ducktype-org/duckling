@@ -19,38 +19,16 @@
 #include <query_framework/standard_query/query_cache_macros.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 
-#include <algorithm>
+// #include <algorithm>
 #include <fstream>
 
 namespace compiler::driver {
-	// Bring this back, maybe
+	
 
-	// void LIRModuleGlobal::debugPrint(query::Context& ctx, std::ostream& os) const {
-	// 	lir_global.debugPrint(ctx, os);
-
-	// 	if_opt_some(global_ctor, ctor) {
-	// 		os << "  Global constructor:\n";
-	// 		ctor->debugPrint(ctx, os);
-	// 	}
-	// 	if_opt_some(global_dtor, dtor) {
-	// 		os << "  Global destructor:\n";
-	// 		dtor->debugPrint(ctx, os);
-	// 	}
-	// }
-
-	// void LIRUnitWithBackendName::debugPrint(query::Context& ctx, std::ostream& os) const {
-	// 	os << "LIRUnitWithBackendName for module: " << module_id.strView() << "\n";
-	// 	os << "Functions:\n";
-	// 	for (const auto& func: functions) {
-	// 		func->debugPrint(ctx, os);
-	// 		os << "\n";
-	// 	}
-	// 	os << "Globals:\n";
-	// 	for (const auto& global: globals) {
-	// 		global.debugPrint(ctx, os);
-	// 		os << "\n";
-	// 	}
-	// }
+	void LIRUnitWithBackendName::debugPrint(query::Context& ctx, std::ostream& os) const {
+		os << "LIRUnitWithBackendName for module: " << module_id.strView() << "\n";
+		lir_unit.debugPrint(ctx, os);
+	}
 
 	/**
 	 * @brief Utility function to get an ofstream for dumping debug artifacts.
@@ -94,7 +72,6 @@ namespace compiler::driver {
 				.lir_unit  = lir::lowerToLIRUnit(ctx, mir_unit),
 			};
 
-			// PR: move debug printing to units!
 			if (driver::print_ir_options.print_lir) lir_module.debugPrint(ctx, std::cout);
 			if (driver::dump_ir_options.dump_lir) {
 				auto ofstream = getDebugDumpArtifact(
