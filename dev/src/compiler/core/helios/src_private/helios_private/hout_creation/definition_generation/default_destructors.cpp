@@ -21,10 +21,7 @@ namespace compiler::helios::defgen {
 
 	struct IMPLEMENT_QUERY(QueryDefaultDestructor, query::QResult<HOUTFunction>) {
 		static PResult provide(Context& ctx, const QKey owner_type) {
-			const auto  dtor_sym  = ctx.query<QueryGeneratedSymbol>({
-                base::StrID("__destruct"),
-                GeneratedSymbolData{ GeneratedSymbolData::DefaultDestructor{ owner_type } },
-            });
+			const auto  dtor_sym  = destructSymForType(ctx, owner_type);
 			const auto& dtor_decl = ctx.query<QueryDeclOfFun>(dtor_sym)->valueOrThrow();
 
 			std::vector<Box<code::Stmt>> body{};
@@ -48,12 +45,7 @@ namespace compiler::helios::defgen {
 					const auto field_type = field.getType(ctx);
 
 					if (field_type.getType().getKind() == tsh::Kind::Class) {
-						const SymID field_dtor_sym = ctx.query<QueryGeneratedSymbol>({
-							.name = base::StrID("__destruct"),
-							.generated_symbol_data
-							= GeneratedSymbolData{ GeneratedSymbolData::DefaultDestructor{
-								field_type.getType() } },
-						});
+						const SymID field_dtor_sym = destructSymForType(ctx, field_type.getType());
 
 						std::vector<Box<code::Expr>> args;
 						args.emplace_back(makeBox<code::RefOfExpr>(
