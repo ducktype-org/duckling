@@ -259,7 +259,10 @@ namespace compiler::lir {
 
 		LIRGlobalType type;
 
-		base::Optional<ctv::CompileTimeValue> initial_value;
+		// we could keep it here, how the sake on value-inlining optimization
+		// ignore it for now
+		// PR: think about it
+		// base::Optional<ctv::CompileTimeValue> initial_value;
 
 	private:
 		LIRGlobal(
@@ -360,8 +363,11 @@ namespace compiler::lir {
 		};
 
 		using BaseVariant = std::variant<LIRLocalRef, LIRGlobal>;
+
+
 		/**
 		 * @brief Base of the LIR place, either local or global variable.
+		 * PR TODO: storing a copy here is a little bit concerning
 		 */
 		BaseVariant base;
 
@@ -639,6 +645,20 @@ namespace compiler::lir {
 		base::Map<LIRLocalRef, u64> getLocalVariableIDs() const;
 	};
 
+
+	// PR TODO: Data←→glob pattern as in mir, document this, make nameing consistent
+	struct LIRGlobalData final {
+		struct CTorDtorPair final {
+			base::Optional<CRef<lir::Function>>
+				global_ctor;  ///< Optional, if the global has a constructor.
+			base::Optional<CRef<lir::Function>>
+				global_dtor;  ///< Optional, if the global has a destructor.
+		};
+
+		LIRGlobal global;
+		std::variant<ctv::CompileTimeValue, CTorDtorPair> data_initialization;
+	};
+
 	/**
 	 * @brief Structure representing single LIRUnit.
 	 *
@@ -649,6 +669,6 @@ namespace compiler::lir {
 	 */
 	struct LIRUnit final {
 		std::vector<CRef<Function>> lir_functions;
-		std::vector<LIRGlobal>      lir_globals;
+		std::vector<LIRGlobalData>      lir_globals;
 	};
 }
