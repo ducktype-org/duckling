@@ -102,7 +102,7 @@ namespace compiler::mir {
 					symbol_kind == helios::SymbolKind::Variable
 						|| symbol_kind == helios::SymbolKind::Const,
 					"IdentifierExpr symbol should be either local variable or global variable or "
-				    "constant."
+					"constant."
 				);
 
 				valueOutput(

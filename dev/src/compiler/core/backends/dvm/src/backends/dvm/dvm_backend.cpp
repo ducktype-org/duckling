@@ -32,8 +32,7 @@ namespace compiler::backend_vm {
 		program_context->insertExternCFunction(extern_func);
 	}
 
-	void DVMCodeBuilder::insertLirGlobal(
-		const lir::LIRGlobalData&               lir_global) {
+	void DVMCodeBuilder::insertLirGlobal(const lir::LIRGlobalData& lir_global) {
 		program_context->lowerAndKeepLirGlobal(lir_global);
 	}
 

@@ -13,6 +13,7 @@
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <lir/lir_structure/function_forward.hpp>
 #include <time_stats/time_stats.hpp>
+
 #include <base/extend_cpp/variant_match.hpp>
 
 namespace compiler::driver {
@@ -42,12 +43,10 @@ namespace compiler::driver {
 						dtors.push_back(ctor_dtor_pair.global_dtor.value());
 					}
 				}
-				variant_case (ctv::CompileTimeValue, ctv_initial_value) {
+				variant_case(ctv::CompileTimeValue, ctv_initial_value) {
 					// This case is handled inside addGlobalToModule
 				}
-				variant_default {
-					CORE_UNREACHABLE();
-				}
+				variant_default { CORE_UNREACHABLE(); }
 			}
 		}
 
@@ -77,9 +76,8 @@ namespace compiler::driver {
 			mod.addFunctionToModuleDtors(ctx, CRef<lir::Function>(&module_dtor));
 		}
 
-		for (const auto& lir_function: lir_module->lir_unit.lir_functions) {
+		for (const auto& lir_function: lir_module->lir_unit.lir_functions)
 			mod.addFunctionToModule(ctx, lir_function);
-		}			
 		CORE_ASSERT(mod.verify().isOk(), "LLVM module verification failed");
 
 		return mod;

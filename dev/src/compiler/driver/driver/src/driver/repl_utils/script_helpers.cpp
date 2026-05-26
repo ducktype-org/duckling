@@ -1,10 +1,9 @@
 #include "script_helpers.hpp"
 
+#include <base/extend_cpp/vector_utils.hpp>
 #include <base/str/str_utils.hpp>
 
 #include <hashing/component_hash.hpp>
-#include <base/extend_cpp/vector_utils.hpp>
-
 
 namespace compiler::repl {
 	base::StrID getScriptModuleID(const fs::File& script_file) {

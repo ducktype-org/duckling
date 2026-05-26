@@ -97,9 +97,8 @@ namespace compiler::repl {
 		// This is strictly connected to the loading dvm context.
 		// We mimic the same idea as in compiling a single module,
 		// but this time we append the new functions to the lowering context.
-		for (const auto& global: lir_data->lir_unit.lir_globals) {
+		for (const auto& global: lir_data->lir_unit.lir_globals)
 			(void) lowering_context.lowerAndKeepLirGlobal(global);
-		}
 
 		// Lower all functions
 		for (const auto& lir_function: lir_data->lir_unit.lir_functions) {

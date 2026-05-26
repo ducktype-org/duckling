@@ -64,9 +64,7 @@ namespace compiler::backend_vm::internal {
 		 */
 		const vm::code::Function& lowerAndKeepLirFunction(CRef<lir::Function> lir_function);
 
-		const vm::code::GlobalData& lowerAndKeepLirGlobal(
-			const lir::LIRGlobalData& lir_global
-		);
+		const vm::code::GlobalData& lowerAndKeepLirGlobal(const lir::LIRGlobalData& lir_global);
 
 		/**
 		 * @brief Lowers a LIR type layout into VM bytecode type representation.

@@ -8,9 +8,9 @@
 #include <debug_info/debug_info_builder.hpp>
 #include <tsl/type_layout.hpp>
 
+#include <base/extend_cpp/variant_match.hpp>
 #include <base/str/str_utils.hpp>
 #include <base/types/bits_and_bytes.hpp>
-#include <base/extend_cpp/variant_match.hpp>
 
 #include <logger/logger.hpp>
 
@@ -195,13 +195,14 @@ vm::code::CodeCollection ProgramLoweringContext::collectNewCodeSince(
 }
 
 const vm::code::GlobalData& ProgramLoweringContext::lowerAndKeepLirGlobal(
-	const lir::LIRGlobalData&               lir_global
+	const lir::LIRGlobalData& lir_global
 ) {
 	if (auto maybe_global = global_name_to_dvm_data.atMaybe(lir_global.global.mangled_name))
 		return **maybe_global;
 
-	auto& global_type      = **lowerAndKeepTslType(lir_global.global.layout);
-	auto& dvm_global_place = getLirGlobal(&lir_global.global);  // Ensure the global is added to the map.
+	auto& global_type = **lowerAndKeepTslType(lir_global.global.layout);
+	auto& dvm_global_place
+		= getLirGlobal(&lir_global.global);  // Ensure the global is added to the map.
 
 	using vm::code::Identifier;
 
@@ -210,20 +211,20 @@ const vm::code::GlobalData& ProgramLoweringContext::lowerAndKeepLirGlobal(
 
 	variant_match(lir_global.data_initialization) {
 		variant_case(lir::LIRGlobalData::CTorDtorPair, ctor_dtor_pair) {
-
 			lowerAndKeepLirFunction(ctor_dtor_pair.global_ctor.value());
 			ctor_name = Identifier(ctor_dtor_pair.global_ctor.value()->mangled_name);
 
 			lowerAndKeepLirFunction(ctor_dtor_pair.global_dtor.value());
 			dtor_name = Identifier(ctor_dtor_pair.global_dtor.value()->mangled_name);
-
 		}
 		variant_case(ctv::CompileTimeValue, ctv_initial_value) {
 			// @TODO: #1553 we create mini-ctors for global variables with CTV initializers for now.
-			// Ideally, we should add proper support for immediate value initializers in the DVM and avoid this workaround.
+			// Ideally, we should add proper support for immediate value initializers in the DVM and
+			// avoid this workaround.
 
 			auto mini_ctor_name
-				= base::StrID(base::strConcat(lir_global.global.mangled_name.strView(), "_ctv_ctor"));
+				= base::StrID(base::strConcat(lir_global.global.mangled_name.strView(), "_ctv_ctor")
+			    );
 
 			auto mini_ctor = createMiniGlobalCtorFromCTV(
 				*this,

@@ -216,7 +216,7 @@ namespace compiler::mir {
 			if (std::holds_alternative<helios::HOUTGlobalConst>(key.global_data->value))
 				CORE_PANIC(
 					"Creating ctors for constant variables does not work, they should use CTVs "
-				    "instead."
+					"instead."
 				);
 
 			auto global_init_expr
@@ -260,7 +260,9 @@ namespace compiler::mir {
 				{ MIRGlobal({ key.global_data->helios_symbol,
 			                  key.global_data->type,
 			                  MIRGlobal::Kind::Variable }) },
-				{ lowerexpr_res.getResult(function_builder), },
+				{
+					lowerexpr_res.getResult(function_builder),
+				},
 				{},
 				function_builder.getTopLevelScope(),
 			});

@@ -36,7 +36,7 @@ namespace compiler::backend_vm {
 	}
 
 	const vm::code::GlobalData& ReplLoweringContext::lowerAndKeepLirGlobal(
-		const lir::LIRGlobalData&               lir_global
+		const lir::LIRGlobalData& lir_global
 	) {
 		return m_context->lowerAndKeepLirGlobal(lir_global);
 	}
