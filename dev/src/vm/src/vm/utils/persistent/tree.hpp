@@ -29,12 +29,12 @@ namespace vm::persistent::detail {
 	template<typename T>
 	concept RebuildRes = std::is_same_v<T, void> || std::is_same_v<T, NodeID>;
 
-	template<typename SelfT, typename ResT>
-	concept ValidSignature
-		= RebuildRes<ResT> && (std::is_same_v<void, ResT> || !std::is_const_v<SelfT>);
-
 	template<typename T1, typename T2>
 	concept SameWNoQual = std::is_same_v<std::remove_cvref_t<T1>, std::remove_cvref_t<T2>>;
+	
+	template<typename SelfT, typename ResT>
+	concept ValidSignature
+		= RebuildRes<ResT> && SameWNoQual<SegmentTree, SelfT> && (std::is_same_v<void, ResT> || !std::is_const_v<SelfT>);
 
 	class SegmentTree final {
 		using posT = usize;
@@ -292,8 +292,8 @@ namespace vm::persistent::detail {
 		 * @tparam segTreeT underlying inner type of the ptr to memory. Passed explicitly to
 		 * determine qualifiers
 		 */
-		template<typename segTreeT>
-		requires SameWNoQual<SegmentTree, segTreeT> struct RebuildCtx {
+		template<SameWNoQual<SegmentTree> segTreeT>
+		struct RebuildCtx {
 			segTreeT* mem;
 			posT      root_pos{};
 			posT      node_pos{};
@@ -779,7 +779,7 @@ namespace vm::persistent::detail {
 		 * @note can be mutable or unmutable, depending of return type of merge poliscy (hence use
 		 * of this deduction)
 		 */
-		template<typename ResT, typename SelfT>
+		template<RebuildRes ResT, SameWNoQual<SegmentTree> SelfT>
 		ResT rebuildFromTwo(
 			this SelfT& st, NodeID root_1, NodeID root_2, MergeBuilder<ResT> merge_policy
 		) requires ValidSignature<SelfT, ResT> {
@@ -947,7 +947,7 @@ namespace vm::persistent::detail {
 		 * @note can be mutable or unmutable, depending of return type of range builder
 		 * @note ranges are right opened [l, r) where l < r, and we expect at least one range.
 		 */
-		template<typename ResT, typename SelfT>
+		template<RebuildRes ResT, SameWNoQual<SegmentTree> SelfT>
 		ResT rebuildRanges(
 			this SelfT&                              st,
 			NodeID                                   root,
@@ -1084,7 +1084,7 @@ namespace vm::persistent::detail {
 		 * @brief helper function for modifying a single range of memory
 		 * @note can be mutable or unmutable, depending of return type of range constructor
 		 */
-		template<typename ResT, typename SelfT>
+		template<RebuildRes ResT, SameWNoQual<SegmentTree> SelfT>
 		ResT rebuildRange(
 			this SelfT&               st,
 			NodeID                    root,
