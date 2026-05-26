@@ -27,10 +27,7 @@ namespace compiler::lir {
 
 			variant_match(mir_global.initial_value) {
 				variant_case(ctv::CompileTimeValue, ctv_initial_value) {
-					// @future #1554 -- const ctors will probably be added here
-					// Note: The CTV initial value for constants is already set in lir_global
-					// (by the fromHOUT function used above). Backends should handle constant
-					// initialization appropriately.
+					// @future #1554 -- const ctors will probably be added here (or in backends)
 					lir_unit.lir_globals.emplace_back(LIRGlobalData{
 						.global              = lir_global,
 						.data_initialization = ctv_initial_value,

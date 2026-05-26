@@ -260,7 +260,7 @@ namespace compiler::mir {
 				{ MIRGlobal({ key.global_data->helios_symbol,
 			                  key.global_data->type,
 			                  MIRGlobal::Kind::Variable }) },
-				{ lowerexpr_res.getResult(function_builder) },
+				{ lowerexpr_res.getResult(function_builder), },
 				{},
 				function_builder.getTopLevelScope(),
 			});
