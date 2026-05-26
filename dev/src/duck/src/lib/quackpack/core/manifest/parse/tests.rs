@@ -1127,7 +1127,8 @@ fn frontmatter_with_import() {
     importing.touch().unwrap();
     importing
         .write(
-            r#"
+            r#" 
+            
 <frontmatter>
 import: y
 </frontmatter>
@@ -1179,5 +1180,46 @@ import: y
                 "No such file or directory (os error 2)",
             ]
         )
+    );
+}
+
+#[test]
+fn frontmatter_after_code_not_read() {
+    let dir = TempDir::new().unwrap();
+    let script = dir.path().join("x");
+    script.touch().unwrap();
+    script
+        .write(
+            r#" 
+let a = 5
+<frontmatter>
+import: y
+</frontmatter>
+        "#,
+        )
+        .unwrap();
+    let ctx = DuckContext::default();
+    assert!(parse_frontmatter(script, &ctx).unwrap().is_none());
+}
+
+#[test]
+fn fail_not_closed_frontmatter() {
+    let dir = TempDir::new().unwrap();
+    let script = dir.path().join("x");
+    script.touch().unwrap();
+    script
+        .write(
+            r#"
+<frontmatter>
+import: y
+</front-matter>
+        "#,
+        )
+        .unwrap();
+    let ctx = DuckContext::default();
+    let err = parse_frontmatter(script, &ctx).unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        make_errors_message_frontmatter(&dir, ["frontmatter begins but does not end"])
     );
 }

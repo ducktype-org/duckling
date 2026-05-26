@@ -21,7 +21,9 @@ use crate::{
 };
 
 pub static FRONTMATTER_REGEX: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"<frontmatter>([\s\S]*)</frontmatter>").unwrap());
+    LazyLock::new(|| Regex::new(r"^\s*<frontmatter>([\s\S]*)</frontmatter>").unwrap());
+pub static UNCLOSED_FRONTMATTER_REGEX: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^\s+<frontmatter>").unwrap());
 
 /// Parse a frontmatter of a script at a given `path`.
 pub fn parse_frontmatter(
@@ -59,7 +61,11 @@ fn parse(path: &Path, ctx: &DuckContext) -> QuackResult<Option<(FrontMatter, Fro
 /// Generate a [`FrontMatterSchema`] from the script's contents.
 fn generate_schema_script(path: &Path) -> QuackResult<Option<FrontMatterSchema>> {
     let content = path.read_to_string()?;
+    println!("{content}");
     let Some(captures) = FRONTMATTER_REGEX.captures(&content) else {
+        if UNCLOSED_FRONTMATTER_REGEX.captures(&content).is_some() {
+            qp_bail!("frontmatter begins but does not end")
+        }
         return Ok(None);
     };
     let frontmatter_content = captures.get(1).unwrap().as_str();
