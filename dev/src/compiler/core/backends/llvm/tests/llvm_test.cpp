@@ -44,6 +44,7 @@ public:
 		TESTER_ADD_TEST(stringsTest);
 		TESTER_ADD_TEST(ffiTest);
 		TESTER_ADD_TEST(tuplesTest);
+		TESTER_ADD_TEST(pointersTest);
 	}
 
 protected:
@@ -506,6 +507,11 @@ private:
 		assertTrue(
 			std::regex_search(ir, std::regex{ R"(%T.*E)" }), "Expected tuple struct definition"
 		);
+	}
+
+	void pointersTest() {
+		auto        llvm_module = getLLVMModuleFromPath("modules/pointers");
+		std::string ir          = llvm_module.dumpLLVMToString();
 	}
 };
 

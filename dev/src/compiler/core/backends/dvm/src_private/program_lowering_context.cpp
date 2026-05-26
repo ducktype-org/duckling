@@ -33,6 +33,10 @@ compiler::backend_vm::internal::ProgramLoweringContext::ProgramLoweringContext(
                             : base::Optional<debug_info::DebugInfoBuilder>{})
 	  ) {}
 
+CRef<vm::code::TypeOfData> ProgramLoweringContext::keepVMType(vm::code::TypeOfData dvm_type) {
+	return &type_storage.dvm_types.put(typeName(dvm_type), std::move(dvm_type)).first->second;
+}
+
 base::Optional<CRef<vm::code::TypeOfData>> ProgramLoweringContext::lowerAndKeepTslType(
 	CRef<tsl::TypeLayout> layout
 ) {
@@ -323,8 +327,38 @@ base::Optional<vm::code::TypeOfData> ProgramLoweringContext::lowerTslTypeInterna
 		variant_case(tsl::PointerTypeLayout, pointer_layout) {
 			const vm::code::TypeOfData& pointee_type
 				= **lowerAndKeepTslType(pointer_layout.getPointee());
-			auto pointer_type_name = base::strConcat("ptr_", typeName(pointee_type));
-			return vm::code::PointerType(base::StrID(pointer_type_name), typeName(pointee_type));
+			switch (pointer_layout.getPointerKind()) {
+			case tsl::PointerTypeLayout::PointerKind::SinglePointer: {
+				auto pointer_type_name = base::strConcat("ptr_", typeName(pointee_type));
+				return vm::code::PointerType(base::StrID(pointer_type_name), typeName(pointee_type));
+			}
+			case tsl::PointerTypeLayout::PointerKind::ManyPointer: {
+				// Many pointer is a pointer to a dynamic table of the pointee type.
+				auto dyntable_type_name = base::strConcat("dyntable_", typeName(pointee_type));
+				vm::code::DynamicTableType dyntable_type(
+					base::StrID(dyntable_type_name), typeName(pointee_type)
+				);
+				keepVMType(dyntable_type
+				);  // Ensure the dynamic table type is stored in the context.
+				auto pointer_type_name = base::strConcat("ptr_", dyntable_type_name);
+				return vm::code::PointerType(
+					base::StrID(pointer_type_name), typeName(dyntable_type)
+				);
+			}
+			case tsl::PointerTypeLayout::PointerKind::CPointer: {
+				query_ctx_for_errors.value()->logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					base::strConcat(
+						"CPointer types are not supported in DVM code generation yet: ",
+						layout->toStringDefinition(*query_ctx_for_errors.value())
+					),
+					""
+				));
+				query::throwFailed();
+				break;
+			}
+			default:
+				CORE_PANIC("All cases should be covered.");
+			}
 		}
 		variant_case(tsl::ClassTypeLayout, class_layout) {
 			std::vector<vm::code::Field> fields;

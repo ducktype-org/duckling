@@ -603,10 +603,16 @@ namespace compiler::tsl {
 	 * @brief Layout of a type that has pointer-like low level behaviour.
 	 */
 	class PointerTypeLayout final: public TypeLayoutABC {
+	public:
+		enum class PointerKind { SinglePointer, ManyPointer, CPointer };
+
+	private:
 		// The layout of the pointee type.
 		// Since a pointer may be untyped, the layout of the pointee may be unknown.
 		// Hence, the use of a nullable ref.
 		MCRef<TypeLayout> pointee{};
+
+		PointerKind pointer_kind;
 
 		/**
 		 * @brief Construct a PointerLayout for a RawPointer.
@@ -615,7 +621,8 @@ namespace compiler::tsl {
 		explicit PointerTypeLayout(
 			const tsh::RawPointerAbstractType raw_pointer_type, query::Context& ctx
 		):
-			  TypeLayoutABC(POINTER_SIZE, tsh::SymbolType<>::withDefaults(raw_pointer_type), ctx) {}
+			  TypeLayoutABC(POINTER_SIZE, tsh::SymbolType<>::withDefaults(raw_pointer_type), ctx),
+			  pointer_kind(PointerKind::SinglePointer) {}
 
 		/**
 		 * @brief Construct a PointerLayout from a typed Pointer.
@@ -623,6 +630,20 @@ namespace compiler::tsl {
 		 * @param ctx The query::Context for constructing the TypeLayout of the pointee.
 		 */
 		PointerTypeLayout(tsh::PointerAbstractType pointer_type, query::Context& ctx);
+
+		/**
+		 * @brief Construct a PointerLayout from a typed ManyPointer.
+		 * @param pointer_type The source typed ManyPointer.
+		 * @param ctx The query::Context for constructing the TypeLayout of the pointee.
+		 */
+		PointerTypeLayout(tsh::ManyPointerAbstractType pointer_type, query::Context& ctx);
+
+		/**
+		 * @brief Construct a PointerLayout from a typed CPointer.
+		 * @param pointer_type The source typed CPointer.
+		 * @param ctx The query::Context for constructing the TypeLayout of the pointee.
+		 */
+		PointerTypeLayout(tsh::CPointerAbstractType pointer_type, query::Context& ctx);
 
 		/**
 		 * @brief Construct a PointerLayout from a SymbolType, provided that it is not DIRECT.
@@ -650,10 +671,24 @@ namespace compiler::tsl {
 			return pointee;
 		}
 
+		[[nodiscard]] PointerKind getPointerKind() const { return pointer_kind; }
+
 		[[nodiscard]]
 		std::string toStringDefinition(query::Context&, bool, const u32 indent) const override {
-			return getIndent(indent) + "Pointer to " + getSourceType().toString() + " : "
-			     + base::toString(getSize());
+			std::string pointer_kind_str;
+			switch (pointer_kind) {
+			case PointerKind::SinglePointer:
+				pointer_kind_str = "Pointer";
+				break;
+			case PointerKind::ManyPointer:
+				pointer_kind_str = "ManyPointer";
+				break;
+			case PointerKind::CPointer:
+				pointer_kind_str = "CPointer";
+				break;
+			}
+			return getIndent(indent) + pointer_kind_str + " to " + getSourceType().toString()
+			     + " : " + base::toString(getSize());
 		}
 	};
 
@@ -708,6 +743,13 @@ namespace compiler::tsl {
 		[[nodiscard]]
 		bool is() const {
 			return std::holds_alternative<T>(variant);
+		}
+
+		template<typename T>
+		[[nodiscard]]
+		const T& as() const {
+			CORE_ASSERT(is<T>(), "Invalid type layout variant access");
+			return std::get<T>(variant);
 		}
 
 		/**
