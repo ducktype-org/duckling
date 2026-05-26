@@ -111,5 +111,12 @@ namespace vm::debugger {
 		 * @brief Returns current position
 		 */
 		std::expected<api::response::CodePosition, api::ApiError> getCurrentPosition();
+
+		/**
+		 * @brief Sets breakpoint
+		 */
+		std::expected<void, api::ApiError> setBreakpoint(
+			base::StrID function_name, u64 instr_number, bool enabled = true
+		);
 	};
 }
