@@ -601,7 +601,7 @@ namespace compiler::tsh {
 		}
 
 		[[nodiscard]]
-		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
+		CRef<TypeInterface> getDeclaredInterface(query::Context& ctx) const override;
 	};
 
 	class CPointerAbstractTypeImpl final: public PointerAbstractTypeImpl {
@@ -622,7 +622,7 @@ namespace compiler::tsh {
 		}
 
 		[[nodiscard]]
-		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
+		CRef<TypeInterface> getDeclaredInterface(query::Context& ctx) const override;
 	};
 
 	class StringAbstractTypeImpl final: public AbstractTypeImpl {
