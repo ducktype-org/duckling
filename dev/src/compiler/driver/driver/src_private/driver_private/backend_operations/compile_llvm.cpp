@@ -30,7 +30,7 @@ namespace compiler::driver {
 		std::vector<CRef<lir::Function>> dtors;
 
 		for (const auto& global: lir_module->lir_unit.lir_globals) {
-			mod.addGlobalToModule(global.global);
+			mod.addGlobalToModule(global);
 			// Add global constructors and destructors if they exist
 			variant_match(global.data_initialization) {
 				variant_case(lir::LIRGlobalData::CTorDtorPair, ctor_dtor_pair) {

@@ -497,6 +497,10 @@ namespace compiler::backend_llvm {
 		);
 	}
 
+	/**
+	 * @brief This only inserts a global variable declaration if it doesn't exist.
+	 * It does not set any initializer or linkage.
+	 */
 	Ref<llvm::Constant> getOrInsertGlobalVariable(
 		const Ref<llvm::Module> module, const lir::LIRGlobal& lir_global
 	) {
@@ -515,29 +519,35 @@ namespace compiler::backend_llvm {
 	 * for constants it sets the initial value to the provided constant value.
 	 */
 	Ref<llvm::GlobalVariable> addGlobalVariable(
-		const Ref<llvm::Module> module, const lir::LIRGlobal& lir_global
+		const Ref<llvm::Module> module, const lir::LIRGlobalData& lir_global
 	) {
-		getOrInsertGlobalVariable(module, lir_global);
+		getOrInsertGlobalVariable(module, lir_global.global);
+
 		const Ref<llvm::GlobalVariable> global
-			= module->getNamedGlobal(lir_global.mangled_name.strView());
+			= module->getNamedGlobal(lir_global.global.mangled_name.strView());
 
 		CORE_ASSERT(global->isDeclaration(), "Global is not the declaration");
 
 		global->setLinkage(llvm::GlobalValue::ExternalLinkage);
-		global->setConstant(lir_global.type == lir::LIRGlobalType::Constant);
+		global->setConstant(lir_global.global.type == lir::LIRGlobalType::Constant);
 
-		if (lir_global.type == lir::LIRGlobalType::Constant) {
+		if (lir_global.global.type == lir::LIRGlobalType::Constant) {
 			CORE_ASSERT(
-				lir_global.initial_value.has_value(), "Expected initial value for constant global"
+				std::holds_alternative<ctv::CompileTimeValue>(lir_global.data_initialization),
+				"Constant global must have CompileTimeValue as initial value"
 			);
 			global->setInitializer(
-				ctvToLLVMConstant(lir_global.initial_value.value(), global->getValueType(), module)
+				ctvToLLVMConstant(
+					std::get<ctv::CompileTimeValue>(lir_global.data_initialization), 
+					global->getValueType(),
+					 module
+				)
 			);
 		} else {
 			// Initialise the global variable to null, since it will be initialised in the constructor:
 			CORE_ASSERT(
-				not lir_global.initial_value.has_value(),
-				"Non-constant global should not have initial value set"
+				std::holds_alternative<lir::LIRGlobalData::CTorDtorPair>(lir_global.data_initialization),
+				"For now we assume, that each non-constant is non-CTV initialized, but this might change in the future"
 			);
 			global->setInitializer(llvm::Constant::getNullValue(global->getValueType()));
 		}
@@ -1494,7 +1504,7 @@ namespace compiler::backend_llvm {
 		llvm::appendToGlobalDtors(*module->module.refMut(), fun, 65'535);
 	}
 
-	void addGlobalToModuleImpl(const Ref<ModuleImpl> module, const lir::LIRGlobal& lir_global) {
+	void addGlobalToModuleImpl(const Ref<ModuleImpl> module, const lir::LIRGlobalData& lir_global) {
 		addGlobalVariable(module->module.refMut(), lir_global);
 	}
 }
