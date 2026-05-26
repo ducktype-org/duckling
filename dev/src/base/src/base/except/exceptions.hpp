@@ -11,10 +11,10 @@
 
 #pragma once
 
-#include <base/preproc/utils.hpp>
+#include <base/preproc/cat.hpp>
+#include <base/preproc/stringify.hpp>
 #include <base/str/str_utils.hpp>  // IWYU pragma: export
 
-#include <cstring>
 #include <exception>
 #include <string>
 #include <string_view>
@@ -147,16 +147,16 @@ namespace base {
 	#define CORE_UNREACHABLE() std::unreachable()
 #endif
 
-#define CORE_ASSERT_NOEXCEPT_BASE(assert_type, cond, what, ...)                        \
-	{                                                                                  \
-		bool CONCAT_2(core_assert_noexcept_was_panic_, __LINE__) = false;              \
-		try {                                                                          \
-			assert_type(cond, what __VA_OPT__(, ) __VA_ARGS__);                        \
-		} catch (const base::Panic& e) {                                               \
-			e.printToCerr();                                                           \
-			CONCAT_2(core_assert_noexcept_was_panic_, __LINE__) = true;                \
-		}                                                                              \
-		if (CONCAT_2(core_assert_noexcept_was_panic_, __LINE__)) { std::terminate(); } \
+#define CORE_ASSERT_NOEXCEPT_BASE(assert_type, cond, what, ...)                   \
+	{                                                                             \
+		bool CAT(core_assert_noexcept_was_panic_, __LINE__) = false;              \
+		try {                                                                     \
+			assert_type(cond, what __VA_OPT__(, ) __VA_ARGS__);                   \
+		} catch (const base::Panic& e) {                                          \
+			e.printToCerr();                                                      \
+			CAT(core_assert_noexcept_was_panic_, __LINE__) = true;                \
+		}                                                                         \
+		if (CAT(core_assert_noexcept_was_panic_, __LINE__)) { std::terminate(); } \
 	}
 
 /**
