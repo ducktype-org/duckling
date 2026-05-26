@@ -13,6 +13,7 @@
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <lir/lir_structure/function_forward.hpp>
 #include <time_stats/time_stats.hpp>
+#include <base/extend_cpp/variant_match.hpp>
 
 namespace compiler::driver {
 
@@ -26,17 +27,26 @@ namespace compiler::driver {
 		std::vector<CRef<lir::Function>> ctors;
 		std::vector<CRef<lir::Function>> dtors;
 
-
-		for (const auto& global: lir_module->globals) {
-			mod.addGlobalToModule(global.lir_global);
+		for (const auto& global: lir_module->lir_unit.lir_globals) {
+			mod.addGlobalToModule(global.global);
 			// Add global constructors and destructors if they exist
-			if (global.global_ctor.has_value()) {
-				mod.addFunctionToModule(ctx, global.global_ctor.value());
-				ctors.push_back(global.global_ctor.value());
-			}
-			if (global.global_dtor.has_value()) {
-				mod.addFunctionToModule(ctx, global.global_dtor.value());
-				dtors.push_back(global.global_dtor.value());
+			variant_match(global.data_initialization) {
+				variant_case(lir::LIRGlobalData::CTorDtorPair, ctor_dtor_pair) {
+					if (ctor_dtor_pair.global_ctor.has_value()) {
+						mod.addFunctionToModule(ctx, ctor_dtor_pair.global_ctor.value());
+						ctors.push_back(ctor_dtor_pair.global_ctor.value());
+					}
+					if (ctor_dtor_pair.global_dtor.has_value()) {
+						mod.addFunctionToModule(ctx, ctor_dtor_pair.global_dtor.value());
+						dtors.push_back(ctor_dtor_pair.global_dtor.value());
+					}
+				}
+				variant_case (ctv::CompileTimeValue, ctv_initial_value) {
+					// This case is handled inside addGlobalToModule
+				}
+				variant_default {
+					CORE_UNREACHABLE();
+				}
 			}
 		}
 
@@ -66,9 +76,9 @@ namespace compiler::driver {
 			mod.addFunctionToModuleDtors(ctx, CRef<lir::Function>(&module_dtor));
 		}
 
-		for (const auto& lir_function: lir_module->functions)
+		for (const auto& lir_function: lir_module->lir_unit.lir_functions) {
 			mod.addFunctionToModule(ctx, lir_function);
-
+		}			
 		CORE_ASSERT(mod.verify().isOk(), "LLVM module verification failed");
 
 		return mod;

@@ -54,8 +54,10 @@ namespace compiler::backend_llvm {
 		/**
 		 * @brief Adds a global variable declaration to the module.
 		 *
-		 * This function declares a global variable in the LLVM module and initializes it to 0 or
-		 * null. Note: This does not add a constructor for the global variable.
+		 * This function declares a global variable in the LLVM.
+		 * Note: If the global is a constant, it will be initialized with the provided value.
+		 * If the global is a variable, it will be zero-initialized by default, and the provided value will be ignored.
+		 * PR: improve the above!
 		 *
 		 * @param lir_global The global variable to be added to the module.
 		 */
