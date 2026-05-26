@@ -44,13 +44,16 @@ namespace compiler::lir {
 	LIRGlobal LIRGlobal::fromMIR(query::Context& ctx, mir::MIRGlobal mir_global) {
 		auto type_layout = ctx.query<tsl::QuerySymbolTypeLayout>(mir_global.type);
 
-		auto mangled_name = helios::mangler::getSimpleMangledName(ctx, mir_global.helios_id);
-		LIRGlobalType type = mir_global.kind == mir::MIRGlobal::Kind::Constant ? LIRGlobalType::Constant
-		                                                            : LIRGlobalType::Variable; 
+		auto mangled_name  = helios::mangler::getSimpleMangledName(ctx, mir_global.helios_id);
+		LIRGlobalType type = mir_global.kind == mir::MIRGlobal::Kind::Constant
+		                       ? LIRGlobalType::Constant
+		                       : LIRGlobalType::Variable;
 
-		return LIRGlobal{ type_layout,
-			              mangled_name,
-			              type,};
+		return LIRGlobal{
+			type_layout,
+			mangled_name,
+			type,
+		};
 	}
 
 	LIRGlobal LIRGlobal::fromHOUT(query::Context& ctx, const helios::HOUTGlobalData& hout_global) {

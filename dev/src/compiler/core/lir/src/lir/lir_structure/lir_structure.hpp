@@ -262,14 +262,13 @@ namespace compiler::lir {
 
 	private:
 		LIRGlobal(
-			const CRef<tsl::TypeLayout>                  layout,
-			const base::StrID&                           mangled_name,
-			const LIRGlobalType                          type
+			const CRef<tsl::TypeLayout> layout,
+			const base::StrID&          mangled_name,
+			const LIRGlobalType         type
 		):
 			  layout(layout),
 			  mangled_name(mangled_name),
-			  type(type)
-		{}
+			  type(type) {}
 
 		friend Function;
 

@@ -813,8 +813,10 @@ namespace compiler::helios {
 				"LIR global variables are not supported in compile time evaluation."
 			);
 
-			return LIRBuildResult{ .func_to_call = mangled_name_function_to_call.str(),
-				                   .functions    = std::move(lir_unit.lir_functions), };
+			return LIRBuildResult{
+				.func_to_call = mangled_name_function_to_call.str(),
+				.functions    = std::move(lir_unit.lir_functions),
+			};
 		}
 
 		/**
