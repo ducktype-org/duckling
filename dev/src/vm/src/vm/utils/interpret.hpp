@@ -39,8 +39,10 @@ namespace vm {
 	[[nodiscard]] T safeReadPointerBytes(const byte* ptr, usize offset = 0)
 		requires std::is_trivially_copyable_v<T> {
 		CORE_ASSERT(isAligned<T>(ptr + offset), "Unaligned access in safeReadPointerBytes");
-		// After reinterpret cast the pointer to points to object of type T. T is type
-		// accessible to T, we can dereference.
+		// After reinterpret cast the pointer points to the memory on which object of type T
+		// was created using placement new. That means dereferenced value is of type T.
+		// T is type accesible to T - new pointer can be dereferenced.
+		// https://cppreference.com/cpp/language/reinterpret_cast point 5.
 		return *reinterpret_cast<const T*>(ptr + offset);
 	}
 
