@@ -23,7 +23,7 @@
 #include <fstream>
 
 namespace compiler::driver {
-	
+
 
 	void LIRUnitWithBackendName::debugPrint(query::Context& ctx, std::ostream& os) const {
 		os << "LIRUnitWithBackendName for module: " << module_id.strView() << "\n";
@@ -55,9 +55,7 @@ namespace compiler::driver {
 
 			mir::MIRUnit mir_unit = mir::lowerToMIRUnit(ctx, &hout_unit).valueOrThrow();
 
-			if (driver::print_ir_options.print_mir) {
-				mir_unit.debugPrint(ctx, std::cout);
-			}
+			if (driver::print_ir_options.print_mir) mir_unit.debugPrint(ctx, std::cout);
 			if (driver::dump_ir_options.dump_mir) {
 				auto ofstream = getDebugDumpArtifact(
 					base::StrID(base::strConcat(module_name.strView(), ".mir"))

@@ -292,9 +292,9 @@ namespace compiler::mir {
 	};
 
 	/**
-	* PR: update!!!!!
-	* This is a lightweight ID used for MIR place only!
-	*
+	 * PR: update!!!!!
+	 * This is a lightweight ID used for MIR place only!
+	 *
 	 * @brief Represents a global value in MIR.
 	 *
 	 * This structure is used to reference a global variable in MIR code. It is directly connected
@@ -324,7 +324,6 @@ namespace compiler::mir {
 		tsh::SymbolType<> type;
 
 		Kind kind;
-
 
 		MIRGlobal(helios::SymID helios_id, tsh::SymbolType<> type, Kind kind):
 			  helios_id(helios_id),
@@ -865,12 +864,12 @@ namespace compiler::mir {
 	 *
 	 * MIR unit is an arbitrary code collections represented in MIR IR.
 	 * There is no constract on what any given MIRUnit should contain.
-	 * 
+	 *
 	 * @note MIR units are created mostly from HOUT units.
 	 */
 	struct MIRUnit final {
 		std::vector<CRef<mir::Function>> mir_functions;
-		std::vector<MIRGlobalData> mir_globals;
+		std::vector<MIRGlobalData>       mir_globals;
 
 		void debugPrint(query::Context& ctx, std::ostream& out) const;
 	};

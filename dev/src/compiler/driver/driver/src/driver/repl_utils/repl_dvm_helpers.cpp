@@ -30,7 +30,7 @@ namespace compiler::repl {
 		backend_vm::ReplLoweringContext& lowering_context
 	) {
 		// @TODO: #2246 pipeline here!
-		
+
 
 		auto active_ctx = lowering_context.getActiveContext();
 		CORE_ASSERT(

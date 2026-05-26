@@ -18,8 +18,8 @@ namespace compiler::driver {
 		/**
 		 * @brief The module ID is more or a lass a module name, that will be use by the backend.
 		 */
-		base::StrID                      module_id;
-		lir::LIRUnit 				     lir_unit;
+		base::StrID  module_id;
+		lir::LIRUnit lir_unit;
 
 		void debugPrint(query::Context& ctx, std::ostream& os) const;
 	};

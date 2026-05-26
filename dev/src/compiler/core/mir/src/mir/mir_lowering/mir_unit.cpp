@@ -1,6 +1,7 @@
 #pragma once
 
 #include "mir_unit.hpp"
+
 #include "mir_queries.hpp"
 
 #include <base/extend_cpp/variant_match.hpp>
@@ -8,21 +9,19 @@
 namespace compiler::mir {
 	query::QResult<MIRUnit> lowerToMIRUnit(query::Context& ctx, CRef<helios::HOUTUnit> hout_unit) {
 		// #2246 implement this
-		
+
 		MIRUnit unit_result;
-		bool is_failed = false;
+		bool    is_failed = false;
 
 		// Functions:
 		for (const auto& hout_function: hout_unit->functions) {
 			CRef<LowerToMIRFunctionResult> mir_function
 				= ctx.query<mir::LowerToMIRFunction>({ hout_function });
 
-			if (mir_function->hasFailed()) {
+			if (mir_function->hasFailed())
 				is_failed = true;
-			}
-			else {
+			else
 				unit_result.mir_functions.emplace_back(&mir_function->valueOrPanic());
-			}
 		}
 
 		// Globals:
@@ -32,9 +31,12 @@ namespace compiler::mir {
 
 			auto helios_kind_to_mir_kind = [](helios::HOUTGlobalDataType type) -> MIRGlobal::Kind {
 				switch (type) {
-					case helios::HOUTGlobalDataType::Constant: return MIRGlobal::Kind::Constant;
-					case helios::HOUTGlobalDataType::Variable: return MIRGlobal::Kind::Variable;
-					default: CORE_UNREACHABLE();
+				case helios::HOUTGlobalDataType::Constant:
+					return MIRGlobal::Kind::Constant;
+				case helios::HOUTGlobalDataType::Variable:
+					return MIRGlobal::Kind::Variable;
+				default:
+					CORE_UNREACHABLE();
 				}
 			};
 
@@ -51,10 +53,10 @@ namespace compiler::mir {
 				}
 				variant_case(helios::HOUTGlobalVariable, hout_expr_initial_value) {
 					CRef mir_ctor_function
-							= ctx.query<mir::LowerGlobalDataToMIRCtor>({ hout_global });
+						= ctx.query<mir::LowerGlobalDataToMIRCtor>({ hout_global });
 					if (mir_ctor_function->hasFailed()) {
 						is_failed = true;
-						break; // Note: this jump breaks only the variant_match
+						break;  // Note: this jump breaks only the variant_match
 					}
 					unit_result.mir_globals.emplace_back(MIRGlobalData{
 						.global = MIRGlobal{
@@ -65,18 +67,12 @@ namespace compiler::mir {
 						.initial_value = &mir_ctor_function->valueOrPanic(),
 					});
 				}
-				variant_default {
-					CORE_UNREACHABLE();
-				}
+				variant_default { CORE_UNREACHABLE(); }
 			}
-
-			
 		}
 
 
-		if (is_failed) {
-			return query::Failed();
-		}
+		if (is_failed) return query::Failed();
 
 		return unit_result;
 	}

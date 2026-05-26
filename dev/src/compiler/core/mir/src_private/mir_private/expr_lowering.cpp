@@ -2,8 +2,8 @@
 
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/visitors.hpp>
-#include <helios/tsh/queries/types.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
+#include <helios/tsh/queries/types.hpp>
 #include <helios/utils/get_expr_symid.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 
@@ -100,16 +100,18 @@ namespace compiler::mir {
 				auto symbol_kind = helios::kind(expr.symbol);
 				CORE_ASSERT(
 					symbol_kind == helios::SymbolKind::Variable
-					|| symbol_kind == helios::SymbolKind::Const,
-					"IdentifierExpr symbol should be either local variable or global variable or constant."
+						|| symbol_kind == helios::SymbolKind::Const,
+					"IdentifierExpr symbol should be either local variable or global variable or "
+				    "constant."
 				);
 
 				valueOutput(
 					continuation,
-					MIRValue{ MIRGlobal({
-						 expr.symbol, expr.expression_type.getSymbolType(), 
-						 (symbol_kind == helios::SymbolKind::Const) ? MIRGlobal::Kind::Constant : MIRGlobal::Kind::Variable
-					 }) }
+					MIRValue{ MIRGlobal({ expr.symbol,
+				                          expr.expression_type.getSymbolType(),
+				                          (symbol_kind == helios::SymbolKind::Const)
+				                              ? MIRGlobal::Kind::Constant
+				                              : MIRGlobal::Kind::Variable }) }
 				);
 			}
 		}

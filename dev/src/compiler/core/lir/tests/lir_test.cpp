@@ -91,9 +91,9 @@ private:
 	/**
 	 * Compiles the module at given path to LIR, returning also HOUT and MIR counterparts of
 	 * functions. Note that it does not include globals/constants in the result (only functions).
-	 
+
 	 // #2246 PIPELINE LOGIC HERE
-	 
+
 	 */
 	LIRModuleResult getLIROfModule(std::string_view module_path) {
 		auto [module, scope] = getModule(fs::File(module_path));

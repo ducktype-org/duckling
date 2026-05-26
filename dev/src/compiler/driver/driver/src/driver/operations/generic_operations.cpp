@@ -317,7 +317,9 @@ namespace compiler::driver {
 	QUERY_IMPLEMENTATION_BOILERPLATE(CompileModule);
 
 	namespace {
-		std::expected<LIRUnitWithBackendName, std::string> compileScriptToLIRModuleData(query::Context& ctx) {
+		std::expected<LIRUnitWithBackendName, std::string> compileScriptToLIRModuleData(
+			query::Context& ctx
+		) {
 			auto& script_context = global_state::getScriptContext();
 			auto  script_source  = script_context.script_file.getContent().view().stdString();
 			auto  split_result   = repl::splitInputIntoStatements(ctx, script_source);

@@ -13,7 +13,9 @@ namespace compiler::driver {
 	 * @brief Compiles the LIRUnitWithBackendName to LLVM Module.
 	 #2246 this should be moved to backend probably, or some pipeline module/submodule
 	 */
-	backend_llvm::Module compileLIRModuleToLLVM(query::Context& ctx, CRef<LIRUnitWithBackendName> lir_module);
+	backend_llvm::Module compileLIRModuleToLLVM(
+		query::Context& ctx, CRef<LIRUnitWithBackendName> lir_module
+	);
 
 
 	/**

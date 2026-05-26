@@ -5,6 +5,7 @@
 #include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/elements/includes/basic.hpp>
 #include <helios/hout/visitors.hpp>
+#include <helios/mangler/mangler.hpp>
 #include <helios/queries/function_queries.hpp>
 #include <helios/queries/queries.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
@@ -15,7 +16,6 @@
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
-#include <helios/mangler/mangler.hpp>
 // #include <lir/lir_lowering/lir_lowering.hpp>
 #include <lir/lir_lowering/lir_unit.hpp>
 // #include <mir/mir_lowering/mir_queries.hpp>
@@ -791,19 +791,18 @@ namespace compiler::helios {
 			// order to evaluate this one.
 			Ref dependencies
 				= &ctx.query<QueryTransitiveFunctionCalls>(function_sym_id)->valueOrThrow();
-	
-			auto mangled_name_function_to_call = ctx.query<mangler::QueryMangledSymbol>({function_sym_id});
+
+			auto mangled_name_function_to_call
+				= ctx.query<mangler::QueryMangledSymbol>({ function_sym_id });
 
 			// temporary hout unit used to lower functions to LIR
 			HOUTUnit hout_unit;
-			for (const SymID& func_id: *dependencies) {			
+			for (const SymID& func_id: *dependencies) {
 				auto& hout_func = ctx.query<QueryCodeOfFun>(func_id)->valueOrThrow();
 				hout_unit.functions.emplace_back(&hout_func);
 			}
-			auto lir_unit = lir::lowerToLIRUnit(
-				ctx,
-				mir::lowerToMIRUnit(ctx, &hout_unit).valueOrThrow()
-			);
+			auto lir_unit
+				= lir::lowerToLIRUnit(ctx, mir::lowerToMIRUnit(ctx, &hout_unit).valueOrThrow());
 
 			// Note: the assumptions bellow might change,
 			// for example when we will add consts to comp time.
@@ -811,12 +810,13 @@ namespace compiler::helios {
 				lir_unit.lir_functions.size() == dependencies->size(),
 				"Number of lir functions should be the same as number of dependencies collected."
 			);
-			CORE_ASSERT(lir_unit.lir_globals.empty(), "LIR global variables are not supported in compile time evaluation.");
+			CORE_ASSERT(
+				lir_unit.lir_globals.empty(),
+				"LIR global variables are not supported in compile time evaluation."
+			);
 
-			return LIRBuildResult {
-				.func_to_call = mangled_name_function_to_call.str(),
-				.functions    = std::move(lir_unit.lir_functions)
-			};
+			return LIRBuildResult{ .func_to_call = mangled_name_function_to_call.str(),
+				                   .functions    = std::move(lir_unit.lir_functions) };
 		}
 
 		/**

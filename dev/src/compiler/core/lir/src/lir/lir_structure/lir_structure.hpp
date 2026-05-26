@@ -269,15 +269,16 @@ namespace compiler::lir {
 			// const helios::SymID                          helios_id,
 			const CRef<tsl::TypeLayout>                  layout,
 			const base::StrID&                           mangled_name,
-			const LIRGlobalType                          type         ,
-			const base::Optional<ctv::CompileTimeValue>& initial_value = {} // PR TODO: remove this maybe
+			const LIRGlobalType                          type,
+			const base::Optional<ctv::CompileTimeValue>& initial_value = {}
+			// PR TODO: remove this maybe
 		):
-			//   helios_id(helios_id),
+			  //   helios_id(helios_id),
 			  layout(layout),
 			  mangled_name(mangled_name),
 			  type(type)
-			//   initial_value(initial_value) 
-			  {}
+		//   initial_value(initial_value)
+		{}
 
 		friend Function;
 
@@ -648,7 +649,6 @@ namespace compiler::lir {
 		base::Map<LIRLocalRef, u64> getLocalVariableIDs() const;
 	};
 
-
 	// PR TODO: Data←→glob pattern as in mir, document this, make nameing consistent
 	struct LIRGlobalData final {
 		struct CTorDtorPair final {
@@ -658,7 +658,7 @@ namespace compiler::lir {
 				global_dtor;  ///< Optional, if the global has a destructor.
 		};
 
-		LIRGlobal global;
+		LIRGlobal                                         global;
 		std::variant<ctv::CompileTimeValue, CTorDtorPair> data_initialization;
 
 		void debugPrint(query::Context& ctx, std::ostream& out) const;
@@ -669,12 +669,12 @@ namespace compiler::lir {
 	 *
 	 * LIR unit is an arbitrary code collections represented in LIR IR.
 	 * There is no constract on what any given LIRUnit should contain.
-	 * 
+	 *
 	 * @note LIR units are created mostly from MIR units.
 	 */
 	struct LIRUnit final {
 		std::vector<CRef<Function>> lir_functions;
-		std::vector<LIRGlobalData>      lir_globals;
+		std::vector<LIRGlobalData>  lir_globals;
 
 		void debugPrint(query::Context& ctx, std::ostream& out) const;
 	};

@@ -35,6 +35,9 @@ namespace compiler::driver {
 	 * @brief Query that produces LIRUnitWithBackendName for given Duckling module.
 	 */
 	DECLARE_QUERY(
-		CompileToLIRModuleData, frontend::ModuleID, CRef<query::QResult<LIRUnitWithBackendName>>, ({})
+		CompileToLIRModuleData,
+		frontend::ModuleID,
+		CRef<query::QResult<LIRUnitWithBackendName>>,
+		({})
 	)
 }

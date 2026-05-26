@@ -46,12 +46,12 @@ namespace compiler::lir {
 
 		auto mangled_name = helios::mangler::getSimpleMangledName(ctx, mir_global.helios_id);
 
-		return LIRGlobal{  
-			type_layout,
-			mangled_name,
-			// eh, do something better then ternary here
-			mir_global.kind == mir::MIRGlobal::Kind::Constant ? LIRGlobalType::Constant : LIRGlobalType::Variable
-		};
+		return LIRGlobal{ type_layout,
+			              mangled_name,
+			              // eh, do something better then ternary here
+			              mir_global.kind == mir::MIRGlobal::Kind::Constant
+			                  ? LIRGlobalType::Constant
+			                  : LIRGlobalType::Variable };
 	}
 
 	LIRGlobal LIRGlobal::fromHOUT(query::Context& ctx, const helios::HOUTGlobalData& hout_global) {
@@ -62,14 +62,14 @@ namespace compiler::lir {
 		variant_match(hout_global.value) {
 			variant_case(helios::HOUTGlobalConst, name) {
 				return LIRGlobal{
-					type_layout, mangled_name,
-					LIRGlobalType::Constant,   name.value,
+					type_layout,
+					mangled_name,
+					LIRGlobalType::Constant,
+					name.value,
 				};
 			}
 			variant_case(helios::HOUTGlobalVariable, name) {
-				return LIRGlobal{
-					type_layout, mangled_name, LIRGlobalType::Variable
-				};
+				return LIRGlobal{ type_layout, mangled_name, LIRGlobalType::Variable };
 			}
 			variant_default {
 				CORE_PANIC(
