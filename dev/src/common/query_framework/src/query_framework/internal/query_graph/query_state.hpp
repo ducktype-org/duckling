@@ -315,6 +315,15 @@ namespace query::internal {
 		void logDiagnosticForNode(NodeID node_id, Box<dia_int::MessageBase> diagnostic);
 
 		/**
+		 * @brief Logs diagnostic messages from a Logger for a specific node.
+		 *
+		 * Same as `logDiagnosticForNode(NodeID, Box<MessageBase>)` but
+		 * moves all diagnostics from the provided Logger into the node's logger,
+		 * leaving the provided Logger empty.
+		 */
+		void logDiagnosticFromLoggerForNode(NodeID node_id, dia_int::Logger& src_logger);
+
+		/**
 		 * @brief Clears all diagnostics for a specific node.
 		 */
 		void clearDiagnosticForNode(NodeID node_id);
