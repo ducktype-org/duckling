@@ -25,8 +25,7 @@ namespace vm::jit::cnp {
                                                                                              \
 		CORE_ASSERT(instr_ptr == &my_instr + 1, "An unexpected jumping opcode");             \
                                                                                              \
-		DECLARE_LINK_VARIABLE(continue_fn);                                                  \
-		auto continue_fn = GET_LINK_VARIABLE(                                                \
+		auto continue_fn = LINK_VALUE(                                                       \
 			continue_fn, void (*)(const MicroInstruction*, byte*, Frame*, SafeVMThread&), 64 \
 		);                                                                                   \
 		return (*continue_fn)(instr, local_stack, frame, thread);                            \
