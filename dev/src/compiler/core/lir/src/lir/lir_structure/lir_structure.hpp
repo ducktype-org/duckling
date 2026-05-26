@@ -254,14 +254,6 @@ namespace compiler::lir {
 	 * constants.
 	 */
 	struct LIRGlobal final {
-		// #2246 do something about this
-		// see #1657
-		// /**
-		//  * @brief HELIOS id of the variable.
-		//  * #2246 this should not be here, its lir!
-		//  */
-		// helios::SymID helios_id;
-
 		CRef<tsl::TypeLayout> layout;
 
 		base::StrID mangled_name;
@@ -270,18 +262,13 @@ namespace compiler::lir {
 
 	private:
 		LIRGlobal(
-			// const helios::SymID                          helios_id,
 			const CRef<tsl::TypeLayout>                  layout,
 			const base::StrID&                           mangled_name,
-			const LIRGlobalType                          type,
-			const base::Optional<ctv::CompileTimeValue>& initial_value = {}
-			// PR TODO: remove this maybe
+			const LIRGlobalType                          type
 		):
-			  //   helios_id(helios_id),
 			  layout(layout),
 			  mangled_name(mangled_name),
 			  type(type)
-		//   initial_value(initial_value)
 		{}
 
 		friend Function;
@@ -372,10 +359,8 @@ namespace compiler::lir {
 
 		using BaseVariant = std::variant<LIRLocalRef, LIRGlobal>;
 
-
 		/**
 		 * @brief Base of the LIR place, either local or global variable.
-		 * PR TODO: storing a copy here is a little bit concerning
 		 */
 		BaseVariant base;
 
