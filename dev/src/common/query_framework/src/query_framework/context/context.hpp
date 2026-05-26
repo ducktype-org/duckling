@@ -50,9 +50,10 @@ namespace query {
 	struct Context final {
 	private:
 		internal::NodeID my_node;
+		base::Optional<internal::ActiveGraph::NodeHandle> my_active_graph_handle;
+		
 		bool             active = true;
 
-		base::Optional<internal::ActiveGraph::NodeHandle> my_active_graph_handle;
 
 		/**
 		 * A flag indicating that the query node associated with this context is part of a cycle in
@@ -124,7 +125,7 @@ namespace query {
 				  this_context_ref(&this_context)
 			{
 			
-			main_query_state.addDependency(caller, callee);
+				main_query_state.addDependency(caller, callee);
 
 				if (enable_active_graph_operations) {
 
@@ -151,7 +152,7 @@ namespace query {
 					);
 
 
-					auto maybe_cycle = main_query_state.getActiveGraph()->cycleCheck(caller);
+					auto maybe_cycle = main_query_state.getActiveGraph()->cycleCheck(callee);
 
 					if (maybe_cycle.has_value()) {
 						// We hit a cycle!

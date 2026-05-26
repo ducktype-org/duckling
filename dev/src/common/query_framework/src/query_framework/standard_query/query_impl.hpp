@@ -111,10 +111,10 @@ namespace query::internal {
 		// actual cycle checks are done in ctx.query
 		// @TODO: #1887 might want to put it under one more layer of abstraction:
 		ContextAccess::getState()->addGraphNode(node_id);
-		ContextAccess::getState()->getActiveGraph()->putNode(node_id, context);
+		auto active_handle = ContextAccess::getState()->getActiveGraph()->putNode(node_id, context);
 
 		// we have to set it here, after putting the node in the graph, since otherwise we cannot get the handle to it
-		// context->setActiveGraphHandle(ContextAccess::getState()->getActiveGraph()->getNodeHandle(node_id));
+		context->setActiveGraphHandle(active_handle);
 
 		CORE_DEV_LOG(Query, "[QUERY \"", QueryIntType::QUERY_DATA.name, "\"]: Calculating.\n");
 
