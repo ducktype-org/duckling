@@ -1,20 +1,23 @@
 'use strict';
 
 import * as vscode from 'vscode';
-import * as path from 'path';
 
 export function activate(context: vscode.ExtensionContext) {
 
     const provider = new DuckVMConfigurationProvider();
     context.subscriptions.push(
-        vscode.debug.registerDebugConfigurationProvider('ducklingdebug', provider)
+        vscode.debug.registerDebugConfigurationProvider(
+            'ducklingdebug', 
+            provider, 
+            vscode.DebugConfigurationProviderTriggerKind.Dynamic
+        )
     );
 
-    const factory = new DuckVMExecutableFactory(context);
+    const factory = new DuckVMExecutableFactory();
     context.subscriptions.push(
         vscode.debug.registerDebugAdapterDescriptorFactory('ducklingdebug', factory)
     );
-3
+
     const trackerFactory = vscode.debug.registerDebugAdapterTrackerFactory('ducklingdebug', {
         createDebugAdapterTracker(session: vscode.DebugSession) {
             return {
@@ -33,15 +36,53 @@ export function activate(context: vscode.ExtensionContext) {
             };
         }
     });
-    context.subscriptions.push(trackerFactory);
 
+    let runHandler = vscode.commands.registerCommand('ducklingdebug.runFile', (uri: vscode.Uri) => {
+        const targetUri = uri || vscode.window.activeTextEditor?.document.uri;
+        if (!targetUri) return;
+
+        vscode.debug.startDebugging(undefined, {
+            type: "ducklingdebug",
+            name: "Duckling: Run Active File",
+            request: "launch",
+            program: targetUri.fsPath,
+            noDebug: true
+        });
+    });
+
+    let debugHandler = vscode.commands.registerCommand('ducklingdebug.debugFile', (uri: vscode.Uri) => {
+        const targetUri = uri || vscode.window.activeTextEditor?.document.uri;
+        if (!targetUri) return;
+
+        vscode.debug.startDebugging(undefined, {
+            type: "ducklingdebug",
+            name: "Duckling: Debug Active File",
+            request: "launch",
+            program: targetUri.fsPath
+        });
+    });
+
+    context.subscriptions.push(runHandler, debugHandler, trackerFactory);
 }
 
 export function deactivate() {
     // nothing to do
 }
-
 class DuckVMConfigurationProvider implements vscode.DebugConfigurationProvider {
+
+   provideDebugConfigurations(
+        folder: vscode.WorkspaceFolder | undefined, 
+        token?: vscode.CancellationToken
+    ): vscode.ProviderResult<vscode.DebugConfiguration[]> {
+        return [
+            {
+                type: 'ducklingdebug',
+                request: 'launch',
+                name: 'Duckling: Launch Current File',
+                program: '${file}'
+            }
+        ];
+    }
 
     resolveDebugConfiguration(
         folder: vscode.WorkspaceFolder | undefined,
@@ -69,31 +110,12 @@ class DuckVMConfigurationProvider implements vscode.DebugConfigurationProvider {
 
 class DuckVMExecutableFactory implements vscode.DebugAdapterDescriptorFactory {
 
-    constructor(private readonly context: vscode.ExtensionContext) {}
+    constructor() {}
 
     createDebugAdapterDescriptor(
         session: vscode.DebugSession,
         executable: vscode.DebugAdapterExecutable | undefined
     ): vscode.ProviderResult<vscode.DebugAdapterDescriptor> {
-
-        if (!executable) {
-            const exePath = path.join(
-                this.context.extensionPath,
-                'bin',
-                'debug_adapter'
-            );
-
-            const args: string[] = [];
-            const options = {
-                cwd: path.dirname(exePath),
-                env: {
-                    ...process.env,
-                    DUCKVM_DEBUG: "1"
-                }
-            };
-
-            executable = new vscode.DebugAdapterExecutable(exePath, args, options);
-        }
 
         return executable;
     }

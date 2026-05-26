@@ -10,11 +10,38 @@
   "activationEvents": [
     "onStartupFinished",
     "onLanguage:fatbytecode",
-    "onDebug:ducklingdebug"
+    "onDebug:ducklingdebug",
+    "onDebugDynamicConfigurations"
   ],
   "main": "./out/extension.js",
 
   "contributes": {
+    "commands": [
+      {
+        "command": "ducklingdebug.runFile",
+        "title": "Run Duckling File",
+        "icon": "$(play)"
+      },
+      {
+        "command": "ducklingdebug.debugFile",
+        "title": "Debug Duckling File",
+        "icon": "$(debug-alt)"
+      }
+    ],
+    "menus": {
+      "editor/title/run": [
+        {
+          "command": "ducklingdebug.runFile",
+          "when": "resourceLangId == fatbytecode",
+          "group": "navigation@1"
+        },
+        {
+          "command": "ducklingdebug.debugFile",
+          "when": "resourceLangId == fatbytecode",
+          "group": "navigation@2"
+        }
+      ]
+    },
     "languages": [
       {
         "id": "fatbytecode",
