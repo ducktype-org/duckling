@@ -65,6 +65,7 @@ namespace compiler::repl {
 
 		/**
 		 * @brief Replay the first N entries from the session history file.
+		 * @param silent Suppress replay output when true.
 		 */
 		void replayHistoryEntries(usize count, bool silent);
 
