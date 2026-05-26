@@ -38,7 +38,6 @@ namespace compiler::repl {
 	class ReplSession final {
 	public:
 		explicit ReplSession(bool completions_enabled = true);
-		static constexpr int RESET_EXIT_CODE = 100;
 
 		/**
 		 * @brief Load a script file and execute its statements in the current REPL session.
@@ -60,9 +59,9 @@ namespace compiler::repl {
 
 		/**
 		 * Run the main REPL loop (blocking).
-		 * @return Exit code (0 for normal exit)
+		 * @return Result describing how the session ended
 		 */
-		int run();
+		ReplResult run();
 
 		/**
 		 * @brief Replay the first N entries from the session history file.

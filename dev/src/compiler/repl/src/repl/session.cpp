@@ -778,14 +778,14 @@ namespace compiler::repl {
 		CORE_UNREACHABLE();
 	}
 
-	int ReplSession::run() {
+	ReplResult ReplSession::run() {
 		m_frontend.printWelcome();
 		while (!m_should_exit) {
 			std::string line = m_frontend.readLine();
 
 			if (line.empty() && std::cin.eof()) {
 				std::cout << "\nGoodbye!\n";
-				break;
+				return ReplResult::exit();
 			}
 
 			auto result = processLine(line);
@@ -799,16 +799,16 @@ namespace compiler::repl {
 
 			if (result.status == ReplResult::Status::Reset) {
 				if (!result.message.empty()) std::cout << result.message << "\n";
-				break;
+				return result;
 			}
 
 			if (result.status == ReplResult::Status::Exit) {
 				std::cout << result.message << "\n";
-				break;
+				return result;
 			}
 		}
 
-		return m_should_reset ? RESET_EXIT_CODE : 0;
+		return ReplResult::success();
 	}
 
 }  // namespace compiler::repl

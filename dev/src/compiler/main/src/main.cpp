@@ -1021,8 +1021,8 @@ clah::Clah getClahForMain() {
 						compiler::driver::exit();
 						return 1;
 					}
-					int                   result = 0;
-					base::Optional<usize> reset_replay_count;
+					base::Optional<usize>      reset_replay_count;
+					compiler::repl::ReplResult repl_result = compiler::repl::ReplResult::success();
 					{
 						compiler::repl::ReplSession session(!options.isFlag("no-completions"));
 						auto replay_count_opt = options.getValue<i64>("history-entries");
@@ -1057,16 +1057,16 @@ clah::Clah getClahForMain() {
 								return 1;
 							}
 						}
-						result             = session.run();
+						repl_result        = session.run();
 						reset_replay_count = session.getResetReplayCount();
 					}
 					compiler::driver::exit();
-					if (result == compiler::repl::ReplSession::RESET_EXIT_CODE) {
+					if (repl_result.status == compiler::repl::ReplResult::Status::Reset) {
 						if (reset_replay_count.has_value())
 							setReplRestartArgs(reset_replay_count.value(), true);
 						return execSelf(g_argv);
 					}
-					return result;
+					return 0;
 				})
 		)
 	    .addSubcommand(clah::Clah("dummy", "Dummy command (cli testing command).")
