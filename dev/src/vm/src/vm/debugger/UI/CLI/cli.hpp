@@ -34,5 +34,6 @@ namespace vm::debugger::cli {
 
 		void help();
 		void status();
+		void position(std::expected<vm::api::response::CodePosition, vm::api::ApiError>& response);
 	};
 }

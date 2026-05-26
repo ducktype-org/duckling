@@ -1,11 +1,14 @@
 #include "cli.hpp"
 
+#include <token_source/source.hpp>
+
 namespace {
 	std::string strip(std::string& string) {
 		string.erase(0, string.find_first_not_of(" \t\n\r"));
 		string.erase(string.find_last_not_of(" \t\n\r") + 1);
 		return string;
 	}
+
 }
 
 namespace vm::debugger::cli {
@@ -101,11 +104,13 @@ namespace vm::debugger::cli {
 					return api_error;
 				});
 			} else if (stripped_line == "pause" || stripped_line == "p") {
-				debugger.pause().transform_error([&](const api::ApiError& api_error) {
-					std::lock_guard lk(output_mutex);
-					std::cout << "Pause failed...\n";
-					return api_error;
-				});
+				auto response
+					= debugger.pause().transform_error([&](const api::ApiError& api_error) {
+						  std::lock_guard lk(output_mutex);
+						  std::cout << "Pause failed...\n";
+						  return api_error;
+					  });
+				position(response);
 			} else if (stripped_line == "continue" || stripped_line == "c"
 			           || stripped_line == "resume") {
 				debugger.resume().transform_error([&](const api::ApiError& api_error) {
@@ -117,6 +122,9 @@ namespace vm::debugger::cli {
 				help();
 			} else if (stripped_line == "status" || stripped_line == "s") {
 				status();
+			} else if (stripped_line == "position" || stripped_line == "pos") {
+				auto response = debugger.getCurrentPosition();
+				position(response);
 			}
 		}
 
@@ -135,6 +143,7 @@ namespace vm::debugger::cli {
 					 "  (c)ontinue  - resume VM execution\n"
 
 					 "  (s)tatus    - write current VM status\n"
+					 "  (pos)ition  - write current position\n"
 				  << "\n";
 	}
 
@@ -148,5 +157,23 @@ namespace vm::debugger::cli {
 			},
 			response
 		);
+	}
+
+	void CLIDebugger::position(
+		std::expected<vm::api::response::CodePosition, vm::api::ApiError>& response
+	) {
+		if (response.has_value()) {
+			auto            pos = response.value();
+			std::lock_guard lk(output_mutex);
+			std::cout << "In instruction " << pos.instr_number << " of function "
+					  << pos.function_name.strView() << "\n";
+			if (pos.source_position.has_value()) {
+				auto src   = pos.source_position.value();
+				auto start = src.getStartLineColumn();
+				std::cout << src.getSource()->getFile().getFilePath().strView() << ":"
+						  << start.first << ":" << start.second << "\nline " << start.first << ": "
+						  << src.content() << "\n";
+			}
+		}
 	}
 }
