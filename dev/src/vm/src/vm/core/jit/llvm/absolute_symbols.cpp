@@ -1,6 +1,7 @@
 #include "absolute_symbols.hpp"
 
 #include "../non_jitable.hpp"
+
 #include <llvm_helpers/llvm_helpers.hpp>
 
 #include <ranges>
@@ -17,7 +18,7 @@ void registerAbsoluteJITSymbols(llvm::orc::LLJIT& lljit) {
 	llvm::orc::SymbolMap host_symbols;
 
 	// NOLINTBEGIN(clang-analyzer-optin.core.EnumCastOutOfRange)
-	for (auto [name, address]: hard_symbols) {
+	for (auto [name, address]: vm::jit::hard_symbols) {
 		host_symbols[lljit.mangleAndIntern(name)] = llvm::orc::ExecutorSymbolDef(
 			llvm::orc::ExecutorAddr::fromPtr(address),
 			llvm::JITSymbolFlags::Exported | llvm::JITSymbolFlags::Callable
