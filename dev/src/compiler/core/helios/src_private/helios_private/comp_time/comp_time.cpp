@@ -16,9 +16,7 @@
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
-// #include <lir/lir_lowering/lir_lowering.hpp>
 #include <lir/lir_lowering/lir_unit.hpp>
-// #include <mir/mir_lowering/mir_queries.hpp>
 #include <mir/mir_lowering/mir_unit.hpp>
 
 #include <base/str/str_utils.hpp>
@@ -816,7 +814,7 @@ namespace compiler::helios {
 			);
 
 			return LIRBuildResult{ .func_to_call = mangled_name_function_to_call.str(),
-				                   .functions    = std::move(lir_unit.lir_functions) };
+				                   .functions    = std::move(lir_unit.lir_functions), };
 		}
 
 		/**
