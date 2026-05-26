@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../config.hpp"
+#include "../../config.hpp"
 
 #include <base/misc/raw_view.hpp>
 #include <base/pointers/ref.hpp>

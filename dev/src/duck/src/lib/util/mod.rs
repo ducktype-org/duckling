@@ -2,6 +2,7 @@
 pub mod command_ext;
 pub mod env;
 pub mod error;
+pub mod extend;
 pub mod extract;
 pub mod file_locks;
 pub mod hash;

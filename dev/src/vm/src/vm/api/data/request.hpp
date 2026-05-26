@@ -101,6 +101,12 @@ namespace vm::api {
 		struct AttachStatusListener {
 			Ref<events::Listener<ProcStatus>> listener;
 		};
+
+		struct SetBreakpoint {
+			base::StrID function_name;
+			u64         instruction_index;
+			bool        enable;
+		};
 	}
 
 	using RequestVariant = std::variant<
@@ -127,7 +133,8 @@ namespace vm::api {
 		request::Detach,
 		request::ExitCodeRequest,
 		request::DeinitAndValidate,
-		request::AttachStatusListener>;
+		request::AttachStatusListener,
+		request::SetBreakpoint>;
 
 	struct SupervisorRequest {
 		PID            pid;

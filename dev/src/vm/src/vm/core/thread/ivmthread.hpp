@@ -99,11 +99,6 @@ namespace vm {
 		 */
 		virtual std::expected<api::Response, api::ApiError> join();
 
-		/**
-		 * @brief Returns current execution position if the thread is paused.
-		 */
-		virtual std::expected<api::Response, api::ApiError> getCurrentPosition() = 0;
-
 		virtual bool isPauseRequested();
 
 		virtual bool isTerminateRequested();

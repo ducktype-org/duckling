@@ -343,7 +343,8 @@ namespace vm {
 				performFunctionCall(instr, local_stack, frame, thread, func_id);
 			} else {
 				// should be compiled now
-				MRef<jit::JitOpFun> compiled = jit::compileLLVM(func_obj);
+				MRef<jit::JitOpFun> compiled
+					= jit::compileLLVM(func_obj.cfg, func_obj.bc, func_obj.name);
 
 				CORE_ASSERT(compiled, "Compiled function pointer shouldn't be nullptr");
 				my_data.func_ptr = compiled;
@@ -1204,10 +1205,10 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(breakpoint)(FUNCTION_ARGS) {
 		{
-			instr += 1;
 			save_execution_state(instr, local_stack, frame, thread);
 
 			thread.handleBreakpoint();
+			thread.executeOneStep();
 
 			// Restore current flow.
 			// They can be changed when doing "step by step" execution.
@@ -1215,6 +1216,7 @@ namespace vm {
 			instr       = frame->instr;
 			local_stack = frame->local_stack;
 		}
+
 		FUNCTION_CONT(0);
 	}
 
@@ -1373,8 +1375,9 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(ft_mov_pptr_pptr)(FUNCTION_ARGS) {
 		{
+			ShadowPointer src = GET_SHADOW_POINTER_REF(instr->arg1);
 			GET_SHADOW_POINTER_REF(instr->arg0) = updateShadowPointerAssignment(
-				thread, GET_SHADOW_POINTER_REF(instr->arg0), GET_SHADOW_POINTER_REF(instr->arg1)
+				thread, GET_SHADOW_POINTER_REF(instr->arg0), src
 			);
 		}
 		FUNCTION_CONT(1);
@@ -1581,10 +1584,6 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(ft_placeRead)(FUNCTION_ARGS) {
 		{
 			ShadowEntry* entry = getShadowEntryPtr(frame, thread, instr->arg0);
-            auto tid = thread.getThreadID();
-            std::cerr << "READ " << instr->arg0 << "TID: " << tid << "\n";
-            std::cerr << *entry << '\n';
-
 			entry->processRead(thread.getThreadID(), thread.getVC()[thread.getThreadID()], thread.getVC());
 		}
 		FUNCTION_CONT(1);
@@ -1593,8 +1592,6 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(ft_placeWrite)(FUNCTION_ARGS) {
 		{
 			ShadowEntry* entry = getShadowEntryPtr(frame, thread, instr->arg0);
-            std::cerr << "Write " << instr->arg0 << "\n";
-            std::cerr << *entry << '\n';
 			entry->processWrite(thread.getThreadID(), thread.getVC()[thread.getThreadID()], thread.getVC());
 		}
 		FUNCTION_CONT(1);

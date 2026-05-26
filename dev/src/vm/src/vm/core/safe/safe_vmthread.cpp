@@ -16,6 +16,7 @@
 #include <vm/api/data/status.hpp>
 #include <vm/core/safe/concurrency/gil.hpp>
 #include <vm/core/safe/exceptions.hpp>
+#include <vm/core/safe/low_program/cfg/cf_graph.hpp>
 #include <vm/core/safe/low_program/low_program.hpp>
 #include <vm/core/safe/low_program/opcodes.hpp>
 #include <vm/core/safe/memory/pointer.hpp>
@@ -51,15 +52,14 @@ namespace vm {
 	SafeVMThread::SafeVMThread(api::ThreadID thread_id, SafeVMProcess& process):
 		  IVMThread(thread_id, process),
 		  runtime_data(
-			  process.getMemory().initializeFrameStack(),
-			  process.getMemory().getGlobalDataMemory()
+			  process.getMemory().initializeFrameStack(), process.getMemory().getGlobalDataMemory()
 		  ),
 		  safe_process(process),
 		  process_memory(process.getMemory()),
 		  process_program(process.getLoadedProgram()) {
 		vc[thread_id] = 1;
 		if (process.settings_.enable_fast_track) {
-			runtime_data.global_shadow_data_buffer_base = process.global_shadow_data.data();
+			runtime_data.global_shadow_data_buffer_base    = process.global_shadow_data.data();
 			runtime_data.global_shadow_pointer_buffer_base = process.global_shadow_pointer.data();
 		}
 	}
@@ -109,6 +109,19 @@ namespace vm {
 		std::byte* local_stack = frame->local_stack;
 
 		low::MicroOpcode opcode = getInstructionOpcode(*instr);
+		if (opcode == low::MicroOpcode::breakpoint) {
+			const auto* program_copy
+				= dynamic_cast<const low::LowVMProgramCopy*>(process_program.get());
+			CORE_ASSERT(program_copy, "Breakpoints should be only in LowVMProgramCopy.");
+
+			auto original_instr
+				= program_copy->getOriginalProgram()
+			          ->getFunctions()
+			          .at(frame->current_function->name)
+			          ->bc[static_cast<size_t>(frame->instr - &frame->current_function->bc[0])];
+
+			opcode = getInstructionOpcode(original_instr);
+		}
 
 		// Execute the instruction by calling the debug opcode function.
 		OpFuns::DEBUG_OPFUNS.at(std::to_underlying(opcode))(instr, local_stack, frame, *this);
@@ -128,29 +141,38 @@ namespace vm {
 		const low::LowFuncData& func, const FunctionRunArguments& func_args
 	) const {
 		if (func_args.size() != func.parameters.size()) {
-			throw exceptions::VMRuntimeException(base::strConcat(
-				"Function '",
-				func.name.str(),
-				"' expects ",
-				func.parameters.size(),
-				" arguments, but ",
-				func_args.size(),
-				" were provided."
-			));
+			throw exceptions::VMRuntimeException(
+				base::strConcat(
+					"Function '",
+					func.name.str(),
+					"' expects ",
+					func.parameters.size(),
+					" arguments, but ",
+					func_args.size(),
+					" were provided."
+				)
+			);
 		}
 
-		low::LowFuncData start_function{ .name              = base::StrID("vm_start_function"),
-			                             .bc                = {},
-			                             .local_stack_size  = 0,
-			                             .local_block_count = func.result_types.size() + func.parameters.size(),
-			                             .arg_size          = 0,
-			                             .ret_size          = func.ret_size,
-			                             .arg_shadow_size   = 0,
-			                             .arg_pointer_size  = 0,
-			                             .ret_shadow_size   = func.ret_shadow_size,
-			                             .ret_pointer_size  = func.ret_pointer_size,
-			                             .parameters        = {},
-			                             .result_types      = func.result_types };
+		low::LowFuncData start_function{
+			.name = base::StrID("vm_start_function"),
+#ifdef ENABLE_JIT
+			.cfg
+			= low::cf::ControlFlowGraph(),  // This is okay because we never JIT the start function.
+#endif
+			.bc                  = {},
+			.local_stack_size    = 0,
+			.local_block_count   = func.result_types.size() + func.parameters.size(),
+			.arg_size            = 0,
+			.ret_size            = func.ret_size,
+			.arg_shadow_size     = 0,
+			.arg_pointer_size    = 0,
+			.ret_shadow_size     = func.ret_shadow_size,
+			.ret_pointer_size    = func.ret_pointer_size,
+			.parameters          = {},
+			.result_types        = func.result_types,
+			.instruction_mapping = {}
+		};
 
 		const u64 called_function_id = process_program->getFunctions().idOf(func.name).value();
 
@@ -182,16 +204,18 @@ namespace vm {
 			}
 
 			if (arg_value->type != arg_type) {
-				throw exceptions::VMRuntimeException(base::strConcat(
-					"Type mismatch for argument ",
-					i,
-					" of function '",
-					func.name.str(),
-					"': expected ",
-					arg_type->getName().str(),
-					", got ",
-					arg_value->type->getName().str()
-				));
+				throw exceptions::VMRuntimeException(
+					base::strConcat(
+						"Type mismatch for argument ",
+						i,
+						" of function '",
+						func.name.str(),
+						"': expected ",
+						arg_type->getName().str(),
+						", got ",
+						arg_value->type->getName().str()
+					)
+				);
 			}
 
 			start_function.bc.push_back(
@@ -199,9 +223,9 @@ namespace vm {
 			);
 			if (safe_process.settings_.enable_fast_track) {
 				u64 arg_type_bytes = safeReadObjectBytes<u64>(arg_type);
-				start_function.bc.push_back(
-					MAKE_BYTECODE_INSTRUCTION(ft_init_bany_type, func.result_types.size() + i, arg_type_bytes)
-				);
+				start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(
+					ft_init_bany_type, func.result_types.size() + i, arg_type_bytes
+				));
 			}
 			start_function.local_stack_size += arg_type->getSize().asInt();
 			start_function.parameters.push_back(arg_value->type);
@@ -225,9 +249,9 @@ namespace vm {
 				{
 					MAKE_BYTECODE_INSTRUCTION(stepGil, 0, 0),  // We need to acquire GIL
 					MAKE_BYTECODE_INSTRUCTION(call_func, called_function_id, 0),
-					// @note: Only one block is left on the stack in this place, so there is no need for
-					// any deinits. It's being deinitialized by the thread after obtaining the return
-					// value/exit_code.
+					// @note: Only one block is left on the stack in this place, so there is no need
+			        // for any deinits. It's being deinitialized by the thread after obtaining the
+			        // return value/exit_code.
 					MAKE_BYTECODE_INSTRUCTION(exit, 0, 0),
 				}
 			);
@@ -264,18 +288,25 @@ namespace vm {
 		auto        str_ptr_type     = types.at(base::StrID("ptr_string"));
 		auto        byte_type        = types.at(base::StrID("byte"));
 
-		low::LowFuncData start_function{ .name              = base::StrID("vm_start_function"),
-			                             .bc                = {},
-			                             .local_stack_size  = 72,
-			                             .local_block_count = 7,
-			                             .arg_size          = 0,
-			                             .ret_size          = func.ret_size,
-			                             .arg_shadow_size   = 0,
-			                             .arg_pointer_size  = 0,
-			                             .ret_shadow_size   = func.ret_shadow_size,
-			                             .ret_pointer_size  = func.ret_pointer_size,
-			                             .parameters        = {},
-			                             .result_types      = func.result_types };
+		low::LowFuncData start_function{
+			.name = base::StrID("vm_start_function"),
+#ifdef ENABLE_JIT
+			.cfg
+			= low::cf::ControlFlowGraph(),  // This is okay because we never JIT the start function.
+#endif
+			.bc                  = {},
+			.local_stack_size    = 72,
+			.local_block_count   = 7,
+			.arg_size            = 0,
+			.ret_size            = func.ret_size,
+			.arg_shadow_size     = 0,
+			.arg_pointer_size    = 0,
+			.ret_shadow_size     = func.ret_shadow_size,
+			.ret_pointer_size    = func.ret_pointer_size,
+			.parameters          = {},
+			.result_types        = func.result_types,
+			.instruction_mapping = {}
+		};
 
 		// TypeIDs to pass to opcodes.
 		u64 argv_type_arg     = safeReadObjectBytes<u64>(argv_type);
@@ -414,7 +445,9 @@ namespace vm {
 								anyArrayStore_pptr_bany, 40, 5
 							),  // ptr_tmp_store[ix] := char_tmp_store
 							MAKE_BYTECODE_INSTRUCTION(ext_p64_type, 32, byte_type_arg),
-							MAKE_BYTECODE_INSTRUCTION(mov_p64_imm, 32, argv_index),  // ix := argv_index
+							MAKE_BYTECODE_INSTRUCTION(
+								mov_p64_imm, 32, argv_index
+							),  // ix := argv_index
 							MAKE_BYTECODE_INSTRUCTION(
 								anyArrayStore_pptr_bany, 8, 4
 							),  // argv_internal[ix] := ptr_tmp_store
@@ -460,8 +493,10 @@ namespace vm {
 						MAKE_BYTECODE_INSTRUCTION(init_bany_type, 5, i64_type_arg),  // [48, 56) argc
 						MAKE_BYTECODE_INSTRUCTION(
 							init_bany_type, 6, argv_ptr_type_arg
-						),                                                        // [56, 72) *argv
-						MAKE_BYTECODE_INSTRUCTION(mov_p64_imm, 48, args.size()),  // argc := args.size()
+						),  // [56, 72) *argv
+						MAKE_BYTECODE_INSTRUCTION(
+							mov_p64_imm, 48, args.size()
+						),                                                // argc := args.size()
 						MAKE_BYTECODE_INSTRUCTION(mov_pptr_pptr, 56, 8),  // argv := argv_internal
 					}
 				);
@@ -541,7 +576,7 @@ namespace vm {
 					MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),     // deinit argc_internal
 					MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),     // deinit *argv_internal
 					// At this point only the start function return value (which is the program exit
-					// code) remains on the stack.
+			        // code) remains on the stack.
 					MAKE_BYTECODE_INSTRUCTION(exit, 0, 0),
 				}
 			);
@@ -622,20 +657,22 @@ namespace vm {
 		auto orig_block_stack_size
 			= usize(frame->local_block_ref_stack_end - frame->local_block_ref_stack_base);
 
-		frame->current_function            = &start_function;
-		frame->local_block_ref_stack_base  = runtime_data.block_ref_stack_base;
-		frame->local_block_ref_stack_end   = runtime_data.block_ref_stack_base;
+		frame->current_function           = &start_function;
+		frame->local_block_ref_stack_base = runtime_data.block_ref_stack_base;
+		frame->local_block_ref_stack_end  = runtime_data.block_ref_stack_base;
 
 		if (safe_process.settings_.enable_fast_track) {
-			auto* sf = runtime_data.shadow_frame_stack_current;
+			auto* sf                              = runtime_data.shadow_frame_stack_current;
 			sf->local_shadow_block_ref_stack_base = runtime_data.shadow_block_ref_stack_base;
 			sf->local_shadow_block_ref_stack_end  = runtime_data.shadow_block_ref_stack_base;
-			sf->local_shadow_pointer_block_ref_stack_base = runtime_data.shadow_pointer_block_ref_stack_base;
-			sf->local_shadow_pointer_block_ref_stack_end  = runtime_data.shadow_pointer_block_ref_stack_base;
-			sf->local_shadow_data_stack     = runtime_data.shadow_data_stack_base;
-			sf->local_shadow_pointer_stack  = runtime_data.shadow_pointer_stack_base;
-			sf->local_shadow_data_head      = 0;
-			sf->local_shadow_pointer_head   = 0;
+			sf->local_shadow_pointer_block_ref_stack_base
+				= runtime_data.shadow_pointer_block_ref_stack_base;
+			sf->local_shadow_pointer_block_ref_stack_end
+				= runtime_data.shadow_pointer_block_ref_stack_base;
+			sf->local_shadow_data_stack    = runtime_data.shadow_data_stack_base;
+			sf->local_shadow_pointer_stack = runtime_data.shadow_pointer_stack_base;
+			sf->local_shadow_data_head     = 0;
+			sf->local_shadow_pointer_head  = 0;
 		}
 
 		const auto* instr = start_function.bc.data();
@@ -703,8 +740,10 @@ namespace vm {
 			const auto& maybe_func
 				= process_program->getFunctions().atMaybe(base::StrID(func_name.data()));
 			if (!maybe_func.has_value()) {
-				respondExecutionRequest(api::ExecutionPanicked{
-					base::strConcat("Called function '", func_name, "' does not exist.") });
+				respondExecutionRequest(
+					api::ExecutionPanicked{
+						base::strConcat("Called function '", func_name, "' does not exist.") }
+				);
 				return;
 			}
 			const auto& func = *maybe_func.value();
@@ -737,12 +776,12 @@ namespace vm {
 		for (const auto& [global, id, name]: std::ranges::reverse_view(globals)) {
 			if (global->dtor_name.has_value()) {
 				try {
-					const auto& func = *executing_program->getFunctions()
-					                        .atMaybe(base::StrID(global->dtor_name.value()))
-					                        .expect(
-												"Called function does not exist: "
-												+ global->dtor_name.value().str()
-											);
+					const auto&      func = *executing_program->getFunctions()
+					                             .atMaybe(base::StrID(global->dtor_name.value()))
+					                             .expect(
+													 "Called function does not exist: "
+													 + global->dtor_name.value().str()
+												 );
 					low::LowFuncData start_function = createStartFunctionFor(func, {});
 					executeFunction(start_function, func);
 				} catch (const KillProcessException& e) {
@@ -752,24 +791,22 @@ namespace vm {
 		}
 	}
 
-	std::expected<api::Response, api::ApiError> SafeVMThread::getCurrentPosition() {
+	std::expected<low::LowCodePosition, api::ApiError> SafeVMThread::getCurrentPosition() {
 		variant_match(getStatus()) {
 			variant_case_novalue(api::Paused) {
-				auto frame = runtime_data.frame_stack_current;
-				auto instr = frame->instr;
+				auto  frame = runtime_data.frame_stack_current;
+				auto& func  = *frame->current_function;
 
-				for (const auto& [idx, func]:
-				     std::views::enumerate(process_program->getFunctions())) {
-					if (func.bc.data() <= instr && instr < func.bc.data() + func.bc.size()) {
-						return api::Response(api::response::CodePosition{
-							.function_id  = static_cast<u64>(idx),  // Assuming function_id is int
-							.instr_number = static_cast<u64>(instr - func.bc.data()) });
-					}
-				}
+				return low::LowCodePosition{
+					.function          = &func,
+					.instruction_index = static_cast<u64>(frame->instr - func.bc.data()),
+				};
 			}
 			variant_default {
-				return std::unexpected(api::ApiError{
-					api::OtherError{ "wrong execution status while reading current position" } });
+				return std::unexpected(
+					api::ApiError{
+						api::OtherError{ "wrong execution status while reading current position" } }
+				);
 			}
 		}
 		CORE_UNREACHABLE();
@@ -821,7 +858,8 @@ namespace vm {
 
 		if (safe_process.settings_.enable_fast_track) {
 			runtime_data.global_shadow_data_buffer_base = safe_process.global_shadow_data.data();
-			runtime_data.global_shadow_pointer_buffer_base = safe_process.global_shadow_pointer.data();
+			runtime_data.global_shadow_pointer_buffer_base
+				= safe_process.global_shadow_pointer.data();
 		}
 	}
 

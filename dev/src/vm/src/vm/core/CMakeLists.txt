@@ -26,6 +26,8 @@ add_files(
 	safe/opcode_functions/opcodes_functions_impl_exec.cpp
 	safe/opcode_functions/opcodes_functions_impl_debug.cpp
 	safe/low_program/instruction.cpp
+	safe/low_program/cfg/cf_graph.cpp
+	safe/low_program/cfg/cf_analysis.cpp
 	safe/safe_vmthread.cpp
 	vmvalue/vmvalue.cpp
 	vmvalue/vmvalueref.cpp

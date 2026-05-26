@@ -7,14 +7,15 @@
 #include <vm/api/data/api_error.hpp>
 #include <vm/api/data/request.hpp>
 #include <vm/api/data/status.hpp>
+#include <vm/api/settings.hpp>
 #include <vm/core/process/interface_types.hpp>
 #include <vm/core/process/vmprocess.hpp>
 #include <vm/core/safe/concurrency/gil.hpp>
 #include <vm/core/safe/concurrency/synchronization_primitives.hpp>
 #include <vm/core/safe/low_program/low_program.hpp>
 #include <vm/core/safe/safe_vmthread.hpp>
+#include <vm/loader/compiler/safe/safe_compiler.hpp>
 #include <vm/loader/loader.hpp>
-#include <vm/api/settings.hpp>
 
 #include <expected>
 #include <string>
@@ -36,12 +37,15 @@ namespace vm {
 
 	private:
 		std::shared_mutex rw_global;
+
 		/**
 		 * @brief A loader instance for this SafeVMProcess. Stores the high level and low level
 		 * representation of the currently executed program. `loaded_program` references the low
 		 * representation which exists in this class.
 		 */
-		loader::Loader loader{};
+		loader::Loader                       loader{};
+		loader::compiler::safe::SafeCompiler compiler{ *loader.getHighProgram() };
+
 		/**
 		 * @brief The program being executed by this process.
 		 * Holds a constant and stable reference.
@@ -84,18 +88,23 @@ namespace vm {
 
 		base::Optional<api::ApiError> assertProcessCanRespond();
 
-		api::ProcessSettings       settings_;
-		std::vector<ShadowEntry>   global_shadow_data;
-		std::vector<ShadowPointer> global_shadow_pointer;
-		std::vector<ShadowBlock*>  global_shadow_blocks;
+		api::ProcessSettings             settings_;
+		std::vector<ShadowEntry>         global_shadow_data;
+		std::vector<ShadowPointer>       global_shadow_pointer;
+		std::vector<ShadowBlock*>        global_shadow_blocks;
 		std::vector<ShadowPointerBlock*> global_shadow_pointer_blocks;
 
 	public:
 		SafeVMProcess(PID my_pid, const api::ProcessSettings& settings = {});
 		~SafeVMProcess() override;
 
-		[[nodiscard]] Ref<ShadowBlock> getGlobalShadowBlock(u64 idx) { return { global_shadow_blocks.at(idx) }; }
-		[[nodiscard]] Ref<ShadowPointerBlock> getGlobalShadowPointerBlock(u64 idx) { return { global_shadow_pointer_blocks.at(idx) }; }
+		[[nodiscard]] Ref<ShadowBlock> getGlobalShadowBlock(u64 idx) {
+			return { global_shadow_blocks.at(idx) };
+		}
+
+		[[nodiscard]] Ref<ShadowPointerBlock> getGlobalShadowPointerBlock(u64 idx) {
+			return { global_shadow_pointer_blocks.at(idx) };
+		}
 
 		/**
 		 * @brief Returns thread by id and if id doesn't exist or it is equal 0
@@ -131,7 +140,8 @@ namespace vm {
 
 		base::Optional<api::ApiError> stepVMThread(api::ThreadID thread_id) override;
 
-		std::expected<api::Response, api::ApiError> getVMThreadCurrentPosition(api::ThreadID thread_id
+		std::expected<api::Response, api::ApiError> getVMThreadCurrentPosition(
+			api::ThreadID thread_id
 		) override;
 
 		void notifyPausedVMThread(api::ThreadID thread_id) override;
@@ -146,15 +156,31 @@ namespace vm {
 			api::ThreadID thread_id, u64 frame_index
 		) override;
 
-		std::expected<api::Response, api::ApiError> getTypeMetadata(const std::string& type_name
+		std::expected<api::Response, api::ApiError> getTypeMetadata(
+			const std::string& type_name
 		) override;
 
-		std::expected<api::Response, api::ApiError> getVMValueForType(const std::string& type_name
+		std::expected<api::Response, api::ApiError> getVMValueForType(
+			const std::string& type_name
 		) override;
 
 		api::ThreadID getMainThreadID() override;
 
 		std::vector<api::ThreadID> getAllThreadIDs() override;
+
+		std::expected<api::Response, api::ApiError> setBreakpoint(
+			base::StrID function_name, usize instruction_index, bool enable
+		) override;
+
+		/**
+		 * @brief Updates the memory for globals of this process after loading a program with new
+		 * globals. Works in incremental way. Only supports adding new globals, not removing or
+		 * changing existing ones.
+		 *
+		 * Should be called after loading a new globals.
+		 * @param program The program with the new globals.
+		 */
+		void updateGlobalDataMemory(CRef<low::ILowVMProgram> program);
 
 		Ref<VmValue> createVmValue(TypeCRef type) override;
 
@@ -177,15 +203,5 @@ namespace vm {
 		 * @brief Get the synchronization primitives of the process.
 		 */
 		SynchronizationPrimitives& getSynchronizationPrimitives();
-
-		/**
-		 * @brief Updates the memory for globals of this process after loading a program with new
-		 * globals. Works in incremental way. Only supports adding new globals, not removing or
-		 * changing existing ones.
-		 *
-		 * Should be called after loading a new globals.
-		 * @param program The program with the new globals.
-		 */
-		void updateGlobalDataMemory(CRef<low::ILowVMProgram> program);
 	};
 }

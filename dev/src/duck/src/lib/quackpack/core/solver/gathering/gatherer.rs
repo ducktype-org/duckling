@@ -102,6 +102,8 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
 
     /// Helper for [`Gatherer::explore()`], creates a dummy [`ManifestsRequest`] for the root package to update the state
     /// and returns a dummy [`FetchResponse`], to create a starting point for the [`Gatherer::explore()`] function.
+    ///
+    /// Note: We assume that `root_features` are expanded.
     #[tracing::instrument(skip_all, fields(root_path))]
     fn fetch_root(
         &self,
@@ -110,6 +112,9 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
         root_features: HashSet<FeatureName>,
         state: &mut GathererState,
     ) -> QuackResult<FetchResponse> {
+        if cfg!(debug_assertions) {
+            assert_root_features_are_expanded(&root_manifest, &root_features);
+        }
         let root_loc = InternedLocation::new(Location::Local {
             path: root_path.clone(),
         });
@@ -427,4 +432,17 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
             }
         }
     }
+}
+
+fn assert_root_features_are_expanded(
+    root_manifest: &Manifest,
+    root_features: &HashSet<FeatureName>,
+) {
+    assert_eq!(
+        root_manifest
+            .features()
+            .expand_features(root_features.iter().copied())
+            .unwrap(),
+        *root_features
+    );
 }
