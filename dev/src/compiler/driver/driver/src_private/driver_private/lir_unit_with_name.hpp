@@ -11,8 +11,9 @@ namespace compiler::driver {
 
 
 	/**
-	 * @brief The last intermediate representation of the module before the backends.
-	 * It will be fed to the backend operations to generate the final output.
+	 * @brief A simple struct holding a LIRUnit together with a module name that will be used by the backends.
+	 * It is effective the last intermediate representation thet will be used
+	 * to with backend operations to generate the final output.
 	 */
 	struct LIRUnitWithBackendName final {
 		/**

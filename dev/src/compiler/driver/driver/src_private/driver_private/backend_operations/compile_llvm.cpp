@@ -18,7 +18,6 @@
 
 namespace compiler::driver {
 
-	// TODO PR: consider moveing this to LLVM backend, it depends on LIR structure anyway!
 	backend_llvm::Module compileLIRModuleToLLVM(
 		query::Context& ctx, CRef<LIRUnitWithBackendName> lir_module
 	) {
@@ -31,9 +30,10 @@ namespace compiler::driver {
 
 		for (const auto& global: lir_module->lir_unit.lir_globals) {
 			mod.addGlobalToModule(global);
-			// Add global constructors and destructors if they exist
+
 			variant_match(global.data_initialization) {
 				variant_case(lir::LIRGlobalData::CTorDtorPair, ctor_dtor_pair) {
+					// Add global constructors and destructors if they exist
 					if (ctor_dtor_pair.global_ctor.has_value()) {
 						mod.addFunctionToModule(ctx, ctor_dtor_pair.global_ctor.value());
 						ctors.push_back(ctor_dtor_pair.global_ctor.value());
@@ -44,7 +44,10 @@ namespace compiler::driver {
 					}
 				}
 				variant_case(ctv::CompileTimeValue, ctv_initial_value) {
-					// This case is handled inside addGlobalToModule
+					// @TODO: #2246 this is a little random, think about it more. 
+					// Maybe we will be able to keep all initialization logic for LLVM in one place
+
+					// NOTE: This case is handled inside addGlobalToModule
 				}
 				variant_default { CORE_UNREACHABLE(); }
 			}

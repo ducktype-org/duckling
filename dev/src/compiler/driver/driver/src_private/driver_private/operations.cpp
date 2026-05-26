@@ -2,14 +2,12 @@
 
 #include <driver/module_flags/module_flags.hpp>
 #include <driver_private/debug_artifacts.hpp>
-#include <driver_private/lir_module_data.hpp>
+#include <driver_private/lir_unit_with_name.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/queries/queries.hpp>
-#include <lir/lir_lowering/lir_lowering.hpp>
 #include <lir/lir_lowering/lir_unit.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
-#include <mir/mir_lowering/mir_queries.hpp>
 #include <mir/mir_lowering/mir_unit.hpp>
 
 #include <base/extend_cpp/variant_match.hpp>
@@ -19,7 +17,6 @@
 #include <query_framework/standard_query/query_cache_macros.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 
-// #include <algorithm>
 #include <fstream>
 
 namespace compiler::driver {
@@ -87,7 +84,6 @@ namespace compiler::driver {
 	struct IMPLEMENT_QUERY(CompileToLIRModuleData, query::QResult<LIRUnitWithBackendName>) {
 		QUERY_AUTO_CACHE_CREF
 
-		// #2246 this should go
 		static auto provide(query::Context& ctx, frontend::ModuleID module_id) -> PResult {
 			const auto& hout_unit = ctx.query<helios::QueryModuleHOUT>(module_id)->valueOrThrow();
 

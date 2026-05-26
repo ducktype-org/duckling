@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../lir_module_data.hpp"
+#include "../lir_unit_with_name.hpp"
 
 #include <backends/llvm/llvm_backend.hpp>
 
@@ -11,7 +11,8 @@ namespace compiler::driver {
 
 	/**
 	 * @brief Compiles the LIRUnitWithBackendName to LLVM Module.
-	 #2246 this should be moved to backend probably, or some pipeline module/submodule
+	 * @TODO: #2246 Move this logic to the LLVM backend, it is not really driver-specific and it depends on LIR structure anyway.
+	 * Also: maybe remove LIRUnitWithBackendName -- we can just set module name per module in backend.
 	 */
 	backend_llvm::Module compileLIRModuleToLLVM(
 		query::Context& ctx, CRef<LIRUnitWithBackendName> lir_module
@@ -20,7 +21,7 @@ namespace compiler::driver {
 
 	/**
 	 * Compile builtin LLVM library into an object file.
-	 #2246 this should be moved to backend probably, or some pipeline module/submodule
+	 * @TODO: #2246 this might be moved to backend.
 	 */
 	artifacts::FileArtifact emitBuiltinLLVMObjectFile();
 }

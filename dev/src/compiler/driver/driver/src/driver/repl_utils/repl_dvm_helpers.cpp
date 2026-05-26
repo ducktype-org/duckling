@@ -2,7 +2,7 @@
 
 #include <backends/dvm/repl_lowering.hpp>
 #include <driver_private/backend_operations/compile_dvm.hpp>
-#include <driver_private/lir_module_data.hpp>
+#include <driver_private/lir_unit_with_name.hpp>
 #include <driver_private/operations.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
@@ -39,8 +39,7 @@ namespace compiler::repl {
 		std::string_view                 module_name,
 		backend_vm::ReplLoweringContext& lowering_context
 	) {
-		// @TODO: #2246 pipeline here!
-
+		// @TODO: #2246 we duplicate some pipeline logic here, unify it
 
 		auto active_ctx = lowering_context.getActiveContext();
 		CORE_ASSERT(

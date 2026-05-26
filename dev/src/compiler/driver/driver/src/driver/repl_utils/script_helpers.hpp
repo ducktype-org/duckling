@@ -1,6 +1,6 @@
 #pragma once
 
-#include <driver_private/lir_module_data.hpp>
+#include <driver_private/lir_unit_with_name.hpp>
 
 #include <filesystem/file.hpp>
 

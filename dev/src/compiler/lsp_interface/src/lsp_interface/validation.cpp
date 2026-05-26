@@ -159,8 +159,7 @@ namespace lsp {
 
 		// We run the semantic analysis if there is no parsing errors.
 
-		// #2246 use pipeline module here?
-		// or not
+		// @TODO: #2246 see if anything should be changed heres
 		if (isModuleTreeParsedSuccessfully(root_module))
 			query::entryPoint<helios::QueryModuleHOUTRecursively>(root_module->getModuleID());
 

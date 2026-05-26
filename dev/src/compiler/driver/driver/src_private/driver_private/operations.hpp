@@ -1,6 +1,6 @@
 #pragma once
 
-#include "lir_module_data.hpp"
+#include "lir_unit_with_name.hpp"
 
 #include <frontend/module_tree/module_id.hpp>
 #include <helios/hout/hout_fd.hpp>
@@ -22,7 +22,8 @@ namespace compiler::driver {
 
 	/**
 	 * @brief Query that converts HOUTUnit to LIRUnitWithBackendName.
-	 #2246 this should go!
+	 * @TODO: #2246 Consider removing this query and moving logic from it elsewhere
+	 * or changing it into function (it only call unit lowering and generates IR debug artifacts).
 	 */
 	DECLARE_QUERY(
 		CompileHOUTUnitToLIRModuleData,
@@ -33,6 +34,8 @@ namespace compiler::driver {
 
 	/**
 	 * @brief Query that produces LIRUnitWithBackendName for given Duckling module.
+	 * @TODO: #2246 Consider removing this query and moving logic from it elsewhere
+	 * or changing it into function (it only adds a module name).
 	 */
 	DECLARE_QUERY(
 		CompileToLIRModuleData,
