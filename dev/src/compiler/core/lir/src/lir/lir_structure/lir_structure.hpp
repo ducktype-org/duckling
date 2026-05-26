@@ -243,7 +243,14 @@ namespace compiler::lir {
 	enum class LIRGlobalType { Variable, Constant };
 
 	/**
-	 * @brief Global variable/constant in LIR.
+	 * @brief Lightweight ID-like representation of a global value used in LIR IR code (e.g. in LIRPlace).
+	 * By global-value we refer to a global variable or a global constant.
+	 *
+	 * @important This is not a full IR representation of a global variable.
+	 * LIRGlobalData serves that purpose and contains more information.
+	 *
+	 * This structure is used to reference a global variable in LIR code.
+	 * This structure enables LIR instructions to refer to and manipulate global variables and constants.
 	 */
 	struct LIRGlobal final {
 		// #2246 do something about this
@@ -259,11 +266,6 @@ namespace compiler::lir {
 		base::StrID mangled_name;
 
 		LIRGlobalType type;
-
-		// we could keep it here, how the sake on value-inlining optimization
-		// ignore it for now
-		// PR: think about it
-		// base::Optional<ctv::CompileTimeValue> initial_value;
 
 	private:
 		LIRGlobal(
@@ -651,7 +653,10 @@ namespace compiler::lir {
 		base::Map<LIRLocalRef, u64> getLocalVariableIDs() const;
 	};
 
-	// PR TODO: Data←→glob pattern as in mir, document this, make nameing consistent
+	/**
+	 * @brief Representation of a global value in LIR (i.e. a global variable or constant).
+	 * See also: LIRGlobal
+	 */
 	struct LIRGlobalData final {
 		struct CTorDtorPair final {
 			base::Optional<CRef<lir::Function>>

@@ -292,14 +292,14 @@ namespace compiler::mir {
 	};
 
 	/**
-	 * @brief Lightweight ID-like representation of a global value used inside MIR IR code (e.g. in MIRPlace).
+	 * @brief Lightweight ID-like representation of a global value used in MIR IR code (e.g. in MIRPlace).
+	 * By global-value we refer to a global variable or a global constant.
 	 *
 	 * @important This is not a full IR representation of a global variable.
 	 * MIRGlobalData serves that purpose and contains more information.
 	 *
 	 * This structure is used to reference a global variable in MIR code. It is directly connected
-	 * to the value from HOUT global data, allowing the MIR to operate on global variables defined
-	 * at the HOUT level.
+	 * to the value from HELIOS-ID of a global entity.
 	 *
 	 * @details
 	 * - The `helios_id` field is the HELIOS SymID of the global variable, used for referencing.

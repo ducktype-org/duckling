@@ -9,12 +9,8 @@
 
 #include <backends/llvm/llvm_backend.hpp>
 #include <global_state/artifacts_location.hpp>
-#include <helios/mangler/mangler.hpp>
-#include <lir/lir_lowering/lir_lowering.hpp>
 #include <lir/lir_structure/lir_structure_fd.hpp>
 #include <time_stats/time_stats.hpp>
-
-#include <base/extend_cpp/variant_match.hpp>
 
 namespace compiler::driver {
 
