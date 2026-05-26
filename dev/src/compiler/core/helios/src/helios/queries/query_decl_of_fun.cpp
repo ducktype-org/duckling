@@ -490,6 +490,68 @@ namespace compiler::helios {
 									key, return_type, {}, code::generatedOrigin()
 								};
 							}
+							variant_case(
+								defgen::GeneratedSymbolData::ToStringMethod, to_string_data
+							) {
+								const auto self_param = ctx.query<defgen::QueryGeneratedSymbol>(
+									{ .name = base::StrID("self"),
+								      .generated_symbol_data
+								      = defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::Parameter{
+										  .function_symbol = key,
+										  .parameter_index = 0,
+									  } } }
+								);
+
+								const auto method_type = ctx.query<QueryTypeOfSymbol>(key)
+								                             ->valueOrThrow()
+								                             .getType()
+								                             .as<tsh::FunctionAbstractType>();
+								const auto self_type   = method_type.getParameterTypes().at(0);
+								const auto return_type = method_type.getResultType();
+
+								std::vector<code::Parameter> parameters;
+								parameters.emplace_back(
+									base::StrID("self"),
+									self_type,
+									std::nullopt,
+									self_param,
+									code::generatedOrigin()
+								);
+
+								return HOUTFunctionDeclaration{
+									key, return_type, std::move(parameters), code::generatedOrigin()
+								};
+							}
+							variant_case(defgen::GeneratedSymbolData::DefaultDestructor, dtor_data) {
+								const auto self_param = ctx.query<defgen::QueryGeneratedSymbol>(
+									{ .name = base::StrID("self"),
+								      .generated_symbol_data
+								      = defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::Parameter{
+										  .function_symbol = key,
+										  .parameter_index = 0,
+									  } } }
+								);
+
+								const auto method_type = ctx.query<QueryTypeOfSymbol>(key)
+								                             ->valueOrThrow()
+								                             .getType()
+								                             .as<tsh::FunctionAbstractType>();
+								const auto self_type   = method_type.getParameterTypes().at(0);
+								const auto return_type = method_type.getResultType();
+
+								std::vector<code::Parameter> parameters;
+								parameters.emplace_back(
+									base::StrID("self"),
+									self_type,
+									std::nullopt,
+									self_param,
+									code::generatedOrigin()
+								);
+
+								return HOUTFunctionDeclaration{
+									key, return_type, std::move(parameters), code::generatedOrigin()
+								};
+							}
 							variant_case_novalue(defgen::GeneratedSymbolData::BuiltinOperator) {
 								return getBuiltinDecl(ctx, key);
 							}

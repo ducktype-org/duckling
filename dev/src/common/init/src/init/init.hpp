@@ -1,6 +1,6 @@
 #pragma once
 
-#include <base/preproc/utils.hpp>
+#include <base/preproc/cat.hpp>
 
 #include <functional>
 
@@ -68,10 +68,10 @@ namespace init {
  * @note For technical reasons the macro should be used at most once per line.
  * Unfortunately C++26 `_` identifier don't work here, as it is a global variable.
  */
-#define RUN_BEFORE_MAIN(code)                                                           \
-	namespace {                                                                         \
-		int CONCAT_2(run_before_main_helper_JG8MG9_, __LINE__) = []() noexcept -> int { \
-			code;                                                                       \
-			return 0;                                                                   \
-		}();                                                                            \
+#define RUN_BEFORE_MAIN(code)                                                      \
+	namespace {                                                                    \
+		int CAT(run_before_main_helper_JG8MG9_, __LINE__) = []() noexcept -> int { \
+			code;                                                                  \
+			return 0;                                                              \
+		}();                                                                       \
 	}

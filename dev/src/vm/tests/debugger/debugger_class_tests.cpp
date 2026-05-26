@@ -1,3 +1,5 @@
+#include <base/comptime/type_traits.hpp>
+
 #include <tester/tester.hpp>
 
 #include <vm/debugger/debugger.hpp>
@@ -5,7 +7,7 @@
 #include <condition_variable>
 #include <mutex>
 
-#define altIndex(t) base::internal::alternativeIndex<vm::api::ProcStatus, t>()
+#define altIndex(t) base::variantTypeIndex<vm::api::ProcStatus, t>()
 
 class VmDebuggerTest: public tester::TestSuite {
 #undef TESTER_CLASS
@@ -41,7 +43,8 @@ private:
 	void testTemplate(
 		std::string_view          path_name,
 		const std::vector<int>&   expected_values,
-		const std::vector<usize>& expected_statuses
+		const std::vector<usize>& expected_statuses,
+		const std::vector<u64>&   breakpoints = {}
 	) {
 		std::atomic<size_t>     status_counter  = 0;
 		std::atomic<size_t>     ret_val_counter = 0;
@@ -50,25 +53,36 @@ private:
 
 		events::Listener<vm::api::ProcStatus> status_listener([&](const vm::api::ProcStatus& status
 		                                                      ) {
+			bool notify = false;
 			{
 				std::lock_guard lk(m);
 				ASSERT_TRUE(status_counter < expected_statuses.size());
 				ASSERT_EQUAL_PRINT(expected_statuses[status_counter], status.index());
 				status_counter++;
+				notify
+					= (status_counter == expected_statuses.size()
+				       && ret_val_counter == expected_values.size());
 			}
-			if (status_counter == expected_statuses.size()) cv.notify_one();
+			if (notify) cv.notify_one();
 		});
 
 		events::Listener<vm::api::ExitValue> execution_completed_listener(
 			[&](const vm::api::ExitValue& exit_value) {
-				std::lock_guard lk(m);
-				ASSERT_TRUE(ret_val_counter < expected_values.size());
-				ASSERT_EQUAL_PRINT(1, exit_value.size());
-				ASSERT_EQUAL_PRINT("i64", exit_value[0]->type->getName());
-				ASSERT_EQUAL_PRINT(
-					expected_values[ret_val_counter], exit_value[0]->readBytes<i64>()
-				);
-				ret_val_counter++;
+				bool notify = false;
+				{
+					std::lock_guard lk(m);
+					ASSERT_TRUE(ret_val_counter < expected_values.size());
+					ASSERT_EQUAL_PRINT(1, exit_value.size());
+					ASSERT_EQUAL_PRINT("i64", exit_value[0]->type->getName());
+					ASSERT_EQUAL_PRINT(
+						expected_values[ret_val_counter], exit_value[0]->readBytes<i64>()
+					);
+					ret_val_counter++;
+					notify
+						= (status_counter == expected_statuses.size()
+				           && ret_val_counter == expected_values.size());
+				}
+				if (notify) cv.notify_one();
 			}
 		);
 
@@ -78,7 +92,9 @@ private:
 		debugger.attachOnStatusChangedListener(status_listener);
 		debugger.attachOnExecutionCompletedListener(execution_completed_listener);
 		debugger.attachOnErrorListener(error_listener);
-		debugger.runMain();
+		for (u64 breakpoint: breakpoints)
+			ASSERT_TRUE(debugger.setBreakpoint(base::StrID("main"), breakpoint).has_value());
+		ASSERT_TRUE(debugger.runMain().has_value());
 		std::unique_lock lk(m);
 		// timeout for the test
 		ASSERT_TRUE(cv.wait_for(lk, std::chrono::milliseconds(100), [&] {
@@ -117,7 +133,8 @@ private:
 			{
 				altIndex(vm::api::Running),
 				altIndex(vm::api::Paused),
-			}
+			},
+			{ 5, 8 }
 		);
 	}
 
@@ -150,11 +167,12 @@ private:
 		events::Listener<std::string> error_listener([&](const std::string& err) { fail(err); });
 
 		vm::debugger::Debugger debugger{ fs::File(path("while_true.dbc")) };
+		ASSERT_TRUE(debugger.setBreakpoint(base::StrID("main"), 0).has_value());
 
 		debugger.attachOnStatusChangedListener(status_listener);
 		debugger.attachOnErrorListener(error_listener);
 
-		debugger.runMain();
+		ASSERT_TRUE(debugger.runMain().has_value());
 
 		{
 			std::unique_lock lk(m);
@@ -270,14 +288,15 @@ private:
 		debugger.pause();
 		ASSERT_TRUE(!debugger.pause());  // 3rd error
 
-		debugger.resume();
+		ASSERT_TRUE(debugger.resume().has_value());
 
 		ASSERT_TRUE(std::holds_alternative<vm::api::Running>(debugger.getStatus()));
 	}
 
 	void memoryTest() {
 		vm::debugger::Debugger debugger{ fs::File(path("breakpoint_all_types.dbc")) };
-		std::mutex             m;
+		ASSERT_TRUE(debugger.setBreakpoint(base::StrID("main"), 20).has_value());
+		std::mutex m;
 
 		std::condition_variable cv;
 
@@ -291,6 +310,15 @@ private:
 		ASSERT_TRUE(cv.wait_for(lk, std::chrono::milliseconds(100), [&] {
 			return std::holds_alternative<vm::api::Paused>(debugger.getStatus());
 		}));
+
+		// Code position Test
+		auto pos_response = debugger.getCurrentPosition();
+		ASSERT_TRUE(pos_response.has_value());
+		auto code_position = pos_response.value();
+		ASSERT_EQUAL_PRINT("main", code_position.function_name);
+		ASSERT_EQUAL_PRINT(20, code_position.instr_number);
+		ASSERT_TRUE(code_position.source_position.has_value());
+
 
 		auto main_thread_id = vm::api::ThreadID(0);
 

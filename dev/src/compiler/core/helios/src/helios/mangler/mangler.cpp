@@ -317,6 +317,17 @@ namespace compiler::helios::mangler {
 								           .str()
 								     + "E";
 							}
+							variant_case(defgen::GeneratedSymbolData::DefaultDestructor, dtor) {
+								// We do not have a reliable "path to type" in this case, so we omit
+								// it. Any ambiguities are solved by the function type anyway.
+								return "Hdd" + func(ctx, symbol_id) + "E";
+							}
+							variant_case(defgen::GeneratedSymbolData::ToStringMethod, to_string) {
+								// We do not have a reliable "path to type" in this case
+								// (esp. for simple types such as i32), so we omit it.
+								// Any ambiguities are solved by the function type anyway.
+								return "Hts" + func(ctx, symbol_id) + "E";
+							}
 							variant_case(
 								defgen::GeneratedSymbolData::ReplExpressionWrapper, repl_wrapper
 							) {

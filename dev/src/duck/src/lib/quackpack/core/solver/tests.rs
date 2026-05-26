@@ -72,8 +72,8 @@ fn create_mock_server() -> MockServer {
     let a1 = registry::Manifest {
         metadata: registry::Metadata {
             version: Version::new(1, 0, 0),
-            authors: vec!["Patryk Rogalski".into()],
-            license: "GLWTSPL".into(),
+            authors: vec!["Carly Shillingford".into()],
+            license: "MIT".into(),
             name: "a".into(),
             description: "".into(),
         },
@@ -86,8 +86,8 @@ fn create_mock_server() -> MockServer {
     let a2 = registry::Manifest {
         metadata: registry::Metadata {
             version: Version::new(2, 0, 0),
-            authors: vec!["Patryk Rogalski".into()],
-            license: "GLWTSPL".into(),
+            authors: vec!["Carly Shillingford".into()],
+            license: "MIT".into(),
             name: "a".into(),
             description: "".into(),
         },
@@ -100,8 +100,8 @@ fn create_mock_server() -> MockServer {
     let b2 = registry::Manifest {
         metadata: registry::Metadata {
             version: Version::new(2, 0, 0),
-            authors: vec!["Patryk Rogalski".into()],
-            license: "GLWTSPL".into(),
+            authors: vec!["Carly Shillingford".into()],
+            license: "MIT".into(),
             name: "b".into(),
             description: "".into(),
         },
@@ -227,33 +227,33 @@ dependencies:
         panic!()
     };
     let new_freeze = solver.solve().unwrap().new_freeze;
-    assert!(new_freeze.main_pkg == root_pkg);
-    assert!(
-        new_freeze.package_freezes
-            == [
-                (
-                    root_pkg,
-                    SolverPackageFreeze {
-                        dependencies_realization: [("a".into(), a_pkg), ("b".into(), b_pkg)].into(),
-                        features: [].into()
-                    }
-                ),
-                (
-                    a_pkg,
-                    SolverPackageFreeze {
-                        dependencies_realization: [].into(),
-                        features: [].into()
-                    }
-                ),
-                (
-                    b_pkg,
-                    SolverPackageFreeze {
-                        dependencies_realization: [].into(),
-                        features: [].into()
-                    }
-                ),
-            ]
-            .into()
+    assert_eq!(new_freeze.main_pkg, root_pkg);
+    assert_eq!(
+        new_freeze.package_freezes,
+        [
+            (
+                root_pkg,
+                SolverPackageFreeze {
+                    dependencies_realization: [("a".into(), a_pkg), ("b".into(), b_pkg)].into(),
+                    features: [].into()
+                }
+            ),
+            (
+                a_pkg,
+                SolverPackageFreeze {
+                    dependencies_realization: [].into(),
+                    features: [].into()
+                }
+            ),
+            (
+                b_pkg,
+                SolverPackageFreeze {
+                    dependencies_realization: [].into(),
+                    features: [].into()
+                }
+            ),
+        ]
+        .into()
     )
 }
 
@@ -347,26 +347,26 @@ dependencies:
     else {
         panic!()
     };
-    assert!(answer.new_freeze.main_pkg == root_pkg);
-    assert!(
-        answer.new_freeze.package_freezes
-            == [
-                (
-                    root_pkg,
-                    SolverPackageFreeze {
-                        dependencies_realization: [("b".into(), b_pkg)].into(),
-                        features: [].into()
-                    }
-                ),
-                (
-                    b_pkg,
-                    SolverPackageFreeze {
-                        dependencies_realization: [].into(),
-                        features: [].into()
-                    }
-                ),
-            ]
-            .into()
+    assert_eq!(answer.new_freeze.main_pkg, root_pkg);
+    assert_eq!(
+        answer.new_freeze.package_freezes,
+        [
+            (
+                root_pkg,
+                SolverPackageFreeze {
+                    dependencies_realization: [("b".into(), b_pkg)].into(),
+                    features: [].into()
+                }
+            ),
+            (
+                b_pkg,
+                SolverPackageFreeze {
+                    dependencies_realization: [].into(),
+                    features: [].into()
+                }
+            ),
+        ]
+        .into()
     )
 }
 
@@ -377,7 +377,7 @@ dependencies:
 /// Only *a* in version 2.0.0 has that feature and should be chosen to the new freeze.
 ///
 /// Note:
-/// [`SolverMode::Merciful`] is used in this test.
+/// [`SolverMode::supress_foreign_manifests_errors`] is set to true in this test.
 fn no_longer_working_dependency() {
     let (ctx, _root) = setup_duck_ctx();
     let server = create_mock_server();
@@ -458,25 +458,25 @@ dependencies:
         panic!()
     };
     let new_freeze = solver.solve().unwrap().new_freeze;
-    assert!(new_freeze.main_pkg == root_pkg);
-    assert!(
-        new_freeze.package_freezes
-            == [
-                (
-                    root_pkg,
-                    SolverPackageFreeze {
-                        dependencies_realization: [("a".into(), a2_pkg)].into(),
-                        features: [].into()
-                    }
-                ),
-                (
-                    a2_pkg,
-                    SolverPackageFreeze {
-                        dependencies_realization: [].into(),
-                        features: ["a".into()].into()
-                    }
-                ),
-            ]
-            .into()
+    assert_eq!(new_freeze.main_pkg, root_pkg);
+    assert_eq!(
+        new_freeze.package_freezes,
+        [
+            (
+                root_pkg,
+                SolverPackageFreeze {
+                    dependencies_realization: [("a".into(), a2_pkg)].into(),
+                    features: [].into()
+                }
+            ),
+            (
+                a2_pkg,
+                SolverPackageFreeze {
+                    dependencies_realization: [].into(),
+                    features: ["a".into()].into()
+                }
+            ),
+        ]
+        .into()
     )
 }

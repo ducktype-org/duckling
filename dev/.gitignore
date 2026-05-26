@@ -18,6 +18,11 @@ coverage.info
 
 # bin:
 bin/
+*.a
+*.o
+*.so
+*.dll
+*.exe
 
 # python cache:
 __pycache__/

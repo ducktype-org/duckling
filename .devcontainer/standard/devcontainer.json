@@ -1,0 +1,25 @@
+{
+	"name": "Dockling Dev - Standard",
+	// "image": "dockling-dev",
+	"build": {
+		"dockerfile": "../../dockling-dev/image/Dockerfile",
+		"context": "../../dockling-dev/image",
+		"args": {
+			"UID": "${localEnv:UID:1000}",
+			"GID": "${localEnv:UID:1000}",  // This is not an error. There is no unified env var for gid, gid is usually equal to uid, and it doesn't really matter anyway.
+			"DEFAULT_USER": "ubuntu"
+		}
+	},
+
+	"workspaceMount": "source=${localWorkspaceFolder},target=/duckling,type=bind,consistency=cached",
+	"workspaceFolder": "/duckling",
+
+	"runArgs": [ "--cap-add=SYS_PTRACE", "--hostname", "dockling"],
+
+	"initializeCommand": "mkdir -p ${localWorkspaceFolder}/dockling-dev/home",
+
+	"mounts": [
+		"source=${localWorkspaceFolder}/dockling-dev/home/,target=/home/ubuntu/,type=bind",
+		"source=${localEnv:HOME}/.ssh,target=/home/ubuntu/.ssh,type=bind"
+	]
+}

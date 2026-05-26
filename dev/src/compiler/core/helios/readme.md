@@ -2,6 +2,7 @@
 
 * [mangling-scheme](./src/helios/mangler/mangling-scheme.md)
 * [src_private/helios_private/scopes](./src_private/helios_private/scopes/readme.md)
+* [src/helios/repl_utils](./src/helios/repl_utils/readme.md)
 
 
 @attention
