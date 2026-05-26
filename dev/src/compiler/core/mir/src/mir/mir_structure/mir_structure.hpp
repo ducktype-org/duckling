@@ -848,14 +848,7 @@ namespace compiler::mir {
 	};
 
 	struct MIRGlobalData final {
-
 		MIRGlobal global;
-
-		// helios::SymID helios_id;
-
-		// PR TODO: it this needed? 
-		// tsh::SymbolType<> type;
-
 
 		/**
 		 * @brief Initial value for the global variable.
@@ -863,6 +856,8 @@ namespace compiler::mir {
 		 * Should always be a CTV is kind is Const
 		 */
 		std::variant<ctv::CompileTimeValue, CRef<mir::Function>> initial_value;
+
+		void debugPrint(query::Context& ctx, std::ostream& out) const;
 	};
 
 	/**
@@ -876,6 +871,8 @@ namespace compiler::mir {
 	struct MIRUnit final {
 		std::vector<CRef<mir::Function>> mir_functions;
 		std::vector<MIRGlobalData> mir_globals;
+
+		void debugPrint(query::Context& ctx, std::ostream& out) const;
 	};
 
 }

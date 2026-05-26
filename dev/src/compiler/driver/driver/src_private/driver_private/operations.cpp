@@ -78,23 +78,15 @@ namespace compiler::driver {
 
 			mir::MIRUnit mir_unit = mir::lowerToMIRUnit(ctx, &hout_unit).valueOrThrow();
 
-			// probably move debug printint to units!
 
 			if (driver::print_ir_options.print_mir) {
-				std::ranges::for_each(mir_unit.mir_functions, [](CRef<mir::Function> mir_function) {
-					mir_function->debugPrint(std::cout);
-				});
-				std::ranges::for_each(mir_unit.mir_globals, [](const mir::MIRGlobalData& mir_global) {
-					mir_global.global.debugPrint(std::cout); // PR: TODO: print entire global data here
-				});
+				mir_unit.debugPrint(ctx, std::cout);
 			}
 			if (driver::dump_ir_options.dump_mir) {
 				auto ofstream = getDebugDumpArtifact(
 					base::StrID(base::strConcat(module_name.strView(), ".mir"))
 				);
-				std::ranges::for_each(mir_unit.mir_functions, [&](CRef<mir::Function> mir_function) {
-					mir_function->debugPrint(ofstream);
-				});
+				mir_unit.debugPrint(ctx, ofstream);
 			}
 
 			auto lir_module = LIRUnitWithBackendName{

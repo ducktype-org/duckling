@@ -660,6 +660,8 @@ namespace compiler::lir {
 
 		LIRGlobal global;
 		std::variant<ctv::CompileTimeValue, CTorDtorPair> data_initialization;
+
+		void debugPrint(query::Context& ctx, std::ostream& out) const;
 	};
 
 	/**
@@ -673,5 +675,7 @@ namespace compiler::lir {
 	struct LIRUnit final {
 		std::vector<CRef<Function>> lir_functions;
 		std::vector<LIRGlobalData>      lir_globals;
+
+		void debugPrint(query::Context& ctx, std::ostream& out) const;
 	};
 }
