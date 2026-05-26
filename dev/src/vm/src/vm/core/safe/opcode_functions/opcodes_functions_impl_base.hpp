@@ -1734,6 +1734,302 @@ namespace vm {
 		}
 		FUNCTION_CONT(2);
 	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ft_structLea_pptr_pste)(FUNCTION_ARGS) {
+		{
+			auto* sf = thread.getShadowFrame();
+			auto block = READ_SHADOW_BLOCK_REF_FROM_ARG(instr->arg1);
+			auto block_ptr = READ_SHADOW_POINTER_BLOCK_REF_FROM_ARG(instr->arg1);
+			u32 shadow_offset = static_cast<u32>(instr[1].arg0);
+			u32 pointer_offset = static_cast<u32>(instr[1].arg1);
+
+			ShadowPointer shadow_ptr;
+			shadow_ptr.shadow_block = block;
+			shadow_ptr.shadow_pointer_block = block_ptr;
+			shadow_ptr.logical_offset = shadow_offset;
+			shadow_ptr.pointer_offset = pointer_offset;
+
+			GET_SHADOW_POINTER_REF(instr->arg0) = updateShadowPointerAssignment(thread, GET_SHADOW_POINTER_REF(instr->arg0), shadow_ptr);
+		}
+		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ft_structRead_pste)(FUNCTION_ARGS) {
+		{
+			auto* sf = thread.getShadowFrame();
+			auto block = READ_SHADOW_BLOCK_REF_FROM_ARG(instr->arg0);
+			u32 shadow_offset = static_cast<u32>(instr->arg1);
+			TypeCRef struct_type = thread.getShadowDataMemory().getBlockType(block);
+
+			u32 size = 1;
+			if_opt_some(struct_type->getFields(), fields) {
+				for (const auto& field : *fields) {
+					if (field.shadow_offset == shadow_offset) {
+						size = field.type->getShadowSize();
+						break;
+					}
+				}
+			}
+
+			auto tid = thread.getThreadID();
+			auto epoch = thread.getVC()[tid];
+			for (u32 i = 0; i < size; ++i) {
+				ShadowEntry* entry = block->getData() + shadow_offset + i;
+				entry->processRead(tid, epoch, thread.getVC());
+			}
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ft_structWrite_pste)(FUNCTION_ARGS) {
+		{
+			auto* sf = thread.getShadowFrame();
+			auto block = READ_SHADOW_BLOCK_REF_FROM_ARG(instr->arg0);
+			u32 shadow_offset = static_cast<u32>(instr->arg1);
+			TypeCRef struct_type = thread.getShadowDataMemory().getBlockType(block);
+
+			u32 size = 1;
+			if_opt_some(struct_type->getFields(), fields) {
+				for (const auto& field : *fields) {
+					if (field.shadow_offset == shadow_offset) {
+						size = field.type->getShadowSize();
+						break;
+					}
+				}
+			}
+
+			auto tid = thread.getThreadID();
+			auto epoch = thread.getVC()[tid];
+			for (u32 i = 0; i < size; ++i) {
+				ShadowEntry* entry = block->getData() + shadow_offset + i;
+				entry->processWrite(tid, epoch, thread.getVC());
+			}
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ft_mov_pste_pste)(FUNCTION_ARGS) {
+		{
+			auto* sf = thread.getShadowFrame();
+			auto dst_block = READ_SHADOW_BLOCK_REF_FROM_ARG(instr->arg0);
+			auto src_block = READ_SHADOW_BLOCK_REF_FROM_ARG(instr->arg1);
+			auto type = READ_FROM_DIRECT_ARG(TypeCRef, instr[1].arg0);
+
+			auto tid = thread.getThreadID();
+			auto epoch = thread.getVC()[tid];
+			for (u32 i = 0; i < type->getShadowSize(); ++i) {
+				ShadowEntry* src_entry = src_block->getData() + i;
+				ShadowEntry* dst_entry = dst_block->getData() + i;
+				src_entry->processRead(tid, epoch, thread.getVC());
+				dst_entry->processWrite(tid, epoch, thread.getVC());
+			}
+
+			u32 pointer_size = type->getPointerSize();
+			if (pointer_size > 0) {
+				auto dst_ptr_block = READ_SHADOW_POINTER_BLOCK_REF_FROM_ARG(instr->arg0);
+				auto src_ptr_block = READ_SHADOW_POINTER_BLOCK_REF_FROM_ARG(instr->arg1);
+				for (u32 i = 0; i < pointer_size; ++i) {
+					ShadowPointer dst_val = *(dst_ptr_block->getData() + i);
+					ShadowPointer src_val = *(src_ptr_block->getData() + i);
+					*(dst_ptr_block->getData() + i) = updateShadowPointerAssignment(thread, dst_val, src_val);
+				}
+			}
+		}
+		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ft_fixedSizeTableIdxLea_pptr_pfst)(FUNCTION_ARGS) {
+		{
+			auto* sf = thread.getShadowFrame();
+			auto block = READ_SHADOW_BLOCK_REF_FROM_ARG(instr->arg1);
+			auto block_ptr = READ_SHADOW_POINTER_BLOCK_REF_FROM_ARG(instr->arg1);
+			u64 index = READ_FROM_PLACE_ARG(u64, instr[1].arg0);
+			auto elem_type = READ_FROM_DIRECT_ARG(TypeCRef, instr[1].arg1);
+
+			u32 shadow_offset = static_cast<u32>(index * elem_type->getShadowSize());
+			u32 pointer_offset = static_cast<u32>(index * elem_type->getPointerSize());
+
+			ShadowPointer shadow_ptr;
+			shadow_ptr.shadow_block = block;
+			shadow_ptr.shadow_pointer_block = block_ptr;
+			shadow_ptr.logical_offset = shadow_offset;
+			shadow_ptr.pointer_offset = pointer_offset;
+
+			GET_SHADOW_POINTER_REF(instr->arg0) = updateShadowPointerAssignment(thread, GET_SHADOW_POINTER_REF(instr->arg0), shadow_ptr);
+		}
+		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ft_arrayRead_pfst)(FUNCTION_ARGS) {
+		{
+			auto* sf = thread.getShadowFrame();
+			auto block = READ_SHADOW_BLOCK_REF_FROM_ARG(instr->arg0);
+			u64 idx = READ_FROM_PLACE_ARG(u64, instr->arg1);
+			auto elem_type = READ_FROM_DIRECT_ARG(TypeCRef, instr[1].arg1);
+			u32 size = elem_type->getShadowSize();
+			u32 shadow_offset = static_cast<u32>(idx * size);
+
+			auto tid = thread.getThreadID();
+			auto epoch = thread.getVC()[tid];
+			for (u32 i = 0; i < size; ++i) {
+				ShadowEntry* entry = block->getData() + shadow_offset + i;
+				entry->processRead(tid, epoch, thread.getVC());
+			}
+		}
+		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ft_arrayWrite_pfst)(FUNCTION_ARGS) {
+		{
+			auto* sf = thread.getShadowFrame();
+			auto block = READ_SHADOW_BLOCK_REF_FROM_ARG(instr->arg0);
+			u64 idx = READ_FROM_PLACE_ARG(u64, instr->arg1);
+			auto elem_type = READ_FROM_DIRECT_ARG(TypeCRef, instr[1].arg1);
+			u32 size = elem_type->getShadowSize();
+			u32 shadow_offset = static_cast<u32>(idx * size);
+
+			auto tid = thread.getThreadID();
+			auto epoch = thread.getVC()[tid];
+			for (u32 i = 0; i < size; ++i) {
+				ShadowEntry* entry = block->getData() + shadow_offset + i;
+				entry->processWrite(tid, epoch, thread.getVC());
+			}
+		}
+		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ft_mov_pfst_pfst)(FUNCTION_ARGS) {
+		{
+			auto* sf = thread.getShadowFrame();
+			auto dst_block = READ_SHADOW_BLOCK_REF_FROM_ARG(instr->arg0);
+			auto src_block = READ_SHADOW_BLOCK_REF_FROM_ARG(instr->arg1);
+			auto type = READ_FROM_DIRECT_ARG(TypeCRef, instr[1].arg0);
+
+			auto tid = thread.getThreadID();
+			auto epoch = thread.getVC()[tid];
+			for (u32 i = 0; i < type->getShadowSize(); ++i) {
+				ShadowEntry* src_entry = src_block->getData() + i;
+				ShadowEntry* dst_entry = dst_block->getData() + i;
+				src_entry->processRead(tid, epoch, thread.getVC());
+				dst_entry->processWrite(tid, epoch, thread.getVC());
+			}
+
+			u32 pointer_size = type->getPointerSize();
+			if (pointer_size > 0) {
+				auto dst_ptr_block = READ_SHADOW_POINTER_BLOCK_REF_FROM_ARG(instr->arg0);
+				auto src_ptr_block = READ_SHADOW_POINTER_BLOCK_REF_FROM_ARG(instr->arg1);
+				for (u32 i = 0; i < pointer_size; ++i) {
+					ShadowPointer dst_val = *(dst_ptr_block->getData() + i);
+					ShadowPointer src_val = *(src_ptr_block->getData() + i);
+					*(dst_ptr_block->getData() + i) = updateShadowPointerAssignment(thread, dst_val, src_val);
+				}
+			}
+		}
+		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ft_dynTableReAlloc)(FUNCTION_ARGS) {
+		{
+			ShadowPointer& sp           = GET_SHADOW_POINTER_REF(instr->arg0);
+			auto           table_type   = READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1);
+			u64            new_elem_count = READ_FROM_PLACE_ARG(u64, instr[1].arg0);
+
+			if (new_elem_count == 0) {
+				if (sp.shadow_block) {
+					auto block = sp.shadow_block.toOpt().value();
+					auto type  = thread.getShadowDataMemory().getBlockType(block);
+					auto tid   = thread.getThreadID();
+					auto epoch = thread.getVC()[tid];
+					ShadowEntry* base = block->getData();
+					for (usize i = 0; i < type->getShadowSize(); ++i) {
+						base[i].processWrite(tid, epoch, thread.getVC());
+						base[i].reset();
+					}
+					thread.getShadowDataMemory().freeBlockData(block);
+					thread.getShadowDataMemory().decreaseBlockRefcount(block);
+					sp.shadow_block = nullptr;
+				}
+
+				if (sp.shadow_pointer_block) {
+					auto block_ptr = sp.shadow_pointer_block.toOpt().value();
+					thread.getShadowPointerMemory().freeBlockData(block_ptr);
+					thread.getShadowPointerMemory().decreaseBlockRefcount(block_ptr);
+					sp.shadow_pointer_block = nullptr;
+				}
+
+				sp.logical_offset = 0;
+				sp.pointer_offset = 0;
+			} else if (sp.isNull()) {
+				auto inner_type = table_type->getInnerType().value();
+				ShadowPointer shadow_ptr;
+				if (inner_type->getShadowSize() > 0) {
+					auto shadow_block = thread.getShadowDataMemory().dynTableAllocateHeapN(table_type, new_elem_count);
+					shadow_ptr.shadow_block = shadow_block;
+					shadow_ptr.logical_offset = 0;
+
+					auto tid = thread.getThreadID();
+					auto epoch = thread.getVC()[tid];
+					ShadowEntry* base = shadow_block->getData();
+					usize total_shadow_size = inner_type->getShadowSize() * new_elem_count;
+					for (usize i = 0; i < total_shadow_size; ++i) {
+						base[i].last_write = Epoch(tid, epoch);
+						base[i].last_read_epoch = Epoch(tid, epoch);
+					}
+				}
+				if (inner_type->getPointerSize() > 0) {
+					auto shadow_ptr_block = thread.getShadowPointerMemory().dynTableAllocateHeapN(table_type, new_elem_count);
+					shadow_ptr.shadow_pointer_block = shadow_ptr_block;
+					shadow_ptr.pointer_offset = 0;
+				}
+
+				sp = updateShadowPointerAssignment(thread, sp, shadow_ptr);
+			} else {
+				auto inner_type = table_type->getInnerType().value();
+				if (inner_type->getShadowSize() > 0) {
+					if (sp.shadow_block) {
+						auto block = sp.shadow_block.toOpt().value();
+						auto old_size = thread.getShadowDataMemory().getBlockViewUnsafe(block).size();
+						thread.getShadowDataMemory().dynTableReallocateBlockDataN(block, new_elem_count);
+						auto new_size = thread.getShadowDataMemory().getBlockViewUnsafe(block).size();
+						if (new_size > old_size) {
+							auto tid = thread.getThreadID();
+							auto epoch = thread.getVC()[tid];
+							ShadowEntry* base = block->getData();
+							for (usize i = old_size; i < new_size; ++i) {
+								base[i].last_write = Epoch(tid, epoch);
+								base[i].last_read_epoch = Epoch(tid, epoch);
+							}
+						}
+					} else {
+						auto shadow_block = thread.getShadowDataMemory().dynTableAllocateHeapN(table_type, new_elem_count);
+						sp.shadow_block = shadow_block;
+						sp.logical_offset = 0;
+
+						auto tid = thread.getThreadID();
+						auto epoch = thread.getVC()[tid];
+						ShadowEntry* base = shadow_block->getData();
+						usize total_shadow_size = inner_type->getShadowSize() * new_elem_count;
+						for (usize i = 0; i < total_shadow_size; ++i) {
+							base[i].last_write = Epoch(tid, epoch);
+							base[i].last_read_epoch = Epoch(tid, epoch);
+						}
+					}
+				}
+
+				if (inner_type->getPointerSize() > 0) {
+					if (sp.shadow_pointer_block) {
+						auto block_ptr = sp.shadow_pointer_block.toOpt().value();
+						thread.getShadowPointerMemory().dynTableReallocateBlockDataN(block_ptr, new_elem_count);
+					} else {
+						auto shadow_ptr_block = thread.getShadowPointerMemory().dynTableAllocateHeapN(table_type, new_elem_count);
+						sp.shadow_pointer_block = shadow_ptr_block;
+						sp.pointer_offset = 0;
+					}
+				}
+			}
+		}
+		FUNCTION_CONT(2);
+	}
 }
 
 

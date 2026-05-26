@@ -259,8 +259,22 @@ namespace vm::loader::compiler::detail {
 				addLow<Op_ext_imm>(vm::opargs::Immediate{ type_size });
 			}
 			instr_case(high::Op_mov_popq_imm, i) { addLow<Op_mov_popq_imm>(i.dst, i.src); }
-			instr_case(high::Op_mov_pste_pste, i) { addLow<Op_mov_bste_bste>(i.dst, i.src); }
-			instr_case(high::Op_mov_pfst_pfst, i) { addLow<Op_mov_bfst_bfst>(i.dst, i.src); }
+			instr_case(high::Op_mov_pste_pste, i) {
+				addLow<Op_mov_bste_bste>(i.dst, i.src);
+				if (compiler.settings_.enable_fast_track) {
+					auto type = getPlaceType(i.src);
+					addLow<Op_ft_mov_pste_pste>(i.dst, i.src);
+					addLow<Op_ext_type>(opargs::Type{ type->getName() });
+				}
+			}
+			instr_case(high::Op_mov_pfst_pfst, i) {
+				addLow<Op_mov_bfst_bfst>(i.dst, i.src);
+				if (compiler.settings_.enable_fast_track) {
+					auto type = getPlaceType(i.src);
+					addLow<Op_ft_mov_pfst_pfst>(i.dst, i.src);
+					addLow<Op_ext_type>(opargs::Type{ type->getName() });
+				}
+			}
 			instr_case(high::Op_add_p64_p64, i) {
 				ftRead(i.src); ftRead(i.dst); ftWrite(i.dst);
 				addLow<Op_add_p64_p64>(i.dst, i.src);
@@ -630,12 +644,22 @@ namespace vm::loader::compiler::detail {
 			instr_case(high::Op_structLea_pptr_pste_field, i) {
 				addLow<Op_structLea_pptr_bste>(i.dst_ptr, i.src_data_struct);
 				addLow<Op_ext_field>(i.field);
+				if (compiler.settings_.enable_fast_track) {
+					addLow<Op_ft_structLea_pptr_pste>(i.dst_ptr, i.src_data_struct);
+					addLow<Op_ext_sfield_spfield>(i.field, i.field);
+				}
 			}
 			instr_case(high::Op_structLoad_pany_pste_field, i) {
+				if (compiler.settings_.enable_fast_track) {
+					addLow<Op_ft_structRead_pste>(i.src_data_struct, i.field);
+				}
 				addLow<Op_structLoad_bany_bste>(i.dst, i.src_data_struct);
 				addLow<Op_ext_field>(i.field);
 			}
 			instr_case(high::Op_structStore_pste_pany_field, i) {
+				if (compiler.settings_.enable_fast_track) {
+					addLow<Op_ft_structWrite_pste>(i.dst_data_struct, i.field);
+				}
 				addLow<Op_structStore_bste_bany>(i.dst_data_struct, i.src);
 				addLow<Op_ext_field>(i.field);
 			}
@@ -681,12 +705,24 @@ namespace vm::loader::compiler::detail {
 			instr_case(high::Op_fixedSizeTableLea_pptr_pfst_p64, i) {
 				addLow<Op_fixedSizeTableLea_pptr_bfst>(i.dst_ptr, i.src_table);
 				addLow<Op_ext_p64_type>(i.index, opargs::Type{ TABLE_VAL_ELEM_TYPE(i.src_table) });
+				if (compiler.settings_.enable_fast_track) {
+					addLow<Op_ft_fixedSizeTableIdxLea_pptr_pfst>(i.dst_ptr, i.src_table);
+					addLow<Op_ext_p64_type>(i.index, opargs::Type{ TABLE_VAL_ELEM_TYPE(i.src_table) });
+				}
 			}
 			instr_case(high::Op_fixedSizeTableLoad_pany_pfst_p64, i) {
+				if (compiler.settings_.enable_fast_track) {
+					addLow<Op_ft_arrayRead_pfst>(i.src_table, i.index);
+					addLow<Op_ext_p64_type>(i.index, opargs::Type{ TABLE_VAL_ELEM_TYPE(i.src_table) });
+				}
 				addLow<Op_fixedSizeTableLoad_bany_bfst>(i.dst, i.src_table);
 				addLow<Op_ext_p64_type>(i.index, opargs::Type{ TABLE_VAL_ELEM_TYPE(i.src_table) });
 			}
 			instr_case(high::Op_fixedSizeTableStore_pfst_pany_p64, i) {
+				if (compiler.settings_.enable_fast_track) {
+					addLow<Op_ft_arrayWrite_pfst>(i.dst_table, i.index);
+					addLow<Op_ext_p64_type>(i.index, opargs::Type{ TABLE_VAL_ELEM_TYPE(i.dst_table) });
+				}
 				addLow<Op_fixedSizeTableStore_bfst_bany>(i.dst_table, i.src);
 				addLow<Op_ext_p64_type>(i.index, opargs::Type{ TABLE_VAL_ELEM_TYPE(i.dst_table) });
 			}
@@ -729,6 +765,10 @@ namespace vm::loader::compiler::detail {
 			instr_case(high::Op_dynTableReAlloc_pptr_type_p64, i) {
 				addLow<Op_dynTableReAlloc_pptr_type>(i.dst_table_ptr, i.table_type);
 				addLow<Op_ext_p64>(i.new_elem_count);
+				if (compiler.settings_.enable_fast_track) {
+					addLow<Op_ft_dynTableReAlloc>(i.dst_table_ptr, i.table_type);
+					addLow<Op_ext_p64>(i.new_elem_count);
+				}
 			}
 #undef TABLE_PTR_ELEM_TYPE
 #undef TABLE_VAL_ELEM_TYPE
