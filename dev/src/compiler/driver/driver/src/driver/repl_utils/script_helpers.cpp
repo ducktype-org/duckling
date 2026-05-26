@@ -3,6 +3,8 @@
 #include <base/str/str_utils.hpp>
 
 #include <hashing/component_hash.hpp>
+#include <base/extend_cpp/vector_utils.hpp>
+
 
 namespace compiler::repl {
 	base::StrID getScriptModuleID(const fs::File& script_file) {
@@ -17,10 +19,8 @@ namespace compiler::repl {
 	void appendScriptLIRModuleData(
 		driver::LIRUnitWithBackendName& merged, const driver::LIRUnitWithBackendName& chunk
 	) {
-		merged.functions.insert(
-			merged.functions.end(), chunk.functions.begin(), chunk.functions.end()
-		);
-		merged.globals.insert(merged.globals.end(), chunk.globals.begin(), chunk.globals.end());
+		base::appendToVector(merged.lir_unit.lir_functions, chunk.lir_unit.lir_functions);
+		base::appendToVector(merged.lir_unit.lir_globals, chunk.lir_unit.lir_globals);
 	}
 
 }  // namespace compiler::repl

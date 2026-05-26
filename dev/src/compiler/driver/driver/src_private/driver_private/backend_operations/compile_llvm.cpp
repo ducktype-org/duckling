@@ -17,6 +17,7 @@
 
 namespace compiler::driver {
 
+	// TODO PR: consider moveing this to LLVM backend, it depends on LIR structure anyway!
 	backend_llvm::Module compileLIRModuleToLLVM(
 		query::Context& ctx, CRef<LIRUnitWithBackendName> lir_module
 	) {

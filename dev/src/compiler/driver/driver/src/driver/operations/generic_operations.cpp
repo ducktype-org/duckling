@@ -334,9 +334,9 @@ namespace compiler::driver {
 
 			LIRUnitWithBackendName merged{
 				.module_id = repl::getScriptModuleID(script_context.script_file),
-				.functions = {},
-				.globals   = {},
+				.lir_unit  = lir::LIRUnit{},
 			};
+			
 			// Track wrapper symbols to build the synthetic main that runs them in order.
 			// We preserve the original statement order to match script semantics.
 			std::vector<helios::SymID>         wrapper_symbols;
