@@ -51,12 +51,26 @@ namespace compiler::helios::defgen {
 		/**
 		 * Represents a compiler-generated default constructor for a static array type.
 		 *
-		 * The default constructor is a function that doesn't takes any parameters and loops through
+		 * The default constructor is a function that doesn't take any parameters and loops through
 		 * the static array initializing its fields with a default value (which may mean a call to
 		 * another constructor). Returns the initialized static array value.
 		 */
 		struct DefaultStaticArrayConstructor final {
 			tsh::AbstractType array_type;
+
+			[[nodiscard]]
+			base::Bit256 queryUnstablePerfectHash() const;
+		};
+
+		struct ToStringMethod final {
+			tsh::AbstractType owner_type;
+
+			[[nodiscard]]
+			base::Bit256 queryUnstablePerfectHash() const;
+		};
+
+		struct DefaultDestructor final {
+			tsh::AbstractType owner_type;
 
 			[[nodiscard]]
 			base::Bit256 queryUnstablePerfectHash() const;
@@ -189,6 +203,8 @@ namespace compiler::helios::defgen {
 			ImplicitConstructor,
 			DefaultClassConstructor,
 			DefaultStaticArrayConstructor,
+			ToStringMethod,
+			DefaultDestructor,
 			BuiltinOperator,
 			Parameter,
 			SelfParameter,
