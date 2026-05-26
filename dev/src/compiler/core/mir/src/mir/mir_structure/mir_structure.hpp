@@ -309,6 +309,9 @@ namespace compiler::mir {
 	 * originate from HOUT global data.
 	 */
 	struct MIRGlobal final {
+		enum class Kind { Variable, Constant };
+
+
 		/**
 		 * @brief HELIOS SymID of the global variable.
 		 * It is used to reference the global variable in the code.
@@ -320,9 +323,13 @@ namespace compiler::mir {
 		 */
 		tsh::SymbolType<> type;
 
-		MIRGlobal(helios::SymID helios_id, tsh::SymbolType<> type):
+		Kind kind;
+
+
+		MIRGlobal(helios::SymID helios_id, tsh::SymbolType<> type, Kind kind):
 			  helios_id(helios_id),
-			  type(type) {}
+			  type(type),
+			  kind(kind) {}
 
 		void debugPrint(std::ostream& os, bool detailed = false) const;
 
@@ -841,14 +848,14 @@ namespace compiler::mir {
 	};
 
 	struct MIRGlobalData final {
-		enum class Kind { Variable, Constant };
 
-		helios::SymID helios_id;
+		MIRGlobal global;
+
+		// helios::SymID helios_id;
 
 		// PR TODO: it this needed? 
-		tsh::SymbolType<> type;
+		// tsh::SymbolType<> type;
 
-		Kind kind;
 
 		/**
 		 * @brief Initial value for the global variable.

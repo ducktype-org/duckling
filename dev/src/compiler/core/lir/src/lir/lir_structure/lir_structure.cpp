@@ -356,7 +356,7 @@ namespace compiler::lir {
 		os << (type == LIRGlobalType::Constant ? "constant" : "variable") << ": ";
 		os << mangled_name.strView() << "\n";
 		os << "Type: " << layout->toStringDefinition(ctx) << "\n";
-		if (initial_value.has_value()) os << "Initial value: " << initial_value->toString() << "\n";
+		// if (initial_value.has_value()) os << "Initial value: " << initial_value->toString() << "\n";
 	}
 
 	LIRLocalSpecialKind specialKindFromMIR(const mir::MIRLocal& mir_local) {

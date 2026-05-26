@@ -41,8 +41,10 @@ namespace compiler::mir {
 			variant_match(hout_global->value) {
 				variant_case(helios::HOUTGlobalConst, ctv_initial_value) {
 					unit_result.mir_globals.emplace_back(MIRGlobalData{
-						.helios_id = hout_global->helios_symbol,
-						.type = hout_global->type,
+						.global = MIRGlobal{
+							hout_global->helios_symbol,
+							hout_global->type,
+						},
 						.kind = helios_kind_to_mir_kind(hout_global->data_type),
 						.initial_value = ctv_initial_value.value,
 					});
@@ -55,8 +57,10 @@ namespace compiler::mir {
 						break; // Note: this jump breaks only the variant_match
 					}
 					unit_result.mir_globals.emplace_back(MIRGlobalData{
-						.helios_id = hout_global->helios_symbol,
-						.type = hout_global->type,
+						.global = MIRGlobal{
+							hout_global->helios_symbol,
+							hout_global->type,
+						},
 						.kind = helios_kind_to_mir_kind(hout_global->data_type),
 						.initial_value = &mir_ctor_function->valueOrPanic(),
 					});

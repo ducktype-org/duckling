@@ -269,14 +269,15 @@ namespace compiler::lir {
 			// const helios::SymID                          helios_id,
 			const CRef<tsl::TypeLayout>                  layout,
 			const base::StrID&                           mangled_name,
-			const LIRGlobalType                          type          = LIRGlobalType::Variable,
-			const base::Optional<ctv::CompileTimeValue>& initial_value = {}
+			const LIRGlobalType                          type         ,
+			const base::Optional<ctv::CompileTimeValue>& initial_value = {} // PR TODO: remove this maybe
 		):
 			//   helios_id(helios_id),
 			  layout(layout),
 			  mangled_name(mangled_name),
-			  type(type),
-			  initial_value(initial_value) {}
+			  type(type)
+			//   initial_value(initial_value) 
+			  {}
 
 		friend Function;
 
@@ -290,6 +291,8 @@ namespace compiler::lir {
 		 * @note Do not use this function outside of LIR lowering / driver.
 		 * This handles both global variables and constants. For constants, it also sets CTV initial
 		 * value of the global.
+		 *
+		 * PR TODO: REMOVE THIS
 		 */
 		static LIRGlobal fromHOUT(query::Context& ctx, const helios::HOUTGlobalData& helios_id);
 
