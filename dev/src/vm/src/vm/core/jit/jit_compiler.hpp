@@ -7,6 +7,7 @@
 
 #include <base/pointers/ref.hpp>
 
+#include <vm/core/jit/copy-and-patch/memory/memory.hpp>
 #include <vm/core/safe/low_program/low_program.hpp>
 
 #ifdef BUILD_TYPE_RELEASE
@@ -37,4 +38,9 @@ namespace vm::jit {
 	 * @brief Compile the function on the C2, LLVM-based compiler.
 	 */
 	MRef<JitOpFun> compileLLVM(const vm::low::LowFuncData& func_data);
+
+	/**
+	 * @brief Compile the function on the C1, Copy&Patch-based compiler.
+	 */
+	cnp::JitFuncMemory compileCP(const vm::low::LowFuncData& func_data);
 }
