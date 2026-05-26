@@ -79,11 +79,6 @@ namespace compiler::helios {
 	base::Optional<pst::Access<pst::Stmt>> stmt(query::Context&, SymID);
 
 	/**
-	 * @return PST element symbol was created from.
-	 */
-	base::Optional<pst::AccessLocked<pst::LangElement>> symbolPst(SymID);
-
-	/**
 	 * @return PST element symbol was created from,
 	 * or empty optional if the symbol was not created from a PST element.
 	 */

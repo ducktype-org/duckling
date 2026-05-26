@@ -876,49 +876,6 @@ namespace compiler::helios::code {
 }
 
 namespace compiler::helios {
-	namespace {
-		void logCoercionFailure(
-			query::Context&                                      ctx,
-			const CoercionQResult&                               coercion_qresult,
-			const tsh::SymbolType<>&                             source_symbol_type,
-			const tsh::SymbolType<>&                             expected_type,
-			dia_int::StablePosition                              source_position,
-			base::Optional<std::function<void(query::Context&)>> log_error
-		) {
-			variant_match(coercion_qresult.valueOrThrow().getVariant()) {
-				variant_case(InvalidCoercion, _) {
-					if (log_error.has_value()) {
-						(*log_error)(ctx);
-					} else {
-						ctx.logInt(makeBox<IncompatibleTypesError>(
-							source_position,
-							makeBox<InteractiveType>(ctx, source_symbol_type),
-							makeBox<InteractiveType>(ctx, expected_type)
-						));
-					}
-					return;
-				}
-				variant_case(TypeNotTriviallyCopyable, _) {
-					ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-						base::strConcat(
-							"Copy constructor for non-trivially-copyable type `",
-							source_symbol_type.withReferenceKind(tsh::ReferenceKind::Direct)
-								.toString(),
-							"`. This was caused by the need of dereferencing a value of type: "
-							"`",
-							source_symbol_type.toString(),
-							"`."
-						),
-						source_position
-					));
-					return;
-				}
-				variant_default { CORE_PANIC("Unhandled coercion result variant."); }
-			}
-			CORE_UNREACHABLE();
-		}
-	}
-
 	struct IMPLEMENT_QUERY(QueryHoutOfExpr, ExprConstructionResult) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			// @TODO static assert this is top-expr
@@ -970,26 +927,12 @@ namespace compiler::helios {
 	) {
 		auto expr_hout_qresult = code::subExprFromPST(ctx, element);
 		UNPACK_QRESULT_MOVE(auto expr_hout =, expr_hout_qresult);
+		const auto source_position = element.unlock(ctx)->getStablePosition();
 
-		const auto source_symbol_type = expr_hout->expression_type.getSymbolType();
-		const auto source_position    = element.unlock(ctx)->getStablePosition();
-		const auto coercion_qresult   = canCoerce(ctx, source_symbol_type, expected_type);
-		if (coercion_qresult.hasFailed()) return query::Failed();
-
-		variant_match(coercion_qresult.valueOrThrow().getVariant()) {
-			variant_case(Coercion, coercion) { return coercion.coerce(ctx, std::move(expr_hout)); }
-			variant_default {
-				logCoercionFailure(
-					ctx,
-					coercion_qresult,
-					source_symbol_type,
-					expected_type,
-					source_position,
-					std::move(log_error)
-				);
-				return query::Failed();
-			}
-		}
-		CORE_UNREACHABLE();
+		auto maybe_coerced = coerceFromBox(
+			ctx, std::move(expr_hout), expected_type, source_position, std::move(log_error)
+		);
+		if (maybe_coerced.has_value()) return std::move(maybe_coerced.value());
+		return query::Failed();
 	}
 }
