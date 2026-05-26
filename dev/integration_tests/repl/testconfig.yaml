@@ -7,11 +7,6 @@ beginning: |
   Press Enter to submit. Press Alt+Enter for new line.
 
 end: "\nGoodbye!\n"
-<<<<<<< HEAD
-instruction_prompt: "Instruction executed.\n"
-function_prompt: "Function executed.\n"
-=======
->>>>>>> main
 
 SubDirs:
   - fundamentals
