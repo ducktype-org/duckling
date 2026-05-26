@@ -1,7 +1,5 @@
 #include "scopes.hpp"
 
-#include "frontend/pst_parser/element_kind.hpp"
-
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
