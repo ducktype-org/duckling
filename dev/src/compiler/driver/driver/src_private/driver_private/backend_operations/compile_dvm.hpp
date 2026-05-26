@@ -23,6 +23,6 @@ namespace compiler::driver {
 	 * @brief Compiles the LIRModuleData to DVM CodeCollection.
 	 */
 	[[nodiscard]] DVMModuleData compileLIRModuleToDVM(
-		CRef<LIRModuleData> lir_module, query::Context& query_ctx, bool build_debug_info
+		CRef<LIRUnitWithBackendName> lir_module, query::Context& query_ctx, bool build_debug_info
 	);
 }

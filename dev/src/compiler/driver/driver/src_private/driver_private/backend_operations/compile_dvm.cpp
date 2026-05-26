@@ -10,7 +10,7 @@
 
 namespace compiler::driver {
 	DVMModuleData compileLIRModuleToDVM(
-		CRef<LIRModuleData> data, query::Context& query_ctx, bool build_debug_info
+		CRef<LIRUnitWithBackendName> data, query::Context& query_ctx, bool build_debug_info
 	) {
 		time_stats::TrackCategoryTime _(time_stats::TimeCategories::BackendCompilation);
 

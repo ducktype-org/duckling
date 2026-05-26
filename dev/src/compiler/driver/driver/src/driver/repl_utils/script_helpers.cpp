@@ -15,7 +15,7 @@ namespace compiler::repl {
 	}
 
 	void appendScriptLIRModuleData(
-		driver::LIRModuleData& merged, const driver::LIRModuleData& chunk
+		driver::LIRUnitWithBackendName& merged, const driver::LIRUnitWithBackendName& chunk
 	) {
 		merged.functions.insert(
 			merged.functions.end(), chunk.functions.begin(), chunk.functions.end()
