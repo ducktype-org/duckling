@@ -343,10 +343,9 @@ namespace vm {
 				performFunctionCall(instr, local_stack, frame, thread, func_id);
 			} else {
 				// should be compiled now
-				MRef<jit::JitOpFun> compiled = jit::compileLLVM(func_obj);
+				auto compiled = jit::compileCP(func_obj);
 
-				CORE_ASSERT(compiled, "Compiled function pointer shouldn't be nullptr");
-				my_data.func_ptr = compiled;
+				my_data.func_ptr = compiled.intoFunc<jit::JitOpFun>();
 
 				run_compiled();
 			}
