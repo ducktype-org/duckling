@@ -170,6 +170,7 @@ namespace vm {
 		 * @param block The block to update the data view for.
 		 * @param new_view The new view to set for the block.
 		 */
+	public:
 		void updateBlockDataView(Ref<BlockT> block, base::TypedModRawView<EntryT> new_view) {
 			CORE_ASSERT(
 				block->data.element_type->getSize().asInt() == new_view.size(),
@@ -190,6 +191,7 @@ namespace vm {
 
 			update_block_data_recursively(block);
 		}
+	private:
 
 		/**
 		 * @brief Executes destructors on individual objects that are in the block.

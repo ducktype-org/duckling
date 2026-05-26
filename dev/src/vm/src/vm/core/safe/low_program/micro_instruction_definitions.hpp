@@ -682,6 +682,9 @@ DEF_MICRO_INSTR(ft_ptrSub_pptr_pptr, vm::low::opargs::PlaceShadowPointerAny, vm:
 DEF_MICRO_INSTR(ft_load_pptr_pptr, vm::low::opargs::PlaceShadowPointerAny, vm::low::opargs::PlaceShadowPointerAny)
 DEF_MICRO_INSTR(ft_store_pptr_pptr, vm::low::opargs::PlaceShadowPointerAny, vm::low::opargs::PlaceShadowPointerAny)
 DEF_MICRO_INSTR(ft_memCopy, vm::low::opargs::PlaceShadowPointerAny, vm::low::opargs::PlaceShadowPointerAny)
+DEF_MICRO_INSTR(ft_mov_pptr_pptr, vm::low::opargs::PlaceShadowPointerAny, vm::low::opargs::PlaceShadowPointerAny)
+DEF_MICRO_INSTR(ft_setNull_pptr, vm::low::opargs::PlaceShadowPointerAny)
+
 
 // 4.4: Allocation & Initialization
 DEF_MICRO_INSTR(ft_alloc_pptr_type, vm::low::opargs::PlaceShadowPointerAny, vm::low::opargs::Type)

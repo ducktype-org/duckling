@@ -9,6 +9,12 @@ function inc {} -> {} {
 }
 
 function main { i64, ptr_argv } -> { i64 } {
+    init_pany_type x, i64;
+    init_pany_type y, i64;
+    init_pany_type z, i64;
+    mov_p64_imm x, 43;
+    mov_p64_imm y, 43;
+    mov_p64_imm z, 43;
     init_pany_type thread_id, i64;
     set_threadctx inc;
     call_builtinfunc builtin_start_thread;

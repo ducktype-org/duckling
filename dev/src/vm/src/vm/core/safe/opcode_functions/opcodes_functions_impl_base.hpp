@@ -1337,6 +1337,24 @@ namespace vm {
 		FUNCTION_CONT(2);
 	}
 
+	RETURN_TYPE OpFuns::OPCODE_NAME(ft_mov_pptr_pptr)(FUNCTION_ARGS) {
+		{
+			GET_SHADOW_POINTER_REF(instr->arg0) = updateShadowPointerAssignment(
+				thread, GET_SHADOW_POINTER_REF(instr->arg0), GET_SHADOW_POINTER_REF(instr->arg1)
+			);
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ft_setNull_pptr)(FUNCTION_ARGS) {
+		{
+			GET_SHADOW_POINTER_REF(instr->arg0) = updateShadowPointerAssignment(
+				thread, GET_SHADOW_POINTER_REF(instr->arg0), ShadowPointer::null()
+			);
+		}
+		FUNCTION_CONT(1);
+	}
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(ft_alloc_pptr_type)(FUNCTION_ARGS) {
 		{
 			auto type = READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1);

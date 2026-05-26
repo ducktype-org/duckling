@@ -229,8 +229,18 @@ namespace vm::loader::compiler::detail {
 			}
 			instr_case(high::Op_cmov_p64_imm, i) { addLow<Op_cmov_p64_imm>(i.dst, i.src); }
 			instr_case(high::Op_cmov_p64_p64, i) { addLow<Op_cmov_p64_p64>(i.dst, i.src); }
-			instr_case(high::Op_mov_pptr_pptr, i) { addLow<Op_mov_pptr_pptr>(i.dst, i.src); }
-			instr_case(high::Op_setNull_pptr, i) { addLow<Op_setNull_pptr>(i.dst); }
+			instr_case(high::Op_mov_pptr_pptr, i) {
+				addLow<Op_mov_pptr_pptr>(i.dst, i.src);
+				if (compiler.settings_.enable_fast_track) {
+					addLow<Op_ft_mov_pptr_pptr>(i.dst, i.src);
+				}
+			}
+			instr_case(high::Op_setNull_pptr, i) {
+				addLow<Op_setNull_pptr>(i.dst);
+				if (compiler.settings_.enable_fast_track) {
+					addLow<Op_ft_setNull_pptr>(i.dst);
+				}
+			}
 			instr_case(high::Op_mov_popq_popq, i) {
 				auto type_size = getPlaceType(i.src)->getSize().asInt();
 				addLow<Op_mov_popq_popq>(i.dst, i.src);
@@ -549,8 +559,22 @@ namespace vm::loader::compiler::detail {
 			instr_case(high::Op_free_pptr, i) { addLow<Op_free_pptr>(i.ptr); }
 			instr_case(high::Op_store_pptr_pany, i) {
 				addLow<Op_store_pptr_bany>(i.dst_ptr, i.src);
+				if (compiler.settings_.enable_fast_track) {
+					auto type = getPlaceType(i.src);
+					if (type->getPointerSize() > 0) {
+						addLow<Op_ft_store_pptr_pptr>(i.dst_ptr, opargs::PlacePtr{ i.src.var_name });
+					}
+				}
 			}
-			instr_case(high::Op_load_pany_pptr, i) { addLow<Op_load_bany_pptr>(i.dst, i.src_ptr); }
+			instr_case(high::Op_load_pany_pptr, i) {
+				addLow<Op_load_bany_pptr>(i.dst, i.src_ptr);
+				if (compiler.settings_.enable_fast_track) {
+					auto type = getPlaceType(i.dst);
+					if (type->getPointerSize() > 0) {
+						addLow<Op_ft_load_pptr_pptr>(opargs::PlacePtr{ i.dst.var_name }, i.src_ptr);
+					}
+				}
+			}
 			instr_case(high::Op_ref_pptr_pany, i) {
 				addLow<Op_ref_pptr_bany>(i.dst_ptr, i.src);
 				if (compiler.settings_.enable_fast_track) {
