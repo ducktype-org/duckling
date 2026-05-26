@@ -64,7 +64,7 @@ namespace query::internal {
 		 * Adds a node to the active query graph.
 		 * Panics if node is already present.
 		 */
-		void putNode(NodeID node_id, std::shared_ptr<query::Context> node_context_ref);
+		NodeHandle putNode(NodeID node_id, std::shared_ptr<query::Context> node_context_ref);
 
 		/**
 		 * Removes a node from the active query graph.
@@ -80,9 +80,9 @@ namespace query::internal {
 		 */
 		u64 size() const;
 
-		NodeHandle getNodeHandle(NodeID node_id) {
-			return active_nodes.getNodeHandle(node_id);
-		}
+		// NodeHandle getNodeHandle(NodeID node_id) {
+		// 	return active_nodes.getNodeHandle(node_id);
+		// }
 
 
 		/**

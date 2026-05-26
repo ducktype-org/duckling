@@ -114,7 +114,7 @@ namespace query::internal {
 		ContextAccess::getState()->getActiveGraph()->putNode(node_id, context);
 
 		// we have to set it here, after putting the node in the graph, since otherwise we cannot get the handle to it
-		context->setActiveGraphHandle(ContextAccess::getState()->getActiveGraph()->getNodeHandle(node_id));
+		// context->setActiveGraphHandle(ContextAccess::getState()->getActiveGraph()->getNodeHandle(node_id));
 
 		CORE_DEV_LOG(Query, "[QUERY \"", QueryIntType::QUERY_DATA.name, "\"]: Calculating.\n");
 

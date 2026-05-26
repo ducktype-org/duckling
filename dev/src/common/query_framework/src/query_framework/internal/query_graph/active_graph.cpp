@@ -4,8 +4,8 @@
 
 namespace query::internal {
 
-	void ActiveGraph::putNode(NodeID node_id, std::shared_ptr<query::Context> node_context_ref) {
-		active_nodes.put(
+	ActiveGraph::NodeHandle ActiveGraph::putNode(NodeID node_id, std::shared_ptr<query::Context> node_context_ref) {
+		auto out = active_nodes.putGetHandle(
 			node_id,
 			{
 				.active_edge      = base::Optional<NodeID>(),
@@ -13,6 +13,7 @@ namespace query::internal {
 			}
 		);
 		active_node_count++;
+		return out;
 	}
 
 	void ActiveGraph::removeNode(NodeID node_id) {

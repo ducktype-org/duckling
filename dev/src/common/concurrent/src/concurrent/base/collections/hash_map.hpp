@@ -559,6 +559,17 @@ namespace concurrent {
 			return NodeHandle(Ref<DATA_T>(data.value()), lock.shard_index);
 		}
 
+
+		template<typename K = KEY_T, typename D = DATA_T>
+		NodeHandle putGetHandle(K&& key, D&& value) RELEASE_NOEXCEPT {
+			WithShardLock lock(*this, keyToShard(key));
+			Ref<KeyValuePair>          result
+				= shards[lock.shard_index].put(std::forward<K>(key), std::forward<D>(value));
+			elements_count.fetch_add(1, std::memory_order_relaxed);
+
+			return NodeHandle(&result->value, lock.shard_index);
+		}
+
 		void callOnNodeHandle(const NodeHandle& handle, auto&& f) {
 			WithShardLock lock(*this, handle.shard_index);
 			std::forward<decltype(f)>(f)(handle.data_ref);

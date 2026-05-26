@@ -94,11 +94,11 @@ namespace query {
 		 */
 		struct QueryGraphHandler final {
 		private:
-			CRef<Context>   this_context_ref;
 			internal::NodeID caller;
 			internal::NodeID callee;
 			bool             enable_active_graph_operations;
-
+			CRef<Context>    this_context_ref;
+		
 			/**
 			 * Helper method used to deduplicate logic related to
 			 * active graph operations in the destructor.
@@ -118,14 +118,21 @@ namespace query {
 				internal::NodeID callee,
 				bool             active_graph_operations
 			):
-				  this_context_ref(&this_context),
 				  caller(caller),
 				  callee(callee),
-				  enable_active_graph_operations(active_graph_operations) {
+				  enable_active_graph_operations(active_graph_operations),
+				  this_context_ref(&this_context)
+			{
 			
 			main_query_state.addDependency(caller, callee);
 
 				if (enable_active_graph_operations) {
+
+					// we want to do it only when necessary:
+					// if (this_context.my_active_graph_handle.empty()) {
+					// 	this_context.my_active_graph_handle = main_query_state.getActiveGraph()->getNodeHandle(caller);
+					// }
+
 					// @TODO: #2026 Optimize it, we only need to add edge here, when the query is
 					// not ready.
 
