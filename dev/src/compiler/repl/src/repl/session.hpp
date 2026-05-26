@@ -9,7 +9,7 @@
 #pragma once
 
 #include "frontend.hpp"
-#include "helper_structs.hpp"
+#include "helpers.hpp"
 
 #include <backends/dvm/repl_lowering.hpp>
 #include <frontend/module_tree/module_tree.hpp>

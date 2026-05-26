@@ -57,8 +57,9 @@ namespace {
 	/**
 	 * @brief Update the stored argv so the REPL can restart with adjusted history options.
 	 *
-	 * Preserves the original executable and subcommand, removes any existing --history-entries and --history-entries-silent
-	 * arguments, which control reset behavior, and appends the requested replay count and silence flag.
+	 * Preserves the original executable and subcommand, removes any existing --history-entries and
+	 * --history-entries-silent arguments, which control reset behavior, and appends the requested
+	 * replay count and silence flag.
 	 *
 	 * @param replay_count Number of history entries to replay after restart.
 	 * @param silent Whether history replay should be silent.

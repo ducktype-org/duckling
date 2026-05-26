@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../helper_structs.hpp"
+#include "../helpers.hpp"
 
 #include <replxx.hxx>
 

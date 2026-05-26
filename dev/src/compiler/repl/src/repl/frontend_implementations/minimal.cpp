@@ -1,7 +1,7 @@
 #define NOMINMAX
 #include "minimal.hpp"
 
-#include <repl/helper_structs.hpp>
+#include <repl/helpers.hpp>
 
 #include <base/types/ints.hpp>
 

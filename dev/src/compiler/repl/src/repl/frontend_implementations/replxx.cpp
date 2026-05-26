@@ -1,6 +1,6 @@
 #include "replxx.hpp"
 
-#include <repl/helper_structs.hpp>
+#include <repl/helpers.hpp>
 
 #include <algorithm>
 #include <cctype>
