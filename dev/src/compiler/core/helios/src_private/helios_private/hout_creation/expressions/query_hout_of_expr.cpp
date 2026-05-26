@@ -342,7 +342,6 @@ namespace compiler::helios::code {
 			) {
 				if (from == to) return;  // trivial cast, always valid
 
-				// Pointer casts
 				using tsh::Kind;
 				using tsh::Mutability;
 				using tsh::ReferenceKind;
@@ -352,12 +351,6 @@ namespace compiler::helios::code {
 				    && from.getRefKind() == ReferenceKind::Direct
 				    && to.getRefKind() == ReferenceKind::Direct)
 					return;
-
-
-				// Pointer casts
-				using tsh::Kind;
-				using tsh::Mutability;
-				using tsh::ReferenceKind;
 
 				struct CastPattern {
 					/// If specified, the cast must have this reference kind on the source side. If
@@ -376,9 +369,7 @@ namespace compiler::helios::code {
 					bool same_pointee_type;
 				};
 
-				// Move it to a typesystem code, it is not static for now
-				// because static requires a mutex.
-				const std::vector<CastPattern> valid_pointer_casts = {
+				static const std::vector<CastPattern> valid_pointer_casts = {
 					{
 						.from_ref_kind     = ReferenceKind::Ref,
 						.from_kind         = {},
