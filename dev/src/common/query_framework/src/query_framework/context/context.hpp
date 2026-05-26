@@ -214,7 +214,7 @@ namespace query {
 
 				return OthQuery::internal_query(key);
 			} else {
-				QueryGraphHandler graph_handler(*this, my_node, dep_id, true);
+				QueryGraphHandler graph_handler(*this, my_node, dep_id, false);
 				this->active = false;
 				defer({ this->active = true; });
 
