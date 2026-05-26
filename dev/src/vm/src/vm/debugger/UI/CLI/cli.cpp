@@ -110,7 +110,6 @@ namespace vm::debugger::cli {
 						  std::cout << "Pause failed...\n";
 						  return api_error;
 					  });
-				position(response);
 			} else if (stripped_line == "continue" || stripped_line == "c"
 			           || stripped_line == "resume") {
 				debugger.resume().transform_error([&](const api::ApiError& api_error) {
