@@ -148,7 +148,7 @@ namespace compiler::helios::desugaring {
 			}();
 
 			return makeBox<code::VariableStmt>(
-				ctx.loop_origin, std::move(len_expr), getConstU64(ctx.ctx), len_sym
+				gen, std::move(len_expr), getConstU64(ctx.ctx), len_sym
 			);
 		}
 
@@ -279,6 +279,7 @@ namespace compiler::helios::desugaring {
 	base::Optional<code::BlockStmt> desugarFor(
 		query::Context& ctx, pst::Access<pst::For> stmt, const BodyProcessor& process_body
 	) {
+		auto gen     = code::generatedOrigin();
 		auto ctx_opt = buildForDesugarCtx(ctx, stmt);
 		if (!ctx_opt.has_value()) return {};
 		auto& for_ctx = ctx_opt.value();
@@ -289,11 +290,8 @@ namespace compiler::helios::desugaring {
 			= ctx.query<QueryTypeOfSymbol>(symbols.iterator)->valueOrThrow();
 
 		Box<code::Expr> reusable_inner = [&]() -> Box<code::Expr> {
-			if (for_ctx.collection_is_l_value) {
-				return makeBox<code::RefOfExpr>(
-					ctx, code::generatedOrigin(), std::move(for_ctx.iterable_hout)
-				);
-			}
+			if (for_ctx.collection_is_l_value)
+				return makeBox<code::RefOfExpr>(ctx, gen, std::move(for_ctx.iterable_hout));
 			return std::move(for_ctx.iterable_hout);
 		}();
 
@@ -327,8 +325,7 @@ namespace compiler::helios::desugaring {
 			// For StaticArray, __len evaluates to a compile-time constant, so it does not evaluate
 			// the collection itself. We execute `iterable_reusable` here in an ExprStmt
 			// to ensure `first_use` is evaluated before get in the loop.
-			outer.statements.emplace_back(
-				makeBox<code::ExprStmt>(for_ctx.loop_origin, std::move(iterable_reusable))
+			outer.statements.emplace_back(makeBox<code::ExprStmt>(gen, std::move(iterable_reusable))
 			);
 			outer.statements.emplace_back(buildLengthVar(for_ctx, symbols.length, {}));
 		} else {
