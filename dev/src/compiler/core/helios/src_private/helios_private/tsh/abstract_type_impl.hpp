@@ -543,7 +543,7 @@ namespace compiler::tsh {
 		}
 
 		explicit PointerAbstractTypeImpl(const SymbolType<> component): pointee(component) {
-			representation = base::strConcat("ptr(", component.toString(), ")");
+			representation = base::strConcat("ptr ", component.toString());
 		}
 
 		[[nodiscard]]
@@ -579,7 +579,7 @@ namespace compiler::tsh {
 
 		explicit ManyPointerAbstractTypeImpl(const SymbolType<> component):
 			  PointerAbstractTypeImpl(component) {
-			representation = base::strConcat("manyptr(", component.toString(), ")");
+			representation = base::strConcat("manyptr ", component.toString());
 		}
 
 		[[nodiscard]]
@@ -600,7 +600,7 @@ namespace compiler::tsh {
 
 		explicit CPointerAbstractTypeImpl(const SymbolType<> component):
 			  PointerAbstractTypeImpl(component) {
-			representation = base::strConcat("cptr(", component.toString(), ")");
+			representation = base::strConcat("cptr ", component.toString());
 		}
 
 		[[nodiscard]]
