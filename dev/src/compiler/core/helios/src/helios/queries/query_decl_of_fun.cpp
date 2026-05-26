@@ -143,6 +143,8 @@ namespace compiler::helios {
 			}
 
 			void visitWhile(pst::Access<pst::While> stmt) final { visitRecursion(stmt->getBody()); }
+
+			void visitFor(pst::Access<pst::For> stmt) final { visitRecursion(stmt->getBody()); }
 		};
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
@@ -350,9 +352,9 @@ namespace compiler::helios {
 
 				base::Optional<BoxOrCRef<code::Expr>> init_expr_coerced_opt = std::nullopt;
 				code::ElementOrigin                   field_origin = code::generatedOrigin();
-				if (symbolPst(field.getSymbol()).has_value()) {
+				if (maybeSymbolPst(field.getSymbol()).has_value()) {
 					// Get the initial value for the field from the PST.
-					const auto field_pst_data = symbolPst(field.getSymbol())
+					const auto field_pst_data = maybeSymbolPst(field.getSymbol())
 					                                .value()
 					                                .unlock(ctx)
 					                                .dynamicCast<pst::Field>()
