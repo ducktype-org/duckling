@@ -202,5 +202,4 @@ namespace compiler::helios {
 		dia_int::StablePosition                              source_position,
 		base::Optional<std::function<void(query::Context&)>> log_error
 	);
-
 }
