@@ -19,6 +19,11 @@ namespace compiler::tsh {
 	}
 
 	[[nodiscard]]
+	bool AbstractType::isSimple() const {
+		return pimpl->isSimple();
+	}
+
+	[[nodiscard]]
 	bool AbstractType::hasNoOpDestructor() const {
 		return pimpl->hasNoOpDestructor();
 	}

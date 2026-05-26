@@ -469,6 +469,8 @@ namespace compiler::backend_llvm {
 
 		if (auto* function = llvm::dyn_cast<llvm::Function>(callee.getCallee())) {
 			function->setCallingConv(getCallingConvFromABI(function_literal.abi));
+			if (function_literal.link_once)
+				function->setLinkage(llvm::GlobalValue::LinkOnceODRLinkage);
 
 			// If the function uses C ABI, we need to pass structs by pointer with `byval` attribute.
 			if (std::holds_alternative<helios::CAbi>(function_literal.abi)) {

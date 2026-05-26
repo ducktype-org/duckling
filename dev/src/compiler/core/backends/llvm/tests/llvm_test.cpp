@@ -134,7 +134,10 @@ private:
 		llvm_module.debugPrint();
 
 		// verify integrity, then return for further checks.
-		assertTrue(llvm_module.verify().isOk(), "LLVM module verification failed");
+		assertTrue(
+			llvm_module.verify().isOk(),
+			"LLVM module verification failed (enable Backend dev logs to see details)"
+		);
 		return llvm_module;
 	}
 
@@ -142,6 +145,10 @@ private:
 		std::string module_path, i32 expected_function_count = 1, i32 expected_prototype_count = -1
 	) {
 		if (expected_prototype_count == -1) expected_prototype_count = expected_function_count;
+		// @TODO: #2694 These numbers are inflated by toString methods for simple types
+		// There are 14 toString methods, and an additional 5 builtin_stringify_<type> prototypes.
+		expected_function_count += 14;
+		expected_prototype_count += 14 + 5;
 		auto llvm_module = getLLVMModuleFromPath(std::move(module_path));
 		ASSERT_EQUAL_PRINT(llvm_module.getFunctionCount(false), expected_function_count);
 		ASSERT_EQUAL_PRINT(llvm_module.getFunctionCount(), expected_prototype_count);
@@ -205,7 +212,7 @@ private:
 		runTestForModule("modules/units/unit_simple_multiple_modules", 1, 2);
 	}
 
-	void classTest() { runTestForModule("modules/classes/records", 10, 11); }
+	void classTest() { runTestForModule("modules/classes/records", 14, 16); }
 
 	void stringsTest() { runTestForModule("modules/strings", 1, 3); }
 
@@ -224,7 +231,7 @@ private:
 			ptr_loads++;
 			search_range = matches.suffix();
 		}
-		assertTrue(ptr_loads == 17, "Too few pointer loads");
+		assertTrue(ptr_loads == 18, "Too few pointer loads");
 	}
 
 	void boxesTest() {
