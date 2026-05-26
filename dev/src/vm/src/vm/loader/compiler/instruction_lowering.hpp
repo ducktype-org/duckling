@@ -254,11 +254,16 @@ namespace vm::loader::compiler::detail {
 				}
 			}
 			instr_case(high::Op_mov_popq_popq, i) {
+				ftRead(i.src);
+				ftWrite(i.dst);
 				auto type_size = getPlaceType(i.src)->getSize().asInt();
 				addLow<Op_mov_popq_popq>(i.dst, i.src);
 				addLow<Op_ext_imm>(vm::opargs::Immediate{ type_size });
 			}
-			instr_case(high::Op_mov_popq_imm, i) { addLow<Op_mov_popq_imm>(i.dst, i.src); }
+			instr_case(high::Op_mov_popq_imm, i) {
+				ftWrite(i.dst);
+				addLow<Op_mov_popq_imm>(i.dst, i.src);
+			}
 			instr_case(high::Op_mov_pste_pste, i) {
 				addLow<Op_mov_bste_bste>(i.dst, i.src);
 				if (compiler.settings_.enable_fast_track) {
@@ -501,11 +506,19 @@ namespace vm::loader::compiler::detail {
 				addLow<Op_variantSetInner_bvnt_type>(i.variant, i.inner_type);
 				opargs::Type variant_type = getPlaceType(i.variant)->getName();
 				addLow<Op_ext_type>(variant_type);
+				if (compiler.settings_.enable_fast_track) {
+					addLow<Op_ft_variantSetInner_psbvnt_type>(i.variant, i.inner_type);
+					addLow<Op_ext_type>(variant_type);
+				}
 			}
 			instr_case(high::Op_variantGetInner_pptr_pvnt_type, i) {
 				addLow<Op_variantGetInner_pptr_bvnt>(i.dst_ptr, i.variant);
 				opargs::Type variant_type = getPlaceType(i.variant)->getName();
 				addLow<Op_ext_type_type>(i.expected_type, variant_type);
+				if (compiler.settings_.enable_fast_track) {
+					addLow<Op_ft_variantGetInner_pptr_psbvnt>(i.dst_ptr, i.variant);
+					addLow<Op_ext_type_type>(i.expected_type, variant_type);
+				}
 			}
 			instr_case(high::Op_variantSetInner_pptr_type, i) {
 				addLow<Op_variantSetInner_pptr_type>(i.variant_ptr, i.inner_type);
@@ -514,6 +527,10 @@ namespace vm::loader::compiler::detail {
 				                                .value()
 				                                ->getName();
 				addLow<Op_ext_type>(variant_type);
+				if (compiler.settings_.enable_fast_track) {
+					addLow<Op_ft_variantSetInner_pptr_type>(i.variant_ptr, i.inner_type);
+					addLow<Op_ext_type>(variant_type);
+				}
 			}
 			instr_case(high::Op_variantGetInner_pptr_pptr_type, i) {
 				addLow<Op_variantGetInner_pptr_pptr>(i.dst_ptr, i.variant_ptr);
@@ -522,6 +539,10 @@ namespace vm::loader::compiler::detail {
 				                                .value()
 				                                ->getName();
 				addLow<Op_ext_type_type>(i.expected_type, variant_type);
+				if (compiler.settings_.enable_fast_track) {
+					addLow<Op_ft_variantGetInner_pptr_pptr>(i.dst_ptr, i.variant_ptr);
+					addLow<Op_ext_type_type>(i.expected_type, variant_type);
+				}
 			}
 			instr_case(high::Op_label, i) { addLabel(i.label); }
 			instr_case(high::Op_jmp_label, i) { addLow<Op_jmp_label>(i.label); }

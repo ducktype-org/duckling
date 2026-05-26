@@ -721,6 +721,12 @@ DEF_MICRO_INSTR(ft_arrayWrite_pfst, vm::low::opargs::PlaceShadowBlockFSTable, vm
 DEF_MICRO_INSTR(ft_mov_pfst_pfst, vm::low::opargs::PlaceShadowBlockFSTable, vm::low::opargs::PlaceShadowBlockFSTable)
 DEF_MICRO_INSTR(ft_dynTableReAlloc, vm::low::opargs::PlaceShadowPointerAny, vm::low::opargs::Type)
 
+// 5.5: Stack & Heap Variant Instrumentation
+DEF_MICRO_INSTR(ft_variantSetInner_psbvnt_type, vm::low::opargs::PlaceShadowBlockVariant, vm::low::opargs::Type)
+DEF_MICRO_INSTR(ft_variantGetInner_pptr_psbvnt, vm::low::opargs::PlaceShadowPointerAny, vm::low::opargs::PlaceShadowBlockVariant)
+DEF_MICRO_INSTR(ft_variantSetInner_pptr_type, vm::low::opargs::PlaceShadowPointerAny, vm::low::opargs::Type)
+DEF_MICRO_INSTR(ft_variantGetInner_pptr_pptr, vm::low::opargs::PlaceShadowPointerAny, vm::low::opargs::PlaceShadowPointerAny)
+
 // ========= MISC ========
 
 DEF_MICRO_INSTR(check_strategy)

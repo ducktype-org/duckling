@@ -2030,6 +2030,122 @@ namespace vm {
 		}
 		FUNCTION_CONT(2);
 	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ft_variantSetInner_psbvnt_type)(FUNCTION_ARGS) {
+		{
+			auto* sf = thread.getShadowFrame();
+			auto block = READ_SHADOW_BLOCK_REF_FROM_ARG(instr->arg0);
+			auto wanted_type = READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1);
+			auto variant_type = READ_FROM_DIRECT_ARG(TypeCRef, instr[1].arg0);
+
+			auto tid = thread.getThreadID();
+			auto epoch = thread.getVC()[tid];
+			ShadowEntry* tag_entry = block->getData();
+			tag_entry->processWrite(tid, epoch, thread.getVC());
+
+			thread.getShadowDataMemory().setNestedViewBlock({ block, 1 }, wanted_type);
+
+			if (wanted_type->getPointerSize() > 0) {
+				auto block_ptr = READ_SHADOW_POINTER_BLOCK_REF_FROM_ARG(instr->arg0);
+				thread.getShadowPointerMemory().setNestedViewBlock({ block_ptr, 0 }, wanted_type);
+			}
+		}
+		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ft_variantGetInner_pptr_psbvnt)(FUNCTION_ARGS) {
+		{
+			auto* sf = thread.getShadowFrame();
+			auto block = READ_SHADOW_BLOCK_REF_FROM_ARG(instr->arg1);
+			auto expected_type = READ_FROM_DIRECT_ARG(TypeCRef, instr[1].arg0);
+			auto variant_type = READ_FROM_DIRECT_ARG(TypeCRef, instr[1].arg1);
+
+			auto tid = thread.getThreadID();
+			auto epoch = thread.getVC()[tid];
+			ShadowEntry* tag_entry = block->getData();
+			tag_entry->processRead(tid, epoch, thread.getVC());
+
+			auto view_block = thread.getShadowDataMemory().getNestedViewBlock({ block, 1 }, expected_type);
+			ShadowPointer shadow_ptr;
+			if (view_block) {
+				shadow_ptr.shadow_block = view_block;
+				shadow_ptr.logical_offset = 0;
+
+				if (expected_type->getPointerSize() > 0) {
+					auto block_ptr = READ_SHADOW_POINTER_BLOCK_REF_FROM_ARG(instr->arg1);
+					auto view_ptr_block = thread.getShadowPointerMemory().getNestedViewBlock({ block_ptr, 0 }, expected_type);
+					shadow_ptr.shadow_pointer_block = view_ptr_block;
+					shadow_ptr.pointer_offset = 0;
+				}
+			}
+
+			GET_SHADOW_POINTER_REF(instr->arg0) = updateShadowPointerAssignment(thread, GET_SHADOW_POINTER_REF(instr->arg0), shadow_ptr);
+		}
+		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ft_variantSetInner_pptr_type)(FUNCTION_ARGS) {
+		{
+			ShadowPointer variant_sp = GET_SHADOW_POINTER_REF(instr->arg0);
+			auto wanted_type = READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1);
+			auto variant_type = READ_FROM_DIRECT_ARG(TypeCRef, instr[1].arg0);
+
+			if (!variant_sp.isNull()) {
+				auto block = variant_sp.shadow_block.toOpt().value();
+				auto offset = variant_sp.logical_offset;
+
+				auto tid = thread.getThreadID();
+				auto epoch = thread.getVC()[tid];
+				ShadowEntry* tag_entry = block->getData() + offset;
+				tag_entry->processWrite(tid, epoch, thread.getVC());
+
+				thread.getShadowDataMemory().setNestedViewBlock({ block, offset + 1 }, wanted_type);
+
+				if (wanted_type->getPointerSize() > 0) {
+					auto block_ptr = variant_sp.shadow_pointer_block.toOpt().value();
+					auto ptr_offset = variant_sp.pointer_offset;
+					thread.getShadowPointerMemory().setNestedViewBlock({ block_ptr, ptr_offset }, wanted_type);
+				}
+			}
+		}
+		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ft_variantGetInner_pptr_pptr)(FUNCTION_ARGS) {
+		{
+			ShadowPointer variant_sp = GET_SHADOW_POINTER_REF(instr->arg1);
+			auto expected_type = READ_FROM_DIRECT_ARG(TypeCRef, instr[1].arg0);
+			auto variant_type = READ_FROM_DIRECT_ARG(TypeCRef, instr[1].arg1);
+
+			ShadowPointer shadow_ptr;
+			if (!variant_sp.isNull()) {
+				auto block = variant_sp.shadow_block.toOpt().value();
+				auto offset = variant_sp.logical_offset;
+
+				auto tid = thread.getThreadID();
+				auto epoch = thread.getVC()[tid];
+				ShadowEntry* tag_entry = block->getData() + offset;
+				tag_entry->processRead(tid, epoch, thread.getVC());
+
+				auto view_block = thread.getShadowDataMemory().getNestedViewBlock({ block, offset + 1 }, expected_type);
+				if (view_block) {
+					shadow_ptr.shadow_block = view_block;
+					shadow_ptr.logical_offset = 0;
+
+					if (expected_type->getPointerSize() > 0) {
+						auto block_ptr = variant_sp.shadow_pointer_block.toOpt().value();
+						auto ptr_offset = variant_sp.pointer_offset;
+						auto view_ptr_block = thread.getShadowPointerMemory().getNestedViewBlock({ block_ptr, ptr_offset }, expected_type);
+						shadow_ptr.shadow_pointer_block = view_ptr_block;
+						shadow_ptr.pointer_offset = 0;
+					}
+				}
+			}
+
+			GET_SHADOW_POINTER_REF(instr->arg0) = updateShadowPointerAssignment(thread, GET_SHADOW_POINTER_REF(instr->arg0), shadow_ptr);
+		}
+		FUNCTION_CONT(2);
+	}
 }
 
 

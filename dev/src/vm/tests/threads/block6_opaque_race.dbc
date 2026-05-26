@@ -29,7 +29,6 @@ function main { i64, ptr_argv } -> { i64 } {
     # Concurrently copy opaque value blocks (exposes mov_popq_popq gap)
     init_pany_type main_temp, OpaqueType;
     mov_popq_popq local_opaque, main_temp;
-    ext_imm 16;
 
     init_pany_type join_ret, i64;
     init_pany_type join_id, i64;

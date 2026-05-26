@@ -645,7 +645,15 @@ namespace vm {
 
 			auto block_data         = parent_pointer.block->data;
 			block_data.element_type = type;
-			block_data.view         = getPointerData(parent_pointer, type->getSize().asInt());
+			u64 entry_count = 0;
+			if constexpr (std::is_same_v<EntryT, vm::ShadowEntry>) {
+				entry_count = type->getShadowSize();
+			} else if constexpr (std::is_same_v<EntryT, vm::ShadowPointer>) {
+				entry_count = type->getPointerSize();
+			} else {
+				entry_count = type->getSize().asInt();
+			}
+			block_data.view         = getPointerData(parent_pointer, entry_count);
 
 			auto new_block    = createBlock(block_data);  // @note createBlock nulls them bytes
 			new_block->parent = parent_pointer.getBlock();
