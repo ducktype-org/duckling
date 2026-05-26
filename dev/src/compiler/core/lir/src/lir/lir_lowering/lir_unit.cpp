@@ -31,7 +31,11 @@ namespace compiler::lir {
                     auto lir_ctor_function = ctx.query<lir::LowerToLIRFunction>({ mir_ctor_function });
                     lir_unit.lir_globals.emplace_back(LIRGlobalData{
                         .global = lir_global,
-                        .data_initialization = LIRGlobalData::CTorDtorPair{ .global_ctor = lir_ctor_function },
+                        .data_initialization = LIRGlobalData::CTorDtorPair{
+                            // @TODO: #929 add legit dtors when implemented 
+                            .global_ctor = lir_ctor_function,
+                            .global_dtor = std::nullopt,
+                        },
                     });
                 }
                 variant_default {
