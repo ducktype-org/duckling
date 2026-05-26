@@ -2,6 +2,7 @@
 
 #include <base/types/ints.hpp>
 
+#include <concepts>
 #include <cstddef>
 
 namespace vm::jit::cnp {
@@ -14,9 +15,9 @@ namespace vm::jit::cnp {
 		HoleType  type;
 		HoleValue value;
 
-		void relocate(const byte* from, byte* to) const;
+		inline void relocate(const byte* from, byte* to) const;
 		template<std::integral T>
-		void patch(byte* new_addr, T value) const;
+		inline void patch(byte* new_addr, T value) const;
 	};
 
 #ifdef __x86_64__
