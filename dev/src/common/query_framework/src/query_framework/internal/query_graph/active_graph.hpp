@@ -58,6 +58,8 @@ namespace query::internal {
 
 
 	public:
+		using NodeHandle = decltype(active_nodes)::NodeHandle;
+
 		/**
 		 * Adds a node to the active query graph.
 		 * Panics if node is already present.
@@ -78,15 +80,24 @@ namespace query::internal {
 		 */
 		u64 size() const;
 
+		NodeHandle getNodeHandle(NodeID node_id) {
+			return active_nodes.getNodeHandle(node_id);
+		}
+
+
 		/**
 		 * Removes active edge of a given node.
 		 */
 		void removeEdge(NodeID node_id);
 
+		void removeEdgeByHandle(NodeHandle handle);
+
 		/**
 		 * Sets new active edge of a given node.
 		 */
 		void setEdge(NodeID node_id, NodeID edge);
+
+		void setEdgeByHandle(NodeHandle handle, NodeID edge);
 
 		/**
 		 * Walks the given node, until there is a cycle, or it can't walk no more.

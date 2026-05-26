@@ -105,6 +105,8 @@ namespace concurrent {
 	public:
 		using KeyValuePair = typename HashMapType::KeyValuePair;
 
+
+
 		ConHashMap(): shards(SHARD_COUNT) {
 			for (u64 i = 0; i < SHARD_COUNT; i++)
 				shard_mutexes.emplace_back(makeBox<concurrent::AtomicFlagSpinlock>());
@@ -532,6 +534,34 @@ namespace concurrent {
 				return &pair;
 			});
 			return result;
+		}
+
+
+
+		struct NodeHandle final {
+		private:
+			friend class ConHashMap;
+
+			Ref<DATA_T> data_ref;
+			u64 shard_index;
+
+			NodeHandle(Ref<DATA_T> data_ref, u64 shard_index): data_ref(data_ref), shard_index(shard_index) {}
+		};
+
+		NodeHandle getNodeHandle(const KEY_T& key) {
+			WithShardLock lock(*this, keyToShard(key));
+			
+			auto data = shards[lock.shard_index].atMaybe(key);
+			if (!data.has_value()) {
+				CORE_PANIC("Key not found in ConHashMap");
+			}
+
+			return NodeHandle(Ref<DATA_T>(data.value()), lock.shard_index);
+		}
+
+		void callOnNodeHandle(const NodeHandle& handle, auto&& f) {
+			WithShardLock lock(*this, handle.shard_index);
+			std::forward<decltype(f)>(f)(handle.data_ref);
 		}
 
 	private:

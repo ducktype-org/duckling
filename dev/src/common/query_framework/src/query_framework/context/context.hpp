@@ -52,6 +52,8 @@ namespace query {
 		internal::NodeID my_node;
 		bool             active = true;
 
+		base::Optional<internal::ActiveGraph::NodeHandle> my_active_graph_handle;
+
 		/**
 		 * A flag indicating that the query node associated with this context is part of a cycle in
 		 * the query graph. This is set by the cycle detection logic in QueryGraphHandler when a
@@ -66,7 +68,12 @@ namespace query {
 		 */
 		std::atomic<bool> is_cyclic_node = false;
 
-		Context(internal::NodeID my_node): my_node(my_node) {}
+		Context(internal::NodeID my_node):
+			my_node(my_node)
+			// my_active_graph_handle(main_query_state.getActiveGraph()->getNodeHandle(my_node))
+		{}
+
+
 		friend struct query::internal::ContextAccess;
 
 		/**
@@ -87,6 +94,7 @@ namespace query {
 		 */
 		struct QueryGraphHandler final {
 		private:
+			CRef<Context>   this_context_ref;
 			internal::NodeID caller;
 			internal::NodeID callee;
 			bool             enable_active_graph_operations;
@@ -95,19 +103,27 @@ namespace query {
 			 * Helper method used to deduplicate logic related to
 			 * active graph operations in the destructor.
 			 */
-			void deinitActiveGraph() { main_query_state.getActiveGraph()->removeEdge(caller); }
+			void deinitActiveGraph() { 
+				// main_query_state.getActiveGraph()->removeEdge(caller);
+				main_query_state.getActiveGraph()->removeEdgeByHandle(
+					this_context_ref->my_active_graph_handle.value()
+				);
+			}
 
 		public:
+
 			QueryGraphHandler(
 				Context&         this_context,
 				internal::NodeID caller,
 				internal::NodeID callee,
 				bool             active_graph_operations
 			):
+				  this_context_ref(&this_context),
 				  caller(caller),
 				  callee(callee),
 				  enable_active_graph_operations(active_graph_operations) {
-				main_query_state.addDependency(caller, callee);
+			
+			main_query_state.addDependency(caller, callee);
 
 				if (enable_active_graph_operations) {
 					// @TODO: #2026 Optimize it, we only need to add edge here, when the query is
@@ -121,7 +137,13 @@ namespace query {
 					// "working-on" edges. Also note, that we should not add any edges when
 					// scheduling queries. Scheduling acts as if the schedule operation came from
 					// outside the query framework.
-					main_query_state.getActiveGraph()->setEdge(caller, callee);
+					
+					// main_query_state.getActiveGraph()->setEdge(caller, callee);
+					main_query_state.getActiveGraph()->setEdgeByHandle(
+						this_context_ref->my_active_graph_handle.value(), callee
+					);
+
+
 					auto maybe_cycle = main_query_state.getActiveGraph()->cycleCheck(caller);
 
 					if (maybe_cycle.has_value()) {
@@ -188,6 +210,11 @@ namespace query {
 		Context(const Context&) = delete;
 		Context(Context&&)      = delete;
 
+
+		void setActiveGraphHandle(internal::ActiveGraph::NodeHandle handle) {
+			my_active_graph_handle = handle;
+		}
+
 		/**
 		 * This is the main query invocation method, used to call other queries from a query
 		 * implementation.
@@ -214,7 +241,7 @@ namespace query {
 
 				return OthQuery::internal_query(key);
 			} else {
-				QueryGraphHandler graph_handler(*this, my_node, dep_id, false);
+				QueryGraphHandler graph_handler(*this, my_node, dep_id, true);
 				this->active = false;
 				defer({ this->active = true; });
 

@@ -38,10 +38,30 @@ namespace query::internal {
 		});
 	}
 
+	void ActiveGraph::removeEdgeByHandle(NodeHandle handle) {
+		active_nodes.callOnNodeHandle(handle, [](Ref<ActiveData> data_ref) {
+			CORE_ASSERT(
+				data_ref->active_edge.has_value(),
+				"Removing edge for node that does not have an active edge"
+			);
+			data_ref->active_edge.reset();
+		});
+	}
+
 	void ActiveGraph::setEdge(NodeID node_id, NodeID edge) {
 		// Note that callOn will panic here, on a node that does not exist, this is the expected
 		// behavior.
 		active_nodes.callOn(node_id, [edge](Ref<ActiveData> data_ref) {
+			CORE_ASSERT(
+				data_ref->active_edge.empty(),
+				"Setting edge for node that already has an active edge"
+			);
+			data_ref->active_edge = edge;
+		});
+	}
+
+	void ActiveGraph::setEdgeByHandle(NodeHandle handle, NodeID edge) {
+		active_nodes.callOnNodeHandle(handle, [edge](Ref<ActiveData> data_ref) {
 			CORE_ASSERT(
 				data_ref->active_edge.empty(),
 				"Setting edge for node that already has an active edge"
