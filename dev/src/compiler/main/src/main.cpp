@@ -54,7 +54,7 @@
 namespace {
 	std::vector<std::string> g_argv;
 
-	void setReplRestartArgs(size_t replay_count, bool silent) {
+	void setReplRestartArgs(usize replay_count, bool silent) {
 		if (g_argv.empty()) return;
 
 		std::vector<std::string> new_args;
@@ -62,7 +62,7 @@ namespace {
 		new_args.push_back(g_argv[0]);
 
 		bool seen_repl = false;
-		for (size_t i = 1; i < g_argv.size(); ++i) {
+		for (usize i = 1; i < g_argv.size(); ++i) {
 			const auto& arg = g_argv[i];
 			if (!seen_repl) {
 				new_args.push_back(arg);
@@ -1022,7 +1022,7 @@ clah::Clah getClahForMain() {
 						return 1;
 					}
 					int                    result = 0;
-					base::Optional<size_t> reset_replay_count;
+					base::Optional<usize> reset_replay_count;
 					{
 						compiler::repl::ReplSession session(!options.isFlag("no-completions"));
 						auto replay_count_opt = options.getValue<i64>("history-entries");
@@ -1035,7 +1035,7 @@ clah::Clah getClahForMain() {
 						}
 						if (replay_count > 0)
 							session.replayHistoryEntries(
-								static_cast<size_t>(replay_count), replay_silent
+								static_cast<usize>(replay_count), replay_silent
 							);
 						if (options.getExtraParameterCount() > 1) {
 							std::cerr << "Error: repl accepts at most one script path. "
@@ -1084,7 +1084,7 @@ clah::Clah getClahForMain() {
 
 int main(int argc, const char* argv[]) {
 	g_argv.clear();
-	g_argv.reserve(static_cast<size_t>(argc));
+	g_argv.reserve(static_cast<usize>(argc));
 	for (int i = 0; i < argc; ++i) g_argv.emplace_back(argv[i]);
 
 	init::InitObject _;
