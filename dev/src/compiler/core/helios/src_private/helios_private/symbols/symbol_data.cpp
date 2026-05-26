@@ -26,6 +26,14 @@ namespace compiler::helios {
 			return { array_type.queryUnstablePerfectHash() };
 		}
 
+		base::Bit256 GeneratedSymbolData::ToStringMethod::queryUnstablePerfectHash() const {
+			return owner_type.queryUnstablePerfectHash();
+		}
+
+		base::Bit256 GeneratedSymbolData::DefaultDestructor::queryUnstablePerfectHash() const {
+			return owner_type.queryUnstablePerfectHash();
+		}
+
 		base::Bit256 GeneratedSymbolData::BuiltinOperator::queryUnstablePerfectHash() const {
 			return { operator_type.queryUnstablePerfectHash() };
 		}
@@ -84,11 +92,7 @@ namespace compiler::helios {
 					std::vector<tsh::SymbolType<>> param_types;
 					for (const auto& field: fields) param_types.push_back(field.getType(ctx));
 
-					const tsh::SymbolType<> return_type{
-						target_type,
-						tsh::ReferenceKind::Direct,
-						tsh::Mutability::Mutable,
-					};
+					const auto return_type = tsh::SymbolType<>::withDefaults(target_type);
 
 					const auto ctor_abstract_type = ctx.query<tsh::QueryFunctionType>({
 						.parameter_types = std::move(param_types),
@@ -109,16 +113,11 @@ namespace compiler::helios {
 					          .as<tsh::ClassAbstractType>();
 
 					// @TODO: #1328 Properly handle value categories in class constructors.
-					const tsh::SymbolType<> return_type{
-						class_type,
-						tsh::ReferenceKind::Direct,
-						tsh::Mutability::Mutable,
-					};
+					const auto return_type = tsh::SymbolType<>::withDefaults(class_type);
 
-					const auto ctor_abstract_type = ctx.query<tsh::QueryFunctionType>({
-						.parameter_types = {},
-						.result_type     = return_type,
-					});
+					const auto ctor_abstract_type
+						= ctx.query<tsh::QueryFunctionType>({ .parameter_types = {},
+					                                          .result_type     = return_type });
 
 					return tsh::SymbolType<>{
 						ctor_abstract_type,
@@ -127,19 +126,57 @@ namespace compiler::helios {
 					};
 				}
 				variant_case(DefaultStaticArrayConstructor, ctor) {
-					const tsh::SymbolType<> return_type{
-						ctor.array_type,
-						tsh::ReferenceKind::Direct,
-						tsh::Mutability::Mutable,
-					};
+					const auto return_type = tsh::SymbolType<>::withDefaults(ctor.array_type);
 
-					const auto ctor_abstract_type = ctx.query<tsh::QueryFunctionType>({
-						.parameter_types = {},
-						.result_type     = return_type,
-					});
+					const auto ctor_abstract_type
+						= ctx.query<tsh::QueryFunctionType>({ .parameter_types = {},
+					                                          .result_type     = return_type });
 
 					return tsh::SymbolType<>{
 						ctor_abstract_type,
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Immutable,
+					};
+				}
+				variant_case(ToStringMethod, to_string) {
+					const tsh::SymbolType<> self_type{
+						to_string.owner_type,
+						to_string.owner_type.isSimple() ? tsh::ReferenceKind::Direct
+														: tsh::ReferenceKind::Ref,
+						tsh::Mutability::Immutable,
+					};
+
+					const auto return_type = tsh::SymbolType<>::withDefaults(tsh::getStringType());
+
+					const auto to_string_abstract_type
+						= ctx.query<tsh::QueryFunctionType>({ .parameter_types = { self_type },
+					                                          .result_type     = return_type });
+
+					return tsh::SymbolType<>{
+						to_string_abstract_type,
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Immutable,
+					};
+				}
+				variant_case(DefaultDestructor, dtor) {
+					const tsh::SymbolType<> self_type{
+						dtor.owner_type,
+						tsh::ReferenceKind::Ref,
+						tsh::Mutability::Mutable,
+					};
+
+					const tsh::SymbolType<> return_type{
+						tsh::getUnitType(),
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Immutable,
+					};
+
+					const auto dtor_abstract_type
+						= ctx.query<tsh::QueryFunctionType>({ .parameter_types = { self_type },
+					                                          .result_type     = return_type });
+
+					return tsh::SymbolType<>{
+						dtor_abstract_type,
 						tsh::ReferenceKind::Direct,
 						tsh::Mutability::Immutable,
 					};
@@ -198,13 +235,10 @@ namespace compiler::helios {
 				variant_case_novalue(ReplInstructionWrapper) {
 					// Unit (not Void) is the correct return type for procedures.
 					// Per the language spec: "void ... cannot be returned from a function".
-					const auto void_type = tsh::SymbolType<>{
-						tsh::getUnitType(),
-						tsh::ReferenceKind::Direct,
-						tsh::Mutability::Mutable,
-					};
+					const auto void_type = tsh::SymbolType<>::withDefaults(tsh::getUnitType());
 					const auto function_abstract_type
-						= ctx.query<tsh::QueryFunctionType>({ {}, void_type });
+						= ctx.query<tsh::QueryFunctionType>({ .parameter_types = {},
+					                                          .result_type     = void_type });
 					return tsh::SymbolType<>{
 						function_abstract_type,
 						tsh::ReferenceKind::Direct,
@@ -212,13 +246,12 @@ namespace compiler::helios {
 					};
 				}
 				variant_case_novalue(ScriptMainWrapper) {
-					const auto return_type = tsh::SymbolType<>{
-						tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed),
-						tsh::ReferenceKind::Direct,
-						tsh::Mutability::Mutable,
-					};
+					const auto return_type = tsh::SymbolType<>::withDefaults(
+						tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed)
+					);
 					const auto function_abstract_type
-						= ctx.query<tsh::QueryFunctionType>({ {}, return_type });
+						= ctx.query<tsh::QueryFunctionType>({ .parameter_types = {},
+					                                          .result_type     = return_type });
 					return tsh::SymbolType<>{
 						function_abstract_type,
 						tsh::ReferenceKind::Direct,
@@ -271,6 +304,8 @@ namespace compiler::helios {
 				variant_case(ImplicitConstructor, ctor) { return {}; }
 				variant_case(DefaultClassConstructor, ctor) { return {}; }
 				variant_case(DefaultStaticArrayConstructor, ctor) { return {}; }
+				variant_case(DefaultDestructor, dtor) { return {}; }
+				variant_case(ToStringMethod, to_string) { return {}; }
 				variant_case(BuiltinOperator, op) { return {}; }
 				variant_case(Parameter, param) { return {}; }
 				variant_case(SelfParameter, param) { return param.scope; }
@@ -321,7 +356,9 @@ namespace compiler::helios {
 				defgen::GeneratedSymbolData::BuiltinOperator,
 				defgen::GeneratedSymbolData::ReplExpressionWrapper,
 				defgen::GeneratedSymbolData::ReplInstructionWrapper,
-				defgen::GeneratedSymbolData::ScriptMainWrapper
+				defgen::GeneratedSymbolData::ScriptMainWrapper,
+				defgen::GeneratedSymbolData::ToStringMethod,
+				defgen::GeneratedSymbolData::DefaultDestructor
 			) {
 				kind = SymbolKind::Function;
 			}
