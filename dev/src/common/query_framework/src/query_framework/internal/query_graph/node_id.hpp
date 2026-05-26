@@ -112,17 +112,60 @@ namespace query::internal {
 			return tmp.v0 ^ tmp.v1 ^ tmp.v2 ^ tmp.v3;
 		}
 	};
+
+
+	struct XXHash64 final {
+		uint64_t state = PRIME5;
+		uint64_t total_len = 0;
+
+		static constexpr uint64_t PRIME1 = 11400714785074694791ULL;
+		static constexpr uint64_t PRIME2 = 14029467366897019727ULL;
+		static constexpr uint64_t PRIME3 =  1609587929392839161ULL;
+		static constexpr uint64_t PRIME4 =  9650029242287828579ULL;
+		static constexpr uint64_t PRIME5 =  2870177450012600261ULL;
+
+		static uint64_t rotl(uint64_t x, int r) {
+			return (x << r) | (x >> (64 - r));
+		}
+
+		// Add one uint64_t value to the hash
+		void add(uint64_t value) {
+			total_len += 8;
+
+			uint64_t k = value;
+			k *= PRIME2;
+			k = rotl(k, 31);
+			k *= PRIME1;
+
+			state ^= k;
+			state = rotl(state, 27) * PRIME1 + PRIME4;
+		}
+
+		// Finalize and return the hash
+		[[nodiscard]]
+		uint64_t finalize() const {
+			uint64_t h = state + total_len;
+
+			h ^= h >> 33;
+			h *= PRIME2;
+			h ^= h >> 29;
+			h *= PRIME3;
+			h ^= h >> 32;
+
+			return h;
+		}
+	};
 }
 
 template<>
 struct std::hash<query::internal::NodeID> final {
 	std::size_t operator()(const query::internal::NodeID& key) const {
-		query::internal::SipHashLowRoundOnlyU64 hasher;
-		hasher(key.q_id.asInt());
-		hasher(key.hash.val.data[0]);
-		hasher(key.hash.val.data[1]);
-		hasher(key.hash.val.data[2]);
-		hasher(key.hash.val.data[3]);
+		query::internal::XXHash64 hasher;
+		hasher.add(key.q_id.asInt());
+		hasher.add(key.hash.val.data[0]);
+		hasher.add(key.hash.val.data[1]);
+		hasher.add(key.hash.val.data[2]);
+		hasher.add(key.hash.val.data[3]);
 		return hasher.finalize();
 		
 		// auto l = key.q_id;
