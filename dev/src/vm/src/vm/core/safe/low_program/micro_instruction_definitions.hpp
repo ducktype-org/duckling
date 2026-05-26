@@ -681,6 +681,7 @@ DEF_MICRO_INSTR(ft_ptrSub_pptr_pptr, vm::low::opargs::PlaceShadowPointerAny, vm:
 // 4.3: Data Movement Instructions
 DEF_MICRO_INSTR(ft_load_pptr_pptr, vm::low::opargs::PlaceShadowPointerAny, vm::low::opargs::PlaceShadowPointerAny)
 DEF_MICRO_INSTR(ft_store_pptr_pptr, vm::low::opargs::PlaceShadowPointerAny, vm::low::opargs::PlaceShadowPointerAny)
+DEF_MICRO_INSTR(ft_store_pptr_bany, vm::low::opargs::PlaceShadowPointerAny, vm::low::opargs::PlaceBlockAny)
 DEF_MICRO_INSTR(ft_memCopy, vm::low::opargs::PlaceShadowPointerAny, vm::low::opargs::PlaceShadowPointerAny)
 DEF_MICRO_INSTR(ft_mov_pptr_pptr, vm::low::opargs::PlaceShadowPointerAny, vm::low::opargs::PlaceShadowPointerAny)
 DEF_MICRO_INSTR(ft_setNull_pptr, vm::low::opargs::PlaceShadowPointerAny)

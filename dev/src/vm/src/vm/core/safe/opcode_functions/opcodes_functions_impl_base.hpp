@@ -1251,7 +1251,7 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(ft_tableIdxLea_pptr_pptr)(FUNCTION_ARGS) {
 		{
-			auto       index     = READ_FROM_DIRECT_ARG(u64, instr[1].arg0);
+			u64        index     = READ_FROM_PLACE_ARG(u64, instr[1].arg0);
 			auto       elem_type = READ_FROM_DIRECT_ARG(TypeCRef, instr[1].arg1);
 
 			ShadowPointer table_shadow = GET_SHADOW_POINTER_REF(instr->arg1);
@@ -1267,7 +1267,7 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(ft_ptrAdd_pptr_pptr)(FUNCTION_ARGS) {
 		{
-			auto       index     = READ_FROM_DIRECT_ARG(u64, instr[1].arg0);
+			u64        index     = READ_FROM_PLACE_ARG(u64, instr[1].arg0);
 			auto       elem_type = READ_FROM_DIRECT_ARG(TypeCRef, instr[1].arg1);
 
 			ShadowPointer src_shadow = GET_SHADOW_POINTER_REF(instr->arg1);
@@ -1283,7 +1283,7 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(ft_ptrSub_pptr_pptr)(FUNCTION_ARGS) {
 		{
-			auto       index     = READ_FROM_DIRECT_ARG(u64, instr[1].arg0);
+			u64        index     = READ_FROM_PLACE_ARG(u64, instr[1].arg0);
 			auto       elem_type = READ_FROM_DIRECT_ARG(TypeCRef, instr[1].arg1);
 
 			ShadowPointer src_shadow = GET_SHADOW_POINTER_REF(instr->arg1);
@@ -1307,6 +1307,37 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(ft_store_pptr_pptr)(FUNCTION_ARGS) {
 		{
 			GET_SHADOW_POINTER_REF(instr->arg0) = updateShadowPointerAssignment(thread, GET_SHADOW_POINTER_REF(instr->arg0), GET_SHADOW_POINTER_REF(instr->arg1));
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ft_store_pptr_bany)(FUNCTION_ARGS) {
+		{
+			ShadowPointer dst_shadow = GET_SHADOW_POINTER_REF(instr->arg0);
+			auto src_block = READ_BLOCK_REF_FROM_ARG(instr->arg1);
+			auto type = Memory::getBlockType(src_block);
+
+			if (!dst_shadow.isNull()) {
+				auto tid = thread.getThreadID();
+				auto epoch = thread.getVC()[tid];
+
+				u32 shadow_size = type->getShadowSize();
+				for (u32 i = 0; i < shadow_size; ++i) {
+					ShadowEntry* entry = dst_shadow.data_base() + dst_shadow.logical_offset + i;
+					entry->processWrite(tid, epoch, thread.getVC());
+				}
+
+				u32 pointer_size = type->getPointerSize();
+				if (pointer_size > 0) {
+					auto* sf = thread.getShadowFrame();
+					auto src_pointer_block = READ_SHADOW_POINTER_BLOCK_REF_FROM_ARG(instr->arg1);
+					for (u32 i = 0; i < pointer_size; ++i) {
+						ShadowPointer dst_val = *(dst_shadow.pointer_base() + dst_shadow.pointer_offset + i);
+						ShadowPointer src_val = *(src_pointer_block->getData() + i);
+						*(dst_shadow.pointer_base() + dst_shadow.pointer_offset + i) = updateShadowPointerAssignment(thread, dst_val, src_val);
+					}
+				}
+			}
 		}
 		FUNCTION_CONT(1);
 	}
@@ -1364,6 +1395,14 @@ namespace vm {
 				auto shadow_block = thread.getShadowDataMemory().allocateHeap(type);
 				shadow_ptr.shadow_block = shadow_block;
 				shadow_ptr.logical_offset = 0;
+
+				auto tid = thread.getThreadID();
+				auto epoch = thread.getVC()[tid];
+				ShadowEntry* base = shadow_block->getData();
+				for (u32 i = 0; i < type->getShadowSize(); ++i) {
+					base[i].last_write = Epoch(tid, epoch);
+					base[i].last_read_epoch = Epoch(tid, epoch);
+				}
 			}
 			if (type->getPointerSize() > 0) {
 				auto shadow_ptr_block = thread.getShadowPointerMemory().allocateHeap(type);

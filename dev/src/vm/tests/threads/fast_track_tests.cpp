@@ -139,8 +139,7 @@ private:
 
 			variant_match(exec_status.value()) {
 				variant_case(vm::api::ExecutionPanicked, panicked) {
-					got_race_panic = panicked.error_message.contains("Tried dividing by zero") ||
-					                 panicked.error_message.contains("[FastTrack] Data race detected");
+					got_race_panic = panicked.error_message.contains("[FastTrack] Data race detected");
 				}
 				variant_default {}
 			}

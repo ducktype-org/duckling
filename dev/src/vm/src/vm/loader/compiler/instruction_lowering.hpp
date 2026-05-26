@@ -560,6 +560,7 @@ namespace vm::loader::compiler::detail {
 			instr_case(high::Op_store_pptr_pany, i) {
 				addLow<Op_store_pptr_bany>(i.dst_ptr, i.src);
 				if (compiler.settings_.enable_fast_track) {
+					addLow<Op_ft_store_pptr_bany>(i.dst_ptr, i.src);
 					auto type = getPlaceType(i.src);
 					if (type->getPointerSize() > 0) {
 						addLow<Op_ft_store_pptr_pptr>(i.dst_ptr, opargs::PlacePtr{ i.src.var_name });
