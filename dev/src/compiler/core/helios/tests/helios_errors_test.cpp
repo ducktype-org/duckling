@@ -31,8 +31,12 @@ class HeliosErrorsTests: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		TESTER_ADD_TEST(testDuplicatedFunctionDeclaration);
 		TESTER_ADD_TEST(testErrorLogging);
+
+		// This test has some strange side effects. Putting it before `testErrorLogging` causes
+		// the tests to fail.
+		TESTER_ADD_TEST(testDuplicatedFunctionDeclaration);
+
 		TESTER_ADD_TEST(testErrorLoggingExpandStatements);
 		TESTER_ADD_TEST(testErrorLoggingCyclicErrors);
 		TESTER_ADD_TEST(testErrorBadExpr);
@@ -588,6 +592,7 @@ private:
 				1
 			);
 		}
+
 
 		// ============================ Mutability errors ============================
 		{
