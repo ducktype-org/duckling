@@ -1,6 +1,6 @@
 #pragma once
 
-#include "compiler.hpp"
+#include "safe_compiler.hpp"
 
 #include <base/comptime/type_traits.hpp>
 #include <base/preproc/for_each.hpp>
@@ -8,12 +8,13 @@
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
+#include <vm/core/safe/low_program/low_program.hpp>
 #include <vm/core/safe/low_program/utils.hpp>
 
 #include <tuple>
 #include <type_traits>
 
-namespace vm::loader::compiler::detail {
+namespace vm::loader::compiler::safe::detail {
 	/**
 	 * @brief Checks whether a high-level instruction argument type can be translated
 	 * to a specific low-level micro instruction argument type.
@@ -63,12 +64,13 @@ namespace vm::loader::compiler::detail {
 	 * Beside generating a vector of `MicroInstruction`s, this class also provides a map
 	 * from temporary label IDs to label offsets used later by `Compiler::linkLabelArguments`.
 	 */
-	class MicroBytecodeBuilder {
-		Compiler&                             compiler;
-		Compiler::FunctionCompilationContext& ctx;
+	class SafeMicroBytecodeBuilder {
+		safe::SafeCompiler&                                       compiler;
+		const vm::loader::compiler::detail::FunctionStackContext& ctx;
 
-		base::HashMap<usize, usize> label_id_to_offset{};
-		usize                       next_instruction_index = 0;
+		base::HashMap<usize, usize>       label_id_to_offset{};
+		base::HashMap<base::StrID, usize> label_name_to_id{};
+		usize                             next_instruction_index = 0;
 
 		low::MicroBytecode result;
 
@@ -77,7 +79,10 @@ namespace vm::loader::compiler::detail {
 #endif
 
 	public:
-		MicroBytecodeBuilder(Compiler& compiler, Compiler::FunctionCompilationContext& ctx):
+		SafeMicroBytecodeBuilder(
+			safe::SafeCompiler&                                       compiler,
+			const vm::loader::compiler::detail::FunctionStackContext& ctx
+		):
 			  compiler{ compiler },
 			  ctx{ ctx } {}
 
@@ -101,8 +106,10 @@ namespace vm::loader::compiler::detail {
 		bool is_control_flow               = true;
 
 		TypeCRef getPlaceType(const opargs::ArgumentType auto p) const {
-			if (auto maybe_val = ctx.function.local_stack->getTypeName(ctx.curr_state, p.var_name))
-				return compiler.low_program.getTypes().at(*maybe_val);
+			if (auto maybe_val = ctx.locals_map.atMaybe(p.var_name)) {
+				code::valid_type::ValidTypeID type_id = maybe_val.value()->type;
+				return compiler.getLowProgram()->getTypes().at(TypeID(type_id.asInt()));
+			}
 			return compiler.getLowProgram()->getGlobals().at(p.var_name)->type;
 		}
 
@@ -113,7 +120,7 @@ namespace vm::loader::compiler::detail {
 				return u64(arg);
 			} else {
 				return compiler.template lowerArgument<std::remove_cvref_t<HighArg>, LowArg>(
-					ctx, arg
+					ctx, label_name_to_id, arg
 				);
 			}
 		}
@@ -143,12 +150,15 @@ namespace vm::loader::compiler::detail {
 		}
 
 		void addLabel(opargs::Label label) {
-			usize lid = compiler.lowerArgument<opargs::Label, low::opargs::Label>(ctx, label);
+			usize lid = compiler.lowerArgument<opargs::Label, low::opargs::Label>(
+				ctx, label_name_to_id, label
+			);
 			label_id_to_offset.put(lid, next_instruction_index);
 		}
 	};
 
-	low::LowFuncData::InstructionRange MicroBytecodeBuilder::add(const code::Instruction& instruction
+	low::LowFuncData::InstructionRange SafeMicroBytecodeBuilder::add(
+		const code::Instruction& instruction
 	) {
 #if (BUILD_TYPE_DEV_DEBUG)
 		current_high_instruction_representation = code::instructionToString(instruction);
@@ -413,22 +423,14 @@ namespace vm::loader::compiler::detail {
 			}
 			instr_case(high::Op_variantSetInner_pptr_type, i) {
 				addLow<Op_variantSetInner_pptr_type>(i.variant_ptr, i.inner_type);
-				auto type_name
-					= *ctx.function.local_stack->getTypeName(ctx.curr_state, i.variant_ptr.var_name);
-
 				opargs::Type variant_type
-					= compiler.low_program.getTypes().at(type_name)->getInnerType().value()->getName(
-					);
+					= getPlaceType(i.variant_ptr)->getInnerType().value()->getName();
 				addLow<Op_ext_type>(variant_type);
 			}
 			instr_case(high::Op_variantGetInner_pptr_pptr_type, i) {
 				addLow<Op_variantGetInner_pptr_pptr>(i.dst_ptr, i.variant_ptr);
-				auto type_name
-					= *ctx.function.local_stack->getTypeName(ctx.curr_state, i.variant_ptr.var_name);
-
 				opargs::Type variant_type
-					= compiler.low_program.getTypes().at(type_name)->getInnerType().value()->getName(
-					);
+					= getPlaceType(i.variant_ptr)->getInnerType().value()->getName();
 				addLow<Op_ext_type_type>(i.expected_type, variant_type);
 			}
 			instr_case(high::Op_label, i) { addLabel(i.label); }

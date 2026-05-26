@@ -114,6 +114,7 @@ namespace vm {
 }
 
 JSON_REGISTER_TYPE_WITH_NAME(vm::VmValue, "VmValue");
+JSON_REGISTER_TYPE_WITH_NAME(Ref<vm::VmValue>, "Ref<VmValue>");
 
 // NOLINTBEGIN(readability-identifier-naming)
 template<>
