@@ -1021,7 +1021,7 @@ clah::Clah getClahForMain() {
 						compiler::driver::exit();
 						return 1;
 					}
-					int                    result = 0;
+					int                   result = 0;
 					base::Optional<usize> reset_replay_count;
 					{
 						compiler::repl::ReplSession session(!options.isFlag("no-completions"));

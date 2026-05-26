@@ -1,7 +1,7 @@
 #include <string>
 #include <vector>
 
- /**
+/**
  * @brief Relaunches the current executable with the original arguments.
  *
  * On POSIX systems, this replaces the current process image.
