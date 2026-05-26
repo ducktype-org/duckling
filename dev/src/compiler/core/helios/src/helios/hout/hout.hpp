@@ -186,7 +186,12 @@ namespace compiler::helios {
 	};
 
 	/**
-	 * @brief Structure representing single HOUTUnit
+	 * @brief Structure representing single HOUTUnit.
+	 *
+	 * HOUT unit is an arbitrary code collections represented in HOUT IR.
+	 *
+	 * There are typically created for a given module, but there is no
+	 * constract on what any given HOUTUnit should contain. 
 	 */
 	struct HOUTUnit final {
 		// all first class citizens of module should be here:

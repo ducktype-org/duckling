@@ -726,10 +726,20 @@ namespace compiler::mir {
 		[[nodiscard]] Instruction& firstInstruction();
 	};
 
+	/**
+	 * @brief Helper struct for adding additional semantic information
+	 * to the SymID of a global variable.
+	 * See: Function::HSymID
+	 */
 	struct FunctionSymID final {
 		helios::SymID id;
 	};
 
+	/**
+	 * @brief Helper struct for adding additional semantic information
+	 * to the SymID of a global variable.
+	 * See: Function::HSymID
+	 */
 	struct GlobalVariableCTOR final {
 		helios::SymID global_var_id;
 	};
@@ -823,7 +833,37 @@ namespace compiler::mir {
 		 * @note If there is a block in the HashMap but not in the block_order,
 		 * it is considered invalid.
 		 */
+		[[nodiscard]]
 		base::OkBad validateBlockIDs() const;
+	};
+
+	struct MIRGlobalData final {
+		enum class Kind { Variable, Const };
+
+		helios::SymID helios_id;
+		tsh::SymbolType<> type;
+
+		Kind kind;
+
+		/**
+		 * @brief Initial value for the global variable.
+		 * Can be either a compile-time value or a reference to a function.
+		 * Should always be a CTV is kind is Const
+		 */
+		std::variant<ctv::CompileTimeValue, CRef<mir::Function>> initial_value;
+	};
+
+	/**
+	 * @brief Structure representing single MIRUnit.
+	 *
+	 * MIR unit is an arbitrary code collections represented in MIR IR.
+	 * There is no constract on what any given MIRUnit should contain.
+	 * 
+	 * @note MIR units are created mostly from HOUT units.
+	 */
+	struct MIRUnit final {
+		std::vector<CRef<mir::Function>> mir_functions;
+		std::vector<MIRGlobalData> mir_globals;
 	};
 
 }

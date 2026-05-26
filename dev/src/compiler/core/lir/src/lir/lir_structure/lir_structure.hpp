@@ -251,6 +251,7 @@ namespace compiler::lir {
 
 		/**
 		 * @brief HELIOS id of the variable.
+		 * #2246 this should not be here, its lir!
 		 */
 		helios::SymID helios_id;
 
