@@ -43,7 +43,9 @@ namespace vm {
 		// was created using placement new. That means dereferenced value is of type T.
 		// T is type accesible to T - new pointer can be dereferenced.
 		// https://cppreference.com/cpp/language/reinterpret_cast point 5.
+	//	return *std::launder(reinterpret_cast<const T*>(ptr + offset));
 		return *reinterpret_cast<const T*>(ptr + offset);
+	
 	}
 
 	/**

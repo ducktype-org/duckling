@@ -106,7 +106,7 @@ namespace vm {
 		 * Old values of `instr` and `local_stack` should be saved on the frame of the caller.
 		 * `number_of_exts` should be the number of exts after instruction. instr will be increased
 		 * by that number + 1.
-		 * @note The function has to be inlined since it's used by the `call_func` and
+		 * @note The function has to be inlined since it's used by the `call_cc_func` and
 		 * `virtual_call` opcodes and breaks tailcalling of opcode function if not inlined.
 		 */
 		template<size_t number_of_exts = 0>

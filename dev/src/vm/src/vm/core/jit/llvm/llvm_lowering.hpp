@@ -178,8 +178,8 @@ namespace vm::jit {
 				const vm::MicroInstruction& mi     = function_to_compile.bc.at(instr_idx);
 				auto                        opcode = vm::getInstructionOpcode(mi);
 				switch (opcode) {
-				case vm::low::MicroOpcode::jit_call_entrypoint:
-				case vm::low::MicroOpcode::call_func:
+				case vm::low::MicroOpcode::jitCallEntrypoint_cc_func:
+				case vm::low::MicroOpcode::call_cc_func:
 				case vm::low::MicroOpcode::virtual_call_pptr_method: {
 					// Trampoline uses VM functions, instructions have to have correct type.
 #ifdef USE_SWITCH_CASE

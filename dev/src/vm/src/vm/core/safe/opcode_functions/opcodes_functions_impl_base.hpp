@@ -318,7 +318,7 @@ namespace vm {
 		FUNCTION_CONT(0);
 	}
 #ifdef ENABLE_JIT
-	RETURN_TYPE OpFuns::OPCODE_NAME(jit_call_entrypoint)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(jitCallEntrypoint_cc_func)(FUNCTION_ARGS) {
 		{
 			auto& jit_data = thread.jit_data;
 			auto  func_id  = instr->arg1;
@@ -396,7 +396,7 @@ namespace vm {
 			}
 			for (auto& vm_value: args) vm_value->freeData();
 
-			// Similar as in call_func, but we deinit the arguments blocks as well,
+			// Similar as in call_cc_func, but we deinit the arguments blocks as well,
 			// but without the return value.
 			for (u64 i = 0; i < arg_count; i++) performDeinit(frame, thread);
 		}
@@ -541,7 +541,7 @@ namespace vm {
 		FUNCTION_CONT(0);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(init_bany_type)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(init_cc_type)(FUNCTION_ARGS) {
 		{
 			performInit(
 				instr, local_stack, frame, thread, READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1)
@@ -1222,7 +1222,7 @@ namespace vm {
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(stepGil)(FUNCTION_ARGS) {
-		{ thread.stepGil(); }
+		{ }
 		FUNCTION_CONT(1);
 	}
 

@@ -37,7 +37,7 @@ namespace vm {
 	#define MAKE_BYTECODE_INSTRUCTION(OPCODE_NAME, ARG_0, ARG_1)         \
 		makeLowInstruction(                                              \
 			low::MicroOpcode::OPCODE_NAME == low::MicroOpcode::call_cc_func \
-				? low::MicroOpcode::jit_call_entrypoint                  \
+				? low::MicroOpcode::jitCallEntrypoint_cc_func                  \
 				: low::MicroOpcode::OPCODE_NAME,                         \
 			ARG_0,                                                       \
 			ARG_1                                                        \
@@ -165,7 +165,7 @@ namespace vm {
 			// exit_code = 0.
 			stack_size = Type::fullyAlignUp(stack_size);
 			start_function.bc.push_back(
-				MAKE_BYTECODE_INSTRUCTION(init_bany_type, stack_size, safeReadObjectBytes<u64>(res))
+				MAKE_BYTECODE_INSTRUCTION(init_cc_type, stack_size, safeReadObjectBytes<u64>(res))
 			);
 			stack_size += res->getSize().asInt();
 		}
@@ -278,16 +278,16 @@ namespace vm {
 			{
 				// Program return value is fixes to return `i64`.
 				MAKE_BYTECODE_INSTRUCTION(
-					init_bany_type, 0, i64_type_arg
+					init_cc_type, 0, i64_type_arg
 				),  // stack [0, 8), block idx 0 program ret_val
 				MAKE_BYTECODE_INSTRUCTION(
-					init_bany_type, 8, argv_ptr_type_arg
+					init_cc_type, 8, argv_ptr_type_arg
 				),  // stack [8, 24) block idx 1 *argv_internal
 				MAKE_BYTECODE_INSTRUCTION(
-					init_bany_type, 24, i64_type_arg
+					init_cc_type, 24, i64_type_arg
 				),  // stack  [24, 32) block idx 2 argc_internal
 				MAKE_BYTECODE_INSTRUCTION(
-					init_bany_type, 32, i64_type_arg
+					init_cc_type, 32, i64_type_arg
 				),  // stack [32, 40) block idx 3 ix
 				MAKE_BYTECODE_INSTRUCTION(
 					mov_p64_imm, 24, args.size()
@@ -307,10 +307,10 @@ namespace vm {
 					start_function.bc.end(),
 					{
 						MAKE_BYTECODE_INSTRUCTION(
-							init_bany_type, 40, str_ptr_type_arg
+							init_cc_type, 40, str_ptr_type_arg
 						),  // stack [40, 56) block idx 4 ptr_tmp_store
 						MAKE_BYTECODE_INSTRUCTION(
-							init_bany_type, 56, byte_type_arg
+							init_cc_type, 56, byte_type_arg
 						),  // stack [56, 57) block idx 5 char_tmp_store
 						MAKE_BYTECODE_INSTRUCTION(
 							mov_p64_imm, 24, arg.size() + 1
@@ -359,7 +359,7 @@ namespace vm {
 
 		// Now actually prepare to call 'main'.
 		start_function.bc.push_back(
-			MAKE_BYTECODE_INSTRUCTION(init_bany_type, 40, i64_type_arg)  // [40, 48) main ret_val
+			MAKE_BYTECODE_INSTRUCTION(init_cc_type, 40, i64_type_arg)  // [40, 48) main ret_val
 		);
 
 		// Pass the command line arguments only if main signature specifies it.
@@ -367,9 +367,9 @@ namespace vm {
 			start_function.bc.insert(
 				start_function.bc.end(),
 				{
-					MAKE_BYTECODE_INSTRUCTION(init_bany_type, 48, i64_type_arg),  // [48, 56) argc
+					MAKE_BYTECODE_INSTRUCTION(init_cc_type, 48, i64_type_arg),  // [48, 56) argc
 					MAKE_BYTECODE_INSTRUCTION(
-						init_bany_type, 56, argv_ptr_type_arg
+						init_cc_type, 56, argv_ptr_type_arg
 					),                                                        // [56, 72) *argv
 					MAKE_BYTECODE_INSTRUCTION(mov_p64_imm, 48, args.size()),  // argc := args.size()
 					MAKE_BYTECODE_INSTRUCTION(mov_pptr_pptr, 56, 8),  // argv := argv_internal
@@ -387,7 +387,7 @@ namespace vm {
 				MAKE_BYTECODE_INSTRUCTION(mov_p64_p64, 0, 40),  // ret_val := main_ret_val
 				MAKE_BYTECODE_INSTRUCTION(mov_p64_imm, 32, 0),  // ix := 0
 				MAKE_BYTECODE_INSTRUCTION(
-					init_bany_type, 48, str_ptr_type_arg
+					init_cc_type, 48, str_ptr_type_arg
 				),  // [48, 64) ptr_tmp_store
 			}
 		);

@@ -432,7 +432,7 @@ namespace vm::loader::compiler::detail {
 			instr_case(high::Op_jmpIfNot_label, i) { addLow<Op_jmpIfNot_label>(i.label); }
 			instr_case(high::Op_call_func, i) {
 #ifdef ENABLE_JIT
-				addLow<Op_jit_call_entrypoint>(
+				addLow<Op_jitCallEntrypoint_cc_func>(
 					ctx.offset_at_instructions.at(ctx.current_instruction_index), i.function
 				);
 #else
@@ -447,7 +447,7 @@ namespace vm::loader::compiler::detail {
 			instr_case(high::Op_ret_tailcall_func, i) { addLow<Op_ret_tailcall_func>(i.function); }
 			instr_case(high::Op_ret, i) { addLow<Op_ret>(); }
 			instr_case(high::Op_init_pany_type, i) {
-				addLow<Op_init_bany_type>(
+				addLow<Op_init_cc_type>(
 					ctx.offset_at_instructions.at(ctx.current_instruction_index), i.type
 				);
 			}

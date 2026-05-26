@@ -327,7 +327,7 @@ namespace vm::loader::compiler {
 		auto push = [&](opargs::PlaceAny local, opargs::Type type) {
 			auto type_ref   = low_program.types->at(type.type_name);
 			auto type_size  = type_ref->getSize().asInt();
-			auto type_align = must_be_fully_alligned.contains(local.var_name)
+			auto type_align = must_be_fully_aligned.contains(local.var_name)
 			                    ? Type::MAX_ALIGNMENT
 			                    : type_ref->getStackAlignment();
 
