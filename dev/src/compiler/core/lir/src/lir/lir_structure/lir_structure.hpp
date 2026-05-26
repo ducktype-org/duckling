@@ -296,7 +296,7 @@ namespace compiler::lir {
 		 * This handles both global variables and constants. For constants, it also sets CTV initial
 		 * value of the global.
 		 *
-		 * PR TODO: REMOVE THIS
+		 * @TODO: #2246 remove this, it is only used in tests now (and update the tests)
 		 */
 		static LIRGlobal fromHOUT(query::Context& ctx, const helios::HOUTGlobalData& helios_id);
 

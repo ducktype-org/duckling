@@ -24,8 +24,8 @@ namespace compiler::backend_vm::internal {
 	 *
 	 * This is a temporary helper used when a LIR global has an initial CTV value but no
 	 * explicit ctor function lowered from LIR.
-	 * @TODO: #1657 Remove this
-	 // HUH?
+	 * @TODO: #1553 Remove this constants should have constants initialization
+
 	 */
 	vm::code::Function createMiniGlobalCtorFromCTV(
 		ProgramLoweringContext&      program_context,
