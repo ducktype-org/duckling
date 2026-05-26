@@ -7,8 +7,10 @@
 #include <helios/hout/hout.hpp>
 #include <helios/queries/queries.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
+#include <lir/lir_lowering/lir_unit.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 #include <mir/mir_lowering/mir_queries.hpp>
+#include <mir/mir_lowering/mir_unit.hpp>
 
 #include <base/extend_cpp/variant_match.hpp>
 
@@ -21,32 +23,34 @@
 #include <fstream>
 
 namespace compiler::driver {
-	void LIRModuleGlobal::debugPrint(query::Context& ctx, std::ostream& os) const {
-		lir_global.debugPrint(ctx, os);
+	// Bring this back, maybe
 
-		if_opt_some(global_ctor, ctor) {
-			os << "  Global constructor:\n";
-			ctor->debugPrint(ctx, os);
-		}
-		if_opt_some(global_dtor, dtor) {
-			os << "  Global destructor:\n";
-			dtor->debugPrint(ctx, os);
-		}
-	}
+	// void LIRModuleGlobal::debugPrint(query::Context& ctx, std::ostream& os) const {
+	// 	lir_global.debugPrint(ctx, os);
 
-	void LIRModuleData::debugPrint(query::Context& ctx, std::ostream& os) const {
-		os << "LIRModuleData for module: " << module_id.strView() << "\n";
-		os << "Functions:\n";
-		for (const auto& func: functions) {
-			func->debugPrint(ctx, os);
-			os << "\n";
-		}
-		os << "Globals:\n";
-		for (const auto& global: globals) {
-			global.debugPrint(ctx, os);
-			os << "\n";
-		}
-	}
+	// 	if_opt_some(global_ctor, ctor) {
+	// 		os << "  Global constructor:\n";
+	// 		ctor->debugPrint(ctx, os);
+	// 	}
+	// 	if_opt_some(global_dtor, dtor) {
+	// 		os << "  Global destructor:\n";
+	// 		dtor->debugPrint(ctx, os);
+	// 	}
+	// }
+
+	// void LIRModuleData::debugPrint(query::Context& ctx, std::ostream& os) const {
+	// 	os << "LIRModuleData for module: " << module_id.strView() << "\n";
+	// 	os << "Functions:\n";
+	// 	for (const auto& func: functions) {
+	// 		func->debugPrint(ctx, os);
+	// 		os << "\n";
+	// 	}
+	// 	os << "Globals:\n";
+	// 	for (const auto& global: globals) {
+	// 		global.debugPrint(ctx, os);
+	// 		os << "\n";
+	// 	}
+	// }
 
 	/**
 	 * @brief Utility function to get an ofstream for dumping debug artifacts.
@@ -72,86 +76,33 @@ namespace compiler::driver {
 				hout_unit.debugPrint(ctx, ofstream);
 			}
 
-			std::vector<CRef<mir::Function>> mir_functions;
-			mir_functions.reserve(hout_unit.functions.size());
+			mir::MIRUnit mir_unit = mir::lowerToMIRUnit(ctx, &hout_unit).valueOrThrow();
 
-			for (const auto& hout_function: hout_unit.functions) {
-				CRef mir_function
-					= &ctx.query<mir::LowerToMIRFunction>({ hout_function })->valueOrThrow();
-				mir_functions.push_back(mir_function);
-			}
+			// probably move debug printint to units!
 
 			if (driver::print_ir_options.print_mir) {
-				std::ranges::for_each(mir_functions, [](CRef<mir::Function> mir_function) {
+				std::ranges::for_each(mir_unit.mir_functions, [](CRef<mir::Function> mir_function) {
 					mir_function->debugPrint(std::cout);
+				});
+				std::ranges::for_each(mir_unit.mir_globals, [](const mir::MIRGlobalData& mir_global) {
+					mir_global.global.debugPrint(std::cout); // PR: TODO: print entire global data here
 				});
 			}
 			if (driver::dump_ir_options.dump_mir) {
 				auto ofstream = getDebugDumpArtifact(
 					base::StrID(base::strConcat(module_name.strView(), ".mir"))
 				);
-				std::ranges::for_each(mir_functions, [&](CRef<mir::Function> mir_function) {
+				std::ranges::for_each(mir_unit.mir_functions, [&](CRef<mir::Function> mir_function) {
 					mir_function->debugPrint(ofstream);
 				});
 			}
 
-			std::vector<CRef<lir::Function>> lir_functions;
-			std::vector<LIRModuleGlobal>     globals;
-			lir_functions.reserve(hout_unit.functions.size());
-			globals.reserve(hout_unit.glob_data.size());
-
-			for (const auto& mir_function: mir_functions) {
-				CRef lir_function = ctx.query<lir::LowerToLIRFunction>({ mir_function });
-				lir_functions.push_back(lir_function);
-			}
-
-
-			for (const auto& hout_global: hout_unit.glob_data) {
-				// Discard information-less globals.
-				if (not hout_global->type.getType().carriesInformation(ctx)) continue;
-
-				auto lir_global = lir::LIRGlobal::fromHOUT(ctx, *hout_global);
-
-				variant_match(hout_global->value) {
-					variant_case(helios::HOUTGlobalVariable, var) {
-						CRef mir_function
-							= &ctx.query<mir::LowerGlobalDataToMIRCtor>({ hout_global })
-						           ->valueOrThrow();
-						auto lir_function = ctx.query<lir::LowerToLIRFunction>({ mir_function });
-						globals.emplace_back(LIRModuleGlobal{
-							.lir_global = lir_global,
-							// @TODO: #929 add legit dtors when implemented
-							.global_ctor = lir_function,
-							.global_dtor = std::nullopt,
-						});
-					}
-					variant_case(helios::HOUTGlobalConst, global_const) {
-						// @future #1554 -- const ctors will probably be added here
-						// Note: The CTV initial value for constants is already set in lir_global
-						// (by the fromHOUT function used above). Backends should handle constant
-						// initialization appropriately.
-						globals.emplace_back(LIRModuleGlobal{
-							.lir_global  = lir_global,
-							.global_ctor = std::nullopt,
-							.global_dtor = std::nullopt,
-						});
-					}
-					variant_default {
-						CORE_PANIC(base::strConcat(
-							"Unexpected global data type in module: ",
-							hout_global->original_name.strView()
-						));
-					}
-				}
-			}
-
-
 			auto lir_module = LIRModuleData{
 				.module_id = module_name,
-				.functions = lir_functions,
-				.globals   = globals,
+				.lir_unit  = lir::lowerToLIRUnit(ctx, mir_unit),
 			};
 
+			// PR: move debug printing to units!
 			if (driver::print_ir_options.print_lir) lir_module.debugPrint(ctx, std::cout);
 			if (driver::dump_ir_options.dump_lir) {
 				auto ofstream = getDebugDumpArtifact(

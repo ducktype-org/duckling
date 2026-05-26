@@ -29,6 +29,9 @@ namespace compiler::repl {
 		std::string_view                 module_name,
 		backend_vm::ReplLoweringContext& lowering_context
 	) {
+		// @TODO: #2246 pipeline here!
+		
+
 		auto active_ctx = lowering_context.getActiveContext();
 		CORE_ASSERT(
 			active_ctx.has_value() && active_ctx.value().get() == &ctx,
