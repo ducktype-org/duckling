@@ -5,8 +5,8 @@
 #include <base/except/exceptions.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
-#include <vm/loader/compiler/ivm_compiler.hpp>
 #include <vm/loader/compiler/fast/instruction_lowering.hpp>
+#include <vm/loader/compiler/ivm_compiler.hpp>
 
 #include <algorithm>
 
