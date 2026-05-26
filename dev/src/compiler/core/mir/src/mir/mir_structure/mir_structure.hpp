@@ -292,8 +292,8 @@ namespace compiler::mir {
 	};
 
 	/**
-	 * @brief Lightweight ID-like representation of a global value used in MIR IR code (e.g. in MIRPlace).
-	 * By global-value we refer to a global variable or a global constant.
+	 * @brief Lightweight ID-like representation of a global value used in MIR IR code (e.g. in
+	 * MIRPlace). By global-value we refer to a global variable or a global constant.
 	 *
 	 * @important This is not a full IR representation of a global variable.
 	 * MIRGlobalData serves that purpose and contains more information.

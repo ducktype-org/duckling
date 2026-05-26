@@ -243,14 +243,15 @@ namespace compiler::lir {
 	enum class LIRGlobalType { Variable, Constant };
 
 	/**
-	 * @brief Lightweight ID-like representation of a global value used in LIR IR code (e.g. in LIRPlace).
-	 * By global-value we refer to a global variable or a global constant.
+	 * @brief Lightweight ID-like representation of a global value used in LIR IR code (e.g. in
+	 * LIRPlace). By global-value we refer to a global variable or a global constant.
 	 *
 	 * @important This is not a full IR representation of a global variable.
 	 * LIRGlobalData serves that purpose and contains more information.
 	 *
 	 * This structure is used to reference a global variable in LIR code.
-	 * This structure enables LIR instructions to refer to and manipulate global variables and constants.
+	 * This structure enables LIR instructions to refer to and manipulate global variables and
+	 * constants.
 	 */
 	struct LIRGlobal final {
 		// #2246 do something about this

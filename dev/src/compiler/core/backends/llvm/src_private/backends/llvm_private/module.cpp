@@ -4,10 +4,9 @@
 #include "llvm_lowering.hpp"
 #include "module_impl.hpp"
 
-#include <lir/lir_lowering/lir_lowering.hpp>
-#include <helios/mangler/mangler.hpp> // @TODO: #2796 remove this include if possible
-
 #include <backends/llvm/llvm_backend.hpp>
+#include <helios/mangler/mangler.hpp>  // @TODO: #2796 remove this include if possible
+#include <lir/lir_lowering/lir_lowering.hpp>
 
 #include <base/except/exceptions.hpp>
 
@@ -26,7 +25,9 @@ namespace compiler::backend_llvm {
 		return { parseLLVMBCToModuleImpl(llvm_bc_data) };
 	}
 
-	Module Module::fromLIRUnit(query::Context& ctx, const lir::LIRUnit& lir_unit, base::StrID module_id) {
+	Module Module::fromLIRUnit(
+		query::Context& ctx, const lir::LIRUnit& lir_unit, base::StrID module_id
+	) {
 		backend_llvm::Module mod(module_id);
 
 		std::vector<CRef<lir::Function>> ctors;

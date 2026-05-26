@@ -69,7 +69,9 @@ private:
 			auto mir_result = mir::lowerToMIRUnit(ctx, &module_hout).valueOrPanic();
 			auto lir_result = lir::lowerToLIRUnit(ctx, mir_result);
 
-			llvm_module_opt.emplace(backend_llvm::Module::fromLIRUnit(ctx, lir_result, base::StrID("test_module")));
+			llvm_module_opt.emplace(
+				backend_llvm::Module::fromLIRUnit(ctx, lir_result, base::StrID("test_module"))
+			);
 		});
 
 		// debug print for coverage only:

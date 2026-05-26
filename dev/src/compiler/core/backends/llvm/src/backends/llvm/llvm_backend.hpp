@@ -52,7 +52,9 @@ namespace compiler::backend_llvm {
 		 *
 		 * @return Module created by lowering the given LIRUnit.
 		 */
-		static Module fromLIRUnit(query::Context&, const lir::LIRUnit& lir_unit, base::StrID module_id);
+		static Module fromLIRUnit(
+			query::Context&, const lir::LIRUnit& lir_unit, base::StrID module_id
+		);
 
 		Module(Box<ModuleImpl> impl): impl(std::move(impl)) {}
 
@@ -62,9 +64,9 @@ namespace compiler::backend_llvm {
 		 * @brief Adds a global variable declaration to the module.
 		 *
 		 * This function declares a global variable in the LLVM.
-		 * Note: If the global is a constant, it will be initialized within ths function with the provided value.
-		 * If the global is a variable, it will be zero-initialized by default, and the provided
-		 * value will be ignored.
+		 * Note: If the global is a constant, it will be initialized within ths function with the
+		 * provided value. If the global is a variable, it will be zero-initialized by default, and
+		 * the provided value will be ignored.
 		 *
 		 * @param lir_global The global variable to be added to the module.
 		 */

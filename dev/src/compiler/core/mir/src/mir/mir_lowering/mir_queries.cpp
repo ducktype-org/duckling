@@ -257,9 +257,11 @@ namespace compiler::mir {
 			assign_instr.fill(Instruction{
 				Operation::Assign,
 				// Note: we know its a variable here, since this query only works for variables,
-				{ MIRGlobal({ key.global_data->helios_symbol,
-			                  key.global_data->type,
-			                  MIRGlobal::Kind::Variable }), },
+				{
+					MIRGlobal({ key.global_data->helios_symbol,
+			                    key.global_data->type,
+			                    MIRGlobal::Kind::Variable }),
+				},
 				{
 					lowerexpr_res.getResult(function_builder),
 				},
