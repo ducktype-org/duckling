@@ -1,7 +1,8 @@
 #include "../function_lowering_context.hpp"
 #include "dvm_operation.hpp"
 #include "instruction_lowerer.hpp"
-#include "program_lowering_context.hpp"
+
+#include <program_lowering_context.hpp>
 
 namespace compiler::backend_vm::internal {
 	void InstructionLowerer::lower(const AddressOfOperation& op) {
