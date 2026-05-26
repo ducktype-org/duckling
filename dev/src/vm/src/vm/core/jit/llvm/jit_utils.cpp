@@ -2,6 +2,8 @@
 
 #include <llvm_helpers/llvm_helpers.hpp>
 
+#include <functional>
+
 LLVM_INCLUDE_BEGIN()
 
 #include <llvm/ExecutionEngine/Orc/LLJIT.h>
