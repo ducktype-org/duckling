@@ -50,16 +50,16 @@ namespace vm::loader::compiler::safe {
 
 		DEFINE_LOWER_ARGUMENT_IMPL_FOR_FAMILY(
 			low::opargs::PlaceDataArgumentType,
-			if(auto maybe_val = stack_ctx.locals_map.atMaybe(opcode_arg.var_name)) {
-				return getIntTypeSize(maybe_val.value()->offset);
+			if_opt_some(stack_ctx.function.local_stack->getByteOffset(stack_ctx.curr_state, opcode_arg.var_name), offset) {
+				return offset.assumePointerSize(Bytes{16}).asInt();
 			}
 			return compiler.low_program.getGlobals().at(opcode_arg.var_name)->global_buffer_offset | (1ULL << 63);
 		);
 
 		DEFINE_LOWER_ARGUMENT_IMPL_FOR_FAMILY(
 			low::opargs::PlaceBlockArgumentType,
-			if(auto maybe_val = stack_ctx.locals_map.atMaybe(opcode_arg.var_name)) {
-				return maybe_val.value()->stack_index;
+			if(auto maybe_val = stack_ctx.function.local_stack->getIdx(stack_ctx.curr_state, opcode_arg.var_name)) {
+				return *maybe_val;
 			}
 			return compiler.low_program.getGlobals().at(opcode_arg.var_name)->global_block_idx | (1ULL << 63);
 		);
@@ -150,12 +150,13 @@ namespace vm::loader::compiler::safe {
 		}
 	}
 
-	std::pair<low::MicroBytecode, std::vector<vm::low::LowFuncData::InstructionRange>> SafeCompiler::
-		lowerInstructions(const vm::loader::compiler::detail::FunctionStackContext& ctx) {
+	std::pair<low::MicroBytecode, std::vector<vm::low::LowFuncData::InstructionRange>>
+		SafeCompiler::lowerInstructions(vm::loader::compiler::detail::FunctionStackContext& ctx) {
 		detail::SafeMicroBytecodeBuilder                    builder{ *this, ctx };
 		std::vector<vm::low::LowFuncData::InstructionRange> instruction_mapping;
 
-		for (const auto& instr: ctx.function.body) {
+		for (auto& instr: ctx.function.body) {
+			ctx.curr_state         = instr.visit([](auto&& i) { return i.stack_state; });
 			auto instruction_range = builder.add(instr);
 			instruction_mapping.push_back(instruction_range);
 		}

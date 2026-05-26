@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vm/bytecode/bytecode.hpp>
+#include <vm/bytecode/local_stack_database.hpp>
 #include <vm/bytecode/validator/valid_program.hpp>
 #include <vm/bytecode/validator/valid_type/type_context.hpp>
 #include <vm/bytecode/validator/valid_type/valid_type.hpp>
@@ -16,6 +17,7 @@ namespace vm::loader::compiler {
 
 			/// The high level function definition.
 			const code::Function& function;
+			code::StackStateID    curr_state = code::LocalStackDb::EMPTY;
 
 			struct LocalEntry {
 				code::valid_type::TypeSize offset;
@@ -25,9 +27,6 @@ namespace vm::loader::compiler {
 				code::valid_type::ValidTypeID type;
 			};
 
-			/// A mapping from a local variable's name to its offset on the function's local stack
-			/// and type.
-			base::HashMap<base::StrID, LocalEntry> locals_map{};
 			/// Total required size for the local stack frame, in bytes.
 			code::valid_type::TypeSize local_stack_size{};
 			usize                      local_block_count = 0;
