@@ -213,7 +213,7 @@ jobs:
 
       # Remove ccache folder to prevent cache snowball growth
       - name: Remove ccache on main
-        if: ${{ env.BRANCH_NAME == 'main' }}
+        if: ${{ env.BRANCH_NAME == 'main' || (matrix.compiler.name = 'clang' && contains(github.event.pull_request.labels.*.name, 'CLANG No Cache')) }}
         id: ccache-main-rm
         run: rm -rf ${CCACHE_DIR}
 
