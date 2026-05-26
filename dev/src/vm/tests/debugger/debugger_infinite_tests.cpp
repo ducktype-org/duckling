@@ -42,21 +42,22 @@ private:
 	void pausesExecution() {
 		auto pid = loadProgram("while_true.dbc");
 
-		vm::api::run(pid).value();  // "Run failed (1)"
+		ASSERT_TRUE(vm::api::setBreakpoint(pid, base::StrID("main"), 0, true).has_value());
+		ASSERT_TRUE(vm::api::run(pid).has_value());  // "Run failed (1)"
 
 		// We want to assure that the start function already managed to call main for the test to
 		// work correctly.
 		auto execution_position
 			= vm::api::waitForBreakpoint(pid).value();  // "Wait for breakpoint failed (1)"
-		ASSERT_EQUAL_PRINT(1, execution_position.instr_number);
+		ASSERT_EQUAL_PRINT(0, execution_position.instr_number);
 
-		vm::api::resume(pid).value();                 // "Resume failed (1)"
-		auto position = vm::api::pause(pid).value();  // "Pause failed (1)"
-		ASSERT_EQUAL_PRINT(position.instr_number, 5);
+		ASSERT_TRUE(vm::api::resume(pid).has_value());  // "Resume failed (1)"
+		auto position = vm::api::pause(pid).value();    // "Pause failed (1)"
+		ASSERT_EQUAL_PRINT(position.instr_number, 4);
 
 		auto expected_next_line = [this](u64 x) -> u64 {
-			if (x == 4) return 5;
-			if (x == 5) return 4;
+			if (x == 3) return 4;
+			if (x == 4) return 3;
 			this->fail("Unexpected line number: " + std::to_string(x));
 			CORE_UNREACHABLE();
 		};

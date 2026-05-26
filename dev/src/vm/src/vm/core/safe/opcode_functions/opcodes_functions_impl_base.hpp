@@ -343,7 +343,8 @@ namespace vm {
 				performFunctionCall(instr, local_stack, frame, thread, func_id);
 			} else {
 				// should be compiled now
-				MRef<jit::JitOpFun> compiled = jit::compileLLVM(func_obj);
+				MRef<jit::JitOpFun> compiled
+					= jit::compileLLVM(func_obj.cfg, func_obj.bc, func_obj.name);
 
 				CORE_ASSERT(compiled, "Compiled function pointer shouldn't be nullptr");
 				my_data.func_ptr = compiled;
@@ -1200,10 +1201,10 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(breakpoint)(FUNCTION_ARGS) {
 		{
-			instr += 1;
 			save_execution_state(instr, local_stack, frame, thread);
 
 			thread.handleBreakpoint();
+			thread.executeOneStep();
 
 			// Restore current flow.
 			// They can be changed when doing "step by step" execution.
@@ -1211,6 +1212,7 @@ namespace vm {
 			instr       = frame->instr;
 			local_stack = frame->local_stack;
 		}
+
 		FUNCTION_CONT(0);
 	}
 
