@@ -31,10 +31,10 @@ namespace vm::persistent::detail {
 
 	template<typename T1, typename T2>
 	concept SameWNoQual = std::is_same_v<std::remove_cvref_t<T1>, std::remove_cvref_t<T2>>;
-	
+
 	template<typename SelfT, typename ResT>
-	concept ValidSignature
-		= RebuildRes<ResT> && SameWNoQual<SegmentTree, SelfT> && (std::is_same_v<void, ResT> || !std::is_const_v<SelfT>);
+	concept ValidSignature = RebuildRes<ResT> && SameWNoQual<SegmentTree, SelfT>
+	                      && (std::is_same_v<void, ResT> || !std::is_const_v<SelfT>);
 
 	class SegmentTree final {
 		using posT = usize;
@@ -216,7 +216,7 @@ namespace vm::persistent::detail {
 
 			{
 				usize lsb_idx = max_height - 1;
-				posT mask = 1;
+				posT  mask    = 1;
 				mask <<= lsb_idx;
 				CORE_ASSERT(mask & left_pos, "max_height digit from right is 1");
 
@@ -239,7 +239,7 @@ namespace vm::persistent::detail {
 
 			{
 				usize diff_idx = height_of_diff - 1;
-				posT diff_bit = 1;
+				posT  diff_bit = 1;
 				diff_bit <<= diff_idx;
 				CORE_ASSERT(
 					(diff_bit & left_idx) != (diff_bit & right_guard),

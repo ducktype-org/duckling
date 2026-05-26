@@ -116,9 +116,9 @@ namespace vm::persistent {
 			return inner.getPathTo(fromState(state), idx);
 		}
 
-		constexpr static MemoryStateID EMPTY = MemoryStateID{ u64(detail::SegmentTree::EMPTY) };
-		constexpr static auto IDX_END = detail::SegmentTree::IDX_END;
-		using Dir = detail::SegmentTree::Dir;
+		constexpr static MemoryStateID EMPTY   = MemoryStateID{ u64(detail::SegmentTree::EMPTY) };
+		constexpr static auto          IDX_END = detail::SegmentTree::IDX_END;
+		using Dir                              = detail::SegmentTree::Dir;
 
 		using ConflictPolicy = std::function<base::Optional<usize>(usize, usize, usize)>;
 		inline const static ConflictPolicy DEFAULT_CONFLICT_POLICY

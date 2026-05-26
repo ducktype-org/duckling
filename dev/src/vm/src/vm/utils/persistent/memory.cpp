@@ -80,17 +80,16 @@ namespace vm::persistent {
 			root_1,
 			root_2,
 			detail::SegmentTree::MergeBuilder<ID>{
-				.only_1   = [](ID id, usize) { return id; },
-				.only_2   = [](ID id, usize) { return id; },
-				.the_same = [](ID id, usize) { return id; },
-				.confilicts =
-					[&](usize idx, usize val_1, usize val_2) -> ID {
-						match_optional(policy(idx, val_1, val_2)) {
-							opt_some(val) { return inner.emplaceLeaf(idx, val); }
-							opt_none { return detail::SegmentTree::EMPTY; }
-						}
-						CORE_UNREACHABLE();
-					},
+				.only_1     = [](ID id, usize) { return id; },
+				.only_2     = [](ID id, usize) { return id; },
+				.the_same   = [](ID id, usize) { return id; },
+				.confilicts = [&](usize idx, usize val_1, usize val_2) -> ID {
+					match_optional(policy(idx, val_1, val_2)) {
+						opt_some(val) { return inner.emplaceLeaf(idx, val); }
+						opt_none { return detail::SegmentTree::EMPTY; }
+					}
+					CORE_UNREACHABLE();
+				},
 			}
 		);
 
@@ -142,17 +141,14 @@ namespace vm::persistent {
 
 		auto root = validateInput(state, idxs);
 
-		auto new_root = inner.reconstructLeaves(
-			root,
-			idxs,
-			[&](usize cur_idx, base::Optional<usize>) -> ID {
-				CORE_ASSERT(vals.size(), "there must be sth");
-				auto [idx, val] = vals.front();
-				vals.pop_front();
-				CORE_ASSERT(cur_idx == idx, "expected other idx");
-				return inner.emplaceLeaf(idx, val);
-			}
-		);
+		auto new_root
+			= inner.reconstructLeaves(root, idxs, [&](usize cur_idx, base::Optional<usize>) -> ID {
+				  CORE_ASSERT(vals.size(), "there must be sth");
+				  auto [idx, val] = vals.front();
+				  vals.pop_front();
+				  CORE_ASSERT(cur_idx == idx, "expected other idx");
+				  return inner.emplaceLeaf(idx, val);
+			  });
 
 		return toState(new_root);
 	}
@@ -161,9 +157,9 @@ namespace vm::persistent {
 		std::ranges::sort(idxs);
 		auto root = validateInput(state, idxs);
 
-		auto new_root = inner.reconstructLeaves(
-			root, idxs, [&](usize, base::Optional<usize>) { return detail::SegmentTree::EMPTY; }
-		);
+		auto new_root = inner.reconstructLeaves(root, idxs, [&](usize, base::Optional<usize>) {
+			return detail::SegmentTree::EMPTY;
+		});
 
 		return toState(new_root);
 	}
