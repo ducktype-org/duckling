@@ -1,5 +1,11 @@
 #include "system_utils.hpp"
 
+#ifdef _WIN32
+	#include <process.h>
+#else
+	#include <unistd.h>
+#endif
+
 int execSelf(std::vector<std::string>& g_argv) {
 	std::vector<char*> args;
 	args.reserve(g_argv.size() + 1);
