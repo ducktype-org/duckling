@@ -72,11 +72,12 @@ namespace compiler::helios {
 			std::vector<SymID>             class_symbols;
 			std::set<SymID>                default_ctors;
 			std::set<SymID>                additional_ctors;
+			std::set<SymID>                additional_tostrings;
 			// Keeps track of mangled names processed within the current module
 			// to detect duplicated function declarations at the HOUT level.
 			std::set<base::StrID> processed_mangled_names;
 
-			auto register_ctor_if_needed = [&](SymID sym) {
+			auto register_ctor_and_tostring_if_needed = [&](SymID sym) {
 				const auto& symbol_type = ctx.query<QueryTypeOfSymbol>(sym)->valueOrThrow();
 				const auto& type        = symbol_type.getType();
 
@@ -86,6 +87,9 @@ namespace compiler::helios {
 					const auto& tuple_ctor
 						= ctx.query<defgen::QueryTuplePackConstructor>(tuple_type)->valueOrThrow();
 					additional_ctors.insert(tuple_ctor.declaration->original_symbol);
+					const auto& tuple_tostring
+						= ctx.query<defgen::QueryToStringMethod>(tuple_type)->valueOrThrow();
+					additional_tostrings.insert(tuple_tostring.declaration->original_symbol);
 					return;
 				}
 
@@ -107,9 +111,9 @@ namespace compiler::helios {
 					default_ctors.insert(class_ctor.declaration->original_symbol);
 				}
 			};
-			auto register_ctor_if_needed_no_interrupt
-				= [&run_no_interrupt, &register_ctor_if_needed](SymID sym) {
-					  run_no_interrupt([&] { register_ctor_if_needed(sym); });
+			auto register_ctor_and_tostring_if_needed_no_interrupt
+				= [&run_no_interrupt, &register_ctor_and_tostring_if_needed](SymID sym) {
+					  run_no_interrupt([&] { register_ctor_and_tostring_if_needed(sym); });
 				  };
 
 			auto try_append_global_data = [&](SymID sym) {
@@ -132,7 +136,7 @@ namespace compiler::helios {
 					// Register default constructors for all symbols that need them.
 					const auto sym_kind = kind(sym);
 					if (sym_kind == SymbolKind::Variable || sym_kind == SymbolKind::Const)
-						register_ctor_if_needed_no_interrupt(sym);
+						register_ctor_and_tostring_if_needed_no_interrupt(sym);
 
 					// grab constants:
 					if (kind(sym) == SymbolKind::Const) try_append_global_data(sym);
@@ -163,6 +167,13 @@ namespace compiler::helios {
 				appendDefaultConstructors(out.functions, default_ctors, ctx);
 				for (SymID ctor_sym: additional_ctors) {
 					const auto& hout_res = ctx.query<QueryCodeOfFun>(ctor_sym)->valueOrThrow();
+					out.functions.emplace_back(&hout_res);
+				}
+			});
+
+			run_no_interrupt([&] {
+				for (SymID tostring_sym: additional_tostrings) {
+					const auto& hout_res = ctx.query<QueryCodeOfFun>(tostring_sym)->valueOrThrow();
 					out.functions.emplace_back(&hout_res);
 				}
 			});
@@ -242,6 +253,7 @@ namespace compiler::helios {
 			append_to_string_for_simple_type(tsh::getCharType());
 			append_to_string_for_simple_type(tsh::getBoolType());
 			append_to_string_for_simple_type(tsh::getStringType());
+			append_to_string_for_simple_type(tsh::getUnitType());
 		}
 
 		/**

@@ -31,7 +31,20 @@ namespace compiler::tsh {
 	 */
 	TypeInterface getDefaultTypeInterfaceForType(query::Context& ctx, const AbstractType type) {
 		// @TODO: #1956 Methods don't work for zero-sized types yet, due to taking ref to self
-		if (not type.carriesInformation(ctx)) return {};
+		if (not type.carriesInformation(ctx)) {
+			if (type.getKind() == Kind::Unit) {
+				// The unit type has a `toString` method, even though it doesn't carry information,
+				// because it is a simple type and it's passed by value.
+				return TypeInterface{ std::vector{ InterfaceElement{
+					helios::defgen::toStringSymForType(ctx, type),
+					type,
+					0,
+					InterfaceElement::InterfaceElementKind::Method,
+					ClassMemberVisibility::Public,
+				} } };
+			}
+			return {};
+		}
 
 		using helios::defgen::destructSymForType;
 		using helios::defgen::toStringSymForType;
