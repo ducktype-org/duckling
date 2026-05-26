@@ -1,7 +1,7 @@
 file(GLOB analyze_deps "${CMAKE_SOURCE_DIR}/scripts/py/jit/*.py")
 
 # Analyze and process the `binary_file`, preparing to embed in `destination_file`
-function(process_to_binary binary_file destination_file binary_artifact_prefix)
+function(process_to_binary binary_file destination_file binary_artifact_prefix analyze_arg)
     set(extra_deps ${ARGN})
     get_filename_component(
         destination_file_abs "${destination_file}"
@@ -45,7 +45,7 @@ function(process_to_binary binary_file destination_file binary_artifact_prefix)
         "${CMAKE_SOURCE_DIR}/scripts/py/jit/analyze_bin.py"
         "${linked_out}"
         "--output=${nm_out}"
-        "--accept-all-sections"
+        ${analyze_arg}
         "--shared"
         ${LLVM_TOOLS_ARGS}
         DEPENDS ${linked_out} ${analyze_deps}
@@ -92,7 +92,12 @@ function(process_to_binary binary_file destination_file binary_artifact_prefix)
     )
 endfunction()
 
-process_to_binary(${CMAKE_CURRENT_SOURCE_DIR}/tests/mock_stencils.c tests/jit_memory_test.cpp "mock_stencils")
+process_to_binary(
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/mock_stencils.c 
+    tests/jit_memory_test.cpp 
+    "mock_stencils"
+    "--accept-all-sections"
+)
 
 add_library(Stencils OBJECT memory/memory.cpp stencils/dynamic_library.cpp)
 make_module(Stencils USES Base)
@@ -104,15 +109,21 @@ add_library(cp-stencils_bc OBJECT stencils/stencils.cpp)
 target_compile_options(cp-stencils_bc PRIVATE -emit-llvm)
 target_link_libraries(cp-stencils_bc PRIVATE LibCommonVM)
 
-process_to_binary($<TARGET_PROPERTY:CommonVMBitcode_sc,VM_COMMON_BC> copy-and-patch.cpp "stencils" $<TARGET_PROPERTY:CommonVMBitcode_sc,VM_COMMON_BC>)
+process_to_binary(
+    $<TARGET_PROPERTY:CommonVMBitcode_sc,VM_COMMON_BC> 
+    stencil_holder.cpp 
+    "stencils"
+    ""
+    $<TARGET_PROPERTY:CommonVMBitcode_sc,VM_COMMON_BC>)
 
 add_files(
     memory/memory.cpp
     stencils/dynamic_library.cpp
+    copy-and-patch.cpp
 )
 set(vm_common_sources ${vm_common_sources} ${files} PARENT_SCOPE)
 
 add_files(
-    copy-and-patch.cpp
+    stencil_holder.cpp
 )
 set(jit_dependency ${jit_dependency} ${files} PARENT_SCOPE)
