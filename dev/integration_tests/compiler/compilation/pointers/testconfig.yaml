@@ -1,19 +1,27 @@
 # Pointer type tests (ptr, manyptr, cptr)
 
 Tests:
-  manyptr_malloc:
+  manyptr:
     Cases:
       llvm:
         backend: llvm
         Output:
-          String: "1\n3\n7\n"
+          String: "1\n3\n7\n42\n43\n30\n"
         ExitCode: 0
       llvm_valgrind:
         backend: llvm
         valgrind: "true"
         TimeOut: 3
         Output:
-          String: "1\n3\n7\n"
+          String: "1\n3\n7\n42\n43\n30\n"
+        ExitCode: 0
+
+  nested_pointers:
+    Cases:
+      all:
+        backend: all
+        Output:
+          String: "100\n999\n10\n3\n"
         ExitCode: 0
 
   ptr_deref_ref:
@@ -64,5 +72,5 @@ Tests:
         Output:
           String: ""
         Err:
-          String: 'VMThread has panicked: Data was freed\n{\"data\":{\"error\":\"Execution panicked with error: Data was freed\"},\"type\":\"OtherError\"}block.refcount != 0, BlockID=0\n'
+          String: 'VMThread has panicked: Accessing null pointer\n{\"data\":{\"error\":\"Execution panicked with error: Accessing null pointer\"},\"type\":\"OtherError\"}block.refcount != 0, BlockID=1\n'
         ExitCode: 1

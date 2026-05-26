@@ -5,7 +5,6 @@
 namespace compiler::backend_vm::internal {
 	void InstructionLowerer::lower(const BoxAllocOperation& op) {
 		auto type = op.src.getType();
-		std::cerr << op.dest.has_value() << "\n";
 		ctx->pushInstruction(
 			{ OpKind::alloc, op.dest->asArgument(), vm::opargs::Type(typeName(type)) }
 		);

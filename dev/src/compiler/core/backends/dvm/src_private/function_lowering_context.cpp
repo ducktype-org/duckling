@@ -345,7 +345,6 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 					if (current_layout->is<tsl::StaticArrayTypeLayout>()) {
 						const auto& array_layout
 							= std::get<tsl::StaticArrayTypeLayout>(current_layout->getVariant());
-
 						return { array_layout.getElementLayout(),
 							     vm::code::builders::OpKind::fixedSizeTableLea };
 					}

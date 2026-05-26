@@ -1,5 +1,5 @@
 fun main() -> i64 = {
-    let first = 10;
+    var first = 10;
     var x: ptr i32 = &first as ptr i32;
     var y = &(*x);
     y = 30;
