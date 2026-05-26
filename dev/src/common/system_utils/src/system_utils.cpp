@@ -17,12 +17,12 @@ int execSelf(std::vector<std::string>& g_argv) {
 	intptr_t result = _spawnvp(_P_WAIT, args[0], args.data());
 	if (result == -1) {
 		std::perror("_spawnvp");
-		return 1;
+		return -1;
 	}
 	return static_cast<int>(result);
 #else
 	execvp(args[0], args.data());
 	std::perror("execvp");
-	return 1;
+	return -1;
 #endif
 }
