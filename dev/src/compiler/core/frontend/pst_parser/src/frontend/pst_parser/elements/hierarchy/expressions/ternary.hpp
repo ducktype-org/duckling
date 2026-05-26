@@ -13,7 +13,7 @@ namespace pst::expr {
 	 * would cause parsing problems.
 	 */
 	class Ternary final: public ExprElement {
-		using Lower = CastAs;
+		using Lower = LogicOr;
 
 		NAMED_CHILD(condition, ExprElement);
 		NAMED_CHILD(if_true, ExprElement);

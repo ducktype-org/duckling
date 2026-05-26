@@ -100,7 +100,6 @@ namespace lang_def {
 			{ Keyword::Or, "or", KeywordFlags() },
 			{ Keyword::Xor, "xor", KeywordFlags() },
 
-			{ Keyword::As, "as", KeywordFlags() },
 			{ Keyword::Hides, "hides", KeywordFlags() },
 			{ Keyword::In, "in", KeywordFlags() },
 			{ Keyword::Lambda, "lambda", KeywordFlags() },
@@ -202,6 +201,7 @@ namespace lang_def {
 	constexpr auto OPERATOR_ARRAY = std::to_array<std::pair<NamedOperator, std::string_view>>({
 		{ NamedOperator::NotAnOperator, "NotAnOperator" },
 
+		{ NamedOperator::As, "as" },
 		{ NamedOperator::Period, "." },
 		{ NamedOperator::Range, ".." },
 		{ NamedOperator::PeriodQuestion, ".?" },

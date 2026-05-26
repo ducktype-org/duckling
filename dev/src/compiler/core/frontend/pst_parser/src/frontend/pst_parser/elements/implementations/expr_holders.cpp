@@ -1,7 +1,6 @@
 #include "../hierarchy/expr_holders.hpp"
 
 #include "../hierarchy/expressions/assignment.hpp"
-#include "../hierarchy/expressions/cast_as.hpp"
 #include "../hierarchy/expressions/comma.hpp"
 #include "../hierarchy/expressions/ternary.hpp"
 #include "preamble.hpp"
@@ -54,9 +53,5 @@ namespace pst {
 
 	MBox<ExprElement> ExprParserHelper::parseTernary(LangParserState& state) {
 		return expr::Ternary::parse(state);
-	}
-
-	MBox<ExprElement> ExprParserHelper::parseCastAs(LangParserState& state) {
-		return expr::CastAs::parse(state);
 	}
 }

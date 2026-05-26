@@ -277,6 +277,24 @@ namespace compiler::helios::code {
 			void visitBinaryOperator(pst::Access<pst::expr::BinaryOperator> stmt) override {
 				// handle variants:
 				const auto op = stmt->getOperator().unlock(ctx);
+				if (op->unwrap() == lang_def::NamedOperator::As) {
+					const auto meta_type = tsh::SymbolType<>::withDefaults(tsh::getMetaType());
+
+					auto value_expr = subExprFromPST(ctx, stmt->getLeftOperand()).valueOrThrow();
+					auto type_expr = subExprFromPSTWithType(ctx, stmt->getRightOperand(), meta_type)
+					                     .valueOrThrow();
+					auto type_ctv    = ctx.query<QueryEvaluateHOUTExpression>({ type_expr.ref() });
+					auto symbol_type = type_ctv.valueOrThrow().get<tsh::SymbolType<>>().value();
+
+					assertCastIsValid(
+						stmt, value_expr->expression_type.getSymbolType(), symbol_type
+					);
+					node = makeBox<CastExpr>(
+						ctx, pstOrigin(stmt), std::move(value_expr), symbol_type
+					);
+					return;
+				}
+
 				if (op->unwrap() == lang_def::NamedOperator::Pipe) {
 					auto                   sub_exprs = getVariantSubExprs(ctx, stmt);
 					std::vector<Box<Expr>> all_subtypes;
@@ -553,9 +571,9 @@ namespace compiler::helios::code {
 			}
 
 			void assertCastIsValid(
-				pst::Access<pst::expr::CastAs> stmt,
-				const tsh::SymbolType<>&       from,
-				const tsh::SymbolType<>&       to
+				pst::Access<pst::expr::BinaryOperator> stmt,
+				const tsh::SymbolType<>&               from,
+				const tsh::SymbolType<>&               to
 			) {
 				if (from == to) return;  // trivial cast, always valid
 
@@ -605,19 +623,6 @@ namespace compiler::helios::code {
 					stmt->getStablePosition()
 				));
 				query::throwFailed();
-			}
-
-			void visitCastAs(pst::Access<pst::expr::CastAs> stmt) override {
-				const auto meta_type = tsh::SymbolType<>::withDefaults(tsh::getMetaType());
-
-				auto value_expr = subExprFromPST(ctx, stmt->getValueExpression()).valueOrThrow();
-				auto type_expr  = subExprFromPSTWithType(ctx, stmt->getTypeExpression(), meta_type)
-				                     .valueOrThrow();
-				auto type_ctv    = ctx.query<QueryEvaluateHOUTExpression>({ type_expr.ref() });
-				auto symbol_type = type_ctv.valueOrThrow().get<tsh::SymbolType<>>().value();
-
-				assertCastIsValid(stmt, value_expr->expression_type.getSymbolType(), symbol_type);
-				node = makeBox<CastExpr>(ctx, pstOrigin(stmt), std::move(value_expr), symbol_type);
 			}
 
 			void visitTernary(pst::Access<pst::expr::Ternary> stmt) override {

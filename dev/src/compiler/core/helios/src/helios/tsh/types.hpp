@@ -242,6 +242,8 @@ namespace compiler::tsh {
 		 * A value of this type is simply a memory address.
 		 * It is statically known what the type of the pointee is.
 		 */
+		[[nodiscard]]
+		SymbolType<> getPointee() const;
 
 		/**
 		 * @brief Gets the underlying type of the Pointer type.
@@ -267,11 +269,11 @@ namespace compiler::tsh {
 		SETUP_TYPE_WITH_BASE(CPointerAbstractType, AbstractType)
 
 		/**
-	 * It has different layout in the DVM than basic pointer.
-	 *
-	 * A value of this type is simply a memory address.
-	 * It is statically known what the type of the pointee is.
-		SymbolType<> getPointee() const;
+		 * It has different layout in the DVM than basic pointer.
+		 *
+		 * A value of this type is simply a memory address.
+		 * It is statically known what the type of the pointee is.*/
+		[[nodiscard]] SymbolType<> getPointee() const;
 
 		/**
 		 * @brief Gets the underlying type of the Pointer type.

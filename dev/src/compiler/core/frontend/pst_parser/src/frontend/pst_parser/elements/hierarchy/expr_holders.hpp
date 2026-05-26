@@ -62,7 +62,6 @@ namespace pst {
 		static MBox<ExprElement> parseAssignment(LangParserState& state);
 		static MBox<ExprElement> parseComma(LangParserState& state);
 		static MBox<ExprElement> parseTernary(LangParserState& state);
-		static MBox<ExprElement> parseCastAs(LangParserState& state);
 	};
 
 	/**
