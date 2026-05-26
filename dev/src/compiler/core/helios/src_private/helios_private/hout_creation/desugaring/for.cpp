@@ -28,7 +28,6 @@ namespace compiler::helios::desugaring {
 		struct ForDesugarCtx {
 			query::Context&       ctx;
 			pst::Access<pst::For> stmt;
-			ScopeID               for_scope;
 
 			code::ElementOrigin loop_origin;
 			code::ElementOrigin iterable_origin;
@@ -79,12 +78,10 @@ namespace compiler::helios::desugaring {
 				));
 				return {};
 			}
-			ScopeID for_scope = ctx.query<QueryPrimaryCodeScopeFor>({ stmt });
 
 			return ForDesugarCtx{
 				.ctx                   = ctx,
 				.stmt                  = stmt,
-				.for_scope             = for_scope,
 				.loop_origin           = code::pstOrigin(stmt),
 				.iterable_origin       = code::pstOrigin(iterable_pst),
 				.iterator_origin       = code::pstOrigin(stmt->getIteratorIdentifier().unlock(ctx)),
@@ -255,27 +252,32 @@ namespace compiler::helios::desugaring {
 		}
 	}
 
-	SymID getForIteratorSymbol(query::Context& ctx, pst::Access<pst::For> stmt) {
-		return ctx.query<QuerySymbolOfSTMT>({ stmt->getIteratorIdentifier() }).valueOrThrow();
-	}
+	ForGeneratedSymbols getForGeneratedSymbols(query::Context& ctx, pst::Access<pst::For> stmt) {
+		ScopeID for_scope = ctx.query<QueryPrimaryCodeScopeFor>({ stmt });
 
-	SymID makeForLocal(
-		query::Context& ctx, ScopeID for_scope, base::StrID role, tsh::SymbolType<> type
-	) {
-		// Compose the name with the current scope hash, so we don't have naming collisions
-		// with nested loops.
-		auto unique = for_scope.queryUnstablePerfectHash();
-		auto name   = base::StrID(base::strConcat(role, unique));
+		auto get_generated_local = [&](base::StrID role, tsh::SymbolType<> type) {
+			// Compose the name with the current scope hash, so we don't have naming collisions
+			// with nested loops.
+			auto unique = for_scope.queryUnstablePerfectHash();
+			auto name   = base::StrID(base::strConcat(role, unique));
 
-		return ctx.query<defgen::QueryGeneratedSymbol>({
-			.name = name,
-			.generated_symbol_data
-			= defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::ControlFlowLocal{
-				.owning_scope = for_scope,
-				.role         = role,
-				.type         = type,
-			} },
-		});
+			return ctx.query<defgen::QueryGeneratedSymbol>({
+				.name = name,
+				.generated_symbol_data
+				= defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::ControlFlowLocal{
+					.owning_scope = for_scope,
+					.role         = role,
+					.type         = type,
+				} },
+			});
+		};
+
+		return {
+			.iterator
+			= ctx.query<QuerySymbolOfSTMT>({ stmt->getIteratorIdentifier() }).valueOrThrow(),
+			.index  = get_generated_local(base::StrID("__index"), getU64(ctx)),
+			.length = get_generated_local(base::StrID("__len"), getConstU64(ctx)),
+		};
 	}
 
 	base::Optional<code::BlockStmt> desugarFor(
@@ -285,13 +287,10 @@ namespace compiler::helios::desugaring {
 		if (!ctx_opt.has_value()) return {};
 		auto& for_ctx = ctx_opt.value();
 
-		// Create the needed symbols.
-		SymID idx_sym
-			= makeForLocal(for_ctx.ctx, for_ctx.for_scope, base::StrID("__index"), getU64(ctx));
-		SymID len_sym
-			= makeForLocal(for_ctx.ctx, for_ctx.for_scope, base::StrID("__len"), getConstU64(ctx));
-		SymID             iter_sym  = getForIteratorSymbol(ctx, stmt);
-		tsh::SymbolType<> iter_type = ctx.query<QueryTypeOfSymbol>(iter_sym)->valueOrThrow();
+		// Get the needed symbols.
+		ForGeneratedSymbols symbols = getForGeneratedSymbols(ctx, stmt);
+		tsh::SymbolType<>   iter_type
+			= ctx.query<QueryTypeOfSymbol>(symbols.iterator)->valueOrThrow();
 
 		Box<code::Expr> reusable_inner = [&]() -> Box<code::Expr> {
 			if (for_ctx.collection_is_l_value) {
@@ -309,7 +308,12 @@ namespace compiler::helios::desugaring {
 		// Build the while body first so we bail out on coercion failure before
 		// consuming the iterable expression into the ReusableExpr.
 		auto while_body = buildWhileBody(
-			for_ctx, std::move(iterable_next_use), idx_sym, iter_sym, iter_type, process_body
+			for_ctx,
+			std::move(iterable_next_use),
+			symbols.index,
+			symbols.iterator,
+			iter_type,
+			process_body
 		);
 		if (!while_body.has_value()) return {};
 
@@ -322,25 +326,25 @@ namespace compiler::helios::desugaring {
 		// 		__idx = __idx + 1;
 		// }
 		code::CodeBlock outer{};
-		outer.statements.emplace_back(buildIndexVar(for_ctx, idx_sym));
+		outer.statements.emplace_back(buildIndexVar(for_ctx, symbols.index));
 		if (for_ctx.iterable_type.getType().getKind() == tsh::Kind::StaticArray) {
 			// For StaticArray, __len evaluates to a compile-time constant, so it does not evaluate
 			// the collection itself. We execute `iterable_reusable` here in an ExprStmt
-			// solely to ensure `first_use` is evaluated before we start looping.
+			// to ensure `first_use` is evaluated before get in the loop.
 			outer.statements.emplace_back(
 				makeBox<code::ExprStmt>(for_ctx.loop_origin, std::move(iterable_reusable))
 			);
-			outer.statements.emplace_back(buildLengthVar(for_ctx, len_sym, {}));
+			outer.statements.emplace_back(buildLengthVar(for_ctx, symbols.length, {}));
 		} else {
 			outer.statements.emplace_back(
-				buildLengthVar(for_ctx, len_sym, std::move(iterable_reusable))
+				buildLengthVar(for_ctx, symbols.length, std::move(iterable_reusable))
 			);
 		}
 
 
 		outer.statements.emplace_back(makeBox<code::WhileStmt>(
 			for_ctx.loop_origin,
-			buildCondition(for_ctx, idx_sym, len_sym),
+			buildCondition(for_ctx, symbols.index, symbols.length),
 			std::move(while_body.value())
 		));
 

@@ -35,6 +35,7 @@
 #include <string_id/string_id.hpp>
 
 #include <algorithm>
+#include <type_traits>
 
 namespace compiler::helios {
 
@@ -537,20 +538,13 @@ namespace compiler::helios {
 			}
 
 			void visitFor(pst::Access<pst::For> for_stmt) override {
-				ScopeID for_scope = ctx.query<QueryPrimaryCodeScopeFor>({ for_stmt });
-				auto    u64_mut   = tsh::SymbolType<>::withDefaults(
-                    tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned)
-                );
-				auto u64_immut = u64_mut.withMutability(tsh::Mutability::Immutable);
+				using namespace desugaring;
+				ForGeneratedSymbols symbols = getForGeneratedSymbols(ctx, for_stmt);
 
 				std::vector<SymID> out;
-				out.emplace_back(desugaring::getForIteratorSymbol(ctx, for_stmt));
-				out.emplace_back(
-					desugaring::makeForLocal(ctx, for_scope, base::StrID("__index"), u64_mut)
-				);
-				out.emplace_back(
-					desugaring::makeForLocal(ctx, for_scope, base::StrID("__len"), u64_immut)
-				);
+				out.emplace_back(symbols.iterator);
+				out.emplace_back(symbols.index);
+				out.emplace_back(symbols.length);
 				output(std::move(out));
 			}
 

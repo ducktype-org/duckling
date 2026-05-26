@@ -9,18 +9,22 @@
 
 namespace compiler::helios::desugaring {
 	/**
-	 * @brief Returns a SymID of the user-declared iterator of a For stmt.
+	 * @brief All symbols created by the `for` statement.
 	 */
-	SymID getForIteratorSymbol(query::Context& ctx, pst::Access<pst::For> stmt);
+	struct ForGeneratedSymbols final {
+		SymID iterator;  ///< The iterator variable
+		SymID index;     ///< Variable storing the current index of the loop.
+		SymID length;    ///< Variable storing the length of the iterable.
+	};
 
 	/**
-	 * @brief Returns a SymID of the compiler generated control flow variables which appeared when
-	 * desugaring the for loop.
+	 * @brief Returns a structure containing all symbols created by a `for` statement.
 	 */
-	SymID makeForLocal(
-		query::Context& ctx, ScopeID for_scope, base::StrID role, tsh::SymbolType<> type
-	);
+	ForGeneratedSymbols getForGeneratedSymbols(query::Context& ctx, pst::Access<pst::For> stmt);
 
+	/**
+	 * @brief Callback for processing the for's body.
+	 */
 	using BodyProcessor = std::function<code::CodeBlock(pst::AccessLocked<pst::CodeBlockOrStmt>)>;
 
 	/**
@@ -28,22 +32,26 @@ namespace compiler::helios::desugaring {
 	 *
 	 * For a simple for loop:
 	 * ```
-	 * for (x: i64 in static_arr) {
-	 *     builtin_output_i64(x);
+	 * var t_arr: T[2];
+	 * for(t in t_arr) {
+	 *     builtin_output_i64(t.a);
 	 * }
 	 * ```
 	 *
 	 * HOUT like this would be generated:
 	 * ```
 	 * { # <- This block is generated (it's not here for beauty reasons).
-	 *		var __collection : ref i64[2] = &static_arr;
-	 * 		var __index : u64 = 0u64;
-	 * 		var __len: const u64 = 2; # or `len static_arr` in case of lists.
-	 * 		while (__index < __len) {
-	 * 		    var x : i64 = __collection[__index];
-	 * 		    builtin_output_i64(x);
-	 * 		    __index = __index + 1;
-	 * 		}
+	 * 	   #'41' is the scope hash combined with the variable name for the symbols to not collide in
+	 * 	   # nested loops
+	 *
+	 *     var __index41 : u64 = 0;
+	 *     do [tmp](refof((Symbol t_arr (26))))
+	 * 	   var __len41: const u64 = 2; # or `len dynamic_arr` in case of lists.
+	 *     while ((Symbol __index41 (63)) < (Symbol __len41 (64))) {
+	 *         var t : Class T = deref([reuse](refof((Symbol t_arr (26)))))[(Symbol __index41 (63))];
+	 *         do (Symbol builtin_output_i64 (16))(cast[to=i64]((Symbol t (62)).a))
+	 *         (Symbol __index41 (63)) = (Symbol __index41 (63)) + 1;
+	 *     }
 	 * }
 	 * ```
 	 *

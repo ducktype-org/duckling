@@ -140,6 +140,7 @@ namespace compiler::helios {
 			}
 
 			void visitIdentifierWrapper(pst::Access<pst::IdentifierWrapper> ident) final {
+				// @TODO: #2782 Remove this function.
 				auto parent_opt = ident->getParent();
 				CORE_ASSERT(parent_opt.has_value(), "IdentifierWrapper without in type query");
 
