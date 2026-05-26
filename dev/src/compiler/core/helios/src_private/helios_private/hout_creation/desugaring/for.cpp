@@ -1,6 +1,7 @@
 #include "for.hpp"
 
 #include <frontend/pst_parser/access.hpp>
+#include <frontend/pst_parser/elements/hierarchy/expr_holders.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/hout/origin.hpp>
@@ -13,6 +14,7 @@
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/hout_creation/expressions/coercions.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
+#include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
 #include <base/collections/optional.hpp>
