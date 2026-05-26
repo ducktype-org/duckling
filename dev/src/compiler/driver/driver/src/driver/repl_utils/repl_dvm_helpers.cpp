@@ -90,14 +90,23 @@ namespace compiler::repl {
 		);
 		for (const auto& global: lir_data->lir_unit.lir_globals) {
 			CORE_DEV_LOG(REPL, "Global: ", global.global.mangled_name.strView());
-			// if (global.global_ctor.has_value())
-			// 	CORE_DEV_LOG(
-			// 		REPL, "  Has ctor: ", global.data_initialization.value()->mangled_name.strView()
-			// 	);
-			// if (global.global_dtor.has_value())
-			// 	CORE_DEV_LOG(
-			// 		REPL, "  Has dtor: ", global.global_dtor.value()->mangled_name.strView()
-			// 	);
+			if (std::holds_alternative<lir::LIRGlobalData::CTorDtorPair>(global.data_initialization
+			    )) {
+				auto& ctor_dtor_pair
+					= std::get<lir::LIRGlobalData::CTorDtorPair>(global.data_initialization);
+				if (ctor_dtor_pair.global_ctor.has_value())
+					CORE_DEV_LOG(
+						REPL,
+						"  Has ctor: ",
+						ctor_dtor_pair.global_ctor.value()->mangled_name.strView()
+					);
+				if (ctor_dtor_pair.global_dtor.has_value())
+					CORE_DEV_LOG(
+						REPL,
+						"  Has dtor: ",
+						ctor_dtor_pair.global_dtor.value()->mangled_name.strView()
+					);
+			}
 		}
 		for (const auto& func: lir_data->lir_unit.lir_functions)
 			CORE_DEV_LOG(REPL, "Function: ", func->mangled_name.strView());

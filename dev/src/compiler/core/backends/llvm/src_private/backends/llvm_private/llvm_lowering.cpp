@@ -550,7 +550,7 @@ namespace compiler::backend_llvm {
 					lir_global.data_initialization
 				),
 				"For now we assume, that each non-constant is non-CTV initialized, but this might "
-			    "change in the future"
+				"change in the future"
 			);
 			global->setInitializer(llvm::Constant::getNullValue(global->getValueType()));
 		}

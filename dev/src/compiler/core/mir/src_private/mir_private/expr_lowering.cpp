@@ -105,13 +105,19 @@ namespace compiler::mir {
 					"constant."
 				);
 
+				MIRGlobal::Kind global_kind = (symbol_kind == helios::SymbolKind::Const)
+				                                ? MIRGlobal::Kind::Constant
+				                                : MIRGlobal::Kind::Variable;
+
 				valueOutput(
 					continuation,
-					MIRValue{ MIRGlobal({ expr.symbol,
-				                          expr.expression_type.getSymbolType(),
-				                          (symbol_kind == helios::SymbolKind::Const)
-				                              ? MIRGlobal::Kind::Constant
-				                              : MIRGlobal::Kind::Variable }) }
+					MIRValue{
+						MIRGlobal({
+							expr.symbol,
+							expr.expression_type.getSymbolType(),
+							global_kind,
+						}),
+					}
 				);
 			}
 		}

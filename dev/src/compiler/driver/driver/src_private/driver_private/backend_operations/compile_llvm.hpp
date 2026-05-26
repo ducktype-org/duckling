@@ -11,8 +11,9 @@ namespace compiler::driver {
 
 	/**
 	 * @brief Compiles the LIRUnitWithBackendName to LLVM Module.
-	 * @TODO: #2246 Move this logic to the LLVM backend, it is not really driver-specific and it depends on LIR structure anyway.
-	 * Also: maybe remove LIRUnitWithBackendName -- we can just set module name per module in backend.
+	 * @TODO: #2246 Move this logic to the LLVM backend, it is not really driver-specific and it
+	 * depends on LIR structure anyway. Also: maybe remove LIRUnitWithBackendName -- we can just set
+	 * module name per module in backend.
 	 */
 	backend_llvm::Module compileLIRModuleToLLVM(
 		query::Context& ctx, CRef<LIRUnitWithBackendName> lir_module
