@@ -2,7 +2,7 @@
 
 #include "module_impl_fd.hpp"
 
-#include <lir/lir_structure/function_forward.hpp>
+#include <lir/lir_structure/lir_structure_fd.hpp>
 
 #include <base/pointers/box.hpp>
 #include <base/types/ok_bad.hpp>
@@ -46,6 +46,13 @@ namespace compiler::backend_llvm {
 		 * @return Module created by parsing the given bitcode.
 		 */
 		static Module fromLLVMBC(std::span<unsigned char> llvm_bc_data);
+
+		/**
+		 * @brief Creates an LLVM module from LIRUnit.
+		 *
+		 * @return Module created by lowering the given LIRUnit.
+		 */
+		static Module fromLIRUnit(query::Context&, const lir::LIRUnit& lir_unit, base::StrID module_id);
 
 		Module(Box<ModuleImpl> impl): impl(std::move(impl)) {}
 

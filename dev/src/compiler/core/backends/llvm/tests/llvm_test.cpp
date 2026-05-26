@@ -4,8 +4,10 @@
 #include <global_state/backend_options.hpp>
 #include <helios/mangler/mangler.hpp>
 #include <helios/queries/queries.hpp>
-#include <lir/lir_lowering/lir_lowering.hpp>
-#include <mir/mir_lowering/mir_queries.hpp>
+// #include <lir/lir_lowering/lir_lowering.hpp>
+#include <lir/lir_lowering/lir_unit.hpp>
+// #include <mir/mir_lowering/mir_queries.hpp>
+#include <mir/mir_lowering/mir_unit.hpp>
 
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
@@ -54,18 +56,22 @@ protected:
 	}
 
 private:
-	auto getLLVMModuleFromPath(std::string module_path) {
+	compiler::backend_llvm::Module getLLVMModuleFromPath(std::string module_path) {
 		using namespace compiler;
 
 		backend_llvm::Module             llvm_module(base::StrID("test_module"));
 		std::vector<CRef<lir::Function>> ctors;
 
-		// #2246 PIPELINE LOGIC HERE
+		// @TODO: #2246 unify pipeline logic here, it should be easy after
+		// some elements of driver are moved to the LLVM backend
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto module
 				= frontend::createModuleTreeWithRandomPackageID(fs::File(path(module_path)));
 			auto& module_hout = ctx.query<helios::QueryModuleHOUT>(module)->valueOrPanic();
+
+			auto mir_result = mir::lowerToMIRUnit(ctx, &module_hout).valueOrPanic();
+			auto lir_result = lir::lowerToLIRUnit(ctx, mir_result);
 
 			for (auto& hout_glob: module_hout.glob_data) {
 				if (!hout_glob->type.getType().carriesInformation(ctx)) continue;
@@ -123,11 +129,8 @@ private:
 				llvm_module.addFunctionToModuleDtors(ctx, CRef<lir::Function>(&module_dtor));
 			}
 
-			for (auto& fun: module_hout.functions) {
-				CRef mir_fun
-					= &ctx.query<compiler::mir::LowerToMIRFunction>({ fun })->valueOrThrow();
-				auto lir_fun = ctx.query<compiler::lir::LowerToLIRFunction>({ mir_fun });
-				llvm_module.addFunctionToModule(ctx, lir_fun);
+			for (auto& fun: lir_result.lir_functions) {
+				llvm_module.addFunctionToModule(ctx, fun);
 			}
 		});
 

@@ -564,7 +564,7 @@ namespace compiler::backend_llvm {
 	 * and generates LLVM function in given module based
 	 * on provided LIRFunction.
 	 */
-	struct LIRFunction2LLVM {
+	struct LIRFunction2LLVM final {
 		Ref<llvm::Module>   module;
 		llvm::LLVMContext&  context;
 		query::Context&     ctx;

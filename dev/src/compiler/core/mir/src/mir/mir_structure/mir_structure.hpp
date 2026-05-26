@@ -292,10 +292,10 @@ namespace compiler::mir {
 	};
 
 	/**
-	 * PR: update!!!!!
-	 * This is a lightweight ID used for MIR place only!
+	 * @brief Lightweight ID-like representation of a global value used inside MIR IR code (e.g. in MIRPlace).
 	 *
-	 * @brief Represents a global value in MIR.
+	 * @important This is not a full IR representation of a global variable.
+	 * MIRGlobalData serves that purpose and contains more information.
 	 *
 	 * This structure is used to reference a global variable in MIR code. It is directly connected
 	 * to the value from HOUT global data, allowing the MIR to operate on global variables defined
@@ -310,7 +310,6 @@ namespace compiler::mir {
 	 */
 	struct MIRGlobal final {
 		enum class Kind { Variable, Constant };
-
 
 		/**
 		 * @brief HELIOS SymID of the global variable.
@@ -737,8 +736,8 @@ namespace compiler::mir {
 
 	/**
 	 * @brief Helper struct for adding additional semantic information
-	 * to the SymID of a global variable.
-	 * See: Function::HSymID
+	 * to the SymID.
+	 * See: Function::HSymID for usage
 	 */
 	struct FunctionSymID final {
 		helios::SymID id;
@@ -746,8 +745,8 @@ namespace compiler::mir {
 
 	/**
 	 * @brief Helper struct for adding additional semantic information
-	 * to the SymID of a global variable.
-	 * See: Function::HSymID
+	 * to the SymID
+	 * See: Function::HSymID for usage
 	 */
 	struct GlobalVariableCTOR final {
 		helios::SymID global_var_id;
@@ -846,13 +845,17 @@ namespace compiler::mir {
 		base::OkBad validateBlockIDs() const;
 	};
 
+	/**
+	 * @brief Representation of a global value in MIR.
+	 * See also: MIRGlobal
+	 */
 	struct MIRGlobalData final {
 		MIRGlobal global;
 
 		/**
 		 * @brief Initial value for the global variable.
-		 * Can be either a compile-time value or a reference to a function.
-		 * Should always be a CTV is kind is Const
+		 * Can be either a compile-time value or a reference to a ctor function.
+		 * Should always be a CTV if kind is Const
 		 */
 		std::variant<ctv::CompileTimeValue, CRef<mir::Function>> initial_value;
 

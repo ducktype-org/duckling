@@ -1,6 +1,6 @@
 #pragma once
 
-#include "function_forward.hpp"  // IWYU pragma: keep
+#include "lir_structure_fd.hpp"  // IWYU pragma: keep
 
 #include <ctv/ctv.hpp>
 #include <diagnostic_interactive/stable_position.hpp>

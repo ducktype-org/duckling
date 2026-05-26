@@ -8,7 +8,6 @@
 
 namespace compiler::mir {
 	query::QResult<MIRUnit> lowerToMIRUnit(query::Context& ctx, CRef<helios::HOUTUnit> hout_unit) {
-		// #2246 implement this
 
 		MIRUnit unit_result;
 		bool    is_failed = false;

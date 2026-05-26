@@ -159,7 +159,7 @@ namespace lsp {
 
 		// We run the semantic analysis if there is no parsing errors.
 
-		// @TODO: #2246 see if anything should be changed heres
+		// @TODO: #2246 see if anything should be changed here
 		if (isModuleTreeParsedSuccessfully(root_module))
 			query::entryPoint<helios::QueryModuleHOUTRecursively>(root_module->getModuleID());
 
