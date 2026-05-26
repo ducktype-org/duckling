@@ -377,6 +377,20 @@ namespace compiler::repl {
 
 		const usize replay_count = std::min(count, entries.size());
 		for (usize i = 0; i < replay_count; ++i) {
+			if (!silent) {
+				std::istringstream lines(entries[i]);
+				std::string        line;
+				bool               first_line = true;
+				while (std::getline(lines, line)) {
+					if (first_line) {
+						std::cout << ">> " << line << "\n";
+					} else {
+						std::cout << ReplConfig::HISTORY_MULTILINE_CONTINUATION << line
+						          << "\n";
+					}
+					first_line = false;
+				}
+			}
 			auto result = executeInput(entries[i]);
 			if (result.status == ReplResult::Status::Error) {
 				if (!silent) {
