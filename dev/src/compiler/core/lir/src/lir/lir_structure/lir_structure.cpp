@@ -46,7 +46,7 @@ namespace compiler::lir {
 
 		auto mangled_name = helios::mangler::getSimpleMangledName(ctx, mir_global.helios_id);
 
-		return LIRGlobal{ mir_global.helios_id, type_layout, mangled_name };
+		return LIRGlobal{  type_layout, mangled_name };
 	}
 
 	LIRGlobal LIRGlobal::fromHOUT(query::Context& ctx, const helios::HOUTGlobalData& hout_global) {
@@ -57,13 +57,13 @@ namespace compiler::lir {
 		variant_match(hout_global.value) {
 			variant_case(helios::HOUTGlobalConst, name) {
 				return LIRGlobal{
-					hout_global.helios_symbol, type_layout, mangled_name,
+					type_layout, mangled_name,
 					LIRGlobalType::Constant,   name.value,
 				};
 			}
 			variant_case(helios::HOUTGlobalVariable, name) {
 				return LIRGlobal{
-					hout_global.helios_symbol, type_layout, mangled_name, LIRGlobalType::Variable
+					type_layout, mangled_name, LIRGlobalType::Variable
 				};
 			}
 			variant_default {

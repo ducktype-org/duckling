@@ -218,7 +218,7 @@ namespace compiler::lir {
 		 * Order of those functions matter, as they build components of LIR function
 		 * step by step.
 		 */
-		struct MIR2LIR {
+		struct MIR2LIR final {
 			Context& ctx;
 			QKey     key;
 

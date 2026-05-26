@@ -247,13 +247,11 @@ namespace compiler::lir {
 	struct LIRGlobal final {
 		// #2246 do something about this
 		// see #1657
-
-
-		/**
-		 * @brief HELIOS id of the variable.
-		 * #2246 this should not be here, its lir!
-		 */
-		helios::SymID helios_id;
+		// /**
+		//  * @brief HELIOS id of the variable.
+		//  * #2246 this should not be here, its lir!
+		//  */
+		// helios::SymID helios_id;
 
 		CRef<tsl::TypeLayout> layout;
 
@@ -265,13 +263,13 @@ namespace compiler::lir {
 
 	private:
 		LIRGlobal(
-			const helios::SymID                          helios_id,
+			// const helios::SymID                          helios_id,
 			const CRef<tsl::TypeLayout>                  layout,
 			const base::StrID&                           mangled_name,
 			const LIRGlobalType                          type          = LIRGlobalType::Variable,
 			const base::Optional<ctv::CompileTimeValue>& initial_value = {}
 		):
-			  helios_id(helios_id),
+			//   helios_id(helios_id),
 			  layout(layout),
 			  mangled_name(mangled_name),
 			  type(type),
@@ -639,5 +637,18 @@ namespace compiler::lir {
 		 */
 		[[nodiscard]]
 		base::Map<LIRLocalRef, u64> getLocalVariableIDs() const;
+	};
+
+	/**
+	 * @brief Structure representing single LIRUnit.
+	 *
+	 * LIR unit is an arbitrary code collections represented in LIR IR.
+	 * There is no constract on what any given LIRUnit should contain.
+	 * 
+	 * @note LIR units are created mostly from MIR units.
+	 */
+	struct LIRUnit final {
+		std::vector<CRef<Function>> lir_functions;
+		std::vector<LIRGlobal>      lir_globals;
 	};
 }

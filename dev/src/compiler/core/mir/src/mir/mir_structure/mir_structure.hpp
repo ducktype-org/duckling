@@ -292,6 +292,9 @@ namespace compiler::mir {
 	};
 
 	/**
+	* PR: update!!!!!
+	* This is a lightweight ID used for MIR place only!
+	*
 	 * @brief Represents a global value in MIR.
 	 *
 	 * This structure is used to reference a global variable in MIR code. It is directly connected
