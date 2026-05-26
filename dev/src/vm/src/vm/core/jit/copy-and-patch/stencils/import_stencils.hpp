@@ -87,16 +87,11 @@ namespace vm::jit::cnp {
 		}
 
 		/**
-		 * @brief Copy and patch a stencil into a given address.
+		 * @brief Patch a stencil into a given address.
 		 */
-		byte* relocate_and_patch(
-			const StencilData& stencil_data, byte* new_address, auto patch_values
-		) {
-			auto ret = relocate(stencil_data, new_address);
-			for (auto hole : stencil_data.to_patch)
+		void patch(const StencilData& stencil_data, byte* new_address, auto patch_values) {
+			for (auto hole: stencil_data.to_patch)
 				hole.patch(new_address, patch_values(hole.value));
-
-			return ret;
 		}
 
 	private:
