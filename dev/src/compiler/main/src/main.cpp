@@ -1032,6 +1032,7 @@ clah::Clah getClahForMain() {
 						return 1;
 					}
 					base::Optional<usize>      reset_replay_count;
+					bool                       reset_replay_silent = false;
 					compiler::repl::ReplResult repl_result = compiler::repl::ReplResult::success();
 					{
 						compiler::repl::ReplSession session(!options.isFlag("no-completions"));
@@ -1067,13 +1068,14 @@ clah::Clah getClahForMain() {
 								return 1;
 							}
 						}
-						repl_result        = session.run();
-						reset_replay_count = session.getResetReplayCount();
+						repl_result         = session.run();
+						reset_replay_count  = session.getResetReplayCount();
+						reset_replay_silent = session.getResetReplaySilent();
 					}
 					compiler::driver::exit();
 					if (repl_result.status == compiler::repl::ReplResult::Status::Reset) {
 						if (reset_replay_count.has_value())
-							setReplRestartArgs(reset_replay_count.value(), true);
+							setReplRestartArgs(reset_replay_count.value(), reset_replay_silent);
 						return execSelf(g_argv);
 					}
 					return 0;

@@ -76,6 +76,11 @@ namespace compiler::repl {
 			return m_reset_replay_count;
 		}
 
+		/**
+		 * @brief Return whether reset replay should be silent.
+		 */
+		[[nodiscard]] bool getResetReplaySilent() const { return m_reset_replay_silent; }
+
 	private:
 		/**
 		 * @brief Grant ReplSimulationTest access to private members for testing.
@@ -242,6 +247,7 @@ namespace compiler::repl {
 		bool                       m_should_reset;     ///< Flag to reset the REPL process
 		std::vector<ReplStatement> m_session_history;  ///< All statements entered in this session
 		base::Optional<usize>      m_reset_replay_count;  ///< Replay count requested via /reset -n
+		bool                       m_reset_replay_silent = false;  ///< Silence replay on reset
 		u64          m_line_counter;  ///< Counter for generating unique wrapper function names
 		vm::PID      m_dvm_pid;       ///< Process ID of the running DVM instance
 		ReplFrontend m_frontend;      ///< Frontend for user interaction

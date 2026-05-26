@@ -44,8 +44,10 @@
 
 namespace compiler::repl {
 	namespace {
-		constexpr std::string_view K_RESET_COMMAND   = "/reset";
-		constexpr std::string_view K_RESET_ERROR_MSG = "Usage: /reset [<count>|-<relative_count>]";
+		constexpr std::string_view K_RESET_COMMAND = "/reset";
+		constexpr std::string_view K_RESET_ERROR_MSG
+			= "Usage: /reset [<count>|-<relative_count>] [--history-entries-silent]";
+		constexpr std::string_view K_RESET_SILENT_FLAG = "--history-entries-silent";
 
 		std::string getSessionHistoryFilePath() { return ".duckling_repl_session_history"; }
 
@@ -76,11 +78,13 @@ namespace compiler::repl {
 			usize&           replay_count,
 			bool&            has_replay_count,
 			bool&            is_relative,
+			bool&            replay_silent,
 			std::string&     error_message
 		) {
 			replay_count     = 0;
 			has_replay_count = false;
 			is_relative      = false;
+			replay_silent    = false;
 			if (!line.starts_with(K_RESET_COMMAND)) return false;
 
 			std::string_view rest = line;
@@ -88,10 +92,43 @@ namespace compiler::repl {
 			rest = trim(rest);
 			if (rest.empty()) return true;
 
-			const auto value = takeToken(rest);
-			if (value.empty()) {
-				error_message = std::string(K_RESET_ERROR_MSG);
-				return false;
+			std::string_view value;
+			while (true) {
+				value = takeToken(rest);
+				if (value.empty()) break;
+				if (value == K_RESET_SILENT_FLAG) {
+					replay_silent = true;
+					rest          = trim(rest);
+					continue;
+				}
+				if (has_replay_count) {
+					error_message = std::string(K_RESET_ERROR_MSG);
+					return false;
+				}
+
+				rest                       = trim(rest);
+				usize number_abs_val_start = 0;
+				if (value.front() == '-') {
+					is_relative          = true;
+					number_abs_val_start = 1;
+					if (value.size() == 1) {
+						error_message = std::string(K_RESET_ERROR_MSG);
+						return false;
+					}
+				}
+
+				for (usize i = number_abs_val_start; i < value.size(); ++i) {
+					const char ch = value[i];
+					if (ch < '0' || ch > '9') {
+						error_message = std::string(K_RESET_ERROR_MSG);
+						return false;
+					}
+				}
+
+				replay_count
+					= static_cast<usize>(std::stoul(std::string(value.substr(number_abs_val_start)))
+				    );
+				has_replay_count = true;
 			}
 
 			rest = trim(rest);
@@ -100,27 +137,6 @@ namespace compiler::repl {
 				return false;
 			}
 
-			usize number_abs_val_start = 0;
-			if (value.front() == '-') {
-				is_relative          = true;
-				number_abs_val_start = 1;
-				if (value.size() == 1) {
-					error_message = std::string(K_RESET_ERROR_MSG);
-					return false;
-				}
-			}
-
-			for (usize i = number_abs_val_start; i < value.size(); ++i) {
-				const char ch = value[i];
-				if (ch < '0' || ch > '9') {
-					error_message = std::string(K_RESET_ERROR_MSG);
-					return false;
-				}
-			}
-
-			replay_count
-				= static_cast<usize>(std::stoul(std::string(value.substr(number_abs_val_start))));
-			has_replay_count = true;
 			return true;
 		}
 
@@ -429,9 +445,10 @@ namespace compiler::repl {
 			usize       replay_count     = 0;
 			bool        has_replay_count = false;
 			bool        is_relative      = false;
+			bool        replay_silent    = false;
 			std::string parse_error;
 			if (!parseResetReplayCount(
-					line, replay_count, has_replay_count, is_relative, parse_error
+					line, replay_count, has_replay_count, is_relative, replay_silent, parse_error
 				)) {
 				std::cerr << parse_error << "\n";
 				return true;
@@ -451,7 +468,8 @@ namespace compiler::repl {
 			} else {
 				m_reset_replay_count.reset();
 			}
-			m_should_reset = true;
+			m_reset_replay_silent = replay_silent;
+			m_should_reset        = true;
 			return true;
 		}
 
