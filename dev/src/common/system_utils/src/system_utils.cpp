@@ -6,6 +6,7 @@
 	#include <unistd.h>
 #endif
 
+// @TODO: #2308 Once implemented, maybe use it here.
 int execSelf(std::vector<std::string>& g_argv) {
 	std::vector<char*> args;
 	args.reserve(g_argv.size() + 1);
