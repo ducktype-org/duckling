@@ -211,11 +211,15 @@ const vm::code::GlobalData& ProgramLoweringContext::lowerAndKeepLirGlobal(
 
 	variant_match(lir_global.data_initialization) {
 		variant_case(lir::LIRGlobalData::CTorDtorPair, ctor_dtor_pair) {
-			lowerAndKeepLirFunction(ctor_dtor_pair.global_ctor.value());
-			ctor_name = Identifier(ctor_dtor_pair.global_ctor.value()->mangled_name);
+			if (ctor_dtor_pair.global_ctor.has_value()) {
+				lowerAndKeepLirFunction(ctor_dtor_pair.global_ctor.value());
+				ctor_name = Identifier(ctor_dtor_pair.global_ctor.value()->mangled_name);
+			}
 
-			lowerAndKeepLirFunction(ctor_dtor_pair.global_dtor.value());
-			dtor_name = Identifier(ctor_dtor_pair.global_dtor.value()->mangled_name);
+			if (ctor_dtor_pair.global_dtor.has_value()) {
+				lowerAndKeepLirFunction(ctor_dtor_pair.global_dtor.value());
+				dtor_name = Identifier(ctor_dtor_pair.global_dtor.value()->mangled_name);
+			}
 		}
 		variant_case(ctv::CompileTimeValue, ctv_initial_value) {
 			// @TODO: #1553 we create mini-ctors for global variables with CTV initializers for now.
