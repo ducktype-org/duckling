@@ -496,8 +496,9 @@ namespace compiler::helios {
 								const auto self_param = ctx.query<defgen::QueryGeneratedSymbol>(
 									{ .name = base::StrID("self"),
 								      .generated_symbol_data
-								      = defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::SelfParameterNoScope{
-										  .method_symbol = key,
+								      = defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::Parameter{
+										  .function_symbol = key,
+										  .parameter_index = 0,
 									  } } }
 								);
 
@@ -527,8 +528,9 @@ namespace compiler::helios {
 								const auto self_param = ctx.query<defgen::QueryGeneratedSymbol>(
 									{ .name = base::StrID("self"),
 								      .generated_symbol_data
-								      = defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::SelfParameterNoScope{
-										  .method_symbol = key,
+								      = defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::Parameter{
+										  .function_symbol = key,
+										  .parameter_index = 0,
 									  } } }
 								);
 

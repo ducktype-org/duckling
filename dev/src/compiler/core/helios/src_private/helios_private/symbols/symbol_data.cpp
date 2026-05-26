@@ -46,10 +46,6 @@ namespace compiler::helios {
 			return { method_symbol.queryUnstablePerfectHash(), scope.queryUnstablePerfectHash() };
 		}
 
-		base::Bit256 GeneratedSymbolData::SelfParameterNoScope::queryUnstablePerfectHash() const {
-			return { method_symbol.queryUnstablePerfectHash() };
-		}
-
 		base::Bit256 GeneratedSymbolData::Field::queryUnstablePerfectHash() const {
 			return { parent_type.queryUnstablePerfectHash(), index };
 		}
@@ -219,17 +215,6 @@ namespace compiler::helios {
 					};
 					return param_symbol_type;
 				}
-				variant_case(SelfParameterNoScope, param) {
-					// Don't use QueryClassOfMember (if it even still exists) because methods may be
-					// generated for non-class types, and QueryClassOfMember is a temporary solution
-					// anyway. Reconsidevisit
-					const auto method_type = ctx.query<QueryTypeOfSymbol>({ param.method_symbol })
-					                             ->valueOrThrow()
-					                             .getType()
-					                             .as<tsh::FunctionAbstractType>();
-					const auto& self_type = method_type.getParameterTypes().front();
-					return self_type;
-				}
 				variant_case(Field, field) {
 					// @TODO: #2515 Implament other cases
 					switch (field.parent_type.getKind()) {
@@ -305,9 +290,6 @@ namespace compiler::helios {
 					CORE_PANIC("Can't get scope of generated parameter yet.");
 				}
 				variant_case(SelfParameter, param) { return param.scope; }
-				variant_case(SelfParameterNoScope, param) {
-					CORE_PANIC("Can't get scope of generated self parameter without scope.");
-				}
 				variant_case(Field, field) {
 					CORE_PANIC("Can't get scope of generated field yet.");
 				}
@@ -336,7 +318,6 @@ namespace compiler::helios {
 				variant_case(BuiltinOperator, op) { return {}; }
 				variant_case(Parameter, param) { return {}; }
 				variant_case(SelfParameter, param) { return param.scope; }
-				variant_case(SelfParameterNoScope, param) { return {}; }
 				variant_case(Field, field) { return {}; }
 				variant_case(Variable, var) { return {}; }
 				variant_case(ReplExpressionWrapper, repl) { return {}; }
@@ -391,8 +372,7 @@ namespace compiler::helios {
 			}
 			variant_case_novalue(
 				defgen::GeneratedSymbolData::Parameter,
-				defgen::GeneratedSymbolData::SelfParameter,
-				defgen::GeneratedSymbolData::SelfParameterNoScope
+				defgen::GeneratedSymbolData::SelfParameter
 			) {
 				kind = SymbolKind::Parameter;
 			}

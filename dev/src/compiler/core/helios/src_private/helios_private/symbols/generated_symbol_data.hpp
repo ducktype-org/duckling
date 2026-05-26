@@ -108,17 +108,6 @@ namespace compiler::helios::defgen {
 		};
 
 		/**
-		 * Represents a compiler-generated `self` parameter of a class method, when scope is not
-		 * applicable.
-		 */
-		struct SelfParameterNoScope final {
-			SymID method_symbol;
-
-			[[nodiscard]]
-			base::Bit256 queryUnstablePerfectHash() const;
-		};
-
-		/**
 		 * Represents a compiler-generated field in a type. That type does not need to be a class.
 		 * For example, the `_1`, `_2`, etc. fields in tuples.
 		 */
@@ -219,7 +208,6 @@ namespace compiler::helios::defgen {
 			BuiltinOperator,
 			Parameter,
 			SelfParameter,
-			SelfParameterNoScope,
 			Field,
 			Variable,
 			ReplExpressionWrapper,
