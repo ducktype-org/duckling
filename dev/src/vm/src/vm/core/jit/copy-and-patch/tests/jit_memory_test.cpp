@@ -108,7 +108,7 @@ private:
 		auto foo_code = FIND_FUNC("must_patch");
 		auto memory   = JitFuncMemory::allocate(foo_code.size);
 		stencils.relocate(foo_code, memory.addr);
-		stencils.patch(foo_code, memory.addr, [](HoleValue value) {
+		foo_code.patch(memory.addr, [](HoleValue value) {
 			if (value == HoleValue::ARG0)
 				return 9;
 			else
