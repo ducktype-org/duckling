@@ -1,5 +1,7 @@
 #include "scopes.hpp"
 
+#include "frontend/pst_parser/element_kind.hpp"
+
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
@@ -35,7 +37,6 @@
 #include <string_id/string_id.hpp>
 
 #include <algorithm>
-#include <type_traits>
 
 namespace compiler::helios {
 
@@ -182,13 +183,11 @@ namespace compiler::helios {
 
 		case pst::ElementKind::ExprHolder: {
 			auto expr_parent = element->getParent().value().unlockOpt(ctx);
-			if (expr_parent.has_value()) {
-				auto parent_kind = expr_parent.value()->getElementKind();
-				if (parent_kind == pst::ElementKind::Expand) {
-					// This is a special case.
-					// Elements in macro expansions should have their scope parent be the grandparent.
-					return ElementScopeKind::ParentTransparent;
-				}
+			if (expr_parent.has_value()
+			    && expr_parent.value()->getElementKind() == pst::ElementKind::Expand) {
+				// This is a special case.
+				// Elements in macro expansions should have their scope parent be the grandparent.
+				return ElementScopeKind::ParentTransparent;
 			}
 			return ElementScopeKind::Transparent;
 		}

@@ -36,7 +36,6 @@ namespace compiler::helios::desugaring {
 			// Iterable info.
 			tsh::SymbolType<> iterable_type;
 			bool              collection_is_l_value;
-			tsh::SymbolType<> col_type;
 			Box<code::Expr>   iterable_hout;
 		};
 
@@ -87,9 +86,6 @@ namespace compiler::helios::desugaring {
 				.iterator_origin       = code::pstOrigin(stmt->getIteratorIdentifier().unlock(ctx)),
 				.iterable_type         = iterable_type,
 				.collection_is_l_value = not iterable_is_r_value,
-				.col_type              = iterable_is_r_value
-				                           ? iterable_type
-				                           : iterable_type.withReferenceKind(tsh::ReferenceKind::Ref),
 				.iterable_hout         = std::move(iterable_hout),
 			};
 		}

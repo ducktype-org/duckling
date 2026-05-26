@@ -3,6 +3,7 @@
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/tsh/queries/types.hpp>
+#include <mir/mir_lowering/mir_lifetimes.hpp>
 #include <mir/mir_structure/mir_local_ref.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 
@@ -198,26 +199,6 @@ namespace compiler::mir {
 		return local_list.last();
 	}
 
-	ScopeRef lcaa(ScopeRef a, ScopeRef b) {
-		auto depth_a = a->depth;
-		auto depth_b = b->depth;
-
-		while (depth_a > depth_b) {
-			a = a->parent.toOpt().value();
-			depth_a--;
-		}
-		while (depth_b > depth_a) {
-			b = b->parent.toOpt().value();
-			depth_b--;
-		}
-		while (a != b) {
-			a = a->parent.toOpt().value();
-			b = b->parent.toOpt().value();
-		}
-
-		return a;
-	}
-
 	MIRLocalMutRef FunctionBuilder::getTmpForReusableExpr(
 		const helios::code::ReusableExpr& reusable_expr, const ScopeRef scope
 	) {
@@ -229,7 +210,7 @@ namespace compiler::mir {
 			// a loop, next_use inside its body) the lifetime must span both, otherwise
 			// the local gets pinned to the first scope we saw and writes from the other
 			// use end up outside its lifetime window.
-			tmp->scope.value() = lcaa(tmp->scope.value(), scope);
+			tmp->scope.value() = lca(tmp->scope.value(), scope);
 			return tmp;
 		}
 
