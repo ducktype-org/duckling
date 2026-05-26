@@ -5,6 +5,8 @@
 #include <frontend/module_tree/queries.hpp>
 #include <repl/session.hpp>
 
+#include <base/types/ints.hpp>
+
 #include <filesystem/file.hpp>
 #include <logger/logger.hpp>
 #include <query_framework/entry/query_entry_point.hpp>
@@ -758,7 +760,7 @@ namespace compiler::repl {
 				    { .input = "y;", .description = "Look up y" } };
 
 			// Track initial state
-			size_t initial_history_size = session.m_session_history.size();
+			usize initial_history_size = session.m_session_history.size();
 
 			for (const auto& test: tests) {
 				auto result = session.processLine(test.input);
@@ -778,7 +780,7 @@ namespace compiler::repl {
 			}
 
 			// Verify that history was updated with all statements
-			size_t expected_history_size = initial_history_size + tests.size();
+			usize expected_history_size = initial_history_size + tests.size();
 			assertTrue(
 				session.m_session_history.size() == expected_history_size,
 				"REPL session history should track all variable operations"

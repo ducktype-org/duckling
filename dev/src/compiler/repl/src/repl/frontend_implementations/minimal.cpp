@@ -216,7 +216,7 @@ namespace compiler::repl {
 
 		std::cout << "\n=== REPL History (" << m_history.size()
 				  << (m_history.size() == 1 ? " statement" : " statements") << ") ===\n";
-		for (size_t i = 0; i < m_history.size(); ++i)
+		for (usize i = 0; i < m_history.size(); ++i)
 			std::cout << "[" << (i + 1) << "] " << m_history[i].print(true) << '\n';
 		std::cout << '\n';
 	}
@@ -450,7 +450,7 @@ namespace compiler::repl {
 			m_editor_state.prev_state_row, m_editor_state.prev_state_col
 		);
 
-		for (size_t i = 0; i < prev_st_lengths.size(); i++) {
+		for (usize i = 0; i < prev_st_lengths.size(); i++) {
 			clear_seq += std::string(prev_st_lengths[i], ' ');
 			if (i < prev_st_lengths.size() - 1) {
 				clear_seq += NEWLINE_CHAR;

@@ -10,6 +10,8 @@
 #include <frontend/pst_parser/utility.hpp>
 #include <helios/queries/function_queries.hpp>
 #include <helios/queries/queries.hpp>
+
+#include <base/types/ints.hpp>
 // @TODO: #1824 Move platform dependent includes to a separate file.
 #include <fcntl.h>
 #include <sys/ioctl.h>
@@ -61,8 +63,8 @@ namespace compiler::repl {
 		}
 
 		std::string_view takeToken(std::string_view& text) {
-			text       = trimLeft(text);
-			size_t pos = 0;
+			text      = trimLeft(text);
+			usize pos = 0;
 			while (pos < text.size() && !std::isspace(static_cast<unsigned char>(text[pos]))) ++pos;
 			std::string_view token = text.substr(0, pos);
 			text.remove_prefix(pos);
@@ -71,7 +73,7 @@ namespace compiler::repl {
 
 		bool parseResetReplayCount(
 			std::string_view line,
-			size_t&          replay_count,
+			usize&           replay_count,
 			bool&            has_replay_count,
 			bool&            is_relative,
 			std::string&     error_message
@@ -98,7 +100,7 @@ namespace compiler::repl {
 				return false;
 			}
 
-			size_t number_abs_val_start = 0;
+			usize number_abs_val_start = 0;
 			if (value.front() == '-') {
 				is_relative          = true;
 				number_abs_val_start = 1;
@@ -108,7 +110,7 @@ namespace compiler::repl {
 				}
 			}
 
-			for (size_t i = number_abs_val_start; i < value.size(); ++i) {
+			for (usize i = number_abs_val_start; i < value.size(); ++i) {
 				const char ch = value[i];
 				if (ch < '0' || ch > '9') {
 					error_message = std::string(K_RESET_ERROR_MSG);
@@ -117,18 +119,18 @@ namespace compiler::repl {
 			}
 
 			replay_count
-				= static_cast<size_t>(std::stoul(std::string(value.substr(number_abs_val_start))));
+				= static_cast<usize>(std::stoul(std::string(value.substr(number_abs_val_start))));
 			has_replay_count = true;
 			return true;
 		}
 
-		bool parseHistoryHeader(const std::string& line, size_t& entry_index) {
+		bool parseHistoryHeader(const std::string& line, usize& entry_index) {
 			if (line.size() < 3 || line.front() != '[' || line.back() != ']') return false;
 			const std::string number = line.substr(1, line.size() - 2);
 			if (number.empty()) return false;
 			for (char ch: number)
 				if (ch < '0' || ch > '9') return false;
-			entry_index = static_cast<size_t>(std::stoul(number));
+			entry_index = static_cast<usize>(std::stoul(number));
 			return true;
 		}
 
@@ -202,7 +204,7 @@ namespace compiler::repl {
 			}
 		};
 
-		std::vector<std::string> loadSessionHistoryEntries(size_t max_entries) {
+		std::vector<std::string> loadSessionHistoryEntries(usize max_entries) {
 			std::vector<std::string> entries;
 			if (max_entries == 0) return entries;
 
@@ -213,7 +215,7 @@ namespace compiler::repl {
 			bool        in_entries = false;
 			std::string line;
 			while (std::getline(in, line)) {
-				size_t entry_index = 0;
+				usize entry_index = 0;
 				if (parseHistoryHeader(line, entry_index)) {
 					if (in_entries && !current.empty()) {
 						if (!current.empty() && current.back() == '\n') current.pop_back();
@@ -282,7 +284,7 @@ namespace compiler::repl {
 		out << "Duckling REPL session history\n";
 		out << "Entries: " << m_session_history.size() << "\n\n";
 
-		for (size_t i = 0; i < m_session_history.size(); ++i) {
+		for (usize i = 0; i < m_session_history.size(); ++i) {
 			out << "[" << (i + 1) << "]\n";
 			std::istringstream lines(m_session_history[i].source_code);
 			std::string        line;
@@ -299,7 +301,7 @@ namespace compiler::repl {
 
 		std::cout << "\n=== REPL Session History (" << m_session_history.size()
 				  << (m_session_history.size() == 1 ? " entry" : " entries") << ") ===\n";
-		for (size_t i = 0; i < m_session_history.size(); ++i) {
+		for (usize i = 0; i < m_session_history.size(); ++i) {
 			std::istringstream lines(m_session_history[i].source_code);
 			std::string        line;
 			bool               first_line = true;
@@ -344,7 +346,7 @@ namespace compiler::repl {
 		}
 	}
 
-	void ReplSession::replayHistoryEntries(size_t count, bool silent) {
+	void ReplSession::replayHistoryEntries(usize count, bool silent) {
 		if (count == 0) return;
 
 		ScopedStreamSilence silence(silent);
@@ -357,8 +359,8 @@ namespace compiler::repl {
 			return;
 		}
 
-		const size_t replay_count = std::min(count, entries.size());
-		for (size_t i = 0; i < replay_count; ++i) {
+		const usize replay_count = std::min(count, entries.size());
+		for (usize i = 0; i < replay_count; ++i) {
 			auto result = executeInput(entries[i]);
 			if (result.status == ReplResult::Status::Error) {
 				if (!silent) {
@@ -424,7 +426,7 @@ namespace compiler::repl {
 		}
 
 		if (line.starts_with(K_RESET_COMMAND)) {
-			size_t      replay_count     = 0;
+			usize       replay_count     = 0;
 			bool        has_replay_count = false;
 			bool        is_relative      = false;
 			std::string parse_error;
