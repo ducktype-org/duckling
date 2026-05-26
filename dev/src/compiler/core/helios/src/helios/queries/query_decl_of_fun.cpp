@@ -502,13 +502,11 @@ namespace compiler::helios {
 									  } } }
 								);
 
-								const auto self_type
-									= ctx.query<QueryTypeOfSymbol>(self_param)->valueOrThrow();
-
 								const auto method_type = ctx.query<QueryTypeOfSymbol>(key)
 								                             ->valueOrThrow()
 								                             .getType()
 								                             .as<tsh::FunctionAbstractType>();
+								const auto self_type   = method_type.getParameterTypes().at(0);
 								const auto return_type = method_type.getResultType();
 
 								std::vector<code::Parameter> parameters;
@@ -534,13 +532,11 @@ namespace compiler::helios {
 									  } } }
 								);
 
-								const auto self_type
-									= ctx.query<QueryTypeOfSymbol>(self_param)->valueOrThrow();
-
 								const auto method_type = ctx.query<QueryTypeOfSymbol>(key)
 								                             ->valueOrThrow()
 								                             .getType()
 								                             .as<tsh::FunctionAbstractType>();
+								const auto self_type   = method_type.getParameterTypes().at(0);
 								const auto return_type = method_type.getResultType();
 
 								std::vector<code::Parameter> parameters;

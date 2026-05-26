@@ -11,6 +11,8 @@
 #include <helios/symbols/query_type_symbol_data.hpp>
 #include <helios/tsh/queries/implicit_coercibility.hpp>
 #include <helios/tsh/queries/types.hpp>
+#include <helios_private/hout_creation/definition_generation/default_destructors.hpp>
+#include <helios_private/hout_creation/definition_generation/to_string_methods.hpp>
 #include <helios_private/symbols/generated_symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
@@ -31,18 +33,14 @@ namespace compiler::tsh {
 		// @TODO: #1956 Methods don't work for zero-sized types yet, due to taking ref to self
 		if (not type.carriesInformation(ctx)) return {};
 
-		using namespace helios::defgen;
-		auto get_generated_symbol
-			= [&](const base::StrID                                      name,
-		          const GeneratedSymbolData::GeneratedSymbolDataVariant& data) -> helios::SymID {
-			return ctx.query<QueryGeneratedSymbol>({ name, GeneratedSymbolData(data) });
-		};
+		using helios::defgen::destructSymForType;
+		using helios::defgen::toStringSymForType;
 
 		std::vector<InterfaceElement> elements;
 
 		// Every type has a `toString` method.
 		elements.emplace_back(
-			get_generated_symbol(base::StrID("toString"), GeneratedSymbolData::ToStringMethod(type)),
+			toStringSymForType(ctx, type),
 			type,
 			0,
 			InterfaceElement::InterfaceElementKind::Method,
@@ -52,9 +50,7 @@ namespace compiler::tsh {
 		// Only classes have destructors (for now)
 		if (type.getKind() == Kind::Class) {
 			elements.emplace_back(
-				get_generated_symbol(
-					base::StrID("__destruct"), GeneratedSymbolData::DefaultDestructor(type)
-				),
+				destructSymForType(ctx, type),
 				type,
 				0,
 				InterfaceElement::InterfaceElementKind::Method,

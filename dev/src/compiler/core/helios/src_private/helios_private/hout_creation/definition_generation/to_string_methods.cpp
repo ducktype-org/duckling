@@ -18,23 +18,43 @@
 #include <ranges>
 
 namespace compiler::helios::defgen {
+	SymID toStringSymForType(query::Context& ctx, const tsh::AbstractType type) {
+		return ctx.query<QueryGeneratedSymbol>({
+			.name = base::StrID("toString"),
+			.generated_symbol_data
+			= GeneratedSymbolData{ GeneratedSymbolData::ToStringMethod{ type } },
+		});
+	}
+
 	struct IMPLEMENT_QUERY(QueryToStringMethod, query::QResult<HOUTFunction>) {
+		static inline const auto STRING_TYPE
+			= tsh::SymbolType<>::withDefaults(tsh::getStringType());
+
+		static SymID concatSym(query::Context& ctx) {
+			return ctx.query<QueryGeneratedSymbol>({
+				.name                  = base::StrID("builtin_string_concatenated"),
+				.generated_symbol_data = GeneratedSymbolData{ GeneratedSymbolData::BuiltinOperator{
+					.operator_type = ctx.query<tsh::QueryFunctionType>({
+						{ STRING_TYPE, STRING_TYPE },
+						STRING_TYPE,
+					}),
+				} },
+			});
+		}
+
 		static void stringifyBool(
 			Context&                       ctx,
 			const HOUTFunctionDeclaration& to_string_decl,
 			std::vector<Box<code::Stmt>>&  body
 		) {
-			const auto self_param = to_string_decl.parameters.at(0).helios_symbol;
-
-			const auto string_type = tsh::SymbolType<>::withDefaults(tsh::getStringType());
+			const auto self_param  = to_string_decl.parameters.at(0).helios_symbol;
 			const auto bool_type   = to_string_decl.parameters.at(0).type;
-
 			const auto builtin_sym = ctx.query<QueryGeneratedSymbol>({
 				.name                  = base::StrID("builtin_stringify_bool"),
 				.generated_symbol_data = GeneratedSymbolData{ GeneratedSymbolData::BuiltinOperator{
 					.operator_type = ctx.query<tsh::QueryFunctionType>({
 						{ bool_type },
-						string_type,
+						STRING_TYPE,
 					}),
 				} },
 			});
@@ -59,34 +79,28 @@ namespace compiler::helios::defgen {
 			const HOUTFunctionDeclaration& to_string_decl,
 			std::vector<Box<code::Stmt>>&  body
 		) {
-			const auto self_param = to_string_decl.parameters.at(0).helios_symbol;
-
-			const auto string_type     = tsh::SymbolType<>::withDefaults(tsh::getStringType());
+			const auto self_param      = to_string_decl.parameters.at(0).helios_symbol;
 			const auto source_int_type = to_string_decl.parameters.at(0).type;
-
 			const bool is_signed
 				= source_int_type.getType().as<tsh::IntegralAbstractType>().getSignedness()
 			   == tsh::IntegralAbstractType::Signedness::Signed;
-
 			const auto target_builtin_name = is_signed ? base::StrID("builtin_stringify_i64")
 			                                           : base::StrID("builtin_stringify_u64");
-
-			const auto target_int_type = tsh::SymbolType<>::withDefaults(tsh::getIntegralType(
-				ctx,
-				64,
-				is_signed ? tsh::IntegralAbstractType::Signedness::Signed
-						  : tsh::IntegralAbstractType::Signedness::Unsigned
-			));
-
-			const auto builtin_sym = ctx.query<QueryGeneratedSymbol>({
-				.name                  = target_builtin_name,
-				.generated_symbol_data = GeneratedSymbolData{ GeneratedSymbolData::BuiltinOperator{
-					.operator_type = ctx.query<tsh::QueryFunctionType>({
-						{ target_int_type },
-						string_type,
-					}),
-				} },
-			});
+			const auto target_int_type     = tsh::SymbolType<>::withDefaults(tsh::getIntegralType(
+                ctx,
+                64,
+                is_signed ? tsh::IntegralAbstractType::Signedness::Signed
+							  : tsh::IntegralAbstractType::Signedness::Unsigned
+            ));
+			const auto builtin_sym         = ctx.query<QueryGeneratedSymbol>({
+						.name                  = target_builtin_name,
+						.generated_symbol_data = GeneratedSymbolData{ GeneratedSymbolData::BuiltinOperator{
+							.operator_type = ctx.query<tsh::QueryFunctionType>({
+                        { target_int_type },
+                        STRING_TYPE,
+                    }),
+                } },
+            });
 
 			Box<code::Expr> arg_expr
 				= makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), self_param);
@@ -115,21 +129,17 @@ namespace compiler::helios::defgen {
 			const HOUTFunctionDeclaration& to_string_decl,
 			std::vector<Box<code::Stmt>>&  body
 		) {
-			const auto self_param = to_string_decl.parameters.at(0).helios_symbol;
-
-			const auto string_type       = tsh::SymbolType<>::withDefaults(tsh::getStringType());
-			const auto source_float_type = to_string_decl.parameters.at(0).type;
-
+			const auto self_param          = to_string_decl.parameters.at(0).helios_symbol;
+			const auto source_float_type   = to_string_decl.parameters.at(0).type;
 			const auto target_builtin_name = base::StrID("builtin_stringify_f64");
 			const auto target_float_type
 				= tsh::SymbolType<>::withDefaults(tsh::getFloatType(ctx, 64));
-
 			const auto builtin_sym = ctx.query<QueryGeneratedSymbol>({
 				.name                  = target_builtin_name,
 				.generated_symbol_data = GeneratedSymbolData{ GeneratedSymbolData::BuiltinOperator{
 					.operator_type = ctx.query<tsh::QueryFunctionType>({
 						{ target_float_type },
-						string_type,
+						STRING_TYPE,
 					}),
 				} },
 			});
@@ -161,20 +171,17 @@ namespace compiler::helios::defgen {
 			const HOUTFunctionDeclaration& to_string_decl,
 			std::vector<Box<code::Stmt>>&  body
 		) {
-			const auto self_param = to_string_decl.parameters.at(0).helios_symbol;
-
-			const auto string_type      = tsh::SymbolType<>::withDefaults(tsh::getStringType());
+			const auto self_param       = to_string_decl.parameters.at(0).helios_symbol;
 			const auto source_char_type = to_string_decl.parameters.at(0).type;
-
-			const auto builtin_sym = ctx.query<QueryGeneratedSymbol>({
-				.name                  = base::StrID("builtin_stringify_char"),
-				.generated_symbol_data = GeneratedSymbolData{ GeneratedSymbolData::BuiltinOperator{
-					.operator_type = ctx.query<tsh::QueryFunctionType>({
-						{ source_char_type },
-						string_type,
-					}),
-				} },
-			});
+			const auto builtin_sym      = ctx.query<QueryGeneratedSymbol>({
+					 .name                  = base::StrID("builtin_stringify_char"),
+					 .generated_symbol_data = GeneratedSymbolData{ GeneratedSymbolData::BuiltinOperator{
+						 .operator_type = ctx.query<tsh::QueryFunctionType>({
+                        { source_char_type },
+                        STRING_TYPE,
+                    }),
+                } },
+            });
 
 			std::vector<Box<code::Expr>> args;
 			args.emplace_back(makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), self_param)
@@ -217,18 +224,7 @@ namespace compiler::helios::defgen {
 				= to_string_decl.parameters.at(0).type.getType().as<tsh::ClassAbstractType>();
 			const auto class_name      = name(class_type.getSymbol());
 			const auto class_interface = class_type.getInterface(ctx);
-
-			// Grab the symbol of the `concatenated` built-in function
-			const auto string_type = tsh::SymbolType<>::withDefaults(tsh::getStringType());
-			const auto concat_sym  = ctx.query<QueryGeneratedSymbol>({
-				 .name                  = base::StrID("builtin_string_concatenated"),
-				 .generated_symbol_data = GeneratedSymbolData{ GeneratedSymbolData::BuiltinOperator{
-					 .operator_type = ctx.query<tsh::QueryFunctionType>({
-                        { string_type, string_type },
-                        string_type,
-                    }),
-                } },
-            });
+			const auto concat_sym      = concatSym(ctx);
 
 			// Create a reusable expression of the de-reffed self (self is passed by reference)
 			auto self_expr = makeBox<code::DerefExpr>(
@@ -246,14 +242,14 @@ namespace compiler::helios::defgen {
 			      .generated_symbol_data = GeneratedSymbolData{ GeneratedSymbolData::Variable{
 					  .function_symbol = to_string_decl.original_symbol,
 					  .variable_index  = 0,
-					  .type            = string_type } } }
+					  .type            = STRING_TYPE } } }
 			);
 			body.emplace_back(makeBox<code::VariableStmt>(
 				code::generatedOrigin(),
 				makeBox<code::LiteralStringExpr>(
 					ctx, code::generatedOrigin(), base::StrID(class_name.str() + "(")
 				),
-				string_type,
+				STRING_TYPE,
 				result_sym
 			));
 
@@ -264,15 +260,9 @@ namespace compiler::helios::defgen {
 
 			for (usize idx = 0; idx < num_fields; idx++) {
 				// Get the stringified field
-				const auto& field      = fields.at(idx);
-				const auto  field_type = field.getType(ctx);
-
-				const SymID field_to_string_sym = ctx.query<QueryGeneratedSymbol>({
-					.name = base::StrID("toString"),
-					.generated_symbol_data
-					= GeneratedSymbolData{ GeneratedSymbolData::ToStringMethod{
-						field_type.getType() } },
-				});
+				const auto& field               = fields.at(idx);
+				const auto  field_type          = field.getType(ctx);
+				const SymID field_to_string_sym = toStringSymForType(ctx, field_type.getType());
 
 				auto            next_reusable_self_expr = reusable_self_expr->nextUse();
 				Box<code::Expr> accessed_field          = makeBox<code::AccessExpr>(
@@ -349,10 +339,7 @@ namespace compiler::helios::defgen {
 		}
 
 		static PResult provide(Context& ctx, const QKey owner_type) {
-			const auto  to_string_sym  = ctx.query<QueryGeneratedSymbol>({
-                base::StrID("toString"),
-                GeneratedSymbolData{ GeneratedSymbolData::ToStringMethod{ owner_type } },
-            });
+			const auto  to_string_sym  = toStringSymForType(ctx, owner_type);
 			const auto& to_string_decl = ctx.query<QueryDeclOfFun>(to_string_sym)->valueOrThrow();
 
 			std::vector<Box<code::Stmt>> body{};

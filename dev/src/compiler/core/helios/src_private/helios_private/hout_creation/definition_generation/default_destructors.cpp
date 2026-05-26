@@ -11,6 +11,14 @@
 #include <ranges>
 
 namespace compiler::helios::defgen {
+	SymID destructSymForType(query::Context& ctx, const tsh::AbstractType type) {
+		return ctx.query<QueryGeneratedSymbol>({
+			.name = base::StrID("__destruct"),
+			.generated_symbol_data
+			= GeneratedSymbolData{ GeneratedSymbolData::DefaultDestructor{ type } },
+		});
+	}
+
 	struct IMPLEMENT_QUERY(QueryDefaultDestructor, query::QResult<HOUTFunction>) {
 		static PResult provide(Context& ctx, const QKey owner_type) {
 			const auto  dtor_sym  = ctx.query<QueryGeneratedSymbol>({

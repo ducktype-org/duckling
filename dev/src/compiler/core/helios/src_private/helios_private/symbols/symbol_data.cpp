@@ -87,11 +87,7 @@ namespace compiler::helios {
 					std::vector<tsh::SymbolType<>> param_types;
 					for (const auto& field: fields) param_types.push_back(field.getType(ctx));
 
-					const tsh::SymbolType<> return_type{
-						target_type,
-						tsh::ReferenceKind::Direct,
-						tsh::Mutability::Mutable,
-					};
+					const auto return_type = tsh::SymbolType<>::withDefaults(target_type);
 
 					const auto ctor_abstract_type = ctx.query<tsh::QueryFunctionType>({
 						std::move(param_types),
@@ -112,11 +108,7 @@ namespace compiler::helios {
 					          .as<tsh::ClassAbstractType>();
 
 					// @TODO: #1328 Properly handle value categories in class constructors.
-					const tsh::SymbolType<> return_type{
-						class_type,
-						tsh::ReferenceKind::Direct,
-						tsh::Mutability::Mutable,
-					};
+					const auto return_type = tsh::SymbolType<>::withDefaults(class_type);
 
 					const auto ctor_abstract_type
 						= ctx.query<tsh::QueryFunctionType>({ {}, return_type });
@@ -128,11 +120,7 @@ namespace compiler::helios {
 					};
 				}
 				variant_case(DefaultStaticArrayConstructor, ctor) {
-					const tsh::SymbolType<> return_type{
-						ctor.array_type,
-						tsh::ReferenceKind::Direct,
-						tsh::Mutability::Mutable,
-					};
+					const auto return_type = tsh::SymbolType<>::withDefaults(ctor.array_type);
 
 					const auto ctor_abstract_type
 						= ctx.query<tsh::QueryFunctionType>({ {}, return_type });
@@ -151,11 +139,7 @@ namespace compiler::helios {
 						tsh::Mutability::Immutable,
 					};
 
-					const tsh::SymbolType<> return_type{
-						tsh::getStringType(),
-						tsh::ReferenceKind::Direct,
-						tsh::Mutability::Mutable,
-					};
+					const auto return_type = tsh::SymbolType<>::withDefaults(tsh::getStringType());
 
 					const auto to_string_abstract_type
 						= ctx.query<tsh::QueryFunctionType>({ { self_type }, return_type });
@@ -241,11 +225,7 @@ namespace compiler::helios {
 				variant_case_novalue(ReplInstructionWrapper) {
 					// Unit (not Void) is the correct return type for procedures.
 					// Per the language spec: "void ... cannot be returned from a function".
-					const auto void_type = tsh::SymbolType<>{
-						tsh::getUnitType(),
-						tsh::ReferenceKind::Direct,
-						tsh::Mutability::Mutable,
-					};
+					const auto void_type = tsh::SymbolType<>::withDefaults(tsh::getUnitType());
 					const auto function_abstract_type
 						= ctx.query<tsh::QueryFunctionType>({ {}, void_type });
 					return tsh::SymbolType<>{
@@ -255,11 +235,9 @@ namespace compiler::helios {
 					};
 				}
 				variant_case_novalue(ScriptMainWrapper) {
-					const auto return_type = tsh::SymbolType<>{
-						tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed),
-						tsh::ReferenceKind::Direct,
-						tsh::Mutability::Mutable,
-					};
+					const auto return_type = tsh::SymbolType<>::withDefaults(
+						tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed)
+					);
 					const auto function_abstract_type
 						= ctx.query<tsh::QueryFunctionType>({ {}, return_type });
 					return tsh::SymbolType<>{
@@ -371,8 +349,7 @@ namespace compiler::helios {
 				kind = SymbolKind::Function;
 			}
 			variant_case_novalue(
-				defgen::GeneratedSymbolData::Parameter,
-				defgen::GeneratedSymbolData::SelfParameter
+				defgen::GeneratedSymbolData::Parameter, defgen::GeneratedSymbolData::SelfParameter
 			) {
 				kind = SymbolKind::Parameter;
 			}

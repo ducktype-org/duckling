@@ -310,7 +310,7 @@ str builtin_stringify_u64(uint64_t v) {
 }
 
 str builtin_stringify_f64(double v) {
-	char stringified[21];
+	char stringified[32];
 	snprintf(stringified, sizeof(stringified), "%g", v);
 	uint64_t length = strlen(stringified);
 

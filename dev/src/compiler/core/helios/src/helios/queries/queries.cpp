@@ -17,6 +17,7 @@
 #include <helios_private/errors/duplicated_definition.hpp>
 #include <helios_private/hout_creation/definition_generation/class_constructors.hpp>
 #include <helios_private/hout_creation/definition_generation/default_constructors.hpp>
+#include <helios_private/hout_creation/definition_generation/to_string_methods.hpp>
 #include <helios_private/hout_creation/definition_generation/tuple_constructor.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
@@ -222,13 +223,7 @@ namespace compiler::helios {
 		) {
 			auto append_to_string_for_simple_type = [&](tsh::AbstractType type) {
 				const auto to_string_method
-					= ctx.query<QueryCodeOfFun>(ctx.query<defgen::QueryGeneratedSymbol>({
-						.name = base::StrID("toString"),
-						.generated_symbol_data
-						= defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::ToStringMethod{
-							.owner_type = type,
-						} },
-					}));
+					= ctx.query<QueryCodeOfFun>(defgen::toStringSymForType(ctx, type));
 				out_functions.emplace_back(&to_string_method->valueOrThrow());
 			};
 

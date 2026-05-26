@@ -181,7 +181,6 @@ namespace compiler::tsh {
 		 * which belong to the default interface for each type. In other words, this is the part of
 		 * the interface which has been declared by the user.
 		 * @param ctx The Query Context necessary to deduce interfaces.
-		 * This is applicable for types which require being at some point "incomplete".
 		 * @return The TypeInterface of the type described by this class.
 		 */
 		[[nodiscard]]

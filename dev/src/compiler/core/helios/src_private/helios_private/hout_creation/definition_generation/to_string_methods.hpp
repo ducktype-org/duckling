@@ -7,6 +7,8 @@
 #include <query_framework/query_result.hpp>
 
 namespace compiler::helios::defgen {
+	SymID toStringSymForType(query::Context& ctx, tsh::AbstractType type);
+
 	/**
 	 * @brief Get the compiler-generated HOUT representation of the toString method for a type.
 	 * \query_thread_safe_if_cache
