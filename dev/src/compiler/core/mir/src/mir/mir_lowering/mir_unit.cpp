@@ -30,10 +30,10 @@ namespace compiler::mir {
 			// Discard information-less globals.
 			if (not hout_global->type.getType().carriesInformation(ctx)) continue;
 
-			auto helios_kind_to_mir_kind = [](helios::HOUTGlobalDataType type) -> MIRGlobalData::Kind {
+			auto helios_kind_to_mir_kind = [](helios::HOUTGlobalDataType type) -> MIRGlobal::Kind {
 				switch (type) {
-					case helios::HOUTGlobalDataType::Constant: return MIRGlobalData::Kind::Constant;
-					case helios::HOUTGlobalDataType::Variable: return MIRGlobalData::Kind::Variable;
+					case helios::HOUTGlobalDataType::Constant: return MIRGlobal::Kind::Constant;
+					case helios::HOUTGlobalDataType::Variable: return MIRGlobal::Kind::Variable;
 					default: CORE_UNREACHABLE();
 				}
 			};
@@ -44,8 +44,8 @@ namespace compiler::mir {
 						.global = MIRGlobal{
 							hout_global->helios_symbol,
 							hout_global->type,
+							helios_kind_to_mir_kind(hout_global->data_type),
 						},
-						.kind = helios_kind_to_mir_kind(hout_global->data_type),
 						.initial_value = ctv_initial_value.value,
 					});
 				}
@@ -60,8 +60,8 @@ namespace compiler::mir {
 						.global = MIRGlobal{
 							hout_global->helios_symbol,
 							hout_global->type,
+							helios_kind_to_mir_kind(hout_global->data_type),
 						},
-						.kind = helios_kind_to_mir_kind(hout_global->data_type),
 						.initial_value = &mir_ctor_function->valueOrPanic(),
 					});
 				}
