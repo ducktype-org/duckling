@@ -44,7 +44,7 @@ namespace {
 		return &exec_functions[reloc_arg.asInt()];
 	}
 
-	exec::arg::Type relocateType(TRANSLATOR_ARGUMENTS(Type)) {
+	[[maybe_unused]] exec::arg::Type relocateType(TRANSLATOR_ARGUMENTS(Type)) {
 		return program.types.at(TypeID(reloc_arg.asInt())).get();
 	}
 
@@ -83,7 +83,7 @@ exec::Instruction relocInstruction(
 		);                                                                         \
 	}
 #include "instructions/instruction_definitions.hpp"
-#undef HANDLE_INSTR
+#undef HANDLE_INSTR_ARGS
 #undef ARG_TYPE
 #undef ARG_NAME
 #undef DO_TRANSLATION

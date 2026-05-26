@@ -5,7 +5,13 @@
 #include <vm/core/fast/utils.hpp>
 #include <vm/core/process/vmprocess.hpp>
 
+#include <cstring>
+
 #define IMPL(NAME) void vm::fast::FastExecutor::Instr_##NAME(INSTRFUN_ARGS(NAME))
+
+// #define PROGRESS_BY(progress_count)             \
+// 	state.incrementInstruction(progress_count); \
+// 	IF_TC(frame->ip->id(state, local_stack, frame, thread, *frame->ip))
 
 #define PROGRESS_BY(progress_count) state.incrementInstruction(progress_count)
 
@@ -20,11 +26,17 @@
 // #define READ_PLACE(type, arg) safeReadPointerBytes<type>(getBytePtrToPlace(arg))
 // #define WRITE_PLACE(arg, val) safeWriteBytes(getBytePtrToPlace(arg), val)
 
-// !TODO: Make local_stack be the stack_base_pointer
-
 IMPL(init_pany_imm) {
-	// Init will never happen for global
-	std::memset(local_stack + instr.dst, 0, instr.size);
+	// @note init will never happen for global
+	memset(local_stack + instr.dst, 0, instr.size);
+	// LLVM does not optimize call to memset, even with LTO for some reason.
+	// But call using standard abi is still for some reason faster than
+	// the loop below.
+	// for (u64* p = (u64*) (local_stack + instr.dst);
+	//      p < (u64*) (local_stack + instr.dst + instr.size);
+	//      p++)
+	// 	*p = 0ULL;
+
 	PROGRESS_BY(1);
 }
 
@@ -152,3 +164,5 @@ IMPL(ret_imm) {
 	// instruction, so we don't need to do anything else here.
 	PROGRESS_BY(0);
 }
+
+IMPL(exit) {}

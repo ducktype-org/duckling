@@ -35,6 +35,7 @@ add_files(
 	fast/eval/instruction_functions.cpp
 	fast/program/relocator.cpp
 	fast/fast_vmthread.cpp
+	fast/program/instructions/executable.cpp
 )
 
 set(vm_config_dependent_sources ${vm_config_dependent_sources} ${files} PARENT_SCOPE)

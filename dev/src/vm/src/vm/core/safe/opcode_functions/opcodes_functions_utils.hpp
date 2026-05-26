@@ -6,6 +6,7 @@
 #include <base/pointers/ref.hpp>
 #include <base/types/ints.hpp>
 
+#include <vm/core/musttail.hpp>
 #include <vm/utils/interpret.hpp>
 
 namespace vm {
@@ -59,7 +60,8 @@ inline static Ref<vm::Block> getBlockRefFromArg(
 template<typename T>
 [[nodiscard]] [[gnu::always_inline]]
 inline static T readFromPlace(std::byte* local_stack, std::byte* global_buffer, u64 place_arg) {
-	return vm::safeReadPointerBytes<T>(getBytePtrFromPlaceArg(local_stack, global_buffer, place_arg)
+	return vm::safeReadPointerBytes<T>(
+		getBytePtrFromPlaceArg(local_stack, global_buffer, place_arg)
 	);
 }
 
@@ -109,20 +111,6 @@ template<typename T>
 inline static void writeToView(base::ModRawView view, const T& value) {
 	return vm::safeWriteBytes<T>(view.getBegin(), value);
 }
-
-
-#if defined(__clang_major__) && __clang_major__ >= 13
-	#define MUST_TAIL [[clang::musttail]]
-#elif defined(__GNUG__) && __GNUG__ >= 15
-	#define MUST_TAIL [[gnu::musttail]]
-#else
-	#define MUST_TAIL
-
-	#ifdef USE_TAIL_CALLS
-		#warning \
-			"USE_TAIL_CALLS without support from compiler. This can potentially cause stack-overflow."
-	#endif
-#endif
 
 /**
  * @brief Execute next instruction of the bytecode.

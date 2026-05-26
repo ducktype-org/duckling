@@ -7,6 +7,8 @@
 #include <base/types/ints.hpp>
 
 #include <vm/core/fast/program/type.hpp>
+#include <vm/core/fast/eval/dispatcher.hpp>
+
 
 namespace vm::fast {
 	struct FunctionInfo;
@@ -32,13 +34,24 @@ namespace vm::fast::exec {
 #undef HANDLE_ARG_DEF
 	}
 
+#define ARG_NAMESPACE arg::
+#define MAKE_INSTR_STRUCTS
+#define MAKE_INSTRUCTION_UNION
+
 #ifdef USE_TAIL_CALLS
+#define ID_TYPE() ::vm::fast::DispatcherFunction
+#define MAKE_MAKERS_JUST_DEF // @note: No implementation in the .hpp
 #else
+#define MAKE_MAKERS_FULL
 #endif
 
-#define ARG_NAMESPACE arg::
 #include "instr_structures.hpp"
 #undef ARG_NAMESPACE
+#undef ID_TYPE
+#undef MAKE_INSTR_STRUCTS
+#undef MAKE_INSTRUCTION_UNION
+#undef MAKE_MAKERS
+
 
 	struct ExecFunction {
 		std::vector<Instruction> data;

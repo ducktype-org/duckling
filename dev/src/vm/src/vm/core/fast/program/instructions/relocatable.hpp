@@ -26,8 +26,14 @@ namespace vm::fast::reloc {
 	}
 
 #define ARG_NAMESPACE arg::
+#define MAKE_INSTR_STRUCTS
+#define MAKE_INSTRUCTION_UNION
+#define MAKE_MAKERS_FULL
 #include "instr_structures.hpp"
 #undef ARG_NAMESPACE
+#undef MAKE_INSTR_STRUCTS
+#undef MAKE_INSTRUCTION_UNION
+#undef MAKE_MAKERS_FULL
 
 	struct RelocFunction {
 		std::vector<Instruction> data;

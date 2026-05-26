@@ -53,9 +53,6 @@ DEF_ARG(JumpDestination)
 DEF_ARG(Type)
 #define COMPARE_Type(x) x
 #define INFO_Type()     (type)
-DEF_ARG(Function)
-#define COMPARE_Function(x) x
-#define INFO_Function()     (func)
 
 #ifdef DEFAULT_HANDLE_ARG
 	#undef DEFAULT_HANDLE_ARG
