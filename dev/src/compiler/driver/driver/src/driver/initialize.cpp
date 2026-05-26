@@ -9,7 +9,7 @@
 #include <driver/diagnostics/log_helpers.hpp>
 #include <driver/incremental_utils/collect_input.hpp>
 #include <driver/module_flags/module_flags.hpp>
-#include <driver/standard_library/standard_library.hpp>
+#include <driver_private/standard_library/standard_library.hpp>
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <global_state/artifacts_location.hpp>
@@ -80,7 +80,7 @@ namespace compiler::driver {
 
 		base::OkBad handlePackageOptions(
 			std::vector<compiler::frontend::packages::RawPackageInfo>& packages_info,
-			const options_types::GlobalLinkingOptions&                 global_linking_options
+			const options_types::StdLibOptions&                        stdlib_options
 		) {
 			auto report      = diagnostics::makeGlobalLoggerReporter();
 			bool had_failure = false;
@@ -88,7 +88,7 @@ namespace compiler::driver {
 			compiler::frontend::packages::filterUndeclaredDependencies(packages_info, report);
 
 			// Adding standard library packages
-			if (auto path = resolveStdPath(global_linking_options)) {
+			if (auto path = resolveStdPath(stdlib_options)) {
 				if (addStandardLibraryPackages(*path, report).isBad()) return base::BAD;
 				if (addStandardLibraryDependencies(packages_info, report).isBad()) return base::BAD;
 			}
@@ -192,6 +192,7 @@ namespace compiler::driver {
 	 * This is a hack to make the import from different packages work in the REPL,
 	 * as the module lookup relies on the global package registry.
 	 * The module is otherwise unused.
+	 * @TODO: #2762 probably remove this
 	 */
 	std::vector<compiler::frontend::packages::RawPackageInfo> getScriptStubPackage() {
 		auto package_root_file = fs::FileManager::createRandomVirtualFile("", ".dmf");
@@ -238,7 +239,7 @@ namespace compiler::driver {
 
 				auto package_success = handlePackageOptions(
 					package_compilation_options.packages_info,
-					package_compilation_options.global_linking_options
+					package_compilation_options.stdlib_options
 				);
 
 				if (package_success.isBad()) return base::BAD;
@@ -247,9 +248,9 @@ namespace compiler::driver {
 				handleIncrementalOptions(package_compilation_options.incremental);
 			}
 			variant_case(CompilerModeOfOperationAndOptions::ReplMode, repl_options) {
-				auto                                repl_packages_info = getScriptStubPackage();
-				options_types::GlobalLinkingOptions repl_linking_options{
-					.std_lib_type = options_types::GlobalLinkingOptions::DefaultStd{},
+				auto                         repl_packages_info = getScriptStubPackage();
+				options_types::StdLibOptions repl_linking_options{
+					.std_lib_type = options_types::StdLibOptions::DefaultStd{},
 				};
 
 				auto package_success
@@ -261,9 +262,9 @@ namespace compiler::driver {
 				handleExecutionOptions(repl_options.execution_options);
 			}
 			variant_case(CompilerModeOfOperationAndOptions::ScriptMode, script_options) {
-				auto                                repl_packages_info = getScriptStubPackage();
-				options_types::GlobalLinkingOptions repl_linking_options{
-					.std_lib_type = options_types::GlobalLinkingOptions::DefaultStd{},
+				auto                         repl_packages_info = getScriptStubPackage();
+				options_types::StdLibOptions repl_linking_options{
+					.std_lib_type = options_types::StdLibOptions::DefaultStd{},
 				};
 
 

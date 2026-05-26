@@ -1,6 +1,5 @@
 #pragma once
 
-#include "builtin_symbol_data.hpp"
 #include "generated_symbol_data.hpp"
 #include "pst_symbol_data.hpp"
 

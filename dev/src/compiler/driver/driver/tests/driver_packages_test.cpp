@@ -83,7 +83,7 @@ protected:
 				.debug_options         = {},
 				.incremental           = {},
 				.execution_options     = { .worker_count = 1 },
-				.global_linking_options = {},
+				.stdlib_options = {},
 			}
 		);
 
@@ -161,7 +161,7 @@ private:
 		for (const auto& raw_task: manifest.tasks) {
 			auto task_opt = driver::convertRawTaskToTask(
 				raw_task,
-				driver::options_types::GlobalLinkingOptions{},
+				driver::options_types::StdLibOptions{},
 				compiler::driver::diagnostics::makeGlobalLoggerReporter()
 			);
 			ASSERT_TRUE(task_opt.has_value());
@@ -207,7 +207,7 @@ private:
 
 		auto result = driver::convertRawTaskToTask(
 			raw,
-			driver::options_types::GlobalLinkingOptions{},
+			driver::options_types::StdLibOptions{},
 			compiler::driver::diagnostics::makeGlobalLoggerReporter()
 		);
 		ASSERT_TRUE(!result.has_value());

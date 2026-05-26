@@ -146,8 +146,6 @@ namespace artifacts {
 		 */
 		void flush();
 
-		fs::FilePath getDirectoryPath() const { return PATH; }
-
 		/////////////////////////// SUB COLLECTIONS /////////////////////////
 
 		Ref<ArtifactCollection> subCollectionNew(base::StrID collection_name);

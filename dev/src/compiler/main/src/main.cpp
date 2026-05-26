@@ -102,7 +102,7 @@ global_state::BackendOptions getBackendOptionsFromClah(const clah::ParsingResult
 	};
 }
 
-auto getClahGlobalLinkingOptions() {
+auto getClahStdLibOptions() {
 	return std::array{
 		clah::ParamBuilder::ofFlag()
 			.addLongName("no-std")
@@ -119,29 +119,25 @@ auto getClahGlobalLinkingOptions() {
 /**
  * Helper function to extract linking options from clah parsing result.
  */
-compiler::driver::options_types::GlobalLinkingOptions getGlobalLinkingOptionsFromClah(
+compiler::driver::options_types::StdLibOptions getStdLibOptionsFromClah(
 	const clah::ParsingResult& parsing_result
 ) {
-	using compiler::driver::options_types::GlobalLinkingOptions;
-	compiler::driver::options_types::GlobalLinkingOptions linking_options;
+	using compiler::driver::options_types::StdLibOptions;
+	compiler::driver::options_types::StdLibOptions linking_options;
 
 
 	if (parsing_result.isFlag("no-std"))
-		linking_options.std_lib_type = GlobalLinkingOptions::NoStd{};
+		linking_options.std_lib_type = StdLibOptions::NoStd{};
 
-	else if (auto custom_std_path = parsing_result.getValue<fs::FilePath>("custom-std-path")) {
-		linking_options.std_lib_type
-			= GlobalLinkingOptions::CustomStd{ .std_path = *custom_std_path };
-	} else {
-		linking_options.std_lib_type = GlobalLinkingOptions::DefaultStd{};
-	}
-
-	linking_options.link_c_standard_library = not parsing_result.isFlag("no-c-standard-library");
+	else if (auto custom_std_path = parsing_result.getValue<fs::FilePath>("custom-std-path"))
+		linking_options.std_lib_type = StdLibOptions::CustomStd{ .std_path = *custom_std_path };
+	else
+		linking_options.std_lib_type = StdLibOptions::DefaultStd{};
 
 	return linking_options;
 }
 
-clah::VerificationResult verifyGlobalLinkingOptions(const clah::ParsingResult& parsing_result) {
+clah::VerificationResult verifyStdLibOptions(const clah::ParsingResult& parsing_result) {
 	if (parsing_result.isFlag("no-std") && parsing_result.isParam("custom-std-path")) {
 		return std::unexpected<std::string>(
 			"--no-std and --custom-std-path cannot be used together."
@@ -196,6 +192,8 @@ compiler::linker::LinkingOptions getLinkingOptionsFromClah(const clah::ParsingRe
 
 	if (auto lib_path = parsing_result.getValue<std::string>("additional-link-options"))
 		linking_options.additional_link_options = lib_path.value();
+
+	linking_options.link_c_standard_library = not parsing_result.isFlag("no-c-standard-library");
 
 	return linking_options;
 }
@@ -370,8 +368,8 @@ clah::Clah getClahForMain() {
 				.addPositional(clah::FileParser::make("module"))
 				.add(getLlvmOptLevelParam())
 				.add(debug_options::getClahDebugParameters())
-				.add(getClahGlobalLinkingOptions())
-				.addCustomVerification(verifyGlobalLinkingOptions)
+				.add(getClahStdLibOptions())
+				.addCustomVerification(verifyStdLibOptions)
 				.add(clah::ParamBuilder::ofValue(clah::StringParser::make("name"))
 	                     .addShortName('n')
 	                     .addLongName("name")
@@ -414,7 +412,7 @@ clah::Clah getClahForMain() {
 							.execution_options = {
 								.worker_count = 1,
 							},
-							.global_linking_options = getGlobalLinkingOptionsFromClah(options),
+							.stdlib_options = getStdLibOptionsFromClah(options),
 						}
 					);
 
@@ -446,8 +444,8 @@ clah::Clah getClahForMain() {
 				.addPositional(clah::FileParser::make("module"))
 				.add(getLlvmOptLevelParam())
 				.add(debug_options::getClahDebugParameters())
-				.add(getClahGlobalLinkingOptions())
-				.addCustomVerification(verifyGlobalLinkingOptions)
+				.add(getClahStdLibOptions())
+				.addCustomVerification(verifyStdLibOptions)
 				.add(getClahLinkingOptions())
 				.add(clah::ParamBuilder::ofValue(clah::StringParser::make("name"))
 	                     .addShortName('n')
@@ -525,8 +523,8 @@ clah::Clah getClahForMain() {
 					auto package_name    = options.getValue<std::string>("name").copyValueOr("");
 					CORE_ASSERT(package_name != "", "Package name must be specified");
 
-					auto worker_count           = options.getValue<i64>("workers").copyValueOr(1);
-					auto global_linking_options = getGlobalLinkingOptionsFromClah(options);
+					auto worker_count   = options.getValue<i64>("workers").copyValueOr(1);
+					auto stdlib_options = getStdLibOptionsFromClah(options);
 					auto init_result = compiler::driver::initializeTheCompiler(
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
 							.packages_info = {
@@ -548,7 +546,7 @@ clah::Clah getClahForMain() {
 							.execution_options = {
 								.worker_count = base::safeIntConv<u64>(worker_count),
 							},
-							.global_linking_options = global_linking_options
+							.stdlib_options = stdlib_options
 						}
 					);
 
@@ -578,8 +576,8 @@ clah::Clah getClahForMain() {
 						auto output_file_name = options.getValue<std::string>("output-file-name")
 			                                        .copyValueOr("package_llvm");
 						auto local_options   = getLinkingOptionsFromClah(options);
-						auto linking_options = compiler::driver::mergeBothLinkingOptions(
-							local_options, global_linking_options
+						auto linking_options = compiler::driver::constructLinkerOptions(
+							local_options, stdlib_options
 						);
 						build_target = compiler::driver::BuildTargetLLVMExecutable{
 							.output_file_stem = base::StrID(output_file_name.c_str()),
@@ -633,8 +631,8 @@ clah::Clah getClahForMain() {
 			clah::Clah("compile_packages", "Compile package(s) described by a JSON manifest.")
 				.addPositional(clah::FileParser::make("manifest"))
 				.add(getLlvmOptLevelParam())
-				.add(getClahGlobalLinkingOptions())
-				.addCustomVerification(verifyGlobalLinkingOptions)
+				.add(getClahStdLibOptions())
+				.addCustomVerification(verifyStdLibOptions)
 				.add(clah::ParamBuilder::ofValue(clah::FilePathParser::make("filepath"))
 	                     .addShortName('a')
 	                     .addLongName("artifact-location")
@@ -692,7 +690,7 @@ clah::Clah getClahForMain() {
 					}
 
 					(void) manifest->verify(report);
-					auto global_linking_options = getGlobalLinkingOptionsFromClah(options);
+					auto stdlib_options = getStdLibOptionsFromClah(options);
 					auto init_result = compiler::driver::initializeTheCompiler(
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
 							.packages_info = manifest->packages,
@@ -706,7 +704,7 @@ clah::Clah getClahForMain() {
 							.execution_options = {
 								.worker_count = base::safeIntConv<u64>(worker_count),
 							},
-							.global_linking_options = global_linking_options,
+							.stdlib_options = stdlib_options,
 						}
 					);
 
@@ -719,7 +717,7 @@ clah::Clah getClahForMain() {
 					compilation_tasks.reserve(manifest->tasks.size());
 					for (const auto& raw_task: manifest->tasks) {
 						auto converted = compiler::driver::convertRawTaskToTask(
-							raw_task, global_linking_options, report
+							raw_task, stdlib_options, report
 						);
 						if (!converted.has_value()) {
 							compiler::driver::exit();
@@ -813,7 +811,7 @@ clah::Clah getClahForMain() {
 									.execution_options = {
 										.worker_count = 1,
 									},
-									.global_linking_options = getGlobalLinkingOptionsFromClah(options),
+									.stdlib_options = getStdLibOptionsFromClah(options),
 						}
 					);
 
@@ -910,8 +908,8 @@ clah::Clah getClahForMain() {
 	                                .addShortDesc("Worker count.")
 	                                .optional()
 	                                .build())
-	                       .add(getClahGlobalLinkingOptions())
-	                       .addCustomVerification(verifyGlobalLinkingOptions)
+	                       .add(getClahStdLibOptions())
+	                       .addCustomVerification(verifyStdLibOptions)
 	                       .setHandler([](const clah::ParsingResult& options) -> int {
 							   using namespace compiler;
 

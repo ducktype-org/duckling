@@ -29,6 +29,8 @@ namespace compiler::linker {
 		/**
 		 * @brief String that contains the options for linking the standard library.
 		 * Empty if we don't use the standard library.
+		 * This is not automatically added by the package dependencies since the std lib
+		 * is not handled by the package manager.
 		 */
 		base::Optional<std::string> stdlib_link_options;
 	};

@@ -51,3 +51,14 @@ Tests:
       llvm:
         Run: "@{duckc_path} compile_package duck_modules/@{module_to_compile} -a build -n package_@{module_to_compile} -w @{duckc_worker_count} --no-std --custom-std-path custom_std"
         ExitCode: 1
+  
+  compile_packages_default_std:
+    module_to_compile: "uses_std"
+    enable_conc_deterministic_tests: "false"
+    compile_dvm_only_cmd: "@{duckc_path} compile_packages duck_modules/@{module_to_compile}/manifest.json -a build"
+    compile_llvm_only_cmd: "@{duckc_path} compile_packages duck_modules/@{module_to_compile}/manifest.json -a build"
+    Cases:
+      all:
+        backend: all
+        Output:
+          String: "10\n"

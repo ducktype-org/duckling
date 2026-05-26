@@ -315,10 +315,7 @@ namespace compiler::helios {
 			);
 		}
 		case pst::StmtKind::Import: {
-			// For now we assume that only two types of import exists:
-			// import a.b.c;
-			// import a.b.c as d;
-
+			// @TODO: #2791 finish this
 			auto import       = stmt.dynamicCast<pst::Import>().value();
 			auto import_chain = import->getImportChain().unlock(ctx);
 			if (auto import_as = import_chain.dynamicCast<pst::ImportIdentifierAs>()) {
@@ -343,6 +340,13 @@ namespace compiler::helios {
 				// import a.b.c.*;
 				usize count = import_star.value()->numberOfNames();
 				auto  name  = import_star.value()->getNameByIndex(count - 1).unlock(ctx)->unwrap();
+				if (import_star.value()->isImportHides()) {
+					ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+						"Import chains of type `ImportStarHides` are not yet supported in "
+						"makeSymbolFromStatement",
+						import_star.value()->getStablePosition()
+					));
+				}
 				return SymbolData::makePSTSymbolData(
 					{
 						.name        = name,
@@ -354,6 +358,11 @@ namespace compiler::helios {
 				);
 			} else if (auto import_nested = import_chain.dynamicCast<pst::ImportNested>()) {
 				// import a.b.c(...);
+				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					"Import chains of type `ImportNested` are not yet supported in "
+					"makeSymbolFromStatement",
+					import_nested.value()->getStablePosition()
+				));
 				usize count = import_nested.value()->numberOfNames();
 				auto  name = import_nested.value()->getNameByIndex(count - 1).unlock(ctx)->unwrap();
 				return SymbolData::makePSTSymbolData(

@@ -1,3 +1,0 @@
-# This file is only needed so we can treat the whole directory with the 
-# test files as one big package with submodules, because this way the 
-# tests can use the standard library.

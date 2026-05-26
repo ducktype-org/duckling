@@ -51,7 +51,6 @@ public:
 protected:
 	void         testWithLIR(query::Context& ctx, CRef<compiler::lir::Function> lir_function);
 	fs::FilePath artifacts_path = fs::FileManager::createRandomTempDirectory().getFilePath();
-	base::Optional<compiler::frontend::ModuleID> root_module_id;
 
 	/**
 	 * Initialize the compiler to have the ability to import from the standard library in tests.
@@ -59,16 +58,26 @@ protected:
 	 */
 	void beforeAll() override {
 		global_state::setters::setGlobalLogger(makeBox<dia_int::Logger>());
-		compiler::frontend::packages::RawPackageInfo main_pkg{
-			.package_name = base::StrID("test_package"),
-			.version      = base::StrID("0.1.0"),
-			.package_path = fs::FilePath(path("modules/")),
-			.features     = {},
-			.dependencies = {},
+		auto subpath_package = [&](const std::string& subpath) {
+			return compiler::frontend::packages::RawPackageInfo{
+				.package_name = base::StrID(subpath),
+				.version      = base::StrID("0.1.0"),
+				.package_path = fs::FilePath(path("modules/" + subpath + "/")),
+				.features     = {},
+				.dependencies = {},
+			};
+		};
+		std::vector<compiler::frontend::packages::RawPackageInfo> packages{
+			subpath_package("simple"),         subpath_package("boolean_operations"),
+			subpath_package("builtin_funcs"),  subpath_package("comparisons"),
+			subpath_package("function_calls"), subpath_package("globals"),
+			subpath_package("records"),        subpath_package("references"),
+			subpath_package("static_arrays"),  subpath_package("units"),
+			subpath_package("inits_deinits"),
 		};
 		auto init_result = compiler::driver::initializeTheCompiler(
 			compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
-				.packages_info = {main_pkg},
+				.packages_info = std::move(packages),
 				.compilation_artifacts = {
 					.artifacts_path = artifacts_path,
 				},
@@ -78,10 +87,9 @@ protected:
 				.debug_options         = {},
 				.incremental           = {},
 				.execution_options     = { .worker_count = 1 },
-				.global_linking_options = { .std_lib_type = compiler::driver::options_types::GlobalLinkingOptions::DefaultStd{} },
+				.stdlib_options = { .std_lib_type = compiler::driver::options_types::StdLibOptions::DefaultStd{} },
 			}
 		);
-		root_module_id = global_state::getPackages().back().getRootModule().illegalAccess().getID();
 		assertTrue(init_result.status().isOk(), "Compiler initialization failed");
 	}
 
@@ -96,6 +104,7 @@ private:
 	) {
 		compiler::frontend::ModuleID current_module = start_module;
 		for (const auto& part: path) {
+			std::cerr << "Finding submodule: " << part << "\n";
 			current_module = compiler::frontend::getModuleRef(current_module)
 			                     ->getSubmoduleByName(base::StrID(part))
 			                     .illegalAccess()
@@ -114,7 +123,13 @@ private:
 												  return std::string(part.begin(), part.end());
 											  })
 		                                    | std::ranges::to<std::vector>();
-		auto module = findSubmodule(root_module_id.value(), path_parts);
+		auto                     package_name = base::StrID(path_parts.front());
+		std::vector<std::string> submodule_path_parts(path_parts.begin() + 1, path_parts.end());
+		base::Optional<compiler::frontend::ModuleID> root_module_id;
+		for (const auto& pkg_info: global_state::getPackages())
+			if (pkg_info.getPackageID() == package_name)
+				root_module_id = pkg_info.getRootModule().illegalAccess().getID();
+		auto module = findSubmodule(*root_module_id, submodule_path_parts);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto& top_level = ctx.query<helios::QueryTopLevelEntities>(module)->valueOrPanic();

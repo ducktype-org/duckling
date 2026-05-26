@@ -64,7 +64,7 @@ namespace compiler::driver {
 			// bool rm_artifacts_after_compilation = false;
 		};
 
-		struct GlobalLinkingOptions final {
+		struct StdLibOptions final {
 			struct NoStd final {};
 
 			struct DefaultStd final {};
@@ -78,11 +78,6 @@ namespace compiler::driver {
 			 * no standard library at all.
 			 */
 			std::variant<NoStd, DefaultStd, CustomStd> std_lib_type = NoStd{};
-
-			/**
-			 * Whether to link the C standard library.
-			 */
-			bool link_c_standard_library = false;
 		};
 	}
 
@@ -116,7 +111,7 @@ namespace compiler::driver {
 			options_types::DebugOptions                               debug_options;
 			options_types::IncrementalOptions                         incremental;
 			options_types::ExecutionOptions                           execution_options;
-			options_types::GlobalLinkingOptions                       global_linking_options;
+			options_types::StdLibOptions                              stdlib_options;
 		};
 
 		/**

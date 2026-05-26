@@ -4,7 +4,6 @@
 #include <driver/initialize.hpp>
 #include <driver/manifest/manifest.hpp>
 #include <driver/operations/generic_operations.hpp>
-#include <driver/standard_library/standard_library.hpp>
 #include <driver/task/task.hpp>
 #include <driver_private/standard_library/standard_library.hpp>
 #include <global_state/backend_options.hpp>
@@ -76,7 +75,7 @@ protected:
 				.debug_options         = {},
 				.incremental           = {},
 				.execution_options     = { .worker_count = 1 },
-				.global_linking_options = { .std_lib_type = driver::options_types::GlobalLinkingOptions::DefaultStd{} },
+				.stdlib_options = { .std_lib_type = driver::options_types::StdLibOptions::DefaultStd{} },
 			}
 		);
 		assertTrue(init_result.status().isOk(), "Compiler initialization failed");
@@ -136,8 +135,8 @@ private:
 	 * @brief Verifies that standard library linking options are correctly applied to tasks.
 	 */
 	void verifyStdLinkingOptionsInConvertedTasks() {
-		driver::options_types::GlobalLinkingOptions global_opts{
-			.std_lib_type = driver::options_types::GlobalLinkingOptions::DefaultStd{}
+		driver::options_types::StdLibOptions global_opts{
+			.std_lib_type = driver::options_types::StdLibOptions::DefaultStd{}
 		};
 
 		for (const auto& raw_task: manifest.tasks) {

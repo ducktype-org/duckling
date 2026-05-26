@@ -1,7 +1,7 @@
 #include "task.hpp"
 
 #include <driver/diagnostics/log_helpers.hpp>
-#include <driver/standard_library/standard_library.hpp>
+#include <driver_private/standard_library/standard_library.hpp>
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <global_state/packages.hpp>
@@ -251,16 +251,14 @@ namespace compiler::driver {
 	 * for a given`BuildTarget`.
 	 */
 	BuildTarget convertBuildTargetForTask(
-		const BuildTarget&                         raw_target,
-		const options_types::GlobalLinkingOptions& global_linking_options
+		const BuildTarget& raw_target, const options_types::StdLibOptions& stdlib_options
 	) {
 		variant_match(raw_target) {
 			variant_case(BuildTargetLLVMExecutable, llvm_exec_target) {
 				return BuildTargetLLVMExecutable{
 					.output_file_stem = llvm_exec_target.output_file_stem,
-					.linking_options  = mergeBothLinkingOptions(
-                        llvm_exec_target.linking_options, global_linking_options
-                    ),
+					.linking_options
+					= constructLinkerOptions(llvm_exec_target.linking_options, stdlib_options),
 				};
 			}
 			variant_default { return raw_target; }
@@ -268,9 +266,9 @@ namespace compiler::driver {
 	}
 
 	base::Optional<Task> convertRawTaskToTask(
-		const RawTask&                             raw_task,
-		const options_types::GlobalLinkingOptions& global_linking_options,
-		const task::DiagnosticReporter&            report
+		const RawTask&                      raw_task,
+		const options_types::StdLibOptions& stdlib_options,
+		const task::DiagnosticReporter&     report
 	) {
 		variant_match(raw_task.task_data) {
 			variant_case(RawPackageCompilationTask, raw_package_task) {
@@ -279,9 +277,8 @@ namespace compiler::driver {
 
 				if (!root_module_opt.has_value()) return {};
 
-				auto build_target = convertBuildTargetForTask(
-					raw_package_task.build_target, global_linking_options
-				);
+				auto build_target
+					= convertBuildTargetForTask(raw_package_task.build_target, stdlib_options);
 
 				return Task{
 					.type      = TaskType::PackageCompilation,
@@ -296,13 +293,12 @@ namespace compiler::driver {
 		CORE_UNREACHABLE();
 	}
 
-	linker::LinkingOptions mergeBothLinkingOptions(
-		const linker::LinkingOptions&              local_options,
-		const options_types::GlobalLinkingOptions& global_linking_options
+	linker::LinkingOptions constructLinkerOptions(
+		const linker::LinkingOptions&       local_options,
+		const options_types::StdLibOptions& stdlib_options
 	) {
-		linker::LinkingOptions options  = local_options;
-		options.link_c_standard_library = global_linking_options.link_c_standard_library;
-		options.stdlib_link_options     = getStdLibLinkingArgs(global_linking_options);
+		linker::LinkingOptions options = local_options;
+		options.stdlib_link_options    = getStdLibLinkingArgs(stdlib_options);
 		return options;
 	}
 }  // namespace compiler::driver
