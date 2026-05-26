@@ -23,6 +23,16 @@ namespace compiler::repl {
 	// float and double sizes are already validated in base/types/floats.hpp.
 	static_assert(sizeof(bool) == 1, "bool must be 1 byte for DVM compatibility");
 
+	static bool lirFunctionDealsWithStrings(const CRef<lir::Function> lir_function) {
+		auto is_string_layout = [](const CRef<tsl::TypeLayout> layout) -> bool {
+			return layout->getSourceType().getType().getKind() == tsh::Kind::String;
+		};
+		if (is_string_layout(lir_function->return_type_layout)) return true;
+		for (const auto& param_layout: lir_function->parameter_layouts)
+			if (is_string_layout(param_layout)) return true;
+		return false;
+	}
+
 	std::expected<vm::code::CodeCollection, std::string> compileHOUTUnitToDVMCode(
 		query::Context&                  ctx,
 		const helios::HOUTUnit&          hout_unit,
@@ -103,6 +113,16 @@ namespace compiler::repl {
 		// Lower all functions
 		for (const auto& lir_function: lir_data->lir_unit.lir_functions) {
 			CORE_DEV_LOG(REPL, "Lowering function: ", lir_function->mangled_name.strView(), "\n");
+			// @TODO: #2483 Remove this filter (and the helper function) when strings work in DVM.
+			if (lirFunctionDealsWithStrings(lir_function)) {
+				CORE_DEV_LOG(
+					REPL,
+					"Lowering function that deals with strings skipped: ",
+					lir_function->mangled_name,
+					"\n"
+				);
+				continue;
+			}
 			(void) lowering_context.lowerAndKeepLirFunction(lir_function);
 		}
 

@@ -78,7 +78,11 @@ namespace compiler::driver {
 
 		for (const auto& lir_function: lir_module->lir_unit.lir_functions)
 			mod.addFunctionToModule(ctx, lir_function);
-		CORE_ASSERT(mod.verify().isOk(), "LLVM module verification failed");
+
+		CORE_ASSERT(
+			mod.verify().isOk(),
+			"LLVM module verification failed (enable Backend dev logs to see details)"
+		);
 
 		return mod;
 	}

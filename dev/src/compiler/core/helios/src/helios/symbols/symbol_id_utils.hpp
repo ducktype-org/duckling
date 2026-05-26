@@ -59,6 +59,11 @@ namespace compiler::helios {
 	ScopeID scope(SymID);
 
 	/**
+	 * @return Whether the symbol should use LinkOnce in LLVM.
+	 */
+	bool shouldLinkOnce(SymID);
+
+	/**
 	 * Gets scope that given symbol was defined within.
 	 * Returns empty optional if the symbol doesn't have a scope.
 	 * E.g. builtin functions don't have a scope.
