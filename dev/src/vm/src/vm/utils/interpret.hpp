@@ -58,7 +58,7 @@ namespace vm {
 	template<typename T>
 	void safeWriteBytes(byte* dest, const T& value, usize offset = 0)
 		requires(std::is_trivially_copyable_v<T>) {
-		CORE_ASSERT(isAligned<T>(dest + offset), "Unaligned access in safeReadPointerBytes");
+		CORE_ASSERT(isAligned<T>(dest + offset), "Unaligned access in safeWriteBytes");
 
 		new (reinterpret_cast<void*>(dest + offset)) T(value);
 	}
