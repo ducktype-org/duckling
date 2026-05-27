@@ -45,8 +45,10 @@ namespace compiler::backend_llvm {
 
 		bool error_found = llvm::verifyModule(*impl->module, &llvm_verification_stream);
 
-		if (error_found)
+		if (error_found) {
+			CORE_DEV_LOG(Backend, dumpLLVMToString());
 			CORE_DEV_LOG(Backend, "LLVM Verification Failed!: ", "\n", llvm_verification, "\n");
+		}
 
 		return error_found ? base::BAD : base::OK;
 	}
