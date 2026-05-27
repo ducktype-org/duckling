@@ -76,6 +76,13 @@ namespace compiler::backend_vm::internal {
 		base::Optional<CRef<vm::code::TypeOfData>> lowerAndKeepTslType(CRef<tsl::TypeLayout> layout);
 
 		/**
+		 * @brief Inserts a manually created DVM type into the program context and returns a
+		 * reference to it. Used when want to register a type and use it by its name.
+		 * @return CRef<vm::code::TypeOfData>
+		 */
+		CRef<vm::code::TypeOfData> keepVMType(vm::code::TypeOfData dvm_type);
+
+		/**
 		 * @brief Creates and inserts a pointer type into the program lowering context.
 		 * It caches the result, so inserts the type into the program only if needed.
 		 */

@@ -99,6 +99,25 @@ private:
 			{ "Variable declaration shadows a previous declaration.", "Previous declaration:" },
 			1
 		);
+		checkForErrorOnCompileModule(
+			R"(fun shadowedVar() = {
+				var arr: i32[2];
+                var x = 42;
+				for (x in arr) {}
+            })",
+			{ "Variable declaration shadows a previous declaration.", "Previous declaration:" },
+			1
+		);
+		checkForErrorOnCompileModule(
+			R"(fun shadowedIter() = {
+				var arr: i32[2];
+				for (x in arr) {
+					for (x in arr) {}
+				}
+            })",
+			{ "Variable declaration shadows a previous declaration.", "Previous declaration:" },
+			1
+		);
 	}
 };
 

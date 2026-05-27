@@ -238,6 +238,8 @@ namespace compiler::mir {
 				return base_type.as<tsh::DynamicArrayAbstractType>().getElementType();
 			case tsh::Kind::StaticArray:
 				return base_type.as<tsh::StaticArrayAbstractType>().getElementType();
+			case tsh::Kind::ManyPointer:
+				return base_type.as<tsh::ManyPointerAbstractType>().getPointee();
 			default:
 				CORE_PANIC("Cannot index into type: ", type.toString());
 			}
