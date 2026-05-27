@@ -19,7 +19,8 @@ namespace vm::code {
 	/**
 	 * @brief this structure records the pops and pushes to the stack, and later constructs an
 	 * immutable local database which contains all the information
-	 * @note It allows for the same operations as local stack databes, though a bit slower
+	 * @note It allows for the same operations as local stack databes, though a bit slower since
+	 * they have to be performed online
 	 */
 	class LocalStackDbBuilder {
 		using Lifetime       = LocalStackDb::Lifetime;
@@ -70,33 +71,86 @@ namespace vm::code {
 
 		static constexpr StackStateID EMPTY = StackStateID{ 0 };
 
+		/**
+		 * @brief operation which pushes new variable of given name and stack to the givens state of
+		 * the stack
+		 * @returns id of modified state
+		 */
+		[[nodiscard]]
 		StackStateID push(StackStateID state, base::StrID name, base::StrID type);
 
+		/**
+		 * @brief operation which pops a caretain amount of last variables from the stack
+		 * @note popped amount must be smaller than size of the stack at given state
+		 * @returns id of modified state
+		 */
+		[[nodiscard]]
 		StackStateID pop(StackStateID state, usize amount = 1);
 
+		/**
+		 * @brief operation which changes the type of variable with given name
+		 * @note there must be a variable with given name on the stack at given state
+		 * @returns id of modified state
+		 */
+		[[nodiscard]]
 		StackStateID change(StackStateID state, base::StrID name, base::StrID type);
 
+		/**
+		 * @returns name of the type of the variable with particular name at given state of the stack
+		 * @note this information takes into account primitive-casting operations
+		 * @note returns nullopt, when stack at current state doesn't contain variable with such name
+		 */
 		[[nodiscard]]
 		base::Optional<base::StrID> getTypeName(StackStateID state, base::StrID name) const;
 
+		/**
+		 * @returns name of the type of the variable with particular index at given state of the stack
+		 * @note this information takes into account primitive-casting operations
+		 * @note returns nullopt, when stack at current state doesn't contain variable with such index
+		 */
 		[[nodiscard]]
 		base::Optional<base::StrID> getTypeName(StackStateID state, usize idx) const;
 
+		/**
+		 * @returns number of variables on the stack (size of the stack in blocks) at given state
+		 */
 		[[nodiscard]]
 		usize size(StackStateID state) const;
 
+		/**
+		 * @brief checks whether stack at given state contains a value of given name
+		 */
 		[[nodiscard]]
 		bool contains(StackStateID state, base::StrID name) const;
 
+		/**
+		 * @brief compares two states of the stack in terms of types of variables
+		 * @returns true if two instances are the same in terms of types of the variables and their
+order order	 * @note this information takes into account primitive-casting operations
+		 */
 		[[nodiscard]]
 		bool eqTypes(StackStateID state_1, StackStateID state_2) const;
 
+		/**
+		 * @brief compares two states of the stack in terms of names of variables
+		 * @returns true if two instances are the same in terms of names of the variables and their
+		 * order
+		 */
 		[[nodiscard]]
 		bool eqNames(StackStateID state_1, StackStateID state_2) const;
 
+		/**
+		 * @returns name of the variable with particular index at given state of the stack
+		 * @note returns nullopt, when stack at current state doesn't contain variable with such index
+		 */
 		[[nodiscard]]
 		base::Optional<base::StrID> getName(StackStateID state, usize idx) const;
 
+		/**
+		 * @brief function to finish building th local stack database
+		 * @returns a database which will anwer all the questions offline
+		 * @note this function should be called exactly once, at the end of lifetime for the database
+		 */
 		LocalStackDb finalize();
 	};
 }
