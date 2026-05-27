@@ -41,10 +41,14 @@ namespace vm {
 		CORE_ASSERT(isAligned<T>(ptr + offset), "Unaligned access in safeReadPointerBytes");
 		// After reinterpret cast the pointer points to the memory on which object of type T
 		// was created using placement new. That means dereferenced value is of type T.
-		// T is type accesible to T - new pointer can be dereferenced.
+		// T is type accesible to T - new pointer satisfies necessery condition to be dereferenced.
 		// https://cppreference.com/cpp/language/reinterpret_cast point 5.
-		//	return *std::launder(reinterpret_cast<const T*>(ptr + offset));
-		return *reinterpret_cast<const T*>(ptr + offset);
+		// std::launder is necessery to follow strict aliasing rule, as described in 
+		// https://en.cppreference.com/cpp/utility/launder	:
+		// typical use of std::launder:
+		// Obtaining a pointer to an object created by placement new from a pointer to an 
+		// object providing storage for that object.
+		return *std::launder(reinterpret_cast<const T*>(ptr + offset));
 	}
 
 	/**
