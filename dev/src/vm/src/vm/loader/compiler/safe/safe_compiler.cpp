@@ -29,7 +29,7 @@ namespace vm::loader::compiler::safe {
 			[[maybe_unused]] const vm::loader::compiler::detail::FunctionStackContext& stack_ctx,    \
 			[[maybe_unused]] base::HashMap<base::StrID, usize>&                        label_id_map, \
 			const FromType&                                                            opcode_arg,   \
-			code::StackStateID stack_state_id,                                                       \
+			code::StackStateID stack_state_id                                                        \
 		) {                                                                                          \
 			__VA_ARGS__                                                                              \
 		}                                                                                            \
@@ -43,7 +43,7 @@ namespace vm::loader::compiler::safe {
 			[[maybe_unused]] const vm::loader::compiler::detail::FunctionStackContext& stack_ctx,    \
 			[[maybe_unused]] base::HashMap<base::StrID, usize>&                        label_id_map, \
 			const HIGH_FROM_TYPE&                                                      opcode_arg,   \
-			code::StackStateID stack_state_id,                                                       \
+			code::StackStateID stack_state_id                                                        \
 		) {                                                                                          \
 			__VA_ARGS__                                                                              \
 		}                                                                                            \
