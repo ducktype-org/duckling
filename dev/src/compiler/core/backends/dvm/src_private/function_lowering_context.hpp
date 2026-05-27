@@ -104,6 +104,12 @@ namespace compiler::backend_vm::internal {
 		const DVMPlace& getOrInsertLirLocal(lir::LIRLocalRef local);
 
 		/**
+		 * @brief Load to temporary local variable from a given pointer type place.
+		 * Return the place representing the temporary local variable.
+		 */
+		DVMPlace loadFromPlace(const DVMPlace& place, const vm::code::TypeOfData& pointee_type);
+
+		/**
 		 * @brief Makes sure a given @p value is a place and places it in a temporary if needed
 		 * (e.g. the value is an Immediate). If the given value is already a place, it does nothing
 		 * and just returns the inner place.
