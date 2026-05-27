@@ -1,8 +1,9 @@
 #pragma once
 
-#include <vm/core/safe/memory/memory.hpp>
 #include "shadow_entry.hpp"
 #include "shadow_pointer.hpp"
+
+#include <vm/core/safe/memory/memory.hpp>
 
 namespace vm {
 

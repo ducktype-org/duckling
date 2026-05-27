@@ -168,25 +168,33 @@ namespace base {
 		TypedOwningView& operator=(TypedOwningView&& view) noexcept {
 			if (this != &view) {
 				delete[] begin;
-				begin      = view.begin;
-				arr_size   = view.arr_size;
-				view.begin = nullptr;
-				view.arr_size  = 0;
+				begin         = view.begin;
+				arr_size      = view.arr_size;
+				view.begin    = nullptr;
+				view.arr_size = 0;
 			}
 			return *this;
 		}
 
 		[[nodiscard]]
-		T* getBegin() const { return begin; }
+		T* getBegin() const {
+			return begin;
+		}
 
 		[[nodiscard]]
-		usize size() const { return arr_size; }
+		usize size() const {
+			return arr_size;
+		}
 
 		[[nodiscard]]
-		TypedModRawView<T> modView() { return { begin, arr_size }; }
+		TypedModRawView<T> modView() {
+			return { begin, arr_size };
+		}
 
 		[[nodiscard]]
-		TypedModRawView<const T> view() const { return { begin, arr_size }; }
+		TypedModRawView<const T> view() const {
+			return { begin, arr_size };
+		}
 
 		~TypedOwningView() { delete[] begin; }
 	};

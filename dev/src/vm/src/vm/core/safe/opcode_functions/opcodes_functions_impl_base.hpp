@@ -1328,7 +1328,7 @@ namespace vm {
 
 				u32 shadow_size = type->getShadowSize();
 				for (u32 i = 0; i < shadow_size; ++i) {
-					ShadowEntry* entry = dst_shadow.data_base() + dst_shadow.logical_offset + i;
+					ShadowEntry* entry = dst_shadow.dataBase() + dst_shadow.logical_offset + i;
 					entry->processWrite(tid, epoch, thread.getVC());
 				}
 
@@ -1337,9 +1337,9 @@ namespace vm {
 					auto* sf = thread.getShadowFrame();
 					auto src_pointer_block = READ_SHADOW_POINTER_BLOCK_REF_FROM_ARG(instr->arg1);
 					for (u32 i = 0; i < pointer_size; ++i) {
-						ShadowPointer dst_val = *(dst_shadow.pointer_base() + dst_shadow.pointer_offset + i);
+						ShadowPointer dst_val = *(dst_shadow.pointerBase() + dst_shadow.pointer_offset + i);
 						ShadowPointer src_val = *(src_pointer_block->getData() + i);
-						*(dst_shadow.pointer_base() + dst_shadow.pointer_offset + i) = updateShadowPointerAssignment(thread, dst_val, src_val);
+						*(dst_shadow.pointerBase() + dst_shadow.pointer_offset + i) = updateShadowPointerAssignment(thread, dst_val, src_val);
 					}
 				}
 			}
@@ -1358,15 +1358,15 @@ namespace vm {
 				auto tid = thread.getThreadID();
 				auto epoch = thread.getVC()[tid];
 				for(u32 i = 0; i < type->getShadowSize(); ++i) {
-					ShadowEntry* src_entry = src_shadow.data_base() + src_shadow.logical_offset + i;
-					ShadowEntry* dst_entry = dst_shadow.data_base() + dst_shadow.logical_offset + i;
+					ShadowEntry* src_entry = src_shadow.dataBase() + src_shadow.logical_offset + i;
+					ShadowEntry* dst_entry = dst_shadow.dataBase() + dst_shadow.logical_offset + i;
 					src_entry->processRead(tid, epoch, thread.getVC());
 					dst_entry->processWrite(tid, epoch, thread.getVC());
 				}
 				for(u32 i = 0; i < type->getPointerSize(); ++i) {
-					ShadowPointer dst_val = *(dst_shadow.pointer_base() + dst_shadow.pointer_offset + i);
-					ShadowPointer src_val = *(src_shadow.pointer_base() + src_shadow.pointer_offset + i);
-					*(dst_shadow.pointer_base() + dst_shadow.pointer_offset + i) = updateShadowPointerAssignment(thread, dst_val, src_val);
+					ShadowPointer dst_val = *(dst_shadow.pointerBase() + dst_shadow.pointer_offset + i);
+					ShadowPointer src_val = *(src_shadow.pointerBase() + src_shadow.pointer_offset + i);
+					*(dst_shadow.pointerBase() + dst_shadow.pointer_offset + i) = updateShadowPointerAssignment(thread, dst_val, src_val);
 				}
 			}
 		}
@@ -1656,7 +1656,7 @@ namespace vm {
 				auto tid = thread.getThreadID();
 				auto epoch = thread.getVC()[tid];
 				for (u32 i = 0; i < size; ++i) {
-					ShadowEntry* entry = shadow_ptr.data_base() + shadow_ptr.logical_offset + shadow_offset + i;
+					ShadowEntry* entry = shadow_ptr.dataBase() + shadow_ptr.logical_offset + shadow_offset + i;
 					entry->processRead(tid, epoch, thread.getVC());
 				}
 			}
@@ -1684,7 +1684,7 @@ namespace vm {
 				auto tid = thread.getThreadID();
 				auto epoch = thread.getVC()[tid];
 				for (u32 i = 0; i < size; ++i) {
-					ShadowEntry* entry = shadow_ptr.data_base() + shadow_ptr.logical_offset + shadow_offset + i;
+					ShadowEntry* entry = shadow_ptr.dataBase() + shadow_ptr.logical_offset + shadow_offset + i;
 					entry->processWrite(tid, epoch, thread.getVC());
 				}
 			}
@@ -1704,7 +1704,7 @@ namespace vm {
 				auto tid = thread.getThreadID();
 				auto epoch = thread.getVC()[tid];
 				for (u32 i = 0; i < size; ++i) {
-					ShadowEntry* entry = shadow_ptr.data_base() + start_offset + i;
+					ShadowEntry* entry = shadow_ptr.dataBase() + start_offset + i;
 					entry->processRead(tid, epoch, thread.getVC());
 				}
 			}
@@ -1724,7 +1724,7 @@ namespace vm {
 				auto tid = thread.getThreadID();
 				auto epoch = thread.getVC()[tid];
 				for (u32 i = 0; i < size; ++i) {
-					ShadowEntry* entry = shadow_ptr.data_base() + start_offset + i;
+					ShadowEntry* entry = shadow_ptr.dataBase() + start_offset + i;
 					entry->processWrite(tid, epoch, thread.getVC());
 				}
 			}

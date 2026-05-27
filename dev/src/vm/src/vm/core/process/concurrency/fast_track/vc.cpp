@@ -3,7 +3,9 @@
  */
 
 #include "vc.hpp"
+
 #include "epoch.hpp"
+
 #include <algorithm>
 
 namespace vm {

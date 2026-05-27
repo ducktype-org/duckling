@@ -72,8 +72,8 @@ namespace vm {
     using ShadowPointerBlock = BasicBlock<ShadowPointer>;
 	using BlockGeneric = Block;
 
-	inline ShadowEntry* ShadowPointer::data_base() const { return shadow_block ? shadow_block->getData() : nullptr; }
-	inline ShadowPointer* ShadowPointer::pointer_base() const { return shadow_pointer_block ? shadow_pointer_block->getData() : nullptr; }
+	inline ShadowEntry* ShadowPointer::dataBase() const { return shadow_block ? shadow_block->getData() : nullptr; }
+	inline ShadowPointer* ShadowPointer::pointerBase() const { return shadow_pointer_block ? shadow_pointer_block->getData() : nullptr; }
 }
 
 ID_STD_HASH(vm::BlockID);

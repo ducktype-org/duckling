@@ -5,9 +5,11 @@
  * @brief Vector Clock implementation for the FastTrack algorithm.
  */
 
-#include <vector>
 #include <base/types/ints.hpp>
+
 #include <vm/api/data/thread_id.hpp>
+
+#include <vector>
 
 namespace vm {
 	class Epoch;
@@ -36,6 +38,7 @@ namespace vm {
 		 * @brief Manual reference counting for Shared mode in ShadowEntry.
 		 */
 		void incRef() { ref_count++; }
+
 		void decRef() {
 			if (--ref_count == 0) delete this;
 		}

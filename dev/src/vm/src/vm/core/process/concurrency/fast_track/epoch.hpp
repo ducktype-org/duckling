@@ -6,6 +6,7 @@
  */
 
 #include <base/types/ints.hpp>
+
 #include <vm/api/data/thread_id.hpp>
 
 namespace vm {
@@ -17,28 +18,28 @@ namespace vm {
 	 */
 	class Epoch {
 	public:
-		using Clock = i32;
+		using Clock    = i32;
 		using ThreadId = api::ThreadID;
 
 		/**
 		 * @brief Initial state: null@bad.
 		 */
-		constexpr Epoch() : tid_(api::ThreadID::bad()), clock_(0) {}
+		constexpr Epoch(): thread_id(api::ThreadID::bad()), clock_value(0) {}
 
 		/**
 		 * @brief Construct epoch c@t.
 		 */
-		constexpr Epoch(ThreadId tid, Clock clock) : tid_(tid), clock_(clock) {}
+		constexpr Epoch(ThreadId tid, Clock clock): thread_id(tid), clock_value(clock) {}
 
 		/**
 		 * @brief Component t from c@t.
 		 */
-		constexpr ThreadId tid() const { return tid_; }
+		[[nodiscard]] constexpr ThreadId tid() const { return thread_id; }
 
 		/**
 		 * @brief Component c from c@t.
 		 */
-		constexpr Clock clock() const { return clock_; }
+		[[nodiscard]] constexpr Clock clock() const { return clock_value; }
 
 		/**
 		 * @brief Successor: c@t -> (c+1)@t.
@@ -54,14 +55,14 @@ namespace vm {
 		 * @brief Epoch comparison: c@t <= c'@t' <=> t = t' \land c <= c'.
 		 */
 		constexpr bool operator<=(const Epoch& other) const {
-			return tid_ == other.tid_ && clock_ <= other.clock_;
+			return thread_id == other.thread_id && clock_value <= other.clock_value;
 		}
 
 		/**
 		 * @brief Equality: c@t = c'@t' <=> t = t' \land c = c'.
 		 */
 		constexpr bool operator==(const Epoch& other) const {
-			return tid_ == other.tid_ && clock_ == other.clock_;
+			return thread_id == other.thread_id && clock_value == other.clock_value;
 		}
 
 		/**
@@ -70,7 +71,7 @@ namespace vm {
 		constexpr bool operator!=(const Epoch& other) const { return !(*this == other); }
 
 	private:
-		ThreadId tid_;
-		Clock clock_;
+		ThreadId thread_id;
+		Clock    clock_value;
 	};
 }

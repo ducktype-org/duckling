@@ -19,8 +19,14 @@ namespace vm::builtins {
 
 	namespace {
 		template<class Ret, class... FunArgs, std::size_t... Is>
-		base::Optional<Box<VmValue>>
-			callUnpackArgsImpl(Ret (*function)(SafeVMThread&, FunArgs...), const std::vector<TypeCRef>& vm_return_types, IVMProcess& process, SafeVMThread& thread, const std::vector<Box<VmValue>>& args, std::index_sequence<Is...>) {
+		base::Optional<Box<VmValue>> callUnpackArgsImpl(
+			Ret (*function)(SafeVMThread&, FunArgs...),
+			const std::vector<TypeCRef>&     vm_return_types,
+			IVMProcess&                      process,
+			SafeVMThread&                    thread,
+			const std::vector<Box<VmValue>>& args,
+			std::index_sequence<Is...>
+		) {
 			if constexpr (std::is_void_v<Ret>) {
 				function(thread, args[Is]->template readBytes<FunArgs>()...);
 				return {};
@@ -116,12 +122,13 @@ namespace vm::builtins {
 
 	i64 FunctionHandlers::builtinStartThread(SafeVMThread& thread) {
 		thread.releaseGil();
-		
+
 		auto result = vm::api::runFunction(thread.safe_process.getPID(), thread.getThreadCtx());
-		
+
 		if (result.has_value() && thread.safe_process.getSettings().enable_fast_track) {
-			// After spawning, parent increments its own clock to establish happens-before with future actions
-			thread.onRelease(const_cast<VectorClock&>(thread.getVC())); // Manual increment
+			// After spawning, parent increments its own clock to establish happens-before with
+			// future actions
+			thread.onRelease(const_cast<VectorClock&>(thread.getVC()));  // Manual increment
 		}
 
 		thread.acquireGil();
@@ -131,11 +138,11 @@ namespace vm::builtins {
 
 	i64 FunctionHandlers::builtinJoinThread(SafeVMThread& thread, u64 thread_id) {
 		thread.releaseGil();
-		
+
 		auto target_thread_opt = thread.safe_process.getVMThreadByID(api::ThreadID{ thread_id });
-		
+
 		auto result = vm::api::join(thread.safe_process.getPID(), api::ThreadID{ thread_id });
-		
+
 		if (result.has_value() && target_thread_opt) {
 			// FastTrack Join: Joinee's VC joined into Joiner's VC
 			thread.joinVC(target_thread_opt.value()->getVC());

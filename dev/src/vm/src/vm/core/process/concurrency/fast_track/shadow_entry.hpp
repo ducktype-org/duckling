@@ -4,12 +4,11 @@
 #include "vc.hpp"
 
 #include <vm/api/data/api_error.hpp>
+#include <vm/core/safe/exceptions.hpp>
 
+#include <iostream>
 #include <memory>
 #include <variant>
-#include <iostream>
-
-#include <vm/core/safe/exceptions.hpp>
 
 namespace vm {
 
@@ -23,9 +22,9 @@ namespace vm {
 	struct ShadowEntry {
 		Epoch        last_write;
 		Epoch        last_read_epoch;
-		VectorClock* last_read_vc = nullptr; // Manual ref-counting in Phase 3
+		VectorClock* last_read_vc = nullptr;  // Manual ref-counting in Phase 3
 
-		ShadowEntry(): last_write(), last_read_epoch(), last_read_vc(nullptr) {}
+		ShadowEntry(): last_write(), last_read_epoch() {}
 
 		/**
 		 * @brief Resets the shadow entry to its initial state.
@@ -40,65 +39,61 @@ namespace vm {
 		}
 
 		~ShadowEntry() {
-			if (last_read_vc) {
-				last_read_vc->decRef();
-			}
+			if (last_read_vc) last_read_vc->decRef();
 		}
 
 		// Support copy for IMemory/std::fill/std::copy
 		ShadowEntry(const ShadowEntry& other):
-			last_write(other.last_write),
-			last_read_epoch(other.last_read_epoch),
-			last_read_vc(other.last_read_vc) {
+			  last_write(other.last_write),
+			  last_read_epoch(other.last_read_epoch),
+			  last_read_vc(other.last_read_vc) {
 			if (last_read_vc) last_read_vc->incRef();
 		}
 
 		ShadowEntry& operator=(const ShadowEntry& other) {
 			if (this != &other) {
 				if (last_read_vc) last_read_vc->decRef();
-				last_write = other.last_write;
+				last_write      = other.last_write;
 				last_read_epoch = other.last_read_epoch;
-				last_read_vc = other.last_read_vc;
+				last_read_vc    = other.last_read_vc;
 				if (last_read_vc) last_read_vc->incRef();
 			}
 			return *this;
 		}
 
 		// Allow move
-		ShadowEntry(ShadowEntry&& other) noexcept :
-			last_write(other.last_write),
-			last_read_epoch(other.last_read_epoch),
-			last_read_vc(other.last_read_vc) {
+		ShadowEntry(ShadowEntry&& other) noexcept:
+			  last_write(other.last_write),
+			  last_read_epoch(other.last_read_epoch),
+			  last_read_vc(other.last_read_vc) {
 			other.last_read_vc = nullptr;
 		}
 
 		ShadowEntry& operator=(ShadowEntry&& other) noexcept {
 			if (this != &other) {
 				if (last_read_vc) last_read_vc->decRef();
-				last_write = other.last_write;
-				last_read_epoch = other.last_read_epoch;
-				last_read_vc = other.last_read_vc;
+				last_write         = other.last_write;
+				last_read_epoch    = other.last_read_epoch;
+				last_read_vc       = other.last_read_vc;
 				other.last_read_vc = nullptr;
 			}
 			return *this;
 		}
 
-        friend std::ostream& operator<<(std::ostream& ss, const ShadowEntry& e){
-            ss << "write: " << e.last_write.clock() << "@" << e.last_write.tid() << '\n';
-            ss << "read : " << e.last_read_epoch.clock() << "@" << e.last_read_epoch.tid();
-            return ss;
-        }
+		friend std::ostream& operator<<(std::ostream& ss, const ShadowEntry& e) {
+			ss << "write: " << e.last_write.clock() << "@" << e.last_write.tid() << '\n';
+			ss << "read : " << e.last_read_epoch.clock() << "@" << e.last_read_epoch.tid();
+			return ss;
+		}
 
-		bool isShared() const { return last_read_vc != nullptr; }
+		[[nodiscard]] bool isShared() const { return last_read_vc != nullptr; }
 
 		/**
 		 * @brief FastTrack Read rule.
 		 */
 		void processRead(api::ThreadID tid, i32 clock, const VectorClock& thread_vc) {
 			// WR Race: last_write <= thread_vc(tid_w)
-			if (!(last_write <= thread_vc)) {
-				reportRace("Write-Read", last_write, Epoch(tid, clock));
-			}
+			if (!(last_write <= thread_vc)) reportRace("Write-Read", last_write, Epoch(tid, clock));
 
 			if (isShared()) {
 				// Shared Mode: update VC(tid)
@@ -125,29 +120,29 @@ namespace vm {
 		 */
 		void processWrite(api::ThreadID tid, i32 clock, const VectorClock& thread_vc) {
 			// WW Race: last_write <= thread_vc
-			if (!(last_write <= thread_vc)) {
+			if (!(last_write <= thread_vc))
 				reportRace("Write-Write", last_write, Epoch(tid, clock));
-			}
 
 			// RW Race
 			if (isShared()) {
 				if (!(*last_read_vc <= thread_vc)) {
-					reportRace("Read-Write (Shared)", Epoch(), Epoch(tid, clock)); // Simplified report
+					reportRace(
+						"Read-Write (Shared)", Epoch(), Epoch(tid, clock)
+					);  // Simplified report
 				}
 				last_read_vc->decRef();
 				last_read_vc = nullptr;
 			} else {
-				if (!(last_read_epoch <= thread_vc)) {
+				if (!(last_read_epoch <= thread_vc))
 					reportRace("Read-Write (Exclusive)", last_read_epoch, Epoch(tid, clock));
-				}
 			}
 
-			last_write = Epoch(tid, clock);
-			last_read_epoch = last_write; // FastTrack optimization/invariant
+			last_write      = Epoch(tid, clock);
+			last_read_epoch = last_write;  // FastTrack optimization/invariant
 		}
 
 	private:
-		void reportRace(const char* type, Epoch first, Epoch second) {
+		void reportRace(const char*, Epoch, Epoch) {
 			throw exceptions::VMDataRaceException();
 		}
 	};
