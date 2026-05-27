@@ -117,5 +117,10 @@ namespace vm::debugger {
 		std::expected<void, api::ApiError> setBreakpoint(
 			base::StrID function_name, u64 instr_number, bool enabled = true
 		);
+
+		/**
+		 * @brief Execute one FatByteCode step in the VM
+		 */
+		std::expected<void, api::ApiError> step();
 	};
 }
