@@ -12,9 +12,9 @@
 
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/instructions.hpp>
-#include <vm/bytecode/local_stack_database_builder.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
+#include <vm/bytecode/validator/local_stack_database_builder.hpp>
 #include <vm/bytecode/validator/valid_type/type_context.hpp>
 #include <vm/bytecode/validator/valid_type/valid_type.hpp>
 #include <vm/core/builtin_functions.hpp>
@@ -94,8 +94,8 @@ struct LocalStackEntry {
 };
 
 /**
- * @brief A wrapper class for both factory for local stack and the local stack databse itself.
- * @note This is so that it can be used both on completed and currently builded local-stack. This
+ * @brief A wrapper class for both factory for local stack and the local stack database itself.
+ * @note This is so that it can be used both on completed and currently built local-stack. This
  * way, building a database can be done before, during or after validation.
  */
 class LocalStack {
@@ -103,7 +103,7 @@ class LocalStack {
 
 	CRef<valid_type::ValidTypeMap>                             types_ctx;
 	std::variant<CRef<LocalStackDb>, Ref<LocalStackDbBuilder>> source;
-	StackStateID                                               stack_state;
+	StackStateID                                               stack_state_id;
 	usize                                                      number_of_ret_vals = 0;
 
 public:
@@ -120,12 +120,12 @@ public:
 	):
 		  types_ctx(&types_ctx),
 		  source(src),
-		  stack_state(state),
+		  stack_state_id(state),
 		  number_of_ret_vals(number_of_rets) {}
 
 	[[nodiscard]]
-	StackStateID getState() const {
-		return stack_state;
+	StackStateID getStateID() const {
+		return stack_state_id;
 	}
 
 	[[nodiscard]]
@@ -138,17 +138,17 @@ public:
 	}
 
 	void push(const opargs::PlaceAny& local, const opargs::Type& type) {
-		variant_match(source) {
-			variant_case(Ref<LocalStackDbBuilder>, bld_ref) {
-				if (bld_ref->contains(stack_state, local.var_name))
-					throw DuplicatedLocalNameError(local);
+		CORE_ASSERT(
+			std::holds_alternative<Ref<LocalStackDbBuilder>>(source),
+			"We need to be building local stack database to push variables to stack"
+		);
 
-				auto new_state = bld_ref->push(stack_state, local.var_name, type.type_name);
-				stack_state    = new_state;
-				return;
-			}
-		}
-		CORE_UNREACHABLE();
+		auto bld_ref = std::get<Ref<LocalStackDbBuilder>>(source);
+		if (bld_ref->contains(stack_state_id, local.var_name))
+			throw DuplicatedLocalNameError(local);
+
+		auto new_state = bld_ref->push(stack_state_id, local.var_name, type.type_name);
+		stack_state_id = new_state;
 	}
 
 	/**
@@ -158,25 +158,28 @@ public:
 	 */
 	template<DeinitializingInstruction InstructionType>
 	void pop(const InstructionType& cause) {
-		variant_match(source) {
-			variant_case(Ref<LocalStackDbBuilder>, bld_ref) {
-				auto size = bld_ref->size(stack_state);
-				if (size == number_of_ret_vals) throw RetValDeinitError(cause);
-				auto new_state = bld_ref->pop(stack_state);
-				auto new_size  = bld_ref->size(new_state);
-				CORE_ASSERT(new_size + 1 == size, "we expect that the size must be valid");
-				stack_state = new_state;
-				return;
-			}
-		}
-		CORE_UNREACHABLE();
+		CORE_ASSERT(
+			std::holds_alternative<Ref<LocalStackDbBuilder>>(source),
+			"We need to be building local stack database to pop variables from stack"
+		);
+
+		auto bld_ref = std::get<Ref<LocalStackDbBuilder>>(source);
+
+		auto size = bld_ref->size(stack_state_id);
+		if (size == number_of_ret_vals) throw RetValDeinitError(cause);
+		auto new_state = bld_ref->pop(stack_state_id);
+		auto new_size  = bld_ref->size(new_state);
+		CORE_ASSERT(new_size + 1 == size, "we expect that the size must be valid");
+		stack_state_id = new_state;
 	}
 
 	[[nodiscard]]
 	usize size() const {
 		variant_match(source) {
-			variant_case(Ref<LocalStackDbBuilder>, bld_ref) { return bld_ref->size(stack_state); }
-			variant_case(CRef<LocalStackDb>, db_ref) { return db_ref->size(stack_state); }
+			variant_case(Ref<LocalStackDbBuilder>, bld_ref) {
+				return bld_ref->size(stack_state_id);
+			}
+			variant_case(CRef<LocalStackDb>, db_ref) { return db_ref->size(stack_state_id); }
 		}
 		CORE_UNREACHABLE();
 	}
@@ -185,8 +188,10 @@ public:
 	LocalStackEntry back(usize i = 0) const {
 		usize size = 0;
 		variant_match(source) {
-			variant_case(Ref<LocalStackDbBuilder>, bld_ref) { size = bld_ref->size(stack_state); }
-			variant_case(CRef<LocalStackDb>, db_ref) { size = db_ref->size(stack_state); }
+			variant_case(Ref<LocalStackDbBuilder>, bld_ref) {
+				size = bld_ref->size(stack_state_id);
+			}
+			variant_case(CRef<LocalStackDb>, db_ref) { size = db_ref->size(stack_state_id); }
 		}
 
 		CORE_ASSERT(i < size, "we want idx to be smaller than size");
@@ -199,14 +204,14 @@ public:
 		variant_match(source) {
 			variant_case(Ref<LocalStackDbBuilder>, bld_ref) {
 				return LocalStackEntry{
-					.local_name = *bld_ref->getName(stack_state, idx),
-					.type       = types_ctx->at(*bld_ref->typeOf(stack_state, idx)),
+					.local_name = *bld_ref->getName(stack_state_id, idx),
+					.type       = types_ctx->at(*bld_ref->typeOf(stack_state_id, idx)),
 				};
 			}
 			variant_case(CRef<LocalStackDb>, db_ref) {
 				return LocalStackEntry{
-					.local_name = *db_ref->getName(stack_state, idx),
-					.type       = types_ctx->at(*db_ref->getTypeName(stack_state, idx)),
+					.local_name = *db_ref->getName(stack_state_id, idx),
+					.type       = types_ctx->at(*db_ref->getTypeName(stack_state_id, idx)),
 				};
 			}
 		}
@@ -217,8 +222,8 @@ public:
 		variant_match(source) {
 			variant_case(Ref<LocalStackDbBuilder>, bld_ref) {
 				auto local_name = VISIT(local, l, return l.var_name);
-				auto new_state  = bld_ref->change(stack_state, local_name, type.type_name);
-				stack_state     = new_state;
+				auto new_state  = bld_ref->change(stack_state_id, local_name, type.type_name);
+				stack_state_id  = new_state;
 				return;
 			}
 		}
@@ -229,10 +234,10 @@ public:
 	bool contains(base::StrID local_name) const {
 		variant_match(source) {
 			variant_case(Ref<LocalStackDbBuilder>, bld_ref) {
-				return bld_ref->contains(stack_state, local_name);
+				return bld_ref->contains(stack_state_id, local_name);
 			}
 			variant_case(CRef<LocalStackDb>, db_ref) {
-				return db_ref->contains(stack_state, local_name);
+				return db_ref->contains(stack_state_id, local_name);
 			}
 		}
 		CORE_UNREACHABLE();
@@ -244,10 +249,10 @@ public:
 
 		variant_match(source) {
 			variant_case(Ref<LocalStackDbBuilder>, bld_ref) {
-				name_of_type = *bld_ref->typeOf(stack_state, local_name);
+				name_of_type = *bld_ref->typeOf(stack_state_id, local_name);
 			}
 			variant_case(CRef<LocalStackDb>, db_ref) {
-				name_of_type = *db_ref->getTypeName(stack_state, local_name);
+				name_of_type = *db_ref->getTypeName(stack_state_id, local_name);
 			}
 		}
 
@@ -256,17 +261,11 @@ public:
 
 	[[nodiscard]]
 	bool eqStack(StackStateID stack_state_1, StackStateID stack_state_2) const {
-		variant_match(source) {
-			variant_case(Ref<LocalStackDbBuilder>, bld_ref) {
-				return bld_ref->eqTypes(stack_state_1, stack_state_2)
-				    && bld_ref->eqNames(stack_state_1, stack_state_2);
-			}
-			variant_case(CRef<LocalStackDb>, db_ref) {
-				return db_ref->eqTypes(stack_state_1, stack_state_2)
-				    && db_ref->eqNames(stack_state_1, stack_state_2);
-			}
-		}
-		CORE_UNREACHABLE();
+		return VISIT(
+			source,
+			db,
+			db->eqTypes(stack_state_1, stack_state_2) && db->eqNames(stack_state_1, stack_state_2)
+		);
 	}
 };
 
@@ -298,10 +297,10 @@ class FunctionValidator {
             return &signatures.at(instr.function.function_name);
 		}();
 
-		auto& params = signature->parameters;
-		auto& reslts = signature->result_types;
+		auto& params  = signature->parameters;
+		auto& results = signature->result_types;
 
-		if (params.size() + reslts.size() > local_stack.size())
+		if (params.size() + results.size() > local_stack.size())
 			throw InvalidFunctionCallArgumentsError(generic_arg);
 
 		using namespace std::views;
@@ -311,7 +310,7 @@ class FunctionValidator {
 			local_stack.pop(instr);
 		}
 
-		for (auto [idx, reslt]: enumerate(reslts | reverse))
+		for (auto [idx, reslt]: enumerate(results | reverse))
 			if (local_stack.back(usize(idx)).type->getName() != reslt.str)
 				throw InvalidFunctionCallArgumentsError(generic_arg);
 	}
@@ -1623,18 +1622,18 @@ class FunctionValidator {
 					// this is the only exception from the rule "save stack state before instruction"
 					// it is needed to properly lower the name of the variable for the compilation
 					local_stack.push(instr.var, instr.type);
-					stack_before_instr[index] = local_stack.getState();
+					stack_before_instr[index] = local_stack.getStateID();
 					index++;
 				}
 				instr_case(Op_deinit, instr) {
-					stack_before_instr[index] = local_stack.getState();
+					stack_before_instr[index] = local_stack.getStateID();
 					local_stack.pop(instr);
 					index++;
 				}
 				instr_case(Op_label, instr) {
 					match_optional(stack_before_instr[index]) {
 						opt_some(label_state) {
-							if (!local_stack.eqStack(label_state, local_stack.getState()))
+							if (!local_stack.eqStack(label_state, local_stack.getStateID()))
 								throw StackStructureMismatchError(
 									instr, jumps_to_label.at(instr.label.label_name)
 								);
@@ -1642,59 +1641,59 @@ class FunctionValidator {
 							dfs_stack.pop_back();
 						}
 						opt_none {
-							stack_before_instr[index] = local_stack.getState();
+							stack_before_instr[index] = local_stack.getStateID();
 							index++;
 						}
 					}
 				}
 				instr_case(Op_jmp_label, instr) {
-					stack_before_instr[index] = local_stack.getState();
+					stack_before_instr[index] = local_stack.getStateID();
 					index                     = getLabelTarget(instr.label);
 				}
 				instr_case(Op_jmpIf_label, instr) {
-					stack_before_instr[index] = local_stack.getState();
+					stack_before_instr[index] = local_stack.getStateID();
 					index++;
 					dfs_stack.emplace_back(getLabelTarget(instr.label), local_stack);
 				}
 				instr_case(Op_jmpIfNot_label, instr) {
-					stack_before_instr[index] = local_stack.getState();
+					stack_before_instr[index] = local_stack.getStateID();
 					index++;
 					dfs_stack.emplace_back(getLabelTarget(instr.label), local_stack);
 				}
 				instr_case(Op_ret, instr) {
-					stack_before_instr[index]    = local_stack.getState();
+					stack_before_instr[index]    = local_stack.getStateID();
 					std::tie(index, local_stack) = dfs_stack.back();
 					dfs_stack.pop_back();
 				}
 				instr_case(Op_call_func, instr) {
-					stack_before_instr[index] = local_stack.getState();
+					stack_before_instr[index] = local_stack.getStateID();
 					validateCallAndPop(local_stack, instr);
 					index++;
 				}
 				instr_case(Op_call_builtinfunc, instr) {
-					stack_before_instr[index] = local_stack.getState();
+					stack_before_instr[index] = local_stack.getStateID();
 					validateCallAndPop(local_stack, instr);
 					index++;
 				}
 				instr_case(Op_call_cfunc, instr) {
-					stack_before_instr[index] = local_stack.getState();
+					stack_before_instr[index] = local_stack.getStateID();
 					validateCallAndPop(local_stack, instr);
 					index++;
 				}
 				instr_case(Op_virtual_call_pptr_method, instr) {
-					stack_before_instr[index] = local_stack.getState();
+					stack_before_instr[index] = local_stack.getStateID();
 					validateMethodCallAndPop(local_stack, instr);
 					index++;
 				}
 				instr_case(Op_ret_tailcall_func, instr) {
-					stack_before_instr[index] = local_stack.getState();
+					stack_before_instr[index] = local_stack.getStateID();
 					validateTailcall(local_stack, instr, function.signature);
 					std::tie(index, local_stack) = dfs_stack.back();
 					dfs_stack.pop_back();
 				}
 #define HANDLE_CAST(SIZE)                                          \
 	instr_case(Op_cast_p##SIZE##_type, instr) {                    \
-		stack_before_instr[index] = local_stack.getState();        \
+		stack_before_instr[index] = local_stack.getStateID();      \
 		local_stack.castPrimitive(instr.value, instr.target_type); \
 		index++;                                                   \
 	}
@@ -1702,7 +1701,7 @@ class FunctionValidator {
 				FOR_EACH(HANDLE_CAST, 8, 16, 32, 64)
 #undef HANDLE_CAST
 				instr_default {
-					stack_before_instr[index] = local_stack.getState();
+					stack_before_instr[index] = local_stack.getStateID();
 					index++;
 				}
 			}
@@ -1742,7 +1741,7 @@ public:
 	std::tuple<std::vector<Instruction>, LocalStackDb> validateAndExtractReachableCode() {
 		validateSignature();
 		preprocessLabels();
-		auto db = traverseControlFlowGraph();
+		LocalStackDb db = traverseControlFlowGraph();
 		validateFunctionEnd();
 
 		std::vector<Instruction> out;

@@ -126,7 +126,7 @@ bool ls_db_bld::eqNames(StackStateID state_1, StackStateID state_2) const {
 base::Optional<base::StrID> ls_db_bld::getName(StackStateID state, usize idx) const {
 	auto [node_id, typestack_id] = validateState(state);
 
-	if (idx > tree[node_id].size) return std::nullopt;
+	if (idx >= tree[node_id].size) return std::nullopt;
 
 	auto varname_stack_id = tree[node_id].name_stack_id;
 

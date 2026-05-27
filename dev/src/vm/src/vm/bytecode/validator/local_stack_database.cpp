@@ -50,6 +50,8 @@ base::Optional<ls_db::NameStackEntry> ls_db::getNameEntryByIdx(StackStateID stat
 
 	auto it = occurences.lower_bound(entry.lifetime);
 
+	if (it == occurences.end()) return std::nullopt;
+
 	if (auto [init, deinit] = it->first;
 	    init > entry.lifetime.deinit_idx || deinit < entry.lifetime.init_idx) {
 		return std::nullopt;
@@ -59,7 +61,7 @@ base::Optional<ls_db::NameStackEntry> ls_db::getNameEntryByIdx(StackStateID stat
 	return namestack_entries.at(val_stack_id);
 }
 
-base::Optional<ls_db::valid_type::TypeSize> ls_db::getByteOffset(
+base::Optional<vm::code::valid_type::TypeSize> ls_db::getByteOffset(
 	StackStateID state, base::StrID name
 ) const {
 	match_optional(getNameEntryByName(state, name)) {
@@ -91,6 +93,9 @@ base::Optional<base::StrID> ls_db::getTypeName(StackStateID state, base::StrID n
 
 base::Optional<base::StrID> ls_db::getTypeName(StackStateID state, usize idx) const {
 	auto typestack_id = validateState(state).second;
+
+	if (idx >= typestack.size(typestack_id)) return std::nullopt;
+
 	return typestack.at(typestack_id, idx);
 }
 
@@ -107,7 +112,7 @@ base::Optional<base::StrID> ls_db::getName(StackStateID state, usize idx) const 
 	CORE_UNREACHABLE();
 }
 
-ls_db::valid_type::TypeSize ls_db::byteSize(StackStateID state) const {
+vm::code::valid_type::TypeSize ls_db::byteSize(StackStateID state) const {
 	auto name_state_id = validateState(state).first;
 	return namestack_entries.at(name_state_id).size_in_bytes;
 }

@@ -18,7 +18,7 @@
 
 namespace vm::code {
 
-	STRONG_TYPEDEF_INT(StackStateID, u64);
+	STRONG_TYPEDEF_ID_DIRECT_CREATION(StackStateID, u64);
 
 	class LocalStackDbBuilder;
 

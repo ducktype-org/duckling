@@ -79,6 +79,8 @@ namespace vm::loader::compiler::safe::detail {
 #endif
 
 	public:
+		code::StackStateID curr_state = code::LocalStackDb::EMPTY;
+
 		SafeMicroBytecodeBuilder(
 			safe::SafeCompiler&                                       compiler,
 			const vm::loader::compiler::detail::FunctionStackContext& ctx
@@ -123,7 +125,7 @@ namespace vm::loader::compiler::safe::detail {
 				return u64(arg);
 			} else {
 				return compiler.template lowerArgument<std::remove_cvref_t<HighArg>, LowArg>(
-					ctx, label_name_to_id, arg
+					ctx, label_name_to_id, arg, curr_state
 				);
 			}
 		}

@@ -92,7 +92,7 @@ namespace vm::loader::compiler::safe {
 		 */
 
 		std::pair<low::MicroBytecode, std::vector<vm::low::LowFuncData::InstructionRange>> lowerInstructions(
-			vm::loader::compiler::detail::FunctionStackContext& ctx
+			const vm::loader::compiler::detail::FunctionStackContext& ctx
 		);
 
 		/**

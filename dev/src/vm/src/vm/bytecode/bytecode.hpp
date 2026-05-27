@@ -6,8 +6,8 @@
 #include <token_parser_core/common_elements.hpp>
 
 #include <vm/bytecode/element_base.hpp>
-#include <vm/bytecode/local_stack_database.hpp>
 #include <vm/bytecode/type_of_data.hpp>
+#include <vm/bytecode/validator/local_stack_database.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
 
 namespace vm::code {
@@ -58,7 +58,7 @@ namespace vm::code {
 	 * @brief Represents bytecode a function.
 	 * @note A function on its own (without local_stack field) does not contain enough
 	 * information to tell if it is correct/valid or not. Only when local_stack field is present you
-	 * can assume that function passed the validation and assined each instruction a corresponding
+	 * can assume that function passed the validation and assigned each instruction a corresponding
 	 * state of the stack.
 	 */
 	struct Function final: ElementBase {

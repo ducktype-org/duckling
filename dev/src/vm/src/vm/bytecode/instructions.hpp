@@ -29,8 +29,8 @@
 #include <base/pointers/box.hpp>
 #include <base/preproc/for_each.hpp>
 
-#include <vm/bytecode/local_stack_database.hpp>
 #include <vm/bytecode/opcode_args.hpp>
+#include <vm/bytecode/validator/local_stack_database.hpp>
 
 // Useful for turning a name to a properly qualified type name in X-macros.
 #define VM_INSTR_FROM_NAME(name)  vm::code::instructions::Op_##name

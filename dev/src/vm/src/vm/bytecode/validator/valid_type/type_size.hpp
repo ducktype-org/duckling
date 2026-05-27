@@ -42,7 +42,7 @@ namespace vm::code::valid_type {
 				     size_when_ptr_is_16_bytes + other.size_when_ptr_is_16_bytes };
 		}
 
-		TypeSize operator+=(const TypeSize& other) {
+		constexpr TypeSize operator+=(const TypeSize& other) {
 			size_when_ptr_is_8_bytes += other.size_when_ptr_is_8_bytes;
 			size_when_ptr_is_16_bytes += other.size_when_ptr_is_16_bytes;
 			return *this;

@@ -33,7 +33,7 @@ namespace vm::loader::compiler {
 		CORE_ASSERT(ctx.function.local_stack, "A given function should have passed the validation");
 		auto& db = *ctx.function.local_stack;
 
-		for (auto instr: ctx.function.body) {
+		for (const auto& instr: ctx.function.body) {
 			auto state = instr.visit([&](auto&& i) { return i.stack_state; });
 
 			max_block_count = std::max(max_block_count, db.size(state));
