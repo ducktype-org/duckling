@@ -12,7 +12,7 @@ fun test_char_comparisons() = {
     let neq: bool = a != b;
 
     if (not lt or not le or gt or ge or eq or not neq) {
-        builtin_output_string("bad 1");
+        print("bad 1");
     }
 }
 
@@ -22,7 +22,7 @@ fun test_char_difference() = {
 
     let diff: u8 = d - a;  # 3
     if (diff != 3) {
-        builtin_output_string("bad 2");
+        print("bad 2");
     }
 }
 
@@ -34,28 +34,28 @@ fun test_char_int_addition() = {
     let d2: char = 3u8 + a;        # 'd'
 
     if (d1 != 'd' or d2 != 'd') {
-        builtin_output_string("bad 3");
+        print("bad 3");
     }
 }
 
 # Something more fun.
 
 fun process_character() -> () = {
-    builtin_output_string("Enter a character: ");
+    print("Enter a character: ");
     var c = builtin_input_char();
 
     if ('a' <= c <= 'z') {
-        builtin_output_string("The provided character is lowercase.\n");
-        builtin_output_string("Its uppercase counterpart is: ");
+        print("The provided character is lowercase.\n");
+        print("Its uppercase counterpart is: ");
         builtin_output_char(c - 'a' + 'A');
-        builtin_output_string("\n");
+        print("\n");
     } else if ('A' <= c <= 'Z') {
-        builtin_output_string("The provided character is uppercase.\n");
-        builtin_output_string("Its lowercase counterpart is: ");
+        print("The provided character is uppercase.\n");
+        print("Its lowercase counterpart is: ");
         builtin_output_char(c - 'A' + 'a');
-        builtin_output_string("\n");
+        print("\n");
     } else {
-        builtin_output_string("The provided character is not a letter.\n");
+        print("The provided character is not a letter.\n");
     }
 }
 

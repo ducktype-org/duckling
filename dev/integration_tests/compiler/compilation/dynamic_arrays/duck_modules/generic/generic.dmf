@@ -4,7 +4,7 @@ class Point {
 }
 
 fun printSeparator() -> () = {
-    builtin_output_string("888888888888888\n");
+    print("888888888888888\n");
 }
 
 fun printPoint(p: ref Point) -> () = {

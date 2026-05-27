@@ -1,21 +1,21 @@
 fun helloWorld() = {
     let myString = builtin_input_string();
-    builtin_output_string(myString);
-    builtin_output_string("\nHello, world!\n");
+    print(myString);
+    print("\nHello, world!\n");
 }
 
 fun prependAppend() = {
     let b = "b";
-    builtin_output_string('a' +: b);
-    builtin_output_string("\n");
-    builtin_output_string(b :+ 'c' :+ 'd');
-    builtin_output_string("\n");
+    print('a' +: b);
+    print("\n");
+    print(b :+ 'c' :+ 'd');
+    print("\n");
 }
 
 fun concat() = {
     let hello = "Hello, ";
     let world = "world!\n";
-    builtin_output_string(hello ++ world);
+    print(hello ++ world);
 }
 
 fun main() -> i64 = {

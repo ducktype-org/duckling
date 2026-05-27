@@ -537,7 +537,7 @@ private:
 		checkForErrorOnCompileModule(
 			R"(
 				fun main() -> i64 = {
-					builtin_output_string("This is an unknown escape sequence: \c");
+					print("This is an unknown escape sequence: \c");
 					return 0;
 				}
 			)",

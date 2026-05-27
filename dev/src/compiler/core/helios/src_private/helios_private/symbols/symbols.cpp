@@ -655,7 +655,7 @@ namespace compiler::helios {
 								ctx.query<tsh::QueryFunctionType>({ {}, str_type })
 							),
 						    std::make_pair(
-								base::StrID("builtin_output_string"),
+								base::StrID("print"),
 								ctx.query<tsh::QueryFunctionType>({ { str_type }, i32_type })
 							) };
 
