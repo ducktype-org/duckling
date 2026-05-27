@@ -1741,7 +1741,7 @@ public:
 	}
 };
 
-vm::code::Function vm::code::detail::validateAndExtractReachableCode(
+vm::code::valid_function::ValidFunction vm::code::detail::validateAndExtractReachableCode(
 	const valid_type::ValidTypeMap&                  types,
 	const ObjIdNameMap<GlobalData>&                  globals_map,
 	const base::HashMap<base::StrID, FuncSignature>& signatures,
@@ -1753,7 +1753,7 @@ vm::code::Function vm::code::detail::validateAndExtractReachableCode(
 
 	FunctionValidator validator(types, globals_map, signatures, ext_c_signatures, function);
 
-	Function new_function;
+	valid_function::ValidFunction new_function;
 	new_function.name = function.name;
 	std::tie(new_function.body, new_function.local_stack)
 		= validator.validateAndExtractReachableCode();

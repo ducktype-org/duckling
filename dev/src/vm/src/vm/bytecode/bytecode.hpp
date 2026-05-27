@@ -7,7 +7,6 @@
 
 #include <vm/bytecode/element_base.hpp>
 #include <vm/bytecode/type_of_data.hpp>
-#include <vm/bytecode/validator/local_stack_database.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
 
 namespace vm::code {
@@ -62,10 +61,9 @@ namespace vm::code {
 	 * state of the stack.
 	 */
 	struct Function final: ElementBase {
-		Identifier                   name;
-		CodeBlock                    body;
-		FuncSignature                signature;
-		base::Optional<LocalStackDb> local_stack = std::nullopt;
+		Identifier    name;
+		CodeBlock     body;
+		FuncSignature signature;
 	};
 
 	/**

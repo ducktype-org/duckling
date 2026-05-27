@@ -13,10 +13,10 @@ namespace vm::loader::compiler {
 		 * @brief A structure holding the intermediate state for the compilation of a single function.
 		 */
 		struct FunctionStackContext {
-			FunctionStackContext(const code::Function& func): function(func) {}
+			FunctionStackContext(const code::valid_function::ValidFunction& func): function(func) {}
 
 			/// The high level function definition.
-			const code::Function& function;
+			const code::valid_function::ValidFunction& function;
 
 			/// Total required size for the local stack frame, in bytes.
 			code::valid_type::TypeSize local_stack_size{};
