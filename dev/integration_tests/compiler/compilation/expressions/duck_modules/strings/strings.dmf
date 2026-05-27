@@ -1,3 +1,5 @@
+import core.builtins.*;
+
 fun helloWorld() = {
     let myString = builtin_input_string();
     print(myString);

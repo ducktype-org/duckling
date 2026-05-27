@@ -1,3 +1,5 @@
+import core.builtins.*;
+
 var g_a: i32 = 10;
 var g_b: i32 = 20;
 var g_c: i64 = 300;

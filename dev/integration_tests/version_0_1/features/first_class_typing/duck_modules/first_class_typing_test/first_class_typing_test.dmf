@@ -1,3 +1,5 @@
+import core.builtins.*;
+
 # Test types as first-class citizens
 # Focus: type aliases and functions taking and returning types
 

@@ -1,3 +1,5 @@
+import core.builtins.*;
+
 # Operator overloading test (primitive types)
 # This test checks if operator overloads work for primitive types
 
