@@ -250,15 +250,15 @@ namespace compiler::helios::code {
 
 						// - - Correct for passing by copy or reference depending on type
 						if (not sub_expr_hout->expression_type.getType().isSimple()) {
-							sub_expr_hout = makeBox<code::RefOfExpr>(
-								ctx, code::generatedOrigin(), std::move(sub_expr_hout)
+							sub_expr_hout = makeBox<RefOfExpr>(
+								ctx, generatedOrigin(), std::move(sub_expr_hout)
 							);
 						}
 						if (sub_expr_hout->expression_type.getType().isSimple()
 						    and sub_expr_hout->expression_type.getSymbolType().getRefKind()
 						            != tsh::ReferenceKind::Direct) {
-							sub_expr_hout = makeBox<code::DerefExpr>(
-								ctx, code::generatedOrigin(), std::move(sub_expr_hout)
+							sub_expr_hout = makeBox<DerefExpr>(
+								ctx, generatedOrigin(), std::move(sub_expr_hout)
 							);
 						}
 
