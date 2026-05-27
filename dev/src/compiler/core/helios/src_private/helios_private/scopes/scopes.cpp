@@ -651,6 +651,11 @@ namespace compiler::helios {
 						auto wild_result_qresult
 							= HInterface::ofSymbol(sym).lookup(ctx, key.name, { true });
 						UNPACK_QRESULT_CREF(CRef<LookupResult> wild_result = &, wild_result_qresult);
+						// The correct code that works for using is commented out,
+						// to make the import a.*; work correctly.
+						// @TODO: #1412 fix this properly
+						// if (!wild_result->isEmpty())
+						// 	result.children.push_back(wild_result->toNode(sym));
 						if (!wild_result->isEmpty()) result.merge(*wild_result);
 					}
 				} else if (isAlias(sym) && name(sym) == key.name) {

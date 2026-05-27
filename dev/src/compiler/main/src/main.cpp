@@ -117,24 +117,24 @@ auto getClahStdLibOptions() {
 }
 
 /**
- * Helper function to extract linking options from clah parsing result.
+ * Helper function to extract standard library options from clah parsing result.
  */
 compiler::driver::options_types::StdLibOptions getStdLibOptionsFromClah(
 	const clah::ParsingResult& parsing_result
 ) {
 	using compiler::driver::options_types::StdLibOptions;
-	compiler::driver::options_types::StdLibOptions linking_options;
+	compiler::driver::options_types::StdLibOptions std_lib_options;
 
 
 	if (parsing_result.isFlag("no-std"))
-		linking_options.std_lib_type = StdLibOptions::NoStd{};
+		std_lib_options.std_lib_type = StdLibOptions::NoStd{};
 
 	else if (auto custom_std_path = parsing_result.getValue<fs::FilePath>("custom-std-path"))
-		linking_options.std_lib_type = StdLibOptions::CustomStd{ .std_path = *custom_std_path };
+		std_lib_options.std_lib_type = StdLibOptions::CustomStd{ .std_path = *custom_std_path };
 	else
-		linking_options.std_lib_type = StdLibOptions::DefaultStd{};
+		std_lib_options.std_lib_type = StdLibOptions::DefaultStd{};
 
-	return linking_options;
+	return std_lib_options;
 }
 
 clah::VerificationResult verifyStdLibOptions(const clah::ParsingResult& parsing_result) {

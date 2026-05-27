@@ -185,10 +185,10 @@ namespace compiler::driver {
 	std::vector<artifacts::FileArtifact> getStdLibArtifacts() {
 		std::vector<artifacts::FileArtifact> artifacts;
 		for (const auto& config: STD_PACKAGES_CONFIG) {
-			auto artifact_opt = global_state::getRootCollection()->fileArtifactAtMaybe(
+			auto artifact = global_state::getRootCollection()->fileArtifactAtOrNew(
 				base::StrID(base::strConcat(config.name, ".a"))
 			);
-			if (artifact_opt.has_value()) artifacts.push_back(*artifact_opt.value());
+			artifacts.push_back(std::move(artifact));
 		}
 		return artifacts;
 	}

@@ -141,7 +141,6 @@ namespace compiler::helios {
 	bool shouldLinkOnce(SymID id) {
 		variant_match(getSymRef(id)->other) {
 			variant_case_novalue(PstSymbolData) { return false; }
-			variant_case_novalue(builtin::BuiltinFunctionData) { return false; }
 			variant_case(defgen::GeneratedSymbolData, gen_data) {
 				variant_match(gen_data.data) {
 					variant_case_novalue(defgen::GeneratedSymbolData::BuiltinOperator) {
@@ -334,7 +333,10 @@ namespace compiler::helios {
 			);
 		}
 		case pst::StmtKind::Import: {
-			// @TODO: #2791 finish this
+			// @TODO: #2791 finish this, note that this may require bigger refactor to unify the
+			// logic with other similar constructs (e.g. usings), and because imports may introduce
+			// multiple names now. We could extend wildcard machinery to keep the general assumption
+			// of one-stmt=one-symbol while handling the above.
 			auto import       = stmt.dynamicCast<pst::Import>().value();
 			auto import_chain = import->getImportChain().unlock(ctx);
 			if (auto import_as = import_chain.dynamicCast<pst::ImportIdentifierAs>()) {

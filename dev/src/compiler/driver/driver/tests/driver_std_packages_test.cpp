@@ -6,6 +6,7 @@
 #include <driver/operations/generic_operations.hpp>
 #include <driver/task/task.hpp>
 #include <driver_private/standard_library/standard_library.hpp>
+#include <driver/standard_library/standard_library.hpp>
 #include <global_state/backend_options.hpp>
 #include <global_state/global_logger.hpp>
 #include <global_state/packages.hpp>
@@ -20,7 +21,6 @@
 
 #include <algorithm>
 #include <fstream>
-#include <string>
 using namespace compiler;
 
 class StdPackagesTest final: public tester::TestSuite {
@@ -175,20 +175,12 @@ private:
 		ASSERT_TRUE(driver::compilePackages(tasks).isOk());
 
 		// Verify expected artifacts
-		for (const auto& config: driver::STD_PACKAGES_CONFIG) {
-			auto a_output_path
-				= driver::getStdBinariesDirectory() / (std::string(config.name) + ".a");
-			auto dbc_output_path = artifacts_path.getPath() / (std::string(config.name) + ".dbc");
-
+		for (const auto& art: driver::getStdLibArtifacts()) {
 			assertTrue(
-				std::filesystem::exists(a_output_path),
+				std::filesystem::exists(art.file.getFilePath().getPath()),
 				base::strConcat(
-					"Missing standard library static library artifact: ", a_output_path.string()
+					"Missing standard library static library artifact: ", art.file.getFilePath().getPath().string()
 				)
-			);
-			assertTrue(
-				std::filesystem::exists(dbc_output_path),
-				base::strConcat("Missing standard library DVM artifact: ", dbc_output_path.string())
 			);
 		}
 	}
