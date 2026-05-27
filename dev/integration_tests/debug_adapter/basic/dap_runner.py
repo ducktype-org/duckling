@@ -3,8 +3,8 @@ from helpers import *
 # --- MAIN ---
 vm_process = start_vm(*sys.argv)
 
-vm_process.stdin.write(format_dap('{"seq":1,"type":"request","command":"initialize","arguments":{}}'))
-vm_process.stdin.write(format_dap('{"seq":2,"type":"request","command":"launch","arguments":{"program":"simple.dbc"}}'))
+vm_process.stdin.buffer.write(format_dap('{"seq":1,"type":"request","command":"initialize","arguments":{}}'))
+vm_process.stdin.buffer.write(format_dap('{"seq":2,"type":"request","command":"launch","arguments":{"program":"simple.dbc"}}'))
 vm_process.stdin.flush()
 
 full_output = ""

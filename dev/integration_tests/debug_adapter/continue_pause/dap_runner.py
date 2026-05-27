@@ -4,8 +4,8 @@ from helpers import *
 # --- MAIN ---
 vm_process = start_vm(*sys.argv)
 
-vm_process.stdin.write(format_dap('{"seq":1,"type":"request","command":"initialize","arguments":{}}'))
-vm_process.stdin.write(format_dap('{"seq":2,"type":"request","command":"launch","arguments":{"program":"while_true.dbc"}}'))
+vm_process.stdin.buffer.write(format_dap('{"seq":1,"type":"request","command":"initialize","arguments":{}}'))
+vm_process.stdin.buffer.write(format_dap('{"seq":2,"type":"request","command":"launch","arguments":{"program":"while_true.dbc"}}'))
 vm_process.stdin.flush()
 
 
@@ -20,7 +20,7 @@ while True:
     if "Running" in msg:
         break
 
-vm_process.stdin.write(format_dap('{"seq":3,"type":"request","command":"pause","arguments":{"threadId":1}}'))
+vm_process.stdin.buffer.write(format_dap('{"seq":3,"type":"request","command":"pause","arguments":{"threadId":1}}'))
 vm_process.stdin.flush()
 
 expected_pause_facts = {
@@ -33,8 +33,10 @@ recorded_facts = set()
 while True:
     raw_msg = read_dap_message(vm_process.stdout)
     if raw_msg is None:
-        print("Fail")
-        break
+        sys.stderr.write("FAIL: EOF while waiting for stopped output\n")
+        sys.stderr.flush()
+        vm_process.terminate()
+        raise SystemExit(1)
 
     try:
         msg = json.loads(raw_msg)
@@ -59,18 +61,23 @@ while True:
         sys.stderr.flush()
         break
 
-vm_process.stdin.write(format_dap('{"seq":4,"type":"request","command":"pause","arguments":{}}'))
+vm_process.stdin.buffer.write(format_dap('{"seq":4,"type":"request","command":"pause","arguments":{}}'))
+vm_process.stdin.flush()
 
 while True:
     raw_msg = read_dap_message(vm_process.stdout)
 
     if raw_msg is None:
-        print("Fail")
-        break
+        sys.stderr.write("FAIL: EOF while waiting for Failed output - pause while paused\n")
+        sys.stderr.flush()
+        vm_process.terminate()
+        raise SystemExit(1)
+
     if "Failed" in raw_msg:
         break
 
-vm_process.stdin.write(format_dap('{"seq":5,"type":"request","command":"continue","arguments":{}}'))
+vm_process.stdin.buffer.write(format_dap('{"seq":5,"type":"request","command":"continue","arguments":{}}'))
+vm_process.stdin.flush()
 
 expected_continue_facts = {
     "continue_response_success",
@@ -82,8 +89,11 @@ recorded_facts.clear()
 while True:
     raw_msg = read_dap_message(vm_process.stdout)
     if raw_msg is None:
-        print("Fail")
-        break
+        sys.stderr.write("FAIL: EOF while waiting for Running output\n")
+        sys.stderr.flush()
+        vm_process.terminate()
+        raise SystemExit(1)
+
     try:
         msg = json.loads(raw_msg)
     except json.JSONDecodeError:
@@ -103,13 +113,16 @@ while True:
         sys.stderr.flush()
         break
 
-vm_process.stdin.write(format_dap('{"seq":6,"type":"request","command":"continue","arguments":{}}'))
+vm_process.stdin.buffer.write(format_dap('{"seq":6,"type":"request","command":"continue","arguments":{}}'))
+vm_process.stdin.flush()
 
 while True:
     raw_msg = read_dap_message(vm_process.stdout)
     if raw_msg is None:
-        print("Fail")
-        break
+        sys.stderr.write("FAIL: EOF while waiting for Failed output - continue while running\n")
+        sys.stderr.flush()
+        vm_process.terminate()
+        raise SystemExit(1)
 
     if "Failed" in raw_msg:
         break

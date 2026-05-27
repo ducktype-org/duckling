@@ -1,6 +1,7 @@
 #include "debug_adapter.hpp"
 
 #include <vm/api/data/api_error.hpp>
+#include <vm/api/data/status.hpp>
 
 #include <iostream>
 
@@ -20,6 +21,13 @@ namespace vm::debugger::debug_adapter {
 			  message += "\n";
 
 			  this->sendEvent("output", { { "category", "console" }, { "output", message } });
+
+			  if (std::holds_alternative<api::Paused>(status)) {
+				  this->sendEvent(
+					  "stopped",
+					  { { "reason", "pause" }, { "threadId", 1 }, { "allThreadsStopped", true } }
+				  );
+			  }
 		  }),
 
 		  completion_listener([this](const vm::api::ExitValue& exit_val) {
@@ -27,7 +35,7 @@ namespace vm::debugger::debug_adapter {
 			  bool        is_first   = true;
 
 			  for (auto val: exit_val) {
-				  std::string rendered_value   = "";
+				  std::string rendered_value     = "";
 				  bool        has_rendered_value = false;
 
 				  if_opt_some(val->readData(), data) {
@@ -220,10 +228,6 @@ namespace vm::debugger::debug_adapter {
 		}
 
 		sendResponse(req, true);
-
-		sendEvent(
-			"stopped", { { "reason", "pause" }, { "threadId", 1 }, { "allThreadsStopped", true } }
-		);
 	}
 
 	void DebugAdapter::handleContinue(const nlohmann::json& req) {
@@ -234,7 +238,6 @@ namespace vm::debugger::debug_adapter {
 			return;
 		}
 
-		sendResponse(req, true, { { "allThreadsContinued", true } });
-		sendEvent("continued", { { "threadId", 1 }, { "allThreadsContinued", true } });
+		sendResponse(req, true);
 	}
 }

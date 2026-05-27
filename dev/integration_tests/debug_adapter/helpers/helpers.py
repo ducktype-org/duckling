@@ -5,7 +5,12 @@ import subprocess
 # --- Helpers ---
 
 def format_dap(json_str):
-    return f"Content-Length: {len(json_str)}\r\n\r\n{json_str}"
+    payload_bytes = json_str.encode('utf-8')
+    
+    header_str = f"Content-Length: {len(payload_bytes)}\r\n\r\n"
+    header_bytes = header_str.encode('ascii')
+
+    return header_bytes + payload_bytes
 
 # returns only body of the message got from stdout
 def read_dap_message(stdout):
