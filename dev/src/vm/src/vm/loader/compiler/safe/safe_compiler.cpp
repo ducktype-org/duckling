@@ -52,7 +52,7 @@ namespace vm::loader::compiler::safe {
 
 		DEFINE_LOWER_ARGUMENT_IMPL_FOR_FAMILY(
 			low::opargs::PlaceDataArgumentType,
-			if (auto&& maybe_offset = stack_ctx.function.local_stack->getByteOffset(stack_state_id, opcode_arg.var_name); maybe_offset.has_value()) {
+			if (auto&& maybe_offset = stack_ctx.function.local_stack.getByteOffset(stack_state_id, opcode_arg.var_name); maybe_offset.has_value()) {
 				return getIntTypeSize(*maybe_offset);
 			}
 			return compiler.low_program.getGlobals().at(opcode_arg.var_name)->global_buffer_offset | (1ULL << 63);
@@ -60,7 +60,7 @@ namespace vm::loader::compiler::safe {
 
 		DEFINE_LOWER_ARGUMENT_IMPL_FOR_FAMILY(
 			low::opargs::PlaceBlockArgumentType,
-			if(auto maybe_val = stack_ctx.function.local_stack->getIdx(stack_state_id, opcode_arg.var_name)) {
+			if(auto maybe_val = stack_ctx.function.local_stack.getIdx(stack_state_id, opcode_arg.var_name)) {
 				return *maybe_val;
 			}
 			return compiler.low_program.getGlobals().at(opcode_arg.var_name)->global_block_idx | (1ULL << 63);
@@ -172,7 +172,7 @@ namespace vm::loader::compiler::safe {
 		return { std::move(micro_bytecode), std::move(instruction_mapping) };
 	}
 
-	void SafeCompiler::compileNewFunctions(const std::vector<code::Function>& new_functions) {
+	void SafeCompiler::compileNewFunctions(const std::vector<code::valid_function::ValidFunction>& new_functions) {
 		for (const auto& function: new_functions) {
 			vm::loader::compiler::detail::FunctionStackContext ctx
 				= calculateStackContext(function);

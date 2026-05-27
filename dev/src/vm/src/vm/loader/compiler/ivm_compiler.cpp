@@ -31,7 +31,7 @@ namespace vm::loader::compiler {
 		usize                      max_block_count = 0;
 
 		CORE_ASSERT(ctx.function.local_stack, "A given function should have passed the validation");
-		auto& db = *ctx.function.local_stack;
+		auto& db = ctx.function.local_stack;
 
 		for (const auto& instr: ctx.function.body) {
 			auto state = instr.visit([&](auto&& i) { return i.stack_state; });
@@ -72,7 +72,7 @@ namespace vm::loader::compiler {
 		compileNewGlobals(new_globals);
 
 		auto new_functions = high_program.functions() | std::views::drop(sizes.function_count)
-		                   | std::ranges::to<std::vector<code::Function>>();
+		                   | std::ranges::to<std::vector<code::valid_function::ValidFunction>>();
 		compileNewFunctions(new_functions);
 	}
 }

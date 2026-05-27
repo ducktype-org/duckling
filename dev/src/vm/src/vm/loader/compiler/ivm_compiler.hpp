@@ -93,7 +93,7 @@ namespace vm::loader::compiler {
 		 * @param new_functions A vector containing the new `Function` objects for newly added
 		 * functions.
 		 */
-		virtual void compileNewFunctions(const std::vector<code::Function>& new_functions) = 0;
+		virtual void compileNewFunctions(const std::vector<code::valid_function::ValidFunction>& new_functions) = 0;
 
 		/**
 		 * @brief Compiles newly added ExternCFunctions and adds the compiled functions to the
