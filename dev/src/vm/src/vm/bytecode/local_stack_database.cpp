@@ -59,7 +59,9 @@ base::Optional<ls_db::NameStackEntry> ls_db::getNameEntryByIdx(StackStateID stat
 	return namestack_entries.at(val_stack_id);
 }
 
-base::Optional<ls_db::tp_size> ls_db::getByteOffset(StackStateID state, base::StrID name) const {
+base::Optional<ls_db::valid_type::TypeSize> ls_db::getByteOffset(
+	StackStateID state, base::StrID name
+) const {
 	match_optional(getNameEntryByName(state, name)) {
 		opt_some(entry) { return entry.size_in_bytes - entry.size_of_last; }
 		opt_none { return std::nullopt; }
@@ -105,7 +107,7 @@ base::Optional<base::StrID> ls_db::getName(StackStateID state, usize idx) const 
 	CORE_UNREACHABLE();
 }
 
-ls_db::tp_size ls_db::byteSize(StackStateID state) const {
+ls_db::valid_type::TypeSize ls_db::byteSize(StackStateID state) const {
 	auto name_state_id = validateState(state).first;
 	return namestack_entries.at(name_state_id).size_in_bytes;
 }

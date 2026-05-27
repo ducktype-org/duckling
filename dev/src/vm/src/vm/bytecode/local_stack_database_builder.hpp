@@ -22,7 +22,6 @@ namespace vm::code {
 	 * @note It allows for the same operations as local stack databes, though a bit slower
 	 */
 	class LocalStackDbBuilder {
-		using tp_size        = LocalStackDb::tp_size;
 		using Lifetime       = LocalStackDb::Lifetime;
 		using NameMap        = LocalStackDb::NameMap;
 		using NameStackEntry = LocalStackDb::NameStackEntry;
@@ -30,8 +29,8 @@ namespace vm::code {
 		using TypeStackID    = LocalStackDb::TypeStackID;
 
 		struct Child {
-			base::StrID name;
-			tp_size     byte_offset;
+			base::StrID          name;
+			valid_type::TypeSize byte_offset;
 
 			bool operator==(const Child&) const = default;
 		};
@@ -47,7 +46,7 @@ namespace vm::code {
 			usize                                        name_stack_id = 0;
 			usize                                        size          = 0;
 			NameStackID                                  prev_node     = 0;
-			tp_size byte_depth = tp_size{ Bytes{ 0 }, Bytes{ 0 } };
+			valid_type::TypeSize byte_depth = valid_type::TypeSize{ Bytes{ 0 }, Bytes{ 0 } };
 
 			NameStackID emplaceChild(const Child& child, NameStackID new_id);
 		};

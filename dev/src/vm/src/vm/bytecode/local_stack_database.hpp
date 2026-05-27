@@ -28,7 +28,6 @@ namespace vm::code {
 	 */
 	class LocalStackDb {
 		friend LocalStackDbBuilder;
-		using tp_size = valid_type::TypeSize;
 
 		using NameStackID = u64;
 		using TypeStackID = u64;
@@ -40,12 +39,12 @@ namespace vm::code {
 		};
 
 		struct NameStackEntry {
-			Lifetime    lifetime{};
-			NameStackID prev = 0;
-			tp_size     size_in_bytes{};
-			usize       size_in_blocks{};
-			tp_size     size_of_last{};
-			base::StrID name_of_last = base::StrID{ "" };
+			Lifetime             lifetime{};
+			NameStackID          prev = 0;
+			valid_type::TypeSize size_in_bytes{};
+			usize                size_in_blocks{};
+			valid_type::TypeSize size_of_last{};
+			base::StrID          name_of_last = base::StrID{ "" };
 		};
 
 		base::Optional<NameStackEntry> getNameEntryByName(StackStateID state, base::StrID name) const;
@@ -64,7 +63,8 @@ namespace vm::code {
 		static constexpr NameStackID  EMPTY_NAME_STACK = 0;
 		static constexpr TypeStackID EMPTY_TYPE_STACK = persistent::DummyVector<base::StrID>::EMPTY;
 
-		base::Optional<tp_size> getByteOffset(StackStateID state, base::StrID name) const;
+		base::Optional<valid_type::TypeSize> getByteOffset(StackStateID state, base::StrID name)
+			const;
 
 		bool contains(StackStateID state, base::StrID name) const;
 
@@ -78,7 +78,7 @@ namespace vm::code {
 
 		usize size(StackStateID state) const;
 
-		tp_size byteSize(StackStateID state) const;
+		valid_type::TypeSize byteSize(StackStateID state) const;
 
 		[[nodiscard]]
 		bool eqTypes(StackStateID state_1, StackStateID state_2) const;
