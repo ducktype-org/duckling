@@ -8,6 +8,12 @@
 
 namespace vm::persistent {
 
+	/**
+	 * @brief A persistant dataStrcture simulating STL Vector but with the possibility to access
+	 * and modigy any of it's previous instances
+	 * @note can be thought of Hashmap<VectorStateID, Vector<T> >
+	 * @warning THIS IS NAIVE IMPLEMENTATION IN O(N^2), USE FOR TESTING OR SMALL NUMBER OF OPERATIONS
+	 */
 	template<typename T>
 	class DummyVector {
 		std::vector<std::pair<base::Optional<usize>, std::vector<T>>> copies;
@@ -21,6 +27,10 @@ namespace vm::persistent {
 	public:
 		static constexpr usize EMPTY = 0;
 
+		/**
+		 * @brief creates a new state from the pevious one, by popping some number of variables from the end
+		 * @throws when size of vector is smaller than the number of values to pop 
+		 */
 		[[nodiscard]]
 		usize pop(usize state, usize no_of_values_to_pop = 1) {
 			for (; no_of_values_to_pop > 0; no_of_values_to_pop--) {
@@ -42,6 +52,9 @@ namespace vm::persistent {
 			return copies.size() - 1;
 		}
 
+		/**
+		 * @brief creates a new state from the pevious one, by changing value at the index 
+		 */
 		[[nodiscard]]
 		usize change(usize state, usize idx, const T& val) {
 			auto copy    = validateState(state).second;
@@ -51,6 +64,9 @@ namespace vm::persistent {
 			return copies.size() - 1;
 		}
 
+		/**
+		 * @brief creates a new state from the pevious one, by pushing variable at the end 
+		 */
 		[[nodiscard]]
 		usize push(usize state, const T& val) {
 			auto copy = validateState(state).second;
@@ -60,16 +76,27 @@ namespace vm::persistent {
 			return copies.size() - 1;
 		}
 
+		/**
+		 * @brief comapre two states of the vector
+		 * @return true if the instances are equal
+		 * @warning THIS TAKES O(N)
+		 */
 		[[nodiscard]]
 		bool eq(usize state_1, usize state_2) const {
 			return validateState(state_1).second == validateState(state_2).second;
 		}
 
+		/**
+		 * @brief accessor to elements at given state by idx
+		 */
 		[[nodiscard]]
 		const T& at(usize state, usize idx) const {
 			return validateState(state).second.at(idx);
 		}
 
+		/**
+		 * @brief return size of the vector at given state
+		 */
 		[[nodiscard]]
 		usize size(usize state) const {
 			return validateState(state).second.size();
