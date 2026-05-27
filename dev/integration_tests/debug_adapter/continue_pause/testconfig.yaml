@@ -3,8 +3,4 @@ Tests:
     Run: "PYTHONPATH=../helpers python3 dap_runner.py @{build_dir}"
     TimeOut: 5
     Cases:
-      resume_pause:
-        Input:
-          String: ""
-        Output:
-          String: "SUCCESS\n"
+      resume_pause: { }

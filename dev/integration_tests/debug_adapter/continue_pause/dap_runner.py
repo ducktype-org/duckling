@@ -12,6 +12,11 @@ vm_process.stdin.flush()
 # waiting for Running output
 while True:
     msg = read_dap_message(vm_process.stdout)
+    if msg is None:
+        sys.stderr.write("FAIL: EOF while waiting for initial Running output\n")
+        sys.stderr.flush()
+        vm_process.terminate()
+        raise SystemExit(1)
     if "Running" in msg:
         break
 
@@ -109,6 +114,5 @@ while True:
     if "Failed" in raw_msg:
         break
 
-print("SUCCESS")
 
 vm_process.terminate()

@@ -27,15 +27,22 @@ namespace vm::debugger::debug_adapter {
 			  bool        is_first   = true;
 
 			  for (auto val: exit_val) {
-				  if (!is_first) return_str += ", ";
-				  is_first = false;
+				  std::string rendered_value   = "";
+				  bool        has_rendered_value = false;
 
 				  if_opt_some(val->readData(), data) {
 					  variant_match(data) {
 						  variant_case(vm::interpreted_data_variant::Primitive, primitive) {
-							  return_str += std::to_string(primitive.value);
+							  rendered_value     = std::to_string(primitive.value);
+							  has_rendered_value = true;
 						  }
 					  }
+				  }
+
+				  if (has_rendered_value) {
+					  if (!is_first) return_str += ", ";
+					  return_str += rendered_value;
+					  is_first = false;
 				  }
 			  }
 			  return_str += "]";
@@ -227,6 +234,7 @@ namespace vm::debugger::debug_adapter {
 			return;
 		}
 
-		sendResponse(req, true);
+		sendResponse(req, true, { { "allThreadsContinued", true } });
+		sendEvent("continued", { { "threadId", 1 }, { "allThreadsContinued", true } });
 	}
 }
