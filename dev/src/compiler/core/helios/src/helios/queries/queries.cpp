@@ -53,7 +53,7 @@ namespace compiler::helios {
 
 			MCRef<std::vector<ScopeID>> scopes_to_process;
 
-			auto scopes_in_module = ctx.query<QueryScopesInModule>(key);
+			auto scopes_in_module = ctx.query<QueryScopesInModule>(key.module_id);
 			variant_match(scopes_in_module->value) {
 				variant_case(QueryScopesInModuleValue::Success, success) {
 					scopes_to_process = &success.scopes;
@@ -150,7 +150,7 @@ namespace compiler::helios {
 				}
 			}
 
-			appendToStringForSimpleTypes(out.functions, ctx);
+			if (key.include_simple_type_helpers) appendToStringForSimpleTypes(out.functions, ctx);
 
 			for (auto class_sym: class_symbols) {
 				// we postpone this past function scheduling, as

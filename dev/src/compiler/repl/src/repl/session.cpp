@@ -620,10 +620,10 @@ namespace compiler::repl {
 				// Defer: invalidate when exiting this scope, even on early return
 				defer(m_lowering_context->invalidateContext());
 
-				const auto& hout_unit
-					= ctx.query<helios::QueryModuleHOUT>(module_id)->valueOrThrow();
-				// The stmt parameter is used only here, for logging. It's not needed for
-			    // the actual query since QueryModuleHOUT already compiles the entire module
+				// @TODO: #2833 remove the bool once LIR deduplication is implemented
+				const auto& hout_unit = getDefinitionHOUTUnit(ctx, module_id, true);
+				// The stmt parameter is used only here, for logging. It's not needed for the
+			    // actual query since QueryModuleHOUT already compiles the entire module
 			    // containing the statement.
 				auto stmt_kind = stmt.unlock(ctx)->getElementKind();
 				CORE_DEV_LOG(REPL, "Definition statement kind: ", static_cast<u32>(stmt_kind), "\n");

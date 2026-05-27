@@ -126,7 +126,11 @@ namespace compiler::repl {
 
 	/**
 	 * @brief Retrieve the module HOUT for a definition statement module.
+	 *
+	 * @TODO: #2833 remove the bool once proper deduplication in LIR merge is implemented
 	 */
-	const helios::HOUTUnit& getDefinitionHOUTUnit(query::Context& ctx, frontend::ModuleID module_id);
+	const helios::HOUTUnit& getDefinitionHOUTUnit(
+		query::Context& ctx, frontend::ModuleID module_id, bool include_simple_type_helpers = true
+	);
 
 }  // namespace compiler::repl

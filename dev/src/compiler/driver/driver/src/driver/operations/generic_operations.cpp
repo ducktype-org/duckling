@@ -351,6 +351,9 @@ namespace compiler::driver {
 				parent_module_id = empty_script_module->getModuleID();
 			}
 
+			// First definition will also load simple type helpers.
+			// @TODO: #2833 remove this bool once deduplication in LIR is implemented.
+			bool saw_definition = false;
 			for (const auto& statement_source: *split_result) {
 				auto module_ref = repl::createEphemeralChainedStatementModule(
 					statement_source, parent_module_id, statement_counter, "script_"
@@ -378,11 +381,13 @@ namespace compiler::driver {
 						statement_info_result.value()
 					)) {
 					CORE_DEV_LOG(REPL, "compile_script: classified as definition\n");
-					const auto& hout_unit  = repl::getDefinitionHOUTUnit(ctx, module_id);
-					auto        lir_result = ctx.query<CompileHOUTUnitToLIRModuleData>({
-                        &hout_unit,
-                        module_name_id,
-                    });
+					const auto& hout_unit
+						= repl::getDefinitionHOUTUnit(ctx, module_id, !saw_definition);
+					saw_definition  = true;
+					auto lir_result = ctx.query<CompileHOUTUnitToLIRModuleData>({
+						&hout_unit,
+						module_name_id,
+					});
 					if (lir_result->hasFailed())
 						return std::unexpected("Failed to compile definition statement to LIR");
 					repl::appendScriptLIRModuleData(merged, lir_result->valueOrPanic());

@@ -16,6 +16,30 @@ namespace compiler::helios {
 	// incremental compilation
 
 	/**
+	 * @brief Key for QueryModuleHOUT.
+	 *
+	 * The bool controls whether simple-type toString helpers are included in the resulting HOUT.
+	 * It defaults to true so existing callers keep the full module behavior.
+	 *
+	 * @TODO: #2833 remove the bool once proper deduplication in LIR merge is implemented
+	 */
+	struct QueryModuleHOUT_Key final {
+		frontend::ModuleID module_id;
+		bool               include_simple_type_helpers = true;
+
+		QueryModuleHOUT_Key(frontend::ModuleID module_id, bool include_simple_type_helpers = true):
+			  module_id(module_id),
+			  include_simple_type_helpers(include_simple_type_helpers) {}
+
+		[[nodiscard]] base::Bit256 queryUnstablePerfectHash() const {
+			return { module_id.queryUnstablePerfectHash(),
+				     static_cast<u64>(include_simple_type_helpers) };
+		}
+
+		bool operator==(const QueryModuleHOUT_Key&) const = default;
+	};
+
+	/**
 	 * @brief Query FULL HOUTUnit of single module
 	 *
 	 * \parallel key helpers like isGlobalVar don’t modify globals
@@ -23,7 +47,7 @@ namespace compiler::helios {
 	 */
 	DECLARE_QUERY(
 		QueryModuleHOUT,
-		frontend::ModuleID,
+		QueryModuleHOUT_Key,
 		CRef<query::QResult<HOUTUnit>>,
 		({
 			// Compile module schedules other queries, so we don't want to interrupt it in the

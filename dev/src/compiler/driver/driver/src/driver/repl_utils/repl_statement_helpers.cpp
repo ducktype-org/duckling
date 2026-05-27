@@ -49,9 +49,14 @@ namespace compiler::repl {
 		return hout_unit;
 	}
 
-	const helios::HOUTUnit& getDefinitionHOUTUnit(query::Context& ctx, frontend::ModuleID module_id) {
-		// @TODO: #2246 validate usage of QueryModuleHOUT here after any other changes
-		return ctx.query<helios::QueryModuleHOUT>(module_id)->valueOrThrow();
+	const helios::HOUTUnit& getDefinitionHOUTUnit(
+		query::Context& ctx, frontend::ModuleID module_id, bool include_simple_type_helpers
+	) {
+		return ctx
+		    .query<helios::QueryModuleHOUT>(
+				helios::QueryModuleHOUT_Key(module_id, include_simple_type_helpers)
+			)
+		    ->valueOrThrow();
 	}
 
 	std::expected<SingleStatementInfo, std::string> classifySingleStatement(
