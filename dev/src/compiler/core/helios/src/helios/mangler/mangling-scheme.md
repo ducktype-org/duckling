@@ -101,6 +101,8 @@ either in the scheme or it's implementation, they should be reflected here.
 
 <pointer-type> ::= "P"                                      // raw pointer
                  | "P" <type> "E"                           // pointer
+                 | "MP" <type> "E"                          // many pointer
+                 | "CP" <type> "E"                          // c pointer
 
 <variant-type> ::= "V" <type>* "E"                          // variant type
 
@@ -164,6 +166,8 @@ either in the scheme or it's implementation, they should be reflected here.
                         | "dc" <function-type>              // default class constructor
                         | "ds" <function-type>              // default static array constructor
                         | "dt" <function-type>              // default tuple constructor
+                        | "dd" <function-type>              // default destructor
+                        | "ts" <function-type>              // toString method
 //                      | ...                               // @future: virtual tables, generic structures, named parameter tables, guard variables, ...
 
 <back-reference> ::= "B" <compact-number>                   // reference to a previously defined node

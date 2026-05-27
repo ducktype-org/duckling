@@ -20,7 +20,7 @@
  */
 #pragma once
 
-#include <base/preproc/utils.hpp>
+#include <base/preproc/macro_base.hpp>
 
 #include <type_traits>  // IWYU pragma: export
 
@@ -67,43 +67,41 @@
 		BASE value;                                                                                \
                                                                                                    \
 	public:                                                                                        \
-		inline NAME()                               = default;                                     \
-		inline NAME(const NAME& mX)                 = default;                                     \
-		inline NAME(NAME&& mX) noexcept             = default;                                     \
-		inline NAME& operator=(const NAME& rhs)     = default;                                     \
-		inline NAME& operator=(NAME&& rhs) noexcept = default;                                     \
-		inline constexpr explicit(EXPLICIT_BASE) NAME(const BASE& x) noexcept: value{ x } {}       \
+		NAME()                           = default;                                                \
+		NAME(const NAME&)                = default;                                                \
+		NAME(NAME&&) noexcept            = default;                                                \
+		NAME& operator=(const NAME&)     = default;                                                \
+		NAME& operator=(NAME&&) noexcept = default;                                                \
+		constexpr explicit(EXPLICIT_BASE) NAME(const BASE& x) noexcept: value{ x } {}              \
 		template<typename T>                                                                       \
 		requires(std::is_arithmetic_v<T>)                                                          \
-		inline constexpr explicit(true) NAME(T x) noexcept: value(static_cast<BASE>(x)) {}         \
-		inline constexpr explicit(EXPLICIT_BASE) operator BASE() const noexcept { return value; }  \
-		inline constexpr explicit(EXPLICIT_BASE) operator BASE() noexcept { return value; }        \
+		constexpr explicit(true) NAME(T x) noexcept: value(static_cast<BASE>(x)) {}                \
+		constexpr explicit(EXPLICIT_BASE) operator BASE() const noexcept { return value; }         \
+		constexpr explicit(EXPLICIT_BASE) operator BASE() noexcept { return value; }               \
 		template<typename T>                                                                       \
-		inline constexpr explicit(true) operator T() const noexcept {                              \
+		constexpr explicit(true) operator T() const noexcept {                                     \
 			return static_cast<T>(value);                                                          \
 		}                                                                                          \
 		template<typename T = BASE_T>                                                              \
-		inline constexpr T asInt() const noexcept {                                                \
+		constexpr T asInt() const noexcept {                                                       \
 			return T(value);                                                                       \
 		}                                                                                          \
-		inline constexpr NAME operator+() const noexcept { return NAME(+value); }                  \
-		inline constexpr NAME operator-() const noexcept {                                         \
-			return NAME(static_cast<BASE_T>(-value));                                              \
-		}                                                                                          \
-		inline constexpr NAME& operator++() noexcept {                                             \
+		constexpr NAME  operator+() const noexcept { return NAME(+value); }                        \
+		constexpr NAME  operator-() const noexcept { return NAME(static_cast<BASE_T>(-value)); }   \
+		constexpr NAME& operator++() noexcept {                                                    \
 			value++;                                                                               \
 			return *this;                                                                          \
 		}                                                                                          \
-		inline constexpr NAME& operator--() noexcept {                                             \
+		constexpr NAME& operator--() noexcept {                                                    \
 			value--;                                                                               \
 			return *this;                                                                          \
 		}                                                                                          \
-		inline constexpr NAME operator++(int) noexcept {                                           \
+		constexpr NAME operator++(int) noexcept {                                                  \
 			NAME old = *this;                                                                      \
 			value++;                                                                               \
 			return old;                                                                            \
 		}                                                                                          \
-		inline constexpr NAME operator--(int) noexcept {                                           \
+		constexpr NAME operator--(int) noexcept {                                                  \
 			NAME old = *this;                                                                      \
 			value--;                                                                               \
 			return old;                                                                            \
@@ -118,17 +116,18 @@
 		STRONG_TYPEDEF_INT_MAKE_OPERATION_AUX(-, SELF_T)                                           \
 		STRONG_TYPEDEF_INT_MAKE_INPLACE_OPERATION_AUX(+=, +)                                       \
 		STRONG_TYPEDEF_INT_MAKE_INPLACE_OPERATION_AUX(-=, -)                                       \
-		IF(DIMENSIONAL,                                                                            \
-		   STRONG_TYPEDEF_INT_MAKE_SCALAR_OPERATION_AUX(*, SELF_T)                                 \
-		       STRONG_TYPEDEF_INT_MAKE_SCALAR_OPERATION_AUX(/, SELF_T)                             \
-		           STRONG_TYPEDEF_INT_MAKE_INPLACE_SCALAR_OPERATION_AUX(*=, *)                     \
-		               STRONG_TYPEDEF_INT_MAKE_INPLACE_SCALAR_OPERATION_AUX(/=, /),                \
-		   STRONG_TYPEDEF_INT_MAKE_OPERATION_AUX(*, SELF_T)                                        \
-		       STRONG_TYPEDEF_INT_MAKE_OPERATION_AUX(/, SELF_T)                                    \
-		           STRONG_TYPEDEF_INT_MAKE_OPERATION_AUX(%, SELF_T)                                \
-		               STRONG_TYPEDEF_INT_MAKE_INPLACE_OPERATION_AUX(*=, *)                        \
-		                   STRONG_TYPEDEF_INT_MAKE_INPLACE_OPERATION_AUX(/=, /)                    \
-		                       STRONG_TYPEDEF_INT_MAKE_INPLACE_OPERATION_AUX(%=, %))               \
+		IF(DIMENSIONAL)(                                                                           \
+			STRONG_TYPEDEF_INT_MAKE_SCALAR_OPERATION_AUX(*, SELF_T)                                \
+				STRONG_TYPEDEF_INT_MAKE_SCALAR_OPERATION_AUX(/, SELF_T)                            \
+					STRONG_TYPEDEF_INT_MAKE_INPLACE_SCALAR_OPERATION_AUX(*=, *)                    \
+						STRONG_TYPEDEF_INT_MAKE_INPLACE_SCALAR_OPERATION_AUX(/=, /),               \
+			STRONG_TYPEDEF_INT_MAKE_OPERATION_AUX(*, SELF_T)                                       \
+				STRONG_TYPEDEF_INT_MAKE_OPERATION_AUX(/, SELF_T)                                   \
+					STRONG_TYPEDEF_INT_MAKE_OPERATION_AUX(%, SELF_T)                               \
+						STRONG_TYPEDEF_INT_MAKE_INPLACE_OPERATION_AUX(*=, *)                       \
+							STRONG_TYPEDEF_INT_MAKE_INPLACE_OPERATION_AUX(/=, /)                   \
+								STRONG_TYPEDEF_INT_MAKE_INPLACE_OPERATION_AUX(%=, %)               \
+		)                                                                                          \
 	};                                                                                             \
                                                                                                    \
 	static_assert(                                                                                 \
@@ -145,7 +144,7 @@
  *
  * Allows for operations like 2kg * 2, but not for 2kg*2kg.
  */
-#define STRONG_TYPEDEF_INT_DIMENSIONAL(NAME, BASE) STRONG_TYPEDEF_INT_AUX(NAME, BASE, true, true)
+#define STRONG_TYPEDEF_INT_DIMENSIONAL(NAME, BASE) STRONG_TYPEDEF_INT_AUX(NAME, BASE, true, 1)
 
 /**
  * @brief This macro is intended to create strongly typed
@@ -155,7 +154,7 @@
  *
  * Allows for operations like MyOwnI32 * MyOwnI32
  */
-#define STRONG_TYPEDEF_INT(NAME, BASE) STRONG_TYPEDEF_INT_AUX(NAME, BASE, true, false)
+#define STRONG_TYPEDEF_INT(NAME, BASE) STRONG_TYPEDEF_INT_AUX(NAME, BASE, true, 0)
 
 #define STRONGLY_TYPED_INT_STD_HASH(TYPE)                                                  \
 	template<>                                                                             \

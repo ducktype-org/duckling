@@ -201,7 +201,7 @@ namespace compiler::helios::mangler {
 			} else {
 				std::vector<std::string> path_parts;
 
-				auto ancestor     = symbolPst(symbol_id).value().unlock(ctx);
+				auto ancestor     = maybeSymbolPst(symbol_id).value().unlock(ctx);
 				auto ancestor_opt = getPSTElementParent(ctx, ancestor);
 
 				while (ancestor_opt.isLangElement()) {
@@ -321,6 +321,17 @@ namespace compiler::helios::mangler {
 								           ->valueOrThrow()
 								           .str()
 								     + "E";
+							}
+							variant_case(defgen::GeneratedSymbolData::DefaultDestructor, dtor) {
+								// We do not have a reliable "path to type" in this case, so we omit
+								// it. Any ambiguities are solved by the function type anyway.
+								return "Hdd" + func(ctx, symbol_id) + "E";
+							}
+							variant_case(defgen::GeneratedSymbolData::ToStringMethod, to_string) {
+								// We do not have a reliable "path to type" in this case
+								// (esp. for simple types such as i32), so we omit it.
+								// Any ambiguities are solved by the function type anyway.
+								return "Hts" + func(ctx, symbol_id) + "E";
 							}
 							variant_case(
 								defgen::GeneratedSymbolData::ReplExpressionWrapper, repl_wrapper
@@ -506,6 +517,18 @@ namespace compiler::helios::mangler {
 			);
 		}
 
+		static std::string mangle(query::Context& ctx, tsh::ManyPointerAbstractType type) {
+			return base::strConcat(
+				"MP", ctx.query<QueryMangledType>({ type.getPointee() })->valueOrThrow().str(), "E"
+			);
+		}
+
+		static std::string mangle(query::Context& ctx, tsh::CPointerAbstractType type) {
+			return base::strConcat(
+				"CP", ctx.query<QueryMangledType>({ type.getPointee() })->valueOrThrow().str(), "E"
+			);
+		}
+
 		static std::string mangle(query::Context&, tsh::StringAbstractType) { return "s"; }
 
 		static std::string mangle(query::Context& ctx, tsh::FunctionAbstractType type) {
@@ -584,6 +607,10 @@ namespace compiler::helios::mangler {
 				return mangle(ctx, type.as<tsh::RawPointerAbstractType>());
 			case Pointer:
 				return mangle(ctx, type.as<tsh::PointerAbstractType>());
+			case ManyPointer:
+				return mangle(ctx, type.as<tsh::ManyPointerAbstractType>());
+			case CPointer:
+				return mangle(ctx, type.as<tsh::CPointerAbstractType>());
 			case String:
 				return mangle(ctx, type.as<tsh::StringAbstractType>());
 			case Function:
