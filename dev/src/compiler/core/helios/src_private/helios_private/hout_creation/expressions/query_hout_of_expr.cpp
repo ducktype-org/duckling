@@ -207,8 +207,9 @@ namespace compiler::helios::code {
 				});
 
 				// Construct the expression, initially empty.
-				MBox<Expr> result_expr = nullptr;
-				bool       failed      = false;
+				MBox<Expr> result_expr
+					= makeBox<LiteralStringExpr>(ctx, generatedOrigin(), base::StrID(""));
+				bool failed = false;
 
 				// - For each sub element
 				for (auto sub_locked: stmt->getSubElements()) {
@@ -239,7 +240,7 @@ namespace compiler::helios::code {
 						auto sub_expr_hout_qresult = subExprFromPST(
 							ctx, sub_expr.value()->getExpr().unlock(ctx)->getExpr()
 						);
-						if (sub_expr_hout_qresult.hasFailed()) continue;
+						if (sub_expr_hout_qresult.hasFailed()) { failed = true; continue; }
 						auto       sub_expr_hout = std::move(sub_expr_hout_qresult).valueOrThrow();
 						const auto sub_expr_type = sub_expr_hout->expression_type.getType();
 						const auto to_string_sym = defgen::toStringSymForType(ctx, sub_expr_type);
@@ -279,11 +280,6 @@ namespace compiler::helios::code {
 					}
 
 					// - Concatenate the result with the next string.
-					if (not result_expr) {
-						result_expr = std::move(next_string);
-						continue;
-					}
-
 					std::vector<Box<Expr>> arguments;
 					arguments.emplace_back(std::move(result_expr).toOptBox().value());
 					arguments.emplace_back(std::move(next_string).toOptBox().value());
