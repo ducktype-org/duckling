@@ -62,9 +62,9 @@ private:
 	}
 
 	static base::RawView makeView(std::string_view view) {
-		return base::RawView(
+		return {
 			std::span<const std::byte>(reinterpret_cast<const std::byte*>(view.data()), view.size())
-		);
+		};
 	}
 
 	void strIDTest() {
