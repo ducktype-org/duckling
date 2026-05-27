@@ -52,7 +52,7 @@ namespace vm::loader::compiler::safe {
 
 		DEFINE_LOWER_ARGUMENT_IMPL_FOR_FAMILY(
 			low::opargs::PlaceDataArgumentType,
-			if_opt_some(stack_ctx.function.local_stack->getByteOffset(stack_ctx.curr_state, opcode_arg.var_name), offset) {
+			if_opt_some(stack_ctx.function.local_stack->getByteOffset(stack_state_id, opcode_arg.var_name), offset) {
 				return getIntTypeSize(offset);
 			}
 			return compiler.low_program.getGlobals().at(opcode_arg.var_name)->global_buffer_offset | (1ULL << 63);
@@ -60,7 +60,7 @@ namespace vm::loader::compiler::safe {
 
 		DEFINE_LOWER_ARGUMENT_IMPL_FOR_FAMILY(
 			low::opargs::PlaceBlockArgumentType,
-			if(auto maybe_val = stack_ctx.function.local_stack->getIdx(stack_ctx.curr_state, opcode_arg.var_name)) {
+			if(auto maybe_val = stack_ctx.function.local_stack->getIdx(stack_state_id, opcode_arg.var_name)) {
 				return *maybe_val;
 			}
 			return compiler.low_program.getGlobals().at(opcode_arg.var_name)->global_block_idx | (1ULL << 63);
