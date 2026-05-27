@@ -65,28 +65,15 @@ namespace vm {
 		SafeVMThread* parent_thread = nullptr;
 		auto current_id = std::this_thread::get_id();
 		
-		std::cerr << "[DEBUG] Spawning child thread for func: " << func_name 
-		         << ", current C++ thread ID: " << current_id << "\n";
-		
 		for (auto& t : vm_threads) {
-			std::cerr << "  [DEBUG] Thread ID: " << t.getThreadID();
-			if (t.hasActiveThread()) {
-				std::cerr << ", Native ID: " << t.getNativeThreadId();
-			} else {
-				std::cerr << ", No Active Thread";
-			}
-			std::cerr << "\n";
-			
 			if (t.hasActiveThread() && t.getNativeThreadId() == current_id) {
 				parent_thread = &t;
 			}
 		}
 
 		if (parent_thread) {
-			std::cerr << "  [DEBUG] Matched parent thread ID: " << parent_thread->getThreadID() << "\n";
 			thread.forkVC(parent_thread->getVC());
 		} else {
-			std::cerr << "  [DEBUG] No parent match. Falling back to main thread ID: " << getMainVMThread().getThreadID() << "\n";
 			thread.forkVC(getMainVMThread().getVC());
 		}
 
