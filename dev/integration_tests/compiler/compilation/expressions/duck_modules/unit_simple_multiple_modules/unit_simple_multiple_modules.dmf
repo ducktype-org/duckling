@@ -1,3 +1,5 @@
+import core.builtins.*;
+
 # Simple self-contained test for units as values and types, in multiple modules.
 
 import unit_simple_submodule as unit_simple_submodule;

@@ -19,4 +19,4 @@ add_library(DVMBackend STATIC
 
 make_module(DVMBackend USES Base QueryFramework LIR LibVM Logger DebugInfo)
 
-duck_add_test(compiler dvm_backend tests/dvm_backend_test.cpp USES DVMBackend LibVM VmTester_sc)
+duck_add_test(compiler dvm_backend tests/dvm_backend_test.cpp USES DVMBackend LibVM VmTester_sc Driver)

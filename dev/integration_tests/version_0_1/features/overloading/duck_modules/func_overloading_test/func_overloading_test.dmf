@@ -1,3 +1,5 @@
+import core.builtins.*;
+
 
 # Function overloading test
 # This test checks if function overloading works as expected for i64, f64, bool, and string

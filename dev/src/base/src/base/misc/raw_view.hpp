@@ -35,6 +35,8 @@ namespace base {
 
 		RawView(RawArray begin, usize size): begin{ begin }, arr_size{ size } {}
 
+		RawView(std::span<const std::byte> span): RawView(span.data(), span.size()) {}
+
 		RawView& operator=(const RawView&) = default;
 
 		// do not make explicit

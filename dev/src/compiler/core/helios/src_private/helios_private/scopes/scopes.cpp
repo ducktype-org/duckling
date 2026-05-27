@@ -99,6 +99,8 @@ namespace compiler::helios {
 
 		case pst::ElementKind::Import:
 		case pst::ElementKind::ImportIdentifierAs:
+		case pst::ElementKind::ImportStarHides:
+		case pst::ElementKind::ImportNested:
 		case pst::ElementKind::DottedName:
 		// I don't know if this is correct
 		case pst::ElementKind::StmtSpecifier:
@@ -642,8 +644,6 @@ namespace compiler::helios {
 					= is_repl_module
 				   && ctx.query<frontend::QueryReplModuleParent>(module_id).has_value();
 
-				if (!repl_has_parent) return builtin::lookupGlobalBuiltins(ctx, key.name);
-
 				// For REPL modules with parents, skip duplicating builtins here.
 				// They will be resolved via the parent chain in QueryLookupInScopeAndParents.
 				return LookupResult{};
@@ -657,8 +657,12 @@ namespace compiler::helios {
 						auto wild_result_qresult
 							= HInterface::ofSymbol(sym).lookup(ctx, key.name, { true });
 						UNPACK_QRESULT_CREF(CRef<LookupResult> wild_result = &, wild_result_qresult);
-						if (!wild_result->isEmpty())
-							result.children.push_back(wild_result->toNode(sym));
+						// The correct code that works for using is commented out,
+						// to make the import a.*; work correctly.
+						// @TODO: #1412 fix this properly
+						// if (!wild_result->isEmpty())
+						// 	result.children.push_back(wild_result->toNode(sym));
+						if (!wild_result->isEmpty()) result.merge(*wild_result);
 					}
 				} else if (isAlias(sym) && name(sym) == key.name) {
 					// @TODO: #1412 fix dealias

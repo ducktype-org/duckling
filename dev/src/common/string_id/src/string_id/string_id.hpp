@@ -94,7 +94,7 @@ namespace base {
 		// Makes copy
 		explicit StrID(const RawView& data);
 		explicit StrID(const char* data);
-		explicit StrID(const std::string& data);
+		explicit StrID(std::string_view data);
 
 		StrID& operator=(const StrID& oth) = default;
 
