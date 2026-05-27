@@ -30,7 +30,6 @@ namespace vm::loader::compiler {
 		code::valid_type::TypeSize max_stack_size{ Bytes{ 0 }, Bytes{ 0 } };
 		usize                      max_block_count = 0;
 
-		CORE_ASSERT(ctx.function.local_stack, "A given function should have passed the validation");
 		auto& db = ctx.function.local_stack;
 
 		for (const auto& instr: ctx.function.body) {

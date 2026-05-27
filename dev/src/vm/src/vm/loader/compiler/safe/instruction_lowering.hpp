@@ -108,7 +108,7 @@ namespace vm::loader::compiler::safe::detail {
 		bool is_control_flow               = true;
 
 		TypeCRef getPlaceType(const opargs::ArgumentType auto p) const {
-			if (auto maybe_val = ctx.function.local_stack->getTypeName(curr_state, p.var_name)) {
+			if (auto maybe_val = ctx.function.local_stack.getTypeName(curr_state, p.var_name)) {
 				code::valid_type::ValidTypeID type_id = compiler.high_program.getTypeContext()
 				                                            .getCurrentTypes()
 				                                            .at(*maybe_val)
