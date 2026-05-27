@@ -60,7 +60,8 @@ namespace vm::loader::compiler::safe {
 
 		void compileNewTypes(const std::vector<code::valid_type::ValidType>& new_types) override;
 		void compileNewGlobals(const std::vector<code::GlobalData>& new_globals) override;
-		void compileNewFunctions(const std::vector<code::valid_function::ValidFunction>& new_functions) override;
+		void compileNewFunctions(const std::vector<code::valid_function::ValidFunction>& new_functions
+		) override;
 		void compileNewExtCFunctions(const std::vector<code::ExternalCFunction>& new_functions
 		) override;
 

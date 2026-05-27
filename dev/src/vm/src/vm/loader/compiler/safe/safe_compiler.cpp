@@ -172,7 +172,9 @@ namespace vm::loader::compiler::safe {
 		return { std::move(micro_bytecode), std::move(instruction_mapping) };
 	}
 
-	void SafeCompiler::compileNewFunctions(const std::vector<code::valid_function::ValidFunction>& new_functions) {
+	void SafeCompiler::compileNewFunctions(
+		const std::vector<code::valid_function::ValidFunction>& new_functions
+	) {
 		for (const auto& function: new_functions) {
 			vm::loader::compiler::detail::FunctionStackContext ctx
 				= calculateStackContext(function);

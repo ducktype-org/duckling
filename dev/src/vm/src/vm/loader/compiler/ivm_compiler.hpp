@@ -93,7 +93,9 @@ namespace vm::loader::compiler {
 		 * @param new_functions A vector containing the new `Function` objects for newly added
 		 * functions.
 		 */
-		virtual void compileNewFunctions(const std::vector<code::valid_function::ValidFunction>& new_functions) = 0;
+		virtual void compileNewFunctions(
+			const std::vector<code::valid_function::ValidFunction>& new_functions
+		) = 0;
 
 		/**
 		 * @brief Compiles newly added ExternCFunctions and adds the compiled functions to the
@@ -114,9 +116,11 @@ namespace vm::loader::compiler {
 		/**
 		 * @brief Calculates the stack offsets of stack variables.
 		 * Since in ValidProgram variables are represented by names not indexes on the stack.
-		 * This function creates an stack context which is used during lowering instructions to change
-		 * the variable names to numeric offsets.
+		 * This function creates an stack context which is used during lowering instructions to
+		 * change the variable names to numeric offsets.
 		 */
-		detail::FunctionStackContext calculateStackContext(const code::valid_function::ValidFunction& function);
+		detail::FunctionStackContext calculateStackContext(
+			const code::valid_function::ValidFunction& function
+		);
 	};
 }

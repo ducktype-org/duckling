@@ -24,7 +24,9 @@
 
 namespace vm::loader::compiler {
 
-	detail::FunctionStackContext IVMCompiler::calculateStackContext(const code::valid_function::ValidFunction& function) {
+	detail::FunctionStackContext IVMCompiler::calculateStackContext(
+		const code::valid_function::ValidFunction& function
+	) {
 		detail::FunctionStackContext ctx(function);
 
 		code::valid_type::TypeSize max_stack_size{ Bytes{ 0 }, Bytes{ 0 } };
