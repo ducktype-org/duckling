@@ -108,7 +108,7 @@ namespace vm::loader::compiler::safe::detail {
 		bool is_control_flow               = true;
 
 		TypeCRef getPlaceType(const opargs::ArgumentType auto p) const {
-			if (auto maybe_val = ctx.function.local_stack->getTypeName(ctx.curr_state, p.var_name)) {
+			if (auto maybe_val = ctx.function.local_stack->getTypeName(curr_state, p.var_name)) {
 				code::valid_type::ValidTypeID type_id = compiler.high_program.getTypeContext()
 				                                            .getCurrentTypes()
 				                                            .at(*maybe_val)
@@ -156,7 +156,7 @@ namespace vm::loader::compiler::safe::detail {
 
 		void addLabel(opargs::Label label) {
 			usize lid = compiler.lowerArgument<opargs::Label, low::opargs::Label>(
-				ctx, label_name_to_id, label
+				ctx, label_name_to_id, label, curr_state
 			);
 			label_id_to_offset.put(lid, next_instruction_index);
 		}
