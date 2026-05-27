@@ -43,7 +43,7 @@ namespace vm::loader::compiler::safe {
 			[[maybe_unused]] const vm::loader::compiler::detail::FunctionStackContext& stack_ctx,    \
 			[[maybe_unused]] base::HashMap<base::StrID, usize>&                        label_id_map, \
 			const HIGH_FROM_TYPE&                                                      opcode_arg,   \
-			code::StackStateID stack_state_id                                                        \
+			[[maybe_unused]] code::StackStateID stack_state_id                                       \
 		) {                                                                                          \
 			__VA_ARGS__                                                                              \
 		}                                                                                            \
@@ -52,8 +52,8 @@ namespace vm::loader::compiler::safe {
 
 		DEFINE_LOWER_ARGUMENT_IMPL_FOR_FAMILY(
 			low::opargs::PlaceDataArgumentType,
-			if_opt_some(stack_ctx.function.local_stack->getByteOffset(stack_state_id, opcode_arg.var_name), offset) {
-				return getIntTypeSize(offset);
+			if (auto&& maybe_offset = stack_ctx.function.local_stack->getByteOffset(stack_state_id, opcode_arg.var_name); maybe_offset.has_value()) {
+				return getIntTypeSize(*maybe_offset);
 			}
 			return compiler.low_program.getGlobals().at(opcode_arg.var_name)->global_buffer_offset | (1ULL << 63);
 		);
