@@ -4,9 +4,9 @@
 #include <driver/initialize.hpp>
 #include <driver/manifest/manifest.hpp>
 #include <driver/operations/generic_operations.hpp>
+#include <driver/standard_library/standard_library.hpp>
 #include <driver/task/task.hpp>
 #include <driver_private/standard_library/standard_library.hpp>
-#include <driver/standard_library/standard_library.hpp>
 #include <global_state/backend_options.hpp>
 #include <global_state/global_logger.hpp>
 #include <global_state/packages.hpp>
@@ -179,7 +179,8 @@ private:
 			assertTrue(
 				std::filesystem::exists(art.file.getFilePath().getPath()),
 				base::strConcat(
-					"Missing standard library static library artifact: ", art.file.getFilePath().getPath().string()
+					"Missing standard library static library artifact: ",
+					art.file.getFilePath().getPath().string()
 				)
 			);
 		}

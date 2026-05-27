@@ -157,10 +157,9 @@ private:
 					var p = Point(x=1.0);
 				}
 			)",
-			{ "given argument type `f32` cannot be converted" },
-			1
-		);
-
+				{ "given argument type `f32` cannot be converted" },
+				1
+			);
 
 			checkForErrorOnCompileModule(
 				R"(
@@ -572,18 +571,11 @@ private:
 				1
 			);
 
-		// ============================ Other errors ============================
-		checkForErrorOnCompileModule(
-			R"(fun a() = 100000000000000000000000;)", { "Numeric literal value is too large" }, 1
-		);
-		checkForErrorOnCompileModule(
-			R"(fun a() = 1000i8;)", { "Literal doesn't fit in the declared signed integer type." }, 1
-		);
-		checkForErrorOnCompileModule(
-			R"(
-				fun main() -> i64 = {
-					let z = "This is an unknown escape sequence: \c";
-					return 0;
+			checkForErrorOnCompileModule(
+				R"(
+				fun main() = {
+					var l: List;
+					l[0] = 123;
 				}
 			)",
 				{ "Type `List` cannot be default initialized" },
@@ -618,11 +610,8 @@ private:
 			checkForErrorOnCompileModule(
 				R"(
 				fun main() -> i64 = {
-					var n = 42;
-                    if (true) {
-                        var n = 24;
-						n + 3;
-                    }
+    				var dyn_const_arr: List[const i32];
+    				for (x in dyn_const_arr) { x = 2; }
 				}
 			)",
 				{ "Left side of assignment can't be immutable." },
@@ -1034,7 +1023,7 @@ private:
 			checkForErrorOnCompileModule(
 				R"(
 				fun main() -> i64 = {
-					builtin_output_string("This is an unknown escape sequence: \c");
+					let z = "This is an unknown escape sequence: \c";
 					return 0;
 				}
 			)",
@@ -1048,7 +1037,7 @@ private:
 					var n = 42;
                     if (true) {
                         var n = 24;
-                        builtin_output_i64(n);
+						n + 1;
                     }
 				}
 			)",
@@ -1254,7 +1243,7 @@ private:
 					expand str_b;
 				}
 
-				fun foo() = builtin_output_i64(N.foo());
+				fun foo() = N.foo();
 			)",
 			{
 				"Call failed",

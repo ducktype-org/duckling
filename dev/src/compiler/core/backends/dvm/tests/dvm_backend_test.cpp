@@ -74,7 +74,7 @@ protected:
 			subpath_package("function_calls"), subpath_package("globals"),
 			subpath_package("records"),        subpath_package("references"),
 			subpath_package("static_arrays"),  subpath_package("units"),
-			subpath_package("inits_deinits"),
+			subpath_package("inits_deinits"),  subpath_package("pointers")
 		};
 		auto init_result = compiler::driver::initializeTheCompiler(
 			compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
@@ -226,7 +226,7 @@ private:
 		const auto validation_result = vm::api::deinitAndValidate(result.pid);
 		ASSERT_TRUE(validation_result.has_value());
 	}
-	
+
 	void simpleTest() { runTest("simple", {}, {}, {}, 42); }
 
 	void functionCallsTest() { runTest("function_calls", {}, {}, {}, 4); }
@@ -262,7 +262,7 @@ private:
 		runTest("static_arrays", {}, "1\n100\n200\n300\n600\n20\n42\n11\n13\n4\n", {}, 0);
 	}
 
-	void unitsTest() { runTest("modules/units", {}, {}, {}, 0); }
+	void unitsTest() { runTest("units", {}, {}, {}, 0); }
 
 	void pointersTest() { runFailTest("pointers", "Accessing null pointer", {}, {}, {}); }
 
