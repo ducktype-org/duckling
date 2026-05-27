@@ -96,7 +96,7 @@ namespace compiler::helios::test_utils {
 			}
 		};
 
-		auto            pst_stmt = symbolPst(sym).value().illegalAccess().value();
+		auto            pst_stmt = maybeSymbolPst(sym).value().illegalAccess().value();
 		GetHOUTExprTree visitor;
 		pst_stmt->acceptVisitor(visitor);
 
@@ -119,7 +119,7 @@ namespace compiler::helios::test_utils {
 			}
 		};
 
-		auto            pst_stmt = symbolPst(sym).value().illegalAccess().value();
+		auto            pst_stmt = maybeSymbolPst(sym).value().illegalAccess().value();
 		GetHOUTExprTree visitor;
 		pst_stmt->acceptVisitor(visitor);
 
@@ -129,7 +129,8 @@ namespace compiler::helios::test_utils {
 	ScopeID getFunctionBodyScope(SymID sym) {
 		return base::anyCast<ScopeID>(
 			query::utils::withContextCompute([&](query::Context& ctx) -> std::any {
-				auto func_pst = symbolPst(sym).value().unlock(ctx).dynamicCast<pst::Fun>().value();
+				auto func_pst
+					= maybeSymbolPst(sym).value().unlock(ctx).dynamicCast<pst::Fun>().value();
 				auto fun_body = func_pst->getBody().unlock(ctx);
 				return ctx.query<QueryPrimaryCodeScopeFor>(fun_body);
 			})

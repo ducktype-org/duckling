@@ -151,4 +151,6 @@ namespace vm::debugger {
 	) {
 		return api::setBreakpoint(pid, function_name, instr_number, enabled);
 	}
+
+	std::expected<void, api::ApiError> Debugger::step() { return api::step(pid); }
 }

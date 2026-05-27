@@ -14,6 +14,8 @@
 #include <frontend/pst_parser/lang_parser_element.hpp>
 #include <frontend/pst_parser/pst_visitor.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
+#include <helios/tsh/queries/types.hpp>
+#include <helios_private/hout_creation/desugaring/for.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/lookup/lookup_result.hpp>
 #include <helios_private/pst_layer/for_all.hpp>
@@ -534,11 +536,15 @@ namespace compiler::helios {
 				output(std::vector<SymID>{});
 			}
 
-			void visitFor(pst::Access<pst::For>) override {
-				// Scope of "for →(...)← {}"
-				// @TODO: #2096 add for loop variables to the scope
-				// and add them here.
-				output(std::vector<SymID>{});
+			void visitFor(pst::Access<pst::For> for_stmt) override {
+				using namespace desugaring;
+				ForGeneratedSymbols symbols = getForGeneratedSymbols(ctx, for_stmt);
+
+				std::vector<SymID> out;
+				out.emplace_back(symbols.iterator);
+				out.emplace_back(symbols.index);
+				out.emplace_back(symbols.length);
+				output(std::move(out));
 			}
 
 			void visitExprStmt(pst::Access<pst::ExprStmt>) override {

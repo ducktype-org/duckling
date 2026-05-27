@@ -223,4 +223,72 @@ namespace compiler::helios {
 		Box<code::Expr> from_box = from->clone();
 		return coerce(ctx, std::move(from_box));
 	}
+
+	base::Optional<Box<code::Expr>> coerceFromBox(
+		query::Context&                                      ctx,
+		Box<code::Expr>                                      expr,
+		const tsh::SymbolType<>                              expected_type,
+		dia_int::StablePosition                              source_position,
+		base::Optional<std::function<void(query::Context&)>> log_error
+	) {
+		const tsh::SymbolType<> source_symbol_type = expr->expression_type.getSymbolType();
+		const auto coercion_qresult = canCoerce(ctx, source_symbol_type, expected_type);
+		if (coercion_qresult.hasFailed()) return {};
+
+		variant_match(coercion_qresult.valueOrThrow().getVariant()) {
+			variant_case(Coercion, coercion) { return coercion.coerce(ctx, std::move(expr)); }
+			variant_default {
+				logCoercionFailure(
+					ctx,
+					coercion_qresult,
+					source_symbol_type,
+					expected_type,
+					source_position,
+					std::move(log_error)
+				);
+				return {};
+			}
+		}
+		CORE_UNREACHABLE();
+	}
+
+	void logCoercionFailure(
+		query::Context&                                      ctx,
+		const CoercionQResult&                               coercion_qresult,
+		const tsh::SymbolType<>&                             source_symbol_type,
+		const tsh::SymbolType<>&                             expected_type,
+		dia_int::StablePosition                              source_position,
+		base::Optional<std::function<void(query::Context&)>> log_error
+	) {
+		variant_match(coercion_qresult.valueOrThrow().getVariant()) {
+			variant_case(InvalidCoercion, _) {
+				if (log_error.has_value()) {
+					(*log_error)(ctx);
+				} else {
+					ctx.logInt(makeBox<IncompatibleTypesError>(
+						source_position,
+						makeBox<InteractiveType>(ctx, source_symbol_type),
+						makeBox<InteractiveType>(ctx, expected_type)
+					));
+				}
+				return;
+			}
+			variant_case(TypeNotTriviallyCopyable, _) {
+				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					base::strConcat(
+						"Copy constructor for non-trivially-copyable type `",
+						source_symbol_type.withReferenceKind(tsh::ReferenceKind::Direct).toString(),
+						"`. This was caused by the need of dereferencing a value of type: "
+						"`",
+						source_symbol_type.toString(),
+						"`."
+					),
+					source_position
+				));
+				return;
+			}
+			variant_default { CORE_PANIC("Unhandled coercion result variant."); }
+		}
+		return;
+	}
 }

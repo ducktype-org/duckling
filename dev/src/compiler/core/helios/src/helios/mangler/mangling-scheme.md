@@ -101,6 +101,8 @@ either in the scheme or it's implementation, they should be reflected here.
 
 <pointer-type> ::= "P"                                      // raw pointer
                  | "P" <type> "E"                           // pointer
+                 | "MP" <type> "E"                          // many pointer
+                 | "CP" <type> "E"                          // c pointer
 
 <variant-type> ::= "V" <type>* "E"                          // variant type
 

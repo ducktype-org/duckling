@@ -769,6 +769,21 @@ namespace compiler::backend_llvm {
 								current_layout = dynamic_array_layout.getElementLayout();
 								current_type   = typeFromLayout(module, current_layout);
 							}
+							variant_case(tsl::PointerTypeLayout, pointer_layout) {
+								// Finish any struct/array GEP first
+								flush_gep();
+
+								// Load the pointer value (because current_ptr points to storage)
+								current_ptr = builder.CreateLoad(builder.getPtrTy(), current_ptr);
+
+								// Add an index for pointer arithmetic
+								gep_indices.push_back(index_value);
+
+
+								// Update layout/type
+								current_layout = pointer_layout.getPointee();
+								current_type   = typeFromLayout(module, current_layout);
+							}
 							variant_default { CORE_PANIC("Indexing into a non-array layout"); }
 						}
 					}

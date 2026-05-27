@@ -45,6 +45,7 @@ public:
 		TESTER_ADD_TEST(stringsTest);
 		TESTER_ADD_TEST(ffiTest);
 		TESTER_ADD_TEST(tuplesTest);
+		TESTER_ADD_TEST(pointersTest);
 	}
 
 protected:
@@ -147,9 +148,9 @@ private:
 	) {
 		if (expected_prototype_count == -1) expected_prototype_count = expected_function_count;
 		// @TODO: #2694 These numbers are inflated by toString methods for simple types
-		// There are 13 toString methods, and an additional 5 builtin_stringify_<type> prototypes.
-		expected_function_count += 13;
-		expected_prototype_count += 13 + 5;
+		// There are 14 toString methods, and an additional 5 builtin_stringify_<type> prototypes.
+		expected_function_count += 14;
+		expected_prototype_count += 14 + 5;
 		auto llvm_module = getLLVMModuleFromPath(std::move(module_path));
 		ASSERT_EQUAL_PRINT(llvm_module.getFunctionCount(false), expected_function_count);
 		ASSERT_EQUAL_PRINT(llvm_module.getFunctionCount(), expected_prototype_count);
@@ -508,6 +509,11 @@ private:
 		assertTrue(
 			std::regex_search(ir, std::regex{ R"(%T.*E)" }), "Expected tuple struct definition"
 		);
+	}
+
+	void pointersTest() {
+		auto        llvm_module = getLLVMModuleFromPath("modules/pointers");
+		std::string ir          = llvm_module.dumpLLVMToString();
 	}
 };
 

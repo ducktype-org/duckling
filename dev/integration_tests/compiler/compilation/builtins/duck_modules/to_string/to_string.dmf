@@ -17,6 +17,11 @@ fun main() -> i32 = {
 
 	builtin_output_string(true.toString());
 
+	builtin_output_string(().toString());
+
+	var t = ("John Smith", 42, 1.69);
+	builtin_output_string(t.toString());
+
 	var p = Person("John Smith", 42, 1.69);
 	builtin_output_string(p.toString());
 

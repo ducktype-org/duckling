@@ -76,6 +76,19 @@ namespace compiler::helios {
 	bool isGlobalVar(query::Context& ctx, SymID id) {
 		CORE_ASSERT(getSymRef(id)->common.kind == SymbolKind::Variable, "Not a variable.");
 
+		// Generated symbol might have appeared here when adding new generated locals into the
+		// function when desugaring for loops. We filter them out here since rest of the function
+		// assumes we have a PST symbol.
+		CRef<SymbolData> symbol_data = getSymRef(id);
+		if (std::holds_alternative<defgen::GeneratedSymbolData>(symbol_data->other)) {
+			auto gsd = std::get<defgen::GeneratedSymbolData>(symbol_data->other);
+			variant_match(gsd.data) {
+				variant_case_novalue(defgen::GeneratedSymbolData::ControlFlowLocal) return false;
+				variant_default CORE_PANIC("Unhandled generated symbol in `isGlobalVar()`");
+			}
+		}
+
+
 		// We go up the PST until we find a statement that determines whether the variable is global
 		// or not.
 		return std::invoke(
@@ -108,7 +121,8 @@ namespace compiler::helios {
 				case pst::ElementKind::Block:
 				case pst::ElementKind::ExprElement:
 				case pst::ElementKind::ExprHolder:
-				case pst::ElementKind::ExprStmt: {
+				case pst::ElementKind::ExprStmt:
+				case pst::ElementKind::IdentifierWrapper: {
 					auto pst_parent = getPSTElementParent(ctx, el);
 
 					CORE_ASSERT(
@@ -169,12 +183,6 @@ namespace compiler::helios {
 		return getSymRef(id)->stmtCast(ctx);
 	}
 
-	base::Optional<pst::AccessLocked<pst::LangElement>> symbolPst(SymID id) {
-		return getSymRef(id)->getPSTDataOpt().map([](auto pst_data) {
-			return pst_data->getElement();
-		});
-	}
-
 	base::Optional<pst::AccessLocked<pst::LangElement>> maybeSymbolPst(SymID id) {
 		return getSymRef(id)->getPSTDataOpt().map([](CRef<PstSymbolData> data) {
 			return data->getElement();
@@ -191,7 +199,7 @@ namespace compiler::helios {
 		// 6. Prepend the module name
 
 		std::string                                         out = "";
-		base::Optional<pst::AccessLocked<pst::LangElement>> pst = symbolPst(sym);
+		base::Optional<pst::AccessLocked<pst::LangElement>> pst = maybeSymbolPst(sym);
 		do {
 			if (!pst.value().unlock(ctx)->getParent()) break;
 			auto stmt = pst->unlock(ctx).dynamicCast<pst::Stmt>();
@@ -496,6 +504,26 @@ namespace compiler::helios {
 				PstSymbolData(scope, element->getHash())
 			);
 		}
+
+		if (auto ident_wrapper_opt = element.dynamicCast<pst::IdentifierWrapper>()) {
+			auto ident_wrapper = ident_wrapper_opt.value();
+			auto parent_opt    = ident_wrapper->getParent();
+			CORE_ASSERT(parent_opt.has_value(), "IdentifierWrapper without parent");
+
+			auto parent_elem = parent_opt.value().unlock(ctx);
+			if (auto for_parent_opt = parent_elem.dynamicCast<pst::For>()) {
+				return SymbolData::makePSTSymbolData(
+					{
+						.name = ident_wrapper->unwrap(),
+						.kind = SymbolKind::Variable,
+					},
+					PstSymbolData(scope, element->getHash())
+				);
+			} else {
+				CORE_PANIC("IdentifierWrapper in QuerySymbolOfStmt with unsupported parent");
+			}
+		}
+
 		CORE_PANIC("Not handled PST element in makeSymbolFromPSTElement");
 	}
 
@@ -621,10 +649,9 @@ namespace compiler::helios {
 				auto                         pointed = using_stmt->getPointed().unlock(ctx);
 				usize                        size    = pointed->numberOfNames();
 				std::vector<tpc::Identifier> pointed_to_names(size);
-				for (usize i = 0; i < size; i++) {
+				for (usize i = 0; i < size; i++)
 					pointed_to_names[i]
 						= { .value = pointed->getNameByIndex(i).unlock(ctx)->unwrap() };
-				}
 
 				auto lookup_res = lookupChain(
 					ctx,
