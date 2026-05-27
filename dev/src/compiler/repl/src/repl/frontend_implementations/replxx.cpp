@@ -23,9 +23,10 @@ namespace compiler::repl {
 		"dict", "else", "expand", "extends", "extern", "false", "for", "fun",
 		"fundecl", "if", "implements", "import", "in", "lambda", "let", "loop",
 		"match", "move", "namespace", "none", "not", "or", "pattern", "private",
-		"protected", "public", "redo", "ref", "refof", "restart", "return", "set",
-		"sizeof", "static", "str", "switch", "test", "then", "this", "throw",
-		"true", "try", "type", "using", "var", "vec", "while", "with", "xor"
+		"protected", "public", "redo", "ref", "slice", "ptr", "manyptr", "cptr", 
+		"refof", "restart", "return", "set", "sizeof", "static", "str", "switch",
+		"test", "then", "this", "throw", "true", "try", "type", "using", "var",
+		"vec", "while", "with", "xor"
 	};
 
 	static const std::set<std::string> DUCKLING_TYPES = {

@@ -24,7 +24,7 @@ namespace compiler::lir {
 		LIRLocalMetadata metadata;
 		if_opt_some(mir_local->helios_id, helios_id) {
 			metadata.source_code_name = helios::name(helios_id);
-			if_opt_some(helios::symbolPst(helios_id), pst_elem) {
+			if_opt_some(helios::maybeSymbolPst(helios_id), pst_elem) {
 				metadata.position = pst_elem.unlock(ctx)->getStablePosition();
 			}
 		}
@@ -100,6 +100,9 @@ namespace compiler::lir {
 							  }
 							  variant_case(tsl::DynamicArrayTypeLayout, dynamic_array_layout) {
 								  current_layout = dynamic_array_layout.getElementLayout();
+							  }
+							  variant_case(tsl::PointerTypeLayout, many_pointer_layout) {
+								  current_layout = many_pointer_layout.getPointee();
 							  }
 							  variant_default {
 								  CORE_PANIC(

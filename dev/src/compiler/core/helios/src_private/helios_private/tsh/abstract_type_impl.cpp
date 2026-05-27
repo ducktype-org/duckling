@@ -141,18 +141,11 @@ namespace compiler::tsh {
 		return &empty;
 	}
 
-	bool PointerAbstractTypeImpl::isImplicitlyCoercible(
-		const AbstractType target, query::Context& ctx
-	) const {
-		// Implicit coercions allow checking against null pointer.
-		// We do not allow casting to another (raw) pointer type,
-		// because we forbid implicit type (de)specification in this context.
-		// We only allow dropping mutability.
-		return target.getKind() == Kind::Bool
-		    || (target.getKind() == Kind::Pointer
-		        && ctx.query<QueryImplicitCoercibilityOnSymbolType>(
-					{ pointee, PointerAbstractType(target).getPointee() }
-				));
+	bool PointerAbstractTypeImpl::isImplicitlyCoercible(const AbstractType, query::Context&) const {
+		// The pointers are generally not the main tool for the job
+		// in our language, but we may in the future allow
+		// implicit coercions to bool to check against null pointer.
+		return false;
 	}
 
 	bool TupleAbstractTypeImpl::isImplicitlyCoercible(
@@ -314,6 +307,18 @@ namespace compiler::tsh {
 		return &empty;
 	}
 
+	CRef<TypeInterface> ManyPointerAbstractTypeImpl::getDeclaredInterface(query::Context&) const {
+		// note: we can extend interface later if needed
+		static TypeInterface empty{};
+		return &empty;
+	}
+
+	CRef<TypeInterface> CPointerAbstractTypeImpl::getDeclaredInterface(query::Context&) const {
+		// note: we can extend interface later if needed
+		static TypeInterface empty{};
+		return &empty;
+	}
+
 	CRef<TypeInterface> StringAbstractTypeImpl::getDeclaredInterface(query::Context&) const {
 		throw base::NotYetImplemented("String type interface not yet implemented");
 	}
@@ -415,7 +420,7 @@ namespace compiler::tsh {
 		auto fields = getDeclaredInterface(ctx)->getFieldsView();
 		for (const auto& field: fields) {
 			// @TODO: #2331 Move this logic out of TSH.
-			auto field_pst = helios::symbolPst(field.getSymbol())
+			auto field_pst = helios::maybeSymbolPst(field.getSymbol())
 			                     .value()
 			                     .unlock(ctx)
 			                     .dynamicCast<pst::Field>()
@@ -432,7 +437,7 @@ namespace compiler::tsh {
 		auto fields = getDeclaredInterface(ctx)->getFieldsView();
 		for (const auto& field: fields) {
 			// @TODO: #2331 Move this logic out of TSH.
-			auto field_pst = helios::symbolPst(field.getSymbol())
+			auto field_pst = helios::maybeSymbolPst(field.getSymbol())
 			                     .value()
 			                     .unlock(ctx)
 			                     .dynamicCast<pst::Field>()

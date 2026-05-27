@@ -1,0 +1,90 @@
+{
+  "name": "duckling-debug",
+  "displayName": "Duckling Debugger",
+  "author": "DuckType",
+  "publisher": "DuckType",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "activationEvents": [
+    "onStartupFinished",
+    "onLanguage:fatbytecode",
+    "onDebug:ducklingdebug",
+    "onDebugDynamicConfigurations"
+  ],
+  "main": "./out/extension.js",
+
+  "contributes": {
+    "commands": [
+      {
+        "command": "ducklingdebug.runFile",
+        "title": "Run Duckling File",
+        "icon": "$(play)"
+      },
+      {
+        "command": "ducklingdebug.debugFile",
+        "title": "Debug Duckling File",
+        "icon": "$(debug-alt)"
+      }
+    ],
+    "menus": {
+      "editor/title/run": [
+        {
+          "command": "ducklingdebug.runFile",
+          "when": "resourceLangId == fatbytecode",
+          "group": "navigation@1"
+        },
+        {
+          "command": "ducklingdebug.debugFile",
+          "when": "resourceLangId == fatbytecode",
+          "group": "navigation@2"
+        }
+      ]
+    },
+    "languages": [
+      {
+        "id": "fatbytecode",
+        "extensions": [".dbc"]
+      }
+    ],
+
+    "breakpoints": [
+      {
+        "language": "fatbytecode"
+      }
+    ],
+
+    "debuggers": [
+      {
+        "type": "ducklingdebug",
+        "label": "Duckling Debugger",
+        "program": "../../build/bin/VM",
+        "args": ["debug_adapter"],
+        "languages": ["fatbytecode"],
+
+        "configurationAttributes": {
+          "launch": {
+            "properties": {
+              "program": {
+                "type": "string",
+                "description": "Path to fatbytecode program",
+                "default": "${file}"
+              }
+            }
+          }
+        }
+      }
+    ]
+  },
+
+  "scripts": {
+    "compile": "tsc -p ./src"
+  },
+
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.90.0"
+  }
+}

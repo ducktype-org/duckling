@@ -380,7 +380,7 @@ namespace compiler::helios {
 					ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 						"Methods of zero-sized classes are not yet implemented due to ZST not "
 						"being properly supported yet.",
-						symbolPst(method.getSymbol()).map([&](auto pst) {
+						maybeSymbolPst(method.getSymbol()).map([&](auto pst) {
 							return pst.unlock(ctx)->getStablePosition();
 						})
 					));
