@@ -106,6 +106,14 @@ namespace compiler::tsh {
 		CRef<TypeInterface> getInterface(query::Context& ctx) const;
 
 		/**
+		 * @brief Check if the type is a simple type, which correlates heavily with the type being
+		 * more efficient to be passed by copy instead of by reference.
+		 * @return Whether the type is a simple type.
+		 */
+		[[nodiscard]]
+		bool isSimple() const;
+
+		/**
 		 * @brief Determines weather the type has a trivial destructor.
 		 * For more information look in `symbol_type.hpp`
 		 *

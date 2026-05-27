@@ -43,7 +43,8 @@ private:
 	void testTemplate(
 		std::string_view          path_name,
 		const std::vector<int>&   expected_values,
-		const std::vector<usize>& expected_statuses
+		const std::vector<usize>& expected_statuses,
+		const std::vector<u64>&   breakpoints = {}
 	) {
 		std::atomic<size_t>     status_counter  = 0;
 		std::atomic<size_t>     ret_val_counter = 0;
@@ -91,7 +92,9 @@ private:
 		debugger.attachOnStatusChangedListener(status_listener);
 		debugger.attachOnExecutionCompletedListener(execution_completed_listener);
 		debugger.attachOnErrorListener(error_listener);
-		debugger.runMain();
+		for (u64 breakpoint: breakpoints)
+			ASSERT_TRUE(debugger.setBreakpoint(base::StrID("main"), breakpoint).has_value());
+		ASSERT_TRUE(debugger.runMain().has_value());
 		std::unique_lock lk(m);
 		// timeout for the test
 		ASSERT_TRUE(cv.wait_for(lk, std::chrono::milliseconds(100), [&] {
@@ -130,7 +133,8 @@ private:
 			{
 				altIndex(vm::api::Running),
 				altIndex(vm::api::Paused),
-			}
+			},
+			{ 5, 8 }
 		);
 	}
 
@@ -163,11 +167,12 @@ private:
 		events::Listener<std::string> error_listener([&](const std::string& err) { fail(err); });
 
 		vm::debugger::Debugger debugger{ fs::File(path("while_true.dbc")) };
+		ASSERT_TRUE(debugger.setBreakpoint(base::StrID("main"), 0).has_value());
 
 		debugger.attachOnStatusChangedListener(status_listener);
 		debugger.attachOnErrorListener(error_listener);
 
-		debugger.runMain();
+		ASSERT_TRUE(debugger.runMain().has_value());
 
 		{
 			std::unique_lock lk(m);
@@ -280,17 +285,21 @@ private:
 
 		ASSERT_TRUE(!debugger.resume());   // 2nd error
 
-		debugger.pause();
-		ASSERT_TRUE(!debugger.pause());  // 3rd error
+		ASSERT_TRUE(!debugger.step());     // 3rd error
 
-		debugger.resume();
+		ASSERT_TRUE(debugger.pause().has_value());
+
+		ASSERT_TRUE(!debugger.pause());  // 4rd error
+
+		ASSERT_TRUE(debugger.resume().has_value());
 
 		ASSERT_TRUE(std::holds_alternative<vm::api::Running>(debugger.getStatus()));
 	}
 
 	void memoryTest() {
 		vm::debugger::Debugger debugger{ fs::File(path("breakpoint_all_types.dbc")) };
-		std::mutex             m;
+		ASSERT_TRUE(debugger.setBreakpoint(base::StrID("main"), 20).has_value());
+		std::mutex m;
 
 		std::condition_variable cv;
 
@@ -305,13 +314,15 @@ private:
 			return std::holds_alternative<vm::api::Paused>(debugger.getStatus());
 		}));
 
-		// Code position Test
-		auto pos_response = debugger.getCurrentPosition();
-		ASSERT_TRUE(pos_response.has_value());
-		auto code_position = pos_response.value();
-		ASSERT_EQUAL_PRINT("main", code_position.function_name);
-		ASSERT_EQUAL_PRINT(21, code_position.instr_number);
-		ASSERT_TRUE(code_position.source_position.has_value());
+		{
+			// Code position Test
+			auto pos_response = debugger.getCurrentPosition();
+			ASSERT_TRUE(pos_response.has_value());
+			auto code_position = pos_response.value();
+			ASSERT_EQUAL_PRINT("main", code_position.function_name);
+			ASSERT_EQUAL_PRINT(20, code_position.instr_number);
+			ASSERT_TRUE(code_position.source_position.has_value());
+		}
 
 
 		auto main_thread_id = vm::api::ThreadID(0);
@@ -330,6 +341,17 @@ private:
 		);  // fixtable_pointer		ASSERT_EQUAL_PRINT("<pointer>", info.frame_vars[6].value.str());
 		ASSERT_EQUAL_PRINT("<pointer>", info.frame_vars[7].value.str());  // variant_pointer
 		ASSERT_EQUAL_PRINT("42", info.frame_vars[8].value.str());         // new_variant_data_value
+
+		// Step test
+		ASSERT_TRUE(debugger.step().has_value());
+		{
+			auto pos_response = debugger.getCurrentPosition();
+			ASSERT_TRUE(pos_response.has_value());
+			auto code_position = pos_response.value();
+			ASSERT_EQUAL_PRINT("main", code_position.function_name);
+			ASSERT_EQUAL_PRINT(21, code_position.instr_number);
+			ASSERT_TRUE(code_position.source_position.has_value());
+		}
 	}
 };
 

@@ -2,8 +2,8 @@
 Tests:
   simple_boxes:
     Cases:
-      llvm:
-        backend: llvm
+      all:
+        backend: all
         Output:
           String: "42\n123\n1\n2\n99\n100\n"
         ExitCode: 0
@@ -16,8 +16,8 @@ Tests:
         ExitCode: 0
   box_coercions:
     Cases:
-      llvm:
-        backend: llvm
+      all:
+        backend: all
         Output:
           String: "2\n1\n2\n777\n2\n"
         ExitCode: 0
@@ -30,8 +30,8 @@ Tests:
         ExitCode: 0
   reference_kind_collapsing:
     Cases:
-      llvm:
-        backend: llvm
+      all:
+        backend: all
         Output:
           String: "1\n1\n1\n1\n1\n1\n1\n1\n1\n3\n"
         ExitCode: 0

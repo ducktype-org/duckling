@@ -1,0 +1,27 @@
+class Person {
+	name: str;
+	age: i32;
+	height: f64
+}
+
+fun main() -> i32 = {
+	builtin_output_string((1).toString());
+	var a = 2;
+	builtin_output_string(a.toString());
+
+	builtin_output_string(3.14.toString());
+
+	builtin_output_string('d'.toString());
+
+	builtin_output_string(true.toString());
+
+	builtin_output_string(().toString());
+
+	var t = ("John Smith", 42, 1.69);
+	builtin_output_string(t.toString());
+
+	var p = Person("John Smith", 42, 1.69);
+	builtin_output_string(p.toString());
+
+	return 0;
+}
