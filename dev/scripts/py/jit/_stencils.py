@@ -117,7 +117,7 @@ class Stencil:
                 f'.name = "{self.name}"',
                 f".place = {self.place}",
                 f".size = {self.size}",
-                ".to_patch = " + list_quote(hole.to_c() for hole in self.holes),
+                ".to_patch = " + list_quote(hole.to_c() for hole in self.holes if hole.value != HoleValue.ZERO),
                 ".relocation = {}",
             ]
         )
