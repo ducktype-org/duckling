@@ -116,10 +116,22 @@ def parse(llvm_readobj: str, binary: str, verbose: bool, shared: bool) -> list[S
 
 
 def generate_stencils(
-    llvm_readobj: str, binary, output_file, verbose: bool, shared: bool
+    llvm_readobj: str, binary, output_file, verbose: bool, shared: bool, order
 ):
-    stencil_holes = parse(llvm_readobj, binary, verbose, shared)
-    output_file.write(stencils_to_c(stencil_holes, binary=binary.read()))
+    stencils = parse(llvm_readobj, binary, verbose, shared)
+    if order:
+        order_map = json.loads(order.read())
+        no_stencil = Stencil(name="NO STENCIL", place=0, size=0, holes=[])
+        array = [no_stencil] * len(order_map)
+        for stencil in stencils:
+            idx = order_map[stencil.name[len("stencil_") :]]
+            array[idx] = stencil
+
+        stencils = array
+        for stencil in stencils:
+            opcode = order_map[stencil.name[len("stencil_") :]] if stencil.name != no_stencil.name else -1
+            print(f"name: {stencil.name}, opcode: {opcode}")
+    output_file.write(stencils_to_c(stencils, binary=binary.read()))
 
 
 @click.command()
@@ -132,12 +144,15 @@ def generate_stencils(
 )
 @click.option("-v", "--verbose", is_flag=True)
 @click.option("-s", "--shared", is_flag=True)
+@click.option("--order", type=click.File("r"))
 @click.argument("binary", type=click.File("rb"))  # rb = read binary
 @llvm_tools_version_options
-def main(llvm_readobj, output, binary, verbose, accept_all_sections, shared, **kwargs):
+def main(
+    llvm_readobj, output, binary, verbose, accept_all_sections, shared, order, **kwargs
+):
     global all_sections
     all_sections = accept_all_sections
-    generate_stencils(llvm_readobj, binary, output, verbose, shared)
+    generate_stencils(llvm_readobj, binary, output, verbose, shared, order)
 
 
 if __name__ == "__main__":

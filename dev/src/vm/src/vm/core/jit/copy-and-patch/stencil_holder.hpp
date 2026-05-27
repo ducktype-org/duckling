@@ -8,6 +8,8 @@
 
 #include "stencils/import_stencils.hpp"
 
+#include <vm/core/safe/low_program/opcodes.hpp>
+
 #include <cstdint>
 #include <span>
 
@@ -16,5 +18,5 @@ namespace vm::jit::cnp {
 	[[nodiscard]] std::span<const byte> stencilsBinary(const StencilData& stencil_data);
 
 	// TODO: use non-jitable.hpp to get the jitable
-	[[nodiscard]] const std::array<StencilData, 324>& stencilsData();
+	[[nodiscard]] const std::array<StencilData, low::microInstrCount()>& stencilsData();
 }

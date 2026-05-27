@@ -1,5 +1,12 @@
 file(GLOB analyze_deps "${CMAKE_SOURCE_DIR}/scripts/py/jit/*.py")
 
+add_executable(print_opcodes print_opcodes.cpp)
+add_custom_command(
+    OUTPUT opcodes.json
+    COMMAND print_opcodes >opcodes.json
+    DEPENDS print_opcodes
+)
+
 # Analyze and process the `binary_file`, preparing to embed in `destination_file`
 function(process_to_binary binary_file destination_file binary_artifact_prefix analyze_arg)
     set(extra_deps ${ARGN})
@@ -113,8 +120,8 @@ process_to_binary(
     $<TARGET_PROPERTY:CommonVMBitcode_sc,VM_COMMON_BC> 
     stencil_holder.cpp 
     "stencils"
-    ""
-    $<TARGET_PROPERTY:CommonVMBitcode_sc,VM_COMMON_BC>)
+    "--order=opcodes.json"
+    opcodes.json $<TARGET_PROPERTY:CommonVMBitcode_sc,VM_COMMON_BC>)
 
 add_files(
     memory/memory.cpp
