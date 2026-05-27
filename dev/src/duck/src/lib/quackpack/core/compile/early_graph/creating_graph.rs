@@ -18,6 +18,8 @@ impl DependencyGraph {
     #[tracing::instrument(skip_all)]
     pub fn new(freeze: &VenvFreeze) -> QuackResult<Self> {
         let root = freeze.root();
+        // @TODO: #2789 this is ugly, but with Identities, I think FreezeDep will contain Identity.
+        let mut freeze_dep_to_freeze_pkg = HashMap::new();
         let mut graph = HashMap::new();
         graph.insert(
             root.as_freeze_dep(),
@@ -28,9 +30,11 @@ impl DependencyGraph {
                 dep.as_freeze_dep(),
                 DependencyNode::new(dep.dependencies().iter().copied()),
             );
+            freeze_dep_to_freeze_pkg.insert(dep.as_freeze_dep(), dep.clone());
         }
         let root = root.as_freeze_dep();
         Self::check_is_complete_graph(root, &graph)?;
+        Self::check_cycles_only_on_local_deps(&freeze_dep_to_freeze_pkg, root, &graph)?;
         Ok(Self { root, graph })
     }
 
@@ -50,6 +54,38 @@ impl DependencyGraph {
                         PackageType::TransitiveDependency
                     };
                     qp_bail_internal!("malformed freezefile: missing {dep_type} `{dep}`")
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// Checks that only cycles of dependencies are of local dependencies.
+    fn check_cycles_only_on_local_deps(
+        freeze_dep_to_freeze_pkg: &HashMap<FreezeDep, FreezePackage>,
+        root: FreezeDep,
+        graph: &HashMap<FreezeDep, DependencyNode>,
+    ) -> QuackResult<()> {
+        debug!(%root, ?graph, "checking cycles only on local deps");
+        let sccs = kosaraju_sccs(graph);
+        for scc in sccs {
+            if scc.len() == 1 {
+                // 1-element scc, so no cycle.
+                continue;
+            }
+            for dep in scc {
+                let mut is_local = true;
+                if let Some(freeze_pkg) = freeze_dep_to_freeze_pkg.get(&dep) {
+                    is_local = freeze_pkg.source().is_local();
+                }
+                // Otherwise this is the root package, so it is local.
+                if !is_local {
+                    // @TODO: #2789 Maybe this could be a better error message (find and print the whole cycle).
+                    // But it is too much pain with this API right now.
+                    qp_bail!(
+                        "the freeze contains a cycle of dependencies which contains a non-local package {}",
+                        dep
+                    );
                 }
             }
         }
@@ -170,4 +206,101 @@ impl EarlyGraph {
             packages: PackagesSet { inner: packages },
         })
     }
+}
+
+/// Computes the decomposition of the graph into strongly connected components.
+/// Returns a vector of vectors, each vector lists vertices in one stronly connected component.
+fn kosaraju_sccs(graph: &HashMap<FreezeDep, DependencyNode>) -> Vec<Vec<FreezeDep>> {
+    // This is the Kosaraju's algorithm for finding strongly connected components of a graph.
+    // Step 1: First DFS to get finishing order
+    let mut visited = HashSet::new();
+    let mut order = Vec::new();
+
+    for vertex in graph.keys() {
+        if !visited.contains(vertex) {
+            dfs1(graph, *vertex, &mut visited, &mut order);
+        }
+    }
+
+    // Step 2: Build reversed graph.
+    let reversed = reverse_graph(graph);
+
+    // Step 3: DFS on reversed graph in post-order of the first dfs.
+    let mut visited = HashSet::new();
+    let mut sccs = Vec::new();
+
+    for vertex in order.iter().rev() {
+        if !visited.contains(vertex) {
+            let mut scc = Vec::new();
+            dfs2(&reversed, *vertex, &mut visited, &mut scc);
+            sccs.push(scc);
+        }
+    }
+
+    sccs
+}
+
+/// Helper for [`kosaraju_sccs`].
+/// Forwards DFS pass.
+fn dfs1(
+    graph: &HashMap<FreezeDep, DependencyNode>,
+    vertex: FreezeDep,
+    visited: &mut HashSet<FreezeDep>,
+    order: &mut Vec<FreezeDep>,
+) {
+    visited.insert(vertex);
+
+    if let Some(neighbors) = graph.get(&vertex) {
+        for neighbor in neighbors.dependencies() {
+            if !visited.contains(neighbor) {
+                dfs1(graph, *neighbor, visited, order);
+            }
+        }
+    }
+
+    order.push(vertex);
+}
+
+/// Helper for [`kosaraju_sccs`].
+/// Backwards DFS pass.
+fn dfs2(
+    graph: &HashMap<FreezeDep, DependencyNode>,
+    vertex: FreezeDep,
+    visited: &mut HashSet<FreezeDep>,
+    scc: &mut Vec<FreezeDep>,
+) {
+    visited.insert(vertex);
+    scc.push(vertex);
+
+    if let Some(neighbors) = graph.get(&vertex) {
+        for neighbor in neighbors.dependencies() {
+            if !visited.contains(neighbor) {
+                dfs2(graph, *neighbor, visited, scc);
+            }
+        }
+    }
+}
+
+/// Helper for [`kosaraju_sccs`].
+/// Computes the reversal of the dependencies graph.
+fn reverse_graph(graph: &HashMap<FreezeDep, DependencyNode>) -> HashMap<FreezeDep, DependencyNode> {
+    let mut reversed = HashMap::new();
+
+    // Initialize all vertices
+    for vertex in graph.keys() {
+        reversed.insert(*vertex, DependencyNode::new(vec![]));
+    }
+
+    // Add reversed edges
+    for (from, to_list) in graph {
+        for to in to_list.dependencies() {
+            reversed
+                .entry(*to)
+                .or_insert_with(DependencyNode::default)
+                .dependencies_mut()
+                .push(*from);
+        }
+    }
+
+    reversed
 }

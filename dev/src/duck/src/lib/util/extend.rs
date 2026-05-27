@@ -1,7 +1,6 @@
 use std::collections::HashSet;
 use std::hash::Hash;
 
-
 pub trait QpExtend<A>: Extend<A> {
     /// Extends `self` by `iter` and return the number of new elements.
     fn extend_and_get_diff_size<T>(&mut self, iter: T) -> usize
