@@ -25,12 +25,12 @@ namespace {
 		base::StrID name{};
 
 		void visitIdentifierLiteral(pst::Access<pst::expr::IdentifierLiteral> ident) override {
-			name = ident->getName().value;
+			name = ident->getName().illegalAccess().value()->unwrap();
 		}
 
 		// Built-in primitive type names (`i64`, `bool`, `void`, ...) are tokenized as keywords.
 		void visitKeywordLiteral(pst::Access<pst::expr::KeywordLiteral> kw) override {
-			name = lang_def::keywordToStr(kw->getKeyword());
+			name = lang_def::keywordToStr(kw->getKeyword().illegalAccess().value()->unwrap());
 		}
 	};
 
@@ -43,7 +43,7 @@ namespace {
 
 namespace pg {
 	void FunctionPass::visitFun(pst::Access<pst::Fun> stmt) {
-		sym::SymbolID fun_sym_id = ctx.lookupInScopeAndParents(ctx.currNs().id, stmt->getName());
+		sym::SymbolID fun_sym_id = ctx.lookupInScopeAndParents(ctx.currNs().id, stmt->getName().illegalAccess().value()->unwrap());
 		sym::Symbol&  fun_sym    = ctx.getSymbol(fun_sym_id);
 
 		llvm::Type* lowered = lowering.lowerType(fun_sym.type_id, ctx);
@@ -53,7 +53,7 @@ namespace pg {
 
 		llvm_module.inCtxDo([&](llvm::LLVMContext& llvm_ctx, llvm::Module& mod) {
 			llvm::Function* fn = llvm::Function::Create(
-				fn_ty, llvm::Function::ExternalLinkage, stmt->getName().strView(), &mod
+				fn_ty, llvm::Function::ExternalLinkage, stmt->getName().illegalAccess().value()->unwrap().strView(), &mod
 			);
 			auto* entry = llvm::BasicBlock::Create(llvm_ctx, "entry", fn);
 			builder_stack.emplace_back(entry);
@@ -62,6 +62,16 @@ namespace pg {
 			// Enter the function's primary namespace so identifier lookups inside the body
 			// hit local declarations (variables, parameters) before falling back to outer scopes.
 			ctx.enterNamespace(fn_kind.primary_namespace);
+
+			// Insert locals for parameters. They will be used by identifier lookups inside the function body.
+			for (auto [i, arg_sym_id]: std::views::enumerate(fn_kind.argument_symbols)) {
+				// @note Symbols are just declared at this point, so their type_id is still the incomplete type.
+				// We need to finalize them by assigning the correct type_id before we can lower to LLVM types and create the alloca.
+				const sym::Symbol& arg_sym = ctx.getSymbol(arg_sym_id);
+				llvm::Type*   llvm_ty     = lowering.lowerType(arg_sym.type_id, ctx);
+				llvm::AllocaInst* slot = builder_stack.back().CreateAlloca(llvm_ty, nullptr, arg_sym.name.strView());
+				locals.insertOrAssign(arg_sym_id, slot);
+			}
 
 			pst::Access<pst::CodeBlockOrStmt> body = stmt->getBody().illegalAccess().value();
 			for (pst::AccessLocked<pst::Stmt> inner_stmt:
@@ -86,7 +96,7 @@ namespace pg {
 			base::StrID type_name = extractTypeName(type_expr);
 			if (type_name == base::StrID()) {
 				throw std::runtime_error(
-					"Variable '" + stmt->getName().str()
+					"Variable '" + stmt->getName().illegalAccess().value()->unwrap().str()
 					+ "' has a type expression of kind '" + type_expr.elementType()
 					+ "' which is not a bare identifier (not yet supported)"
 				);
@@ -95,11 +105,11 @@ namespace pg {
 		}
 
 		sym::SymbolID sym_id
-			= ctx.insertSymbol(stmt->getName(), sym::VariableSymbol{}, type_id);
+			= ctx.insertSymbol(stmt->getName().illegalAccess().value()->unwrap(), sym::VariableSymbol{}, type_id);
 
 		llvm::Type* llvm_ty = lowering.lowerType(type_id, ctx);
 		llvm::AllocaInst* slot
-			= builder_stack.back().CreateAlloca(llvm_ty, nullptr, stmt->getName().strView());
+			= builder_stack.back().CreateAlloca(llvm_ty, nullptr, stmt->getName().illegalAccess().value()->unwrap().strView());
 		locals.insertOrAssign(sym_id, slot);
 
 		// Optional initializer: var x: T = <expr>;

@@ -13,7 +13,7 @@ llvm::Type* pg::LlvmLoweringContext::lowerType(tp::TypeID type_id, Context& ctx)
 	if (types.contains(type_id)) return types[type_id];
 
 	tp::TypeInfo& type_info = ctx.getTypeInfo(type_id);
-	CORE_ASSERT(!std::holds_alternative<tp::Incomplete>(type_info.kind), "Expected a complete type");
+	CORE_ASSERT(!std::holds_alternative<tp::Incomplete>(type_info.kind), "Expected a complete type, got an incomplete one: " + type_info.name.str());
 
 	variant_match(type_info.kind) {
 		variant_case(tp::Integral, integral) {
