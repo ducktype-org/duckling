@@ -18,20 +18,29 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.debug.registerDebugAdapterDescriptorFactory('ducklingdebug', factory)
     );
 
+    const duckLogChannel = vscode.window.createOutputChannel("DuckVM Debug Protocol");
+    context.subscriptions.push(duckLogChannel);
+
+    duckLogChannel.appendLine("=== DuckVM Debugger Logs Initialized ===");
+
     const trackerFactory = vscode.debug.registerDebugAdapterTrackerFactory('ducklingdebug', {
         createDebugAdapterTracker(session: vscode.DebugSession) {
             return {
                 onWillReceiveMessage: m => {
                     console.log(`\n---> VS Code to DA:\n${JSON.stringify(m, null, 2)}`);
+                    duckLogChannel.appendLine(`\n---> VS Code to DA:\n${JSON.stringify(m, null, 2)}`);
                 },
                 onDidSendMessage: m => {
                     console.log(`\n<--- DA to VS Code:\n${JSON.stringify(m, null, 2)}`);
+                    duckLogChannel.appendLine(`\n<--- DA to VS Code:\n${JSON.stringify(m, null, 2)}`);
                 },
                 onError: error => {
                     console.error(`\n!!! DA Error: ${error.message}`);
+                    duckLogChannel.appendLine(`\n!!! DA Error: ${error.message}`);
                 },
                 onExit: (code, signal) => {
                     console.log(`\n=== DA exited with code: ${code}, signal: ${signal} ===`);
+                    duckLogChannel.appendLine(`\n=== DA exited with code: ${code}, signal: ${signal} ===`);
                 }
             };
         }
