@@ -240,7 +240,10 @@ namespace compiler::helios::code {
 						auto sub_expr_hout_qresult = subExprFromPST(
 							ctx, sub_expr.value()->getExpr().unlock(ctx)->getExpr()
 						);
-						if (sub_expr_hout_qresult.hasFailed()) { failed = true; continue; }
+						if (sub_expr_hout_qresult.hasFailed()) {
+							failed = true;
+							continue;
+						}
 						auto       sub_expr_hout = std::move(sub_expr_hout_qresult).valueOrThrow();
 						const auto sub_expr_type = sub_expr_hout->expression_type.getType();
 						const auto to_string_sym = defgen::toStringSymForType(ctx, sub_expr_type);
