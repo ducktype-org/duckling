@@ -80,8 +80,8 @@ impl DependencyGraph {
                 }
                 // Otherwise this is the root package, so it is local.
                 if !is_local {
-                    // @TODO: #2789 Maybe this could be a better error message (find and print the whole cycle).
-                    // But it is too much pain with this API right now.
+                    // @TODO: #2603 Maybe this could be a better error message (find and print the whole cycle).
+                    // But it is too much pain with this API right now, we do not have dependencies of root here.
                     qp_bail!(
                         "the freeze contains a cycle of dependencies which contains a non-local package {}",
                         dep
