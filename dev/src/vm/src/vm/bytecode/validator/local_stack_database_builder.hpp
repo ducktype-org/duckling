@@ -77,10 +77,10 @@ namespace vm::code {
 		StackStateID change(StackStateID state, base::StrID name, base::StrID type);
 
 		[[nodiscard]]
-		base::Optional<base::StrID> typeOf(StackStateID state, base::StrID name) const;
+		base::Optional<base::StrID> getTypeName(StackStateID state, base::StrID name) const;
 
 		[[nodiscard]]
-		base::Optional<base::StrID> typeOf(StackStateID state, usize idx) const;
+		base::Optional<base::StrID> getTypeName(StackStateID state, usize idx) const;
 
 		[[nodiscard]]
 		usize size(StackStateID state) const;

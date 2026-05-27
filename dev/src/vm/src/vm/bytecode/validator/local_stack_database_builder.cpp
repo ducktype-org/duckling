@@ -75,7 +75,7 @@ vm::code::StackStateID ls_db_bld::change(StackStateID state, base::StrID name, b
 	return StackStateID{ states.size() - 1 };
 }
 
-base::Optional<base::StrID> ls_db_bld::typeOf(StackStateID state, usize idx) const {
+base::Optional<base::StrID> ls_db_bld::getTypeName(StackStateID state, usize idx) const {
 	auto [node_id, typestack_id] = validateState(state);
 
 	if (idx >= typenames.size(typestack_id)) return std::nullopt;
@@ -83,7 +83,7 @@ base::Optional<base::StrID> ls_db_bld::typeOf(StackStateID state, usize idx) con
 	return typenames.at(typestack_id, idx);
 }
 
-base::Optional<base::StrID> ls_db_bld::typeOf(StackStateID state, base::StrID name) const {
+base::Optional<base::StrID> ls_db_bld::getTypeName(StackStateID state, base::StrID name) const {
 	auto node_id     = validateState(state).first;
 	auto name_map_id = tree[node_id].name_map_id;
 
@@ -91,7 +91,7 @@ base::Optional<base::StrID> ls_db_bld::typeOf(StackStateID state, base::StrID na
 
 	auto idx = name_to_idx.at(name_map_id, name);
 
-	return typeOf(state, idx);
+	return getTypeName(state, idx);
 }
 
 usize ls_db_bld::size(StackStateID state) const {

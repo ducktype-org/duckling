@@ -175,28 +175,16 @@ public:
 
 	[[nodiscard]]
 	usize size() const {
-		variant_match(source) {
-			variant_case(Ref<LocalStackDbBuilder>, bld_ref) {
-				return bld_ref->size(stack_state_id);
-			}
-			variant_case(CRef<LocalStackDb>, db_ref) { return db_ref->size(stack_state_id); }
-		}
-		CORE_UNREACHABLE();
+		usize ans = 0;
+		VISIT(source, db, ans = db->size(stack_state_id););
+		return ans;
 	}
 
 	[[nodiscard]]
 	LocalStackEntry back(usize i = 0) const {
-		usize size = 0;
-		variant_match(source) {
-			variant_case(Ref<LocalStackDbBuilder>, bld_ref) {
-				size = bld_ref->size(stack_state_id);
-			}
-			variant_case(CRef<LocalStackDb>, db_ref) { size = db_ref->size(stack_state_id); }
-		}
-
-		CORE_ASSERT(i < size, "we want idx to be smaller than size");
-
-		return front(size - i - 1);
+		usize end = size();
+		CORE_ASSERT(i < end, "we want idx to be smaller than size");
+		return front(end - 1 - i);
 	}
 
 	[[nodiscard]]
@@ -205,7 +193,7 @@ public:
 			variant_case(Ref<LocalStackDbBuilder>, bld_ref) {
 				return LocalStackEntry{
 					.local_name = *bld_ref->getName(stack_state_id, idx),
-					.type       = types_ctx->at(*bld_ref->typeOf(stack_state_id, idx)),
+					.type       = types_ctx->at(*bld_ref->getTypeName(stack_state_id, idx)),
 				};
 			}
 			variant_case(CRef<LocalStackDb>, db_ref) {
@@ -219,53 +207,45 @@ public:
 	}
 
 	void castPrimitive(const opargs::OpCodePrimitiveArg& local, const opargs::Type& type) {
-		variant_match(source) {
-			variant_case(Ref<LocalStackDbBuilder>, bld_ref) {
-				auto local_name = VISIT(local, l, return l.var_name);
-				auto new_state  = bld_ref->change(stack_state_id, local_name, type.type_name);
-				stack_state_id  = new_state;
-				return;
-			}
-		}
-		CORE_UNREACHABLE();
+				CORE_ASSERT(
+			std::holds_alternative<Ref<LocalStackDbBuilder>>(source),
+			"We need to be building local stack database to cast type of variables"
+		);
+
+		auto bld_ref = std::get<Ref<LocalStackDbBuilder>>(source);
+
+		auto local_name = VISIT(local, l, return l.var_name);
+		auto new_state  = bld_ref->change(stack_state_id, local_name, type.type_name);
+		stack_state_id  = new_state;
 	}
 
 	[[nodiscard]]
 	bool contains(base::StrID local_name) const {
-		variant_match(source) {
-			variant_case(Ref<LocalStackDbBuilder>, bld_ref) {
-				return bld_ref->contains(stack_state_id, local_name);
-			}
-			variant_case(CRef<LocalStackDb>, db_ref) {
-				return db_ref->contains(stack_state_id, local_name);
-			}
-		}
-		CORE_UNREACHABLE();
+		bool ans = false;
+		VISIT(source, db, ans = db->contains(stack_state_id, local_name););
+		return ans;
 	}
 
 	[[nodiscard]]
 	CRef<valid_type::ValidType> at(base::StrID local_name) const {
 		base::StrID name_of_type{};
 
-		variant_match(source) {
-			variant_case(Ref<LocalStackDbBuilder>, bld_ref) {
-				name_of_type = *bld_ref->typeOf(stack_state_id, local_name);
-			}
-			variant_case(CRef<LocalStackDb>, db_ref) {
-				name_of_type = *db_ref->getTypeName(stack_state_id, local_name);
-			}
-		}
+		VISIT(source, db, name_of_type = *db->getTypeName(stack_state_id, local_name););
 
 		return types_ctx->at(name_of_type);
 	}
 
 	[[nodiscard]]
 	bool eqStack(StackStateID stack_state_1, StackStateID stack_state_2) const {
-		return VISIT(
+		bool ans = false;
+		VISIT(
 			source,
 			db,
-			db->eqTypes(stack_state_1, stack_state_2) && db->eqNames(stack_state_1, stack_state_2)
+			ans
+			= db->eqTypes(stack_state_1, stack_state_2) && db->eqNames(stack_state_1, stack_state_2)
 		);
+
+		return ans;
 	}
 };
 
@@ -422,8 +402,9 @@ class FunctionValidator {
 	}
 
 	template<typename PlaceT>
-	CRef<valid_type::ValidType> getPlaceType(const PlaceT& place, const LocalStack& current_stack)
-		const {
+	CRef<valid_type::ValidType> getPlaceType(
+		const PlaceT& place, const LocalStack& current_stack
+	) const {
 		bool is_local = current_stack.contains(place.var_name);
 		return is_local ? current_stack.at(place.var_name)
 		                : types_ctx.at(globals.at(place.var_name)->type);
@@ -1505,7 +1486,10 @@ class FunctionValidator {
 	}
 
 	template<class Error, class Instr>
-	requires(std::is_same_v<Instr, std::remove_cvref_t<Op_upcast_pptr_pptr>> || std::is_same_v<Instr, std::remove_cvref_t<Op_downcast_pptr_pptr>>)
+	requires(
+		std::is_same_v<Instr, std::remove_cvref_t<Op_upcast_pptr_pptr>>
+		|| std::is_same_v<Instr, std::remove_cvref_t<Op_downcast_pptr_pptr>>
+	)
 	void validateClassCast(const Instr& instruction, const LocalStack& current_stack) const {
 		auto higher_ptr_tod = getPlaceType(instruction.dst, current_stack);
 		auto lower_ptr_tod  = getPlaceType(instruction.src, current_stack);

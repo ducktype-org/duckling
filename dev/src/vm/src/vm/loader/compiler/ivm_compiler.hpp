@@ -17,7 +17,6 @@ namespace vm::loader::compiler {
 
 			/// The high level function definition.
 			const code::Function& function;
-			code::StackStateID    curr_state = code::LocalStackDb::EMPTY;
 
 			/// Total required size for the local stack frame, in bytes.
 			code::valid_type::TypeSize local_stack_size{};
