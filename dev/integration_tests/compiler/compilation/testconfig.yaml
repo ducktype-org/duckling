@@ -89,6 +89,7 @@ SubDirs:
   - optimisations
   - references
   - boxes
+  - pointers
   - globals
   - imports
   - macros

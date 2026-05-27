@@ -244,9 +244,14 @@ namespace compiler::helios::code {
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
 
+		// Clones the expression just as any other expression,
+		// which means it performs a *deep* copy. Should not be used
+		// for reusing a reusable expression. Use nextUse() for that.
 		[[nodiscard]] Box<Expr> clone() const final;
 
-		[[nodiscard]] Box<Expr> nextUse() const;
+		// Create a ReusableExpression with the same inner expression,
+		// but prepared for a re-use.
+		[[nodiscard]] Box<ReusableExpr> nextUse() const;
 
 	private:
 		FRIEND_MAKEBOX
@@ -372,6 +377,10 @@ namespace compiler::helios::code {
 		FloatNegation,
 		BooleanNot,
 		Ref,
+		Ptr,
+		ManyPtr,
+		CPtr,
+		Slice,
 		Box,
 		Const,
 		Len,  // @TODO: #1970 Probably remove that in the future.
