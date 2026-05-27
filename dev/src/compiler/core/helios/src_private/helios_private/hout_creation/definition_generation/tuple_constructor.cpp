@@ -16,7 +16,7 @@ namespace compiler::helios::defgen {
 			auto tuple_interface = tuple_type.getInterface(ctx);
 			// Preamble, get some basic data.
 			using ImplicitConstructor = GeneratedSymbolData::ImplicitConstructor;
-			using Variable            = GeneratedSymbolData::Variable;
+			using Variable            = GeneratedSymbolData::GeneratedFunctionVariable;
 			using std::ranges::to;
 			using std::views::transform;
 
