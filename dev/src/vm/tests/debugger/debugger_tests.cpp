@@ -69,17 +69,22 @@ private:
 	 */
 	void pausesOnBreakpointAndResumes() {
 		auto pid = loadProgram("breakpoint.dbc");
+		for (auto breakpoint: { 5ULL, 8ULL })
+			ASSERT_TRUE(
+				vm::api::setBreakpoint(pid, base::StrID("main"), breakpoint, true).has_value()
+			);
+
 		vm::api::run(pid).value();  // "Run failed (1)"
 
 		auto execution_position
 			= vm::api::waitForBreakpoint(pid).value();  // "Wait for breakpoint failed (1)"
-		ASSERT_EQUAL_PRINT(12, execution_position.instr_number);
+		ASSERT_EQUAL_PRINT(5, execution_position.instr_number);
 
 		vm::api::resume(pid).value();  // "Resume failed (1)"
 
 		execution_position
 			= vm::api::waitForBreakpoint(pid).value();  // "Wait for breakpoint failed (1)"
-		ASSERT_EQUAL_PRINT(20, execution_position.instr_number);
+		ASSERT_EQUAL_PRINT(8, execution_position.instr_number);
 
 		vm::api::resume(pid).value();  // "Resume failed (2)"
 
@@ -91,34 +96,39 @@ private:
 	 */
 	void executesStepByStep() {
 		auto pid = loadProgram("breakpoint.dbc");
+		for (auto breakpoint: { 5ULL, 8ULL })
+			ASSERT_TRUE(
+				vm::api::setBreakpoint(pid, base::StrID("main"), breakpoint, true).has_value()
+			);
 
 		vm::api::run(pid).value();  // "Run failed (1)"
 
 		auto execution_position
 			= vm::api::waitForBreakpoint(pid).value();  // "Wait for breakpoint failed (1)"
-		assertEqual(12, execution_position.instr_number, "Line number is not correct");
+		ASSERT_EQUAL_PRINT(5, execution_position.instr_number);
 
 		u64 line = stepAndGetLine(pid);
-		ASSERT_EQUAL_PRINT(13, line);
+		ASSERT_EQUAL_PRINT(6, line);
 
 		line = stepAndGetLine(pid);
-		ASSERT_EQUAL_PRINT(14, line);
+		ASSERT_EQUAL_PRINT(7, line);
 
 		vm::api::resume(pid).value();  // "Resume failed (1)"
 
 		execution_position
 			= vm::api::waitForBreakpoint(pid).value();  // "Wait for breakpoint failed (2)"
-		ASSERT_EQUAL_PRINT(20, execution_position.instr_number);
+		ASSERT_EQUAL_PRINT(8, execution_position.instr_number);
 
 		vm::api::resume(pid).value();  // "Resume failed (2)"
 
 		vm::api::stop(pid).value();    // "Stop failed (1)"
 	}
 
-	u64 stepAndGetLine(u64 pid) {
-		vm::api::step(base::safeIntConv<vm::PID>(pid)).value();  // "Step failed"
-		auto execution_position = vm::api::getCurrentPosition(base::safeIntConv<vm::PID>(pid))
-		                              .value();                  // "Get current position failed"
+	u64 stepAndGetLine(vm::PID pid) {
+		vm::api::step(pid).value();                      // "Step failed"
+		auto execution_position
+			= vm::api::getCurrentPosition(pid).value();  // "Get current position failed"
+
 		return execution_position.instr_number;
 	}
 
@@ -150,6 +160,7 @@ private:
 	 */
 	void vmApiMemoryAllTypes() {
 		auto pid = loadProgram("breakpoint_all_types.dbc");
+		ASSERT_TRUE(vm::api::setBreakpoint(pid, base::StrID("main"), 20, true).has_value());
 		auto tid = vm::api::ThreadID(0);
 
 		ASSERT_TRUE(vm::api::run(pid).has_value());

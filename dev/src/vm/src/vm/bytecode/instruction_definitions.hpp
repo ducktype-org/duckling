@@ -640,8 +640,6 @@ DEF_INSTR(nop)
 // terminates execution
 DEF_INSTR(exit)
 
-DEF_INSTR(breakpoint)
-
 /**
  * @brief This is a very internal instruction, that should not be used in regular bytecode.
  * It is a helper for start functions.

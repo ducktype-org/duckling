@@ -5,8 +5,8 @@ fun main() -> i64 = {
     if NamedIf (2 <= 1) { }
     while NamedWhile (2 <= 1) { }
 
-    # @TODO: #2096 add for case
-    # for NamedFor (...) { }
+    var arr: i32[2];
+    for NamedFor (x in arr) { }
 
     return 0;
 }
