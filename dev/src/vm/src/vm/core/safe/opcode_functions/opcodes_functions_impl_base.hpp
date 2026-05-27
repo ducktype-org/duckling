@@ -1222,7 +1222,7 @@ namespace vm {
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(stepGil)(FUNCTION_ARGS) {
-		{ }
+		{}
 		FUNCTION_CONT(1);
 	}
 

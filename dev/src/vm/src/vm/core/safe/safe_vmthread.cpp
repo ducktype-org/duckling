@@ -34,13 +34,13 @@ namespace vm {
 
 #if defined(ENABLE_JIT) and not defined(BUILD_TYPE_RELEASE)
 	// When testing JIT, compile all calls from the start function. Specifically main.
-	#define MAKE_BYTECODE_INSTRUCTION(OPCODE_NAME, ARG_0, ARG_1)         \
-		makeLowInstruction(                                              \
+	#define MAKE_BYTECODE_INSTRUCTION(OPCODE_NAME, ARG_0, ARG_1)            \
+		makeLowInstruction(                                                 \
 			low::MicroOpcode::OPCODE_NAME == low::MicroOpcode::call_cc_func \
-				? low::MicroOpcode::jitCallEntrypoint_cc_func                  \
-				: low::MicroOpcode::OPCODE_NAME,                         \
-			ARG_0,                                                       \
-			ARG_1                                                        \
+				? low::MicroOpcode::jitCallEntrypoint_cc_func               \
+				: low::MicroOpcode::OPCODE_NAME,                            \
+			ARG_0,                                                          \
+			ARG_1                                                           \
 		)
 
 #else

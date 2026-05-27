@@ -397,7 +397,9 @@ DEF_MICRO_INSTR(call_cc_func, vm::low::opargs::ComputedConstant, vm::low::opargs
 #ifdef ENABLE_JIT
 // Call a function, with the possibility to compile it later.
 // ComputedConstant represent stack offset at the moment of call.
-DEF_MICRO_INSTR(jitCallEntrypoint_cc_func, vm::low::opargs::ComputedConstant, vm::low::opargs::FunctionID)
+DEF_MICRO_INSTR(
+	jitCallEntrypoint_cc_func, vm::low::opargs::ComputedConstant, vm::low::opargs::FunctionID
+)
 #endif
 
 DEF_MICRO_INSTR(call_builtinfunc, vm::low::opargs::BuiltinFunctionID)

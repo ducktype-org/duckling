@@ -30,16 +30,15 @@ namespace vm {
 		 * Variant which has alignment of the most alinged alternative or type tag size (which is
 		 * smaller than u64)
 		 */
-		constexpr static size_t MAX_ALIGNMENT = std::ranges::max({alignof(Pointer), alignof(u64), alignof(void*)});
+		constexpr static size_t MAX_ALIGNMENT
+			= std::ranges::max({ alignof(Pointer), alignof(u64), alignof(void*) });
 
 		/**
 		 * @brief Aligns value up, to the Type::MAX_ALIGNMENT.
 		 * @note Specific version of function for MAX_ALIGNMENT, because it is used in multiple
 		 * places.
 		 */
-		constexpr static usize fullyAlignUp(usize value) {
-			return alignUp(value, MAX_ALIGNMENT);
-		}
+		constexpr static usize fullyAlignUp(usize value) { return alignUp(value, MAX_ALIGNMENT); }
 
 		/**
 		 * @brief Aligns value up to the alignment. Alignment must be a power of 2.
