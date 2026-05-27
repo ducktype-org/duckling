@@ -233,7 +233,8 @@ public:
 
 	/**
 	 * @brief Function for determining if stack is the same at two states (== operator).
-	 * @warning THIS FUNCTION IS O(n) AS OF 27.05.2026 - Use it with care or upload a persistant structures library 
+	 * @warning THIS FUNCTION IS O(n) AS OF 27.05.2026 - Use it with care or upload a persistant
+	 * structures library
 	 */
 	[[nodiscard]]
 	bool eqStack(StackStateID stack_state_1, StackStateID stack_state_2) const {
@@ -402,9 +403,8 @@ class FunctionValidator {
 	}
 
 	template<typename PlaceT>
-	CRef<valid_type::ValidType> getPlaceType(
-		const PlaceT& place, const LocalStack& current_stack
-	) const {
+	CRef<valid_type::ValidType> getPlaceType(const PlaceT& place, const LocalStack& current_stack)
+		const {
 		bool is_local = current_stack.contains(place.var_name);
 		return is_local ? current_stack.at(place.var_name)
 		                : types_ctx.at(globals.at(place.var_name)->type);
@@ -1486,10 +1486,7 @@ class FunctionValidator {
 	}
 
 	template<class Error, class Instr>
-	requires(
-		std::is_same_v<Instr, std::remove_cvref_t<Op_upcast_pptr_pptr>>
-		|| std::is_same_v<Instr, std::remove_cvref_t<Op_downcast_pptr_pptr>>
-	)
+	requires(std::is_same_v<Instr, std::remove_cvref_t<Op_upcast_pptr_pptr>> || std::is_same_v<Instr, std::remove_cvref_t<Op_downcast_pptr_pptr>>)
 	void validateClassCast(const Instr& instruction, const LocalStack& current_stack) const {
 		auto higher_ptr_tod = getPlaceType(instruction.dst, current_stack);
 		auto lower_ptr_tod  = getPlaceType(instruction.src, current_stack);

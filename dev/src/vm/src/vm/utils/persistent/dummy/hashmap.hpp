@@ -50,7 +50,7 @@ namespace vm::persistent {
 		}
 
 		/**
-		 * @brief checks if the certain key is present at given instance of a hashmap 
+		 * @brief checks if the certain key is present at given instance of a hashmap
 		 */
 		[[nodiscard]]
 		bool contains(usize state, const Key& k) const {

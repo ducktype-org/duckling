@@ -111,7 +111,7 @@ namespace vm::loader::compiler::safe {
 			const vm::loader::compiler::detail::FunctionStackContext& local_ctx,
 			base::HashMap<base::StrID, usize>&                        label_id_map,
 			const FromType&                                           opcode_arg,
-			code::StackStateID stack_state_id
+			code::StackStateID                                        stack_state_id
 		);
 	};
 }

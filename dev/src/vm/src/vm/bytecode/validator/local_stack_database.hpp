@@ -103,21 +103,24 @@ namespace vm::code {
 		usize size(StackStateID state) const;
 
 		/**
-		 * @returns sum of sizes for all variables on the stack (size of the stack in bytes) at given state
+		 * @returns sum of sizes for all variables on the stack (size of the stack in bytes) at
+		 * given state
 		 */
 		valid_type::TypeSize byteSize(StackStateID state) const;
 
 		/**
 		 * @brief compares two states of the stack in terms of types of variables
-		 * @returns true if two instances are the same in terms of types of the variables and their order
-order	 * @note this information takes into account primitive-casting operations
+		 * @returns true if two instances are the same in terms of types of the variables and their
+		 * order
+		 * @note this information takes into account primitive-casting operations
 		 */
 		[[nodiscard]]
 		bool eqTypes(StackStateID state_1, StackStateID state_2) const;
 
 		/**
 		 * @brief compares two states of the stack in terms of names of variables
-		 * @returns true if two instances are the same in terms of names of the variables and their order
+		 * @returns true if two instances are the same in terms of names of the variables and their
+		 * order
 		 */
 		[[nodiscard]]
 		bool eqNames(StackStateID state_1, StackStateID state_2) const;

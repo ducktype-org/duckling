@@ -28,8 +28,9 @@ namespace vm::persistent {
 		static constexpr usize EMPTY = 0;
 
 		/**
-		 * @brief creates a new state from the pevious one, by popping some number of variables from the end
-		 * @throws when size of vector is smaller than the number of values to pop 
+		 * @brief creates a new state from the pevious one, by popping some number of variables from
+		 * the end
+		 * @throws when size of vector is smaller than the number of values to pop
 		 */
 		[[nodiscard]]
 		usize pop(usize state, usize no_of_values_to_pop = 1) {
@@ -53,7 +54,7 @@ namespace vm::persistent {
 		}
 
 		/**
-		 * @brief creates a new state from the pevious one, by changing value at the index 
+		 * @brief creates a new state from the pevious one, by changing value at the index
 		 */
 		[[nodiscard]]
 		usize change(usize state, usize idx, const T& val) {
@@ -65,7 +66,7 @@ namespace vm::persistent {
 		}
 
 		/**
-		 * @brief creates a new state from the pevious one, by pushing variable at the end 
+		 * @brief creates a new state from the pevious one, by pushing variable at the end
 		 */
 		[[nodiscard]]
 		usize push(usize state, const T& val) {
