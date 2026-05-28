@@ -113,6 +113,15 @@ namespace compiler::tsh {
 
 
 	/**
+	 * @brief Query to get a typed C pointer type.
+	 *
+	 * \query_thread_safe
+	 */
+	DECLARE_QUERY(QuerySliceType, SymbolType<>, SliceAbstractType, ({ .uses_qresult = false }))
+
+
+
+	/**
 	 * @brief Query to get the DynamicArray type.
 	 * The AbstractType of the elements of the array is given as a key.
 	 *

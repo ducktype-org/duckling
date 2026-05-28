@@ -524,6 +524,12 @@ namespace compiler::helios::mangler {
 			);
 		}
 
+		static std::string mangle(query::Context& ctx, tsh::SliceAbstractType type) {
+			return base::strConcat(
+				"S", ctx.query<QueryMangledType>({ type.getElementType() })->valueOrThrow().str(), "E"
+			);
+		}
+
 		static std::string mangle(query::Context&, tsh::StringAbstractType) { return "s"; }
 
 		static std::string mangle(query::Context& ctx, tsh::FunctionAbstractType type) {
@@ -606,6 +612,8 @@ namespace compiler::helios::mangler {
 				return mangle(ctx, type.as<tsh::ManyPointerAbstractType>());
 			case CPointer:
 				return mangle(ctx, type.as<tsh::CPointerAbstractType>());
+			case Slice:
+				return mangle(ctx, type.as<tsh::SliceAbstractType>());
 			case String:
 				return mangle(ctx, type.as<tsh::StringAbstractType>());
 			case Function:

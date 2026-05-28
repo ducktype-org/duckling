@@ -529,4 +529,6 @@ namespace compiler::tsl {
 	base::StrID TypeLayout::getMangledName() const {
 		return VISIT(variant, l, return l.getMangledName());
 	}
+
+	ClassTypeLayout::ClassTypeLayout(tsh::SliceAbstractType slice_type, query::Context& ctx) {}
 }

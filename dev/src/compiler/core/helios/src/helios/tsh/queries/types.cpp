@@ -142,6 +142,15 @@ namespace compiler::tsh {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryCPointerType)
 
+
+	struct IMPLEMENT_QUERY(QuerySliceType, SliceAbstractType::Impl) {
+		static auto provide(Context&, const QKey key) -> PResult {
+			return SliceAbstractTypeImpl(key);
+		}
+		QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySliceType)
 	struct IMPLEMENT_QUERY(QueryDynamicArrayType, DynamicArrayAbstractType::Impl) {
 		static auto provide(Context&, const QKey key) -> PResult { return { key }; }
 

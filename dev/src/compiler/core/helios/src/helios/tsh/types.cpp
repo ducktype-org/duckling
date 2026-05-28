@@ -206,6 +206,7 @@ namespace compiler::tsh {
 	INSTANTIATE_CHECKED_CAST(PointerAbstractType)
 	INSTANTIATE_CHECKED_CAST(ManyPointerAbstractType)
 	INSTANTIATE_CHECKED_CAST(CPointerAbstractType)
+	INSTANTIATE_CHECKED_CAST(SliceAbstractType)
 	INSTANTIATE_CHECKED_CAST(StringAbstractType)
 	INSTANTIATE_CHECKED_CAST(TupleAbstractType)
 	INSTANTIATE_CHECKED_CAST(FunctionAbstractType)

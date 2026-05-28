@@ -363,6 +363,11 @@ namespace compiler::tsh {
 		throw base::NotYetImplemented("Type template interface not yet implemented");
 	}
 
+	CRef<TypeInterface> SliceAbstractTypeImpl::getDeclaredInterface(query::Context&) const {
+		CORE_PANIC("Slice type interface does not exist (we can add it if we find a use case).");
+	}
+
+
 	AbstractType TypeTemplateAbstractTypeImpl::instantiate(
 		query::Context& ctx, const SymbolType<>& element_type
 	) const {
