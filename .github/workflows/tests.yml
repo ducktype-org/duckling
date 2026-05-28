@@ -19,7 +19,6 @@ env:
   WORKSPACE: ${{ github.workspace }}/dev
   BUILD_DIR: ${{ github.workspace }}/dev/build
   CCACHE_DIR: ${{ github.workspace }}/dev/.ccache
-  SCCACHE_DIR: ~/.cache/sccache
   BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
   IF_MAIN_PR: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main'}}
   BUILD_SYSTEM: Ninja
