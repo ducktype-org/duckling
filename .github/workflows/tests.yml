@@ -350,16 +350,6 @@ jobs:
             ${{ env.CCACHE_DIR }}
           key: ${{ steps.restore-build-cache.outputs.cache-primary-key }}
 
-      # Save sccache on main branch to be restored in other branches.
-      - name: Save sccache cache
-        if: ${{ env.BRANCH_NAME == 'main' }}
-        id: save-sccache-cache
-        uses: actions/cache/save@v5
-        with:
-          path: |
-            ${{ env.SCCACHE_DIR }}
-          key: ${{ steps.restore-sccache-cache.outputs.cache-primary-key }}
-
       - name: Test
         working-directory: ${{ env.WORKSPACE }}
         run: ./toolbox.py test -b ${{ env.BUILD_DIR }} -j ${{ steps.set-jobs.outputs.jobs }} --output-on-failure --timeout 60
@@ -383,6 +373,19 @@ jobs:
         id: integration-tests
         working-directory: ${{ env.WORKSPACE }}
         run: ./toolbox.py itest -b ${{ env.BUILD_DIR }}
+
+      # Save sccache on main branch to be restored in other branches.
+      # NOTE: This has to be done **after** integration tests: ONLY when testing duck, we actually build duck in CI,
+      # so we have to save sccache after that, otherwise we'd have nothing to save.
+      - name: Save sccache cache
+        if: ${{ env.BRANCH_NAME == 'main' }}
+        id: save-sccache-cache
+        uses: actions/cache/save@v5
+        with:
+          path: |
+            ${{ env.SCCACHE_DIR }}
+          key: ${{ steps.restore-sccache-cache.outputs.cache-primary-key }}
+
 
       # failure() makes this step run even when a previous step has failed (which would otherwise
       # cause all subsequent steps to be skipped). The additional conditions ensure this step only
