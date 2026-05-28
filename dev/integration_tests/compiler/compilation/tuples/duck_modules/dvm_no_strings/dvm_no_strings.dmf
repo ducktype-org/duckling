@@ -14,5 +14,11 @@ fun main() -> i64 = {
 
     builtin_output_i64(tuple._1);
     builtin_output_i64(tuple._2);
+    
+    var tuple_2 = tuple;
+
+    builtin_output_i64(tuple_2._1);
+    builtin_output_i64(tuple_2._2);
+
     return 0;
 }
