@@ -9,7 +9,8 @@ namespace pst {
 	class Param final: public NotStmt {
 		PARENT_CLASS(NotStmt);
 
-		ELEMENT_CLONE_DECL(Param, name, type, initial);
+		ELEMENT_CLONE_DECL(Param);
+		CLONE_SIGNATURE(Param) override;
 	
 		NAMED_CHILD(name, IdentifierWrapper);
 		NAMED_CHILD(type, UniversalExprHolder);

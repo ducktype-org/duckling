@@ -5,6 +5,7 @@
 #include "elements/elements_list.hpp"
 #include "elements/lang_state_unmethods.hpp"
 #include "pst_config.hpp"
+#include "cloning_decl.hpp"
 #include "pst_id.hpp"
 #include "source_position_locked.hpp"
 
@@ -28,28 +29,6 @@
 namespace dia_int {
 	class StablePosition;
 }
-
-namespace pst {
-	struct CloneDummy {
-	private:
-		constexpr CloneDummy() = default;
-		friend constexpr CloneDummy makeCloneDummy();
-	};
-
-	constexpr CloneDummy makeCloneDummy() { return {}; }
-
-	constexpr CloneDummy CLONE = makeCloneDummy();
-}
-
-#define AUX_ONE_PLUS(arg) 1+
-
-#define PARENT_CLASS(parent_class) private: using ParentClass = parent_class
-
-#define ELEMENT_CLONE_DECL(element, ...) \
-	protected: \
-		explicit element(pst::CloneDummy clone, element& other): ParentClass(clone, other) {} \
-		static constexpr usize SUB_ELEMENTS_COUNT = FOR_EACH(AUX_ONE_PLUS, __VA_ARGS__) 0
-
 
 
 namespace pst {
@@ -98,8 +77,17 @@ namespace pst {
 			  source_position(other.source_position),
 			  context_hash(other.context_hash),
 			  id(PstID::next()) {}
+
+		virtual CLONE_SIGNATURE(LangElement) = 0;
+
+		[[nodiscard]] 
+		virtual MBox<LangElement> clone() const {
+			return cloneElement();
+		}
+
 	public:
 		using SubToken = base::CRef<lexer::Token>;
+
 
 		/**
 		 * @brief Needed for access to element path methods.
