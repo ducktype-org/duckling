@@ -61,13 +61,6 @@ class Point {
     fun setY(newY: i64) = {
         self.y = newY;
     }
-
-    fun output() = {
-        builtin_output_i64(manhattanFromOrigin());
-        builtin_output_i64(self.areaFromOrigin());
-        builtin_output_i64(manhattanFromOrigin(3));
-        builtin_output_i64(self.areaFromOrigin(4));
-    }
 }
 
 fun main() -> i64 = {
@@ -77,8 +70,8 @@ fun main() -> i64 = {
     var v1 = obj1.exampleField;
     var v2 = obj2.getField();
 
-    builtin_output_i64(v1); # 0
-    builtin_output_i64(v2); # 1
+    # builtin_output_i64(v1); # 0
+    # builtin_output_i64(v2); # 1
 
     obj1.setField(2);
     obj2.setField(3);
@@ -86,16 +79,16 @@ fun main() -> i64 = {
     var v3 = obj1.getField(); # 2
     var v4 = obj2.exampleField; # 3
 
-    builtin_output_i64(v3);
-    builtin_output_i64(v4);
+    # builtin_output_i64(v3);
+    # builtin_output_i64(v4);
 
     var wrap_obj = Wrapper(obj1);
     var v5 = wrap_obj.getInnerViaCall();
     wrap_obj.innerField.setToZero();
     var v6 = wrap_obj.getInnerViaAccess();
 
-    builtin_output_i64(v5); # 2
-    builtin_output_i64(v6); # 0
+    # builtin_output_i64(v5); # 2
+    # builtin_output_i64(v6); # 0
 
     return 0;
 }

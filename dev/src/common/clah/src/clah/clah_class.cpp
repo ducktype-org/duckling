@@ -91,6 +91,11 @@ namespace clah {
 		return std::move(*this);
 	}
 
+	Clah&& Clah::addCustomVerification(CustomVerification verification) {
+		custom_verifications.push_back(std::move(verification));
+		return std::move(*this);
+	}
+
 	Clah&& Clah::setDefaultValueParser(MBox<ValueParser> parser) {
 		default_value_parser = std::move(parser);
 		return std::move(*this);
@@ -233,6 +238,14 @@ namespace clah {
 			throw clah::exceptions::ClahException("No command matched!");
 		auto command = maybe_command.value();
 
+		auto run_custom_verifications = [&](const Clah& clah) {
+			for (const auto& verification: clah.custom_verifications) {
+				auto verification_result = verification(result);
+				if (not verification_result.has_value())
+					throw exceptions::CustomVerificationFailed(verification_result.error());
+			}
+		};
+
 		if (num_positional_args < command->getPositionalParameters().size()) {
 			const auto& param = command->getPositionalParameters()[num_positional_args];
 			throw exceptions::PositionalParameterExpected(
@@ -270,5 +283,8 @@ namespace clah {
 		// Validate global params. This function is invoked from the root command, thus we
 		// compare it with this.
 		if (command.get() != this) validate_parameters(getParameters());
+
+		run_custom_verifications(*command);
+		if (command.get() != this) run_custom_verifications(*this);
 	}
 }  // clah

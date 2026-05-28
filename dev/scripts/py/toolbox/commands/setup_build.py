@@ -33,6 +33,7 @@ def configure_presets(ctx, param, value):
             "strip_symbol_information": True,
             "embed_assets": True,
             "build_static_icu": True, # we want to have a static ICU in release to make the binary portable
+            "fixed_std_path": False, # we want to have a dynamic std path in release
         }
     elif value == "MaxPerformancePreset":
         preset_map = {
@@ -204,6 +205,13 @@ def configure_presets(ctx, param, value):
     help="Forces building and linking against a custom-built static version of ICU.",
     type=bool,
     default=False,
+    is_flag=True,
+)
+@option(
+    "--fixed-std-path/--no-fixed-std-path",
+    help="Whether to use a fixed path for the standard library. If not then path is calculated dynamically based on the path of the executable",
+    type=bool,
+    default=True,
     is_flag=True,
 )
 @option(

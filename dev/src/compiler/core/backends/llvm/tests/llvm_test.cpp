@@ -1,4 +1,5 @@
 #include <backends/llvm/llvm_backend.hpp>
+#include <diagnostic_interactive/module_flags/module_flags.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <global_state/backend_options.hpp>
@@ -52,6 +53,7 @@ protected:
 		global_state::setters::setBackendOptions({
 			.llvm_backend = { global_state::BackendOptions::LLVMBackend{} },
 		});
+		dia_int::configureImmediatePrint(&std::cerr);
 	}
 
 private:
@@ -171,7 +173,7 @@ private:
 
 	void functionCalls() {
 		runTestForModule("modules/calls_simple", 3);
-		runTestForModule("modules/calls", 3, 5);
+		runTestForModule("modules/calls", 3, 4);
 	}
 
 	void parseFromIRCodeTest() {
@@ -207,16 +209,16 @@ private:
 		runTestForModule("modules/units/unit2", 2, 2);
 		runTestForModule("modules/units/unit3", 1, 1);
 		runTestForModule("modules/units/unit4", 1, 2);
-		runTestForModule("modules/units/unit_simple", 2, 3);
-		runTestForModule("modules/units/unit_class", 3, 4);
+		runTestForModule("modules/units/unit_simple", 2, 2);
+		runTestForModule("modules/units/unit_class", 3, 3);
 		runTestForModule("modules/units/unit_simple_multiple_modules", 1, 2);
 	}
 
 	void classTest() { runTestForModule("modules/classes/records", 14, 16); }
 
-	void stringsTest() { runTestForModule("modules/strings", 1, 3); }
+	void stringsTest() { runTestForModule("modules/strings", 2, 2); }
 
-	void ffiTest() { runTestForModule("modules/ffi", 1, 2); }
+	void ffiTest() { runTestForModule("modules/ffi", 1, 1); }
 
 	void referencesTest() {
 		auto        llvm_module = getLLVMModuleFromPath("modules/references");

@@ -1,2 +1,4 @@
+import core.builtins.*;
+
 
 fun sub() = 1;

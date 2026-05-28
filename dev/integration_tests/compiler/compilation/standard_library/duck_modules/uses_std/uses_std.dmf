@@ -1,0 +1,6 @@
+import core.builtins.*;
+
+fun main() -> i64 = {
+    builtin_output_i64(10);
+    return 0;
+}

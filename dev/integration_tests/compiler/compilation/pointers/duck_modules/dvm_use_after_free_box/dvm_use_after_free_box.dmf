@@ -1,3 +1,5 @@
+import core.builtins.*;
+
 fun main() -> i64 = {
     var p : ptr i32;
     {

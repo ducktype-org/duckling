@@ -20,15 +20,16 @@ compile_determinism_script: "@{dev_dir}/integration_tests/compiler/compilation/s
 # Path to the helper script that runs multiple commands and asserts identical stdout/stderr/exit code.
 compare_runs_script: "@{dev_dir}/integration_tests/compiler/compilation/scripts/compare_runs.py"
 
-compile_dvm_backend_deterministically_cmd: "if [ '@{enable_conc_deterministic_tests}' = 'true' ]; then python3 @{compile_determinism_script} --duckc-path @{duckc_path} --module-name @{Name} --duckc-worker-count @{duckc_worker_count} --compile-options='@{compile_dvm_options}' --backend dvm; else true; fi"
-compile_llvm_backend_deterministically_cmd: "if [ '@{enable_conc_deterministic_tests}' = 'true' ]; then python3 @{compile_determinism_script} --duckc-path @{duckc_path} --module-name @{Name} --duckc-worker-count @{duckc_worker_count} --compile-options='@{compile_llvm_options}' --backend llvm; else true; fi"
+module_to_compile: "@{Name}"
+compile_dvm_backend_deterministically_cmd: "if [ '@{enable_conc_deterministic_tests}' = 'true' ]; then python3 @{compile_determinism_script} --duckc-path @{duckc_path} --module-name @{module_to_compile} --duckc-worker-count @{duckc_worker_count} --compile-options='@{compile_dvm_options}' --backend dvm; else true; fi"
+compile_llvm_backend_deterministically_cmd: "if [ '@{enable_conc_deterministic_tests}' = 'true' ]; then python3 @{compile_determinism_script} --duckc-path @{duckc_path} --module-name @{module_to_compile} --duckc-worker-count @{duckc_worker_count} --compile-options='@{compile_llvm_options}' --backend llvm; else true; fi"
 
-compile_dvm_backend_cmd:  "@{compile_dvm_backend_deterministically_cmd} && @{duckc_path} compile_package duck_modules/@{Name} -w @{duckc_worker_count} -a build -n package_@{Name} @{compile_dvm_options} --dvm-backend"
-compile_llvm_backend_cmd: "@{compile_llvm_backend_deterministically_cmd} && @{duckc_path} compile_package duck_modules/@{Name} -w @{duckc_worker_count} -a build -n package_@{Name} @{compile_llvm_options}"
+compile_dvm_backend_cmd:  "@{compile_dvm_backend_deterministically_cmd} && @{duckc_path} compile_package duck_modules/@{module_to_compile} -w @{duckc_worker_count} -a build -n package_@{module_to_compile} @{compile_dvm_options} --dvm-backend"
+compile_llvm_backend_cmd: "@{compile_llvm_backend_deterministically_cmd} && @{duckc_path} compile_package duck_modules/@{module_to_compile} -w @{duckc_worker_count} -a build -n package_@{module_to_compile} @{compile_llvm_options}"
 
 # "compile only" commands used by the all backend (determinism checks run separately before these).
-compile_dvm_only_cmd: "@{duckc_path} compile_package duck_modules/@{Name} -w @{duckc_worker_count} -a build -n package_@{Name} @{compile_dvm_options} --dvm-backend"
-compile_llvm_only_cmd: "@{duckc_path} compile_package duck_modules/@{Name} -w @{duckc_worker_count} -a build -n package_@{Name} @{compile_llvm_options}"
+compile_dvm_only_cmd: "@{duckc_path} compile_package duck_modules/@{module_to_compile} -w @{duckc_worker_count} -a build -n package_@{module_to_compile} @{compile_dvm_options} --dvm-backend"
+compile_llvm_only_cmd: "@{duckc_path} compile_package duck_modules/@{module_to_compile} -w @{duckc_worker_count} -a build -n package_@{module_to_compile} @{compile_llvm_options}"
 
 compiled_to_llvm: "./build/package_llvm.exe"
 compiled_to_dvm: "./build/package_dvm.dbc"
@@ -95,3 +96,4 @@ SubDirs:
   - macros
   - diagnostics
   - packages
+  - standard_library
