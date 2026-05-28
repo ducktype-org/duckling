@@ -187,3 +187,43 @@ std::expected<base::Optional<dia::SourcePosition>, vm::loader::MappingException>
 		return instr.bytecode_pos;
 	});
 }
+
+base::Optional<FatBytecodePosition> vm::loader::Loader::mapFileLineToCodeCollectionPosition(
+	fs::File file, usize line_number
+) const {
+	for (const auto& function: getHighProgram()->functions()) {
+		if (function.bytecode_pos.has_value()) {
+			auto bytecode_pos = function.bytecode_pos.value();
+			if (bytecode_pos.getSource()->getFile() == file
+			    && bytecode_pos.getStartLineColumn().first == line_number) {
+				return FatBytecodePosition{ function.name.str, 0 };
+			}
+			if (bytecode_pos.getSource()->getFile() != file
+			    || bytecode_pos.getStartLineColumn().first > line_number
+				|| bytecode_pos.getEndLineColumn().first < line_number) {
+				continue;
+			}
+		}
+
+		auto guess = std::lower_bound(
+			function.body.begin(), function.body.end(), line_number,
+			[&](const auto& instr, usize line) {
+				auto bytecode_pos = instr.visit([](auto&& i) { return i.bytecode_pos; });
+				if (!bytecode_pos.has_value()) return true;
+				if (bytecode_pos->getSource()->getFile() != file) return true;
+				return bytecode_pos->getStartLineColumn().first < line;
+			}
+		);
+
+		if (guess != function.body.end()) {
+			auto bytecode_pos = guess->visit([](auto&& instr) { return instr.bytecode_pos; });
+			if (bytecode_pos.has_value()
+			    && bytecode_pos->getSource()->getFile() == file
+			    && bytecode_pos->getStartLineColumn().first == line_number) {
+				return FatBytecodePosition{ function.name.str, static_cast<usize>(std::distance(function.body.begin(), guess)) };
+			}
+		}
+	}
+
+	return std::nullopt;
+}

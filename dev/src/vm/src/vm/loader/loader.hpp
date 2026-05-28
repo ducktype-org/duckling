@@ -71,5 +71,9 @@ namespace vm::loader {
 		std::expected<base::Optional<dia::SourcePosition>, MappingException> mapCodeCollectionPositionToFilePosition(
 			FatBytecodePosition position
 		) const;
+
+		base::Optional<FatBytecodePosition> mapFileLineToCodeCollectionPosition(
+			fs::File file, usize line_number 
+		) const;
 	};
 }
