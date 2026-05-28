@@ -102,8 +102,9 @@ private:
 			ASSERT_TRUE(
 				vm::api::setBreakpoint(pid, base::StrID("main"), breakpoint, true).has_value()
 			);
-		
-		vm::api::setBreakpoint(pid, base::StrID("main"), 5, false).value();  // "Remove breakpoint failed (1)"
+
+		vm::api::setBreakpoint(pid, base::StrID("main"), 5, false)
+			.value();               // "Remove breakpoint failed (1)"
 
 		vm::api::run(pid).value();  // "Run failed (1)"
 
