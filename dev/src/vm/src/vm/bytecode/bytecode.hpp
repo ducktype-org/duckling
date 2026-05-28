@@ -55,10 +55,8 @@ namespace vm::code {
 
 	/**
 	 * @brief Represents bytecode a function.
-	 * @note A function on its own (without local_stack field) does not contain enough
-	 * information to tell if it is correct/valid or not. Only when local_stack field is present you
-	 * can assume that function passed the validation and assigned each instruction a corresponding
-	 * state of the stack.
+	 * @note A function on its own (without type context or globals) does not contain enough
+	 * information to tell if it is correct/valid or not
 	 */
 	struct Function final: ElementBase {
 		Identifier    name;
