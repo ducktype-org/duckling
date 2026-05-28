@@ -16,6 +16,7 @@ public:
 		TESTER_ADD_TEST(stopTest);
 		TESTER_ADD_TEST(killTest);
 		TESTER_ADD_TEST(pausesOnBreakpointAndResumes);
+		TESTER_ADD_TEST(notPausesOnRemovedBreakpoint);
 		TESTER_ADD_TEST(executesStepByStep);
 		TESTER_ADD_TEST(vmApiMemoryAllTypes);
 	}
@@ -89,6 +90,30 @@ private:
 		vm::api::resume(pid).value();  // "Resume failed (2)"
 
 		vm::api::stop(pid).value();    // "Stop failed (1)"
+	}
+
+	/**
+	 * @brief Checks if the program will not pause on removed breakpoint.
+	 * Checks if `api::waitForPause` and `api::resume` functions work correctly.
+	 */
+	void notPausesOnRemovedBreakpoint() {
+		auto pid = loadProgram("breakpoint.dbc");
+		for (auto breakpoint: { 5ULL, 8ULL })
+			ASSERT_TRUE(
+				vm::api::setBreakpoint(pid, base::StrID("main"), breakpoint, true).has_value()
+			);
+
+		ASSERT_TRUE(vm::api::setBreakpoint(pid, base::StrID("main"), 5, false).has_value());
+
+		ASSERT_TRUE(vm::api::run(pid).has_value());
+
+		auto execution_position = vm::api::waitForBreakpoint(pid);
+		ASSERT_TRUE(execution_position.has_value());
+
+		ASSERT_EQUAL_PRINT(8, execution_position->instr_number);
+
+		ASSERT_TRUE(vm::api::resume(pid).has_value());
+		ASSERT_TRUE(vm::api::stop(pid).has_value());
 	}
 
 	/**
