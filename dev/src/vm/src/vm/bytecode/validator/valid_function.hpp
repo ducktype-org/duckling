@@ -13,7 +13,7 @@ namespace vm::code::valid_function {
 
 		/**
 		 * @brief constructs a normal (not validated) function, which from a valid function
-		 * @warning THIS FUNCTION IS O(n) - consider using it 
+		 * @warning THIS FUNCTION IS O(n) - USE IT CAREFULY.
 		 */
 		Function toNormal() const {
 			Function new_func;
