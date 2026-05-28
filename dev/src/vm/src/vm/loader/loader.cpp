@@ -195,14 +195,17 @@ base::Optional<FatBytecodePosition> vm::loader::Loader::mapFileLineToCodeCollect
 		auto body = function.body;
 
 		if (function.bytecode_pos.has_value()) {
-			auto bytecode_pos = function.bytecode_pos.value();
+			auto pos = function.bytecode_pos.value();
 
 			// Skip if function lays in other file
-			if (bytecode_pos.getSource()->getFile() != file) continue;
+			if (pos.getSource()->getFile() != file) continue;
 
 			// Return first instruction if line contains function definition head
-			if (bytecode_pos.getStartLineColumn().first == line_number)
-				return FatBytecodePosition{ function.name.str, 0 };
+			if (pos.getStartLineColumn().first == line_number)
+				return FatBytecodePosition{
+					.function_name     = function.name.str,
+					.instruction_index = 0,
+				};
 		}
 
 		auto get_pos = [](auto&& i) { return i.bytecode_pos; };
@@ -215,21 +218,30 @@ base::Optional<FatBytecodePosition> vm::loader::Loader::mapFileLineToCodeCollect
 		auto back_pos = body.back().visit(get_pos);
 		if (back_pos.has_value() && back_pos->getStartLineColumn().first < line_number) continue;
 
-		auto comparator = [&](const auto& instr, usize line) {
-			auto pos = instr.visit(get_pos);
-			if (!pos.has_value() || pos->getSource()->getFile() != file) return true;
-			return pos->getStartLineColumn().first < line;
-		};
-
-		auto guess = std::lower_bound(body.begin(), body.end(), line_number, comparator);
+		auto guess = std::ranges::lower_bound(
+			body,
+			line_number,
+			std::ranges::less{},
+			[&](const auto& instr) -> usize {
+				auto pos = instr.visit(get_pos);
+				
+				if (!pos || pos->getSource()->getFile() != file)
+					return -1ULL;
+				
+				return pos->getStartLineColumn().first;
+			}
+		);
+		
 		if (guess == body.end()) continue;
 
-		auto pos = guess->visit([](auto&& instr) { return instr.bytecode_pos; });
+		auto pos = guess->visit(get_pos);
 		if (!pos) continue;
 
 		if (pos->getSource()->getFile() == file && pos->getStartLineColumn().first == line_number)
-			return FatBytecodePosition{ function.name.str,
-				                        static_cast<usize>(std::distance(body.begin(), guess)) };
+			return FatBytecodePosition{
+				.function_name     = function.name.str,
+				.instruction_index = static_cast<usize>(std::distance(body.begin(), guess)),
+			};
 	}
 
 	return std::nullopt;
