@@ -9,10 +9,11 @@
 namespace vm::persistent {
 
 	/**
-	 * @brief A persistant dataStrcture simulating STL Vector but with the possibility to access
-	 * and modigy any of it's previous instances
+	 * @brief A persistent data structure simulating STL vector but with the ability to access
+	 * and modify any of it's previous states.
 	 * @note can be thought of Hashmap<VectorStateID, Vector<T> >
-	 * @warning THIS IS NAIVE IMPLEMENTATION IN O(N^2), USE FOR TESTING OR SMALL NUMBER OF OPERATIONS
+	 * @warning THIS IS A NAIVE IMPLEMENTATION IN O(N^2), USE FOR TESTING OR SMALL NUMBER OF
+	 * OPERATIONS
 	 */
 	template<typename T>
 	class DummyVector {

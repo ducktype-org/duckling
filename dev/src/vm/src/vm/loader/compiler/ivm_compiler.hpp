@@ -117,7 +117,7 @@ namespace vm::loader::compiler {
 		 * @brief Calculates the stack offsets of stack variables.
 		 * Since in ValidProgram variables are represented by names not indexes on the stack.
 		 * This function creates an stack context which is used during lowering instructions to
-		 * change the variable names to numeric offsets.
+		 * translate the variable name to numeric offsets.
 		 */
 		detail::FunctionStackContext calculateStackContext(
 			const code::valid_function::ValidFunction& function

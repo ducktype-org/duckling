@@ -2,7 +2,7 @@
 
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/type_of_data.hpp>
-#include <vm/bytecode/validator/valid_function/valid_function.hpp>
+#include <vm/bytecode/validator/valid_function.hpp>
 #include <vm/bytecode/validator/valid_type/type_context.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
 

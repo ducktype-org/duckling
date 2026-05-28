@@ -7,10 +7,11 @@
 namespace vm::persistent {
 
 	/**
-	 * @brief A persistant dataStrcture simulating STL HashMap but with the possibility to access
-	 * and modigy any of it's previous instances
+	 * @brief A persistent data strcture simulating STL unordered_map but with the ability to access
+	 * and modify any of it's previous states.
 	 * @note can be thought of Hashmap<MapStateID, HashMap<Key, Val> >
-	 * @warning THIS IS NAIVE IMPLEMENTATION IN O(N^2), USE FOR TESTING OR SMALL NUMBER OF OPERATIONS
+	 * @warning THIS IS A NAIVE IMPLEMENTATION IN O(N^2), USE FOR TESTING OR SMALL NUMBER OF
+	 * OPERATIONS
 	 */
 	template<typename Key, typename Val, typename Hasher = std::hash<Key>>
 	class DummyHashMap {
