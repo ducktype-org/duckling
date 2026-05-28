@@ -78,7 +78,7 @@ namespace vm::loader {
 		 * instruction exists.
 		 */
 		base::Optional<FatBytecodePosition> mapFileLineToCodeCollectionPosition(
-			fs::File file, usize line_number
+			fs::File file, usize line
 		) const;
 	};
 }

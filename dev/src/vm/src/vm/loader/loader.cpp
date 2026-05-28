@@ -189,55 +189,44 @@ std::expected<base::Optional<dia::SourcePosition>, vm::loader::MappingException>
 }
 
 base::Optional<FatBytecodePosition> vm::loader::Loader::mapFileLineToCodeCollectionPosition(
-	fs::File file, usize line_number
+	fs::File file, usize line
 ) const {
 	for (const auto& function: getHighProgram()->functions()) {
+		// ensure function has position and is in requested file
+		if (!function.bytecode_pos) continue;
+		if (function.bytecode_pos->getSource()->getFile() != file) continue;
+
 		auto body = function.body;
 
-		if (function.bytecode_pos.has_value()) {
-			auto pos = function.bytecode_pos.value();
-
-			// Skip if function lays in other file
-			if (pos.getSource()->getFile() != file) continue;
-
-			// Return first instruction if line contains function definition head
-			if (pos.getStartLineColumn().first == line_number)
-				return FatBytecodePosition{
-					.function_name     = function.name.str,
-					.instruction_index = 0,
-				};
-		}
+		// Return first instruction if line contains function name
+		if (function.name.bytecode_pos->getStartLineColumn().first == line)
+			return FatBytecodePosition{
+				.function_name     = function.name.str,
+				.instruction_index = 0,
+			};
 
 		auto get_pos = [](auto&& i) { return i.bytecode_pos; };
 
-		// Skip if before the function
-		auto front_pos = body.front().visit(get_pos);
-		if (front_pos.has_value() && front_pos->getStartLineColumn().first > line_number) continue;
+		// Skip if before or after the function
+		if (body.front().visit(get_pos)->getStartLineColumn().first > line) continue;
+		if (body.back().visit(get_pos)->getStartLineColumn().first < line) continue;
 
-		// Skip if after the function
-		auto back_pos = body.back().visit(get_pos);
-		if (back_pos.has_value() && back_pos->getStartLineColumn().first < line_number) continue;
-
+		// Binsearch line
 		auto guess = std::ranges::lower_bound(
 			body,
-			line_number,
+			line,
 			std::ranges::less{},
 			[&](const auto& instr) -> usize {
-				auto pos = instr.visit(get_pos);
-				
-				if (!pos || pos->getSource()->getFile() != file)
-					return -1ULL;
-				
-				return pos->getStartLineColumn().first;
+				return instr.visit(get_pos)->getStartLineColumn().first;
 			}
 		);
-		
+
 		if (guess == body.end()) continue;
 
 		auto pos = guess->visit(get_pos);
 		if (!pos) continue;
 
-		if (pos->getSource()->getFile() == file && pos->getStartLineColumn().first == line_number)
+		if (pos->getSource()->getFile() == file && pos->getStartLineColumn().first == line)
 			return FatBytecodePosition{
 				.function_name     = function.name.str,
 				.instruction_index = static_cast<usize>(std::distance(body.begin(), guess)),

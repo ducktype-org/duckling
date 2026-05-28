@@ -237,7 +237,7 @@ namespace vm::api {
 		return Supervisor::get()
 		    .doRequest(SupervisorRequest(
 				pid,
-				request::MapFileLineToCodeCollectionPosition{ .file        = file,
+				request::MapFileLineToCodeCollectionPosition{ .file        = std::move(file),
 		                                                      .line_number = line_number }
 			))
 		    .and_then(mapOrWrongResponse<response::CodePosition>);
