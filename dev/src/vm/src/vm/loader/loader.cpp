@@ -189,7 +189,7 @@ std::expected<base::Optional<dia::SourcePosition>, vm::loader::MappingException>
 }
 
 base::Optional<FatBytecodePosition> vm::loader::Loader::mapFileLineToCodeCollectionPosition(
-	fs::File file, usize line
+	const fs::File& file, usize line
 ) const {
 	for (const auto& function: getHighProgram()->functions()) {
 		// ensure function has position and is in requested file

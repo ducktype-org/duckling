@@ -146,7 +146,7 @@ namespace vm {
 		) override;
 
 		std::expected<api::Response, api::ApiError> mapFileLineToCodeCollectionPosition(
-			fs::File file, usize line_number
+			const fs::File& file, usize line_number
 		) override;
 
 		/**

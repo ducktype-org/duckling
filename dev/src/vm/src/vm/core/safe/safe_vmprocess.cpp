@@ -447,7 +447,7 @@ namespace vm {
 	}
 
 	std::expected<api::Response, api::ApiError> SafeVMProcess::mapFileLineToCodeCollectionPosition(
-		fs::File file, usize line_number
+		const fs::File& file, usize line_number
 	) {
 		auto maybe_position = loader.mapFileLineToCodeCollectionPosition(file, line_number);
 		if (!maybe_position)
