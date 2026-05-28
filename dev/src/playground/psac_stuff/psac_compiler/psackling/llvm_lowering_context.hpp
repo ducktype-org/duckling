@@ -1,11 +1,12 @@
 #pragma once
 
-#include "base/collections/maps.hpp"
 #include "psackling/ids.hpp"
 #include "psackling/llvm.hpp"
 
+#include "base/collections/maps.hpp"
+
 namespace pg {
-    class Context;
+	class Context;
 
 	class LlvmLoweringContext {
 	public:
@@ -16,6 +17,6 @@ namespace pg {
 	private:
 		LlvmProgramModule& llvm_module;
 
-        base::HashMap<tp::TypeID, llvm::Type*> types;
+		base::HashMap<tp::TypeID, llvm::Type*> types;
 	};
 }

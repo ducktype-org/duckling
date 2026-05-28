@@ -2,6 +2,7 @@
 
 #include <frontend/pst_parser/elements/elements_list.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
+#include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/binary_operator.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/call.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/chain_expr.hpp>
@@ -28,8 +29,8 @@ namespace pg {
 		const u64   value   = std::stoull(lit->getValue().str());
 		llvm::Type* llvm_ty = lowering.lowerType(ctx.i64_type_id, ctx);
 		result              = LoweredExpr{
-			.value   = llvm::ConstantInt::get(llvm_ty, value),
-			.type_id = ctx.i64_type_id,
+						 .value   = llvm::ConstantInt::get(llvm_ty, value),
+						 .type_id = ctx.i64_type_id,
 		};
 	}
 
@@ -81,8 +82,9 @@ namespace pg {
 
 		llvm::Type* llvm_ty = lowering.lowerType(symbol.type_id, ctx);
 		result              = LoweredExpr{
-			.value   = builder.CreateLoad(llvm_ty, slot, name.strView()),
-			.type_id = symbol.type_id,
+						 .value   = builder.CreateLoad(llvm_ty, slot, name.strView()),
+						 .type_id = symbol.type_id,
+						 .address = slot,
 		};
 	}
 
@@ -112,7 +114,8 @@ namespace pg {
 			);
 		}
 
-		llvm::Value* out_value = nullptr;
+		llvm::Value* out_value   = nullptr;
+		tp::TypeID   result_type = ctx.i64_type_id;
 		switch (op->getOperator().illegalAccess().value()->unwrap().asNamed()) {
 		case lang_def::NamedOperator::Plus:
 			out_value = builder.CreateAdd(lhs.value, rhs.value, "addtmp");
@@ -127,6 +130,30 @@ namespace pg {
 			// Signed division — i64 is signed in our type system.
 			out_value = builder.CreateSDiv(lhs.value, rhs.value, "divtmp");
 			break;
+		case lang_def::NamedOperator::Equal:
+			out_value   = builder.CreateICmpEQ(lhs.value, rhs.value, "eqtmp");
+			result_type = ctx.bool_type_id;
+			break;
+		case lang_def::NamedOperator::NotEqual:
+			out_value   = builder.CreateICmpNE(lhs.value, rhs.value, "netmp");
+			result_type = ctx.bool_type_id;
+			break;
+		case lang_def::NamedOperator::Lesser:
+			out_value   = builder.CreateICmpSLT(lhs.value, rhs.value, "lttmp");
+			result_type = ctx.bool_type_id;
+			break;
+		case lang_def::NamedOperator::LEqual:
+			out_value   = builder.CreateICmpSLE(lhs.value, rhs.value, "letmp");
+			result_type = ctx.bool_type_id;
+			break;
+		case lang_def::NamedOperator::Greater:
+			out_value   = builder.CreateICmpSGT(lhs.value, rhs.value, "gttmp");
+			result_type = ctx.bool_type_id;
+			break;
+		case lang_def::NamedOperator::GEqual:
+			out_value   = builder.CreateICmpSGE(lhs.value, rhs.value, "getmp");
+			result_type = ctx.bool_type_id;
+			break;
 		default:
 			throw std::runtime_error(
 				"Binary operator '" + op->getOperator().illegalAccess().value()->unwrap().str()
@@ -134,7 +161,7 @@ namespace pg {
 			);
 		}
 
-		result = LoweredExpr{ .value = out_value, .type_id = ctx.i64_type_id };
+		result = LoweredExpr{ .value = out_value, .type_id = result_type };
 	}
 
 	void ExprLowering::visitComparisonChain(pst::Access<pst::expr::ComparisonChain> chain) {
@@ -142,7 +169,7 @@ namespace pg {
 		// adjacent values on i64 (only supported numeric type for now); result is bool.
 
 		auto        expr_count = usize(chain->numberOfSubExpressions());
-		const auto& ops = std::views::iota(0ULL, expr_count - 1)
+		const auto& ops        = std::views::iota(0ULL, expr_count - 1)
 		                | std::views::transform([chain](usize i) { return chain->getOperator(i); });
 		if (ops.empty())
 			throw std::runtime_error("Empty comparison chain (PST invariant violation)");
@@ -197,13 +224,109 @@ namespace pg {
 		CORE_PANIC("Not handling calls just yet");
 	}
 
+	void ExprLowering::visitAssignment(pst::Access<pst::expr::Assignment> assignment) {
+		const base::StrID op = assignment->getAssignmentType().illegalAccess().value()->unwrap();
+
+		LoweredExpr lhs = lower(*assignment->getVariables().illegalAccess().value());
+		if (lhs.address == nullptr)
+			throw std::runtime_error("Left-hand side of '" + op.str() + "' is not an l-value");
+
+		LoweredExpr rhs = lower(*assignment->getValue().illegalAccess().value());
+
+		if (lhs.type_id != rhs.type_id) {
+			const tp::TypeInfo& lhs_ti = ctx.getTypeInfo(lhs.type_id);
+			const tp::TypeInfo& rhs_ti = ctx.getTypeInfo(rhs.type_id);
+			throw std::runtime_error(
+				"Type mismatch in '" + op.str() + "': lhs is '" + lhs_ti.name.str() + "', rhs is '"
+				+ rhs_ti.name.str() + "'"
+			);
+		}
+
+		llvm::Value* value_to_store = nullptr;
+
+		if (op == base::StrID("=")) {
+			value_to_store = rhs.value;
+		} else if (op == base::StrID("+=")) {
+			if (lhs.type_id != ctx.i64_type_id)
+				throw std::runtime_error("'+=' currently only supports i64 operands");
+			value_to_store = builder.CreateAdd(lhs.value, rhs.value, "addassigntmp");
+		} else if (op == base::StrID("-=")) {
+			if (lhs.type_id != ctx.i64_type_id)
+				throw std::runtime_error("'-=' currently only supports i64 operands");
+			value_to_store = builder.CreateSub(lhs.value, rhs.value, "subassigntmp");
+		} else {
+			throw std::runtime_error(
+				"Assignment operator '" + op.str() + "' not yet supported (=, +=, -= only)"
+			);
+		}
+
+		builder.CreateStore(value_to_store, lhs.address);
+
+		result = LoweredExpr{
+			.value   = value_to_store,
+			.type_id = lhs.type_id,
+		};
+	}
+
 	void ExprLowering::visitChainExpr(pst::Access<pst::expr::ChainExpr> chain) {
-		// For now we support only a single call.
-		auto&& chain_links = chain->getChain();
-		CORE_ASSERT(
-			chain_links.size() == 1, "Only single-link chain expressions are supported for now"
-		);
-		auto elem = chain_links.front().illegalAccess().value();
-		elem->acceptExprVisitor(*this);
+		const pst::ExprElement& atom_expr = *chain->getAtom().illegalAccess().value();
+		LoweredExpr             current   = lower(atom_expr);
+
+		for (pst::AccessLocked<pst::ExprElement> element_locked: chain->getChain()) {
+			pst::Access<pst::ExprElement> element = element_locked.illegalAccess().value();
+
+			auto opt_access = element.dynamicCast<pst::expr::Access>();
+			if (!opt_access.has_value())
+				throw std::runtime_error("Chain expression: only `.` field access is supported");
+			auto access = opt_access.value();
+			if (access->getType().illegalAccess().value()->unwrap() != base::StrID(".")) {
+				// TODO: Add function calls here.
+				throw std::runtime_error(
+					"Chain expression: only `.` access supported, got: "
+					+ access->getType().illegalAccess().value()->unwrap().str()
+				);
+			}
+
+			if (current.address == nullptr)
+				throw std::runtime_error("Field access on non-l-value expression");
+
+			// Base must be a struct.
+			tp::TypeInfo& base_type_info = ctx.getTypeInfo(current.type_id);
+			if (!std::holds_alternative<tp::Structure>(base_type_info.kind)) {
+				throw std::runtime_error(
+					"Field access on non-struct type '" + base_type_info.name.str() + "'"
+				);
+			}
+
+			// Look up the field in the struct's own namespace.
+			const base::StrID field_name = access->getName().illegalAccess().value()->unwrap();
+			sym::SymbolID     field_sym_id
+				= ctx.lookupInScopeAndParents(base_type_info.namespace_id, field_name);
+			const sym::Symbol& field_sym = ctx.getSymbol(field_sym_id);
+			if (!std::holds_alternative<sym::FieldSymbol>(field_sym.kind)) {
+				throw std::runtime_error(
+					"Symbol '" + field_name.str() + "' in struct '" + base_type_info.name.str()
+					+ "' is not a field"
+				);
+			}
+			const u32 field_index = std::get<sym::FieldSymbol>(field_sym.kind).index;
+
+			// GEP into the struct, then load the field's value.
+			llvm::Type*  struct_llvm_ty = lowering.lowerType(current.type_id, ctx);
+			llvm::Value* field_ptr      = builder.CreateStructGEP(
+                struct_llvm_ty, current.address, field_index, field_name.strView()
+            );
+			llvm::Type*  field_llvm_ty = lowering.lowerType(field_sym.type_id, ctx);
+			llvm::Value* field_value
+				= builder.CreateLoad(field_llvm_ty, field_ptr, field_name.strView());
+
+			current = LoweredExpr{
+				.value   = field_value,
+				.type_id = field_sym.type_id,
+				.address = field_ptr,  // result is still addressable, chains further
+			};
+		}
+
+		result = current;
 	}
 }

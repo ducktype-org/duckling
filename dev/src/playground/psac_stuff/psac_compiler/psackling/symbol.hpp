@@ -20,7 +20,12 @@ namespace pg::sym {
 		ns::NamespaceID namespace_id;
 	};
 
-	using SymbolKind = std::variant<FunctionSymbol, VariableSymbol, TypeSymbol, NamespaceSymbol>;
+	struct FieldSymbol {
+		u32 index;
+	};
+
+	using SymbolKind
+		= std::variant<FunctionSymbol, VariableSymbol, TypeSymbol, NamespaceSymbol, FieldSymbol>;
 
 	struct Symbol {
 		base::StrID name;

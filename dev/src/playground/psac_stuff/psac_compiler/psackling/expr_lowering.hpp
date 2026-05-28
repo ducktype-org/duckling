@@ -12,8 +12,9 @@
 
 namespace pg {
 	struct LoweredExpr {
-		llvm::Value* value{ nullptr };
+		llvm::Value* value{ nullptr };    // In r-value sense.
 		tp::TypeID   type_id{};
+		llvm::Value* address{ nullptr };  // In l-value sense.
 	};
 
 	/// Per-function map: variable SymbolID -> its stack slot (alloca).
@@ -29,10 +30,7 @@ namespace pg {
 	class ExprLowering final: public pst::expr::PstExprVisitorPanicky {
 	public:
 		ExprLowering(
-			Context&             ctx,
-			LlvmLoweringContext& lowering,
-			llvm::IRBuilder<>&   builder,
-			LocalsMap&           locals
+			Context& ctx, LlvmLoweringContext& lowering, llvm::IRBuilder<>& builder, LocalsMap& locals
 		):
 			  ctx(ctx),
 			  lowering(lowering),
@@ -47,6 +45,7 @@ namespace pg {
 		void visitBinaryOperator(pst::Access<pst::expr::BinaryOperator> op) override;
 		void visitComparisonChain(pst::Access<pst::expr::ComparisonChain> chain) override;
 		void visitRoundExpr(pst::Access<pst::expr::RoundExpr> round) override;
+		void visitAssignment(pst::Access<pst::expr::Assignment> assignment) override;
 		void visitCall(pst::Access<pst::expr::Call> call) override;
 		void visitChainExpr(pst::Access<pst::expr::ChainExpr> chain) override;
 

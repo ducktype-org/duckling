@@ -15,11 +15,12 @@ namespace pg::tp {
 
 	struct Incomplete {};
 
-    struct Namespace {};
+	struct Namespace {};
 
 	struct Structure {
 		// Fields are stored as symbols in the namespace of the structure
-		sym::SymbolID structure_symbol_id;
+		sym::SymbolID              structure_symbol_id;
+		std::vector<sym::SymbolID> field_symbols;
 	};
 
 	struct Integral {

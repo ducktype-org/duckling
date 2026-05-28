@@ -52,7 +52,7 @@ void pg::compile(const fs::File& file, std::string_view output_path) {
 	LlvmLoweringContext llvm_lowering(llvm_module);
 	Context             ctx(llvm_lowering);
 
-	// Pass 1: register top-level declarations (namespaces, functions) in Context.
+	// Pass 1: register top-level declarations (namespaces, functions, structs) in Context.
 	GlobalPass global_pass(ctx);
 	for (pst::AccessLocked<pst::Stmt> inner_stmt:
 	     pst.getRootElement().illegalAccess().value()->getStatements()) {

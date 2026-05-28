@@ -1,17 +1,15 @@
+#include <psackling/compiler.hpp>
+
 #include <clah/clah.hpp>
 #include <filesystem/file.hpp>
 #include <init/init.hpp>
 #include <logger/logger.hpp>
 #include <printer/stream_printer.hpp>
 
-#include <psackling/compiler.hpp>
-
 #include <exception>
 #include <regex>
 
-void showVersion() {
-	std::cout << "Psackling version -0.05\n";
-}
+void showVersion() { std::cout << "Psackling version -0.05\n"; }
 
 clah::Clah getVmClah() {
 	return clah::Clah("VM", "The Duckling Virtual Machine.")
@@ -40,8 +38,8 @@ clah::Clah getVmClah() {
 	             .addShortDesc("Enables DVM debug logs.")
 	             .build())
 #endif
-		.addPositional(clah::FileParser::make("file", std::regex(".*\\.dmf$")))
-		.setHandler([](const clah::ParsingResult& options) -> int {
+	    .addPositional(clah::FileParser::make("file", std::regex(".*\\.dmf$")))
+	    .setHandler([](const clah::ParsingResult& options) -> int {
 			pg::compile(options.getPositional<fs::File>(0));
 			return 0;
 		});

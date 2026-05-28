@@ -30,8 +30,7 @@ namespace pg {
 				  namespaces.insertOrAssign(
 					  id,
 					  ns::Namespace{
-						  .name = base::StrID("$"), .id = id, .parent_namespace = {}, .symbols = {}
-					  }
+						  .name = base::StrID("$"), .id = id, .parent_namespace = {}, .symbols = {} }
 				  );
 				  namespace_stack.push_back(id);
 				  return id;
@@ -57,7 +56,8 @@ namespace pg {
 			}
 			currNs().symbols.insertOrAssign(name, id);
 			symbols.insertOrAssign(
-				id, sym::Symbol{ .name = name, .id = id, .type_id = type_id, .kind = std::move(kind) }
+				id,
+				sym::Symbol{ .name = name, .id = id, .type_id = type_id, .kind = std::move(kind) }
 			);
 			return id;
 		}
@@ -79,8 +79,7 @@ namespace pg {
 			types.insertOrAssign(
 				id,
 				tp::TypeInfo{
-					.name = name, .kind = std::move(kind), .id = id, .namespace_id = currNs().id
-				}
+					.name = name, .kind = std::move(kind), .id = id, .namespace_id = currNs().id }
 			);
 			// Pseudo-types (Incomplete, Namespace) have no LLVM representation; skip lowering.
 			const auto& kind_ref = types[id].kind;
@@ -91,13 +90,30 @@ namespace pg {
 			return id;
 		}
 
+		/// Like newType, but lets specifying which namespace the type "lives in"
+		/// (used for struct types, whose members live in a child namespace of where the
+		/// type name is visible). Does NOT insert a symbol - caller does that in the
+		/// outer scope after popping the struct's namespace.
+		tp::TypeID newTypeInScope(base::StrID name, tp::TypeKind kind, ns::NamespaceID owner_ns) {
+			tp::TypeID id = tp::TypeID::next();
+			types.insertOrAssign(
+				id,
+				tp::TypeInfo{
+					.name = name, .kind = std::move(kind), .id = id, .namespace_id = owner_ns }
+			);
+			const auto& kind_ref = types[id].kind;
+			if (!std::holds_alternative<tp::Incomplete>(kind_ref)
+			    && !std::holds_alternative<tp::Namespace>(kind_ref))
+				llvm_context.lowerType(id, *this);
+			return id;
+		}
+
 		ns::NamespaceID newNamespace(base::StrID name) {
 			ns::NamespaceID id = ns::NamespaceID::next();
 			namespaces.insertOrAssign(
 				id,
 				ns::Namespace{
-					.name = name, .id = id, .parent_namespace = currNs().id, .symbols = {}
-				}
+					.name = name, .id = id, .parent_namespace = currNs().id, .symbols = {} }
 			);
 			insertSymbol(name, sym::NamespaceSymbol{ .namespace_id = id }, namespace_type_id);
 			return id;
@@ -113,21 +129,22 @@ namespace pg {
 				+ " or any of its parents"
 			);
 		}
+
 		tp::TypeID lookupTypeInScopeAndParents(ns::NamespaceID ns_id, base::StrID name) {
-            sym::SymbolID sym_id = lookupInScopeAndParents(ns_id, name);
-            if (!std::holds_alternative<sym::TypeSymbol>(symbols[sym_id].kind)) {
-                throw std::runtime_error(
-                    "Symbol " + name.str() + " found in namespace " + namespaces[ns_id].name.str()
-                    + " but is not a type"
-                );
-            }
-            return symbols[sym_id].type_id;
+			sym::SymbolID sym_id = lookupInScopeAndParents(ns_id, name);
+			if (!std::holds_alternative<sym::TypeSymbol>(symbols[sym_id].kind)) {
+				throw std::runtime_error(
+					"Symbol " + name.str() + " found in namespace " + namespaces[ns_id].name.str()
+					+ " but is not a type"
+				);
+			}
+			return symbols[sym_id].type_id;
 		}
 
 		ns::NamespaceID pushNamespace(base::StrID name) {
 			ns::NamespaceID id = newNamespace(name);
 			namespace_stack.push_back(id);
-            return id;
+			return id;
 		}
 
 		/// Enter an already-existing namespace (e.g. one created by an earlier pass).

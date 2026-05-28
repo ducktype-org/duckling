@@ -48,7 +48,7 @@ psac_function(
 ) {
 	// NOT HERE:
 	// work(g_config.workload);
-			
+
 	std::vector<psac::Mod<ValueTp>*> inputs;
 	inputs.push_back(&(*w)[i]);
 	for (usize j: g_adj[i]) inputs.push_back(&(*out)[j]);

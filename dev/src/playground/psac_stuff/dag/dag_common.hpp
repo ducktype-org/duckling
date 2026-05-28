@@ -3,22 +3,20 @@
 #include <base/types/ints.hpp>
 
 #include <algorithm>
+#include <atomic>
 #include <iostream>
 #include <random>
 #include <vector>
-#include <atomic>
 
 constexpr u64 WORKLOAD_SCALE_FACTOR = 1'000;
 constexpr u64 MOD                   = 1'000'000'007;
 using ValueTp                       = u32;
 
-
-
 // Simulates workload in nodes.
 void work(u64 iterations) {
 	// static std::atomic<u64> global_work_counter{ 0 };
-	// static struct Printer { ~Printer() { std::cout << "Total work iterations: " << global_work_counter.load() << '\n'; } } printer;  
-	// global_work_counter++;
+	// static struct Printer { ~Printer() { std::cout << "Total work iterations: " <<
+	// global_work_counter.load() << '\n'; } } printer; global_work_counter++;
 
 
 	volatile i32 x = 0;

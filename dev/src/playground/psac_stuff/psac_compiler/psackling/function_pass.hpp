@@ -24,8 +24,14 @@ namespace pg {
 			  lowering(lowering) {}
 
 		void visitFun(pst::Access<pst::Fun> stmt) override;
+		void visitIf(pst::Access<pst::If> stmt) override;
+		void visitWhile(pst::Access<pst::While> stmt) override;
 		void visitReturn(pst::Access<pst::Return> stmt) override;
 		void visitVariable(pst::Access<pst::Variable> stmt) override;
+		void visitExprStmt(pst::Access<pst::ExprStmt> stmt) override;
+
+		// Classes are skipped in function pass.
+		void visitClass(pst::Access<pst::Class>) override {}
 
 	private:
 		Context&             ctx;

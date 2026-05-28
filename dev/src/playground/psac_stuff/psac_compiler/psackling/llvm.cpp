@@ -8,10 +8,10 @@ pg::LlvmProgramModule::LlvmProgramModule():
 	module->setDataLayout(target_machine->createDataLayout());
 }
 
-void pg::LlvmProgramModule::inCtxDo(const std::function<void(llvm::LLVMContext&, llvm::Module&)>& func) {
+void pg::LlvmProgramModule::inCtxDo(const std::function<void(llvm::LLVMContext&, llvm::Module&)>& func
+) {
 	func(context, *module);
 }
-
 
 void pg::LlvmProgramModule::buildMainReturningZero() {
 	auto* i32_type = llvm::Type::getInt32Ty(context);
