@@ -21,3 +21,14 @@ runs:
     - name: Download libgfortran5
       shell: bash
       run: sudo apt -y install libgfortran5
+
+    - name: Download sccache
+      shell: bash
+      run: sudo apt -y install sccache
+
+    - name: Setup sccache environment
+      shell: bash
+      run: |
+        echo 'RUSTC_WRAPPER=sccache' >> "$GITHUB_ENV"
+        echo 'SCCACHE_DIR=~/.cache/sccache' >> "$GITHUB_ENV"
+        echo 'SCCACHE_CACHE_SIZE=1G' >> "$GITHUB_ENV"

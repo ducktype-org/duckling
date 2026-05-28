@@ -19,6 +19,7 @@ env:
   WORKSPACE: ${{ github.workspace }}/dev
   BUILD_DIR: ${{ github.workspace }}/dev/build
   CCACHE_DIR: ${{ github.workspace }}/dev/.ccache
+  SCCACHE_DIR: ~/.cache/sccache
   BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
   IF_MAIN_PR: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main'}}
   BUILD_SYSTEM: Ninja
@@ -211,11 +212,29 @@ jobs:
             ${{ runner.os }}-${{ matrix.compiler.cache-prefix }}-${{ matrix.build-type }}-main
             ${{ runner.os }}-${{ matrix.compiler.cache-prefix }}-${{ matrix.build-type }}
 
+      - name: Restore sccache cache
+        id: restore-sccache-cache
+        uses: actions/cache/restore@v5
+        with:
+          path: |
+            ${{ env.SCCACHE_DIR }}
+          key: ${{ runner.os }}-sccache-${{ env.BRANCH_NAME }}-${{ steps.cache-timestamp.outputs.timestamp }}
+          restore-keys: |
+            ${{ runner.os }}-sccache-${{ env.BRANCH_NAME }}-
+            ${{ runner.os }}-sccache-main-
+            ${{ runner.os }}-sccache-
+
       # Remove ccache folder to prevent cache snowball growth
       - name: Remove ccache on main
         if: ${{ env.BRANCH_NAME == 'main' }}
         id: ccache-main-rm
         run: rm -rf ${CCACHE_DIR}
+
+      # Remove sccache folder to prevent cache snowball growth
+      - name: Remove sccache on main
+        if: ${{ env.BRANCH_NAME == 'main' }}
+        id: sccache-main-rm
+        run: rm -rf ${SCCACHE_DIR}
 
       - name: Initialize project
         working-directory: ${{ env.WORKSPACE }}
@@ -330,6 +349,16 @@ jobs:
           path: |
             ${{ env.CCACHE_DIR }}
           key: ${{ steps.restore-build-cache.outputs.cache-primary-key }}
+
+      # Save sccache on main branch to be restored in other branches.
+      - name: Save sccache cache
+        if: ${{ env.BRANCH_NAME == 'main' }}
+        id: save-sccache-cache
+        uses: actions/cache/save@v5
+        with:
+          path: |
+            ${{ env.SCCACHE_DIR }}
+          key: ${{ steps.restore-sccache-cache.outputs.cache-primary-key }}
 
       - name: Test
         working-directory: ${{ env.WORKSPACE }}

@@ -13,6 +13,7 @@ on:
 
 env:
   CARGO_DIR: ~/.cargo
+  BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
 
 jobs:
   determine-runners:
@@ -53,6 +54,16 @@ jobs:
 
       - name: Add Rust components to PATH
         run: echo "${{ env.CARGO_DIR }}/bin" >> $GITHUB_PATH
+
+      - name: Restore sccache cache
+        uses: actions/cache/restore@v5
+        with:
+          path: ~/.cache/sccache
+          key: ${{ runner.os }}-sccache-${{ env.BRANCH_NAME }}
+          restore-keys: |
+            ${{ runner.os }}-sccache-${{ env.BRANCH_NAME }}-
+            ${{ runner.os }}-sccache-main-
+            ${{ runner.os }}-sccache-
 
       - name: Setup duck dependencies
         uses: ./.github/actions/setup-duck-dependencies/
@@ -124,6 +135,16 @@ jobs:
 
       - name: Add Rust components to PATH
         run: echo "${{ env.CARGO_DIR }}/bin" >> $GITHUB_PATH
+
+      - name: Restore sccache cache
+        uses: actions/cache/restore@v5
+        with:
+          path: ~/.cache/sccache
+          key: ${{ runner.os }}-sccache-${{ env.BRANCH_NAME }}
+          restore-keys: |
+            ${{ runner.os }}-sccache-${{ env.BRANCH_NAME }}-
+            ${{ runner.os }}-sccache-main-
+            ${{ runner.os }}-sccache-
 
       - name: Setup duck dependencies
         uses: ./.github/actions/setup-duck-dependencies/
