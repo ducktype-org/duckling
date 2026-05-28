@@ -1,5 +1,17 @@
 #include "memory.hpp"
 
+#include <fstream>
+
+namespace vm::jit::cnp {
+	void JitFuncMemory::dump(const char* filename) {
+		std::ofstream file{filename, std::ios::binary};
+
+		for (std::byte byte : span()) {
+			file << (char)byte;
+		}
+	}
+}
+
 #if __unix__
 	#include <sys/mman.h>
 	#include <unistd.h>

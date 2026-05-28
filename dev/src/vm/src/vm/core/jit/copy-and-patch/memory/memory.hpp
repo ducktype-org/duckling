@@ -3,6 +3,7 @@
 #include <base/types/ints.hpp>
 
 #include <cstddef>
+#include <span>
 
 namespace vm::jit::cnp {
 
@@ -18,6 +19,10 @@ namespace vm::jit::cnp {
 		~JitFuncMemory() noexcept;
 
 		void markExecutable();
+		void dump(const char* filename);
+		std::span<byte> span() {
+			return std::span{addr, size};
+		}
 
 		/**
 		 * @brief Access the memory as if it was a function pointer. This is not compliant with the
@@ -25,7 +30,7 @@ namespace vm::jit::cnp {
 		 * actually a function.
 		 */
 		template<class Func>
-		requires std::is_function_v<Func> const Func* intoFunc() const {
+		requires std::is_function_v<Func> [[nodiscard]] const Func* intoFunc() const {
 			return reinterpret_cast<const Func*>(addr);
 		}
 
