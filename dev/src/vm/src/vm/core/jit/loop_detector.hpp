@@ -17,25 +17,12 @@ namespace vm::jit::cf {
 	class LoopDetector;
 
 	/**
-	 * @brief Subgraph of a control-flow graph representing a natural loop.
+	 * @brief Aggregated function CFG and detected loop CFGs.
+	 * @details Index 0 contains the full function CFG; later entries contain loop subgraphs.
 	 */
-	struct Loop {
-		/**
-		 * @brief Constructs a loop subgraph from the original CFG and member block IDs.
-		 * @param start_block Loop header block ID.
-		 * @param cfg Original control-flow graph.
-		 * @param members Block IDs that are part of the loop.
-		 */
-		Loop(
-			BasicBlockID                     start_block,
-			const ControlFlowGraph&          cfg,
-			const std::vector<BasicBlockID>& members
-		):
-			  start_block(start_block),
-			  loop_cfg(cfg.subgraph(members)) {}
-
-		BasicBlockID     start_block;
-		ControlFlowGraph loop_cfg;
+	struct FunctionLoopCFGs {
+		std::vector<BasicBlockID>     start_blocks;
+		std::vector<ControlFlowGraph> cfgs;
 	};
 
 	/**
@@ -46,12 +33,18 @@ namespace vm::jit::cf {
 		LoopDetector() = default;
 
 		/**
-		 * @brief Detects loops in function CFG via back edges.
-		 * @param cfg Control-flow graph.
-		 * @return Detected loops represented as subgraphs of the CFG.
+		 * @brief Detects natural loops in a function CFG using dominator relations.
+		 * @return A function-level CFG at index 0 and loop CFGs at later indices.
 		 */
-		std::vector<Loop> findLoops(const ControlFlowGraph& cfg) {
-			std::vector<Loop> loops;
+		FunctionLoopCFGs findLoops(const low::MicroBytecode& bc) {
+			ControlFlowGraph cfg(bc);
+			FunctionLoopCFGs segs{};
+
+			// First instruction is JIT entry point for entire function so we add full CFG as the
+			// first segment (to avoid copying, we move it after creating all of the subgraphs,
+			// here we just add an empty placeholder).
+			segs.cfgs.push_back({});
+			segs.start_blocks.push_back(0);
 
 			calcPredecessors(cfg);
 			calcDominators(cfg);
@@ -85,10 +78,16 @@ namespace vm::jit::cf {
 					}
 				}
 
-				if (!stack.empty()) loops.emplace_back(bid, cfg, std::move(stack));
+				if (!stack.empty()) {
+					CORE_ASSERT(bid != 0, "Entry block cannot be a loop header");
+					segs.cfgs.push_back(cfg.subgraph(std::move(stack)));
+					segs.start_blocks.push_back(bid);
+				}
 			}
 
-			return loops;
+			// Move full function CFG here to avoid copying it before all the subgraphs are created.
+			segs.cfgs[0] = std::move(cfg);
+			return segs;
 		}
 
 	private:
@@ -243,4 +242,9 @@ namespace vm::jit::cf {
 			    && dom_tree_timestamps[bid].second <= dom_tree_timestamps[domid].second;
 		}
 	};
+
+	FunctionLoopCFGs detectLoopsInFunction(const low::MicroBytecode& bc) {
+		LoopDetector detector;
+		return detector.findLoops(bc);
+	}
 }  // namespace vm::jit::cf
