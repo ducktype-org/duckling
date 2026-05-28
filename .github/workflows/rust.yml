@@ -13,6 +13,7 @@ on:
 
 env:
   CARGO_DIR: ~/.cargo
+  SCCACHE_DIR: ~/.cache/sccache
   BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
 
 jobs:
@@ -58,7 +59,8 @@ jobs:
       - name: Restore sccache cache
         uses: actions/cache/restore@v5
         with:
-          path: ~/.cache/sccache
+          path: |
+            ${{ env.SCCACHE_DIR }}
           key: ${{ runner.os }}-sccache-${{ env.BRANCH_NAME }}
           restore-keys: |
             ${{ runner.os }}-sccache-${{ env.BRANCH_NAME }}-
@@ -139,7 +141,8 @@ jobs:
       - name: Restore sccache cache
         uses: actions/cache/restore@v5
         with:
-          path: ~/.cache/sccache
+          path: |
+            ${{ env.SCCACHE_DIR }}
           key: ${{ runner.os }}-sccache-${{ env.BRANCH_NAME }}
           restore-keys: |
             ${{ runner.os }}-sccache-${{ env.BRANCH_NAME }}-
