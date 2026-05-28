@@ -413,7 +413,8 @@ namespace vm {
 		base::StrID function_name, usize instruction_index, bool enable
 	) {
 		// Try to obtain original function
-		auto maybe_original_function = loaded_program->getFunctions().atMaybe(function_name);
+		auto maybe_original_function
+			= loaded_program_copy.getOriginalProgram()->getFunctions().atMaybe(function_name);
 		if (!maybe_original_function)
 			return std::unexpected(api::OtherError{ "setBreakpoint: Function does not exist" });
 		auto original_function = *maybe_original_function;
