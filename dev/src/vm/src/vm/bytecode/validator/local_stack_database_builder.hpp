@@ -36,9 +36,10 @@ namespace vm::code {
 			bool operator==(const Child&) const = default;
 		};
 
-		using ChildHash = decltype([](const Child& child) {
+		using ChildHash = decltype([](const Child& child) -> usize {
 			return std::hash<base::StrID>{}(child.name)
-			     + std::hash<valid_type::TypeSize>{}(child.byte_offset);
+			     + child.byte_offset.assumePointerSize(Bytes(16)).asInt()
+			     + child.byte_offset.assumePointerSize(Bytes(8)).asInt();
 		});
 
 		struct TreeNode {
