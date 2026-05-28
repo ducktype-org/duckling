@@ -230,4 +230,16 @@ namespace vm::api {
 			))
 		    .transform(ignoreResponse);
 	}
+
+	std::expected<response::CodePosition, ApiError> mapFileLineToCodeCollectionPosition(
+		PID pid, fs::File file, usize line_number
+	) {
+		return Supervisor::get()
+		    .doRequest(SupervisorRequest(
+				pid,
+				request::MapFileLineToCodeCollectionPosition{ .file        = file,
+		                                                      .line_number = line_number }
+			))
+		    .and_then(mapOrWrongResponse<response::CodePosition>);
+	}
 }

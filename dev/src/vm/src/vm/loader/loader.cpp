@@ -194,19 +194,27 @@ base::Optional<FatBytecodePosition> vm::loader::Loader::mapFileLineToCodeCollect
 	for (const auto& function: getHighProgram()->functions()) {
 		if (function.bytecode_pos.has_value()) {
 			auto bytecode_pos = function.bytecode_pos.value();
-			if (bytecode_pos.getSource()->getFile() == file
-			    && bytecode_pos.getStartLineColumn().first == line_number) {
+
+			// Skip if in other file
+			if (bytecode_pos.getSource()->getFile() != file) continue;
+
+			// Check for matching function declaration
+			if (bytecode_pos.getStartLineColumn().first == line_number)
 				return FatBytecodePosition{ function.name.str, 0 };
-			}
-			if (bytecode_pos.getSource()->getFile() != file
-			    || bytecode_pos.getStartLineColumn().first > line_number
-				|| bytecode_pos.getEndLineColumn().first < line_number) {
+
+			// Skip if outside the function
+			auto front_pos = function.body.front().visit([](auto&& i) { return i.bytecode_pos; });
+			auto back_pos  = function.body.back().visit([](auto&& i) { return i.bytecode_pos; });
+			if ((front_pos.has_value() && front_pos->getStartLineColumn().first > line_number)
+			    || (back_pos.has_value() && back_pos->getEndLineColumn().first < line_number)) {
 				continue;
 			}
 		}
 
 		auto guess = std::lower_bound(
-			function.body.begin(), function.body.end(), line_number,
+			function.body.begin(),
+			function.body.end(),
+			line_number,
 			[&](const auto& instr, usize line) {
 				auto bytecode_pos = instr.visit([](auto&& i) { return i.bytecode_pos; });
 				if (!bytecode_pos.has_value()) return true;
@@ -217,10 +225,12 @@ base::Optional<FatBytecodePosition> vm::loader::Loader::mapFileLineToCodeCollect
 
 		if (guess != function.body.end()) {
 			auto bytecode_pos = guess->visit([](auto&& instr) { return instr.bytecode_pos; });
-			if (bytecode_pos.has_value()
-			    && bytecode_pos->getSource()->getFile() == file
+			if (bytecode_pos.has_value() && bytecode_pos->getSource()->getFile() == file
 			    && bytecode_pos->getStartLineColumn().first == line_number) {
-				return FatBytecodePosition{ function.name.str, static_cast<usize>(std::distance(function.body.begin(), guess)) };
+				return FatBytecodePosition{
+					function.name.str,
+					static_cast<usize>(std::distance(function.body.begin(), guess))
+				};
 			}
 		}
 	}

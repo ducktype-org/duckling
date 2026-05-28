@@ -145,6 +145,10 @@ namespace vm {
 			base::StrID function_name, usize instruction_index, bool enable
 		) override;
 
+		std::expected<api::Response, api::ApiError> mapFileLineToCodeCollectionPosition(
+			fs::File file, usize line_number
+		) override;
+
 		/**
 		 * @brief Updates the memory for globals of this process after loading a program with new
 		 * globals. Works in incremental way. Only supports adding new globals, not removing or

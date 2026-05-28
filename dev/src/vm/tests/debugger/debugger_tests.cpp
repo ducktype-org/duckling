@@ -17,6 +17,7 @@ public:
 		TESTER_ADD_TEST(killTest);
 		TESTER_ADD_TEST(pausesOnBreakpointAndResumes);
 		TESTER_ADD_TEST(executesStepByStep);
+		TESTER_ADD_TEST(backMapTest);
 		TESTER_ADD_TEST(vmApiMemoryAllTypes);
 	}
 
@@ -151,6 +152,39 @@ private:
 			"Variable type is not correct for field " + field_name.str()
 		);
 		return getVMValueRefData<FiedDataType>(field.value);
+	}
+
+	/**
+	 * @brief Checks dbc to cc mapping.
+	 */
+	void backMapTest() {
+		auto pid = loadProgram("vm_api_tests.dbc");
+
+		auto assert_mapping = [&](usize line, usize index) {
+			fs::File file(path("vm_api_tests.dbc"));
+			auto     map_response = vm::api::mapFileLineToCodeCollectionPosition(pid, file, line);
+
+			ASSERT_TRUE(map_response.has_value());
+			auto code_position = map_response.value();
+
+			ASSERT_EQUAL_PRINT(code_position.function_name, "main");
+			ASSERT_EQUAL_PRINT(code_position.instr_number, index);
+		};
+
+		auto assert_no_maping = [&](usize line) {
+			fs::File file(path("vm_api_tests.dbc"));
+			auto     map_response = vm::api::mapFileLineToCodeCollectionPosition(pid, file, line);
+			ASSERT_TRUE(!map_response);
+		};
+
+		assert_mapping(10, 2);
+		assert_mapping(20, 9);
+		assert_mapping(3, 0);
+		assert_mapping(8, 0);
+		assert_no_maping(2);
+		assert_no_maping(16);
+		assert_no_maping(21);
+		assert_no_maping(22);
 	}
 
 	/**
