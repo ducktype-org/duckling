@@ -74,6 +74,27 @@ namespace {
 					}
 				}
 			}
+			variant_case(tsl::PointerTypeLayout, pointer_layout) {
+				variant_match(target_layout->getVariant()) {
+					variant_case(tsl::PointerTypeLayout, target_pointer_layout) {
+						using tsl::PointerTypeLayout::PointerKind::CPointer;
+						using tsl::PointerTypeLayout::PointerKind::ManyPointer;
+						using tsl::PointerTypeLayout::PointerKind::SinglePointer;
+						// Pointer -> CPointer
+						if ((pointer_layout.getPointerKind() == SinglePointer
+						     || pointer_layout.getPointerKind() == ManyPointer)
+						    && target_pointer_layout.getPointerKind() == CPointer) {
+							// @TODO: #2745 add support for this cast
+							CORE_PANIC("Casting to CPointer is not supported yet");
+						} else {
+							CORE_PANIC("Unsupported cast between different pointer kinds");
+						}
+					}
+					variant_default {
+						CORE_PANIC("Unsupported cast from pointer-layout to target layout");
+					}
+				}
+			}
 			variant_default {
 				CORE_PANIC(base::strConcat(
 					"Unsupported cast source layout in DVM lowering: ",

@@ -1,3 +1,5 @@
+import core.builtins.*;
+
 # Packing literals
 var a = ();
 var b = (1, -2, 3, 4);

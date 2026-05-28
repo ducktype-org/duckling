@@ -3,13 +3,13 @@
         {
             "name": "lib_a",
             "version": "0.1.0",
-            "path": "duck_modules/multi_package/lib_a",
+            "path": "modules/packages/lib_a",
             "features": [ "use_mathlib" ]
         },
         {
             "name": "lib_b",
             "version": "0.1.0",
-            "path": "duck_modules/multi_package/lib_b",
+            "path": "modules/packages/lib_b",
             "features": [ "use_mathlib", "use_lib_a" ],
             "dependencies": [
                 { "name": "lib_a", "alias": "lib_a" }
@@ -18,7 +18,7 @@
         {
             "name": "app1",
             "version": "0.1.0",
-            "path": "duck_modules/multi_package/app1",
+            "path": "modules/packages/app1",
             "features": [],
             "dependencies": [
                 { "name": "lib_a", "alias": "lib_a" },
@@ -28,7 +28,7 @@
         {
             "name": "app2",
             "version": "0.1.0",
-            "path": "duck_modules/multi_package/app2",
+            "path": "modules/packages/app2",
             "dependencies": [
                 { "name": "lib_a", "alias": "lib_a" }
             ]

@@ -19,7 +19,7 @@ namespace compiler::helios::defgen {
 			auto class_interface = class_type.getInterface(ctx);
 
 			using ImplicitConstructor = GeneratedSymbolData::ImplicitConstructor;
-			using Variable            = GeneratedSymbolData::Variable;
+			using Variable            = GeneratedSymbolData::GeneratedFunctionVariable;
 			using std::ranges::to;
 			using std::views::transform;
 

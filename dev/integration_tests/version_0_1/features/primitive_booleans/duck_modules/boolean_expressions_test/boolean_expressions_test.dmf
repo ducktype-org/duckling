@@ -1,3 +1,5 @@
+import core.builtins.*;
+
 # Test boolean expressions in various contexts
 # Focus: ternary if-expressions, comparison results, complex boolean logic
 

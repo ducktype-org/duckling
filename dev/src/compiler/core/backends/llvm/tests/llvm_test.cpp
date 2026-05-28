@@ -1,4 +1,5 @@
 #include <backends/llvm/llvm_backend.hpp>
+#include <diagnostic_interactive/module_flags/module_flags.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <global_state/backend_options.hpp>
@@ -44,6 +45,7 @@ public:
 		TESTER_ADD_TEST(stringsTest);
 		TESTER_ADD_TEST(ffiTest);
 		TESTER_ADD_TEST(tuplesTest);
+		TESTER_ADD_TEST(pointersTest);
 	}
 
 protected:
@@ -51,6 +53,7 @@ protected:
 		global_state::setters::setBackendOptions({
 			.llvm_backend = { global_state::BackendOptions::LLVMBackend{} },
 		});
+		dia_int::configureImmediatePrint(&std::cerr);
 	}
 
 private:
@@ -133,7 +136,10 @@ private:
 		llvm_module.debugPrint();
 
 		// verify integrity, then return for further checks.
-		assertTrue(llvm_module.verify().isOk(), "LLVM module verification failed");
+		assertTrue(
+			llvm_module.verify().isOk(),
+			"LLVM module verification failed (enable Backend dev logs to see details)"
+		);
 		return llvm_module;
 	}
 
@@ -141,6 +147,10 @@ private:
 		std::string module_path, i32 expected_function_count = 1, i32 expected_prototype_count = -1
 	) {
 		if (expected_prototype_count == -1) expected_prototype_count = expected_function_count;
+		// @TODO: #2694 These numbers are inflated by toString methods for simple types
+		// There are 14 toString methods, and an additional 5 builtin_stringify_<type> prototypes.
+		expected_function_count += 14;
+		expected_prototype_count += 14 + 5;
 		auto llvm_module = getLLVMModuleFromPath(std::move(module_path));
 		ASSERT_EQUAL_PRINT(llvm_module.getFunctionCount(false), expected_function_count);
 		ASSERT_EQUAL_PRINT(llvm_module.getFunctionCount(), expected_prototype_count);
@@ -163,7 +173,7 @@ private:
 
 	void functionCalls() {
 		runTestForModule("modules/calls_simple", 3);
-		runTestForModule("modules/calls", 3, 5);
+		runTestForModule("modules/calls", 3, 4);
 	}
 
 	void parseFromIRCodeTest() {
@@ -199,16 +209,16 @@ private:
 		runTestForModule("modules/units/unit2", 2, 2);
 		runTestForModule("modules/units/unit3", 1, 1);
 		runTestForModule("modules/units/unit4", 1, 2);
-		runTestForModule("modules/units/unit_simple", 2, 3);
-		runTestForModule("modules/units/unit_class", 3, 4);
+		runTestForModule("modules/units/unit_simple", 2, 2);
+		runTestForModule("modules/units/unit_class", 3, 3);
 		runTestForModule("modules/units/unit_simple_multiple_modules", 1, 2);
 	}
 
-	void classTest() { runTestForModule("modules/classes/records", 10, 11); }
+	void classTest() { runTestForModule("modules/classes/records", 14, 16); }
 
-	void stringsTest() { runTestForModule("modules/strings", 1, 3); }
+	void stringsTest() { runTestForModule("modules/strings", 2, 2); }
 
-	void ffiTest() { runTestForModule("modules/ffi", 1, 2); }
+	void ffiTest() { runTestForModule("modules/ffi", 1, 1); }
 
 	void referencesTest() {
 		auto        llvm_module = getLLVMModuleFromPath("modules/references");
@@ -223,7 +233,7 @@ private:
 			ptr_loads++;
 			search_range = matches.suffix();
 		}
-		assertTrue(ptr_loads == 17, "Too few pointer loads");
+		assertTrue(ptr_loads == 18, "Too few pointer loads");
 	}
 
 	void boxesTest() {
@@ -499,6 +509,11 @@ private:
 		assertTrue(
 			std::regex_search(ir, std::regex{ R"(%T.*E)" }), "Expected tuple struct definition"
 		);
+	}
+
+	void pointersTest() {
+		auto        llvm_module = getLLVMModuleFromPath("modules/pointers");
+		std::string ir          = llvm_module.dumpLLVMToString();
 	}
 };
 
