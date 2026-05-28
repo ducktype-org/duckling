@@ -39,7 +39,7 @@ jobs:
             path: dev/src/duck/
       fail-fast: false
 
-    timeout-minutes: 15
+    timeout-minutes: 5
 
     steps:
       - name: Clean workspace (self-hosted only)
@@ -87,7 +87,7 @@ jobs:
             path: dev/src/duck/
       fail-fast: false
 
-    timeout-minutes: 15
+    timeout-minutes: 5
 
     steps:
       - name: Clean workspace (self-hosted only)
@@ -121,7 +121,7 @@ jobs:
             path: dev/src/duck/
       fail-fast: false
 
-    timeout-minutes: 15
+    timeout-minutes: 5
 
     steps:
       - name: Clean workspace (self-hosted only)
