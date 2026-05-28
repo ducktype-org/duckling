@@ -3,6 +3,7 @@ cwd_duck_root: cd `git rev-parse --show-toplevel`/dev/src/duck/
 build_duck: |
   timeout 3m cargo --locked build
   exit_code=$?
+  # 124 is `timeout`'s standard exit code for command timeout.
   if [ "$exit_code" -eq 124 ]; then
     echo "Build step 'build_duck' timed out after 3 minutes. Please retry, or inspect recent toolchain/cache changes." >&2
   fi
