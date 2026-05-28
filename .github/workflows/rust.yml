@@ -18,7 +18,7 @@ env:
 jobs:
   determine-runners:
     if: github.event.pull_request.draft == false
-    
+
     uses: ./.github/workflows/determine-runners.yml
     with:
       self-hosted-labels: '["ubuntu-24.04"]'
@@ -73,6 +73,11 @@ jobs:
       - name: Run cargo clippy
         working-directory: ${{ matrix.project.path }}
         run: cargo clippy --no-deps --locked -- -D warnings
+
+      - name: Remove sccache on main
+        if: ${{ env.BRANCH_NAME == 'main' }}
+        id: sccache-main-rm
+        run: rm -rf ${SCCACHE_DIR}
 
   rustfmt:
     if: github.event.pull_request.draft == false
@@ -156,3 +161,8 @@ jobs:
       - name: Run cargo test
         working-directory: ${{ matrix.project.path }}
         run: cargo --locked test
+
+      - name: Remove sccache on main
+        if: ${{ env.BRANCH_NAME == 'main' }}
+        id: sccache-main-rm
+        run: rm -rf ${SCCACHE_DIR}
