@@ -22,6 +22,9 @@ namespace pst {
 	 * @brief A general element that is a common ancestor for elements that aren't statements
 	 */
 	class NotStmt: public LangElement {
+		PARENT_CLASS(LangElement);
+		ELEMENT_CLONE_DECL(NotStmt);
+
 	public:
 		explicit NotStmt(const LangParserState& state): LangElement(state) {}
 

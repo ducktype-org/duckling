@@ -41,13 +41,16 @@ namespace pst {
 	constexpr CloneDummy CLONE = makeCloneDummy();
 }
 
-#define ELEMENT_CLONE_DEF(element, ...) \
-	private: \
-		explicit element(CloneDummy clone, element& other):\
-			  source_position(other.source_position),\
-			  context_hash(other.context_hash),\
-			  element_kind(other.element_kind),\
-			  id(PstID::next()) {}
+#define AUX_ONE_PLUS(arg) 1+
+
+#define PARENT_CLASS(parent_class) private: using ParentClass = parent_class
+
+#define ELEMENT_CLONE_DECL(element, ...) \
+	protected: \
+		explicit element(pst::CloneDummy clone, element& other): ParentClass(clone, other) {} \
+		static constexpr usize SUB_ELEMENTS_COUNT = FOR_EACH(AUX_ONE_PLUS, __VA_ARGS__) 0
+
+
 
 namespace pst {
 	class Import;
@@ -90,6 +93,11 @@ namespace pst {
 	 * @brief Base Element for all of the PST elements.
 	 */
 	class LangElement: public tpc::Element {
+	protected:
+		explicit LangElement(pst::CloneDummy, LangElement& other):
+			  source_position(other.source_position),
+			  context_hash(other.context_hash),
+			  id(PstID::next()) {}
 	public:
 		using SubToken = base::CRef<lexer::Token>;
 

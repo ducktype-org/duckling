@@ -7,6 +7,10 @@ namespace pst {
 	 * @brief Declaration of a single function or pattern argument.
 	 */
 	class Param final: public NotStmt {
+		PARENT_CLASS(NotStmt);
+
+		ELEMENT_CLONE_DECL(Param, name, type, initial);
+	
 		NAMED_CHILD(name, IdentifierWrapper);
 		NAMED_CHILD(type, UniversalExprHolder);
 		NAMED_CHILD_OPT(initial, UniversalExprHolder);
