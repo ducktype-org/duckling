@@ -11,6 +11,7 @@
 #include <mir/mir_lowering/mir_queries.hpp>
 
 #include <base/extend_cpp/variant_match.hpp>
+#include <base/types/bit256.hpp>
 
 #include <hashing/component_hash.hpp>
 #include <query_framework/context/context.hpp>
@@ -21,6 +22,11 @@
 #include <fstream>
 
 namespace compiler::driver {
+
+	base::Bit256 CompileHOUTUnitToLIRModuleDataKey::queryUnstablePerfectHash() const {
+		return hashing::justHash<hashing::SHA256>(module_name.str(), hout_unit->id.asInt());
+	}
+
 	void LIRModuleGlobal::debugPrint(query::Context& ctx, std::ostream& os) const {
 		lir_global.debugPrint(ctx, os);
 

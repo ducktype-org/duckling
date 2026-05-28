@@ -1,3 +1,5 @@
+import core.builtins.*;
+
 # This test checks basic record type functionalities,
 # that is construction, copy, field access and field assignment.
 

@@ -127,9 +127,9 @@ namespace compiler::frontend {
 			" too small for child_name and found flag"
 		);
 
-		auto* ptr = reinterpret_cast<const char*>(data.data() + offset);
+		auto* ptr = data.data() + offset;
 		offset += len;
-		lookup_data.child_name = base::StrID({ ptr, len });  // this makes a copy
+		lookup_data.child_name = base::StrID(base::RawView{ ptr, len });  // this makes a copy
 		auto was_found         = std::byte(0);
 		std::memcpy(&was_found, data.data() + offset, sizeof(std::byte));
 		lookup_data.found = bool(was_found);

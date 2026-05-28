@@ -3,6 +3,8 @@
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
+#include <algorithm>
+
 namespace compiler::helios {
 
 	NestedResult::NestedResult(SymID node, LookupResult inner):
@@ -53,12 +55,18 @@ namespace compiler::helios {
 		return res;
 	}
 
+	template<typename T>
+	std::vector<T> mergeSet(std::vector<T> a, std::vector<T> b) {
+		std::ranges::sort(a);
+		std::ranges::sort(b);
+
+		std::vector<T> result;
+		std::ranges::set_union(a, b, std::back_inserter(result));
+		return result;
+	}
+
 	void LookupResult::merge(LookupResult other) {
-		leaves.insert(
-			leaves.end(),
-			std::make_move_iterator(other.leaves.begin()),
-			std::make_move_iterator(other.leaves.end())
-		);
+		leaves = mergeSet(std::move(leaves), std::move(other.leaves));
 
 		children.insert(
 			children.end(),
