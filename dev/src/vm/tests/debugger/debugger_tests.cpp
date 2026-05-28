@@ -103,18 +103,17 @@ private:
 				vm::api::setBreakpoint(pid, base::StrID("main"), breakpoint, true).has_value()
 			);
 
-		vm::api::setBreakpoint(pid, base::StrID("main"), 5, false)
-			.value();               // "Remove breakpoint failed (1)"
+		ASSERT_TRUE(vm::api::setBreakpoint(pid, base::StrID("main"), 5, false).has_value());
 
-		vm::api::run(pid).value();  // "Run failed (1)"
+		ASSERT_TRUE(vm::api::run(pid).has_value());
 
-		auto execution_position
-			= vm::api::waitForBreakpoint(pid).value();  // "Wait for breakpoint failed (1)"
-		ASSERT_EQUAL_PRINT(8, execution_position.instr_number);
+		auto execution_position = vm::api::waitForBreakpoint(pid);
+		ASSERT_TRUE(execution_position.has_value());
 
-		vm::api::resume(pid).value();  // "Resume failed (1)"
+		ASSERT_EQUAL_PRINT(8, execution_position->instr_number);
 
-		vm::api::stop(pid).value();    // "Stop failed (1)"
+		ASSERT_TRUE(vm::api::resume(pid).has_value());
+		ASSERT_TRUE(vm::api::stop(pid).has_value());
 	}
 
 	/**
