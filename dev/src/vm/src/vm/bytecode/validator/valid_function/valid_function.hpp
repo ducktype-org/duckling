@@ -5,10 +5,11 @@
 
 namespace vm::code::valid_function {
 	struct ValidFunction final: ElementBase {
-		Identifier    name;
-		CodeBlock     body;
-		FuncSignature signature;
-		LocalStackDb  local_stack;
+		Identifier                name;
+		CodeBlock                 body;
+		std::vector<StackStateID> stack_states;
+		FuncSignature             signature;
+		LocalStackDb              local_stack;
 
 		Function toNormal() const {
 			Function new_func;

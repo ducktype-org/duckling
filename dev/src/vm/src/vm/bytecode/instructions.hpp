@@ -30,7 +30,6 @@
 #include <base/preproc/for_each.hpp>
 
 #include <vm/bytecode/opcode_args.hpp>
-#include <vm/bytecode/validator/local_stack_database.hpp>
 
 // Useful for turning a name to a properly qualified type name in X-macros.
 #define VM_INSTR_FROM_NAME(name)  vm::code::instructions::Op_##name
@@ -52,10 +51,7 @@ namespace vm::code {
 
 	namespace detail {
 		// This structure allows us to easily define the `IsInstruction` concept.
-		struct InstructionBase: ElementBase {
-			usize        instr_idx = 0;
-			StackStateID stack_state{};
-		};
+		struct InstructionBase: ElementBase {};
 
 		// Helper useful for getting rid of the leading comma resulting from `FOR_EACH`.
 		template<typename THead, typename... TTail>

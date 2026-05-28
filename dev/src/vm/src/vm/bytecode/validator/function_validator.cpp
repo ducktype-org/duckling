@@ -1719,25 +1719,23 @@ public:
 		  ext_c_signatures(ext_c_signatures),
 		  function(function) {}
 
-	std::tuple<std::vector<Instruction>, LocalStackDb> validateAndExtractReachableCode() {
+	std::tuple<std::vector<Instruction>, std::vector<StackStateID>, LocalStackDb> validateAndExtractReachableCode(
+	) {
 		validateSignature();
 		preprocessLabels();
 		LocalStackDb db = traverseControlFlowGraph();
 		validateFunctionEnd();
 
-		std::vector<Instruction> out;
+		std::vector<Instruction>  body;
+		std::vector<StackStateID> stack_states;
 		for (usize idx = 0; idx < function.body.size(); idx++) {
 			if_opt_some(stack_before_instr[idx], state) {
-				auto instruction = function.body[idx];
-				instruction.visit([&](auto&& i) {
-					i.instr_idx   = idx;
-					i.stack_state = state;
-				});
-				out.push_back(instruction);
+				body.emplace_back(function.body[idx]);
+				stack_states.emplace_back(state);
 			}
 		}
 
-		return { out, db };
+		return { body, stack_states, db };
 	}
 };
 
@@ -1755,7 +1753,7 @@ vm::code::valid_function::ValidFunction vm::code::detail::validateAndExtractReac
 
 	valid_function::ValidFunction new_function;
 	new_function.name = function.name;
-	std::tie(new_function.body, new_function.local_stack)
+	std::tie(new_function.body, new_function.stack_states, new_function.local_stack)
 		= validator.validateAndExtractReachableCode();
 	new_function.bytecode_pos = function.bytecode_pos;
 	new_function.signature    = signature;

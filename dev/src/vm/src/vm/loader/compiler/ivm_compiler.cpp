@@ -34,9 +34,7 @@ namespace vm::loader::compiler {
 
 		auto& db = ctx.function.local_stack;
 
-		for (const auto& instr: ctx.function.body) {
-			auto state = instr.visit([&](auto&& i) { return i.stack_state; });
-
+		for (const auto& state: ctx.function.stack_states) {
 			max_block_count = std::max(max_block_count, db.size(state));
 			max_stack_size  = max_stack_size.fieldMax(db.byteSize(state));
 		}

@@ -160,9 +160,9 @@ namespace vm::loader::compiler::safe {
 		detail::SafeMicroBytecodeBuilder                    builder{ *this, ctx };
 		std::vector<vm::low::LowFuncData::InstructionRange> instruction_mapping;
 
-		for (auto& instr: ctx.function.body) {
-			builder.curr_state     = instr.visit([](auto&& i) { return i.stack_state; });
-			auto instruction_range = builder.add(instr);
+		for (usize i = 0; i < ctx.function.body.size(); i++) {
+			builder.curr_state     = ctx.function.stack_states[i];
+			auto instruction_range = builder.add(ctx.function.body[i]);
 			instruction_mapping.push_back(instruction_range);
 		}
 
