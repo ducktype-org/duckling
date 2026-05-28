@@ -56,7 +56,7 @@ namespace vm::code {
 	/**
 	 * @brief Represents bytecode a function.
 	 * @note A function on its own (without type context or globals) does not contain enough
-	 * information to tell if it is correct/valid or not
+	 * information to tell if it is correct/valid or not.
 	 */
 	struct Function final: ElementBase {
 		Identifier    name;
