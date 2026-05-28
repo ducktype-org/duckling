@@ -55,7 +55,6 @@ namespace compiler::repl {
 		QueryReplInstructionWrapper,
 		QueryReplInstructionWrapper_Key,
 		query::QResult<helios::HOUTFunction>,
-		({ .uses_qresult = true })
 	);
 
 }  // namespace compiler::repl
