@@ -182,6 +182,7 @@ private:
 		assert_mapping(3, 0);
 		assert_mapping(8, 0);
 		assert_no_maping(2);
+		assert_no_maping(4);
 		assert_no_maping(16);
 		assert_no_maping(21);
 		assert_no_maping(22);
