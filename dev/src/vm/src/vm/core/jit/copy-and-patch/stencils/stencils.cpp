@@ -11,7 +11,7 @@ namespace vm::jit::cnp {
 // for now only a single(ext-less) instruction
 // jitable_interface.py depends on the exact fully-qualified name
 #define HANDLE_MICRO_INSTR(opcode_name)                                                      \
-	void stencil_##opcode_name(                                                              \
+	extern "C" void stencil_##opcode_name(                                                              \
 		const MicroInstruction* instr, byte* local_stack, Frame* frame, SafeVMThread& thread \
 	) {                                                                                      \
 		CORE_ASSERT(                                                                         \

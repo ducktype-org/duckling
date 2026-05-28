@@ -19,7 +19,7 @@ def is_opfun(func_name: str) -> bool:
     )
 
 def is_stencil(func_name: str) -> bool:
-    return func_name.startswith("vm::jit::cnp::stencil")
+    return func_name.startswith("stencil")
 
 def nonjitable(func_name: str) -> bool:
     unjitable_opfuncs = [
@@ -82,6 +82,8 @@ def main(llvm_nm, llvm_cxxfilt, input_path, output_file, **kwargs):
     for mangled, unmangled in zip(mangled_names, unmangled_names):
         if should_remain(unmangled):
             write(mangled)
+        else:
+            print(f"Ignore: {unmangled}")
 
     global special_functions
     for func_name, used in special_functions.items():
