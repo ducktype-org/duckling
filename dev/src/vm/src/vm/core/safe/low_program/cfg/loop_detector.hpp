@@ -9,11 +9,7 @@
 #include <limits>
 #include <vector>
 
-namespace vm::jit::cf {
-	using vm::low::cf::BasicBlock;
-	using vm::low::cf::BasicBlockID;
-	using vm::low::cf::ControlFlowGraph;
-
+namespace vm::low::cf {
 	class LoopDetector;
 
 	/**
@@ -36,7 +32,7 @@ namespace vm::jit::cf {
 		 * @brief Detects natural loops in a function CFG using dominator relations.
 		 * @return A function-level CFG at index 0 and loop CFGs at later indices.
 		 */
-		FunctionLoopCFGs findLoops(const low::MicroBytecode& bc) {
+		FunctionLoopCFGs findLoops(const MicroBytecode& bc) {
 			ControlFlowGraph cfg(bc);
 			FunctionLoopCFGs segs{};
 
@@ -243,8 +239,8 @@ namespace vm::jit::cf {
 		}
 	};
 
-	FunctionLoopCFGs detectLoopsInFunction(const low::MicroBytecode& bc) {
+	FunctionLoopCFGs detectLoopsInFunction(const MicroBytecode& bc) {
 		LoopDetector detector;
 		return detector.findLoops(bc);
 	}
-}  // namespace vm::jit::cf
+}  // namespace vm::low::cf
