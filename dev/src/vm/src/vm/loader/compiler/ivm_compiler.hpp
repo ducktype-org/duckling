@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vm/bytecode/bytecode.hpp>
+#include <vm/bytecode/validator/local_stack_database.hpp>
 #include <vm/bytecode/validator/valid_program.hpp>
 #include <vm/bytecode/validator/valid_type/type_context.hpp>
 #include <vm/bytecode/validator/valid_type/valid_type.hpp>
@@ -12,22 +13,11 @@ namespace vm::loader::compiler {
 		 * @brief A structure holding the intermediate state for the compilation of a single function.
 		 */
 		struct FunctionStackContext {
-			FunctionStackContext(const code::Function& func): function(func) {}
+			FunctionStackContext(const code::valid_function::ValidFunction& func): function(func) {}
 
 			/// The high level function definition.
-			const code::Function& function;
+			const code::valid_function::ValidFunction& function;
 
-			struct LocalEntry {
-				code::valid_type::TypeSize offset;
-				u64 stack_index;  /// The index of the local variable in the function's local
-				                  /// stack, always equal to the size of the type stack at the
-				                  /// moment of the variable declaration.
-				code::valid_type::ValidTypeID type;
-			};
-
-			/// A mapping from a local variable's name to its offset on the function's local stack
-			/// and type.
-			base::HashMap<base::StrID, LocalEntry> locals_map{};
 			/// Total required size for the local stack frame, in bytes.
 			code::valid_type::TypeSize local_stack_size{};
 			usize                      local_block_count = 0;
@@ -103,7 +93,9 @@ namespace vm::loader::compiler {
 		 * @param new_functions A vector containing the new `Function` objects for newly added
 		 * functions.
 		 */
-		virtual void compileNewFunctions(const std::vector<code::Function>& new_functions) = 0;
+		virtual void compileNewFunctions(
+			const std::vector<code::valid_function::ValidFunction>& new_functions
+		) = 0;
 
 		/**
 		 * @brief Compiles newly added ExternCFunctions and adds the compiled functions to the
@@ -124,9 +116,11 @@ namespace vm::loader::compiler {
 		/**
 		 * @brief Calculates the stack offsets of stack variables.
 		 * Since in ValidProgram variables are represented by names not indexes on the stack.
-		 * This function creates an offset map which is used during lowering instructions to change
-		 * the variable names to numeric offsets.
+		 * This function creates an stack context which is used during lowering instructions to
+		 * translate the variable name to numeric offsets.
 		 */
-		detail::FunctionStackContext calculateStackContext(const code::Function& function);
+		detail::FunctionStackContext calculateStackContext(
+			const code::valid_function::ValidFunction& function
+		);
 	};
 }
