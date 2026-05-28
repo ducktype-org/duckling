@@ -39,6 +39,7 @@ function(process_to_binary binary_file destination_file binary_artifact_prefix a
         COMMAND ${CMAKE_C_COMPILER}
         -fPIC
         -shared
+        -mcmodel=large
         ${linked_out}-1
         -o ${linked_out}
         DEPENDS ${binary_file} ${extra_deps}

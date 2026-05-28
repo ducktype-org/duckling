@@ -24,6 +24,7 @@ static auto stencils = Stencils {
 }
 .load();
 
+
 class JitMemoryTest: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS JitMemoryTest
@@ -36,6 +37,7 @@ public:
 		TESTER_ADD_TEST(testCallingRecursive);
 		TESTER_ADD_TEST(testCallingLibc);
 		TESTER_ADD_TEST(testPatching);
+		TESTER_ADD_TEST(testCombining);
 	}
 
 private:
@@ -118,6 +120,52 @@ private:
 
 		auto must_patch = memory.intoFunc<int(int)>();
 		for (int i = 0; i < 100; ++i) ASSERT_EQUAL_PRINT(std::invoke(must_patch, i), i + 9);
+	}
+
+	void testCombining() {
+		auto add_code = FIND_FUNC("stencil_add");
+		auto mul_code = FIND_FUNC("stencil_mul");
+		auto end_code = FIND_FUNC("stencil_end");
+
+		auto memory = JitFuncMemory::allocate(add_code.size + mul_code.size + end_code.size);
+		
+		auto add_addr = memory.addr;
+		auto mul_addr = stencils.relocate(add_code, add_addr);
+		auto end_addr = stencils.relocate(mul_code, mul_addr);
+		stencils.relocate(end_code, end_addr);
+
+		memory.dump("dump1");
+
+		add_code.patch(add_addr, [&](HoleValue hole) {
+			switch (hole)
+			{
+			case HoleValue::CONTINUE_FUNCTION:
+				return std::bit_cast<intptr_t>(mul_addr);
+			default:
+				CORE_PANIC("unexpected relocation");
+			}
+		});
+
+		mul_code.patch(mul_addr, [&](HoleValue hole) {
+			switch (hole)
+			{
+			case HoleValue::CONTINUE_FUNCTION:
+				return std::bit_cast<intptr_t>(end_addr);
+			default:
+				CORE_PANIC("unexpected relocation");
+			}
+		});
+
+		memory.dump("dump2");
+
+		memory.markExecutable();
+		auto build_func = memory.intoFunc<int(int, int)>(); // (a + b) * b
+		for (int a = 0; a < 10; ++a) {
+			for (int b = 0; b < 10; ++b) {
+				auto returned = std::invoke(build_func, a, b);
+				ASSERT_EQUAL_PRINT(returned, (a + b) * b);
+			}
+		}
 	}
 };
 

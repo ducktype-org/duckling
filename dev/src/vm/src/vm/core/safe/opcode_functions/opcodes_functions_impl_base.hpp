@@ -345,7 +345,14 @@ namespace vm {
 				// should be compiled now
 				auto compiled = jit::compileCP(func_obj);
 
-				my_data.func_ptr = compiled.intoFunc<jit::JitOpFun>();
+				performFunctionCall(instr, local_stack, frame, thread, func_id);
+
+				auto ptr = compiled.intoFunc<jit::CPFunc>();
+				(*ptr)(instr, local_stack, frame, thread);
+				++instr;
+
+				//auto ptr = compiled.intoFunc<jit::JitOpFun>();
+				//(*ptr)(&instr, &local_stack, &frame, &thread);
 
 				run_compiled();
 			}

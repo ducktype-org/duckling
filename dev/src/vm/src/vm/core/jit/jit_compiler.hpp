@@ -21,10 +21,12 @@ namespace vm::jit {
 	using JitOpFun
 		= void(const vm::MicroInstruction**, std::byte**, vm::Frame**, vm::SafeVMThread*);
 
-	/**
-	 * @brief The data additionally stored per function, by the JIT compiler.
-	 */
-	struct JitFuncData {
+	using CPFunc = void(const MicroInstruction*, byte*, Frame*, SafeVMThread&);
+
+		/**
+	     * @brief The data additionally stored per function, by the JIT compiler.
+	     */
+		struct JitFuncData {
 		MRef<JitOpFun> func_ptr          = nullptr;
 		uint           until_compilation = COMPILATION_THRESHOLD;
 	};

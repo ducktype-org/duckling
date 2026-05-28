@@ -5,6 +5,8 @@
 #include <vm/core/safe/low_program/instruction.hpp>
 #include <vm/core/safe/low_program/low_program.hpp>
 
+#include <iostream>
+
 namespace vm::jit {
 	cnp::JitFuncMemory compileCP(const vm::low::LowFuncData& func_data) {
 		using namespace cnp;
@@ -20,10 +22,9 @@ namespace vm::jit {
 
 		auto  memory = JitFuncMemory::allocate(size);
 		byte* next   = memory.addr;
-		for (auto instr: func_data.bc) {
-			auto opcode = getInstructionOpcode(instr);
 
-			auto stencil_data = stencilsData().at(static_cast<u64>(opcode));
+		auto patch_stencil = [&](auto instr, low::MicroOpcode opcode) {
+			auto stencil_data = stencilsData().at(std::to_underlying(opcode));
 			auto previous     = next;
 			next              = relocate(stencil_data, previous);
 			stencil_data.patch(previous, [&instr, &next](HoleValue value) {
@@ -39,7 +40,17 @@ namespace vm::jit {
 					return 0ul;
 				}
 			});
+		};
+
+		for (auto instr: func_data.bc) {
+			auto opcode = getInstructionOpcode(instr);
+			std::cerr << vm::low::OPCODE_NAMES[std::to_underlying(opcode)] << ": "
+					  << std::to_underlying(opcode) << std::endl;
+			patch_stencil(instr, opcode);
 		}
+		patch_stencil(makeLowInstruction(low::MicroOpcode::exit), low::MicroOpcode::exit);
+
+		memory.markExecutable();
 		return memory;
 	}
 }

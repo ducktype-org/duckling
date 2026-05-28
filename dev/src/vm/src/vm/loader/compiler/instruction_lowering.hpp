@@ -121,7 +121,6 @@ namespace vm::loader::compiler::detail {
 		requires AreTranslatableInstructionTagArgs<T, Args...> void addLow(Args&&... args) {
 			if (push_step_gil_on_next_add_low) {
 				push_step_gil_on_next_add_low = false;
-				addLow<Op_stepGil>();
 			}
 
 			if (is_control_flow) {

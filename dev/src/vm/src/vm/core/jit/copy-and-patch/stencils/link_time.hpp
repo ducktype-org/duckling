@@ -2,6 +2,7 @@
 
 #include <bit>
 #include <cstdint>
+#include <functional>
 
 namespace vm::jit::cnp::internal {
 	struct OpaqueStruct;
