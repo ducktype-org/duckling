@@ -318,38 +318,34 @@ namespace vm {
 		FUNCTION_CONT(0);
 	}
 #ifdef ENABLE_JIT
-	RETURN_TYPE OpFuns::OPCODE_NAME(jit_call_entrypoint)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(jit_entrypoint)(FUNCTION_ARGS) {
 		{
-			auto& jit_data = thread.jit_data;
-			auto  func_id  = instr->arg0;
-			auto& func_obj = thread.process_program->getFunctions()[func_id];
+			auto& jit_data         = thread.jit_data;
+			auto& current_func_obj = *frame->current_function;
+			auto  current_func_id
+				= thread.process_program->getFunctions().idOf(current_func_obj.name).value();
 
 			// @TODO: #2126 manage the size when inserting new code
-			if (jit_data.size() <= func_id) jit_data.resize(2 * func_id + 2);
+			if (jit_data.size() <= current_func_id) jit_data.resize(2 * current_func_id + 2);
 
-			jit::JitFuncData& my_data = jit_data[func_id];
-
-			auto run_compiled = [&]() {
-				performFunctionCall(instr, local_stack, frame, thread, func_id);
-				(*my_data.func_ptr)(&instr, &local_stack, &frame, &thread);
-			};
+			jit::JitFuncData& my_data = jit_data[current_func_id];
 
 			if (my_data.func_ptr) {
 				// is already compiled
-				run_compiled();
+				(*my_data.func_ptr)(&instr, &local_stack, &frame, &thread);
 			} else if (0 < my_data.until_compilation) {
 				// should be compiled later
 				--my_data.until_compilation;
-				performFunctionCall(instr, local_stack, frame, thread, func_id);
 			} else {
 				// should be compiled now
-				MRef<jit::JitOpFun> compiled
-					= jit::compileLLVM(func_obj.cfg, func_obj.bc, func_obj.name);
+				MRef<jit::JitOpFun> compiled = jit::compileLLVM(
+					current_func_obj.cfg, current_func_obj.bc, current_func_obj.name
+				);
 
 				CORE_ASSERT(compiled, "Compiled function pointer shouldn't be nullptr");
 				my_data.func_ptr = compiled;
 
-				run_compiled();
+				(*my_data.func_ptr)(&instr, &local_stack, &frame, &thread);
 			}
 		}
 		FUNCTION_CONT(0);

@@ -23,12 +23,9 @@ def is_stencil(func_name: str) -> bool:
 
 def nonjitable(func_name: str) -> bool:
     unjitable_opfuncs = [
-        "jit_call_entrypoint",
-        "call_func",
+        "jit_entrypoint",
         "call_builtinfunc",
-        "virtual_call_pptr_method",
-        "ret_tailcall_func",
-        "breakpoint",
+        "breakpoint"
     ]
 
     return any(op in func_name for op in unjitable_opfuncs)
