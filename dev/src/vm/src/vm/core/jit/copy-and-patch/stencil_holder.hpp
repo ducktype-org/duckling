@@ -17,6 +17,12 @@ namespace vm::jit::cnp {
 	byte* relocate(const StencilData& stencil_data, byte* new_address);
 	[[nodiscard]] std::span<const byte> stencilsBinary(const StencilData& stencil_data);
 
+	enum class SpecialStencils {
+		ret = low::microInstrCount()
+	};
+
+	constexpr size_t stencil_count = low::microInstrCount() + 1;
+
 	// TODO: use non-jitable.hpp to get the jitable
-	[[nodiscard]] const std::array<StencilData, low::microInstrCount()>& stencilsData();
+	[[nodiscard]] const std::array<StencilData, stencil_count>& stencilsData();
 }

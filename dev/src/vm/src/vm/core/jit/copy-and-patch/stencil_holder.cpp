@@ -27,7 +27,7 @@ namespace vm::jit::cnp {
 		return getLoadedStencils().stencilsBinary(stencil_data);
 	}
 
-	[[nodiscard]] const std::array<StencilData, low::microInstrCount()>& stencilsData() {
+	[[nodiscard]] const std::array<StencilData, stencil_count>& stencilsData() {
 		return getLoadedStencils().stencilsData();
 	}
 }

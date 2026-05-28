@@ -9,28 +9,16 @@
 #include <iostream>
 
 namespace vm::jit::cnp {
-	const char* wtf(auto opcode) {
-		switch (opcode) {
-#define HANDLE_MICRO_INSTR(opcode_name) \
-	case low::MicroOpcode::opcode_name: \
-		return #opcode_name;
-#include <vm/core/safe/low_program/micro_instruction_definitions.hpp>
-#undef HANDLE_MICRO_INSTR
-		}
-	}
-
 // for now only a single(ext-less) instruction
 // jitable_interface.py depends on the exact fully-qualified name
 #define HANDLE_MICRO_INSTR(opcode_name)                                                       \
-	extern "C" void stencil_##opcode_name(                                                    \
-		const MicroInstruction* instr, byte* local_stack, Frame* frame, SafeVMThread& thread  \
-	) {                                                                                       \
-		std::cerr << "What is happening " << std::to_underlying(getInstructionOpcode(*instr)) \
-				  << std::endl;                                                               \
+	extern "C" void stencil_##opcode_name(CP_ARGS) {                                          \
+		/*std::cerr << "Stencil running:" << std::to_underlying(getInstructionOpcode(*instr)) \
+		          << std::endl;*/                                                             \
 		CORE_ASSERT(                                                                          \
 			low::MicroOpcode::opcode_name == low::MicroOpcode::exit                           \
 				|| getInstructionOpcode(*instr) == low::MicroOpcode::opcode_name,             \
-			"Expected a different opcode", /**/                                               \
+			"Expected a different opcode",                                                    \
 		);                                                                                    \
                                                                                               \
 		vm::OpFuns::op_##opcode_name(instr, local_stack, frame, thread);                      \
@@ -45,4 +33,12 @@ namespace vm::jit::cnp {
 #include <vm/core/safe/low_program/micro_instruction_definitions.hpp>
 #undef HANDLE_MICRO_INSTR
 
+	extern "C" void stencil_special_return(CP_ARGS) {
+		std::cerr << "Stencil running: special_return" << std::endl;
+
+		thread.runtime_data.frame_stack_current = frame;
+		frame->local_stack                      = local_stack;
+		frame->instr                            = instr;
+		return;
+	}
 }

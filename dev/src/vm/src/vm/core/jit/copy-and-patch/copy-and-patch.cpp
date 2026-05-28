@@ -23,11 +23,18 @@ namespace vm::jit {
 		auto  memory = JitFuncMemory::allocate(size);
 		byte* next   = memory.addr;
 
-		auto patch_stencil = [&](auto instr, low::MicroOpcode opcode) {
-			auto stencil_data = stencilsData().at(std::to_underlying(opcode));
+		auto patch_stencil = [&](u64 opcode, auto func) {
+			auto stencil_data = stencilsData().at(opcode);
 			auto previous     = next;
 			next              = relocate(stencil_data, previous);
-			stencil_data.patch(previous, [&instr, &next](HoleValue value) {
+			stencil_data.patch(previous, func);
+		};
+
+		for (auto instr: func_data.bc) {
+			auto opcode = getInstructionOpcode(instr);
+			//std::cerr << vm::low::OPCODE_NAMES[std::to_underlying(opcode)] << ": "
+			//		  << std::to_underlying(opcode) << std::endl;
+			patch_stencil(std::to_underlying(opcode), [&instr, &next](HoleValue value) {
 				switch (value) {
 				case HoleValue::ARG0:
 					return instr.arg0;
@@ -40,16 +47,13 @@ namespace vm::jit {
 					return 0ul;
 				}
 			});
-		};
-
-		for (auto instr: func_data.bc) {
-			auto opcode = getInstructionOpcode(instr);
-			std::cerr << vm::low::OPCODE_NAMES[std::to_underlying(opcode)] << ": "
-					  << std::to_underlying(opcode) << std::endl;
-			patch_stencil(instr, opcode);
 		}
-		patch_stencil(makeLowInstruction(low::MicroOpcode::exit), low::MicroOpcode::exit);
+		memory.dump("dump_normal");
+		patch_stencil(std::to_underlying(SpecialStencils::ret), [](HoleValue) -> u64 {
+			CORE_PANIC("Special stencil 'ret' has a relocation");
+		});
 
+		memory.dump("dump_finished");
 		memory.markExecutable();
 		return memory;
 	}

@@ -21,7 +21,8 @@ namespace vm::jit {
 	using JitOpFun
 		= void(const vm::MicroInstruction**, std::byte**, vm::Frame**, vm::SafeVMThread*);
 
-	using CPFunc = void(const MicroInstruction*, byte*, Frame*, SafeVMThread&);
+	#define CP_ARGS const MicroInstruction* instr, byte* local_stack, Frame* frame, SafeVMThread& thread
+	using CPFunc = void(CP_ARGS);
 
 		/**
 	     * @brief The data additionally stored per function, by the JIT compiler.

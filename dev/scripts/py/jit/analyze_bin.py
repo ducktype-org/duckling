@@ -114,23 +114,32 @@ def parse(llvm_readobj: str, binary: str, verbose: bool, shared: bool) -> list[S
             print(len(stencil.holes))
         return stencils
 
+def order_stencils(stencils: list[Stencil], order):
+    no_stencil = Stencil(name="NO STENCIL", place=0, size=0, holes=[])
+    array = [no_stencil] * len(order)
+    for stencil in stencils:
+        if stencil.name.startswith("stencil_special"):
+            continue
+        idx = order[stencil.name[len("stencil_") :]]
+        array[idx] = stencil
+        
+    for stencil in array:
+        opcode = order[stencil.name[len("stencil_") :]] if stencil.name != no_stencil.name else -1
+        print(f"name: {stencil.name}, opcode: {opcode}")
+
+    for stencil in stencils:
+        if stencil.name.startswith("stencil_special"):
+            array.append(stencil)
+
+    return array
 
 def generate_stencils(
     llvm_readobj: str, binary, output_file, verbose: bool, shared: bool, order
 ):
     stencils = parse(llvm_readobj, binary, verbose, shared)
     if order:
-        order_map = json.loads(order.read())
-        no_stencil = Stencil(name="NO STENCIL", place=0, size=0, holes=[])
-        array = [no_stencil] * len(order_map)
-        for stencil in stencils:
-            idx = order_map[stencil.name[len("stencil_") :]]
-            array[idx] = stencil
-
-        stencils = array
-        for stencil in stencils:
-            opcode = order_map[stencil.name[len("stencil_") :]] if stencil.name != no_stencil.name else -1
-            print(f"name: {stencil.name}, opcode: {opcode}")
+        stencils = order_stencils(stencils, json.loads(order.read()))
+        
     output_file.write(stencils_to_c(stencils, binary=binary.read()))
 
 
