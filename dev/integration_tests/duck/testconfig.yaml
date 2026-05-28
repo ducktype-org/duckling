@@ -7,7 +7,9 @@ build_duck: |
   if [ "$exit_code" -eq 124 ]; then
     echo "Build step 'build_duck' timed out after 3 minutes. Please retry, or inspect recent toolchain/cache changes." >&2
   fi
-  exit "$exit_code"
+  if [ "$exit_code" -ne 0 ]; then
+    exit "$exit_code"
+  fi
 duck_exe_dir: '`git rev-parse --show-toplevel`/dev/src/duck/target/debug/'
 prepare: ""
 before_cmd: "true"
