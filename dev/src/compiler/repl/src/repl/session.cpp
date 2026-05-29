@@ -40,14 +40,13 @@ namespace compiler::repl {
 	}
 
 	ReplResult ReplSession::runWithReplErrorHandling(
-		std::string_view                   panic_prefix,
 		std::string_view                   std_exception_prefix,
 		const std::function<ReplResult()>& action
 	) {
 		try {
 			return action();
-		} catch (const base::Panic& e) {
-			return ReplResult::error(base::strConcat(panic_prefix, e.what()));
+		} catch (const base::Panic&) {
+			throw;
 		} catch (const std::exception& e) {
 			return ReplResult::error(base::strConcat(std_exception_prefix, e.what()));
 		} catch (...) {
@@ -57,7 +56,6 @@ namespace compiler::repl {
 	}
 
 	void ReplSession::runWithContextErrorHandling(
-		std::string_view                            panic_prefix,
 		std::string_view                            std_exception_prefix,
 		const std::function<void(query::Context&)>& action,
 		std::string&                                out_error
@@ -65,8 +63,8 @@ namespace compiler::repl {
 		query::utils::withContextDo([&](query::Context& ctx) {
 			try {
 				action(ctx);
-			} catch (const base::Panic& e) {
-				out_error = base::strConcat(panic_prefix, e.what());
+			} catch (const base::Panic&) {
+				throw;
 			} catch (const std::exception& e) {
 				out_error = base::strConcat(std_exception_prefix, e.what());
 			} catch (...) {
@@ -218,7 +216,6 @@ namespace compiler::repl {
 
 	ReplResult ReplSession::handleExpression(const pst::AccessLocked<pst::ExprStmt>& expr_stmt) {
 		return runWithReplErrorHandling(
-			"Expression evaluation failed: ",
 			"Unexpected error during expression evaluation: ",
 			[&]() -> ReplResult {
 				std::string output_message;
@@ -230,7 +227,6 @@ namespace compiler::repl {
 				CORE_DEV_LOG(REPL, "Starting handleExpression\n");
 
 				runWithContextErrorHandling(
-					"Expression evaluation failed: ",
 					"Unexpected error during expression evaluation: ",
 					[&](query::Context& ctx) {
 						auto build_result = buildStatementWrapper(
@@ -257,7 +253,6 @@ namespace compiler::repl {
 				auto hout_unit = makeExecutableHOUTUnit(expr_wrapper.value());
 
 				runWithContextErrorHandling(
-					"Compilation/execution error: ",
 					"Unexpected error: ",
 					[&](query::Context& ctx) {
 						// Initialize context on first use or update it for this scope
@@ -312,7 +307,6 @@ namespace compiler::repl {
 
 	ReplResult ReplSession::handleInstruction(const pst::AccessLocked<pst::Stmt>& stmt) {
 		return runWithReplErrorHandling(
-			"Instruction evaluation failed: ",
 			"Unexpected error during instruction evaluation: ",
 			[&]() -> ReplResult {
 				std::string output_message;
@@ -324,7 +318,6 @@ namespace compiler::repl {
 				CORE_DEV_LOG(REPL, "Starting handleInstruction\n");
 
 				runWithContextErrorHandling(
-					"Instruction evaluation failed: ",
 					"Unexpected error during instruction evaluation: ",
 					[&](query::Context& ctx) {
 						auto build_result = buildStatementWrapper(
@@ -351,7 +344,6 @@ namespace compiler::repl {
 				auto hout_unit = makeExecutableHOUTUnit(instr_wrapper.value());
 
 				runWithContextErrorHandling(
-					"Compilation/execution error: ",
 					"Unexpected error: ",
 					[&](query::Context& ctx) {
 						// Initialize context on first use or update it for this scope
@@ -402,7 +394,6 @@ namespace compiler::repl {
 
 	ReplResult ReplSession::handleDefinition(const pst::AccessLocked<pst::Stmt>& stmt) {
 		return runWithReplErrorHandling(
-			"Definition compilation error: ",
 			"Unexpected error: ",
 			[&]() -> ReplResult {
 				std::string output_message;
@@ -410,7 +401,6 @@ namespace compiler::repl {
 				auto        module_id = getCurrentModuleID();
 
 				runWithContextErrorHandling(
-					"Definition compilation error: ",
 					"Unexpected error: ",
 					[&](query::Context& ctx) {
 						// Initialize context on first use or update it for this scope
@@ -454,7 +444,7 @@ namespace compiler::repl {
 	}
 
 	ReplResult ReplSession::executeInput(std::string_view input) {
-		return runWithReplErrorHandling("REPL execution failed: ", "Error: ", [&]() -> ReplResult {
+		return runWithReplErrorHandling("Error: ", [&]() -> ReplResult {
 			if (input.empty()) return ReplResult::success();
 
 			CORE_DEV_LOG(REPL, "Starting executeInput\n");

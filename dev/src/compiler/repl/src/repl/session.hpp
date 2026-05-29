@@ -219,7 +219,6 @@ namespace compiler::repl {
 		 * @brief Execute an action and unify panic/exception handling for REPL.
 		 */
 		ReplResult runWithReplErrorHandling(
-			std::string_view                   panic_prefix,
 			std::string_view                   std_exception_prefix,
 			const std::function<ReplResult()>& action
 		);
@@ -228,7 +227,6 @@ namespace compiler::repl {
 		 * @brief Execute a query-context action and catch panics inside withContextDo.
 		 */
 		void runWithContextErrorHandling(
-			std::string_view                            panic_prefix,
 			std::string_view                            std_exception_prefix,
 			const std::function<void(query::Context&)>& action,
 			std::string&                                out_error
