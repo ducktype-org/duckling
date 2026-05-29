@@ -1015,9 +1015,9 @@ clah::Clah getClahForMain() {
 	                     .optional()
 	                     .build())
 				.add(clah::ParamBuilder::ofFlag()
-		                     .addLongName("silent")
-		                     .addShortDesc("Replay history without output (internal).")
-		                     .build())
+	                     .addLongName("silent")
+	                     .addShortDesc("Replay history without output (internal).")
+	                     .build())
 				.setHandler([](const clah::ParsingResult& options) -> int {
 					auto init_result = compiler::driver::initializeTheCompiler(
 								   compiler::driver::CompilerModeOfOperationAndOptions::ReplMode{
@@ -1068,14 +1068,13 @@ clah::Clah getClahForMain() {
 								return 1;
 							}
 						}
-						repl_result         = session.run();
+						repl_result         = session.run(replay_count_opt.has_value());
 						reset_replay_count  = session.getResetReplayCount();
 						reset_replay_silent = session.getResetReplaySilent();
 					}
 					compiler::driver::exit();
 					if (repl_result.status == compiler::repl::ReplResult::Status::Reset) {
-						if (reset_replay_count.has_value())
-							setReplRestartArgs(reset_replay_count.value(), reset_replay_silent);
+						setReplRestartArgs(reset_replay_count.copyValueOr(0), reset_replay_silent);
 						return execSelf(g_argv);
 					}
 					return 0;

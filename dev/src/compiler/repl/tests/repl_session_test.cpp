@@ -598,10 +598,7 @@ namespace compiler::repl {
 				result.message.find("Missing script path") != std::string::npos,
 				"Error should explain that script path is missing"
 			);
-			assertFalse(
-				session.m_suppress_repl_feedback_during_script_load,
-				"Output suppression should be restored"
-			);
+			assertFalse(session.m_suppress_repl, "Output suppression should be restored");
 		}
 
 		void testLoadScriptFileInvalidContents() {
@@ -618,10 +615,7 @@ namespace compiler::repl {
 			assertTrue(
 				!result.message.empty(), "Invalid script should produce a useful error message"
 			);
-			assertFalse(
-				session.m_suppress_repl_feedback_during_script_load,
-				"Output suppression should be restored"
-			);
+			assertFalse(session.m_suppress_repl, "Output suppression should be restored");
 		}
 
 		void testLoadScriptFileExecutesStatements() {
@@ -641,10 +635,7 @@ namespace compiler::repl {
 
 			auto updated_history_size = session.m_session_history.size();
 			ASSERT_EQUAL(3UL, updated_history_size - initial_history_size);
-			assertFalse(
-				session.m_suppress_repl_feedback_during_script_load,
-				"Output suppression should be restored"
-			);
+			assertFalse(session.m_suppress_repl, "Output suppression should be restored");
 
 			auto follow_up_result = session.processLine("1 + 1;");
 			assertTrue(

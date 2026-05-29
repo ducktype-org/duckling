@@ -11,16 +11,10 @@
 #include <helios/queries/function_queries.hpp>
 #include <helios/queries/queries.hpp>
 
-#include <base/types/ints.hpp>
-// @TODO: #1824 Move platform dependent includes to a separate file.
-#include <fcntl.h>
-#include <sys/ioctl.h>
-#include <termios.h>
-#include <unistd.h>
-
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/defer.hpp>
 #include <base/str/str_utils.hpp>
+#include <base/types/ints.hpp>
 
 #include <filesystem/file.hpp>
 #include <logger/logger.hpp>
@@ -38,7 +32,6 @@
 #include <fstream>
 #include <iostream>
 #include <sstream>
-#include <streambuf>
 #include <string>
 #include <string_view>
 
@@ -149,76 +142,6 @@ namespace compiler::repl {
 			entry_index = static_cast<usize>(std::stoul(number));
 			return true;
 		}
-
-		class NullBuffer final: public std::streambuf {
-		public:
-			int overflow(int ch) override { return traits_type::not_eof(ch); }
-		};
-
-		class ScopedStreamSilence final {
-		public:
-			explicit ScopedStreamSilence(bool enabled): m_enabled(enabled) {
-				if (!m_enabled) return;
-				redirectCppStreams();
-				redirectStdio();
-			}
-
-			~ScopedStreamSilence() {
-				if (!m_enabled) return;
-				restoreCppStreams();
-				restoreStdio();
-			}
-
-			ScopedStreamSilence(const ScopedStreamSilence&)            = delete;
-			ScopedStreamSilence& operator=(const ScopedStreamSilence&) = delete;
-
-		private:
-			bool            m_enabled = false;
-			NullBuffer      m_null_buf;
-			std::streambuf* m_cout_buf     = nullptr;
-			std::streambuf* m_cerr_buf     = nullptr;
-			int             m_saved_stdout = -1;
-
-			void redirectCppStreams() {
-				m_cout_buf = std::cout.rdbuf(&m_null_buf);
-				m_cerr_buf = std::cerr.rdbuf(&m_null_buf);
-			}
-
-			void restoreCppStreams() {
-				std::cout.flush();
-				std::cerr.flush();
-
-				std::cout.rdbuf(m_cout_buf);
-				std::cerr.rdbuf(m_cerr_buf);
-
-				std::cout.clear();
-				std::cerr.clear();
-			}
-
-			void redirectStdio() {
-				fflush(stdout);
-				m_saved_stdout = dup(STDOUT_FILENO);
-				if (m_saved_stdout != -1) {
-					int dev_null
-						= open("/dev/null", O_WRONLY);  // NOLINT(cppcoreguidelines-pro-type-vararg)
-					if (dev_null != -1) {
-						dup2(dev_null, STDOUT_FILENO);
-						close(dev_null);
-					}
-				}
-			}
-
-			void restoreStdio() {
-				if (m_saved_stdout != -1) {
-					fflush(stdout);
-					dup2(m_saved_stdout, STDOUT_FILENO);
-					close(m_saved_stdout);
-
-					clearerr(stdout);
-					setvbuf(stdout, nullptr, _IOLBF, BUFSIZ);
-				}
-			}
-		};
 
 		std::vector<std::string> loadSessionHistoryEntries(usize max_entries) {
 			std::vector<std::string> entries;
@@ -348,8 +271,8 @@ namespace compiler::repl {
 			return ReplResult::error("Missing script path. Usage: /load <path-to-script.ds>");
 
 		try {
-			m_suppress_repl_feedback_during_script_load = true;
-			defer(m_suppress_repl_feedback_during_script_load = false);
+			m_suppress_repl = true;
+			defer(m_suppress_repl = false);
 			const fs::FilePath script_path{ std::string(trimmed_path) };
 			fs::File           script_file{ script_path };
 			auto               source = script_file.getContent().view().stdString();
@@ -365,8 +288,6 @@ namespace compiler::repl {
 	void ReplSession::replayHistoryEntries(usize count, bool silent) {
 		if (count == 0) return;
 
-		ScopedStreamSilence silence(silent);
-
 		const auto      entries = loadSessionHistoryEntries(count);
 		std::error_code remove_error;
 		std::filesystem::remove(getSessionHistoryFilePath(), remove_error);
@@ -376,18 +297,18 @@ namespace compiler::repl {
 		}
 
 		const usize replay_count = std::min(count, entries.size());
+		if (silent) m_suppress_repl = true;
+		defer(m_suppress_repl = false);
 		for (usize i = 0; i < replay_count; ++i) {
 			if (!silent) {
 				std::istringstream lines(entries[i]);
 				std::string        line;
 				bool               first_line = true;
 				while (std::getline(lines, line)) {
-					if (first_line) {
+					if (first_line)
 						std::cout << ">> " << line << "\n";
-					} else {
-						std::cout << ReplConfig::HISTORY_MULTILINE_CONTINUATION << line
-						          << "\n";
-					}
+					else
+						std::cout << ReplConfig::HISTORY_MULTILINE_CONTINUATION << line << "\n";
 					first_line = false;
 				}
 			}
@@ -479,8 +400,6 @@ namespace compiler::repl {
 
 				if (is_relative) replay_count = m_session_history.size() - replay_count;
 				m_reset_replay_count = replay_count;
-			} else {
-				m_reset_replay_count.reset();
 			}
 			m_reset_replay_silent = replay_silent;
 			m_should_reset        = true;
@@ -604,7 +523,7 @@ namespace compiler::repl {
 				auto run_result
 					= executeFunctionAndCaptureResult(m_dvm_pid, wrapper_func_name, return_type);
 				if (run_result.has_value()) {
-					if (!m_suppress_repl_feedback_during_script_load) {
+					if (!m_suppress_repl) {
 						if (return_type.toString() == "()")
 							std::cout << "Function executed.\n";
 						else
@@ -812,8 +731,8 @@ namespace compiler::repl {
 		CORE_UNREACHABLE();
 	}
 
-	ReplResult ReplSession::run() {
-		m_frontend.printWelcome();
+	ReplResult ReplSession::run(bool is_reset) {
+		if (!is_reset) m_frontend.printWelcome();
 		while (!m_should_exit) {
 			std::string line = m_frontend.readLine();
 

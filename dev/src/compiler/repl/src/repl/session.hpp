@@ -59,9 +59,11 @@ namespace compiler::repl {
 
 		/**
 		 * Run the main REPL loop (blocking).
+		 * @param is_reset Flag whether this started as an effect of reset(then it doesn't print
+		 * welcome message).
 		 * @return Result describing how the session ended
 		 */
-		ReplResult run();
+		ReplResult run(bool is_reset);
 
 		/**
 		 * @brief Replay the first N entries from the session history file.
@@ -262,16 +264,17 @@ namespace compiler::repl {
 		 */
 		base::Optional<backend_vm::ReplLoweringContext> m_lowering_context;
 		/**
-		 * Suppress per-statement REPL feedback while ingesting a script into session state.
+		 * Suppress per-statement REPL feedback. This can be useful either when loading scripts
+		 * or when resetting state of the REPL.
 		 *
 		 * When true, REPL bookkeeping messages like expression results are hidden for
-		 * statements executed by `loadScriptFile`.
+		 * executed statements.
 		 *
 		 * @note This flag is only enabled inside script-loading flow (`/load` and
-		 *       `duckc repl <script>` preload). Standard interactive REPL input keeps
-		 *       normal feedback.
+		 *       `duckc repl <script>` preload) or during state reset (`/reset`).
+		 *		 Standard interactive REPL input keeps normal feedback.
 		 */
-		bool m_suppress_repl_feedback_during_script_load = false;
+		bool m_suppress_repl = false;
 	};
 
 }  // namespace compiler::repl
