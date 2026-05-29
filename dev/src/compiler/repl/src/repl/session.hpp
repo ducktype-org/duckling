@@ -216,7 +216,7 @@ namespace compiler::repl {
 		ReplResult failWithMessage(std::string_view message);
 
 		/**
-		 * @brief Execute an action and unify panic/exception handling for REPL.
+		 * @brief Execute an action and map non-panic exceptions to REPL error messages.
 		 */
 		ReplResult runWithReplErrorHandling(
 			std::string_view                   std_exception_prefix,
@@ -224,7 +224,7 @@ namespace compiler::repl {
 		);
 
 		/**
-		 * @brief Execute a query-context action and catch panics inside withContextDo.
+		 * @brief Execute a query-context action and map QueryFailed to a REPL error message.
 		 */
 		void runWithContextErrorHandling(
 			std::string_view                            std_exception_prefix,
