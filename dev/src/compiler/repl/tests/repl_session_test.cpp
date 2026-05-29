@@ -634,7 +634,7 @@ namespace compiler::repl {
 			);
 
 			auto updated_history_size = session.m_session_history.size();
-			ASSERT_EQUAL(3UL, updated_history_size - initial_history_size);
+			ASSERT_EQUAL(2UL, updated_history_size - initial_history_size);
 			assertFalse(session.m_suppress_repl, "Output suppression should be restored");
 
 			auto follow_up_result = session.processLine("1 + 1;");

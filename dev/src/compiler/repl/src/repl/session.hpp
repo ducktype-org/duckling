@@ -70,12 +70,10 @@ namespace compiler::repl {
 		 * @param silent Suppress replay output when true.
 		 */
 		void replayHistoryEntries(usize count, bool silent);
-		void replayHistoryEntries(usize count, bool silent);
 
 		/**
 		 * @brief Return replay count requested via /reset -n.
 		 */
-		[[nodiscard]] base::Optional<usize> getResetReplayCount() const {
 		[[nodiscard]] base::Optional<usize> getResetReplayCount() const {
 			return m_reset_replay_count;
 		}
