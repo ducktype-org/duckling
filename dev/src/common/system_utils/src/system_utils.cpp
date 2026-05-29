@@ -1,5 +1,7 @@
 #include "system_utils.hpp"
 
+#include <cerrno>
+
 #ifdef _WIN32
 	#include <process.h>
 #else
@@ -7,7 +9,7 @@
 #endif
 
 // @TODO: #2308 Once implemented, maybe use it here.
-int execSelf(std::vector<std::string>& g_argv) {
+ExecSelfResult execSelf(std::vector<std::string>& g_argv) {
 	std::vector<char*> args;
 	args.reserve(g_argv.size() + 1);
 	for (auto& arg: g_argv) args.push_back(arg.data());
@@ -17,12 +19,21 @@ int execSelf(std::vector<std::string>& g_argv) {
 	intptr_t result = _spawnvp(_P_WAIT, args[0], args.data());
 	if (result == -1) {
 		std::perror("_spawnvp");
-		return -1;
+		return ExecSelfResult{
+			.status = ExecSelfStatus::Error,
+			.error_code = errno,
+		};
 	}
-	return static_cast<int>(result);
+	return ExecSelfResult{
+		.status = ExecSelfStatus::Spawned,
+		.exit_code = static_cast<int>(result),
+	};
 #else
 	execvp(args[0], args.data());
 	std::perror("execvp");
-	return -1;
+	return ExecSelfResult{
+		.status = ExecSelfStatus::Error,
+		.error_code = errno,
+	};
 #endif
 }

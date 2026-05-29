@@ -1075,7 +1075,9 @@ clah::Clah getClahForMain() {
 					compiler::driver::exit();
 					if (repl_result.status == compiler::repl::ReplResult::Status::Reset) {
 						setReplRestartArgs(reset_replay_count.copyValueOr(0), reset_replay_silent);
-						return execSelf(g_argv);
+						auto exec_result = execSelf(g_argv);
+						if (exec_result.status == ExecSelfStatus::Error) return 1;
+						return exec_result.exit_code;
 					}
 					return 0;
 				})
