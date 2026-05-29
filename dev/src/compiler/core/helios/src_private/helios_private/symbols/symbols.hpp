@@ -82,13 +82,6 @@ namespace compiler::helios {
 	 */
 	DECLARE_QUERY(QueryConstValueOf, SymID, QueryConstValueOf_Result, ({}));
 
-	namespace builtin {
-		/**
-		 * Lookup a global builtin symbol by name.
-		 * @note Non-global builtins will likely exist, for example: `i64.max`.
-		 */
-		LookupResult lookupGlobalBuiltins(query::Context&, base::StrID name);
-	}
 
 	using QuerySpecifiersOfSymbol_Result = std::vector<pst::AccessLocked<pst::StmtSpecifier>>;
 

@@ -82,8 +82,8 @@ namespace compiler::frontend::packages {
 				data.size() >= offset + len,
 				"KeyOf_PackageDependencyAliasSideInput::deserialize: buffer too small for str data"
 			);
-			auto* ptr = reinterpret_cast<const char*>(data.data() + offset);
-			dst       = base::StrID({ ptr, len });
+			auto* ptr = data.data() + offset;
+			dst       = base::StrID(base::RawView{ ptr, len });
 			offset += len;
 		};
 		read_str(out.alias);

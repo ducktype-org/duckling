@@ -246,11 +246,6 @@ namespace compiler::helios {
 
 					return visitor.symbol_type_qresult;
 				}
-				variant_case(builtin::BuiltinFunctionData, builtin_data) {
-					return tsh::SymbolType<>(
-						builtin_data.type, tsh::ReferenceKind::Direct, tsh::Mutability::Mutable
-					);
-				}
 				variant_case(defgen::GeneratedSymbolData, generated_data) {
 					return generated_data.getType(ctx);
 				}
