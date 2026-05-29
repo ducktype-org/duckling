@@ -215,6 +215,21 @@ namespace compiler::helios {
 						return field.parent_type.as<tsh::TupleAbstractType>().getComponents().at(
 							field.index
 						);
+					case tsh::Kind::Slice: {
+						if (field.index == 0) {
+							auto element_type
+								= field.parent_type.as<tsh::SliceAbstractType>().getElementType();
+							auto many_pointer_type
+								= ctx.query<tsh::QueryManyPointerType>({ element_type });
+							return tsh::SymbolType<>::withDefaults(many_pointer_type);
+						}
+						if (field.index == 1) {
+							return tsh::SymbolType<>::withDefaults(tsh::getIntegralType(
+								ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned
+							));
+						}
+						CORE_PANIC("Slice only has fields 0 (element) and 1 (length)");
+					}
 					default:
 						CORE_UNREACHABLE();
 					}

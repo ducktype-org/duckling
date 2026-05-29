@@ -838,6 +838,8 @@ namespace compiler::helios::code {
 						  return base_type.as<tsh::StaticArrayAbstractType>().getElementType();
 					  case tsh::Kind::ManyPointer:
 						  return base_type.as<tsh::ManyPointerAbstractType>().getPointee();
+					  case tsh::Kind::Slice:
+						  return base_type.as<tsh::SliceAbstractType>().getElementType();
 					  default:
 						  CORE_PANIC("Cannot index a non-array like type");
 					  }

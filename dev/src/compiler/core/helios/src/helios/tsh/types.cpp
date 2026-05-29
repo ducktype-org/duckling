@@ -72,6 +72,12 @@ namespace compiler::tsh {
 		return toCPimpl(pimpl)->getUnderlyingType();
 	}
 
+
+
+	SymbolType<> SliceAbstractType::getElementType() const {
+		return toCPimpl(pimpl)->getElementType();
+	}
+
 	struct ReferenceConstructionRecord {
 		AbstractType  underlying_type;
 		ReferenceKind ref_kind;

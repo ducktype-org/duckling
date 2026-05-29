@@ -1,5 +1,7 @@
 #include "expr_lowering.hpp"
 
+#include "helios/symbols/query_type_symbol_data.hpp"
+
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/tsh/queries/types.hpp>
@@ -305,13 +307,24 @@ namespace compiler::mir {
 			if (expr.base->expression_type.getSymbolType().getType().getKind() == tsh::Kind::Meta) {
 				// @TODO: #1918 Implement that.
 				throw base::NotYetImplemented("Lowering of IndexExpr operating on Meta");
+			} else if (expr.base->expression_type.getSymbolType().getType().getKind()
+			           == tsh::Kind::Slice) {
+				auto lowered_index = lowerSubExpr(*expr.index, continuation);
+				auto index_val     = lowered_index.getResult(function);
+
+				auto lowered_base = lowerSubExpr(*expr.base, lowered_index.begin);
+				auto base_val     = lowered_base.getResult(function);
+				// We perform bound checking
+				auto slice_data = function.getContext().query<helios::QuerySliceTypeData>(
+					expr.base->expression_type.getSymbolType().getType()
+				);
+
 			} else {
 				auto lowered_index = lowerSubExpr(*expr.index, continuation);
 				auto index_val     = lowered_index.getResult(function);
 
 				auto lowered_base = lowerSubExpr(*expr.base, lowered_index.begin);
 				auto base_val     = lowered_base.getResult(function);
-
 				variant_match(std::move(base_val.getVariant())) {
 					variant_case(MIRPlace, place) {
 						valueOutput(lowered_base.begin, place.withIndex(index_val));

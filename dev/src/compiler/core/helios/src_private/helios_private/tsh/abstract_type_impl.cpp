@@ -1,5 +1,6 @@
 #include "abstract_type_impl.hpp"
 
+#include "helios/symbols/query_type_of_symbol.hpp"
 #include "queries.hpp"
 
 // @TODO: #2331 Remove these includes
@@ -319,6 +320,34 @@ namespace compiler::tsh {
 		return &empty;
 	}
 
+	CRef<TypeInterface> SliceAbstractTypeImpl::getDeclaredInterface(query::Context& ctx) const {
+		auto compute_interface = [&]() -> TypeInterface {
+			std::vector<InterfaceElement> elements;
+			elements.reserve(2);
+
+			auto components = ctx.query<helios::QuerySliceTypeData>(toAbstractType());
+			elements.emplace_back(
+				components->ptr,
+				ctx.query<helios::QueryTypeOfSymbol>(components->ptr)->valueOrThrow().getType(),
+				0,
+				InterfaceElement::InterfaceElementKind::Field,
+				ClassMemberVisibility::Private
+			);
+			elements.emplace_back(
+				components->len,
+				ctx.query<helios::QueryTypeOfSymbol>(components->len)->valueOrThrow().getType(),
+				1,
+				InterfaceElement::InterfaceElementKind::Field,
+				ClassMemberVisibility::Private
+			);
+
+			auto interface = TypeInterface(elements);
+			return interface;
+		};
+		static const TypeInterface cached_interface = compute_interface();
+		return &cached_interface;
+	}
+
 	CRef<TypeInterface> StringAbstractTypeImpl::getDeclaredInterface(query::Context&) const {
 		throw base::NotYetImplemented("String type interface not yet implemented");
 	}
@@ -362,11 +391,6 @@ namespace compiler::tsh {
 	CRef<TypeInterface> TypeTemplateAbstractTypeImpl::getDeclaredInterface(query::Context&) const {
 		throw base::NotYetImplemented("Type template interface not yet implemented");
 	}
-
-	CRef<TypeInterface> SliceAbstractTypeImpl::getDeclaredInterface(query::Context&) const {
-		CORE_PANIC("Slice type interface does not exist (we can add it if we find a use case).");
-	}
-
 
 	AbstractType TypeTemplateAbstractTypeImpl::instantiate(
 		query::Context& ctx, const SymbolType<>& element_type
@@ -480,6 +504,10 @@ namespace compiler::tsh {
 			return dynamic_array_type.getElementType() == element_type;
 		}
 
+		return false;
+	}
+
+	bool SliceAbstractTypeImpl::isImplicitlyCoercible(AbstractType, query::Context&) const {
 		return false;
 	}
 
