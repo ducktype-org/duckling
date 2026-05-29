@@ -192,11 +192,11 @@ base::Optional<FatBytecodePosition> vm::loader::Loader::mapFileLineToCodeCollect
 	const fs::File& file, usize line
 ) const {
 	for (const auto& function: getHighProgram()->functions()) {
-		// ensure function has position and is in requested file
+		// ensure function has position data and is in requested file
 		if (!function.bytecode_pos) continue;
 		if (function.bytecode_pos->getSource()->getFile() != file) continue;
 
-		auto body = function.body;
+		const auto& body = function.body;
 
 		// Return first instruction if line contains function name
 		if (function.name.bytecode_pos->getStartLineColumn().first == line)
@@ -221,10 +221,9 @@ base::Optional<FatBytecodePosition> vm::loader::Loader::mapFileLineToCodeCollect
 			}
 		);
 
-		if (guess == body.end()) continue;
-
+		if (guess == body.end())
+			break;  // this line is between this function instructions, so it's not in any other function
 		auto pos = guess->visit(get_pos);
-		if (!pos) continue;
 
 		if (pos->getSource()->getFile() == file && pos->getStartLineColumn().first == line)
 			return FatBytecodePosition{
