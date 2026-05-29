@@ -13,6 +13,11 @@
 #include <vm/core/safe/type_metadata/type_metadata.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
 
+#ifdef ENABLE_JIT
+#include <vm/core/safe/low_program/cfg/cf_graph.hpp>
+#include <vm/core/safe/low_program/cfg/loop_detector.hpp>
+#endif
+
 namespace vm::loader::compiler::safe {
 	class SafeCompiler;
 }
@@ -26,7 +31,7 @@ namespace vm::low {
 	struct LowFuncData {
 		base::StrID name;
 #ifdef ENABLE_JIT
-		cf::ControlFlowGraph cfg;
+		std::vector<cf::ControlFlowGraph> cfgs;
 #endif
 		MicroBytecode bc;
 

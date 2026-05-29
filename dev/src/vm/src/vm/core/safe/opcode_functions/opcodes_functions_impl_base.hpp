@@ -339,7 +339,7 @@ namespace vm {
 			} else {
 				// should be compiled now
 				MRef<jit::JitOpFun> compiled = jit::compileLLVM(
-					current_func_obj.cfg, current_func_obj.bc, current_func_obj.name
+					current_func_obj.cfgs[0], current_func_obj.bc, current_func_obj.name
 				);
 
 				CORE_ASSERT(compiled, "Compiled function pointer shouldn't be nullptr");

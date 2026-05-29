@@ -239,7 +239,7 @@ namespace vm::low::cf {
 		}
 	};
 
-	FunctionLoopCFGs detectLoopsInFunction(const MicroBytecode& bc) {
+	inline FunctionLoopCFGs detectLoopsInFunction(const MicroBytecode& bc) {
 		LoopDetector detector;
 		return detector.findLoops(bc);
 	}

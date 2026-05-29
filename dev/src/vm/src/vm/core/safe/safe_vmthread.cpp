@@ -136,8 +136,8 @@ namespace vm {
 		low::LowFuncData start_function{
 			.name = base::StrID("vm_start_function"),
 #ifdef ENABLE_JIT
-			.cfg
-			= low::cf::ControlFlowGraph(),  // This is okay because we never JIT the start function.
+			// This is okay because we never JIT the start function.
+			.cfgs = std::vector<low::cf::ControlFlowGraph>{},
 #endif
 			.bc                  = {},
 			.local_stack_size    = 0,
@@ -240,8 +240,8 @@ namespace vm {
 		low::LowFuncData start_function{
 			.name = base::StrID("vm_start_function"),
 #ifdef ENABLE_JIT
-			.cfg
-			= low::cf::ControlFlowGraph(),  // This is okay because we never JIT the start function.
+			// This is okay because we never JIT the start function.
+			.cfgs = std::vector<low::cf::ControlFlowGraph>{},
 #endif
 			.bc                  = {},
 			.local_stack_size    = 72,

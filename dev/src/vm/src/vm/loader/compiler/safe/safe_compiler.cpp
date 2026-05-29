@@ -12,6 +12,11 @@
 #include <vm/loader/compiler/safe/type_builder.hpp>
 #include <vm/utils/interpret.hpp>
 
+#ifdef ENABLE_JIT
+#include <vm/core/safe/low_program/cfg/cf_graph.hpp>
+#include <vm/core/safe/low_program/cfg/loop_detector.hpp>
+#endif
+
 namespace vm::loader::compiler::safe {
 
 	static usize getIntTypeSize(const code::valid_type::TypeSize& size) {
@@ -201,10 +206,14 @@ namespace vm::loader::compiler::safe {
 				result_types.emplace_back(low_program.types->at(ret));
 			}
 
+#ifdef ENABLE_JIT
+			low::cf::FunctionLoopCFGs func_cfgs = low::cf::detectLoopsInFunction(bytecode);
+			std::vector<low::cf::ControlFlowGraph> cfgs = func_cfgs.cfgs;
+#endif
 			low_program.functions.insert(
 				low::LowFuncData{ .name = function.name,
 #ifdef ENABLE_JIT
-			                      .cfg = vm::low::cf::ControlFlowGraph(bytecode),
+			                      .cfgs = cfgs,
 #endif
 			                      .bc                  = std::move(bytecode),
 			                      .local_stack_size    = getIntTypeSize(ctx.local_stack_size),
