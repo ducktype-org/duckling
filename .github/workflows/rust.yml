@@ -64,7 +64,7 @@ jobs:
         with:
           path: |
             ${{ env.SCCACHE_DIR }}
-          key: ${{ runner.os }}-sccache-${{ env.BRANCH_NAME }}
+          key: ${{ runner.os }}-sccache-${{ env.BRANCH_NAME }}-${{ steps.cache-timestamp.outputs.timestamp }}
           restore-keys: |
             ${{ runner.os }}-sccache-${{ env.BRANCH_NAME }}-
             ${{ runner.os }}-sccache-main-
@@ -77,7 +77,7 @@ jobs:
       - name: Remove sccache on main
         if: ${{ env.BRANCH_NAME == 'main' }}
         id: sccache-main-rm
-        run: rm -rf ${SCCACHE_DIR}
+        run: rm -rf ${{ env.SCCACHE_DIR }}
 
   rustfmt:
     if: github.event.pull_request.draft == false
@@ -152,7 +152,7 @@ jobs:
         with:
           path: |
             ${{ env.SCCACHE_DIR }}
-          key: ${{ runner.os }}-sccache-${{ env.BRANCH_NAME }}
+          key: ${{ runner.os }}-sccache-${{ env.BRANCH_NAME }}-${{ steps.cache-timestamp.outputs.timestamp }}
           restore-keys: |
             ${{ runner.os }}-sccache-${{ env.BRANCH_NAME }}-
             ${{ runner.os }}-sccache-main-
@@ -165,4 +165,4 @@ jobs:
       - name: Remove sccache on main
         if: ${{ env.BRANCH_NAME == 'main' }}
         id: sccache-main-rm
-        run: rm -rf ${SCCACHE_DIR}
+        run: rm -rf ${{ env.SCCACHE_DIR }}

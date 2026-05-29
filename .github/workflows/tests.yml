@@ -314,6 +314,9 @@ jobs:
           echo "ccache:"
           du -hs ${{ env.CCACHE_DIR }}
 
+          echo "sccache:"
+          du -hs ${{ env.SCCACHE_DIR }}
+
       # Source:  https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/caching-dependencies-to-speed-up-workflows#force-deleting-cache-entries
       # This step deletes all the cache entries that are related to this branch,
       # and it is done in this moment in the script, right after building, because
