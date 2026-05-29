@@ -86,7 +86,7 @@ pub struct SimpleOrigin {
 
 impl SimpleOrigin {
     /// Create a new [`SimpleOrigin`].
-    fn new(url: InternedUrl, kind: SimpleKind) -> Self {
+    pub(super) fn new(url: InternedUrl, kind: SimpleKind) -> Self {
         Self { url, kind }
     }
 

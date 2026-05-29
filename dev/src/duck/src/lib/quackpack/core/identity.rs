@@ -6,6 +6,7 @@ use std::path::Path;
 use serde::{Deserialize, Serialize, de};
 use url::Url;
 
+use crate::quackpack::core::simple_identity::{SimpleIdentity, SimpleKind, SimpleOrigin};
 use crate::quackpack::util::interned_url::InternedUrl;
 use crate::quackpack::util::is_local_file::IsLocalFile;
 use crate::{QuackResult, QuackResultContext, StrId, qp_err};
@@ -44,6 +45,21 @@ impl Kind {
     /// Check, whether this [`Kind`] is a local kind.
     pub fn is_local(&self) -> bool {
         matches!(self, Kind::Local)
+    }
+
+    /// Convert this [`Kind`] into a [`SimpleKind`].
+    pub fn as_simple(&self) -> SimpleKind {
+        match self {
+            Self::Registry => SimpleKind::Registry,
+            Self::Git { .. } => SimpleKind::Git,
+            Self::Local => SimpleKind::Local,
+        }
+    }
+}
+
+impl From<Kind> for SimpleKind {
+    fn from(value: Kind) -> Self {
+        value.as_simple()
     }
 }
 
@@ -96,6 +112,17 @@ impl Origin {
     /// Get a [`Kind`] of this [`Origin`].
     pub fn kind(&self) -> Kind {
         self.kind
+    }
+
+    /// Convert this [`Origin`] into a [`SimpleOrigin`].
+    pub fn as_simple(&self) -> SimpleOrigin {
+        SimpleOrigin::new(self.url, self.kind.as_simple())
+    }
+}
+
+impl From<Origin> for SimpleOrigin {
+    fn from(value: Origin) -> Self {
+        value.as_simple()
     }
 }
 
@@ -209,6 +236,17 @@ impl Identity {
     /// Get the [`Origin`].
     pub fn origin(&self) -> Origin {
         self.origin
+    }
+
+    /// Convert this [`Identity`] into a [`SimpleIdentity`].
+    pub fn as_simple(&self) -> SimpleIdentity {
+        SimpleIdentity::new(self.name(), self.origin().as_simple())
+    }
+}
+
+impl From<Identity> for SimpleIdentity {
+    fn from(value: Identity) -> Self {
+        value.as_simple()
     }
 }
 
