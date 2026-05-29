@@ -75,13 +75,13 @@ namespace compiler::repl {
 		 * @brief Return replay count requested via /reset -n.
 		 */
 		[[nodiscard]] base::Optional<usize> getResetReplayCount() const {
-			return m_reset_replay_count;
+			return m_reset_state.replay_count;
 		}
 
 		/**
 		 * @brief Return whether reset replay should be silent.
 		 */
-		[[nodiscard]] bool getResetReplaySilent() const { return m_reset_replay_silent; }
+		[[nodiscard]] bool getResetReplaySilent() const { return m_reset_state.replay_silent; }
 
 	private:
 		/**
@@ -245,11 +245,21 @@ namespace compiler::repl {
 		 */
 		void printSessionHistory() const;
 
-		bool                       m_should_exit;      ///< Flag to terminate the REPL loop
-		bool                       m_should_reset;     ///< Flag to reset the REPL process
+		/**
+		 * @brief Keeps data necessary to control resets in one place.
+		 */
+		struct ResetState {
+			bool should_reset
+				= false;  ///< Flag used to indicate to the main run loop that reset should be done
+			base::Optional<usize> replay_count;  ///< Indicates how many entries from the start of
+			                                     ///< session history should be replayed.
+			bool replay_silent = false;          ///< Flag to suppress output during reset.
+		};
+
+		bool m_should_exit;  ///< Flag to terminate the REPL loop. It is set by /exit command. And
+		                     ///< then it is checked by the main run loop.
 		std::vector<ReplStatement> m_session_history;  ///< All statements entered in this session
-		base::Optional<usize>      m_reset_replay_count;  ///< Replay count requested via /reset -n
-		bool                       m_reset_replay_silent = false;  ///< Silence replay on reset
+		ResetState                 m_reset_state;      ///< Struct to control reset.
 		u64          m_line_counter;  ///< Counter for generating unique wrapper function names
 		vm::PID      m_dvm_pid;       ///< Process ID of the running DVM instance
 		ReplFrontend m_frontend;      ///< Frontend for user interaction

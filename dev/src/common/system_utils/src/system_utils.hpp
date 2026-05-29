@@ -14,8 +14,8 @@ enum class ExecSelfStatus {
 
 struct ExecSelfResult {
 	ExecSelfStatus status{};
-	int exit_code = 0;  // Valid when status is ExecSelfStatus::Spawned.
-	int error_code = 0; // Valid when status is ExecSelfStatus::Error.
+	int            exit_code  = 0;  // Valid when status is ExecSelfStatus::Spawned.
+	int            error_code = 0;  // Valid when status is ExecSelfStatus::Error.
 };
 
 /**

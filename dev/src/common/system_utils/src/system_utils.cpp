@@ -20,19 +20,19 @@ ExecSelfResult execSelf(std::vector<std::string>& g_argv) {
 	if (result == -1) {
 		std::perror("_spawnvp");
 		return ExecSelfResult{
-			.status = ExecSelfStatus::Error,
+			.status     = ExecSelfStatus::Error,
 			.error_code = errno,
 		};
 	}
 	return ExecSelfResult{
-		.status = ExecSelfStatus::Spawned,
+		.status    = ExecSelfStatus::Spawned,
 		.exit_code = static_cast<int>(result),
 	};
 #else
 	execvp(args[0], args.data());
 	std::perror("execvp");
 	return ExecSelfResult{
-		.status = ExecSelfStatus::Error,
+		.status     = ExecSelfStatus::Error,
 		.error_code = errno,
 	};
 #endif

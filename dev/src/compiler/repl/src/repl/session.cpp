@@ -256,8 +256,6 @@ namespace compiler::repl {
 
 	ReplSession::ReplSession(bool completions_enabled):
 		  m_should_exit(false),
-		  m_should_reset(false),
-		  m_reset_replay_count(),
 		  m_line_counter(0),
 		  m_dvm_pid(0),
 		  m_frontend(completions_enabled),
@@ -399,10 +397,10 @@ namespace compiler::repl {
 				}
 
 				if (is_relative) replay_count = m_session_history.size() - replay_count;
-				m_reset_replay_count = replay_count;
+				m_reset_state.replay_count = replay_count;
 			}
-			m_reset_replay_silent = replay_silent;
-			m_should_reset        = true;
+			m_reset_state.replay_silent = replay_silent;
+			m_reset_state.should_reset  = true;
 			return true;
 		}
 
@@ -450,7 +448,7 @@ namespace compiler::repl {
 	ReplResult ReplSession::processLine(std::string_view line) {
 		if (isCommand(line)) {
 			handleCommand(line);
-			if (m_should_reset) return ReplResult::reset();
+			if (m_reset_state.should_reset) return ReplResult::reset();
 			if (m_should_exit) return ReplResult::exit();
 			return ReplResult::success();
 		}
