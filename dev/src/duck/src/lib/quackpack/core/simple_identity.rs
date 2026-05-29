@@ -20,12 +20,16 @@ use crate::{QuackError, QuackResult, QuackResultContext, StrId, qp_bail, qp_err}
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 /// An [`Origin`]'s kind.
 pub enum SimpleKind {
+    /// A registry-based identity.
     Registry,
+    /// A git-based identity.
     Git,
+    /// A local-based identity.
     Local,
 }
 
 impl SimpleKind {
+    /// Get a human-like display.
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Registry => "registry",
@@ -34,14 +38,17 @@ impl SimpleKind {
         }
     }
 
+    /// Check, whether this [`SimpleKind`] is a registry kind.
     pub fn is_registry(&self) -> bool {
         matches!(self, SimpleKind::Registry)
     }
 
+    /// Check, whether this [`SimpleKind`] is a git kind.
     pub fn is_git(&self) -> bool {
         matches!(self, SimpleKind::Git)
     }
 
+    /// Check, whether this [`SimpleKind`] is a local kind.
     pub fn is_local(&self) -> bool {
         matches!(self, SimpleKind::Local)
     }
@@ -71,6 +78,7 @@ impl PartialEq<SimpleKind> for Kind {
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+/// A simplified version of the [`Origin`].
 pub struct SimpleOrigin {
     url: InternedUrl,
     kind: SimpleKind,
@@ -179,20 +187,24 @@ impl<'de> Deserialize<'de> for SimpleOrigin {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+/// A simplified version of the [`Identity`].
 pub struct SimpleIdentity {
     name: StrId,
     origin: SimpleOrigin,
 }
 
 impl SimpleIdentity {
+    /// Create a new [`SimpleIdentity`].
     pub fn new(name: StrId, origin: SimpleOrigin) -> Self {
         Self { name, origin }
     }
 
+    /// Get the name.
     pub fn name(&self) -> StrId {
         self.name
     }
 
+    /// Get the [`SimpleOrigin`].
     pub fn origin(&self) -> SimpleOrigin {
         self.origin
     }

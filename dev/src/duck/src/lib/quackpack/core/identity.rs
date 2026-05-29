@@ -13,12 +13,16 @@ use crate::{QuackResult, QuackResultContext, StrId, qp_err};
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 /// An [`Origin`]'s kind.
 pub enum Kind {
+    /// A registry-based identity.
     Registry,
+    /// A git-based identity.
     Git { commit: StrId },
+    /// A local-based identity.
     Local,
 }
 
 impl Kind {
+    /// Get a human-like display.
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Registry => "registry",
@@ -27,14 +31,17 @@ impl Kind {
         }
     }
 
+    /// Check, whether this [`Kind`] is a registry kind.
     pub fn is_registry(&self) -> bool {
         matches!(self, Kind::Registry)
     }
 
+    /// Check, whether this [`Kind`] is a git kind.
     pub fn is_git(&self) -> bool {
         matches!(self, Kind::Git { .. })
     }
 
+    /// Check, whether this [`Kind`] is a local kind.
     pub fn is_local(&self) -> bool {
         matches!(self, Kind::Local)
     }
@@ -47,6 +54,7 @@ impl Display for Kind {
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+/// Origin of a package.
 pub struct Origin {
     url: InternedUrl,
     kind: Kind,
@@ -180,6 +188,7 @@ impl<'de> Deserialize<'de> for Origin {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Serialize)]
+/// An [`Identity`], a unique package identifier in the resolved graph.
 pub struct Identity {
     name: StrId,
     #[serde(flatten)]
@@ -187,14 +196,17 @@ pub struct Identity {
 }
 
 impl Identity {
+    /// Create a new [`Identity`].
     pub fn new(name: StrId, origin: Origin) -> Self {
         Self { name, origin }
     }
 
+    /// Get the name.
     pub fn name(&self) -> StrId {
         self.name
     }
 
+    /// Get the [`Origin`].
     pub fn origin(&self) -> Origin {
         self.origin
     }
