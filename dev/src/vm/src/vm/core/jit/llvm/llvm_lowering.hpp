@@ -46,7 +46,6 @@ namespace vm::jit {
 		llvm::Value* frame_arg;
 		llvm::Value* thread_arg;
 
-		vm::low::cf::ControlFlowGraph  cfg;
 		std::vector<llvm::BasicBlock*> llvm_blocks;
 
 		LLVMBuilder(llvm::Module* module, llvm::LLVMContext& ctx): llvm_ctx(ctx), module(module) {
