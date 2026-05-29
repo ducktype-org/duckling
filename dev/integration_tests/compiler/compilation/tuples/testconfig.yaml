@@ -1,7 +1,7 @@
-enable_conc_deterministic_tests: "false"
 
 Tests:
   dvm_no_strings:
+    enable_conc_deterministic_tests: "false"
     Cases:
       all:
         backend: all
