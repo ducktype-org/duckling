@@ -47,6 +47,12 @@ impl InternedUrl {
     }
 }
 
+impl From<Url> for InternedUrl {
+    fn from(value: Url) -> Self {
+        Self::new(value)
+    }
+}
+
 impl Deref for InternedUrl {
     type Target = Url;
 

@@ -1,6 +1,7 @@
 //! Core quackpack's modules.
 pub mod compile;
 pub mod fetcher;
+pub mod identity;
 mod manifest;
 mod package;
 mod package_context;
