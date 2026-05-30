@@ -23,7 +23,7 @@
 #include <logger/logger.hpp>
 #include <query_framework/entry/query_entry_point.hpp>
 #include <query_framework/entry/with_context_do.hpp>
-#include <query_framework/utils/query_failed_try.hpp>
+#include <query_framework/internal/query_errors.hpp>
 
 #include <vm/api/vm.hpp>
 
@@ -62,9 +62,14 @@ namespace compiler::repl {
 		std::string&                                out_error
 	) {
 		query::utils::withContextDo([&](query::Context& ctx) {
-			auto status = query::runFuncWithQueryFailedHandling([&] { action(ctx); });
-			if (status.status().isBad())
-				out_error = base::strConcat(std_exception_prefix, "Query failed (see diagnostics above).");
+			try {
+				action(ctx);
+			} catch (const query::internal::QueryFailedException&) {
+				out_error = base::strConcat(
+					std_exception_prefix,
+					"Query failed (see diagnostics above)."
+				);
+			}
 		});
 	}
 
@@ -405,12 +410,8 @@ namespace compiler::repl {
 						// Defer: invalidate when exiting this scope, even on early return
 						defer(m_lowering_context->invalidateContext());
 
-						auto hout_result = ctx.query<helios::QueryModuleHOUT>(module_id);
-						if (hout_result->hasFailed()) {
-							error_message = "Failed to compile definition module (see diagnostics above).";
-							return;
-						}
-						const auto& hout_unit = hout_result->valueOrPanic();
+						const auto& hout_unit
+							= ctx.query<helios::QueryModuleHOUT>(module_id)->valueOrThrow();
 						// The stmt parameter is used only here, for logging. It's not needed for
 				        // the actual query since QueryModuleHOUT already compiles the entire module
 				        // containing the statement.
