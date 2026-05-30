@@ -319,7 +319,10 @@ namespace compiler::mir {
 		os << "  Initial Value (CTV or Function): ";
 		variant_match(initial_value) {
 			variant_case(ctv::CompileTimeValue, ctv) { os << ctv.toString(); }
-			variant_case(CRef<mir::Function>, func_ref) { func_ref->debugPrint(os); }
+			variant_case(CRef<mir::Function>, func_ref) { 
+			os << "constructor: " << func_ref->name << "\n";
+			func_ref->debugPrint(os); 
+		}
 		}
 	}
 
