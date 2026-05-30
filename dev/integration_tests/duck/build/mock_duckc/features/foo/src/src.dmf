@@ -1,7 +1,7 @@
 import core.builtins.*;
 
 fun main() = {
-    # !TODO: On macOS, builtin_output_string segfaults :^);
-    # builtin_output_string("Hello, world!");
+    # !TODO: On macOS, print segfaults :^);
+    # print("Hello, world!");
     return 0;
 }
