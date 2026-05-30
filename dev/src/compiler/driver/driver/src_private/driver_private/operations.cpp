@@ -26,7 +26,6 @@ namespace compiler::driver {
 		return hashing::justHash<hashing::SHA256>(module_name.str(), hout_unit->id.asInt());
 	}
 
-
 	void LIRUnitWithBackendName::debugPrint(query::Context& ctx, std::ostream& os) const {
 		os << "LIRUnitWithBackendName for module: " << module_id.strView() << "\n";
 		lir_unit.debugPrint(ctx, os);

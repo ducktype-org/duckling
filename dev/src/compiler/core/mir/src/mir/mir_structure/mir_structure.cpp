@@ -190,14 +190,12 @@ namespace compiler::mir {
 
 	void MIRGlobal::debugPrint(std::ostream& os, bool detailed) const {
 		if (detailed) {
-		    os << "[MIR] Global: ";
+			os << "[MIR] Global: ";
 			os << ": Helios Name: " << name(helios_id).strView();
 			os << ", Type: " << type.toString();
 			os << "\n";
-	    }
-		if (not detailed) {
-		    os << "Global(" << name(helios_id).strView() << ")";
 		}
+		if (not detailed) os << "Global(" << name(helios_id).strView() << ")";
 	}
 
 	base::StrID MIRLocal::getName() const {
@@ -319,10 +317,10 @@ namespace compiler::mir {
 		os << "  Initial Value (CTV or Function): ";
 		variant_match(initial_value) {
 			variant_case(ctv::CompileTimeValue, ctv) { os << ctv.toString(); }
-			variant_case(CRef<mir::Function>, func_ref) { 
-			os << "constructor: " << func_ref->name << "\n";
-			func_ref->debugPrint(os); 
-		}
+			variant_case(CRef<mir::Function>, func_ref) {
+				os << "constructor: " << func_ref->name << "\n";
+				func_ref->debugPrint(os);
+			}
 		}
 	}
 
