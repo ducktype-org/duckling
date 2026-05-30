@@ -217,7 +217,7 @@ namespace compiler::helios::code {
 					MBox<Expr> next_string = nullptr;
 
 					// - Create the next string expression
-					if (const auto substr = sub.dynamicCast<pst::FormatSubString>(); substr) {
+					if (const auto substr = sub.dynamicCast<pst::FormatSubString>()) {
 						// - If it's a string, take it as a literal, remember to unescape it
 						const auto escaped_string  = substr.value()->getValue().value.strView();
 						const auto unescape_result = base::unescapeString(escaped_string);
@@ -233,8 +233,7 @@ namespace compiler::helios::code {
 								));
 							}
 						}
-					} else if (const auto sub_expr = sub.dynamicCast<pst::FormatSubExpression>();
-					           sub_expr) {
+					} else if (const auto sub_expr = sub.dynamicCast<pst::FormatSubExpression>()) {
 						// - If it's an expression, use its toString() method
 						// - - Parse sub expression and gather data
 						auto sub_expr_hout_qresult = subExprFromPST(
@@ -249,7 +248,9 @@ namespace compiler::helios::code {
 						const auto to_string_sym = defgen::toStringSymForType(ctx, sub_expr_type);
 
 						// - - Correct for passing by copy or reference depending on type
-						if (not sub_expr_hout->expression_type.getType().isSimple()) {
+						if (not sub_expr_hout->expression_type.getType().isSimple()
+						    and sub_expr_hout->expression_type.getSymbolType().getRefKind()
+						            != tsh::ReferenceKind::Ref) {
 							sub_expr_hout = makeBox<RefOfExpr>(
 								ctx, generatedOrigin(), std::move(sub_expr_hout)
 							);

@@ -1,4 +1,4 @@
-import core.builtins.*
+import core.builtins.*;
 
 fun main() -> i32 = {
 	print("What is your name?\n");
