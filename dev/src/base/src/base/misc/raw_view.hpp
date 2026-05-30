@@ -7,6 +7,7 @@
 #include <base/types/ints.hpp>
 
 #include <memory>
+#include <span>
 #include <string>
 #include <string_view>
 
