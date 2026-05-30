@@ -179,7 +179,12 @@ impl<'duck> Fetcher<'duck> {
         source: &Git,
         destination_directory: &std::path::Path,
     ) -> QuackResult<types::GitCloneResponse> {
-        git::GitClient::clone_blocking(source, destination_directory, self.ctx)
+        git::GitClient::clone_blocking(
+            source.url(),
+            source.reference(),
+            destination_directory,
+            self.ctx,
+        )
     }
 
     /// Same as [`clone_from_git_to_directory`](Self::clone_from_git_to_directory), but a target directory is a temporary

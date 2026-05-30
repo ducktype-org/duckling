@@ -4,12 +4,10 @@ use std::ops::Deref;
 use std::path::{Path, PathBuf};
 use std::sync::{Mutex, OnceLock};
 
-use git2::FetchOptions;
 use serde::{Deserialize, Serialize};
 use url::Url;
 
 use crate::quackpack::schemas::registry;
-use crate::quackpack::util::is_local_file::IsLocalFile;
 use crate::util::extract::Extract;
 use crate::{QuackError, StrId, qp_bail};
 
@@ -216,28 +214,6 @@ impl Git {
     /// Get the git branch or tag.
     pub fn reference(&self) -> &GitReference {
         &self.reference
-    }
-
-    /// Check whether we can perform a shallow clone of this dependency.
-    ///
-    /// Due to some git2-rs stuff we can't shallow clone a tag or a local repository.
-    ///
-    /// However, we always disallow shallow clones when commit is specified.
-    pub fn can_shallow_clone(&self) -> bool {
-        let is_local_repository_url = self.url.is_local_file();
-        !is_local_repository_url && (self.reference.is_default() || self.reference.is_branch())
-    }
-
-    /// Get [`FetchOptions`] for this source.
-    ///
-    /// This if factored out so we can easily make small changes to the
-    /// [`FetchOptions`], such as setting depth to 0 to make a full fetch.
-    pub fn git_fetch_options(&self) -> FetchOptions<'_> {
-        let mut fetch_options = FetchOptions::new();
-        if self.can_shallow_clone() {
-            fetch_options.depth(1);
-        }
-        fetch_options
     }
 }
 

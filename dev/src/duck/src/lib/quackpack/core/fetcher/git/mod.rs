@@ -3,11 +3,13 @@
 use std::path::Path;
 
 use git2::build::RepoBuilder;
-use git2::{Oid, Repository};
+use git2::{FetchOptions, Oid, Repository};
 use tracing::debug;
+use url::Url;
 
 use crate::quackpack::core::fetcher::types::GitCloneResponse;
-use crate::quackpack::core::{Git, GitReference, PackageLoader};
+use crate::quackpack::core::{GitReference, PackageLoader};
+use crate::quackpack::util::is_local_file::IsLocalFile;
 use crate::{DuckContext, QuackResult, QuackResultContext};
 
 #[cfg(test)]
@@ -22,68 +24,76 @@ impl GitClient {
     /// Clone a repository pointed by `source` into `destination`, and parse a package it contains.
     #[tracing::instrument(skip(ctx))]
     pub fn clone_blocking(
-        source: &Git,
+        url: &Url,
+        reference: &GitReference,
         destination: &Path,
         ctx: &DuckContext,
     ) -> QuackResult<GitCloneResponse> {
         let mut builder = RepoBuilder::new();
 
-        builder.fetch_options(source.git_fetch_options());
+        builder.fetch_options(fetch_options_for(url, reference));
         // git2-rs doesn't support cloning with a given tag :(.
-        if let GitReference::Branch(branch) = source.reference() {
+        if let GitReference::Branch(branch) = reference {
             builder.branch(branch.as_str());
         }
 
-        let repository = match builder.clone(source.url().as_str(), destination) {
+        let repository = match builder.clone(url.as_str(), destination) {
             Ok(repository) => repository,
             Err(e) => {
                 debug!("failed to clone: {e}");
                 // We've failed to clone a repository, try to fallback to a non-shallow clone.
-                if !source.can_shallow_clone() {
+                if !can_shallow_clone(url, reference) {
                     return Err(e.into());
                 }
-                let mut fetch_options = source.git_fetch_options();
+                let mut fetch_options = fetch_options_for(url, reference);
                 fetch_options.depth(0);
                 builder.fetch_options(fetch_options);
-                builder.clone(source.url().as_str(), destination)?
+                builder.clone(url.as_str(), destination)?
             }
         };
 
         debug!("will checkout to tag...");
 
         // Prefer specific commits over tags.
-        if let GitReference::Rev(commit) = source.reference() {
+        if let GitReference::Rev(commit) = reference {
             repository.checkout_commit(commit.as_str()).with_context(|| {
                 format!(
                     "when performing a checkout of a repository cloned from `{}` to a commit `{}`",
-                    source.url(),
+                    url,
                     commit
                 )
             })?;
-        } else if let GitReference::Tag(tag) = source.reference() {
+        } else if let GitReference::Tag(tag) = reference {
             repository.checkout_tag(tag.as_str()).with_context(|| {
                 format!(
                     "when performing a checkout of a repository cloned from `{}` to a tag `{}`",
-                    source.url(),
-                    tag
+                    url, tag
                 )
             })?;
         }
 
         let commit = repository.head()?.peel_to_commit()?.id();
         let package = PackageLoader::find_at_exact_directory(destination, ctx)
-            .with_context(|| {
-                format!(
-                    "git repository at `{}` is not a duckling package",
-                    source.url()
-                )
-            })?
+            .with_context(|| format!("git repository at `{}` is not a duckling package", url))?
             .into_package();
         Ok(GitCloneResponse {
             commit_hash: commit.to_string().into(),
             package,
         })
     }
+}
+
+fn fetch_options_for(url: &Url, reference: &GitReference) -> FetchOptions<'static> {
+    let mut fetch_options = FetchOptions::new();
+    if can_shallow_clone(url, reference) {
+        fetch_options.depth(1);
+    }
+    fetch_options
+}
+
+fn can_shallow_clone(url: &Url, reference: &GitReference) -> bool {
+    let is_local_repository_url = url.is_local_file();
+    !is_local_repository_url && (reference.is_default() || reference.is_branch())
 }
 
 /// A helper trait for repository methods.
