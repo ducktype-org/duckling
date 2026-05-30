@@ -32,7 +32,7 @@ namespace compiler::mir {
 					CORE_ASSERT(
 						hout_global->data_type == helios::HOUTGlobalDataType::Constant,
 						"We assume currently HOUTGlobalConst <-> CTV initial value, change the "
-					    "code here if this ever changes"
+						"code here if this ever changes"
 					);
 
 					unit_result.mir_globals.emplace_back(MIRGlobalData{
@@ -48,7 +48,7 @@ namespace compiler::mir {
 					CORE_ASSERT(
 						hout_global->data_type == helios::HOUTGlobalDataType::Variable,
 						"We assume currently HOUTGlobalVariable <-> CRef<mir::Function> initial "
-					    "value, change the code here if this ever changes"
+						"value, change the code here if this ever changes"
 					);
 
 					CRef mir_ctor_function

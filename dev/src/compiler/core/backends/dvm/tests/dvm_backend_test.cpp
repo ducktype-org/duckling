@@ -139,19 +139,17 @@ private:
 			// @TODO: #2246 remove query top level entities if possible
 
 			auto& top_level = ctx.query<helios::QueryTopLevelEntities>(module)->valueOrPanic();
-			
+
 			auto mir_unit = mir::lowerToMIRUnit(ctx, &top_level);
 			assertTrue(mir_unit.hasValue(), "MIR lowering failed");
 
 			auto lir_unit = lir::lowerToLIRUnit(ctx, mir_unit.valueOrPanic());
 
 			backend_vm::DVMCodeBuilder m(ctx, false, false);
-			
+
 			for (const auto& global: lir_unit.lir_globals) m.insertLirGlobal(global);
-			
-			for (auto& lir_fun: lir_unit.lir_functions) {
-				m.insertLirFunction(lir_fun);
-			}
+
+			for (auto& lir_fun: lir_unit.lir_functions) m.insertLirFunction(lir_fun);
 			code = m.build();
 		});
 		return code;

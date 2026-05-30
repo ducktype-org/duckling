@@ -91,10 +91,11 @@ private:
 	/**
 	 * Compiles the module at given path to LIR, returning also HOUT and MIR counterparts of
 	 * functions. Note that it does not include globals/constants in the result (only functions).
-	 * 
+	 *
 	 * #2246 getLIROfModule uses custom pipeline logic,
-	 * try to unify it. It will be tricky, as we also create custom mapping here from HOUT to MIR and LIR functions,
-	 * but maybe we can hack-in this mapping around the existing pipeline entry points in some way.
+	 * try to unify it. It will be tricky, as we also create custom mapping here from HOUT to MIR
+	 * and LIR functions, but maybe we can hack-in this mapping around the existing pipeline entry
+	 * points in some way.
 	 */
 	LIRModuleResult getLIROfModule(std::string_view module_path) {
 		auto [module, scope] = getModule(fs::File(module_path));
@@ -426,7 +427,7 @@ private:
 	}
 
 	void testLIRGlobal() {
-		// @TODO: #2246 update this tests, to operate on full global data, after 
+		// @TODO: #2246 update this tests, to operate on full global data, after
 		// the getLIROfModule update
 
 		auto module       = getLIROfModule(path("modules/globals"));
@@ -441,7 +442,7 @@ private:
 			ASSERT_EQUAL(lir::LIRGlobalType::Variable, global_tuple_lir.type);
 			ASSERT_EQUAL(lir::LIRGlobalType::Variable, some_global_lir.type);
 			ASSERT_EQUAL(lir::LIRGlobalType::Variable, g_lir.type);
-			
+
 			// @TODO: #2246 bring back this check in some form
 			// ASSERT_EQUAL(false, g_lir.initial_value.has_value());
 		});
@@ -464,7 +465,7 @@ private:
 	}
 
 	void simpleConstant() {
-		// @TODO: #2246 update this tests, to operate on full global data, after 
+		// @TODO: #2246 update this tests, to operate on full global data, after
 		// the getLIROfModule update
 
 		auto [module, scope] = getModule(fs::File(path("modules/constants")));
