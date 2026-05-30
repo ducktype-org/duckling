@@ -10,8 +10,10 @@
 #include <global_state/packages.hpp>
 #include <helios/queries/queries.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
+#include <lir/lir_lowering/lir_unit.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 #include <mir/mir_lowering/mir_queries.hpp>
+#include <mir/mir_lowering/mir_unit.hpp>
 #include <vm_tester_utils.hpp>
 
 #include <base/str/str_utils.hpp>
@@ -133,58 +135,21 @@ private:
 		auto module = findSubmodule(*root_module_id, submodule_path_parts);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			// #2246 PIPELINE LOGIC HERE
-			// #2246 remove query top level entities, it is super random!
+			// @TODO: #2246 this duplicates the logic of compileLIRModuleToDVM, try to unify it
+			// @TODO: #2246 remove query top level entities if possible
+
 			auto& top_level = ctx.query<helios::QueryTopLevelEntities>(module)->valueOrPanic();
+			
+			auto mir_unit = mir::lowerToMIRUnit(ctx, &top_level);
+			assertTrue(mir_unit.hasValue(), "MIR lowering failed");
+
+			auto lir_unit = lir::lowerToLIRUnit(ctx, mir_unit.valueOrPanic());
 
 			backend_vm::DVMCodeBuilder m(ctx, false, false);
-
-			for (auto& hout_glob: top_level.glob_data) {
-				auto lir_glob = lir::LIRGlobal::fromHOUT(ctx, *hout_glob);
-				variant_match(hout_glob->value) {
-					variant_case(helios::HOUTGlobalVariable, var) {
-						if (not hout_glob->type.getType().carriesInformation(ctx)) continue;
-
-						CRef mir_func = &ctx.query<mir::LowerGlobalDataToMIRCtor>({ hout_glob })
-						                     ->valueOrThrow();
-
-						auto lir_func = ctx.query<lir::LowerToLIRFunction>({ mir_func });
-						m.insertLirGlobal(
-							lir_glob,
-							// @TODO: #929 add legit dtors when implemented
-							lir_func,
-							{}
-						);
-					}
-					variant_case(helios::HOUTGlobalConst, cnst) {
-						// @TODO: #1553 -- const ctors will probably be added here
-						// @TODO: #1709 For now, global meta type constants are skipped and not
-						// treated as failure for the code using compile time evaluated types to
-						// compile.
-						if (!cnst.value.has<tsh::SymbolType<>>()) {
-							fail(base::strConcat(
-								"We fail here, because constants don't work on DVM as "
-								"expected, "
-								"remove "
-								"the fail after #1553. ",
-								"Global constant: ",
-								hout_glob->original_name.strView()
-							));
-						}
-					}
-					variant_default {
-						fail(base::strConcat(
-							"Unexpected global data type in module: ",
-							hout_glob->original_name.strView()
-						));
-					}
-				}
-			}
-			for (auto& fun: top_level.functions) {
-				auto mir_fun = ctx.query<compiler::mir::LowerToMIRFunction>({ fun });
-				auto lir_fun = ctx.query<compiler::lir::LowerToLIRFunction>(
-					{ &mir_fun->valueOrPanicMsg("Couldn\'t compile") }
-				);
+			
+			for (const auto& global: lir_unit.lir_globals) m.insertLirGlobal(global);
+			
+			for (auto& lir_fun: lir_unit.lir_functions) {
 				m.insertLirFunction(lir_fun);
 			}
 			code = m.build();
