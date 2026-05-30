@@ -1,5 +1,3 @@
-#pragma once
-
 #include "mir_unit.hpp"
 
 #include "mir_queries.hpp"

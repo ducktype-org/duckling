@@ -149,7 +149,7 @@ private:
 
 			for (const auto& global: lir_unit.lir_globals) m.insertLirGlobal(global);
 
-			for (auto& lir_fun: lir_unit.lir_functions) m.insertLirFunction(lir_fun);
+			for (const auto& lir_fun: lir_unit.lir_functions) m.insertLirFunction(lir_fun);
 			code = m.build();
 		});
 		return code;

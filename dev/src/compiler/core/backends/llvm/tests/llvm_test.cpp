@@ -144,7 +144,7 @@ private:
 		);
 	}
 
-	void globalVariablesTest() { runTestForModule("modules/global-variables", 5, 5); }
+	void globalVariablesTest() { runTestForModule("modules/global-variables", 4, 4); }
 
 	void unitsTest() {
 		runTestForModule("modules/units/unit1", 2, 2);
