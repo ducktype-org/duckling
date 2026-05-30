@@ -855,6 +855,8 @@ namespace compiler::driver {
 					}
 				}
 				variant_case(BuildTargetLLVMStaticLibrary, target_lib) {
+					// Note, if you change this convention, please also change the one in the
+					// `getStdLibArtifacts`
 					auto output_file
 						= global_state::getRootCollection()->fileArtifactAtOrNew(base::StrID(
 							base::strConcat(target_lib.output_file_stem.strView(), ".a").c_str()

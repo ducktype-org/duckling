@@ -1,3 +1,5 @@
+import core.builtins.*;
+
 fun printList(list: ref List[i64]) -> () = {
     builtin_output_string("8888888888888888888\n");
     var i = 0;

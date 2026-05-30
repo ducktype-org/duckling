@@ -1,3 +1,5 @@
+import core.builtins.*;
+
 # Test ternary expressions and chained else-if
 # Focus: "if cond then x else y" syntax and else-if chains
 

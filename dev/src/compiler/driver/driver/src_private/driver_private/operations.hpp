@@ -5,8 +5,6 @@
 #include <frontend/module_tree/module_id.hpp>
 #include <helios/hout/hout_fd.hpp>
 
-#include <functional>
-
 namespace compiler::driver {
 
 	struct CompileHOUTUnitToLIRModuleDataKey final {
@@ -15,9 +13,7 @@ namespace compiler::driver {
 
 		auto operator<=>(const CompileHOUTUnitToLIRModuleDataKey&) const = default;
 
-		[[nodiscard]] u64 queryUnstablePerfectHash() const {
-			return std::hash<base::StrID>{}(module_name);
-		}
+		[[nodiscard]] base::Bit256 queryUnstablePerfectHash() const;
 	};
 
 	/**

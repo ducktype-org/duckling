@@ -189,6 +189,8 @@ namespace compiler::helios {
 		void debugPrint(query::Context& ctx, std::ostream& out) const;
 	};
 
+	STRONG_TYPEDEF_ID(HOUTUnitID);
+
 	/**
 	 * @brief Structure representing single HOUTUnit.
 	 *
@@ -205,6 +207,7 @@ namespace compiler::helios {
 		// * defined templates
 		// * vector/references to hout of submodules? -- not necessarily needed
 		// * what else?
+		HOUTUnitID id = HOUTUnitID::next();
 
 		std::vector<CRef<HOUTGlobalData>> glob_data;
 

@@ -1,6 +1,10 @@
+fun takesString(s: str) -> str = {
+    return s;
+}
+
 fun main() -> i64 = {
-    let myString = builtin_input_string();
-    builtin_output_string(myString);
-    builtin_output_string("\nHello, world!\n");
+    let myString = "a";
+    takesString(myString);
+    takesString(takesString(myString));
     return 0;
 }

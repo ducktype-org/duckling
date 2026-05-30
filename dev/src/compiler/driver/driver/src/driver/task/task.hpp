@@ -1,6 +1,7 @@
 #pragma once
 
 #include <archiver/archive.hpp>
+#include <driver/options.hpp>
 #include <frontend/module_tree/module_id.hpp>
 #include <global_state/packages.hpp>
 #include <linker/link.hpp>
@@ -43,7 +44,7 @@ namespace compiler::driver {
 	/**
 	 * @brief Package build target.
 	 */
-	struct BuildTargetDVM {
+	struct BuildTargetDVM final {
 		/**
 		 * @brief The output file path stem for the compiled DVM package.
 		 */
@@ -53,9 +54,9 @@ namespace compiler::driver {
 	/**
 	 * @brief Package build target for LLVM backend (to object files).
 	 */
-	struct BuildTargetLLVM {};
+	struct BuildTargetLLVM final {};
 
-	struct BuildTargetLLVMExecutable {
+	struct BuildTargetLLVMExecutable final {
 		/**
 		 * @brief The output file path for the compiled executable.
 		 */
@@ -67,7 +68,7 @@ namespace compiler::driver {
 		linker::LinkingOptions linking_options;
 	};
 
-	struct BuildTargetLLVMStaticLibrary {
+	struct BuildTargetLLVMStaticLibrary final {
 		/**
 		 * @brief The output file path for the compiled static library.
 		 */
@@ -113,7 +114,7 @@ namespace compiler::driver {
 	 * A task can be of different types, such as package compilation, and contains the relevant data
 	 * for that task type.
 	 */
-	struct RawTask {
+	struct RawTask final {
 		TaskType                                type;
 		std::variant<RawPackageCompilationTask> task_data;
 
@@ -125,7 +126,7 @@ namespace compiler::driver {
 		);
 	};
 
-	struct Task {
+	struct Task final {
 		TaskType                             type;
 		std::variant<PackageCompilationTask> task_data;
 	};
@@ -135,6 +136,17 @@ namespace compiler::driver {
 	 * @note This function requires presence of the package specified in the task in global_state
 	 */
 	base::Optional<Task> convertRawTaskToTask(
-		const RawTask& raw_task, const task::DiagnosticReporter& report
+		const RawTask&                      raw_task,
+		const options_types::StdLibOptions& stdlib_options,
+		const task::DiagnosticReporter&     report
+	);
+
+	/**
+	 * @brief Construct linker options for a given task, based on the task's build target and the
+	 * standard library options.
+	 */
+	linker::LinkingOptions constructLinkerOptions(
+		const linker::LinkingOptions&       local_options,
+		const options_types::StdLibOptions& stdlib_options
 	);
 }

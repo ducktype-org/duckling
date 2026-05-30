@@ -1,3 +1,5 @@
+import core.builtins.*;
+
 # This test checks record default values during construction and named arguments to constructors.
 #
 # This includes calling a function every time the constructor
