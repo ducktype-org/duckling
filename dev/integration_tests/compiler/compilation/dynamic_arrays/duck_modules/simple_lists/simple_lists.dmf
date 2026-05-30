@@ -36,7 +36,7 @@ fun main() -> i32 = {
 
     printList(&arr);
     
-    arr -= 3;
+    arr -= 3u64;
     builtin_output_u64(len arr);
     printList(&arr);
 

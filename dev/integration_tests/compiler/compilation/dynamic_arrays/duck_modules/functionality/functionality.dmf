@@ -19,7 +19,7 @@ fun testPushPopPushPopPushPop() -> () = {
     var i = 0;
     while (i < 10) { l += i; i = i + 1; }
     
-    l -= 5;
+    l -= 5u64;
     builtin_output_u64(len l); # 5
     
     i = 0;
@@ -36,7 +36,7 @@ fun testPopTooBig() -> () = {
     var l: List[i64];
     l += 1; l += 2;
     
-    l -= 10; # Try removing 10 elements, although only 2 exist.
+    l -= 10u64; # Try removing 10 elements, although only 2 exist.
     builtin_output_u64(len l); # 0
     
     l += 555;
