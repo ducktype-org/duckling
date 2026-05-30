@@ -164,16 +164,6 @@ private:
 			checkForErrorOnCompileModule(
 				R"(
 				fun a() = {
-					builtin_output_i64();
-				}
-			)",
-				{ "call is missing a required argument", "declaration is not available." },
-				1
-			);
-
-			checkForErrorOnCompileModule(
-				R"(
-				fun a() = {
 					b(1,2,3);
 				}
 			)",
@@ -448,7 +438,6 @@ private:
 				const unitType: type = ();
 
 				fun foo(u: ()) -> () = {
-				    builtin_output_i64(1);
 				    return u;
 				}
 
@@ -1034,12 +1023,34 @@ private:
 			checkForErrorOnCompileModule(
 				R"(
 				fun main() -> i64 = {
-					builtin_output_string("This is an unknown escape sequence: \c");
+					let z = "This is an unknown escape sequence: \c";
 					return 0;
 				}
 			)",
-				{ "unknown escape sequence" },
+				{ "Escape sequence `\\c` is not recognised." },
 				1
+			);
+			checkForErrorOnCompileModule(
+				R"(
+				fun main() -> i64 = {
+					let formatString = f"This is an unknown escape sequence: \c";
+					return 0;
+				}
+			)",
+				{ "Escape sequence `\\c` is not recognised." },
+				1
+			);
+			checkForErrorOnCompileModule(
+				R"(
+				fun main() -> i64 = {
+					let x = 1;
+					let formatString = f"This is one: {notX}.\c";
+					return 0;
+				}
+			)",
+				// @TODO: #2817 Enable errors once they are all reported.
+				{ "Symbol 'notX' not found" /*, "Escape sequence `\\c` is not recognised."*/ },
+				1 /*2*/
 			);
 
 			checkForErrorOnCompileModule(
@@ -1048,7 +1059,7 @@ private:
 					var n = 42;
                     if (true) {
                         var n = 24;
-                        builtin_output_i64(n);
+						n + 1;
                     }
 				}
 			)",
@@ -1254,7 +1265,7 @@ private:
 					expand str_b;
 				}
 
-				fun foo() = builtin_output_i64(N.foo());
+				fun foo() = N.foo();
 			)",
 			{
 				"Call failed",

@@ -88,6 +88,9 @@ namespace clah::exceptions {
 	):
 		  ClahException(base::strConcat("Invalid parameter - ", name, " - ", why)) {}
 
+	CustomVerificationFailed::CustomVerificationFailed(const std::string& message):
+		  ClahException(base::strConcat(message)) {}
+
 	DuplicatedParameter::DuplicatedParameter(const std::string& name):
 		  ClahException(base::strConcat("Duplicated parameter named: ", name)) {}
 

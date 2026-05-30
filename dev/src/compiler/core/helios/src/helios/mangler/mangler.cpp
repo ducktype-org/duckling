@@ -289,11 +289,6 @@ namespace compiler::helios::mangler {
 						// If the symbol originates from the PST, use its path.
 						return path(ctx, symbol_id) + func(ctx, symbol_id);
 					}
-					variant_case_novalue(builtin::BuiltinFunctionData) {
-						// Builtins have a C linkage (CAbi), so they are handled by the
-						// `shouldMangle` check in `provide()`
-						CORE_UNREACHABLE();
-					}
 					variant_case(defgen::GeneratedSymbolData, gen_data) {
 						// If the symbol is generated, it has no path.
 						variant_match(gen_data.data) {

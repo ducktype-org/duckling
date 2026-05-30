@@ -1,3 +1,5 @@
+import core.builtins.*;
+
 fun main() -> i64 = {
     # Test type deduction for integers
     var a = 42;           # deduced as default int

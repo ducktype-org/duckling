@@ -86,7 +86,6 @@ public:
 		TESTER_ADD_TEST(testStrings);
 		TESTER_ADD_TEST(testStaticArrays);
 		TESTER_ADD_TEST(testDynamicArrays);
-		TESTER_ADD_TEST(testBuiltinFunctions);
 		TESTER_ADD_TEST(testFunctionReturnTypeDeduction);
 		TESTER_ADD_TEST(testFunctionReturnTypeCheckAndCoercion);
 		TESTER_ADD_TEST(testMethodCalls);
@@ -610,8 +609,10 @@ private:
 				= &h_interface.lookup(ctx, base::StrID("_0"))->valueOrPanic();
 			ASSERT_TRUE(empty_result->isEmpty());
 
+			// Check that the module lowers to HOUT without throwing.
 			const auto& hout
 				= ctx.query<compiler::helios::QueryModuleHOUT>(module_id)->valueOrThrow();
+			(void) hout;
 		});
 	}
 
@@ -1879,6 +1880,20 @@ private:
 				"The prepended expression should call builtin_string_concatenated"
 			);
 		}
+
+		{
+			// let x = 1;
+			// let y = 2;
+			// let format = "Did you know that {x} plus {y} equals ({x + y})?";
+			const auto& format_stmt = dynamic_cast<const VariableStmt&>(*statements.at(8));
+			const auto format_expr = dynamic_cast<const CallExpr*>(format_stmt.initial_value.get());
+			const auto format_callee = dynamic_cast<IdentifierExpr*>(format_expr->callee.get());
+			assertEqual(
+				compiler::helios::name(format_callee->symbol),
+				base::StrID("builtin_string_concatenated"),
+				"The format string expression should call builtin_string_concatenated"
+			);
+		}
 	}
 
 	void testStaticArrays() {
@@ -1995,46 +2010,6 @@ private:
 			auto* index_expr = dynamic_cast<const IndexExpr*>(var_decl.initial_value.get());
 			ASSERT_TRUE(index_expr != nullptr);
 		}
-	}
-
-	void testBuiltinFunctions() {
-		auto [module, scope] = getModule(fs::File(path("test_modules/builtins")));
-		auto& hout
-			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
-		ASSERT_EQUAL(1, hout.functions.size());
-
-		auto function = hout.functions.at(0);
-		ASSERT_EQUAL(function->declaration->original_name, "main");
-
-		Ref variable_stmt = dynamic_cast<const compiler::helios::code::VariableStmt*>(
-			function->body->statements.at(0).ref().get()
-		);
-		Ref call_expr_1 = dynamic_cast<const compiler::helios::code::CallExpr*>(
-			variable_stmt->initial_value.get()
-		);
-		auto call_expr_1_callee
-			= compiler::helios::getIdentifierExprSymID(call_expr_1->callee.ref()).value();
-		ASSERT_TRUE(std::holds_alternative<compiler::helios::builtin::BuiltinFunctionData>(
-			getSymRef(call_expr_1_callee)->other
-		));
-		ASSERT_EQUAL(base::StrID("builtin_input_i64"), compiler::helios::name(call_expr_1_callee));
-
-		Ref expr_stmt = dynamic_cast<const compiler::helios::code::ExprStmt*>(
-			function->body->statements.at(1).ref().get()
-		);
-		Ref  call_expr_2 = dynamic_cast<const compiler::helios::code::CallExpr*>(&*expr_stmt->expr);
-		auto call_expr_2_callee
-			= compiler::helios::getIdentifierExprSymID(call_expr_2->callee.ref()).value();
-		ASSERT_TRUE(std::holds_alternative<compiler::helios::builtin::BuiltinFunctionData>(
-			getSymRef(call_expr_2_callee)->other
-		));
-		ASSERT_EQUAL(base::StrID("builtin_output_i64"), compiler::helios::name(call_expr_2_callee));
-		auto& builtin_output_decl
-			= query::entryPoint<compiler::helios::QueryDeclOfFun>(call_expr_2_callee)->valueOrPanic();
-		ASSERT_EQUAL(
-			builtin_output_decl.parameters.at(0).type.getType().getKind(),
-			compiler::tsh::Kind::Integral
-		);
 	}
 
 	void testFunctionReturnTypeDeduction() {
@@ -2179,7 +2154,7 @@ private:
 		          ->valueOrThrow()
 		          .getType()
 		          .as<compiler::tsh::ClassAbstractType>();
-		ASSERT_EQUAL(7, point_class_info.methods.size());
+		ASSERT_EQUAL(6, point_class_info.methods.size());
 
 		for (auto& method: point_class_info.methods) {
 			auto method_hout

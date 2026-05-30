@@ -10,6 +10,8 @@
 #include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block.hpp>
+#include <frontend/pst_parser/elements/hierarchy/not_statements/format_string_sub_elements/format_sub_expression.hpp>
+#include <frontend/pst_parser/elements/hierarchy/not_statements/format_string_sub_elements/format_sub_string.hpp>
 #include <frontend/pst_parser/pst_expr_visitor.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
@@ -17,10 +19,12 @@
 #include <helios/tsh/symbol_type.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/errors/dia_interactive_elements.hpp>
+#include <helios_private/hout_creation/definition_generation/to_string_methods.hpp>
 #include <helios_private/hout_creation/expressions/builtin_operators.hpp>
 #include <helios_private/hout_creation/expressions/chain_expr.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
+#include <helios_private/symbols/symbols.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
@@ -185,6 +189,117 @@ namespace compiler::helios::code {
 						));
 					}
 				}
+			}
+
+			void visitExprFormatStrValue(pst::Access<pst::expr::ExprFormatStrValue> stmt) override {
+				// Helpful preamble
+				static const auto string_type
+					= tsh::SymbolType<>::withDefaults(tsh::getStringType());
+				auto concat_sym = ctx.query<defgen::QueryGeneratedSymbol>({
+					.name = base::StrID("builtin_string_concatenated"),
+					.generated_symbol_data
+					= defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::BuiltinOperator{
+						.operator_type = ctx.query<tsh::QueryFunctionType>({
+							{ string_type, string_type },
+							string_type,
+						}),
+					} },
+				});
+
+				// Construct the expression, initially empty.
+				MBox<Expr> result_expr
+					= makeBox<LiteralStringExpr>(ctx, generatedOrigin(), base::StrID(""));
+				bool failed = false;
+
+				// - For each sub element
+				for (auto sub_locked: stmt->getSubElements()) {
+					const auto sub         = sub_locked.unlock(ctx);
+					MBox<Expr> next_string = nullptr;
+
+					// - Create the next string expression
+					if (const auto substr = sub.dynamicCast<pst::FormatSubString>()) {
+						// - If it's a string, take it as a literal, remember to unescape it
+						const auto escaped_string  = substr.value()->getValue().value.strView();
+						const auto unescape_result = base::unescapeString(escaped_string);
+						match_optional(unescape_result) {
+							opt_some(result) {
+								next_string = makeBox<LiteralStringExpr>(
+									ctx, pstOrigin(sub).generatedFrom(), base::StrID(result.value)
+								);
+							}
+							opt_err(error) {
+								ctx.logInt(makeBox<UnknownEscapeSequenceError>(
+									stmt->getStablePosition(), error.value
+								));
+							}
+						}
+					} else if (const auto sub_expr = sub.dynamicCast<pst::FormatSubExpression>()) {
+						// - If it's an expression, use its toString() method
+						// - - Parse sub expression and gather data
+						auto sub_expr_hout_qresult = subExprFromPST(
+							ctx, sub_expr.value()->getExpr().unlock(ctx)->getExpr()
+						);
+						if (sub_expr_hout_qresult.hasFailed()) {
+							failed = true;
+							continue;
+						}
+						auto       sub_expr_hout = std::move(sub_expr_hout_qresult).valueOrThrow();
+						const auto sub_expr_type = sub_expr_hout->expression_type.getType();
+						const auto to_string_sym = defgen::toStringSymForType(ctx, sub_expr_type);
+
+						// - - Correct for passing by copy or reference depending on type
+						if (not sub_expr_hout->expression_type.getType().isSimple()
+						    and sub_expr_hout->expression_type.getSymbolType().getRefKind()
+						            != tsh::ReferenceKind::Ref) {
+							sub_expr_hout = makeBox<RefOfExpr>(
+								ctx, generatedOrigin(), std::move(sub_expr_hout)
+							);
+						}
+						if (sub_expr_hout->expression_type.getType().isSimple()
+						    and sub_expr_hout->expression_type.getSymbolType().getRefKind()
+						            != tsh::ReferenceKind::Direct) {
+							sub_expr_hout = makeBox<DerefExpr>(
+								ctx, generatedOrigin(), std::move(sub_expr_hout)
+							);
+						}
+
+						// - - Create HOUT Expr
+						std::vector<Box<Expr>> arguments;
+						arguments.emplace_back(std::move(sub_expr_hout));
+						next_string = makeBox<CallExpr>(
+							ctx,
+							pstOrigin(sub).generatedFrom(),
+							makeBox<IdentifierExpr>(
+								ctx, pstOrigin(sub).generatedFrom(), to_string_sym
+							),
+							std::move(arguments)
+						);
+					} else {
+						CORE_UNREACHABLE();
+					}
+
+					if (not next_string) {
+						failed = true;
+						continue;
+					}
+
+					// - Concatenate the result with the next string.
+					std::vector<Box<Expr>> arguments;
+					arguments.emplace_back(std::move(result_expr).toOptBox().value());
+					arguments.emplace_back(std::move(next_string).toOptBox().value());
+
+					result_expr = makeBox<CallExpr>(
+						ctx,
+						pstOrigin(sub).generatedFrom(),
+						makeBox<IdentifierExpr>(ctx, pstOrigin(sub).generatedFrom(), concat_sym),
+						std::move(arguments)
+					);
+				}
+
+				// If any sub-expression failed to be processed, fail the entire visit.
+				if (failed) return;
+
+				node = std::move(result_expr).toOptBox().value();
 			}
 
 			static bool isNumericType(const tsh::AbstractType type) {
