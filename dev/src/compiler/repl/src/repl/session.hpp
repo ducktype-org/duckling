@@ -216,7 +216,7 @@ namespace compiler::repl {
 		ReplResult failWithMessage(std::string_view message);
 
 		/**
-		 * @brief Execute an action and map non-panic exceptions to REPL error messages.
+		 * @brief Execute an action in a shared REPL wrapper.
 		 */
 		ReplResult runWithReplErrorHandling(
 			std::string_view std_exception_prefix, const std::function<ReplResult()>& action

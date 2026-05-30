@@ -43,14 +43,8 @@ namespace compiler::repl {
 	ReplResult ReplSession::runWithReplErrorHandling(
 		std::string_view std_exception_prefix, const std::function<ReplResult()>& action
 	) {
-		try {
-			return action();
-		} catch (const base::Panic&) { throw; } catch (const std::exception& e) {
-			return ReplResult::error(base::strConcat(std_exception_prefix, e.what()));
-		} catch (...) {
-			return ReplResult::error(base::strConcat(std_exception_prefix, "Unknown error occurred")
-			);
-		}
+		(void)std_exception_prefix;
+		return action();
 	}
 
 	void ReplSession::runWithContextErrorHandling(
