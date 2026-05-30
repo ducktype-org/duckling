@@ -36,11 +36,13 @@ namespace vm::code {
 			bool operator==(const Child&) const = default;
 		};
 
-		using ChildHash = decltype([](const Child& child) -> usize {
-			return std::hash<base::StrID>{}(child.name)
-			     + child.byte_offset.assumePointerSize(Bytes(16)).asInt()
-			     + child.byte_offset.assumePointerSize(Bytes(8)).asInt();
-		});
+		struct ChildHash {
+			constexpr usize operator()(const Child& child) const {
+				return std::hash<base::StrID>{}(child.name)
+				     + child.byte_offset.assumePointerSize(Bytes(16)).asInt()
+				     + child.byte_offset.assumePointerSize(Bytes(8)).asInt();
+			}
+		};
 
 		struct TreeNode {
 			base::HashMap<Child, NameStackID, ChildHash> children{};
