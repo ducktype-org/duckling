@@ -30,6 +30,7 @@ namespace compiler::repl {
 		QueryReplExpressionWrapper,
 		QueryReplExpressionWrapper_Key,
 		query::QResult<helios::HOUTFunction>,
+		({})
 	);
 
 	/**
@@ -54,6 +55,7 @@ namespace compiler::repl {
 		QueryReplInstructionWrapper,
 		QueryReplInstructionWrapper_Key,
 		query::QResult<helios::HOUTFunction>,
+		({})
 	);
 
 }  // namespace compiler::repl

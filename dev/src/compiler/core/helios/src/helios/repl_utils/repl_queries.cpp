@@ -128,7 +128,7 @@ namespace compiler::repl {
 			auto& decl = ctx.query<helios::QueryDeclOfFun>(synthetic_symbol)->valueOrThrow();
 
 			CORE_DEV_LOG(REPL, "QueryReplInstructionWrapper completed successfully\n");
-			return helios::HOUTFunction { helios::code::generatedOrigin(), &decl, code_block };
+			return helios::HOUTFunction{ helios::code::generatedOrigin(), &decl, code_block };
 		}
 
 		QUERY_AUTO_CACHE_COPY

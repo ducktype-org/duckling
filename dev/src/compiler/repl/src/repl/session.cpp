@@ -269,9 +269,9 @@ namespace compiler::repl {
 						CORE_DEV_LOG(REPL, "Compiling and loading to DVM\n");
 						auto eval_module_id = getCurrentModuleID();
 						auto module_name    = getStatementModuleName(eval_module_id);
-						auto load_result    = compileAndLoad(
-                            ctx, hout_unit, module_name, m_dvm_pid, m_lowering_context.value()
-                        );
+						auto load_result = compileAndLoad(
+							ctx, hout_unit, module_name, m_dvm_pid, m_lowering_context.value()
+						);
 						if (!load_result.has_value()) {
 							error_message = "DVM load error: " + load_result.error();
 							return;
@@ -370,14 +370,10 @@ namespace compiler::repl {
 						CORE_DEV_LOG(REPL, "Instruction compiled and loaded to DVM\n");
 
 						// Instructions always return unit — run and join without reading an exit value.
-						auto run_result
-							= vm::api::runFunction(m_dvm_pid, wrapper_func_name, {})
-				                  .and_then([&](auto) { return vm::api::join(m_dvm_pid); })
-				                  .transform_error(vm::api::errorToString);
-						if (run_result.has_value()) {
-							if (!m_suppress_repl_feedback_during_script_load)
-								std::cout << "Instruction executed.\n";
-						} else {
+						auto run_result = vm::api::runFunction(m_dvm_pid, wrapper_func_name, {})
+						                     .and_then([&](auto) { return vm::api::join(m_dvm_pid); })
+						                     .transform_error(vm::api::errorToString);
+						if (!run_result.has_value()) {
 							error_message = "Runtime error: " + run_result.error();
 							return;
 						}
@@ -413,8 +409,8 @@ namespace compiler::repl {
 						const auto& hout_unit
 							= ctx.query<helios::QueryModuleHOUT>(module_id)->valueOrThrow();
 						// The stmt parameter is used only here, for logging. It's not needed for
-				        // the actual query since QueryModuleHOUT already compiles the entire module
-				        // containing the statement.
+						// the actual query since QueryModuleHOUT already compiles the entire module
+						// containing the statement.
 						auto stmt_kind = stmt.unlock(ctx)->getElementKind();
 						CORE_DEV_LOG(
 							REPL, "Definition statement kind: ", static_cast<u32>(stmt_kind), "\n"

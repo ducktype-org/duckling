@@ -232,11 +232,11 @@ namespace compiler::repl {
 			std::string&                                out_error
 		);
 
-		bool                       m_should_exit;  ///< Flag to terminate the REPL loop
-		std::vector<ReplStatement> m_history;      ///< All statements entered in this session
-		u64          m_line_counter;  ///< Counter for generating unique wrapper function names
-		vm::PID      m_dvm_pid;       ///< Process ID of the running DVM instance
-		ReplFrontend m_frontend;      ///< Frontend for user interaction
+		bool                       m_should_exit;   ///< Flag to terminate the REPL loop
+		std::vector<ReplStatement> m_history;       ///< All statements entered in this session
+		u64                        m_line_counter;  ///< Counter for generating unique wrapper function names
+		vm::PID                    m_dvm_pid;       ///< Process ID of the running DVM instance
+		ReplFrontend               m_frontend;      ///< Frontend for user interaction
 		/**
 		 * @brief Persistent lowering context for REPL statement compilation.
 		 *
