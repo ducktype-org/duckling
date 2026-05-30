@@ -609,8 +609,10 @@ private:
 				= &h_interface.lookup(ctx, base::StrID("_0"))->valueOrPanic();
 			ASSERT_TRUE(empty_result->isEmpty());
 
+			// Check that the module lowers to HOUT without throwing.
 			const auto& hout
 				= ctx.query<compiler::helios::QueryModuleHOUT>(module_id)->valueOrThrow();
+			(void) hout;
 		});
 	}
 
@@ -1876,6 +1878,20 @@ private:
 				compiler::helios::name(concatenated_callee->symbol),
 				base::StrID("builtin_string_concatenated"),
 				"The prepended expression should call builtin_string_concatenated"
+			);
+		}
+
+		{
+			// let x = 1;
+			// let y = 2;
+			// let format = "Did you know that {x} plus {y} equals ({x + y})?";
+			const auto& format_stmt = dynamic_cast<const VariableStmt&>(*statements.at(8));
+			const auto format_expr = dynamic_cast<const CallExpr*>(format_stmt.initial_value.get());
+			const auto format_callee = dynamic_cast<IdentifierExpr*>(format_expr->callee.get());
+			assertEqual(
+				compiler::helios::name(format_callee->symbol),
+				base::StrID("builtin_string_concatenated"),
+				"The format string expression should call builtin_string_concatenated"
 			);
 		}
 	}

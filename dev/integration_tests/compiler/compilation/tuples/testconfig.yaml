@@ -1,4 +1,13 @@
+enable_conc_deterministic_tests: "false"
+
 Tests:
+  dvm_no_strings:
+    Cases:
+      all:
+        backend: all
+        Output:
+          String: "10\n20\n15\n35\n15\n35\n"
+        ExitCode: 0
   pack:
     Cases:
       llvm:
@@ -11,5 +20,5 @@ Tests:
       llvm:
         backend: llvm
         Output:
-          String: "JohnDoe30\nJaneSmith23"
+          String: "JohnDoe30\nJaneSmith23\n"
         ExitCode: 0
