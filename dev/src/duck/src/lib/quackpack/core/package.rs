@@ -3,9 +3,10 @@ use std::fmt;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
+use crate::QuackResult;
 use crate::quackpack::core::Manifest;
 use crate::quackpack::core::compile::artifacts_layout::ArtifactsLayout;
-use crate::quackpack::core::storage::freeze::FreezeDep;
+use crate::quackpack::core::simple_identity::{SimpleIdentity, SimpleOrigin};
 use crate::quackpack::schemas::manifest::Manifest as ManifestSchema;
 
 #[derive(Clone)]
@@ -79,9 +80,10 @@ impl Package {
         &self.inner.artifacts_dir
     }
 
-    /// Convert this package to a [`FreezeDep`].
-    pub fn as_freeze_dep(&self) -> FreezeDep {
-        FreezeDep::new(self.manifest().name(), self.manifest().version())
+    /// Convert this package to a [`SimpleIdentity`].
+    pub fn as_simple_identity(&self) -> QuackResult<SimpleIdentity> {
+        let origin = SimpleOrigin::for_local(self.root_directory())?;
+        Ok(SimpleIdentity::new(self.manifest().name(), origin))
     }
 
     /// Is this the global package.

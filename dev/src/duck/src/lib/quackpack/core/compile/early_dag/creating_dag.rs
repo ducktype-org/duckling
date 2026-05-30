@@ -17,26 +17,31 @@ impl DependencyDag {
     ///
     /// This method checks that the graph is complete, and that it is, in fact, a DAG.
     #[tracing::instrument(skip_all)]
-    pub fn new(freeze: &VenvFreeze) -> QuackResult<Self> {
+    pub fn new(freeze: &VenvFreeze, root_identity: SimpleIdentity) -> QuackResult<Self> {
         let root = freeze.root();
         let mut dag = HashMap::new();
         dag.insert(
-            root.as_freeze_dep(),
+            root_identity,
             DependencyNode::new(root.dependencies().iter().copied()),
         );
         for dep in freeze.dependencies() {
             dag.insert(
-                dep.as_freeze_dep(),
+                dep.as_simple_identity(),
                 DependencyNode::new(dep.dependencies().iter().copied()),
             );
         }
-        let root = root.as_freeze_dep();
-        Self::check_is_dag(root, &dag)?;
-        Ok(Self { root, dag })
+        Self::check_is_dag(root_identity, &dag)?;
+        Ok(Self {
+            root: root_identity,
+            dag,
+        })
     }
 
     /// Helpers for [`new`](Self::new).
-    fn check_is_dag(root: FreezeDep, dag: &HashMap<FreezeDep, DependencyNode>) -> QuackResult<()> {
+    fn check_is_dag(
+        root: SimpleIdentity,
+        dag: &HashMap<SimpleIdentity, DependencyNode>,
+    ) -> QuackResult<()> {
         Self::check_is_complete_graph(root, dag)?;
         Self::check_no_cycles(root, dag)?;
         Ok(())
@@ -45,8 +50,8 @@ impl DependencyDag {
     /// Checks, whether `graph` rooted at `root` is complete.
     #[tracing::instrument(skip_all)]
     fn check_is_complete_graph(
-        root: FreezeDep,
-        graph: &HashMap<FreezeDep, DependencyNode>,
+        root: SimpleIdentity,
+        graph: &HashMap<SimpleIdentity, DependencyNode>,
     ) -> QuackResult<()> {
         debug!(%root, ?graph, "checking completeness");
         for (k, v) in graph {
@@ -67,8 +72,8 @@ impl DependencyDag {
     /// Checks, that the `graph` rooted at `root` doesn't have cycles.
     #[tracing::instrument(skip_all)]
     fn check_no_cycles(
-        root: FreezeDep,
-        dag: &HashMap<FreezeDep, DependencyNode>,
+        root: SimpleIdentity,
+        dag: &HashMap<SimpleIdentity, DependencyNode>,
     ) -> QuackResult<()> {
         debug!(%root, graph = ?dag, "checking cycles");
         #[derive(Debug, Eq, PartialEq)]
@@ -80,10 +85,10 @@ impl DependencyDag {
         let mut states = HashMap::new();
         let mut order = vec![];
         fn visit_impl(
-            current: FreezeDep,
-            dag: &HashMap<FreezeDep, DependencyNode>,
-            states: &mut HashMap<FreezeDep, State>,
-            order: &mut Vec<FreezeDep>,
+            current: SimpleIdentity,
+            dag: &HashMap<SimpleIdentity, DependencyNode>,
+            states: &mut HashMap<SimpleIdentity, State>,
+            order: &mut Vec<SimpleIdentity>,
         ) -> QuackResult<()> {
             order.push(current);
             let previous_state = states.insert(current, State::Entered);
@@ -115,7 +120,7 @@ impl DependencyDag {
 
 impl DependencyNode {
     /// Creates a new [`DependencyNode`] with the given dependencies.
-    pub fn new(dependencies: impl IntoIterator<Item = FreezeDep>) -> Self {
+    pub fn new(dependencies: impl IntoIterator<Item = SimpleIdentity>) -> Self {
         Self {
             dependencies: dependencies.into_iter().collect(),
         }
@@ -141,44 +146,22 @@ fn parse_dependency(
             || match storage_id {
                 PackageId::Registry(ref registry_id) => format!(
                     "downloaded malformed dependency `{}` from `{}`",
-                    dep.as_freeze_dep(),
+                    dep.as_simple_identity(),
                     registry_id.url()
                 ),
                 PackageId::Git(ref git_id) => format!(
                     "cloned malformed dependency `{}` from `{}`",
-                    dep.as_freeze_dep(),
+                    dep.as_simple_identity(),
                     git_id.url()
                 ),
                 PackageId::Local(..) => format!(
                     "malformed local dependency `{}` at `{}`",
-                    dep.as_freeze_dep(),
+                    dep.as_simple_identity(),
                     directory.display(),
                 ),
             },
         )?;
     let package = ctx.into_package();
-    if package.as_freeze_dep() != dep.as_freeze_dep() {
-        match storage_id {
-            PackageId::Registry(registry_id) => qp_bail!(
-                "downloaded malformed dependency from `{}`: got name `{}`, expected `{}`",
-                registry_id.url(),
-                package.as_freeze_dep(),
-                dep.as_freeze_dep(),
-            ),
-            PackageId::Git(git_id) => qp_bail!(
-                "cloned malformed dependency from `{}`: got name `{}`, expected `{}`",
-                git_id.url(),
-                package.as_freeze_dep(),
-                dep.as_freeze_dep(),
-            ),
-            PackageId::Local(..) => qp_bail!(
-                "malformed local dependency at `{}`: got name `{}`, expected `{}`",
-                directory.display(),
-                package.as_freeze_dep(),
-                dep.as_freeze_dep(),
-            ),
-        }
-    }
     Ok(CompilerPackage::new(package, pkg_type))
 }
 
@@ -191,10 +174,10 @@ impl EarlyDag {
     #[tracing::instrument(skip_all)]
     pub fn new_early(bcx: &BuildContext<'_, '_>) -> QuackResult<Self> {
         // `new` checks for cycles.
-        let graph = DependencyDag::new(&bcx.freeze)?;
+        let graph = DependencyDag::new(&bcx.freeze, bcx.root_identity)?;
         let mut packages = HashMap::new();
         packages.insert(
-            bcx.freeze.root().as_freeze_dep(),
+            bcx.root_identity,
             CompilerPackage::new(bcx.pcx.package().clone(), PackageType::RootPackage),
         );
         let direct_dependencies_names = bcx
@@ -213,11 +196,36 @@ impl EarlyDag {
                 PackageType::TransitiveDependency
             };
             let package = parse_dependency(dep, &bcx.storage, bcx.pcx.ctx(), pkg_type)?;
-            let overwritten_entry = packages.insert(dep.as_freeze_dep(), package).is_some();
+            let manifest = package.package().manifest();
+            if manifest.name() != dep.name() || manifest.version() != dep.version() {
+                let display_expected = format!("{} {}", dep.name(), dep.version());
+                let display_found = format!("{} {}", manifest.name(), manifest.version());
+                match dep.to_package_id() {
+                    PackageId::Registry(registry_id) => qp_bail!(
+                        "downloaded malformed dependency from `{}`: got name `{}`, expected `{}`",
+                        registry_id.url(),
+                        display_found,
+                        display_expected
+                    ),
+                    PackageId::Git(git_id) => qp_bail!(
+                        "cloned malformed dependency from `{}`: got name `{}`, expected `{}`",
+                        git_id.url(),
+                        display_found,
+                        display_expected
+                    ),
+                    PackageId::Local(id) => qp_bail!(
+                        "malformed local dependency at `{}`: got name `{}`, expected `{}`",
+                        id.path(),
+                        display_found,
+                        display_expected
+                    ),
+                }
+            }
+            let overwritten_entry = packages.insert(dep.as_simple_identity(), package).is_some();
             if overwritten_entry {
                 qp_bail!(
                     "malformed freezefile: duplicated dependency `{}`",
-                    dep.as_freeze_dep()
+                    dep.as_simple_identity()
                 )
             }
         }

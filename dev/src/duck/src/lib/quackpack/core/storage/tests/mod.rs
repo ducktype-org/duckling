@@ -8,8 +8,9 @@ use url::Url;
 
 use crate::DuckContext;
 use crate::quackpack::core::fetcher::Fetcher;
-use crate::quackpack::core::solver::types_common::ExpandedLocation;
-use crate::quackpack::core::storage::freeze::{FreezeDep, FreezePackage, RootPackage, VenvFreeze};
+use crate::quackpack::core::identity::{Identity, Origin};
+use crate::quackpack::core::simple_identity::{SimpleIdentity, SimpleOrigin};
+use crate::quackpack::core::storage::freeze::{FreezePackage, RootPackage, VenvFreeze};
 use crate::quackpack::core::storage::package_id::{PackageId, RegistryId};
 use crate::quackpack::core::storage::paths::Storage;
 use crate::quackpack::core::storage::venv::{Venv, VenvData};
@@ -117,16 +118,17 @@ fn setup_mock_venvs(root: &Path, ctx: &DuckContext) {
         },
         ctx,
     );
-    let dep = FreezeDep::new("bar".into(), Version::new(1, 0, 0));
+
+    let origin = Origin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
+    let simple_origin = SimpleOrigin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
+    let mock_simple_identity = |name: &str| SimpleIdentity::new(name.into(), simple_origin);
+    let mock_identity = |name: &str| Identity::new(name.into(), origin);
+    let dep = mock_simple_identity("bar");
     let package = FreezePackage::new(
-        dep.name(),
-        dep.version(),
+        mock_identity(dep.name().as_str()),
+        Version::new(1, 0, 0),
         vec![],
         vec![],
-        ExpandedLocation::Registry {
-            url: Fetcher::DEFAULT_REGISTRY_URL.parse().unwrap(),
-            real_name: dep.name(),
-        },
     );
     setup_mock_venv(
         root,
@@ -142,16 +144,12 @@ fn setup_mock_venvs(root: &Path, ctx: &DuckContext) {
         ctx,
     );
 
-    let dep = FreezeDep::new("baz".into(), Version::new(1, 0, 0));
+    let dep = mock_simple_identity("baz");
     let package = FreezePackage::new(
-        dep.name(),
-        dep.version(),
+        mock_identity(dep.name().as_str()),
+        Version::new(1, 0, 0),
         vec![],
         vec![],
-        ExpandedLocation::Registry {
-            url: Fetcher::DEFAULT_REGISTRY_URL.parse().unwrap(),
-            real_name: dep.name(),
-        },
     );
 
     setup_mock_venv(

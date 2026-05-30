@@ -11,6 +11,7 @@ use crate::quackpack::core::solver::types_common::{InternedLocation, Location};
 use crate::quackpack::core::version::CompatibilityCheck;
 use crate::quackpack::core::{Dependency, GitReference, SourceKind, Version};
 use crate::quackpack::util::interned_url::InternedUrl;
+use crate::quackpack::util::to_path_buf::ToPathBuf;
 use crate::{QuackResult, QuackResultContext, StrId, qp_bail_internal};
 
 #[derive(Debug, Clone, Copy, Deserialize, Eq, Hash, PartialEq, Serialize)]
@@ -53,7 +54,11 @@ impl ExpandedLocation {
             Self::Registry { real_name, .. } => format!("`{}", real_name),
             Self::Git { url, .. } => format!("cloned from `{url}`"),
             Self::Local { absolute_path } => {
-                format!("at the directory `{}`", absolute_path)
+                if let Ok(path) = absolute_path.to_path_buf() {
+                    format!("at the directory `{}`", path.display())
+                } else {
+                    format!("at the directory `{}`", absolute_path)
+                }
             }
         }
     }

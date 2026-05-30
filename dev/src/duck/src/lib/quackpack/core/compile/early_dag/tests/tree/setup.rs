@@ -4,10 +4,12 @@ use tempfile::TempDir;
 
 use crate::DuckContext;
 use crate::quackpack::core::fetcher::Fetcher;
-use crate::quackpack::core::solver::types_common::ExpandedLocation;
-use crate::quackpack::core::storage::freeze::{FreezeDep, FreezePackage, RootPackage, VenvFreeze};
+use crate::quackpack::core::identity::{Identity, Origin};
+use crate::quackpack::core::simple_identity::{SimpleIdentity, SimpleOrigin};
+use crate::quackpack::core::storage::freeze::{FreezePackage, RootPackage, VenvFreeze};
 use crate::quackpack::core::storage::package_id::RegistryId;
 use crate::quackpack::core::{PackageLoader, Version};
+use crate::quackpack::util::to_url::ToUrl;
 use crate::util::path_ops_ext::PathOpsExt;
 use crate::util::test_utils::setup_test;
 
@@ -159,120 +161,96 @@ features:
 /// This function should be generally used in order to create
 /// [`BuildContext`](super::BuildContext).
 pub fn freeze() -> VenvFreeze {
+    let origin = Origin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
+    let simple_origin = SimpleOrigin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
+    let mock_simple_identity = |name: &str| SimpleIdentity::new(name.into(), simple_origin);
+    let mock_identity = |name: &str| Identity::new(name.into(), origin);
     VenvFreeze::new(
         RootPackage::new(
             "root".into(),
             Version::new(1, 0, 0),
             vec!["use_bar".into(), "full".into(), "nonexistent".into()],
-            vec![FreezeDep::new("foo".into(), Version::new(1, 0, 0))],
+            vec![mock_simple_identity("foo")],
         ),
         vec![
             FreezePackage::new(
-                "foo".into(),
+                mock_identity("foo"),
                 Version::new(1, 0, 0),
                 vec!["use_bar".into(), "use_bar_with_baz".into()],
-                vec![FreezeDep::new("bar".into(), Version::new(1, 0, 0))],
-                ExpandedLocation::Registry {
-                    url: Fetcher::DEFAULT_REGISTRY_URL.parse().unwrap(),
-                    real_name: "foo".into(),
-                },
+                vec![mock_simple_identity("bar")],
             ),
             FreezePackage::new(
-                "bar".into(),
+                mock_identity("bar"),
                 Version::new(1, 0, 0),
                 vec!["use_baz".into()],
-                vec![FreezeDep::new("baz".into(), Version::new(1, 0, 0))],
-                ExpandedLocation::Registry {
-                    url: Fetcher::DEFAULT_REGISTRY_URL.parse().unwrap(),
-                    real_name: "bar".into(),
-                },
+                vec![mock_simple_identity("baz")],
             ),
-            FreezePackage::new(
-                "baz".into(),
-                Version::new(1, 0, 0),
-                vec![],
-                vec![],
-                ExpandedLocation::Registry {
-                    url: Fetcher::DEFAULT_REGISTRY_URL.parse().unwrap(),
-                    real_name: "baz".into(),
-                },
-            ),
+            FreezePackage::new(mock_identity("baz"), Version::new(1, 0, 0), vec![], vec![]),
         ],
     )
 }
 
 pub fn freeze_with_cycle() -> VenvFreeze {
+    let origin = Origin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
+    let simple_origin = SimpleOrigin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
+    let mock_simple_identity = |name: &str| SimpleIdentity::new(name.into(), simple_origin);
+    let mock_identity = |name: &str| Identity::new(name.into(), origin);
     VenvFreeze::new(
         RootPackage::new(
             "root".into(),
             Version::new(1, 0, 0),
             vec!["use_bar".into(), "full".into(), "nonexistent".into()],
-            vec![FreezeDep::new("foo".into(), Version::new(1, 0, 0))],
+            vec![mock_simple_identity("foo")],
         ),
         vec![
             FreezePackage::new(
-                "foo".into(),
+                mock_identity("foo"),
                 Version::new(1, 0, 0),
                 vec!["use_bar".into(), "use_bar_with_baz".into()],
-                vec![FreezeDep::new("bar".into(), Version::new(1, 0, 0))],
-                ExpandedLocation::Registry {
-                    url: Fetcher::DEFAULT_REGISTRY_URL.parse().unwrap(),
-                    real_name: "foo".into(),
-                },
+                vec![mock_simple_identity("bar")],
             ),
             FreezePackage::new(
-                "bar".into(),
+                mock_identity("bar"),
                 Version::new(1, 0, 0),
                 vec!["use_baz".into()],
-                vec![FreezeDep::new("foo".into(), Version::new(1, 0, 0))],
-                ExpandedLocation::Registry {
-                    url: Fetcher::DEFAULT_REGISTRY_URL.parse().unwrap(),
-                    real_name: "bar".into(),
-                },
+                vec![mock_simple_identity("foo")],
             ),
-            FreezePackage::new(
-                "baz".into(),
-                Version::new(1, 0, 0),
-                vec![],
-                vec![],
-                ExpandedLocation::Registry {
-                    url: Fetcher::DEFAULT_REGISTRY_URL.parse().unwrap(),
-                    real_name: "baz".into(),
-                },
-            ),
+            FreezePackage::new(mock_identity("baz"), Version::new(1, 0, 0), vec![], vec![]),
         ],
     )
 }
 
 pub fn freeze_without_direct_dep() -> VenvFreeze {
+    let simple_origin = SimpleOrigin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
+    let mock_simple_identity = |name: &str| SimpleIdentity::new(name.into(), simple_origin);
     VenvFreeze::new(
         RootPackage::new(
             "root".into(),
             Version::new(1, 0, 0),
             vec!["use_bar".into(), "full".into(), "nonexistent".into()],
-            vec![FreezeDep::new("foo".into(), Version::new(1, 0, 0))],
+            vec![mock_simple_identity("foo")],
         ),
         vec![],
     )
 }
 
 pub fn freeze_without_transitive_dep() -> VenvFreeze {
+    let origin = Origin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
+    let simple_origin = SimpleOrigin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
+    let mock_simple_identity = |name: &str| SimpleIdentity::new(name.into(), simple_origin);
+    let mock_identity = |name: &str| Identity::new(name.into(), origin);
     VenvFreeze::new(
         RootPackage::new(
             "root".into(),
             Version::new(1, 0, 0),
             vec!["use_bar".into(), "full".into(), "nonexistent".into()],
-            vec![FreezeDep::new("foo".into(), Version::new(1, 0, 0))],
+            vec![mock_simple_identity("foo")],
         ),
         vec![FreezePackage::new(
-            "foo".into(),
+            mock_identity("foo"),
             Version::new(1, 0, 0),
             vec!["use_bar".into(), "use_bar_with_baz".into()],
-            vec![FreezeDep::new("bar".into(), Version::new(1, 0, 0))],
-            ExpandedLocation::Registry {
-                url: Fetcher::DEFAULT_REGISTRY_URL.parse().unwrap(),
-                real_name: "foo".into(),
-            },
+            vec![mock_simple_identity("bar")],
         )],
     )
 }

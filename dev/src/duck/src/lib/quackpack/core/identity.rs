@@ -5,7 +5,9 @@ use std::path::Path;
 
 use serde::{Deserialize, Serialize, de};
 
+use crate::quackpack::core::Manifest;
 use crate::quackpack::core::simple_identity::{SimpleIdentity, SimpleKind, SimpleOrigin};
+use crate::quackpack::core::solver::types_common::{ExpandedLocation, ExpandedPackage};
 use crate::quackpack::util::interned_url::InternedUrl;
 use crate::quackpack::util::is_local_file::IsLocalFile;
 use crate::quackpack::util::to_url::ToUrl;
@@ -250,6 +252,19 @@ impl From<Identity> for SimpleIdentity {
     fn from(value: Identity) -> Self {
         value.as_simple()
     }
+}
+
+pub fn realization_and_manifest_to_identity(
+    realization: ExpandedPackage,
+    realization_manifest: &Manifest,
+) -> Identity {
+    let name = realization_manifest.name();
+    let origin = match realization.location {
+        ExpandedLocation::Registry { url, .. } => Origin::for_registry(url),
+        ExpandedLocation::Git { url, commit } => Origin::for_git(url, commit),
+        ExpandedLocation::Local { absolute_path } => Origin::new(absolute_path, Kind::Local),
+    };
+    Identity::new(name, origin)
 }
 
 #[cfg(test)]

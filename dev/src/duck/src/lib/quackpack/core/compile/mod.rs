@@ -10,6 +10,7 @@ use tracing::debug;
 
 use crate::QuackResult;
 use crate::quackpack::core::compile::profiles::Profile;
+use crate::quackpack::core::simple_identity::SimpleIdentity;
 use crate::quackpack::core::storage::freeze::VenvFreeze;
 use crate::quackpack::core::storage::paths::Storage;
 use crate::quackpack::core::{FeatureName, PackageContext};
@@ -33,6 +34,7 @@ const MISSING_DEPENDENCY_IN_MANIFEST_MESSAGE: &str =
 pub struct BuildContext<'duck, 'ctx> {
     /// Package to build or venv of the script.
     pub pcx: &'ctx PackageContext<'duck>,
+    pub root_identity: SimpleIdentity,
     pub freeze: VenvFreeze,
     pub storage: Storage,
     pub used_features: Vec<FeatureName>,

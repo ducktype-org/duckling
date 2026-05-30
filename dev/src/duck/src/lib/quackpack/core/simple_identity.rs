@@ -11,7 +11,9 @@ use std::str::FromStr;
 
 use serde::{Deserialize, Serialize, de};
 
+use crate::quackpack::core::Manifest;
 use crate::quackpack::core::identity::{Identity, Kind, Origin};
+use crate::quackpack::core::solver::types_common::{ExpandedLocation, ExpandedPackage};
 use crate::quackpack::util::interned_url::InternedUrl;
 use crate::quackpack::util::is_local_file::IsLocalFile;
 use crate::quackpack::util::to_url::ToUrl;
@@ -265,6 +267,21 @@ impl<'de> Deserialize<'de> for SimpleIdentity {
             .string(|s| s.parse().map_err(de::Error::custom))
             .deserialize(deserializer)
     }
+}
+
+pub fn realization_and_manifest_to_simple_identity(
+    realization: ExpandedPackage,
+    realization_manifest: &Manifest,
+) -> SimpleIdentity {
+    let name = realization_manifest.name();
+    let origin = match realization.location {
+        ExpandedLocation::Registry { url, .. } => SimpleOrigin::for_registry(url),
+        ExpandedLocation::Git { url, .. } => SimpleOrigin::for_git(url),
+        ExpandedLocation::Local { absolute_path } => {
+            SimpleOrigin::new(absolute_path, SimpleKind::Local)
+        }
+    };
+    SimpleIdentity::new(name, origin)
 }
 
 #[cfg(test)]

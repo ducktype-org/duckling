@@ -3,8 +3,9 @@ use std::path::Path;
 use super::{registry_url_hash, setup_mock_storage};
 use crate::DuckContext;
 use crate::quackpack::core::fetcher::Fetcher;
-use crate::quackpack::core::solver::types_common::ExpandedLocation;
-use crate::quackpack::core::storage::freeze::{FreezeDep, FreezePackage, VenvFreeze};
+use crate::quackpack::core::identity::{Identity, Origin};
+use crate::quackpack::core::simple_identity::{SimpleIdentity, SimpleOrigin};
+use crate::quackpack::core::storage::freeze::{FreezePackage, VenvFreeze};
 use crate::quackpack::core::storage::paths::Storage;
 use crate::quackpack::core::storage::tests::{
     create_mock_package_at_tmpdir, create_mock_package_with_deps_at_tmpdir,
@@ -251,16 +252,10 @@ fn save_trims_files() {
     // Firstly, add a lot of dependencies, to make a file longer (have more bytes).
     let number_of_new_packages = 5;
     for _ in 0..number_of_new_packages {
-        let package = FreezePackage::new(
-            "dep".into(),
-            Version::new(1, 0, 0),
-            vec![],
-            vec![],
-            ExpandedLocation::Registry {
-                url: Fetcher::DEFAULT_REGISTRY_URL.parse().unwrap(),
-                real_name: "dep".into(),
-            },
-        );
+        let origin = Origin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
+        let mock_identity = |name: &str| Identity::new(name.into(), origin);
+        let package =
+            FreezePackage::new(mock_identity("dep"), Version::new(1, 0, 0), vec![], vec![]);
         venv.data_mut()
             .freeze_mut()
             .dependencies_mut()
@@ -455,6 +450,16 @@ fn sync_with_deps() {
     let (ctx, _home, storage_root) = setup_mock_storage();
     let (root, pcx) = create_mock_package_with_deps_at_tmpdir(&ctx, "my-package");
 
+    let mock_simple_identity = |name: &str| {
+        let path = root.path().join(name).resolve().unwrap();
+        let simple_origin = SimpleOrigin::for_local(&path).unwrap();
+        SimpleIdentity::new(name.into(), simple_origin)
+    };
+    let mock_identity = |name: &str| {
+        let path = root.path().join(name).resolve().unwrap();
+        let origin = Origin::for_local(&path).unwrap();
+        Identity::new(name.into(), origin)
+    };
     let (_lock, venv, storage) = ops::sync(
         &pcx,
         StorageSyncOptions {
@@ -474,27 +479,14 @@ fn sync_with_deps() {
     assert_eq!(root_package.name(), "my-package");
     assert_eq!(root_package.version(), Version::new(1, 0, 0));
     assert!(root_package.features().is_empty());
-    assert_eq!(
-        root_package.dependencies(),
-        [FreezeDep::new("dep".into(), Version::new(1, 0, 0))]
-    );
+    assert_eq!(root_package.dependencies(), [mock_simple_identity("dep")],);
     assert_eq!(
         freeze.dependencies(),
         [FreezePackage::new(
-            "dep".into(),
+            mock_identity("dep"),
             Version::new(1, 0, 0),
             vec![],
             vec![],
-            ExpandedLocation::Local {
-                absolute_path: root
-                    .path()
-                    .join("dep")
-                    .resolve()
-                    .unwrap()
-                    .to_url()
-                    .unwrap()
-                    .into(),
-            }
         )]
     );
 }
@@ -503,6 +495,16 @@ fn sync_with_deps() {
 fn sync_with_deps_and_expose_freezefile() {
     let (ctx, _home, storage_root) = setup_mock_storage();
     let (root, _) = create_mock_package_with_deps_at_tmpdir(&ctx, "my-package");
+    let mock_simple_identity = |name: &str| {
+        let path = root.path().join(name).resolve().unwrap();
+        let simple_origin = SimpleOrigin::for_local(&path).unwrap();
+        SimpleIdentity::new(name.into(), simple_origin)
+    };
+    let mock_identity = |name: &str| {
+        let path = root.path().join(name).resolve().unwrap();
+        let origin = Origin::for_local(&path).unwrap();
+        Identity::new(name.into(), origin)
+    };
     println!("root: {}", root.path().display());
     root.path()
         .join("root")
@@ -532,27 +534,14 @@ fn sync_with_deps_and_expose_freezefile() {
     assert_eq!(root_package.name(), "my-package");
     assert_eq!(root_package.version(), Version::new(1, 0, 0));
     assert!(root_package.features().is_empty());
-    assert_eq!(
-        root_package.dependencies(),
-        [FreezeDep::new("dep".into(), Version::new(1, 0, 0))]
-    );
+    assert_eq!(root_package.dependencies(), [mock_simple_identity("dep")],);
     assert_eq!(
         freeze.dependencies(),
         [FreezePackage::new(
-            "dep".into(),
+            mock_identity("dep"),
             Version::new(1, 0, 0),
             vec![],
             vec![],
-            ExpandedLocation::Local {
-                absolute_path: root
-                    .path()
-                    .join("dep")
-                    .resolve()
-                    .unwrap()
-                    .to_url()
-                    .unwrap()
-                    .into(),
-            }
         )]
     );
     let data = root
