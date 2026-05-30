@@ -866,7 +866,7 @@ namespace compiler::mir {
 	 * @brief Structure representing single MIRUnit.
 	 *
 	 * MIR unit is an arbitrary code collections represented in MIR IR.
-	 * There is no constract on what any given MIRUnit should contain.
+	 * There is no assumption on what any given MIRUnit should contain.
 	 *
 	 * @note MIR units are created mostly from HOUT units.
 	 */

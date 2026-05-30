@@ -390,14 +390,14 @@ namespace compiler::lir {
 
 	void LIRUnit::debugPrint(query::Context& ctx, std::ostream& os) const {
 		os << "LIRUnit: \n";
-		os << "Functions:\n";
-		for (const auto& func: lir_functions) {
-			func->debugPrint(ctx, os);
-			os << "\n";
-		}
 		os << "Globals:\n";
 		for (const auto& global: lir_globals) {
 			global.debugPrint(ctx, os);
+			os << "\n";
+		}
+		os << "Functions:\n";
+		for (const auto& func: lir_functions) {
+			func->debugPrint(ctx, os);
 			os << "\n";
 		}
 	}

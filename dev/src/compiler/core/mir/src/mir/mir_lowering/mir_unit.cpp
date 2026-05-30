@@ -27,29 +27,28 @@ namespace compiler::mir {
 			// Discard information-less globals.
 			if (not hout_global->type.getType().carriesInformation(ctx)) continue;
 
-			auto helios_kind_to_mir_kind = [](helios::HOUTGlobalDataType type) -> MIRGlobal::Kind {
-				switch (type) {
-				case helios::HOUTGlobalDataType::Constant:
-					return MIRGlobal::Kind::Constant;
-				case helios::HOUTGlobalDataType::Variable:
-					return MIRGlobal::Kind::Variable;
-				default:
-					CORE_UNREACHABLE();
-				}
-			};
-
 			variant_match(hout_global->value) {
 				variant_case(helios::HOUTGlobalConst, ctv_initial_value) {
+					CORE_ASSERT(
+						hout_global->data_type == helios::HOUTGlobalDataType::Constant,
+						"We assume currently HOUTGlobalConst <-> CTV initial value, change the code here if this ever changes"
+					);
+
 					unit_result.mir_globals.emplace_back(MIRGlobalData{
 						.global = MIRGlobal{
 							hout_global->helios_symbol,
 							hout_global->type,
-							helios_kind_to_mir_kind(hout_global->data_type),
+							MIRGlobal::Kind::Constant,
 						},
 						.initial_value = ctv_initial_value.value,
 					});
 				}
 				variant_case(helios::HOUTGlobalVariable, hout_expr_initial_value) {
+					CORE_ASSERT(
+						hout_global->data_type == helios::HOUTGlobalDataType::Variable,
+						"We assume currently HOUTGlobalVariable <-> CRef<mir::Function> initial value, change the code here if this ever changes"
+					);
+
 					CRef mir_ctor_function
 						= ctx.query<mir::LowerGlobalDataToMIRCtor>({ hout_global });
 					if (mir_ctor_function->hasFailed()) {
@@ -60,7 +59,7 @@ namespace compiler::mir {
 						.global = MIRGlobal{
 							hout_global->helios_symbol,
 							hout_global->type,
-							helios_kind_to_mir_kind(hout_global->data_type),
+							MIRGlobal::Kind::Variable,
 						},
 						.initial_value = &mir_ctor_function->valueOrPanic(),
 					});

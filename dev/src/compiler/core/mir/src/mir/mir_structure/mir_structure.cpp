@@ -189,10 +189,14 @@ namespace compiler::mir {
 	}
 
 	void MIRGlobal::debugPrint(std::ostream& os, bool detailed) const {
-		os << "Global(" << name(helios_id).strView() << ")";
 		if (detailed) {
+		    os << "[MIR] Global: ";
 			os << ": Helios Name: " << name(helios_id).strView();
 			os << ", Type: " << type.toString();
+			os << "\n";
+	    }
+		if (not detailed) {
+		    os << "Global(" << name(helios_id).strView() << ")";
 		}
 	}
 

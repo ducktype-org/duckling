@@ -660,7 +660,7 @@ namespace compiler::lir {
 	 * @brief Structure representing single LIRUnit.
 	 *
 	 * LIR unit is an arbitrary code collections represented in LIR IR.
-	 * There is no constract on what any given LIRUnit should contain.
+	 * There is no assumption on what any given LIRUnit should contain.
 	 *
 	 * @note LIR units are created mostly from MIR units.
 	 */
