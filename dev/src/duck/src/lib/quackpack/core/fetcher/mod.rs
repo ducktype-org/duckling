@@ -9,9 +9,10 @@ use tempfile::TempDir;
 use tracing::debug;
 use url::Url;
 
-use crate::quackpack::core::Git;
+use crate::quackpack::core::GitReference;
 use crate::quackpack::core::fetcher::types::{FetcherResponse, PackageWithUrl};
 use crate::quackpack::schemas::registry;
+use crate::quackpack::util::interned_url::InternedUrl;
 use crate::util::file_locks::FileLockManager;
 use crate::util::path_ops_ext::{MkdirOptions, PathOpsExt};
 use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail_internal};
@@ -113,17 +114,17 @@ impl<'duck> Fetcher<'duck> {
     /// Otherwise __no__ lookup is performed.
     /// However, in that case it saves all fetched metadata, so
     /// future calls to [`get_package_metadata`](Self::get_package_metadata) should cache hit.
-    #[tracing::instrument(skip(self, url), fields(url = url.as_str()))]
+    #[tracing::instrument(skip(self))]
     pub fn get_package_all_metadata(
         &mut self,
-        url: &Url,
+        url: InternedUrl,
         package_name: StrId,
     ) -> QuackResult<FetcherResponse<types::MultiMetadata>> {
         if self.ctx.is_offline() {
             let package = PackageWithUrl {
                 id: package_name,
                 version: 1.into(),
-                url: url.clone(),
+                url,
             };
             let cached = self.cache.get_all_manifests(&package)?;
             return Ok(FetcherResponse::Some(types::MultiMetadata {
@@ -132,10 +133,10 @@ impl<'duck> Fetcher<'duck> {
         }
         let result = self
             .ducknest_client
-            .get_multi_metadata(url, package_name)
+            .get_multi_metadata(&url, package_name)
             .with_context(|| format!("while getting a multimetadata of `{}`", package_name))?;
         self.cache
-            .add_or_replace_multiple_manifests(url.clone(), result.packages_metadata.clone())?;
+            .add_or_replace_multiple_manifests(url, result.packages_metadata.clone())?;
         Ok(FetcherResponse::Some(result))
     }
 
@@ -176,15 +177,11 @@ impl<'duck> Fetcher<'duck> {
     #[tracing::instrument(skip(self))]
     pub fn clone_from_git_to_directory(
         &self,
-        source: &Git,
+        url: &Url,
+        reference: &GitReference,
         destination_directory: &std::path::Path,
     ) -> QuackResult<types::GitCloneResponse> {
-        git::GitClient::clone_blocking(
-            source.url(),
-            source.reference(),
-            destination_directory,
-            self.ctx,
-        )
+        git::GitClient::clone_blocking(url, reference, destination_directory, self.ctx)
     }
 
     /// Same as [`clone_from_git_to_directory`](Self::clone_from_git_to_directory), but a target directory is a temporary
@@ -192,10 +189,14 @@ impl<'duck> Fetcher<'duck> {
     ///
     /// This is needed because storage paths depend on a commit, which we can only get after
     /// cloning a repository.
-    #[tracing::instrument(skip(self))]
-    pub fn clone_from_git(&self, source: &Git) -> QuackResult<(types::GitCloneResponse, TempDir)> {
+    #[tracing::instrument(skip(self, url) fields(url = url.as_str()))]
+    pub fn clone_from_git(
+        &self,
+        url: &Url,
+        reference: &GitReference,
+    ) -> QuackResult<(types::GitCloneResponse, TempDir)> {
         let dir = tempfile::tempdir().context("failed to create a temporary directory")?;
-        let result = self.clone_from_git_to_directory(source, dir.path())?;
+        let result = self.clone_from_git_to_directory(url, reference, dir.path())?;
         Ok((result, dir))
     }
 

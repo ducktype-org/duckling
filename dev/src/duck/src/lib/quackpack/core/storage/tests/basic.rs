@@ -13,6 +13,7 @@ use crate::quackpack::core::storage::venv::Venv;
 use crate::quackpack::core::storage::venv_id::ToVenvId;
 use crate::quackpack::core::storage::{self, StorageSyncOptions, ops};
 use crate::quackpack::core::{PackageLoader, Version};
+use crate::quackpack::util::to_url::ToUrl;
 use crate::util::path_ops_ext::PathOpsExt;
 
 fn check_venvs_exist(root: &Path, names: &[&str]) {
@@ -258,8 +259,7 @@ fn save_trims_files() {
             ExpandedLocation::Registry {
                 url: Fetcher::DEFAULT_REGISTRY_URL.parse().unwrap(),
                 real_name: "dep".into(),
-            }
-            .into(),
+            },
         );
         venv.data_mut()
             .freeze_mut()
@@ -486,9 +486,15 @@ fn sync_with_deps() {
             vec![],
             vec![],
             ExpandedLocation::Local {
-                absolute_path: root.path().join("dep").resolve().unwrap()
+                absolute_path: root
+                    .path()
+                    .join("dep")
+                    .resolve()
+                    .unwrap()
+                    .to_url()
+                    .unwrap()
+                    .into(),
             }
-            .into()
         )]
     );
 }
@@ -538,9 +544,15 @@ fn sync_with_deps_and_expose_freezefile() {
             vec![],
             vec![],
             ExpandedLocation::Local {
-                absolute_path: root.path().join("dep").resolve().unwrap()
+                absolute_path: root
+                    .path()
+                    .join("dep")
+                    .resolve()
+                    .unwrap()
+                    .to_url()
+                    .unwrap()
+                    .into(),
             }
-            .into()
         )]
     );
     let data = root

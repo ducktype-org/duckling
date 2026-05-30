@@ -17,6 +17,7 @@ use crate::quackpack::core::storage::venv_id::ToVenvId;
 use crate::quackpack::core::{PackageContext, PackageLoader, Version};
 use crate::quackpack::subcommands::init;
 use crate::quackpack::subcommands::init::InitOptions;
+use crate::quackpack::util::to_url::ToUrl;
 use crate::util::path_ops_ext::PathOpsExt;
 use crate::util::test_utils::setup_test;
 
@@ -24,7 +25,7 @@ mod basic;
 mod concurrent;
 
 fn registry_url_hash() -> String {
-    let url: Url = Fetcher::DEFAULT_REGISTRY_URL.parse().unwrap();
+    let url: Url = Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap();
     crate::util::hash::sha256_string(url.host_str().unwrap())
 }
 
@@ -125,8 +126,7 @@ fn setup_mock_venvs(root: &Path, ctx: &DuckContext) {
         ExpandedLocation::Registry {
             url: Fetcher::DEFAULT_REGISTRY_URL.parse().unwrap(),
             real_name: dep.name(),
-        }
-        .into(),
+        },
     );
     setup_mock_venv(
         root,
@@ -151,8 +151,7 @@ fn setup_mock_venvs(root: &Path, ctx: &DuckContext) {
         ExpandedLocation::Registry {
             url: Fetcher::DEFAULT_REGISTRY_URL.parse().unwrap(),
             real_name: dep.name(),
-        }
-        .into(),
+        },
     );
 
     setup_mock_venv(

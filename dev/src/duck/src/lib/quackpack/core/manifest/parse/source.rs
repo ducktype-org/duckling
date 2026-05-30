@@ -7,11 +7,12 @@ use itertools::Itertools;
 use tracing::debug;
 use url::Url;
 
-use super::Scope;
-use crate::quackpack::core::{Git, GitReference, Local, Registry, ScopeGuard, Source};
+use super::{Scope, ScopeGuard};
+use crate::quackpack::core::{GitReference, Source};
 use crate::quackpack::schemas::manifest::{
     Dependency as DependencySchema, DependencySource as SourceSchema, DetailedSource,
 };
+use crate::quackpack::util::to_url::ToUrl;
 use crate::util::error::MessageError;
 use crate::util::path_ops_ext::PathOpsExt;
 use crate::{DuckContext, QpContext, QuackError, QuackResult, QuackResultContext, qp_bail, qp_err};
@@ -30,7 +31,8 @@ pub(crate) fn parse(
     let Some(ref source) = schema.source else {
         debug!("missing the source, falling back to the default registry...?");
         if schema.version.is_some() {
-            return Ok(Source::Registry(Registry::new(ctx.registry_url()?)));
+            let url = ctx.registry_url()?;
+            return Ok(Source::for_registry(url));
         }
         scope.disarm_and_pop();
         return Err(QuackError::hint(
@@ -53,15 +55,15 @@ pub(crate) fn parse(
     }
     let source = match source {
         SourceSchema::Simple(registry_url) => {
-            let url = registry_url
+            let url: Url = registry_url
                 .as_str()
                 .try_into()
                 .with_context(|| format!("`{registry_url}` is not a valid URL"))?;
-            return Ok(Registry::new(url).into());
+            return Ok(Source::for_registry(url));
         }
         SourceSchema::Detailed(detailed_source) => detailed_source,
     };
-    let source: Source = match (
+    let source = match (
         source.registry_url.as_ref(),
         source.path.as_ref(),
         source.git_url.as_ref(),
@@ -73,7 +75,8 @@ pub(crate) fn parse(
             check_no_registry(source, &mut scope)?;
             if schema.version.is_some() {
                 debug!("...but has a version, assuming registry source");
-                Registry::new(ctx.registry_url()?).into()
+                let url = ctx.registry_url()?;
+                Source::for_registry(url)
             } else {
                 scope.pop();
                 return Err(QuackError::hint(
@@ -89,19 +92,19 @@ pub(crate) fn parse(
             debug!("found a registry source");
             check_no_git(source, &mut scope)?;
             check_no_local(source, &mut scope)?;
-            let url = registry_url
+            let url: Url = registry_url
                 .as_str()
                 .try_into()
                 .with_context(|| format!("`{registry_url}` is not a valid URL"))?;
-            Registry::new(url).into()
+            Source::for_registry(url)
         }
         (None, Some(root), None) => {
             debug!("found a local path source");
             check_no_git(source, &mut scope)?;
             check_no_registry(source, &mut scope)?;
             debug!("manifest path is `{root}`");
-            let (dir_root, was_relative) = resolve_local_dep_root(root, package_root, ctx)?;
-            Local::new(dir_root, root.into(), was_relative).into()
+            let dir_root = resolve_local_dep_root(root, package_root, ctx)?;
+            Source::for_local(&dir_root)?
         }
         (None, None, Some(manifest_git_url)) => {
             debug!("found a git source");
@@ -109,7 +112,7 @@ pub(crate) fn parse(
             check_no_registry(source, &mut scope)?;
             let reference = resolve_git_reference(source, &scope)?;
             let git_url = parse_git_url(manifest_git_url, package_root, ctx)?;
-            Git::new(git_url, reference).into()
+            Source::for_git(git_url, reference)
         }
         (None, Some(_), Some(_)) => {
             scope.pop();
@@ -259,7 +262,7 @@ fn resolve_local_dep_root(
     manifest_root: &str,
     package_root: &Path,
     ctx: &DuckContext,
-) -> QuackResult<(PathBuf, bool)> {
+) -> QuackResult<PathBuf> {
     let home = ctx.user_home();
     let Some(home) = home.to_str() else {
         qp_bail!(
@@ -269,15 +272,12 @@ fn resolve_local_dep_root(
     };
     let expanded = Path::new(manifest_root).expand_user_with(home)?;
     if expanded.is_absolute() {
-        Ok((expanded.to_path_buf(), false))
+        Ok(expanded.to_path_buf())
     } else {
-        Ok((
-            package_root
-                .join(expanded)
-                .expand_user_with(home)?
-                .resolve()?,
-            true,
-        ))
+        Ok(package_root
+            .join(expanded)
+            .expand_user_with(home)?
+            .resolve()?)
     }
 }
 
@@ -287,14 +287,14 @@ fn parse_git_url(
     package_root: &Path,
     ctx: &DuckContext,
 ) -> QuackResult<Url> {
-    let git_url = Url::parse(manifest_git_url);
+    let git_url = manifest_git_url.to_url();
     let mut err: QuackError = match git_url {
         Ok(parsed) => return Ok(parsed),
-        Err(err) => err.into(),
+        Err(err) => err,
     };
     // We are building error messages from the bottom to the top.
     // If an original URL points to a file, mention it to the user. Also, ignore any errors.
-    if let Ok((path, _)) = resolve_local_dep_root(manifest_git_url, package_root, ctx)
+    if let Ok(path) = resolve_local_dep_root(manifest_git_url, package_root, ctx)
         && path.exists()
     {
         err = err.add_hint(format!(

@@ -10,11 +10,11 @@ use std::path::Path;
 use std::str::FromStr;
 
 use serde::{Deserialize, Serialize, de};
-use url::Url;
 
 use crate::quackpack::core::identity::{Identity, Kind, Origin};
 use crate::quackpack::util::interned_url::InternedUrl;
 use crate::quackpack::util::is_local_file::IsLocalFile;
+use crate::quackpack::util::to_url::ToUrl;
 use crate::{QuackError, QuackResult, QuackResultContext, StrId, qp_bail, qp_err};
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
@@ -87,6 +87,11 @@ pub struct SimpleOrigin {
 impl SimpleOrigin {
     /// Create a new [`SimpleOrigin`].
     pub(super) fn new(url: InternedUrl, kind: SimpleKind) -> Self {
+        // kind = local => url.is_local_file
+        debug_assert!(
+            url.is_local_file() || !kind.is_local(),
+            "kind=`local` should have `file://`"
+        );
         Self { url, kind }
     }
 
@@ -102,8 +107,7 @@ impl SimpleOrigin {
 
     /// Create a new [`SimpleOrigin`] for a git with a commit.
     pub fn for_local(root: &Path) -> QuackResult<Self> {
-        let url = Url::from_file_path(root)
-            .map_err(|_| qp_err!("failed to convert the path `{}` into a url", root.display()))?;
+        let url = root.to_url()?;
         Ok(Self::new(url.into(), SimpleKind::Local))
     }
 
@@ -154,7 +158,7 @@ impl FromStr for SimpleOrigin {
             "git" => SimpleKind::Git,
             kind => return Err(unexpected_kind_error(kind)),
         };
-        let url = Url::parse(url).with_context(|| format!("`{url}` is not a valid url"))?;
+        let url = url.to_url()?;
         if kind.is_local() && !url.is_local_file() {
             qp_bail!(
                 "inferred kind=`local`, but url scheme is `{}`",
@@ -268,17 +272,18 @@ mod tests {
     use std::path::PathBuf;
 
     use super::*;
+    use crate::quackpack::util::to_url::ToUrl;
 
     #[test]
     fn origin_display() {
         {
-            let url = Url::parse("https://localhost:9001").unwrap();
+            let url = "https://localhost:9001".to_url().unwrap();
             let origin = SimpleOrigin::for_registry(url);
             assert_eq!(origin.to_string(), "registry+https://localhost:9001/");
         }
 
         {
-            let url = Url::parse("https://localhost:9001").unwrap();
+            let url = "https://localhost:9001".to_url().unwrap();
             let origin = SimpleOrigin::for_git(url);
             assert_eq!(origin.to_string(), "git+https://localhost:9001/");
         }
@@ -292,14 +297,14 @@ mod tests {
     #[test]
     fn origin_parse() {
         {
-            let url = Url::parse("https://localhost:9001").unwrap();
+            let url = "https://localhost:9001".to_url().unwrap();
             let origin = SimpleOrigin::for_registry(url);
             let formatted = origin.to_string();
             let parsed = formatted.parse::<SimpleOrigin>().unwrap();
             assert_eq!(parsed, origin);
         }
         {
-            let url = Url::parse("https://localhost:9001").unwrap();
+            let url = "https://localhost:9001".to_url().unwrap();
             let origin = SimpleOrigin::for_git(url);
             let formatted = origin.to_string();
             let parsed = formatted.parse::<SimpleOrigin>().unwrap();
@@ -340,14 +345,14 @@ mod tests {
     #[test]
     fn identity_display() {
         {
-            let url = Url::parse("https://localhost:9001").unwrap();
+            let url = "https://localhost:9001".to_url().unwrap();
             let origin = SimpleOrigin::for_registry(url);
             let identity = SimpleIdentity::new("foo".into(), origin);
             let formatted = identity.to_string();
             assert_eq!(formatted, "foo registry+https://localhost:9001/");
         }
         {
-            let url = Url::parse("https://localhost:9001").unwrap();
+            let url = "https://localhost:9001".to_url().unwrap();
             let origin = SimpleOrigin::for_git(url);
             let identity = SimpleIdentity::new("foo".into(), origin);
             let formatted = identity.to_string();
@@ -365,7 +370,7 @@ mod tests {
     #[test]
     fn identity_parse() {
         {
-            let url = Url::parse("https://localhost:9001").unwrap();
+            let url = "https://localhost:9001".to_url().unwrap();
             let origin = SimpleOrigin::for_registry(url);
             let identity = SimpleIdentity::new("foo".into(), origin);
             let formatted = identity.to_string();
@@ -373,7 +378,7 @@ mod tests {
             assert_eq!(parsed, identity);
         }
         {
-            let url = Url::parse("https://localhost:9001").unwrap();
+            let url = "https://localhost:9001".to_url().unwrap();
             let origin = SimpleOrigin::for_git(url);
             let identity = SimpleIdentity::new("foo".into(), origin);
             let formatted = identity.to_string();

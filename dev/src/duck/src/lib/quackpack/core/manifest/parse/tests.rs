@@ -5,7 +5,8 @@ use std::path::PathBuf;
 use tempfile::{TempDir, tempdir};
 
 use super::parse_manifest;
-use crate::quackpack::core::{GitReference, OptLevel, Profile, Source, Version};
+use crate::quackpack::core::{GitReference, OptLevel, Profile, Version};
+use crate::quackpack::util::to_path_buf::ToPathBuf;
 use crate::util::path_ops_ext::PathOpsExt;
 use crate::{DuckContext, QpContext, StrId};
 
@@ -176,11 +177,7 @@ dependencies:
     assert_eq!(a.versions()[0].to_string(), "0.1.0");
     assert_eq!(a.versions()[1].to_string(), "2.0.0");
     assert!(a.source().is_git());
-    if let Source::Git(git_source) = a.source().as_ref() {
-        assert_eq!(git_source.url().as_str(), "https://google.com/");
-    } else {
-        panic!("wrong type")
-    }
+    assert_eq!(a.source().url().as_str(), "https://google.com/");
     assert!(summary.dev_dependencies().all_dependencies().is_empty());
     assert!(summary.features().all_features().is_empty());
 }
@@ -402,21 +399,16 @@ dependencies:
 
     let a = summary.dependencies().get_by_name(StrId::new("a")).unwrap();
     assert!(a.source().is_local());
-    if let Source::Local(local_source) = a.source().as_ref() {
-        assert_eq!(
-            local_source.absolute(),
-            manifest_path
-                .parent()
-                .unwrap()
-                .resolve()
-                .unwrap()
-                .join("xd")
-        );
-        assert!(local_source.was_original_entry_relative());
-        assert_eq!(local_source.entry_in_manifest(), "xd");
-    } else {
-        panic!("wrong type")
-    }
+    let path = a.source().url().to_path_buf().unwrap();
+    assert_eq!(
+        path,
+        manifest_path
+            .parent()
+            .unwrap()
+            .resolve()
+            .unwrap()
+            .join("xd")
+    );
     assert!(a.versions().is_empty());
     assert_eq!(a.name(), a.effective_name());
     assert!(a.alias().is_none());
@@ -426,23 +418,19 @@ dependencies:
         .get_by_name(StrId::new("a1"))
         .unwrap();
     assert!(a1.source().is_local());
-    if let Source::Local(local_source) = a1.source().as_ref() {
-        assert_eq!(
-            local_source.absolute(),
-            manifest_path
-                .parent()
-                .unwrap()
-                .parent()
-                .unwrap()
-                .resolve()
-                .unwrap()
-                .join("xd")
-        );
-        assert!(local_source.was_original_entry_relative());
-        assert_eq!(local_source.entry_in_manifest(), "../xd");
-    } else {
-        panic!("wrong type")
-    }
+
+    let path = a1.source().url().to_path_buf().unwrap();
+    assert_eq!(
+        path,
+        manifest_path
+            .parent()
+            .unwrap()
+            .parent()
+            .unwrap()
+            .resolve()
+            .unwrap()
+            .join("xd")
+    );
     assert!(a1.alias().is_none());
 
     let a2 = summary
@@ -450,14 +438,9 @@ dependencies:
         .get_by_name(StrId::new("a2"))
         .unwrap();
     assert!(a2.source().is_local());
-    if let Source::Local(local_source) = a2.source().as_ref() {
-        let home_dir = home_dir().unwrap();
-        assert_eq!(local_source.absolute(), home_dir.join("xd"));
-        assert!(!local_source.was_original_entry_relative());
-        assert_eq!(local_source.entry_in_manifest(), "~/xd");
-    } else {
-        panic!("wrong type")
-    }
+    let path = a2.source().url().to_path_buf().unwrap();
+    let home_dir = home_dir().unwrap();
+    assert_eq!(path, home_dir.join("xd"));
     assert!(a2.alias().is_none());
 
     let a3 = summary
@@ -465,23 +448,14 @@ dependencies:
         .get_by_name(StrId::new("a3"))
         .unwrap();
     assert!(a3.source().is_local());
-    if let Source::Local(local_source) = a3.source().as_ref() {
-        assert_eq!(local_source.absolute(), PathBuf::from("/xd"));
-        assert!(!local_source.was_original_entry_relative());
-        assert_eq!(local_source.entry_in_manifest(), "/xd");
-    } else {
-        panic!("wrong type")
-    }
+    let path = a3.source().url().to_path_buf().unwrap();
+    assert_eq!(path, PathBuf::from("/xd"));
     assert!(a3.alias().is_none());
 
     let b = summary.dependencies().get_by_name(StrId::new("b")).unwrap();
     assert!(b.source().is_registry());
-    if let Source::Registry(registry_source) = b.source().as_ref() {
-        let default_registry = ctx.registry_url().unwrap();
-        assert_eq!(*registry_source.url(), default_registry);
-    } else {
-        panic!("wrong type")
-    }
+    let default_registry = ctx.registry_url().unwrap();
+    assert_eq!(b.source().url(), default_registry);
     assert_eq!(b.versions().len(), 1);
     assert_eq!(b.versions()[0].to_string(), "0.1.0");
     assert_eq!(b.name(), b.effective_name());
@@ -502,11 +476,7 @@ dependencies:
         .get_by_alias(StrId::new("d"))
         .unwrap();
     assert!(d.source().is_registry());
-    if let Source::Registry(registry_source) = d.source().as_ref() {
-        assert_eq!(registry_source.url().as_str(), "https://google.com/");
-    } else {
-        panic!("wrong type")
-    }
+    assert_eq!(d.source().url().as_str(), "https://google.com/");
     assert_eq!(d.versions().len(), 1);
     assert_eq!(d.name(), "alias2");
     assert_eq!(d.alias(), Some("d".into()));
@@ -514,51 +484,33 @@ dependencies:
 
     let e = summary.dependencies().get_by_name(StrId::new("e")).unwrap();
     assert!(e.source().is_git());
-    if let Source::Git(git_source) = e.source().as_ref() {
-        assert_eq!(git_source.url().as_str(), "https://google.com/");
-        assert_eq!(
-            git_source.reference(),
-            &GitReference::Branch("branch".to_owned())
-        );
-    } else {
-        panic!("wrong type")
-    }
+    assert_eq!(e.source().url().as_str(), "https://google.com/");
+    let reference = e.source().maybe_reference().unwrap();
+    assert_eq!(reference, &GitReference::Branch("branch".to_owned()));
     assert!(e.versions().is_empty());
     assert_eq!(e.name(), e.effective_name());
 
     let f = summary.dependencies().get_by_name(StrId::new("f")).unwrap();
     assert!(f.source().is_git());
-    if let Source::Git(git_source) = f.source().as_ref() {
-        assert_eq!(git_source.url().as_str(), "https://google.com/");
-        assert_eq!(git_source.reference(), &GitReference::Tag("tag".to_owned()));
-    } else {
-        panic!("wrong type")
-    }
+    assert_eq!(f.source().url().as_str(), "https://google.com/");
+    let reference = f.source().maybe_reference().unwrap();
+    assert_eq!(reference, &GitReference::Tag("tag".to_owned()));
     assert!(f.versions().is_empty());
     assert_eq!(f.name(), f.effective_name());
 
     let g = summary.dependencies().get_by_name(StrId::new("g")).unwrap();
     assert!(g.source().is_git());
-    if let Source::Git(git_source) = g.source().as_ref() {
-        assert_eq!(git_source.url().as_str(), "https://google.com/");
-        assert_eq!(
-            git_source.reference(),
-            &GitReference::Rev("commit".to_owned())
-        );
-    } else {
-        panic!("wrong type")
-    }
+    assert_eq!(g.source().url().as_str(), "https://google.com/");
+    let reference = g.source().maybe_reference().unwrap();
+    assert_eq!(reference, &GitReference::Rev("commit".to_owned()));
     assert!(g.versions().is_empty());
     assert_eq!(g.name(), g.effective_name());
 
     let h = summary.dependencies().get_by_name(StrId::new("h")).unwrap();
     assert!(h.source().is_git());
-    if let Source::Git(git_source) = h.source().as_ref() {
-        assert_eq!(git_source.url().as_str(), "https://google.com/");
-        assert_eq!(git_source.reference(), &GitReference::Default,);
-    } else {
-        panic!("wrong type")
-    }
+    assert_eq!(h.source().url().as_str(), "https://google.com/");
+    let reference = h.source().maybe_reference().unwrap();
+    assert_eq!(reference, &GitReference::Default);
     assert!(h.versions().is_empty());
     assert_eq!(h.name(), h.effective_name());
 
@@ -879,6 +831,7 @@ dependencies:
                     "either change it to a local dependency or change the URL to `file://{}`",
                     root_dir.path().display()
                 ),
+                &format!("`{}` is not a valid url", root_dir.path().display()),
                 "relative URL without a base",
             ]
         )

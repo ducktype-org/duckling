@@ -175,8 +175,7 @@ pub fn freeze() -> VenvFreeze {
                 ExpandedLocation::Registry {
                     url: Fetcher::DEFAULT_REGISTRY_URL.parse().unwrap(),
                     real_name: "foo".into(),
-                }
-                .into(),
+                },
             ),
             FreezePackage::new(
                 "bar".into(),
@@ -186,8 +185,7 @@ pub fn freeze() -> VenvFreeze {
                 ExpandedLocation::Registry {
                     url: Fetcher::DEFAULT_REGISTRY_URL.parse().unwrap(),
                     real_name: "bar".into(),
-                }
-                .into(),
+                },
             ),
             FreezePackage::new(
                 "baz".into(),
@@ -197,8 +195,7 @@ pub fn freeze() -> VenvFreeze {
                 ExpandedLocation::Registry {
                     url: Fetcher::DEFAULT_REGISTRY_URL.parse().unwrap(),
                     real_name: "baz".into(),
-                }
-                .into(),
+                },
             ),
         ],
     )
@@ -221,8 +218,7 @@ pub fn freeze_with_cycle() -> VenvFreeze {
                 ExpandedLocation::Registry {
                     url: Fetcher::DEFAULT_REGISTRY_URL.parse().unwrap(),
                     real_name: "foo".into(),
-                }
-                .into(),
+                },
             ),
             FreezePackage::new(
                 "bar".into(),
@@ -232,8 +228,7 @@ pub fn freeze_with_cycle() -> VenvFreeze {
                 ExpandedLocation::Registry {
                     url: Fetcher::DEFAULT_REGISTRY_URL.parse().unwrap(),
                     real_name: "bar".into(),
-                }
-                .into(),
+                },
             ),
             FreezePackage::new(
                 "baz".into(),
@@ -243,8 +238,7 @@ pub fn freeze_with_cycle() -> VenvFreeze {
                 ExpandedLocation::Registry {
                     url: Fetcher::DEFAULT_REGISTRY_URL.parse().unwrap(),
                     real_name: "baz".into(),
-                }
-                .into(),
+                },
             ),
         ],
     )
@@ -278,8 +272,7 @@ pub fn freeze_without_transitive_dep() -> VenvFreeze {
             ExpandedLocation::Registry {
                 url: Fetcher::DEFAULT_REGISTRY_URL.parse().unwrap(),
                 real_name: "foo".into(),
-            }
-            .into(),
+            },
         )],
     )
 }

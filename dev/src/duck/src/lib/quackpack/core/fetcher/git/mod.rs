@@ -22,7 +22,7 @@ pub struct GitClient {}
 
 impl GitClient {
     /// Clone a repository pointed by `source` into `destination`, and parse a package it contains.
-    #[tracing::instrument(skip(ctx))]
+    #[tracing::instrument(skip(ctx, url) fields(url = url.as_str()))]
     pub fn clone_blocking(
         url: &Url,
         reference: &GitReference,

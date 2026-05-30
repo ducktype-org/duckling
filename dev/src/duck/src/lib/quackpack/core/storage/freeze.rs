@@ -4,7 +4,7 @@ use std::str::FromStr;
 
 use serde::{Deserialize, Serialize, de, ser};
 
-use crate::quackpack::core::solver::types_common::{ExpandedLocation, InternedExpandedLocation};
+use crate::quackpack::core::solver::types_common::ExpandedLocation;
 use crate::quackpack::core::storage::package_id::{GitId, LocalId, PackageId, RegistryId};
 use crate::quackpack::core::{FeatureName, Version};
 use crate::{QuackError, QuackResultContext, StrId, qp_bail};
@@ -144,7 +144,7 @@ pub struct FreezePackage {
     version: Version,
     features: Vec<FeatureName>,
     dependencies: Vec<FreezeDep>,
-    source: InternedExpandedLocation,
+    source: ExpandedLocation,
 }
 
 impl FreezePackage {
@@ -154,7 +154,7 @@ impl FreezePackage {
         version: Version,
         features: Vec<FeatureName>,
         dependencies: Vec<FreezeDep>,
-        source: InternedExpandedLocation,
+        source: ExpandedLocation,
     ) -> Self {
         Self {
             name,
@@ -224,26 +224,24 @@ impl FreezePackage {
     }
 
     /// Get the source of this dependency.
-    pub fn source(&self) -> InternedExpandedLocation {
+    pub fn source(&self) -> ExpandedLocation {
         self.source
     }
 
     /// Set the source of this dependency.
-    pub fn set_source(&mut self, source: InternedExpandedLocation) {
+    pub fn set_source(&mut self, source: ExpandedLocation) {
         self.source = source;
     }
 
     /// Cast self to the [`PackageId`].
     pub fn to_package_id(&self) -> PackageId {
-        match self.source().as_ref() {
+        match self.source() {
             ExpandedLocation::Registry { url, .. } => {
-                PackageId::Registry(RegistryId::new(self.name(), self.version(), url.clone()))
+                PackageId::Registry(RegistryId::new(self.name(), self.version(), url))
             }
-            ExpandedLocation::Git { url, commit } => {
-                PackageId::Git(GitId::new(url.clone(), *commit))
-            }
+            ExpandedLocation::Git { url, commit } => PackageId::Git(GitId::new(url, commit)),
             ExpandedLocation::Local { absolute_path } => {
-                PackageId::Local(LocalId::new(absolute_path.clone()))
+                PackageId::Local(LocalId::new(absolute_path))
             }
         }
     }

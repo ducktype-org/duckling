@@ -26,6 +26,30 @@ impl PartialEq for InternedUrl {
     }
 }
 
+impl PartialEq<Url> for InternedUrl {
+    fn eq(&self, other: &Url) -> bool {
+        self.as_url() == other
+    }
+}
+
+impl PartialEq<&Url> for InternedUrl {
+    fn eq(&self, other: &&Url) -> bool {
+        self.as_url() == *other
+    }
+}
+
+impl PartialEq<InternedUrl> for Url {
+    fn eq(&self, other: &InternedUrl) -> bool {
+        other == self
+    }
+}
+
+impl PartialEq<InternedUrl> for &Url {
+    fn eq(&self, other: &InternedUrl) -> bool {
+        other == self
+    }
+}
+
 impl Eq for InternedUrl {}
 
 impl Hash for InternedUrl {
@@ -44,6 +68,11 @@ impl InternedUrl {
             static_ref
         });
         Self { inner: reference }
+    }
+
+    /// Get the reference to the underlying [`Url`].
+    pub fn as_url(&self) -> &'static Url {
+        self.inner
     }
 }
 
@@ -70,12 +99,6 @@ impl AsRef<Url> for InternedUrl {
 impl AsRef<str> for InternedUrl {
     fn as_ref(&self) -> &str {
         self.inner.as_ref()
-    }
-}
-
-impl PartialEq<Url> for InternedUrl {
-    fn eq(&self, other: &Url) -> bool {
-        self.inner == other
     }
 }
 

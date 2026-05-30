@@ -4,12 +4,12 @@ use std::fmt::Display;
 use std::path::Path;
 
 use serde::{Deserialize, Serialize, de};
-use url::Url;
 
 use crate::quackpack::core::simple_identity::{SimpleIdentity, SimpleKind, SimpleOrigin};
 use crate::quackpack::util::interned_url::InternedUrl;
 use crate::quackpack::util::is_local_file::IsLocalFile;
-use crate::{QuackResult, QuackResultContext, StrId, qp_err};
+use crate::quackpack::util::to_url::ToUrl;
+use crate::{QuackResult, StrId};
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 /// An [`Origin`]'s kind.
@@ -79,6 +79,11 @@ pub struct Origin {
 impl Origin {
     /// Create a new [`Origin`].
     fn new(url: InternedUrl, kind: Kind) -> Self {
+        // kind = local => url.is_local_file
+        debug_assert!(
+            url.is_local_file() || !kind.is_local(),
+            "kind=`local` should have `file://`"
+        );
         Self { url, kind }
     }
 
@@ -99,8 +104,7 @@ impl Origin {
 
     /// Create a new [`Origin`] for a git with a commit.
     pub fn for_local(root: &Path) -> QuackResult<Self> {
-        let url = Url::from_file_path(root)
-            .map_err(|_| qp_err!("failed to convert the path `{}` into a url", root.display()))?;
+        let url = root.to_url()?;
         Ok(Self::new(url.into(), Kind::Local))
     }
 
@@ -200,9 +204,7 @@ impl<'de> Deserialize<'de> for Origin {
             ("git", None) => return Err(expected_commit_error("git")),
             (kind, _) => return Err(unexpected_kind_error(kind)),
         };
-        let url = Url::parse(url)
-            .with_context(|| format!("`{url}` is not a valid url"))
-            .map_err(de::Error::custom)?;
+        let url = url.to_url().map_err(de::Error::custom)?;
         if kind.is_local() && !url.is_local_file() {
             let msg = format!(
                 "inferred kind=`local`, but url scheme is `{}`",
@@ -255,17 +257,18 @@ mod tests {
     use std::path::PathBuf;
 
     use super::*;
+    use crate::quackpack::util::to_url::ToUrl;
 
     #[test]
     fn origin_display() {
         {
-            let url = Url::parse("https://localhost:9001").unwrap();
+            let url = "https://localhost:9001".to_url().unwrap();
             let origin = Origin::for_registry(url);
             assert_eq!(origin.to_string(), "registry+https://localhost:9001/");
         }
 
         {
-            let url = Url::parse("https://localhost:9001").unwrap();
+            let url = "https://localhost:9001".to_url().unwrap();
             let origin = Origin::for_git(url, "1");
             assert_eq!(origin.to_string(), "git+https://localhost:9001/");
         }
@@ -279,7 +282,7 @@ mod tests {
     #[test]
     fn origin_serialize() {
         {
-            let url = Url::parse("https://localhost:9001").unwrap();
+            let url = "https://localhost:9001".to_url().unwrap();
             let origin = Origin::for_registry(url);
             let formatted = serde_json::to_string_pretty(&origin).unwrap();
             assert_eq!(
@@ -290,7 +293,7 @@ mod tests {
             );
         }
         {
-            let url = Url::parse("https://localhost:9001").unwrap();
+            let url = "https://localhost:9001".to_url().unwrap();
             let origin = Origin::for_git(url, "1");
             let formatted = serde_json::to_string_pretty(&origin).unwrap();
             assert_eq!(
@@ -317,14 +320,14 @@ mod tests {
     #[test]
     fn origin_deserialize() {
         {
-            let url = Url::parse("https://localhost:9001").unwrap();
+            let url = "https://localhost:9001".to_url().unwrap();
             let origin = Origin::for_registry(url);
             let formatted = serde_json::to_string_pretty(&origin).unwrap();
             let parsed = serde_json::from_str::<Origin>(&formatted).unwrap();
             assert_eq!(parsed, origin);
         }
         {
-            let url = Url::parse("https://localhost:9001").unwrap();
+            let url = "https://localhost:9001".to_url().unwrap();
             let origin = Origin::for_git(url, "1");
             let formatted = serde_json::to_string_pretty(&origin).unwrap();
             let parsed = serde_json::from_str::<Origin>(&formatted).unwrap();
@@ -392,7 +395,7 @@ mod tests {
     #[test]
     fn identity_serialize() {
         {
-            let url = Url::parse("https://localhost:9001").unwrap();
+            let url = "https://localhost:9001".to_url().unwrap();
             let origin = Origin::for_registry(url);
             let identity = Identity::new("foo".into(), origin);
             let formatted = serde_json::to_string_pretty(&identity).unwrap();
@@ -405,7 +408,7 @@ mod tests {
             );
         }
         {
-            let url = Url::parse("https://localhost:9001").unwrap();
+            let url = "https://localhost:9001".to_url().unwrap();
             let origin = Origin::for_git(url, "1");
             let identity = Identity::new("foo".into(), origin);
             let formatted = serde_json::to_string_pretty(&identity).unwrap();
@@ -436,7 +439,7 @@ mod tests {
     #[test]
     fn identity_deserialize() {
         {
-            let url = Url::parse("https://localhost:9001").unwrap();
+            let url = "https://localhost:9001".to_url().unwrap();
             let origin = Origin::for_registry(url);
             let identity = Identity::new("foo".into(), origin);
             let formatted = serde_json::to_string_pretty(&identity).unwrap();
@@ -444,7 +447,7 @@ mod tests {
             assert_eq!(parsed, identity);
         }
         {
-            let url = Url::parse("https://localhost:9001").unwrap();
+            let url = "https://localhost:9001".to_url().unwrap();
             let origin = Origin::for_git(url, "1");
             let identity = Identity::new("foo".into(), origin);
             let formatted = serde_json::to_string_pretty(&identity).unwrap();

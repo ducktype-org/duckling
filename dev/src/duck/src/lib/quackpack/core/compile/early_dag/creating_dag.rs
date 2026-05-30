@@ -9,6 +9,7 @@ use crate::quackpack::core::compile::compiler_package::PackageType;
 use crate::quackpack::core::storage::freeze::{FreezePackage, VenvFreeze};
 use crate::quackpack::core::storage::package_id::PackageId;
 use crate::quackpack::core::storage::paths::Storage;
+use crate::quackpack::util::to_path_buf::ToPathBuf;
 use crate::{DuckContext, QuackResultContext, qp_bail, qp_bail_internal};
 
 impl DependencyDag {
@@ -132,7 +133,7 @@ fn parse_dependency(
     debug!(?dep, type = %pkg_type, "parsing dep");
     let storage_id = dep.to_package_id();
     let directory = match storage_id {
-        PackageId::Local(ref local) => local.path().to_path_buf(),
+        PackageId::Local(ref local) => local.path().to_path_buf()?,
         _ => storage.pkg_dir(&storage_id),
     };
     let ctx =

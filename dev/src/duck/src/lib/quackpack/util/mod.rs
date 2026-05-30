@@ -5,6 +5,8 @@ pub mod paths;
 pub mod progress_bar;
 pub mod qp_context;
 pub mod str_id;
+pub mod to_path_buf;
+pub mod to_url;
 pub mod with_version;
 
 /// A common message which should be passed to `.expect()`s.

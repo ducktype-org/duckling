@@ -23,7 +23,8 @@ use crate::quackpack::core::storage::package_id::{GitId, RegistryId};
 use crate::quackpack::core::storage::paths::Storage;
 use crate::quackpack::core::storage::venv::{Venv, VenvData};
 use crate::quackpack::core::storage::venv_id::{ToVenvId, VenvId};
-use crate::quackpack::core::{Git, GitReference, Package, PackageContext, PackageLoader, storage};
+use crate::quackpack::core::{GitReference, Package, PackageContext, PackageLoader, storage};
+use crate::quackpack::util::to_url::ToUrl;
 use crate::util::error::MessageError;
 use crate::util::path_ops_ext::PathOpsExt;
 use crate::{QuackError, QuackResult, QuackResultContext, qp_bail, qp_bail_internal};
@@ -228,16 +229,16 @@ fn get_solver_answer(
     debug!(?mode);
     let root_pkg = ExpandedPackage {
         location: ExpandedLocation::Local {
-            absolute_path: pcx.package().root_directory().to_path_buf(),
-        }
-        .into(),
+            absolute_path: pcx.package().root_directory().to_url()?.into(),
+        },
         version: None,
     };
     let solver_freeze = match input_freeze {
         Some(freeze) => SolverFreeze::try_from_venv_freeze(root_pkg, freeze)?,
         None => SolverFreeze::empty_with_root(root_pkg)?,
     };
-    let solver = SolverGathererData::new(pcx, solver_freeze, mode);
+    let solver = SolverGathererData::new(pcx, solver_freeze, mode)
+        .context("failed to start gathering packages")?;
     let fetcher_lock = pcx.ctx().duck_home().open_fetcher_lockfile(pcx.ctx())?;
     let should_run_engine = solver.prepare_solving(fetcher, git_access)?;
     drop(fetcher_lock);
@@ -280,19 +281,20 @@ fn fetch_source_code(
     pkg: ExpandedPackage,
 ) -> QuackResult<bool> {
     debug!(?pkg);
-    match pkg.location.as_ref() {
+    match pkg.location {
         ExpandedLocation::Local { absolute_path: _ } => Ok(false),
         ExpandedLocation::Git { url, commit } => {
-            let pkg_id = GitId::new(url.clone(), *commit).into();
+            let pkg_id = GitId::new(url, commit).into();
             if storage.is_package_stored(&pkg_id) {
                 return Ok(false);
             }
-            if git_access.is_stored(url.clone(), commit) {
+            if git_access.is_stored(url, &commit) {
                 storage.mark_as_stored(&pkg_id)?;
                 return Ok(true);
             }
             fetcher.clone_from_git_to_directory(
-                &Git::new(url.clone(), GitReference::Rev(commit.as_str().into())),
+                &url,
+                &GitReference::Rev(commit.as_str().to_string()),
                 &storage.pkg_dir(&pkg_id),
             )?;
             storage.mark_as_stored(&pkg_id)?;
@@ -303,7 +305,7 @@ fn fetch_source_code(
             let Some(version) = pkg.version else {
                 qp_bail_internal!("Registry package without version");
             };
-            let pkg_id = RegistryId::new(*real_name, version, url.clone()).into();
+            let pkg_id = RegistryId::new(real_name, version, url).into();
             if storage.is_package_stored(&pkg_id) {
                 return Ok(false);
             }
@@ -311,9 +313,9 @@ fn fetch_source_code(
             let mut blob_path = PathBuf::new();
             for attempt in 1..=MAX_BLOB_RETRY_COUNT {
                 match fetcher.fetch_package_blob(&PackageWithUrl {
-                    id: *real_name,
+                    id: real_name,
                     version,
-                    url: url.clone(),
+                    url,
                 }) {
                     Ok(path) => {
                         blob_path = path;

@@ -1,15 +1,12 @@
 use std::collections::{HashMap, HashSet};
 use std::hash::Hash;
 use std::ops::Deref;
-use std::path::PathBuf;
 use std::sync::{Mutex, OnceLock};
 
-use url::Url;
-
-use crate::quackpack::core::solver::types_common::expanded::InternedExpandedLocation;
 use crate::quackpack::core::solver::types_common::{ExpandedLocation, ExpandedPackage};
 use crate::quackpack::core::version::CompatibilityCheck;
-use crate::quackpack::core::{Dependency, GitReference, Source, Version};
+use crate::quackpack::core::{Dependency, GitReference, SourceKind, Version};
+use crate::quackpack::util::interned_url::InternedUrl;
 use crate::util::extract::Extract;
 use crate::{QuackResult, StrId, qp_bail_internal};
 
@@ -73,44 +70,34 @@ impl Hash for InternedLocation {
     }
 }
 
-#[derive(Clone, Eq, Hash, PartialEq)]
+#[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub enum Location {
-    Registry { url: Url, real_name: StrId },
-    Git { url: Url, reference: GitReference },
-    Local { path: PathBuf },
-}
-
-impl std::fmt::Debug for Location {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Registry { url, real_name } => f
-                .debug_struct("Registry")
-                .field("url", &url.as_str())
-                .field("real_name", real_name)
-                .finish(),
-            Self::Git { url, reference } => f
-                .debug_struct("Git")
-                .field("url", &url.as_str())
-                .field("reference", reference)
-                .finish(),
-            Self::Local { path } => f.debug_struct("Local").field("path", path).finish(),
-        }
-    }
+    Registry {
+        url: InternedUrl,
+        real_name: StrId,
+    },
+    Git {
+        url: InternedUrl,
+        reference: GitReference,
+    },
+    Local {
+        path: InternedUrl,
+    },
 }
 
 impl From<&Dependency> for Location {
     fn from(dependency: &Dependency) -> Self {
-        match &dependency.source().as_ref() {
-            Source::Registry(registry) => Self::Registry {
-                url: registry.url().clone(),
+        let source = dependency.source();
+        let url = source.url();
+        match source.kind() {
+            SourceKind::Registry => Self::Registry {
+                url,
                 real_name: dependency.name(),
             },
-            Source::Local(local) => Self::Local {
-                path: local.absolute().to_path_buf(),
-            },
-            Source::Git(git) => Self::Git {
-                url: git.url().clone(),
-                reference: git.reference().clone(),
+            SourceKind::Local => Self::Local { path: url },
+            SourceKind::Git(reference) => Self::Git {
+                url,
+                reference: reference.clone(),
             },
         }
     }
@@ -132,15 +119,15 @@ impl Location {
     pub fn canonical_unexpansion(expanded_loc: &ExpandedLocation) -> Self {
         match expanded_loc {
             ExpandedLocation::Registry { url, real_name } => Self::Registry {
-                url: url.clone(),
+                url: *url,
                 real_name: *real_name,
             },
             ExpandedLocation::Git { url, commit } => Self::Git {
-                url: url.clone(),
+                url: *url,
                 reference: GitReference::Rev(commit.as_str().into()),
             },
             ExpandedLocation::Local { absolute_path } => Self::Local {
-                path: absolute_path.clone(),
+                path: *absolute_path,
             },
         }
     }
@@ -185,7 +172,7 @@ impl Package {
     /// Create the appropriate [`ExpandedPackage`] from this [`Package`].
     pub fn resolve(
         self,
-        location_resolver: &HashMap<InternedLocation, InternedExpandedLocation>,
+        location_resolver: &HashMap<InternedLocation, ExpandedLocation>,
     ) -> Option<ExpandedPackage> {
         location_resolver
             .get(&self.location)

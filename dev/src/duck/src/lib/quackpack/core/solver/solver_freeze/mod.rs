@@ -172,12 +172,12 @@ mod test {
     use std::path::PathBuf;
 
     use tempfile::{TempDir, tempdir};
-    use url::Url;
 
     use super::*;
     use crate::DuckContext;
     use crate::quackpack::core::solver::types_common::ExpandedLocation;
     use crate::quackpack::core::{PackageLoader, parse_manifest};
+    use crate::quackpack::util::to_url::ToUrl;
     use crate::util::path_ops_ext::PathOpsExt;
 
     fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {
@@ -192,14 +192,12 @@ mod test {
     #[test]
     fn storage_to_solver_freeze() {
         let loc_a = ExpandedLocation::Registry {
-            url: Url::parse("https://example.net").unwrap(),
+            url: "https://example.net".to_url().unwrap().into(),
             real_name: "a".into(),
-        }
-        .into();
+        };
         let loc_b = ExpandedLocation::Local {
-            absolute_path: PathBuf::new().join("xdd"),
-        }
-        .into();
+            absolute_path: PathBuf::from("/xdd").to_url().unwrap().into(),
+        };
         let pkg_a = ExpandedPackage {
             location: loc_a,
             version: Some(1.into()),
@@ -228,9 +226,8 @@ mod test {
         );
         let root_pkg = ExpandedPackage {
             location: ExpandedLocation::Local {
-                absolute_path: PathBuf::new(),
-            }
-            .into(),
+                absolute_path: PathBuf::from("/").to_url().unwrap().into(),
+            },
             version: None,
         };
         let storage_freeze = VenvFreeze::new(root, vec![freeze_pkg_a, freeze_pkg_b]);
@@ -317,18 +314,15 @@ features:
         let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
         let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
         let exp_location_root = ExpandedLocation::Local {
-            absolute_path: PathBuf::new().join("./root_path"),
-        }
-        .into();
+            absolute_path: PathBuf::from("/root_path").to_url().unwrap().into(),
+        };
         let exp_location_a = ExpandedLocation::Registry {
-            url: Url::parse("https://example.net").unwrap(),
+            url: "https://example.net".to_url().unwrap().into(),
             real_name: StrId::from("a"),
-        }
-        .into();
+        };
         let exp_location_b = ExpandedLocation::Local {
-            absolute_path: PathBuf::new().join("./sialalala"),
-        }
-        .into();
+            absolute_path: PathBuf::from("/sialalala").to_url().unwrap().into(),
+        };
         let exp_pkg_root = ExpandedPackage {
             location: exp_location_root,
             version: None,
