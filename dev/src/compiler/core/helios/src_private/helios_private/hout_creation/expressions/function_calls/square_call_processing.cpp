@@ -84,7 +84,7 @@ namespace compiler::helios::code {
 			// If base is a type template, we expect meta in the index arguments for baking the
 			// template type. Otherwise we expect an integer for StaticArray type creation.
 			// @TODO: #1532 This u64/meta coercions should be handled by the `[]` operator.
-			auto expected_index_arg_type = [&]() -> query::QResult<tsh::SymbolType<>> {
+			auto expected_index_arg_type = [&]() -> tsh::SymbolType<> {
 				// @TODO: #1918 This logic should be generalized to handle any expressions with
 				// TypeTemplate type, not just literals.
 				if (auto* literal_type_expr = dynamic_cast<LiteralTypeExpr*>(base.get())) {
@@ -99,24 +99,6 @@ namespace compiler::helios::code {
 					}
 				}
 
-				auto ctv = ctx.query<QueryEvaluateHOUTExpression>(
-								  { ctx.query<QueryHoutOfExpr>(arg_pst)->valueOrThrow().get() }
-				)
-				               .valueOrThrow();
-				auto size = ctv.get<numeric_value::NumericValue>();
-
-				if (!size->isIntegral() || !size.has_value()
-				    || !(
-						size.value().coerceTo<i64>().has_value()
-						&& size.value().coerceTo<i64>().value() >= 0
-					)) {
-					ctx.logInt(makeBox<dia_int::PlaceholderError>(
-						"Static array size must be a non-negative integral value.",
-						arg_pst.unlock(ctx)->getStablePosition()
-					));
-					return query::Failed();
-				}
-
 				return tsh::SymbolType<>{
 					// @TODO: #2754 Possibly adjust the type based on the actual type of the index
 					// expression.
@@ -124,8 +106,7 @@ namespace compiler::helios::code {
 					tsh::ReferenceKind::Direct,
 					tsh::Mutability::Immutable
 				};
-			}()
-														.valueOrThrow();
+			}();
 
 			auto arg_res = subExprFromPSTWithType(ctx, arg_pst, expected_index_arg_type);
 			UNPACK_QRESULT_MOVE(Box<Expr> arg_expr =, arg_res);

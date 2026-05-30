@@ -161,11 +161,13 @@ namespace compiler::helios {
 						"earlier."
 					);
 					auto maybe_u64_size = maybe_size.coerceTo<u64>();
-					CORE_ASSERT(
-						maybe_u64_size.has_value(),
-						"Static array type creation with negative size. This should be caught "
-						"earlier."
-					);
+					// TODO: #2754 With flexible literals it should work
+					if (!maybe_u64_size.has_value()) {
+						ctx.logInt(makeBox<dia_int::PlaceholderError>(
+							"Static array size must be a non-negative integral value.", ""
+						));
+						return query::Failed();
+					}
 					auto size = static_cast<usize>(maybe_u64_size.value());
 					return CompileTimeValue{ sinkStaticArrayDimension(ctx, base_type, size) };
 				}

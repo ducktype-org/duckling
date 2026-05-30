@@ -14,7 +14,6 @@
 #include <helios/hout/elements/expr.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/tsh/queries.hpp>
-#include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/errors/dia_interactive_elements.hpp>
 #include <helios_private/hout_creation/expressions/builtin_operators.hpp>
 #include <helios_private/hout_creation/expressions/chain_expr.hpp>
@@ -658,39 +657,22 @@ namespace compiler::helios::code {
 					// @TODO: #1970 This implementation is temporary and should be handled by the
 					// `-=` operator in the future.
 					if (location_type.getType().getKind() == tsh::Kind::DynamicArray) {
-						auto i64_type = tsh::SymbolType<>{
+						auto u64_type = tsh::SymbolType<>{
 							tsh::getIntegralType(
-								ctx, 64, tsh::IntegralAbstractType::Signedness::Signed
+								ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned
 							),
 							tsh::ReferenceKind::Direct,
 							tsh::Mutability::Mutable
 						};
 
 						auto value_expr_coerced_qresult
-							= subExprFromPSTWithType(ctx, val, i64_type);
+							= subExprFromPSTWithType(ctx, val, u64_type);
 						if (value_expr_coerced_qresult.hasFailed()) return;
 
-						auto value_expr_coerced
-							= std::move(value_expr_coerced_qresult.valueOrThrow());
-						auto ctv
-							= ctx.query<QueryEvaluateHOUTExpression>({ value_expr_coerced.get() })
-						          .valueOrThrow();
-						auto arg = ctv.get<numeric_value::NumericValue>();
-
-						if (!arg->isIntegral() || !arg.has_value()
-						    || !(
-								arg.value().coerceTo<i64>().has_value()
-								&& arg.value().coerceTo<i64>().value() >= 0
-							)) {
-							ctx.logInt(makeBox<dia_int::PlaceholderError>(
-								"`-=` argument must be a non-negative integral value.",
-								val.unlock(ctx)->getStablePosition()
-							));
-							return;
-						}
-
 						node = makeBox<ListPopExpr>(
-							pstOrigin(stmt), std::move(location_expr), std::move(value_expr_coerced)
+							pstOrigin(stmt),
+							std::move(location_expr),
+							std::move(value_expr_coerced_qresult).valueOrThrow()
 						);
 						return;
 					}
