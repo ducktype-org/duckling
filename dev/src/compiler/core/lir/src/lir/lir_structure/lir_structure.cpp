@@ -367,7 +367,6 @@ namespace compiler::lir {
 		os << (type == LIRGlobalType::Constant ? "constant" : "variable") << ": ";
 		os << mangled_name.strView() << "\n";
 		os << "Type: " << layout->toStringDefinition(ctx) << "\n";
-		// if (initial_value.has_value()) os << "Initial value: " << initial_value->toString() << "\n";
 	}
 
 	void LIRGlobalData::debugPrint(query::Context& ctx, std::ostream& os) const {

@@ -312,13 +312,13 @@ namespace compiler::mir {
 		local->debugPrint(os);
 	}
 
-	void MIRGlobalData::debugPrint(query::Context& ctx, std::ostream& os) const {
+	void MIRGlobalData::debugPrint(query::Context&, std::ostream& os) const {
 		global.debugPrint(os, true);
 		os << "  Initial Value (CTV or Function): ";
 		variant_match(initial_value) {
 			variant_case(ctv::CompileTimeValue, ctv) { os << ctv.toString(); }
 			variant_case(CRef<mir::Function>, func_ref) {
-				os << "constructor: " << func_ref->name << "\n";
+				os << "constructor: " << func_ref->name.strView() << "\n";
 				func_ref->debugPrint(os);
 			}
 		}
