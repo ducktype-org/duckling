@@ -3,17 +3,18 @@
 //! This is the hardest (and most crucial) part of the parsing process.
 use std::path::{Path, PathBuf};
 
+use itertools::Itertools;
 use tracing::debug;
 use url::Url;
 
 use super::Scope;
-use crate::quackpack::core::{BranchOrTag, Git, Local, Registry, ScopeGuard, Source};
+use crate::quackpack::core::{Git, GitReference, Local, Registry, ScopeGuard, Source};
 use crate::quackpack::schemas::manifest::{
     Dependency as DependencySchema, DependencySource as SourceSchema, DetailedSource,
 };
 use crate::util::error::MessageError;
 use crate::util::path_ops_ext::PathOpsExt;
-use crate::{DuckContext, QpContext, QuackError, QuackResult, QuackResultContext, qp_bail};
+use crate::{DuckContext, QpContext, QuackError, QuackResult, QuackResultContext, qp_bail, qp_err};
 
 /// Parse given [`DependencySchema`] into [`Source`].
 ///
@@ -106,14 +107,9 @@ pub(crate) fn parse(
             debug!("found a git source");
             check_no_local(source, &mut scope)?;
             check_no_registry(source, &mut scope)?;
-            let branch_or_tag = resolve_git_branch_or_tag(source, &scope)?;
+            let reference = resolve_git_reference(source, &scope)?;
             let git_url = parse_git_url(manifest_git_url, package_root, ctx)?;
-            Git::new(
-                git_url,
-                branch_or_tag,
-                source.commit.as_ref().map(<&String>::into),
-            )
-            .into()
+            Git::new(git_url, reference).into()
         }
         (None, Some(_), Some(_)) => {
             scope.pop();
@@ -227,17 +223,32 @@ fn check_no_registry(source: &DetailedSource, scope: &mut ScopeGuard<'_>) -> Qua
 
 /// Resolve [`BranchOrTag`] from the given `source`.
 #[tracing::instrument(skip_all)]
-fn resolve_git_branch_or_tag(source: &DetailedSource, scope: &Scope) -> QuackResult<BranchOrTag> {
-    match (source.branch.as_ref(), source.tag.as_ref()) {
-        (None, None) => Ok(BranchOrTag::Default),
-        (None, Some(tag)) => Ok(BranchOrTag::Tag(tag.into())),
-        (Some(branch), None) => Ok(BranchOrTag::Branch(branch.into())),
-        (Some(_), Some(_)) => {
-            let formatted = scope.format();
-            qp_bail!(
-                "the dependency `{formatted}` is a git dependency, but it contains mutually exclusive fields: `{formatted}.branch`, `{formatted}.tag`"
-            );
-        }
+fn resolve_git_reference(source: &DetailedSource, scope: &Scope) -> QuackResult<GitReference> {
+    let mutually_exclusive_fields_error = |names: &'static [&'static str]| {
+        let formatted = scope.format();
+        let fields = names
+            .iter()
+            .map(|name| format!("`{formatted}.{name}`"))
+            .join(", ");
+        qp_err!(
+            "the dependency `{formatted}` is a git dependency, but it contains mutually exclusive fields: {fields}"
+        )
+    };
+    match (
+        source.branch.as_ref(),
+        source.tag.as_ref(),
+        source.commit.as_ref(),
+    ) {
+        (None, None, None) => Ok(GitReference::Default),
+        (None, Some(tag), None) => Ok(GitReference::Tag(tag.into())),
+        (Some(branch), None, None) => Ok(GitReference::Branch(branch.into())),
+        (None, None, Some(commit)) => Ok(GitReference::Rev(commit.into())),
+        (Some(_), Some(_), None) => Err(mutually_exclusive_fields_error(&["branch", "tag"])),
+        (None, Some(_), Some(_)) => Err(mutually_exclusive_fields_error(&["tag", "commit"])),
+        (Some(_), None, Some(_)) => Err(mutually_exclusive_fields_error(&["branch", "commit"])),
+        (Some(_), Some(_), Some(_)) => Err(mutually_exclusive_fields_error(&[
+            "branch", "tag", "commit",
+        ])),
     }
 }
 

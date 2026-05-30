@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use tempfile::{TempDir, tempdir};
 
 use super::parse_manifest;
-use crate::quackpack::core::{BranchOrTag, OptLevel, Profile, Source, Version};
+use crate::quackpack::core::{GitReference, OptLevel, Profile, Source, Version};
 use crate::util::path_ops_ext::PathOpsExt;
 use crate::{DuckContext, QpContext, StrId};
 
@@ -178,6 +178,8 @@ dependencies:
     assert!(a.source().is_git());
     if let Source::Git(git_source) = a.source().as_ref() {
         assert_eq!(git_source.url().as_str(), "https://google.com/");
+    } else {
+        panic!("wrong type")
     }
     assert!(summary.dev_dependencies().all_dependencies().is_empty());
     assert!(summary.features().all_features().is_empty());
@@ -377,13 +379,26 @@ dependencies:
     source:
       git-url: https://google.com
       branch: branch
+
+  f:
+    source:
+      git-url: https://google.com
+      tag: tag
+
+  g:
+    source:
+      git-url: https://google.com
       commit: commit
+
+  h:
+    source:
+      git-url: https://google.com
 "#,
     );
     let ctx = DuckContext::default();
     let manifest = parse_manifest(&manifest_path, &ctx).unwrap();
     let summary = manifest.manifest();
-    assert_eq!(summary.dependencies().all_dependencies().len(), 8);
+    assert_eq!(summary.dependencies().all_dependencies().len(), 11);
 
     let a = summary.dependencies().get_by_name(StrId::new("a")).unwrap();
     assert!(a.source().is_local());
@@ -399,6 +414,8 @@ dependencies:
         );
         assert!(local_source.was_original_entry_relative());
         assert_eq!(local_source.entry_in_manifest(), "xd");
+    } else {
+        panic!("wrong type")
     }
     assert!(a.versions().is_empty());
     assert_eq!(a.name(), a.effective_name());
@@ -423,6 +440,8 @@ dependencies:
         );
         assert!(local_source.was_original_entry_relative());
         assert_eq!(local_source.entry_in_manifest(), "../xd");
+    } else {
+        panic!("wrong type")
     }
     assert!(a1.alias().is_none());
 
@@ -436,6 +455,8 @@ dependencies:
         assert_eq!(local_source.absolute(), home_dir.join("xd"));
         assert!(!local_source.was_original_entry_relative());
         assert_eq!(local_source.entry_in_manifest(), "~/xd");
+    } else {
+        panic!("wrong type")
     }
     assert!(a2.alias().is_none());
 
@@ -448,6 +469,8 @@ dependencies:
         assert_eq!(local_source.absolute(), PathBuf::from("/xd"));
         assert!(!local_source.was_original_entry_relative());
         assert_eq!(local_source.entry_in_manifest(), "/xd");
+    } else {
+        panic!("wrong type")
     }
     assert!(a3.alias().is_none());
 
@@ -456,6 +479,8 @@ dependencies:
     if let Source::Registry(registry_source) = b.source().as_ref() {
         let default_registry = ctx.registry_url().unwrap();
         assert_eq!(*registry_source.url(), default_registry);
+    } else {
+        panic!("wrong type")
     }
     assert_eq!(b.versions().len(), 1);
     assert_eq!(b.versions()[0].to_string(), "0.1.0");
@@ -479,6 +504,8 @@ dependencies:
     assert!(d.source().is_registry());
     if let Source::Registry(registry_source) = d.source().as_ref() {
         assert_eq!(registry_source.url().as_str(), "https://google.com/");
+    } else {
+        panic!("wrong type")
     }
     assert_eq!(d.versions().len(), 1);
     assert_eq!(d.name(), "alias2");
@@ -490,13 +517,51 @@ dependencies:
     if let Source::Git(git_source) = e.source().as_ref() {
         assert_eq!(git_source.url().as_str(), "https://google.com/");
         assert_eq!(
-            git_source.branch_or_tag(),
-            &BranchOrTag::Branch("branch".to_owned())
+            git_source.reference(),
+            &GitReference::Branch("branch".to_owned())
         );
-        assert_eq!(git_source.rev().as_deref(), Some("commit"));
+    } else {
+        panic!("wrong type")
     }
     assert!(e.versions().is_empty());
     assert_eq!(e.name(), e.effective_name());
+
+    let f = summary.dependencies().get_by_name(StrId::new("f")).unwrap();
+    assert!(f.source().is_git());
+    if let Source::Git(git_source) = f.source().as_ref() {
+        assert_eq!(git_source.url().as_str(), "https://google.com/");
+        assert_eq!(git_source.reference(), &GitReference::Tag("tag".to_owned()));
+    } else {
+        panic!("wrong type")
+    }
+    assert!(f.versions().is_empty());
+    assert_eq!(f.name(), f.effective_name());
+
+    let g = summary.dependencies().get_by_name(StrId::new("g")).unwrap();
+    assert!(g.source().is_git());
+    if let Source::Git(git_source) = g.source().as_ref() {
+        assert_eq!(git_source.url().as_str(), "https://google.com/");
+        assert_eq!(
+            git_source.reference(),
+            &GitReference::Rev("commit".to_owned())
+        );
+    } else {
+        panic!("wrong type")
+    }
+    assert!(g.versions().is_empty());
+    assert_eq!(g.name(), g.effective_name());
+
+    let h = summary.dependencies().get_by_name(StrId::new("h")).unwrap();
+    assert!(h.source().is_git());
+    if let Source::Git(git_source) = h.source().as_ref() {
+        assert_eq!(git_source.url().as_str(), "https://google.com/");
+        assert_eq!(git_source.reference(), &GitReference::Default,);
+    } else {
+        panic!("wrong type")
+    }
+    assert!(h.versions().is_empty());
+    assert_eq!(h.name(), h.effective_name());
+
     assert!(b.alias().is_none());
 }
 
@@ -1044,6 +1109,156 @@ dependencies:
             [
                 "when parsing the field `dependencies`",
                 "multiple dependencies specify the same name `c`"
+            ]
+        )
+    );
+}
+
+#[test]
+fn git_exclusive_fields() {
+    let (dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: xd
+  version: '0.10'
+
+dependencies:
+  a:
+    version: '1'
+    source:
+      name: c
+  b:
+    version: '1'
+    source:
+      name: c
+"#,
+    );
+    let ctx = DuckContext::default();
+    let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        make_errors_message(
+            &dir,
+            [
+                "when parsing the field `dependencies`",
+                "multiple dependencies specify the same name `c`"
+            ]
+        )
+    );
+}
+
+#[test]
+fn branch_and_tag_are_mutually_exclusive() {
+    let (dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: xd
+  version: '0.10'
+
+dependencies:
+  a:
+    source:
+      git-url: https://google.com
+      branch: branch
+      tag: tag
+"#,
+    );
+    let ctx = DuckContext::default();
+    let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        make_errors_message(
+            &dir,
+            [
+                "the dependency `dependencies.a.source` is a git dependency, but it contains mutually exclusive fields: `dependencies.a.source.branch`, `dependencies.a.source.tag`"
+            ]
+        )
+    );
+}
+
+#[test]
+fn branch_and_commit_are_mutually_exclusive() {
+    let (dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: xd
+  version: '0.10'
+
+dependencies:
+  a:
+    source:
+      git-url: https://google.com
+      branch: branch
+      commit: commit
+"#,
+    );
+    let ctx = DuckContext::default();
+    let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        make_errors_message(
+            &dir,
+            [
+                "the dependency `dependencies.a.source` is a git dependency, but it contains mutually exclusive fields: `dependencies.a.source.branch`, `dependencies.a.source.commit`"
+            ]
+        )
+    );
+}
+
+#[test]
+fn tag_and_commit_are_mutually_exclusive() {
+    let (dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: xd
+  version: '0.10'
+
+dependencies:
+  a:
+    source:
+      git-url: https://google.com
+      tag: tag
+      commit: commit
+"#,
+    );
+    let ctx = DuckContext::default();
+    let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        make_errors_message(
+            &dir,
+            [
+                "the dependency `dependencies.a.source` is a git dependency, but it contains mutually exclusive fields: `dependencies.a.source.tag`, `dependencies.a.source.commit`"
+            ]
+        )
+    );
+}
+
+#[test]
+fn branch_tag_and_commit_are_mutually_exclusive() {
+    let (dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: xd
+  version: '0.10'
+
+dependencies:
+  a:
+    source:
+      git-url: https://google.com
+      branch: branch
+      tag: tag
+      commit: commit
+"#,
+    );
+    let ctx = DuckContext::default();
+    let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        make_errors_message(
+            &dir,
+            [
+                "the dependency `dependencies.a.source` is a git dependency, but it contains mutually exclusive fields: `dependencies.a.source.branch`, `dependencies.a.source.tag`, `dependencies.a.source.commit`"
             ]
         )
     );

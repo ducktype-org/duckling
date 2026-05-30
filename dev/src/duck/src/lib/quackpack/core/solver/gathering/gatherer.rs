@@ -24,7 +24,7 @@ use crate::quackpack::core::solver::solver_mode::SolverMode;
 use crate::quackpack::core::solver::types_common::{
     ExpandedLocation, ExpandedPackage, InternedLocation, Location,
 };
-use crate::quackpack::core::{BranchOrTag, FeatureName, Git, Manifest, PackageLoader};
+use crate::quackpack::core::{FeatureName, Git, GitReference, Manifest, PackageLoader};
 use crate::quackpack::schemas::registry;
 use crate::{QuackResult, QuackResultContext, StrId, qp_bail_internal};
 
@@ -157,12 +157,8 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
                     Location::Registry { url, real_name } => {
                         Ok(self.fetch_registry_not_pinned(&not_pinned_request, url, *real_name))
                     }
-                    Location::Git {
-                        url,
-                        branch_or_tag,
-                        rev,
-                    } => {
-                        Ok(self.fetch_git(&not_pinned_request, url, branch_or_tag, rev.as_deref()))
+                    Location::Git { url, reference } => {
+                        Ok(self.fetch_git(&not_pinned_request, url, reference))
                     }
                     Location::Local { path } => Ok(self.fetch_local(&not_pinned_request, path)),
                 }
@@ -287,21 +283,19 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
         &mut self,
         request: &NotPinnedRequest,
         url: &Url,
-        branch_or_tag: &BranchOrTag,
-        rev: Option<&str>,
+        reference: &GitReference,
     ) -> GathererComputation<FetchResponse> {
         debug!("fetching git");
         let fetch_failure = || {
             FetchResponse::Failed(FetchFailure::NotPinned(NotPinnedFailure {
                 origin_location: InternedLocation::new(Location::Git {
                     url: url.clone(),
-                    branch_or_tag: branch_or_tag.clone(),
-                    rev: rev.map(StrId::from),
+                    reference: reference.clone(),
                 }),
             }))
         };
 
-        if let Some(success) = self.try_get_cached_git(url, branch_or_tag, rev) {
+        if let Some(success) = self.try_get_cached_git(url, reference) {
             debug!("git request was cached");
             return GathererComputation::only_success(FetchResponse::Success(
                 FetchSuccess::NotPinned(success),
@@ -311,7 +305,7 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
             return GathererComputation::only_success(fetch_failure());
         }
 
-        let git_source = Git::new(url.clone(), branch_or_tag.clone(), rev.map(StrId::from));
+        let git_source = Git::new(url.clone(), reference.clone());
         let fetcher_response: GathererComputation<Option<(GitCloneResponse, TempDir)>> =
             self.fetcher.clone_from_git(&git_source).into();
         let Some((cloned_pkg, path_where_cloned)) = fetcher_response.0 else {
@@ -349,20 +343,13 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
         )))
     }
 
-    fn try_get_cached_git(
-        &self,
-        url: &Url,
-        branch_or_tag: &BranchOrTag,
-        rev: Option<&str>,
-    ) -> Option<NotPinnedSuccess> {
-        if matches!(branch_or_tag, BranchOrTag::Default)
-            && let Some(commit) = rev
+    fn try_get_cached_git(&self, url: &Url, reference: &GitReference) -> Option<NotPinnedSuccess> {
+        if let GitReference::Rev(commit) = reference
             && let Some(path) = self.git_access.path_if_stored(url.clone(), commit)
         {
             let origin_location = InternedLocation::new(Location::Git {
                 url: url.clone(),
-                branch_or_tag: branch_or_tag.clone(),
-                rev: rev.map(StrId::from),
+                reference: reference.clone(),
             });
             let expanded_location = ExpandedLocation::Git {
                 url: url.clone(),

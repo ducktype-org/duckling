@@ -23,7 +23,7 @@ use crate::quackpack::core::storage::package_id::{GitId, RegistryId};
 use crate::quackpack::core::storage::paths::Storage;
 use crate::quackpack::core::storage::venv::{Venv, VenvData};
 use crate::quackpack::core::storage::venv_id::{ToVenvId, VenvId};
-use crate::quackpack::core::{BranchOrTag, Git, Package, PackageContext, PackageLoader, storage};
+use crate::quackpack::core::{Git, GitReference, Package, PackageContext, PackageLoader, storage};
 use crate::util::error::MessageError;
 use crate::util::path_ops_ext::PathOpsExt;
 use crate::{QuackError, QuackResult, QuackResultContext, qp_bail, qp_bail_internal};
@@ -292,7 +292,7 @@ fn fetch_source_code(
                 return Ok(true);
             }
             fetcher.clone_from_git_to_directory(
-                &Git::new(url.clone(), BranchOrTag::Default, Some(*commit)),
+                &Git::new(url.clone(), GitReference::Rev(commit.as_str().into())),
                 &storage.pkg_dir(&pkg_id),
             )?;
             storage.mark_as_stored(&pkg_id)?;

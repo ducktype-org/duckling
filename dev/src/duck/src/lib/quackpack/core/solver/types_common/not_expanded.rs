@@ -9,7 +9,7 @@ use url::Url;
 use crate::quackpack::core::solver::types_common::expanded::InternedExpandedLocation;
 use crate::quackpack::core::solver::types_common::{ExpandedLocation, ExpandedPackage};
 use crate::quackpack::core::version::CompatibilityCheck;
-use crate::quackpack::core::{BranchOrTag, Dependency, Source, Version};
+use crate::quackpack::core::{Dependency, GitReference, Source, Version};
 use crate::util::extract::Extract;
 use crate::{QuackResult, StrId, qp_bail_internal};
 
@@ -75,18 +75,9 @@ impl Hash for InternedLocation {
 
 #[derive(Clone, Eq, Hash, PartialEq)]
 pub enum Location {
-    Registry {
-        url: Url,
-        real_name: StrId,
-    },
-    Git {
-        url: Url,
-        branch_or_tag: BranchOrTag,
-        rev: Option<StrId>,
-    },
-    Local {
-        path: PathBuf,
-    },
+    Registry { url: Url, real_name: StrId },
+    Git { url: Url, reference: GitReference },
+    Local { path: PathBuf },
 }
 
 impl std::fmt::Debug for Location {
@@ -97,15 +88,10 @@ impl std::fmt::Debug for Location {
                 .field("url", &url.as_str())
                 .field("real_name", real_name)
                 .finish(),
-            Self::Git {
-                url,
-                branch_or_tag,
-                rev,
-            } => f
+            Self::Git { url, reference } => f
                 .debug_struct("Git")
                 .field("url", &url.as_str())
-                .field("branch_or_tag", branch_or_tag)
-                .field("rev", rev)
+                .field("reference", reference)
                 .finish(),
             Self::Local { path } => f.debug_struct("Local").field("path", path).finish(),
         }
@@ -124,8 +110,7 @@ impl From<&Dependency> for Location {
             },
             Source::Git(git) => Self::Git {
                 url: git.url().clone(),
-                branch_or_tag: git.branch_or_tag().clone(),
-                rev: git.rev(),
+                reference: git.reference().clone(),
             },
         }
     }
@@ -152,8 +137,7 @@ impl Location {
             },
             ExpandedLocation::Git { url, commit } => Self::Git {
                 url: url.clone(),
-                branch_or_tag: BranchOrTag::Default,
-                rev: Some(*commit),
+                reference: GitReference::Rev(commit.as_str().into()),
             },
             ExpandedLocation::Local { absolute_path } => Self::Local {
                 path: absolute_path.clone(),

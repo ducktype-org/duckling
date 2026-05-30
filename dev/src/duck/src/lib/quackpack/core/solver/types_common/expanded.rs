@@ -12,7 +12,7 @@ use crate::quackpack::core::solver::gathering::fetch_types::{
 };
 use crate::quackpack::core::solver::types_common::{InternedLocation, Location};
 use crate::quackpack::core::version::CompatibilityCheck;
-use crate::quackpack::core::{BranchOrTag, Dependency, Registry, Source, Version};
+use crate::quackpack::core::{Dependency, GitReference, Registry, Source, Version};
 use crate::util::extract::Extract;
 use crate::{QuackResult, QuackResultContext, StrId, qp_bail_internal};
 
@@ -208,7 +208,7 @@ impl ExpandedPackage {
             (ExpandedLocation::Git { url, commit }, Source::Git(git_source)) => {
                 // If the git dependency specifies tag, branch or nothing (default branch),
                 // some new commits may have appeared.
-                if let Some(required_commit) = git_source.rev()
+                if let GitReference::Rev(required_commit) = git_source.reference()
                     && *commit == *required_commit
                     && url == git_source.url()
                 {
@@ -275,8 +275,7 @@ impl ExpandedPackage {
                 Ok(ManifestsRequest::NotPinned(NotPinnedRequest {
                     location: InternedLocation::new(Location::Git {
                         url: url.clone(),
-                        branch_or_tag: BranchOrTag::Default,
-                        rev: Some(*commit),
+                        reference: GitReference::Rev(commit.as_str().into()),
                     }),
                     versions: None,
                     features: HashSet::new(),

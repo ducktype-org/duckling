@@ -4,7 +4,7 @@ use url::Url;
 
 use crate::DuckContext;
 use crate::quackpack::core::fetcher::git::GitClient;
-use crate::quackpack::core::{BranchOrTag, Git, PackageLoader};
+use crate::quackpack::core::{Git, GitReference, PackageLoader};
 use crate::util::path_ops_ext::PathOpsExt;
 
 fn generate_local_git_repo() -> TempDir {
@@ -57,8 +57,7 @@ fn clone_local_repo() {
     let target = dir.path().join("cloned");
     let source = Git::new(
         Url::from_directory_path(dir.path()).unwrap(),
-        BranchOrTag::Default,
-        None,
+        GitReference::Default,
     );
 
     let ctx = DuckContext::default();
@@ -80,8 +79,7 @@ fn clone_local_repo_with_branch() {
     let target = dir.path().join("cloned");
     let source = Git::new(
         Url::from_directory_path(dir.path()).unwrap(),
-        BranchOrTag::Branch("test-branch".into()),
-        None,
+        GitReference::Branch("test-branch".into()),
     );
 
     let ctx = DuckContext::default();
@@ -98,8 +96,7 @@ fn clone_local_repo_with_tag() {
     let target = dir.path().join("cloned");
     let source = Git::new(
         Url::from_directory_path(dir.path()).unwrap(),
-        BranchOrTag::Tag("v1.0.0".into()),
-        None,
+        GitReference::Tag("v1.0.0".into()),
     );
 
     let ctx = DuckContext::default();
@@ -125,8 +122,7 @@ fn clone_local_repo_with_rev() {
     let target = dir.path().join("cloned");
     let source = Git::new(
         Url::from_directory_path(dir.path()).unwrap(),
-        BranchOrTag::Default,
-        Some(original_commit.id().to_string().into()),
+        GitReference::Rev(original_commit.id().to_string()),
     );
     let ctx = DuckContext::default();
     let _ = GitClient::clone_blocking(&source, &target, &ctx).unwrap();

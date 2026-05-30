@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use url::Url;
 
 use crate::quackpack::schemas::registry;
+use crate::quackpack::util::is_local_file::IsLocalFile;
 use crate::util::extract::Extract;
 use crate::{QuackError, StrId, qp_bail};
 
@@ -189,28 +190,22 @@ impl Local {
 /// Represents a source of a dependency cloned from git.
 pub struct Git {
     url: Url,
-    branch_or_tag: BranchOrTag,
-    rev: Option<StrId>,
+    reference: GitReference,
 }
 
 impl std::fmt::Debug for Git {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Git")
             .field("url", &self.url.as_str())
-            .field("branch_or_tag", &self.branch_or_tag)
-            .field("rev", &self.rev)
+            .field("reference", &self.reference)
             .finish()
     }
 }
 
 impl Git {
     /// Create a new [`Git`] source.
-    pub fn new(url: Url, branch_or_tag: BranchOrTag, rev: Option<StrId>) -> Self {
-        Self {
-            url,
-            branch_or_tag,
-            rev,
-        }
+    pub fn new(url: Url, reference: GitReference) -> Self {
+        Self { url, reference }
     }
 
     /// Get the git repository URL.
@@ -219,13 +214,8 @@ impl Git {
     }
 
     /// Get the git branch or tag.
-    pub fn branch_or_tag(&self) -> &BranchOrTag {
-        &self.branch_or_tag
-    }
-
-    /// Get the specific revision (commit hash), if any.
-    pub fn rev(&self) -> Option<StrId> {
-        self.rev
+    pub fn reference(&self) -> &GitReference {
+        &self.reference
     }
 
     /// Check whether we can perform a shallow clone of this dependency.
@@ -234,8 +224,8 @@ impl Git {
     ///
     /// However, we always disallow shallow clones when commit is specified.
     pub fn can_shallow_clone(&self) -> bool {
-        let is_local_repository_url = self.url.scheme() == "file";
-        !is_local_repository_url && !self.branch_or_tag().is_tag() && self.rev.is_none()
+        let is_local_repository_url = self.url.is_local_file();
+        !is_local_repository_url && (self.reference.is_default() || self.reference.is_branch())
     }
 
     /// Get [`FetchOptions`] for this source.
@@ -255,29 +245,36 @@ impl Git {
 /// A type-safe approach for specifying a git tag or a branch.
 // We intentionally keep inner values as strings: we don't clone them a lot,
 // and turning them into StrId would only “leak” memory.
-pub enum BranchOrTag {
+pub enum GitReference {
     /// The default branch.
     Default,
     /// A specific tag.
     Tag(String),
     /// A specific branch.
     Branch(String),
+    /// Other.
+    Rev(String),
 }
 
-impl BranchOrTag {
-    /// Helper around `matches!(self, BranchOrTag::Default)`.
+impl GitReference {
+    /// Helper around `matches!(self, GitReference::Default)`.
     pub fn is_default(&self) -> bool {
-        matches!(self, BranchOrTag::Default)
+        matches!(self, GitReference::Default)
     }
 
-    /// Helper around `matches!(self, BranchOrTag::Tag(..))`.
+    /// Helper around `matches!(self, GitReference::Tag(..))`.
     pub fn is_tag(&self) -> bool {
-        matches!(self, BranchOrTag::Tag(..))
+        matches!(self, GitReference::Tag(..))
     }
 
-    /// Helper around `matches!(self, BranchOrTag::Branch(..))`.
+    /// Helper around `matches!(self, GitReference::Branch(..))`.
     pub fn is_branch(&self) -> bool {
-        matches!(self, BranchOrTag::Branch(..))
+        matches!(self, GitReference::Branch(..))
+    }
+
+    /// Helper around `matches!(self, GitReference::Rev(..))`.
+    pub fn is_rev(&self) -> bool {
+        matches!(self, GitReference::Rev(..))
     }
 }
 
@@ -321,18 +318,18 @@ impl TryFrom<registry::DependencySource> for Source {
                 tag,
                 branch,
             } => {
-                let branch_or_tag = match (tag, branch) {
-                    (None, None) => BranchOrTag::Default,
-                    (None, Some(branch)) => BranchOrTag::Branch(branch),
-                    (Some(tag), None) => BranchOrTag::Tag(tag),
-                    (Some(_), Some(_)) => {
-                        qp_bail!("git dependency in the registry specifies both `tag` and `branch`")
+                let reference = match (tag, branch, commit) {
+                    (None, None, None) => GitReference::Default,
+                    (None, Some(branch), None) => GitReference::Branch(branch),
+                    (Some(tag), None, None) => GitReference::Tag(tag),
+                    (None, None, Some(commit)) => GitReference::Rev(commit),
+                    _ => {
+                        qp_bail!("only one of `branch`, `tag`, or `commit` can be specified")
                     }
                 };
                 Git {
                     url: git_url.as_str().try_into()?,
-                    branch_or_tag,
-                    rev: commit.map(Into::into),
+                    reference,
                 }
                 .into()
             }
@@ -367,19 +364,16 @@ impl TryFrom<Source> for registry::DependencySource {
                 }
             }
             Source::Git(git) => {
-                let Git {
-                    url,
-                    branch_or_tag,
-                    rev,
-                } = git;
-                let (tag, branch) = match branch_or_tag {
-                    BranchOrTag::Default => (None, None),
-                    BranchOrTag::Tag(tag) => (Some(tag), None),
-                    BranchOrTag::Branch(branch) => (None, Some(branch)),
+                let Git { url, reference } = git;
+                let (tag, branch, commit) = match reference {
+                    GitReference::Default => (None, None, None),
+                    GitReference::Tag(tag) => (Some(tag), None, None),
+                    GitReference::Branch(branch) => (None, Some(branch), None),
+                    GitReference::Rev(commit) => (None, None, Some(commit)),
                 };
                 registry::SourceInner::Git {
                     git_url: url.into(),
-                    commit: rev.map(Into::into),
+                    commit,
                     tag,
                     branch,
                 }

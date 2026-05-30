@@ -7,7 +7,7 @@ use git2::{Oid, Repository};
 use tracing::debug;
 
 use crate::quackpack::core::fetcher::types::GitCloneResponse;
-use crate::quackpack::core::{BranchOrTag, Git, PackageLoader};
+use crate::quackpack::core::{Git, GitReference, PackageLoader};
 use crate::{DuckContext, QuackResult, QuackResultContext};
 
 #[cfg(test)]
@@ -30,7 +30,7 @@ impl GitClient {
 
         builder.fetch_options(source.git_fetch_options());
         // git2-rs doesn't support cloning with a given tag :(.
-        if let BranchOrTag::Branch(branch) = source.branch_or_tag() {
+        if let GitReference::Branch(branch) = source.reference() {
             builder.branch(branch.as_str());
         }
 
@@ -52,7 +52,7 @@ impl GitClient {
         debug!("will checkout to tag...");
 
         // Prefer specific commits over tags.
-        if let Some(commit) = source.rev() {
+        if let GitReference::Rev(commit) = source.reference() {
             repository.checkout_commit(commit.as_str()).with_context(|| {
                 format!(
                     "when performing a checkout of a repository cloned from `{}` to a commit `{}`",
@@ -60,7 +60,7 @@ impl GitClient {
                     commit
                 )
             })?;
-        } else if let BranchOrTag::Tag(tag) = source.branch_or_tag() {
+        } else if let GitReference::Tag(tag) = source.reference() {
             repository.checkout_tag(tag.as_str()).with_context(|| {
                 format!(
                     "when performing a checkout of a repository cloned from `{}` to a tag `{}`",
