@@ -92,6 +92,7 @@ SubDirs:
   - boxes
   - pointers
   - globals
+  - tuples
   - imports
   - macros
   - diagnostics
