@@ -1,0 +1,5 @@
+extern("C") fundecl abort() -> ();
+
+fun panic() -> () = {
+    abort();
+}

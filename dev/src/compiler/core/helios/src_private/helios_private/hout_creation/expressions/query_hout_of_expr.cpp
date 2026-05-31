@@ -512,7 +512,7 @@ namespace compiler::helios::code {
 					break;
 
 				case pst::Keyword::Str:
-					node = makeBox<LiteralTypeExpr>(ctx, pstOrigin(stmt), tsh::getStringType());
+					node = makeBox<LiteralTypeExpr>(ctx, pstOrigin(stmt), tsh::getCharSliceType(ctx));
 					break;
 
 				case pst::Keyword::Type:

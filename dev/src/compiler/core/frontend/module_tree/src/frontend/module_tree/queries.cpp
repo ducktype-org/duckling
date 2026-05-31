@@ -81,4 +81,27 @@ namespace compiler::frontend {
 
 		return current_module;
 	}
+
+	base::Optional<ModuleID> getModuleByAbsolutePath(
+		query::Context& ctx, base::StrID package_name, const std::vector<base::StrID>& path
+	) {
+		for (const auto& pkg: global_state::getPackages()) {
+			if (pkg.getPackageID() == package_name) {
+				auto current_module = pkg.getRootModule().unlock(ctx).getID();
+
+				for (const auto& component: path) {
+					auto maybe_child
+						= getModuleRef(current_module)->getSubmoduleByName(component).unlock(ctx);
+					if (maybe_child.has_value())
+						current_module = maybe_child.value().unlock(ctx).getID();
+					else
+						return {};
+				}
+
+				return current_module;
+			}
+		}
+
+		return {};
+	}
 }

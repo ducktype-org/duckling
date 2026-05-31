@@ -6,6 +6,8 @@
 #include "expr.hpp"
 
 #include "../visitors.hpp"
+#include "helios/tsh/queries/types.hpp"
+#include "helios/tsh/symbol_type.hpp"
 
 #include <concurrent/base/collections/hash_map.hpp>
 #include <helios/mangler/mangler.hpp>
@@ -153,15 +155,11 @@ namespace compiler::helios::code {
 		  value(value) {}
 
 	LiteralStringExpr::LiteralStringExpr(
-		query::Context&, ElementOrigin origin, const base::StrID value
+		query::Context& ctx, ElementOrigin origin, const base::StrID value
 	):
 		  Expr(
 			  tsh::ExpressionType<>(
-				  tsh::SymbolType{
-					  tsh::getStringType(),
-					  tsh::ReferenceKind::Direct,
-					  tsh::Mutability::Mutable,
-				  },
+				  tsh::SymbolType<>::withDefaults(tsh::getCharSliceType(ctx)),
 				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
 			  ),
 			  origin

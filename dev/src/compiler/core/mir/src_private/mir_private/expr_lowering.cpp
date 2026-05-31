@@ -1,6 +1,7 @@
 #include "expr_lowering.hpp"
 
 #include "helios/symbols/query_type_symbol_data.hpp"
+#include "mir_private/utils/slices.hpp"
 
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/visitors.hpp>
@@ -309,15 +310,43 @@ namespace compiler::mir {
 				throw base::NotYetImplemented("Lowering of IndexExpr operating on Meta");
 			} else if (expr.base->expression_type.getSymbolType().getType().getKind()
 			           == tsh::Kind::Slice) {
-				auto lowered_index = lowerSubExpr(*expr.index, continuation);
+				auto bounds_check_fail_block = function.newBlock();
+				auto bounds_check_cond_block = function.newBlock();
+				auto entry_block = function.newBlock();
+				entry_block->setTerminator(Instruction{
+					Operation::Jump, {}, { bounds_check_cond_block->getID() }, {}, expr_scope
+				});
+
+				auto lowered_index = lowerSubExpr(*expr.index, entry_block);
 				auto index_val     = lowered_index.getResult(function);
 
 				auto lowered_base = lowerSubExpr(*expr.base, lowered_index.begin);
 				auto base_val     = lowered_base.getResult(function);
+
 				// We perform bound checking
 				auto slice_data = function.getContext().query<helios::QuerySliceTypeData>(
 					expr.base->expression_type.getSymbolType().getType()
 				);
+				sliceBoundsCheck(
+					{ .condition_block = bounds_check_cond_block,
+				      .fail_block      = bounds_check_fail_block,
+				      .ok_block        = continuation,
+				      .function        = function,
+				      .scope           = expr_scope },
+					*slice_data,
+					index_val,
+					base_val,
+					expr.getPosition()
+				);
+
+				variant_match(std::move(base_val.getVariant())) {
+					variant_case(MIRPlace, place) {
+						auto result = place.withField(function.getContext(), slice_data->ptr)
+						                  .withIndex(index_val);
+						valueOutput(lowered_base.begin, result);
+					}
+					variant_default { CORE_PANIC("Index base must be a MIRPlace"); }
+				}
 
 			} else {
 				auto lowered_index = lowerSubExpr(*expr.index, continuation);
