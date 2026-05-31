@@ -55,10 +55,7 @@ pub(crate) fn parse(
     }
     let source = match source {
         SourceSchema::Simple(registry_url) => {
-            let url: Url = registry_url
-                .as_str()
-                .try_into()
-                .with_context(|| format!("`{registry_url}` is not a valid URL"))?;
+            let url = registry_url.as_str().to_url()?;
             return Ok(Source::for_registry(url));
         }
         SourceSchema::Detailed(detailed_source) => detailed_source,
@@ -92,10 +89,7 @@ pub(crate) fn parse(
             debug!("found a registry source");
             check_no_git(source, &mut scope)?;
             check_no_local(source, &mut scope)?;
-            let url: Url = registry_url
-                .as_str()
-                .try_into()
-                .with_context(|| format!("`{registry_url}` is not a valid URL"))?;
+            let url = registry_url.as_str().to_url()?;
             Source::for_registry(url)
         }
         (None, Some(root), None) => {

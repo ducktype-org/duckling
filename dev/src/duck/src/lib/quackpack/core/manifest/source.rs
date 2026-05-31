@@ -2,7 +2,6 @@
 use std::path::Path;
 
 use serde::{Deserialize, Serialize};
-use url::Url;
 
 use crate::quackpack::schemas::registry;
 use crate::quackpack::util::interned_url::InternedUrl;
@@ -141,7 +140,7 @@ impl TryFrom<registry::DependencySource> for Source {
     fn try_from(value: registry::DependencySource) -> Result<Self, Self::Error> {
         let tmp = match value.inner {
             registry::SourceInner::Registry { registry_url } => {
-                let url: Url = registry_url.as_str().try_into()?;
+                let url = registry_url.as_str().to_url()?;
                 Self::for_registry(url)
             }
             registry::SourceInner::Git {
@@ -150,7 +149,7 @@ impl TryFrom<registry::DependencySource> for Source {
                 tag,
                 branch,
             } => {
-                let url: Url = git_url.as_str().try_into()?;
+                let url = git_url.as_str().to_url()?;
                 let reference = match (tag, branch, commit) {
                     (None, None, None) => GitReference::Default,
                     (None, Some(branch), None) => GitReference::Branch(branch),

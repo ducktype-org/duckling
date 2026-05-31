@@ -4,7 +4,6 @@ use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime};
 
 use tempfile::TempDir;
-use url::Url;
 
 use crate::DuckContext;
 use crate::quackpack::core::fetcher::Fetcher;
@@ -26,7 +25,7 @@ mod basic;
 mod concurrent;
 
 fn registry_url_hash() -> String {
-    let url: Url = Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap();
+    let url = Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap();
     crate::util::hash::sha256_string(url.host_str().unwrap())
 }
 
