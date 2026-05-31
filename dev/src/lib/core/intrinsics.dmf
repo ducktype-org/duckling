@@ -1,6 +1,6 @@
 namespace char_slice {
-    extern("builtin") fundecl slice_from_parts(p : manyptr char, length : u64) -> str;
-    extern("builtin") fundecl ptr_from_slice(s: str) -> manyptr char;
+    extern("builtin") fundecl slice_from_parts(p : manyptr char, length : u64) -> String;
+    extern("builtin") fundecl ptr_from_slice(s: String) -> manyptr char;
 }
 
 # extern("native_builtin")

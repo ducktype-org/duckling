@@ -181,6 +181,17 @@ namespace compiler::helios {
 							return ctx.query<defgen::QueryToStringMethod>(to_string.owner_type)
 							    ->valueOrThrow();
 						}
+						variant_case(defgen::GeneratedSymbolData::LengthMethod, length_method) {
+							ctx.query<QueryDeclOfFun>(to_string_sym)->valueOrThrow();
+							std::vector<Box<code::Stmt>> body{};
+							return HOUTFunction(
+								code::generatedOrigin(),
+								&to_string_decl,
+								std::make_shared<const code::CodeBlock>(code::CodeBlock{
+									.statements = std::move(body),
+								})
+							);
+						}
 						variant_default {
 							CORE_PANIC(base::strConcat(
 								"QueryTypeOfSymbol: Generated symbol '",

@@ -134,15 +134,11 @@ namespace {
 					string_constant
 				);
 
-				// Prepare the global struct
+				// Prepare the char slice struct
 				const u64                          length = str.strView().size();
 				const std::vector<llvm::Constant*> fields{
 					string_global,
 					// length is length
-					llvm::ConstantInt::get(llvm_module->getContext(), llvm::APInt(64, length)),
-					// memory_begin_offset (wrt. data pointer) is 0
-					llvm::ConstantInt::get(llvm_module->getContext(), llvm::APInt(64, 0)),
-					// memory_end_offset (wrt. data pointer) is equal to length
 					llvm::ConstantInt::get(llvm_module->getContext(), llvm::APInt(64, length))
 				};
 				const auto struct_type     = llvm::cast<llvm::StructType>(llvm_type.get());

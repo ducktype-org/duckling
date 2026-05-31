@@ -28,6 +28,11 @@ struct str {
 	uint64_t memory_end_offset;
 };
 
+struct char_slice {
+	char*    data;
+	uint64_t length;
+};
+
 // Definition of the Duckling dynamic list representation.
 struct list {
 	// Pointer to the data of the list.
@@ -55,6 +60,7 @@ extern "C" {
 	uint64_t builtin_input_u64();
 	int32_t  builtin_output_f64(double v);
 	double   builtin_input_f64();
+	int64_t  builtin_output_str(char_slice s);
 
 	// String I/O @TODO: #2636 move to Duckling
 	int64_t builtin_output_string(str s);
@@ -80,6 +86,7 @@ extern "C" {
 	str builtin_stringify_f64(double v);
 	str builtin_stringify_char(char c);
 	str builtin_stringify_bool(bool b);
+	str builtin_stringify_str(char_slice s);
 }
 
 int32_t builtin_output_char(char c) { return printf("%c", c); }
@@ -155,6 +162,11 @@ int64_t builtin_output_string(str s) {
 	return int64_t(fwrite(s.data, sizeof(char), s.length, stdout));
 }
 
+int64_t builtin_output_str(char_slice s) {
+	// Use fwrite to handle non-null-terminated strings and binary data safely.
+	return int64_t(fwrite(s.data, sizeof(char), s.length, stdout));
+}
+
 void builtin_free_string(str s) {
 	if (s.data != NULL) {
 		// The data pointer might not be the start of the allocation.
@@ -208,6 +220,19 @@ str builtin_string_concatenated(str s, str t) {
 		.length              = new_length,
 		.memory_begin_offset = 0,
 		.memory_end_offset   = new_length,
+	};
+}
+
+str builtin_stringify_str(char_slice slice) {
+	char* new_data = (char*) malloc(slice.length);
+	if (!new_data) exit(1);
+	memcpy(new_data, slice.data, slice.length);
+
+	return str{
+		.data                = new_data,
+		.length              = slice.length,
+		.memory_begin_offset = 0,
+		.memory_end_offset   = slice.length,
 	};
 }
 

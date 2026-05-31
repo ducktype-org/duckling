@@ -1,7 +1,7 @@
 import core.builtins.*;
 
 class Person {
-	name: str;
+	name: String;
 	age: i32;
 	height: f64
 }

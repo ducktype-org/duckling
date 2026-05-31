@@ -13,6 +13,7 @@
 #include <helios/tsh/queries/implicit_coercibility.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios_private/hout_creation/definition_generation/default_destructors.hpp>
+#include <helios_private/hout_creation/definition_generation/length_methods.hpp>
 #include <helios_private/hout_creation/definition_generation/to_string_methods.hpp>
 #include <helios_private/symbols/generated_symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
@@ -323,7 +324,7 @@ namespace compiler::tsh {
 	CRef<TypeInterface> SliceAbstractTypeImpl::getDeclaredInterface(query::Context& ctx) const {
 		auto compute_interface = [&]() -> TypeInterface {
 			std::vector<InterfaceElement> elements;
-			elements.reserve(2);
+			elements.reserve(3);
 
 			auto components = ctx.query<helios::QuerySliceTypeData>(toAbstractType());
 			elements.emplace_back(
@@ -339,6 +340,15 @@ namespace compiler::tsh {
 				1,
 				InterfaceElement::InterfaceElementKind::Field,
 				ClassMemberVisibility::Private
+			);
+
+			auto length_sym = helios::defgen::lengthMethodForType(ctx, toAbstractType());
+			elements.emplace_back(
+				length_sym,
+				ctx.query<helios::QueryTypeOfSymbol>(length_sym)->valueOrThrow().getType(),
+				2,
+				InterfaceElement::InterfaceElementKind::Method,
+				ClassMemberVisibility::Public
 			);
 
 			auto interface = TypeInterface(elements);

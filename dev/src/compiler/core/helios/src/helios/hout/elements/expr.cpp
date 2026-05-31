@@ -159,7 +159,11 @@ namespace compiler::helios::code {
 	):
 		  Expr(
 			  tsh::ExpressionType<>(
-				  tsh::SymbolType<>::withDefaults(tsh::getCharSliceType(ctx)),
+				  tsh::SymbolType{
+					  tsh::getCharSliceType(ctx),
+					  tsh::ReferenceKind::Direct,
+					  tsh::Mutability::Immutable,
+				  },
 				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
 			  ),
 			  origin

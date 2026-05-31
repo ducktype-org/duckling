@@ -1,4 +1,4 @@
-fun takesString(s: str) -> str = {
+fun takesString(s: String) -> String = {
     return s;
 }
 

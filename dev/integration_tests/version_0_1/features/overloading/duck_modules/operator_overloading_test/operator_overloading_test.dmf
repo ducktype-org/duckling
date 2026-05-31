@@ -3,8 +3,8 @@ import core.builtins.*;
 # Operator overloading test (primitive types)
 # This test checks if operator overloads work for primitive types
 
-fun *(c: char, n: i64) -> str = {
-	var result: str = "";
+fun *(c: char, n: i64) -> String = {
+	var result: String = "";
 	while (n > 0) {
 		result = result :+ c;
 		n -= 1;

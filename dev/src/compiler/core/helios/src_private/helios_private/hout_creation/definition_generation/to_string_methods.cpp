@@ -1,5 +1,8 @@
 #include "to_string_methods.hpp"
 
+#include "helios/tsh/abstract_type.hpp"
+#include "helios/tsh/symbol_type.hpp"
+
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/hout/hout.hpp>
@@ -10,6 +13,7 @@
 #include <helios_private/hout_creation/expressions/coercions.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
+#include <helios_private/lookup/interface.hpp>
 
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_result.hpp>
@@ -54,6 +58,22 @@ namespace compiler::helios::defgen {
 					}),
 				} },
 			});
+		}
+
+		static Box<code::Expr> getStringFromLiteralExpr(query::Context& ctx, base::StrID value) {
+			std::vector<Box<code::Expr>> call_args;
+			call_args.emplace_back(
+				makeBox<code::LiteralStringExpr>(ctx, code::generatedOrigin(), value)
+			);
+			SymID callee_sym = stringifySym(
+				ctx,
+				tsh::SymbolType<>::withDefaults(tsh::getCharSliceType(ctx)),
+				"builtin_stringify_str"
+			);
+			auto callee = makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), callee_sym);
+			return makeBox<code::CallExpr>(
+				ctx, code::generatedOrigin(), std::move(callee), std::move(call_args)
+			);
 		}
 
 		static void stringifyBool(
@@ -196,15 +216,167 @@ namespace compiler::helios::defgen {
 			));
 		}
 
+		static void stringifySlice(
+			Context&                       ctx,
+			const HOUTFunctionDeclaration& to_string_decl,
+			std::vector<Box<code::Stmt>>&  body
+		) {
+			auto& self_param         = to_string_decl.parameters.at(0);
+			auto  slice_type         = self_param.type.getType().as<tsh::SliceAbstractType>();
+			auto  slice_element_type = slice_type.getElementType();
+			if (slice_element_type.getType() == tsh::getCharType()
+			    and slice_element_type.getRefKind() == tsh::ReferenceKind::Direct) {
+				stringifyString(ctx, to_string_decl, body);
+			} else {
+				stringifyRange(ctx, to_string_decl, body);
+			}
+		}
+
 		static void stringifyUnit(
 			Context& ctx,
 			const HOUTFunctionDeclaration& /* to_string_decl */,
 			std::vector<Box<code::Stmt>>& body
 		) {
 			body.emplace_back(makeBox<code::ReturnStmt>(
-				code::generatedOrigin(),
-				makeBox<code::LiteralStringExpr>(ctx, code::generatedOrigin(), base::StrID("()"))
+				code::generatedOrigin(), getStringFromLiteralExpr(ctx, base::StrID("()"))
 			));
+		}
+
+		/**
+		 * @brief Stringify the given self parameter as a range, for example
+		 * [1,2,3,4] or [1.0, 2.0, 3.0]]
+		 */
+		static void stringifyRange(
+			Context&                       ctx,
+			const HOUTFunctionDeclaration& to_string_decl,
+			std::vector<Box<code::Stmt>>&  body
+		) {
+			const auto  gen        = code::generatedOrigin();
+			const auto& self_param = to_string_decl.parameters.at(0);
+			const auto  u64_type   = tsh::SymbolType<>::withDefaults(
+                tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned)
+            );
+
+			auto result_sym = ctx.query<QueryGeneratedSymbol>(
+				{ .name = base::StrID("__result"),
+			      .generated_symbol_data
+			      = GeneratedSymbolData{ GeneratedSymbolData::GeneratedFunctionVariable{
+					  .function_symbol = to_string_decl.original_symbol,
+					  .variable_index  = 0,
+					  .type            = STRING_TYPE } } }
+			);
+			auto idx_sym = ctx.query<QueryGeneratedSymbol>(
+				{ .name = base::StrID("__idx"),
+			      .generated_symbol_data
+			      = GeneratedSymbolData{ GeneratedSymbolData::GeneratedFunctionVariable{
+					  .function_symbol = to_string_decl.original_symbol,
+					  .variable_index  = 1,
+					  .type            = u64_type } } }
+			);
+
+			auto idx_expr   = makeBox<code::IdentifierExpr>(ctx, gen, idx_sym);
+			auto range_expr = [&]() -> Box<code::Expr> {
+				auto self_expr = makeBox<code::IdentifierExpr>(ctx, gen, self_param.helios_symbol);
+				if (self_param.type.getRefKind() != tsh::ReferenceKind::Direct)
+					return makeBox<code::DerefExpr>(ctx, gen, std::move(self_expr));
+				return self_expr;
+			}();
+			auto append_to_stmt = [&](Box<code::Expr> rhs) {
+				std::vector<Box<code::Expr>> args;
+				args.emplace_back(makeBox<code::IdentifierExpr>(ctx, gen, result_sym));
+				args.emplace_back(std::move(rhs));
+				return makeBox<code::AssignmentStmt>(
+					gen,
+					makeBox<code::IdentifierExpr>(ctx, gen, result_sym),
+					makeBox<code::CallExpr>(
+						ctx,
+						gen,
+						makeBox<code::IdentifierExpr>(ctx, gen, concatSym(ctx)),
+						std::move(args)
+					)
+				);
+			};
+
+
+			// var result: String = "["
+			body.emplace_back(makeBox<code::VariableStmt>(
+				gen, getStringFromLiteralExpr(ctx, base::StrID("[")), STRING_TYPE, result_sym
+			));
+			// var idx: u64 = 0
+			body.emplace_back(makeBox<code::VariableStmt>(
+				gen,
+				makeBox<code::LiteralNumericExpr>(
+					ctx,
+					gen,
+					compiler::numeric_value::NumericValue::createOfType<u64>(u64_type.getType(), 0)
+						.value()
+				),
+				u64_type,
+				idx_sym
+			));
+
+			auto len_expr = makeBox<code::AccessExpr>(
+				ctx,
+				gen,
+				range_expr->clone(),
+				HInterface::ofTypeInstance(self_param.type.getType())
+			          .lookup(ctx, base::StrID("len"))->valueOrThrow().leaves[0]
+			);
+			auto condition = makeBox<code::BinaryOperatorExpr>(
+				ctx, gen, code::BuiltinBinary::IntegerLt, idx_expr->clone(), std::move(len_expr)
+			);
+
+			/**
+			 * while idx < len {
+			 *     element = range[idx]
+			 *     result = concat(result, toString(element))
+			 *     idx = idx + 1
+			 * }
+			 */
+			code::CodeBlock while_body{};
+			auto       element_expr = makeBox<code::IndexExpr>(ctx, gen, range_expr->clone(), idx_expr->clone());
+			const auto element_type = element_expr->expression_type.getSymbolType();
+			const auto element_to_string  = toStringSymForType(ctx, element_type.getType());
+			Box<code::Expr> to_string_arg = std::move(element_expr);
+			if (not element_type.getType().isSimple())
+				to_string_arg = makeBox<code::RefOfExpr>(ctx, gen, std::move(to_string_arg));
+			else if (element_type.getRefKind() != tsh::ReferenceKind::Direct)
+				to_string_arg = makeBox<code::DerefExpr>(ctx, gen, std::move(to_string_arg));
+
+			std::vector<Box<code::Expr>> to_string_args;
+			to_string_args.emplace_back(std::move(to_string_arg));
+			auto stringified_element = makeBox<code::CallExpr>(
+				ctx,
+				gen,
+				makeBox<code::IdentifierExpr>(ctx, gen, element_to_string),
+				std::move(to_string_args)
+			);
+			while_body.statements.emplace_back(append_to_stmt(getStringFromLiteralExpr(ctx, base::StrID(" "))));
+			while_body.statements.emplace_back(append_to_stmt(std::move(stringified_element)));
+
+			// idx = idx + 1
+			auto one = makeBox<code::LiteralNumericExpr>(
+				ctx,
+				gen,
+				compiler::numeric_value::NumericValue::createOfType<u64>(u64_type.getType(), 1)
+					.value()
+			);
+			while_body.statements.emplace_back(makeBox<code::AssignmentStmt>(
+				gen,
+				idx_expr->clone(),
+				makeBox<code::BinaryOperatorExpr>(
+					ctx, gen, code::BuiltinBinary::IntegerAdd, idx_expr->clone(), std::move(one)
+				)
+			));
+
+			body.emplace_back(
+				makeBox<code::WhileStmt>(gen, std::move(condition), std::move(while_body))
+			);
+
+			body.emplace_back(append_to_stmt(getStringFromLiteralExpr(ctx, base::StrID("]"))));
+			body.emplace_back(
+				makeBox<code::ReturnStmt>(gen, makeBox<code::IdentifierExpr>(ctx, gen, result_sym))
+			);
 		}
 
 		static void stringifyAggregate(
@@ -236,7 +408,7 @@ namespace compiler::helios::defgen {
 			);
 			body.emplace_back(makeBox<code::VariableStmt>(
 				code::generatedOrigin(),
-				makeBox<code::LiteralStringExpr>(ctx, code::generatedOrigin(), prefix),
+				getStringFromLiteralExpr(ctx, base::StrID(prefix)),
 				STRING_TYPE,
 				result_sym
 			));
@@ -304,9 +476,9 @@ namespace compiler::helios::defgen {
 				v3.emplace_back(
 					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), result_sym)
 				);
-				v3.emplace_back(makeBox<code::LiteralStringExpr>(
-					ctx, code::generatedOrigin(), base::StrID(idx < num_fields - 1 ? "," : ")")
-				));
+				v3.emplace_back(
+					getStringFromLiteralExpr(ctx, base::StrID(idx < num_fields - 1 ? "," : ")"))
+				);
 				body.emplace_back(makeBox<code::AssignmentStmt>(
 					code::generatedOrigin(),
 					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), result_sym),
@@ -380,6 +552,10 @@ namespace compiler::helios::defgen {
 				stringifyString(ctx, to_string_decl, body);
 				break;
 			}
+			case tsh::Kind::Slice: {
+				stringifySlice(ctx, to_string_decl, body);
+				break;
+			}
 			case tsh::Kind::Unit: {
 				stringifyUnit(ctx, to_string_decl, body);
 				break;
@@ -396,8 +572,7 @@ namespace compiler::helios::defgen {
 				std::string msg
 					= "Stringification not yet implemented for " + owner_type.toString();
 				body.emplace_back(makeBox<code::ReturnStmt>(
-					code::generatedOrigin(),
-					makeBox<code::LiteralStringExpr>(ctx, code::generatedOrigin(), base::StrID(msg))
+					code::generatedOrigin(), getStringFromLiteralExpr(ctx, base::StrID(msg))
 				));
 				break;
 			}

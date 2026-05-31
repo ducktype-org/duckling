@@ -158,6 +158,28 @@ namespace compiler::helios {
 						tsh::Mutability::Immutable,
 					};
 				}
+				variant_case(LengthMethod, length_method) {
+					const tsh::SymbolType<> self_type{
+						length_method.owner_type,
+						length_method.owner_type.isSimple() ? tsh::ReferenceKind::Direct
+															: tsh::ReferenceKind::Ref,
+						tsh::Mutability::Immutable,
+					};
+
+					const auto return_type = tsh::SymbolType<>::withDefaults(tsh::getIntegralType(
+						ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned
+					));
+
+					const auto length_method_abstract_type
+						= ctx.query<tsh::QueryFunctionType>({ .parameter_types = { self_type },
+					                                          .result_type     = return_type });
+
+					return tsh::SymbolType<>{
+						length_method_abstract_type,
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Immutable,
+					};
+				}
 				variant_case(DefaultDestructor, dtor) {
 					const tsh::SymbolType<> self_type{
 						dtor.owner_type,

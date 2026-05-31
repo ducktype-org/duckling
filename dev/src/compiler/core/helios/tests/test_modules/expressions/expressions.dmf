@@ -9,7 +9,7 @@ const V12: i64 = V3 + V3 * V3;
 
 const CMP: bool = V1 < 3 <= 4 == 5 != 6 >= 7 > VM1;
 
-const STR: str = "quack";
+const STR: String = "quack";
 
 const VREF: ref i32 = 0;
 const VBOX: box f16 = 0;
