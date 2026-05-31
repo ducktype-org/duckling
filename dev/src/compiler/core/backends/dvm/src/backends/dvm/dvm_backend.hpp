@@ -40,11 +40,7 @@ namespace compiler::backend_vm {
 		/**
 		 * @brief Inserts a LIR global into the module.
 		 */
-		void insertLirGlobal(
-			const lir::LIRGlobal&               lir_global,
-			base::Optional<CRef<lir::Function>> global_ctor,
-			base::Optional<CRef<lir::Function>> global_dtor
-		);
+		void insertLirGlobal(const lir::LIRGlobalData& lir_global);
 
 		/**
 		 * @brief Insert raw bytecode into a module.

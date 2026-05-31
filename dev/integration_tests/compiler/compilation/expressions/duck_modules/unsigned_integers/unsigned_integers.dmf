@@ -1,3 +1,5 @@
+import core.builtins.*;
+
 fun main() -> i64 = {
     ### U8 ###
     let u8_large: u8 = 250u8;

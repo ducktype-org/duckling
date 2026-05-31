@@ -49,14 +49,19 @@ namespace compiler::tsh {
 			= 0;
 
 		/**
-		 * @brief Gets the TypeInterface of the type described by this class.
-		 * @param ctx The Query Context necessary to deduce interfaces.
-		 * This is applicable for types which require being at some point "incomplete".
-		 * @return The TypeInterface of the type described by this class.
+		 * Get the complete interface of the type (including default methods and user-defined ones).
+		 * @note Uses an internal query for caching.
 		 */
 		[[nodiscard]]
-		virtual CRef<TypeInterface> getInterface(query::Context& ctx) const
-			= 0;
+		CRef<TypeInterface> getInterface(query::Context& ctx) const;
+
+		/**
+		 * @brief Check if the type is a simple type, which correlates heavily with the type being
+		 * more efficient to be passed by copy instead of by reference.
+		 * @return Whether the type is a simple type.
+		 */
+		[[nodiscard]]
+		bool isSimple() const;
 
 		/**
 		 * @brief Determines weather the type has a no-op destructor,
@@ -171,6 +176,19 @@ namespace compiler::tsh {
 		virtual ~AbstractTypeImpl() = default;
 
 	protected:
+		/**
+		 * @brief Gets the TypeInterface of the type described by this class, excluding elements
+		 * which belong to the default interface for each type. In other words, this is the part of
+		 * the interface which has been declared by the user.
+		 * @param ctx The Query Context necessary to deduce interfaces.
+		 * @return The TypeInterface of the type described by this class.
+		 */
+		[[nodiscard]]
+		virtual CRef<TypeInterface> getDeclaredInterface(query::Context& ctx) const
+			= 0;
+
+		friend struct ImplementationOf_QueryTypeInterface;
+
 		// @TODO set this for each type and make it const.
 		// @TODO make this a field in AbstractTypeImpl, set in the constructor?
 		// Should be done when text representation for types is determined.
@@ -219,7 +237,7 @@ namespace compiler::tsh {
 		[[nodiscard]] bool carriesInformation(query::Context&) const override { return false; }
 
 		[[nodiscard]]
-		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
+		CRef<TypeInterface> getDeclaredInterface(query::Context& ctx) const override;
 	};
 
 	class VoidAbstractTypeImpl final: public AbstractTypeImpl {
@@ -250,7 +268,7 @@ namespace compiler::tsh {
 
 		[[nodiscard]] bool carriesInformation(query::Context&) const override { return false; }
 
-		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
+		CRef<TypeInterface> getDeclaredInterface(query::Context& ctx) const override;
 	};
 
 	class ByteAbstractTypeImpl final: public AbstractTypeImpl {
@@ -286,7 +304,7 @@ namespace compiler::tsh {
 		[[nodiscard]] bool isTriviallyCopyable(query::Context&) const override { return true; }
 
 		[[nodiscard]]
-		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
+		CRef<TypeInterface> getDeclaredInterface(query::Context& ctx) const override;
 	};
 
 	class BoolAbstractTypeImpl final: public AbstractTypeImpl {
@@ -322,7 +340,7 @@ namespace compiler::tsh {
 		[[nodiscard]] bool isTriviallyCopyable(query::Context&) const override { return true; }
 
 		[[nodiscard]]
-		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
+		CRef<TypeInterface> getDeclaredInterface(query::Context& ctx) const override;
 	};
 
 	class CharAbstractTypeImpl final: public AbstractTypeImpl {
@@ -358,7 +376,7 @@ namespace compiler::tsh {
 		[[nodiscard]] bool isTriviallyCopyable(query::Context&) const override { return true; }
 
 		[[nodiscard]]
-		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
+		CRef<TypeInterface> getDeclaredInterface(query::Context& ctx) const override;
 	};
 
 	class IntegralAbstractTypeImpl final: public AbstractTypeImpl {
@@ -419,7 +437,7 @@ namespace compiler::tsh {
 		[[nodiscard]] bool isTriviallyCopyable(query::Context&) const override { return true; }
 
 		[[nodiscard]]
-		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
+		CRef<TypeInterface> getDeclaredInterface(query::Context& ctx) const override;
 	};
 
 	class FloatAbstractTypeImpl final: public AbstractTypeImpl {
@@ -464,7 +482,7 @@ namespace compiler::tsh {
 		[[nodiscard]] bool isTriviallyCopyable(query::Context&) const override { return true; }
 
 		[[nodiscard]]
-		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
+		CRef<TypeInterface> getDeclaredInterface(query::Context& ctx) const override;
 	};
 
 	class RawPointerAbstractTypeImpl final: public AbstractTypeImpl {
@@ -512,13 +530,13 @@ namespace compiler::tsh {
 		[[nodiscard]] bool isTriviallyCopyable(query::Context&) const override { return true; }
 
 		[[nodiscard]]
-		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
+		CRef<TypeInterface> getDeclaredInterface(query::Context& ctx) const override;
 
 	private:
 		Mutability mutability;
 	};
 
-	class PointerAbstractTypeImpl final: public AbstractTypeImpl {
+	class PointerAbstractTypeImpl: public AbstractTypeImpl {
 		SymbolType<> pointee;
 
 	public:
@@ -543,7 +561,7 @@ namespace compiler::tsh {
 		}
 
 		explicit PointerAbstractTypeImpl(const SymbolType<> component): pointee(component) {
-			representation = base::strConcat("pointer(", component.toString(), ")");
+			representation = base::strConcat("ptr ", component.toString());
 		}
 
 		[[nodiscard]]
@@ -562,7 +580,49 @@ namespace compiler::tsh {
 		[[nodiscard]] bool isTriviallyCopyable(query::Context&) const override { return true; }
 
 		[[nodiscard]]
-		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
+		CRef<TypeInterface> getDeclaredInterface(query::Context& ctx) const override;
+	};
+
+	class ManyPointerAbstractTypeImpl final: public PointerAbstractTypeImpl {
+	public:
+		[[nodiscard]]
+		Kind getKind() const override {
+			return STATIC_KIND;
+		}
+
+		/**
+		 * @brief The Kind of types described by objects of this class.
+		 */
+		static constexpr Kind STATIC_KIND = Kind::ManyPointer;
+
+		explicit ManyPointerAbstractTypeImpl(const SymbolType<> component):
+			  PointerAbstractTypeImpl(component) {
+			representation = base::strConcat("manyptr ", component.toString());
+		}
+
+		[[nodiscard]]
+		CRef<TypeInterface> getDeclaredInterface(query::Context& ctx) const override;
+	};
+
+	class CPointerAbstractTypeImpl final: public PointerAbstractTypeImpl {
+	public:
+		[[nodiscard]]
+		Kind getKind() const override {
+			return STATIC_KIND;
+		}
+
+		/**
+		 * @brief The Kind of types described by objects of this class.
+		 */
+		static constexpr Kind STATIC_KIND = Kind::CPointer;
+
+		explicit CPointerAbstractTypeImpl(const SymbolType<> component):
+			  PointerAbstractTypeImpl(component) {
+			representation = base::strConcat("cptr ", component.toString());
+		}
+
+		[[nodiscard]]
+		CRef<TypeInterface> getDeclaredInterface(query::Context& ctx) const override;
 	};
 
 	class StringAbstractTypeImpl final: public AbstractTypeImpl {
@@ -609,7 +669,7 @@ namespace compiler::tsh {
 		}
 
 		[[nodiscard]]
-		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
+		CRef<TypeInterface> getDeclaredInterface(query::Context& ctx) const override;
 	};
 
 	class DynamicArrayAbstractTypeImpl final: public AbstractTypeImpl {
@@ -670,7 +730,7 @@ namespace compiler::tsh {
 		[[nodiscard]] bool isTriviallyCopyable(query::Context&) const override { return false; }
 
 		[[nodiscard]]
-		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
+		CRef<TypeInterface> getDeclaredInterface(query::Context& ctx) const override;
 	};
 
 	class StaticArrayAbstractTypeImpl final: public AbstractTypeImpl {
@@ -718,7 +778,7 @@ namespace compiler::tsh {
 		[[nodiscard]] bool carriesInformation(query::Context& ctx) const override;
 
 		[[nodiscard]]
-		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
+		CRef<TypeInterface> getDeclaredInterface(query::Context& ctx) const override;
 	};
 
 	class TupleAbstractTypeImpl final: public AbstractTypeImpl {
@@ -752,7 +812,7 @@ namespace compiler::tsh {
 		[[nodiscard]] bool isTriviallyCopyable(query::Context& ctx) const override;
 
 		[[nodiscard]]
-		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
+		CRef<TypeInterface> getDeclaredInterface(query::Context& ctx) const override;
 	};
 
 	class FunctionAbstractTypeImpl final: public AbstractTypeImpl {
@@ -829,7 +889,7 @@ namespace compiler::tsh {
 		}
 
 		[[nodiscard]]
-		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
+		CRef<TypeInterface> getDeclaredInterface(query::Context& ctx) const override;
 	};
 
 	/** @TODO:
@@ -870,7 +930,7 @@ namespace compiler::tsh {
 		[[nodiscard]] bool isTriviallyCopyable(query::Context& ctx) const override;
 
 		[[nodiscard]]
-		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
+		CRef<TypeInterface> getDeclaredInterface(query::Context& ctx) const override;
 	};
 
 	class ClassAbstractTypeImpl final: public AbstractTypeImpl {
@@ -888,7 +948,7 @@ namespace compiler::tsh {
 		static constexpr Kind STATIC_KIND = Kind::Class;
 
 		[[nodiscard]]
-		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
+		CRef<TypeInterface> getDeclaredInterface(query::Context& ctx) const override;
 
 		explicit ClassAbstractTypeImpl(compiler::helios::SymID symbol);
 
@@ -918,7 +978,7 @@ namespace compiler::tsh {
 		[[nodiscard]]
 		SymbolType<> getMemberType(compiler::helios::SymID sym, query::Context& ctx) const {
 			const auto& elements_with_same_name
-				= getInterface(ctx)->getElementsByName().at(name(sym));
+				= getDeclaredInterface(ctx)->getElementsByName().at(name(sym));
 			for (const auto& element: elements_with_same_name)
 				if (element.getSymbol() == sym) return element.getType(ctx);
 			CORE_PANIC("Element not found.");
@@ -937,7 +997,7 @@ namespace compiler::tsh {
 		[[nodiscard]] bool carriesInformation(query::Context& ctx) const override {
 			// this should probably be changed/expanded in the future:
 			u64 fields_count = 0;
-			for (const auto& element: getInterface(ctx)->getElements())
+			for (const auto& element: getDeclaredInterface(ctx)->getElements())
 				if (element.isField()) fields_count++;
 			return fields_count != 0;
 		}
@@ -970,7 +1030,7 @@ namespace compiler::tsh {
 		[[nodiscard]] bool isTriviallyCopyable(query::Context&) const override { return false; }
 
 		[[nodiscard]]
-		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
+		CRef<TypeInterface> getDeclaredInterface(query::Context& ctx) const override;
 	};
 
 	class ModuleAbstractTypeImpl final: public AbstractTypeImpl {
@@ -1003,7 +1063,7 @@ namespace compiler::tsh {
 		[[nodiscard]] bool isTriviallyCopyable(query::Context&) const override { return false; }
 
 		[[nodiscard]]
-		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
+		CRef<TypeInterface> getDeclaredInterface(query::Context& ctx) const override;
 	};
 
 	class MetaAbstractTypeImpl final: public AbstractTypeImpl {
@@ -1036,7 +1096,7 @@ namespace compiler::tsh {
 		[[nodiscard]] bool isTriviallyCopyable(query::Context&) const override { return true; }
 
 		[[nodiscard]]
-		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
+		CRef<TypeInterface> getDeclaredInterface(query::Context& ctx) const override;
 	};
 
 	class ImportAbstractTypeImpl final: public AbstractTypeImpl {
@@ -1066,7 +1126,7 @@ namespace compiler::tsh {
 		[[nodiscard]] bool isTriviallyCopyable(query::Context&) const override { return false; }
 
 		[[nodiscard]]
-		CRef<TypeInterface> getInterface(query::Context& ctx) const override;
+		CRef<TypeInterface> getDeclaredInterface(query::Context& ctx) const override;
 	};
 
 	class TypeTemplateAbstractTypeImpl final: public AbstractTypeImpl {
@@ -1118,6 +1178,6 @@ namespace compiler::tsh {
 
 		[[nodiscard]] bool isTriviallyCopyable(query::Context&) const override { return false; }
 
-		CRef<TypeInterface> getInterface(query::Context&) const override;
+		CRef<TypeInterface> getDeclaredInterface(query::Context&) const override;
 	};
 }

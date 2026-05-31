@@ -469,6 +469,8 @@ namespace compiler::backend_llvm {
 
 		if (auto* function = llvm::dyn_cast<llvm::Function>(callee.getCallee())) {
 			function->setCallingConv(getCallingConvFromABI(function_literal.abi));
+			if (function_literal.link_once)
+				function->setLinkage(llvm::GlobalValue::LinkOnceODRLinkage);
 
 			// If the function uses C ABI, we need to pass structs by pointer with `byval` attribute.
 			if (std::holds_alternative<helios::CAbi>(function_literal.abi)) {
@@ -497,6 +499,10 @@ namespace compiler::backend_llvm {
 		);
 	}
 
+	/**
+	 * @brief This only inserts a global variable declaration if it doesn't exist.
+	 * It does not set any initializer or linkage.
+	 */
 	Ref<llvm::Constant> getOrInsertGlobalVariable(
 		const Ref<llvm::Module> module, const lir::LIRGlobal& lir_global
 	) {
@@ -515,29 +521,36 @@ namespace compiler::backend_llvm {
 	 * for constants it sets the initial value to the provided constant value.
 	 */
 	Ref<llvm::GlobalVariable> addGlobalVariable(
-		const Ref<llvm::Module> module, const lir::LIRGlobal& lir_global
+		const Ref<llvm::Module> module, const lir::LIRGlobalData& lir_global
 	) {
-		getOrInsertGlobalVariable(module, lir_global);
+		getOrInsertGlobalVariable(module, lir_global.global);
+
 		const Ref<llvm::GlobalVariable> global
-			= module->getNamedGlobal(lir_global.mangled_name.strView());
+			= module->getNamedGlobal(lir_global.global.mangled_name.strView());
 
 		CORE_ASSERT(global->isDeclaration(), "Global is not the declaration");
 
 		global->setLinkage(llvm::GlobalValue::ExternalLinkage);
-		global->setConstant(lir_global.type == lir::LIRGlobalType::Constant);
+		global->setConstant(lir_global.global.type == lir::LIRGlobalType::Constant);
 
-		if (lir_global.type == lir::LIRGlobalType::Constant) {
+		if (lir_global.global.type == lir::LIRGlobalType::Constant) {
 			CORE_ASSERT(
-				lir_global.initial_value.has_value(), "Expected initial value for constant global"
+				std::holds_alternative<ctv::CompileTimeValue>(lir_global.data_initialization),
+				"Constant global must have CompileTimeValue as initial value"
 			);
-			global->setInitializer(
-				ctvToLLVMConstant(lir_global.initial_value.value(), global->getValueType(), module)
-			);
+			global->setInitializer(ctvToLLVMConstant(
+				std::get<ctv::CompileTimeValue>(lir_global.data_initialization),
+				global->getValueType(),
+				module
+			));
 		} else {
 			// Initialise the global variable to null, since it will be initialised in the constructor:
 			CORE_ASSERT(
-				not lir_global.initial_value.has_value(),
-				"Non-constant global should not have initial value set"
+				std::holds_alternative<lir::LIRGlobalData::CTorDtorPair>(
+					lir_global.data_initialization
+				),
+				"For now we assume, that each non-constant is non-CTV initialized, but this might "
+				"change in the future"
 			);
 			global->setInitializer(llvm::Constant::getNullValue(global->getValueType()));
 		}
@@ -551,7 +564,7 @@ namespace compiler::backend_llvm {
 	 * and generates LLVM function in given module based
 	 * on provided LIRFunction.
 	 */
-	struct LIRFunction2LLVM {
+	struct LIRFunction2LLVM final {
 		Ref<llvm::Module>   module;
 		llvm::LLVMContext&  context;
 		query::Context&     ctx;
@@ -765,6 +778,21 @@ namespace compiler::backend_llvm {
 
 								// Lastly, update the types and layouts.
 								current_layout = dynamic_array_layout.getElementLayout();
+								current_type   = typeFromLayout(module, current_layout);
+							}
+							variant_case(tsl::PointerTypeLayout, pointer_layout) {
+								// Finish any struct/array GEP first
+								flush_gep();
+
+								// Load the pointer value (because current_ptr points to storage)
+								current_ptr = builder.CreateLoad(builder.getPtrTy(), current_ptr);
+
+								// Add an index for pointer arithmetic
+								gep_indices.push_back(index_value);
+
+
+								// Update layout/type
+								current_layout = pointer_layout.getPointee();
 								current_type   = typeFromLayout(module, current_layout);
 							}
 							variant_default { CORE_PANIC("Indexing into a non-array layout"); }
@@ -1494,7 +1522,7 @@ namespace compiler::backend_llvm {
 		llvm::appendToGlobalDtors(*module->module.refMut(), fun, 65'535);
 	}
 
-	void addGlobalToModuleImpl(const Ref<ModuleImpl> module, const lir::LIRGlobal& lir_global) {
+	void addGlobalToModuleImpl(const Ref<ModuleImpl> module, const lir::LIRGlobalData& lir_global) {
 		addGlobalVariable(module->module.refMut(), lir_global);
 	}
 }

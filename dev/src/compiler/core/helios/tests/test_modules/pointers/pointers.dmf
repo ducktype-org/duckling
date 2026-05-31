@@ -1,0 +1,21 @@
+fun test_pointers() -> i64 = {
+    var a: i32 = 20;
+    var ref_a: ref i32 = &a;
+
+    var p: ptr i32;
+    var from_ref: ptr i32 = ref_a as ptr i32;
+    var from_addr: ptr i32 = &a as ptr i32;
+
+    var box_a: box i32 = 42;
+    var from_box: ptr i32 = box_a as ptr i32;
+
+    var c: cptr i32 = from_ref as cptr i32;
+    var m: manyptr i32;
+    var pp: ptr ptr i32;
+    var inner: ptr i32;
+
+    var deref_val: i32 = *from_ref;
+    var sum: i32 = *from_ref + 1;
+
+    return 0;
+}

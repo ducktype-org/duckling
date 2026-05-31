@@ -114,6 +114,13 @@ namespace clah::exceptions {
 	};
 
 	/**
+	 * @brief Raised when a custom verification callback fails.
+	 */
+	struct CustomVerificationFailed: public ClahException {
+		explicit CustomVerificationFailed(const std::string& message);
+	};
+
+	/**
 	 * @brief Raised when user has specified extra arguments, but Clah has
 	 * Clah::default_value_parser set to nullptr.
 	 */

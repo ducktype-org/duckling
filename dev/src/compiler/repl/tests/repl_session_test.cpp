@@ -1,3 +1,4 @@
+#include <diagnostic_interactive/module_flags/module_flags.hpp>
 #include <driver/repl_utils/repl_split_helpers.hpp>
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
@@ -5,6 +6,7 @@
 #include <repl/session.hpp>
 
 #include <filesystem/file.hpp>
+#include <logger/logger.hpp>
 #include <query_framework/entry/query_entry_point.hpp>
 #include <tester/tester.hpp>
 
@@ -44,6 +46,13 @@ namespace compiler::repl {
 			TESTER_ADD_TEST(testReplArithmeticExpressions);
 			TESTER_ADD_TEST(testReplVariableLookup);
 			TESTER_ADD_TEST(testReplUnsupportedActionClassification);
+		}
+
+		void beforeAll() override {
+			dia_int::configureImmediatePrint(&std::cerr);
+			// enable if needed
+			// logger::enable_dev_logs = true;
+			// logger::enableDevCategoryByStringName("REPL");
 		}
 
 	private:
@@ -308,9 +317,8 @@ namespace compiler::repl {
 		void testLoadScriptFileExecutesStatements() {
 			ReplSession session;
 
-			auto script_file = fs::FileManager::createRandomTempFile(
-				"var loaded_x: i32 = 1;\nloaded_x = 10;\nbuiltin_output_i64(loaded_x + 3);"
-			);
+			auto script_file
+				= fs::FileManager::createRandomTempFile("var loaded_x: i32 = 1;\nloaded_x = 10;");
 			auto script_path = std::string("   ") + script_file.getFilePath().string();
 
 			auto initial_history_size = session.m_history.size();
@@ -322,7 +330,7 @@ namespace compiler::repl {
 			);
 
 			auto updated_history_size = session.m_history.size();
-			ASSERT_EQUAL(3UL, updated_history_size - initial_history_size);
+			ASSERT_EQUAL(2UL, updated_history_size - initial_history_size);
 			assertFalse(
 				session.m_suppress_repl_feedback_during_script_load,
 				"Output suppression should be restored"
@@ -340,9 +348,8 @@ namespace compiler::repl {
 		void testLoadCommandExecutesScript() {
 			ReplSession session;
 
-			auto script_file = fs::FileManager::createRandomTempFile(
-				"var cmd_x: i32 = 7;\ncmd_x = cmd_x + 2;\nbuiltin_output_i64(cmd_x);"
-			);
+			auto script_file
+				= fs::FileManager::createRandomTempFile("var cmd_x: i32 = 7;\ncmd_x = cmd_x + 2;");
 			auto command = std::string("/load ") + script_file.getFilePath().string();
 
 			auto result = session.processLine(command);

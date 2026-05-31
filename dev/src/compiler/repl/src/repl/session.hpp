@@ -24,6 +24,7 @@
 
 #include <vm/core/process/interface_types.hpp>
 
+#include <functional>
 #include <string_view>
 #include <vector>
 
@@ -208,6 +209,20 @@ namespace compiler::repl {
 		 * once during REPL session initialization.
 		 */
 		void initDVM();
+
+		/**
+		 * @brief Return a simple error result.
+		 */
+		ReplResult failWithMessage(std::string_view message);
+
+		/**
+		 * @brief Execute a query-context action and map QueryFailed to a REPL error message.
+		 */
+		void runWithContextErrorHandling(
+			std::string_view                            std_exception_prefix,
+			const std::function<void(query::Context&)>& action,
+			std::string&                                out_error
+		);
 
 		bool                       m_should_exit;  ///< Flag to terminate the REPL loop
 		std::vector<ReplStatement> m_history;      ///< All statements entered in this session
