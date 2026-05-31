@@ -669,21 +669,21 @@ namespace compiler::repl {
 
 				CORE_DEV_LOG(REPL, "Executing ", statement_sources.size(), " statement(s)\n");
 
-					ReplResult last_result = ReplResult::success();
-					for (const auto& stmt_source: statement_sources) {
-						CORE_DEV_LOG(REPL, "Executing statement: \"", stmt_source, "\"\n");
-						base::Optional<frontend::ModuleID> parent_module_id;
-						if (!m_session_history.empty()) {
-							parent_module_id = m_session_history.back().module_id;
-							CORE_DEV_LOG(
-								REPL,
-								"Setting REPL parent to module #",
-								m_session_history.back().module_id.queryUnstablePerfectHash(),
-								"\n"
-							);
-						} else {
-							CORE_DEV_LOG(REPL, "First REPL module, no parent\n");
-						}
+				ReplResult last_result = ReplResult::success();
+				for (const auto& stmt_source: statement_sources) {
+					CORE_DEV_LOG(REPL, "Executing statement: \"", stmt_source, "\"\n");
+					base::Optional<frontend::ModuleID> parent_module_id;
+					if (!m_session_history.empty()) {
+						parent_module_id = m_session_history.back().module_id;
+						CORE_DEV_LOG(
+							REPL,
+							"Setting REPL parent to module #",
+							m_session_history.back().module_id.queryUnstablePerfectHash(),
+							"\n"
+						);
+					} else {
+						CORE_DEV_LOG(REPL, "First REPL module, no parent\n");
+					}
 
 					auto module_ref = createEphemeralChainedStatementModule(
 						stmt_source, parent_module_id, m_line_counter, "repl_"
