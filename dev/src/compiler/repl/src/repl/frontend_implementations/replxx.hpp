@@ -1,11 +1,12 @@
 #pragma once
 
-#include "../helper_structs.hpp"
+#include "../helpers.hpp"
 
 #include <replxx.hxx>
 
 #include <set>
 #include <string>
+#include <string_view>
 
 namespace compiler::repl {
 	class FrontendReplxxImplementation final {
@@ -16,6 +17,7 @@ namespace compiler::repl {
 		void        printWelcome() const;
 		std::string readLine();
 		void        printHistory() const;
+		void        addHistoryEntry(std::string_view entry);
 		void        clearHistory();
 		void        clearScreen();
 		void        printHelp() const;

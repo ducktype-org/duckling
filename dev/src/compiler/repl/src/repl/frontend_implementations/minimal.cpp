@@ -1,7 +1,7 @@
 #define NOMINMAX
 #include "minimal.hpp"
 
-#include <repl/helper_structs.hpp>
+#include <repl/helpers.hpp>
 
 #include <base/types/ints.hpp>
 
@@ -9,6 +9,7 @@
 #include <cstddef>
 #include <format>
 #include <iostream>
+#include <sstream>
 #include <string>
 #include <string_view>
 
@@ -215,21 +216,37 @@ namespace compiler::repl {
 
 		std::cout << "\n=== REPL History (" << m_history.size()
 				  << (m_history.size() == 1 ? " statement" : " statements") << ") ===\n";
-		for (size_t i = 0; i < m_history.size(); ++i)
+		for (usize i = 0; i < m_history.size(); ++i)
 			std::cout << "[" << (i + 1) << "] " << m_history[i].print(true) << '\n';
 		std::cout << '\n';
+	}
+
+	void FrontendMinImplementation::addHistoryEntry(std::string_view entry) {
+		EditorState state;
+		state.reset();
+		state.lines.clear();
+
+		std::istringstream stream{ std::string(entry) };
+		std::string        line;
+		while (std::getline(stream, line)) state.lines.push_back(line);
+		if (state.lines.empty()) state.lines.emplace_back("");
+
+		state.row = state.lines.size() - 1;
+		state.col = state.lines.back().size();
+		state.prev_state_lengths.clear();
+		for (const auto& saved_line: state.lines)
+			state.prev_state_lengths.push_back(saved_line.size());
+		state.prev_state_row = state.row;
+		state.prev_state_col = state.col;
+
+		m_history.push_back(state);
+		m_hist_idx = m_history.size();
 	}
 
 	void FrontendMinImplementation::clearHistory() { m_history.clear(); }
 
 	void FrontendMinImplementation::printHelp() const {
-		std::cout << "\n=== REPL Commands ===\n";
-		std::cout << "  /help, /?, /h       - Show this help message\n";
-		std::cout << "  /exit, /quit, /q    - Exit the REPL\n";
-		std::cout << "  /history, /hist     - Show all executed statements\n";
-		std::cout << "  /clear, /c          - Clear terminal\n";
-		std::cout << "  /load <file.ds>     - Load script file (stops on first error; previous\n"
-				  << "                         statements stay applied)\n";
+		printReplCommandsHelp(std::cout);
 		std::cout << "\n=== Editing ===\n";
 		std::cout << "  Alt + Enter         - Insert a new line\n";
 		std::cout << "  Alt + Up / Down     - Navigate input history\n";
@@ -433,7 +450,7 @@ namespace compiler::repl {
 			m_editor_state.prev_state_row, m_editor_state.prev_state_col
 		);
 
-		for (size_t i = 0; i < prev_st_lengths.size(); i++) {
+		for (usize i = 0; i < prev_st_lengths.size(); i++) {
 			clear_seq += std::string(prev_st_lengths[i], ' ');
 			if (i < prev_st_lengths.size() - 1) {
 				clear_seq += NEWLINE_CHAR;
