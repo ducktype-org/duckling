@@ -16,15 +16,20 @@
 
 namespace compiler::backend_vm {
 	/**
-	 * @brief REPL wrapper around ProgramLoweringContext with incremental emission support.
+	 * @brief Public API wrapper for REPL that exposes `ProgramLoweringContext` from DVM's
+	 * `src_private`.
 	 *
-	 * Keeps a persistent lowering context across REPL statements and exposes helpers to
-	 * capture a snapshot before lowering and then collect only the newly lowered code
-	 * since that snapshot. This enables incremental bytecode loading while still allowing
+	 * This class provides a stable public interface to the DVM backend's internal lowering context,
+	 * preventing REPL and other clients from directly depending on `src_private` implementation
+	 * details. It delegates all actual lowering logic to `ProgramLoweringContext` while
+	 * encapsulating incremental code emission for REPL use cases.
+	 *
+	 * The wrapper maintains a persistent lowering context across REPL statements, allowing
 	 * later statements to reference symbols (functions, globals, types) from earlier ones.
+	 * It exposes snapshot/collection semantics to enable incremental bytecode loading without
+	 * recompiling the entire module.
 	 *
-	 * @note This wrapper doesn't add any complicated logic,
-	 * it is a simple wrapper for the ProgramLoweringContext.
+	 * @note This is purely an encapsulation layer it adds no logic of its own.
 	 *
 	 * @note Feel Free to refactor this class if a better way of managing
 	 * the REPL context is found.

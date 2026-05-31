@@ -53,10 +53,12 @@ private:
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto expr_stmt = extractSingleExpression(ctx, "1 + 2;");
 
-			auto wrapper = ctx.query<repl::QueryReplExpressionWrapper>({
+			auto wrapper_result = ctx.query<repl::QueryReplExpressionWrapper>({
 				.expr_stmt = expr_stmt,
 				.counter   = 7,
 			});
+			ASSERT_TRUE(wrapper_result.hasValue());
+			auto& wrapper = wrapper_result.valueOrPanic();
 
 			ASSERT_EQUAL(wrapper.declaration->parameters.size(), 0u);
 			ASSERT_EQUAL(wrapper.body->statements.size(), 1u);
@@ -73,10 +75,12 @@ private:
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto expr_stmt = extractSingleExpression(ctx, "40 + 2;");
 
-			auto wrapper = ctx.query<repl::QueryReplExpressionWrapper>({
+			auto wrapper_result = ctx.query<repl::QueryReplExpressionWrapper>({
 				.expr_stmt = expr_stmt,
 				.counter   = 13,
 			});
+			ASSERT_TRUE(wrapper_result.hasValue());
+			auto& wrapper = wrapper_result.valueOrPanic();
 
 			auto sym_ref  = helios::getSymRef(wrapper.declaration->original_symbol);
 			auto gen_data = std::get_if<helios::defgen::GeneratedSymbolData>(&sym_ref->other);
@@ -99,14 +103,18 @@ private:
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto expr_stmt = extractSingleExpression(ctx, "1 + 2;");
 
-			auto wrapper_a = ctx.query<repl::QueryReplExpressionWrapper>({
+			auto wrapper_result_a = ctx.query<repl::QueryReplExpressionWrapper>({
 				.expr_stmt = expr_stmt,
 				.counter   = 101,
 			});
-			auto wrapper_b = ctx.query<repl::QueryReplExpressionWrapper>({
+			auto wrapper_result_b = ctx.query<repl::QueryReplExpressionWrapper>({
 				.expr_stmt = expr_stmt,
 				.counter   = 102,
 			});
+			ASSERT_TRUE(wrapper_result_a.hasValue());
+			ASSERT_TRUE(wrapper_result_b.hasValue());
+			auto& wrapper_a = wrapper_result_a.valueOrPanic();
+			auto& wrapper_b = wrapper_result_b.valueOrPanic();
 
 			auto mangled_a
 				= helios::mangler::getSimpleMangledName(ctx, wrapper_a.declaration->original_symbol)
@@ -132,14 +140,18 @@ private:
 			auto expr_i32 = extractSingleExpression(ctx, "42;");
 			auto expr_f64 = extractSingleExpression(ctx, "3.14;");
 
-			auto wrapper_i32 = ctx.query<repl::QueryReplExpressionWrapper>({
+			auto wrapper_result_i32 = ctx.query<repl::QueryReplExpressionWrapper>({
 				.expr_stmt = expr_i32,
 				.counter   = 999,
 			});
-			auto wrapper_f64 = ctx.query<repl::QueryReplExpressionWrapper>({
+			auto wrapper_result_f64 = ctx.query<repl::QueryReplExpressionWrapper>({
 				.expr_stmt = expr_f64,
 				.counter   = 999,
 			});
+			ASSERT_TRUE(wrapper_result_i32.hasValue());
+			ASSERT_TRUE(wrapper_result_f64.hasValue());
+			auto& wrapper_i32 = wrapper_result_i32.valueOrPanic();
+			auto& wrapper_f64 = wrapper_result_f64.valueOrPanic();
 
 			auto sym_i32 = helios::getSymRef(wrapper_i32.declaration->original_symbol);
 			auto sym_f64 = helios::getSymRef(wrapper_f64.declaration->original_symbol);
