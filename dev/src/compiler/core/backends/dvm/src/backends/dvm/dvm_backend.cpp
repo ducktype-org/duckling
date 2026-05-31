@@ -1,6 +1,5 @@
-#include "program_lowering_context.hpp"
-
 #include <backends/dvm/dvm_backend.hpp>
+#include <program_lowering_context.hpp>
 
 #include <base/except/exceptions.hpp>
 #include <base/pointers/box.hpp>
@@ -32,12 +31,8 @@ namespace compiler::backend_vm {
 		program_context->insertExternCFunction(extern_func);
 	}
 
-	void DVMCodeBuilder::insertLirGlobal(
-		const lir::LIRGlobal&               lir_global,
-		base::Optional<CRef<lir::Function>> global_ctor,
-		base::Optional<CRef<lir::Function>> global_dtor
-	) {
-		program_context->lowerAndKeepLirGlobal(lir_global, global_ctor, global_dtor);
+	void DVMCodeBuilder::insertLirGlobal(const lir::LIRGlobalData& lir_global) {
+		program_context->lowerAndKeepLirGlobal(lir_global);
 	}
 
 	void DVMCodeBuilder::insertRawBytecodeDefinitions(const vm::code::CodeCollection& bytecode) {

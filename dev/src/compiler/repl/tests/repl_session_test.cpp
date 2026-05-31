@@ -5,11 +5,17 @@
 #include <frontend/module_tree/queries.hpp>
 #include <repl/session.hpp>
 
+#include <base/types/ints.hpp>
+
 #include <filesystem/file.hpp>
 #include <logger/logger.hpp>
 #include <query_framework/entry/query_entry_point.hpp>
 #include <tester/tester.hpp>
 
+#include <filesystem>
+#include <fstream>
+#include <iostream>
+#include <sstream>
 #include <string_view>
 
 namespace compiler::repl {
@@ -34,7 +40,6 @@ namespace compiler::repl {
 			TESTER_ADD_TEST(testReplHistoryCommandThroughProcessLine);
 			TESTER_ADD_TEST(testReplUnknownCommandThroughHandleCommand);
 			TESTER_ADD_TEST(testReplClearCommandDoesNotResetSessionState);
-			TESTER_ADD_TEST(testReplClearHistoryResetsSessionState);
 			TESTER_ADD_TEST(testReplProcessLineWithCode);
 			TESTER_ADD_TEST(testReplInstructionExecution);
 			TESTER_ADD_TEST(testReplCommandDetection);
@@ -46,6 +51,15 @@ namespace compiler::repl {
 			TESTER_ADD_TEST(testReplArithmeticExpressions);
 			TESTER_ADD_TEST(testReplVariableLookup);
 			TESTER_ADD_TEST(testReplUnsupportedActionClassification);
+			TESTER_ADD_TEST(testReplResetAbsoluteReplay);
+			TESTER_ADD_TEST(testReplResetRelativeReplay);
+			TESTER_ADD_TEST(testReplResetSyntaxErrors);
+			TESTER_ADD_TEST(testReplFrontendAddHistory);
+			TESTER_ADD_TEST(testReplResetSyntaxErrorsMore);
+			TESTER_ADD_TEST(testReplSaveAndPrintHistory);
+			TESTER_ADD_TEST(testReplCommandsResetCommand);
+			TESTER_ADD_TEST(testReplHistoryCommandAdvanced);
+			TESTER_ADD_TEST(testReplReplayHistoryNotSilent);
 		}
 
 		void beforeAll() override {
@@ -56,6 +70,29 @@ namespace compiler::repl {
 		}
 
 	private:
+		struct ScopedStreamCapture final {
+			explicit ScopedStreamCapture(std::ostream& stream):
+				  m_stream(stream),
+				  m_old_buf(stream.rdbuf(m_buffer.rdbuf())) {}
+
+			~ScopedStreamCapture() { m_stream.rdbuf(m_old_buf); }
+
+			ScopedStreamCapture(const ScopedStreamCapture&)            = delete;
+			ScopedStreamCapture& operator=(const ScopedStreamCapture&) = delete;
+
+			std::string str() const { return m_buffer.str(); }
+
+		private:
+			std::ostream&     m_stream;
+			std::stringstream m_buffer;
+			std::streambuf*   m_old_buf = nullptr;
+		};
+
+		void removeSessionHistoryFile() {
+			std::error_code err;
+			std::filesystem::remove(".duckling_repl_session_history", err);
+		}
+
 		/**
 		 * @brief Test that a ReplSession can be initialized successfully.
 		 *
@@ -70,7 +107,7 @@ namespace compiler::repl {
 			assertTrue(
 				!session.m_should_exit, "ReplSession should not exit immediately after construction"
 			);
-			assertTrue(session.m_history.empty(), "ReplSession history should start empty");
+			assertTrue(session.m_session_history.empty(), "ReplSession history should start empty");
 			assertTrue(session.m_line_counter == 0, "Line counter should start at 0");
 		}
 
@@ -149,7 +186,7 @@ namespace compiler::repl {
 
 			session.processLine("var x: i32 = 10;");
 
-			auto history_size_before_clear = session.m_history.size();
+			auto history_size_before_clear = session.m_session_history.size();
 			auto line_counter_before_clear = session.m_line_counter;
 
 			auto clear_result = session.processLine("/clear");
@@ -159,7 +196,7 @@ namespace compiler::repl {
 				"/clear should be processed as a successful command"
 			);
 			assertTrue(
-				session.m_history.size() == history_size_before_clear,
+				session.m_session_history.size() == history_size_before_clear,
 				"/clear should not modify REPL statement history"
 			);
 			assertTrue(
@@ -168,19 +205,292 @@ namespace compiler::repl {
 			);
 		}
 
-		void testReplClearHistoryResetsSessionState() {
+		void testReplResetAbsoluteReplay() {
+			removeSessionHistoryFile();
 			ReplSession session;
 
-			session.processLine("1 + 2");
-			session.processLine("3 + 4");
+			std::vector<std::string_view> statements = {
+				"var a: i32 = 1;",
+				"var b: i32 = a + 1;",
+				"var c: i32 = b + 1;",
+				"var d: i32 = c + 1;",
+			};
 
-			assertTrue(!session.m_history.empty(), "History should contain entries before clear");
-			assertTrue(session.m_line_counter > 0, "Line counter should increase before clear");
+			for (auto stmt: statements) {
+				auto result = session.processLine(stmt);
+				assertTrue(
+					result.status == ReplResult::Status::Success,
+					"Setup statements should execute before reset"
+				);
+			}
 
-			session.clearHistory();
+			auto reset_result = session.processLine("/reset 2");
+			assertTrue(
+				reset_result.status == ReplResult::Status::Reset,
+				"/reset 2 should request a REPL reset"
+			);
+			assertTrue(
+				session.getResetReplayCount().has_value()
+					&& session.getResetReplayCount().value() == 2,
+				"/reset 2 should set replay count to 2"
+			);
 
-			assertTrue(session.m_history.empty(), "clearHistory should remove all history entries");
-			assertTrue(session.m_line_counter == 0, "clearHistory should reset line counter");
+			{
+				ReplSession replay_session;
+				replay_session.replayHistoryEntries(2, true);
+
+				auto first_result  = replay_session.processLine("a;");
+				auto second_result = replay_session.processLine("b;");
+				auto third_result  = replay_session.processLine("c;");
+				auto fourth_result = replay_session.processLine("d;");
+
+				assertTrue(
+					first_result.status == ReplResult::Status::Success,
+					"After reset to entry 2, 'a' should be available"
+				);
+				assertTrue(
+					second_result.status == ReplResult::Status::Success,
+					"After reset to entry 2, 'b' should be available"
+				);
+				assertTrue(
+					third_result.status == ReplResult::Status::Error,
+					"After reset to entry 2, 'c' should be unavailable"
+				);
+				assertTrue(
+					fourth_result.status == ReplResult::Status::Error,
+					"After reset to entry 2, 'd' should be unavailable"
+				);
+			}
+
+			removeSessionHistoryFile();
+		}
+
+		void testReplResetRelativeReplay() {
+			removeSessionHistoryFile();
+			ReplSession session;
+
+			std::vector<std::string_view> statements = {
+				"var a: i32 = 1;",
+				"var b: i32 = a + 1;",
+				"var c: i32 = b + 1;",
+				"var d: i32 = c + 1;",
+			};
+
+			for (auto stmt: statements) {
+				auto result = session.processLine(stmt);
+				assertTrue(
+					result.status == ReplResult::Status::Success,
+					"Setup statements should execute before reset"
+				);
+			}
+
+			auto reset_result = session.processLine("/reset -2");
+			assertTrue(
+				reset_result.status == ReplResult::Status::Reset,
+				"/reset -2 should request a REPL reset"
+			);
+			assertTrue(
+				session.getResetReplayCount().has_value()
+					&& session.getResetReplayCount().value() == 2,
+				"/reset -2 should set replay count to size - 2"
+			);
+
+			{
+				ReplSession replay_session;
+				replay_session.replayHistoryEntries(2, true);
+				auto first_result  = replay_session.processLine("a;");
+				auto second_result = replay_session.processLine("b;");
+				auto third_result  = replay_session.processLine("c;");
+				assertTrue(
+					first_result.status == ReplResult::Status::Success,
+					"After relative reset, 'a' should be available"
+				);
+				assertTrue(
+					second_result.status == ReplResult::Status::Success,
+					"After relative reset, 'b' should be available"
+				);
+				assertTrue(
+					third_result.status == ReplResult::Status::Error,
+					"After relative reset, 'c' should be unavailable"
+				);
+			}
+
+			removeSessionHistoryFile();
+		}
+
+		void testReplFrontendAddHistory() {
+			ReplFrontend frontend_without_completions(false);
+			ReplFrontend frontend_with_completions(true);
+			frontend_without_completions.clearHistory();
+			frontend_with_completions.clearHistory();
+
+			{
+				ScopedStreamCapture capture(std::cout);
+				frontend_without_completions.printHistory();
+				assertTrue(
+					capture.str().find("No history yet.") != std::string::npos,
+					"Should print no history"
+				);
+			}
+
+			frontend_with_completions.addHistoryEntry("test");
+			frontend_with_completions.addHistoryEntry("");
+			frontend_with_completions.clearHistory();
+
+			{
+				ScopedStreamCapture capture(std::cout);
+				frontend_with_completions.printHistory();
+				assertTrue(
+					capture.str().find("No history yet.") != std::string::npos,
+					"Should print no history after clear"
+				);
+			}
+
+			frontend_without_completions.addHistoryEntry("test entry");
+			frontend_without_completions.addHistoryEntry("");
+			frontend_without_completions.addHistoryEntry("line 1\nline 2");
+
+			{
+				ScopedStreamCapture capture(std::cout);
+				frontend_without_completions.printHistory();
+				assertTrue(
+					capture.str().find("test entry") != std::string::npos,
+					"Should contain first entry"
+				);
+				assertTrue(
+					capture.str().find("line 1") != std::string::npos, "Should contain third entry"
+				);
+			}
+
+			frontend_without_completions.clearHistory();
+
+			{
+				ScopedStreamCapture capture(std::cout);
+				frontend_without_completions.printHistory();
+				assertTrue(
+					capture.str().find("No history yet.") != std::string::npos,
+					"Should print no history after clear"
+				);
+			}
+		}
+
+		void testReplSaveAndPrintHistory() {
+			removeSessionHistoryFile();
+			ReplSession session;
+
+			auto result1 = session.processLine("var p: i32 = 123;");
+			assertTrue(result1.status == ReplResult::Status::Success, "Declaration should succeed");
+
+			{
+				ScopedStreamCapture capture(std::cout);
+				auto                result2 = session.processLine("/history");
+				assertTrue(result2.status == ReplResult::Status::Success, "/history should succeed");
+				assertTrue(
+					capture.str().find("var p: i32 = 123;") != std::string::npos,
+					"Should print history containing var p"
+				);
+			}
+
+			auto reset_result = session.processLine("/reset");
+			assertTrue(
+				reset_result.status == ReplResult::Status::Reset, "/reset should request reset"
+			);
+
+			{
+				ScopedStreamCapture capture(std::cerr);
+				session.replayHistoryEntries(0, false);
+				assertTrue(capture.str().empty(), "Should not print anything for 0 count replay");
+			}
+		}
+
+		void testReplResetSyntaxErrorsMore() {
+			removeSessionHistoryFile();
+			ReplSession session;
+
+			{
+				ScopedStreamCapture capture(std::cerr);
+				auto                result = session.processLine("/reset a");
+				assertTrue(
+					result.status == ReplResult::Status::Success,
+					"Invalid /reset syntax should not request a reset"
+				);
+				assertTrue(
+					capture.str().find("Usage: /reset") != std::string::npos,
+					"Invalid /reset syntax should print usage"
+				);
+			}
+
+			{
+				ScopedStreamCapture capture(std::cerr);
+				auto                result = session.processLine("/reset -a");
+				assertTrue(
+					result.status == ReplResult::Status::Success,
+					"Invalid /reset syntax should not request a reset"
+				);
+				assertTrue(
+					capture.str().find("Usage: /reset") != std::string::npos,
+					"Invalid /reset syntax should print usage"
+				);
+			}
+
+			{
+				ScopedStreamCapture capture(std::cerr);
+				auto                result = session.processLine("/reset 99999");
+				assertTrue(
+					result.status == ReplResult::Status::Success,
+					"Invalid /reset syntax should not request a reset"
+				);
+			}
+		}
+
+		void testReplResetSyntaxErrors() {
+			removeSessionHistoryFile();
+			ReplSession session;
+
+			{
+				ScopedStreamCapture capture(std::cerr);
+				auto                result = session.processLine("/reset -");
+				assertTrue(
+					result.status == ReplResult::Status::Success,
+					"Invalid /reset syntax should not request a reset"
+				);
+				assertTrue(
+					capture.str().find("Usage: /reset") != std::string::npos,
+					"Invalid /reset syntax should print usage"
+				);
+			}
+
+			{
+				ScopedStreamCapture capture(std::cerr);
+				auto                result = session.processLine("/reset 1 2");
+				assertTrue(
+					result.status == ReplResult::Status::Success,
+					"Extra tokens in /reset should not request a reset"
+				);
+				assertTrue(
+					capture.str().find("Usage: /reset") != std::string::npos,
+					"Extra tokens in /reset should print usage"
+				);
+			}
+
+			{
+				auto setup_a = session.processLine("var a: i32 = 1;");
+				auto setup_b = session.processLine("var b: i32 = a + 1;");
+				assertTrue(
+					setup_a.status == ReplResult::Status::Success
+						&& setup_b.status == ReplResult::Status::Success,
+					"Setup should succeed before reset validation"
+				);
+				ScopedStreamCapture capture(std::cerr);
+				auto                result = session.processLine("/reset 1");
+				assertTrue(
+					result.status == ReplResult::Status::Reset,
+					"/reset 1 should request a reset when history has entries"
+				);
+				assertTrue(capture.str().empty(), "Valid /reset should not print usage");
+			}
+
+			removeSessionHistoryFile();
 		}
 
 		/**
@@ -213,7 +523,7 @@ namespace compiler::repl {
 				"Instruction statement should execute successfully"
 			);
 			assertTrue(
-				session.m_history.size() == 1,
+				session.m_session_history.size() == 1,
 				"Instruction execution should add one entry to history"
 			);
 		}
@@ -253,7 +563,7 @@ namespace compiler::repl {
 			ReplSession session;
 
 			// Initial state
-			auto initial_history_size = session.m_history.size();
+			auto initial_history_size = session.m_session_history.size();
 			auto initial_line_count   = session.m_line_counter;
 
 			assertTrue(initial_history_size == 0, "History should start empty");
@@ -264,7 +574,7 @@ namespace compiler::repl {
 			session.processLine(code);
 
 			// Verify that history was updated
-			auto updated_history_size = session.m_history.size();
+			auto updated_history_size = session.m_session_history.size();
 			assertTrue(
 				updated_history_size >= initial_history_size,
 				"History size should increase or stay same after processing"
@@ -288,10 +598,7 @@ namespace compiler::repl {
 				result.message.find("Missing script path") != std::string::npos,
 				"Error should explain that script path is missing"
 			);
-			assertFalse(
-				session.m_suppress_repl_feedback_during_script_load,
-				"Output suppression should be restored"
-			);
+			assertFalse(session.m_suppress_repl, "Output suppression should be restored");
 		}
 
 		void testLoadScriptFileInvalidContents() {
@@ -308,10 +615,7 @@ namespace compiler::repl {
 			assertTrue(
 				!result.message.empty(), "Invalid script should produce a useful error message"
 			);
-			assertFalse(
-				session.m_suppress_repl_feedback_during_script_load,
-				"Output suppression should be restored"
-			);
+			assertFalse(session.m_suppress_repl, "Output suppression should be restored");
 		}
 
 		void testLoadScriptFileExecutesStatements() {
@@ -321,7 +625,7 @@ namespace compiler::repl {
 				= fs::FileManager::createRandomTempFile("var loaded_x: i32 = 1;\nloaded_x = 10;");
 			auto script_path = std::string("   ") + script_file.getFilePath().string();
 
-			auto initial_history_size = session.m_history.size();
+			auto initial_history_size = session.m_session_history.size();
 
 			auto result = session.loadScriptFile(script_path);
 
@@ -329,12 +633,9 @@ namespace compiler::repl {
 				result.status == ReplResult::Status::Success, "Loading a valid script should succeed"
 			);
 
-			auto updated_history_size = session.m_history.size();
+			auto updated_history_size = session.m_session_history.size();
 			ASSERT_EQUAL(2UL, updated_history_size - initial_history_size);
-			assertFalse(
-				session.m_suppress_repl_feedback_during_script_load,
-				"Output suppression should be restored"
-			);
+			assertFalse(session.m_suppress_repl, "Output suppression should be restored");
 
 			auto follow_up_result = session.processLine("1 + 1;");
 			assertTrue(
@@ -450,7 +751,7 @@ namespace compiler::repl {
 				    { .input = "y;", .description = "Look up y" } };
 
 			// Track initial state
-			size_t initial_history_size = session.m_history.size();
+			usize initial_history_size = session.m_session_history.size();
 
 			for (const auto& test: tests) {
 				auto result = session.processLine(test.input);
@@ -470,9 +771,9 @@ namespace compiler::repl {
 			}
 
 			// Verify that history was updated with all statements
-			size_t expected_history_size = initial_history_size + tests.size();
+			usize expected_history_size = initial_history_size + tests.size();
 			assertTrue(
-				session.m_history.size() == expected_history_size,
+				session.m_session_history.size() == expected_history_size,
 				"REPL session history should track all variable operations"
 			);
 		}
@@ -505,6 +806,123 @@ namespace compiler::repl {
 			assert_unsupported_action("break;");
 			assert_unsupported_action("throw 5;");
 			assert_unsupported_action("return;");
+		}
+
+		void testReplCommandsResetCommand() {
+			ReplSession session;
+
+			{
+				ScopedStreamCapture capture(std::cout);
+				auto                result = session.processLine("/commands-reset");
+				assertTrue(
+					result.status == ReplResult::Status::Success, "/commands-reset should succeed"
+				);
+				assertTrue(
+					capture.str().find("Command history cleared.") != std::string::npos,
+					"Should print confirmation, got: " + capture.str()
+				);
+			}
+			{
+				ScopedStreamCapture capture(std::cout);
+				auto                result = session.processLine("/cmds-reset");
+				assertTrue(
+					result.status == ReplResult::Status::Success, "/cmds-reset should succeed"
+				);
+				assertTrue(
+					capture.str().find("Command history cleared.") != std::string::npos,
+					"Should print confirmation"
+				);
+			}
+			{
+				ScopedStreamCapture capture(std::cout);
+				auto                result = session.processLine("/cmds");
+				assertTrue(result.status == ReplResult::Status::Success, "/cmds should succeed");
+				assertTrue(
+					capture.str().find("No history yet.") != std::string::npos,
+					"Should print no history"
+				);
+			}
+			{
+				ScopedStreamCapture capture(std::cout);
+				auto                result = session.processLine("/commands");
+				assertTrue(result.status == ReplResult::Status::Success, "/commands should succeed");
+				assertTrue(
+					capture.str().find("No history yet.") != std::string::npos,
+					"Should print no history"
+				);
+			}
+		}
+
+		void testReplHistoryCommandAdvanced() {
+			removeSessionHistoryFile();
+			ReplSession session;
+
+			auto setup_a = session.processLine("var x_a = 1;");
+			auto setup_b = session.processLine("var y_b = 2;");
+			assertTrue(
+				setup_a.status == ReplResult::Status::Success
+					&& setup_b.status == ReplResult::Status::Success,
+				"Setup should succeed"
+			);
+
+			{
+				ScopedStreamCapture capture(std::cout);
+				auto                result = session.processLine("/hist");
+				assertTrue(result.status == ReplResult::Status::Success, "/hist should succeed");
+				assertTrue(
+					capture.str().find("var x_a = 1;") != std::string::npos, "Should print x_a"
+				);
+				assertTrue(
+					capture.str().find("var y_b = 2;") != std::string::npos, "Should print y_b"
+				);
+			}
+
+			{
+				ScopedStreamCapture capture(std::cout);
+				auto                result = session.processLine("/history");
+				assertTrue(result.status == ReplResult::Status::Success, "/history should succeed");
+				assertTrue(
+					capture.str().find("var x_a = 1;") != std::string::npos, "Should print x_a"
+				);
+			}
+			removeSessionHistoryFile();
+		}
+
+		void testReplReplayHistoryNotSilent() {
+			removeSessionHistoryFile();
+
+			{
+				ReplSession         session;
+				ScopedStreamCapture capture(std::cerr);
+				session.replayHistoryEntries(1, false);
+				assertTrue(
+					capture.str().find("Warning: no REPL session history entries found to replay.")
+						!= std::string::npos,
+					"Should print warning when no history exists"
+				);
+			}
+
+			{
+				std::ofstream out(".duckling_repl_session_history");
+				out << "Duckling REPL session history\n";
+				out << "Entries: 1\n\n";
+				out << "[1]\n";
+				out << "var x = ;\n\n";
+				out.close();
+
+				ReplSession         replay_session;
+				ScopedStreamCapture capture(std::cerr);
+				replay_session.replayHistoryEntries(1, false);
+				std::cout << "DEBUG CAPTURE: '" << capture.str() << "'\n";
+				assertTrue(
+					capture.str().find(
+						"Warning: stopping history replay after entry 1 due to error."
+					) != std::string::npos,
+					"Should print warning when replay errors"
+				);
+			}
+
+			removeSessionHistoryFile();
 		}
 
 	public:
