@@ -22,8 +22,8 @@
 #include <helios/hout/hout.hpp>
 #include <helios/queries/queries.hpp>
 #include <linker/link.hpp>
+#include <os_utils/exec_self.hpp>
 #include <repl/session.hpp>
-#include <system_utils.hpp>
 #include <time_stats/time_stats.hpp>
 
 #include <base/except/exceptions.hpp>
@@ -1075,8 +1075,8 @@ clah::Clah getClahForMain() {
 					compiler::driver::exit();
 					if (repl_result.status == compiler::repl::ReplResult::Status::Reset) {
 						setReplRestartArgs(reset_replay_count.copyValueOr(0), reset_replay_silent);
-						auto exec_result = execSelf(g_argv);
-						if (exec_result.status == ExecSelfStatus::Error) return 1;
+						auto exec_result = os_utils::execSelf(g_argv);
+						if (exec_result.status == os_utils::ExecSelfStatus::Error) return 1;
 						return exec_result.exit_code;
 					}
 					return 0;
