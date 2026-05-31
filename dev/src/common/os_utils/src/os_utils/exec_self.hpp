@@ -9,7 +9,7 @@ namespace os_utils {
 		Error,
 	};
 
-	struct ExecSelfResult {
+	struct ExecSelfResult final {
 		ExecSelfStatus status{};
 		int            exit_code  = 0;  // Valid when status is ExecSelfStatus::Spawned.
 		int            error_code = 0;  // Valid when status is ExecSelfStatus::Error.

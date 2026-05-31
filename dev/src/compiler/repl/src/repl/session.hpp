@@ -248,7 +248,7 @@ namespace compiler::repl {
 		/**
 		 * @brief Keeps data necessary to control resets in one place.
 		 */
-		struct ResetState {
+		struct ResetState final {
 			bool should_reset
 				= false;  ///< Flag used to indicate to the main run loop that reset should be done
 			base::Optional<usize> replay_count;  ///< Indicates how many entries from the start of
