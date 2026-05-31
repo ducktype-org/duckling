@@ -168,5 +168,15 @@ namespace vm::persistent {
 			auto ans = insert(state_id, key, var);
 			return { true, ans };
 		}
+
+		/**
+		 * @brief comapre two states of the hashmap
+		 * @return true if the instances are equal
+		 */
+		[[nodiscard]]
+		bool eq(HashMapStateID state_1, HashMapStateID state_2) const {
+			return state_1 == state_2;
+		}
+
 	};
 }

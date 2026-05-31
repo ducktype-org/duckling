@@ -181,6 +181,16 @@ namespace vm::persistent {
 			return toVecState(new_state);
 		}
 
+		/**
+		 * @brief comapre two states of the vector
+		 * @return true if the instances are equal
+		 */
+		[[nodiscard]]
+		bool eq(VectorStateID state_1, VectorStateID state_2) const {
+			return state_1 == state_2;
+		}
+
+
 		Vector() = default;
 	};
 }
