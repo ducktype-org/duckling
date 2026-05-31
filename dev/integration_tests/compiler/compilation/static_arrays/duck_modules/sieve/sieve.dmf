@@ -1,3 +1,5 @@
+import core.builtins.*;
+
 fun init_array(size: i64, arr: ref i64[100]) -> () = {
     var i = 0;
     while (i < size) {

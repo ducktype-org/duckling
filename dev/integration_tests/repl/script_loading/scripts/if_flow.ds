@@ -1,3 +1,5 @@
+import core.builtins.*;
+
 var y: i32 = 2;
 
 if (true) {

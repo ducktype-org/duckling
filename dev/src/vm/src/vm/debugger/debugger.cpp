@@ -49,17 +49,17 @@ namespace vm::debugger {
 
 	Debugger::~Debugger() {
 		updater.detach();
-		vm::api::getExecutionStatus(pid)
-			.and_then([&](const vm::api::ProcStatus& status) {
-				if (!std::holds_alternative<api::NotStarted>(status))
-					return std::expected<void, vm::api::ApiError>{};
 
-				return std::expected<void, vm::api::ApiError>{ std::unexpected(vm::api::ApiError{
-					vm::api::OtherError{ "VM was not even runned..." } }) };
+		// @TODO: #1222 Remove checking status and always kill after fixing kill
+
+		api::getExecutionStatus(pid)
+			.and_then([&](const api::ProcStatus& status) {
+				if (!std::holds_alternative<api::NotStarted>(status)) return api::kill(pid);
+
+				return std::expected<void, api::ApiError>{};
 			})
-			.and_then([&] { return vm::api::kill(pid); })
-			.transform_error([&](const vm::api::ApiError& api_error) {
-				on_error.emitEvent(vm::api::errorToString(api_error));
+			.transform_error([&](const api::ApiError& api_error) {
+				on_error.emitEvent(api::errorToString(api_error));
 				return api_error;
 			});
 	}
@@ -151,4 +151,6 @@ namespace vm::debugger {
 	) {
 		return api::setBreakpoint(pid, function_name, instr_number, enabled);
 	}
+
+	std::expected<void, api::ApiError> Debugger::step() { return api::step(pid); }
 }
