@@ -326,7 +326,10 @@ namespace compiler::helios::mangler {
 								// We do not have a reliable "path to type" in this case
 								// (esp. for simple types such as i32), so we omit it.
 								// Any ambiguities are solved by the function type anyway.
-								return "Hts" + func(ctx, symbol_id) + "E";
+								return "HtoString" + func(ctx, symbol_id) + "E";
+							}
+							variant_case(defgen::GeneratedSymbolData::LengthMethod, length_method) {
+								return "Hlength" + func(ctx, symbol_id) + "E";
 							}
 							variant_case(
 								defgen::GeneratedSymbolData::ReplExpressionWrapper, repl_wrapper

@@ -30,6 +30,10 @@ namespace compiler::helios {
 			return owner_type.queryUnstablePerfectHash();
 		}
 
+		base::Bit256 GeneratedSymbolData::LengthMethod::queryUnstablePerfectHash() const {
+			return { owner_type.queryUnstablePerfectHash() };
+		}
+
 		base::Bit256 GeneratedSymbolData::DefaultDestructor::queryUnstablePerfectHash() const {
 			return owner_type.queryUnstablePerfectHash();
 		}
@@ -383,6 +387,7 @@ namespace compiler::helios {
 				defgen::GeneratedSymbolData::ReplInstructionWrapper,
 				defgen::GeneratedSymbolData::ScriptMainWrapper,
 				defgen::GeneratedSymbolData::ToStringMethod,
+				defgen::GeneratedSymbolData::LengthMethod,
 				defgen::GeneratedSymbolData::DefaultDestructor
 			) {
 				kind = SymbolKind::Function;

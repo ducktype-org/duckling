@@ -29,6 +29,7 @@
 #include <query_framework/query_errors.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 #include <query_framework/utils/query_failed_try.hpp>
+#include "helios_private/hout_creation/definition_generation/length_methods.hpp"
 
 #include <set>
 
@@ -72,7 +73,7 @@ namespace compiler::helios {
 			std::vector<SymID>             class_symbols;
 			std::set<SymID>                default_ctors;
 			std::set<SymID>                additional_ctors;
-			std::set<SymID>                additional_tostrings;
+			std::set<SymID>                additional_methods;
 			// Keeps track of mangled names processed within the current module
 			// to detect duplicated function declarations at the HOUT level.
 			std::set<base::StrID> processed_mangled_names;
@@ -89,7 +90,13 @@ namespace compiler::helios {
 					additional_ctors.insert(tuple_ctor.declaration->original_symbol);
 					const auto& tuple_tostring
 						= ctx.query<defgen::QueryToStringMethod>(tuple_type)->valueOrThrow();
-					additional_tostrings.insert(tuple_tostring.declaration->original_symbol);
+					additional_methods.insert(tuple_tostring.declaration->original_symbol);
+					return;
+				}
+				if (type.getKind() == tsh::Kind::Slice) {
+					const auto& length_method
+						= ctx.query<defgen::QueryLengthMethod>(type)->valueOrThrow();
+					additional_methods.insert(length_method.declaration->original_symbol);
 					return;
 				}
 
@@ -109,7 +116,7 @@ namespace compiler::helios {
 					const auto& class_ctor
 						= ctx.query<defgen::QueryDefaultClassConstructor>(class_type)->valueOrThrow();
 					default_ctors.insert(class_ctor.declaration->original_symbol);
-				}
+				} 
 			};
 			auto register_ctor_and_tostring_if_needed_no_interrupt
 				= [&run_no_interrupt, &register_ctor_and_tostring_if_needed](SymID sym) {
@@ -172,7 +179,7 @@ namespace compiler::helios {
 			});
 
 			run_no_interrupt([&] {
-				for (SymID tostring_sym: additional_tostrings) {
+				for (SymID tostring_sym: additional_methods) {
 					const auto& hout_res = ctx.query<QueryCodeOfFun>(tostring_sym)->valueOrThrow();
 					out.functions.emplace_back(&hout_res);
 				}

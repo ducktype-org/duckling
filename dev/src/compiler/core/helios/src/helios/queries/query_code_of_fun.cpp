@@ -1,4 +1,5 @@
 #include "function_queries.hpp"
+#include "helios_private/hout_creation/definition_generation/length_methods.hpp"
 
 #include <frontend/pst_parser/elements/hierarchy/actions/all_actions.hpp>
 #include <frontend/pst_parser/elements/hierarchy/actions/return.hpp>
@@ -182,15 +183,8 @@ namespace compiler::helios {
 							    ->valueOrThrow();
 						}
 						variant_case(defgen::GeneratedSymbolData::LengthMethod, length_method) {
-							ctx.query<QueryDeclOfFun>(to_string_sym)->valueOrThrow();
-							std::vector<Box<code::Stmt>> body{};
-							return HOUTFunction(
-								code::generatedOrigin(),
-								&to_string_decl,
-								std::make_shared<const code::CodeBlock>(code::CodeBlock{
-									.statements = std::move(body),
-								})
-							);
+							return ctx.query<defgen::QueryLengthMethod>(length_method.owner_type)
+							    ->valueOrThrow();
 						}
 						variant_default {
 							CORE_PANIC(base::strConcat(
