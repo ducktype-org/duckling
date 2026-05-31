@@ -1,6 +1,5 @@
-#include <program_lowering_context.hpp>
-
 #include <backends/dvm/dvm_backend.hpp>
+#include <program_lowering_context.hpp>
 
 #include <base/except/exceptions.hpp>
 #include <base/pointers/box.hpp>

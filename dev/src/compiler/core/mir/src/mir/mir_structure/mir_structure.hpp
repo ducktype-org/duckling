@@ -876,7 +876,6 @@ namespace compiler::mir {
 
 		void debugPrint(query::Context& ctx, std::ostream& out) const;
 	};
-
 }
 
 ID_STD_HASH(compiler::mir::LocalID);
