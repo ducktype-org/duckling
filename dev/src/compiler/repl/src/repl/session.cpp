@@ -25,7 +25,6 @@
 #include <vm/api/vm.hpp>
 
 #include <algorithm>
-#include <cctype>
 #include <cstdlib>
 #include <cstring>
 #include <filesystem>
@@ -41,26 +40,14 @@ namespace compiler::repl {
 		constexpr std::string_view K_RESET_ERROR_MSG
 			= "Usage: /reset [<count>|-<relative_count>] [--silent]";
 		constexpr std::string_view K_RESET_SILENT_FLAG = "--silent";
+		constexpr std::string_view K_REPL_WHITESPACE   = " \t\r\n\f\v";
 
 		std::string getSessionHistoryFilePath() { return ".duckling_repl_session_history"; }
 
-		std::string_view trimLeft(std::string_view text) {
-			while (!text.empty() && std::isspace(static_cast<unsigned char>(text.front())))
-				text.remove_prefix(1);
-			return text;
-		}
-
-		std::string_view trim(std::string_view text) {
-			text = trimLeft(text);
-			while (!text.empty() && std::isspace(static_cast<unsigned char>(text.back())))
-				text.remove_suffix(1);
-			return text;
-		}
-
 		std::string_view takeToken(std::string_view& text) {
-			text      = trimLeft(text);
-			usize pos = 0;
-			while (pos < text.size() && !std::isspace(static_cast<unsigned char>(text[pos]))) ++pos;
+			text     = base::strTrimLeft(text, K_REPL_WHITESPACE);
+			auto pos = text.find_first_of(K_REPL_WHITESPACE);
+			if (pos == std::string_view::npos) pos = text.size();
 			std::string_view token = text.substr(0, pos);
 			text.remove_prefix(pos);
 			return token;
@@ -82,7 +69,7 @@ namespace compiler::repl {
 
 			std::string_view rest = line;
 			rest.remove_prefix(K_RESET_COMMAND.size());
-			rest = trim(rest);
+			rest = base::strTrim(rest, K_REPL_WHITESPACE);
 			if (rest.empty()) return true;
 
 			std::string_view value;
@@ -91,7 +78,7 @@ namespace compiler::repl {
 				if (value.empty()) break;
 				if (value == K_RESET_SILENT_FLAG) {
 					replay_silent = true;
-					rest          = trim(rest);
+					rest          = base::strTrim(rest, K_REPL_WHITESPACE);
 					continue;
 				}
 				if (has_replay_count) {
@@ -99,7 +86,7 @@ namespace compiler::repl {
 					return false;
 				}
 
-				rest                       = trim(rest);
+				rest                       = base::strTrim(rest, K_REPL_WHITESPACE);
 				usize number_abs_val_start = 0;
 				if (value.front() == '-') {
 					is_relative          = true;
@@ -124,7 +111,7 @@ namespace compiler::repl {
 				has_replay_count = true;
 			}
 
-			rest = trim(rest);
+			rest = base::strTrim(rest, K_REPL_WHITESPACE);
 			if (!rest.empty()) {
 				error_message = std::string(K_RESET_ERROR_MSG);
 				return false;
