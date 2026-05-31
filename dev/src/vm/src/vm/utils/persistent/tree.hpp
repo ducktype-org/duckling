@@ -69,9 +69,12 @@ namespace vm::persistent::detail {
 		};
 
 		// required for use of BijectiveMap (both sides must be hashable)
-		using ChildEntryH = decltype([](const ChildEntry& h) -> usize {
-			return (std::hash<NodeID>{}(h.left_child) << 1) ^ std::hash<NodeID>{}(h.right_child);
-		});
+		struct ChildEntryH {
+			usize operator()(const ChildEntry& h) const {
+				return (std::hash<NodeID>{}(h.left_child) << 1)
+				     ^ std::hash<NodeID>{}(h.right_child);
+			}
+		};
 
 		struct LeafEntry {
 			idxT idx;
@@ -81,9 +84,11 @@ namespace vm::persistent::detail {
 		};
 
 		// required for use of BijectiveMap (both sides must be hashable)
-		using LeafEntryH = decltype([](const LeafEntry& h) -> usize {
-			return (std::hash<usize>{}(h.idx) << 1) ^ std::hash<usize>{}(h.value);
-		});
+		struct LeafEntryH {
+			usize operator()(const LeafEntry& h) const {
+				return (std::hash<usize>{}(h.idx) << 1) ^ std::hash<usize>{}(h.value);
+			}
+		};
 
 		/**
 		 * @brief helds no of actiVe nodes, position in the tree and idx of leftmost and rightmost
