@@ -81,7 +81,7 @@ namespace vm::persistent {
 		/**
 		 * @brief method for accessing element at given idx for given instance.
 		 */
-		const VarT& access(VectorStateID state_id, usize idx) const {
+		const VarT& at(VectorStateID state_id, usize idx) const {
 			auto state = validateState(state_id);
 			if_opt_some(inner.access(state, idx), val_id) { return held_values.atRight(val_id); }
 			CORE_UNREACHABLE();

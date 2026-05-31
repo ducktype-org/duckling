@@ -125,7 +125,7 @@ namespace vm::persistent {
 		/**
 		 * @brief method for accessing element for given key at given instance.
 		 */
-		const ValT& access(HashMapStateID state_id, const KeyT& key) const {
+		const ValT& at(HashMapStateID state_id, const KeyT& key) const {
 			auto state = toMemState(state_id);
 			if_opt_some(held_keys.atLeftOpt(key), key_id) {
 				if_opt_some(inner.access(state, key_id), val_id) {

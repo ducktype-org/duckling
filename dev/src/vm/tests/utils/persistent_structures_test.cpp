@@ -234,7 +234,7 @@ public:
 			auto view = vec.view(state, 0, size);
 			ASSERT_EQUAL(expected, view);
 
-			for (usize i = 0; i < size; i++) ASSERT_EQUAL(expected[i], vec.access(state, i));
+			for (usize i = 0; i < size; i++) ASSERT_EQUAL(expected[i], vec.at(state, i));
 		};
 
 		auto empt = Vector<std::string>::EMPTY;
@@ -312,7 +312,7 @@ public:
 				);
 
 				CORE_ASSERT(
-					map.access(state, key) == val, "values should be equal in both copy and database"
+					map.at(state, key) == val, "values should be equal in both copy and database"
 				);
 			}
 
@@ -322,7 +322,7 @@ public:
 					"map should contain all of expected values"
 				);
 				CORE_ASSERT(
-					expected.at(key) == val && map.access(state, key) == val,
+					expected.at(key) == val && map.at(state, key) == val,
 					"values should be equal in both copy and database"
 				);
 			}
