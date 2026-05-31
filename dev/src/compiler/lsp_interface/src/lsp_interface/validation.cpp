@@ -158,6 +158,11 @@ namespace lsp {
 			= getParserDiagnosticsFromModuleTree(root_module);
 
 		// We run the semantic analysis if there is no parsing errors.
+
+		// @TODO: #2246 see if anything should be changed here.
+		//          We could add mir-lowering phase here, as some compilation errors happen during
+		//          mir lowering.
+
 		if (isModuleTreeParsedSuccessfully(root_module))
 			query::entryPoint<helios::QueryModuleHOUTRecursively>(root_module->getModuleID());
 
