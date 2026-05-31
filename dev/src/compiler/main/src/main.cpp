@@ -52,6 +52,7 @@
 #include <vector>
 
 namespace {
+	/// Global variable storing arguments passed to the program.
 	std::vector<std::string> g_argv;
 
 	/**
