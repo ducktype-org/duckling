@@ -1,6 +1,7 @@
 #include "replxx.hpp"
 
 #include "replxx_helpers.hpp"
+
 #include <repl/helpers.hpp>
 
 #include <base/types/ints.hpp>
@@ -170,7 +171,7 @@ namespace compiler::repl {
 		                                     replxx::Replxx::colors_t& colors) {
 			// We iterate over the input, identifying tokens and coloring them.
 			usize i                 = 0;
-			auto   input_code_points = replxx_helpers::mapUtf8CodePoints(input);
+			auto  input_code_points = replxx_helpers::mapUtf8CodePoints(input);
 			usize len               = input_code_points.size();
 
 			while (i < len) {
