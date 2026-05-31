@@ -88,7 +88,7 @@ namespace vm::loader::compiler::safe::detail {
 			  compiler{ compiler },
 			  ctx{ ctx } {
 #ifdef ENABLE_JIT
-			addLow<Op_jit_entrypoint>();
+			addLow<Op_jit_entrypoint>(opargs::Immediate{ 0 }); // Entry point to CFG of whole function (id 0)
 #endif
 		}
 

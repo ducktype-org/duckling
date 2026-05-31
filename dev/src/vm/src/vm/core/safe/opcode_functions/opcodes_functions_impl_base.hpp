@@ -337,9 +337,12 @@ namespace vm {
 				// should be compiled later
 				--my_data.until_compilation;
 			} else {
+				auto cfg_id = instr->arg0;
+				CORE_ASSERT(0 <= cfg_id && cfg_id < current_func_obj.cfgs.size(), "CFG id is out of bounds");
+
 				// should be compiled now
 				MRef<jit::JitOpFun> compiled = jit::compileLLVM(
-					current_func_obj.cfgs[0], current_func_obj.bc, current_func_obj.name
+					current_func_obj.cfgs[cfg_id], current_func_obj.bc, current_func_obj.name
 				);
 
 				CORE_ASSERT(compiled, "Compiled function pointer shouldn't be nullptr");
