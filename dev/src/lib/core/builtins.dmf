@@ -22,7 +22,7 @@ extern("C") {
     fundecl builtin_output_f64(x: f64) -> i32;
 
     fundecl builtin_input_string() -> String;
-    fundecl builtin_output_string(x: String) -> i32;
+    fundecl print(x: String) -> i32;
     
     fundecl builtin_output_str(x: str);
 }

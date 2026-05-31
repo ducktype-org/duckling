@@ -2,7 +2,7 @@
 
 #include <backends/dvm/repl_lowering.hpp>
 #include <driver_private/backend_operations/compile_dvm.hpp>
-#include <driver_private/lir_module_data.hpp>
+#include <driver_private/lir_unit_with_name.hpp>
 #include <driver_private/operations.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
@@ -39,6 +39,8 @@ namespace compiler::repl {
 		std::string_view                 module_name,
 		backend_vm::ReplLoweringContext& lowering_context
 	) {
+		// @TODO: #2246 we duplicate some pipeline logic here, unify it
+
 		auto active_ctx = lowering_context.getActiveContext();
 		CORE_ASSERT(
 			active_ctx.has_value() && active_ctx.value().get() == &ctx,
@@ -81,37 +83,43 @@ namespace compiler::repl {
 		CORE_DEV_LOG(
 			REPL,
 			"LIR data contains ",
-			lir_data->functions.size(),
+			lir_data->lir_unit.lir_functions.size(),
 			" functions and ",
-			lir_data->globals.size(),
+			lir_data->lir_unit.lir_globals.size(),
 			" globals\n"
 		);
-		for (const auto& global: lir_data->globals) {
-			CORE_DEV_LOG(REPL, "Global: ", global.lir_global.mangled_name.strView());
-			if (global.global_ctor.has_value())
-				CORE_DEV_LOG(
-					REPL, "  Has ctor: ", global.global_ctor.value()->mangled_name.strView()
-				);
-			if (global.global_dtor.has_value())
-				CORE_DEV_LOG(
-					REPL, "  Has dtor: ", global.global_dtor.value()->mangled_name.strView()
-				);
+		for (const auto& global: lir_data->lir_unit.lir_globals) {
+			CORE_DEV_LOG(REPL, "Global: ", global.global.mangled_name.strView());
+			if (std::holds_alternative<lir::LIRGlobalData::CTorDtorPair>(global.data_initialization
+			    )) {
+				auto& ctor_dtor_pair
+					= std::get<lir::LIRGlobalData::CTorDtorPair>(global.data_initialization);
+				if (ctor_dtor_pair.global_ctor.has_value())
+					CORE_DEV_LOG(
+						REPL,
+						"  Has ctor: ",
+						ctor_dtor_pair.global_ctor.value()->mangled_name.strView()
+					);
+				if (ctor_dtor_pair.global_dtor.has_value())
+					CORE_DEV_LOG(
+						REPL,
+						"  Has dtor: ",
+						ctor_dtor_pair.global_dtor.value()->mangled_name.strView()
+					);
+			}
 		}
-		for (const auto& func: lir_data->functions)
+		for (const auto& func: lir_data->lir_unit.lir_functions)
 			CORE_DEV_LOG(REPL, "Function: ", func->mangled_name.strView());
 
 		// @TODO: #2246 check if we can avoid repeating the logic from compileLirToModuleData.
 		// This is strictly connected to the loading dvm context.
 		// We mimic the same idea as in compiling a single module,
 		// but this time we append the new functions to the lowering context.
-		for (const auto& global: lir_data->globals) {
-			(void) lowering_context.lowerAndKeepLirGlobal(
-				global.lir_global, global.global_ctor, global.global_dtor
-			);
-		}
+		for (const auto& global: lir_data->lir_unit.lir_globals)
+			(void) lowering_context.lowerAndKeepLirGlobal(global);
 
 		// Lower all functions
-		for (const auto& lir_function: lir_data->functions) {
+		for (const auto& lir_function: lir_data->lir_unit.lir_functions) {
 			CORE_DEV_LOG(REPL, "Lowering function: ", lir_function->mangled_name.strView(), "\n");
 			// @TODO: #2483 Remove this filter (and the helper function) when strings work in DVM.
 			if (lirFunctionDealsWithStrings(lir_function)) {

@@ -1,5 +1,5 @@
 /**
- * @file function_forward.hpp
+ * @file lir_structure_fd.hpp
  * @brief forward declaration for less header dependencies
  */
 
@@ -7,5 +7,6 @@
 
 namespace compiler::lir {
 	struct Function;
-	struct LIRGlobal;
+	struct LIRGlobalData;
+	struct LIRUnit;
 }

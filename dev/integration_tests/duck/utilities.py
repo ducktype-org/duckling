@@ -8,9 +8,9 @@ import json
 from typing import Any, Iterable, Final
 
 
-DEFAULT_SRC: Final[str] = """fun main() = {
-    # !TODO: On macOS, builtin_output_string segfaults :^);
-    # builtin_output_string("Hello, world!");
+DEFAULT_SRC: Final[str] = """import core.builtins.*;
+
+fun main() = {
     return 0;
 }
 """

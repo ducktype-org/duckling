@@ -65,6 +65,7 @@ private:
 		const std::vector<std::string_view>& present_phrases,
 		u64                                  logged_msg_count
 	) {
+		// @TODO: #2246 make sure this is ok
 		frontend::ModuleID module_id
 			= frontend::createModuleTreeFromContents(module_content, "test_package");
 
@@ -1027,8 +1028,30 @@ private:
 					return 0;
 				}
 			)",
-				{ "unknown escape sequence" },
+				{ "Escape sequence `\\c` is not recognised." },
 				1
+			);
+			checkForErrorOnCompileModule(
+				R"(
+				fun main() -> i64 = {
+					let formatString = f"This is an unknown escape sequence: \c";
+					return 0;
+				}
+			)",
+				{ "Escape sequence `\\c` is not recognised." },
+				1
+			);
+			checkForErrorOnCompileModule(
+				R"(
+				fun main() -> i64 = {
+					let x = 1;
+					let formatString = f"This is one: {notX}.\c";
+					return 0;
+				}
+			)",
+				// @TODO: #2817 Enable errors once they are all reported.
+				{ "Symbol 'notX' not found" /*, "Escape sequence `\\c` is not recognised."*/ },
+				1 /*2*/
 			);
 
 			checkForErrorOnCompileModule(

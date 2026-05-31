@@ -5,6 +5,7 @@
 
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/visitors.hpp>
+#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/utils/get_expr_symid.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
@@ -99,10 +100,27 @@ namespace compiler::mir {
 			if (optional_local.has_value()) {
 				valueOutput(continuation, MIRValue{ optional_local.value() });
 			} else {
-				//@TODO: #1334 Check if the symbol is a real global variable.
+				auto symbol_kind = helios::kind(expr.symbol);
+				CORE_ASSERT(
+					symbol_kind == helios::SymbolKind::Variable
+						|| symbol_kind == helios::SymbolKind::Const,
+					"IdentifierExpr symbol should be either local variable or global variable or "
+					"constant."
+				);
+
+				MIRGlobal::Kind global_kind = (symbol_kind == helios::SymbolKind::Const)
+				                                ? MIRGlobal::Kind::Constant
+				                                : MIRGlobal::Kind::Variable;
+
 				valueOutput(
 					continuation,
-					MIRValue{ MIRGlobal({ expr.symbol, expr.expression_type.getSymbolType() }) }
+					MIRValue{
+						MIRGlobal({
+							expr.symbol,
+							expr.expression_type.getSymbolType(),
+							global_kind,
+						}),
+					}
 				);
 			}
 		}

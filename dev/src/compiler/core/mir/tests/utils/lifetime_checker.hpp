@@ -19,12 +19,12 @@
 
 namespace compiler::mir::test_utils {
 
-	struct ExpectedFlagEvent {
+	struct ExpectedFlagEvent final {
 		OperationFlag::Flag flag;
 		std::string         variable_name;
 	};
 
-	struct InstructionTypeEvent {
+	struct InstructionTypeEvent final {
 		Operation operation;
 	};
 

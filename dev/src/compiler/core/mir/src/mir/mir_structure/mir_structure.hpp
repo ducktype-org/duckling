@@ -292,11 +292,14 @@ namespace compiler::mir {
 	};
 
 	/**
-	 * @brief Represents a global value in MIR.
+	 * @brief Lightweight ID-like representation of a global value used in MIR IR code (e.g. in
+	 * MIRPlace). By global-value we refer to a global variable or a global constant.
+	 *
+	 * @important This is not a full IR representation of a global variable.
+	 * MIRGlobalData serves that purpose and contains more information.
 	 *
 	 * This structure is used to reference a global variable in MIR code. It is directly connected
-	 * to the value from HOUT global data, allowing the MIR to operate on global variables defined
-	 * at the HOUT level.
+	 * to the value from HELIOS-ID of a global entity.
 	 *
 	 * @details
 	 * - The `helios_id` field is the HELIOS SymID of the global variable, used for referencing.
@@ -306,6 +309,8 @@ namespace compiler::mir {
 	 * originate from HOUT global data.
 	 */
 	struct MIRGlobal final {
+		enum class Kind { Variable, Constant };
+
 		/**
 		 * @brief HELIOS SymID of the global variable.
 		 * It is used to reference the global variable in the code.
@@ -317,9 +322,12 @@ namespace compiler::mir {
 		 */
 		tsh::SymbolType<> type;
 
-		MIRGlobal(helios::SymID helios_id, tsh::SymbolType<> type):
+		Kind kind;
+
+		MIRGlobal(helios::SymID helios_id, tsh::SymbolType<> type, Kind kind):
 			  helios_id(helios_id),
-			  type(type) {}
+			  type(type),
+			  kind(kind) {}
 
 		void debugPrint(std::ostream& os, bool detailed = false) const;
 
@@ -727,10 +735,20 @@ namespace compiler::mir {
 		[[nodiscard]] Instruction& firstInstruction();
 	};
 
+	/**
+	 * @brief Helper struct for adding additional semantic information
+	 * to the SymID.
+	 * See: Function::HSymID for usage
+	 */
 	struct FunctionSymID final {
 		helios::SymID id;
 	};
 
+	/**
+	 * @brief Helper struct for adding additional semantic information
+	 * to the SymID
+	 * See: Function::HSymID for usage
+	 */
 	struct GlobalVariableCTOR final {
 		helios::SymID global_var_id;
 	};
@@ -824,9 +842,41 @@ namespace compiler::mir {
 		 * @note If there is a block in the HashMap but not in the block_order,
 		 * it is considered invalid.
 		 */
+		[[nodiscard]]
 		base::OkBad validateBlockIDs() const;
 	};
 
+	/**
+	 * @brief Representation of a global value in MIR.
+	 * See also: MIRGlobal
+	 */
+	struct MIRGlobalData final {
+		MIRGlobal global;
+
+		/**
+		 * @brief Initial value for the global variable.
+		 * Can be either a compile-time value or a reference to a ctor function.
+		 * Should always be a CTV if kind is Const
+		 */
+		std::variant<ctv::CompileTimeValue, CRef<mir::Function>> initial_value;
+
+		void debugPrint(query::Context& ctx, std::ostream& out) const;
+	};
+
+	/**
+	 * @brief Structure representing single MIRUnit.
+	 *
+	 * MIR unit is an arbitrary code collections represented in MIR IR.
+	 * There is no assumption on what any given MIRUnit should contain.
+	 *
+	 * @note MIR units are created mostly from HOUT units.
+	 */
+	struct MIRUnit final {
+		std::vector<CRef<mir::Function>> mir_functions;
+		std::vector<MIRGlobalData>       mir_globals;
+
+		void debugPrint(query::Context& ctx, std::ostream& out) const;
+	};
 }
 
 ID_STD_HASH(compiler::mir::LocalID);

@@ -429,7 +429,9 @@ namespace compiler::helios::defgen {
                     ctx, code::generatedOrigin(), std::move(reusable_self_expr), field.getSymbol()
                 );
 				// If the field is not a simple type, we must call its `toString` method on a reference.
-				if (not accessed_field->expression_type.getType().isSimple()) {
+				if (not accessed_field->expression_type.getType().isSimple()
+				    and accessed_field->expression_type.getSymbolType().getRefKind()
+				            != tsh::ReferenceKind::Ref) {
 					accessed_field = makeBox<code::RefOfExpr>(
 						ctx, code::generatedOrigin(), std::move(accessed_field)
 					);
