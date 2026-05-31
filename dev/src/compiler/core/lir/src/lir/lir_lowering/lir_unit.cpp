@@ -41,7 +41,7 @@ namespace compiler::lir {
 					lir_unit.lir_globals.emplace_back(LIRGlobalData{
                         .global = lir_global,
                         .data_initialization = LIRGlobalData::CTorDtorPair{
-                            // @TODO: #929 add legit dtors when implemented 
+                            // @TODO: #2825 add legit dtors when implemented 
                             .global_ctor = lir_ctor_function,
                             .global_dtor = std::nullopt,
                         },
