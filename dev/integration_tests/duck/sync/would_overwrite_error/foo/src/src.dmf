@@ -1,5 +1,5 @@
+import core.builtins.*;
+
 fun main() = {
-    # !TODO: On macOS, print segfaults :^);
-    # print("Hello, world!");
     return 0;
 }
