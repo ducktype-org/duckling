@@ -36,7 +36,7 @@ namespace vm::code {
 			bool operator==(const Child&) const = default;
 		};
 
-		struct ChildHash {
+		struct ChildHash final {
 			constexpr usize operator()(const Child& child) const {
 				return std::hash<base::StrID>{}(child.name)
 				     + child.byte_offset.assumePointerSize(Bytes(16)).asInt()
