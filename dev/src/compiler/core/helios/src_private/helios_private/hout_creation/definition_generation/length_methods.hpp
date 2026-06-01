@@ -15,4 +15,3 @@ namespace compiler::helios::defgen {
 	 */
 	DECLARE_QUERY(QueryLengthMethod, tsh::AbstractType, CRef<query::QResult<HOUTFunction>>, ({}));
 }
-

@@ -529,7 +529,9 @@ namespace compiler::helios::mangler {
 
 		static std::string mangle(query::Context& ctx, tsh::SliceAbstractType type) {
 			return base::strConcat(
-				"S", ctx.query<QueryMangledType>({ type.getElementType() })->valueOrThrow().str(), "E"
+				"S",
+				ctx.query<QueryMangledType>({ type.getElementType() })->valueOrThrow().str(),
+				"E"
 			);
 		}
 

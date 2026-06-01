@@ -1,11 +1,11 @@
 fun main() = {
-    let b = "b";
+    let b = "b".toString();
     let ab = 'a' +: b;
     let bcd = b :+ 'c' :+ 'd';
 
     let hello = "Hello, ";
     let world = "world!\n";
-    let helloWorld = hello ++ world;
+    let helloWorld = hello.toString() ++ world.toString();
 
     let x = 1;
     let y = 2;

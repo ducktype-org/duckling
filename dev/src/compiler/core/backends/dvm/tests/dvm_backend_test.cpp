@@ -62,10 +62,8 @@ protected:
 			{ fs::FilePath(path("modules/inits_deinits/")), "inits_deinits" },
 			{ fs::FilePath(path("modules/pointers/")), "pointers" },
 		};
-		auto init_result = compiler::driver::test_utils::initializeCompilerForTests(
-			packages,
-			artifacts_path
-		);
+		auto init_result
+			= compiler::driver::test_utils::initializeCompilerForTests(packages, artifacts_path);
 		assertTrue(init_result.status().isOk(), "Compiler initialization failed");
 	}
 

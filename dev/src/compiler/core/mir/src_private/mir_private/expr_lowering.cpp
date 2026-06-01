@@ -330,10 +330,9 @@ namespace compiler::mir {
 			           == tsh::Kind::Slice) {
 				auto bounds_check_fail_block = function.newBlock();
 				auto bounds_check_cond_block = function.newBlock();
-				auto entry_block = function.newBlock();
+				auto entry_block             = function.newBlock();
 				entry_block->setTerminator(Instruction{
-					Operation::Jump, {}, { bounds_check_cond_block->getID() }, {}, expr_scope
-				});
+					Operation::Jump, {}, { bounds_check_cond_block->getID() }, {}, expr_scope });
 
 				auto lowered_index = lowerSubExpr(*expr.index, entry_block);
 				auto index_val     = lowered_index.getResult(function);

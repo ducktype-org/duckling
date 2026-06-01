@@ -72,8 +72,6 @@ namespace compiler::tsh {
 		return toCPimpl(pimpl)->getUnderlyingType();
 	}
 
-
-
 	SymbolType<> SliceAbstractType::getElementType() const {
 		return toCPimpl(pimpl)->getElementType();
 	}

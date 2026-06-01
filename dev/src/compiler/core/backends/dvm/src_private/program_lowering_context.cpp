@@ -35,7 +35,10 @@ compiler::backend_vm::internal::ProgramLoweringContext::ProgramLoweringContext(
 	  ) {}
 
 CRef<vm::code::TypeOfData> ProgramLoweringContext::keepVMType(vm::code::TypeOfData dvm_type) {
-	return &type_storage.dvm_types.put(typeName(dvm_type), std::move(dvm_type)).first->second;
+	auto type_name      = typeName(dvm_type);
+	auto [it, inserted] = type_storage.dvm_types.put(type_name, std::move(dvm_type));
+	if (inserted) lowered_type_order.push_back(type_name);
+	return &it->second;
 }
 
 base::Optional<CRef<vm::code::TypeOfData>> ProgramLoweringContext::lowerAndKeepTslType(
@@ -320,6 +323,7 @@ void ProgramLoweringContext::insertExternCFunction(const vm::code::ExternalCFunc
 base::Optional<vm::code::TypeOfData> ProgramLoweringContext::lowerTslTypeInternal(
 	CRef<tsl::TypeLayout> layout
 ) {
+	std::cerr << "Lowering TSL type: " << layout->toStringIdentification() << std::endl;
 	variant_match(layout->getVariant()) {
 		variant_case_novalue(tsl::EmptyTypeLayout) { return {}; }
 		variant_case_novalue(tsl::IntegralTypeLayout) {
@@ -352,8 +356,8 @@ base::Optional<vm::code::TypeOfData> ProgramLoweringContext::lowerTslTypeInterna
 				vm::code::DynamicTableType dyntable_type(
 					base::StrID(dyntable_type_name), typeName(pointee_type)
 				);
-				keepVMType(dyntable_type
-				);  // Ensure the dynamic table type is stored in the context.
+				// Ensure the dynamic table type is stored in the context.
+				keepVMType(dyntable_type);
 				auto pointer_type_name = base::strConcat("ptr_", dyntable_type_name);
 				return vm::code::PointerType(
 					base::StrID(pointer_type_name), typeName(dyntable_type)

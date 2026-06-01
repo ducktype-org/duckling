@@ -65,8 +65,8 @@ namespace compiler::repl {
 		void beforeAll() override {
 			dia_int::configureImmediatePrint(&std::cerr);
 			// enable if needed
-			// logger::enable_dev_logs = true;
-			// logger::enableDevCategoryByStringName("REPL");
+			logger::enable_dev_logs = true;
+			logger::enableDevCategoryByStringName("REPL");
 		}
 
 	private:

@@ -146,6 +146,14 @@ private:
 		};
 	}
 
+	static compiler::tsh::SymbolType<> stConst(const compiler::tsh::AbstractType abstract_type) {
+		return compiler::tsh::SymbolType{
+			abstract_type,
+			compiler::tsh::ReferenceKind::Direct,
+			Immutable,
+		};
+	}
+
 	/**
 	 * Shorthand to create a reference to mutable symbol type from an abstract type.
 	 */
@@ -573,10 +581,9 @@ private:
 
 		auto i32 = st(getIntegralTypeNoContext(32, Signed));
 		auto f32 = st(getFloatTypeNoContext(32));
-		auto str = st(compiler::tsh::getStringType());
-
 		query::utils::withContextDo([&](query::Context& ctx) {
 			using compiler::helios::LookupResult;
+			auto str = stConst(compiler::tsh::getCharSliceType(ctx));
 
 			CRef<LookupResult> first_result
 				= &h_interface.lookup(ctx, base::StrID("_1"))->valueOrPanic();
@@ -854,10 +861,10 @@ private:
 			glob_data += hout->glob_data.size();
 		}
 
-		// @TODO: #2694 This should be 3, not 17, when toString methods
+		// @TODO: #2694 This should be 3, not 19, when toString methods
 		// for simple types are moved out of every HOUT unit.
 		// @TODO: #2424 When refactoring, add robust tests that the expected toString methods are added.
-		ASSERT_EQUAL(functions, 17);
+		ASSERT_EQUAL_PRINT(functions, 19);
 		ASSERT_EQUAL(glob_data, 5);
 	}
 
@@ -875,10 +882,10 @@ private:
 			glob_data += hout->glob_data.size();
 		}
 
-		// @TODO: #2694 This should be 1, not 29 (1 + 2 * 14), when toString methods
+		// @TODO: #2694 This should be 1, not 29 (1 + 2 * 14 + 1 (length)), when toString methods
 		// for simple types are moved out of every HOUT unit (there are two units in this test).
 		// @TODO: #2424 When refactoring, add robust tests that the expected toString methods are added.
-		ASSERT_EQUAL(functions, 29);
+		ASSERT_EQUAL_PRINT(functions, 33);
 		ASSERT_EQUAL(glob_data, 5);
 	}
 
@@ -2418,13 +2425,17 @@ private:
 
 		const auto bool_type = compiler::tsh::getBoolType();
 
-		const auto str_type = compiler::tsh::getStringType();
+		const auto str_type
+			= base::anyCast<compiler::tsh::SliceAbstractType>(query::utils::withContextCompute(
+				[&](query::Context& ctx) { return compiler::tsh::getCharSliceType(ctx); }
+			));
 
 		const auto tuple_ii_type = query::entryPoint<compiler::tsh::QueryTupleType>(
 			{ { st(int32_type), st(int32_type) } }
 		);
-		const auto tuple_si_type
-			= query::entryPoint<compiler::tsh::QueryTupleType>({ { st(str_type), st(int32_type) } });
+		const auto tuple_si_type = query::entryPoint<compiler::tsh::QueryTupleType>(
+			{ { stConst(str_type), st(int32_type) } }
+		);
 
 		auto foo            = getChain("foo", root_scope).back();
 		auto foo_body_scope = getFunctionBodyScope(foo);

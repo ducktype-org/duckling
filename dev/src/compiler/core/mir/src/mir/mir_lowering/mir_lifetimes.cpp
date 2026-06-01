@@ -205,8 +205,6 @@ namespace compiler::mir {
 							first_path_ending_scopes.value(), new_instructions
 						);
 					}
-					if (successors.size() == 1)
-						block.terminator.scope = function.blocks[successors[0]].beginScope();
 				} else {
 					// Paths are not identical or there would be a scope regression. Create a new
 					// block and insert destructors there.
@@ -230,8 +228,21 @@ namespace compiler::mir {
 						// Add all needed destructors.
 						add_destructors_to_instr_vec(succ_ending_scopes, new_block_instructions);
 
+						auto new_terminator_scope = [&]() {
+							// If there is only one succ_ending_scope and is equal to the
+							// terminator.scope the scope of the new terminator is the same as
+							// the original terminator scope (to match the optimization case).
+							// Otherwise, we want to have the new terminator scope to be scope
+							// of the succ_begin_scope.
+							if (succ_ending_scopes.size() == 1
+							    && succ_ending_scopes.front() == terminator.scope) {
+								return terminator.scope;
+							} else {
+								return function.blocks[succ].beginScope();
+							}
+						}();
 						Instruction new_block_terminator{
-							Operation::Jump, {}, { MIRValue(succ) }, {}, succ_begin_scope
+							Operation::Jump, {}, { MIRValue(succ) }, {}, new_terminator_scope
 						};
 
 						// Add the new block.
@@ -407,9 +418,7 @@ namespace compiler::mir {
 		// The order here does matter. AddDestructorsPass{} performs a transformation on the CFG
 		// which adds an important invariant that all successors of a block have the same ending
 		// scopes. This assumption is then used when adding ScopeFlags.
-		function.debugPrint(std::cerr);		
 		AddDestructorsPass{}.run(ctx, function, args);
-		function.debugPrint(std::cerr);		
 		AddScopeFlagsPass{}.run(ctx, function, args);
 
 		return function;

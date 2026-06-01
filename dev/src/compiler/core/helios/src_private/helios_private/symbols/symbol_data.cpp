@@ -347,6 +347,7 @@ namespace compiler::helios {
 				variant_case(DefaultStaticArrayConstructor, ctor) { return {}; }
 				variant_case(DefaultDestructor, dtor) { return {}; }
 				variant_case(ToStringMethod, to_string) { return {}; }
+				variant_case(LengthMethod, m) { return {}; }
 				variant_case(BuiltinOperator, op) { return {}; }
 				variant_case(Parameter, param) { return {}; }
 				variant_case(SelfParameter, param) { return param.scope; }

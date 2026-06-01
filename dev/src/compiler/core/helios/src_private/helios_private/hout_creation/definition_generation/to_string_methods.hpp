@@ -8,7 +8,7 @@
 
 namespace compiler::helios::defgen {
 	/**
-	 * @brief Get the symbol of the toString method for a type. 
+	 * @brief Get the symbol of the toString method for a type.
 	 */
 	SymID toStringSymForType(query::Context& ctx, tsh::AbstractType type);
 

@@ -2,9 +2,9 @@
 
 #include "initialize.hpp"
 
-#include <filesystem/file_path.hpp>
-
 #include <frontend/module_tree/module_id.hpp>
+
+#include <filesystem/file_path.hpp>
 
 #include <string>
 #include <string_view>
@@ -20,8 +20,7 @@ namespace compiler::driver::test_utils {
 	 * @param artifacts_path Path where compilation artifacts should be stored.
 	 */
 	base::CheckedOkBad initializeCompilerForTests(
-		const std::vector<PackagePathAndName>& packages,
-		const fs::FilePath&                   artifacts_path
+		const std::vector<PackagePathAndName>& packages, const fs::FilePath& artifacts_path
 	);
 
 	/**
@@ -32,8 +31,8 @@ namespace compiler::driver::test_utils {
 	 */
 	base::CheckedOkBad initializeCompilerForTests(
 		const std::vector<PackagePathAndName>& packages,
-		const fs::FilePath&                   artifacts_path,
-		const options_types::StdLibOptions&   stdlib_options
+		const fs::FilePath&                    artifacts_path,
+		const options_types::StdLibOptions&    stdlib_options
 	);
 
 	/**

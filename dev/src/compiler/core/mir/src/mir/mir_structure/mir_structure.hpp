@@ -389,8 +389,7 @@ namespace compiler::mir {
 		 * field access and index access for array elements.
 		 */
 		struct Projection {
-			std::variant<DerefProjection, FieldProjection, IndexProjection>
-				storage;
+			std::variant<DerefProjection, FieldProjection, IndexProjection> storage;
 
 			static Projection field(helios::SymID field_id) {
 				return Projection(FieldProjection(field_id));

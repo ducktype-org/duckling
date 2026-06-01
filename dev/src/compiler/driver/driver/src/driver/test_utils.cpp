@@ -16,24 +16,22 @@
 namespace compiler::driver::test_utils {
 	namespace {
 		compiler::frontend::ModuleID findSubmodule(
-			compiler::frontend::ModuleID start_module,
-			const std::vector<std::string>& path
+			compiler::frontend::ModuleID start_module, const std::vector<std::string>& path
 		) {
 			compiler::frontend::ModuleID current_module = start_module;
 			for (const auto& part: path) {
 				current_module = compiler::frontend::getModuleRef(current_module)
-					                 ->getSubmoduleByName(base::StrID(part))
-					                 .illegalAccess()
-					                 ->illegalAccess()
-					                 .getID();
+				                     ->getSubmoduleByName(base::StrID(part))
+				                     .illegalAccess()
+				                     ->illegalAccess()
+				                     .getID();
 			}
 			return current_module;
 		}
 	}
 
 	base::CheckedOkBad initializeCompilerForTests(
-		const std::vector<PackagePathAndName>& packages,
-		const fs::FilePath&                   artifacts_path
+		const std::vector<PackagePathAndName>& packages, const fs::FilePath& artifacts_path
 	) {
 		options_types::StdLibOptions stdlib_options{
 			.std_lib_type = options_types::StdLibOptions::DefaultStd{},
@@ -43,8 +41,8 @@ namespace compiler::driver::test_utils {
 
 	base::CheckedOkBad initializeCompilerForTests(
 		const std::vector<PackagePathAndName>& packages,
-		const fs::FilePath&                   artifacts_path,
-		const options_types::StdLibOptions&   stdlib_options
+		const fs::FilePath&                    artifacts_path,
+		const options_types::StdLibOptions&    stdlib_options
 	) {
 		initializeGlobalLogger();
 
@@ -79,8 +77,8 @@ namespace compiler::driver::test_utils {
 	compiler::frontend::ModuleID getModuleIdFromPath(std::string_view module_path) {
 		std::vector<std::string> path_parts = std::string(module_path) | std::views::split('/')
 		                                    | std::views::transform([](auto&& part) {
-										return std::string(part.begin(), part.end());
-									})
+												  return std::string(part.begin(), part.end());
+											  })
 		                                    | std::ranges::to<std::vector>();
 
 		CORE_ASSERT(!path_parts.empty(), "Module path must not be empty");

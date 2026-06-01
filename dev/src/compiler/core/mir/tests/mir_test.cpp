@@ -449,15 +449,17 @@ private:
 		withContextDo([&](query::Context& ctx) {
 			auto& unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
 			auto& functions = unit.functions;
-			ASSERT_EQUAL(4, functions.size());
-			ASSERT_EQUAL(functions.at(0)->declaration->original_name, base::StrID("missing_return"));
-			ASSERT_EQUAL(
+			ASSERT_EQUAL_PRINT(4, functions.size());
+			ASSERT_EQUAL_PRINT(
+				functions.at(0)->declaration->original_name, base::StrID("missing_return")
+			);
+			ASSERT_EQUAL_PRINT(
 				functions.at(1)->declaration->original_name, base::StrID("should_add_retvoid")
 			);
-			ASSERT_EQUAL(
+			ASSERT_EQUAL_PRINT(
 				functions.at(2)->declaration->original_name, base::StrID("unreachable_end")
 			);
-			ASSERT_EQUAL(functions.at(3)->declaration->original_name, base::StrID("empty"));
+			ASSERT_EQUAL_PRINT(functions.at(3)->declaration->original_name, base::StrID("empty"));
 
 			ASSERT_TRUE(
 				ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(0) })->hasFailed()
@@ -471,7 +473,9 @@ private:
 
 			auto& last_block
 				= should_add_retvoid_fun.blocks[should_add_retvoid_fun.block_order.back()];
-			ASSERT_EQUAL(last_block.terminator.operation, compiler::mir::Operation::ReturnVoid);
+			ASSERT_EQUAL_PRINT(
+				last_block.terminator.operation, compiler::mir::Operation::ReturnVoid
+			);
 
 
 			auto& unreachable_end_fun

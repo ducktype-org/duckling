@@ -14,11 +14,11 @@ namespace compiler::mir {
 		const MIRValue&                                slice,  // struct { ptr, length }
 		const base::Optional<dia_int::StablePosition>& pos
 	) {
-		auto& function     = context.function;
-		auto& condition_block  = context.condition_block;
-		auto& fail_block       = context.fail_block;
-		auto& ok_block = context.ok_block;
-		auto  scope        = context.scope;
+		auto& function        = context.function;
+		auto& condition_block = context.condition_block;
+		auto& fail_block      = context.fail_block;
+		auto& ok_block        = context.ok_block;
+		auto  scope           = context.scope;
 
 		base::Optional<MIRValue> slice_len;
 		variant_match(slice.getVariant()) {

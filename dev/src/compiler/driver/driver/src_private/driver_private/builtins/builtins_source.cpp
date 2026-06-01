@@ -31,7 +31,7 @@ struct str {
 // Definition of the Duckling character slice representation, used for string literals.
 struct char_slice {
 	// Pointer to the data of the character slice.
-	char*    data;
+	char* data;
 	// The length of the character slice.
 	uint64_t length;
 };

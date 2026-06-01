@@ -1,4 +1,4 @@
-fun takesString(s: String) -> String = {
+fun takesString(s: str) -> str = {
     return s;
 }
 
@@ -6,5 +6,6 @@ fun main() -> i64 = {
     let myString = "a";
     takesString(myString);
     takesString(takesString(myString));
+    let concatenated = "a".toString() ++ "b".toString();
     return 0;
 }

@@ -1,6 +1,6 @@
-const Person: type = (String, String, i64); # name, surname, age
+const Person: type = (str, str, i64); # name, surname, age
 
-fun makePerson(name: String, surname: String, age: i64) -> Person = {
+fun makePerson(name: str, surname: str, age: i64) -> Person = {
     return (name, surname, age);
 }
 

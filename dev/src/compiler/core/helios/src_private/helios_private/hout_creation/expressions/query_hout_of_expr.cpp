@@ -211,7 +211,9 @@ namespace compiler::helios::code {
 						const auto unescape_result = base::unescapeString(escaped_string);
 						match_optional(unescape_result) {
 							opt_some(result) {
-								next_string = defgen::getStringFromLiteralExpr(ctx, base::StrID(result.value));
+								next_string = defgen::getStringFromLiteralExpr(
+									ctx, base::StrID(result.value)
+								);
 							}
 							opt_err(error) {
 								ctx.logInt(makeBox<UnknownEscapeSequenceError>(
