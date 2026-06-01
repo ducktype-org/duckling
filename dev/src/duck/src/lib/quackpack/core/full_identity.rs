@@ -1,4 +1,6 @@
 //! A package identity, a unique identifier in the dependencies' graph.
+//!
+//! For differences between [`FullIdentity`] and [`Identity`], see the `readme.md` under the `core/` directory.
 
 use std::fmt::Display;
 use std::path::Path;

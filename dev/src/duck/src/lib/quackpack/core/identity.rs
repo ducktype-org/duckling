@@ -4,6 +4,8 @@
 //! Also, they have different [`Display`], [`Serialize`], and [`Deserialize`] impls.
 //!
 //! In particular, [`Identity`] and [`Origin`] implement [`FromStr`].
+//!
+//! For differences between [`FullIdentity`] and [`Identity`], see the `readme.md` under the `core/` directory.
 
 use std::fmt::Display;
 use std::path::Path;
