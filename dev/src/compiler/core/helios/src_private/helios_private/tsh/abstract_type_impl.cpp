@@ -97,6 +97,7 @@ namespace compiler::tsh {
 		case Float:
 		case Pointer:
 		case RawPointer:
+		case Slice:
 			return true;
 		default:
 			return false;

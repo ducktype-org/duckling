@@ -229,12 +229,8 @@ namespace compiler::helios::defgen {
 					= makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), callee_sym);
 
 				std::vector<Box<code::Expr>> call_args;
-				call_args.emplace_back(makeBox<code::DerefExpr>(
-					ctx,
-					code::generatedOrigin(),
-					makeBox<code::IdentifierExpr>(
-						ctx, code::generatedOrigin(), self_param.helios_symbol
-					)
+				call_args.emplace_back(makeBox<code::IdentifierExpr>(
+					ctx, code::generatedOrigin(), self_param.helios_symbol
 				));
 
 				body.emplace_back(makeBox<code::ReturnStmt>(

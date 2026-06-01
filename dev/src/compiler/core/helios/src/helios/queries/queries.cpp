@@ -1,5 +1,7 @@
 #include "queries.hpp"
 
+#include "helios_private/hout_creation/definition_generation/length_methods.hpp"
+
 #include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/hout/elements.hpp>
@@ -29,7 +31,6 @@
 #include <query_framework/query_errors.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 #include <query_framework/utils/query_failed_try.hpp>
-#include "helios_private/hout_creation/definition_generation/length_methods.hpp"
 
 #include <set>
 
@@ -119,7 +120,7 @@ namespace compiler::helios {
 					const auto& class_ctor
 						= ctx.query<defgen::QueryDefaultClassConstructor>(class_type)->valueOrThrow();
 					default_ctors.insert(class_ctor.declaration->original_symbol);
-				} 
+				}
 			};
 			auto register_ctor_and_tostring_if_needed_no_interrupt
 				= [&run_no_interrupt, &register_ctor_and_tostring_if_needed](SymID sym) {
@@ -264,6 +265,11 @@ namespace compiler::helios {
 			append_to_string_for_simple_type(tsh::getBoolType());
 			append_to_string_for_simple_type(tsh::getStringType());
 			append_to_string_for_simple_type(tsh::getUnitType());
+			append_to_string_for_simple_type(tsh::getCharSliceType(ctx));
+			out_functions.emplace_back(&ctx.query<QueryCodeOfFun>(defgen::lengthMethodForType(
+																	  ctx, tsh::getCharSliceType(ctx)
+																  ))
+			                                ->valueOrThrow());
 		}
 
 		/**

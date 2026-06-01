@@ -3,6 +3,7 @@
  */
 
 #include <ctv/ctv.hpp>
+#include <driver/test_utils.hpp>
 #include <helios/queries/function_queries.hpp>
 #include <helios/queries/queries.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
@@ -12,6 +13,7 @@
 #include <mir/mir_lowering/mir_validation.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 
+#include <filesystem/file.hpp>
 #include <query_framework/context/context.hpp>
 #include <query_framework/entry/with_context_do.hpp>
 #include <tester/tester.hpp>
@@ -41,6 +43,29 @@ public:
 		TESTER_ADD_TEST(staticArraysTest);
 		TESTER_ADD_TEST(dynamicArraysTest);
 		TESTER_ADD_TEST(tupleTest);
+	}
+
+protected:
+	void beforeAll() override {
+		fs::FilePath artifacts_path = fs::FileManager::createRandomTempDirectory().getFilePath();
+		std::vector<compiler::driver::test_utils::PackagePathAndName> packages{
+			{ fs::FilePath(path("modules/mir_simple_test/")), "mir_simple_test" },
+			{ fs::FilePath(path("modules/mir_var_test/")), "mir_var_test" },
+			{ fs::FilePath(path("modules/booleans/")), "booleans" },
+			{ fs::FilePath(path("modules/function_calls/")), "function_calls" },
+			{ fs::FilePath(path("modules/numeric_literals/")), "numeric_literals" },
+			{ fs::FilePath(path("modules/function_with_parameters/")), "function_with_parameters" },
+			{ fs::FilePath(path("modules/function_end_test/")), "function_end_test" },
+			{ fs::FilePath(path("modules/meta_functions/")), "meta_functions" },
+			{ fs::FilePath(path("modules/references/")), "references" },
+			{ fs::FilePath(path("modules/boxes/")), "boxes" },
+			{ fs::FilePath(path("modules/static_arrays/")), "static_arrays" },
+			{ fs::FilePath(path("modules/dynamic_arrays/")), "dynamic_arrays" },
+			{ fs::FilePath(path("modules/tuples/")), "tuples" },
+		};
+		auto init_result
+			= compiler::driver::test_utils::initializeCompilerForTests(packages, artifacts_path);
+		assertTrue(init_result.status().isOk(), "Compiler initialization failed");
 	}
 
 private:
@@ -453,7 +478,7 @@ private:
 				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(2) })->valueOrThrow();
 			unreachable_end_fun.validateBlockIDs();
 			unreachable_end_fun.debugPrint(foo_str);
-			ASSERT_EQUAL(unreachable_end_fun.block_order.size(), 7);
+			ASSERT_EQUAL_PRINT(unreachable_end_fun.block_order.size(), 7);
 
 			auto& empty
 				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(3) })->valueOrThrow();

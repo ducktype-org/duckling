@@ -204,9 +204,9 @@ namespace compiler::mir {
 						add_destructors_to_instr_vec(
 							first_path_ending_scopes.value(), new_instructions
 						);
-						if (successors.size() == 1)
-							block.terminator.scope = function.blocks[successors[0]].beginScope();
 					}
+					if (successors.size() == 1)
+						block.terminator.scope = function.blocks[successors[0]].beginScope();
 				} else {
 					// Paths are not identical or there would be a scope regression. Create a new
 					// block and insert destructors there.
@@ -407,7 +407,9 @@ namespace compiler::mir {
 		// The order here does matter. AddDestructorsPass{} performs a transformation on the CFG
 		// which adds an important invariant that all successors of a block have the same ending
 		// scopes. This assumption is then used when adding ScopeFlags.
+		function.debugPrint(std::cerr);		
 		AddDestructorsPass{}.run(ctx, function, args);
+		function.debugPrint(std::cerr);		
 		AddScopeFlagsPass{}.run(ctx, function, args);
 
 		return function;

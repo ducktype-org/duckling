@@ -25,12 +25,8 @@ namespace compiler::helios::defgen {
 				makeBox<code::AccessExpr>(
 					ctx,
 					code::generatedOrigin(),
-					makeBox<code::DerefExpr>(
-						ctx,
-						code::generatedOrigin(),
-						makeBox<code::IdentifierExpr>(
-							ctx, code::generatedOrigin(), decl.parameters.at(0).helios_symbol
-						)
+					makeBox<code::IdentifierExpr>(
+						ctx, code::generatedOrigin(), decl.parameters.at(0).helios_symbol
 					),
 					slice_fields->len
 				)
