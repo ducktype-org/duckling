@@ -72,7 +72,7 @@ int main(int argc, const char* argv[]) {
 	}
 
 	concurrent::worker::setWorkerCount(g_config.threads);
-	query::track_reverse_graph = true;
+	query::setTrackReverseGraph(true);
 	std::ios::sync_with_stdio(false);
 	std::cin.tie(nullptr);
 
