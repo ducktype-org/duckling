@@ -182,7 +182,7 @@ namespace vm::builtins {
 			throw;
 		} catch (const vm::KillProcessException&) {
 			// Acquire GIL: exception handlers and destructors need exclusive access to process state.
-			thread.acquireGil();
+			//thread.acquireGil();
 			throw;
 		} catch (const std::exception& e) {
 		// Acquire GIL: exception handlers and destructors need exclusive access to process state.

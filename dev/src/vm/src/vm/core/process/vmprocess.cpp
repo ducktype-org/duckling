@@ -150,7 +150,11 @@ namespace vm {
 		return api::Response(api::response::Empty());
 	}
 
-	void IVMProcess::setStatus(const api::ProcStatus& new_status) noexcept {
+	void IVMProcess::setStatus(const api::ProcStatus& new_status, api::ThreadID thread_id) noexcept {
+		const bool is_main_thread = thread_id.asInt() == 0;
+
+		if (!is_main_thread) return;  // Only main thread can set overall process status
+
 		{
 			std::unique_lock<std::shared_mutex> lock(rw_status);
 			status = new_status;
@@ -160,7 +164,13 @@ namespace vm {
 		if (api::isStatusTerminal(new_status)) onTerminalStatus(new_status);
 	}
 
-	bool IVMProcess::setStatusIfNotTerminal(const api::ProcStatus& new_status) noexcept {
+	bool IVMProcess::setStatusIfNotTerminal(const api::ProcStatus& new_status, api::ThreadID thread_id) noexcept {
+		const bool is_main_thread = thread_id.asInt() == 0;
+
+		// Child threads should not move the whole process into a terminal state.
+		// They may still publish a terminal failure so the process can stop as a whole.
+		if (is_main_thread) return false;
+
 		bool            updated = false;
 		api::ProcStatus emitted_status;
 		{
