@@ -194,6 +194,10 @@ namespace vm {
 			base::StrID function_name, usize instruction_index, bool enable
 		) = 0;
 
+		virtual std::expected<api::Response, api::ApiError> mapFileLineToCodeCollectionPosition(
+			const fs::File& file, usize line_number
+		) = 0;
+
 	public:
 		ProcIO& getIO();
 

@@ -1,5 +1,7 @@
 #include <driver/repl_utils/repl_split_helpers.hpp>
 
+#include <base/types/ints.hpp>
+
 #include <tester/tester.hpp>
 
 class SplitInputIntoStatementsTest: public tester::TestSuite {
@@ -117,7 +119,7 @@ private:
 		assertTrue(first.has_value(), "First call must succeed");
 		assertTrue(second.has_value(), "Second call must succeed");
 		ASSERT_EQUAL(first->size(), second->size());
-		for (std::size_t i = 0; i < first->size(); ++i) ASSERT_EQUAL((*first)[i], (*second)[i]);
+		for (usize i = 0; i < first->size(); ++i) ASSERT_EQUAL((*first)[i], (*second)[i]);
 
 		auto err1 = compiler::repl::splitInputIntoStatements("{\nfun broken() = {");
 		auto err2 = compiler::repl::splitInputIntoStatements("{\nfun broken() = {");

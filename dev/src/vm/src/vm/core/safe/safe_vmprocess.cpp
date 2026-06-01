@@ -479,6 +479,24 @@ namespace vm {
 		return api::response::Empty{};
 	}
 
+	std::expected<api::Response, api::ApiError> SafeVMProcess::mapFileLineToCodeCollectionPosition(
+		const fs::File& file, usize line_number
+	) {
+		auto maybe_position = loader.mapFileLineToCodeCollectionPosition(file, line_number);
+		if (!maybe_position)
+			return std::unexpected(api::ApiError{
+				api::OtherError{ "No instruction at given position" } });
+		auto position = maybe_position.value();
+
+		auto source_position = loader.mapCodeCollectionPositionToFilePosition(position).value();
+
+		return api::response::CodePosition{
+			.function_name   = position.function_name,
+			.instr_number    = position.instruction_index,
+			.source_position = source_position,
+		};
+	}
+
 	void SafeVMProcess::updateGlobalDataMemory(CRef<low::ILowVMProgram> program) {
 		using namespace std::ranges;
 		auto global_buffer_config = program->getGlobalBufferConfig();

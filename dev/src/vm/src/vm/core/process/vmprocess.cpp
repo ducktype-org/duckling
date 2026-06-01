@@ -123,6 +123,10 @@ namespace vm {
 				);
 			}
 
+			variant_case(api::request::MapFileLineToCodeCollectionPosition, request) {
+				return mapFileLineToCodeCollectionPosition(request.file, request.line_number);
+			}
+
 			variant_default { return api::Response(api::response::Empty()); }
 		}
 

@@ -214,7 +214,10 @@ namespace compiler::mir {
 	struct IMPLEMENT_QUERY(LowerGlobalDataToMIRCtor, LowerGlobalDataToMIRFunctionResult) {
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
 			if (std::holds_alternative<helios::HOUTGlobalConst>(key.global_data->value))
-				CORE_PANIC("Creating ctors for constant variables are not implemented yet.");
+				CORE_PANIC(
+					"Creating ctors for constant variables does not work, they should use CTVs "
+					"instead."
+				);
 
 			auto global_init_expr
 				= std::get<helios::HOUTGlobalVariable>(key.global_data->value).initial_value.ref();
@@ -253,8 +256,15 @@ namespace compiler::mir {
 
 			assign_instr.fill(Instruction{
 				Operation::Assign,
-				{ MIRGlobal({ key.global_data->helios_symbol, key.global_data->type }) },
-				{ lowerexpr_res.getResult(function_builder) },
+				// Note: we know its a variable here, since this query only works for variables,
+				{
+					MIRGlobal({ key.global_data->helios_symbol,
+			                    key.global_data->type,
+			                    MIRGlobal::Kind::Variable }),
+				},
+				{
+					lowerexpr_res.getResult(function_builder),
+				},
 				{},
 				function_builder.getTopLevelScope(),
 			});
