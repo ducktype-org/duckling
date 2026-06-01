@@ -69,9 +69,9 @@ impl From<&registry::Manifest> for Package {
 #[derive(Debug)]
 /// Response of the [`GitClient::clone_blocking`](super::git::GitClient::clone_blocking).
 pub struct GitCloneResponse {
-    /// Hash of the checkouted repository.
+    /// Hash of the checkout'd repository.
     pub commit_hash: StrId,
-    /// Parsed package at the repository checkouted at the
+    /// Parsed package at the repository checkout'd at the
     /// [`commit_hash`](GitCloneResponse::commit_hash).
     pub package: core::Package,
 }

@@ -280,6 +280,7 @@ dependencies:
     version: '1'
   alias_b:
     source:
+      # cSpell:disable-next-line
       path: ./sialalala
 
 features:
@@ -326,6 +327,7 @@ features:
         }
         .into();
         let exp_location_b = ExpandedLocation::Local {
+            // cSpell:disable-next-line
             absolute_path: PathBuf::new().join("./sialalala"),
         }
         .into();

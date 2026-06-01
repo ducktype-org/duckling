@@ -68,20 +68,21 @@ impl<'de> de::Deserializer<'de> for YamlDeserializer<'de, '_> {
     type Error = QuackErrorWrapper;
 
     forward_to_yaml! {
-        deserialize_any;
-        deserialize_bool;
-        deserialize_i8; deserialize_i16; deserialize_i32; deserialize_i64;
-        deserialize_u8; deserialize_u16; deserialize_u32; deserialize_u64;
-        deserialize_f32; deserialize_f64;
-        deserialize_char; deserialize_str; deserialize_string; deserialize_bytes; deserialize_byte_buf;
-        deserialize_unit; deserialize_seq; deserialize_map; deserialize_identifier; deserialize_ignored_any;
-        deserialize_unit_struct, name: &'static str;
-        deserialize_newtype_struct, name: &'static str;
-        deserialize_tuple, len: usize;
-        deserialize_tuple_struct, name: &'static str, len: usize;
-        deserialize_struct, name: &'static str, fields: &'static [&'static str];
-        deserialize_enum, name: &'static str, variants: &'static [&'static str]
-    }
+            deserialize_any;
+            deserialize_bool;
+            deserialize_i8; deserialize_i16; deserialize_i32; deserialize_i64;
+            deserialize_u8; deserialize_u16; deserialize_u32; deserialize_u64;
+            deserialize_f32; deserialize_f64;
+            deserialize_char; deserialize_str; deserialize_string; deserialize_bytes; deserialize_byte_buf;
+            deserialize_unit; deserialize_seq; deserialize_map; deserialize_identifier; deserialize_ignored_any;
+            deserialize_unit_struct, name: &'static str;
+    // cSpell:disable-next-line
+            deserialize_newtype_struct, name: &'static str;
+            deserialize_tuple, len: usize;
+            deserialize_tuple_struct, name: &'static str, len: usize;
+            deserialize_struct, name: &'static str, fields: &'static [&'static str];
+            deserialize_enum, name: &'static str, variants: &'static [&'static str]
+        }
 
     fn deserialize_option<V>(self, visitor: V) -> Result<V::Value, Self::Error>
     where

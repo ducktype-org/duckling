@@ -20,7 +20,7 @@ fn generate_local_git_repo() -> TempDir {
         .write(
             "\
 metadata:
-  name: fixtured_git_dependency
+  name: foo
   version: '1'",
         )
         .unwrap();

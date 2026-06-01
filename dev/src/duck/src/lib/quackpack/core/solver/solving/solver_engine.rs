@@ -118,13 +118,13 @@ impl<'a> SolverEngine<'a> {
         main_pkg: &(ExpandedPackage, HashSet<FeatureName>),
     ) -> QuackResult<FoundSolution> {
         self.create_package_variables();
-        let empty_hashset: HashSet<FeatureName> = HashSet::new();
+        let empty_hash_set: HashSet<FeatureName> = HashSet::new();
         for (package, manifest) in self.input.gathered_manifests.iter() {
             let possible_features = self
                 .input
                 .all_possible_features
                 .get(package)
-                .unwrap_or(&empty_hashset);
+                .unwrap_or(&empty_hash_set);
             for dependency in manifest.dependencies().all_dependencies() {
                 if dependency.is_enabled_for(possible_features.iter().cloned()) {
                     self.construct_for_single_dependency(package, dependency)?;
@@ -158,7 +158,7 @@ impl<'a> SolverEngine<'a> {
         }
     }
 
-    /// Creates the necesseary constraints for a single dependency.
+    /// Creates the necessary constraints for a single dependency.
     fn construct_for_single_dependency(
         &mut self,
         parent: &ExpandedPackage,
@@ -247,7 +247,7 @@ impl<'a> SolverEngine<'a> {
         Ok(())
     }
 
-    /// Creates version realization constraints and necesseary variables for a single dependency.
+    /// Creates version realization constraints and necessary variables for a single dependency.
     fn create_dependency_version_realization_conditions(
         &mut self,
         edge: &DependencyEdge,
@@ -263,7 +263,7 @@ impl<'a> SolverEngine<'a> {
         if is_dep_forced_default {
             self.model.require_satisfying_dep_version(edge, None)?;
         } else {
-            for dep_forcing_feature in manifest_dependency.enableing_features() {
+            for dep_forcing_feature in manifest_dependency.enabling_features() {
                 self.model
                     .require_satisfying_dep_version(edge, Some(dep_forcing_feature))?;
             }
@@ -271,7 +271,7 @@ impl<'a> SolverEngine<'a> {
         Ok(())
     }
 
-    /// Creates feature realization constraints and necesseary variables for a single dependency.
+    /// Creates feature realization constraints and necessary variables for a single dependency.
     fn create_dependency_feature_realization_conditions(
         &mut self,
         edge: &DependencyEdge,

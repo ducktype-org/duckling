@@ -23,6 +23,7 @@ fn check_venvs_exist(root: &Path, names: &[&str]) {
     }
 }
 
+// cSpell:disable-next-line
 fn check_venvs_dont_exist(root: &Path, names: &[&str]) {
     for name in names {
         assert!(!root.join("venv").join(name).exists());
@@ -49,6 +50,7 @@ fn clean() {
     assert_eq!(output.removed_venvs, ["root3".to_venv_id()]);
     assert_eq!(output.removed_packages, expected_packages);
     check_venvs_exist(&root, &["root1", "root2", "root4"]);
+    // cSpell:disable-next-line
     check_venvs_dont_exist(&root, &["root3"]);
 
     let mut iterator = root.join("pkg").read_dir().unwrap();
@@ -71,19 +73,24 @@ fn delete_venv() {
     let (ctx, _home, root) = setup_mock_storage();
     storage::ops::delete_venv(&ctx, &root, "root1").unwrap();
     check_venvs_exist(&root, &["root2", "root3", "root4"]);
+    // cSpell:disable-next-line
     check_venvs_dont_exist(&root, &["root1"]);
     storage::ops::delete_venv(&ctx, &root, "root2").unwrap();
     check_venvs_exist(&root, &["root3", "root4"]);
+    // cSpell:disable-next-line
     check_venvs_dont_exist(&root, &["root1", "root2"]);
     storage::ops::delete_venv(&ctx, &root, "root3").unwrap();
     check_venvs_exist(&root, &["root4"]);
+    // cSpell:disable-next-line
     check_venvs_dont_exist(&root, &["root1", "root2", "root3"]);
 
     storage::ops::delete_venv(&ctx, &root, "non_existent_venv").unwrap();
     check_venvs_exist(&root, &["root4"]);
+    // cSpell:disable-next-line
     check_venvs_dont_exist(&root, &["root1", "root2", "root3"]);
 
     storage::ops::delete_venv(&ctx, &root, "root4").unwrap();
+    // cSpell:disable-next-line
     check_venvs_dont_exist(&root, &["root1", "root2", "root3", "root4"]);
 
     let mut output = storage::ops::clean_storage(&ctx, &root).unwrap();
@@ -234,7 +241,7 @@ fn assert_can_load_after_save(venv: &Venv, storage: &Storage, ctx: &DuckContext)
         backup.display()
     );
     Venv::fix_and_load(storage, id, ctx)
-        .expect("an error occured")
+        .expect("an error occurred")
         .expect("failed to load venv")
 }
 
@@ -244,7 +251,7 @@ fn save_trims_files() {
     let id = "root1".to_venv_id();
     let storage = Storage::new(ctx.default_storage_root().into_not_locked_path());
     let mut venv = Venv::fix_and_load(&storage, id, &ctx)
-        .expect("an error occured")
+        .expect("an error occurred")
         .expect("failed to load venv");
     let original_venv = venv.clone();
     // Firstly, add a lot of dependencies, to make a file longer (have more bytes).
@@ -384,6 +391,7 @@ fn sync_overwrite_success() {
 }
 
 #[test]
+// cSpell:disable-next-line
 fn sync_overwrite_doesnt_matter_for_the_same_root() {
     let (ctx, _home, _storage_root) = setup_mock_storage();
     let (_root, pcx) = create_mock_package_at_tmpdir(&ctx, "my-package");

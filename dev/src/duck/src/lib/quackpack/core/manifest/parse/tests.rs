@@ -657,6 +657,7 @@ dependencies:
 }
 
 #[test]
+// cSpell:disable-next-line
 fn dep_features_with_conds() {
     let (_dir, manifest_path) = prepare_manifest(
         r#"
@@ -728,6 +729,7 @@ dependencies:
 }
 
 #[test]
+// cSpell:disable-next-line
 fn dep_features_with_invalid_conds() {
     let (dir, manifest_path) = prepare_manifest(
         r#"
@@ -842,6 +844,7 @@ dependencies:
 }
 
 #[test]
+// cSpell:disable-next-line
 fn floats_explicit_string_dont_work() {
     let (dir, manifest_path) = prepare_manifest(
         r#"
@@ -870,6 +873,7 @@ dependencies:
 }
 
 #[test]
+// cSpell:disable-next-line
 fn floats_dont_parse() {
     let (dir, manifest_path) = prepare_manifest(
         r#"

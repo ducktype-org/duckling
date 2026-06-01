@@ -6,4 +6,4 @@ pub mod qp_context;
 pub mod str_id;
 
 /// A common message which should be passed to `.expect()`s.
-pub const PANIC_MESSAGE: &str = "a thread panick'ed, which should not have happened";
+pub const PANIC_MESSAGE: &str = "a thread panic'd, which should not have happened";

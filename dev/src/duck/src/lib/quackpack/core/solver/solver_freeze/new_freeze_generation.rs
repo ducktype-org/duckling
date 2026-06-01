@@ -133,7 +133,7 @@ impl SolverFreeze {
     }
 
     /// Helper for [`SolverFreeze::mark_children_as_necessary`].
-    /// Finds with what features the package is currectly listed in the new package freezes map.
+    /// Finds with what features the package is currently listed in the new package freezes map.
     fn current_pkg_features(
         &self,
         new_pkg_freezes: &mut HashMap<ExpandedPackage, SolverPackageFreeze>,

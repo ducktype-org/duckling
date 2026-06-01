@@ -78,7 +78,7 @@ pub fn clean_storage(ctx: &DuckContext, storage_root: &Path) -> QuackResult<Clea
     locks::cleanup_locks(&storage)?;
     debug!("all used dependencies are `{all_deps:?}");
     let all_pkgs = storage.iter_pkgs()?.collect::<Result<Vec<_>, _>>()?;
-    let pgks_to_remove = all_pkgs
+    let packages_to_remove = all_pkgs
         .into_iter()
         .flat_map(|pkg| {
             let venv_id: StrId = pkg.file_name().into();
@@ -89,13 +89,13 @@ pub fn clean_storage(ctx: &DuckContext, storage_root: &Path) -> QuackResult<Clea
             }
         })
         .collect::<Vec<_>>();
-    for pkg in pgks_to_remove.iter() {
+    for pkg in packages_to_remove.iter() {
         pkg.rmtree()?;
     }
     ctx.console().info("successfully cleaned the storage")?;
     Ok(CleanOutput {
         removed_venvs,
-        removed_packages: pgks_to_remove,
+        removed_packages: packages_to_remove,
     })
 }
 

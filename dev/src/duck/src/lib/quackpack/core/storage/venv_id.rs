@@ -35,7 +35,7 @@ impl VenvId {
     }
 }
 
-macro_rules! forward_to_asref {
+macro_rules! forward_to_as_ref {
     ($($type:ty)*) => {
         $(
             impl AsRef<$type> for VenvId {
@@ -47,7 +47,7 @@ macro_rules! forward_to_asref {
     };
 }
 
-forward_to_asref!(OsStr str Path);
+forward_to_as_ref!(OsStr str Path);
 
 impl fmt::Display for VenvId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -130,7 +130,7 @@ impl ToVenvId for Manifest {
     }
 }
 
-macro_rules! forward_to_strid {
+macro_rules! forward_to_str_id {
     ($($type:ty)*) => {
         $(
             impl ToVenvId for $type {
@@ -143,7 +143,7 @@ macro_rules! forward_to_strid {
     };
 }
 
-forward_to_strid!(str String Path OsStr OsString);
+forward_to_str_id!(str String Path OsStr OsString);
 
 impl ToVenvId for &str {
     fn to_venv_id(&self) -> VenvId {

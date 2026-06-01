@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
 
-use crate::quackpack::core::solver::gathering::error_surpression::{
+use crate::quackpack::core::solver::gathering::error_suppression::{
     GathererComputation, GathererResult,
 };
 use crate::quackpack::core::solver::gathering::fetch_types::{
@@ -215,7 +215,7 @@ impl GathererState {
                 QueryState::Pending { requests } => {
                     // We are adding a pinned request to the requests chained to an unpinned fetch.
                     // This is not a bug - later the same method `[GathererState::complete_requests]` will be used
-                    // for handling chained requests for both types of fetches, so this pinnned
+                    // for handling chained requests for both types of fetches, so this pinned
                     // request will be properly handled when the not pinned fetch completes.
                     requests.push(ManifestsRequest::Pinned(pinned_request));
                     return Ok(GathererComputation::empty());
@@ -264,7 +264,7 @@ impl GathererState {
     }
 
     /// After getting a response to a fetch,
-    /// updates the state and decides what furhter requests to make.
+    /// updates the state and decides what further requests to make.
     pub fn handle_fetch_response(
         &mut self,
         response: FetchResponse,
@@ -643,7 +643,7 @@ impl TryFrom<GathererState> for GatheredInfo {
         for pkg in unnecessary_pkgs {
             let Some(versions) = value.versions_for_location.get_mut(&pkg.location) else {
                 qp_bail_internal!(
-                    "Unncecessary package's location not present in the versions for location map"
+                    "Unnecessary package's location not present in the versions for location map"
                 );
             };
             versions.remove(&pkg.version);

@@ -140,7 +140,7 @@ fn create_mock_server() -> MockServer {
 }
 
 #[test]
-/// Tests a new dependency occuring in the manifest.
+/// Tests a new dependency occurring in the manifest.
 /// Main package depends on *a* and *b*, but only *a* is present in the supplied freeze.
 fn new_dependency() {
     let (ctx, _root) = setup_duck_ctx();
@@ -377,7 +377,7 @@ dependencies:
 /// Only *a* in version 2.0.0 has that feature and should be chosen to the new freeze.
 ///
 /// Note:
-/// [`SolverMode::supress_foreign_manifests_errors`] is set to true in this test.
+/// [`SolverMode::suppress_foreign_manifests_errors`] is set to true in this test.
 fn no_longer_working_dependency() {
     let (ctx, _root) = setup_duck_ctx();
     let server = create_mock_server();
@@ -447,7 +447,7 @@ dependencies:
     };
 
     let mode = SolverMode {
-        supress_foreign_manifests_errors: true,
+        suppress_foreign_manifests_errors: true,
         frozen: false,
     };
     let solver = SolverGathererData::new(&pcx, previous_freeze, mode);

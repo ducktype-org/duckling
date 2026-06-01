@@ -94,7 +94,7 @@ impl SolverFreeze {
     }
 
     /// Helper for [`Self::find_maximal_correct_dep_solution`].
-    /// Finds which packages from the freeze are not immediatelly flawed:
+    /// Finds which packages from the freeze are not immediately flawed:
     ///     * we were able to obtain their manifests,
     ///     * all manifest dependencies are satisfied by appropriate freeze-written realizations.
     fn still_satisfied_pkgs(
@@ -171,7 +171,7 @@ impl SolverFreeze {
     }
 
     /// Helper for [`Self::still_satisfied_pkgs`].
-    /// Checks if a particular dependency is satisifed.
+    /// Checks if a particular dependency is satisfied.
     fn check_if_dep_is_satisfied(
         freeze: &SolverPackageFreeze,
         realization_freeze: &SolverPackageFreeze,

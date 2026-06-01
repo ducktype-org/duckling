@@ -199,7 +199,7 @@ impl<'a> SolverModel<'a, ProblemCreated> {
         Ok(())
     }
 
-    /// Adds a constaint that forces the package to be present with a feature.
+    /// Adds a constraint that forces the package to be present with a feature.
     pub fn require_package_with_feature(
         &mut self,
         pkg: &ExpandedPackage,
