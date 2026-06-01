@@ -28,8 +28,11 @@ struct str {
 	uint64_t memory_end_offset;
 };
 
+// Definition of the Duckling character slice representation, used for string literals.
 struct char_slice {
+	// Pointer to the data of the character slice.
 	char*    data;
+	// The length of the character slice.
 	uint64_t length;
 };
 

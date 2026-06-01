@@ -200,10 +200,13 @@ namespace compiler::mir {
 				if (safe_to_opt) {
 					// Opt: If all paths require the same destructors we don't create a new block
 					// and insert them directly to the current block.
-					if (boundary_crossed)
+					if (boundary_crossed) {
 						add_destructors_to_instr_vec(
 							first_path_ending_scopes.value(), new_instructions
 						);
+						if (successors.size() == 1)
+							block.terminator.scope = function.blocks[successors[0]].beginScope();
+					}
 				} else {
 					// Paths are not identical or there would be a scope regression. Create a new
 					// block and insert destructors there.
@@ -371,7 +374,9 @@ namespace compiler::mir {
 				if (auto existing_starting_scopes = starting_scopes_by_block.atMaybe(succ)) {
 					CORE_ASSERT(
 						*existing_starting_scopes.value() == starting_scopes,
-						"Different starting scopes for the same block"
+						base::strConcat(
+							"Different starting scopes for the same block ", block_id.asInt()
+						)
 					);
 				} else {
 					addStartScopeFlags(

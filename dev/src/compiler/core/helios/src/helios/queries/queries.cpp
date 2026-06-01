@@ -97,6 +97,9 @@ namespace compiler::helios {
 					const auto& length_method
 						= ctx.query<defgen::QueryLengthMethod>(type)->valueOrThrow();
 					additional_methods.insert(length_method.declaration->original_symbol);
+					const auto& tostring_method
+						= ctx.query<defgen::QueryToStringMethod>(type)->valueOrThrow();
+					additional_methods.insert(tostring_method.declaration->original_symbol);
 					return;
 				}
 

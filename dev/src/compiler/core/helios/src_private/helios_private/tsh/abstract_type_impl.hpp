@@ -627,23 +627,24 @@ namespace compiler::tsh {
 
 	class SliceAbstractTypeImpl final: public AbstractTypeImpl {
 		SymbolType<> element;
+
 	public:
 		[[nodiscard]]
 		Kind getKind() const override {
 			return STATIC_KIND;
 		}
-		
+
 		[[nodiscard]]
 		SymbolType<> getElementType() const {
 			return element;
 		}
+
 		/**
 		 * @brief The Kind of types described by objects of this class.
 		 */
 		static constexpr Kind STATIC_KIND = Kind::Slice;
 
-		explicit SliceAbstractTypeImpl(const SymbolType<> element):
-			  element(element) {
+		explicit SliceAbstractTypeImpl(const SymbolType<> element): element(element) {
 			representation = base::strConcat("slice ", element.toString());
 		}
 
@@ -652,10 +653,10 @@ namespace compiler::tsh {
 
 		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
 
-		[[nodiscard]] bool isDefaultConstructible(query::Context&) const override { return true; }
+		[[nodiscard]] bool isDefaultConstructible(query::Context&) const override { return false; }
 
 		[[nodiscard]] bool isTriviallyZeroInitializable(query::Context&) const override {
-			return true;
+			return false;
 		}
 
 		[[nodiscard]] bool isCopyable(query::Context&) const override { return true; }
@@ -665,7 +666,6 @@ namespace compiler::tsh {
 		[[nodiscard]]
 		CRef<TypeInterface> getDeclaredInterface(query::Context&) const override;
 	};
-
 
 	class StringAbstractTypeImpl final: public AbstractTypeImpl {
 	public:
