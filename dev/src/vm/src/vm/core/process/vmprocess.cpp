@@ -164,7 +164,9 @@ namespace vm {
 		if (api::isStatusTerminal(new_status)) onTerminalStatus(new_status);
 	}
 
-	bool IVMProcess::setStatusIfNotTerminal(const api::ProcStatus& new_status, api::ThreadID thread_id) noexcept {
+	bool IVMProcess::setStatusIfNotTerminal(
+		const api::ProcStatus& new_status, api::ThreadID thread_id
+	) noexcept {
 		const bool is_main_thread = thread_id.asInt() == 0;
 
 		// Child threads should not move the whole process into a terminal state.

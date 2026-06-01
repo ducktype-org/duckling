@@ -218,7 +218,9 @@ namespace vm {
 		 * @brief Atomically set process status if it is not already terminal.
 		 * @return true if status was updated, false if status was already terminal.
 		 */
-		bool setStatusIfNotTerminal(const api::ProcStatus& new_status, api::ThreadID thread_id) noexcept;
+		bool setStatusIfNotTerminal(
+			const api::ProcStatus& new_status, api::ThreadID thread_id
+		) noexcept;
 
 		/**
 		 * @brief Creates a VmValue of a given type and registers it in this VMProcess

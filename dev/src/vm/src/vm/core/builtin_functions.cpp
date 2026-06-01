@@ -176,24 +176,24 @@ namespace vm::builtins {
 				= cv->wait(*mutex, [&thread] { return thread.isTerminateRequested(); });
 			if (interrupted) throw vm::KillProcessException{};
 		} catch (const vm::exceptions::VMRuntimeException&) {
-			// Acquire GIL: exception handlers and destructors need exclusive access to process state 
-			// during cleanup and propagation of VM runtime exceptions.
+			// Acquire GIL: exception handlers and destructors need exclusive access to process
+			// state during cleanup and propagation of VM runtime exceptions.
 			thread.acquireGil();
 			throw;
 		} catch (const vm::KillProcessException&) {
 			// Acquire GIL: exception handlers and destructors need exclusive access to process state.
-			//thread.acquireGil();
+			// thread.acquireGil();
 			throw;
 		} catch (const std::exception& e) {
-		// Acquire GIL: exception handlers and destructors need exclusive access to process state.
-		// Then wrap the exception so the VM can report ExecutionPanicked.
+			// Acquire GIL: exception handlers and destructors need exclusive access to process
+			// state. Then wrap the exception so the VM can report ExecutionPanicked.
 			thread.acquireGil();
 			std::string msg = "builtinWaitCV failed during condition variable wait: ";
 			msg += e.what();
 			throw vm::exceptions::VMRuntimeException(std::move(msg));
 		} catch (...) {
-		// Acquire GIL: exception handlers and destructors need exclusive access to process state.
-		// Then convert unknown exceptions into a VMRuntimeException.
+			// Acquire GIL: exception handlers and destructors need exclusive access to process
+			// state. Then convert unknown exceptions into a VMRuntimeException.
 			thread.acquireGil();
 			throw vm::exceptions::VMRuntimeException(
 				"builtinWaitCV failed during condition variable wait with an unknown exception"
