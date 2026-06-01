@@ -19,6 +19,7 @@ pub mod compiler_package;
 pub mod duckc;
 pub mod early_graph;
 pub mod profiles;
+pub mod unit;
 
 use duckc::*;
 use early_graph::*;
