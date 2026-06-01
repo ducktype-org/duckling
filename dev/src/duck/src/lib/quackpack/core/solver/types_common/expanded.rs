@@ -112,7 +112,7 @@ impl ExpandedPackage {
                 // If the git dependency specifies tag, branch or nothing (default branch),
                 // some new commits may have appeared.
                 if let GitReference::Rev(required_commit) = reference
-                    && *commit == *required_commit
+                    && commit == *required_commit
                     && url == dep_url
                 {
                     if let Some(required_version) = dependency.versions().first() {

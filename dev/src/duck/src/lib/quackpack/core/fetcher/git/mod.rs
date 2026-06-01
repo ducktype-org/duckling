@@ -25,7 +25,7 @@ impl GitClient {
     #[tracing::instrument(skip(ctx, url) fields(url = url.as_str()))]
     pub fn clone_blocking(
         url: &Url,
-        reference: &GitReference,
+        reference: GitReference,
         destination: &Path,
         ctx: &DuckContext,
     ) -> QuackResult<GitCloneResponse> {
@@ -84,7 +84,7 @@ impl GitClient {
 }
 
 /// Get specific [`FetchOptions`] for cloning the given `url` with `reference`.
-fn fetch_options_for(url: &Url, reference: &GitReference) -> FetchOptions<'static> {
+fn fetch_options_for(url: &Url, reference: GitReference) -> FetchOptions<'static> {
     let mut fetch_options = FetchOptions::new();
     if can_shallow_clone(url, reference) {
         fetch_options.depth(1);
@@ -96,7 +96,7 @@ fn fetch_options_for(url: &Url, reference: &GitReference) -> FetchOptions<'stati
 /// Right now conditions are as follow:
 /// 1. `url` must not be a local repository (i.e. schema != "file"),
 /// 2. reference must NOT point to specific commit (it's either a default branch, or a specific branch).
-fn can_shallow_clone(url: &Url, reference: &GitReference) -> bool {
+fn can_shallow_clone(url: &Url, reference: GitReference) -> bool {
     let is_local_repository_url = url.is_local_file();
     !is_local_repository_url && (reference.is_default() || reference.is_branch())
 }

@@ -294,7 +294,7 @@ fn fetch_source_code(
             }
             fetcher.clone_from_git_to_directory(
                 &url,
-                &GitReference::Rev(commit.as_str().to_string()),
+                GitReference::Rev(commit),
                 &storage.pkg_dir(&pkg_id),
             )?;
             storage.mark_as_stored(&pkg_id)?;

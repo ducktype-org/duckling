@@ -156,7 +156,7 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
                         Ok(self.fetch_registry_not_pinned(&not_pinned_request, *url, *real_name))
                     }
                     Location::Git { url, reference } => {
-                        Ok(self.fetch_git(&not_pinned_request, *url, reference))
+                        Ok(self.fetch_git(&not_pinned_request, *url, *reference))
                     }
                     Location::Local { path: path_url } => {
                         let path = path_url.to_path_buf()?;
@@ -276,15 +276,12 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
         &mut self,
         request: &NotPinnedRequest,
         url: InternedUrl,
-        reference: &GitReference,
+        reference: GitReference,
     ) -> GathererComputation<FetchResponse> {
         debug!("fetching git");
         let fetch_failure = || {
             FetchResponse::Failed(FetchFailure::NotPinned(NotPinnedFailure {
-                origin_location: InternedLocation::new(Location::Git {
-                    url,
-                    reference: reference.clone(),
-                }),
+                origin_location: InternedLocation::new(Location::Git { url, reference }),
             }))
         };
         match self.try_get_cached_git(url, reference) {
@@ -339,19 +336,13 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
     fn try_get_cached_git(
         &self,
         url: InternedUrl,
-        reference: &GitReference,
+        reference: GitReference,
     ) -> QuackResult<Option<NotPinnedSuccess>> {
         if let GitReference::Rev(commit) = reference
-            && let Some(path) = self.git_access.path_if_stored(url, commit)
+            && let Some(path) = self.git_access.path_if_stored(url, &commit)
         {
-            let origin_location = InternedLocation::new(Location::Git {
-                url,
-                reference: reference.clone(),
-            });
-            let expanded_location = ExpandedLocation::Git {
-                url,
-                commit: commit.into(),
-            };
+            let origin_location = InternedLocation::new(Location::Git { url, reference });
+            let expanded_location = ExpandedLocation::Git { url, commit };
             let storage_local_request = NotPinnedRequest {
                 location: InternedLocation::new(Location::Local {
                     path: path.to_url()?.into(),

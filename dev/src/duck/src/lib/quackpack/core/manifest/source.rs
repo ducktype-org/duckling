@@ -7,7 +7,7 @@ use crate::quackpack::schemas::registry;
 use crate::quackpack::util::interned_url::InternedUrl;
 use crate::quackpack::util::is_local_file::IsLocalFile;
 use crate::quackpack::util::to_url::ToUrl;
-use crate::{QuackError, QuackResult, qp_bail};
+use crate::{QuackError, QuackResult, StrId, qp_bail};
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash, Serialize, Deserialize)]
 pub enum SourceKind {
@@ -29,9 +29,9 @@ impl SourceKind {
         matches!(self, SourceKind::Git(..))
     }
 
-    pub fn maybe_reference(&self) -> Option<&GitReference> {
+    pub fn maybe_reference(&self) -> Option<GitReference> {
         if let SourceKind::Git(reference) = self {
-            Some(reference)
+            Some(*reference)
         } else {
             None
         }
@@ -96,24 +96,22 @@ impl Source {
     }
 
     /// Helper for `source.kind().maybe_reference()`.
-    pub fn maybe_reference(&self) -> Option<&GitReference> {
+    pub fn maybe_reference(&self) -> Option<GitReference> {
         self.kind.maybe_reference()
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-/// A type-safe approach for specifying a git tag or a branch.
-// We intentionally keep inner values as strings: we don't clone them a lot,
-// and turning them into StrId would only “leak” memory.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+/// A type-safe approach for specifying a git reference.
 pub enum GitReference {
     /// The default branch.
     Default,
     /// A specific tag.
-    Tag(String),
+    Tag(StrId),
     /// A specific branch.
-    Branch(String),
+    Branch(StrId),
     /// Other.
-    Rev(String),
+    Rev(StrId),
 }
 
 impl GitReference {
@@ -156,9 +154,9 @@ impl TryFrom<registry::DependencySource> for Source {
                 let url = git_url.as_str().to_url()?;
                 let reference = match (tag, branch, commit) {
                     (None, None, None) => GitReference::Default,
-                    (None, Some(branch), None) => GitReference::Branch(branch),
-                    (Some(tag), None, None) => GitReference::Tag(tag),
-                    (None, None, Some(commit)) => GitReference::Rev(commit),
+                    (None, Some(branch), None) => GitReference::Branch(branch.into()),
+                    (Some(tag), None, None) => GitReference::Tag(tag.into()),
+                    (None, None, Some(commit)) => GitReference::Rev(commit.into()),
                     _ => {
                         qp_bail!("only one of `branch`, `tag`, or `commit` can be specified")
                     }
@@ -183,9 +181,9 @@ impl TryFrom<Source> for registry::DependencySource {
             SourceKind::Git(reference) => {
                 let (tag, branch, commit) = match reference {
                     GitReference::Default => (None, None, None),
-                    GitReference::Tag(tag) => (Some(tag), None, None),
-                    GitReference::Branch(branch) => (None, Some(branch), None),
-                    GitReference::Rev(commit) => (None, None, Some(commit)),
+                    GitReference::Tag(tag) => (Some(tag.into()), None, None),
+                    GitReference::Branch(branch) => (None, Some(branch.into()), None),
+                    GitReference::Rev(commit) => (None, None, Some(commit.into())),
                 };
                 registry::SourceInner::Git {
                     git_url: url.to_string(),

@@ -56,10 +56,10 @@ fn clone_local_repo() {
 
     let target = dir.path().join("cloned");
     let url = Url::from_directory_path(dir.path()).unwrap();
-    let refernce = GitReference::Default;
+    let reference = GitReference::Default;
 
     let ctx = DuckContext::default();
-    let _ = GitClient::clone_blocking(&url, &refernce, &target, &ctx).unwrap();
+    let _ = GitClient::clone_blocking(&url, reference, &target, &ctx).unwrap();
 
     assert!(target.exists());
     assert!(target.is_dir());
@@ -77,10 +77,10 @@ fn clone_local_repo_with_branch() {
     let target = dir.path().join("cloned");
 
     let url = Url::from_directory_path(dir.path()).unwrap();
-    let refernce = GitReference::Branch("test-branch".into());
+    let reference = GitReference::Branch("test-branch".into());
 
     let ctx = DuckContext::default();
-    let _ = GitClient::clone_blocking(&url, &refernce, &target, &ctx).unwrap();
+    let _ = GitClient::clone_blocking(&url, reference, &target, &ctx).unwrap();
 
     let repo = Repository::open(&target).unwrap();
     assert_eq!(repo.head().unwrap().shorthand().unwrap(), "test-branch");
@@ -92,10 +92,10 @@ fn clone_local_repo_with_tag() {
 
     let target = dir.path().join("cloned");
     let url = Url::from_directory_path(dir.path()).unwrap();
-    let refernce = GitReference::Tag("v1.0.0".into());
+    let reference = GitReference::Tag("v1.0.0".into());
 
     let ctx = DuckContext::default();
-    let _ = GitClient::clone_blocking(&url, &refernce, &target, &ctx).unwrap();
+    let _ = GitClient::clone_blocking(&url, reference, &target, &ctx).unwrap();
 
     let repo = Repository::open(&target).unwrap();
     let mut opts = DescribeOptions::new();
@@ -116,10 +116,10 @@ fn clone_local_repo_with_rev() {
 
     let target = dir.path().join("cloned");
     let url = Url::from_directory_path(dir.path()).unwrap();
-    let refernce = GitReference::Rev(original_commit.id().to_string());
+    let reference = GitReference::Rev(original_commit.id().to_string().into());
 
     let ctx = DuckContext::default();
-    let _ = GitClient::clone_blocking(&url, &refernce, &target, &ctx).unwrap();
+    let _ = GitClient::clone_blocking(&url, reference, &target, &ctx).unwrap();
 
     let repo = Repository::open(&target).unwrap();
     let new_commit = repo.head().unwrap().peel_to_commit().unwrap();

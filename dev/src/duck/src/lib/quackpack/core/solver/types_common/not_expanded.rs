@@ -97,7 +97,7 @@ impl From<&Dependency> for Location {
             SourceKind::Local => Self::Local { path: url },
             SourceKind::Git(reference) => Self::Git {
                 url,
-                reference: reference.clone(),
+                reference: *reference,
             },
         }
     }

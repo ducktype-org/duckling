@@ -486,7 +486,7 @@ dependencies:
     assert!(e.source().is_git());
     assert_eq!(e.source().url().as_str(), "https://google.com/");
     let reference = e.source().maybe_reference().unwrap();
-    assert_eq!(reference, &GitReference::Branch("branch".to_owned()));
+    assert_eq!(reference, GitReference::Branch("branch".into()));
     assert!(e.versions().is_empty());
     assert_eq!(e.name(), e.effective_name());
 
@@ -494,7 +494,7 @@ dependencies:
     assert!(f.source().is_git());
     assert_eq!(f.source().url().as_str(), "https://google.com/");
     let reference = f.source().maybe_reference().unwrap();
-    assert_eq!(reference, &GitReference::Tag("tag".to_owned()));
+    assert_eq!(reference, GitReference::Tag("tag".into()));
     assert!(f.versions().is_empty());
     assert_eq!(f.name(), f.effective_name());
 
@@ -502,7 +502,7 @@ dependencies:
     assert!(g.source().is_git());
     assert_eq!(g.source().url().as_str(), "https://google.com/");
     let reference = g.source().maybe_reference().unwrap();
-    assert_eq!(reference, &GitReference::Rev("commit".to_owned()));
+    assert_eq!(reference, GitReference::Rev("commit".into()));
     assert!(g.versions().is_empty());
     assert_eq!(g.name(), g.effective_name());
 
@@ -510,7 +510,7 @@ dependencies:
     assert!(h.source().is_git());
     assert_eq!(h.source().url().as_str(), "https://google.com/");
     let reference = h.source().maybe_reference().unwrap();
-    assert_eq!(reference, &GitReference::Default);
+    assert_eq!(reference, GitReference::Default);
     assert!(h.versions().is_empty());
     assert_eq!(h.name(), h.effective_name());
 
