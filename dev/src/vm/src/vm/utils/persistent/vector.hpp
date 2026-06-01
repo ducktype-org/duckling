@@ -155,12 +155,13 @@ namespace vm::persistent {
 
 		/**
 		 * @brief returns a state which consists of `pref_size` first elements at given instamce
-		 * @note `pref_size` must be smaller than the size of vector at given instance
+		 * @note `pref_size` must be smaller or equal to the size of vector at given instance
 		 */
 		VectorStateID getPrefix(VectorStateID state_id, usize pref_size) {
 			auto state = validateState(state_id);
 			auto size  = inner.size(state);
 			if (pref_size > size) throw std::invalid_argument("trying to take too much");
+			if (pref_size == size) return EMPTY;
 
 			auto new_state = inner.slice(state, 0, pref_size);
 
@@ -169,12 +170,13 @@ namespace vm::persistent {
 
 		/**
 		 * @brief pops multple values from the vector ar given instance
-		 * @note number of values to pop must be smaller than the size of vector at given instance
+		 * @note number of values to pop must be smaller or equal to the size of vector at given instance
 		 */
 		VectorStateID pop(VectorStateID state_id, usize how_many_pop = 1) {
 			auto state = validateState(state_id);
 			auto size  = inner.size(state);
 			if (how_many_pop > size) throw std::invalid_argument("trying to pop too much");
+			if (how_many_pop == size) return EMPTY;
 
 			auto new_state = inner.slice(state, 0, size - how_many_pop);
 
