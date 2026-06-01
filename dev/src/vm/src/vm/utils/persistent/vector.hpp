@@ -170,7 +170,8 @@ namespace vm::persistent {
 
 		/**
 		 * @brief pops multple values from the vector ar given instance
-		 * @note number of values to pop must be smaller or equal to the size of vector at given instance
+		 * @note number of values to pop must be smaller or equal to the size of vector at given
+		 * instance
 		 */
 		VectorStateID pop(VectorStateID state_id, usize how_many_pop = 1) {
 			auto state = validateState(state_id);
@@ -191,7 +192,6 @@ namespace vm::persistent {
 		bool eq(VectorStateID state_1, VectorStateID state_2) const {
 			return state_1 == state_2;
 		}
-
 
 		Vector() = default;
 	};

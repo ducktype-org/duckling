@@ -177,6 +177,5 @@ namespace vm::persistent {
 		bool eq(HashMapStateID state_1, HashMapStateID state_2) const {
 			return state_1 == state_2;
 		}
-
 	};
 }
