@@ -49,7 +49,7 @@ impl Source {
         // kind = local => url.is_local_file
         debug_assert!(
             url.is_local_file() || !kind.is_local(),
-            "kind=`local` should have `file://`"
+            "kind=`local` should have `file://`; has kind=`{kind:?}` and url=`{url}`"
         );
         Self { url, kind }
     }
@@ -80,18 +80,22 @@ impl Source {
         &self.kind
     }
 
+    /// Helper for `source.kind().is_registry()`.
     pub fn is_registry(&self) -> bool {
         self.kind.is_registry()
     }
 
+    /// Helper for `source.kind().is_git()`.
     pub fn is_git(&self) -> bool {
         self.kind.is_git()
     }
 
+    /// Helper for `source.kind().is_local()`.
     pub fn is_local(&self) -> bool {
         self.kind.is_local()
     }
 
+    /// Helper for `source.kind().maybe_reference()`.
     pub fn maybe_reference(&self) -> Option<&GitReference> {
         self.kind.maybe_reference()
     }

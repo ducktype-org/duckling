@@ -7,8 +7,8 @@ use tempfile::TempDir;
 
 use crate::DuckContext;
 use crate::quackpack::core::fetcher::Fetcher;
+use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
 use crate::quackpack::core::identity::{Identity, Origin};
-use crate::quackpack::core::simple_identity::{SimpleIdentity, SimpleOrigin};
 use crate::quackpack::core::storage::freeze::{FreezePackage, RootPackage, VenvFreeze};
 use crate::quackpack::core::storage::package_id::{PackageId, RegistryId};
 use crate::quackpack::core::storage::paths::Storage;
@@ -118,10 +118,10 @@ fn setup_mock_venvs(root: &Path, ctx: &DuckContext) {
         ctx,
     );
 
-    let origin = Origin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
-    let simple_origin = SimpleOrigin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
-    let mock_simple_identity = |name: &str| SimpleIdentity::new(name.into(), simple_origin);
-    let mock_identity = |name: &str| Identity::new(name.into(), origin);
+    let origin = FullOrigin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
+    let simple_origin = Origin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
+    let mock_simple_identity = |name: &str| Identity::new(name.into(), simple_origin);
+    let mock_identity = |name: &str| FullIdentity::new(name.into(), origin);
     let dep = mock_simple_identity("bar");
     let package = FreezePackage::new(
         mock_identity(dep.name().as_str()),

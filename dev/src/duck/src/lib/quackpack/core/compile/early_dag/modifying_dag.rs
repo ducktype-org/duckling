@@ -45,8 +45,8 @@ impl EarlyDag {
 
         #[tracing::instrument(skip_all)]
         fn populate_impl(
-            current: SimpleIdentity,
-            dag: &HashMap<SimpleIdentity, DependencyNode>,
+            current: Identity,
+            dag: &HashMap<Identity, DependencyNode>,
             packages: &mut PackagesSet,
         ) -> QuackResult<()> {
             let this = packages.package(&current);

@@ -21,7 +21,7 @@ use tempfile::TempDir;
 use super::BuildContext;
 use super::compiler_package::CompilerPackage;
 use crate::quackpack::core::compile::early_dag::EarlyDag;
-use crate::quackpack::core::simple_identity::SimpleIdentity;
+use crate::quackpack::core::identity::Identity;
 use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail, qp_bail_internal};
 
 #[derive(Debug)]
@@ -139,7 +139,7 @@ impl Duckc {
 }
 
 /// Helper for checking not yet supported features of the compiler.
-fn bail_if_has_deps(dependencies: &[SimpleIdentity]) -> QuackResult<()> {
+fn bail_if_has_deps(dependencies: &[Identity]) -> QuackResult<()> {
     if !dependencies.is_empty() {
         qp_bail_internal!("external dependencies are not (yet) supported by duckc")
     }
@@ -155,7 +155,7 @@ fn bail_if_has_explicit_aliases(package: &CompilerPackage) -> QuackResult<()> {
         .iter()
         .any(|dep| dep.is_aliased())
     {
-        let desc = package.package().as_simple_identity()?;
+        let desc = package.package().as_a_local_identity()?;
         qp_bail_internal!("package `{desc}` has aliased dependencies, which is not yet supported")
     }
     Ok(())

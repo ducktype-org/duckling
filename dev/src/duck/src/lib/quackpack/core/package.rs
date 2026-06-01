@@ -6,7 +6,7 @@ use std::sync::Arc;
 use crate::QuackResult;
 use crate::quackpack::core::Manifest;
 use crate::quackpack::core::compile::artifacts_layout::ArtifactsLayout;
-use crate::quackpack::core::simple_identity::{SimpleIdentity, SimpleOrigin};
+use crate::quackpack::core::identity::{Identity, Origin};
 use crate::quackpack::schemas::manifest::Manifest as ManifestSchema;
 
 #[derive(Clone)]
@@ -80,10 +80,11 @@ impl Package {
         &self.inner.artifacts_dir
     }
 
-    /// Convert this package to a [`SimpleIdentity`].
-    pub fn as_simple_identity(&self) -> QuackResult<SimpleIdentity> {
-        let origin = SimpleOrigin::for_local(self.root_directory())?;
-        Ok(SimpleIdentity::new(self.manifest().name(), origin))
+    /// Convert this package to a [`Identity`].
+    /// This will always (try to) return an [`Identity`] with [`Origin::for_local`] origin.
+    pub fn as_a_local_identity(&self) -> QuackResult<Identity> {
+        let origin = Origin::for_local(self.root_directory())?;
+        Ok(Identity::new(self.manifest().name(), origin))
     }
 
     /// Is this the global package.

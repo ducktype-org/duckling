@@ -119,7 +119,7 @@ pub fn run_script<'duck>(rs_options: RunScriptOptions<'duck>) -> QuackResult<()>
             }
         }
     };
-    let root_identity = package.package().as_simple_identity()?;
+    let root_identity = package.package().as_a_local_identity()?;
     let (lock, venv, storage) = sync(
         &package,
         StorageSyncOptions {

@@ -5,8 +5,8 @@ use std::collections::{HashMap, HashSet};
 
 use tracing::debug;
 
-use crate::quackpack::core::identity::{Identity, Kind, realization_and_manifest_to_identity};
-use crate::quackpack::core::simple_identity::realization_and_manifest_to_simple_identity;
+use crate::quackpack::core::full_identity::{FullIdentity, FullKind};
+use crate::quackpack::core::identity::Identity;
 use crate::quackpack::core::solver::types_common::{ExpandedLocation, ExpandedPackage};
 use crate::quackpack::core::storage::freeze::{FreezePackage, RootPackage, VenvFreeze};
 use crate::quackpack::core::{FeatureName, Manifest};
@@ -39,15 +39,15 @@ impl Default for SolverPackageFreeze {
     }
 }
 
-fn identity_to_expanded_loc(identity: &Identity) -> ExpandedLocation {
+fn identity_to_expanded_loc(identity: &FullIdentity) -> ExpandedLocation {
     let url = identity.origin().url();
     match identity.origin().kind() {
-        Kind::Registry => ExpandedLocation::Registry {
+        FullKind::Registry => ExpandedLocation::Registry {
             url,
             real_name: identity.name(),
         },
-        Kind::Git { commit } => ExpandedLocation::Git { url, commit },
-        Kind::Local => ExpandedLocation::Local { absolute_path: url },
+        FullKind::Git { commit } => ExpandedLocation::Git { url, commit },
+        FullKind::Local => ExpandedLocation::Local { absolute_path: url },
     }
 }
 
@@ -145,13 +145,13 @@ impl SolverFreeze {
                 let realization_manifest = manifests
                     .get(&realization)
                     .context_internal("No manifest for realization")?;
-                dependencies.push(realization_and_manifest_to_simple_identity(
+                dependencies.push(Identity::from_realization_and_manifest(
                     realization,
                     realization_manifest,
                 ));
             }
             pkg_freezes.push(FreezePackage::new(
-                realization_and_manifest_to_identity(pkg, package_manifest),
+                FullIdentity::from_realization_and_manifest(pkg, package_manifest),
                 package_manifest.version(),
                 freeze.features.into_iter().collect::<Vec<_>>(),
                 dependencies,
@@ -165,7 +165,7 @@ impl SolverFreeze {
             let realization_manifest = manifests
                 .get(&realization)
                 .context_internal("No manifest for realization")?;
-            root_deps.push(realization_and_manifest_to_simple_identity(
+            root_deps.push(Identity::from_realization_and_manifest(
                 realization,
                 realization_manifest,
             ));
@@ -188,8 +188,8 @@ mod test {
 
     use super::*;
     use crate::DuckContext;
-    use crate::quackpack::core::identity::Origin;
-    use crate::quackpack::core::simple_identity::{SimpleIdentity, SimpleOrigin};
+    use crate::quackpack::core::full_identity::FullOrigin;
+    use crate::quackpack::core::identity::{Identity, Origin};
     use crate::quackpack::core::solver::types_common::ExpandedLocation;
     use crate::quackpack::core::{PackageLoader, parse_manifest};
     use crate::quackpack::util::to_url::ToUrl;
@@ -222,24 +222,24 @@ mod test {
             version: None,
         };
         let freeze_pkg_a = FreezePackage::new(
-            Identity::new(
+            FullIdentity::new(
                 "a".into(),
-                Origin::for_registry("https://example.net".to_url().unwrap()),
+                FullOrigin::for_registry("https://example.net".to_url().unwrap()),
             ),
             1.into(),
             vec!["f_a".into()],
             vec![],
         );
         let freeze_pkg_b = FreezePackage::new(
-            Identity::new(
+            FullIdentity::new(
                 "b".into(),
-                Origin::for_local(&PathBuf::from("/xdd")).unwrap(),
+                FullOrigin::for_local(&PathBuf::from("/xdd")).unwrap(),
             ),
             2.into(),
             vec!["f_b1".into(), "f_b2".into()],
-            vec![SimpleIdentity::new(
+            vec![Identity::new(
                 "a".into(),
-                SimpleOrigin::for_registry("https://example.net".to_url().unwrap()),
+                Origin::for_registry("https://example.net".to_url().unwrap()),
             )],
         );
         let root = RootPackage::new(
@@ -247,13 +247,13 @@ mod test {
             3.into(),
             vec!["f_root".into()],
             vec![
-                SimpleIdentity::new(
+                Identity::new(
                     "a".into(),
-                    SimpleOrigin::for_registry("https://example.net".to_url().unwrap()),
+                    Origin::for_registry("https://example.net".to_url().unwrap()),
                 ),
-                SimpleIdentity::new(
+                Identity::new(
                     "b".into(),
-                    SimpleOrigin::for_local(&PathBuf::from("/xdd")).unwrap(),
+                    Origin::for_local(&PathBuf::from("/xdd")).unwrap(),
                 ),
             ],
         );
@@ -404,7 +404,7 @@ features:
             ]),
         };
         let storage_freeze = solver_freeze.generate_storage_freeze(&manifests).unwrap();
-        let root_deps: HashSet<SimpleIdentity> = storage_freeze
+        let root_deps: HashSet<Identity> = storage_freeze
             .root()
             .dependencies()
             .iter()
@@ -413,13 +413,13 @@ features:
         assert_eq!(
             root_deps,
             HashSet::from([
-                SimpleIdentity::new(
+                Identity::new(
                     "a".into(),
-                    SimpleOrigin::for_registry("https://example.net".to_url().unwrap()),
+                    Origin::for_registry("https://example.net".to_url().unwrap()),
                 ),
-                SimpleIdentity::new(
+                Identity::new(
                     "b".into(),
-                    SimpleOrigin::for_local(&PathBuf::from("/sialalala")).unwrap(),
+                    Origin::for_local(&PathBuf::from("/sialalala")).unwrap(),
                 ),
             ])
         );
@@ -428,24 +428,24 @@ features:
         assert_eq!(storage_freeze.root().version(), 3.into());
 
         let pkg_freeze_a = FreezePackage::new(
-            Identity::new(
+            FullIdentity::new(
                 "a".into(),
-                Origin::for_registry("https://example.net".to_url().unwrap()),
+                FullOrigin::for_registry("https://example.net".to_url().unwrap()),
             ),
             1.into(),
             vec!["f_a".into()],
             vec![],
         );
         let pkg_freeze_b = FreezePackage::new(
-            Identity::new(
+            FullIdentity::new(
                 "b".into(),
-                Origin::for_local(&PathBuf::from("/sialalala")).unwrap(),
+                FullOrigin::for_local(&PathBuf::from("/sialalala")).unwrap(),
             ),
             2.into(),
             vec!["f_b".into()],
-            vec![SimpleIdentity::new(
+            vec![Identity::new(
                 "a".into(),
-                SimpleOrigin::for_registry("https://example.net".to_url().unwrap()),
+                Origin::for_registry("https://example.net".to_url().unwrap()),
             )],
         );
         assert_eq!(storage_freeze.dependencies().len(), 2);

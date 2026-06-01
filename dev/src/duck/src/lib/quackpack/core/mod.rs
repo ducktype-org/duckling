@@ -1,13 +1,13 @@
 //! Core quackpack's modules.
 pub mod compile;
 pub mod fetcher;
+pub mod full_identity;
 pub mod identity;
 mod manifest;
 mod package;
 mod package_context;
 mod package_loader;
 pub mod run;
-pub mod simple_identity;
 pub mod solver;
 pub mod storage;
 mod venv_config;

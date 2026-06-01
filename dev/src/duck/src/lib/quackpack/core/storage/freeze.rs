@@ -3,8 +3,8 @@
 use serde::{Deserialize, Serialize};
 
 use crate::StrId;
-use crate::quackpack::core::identity::{Identity, Kind};
-use crate::quackpack::core::simple_identity::SimpleIdentity;
+use crate::quackpack::core::full_identity::{FullIdentity, FullKind};
+use crate::quackpack::core::identity::Identity;
 use crate::quackpack::core::storage::package_id::{GitId, LocalId, PackageId, RegistryId};
 use crate::quackpack::core::{FeatureName, Version};
 
@@ -58,7 +58,7 @@ pub struct RootPackage {
     name: StrId,
     version: Version,
     features: Vec<FeatureName>,
-    dependencies: Vec<SimpleIdentity>,
+    dependencies: Vec<Identity>,
 }
 
 impl RootPackage {
@@ -67,7 +67,7 @@ impl RootPackage {
         name: StrId,
         version: Version,
         features: Vec<FeatureName>,
-        dependencies: Vec<SimpleIdentity>,
+        dependencies: Vec<Identity>,
     ) -> Self {
         Self {
             name,
@@ -113,17 +113,17 @@ impl RootPackage {
     }
 
     /// Get all direct dependencies of this package.
-    pub fn dependencies(&self) -> &[SimpleIdentity] {
+    pub fn dependencies(&self) -> &[Identity] {
         &self.dependencies
     }
 
     /// A mutable counterpart to the [`dependencies`](Self::dependencies).
-    pub fn dependencies_mut(&mut self) -> &mut Vec<SimpleIdentity> {
+    pub fn dependencies_mut(&mut self) -> &mut Vec<Identity> {
         &mut self.dependencies
     }
 
     /// Set the direct dependencies of this package.
-    pub fn set_dependencies(&mut self, dependencies: Vec<SimpleIdentity>) {
+    pub fn set_dependencies(&mut self, dependencies: Vec<Identity>) {
         self.dependencies = dependencies;
     }
 }
@@ -133,18 +133,18 @@ impl RootPackage {
 pub struct FreezePackage {
     version: Version,
     features: Vec<FeatureName>,
-    dependencies: Vec<SimpleIdentity>,
+    dependencies: Vec<Identity>,
     #[serde(flatten)]
-    source: Identity,
+    source: FullIdentity,
 }
 
 impl FreezePackage {
     /// Create a new [`FreezePackage`].
     pub fn new(
-        source: Identity,
+        source: FullIdentity,
         version: Version,
         features: Vec<FeatureName>,
-        dependencies: Vec<SimpleIdentity>,
+        dependencies: Vec<Identity>,
     ) -> Self {
         Self {
             version,
@@ -154,9 +154,9 @@ impl FreezePackage {
         }
     }
 
-    /// Cast this dependency to the [`SimpleIdentity`].
-    pub fn as_simple_identity(&self) -> SimpleIdentity {
-        self.source.as_simple()
+    /// Cast this dependency to the [`Identity`].
+    pub fn as_identity(&self) -> Identity {
+        self.source.as_identity()
     }
 
     /// Get the name of this dependency.
@@ -190,27 +190,27 @@ impl FreezePackage {
     }
 
     /// Get all direct dependencies of this dependency.
-    pub fn dependencies(&self) -> &[SimpleIdentity] {
+    pub fn dependencies(&self) -> &[Identity] {
         &self.dependencies
     }
 
     /// A mutable counterpart to the [`dependencies`](Self::dependencies).
-    pub fn dependencies_mut(&mut self) -> &mut Vec<SimpleIdentity> {
+    pub fn dependencies_mut(&mut self) -> &mut Vec<Identity> {
         &mut self.dependencies
     }
 
     /// Set the direct dependencies of this dependency.
-    pub fn set_dependencies(&mut self, dependencies: Vec<SimpleIdentity>) {
+    pub fn set_dependencies(&mut self, dependencies: Vec<Identity>) {
         self.dependencies = dependencies;
     }
 
     /// Get the source of this dependency.
-    pub fn identity(&self) -> &Identity {
+    pub fn identity(&self) -> &FullIdentity {
         &self.source
     }
 
     /// Set the source of this dependency.
-    pub fn set_identity(&mut self, source: Identity) {
+    pub fn set_identity(&mut self, source: FullIdentity) {
         self.source = source;
     }
 
@@ -218,11 +218,11 @@ impl FreezePackage {
     pub fn to_package_id(&self) -> PackageId {
         let url = self.identity().origin().url();
         match self.identity().origin().kind() {
-            Kind::Registry => {
+            FullKind::Registry => {
                 PackageId::Registry(RegistryId::new(self.name(), self.version(), url))
             }
-            Kind::Git { commit } => PackageId::Git(GitId::new(url, commit)),
-            Kind::Local => PackageId::Local(LocalId::new(url)),
+            FullKind::Git { commit } => PackageId::Git(GitId::new(url, commit)),
+            FullKind::Local => PackageId::Local(LocalId::new(url)),
         }
     }
 }

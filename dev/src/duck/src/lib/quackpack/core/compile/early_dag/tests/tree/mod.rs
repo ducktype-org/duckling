@@ -8,7 +8,7 @@ use crate::quackpack::core::compile::BuildContext;
 use crate::quackpack::core::compile::early_dag::{DependencyNode, EarlyDag};
 use crate::quackpack::core::compile::profiles::Profile;
 use crate::quackpack::core::fetcher::Fetcher;
-use crate::quackpack::core::simple_identity::{SimpleIdentity, SimpleOrigin};
+use crate::quackpack::core::identity::{Identity, Origin};
 use crate::quackpack::core::storage::paths::Storage;
 use crate::quackpack::util::to_url::ToUrl;
 
@@ -17,19 +17,19 @@ fn creates_valid_initial_graph() {
     let (ctx, root) = setup_mock_storage();
     let identity_for = |name: &str| {
         let path = root.path().join(name);
-        let origin = SimpleOrigin::for_local(&path).unwrap();
-        SimpleIdentity::new(name.into(), origin)
+        let origin = Origin::for_local(&path).unwrap();
+        Identity::new(name.into(), origin)
     };
 
     let fetcher_identity_for = |name: &str| {
-        let origin = SimpleOrigin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
-        SimpleIdentity::new(name.into(), origin)
+        let origin = Origin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
+        Identity::new(name.into(), origin)
     };
     let package = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
     let profile =
         Profile::construct_profile("dev".into(), package.package().manifest().profiles()).unwrap();
-    let root_origin = SimpleOrigin::for_local(&root.path().join("root")).unwrap();
-    let root_identity = SimpleIdentity::new("root".into(), root_origin);
+    let root_origin = Origin::for_local(&root.path().join("root")).unwrap();
+    let root_identity = Identity::new("root".into(), root_origin);
     let bcx = BuildContext {
         pcx: &package,
         root_identity,
@@ -66,19 +66,19 @@ fn expands_valid_features1() {
     let (ctx, root) = setup_mock_storage();
     let identity_for = |name: &str| {
         let path = root.path().join(name);
-        let origin = SimpleOrigin::for_local(&path).unwrap();
-        SimpleIdentity::new(name.into(), origin)
+        let origin = Origin::for_local(&path).unwrap();
+        Identity::new(name.into(), origin)
     };
 
     let fetcher_identity_for = |name: &str| {
-        let origin = SimpleOrigin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
-        SimpleIdentity::new(name.into(), origin)
+        let origin = Origin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
+        Identity::new(name.into(), origin)
     };
     let package = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
     let profile =
         Profile::construct_profile("dev".into(), package.package().manifest().profiles()).unwrap();
-    let root_origin = SimpleOrigin::for_local(&root.path().join("root")).unwrap();
-    let root_identity = SimpleIdentity::new("root".into(), root_origin);
+    let root_origin = Origin::for_local(&root.path().join("root")).unwrap();
+    let root_identity = Identity::new("root".into(), root_origin);
     let bcx = BuildContext {
         pcx: &package,
         root_identity,
@@ -120,19 +120,19 @@ fn expands_valid_features2() {
     let (ctx, root) = setup_mock_storage();
     let identity_for = |name: &str| {
         let path = root.path().join(name);
-        let origin = SimpleOrigin::for_local(&path).unwrap();
-        SimpleIdentity::new(name.into(), origin)
+        let origin = Origin::for_local(&path).unwrap();
+        Identity::new(name.into(), origin)
     };
 
     let fetcher_identity_for = |name: &str| {
-        let origin = SimpleOrigin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
-        SimpleIdentity::new(name.into(), origin)
+        let origin = Origin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
+        Identity::new(name.into(), origin)
     };
     let package = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
     let profile =
         Profile::construct_profile("dev".into(), package.package().manifest().profiles()).unwrap();
-    let root_origin = SimpleOrigin::for_local(&root.path().join("root")).unwrap();
-    let root_identity = SimpleIdentity::new("root".into(), root_origin);
+    let root_origin = Origin::for_local(&root.path().join("root")).unwrap();
+    let root_identity = Identity::new("root".into(), root_origin);
     let bcx = BuildContext {
         pcx: &package,
         root_identity,
@@ -180,19 +180,19 @@ fn expands_valid_features3() {
     let (ctx, root) = setup_mock_storage();
     let identity_for = |name: &str| {
         let path = root.path().join(name);
-        let origin = SimpleOrigin::for_local(&path).unwrap();
-        SimpleIdentity::new(name.into(), origin)
+        let origin = Origin::for_local(&path).unwrap();
+        Identity::new(name.into(), origin)
     };
 
     let fetcher_identity_for = |name: &str| {
-        let origin = SimpleOrigin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
-        SimpleIdentity::new(name.into(), origin)
+        let origin = Origin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
+        Identity::new(name.into(), origin)
     };
     let package = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
     let profile =
         Profile::construct_profile("dev".into(), package.package().manifest().profiles()).unwrap();
-    let root_origin = SimpleOrigin::for_local(&root.path().join("root")).unwrap();
-    let root_identity = SimpleIdentity::new("root".into(), root_origin);
+    let root_origin = Origin::for_local(&root.path().join("root")).unwrap();
+    let root_identity = Identity::new("root".into(), root_origin);
     let bcx = BuildContext {
         pcx: &package,
         root_identity,
@@ -238,8 +238,8 @@ fn errors_with_nonexistent_features() {
     let package = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
     let profile =
         Profile::construct_profile("dev".into(), package.package().manifest().profiles()).unwrap();
-    let root_origin = SimpleOrigin::for_local(&root.path().join("root")).unwrap();
-    let root_identity = SimpleIdentity::new("root".into(), root_origin);
+    let root_origin = Origin::for_local(&root.path().join("root")).unwrap();
+    let root_identity = Identity::new("root".into(), root_origin);
     let bcx = BuildContext {
         pcx: &package,
         root_identity,
@@ -263,19 +263,19 @@ fn removes_inactive_deps1() {
     let (ctx, root) = setup_mock_storage();
     let identity_for = |name: &str| {
         let path = root.path().join(name);
-        let origin = SimpleOrigin::for_local(&path).unwrap();
-        SimpleIdentity::new(name.into(), origin)
+        let origin = Origin::for_local(&path).unwrap();
+        Identity::new(name.into(), origin)
     };
 
     let fetcher_identity_for = |name: &str| {
-        let origin = SimpleOrigin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
-        SimpleIdentity::new(name.into(), origin)
+        let origin = Origin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
+        Identity::new(name.into(), origin)
     };
     let package = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
     let profile =
         Profile::construct_profile("dev".into(), package.package().manifest().profiles()).unwrap();
-    let root_origin = SimpleOrigin::for_local(&root.path().join("root")).unwrap();
-    let root_identity = SimpleIdentity::new("root".into(), root_origin);
+    let root_origin = Origin::for_local(&root.path().join("root")).unwrap();
+    let root_identity = Identity::new("root".into(), root_origin);
     let bcx = BuildContext {
         pcx: &package,
         root_identity,
@@ -308,19 +308,19 @@ fn removes_inactive_deps2() {
     let (ctx, root) = setup_mock_storage();
     let identity_for = |name: &str| {
         let path = root.path().join(name);
-        let origin = SimpleOrigin::for_local(&path).unwrap();
-        SimpleIdentity::new(name.into(), origin)
+        let origin = Origin::for_local(&path).unwrap();
+        Identity::new(name.into(), origin)
     };
 
     let fetcher_identity_for = |name: &str| {
-        let origin = SimpleOrigin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
-        SimpleIdentity::new(name.into(), origin)
+        let origin = Origin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
+        Identity::new(name.into(), origin)
     };
     let package = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
     let profile =
         Profile::construct_profile("dev".into(), package.package().manifest().profiles()).unwrap();
-    let root_origin = SimpleOrigin::for_local(&root.path().join("root")).unwrap();
-    let root_identity = SimpleIdentity::new("root".into(), root_origin);
+    let root_origin = Origin::for_local(&root.path().join("root")).unwrap();
+    let root_identity = Identity::new("root".into(), root_origin);
     let bcx = BuildContext {
         pcx: &package,
         root_identity,
@@ -356,19 +356,19 @@ fn removes_inactive_deps3() {
     let (ctx, root) = setup_mock_storage();
     let identity_for = |name: &str| {
         let path = root.path().join(name);
-        let origin = SimpleOrigin::for_local(&path).unwrap();
-        SimpleIdentity::new(name.into(), origin)
+        let origin = Origin::for_local(&path).unwrap();
+        Identity::new(name.into(), origin)
     };
 
     let fetcher_identity_for = |name: &str| {
-        let origin = SimpleOrigin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
-        SimpleIdentity::new(name.into(), origin)
+        let origin = Origin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
+        Identity::new(name.into(), origin)
     };
     let package = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
     let profile =
         Profile::construct_profile("dev".into(), package.package().manifest().profiles()).unwrap();
-    let root_origin = SimpleOrigin::for_local(&root.path().join("root")).unwrap();
-    let root_identity = SimpleIdentity::new("root".into(), root_origin);
+    let root_origin = Origin::for_local(&root.path().join("root")).unwrap();
+    let root_identity = Identity::new("root".into(), root_origin);
     let bcx = BuildContext {
         pcx: &package,
         root_identity,
@@ -407,19 +407,19 @@ fn removes_inactive_deps4() {
     let (ctx, root) = setup_mock_storage();
     let identity_for = |name: &str| {
         let path = root.path().join(name);
-        let origin = SimpleOrigin::for_local(&path).unwrap();
-        SimpleIdentity::new(name.into(), origin)
+        let origin = Origin::for_local(&path).unwrap();
+        Identity::new(name.into(), origin)
     };
 
     let fetcher_identity_for = |name: &str| {
-        let origin = SimpleOrigin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
-        SimpleIdentity::new(name.into(), origin)
+        let origin = Origin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
+        Identity::new(name.into(), origin)
     };
     let package = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
     let profile =
         Profile::construct_profile("dev".into(), package.package().manifest().profiles()).unwrap();
-    let root_origin = SimpleOrigin::for_local(&root.path().join("root")).unwrap();
-    let root_identity = SimpleIdentity::new("root".into(), root_origin);
+    let root_origin = Origin::for_local(&root.path().join("root")).unwrap();
+    let root_identity = Identity::new("root".into(), root_origin);
     let bcx = BuildContext {
         pcx: &package,
         root_identity,
@@ -458,19 +458,19 @@ fn cycle_in_freeze() {
     let (ctx, root) = setup_mock_storage();
     let identity_for = |name: &str| {
         let path = root.path().join(name);
-        let origin = SimpleOrigin::for_local(&path).unwrap();
-        SimpleIdentity::new(name.into(), origin)
+        let origin = Origin::for_local(&path).unwrap();
+        Identity::new(name.into(), origin)
     };
 
     let fetcher_identity_for = |name: &str| {
-        let origin = SimpleOrigin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
-        SimpleIdentity::new(name.into(), origin)
+        let origin = Origin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
+        Identity::new(name.into(), origin)
     };
     let package = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
     let profile =
         Profile::construct_profile("dev".into(), package.package().manifest().profiles()).unwrap();
-    let root_origin = SimpleOrigin::for_local(&root.path().join("root")).unwrap();
-    let root_identity = SimpleIdentity::new("root".into(), root_origin);
+    let root_origin = Origin::for_local(&root.path().join("root")).unwrap();
+    let root_identity = Identity::new("root".into(), root_origin);
     let bcx = BuildContext {
         pcx: &package,
         root_identity,
@@ -497,14 +497,14 @@ fn cycle_in_freeze() {
 fn missing_direct_dep_in_freeze() {
     let (ctx, root) = setup_mock_storage();
     let fetcher_identity_for = |name: &str| {
-        let origin = SimpleOrigin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
-        SimpleIdentity::new(name.into(), origin)
+        let origin = Origin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
+        Identity::new(name.into(), origin)
     };
     let package = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
     let profile =
         Profile::construct_profile("dev".into(), package.package().manifest().profiles()).unwrap();
-    let root_origin = SimpleOrigin::for_local(&root.path().join("root")).unwrap();
-    let root_identity = SimpleIdentity::new("root".into(), root_origin);
+    let root_origin = Origin::for_local(&root.path().join("root")).unwrap();
+    let root_identity = Identity::new("root".into(), root_origin);
     let bcx = BuildContext {
         pcx: &package,
         root_identity,
@@ -528,14 +528,14 @@ fn missing_direct_dep_in_freeze() {
 fn missing_transitive_dep_in_freeze() {
     let (ctx, root) = setup_mock_storage();
     let fetcher_identity_for = |name: &str| {
-        let origin = SimpleOrigin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
-        SimpleIdentity::new(name.into(), origin)
+        let origin = Origin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
+        Identity::new(name.into(), origin)
     };
     let package = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
     let profile =
         Profile::construct_profile("dev".into(), package.package().manifest().profiles()).unwrap();
-    let root_origin = SimpleOrigin::for_local(&root.path().join("root")).unwrap();
-    let root_identity = SimpleIdentity::new("root".into(), root_origin);
+    let root_origin = Origin::for_local(&root.path().join("root")).unwrap();
+    let root_identity = Identity::new("root".into(), root_origin);
     let bcx = BuildContext {
         pcx: &package,
         root_identity,

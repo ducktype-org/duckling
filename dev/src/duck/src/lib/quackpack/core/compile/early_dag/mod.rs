@@ -6,7 +6,7 @@ use itertools::Itertools;
 
 use crate::quackpack::core::compile::MISSING_DEPENDENCY_IN_DAG_MESSAGE;
 use crate::quackpack::core::compile::compiler_package::CompilerPackage;
-use crate::quackpack::core::simple_identity::SimpleIdentity;
+use crate::quackpack::core::identity::Identity;
 use crate::util::error::MessageError;
 use crate::{QuackError, QuackResult};
 
@@ -14,7 +14,7 @@ pub mod creating_dag;
 pub mod modifying_dag;
 
 /// Common helper for creating a consistent error.
-fn bail_cycle_message(cycle: &[SimpleIdentity]) -> QuackError {
+fn bail_cycle_message(cycle: &[Identity]) -> QuackError {
     let cycle = cycle.iter().map(|dep| format!("`{}`", dep)).join(" -> ");
     MessageError(format!("malformed freezefile: cycle {cycle}").into()).into()
 }
@@ -23,23 +23,23 @@ fn bail_cycle_message(cycle: &[SimpleIdentity]) -> QuackError {
 mod tests;
 
 #[derive(Debug)]
-/// Dictionary [`SimpleIdentity`] -> [`CompilerPackage`].
+/// Dictionary [`Identity`] -> [`CompilerPackage`].
 ///
 /// *Should* contain root and all dependencies listed in a freezefile.
 pub struct PackagesSet {
-    inner: HashMap<SimpleIdentity, CompilerPackage>,
+    inner: HashMap<Identity, CompilerPackage>,
 }
 
 impl PackagesSet {
     /// Get [`CompilerPackage`] for the given `name`.
-    pub fn package(&self, name: &SimpleIdentity) -> &CompilerPackage {
+    pub fn package(&self, name: &Identity) -> &CompilerPackage {
         self.inner
             .get(name)
             .expect(MISSING_DEPENDENCY_IN_DAG_MESSAGE)
     }
 
     /// Same as [`package`](Self::package), but returns a mutable reference.
-    pub fn package_mut(&mut self, name: &SimpleIdentity) -> &mut CompilerPackage {
+    pub fn package_mut(&mut self, name: &Identity) -> &mut CompilerPackage {
         self.inner
             .get_mut(name)
             .expect(MISSING_DEPENDENCY_IN_DAG_MESSAGE)
@@ -56,8 +56,8 @@ pub struct EarlyDag {
 #[derive(Debug, PartialEq, Eq)]
 /// DAG representing dependency-dependant relations.
 pub struct DependencyDag {
-    root: SimpleIdentity,
-    dag: HashMap<SimpleIdentity, DependencyNode>,
+    root: Identity,
+    dag: HashMap<Identity, DependencyNode>,
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Default)]
@@ -65,17 +65,17 @@ pub struct DependencyDag {
 ///
 /// Contains dependencies of this node.
 pub struct DependencyNode {
-    dependencies: Vec<SimpleIdentity>,
+    dependencies: Vec<Identity>,
 }
 
 impl DependencyDag {
     /// Get the root package of this DAG.
-    pub fn root(&self) -> SimpleIdentity {
+    pub fn root(&self) -> Identity {
         self.root
     }
 
     /// Get the [`DependencyNode`] for the given package.
-    pub fn dependencies_for_package(&self, package: &SimpleIdentity) -> &DependencyNode {
+    pub fn dependencies_for_package(&self, package: &Identity) -> &DependencyNode {
         self.dag
             .get(package)
             .expect(MISSING_DEPENDENCY_IN_DAG_MESSAGE)
@@ -84,7 +84,7 @@ impl DependencyDag {
     /// Sort topologically this DAG.
     ///
     /// This method returns an error, if it encounters a cycle.
-    pub fn topo_sort_order(&self) -> QuackResult<Vec<SimpleIdentity>> {
+    pub fn topo_sort_order(&self) -> QuackResult<Vec<Identity>> {
         #[derive(Debug, Eq, PartialEq)]
         enum State {
             Entered,
@@ -94,10 +94,10 @@ impl DependencyDag {
         let mut states = HashMap::new();
         let mut order = vec![];
         fn visit_impl(
-            current: SimpleIdentity,
-            dag: &HashMap<SimpleIdentity, DependencyNode>,
-            states: &mut HashMap<SimpleIdentity, State>,
-            order: &mut Vec<SimpleIdentity>,
+            current: Identity,
+            dag: &HashMap<Identity, DependencyNode>,
+            states: &mut HashMap<Identity, State>,
+            order: &mut Vec<Identity>,
         ) -> QuackResult<()> {
             let previous_state = states.insert(current, State::Entered);
             debug_assert_ne!(
@@ -129,24 +129,24 @@ impl DependencyDag {
 
 impl DependencyNode {
     /// Get dependencies of this node.
-    pub fn dependencies(&self) -> &[SimpleIdentity] {
+    pub fn dependencies(&self) -> &[Identity] {
         &self.dependencies
     }
 
     /// Same as [`dependencies`](Self::dependencies), but returns a mutable vector.
-    pub fn dependencies_mut(&mut self) -> &mut Vec<SimpleIdentity> {
+    pub fn dependencies_mut(&mut self) -> &mut Vec<Identity> {
         &mut self.dependencies
     }
 }
 
 impl EarlyDag {
     /// Get the [`CompilerPackage`] for the given `name`.
-    pub fn package(&self, name: &SimpleIdentity) -> &CompilerPackage {
+    pub fn package(&self, name: &Identity) -> &CompilerPackage {
         self.packages.package(name)
     }
 
     /// Same as [`package`](Self::package), but returns a mutable reference.
-    pub fn package_mut(&mut self, name: &SimpleIdentity) -> &mut CompilerPackage {
+    pub fn package_mut(&mut self, name: &Identity) -> &mut CompilerPackage {
         self.packages.package_mut(name)
     }
 

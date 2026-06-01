@@ -3,8 +3,8 @@ use std::path::Path;
 use super::{registry_url_hash, setup_mock_storage};
 use crate::DuckContext;
 use crate::quackpack::core::fetcher::Fetcher;
+use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
 use crate::quackpack::core::identity::{Identity, Origin};
-use crate::quackpack::core::simple_identity::{SimpleIdentity, SimpleOrigin};
 use crate::quackpack::core::storage::freeze::{FreezePackage, VenvFreeze};
 use crate::quackpack::core::storage::paths::Storage;
 use crate::quackpack::core::storage::tests::{
@@ -252,8 +252,8 @@ fn save_trims_files() {
     // Firstly, add a lot of dependencies, to make a file longer (have more bytes).
     let number_of_new_packages = 5;
     for _ in 0..number_of_new_packages {
-        let origin = Origin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
-        let mock_identity = |name: &str| Identity::new(name.into(), origin);
+        let origin = FullOrigin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
+        let mock_identity = |name: &str| FullIdentity::new(name.into(), origin);
         let package =
             FreezePackage::new(mock_identity("dep"), Version::new(1, 0, 0), vec![], vec![]);
         venv.data_mut()
@@ -452,13 +452,13 @@ fn sync_with_deps() {
 
     let mock_simple_identity = |name: &str| {
         let path = root.path().join(name).resolve().unwrap();
-        let simple_origin = SimpleOrigin::for_local(&path).unwrap();
-        SimpleIdentity::new(name.into(), simple_origin)
+        let simple_origin = Origin::for_local(&path).unwrap();
+        Identity::new(name.into(), simple_origin)
     };
     let mock_identity = |name: &str| {
         let path = root.path().join(name).resolve().unwrap();
-        let origin = Origin::for_local(&path).unwrap();
-        Identity::new(name.into(), origin)
+        let origin = FullOrigin::for_local(&path).unwrap();
+        FullIdentity::new(name.into(), origin)
     };
     let (_lock, venv, storage) = ops::sync(
         &pcx,
@@ -497,13 +497,13 @@ fn sync_with_deps_and_expose_freezefile() {
     let (root, _) = create_mock_package_with_deps_at_tmpdir(&ctx, "my-package");
     let mock_simple_identity = |name: &str| {
         let path = root.path().join(name).resolve().unwrap();
-        let simple_origin = SimpleOrigin::for_local(&path).unwrap();
-        SimpleIdentity::new(name.into(), simple_origin)
+        let simple_origin = Origin::for_local(&path).unwrap();
+        Identity::new(name.into(), simple_origin)
     };
     let mock_identity = |name: &str| {
         let path = root.path().join(name).resolve().unwrap();
-        let origin = Origin::for_local(&path).unwrap();
-        Identity::new(name.into(), origin)
+        let origin = FullOrigin::for_local(&path).unwrap();
+        FullIdentity::new(name.into(), origin)
     };
     println!("root: {}", root.path().display());
     root.path()

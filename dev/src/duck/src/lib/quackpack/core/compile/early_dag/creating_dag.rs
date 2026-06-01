@@ -3,21 +3,21 @@
 use tracing::debug;
 
 use super::*;
-use crate::quackpack::core::PackageLoader;
 use crate::quackpack::core::compile::BuildContext;
 use crate::quackpack::core::compile::compiler_package::PackageType;
 use crate::quackpack::core::storage::freeze::{FreezePackage, VenvFreeze};
 use crate::quackpack::core::storage::package_id::PackageId;
 use crate::quackpack::core::storage::paths::Storage;
+use crate::quackpack::core::{Manifest, PackageLoader};
 use crate::quackpack::util::to_path_buf::ToPathBuf;
-use crate::{DuckContext, QuackResultContext, qp_bail, qp_bail_internal};
+use crate::{DuckContext, QuackResultContext, qp_bail, qp_bail_internal, qp_err};
 
 impl DependencyDag {
     /// Create new [`DependencyDag`] from the given freeze.
     ///
     /// This method checks that the graph is complete, and that it is, in fact, a DAG.
     #[tracing::instrument(skip_all)]
-    pub fn new(freeze: &VenvFreeze, root_identity: SimpleIdentity) -> QuackResult<Self> {
+    pub fn new(freeze: &VenvFreeze, root_identity: Identity) -> QuackResult<Self> {
         let root = freeze.root();
         let mut dag = HashMap::new();
         dag.insert(
@@ -26,7 +26,7 @@ impl DependencyDag {
         );
         for dep in freeze.dependencies() {
             dag.insert(
-                dep.as_simple_identity(),
+                dep.as_identity(),
                 DependencyNode::new(dep.dependencies().iter().copied()),
             );
         }
@@ -38,10 +38,7 @@ impl DependencyDag {
     }
 
     /// Helpers for [`new`](Self::new).
-    fn check_is_dag(
-        root: SimpleIdentity,
-        dag: &HashMap<SimpleIdentity, DependencyNode>,
-    ) -> QuackResult<()> {
+    fn check_is_dag(root: Identity, dag: &HashMap<Identity, DependencyNode>) -> QuackResult<()> {
         Self::check_is_complete_graph(root, dag)?;
         Self::check_no_cycles(root, dag)?;
         Ok(())
@@ -50,8 +47,8 @@ impl DependencyDag {
     /// Checks, whether `graph` rooted at `root` is complete.
     #[tracing::instrument(skip_all)]
     fn check_is_complete_graph(
-        root: SimpleIdentity,
-        graph: &HashMap<SimpleIdentity, DependencyNode>,
+        root: Identity,
+        graph: &HashMap<Identity, DependencyNode>,
     ) -> QuackResult<()> {
         debug!(%root, ?graph, "checking completeness");
         for (k, v) in graph {
@@ -71,10 +68,7 @@ impl DependencyDag {
 
     /// Checks, that the `graph` rooted at `root` doesn't have cycles.
     #[tracing::instrument(skip_all)]
-    fn check_no_cycles(
-        root: SimpleIdentity,
-        dag: &HashMap<SimpleIdentity, DependencyNode>,
-    ) -> QuackResult<()> {
+    fn check_no_cycles(root: Identity, dag: &HashMap<Identity, DependencyNode>) -> QuackResult<()> {
         debug!(%root, graph = ?dag, "checking cycles");
         #[derive(Debug, Eq, PartialEq)]
         enum State {
@@ -85,10 +79,10 @@ impl DependencyDag {
         let mut states = HashMap::new();
         let mut order = vec![];
         fn visit_impl(
-            current: SimpleIdentity,
-            dag: &HashMap<SimpleIdentity, DependencyNode>,
-            states: &mut HashMap<SimpleIdentity, State>,
-            order: &mut Vec<SimpleIdentity>,
+            current: Identity,
+            dag: &HashMap<Identity, DependencyNode>,
+            states: &mut HashMap<Identity, State>,
+            order: &mut Vec<Identity>,
         ) -> QuackResult<()> {
             order.push(current);
             let previous_state = states.insert(current, State::Entered);
@@ -120,7 +114,7 @@ impl DependencyDag {
 
 impl DependencyNode {
     /// Creates a new [`DependencyNode`] with the given dependencies.
-    pub fn new(dependencies: impl IntoIterator<Item = SimpleIdentity>) -> Self {
+    pub fn new(dependencies: impl IntoIterator<Item = Identity>) -> Self {
         Self {
             dependencies: dependencies.into_iter().collect(),
         }
@@ -146,17 +140,17 @@ fn parse_dependency(
             || match storage_id {
                 PackageId::Registry(ref registry_id) => format!(
                     "downloaded malformed dependency `{}` from `{}`",
-                    dep.as_simple_identity(),
+                    dep.as_identity(),
                     registry_id.url()
                 ),
                 PackageId::Git(ref git_id) => format!(
                     "cloned malformed dependency `{}` from `{}`",
-                    dep.as_simple_identity(),
+                    dep.as_identity(),
                     git_id.url()
                 ),
                 PackageId::Local(..) => format!(
                     "malformed local dependency `{}` at `{}`",
-                    dep.as_simple_identity(),
+                    dep.as_identity(),
                     directory.display(),
                 ),
             },
@@ -198,34 +192,13 @@ impl EarlyDag {
             let package = parse_dependency(dep, &bcx.storage, bcx.pcx.ctx(), pkg_type)?;
             let manifest = package.package().manifest();
             if manifest.name() != dep.name() || manifest.version() != dep.version() {
-                let display_expected = format!("{} {}", dep.name(), dep.version());
-                let display_found = format!("{} {}", manifest.name(), manifest.version());
-                match dep.to_package_id() {
-                    PackageId::Registry(registry_id) => qp_bail!(
-                        "downloaded malformed dependency from `{}`: got name `{}`, expected `{}`",
-                        registry_id.url(),
-                        display_found,
-                        display_expected
-                    ),
-                    PackageId::Git(git_id) => qp_bail!(
-                        "cloned malformed dependency from `{}`: got name `{}`, expected `{}`",
-                        git_id.url(),
-                        display_found,
-                        display_expected
-                    ),
-                    PackageId::Local(id) => qp_bail!(
-                        "malformed local dependency at `{}`: got name `{}`, expected `{}`",
-                        id.path(),
-                        display_found,
-                        display_expected
-                    ),
-                }
+                return Err(error_for_metadata_mismtach(manifest, dep));
             }
-            let overwritten_entry = packages.insert(dep.as_simple_identity(), package).is_some();
+            let overwritten_entry = packages.insert(dep.as_identity(), package).is_some();
             if overwritten_entry {
                 qp_bail!(
                     "malformed freezefile: duplicated dependency `{}`",
-                    dep.as_simple_identity()
+                    dep.as_identity()
                 )
             }
         }
@@ -233,5 +206,31 @@ impl EarlyDag {
             dag: graph,
             packages: PackagesSet { inner: packages },
         })
+    }
+}
+
+/// Get the error message emitted when parsed package has different version (or name), than in the freeze.
+fn error_for_metadata_mismtach(manifest: &Manifest, dep: &FreezePackage) -> QuackError {
+    let display_expected = format!("{} {}", dep.name(), dep.version());
+    let display_found = format!("{} {}", manifest.name(), manifest.version());
+    match dep.to_package_id() {
+        PackageId::Registry(registry_id) => qp_err!(
+            "downloaded malformed dependency from `{}`: got name `{}`, expected `{}`",
+            registry_id.url(),
+            display_found,
+            display_expected
+        ),
+        PackageId::Git(git_id) => qp_err!(
+            "cloned malformed dependency from `{}`: got name `{}`, expected `{}`",
+            git_id.url(),
+            display_found,
+            display_expected
+        ),
+        PackageId::Local(id) => qp_err!(
+            "malformed local dependency at `{}`: got name `{}`, expected `{}`",
+            id.path(),
+            display_found,
+            display_expected
+        ),
     }
 }

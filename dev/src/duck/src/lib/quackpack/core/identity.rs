@@ -1,228 +1,28 @@
-//! A package identity, a unique identifier in the dependencies' graph.
+//! A simple package identity, a unique identifier in the dependencies' graph.
+//! Difference between [`Identity`] and [`FullIdentity`] is that [`Identity`] doesn't have commits inside.
+//!
+//! Also, they have different [`Display`], [`Serialize`], and [`Deserialize`] impls.
+//!
+//! In particular, [`Identity`] and [`Origin`] implement [`FromStr`].
 
 use std::fmt::Display;
 use std::path::Path;
+use std::str::FromStr;
 
 use serde::{Deserialize, Serialize, de};
 
 use crate::quackpack::core::Manifest;
-use crate::quackpack::core::simple_identity::{SimpleIdentity, SimpleKind, SimpleOrigin};
+use crate::quackpack::core::full_identity::{FullIdentity, FullKind, FullOrigin};
 use crate::quackpack::core::solver::types_common::{ExpandedLocation, ExpandedPackage};
 use crate::quackpack::util::interned_url::InternedUrl;
 use crate::quackpack::util::is_local_file::IsLocalFile;
 use crate::quackpack::util::to_url::ToUrl;
-use crate::{QuackResult, StrId};
+use crate::{QuackError, QuackResult, QuackResultContext, StrId, qp_bail, qp_err};
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
-/// An [`Origin`]'s kind.
-pub enum Kind {
-    /// A registry-based identity.
-    Registry,
-    /// A git-based identity.
-    Git { commit: StrId },
-    /// A local-based identity.
-    Local,
-}
-
-impl Kind {
-    /// Get a human-like display.
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            Self::Registry => "registry",
-            Self::Git { .. } => "git",
-            Self::Local => "local",
-        }
-    }
-
-    /// Check, whether this [`Kind`] is a registry kind.
-    pub fn is_registry(&self) -> bool {
-        matches!(self, Kind::Registry)
-    }
-
-    /// Check, whether this [`Kind`] is a git kind.
-    pub fn is_git(&self) -> bool {
-        matches!(self, Kind::Git { .. })
-    }
-
-    /// Check, whether this [`Kind`] is a local kind.
-    pub fn is_local(&self) -> bool {
-        matches!(self, Kind::Local)
-    }
-
-    /// Convert this [`Kind`] into a [`SimpleKind`].
-    pub fn as_simple(&self) -> SimpleKind {
-        match self {
-            Self::Registry => SimpleKind::Registry,
-            Self::Git { .. } => SimpleKind::Git,
-            Self::Local => SimpleKind::Local,
-        }
-    }
-}
-
-impl From<Kind> for SimpleKind {
-    fn from(value: Kind) -> Self {
-        value.as_simple()
-    }
-}
-
-impl Display for Kind {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.as_str())
-    }
-}
-
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
-/// Origin of a package.
-pub struct Origin {
-    url: InternedUrl,
-    kind: Kind,
-}
-
-impl Origin {
-    /// Create a new [`Origin`].
-    fn new(url: InternedUrl, kind: Kind) -> Self {
-        // kind = local => url.is_local_file
-        debug_assert!(
-            url.is_local_file() || !kind.is_local(),
-            "kind=`local` should have `file://`"
-        );
-        Self { url, kind }
-    }
-
-    /// Create a new [`Origin`] for a registry.
-    pub fn for_registry(url: impl Into<InternedUrl>) -> Self {
-        Self::new(url.into(), Kind::Registry)
-    }
-
-    /// Create a new [`Origin`] for a git with a commit.
-    pub fn for_git(url: impl Into<InternedUrl>, commit: impl Into<StrId>) -> Self {
-        Self::new(
-            url.into(),
-            Kind::Git {
-                commit: commit.into(),
-            },
-        )
-    }
-
-    /// Create a new [`Origin`] for a git with a commit.
-    pub fn for_local(root: &Path) -> QuackResult<Self> {
-        let url = root.to_url()?;
-        Ok(Self::new(url.into(), Kind::Local))
-    }
-
-    /// Get an [`InternedUrl`] of this [`Origin`].
-    pub fn url(&self) -> InternedUrl {
-        self.url
-    }
-
-    /// Get a [`Kind`] of this [`Origin`].
-    pub fn kind(&self) -> Kind {
-        self.kind
-    }
-
-    /// Convert this [`Origin`] into a [`SimpleOrigin`].
-    pub fn as_simple(&self) -> SimpleOrigin {
-        SimpleOrigin::new(self.url, self.kind.as_simple())
-    }
-}
-
-impl From<Origin> for SimpleOrigin {
-    fn from(value: Origin) -> Self {
-        value.as_simple()
-    }
-}
-
-impl Display for Origin {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}+{}", self.kind, self.url)
-    }
-}
-
-impl Serialize for Origin {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        #[derive(Serialize)]
-        struct SerializeHelper {
-            source: String,
-            #[serde(skip_serializing_if = "Option::is_none")]
-            commit: Option<StrId>,
-        }
-        let commit = match self.kind {
-            Kind::Git { commit } => Some(commit),
-            _ => None,
-        };
-        let helper = SerializeHelper {
-            commit,
-            source: self.to_string(),
-        };
-        helper.serialize(serializer)
-    }
-}
-
-impl<'de> Deserialize<'de> for Origin {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        #[derive(Deserialize)]
-        struct DeserializeHelper {
-            source: String,
-            commit: Option<String>,
-        }
-        let helper = DeserializeHelper::deserialize(deserializer)?;
-        let Some((kind, url)) = helper.source.split_once('+') else {
-            let msg = format!(
-                "expected `source` to be in format `kind+url`, but found `{}`",
-                helper.source
-            );
-            return Err(de::Error::custom(msg));
-        };
-        let unexpected_commit_error = |kind: &str| {
-            let msg = format!("inferred kind=`{kind}`, but `commit` was present");
-            de::Error::custom(msg)
-        };
-
-        let expected_commit_error = |kind: &str| {
-            let msg = format!("inferred kind=`{kind}`, but `commit` was not present");
-            de::Error::custom(msg)
-        };
-
-        let unexpected_kind_error = |kind: &str| {
-            let msg = format!("inferred unsupported kind=`{kind}`");
-            de::Error::custom(msg)
-        };
-        let kind = match (kind, helper.commit.as_deref()) {
-            ("registry", None) => Kind::Registry,
-            ("local", None) => Kind::Local,
-            ("git", Some(commit)) => Kind::Git {
-                commit: commit.into(),
-            },
-
-            // Errors,
-            ("registry", Some(_)) => return Err(unexpected_commit_error("registry")),
-            ("local", Some(_)) => return Err(unexpected_commit_error("local")),
-            ("git", None) => return Err(expected_commit_error("git")),
-            (kind, _) => return Err(unexpected_kind_error(kind)),
-        };
-        let url = url.to_url().map_err(de::Error::custom)?;
-        if kind.is_local() && !url.is_local_file() {
-            let msg = format!(
-                "inferred kind=`local`, but url scheme is `{}`",
-                url.scheme()
-            );
-            return Err(de::Error::custom(msg));
-        }
-        Ok(Self::new(url.into(), kind))
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Serialize)]
-/// An [`Identity`], a unique package identifier in the resolved graph.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+/// A simplified version of the [`FullIdentity`].
 pub struct Identity {
     name: StrId,
-    #[serde(flatten)]
     origin: Origin,
 }
 
@@ -242,29 +42,245 @@ impl Identity {
         self.origin
     }
 
-    /// Convert this [`Identity`] into a [`SimpleIdentity`].
-    pub fn as_simple(&self) -> SimpleIdentity {
-        SimpleIdentity::new(self.name(), self.origin().as_simple())
+    /// Helper for solver for creating storage's freeze.
+    pub fn from_realization_and_manifest(
+        realization: ExpandedPackage,
+        realization_manifest: &Manifest,
+    ) -> Self {
+        let name = realization_manifest.name();
+        let origin = match realization.location {
+            ExpandedLocation::Registry { url, .. } => Origin::for_registry(url),
+            ExpandedLocation::Git { url, .. } => Origin::for_git(url),
+            ExpandedLocation::Local { absolute_path } => Origin::new(absolute_path, Kind::Local),
+        };
+        Self::new(name, origin)
     }
 }
 
-impl From<Identity> for SimpleIdentity {
-    fn from(value: Identity) -> Self {
-        value.as_simple()
+impl PartialEq<FullIdentity> for Identity {
+    fn eq(&self, other: &FullIdentity) -> bool {
+        self.name() == other.name() && self.origin() == other.origin()
     }
 }
 
-pub fn realization_and_manifest_to_identity(
-    realization: ExpandedPackage,
-    realization_manifest: &Manifest,
-) -> Identity {
-    let name = realization_manifest.name();
-    let origin = match realization.location {
-        ExpandedLocation::Registry { url, .. } => Origin::for_registry(url),
-        ExpandedLocation::Git { url, commit } => Origin::for_git(url, commit),
-        ExpandedLocation::Local { absolute_path } => Origin::new(absolute_path, Kind::Local),
-    };
-    Identity::new(name, origin)
+impl PartialEq<Identity> for FullIdentity {
+    fn eq(&self, other: &Identity) -> bool {
+        other == self
+    }
+}
+
+impl Display for Identity {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} {}", self.name, self.origin)
+    }
+}
+
+impl FromStr for Identity {
+    type Err = QuackError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let Some((name, origin)) = s.split_once(' ') else {
+            qp_bail!("expected a simple identity in format `<name> <origin>`")
+        };
+        let origin = origin
+            .parse()
+            .with_context(|| format!("simple identity `{}` has invalid origin syntax", s))?;
+        Ok(Self::new(name.into(), origin))
+    }
+}
+
+impl Serialize for Identity {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.collect_str(self)
+    }
+}
+
+impl<'de> Deserialize<'de> for Identity {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        serde_untagged::UntaggedEnumVisitor::new()
+            .expecting("a simple identity")
+            .string(|s| s.parse().map_err(de::Error::custom))
+            .deserialize(deserializer)
+    }
+}
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+/// A simplified version of the [`Origin`].
+pub struct Origin {
+    url: InternedUrl,
+    kind: Kind,
+}
+
+impl Origin {
+    /// Create a new [`Origin`].
+    pub(super) fn new(url: InternedUrl, kind: Kind) -> Self {
+        // kind = local => url.is_local_file
+        debug_assert!(
+            url.is_local_file() || !kind.is_local(),
+            "kind=`local` should have `file://`; has kind=`{kind}` and url=`{url}`"
+        );
+        Self { url, kind }
+    }
+
+    /// Create a new [`Origin`] for a registry.
+    pub fn for_registry(url: impl Into<InternedUrl>) -> Self {
+        Self::new(url.into(), Kind::Registry)
+    }
+
+    /// Create a new [`Origin`] for a git with a commit.
+    pub fn for_git(url: impl Into<InternedUrl>) -> Self {
+        Self::new(url.into(), Kind::Git)
+    }
+
+    /// Create a new [`Origin`] for a git with a commit.
+    pub fn for_local(root: &Path) -> QuackResult<Self> {
+        let url = root.to_url()?;
+        Ok(Self::new(url.into(), Kind::Local))
+    }
+
+    /// Get an [`InternedUrl`] of this [`Origin`].
+    pub fn url(&self) -> InternedUrl {
+        self.url
+    }
+
+    /// Get a [`Kind`] of this [`Origin`].
+    pub fn kind(&self) -> Kind {
+        self.kind
+    }
+}
+
+impl PartialEq<FullOrigin> for Origin {
+    fn eq(&self, other: &FullOrigin) -> bool {
+        self.kind() == other.kind() && self.url() == other.url()
+    }
+}
+
+impl PartialEq<Origin> for FullOrigin {
+    fn eq(&self, other: &Origin) -> bool {
+        other == self
+    }
+}
+
+impl Display for Origin {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}+{}", self.kind, self.url)
+    }
+}
+
+impl FromStr for Origin {
+    type Err = QuackError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let Some((kind, url)) = s.split_once('+') else {
+            qp_bail!(
+                "expected input to be in format `kind+url`, but found `{}`",
+                s,
+            )
+        };
+
+        let unexpected_kind_error = |kind: &str| qp_err!("inferred unsupported kind=`{kind}`");
+        let kind = match kind {
+            "registry" => Kind::Registry,
+            "local" => Kind::Local,
+            "git" => Kind::Git,
+            kind => return Err(unexpected_kind_error(kind)),
+        };
+        let url = url.to_url()?;
+        if kind.is_local() && !url.is_local_file() {
+            qp_bail!(
+                "inferred kind=`local`, but url scheme is `{}`",
+                url.scheme()
+            )
+        }
+        Ok(Self::new(url.into(), kind))
+    }
+}
+
+impl Serialize for Origin {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.collect_str(self)
+    }
+}
+
+impl<'de> Deserialize<'de> for Origin {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        serde_untagged::UntaggedEnumVisitor::new()
+            .expecting("a simple origin")
+            .string(|s| s.parse().map_err(de::Error::custom))
+            .deserialize(deserializer)
+    }
+}
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
+/// An [`Origin`]'s kind.
+pub enum Kind {
+    /// A registry-based identity.
+    Registry,
+    /// A git-based identity.
+    Git,
+    /// A local-based identity.
+    Local,
+}
+
+impl Kind {
+    /// Get a human-like display.
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Registry => "registry",
+            Self::Git => "git",
+            Self::Local => "local",
+        }
+    }
+
+    /// Check, whether this [`Kind`] is a registry kind.
+    pub fn is_registry(&self) -> bool {
+        matches!(self, Kind::Registry)
+    }
+
+    /// Check, whether this [`Kind`] is a git kind.
+    pub fn is_git(&self) -> bool {
+        matches!(self, Kind::Git)
+    }
+
+    /// Check, whether this [`Kind`] is a local kind.
+    pub fn is_local(&self) -> bool {
+        matches!(self, Kind::Local)
+    }
+}
+
+impl Display for Kind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.as_str())
+    }
+}
+
+impl PartialEq<FullKind> for Kind {
+    fn eq(&self, other: &FullKind) -> bool {
+        matches!(
+            (self, other),
+            (Self::Registry, FullKind::Registry)
+                | (Self::Git, FullKind::Git { .. })
+                | (Self::Local, FullKind::Local)
+        )
+    }
+}
+
+impl PartialEq<Kind> for FullKind {
+    fn eq(&self, other: &Kind) -> bool {
+        other == self
+    }
 }
 
 #[cfg(test)]
@@ -284,7 +300,7 @@ mod tests {
 
         {
             let url = "https://localhost:9001".to_url().unwrap();
-            let origin = Origin::for_git(url, "1");
+            let origin = Origin::for_git(url);
             assert_eq!(origin.to_string(), "git+https://localhost:9001/");
         }
         {
@@ -295,100 +311,37 @@ mod tests {
     }
 
     #[test]
-    fn origin_serialize() {
+    fn origin_parse() {
         {
             let url = "https://localhost:9001".to_url().unwrap();
             let origin = Origin::for_registry(url);
-            let formatted = serde_json::to_string_pretty(&origin).unwrap();
-            assert_eq!(
-                formatted,
-                r#"{
-  "source": "registry+https://localhost:9001/"
-}"#
-            );
-        }
-        {
-            let url = "https://localhost:9001".to_url().unwrap();
-            let origin = Origin::for_git(url, "1");
-            let formatted = serde_json::to_string_pretty(&origin).unwrap();
-            assert_eq!(
-                formatted,
-                r#"{
-  "source": "git+https://localhost:9001/",
-  "commit": "1"
-}"#
-            );
-        }
-        {
-            let root = PathBuf::from("/tmp");
-            let origin = Origin::for_local(&root).unwrap();
-            let formatted = serde_json::to_string_pretty(&origin).unwrap();
-            assert_eq!(
-                formatted,
-                r#"{
-  "source": "local+file:///tmp"
-}"#
-            );
-        }
-    }
-
-    #[test]
-    fn origin_deserialize() {
-        {
-            let url = "https://localhost:9001".to_url().unwrap();
-            let origin = Origin::for_registry(url);
-            let formatted = serde_json::to_string_pretty(&origin).unwrap();
-            let parsed = serde_json::from_str::<Origin>(&formatted).unwrap();
+            let formatted = origin.to_string();
+            let parsed = formatted.parse::<Origin>().unwrap();
             assert_eq!(parsed, origin);
         }
         {
             let url = "https://localhost:9001".to_url().unwrap();
-            let origin = Origin::for_git(url, "1");
-            let formatted = serde_json::to_string_pretty(&origin).unwrap();
-            let parsed = serde_json::from_str::<Origin>(&formatted).unwrap();
+            let origin = Origin::for_git(url);
+            let formatted = origin.to_string();
+            let parsed = formatted.parse::<Origin>().unwrap();
             assert_eq!(parsed, origin);
         }
         {
             let root = PathBuf::from("/tmp");
             let origin = Origin::for_local(&root).unwrap();
-            let formatted = serde_json::to_string_pretty(&origin).unwrap();
-            let parsed = serde_json::from_str::<Origin>(&formatted).unwrap();
+            let formatted = origin.to_string();
+            let parsed = formatted.parse::<Origin>().unwrap();
             assert_eq!(parsed, origin);
         }
         {
-            let extra_commit = r#"{
-  "source": "registry+https://localhost:9001/",
-  "commit": "1"
-}"#;
-            let err = serde_json::from_str::<Origin>(extra_commit).unwrap_err();
-            assert_eq!(
-                err.to_string(),
-                "inferred kind=`registry`, but `commit` was present"
-            )
-        }
-        {
-            let missing_commit = r#"{
-  "source": "git+https://localhost:9001/"
-}"#;
-            let err = serde_json::from_str::<Origin>(missing_commit).unwrap_err();
-            assert_eq!(
-                err.to_string(),
-                "inferred kind=`git`, but `commit` was not present"
-            )
-        }
-        {
-            let unknown_kind = r#"{
-  "source": "foo+https://localhost:9001/"
-}"#;
-            let err = serde_json::from_str::<Origin>(unknown_kind).unwrap_err();
+            let unknown_kind = "foo+https://localhost:9001/";
+            let err = unknown_kind.parse::<Origin>().unwrap_err();
             assert_eq!(err.to_string(), "inferred unsupported kind=`foo`")
         }
 
         {
-            let local_wrong_scheme = r#"{
-  "source": "local+https://localhost:9001/"
-}"#;
-            let err = serde_json::from_str::<Origin>(local_wrong_scheme).unwrap_err();
+            let local_wrong_scheme = "local+https://localhost:9001/";
+            let err = local_wrong_scheme.parse::<Origin>().unwrap_err();
             assert_eq!(
                 err.to_string(),
                 "inferred kind=`local`, but url scheme is `https`"
@@ -396,86 +349,84 @@ mod tests {
         }
 
         {
-            let wrong_format = r#"{
-  "source": "https://localhost:9001/"
-}"#;
-            let err = serde_json::from_str::<Origin>(wrong_format).unwrap_err();
+            let wrong_format = "https://localhost:9001/";
+            let err = wrong_format.parse::<Origin>().unwrap_err();
             assert_eq!(
                 err.to_string(),
-                "expected `source` to be in format `kind+url`, but found `https://localhost:9001/`"
+                "expected input to be in format `kind+url`, but found `https://localhost:9001/`"
             )
         }
     }
 
     #[test]
-    fn identity_serialize() {
+    fn identity_display() {
         {
             let url = "https://localhost:9001".to_url().unwrap();
             let origin = Origin::for_registry(url);
             let identity = Identity::new("foo".into(), origin);
-            let formatted = serde_json::to_string_pretty(&identity).unwrap();
-            assert_eq!(
-                formatted,
-                r#"{
-  "name": "foo",
-  "source": "registry+https://localhost:9001/"
-}"#
-            );
+            let formatted = identity.to_string();
+            assert_eq!(formatted, "foo registry+https://localhost:9001/");
         }
         {
             let url = "https://localhost:9001".to_url().unwrap();
-            let origin = Origin::for_git(url, "1");
+            let origin = Origin::for_git(url);
             let identity = Identity::new("foo".into(), origin);
-            let formatted = serde_json::to_string_pretty(&identity).unwrap();
-            assert_eq!(
-                formatted,
-                r#"{
-  "name": "foo",
-  "source": "git+https://localhost:9001/",
-  "commit": "1"
-}"#
-            );
+            let formatted = identity.to_string();
+            assert_eq!(formatted, "foo git+https://localhost:9001/");
         }
         {
             let root = PathBuf::from("/tmp");
             let origin = Origin::for_local(&root).unwrap();
             let identity = Identity::new("foo".into(), origin);
-            let formatted = serde_json::to_string_pretty(&identity).unwrap();
-            assert_eq!(
-                formatted,
-                r#"{
-  "name": "foo",
-  "source": "local+file:///tmp"
-}"#
-            );
+            let formatted = identity.to_string();
+            assert_eq!(formatted, "foo local+file:///tmp");
         }
     }
 
     #[test]
-    fn identity_deserialize() {
+    fn identity_parse() {
         {
             let url = "https://localhost:9001".to_url().unwrap();
             let origin = Origin::for_registry(url);
             let identity = Identity::new("foo".into(), origin);
-            let formatted = serde_json::to_string_pretty(&identity).unwrap();
-            let parsed = serde_json::from_str::<Identity>(&formatted).unwrap();
+            let formatted = identity.to_string();
+            let parsed = formatted.parse::<Identity>().unwrap();
             assert_eq!(parsed, identity);
         }
         {
             let url = "https://localhost:9001".to_url().unwrap();
-            let origin = Origin::for_git(url, "1");
+            let origin = Origin::for_git(url);
             let identity = Identity::new("foo".into(), origin);
-            let formatted = serde_json::to_string_pretty(&identity).unwrap();
-            let parsed = serde_json::from_str::<Identity>(&formatted).unwrap();
+            let formatted = identity.to_string();
+            let parsed = formatted.parse::<Identity>().unwrap();
             assert_eq!(parsed, identity);
         }
         {
             let root = PathBuf::from("/tmp");
             let origin = Origin::for_local(&root).unwrap();
             let identity = Identity::new("foo".into(), origin);
-            let formatted = serde_json::to_string_pretty(&identity).unwrap();
-            let parsed = serde_json::from_str::<Identity>(&formatted).unwrap();
+            let formatted = identity.to_string();
+            let parsed = formatted.parse::<Identity>().unwrap();
             assert_eq!(parsed, identity);
+        }
+        {
+            let invalid_format = "foo";
+            let err = invalid_format.parse::<Identity>().unwrap_err();
+            assert_eq!(
+                err.to_string(),
+                "expected a simple identity in format `<name> <origin>`"
+            )
+        }
+
+        {
+            let invalid_origin_format = "foo local+";
+            let err = invalid_origin_format.parse::<Identity>().unwrap_err();
+            assert_eq!(
+                err.to_string(),
+                "simple identity `foo local+` has invalid origin syntax
+`` is not a valid url
+relative URL without a base"
+            )
         }
     }
 }

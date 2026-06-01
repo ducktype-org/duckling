@@ -83,6 +83,7 @@ impl GitClient {
     }
 }
 
+/// Get specific [`FetchOptions`] for cloning the given `url` with `reference`.
 fn fetch_options_for(url: &Url, reference: &GitReference) -> FetchOptions<'static> {
     let mut fetch_options = FetchOptions::new();
     if can_shallow_clone(url, reference) {
@@ -91,6 +92,10 @@ fn fetch_options_for(url: &Url, reference: &GitReference) -> FetchOptions<'stati
     fetch_options
 }
 
+/// Check, if we can shallow clone a `reference` from `url`.
+/// Right now conditions are as follow:
+/// 1. `url` must not be a local repository (i.e. schema != "file"),
+/// 2. reference must NOT point to specific commit (it's either a default branch, or a specific branch).
 fn can_shallow_clone(url: &Url, reference: &GitReference) -> bool {
     let is_local_repository_url = url.is_local_file();
     !is_local_repository_url && (reference.is_default() || reference.is_branch())

@@ -33,7 +33,7 @@ pub fn compile(options: BuildOptions<'_>) -> QuackResult<()> {
         frozen,
         strict_errors,
     } = options;
-    let root_identity = pcx.package().as_simple_identity()?;
+    let root_identity = pcx.package().as_a_local_identity()?;
     let (lock, venv, storage) = sync(
         &pcx,
         StorageSyncOptions {
