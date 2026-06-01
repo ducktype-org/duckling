@@ -58,39 +58,28 @@ private:
 				std::lock_guard lk(m);
 				ASSERT_TRUE(status_counter < expected_statuses.size());
 				ASSERT_EQUAL_PRINT(expected_statuses[status_counter], status.index());
+				variant_match(status) {
+					variant_case(vm::api::ExecutionCompleted, completed) {
+						auto exit_value = completed.exit_value;
+						ASSERT_TRUE(ret_val_counter < expected_values.size());
+						ASSERT_EQUAL_PRINT(1, exit_value.size());
+						ASSERT_EQUAL_PRINT("i64", exit_value[0]->type->getName());
+						ASSERT_EQUAL_PRINT(
+							expected_values[ret_val_counter], exit_value[0]->readBytes<i64>()
+						);
+						ret_val_counter++;
+					}
+				}
 				status_counter++;
-				notify
-					= (status_counter == expected_statuses.size()
-				       && ret_val_counter == expected_values.size());
+				notify = status_counter == expected_statuses.size();
 			}
 			if (notify) cv.notify_one();
 		});
-
-		events::Listener<vm::api::ExitValue> execution_completed_listener(
-			[&](const vm::api::ExitValue& exit_value) {
-				bool notify = false;
-				{
-					std::lock_guard lk(m);
-					ASSERT_TRUE(ret_val_counter < expected_values.size());
-					ASSERT_EQUAL_PRINT(1, exit_value.size());
-					ASSERT_EQUAL_PRINT("i64", exit_value[0]->type->getName());
-					ASSERT_EQUAL_PRINT(
-						expected_values[ret_val_counter], exit_value[0]->readBytes<i64>()
-					);
-					ret_val_counter++;
-					notify
-						= (status_counter == expected_statuses.size()
-				           && ret_val_counter == expected_values.size());
-				}
-				if (notify) cv.notify_one();
-			}
-		);
 
 		events::Listener<std::string> error_listener([&](const std::string& err) { fail(err); });
 
 		vm::debugger::Debugger debugger{ fs::File(path(std::string(path_name))) };
 		debugger.attachOnStatusChangedListener(status_listener);
-		debugger.attachOnExecutionCompletedListener(execution_completed_listener);
 		debugger.attachOnErrorListener(error_listener);
 		for (u64 breakpoint: breakpoints)
 			ASSERT_TRUE(debugger.setBreakpoint(base::StrID("main"), breakpoint).has_value());
@@ -235,29 +224,28 @@ private:
 				std::lock_guard lk(m);
 				ASSERT_TRUE(status_counter < expected_statuses.size());
 				ASSERT_EQUAL_PRINT(expected_statuses[status_counter], status.index());
+				variant_match(status) {
+					variant_case(vm::api::ExecutionCompleted, completed) {
+						auto exit_value = completed.exit_value;
+						ASSERT_TRUE(ret_val_counter < expected_values.size());
+						ASSERT_EQUAL_PRINT(1, exit_value.size());
+						ASSERT_EQUAL_PRINT("i64", exit_value[0]->type->getName());
+						ASSERT_EQUAL_PRINT(
+							expected_values[ret_val_counter], exit_value[0]->readBytes<i64>()
+						);
+						ret_val_counter++;
+					}
+				}
 				status_counter++;
 			}
 			if (status_counter == expected_statuses.size()) cv.notify_one();
 		});
 
-		events::Listener<vm::api::ExitValue> execution_completed_listener(
-			[&](const vm::api::ExitValue& exit_value) {
-				std::lock_guard lk(m);
-				ASSERT_TRUE(ret_val_counter < expected_values.size());
-				ASSERT_EQUAL_PRINT(1, exit_value.size());
-				ASSERT_EQUAL_PRINT("i64", exit_value[0]->type->getName());
-				ASSERT_EQUAL_PRINT(
-					expected_values[ret_val_counter], exit_value[0]->readBytes<i64>()
-				);
-				ret_val_counter++;
-			}
-		);
 		events::Listener<std::string> error_listener([&](const std::string& err) { fail(err); });
 
 		vm::debugger::Debugger debugger{ fs::File(path("debugger_test.dbc")) };
 
 		debugger.attachOnStatusChangedListener(status_listener);
-		debugger.attachOnExecutionCompletedListener(execution_completed_listener);
 		debugger.attachOnErrorListener(error_listener);
 
 		int loop = 3;
