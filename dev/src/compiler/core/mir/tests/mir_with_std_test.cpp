@@ -2,6 +2,8 @@
  * @file mir_tests.cpp
  */
 
+#include "mir/mir_lowering/mir_unit.hpp"
+
 #include <ctv/ctv.hpp>
 #include <driver/test_utils.hpp>
 #include <helios/queries/function_queries.hpp>
@@ -17,7 +19,6 @@
 #include <query_framework/context/context.hpp>
 #include <query_framework/entry/with_context_do.hpp>
 #include <tester/tester.hpp>
-#include "mir/mir_lowering/mir_unit.hpp"
 
 using namespace compiler::tsh;
 using namespace compiler::helios::test_utils;
@@ -50,7 +51,7 @@ private:
 		withContextDo([&](query::Context& ctx) {
 			auto& unit
 				= ctx.query<compiler::helios::QueryTopLevelEntities>(module_id)->valueOrPanic();
-			auto mir_unit  = compiler::mir::lowerToMIRUnit(ctx, &unit).valueOrPanic();
+			auto mir_unit = compiler::mir::lowerToMIRUnit(ctx, &unit).valueOrPanic();
 			// This 4 blocks are from the conditions for the slice access bounds check
 			ASSERT_EQUAL_PRINT(mir_unit.mir_functions[0]->block_order.size(), 5);
 		});
