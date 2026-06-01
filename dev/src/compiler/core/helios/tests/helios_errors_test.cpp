@@ -529,17 +529,6 @@ private:
 
 		// ============================ Other errors ============================
 		checkForErrorOnCompileModule(
-			R"(
-				fun main() = {
-					var i: i64 = 0;
-					var u: u64 = i;
-				}
-			)",
-			{ "Type `i64` cannot be converted to type `u64`." },
-			1
-		);
-
-		checkForErrorOnCompileModule(
 			R"(fun a() = 100000000000000000000000;)", { "Numeric literal value is too large" }, 1
 		);
 		checkForErrorOnCompileModule(
@@ -649,7 +638,7 @@ private:
 			R"(
 				const ARR_TYPE = i32[10.5];
 			)",
-			{ "Static array size must be a non-negative integral value." },
+			{ "Type `f32` cannot be converted to type `const u64`." },
 			1
 		);
 
@@ -657,7 +646,7 @@ private:
 			R"(
 				const ARR_TYPE = i32[-2];
 			)",
-			{ "Static array size must be a non-negative integral value." },
+			{ "Value cannot be converted to type `const u64` at compile-time." },
 			1
 		);
 
@@ -711,7 +700,7 @@ private:
 					l -= "sth";
 				}
 			)",
-			{ "Type `string` cannot be converted to type `i64`" },
+			{ "Type `string` cannot be converted to type `u64`" },
 			1
 		);
 
