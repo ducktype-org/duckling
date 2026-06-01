@@ -466,6 +466,17 @@ private:
 				{ "inconsistent return statements" },
 				1
 			);
+
+			checkForErrorOnCompileModule(
+				R"(
+					fun main() = {
+						var i: i64 = 0;
+						var u: u64 = i;
+					}
+				)",
+				{ "Type `i64` cannot be converted to type `u64`." },
+				1
+			);
 		}
 
 		// ========================== Lexer errors ==========================
