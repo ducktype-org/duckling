@@ -1,4 +1,4 @@
-//! Generic helper for adding a [`Version`] to the various structures.
+//! Generic helper for adding a [`Version`] to various structures.
 
 use serde::{Deserialize, Serialize};
 
