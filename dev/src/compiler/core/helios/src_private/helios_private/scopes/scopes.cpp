@@ -201,6 +201,10 @@ namespace compiler::helios {
 			// basically just a wrapper around the expanded element.
 			return ElementScopeKind::Transparent;
 
+		case pst::ElementKind::FormatSubExpression:
+		case pst::ElementKind::FormatSubString:
+			return ElementScopeKind::Transparent;
+
 		case pst::ElementKind::KindNotSet:
 			CORE_UNREACHABLE();
 

@@ -1,4 +1,5 @@
 //! Various quackpack-only utilities.
+pub mod interned_url;
 pub mod paths;
 pub mod progress_bar;
 pub mod qp_context;
