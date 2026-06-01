@@ -12,11 +12,11 @@ var f = ("Hello");
 # Assignement
 var aa: () = a;
 var bb: (i64, i32, i64, i32) = b;
-var cc: (bool, i32, f32, String) = c;
+var cc: (bool, i32, f32, str) = c;
 # @TODO: #2509 Uncomment when done
 # var dd: ((i64, f32), (f64, i32)) = d;
 var ee: (i32, i32) = e;
-var ff: (String) = f;
+var ff: (str) = f;
 
 var aaa = a;
 var bbb = b;
@@ -67,7 +67,7 @@ fun unwrap(wrapper: Wrapper) = {
 
 class SomeClass {
     field_a: i32;
-    field_b: String;
+    field_b: str;
 
     fun count(tmp: i32) = {
         field_a = field_a+tmp;

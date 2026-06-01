@@ -3,13 +3,14 @@
  */
 
 #include <ctv/ctv.hpp>
-#include <driver/test_utils.hpp>
+#include <diagnostic_interactive/module_flags/module_flags.hpp>
 #include <helios/queries/function_queries.hpp>
 #include <helios/queries/queries.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <helios/tsh/queries.hpp>
 #include <mir/mir_lowering/mir_queries.hpp>
+#include <mir/mir_lowering/mir_unit.hpp>
 #include <mir/mir_lowering/mir_validation.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 
@@ -43,30 +44,11 @@ public:
 		TESTER_ADD_TEST(staticArraysTest);
 		TESTER_ADD_TEST(dynamicArraysTest);
 		TESTER_ADD_TEST(tupleTest);
+		TESTER_ADD_TEST(sliceTest);
 	}
 
 protected:
-	void beforeAll() override {
-		fs::FilePath artifacts_path = fs::FileManager::createRandomTempDirectory().getFilePath();
-		std::vector<compiler::driver::test_utils::PackagePathAndName> packages{
-			{ fs::FilePath(path("modules/mir_simple_test/")), "mir_simple_test" },
-			{ fs::FilePath(path("modules/mir_var_test/")), "mir_var_test" },
-			{ fs::FilePath(path("modules/booleans/")), "booleans" },
-			{ fs::FilePath(path("modules/function_calls/")), "function_calls" },
-			{ fs::FilePath(path("modules/numeric_literals/")), "numeric_literals" },
-			{ fs::FilePath(path("modules/function_with_parameters/")), "function_with_parameters" },
-			{ fs::FilePath(path("modules/function_end_test/")), "function_end_test" },
-			{ fs::FilePath(path("modules/meta_functions/")), "meta_functions" },
-			{ fs::FilePath(path("modules/references/")), "references" },
-			{ fs::FilePath(path("modules/boxes/")), "boxes" },
-			{ fs::FilePath(path("modules/static_arrays/")), "static_arrays" },
-			{ fs::FilePath(path("modules/dynamic_arrays/")), "dynamic_arrays" },
-			{ fs::FilePath(path("modules/tuples/")), "tuples" },
-		};
-		auto init_result
-			= compiler::driver::test_utils::initializeCompilerForTests(packages, artifacts_path);
-		assertTrue(init_result.status().isOk(), "Compiler initialization failed");
-	}
+	void beforeAll() override { dia_int::configureImmediatePrint(&std::cerr); }
 
 private:
 	using enum compiler::tsh::IntegralAbstractType::Signedness;
@@ -939,6 +921,17 @@ private:
 			}
 
 			ASSERT_TRUE(found_tuple_ctor_call);
+		});
+	}
+
+	void sliceTest() {
+		// Test that without STD library, slice type access will not work.
+		auto [module, scope] = getModule(fs::File(path("modules/slices")));
+
+		withContextDo([&](query::Context& ctx) {
+			auto hout_unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
+			auto mir_unit  = compiler::mir::lowerToMIRUnit(ctx, &hout_unit->valueOrPanic());
+			ASSERT_TRUE(mir_unit.hasFailed());
 		});
 	}
 };

@@ -135,6 +135,14 @@ private:
 		));
 	}
 
+	auto getSliceTypeNoContext(compiler::tsh::SymbolType<> element_type) {
+		return std::any_cast<compiler::tsh::SliceAbstractType>(
+			query::utils::withContextCompute([&](query::Context& ctx) {
+				return ctx.query<compiler::tsh::QuerySliceType>(element_type);
+			})
+		);
+	}
+
 	/**
 	 * Shorthand to create a mutable symbol type from an abstract type.
 	 */
@@ -1844,6 +1852,7 @@ private:
 		auto& hout
 			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
 		auto& function   = hout.functions.at(0);
+		auto  fun_sym    = getChain("main", top_scope).back();
 		auto& statements = function->body->statements;
 		using namespace compiler::helios::code;
 
@@ -1900,6 +1909,21 @@ private:
 				base::StrID("builtin_string_concatenated"),
 				"The format string expression should call builtin_string_concatenated"
 			);
+		}
+
+		{
+			const auto char_type       = compiler::tsh::getCharType();
+			const auto str_type        = compiler::tsh::getStringType();
+			const auto u64_type        = getIntegralTypeNoContext(64, Unsigned);
+			const auto char_slice_type = getSliceTypeNoContext(st(char_type));
+
+			auto fun_body_scope = getFunctionBodyScope(fun_sym);
+
+			// Vars
+			ASSERT_EQUAL(char_slice_type, getTypeOf("should_char_slice", fun_body_scope));
+			ASSERT_EQUAL(char_type, getTypeOf("should_char", fun_body_scope));
+			ASSERT_EQUAL(u64_type, getTypeOf("should_u64", fun_body_scope));
+			ASSERT_EQUAL(str_type, getTypeOf("should_string", fun_body_scope));
 		}
 	}
 

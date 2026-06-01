@@ -6,8 +6,6 @@
 #include "expr.hpp"
 
 #include "../visitors.hpp"
-#include "helios/tsh/queries/types.hpp"
-#include "helios/tsh/symbol_type.hpp"
 
 #include <concurrent/base/collections/hash_map.hpp>
 #include <helios/mangler/mangler.hpp>
@@ -17,6 +15,8 @@
 #include <helios/tsh/abstract_type.hpp>
 #include <helios/tsh/expression_type.hpp>
 #include <helios/tsh/queries.hpp>
+#include <helios/tsh/queries/types.hpp>
+#include <helios/tsh/symbol_type.hpp>
 #include <helios/tsh/types.hpp>
 #include <helios_private/symbols/generated_symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>

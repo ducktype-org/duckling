@@ -1,10 +1,10 @@
 #include "length_methods.hpp"
 
-#include "helios/hout/elements/stmt.hpp"
-#include "helios/queries/function_queries.hpp"
-#include "helios/symbols/query_type_symbol_data.hpp"
-#include "helios_private/symbols/generated_symbol_data.hpp"
-#include "helios_private/symbols/symbols.hpp"
+#include <helios/hout/elements/stmt.hpp>
+#include <helios/queries/function_queries.hpp>
+#include <helios/symbols/query_type_symbol_data.hpp>
+#include <helios_private/symbols/generated_symbol_data.hpp>
+#include <helios_private/symbols/symbols.hpp>
 
 #include <query_framework/standard_query/query_impl.hpp>
 

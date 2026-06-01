@@ -323,7 +323,6 @@ void ProgramLoweringContext::insertExternCFunction(const vm::code::ExternalCFunc
 base::Optional<vm::code::TypeOfData> ProgramLoweringContext::lowerTslTypeInternal(
 	CRef<tsl::TypeLayout> layout
 ) {
-	std::cerr << "Lowering TSL type: " << layout->toStringIdentification() << std::endl;
 	variant_match(layout->getVariant()) {
 		variant_case_novalue(tsl::EmptyTypeLayout) { return {}; }
 		variant_case_novalue(tsl::IntegralTypeLayout) {
@@ -448,7 +447,7 @@ vm::code::CodeCollection ProgramLoweringContext::produceCodeCollection() {
 	std::ranges::sort(
 		collection.functions,
 		[](const vm::code::Function& lhs, const vm::code::Function& rhs) {
-			return lhs.name.str < rhs.name.str;
+			return lhs.name.str.strView() < rhs.name.str.strView();
 		}
 	);
 	collection.global_data

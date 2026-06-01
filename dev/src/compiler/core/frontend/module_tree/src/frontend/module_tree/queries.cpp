@@ -51,7 +51,6 @@ namespace compiler::frontend {
 			// (package, alias) edge instead of on every dependency of the package.
 			auto owner_pkg_id  = getModuleRef(from)->getPackage().unlock(ctx).getID();
 			auto owner_pkg_opt = global_state::getPackageRefOpt(owner_pkg_id);
-
 			// The only situation where owner_pkg_opt would not have value is in the tests.
 			if (not owner_pkg_opt.has_value()) return {};
 			auto owner_pkg = owner_pkg_opt.value();

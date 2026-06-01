@@ -64,7 +64,7 @@ class InitializedPrimitives {
     b: f64 = 1.0;
     c: bool = true;
     d: char = 'A';
-    e: String = "kajak\n";
+    e: String = "kajak\n".toString();
     f: type = i32;
 }
 

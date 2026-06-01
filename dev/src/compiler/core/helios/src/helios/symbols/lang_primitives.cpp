@@ -1,9 +1,9 @@
 #include "lang_primitives.hpp"
 
-#include "diagnostic_interactive/placeholder.hpp"
-#include "frontend/module_tree/queries.hpp"
-#include "helios/symbols/symbol_id_utils.hpp"
-#include "helios_private/scopes/scopes.hpp"
+#include <diagnostic_interactive/placeholder.hpp>
+#include <frontend/module_tree/queries.hpp>
+#include <helios/symbols/symbol_id_utils.hpp>
+#include <helios_private/scopes/scopes.hpp>
 
 #include <query_framework/standard_query/query_impl.hpp>
 

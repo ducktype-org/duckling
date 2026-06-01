@@ -1,6 +1,6 @@
 #include "slices.hpp"
 
-#include "helios/symbols/lang_primitives.hpp"
+#include <helios/symbols/lang_primitives.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>

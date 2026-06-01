@@ -24,6 +24,8 @@ extern("C") {
     fundecl builtin_input_string() -> String;
     fundecl print(x: String) -> i32;
     
-    fundecl builtin_output_str(x: str);
+    fundecl builtin_output_str(x: str) -> i32;
 }
+
+fun print(x: str) -> i32 = builtin_output_str(x);
 
