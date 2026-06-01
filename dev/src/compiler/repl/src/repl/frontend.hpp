@@ -5,6 +5,8 @@
 
 #pragma once
 
+#include "module_flags/module_flags.hpp"
+
 #include <string>
 #include <string_view>
 
@@ -17,13 +19,9 @@
 namespace compiler::repl {
 
 #ifdef USE_REPLXX
-	using FrontendImplementationType                               = FrontendReplxxImplementation;
-	static constexpr bool FRONTEND_DEFAULT_COMPLETIONS_ENABLED     = true;
-	static constexpr bool FRONTEND_DEFAULT_BRACKETED_PASTE_ENABLED = true;
+	using FrontendImplementationType = FrontendReplxxImplementation;
 #else
-	using FrontendImplementationType                               = FrontendMinImplementation;
-	static constexpr bool FRONTEND_DEFAULT_COMPLETIONS_ENABLED     = false;
-	static constexpr bool FRONTEND_DEFAULT_BRACKETED_PASTE_ENABLED = true;
+	using FrontendImplementationType = FrontendMinImplementation;
 #endif
 
 	/**
