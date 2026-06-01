@@ -32,13 +32,14 @@ namespace vm {
 		std::unique_lock                          lock(rw_global);
 		std::expected<void, loader::LoaderLogger> code_result = [&] {
 			variant_match(source) {
-				variant_case(std::vector<fs::File>, files) { return loader.loadAndCompile(files); }
-				variant_case(code::CodeCollection, code) { return loader.loadAndCompile(code); }
+				variant_case(std::vector<fs::File>, files) { return loader.loadAndValidate(files); }
+				variant_case(code::CodeCollection, code) { return loader.loadAndValidate(code); }
 			}
 			CORE_UNREACHABLE();
 		}();
 
 		if (code_result.has_value()) {
+			compiler.recompile();
 			loaded_program_copy.selfUpdate();
 			updateGlobalDataMemory(&loaded_program_copy);
 			return api::Response(api::response::Empty());
@@ -141,7 +142,7 @@ namespace vm {
 	SafeVMProcess::SafeVMProcess(const PID my_pid):
 		  IVMProcess(my_pid),
 		  loaded_program(&loaded_program_copy),
-		  loaded_program_copy(loader.getProgram()) {
+		  loaded_program_copy(compiler.getLowProgram()) {
 		vm_threads.add(*this);
 	}
 
@@ -232,7 +233,7 @@ namespace vm {
 		};
 
 		// Try to obtain high position and optimize instruction range to step over
-		auto maybe_hp = loader.mapLowVMProgramPositionToCodeCollectionPosition(low_position);
+		auto maybe_hp = compiler.mapLowVMProgramPositionToCodeCollectionPosition(low_position);
 		if (maybe_hp) instr_range = mapping[maybe_hp->instruction_index];
 
 		// We do one step, then we go until we're outside the exclusive range (begin, end).
@@ -276,7 +277,7 @@ namespace vm {
 		};
 
 		// Try to obtain high position
-		auto maybe_hp = loader.mapLowVMProgramPositionToCodeCollectionPosition(low_position);
+		auto maybe_hp = compiler.mapLowVMProgramPositionToCodeCollectionPosition(low_position);
 		if (!maybe_hp) return code_position;
 		auto high_position = maybe_hp.value();
 
@@ -412,7 +413,8 @@ namespace vm {
 		base::StrID function_name, usize instruction_index, bool enable
 	) {
 		// Try to obtain original function
-		auto maybe_original_function = loaded_program->getFunctions().atMaybe(function_name);
+		auto maybe_original_function
+			= loaded_program_copy.getOriginalProgram()->getFunctions().atMaybe(function_name);
 		if (!maybe_original_function)
 			return std::unexpected(api::OtherError{ "setBreakpoint: Function does not exist" });
 		auto original_function = *maybe_original_function;
@@ -442,6 +444,24 @@ namespace vm {
 			return std::unexpected(api::OtherError{ "setBreakpoint: Failed to set breakpoint" });
 
 		return api::response::Empty{};
+	}
+
+	std::expected<api::Response, api::ApiError> SafeVMProcess::mapFileLineToCodeCollectionPosition(
+		const fs::File& file, usize line_number
+	) {
+		auto maybe_position = loader.mapFileLineToCodeCollectionPosition(file, line_number);
+		if (!maybe_position)
+			return std::unexpected(api::ApiError{
+				api::OtherError{ "No instruction at given position" } });
+		auto position = maybe_position.value();
+
+		auto source_position = loader.mapCodeCollectionPositionToFilePosition(position).value();
+
+		return api::response::CodePosition{
+			.function_name   = position.function_name,
+			.instr_number    = position.instruction_index,
+			.source_position = source_position,
+		};
 	}
 
 	void SafeVMProcess::updateGlobalDataMemory(CRef<low::ILowVMProgram> program) {

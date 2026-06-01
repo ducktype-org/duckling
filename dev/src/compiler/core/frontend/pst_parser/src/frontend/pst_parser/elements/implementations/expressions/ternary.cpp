@@ -83,9 +83,9 @@ namespace pst::expr {
 		out << R"("condition": )";
 		nullAwareDprint(condition, out);
 		out << R"(, "if_true": )";
-		nullAwareDprint(condition, out);
+		nullAwareDprint(if_true, out);
 		out << R"(, "if_false": )";
-		nullAwareDprint(condition, out);
+		nullAwareDprint(if_false, out);
 
 		out << "}";
 	}

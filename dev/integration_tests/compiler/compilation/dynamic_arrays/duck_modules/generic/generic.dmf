@@ -1,10 +1,12 @@
+import core.builtins.*;
+
 class Point {
     x: i64 = 1;
     y: i64 = 2;
 }
 
 fun printSeparator() -> () = {
-    builtin_output_string("888888888888888\n");
+    print("888888888888888\n");
 }
 
 fun printPoint(p: ref Point) -> () = {

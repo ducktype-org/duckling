@@ -69,6 +69,7 @@ namespace compiler::lir {
 		auto symbol_abi = ctx.query<helios::QuerySymbolABI>(helios_id)->valueOrPanicMsg(
 			"Handling errors in MIR is not supported yet"
 		);
+		auto link_once    = helios::shouldLinkOnce(helios_id);
 		auto mangled_name = helios::mangler::getSimpleMangledName(ctx, helios_id);
 
 		auto return_type = mirReturnType2LirLayout(ctx, type.getResultType());
@@ -82,6 +83,7 @@ namespace compiler::lir {
 		return FunctionLiteral{
 			.mangled_name = mangled_name,
 			.abi          = symbol_abi,
+			.link_once    = link_once,
 			.parameter_layouts
 			= std::make_shared<std::vector<CRef<tsl::TypeLayout>>>(std::move(parameter_types)),
 			.return_type_layout = return_type,
@@ -218,7 +220,7 @@ namespace compiler::lir {
 		 * Order of those functions matter, as they build components of LIR function
 		 * step by step.
 		 */
-		struct MIR2LIR {
+		struct MIR2LIR final {
 			Context& ctx;
 			QKey     key;
 
@@ -640,7 +642,7 @@ namespace compiler::lir {
 					const auto& to_destruct = mir_instruction.arguments.at(0).get<mir::MIRPlace>();
 					const auto& type        = to_destruct.type;
 
-					// @TODO: #929 The whole DestructIf implementation is a stub. Implement it once
+					// @TODO: #2825 The whole DestructIf implementation is a stub. Implement it once
 					// we know how to call destructors.
 
 					if (type.getRefKind() == tsh::ReferenceKind::Direct
@@ -831,6 +833,16 @@ namespace compiler::lir {
 					CORE_UNREACHABLE();
 				}();
 
+				auto link_once = [&]() -> bool {
+					variant_match(key.function->helios_id) {
+						variant_case(mir::FunctionSymID, sym) {
+							return helios::shouldLinkOnce(sym.id);
+						}
+						variant_case(mir::GlobalVariableCTOR, name) { return false; }
+					}
+					CORE_UNREACHABLE();
+				}();
+
 				auto mangled_name = [&]() {
 					variant_match(key.function->helios_id) {
 						variant_case(mir::FunctionSymID, name) {
@@ -849,7 +861,7 @@ namespace compiler::lir {
 				FunctionMetadata metadata;
 				auto&            mir_func = key.function;
 				if (auto func_id = std::get_if<mir::FunctionSymID>(&mir_func->helios_id)) {
-					if (auto pst_elem = helios::symbolPst(func_id->id)) {
+					if (auto pst_elem = helios::maybeSymbolPst(func_id->id)) {
 						metadata.position         = (*pst_elem).unlock(ctx)->getStablePosition();
 						metadata.source_code_name = helios::name(func_id->id);
 					}
@@ -857,6 +869,7 @@ namespace compiler::lir {
 
 				return Function{ .mangled_name       = mangled_name,
 					             .abi                = abi,
+					             .link_once          = link_once,
 					             .parameter_layouts  = std::move(parameter_types),
 					             .return_type_layout = return_type,
 					             .blocks             = std::move(blocks),
@@ -932,6 +945,7 @@ namespace compiler::lir {
 
 		return Function{ .mangled_name       = mangled_name,
 			             .abi                = helios::DefaultAbi{},
+			             .link_once          = false,
 			             .parameter_layouts  = {},
 			             .return_type_layout = return_type,
 			             .blocks             = std::move(blocks),

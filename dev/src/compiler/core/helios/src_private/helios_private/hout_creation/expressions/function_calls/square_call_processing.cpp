@@ -31,7 +31,8 @@ namespace compiler::helios::code {
 			pst::AccessLocked<pst::ExprElement> index_pst
 		) {
 			if (auto expr_kind = current_expr->expression_type.getSymbolType().getType().getKind();
-			    expr_kind != tsh::Kind::StaticArray && expr_kind != tsh::Kind::DynamicArray) {
+			    expr_kind != tsh::Kind::StaticArray && expr_kind != tsh::Kind::DynamicArray
+			    && expr_kind != tsh::Kind::ManyPointer) {
 				auto error_pos = current_expr->origin.getStablePosition().copyValueOr(
 					index_pst.unlock(ctx)->getStablePosition()
 				);

@@ -1,3 +1,5 @@
+import core.builtins.*;
+
 fun main() -> i64 = {
     # Test boolean literals
     var t: bool = true;

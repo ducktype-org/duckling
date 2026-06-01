@@ -16,7 +16,9 @@ public:
 		TESTER_ADD_TEST(stopTest);
 		TESTER_ADD_TEST(killTest);
 		TESTER_ADD_TEST(pausesOnBreakpointAndResumes);
+		TESTER_ADD_TEST(notPausesOnRemovedBreakpoint);
 		TESTER_ADD_TEST(executesStepByStep);
+		TESTER_ADD_TEST(backMapTest);
 		TESTER_ADD_TEST(vmApiMemoryAllTypes);
 	}
 
@@ -92,6 +94,30 @@ private:
 	}
 
 	/**
+	 * @brief Checks if the program will not pause on removed breakpoint.
+	 * Checks if `api::waitForPause` and `api::resume` functions work correctly.
+	 */
+	void notPausesOnRemovedBreakpoint() {
+		auto pid = loadProgram("breakpoint.dbc");
+		for (auto breakpoint: { 5ULL, 8ULL })
+			ASSERT_TRUE(
+				vm::api::setBreakpoint(pid, base::StrID("main"), breakpoint, true).has_value()
+			);
+
+		ASSERT_TRUE(vm::api::setBreakpoint(pid, base::StrID("main"), 5, false).has_value());
+
+		ASSERT_TRUE(vm::api::run(pid).has_value());
+
+		auto execution_position = vm::api::waitForBreakpoint(pid);
+		ASSERT_TRUE(execution_position.has_value());
+
+		ASSERT_EQUAL_PRINT(8, execution_position->instr_number);
+
+		ASSERT_TRUE(vm::api::resume(pid).has_value());
+		ASSERT_TRUE(vm::api::stop(pid).has_value());
+	}
+
+	/**
 	 * @brief Checks if the program will execute step by step.
 	 */
 	void executesStepByStep() {
@@ -154,13 +180,47 @@ private:
 	}
 
 	/**
+	 * @brief Checks dbc to cc mapping.
+	 */
+	void backMapTest() {
+		auto pid = loadProgram("vm_api_tests.dbc");
+
+		auto assert_mapping = [&](usize line, usize index) {
+			fs::File file(path("vm_api_tests.dbc"));
+			auto     map_response = vm::api::mapFileLineToCodeCollectionPosition(pid, file, line);
+
+			ASSERT_TRUE(map_response.has_value());
+			auto code_position = map_response.value();
+
+			ASSERT_EQUAL_PRINT(code_position.function_name, "main");
+			ASSERT_EQUAL_PRINT(code_position.instr_number, index);
+		};
+
+		auto assert_no_maping = [&](usize line) {
+			fs::File file(path("vm_api_tests.dbc"));
+			auto     map_response = vm::api::mapFileLineToCodeCollectionPosition(pid, file, line);
+			ASSERT_TRUE(!map_response);
+		};
+
+		assert_mapping(10, 2);
+		assert_mapping(20, 9);
+		assert_mapping(3, 0);
+		assert_mapping(8, 0);
+		assert_no_maping(2);
+		assert_no_maping(4);
+		assert_no_maping(16);
+		assert_no_maping(21);
+		assert_no_maping(22);
+	}
+
+	/**
 	 * @brief Checks if the vm api functions related to memory and stack frames work correctly.
 	 * Checks the number of stack frames, then resumes the program and checks if it finishes
 	 * correctly.
 	 */
 	void vmApiMemoryAllTypes() {
 		auto pid = loadProgram("breakpoint_all_types.dbc");
-		vm::api::setBreakpoint(pid, base::StrID("main"), 20, true);
+		ASSERT_TRUE(vm::api::setBreakpoint(pid, base::StrID("main"), 20, true).has_value());
 		auto tid = vm::api::ThreadID(0);
 
 		ASSERT_TRUE(vm::api::run(pid).has_value());

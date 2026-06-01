@@ -2,6 +2,7 @@
 
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/visitors.hpp>
+#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/utils/get_expr_symid.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
@@ -96,10 +97,27 @@ namespace compiler::mir {
 			if (optional_local.has_value()) {
 				valueOutput(continuation, MIRValue{ optional_local.value() });
 			} else {
-				//@TODO: #1334 Check if the symbol is a real global variable.
+				auto symbol_kind = helios::kind(expr.symbol);
+				CORE_ASSERT(
+					symbol_kind == helios::SymbolKind::Variable
+						|| symbol_kind == helios::SymbolKind::Const,
+					"IdentifierExpr symbol should be either local variable or global variable or "
+					"constant."
+				);
+
+				MIRGlobal::Kind global_kind = (symbol_kind == helios::SymbolKind::Const)
+				                                ? MIRGlobal::Kind::Constant
+				                                : MIRGlobal::Kind::Variable;
+
 				valueOutput(
 					continuation,
-					MIRValue{ MIRGlobal({ expr.symbol, expr.expression_type.getSymbolType() }) }
+					MIRValue{
+						MIRGlobal({
+							expr.symbol,
+							expr.expression_type.getSymbolType(),
+							global_kind,
+						}),
+					}
 				);
 			}
 		}
@@ -427,11 +445,37 @@ namespace compiler::mir {
 			);
 		}
 
+		bool isEmptyCast(const hc::CastExpr& expr) {
+			if (expr.source_expr->expression_type.getSymbolType() == expr.target_type) return true;
+
+			// If cast is from ref T to ptr T it is empty
+			if (expr.source_expr->expression_type.getSymbolType().getRefKind()
+			        == tsh::ReferenceKind::Ref
+			    && expr.target_type.getType().getKind() == tsh::Kind::Pointer) {
+				return true;
+			}
+
+			// If cast is from box T to ptr T it is empty
+			if (expr.source_expr->expression_type.getSymbolType().getRefKind()
+			        == tsh::ReferenceKind::Box
+			    && expr.target_type.getType().getKind() == tsh::Kind::Pointer) {
+				return true;
+			}
+
+			return false;
+		}
+
 		void visitCastExpr(const hc::CastExpr& expr) override {
+			// Maybe in the future the cast expr can be converted into more specific instructions.
+			if (isEmptyCast(expr)) {
+				// If the cast doesn't change the representation, simply ignore it.
+				output(lowerSubExpr(*expr.source_expr, continuation));
+				return;
+			}
+
 			auto       cast        = continuation->addHole();
 			auto       lowered     = lowerSubExpr(*expr.source_expr, continuation);
 			const auto res_lowered = lowered.getResult(function);
-
 			return noValueOutput(
 				lowered.begin,
 				cast,
