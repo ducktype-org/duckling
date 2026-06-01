@@ -141,7 +141,7 @@ namespace vm::builtins {
 		auto mutex = thread.safe_process.getSynchronizationPrimitives().getMutex(mutex_id);
 
 		thread.releaseGil();
-		while (!mutex->try_lock_for(std::chrono::milliseconds{ 100 })) {
+		while (!mutex->try_lock_for(std::chrono::milliseconds{ 500 })) {
 			if (thread.isTerminateRequested()) {
 				// Acquire GIL before throwing: exception handlers and destructors need exclusive
 				// access to process state (memory blocks, primitives, thread metadata) during cleanup.
