@@ -5,6 +5,8 @@
 #include <chrono>
 
 namespace vm {
+	void ConditionVariable::reset() noexcept { bound_mutex.store(nullptr); }
+
 	bool ConditionVariable::wait(
 		std::timed_mutex& mutex, const std::function<bool()>& should_interrupt
 	) {

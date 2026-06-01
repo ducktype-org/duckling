@@ -143,10 +143,13 @@ namespace vm::builtins {
 		thread.releaseGil();
 		while (!mutex->try_lock_for(std::chrono::milliseconds{ 100 })) {
 			if (thread.isTerminateRequested()) {
+				// Acquire GIL before throwing: exception handlers and destructors need exclusive
+				// access to process state (memory blocks, primitives, thread metadata) during cleanup.
 				thread.acquireGil();
 				throw vm::KillProcessException{};
 			}
 		}
+		// Acquire GIL after blocking: bytecode execution requires holding the GIL.
 		thread.acquireGil();
 	}
 
@@ -173,25 +176,30 @@ namespace vm::builtins {
 				= cv->wait(*mutex, [&thread] { return thread.isTerminateRequested(); });
 			if (interrupted) throw vm::KillProcessException{};
 		} catch (const vm::exceptions::VMRuntimeException&) {
-			// Ensure the GIL is held again before propagating VM runtime exceptions.
+			// Acquire GIL: exception handlers and destructors need exclusive access to process state 
+			// during cleanup and propagation of VM runtime exceptions.
 			thread.acquireGil();
 			throw;
 		} catch (const vm::KillProcessException&) {
+			// Acquire GIL: exception handlers and destructors need exclusive access to process state.
 			thread.acquireGil();
 			throw;
 		} catch (const std::exception& e) {
-			// Reacquire GIL and wrap standard exceptions so the VM can report ExecutionPanicked.
+		// Acquire GIL: exception handlers and destructors need exclusive access to process state.
+		// Then wrap the exception so the VM can report ExecutionPanicked.
 			thread.acquireGil();
 			std::string msg = "builtinWaitCV failed during condition variable wait: ";
 			msg += e.what();
 			throw vm::exceptions::VMRuntimeException(std::move(msg));
 		} catch (...) {
-			// Reacquire GIL and convert unknown exceptions into a VMRuntimeException.
+		// Acquire GIL: exception handlers and destructors need exclusive access to process state.
+		// Then convert unknown exceptions into a VMRuntimeException.
 			thread.acquireGil();
 			throw vm::exceptions::VMRuntimeException(
 				"builtinWaitCV failed during condition variable wait with an unknown exception"
 			);
 		}
+		// Acquire GIL after blocking: bytecode execution requires holding the GIL.
 		thread.acquireGil();
 	}
 
