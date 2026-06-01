@@ -17,11 +17,6 @@ namespace vm {
 
 	public:
 		/**
-		 * @brief Clears internal state before the object is returned to the pool.
-		 */
-		void reset() noexcept;
-
-		/**
 		 * @brief Waits until the condition variable is notified or interruption is requested.
 		 *
 		 * The mutex must already be locked by the caller. This function temporarily releases it

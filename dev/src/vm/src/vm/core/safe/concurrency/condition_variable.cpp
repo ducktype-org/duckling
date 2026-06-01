@@ -5,8 +5,6 @@
 #include <chrono>
 
 namespace vm {
-	void ConditionVariable::reset() noexcept { bound_mutex.store(nullptr); }
-
 	bool ConditionVariable::wait(
 		std::timed_mutex& mutex, const std::function<bool()>& should_interrupt
 	) {
@@ -20,7 +18,7 @@ namespace vm {
 		std::unique_lock<std::timed_mutex> lock(mutex, std::adopt_lock);
 		while (true) {
 			if (should_interrupt()) return true;
-			if (cv.wait_for(lock, std::chrono::milliseconds{ 1 }) == std::cv_status::no_timeout) {
+			if (cv.wait_for(lock, std::chrono::milliseconds{ 500 }) == std::cv_status::no_timeout) {
 				lock.release();
 				return false;
 			}

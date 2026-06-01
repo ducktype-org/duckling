@@ -19,9 +19,5 @@ namespace vm {
 
 	usize SynchronizationPrimitives::addCV() { return cv_pool.add(); }
 
-	void SynchronizationPrimitives::removeCV(usize cv_id) {
-		auto cv = cv_pool.get(cv_id);
-		cv->reset();
-		cv_pool.remove(cv_id);
-	}
+	void SynchronizationPrimitives::removeCV(usize cv_id) { cv_pool.remove(cv_id); }
 }
