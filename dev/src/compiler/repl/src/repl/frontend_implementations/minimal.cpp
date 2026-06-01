@@ -39,7 +39,7 @@ namespace {
 	inline constexpr char             PRINTABLE_MAX           = 0x7e;  // ~
 	inline constexpr std::string_view CLEAR_ENTIRE_SCREEN_SEQ = "\033c\033[H\033[2J\033[0m";
 
-	// ANSI escape sequences for bracketed paste mode
+	// ANSI escape sequences for bracketed paste mode (https://en.wikipedia.org/wiki/Bracketed-paste)
 	inline constexpr std::string_view ENABLE_BRACKETED_PASTE_SEQ  = ESC "[?2004h";
 	inline constexpr std::string_view DISABLE_BRACKETED_PASTE_SEQ = ESC "[?2004l";
 	inline constexpr char             BRACKETED_PASTE_PREFIX1     = '2';

@@ -9,6 +9,7 @@ namespace compiler::repl {
 
 	/**
 	 * @brief Default bracketed paste toggle for the REPL frontend.
+	 * https://en.wikipedia.org/wiki/Bracketed-paste
 	 */
 	constexpr bool FRONTEND_DEFAULT_BRACKETED_PASTE_ENABLED = true;
 #else
@@ -19,6 +20,7 @@ namespace compiler::repl {
 
 	/**
 	 * @brief Default bracketed paste toggle for the REPL frontend.
+	 * https://en.wikipedia.org/wiki/Bracketed-paste
 	 */
 	constexpr bool FRONTEND_DEFAULT_BRACKETED_PASTE_ENABLED = true;
 #endif

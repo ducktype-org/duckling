@@ -65,7 +65,7 @@ namespace compiler::repl {
 		m_replxx.set_beep_on_ambiguous_completion(false);
 		m_replxx.set_max_hint_rows(8);
 		m_replxx.set_hint_delay(0);
-		if (bracketed_paste_enabled)
+		if (bracketed_paste_enabled)  // https://en.wikipedia.org/wiki/Bracketed-paste
 			m_replxx.enable_bracketed_paste();
 		else
 			m_replxx.disable_bracketed_paste();
