@@ -162,7 +162,7 @@ namespace compiler::helios {
 						"earlier."
 					);
 					auto maybe_u64_size = maybe_size.coerceTo<u64>();
-					// TODO: #2754 With flexible literals it should work
+					// @TODO: #2754 With flexible literals it should work
 					if (!maybe_u64_size.has_value()) {
 						ctx.logInt(makeBox<dia_int::PlaceholderError>(
 							"Static array size must be a non-negative integral value.", ""
