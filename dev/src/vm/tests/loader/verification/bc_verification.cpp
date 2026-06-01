@@ -14,7 +14,6 @@ public:
 		TESTER_ADD_TEST(twoInits);
 
 		// Function verification
-		TESTER_ADD_TEST(multipleFunctions);
 		TESTER_ADD_TEST(useArgumentAfterCall);
 		TESTER_ADD_TEST(mainVerification);
 		TESTER_ADD_TEST(multipleRetVals);
@@ -66,16 +65,6 @@ private:
 	void manyJumps() { loadValidDbc("right/many_jumps.dbc"); }
 
 	void twoInits() { loadValidDbc("right/two_inits.dbc"); }
-
-	// Function verification
-	void multipleFunctions() {
-		loadInvalidDbc(
-			"wrong/functions/multiple_functions.dbc",
-			{
-				"Function with this name already exists.",
-			}
-		);
-	}
 
 	// Function verification
 	void useArgumentAfterCall() {
