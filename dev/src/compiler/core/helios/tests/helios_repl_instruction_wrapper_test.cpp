@@ -60,10 +60,12 @@ private:
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto stmt = extractSingleInstruction(ctx, "while (1 == 1) {}");
 
-			auto wrapper = ctx.query<repl::QueryReplInstructionWrapper>({
+			auto wrapper_result = ctx.query<repl::QueryReplInstructionWrapper>({
 				.stmt    = stmt,
 				.counter = 17,
 			});
+			ASSERT_TRUE(wrapper_result.hasValue());
+			auto& wrapper = wrapper_result.valueOrPanic();
 
 			ASSERT_EQUAL(wrapper.declaration->parameters.size(), 0u);
 			ASSERT_EQUAL(wrapper.body->statements.size(), 2u);
@@ -98,14 +100,18 @@ private:
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto stmt = extractSingleInstruction(ctx, "if (1 == 1) {}");
 
-			auto wrapper_a = ctx.query<repl::QueryReplInstructionWrapper>({
+			auto wrapper_result_a = ctx.query<repl::QueryReplInstructionWrapper>({
 				.stmt    = stmt,
 				.counter = 21,
 			});
-			auto wrapper_b = ctx.query<repl::QueryReplInstructionWrapper>({
+			auto wrapper_result_b = ctx.query<repl::QueryReplInstructionWrapper>({
 				.stmt    = stmt,
 				.counter = 22,
 			});
+			ASSERT_TRUE(wrapper_result_a.hasValue());
+			ASSERT_TRUE(wrapper_result_b.hasValue());
+			auto& wrapper_a = wrapper_result_a.valueOrPanic();
+			auto& wrapper_b = wrapper_result_b.valueOrPanic();
 
 			auto mangled_a
 				= helios::mangler::getSimpleMangledName(ctx, wrapper_a.declaration->original_symbol)
@@ -132,10 +138,12 @@ private:
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto stmt = extractSingleInstruction(ctx, "while (1 == 1) {}");
 
-			auto wrapper = ctx.query<repl::QueryReplInstructionWrapper>({
+			auto wrapper_result = ctx.query<repl::QueryReplInstructionWrapper>({
 				.stmt    = stmt,
 				.counter = 31,
 			});
+			ASSERT_TRUE(wrapper_result.hasValue());
+			auto& wrapper = wrapper_result.valueOrPanic();
 
 			ASSERT_EQUAL(wrapper.declaration->parameters.size(), 0u);
 			assertTrue(
@@ -163,10 +171,12 @@ private:
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto stmt = extractSingleInstruction(ctx, "if (1 == 1) {}");
 
-			auto wrapper = ctx.query<repl::QueryReplInstructionWrapper>({
+			auto wrapper_result = ctx.query<repl::QueryReplInstructionWrapper>({
 				.stmt    = stmt,
 				.counter = 41,
 			});
+			ASSERT_TRUE(wrapper_result.hasValue());
+			auto& wrapper = wrapper_result.valueOrPanic();
 
 			ASSERT_EQUAL(wrapper.body->statements.size(), 2u);
 
@@ -182,14 +192,18 @@ private:
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto stmt = extractSingleInstruction(ctx, "if (1 == 1) {}");
 
-			auto wrapper_a = ctx.query<repl::QueryReplInstructionWrapper>({
+			auto wrapper_result_a = ctx.query<repl::QueryReplInstructionWrapper>({
 				.stmt    = stmt,
 				.counter = 55,
 			});
-			auto wrapper_b = ctx.query<repl::QueryReplInstructionWrapper>({
+			auto wrapper_result_b = ctx.query<repl::QueryReplInstructionWrapper>({
 				.stmt    = stmt,
 				.counter = 55,
 			});
+			ASSERT_TRUE(wrapper_result_a.hasValue());
+			ASSERT_TRUE(wrapper_result_b.hasValue());
+			auto& wrapper_a = wrapper_result_a.valueOrPanic();
+			auto& wrapper_b = wrapper_result_b.valueOrPanic();
 
 			ASSERT_EQUAL(
 				wrapper_a.declaration->original_symbol, wrapper_b.declaration->original_symbol

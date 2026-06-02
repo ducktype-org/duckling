@@ -4,20 +4,13 @@ use std::collections::{HashMap, HashSet};
 
 use itertools::Itertools;
 
+use crate::QuackResult;
 use crate::quackpack::core::compile::MISSING_DEPENDENCY_IN_DAG_MESSAGE;
 use crate::quackpack::core::compile::compiler_package::CompilerPackage;
 use crate::quackpack::core::storage::freeze::FreezeDep;
-use crate::util::error::MessageError;
-use crate::{QuackError, QuackResult};
 
-pub mod creating_dag;
-pub mod modifying_dag;
-
-/// Common helper for creating a consistent error.
-fn bail_cycle_message(cycle: &[FreezeDep]) -> QuackError {
-    let cycle = cycle.iter().map(|dep| format!("`{}`", dep)).join(" -> ");
-    MessageError(format!("malformed freezefile: cycle {cycle}").into()).into()
-}
+pub mod creating_graph;
+pub mod modifying_graph;
 
 #[cfg(test)]
 mod tests;
@@ -47,17 +40,17 @@ impl PackagesSet {
 }
 
 #[derive(Debug)]
-/// Dependency DAG ([`DependencyDag`]) + packages cache ([`PackagesSet`]).
-pub struct EarlyDag {
+/// Dependency graph ([`DependencyGraph`]) + packages cache ([`PackagesSet`]).
+pub struct EarlyGraph {
     packages: PackagesSet,
-    dag: DependencyDag,
+    graph: DependencyGraph,
 }
 
 #[derive(Debug, PartialEq, Eq)]
-/// DAG representing dependency-dependant relations.
-pub struct DependencyDag {
+/// Graph representing dependency-dependant relations.
+pub struct DependencyGraph {
     root: FreezeDep,
-    dag: HashMap<FreezeDep, DependencyNode>,
+    graph: HashMap<FreezeDep, DependencyNode>,
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Default)]
@@ -68,62 +61,17 @@ pub struct DependencyNode {
     dependencies: Vec<FreezeDep>,
 }
 
-impl DependencyDag {
-    /// Get the root package of this DAG.
+impl DependencyGraph {
+    /// Get the root package of this graph.
     pub fn root(&self) -> FreezeDep {
         self.root
     }
 
     /// Get the [`DependencyNode`] for the given package.
     pub fn dependencies_for_package(&self, package: &FreezeDep) -> &DependencyNode {
-        self.dag
+        self.graph
             .get(package)
             .expect(MISSING_DEPENDENCY_IN_DAG_MESSAGE)
-    }
-
-    /// Sort topologically this DAG.
-    ///
-    /// This method returns an error, if it encounters a cycle.
-    pub fn topo_sort_order(&self) -> QuackResult<Vec<FreezeDep>> {
-        #[derive(Debug, Eq, PartialEq)]
-        enum State {
-            Entered,
-            Left,
-        }
-
-        let mut states = HashMap::new();
-        let mut order = vec![];
-        fn visit_impl(
-            current: FreezeDep,
-            dag: &HashMap<FreezeDep, DependencyNode>,
-            states: &mut HashMap<FreezeDep, State>,
-            order: &mut Vec<FreezeDep>,
-        ) -> QuackResult<()> {
-            let previous_state = states.insert(current, State::Entered);
-            debug_assert_ne!(
-                previous_state,
-                Some(State::Left),
-                "we shouldn't revisit nodes"
-            );
-            if previous_state == Some(State::Entered) {
-                return Err(bail_cycle_message(order));
-            }
-            let deps = dag
-                .get(&current)
-                .expect("we've verified that there are dependencies");
-            for dep in deps.dependencies() {
-                if states.get(dep) != Some(&State::Left) {
-                    visit_impl(*dep, dag, states, order)?;
-                }
-            }
-
-            states.insert(current, State::Left);
-            order.push(current);
-            Ok(())
-        }
-        visit_impl(self.root, &self.dag, &mut states, &mut order)?;
-        order.reverse();
-        Ok(order)
     }
 }
 
@@ -139,7 +87,7 @@ impl DependencyNode {
     }
 }
 
-impl EarlyDag {
+impl EarlyGraph {
     /// Get the [`CompilerPackage`] for the given `name`.
     pub fn package(&self, name: &FreezeDep) -> &CompilerPackage {
         self.packages.package(name)
@@ -150,8 +98,8 @@ impl EarlyDag {
         self.packages.package_mut(name)
     }
 
-    /// Get the underlying [`DependencyDag`].
-    pub fn dag(&self) -> &DependencyDag {
-        &self.dag
+    /// Get the underlying [`DependencyGraph`].
+    pub fn graph(&self) -> &DependencyGraph {
+        &self.graph
     }
 }
