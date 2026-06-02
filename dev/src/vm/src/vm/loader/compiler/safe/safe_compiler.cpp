@@ -23,36 +23,66 @@ namespace vm::loader::compiler::safe {
 		static u64 getLocalShadowPointerOffset(
 			const SafeCompiler&                                       compiler,
 			const vm::loader::compiler::detail::FunctionStackContext& stack_ctx,
+			code::StackStateID                                        stack_state_id,
 			const code::valid_type::TypeSize&                         var_offset
 		) {
 			u64   shadow_pointer_offset = 0;
 			usize target_offset_val     = getIntTypeSize(var_offset);
-			for (const auto& pair: stack_ctx.locals_map) {
-				const auto& entry = pair.second;
-				if (getIntTypeSize(entry.offset) < target_offset_val) {
-					auto type_ref
-						= compiler.getLowProgram()->getTypes().at(vm::TypeID(entry.type.asInt()));
-					shadow_pointer_offset += type_ref->getPointerSize();
+			auto& db                    = stack_ctx.function.local_stack;
+			usize active_size           = db.size(stack_state_id);
+
+			for (usize i = 0; i < active_size; ++i) {
+				auto name_opt = db.getName(stack_state_id, i);
+				if (!name_opt) continue;
+				auto byte_offset_opt = db.getByteOffset(stack_state_id, *name_opt);
+				if (!byte_offset_opt) continue;
+
+				if (getIntTypeSize(*byte_offset_opt) < target_offset_val) {
+					auto type_name_opt = db.getTypeName(stack_state_id, i);
+					if (type_name_opt) {
+						code::valid_type::ValidTypeID type_id = compiler.getHighProgram().getTypeContext()
+						                                            .getCurrentTypes()
+						                                            .at(*type_name_opt)
+						                                            ->getID();
+						auto type_ref = compiler.getLowProgram()->getTypes().at(vm::TypeID(type_id.asInt()));
+						shadow_pointer_offset += type_ref->getPointerSize();
+					}
 				}
 			}
+
 			return shadow_pointer_offset;
 		}
 
 		static u64 getLocalShadowDataOffset(
 			const SafeCompiler&                                       compiler,
 			const vm::loader::compiler::detail::FunctionStackContext& stack_ctx,
+			code::StackStateID                                        stack_state_id,
 			const code::valid_type::TypeSize&                         var_offset
 		) {
 			u64   shadow_data_offset = 0;
 			usize target_offset_val  = getIntTypeSize(var_offset);
-			for (const auto& pair: stack_ctx.locals_map) {
-				const auto& entry = pair.second;
-				if (getIntTypeSize(entry.offset) < target_offset_val) {
-					auto type_ref
-						= compiler.getLowProgram()->getTypes().at(vm::TypeID(entry.type.asInt()));
-					shadow_data_offset += type_ref->getShadowSize();
+			auto& db                 = stack_ctx.function.local_stack;
+			usize active_size        = db.size(stack_state_id);
+
+			for (usize i = 0; i < active_size; ++i) {
+				auto name_opt = db.getName(stack_state_id, i);
+				if (!name_opt) continue;
+				auto byte_offset_opt = db.getByteOffset(stack_state_id, *name_opt);
+				if (!byte_offset_opt) continue;
+
+				if (getIntTypeSize(*byte_offset_opt) < target_offset_val) {
+					auto type_name_opt = db.getTypeName(stack_state_id, i);
+					if (type_name_opt) {
+						code::valid_type::ValidTypeID type_id = compiler.getHighProgram().getTypeContext()
+						                                            .getCurrentTypes()
+						                                            .at(*type_name_opt)
+						                                            ->getID();
+						auto type_ref = compiler.getLowProgram()->getTypes().at(vm::TypeID(type_id.asInt()));
+						shadow_data_offset += type_ref->getShadowSize();
+					}
 				}
 			}
+
 			return shadow_data_offset;
 		}
 
@@ -166,24 +196,24 @@ namespace vm::loader::compiler::safe {
         
 		DEFINE_LOWER_ARGUMENT_IMPL_FOR_FAMILY(
 			low::opargs::ShadowPlaceDataArgumentType,
-			if(auto maybe_val = stack_ctx.locals_map.atMaybe(opcode_arg.var_name)) {
-				return getLocalShadowDataOffset(compiler, stack_ctx, maybe_val.value()->offset);
+			if (auto maybe_offset = stack_ctx.function.local_stack.getByteOffset(stack_state_id, opcode_arg.var_name); maybe_offset.has_value()) {
+				return getLocalShadowDataOffset(compiler, stack_ctx, stack_state_id, *maybe_offset);
 			}
 			return compiler.low_program.getGlobals().at(opcode_arg.var_name)->global_shadow_data_offset | (1ULL << 63);
 		);
 
 		DEFINE_LOWER_ARGUMENT_IMPL_FOR_FAMILY(
 			low::opargs::ShadowPointerPlaceDataArgumentType,
-			if(auto maybe_val = stack_ctx.locals_map.atMaybe(opcode_arg.var_name)) {
-				return getLocalShadowPointerOffset(compiler, stack_ctx, maybe_val.value()->offset);
+			if (auto maybe_offset = stack_ctx.function.local_stack.getByteOffset(stack_state_id, opcode_arg.var_name); maybe_offset.has_value()) {
+				return getLocalShadowPointerOffset(compiler, stack_ctx, stack_state_id, *maybe_offset);
 			}
 			return compiler.low_program.getGlobals().at(opcode_arg.var_name)->global_shadow_pointer_offset | (1ULL << 63);
 		);
 
 		DEFINE_LOWER_ARGUMENT_IMPL_FOR_FAMILY(
 			low::opargs::ShadowPlaceBlockArgumentType,
-			if(auto maybe_val = stack_ctx.locals_map.atMaybe(opcode_arg.var_name)) {
-				return maybe_val.value()->stack_index;
+			if (auto maybe_val = stack_ctx.function.local_stack.getIdx(stack_state_id, opcode_arg.var_name)) {
+				return *maybe_val;
 			}
 			return compiler.low_program.getGlobals().at(opcode_arg.var_name)->global_block_idx | (1ULL << 63);
 		);

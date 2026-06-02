@@ -63,6 +63,7 @@ namespace vm::loader::compiler::safe {
 		 * @return A constant reference to the current, fully compiled low-level program.
 		 */
 		[[nodiscard]] CRef<vm::low::LowVMProgram> getLowProgram() const;
+		[[nodiscard]] const code::ValidProgram& getHighProgram() const { return high_program; }
 
 		[[nodiscard]] std::expected<FatBytecodePosition, MappingException>
 			mapLowVMProgramPositionToCodeCollectionPosition(low::LowCodePosition position) const;
