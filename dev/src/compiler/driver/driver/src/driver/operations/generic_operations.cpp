@@ -317,7 +317,9 @@ namespace compiler::driver {
 	QUERY_IMPLEMENTATION_BOILERPLATE(CompileModule);
 
 	namespace {
-		std::expected<LIRModuleData, std::string> compileScriptToLIRModuleData(query::Context& ctx) {
+		std::expected<LIRUnitWithBackendName, std::string> compileScriptToLIRModuleData(
+			query::Context& ctx
+		) {
 			auto& script_context = global_state::getScriptContext();
 			auto  script_source  = script_context.script_file.getContent().view().stdString();
 			auto  split_result   = repl::splitInputIntoStatements(ctx, script_source);
@@ -330,11 +332,11 @@ namespace compiler::driver {
 				REPL, "compile_script: split into ", split_result->size(), " statement(s)\n"
 			);
 
-			LIRModuleData merged{
+			LIRUnitWithBackendName merged{
 				.module_id = repl::getScriptModuleID(script_context.script_file),
-				.functions = {},
-				.globals   = {},
+				.lir_unit  = lir::LIRUnit{},
 			};
+
 			// Track wrapper symbols to build the synthetic main that runs them in order.
 			// We preserve the original statement order to match script semantics.
 			std::vector<helios::SymID>         wrapper_symbols;

@@ -105,7 +105,7 @@ namespace compiler::driver {
 		base::Bit256 queryStablePerfectHash() const;
 	};
 
-	struct CompileModuleResult {
+	struct CompileModuleResult final {
 		artifacts::FileArtifact               object_art;
 		base::Optional<debug_info::DebugInfo> debug_info;
 	};

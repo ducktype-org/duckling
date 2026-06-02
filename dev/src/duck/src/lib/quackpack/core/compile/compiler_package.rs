@@ -92,6 +92,26 @@ impl CompilerPackage {
         Ok(())
     }
 
+    /// As [`CompilerPackage::add_new_features`], but returns the set of features that would be added.
+    pub fn features_that_would_be_added(
+        &self,
+        features: impl IntoIterator<Item = FeatureName>,
+    ) -> QuackResult<HashSet<FeatureName>> {
+        let features = self
+            .package
+            .manifest()
+            .features()
+            .expand_features(features)
+            .with_context(|| {
+                format!(
+                    "while expanding features of the {} `{}`",
+                    self.pkg_type,
+                    self.package.manifest().name()
+                )
+            })?;
+        Ok(features)
+    }
+
     /// Get the underlying [`Package`].
     pub fn package(&self) -> &Package {
         &self.package
