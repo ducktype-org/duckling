@@ -4,6 +4,11 @@
 
 namespace pst {
 	class Defer final: public Action {
+		PARENT_CLASS(Action);
+		CLONE_SIGNATURE(Defer) override;
+	public:
+		ELEMENT_CLONE_DECL(Defer);
+
 	public:
 		explicit Defer(const LangParserState& state): Action(state) {}
 

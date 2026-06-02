@@ -8,8 +8,6 @@ namespace pst {
 	 */
 	class Param final: public NotStmt {
 		PARENT_CLASS(NotStmt);
-
-		ELEMENT_CLONE_DECL(Param);
 		CLONE_SIGNATURE(Param) override;
 	
 		NAMED_CHILD(name, IdentifierWrapper);
@@ -17,6 +15,8 @@ namespace pst {
 		NAMED_CHILD_OPT(initial, UniversalExprHolder);
 
 	public:
+		ELEMENT_CLONE_DECL(Param);
+
 		explicit Param(const LangParserState& state): NotStmt(state) {
 			this->element_kind = ElementKind::Param;
 		}

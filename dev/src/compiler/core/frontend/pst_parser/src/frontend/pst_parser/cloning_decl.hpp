@@ -15,7 +15,6 @@ namespace pst {
 #define PARENT_CLASS(parent_class) private: using ParentClass = parent_class
 
 #define ELEMENT_CLONE_DECL(element) \
-	protected: \
-		explicit element(pst::CloneDummy clone, element& other): ParentClass(clone, other) {}
+	explicit element(const pst::CloneDummy clone, const element& other): ParentClass(clone, other) {}
 
-#define CLONE_SIGNATURE(element_type) MBox<element_type> cloneElement() const
+#define CLONE_SIGNATURE(element_type) MBox<LangElement> cloneElement() const

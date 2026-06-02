@@ -3,6 +3,7 @@
 #include "preamble.hpp"
 
 namespace pst {
+	ELEMENT_CLONE_DEF(Param, name, type, initial);
 
 	MBox<Param> Param::parse(LangParserState& state) {
 		auto out = makeBox<Param>(state);

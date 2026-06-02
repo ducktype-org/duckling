@@ -73,7 +73,7 @@ namespace pst {
 	 */
 	class LangElement: public tpc::Element {
 	protected:
-		explicit LangElement(pst::CloneDummy, LangElement& other):
+		explicit LangElement(pst::CloneDummy, const LangElement& other):
 			  source_position(other.source_position),
 			  context_hash(other.context_hash),
 			  id(PstID::next()) {}
@@ -87,7 +87,6 @@ namespace pst {
 
 	public:
 		using SubToken = base::CRef<lexer::Token>;
-
 
 		/**
 		 * @brief Needed for access to element path methods.

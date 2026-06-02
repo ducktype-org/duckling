@@ -23,8 +23,8 @@ namespace pst {
 	 */
 	class NotStmt: public LangElement {
 		PARENT_CLASS(LangElement);
+	protected:
 		ELEMENT_CLONE_DECL(NotStmt);
-
 	public:
 		explicit NotStmt(const LangParserState& state): LangElement(state) {}
 
@@ -133,6 +133,11 @@ namespace pst {
 		void makeImplicitReturn() { implicit_return = true; }
 
 	public:
+	/**
+	 * @todo Need to somehow handle prefixes
+	 */
+		explicit Stmt(const pst::CloneDummy dummy,const Stmt& other): LangElement(dummy, other), kind(other.kind), implicit_return(other.implicit_return) {}
+
 		[[nodiscard]]
 		StmtKind getStmtKind() const {
 			return kind;

@@ -3,6 +3,8 @@
 #include "preamble.hpp"
 
 namespace pst {
+	ELEMENT_CLONE_DEF(Action, expr);	
+
 	MBox<Action> Action::parse(LangParserState& state) {
 		if (!assertStmtChoice<Action>(state, state[0].isKeyword())) return nullptr;
 
