@@ -123,7 +123,7 @@ namespace vm::debugger::cli {
 				status();
 			} else if (stripped_line == "position" || stripped_line == "pos") {
 				auto response = debugger.getCurrentPosition();
-				position(response);
+				position();
 			}
 		}
 
