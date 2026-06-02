@@ -669,5 +669,20 @@ namespace compiler::lir {
 		std::vector<LIRGlobalData>  lir_globals;
 
 		void debugPrint(query::Context& ctx, std::ostream& out) const;
+
+		/**
+		 * @brief Removes duplicate functions and globals from the LIR unit.
+		 *
+		 * @note This is needed to handle the case of multiple script modules in REPL, which might
+		 * contain duplicated functions and globals. We are not sure, whether this is the best way
+		 * to handle this case, but it is a simple solution for now.
+		 * @TODO: #2694 #2424 come back to this, and maybe remove or adapt this method accordingly.
+		 *
+		 * @note In the context, of the above, don't use this method outside of REPL script
+		 * compilation, as it might hide other issues with duplicated functions and globals in LIR
+		 * units. It is only placed here, to avoid potential logic duplication, will we ever need to
+		 * handle duplicated functions and globals in LIR units in other contexts.
+		 */
+		void deduplicateSymbols();
 	};
 }

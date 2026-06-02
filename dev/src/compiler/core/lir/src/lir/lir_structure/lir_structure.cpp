@@ -10,6 +10,7 @@
 
 #include <base/collections/maps.hpp>
 #include <base/extend_cpp/variant_match.hpp>
+#include <base/extend_cpp/vector_utils.hpp>
 
 #include <iomanip>
 #include <set>
@@ -399,6 +400,22 @@ namespace compiler::lir {
 			func->debugPrint(ctx, os);
 			os << "\n";
 		}
+	}
+
+	void LIRUnit::deduplicateSymbols() {
+		std::set<base::StrID> seen_globals;
+		base::filterVectorInPlace(lir_globals, [&seen_globals](const LIRGlobalData& global_data) {
+			if (seen_globals.contains(global_data.global.mangled_name)) return false;
+			seen_globals.insert(global_data.global.mangled_name);
+			return true;
+		});
+
+		std::set<base::StrID> seen_functions;
+		base::filterVectorInPlace(lir_functions, [&seen_functions](const CRef<Function>& func) {
+			if (seen_functions.contains(func->mangled_name)) return false;
+			seen_functions.insert(func->mangled_name);
+			return true;
+		});
 	}
 
 	LIRLocalSpecialKind specialKindFromMIR(const mir::MIRLocal& mir_local) {

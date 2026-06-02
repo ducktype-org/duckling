@@ -431,6 +431,8 @@ namespace compiler::driver {
 				return std::unexpected("Failed to compile script main to LIR");
 			repl::appendScriptLIRModuleData(merged, main_lir->valueOrPanic());
 
+			merged.lir_unit.deduplicateSymbols();
+
 			return merged;
 		}
 
