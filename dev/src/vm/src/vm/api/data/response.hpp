@@ -5,8 +5,8 @@
 
 #include <base/pointers/box.hpp>
 
-#include <string_id/string_id.hpp>
 #include <diagnostic/source_position.hpp>
+#include <string_id/string_id.hpp>
 
 #include <vm/core/vmvalue/vmvalueref.hpp>
 

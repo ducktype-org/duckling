@@ -351,9 +351,8 @@ namespace vm {
 				auto opt_func  = loader.getHighProgram()->functions().atMaybe(func_name);
 
 				if (!opt_func)
-					return std::unexpected(
-						api::ApiError{ api::OtherError{ "FatBytecode-representation not found" } }
-					);
+					return std::unexpected(api::ApiError{
+						api::OtherError{ "FatBytecode-representation not found" } });
 
 				auto func_ref    = *opt_func;
 				auto stack_state = func_ref->stack_states.at(high_pos->instruction_index);
@@ -365,11 +364,12 @@ namespace vm {
 					u64        offset = base::safeIntConv<u64>(
                         memory.getBlockViewUnsafe(block).getBegin() - frame.local_stack
                     );
-					u64 block_offset =  base::safeIntConv<u64>(block_ptr - frame.local_block_ref_stack_base);
+					u64 block_offset
+						= base::safeIntConv<u64>(block_ptr - frame.local_block_ref_stack_base);
 					frame_vars.push_back(api::response::StackFrameData::FrameVar{
 						.offset = offset,
-						.name = func_ref->local_stack.getName(stack_state, block_offset),
-						.type = func_ref->local_stack.getTypeName(stack_state, block_offset),
+						.name   = func_ref->local_stack.getName(stack_state, block_offset),
+						.type   = func_ref->local_stack.getTypeName(stack_state, block_offset),
 						.value  = VMValueRef(*this, memory.getBlockType(block), Pointer(block, 0)),
 					});
 				}
