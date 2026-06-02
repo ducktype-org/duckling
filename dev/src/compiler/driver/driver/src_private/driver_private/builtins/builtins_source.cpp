@@ -57,7 +57,7 @@ extern "C" {
 	double   builtin_input_f64();
 
 	// String I/O @TODO: #2636 move to Duckling
-	int64_t builtin_output_string(str s);
+	int64_t print(str s);
 	str     builtin_input_string();
 	void    builtin_free_string(str s);
 	str     builtin_string_prepended(char c, str s);
@@ -150,7 +150,7 @@ str builtin_input_string() {
 	};
 }
 
-int64_t builtin_output_string(str s) {
+int64_t print(str s) {
 	// Use fwrite to handle non-null-terminated strings and binary data safely.
 	return int64_t(fwrite(s.data, sizeof(char), s.length, stdout));
 }

@@ -2,6 +2,7 @@
 add_library(LIR STATIC
 	src/lir/lir_structure/lir_structure.cpp
 	src/lir/lir_lowering/lir_lowering.cpp
+	src/lir/lir_lowering/lir_unit.cpp
 )
 
 make_module(LIR USES Base QueryFramework MIR TypeSystemLower)
