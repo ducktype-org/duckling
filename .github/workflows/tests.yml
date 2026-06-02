@@ -233,9 +233,11 @@ jobs:
       - name: Check should enable JIT
         id: check-jit
         run: |
-          echo jit-flag=$( [ "${{ matrix.build-type }}" = "DevOpt" ] &&
-                              [ "${{ matrix.compiler.name }}" = "clang" ] &&
-                               echo "--enable-jit" || echo "--no-enable-jit" ) >> $GITHUB_OUTPUT
+          echo jit-flag=--no-enable-jit >> $GITHUB_OUTPUT
+      # @TODO: #2780 fix JIT builds
+      #   echo jit-flag=$( [ "${{ matrix.build-type }}" = "DevOpt" ] &&
+      #                       [ "${{ matrix.compiler.name }}" = "clang" ] &&
+      #                        echo "--enable-jit" || echo "--no-enable-jit" ) >> $GITHUB_OUTPUT
 
       # Configure CMake. Using toolbox instead of direct command, because it
       # also enables CMake File API, which is necessary for integration tests.
@@ -460,7 +462,7 @@ jobs:
           authors: quacker-bot
 
       - name: Post code statistics as github comment
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         if: ${{ env.IF_MAIN_PR == 'true' }}
         env:
           COV_FAIL_MSG: '❌❌❌ - **You have to write some more tests, so the coverage is at least as high as on the main branch!** \n\n 🆘 Run coverage tests: `./toolbox.py coverage` to get more information.'

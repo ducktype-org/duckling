@@ -206,6 +206,13 @@ namespace compiler::tsh {
 		 */
 		base::Map<base::StrID, std::vector<InterfaceElement>> elements_by_name;
 
+		/**
+		 * Check if the element list of the interface contains duplicates.
+		 * Note: it shouldn't. Use this for assertions in constructors.
+		 */
+		[[nodiscard]]
+		base::OkBad checkForDuplicates() const;
+
 	public:
 		TypeInterface() = default;
 
@@ -214,6 +221,15 @@ namespace compiler::tsh {
 		 * @param elements The elements of the interface.
 		 */
 		explicit TypeInterface(const std::vector<InterfaceElement>& elements);
+
+		/**
+		 * Create a new interface which contains all elements from this one, as well as all elements
+		 * from another interface, in this order (note: order of elements is important in interfaces).
+		 * @param other The other type interface.
+		 * @return The new type interface, containing all elements from this one, and the `other`.
+		 */
+		[[nodiscard]]
+		TypeInterface combine(CRef<TypeInterface> other) const;
 
 		[[nodiscard]]
 		const std::vector<InterfaceElement>& getElements() const {

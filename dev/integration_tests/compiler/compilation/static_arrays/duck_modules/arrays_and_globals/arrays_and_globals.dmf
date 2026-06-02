@@ -1,3 +1,5 @@
+import core.builtins.*;
+
 const SIZE = 5;
 var GLOBAL_ARR: i64[SIZE];
 

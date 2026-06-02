@@ -1,3 +1,5 @@
+import core.builtins.*;
+
 # Operator overloading test (primitive types)
 # This test checks if operator overloads work for primitive types
 
@@ -11,6 +13,6 @@ fun *(c: char, n: i64) -> str = {
 }
 
 fun main() -> i64 = {
-    builtin_output_string('a' * 5);
+    print('a' * 5);
     return 0;
 }

@@ -1,3 +1,5 @@
+import core.builtins.*;
+
 fun accept_unit_array(arr: ()[10]) -> () = {
     let x = arr[2];
     builtin_output_i64(111);
