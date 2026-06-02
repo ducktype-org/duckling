@@ -1,3 +1,5 @@
+import core.builtins.*;
+
 var l: List[i64];
 l += 1; 
 l += 2; 

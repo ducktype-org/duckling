@@ -1,3 +1,5 @@
+import core.builtins.*;
+
 var x = -5;
 alias y = x;
 y = 42;

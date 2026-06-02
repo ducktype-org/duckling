@@ -1,2 +1,4 @@
+import core.builtins.*;
+
 namespace N { fun Test() = {return 42;}}
 builtin_output_i64(N.Test());
