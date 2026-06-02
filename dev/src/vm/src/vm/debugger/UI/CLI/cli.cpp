@@ -119,11 +119,13 @@ namespace vm::debugger::cli {
 				});
 			} else if (stripped_line == "help" || stripped_line == "h") {
 				help();
-			} else if (stripped_line == "status" || stripped_line == "s") {
+			} else if (stripped_line == "status" || stripped_line == "st") {
 				status();
 			} else if (stripped_line == "position" || stripped_line == "pos") {
 				auto response = debugger.getCurrentPosition();
 				position();
+			} else if (stripped_line == "step" || stripped_line == "s") {
+				debugger.step();
 			}
 		}
 
@@ -140,8 +142,9 @@ namespace vm::debugger::cli {
 					 "  (r)un       - run main function\n"
 					 "  (p)ause     - pause running VM\n"
 					 "  (c)ontinue  - resume VM execution\n"
+					 "  (s)tep      - executes one Fat step\n"
 
-					 "  (s)tatus    - write current VM status\n"
+					 "  (st)atus    - write current VM status\n"
 					 "  (pos)ition  - write current position\n"
 				  << "\n";
 	}
