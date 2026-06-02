@@ -1,6 +1,6 @@
 #include "replxx_helpers.hpp"
 
-#include "base/types/ints.hpp"
+#include <base/types/ints.hpp>
 
 #include <algorithm>
 #include <cctype>
