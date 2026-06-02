@@ -4,6 +4,7 @@
 #include <vm/api/data/status.hpp>
 
 #include <iostream>
+#include <variant>
 
 namespace vm::debugger::debug_adapter {
 	constexpr std::string_view HEADER_PREFIX = "Content-Length: ";
@@ -22,51 +23,53 @@ namespace vm::debugger::debug_adapter {
 
 			  this->sendEvent("output", { { "category", "console" }, { "output", message } });
 
-			  if (std::holds_alternative<api::Paused>(status)) {
-				  this->sendEvent(
-					  "stopped",
-					  { { "reason", "pause" }, { "threadId", 1 }, { "allThreadsStopped", true } }
-				  );
-			  }
-		  }),
+			  variant_match(status) {
+				  variant_case(api::Paused, status) {
+					  this->sendEvent(
+						  "stopped",
+						  { { "reason", "pause" }, { "threadId", 1 }, { "allThreadsStopped", true } }
+					  );
+				  }
+				  variant_case(api::ExecutionCompleted, status) {
+					  std::string return_str = "[";
+					  bool        is_first   = true;
 
-		  completion_listener([this](const vm::api::ExitValue& exit_val) {
-			  std::string return_str = "[";
-			  bool        is_first   = true;
+					  for (auto val: status.exit_value) {
+						  std::string rendered_value     = "";
+						  bool        has_rendered_value = false;
 
-			  for (auto val: exit_val) {
-				  std::string rendered_value     = "";
-				  bool        has_rendered_value = false;
+						  if_opt_some(val->readData(), data) {
+							  variant_match(data) {
+								  variant_case(vm::interpreted_data_variant::Primitive, primitive) {
+									  rendered_value     = std::to_string(primitive.value);
+									  has_rendered_value = true;
+								  }
+							  }
+						  }
 
-				  if_opt_some(val->readData(), data) {
-					  variant_match(data) {
-						  variant_case(vm::interpreted_data_variant::Primitive, primitive) {
-							  rendered_value     = std::to_string(primitive.value);
-							  has_rendered_value = true;
+						  if (has_rendered_value) {
+							  if (!is_first) return_str += ", ";
+							  return_str += rendered_value;
+							  is_first = false;
 						  }
 					  }
-				  }
+					  return_str += "]";
 
-				  if (has_rendered_value) {
-					  if (!is_first) return_str += ", ";
-					  return_str += rendered_value;
-					  is_first = false;
+					  message = "VM returned: " + return_str + "\n";
+
+					  this->sendEvent(
+						  "output", { { "category", "console" }, { "output", message } }
+					  );
+
+					  this->sendEvent("exited", { { "exitCode", 0 } });
+
+					  this->sendEvent("terminated", {});
 				  }
 			  }
-			  return_str += "]";
-
-			  std::string message = "VM returned: " + return_str + "\n";
-
-			  this->sendEvent("output", { { "category", "console" }, { "output", message } });
-
-			  this->sendEvent("exited", { { "exitCode", 0 } });
-
-			  this->sendEvent("terminated", {});
 		  }),
 
 		  debugger() {
 		debugger.attachOnStatusChangedListener(status_change_listener);
-		debugger.attachOnExecutionCompletedListener(completion_listener);
 	}
 
 	DebugAdapter DebugAdapter::get() { return {}; }
