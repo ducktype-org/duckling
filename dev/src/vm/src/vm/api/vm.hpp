@@ -224,4 +224,13 @@ namespace vm::api {
 	std::expected<void, ApiError> setBreakpoint(
 		PID pid, base::StrID function_name, u64 instruction_index, bool enable
 	);
+
+	/**
+	 * @brief Gets the first code collection instruction that starts in the provided file line.
+	 * @return Either the mapped `CodePosition` on success, or a nullopt if no such instruction
+	 * exists.
+	 */
+	std::expected<response::CodePosition, ApiError> mapFileLineToCodeCollectionPosition(
+		PID pid, fs::File file, usize line_number
+	);
 }

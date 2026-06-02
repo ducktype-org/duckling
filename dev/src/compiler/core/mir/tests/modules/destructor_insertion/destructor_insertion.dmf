@@ -4,7 +4,6 @@ fun A() -> i64 = {
         let length: i64 = 3;
 
         while(index < length) {
-            builtin_output_i64(index);
             index = index + 1;
         }
     };
@@ -23,7 +22,6 @@ fun B() -> i64 = {
                 let length_2: i64 = 3;
 
                 while(index_2 < length_2) {
-                    builtin_output_i64(index_2);
                     index_2 = index_2 + 1;
                 }
             };

@@ -189,8 +189,15 @@ namespace compiler::helios {
 		void debugPrint(query::Context& ctx, std::ostream& out) const;
 	};
 
+	STRONG_TYPEDEF_ID(HOUTUnitID);
+
 	/**
-	 * @brief Structure representing single HOUTUnit
+	 * @brief Structure representing single HOUTUnit.
+	 *
+	 * HOUT unit is an arbitrary code collections represented in HOUT IR.
+	 *
+	 * There are typically created for a given module, but there is no
+	 * assumption on what any given HOUTUnit should contain.
 	 */
 	struct HOUTUnit final {
 		// all first class citizens of module should be here:
@@ -200,6 +207,7 @@ namespace compiler::helios {
 		// * defined templates
 		// * vector/references to hout of submodules? -- not necessarily needed
 		// * what else?
+		HOUTUnitID id = HOUTUnitID::next();
 
 		std::vector<CRef<HOUTGlobalData>> glob_data;
 

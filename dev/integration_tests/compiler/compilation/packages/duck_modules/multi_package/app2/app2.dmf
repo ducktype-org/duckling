@@ -1,3 +1,5 @@
+import core.builtins.*;
+
 import lib_a;
 
 fun main() -> i64 = {

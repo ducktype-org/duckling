@@ -7,6 +7,7 @@
 #include <base/types/ints.hpp>
 
 #include <memory>
+#include <span>
 #include <string>
 #include <string_view>
 
@@ -34,6 +35,8 @@ namespace base {
 		RawView(RawView&&)      = default;
 
 		RawView(RawArray begin, usize size): begin{ begin }, arr_size{ size } {}
+
+		RawView(std::span<const std::byte> span): RawView(span.data(), span.size()) {}
 
 		RawView& operator=(const RawView&) = default;
 

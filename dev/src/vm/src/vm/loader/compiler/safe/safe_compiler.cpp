@@ -64,7 +64,8 @@ namespace vm::loader::compiler::safe {
 			[[maybe_unused]] const SafeCompiler&                                       compiler,     \
 			[[maybe_unused]] const vm::loader::compiler::detail::FunctionStackContext& stack_ctx,    \
 			[[maybe_unused]] base::HashMap<base::StrID, usize>&                        label_id_map, \
-			const FromType&                                                            opcode_arg    \
+			const FromType&                                                            opcode_arg,   \
+			code::StackStateID stack_state_id                                                        \
 		) {                                                                                          \
 			__VA_ARGS__                                                                              \
 		}                                                                                            \
@@ -77,7 +78,8 @@ namespace vm::loader::compiler::safe {
 			[[maybe_unused]] const SafeCompiler&                                       compiler,     \
 			[[maybe_unused]] const vm::loader::compiler::detail::FunctionStackContext& stack_ctx,    \
 			[[maybe_unused]] base::HashMap<base::StrID, usize>&                        label_id_map, \
-			const HIGH_FROM_TYPE&                                                      opcode_arg    \
+			const HIGH_FROM_TYPE&                                                      opcode_arg,   \
+			[[maybe_unused]] code::StackStateID stack_state_id                                       \
 		) {                                                                                          \
 			__VA_ARGS__                                                                              \
 		}                                                                                            \
@@ -86,16 +88,16 @@ namespace vm::loader::compiler::safe {
 
 		DEFINE_LOWER_ARGUMENT_IMPL_FOR_FAMILY(
 			low::opargs::PlaceDataArgumentType,
-			if(auto maybe_val = stack_ctx.locals_map.atMaybe(opcode_arg.var_name)) {
-				return getIntTypeSize(maybe_val.value()->offset);
+			if (auto&& maybe_offset = stack_ctx.function.local_stack.getByteOffset(stack_state_id, opcode_arg.var_name); maybe_offset.has_value()) {
+				return getIntTypeSize(*maybe_offset);
 			}
 			return compiler.low_program.getGlobals().at(opcode_arg.var_name)->global_buffer_offset | (1ULL << 63);
 		);
 
 		DEFINE_LOWER_ARGUMENT_IMPL_FOR_FAMILY(
 			low::opargs::PlaceBlockArgumentType,
-			if(auto maybe_val = stack_ctx.locals_map.atMaybe(opcode_arg.var_name)) {
-				return maybe_val.value()->stack_index;
+			if(auto maybe_val = stack_ctx.function.local_stack.getIdx(stack_state_id, opcode_arg.var_name)) {
+				return *maybe_val;
 			}
 			return compiler.low_program.getGlobals().at(opcode_arg.var_name)->global_block_idx | (1ULL << 63);
 		);
@@ -212,9 +214,12 @@ namespace vm::loader::compiler::safe {
 	u64 SafeCompiler::lowerArgument(
 		const vm::loader::compiler::detail::FunctionStackContext& ctx,
 		base::HashMap<base::StrID, usize>&                        label_id_map,
-		const FromType&                                           opcode_arg
+		const FromType&                                           opcode_arg,
+		code::StackStateID                                        stack_state
 	) {
-		return detail::LowerArgumentImpl<ToType>::lower(*this, ctx, label_id_map, opcode_arg);
+		return detail::LowerArgumentImpl<ToType>::lower(
+			*this, ctx, label_id_map, opcode_arg, stack_state
+		);
 	}
 
 	void SafeCompiler::linkLabelArguments(
@@ -235,8 +240,9 @@ namespace vm::loader::compiler::safe {
 		detail::SafeMicroBytecodeBuilder                    builder{ *this, ctx };
 		std::vector<vm::low::LowFuncData::InstructionRange> instruction_mapping;
 
-		for (const auto& instr: ctx.function.body) {
-			auto instruction_range = builder.add(instr);
+		for (usize i = 0; i < ctx.function.body.size(); i++) {
+			builder.curr_state     = ctx.function.stack_states[i];
+			auto instruction_range = builder.add(ctx.function.body[i]);
 			instruction_mapping.push_back(instruction_range);
 		}
 
@@ -246,7 +252,9 @@ namespace vm::loader::compiler::safe {
 		return { std::move(micro_bytecode), std::move(instruction_mapping) };
 	}
 
-	void SafeCompiler::compileNewFunctions(const std::vector<code::Function>& new_functions) {
+	void SafeCompiler::compileNewFunctions(
+		const std::vector<code::valid_function::ValidFunction>& new_functions
+	) {
 		for (const auto& function: new_functions) {
 			vm::loader::compiler::detail::FunctionStackContext ctx
 				= calculateStackContext(function);

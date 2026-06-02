@@ -79,6 +79,8 @@ namespace vm::loader::compiler::safe::detail {
 #endif
 
 	public:
+		code::StackStateID curr_state = code::LocalStackDb::EMPTY;
+
 		SafeMicroBytecodeBuilder(
 			safe::SafeCompiler&                                       compiler,
 			const vm::loader::compiler::detail::FunctionStackContext& ctx
@@ -106,8 +108,11 @@ namespace vm::loader::compiler::safe::detail {
 		bool is_control_flow               = true;
 
 		TypeCRef getPlaceType(const opargs::ArgumentType auto p) const {
-			if (auto maybe_val = ctx.locals_map.atMaybe(p.var_name)) {
-				code::valid_type::ValidTypeID type_id = maybe_val.value()->type;
+			if (auto maybe_val = ctx.function.local_stack.getTypeName(curr_state, p.var_name)) {
+				code::valid_type::ValidTypeID type_id = compiler.high_program.getTypeContext()
+				                                            .getCurrentTypes()
+				                                            .at(*maybe_val)
+				                                            ->getID();
 				return compiler.getLowProgram()->getTypes().at(TypeID(type_id.asInt()));
 			}
 			return compiler.getLowProgram()->getGlobals().at(p.var_name)->type;
@@ -120,7 +125,7 @@ namespace vm::loader::compiler::safe::detail {
 				return u64(arg);
 			} else {
 				return compiler.template lowerArgument<std::remove_cvref_t<HighArg>, LowArg>(
-					ctx, label_name_to_id, arg
+					ctx, label_name_to_id, arg, curr_state
 				);
 			}
 		}
@@ -151,7 +156,7 @@ namespace vm::loader::compiler::safe::detail {
 
 		void addLabel(opargs::Label label) {
 			usize lid = compiler.lowerArgument<opargs::Label, low::opargs::Label>(
-				ctx, label_name_to_id, label
+				ctx, label_name_to_id, label, curr_state
 			);
 			label_id_to_offset.put(lid, next_instruction_index);
 		}

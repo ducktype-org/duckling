@@ -1,3 +1,5 @@
+import core.builtins.*;
+
 # This test checks that a class containing a field which carries no information compiles successfully.
 
 class UnitFieldClass {

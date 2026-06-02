@@ -74,5 +74,14 @@ namespace vm::loader {
 		std::expected<base::Optional<dia::SourcePosition>, MappingException> mapCodeCollectionPositionToFilePosition(
 			FatBytecodePosition position
 		) const;
+
+		/**
+		 * @brief Gets the first code collection instruction that starts in the provided file line.
+		 * @return Either the mapped `FatBytecodePosition` on success, or a nullopt if no such
+		 * instruction exists.
+		 */
+		base::Optional<FatBytecodePosition> mapFileLineToCodeCollectionPosition(
+			const fs::File& file, usize line
+		) const;
 	};
 }

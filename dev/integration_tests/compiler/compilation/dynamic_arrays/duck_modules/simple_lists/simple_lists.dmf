@@ -1,11 +1,13 @@
+import core.builtins.*;
+
 fun printList(list: ref List[i64]) -> () = {
-    builtin_output_string("8888888888888888888\n");
+    print("8888888888888888888\n");
     var i = 0;
     while (i < len list) {
         builtin_output_i64(list[i]);
         i = i + 1;
     }
-    builtin_output_string("8888888888888888888\n");
+    print("8888888888888888888\n");
 }
 
 fun listByRef(list: ref List[i64]) -> () = {
