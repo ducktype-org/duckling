@@ -67,10 +67,7 @@ def split_section_relocations(section: ELFSection, stencils: list[Stencil]):
 
         idx = bisect.bisect_right(beginnings, rel_offset, key=stencil_offset)
         if idx == 0:
-            print(f"Ignored: {rel_offset}")
             continue
-
-        print(f"Found: {idx - 1}")
         stencil = stencils[idx - 1]
         if rel_offset < stencil.place + stencil.size:
             stencil.holes.append(parse_relocation(relocation, stencil))
@@ -94,7 +91,6 @@ def parse(llvm_readobj: str, binary: str, verbose: bool, shared: bool) -> list[S
         section["Section"] for section in file_info["Sections"]
     ]
 
-    print(f"sections: {len(sections)}")
     stencils = [
         parse_stencil_section(section)
         for section in sections
@@ -110,8 +106,6 @@ def parse(llvm_readobj: str, binary: str, verbose: bool, shared: bool) -> list[S
             print("No relocations section in a shared object")
             exit(2)
         split_section_relocations(rel, stencils)
-        for stencil in stencils:
-            print(len(stencil.holes))
         return stencils
 
 def order_stencils(stencils: list[Stencil], order):
@@ -122,10 +116,6 @@ def order_stencils(stencils: list[Stencil], order):
             continue
         idx = order[stencil.name[len("stencil_") :]]
         array[idx] = stencil
-        
-    for stencil in array:
-        opcode = order[stencil.name[len("stencil_") :]] if stencil.name != no_stencil.name else -1
-        print(f"name: {stencil.name}, opcode: {opcode}")
 
     for stencil in stencils:
         if stencil.name.startswith("stencil_special"):
