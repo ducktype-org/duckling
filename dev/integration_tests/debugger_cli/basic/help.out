@@ -8,6 +8,7 @@ Commands:
   (p)ause     - pause running VM
   (c)ontinue  - resume VM execution
   (s)tatus    - write current VM status
+  (pos)ition  - write current position
 
 Commands:
   (q)uit      - exit the debugger
@@ -16,6 +17,7 @@ Commands:
   (p)ause     - pause running VM
   (c)ontinue  - resume VM execution
   (s)tatus    - write current VM status
+  (pos)ition  - write current position
 
 Exiting debugger...
 
