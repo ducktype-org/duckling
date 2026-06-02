@@ -7,7 +7,6 @@ use crate::quackpack::core::Manifest;
 use crate::quackpack::core::compile::artifacts_layout::ArtifactsLayout;
 use crate::quackpack::core::storage::freeze::FreezeDep;
 use crate::quackpack::core::{Dependencies, Profiles};
-use crate::quackpack::schemas::frontmatter::FrontMatter as FrontMatterSchema;
 use crate::quackpack::schemas::manifest::Manifest as ManifestSchema;
 
 #[derive(Clone)]
@@ -117,13 +116,13 @@ impl fmt::Debug for PackageInner {
 #[derive(Debug)]
 pub struct FrontMatterScript {
     path: PathBuf,
-    original_schema: FrontMatterSchema,
+    original_schema: ManifestSchema,
     manifest: Manifest,
 }
 
 impl FrontMatterScript {
     /// Create a new [`FrontMatterScript`].
-    pub fn new(path: PathBuf, original_schema: FrontMatterSchema, manifest: Manifest) -> Self {
+    pub fn new(path: PathBuf, original_schema: ManifestSchema, manifest: Manifest) -> Self {
         Self {
             path,
             original_schema,
@@ -137,7 +136,7 @@ impl FrontMatterScript {
     }
 
     /// Get the schema of the script's frontmatter.
-    pub fn original_schema(&self) -> &FrontMatterSchema {
+    pub fn original_schema(&self) -> &ManifestSchema {
         &self.original_schema
     }
 

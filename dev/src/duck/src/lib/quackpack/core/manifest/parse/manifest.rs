@@ -20,6 +20,9 @@ pub(crate) fn parse(
     root: &Path,
     ctx: &DuckContext,
 ) -> QuackResult<Manifest> {
+    if schema.import.is_some() {
+        qp_bail!("`import` field is prohibited in manifests")
+    }
     let Some(ref metadata) = schema.metadata else {
         qp_bail!("missing the obligatory section `metadata`")
     };

@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use tempfile::{TempDir, tempdir};
 
 use super::parse_manifest;
-use crate::quackpack::core::manifest::parse::frontmatter::_parse_frontmatter;
+use crate::quackpack::core::manifest::parse::frontmatter::_try_parse_frontmatter;
 use crate::quackpack::core::{BranchOrTag, OptLevel, Profile, Source, Version};
 use crate::util::path_ops_ext::PathOpsExt;
 use crate::{DuckContext, QpContext, StrId};
@@ -1081,7 +1081,9 @@ dependencies:
 "#,
     );
     let ctx = DuckContext::default();
-    let frontmatter = _parse_frontmatter(frontmatter_path, &ctx).unwrap().unwrap();
+    let frontmatter = _try_parse_frontmatter(frontmatter_path, &ctx)
+        .unwrap()
+        .unwrap();
     let _ = frontmatter
         .dependencies()
         .get_by_name(StrId::new("a"))
@@ -1103,7 +1105,7 @@ dependencies:
 "#,
     );
     let ctx = DuckContext::default();
-    let err = _parse_frontmatter(frontmatter_path.clone(), &ctx).unwrap_err();
+    let err = _try_parse_frontmatter(frontmatter_path.clone(), &ctx).unwrap_err();
     assert_eq!(
         err.to_string(),
         make_errors_message_frontmatter(
@@ -1146,7 +1148,7 @@ dependencies:
         )
         .unwrap();
     let ctx = DuckContext::default();
-    let frontmatter = _parse_frontmatter(importing, &ctx).unwrap().unwrap();
+    let frontmatter = _try_parse_frontmatter(importing, &ctx).unwrap().unwrap();
     let _ = frontmatter
         .dependencies()
         .get_by_name(StrId::new("a"))
@@ -1165,14 +1167,14 @@ import: y
 "#,
     );
     let ctx = DuckContext::default();
-    let err = _parse_frontmatter(frontmatter_path.clone(), &ctx).unwrap_err();
+    let err = _try_parse_frontmatter(frontmatter_path.clone(), &ctx).unwrap_err();
     assert_eq!(
         err.to_string(),
         make_errors_message_frontmatter(
             &dir,
             [
                 &format!(
-                    "while reading the frontmatter imported by `{}` at `{}`",
+                    "while reading the file imported by `{}` at `{}`",
                     frontmatter_path.display(),
                     dir.path().join("y").display(),
                 ),
@@ -1199,7 +1201,7 @@ import: y
         )
         .unwrap();
     let ctx = DuckContext::default();
-    assert!(_parse_frontmatter(script, &ctx).unwrap().is_none());
+    assert!(_try_parse_frontmatter(script, &ctx).unwrap().is_none());
 }
 
 #[test]
@@ -1217,7 +1219,7 @@ import: y
         )
         .unwrap();
     let ctx = DuckContext::default();
-    let err = _parse_frontmatter(script, &ctx).unwrap_err();
+    let err = _try_parse_frontmatter(script, &ctx).unwrap_err();
     assert_eq!(
         err.to_string(),
         make_errors_message_frontmatter(&dir, ["frontmatter begins but does not end"])
