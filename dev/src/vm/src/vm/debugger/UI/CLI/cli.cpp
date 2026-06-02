@@ -158,9 +158,8 @@ namespace vm::debugger::cli {
 		);
 	}
 
-	void CLIDebugger::position(
-		std::expected<vm::api::response::CodePosition, vm::api::ApiError>& response
-	) {
+	void CLIDebugger::position() {
+		auto response = debugger.getCurrentPosition();
 		if (response.has_value()) {
 			auto            pos = response.value();
 			std::lock_guard lk(output_mutex);
