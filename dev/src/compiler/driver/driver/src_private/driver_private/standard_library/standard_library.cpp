@@ -7,6 +7,7 @@
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <algorithm>
+#include <unordered_map>
 
 namespace compiler::driver {
 
@@ -74,6 +75,7 @@ namespace compiler::driver {
 				return base::BAD;
 			}
 			RawPackageInfo raw_package_info{
+				.package_id   = base::StrID(config.name),
 				.package_name = base::StrID(config.name),
 				.version      = base::StrID("not_supported"),
 				.package_path = package_path,
@@ -83,13 +85,17 @@ namespace compiler::driver {
 
 			for (const auto& dep_name: config.dependencies) {
 				raw_package_info.dependencies.push_back(RawDependencyInfo{
-					.package_name = base::StrID(dep_name),
-					.alias        = {},
+					.package_id = base::StrID(dep_name),
+					.alias      = {},
 				});
 			}
 
+			std::unordered_map<base::StrID, base::StrID> id_to_name;
+			for (const auto& cfg: STD_PACKAGES_CONFIG)
+				id_to_name[base::StrID(cfg.name)] = base::StrID(cfg.name);
+
 			auto package_info
-				= compiler::frontend::packages::createPackageInfo(raw_package_info, report);
+				= compiler::frontend::packages::createPackageInfo(raw_package_info, id_to_name, report);
 			if (!package_info.has_value()) return base::BAD;
 			global_state::setters::addPackage(*package_info);
 		}
@@ -99,10 +105,11 @@ namespace compiler::driver {
 	namespace {
 		bool hasDependency(
 			const std::vector<compiler::frontend::packages::RawDependencyInfo>& dependencies,
-			base::StrID                                                         target_package
+			base::StrID                                                         target_package_id
 		) {
 			return std::ranges::any_of(dependencies, [&](const auto& dep) {
-				return dep.alias == target_package;
+				return dep.package_id == target_package_id
+					|| dep.alias.copyValueOr(base::StrID()) == target_package_id;
 			});
 		}
 
@@ -122,8 +129,8 @@ namespace compiler::driver {
 					return base::BAD;
 				}
 				package_info.dependencies.push_back(compiler::frontend::packages::RawDependencyInfo{
-					.package_name = base::StrID(config.name),
-					.alias        = {},
+					.package_id = base::StrID(config.name),
+					.alias      = {},
 				});
 			}
 			return base::OK;

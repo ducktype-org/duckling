@@ -450,6 +450,7 @@ clah::Clah getClahForMain() {
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
 							.packages_info = {
 								compiler::frontend::packages::RawPackageInfo{
+									.package_id   = base::StrID(package_name),
 									.package_name = base::StrID(package_name),
 									.version      = base::StrID("not_supported"),
 									.package_path = fs::FilePath(path_to_compile.getFilePath()),
@@ -583,6 +584,7 @@ clah::Clah getClahForMain() {
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
 							.packages_info = {
 								compiler::frontend::packages::RawPackageInfo{
+									.package_id   = base::StrID(package_name),
 									.package_name = base::StrID(package_name),
 									.version      = base::StrID("not_supported"),
 									.package_path = path_to_compile.getFilePath(),
@@ -849,6 +851,7 @@ clah::Clah getClahForMain() {
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
 									.packages_info = {
 										compiler::frontend::packages::RawPackageInfo{
+											.package_id   = base::StrID(package_name),
 											.package_name = base::StrID(package_name),
 											.version      = base::StrID("not_supported"),
 											.package_path = path_to_compile.getFilePath(),

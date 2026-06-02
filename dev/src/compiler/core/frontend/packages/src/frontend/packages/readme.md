@@ -1,21 +1,28 @@
 # Frontend Packages
 
 Resolved package metadata used by the rest of the frontend: package id,
-version, feature flags and the list of direct dependencies (with their
-aliases). Built from manifest input (`RawPackageInfo`) and stored in
-global compiler state, then accessed from queries through `*AccessLocked`
-wrappers that participate in the incremental query framework.
+import name, version, feature flags and the list of direct dependencies
+(with their aliases). Built from manifest input (`RawPackageInfo`) and
+stored in global compiler state, then accessed from queries through
+`*AccessLocked` wrappers that participate in the incremental query
+framework.
 
 ## Type layout
 
-- **`RawPackageInfo` / `RawDependencyInfo`** — plain manifest data
-  (`name`, `path`, `version`, `features`, `dependencies`). Produced by
+- **`RawPackageInfo`** — plain manifest data (`package_id`, `package_name`,
+  `path`, `version`, `features`, `dependencies`). `package_id` uniquely
+  identifies the package; `package_name` is the import name. Produced by
   `fromJson`. Consumed by `createPackageInfo` to build a `PackageInfo`.
+- **`RawDependencyInfo`** — plain dependency data (`package_id`, `alias`).
+  `package_id` references a declared package. The effective alias defaults
+  to the target package's `name` (looked up via an `id_to_name` map), not
+  the dependency's `id`.
 - **`PackageInfo`** — resolved package: keeps the root `ModuleID`,
-  `version`, `features`, dependency list, and a stable hash derived from
-  the package id. Lives in global state.
+  `m_name` (import name), `version`, `features`, dependency list, and a
+  stable hash derived from the package id. Lives in global state.
 - **`PackageDependencyInfo`** — `(package_id, alias)` pair. The `alias`
-  defaults to `package_id` when none is set in the manifest.
+  defaults to the target package's name (looked up from `id_to_name`) when
+  none is set in the manifest.
 
 ## Why locks (`*AccessLocked`)
 
@@ -52,7 +59,8 @@ correctly invalidates dependents.
 1. Driver reads the manifest JSON.
 2. `RawPackageInfo::fromJson` produces a `RawPackageInfo` (validates the
    shape, reports diagnostics).
-3. `createPackageInfo(raw, report)` loads the module tree under
-   `package_path` and constructs a `PackageInfo`.
+3. `createPackageInfo(raw, id_to_name, report)` loads the module tree under
+   `package_path`, resolves dependency aliases via `id_to_name`, and
+   constructs a `PackageInfo`.
 4. The `PackageInfo` is stored in global state and looked up by id from
    queries via `PackageAccessLocked`.

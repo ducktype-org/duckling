@@ -34,6 +34,7 @@ namespace global_state {
 		void addPackage(compiler::frontend::ModuleID root_module) {
 			packages.emplace_back(
 				root_module,
+				compiler::frontend::getModuleRef(root_module)->getPackage().illegalAccess().getID(),
 				base::StrID("not_supported"),
 				std::vector<base::StrID>{},
 				std::vector<compiler::frontend::packages::PackageDependencyInfo>{}

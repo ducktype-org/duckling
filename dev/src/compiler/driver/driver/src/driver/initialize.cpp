@@ -29,6 +29,7 @@
 #include <query_framework/module_flags/module_flags.hpp>
 
 #include <iostream>
+#include <unordered_map>
 
 namespace compiler::driver {
 
@@ -93,8 +94,14 @@ namespace compiler::driver {
 				if (addStandardLibraryDependencies(packages_info, report).isBad()) return base::BAD;
 			}
 
+			std::unordered_map<base::StrID, base::StrID> id_to_name;
+			for (const auto& pkg: packages_info)
+				id_to_name[pkg.package_id] = pkg.package_name;
+			for (const auto& cfg: STD_PACKAGES_CONFIG)
+				id_to_name[base::StrID(cfg.name)] = base::StrID(cfg.name);
+
 			for (const auto& package_info: packages_info) {
-				auto pkg = compiler::frontend::packages::createPackageInfo(package_info, report);
+				auto pkg = compiler::frontend::packages::createPackageInfo(package_info, id_to_name, report);
 				if (pkg)
 					global_state::setters::addPackage(*pkg);
 				else
@@ -198,6 +205,7 @@ namespace compiler::driver {
 		auto package_root_file = fs::FileManager::createRandomVirtualFile("", ".dmf");
 		std::vector<compiler::frontend::packages::RawPackageInfo> repl_packages_info{
 			compiler::frontend::packages::RawPackageInfo{
+				.package_id   = base::StrID("repl_session"),
 				.package_name = base::StrID("repl_session"),
 				.version      = base::StrID("0.1.0"),
 				.package_path = package_root_file.getFilePath(),

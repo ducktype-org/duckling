@@ -7,6 +7,7 @@
 #include <json/diagnostics.hpp>
 #include <nlohmann/json.hpp>
 
+#include <unordered_map>
 #include <unordered_set>
 #include <utility>
 
@@ -70,8 +71,19 @@ namespace compiler::driver {
 			result = base::BAD;
 		}
 
+		std::unordered_set<base::StrID> package_ids;
 		std::unordered_set<base::StrID> package_names;
+		std::unordered_map<base::StrID, base::StrID> id_to_name;
 		for (const auto& pkg: packages) {
+			if (!package_ids.insert(pkg.package_id).second) {
+				report(
+					base::strConcat("Duplicate package id in manifest: ", pkg.package_id.str()),
+					"Two or more packages share the same id in the packages list. "
+					"Each package id must be unique.",
+					true
+				);
+				result = base::BAD;
+			}
 			if (!package_names.insert(pkg.package_name).second) {
 				report(
 					base::strConcat("Duplicate package name in manifest: ", pkg.package_name.str()),
@@ -81,17 +93,18 @@ namespace compiler::driver {
 				);
 				result = base::BAD;
 			}
+			id_to_name[pkg.package_id] = pkg.package_name;
 		}
 
 		for (const auto& pkg: packages) {
-			std::unordered_set<base::StrID> dep_package_names;
+			std::unordered_set<base::StrID> dep_ids;
 			std::unordered_set<base::StrID> dep_aliases;
 			for (const auto& dep: pkg.dependencies) {
-				if (!package_names.contains(dep.package_name)) {
+				if (!package_ids.contains(dep.package_id)) {
 					report(
 						base::strConcat(
 							"Unknown dependency package: ",
-							dep.package_name.str(),
+							dep.package_id.str(),
 							" (in package ",
 							pkg.package_name.str(),
 							")"
@@ -101,11 +114,11 @@ namespace compiler::driver {
 					);
 					result = base::BAD;
 				}
-				if (!dep_package_names.insert(dep.package_name).second) {
+				if (!dep_ids.insert(dep.package_id).second) {
 					report(
 						base::strConcat(
 							"Duplicate dependency: ",
-							dep.package_name.str(),
+							dep.package_id.str(),
 							" (in package ",
 							pkg.package_name.str(),
 							")"
@@ -115,7 +128,7 @@ namespace compiler::driver {
 					);
 					result = base::BAD;
 				}
-				const base::StrID effective_alias = dep.alias.copyValueOr(dep.package_name);
+				base::StrID effective_alias = dep.alias.copyValueOr(id_to_name[dep.package_id]);
 				if (!dep_aliases.insert(effective_alias).second) {
 					report(
 						base::strConcat(
@@ -126,8 +139,8 @@ namespace compiler::driver {
 							")"
 						),
 						"A package cannot have two dependencies sharing the same alias. "
-						"A dependency without an explicit alias uses its package name as the "
-						"alias.",
+						"A dependency without an explicit alias uses its target package's name "
+						"as the alias.",
 						true
 					);
 					result = base::BAD;

@@ -63,6 +63,7 @@ protected:
 		global_state::setters::setGlobalLogger(makeBox<dia_int::Logger>());
 		auto subpath_package = [&](const std::string& subpath) {
 			return compiler::frontend::packages::RawPackageInfo{
+				.package_id   = base::StrID(subpath),
 				.package_name = base::StrID(subpath),
 				.version      = base::StrID("0.1.0"),
 				.package_path = fs::FilePath(path("modules/" + subpath + "/")),
