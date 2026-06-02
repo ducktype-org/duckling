@@ -411,15 +411,12 @@ namespace compiler::repl {
 
 	// Necessary for autocompletion in Jupyter, it prints all possible completions for a given prefix.
 	void FrontendReplxxImplementation::printCompletions(std::string_view prefix) const {
-		for (const auto& kw : DUCKLING_KEYWORDS) {
+		for (const auto& kw: DUCKLING_KEYWORDS)
 			if (kw.starts_with(prefix)) std::cout << kw << "\n";
-		}
-		for (const auto& tp : DUCKLING_TYPES) {
+		for (const auto& tp: DUCKLING_TYPES)
 			if (tp.starts_with(prefix)) std::cout << tp << "\n";
-		}
-		for (const auto& uw : m_user_words) {
+		for (const auto& uw: m_user_words)
 			if (uw.starts_with(prefix)) std::cout << uw << "\n";
-		}
 		std::cout << "End_of_completions" << std::flush;
 	}
 

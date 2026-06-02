@@ -24,8 +24,8 @@ namespace compiler::repl {
 		void        clearHistory();
 		void        clearScreen();
 		void        printHelp() const;
-		void 		printCompletions(std::string_view prefix) const;
-		
+		void        printCompletions(std::string_view prefix) const;
+
 	private:
 		/// Setup replxx key bindings, callbacks, and multiline behavior.
 		void setupKeyBindings();
