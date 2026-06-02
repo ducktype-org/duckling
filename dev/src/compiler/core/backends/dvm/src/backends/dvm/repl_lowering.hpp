@@ -77,11 +77,7 @@ namespace compiler::backend_vm {
 		/**
 		 * @brief Lower a LIR global with its constructor and destructor.
 		 */
-		const vm::code::GlobalData& lowerAndKeepLirGlobal(
-			const lir::LIRGlobal&                     lir_global,
-			base::Optional<base::CRef<lir::Function>> global_ctor,
-			base::Optional<base::CRef<lir::Function>> global_dtor
-		);
+		const vm::code::GlobalData& lowerAndKeepLirGlobal(const lir::LIRGlobalData& lir_global);
 
 
 		/**

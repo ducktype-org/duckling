@@ -37,7 +37,7 @@ Execution model notes:
 src/repl/
 ├── session.hpp            # REPL session interface
 ├── session.cpp            # Session orchestration and execution flow
-├── helper_structs.hpp     # ReplConfig, ReplResult, ReplStatement
+├── helpers.hpp            # ReplConfig, ReplResult, ReplStatement
 ├── frontend.hpp           # Frontend abstraction
 ├── frontend.cpp           # Frontend delegation
 └── frontend_implementations/
