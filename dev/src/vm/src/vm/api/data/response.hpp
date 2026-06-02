@@ -5,6 +5,7 @@
 
 #include <base/pointers/box.hpp>
 
+#include "string_id/string_id.hpp"
 #include <diagnostic/source_position.hpp>
 
 #include <vm/core/vmvalue/vmvalueref.hpp>
@@ -42,8 +43,10 @@ namespace vm::api {
 		struct StackFrameData {
 			struct FrameVar {
 				// @todo: #2367 should express name in CodeCollection instead of offset in LowVMProgram
-				u64        offset = 0;
-				VMValueRef value;
+				u64         offset = 0;
+				base::StrID name;
+				base::StrID type;
+				VMValueRef  value;
 			};
 
 			base::StrID           function_name;

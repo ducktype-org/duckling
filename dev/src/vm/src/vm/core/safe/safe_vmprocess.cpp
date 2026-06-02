@@ -334,6 +334,30 @@ namespace vm {
 						api::OtherError{ "Frame index out of bounds" } });
 				Frame& frame = opt_thread.value()->getStackFrame(frame_index);
 
+				auto& low_func = *frame.current_function;
+				auto  low_pos  = low::LowCodePosition{
+					  .function          = &low_func,
+					  .instruction_index = static_cast<u64>(frame.instr - low_func.bc.data()),
+				};
+
+				auto high_pos = compiler.mapLowVMProgramPositionToCodeCollectionPosition(low_pos);
+
+				if (!high_pos)
+					return std::unexpected(api::ApiError{
+						api::OtherError{ "couldn't map the low-pos to high-pos" } });
+
+
+				auto func_name = low_func.name;
+				auto opt_func  = loader.getHighProgram()->functions().atMaybe(func_name);
+
+				if (!opt_func)
+					return std::unexpected(
+						api::ApiError{ api::OtherError{ "FatBytecode-representation not found" } }
+					);
+
+				auto func_ref    = *opt_func;
+				auto stack_state = func_ref->stack_states.at(high_pos->instruction_index);
+
 				std::vector<api::response::StackFrameData::FrameVar> frame_vars;
 				for (Block* block_ptr:
 				     std::span(frame.local_block_ref_stack_base, frame.local_block_ref_stack_end)) {
@@ -341,8 +365,11 @@ namespace vm {
 					u64        offset = base::safeIntConv<u64>(
                         memory.getBlockViewUnsafe(block).getBegin() - frame.local_stack
                     );
+					u64 block_offset =  base::safeIntConv<u64>(block_ptr - frame.local_block_ref_stack_base);
 					frame_vars.push_back(api::response::StackFrameData::FrameVar{
 						.offset = offset,
+						.name = func_ref->local_stack.getName(stack_state, block_offset),
+						.type = func_ref->local_stack.getTypeName(stack_state, block_offset),
 						.value  = VMValueRef(*this, memory.getBlockType(block), Pointer(block, 0)),
 					});
 				}
