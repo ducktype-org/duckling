@@ -218,6 +218,19 @@ namespace compiler::frontend::packages {
 			auto target_package = std::ranges::find_if(all_packages, [&](const auto& pkg) {
 				return pkg.package_id == dependency.package_id;
 			});
+			if (target_package == all_packages.end()) {
+				report(
+					base::strConcat(
+						"Package dependency not found and should be filtered before this "
+						"function: ",
+						dependency.package_id.strView(),
+						"."
+					),
+					std::string{},
+					true
+				);
+				continue;
+			}
 			package_dependencies.push_back(PackageDependencyInfo{
 				.package_id = dependency.package_id,
 				.alias      = dependency.alias.copyValueOr(target_package->package_name),

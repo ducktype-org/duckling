@@ -168,13 +168,12 @@ namespace compiler::frontend::packages {
 	/**
 	 * @brief Resolve a RawPackageInfo into a PackageInfo by loading its module tree.
 	 * Pure — does not log; routes errors via @p report.
-	 * @param id_to_name Mapping from package id to package name, used to resolve default
-	 * aliases for dependencies that don't specify an explicit alias.
+	 * @param all_packages Vector of all available package infos, used to resolve dependencies.
 	 * @return The loaded PackageInfo or empty if an error was reported.
 	 */
 	base::Optional<PackageInfo> createPackageInfo(
 		const RawPackageInfo&              package_info,
-		const std::vector<RawPackageInfo>& id_to_name,
+		const std::vector<RawPackageInfo>& all_packages,
 		const DiagnosticReporter&          report
 	);
 
