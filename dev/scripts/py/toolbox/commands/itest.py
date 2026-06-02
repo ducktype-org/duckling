@@ -42,6 +42,12 @@ from click import command, option
     help="Path to a log file. A log file contains e.g. dumps of program incorrect IO",
 )
 @option(
+    "--no-determinism-check",
+    is_flag=True,
+    default=False,
+    help="Disable concurrent deterministic compilation checks for all tests.",
+)
+@option(
     "-t",
     "--filter",
     type=str,

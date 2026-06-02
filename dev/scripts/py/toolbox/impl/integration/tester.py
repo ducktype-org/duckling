@@ -33,6 +33,7 @@ def tester_impl(
         verbose: bool,
         log_file: str | Path,
         build_dir: str,
+        no_determinism_check: bool,
 ):
     """
     The driver function of Duckling Integration Tests framework.
@@ -55,6 +56,8 @@ def tester_impl(
         "build_dir": str(Path(build_dir).absolute()),
         "dev_dir": str(get_dev_directory()),
     }
+    if no_determinism_check:
+        user_values["enable_conc_deterministic_tests"] = "false"
 
     test_set = load_tests("integration_tests", user_values=user_values)
 
