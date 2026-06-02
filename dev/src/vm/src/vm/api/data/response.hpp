@@ -42,7 +42,6 @@ namespace vm::api {
 
 		struct StackFrameData {
 			struct FrameVar {
-				// @todo: #2367 should express name in CodeCollection instead of offset in LowVMProgram
 				u64         offset = 0;
 				base::StrID name;
 				base::StrID type;
