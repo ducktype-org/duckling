@@ -309,12 +309,12 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		Ref<dia_int::Logger> getLoggerMut() {
+		Ref<dia_int::Logger> getLoggerMut() const {
 			return file->getIntLogger();
 		}
 
 		[[nodiscard]] bool hasErrors() const {
-			return file->getLogger()->bad() || file->getIntLogger()->hasErrors();
+			return file->getIntLogger()->hasErrors();
 		}
 
 		[[nodiscard]]

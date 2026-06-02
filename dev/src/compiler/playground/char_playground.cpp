@@ -1,4 +1,4 @@
-#include <diagnostic/logger.hpp>
+#include <diagnostic_interactive/logger.hpp>
 #include <filesystem/encoding.hpp>
 #include <filesystem/file.hpp>
 #include <init/init.hpp>
@@ -15,8 +15,7 @@ int main(int argc, char** argv) {
 
 	file->decode<fs::Encoding::UTF8>();
 
-	if (file->getLogger()->bad()) {
-		file->getLogger()->dumpLog(true, std::cerr);
+	if (file->getIntLogger()->hasErrors()) {
 		return 0;
 	}
 

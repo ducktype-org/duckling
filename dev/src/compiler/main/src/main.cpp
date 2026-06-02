@@ -33,7 +33,7 @@
 #include <base/types/ok_bad.hpp>
 
 #include <clah/clah.hpp>
-#include <diagnostic/logger.hpp>
+#include <diagnostic_interactive/logger.hpp>
 #include <filesystem/file.hpp>
 #include <filesystem/file_path.hpp>
 #include <init/init.hpp>
@@ -352,9 +352,7 @@ clah::Clah getClahForMain() {
 					bool tokenize_ok = token_file->tokenize();
 
 					if (not tokenize_ok) {
-						std::cout << "Tokenization errors: ";
-						token_file->getLogger()->dumpLog(true, std::cout);
-						std::cout << "\n";
+						std::cout << "Tokenization errors.\n";
 						return 1;
 					} else {
 						std::cout << "This prints only top-level tokens (will not print tokens "
@@ -403,10 +401,7 @@ clah::Clah getClahForMain() {
 
 					int exit_code = 0;
 
-					if (pst.getLogger()->messageCount() != 0) {
-						std::cout << "Errors and messages: \n";
-						pst.getLogger()->dumpLog(true, std::cout);
-						std::cout << "\n\n";
+					if (pst.hasErrors()) {
 						exit_code = 1;
 					}
 
