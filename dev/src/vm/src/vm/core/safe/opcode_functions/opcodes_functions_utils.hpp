@@ -136,12 +136,12 @@ inline static Ref<vm::ShadowPointerBlock> getShadowPointerBlockRefFromArg(
 
 #define READ_SHADOW_BLOCK_REF_FROM_ARG(ARG) \
 	getShadowBlockRefFromArg( \
-		FT_THREAD, FT_RT.shadow_block_ref_stack_base, ARG \
+		FT_THREAD, sf->local_shadow_block_ref_stack_base, ARG \
 	)
 
 #define READ_SHADOW_POINTER_BLOCK_REF_FROM_ARG(ARG) \
 	getShadowPointerBlockRefFromArg( \
-		FT_THREAD, FT_RT.shadow_pointer_block_ref_stack_base, ARG \
+		FT_THREAD, sf->local_shadow_pointer_block_ref_stack_base, ARG \
 	)
 
 inline static vm::ShadowPointer updateShadowPointerAssignment(
