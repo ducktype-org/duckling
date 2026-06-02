@@ -175,13 +175,13 @@ namespace vm {
 		FUNCTION_CONT(1);                                                                 \
 	}
 
-#define DEFINE_NEGATION_OP(NAME, BITS_SIZE, TYPE)                                 \
-	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_p##BITS_SIZE)(FUNCTION_ARGS) {         \
-		{                                                                         \
-			auto value = READ_FROM_PLACE_ARG(TYPE, instr->arg0);                  \
-			WRITE_TO_PLACE_ARG(TYPE, instr->arg0, value * static_cast<TYPE>(-1)); \
-		}                                                                         \
-		FUNCTION_CONT(1);                                                         \
+#define DEFINE_NEGATION_OP(NAME, BITS_SIZE, TYPE)                                \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_p##BITS_SIZE)(FUNCTION_ARGS) {        \
+		{                                                                        \
+			auto value = READ_FROM_PLACE_ARG(TYPE, instr->arg0);                 \
+			WRITE_TO_PLACE_ARG(TYPE, instr->arg0, value* static_cast<TYPE>(-1)); \
+		}                                                                        \
+		FUNCTION_CONT(1);                                                        \
 	}
 
 // @TODO: #1216 Check for over/under flows.
@@ -356,7 +356,6 @@ namespace vm {
 				frame       = thread.runtime_data.frame_stack_current;
 				instr       = frame->instr;
 				local_stack = frame->local_stack;
-
 			}
 		}
 		FUNCTION_CONT(0);
@@ -524,9 +523,9 @@ namespace vm {
 			       > callee_frame->local_block_ref_stack_base) {
 				auto block           = Ref(callee_frame->local_block_ref_stack_end[-1]);
 				u64  block_ref_count = u64(
-					callee_frame->local_block_ref_stack_end
-					- callee_frame->local_block_ref_stack_base
-				);
+                    callee_frame->local_block_ref_stack_end
+                    - callee_frame->local_block_ref_stack_base
+                );
 
 				// We're returning from a non-void function, so the last `ret_count` blocks on the
 				// stack are the return values. They are being used by the caller so we don't free them.
@@ -681,8 +680,8 @@ namespace vm {
 		{
 			const auto type_size = instr[1].arg0;
 			auto       dst       = getBytePtrFromPlaceArg(
-				local_stack, thread.runtime_data.global_data_buffer_base, instr->arg0
-			);
+                local_stack, thread.runtime_data.global_data_buffer_base, instr->arg0
+            );
 			auto src = getBytePtrFromPlaceArg(
 				local_stack, thread.runtime_data.global_data_buffer_base, instr->arg1
 			);

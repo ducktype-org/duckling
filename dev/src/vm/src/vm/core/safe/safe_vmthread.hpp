@@ -85,8 +85,8 @@ namespace vm {
 	class SafeVMThread final: public IVMThread {
 	public:
 		RuntimeData runtime_data;
-	private:
 
+	private:
 		/**
 		 * @brief Link to parent process.
 		 */

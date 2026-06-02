@@ -128,7 +128,7 @@ private:
 		auto end_code = FIND_FUNC("stencil_end");
 
 		auto memory = JitFuncMemory::allocate(add_code.size + mul_code.size + end_code.size);
-		
+
 		auto add_addr = memory.addr;
 		auto mul_addr = stencils.relocate(add_code, add_addr);
 		auto end_addr = stencils.relocate(mul_code, mul_addr);
@@ -137,8 +137,7 @@ private:
 		memory.dump("dump1");
 
 		add_code.patch(add_addr, [&](HoleValue hole) {
-			switch (hole)
-			{
+			switch (hole) {
 			case HoleValue::CONTINUE_FUNCTION:
 				return std::bit_cast<intptr_t>(mul_addr);
 			default:
@@ -147,8 +146,7 @@ private:
 		});
 
 		mul_code.patch(mul_addr, [&](HoleValue hole) {
-			switch (hole)
-			{
+			switch (hole) {
 			case HoleValue::CONTINUE_FUNCTION:
 				return std::bit_cast<intptr_t>(end_addr);
 			default:
@@ -159,7 +157,7 @@ private:
 		memory.dump("dump2");
 
 		memory.markExecutable();
-		auto build_func = memory.intoFunc<int(int, int)>(); // (a + b) * b
+		auto build_func = memory.intoFunc<int(int, int)>();  // (a + b) * b
 		for (int a = 0; a < 10; ++a) {
 			for (int b = 0; b < 10; ++b) {
 				auto returned = std::invoke(build_func, a, b);

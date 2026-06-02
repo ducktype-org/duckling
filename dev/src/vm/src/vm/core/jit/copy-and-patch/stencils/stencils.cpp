@@ -12,24 +12,17 @@ namespace vm::jit::cnp {
 	DECLARE_LINK_VARIABLE(continue_fn);
 	DECLARE_LINK_VARIABLE(arg0);
 	DECLARE_LINK_VARIABLE(arg1);
-	
-	template<OpFun*  InstructionImplementation, low::MicroOpcode OpCode>
+
+	template<OpFun* InstructionImplementation, low::MicroOpcode OpCode>
 	__always_inline void base_stencil(CP_ARGS) {
 		CORE_ASSERT(
-			OpCode == low::MicroOpcode::exit
-				|| getInstructionOpcode(*instr) == OpCode,
+			OpCode == low::MicroOpcode::exit || getInstructionOpcode(*instr) == OpCode,
 			"Expected a different opcode",
 		);
 
-		if (instr->nontc_opcode != std::to_underlying(OpCode)) {
-			CORE_UNREACHABLE();
-		}
-		if (instr->arg0 != GET_LINK_VARIABLE(arg0, u64, 64)) {
-			CORE_UNREACHABLE();
-		}
-		if (instr->arg1 != GET_LINK_VARIABLE(arg1, u64, 64)) {
-			CORE_UNREACHABLE();
-		}
+		if (instr->nontc_opcode != std::to_underlying(OpCode)) CORE_UNREACHABLE();
+		if (instr->arg0 != GET_LINK_VARIABLE(arg0, u64, 64)) CORE_UNREACHABLE();
+		if (instr->arg1 != GET_LINK_VARIABLE(arg1, u64, 64)) CORE_UNREACHABLE();
 		InstructionImplementation(instr, local_stack, frame, thread);
 
 

@@ -4,11 +4,9 @@
 
 namespace vm::jit::cnp {
 	void JitFuncMemory::dump(const char* filename) {
-		std::ofstream file{filename, std::ios::binary};
+		std::ofstream file{ filename, std::ios::binary };
 
-		for (std::byte byte : span()) {
-			file << (char)byte;
-		}
+		for (std::byte byte: span()) file << (char) byte;
 	}
 }
 

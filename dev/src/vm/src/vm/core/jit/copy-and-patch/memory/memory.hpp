@@ -20,9 +20,8 @@ namespace vm::jit::cnp {
 
 		void markExecutable();
 		void dump(const char* filename);
-		std::span<byte> span() {
-			return std::span{addr, size};
-		}
+
+		std::span<byte> span() { return std::span{ addr, size }; }
 
 		/**
 		 * @brief Access the memory as if it was a function pointer. This is not compliant with the
