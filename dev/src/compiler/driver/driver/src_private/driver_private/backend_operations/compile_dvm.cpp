@@ -22,16 +22,15 @@ namespace compiler::driver {
 	}
 
 	DVMModuleData compileLIRModuleToDVM(
-		CRef<LIRModuleData> data, query::Context& query_ctx, bool build_debug_info
+		CRef<LIRUnitWithBackendName> data, query::Context& query_ctx, bool build_debug_info
 	) {
 		time_stats::TrackCategoryTime _(time_stats::TimeCategories::BackendCompilation);
 
 		backend_vm::DVMCodeBuilder module(query_ctx, build_debug_info, false);
 
-		for (const auto& global: data->globals)
-			module.insertLirGlobal(global.lir_global, global.global_ctor, global.global_dtor);
+		for (const auto& global: data->lir_unit.lir_globals) module.insertLirGlobal(global);
 
-		for (const auto& lir_function: data->functions) {
+		for (const auto& lir_function: data->lir_unit.lir_functions) {
 			// @TODO: #2483 Remove this filter (and the helper function) when strings work in DVM.
 			if (lirFunctionDealsWithStrings(lir_function)) {
 				CORE_DEV_LOG(
