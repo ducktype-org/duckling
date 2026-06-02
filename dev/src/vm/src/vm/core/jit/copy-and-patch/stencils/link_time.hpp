@@ -23,7 +23,7 @@ namespace vm::jit::cnp::internal {
 
 #define LINK_VARIABLE_NAME(name) _##name
 #define DECLARE_LINK_VARIABLE(name) \
-	__attribute__((weak)) extern internal::OpaqueStruct LINK_VARIABLE_NAME(name)
+	extern "C" { __attribute__((weak)) extern internal::OpaqueStruct LINK_VARIABLE_NAME(name); }
 #define GET_LINK_VARIABLE(name, type, size) \
 	internal::valueFromPointer<type, u##size>(LINK_VARIABLE_NAME(name))
 
