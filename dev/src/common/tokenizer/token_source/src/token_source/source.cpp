@@ -97,13 +97,13 @@ namespace tokenizer {
 		return res;
 	}
 
-const base::SharedView TokenSource::getContent() const { return content.value(); }
-
 	void TokenSource::runLexer() {
 		if (int_log.hasErrors()) return;
 		lexer::Lexer lexer{ Ref<TokenSource>(this) };
 		token_data.emplace(lexer.tokenize());
 	}
+
+	const base::SharedView TokenSource::getContent() const { return content.value(); }
 
 	const lexer::CharArray& TokenSource::getChars() const {
 		if (!decoded) CORE_PANIC("Tried to access nonexistant Character data.");

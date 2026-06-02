@@ -7,6 +7,7 @@
  */
 
 #include <archiver/archive.hpp>
+#include <diagnostic_interactive/logger.hpp>
 #include <driver/diagnostics/log_helpers.hpp>
 #include <driver/exit.hpp>
 #include <driver/initialize.hpp>
@@ -33,7 +34,6 @@
 #include <base/types/ok_bad.hpp>
 
 #include <clah/clah.hpp>
-#include <diagnostic_interactive/logger.hpp>
 #include <filesystem/file.hpp>
 #include <filesystem/file_path.hpp>
 #include <init/init.hpp>
@@ -401,9 +401,7 @@ clah::Clah getClahForMain() {
 
 					int exit_code = 0;
 
-					if (pst.hasErrors()) {
-						exit_code = 1;
-					}
+					if (pst.hasErrors()) exit_code = 1;
 
 					std::cout << "Parsed tree:\n";
 					pst.dprint(std::cout);
