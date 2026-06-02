@@ -12,6 +12,7 @@
 #include <vm/core/safe/concurrency/synchronization_primitives.hpp>
 #include <vm/core/safe/safe_vmprocess.hpp>
 #include <vm/core/safe/safe_vmthread.hpp>
+#include <vm/core/safe/fast_track_safe_vmthread.hpp>
 #include <vm/core/safe/type_metadata/definitions.hpp>
 #include <vm/core/vmvalue/vmvalue.hpp>
 
@@ -126,9 +127,8 @@ namespace vm::builtins {
 		auto result = vm::api::runFunction(thread.safe_process.getPID(), thread.getThreadCtx());
 
 		if (result.has_value() && thread.safe_process.getSettings().enable_fast_track) {
-			// After spawning, parent increments its own clock to establish happens-before with
-			// future actions
-			thread.onRelease(const_cast<VectorClock&>(thread.getVC()));  // Manual increment
+			auto& ft = static_cast<FastTrackSafeVMThread&>(thread);
+			ft.getFTData().onRelease(ft.getFTData().vc);
 		}
 
 		thread.acquireGil();
@@ -143,9 +143,11 @@ namespace vm::builtins {
 
 		auto result = vm::api::join(thread.safe_process.getPID(), api::ThreadID{ thread_id });
 
-		if (result.has_value() && target_thread_opt) {
-			// FastTrack Join: Joinee's VC joined into Joiner's VC
-			thread.joinVC(target_thread_opt.value()->getVC());
+		if (result.has_value() && target_thread_opt
+		    && thread.safe_process.getSettings().enable_fast_track) {
+			auto& ft_joiner = static_cast<FastTrackSafeVMThread&>(thread);
+			auto& ft_joinee = static_cast<FastTrackSafeVMThread&>(*target_thread_opt.value());
+			ft_joiner.getFTData().joinVC(ft_joinee.getFTData().getVC());
 		}
 
 		thread.acquireGil();
@@ -165,12 +167,14 @@ namespace vm::builtins {
 			mutex->m.lock();
 			thread.acquireGil();
 		}
-		thread.onAcquire(mutex->vc);
+		if (thread.safe_process.getSettings().enable_fast_track)
+			static_cast<FastTrackSafeVMThread&>(thread).getFTData().onAcquire(mutex->vc);
 	}
 
 	void FunctionHandlers::builtinUnlockMutex(SafeVMThread& thread, u64 mutex_id) {
 		auto mutex = thread.safe_process.getSynchronizationPrimitives().getMutex(mutex_id);
-		thread.onRelease(mutex->vc);
+		if (thread.safe_process.getSettings().enable_fast_track)
+			static_cast<FastTrackSafeVMThread&>(thread).getFTData().onRelease(mutex->vc);
 		mutex->m.unlock();
 	}
 
@@ -185,12 +189,15 @@ namespace vm::builtins {
 	void FunctionHandlers::builtinWaitCV(SafeVMThread& thread, u64 cv_id, u64 mutex_id) {
 		auto cv    = thread.safe_process.getSynchronizationPrimitives().getCV(cv_id);
 		auto mutex = thread.safe_process.getSynchronizationPrimitives().getMutex(mutex_id);
+		const bool ft_enabled = thread.safe_process.getSettings().enable_fast_track;
 
 		thread.releaseGil();
 		try {
-			thread.onRelease(mutex->vc);
+			if (ft_enabled)
+				static_cast<FastTrackSafeVMThread&>(thread).getFTData().onRelease(mutex->vc);
 			cv->wait(mutex->m);
-			thread.onAcquire(mutex->vc);
+			if (ft_enabled)
+				static_cast<FastTrackSafeVMThread&>(thread).getFTData().onAcquire(mutex->vc);
 		} catch (const vm::exceptions::VMRuntimeException&) {
 			// Ensure the GIL is held again before propagating VM runtime exceptions.
 			thread.acquireGil();

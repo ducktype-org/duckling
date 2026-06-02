@@ -56,13 +56,8 @@ namespace vm {
 		  ),
 		  safe_process(process),
 		  process_memory(process.getMemory()),
-		  process_program(process.getLoadedProgram()) {
-		vc[thread_id] = 1;
-		if (process.settings_.enable_fast_track) {
-			runtime_data.global_shadow_data_buffer_base    = process.global_shadow_data.data();
-			runtime_data.global_shadow_pointer_buffer_base = process.global_shadow_pointer.data();
-		}
-	}
+		  process_program(process.getLoadedProgram()) {}
+
 
 	/**
 	 * @brief Tail call written function that handles the execution pause request.
@@ -661,19 +656,7 @@ namespace vm {
 		frame->local_block_ref_stack_base = runtime_data.block_ref_stack_base;
 		frame->local_block_ref_stack_end  = runtime_data.block_ref_stack_base;
 
-		if (safe_process.settings_.enable_fast_track) {
-			auto* sf                              = runtime_data.shadow_frame_stack_current;
-			sf->local_shadow_block_ref_stack_base = runtime_data.shadow_block_ref_stack_base;
-			sf->local_shadow_block_ref_stack_end  = runtime_data.shadow_block_ref_stack_base;
-			sf->local_shadow_pointer_block_ref_stack_base
-				= runtime_data.shadow_pointer_block_ref_stack_base;
-			sf->local_shadow_pointer_block_ref_stack_end
-				= runtime_data.shadow_pointer_block_ref_stack_base;
-			sf->local_shadow_data_stack    = runtime_data.shadow_data_stack_base;
-			sf->local_shadow_pointer_stack = runtime_data.shadow_pointer_stack_base;
-			sf->local_shadow_data_head     = 0;
-			sf->local_shadow_pointer_head  = 0;
-		}
+		onBeforeExecute();
 
 		const auto* instr = start_function.bc.data();
 
@@ -855,19 +838,5 @@ namespace vm {
 	) {
 		runtime_data.global_data_buffer_base      = global_buffer_pointers.data_buffer_base;
 		runtime_data.global_block_ref_buffer_base = global_buffer_pointers.blocks_buffer_base;
-
-		if (safe_process.settings_.enable_fast_track) {
-			runtime_data.global_shadow_data_buffer_base = safe_process.global_shadow_data.data();
-			runtime_data.global_shadow_pointer_buffer_base
-				= safe_process.global_shadow_pointer.data();
-		}
-	}
-
-	IMemory<ShadowEntry>& SafeVMThread::getShadowDataMemory() {
-		return safe_process.shadow_data_memory;
-	}
-
-	IMemory<ShadowPointer>& SafeVMThread::getShadowPointerMemory() {
-		return safe_process.shadow_pointer_memory;
 	}
 }

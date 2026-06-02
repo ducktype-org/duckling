@@ -12,8 +12,6 @@
 #include <vm/core/safe/memory/thread_stack.hpp>
 #include <vm/core/thread/ivmthread.hpp>
 #include <vm/core/vmvalue/vmvalue.hpp>
-#include <vm/core/process/concurrency/fast_track/vc.hpp>
-#include <vm/core/process/concurrency/fast_track/epoch.hpp>
 
 #ifdef ENABLE_JIT
 	#include <vm/core/jit/jit_compiler.hpp>
@@ -29,6 +27,7 @@ namespace vm {
 	}
 
 	class SafeVMProcess;
+	class FastTrackSafeVMThread;
 
 	/**
 	 * @brief Frames are on stack, this is the maximum number of frame pointers available.
@@ -61,29 +60,14 @@ namespace vm {
 		std::byte* local_stack_base;   /// Pointer to the start of `local_stack_reserved`.
 		std::byte* local_stack_end;    /// Pointer to the first value not allocated.
 
-		ShadowEntry*   shadow_data_stack_base;    /// Pointer to the start of shadow data stack.
-		ShadowPointer* shadow_pointer_stack_base; /// Pointer to the start of shadow pointer stack.
-
 		Block** block_ref_stack_base;  /// Pointer to the start of `block_ref_stack_reserved`.
 		Block** block_ref_stack_end;   /// Pointer to the first value not allocated.
-
-		ShadowBlock** shadow_block_ref_stack_base = nullptr;
-		ShadowBlock** shadow_block_ref_stack_end = nullptr;
-		ShadowPointerBlock** shadow_pointer_block_ref_stack_base = nullptr;
-		ShadowPointerBlock** shadow_pointer_block_ref_stack_end = nullptr;
-
-		ShadowFrame* shadow_frame_stack_base = nullptr;
-		ShadowFrame* shadow_frame_stack_end = nullptr;
-		ShadowFrame* shadow_frame_stack_current = nullptr;
 
 		std::byte* global_data_buffer_base;    /// Pointer to the start of global data buffer.
 		Block** global_block_ref_buffer_base;  /// Pointer to the start of global block ref buffer.
 
-		ShadowEntry*   global_shadow_data_buffer_base = nullptr;
-		ShadowPointer* global_shadow_pointer_buffer_base = nullptr;
-
 		RuntimeData(
-			Ref<ThreadStack>           stack,
+			Ref<ThreadStack>            stack,
 			GlobalBufferPointersGeneric global_buffer_pointers
 		):
 			  frame_stack_base(stack->getFrameStack()->data()),
@@ -91,25 +75,10 @@ namespace vm {
 			  frame_stack_current(stack->getFrameStack()->data()),
 			  local_stack_base(stack->getLocalStack()->data()),
 			  local_stack_end(stack->getLocalStack()->data() + stack->getLocalStack()->size()),
-			  shadow_data_stack_base(stack->getShadowDataStack()->data()),
-			  shadow_pointer_stack_base(stack->getShadowPointerStack()->data()),
 			  block_ref_stack_base(stack->getBlockRefStack()->data()),
 			  block_ref_stack_end(
 				  stack->getBlockRefStack()->data() + stack->getBlockRefStack()->size()
 			  ),
-			  shadow_block_ref_stack_base(stack->getShadowBlockRefStack()->data()),
-			  shadow_block_ref_stack_end(
-				  stack->getShadowBlockRefStack()->data() + stack->getShadowBlockRefStack()->size()
-			  ),
-			  shadow_pointer_block_ref_stack_base(stack->getShadowPointerBlockRefStack()->data()),
-			  shadow_pointer_block_ref_stack_end(
-				  stack->getShadowPointerBlockRefStack()->data() + stack->getShadowPointerBlockRefStack()->size()
-			  ),
-			  shadow_frame_stack_base(stack->getShadowFrameStack()->data()),
-			  shadow_frame_stack_end(
-				  stack->getShadowFrameStack()->data() + stack->getShadowFrameStack()->size()
-			  ),
-			  shadow_frame_stack_current(stack->getShadowFrameStack()->data()),
 			  global_data_buffer_base(global_buffer_pointers.data_buffer_base),
 			  global_block_ref_buffer_base(global_buffer_pointers.blocks_buffer_base) {}
 	};
@@ -117,11 +86,9 @@ namespace vm {
 	/**
 	 * @brief Safe implementation of the IVMThread interface.
 	 */
-	class SafeVMThread final: public IVMThread {
+	class SafeVMThread: public IVMThread {
 	private:
 		RuntimeData runtime_data;
-
-		VectorClock vc;
 
 		/**
 		 * @brief Link to parent process.
@@ -208,9 +175,6 @@ namespace vm {
 		[[nodiscard]] SafeVMProcess& getProcess() { return safe_process; }
 		[[nodiscard]] const SafeVMProcess& getProcess() const { return safe_process; }
 
-		IMemory<ShadowEntry>& getShadowDataMemory();
-		IMemory<ShadowPointer>& getShadowPointerMemory();
-
 		/**
 		 * @brief Run a single function with given parameters.
 		 */
@@ -219,8 +183,15 @@ namespace vm {
 		std::expected<low::LowCodePosition, api::ApiError> getCurrentPosition();
 
 		friend class SafeVMProcess;
+		friend class FastTrackSafeVMThread;
 		friend class OpFuns;
 		friend class builtins::FunctionHandlers;
+
+		/**
+		 * @brief Called inside executeFunction just before runInterpreter.
+		 * Override to perform per-execution setup (e.g. shadow frame initialisation).
+		 */
+		virtual void onBeforeExecute() {}
 
 		/**
 		 * @brief Runs GIL logic. Should be called periodically to allow GIL release.
@@ -248,42 +219,6 @@ namespace vm {
 		void setThreadCtx(std::string);
 
 		/**
-		 * @brief Gets current epoch of the thread.
-		 */
-		[[nodiscard]] Epoch getCurrentEpoch() const { return Epoch(getThreadID(), vc[getThreadID()]); }
-
-		/**
-		 * @brief FastTrack Acquire event.
-		 */
-		void onAcquire(const VectorClock& lock_vc) { vc |= lock_vc; }
-
-		/**
-		 * @brief FastTrack Join event.
-		 */
-		void joinVC(const VectorClock& other_vc) { vc |= other_vc; }
-
-		/**
-		 * @brief FastTrack Fork event.
-		 */
-		void forkVC(const VectorClock& parent_vc) {
-			vc = parent_vc;
-			vc[getThreadID()] = 1;
-		}
-
-		/**
-		 * @brief FastTrack Release event.
-		 */
-		void onRelease(VectorClock& lock_vc) {
-			lock_vc = vc;
-			vc[getThreadID()]++;
-		}
-
-		/**
-		 * @brief Gets the thread's vector clock.
-		 */
-		const VectorClock& getVC() const { return vc; }
-
-		/**
 		 * @brief Gets name of the function that will be used in builtin spawn thread.
 		 */
 		[[nodiscard]] const std::string& getThreadCtx() const { return thread_ctx; }
@@ -299,28 +234,8 @@ namespace vm {
 		 */
 		void updateGlobalDataBufferPointers(GlobalBufferPointersGeneric global_buffer_pointers);
 
-		/**
-		 * @brief Returns the base pointer for the global shadow data buffer.
-		 * Used by FastTrack instrumentation helpers to resolve global place shadow entries.
-		 */
-		[[nodiscard]] ShadowEntry* getGlobalShadowDataBase() const {
-			return runtime_data.global_shadow_data_buffer_base;
-		}
-
-		/**
-		 * @brief Returns the base pointer for the global shadow pointer buffer.
-		 * Used by FastTrack instrumentation helpers to resolve global place shadow pointers.
-		 */
-		[[nodiscard]] ShadowPointer* getGlobalShadowPointerBase() const {
-			return runtime_data.global_shadow_pointer_buffer_base;
-		}
-
 		[[nodiscard]] CRef<vm::low::ILowVMProgram> getProgram() const {
 			return process_program;
-		}
-
-		[[nodiscard]] ShadowFrame* getShadowFrame() const {
-			return runtime_data.shadow_frame_stack_current;
 		}
 	};
 

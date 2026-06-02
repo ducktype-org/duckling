@@ -2,24 +2,15 @@
 
 #include "frame.hpp"
 
-#include <vm/core/process/concurrency/fast_track/shadow_entry.hpp>
-#include <vm/core/process/concurrency/fast_track/shadow_pointer.hpp>
-
 #include <vector>
 
 namespace vm {
 	template<typename EntryT>
 	class BasicThreadStack final {
 	private:
-		std::vector<Frame>     frame_stack;
-		std::vector<EntryT>    local_stack;
-		std::vector<BasicBlock<EntryT>*>    block_ref_stack;
-		std::vector<ShadowBlock*>          shadow_block_ref_stack;
-		std::vector<ShadowPointerBlock*>   shadow_pointer_block_ref_stack;
-		std::vector<ShadowFrame>           shadow_frame_stack;
-
-		std::vector<ShadowEntry>    shadow_data_stack;
-		std::vector<ShadowPointer>  shadow_pointer_stack;
+		std::vector<Frame>              frame_stack;
+		std::vector<EntryT>             local_stack;
+		std::vector<BasicBlock<EntryT>*> block_ref_stack;
 
 	public:
 		static constexpr u64 FRAMES_LENGTH = 16'384;
@@ -44,28 +35,13 @@ namespace vm {
 		BasicThreadStack():
 			  frame_stack(FRAMES_LENGTH),
 			  local_stack(STACK_LENGTH),
-			  block_ref_stack(BLOCK_REF_STACK_LENGTH),
-			  shadow_block_ref_stack(BLOCK_REF_STACK_LENGTH),
-			  shadow_pointer_block_ref_stack(BLOCK_REF_STACK_LENGTH),
-			  shadow_frame_stack(FRAMES_LENGTH),
-			  shadow_data_stack(STACK_LENGTH),
-			  shadow_pointer_stack(STACK_LENGTH) {}
+			  block_ref_stack(BLOCK_REF_STACK_LENGTH) {}
 
 		auto getFrameStack() -> Ref<std::vector<Frame>> { return &frame_stack; }
 
 		auto getLocalStack() -> Ref<std::vector<EntryT>> { return &local_stack; }
 
-		auto getShadowDataStack() -> Ref<std::vector<ShadowEntry>> { return &shadow_data_stack; }
-
-		auto getShadowPointerStack() -> Ref<std::vector<ShadowPointer>> { return &shadow_pointer_stack; }
-
 		auto getBlockRefStack() -> Ref<std::vector<BasicBlock<EntryT>*>> { return &block_ref_stack; }
-
-		auto getShadowBlockRefStack() -> Ref<std::vector<ShadowBlock*>> { return &shadow_block_ref_stack; }
-
-		auto getShadowPointerBlockRefStack() -> Ref<std::vector<ShadowPointerBlock*>> { return &shadow_pointer_block_ref_stack; }
-
-		auto getShadowFrameStack() -> Ref<std::vector<ShadowFrame>> { return &shadow_frame_stack; }
 	};
 
 	using ThreadStack = BasicThreadStack<std::byte>;

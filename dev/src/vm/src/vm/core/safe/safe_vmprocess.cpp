@@ -29,6 +29,28 @@
 namespace vm {
 	Memory& SafeVMProcess::getMemory() { return memory; }
 
+	// ---- Virtual thread-pool hooks (default: use vm_threads) ----
+
+	SafeVMThread& SafeVMProcess::doGetMainThread() {
+		return *vm_threads.get(api::ThreadID{ 0 });
+	}
+
+	SafeVMThread& SafeVMProcess::doGetOrCreateEmptyThread() {
+		for (auto& thread: vm_threads) {
+			if (!api::isExecuting(thread.getStatus()) && !thread.hasActiveThread()) return thread;
+		}
+		return *vm_threads.get(vm_threads.add(*this));
+	}
+
+	base::Optional<Ref<SafeVMThread>> SafeVMProcess::doGetThreadByID(api::ThreadID thread_id) {
+		if_opt_some(vm_threads.maybeGet(thread_id), thread) return thread;
+		return std::nullopt;
+	}
+
+	void SafeVMProcess::forEachThread(const std::function<void(SafeVMThread&)>& fn) {
+		for (auto& thread: vm_threads) fn(thread);
+	}
+
 	std::expected<api::Response, api::LoadProgramError> SafeVMProcess::loadProgram(
 		const std::variant<std::vector<fs::File>, code::CodeCollection>& source
 	) {
@@ -60,22 +82,7 @@ namespace vm {
 		SafeVMThread&    thread = getEmptyThread();
 		thread.setThreadCtx(func_name);
 
-		// FastTrack Fork: Parent's current state is joined into child's initial VC.
-		// Identify the actual calling/parent thread from the vm_threads pool by matching OS thread ID.
-		SafeVMThread* parent_thread = nullptr;
-		auto current_id = std::this_thread::get_id();
-		
-		for (auto& t : vm_threads) {
-			if (t.hasActiveThread() && t.getNativeThreadId() == current_id) {
-				parent_thread = &t;
-			}
-		}
-
-		if (parent_thread) {
-			thread.forkVC(parent_thread->getVC());
-		} else {
-			thread.forkVC(getMainVMThread().getVC());
-		}
+		onBeforeThreadSpawn(thread);
 
 		bool response = thread.spawnThreadAndRun(func_name, run_arguments);
 
@@ -116,18 +123,18 @@ namespace vm {
 	}
 
 	std::expected<api::Response, api::ApiError> SafeVMProcess::stop() {
-		for (auto& thread: vm_threads) {
+		std::expected<api::Response, api::ApiError> result = api::response::Empty{};
+		forEachThread([&](SafeVMThread& thread) {
+			if (!result.has_value()) return;
 			auto response = thread.stop();
-
-			if (!thread.joinExecutionThread())
-				return std::unexpected(api::ApiError{ api::JoinError{} });
-
-			// @TODO: #1222 make two different "stop" functions, one that throws error if
-			// program was not stopped successfully and another that does nothing
-			if (!response) return std::unexpected(api::OtherError{ "unexpected status response" });
-		}
-
-		return api::response::Empty{};
+			if (!thread.joinExecutionThread()) {
+				result = std::unexpected(api::ApiError{ api::JoinError{} });
+				return;
+			}
+			if (!response)
+				result = std::unexpected(api::OtherError{ "unexpected status response" });
+		});
+		return result;
 	}
 
 	base::Optional<api::ApiError> SafeVMProcess::assertProcessCanRespond() {
@@ -170,35 +177,14 @@ namespace vm {
 		vm_threads.add(*this);
 	}
 
-	SafeVMProcess::~SafeVMProcess() {
-		for (auto* block : global_shadow_blocks) {
-			if (block) {
-				shadow_data_memory.freeBlockData(Ref(block));
-				shadow_data_memory.decreaseBlockRefcount(Ref(block));
-			}
-		}
-		for (auto* block : global_shadow_pointer_blocks) {
-			if (block) {
-				shadow_pointer_memory.freeBlockData(Ref(block));
-				shadow_pointer_memory.decreaseBlockRefcount(Ref(block));
-			}
-		}
-	}
 
-	SafeVMThread& SafeVMProcess::getMainVMThread() { return *vm_threads.get(api::ThreadID{ 0 }); }
+	SafeVMThread& SafeVMProcess::getMainVMThread() { return doGetMainThread(); }
 
 	base::Optional<Ref<SafeVMThread>> SafeVMProcess::getVMThreadByID(api::ThreadID thread_id) {
-		if_opt_some(vm_threads.maybeGet(thread_id), thread) return thread;
-		return std::nullopt;
+		return doGetThreadByID(thread_id);
 	}
 
-	SafeVMThread& SafeVMProcess::getEmptyThread() {
-		for (auto& thread: vm_threads) {
-			// Thread must not be executing AND must not have an active exec_thread handle
-			if (!api::isExecuting(thread.getStatus()) && !thread.hasActiveThread()) return thread;
-		}
-		return *vm_threads.get(vm_threads.add(*this));
-	}
+	SafeVMThread& SafeVMProcess::getEmptyThread() { return doGetOrCreateEmptyThread(); }
 
 	std::expected<api::Response, api::StateError> SafeVMProcess::getExitCode() {
 		std::unique_lock lock(rw_global);
@@ -438,8 +424,9 @@ namespace vm {
 	std::vector<api::ThreadID> SafeVMProcess::getAllThreadIDs() {
 		std::shared_lock           lock(rw_global);
 		std::vector<api::ThreadID> thread_ids;
-		for (const auto& thread: vm_threads)
+		forEachThread([&](SafeVMThread& thread) {
 			if (api::isExecuting(thread.getStatus())) thread_ids.push_back(thread.getThreadID());
+		});
 		return thread_ids;
 	}
 
@@ -524,55 +511,9 @@ namespace vm {
 				.global_count           = global_buffer_config.global_count,
 			});
 
-		if (settings_.enable_fast_track) {
-			global_shadow_data.resize(std::max<size_t>(global_buffer_config.global_shadow_buffer_size, 1));
-			global_shadow_pointer.resize(std::max<size_t>(global_buffer_config.global_pointer_buffer_size, 1));
-
-			global_shadow_blocks.resize(global_buffer_config.global_count, nullptr);
-			global_shadow_pointer_blocks.resize(global_buffer_config.global_count, nullptr);
-
-			for (const auto& [global, id, name] : program->getGlobals().allData()) {
-				auto block_idx = global->global_block_idx;
-
-				if (global_shadow_blocks[block_idx] == nullptr) {
-					auto block = shadow_data_memory.allocateDummy(
-						global->type,
-						global_shadow_data.data() + global->global_shadow_data_offset
-					);
-					shadow_data_memory.increaseBlockRefcount(block);
-					global_shadow_blocks[block_idx] = block.get();
-				} else {
-					shadow_data_memory.updateBlockDataView(
-						Ref(global_shadow_blocks[block_idx]),
-						{ global_shadow_data.data() + global->global_shadow_data_offset, global->type->getShadowSize() }
-					);
-				}
-
-				// Initialize global shadow entries to the epoch of the thread doing initialization (Thread 0, clock 1)
-				auto* start = global_shadow_data.data() + global->global_shadow_data_offset;
-				for (u32 i = 0; i < global->type->getShadowSize(); ++i) {
-					start[i].last_write = Epoch(api::ThreadID{ 0 }, 1);
-					start[i].last_read_epoch = Epoch(api::ThreadID{ 0 }, 1);
-				}
-
-				if (global_shadow_pointer_blocks[block_idx] == nullptr) {
-					auto ptr_block = shadow_pointer_memory.allocateDummy(
-						global->type,
-						global_shadow_pointer.data() + global->global_shadow_pointer_offset
-					);
-					shadow_pointer_memory.increaseBlockRefcount(ptr_block);
-					global_shadow_pointer_blocks[block_idx] = ptr_block.get();
-				} else {
-					shadow_pointer_memory.updateBlockDataView(
-						Ref(global_shadow_pointer_blocks[block_idx]),
-						{ global_shadow_pointer.data() + global->global_shadow_pointer_offset, global->type->getPointerSize() }
-					);
-				}
-			}
-		}
-
-		for (auto& thread: vm_threads)
+		forEachThread([&](SafeVMThread& thread) {
 			thread.updateGlobalDataBufferPointers(new_global_buffer_pointers);
+		});
 	}
 
 	GIL& SafeVMProcess::getGIL() { return gil; }

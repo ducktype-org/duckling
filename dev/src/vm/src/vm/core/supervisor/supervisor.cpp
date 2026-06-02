@@ -2,6 +2,7 @@
 
 #include <vm/core/process/vmprocess.hpp>
 #include <vm/core/safe/safe_vmprocess.hpp>
+#include <vm/core/safe/fast_track_safe_vmprocess.hpp>
 
 #include <mutex>
 
@@ -20,7 +21,10 @@ namespace vm {
 	std::expected<PID, api::ApiError> Supervisor::newProcess(const api::ProcessSettings& settings) {
 		std::unique_lock lock(rw_process_table);
 		PID              pid = next++;
-		process_table.emplace(pid, Box<IVMProcess>::fromPointer(new SafeVMProcess(pid, settings)));
+		IVMProcess* process = settings.enable_fast_track
+		                        ? static_cast<IVMProcess*>(new FastTrackSafeVMProcess(pid, settings))
+		                        : static_cast<IVMProcess*>(new SafeVMProcess(pid, settings));
+		process_table.emplace(pid, Box<IVMProcess>::fromPointer(process));
 		return pid;
 	}
 

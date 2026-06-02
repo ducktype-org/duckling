@@ -18,6 +18,7 @@
 #include <vm/loader/loader.hpp>
 
 #include <expected>
+#include <functional>
 #include <string>
 #include <variant>
 #include <vector>
@@ -30,7 +31,7 @@ namespace vm {
 	 * @note Only execution of the code is done in the separate thread,
 	 * loading and parsing of the program is done in the caller's thread.
 	 */
-	class SafeVMProcess final: public IVMProcess {
+	class SafeVMProcess : public IVMProcess {
 		friend class VmValue;
 		friend class VMValueRef;
 		friend class SafeVMThread;
@@ -55,8 +56,6 @@ namespace vm {
 		low::LowVMProgramCopy loaded_program_copy;
 
 		Memory                 memory;
-		IMemory<ShadowEntry>   shadow_data_memory;
-		IMemory<ShadowPointer> shadow_pointer_memory;
 
 		GIL                       gil;
 		SynchronizationPrimitives synchronization_primitives;
@@ -88,23 +87,23 @@ namespace vm {
 
 		base::Optional<api::ApiError> assertProcessCanRespond();
 
-		api::ProcessSettings             settings_;
-		std::vector<ShadowEntry>         global_shadow_data;
-		std::vector<ShadowPointer>       global_shadow_pointer;
-		std::vector<ShadowBlock*>        global_shadow_blocks;
-		std::vector<ShadowPointerBlock*> global_shadow_pointer_blocks;
+		api::ProcessSettings settings_;
+
+	protected:
+		virtual SafeVMThread&                     doGetMainThread();
+		virtual SafeVMThread&                     doGetOrCreateEmptyThread();
+		virtual base::Optional<Ref<SafeVMThread>> doGetThreadByID(api::ThreadID thread_id);
+		virtual void forEachThread(const std::function<void(SafeVMThread&)>& fn);
+
+		/**
+		 * @brief Called inside runFunction (under the global lock) just before spawning the
+		 * child thread. Override to inject synchronization-primitive bookkeeping (e.g. FT fork).
+		 */
+		virtual void onBeforeThreadSpawn(SafeVMThread& /*child*/) {}
 
 	public:
 		SafeVMProcess(PID my_pid, const api::ProcessSettings& settings = {});
-		~SafeVMProcess() override;
-
-		[[nodiscard]] Ref<ShadowBlock> getGlobalShadowBlock(u64 idx) {
-			return { global_shadow_blocks.at(idx) };
-		}
-
-		[[nodiscard]] Ref<ShadowPointerBlock> getGlobalShadowPointerBlock(u64 idx) {
-			return { global_shadow_pointer_blocks.at(idx) };
-		}
+		~SafeVMProcess() override = default;
 
 		/**
 		 * @brief Returns thread by id and if id doesn't exist or it is equal 0
@@ -184,7 +183,7 @@ namespace vm {
 		 * Should be called after loading a new globals.
 		 * @param program The program with the new globals.
 		 */
-		void updateGlobalDataMemory(CRef<low::ILowVMProgram> program);
+		virtual void updateGlobalDataMemory(CRef<low::ILowVMProgram> program);
 
 		Ref<VmValue> createVmValue(TypeCRef type) override;
 
