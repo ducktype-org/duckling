@@ -10,21 +10,21 @@
 namespace vm::jit {
 	cnp::JitFuncMemory compileCP(const vm::low::LowFuncData& func_data) {
 		using namespace cnp;
-		auto get_opfunc_size = [&](low::MicroOpcode opcode) {
-			return stencilsData().at(static_cast<u64>(opcode)).size;
+		auto get_opfunc_size = [&](auto opcode) {
+			return stencilsData().at(std::to_underlying(opcode)).size;
 		};
 		usize size = std::ranges::fold_left(
 			func_data.bc | std::views::transform(getInstructionOpcode)
 				| std::views::transform(get_opfunc_size),
 			0,
 			std::plus{}
-		);
+		) + get_opfunc_size(SpecialStencils::ret);
 
 		auto  memory = JitFuncMemory::allocate(size);
 		byte* next   = memory.addr;
 
-		auto patch_stencil = [&](u64 opcode, auto func) {
-			auto stencil_data = stencilsData().at(opcode);
+		auto patch_stencil = [&](auto opcode, auto func) {
+			auto stencil_data = stencilsData().at(std::to_underlying(opcode));
 			auto previous     = next;
 			next              = relocate(stencil_data, previous);
 			stencil_data.patch(previous, func);
@@ -34,7 +34,7 @@ namespace vm::jit {
 			auto opcode = getInstructionOpcode(instr);
 			//std::cerr << vm::low::OPCODE_NAMES[std::to_underlying(opcode)] << ": "
 			//		  << std::to_underlying(opcode) << std::endl;
-			patch_stencil(std::to_underlying(opcode), [&instr, &next](HoleValue value) {
+			patch_stencil(opcode, [&instr, &next](HoleValue value) {
 				switch (value) {
 				case HoleValue::ARG0:
 					return instr.arg0;
@@ -49,7 +49,7 @@ namespace vm::jit {
 			});
 		}
 		memory.dump("dump_normal");
-		patch_stencil(std::to_underlying(SpecialStencils::ret), [](HoleValue) -> u64 {
+		patch_stencil(SpecialStencils::ret, [](HoleValue) -> u64 {
 			CORE_PANIC("Special stencil 'ret' has a relocation");
 		});
 
