@@ -211,7 +211,6 @@ namespace vm {
 		 */
 		[[nodiscard]] PID getPID() const;
 
-		// @TODO: #2400 Remove this
 		void setStatus(const api::ProcStatus& new_status, api::ThreadID thread_id) noexcept;
 
 		/**

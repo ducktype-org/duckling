@@ -64,20 +64,6 @@ void vm::IVMThread::respondExecutionRequest(const api::ProcStatus& response) {
 void vm::IVMThread::setProcessStatus(const vm::api::ProcStatus& new_status) {
 	setThreadStatus(new_status);
 	my_process.setStatus(new_status, thread_id);
-	// const bool is_main_thread      = thread_id.asInt() == 0;
-	// const bool is_terminal_failure = std::holds_alternative<api::ExecutionPanicked>(new_status)
-	//                               || std::holds_alternative<api::ExecutionStopped>(new_status);
-
-	// if (is_main_thread) {
-	// 	// Main thread always sets the process status directly
-	// 	my_process.setStatus(new_status, thread_id);
-	// 	return;
-	// }
-
-	// if (is_terminal_failure) {
-	// 	// Child threads can publish terminal failures if process is not already terminal
-	// 	my_process.setStatusIfNotTerminal(new_status, thread_id);
-	// }
 }
 
 bool vm::IVMThread::joinExecutionThread() {
