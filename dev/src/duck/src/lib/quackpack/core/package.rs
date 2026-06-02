@@ -6,7 +6,7 @@ use std::sync::Arc;
 use crate::quackpack::core::Manifest;
 use crate::quackpack::core::compile::artifacts_layout::ArtifactsLayout;
 use crate::quackpack::core::storage::freeze::FreezeDep;
-use crate::quackpack::core::{Dependencies, FrontMatter, Profiles};
+use crate::quackpack::core::{Dependencies, Profiles};
 use crate::quackpack::schemas::frontmatter::FrontMatter as FrontMatterSchema;
 use crate::quackpack::schemas::manifest::Manifest as ManifestSchema;
 
@@ -118,20 +118,16 @@ impl fmt::Debug for PackageInner {
 pub struct FrontMatterScript {
     path: PathBuf,
     original_schema: FrontMatterSchema,
-    frontmatter: FrontMatter,
+    manifest: Manifest,
 }
 
 impl FrontMatterScript {
     /// Create a new [`FrontMatterScript`].
-    pub fn new(
-        path: PathBuf,
-        original_schema: FrontMatterSchema,
-        frontmatter: FrontMatter,
-    ) -> Self {
+    pub fn new(path: PathBuf, original_schema: FrontMatterSchema, manifest: Manifest) -> Self {
         Self {
             path,
             original_schema,
-            frontmatter,
+            manifest,
         }
     }
 
@@ -145,24 +141,24 @@ impl FrontMatterScript {
         &self.original_schema
     }
 
-    /// Get the script's frontmatter.
-    pub fn frontmatter(&self) -> &FrontMatter {
-        &self.frontmatter
+    /// Get the manifest constructed from the script's frontmatter.
+    pub fn manifest(&self) -> &Manifest {
+        &self.manifest
     }
 
     /// Get the dependencies specified in the frontmatter.
     pub fn dependencies(&self) -> &Dependencies {
-        self.frontmatter().dependencies()
+        self.manifest().dependencies()
     }
 
     /// Get the dev-dependencies specified in the frontmatter.
     pub fn dev_dependencies(&self) -> &Dependencies {
-        self.frontmatter().dev_dependencies()
+        self.manifest().dev_dependencies()
     }
 
     /// Get the profiles specified in the frontmatter.
     pub fn profiles(&self) -> &Profiles {
-        self.frontmatter().profiles()
+        self.manifest().profiles()
     }
 }
 
@@ -171,10 +167,12 @@ mod tests {
     use super::*;
 
     #[test]
-    fn assert_send_sync_package() {
+    fn assert_send_sync_package_and_frontmatter() {
         fn assert_send<T: Send>() {}
         fn assert_sync<T: Sync>() {}
         assert_send::<Package>();
         assert_sync::<Package>();
+        assert_send::<FrontMatterScript>();
+        assert_sync::<FrontMatterScript>();
     }
 }
