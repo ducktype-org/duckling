@@ -173,9 +173,9 @@ namespace compiler::frontend::packages {
 	 * @return The loaded PackageInfo or empty if an error was reported.
 	 */
 	base::Optional<PackageInfo> createPackageInfo(
-		const RawPackageInfo&                          package_info,
-		const std::unordered_map<base::StrID, base::StrID>& id_to_name,
-		const DiagnosticReporter&                     report
+		const RawPackageInfo&              package_info,
+		const std::vector<RawPackageInfo>& id_to_name,
+		const DiagnosticReporter&          report
 	);
 
 	/**

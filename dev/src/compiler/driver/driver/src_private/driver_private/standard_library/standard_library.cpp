@@ -58,8 +58,10 @@ namespace compiler::driver {
 		return path;
 	}
 
-	base::OkBad addStandardLibraryPackages(
-		const fs::FilePath& std_path, frontend::packages::DiagnosticReporter& report
+	base::OkBad getStandardLibraryPackages(
+		std::vector<compiler::frontend::packages::RawPackageInfo>& packages_info,
+		const fs::FilePath&                                        std_path,
+		frontend::packages::DiagnosticReporter&                    report
 	) {
 		using compiler::frontend::packages::RawDependencyInfo;
 		using compiler::frontend::packages::RawPackageInfo;
@@ -89,15 +91,7 @@ namespace compiler::driver {
 					.alias      = {},
 				});
 			}
-
-			std::unordered_map<base::StrID, base::StrID> id_to_name;
-			for (const auto& cfg: STD_PACKAGES_CONFIG)
-				id_to_name[base::StrID(cfg.name)] = base::StrID(cfg.name);
-
-			auto package_info
-				= compiler::frontend::packages::createPackageInfo(raw_package_info, id_to_name, report);
-			if (!package_info.has_value()) return base::BAD;
-			global_state::setters::addPackage(*package_info);
+			packages_info.push_back(std::move(raw_package_info));
 		}
 		return base::OK;
 	}
@@ -109,7 +103,7 @@ namespace compiler::driver {
 		) {
 			return std::ranges::any_of(dependencies, [&](const auto& dep) {
 				return dep.package_id == target_package_id
-					|| dep.alias.copyValueOr(base::StrID()) == target_package_id;
+				    || dep.alias.copyValueOr(base::StrID()) == target_package_id;
 			});
 		}
 
@@ -117,6 +111,14 @@ namespace compiler::driver {
 			compiler::frontend::packages::RawPackageInfo& package_info,
 			frontend::packages::DiagnosticReporter&       report
 		) {
+			// If the package is one of the STD_PACKAGES_CONFIG, we do nothing
+			if (std::ranges::any_of(STD_PACKAGES_CONFIG, [&](const auto& config) {
+					return base::StrID(config.name) == package_info.package_id;
+				})) {
+				return base::OK;
+			}
+
+			// Otherwise, we add dependencies on all standard library packages
 			for (auto& config: STD_PACKAGES_CONFIG) {
 				if (hasDependency(package_info.dependencies, base::StrID(config.name))) {
 					report(

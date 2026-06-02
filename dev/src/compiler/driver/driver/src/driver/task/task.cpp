@@ -229,7 +229,7 @@ namespace compiler::driver {
 		if (had_error) return {};
 
 		return RawPackageCompilationTask{
-			.package_id = *package_id,
+			.package_id   = *package_id,
 			.build_target = std::move(build_target),
 		};
 	}

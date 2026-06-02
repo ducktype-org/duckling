@@ -212,12 +212,8 @@ private:
 			},
 		};
 
-		std::unordered_map<base::StrID, base::StrID> id_to_name{
-			{ base::StrID("dep"), base::StrID("dep") },
-			{ base::StrID("lib"), base::StrID("lib") },
-		};
 
-		auto pkg_info = createPackageInfo(raw, id_to_name, reporter.callback());
+		auto pkg_info = createPackageInfo(raw, { raw }, reporter.callback());
 		ASSERT_TRUE(pkg_info.has_value());
 		ASSERT_EQUAL(reporter.errors, 0);
 
@@ -280,12 +276,7 @@ private:
 			.features     = { base::StrID("f1") },
 			.dependencies = { RawDependencyInfo{ .package_id = base::StrID("dep"), .alias = {} } },
 		};
-
-		std::unordered_map<base::StrID, base::StrID> id_to_name{
-			{ base::StrID("dep"), base::StrID("dep") },
-		};
-
-		auto pkg_info = createPackageInfo(raw, id_to_name, reporter.callback());
+		auto pkg_info = createPackageInfo(raw, { raw }, reporter.callback());
 		ASSERT_TRUE(pkg_info.has_value());
 		ASSERT_EQUAL(pkg_info->getVersion().str(), std::string("1.0.0"));
 		ASSERT_EQUAL(pkg_info->getFeatures()->size(), 1);
@@ -309,9 +300,7 @@ private:
 			.dependencies = {},
 		};
 
-		std::unordered_map<base::StrID, base::StrID> id_to_name;
-
-		auto pkg_info = createPackageInfo(raw, id_to_name, reporter.callback());
+		auto pkg_info = createPackageInfo(raw, { raw }, reporter.callback());
 		ASSERT_TRUE(!pkg_info.has_value());
 		ASSERT_TRUE(reporter.errors > 0);
 

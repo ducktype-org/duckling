@@ -71,8 +71,8 @@ namespace compiler::driver {
 			result = base::BAD;
 		}
 
-		std::unordered_set<base::StrID> package_ids;
-		std::unordered_set<base::StrID> package_names;
+		std::unordered_set<base::StrID>              package_ids;
+		std::unordered_set<base::StrID>              package_names;
 		std::unordered_map<base::StrID, base::StrID> id_to_name;
 		for (const auto& pkg: packages) {
 			if (!package_ids.insert(pkg.package_id).second) {

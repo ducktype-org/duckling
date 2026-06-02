@@ -49,12 +49,15 @@ namespace compiler::driver {
 
 	/**
 	 * @brief Creates packages for the standard library and adds them to the global state.
+	 * @param packages_info[out] The std lib packages will be added here as dependencies.
 	 * @param std_path Path to the standard library.
 	 * @param report Diagnostic reporter to report any issues with the standard library packages
 	 * (like a missing package).
 	 */
-	base::OkBad addStandardLibraryPackages(
-		const fs::FilePath& std_path, frontend::packages::DiagnosticReporter& report
+	base::OkBad getStandardLibraryPackages(
+		std::vector<compiler::frontend::packages::RawPackageInfo>& packages_info,
+		const fs::FilePath&                                        std_path,
+		frontend::packages::DiagnosticReporter&                    report
 	);
 
 	/**

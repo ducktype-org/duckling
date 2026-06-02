@@ -90,18 +90,15 @@ namespace compiler::driver {
 
 			// Adding standard library packages
 			if (auto path = resolveStdPath(stdlib_options)) {
-				if (addStandardLibraryPackages(*path, report).isBad()) return base::BAD;
 				if (addStandardLibraryDependencies(packages_info, report).isBad()) return base::BAD;
+				if (getStandardLibraryPackages(packages_info, *path, report).isBad())
+					return base::BAD;
 			}
 
-			std::unordered_map<base::StrID, base::StrID> id_to_name;
-			for (const auto& pkg: packages_info)
-				id_to_name[pkg.package_id] = pkg.package_name;
-			for (const auto& cfg: STD_PACKAGES_CONFIG)
-				id_to_name[base::StrID(cfg.name)] = base::StrID(cfg.name);
-
 			for (const auto& package_info: packages_info) {
-				auto pkg = compiler::frontend::packages::createPackageInfo(package_info, id_to_name, report);
+				auto pkg = compiler::frontend::packages::createPackageInfo(
+					package_info, packages_info, report
+				);
 				if (pkg)
 					global_state::setters::addPackage(*pkg);
 				else

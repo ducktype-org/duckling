@@ -112,7 +112,11 @@ namespace compiler::frontend::packages {
 		if (!js::checkIsObject(json, "package", report)) return {};
 
 		js::checkForUnknownFields(
-			json, { "id", "name", "path" }, { "version", "features", "dependencies" }, "package", report
+			json,
+			{ "id", "name", "path" },
+			{ "version", "features", "dependencies" },
+			"package",
+			report
 		);
 
 		bool had_error = false;
@@ -184,9 +188,9 @@ namespace compiler::frontend::packages {
 	}
 
 	base::Optional<PackageInfo> createPackageInfo(
-		const RawPackageInfo&                               package_info,
-		const std::unordered_map<base::StrID, base::StrID>& id_to_name,
-		const DiagnosticReporter&                          report
+		const RawPackageInfo&              package_info,
+		const std::vector<RawPackageInfo>& all_packages,
+		const DiagnosticReporter&          report
 	) {
 		auto root_module = compiler::frontend::createModuleTree(
 			package_info.package_path, package_info.package_id
@@ -211,13 +215,12 @@ namespace compiler::frontend::packages {
 		std::vector<PackageDependencyInfo> package_dependencies;
 		package_dependencies.reserve(package_info.dependencies.size());
 		for (const auto& dependency: package_info.dependencies) {
-			auto default_alias_it = id_to_name.find(dependency.package_id);
-			auto default_alias
-				= default_alias_it != id_to_name.end() ? default_alias_it->second
-				                                       : dependency.package_id;
+			auto target_package = std::ranges::find_if(all_packages, [&](const auto& pkg) {
+				return pkg.package_id == dependency.package_id;
+			});
 			package_dependencies.push_back(PackageDependencyInfo{
 				.package_id = dependency.package_id,
-				.alias      = dependency.alias.copyValueOr(default_alias),
+				.alias      = dependency.alias.copyValueOr(target_package->package_name),
 			});
 		}
 
@@ -235,8 +238,7 @@ namespace compiler::frontend::packages {
 	) {
 		std::unordered_set<base::StrID> declared_ids;
 		declared_ids.reserve(packages_info.size());
-		for (const auto& package_info: packages_info)
-			declared_ids.insert(package_info.package_id);
+		for (const auto& package_info: packages_info) declared_ids.insert(package_info.package_id);
 
 		for (auto& package_info: packages_info)
 			std::erase_if(package_info.dependencies, [&](const RawDependencyInfo& dep) {
