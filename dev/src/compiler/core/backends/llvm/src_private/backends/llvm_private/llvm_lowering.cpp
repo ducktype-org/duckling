@@ -1,5 +1,3 @@
-#include "llvm_init.hpp"
-
 #include <llvm_helpers/llvm_helpers.hpp>
 
 #include <mutex>

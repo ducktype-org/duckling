@@ -1,5 +1,3 @@
-#include "llvm_init.hpp"
-
 #include <global_state/backend_options.hpp>
 #include <llvm_helpers/llvm_helpers.hpp>
 
@@ -51,8 +49,6 @@ namespace compiler::backend_llvm {
 	Ref<llvm::TargetMachine> ModuleImpl::setTargetMachine(const std::string& target_triple) {
 		if (target_triple != llvm::sys::getDefaultTargetTriple())
 			throw base::NotYetImplemented("target different than native");
-
-		init();
 
 		match_optional(target_machine.toOpt()) {
 			opt_some(target_machine_ref) {
