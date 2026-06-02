@@ -152,8 +152,15 @@ namespace vm {
 
 	void IVMProcess::setStatus(const api::ProcStatus& new_status, api::ThreadID thread_id) noexcept {
 		const bool is_main_thread = thread_id.asInt() == 0;
-
-		if (!is_main_thread) return;  // Only main thread can set overall process status
+		const bool is_terminal_failure = std::holds_alternative<api::ExecutionPanicked>(new_status)
+		                               || std::holds_alternative<api::ExecutionStopped>(new_status);
+		if (!is_main_thread){
+		  	// Only main thread can set overall process status
+			if(is_terminal_failure)
+				// Child threads can publish terminal failures if process is not already terminal
+		  		setStatusIfNotTerminal(new_status, thread_id);
+		 	return;
+		}
 
 		{
 			std::unique_lock<std::shared_mutex> lock(rw_status);
