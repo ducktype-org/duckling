@@ -365,11 +365,11 @@ namespace vm {
                         memory.getBlockViewUnsafe(block).getBegin() - frame.local_stack
                     );
 					u64 block_offset
-						= base::safeIntConv<u64>(block_ptr - frame.local_block_ref_stack_base);
+						= base::safeIntConv<u64>(block_ptr - *frame.local_block_ref_stack_base);
 					frame_vars.push_back(api::response::StackFrameData::FrameVar{
 						.offset = offset,
-						.name   = func_ref->local_stack.getName(stack_state, block_offset),
-						.type   = func_ref->local_stack.getTypeName(stack_state, block_offset),
+						.name   = *func_ref->local_stack.getName(stack_state, block_offset),
+						.type   = *func_ref->local_stack.getTypeName(stack_state, block_offset),
 						.value  = VMValueRef(*this, memory.getBlockType(block), Pointer(block, 0)),
 					});
 				}
