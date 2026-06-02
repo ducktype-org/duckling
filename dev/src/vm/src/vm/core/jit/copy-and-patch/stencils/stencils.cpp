@@ -8,6 +8,10 @@
 
 #include <iostream>
 
+// For situations when [[assume(...)]] gets ignored and it can't be.
+#define FORCE_ASSUME(...) \
+	if (!(__VA_ARGS__)) CORE_UNREACHABLE()
+
 namespace vm::jit::cnp {
 	DECLARE_LINK_VARIABLE(continue_fn);
 	DECLARE_LINK_VARIABLE(arg0);
@@ -20,9 +24,9 @@ namespace vm::jit::cnp {
 			"Expected a different opcode",
 		);
 
-		if (instr->nontc_opcode != std::to_underlying(OpCode)) CORE_UNREACHABLE();
-		if (instr->arg0 != GET_LINK_VARIABLE(arg0, u64, 64)) CORE_UNREACHABLE();
-		if (instr->arg1 != GET_LINK_VARIABLE(arg1, u64, 64)) CORE_UNREACHABLE();
+		FORCE_ASSUME(instr->nontc_opcode == std::to_underlying(OpCode));
+		FORCE_ASSUME(instr->arg0 == GET_LINK_VARIABLE(arg0, u64, 64));
+		FORCE_ASSUME(instr->arg1 == GET_LINK_VARIABLE(arg1, u64, 64));
 		InstructionImplementation(instr, local_stack, frame, thread);
 
 
