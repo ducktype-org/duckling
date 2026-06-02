@@ -8,6 +8,9 @@
 #include <string>
 #include <string_view>
 
+// Do wyjebania
+#include <vector>
+
 namespace compiler::repl {
 	class FrontendReplxxImplementation final {
 	public:
@@ -21,7 +24,8 @@ namespace compiler::repl {
 		void        clearHistory();
 		void        clearScreen();
 		void        printHelp() const;
-
+		void 		printCompletions(std::string_view prefix) const;
+		
 	private:
 		/// Setup replxx key bindings, callbacks, and multiline behavior.
 		void setupKeyBindings();

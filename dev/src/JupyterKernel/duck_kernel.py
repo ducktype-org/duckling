@@ -1,4 +1,5 @@
 import os
+import re
 
 from ipykernel.kernelbase import Kernel
 import pexpect
@@ -115,6 +116,64 @@ class MyLanguageKernel(Kernel):
             "execution_count": self.execution_count,
             "payload": [],
             "user_expressions": {},
+        }
+    
+    # This method is called by Jupyter when user tries to use autocompletion.
+    def do_complete(self, code, cursor_pos):
+        text_until_cursor = code[:cursor_pos]
+        match = re.search(r"\w+$", text_until_cursor)
+        prefix = match.group(0) if match else ""
+
+        if not prefix:
+            return {
+                "matches": [],
+                "cursor_start": cursor_pos,
+                "cursor_end": cursor_pos,
+                "metadata": {},
+                "status": "ok",
+            }
+
+        try:
+            self.child.read_nonblocking(size=8192, timeout=0)
+        except Exception:
+            pass
+
+        # We utilize custom command /complete in REPL to get list of possible completions for given prefix.
+        self.child.send(f"/complete {prefix}\r")
+
+        try:
+            self.child.expect(self.INPUT_PROMPT, timeout=None)
+        except Exception:
+            pass
+
+        raw_output = self.child.before or ""
+
+        # We delete ANSI escape codes from the output added by replxx.
+        ansi_escape = re.compile(r'(?:\x1b\[|\x9b)[0-?]*[ -/]*[@-~]')
+        clean_output = ansi_escape.sub('', raw_output)
+
+        lines = clean_output.splitlines()
+        matches = []
+
+        for line in lines:
+            clean_line = line.strip()
+
+            if not clean_line:
+                continue
+            if "/complete" in clean_line:
+                continue
+            if "End_of_completions" in clean_line:
+                continue
+
+            if clean_line not in matches:
+                matches.append(clean_line)
+
+        return {
+            "matches": matches,
+            "cursor_start": cursor_pos - len(prefix),
+            "cursor_end": cursor_pos,
+            "metadata": {},
+            "status": "ok",
         }
 
     def do_shutdown(self, restart):
