@@ -34,5 +34,6 @@ namespace vm::debugger::cli {
 
 		void help();
 		void status();
+		void position();
 	};
 }
