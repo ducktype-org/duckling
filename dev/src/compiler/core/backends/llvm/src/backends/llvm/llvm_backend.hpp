@@ -2,7 +2,7 @@
 
 #include "module_impl_fd.hpp"
 
-#include <lir/lir_structure/function_forward.hpp>
+#include <lir/lir_structure/lir_structure_fd.hpp>
 
 #include <base/pointers/box.hpp>
 #include <base/types/ok_bad.hpp>
@@ -47,19 +47,31 @@ namespace compiler::backend_llvm {
 		 */
 		static Module fromLLVMBC(std::span<unsigned char> llvm_bc_data);
 
+		/**
+		 * @brief Creates an LLVM module from LIRUnit.
+		 *
+		 * @return Module created by lowering the given LIRUnit.
+		 */
+		static Module fromLIRUnit(
+			query::Context&, const lir::LIRUnit& lir_unit, base::StrID module_id
+		);
+
 		Module(Box<ModuleImpl> impl): impl(std::move(impl)) {}
 
 		void addFunctionToModule(query::Context&, CRef<lir::Function> lir_function);
 
 		/**
-		 * @brief Adds a global variable declaration to the module.
+		 * @brief Adds a global variable declaration to the LLVM module.
 		 *
-		 * This function declares a global variable in the LLVM module and initializes it to 0 or
-		 * null. Note: This does not add a constructor for the global variable.
+		 * Note:
+		 * * If the global is a constant, it will be initialized within this function with the
+		 * initial CTV value.
+		 * * If the global is a variable, it will be zero-initialized by default, and the initial
+		 * value will be ignored (i.e. this does not add any constructors for the global variables).
 		 *
 		 * @param lir_global The global variable to be added to the module.
 		 */
-		void addGlobalToModule(const lir::LIRGlobal& lir_global);
+		void addGlobalToModule(const lir::LIRGlobalData& lir_global);
 
 		/**
 		 * @brief Adds a function to the LLVM module's list of global constructors.

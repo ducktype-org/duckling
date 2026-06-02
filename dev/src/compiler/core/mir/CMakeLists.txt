@@ -7,6 +7,7 @@ add_library(MIR STATIC
 	src/mir/mir_lowering/mir_lifetimes.cpp
 	src/mir/mir_lowering/mir_validation.cpp
 	src/mir/mir_lowering/mir_queries.cpp
+	src/mir/mir_lowering/mir_unit.cpp
 	src/mir/mir_structure/mir_structure.cpp
 	src/mir/mir_structure/mir_lifetime_scope.cpp
 )

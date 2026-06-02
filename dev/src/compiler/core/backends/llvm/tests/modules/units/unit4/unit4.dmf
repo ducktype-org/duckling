@@ -1,7 +1,8 @@
-# Call builtin function which may return unit
-# (but at the time of writing returns i64).
+# Call fundecl function returning unit
+
+fundecl returns_unit(x: i64) -> ();
 
 fun foo() = {
-    builtin_output_i64(0);
+    returns_unit(0);
     return;
 }

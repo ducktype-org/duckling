@@ -31,11 +31,6 @@ namespace vm::debugger {
 		events::Emitter<api::ProcStatus> on_status_changed;
 
 		/**
-		 * @brief Emits exit value as VMValue when VM completes execution
-		 */
-		events::Emitter<api::ExitValue> on_execution_completed;
-
-		/**
 		 * @brief Emits error message in human readable format on any error
 		 */
 		events::Emitter<std::string> on_error;
@@ -55,11 +50,6 @@ namespace vm::debugger {
 		 * @brief Attach Listener to Emitter that emits current VM status when VM changes status
 		 */
 		void attachOnStatusChangedListener(events::Listener<api::ProcStatus>& listener);
-
-		/**
-		 * @brief Attach Listener to Emitter that emits return value when VM completes execution
-		 */
-		void attachOnExecutionCompletedListener(events::Listener<api::ExitValue>& listener);
 
 		/**
 		 * @brief Attach Listener to Emitter that emits error message when any error raises
@@ -117,5 +107,10 @@ namespace vm::debugger {
 		std::expected<void, api::ApiError> setBreakpoint(
 			base::StrID function_name, u64 instr_number, bool enabled = true
 		);
+
+		/**
+		 * @brief Execute one FatByteCode step in the VM
+		 */
+		std::expected<void, api::ApiError> step();
 	};
 }

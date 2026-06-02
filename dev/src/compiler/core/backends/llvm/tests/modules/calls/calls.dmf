@@ -5,7 +5,7 @@ fun goo(arg1: i64, arg2: i64) -> i64 = {
 }
 
 fun main() -> i64 = {
-    return goo(5, 6) + builtin_input_i64() + sm.foo() + hoo();
+    return goo(5, 6) + sm.foo() + hoo();
 }
 
 fun hoo() -> i64 = {

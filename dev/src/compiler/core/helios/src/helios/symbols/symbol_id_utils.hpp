@@ -59,6 +59,11 @@ namespace compiler::helios {
 	ScopeID scope(SymID);
 
 	/**
+	 * @return Whether the symbol should use LinkOnce in LLVM.
+	 */
+	bool shouldLinkOnce(SymID);
+
+	/**
 	 * Gets scope that given symbol was defined within.
 	 * Returns empty optional if the symbol doesn't have a scope.
 	 * E.g. builtin functions don't have a scope.
@@ -72,11 +77,6 @@ namespace compiler::helios {
 	 * implementation
 	 */
 	base::Optional<pst::Access<pst::Stmt>> stmt(query::Context&, SymID);
-
-	/**
-	 * @return PST element symbol was created from.
-	 */
-	base::Optional<pst::AccessLocked<pst::LangElement>> symbolPst(SymID);
 
 	/**
 	 * @return PST element symbol was created from,

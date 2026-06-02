@@ -2,6 +2,7 @@
 
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/type_of_data.hpp>
+#include <vm/bytecode/validator/valid_function.hpp>
 #include <vm/bytecode/validator/valid_type/type_context.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
 
@@ -46,15 +47,15 @@ namespace vm::code {
 
 		const ObjIdNameMap<GlobalData>& globals() const;
 
-		const ObjIdNameMap<Function>& functions() const;
+		const ObjIdNameMap<valid_function::ValidFunction>& functions() const;
 
 		const ObjIdNameMap<ExternalCFunction>& extCFunctions() const;
 
 	private:
-		ObjIdNameMap<Function>          function_map;
-		ObjIdNameMap<ExternalCFunction> ext_c_function_map;
-		ObjIdNameMap<GlobalData>        globals_map;
-		TypeContext                     type_context;
+		ObjIdNameMap<valid_function::ValidFunction> function_map;
+		ObjIdNameMap<ExternalCFunction>             ext_c_function_map;
+		ObjIdNameMap<GlobalData>                    globals_map;
+		TypeContext                                 type_context;
 
 		/**
 		 * @brief Contains a mapping from function name to function signature for all functions
