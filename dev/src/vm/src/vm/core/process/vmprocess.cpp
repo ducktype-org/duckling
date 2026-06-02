@@ -151,25 +151,27 @@ namespace vm {
 	}
 
 	void IVMProcess::setStatus(const api::ProcStatus& new_status, api::ThreadID thread_id) noexcept {
-		const bool is_main_thread = thread_id.asInt() == 0;
-		const bool is_terminal_failure = std::holds_alternative<api::ExecutionPanicked>(new_status)
-		                               || std::holds_alternative<api::ExecutionStopped>(new_status);
-		// Only main thread can set overall process status
-		if (!is_main_thread) {
-			// Child threads can publish terminal failures if process is not already terminal
-			if(is_terminal_failure) {
-		  		setStatusIfNotTerminal(new_status, thread_id);
-			}
-			return ;
-		}
-
-		{
-			std::unique_lock<std::shared_mutex> lock(rw_status);
-			status = new_status;
-		}
-		on_status_changed.emitEvent(new_status);
-		status_cv.notify_all();
-		if (api::isStatusTerminal(new_status)) onTerminalStatus(new_status);
+    	const bool is_main_thread     = thread_id.asInt() == 0;
+    	const bool is_terminal_failure = std::holds_alternative<api::ExecutionPanicked>(new_status)
+    	                              || std::holds_alternative<api::ExecutionStopped>(new_status);
+		
+    	// Only main thread can set overall process status
+    	if (!is_main_thread) {
+    	    // Child threads can publish terminal failures if process is not already terminal
+    	    if (is_terminal_failure) setStatusIfNotTerminal(new_status, thread_id);
+    	    return;
+    	}
+	
+    	{
+    	    std::unique_lock<std::shared_mutex> lock(rw_status);
+    	    status = new_status;
+    	}
+    	on_status_changed.emitEvent(new_status);
+    	status_cv.notify_all();
+	
+    	if (api::isStatusTerminal(new_status)) {
+    	    onTerminalStatus(new_status);
+    	}
 	}
 
 	bool IVMProcess::setStatusIfNotTerminal(
