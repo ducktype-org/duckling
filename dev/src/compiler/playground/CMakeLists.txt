@@ -7,6 +7,3 @@ duck_add_playground(pst_graph pst_graph_playground.cpp USES Lexer PstParser Syst
 duck_add_playground(frontend frontend_playground.cpp USES Filesystem ModuleTree Clah Init)
 duck_add_playground(helios helios_playground.cpp USES Base ModuleTree Clah HELIOS Init)
 duck_add_playground(main_code_dependency main_code_dependency_playground.cpp USES Base ModuleTree Clah HELIOS Init)
-duck_add_playground(mir mir_playground.cpp USES Base ModuleTree Clah HELIOS QueryFramework MIR PstParser Init)
-duck_add_playground(lir lir_playground.cpp USES Base ModuleTree Clah HELIOS QueryFramework MIR PstParser LIR Init)
-duck_add_playground(llvm llvm_playground.cpp USES Base ModuleTree Clah HELIOS QueryFramework MIR PstParser LIR LLVMBackend Init)

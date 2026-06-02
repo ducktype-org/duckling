@@ -1,3 +1,5 @@
+import core.builtins.*;
+
 # This test tests the compile time evaluation of meta types. 
 # Note that for more complex types we create bool constants which 
 # we check at runtime to assert their correctness, since some of 

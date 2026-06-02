@@ -6,6 +6,7 @@
 #pragma once
 
 #include <string>
+#include <string_view>
 
 #ifdef USE_REPLXX
 	#include "frontend_implementations/replxx.hpp"
@@ -57,6 +58,11 @@ namespace compiler::repl {
 		 * @brief Prints the history of previously entered inputs.
 		 */
 		void printHistory() const;
+
+		/**
+		 * @brief Adds a new entry to the input history.
+		 */
+		void addHistoryEntry(std::string_view entry);
 
 		/**
 		 * @brief Clears the terminal screen.

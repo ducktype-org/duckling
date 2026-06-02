@@ -1,3 +1,5 @@
+import core.builtins.*;
+
 fun swap(a: ref i64, b: ref i64) -> () = {
     let tmp: i64 = a;
     a = b;

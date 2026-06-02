@@ -34,9 +34,9 @@ pub struct InitOptions<'duck, 'a> {
 const DEFAULT_SOURCE_FILENAME: &str = "src.dmf";
 
 const DEFAULT_SOURCE_CONTENTS: &str = "\
+import core.builtins.*;
+
 fun main() = {
-    # !TODO: On macOS, builtin_output_string segfaults :^);
-    # builtin_output_string(\"Hello, world!\");
     return 0;
 }
 ";

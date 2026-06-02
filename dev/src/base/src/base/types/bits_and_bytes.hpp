@@ -16,6 +16,10 @@ STRONG_TYPEDEF_INT_DIMENSIONAL(Bits, usize);
 
 STRONG_TYPEDEF_INT_DIMENSIONAL(Bytes, usize);
 
+STRONGLY_TYPED_INT_STD_HASH(Bytes)
+
+STRONGLY_TYPED_INT_STD_HASH(Bits)
+
 namespace base {
 	constexpr Bits bytes2bits(Bytes bytes) { return Bits(usize(bytes) * 8); }
 

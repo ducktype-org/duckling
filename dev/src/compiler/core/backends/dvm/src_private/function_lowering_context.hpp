@@ -24,7 +24,8 @@ namespace compiler::backend_vm::internal {
 	 *
 	 * This is a temporary helper used when a LIR global has an initial CTV value but no
 	 * explicit ctor function lowered from LIR.
-	 * @TODO: #1657 Remove this
+	 * @TODO: #1553 Remove this constants should have constants initialization
+
 	 */
 	vm::code::Function createMiniGlobalCtorFromCTV(
 		ProgramLoweringContext&      program_context,
@@ -102,6 +103,12 @@ namespace compiler::backend_vm::internal {
 		[[nodiscard]] const DVMPlace& getLirLocal(lir::LIRLocalRef local) const;
 
 		const DVMPlace& getOrInsertLirLocal(lir::LIRLocalRef local);
+
+		/**
+		 * @brief Load to temporary local variable from a given pointer type place.
+		 * Return the place representing the temporary local variable.
+		 */
+		DVMPlace loadFromPlace(const DVMPlace& place, const vm::code::TypeOfData& pointee_type);
 
 		/**
 		 * @brief Makes sure a given @p value is a place and places it in a temporary if needed
