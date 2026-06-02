@@ -672,16 +672,17 @@ namespace compiler::lir {
 
 		/**
 		 * @brief Removes duplicate functions and globals from the LIR unit.
+		 * (based on their mangled names).
 		 *
 		 * @note This is needed to handle the case of multiple script modules in REPL, which might
-		 * contain duplicated functions and globals. We are not sure, whether this is the best way
-		 * to handle this case, but it is a simple solution for now.
+		 * contain duplicated functions and globals.
 		 * @TODO: #2694 #2424 come back to this, and maybe remove or adapt this method accordingly.
 		 *
-		 * @note In the context, of the above, don't use this method outside of REPL script
-		 * compilation, as it might hide other issues with duplicated functions and globals in LIR
-		 * units. It is only placed here, to avoid potential logic duplication, will we ever need to
-		 * handle duplicated functions and globals in LIR units in other contexts.
+		 * @note In the context of the above, don't use this method outside of the REPL script
+		 * compilation without proper thought, as it might hide other issues with duplicated
+		 * functions and globals in LIR units. The method is nontheless placed here, to avoid
+		 * potential logic duplication, will we ever need to handle duplicated functions and globals
+		 * in LIR units in other contexts.
 		 */
 		void deduplicateSymbols();
 	};
