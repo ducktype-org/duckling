@@ -181,8 +181,7 @@ namespace vm::jit {
 				const vm::MicroInstruction& mi     = bc.at(instr_idx);
 				auto                        opcode = vm::getInstructionOpcode(mi);
 				switch (opcode) {
-				// case vm::low::MicroOpcode::jit_call_entrypoint:
-				case vm::low::MicroOpcode::jit_entrypoint:
+				case vm::low::MicroOpcode::jitEntrypoint:
 					continue;
 				case vm::low::MicroOpcode::call_func:
 				case vm::low::MicroOpcode::virtual_call_pptr_method: {

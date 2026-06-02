@@ -88,7 +88,7 @@ namespace vm::loader::compiler::safe::detail {
 			  compiler{ compiler },
 			  ctx{ ctx } {
 #ifdef ENABLE_JIT
-			addLow<Op_jit_entrypoint>();
+			addLow<Op_jitEntrypoint>();
 #endif
 		}
 
@@ -152,7 +152,7 @@ namespace vm::loader::compiler::safe::detail {
 				);
 #if (BUILD_TYPE_DEV_DEBUG)
 	#ifdef ENABLE_JIT
-				if constexpr (!std::is_same_v<T, Op_jit_entrypoint>) {
+				if constexpr (!std::is_same_v<T, Op_jitEntrypoint>) {
 	#endif
 					result.back().opcode_id      = T::OPCODE;
 					result.back().representation = current_high_instruction_representation;
