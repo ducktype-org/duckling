@@ -11,19 +11,22 @@ namespace vm::jit::cnp::internal {
 	Type valueFromPointer(OpaqueStruct& link_time_variable) {
 		auto value = std::bit_cast<uintptr_t>(&link_time_variable);
 
-		CORE_ASSERT(
+		static_assert(
 			sizeof(IntegerEquivalent) <= sizeof(intptr_t), "Type too big for a link-time constant"
 		);
 		auto truncated_value = static_cast<IntegerEquivalent>(value);
 
-		CORE_ASSERT(sizeof(IntegerEquivalent) == sizeof(Type), "Wrong size of link-time constant");
+		static_assert(sizeof(IntegerEquivalent) == sizeof(Type), "Wrong size of link-time constant");
 		return std::bit_cast<Type>(truncated_value);
 	}
 }
 
 #define LINK_VARIABLE_NAME(name) _##name
+
+// Those variables are also implicitly extern: https://en.cppreference.com/cpp/language/language_linkage#Notes
 #define DECLARE_LINK_VARIABLE(name) \
-	extern "C" { __attribute__((weak)) extern internal::OpaqueStruct LINK_VARIABLE_NAME(name); }
+	extern "C" __attribute__((weak)) internal::OpaqueStruct LINK_VARIABLE_NAME(name)
+
 #define GET_LINK_VARIABLE(name, type, size) \
 	internal::valueFromPointer<type, u##size>(LINK_VARIABLE_NAME(name))
 
