@@ -12,8 +12,10 @@
 
 use std::path::{Path, PathBuf};
 
-use crate::util::file_locks::{FileLockManager, LockedFile};
-use crate::{DuckContext, QuackResult};
+use crate::{
+    DuckContext, QuackResult,
+    util::file_locks::{FileLockManager, LockedFile},
+};
 
 #[derive(Clone, Debug)]
 /// Layout of the artifacts directory. See the [module](super::artifacts_layout) documentation.

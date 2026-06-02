@@ -1,4 +1,4 @@
-//! Entrypoints for creating a new [`EarlyDag`] and friends.
+//! Entrypoints for creating a new [`EarlyGraph`] and friends.
 
 use tracing::debug;
 
@@ -11,34 +11,32 @@ use crate::quackpack::core::storage::package_id::PackageId;
 use crate::quackpack::core::storage::paths::Storage;
 use crate::{DuckContext, QuackResultContext, qp_bail, qp_bail_internal};
 
-impl DependencyDag {
-    /// Create new [`DependencyDag`] from the given freeze.
+impl DependencyGraph {
+    /// Create new [`DependencyGraph`] from the given freeze.
     ///
-    /// This method checks that the graph is complete, and that it is, in fact, a DAG.
+    /// This method checks that the graph is complete (all edge targets have their neighbours lists),
+    /// as well as checking that only local dependencies possibly form cycles.
     #[tracing::instrument(skip_all)]
     pub fn new(freeze: &VenvFreeze) -> QuackResult<Self> {
         let root = freeze.root();
-        let mut dag = HashMap::new();
-        dag.insert(
+        // @TODO: #2789 this is ugly, but with Identities, I think FreezeDep will contain Identity.
+        let mut freeze_dep_to_freeze_pkg = HashMap::new();
+        let mut graph = HashMap::new();
+        graph.insert(
             root.as_freeze_dep(),
             DependencyNode::new(root.dependencies().iter().copied()),
         );
         for dep in freeze.dependencies() {
-            dag.insert(
+            graph.insert(
                 dep.as_freeze_dep(),
                 DependencyNode::new(dep.dependencies().iter().copied()),
             );
+            freeze_dep_to_freeze_pkg.insert(dep.as_freeze_dep(), dep.clone());
         }
         let root = root.as_freeze_dep();
-        Self::check_is_dag(root, &dag)?;
-        Ok(Self { root, dag })
-    }
-
-    /// Helpers for [`new`](Self::new).
-    fn check_is_dag(root: FreezeDep, dag: &HashMap<FreezeDep, DependencyNode>) -> QuackResult<()> {
-        Self::check_is_complete_graph(root, dag)?;
-        Self::check_no_cycles(root, dag)?;
-        Ok(())
+        Self::check_is_complete_graph(root, &graph)?;
+        Self::check_cycles_only_on_local_deps(&freeze_dep_to_freeze_pkg, root, &graph)?;
+        Ok(Self { root, graph })
     }
 
     /// Checks, whether `graph` rooted at `root` is complete.
@@ -63,52 +61,37 @@ impl DependencyDag {
         Ok(())
     }
 
-    /// Checks, that the `graph` rooted at `root` doesn't have cycles.
-    #[tracing::instrument(skip_all)]
-    fn check_no_cycles(
+    /// Checks that only cycles of dependencies are of local dependencies.
+    fn check_cycles_only_on_local_deps(
+        freeze_dep_to_freeze_pkg: &HashMap<FreezeDep, FreezePackage>,
         root: FreezeDep,
-        dag: &HashMap<FreezeDep, DependencyNode>,
+        graph: &HashMap<FreezeDep, DependencyNode>,
     ) -> QuackResult<()> {
-        debug!(%root, graph = ?dag, "checking cycles");
-        #[derive(Debug, Eq, PartialEq)]
-        enum State {
-            Entered,
-            Left,
-        }
-
-        let mut states = HashMap::new();
-        let mut order = vec![];
-        fn visit_impl(
-            current: FreezeDep,
-            dag: &HashMap<FreezeDep, DependencyNode>,
-            states: &mut HashMap<FreezeDep, State>,
-            order: &mut Vec<FreezeDep>,
-        ) -> QuackResult<()> {
-            order.push(current);
-            let previous_state = states.insert(current, State::Entered);
-            debug_assert_ne!(
-                previous_state,
-                Some(State::Left),
-                "we shouldn't revisit nodes"
-            );
-            if previous_state == Some(State::Entered) {
-                return Err(bail_cycle_message(order));
+        debug!(%root, ?graph, "checking cycles only on local deps");
+        let sccs = kosaraju_sccs(graph);
+        for scc in sccs {
+            if scc.len() == 1 {
+                // 1-element scc, so no cycle.
+                continue;
             }
-            let deps = dag
-                .get(&current)
-                .expect("we've verified that there are dependencies");
-            for dep in deps.dependencies() {
-                if states.get(dep) != Some(&State::Left) {
-                    visit_impl(*dep, dag, states, order)?;
+            for dep in scc {
+                let mut is_local = true;
+                if let Some(freeze_pkg) = freeze_dep_to_freeze_pkg.get(&dep) {
+                    is_local = freeze_pkg.source().is_local();
+                }
+                // Otherwise this is the root package, so it is local.
+                if !is_local {
+                    // @TODO: #2603 Maybe this could be a better error message (find and print the whole cycle).
+                    // But it is some effort (we have to pick any other vertex and do dfs to it and from it).
+                    // Maybe print the whole ssc?
+                    qp_bail!(
+                        "the freeze contains a cycle of dependencies which contains a non-local package {}",
+                        dep
+                    );
                 }
             }
-
-            states.insert(current, State::Left);
-            let previous = order.pop();
-            debug_assert_eq!(previous, Some(current));
-            Ok(())
         }
-        visit_impl(root, dag, &mut states, &mut order)
+        Ok(())
     }
 }
 
@@ -181,8 +164,8 @@ fn parse_dependency(
     Ok(CompilerPackage::new(package, pkg_type))
 }
 
-impl EarlyDag {
-    /// Creates a new [`EarlyDag`] from the given [`BuildContext`].
+impl EarlyGraph {
+    /// Creates a new [`EarlyGraph`] from the given [`BuildContext`].
     ///
     /// Also note that:
     /// - no features are expanded (including the root package),
@@ -190,7 +173,7 @@ impl EarlyDag {
     #[tracing::instrument(skip_all)]
     pub fn new_early(bcx: &BuildContext<'_, '_>) -> QuackResult<Self> {
         // `new` checks for cycles.
-        let graph = DependencyDag::new(&bcx.freeze)?;
+        let graph = DependencyGraph::new(&bcx.freeze)?;
         let mut packages = HashMap::new();
         packages.insert(
             bcx.freeze.root().as_freeze_dep(),
@@ -221,8 +204,105 @@ impl EarlyDag {
             }
         }
         Ok(Self {
-            dag: graph,
+            graph,
             packages: PackagesSet { inner: packages },
         })
     }
+}
+
+/// Computes the decomposition of the graph into strongly connected components.
+/// Returns a vector of vectors, each vector lists vertices in one stronly connected component.
+fn kosaraju_sccs(graph: &HashMap<FreezeDep, DependencyNode>) -> Vec<Vec<FreezeDep>> {
+    // This is the Kosaraju's algorithm for finding strongly connected components of a graph.
+    // Step 1: First DFS to get finishing order
+    let mut visited = HashSet::new();
+    let mut order = Vec::new();
+
+    for vertex in graph.keys() {
+        if !visited.contains(vertex) {
+            dfs1(graph, *vertex, &mut visited, &mut order);
+        }
+    }
+
+    // Step 2: Build reversed graph.
+    let reversed = reverse_graph(graph);
+
+    // Step 3: DFS on reversed graph in post-order of the first dfs.
+    let mut visited = HashSet::new();
+    let mut sccs = Vec::new();
+
+    for vertex in order.iter().rev() {
+        if !visited.contains(vertex) {
+            let mut scc = Vec::new();
+            dfs2(&reversed, *vertex, &mut visited, &mut scc);
+            sccs.push(scc);
+        }
+    }
+
+    sccs
+}
+
+/// Helper for [`kosaraju_sccs`].
+/// Forwards DFS pass.
+fn dfs1(
+    graph: &HashMap<FreezeDep, DependencyNode>,
+    vertex: FreezeDep,
+    visited: &mut HashSet<FreezeDep>,
+    order: &mut Vec<FreezeDep>,
+) {
+    visited.insert(vertex);
+
+    if let Some(neighbors) = graph.get(&vertex) {
+        for neighbor in neighbors.dependencies() {
+            if !visited.contains(neighbor) {
+                dfs1(graph, *neighbor, visited, order);
+            }
+        }
+    }
+
+    order.push(vertex);
+}
+
+/// Helper for [`kosaraju_sccs`].
+/// Backwards DFS pass.
+fn dfs2(
+    graph: &HashMap<FreezeDep, DependencyNode>,
+    vertex: FreezeDep,
+    visited: &mut HashSet<FreezeDep>,
+    scc: &mut Vec<FreezeDep>,
+) {
+    visited.insert(vertex);
+    scc.push(vertex);
+
+    if let Some(neighbors) = graph.get(&vertex) {
+        for neighbor in neighbors.dependencies() {
+            if !visited.contains(neighbor) {
+                dfs2(graph, *neighbor, visited, scc);
+            }
+        }
+    }
+}
+
+/// Helper for [`kosaraju_sccs`].
+/// Computes the reversal of the dependencies graph.
+fn reverse_graph(graph: &HashMap<FreezeDep, DependencyNode>) -> HashMap<FreezeDep, DependencyNode> {
+    let mut reversed = HashMap::new();
+
+    // Initialize all vertices
+    for vertex in graph.keys() {
+        reversed.insert(*vertex, DependencyNode::new(vec![]));
+    }
+
+    // Add reversed edges
+    for (from, to_list) in graph {
+        for to in to_list.dependencies() {
+            reversed
+                .entry(*to)
+                .or_insert_with(DependencyNode::default)
+                .dependencies_mut()
+                .push(*from);
+        }
+    }
+
+    reversed
 }
