@@ -294,6 +294,7 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
             Ok(None) => {}
             Err(e) => {
                 error!("failed to get cached git: {e}");
+                // @TODO: #2841 We can use `only_error`, because `FetchResponse` does not implement `Default`.
                 // return GathererComputation::only_error(e);
             }
         }
