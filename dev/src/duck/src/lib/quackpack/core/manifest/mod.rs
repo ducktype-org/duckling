@@ -1,6 +1,6 @@
 //! High-level abstraction over a manifest and its inner types.
 //!
-//! The most notable members are [`Manifest`], [`Dependency`], and [`FrontMatter`].
+//! The most notable members are [`Manifest`] and [`Dependency`].
 //!
 //! Parsing is implemented in the [`parse`] module.
 mod dependency;
