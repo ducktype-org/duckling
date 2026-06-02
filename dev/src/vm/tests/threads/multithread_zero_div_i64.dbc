@@ -1,0 +1,22 @@
+function bad {} -> {} {
+    init_pany_type a, i64;
+    init_pany_type b, i64;
+    mov_p64_imm a, 13;
+    mov_p64_imm b, 0;
+    div_p64_p64 a, b;
+    deinit;
+    ret;
+}
+
+function main { i64, ptr_argv } -> { i64 } {
+    init_pany_type thread_bad_id, i64;
+    set_threadctx bad;
+    call_builtinfunc builtin_start_thread;
+
+    init_pany_type join_bad_ret, i64;
+    init_pany_type join_bad_id, i64;
+    mov_p64_p64 join_bad_id, thread_bad_id;
+    call_builtinfunc builtin_join_thread;
+
+    ret;
+}
