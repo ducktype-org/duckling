@@ -1,5 +1,7 @@
 #include "replxx_helpers.hpp"
 
+#include "base/types/ints.hpp"
+
 #include <algorithm>
 #include <cctype>
 #include <string>
@@ -34,16 +36,16 @@ namespace compiler::repl::replxx_helpers {
 		return tokens;
 	}
 
-	int computeBraceIndentDepth(const std::string& input, size_t cursor_pos) {
-		int  depth           = 0;
+	u64 computeBraceIndentDepth(const std::string& input, usize cursor_pos) {
+		u64  depth           = 0;
 		bool in_single_quote = false;
 		bool in_double_quote = false;
 		bool escape_next     = false;
 
 		bool in_single_line_comment  = false;
-		int  multiline_comment_depth = 0;
+		u64  multiline_comment_depth = 0;
 
-		for (size_t i = 0; i < cursor_pos && i < input.size(); ++i) {
+		for (usize i = 0; i < cursor_pos && i < input.size(); ++i) {
 			const char ch = input[i];
 
 			if (escape_next) {
@@ -109,7 +111,7 @@ namespace compiler::repl::replxx_helpers {
 			if (ch == '{')
 				++depth;
 			else if (ch == '}')
-				depth = std::max(0, depth - 1);
+				depth = std::max((u64) 0, depth - 1);
 		}
 
 		return depth;

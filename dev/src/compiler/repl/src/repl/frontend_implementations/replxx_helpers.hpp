@@ -1,5 +1,7 @@
 #pragma once
 
+#include <base/types/ints.hpp>
+
 #include <cstddef>
 #include <string>
 #include <vector>
@@ -21,7 +23,7 @@ namespace compiler::repl::replxx_helpers {
 	 * Compute indentation depth from unmatched braces up to \p cursor_pos.
 	 * Braces inside strings or line comments are ignored.
 	 */
-	int computeBraceIndentDepth(const std::string& input, size_t cursor_pos);
+	u64 computeBraceIndentDepth(const std::string& input, usize cursor_pos);
 
 	/**
 	 * Constructs a simplified string where every UTF-8 code point from the input

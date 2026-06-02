@@ -137,12 +137,12 @@ namespace compiler::repl {
 			if (cursor_pos > static_cast<int>(line.size()))
 				cursor_pos = static_cast<int>(line.size());
 
-			const int indent_depth
+			const auto indent_depth
 				= replxx_helpers::computeBraceIndentDepth(line, static_cast<usize>(cursor_pos));
 
 			std::string indentation;
-			indentation.reserve(static_cast<usize>(indent_depth) * TAB_SPACES.size());
-			for (int i = 0; i < indent_depth; ++i) indentation += TAB_SPACES;
+			indentation.reserve(indent_depth * TAB_SPACES.size());
+			for (usize i = 0; i < indent_depth; ++i) indentation += TAB_SPACES;
 
 			const std::string insertion = "\n" + indentation;
 			line.insert(static_cast<usize>(cursor_pos), insertion);
