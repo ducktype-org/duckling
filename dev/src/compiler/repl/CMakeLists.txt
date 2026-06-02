@@ -6,6 +6,7 @@ endif()
 
 add_library(Repl
     src/repl/frontend.cpp
+    src/repl/helpers.cpp
     src/repl/session.cpp
     ${REPL_IMPL_SRC}
 )
