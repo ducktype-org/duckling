@@ -358,14 +358,14 @@ namespace vm {
 				auto stack_state = func_ref->stack_states.at(high_pos->instruction_index);
 
 				std::vector<api::response::StackFrameData::FrameVar> frame_vars;
-				for (Block* block_ptr:
+				for (Block* const& block_ptr:
 				     std::span(frame.local_block_ref_stack_base, frame.local_block_ref_stack_end)) {
 					Ref<Block> block  = Ref(block_ptr);
 					u64        offset = base::safeIntConv<u64>(
                         memory.getBlockViewUnsafe(block).getBegin() - frame.local_stack
                     );
 					u64 block_offset
-						= base::safeIntConv<u64>(block_ptr - *frame.local_block_ref_stack_base);
+						= base::safeIntConv<u64>(&block_ptr - frame.local_block_ref_stack_base);
 					frame_vars.push_back(api::response::StackFrameData::FrameVar{
 						.offset = offset,
 						.name   = *func_ref->local_stack.getName(stack_state, block_offset),
