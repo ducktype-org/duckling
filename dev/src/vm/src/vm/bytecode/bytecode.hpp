@@ -5,6 +5,7 @@
 #include <string_id/string_id.hpp>
 #include <token_parser_core/common_elements.hpp>
 
+#include <vm/bytecode/const_pool.hpp>
 #include <vm/bytecode/element_base.hpp>
 #include <vm/bytecode/type_of_data.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
@@ -78,7 +79,17 @@ namespace vm::code {
 	};
 
 	/**
-	 * @brief Represents a group of types, globals and functions.
+	 * @brief Represents a constant data entry with a name, type, and initial value.
+	 * Constants are read-only global data initialized from their value expression.
+	 */
+	struct ConstantData final: ElementBase {
+		Identifier     name;
+		Identifier     type;
+		ConstantValue  value;
+	};
+
+	/**
+	 * @brief Represents a group of types, globals, functions and constants.
 	 * @note It's not guaranteed that every code collection is valid.
 	 */
 	struct CodeCollection final {
@@ -86,6 +97,7 @@ namespace vm::code {
 		std::vector<TypeOfData>        types;
 		std::vector<GlobalData>        global_data;
 		std::vector<ExternalCFunction> external_c_functions;
+		std::vector<ConstantData>     constants;
 
 		/**
 		 * @brief Merges another CodeCollection into this one by appending all its elements.

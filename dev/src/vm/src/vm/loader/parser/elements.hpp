@@ -15,6 +15,8 @@
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/type_of_data.hpp>
 
+#include <vm/bytecode/const_pool.hpp>
+
 namespace vm::loader::parser {
 
 	class F8ParserState final: public tpc::ParserState {
@@ -51,6 +53,18 @@ namespace vm::loader::parser {
 		base::Optional<tpc::Identifier> dtor_name;
 
 		static Box<GlobalData> parse(F8ParserState& state);
+
+		void dprint(std::ostream& out) const override;
+	};
+
+	struct ConstantData final: AsmElement {
+		using AsmElement::AsmElement;
+
+		tpc::Identifier    name;
+		tpc::Identifier   type;
+		code::ConstantValue value;
+
+		static MBox<ConstantData> parse(F8ParserState& state);
 
 		void dprint(std::ostream& out) const override;
 	};
@@ -98,10 +112,11 @@ namespace vm::loader::parser {
 	};
 
 	struct ParsedFile final {
-		std::vector<Box<Func>>       functions;
-		std::vector<Box<Type>>       types;
-		std::vector<Box<GlobalData>> global_data;
-		fs::File                     source_file;
+		std::vector<Box<Func>>        functions;
+		std::vector<Box<Type>>        types;
+		std::vector<Box<GlobalData>>  global_data;
+		std::vector<Box<ConstantData>> constants;
+		fs::File                      source_file;
 
 		ParsedFile(fs::File source_file);
 

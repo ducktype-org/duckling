@@ -4,6 +4,7 @@
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
+#include <base/extend_cpp/variant_match.hpp>
 #include <base/preproc/for_each.hpp>
 #include <base/types/floats.hpp>
 
@@ -14,8 +15,11 @@
 #include <token_parser_core/token_stream.hpp>
 #include <token_source/source.hpp>
 
+#include <vm/bytecode/const_pool.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
+
+#include <memory>
 
 namespace vm::loader::parser {
 	namespace opargs_parsers {
@@ -387,6 +391,106 @@ namespace vm::loader::parser {
         );
 
 		state.parse().one(lang_def::Special::Semicolon);
+		return out;
+	}
+
+#define ERROR_CHECK() \
+	if (state.int_err->hasErrors()) return {};
+#define PARSE_ONE_CHECK(VALUE) \
+	state.parse().one(VALUE);  \
+	ERROR_CHECK()
+
+	namespace {
+		base::Optional<code::ConstantValue> parseConstantValue(F8ParserState& state) {
+			using namespace vm::code;
+
+			if (state[0].isKeyword()) {
+				auto kw = state[0].asKeyword();
+				state.tokens().next();
+
+				switch (kw) {
+				case lang_def::Keyword::BCStructureValue: {
+					if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
+						state.logInt(makeBox<dia_int::PlaceholderError>(
+							"Expected `{` after `structure`.", state.getPosition()
+						));
+						return {};
+					}
+
+					state.goDown();
+					auto struct_val = makeBox<ConstantClass>();
+					while (state.notEmpty()) {
+						tpc::Identifier field_name;
+						PARSE_ONE_CHECK(&field_name);
+						PARSE_ONE_CHECK(lang_def::NamedOperator::Colon);
+
+						auto field_value = parseConstantValue(state);
+						if (!field_value) return {};
+						struct_val->fields.emplace_back(
+							field_name.value, std::move(field_value.value())
+						);
+
+						if (state.empty()) break;
+						PARSE_ONE_CHECK(lang_def::Special::Comma);
+					}
+					state.goUpAndSkip();
+					return ConstantValue::fromData(std::move(struct_val));
+				}
+				case lang_def::Keyword::BCFixedSizeTable: {
+					if (!state[0].isBracketGroup(lexer::Token::BracketType::Square)) {
+						state.logInt(makeBox<dia_int::PlaceholderError>(
+							"Expected `[` after `array`.", state.getPosition()
+						));
+						return {};
+					}
+
+					state.goDown();
+					auto array_val = makeBox<ConstantFixedSizeTable>();
+					while (state.notEmpty()) {
+						auto element = parseConstantValue(state);
+						if (!element) return {};
+
+						array_val->elements.push_back(std::move(element.value()));
+						if (state.empty()) break;
+						PARSE_ONE_CHECK(lang_def::Special::Comma);
+					}
+					state.goUpAndSkip();
+
+					return ConstantValue::fromData(std::move(array_val));
+				}
+				default:
+					// Default: parse as a numeric literal (u64 raw bits).
+					auto parsed = opargs_parsers::parseNumericLiteral<u64>(state);
+					ERROR_CHECK();
+					return ConstantValue::fromU64(parsed.first);
+				}
+			}
+			state.logInt(makeBox<dia_int::PlaceholderError>(
+				"Expected a constant value here.", state.getPosition()
+			));
+			return {};
+		}
+	}  // namespace
+
+	MBox<ConstantData> ConstantData::parse(F8ParserState& state) {
+		auto out = makeBox<ConstantData>(state.getPosition());
+
+		PARSE_ONE_CHECK(lang_def::Keyword::BCConstant);
+
+		PARSE_ONE_CHECK(&out->name);
+		PARSE_ONE_CHECK(&out->type);
+
+		auto value_opt = parseConstantValue(state);
+		if (!value_opt) return {};
+		out->value = std::move(value_opt.value());
+
+		PARSE_ONE_CHECK(lang_def::Special::Semicolon);
+
+		auto end_position = state.getPosition().getEnd();
+		out->position     = dia::SourcePosition(
+            out->position.getLocation(), out->position.getStart(), end_position
+        );
+
 		return out;
 	}
 
@@ -913,6 +1017,9 @@ namespace vm::loader::parser {
 			} else if (state[0].is(lang_def::Keyword::BCGlobalData)) {
 				auto global_data = GlobalData::parse(state);
 				out->global_data.emplace_back(std::move(global_data));
+			} else if (state[0].is(lang_def::Keyword::BCConstant)) {
+				auto constant = ConstantData::parse(state).toOptBox();
+				if (constant) out->constants.emplace_back(std::move(*constant));
 			} else if (state[0].is(lang_def::Keyword::BCFunction)) {
 				auto func = Func::parse(state).toOptBox();
 				if (func) out->functions.emplace_back(std::move(*func));
@@ -974,6 +1081,45 @@ namespace vm::loader::parser {
 		out << ";";
 	}
 
+	namespace {
+		void dprintConstantValue(const code::ConstantValue& value, std::ostream& out) {
+			variant_match(*value.data) {
+				variant_case(code::ConstantU64, u64_val) { out << u64_val.value; }
+				variant_case(code::ConstantClass, class_val) {
+					out << "structure { ";
+					bool first = true;
+					for (const auto& [name, field_val]: class_val.fields) {
+						if (!first) out << ", ";
+						out << name.strView() << ": ";
+						dprintConstantValue(field_val, out);
+						first = false;
+					}
+					out << " }";
+				}
+				variant_case(code::ConstantFixedSizeTable, array_val) {
+					out << "array [ ";
+					bool first = true;
+					for (const auto& elem: array_val.elements) {
+						if (!first) out << ", ";
+						dprintConstantValue(elem, out);
+						first = false;
+					}
+					out << " ]";
+				}
+				variant_default {
+					CORE_PANIC("Unknown constant value type.");
+				}				
+			}
+		}
+	}  // namespace
+
+	void ConstantData::dprint(std::ostream& out) const {
+		out << "constant ";
+		out << name.value.strView() << " " << type.value.strView() << " ";
+		dprintConstantValue(value, out);
+		out << ";";
+	}
+
 	void Func::dprint(std::ostream& out) const {
 		out << "function ";
 		out << name.value.strView() << "{";
@@ -998,6 +1144,11 @@ namespace vm::loader::parser {
 	void ParsedFile::dprint(std::ostream& out) const {
 		for (auto& type: types) {
 			type->dprint(out);
+			out << "\n";
+		}
+
+		for (auto& constant: constants) {
+			constant->dprint(out);
 			out << "\n";
 		}
 

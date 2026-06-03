@@ -21,7 +21,8 @@ vm::code::CodeCollection vm::code::ValidProgram::produceValidCodeCollection() co
 		                | std::ranges::to<std::vector>(),
 		     .types                = std::ranges::to<std::vector>(type_context.getTodTypes()),
 		     .global_data          = std::ranges::to<std::vector>(globals_map),
-		     .external_c_functions = std::ranges::to<std::vector>(ext_c_function_map) };
+		     .external_c_functions = std::ranges::to<std::vector>(ext_c_function_map),
+		     .constants            = {} };
 }
 
 vm::code::ValidProgram vm::code::ValidProgram::tryInsertCode(const code::CodeCollection& collection

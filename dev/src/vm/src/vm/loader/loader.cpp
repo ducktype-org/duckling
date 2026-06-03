@@ -44,7 +44,7 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::parseFiles(
 		opt_some(parsed_files) {
 			code::CodeCollection new_code;
 
-			for (const auto& parsed_file: parsed_files) {
+			for ( auto& parsed_file: parsed_files) {
 				for (const auto& global: parsed_file.global_data) {
 					code::GlobalData code_global;
 					code_global.name         = global->name;
@@ -56,6 +56,14 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::parseFiles(
 					if (global->dtor_name.has_value())
 						code_global.dtor_name = code::Identifier(global->dtor_name.value().value);
 					new_code.global_data.emplace_back(code_global);
+				}
+				for (const auto& constant: parsed_file.constants) {
+					code::ConstantData code_constant;
+					code_constant.name         = constant->name;
+					code_constant.type         = constant->type;
+					code_constant.value        = constant->value;
+					code_constant.bytecode_pos = constant->position;
+					new_code.constants.emplace_back(std::move(code_constant));
 				}
 				for (const auto& tp: parsed_file.types) new_code.types.push_back(tp->datatype);
 

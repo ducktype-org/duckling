@@ -1,10 +1,12 @@
 #include "serializer.hpp"
 
+#include <base/extend_cpp/variant_match.hpp>
 #include <base/misc/int_conv.hpp>
 #include <base/preproc/for_each.hpp>
 
 #include <lang_definitions/key_spec_op.hpp>
 
+#include <vm/bytecode/const_pool.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
@@ -276,8 +278,60 @@ namespace vm::code {
 		out << '\n';
 	}
 
+	class ConstantDataSerializer final {
+		std::ostream&          out;
+		const ConstantData&   constant;
+
+		static void serializeConstantValue(const ConstantValue& value, std::ostream& out) {
+			variant_match(*value.data) {
+				variant_case(ConstantU64, u64_val) { out << u64_val.value; }
+				variant_case(ConstantClass, class_val) {
+					out << "class { ";
+					bool first = true;
+					for (const auto& [name, field_val]: class_val.fields) {
+						if (!first) out << ", ";
+						out << name.strView() << ": ";
+						serializeConstantValue(field_val, out);
+						first = false;
+					}
+					out << " }";
+				}
+				variant_case(ConstantFixedSizeTable, fixed_size_table_val) {
+					out << "array [ ";
+					bool first = true;
+					for (const auto& elem: fixed_size_table_val.elements) {
+						if (!first) out << ", ";
+						serializeConstantValue(elem, out);
+						first = false;
+					}
+					out << " ]";
+				}
+			}
+		}
+
+	public:
+		ConstantDataSerializer(std::ostream& out, const ConstantData& constant):
+			  out(out),
+			  constant(constant) {}
+
+		void display() {
+			out << lang_def::keywordToStr(lang_def::Keyword::BCConstant).strView() << ' ';
+			out << constant.name.str.strView() << " " << constant.type.str.strView() << " ";
+			serializeConstantValue(constant.value, out);
+			out << lang_def::specialToStr(lang_def::Special::Semicolon).strView();
+		}
+	};
+
+	void serializeConstant(const ConstantData& constant, std::ostream& out) {
+		ConstantDataSerializer serializer(out, constant);
+		serializer.display();
+		out << '\n';
+	}
+
 	void serializeCode(const CodeCollection& code, std::ostream& out) {
 		for (const auto& type: code.types) serializeType(type, out);
+		out << '\n';
+		for (const auto& constant: code.constants) serializeConstant(constant, out);
 		out << '\n';
 		for (const auto& global_data: code.global_data) serializeGlobal(global_data, out);
 		out << '\n';
