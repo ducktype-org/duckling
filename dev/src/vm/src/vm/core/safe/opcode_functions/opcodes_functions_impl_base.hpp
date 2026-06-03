@@ -343,16 +343,14 @@ namespace vm {
 				performFunctionCall(instr, local_stack, frame, thread, func_id);
 			} else {
 				// should be compiled now
-				std::cerr << "Compiling...\n";
-				auto compiled = jit::compileCP(func_obj);
 
 				performFunctionCall(instr, local_stack, frame, thread, func_id);
 
-				std::cerr << "Calling\n";
+				auto compiled = jit::compileCP(func_obj);
 				auto ptr = compiled.intoFunc<jit::CPFunc>();
 				(*ptr)(instr, local_stack, frame, thread);
-				std::cerr << "Went back\n";
 
+				// Restore values set by copy&patch
 				frame       = thread.runtime_data.frame_stack_current;
 				instr       = frame->instr;
 				local_stack = frame->local_stack;

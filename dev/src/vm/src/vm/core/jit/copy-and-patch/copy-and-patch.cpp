@@ -6,8 +6,6 @@
 #include <vm/core/safe/low_program/low_program.hpp>
 #include <base/config/build_type.hpp>
 
-#include <iostream>
-
 namespace vm::jit {
 	cnp::JitFuncMemory compileCP(const vm::low::LowFuncData& func_data) {
 		using namespace cnp;
@@ -37,8 +35,6 @@ namespace vm::jit {
 				continue;
 			}
 
-			// std::cerr << vm::low::OPCODE_NAMES[std::to_underlying(opcode)] << ": "
-			//		  << std::to_underlying(opcode) << std::endl;
 			patch_stencil(opcode, [&instr, &next](HoleValue value) {
 				switch (value) {
 				case HoleValue::ARG0:

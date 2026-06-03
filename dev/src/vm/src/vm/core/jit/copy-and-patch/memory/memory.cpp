@@ -19,7 +19,6 @@ namespace vm::jit::cnp {
 
 	#include <cstddef>
 	#include <functional>
-	#include <iostream>
 
 namespace vm::jit::cnp {
 	inline usize getPageSize() {
@@ -61,7 +60,6 @@ namespace vm::jit::cnp {
 	#include <windows.h>
 
 	#include <cstddef>
-	#include <iostream>
 
 namespace vm::jit::cnp {
 	usize getPageSize() {

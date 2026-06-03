@@ -6,8 +6,6 @@
 #include <vm/core/jit/jit_compiler.hpp>
 #include <vm/core/safe/opcode_functions/opcodes_functions.hpp>
 
-#include <iostream>
-
 // For situations when [[assume(...)]] gets ignored and it can't be.
 #define FORCE_ASSUME(...) \
 	if (!(__VA_ARGS__)) CORE_UNREACHABLE()
