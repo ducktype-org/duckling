@@ -58,6 +58,20 @@ namespace compiler::tsh {
 		return toCPimpl(pimpl)->getUnderlyingType();
 	}
 
+	SymbolType<> ManyPointerAbstractType::getPointee() const {
+		return toCPimpl(pimpl)->getPointee();
+	}
+
+	AbstractType ManyPointerAbstractType::getUnderlyingType() const {
+		return toCPimpl(pimpl)->getUnderlyingType();
+	}
+
+	SymbolType<> CPointerAbstractType::getPointee() const { return toCPimpl(pimpl)->getPointee(); }
+
+	AbstractType CPointerAbstractType::getUnderlyingType() const {
+		return toCPimpl(pimpl)->getUnderlyingType();
+	}
+
 	struct ReferenceConstructionRecord {
 		AbstractType  underlying_type;
 		ReferenceKind ref_kind;
@@ -169,15 +183,12 @@ namespace compiler::tsh {
 	typename TYPE_AbstractType::CPimpl checkDynamicCast(const AbstractType::CPimpl pimpl) {
 		auto result = dynamic_cast<const typename TYPE_AbstractType::Impl*>(pimpl.get());
 		if (result == nullptr) {
-			std::stringstream ss;
-			const Kind        original_kind = pimpl->getKind();
-			const Kind        target_kind   = TYPE_AbstractType::Impl::STATIC_KIND;
 			CORE_PANIC(
 				"Type cast between TypeAbstractType kinds failed. ",
 				"A cast from ",
-				base::enumToStr(original_kind),
+				base::enumToStr(pimpl->getKind()),
 				" to ",
-				base::enumToStr(target_kind),
+				base::enumToStr(TYPE_AbstractType::Impl::STATIC_KIND),
 				" was attempted."
 			);
 		}
@@ -193,6 +204,8 @@ namespace compiler::tsh {
 	INSTANTIATE_CHECKED_CAST(FloatAbstractType)
 	INSTANTIATE_CHECKED_CAST(RawPointerAbstractType)
 	INSTANTIATE_CHECKED_CAST(PointerAbstractType)
+	INSTANTIATE_CHECKED_CAST(ManyPointerAbstractType)
+	INSTANTIATE_CHECKED_CAST(CPointerAbstractType)
 	INSTANTIATE_CHECKED_CAST(StringAbstractType)
 	INSTANTIATE_CHECKED_CAST(TupleAbstractType)
 	INSTANTIATE_CHECKED_CAST(FunctionAbstractType)

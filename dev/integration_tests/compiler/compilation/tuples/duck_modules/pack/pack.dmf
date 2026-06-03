@@ -1,0 +1,97 @@
+import core.builtins.*;
+
+# Packing literals
+var a = ();
+var b = (1, -2, 3, 4);
+var c = (false, 1, 2., "3");
+# @TODO: #2509 Uncomment when done
+# var d = ((1, 0.), (3.5, 4));
+var e = (0, 0);
+var f = ("Hello");
+
+# Assignement
+var aa: () = a;
+var bb: (i64, i32, i64, i32) = b;
+var cc: (bool, i32, f32, str) = c;
+# @TODO: #2509 Uncomment when done
+# var dd: ((i64, f32), (f64, i32)) = d;
+var ee: (i32, i32) = e;
+var ff: (str) = f;
+
+var aaa = a;
+var bbb = b;
+var ccc = c;
+# @TODO: #2509 Uncomment when done
+# var ddd = d;
+var eee = e;
+var fff = f;
+
+# Packing expressions
+var x = (1+2, 3-4, 1+2-3*4, 2.5/5.*100.-1.333);
+# @TODO: #2510 Uncomment when done
+# var y = (3*4 > 4*3, 1<2<3<4, 1 == 1 != 1, 1 < 2 and not 2 < 3 or 3 > 4);
+var z = (
+    i16(12345),
+    if true then 67 else 76,
+    if true then (
+        if false then
+            1
+        else (
+            if false then (
+                2
+            ) else (
+                4      
+            )
+        )
+    ) else (
+        8
+    )
+);
+
+# Helpers
+class Wrapper {
+    a: (i64, i64);
+}
+
+fun makeTuple(first:i32, second:i32) -> (i32, i32) = {
+    return (first, second);
+}
+
+fun makeWrapper(first:i32, second:i32) -> Wrapper = {
+    return Wrapper((first, second));
+}
+
+fun unwrap(wrapper: Wrapper) = {
+    return wrapper.a;
+}
+
+class SomeClass {
+    field_a: i32;
+    field_b: str;
+
+    fun count(tmp: i32) = {
+        field_a = field_a+tmp;
+        return field_a;
+    }
+}
+
+fun someFunction(tmp: i64) = {
+    return tmp*2 + 7;
+}
+
+fun main() = {
+    aa = ();
+    b = (4, 3, 2, 1);
+    cc = (true, 1, 2.5, "three");
+
+    var sc = SomeClass(0, "zero");
+    var w1 = Wrapper((0, 0));
+    var w2 = makeWrapper(6, 7);
+
+    var tup1 = (someFunction(2+2) + 3, sc, SomeClass(6, "seven"));
+    var tup2: (i32, i32) = makeTuple(1, 2);
+    var tup3: (i64, i64) = unwrap(w1);
+    var tup4: (i64, i64) = w2.a;
+
+    return 0;
+}

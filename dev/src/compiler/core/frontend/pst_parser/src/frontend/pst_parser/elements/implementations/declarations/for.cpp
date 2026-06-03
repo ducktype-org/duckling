@@ -17,12 +17,17 @@ namespace pst {
 
 		if (!assertStmtChoice<For>(state, state[0].is(Keyword::For))) return nullptr;
 
-		PARSE().all(Keyword::For, &out->optional_name);
+		PARSE().all(Keyword::For, &out->name);
 
 		if (!state[0].isBracketGroup(Token::Round)) {
 			state.logInt(makeBox<ForBracketError>(state.getPosition()));
 		} else {
 			PARSE().goDown();
+
+			if (PARSE().tryEat(Keyword::Var))
+				out->is_const = false;
+			else if (PARSE().tryEat(Keyword::Let))
+				out->is_const = true;
 
 			PARSE().one(&out->iterator);
 
@@ -48,10 +53,17 @@ namespace pst {
 
 	void For::dprint(std::ostream& out) const {
 		out << "{";
-		out << R"("name":)";
-		nullAwareDprint(optional_name, out);
-		out << R"(, "identifier": )";
+		if (name.has_value()) {
+			out << R"("name":)";
+			nullAwareDprint(name.value(), out);
+			out << ",";
+		}
+		out << R"("identifier": )";
 		nullAwareDprint(iterator, out);
+
+		if (is_const.has_value())
+			out << R"(, "is_const": )" << (is_const.value() ? "true" : "false");
+
 		out << R"(, "type": )";
 		nullAwareDprint(type, out);
 		out << R"(, "iterable": )";
@@ -62,8 +74,8 @@ namespace pst {
 	}
 
 	HashAlg& For::addElementDataToStableHash(HashAlg& partial_hash) const {
-		addToHash(partial_hash, optional_name);
-		addToHash(partial_hash, iterator);
+		addToHash(partial_hash, is_const.has_value());
+		if (is_const.has_value()) addToHash(partial_hash, is_const.value());
 		return partial_hash;
 	}
 

@@ -1,0 +1,11 @@
+PostCase: python3 check.py && rm -f foo/quackfreeze.json
+
+Tests:
+  sync:
+    Description: can sync a new project which exposes a freezefile
+    Cases:
+      sync:
+        test_cmd: duck -C foo sync
+        Output:
+          String: 'info: successfully synchronized venv \`foo\`\n'
+        

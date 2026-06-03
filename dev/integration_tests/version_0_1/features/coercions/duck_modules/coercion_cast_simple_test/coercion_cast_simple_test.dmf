@@ -1,0 +1,32 @@
+import core.builtins.*;
+
+fun main() -> i64 = {
+    # Implicit coercion: integer to boolean
+    if (1) {
+        builtin_output_i64(1); # Should execute
+    }
+
+    if (0) {
+        builtin_output_i64(2); # Should not execute
+    }
+
+    # Explicit coercion: signed to unsigned
+    var signed: i64 = -10;
+    var unsigned: u64 = u64(signed);
+    if (i64(unsigned) >= 0i64) { # Expect a negative value
+        builtin_output_i64(3);  # Should not execute
+    }
+
+    # Coercion in arithmetic
+    var a: i32 = 10;
+    var b: i64 = 20;
+    var result: i64 = a + b; # Implicit widening
+    builtin_output_i64(result); # Expect 30
+
+    # Coercion in comparisons
+    if (a < b) {
+        builtin_output_i64(4); # Should execute
+    }
+
+    return 0;
+}

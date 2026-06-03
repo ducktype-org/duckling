@@ -91,6 +91,11 @@ namespace clah {
 		return std::move(*this);
 	}
 
+	Clah&& Clah::addCustomVerification(CustomVerification verification) {
+		custom_verifications.push_back(std::move(verification));
+		return std::move(*this);
+	}
+
 	Clah&& Clah::setDefaultValueParser(MBox<ValueParser> parser) {
 		default_value_parser = std::move(parser);
 		return std::move(*this);
@@ -154,23 +159,22 @@ namespace clah {
 		// Add `this` command to the result path.
 		st.result.addToCommandList(this);
 
-		while (st.hasMoreArgs()) {
-			const std::string& token              = st.peekToken();
-			bool               is_negative_number = isNegativeNumber(token);
+		while (not st.isEnd()) {
+			std::string token              = st.frontWord();
+			bool        is_negative_number = isNegativeNumber(token);
 
 			// Parameter
 			if (token.starts_with('-') && !is_negative_number)
 				st.parseParameter(parameters);
-			else {  // Subcommand or positional.
-				auto maybe_subcmd = getSubcommand(token);
-				if_opt_some(maybe_subcmd, subcmd) {
-					if (st.result.isFlag("help")) throw exceptions::HelpException(st.result);
-					// It's a subcommand, go down the tree.
-					st.consumeToken();
-					subcmd->parse(st);
-					return;
-				}
+			else if (auto maybe_subcmd = getSubcommand(token)) {  // Subcommand or positional.
+				auto subcmd = maybe_subcmd.value();
+				if (st.result.isFlag("help")) throw exceptions::HelpException(st.result);
+				// It's a subcommand, go down the tree.
+				st.advanceWord();
 
+				subcmd->parse(st);
+				return;
+			} else {
 				// If not found a "-" parse using default value parser.
 				// Check if value is positional or extra.
 				usize positional_count = st.result.getPositionalParameterCount();
@@ -180,7 +184,9 @@ namespace clah {
 				} else {                    // To many positional arguments.
 					auto parser = getDefaultValueParser();
 					if (parser == nullptr)  // Extra arguments and no default value parser.
-						throw exceptions::NoDefaultValueParser((i32) st.parsing_position, st.args);
+						throw exceptions::NoDefaultValueParser(
+							st.position_in_merged, st.merged_view
+						);
 					st.parseExtra(*parser);
 				}
 			}
@@ -232,6 +238,14 @@ namespace clah {
 			throw clah::exceptions::ClahException("No command matched!");
 		auto command = maybe_command.value();
 
+		auto run_custom_verifications = [&](const Clah& clah) {
+			for (const auto& verification: clah.custom_verifications) {
+				auto verification_result = verification(result);
+				if (not verification_result.has_value())
+					throw exceptions::CustomVerificationFailed(verification_result.error());
+			}
+		};
+
 		if (num_positional_args < command->getPositionalParameters().size()) {
 			const auto& param = command->getPositionalParameters()[num_positional_args];
 			throw exceptions::PositionalParameterExpected(
@@ -269,5 +283,8 @@ namespace clah {
 		// Validate global params. This function is invoked from the root command, thus we
 		// compare it with this.
 		if (command.get() != this) validate_parameters(getParameters());
+
+		run_custom_verifications(*command);
+		if (command.get() != this) run_custom_verifications(*this);
 	}
 }  // clah

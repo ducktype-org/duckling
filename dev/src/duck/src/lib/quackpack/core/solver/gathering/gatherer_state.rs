@@ -1,17 +1,21 @@
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
 
-use crate::quackpack::core::gathering::error_surpression::{GathererComputation, GathererResult};
-use crate::quackpack::core::gathering::fetch_types::{
+use crate::quackpack::core::solver::gathering::error_surpression::{
+    GathererComputation, GathererResult,
+};
+use crate::quackpack::core::solver::gathering::fetch_types::{
     FetchFailure, FetchResponse, FetchSuccess, ManifestsRequest, NotPinnedFailure,
     NotPinnedRequest, NotPinnedSuccess, PinnedFailure, PinnedRequest, PinnedSuccess,
 };
-use crate::quackpack::core::types_common::{
+use crate::quackpack::core::solver::types_common::{
     ExpandedPackage, InternedExpandedLocation, InternedLocation, Location, Package,
 };
 use crate::quackpack::core::version::CompatibilityCheck;
 use crate::quackpack::core::{FeatureName, Manifest, Version};
+use crate::quackpack::util::str_id::QpJoin;
 use crate::util::error::MessageError;
+use crate::util::extend::QpExtend;
 use crate::{
     QuackError, QuackResult, QuackResultContext, qp_bail, qp_bail_internal, qp_err, qp_internal,
 };
@@ -561,8 +565,8 @@ where {
         Ok(result)
     }
 
-    /// Updates what new features of a package were potentially requested if any new feature has been added,
-    /// returns requests for package's dependencies.
+    /// Updates what new features of a package were potentially requested.
+    /// If any new feature has been added, returns requests for package's dependencies.
     fn update_features(
         &mut self,
         pkg: ExpandedPackage,
@@ -589,12 +593,18 @@ where {
                 "s"
             };
             return Ok(GathererComputation::only_error(qp_err!(
-                "Package {package}` does not have feature{plural} `{missing_features}`"
+                "package {package} does not have feature{plural} `{missing_features}`"
             )));
         }
-        if !requested_features.is_empty() || !pkg_data.referenced_by_requests {
+        let manifest = &pkg_data.manifest;
+        let requested_features = manifest.features().expand_features(requested_features)?;
+        if pkg_data
+            .requested_features
+            .extend_and_get_diff_size(requested_features)
+            > 0
+            || !pkg_data.referenced_by_requests
+        {
             pkg_data.referenced_by_requests = true;
-            pkg_data.requested_features.extend(requested_features);
             pkg_data.dep_requests()
         } else {
             Ok(GathererComputation::empty())

@@ -1,0 +1,7 @@
+import core.builtins.*;
+
+var i = 6;
+while(i > 0){
+    builtin_output_i64(i);
+    i = i - 1;
+}

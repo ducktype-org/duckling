@@ -16,11 +16,10 @@ namespace compiler::helios::defgen {
 	struct IMPLEMENT_QUERY(QueryImplicitClassConstructor, query::QResult<HOUTFunction>) {
 		static PResult provide(Context& ctx, const QKey class_type) {
 			// Preamble, get some basic data.
-			const SymID class_symbol    = class_type.getSymbol();
-			auto        class_interface = class_type.getInterface(ctx);
+			auto class_interface = class_type.getInterface(ctx);
 
 			using ImplicitConstructor = GeneratedSymbolData::ImplicitConstructor;
-			using Variable            = GeneratedSymbolData::Variable;
+			using Variable            = GeneratedSymbolData::GeneratedFunctionVariable;
 			using std::ranges::to;
 			using std::views::transform;
 
@@ -33,7 +32,7 @@ namespace compiler::helios::defgen {
 			// Prepare the ctor symbol and declaration.
 			const SymID ctor_symbol = ctx.query<QueryGeneratedSymbol>({
 				.name                  = name(class_type.getSymbol()),
-				.generated_symbol_data = GeneratedSymbolData{ ImplicitConstructor{ class_symbol } },
+				.generated_symbol_data = GeneratedSymbolData{ ImplicitConstructor{ class_type } },
 			});
 
 			const auto& ctor_decl = ctx.query<QueryDeclOfFun>(ctor_symbol)->valueOrThrow();

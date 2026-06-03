@@ -2,6 +2,9 @@
 #include "lookup_chain.hpp"
 
 #include <helios_private/lookup/interface.hpp>
+#include <helios_private/symbols/symbols.hpp>
+
+#include <base/extend_cpp/variant_match.hpp>
 
 namespace compiler::helios {
 
@@ -20,6 +23,7 @@ namespace compiler::helios {
 									pointed.position, ctx, pointed.value, key.params
 								););
 			result.appendList(lookup);
+
 			first_symbol = false;
 		}
 		return result;

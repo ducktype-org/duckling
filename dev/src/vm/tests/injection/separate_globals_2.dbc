@@ -1,11 +1,11 @@
 # Tests if globals declared in other files are visible.
 
-function globaler_setter {} -> void {
-	init_lany_type  x, i64;
-	input_l64       x;
-	mov_g64_l64     counter, x;
-	mov_l64_g64     x, counter;
-	output_l64      x;
+function globaler_setter {} -> {} {
+	init_pany_type  x, i64;
+	input_p64       x;
+	mov_p64_p64     counter, x;
+	mov_p64_p64     x, counter;
+	output_p64      x;
 	
 	deinit; # x
 	ret;

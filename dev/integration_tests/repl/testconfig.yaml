@@ -1,15 +1,16 @@
-Run: "@{build_dir}/bin//duckc repl"
+disable-bracketed-paste: "--disable-bracketed-paste"
+
+Run: "@{duckc_path} repl @{disable-bracketed-paste}"
 
 prompt: "duckling> "
-begining: |
-  Duckling REPL
-  Type /help for available commands, /exit to quit.
-  Press Enter for new line, Alt+Enter to submit.
-
+welcome_message: "Duckling REPL\nType /help for available commands, /exit to quit.\nPress Enter to submit. Press Alt+Enter for new line.\n"
+beginning: "@{welcome_message}"
 end: "\nGoodbye!\n"
+instruction_prompt: "Instruction executed.\n"
 
 SubDirs:
-  - basic_expressions
-  - decl_of_functions
-  # - multiline
+  - fundamentals
+  - intermediate_statements
+  - declarations
+  - script_loading
   - variable_assignment

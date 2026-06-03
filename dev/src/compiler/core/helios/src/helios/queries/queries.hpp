@@ -21,7 +21,17 @@ namespace compiler::helios {
 	 * \parallel key helpers like isGlobalVar don’t modify globals
 	 * \query_thread_safe_if_cache
 	 */
-	DECLARE_QUERY(QueryModuleHOUT, frontend::ModuleID, CRef<query::QResult<HOUTUnit>>, ({}))
+	DECLARE_QUERY(
+		QueryModuleHOUT,
+		frontend::ModuleID,
+		CRef<query::QResult<HOUTUnit>>,
+		({
+			// Compile module schedules other queries, so we don't want to interrupt it in the
+	        // middle of execution.
+	        // @TODO: #2496 maybe remove this tag.
+			.catch_exceptions_if_using_qresult = false,
+		})
+	)
 
 	/**
 	 * @brief Query HOUTUnit of module and all its submodules recursively
@@ -40,6 +50,7 @@ namespace compiler::helios {
 	 *
 	 * \parallel key helpers like isGlobalVar don’t modify globals
 	 * \query_thread_safe_if_cache
+	 * @TODO: #2246 remove this maybe -- try to replace its usages with QueryModuleHOUT
 	 */
 	DECLARE_QUERY(QueryTopLevelEntities, frontend::ModuleID, CRef<query::QResult<HOUTUnit>>, ({}))
 }

@@ -1,0 +1,61 @@
+import core.builtins.*;
+
+# Test simple class (record) declaration
+class Point {
+    x: i64 = 0;
+    y: i64 = 0;
+}
+
+# Test class with mixed types
+class Rectangle {
+    width: i32 = i32(0);
+    height: i32 = i32(0);
+    area: i64 = 0;
+}
+
+# Test nested class
+class Box {
+    top_left: Point = Point();
+    bottom_right: Point = Point(10, 10);
+}
+
+fun main() -> i64 = {
+    # Test default construction
+    var p1: Point = Point();
+    builtin_output_i64(p1.x);              # 0
+    builtin_output_i64(p1.y);              # 0
+
+    # Test construction with values
+    var p2 = Point(5, 10);
+    builtin_output_i64(p2.x);              # 5
+    builtin_output_i64(p2.y);              # 10
+
+    # Test field assignment
+    p1.x = 100;
+    p1.y = 200;
+    builtin_output_i64(p1.x);              # 100
+    builtin_output_i64(p1.y);              # 200
+
+    # Test named arguments
+    var p3 = Point(y = 30, x = 20);
+    builtin_output_i64(p3.x);              # 20
+    builtin_output_i64(p3.y);              # 30
+
+    # Test class copy
+    var p4 = p2;
+    builtin_output_i64(p4.x);              # 5
+    builtin_output_i64(p4.y);              # 10
+
+    # Test Rectangle class
+    var rect = Rectangle(i32(3), i32(4), 12);
+    builtin_output_i64(i64(rect.width));   # 3
+    builtin_output_i64(i64(rect.height));  # 4
+    builtin_output_i64(rect.area);         # 12
+
+    # Test nested class
+    var boxx = Box();
+    builtin_output_i64(boxx.top_left.x);    # 0
+    builtin_output_i64(boxx.bottom_right.x);# 10
+
+    return 0;
+}

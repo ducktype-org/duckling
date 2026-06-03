@@ -29,7 +29,7 @@ namespace compiler::mir {
 	DECLARE_QUERY(LowerToMIRFunction, KeyOf_LowerToMIRFunction, CRef<LowerToMIRFunctionResult>, ({}))
 
 	struct KeyOf_LowerGlobalDataToMIRFunction {
-		helios::HOUTGlobalData global_data;
+		CRef<helios::HOUTGlobalData> global_data;
 
 		[[nodiscard]]
 		u64 queryUnstablePerfectHash() const;

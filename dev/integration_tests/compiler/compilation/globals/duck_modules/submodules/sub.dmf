@@ -1,0 +1,3 @@
+import core.builtins.*;
+
+var global = 30;

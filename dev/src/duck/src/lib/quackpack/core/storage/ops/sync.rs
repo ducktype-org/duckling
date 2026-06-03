@@ -1,35 +1,32 @@
 //! Synchronize a given venv.
 //! This includes: creating a venv, resolving dependencies, downloading them.
-use std::{fs::File, io, path::PathBuf, time::SystemTime};
+use std::fs::File;
+use std::io;
+use std::path::{Path, PathBuf};
+use std::time::SystemTime;
 
 use flate2::read::GzDecoder;
 use tar::Archive;
-use tracing::debug;
+use tracing::{debug, error};
 
-use crate::{
-    QuackResult, QuackResultContext, qp_bail, qp_bail_internal, qp_err,
-    quackpack::core::{
-        BranchOrTag, Git, Package, PackageContext, PackageLoader, ShouldRunSolverEngine,
-        SolverAnswer, SolverGathererData,
-        fetcher::{Fetcher, types::PackageWithUrl},
-        git_access::GitAccess,
-        solver_freeze::SolverFreeze,
-        solver_mode::SolverMode,
-        storage::{
-            freeze::VenvFreeze,
-            git_access::StorageGitAccess,
-            locks::TrySyncLock,
-            package_id::{GitId, PackageId, RegistryId},
-            paths::Storage,
-            venv::{Venv, VenvData},
-            venv_id::{ToVenvId, VenvId},
-        },
-        types_common::{ExpandedLocation, ExpandedPackage, InternedExpandedLocation},
-    },
-    util::path_ops_ext::{PathOpsExt, ShouldBlock},
-};
-
-use crate::quackpack::core::storage;
+use crate::quackpack::core::fetcher::Fetcher;
+use crate::quackpack::core::fetcher::types::PackageWithUrl;
+use crate::quackpack::core::solver::git_access::GitAccess;
+use crate::quackpack::core::solver::solver_freeze::SolverFreeze;
+use crate::quackpack::core::solver::solver_mode::SolverMode;
+use crate::quackpack::core::solver::types_common::{ExpandedLocation, ExpandedPackage};
+use crate::quackpack::core::solver::{ShouldRunSolverEngine, SolverAnswer, SolverGathererData};
+use crate::quackpack::core::storage::freeze::VenvFreeze;
+use crate::quackpack::core::storage::git_access::StorageGitAccess;
+use crate::quackpack::core::storage::locks::TrySyncLock;
+use crate::quackpack::core::storage::package_id::{GitId, RegistryId};
+use crate::quackpack::core::storage::paths::Storage;
+use crate::quackpack::core::storage::venv::{Venv, VenvData};
+use crate::quackpack::core::storage::venv_id::{ToVenvId, VenvId};
+use crate::quackpack::core::{BranchOrTag, Git, Package, PackageContext, PackageLoader, storage};
+use crate::util::error::MessageError;
+use crate::util::path_ops_ext::PathOpsExt;
+use crate::{QuackError, QuackResult, QuackResultContext, qp_bail, qp_bail_internal};
 
 const MAX_BLOB_RETRY_COUNT: i32 = 3;
 
@@ -54,7 +51,8 @@ pub fn sync(
     let venv_config = pcx.venv_config();
     let storage_localization = venv_config
         .storage_path()?
-        .unwrap_or(pcx.ctx().default_storage_root());
+        .map(Path::to_path_buf)
+        .unwrap_or_else(|| pcx.ctx().default_storage_root().into_not_locked_path());
     let storage = Storage::new(storage_localization);
     let mut fetcher = Fetcher::new(pcx.ctx())?;
     let mut git_access = StorageGitAccess::new(&storage);
@@ -62,10 +60,12 @@ pub fn sync(
     let user_exposed_freeze = load_external_freezefile(pcx, expose_freezefile)?;
     let id = pcx.to_venv_id();
 
+    // First context is for IO results, second for unpacking Option (None = would block).
     let _sync_lock = storage::locks::TrySyncLock::new(&storage, id)
-        .context("failed to acquire try sync lock")?;
+        .context("failed to acquire try sync lock")?
+        .with_context(|| format!("another synchronization operation is ongoing in venv `{id}`"))?;
 
-    let venv = Venv::fix_and_load(&storage, id)?;
+    let venv = Venv::fix_and_load(&storage, id, pcx.ctx())?;
 
     if !options.overwrite {
         check_if_overwrites(pcx, venv.as_ref(), id)?;
@@ -112,7 +112,7 @@ pub fn sync(
         );
         Venv::new(id, data)
     };
-    venv.save_to(&storage)?;
+    venv.save_to(&storage, pcx.ctx())?;
 
     if expose_freezefile && !options.frozen {
         let json = serde_json::to_string_pretty(venv.data().freeze())?;
@@ -120,7 +120,7 @@ pub fn sync(
     }
     pcx.ctx()
         .console()
-        .info(format!("successfully synchronized venv `{id}`"));
+        .info(format!("successfully synchronized venv `{id}`"))?;
     Ok((_sync_lock, venv, storage))
 }
 
@@ -139,26 +139,51 @@ fn check_if_overwrites(
     {
         return Ok(());
     }
-    let package =
-        PackageLoader::find_at_exact_directory(venv.data().last_known_directory(), pcx.ctx());
-    let replaces = match package {
-        Ok(package) => package.package().manifest().name() == id.name() && !id.is_global(),
+    let dir = venv.data().last_known_directory();
+    let package = PackageLoader::find_at_exact_directory(dir, pcx.ctx());
+    let (replaces, context) = match package {
+        Ok(package) => {
+            let replaces = package.to_venv_id() == id && !id.is_global();
+            let context = if replaces {
+                Some(format!(
+                    "synchronizing the package at `{}` would overwrite the venv of the package at `{}`",
+                    pcx.package().root_directory().display(),
+                    dir.display()
+                ))
+            } else {
+                None
+            };
+            (replaces, context)
+        }
         Err(e) => {
+            error!(path = %dir.display(), "failed to load the package: {e} ({e:?})");
             if let Some(io_error) = e.downcast_ref_in_chain::<io::Error>() {
                 // Maybe we missed something, check, if package has been moved.
-                ![io::ErrorKind::NotFound, io::ErrorKind::NotADirectory].contains(&io_error.kind())
+                let replaces = ![io::ErrorKind::NotFound, io::ErrorKind::NotADirectory]
+                    .contains(&io_error.kind());
+                (replaces, None)
             } else {
                 // Other error, maybe we failed to deserialize?
                 // Safely assume, that package still exists.
-                true
+                let context = format!(
+                    "failed to load a package at `{}`, assuming it still exists with the name `{id}`",
+                    dir.display()
+                );
+                (true, Some(context))
             }
         }
     };
     if replaces {
-        Err(
-            qp_err!("tried to overwrite an existing virtual environment from another location")
-                .add_hint("use `--overwrite` to force an overwrite"),
-        )
+        let mut error = QuackError::hint("use `--overwrite` to force an overwrite");
+        let same_ids_message = format!("the packages share the same name `{id}`");
+        error = error.context(MessageError::new(same_ids_message));
+        if let Some(context) = context {
+            error = error.context(MessageError::new(context));
+        }
+        let tried_to_override_message =
+            "tried to overwrite an existing virtual environment from another location";
+        error = error.context(MessageError::new(tried_to_override_message));
+        Err(error)
     } else {
         Ok(())
     }
@@ -202,9 +227,10 @@ fn get_solver_answer(
 ) -> QuackResult<SolverAnswer> {
     debug!(?mode);
     let root_pkg = ExpandedPackage {
-        location: InternedExpandedLocation::new(ExpandedLocation::Local {
+        location: ExpandedLocation::Local {
             absolute_path: pcx.package().root_directory().to_path_buf(),
-        }),
+        }
+        .into(),
         version: None,
     };
     let solver_freeze = match input_freeze {
@@ -212,11 +238,7 @@ fn get_solver_answer(
         None => SolverFreeze::empty_with_root(root_pkg)?,
     };
     let solver = SolverGathererData::new(pcx, solver_freeze, mode);
-    let fetcher_lock = pcx
-        .ctx()
-        .duck_home()
-        .ensure_fetcher_lockfile()?
-        .lock(ShouldBlock::Yes)?;
+    let fetcher_lock = pcx.ctx().duck_home().open_fetcher_lockfile(pcx.ctx())?;
     let should_run_engine = solver.prepare_solving(fetcher, git_access)?;
     drop(fetcher_lock);
     debug!("will run solver engine: {should_run_engine}");
@@ -240,8 +262,7 @@ fn fetch_source_codes(
     let fetcher_lock = fetcher
         .ctx()
         .duck_home()
-        .ensure_fetcher_lockfile()?
-        .lock(ShouldBlock::Yes)?;
+        .open_fetcher_lockfile(fetcher.ctx())?;
     for pkg in pkgs {
         was_anything_installed |= fetch_source_code(storage, fetcher, git_access, pkg)?;
     }
@@ -262,11 +283,11 @@ fn fetch_source_code(
     match pkg.location.as_ref() {
         ExpandedLocation::Local { absolute_path: _ } => Ok(false),
         ExpandedLocation::Git { url, commit } => {
-            let pkg_id = PackageId::Git(GitId::new(url.clone(), *commit));
+            let pkg_id = GitId::new(url.clone(), *commit).into();
             if storage.is_package_stored(&pkg_id) {
                 return Ok(false);
             }
-            if git_access.is_stored(url.clone(), *commit) {
+            if git_access.is_stored(url.clone(), commit) {
                 storage.mark_as_stored(&pkg_id)?;
                 return Ok(true);
             }
@@ -282,7 +303,7 @@ fn fetch_source_code(
             let Some(version) = pkg.version else {
                 qp_bail_internal!("Registry package without version");
             };
-            let pkg_id = PackageId::Registry(RegistryId::new(*real_name, version, url.clone()));
+            let pkg_id = RegistryId::new(*real_name, version, url.clone()).into();
             if storage.is_package_stored(&pkg_id) {
                 return Ok(false);
             }

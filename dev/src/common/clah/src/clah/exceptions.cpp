@@ -7,6 +7,7 @@
 
 #include "parsing_result.hpp"
 
+#include <base/misc/int_conv.hpp>
 #include <base/str/str_utils.hpp>
 
 #include <utility>
@@ -22,12 +23,12 @@ namespace {
 	 * @param source The source of characters.
 	 * @return The formatted text.
 	 */
-	std::string shorten(i32 at, i32 back, i32 front, std::string_view source) {
+	std::string shorten(i64 at, i64 back, i64 front, std::string_view source) {
 		std::string shortened;
 		if (at - back > 0) shortened += "...";
 
 		shortened += source.substr(
-			usize(std::max(0, at - back)), source.size() - usize(std::max(0, at - front)) + 1
+			usize(std::max(0L, at - back)), source.size() - usize(std::max(0L, at - front)) + 1
 		);
 
 		if (at + front < source.size() - 1) shortened += "...";
@@ -73,9 +74,10 @@ namespace clah::exceptions {
 			  "Parameter \"", name, "\" requires a value of type <", value_type, ">"
 		  )) {}
 
-	ExpectedParameterIdentifier::ExpectedParameterIdentifier(i32 at, std::string_view source):
+	ExpectedParameterIdentifier::ExpectedParameterIdentifier(u64 at, std::string_view source):
 		  ClahException(base::strConcat(
-			  shorten(at, 20, 20, source), "_<- Here expected parameter identifier."
+			  shorten(base::safeIntConv<i64>(at), 20, 20, source),
+			  "_<- Here expected parameter identifier."
 		  )) {}
 
 	MissingRequiredParameter::MissingRequiredParameter(const std::string& name):
@@ -85,6 +87,9 @@ namespace clah::exceptions {
 		const std::string& name, std::string_view why
 	):
 		  ClahException(base::strConcat("Invalid parameter - ", name, " - ", why)) {}
+
+	CustomVerificationFailed::CustomVerificationFailed(const std::string& message):
+		  ClahException(base::strConcat(message)) {}
 
 	DuplicatedParameter::DuplicatedParameter(const std::string& name):
 		  ClahException(base::strConcat("Duplicated parameter named: ", name)) {}
@@ -100,10 +105,10 @@ namespace clah::exceptions {
 	FileDoesNotExist::FileDoesNotExist(const std::filesystem::path& path):
 		  ClahException("File at \"" + absolute(path).string() + "\" does not exist.") {}
 
-	NoDefaultValueParser::NoDefaultValueParser(i32 at, std::string_view values):
+	NoDefaultValueParser::NoDefaultValueParser(u64 at, std::string_view values):
 		  ClahException(base::strConcat(
 			  "Extra values provided, but no default value specified.\nExtra values: \"",
-			  shorten(at, 0, 20, values),
+			  shorten(base::safeIntConv<i64>(at), 0, 20, values),
 			  "\""
 		  )) {}
 

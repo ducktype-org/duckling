@@ -1,12 +1,12 @@
 #pragma once
 
-#include "function_forward.hpp"  // IWYU pragma: keep
+#include "lir_structure_fd.hpp"  // IWYU pragma: keep
 
 #include <ctv/ctv.hpp>
-#include <frontend/pst_parser/stable_position.hpp>
+#include <diagnostic_interactive/stable_position.hpp>
 #include <helios/hout/hout_fd.hpp>
 #include <helios/symbols/symbol_abi.hpp>
-#include <helios/symbols/symbol_id.hpp>
+#include <helios/symbols/symbol_id.hpp>  // @TODO: #2796 untable this if possible (LIR structure should not depend on symbols if possible)
 #include <mir/mir_structure/mir_local_ref.hpp>
 #include <mir/mir_structure/mir_metadata.hpp>
 #include <tsl/type_layout.hpp>
@@ -20,6 +20,7 @@
 #include <query_framework/context/context_fd.hpp>
 
 #include <memory>
+#include <ostream>
 #include <utility>
 
 // Doc style is intentional, caused by inexplicable funkiness in how Doxygen interacts with macros.
@@ -107,7 +108,22 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 	ReturnVoid,
 	ReturnValue,
 	Jump,
-	Branch
+	Branch,
+	
+	// Nop can be useful when lowering the instruction flags and MIR instr translates
+	// to zero instructions in LIR, but we want to have the flags in correct place.
+	Nop
+)
+
+/// A helper tag that indicates that a value has some special meaning
+/// that can be used by the lower layers.
+MAKE_STRINGIFYABLE_ENUM(compiler::lir, u32, LIRLocalSpecialKind,
+	/// Normal local.
+	Normal,
+	/// This is the return value temporary local.
+	ReturnValue,
+	/// This is a condition result temporary local.
+	ConditionTmp
 )
 
 namespace compiler::lir {
@@ -132,6 +148,7 @@ namespace compiler::lir {
 	struct FunctionLiteral {
 		base::StrID                                         mangled_name;
 		helios::SymbolABI                                   abi;
+		bool                                                link_once;
 		std::shared_ptr<std::vector<CRef<tsl::TypeLayout>>> parameter_layouts;
 		CRef<tsl::TypeLayout>                               return_type_layout;
 
@@ -143,9 +160,11 @@ namespace compiler::lir {
 	 * Used by the backends for the DebugInfo.
 	 */
 	struct LIRLocalMetadata {
-		base::Optional<base::StrID>         source_code_name;
-		base::Optional<pst::StablePosition> position;
+		base::Optional<base::StrID>             source_code_name;
+		base::Optional<dia_int::StablePosition> position;
 	};
+
+	LIRLocalSpecialKind specialKindFromMIR(const mir::MIRLocal& mir_local);
 
 	/**
 	 * @brief Description of a LIR Local variable or function argument.
@@ -168,19 +187,26 @@ namespace compiler::lir {
 
 		LIRLocalMetadata metadata;
 
+		LIRLocalSpecialKind special_kind;
+
 	private:
 		LIRLocal(
 			const base::Optional<helios::SymID> helios_id,
 			const CRef<tsl::TypeLayout>         layout,
 			const base::Optional<u64>           parameter_index,
-			LIRLocalMetadata                    metadata
+			LIRLocalMetadata                    metadata,
+			LIRLocalSpecialKind                 special_kind = LIRLocalSpecialKind::Normal
 		):
 			  helios_id(helios_id),
 			  layout(layout),
 			  parameter_index(parameter_index),
-			  metadata(metadata) {}
+			  metadata(metadata),
+			  special_kind(special_kind) {}
 
-		explicit LIRLocal(const CRef<tsl::TypeLayout> layout): helios_id({}), layout(layout) {}
+		explicit LIRLocal(const CRef<tsl::TypeLayout> layout):
+			  helios_id({}),
+			  layout(layout),
+			  special_kind(LIRLocalSpecialKind::Normal) {}
 
 		friend Function;
 		friend LIRLocalRef;
@@ -217,35 +243,32 @@ namespace compiler::lir {
 	enum class LIRGlobalType { Variable, Constant };
 
 	/**
-	 * @brief Global variable/constant in LIR.
+	 * @brief Lightweight ID-like representation of a global value used in LIR IR code (e.g. in
+	 * LIRPlace). By global-value we refer to a global variable or a global constant.
+	 *
+	 * @important This is not a full IR representation of a global variable.
+	 * LIRGlobalData serves that purpose and contains more information.
+	 *
+	 * This structure is used to reference a global variable in LIR code.
+	 * This structure enables LIR instructions to refer to and manipulate global variables and
+	 * constants.
 	 */
 	struct LIRGlobal final {
-		/**
-		 * @brief HELIOS id of the variable.
-		 */
-		helios::SymID helios_id;
-
 		CRef<tsl::TypeLayout> layout;
 
 		base::StrID mangled_name;
 
 		LIRGlobalType type;
 
-		base::Optional<ctv::CompileTimeValue> initial_value;
-
 	private:
 		LIRGlobal(
-			const helios::SymID                          helios_id,
-			const CRef<tsl::TypeLayout>                  layout,
-			const base::StrID&                           mangled_name,
-			const LIRGlobalType                          type          = LIRGlobalType::Variable,
-			const base::Optional<ctv::CompileTimeValue>& initial_value = {}
+			const CRef<tsl::TypeLayout> layout,
+			const base::StrID&          mangled_name,
+			const LIRGlobalType         type
 		):
-			  helios_id(helios_id),
 			  layout(layout),
 			  mangled_name(mangled_name),
-			  type(type),
-			  initial_value(initial_value) {}
+			  type(type) {}
 
 		friend Function;
 
@@ -259,8 +282,13 @@ namespace compiler::lir {
 		 * @note Do not use this function outside of LIR lowering / driver.
 		 * This handles both global variables and constants. For constants, it also sets CTV initial
 		 * value of the global.
+		 *
+		 * @TODO: #2246 remove this, it is only used in tests now (and update the tests)
 		 */
 		static LIRGlobal fromHOUT(query::Context& ctx, const helios::HOUTGlobalData& helios_id);
+
+
+		void debugPrint(query::Context& ctx, std::ostream& os) const;
 	};
 
 	/**
@@ -329,6 +357,7 @@ namespace compiler::lir {
 		};
 
 		using BaseVariant = std::variant<LIRLocalRef, LIRGlobal>;
+
 		/**
 		 * @brief Base of the LIR place, either local or global variable.
 		 */
@@ -481,11 +510,26 @@ namespace compiler::lir {
 		= std::variant<NoInstrParameters, CastParameters, ListOperationParameters>;
 
 	struct InstructionMetadata {
-		base::Optional<pst::StablePosition> position;
+		base::Optional<dia_int::StablePosition> position;
 
 		InstructionMetadata(const mir::InstructionMetadata& other): position(other.position) {}
 
 		InstructionMetadata() = default;
+	};
+
+	/**
+	 * @brief The scope flags of the instruction.
+	 * It's a flag that indicates the start and end of a variable's scope,
+	 * for efficient local stack allocation in the backend.
+	 * The only user is for now the DVM Backend, which uses it to generate `init` and `deinit`
+	 * instructions.
+	 */
+	struct ScopeFlag {
+		enum class Flag { ScopeStart, ScopeEnd };
+		Flag        flag;
+		LIRLocalRef local;
+
+		bool operator==(const ScopeFlag& other) const = default;
 	};
 
 	/**
@@ -497,6 +541,8 @@ namespace compiler::lir {
 		std::vector<LIRValue>    arguments;
 		InstrParameters          extra_params{ NoInstrParameters{} };
 		InstructionMetadata      metadata;
+
+		std::vector<ScopeFlag> scope_flags;
 
 
 		Instruction()                       = default;
@@ -517,6 +563,11 @@ namespace compiler::lir {
 			  arguments(std::move(arguments)),
 			  extra_params(extra_parameters),
 			  metadata(metadata) {}
+
+		/**
+		 * Whether the instruction can be the last instruction in the block (i.e. be a terminator).
+		 */
+		[[nodiscard]] bool isTerminating() const;
 	};
 
 	/**
@@ -530,8 +581,8 @@ namespace compiler::lir {
 	};
 
 	struct FunctionMetadata {
-		base::Optional<pst::StablePosition> position;
-		base::Optional<base::StrID>         source_code_name;
+		base::Optional<dia_int::StablePosition> position;
+		base::Optional<base::StrID>             source_code_name;
 	};
 
 	/**
@@ -540,6 +591,7 @@ namespace compiler::lir {
 	struct Function final {
 		base::StrID       mangled_name;
 		helios::SymbolABI abi;
+		bool              link_once;
 
 		std::vector<CRef<tsl::TypeLayout>> parameter_layouts;
 		CRef<tsl::TypeLayout>              return_type_layout;
@@ -584,5 +636,38 @@ namespace compiler::lir {
 		 */
 		[[nodiscard]]
 		base::Map<LIRLocalRef, u64> getLocalVariableIDs() const;
+	};
+
+	/**
+	 * @brief Representation of a global value in LIR (i.e. a global variable or constant).
+	 * See also: LIRGlobal
+	 */
+	struct LIRGlobalData final {
+		struct CTorDtorPair final {
+			base::Optional<CRef<lir::Function>>
+				global_ctor;  ///< Optional, if the global has a constructor.
+			base::Optional<CRef<lir::Function>>
+				global_dtor;  ///< Optional, if the global has a destructor.
+		};
+
+		LIRGlobal                                         global;
+		std::variant<ctv::CompileTimeValue, CTorDtorPair> data_initialization;
+
+		void debugPrint(query::Context& ctx, std::ostream& out) const;
+	};
+
+	/**
+	 * @brief Structure representing single LIRUnit.
+	 *
+	 * LIR unit is an arbitrary code collections represented in LIR IR.
+	 * There is no assumption on what any given LIRUnit should contain.
+	 *
+	 * @note LIR units are created mostly from MIR units.
+	 */
+	struct LIRUnit final {
+		std::vector<CRef<Function>> lir_functions;
+		std::vector<LIRGlobalData>  lir_globals;
+
+		void debugPrint(query::Context& ctx, std::ostream& out) const;
 	};
 }

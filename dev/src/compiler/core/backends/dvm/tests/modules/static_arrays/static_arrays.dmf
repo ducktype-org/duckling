@@ -1,0 +1,63 @@
+import core.builtins.*;
+
+fun simple_array_test() -> i32 = {
+    var arr: i32[5];
+    arr[0] = 42;
+    builtin_output_i64(arr[0]); # 42
+
+    var matrix: i32[3][3];
+    matrix[1][1] = 11;
+    matrix[2][1] = 13;
+    let y2 = matrix[2][1];
+    builtin_output_i64(matrix[1][1]); # 11
+    builtin_output_i64(y2);           # 13
+
+    var matrix_3d: f32[3][3][2];
+    matrix_3d[1][1][1] = 3.25;
+    matrix_3d[1][1][1] = matrix_3d[1][1][1] + 0.75;
+    let val_3d = matrix_3d[1][1][1];
+    builtin_output_i64(i64(val_3d));  # 4
+
+    return arr[0];
+}
+
+fun sum_elements(a: i32[3]) -> i32 = {
+    let result = a[0] + a[1] + a[2];
+    return result;
+}
+
+fun fill_array(a: ref i32[3]) -> () = {
+    a[0] = 100;
+    a[1] = 200;
+    a[2] = 300;
+}
+
+fun get_array_by_val() -> i32[3] = {
+    var tmp: i32[3];
+    tmp[0] = 10;
+    tmp[1] = 20;
+    tmp[2] = 30;
+    return tmp;
+}
+
+fun main() -> i64 = {
+    var my_arr: i32[3];
+    my_arr[1] = 1;
+    builtin_output_i64(my_arr[1]); # 1
+
+    fill_array(&my_arr);
+
+    builtin_output_i64(my_arr[0]); # 100
+    builtin_output_i64(my_arr[1]); # 200
+    builtin_output_i64(my_arr[2]); # 300
+
+    let s = sum_elements(my_arr);
+    builtin_output_i64(s);         # 600
+
+    let val = get_array_by_val()[1];
+    builtin_output_i64(val);       # 20
+
+    simple_array_test();
+
+    return 0;
+}

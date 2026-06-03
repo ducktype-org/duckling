@@ -1,5 +1,7 @@
 #pragma once
 
+#include "stable_position.hpp"
+
 #include <diagnostic_interactive/core/diagnostic_arguments_forward.hpp>
 
 #include <diagnostic/location.hpp>
@@ -36,8 +38,8 @@ namespace dia_int {
 		Argument(std::string name): name(std::move(name)) {}
 
 		/**
-		 * @warning This operation can change the DiagnosticBase - for example add new additional
-		 * message
+		 * @warning This operation can change the DiagnosticBase - for example add new attached
+		 * messages or explore links.
 		 */
 		virtual Box<dia_args::Component> getValue(MessageBase&) = 0;
 
@@ -85,40 +87,93 @@ namespace dia_int {
 		CodeArgument(std::string name, dia::SourcePosition position):
 			  Argument(std::move(name)),
 			  position(position) {}
+
+		/**
+		 * @brief Here we use illegalAccess which would not mark the dependency on the position and
+		 * recompilaction. If we would like to cache the errors between the recompilation or show
+		 * the code snippets in the LS, then this would need to be refactored.
+		 */
+		CodeArgument(std::string name, dia_int::StablePosition position):
+			  Argument(std::move(name)),
+			  position(position.getActiveSourcePositionIllegalAccess()) {}
 	};
 
 	class CodeLocationArgument final: public Argument {
 	public:
+		/**
+		 * @brief This intermediate structure is needed,
+		 * to log errors from places where there is no access
+		 * to the `SourcePosition` or `StablePosition`, like
+		 * for example during the tokenization.
+		 */
 		struct FileLocation {
-			std::string         file;
-			u64                 line;
-			u64                 column;
-			base::Optional<u64> end_line{};
-			base::Optional<u64> end_column{};
+			std::string                    file;
+			u64                            line;
+			u64                            column;
+			base::Optional<u64>            end_line{};
+			base::Optional<u64>            end_column{};
+			base::Optional<StablePosition> hash_location{};
 
-			static FileLocation fromSourcePosition(const dia::SourcePosition& pos) {
-				auto [line, column]         = pos.getStartLineColumn();
-				auto [end_line, end_column] = pos.getEndLineColumn();
-				return { .file       = pos.getSource()->getFile().getFilePath().string(),
-					     .line       = (u64) line,
-					     .column     = (u64) column,
+
+			/**
+			 * @brief Simple, direct conversion from StablePosition to FileLocation
+			 * (does not take into account the macro parent chain).
+			 */
+			static FileLocation fromSourcePosition(const dia::SourcePosition& pos);
+
+			/**
+			 * @brief Simple, direct conversion from StablePosition to FileLocation
+			 * (does not take into account the macro parent chain).
+			 */
+			static FileLocation fromStablePosition(const StablePosition& pos);
+
+			[[nodiscard]] dia_int::CodeLocation toCodeLocation() const {
+				return { .file       = file,
+					     .line       = line,
+					     .column     = column,
 					     .end_line   = end_line,
 					     .end_column = end_column };
 			}
 		};
 
+		/**
+		 * @brief Function to get the parent position of the position inside the macro expansion
+		 * (only one step).
+		 * If the position is not inside the macro expansion, returns nullopt.
+		 */
+		static base::Optional<StablePosition> getMacroLocationSource(dia::SourcePosition);
+
+		/**
+		 * @brief Same as getMacroLocationSource but for StablePosition.
+		 */
+		static base::Optional<StablePosition> getMacroLocationSource(dia_int::StablePosition pos);
+
 	private:
 		FileLocation location;
+
+		/**
+		 * If this location is the macro type location,
+		 * this chain contains the positions of the macro expansions from the most inner to the
+		 * most outer.
+		 */
+		std::vector<StablePosition> expanded_from_position_chain;
 
 	public:
 		CodeLocationArgument(std::string name, FileLocation location):
 			  Argument(std::move(name)),
-			  location(std::move(location)) {}
+			  location(std::move(location)),
+			  expanded_from_position_chain() {}
 
-		CodeLocationArgument(std::string name, dia::SourcePosition position):
-			  Argument(std::move(name)),
-			  location(FileLocation::fromSourcePosition(position)) {}
+		CodeLocationArgument(std::string name, dia::SourcePosition position);
 
+		CodeLocationArgument(std::string name, dia_int::StablePosition position);
+
+		/**
+		 * @brief Here the flow uses the local member fields to keep the information between the
+		 * constructor of the class and `getValue`. The main `SourcePosition` processing happens
+		 * in the constructor of the class and in the `getValue` we just use the preprocessed
+		 * information to create a `dia_args::Component` and add the attached messages if needed.
+		 */
 		Box<dia_args::Component> getValue(MessageBase&) override;
 	};
 
@@ -193,8 +248,8 @@ namespace dia_int {
 
 	/**
 	 * @brief Pointer message is an information for where the pointer should point
-	 * in the code snippet. The content of the pointer message is defined in the message template
-	 * with the right ID and here we just specify the ID.
+	 * in the code snippet. The content of the pointer message is defined in the message
+	 * template with the right ID and here we just specify the ID.
 	 */
 	class PointerMessage final {
 	public:
@@ -208,6 +263,15 @@ namespace dia_int {
 			base::Optional<std::string> message_id = {}
 		):
 			  position(position),
+			  pointer_message_id(std::move(name)),
+			  message_id(std::move(message_id)) {}
+
+		PointerMessage(
+			std::string                 name,
+			dia_int::StablePosition     position,
+			base::Optional<std::string> message_id = {}
+		):
+			  position(position.getActiveSourcePositionIllegalAccess()),
 			  pointer_message_id(std::move(name)),
 			  message_id(std::move(message_id)) {}
 	};
@@ -248,8 +312,14 @@ namespace dia_int {
 
 		bool has_been_built = false;
 
-		virtual Metadata getMetadata() const = 0;
+		[[nodiscard]] virtual Metadata getMetadata() const = 0;
 
+		/**
+		 * @brief The priority of the message class. For now used only when sorting the
+		 * attached messages. The higher the priority, the closer the attached message
+		 * will be to the main diagnostic message.
+		 */
+		[[nodiscard]] virtual int getPriority() const { return 0; }
 
 		dia_args::Message buildMessages(
 			base::HashMap<std::string, dia_args::Message>& additional_messages
@@ -306,7 +376,8 @@ namespace dia_int {
 		/* =============================  ACCESSORS ============================= */
 
 		/**
-		 * @note These method is used by the CodeParameter to get the pointer messages on the code.
+		 * @note These method is used by the CodeParameter to get the pointer messages on the
+		 * code.
 		 */
 		const std::vector<PointerMessage>& getPointerMessages() const { return pointer_messages; }
 
@@ -355,8 +426,8 @@ namespace dia_int {
 
 		/**
 		 * @brief Main method that builds the diagnostic file representation of this diagnostic.
-		 * @warning This method can only be called once because it modifies the arguments by using
-		 * getValue(msg&) on the arguments.
+		 * @warning This method can only be called once because it modifies the arguments by
+		 * using getValue(msg&) on the arguments.
 		 */
 		Box<dia_args::Diagnostic> buildDiagnosticFile();
 
@@ -371,6 +442,8 @@ namespace dia_int {
 	class MessageWithCodeFragment: public MessageBase {
 	protected:
 		MessageWithCodeFragment(dia::SourcePosition source_position);
+
+		MessageWithCodeFragment(dia_int::StablePosition source_position);
 	};
 
 	/**
@@ -391,5 +464,11 @@ namespace dia_int {
 	class MessageWithCodeFragmentAndCause: public MessageBase {
 	protected:
 		MessageWithCodeFragmentAndCause(dia::SourcePosition source_position);
+
+		MessageWithCodeFragmentAndCause(dia_int::StablePosition source_position);
 	};
+
+	template<typename T>
+	concept SourcePositionType
+		= std::same_as<T, dia::SourcePosition> || std::same_as<T, dia_int::StablePosition>;
 }

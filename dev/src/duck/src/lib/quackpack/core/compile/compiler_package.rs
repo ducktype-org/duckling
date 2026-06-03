@@ -4,10 +4,8 @@
 use std::collections::HashSet;
 use std::fmt;
 
-use crate::{
-    QuackResult, QuackResultContext,
-    quackpack::core::{FeatureName, Package},
-};
+use crate::quackpack::core::{FeatureName, Package};
+use crate::{QuackResult, QuackResultContext};
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 /// Describes what type dependency type, in respect to the root, is this package.
@@ -92,6 +90,26 @@ impl CompilerPackage {
             self.enabled_features.insert(feature);
         }
         Ok(())
+    }
+
+    /// As [`CompilerPackage::add_new_features`], but returns the set of features that would be added.
+    pub fn features_that_would_be_added(
+        &self,
+        features: impl IntoIterator<Item = FeatureName>,
+    ) -> QuackResult<HashSet<FeatureName>> {
+        let features = self
+            .package
+            .manifest()
+            .features()
+            .expand_features(features)
+            .with_context(|| {
+                format!(
+                    "while expanding features of the {} `{}`",
+                    self.pkg_type,
+                    self.package.manifest().name()
+                )
+            })?;
+        Ok(features)
     }
 
     /// Get the underlying [`Package`].

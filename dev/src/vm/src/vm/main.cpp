@@ -7,8 +7,10 @@
 #include <logger/logger.hpp>
 #include <printer/stream_printer.hpp>
 
+#include <vm/core/safe/low_program/instruction.hpp>
 #include <vm/core/supervisor/supervisor.hpp>
-#include <vm/core/thread/low_program/instruction.hpp>
+#include <vm/debugger/UI/CLI/cli.hpp>
+#include <vm/debugger/UI/debug_adapter/debug_adapter.hpp>
 
 #include <exception>
 
@@ -43,6 +45,7 @@ clah::Clah getVmClah() {
 				logger::enable_dev_logs = true;
 				logger::enableDevCategory(logger::DevLogCategories::DVM);
 				logger::enableDevCategory(logger::DevLogCategories::DVMDetails);
+				logger::setDevLogOutputStreamCurrentDate();
 			}
 		})
 #endif
@@ -71,6 +74,26 @@ clah::Clah getVmClah() {
 								   args.push_back(*options.getExtra<std::string>(argc));
 
 							   return cli(file, args);
+						   }))
+	    .addSubcommand(clah::Clah("debug", "Start the VM CLI debugger.")
+	                       .addPositional(clah::FileParser::make("file"))
+	                       .setDefaultValueParser(clah::StringParser::make("program_argument"))
+	                       .setHandler([](const clah::ParsingResult& options) {
+							   vm::Supervisor::get();
+							   auto                     file = options.getPositional<fs::File>(0);
+							   std::vector<std::string> args;
+							   args.reserve(options.getExtraParameterCount());
+							   for (usize argc = 0; argc < options.getExtraParameterCount(); argc++)
+								   args.push_back(*options.getExtra<std::string>(argc));
+
+							   auto cli = vm::debugger::cli::CLIDebugger(file, args);
+							   return cli.run();
+						   }))
+	    .addSubcommand(clah::Clah("debug_adapter", "Start the VM debug adapter.")
+	                       .setHandler([](const clah::ParsingResult&) -> int {
+							   vm::Supervisor::get();
+							   vm::debugger::debug_adapter::DebugAdapter::get().run();
+							   return 0;
 						   }))
 	    .addSubcommand(clah::Clah("repl", "Start the VM in REPL mode.")
 	                       .setHandler([](const clah::ParsingResult&) -> int {

@@ -39,10 +39,12 @@ private:
 
 			std::map<pst::ElementKind, u64> element_types_count;
 
-			compiler::helios::pstForAll(ctx, root_element, [&](const auto& element) {
-				element_types_count[element->getElementKind()]++;
-			});
+			auto for_all_result
+				= compiler::helios::pstForAll(ctx, root_element, [&](const auto& element) {
+					  element_types_count[element->getElementKind()]++;
+				  });
 
+			ASSERT_TRUE(for_all_result.status().isOk());
 
 			ASSERT_EQUAL(element_types_count[pst::ElementKind::Namespace], 3);
 			ASSERT_EQUAL(element_types_count[pst::ElementKind::Variable], 4);
@@ -58,7 +60,7 @@ private:
 
 		auto n_namespace = getChain("N", root_scope).back();
 
-		auto n_pst = compiler::helios::symbolPst(n_namespace)
+		auto n_pst = compiler::helios::maybeSymbolPst(n_namespace)
 		                 ->dynamicCast<pst::Namespace>()
 		                 .illegalAccess()
 		                 .value();

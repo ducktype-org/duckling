@@ -30,7 +30,7 @@ namespace compiler::repl {
 		return hashing::justHash<hashing::SHA256>(expr_hash, counter);
 	}
 
-	struct IMPLEMENT_QUERY(QueryReplExpressionWrapper, helios::HOUTFunction) {
+	struct IMPLEMENT_QUERY(QueryReplExpressionWrapper, query::QResult<helios::HOUTFunction>) {
 		static auto provide(query::Context& ctx, QKey key) -> PResult {
 			auto expr_stmt = key.expr_stmt.unlock(ctx);
 
@@ -38,14 +38,9 @@ namespace compiler::repl {
 
 			CORE_DEV_LOG(REPL, "Converting expression to HOUT...\n");
 			auto hout_expr_result = ctx.query<helios::QueryHoutOfExpr>(expr_holder->getExpr());
+			if (hout_expr_result->hasFailed()) return query::Failed();
 
-			CORE_ASSERT(
-				hout_expr_result->hasValue(),
-				"Failed to convert expression to HOUT in REPL expression wrapper"
-			);
-
-
-			auto hout_expr   = hout_expr_result->valueOrPanic()->clone();
+			auto hout_expr   = hout_expr_result->valueOrPanic().ref();
 			auto return_type = hout_expr->expression_type.getSymbolType();
 
 			CORE_DEV_LOG(REPL, "Expression return type: ", return_type.toString(), "\n");
@@ -58,13 +53,13 @@ namespace compiler::repl {
 			if (return_type.toString() == "void") {
 				CORE_DEV_LOG(REPL, "Creating ExprStmt for void expression\n");
 				auto void_expr_stmt = base::makeBox<helios::code::ExprStmt>(
-					helios::code::generatedOrigin(), std::move(hout_expr)
+					helios::code::generatedOrigin(), hout_expr
 				);
 				code_block->statements.emplace_back(std::move(void_expr_stmt));
 			} else {
 				CORE_DEV_LOG(REPL, "Creating ReturnStmt for value expression\n");
 				auto return_stmt = base::makeBox<helios::code::ReturnStmt>(
-					helios::code::generatedOrigin(), std::move(hout_expr)
+					helios::code::generatedOrigin(), hout_expr
 				);
 				code_block->statements.emplace_back(std::move(return_stmt));
 			}
@@ -82,7 +77,8 @@ namespace compiler::repl {
 			auto& decl = ctx.query<helios::QueryDeclOfFun>(synthetic_symbol)->valueOrThrow();
 
 			CORE_DEV_LOG(REPL, "QueryReplExpressionWrapper completed successfully\n");
-			return { helios::code::generatedOrigin(), &decl, code_block };
+			helios::HOUTFunction wrapper{ helios::code::generatedOrigin(), &decl, code_block };
+			return wrapper;
 		}
 
 		QUERY_AUTO_CACHE_COPY
@@ -95,7 +91,7 @@ namespace compiler::repl {
 		return hashing::justHash<hashing::SHA256>(stmt_hash, counter);
 	}
 
-	struct IMPLEMENT_QUERY(QueryReplInstructionWrapper, helios::HOUTFunction) {
+	struct IMPLEMENT_QUERY(QueryReplInstructionWrapper, query::QResult<helios::HOUTFunction>) {
 		static auto provide(query::Context& ctx, QKey key) -> PResult {
 			CORE_DEV_LOG(REPL, "QueryReplInstructionWrapper: Starting\n");
 
@@ -132,7 +128,7 @@ namespace compiler::repl {
 			auto& decl = ctx.query<helios::QueryDeclOfFun>(synthetic_symbol)->valueOrThrow();
 
 			CORE_DEV_LOG(REPL, "QueryReplInstructionWrapper completed successfully\n");
-			return { helios::code::generatedOrigin(), &decl, code_block };
+			return helios::HOUTFunction{ helios::code::generatedOrigin(), &decl, code_block };
 		}
 
 		QUERY_AUTO_CACHE_COPY

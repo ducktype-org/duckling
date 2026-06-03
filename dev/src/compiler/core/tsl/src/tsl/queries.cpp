@@ -25,6 +25,10 @@ namespace compiler::tsl {
 				return PointerTypeLayout(tsh::RawPointerAbstractType(key), ctx);
 			case Pointer:
 				return PointerTypeLayout(tsh::PointerAbstractType(key), ctx);
+			case ManyPointer:
+				return PointerTypeLayout(tsh::ManyPointerAbstractType(key), ctx);
+			case CPointer:
+				return PointerTypeLayout(tsh::CPointerAbstractType(key), ctx);
 			case String:
 				return StringTypeLayout(key, ctx);
 			case Function:
@@ -36,7 +40,7 @@ namespace compiler::tsl {
 			case Variant:
 				return VariantTypeLayout(key, ctx);
 			case Tuple:
-				return TupleTypeLayout(tsh::TupleAbstractType(key), ctx);
+				return ClassTypeLayout(tsh::TupleAbstractType(key), ctx);
 			case Class:
 				return ClassTypeLayout(tsh::ClassAbstractType(key), ctx);
 			default:

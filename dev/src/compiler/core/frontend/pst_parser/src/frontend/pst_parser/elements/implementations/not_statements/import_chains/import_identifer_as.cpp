@@ -5,19 +5,24 @@ namespace pst {
 	MBox<ImportIdentifierAs> ImportIdentifierAs::parse(LangParserState& state) {
 		auto out = makeBox<ImportIdentifierAs>(state);
 
-		tpc::Identifier id;
+		MBox<IdentifierWrapper> id;
+
+		auto push_id = [&]() {
+			out->names.emplace_back(nullptr);
+			PARSE().assign(&out->names.back(), std::move(id));
+		};
 
 		PARSE().all(&id);
-		out->names.push_back(id);
+		push_id();
 
 		PST_WHILE(state[0].is(NamedOperator::Period)) {
 			PARSE().all(NamedOperator::Period, &id);
-			out->names.push_back(id);
+			push_id();
 		}
 
-		if (PARSE().tryEat(Keyword::As)) {
+		if (PARSE().tryEat(NamedOperator::As)) {
 			PARSE().all(&id);
-			out->as = id;
+			PARSE().assign(&out->as, std::move(id));
 		}
 
 		return out;
@@ -42,9 +47,13 @@ namespace pst {
 	}
 
 	HashAlg& ImportIdentifierAs::addElementDataToStableHash(HashAlg& partial_hash) const {
-		addToHash(partial_hash, names);
+		addToHash(partial_hash, names.size());
 		addToHash(partial_hash, as.has_value());
-		if (as) addToHash(partial_hash, *as);
 		return partial_hash;
+	}
+
+	void ImportIdentifierAs::calcElementPathHashRecursive() {
+		calcIndexedListChildPath<IdentifierWrapper>({ names }, getElementPathHash());
+		if (as.has_value()) calcNamedChildPath(as.value(), getElementPathHash());
 	}
 }

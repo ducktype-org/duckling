@@ -14,9 +14,12 @@
 #include <frontend/pst_parser/lang_parser_element.hpp>
 #include <frontend/pst_parser/pst_visitor.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
+#include <helios/tsh/queries/types.hpp>
+#include <helios_private/hout_creation/desugaring/for.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/lookup/lookup_result.hpp>
 #include <helios_private/pst_layer/for_all.hpp>
+#include <helios_private/pst_layer/pst_parent.hpp>
 #include <helios_private/pst_layer/stmts_from_aggregate.hpp>
 #include <helios_private/scopes/scope_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
@@ -28,6 +31,7 @@
 
 #include <query_framework/query_result.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
+#include <query_framework/utils/query_failed_try.hpp>
 #include <string_id/string_id.hpp>
 
 #include <algorithm>
@@ -95,6 +99,8 @@ namespace compiler::helios {
 
 		case pst::ElementKind::Import:
 		case pst::ElementKind::ImportIdentifierAs:
+		case pst::ElementKind::ImportStarHides:
+		case pst::ElementKind::ImportNested:
 		case pst::ElementKind::DottedName:
 		// I don't know if this is correct
 		case pst::ElementKind::StmtSpecifier:
@@ -165,6 +171,10 @@ namespace compiler::helios {
 
 		case pst::ElementKind::ExprStmt:
 			return ElementScopeKind::Transparent;
+		case pst::ElementKind::OperatorWrapper:
+		case pst::ElementKind::IdentifierWrapper:
+		case pst::ElementKind::KeywordWrapper:
+			return ElementScopeKind::Transparent;
 
 		case pst::ElementKind::ExprElement:
 		case pst::ElementKind::RoundGroupExpr:
@@ -189,6 +199,10 @@ namespace compiler::helios {
 		case pst::ElementKind::Expand:
 			// This is a bit of a special case, we treat it as transparent, since it is
 			// basically just a wrapper around the expanded element.
+			return ElementScopeKind::Transparent;
+
+		case pst::ElementKind::FormatSubExpression:
+		case pst::ElementKind::FormatSubString:
 			return ElementScopeKind::Transparent;
 
 		case pst::ElementKind::KindNotSet:
@@ -248,38 +262,12 @@ namespace compiler::helios {
 			}
 
 			ScopeID parent = [&]() -> ScopeID {
-				// @TODO: #2452 this logic should be unified
+				auto pst_parent = getPSTElementParent(ctx, element);
 
-				auto maybe_element_parent = element->getParent();
-				if (maybe_element_parent.has_value()) {
-					return ctx.query<QueryPrimaryCodeScopeFor>(maybe_element_parent.value());
-				} else {
-					// If there is no parent, we inspect the additional root data,
-					// as we might be in a macro expansion.
-					// @TODO: #2397 revisit and adjust this logic, we could perhaps move it into PST
-					// layer.
-
-					const auto& additional_root_data = element->getAdditionalRootData();
-
-					variant_match(additional_root_data.pst_parent) {
-						variant_case(pst::AdditionalRootData::MacroExpansionParent, macro_parent) {
-							return ctx.query<QueryPrimaryCodeScopeFor>(macro_parent.expand_element);
-						}
-						variant_case(pst::AdditionalRootData::ModuleParent, module_parent) {
-							auto module_id_any = module_parent.module_id;
-							auto module_id     = base::anyCast<frontend::ModuleID>(module_id_any);
-							return ctx.query<QueryRootScopeOf>(module_id);
-						}
-						variant_default {
-							CORE_PANIC(
-								"Element has no parent and no additional root data, cannot "
-								"determine "
-								"scope parent."
-							);
-						}
-					}
-					CORE_UNREACHABLE();
-				}
+				if (pst_parent.isLangElement())
+					return ctx.query<QueryPrimaryCodeScopeFor>(pst_parent.getAsLangElement());
+				else
+					return ctx.query<QueryRootScopeOf>(pst_parent.getAsModuleID());
 			}();
 
 
@@ -385,7 +373,12 @@ namespace compiler::helios {
 					out->scopes.emplace_back(ctx.query<QueryPrimaryCodeScopeFor>(element));
 			};
 
-			pstForAll(ctx, root_unlocked.value(), grab_scopes_function);
+			auto for_all_ok = pstForAll(ctx, root_unlocked.value(), grab_scopes_function);
+			if (for_all_ok.status().isBad()) {
+				// if the pstForAll failed, we mark the whole query as failed, but we still return
+				// the scopes that we managed to obtain.
+				out->failed = true;
+			}
 		}
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
@@ -396,10 +389,6 @@ namespace compiler::helios {
 			output.scopes.reserve(1'024);  // there will usually be a lot of scopes
 
 			getScopes(ctx, main_file, &output);
-
-			// fetch scopes from other module files
-			auto source_files = ctx.query<frontend::QuerySourceFiles>(key);
-			for (auto file: *source_files) getScopes(ctx, file, &output);
 
 			// eliminate duplicates with sort:
 			std::ranges::sort(output.scopes);
@@ -422,7 +411,7 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryScopesInModule);
 
-	struct IMPLEMENT_QUERY(QuerySymbolsInScope, std::vector<SymID>) {
+	struct IMPLEMENT_QUERY(QuerySymbolsInScope, query::QResult<std::vector<SymID>>) {
 		/**
 		 * @brief Makes symbols from pst::Stmt and filters out non declarations from the StmtList.
 		 */
@@ -551,11 +540,15 @@ namespace compiler::helios {
 				output(std::vector<SymID>{});
 			}
 
-			void visitFor(pst::Access<pst::For>) override {
-				// Scope of "for →(...)← {}"
-				// @TODO: #2096 add for loop variables to the scope
-				// and add them here.
-				output(std::vector<SymID>{});
+			void visitFor(pst::Access<pst::For> for_stmt) override {
+				using namespace desugaring;
+				ForGeneratedSymbols symbols = getForGeneratedSymbols(ctx, for_stmt);
+
+				std::vector<SymID> out;
+				out.emplace_back(symbols.iterator);
+				out.emplace_back(symbols.index);
+				out.emplace_back(symbols.length);
+				output(std::move(out));
 			}
 
 			void visitExprStmt(pst::Access<pst::ExprStmt>) override {
@@ -568,8 +561,6 @@ namespace compiler::helios {
 		 * `provide` function simply calls it and validates output.
 		 */
 		static auto getSymbols(Context& ctx, QKey key) -> PResult {
-			// @TODO: expand macros?
-
 			if (not key.ref->related_pst_element_hash.has_value()) {
 				CORE_ASSERT(key.ref->is_root, "Non root scope without PST element!");
 				return {};
@@ -601,31 +592,34 @@ namespace compiler::helios {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			auto output = getSymbols(ctx, key);
 
-			// validate output:
-			for (auto sym: output) {
-				CORE_ASSERT(
-					scope(sym) == key,
-					base::strConcat(
-						"Scope mismatch in QuerySymbolsInScope and QuerySymbolOfSTMT\n",
-						" for symbol: ",
-						name(sym),
-						"\n\n"
-						" considered scope : ",
-						key.ref->relatedPSTElement().value().unlock(ctx)->elementType(),
-						", ID: ",
-						key.ref->relatedPSTElement().value().unlock(ctx)->getID().asInt(),
-						"\n\n",
-						" scope of symbol: ",
-						scope(sym).ref->relatedPSTElement().value().unlock(ctx)->elementType(),
-						", ID: ",
-						scope(sym).ref->relatedPSTElement().value().unlock(ctx)->getID().asInt(),
-						"\n"
-					)
-				);
+			// Sanity check that the output symbols have correct scope.
+			if (output.hasValue()) {
+				for (auto sym: output.valueOrPanic()) {
+					CORE_ASSERT(
+						scope(sym) == key,
+						base::strConcat(
+							"Scope mismatch in QuerySymbolsInScope and QuerySymbolOfSTMT\n",
+							" for symbol: ",
+							name(sym),
+							"\n\n"
+							" considered scope : ",
+							key.ref->relatedPSTElement().value().unlock(ctx)->elementType(),
+							", ID: ",
+							key.ref->relatedPSTElement().value().unlock(ctx)->getID().asInt(),
+							"\n\n",
+							" scope of symbol: ",
+							scope(sym).ref->relatedPSTElement().value().unlock(ctx)->elementType(),
+							", ID: ",
+							scope(sym).ref->relatedPSTElement().value().unlock(ctx)->getID().asInt(),
+							"\n"
+						)
+					);
+				}
+				if (key.ref->is_root)
+					CORE_ASSERT(
+						output.valueOrPanic().empty(), "Root scope should not have any symbols."
+					);
 			}
-
-			if (key.ref->is_root)
-				CORE_ASSERT(output.empty(), "Root scope should not have any symbols.");
 
 			return output;
 		}
@@ -637,7 +631,7 @@ namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QueryLookupInScope, query::QResult<LookupResult>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			auto symbol_list = ctx.query<QuerySymbolsInScope>(key.scope);
+			Ref symbol_list = &ctx.query<QuerySymbolsInScope>(key.scope)->valueOrThrow();
 
 			// here if the scope is the root scope
 			// we pass the lookup to
@@ -654,8 +648,6 @@ namespace compiler::helios {
 					= is_repl_module
 				   && ctx.query<frontend::QueryReplModuleParent>(module_id).has_value();
 
-				if (!repl_has_parent) return builtin::lookupGlobalBuiltins(ctx, key.name);
-
 				// For REPL modules with parents, skip duplicating builtins here.
 				// They will be resolved via the parent chain in QueryLookupInScopeAndParents.
 				return LookupResult{};
@@ -669,8 +661,12 @@ namespace compiler::helios {
 						auto wild_result_qresult
 							= HInterface::ofSymbol(sym).lookup(ctx, key.name, { true });
 						UNPACK_QRESULT_CREF(CRef<LookupResult> wild_result = &, wild_result_qresult);
-						if (!wild_result->isEmpty())
-							result.children.push_back(wild_result->toNode(sym));
+						// The correct code that works for using is commented out,
+						// to make the import a.*; work correctly.
+						// @TODO: #1412 fix this properly
+						// if (!wild_result->isEmpty())
+						// 	result.children.push_back(wild_result->toNode(sym));
+						if (!wild_result->isEmpty()) result.merge(*wild_result);
 					}
 				} else if (isAlias(sym) && name(sym) == key.name) {
 					// @TODO: #1412 fix dealias
@@ -794,8 +790,7 @@ namespace compiler::helios {
 		// this implementation is fragile, adjust if needed.
 
 		CORE_ASSERT(
-			query::Context::getState().activeQueryCount() == 0,
-			"getAllHeliosScopes called from within query!"
+			!query::Context::areWeInsideQuery(), "getAllHeliosScopes called from within query!"
 		);
 
 		auto root_scopes = ImplementationOf_QueryRootScopeOf::getAllCachedScopes();

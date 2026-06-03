@@ -1,3 +1,5 @@
+import core.builtins.*;
+
 fun init_array(size: i64, arr: ref i64[100]) -> () = {
     var i = 0;
     while (i < size) {
@@ -36,7 +38,7 @@ fun main() -> i64 = {
 
     sieve(limit, &is_prime);
 
-    builtin_output_string("88888888\n");
+    builtin_output_i64(88888888);
     var k = 0;
     while (k <= limit) {
         if (is_prime[k] == 1) {

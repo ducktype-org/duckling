@@ -1,0 +1,42 @@
+import core.builtins.*;
+
+fun noArgs() -> i64 = 1;
+
+fun oneArg(x: i64) -> i64 = x * 2;
+
+fun twoArgs(a: i64, b: i64) -> i64 = a + b;
+
+fun threeArgs(a: i64, b: i64, c: i64) -> i64 = a + b + c;
+
+# Test nested function calls
+fun double(x: i64) -> i64 = x * 2;
+fun triple(x: i64) -> i64 = x * 3;
+
+# Test function call in expression
+fun addOne(x: i64) -> i64 = x + 1;
+
+fun main() -> i64 = {
+    # Test simple function calls
+    builtin_output_i64(noArgs());           # 1
+    builtin_output_i64(oneArg(5));          # 10
+    builtin_output_i64(twoArgs(3, 4));      # 7
+    builtin_output_i64(threeArgs(1, 2, 3)); # 6
+
+    # Test function call with variables
+    var x: i64 = 10;
+    var y: i64 = 20;
+    builtin_output_i64(twoArgs(x, y));      # 30
+
+    # Test nested function calls
+    builtin_output_i64(double(triple(5)));  # 30
+    builtin_output_i64(triple(double(5)));  # 30
+
+    # Test function call in expression
+    var result = addOne(5) + addOne(10);    # 6 + 11 = 17
+    builtin_output_i64(result);             # 17
+
+    # Test function call with literal expressions as args
+    builtin_output_i64(twoArgs(3 + 2, 4 * 2)); # 5 + 8 = 13
+
+    return 0;
+}

@@ -6,6 +6,7 @@ add_library(HELIOS STATIC
 	src_private/helios_private/scopes/scope_data.cpp
 	src_private/helios_private/pst_layer/stmts_from_aggregate.cpp
 	src_private/helios_private/pst_layer/macros.cpp
+	src_private/helios_private/pst_layer/pst_parent.cpp
 	src_private/helios_private/lookup/lookup_result.cpp
 	src_private/helios_private/lookup/interface.cpp
 	src_private/helios_private/lookup/lookup_chain.cpp
@@ -21,14 +22,21 @@ add_library(HELIOS STATIC
 	src_private/helios_private/comp_time/vm_evaluator.cpp
 	src_private/helios_private/comp_time/comptime_type_operations.cpp
 	src_private/helios_private/hout_creation/definition_generation/class_constructors.cpp
+	src_private/helios_private/hout_creation/definition_generation/tuple_constructor.cpp
 	src_private/helios_private/hout_creation/definition_generation/default_constructors.cpp
+	src_private/helios_private/hout_creation/definition_generation/default_destructors.cpp
+	src_private/helios_private/hout_creation/definition_generation/to_string_methods.cpp
+	src_private/helios_private/hout_creation/desugaring/for.cpp
 	src_private/helios_private/hout_creation/hout_stmt_compilation.cpp
 	src_private/helios_private/errors/dia_interactive_elements.cpp
+	src_private/helios_private/errors/duplicated_definition.cpp
 	src_private/helios_private/tsh/abstract_type_impl.cpp
 	src_private/helios_private/tsh/queries.cpp
 
 	src/helios/queries/queries.cpp
-	src/helios/queries/function_queries.cpp
+	src/helios/queries/query_code_of_fun.cpp
+	src/helios/queries/query_decl_of_fun.cpp
+	src/helios/queries/global_data_queries.cpp
     src/helios/scope_id.cpp
 	src/helios/hout/hout.cpp
 	src/helios/hout/elements/stmt.cpp
@@ -37,7 +45,7 @@ add_library(HELIOS STATIC
 	src/helios/mangler/mangler.cpp
 	src/helios/test_utils/helios_test_utils.cpp
 	src/helios/symbols/query_type_of_symbol.cpp
-	src/helios/symbols/query_class_symbol_data.cpp
+	src/helios/symbols/query_type_symbol_data.cpp
 	src/helios/symbols/query_type_from_definition.cpp
 	src/helios/symbols/query_class_of_member.cpp
 	src/helios/symbols/symbol_abi.cpp
@@ -45,12 +53,14 @@ add_library(HELIOS STATIC
 	src/helios/utils/get_expr_symid.cpp
 	src/helios/utils/symbol_list.cpp
 	src/helios/repl_utils/repl_queries.cpp
+	src/helios/repl_utils/script_helpers.cpp
 	src/helios/ls_utils/ls_utils.cpp
 	src/helios/utils/go_to_definition.cpp
 	src/helios/tsh/queries/implicit_coercibility.cpp
 	src/helios/tsh/queries/types.cpp
 	src/helios/tsh/abstract_type.cpp
 	src/helios/tsh/deductions.cpp
+	src/helios/tsh/symbol_type.cpp
 	src/helios/tsh/types.cpp
 	src/helios/tsh/type_interface.cpp
 	src/helios/tsh/value_category.cpp

@@ -1,0 +1,122 @@
+import core.builtins.*;
+
+
+
+fun main() -> i64 = {
+    
+    # unnamed loop and unnamed break
+    var a = 5i64;
+    while (a > 0) {
+        if (a == 3)
+            break;
+        builtin_output_i64(a);          # 5\n4\n
+        a -= 1;
+    }
+    if (a != 3)
+        return 1;
+
+    # named loop and named break
+    a = 5;
+    while test_loop(a > 0) {
+        if (a == 3)
+            break test_loop;
+        builtin_output_i64(a);          # 5\n4\n
+        a -= 1;
+    }
+    if (a != 3)
+        return 1;
+
+    # named loop and unnamed break
+    a = 5;
+    while test_loop(a > 0) {
+        if (a == 3)
+            break;
+        builtin_output_i64(a);          # 5\n4\n
+        a -= 1;
+    }
+    if (a != 3)
+        return 1;
+
+
+    # unnamed loop and unnamed continue
+    a = 5;
+    while (a > 0) {
+        if (a == 3) {
+            a -= 1;
+            continue;
+        }
+        builtin_output_i64(a);          # 5\n4\n2\n1\n
+        a -= 1;
+    }
+    if (a != 0)
+        return 1;
+
+    # named loop and named continue
+    a = 5;
+    while test_loop(a > 0) {
+        if (a == 3) {
+            a -= 1;
+            continue test_loop;
+        }
+        builtin_output_i64(a);          # 5\n4\n2\n1\n
+        a -= 1;
+    }
+    if (a != 0)
+        return 1;
+
+    # named loop and unnamed continue
+    a = 5;
+    while test_loop(a > 0) {
+        if (a == 3) {
+            a -= 1;
+            continue;
+        }
+        builtin_output_i64(a);          # 5\n4\n2\n1\n
+        a -= 1;
+    }
+    if (a != 0)
+        return 1;
+
+
+    # false initial condition
+    while (false) {
+        builtin_output_i64(-1);
+        # should never be printed
+    }
+
+    # nested while loops and named break
+    a = 5;
+    var c = 0;
+    while outer(a > 0) {
+        var b = 0;
+        while inner(b < 2) {
+            if (b == 1 && a == 3)
+                break outer;
+            c += 1;
+            b += 1;
+        }
+        a -= 1;
+    }
+    if (c != 5)
+		return 1;
+
+	    # nested while loops and named continue
+        a = 5;
+        c = 0;
+        while outer(a > 0) {
+            var b = 0;
+            while inner(b < 2) {
+                if (b == 1 && a == 3) {
+                    a -= 1;
+                    continue outer;
+                }
+                c += 1;
+                b += 1;
+            }
+            a -= 1;
+        }
+        if (c != 9)
+    		return 1;
+
+    return 0;
+}

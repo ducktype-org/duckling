@@ -3,6 +3,9 @@
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/tsh/queries/types.hpp>
+#include <mir/mir_lowering/mir_lifetimes.hpp>
+#include <mir/mir_structure/mir_local_ref.hpp>
+#include <mir/mir_structure/mir_structure.hpp>
 
 #include <base/extend_cpp/variant_match.hpp>
 
@@ -174,9 +177,10 @@ namespace compiler::mir {
 	 */
 	MIRLocalMutRef FunctionBuilder::addLocal(const helios::SymID helios_id) {
 		local_list.emplaceBack(MIRLocal{
+			LocalID(next_local_id++),
 			helios_id,
 			ctx.query<helios::QueryTypeOfSymbol>(helios_id)->valueOrThrow(),
-		});
+			{} });
 		return local_list.last();
 	}
 
@@ -186,8 +190,10 @@ namespace compiler::mir {
 	MIRLocalMutRef FunctionBuilder::addParameter(const helios::SymID helios_id, u64 parameter_index) {
 		CORE_ASSERT(kind(helios_id) == helios::SymbolKind::Parameter, "Not a parameter");
 		local_list.emplaceBack(MIRLocal{
+			LocalID(next_local_id++),
 			helios_id,
 			ctx.query<helios::QueryTypeOfSymbol>(helios_id)->valueOrThrow(),
+			LifetimeFlag::NoScopeFlags,
 			parameter_index,
 		});
 		return local_list.last();
@@ -197,8 +203,16 @@ namespace compiler::mir {
 		const helios::code::ReusableExpr& reusable_expr, const ScopeRef scope
 	) {
 		auto expr_id = reusable_expr.inner->getID();
-		if (auto found = reusable_expr_locals.atMaybeCopy(expr_id); found.has_value())
-			return found.value();
+		if (auto found = reusable_expr_locals.atMaybeCopy(expr_id); found.has_value()) {
+			auto tmp = found.value();
+			// We have to widen the lifetime to cover all uses of the reusable expression.
+			// When first_use and next_use live in different scopes (e.g. first_use before
+			// a loop, next_use inside its body) the lifetime must span both, otherwise
+			// the local gets pinned to the first scope we saw and writes from the other
+			// use end up outside its lifetime window.
+			tmp->scope.value() = lca(tmp->scope.value(), scope);
+			return tmp;
+		}
 
 		const auto symbol_type = reusable_expr.expression_type.getSymbolType();
 		auto       tmp         = addTmp(symbol_type, scope);
@@ -208,7 +222,7 @@ namespace compiler::mir {
 
 	[[nodiscard]]
 	MIRLocalMutRef FunctionBuilder::addTmp(const tsh::SymbolType<> type, const ScopeRef scope) {
-		local_list.emplaceBack(MIRLocal{ type });
+		local_list.emplaceBack(MIRLocal{ LocalID(next_local_id++), type });
 		auto tmp = local_list.last();
 		tmp->setLifetimeScope(scope);
 		return tmp;
@@ -220,8 +234,11 @@ namespace compiler::mir {
 	 * Sets its lifetime scope to no_lifetime_scope.
 	 */
 	[[nodiscard]]
-	MIRLocalMutRef FunctionBuilder::addNoLifetimeTmp(const tsh::SymbolType<> type) {
-		return addTmp(type, no_lifetime_scope);
+	MIRLocalMutRef FunctionBuilder::addReturnTmp(const tsh::SymbolType<> type) {
+		auto tmp = addTmp(type, no_lifetime_scope);
+		tmp->lifetime_flags |= LifetimeFlag::ReturnTmpValue | LifetimeFlag::NoScopeFlags
+		                     | LifetimeFlag::NoDestructor;
+		return tmp;
 	}
 
 	/**
@@ -231,11 +248,13 @@ namespace compiler::mir {
 	 * the result of the condition.
 	 */
 	[[nodiscard]]
-	MIRLocalMutRef FunctionBuilder::addNoLifetimeBoolTmp() {
+	MIRLocalMutRef FunctionBuilder::addConditionTmp(ScopeRef scope) {
 		auto type = tsh::SymbolType<>(
 			tsh::getBoolType(), tsh::ReferenceKind::Direct, tsh::Mutability::Immutable
 		);
-		return addNoLifetimeTmp(type);
+		auto tmp = addTmp(type, scope);
+		tmp->lifetime_flags |= LifetimeFlag::ConditionTmpValue | LifetimeFlag::NoDestructor;
+		return tmp;
 	}
 
 	/**

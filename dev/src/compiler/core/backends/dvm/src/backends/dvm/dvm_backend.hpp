@@ -17,7 +17,15 @@ namespace compiler::backend_vm {
 	 */
 	class DVMCodeBuilder final {
 	public:
-		DVMCodeBuilder(query::Context& query_ctx, bool build_debug_info);
+		/**
+		 * @brief Construct a new DVMCodeBuilder object
+		 *
+		 * @param query_ctx
+		 * @param build_debug_info Whether to build debug info for the module.
+		 * @param is_comp_time_lowering Whether we are lowering the code to be loaded by the VM for
+		 * compile time evaluation, or for the final output module.
+		 */
+		DVMCodeBuilder(query::Context& query_ctx, bool build_debug_info, bool is_comp_time_lowering);
 
 		/**
 		 * @brief Inserts a LIR function into the module.
@@ -32,11 +40,7 @@ namespace compiler::backend_vm {
 		/**
 		 * @brief Inserts a LIR global into the module.
 		 */
-		void insertLirGlobal(
-			const lir::LIRGlobal&               lir_global,
-			base::Optional<CRef<lir::Function>> global_ctor,
-			base::Optional<CRef<lir::Function>> global_dtor
-		);
+		void insertLirGlobal(const lir::LIRGlobalData& lir_global);
 
 		/**
 		 * @brief Insert raw bytecode into a module.
@@ -44,7 +48,8 @@ namespace compiler::backend_vm {
 		void insertRawBytecodeDefinitions(const vm::code::CodeCollection& bytecode);
 
 		/**
-		 * @brief Validates and builds module's representation as DVM program.
+		 * @brief Produces the per-module bytecode collection without cross-module validation.
+		 * Full validation is performed at link time after all modules are merged.
 		 */
 		[[nodiscard]] vm::code::CodeCollection build() const;
 

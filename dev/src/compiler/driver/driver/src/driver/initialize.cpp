@@ -6,8 +6,10 @@
 #include <diagnostic_interactive/logger.hpp>
 #include <diagnostic_interactive/module_flags/module_flags.hpp>
 #include <diagnostic_interactive/placeholder.hpp>
+#include <driver/diagnostics/log_helpers.hpp>
 #include <driver/incremental_utils/collect_input.hpp>
 #include <driver/module_flags/module_flags.hpp>
+#include <driver_private/standard_library/standard_library.hpp>
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <global_state/artifacts_location.hpp>
@@ -18,38 +20,21 @@
 #include <linker/link.hpp>
 #include <time_stats/time_stats.hpp>
 
-#include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <artifacts/artifacts.hpp>
 #include <lexer/lexer_class.hpp>
 #include <logger/logger.hpp>
 #include <query_framework/external/api.hpp>
+#include <query_framework/module_flags/module_flags.hpp>
+
+#include <iostream>
 
 namespace compiler::driver {
 
-	InitializationResult::InitializationResult(base::OkBad result): result(result) {}
-
-	InitializationResult::~InitializationResult() {
-		CORE_ASSERT_NOEXCEPT(checked, "Initialization status was not checked, use status method!");
-	}
-
-	[[nodiscard]]
-	base::OkBad InitializationResult::status() {
-		checked = true;
-		return result;
-	}
 
 	namespace {
 		constinit bool is_initialized = false;
-
-		void handleLoggerInitialization() {
-			// We might want to configure it differently in the future:
-			dia_int::configureImmediatePrint(&std::cerr);
-			dia_int::configureTerminalPrinterColors(true);
-
-			global_state::setters::setGlobalLogger(makeBox<dia_int::Logger>());
-		}
 
 		void handleDebugOptions(const options_types::DebugOptions& debug_options) {
 			if (not debug_options.dev_log_categories.empty()) logger::enable_dev_logs = true;
@@ -57,8 +42,15 @@ namespace compiler::driver {
 			for (const auto& category_name: debug_options.dev_log_categories)
 				logger::enableDevCategoryByStringName(category_name);
 
-			driver::llvm_dump_ir  = debug_options.dump_llvm_ir;
-			driver::llvm_dump_asm = debug_options.dump_llvm_asm;
+			driver::dump_ir_options.dump_asm  = debug_options.dump_asm;
+			driver::dump_ir_options.dump_llvm = debug_options.dump_llvm;
+			driver::dump_ir_options.dump_lir  = debug_options.dump_lir;
+			driver::dump_ir_options.dump_mir  = debug_options.dump_mir;
+			driver::dump_ir_options.dump_hir  = debug_options.dump_hir;
+
+			driver::print_ir_options.print_lir = debug_options.print_lir;
+			driver::print_ir_options.print_mir = debug_options.print_mir;
+			driver::print_ir_options.print_hir = debug_options.print_hir;
 		}
 
 		void handleArtifactsOptions(const options_types::ArtifactsOptions& artifacts_options) {
@@ -86,25 +78,29 @@ namespace compiler::driver {
 			);
 		}
 
-		base::OkBad handlePackageOptions(const options_types::PackageInfo& package_info) {
-			// Create the module tree for the main package and add it to global state
-			auto root_module = compiler::frontend::createModuleTree(
-				package_info.package_path, package_info.package_name
-			);
-			if (!getModuleRef(root_module)->hasMainSourceFile()) {
-				auto module_name = getModuleRef(root_module)->getName();
-				global_state::getGlobalLogger()->log(makeBox<dia_int::PlaceholderHeaderError>(
-					"Main package does not have a main source file.",
-					base::strConcat(
-						"The main source file is required for compilation. Please add a ",
-						module_name,
-						".dmf file to the main module directory."
-					)
-				));
-				return base::BAD;
+		base::OkBad handlePackageOptions(
+			std::vector<compiler::frontend::packages::RawPackageInfo>& packages_info,
+			const options_types::StdLibOptions&                        stdlib_options
+		) {
+			auto report      = diagnostics::makeGlobalLoggerReporter();
+			bool had_failure = false;
+
+			compiler::frontend::packages::filterUndeclaredDependencies(packages_info, report);
+
+			// Adding standard library packages
+			if (auto path = resolveStdPath(stdlib_options)) {
+				if (addStandardLibraryPackages(*path, report).isBad()) return base::BAD;
+				if (addStandardLibraryDependencies(packages_info, report).isBad()) return base::BAD;
 			}
-			global_state::setters::addMainPackage(root_module);
-			return base::OK;
+
+			for (const auto& package_info: packages_info) {
+				auto pkg = compiler::frontend::packages::createPackageInfo(package_info, report);
+				if (pkg)
+					global_state::setters::addPackage(*pkg);
+				else
+					had_failure = true;
+			}
+			return had_failure ? base::BAD : base::OK;
 		}
 
 		/**
@@ -149,8 +145,10 @@ namespace compiler::driver {
 				query::external::setPreviousMetadataFromRawBytes(span);
 
 				// We need to parse all files before compilation to collect all PST elements.
-				for (auto mid: global_state::getPackages())
-					compiler::frontend::parseAllFilesInModuleTree(mid.root_module);
+				for (const auto& package_info: global_state::getPackages())
+					compiler::frontend::parseAllFilesInModuleTree(
+						package_info.getRootModule().illegalAccess().getID()
+					);
 
 				// Collect all Inputs and Side inputs and perform red-green sweep.
 				// This must be called after loading both the graph and metadata, as metadata
@@ -171,6 +169,8 @@ namespace compiler::driver {
 				loadPreviousQueryGraphIfExists();
 			} else {
 				driver::enable_incremental_compilation = false;
+				// Disable the query graph because it's not needed and adds overhead.
+				query::enable_query_graph = false;
 			}
 		}
 
@@ -187,7 +187,28 @@ namespace compiler::driver {
 		}
 	}
 
-	InitializationResult initializeTheCompiler(CompilerModeOfOperationAndOptions options) {
+	/**
+	 * Creates a dummy "repl_session" package and root module
+	 * This is a hack to make the import from different packages work in the REPL,
+	 * as the module lookup relies on the global package registry.
+	 * The module is otherwise unused.
+	 * @TODO: #2762 probably remove this
+	 */
+	std::vector<compiler::frontend::packages::RawPackageInfo> getScriptStubPackage() {
+		auto package_root_file = fs::FileManager::createRandomVirtualFile("", ".dmf");
+		std::vector<compiler::frontend::packages::RawPackageInfo> repl_packages_info{
+			compiler::frontend::packages::RawPackageInfo{
+				.package_name = base::StrID("repl_session"),
+				.version      = base::StrID("0.1.0"),
+				.package_path = package_root_file.getFilePath(),
+				.features     = {},
+				.dependencies = {},
+			},
+		};
+		return repl_packages_info;
+	}
+
+	base::CheckedOkBad initializeTheCompiler(CompilerModeOfOperationAndOptions options) {
 		time_stats::TrackCategoryTime driver_initialization_time(
 			time_stats::TimeCategories::DriverInitialization
 		);
@@ -202,7 +223,6 @@ namespace compiler::driver {
 
 		variant_match(options.mode) {
 			variant_case(CompilerModeOfOperationAndOptions::BareMode, bare_options) {
-				handleLoggerInitialization();
 				handleDebugOptions(bare_options.debug_options);
 			}
 			variant_case(
@@ -213,14 +233,14 @@ namespace compiler::driver {
 				// in places where the compiler is left in a state
 				// that could result in panics/errors during exit.
 
-				handleLoggerInitialization();
-
 				handleDebugOptions(package_compilation_options.debug_options);
 				handleExecutionOptions(package_compilation_options.execution_options);
 				handleArtifactsOptions(package_compilation_options.compilation_artifacts);
 
-				auto package_success
-					= handlePackageOptions(package_compilation_options.main_package_info);
+				auto package_success = handlePackageOptions(
+					package_compilation_options.packages_info,
+					package_compilation_options.stdlib_options
+				);
 
 				if (package_success.isBad()) return base::BAD;
 
@@ -228,20 +248,45 @@ namespace compiler::driver {
 				handleIncrementalOptions(package_compilation_options.incremental);
 			}
 			variant_case(CompilerModeOfOperationAndOptions::ReplMode, repl_options) {
-				handleLoggerInitialization();
+				auto                         repl_packages_info = getScriptStubPackage();
+				options_types::StdLibOptions repl_linking_options{
+					.std_lib_type = options_types::StdLibOptions::DefaultStd{},
+				};
+
+				auto package_success
+					= handlePackageOptions(repl_packages_info, repl_linking_options);
+				if (package_success.isBad()) return base::BAD;
+
+
 				handleDebugOptions(repl_options.debug_options);
 				handleExecutionOptions(repl_options.execution_options);
 			}
 			variant_case(CompilerModeOfOperationAndOptions::ScriptMode, script_options) {
-				handleLoggerInitialization();
+				auto                         repl_packages_info = getScriptStubPackage();
+				options_types::StdLibOptions repl_linking_options{
+					.std_lib_type = options_types::StdLibOptions::DefaultStd{},
+				};
+
+
 				handleDebugOptions(script_options.debug_options);
 				handleExecutionOptions(script_options.execution_options);
 				handleArtifactsOptions(script_options.compilation_artifacts);
+				auto package_success
+					= handlePackageOptions(repl_packages_info, repl_linking_options);
+				if (package_success.isBad()) return base::BAD;
 				handleBackendOptions(script_options.backend_options);
 				handleScriptContext(script_options.script_file);
 			}
 			variant_default { CORE_PANIC("Unknown compiler mode of operation"); }
 		}
 		return base::OK;
+	}
+
+	void initializeGlobalLogger() {
+		// We might want to configure it differently in the future:
+		dia_int::configureImmediatePrint(&std::cerr);
+		dia_int::configureTerminalPrinterColors(true);
+
+		global_state::setters::setGlobalLogger(makeBox<dia_int::Logger>());
 	}
 }

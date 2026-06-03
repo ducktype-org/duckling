@@ -1,10 +1,14 @@
 #include "validation.hpp"
 
+#include <diagnostic_interactive/core/common_classes.hpp>
 #include <diagnostic_interactive/core/diagnostic_arguments_forward.hpp>
 #include <diagnostic_interactive/lsp_ui/lsp_ui.hpp>
+#include <diagnostic_interactive/message.hpp>
+#include <diagnostic_interactive/stable_position.hpp>
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/source_file.hpp>
+#include <frontend/pst_parser/lang_parser_element.hpp>
 #include <helios/queries/queries.hpp>
 
 #include <query_framework/context/context.hpp>
@@ -20,6 +24,21 @@ namespace lsp {
 		return module;
 	}
 
+	dia_int::CodeLocation updatePositionWithHashCodeLocation(
+		dia_int::HashCodeLocation hash_code_location
+	) {
+		dia_int::StablePosition stable_position(
+			pst::LangElement::getActiveSourcePosition,
+			pst::LangElement::getActiveSourcePositionIllegalAccess,
+			hash_code_location.begin_node,
+			hash_code_location.end_node
+		);
+		auto updated_source_pos = stable_position.getActiveSourcePositionIllegalAccess();
+		auto updated_code_location
+			= dia_int::CodeLocationArgument::FileLocation::fromSourcePosition(updated_source_pos);
+		return updated_code_location.toCodeLocation();
+	}
+
 	void collectErrorsFromModuleTree(
 		base::CRef<frontend::ModuleTree>                  module,
 		std::vector<CRef<dia_int::dia_args::Diagnostic>>& out
@@ -30,15 +49,6 @@ namespace lsp {
 			);
 		auto main_pst = main_file->getPST();
 		main_pst->getLogger()->collectDiagnostics(out);
-
-		for (const auto& file_ref: module->getSourceFiles().illegalAccess()) {
-			auto file
-				= frontend::GetFileID_Functor::getFileRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
-					file_ref.illegalAccess().getID()
-				);
-			auto pst = file->getPST();
-			pst->getLogger()->collectDiagnostics(out);
-		}
 
 		// Recurse into submodules
 		for (const auto& submodule_id_locked: module->getSubmodules().illegalAccess()) {
@@ -62,14 +72,6 @@ namespace lsp {
 			);
 
 		if (main_file->getPST()->getLogger()->hasErrors()) return false;
-
-		for (const auto& file_ref: module->getSourceFiles().illegalAccess()) {
-			auto file
-				= frontend::GetFileID_Functor::getFileRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
-					file_ref.illegalAccess().getID()
-				);
-			if (file->getPST()->getLogger()->hasErrors()) return false;
-		}
 
 		bool all_submodules_parsed_successfully = true;
 		// Recurse into submodules
@@ -156,10 +158,17 @@ namespace lsp {
 			= getParserDiagnosticsFromModuleTree(root_module);
 
 		// We run the semantic analysis if there is no parsing errors.
+
+		// @TODO: #2246 see if anything should be changed here.
+		//          We could add mir-lowering phase here, as some compilation errors happen during
+		//          mir lowering.
+
 		if (isModuleTreeParsedSuccessfully(root_module))
 			query::entryPoint<helios::QueryModuleHOUTRecursively>(root_module->getModuleID());
 
-		query::Context::collectAllDiagnostic(diagnostics);
+		query::Context::collectAndUpdateAllDiagnostic(
+			diagnostics, updatePositionWithHashCodeLocation
+		);
 
 		dia_int::lsp::EvaluationContext ctx(main_path.uri(), queried_path.uri());
 

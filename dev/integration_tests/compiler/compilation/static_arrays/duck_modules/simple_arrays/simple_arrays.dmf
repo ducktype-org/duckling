@@ -1,3 +1,5 @@
+import core.builtins.*;
+
 fun simple_array_test() -> i32 = {
     var arr: i32[5];
     arr[0] = 42;
@@ -12,8 +14,9 @@ fun simple_array_test() -> i32 = {
 
     var matrix_3d: f32[3][3][2];
     matrix_3d[1][1][1] = 3.25;
+    matrix_3d[1][1][1] = matrix_3d[1][1][1] + 0.75;
     let val_3d = matrix_3d[1][1][1];
-    builtin_output_f64(val_3d);        # 3.14
+    builtin_output_i64(i64(val_3d)); # 4
 
     return arr[0];
 }
@@ -50,7 +53,7 @@ fun main() -> i64 = {
     let val = get_array_by_val()[1];
     builtin_output_i64(val);       # 20
 
-    builtin_output_string("88888888\n");
+    builtin_output_i64(88888888);
     simple_array_test();
 
     return 0;

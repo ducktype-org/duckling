@@ -1,6 +1,6 @@
-function summer { i64, i64 } -> i64 {
-	mov_l64_l64 ret_val, arg0;
-	add_l64_l64 ret_val, arg1;
+function summer { i64, i64 } -> { i64 } {
+	mov_p64_p64 ret0, arg0;
+	add_p64_p64 ret0, arg1;
 
 	deinit;
 	deinit;

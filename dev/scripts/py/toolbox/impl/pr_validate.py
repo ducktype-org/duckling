@@ -57,7 +57,7 @@ def pr_validate_impl(
     )
 
     # Step 6 - test
-    test_impl(build_dir=build_dir, thread_count=thread_count)
+    test_impl(build_dir=build_dir, thread_count=thread_count, timeout=60)
 
     # Step 7 - integration tests
     tester_impl(

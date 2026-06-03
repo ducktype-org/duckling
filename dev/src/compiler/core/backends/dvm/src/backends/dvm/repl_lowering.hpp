@@ -1,31 +1,35 @@
 #pragma once
 
+#include <backends/dvm/dvm_internal_fwd.hpp>
+#include <backends/dvm/repl_lowering_snapshot.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 #include <tsl/type_layout.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/pointers/box.hpp>
 #include <base/pointers/ref.hpp>
+#include <base/types/ints.hpp>
 
 #include <query_framework/context/context_fd.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
 
-namespace compiler::backend_vm::internal {
-	class ProgramLoweringContext;
-}
-
 namespace compiler::backend_vm {
 	/**
-	 * @brief Wrapper for REPL-specific program lowering context.
+	 * @brief Public API wrapper for REPL that exposes `ProgramLoweringContext` from DVM's
+	 * `src_private`.
 	 *
-	 * This class is a convenience wrapper that owns and manages a ProgramLoweringContext
-	 * for use in REPL sessions. The underlying context maintains state across multiple
-	 * REPL statement compilations, allowing later statements to reference symbols
-	 * (functions, globals, types) defined in earlier statements.
+	 * This class provides a stable public interface to the DVM backend's internal lowering context,
+	 * preventing REPL and other clients from directly depending on `src_private` implementation
+	 * details. It delegates all actual lowering logic to `ProgramLoweringContext` while
+	 * encapsulating incremental code emission for REPL use cases.
 	 *
-	 * @note This wrapper doesn't add any complicated logic,
-	 * it is a simple wrapper for the ProgramLoweringContext.
+	 * The wrapper maintains a persistent lowering context across REPL statements, allowing
+	 * later statements to reference symbols (functions, globals, types) from earlier ones.
+	 * It exposes snapshot/collection semantics to enable incremental bytecode loading without
+	 * recompiling the entire module.
+	 *
+	 * @note This is purely an encapsulation layer it adds no logic of its own.
 	 *
 	 * @note Feel Free to refactor this class if a better way of managing
 	 * the REPL context is found.
@@ -41,13 +45,6 @@ namespace compiler::backend_vm {
 		ReplLoweringContext(ReplLoweringContext&&) noexcept;
 		ReplLoweringContext& operator=(ReplLoweringContext&&) noexcept;
 
-		/**
-		 * @brief Get the underlying persistent program lowering context.
-		 *
-		 * This context accumulates all lowered functions, globals, and types across
-		 * all REPL modules in this session.
-		 */
-		internal::ProgramLoweringContext& getContext();
 
 		/**
 		 * @brief Set the query context for error reporting during compilation.
@@ -80,25 +77,22 @@ namespace compiler::backend_vm {
 		/**
 		 * @brief Lower a LIR global with its constructor and destructor.
 		 */
-		const vm::code::GlobalData& lowerAndKeepLirGlobal(
-			const lir::LIRGlobal&                     lir_global,
-			base::Optional<base::CRef<lir::Function>> global_ctor,
-			base::Optional<base::CRef<lir::Function>> global_dtor
-		);
+		const vm::code::GlobalData& lowerAndKeepLirGlobal(const lir::LIRGlobalData& lir_global);
+
 
 		/**
-		 * @brief Lower a LIR type layout into VM bytecode type representation.
-		 * It caches the result, so inserts the type into the program only if needed.
+		 * @brief Capture current state of lowered entities.
 		 */
-		const vm::code::TypeOfData& lowerAndKeepTslType(base::CRef<tsl::TypeLayout> layout);
+		[[nodiscard]] LoweredEntitiesSnapshot captureLoweredEntitiesSnapshot() const;
+
 
 		/**
-		 * @brief Check if a query context is currently set.
-		 *
-		 * @return true if a query context has been set via setContext() and not yet
-		 *         invalidated, false otherwise.
+		 * @brief Collect newly lowered types/functions/extra functions since a snapshot.
 		 */
-		[[nodiscard]] bool hasContext() const;
+		[[nodiscard]] vm::code::CodeCollection collectNewCodeSince(
+			const LoweredEntitiesSnapshot& snapshot
+		) const;
+
 
 	private:
 		// Pimpl: store pointer to complete type, with details in CPP

@@ -26,7 +26,7 @@ namespace compiler::helios::defgen {
 			auto        class_interface = class_type.getInterface(ctx);
 
 			using DefaultClassConstructor = GeneratedSymbolData::DefaultClassConstructor;
-			using Variable                = GeneratedSymbolData::Variable;
+			using Variable                = GeneratedSymbolData::GeneratedFunctionVariable;
 			using std::ranges::to;
 			using std::views::transform;
 
@@ -54,9 +54,12 @@ namespace compiler::helios::defgen {
 			// - Declare result variable.
 			const auto  result_symbol_type = ctor_decl.return_type;
 			const SymID result_symbol      = ctx.query<QueryGeneratedSymbol>({
-					 .name = base::StrID("__result"),
-					 .generated_symbol_data
-                = GeneratedSymbolData{ Variable{ ctor_symbol, 0, result_symbol_type } },
+					 .name                  = base::StrID("__result"),
+					 .generated_symbol_data = GeneratedSymbolData{ Variable{
+						 .function_symbol = ctor_symbol,
+						 .variable_index  = 0,
+						 .type            = result_symbol_type,
+                } },
             });
 
 			// By default all fields with no initial value are zeroed.
@@ -72,14 +75,14 @@ namespace compiler::helios::defgen {
 
 			// - Assign each field with the initializing expression or a default value expression.
 			for (const auto& field: fields) {
-				const auto field_pst_data = symbolPst(field.getSymbol())
+				const auto field_pst_data = maybeSymbolPst(field.getSymbol())
 				                                .value()
 				                                .unlock(ctx)
 				                                .dynamicCast<pst::Field>()
 				                                .value();
 				auto field_init_expr_opt = field_pst_data->getInit();
 
-				auto init_expr = [&]() -> Box<code::Expr> {
+				auto init_expr = [&]() -> BoxOrCRef<code::Expr> {
 					match_optional(field_init_expr_opt) {
 						opt_some(field_init) {
 							// If the field has an initializer value we use it.
@@ -95,7 +98,7 @@ namespace compiler::helios::defgen {
 							// Otherwise initialize it with the default initializer expression.
 							return ctx.query<QueryDefaultInitializerExpr>(field.getType(ctx))
 							    ->valueOrThrow()
-							    ->clone();
+							    .ref();
 						}
 					}
 					CORE_UNREACHABLE();
@@ -147,7 +150,7 @@ namespace compiler::helios::defgen {
 
 			using DefaultStaticArrayConstructor
 				= GeneratedSymbolData::DefaultStaticArrayConstructor;
-			using Variable = GeneratedSymbolData::Variable;
+			using Variable = GeneratedSymbolData::GeneratedFunctionVariable;
 
 			// Prepare the ctor symbol and declaration.
 			const SymID ctor_symbol = ctx.query<QueryGeneratedSymbol>({
@@ -161,11 +164,14 @@ namespace compiler::helios::defgen {
 			std::vector<Box<code::Stmt>> body{};
 
 			// var res: T[N];
-			const SymID res_sym = ctx.query<QueryGeneratedSymbol>(
-				{ .name = base::StrID("__result"),
-			      .generated_symbol_data
-			      = GeneratedSymbolData{ Variable{ ctor_symbol, 0, array_sym_type } } }
-			);
+			const SymID res_sym
+				= ctx.query<QueryGeneratedSymbol>({ .name = base::StrID("__result"),
+			                                        .generated_symbol_data
+			                                        = GeneratedSymbolData{ Variable{
+														.function_symbol = ctor_symbol,
+														.variable_index  = 0,
+														.type            = array_sym_type,
+													} } });
 			body.emplace_back(makeBox<code::VariableStmt>(
 				code::generatedOrigin(),
 				makeBox<code::DefaultValueExpr>(ctx, code::generatedOrigin(), array_type),
@@ -181,11 +187,14 @@ namespace compiler::helios::defgen {
 					                               tsh::ReferenceKind::Direct,
 					                               tsh::Mutability::Mutable };
 				// var i: i64 = 0;
-				const SymID i_sym = ctx.query<QueryGeneratedSymbol>(
-					{ .name = base::StrID("__i"),
-				      .generated_symbol_data
-				      = GeneratedSymbolData{ Variable{ ctor_symbol, 1, u64_type } } }
-				);
+				const SymID i_sym
+					= ctx.query<QueryGeneratedSymbol>({ .name = base::StrID("__i"),
+				                                        .generated_symbol_data
+				                                        = GeneratedSymbolData{ Variable{
+															.function_symbol = ctor_symbol,
+															.variable_index  = 1,
+															.type            = u64_type,
+														} } });
 				auto zero_val = numeric_value::NumericValue::createOfType(u64_abs_type)
 				                    .expect("u64 creation failed");
 				body.emplace_back(makeBox<code::VariableStmt>(
@@ -209,7 +218,7 @@ namespace compiler::helios::defgen {
 				// while (i < size) { res[i] = default_init(T); i = i + 1; }
 				code::CodeBlock loop_body{};
 				auto            element_init
-					= ctx.query<QueryDefaultInitializerExpr>(element_type)->valueOrThrow()->clone();
+					= ctx.query<QueryDefaultInitializerExpr>(element_type)->valueOrThrow().ref();
 
 				// res[i] = default_init(T)
 				loop_body.statements.emplace_back(makeBox<code::AssignmentStmt>(
@@ -220,7 +229,7 @@ namespace compiler::helios::defgen {
 						makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), res_sym),
 						makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), i_sym)
 					),
-					element_init->clone()
+					element_init
 				));
 
 				// i = i + 1
@@ -313,7 +322,7 @@ namespace compiler::helios::defgen {
 				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 					"Generating default constructors for not trivially zero-initializable "
 					"tuple types.",
-					std::nullopt
+					""
 				));
 				return query::Failed();
 			}
@@ -341,11 +350,11 @@ namespace compiler::helios::defgen {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDefaultInitializerExpr);
 
-	query::QResult<Box<code::Expr>> getDefaultInitializerExpr(
-		query::Context& ctx, const tsh::SymbolType<>& type, dia::SourcePosition pos
+	query::QResult<CRef<code::Expr>> getDefaultInitializerExpr(
+		query::Context& ctx, const tsh::SymbolType<>& type, dia_int::StablePosition pos
 	) {
 		if (!type.isDefaultConstructible(ctx)) {
-			ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+			ctx.logInt(makeBox<dia_int::PlaceholderError>(
 				base::strConcat("Type `", type.toString(), "` cannot be default initialized"), pos
 			));
 			return query::Failed();
@@ -353,7 +362,7 @@ namespace compiler::helios::defgen {
 
 		auto res = ctx.query<QueryDefaultInitializerExpr>(type);
 		if (res->hasFailed()) return query::Failed();
-		return res->valueOrThrow()->clone();
+		return res->valueOrThrow().ref();
 	}
 
 

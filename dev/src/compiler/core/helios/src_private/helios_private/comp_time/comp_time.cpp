@@ -5,6 +5,7 @@
 #include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/elements/includes/basic.hpp>
 #include <helios/hout/visitors.hpp>
+#include <helios/mangler/mangler.hpp>
 #include <helios/queries/function_queries.hpp>
 #include <helios/queries/queries.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
@@ -15,8 +16,8 @@
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
-#include <lir/lir_lowering/lir_lowering.hpp>
-#include <mir/mir_lowering/mir_queries.hpp>
+#include <lir/lir_lowering/lir_unit.hpp>
+#include <mir/mir_lowering/mir_unit.hpp>
 
 #include <base/str/str_utils.hpp>
 
@@ -82,7 +83,7 @@ namespace compiler::helios {
 			void visitAccessExpr(const code::AccessExpr& expr) final {
 				// @TODO: #1922 Implement that.
 				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-					"Evaluating access expressions at compile time.", expr.origin.getSourcePosition()
+					"Evaluating access expressions at compile time.", expr.origin.getStablePosition()
 				));
 				result = query::Failed();
 			}
@@ -192,7 +193,7 @@ namespace compiler::helios {
 				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 					"Evaluating index expressions with non-meta and non-type-template base at "
 					"compile time.",
-					expr.origin.getSourcePosition()
+					expr.origin.getStablePosition()
 				));
 				result = query::Failed();
 			}
@@ -207,14 +208,14 @@ namespace compiler::helios {
 					auto const_val_result = ctx.query<QueryConstValueOf>({ expr.symbol });
 					result                = const_val_result.valueOrThrow();
 				} else {
-					match_optional(expr.origin.getSourcePosition()) {
+					match_optional(expr.origin.getStablePosition()) {
 						opt_some(pos) {
-							ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+							ctx.logInt(makeBox<dia_int::PlaceholderError>(
 								"Expression cannot be evaluated at compile-time.", pos
 							));
 						}
 						opt_none {
-							ctx.logInt(makeBox<dia_int::PlaceholderHeaderError>(
+							ctx.logInt(makeBox<dia_int::PlaceholderError>(
 								"Expression cannot be evaluated at compile-time.",
 								base::strConcat(
 									"The code is unavailable because the expression is at "
@@ -326,10 +327,10 @@ namespace compiler::helios {
 									case IntegerDiv:
 									case FloatDiv:
 										if (rhs_val == 0) {
-											ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+											ctx.logInt(makeBox<dia_int::PlaceholderError>(
 												"Division by zero in compile-time expression "
 												"evaluation.",
-												expr.origin.getSourcePosition().value()
+												expr.origin.getStablePosition().value()
 											));
 											return query::Failed();
 										}
@@ -338,10 +339,10 @@ namespace compiler::helios {
 									case IntegerMod:
 									case FloatMod:
 										if (rhs_val == 0) {
-											ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+											ctx.logInt(makeBox<dia_int::PlaceholderError>(
 												"Modulo by zero in compile-time expression "
 												"evaluation.",
-												expr.origin.getSourcePosition().value()
+												expr.origin.getStablePosition().value()
 											));
 											return query::Failed();
 										}
@@ -360,7 +361,7 @@ namespace compiler::helios {
 										ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 											"Evaluation of this binary operator at compile "
 											"time",
-											expr.origin.getSourcePosition()
+											expr.origin.getStablePosition()
 										));
 										return query::Failed();
 									}
@@ -385,7 +386,7 @@ namespace compiler::helios {
 								ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 									"Evaluation of this binary operator at compile "
 									"time",
-									expr.origin.getSourcePosition()
+									expr.origin.getStablePosition()
 								));
 								return query::Failed();
 							}
@@ -449,7 +450,7 @@ namespace compiler::helios {
 								ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 									"Evaluation of this unary operator at compile "
 									"time",
-									expr.origin.getSourcePosition()
+									expr.origin.getStablePosition()
 								));
 								return query::Failed();
 							}
@@ -475,11 +476,23 @@ namespace compiler::helios {
 								return ctv::CompileTimeValue{
 									val.withMutability(tsh::Mutability::Immutable)
 								};
+							case Ptr:
+								return ctv::CompileTimeValue{ tsh::SymbolType<>::withDefaults(
+									ctx.query<tsh::QueryPointerType>({ val })
+								) };
+							case ManyPtr:
+								return ctv::CompileTimeValue{ tsh::SymbolType<>::withDefaults(
+									ctx.query<tsh::QueryManyPointerType>({ val })
+								) };
+							case CPtr:
+								return ctv::CompileTimeValue{ tsh::SymbolType<>::withDefaults(
+									ctx.query<tsh::QueryCPointerType>({ val })
+								) };
 							default:
 								ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 									"Evaluation of this unary operator at compile "
 									"time",
-									expr.origin.getSourcePosition()
+									expr.origin.getStablePosition()
 								));
 								return query::Failed();
 							}
@@ -487,7 +500,7 @@ namespace compiler::helios {
 							ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 								"Evaluation of this unary operator at compile "
 								"time",
-								expr.origin.getSourcePosition()
+								expr.origin.getStablePosition()
 							));
 							return query::Failed();
 						}
@@ -628,7 +641,7 @@ namespace compiler::helios {
 				if (!numeric) {
 					ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 						"Casts of non-numeric compile-time values are not yet implemented.",
-						cast.origin.getSourcePosition()
+						cast.origin.getStablePosition()
 					));
 					result = query::Failed();
 					return;
@@ -638,13 +651,13 @@ namespace compiler::helios {
 				auto maybe_new_numeric = numeric->castTo(cast.target_type.getType());
 
 				if (!maybe_new_numeric.has_value()) {
-					ctx.logInt(makeBox<dia_int::PlaceholderCodeError>(
+					ctx.logInt(makeBox<dia_int::PlaceholderError>(
 						base::strConcat(
 							"Value cannot be converted to type `",
 							cast.target_type.toString(),
 							"` at compile-time."
 						),
-						cast.origin.getSourcePosition().value()
+						cast.origin.getStablePosition().value()
 					));
 					result = query::Failed();
 					return;
@@ -685,7 +698,7 @@ namespace compiler::helios {
 							expr.type.toString(),
 							"'."
 						),
-						expr.origin.getSourcePosition()
+						expr.origin.getStablePosition()
 					));
 					result = query::Failed();
 				}
@@ -743,14 +756,14 @@ namespace compiler::helios {
 			void visitListPushExpr(const code::ListPushExpr& expr) final {
 				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 					"Evaluating list push expression at compile time.",
-					expr.origin.getSourcePosition()
+					expr.origin.getStablePosition()
 				));
 			}
 
 			void visitListPopExpr(const code::ListPopExpr& expr) final {
 				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 					"Evaluating list pop expression at compile time.",
-					expr.origin.getSourcePosition()
+					expr.origin.getStablePosition()
 				));
 			}
 		};
@@ -761,7 +774,7 @@ namespace compiler::helios {
 		 * - `functions` 	- a vector of all LIR functions to compile and load to DVM in order to
 		 * 					  evaluate `func_to_call`
 		 */
-		struct LIRBuildResult {
+		struct LIRBuildResult final {
 			std::string func_to_call;  // Mangled name of the function we evaluate.
 			std::vector<CRef<lir::Function>>
 				functions;             // List of LIR functions needed to evaluate `func_to_call`.
@@ -789,42 +802,33 @@ namespace compiler::helios {
 			Ref dependencies
 				= &ctx.query<QueryTransitiveFunctionCalls>(function_sym_id)->valueOrThrow();
 
-			LIRBuildResult result;
-			result.functions.reserve(dependencies->size());
+			auto mangled_name_function_to_call
+				= ctx.query<mangler::QueryMangledSymbol>({ function_sym_id });
 
+			// temporary hout unit used to lower functions to LIR
+			HOUTUnit hout_unit;
 			for (const SymID& func_id: *dependencies) {
-				if (getSymRef(func_id)->getPSTDataOpt().empty()) {
-					// This path is not implemented yet.
-					// Figure out how to change this check if you hit this one when adding new feature.
-					ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-						base::strConcat(
-							"Evaluating a function in DVM at compile time which was generated "
-							"automatically. "
-							"This likely means that the function was a compiler generated class "
-							"constructor. "
-							"The failure happened for the symbol `",
-							name(func_id),
-							"`."
-						),
-						std::nullopt
-					));
-					return query::Failed();
-				}
-
-				// @TODO: #826 Change this code to a single query once it gets implemented.
 				auto& hout_func = ctx.query<QueryCodeOfFun>(func_id)->valueOrThrow();
-				auto& mir_func = ctx.query<mir::LowerToMIRFunction>({ &hout_func })->valueOrThrow();
-
-				auto lir_func_result = ctx.query<lir::LowerToLIRFunction>({ &mir_func });
-
-				// When lowering the top level function, we store it's mangled name to know
-				// which function to call in the VM.
-				if (func_id == function_sym_id)
-					result.func_to_call = lir_func_result->mangled_name.str();
-
-				result.functions.push_back(lir_func_result);
+				hout_unit.functions.emplace_back(&hout_func);
 			}
-			return result;
+			auto lir_unit
+				= lir::lowerToLIRUnit(ctx, mir::lowerToMIRUnit(ctx, &hout_unit).valueOrThrow());
+
+			// Note: the assumptions bellow might change,
+			// for example when we will add consts to comp time.
+			CORE_ASSERT(
+				lir_unit.lir_functions.size() == dependencies->size(),
+				"Number of lir functions should be the same as number of dependencies collected."
+			);
+			CORE_ASSERT(
+				lir_unit.lir_globals.empty(),
+				"LIR global variables are not supported in compile time evaluation."
+			);
+
+			return LIRBuildResult{
+				.func_to_call = mangled_name_function_to_call.str(),
+				.functions    = std::move(lir_unit.lir_functions),
+			};
 		}
 
 		/**
@@ -878,7 +882,15 @@ namespace compiler::helios {
 				ctx, func_to_call_name, all_lir_functions, ctv_arguments, func_type.getResultType()
 			);
 
-			if (!vm_eval_result) return query::Failed();
+			if (!vm_eval_result) {
+				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					"Compile time evaluation of this function call failed or "
+					"returned unsupported result.",
+					call_expr->origin.getStablePosition(),
+					base::strConcat("Detailed reason: ", vm_eval_result.error().message, "\n")
+				));
+				return query::Failed();
+			}
 			return vm_eval_result.value();
 		}
 
@@ -920,7 +932,7 @@ namespace compiler::helios {
 					// Otherwise, log an error.
 					ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 						"Evaluation of this expression in DVM at compile time",
-						expr->origin.getSourcePosition()
+						expr->origin.getStablePosition()
 					));
 					return query::Failed();
 				}

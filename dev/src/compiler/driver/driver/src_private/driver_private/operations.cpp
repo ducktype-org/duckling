@@ -1,85 +1,83 @@
 #include "operations.hpp"
 
+#include <driver/module_flags/module_flags.hpp>
+#include <driver_private/debug_artifacts.hpp>
+#include <driver_private/lir_unit_with_name.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/queries/queries.hpp>
-#include <lir/lir_lowering/lir_lowering.hpp>
+#include <lir/lir_lowering/lir_unit.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
-#include <mir/mir_lowering/mir_queries.hpp>
+#include <mir/mir_lowering/mir_unit.hpp>
 
 #include <base/extend_cpp/variant_match.hpp>
+#include <base/types/bit256.hpp>
 
 #include <hashing/component_hash.hpp>
 #include <query_framework/context/context.hpp>
 #include <query_framework/standard_query/query_cache_macros.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 
+#include <fstream>
+
 namespace compiler::driver {
 
+	base::Bit256 CompileHOUTUnitToLIRModuleDataKey::queryUnstablePerfectHash() const {
+		return hashing::justHash<hashing::SHA256>(module_name.str(), hout_unit->id.asInt());
+	}
 
-	struct IMPLEMENT_QUERY(CompileHOUTUnitToLIRModuleData, query::QResult<LIRModuleData>) {
+	void LIRUnitWithBackendName::debugPrint(query::Context& ctx, std::ostream& os) const {
+		os << "LIRUnitWithBackendName for module: " << module_id.strView() << "\n";
+		lir_unit.debugPrint(ctx, os);
+	}
+
+	/**
+	 * @brief Utility function to get an ofstream for dumping debug artifacts.
+	 * The artifact will be created if it does not exist.
+	 */
+	std::ofstream getDebugDumpArtifact(base::StrID artifact_name) {
+		auto          art = getDebugArtifactCollection()->fileArtifactAtOrNew(artifact_name);
+		std::ofstream output_file(art.file.getFilePath().getPath(), std::ios::binary);
+		return output_file;
+	}
+
+	struct IMPLEMENT_QUERY(CompileHOUTUnitToLIRModuleData, query::QResult<LIRUnitWithBackendName>) {
 		static auto provide(query::Context& ctx, CompileHOUTUnitToLIRModuleDataKey key) -> PResult {
 			const auto& hout_unit   = *key.hout_unit.get();
 			auto        module_name = key.module_name;
 
-			std::vector<CRef<lir::Function>> functions;
-			functions.reserve(hout_unit.functions.size());
-
-			for (const auto& hout_function: hout_unit.functions) {
-				CRef mir_function
-					= &ctx.query<mir::LowerToMIRFunction>({ hout_function })->valueOrThrow();
-				auto lir_function = ctx.query<lir::LowerToLIRFunction>({ mir_function });
-				functions.push_back(lir_function);
+			if (driver::print_ir_options.print_hir) hout_unit.debugPrint(ctx, std::cout);
+			if (driver::dump_ir_options.dump_hir) {
+				auto ofstream = getDebugDumpArtifact(
+					base::StrID(base::strConcat(module_name.strView(), ".hir"))
+				);
+				hout_unit.debugPrint(ctx, ofstream);
 			}
 
-			std::vector<LIRModuleGlobal> globals;
-			globals.reserve(hout_unit.glob_data.size());
+			mir::MIRUnit mir_unit = mir::lowerToMIRUnit(ctx, &hout_unit).valueOrThrow();
 
-			for (const auto& hout_global: hout_unit.glob_data) {
-				// Discard information-less globals.
-				if (not hout_global.type.getType().carriesInformation(ctx)) continue;
-
-				auto lir_global = lir::LIRGlobal::fromHOUT(ctx, hout_global);
-
-				variant_match(hout_global.value) {
-					variant_case(helios::HOUTGlobalVariable, var) {
-						CRef mir_function
-							= &ctx.query<mir::LowerGlobalDataToMIRCtor>({ hout_global })
-						           ->valueOrThrow();
-						auto lir_function = ctx.query<lir::LowerToLIRFunction>({ mir_function });
-						globals.emplace_back(LIRModuleGlobal{
-							.lir_global = lir_global,
-							// @TODO: #929 add legit dtors when implemented
-							.global_ctor = lir_function,
-							.global_dtor = std::nullopt,
-						});
-					}
-					variant_case(helios::HOUTGlobalConst, global_const) {
-						// @future #1554 -- const ctors will probably be added here
-						// Note: The CTV initial value for constants is already set in lir_global
-						// (by the fromHOUT function used above). Backends should handle constant
-						// initialization appropriately.
-						globals.emplace_back(LIRModuleGlobal{
-							.lir_global  = lir_global,
-							.global_ctor = std::nullopt,
-							.global_dtor = std::nullopt,
-						});
-					}
-					variant_default {
-						CORE_PANIC(base::strConcat(
-							"Unexpected global data type in module: ",
-							hout_global.original_name.strView()
-						));
-					}
-				}
+			if (driver::print_ir_options.print_mir) mir_unit.debugPrint(ctx, std::cout);
+			if (driver::dump_ir_options.dump_mir) {
+				auto ofstream = getDebugDumpArtifact(
+					base::StrID(base::strConcat(module_name.strView(), ".mir"))
+				);
+				mir_unit.debugPrint(ctx, ofstream);
 			}
 
-
-			return LIRModuleData{
+			auto lir_module = LIRUnitWithBackendName{
 				.module_id = module_name,
-				.functions = functions,
-				.globals   = globals,
+				.lir_unit  = lir::lowerToLIRUnit(ctx, mir_unit),
 			};
+
+			if (driver::print_ir_options.print_lir) lir_module.debugPrint(ctx, std::cout);
+			if (driver::dump_ir_options.dump_lir) {
+				auto ofstream = getDebugDumpArtifact(
+					base::StrID(base::strConcat(module_name.strView(), ".lir"))
+				);
+				lir_module.debugPrint(ctx, ofstream);
+			}
+
+			return lir_module;
 		}
 
 		QUERY_AUTO_CACHE_CREF
@@ -87,20 +85,16 @@ namespace compiler::driver {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(CompileHOUTUnitToLIRModuleData);
 
-	struct IMPLEMENT_QUERY(CompileToLIRModuleData, query::QResult<LIRModuleData>) {
+	struct IMPLEMENT_QUERY(CompileToLIRModuleData, query::QResult<LIRUnitWithBackendName>) {
 		QUERY_AUTO_CACHE_CREF
 
 		static auto provide(query::Context& ctx, frontend::ModuleID module_id) -> PResult {
 			const auto& hout_unit = ctx.query<helios::QueryModuleHOUT>(module_id)->valueOrThrow();
 
-
-			auto module_name
-				= base::StrID(base::strConcat(
-								  "module_",
-								  compiler::frontend::ModuleTree::getPathComponentHash(module_id)
-									  .hash.toStringHex()
-				)
-			                      .c_str());
+			auto module_name = base::StrID(base::strConcat(
+				"module_",
+				compiler::frontend::ModuleTree::getPathComponentHash(module_id).hash.toStringHex()
+			));
 
 			// we intentially make copy here, to keep the data in the
 			// cache of this query

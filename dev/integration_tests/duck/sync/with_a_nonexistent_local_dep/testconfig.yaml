@@ -1,0 +1,10 @@
+Tests:
+  sync:
+    Description: cannot sync a project with a nonexistent dependency
+    Cases:
+      sync:
+        test_cmd: duck -C foo sync
+        ExitCode: 1
+        Err:
+          Run: |+
+            echo "error: the path \`$(pwd)/bar\` is not a directory"

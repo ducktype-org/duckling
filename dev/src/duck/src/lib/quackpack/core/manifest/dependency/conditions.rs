@@ -1,9 +1,9 @@
 //! Conditions describing whether a dependency should be enabled.
 use std::collections::HashSet;
 
-use crate::QuackError;
+use crate::quackpack::core::FeatureName;
 use crate::quackpack::schemas::registry;
-use crate::{QuackResult, StrId, qp_bail, quackpack::core::FeatureName};
+use crate::{QuackError, QuackResult, StrId, qp_bail};
 
 #[derive(Clone, Debug)]
 /// Conditions required by a dependency or a feature flag in order to be enabled.
@@ -59,7 +59,7 @@ impl Conditions {
         !enabled_features.is_disjoint(&required_features)
     }
 
-    /// Returns root packages mentioned in the manifest
+    /// Returns root package's features mentioned in the manifest
     pub fn required_root_package_features(&self) -> Option<&[FeatureName]> {
         self.required_root_package_features.as_deref()
     }

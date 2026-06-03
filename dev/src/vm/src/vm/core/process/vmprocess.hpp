@@ -9,11 +9,7 @@
 #include <vm/api/data/api_error.hpp>
 #include <vm/api/data/request.hpp>
 #include <vm/api/data/status.hpp>
-#include <vm/core/process/concurrency/gil.hpp>
-#include <vm/core/process/concurrency/synchronization_primitives.hpp>
-#include <vm/core/process/memory/pointer.hpp>
 #include <vm/core/process/proc_io.hpp>
-#include <vm/core/process/type_metadata/definitions.hpp>
 
 #include <expected>
 #include <shared_mutex>
@@ -46,16 +42,14 @@ namespace vm {
 		// See: https://en.cppreference.com/w/cpp/io/ios_base/Init
 		std::ios_base::Init cin_cout_init;
 
-		GIL                         gil;
-		SynchronizationPrimitives   synchronization_primitives;
 		api::ProcStatus             status;
 		std::shared_mutex           rw_status;
 		std::condition_variable_any status_cv;
 
 		/**
-		 * @brief Emits current status when VM changes status
+		 * @brief Emits after the process status has changed.
 		 */
-		events::Emitter<api::ProcStatus> on_status_change;
+		events::Emitter<api::ProcStatus> on_status_changed;
 
 		IVMProcess(PID my_pid);
 
@@ -184,6 +178,26 @@ namespace vm {
 
 		virtual api::ThreadID getMainThreadID() = 0;
 
+		/**
+		 * @brief Hook called after process status changes to a terminal one.
+		 * Called without holding `rw_status` lock.
+		 */
+		virtual void onTerminalStatus(const api::ProcStatus&) noexcept {}
+
+		/**
+		 * @brief Enables or disables breakpoint on a given instruction in a given function.
+		 * @note Enabling a breakpoint on an instruction that already has a breakpoint or disabling
+		 * a breakpoint on an instruction that doesn't have a breakpoint is considered successful
+		 * and doesn't return an error.
+		 */
+		virtual std::expected<api::Response, api::ApiError> setBreakpoint(
+			base::StrID function_name, usize instruction_index, bool enable
+		) = 0;
+
+		virtual std::expected<api::Response, api::ApiError> mapFileLineToCodeCollectionPosition(
+			const fs::File& file, usize line_number
+		) = 0;
+
 	public:
 		ProcIO& getIO();
 
@@ -196,18 +210,16 @@ namespace vm {
 		 * @brief Get the PID of the process.
 		 */
 		[[nodiscard]] PID getPID() const;
-		/**
-		 * @brief Get the GIL of the process.
-		 */
-		GIL& getGIL();
+
+		void setStatus(const api::ProcStatus& new_status, api::ThreadID thread_id) noexcept;
 
 		/**
-		 * @brief Get the synchronization primitives of the process.
+		 * @brief Atomically set process status if it is not already terminal.
+		 * @return true if status was updated, false if status was already terminal.
 		 */
-		SynchronizationPrimitives& getSynchronizationPrimitives();
-
-		// @TODO: #2400 Remove this
-		void setStatus(const api::ProcStatus& new_status) noexcept;
+		bool setStatusIfNotTerminal(
+			const api::ProcStatus& new_status, api::ThreadID thread_id
+		) noexcept;
 
 		/**
 		 * @brief Creates a VmValue of a given type and registers it in this VMProcess
@@ -221,7 +233,6 @@ namespace vm {
 		 */
 		virtual Ref<VmValue> createVmValue(TypeCRef type)              = 0;
 		virtual Ref<VmValue> createVmValue(TypeCRef type, Pointer src) = 0;
-
 
 		/**
 		 * @brief Creates a VmValue of a given type and transfers ownership to the caller.

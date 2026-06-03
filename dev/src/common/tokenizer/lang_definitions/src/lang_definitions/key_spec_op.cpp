@@ -14,9 +14,10 @@ namespace lang_def {
 
 	void setKeywordMode(KeywordMode mode) { keyword_mode = mode; }
 
+	KeywordMode getKeywordMode() { return keyword_mode; }
+
 	base::StrID makeStrID(std::string_view view) {
-		return base::StrID(base::RawView({ reinterpret_cast<const byte*>(view.data()), view.size() }
-		));
+		return base::StrID(base::RawView({ std::as_bytes(std::span{ view }) }));
 	}
 
 	// @TODO: what if there are many instances of one keyword (vec and vector)
@@ -82,6 +83,10 @@ namespace lang_def {
 			{ Keyword::Len, "len", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::Ref, "ref", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::Box, "box", KeywordFlagsOptions::IsGenPrefixOp },
+			{ Keyword::Ptr, "ptr", KeywordFlagsOptions::IsGenPrefixOp },
+			{ Keyword::CPtr, "cptr", KeywordFlagsOptions::IsGenPrefixOp },
+			{ Keyword::ManyPtr, "manyptr", KeywordFlagsOptions::IsGenPrefixOp },
+			{ Keyword::Slice, "slice", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::Copy, "copy", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::Move, "move", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::Refof, "refof", KeywordFlagsOptions::IsGenPrefixOp },
@@ -94,7 +99,6 @@ namespace lang_def {
 			{ Keyword::Or, "or", KeywordFlags() },
 			{ Keyword::Xor, "xor", KeywordFlags() },
 
-			{ Keyword::As, "as", KeywordFlags() },
 			{ Keyword::Hides, "hides", KeywordFlags() },
 			{ Keyword::In, "in", KeywordFlags() },
 			{ Keyword::Lambda, "lambda", KeywordFlags() },
@@ -146,6 +150,8 @@ namespace lang_def {
 			{ Keyword::Extends, "extends", KeywordFlags() },
 			{ Keyword::Implements, "implements", KeywordFlags() },
 			{ Keyword::Self, "self", KeywordFlags() },
+
+			{ Keyword::Destroy, "destroy", KeywordFlags() },
 		});
 
 	constexpr auto BC_KEYWORDS_ARRAY
@@ -194,6 +200,7 @@ namespace lang_def {
 	constexpr auto OPERATOR_ARRAY = std::to_array<std::pair<NamedOperator, std::string_view>>({
 		{ NamedOperator::NotAnOperator, "NotAnOperator" },
 
+		{ NamedOperator::As, "as" },
 		{ NamedOperator::Period, "." },
 		{ NamedOperator::Range, ".." },
 		{ NamedOperator::PeriodQuestion, ".?" },

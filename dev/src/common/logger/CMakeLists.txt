@@ -3,4 +3,4 @@ add_library(Logger
 	src/logger/module_flags/module_flags.cpp
 )
 
-make_module(Logger USES Base)
+make_module(Logger USES Base Filesystem)

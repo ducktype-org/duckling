@@ -9,8 +9,8 @@
 #include <vm/api/data/response.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/core/process/interface_types.hpp>
-#include <vm/core/process/memory/pointer.hpp>
-#include <vm/core/thread/vmvalue.hpp>
+#include <vm/core/safe/memory/pointer.hpp>
+#include <vm/core/vmvalue/vmvalue.hpp>
 
 #include <json/json.hpp>
 
@@ -101,6 +101,17 @@ namespace vm::api {
 		struct AttachStatusListener {
 			Ref<events::Listener<ProcStatus>> listener;
 		};
+
+		struct SetBreakpoint {
+			base::StrID function_name;
+			u64         instruction_index;
+			bool        enable;
+		};
+
+		struct MapFileLineToCodeCollectionPosition {
+			fs::File file;
+			u64      line_number;
+		};
 	}
 
 	using RequestVariant = std::variant<
@@ -127,7 +138,9 @@ namespace vm::api {
 		request::Detach,
 		request::ExitCodeRequest,
 		request::DeinitAndValidate,
-		request::AttachStatusListener>;
+		request::AttachStatusListener,
+		request::SetBreakpoint,
+		request::MapFileLineToCodeCollectionPosition>;
 
 	struct SupervisorRequest {
 		PID            pid;

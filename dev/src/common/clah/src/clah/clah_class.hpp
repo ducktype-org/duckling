@@ -15,11 +15,17 @@
 
 #include <base/types/ints.hpp>
 
+#include <expected>
 #include <functional>
+#include <ranges>
 #include <string>
 #include <vector>
 
 namespace clah {
+	struct VerificationPassed final {};
+
+	using VerificationResult = std::expected<VerificationPassed, std::string>;
+
 	/**
 	 * @brief Command-line Argument Handler.
 	 *
@@ -44,6 +50,8 @@ namespace clah {
 		using PreHandler = std::function<void(const ParsingResult&)>;
 		using Handler    = std::function<int(const ParsingResult&)>;
 
+		using CustomVerification = std::function<VerificationResult(const ParsingResult&)>;
+
 
 		Clah();
 		Clah(std::string name, std::string description = "");
@@ -61,6 +69,22 @@ namespace clah {
 		 * @return A reference to self.
 		 */
 		Clah&& add(Parameter&& parameter);
+
+		/**
+		 * @brief Adds a range of named parameters to the command.
+		 * @param parameters A vector of parameters constructed with clah::ParamBuilder.
+		 * @return A reference to self.
+		 */
+		template<std::ranges::input_range Range>
+		Clah&& add(Range&& parameters) {
+			static_assert(
+				!std::is_lvalue_reference_v<Range>, "add(range) requires an rvalue range (temporary)"
+			);
+			for (auto& param: parameters) add(std::move(param));
+			auto _ = std::forward<Range>(parameters
+			);  /// Just to silence the linter that we don't move from the rvalue param.
+			return std::move(*this);
+		}
 
 		/**
 		 * @brief Adds a positional parameter without a name to the Clah.
@@ -91,6 +115,14 @@ namespace clah {
 		 * @return A reference to self.
 		 */
 		Clah&& setPreHandler(PreHandler pre_handler);
+
+		/**
+		 * @brief Adds a custom verification callback that runs after parsing is complete.
+		 * If any callback returns base::BAD, parsing fails.
+		 * @param verification The verification callback.
+		 * @return A reference to self.
+		 */
+		Clah&& addCustomVerification(CustomVerification verification);
 
 		/**
 		 * @brief Sets the default value parser for the command. Might be a nullptr.
@@ -232,8 +264,9 @@ namespace clah {
 		void validateParsing(ParsingResult& result) const;
 
 
-		std::string name;         // Name of the command.
-		std::string description;  // Description of the command
+		std::string                     name;         // Name of the command.
+		std::string                     description;  // Description of the command
+		std::vector<CustomVerification> custom_verifications;
 
 		/**
 		 * @brief A parser used to parse extra arguments. Set to StringParser by default.

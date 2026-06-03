@@ -64,7 +64,7 @@ namespace compiler::helios::code {
 			return id;
 		}
 
-		[[nodiscard]] base::Optional<pst::StablePosition> getPosition() const {
+		[[nodiscard]] base::Optional<dia_int::StablePosition> getPosition() const {
 			return origin.getStablePosition();
 		}
 
@@ -244,9 +244,14 @@ namespace compiler::helios::code {
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
 
+		// Clones the expression just as any other expression,
+		// which means it performs a *deep* copy. Should not be used
+		// for reusing a reusable expression. Use nextUse() for that.
 		[[nodiscard]] Box<Expr> clone() const final;
 
-		[[nodiscard]] Box<Expr> nextUse() const;
+		// Create a ReusableExpression with the same inner expression,
+		// but prepared for a re-use.
+		[[nodiscard]] Box<ReusableExpr> nextUse() const;
 
 	private:
 		FRIEND_MAKEBOX
@@ -372,6 +377,10 @@ namespace compiler::helios::code {
 		FloatNegation,
 		BooleanNot,
 		Ref,
+		Ptr,
+		ManyPtr,
+		CPtr,
+		Slice,
 		Box,
 		Const,
 		Len,  // @TODO: #1970 Probably remove that in the future.
@@ -444,6 +453,7 @@ namespace compiler::helios::code {
 	 */
 	struct TupleExpr: public Expr {
 		std::vector<base::Box<Expr>> elements;
+		SymID                        tuple_ctor_symbol;
 
 		TupleExpr(query::Context& ctx, ElementOrigin origin, std::vector<base::Box<Expr>> elements);
 
@@ -458,7 +468,8 @@ namespace compiler::helios::code {
 		TupleExpr(
 			tsh::ExpressionType<>        expression_type,
 			ElementOrigin                origin,
-			std::vector<base::Box<Expr>> elements
+			std::vector<base::Box<Expr>> elements,
+			SymID                        tuple_ctor_symbol
 		);
 	};
 

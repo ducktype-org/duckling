@@ -10,23 +10,31 @@
 //!   communication with the compiler.
 
 mod compilation_type;
+pub mod multipackage_schema;
 mod process_builder;
 
 use std::convert::Infallible;
 
 pub use compilation_type::CompilationType;
+use tempfile::TempDir;
 
 use super::BuildContext;
 use super::compiler_package::CompilerPackage;
-use crate::quackpack::core::compile::early_dag::EarlyDag;
+use crate::quackpack::core::compile::early_graph::EarlyGraph;
 use crate::quackpack::core::storage::freeze::FreezeDep;
-use crate::util::path_ops_ext::{PathOpsExt, ShouldBlock};
 use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail, qp_bail_internal};
 
 #[derive(Debug)]
 /// Data holder of all required in order to execute the compiler.
 pub struct Duckc {
     program_name: StrId,
+}
+
+#[derive(Debug)]
+/// Represents where the compilation artifacts are stored.
+pub enum ArtifactsDir {
+    Default,
+    TempDir(TempDir),
 }
 
 impl Duckc {
@@ -55,23 +63,26 @@ impl Duckc {
     /// Compile the `graph` with the given `compilation_type` and `bcx`.
     pub fn compile(
         &self,
-        graph: &EarlyDag,
+        graph: &EarlyGraph,
         compilation_type: CompilationType,
         bcx: &BuildContext<'_, '_>,
-    ) -> QuackResult<()> {
+    ) -> QuackResult<ArtifactsDir> {
         match compilation_type {
             CompilationType::OnlyRootPackage => self.compile_root_package_only(graph, bcx),
+            CompilationType::StandaloneScript => self.compile_standalone_script(graph, bcx),
         }
     }
 
     /// Specific steps for compiling only the root package using [`process_builder`] backend.
     fn compile_root_package_only(
         &self,
-        graph: &EarlyDag,
+        graph: &EarlyGraph,
         bcx: &BuildContext<'_, '_>,
-    ) -> QuackResult<()> {
-        let this = graph.package(&graph.dag().root());
-        let deps = graph.dag().dependencies_for_package(&graph.dag().root());
+    ) -> QuackResult<ArtifactsDir> {
+        let this = graph.package(&graph.graph().root());
+        let deps = graph
+            .graph()
+            .dependencies_for_package(&graph.graph().root());
         bail_if_has_deps(deps.dependencies())?;
         bail_if_has_explicit_aliases(this)?;
         let this = this.package();
@@ -93,13 +104,41 @@ impl Duckc {
             .set_package_artifacts_dir(this)
             .update_with_profile(&bcx.profile);
         // We need to lock a file, we can't lock a directory.
-        let _lock = this.artifacts_directory().join(".duck_lock").lock(ShouldBlock::Yes).with_context(|| format!("failed to acquire an exclusive lock for spawning a duckc in order to compile a package `{}`", this.as_freeze_dep()))?;
+        let _lock = this.artifacts_directory().acquire_global_lock(bcx.pcx.ctx()).with_context(|| format!("failed to acquire an exclusive lock for spawning a duckc in order to compile a package `{}`", this.as_freeze_dep()))?;
         bcx.pcx
             .ctx()
             .console()
-            .info_verbose(format!("Running `{}`", builder));
+            .info_verbose(format!("Running `{}`", builder))?;
         builder.execute(|| format!("failed to compile package `{}`", this.as_freeze_dep()))?;
-        Ok(())
+        Ok(ArtifactsDir::Default)
+    }
+
+    /// Specific steps for compiling a standalone script using [`process_builder`] backend.
+    fn compile_standalone_script(
+        &self,
+        graph: &EarlyGraph,
+        bcx: &BuildContext<'_, '_>,
+    ) -> QuackResult<ArtifactsDir> {
+        let venv = graph.package(&graph.graph().root());
+        let deps = graph
+            .graph()
+            .dependencies_for_package(&graph.graph().root());
+        bail_if_has_deps(deps.dependencies())?;
+        bail_if_has_explicit_aliases(venv)?;
+        let script_path = bcx
+            .script_path
+            .as_ref()
+            .context_internal("Script compilation without path to it")?
+            .as_path();
+        let artifacts_dir = TempDir::new_in(bcx.pcx.ctx().cwd())?;
+        let mut builder = process_builder::DuckcProcessBuilder::new(self);
+        builder
+            .set_subcommand(process_builder::DuckcSubcommand::CompileScript)
+            .set_script_path(script_path)
+            .set_artifacts_dir(artifacts_dir.path())
+            .update_with_script_profile(&bcx.profile);
+        builder.execute(|| format!("failed to compile script `{}`", script_path.display()))?;
+        Ok(ArtifactsDir::TempDir(artifacts_dir))
     }
 }
 

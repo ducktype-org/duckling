@@ -9,9 +9,6 @@ namespace pst::expr {
 
 		i64 length = base::safeIntConv<i64>(state.ctokens().size());
 
-		auto pos = dia::SourcePosition(state.getPosition(), state.getPosition(length - 1).getEnd());
-
-
 		bool or_found = false;
 		i64  or_fwd   = 0;
 
@@ -27,7 +24,7 @@ namespace pst::expr {
 		auto out = makeBox<LogicOr>(state);
 
 		PARSE().autoFallbackLen(or_fwd).with(&out->left, Lower::parse);
-		PARSE().one(Keyword::Or);
+		PARSE().one(&out->op);
 		PARSE().with(&out->right, Self::parse);
 
 		PST_RETURN out;

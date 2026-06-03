@@ -1,0 +1,95 @@
+import core.builtins.*;
+
+var counter: i64 = 0;
+
+
+fun count(x: i64) -> i64 = {
+
+    counter = counter + 1;
+    if (counter == 2) {
+        builtin_output_i64(999); # This should not execute, because we use `reset()` defined below.
+    }
+    return x;
+}
+
+fun reset() = {
+    counter = 0;
+}
+
+
+fun main() -> i64 = {
+    var a: i64 = 5;
+    var b: i64 = 10;
+    var c: i64 = 5;
+    var d: i64 = 15;
+
+    # Test equality
+    if (a == c) {
+        builtin_output_i64(1); # Should execute
+    }
+    if (a == b) {
+        builtin_output_i64(2); # Should not execute
+    }
+
+    # Test inequality
+    if (a != b) {
+        builtin_output_i64(3); # Should execute
+    }
+    if (a != c) {
+        builtin_output_i64(4); # Should not execute
+    }
+
+    # Test less than
+    if (a < b) {
+        builtin_output_i64(5); # Should execute
+    }
+    if (b < a) {
+        builtin_output_i64(6); # Should not execute
+    }
+
+    # Test greater than
+    if (b > a) {
+        builtin_output_i64(7); # Should execute
+    }
+    if (a > b) {
+        builtin_output_i64(8); # Should not execute
+    }
+
+    # Test less than or equal
+    if (a <= c) {
+        builtin_output_i64(9); # Should execute
+    }
+    if (b <= a) {
+        builtin_output_i64(10); # Should not execute
+    }
+
+    # Test greater than or equal
+    if (b >= a) {
+        builtin_output_i64(11); # Should execute
+    }
+    if (a >= b) {
+        builtin_output_i64(12); # Should not execute
+    }
+
+    # Test comparison chaining (per docs: a < b < c is equivalent to a < b and b < c)
+    if (a < count(b) < d) {
+        builtin_output_i64(13); # Should execute: 5 < 10 < 15
+    }
+    reset();
+    if (d > count(b) > a) {
+        builtin_output_i64(14); # Should execute: 15 > 10 > 5
+    }
+    reset();
+    if (a < count(b) > d) {
+        builtin_output_i64(15); # Should not execute: 5 < 10 but 10 > 15 is false
+    }
+    reset();
+    
+    # Test chained equality/inequality
+    var e: i64 = 5;
+    if (a == count(c) == e) {
+        builtin_output_i64(16); # Should execute: all equal to 5
+    }
+    reset();
+    return 0;
+}

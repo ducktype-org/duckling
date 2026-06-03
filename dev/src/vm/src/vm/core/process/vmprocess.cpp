@@ -10,12 +10,6 @@ namespace vm {
 
 	ProcIO& IVMProcess::getIO() { return io; }
 
-	GIL& IVMProcess::getGIL() { return gil; }
-
-	SynchronizationPrimitives& IVMProcess::getSynchronizationPrimitives() {
-		return synchronization_primitives;
-	}
-
 	PID IVMProcess::getPID() const { return my_pid; }
 
 	std::expected<api::Response, api::ApiError> IVMProcess::doRequest(
@@ -119,8 +113,18 @@ namespace vm {
 			variant_case_novalue(api::request::DeinitAndValidate) { return deinitAndValidate(); }
 
 			variant_case(api::request::AttachStatusListener, request) {
-				on_status_change.attachListener(request.listener);
+				on_status_changed.attachListener(request.listener);
 				return api::Response(api::response::Empty());
+			}
+
+			variant_case(api::request::SetBreakpoint, request) {
+				return setBreakpoint(
+					request.function_name, request.instruction_index, request.enable
+				);
+			}
+
+			variant_case(api::request::MapFileLineToCodeCollectionPosition, request) {
+				return mapFileLineToCodeCollectionPosition(request.file, request.line_number);
 			}
 
 			variant_default { return api::Response(api::response::Empty()); }
@@ -146,13 +150,53 @@ namespace vm {
 		return api::Response(api::response::Empty());
 	}
 
-	void IVMProcess::setStatus(const api::ProcStatus& new_status) noexcept {
+	void IVMProcess::setStatus(const api::ProcStatus& new_status, api::ThreadID thread_id) noexcept {
+		const bool is_main_thread      = thread_id.asInt() == 0;
+		const bool is_terminal_failure = std::holds_alternative<api::ExecutionPanicked>(new_status)
+		                              || std::holds_alternative<api::ExecutionStopped>(new_status);
+
+		// Only main thread can set overall process status
+		if (!is_main_thread) {
+			// Child threads can publish terminal failures if process is not already terminal
+			if (is_terminal_failure) setStatusIfNotTerminal(new_status, thread_id);
+			return;
+		}
+
 		{
 			std::unique_lock<std::shared_mutex> lock(rw_status);
 			status = new_status;
-			on_status_change.emitEvent(status);
 		}
+		on_status_changed.emitEvent(new_status);
 		status_cv.notify_all();
+
+		if (api::isStatusTerminal(new_status)) onTerminalStatus(new_status);
+	}
+
+	bool IVMProcess::setStatusIfNotTerminal(
+		const api::ProcStatus& new_status, api::ThreadID thread_id
+	) noexcept {
+		const bool is_main_thread = thread_id.asInt() == 0;
+
+		// Child threads should not move the whole process into a terminal state.
+		// They may still publish a terminal failure so the process can stop as a whole.
+		if (is_main_thread) return false;
+
+		bool            updated = false;
+		api::ProcStatus emitted_status;
+		{
+			std::unique_lock<std::shared_mutex> lock(rw_status);
+			if (!api::isStatusTerminal(status)) {
+				status         = new_status;
+				emitted_status = new_status;
+				updated        = true;
+			}
+		}
+		if (updated) {
+			on_status_changed.emitEvent(emitted_status);
+			status_cv.notify_all();
+			if (api::isStatusTerminal(emitted_status)) onTerminalStatus(emitted_status);
+		}
+		return updated;
 	}
 
 	api::ProcStatus IVMProcess::getStatus() {

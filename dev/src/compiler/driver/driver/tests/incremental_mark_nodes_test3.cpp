@@ -1,4 +1,5 @@
 #include "incremental_metadata_test_common.hpp"  // IWYU pragma: keep
+#include "test_utils.hpp"
 
 #include <driver/exit.hpp>
 #include <driver/initialize.hpp>
@@ -38,10 +39,10 @@ private:
 		// Initialize with changed functions path (same package name as previous step)
 		auto init_result = compiler::driver::initializeTheCompiler(
             compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
-                .main_package_info = {
-                    .package_name = std::string("mark_nodes_test_package"),
-                    .package_path = fs::FilePath(path("modules/incremental/changed_functions/functions_1")),
-                },
+				.packages_info = { driver_test_utils::emptyRawPackageInfo(
+					"mark_nodes_test_package",
+					path("modules/incremental/changed_functions/functions_1")
+				) },
                 .compilation_artifacts = {.artifacts_path = artifacts_path},
             	.backend_options = {
 					.llvm_backend = global_state::BackendOptions::LLVMBackend{},
@@ -89,17 +90,20 @@ private:
 		// Compile module to trigger red-green sweep
 		auto module = frontend::createModuleTree(
 			fs::File(path("modules/incremental/changed_functions/functions_1")),
-			"mark_nodes_test_package"
+			base::StrID("mark_nodes_test_package")
 		);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			(void) ctx.query<driver::CompileModule>({ module, driver::BackendType::LLVM, false });
+			(void) ctx.query<driver::CompileModule>({ .module_id        = module,
+			                                          .backend_type     = driver::BackendType::LLVM,
+			                                          .build_debug_info = false });
 		});
 
 		// Build a NodeID for the CompileModule query with the exact key we used
 		compiler::driver::KeyOf_CompileModule key{
-			.module_id    = module,
-			.backend_type = compiler::driver::BackendType::LLVM,
+			.module_id        = module,
+			.backend_type     = compiler::driver::BackendType::LLVM,
+			.build_debug_info = false,
 		};
 		query::internal::NodeID root_node{
 			compiler::driver::CompileModule::getID(),

@@ -1,27 +1,25 @@
-use std::{
-    collections::HashSet,
-    ops::Deref,
-    path::PathBuf,
-    sync::{Mutex, OnceLock},
-};
+use std::collections::HashSet;
+use std::hash::Hash;
+use std::ops::Deref;
+use std::path::PathBuf;
+use std::sync::{Mutex, OnceLock};
 
 use serde::{Deserialize, Serialize, de, ser};
 use url::Url;
 
-use crate::{
-    QuackResult, QuackResultContext, StrId, qp_bail_internal,
-    quackpack::core::{
-        BranchOrTag, Dependency, Registry, Source, Version,
-        gathering::fetch_types::{ManifestsRequest, NotPinnedRequest, PinnedRequest},
-        types_common::{InternedLocation, Location},
-        version::CompatibilityCheck,
-    },
+use crate::quackpack::core::solver::gathering::fetch_types::{
+    ManifestsRequest, NotPinnedRequest, PinnedRequest,
 };
+use crate::quackpack::core::solver::types_common::{InternedLocation, Location};
+use crate::quackpack::core::version::CompatibilityCheck;
+use crate::quackpack::core::{BranchOrTag, Dependency, Registry, Source, Version};
+use crate::util::extract::Extract;
+use crate::{QuackResult, QuackResultContext, StrId, qp_bail_internal};
 
 static INTERNED_EXPANDED_LOCATION_CACHE: OnceLock<Mutex<HashSet<&'static ExpandedLocation>>> =
     OnceLock::new();
 
-#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy)]
 /// Interned version of [`Location`].
 pub struct InternedExpandedLocation {
     inner: &'static ExpandedLocation,
@@ -32,17 +30,7 @@ impl InternedExpandedLocation {
         let mut cache = INTERNED_EXPANDED_LOCATION_CACHE
             .get_or_init(Default::default)
             .lock()
-            // NOTE: `.unwrap()` should never panic: from docs:
-            // Errors
-            //
-            // If another user of this mutex panicked while holding the mutex,
-            // then this call will return an error once the mutex is acquired.
-            // The acquired mutex guard will be contained in the returned error.
-            //
-            // Panics
-            //
-            // This function might panic when called if the lock is already held by the current thread.
-            .unwrap();
+            .extract();
         let reference = cache.get(&source).copied().unwrap_or_else(|| {
             let static_ref = Box::leak(Box::new(source));
             cache.insert(static_ref);
@@ -71,9 +59,9 @@ impl<'de> de::Deserialize<'de> for InternedExpandedLocation {
     }
 }
 
-impl From<ExpandedLocation> for InternedExpandedLocation {
-    fn from(value: ExpandedLocation) -> Self {
-        Self::new(value)
+impl<T: Into<ExpandedLocation>> From<T> for InternedExpandedLocation {
+    fn from(value: T) -> Self {
+        Self::new(value.into())
     }
 }
 
@@ -88,6 +76,23 @@ impl Deref for InternedExpandedLocation {
 impl AsRef<ExpandedLocation> for InternedExpandedLocation {
     fn as_ref(&self) -> &'static ExpandedLocation {
         self.inner
+    }
+}
+
+impl PartialEq for InternedExpandedLocation {
+    fn eq(&self, other: &Self) -> bool {
+        // If we have two equal InternedExpandedLocations, their underlying &ExpandedLocation is equal.
+        // That &ExpandedLocation is stored exactly once in INTERNED_EXPANDED_LOCATION_CACHE, so we can compare by comparing pointers,
+        // which is faster.
+        std::ptr::eq(self.inner, other.inner)
+    }
+}
+
+impl Eq for InternedExpandedLocation {}
+
+impl Hash for InternedExpandedLocation {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        std::ptr::hash(self.inner, state);
     }
 }
 
@@ -204,7 +209,7 @@ impl ExpandedPackage {
                 // If the git dependency specifies tag, branch or nothing (default branch),
                 // some new commits may have appeared.
                 if let Some(required_commit) = git_source.rev()
-                    && *commit == required_commit
+                    && *commit == *required_commit
                     && url == git_source.url()
                 {
                     if let Some(required_version) = dependency.versions().first() {

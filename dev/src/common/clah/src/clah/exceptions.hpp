@@ -96,7 +96,7 @@ namespace clah::exceptions {
 	 * @brief Raised when user does not pass a parameter name after ``-`` or ``--``.
 	 */
 	struct ExpectedParameterIdentifier: public ClahException {
-		ExpectedParameterIdentifier(i32 at, std::string_view source);
+		ExpectedParameterIdentifier(u64 at, std::string_view source);
 	};
 
 	/**
@@ -114,11 +114,18 @@ namespace clah::exceptions {
 	};
 
 	/**
+	 * @brief Raised when a custom verification callback fails.
+	 */
+	struct CustomVerificationFailed: public ClahException {
+		explicit CustomVerificationFailed(const std::string& message);
+	};
+
+	/**
 	 * @brief Raised when user has specified extra arguments, but Clah has
 	 * Clah::default_value_parser set to nullptr.
 	 */
 	struct NoDefaultValueParser: public ClahException {
-		explicit NoDefaultValueParser(i32 at, std::string_view values);
+		explicit NoDefaultValueParser(u64 at, std::string_view values);
 	};
 
 	/**

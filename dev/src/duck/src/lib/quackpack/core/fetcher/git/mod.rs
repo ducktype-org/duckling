@@ -2,14 +2,13 @@
 
 use std::path::Path;
 
-use crate::{
-    DuckContext, QuackResult, QuackResultContext, StrId,
-    quackpack::core::{BranchOrTag, Git, PackageLoader, fetcher::types::GitCloneResponse},
-};
-
-use git2::Oid;
-use git2::{Repository, build::RepoBuilder};
+use git2::build::RepoBuilder;
+use git2::{Oid, Repository};
 use tracing::debug;
+
+use crate::quackpack::core::fetcher::types::GitCloneResponse;
+use crate::quackpack::core::{BranchOrTag, Git, PackageLoader};
+use crate::{DuckContext, QuackResult, QuackResultContext};
 
 #[cfg(test)]
 mod tests;
@@ -54,7 +53,7 @@ impl GitClient {
 
         // Prefer specific commits over tags.
         if let Some(commit) = source.rev() {
-            repository.checkout_commit(commit).with_context(|| {
+            repository.checkout_commit(commit.as_str()).with_context(|| {
                 format!(
                     "when performing a checkout of a repository cloned from `{}` to a commit `{}`",
                     source.url(),
@@ -62,7 +61,7 @@ impl GitClient {
                 )
             })?;
         } else if let BranchOrTag::Tag(tag) = source.branch_or_tag() {
-            repository.checkout_tag(tag).with_context(|| {
+            repository.checkout_tag(tag.as_str()).with_context(|| {
                 format!(
                     "when performing a checkout of a repository cloned from `{}` to a tag `{}`",
                     source.url(),
@@ -90,16 +89,16 @@ impl GitClient {
 /// A helper trait for repository methods.
 trait RepositoryExt {
     /// Checkout `self` into a given commit.
-    fn checkout_commit(&self, commit: StrId) -> QuackResult<()>;
+    fn checkout_commit(&self, commit: &str) -> QuackResult<()>;
     /// Checkout `self` into a given tag.
-    fn checkout_tag(&self, tag: StrId) -> QuackResult<()>;
+    fn checkout_tag(&self, tag: &str) -> QuackResult<()>;
 }
 
 impl RepositoryExt for Repository {
     #[tracing::instrument(skip(self))]
-    fn checkout_commit(&self, commit: StrId) -> QuackResult<()> {
+    fn checkout_commit(&self, commit: &str) -> QuackResult<()> {
         let oid =
-            Oid::from_str(&commit).with_context(|| format!("`{commit}` is not a valid Oid"))?;
+            Oid::from_str(commit).with_context(|| format!("`{commit}` is not a valid Oid"))?;
         let commit = self
             .find_commit(oid)
             .with_context(|| format!("repository does not have a commit `{}", commit))?;
@@ -110,7 +109,7 @@ impl RepositoryExt for Repository {
     }
 
     #[tracing::instrument(skip(self))]
-    fn checkout_tag(&self, tag: StrId) -> QuackResult<()> {
+    fn checkout_tag(&self, tag: &str) -> QuackResult<()> {
         let refname = format!("refs/tags/{}", tag);
         let reference = self
             .find_reference(&refname)

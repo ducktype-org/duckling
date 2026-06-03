@@ -17,10 +17,8 @@
 #include <vm/bytecode/type_of_data.hpp>
 #include <vm/bytecode/validator/errors.hpp>
 #include <vm/bytecode/validator/valid_program.hpp>
-#include <vm/loader/compiler/compiler.hpp>
 #include <vm/loader/logger.hpp>
 
-#include <expected>
 #include <vector>
 
 using namespace vm::loader;
@@ -70,16 +68,18 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::parseFiles(
 					func_name.bytecode_pos = func->name.position;
 					function.name          = func_name;
 
-					code::Identifier result_type;
-					result_type.str                = func->result_type.value;
-					result_type.bytecode_pos       = func->result_type.position;
-					function.signature.result_type = result_type;
-
 					for (const auto& param: func->parameters) {
 						code::Identifier param_id;
 						param_id.str          = param.value;
 						param_id.bytecode_pos = param.position;
 						function.signature.parameters.emplace_back(param_id);
+					}
+
+					for (const auto& reslt: func->result_types) {
+						code::Identifier result_type_id;
+						result_type_id.str          = reslt.value;
+						result_type_id.bytecode_pos = reslt.position;
+						function.signature.result_types.emplace_back(result_type_id);
 					}
 
 					for (const auto& instr: func->code->opcodes)
@@ -96,7 +96,7 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::parseFiles(
 	CORE_UNREACHABLE();
 }
 
-std::expected<void, LoaderLogger> Loader::loadAndCompile(const code::CodeCollection& code_collection
+std::expected<void, LoaderLogger> Loader::loadAndValidate(const code::CodeCollection& code_collection
 ) {
 	// Skip if no new code was added.
 	if (code_collection.functions.empty() && code_collection.types.empty()
@@ -111,14 +111,11 @@ std::expected<void, LoaderLogger> Loader::loadAndCompile(const code::CodeCollect
 		// loader stays unchanged.
 		validated_high_program = validated_high_program.tryInsertCode(code_collection);
 
-		// @note: After successfully inserting code into `validated_high_program` we compile it to
-		// the low level representation. This step cannot fail since the code was already validated.
-		compiler.recompile(validated_high_program);
 		return {};
 	} catch (code::StackStructureMismatchError& e) {
 		log.logMap(
 			e.label,
-			[&](Box<dia_int::PlaceholderCodeError>& err) {
+			[&](Box<dia_int::PlaceholderError>& err) {
 				for (const auto& instruction: e.jumps)
 					instruction.visit([&](auto&& i) {
 						log.addNote(
@@ -161,18 +158,79 @@ std::expected<void, LoaderLogger> Loader::loadAndCompile(const code::CodeCollect
 	return std::unexpected(std::move(log));
 }
 
-std::expected<void, LoaderLogger> Loader::loadAndCompile(const std::vector<fs::File>& file_paths) {
+std::expected<void, LoaderLogger> Loader::loadAndValidate(const std::vector<fs::File>& file_paths) {
 	auto opt_code_collection = parseFiles(file_paths);
-	if (opt_code_collection.has_value()) return loadAndCompile(*opt_code_collection);
+	if (opt_code_collection.has_value()) return loadAndValidate(*opt_code_collection);
 	return std::unexpected(std::move(opt_code_collection).error());
 }
 
-CRef<vm::low::LowVMProgram> vm::loader::Loader::getProgram() const {
-	return compiler.getLowProgram();
-}
-
-vm::loader::Loader::Loader() { compiler.recompile(validated_high_program); }
-
 base::CRef<vm::code::ValidProgram> vm::loader::Loader::getHighProgram() const {
 	return &validated_high_program;
+}
+
+std::expected<vm::code::CodeCollection, std::string> vm::loader::Loader::parseCodeCollectionFromFiles(
+	const std::vector<fs::File>& files
+) {
+	return parseFiles(files).transform_error([](LoaderLogger logger) {
+		std::stringstream ss;
+		logger.dump(ss);
+		return ss.str();
+	});
+}
+
+std::expected<base::Optional<dia::SourcePosition>, vm::loader::MappingException> vm::loader::
+	Loader::mapCodeCollectionPositionToFilePosition(FatBytecodePosition position) const {
+	const auto& maybe_high_function = getHighProgram()->functions().atMaybe(position.function_name);
+	if (maybe_high_function.empty()) return std::unexpected(MappingException::NoFunction);
+
+	return maybe_high_function.value()->body.at(position.instruction_index).visit([](auto&& instr) {
+		return instr.bytecode_pos;
+	});
+}
+
+base::Optional<FatBytecodePosition> vm::loader::Loader::mapFileLineToCodeCollectionPosition(
+	const fs::File& file, usize line
+) const {
+	for (const auto& function: getHighProgram()->functions()) {
+		// ensure function has position data and is in requested file
+		if (!function.bytecode_pos) continue;
+		if (function.bytecode_pos->getSource()->getFile() != file) continue;
+
+		const auto& body = function.body;
+
+		// Return first instruction if line contains function name
+		if (function.name.bytecode_pos->getStartLineColumn().first == line)
+			return FatBytecodePosition{
+				.function_name     = function.name.str,
+				.instruction_index = 0,
+			};
+
+		auto get_pos = [](auto&& i) { return i.bytecode_pos; };
+
+		// Skip if before or after the function
+		if (body.front().visit(get_pos)->getStartLineColumn().first > line) continue;
+		if (body.back().visit(get_pos)->getStartLineColumn().first < line) continue;
+
+		// Binsearch line
+		auto guess = std::ranges::lower_bound(
+			body,
+			line,
+			std::ranges::less{},
+			[&](const auto& instr) -> usize {
+				return instr.visit(get_pos)->getStartLineColumn().first;
+			}
+		);
+
+		if (guess == body.end())
+			break;  // this line is between this function instructions, so it's not in any other function
+		auto pos = guess->visit(get_pos);
+
+		if (pos->getSource()->getFile() == file && pos->getStartLineColumn().first == line)
+			return FatBytecodePosition{
+				.function_name     = function.name.str,
+				.instruction_index = static_cast<usize>(std::distance(body.begin(), guess)),
+			};
+	}
+
+	return std::nullopt;
 }

@@ -21,11 +21,11 @@ namespace compiler::repl {
 		std::string_view                          module_name_prefix
 	) {
 		auto builder = frontend::ModuleTreeBuilder::create();
-		builder->setPackageID(base::generateRandomString(32));
+		builder->setPackageID(base::StrID("repl_session"));
 		builder->setMainSourceFile(fs::FileManager::createRandomVirtualFile(input));
 
 		auto module_name = base::strConcat(module_name_prefix, std::to_string(line_counter));
-		builder->setName(base::StrID(module_name.c_str()));
+		builder->setName(base::StrID(module_name));
 
 		frontend::ReplData repl_data;
 		if (parent_module_id.has_value()) repl_data.m_repl_module_parent = parent_module_id.value();
@@ -50,6 +50,7 @@ namespace compiler::repl {
 	}
 
 	const helios::HOUTUnit& getDefinitionHOUTUnit(query::Context& ctx, frontend::ModuleID module_id) {
+		// @TODO: #2246 validate usage of QueryModuleHOUT here after any other changes
 		return ctx.query<helios::QueryModuleHOUT>(module_id)->valueOrThrow();
 	}
 
@@ -81,11 +82,25 @@ namespace compiler::repl {
 			};
 		}
 
-		auto top_level_stmt_opt = pst::extractSingleTopLevelStatement(ctx, root);
-		if (top_level_stmt_opt.has_value())
-			return DefinitionSingleStatementInfo{ .definition_stmt = top_level_stmt_opt.value() };
+		auto definition_stmt_opt = pst::extractSingleDefinition(ctx, root);
+		if (definition_stmt_opt.has_value())
+			return DefinitionSingleStatementInfo{ .definition_stmt = definition_stmt_opt.value() };
 
-		return std::unexpected("Expected exactly one top-level statement");
+		auto single_stmt_opt = pst::extractSingleStatement(ctx, root);
+		if (single_stmt_opt.has_value()) {
+			auto stmt = single_stmt_opt.value().unlock(ctx);
+			return std::unexpected(base::strConcat(
+				"Unsupported single statement kind for REPL classification: ",
+				stmt->elementType(),
+				". Expected expression, instruction (if/while/for/block), or "
+				"definition/declaration."
+			));
+		}
+
+		return std::unexpected(
+			"Expected exactly one classified statement (expression, instruction, or "
+			"definition/declaration)"
+		);
 	}
 
 	std::expected<StatementWrapperBuildResult, std::string> buildStatementWrapper(
@@ -97,10 +112,15 @@ namespace compiler::repl {
 				using PayloadT = std::decay_t<decltype(statement_payload)>;
 
 				if constexpr (std::is_same_v<PayloadT, ExpressionSingleStatementInfo>) {
-					auto wrapper      = ctx.query<QueryReplExpressionWrapper>({
-							 .expr_stmt = statement_payload.expr_stmt,
-							 .counter   = counter,
-                    });
+					auto wrapper_result = ctx.query<QueryReplExpressionWrapper>({
+						.expr_stmt = statement_payload.expr_stmt,
+						.counter   = counter,
+					});
+					if (wrapper_result.hasFailed())
+						return std::unexpected(
+							"Failed to build REPL expression wrapper (see diagnostics above)."
+						);
+					auto wrapper      = wrapper_result.valueOrPanic();
 					auto mangled_name = helios::mangler::getSimpleMangledName(
 						ctx, wrapper.declaration->original_symbol
 					);
@@ -109,10 +129,15 @@ namespace compiler::repl {
 						.wrapper_func_name = std::string(mangled_name.strView()),
 					};
 				} else if constexpr (std::is_same_v<PayloadT, InstructionSingleStatementInfo>) {
-					auto wrapper      = ctx.query<QueryReplInstructionWrapper>({
-							 .stmt    = statement_payload.instruction_stmt,
-							 .counter = counter,
-                    });
+					auto wrapper_result = ctx.query<QueryReplInstructionWrapper>({
+						.stmt    = statement_payload.instruction_stmt,
+						.counter = counter,
+					});
+					if (wrapper_result.hasFailed())
+						return std::unexpected(
+							"Failed to build REPL instruction wrapper (see diagnostics above)."
+						);
+					auto wrapper      = wrapper_result.valueOrPanic();
 					auto mangled_name = helios::mangler::getSimpleMangledName(
 						ctx, wrapper.declaration->original_symbol
 					);

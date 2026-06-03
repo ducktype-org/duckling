@@ -19,13 +19,8 @@ namespace vm::code {
 #define LOCAL_TO_STRING(Tp) \
 	std::string toString(vm::opargs::Tp arg) { return arg.var_name.str(); }
 
-	FOR_EACH(LOCAL_TO_STRING, VM_OPARG_LOCAL_TYPES);
+	FOR_EACH(LOCAL_TO_STRING, VM_OPARG_PLACE_TYPES);
 #undef LOCAL_TO_STRING
-
-#define GLOBAL_TO_STRING(Tp) \
-	std::string toString(vm::opargs::Tp arg) { return arg.global_data_name.str(); }
-
-	FOR_EACH(GLOBAL_TO_STRING, VM_OPARG_GLOBAL_TYPES);
 
 	std::string toString(opargs::Type arg) { return arg.type_name.str(); }
 
@@ -113,7 +108,14 @@ namespace vm::code {
 				out << param.str.strView();
 				first = false;
 			}
-			out << " } -> " << function.signature.result_type.str.strView() << " {\n";
+			out << " } -> { ";
+			first = true;
+			for (const auto& param: function.signature.result_types) {
+				if (!first) out << ", ";
+				out << param.str.strView();
+				first = false;
+			}
+			out << " } {\n";
 
 			indentUp();
 			displayCode();
@@ -132,7 +134,7 @@ namespace vm::code {
 			void operator()(const PrimitiveType& type) const {
 				out << "type primitive: ";
 				out << type.name.strView() << " ";
-				out << type.size;
+				out << type.size.asInt();
 			}
 
 			void operator()(const PointerType& type) const {
@@ -169,23 +171,27 @@ namespace vm::code {
 			void operator()(const FunctionType& fun) const {
 				// type fun: main {} int64
 				out << "type fun: ";
-				out << fun.name.strView() << " {";
+				out << fun.name.strView() << " { ";
 				bool first = true;
 				for (const auto& param: fun.parameters) {
-					if (first)
-						out << " ";
-					else
-						out << ", ";
+					if (!first) out << ", ";
 					out << param.strView();
 					first = false;
 				}
-				out << " } -> " << fun.result.strView();
+				out << " } -> { ";
+				first = true;
+				for (const auto& reslts: fun.result) {
+					if (!first) out << ", ";
+					out << reslts.strView();
+					first = false;
+				}
+				out << " }";
 			}
 
 			void operator()(const OpaqueType& type) const {
 				out << "type opaque: ";
 				out << type.name.strView() << " ";
-				out << type.size;
+				out << type.size.asInt();
 			}
 
 			void operator()(const ClassType& clazz) const {

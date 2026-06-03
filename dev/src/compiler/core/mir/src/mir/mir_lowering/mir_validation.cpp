@@ -176,16 +176,32 @@ namespace compiler::mir {
 							                               : std::tuple{ def, base::Ref(&local) };
 
 							auto get_pos = [&](auto local_ref) {
-								return helios::symbolPst(local_ref->helios_id.value())
-								    .value()
-								    .unlock(ctx)
-								    ->getSourcePosition();
+								return helios::maybeSymbolPst(local_ref->helios_id.value())
+								    .map([&](const auto& pst) {
+										return pst.unlock(ctx)->getStablePosition();
+									});
 							};
-							auto msg = makeBox<VariableShadowingError>(get_pos(shadowing));
-							msg->addAttachedMessage(
-								makeBox<ShadowedDeclarationNote>(get_pos(shadowed))
-							);
-							ctx.logInt(std::move(msg));
+							auto shadowing_pos = get_pos(shadowing);
+							auto shadowed_pos  = get_pos(shadowed);
+
+							if (shadowing_pos && shadowed_pos) {
+								auto msg = makeBox<VariableShadowingError>(*shadowing_pos);
+								msg->addAttachedMessage(
+									makeBox<ShadowedDeclarationNote>(*shadowed_pos)
+								);
+								ctx.logInt(std::move(msg));
+							} else {
+								ctx.logInt(makeBox<dia_int::PlaceholderError>(
+									"Variable declaration shadows a previous declaration.",
+									base::strConcat(
+										"The exact code location is unavailable because the "
+										"variable is compiler generated. ",
+										"The shadowing happened for the symbol `",
+										shadowing->getName(),
+										"`."
+									)
+								));
+							}
 							return base::BAD;
 						}
 					}

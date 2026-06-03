@@ -1,13 +1,13 @@
 use std::collections::HashMap;
 
-use crate::quackpack::core::fetcher::types;
-use crate::util::path_ops_ext::PathOpsExt;
+use httpmock::prelude::*;
+use tempfile::tempdir;
 
 use super::*;
 use crate::quackpack::core::Version;
+use crate::quackpack::core::fetcher::types;
 use crate::quackpack::schemas::registry;
-use httpmock::prelude::*;
-use tempfile::tempdir;
+use crate::util::path_ops_ext::PathOpsExt;
 
 fn create_mock_server() -> (MockServer, DuckContext) {
     let pkg1 = registry::Dependency {
@@ -61,8 +61,8 @@ fn create_mock_server() -> (MockServer, DuckContext) {
     let bar_256 = registry::Manifest {
         metadata: registry::Metadata {
             version: Version::new(2, 5, 6),
-            authors: vec!["Patryk Rogalski".into()],
-            license: "GLWTSPL".into(),
+            authors: vec!["Carly Shillingford".into()],
+            license: "MIT".into(),
             name: "bar".into(),
             description: "".into(),
         },
@@ -75,8 +75,8 @@ fn create_mock_server() -> (MockServer, DuckContext) {
     let foo_123 = registry::Manifest {
         metadata: registry::Metadata {
             version: Version::new(1, 2, 3),
-            authors: vec!["Patryk Rogalski".into()],
-            license: "GLWTSPL".into(),
+            authors: vec!["Carly Shillingford".into()],
+            license: "MIT".into(),
             name: "foo".into(),
             description: "".into(),
         },
@@ -89,8 +89,8 @@ fn create_mock_server() -> (MockServer, DuckContext) {
     let foo_125 = registry::Manifest {
         metadata: registry::Metadata {
             version: Version::new(1, 2, 5),
-            authors: vec!["Patryk Rogalski".into()],
-            license: "GLWTSPL".into(),
+            authors: vec!["Carly Shillingford".into()],
+            license: "MIT".into(),
             name: "foo".into(),
             description: "".into(),
         },

@@ -1,7 +1,7 @@
 # Playground
 duck_add_playground(panic panic_playground.cpp USES Base)
 duck_add_playground(clah clah_playground.cpp USES Clah Printer)
-duck_add_playground(count_tokens_cpp count_tokens_cpp_playground.cpp USES Filesystem TreeSitter Clah Printer)
+duck_add_playground(count_tokens_cpp count_tokens_cpp_playground.cpp USES Filesystem tree-sitter tree-sitter-cpp Clah Printer)
 duck_add_playground(count_tokens_duckling count_tokens_duckling_playground.cpp USES Filesystem TokenSource Clah Printer)
 duck_add_playground(fs_parser fs_parser_playground.cpp USES Base ModuleTree Clah)
 duck_add_playground(stack_trace stack_trace_playground.cpp USES Base)

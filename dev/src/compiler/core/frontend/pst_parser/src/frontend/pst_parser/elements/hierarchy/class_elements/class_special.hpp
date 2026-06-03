@@ -1,6 +1,8 @@
 #pragma once
 
 #include "../meta.hpp"
+#include "../not_statements/wrapper_elements/identifier_wrapper.hpp"
+#include "../not_statements/wrapper_elements/keyword_wrapper.hpp"
 #include "preamble.hpp"
 
 #include <base/extend_cpp/variant_match.hpp>
@@ -12,10 +14,6 @@ namespace pst {
 	 */
 	class ClassSpecial: public ClassStmt {
 	protected:
-		std::variant<tpc::Identifier, Keyword>
-			kind;  ///< What is after the `.`, It may be a keyword in some cases(for now it's only
-		           ///< the move constructor)
-
 		HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const override;
 
 	public:
@@ -28,25 +26,8 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		base::StrID getName() const {
-			using namespace tpc;
-			base::StrID res;
-			VARIANT_VISIT(
-				kind,
-				VISIT_CASE(Identifier, ident, res = base::StrID(ident)),
-				VISIT_CASE(Keyword, key, res = keywordToStr(key))
-			);
-			return res;
-		}
-
-		[[nodiscard]]
 		DeclKind isDeclaration() const final {
 			return DeclKind::Symbol;
-		}
-
-		[[nodiscard]]
-		base::Optional<base::StrID> getDeclSymbolName() const final {
-			return getName();
 		}
 
 		[[nodiscard]]

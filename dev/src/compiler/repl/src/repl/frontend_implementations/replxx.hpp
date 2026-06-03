@@ -1,22 +1,27 @@
 #pragma once
 
-#include "../helper_structs.hpp"
+#include "../helpers.hpp"
 
 #include <replxx.hxx>
 
 #include <set>
 #include <string>
+#include <string_view>
 
 namespace compiler::repl {
 	class FrontendReplxxImplementation final {
 	public:
-		FrontendReplxxImplementation();
+		explicit FrontendReplxxImplementation(
+			bool completions_enabled = true, bool bracketed_paste_enabled = true
+		);
 		~FrontendReplxxImplementation();
 
 		void        printWelcome() const;
 		std::string readLine();
 		void        printHistory() const;
+		void        addHistoryEntry(std::string_view entry);
 		void        clearHistory();
+		void        clearScreen();
 		void        printHelp() const;
 
 	private:
@@ -32,9 +37,10 @@ namespace compiler::repl {
 		/// Get the path to the persistent history file (~/.duckling_repl_history).
 		static std::string getHistoryFilePath();
 
-		replxx::Replxx m_replxx;
+		replxx::Replxx m_replxx{};
+		bool           m_completions_enabled;
 
 		/// Set of user-defined identifiers collected from previous inputs (for completion).
-		std::set<std::string> m_user_words;
+		std::set<std::string> m_user_words{};
 	};
 }

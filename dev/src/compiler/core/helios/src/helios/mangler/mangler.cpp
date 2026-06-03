@@ -15,6 +15,7 @@
 #include <helios/symbols/symbol_id.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/tsh/types.hpp>
+#include <helios_private/pst_layer/pst_parent.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 
@@ -187,11 +188,10 @@ namespace compiler::helios::mangler {
 
 		/**
 		 * @brief Returns symbol name prefixed with all enclosing it scopes to uniquely identify it
-		 * @note: See mangling-scheme.md for details
-		 *
-		 * @TODO: #2464 This is still a little simplified, there should probably be at least an
-		 * additional layer for things like macros and there will probably be other elements that
-		 * create scopes.
+		 * within a single module.
+		 * @note It does not mangle module/package names, pathPrefix and path functions are
+		 * responsible for that.
+		 * @note See mangling-scheme.md for details
 		 */
 		std::string symbolName(query::Context& ctx, SymID symbol_id) {
 			auto scope_id = scope(symbol_id);
@@ -201,31 +201,25 @@ namespace compiler::helios::mangler {
 			} else {
 				std::vector<std::string> path_parts;
 
-				auto current_pst = symbolPst(symbol_id).value().unlock(ctx);
-				while (true) {
-					auto ancestor     = current_pst;
-					auto ancestor_opt = ancestor->getParent();
+				auto ancestor     = maybeSymbolPst(symbol_id).value().unlock(ctx);
+				auto ancestor_opt = getPSTElementParent(ctx, ancestor);
 
-					while (ancestor_opt) {
-						ancestor = ancestor_opt.value().unlock(ctx);
+				while (ancestor_opt.isLangElement()) {
+					ancestor = ancestor_opt.getAsLangElement().unlock(ctx);
 
-						if (ancestor->getElementKind() == pst::ElementKind::Namespace) {
-							auto nmsp = ancestor.dynamicCast<pst::Namespace>().value();
-							path_parts.push_back(identifier(nmsp->getName().strView()));
-							current_pst = pst::Access<pst::LangElement>(ancestor);
-							break;
-						}
-						if (ancestor->getElementKind() == pst::ElementKind::Class) {
-							auto nmsp = ancestor.dynamicCast<pst::Class>().value();
-							path_parts.push_back(identifier(nmsp->getName().strView()));
-							current_pst = pst::Access<pst::LangElement>(ancestor);
-							break;
-						}
-
-						ancestor_opt = ancestor->getParent();
+					if (ancestor->getElementKind() == pst::ElementKind::Namespace) {
+						auto namespace_v = ancestor.dynamicCast<pst::Namespace>().value();
+						path_parts.push_back(
+							identifier(namespace_v->getName().unlock(ctx)->unwrap().strView())
+						);
+					} else if (ancestor->getElementKind() == pst::ElementKind::Class) {
+						auto class_v = ancestor.dynamicCast<pst::Class>().value();
+						path_parts.push_back(
+							identifier(class_v->getName().unlock(ctx)->unwrap().strView())
+						);
 					}
 
-					if (!ancestor_opt) break;
+					ancestor_opt = getPSTElementParent(ctx, ancestor);
 				}
 
 				std::string ret = "N";
@@ -295,18 +289,15 @@ namespace compiler::helios::mangler {
 						// If the symbol originates from the PST, use its path.
 						return path(ctx, symbol_id) + func(ctx, symbol_id);
 					}
-					variant_case_novalue(builtin::BuiltinFunctionData) {
-						// Builtins have a C linkage (CAbi), so they are handled by the
-						// `shouldMangle` check in `provide()`
-						CORE_UNREACHABLE();
-					}
 					variant_case(defgen::GeneratedSymbolData, gen_data) {
 						// If the symbol is generated, it has no path.
 						variant_match(gen_data.data) {
 							variant_case(defgen::GeneratedSymbolData::ImplicitConstructor, ctor) {
-								const auto path_to_class = path(ctx, ctor.class_symbol);
-								const auto ctor_suffix   = "Hic" + func(ctx, symbol_id) + "E";
-								return path_to_class + ctor_suffix;
+								const auto mangled_class = ctx.query<QueryMangledType>(
+									tsh::SymbolType<>::withDefaults(ctor.target_type)
+								);
+								const auto ctor_suffix = "Hic" + func(ctx, symbol_id) + "E";
+								return mangled_class->valueOrThrow().str() + ctor_suffix;
 							}
 							variant_case(
 								defgen::GeneratedSymbolData::DefaultClassConstructor, ctor
@@ -325,6 +316,17 @@ namespace compiler::helios::mangler {
 								           ->valueOrThrow()
 								           .str()
 								     + "E";
+							}
+							variant_case(defgen::GeneratedSymbolData::DefaultDestructor, dtor) {
+								// We do not have a reliable "path to type" in this case, so we omit
+								// it. Any ambiguities are solved by the function type anyway.
+								return "Hdd" + func(ctx, symbol_id) + "E";
+							}
+							variant_case(defgen::GeneratedSymbolData::ToStringMethod, to_string) {
+								// We do not have a reliable "path to type" in this case
+								// (esp. for simple types such as i32), so we omit it.
+								// Any ambiguities are solved by the function type anyway.
+								return "Hts" + func(ctx, symbol_id) + "E";
 							}
 							variant_case(
 								defgen::GeneratedSymbolData::ReplExpressionWrapper, repl_wrapper
@@ -510,6 +512,18 @@ namespace compiler::helios::mangler {
 			);
 		}
 
+		static std::string mangle(query::Context& ctx, tsh::ManyPointerAbstractType type) {
+			return base::strConcat(
+				"MP", ctx.query<QueryMangledType>({ type.getPointee() })->valueOrThrow().str(), "E"
+			);
+		}
+
+		static std::string mangle(query::Context& ctx, tsh::CPointerAbstractType type) {
+			return base::strConcat(
+				"CP", ctx.query<QueryMangledType>({ type.getPointee() })->valueOrThrow().str(), "E"
+			);
+		}
+
 		static std::string mangle(query::Context&, tsh::StringAbstractType) { return "s"; }
 
 		static std::string mangle(query::Context& ctx, tsh::FunctionAbstractType type) {
@@ -588,6 +602,10 @@ namespace compiler::helios::mangler {
 				return mangle(ctx, type.as<tsh::RawPointerAbstractType>());
 			case Pointer:
 				return mangle(ctx, type.as<tsh::PointerAbstractType>());
+			case ManyPointer:
+				return mangle(ctx, type.as<tsh::ManyPointerAbstractType>());
+			case CPointer:
+				return mangle(ctx, type.as<tsh::CPointerAbstractType>());
 			case String:
 				return mangle(ctx, type.as<tsh::StringAbstractType>());
 			case Function:
@@ -606,7 +624,7 @@ namespace compiler::helios::mangler {
 				return mangle(ctx, type.as<tsh::MetaAbstractType>());
 			default:
 				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-					base::strConcat("Cannot mangle type of kind: ", type.getKind()), std::nullopt
+					base::strConcat("Cannot mangle type of kind: ", type.getKind()), ""
 				));
 				return query::Failed();
 			}

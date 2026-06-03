@@ -15,7 +15,10 @@ vm::code::ValidProgram vm::code::ValidProgram::withBuiltins() {
 }
 
 vm::code::CodeCollection vm::code::ValidProgram::produceValidCodeCollection() const {
-	return { .functions            = std::ranges::to<std::vector>(function_map),
+	return { .functions = function_map | std::views::transform([](const auto& valid_function) {
+							  return valid_function.toNormal();
+						  })
+		                | std::ranges::to<std::vector>(),
 		     .types                = std::ranges::to<std::vector>(type_context.getTodTypes()),
 		     .global_data          = std::ranges::to<std::vector>(globals_map),
 		     .external_c_functions = std::ranges::to<std::vector>(ext_c_function_map) };
@@ -39,7 +42,8 @@ const vm::ObjIdNameMap<vm::code::GlobalData>& vm::code::ValidProgram::globals() 
 	return globals_map;
 }
 
-const vm::ObjIdNameMap<vm::code::Function>& vm::code::ValidProgram::functions() const {
+const vm::ObjIdNameMap<vm::code::valid_function::ValidFunction>& vm::code::ValidProgram::functions(
+) const {
 	return function_map;
 }
 
@@ -74,7 +78,7 @@ void vm::code::ValidProgram::insertFunctions(const std::vector<Function>& new_fu
 
 	for (const auto& func: new_functions) {
 		if (function_map.contains(func.name))
-			throw DuplicatedFunctionError(func, *function_map.at(func.name));
+			throw DuplicatedFunctionError(func, function_map.at(func.name)->toNormal());
 
 		auto validated_function = detail::validateAndExtractReachableCode(
 			type_context.getCurrentTypes(), globals_map, function_signatures, ext_c_function_map, func
@@ -94,11 +98,18 @@ void vm::code::ValidProgram::insertExternalCFunctions(
 
 		// Validate arguments exist and are trivially copyable
 
-		if (auto tp = type_context.getCurrentTypes().atMaybe(new_func.signature.result_type)) {
-			if (!tp.value()->isTriviallyCopyable())
-				throw ExtCArgumentTypeNotTriviallyCopyable(*tp.value());
-		} else
-			throw UnknownTypeError(opargs::Type(new_func.signature.result_type));
+		if (new_func.signature.result_types.size()) {
+			CORE_ASSERT(
+				new_func.signature.result_types.size() == 1, "C functions return only one type"
+			);
+			if (auto tp
+			    = type_context.getCurrentTypes().atMaybe(new_func.signature.result_types[0])) {
+				if (!tp.value()->isTriviallyCopyable())
+					throw ExtCArgumentTypeNotTriviallyCopyable(*tp.value());
+			} else
+				throw UnknownTypeError(opargs::Type(new_func.signature.result_types[0]));
+		}
+
 		for (const auto& type: new_func.signature.parameters)
 			if (auto tp = type_context.getCurrentTypes().atMaybe(type)) {
 				if (!tp.value()->isTriviallyCopyable())

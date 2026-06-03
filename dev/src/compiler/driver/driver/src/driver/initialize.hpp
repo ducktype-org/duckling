@@ -2,31 +2,9 @@
 
 #include "options.hpp"
 
-#include <base/types/ok_bad.hpp>
+#include <base/types/checked_okbad.hpp>
 
 namespace compiler::driver {
-
-	/**
-	 * Helper struct used to wrap the result of the initialization,
-	 * in a way that forces the caller to check it (to avoid silent failures).
-	 *
-	 * If status method is never called, the destructor will panic.
-	 */
-	struct InitializationResult final {
-	private:
-		base::OkBad result;
-		bool        checked = false;
-
-	public:
-		InitializationResult(base::OkBad result);
-		InitializationResult(const InitializationResult&) = delete;
-		InitializationResult(InitializationResult&&)      = delete;
-
-		~InitializationResult();
-
-		[[nodiscard]]
-		base::OkBad status();
-	};
 
 	/**
 	 * @brief Initializes the compiler with the given options.
@@ -44,5 +22,12 @@ namespace compiler::driver {
 	 * In case of failure, diagnostic messages will be reported in the global logger.
 	 * Driver exit should still be called in the failure case.
 	 */
-	InitializationResult initializeTheCompiler(CompilerModeOfOperationAndOptions options);
+	base::CheckedOkBad initializeTheCompiler(CompilerModeOfOperationAndOptions options);
+
+	/**
+	 * @brief initialize the global dia-int logger, used for reporting diagnostics during
+	 * initialization phase and in other places outside of queries. This should be called at the
+	 * very beginning of the initialization phase, before reporting any diagnostics
+	 */
+	void initializeGlobalLogger();
 }

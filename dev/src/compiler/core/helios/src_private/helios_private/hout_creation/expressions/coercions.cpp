@@ -2,8 +2,13 @@
 
 #include <ctv/numeric_value.hpp>
 #include <helios/hout/elements/expr.hpp>
+#include <helios/hout/visitors.hpp>
 #include <helios/tsh/queries/implicit_coercibility.hpp>
 #include <helios/tsh/queries/types.hpp>
+#include <helios/tsh/types.hpp>
+#include <helios_private/symbols/symbols.hpp>
+
+#include <base/except/exceptions.hpp>
 
 #include <query_framework/context/context.hpp>
 
@@ -54,12 +59,54 @@ namespace compiler::helios {
 
 			return std::move(expr);
 		}
+
+		// Performs element by element coercion.
+		Box<code::Expr> handleTupleCoercion(
+			query::Context& ctx, Box<code::Expr> expr, const tsh::SymbolType<>& to
+		) {
+			auto source_type = expr->expression_type.getType().as<tsh::TupleAbstractType>();
+			auto to_type     = to.getType().as<tsh::TupleAbstractType>();
+
+			auto tuple = makeBox<code::ReusableExpr>(ctx, std::move(expr));
+
+			std::vector<Box<code::Expr>> elements;
+			elements.reserve(source_type.getComponents().size());
+
+			for (usize i = 0; i < source_type.getComponents().size(); i++) {
+				// We create a tuple expression with the correct type, and then let the
+				// TupleExpr coercion handler handle the coercion to the target tuple type.
+				auto element = makeBox<code::AccessExpr>(
+					ctx,
+					tuple->origin.generatedFrom(),
+					tuple->clone(),
+					ctx.query<defgen::QueryGeneratedSymbol>(
+						{ .name = base::StrID{ base::strConcat("_", i + 1) },
+				          .generated_symbol_data
+				          = defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::Field{
+							  .parent_type = source_type, .index = i } } }
+					)
+				);
+
+				const auto& source_element_type = source_type.getComponents()[i];
+				const auto& to_element_type     = to_type.getComponents()[i];
+
+				auto element_coercion
+					= canCoerce(ctx, source_element_type, to_element_type).valueOrThrow();
+				CORE_ASSERT(
+					element_coercion.isValid(), "Coercion should always be valid at this point."
+				);
+
+				elements.emplace_back(element_coercion.getCoercion().coerce(ctx, element->clone()));
+			}
+
+			return makeBox<code::TupleExpr>(ctx, tuple->origin.generatedFrom(), std::move(elements));
+		}
 	}
 
 	IncompatibleTypesError::IncompatibleTypesError(
-		dia::SourcePosition  source_position,
-		Box<InteractiveType> actual_type,
-		Box<InteractiveType> expected_type
+		dia_int::StablePosition source_position,
+		Box<InteractiveType>    actual_type,
+		Box<InteractiveType>    expected_type
 	):
 		  MessageWithCodeFragmentAndCause(source_position) {
 		addArgument<dia_int::InteractiveArgument>("given_type", std::move(actual_type));
@@ -114,6 +161,9 @@ namespace compiler::helios {
 			return makeBox<code::LiftToTypeExpr>(
 				ctx, current_expr->origin.generatedFrom(), std::move(current_expr)
 			);
+		} else if (source_type.getKind() == tsh::Kind::Tuple
+		           and to.getType().getKind() == tsh::Kind::Tuple) {
+			return handleTupleCoercion(ctx, std::move(current_expr), to);
 		} else {
 			CORE_PANIC("Coercion should always be valid at this point.");
 		}
@@ -166,4 +216,79 @@ namespace compiler::helios {
 		);
 	}
 
+	BoxOrCRef<code::Expr> Coercion::coerceFromRef(query::Context& ctx, CRef<code::Expr> from) const {
+		CORE_ASSERT(isValidFor(from), "Invalid expression for this coercion.");
+		if (isEmptyCoercion()) return from;
+
+		Box<code::Expr> from_box = from->clone();
+		return coerce(ctx, std::move(from_box));
+	}
+
+	base::Optional<Box<code::Expr>> coerceFromBox(
+		query::Context&                                      ctx,
+		Box<code::Expr>                                      expr,
+		const tsh::SymbolType<>                              expected_type,
+		dia_int::StablePosition                              source_position,
+		base::Optional<std::function<void(query::Context&)>> log_error
+	) {
+		const tsh::SymbolType<> source_symbol_type = expr->expression_type.getSymbolType();
+		const auto coercion_qresult = canCoerce(ctx, source_symbol_type, expected_type);
+		if (coercion_qresult.hasFailed()) return {};
+
+		variant_match(coercion_qresult.valueOrThrow().getVariant()) {
+			variant_case(Coercion, coercion) { return coercion.coerce(ctx, std::move(expr)); }
+			variant_default {
+				logCoercionFailure(
+					ctx,
+					coercion_qresult,
+					source_symbol_type,
+					expected_type,
+					source_position,
+					std::move(log_error)
+				);
+				return {};
+			}
+		}
+		CORE_UNREACHABLE();
+	}
+
+	void logCoercionFailure(
+		query::Context&                                      ctx,
+		const CoercionQResult&                               coercion_qresult,
+		const tsh::SymbolType<>&                             source_symbol_type,
+		const tsh::SymbolType<>&                             expected_type,
+		dia_int::StablePosition                              source_position,
+		base::Optional<std::function<void(query::Context&)>> log_error
+	) {
+		variant_match(coercion_qresult.valueOrThrow().getVariant()) {
+			variant_case(InvalidCoercion, _) {
+				if (log_error.has_value()) {
+					(*log_error)(ctx);
+				} else {
+					ctx.logInt(makeBox<IncompatibleTypesError>(
+						source_position,
+						makeBox<InteractiveType>(ctx, source_symbol_type),
+						makeBox<InteractiveType>(ctx, expected_type)
+					));
+				}
+				return;
+			}
+			variant_case(TypeNotTriviallyCopyable, _) {
+				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					base::strConcat(
+						"Copy constructor for non-trivially-copyable type `",
+						source_symbol_type.withReferenceKind(tsh::ReferenceKind::Direct).toString(),
+						"`. This was caused by the need of dereferencing a value of type: "
+						"`",
+						source_symbol_type.toString(),
+						"`."
+					),
+					source_position
+				));
+				return;
+			}
+			variant_default { CORE_PANIC("Unhandled coercion result variant."); }
+		}
+		return;
+	}
 }

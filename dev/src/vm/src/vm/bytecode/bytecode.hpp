@@ -47,7 +47,7 @@ namespace vm::code {
 	};
 
 	struct FuncSignature final {
-		Identifier              result_type;
+		std::vector<Identifier> result_types;
 		std::vector<Identifier> parameters;
 
 		bool operator==(const FuncSignature& other) const noexcept = default;
@@ -86,5 +86,11 @@ namespace vm::code {
 		std::vector<TypeOfData>        types;
 		std::vector<GlobalData>        global_data;
 		std::vector<ExternalCFunction> external_c_functions;
+
+		/**
+		 * @brief Merges another CodeCollection into this one by appending all its elements.
+		 * Does not perform any assertions.
+		 */
+		void mergeFrom(CodeCollection&& other);
 	};
 }

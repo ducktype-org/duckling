@@ -10,7 +10,6 @@
 				"sourceEnd": 35
 			},
 			"While": {
-				"name": "<ANONYMOUS>",
 				"condition": {
 					"position": {
 						"sourceStart": 5,
@@ -27,67 +26,102 @@
 									"sourceStart": 6,
 									"sourceEnd": 20
 								},
-								"Comparison Chain": {
-									"sub-expressions": [
-										{
-											"position": {
-												"sourceStart": 6,
-												"sourceEnd": 10
-											},
-											"Binary Operator": {
-												"left_expr": {
-													"position": {
-														"sourceStart": 6,
-														"sourceEnd": 6
-													},
-													"Identifier Expression": {
-														"name": {
-															"Name": "a"
-														}
-													}
+								"Binary Operator": {
+									"left_expr": {
+										"position": {
+											"sourceStart": 6,
+											"sourceEnd": 10
+										},
+										"Binary Operator": {
+											"left_expr": {
+												"position": {
+													"sourceStart": 6,
+													"sourceEnd": 6
 												},
-												"operator": "+",
-												"right_expr": {
-													"position": {
-														"sourceStart": 10,
-														"sourceEnd": 10
-													},
-													"Identifier Expression": {
-														"name": {
-															"Name": "b"
+												"Identifier Expression": {
+													"name": {
+														"position": {
+															"sourceStart": 6,
+															"sourceEnd": 6
+														},
+														"Identifier Wrapper": {
+															"value": "a"
 														}
 													}
 												}
-											}
-										},
-										{
-											"position": {
-												"sourceStart": 14,
-												"sourceEnd": 20
 											},
-											"Binary Operator": {
-												"left_expr": {
-													"position": {
-														"sourceStart": 14,
-														"sourceEnd": 14
-													},
-													"Numeric Value Expr": {
-														"number": "4"
-													}
+											"operator": {
+												"position": {
+													"sourceStart": 8,
+													"sourceEnd": 8
 												},
-												"operator": "+",
-												"right_expr": {
-													"position": {
-														"sourceStart": 18,
-														"sourceEnd": 20
-													},
-													"Numeric Value Expr": {
-														"number": "0.8"
+												"Operator Wrapper": {
+													"value": "+"
+												}
+											},
+											"right_expr": {
+												"position": {
+													"sourceStart": 10,
+													"sourceEnd": 10
+												},
+												"Identifier Expression": {
+													"name": {
+														"position": {
+															"sourceStart": 10,
+															"sourceEnd": 10
+														},
+														"Identifier Wrapper": {
+															"value": "b"
+														}
 													}
 												}
 											}
 										}
-									]
+									},
+									"operator": {
+										"position": {
+											"sourceStart": 12,
+											"sourceEnd": 12
+										},
+										"Operator Wrapper": {
+											"value": "<"
+										}
+									},
+									"right_expr": {
+										"position": {
+											"sourceStart": 14,
+											"sourceEnd": 20
+										},
+										"Binary Operator": {
+											"left_expr": {
+												"position": {
+													"sourceStart": 14,
+													"sourceEnd": 14
+												},
+												"Numeric Value Expr": {
+													"number": "4"
+												}
+											},
+											"operator": {
+												"position": {
+													"sourceStart": 16,
+													"sourceEnd": 16
+												},
+												"Operator Wrapper": {
+													"value": "+"
+												}
+											},
+											"right_expr": {
+												"position": {
+													"sourceStart": 18,
+													"sourceEnd": 20
+												},
+												"Numeric Value Expr": {
+													"number": "0.8"
+												}
+											}
+										}
+									}
 								}
 							}
 						}
@@ -128,11 +162,25 @@
 													},
 													"Identifier Expression": {
 														"name": {
-															"Name": "c"
+															"position": {
+																"sourceStart": 28,
+																"sourceEnd": 28
+															},
+															"Identifier Wrapper": {
+																"value": "c"
+															}
 														}
 													}
 												},
-												"operator": "-",
+												"operator": {
+													"position": {
+														"sourceStart": 30,
+														"sourceEnd": 30
+													},
+													"Operator Wrapper": {
+														"value": "-"
+													}
+												},
 												"right_expr": {
 													"position": {
 														"sourceStart": 32,
@@ -140,7 +188,13 @@
 													},
 													"Identifier Expression": {
 														"name": {
-															"Name": "d"
+															"position": {
+																"sourceStart": 32,
+																"sourceEnd": 32
+															},
+															"Identifier Wrapper": {
+																"value": "d"
+															}
 														}
 													}
 												}
