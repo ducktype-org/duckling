@@ -47,16 +47,7 @@ namespace vm::low::cf {
 			segs.start_blocks.push_back(0);
 
 			calcPredecessors(cfg);
-			std::cout << "Predecessors calculated:\n";
-			for (usize i = 0; i < cfg.size(); ++i) {
-				std::cout << "Block " << i << ": ";
-				for (BasicBlockID pred: predecessors[i]) std::cout << pred << " ";
-				std::cout << "\n";
-			}
-			std::cout << "\n";
-
 			calcDominators(cfg);
-			std::cout << "Dominator tree calculated.\n";
 
 			std::vector<u32>          last_visited(cfg.size(), 0);
 			u32                       timestamp = 0;
@@ -187,11 +178,6 @@ namespace vm::low::cf {
 		void calcImmediateDominators(const ControlFlowGraph& cfg) {
 			imm_dom.assign(cfg.size(), undefined);
 			calcPostorder(cfg);
-			std::cout << "Postorder numbering:\n";
-			for (usize i = 0; i < cfg.size(); ++i) {
-				std::cout << "Block " << i << ": postorder index = " << postorder[i] << "\n";
-			}
-			std::cout << "\n";
 
 			imm_dom[0]   = 0;  // Entry block dominates itself
 			bool changed = true;
@@ -200,9 +186,6 @@ namespace vm::low::cf {
 				// Start from size - 2 to skip the entry block (it has no predecessors)
 				for (int i = (int)cfg.size() - 2; i >= 0; --i) {
 					BasicBlockID b = inv_postorder_map[i];
-					std::cout << "Calculating idom for block " << b << " with predecessors: ";
-					for (BasicBlockID pred: predecessors[b]) std::cout << pred << " ";
-					std::cout << "\n";
 					CORE_ASSERT(
 						!predecessors[b].empty(), "All blocks except entry should have predecessors"
 					);
@@ -218,11 +201,6 @@ namespace vm::low::cf {
 						changed    = true;
 					}
 				}
-				std::cout << "Current immediate dominators:\n";
-				for (usize i = 0; i < imm_dom.size(); ++i) {
-					std::cout << "Block " << i << ": idom = " << imm_dom[i] << "\n";
-				}
-				std::cout << "\n";
 			}
 		}
 
@@ -244,11 +222,6 @@ namespace vm::low::cf {
 		 */
 		void calcDominators(const ControlFlowGraph& cfg) {
 			calcImmediateDominators(cfg);
-			std::cout << "Immediate dominators:\n";
-			for (usize i = 0; i < imm_dom.size(); ++i) {
-				std::cout << "Block " << i << ": " << imm_dom[i] << "\n";
-			}
-			std::cout << "\n";
 
 			dom_tree.assign(cfg.size(), std::vector<BasicBlockID>());
 			for (usize block_id = 1; block_id < cfg.size(); ++block_id) {
