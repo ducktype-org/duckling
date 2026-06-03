@@ -136,10 +136,6 @@ namespace vm::code {
 		DuplicatedGlobalDataError, code::GlobalData, "Duplicated global data: "
 	);
 
-	DEFINE_DUPLICATED_ELEMENT_ERROR(
-		DuplicatedConstantDataError, code::ConstantData, "Duplicated constant: "
-	);
-
 	DEFINE_DUPLICATED_ELEMENT_ERROR(DuplicatedFunctionError, code::Function, "Duplicated function: ");
 	DEFINE_DUPLICATED_ELEMENT_ERROR(
 		DuplicatedExtCFunctionError, code::ExternalCFunction, "Duplicated external C function: "
@@ -401,6 +397,32 @@ namespace vm::code {
 	DEFINE_ARGUMENT_ERROR(UnknownGlobalNameError, "Unknown global name: ");
 	DEFINE_ARGUMENT_ERROR(UnknownFieldError, "Given data does not contain this field: ");
 	DEFINE_ARGUMENT_ERROR(NonPrimitiveCastError, "Cannot in-place cast to non-primitive type: ");
+
+	class GlobalCtorAndInitialValueConflictError: public ValidationError {
+	public:
+		constexpr static std::string_view ERR_MSG
+			= "Global variable cannot have both a constructor and an initial value: ";
+
+		GlobalCtorAndInitialValueConflictError(base::StrID global_name):
+			  ValidationError(base::strConcat(ERR_MSG, global_name)),
+			  global_name(global_name) {}
+
+		base::StrID global_name;
+	};
+
+	class InitialValueTypeMismatchError: public ValidationError {
+	public:
+		constexpr static std::string_view ERR_MSG
+			= "Initial value type does not match the declared type for global variable: ";
+
+		InitialValueTypeMismatchError(base::StrID global_name, base::StrID expected_type):
+			  ValidationError(base::strConcat(ERR_MSG, global_name, " expected: ", expected_type)),
+			  global_name(global_name),
+			  expected_type(expected_type) {}
+
+		base::StrID global_name;
+		base::StrID expected_type;
+	};
 	DEFINE_INSTRUCTION_ERROR(
 		VTableTypeMismatchError, "The vtable type does not match the object pointer type."
 	);

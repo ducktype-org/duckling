@@ -340,62 +340,7 @@ namespace vm::loader::parser {
 		};
 	}
 
-	Box<GlobalData> GlobalData::parse(F8ParserState& state) {
-		using namespace vm::code;
-		auto out = makeBox<GlobalData>(state.getPosition());
-
-		state.parse().one(lang_def::Keyword::BCGlobalData);
-
-		state.parse().one(&out->name);
-		state.parse().one(&out->type);
-
-		if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
-			state.logInt(makeBox<dia_int::PlaceholderError>(
-				"Expected `{` after here.", state.getPosition(-1)
-			));
-			return out;
-		}
-
-		state.goDown();
-		while (state.notEmpty()) {
-			tpc::Identifier value;
-			if (state[0].is(lang_def::Keyword::BCGlobalConstructor)) {
-				state.parse().all(
-					lang_def::Keyword::BCGlobalConstructor, lang_def::NamedOperator::Colon, &value
-				);
-				out->ctor_name = value;
-			} else if (state[0].is(lang_def::Keyword::BCGlobalDestructor)) {
-				state.parse().all(
-					lang_def::Keyword::BCGlobalDestructor, lang_def::NamedOperator::Colon, &value
-				);
-				out->dtor_name = value;
-				// } else if (key.value.str() == "initial_value") {
-				// 	// @TODO more general than unsigned long
-				// 	out->initial_value = opargs_parsers::parseInt<i64, int>(state);
-			}
-
-			if (state.empty()) break;
-			if (state[0].is(lang_def::Special::Comma)) {
-				state.parse().one(lang_def::Special::Comma);
-			} else {
-				state.logInt(makeBox<dia_int::PlaceholderError>(
-					"Expected comma or } after here.", state.getPosition()
-				));
-				state.tokens().skip();
-			}
-		}
-		state.goUpAndSkip();
-
-		auto end_position = state.getPosition().getEnd();
-		out->position     = dia::SourcePosition(
-            out->position.getLocation(), out->position.getStart(), end_position
-        );
-
-		state.parse().one(lang_def::Special::Semicolon);
-		return out;
-	}
-
-#define ERROR_CHECK() \
+	#define ERROR_CHECK() \
 	if (state.int_err->hasErrors()) return {};
 #define PARSE_ONE_CHECK(VALUE) \
 	state.parse().one(VALUE);  \
@@ -481,25 +426,77 @@ namespace vm::loader::parser {
 		}
 	}  // namespace
 
-	MBox<ConstantData> ConstantData::parse(F8ParserState& state) {
-		auto out = makeBox<ConstantData>(state.getPosition());
+	Box<GlobalData> GlobalData::parse(F8ParserState& state) {
+		using namespace vm::code;
+		auto out = makeBox<GlobalData>(state.getPosition());
 
-		PARSE_ONE_CHECK(lang_def::Keyword::BCConstant);
+		state.parse().one(lang_def::Keyword::BCGlobalData);
 
-		PARSE_ONE_CHECK(&out->name);
-		PARSE_ONE_CHECK(&out->type);
+		state.parse().one(&out->name);
+		state.parse().one(&out->type);
 
-		auto value_opt = parseConstantValue(state);
-		if (!value_opt) return {};
-		out->value = code::ConstantValue(std::move(value_opt));
+		if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
+			state.logInt(makeBox<dia_int::PlaceholderError>(
+				"Expected `{` after here.", state.getPosition(-1)
+			));
+			return out;
+		}
 
-		PARSE_ONE_CHECK(lang_def::Special::Semicolon);
+		state.goDown();
+		while (state.notEmpty()) {
+			if (state[0].is(lang_def::Keyword::BCGlobalConstructor)) {
+				tpc::Identifier value;
+				state.parse().all(
+					lang_def::Keyword::BCGlobalConstructor, lang_def::NamedOperator::Colon, &value
+				);
+				out->ctor_name = value;
+			} else if (state[0].is(lang_def::Keyword::BCGlobalDestructor)) {
+				tpc::Identifier value;
+				state.parse().all(
+					lang_def::Keyword::BCGlobalDestructor, lang_def::NamedOperator::Colon, &value
+				);
+				out->dtor_name = value;
+			} else if (state[0].is(lang_def::Keyword::BCIsConstant)) {
+				state.parse().one(lang_def::Keyword::BCIsConstant);
+				state.parse().one(lang_def::NamedOperator::Colon);
+				if (state[0].is(lang_def::Keyword::BCTrue)) {
+					out->is_constant = true;
+					state.tokens().next();
+				} else if (state[0].is(lang_def::Keyword::BCFalse)) {
+					out->is_constant = false;
+					state.tokens().next();
+				} else {
+					state.logInt(makeBox<dia_int::PlaceholderError>(
+						"Expected `true` or `false` after `is_constant:`.", state.getPosition()
+					));
+				}
+			} else if (state[0].is(lang_def::Keyword::BCInitialValue)) {
+				state.parse().one(lang_def::Keyword::BCInitialValue);
+				state.parse().one(lang_def::NamedOperator::Colon);
+				auto value_opt = parseConstantValue(state);
+				if (value_opt) {
+					out->initial_value = ConstantValue(std::move(value_opt));
+				}
+			}
+
+			if (state.empty()) break;
+			if (state[0].is(lang_def::Special::Comma)) {
+				state.parse().one(lang_def::Special::Comma);
+			} else {
+				state.logInt(makeBox<dia_int::PlaceholderError>(
+					"Expected comma or } after here.", state.getPosition()
+				));
+				state.tokens().skip();
+			}
+		}
+		state.goUpAndSkip();
 
 		auto end_position = state.getPosition().getEnd();
 		out->position     = dia::SourcePosition(
             out->position.getLocation(), out->position.getStart(), end_position
         );
 
+		state.parse().one(lang_def::Special::Semicolon);
 		return out;
 	}
 
@@ -1026,9 +1023,6 @@ namespace vm::loader::parser {
 			} else if (state[0].is(lang_def::Keyword::BCGlobalData)) {
 				auto global_data = GlobalData::parse(state);
 				out->global_data.emplace_back(std::move(global_data));
-			} else if (state[0].is(lang_def::Keyword::BCConstant)) {
-				auto constant = ConstantData::parse(state).toOptBox();
-				if (constant) out->constants.emplace_back(std::move(*constant));
 			} else if (state[0].is(lang_def::Keyword::BCFunction)) {
 				auto func = Func::parse(state).toOptBox();
 				if (func) out->functions.emplace_back(std::move(*func));
@@ -1084,12 +1078,6 @@ namespace vm::loader::parser {
 		for (auto& opcode: opcodes) opcode->dprint(out);
 	}
 
-	void GlobalData::dprint(std::ostream& out) const {
-		out << "global_data ";
-		out << name.value.strView() << " " << type.value.strView();
-		out << ";";
-	}
-
 	namespace {
 		class DprintConstValueVisitor final: public code::ConstVisitor {
 			std::ostream& out;
@@ -1124,12 +1112,32 @@ namespace vm::loader::parser {
 		};
 	}
 
-	void ConstantData::dprint(std::ostream& out) const {
-		out << "constant ";
-		out << name.value.strView() << " " << type.value.strView() << " ";
-		DprintConstValueVisitor value_visitor{ out };
-		value.data->acceptVisitor(value_visitor);
-		out << ";";
+	void GlobalData::dprint(std::ostream& out) const {
+		out << lang_def::keywordToStr(lang_def::Keyword::BCGlobalData).strView() << " ";
+		out << name.value.strView() << " " << type.value.strView() << " {";
+		if (is_constant) {
+			out << "\n    "
+				<< lang_def::keywordToStr(lang_def::Keyword::BCIsConstant).strView() << ": "
+				<< lang_def::keywordToStr(lang_def::Keyword::BCTrue).strView() << ",";
+		}
+		if (initial_value.has_value()) {
+			out << "\n    "
+				<< lang_def::keywordToStr(lang_def::Keyword::BCInitialValue).strView() << ": ";
+			DprintConstValueVisitor value_visitor{ out };
+			initial_value->data->acceptVisitor(value_visitor);
+			out << ",";
+		}
+		if (ctor_name.has_value()) {
+			out << "\n    "
+				<< lang_def::keywordToStr(lang_def::Keyword::BCGlobalConstructor).strView()
+				<< ": " << ctor_name->value.strView() << ",";
+		}
+		if (dtor_name.has_value()) {
+			out << "\n    "
+				<< lang_def::keywordToStr(lang_def::Keyword::BCGlobalDestructor).strView()
+				<< ": " << dtor_name->value.strView() << ",";
+		}
+		out << "\n};";
 	}
 
 	void Func::dprint(std::ostream& out) const {
@@ -1161,11 +1169,6 @@ namespace vm::loader::parser {
 
 		for (auto& global: global_data) {
 			global->dprint(out);
-			out << "\n";
-		}
-
-		for (auto& constant: constants) {
-			constant->dprint(out);
 			out << "\n";
 		}
 

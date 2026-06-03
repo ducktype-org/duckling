@@ -25,12 +25,6 @@ namespace vm::code {
 	void serializeGlobal(const GlobalData& type, std::ostream& out);
 
 	/**
-	 * @brief Serializes bytecode constant data into a parse-able by the DVM
-	 * text representation.
-	 */
-	void serializeConstant(const ConstantData& constant, std::ostream& out);
-
-	/**
 	 * @brief Serializes code collection into a parse-able by the DVM
 	 * text representation.
 	 */

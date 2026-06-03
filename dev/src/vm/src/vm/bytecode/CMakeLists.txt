@@ -5,6 +5,7 @@ add_files(
     builders/instruction_builder.cpp
     serializer/serializer.cpp
     validator/function_validator.cpp
+    validator/initial_value.cpp
     validator/local_stack_database.cpp
     validator/local_stack_database_builder.cpp
     validator/type_validator.cpp

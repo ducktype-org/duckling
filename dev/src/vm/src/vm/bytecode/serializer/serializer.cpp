@@ -239,50 +239,6 @@ namespace vm::code {
 		std::ostream&     out;
 		const GlobalData& global_data;
 
-	public:
-		GlobalDataSerializer(std::ostream& out, const GlobalData& global_data):
-			  out(out),
-			  global_data(global_data) {}
-
-		void display() {
-			out << lang_def::keywordToStr(lang_def::Keyword::BCGlobalData).strView() << ' ';
-			out << global_data.name.str.strView() << " " << global_data.type.str.strView() << " {";
-			if (global_data.ctor_name.has_value()) {
-				out << "\n    "
-					<< lang_def::keywordToStr(lang_def::Keyword::BCGlobalConstructor).strView()
-					<< ": " << global_data.ctor_name.value().str.strView() << ",\n";
-			}
-			if (global_data.dtor_name.has_value()) {
-				out << "\n    "
-					<< lang_def::keywordToStr(lang_def::Keyword::BCGlobalDestructor).strView()
-					<< ": " << global_data.dtor_name.value().str.strView() << ",\n";
-			}
-			out << '}' << lang_def::specialToStr(lang_def::Special::Semicolon).strView();
-		}
-	};
-
-	void serializeFunction(const Function& function, std::ostream& out) {
-		FunctionSerializer serializer(out, function);
-		serializer.display();
-		out << '\n';
-	}
-
-	void serializeType(const TypeOfData& type, std::ostream& out) {
-		TypeSerializer serializer(out, type);
-		serializer.display();
-		out << '\n';
-	}
-
-	void serializeGlobal(const GlobalData& global_data, std::ostream& out) {
-		GlobalDataSerializer serializer(out, global_data);
-		serializer.display();
-		out << '\n';
-	}
-
-	class ConstantDataSerializer final {
-		std::ostream&       out;
-		const ConstantData& constant;
-
 		class DataSerializer final: public code::ConstVisitor {
 			std::ostream& out;
 
@@ -315,31 +271,68 @@ namespace vm::code {
 			DataSerializer(std::ostream& out): out(out) {}
 		};
 
-
 	public:
-		ConstantDataSerializer(std::ostream& out, const ConstantData& constant):
+		GlobalDataSerializer(std::ostream& out, const GlobalData& global_data):
 			  out(out),
-			  constant(constant) {}
+			  global_data(global_data) {}
 
 		void display() {
-			out << lang_def::keywordToStr(lang_def::Keyword::BCConstant).strView() << ' ';
-			out << constant.name.str.strView() << " " << constant.type.str.strView() << " ";
-			DataSerializer data_serializer{ out };
-			constant.value.data->acceptVisitor(data_serializer);
-			out << lang_def::specialToStr(lang_def::Special::Semicolon).strView();
+			out << lang_def::keywordToStr(lang_def::Keyword::BCGlobalData).strView() << ' ';
+			out << global_data.name.str.strView() << " " << global_data.type.str.strView() << " {";
+			bool has_content = false;
+			auto maybe_newline = [&] {
+				if (has_content) out << ",";
+				out << "\n    ";
+				has_content = true;
+			};
+
+			if (global_data.is_constant) {
+				maybe_newline();
+				out << lang_def::keywordToStr(lang_def::Keyword::BCIsConstant).strView() << ": ";
+				out << lang_def::keywordToStr(lang_def::Keyword::BCTrue).strView();
+			}
+
+			if (global_data.initial_value.has_value()) {
+				maybe_newline();
+				out << lang_def::keywordToStr(lang_def::Keyword::BCInitialValue).strView() << ": ";
+				DataSerializer data_serializer{ out };
+				global_data.initial_value->data->acceptVisitor(data_serializer);
+			}
+
+			if (global_data.ctor_name.has_value()) {
+				maybe_newline();
+				out << lang_def::keywordToStr(lang_def::Keyword::BCGlobalConstructor).strView()
+					<< ": " << global_data.ctor_name.value().str.strView();
+			}
+			if (global_data.dtor_name.has_value()) {
+				maybe_newline();
+				out << lang_def::keywordToStr(lang_def::Keyword::BCGlobalDestructor).strView()
+					<< ": " << global_data.dtor_name.value().str.strView();
+			}
+			out << "\n}" << lang_def::specialToStr(lang_def::Special::Semicolon).strView();
 		}
 	};
 
-	void serializeConstant(const ConstantData& constant, std::ostream& out) {
-		ConstantDataSerializer serializer(out, constant);
+	void serializeFunction(const Function& function, std::ostream& out) {
+		FunctionSerializer serializer(out, function);
+		serializer.display();
+		out << '\n';
+	}
+
+	void serializeType(const TypeOfData& type, std::ostream& out) {
+		TypeSerializer serializer(out, type);
+		serializer.display();
+		out << '\n';
+	}
+
+	void serializeGlobal(const GlobalData& global_data, std::ostream& out) {
+		GlobalDataSerializer serializer(out, global_data);
 		serializer.display();
 		out << '\n';
 	}
 
 	void serializeCode(const CodeCollection& code, std::ostream& out) {
 		for (const auto& type: code.types) serializeType(type, out);
-		out << '\n';
-		for (const auto& constant: code.constants) serializeConstant(constant, out);
 		out << '\n';
 		for (const auto& global_data: code.global_data) serializeGlobal(global_data, out);
 		out << '\n';

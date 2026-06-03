@@ -6,6 +6,7 @@
 
 #include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/validator/function_validator.hpp>
+#include <vm/bytecode/validator/initial_value.hpp>
 #include <vm/bytecode/validator/type_validator.hpp>
 
 vm::code::ValidProgram vm::code::ValidProgram::withBuiltins() {
@@ -21,8 +22,7 @@ vm::code::CodeCollection vm::code::ValidProgram::produceValidCodeCollection() co
 		                | std::ranges::to<std::vector>(),
 		     .types                = std::ranges::to<std::vector>(type_context.getTodTypes()),
 		     .global_data          = std::ranges::to<std::vector>(globals_map),
-		     .external_c_functions = std::ranges::to<std::vector>(ext_c_function_map),
-		     .constants            = std::ranges::to<std::vector>(constants_map) };
+		     .external_c_functions = std::ranges::to<std::vector>(ext_c_function_map) };
 }
 
 vm::code::ValidProgram vm::code::ValidProgram::tryInsertCode(const code::CodeCollection& collection
@@ -53,7 +53,6 @@ void vm::code::ValidProgram::insertCode(const CodeCollection& collection) {
 	insertTypes(collection.types);
 	insertGlobals(collection.global_data);
 	insertExternalCFunctions(collection.external_c_functions);
-	insertConstants(collection.constants);
 	insertFunctions(collection.functions);
 }
 
@@ -62,15 +61,25 @@ void vm::code::ValidProgram::insertTypes(const std::vector<TypeOfData>& new_type
 }
 
 void vm::code::ValidProgram::insertGlobals(const std::vector<GlobalData>& new_globals) {
+	const auto& types = type_context.getCurrentTypes();
+
 	for (const auto& global: new_globals) {
 		if (globals_map.contains(global.name))
 			throw DuplicatedGlobalDataError(global, *globals_map.at(global.name));
-		if (!type_context.getCurrentTypes().contains(global.type))
+		if (!types.contains(global.type))
 			throw UnknownTypeError(opargs::Type(global.type));
+		if (global.ctor_name.has_value() && global.initial_value.has_value())
+			throw GlobalCtorAndInitialValueConflictError(global.name);
 		if (global.ctor_name.has_value() && !function_signatures.contains(global.ctor_name.value()))
 			throw MissingGlobalCtorDtorError(true, global.ctor_name.value(), global.name);
 		if (global.dtor_name.has_value() && !function_signatures.contains(global.dtor_name.value()))
 			throw MissingGlobalCtorDtorError(false, global.dtor_name.value(), global.name);
+		if (global.initial_value.has_value()) {
+			auto type_it = types.at(global.type);
+			detail::validateInitialValue(
+				global.initial_value.value(), type_it->getID(), types, global.name
+			);
+		}
 		globals_map.insert(global, global.name);
 	}
 }
@@ -125,20 +134,4 @@ void vm::code::ValidProgram::insertExternalCFunctions(
 
 const vm::ObjIdNameMap<vm::code::ExternalCFunction>& vm::code::ValidProgram::extCFunctions() const {
 	return ext_c_function_map;
-}
-
-const vm::ObjIdNameMap<vm::code::ConstantData>& vm::code::ValidProgram::constants() const {
-	return constants_map;
-}
-
-void vm::code::ValidProgram::insertConstants(
-	const std::vector<ConstantData>& new_constants
-) {
-	for (const auto& constant: new_constants) {
-		if (constants_map.contains(constant.name))
-			throw DuplicatedConstantDataError(constant, *constants_map.at(constant.name));
-		if (!type_context.getCurrentTypes().contains(constant.type))
-			throw UnknownTypeError(opargs::Type(constant.type));
-		constants_map.insert(constant, constant.name);
-	}
 }

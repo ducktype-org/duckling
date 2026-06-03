@@ -50,20 +50,15 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::parseFiles(
 					code_global.name         = global->name;
 					code_global.type         = global->type;
 					code_global.bytecode_pos = global->position;
+					code_global.is_constant  = global->is_constant;
 					if (global->ctor_name.has_value())
 						code_global.ctor_name = code::Identifier(global->ctor_name.value().value);
 
 					if (global->dtor_name.has_value())
 						code_global.dtor_name = code::Identifier(global->dtor_name.value().value);
+					if (global->initial_value.has_value())
+						code_global.initial_value = global->initial_value.value();
 					new_code.global_data.emplace_back(code_global);
-				}
-				for (const auto& constant: parsed_file.constants) {
-					code::ConstantData code_constant;
-					code_constant.name         = constant->name;
-					code_constant.type         = constant->type;
-					code_constant.value        = constant->value;
-					code_constant.bytecode_pos = constant->position;
-					new_code.constants.emplace_back(std::move(code_constant));
 				}
 				for (const auto& tp: parsed_file.types) new_code.types.push_back(tp->datatype);
 
@@ -108,8 +103,7 @@ std::expected<void, LoaderLogger> Loader::loadAndValidate(const code::CodeCollec
 ) {
 	// Skip if no new code was added.
 	if (code_collection.functions.empty() && code_collection.types.empty()
-	    && code_collection.global_data.empty() && code_collection.external_c_functions.empty()
-	    && code_collection.constants.empty()) {
+	    && code_collection.global_data.empty() && code_collection.external_c_functions.empty()) {
 		return {};
 	}
 

@@ -188,7 +188,8 @@ namespace lang_def {
 		BCMethodImplementations,
 		BCTrue,
 		BCFalse,
-		BCConstant,
+		BCIsConstant,
+		BCInitialValue,
 		COUNT,
 	};
 

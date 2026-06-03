@@ -45,6 +45,10 @@ namespace vm::code {
 
 		base::Optional<Identifier> ctor_name;
 		base::Optional<Identifier> dtor_name;
+
+		bool is_constant{ false };
+
+		base::Optional<ConstantValue> initial_value;
 	};
 
 	struct FuncSignature final {
@@ -79,17 +83,7 @@ namespace vm::code {
 	};
 
 	/**
-	 * @brief Represents a constant data entry with a name, type, and initial value.
-	 * Constants are read-only global data initialized from their value expression.
-	 */
-	struct ConstantData final: ElementBase {
-		Identifier    name;
-		Identifier    type;
-		ConstantValue value;
-	};
-
-	/**
-	 * @brief Represents a group of types, globals, functions and constants.
+	 * @brief Represents a group of types, globals, and functions.
 	 * @note It's not guaranteed that every code collection is valid.
 	 */
 	struct CodeCollection final {
@@ -97,7 +91,6 @@ namespace vm::code {
 		std::vector<TypeOfData>        types;
 		std::vector<GlobalData>        global_data;
 		std::vector<ExternalCFunction> external_c_functions;
-		std::vector<ConstantData>      constants;
 
 		/**
 		 * @brief Merges another CodeCollection into this one by appending all its elements.
