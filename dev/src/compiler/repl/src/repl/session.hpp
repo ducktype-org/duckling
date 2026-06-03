@@ -37,7 +37,10 @@ namespace compiler::repl {
 	 */
 	class ReplSession final {
 	public:
-		explicit ReplSession(bool completions_enabled = true);
+		explicit ReplSession(
+			bool completions_enabled     = FRONTEND_DEFAULT_COMPLETIONS_ENABLED,
+			bool bracketed_paste_enabled = FRONTEND_DEFAULT_BRACKETED_PASTE_ENABLED
+		);
 
 		/**
 		 * @brief Load a script file and execute its statements in the current REPL session.
