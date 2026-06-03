@@ -1,11 +1,13 @@
 #include <vm_tester_utils.hpp>
 
-#include <filesystem/file.hpp>
 #include <base/types/floats.hpp>
+
+#include <filesystem/file.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/const_pool.hpp>
 #include <vm/bytecode/instructions.hpp>
+#include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
 #include <vm/bytecode/type_of_data.hpp>
 #include <vm/loader/loader.hpp>
@@ -23,9 +25,7 @@ class SerializeParseRoundtripTest: public VmTestSuite {
 #define TESTER_CLASS SerializeParseRoundtripTest
 
 public:
-	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		TESTER_ADD_TEST(roundtripMinimalProgram);
-	}
+	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(roundtripMinimalProgram); TESTER_ADD_TEST(roundtripFromString);}
 
 private:
 	/**
@@ -64,7 +64,6 @@ private:
 		global.initial_value = ConstantValue::fromData(std::move(constant_array));
 		code.global_data.push_back(std::move(global));
 
-		// Function: main { i64, ptr_argv } -> { i64 } { mov_p64_imm ret0, 0; ret; }
 		Function func;
 		func.name = Identifier(base::StrID("main"));
 		func.signature.parameters.emplace_back(base::StrID("i64"));
@@ -96,8 +95,6 @@ private:
 		auto     result = Loader::parseCodeCollectionFromFiles({ vfile });
 
 		assertTrue(result.has_value(), "Parsing round-trip should succeed");
-		if (!result.has_value()) return;
-
 		const CodeCollection& parsed = result.value();
 
 		// Check types
@@ -128,8 +125,10 @@ private:
 		assertTrue(g.is_constant, "Global should be constant");
 		assertTrue(g.initial_value.has_value(), "Global should have initial_value");
 		auto initial_value = *g.initial_value;
-		auto cfst = dynamic_cast<vm::code::ConstantFixedSizeTable*>(initial_value.data.toOpt().value().get());
-		auto cc = dynamic_cast<vm::code::ConstantClass*>(cfst->elements.at(0).get());
+		auto cfst          = dynamic_cast<vm::code::ConstantFixedSizeTable*>(
+            initial_value.data.toOpt().value().get()
+        );
+		auto cc   = dynamic_cast<vm::code::ConstantClass*>(cfst->elements.at(0).get());
 		auto cimm = dynamic_cast<vm::code::ConstantImmediate*>(cc->fields.at(0).second.get());
 		ASSERT_EQUAL_PRINT(cimm->size.asInt(), 4);
 		int decoded_value = 0;
@@ -143,6 +142,42 @@ private:
 		const Function& f = parsed.functions[0];
 		assertEqual(f.name.str, base::StrID("main"), "Function name should be main");
 		assertEqual(f.body.size(), static_cast<usize>(2), "Function should have 2 instructions");
+	}
+
+	void roundtripFromString() {
+		std::string content = R"(type primitive: i8 1
+type primitive: i32 4
+type data: Point {
+    x: i32,
+    y: i32,
+    is_ok: i8,
+}
+
+type fixed_size_table: point_arr Point 2
+
+global_data answers point_arr {
+    is_constant: true,
+    initial_value: fixed_size_table [ class { x: 0x12345678, y: 0x87654321, is_ok: 0xFF }, class { x: 0x00000001, y: 0xFFFFFFFF, is_ok: 0x0A } ]
+};
+
+function main { i64, ptr_argv } -> { i64 } {
+    mov_p64_imm                ret0,        0;
+    ret                   ;
+}
+
+
+)";
+
+		fs::File vfile  = fs::FileManager::createRandomVirtualFile(content, ".dbc");
+		auto     result = Loader::parseCodeCollectionFromFiles({ vfile });
+
+		assertTrue(result.has_value(), "Parsing round-trip should succeed");
+		const CodeCollection& parsed = result.value();
+
+		std::ostringstream oss;
+		serializeCode(parsed, oss);
+		std::string serialized = oss.str();
+		ASSERT_EQUAL_PRINT(content, serialized);
 	}
 };
 

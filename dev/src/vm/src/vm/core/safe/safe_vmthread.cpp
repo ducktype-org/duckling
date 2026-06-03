@@ -554,17 +554,26 @@ namespace vm {
 		for (const auto& [global, id, name]: process_program->getGlobals().allData()) {
 			auto block_ref
 				= Ref(runtime_data.global_block_ref_buffer_base[global->global_block_idx]);
-			// Insert the global data if it hasn't been initialized; then run constructor if present
-			if (not process_memory.isGlobalInitialized(block_ref) && global->ctor_name.has_value()) {
-				try {
-					const auto& func
-						= *process_program->getFunctions().atMaybe(global->ctor_name.value()).value();
-					low::LowFuncData start_function = createStartFunctionFor(func, {});
-					executeFunction(start_function, func);
-					process_memory.setGlobalInitialized(block_ref);
-				} catch (const KillProcessException& e) {
-					respondExecutionRequest(api::ExecutionPanicked{ e.what() });
+			if (not process_memory.isGlobalInitialized(block_ref)) {
+				variant_match(global->init) {
+					variant_case(low::GlobalCtorDtor, ctor_dtor) {
+						if (ctor_dtor.ctor_name.has_value()) {
+							try {
+								const auto& func
+									= *process_program->getFunctions().atMaybe(ctor_dtor.ctor_name.value()).value();
+								low::LowFuncData start_function = createStartFunctionFor(func, {});
+								executeFunction(start_function, func);
+							} catch (const KillProcessException& e) {
+								respondExecutionRequest(api::ExecutionPanicked{ e.what() });
+							}
+						}
+					}
+					variant_case(low::GlobalInitialValue, value_init) {
+						// Copy the constant initial value bytes directly to the global's memory.
+						process_memory.intializeBlockFromConstValue(block_ref, value_init.value);
+					}
 				}
+				process_memory.setGlobalInitialized(block_ref);
 			}
 		}
 
@@ -604,13 +613,14 @@ namespace vm {
 		// earlier-created resources is destroyed first, preventing use-after-destruction and
 		// keeping teardown safe and logically consistent.
 		for (const auto& [global, id, name]: std::ranges::reverse_view(globals)) {
-			if (global->dtor_name.has_value()) {
+			auto* ctor_dtor = std::get_if<low::GlobalCtorDtor>(&global->init);
+			if (ctor_dtor && ctor_dtor->dtor_name.has_value()) {
 				try {
 					const auto& func = *executing_program->getFunctions()
-					                        .atMaybe(base::StrID(global->dtor_name.value()))
+					                        .atMaybe(base::StrID(ctor_dtor->dtor_name.value()))
 					                        .expect(
 												"Called function does not exist: "
-												+ global->dtor_name.value().str()
+												+ ctor_dtor->dtor_name.value().str()
 											);
 					low::LowFuncData start_function = createStartFunctionFor(func, {});
 					executeFunction(start_function, func);
