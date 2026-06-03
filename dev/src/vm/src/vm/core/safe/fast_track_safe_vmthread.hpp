@@ -25,10 +25,9 @@ namespace vm {
 		const FastTrackThreadData& getFTData() const { return ft_data; }
 
 		IMemory<ShadowEntry>&   getShadowDataMemory();
-		IMemory<ShadowPointer>& getShadowPointerMemory();
 
-		void updateFTGlobalPointers(ShadowEntry* global_data, ShadowPointer* global_ptrs) {
-			ft_data.updateGlobalPointers(global_data, global_ptrs);
+		void updateFTGlobalPointers(ShadowEntry* global_data) {
+			ft_data.updateGlobalPointers(global_data);
 		}
 
 	protected:

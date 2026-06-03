@@ -81,18 +81,27 @@ namespace vm {
 		// Type declaration:
 		static Type declareType(base::StrID name);
 
+		struct FieldDefinition {
+			base::StrID   name;
+			TypeRef       type;
+			ShadowOffset  shadow_offset;
+			PointerOffset pointer_offset;
+		};
+
 		// Type definition:
-		void definePrimitive(TypeSize size);
-		void definePointer(TypeCRef inner);
-		void defineFixedSizeTable(TypeRef inner, u64 table_size);
-		void defineDynamicTable(TypeRef inner);
+		void definePrimitive(TypeSize size, ShadowSize shadow_size, PointerSize pointer_size);
+		void definePointer(TypeCRef inner, ShadowSize shadow_size, PointerSize pointer_size);
+		void defineFixedSizeTable(TypeRef inner, u64 table_size, ShadowSize shadow_size, PointerSize pointer_size);
+		void defineDynamicTable(TypeRef inner, ShadowSize shadow_size, PointerSize pointer_size);
 		void defineData(
-			const std::vector<std::pair<base::StrID, TypeRef>>& fields_definitions,
-			base::Optional<InheritanceMetadata>                 inheritance_metadata
+			const std::vector<FieldDefinition>&  fields_definitions,
+			base::Optional<InheritanceMetadata>  inheritance_metadata,
+			ShadowSize                           shadow_size,
+			PointerSize                          pointer_size
 		);
-		void defineVariant(Bytes type_tag_size, const std::vector<TypeRef>& variants_definitions);
-		void defineFunction(std::vector<TypeCRef> parameters, std::vector<TypeCRef> result);
-		void defineOpaque(TypeSize size);
+		void defineVariant(Bytes type_tag_size, const std::vector<TypeRef>& variants_definitions, ShadowSize shadow_size, PointerSize pointer_size);
+		void defineFunction(std::vector<TypeCRef> parameters, std::vector<TypeCRef> result, ShadowSize shadow_size, PointerSize pointer_size);
+		void defineOpaque(TypeSize size, ShadowSize shadow_size, PointerSize pointer_size);
 
 		// Type finalization:
 		void finalize();
@@ -164,6 +173,9 @@ namespace vm {
 		base::Optional<PointerOffset> getFieldPointerOffsetByName(base::StrID field_name) const;
 		[[nodiscard]]
 		base::Optional<CRef<std::vector<kind::FieldDesc>>> getFields() const;
+
+		[[nodiscard]] u32 getShadowEntryIndex(u64 byte_offset) const;
+		void setByteToShadow(std::vector<u32> b2s);
 
 		// variant
 		base::Optional<Bytes>                 getTypeTagSizeBytes() const;

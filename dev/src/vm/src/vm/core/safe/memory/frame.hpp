@@ -15,7 +15,6 @@
 #include <vm/core/safe/memory/block.hpp>
 #include <vm/core/safe/memory/pointer.hpp>
 #include <vm/core/process/concurrency/fast_track/shadow_entry.hpp>
-#include <vm/core/process/concurrency/fast_track/shadow_pointer.hpp>
 
 #include <cstddef>
 
@@ -84,12 +83,6 @@ namespace vm {
 	 */
 	struct ShadowFrame {
 		ShadowEntry* local_shadow_data_stack = nullptr;
-		ShadowPointer* local_shadow_pointer_stack = nullptr;
-		ShadowBlock** local_shadow_block_ref_stack_base = nullptr;
-		ShadowBlock** local_shadow_block_ref_stack_end = nullptr;
-		ShadowPointerBlock** local_shadow_pointer_block_ref_stack_base = nullptr;
-		ShadowPointerBlock** local_shadow_pointer_block_ref_stack_end = nullptr;
-		u32 local_shadow_data_head = 0;
-		u32 local_shadow_pointer_head = 0;
+		u32          local_shadow_data_head  = 0;
 	};
 }

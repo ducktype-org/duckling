@@ -110,21 +110,6 @@ inline static Ref<vm::ShadowBlock> getShadowBlockRefFromArg(
 	}
 }
 
-[[nodiscard]] [[gnu::always_inline]]
-inline static Ref<vm::ShadowPointerBlock> getShadowPointerBlockRefFromArg(
-	vm::FastTrackSafeVMThread& ft_thread, vm::ShadowPointerBlock** local_stack_blocks, u64 arg
-) {
-	bool is_global = (arg >> 63) != 0;
-	u64 offset = arg & ~(1ULL << 63);
-	if (is_global) {
-		return static_cast<vm::FastTrackSafeVMProcess&>(ft_thread.getProcess())
-		    .getFTGlobals()
-		    .getGlobalShadowPointerBlock(offset);
-	} else {
-		return { local_stack_blocks[offset] };
-	}
-}
-
 /**
  * @brief Convenience macros for accessing FastTrack data from ft_* opcode functions.
  * The thread argument is always SafeVMThread& but ft_* opcodes only execute when a
@@ -134,54 +119,9 @@ inline static Ref<vm::ShadowPointerBlock> getShadowPointerBlockRefFromArg(
 #define FT_DATA   (FT_THREAD.ft_data)
 #define FT_RT     (FT_DATA.ft_runtime)
 
-#define READ_SHADOW_BLOCK_REF_FROM_ARG(ARG) \
-	getShadowBlockRefFromArg( \
-		FT_THREAD, sf->local_shadow_block_ref_stack_base, ARG \
-	)
-
-#define READ_SHADOW_POINTER_BLOCK_REF_FROM_ARG(ARG) \
-	getShadowPointerBlockRefFromArg( \
-		FT_THREAD, sf->local_shadow_pointer_block_ref_stack_base, ARG \
-	)
-
-inline static vm::ShadowPointer updateShadowPointerAssignment(
-	vm::FastTrackSafeVMThread& ft_thread, vm::ShadowPointer dst, vm::ShadowPointer src
-) {
-	if (dst.shadow_block != src.shadow_block) {
-		if (dst.shadow_block) {
-			ft_thread.getShadowDataMemory().decreaseBlockRefcount(dst.shadow_block.toOpt().value());
-		}
-		if (src.shadow_block) {
-			ft_thread.getShadowDataMemory().increaseBlockRefcount(src.shadow_block.toOpt().value());
-		}
-	}
-	if (dst.shadow_pointer_block != src.shadow_pointer_block) {
-		if (dst.shadow_pointer_block) {
-			ft_thread.getShadowPointerMemory().decreaseBlockRefcount(dst.shadow_pointer_block.toOpt().value());
-		}
-		if (src.shadow_pointer_block) {
-			ft_thread.getShadowPointerMemory().increaseBlockRefcount(src.shadow_pointer_block.toOpt().value());
-		}
-	}
-	return src;
-}
-
-
 [[nodiscard]] [[gnu::always_inline]]
 inline static bool isGlobalPlace(u64 place_arg) {
 	return (place_arg >> 63) != 0;
-}
-
-[[nodiscard]] [[gnu::always_inline]]
-inline static vm::ShadowPointer& getShadowPointerRef(
-	vm::Frame*, vm::FastTrackSafeVMThread& ft_thread, u64 place_arg
-) {
-	u64 offset = place_arg & ~(1ULL << 63);
-	if (isGlobalPlace(place_arg)) {
-		return ft_thread.getFTData().getGlobalShadowPointerBase()[offset];
-	} else {
-		return ft_thread.getFTData().getShadowFrame()->local_shadow_pointer_stack[offset];
-	}
 }
 
 [[nodiscard]] [[gnu::always_inline]]
@@ -196,7 +136,6 @@ inline static vm::ShadowEntry* getShadowEntryPtr(
 	}
 }
 
-#define GET_SHADOW_POINTER_REF(ARG) getShadowPointerRef(frame, FT_THREAD, ARG)
 #define GET_SHADOW_ENTRY_PTR(ARG)   getShadowEntryPtr(frame, FT_THREAD, ARG)
 
 /**

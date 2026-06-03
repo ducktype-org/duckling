@@ -1,7 +1,6 @@
 #pragma once
 
 #include <vm/core/process/concurrency/fast_track/shadow_entry.hpp>
-#include <vm/core/process/concurrency/fast_track/shadow_pointer.hpp>
 #include <vm/core/safe/memory/memory.hpp>
 
 #include <base/pointers/ref.hpp>
@@ -20,13 +19,10 @@ namespace vm {
 	 * SafeVMProcess carries no Fast Track overhead.
 	 */
 	class FastTrackGlobals {
-		IMemory<ShadowEntry>             shadow_data_memory;
-		IMemory<ShadowPointer>           shadow_pointer_memory;
+		IMemory<ShadowEntry>      shadow_data_memory;
 
-		std::vector<ShadowEntry>         global_shadow_data;
-		std::vector<ShadowPointer>       global_shadow_pointer;
-		std::vector<ShadowBlock*>        global_shadow_blocks;
-		std::vector<ShadowPointerBlock*> global_shadow_pointer_blocks;
+		std::vector<ShadowEntry>  global_shadow_data;
+		std::vector<ShadowBlock*> global_shadow_blocks;
 
 	public:
 		FastTrackGlobals()  = default;
@@ -44,18 +40,11 @@ namespace vm {
 		[[nodiscard]] ShadowEntry*   globalShadowDataBase() {
 			return global_shadow_data.data();
 		}
-		[[nodiscard]] ShadowPointer* globalShadowPointerBase() {
-			return global_shadow_pointer.data();
-		}
 
 		[[nodiscard]] Ref<ShadowBlock> getGlobalShadowBlock(u64 idx) {
 			return { global_shadow_blocks.at(idx) };
 		}
-		[[nodiscard]] Ref<ShadowPointerBlock> getGlobalShadowPointerBlock(u64 idx) {
-			return { global_shadow_pointer_blocks.at(idx) };
-		}
 
-		[[nodiscard]] IMemory<ShadowEntry>&   getShadowDataMemory()    { return shadow_data_memory; }
-		[[nodiscard]] IMemory<ShadowPointer>& getShadowPointerMemory() { return shadow_pointer_memory; }
+		[[nodiscard]] IMemory<ShadowEntry>&   getShadowDataMemory() { return shadow_data_memory; }
 	};
 }

@@ -161,9 +161,7 @@ namespace vm {
 			.arg_size            = 0,
 			.ret_size            = func.ret_size,
 			.arg_shadow_size     = 0,
-			.arg_pointer_size    = 0,
 			.ret_shadow_size     = func.ret_shadow_size,
-			.ret_pointer_size    = func.ret_pointer_size,
 			.parameters          = {},
 			.result_types        = func.result_types,
 			.instruction_mapping = {}
@@ -295,9 +293,7 @@ namespace vm {
 			.arg_size            = 0,
 			.ret_size            = func.ret_size,
 			.arg_shadow_size     = 0,
-			.arg_pointer_size    = 0,
 			.ret_shadow_size     = func.ret_shadow_size,
-			.ret_pointer_size    = func.ret_pointer_size,
 			.parameters          = {},
 			.result_types        = func.result_types,
 			.instruction_mapping = {}
@@ -478,7 +474,6 @@ namespace vm {
 						MAKE_BYTECODE_INSTRUCTION(ft_init_bany_type, 6, argv_ptr_type_arg),
 						MAKE_BYTECODE_INSTRUCTION(mov_p64_imm, 48, args.size()),
 						MAKE_BYTECODE_INSTRUCTION(mov_pptr_pptr, 56, 8),
-						MAKE_BYTECODE_INSTRUCTION(ft_mov_pptr_pptr, 56, 8),
 					}
 				);
 			} else {

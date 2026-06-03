@@ -14,12 +14,6 @@ namespace vm {
 				shadow_data_memory.decreaseBlockRefcount(Ref(block));
 			}
 		}
-		for (auto* block : global_shadow_pointer_blocks) {
-			if (block) {
-				shadow_pointer_memory.freeBlockData(Ref(block));
-				shadow_pointer_memory.decreaseBlockRefcount(Ref(block));
-			}
-		}
 	}
 
 	void FastTrackGlobals::initialize(CRef<low::ILowVMProgram> program) {
@@ -28,12 +22,8 @@ namespace vm {
 		global_shadow_data.resize(
 			std::max<size_t>(global_buffer_config.global_shadow_buffer_size, 1)
 		);
-		global_shadow_pointer.resize(
-			std::max<size_t>(global_buffer_config.global_pointer_buffer_size, 1)
-		);
 
 		global_shadow_blocks.resize(global_buffer_config.global_count, nullptr);
-		global_shadow_pointer_blocks.resize(global_buffer_config.global_count, nullptr);
 
 		for (const auto& [global, id, name] : program->getGlobals().allData()) {
 			auto block_idx = global->global_block_idx;
@@ -45,6 +35,8 @@ namespace vm {
 				);
 				shadow_data_memory.increaseBlockRefcount(block);
 				global_shadow_blocks[block_idx] = block.get();
+				// Set ft_shadow_block on the data block for this global
+				// (The data block itself is managed elsewhere; we just store the shadow here)
 			} else {
 				shadow_data_memory.updateBlockDataView(
 					Ref(global_shadow_blocks[block_idx]),
@@ -57,21 +49,6 @@ namespace vm {
 			for (u32 i = 0; i < global->type->getShadowSize(); ++i) {
 				start[i].last_write      = Epoch(api::ThreadID{ 0 }, 1);
 				start[i].last_read_epoch = Epoch(api::ThreadID{ 0 }, 1);
-			}
-
-			if (global_shadow_pointer_blocks[block_idx] == nullptr) {
-				auto ptr_block = shadow_pointer_memory.allocateDummy(
-					global->type,
-					global_shadow_pointer.data() + global->global_shadow_pointer_offset
-				);
-				shadow_pointer_memory.increaseBlockRefcount(ptr_block);
-				global_shadow_pointer_blocks[block_idx] = ptr_block.get();
-			} else {
-				shadow_pointer_memory.updateBlockDataView(
-					Ref(global_shadow_pointer_blocks[block_idx]),
-					{ global_shadow_pointer.data() + global->global_shadow_pointer_offset,
-					  global->type->getPointerSize() }
-				);
 			}
 		}
 	}

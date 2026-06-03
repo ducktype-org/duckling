@@ -2,6 +2,7 @@
 
 #include <base/collections/maps.hpp>
 #include <base/types/bits_and_bytes.hpp>
+#include <base/types/ints.hpp>
 
 #include <string_id/string_id.hpp>
 
@@ -10,6 +11,7 @@
 #include <vm/utils/stable_obj_id_name_map.hpp>
 
 #include <unordered_set>
+#include <vector>
 
 namespace vm::code::valid_type {
 	namespace finalized {
@@ -51,6 +53,8 @@ namespace vm::code::valid_type {
 		 */
 		struct Field final {
 			TypeSize    offset;
+			u32         shadow_offset  = 0;
+			u32         pointer_offset = 0;
 			base::StrID name;
 			ValidTypeID type;
 		};
@@ -131,6 +135,12 @@ namespace vm::code::valid_type {
 			 * @note Only classes and interfaces have this metadata.
 			 */
 			base::Optional<InheritanceMetadata> inheritance_metadata;
+
+			/**
+			 * @brief Flat array indexed by concrete byte offset (at 16-byte pointer size).
+			 * byte_to_shadow[i] = shadow entry index for the byte at offset i.
+			 */
+			std::vector<u32> byte_to_shadow;
 		};
 
 		/**

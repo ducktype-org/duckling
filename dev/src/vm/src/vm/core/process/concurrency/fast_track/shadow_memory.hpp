@@ -1,7 +1,6 @@
 #pragma once
 
 #include "shadow_entry.hpp"
-#include "shadow_pointer.hpp"
 
 #include <vm/core/safe/memory/memory.hpp>
 

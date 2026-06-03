@@ -68,75 +68,83 @@ namespace vm {
 	}
 
 	// Type definition:
-	void Type::definePrimitive(TypeSize pass_size) {
+	void Type::definePrimitive(TypeSize pass_size, ShadowSize pass_shadow_size, PointerSize pass_pointer_size) {
 		CORE_ASSERT(state == State::Declared, "Bad type define");
 		state = State::Defined;
 
 		kind_type    = Kind::Primitive;
 		size         = pass_size;
-		shadow_size  = 1;
-		pointer_size = 0;
+		shadow_size  = pass_shadow_size;
+		pointer_size = pass_pointer_size;
 		kind         = kind::Primitive();
 		if (name == "void") am_i_instantiable = false;
 	}
 
-	void Type::definePointer(TypeCRef inner) {
+	void Type::definePointer(TypeCRef inner, ShadowSize pass_shadow_size, PointerSize pass_pointer_size) {
 		CORE_ASSERT(state == State::Declared, "Bad type define");
 		state = State::Defined;
 
 		size         = POINTER_SIZE;
-		shadow_size  = 1;
-		pointer_size = 1;
+		shadow_size  = pass_shadow_size;
+		pointer_size = pass_pointer_size;
 		kind_type    = Kind::Pointer;
 		kind         = kind::Pointer{ inner };
 	}
 
-	void Type::defineFixedSizeTable(TypeRef inner, u64 element_count) {
+	void Type::defineFixedSizeTable(TypeRef inner, u64 element_count, ShadowSize pass_shadow_size, PointerSize pass_pointer_size) {
 		CORE_ASSERT(state == State::Declared, "Bad type define");
 		state = State::Defined;
 
-		kind_type = Kind::FixedSizeTable;
-		kind      = kind::FixedSizeTable{ .inner_type = inner, .element_count = element_count };
+		kind_type    = Kind::FixedSizeTable;
+		shadow_size  = pass_shadow_size;
+		pointer_size = pass_pointer_size;
+		kind         = kind::FixedSizeTable{ .inner_type = inner, .element_count = element_count };
 	}
 
-	void Type::defineDynamicTable(TypeRef inner) {
+	void Type::defineDynamicTable(TypeRef inner, ShadowSize pass_shadow_size, PointerSize pass_pointer_size) {
 		CORE_ASSERT(state == State::Declared, "Bad type define");
 		state = State::Defined;
 
 		kind_type         = Kind::DynamicTable;
-		shadow_size       = 1;
-		pointer_size      = 1;
+		shadow_size       = pass_shadow_size;
+		pointer_size      = pass_pointer_size;
 		kind              = kind::DynamicTable{ .inner_type = inner };
 		am_i_instantiable = false;
 	}
 
 	void Type::defineData(
-		const std::vector<std::pair<base::StrID, TypeRef>>& fields_definitions,
-		base::Optional<InheritanceMetadata>                 inheritance_metadata
+		const std::vector<FieldDefinition>&  fields_definitions,
+		base::Optional<InheritanceMetadata>  inheritance_metadata,
+		ShadowSize                           pass_shadow_size,
+		PointerSize                          pass_pointer_size
 	) {
 		CORE_ASSERT(state == State::Declared, "Bad type define");
 		state = State::Defined;
 
-		kind_type = Kind::Data;
-		auto data = kind::Data{};
-		for (auto [sub_name, sub_type]: fields_definitions) {
-			data.field_name_map.put(sub_name, data.fields.size());
-			// offset is set during finalization
+		kind_type    = Kind::Data;
+		shadow_size  = pass_shadow_size;
+		pointer_size = pass_pointer_size;
+		auto data    = kind::Data{};
+		for (const auto& field_def: fields_definitions) {
+			data.field_name_map.put(field_def.name, data.fields.size());
+			// byte offset is set during finalization; shadow/pointer offsets come from ValidType
 			data.fields.emplace_back(kind::FieldDesc{ .offset         = Offset(0),
-				.shadow_offset  = ShadowOffset(0),
-				.pointer_offset = PointerOffset(0),
-				.type           = sub_type });
+				.shadow_offset  = field_def.shadow_offset,
+				.pointer_offset = field_def.pointer_offset,
+				.type           = field_def.type });
 		}
 		data.inheritance_metadata = std::move(inheritance_metadata);
 		kind                      = data;
 	}
 
-	void Type::defineVariant(Bytes type_tag_size, const std::vector<TypeRef>& variants_definitions) {
+	void Type::defineVariant(Bytes type_tag_size, const std::vector<TypeRef>& variants_definitions, ShadowSize pass_shadow_size, PointerSize pass_pointer_size) {
 		CORE_ASSERT(state == State::Declared, "Bad type define");
 		CORE_ASSERT(variants_definitions.size() != 0, "Cannot define variant with no alternatives");
 		state = State::Defined;
 
 		kind_type    = Kind::Variant;
+		shadow_size  = pass_shadow_size;
+		pointer_size = pass_pointer_size;
 		auto variant = kind::Variant{};
 		for (const auto& type: variants_definitions) variant.alternatives.push_back(type);
 
@@ -144,26 +152,26 @@ namespace vm {
 		kind                  = variant;
 	}
 
-	void Type::defineFunction(std::vector<TypeCRef> parameters, std::vector<TypeCRef> result) {
+	void Type::defineFunction(std::vector<TypeCRef> parameters, std::vector<TypeCRef> result, ShadowSize pass_shadow_size, PointerSize pass_pointer_size) {
 		CORE_ASSERT(state == State::Declared, "Bad type define");
 		state = State::Defined;
 
 		size         = POINTER_SIZE;
-		shadow_size  = 1;
-		pointer_size = 1;
+		shadow_size  = pass_shadow_size;
+		pointer_size = pass_pointer_size;
 		kind_type    = Kind::Function;
 		kind         = kind::Function{ .parameters   = std::move(parameters),
 			                        .result_types = std::move(result) };
 	}
 
-	void Type::defineOpaque(TypeSize pass_size) {
+	void Type::defineOpaque(TypeSize pass_size, ShadowSize pass_shadow_size, PointerSize pass_pointer_size) {
 		CORE_ASSERT(state == State::Declared, "Bad type define");
 		state = State::Defined;
 
 		kind_type    = Kind::Opaque;
 		size         = pass_size;
-		shadow_size  = 1;
-		pointer_size = 0;
+		shadow_size  = pass_shadow_size;
+		pointer_size = pass_pointer_size;
 		kind         = kind::Opaque{};
 	}
 
@@ -178,47 +186,29 @@ namespace vm {
 		variant_match(kind) {
 			variant_case(kind::FixedSizeTable, fixed_size_table) {
 				fixed_size_table.inner_type->finalize();
-				this->size
-					= fixed_size_table.inner_type->getSize() * fixed_size_table.element_count;
-				this->shadow_size
-					= base::safeIntConv<ShadowSize>(fixed_size_table.inner_type->getShadowSize() * fixed_size_table.element_count);
-				this->pointer_size
-					= base::safeIntConv<PointerSize>(fixed_size_table.inner_type->getPointerSize() * fixed_size_table.element_count);
+				this->size = fixed_size_table.inner_type->getSize() * fixed_size_table.element_count;
+				// shadow_size and pointer_size are pre-set from ValidType via defineFixedSizeTable
 			}
 			variant_case(kind::Data, data) {
-				// calculate offset and size
-				Offset        offset(0);
-				ShadowOffset  shadow_offset(0);
-				PointerOffset pointer_offset(0);
+				// calculate byte offsets only; shadow/pointer offsets are pre-set from ValidType
+				Offset offset(0);
 				for (auto& field: data.fields) {
-					field.offset         = offset;
-					field.shadow_offset  = shadow_offset;
-					field.pointer_offset = pointer_offset;
+					field.offset = offset;
 					field.type->finalize();
 					offset += field.type->getSize();
-					shadow_offset += field.type->getShadowSize();
-					pointer_offset += field.type->getPointerSize();
 				}
-				this->size         = offset;
-				this->shadow_size  = shadow_offset;
-				this->pointer_size = pointer_offset;
+				this->size = offset;
 				if_opt_some(data.inheritance_metadata, imd) { inheritsFromImpl(imd); }
 				isInstantiableImpl(data);
 			}
 			variant_case(kind::Variant, variant) {
-				// calculate size
-				TypeSize    data_size(0);
-				ShadowSize  max_shadow_size(0);
-				PointerSize max_pointer_size(0);
+				// calculate byte size only; shadow/pointer sizes are pre-set from ValidType
+				TypeSize data_size(0);
 				for (auto& alternative: variant.alternatives) {
 					alternative->finalize();
-					data_size        = std::max(data_size, alternative->getSize());
-					max_shadow_size  = std::max(max_shadow_size, alternative->getShadowSize());
-					max_pointer_size = std::max(max_pointer_size, alternative->getPointerSize());
+					data_size = std::max(data_size, alternative->getSize());
 				}
-				this->size         = variant.type_tag_size + data_size;
-				this->shadow_size  = 1 + max_shadow_size;
-				this->pointer_size = max_pointer_size;
+				this->size = variant.type_tag_size + data_size;
 				isInstantiableImpl(variant);
 			}
 			variant_default {}
@@ -396,4 +386,46 @@ namespace vm {
 		}
 		CORE_UNREACHABLE();
 	}
+	u32 Type::getShadowEntryIndex(u64 byte_offset) const {
+		variant_match(kind) {
+			variant_case(kind::Data, data) {
+				if (byte_offset < data.byte_to_shadow.size())
+					return data.byte_to_shadow[byte_offset];
+				return 0;
+			}
+			variant_case(kind::FixedSizeTable, table) {
+				auto inner = table.inner_type;
+				u64 inner_bytes  = inner->getSize().asInt();
+				u64 inner_shadow = inner->getShadowSize();
+				if (inner_bytes == 0) return 0;
+				u64 idx = byte_offset / inner_bytes;
+				u64 rem = byte_offset % inner_bytes;
+				return static_cast<u32>(idx * inner_shadow + inner->getShadowEntryIndex(rem));
+			}
+			variant_case(kind::DynamicTable, table) {
+				auto inner = table.inner_type;
+				u64 inner_bytes  = inner->getSize().asInt();
+				u64 inner_shadow = inner->getShadowSize();
+				if (inner_bytes == 0) return 0;
+				u64 idx = byte_offset / inner_bytes;
+				u64 rem = byte_offset % inner_bytes;
+				return static_cast<u32>(idx * inner_shadow + inner->getShadowEntryIndex(rem));
+			}
+			variant_default {
+				return 0;
+			}
+		}
+		CORE_UNREACHABLE();
+	}
+
+	void Type::setByteToShadow(std::vector<u32> b2s) {
+		variant_match(kind) {
+			variant_case(kind::Data, data) {
+				data.byte_to_shadow = std::move(b2s);
+			}
+			variant_default {}
+		}
+	}
+
+
 }

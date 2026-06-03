@@ -67,10 +67,7 @@ namespace vm {
 		ft_globals.initialize(program);
 
 		for (auto& thread: ft_vm_threads) {
-			thread.updateFTGlobalPointers(
-				ft_globals.globalShadowDataBase(),
-				ft_globals.globalShadowPointerBase()
-			);
+			thread.updateFTGlobalPointers(ft_globals.globalShadowDataBase());
 		}
 	}
 }

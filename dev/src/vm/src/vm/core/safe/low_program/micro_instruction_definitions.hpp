@@ -662,34 +662,17 @@ DEF_MICRO_INSTR(ext_p64_type, vm::low::opargs::Place64, vm::low::opargs::Type)
 DEF_MICRO_INSTR(ext_type_field, vm::low::opargs::Type, vm::low::opargs::Field)
 DEF_MICRO_INSTR(ext_type_p64, vm::low::opargs::Type, vm::low::opargs::Place64)
 DEF_MICRO_INSTR(ext_type_type, vm::low::opargs::Type, vm::low::opargs::Type)
-DEF_MICRO_INSTR(ext_sfield_spfield, vm::low::opargs::ShadowField, vm::low::opargs::ShadowPointerField)
 
 
 // ========= Fast Track Definitions ========
 
-// 4.1: Propagation Instructions
-// expects `ext_field` followed by `ext_sfield_spfield` to be the next instructions
-DEF_MICRO_INSTR(ft_structLea_pptr_pptr, vm::low::opargs::PlaceShadowPointerAny, vm::low::opargs::PlaceShadowPointerAny)
-
-// expects `ext_p64_type` to be the next instruction
-DEF_MICRO_INSTR(ft_tableIdxLea_pptr_pptr, vm::low::opargs::PlaceShadowPointerAny, vm::low::opargs::PlaceShadowPointerAny)
-
-// expects `ext_p64_type` to be the next instruction
-DEF_MICRO_INSTR(ft_ptrAdd_pptr_pptr, vm::low::opargs::PlaceShadowPointerAny, vm::low::opargs::PlaceShadowPointerAny)
-DEF_MICRO_INSTR(ft_ptrSub_pptr_pptr, vm::low::opargs::PlaceShadowPointerAny, vm::low::opargs::PlaceShadowPointerAny)
-
-// 4.3: Data Movement Instructions
-DEF_MICRO_INSTR(ft_load_pptr_pptr, vm::low::opargs::PlaceShadowPointerAny, vm::low::opargs::PlaceShadowPointerAny)
-DEF_MICRO_INSTR(ft_store_pptr_pptr, vm::low::opargs::PlaceShadowPointerAny, vm::low::opargs::PlaceShadowPointerAny)
-DEF_MICRO_INSTR(ft_store_pptr_bany, vm::low::opargs::PlaceShadowPointerAny, vm::low::opargs::PlaceBlockAny)
-DEF_MICRO_INSTR(ft_memCopy, vm::low::opargs::PlaceShadowPointerAny, vm::low::opargs::PlaceShadowPointerAny)
-DEF_MICRO_INSTR(ft_mov_pptr_pptr, vm::low::opargs::PlaceShadowPointerAny, vm::low::opargs::PlaceShadowPointerAny)
-DEF_MICRO_INSTR(ft_setNull_pptr, vm::low::opargs::PlaceShadowPointerAny)
-
+// 4.3: Data Movement
+DEF_MICRO_INSTR(ft_store_pptr_bany, vm::low::opargs::PlacePtr, vm::low::opargs::PlaceBlockAny)
+DEF_MICRO_INSTR(ft_memCopy, vm::low::opargs::PlacePtr, vm::low::opargs::PlacePtr)
 
 // 4.4: Allocation & Initialization
-DEF_MICRO_INSTR(ft_alloc_pptr_type, vm::low::opargs::PlaceShadowPointerAny, vm::low::opargs::Type)
-DEF_MICRO_INSTR(ft_free_pptr, vm::low::opargs::PlaceShadowPointerAny)
+DEF_MICRO_INSTR(ft_alloc_pptr_type, vm::low::opargs::PlacePtr, vm::low::opargs::Type)
+DEF_MICRO_INSTR(ft_free_pptr, vm::low::opargs::PlacePtr)
 DEF_MICRO_INSTR(ft_init_bany_type, vm::low::opargs::PlaceBlockAny, vm::low::opargs::Type)
 DEF_MICRO_INSTR(ft_deinit)
 DEF_MICRO_INSTR(ft_call_func, vm::low::opargs::FunctionID)
@@ -700,32 +683,28 @@ DEF_MICRO_INSTR(ft_placeRead, vm::low::opargs::PlaceShadowAny)
 DEF_MICRO_INSTR(ft_placeWrite, vm::low::opargs::PlaceShadowAny)
 DEF_MICRO_INSTR(ft_placeCRead, vm::low::opargs::PlaceShadowAny)
 DEF_MICRO_INSTR(ft_placeCWrite, vm::low::opargs::PlaceShadowAny)
-DEF_MICRO_INSTR(ft_ref_pptr_bany, vm::low::opargs::PlaceShadowPointerAny, vm::low::opargs::PlaceBlockAny)
 
 // 5.2: Direct Heap/Struct Instrumentation
-DEF_MICRO_INSTR(ft_structRead, vm::low::opargs::PlaceShadowPointerAny, vm::low::opargs::ShadowField)
-DEF_MICRO_INSTR(ft_structWrite, vm::low::opargs::PlaceShadowPointerAny, vm::low::opargs::ShadowField)
-DEF_MICRO_INSTR(ft_arrayRead, vm::low::opargs::PlaceShadowPointerAny, vm::low::opargs::Place64)
-DEF_MICRO_INSTR(ft_arrayWrite, vm::low::opargs::PlaceShadowPointerAny, vm::low::opargs::Place64)
+DEF_MICRO_INSTR(ft_structRead, vm::low::opargs::PlacePtr, vm::low::opargs::Type)
+DEF_MICRO_INSTR(ft_structWrite, vm::low::opargs::PlacePtr, vm::low::opargs::Type)
+DEF_MICRO_INSTR(ft_arrayRead, vm::low::opargs::PlacePtr, vm::low::opargs::Place64)
+DEF_MICRO_INSTR(ft_arrayWrite, vm::low::opargs::PlacePtr, vm::low::opargs::Place64)
 
 // 5.3: Stack Struct Instrumentation
-DEF_MICRO_INSTR(ft_structLea_pptr_pste, vm::low::opargs::PlaceShadowPointerAny, vm::low::opargs::PlaceShadowBlockStructure)
-DEF_MICRO_INSTR(ft_structRead_pste, vm::low::opargs::PlaceShadowBlockStructure, vm::low::opargs::ShadowField)
-DEF_MICRO_INSTR(ft_structWrite_pste, vm::low::opargs::PlaceShadowBlockStructure, vm::low::opargs::ShadowField)
-DEF_MICRO_INSTR(ft_mov_pste_pste, vm::low::opargs::PlaceShadowBlockStructure, vm::low::opargs::PlaceShadowBlockStructure)
+DEF_MICRO_INSTR(ft_structRead_pste, vm::low::opargs::PlaceBlockStructure, vm::low::opargs::ShadowField)
+DEF_MICRO_INSTR(ft_structWrite_pste, vm::low::opargs::PlaceBlockStructure, vm::low::opargs::ShadowField)
+DEF_MICRO_INSTR(ft_mov_pste_pste, vm::low::opargs::PlaceBlockStructure, vm::low::opargs::PlaceBlockStructure)
 
 // 5.4: Stack Fixed-Size Table Instrumentation
-DEF_MICRO_INSTR(ft_fixedSizeTableIdxLea_pptr_pfst, vm::low::opargs::PlaceShadowPointerAny, vm::low::opargs::PlaceShadowBlockFSTable)
-DEF_MICRO_INSTR(ft_arrayRead_pfst, vm::low::opargs::PlaceShadowBlockFSTable, vm::low::opargs::Place64)
-DEF_MICRO_INSTR(ft_arrayWrite_pfst, vm::low::opargs::PlaceShadowBlockFSTable, vm::low::opargs::Place64)
-DEF_MICRO_INSTR(ft_mov_pfst_pfst, vm::low::opargs::PlaceShadowBlockFSTable, vm::low::opargs::PlaceShadowBlockFSTable)
-DEF_MICRO_INSTR(ft_dynTableReAlloc, vm::low::opargs::PlaceShadowPointerAny, vm::low::opargs::Type)
+DEF_MICRO_INSTR(ft_arrayRead_pfst, vm::low::opargs::PlaceBlockFSTable, vm::low::opargs::Place64)
+DEF_MICRO_INSTR(ft_arrayWrite_pfst, vm::low::opargs::PlaceBlockFSTable, vm::low::opargs::Place64)
+DEF_MICRO_INSTR(ft_mov_pfst_pfst, vm::low::opargs::PlaceBlockFSTable, vm::low::opargs::PlaceBlockFSTable)
+DEF_MICRO_INSTR(ft_dynTableReAlloc, vm::low::opargs::PlacePtr, vm::low::opargs::Type)
 
 // 5.5: Stack & Heap Variant Instrumentation
-DEF_MICRO_INSTR(ft_variantSetInner_psbvnt_type, vm::low::opargs::PlaceShadowBlockVariant, vm::low::opargs::Type)
-DEF_MICRO_INSTR(ft_variantGetInner_pptr_psbvnt, vm::low::opargs::PlaceShadowPointerAny, vm::low::opargs::PlaceShadowBlockVariant)
-DEF_MICRO_INSTR(ft_variantSetInner_pptr_type, vm::low::opargs::PlaceShadowPointerAny, vm::low::opargs::Type)
-DEF_MICRO_INSTR(ft_variantGetInner_pptr_pptr, vm::low::opargs::PlaceShadowPointerAny, vm::low::opargs::PlaceShadowPointerAny)
+DEF_MICRO_INSTR(ft_variantSetInner_psbvnt_type, vm::low::opargs::PlaceBlockVariant, vm::low::opargs::Type)
+DEF_MICRO_INSTR(ft_variantSetInner_pptr_type, vm::low::opargs::PlacePtr, vm::low::opargs::Type)
+DEF_MICRO_INSTR(ft_variantTagRead_pptr, vm::low::opargs::PlacePtr)
 
 // ========= MISC ========
 

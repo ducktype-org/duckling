@@ -121,6 +121,15 @@ namespace vm::code::valid_type {
 
 		[[nodiscard]] TypeSize getSize() const;
 
+		[[nodiscard]] ShadowSize  getShadowSize()  const;
+		[[nodiscard]] PointerSize getPointerSize() const;
+
+		// O(1) lookup: shadow entry index for any concrete byte offset within this structure type.
+		[[nodiscard]] u32 getShadowOffsetForByteOffset(u32 byte_offset) const;
+
+		[[nodiscard]] base::Optional<u32> getFieldShadowOffsetByName(base::StrID field_name) const;
+		[[nodiscard]] base::Optional<u32> getFieldPointerOffsetByName(base::StrID field_name) const;
+
 		bool operator==(const ValidType& other) const;
 
 		bool operator==(const ValidTypeID& other_id) const;
@@ -160,7 +169,9 @@ namespace vm::code::valid_type {
 		 */
 		bool is_trivially_copyable = true;
 
-		TypeSize size = TypeSize(Bytes(0), 0);
+		TypeSize    size          = TypeSize(Bytes(0), 0);
+		ShadowSize  shadow_size   = 0;
+		PointerSize pointer_size  = 0;
 
 		ValidType(base::StrID name, ValidTypeID id);
 

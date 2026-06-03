@@ -40,17 +40,13 @@ namespace vm::low {
 		usize ret_size;
 
 		usize arg_shadow_size;
-		usize arg_pointer_size;
 		usize ret_shadow_size;
-		usize ret_pointer_size;
 
 		std::vector<TypeCRef> parameters;
 		std::vector<TypeCRef> result_types;
 
 		std::vector<u32> shadow_data_offsets{};
-		std::vector<u32> shadow_pointer_offsets{};
 		std::vector<u32> block_shadow_data_offsets{};
-		std::vector<u32> block_shadow_pointer_offsets{};
 
 		/**
 		 * @brief Range of instructions
@@ -98,8 +94,7 @@ namespace vm::low {
 		/// The shadow data logical offset of the global variable's data in the global shadow buffer.
 		usize global_shadow_data_offset;
 
-		/// The shadow pointer logical offset of the global variable's data in the global shadow buffer.
-		usize global_shadow_pointer_offset;
+
 	};
 
 	/**
@@ -139,8 +134,7 @@ namespace vm::low {
 		struct GlobalBufferConfig {
 			Bytes buffer_size;   /// The sum of sizes of all the global variables in the program.
 			usize global_count;  /// The count of global variables in the program
-			usize global_shadow_buffer_size  = 0;
-			usize global_pointer_buffer_size = 0;
+			usize global_shadow_buffer_size = 0;
 		};
 
 		/**
@@ -152,14 +146,10 @@ namespace vm::low {
 		[[nodiscard]]
 		virtual const std::vector<u32>& getGlobalShadowDataOffsets() const = 0;
 
-		[[nodiscard]]
-		virtual const std::vector<u32>& getGlobalShadowPointerOffsets() const = 0;
 
 		[[nodiscard]]
 		virtual const std::vector<u32>& getGlobalBlockShadowDataOffsets() const = 0;
 
-		[[nodiscard]]
-		virtual const std::vector<u32>& getGlobalBlockShadowPointerOffsets() const = 0;
 
 		virtual ~ILowVMProgram() = default;
 	};
@@ -199,27 +189,20 @@ namespace vm::low {
 		}
 
 		GlobalBufferConfig getGlobalBufferConfig() const override {
-			return { .buffer_size                = global_buffer_size,
-				     .global_count               = global_count,
-				     .global_shadow_buffer_size  = global_shadow_buffer_size,
-				     .global_pointer_buffer_size = global_shadow_pointer_size };
+			return { .buffer_size               = global_buffer_size,
+				     .global_count              = global_count,
+				     .global_shadow_buffer_size = global_shadow_buffer_size };
 		}
 
 		const std::vector<u32>& getGlobalShadowDataOffsets() const override {
 			return global_shadow_data_offsets;
 		}
 
-		const std::vector<u32>& getGlobalShadowPointerOffsets() const override {
-			return global_shadow_pointer_offsets;
-		}
 
 		const std::vector<u32>& getGlobalBlockShadowDataOffsets() const override {
 			return global_block_shadow_data_offsets;
 		}
 
-		const std::vector<u32>& getGlobalBlockShadowPointerOffsets() const override {
-			return global_block_shadow_pointer_offsets;
-		}
 
 	private:
 		LowVMProgram()                                  = default;
@@ -229,12 +212,9 @@ namespace vm::low {
 		ObjIdNameMap<LowGlobalData, GlobalDataID> global_data{};
 		Bytes                                     global_buffer_size         = Bytes(0);
 		usize                                     global_count               = 0;
-		usize                                     global_shadow_buffer_size  = 0;
-		usize                                     global_shadow_pointer_size = 0;
+		usize                                     global_shadow_buffer_size = 0;
 		std::vector<u32>                          global_shadow_data_offsets{};
-		std::vector<u32>                          global_shadow_pointer_offsets{};
 		std::vector<u32>                          global_block_shadow_data_offsets{};
-		std::vector<u32>                          global_block_shadow_pointer_offsets{};
 
 		// Contains all method names in the program. It's used by the executor to determine the
 		// names of called functions.
@@ -283,17 +263,11 @@ namespace vm::low {
 			return original_program->getGlobalShadowDataOffsets();
 		}
 
-		const std::vector<u32>& getGlobalShadowPointerOffsets() const override {
-			return original_program->getGlobalShadowPointerOffsets();
-		}
 
 		const std::vector<u32>& getGlobalBlockShadowDataOffsets() const override {
 			return original_program->getGlobalBlockShadowDataOffsets();
 		}
 
-		const std::vector<u32>& getGlobalBlockShadowPointerOffsets() const override {
-			return original_program->getGlobalBlockShadowPointerOffsets();
-		}
 
 		CRef<LowVMProgram> getOriginalProgram() const { return original_program; }
 

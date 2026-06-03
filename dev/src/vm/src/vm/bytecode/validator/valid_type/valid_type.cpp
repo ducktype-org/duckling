@@ -335,11 +335,15 @@ void valid_type::ValidType::finalize(ValidTypeMap& types) {
 	variant_match(std::get<Finalizing>(state).kind) {
 		variant_case(defined::DefinedPrimitive, primitive) {
 			this->size                  = valid_type::TypeSize(primitive.size, 0);
+			this->shadow_size           = 1;
+			this->pointer_size          = 0;
 			this->is_trivially_copyable = true;
 			state = Finalized{ .kind = finalized::Primitive{ primitive.size } };
 		}
 		variant_case(defined::DefinedPointer, pointer) {
 			this->size                  = valid_type::TypeSize::pointer();
+			this->shadow_size           = 1;
+			this->pointer_size          = 1;
 			this->is_trivially_copyable = false;
 			state                       = Finalized{ .kind = finalized::Pointer{ pointer.inner } };
 		}
@@ -347,6 +351,8 @@ void valid_type::ValidType::finalize(ValidTypeMap& types) {
 			auto inner_type = types.at(fixed_size_table.inner);
 			inner_type->finalize(types);
 			this->size                  = inner_type->getSize() * fixed_size_table.element_count;
+			this->shadow_size  = static_cast<ShadowSize>(inner_type->getShadowSize() * fixed_size_table.element_count);
+			this->pointer_size = static_cast<PointerSize>(inner_type->getPointerSize() * fixed_size_table.element_count);
 			this->is_trivially_copyable = inner_type->isTriviallyCopyable();
 			state                       = Finalized{ .kind = finalized::FixedSizeTable{
 														 .inner         = fixed_size_table.inner,
@@ -357,18 +363,24 @@ void valid_type::ValidType::finalize(ValidTypeMap& types) {
 			/// as this is a runtime property, so size should never be queried,
 			/// through this object. Dynamic table is only accessed by a pointer.
 			this->size                  = valid_type::TypeSize(Bytes(0), 0);
+			this->shadow_size           = 1;
+			this->pointer_size          = 1;
 			this->is_trivially_copyable = false;
 			state = Finalized{ .kind = finalized::DynamicTable{ .inner = dynamic_table.inner } };
 		}
 		variant_case(defined::DefinedOpaque, opaque) {
 			// Opaque type size is known, so we don't need to do anything here.
 			this->size                  = valid_type::TypeSize(opaque.size, 0);
+			this->shadow_size           = 1;
+			this->pointer_size          = 0;
 			this->is_trivially_copyable = true;
 			state                       = Finalized{ .kind = finalized::Opaque{ opaque.size } };
 		}
 		variant_case(defined::DefinedFunction, function) {
 			// Function type size is known, so we don't need to do anything here.
 			this->size                  = valid_type::TypeSize::pointer();
+			this->shadow_size           = 1;
+			this->pointer_size          = 1;
 			this->is_trivially_copyable = false;
 			state                       = Finalized{ .kind = finalized::Function{
 														 .parameters   = std::move(function.parameters),
@@ -390,12 +402,18 @@ void valid_type::ValidType::finalize(ValidTypeMap& types) {
 			// because technically it's the maximum of the sizes of the alternatives, but we also
 			// need to take into account different pointer sizes. More info in TypeSize's doc-comment.
 			valid_type::TypeSize data_segment_size(Bytes(0), 0);
+			ShadowSize  max_shadow_size  = 0;
+			PointerSize max_pointer_size = 0;
 			for (auto& alternative: variant.alternatives) {
 				auto alternative_type = types.at(alternative);
 				alternative_type->finalize(types);
 				data_segment_size = data_segment_size.fieldMax(alternative_type->getSize());
+				max_shadow_size   = std::max(max_shadow_size, alternative_type->getShadowSize());
+				max_pointer_size  = std::max(max_pointer_size, alternative_type->getPointerSize());
 			}
-			this->size = valid_type::TypeSize(type_tag_size, 0) + data_segment_size;
+			this->size         = valid_type::TypeSize(type_tag_size, 0) + data_segment_size;
+			this->shadow_size  = 1 + max_shadow_size;
+			this->pointer_size = max_pointer_size;
 			this->is_trivially_copyable = false;
 			state                       = Finalized{ .kind = finalized::Variant{
 														 .type_tag_size        = type_tag_size,
@@ -409,13 +427,33 @@ void valid_type::ValidType::finalize(ValidTypeMap& types) {
 
 			// Finalize the fields and calculate their offsets.
 			valid_type::TypeSize offset(Bytes(0), 0);
+			u32 shadow_offset  = 0;
+			u32 pointer_offset = 0;
 			for (auto& field: new_structure.fields) {
 				auto field_type = types.at(field.type);
 				field_type->finalize(types);
-				field.offset = offset;
-				offset += field_type->getSize();
+				field.offset         = offset;
+				field.shadow_offset  = shadow_offset;
+				field.pointer_offset = pointer_offset;
+				offset         += field_type->getSize();
+				shadow_offset  += field_type->getShadowSize();
+				pointer_offset += field_type->getPointerSize();
 			}
-			this->size = offset;
+			this->size         = offset;
+			this->shadow_size  = shadow_offset;
+			this->pointer_size = pointer_offset;
+
+			// Build byte_to_shadow: flat array mapping each concrete byte offset → shadow index.
+			const u32 total_bytes = static_cast<u32>(offset.assumePointerSize(Bytes(16)));
+			new_structure.byte_to_shadow.assign(total_bytes, 0);
+			for (auto& field: new_structure.fields) {
+				auto field_type   = types.at(field.type);
+				u32  field_start  = static_cast<u32>(field.offset.assumePointerSize(Bytes(16)));
+				u32  field_bytes  = static_cast<u32>(field_type->getSize().assumePointerSize(Bytes(16)));
+				for (u32 b = field_start; b < field_start + field_bytes; ++b)
+					new_structure.byte_to_shadow[b] = field.shadow_offset;
+			}
+
 			this->is_trivially_copyable
 				= std::ranges::all_of(new_structure.fields, [&](const auto& field) {
 					  auto field_type = types.at(field.type);
@@ -524,6 +562,64 @@ bool valid_type::ValidType::isInstantiable() const {
 	variant_match(state) {
 		variant_case(Finalized, finalized) { return finalized.kind; }
 		variant_default { CORE_PANIC("Tried to get kind of a type that was not finalized"); }
+	}
+}
+
+[[nodiscard]] u32 valid_type::ValidType::getShadowOffsetForByteOffset(u32 byte_offset) const {
+	variant_match(state) {
+		variant_case(Finalized, finalized) {
+			const auto* structure = std::get_if<finalized::Structure>(&finalized.kind);
+			CORE_ASSERT(structure != nullptr, "getShadowOffsetForByteOffset called on non-Structure type");
+			CORE_ASSERT(byte_offset < structure->byte_to_shadow.size(), "byte_offset out of range");
+			return structure->byte_to_shadow[byte_offset];
+		}
+		variant_default { CORE_PANIC("getShadowOffsetForByteOffset called on non-finalized type"); }
+	}
+}
+
+[[nodiscard]] base::Optional<u32> valid_type::ValidType::getFieldShadowOffsetByName(
+	base::StrID field_name
+) const {
+	variant_match(state) {
+		variant_case(Finalized, finalized) {
+			const auto* structure = std::get_if<finalized::Structure>(&finalized.kind);
+			if (!structure) return {};
+			for (const auto& field: structure->fields) {
+				if (field.name == field_name) return field.shadow_offset;
+			}
+			return {};
+		}
+		variant_default { CORE_PANIC("getFieldShadowOffsetByName called on non-finalized type"); }
+	}
+}
+
+[[nodiscard]] base::Optional<u32> valid_type::ValidType::getFieldPointerOffsetByName(
+	base::StrID field_name
+) const {
+	variant_match(state) {
+		variant_case(Finalized, finalized) {
+			const auto* structure = std::get_if<finalized::Structure>(&finalized.kind);
+			if (!structure) return {};
+			for (const auto& field: structure->fields) {
+				if (field.name == field_name) return field.pointer_offset;
+			}
+			return {};
+		}
+		variant_default { CORE_PANIC("getFieldPointerOffsetByName called on non-finalized type"); }
+	}
+}
+
+[[nodiscard]] valid_type::ShadowSize valid_type::ValidType::getShadowSize() const {
+	variant_match(state) {
+		variant_case(Finalized, finalized) { return shadow_size; }
+		variant_default { CORE_PANIC("Tried to get shadow size of a type that was not finalized"); }
+	}
+}
+
+[[nodiscard]] valid_type::PointerSize valid_type::ValidType::getPointerSize() const {
+	variant_match(state) {
+		variant_case(Finalized, finalized) { return pointer_size; }
+		variant_default { CORE_PANIC("Tried to get pointer size of a type that was not finalized"); }
 	}
 }
 

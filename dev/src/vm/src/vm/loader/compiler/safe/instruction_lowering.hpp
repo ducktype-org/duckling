@@ -301,11 +301,9 @@ namespace vm::loader::compiler::safe::detail {
 			}
 			instr_case(high::Op_mov_pptr_pptr, i) {
 				addLow<Op_mov_pptr_pptr>(i.dst, i.src);
-				if (compiler.settings_.enable_fast_track) addLow<Op_ft_mov_pptr_pptr>(i.dst, i.src);
 			}
 			instr_case(high::Op_setNull_pptr, i) {
 				addLow<Op_setNull_pptr>(i.dst);
-				if (compiler.settings_.enable_fast_track) addLow<Op_ft_setNull_pptr>(i.dst);
 			}
 			instr_case(high::Op_mov_popq_popq, i) {
 				ftRead(i.src);
@@ -1327,10 +1325,6 @@ namespace vm::loader::compiler::safe::detail {
 				addLow<Op_variantGetInner_pptr_bvnt>(i.dst_ptr, i.variant);
 				opargs::Type variant_type = getPlaceType(i.variant)->getName();
 				addLow<Op_ext_type_type>(i.expected_type, variant_type);
-				if (compiler.settings_.enable_fast_track) {
-					addLow<Op_ft_variantGetInner_pptr_psbvnt>(i.dst_ptr, i.variant);
-					addLow<Op_ext_type_type>(i.expected_type, variant_type);
-				}
 			}
 			instr_case(high::Op_variantSetInner_pptr_type, i) {
 				addLow<Op_variantSetInner_pptr_type>(i.variant_ptr, i.inner_type);
@@ -1343,14 +1337,12 @@ namespace vm::loader::compiler::safe::detail {
 				}
 			}
 			instr_case(high::Op_variantGetInner_pptr_pptr_type, i) {
+				if (compiler.settings_.enable_fast_track)
+					addLow<Op_ft_variantTagRead_pptr>(i.variant_ptr);
 				addLow<Op_variantGetInner_pptr_pptr>(i.dst_ptr, i.variant_ptr);
 				opargs::Type variant_type
 					= getPlaceType(i.variant_ptr)->getInnerType().value()->getName();
 				addLow<Op_ext_type_type>(i.expected_type, variant_type);
-				if (compiler.settings_.enable_fast_track) {
-					addLow<Op_ft_variantGetInner_pptr_pptr>(i.dst_ptr, i.variant_ptr);
-					addLow<Op_ext_type_type>(i.expected_type, variant_type);
-				}
 			}
 			instr_case(high::Op_label, i) { addLabel(i.label); }
 			instr_case(high::Op_jmp_label, i) { addLow<Op_jmp_label>(i.label); }
@@ -1378,8 +1370,8 @@ namespace vm::loader::compiler::safe::detail {
 					addLow<Op_ft_init_bany_type>(i.var, i.type);
 			}
 			instr_case(high::Op_deinit, i) {
-				addLow<Op_deinit>();
 				if (compiler.settings_.enable_fast_track) addLow<Op_ft_deinit>();
+				addLow<Op_deinit>();
 			}
 			instr_case(high::Op_input_p64, i) { addLow<Op_input_p64>(i.dst); }
 			instr_case(high::Op_output_p64, i) { addLow<Op_output_p64>(i.src); }
@@ -1410,58 +1402,61 @@ namespace vm::loader::compiler::safe::detail {
 			instr_case(high::Op_store_pptr_pany, i) {
 				if (compiler.settings_.enable_fast_track) {
 					addLow<Op_ft_store_pptr_bany>(i.dst_ptr, i.src);
-					auto type = getPlaceType(i.src);
-					if (type->getPointerSize() > 0) {
-						addLow<Op_ft_store_pptr_pptr>(i.dst_ptr, opargs::PlacePtr{ i.src.var_name });
-					}
 				}
 				addLow<Op_store_pptr_bany>(i.dst_ptr, i.src);
 			}
 			instr_case(high::Op_load_pany_pptr, i) {
 				addLow<Op_load_bany_pptr>(i.dst, i.src_ptr);
-				if (compiler.settings_.enable_fast_track) {
-					auto type = getPlaceType(i.dst);
-					if (type->getPointerSize() > 0)
-						addLow<Op_ft_load_pptr_pptr>(opargs::PlacePtr{ i.dst.var_name }, i.src_ptr);
-				}
 			}
 			instr_case(high::Op_ref_pptr_pany, i) {
 				addLow<Op_ref_pptr_bany>(i.dst_ptr, i.src);
-				if (compiler.settings_.enable_fast_track)
-					addLow<Op_ft_ref_pptr_bany>(i.dst_ptr, i.src);
 			}
 			instr_case(high::Op_ref_pptr_pvnt, i) {
 				addLow<Op_ref_pptr_bany>(i.dst_ptr, i.src);
-				if (compiler.settings_.enable_fast_track)
-					addLow<Op_ft_ref_pptr_bany>(i.dst_ptr, i.src);
 			}
 			instr_case(high::Op_structLea_pptr_pptr_field, i) {
 				addLow<Op_structLea_pptr_pptr>(i.dst_ptr, i.src_data_ptr);
 				addLow<Op_ext_field>(i.field);
-				if (compiler.settings_.enable_fast_track) {
-					addLow<Op_ft_structLea_pptr_pptr>(i.dst_ptr, i.src_data_ptr);
-					addLow<Op_ext_sfield_spfield>(i.field, i.field);
-				}
 			}
 			instr_case(high::Op_structLoad_pany_pptr_field, i) {
-				if (compiler.settings_.enable_fast_track)
-					addLow<Op_ft_structRead>(i.src_data_ptr, i.field);
+				if (compiler.settings_.enable_fast_track) {
+					auto field_type_name = [&]() -> base::StrID {
+						auto struct_type = compiler.low_program.getTypes().at(i.field.type_name);
+						if_opt_some(struct_type->getFields(), fields) {
+							auto struct_data = struct_type->get<vm::kind::Data>();
+							if (struct_data) {
+								auto idx_opt = (*struct_data)->field_name_map.atMaybe(i.field.field_name);
+								if (idx_opt) return (*fields)[static_cast<std::size_t>(**idx_opt)].type->getName();
+							}
+						}
+						CORE_PANIC("Field not found for ft_structRead");
+					}();
+					addLow<Op_ft_structRead>(i.src_data_ptr, opargs::Type{ field_type_name });
+				}
 				addLow<Op_structLoad_bany_pptr>(i.dst, i.src_data_ptr);
 				addLow<Op_ext_field>(i.field);
 			}
 			instr_case(high::Op_structStore_pptr_pany_field, i) {
-				if (compiler.settings_.enable_fast_track)
-					addLow<Op_ft_structWrite>(i.dst_data_ptr, i.field);
+				if (compiler.settings_.enable_fast_track) {
+					auto field_type_name = [&]() -> base::StrID {
+						auto struct_type = compiler.low_program.getTypes().at(i.field.type_name);
+						if_opt_some(struct_type->getFields(), fields) {
+							auto struct_data = struct_type->get<vm::kind::Data>();
+							if (struct_data) {
+								auto idx_opt = (*struct_data)->field_name_map.atMaybe(i.field.field_name);
+								if (idx_opt) return (*fields)[static_cast<std::size_t>(**idx_opt)].type->getName();
+							}
+						}
+						CORE_PANIC("Field not found for ft_structWrite");
+					}();
+					addLow<Op_ft_structWrite>(i.dst_data_ptr, opargs::Type{ field_type_name });
+				}
 				addLow<Op_structStore_pptr_bany>(i.dst_data_ptr, i.src);
 				addLow<Op_ext_field>(i.field);
 			}
 			instr_case(high::Op_structLea_pptr_pste_field, i) {
 				addLow<Op_structLea_pptr_bste>(i.dst_ptr, i.src_data_struct);
 				addLow<Op_ext_field>(i.field);
-				if (compiler.settings_.enable_fast_track) {
-					addLow<Op_ft_structLea_pptr_pste>(i.dst_ptr, i.src_data_struct);
-					addLow<Op_ext_sfield_spfield>(i.field, i.field);
-				}
 			}
 			instr_case(high::Op_structLoad_pany_pste_field, i) {
 				if (compiler.settings_.enable_fast_track)
@@ -1483,12 +1478,6 @@ namespace vm::loader::compiler::safe::detail {
 				addLow<Op_ext_p64_type>(
 					i.index, opargs::Type{ TABLE_PTR_ELEM_TYPE(i.src_table_ptr) }
 				);
-				if (compiler.settings_.enable_fast_track) {
-					addLow<Op_ft_tableIdxLea_pptr_pptr>(i.dst_ptr, i.src_table_ptr);
-					addLow<Op_ext_p64_type>(
-						i.index, opargs::Type{ TABLE_PTR_ELEM_TYPE(i.src_table_ptr) }
-					);
-				}
 			}
 			instr_case(high::Op_fixedSizeTableLoad_pany_pptr_p64, i) {
 				addLow<Op_anyArrayLoad_bany_pptr>(i.dst, i.src_table_ptr);
@@ -1517,12 +1506,6 @@ namespace vm::loader::compiler::safe::detail {
 			instr_case(high::Op_fixedSizeTableLea_pptr_pfst_p64, i) {
 				addLow<Op_fixedSizeTableLea_pptr_bfst>(i.dst_ptr, i.src_table);
 				addLow<Op_ext_p64_type>(i.index, opargs::Type{ TABLE_VAL_ELEM_TYPE(i.src_table) });
-				if (compiler.settings_.enable_fast_track) {
-					addLow<Op_ft_fixedSizeTableIdxLea_pptr_pfst>(i.dst_ptr, i.src_table);
-					addLow<Op_ext_p64_type>(
-						i.index, opargs::Type{ TABLE_VAL_ELEM_TYPE(i.src_table) }
-					);
-				}
 			}
 			instr_case(high::Op_fixedSizeTableLoad_pany_pfst_p64, i) {
 				if (compiler.settings_.enable_fast_track) {
@@ -1549,12 +1532,6 @@ namespace vm::loader::compiler::safe::detail {
 				addLow<Op_ext_p64_type>(
 					i.index, opargs::Type{ TABLE_PTR_ELEM_TYPE(i.src_table_ptr) }
 				);
-				if (compiler.settings_.enable_fast_track) {
-					addLow<Op_ft_tableIdxLea_pptr_pptr>(i.dst_ptr, i.src_table_ptr);
-					addLow<Op_ext_p64_type>(
-						i.index, opargs::Type{ TABLE_PTR_ELEM_TYPE(i.src_table_ptr) }
-					);
-				}
 			}
 			instr_case(high::Op_dynTableLoad_pany_pptr_p64, i) {
 				addLow<Op_anyArrayLoad_bany_pptr>(i.dst, i.src_table_ptr);

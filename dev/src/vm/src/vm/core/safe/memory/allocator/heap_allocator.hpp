@@ -25,7 +25,6 @@ namespace vm {
 	struct BlockData;
 
 	struct ShadowEntry;
-	struct ShadowPointer;
 
 	template<typename EntryT>
 	class HeapAllocator final: public IAllocator<EntryT> {
@@ -37,8 +36,6 @@ namespace vm {
 			usize   size = 0;
 			if constexpr (std::is_same_v<EntryT, vm::ShadowEntry>) {
 				size = type->getShadowSize();
-			} else if constexpr (std::is_same_v<EntryT, vm::ShadowPointer>) {
-				size = type->getPointerSize();
 			} else {
 				size = type->getSize().asInt();
 			}
@@ -59,8 +56,6 @@ namespace vm {
 			usize   size = 0;
 			if constexpr (std::is_same_v<EntryT, vm::ShadowEntry>) {
 				size = inner_type->getShadowSize() * n;
-			} else if constexpr (std::is_same_v<EntryT, vm::ShadowPointer>) {
-				size = inner_type->getPointerSize() * n;
 			} else {
 				size = inner_type->getSize().asInt() * n;
 			}

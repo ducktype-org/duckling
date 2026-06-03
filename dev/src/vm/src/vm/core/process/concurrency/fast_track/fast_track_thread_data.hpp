@@ -2,7 +2,6 @@
 
 #include <vm/core/process/concurrency/fast_track/epoch.hpp>
 #include <vm/core/process/concurrency/fast_track/shadow_entry.hpp>
-#include <vm/core/process/concurrency/fast_track/shadow_pointer.hpp>
 #include <vm/core/process/concurrency/fast_track/vc.hpp>
 #include <vm/core/safe/memory/fast_track_thread_stack.hpp>
 #include <vm/core/safe/memory/frame.hpp>
@@ -18,49 +17,25 @@ namespace vm {
 	 * updated when global shadow buffers are reallocated.
 	 */
 	struct FastTrackRuntimeData {
-		ShadowEntry*         shadow_data_stack_base         = nullptr;
-		ShadowPointer*       shadow_pointer_stack_base      = nullptr;
-		ShadowBlock**        shadow_block_ref_stack_base    = nullptr;
-		ShadowBlock**        shadow_block_ref_stack_end     = nullptr;
-		ShadowPointerBlock** shadow_pointer_block_ref_stack_base = nullptr;
-		ShadowPointerBlock** shadow_pointer_block_ref_stack_end  = nullptr;
-		ShadowFrame*         shadow_frame_stack_base        = nullptr;
-		ShadowFrame*         shadow_frame_stack_end         = nullptr;
-		ShadowFrame*         shadow_frame_stack_current     = nullptr;
-
-		ShadowEntry*   global_shadow_data_buffer_base    = nullptr;
-		ShadowPointer* global_shadow_pointer_buffer_base = nullptr;
+		ShadowEntry* shadow_data_stack_base         = nullptr;
+		ShadowFrame* shadow_frame_stack_base        = nullptr;
+		ShadowFrame* shadow_frame_stack_end         = nullptr;
+		ShadowFrame* shadow_frame_stack_current     = nullptr;
+		ShadowEntry* global_shadow_data_buffer_base = nullptr;
 
 		FastTrackRuntimeData() = default;
 
-		FastTrackRuntimeData(
-			Ref<FastTrackThreadStack> stack,
-			ShadowEntry*             global_data,
-			ShadowPointer*           global_ptrs
-		):
+		FastTrackRuntimeData(Ref<FastTrackThreadStack> stack, ShadowEntry* global_data):
 			  shadow_data_stack_base(stack->getShadowDataStack()->data()),
-			  shadow_pointer_stack_base(stack->getShadowPointerStack()->data()),
-			  shadow_block_ref_stack_base(stack->getShadowBlockRefStack()->data()),
-			  shadow_block_ref_stack_end(
-				  stack->getShadowBlockRefStack()->data()
-				  + stack->getShadowBlockRefStack()->size()
-			  ),
-			  shadow_pointer_block_ref_stack_base(stack->getShadowPointerBlockRefStack()->data()),
-			  shadow_pointer_block_ref_stack_end(
-				  stack->getShadowPointerBlockRefStack()->data()
-				  + stack->getShadowPointerBlockRefStack()->size()
-			  ),
 			  shadow_frame_stack_base(stack->getShadowFrameStack()->data()),
 			  shadow_frame_stack_end(
 				  stack->getShadowFrameStack()->data() + stack->getShadowFrameStack()->size()
 			  ),
 			  shadow_frame_stack_current(stack->getShadowFrameStack()->data()),
-			  global_shadow_data_buffer_base(global_data),
-			  global_shadow_pointer_buffer_base(global_ptrs) {}
+			  global_shadow_data_buffer_base(global_data) {}
 
-		void updateGlobalPointers(ShadowEntry* global_data, ShadowPointer* global_ptrs) {
-			global_shadow_data_buffer_base    = global_data;
-			global_shadow_pointer_buffer_base = global_ptrs;
+		void updateGlobalPointers(ShadowEntry* global_data) {
+			global_shadow_data_buffer_base = global_data;
 		}
 	};
 
@@ -81,16 +56,15 @@ namespace vm {
 		void init(
 			FastTrackThreadStack& stack,
 			api::ThreadID         tid,
-			ShadowEntry*          global_data,
-			ShadowPointer*        global_ptrs
+			ShadowEntry*          global_data
 		) {
 			thread_id  = tid;
-			ft_runtime = FastTrackRuntimeData(&stack, global_data, global_ptrs);
+			ft_runtime = FastTrackRuntimeData(&stack, global_data);
 			vc[tid]    = 1;
 		}
 
-		void updateGlobalPointers(ShadowEntry* global_data, ShadowPointer* global_ptrs) {
-			ft_runtime.updateGlobalPointers(global_data, global_ptrs);
+		void updateGlobalPointers(ShadowEntry* global_data) {
+			ft_runtime.updateGlobalPointers(global_data);
 		}
 
 		// ---- Vector clock operations ----
@@ -124,10 +98,6 @@ namespace vm {
 
 		[[nodiscard]] ShadowEntry* getGlobalShadowDataBase() const {
 			return ft_runtime.global_shadow_data_buffer_base;
-		}
-
-		[[nodiscard]] ShadowPointer* getGlobalShadowPointerBase() const {
-			return ft_runtime.global_shadow_pointer_buffer_base;
 		}
 	};
 }

@@ -11,7 +11,6 @@
 
 namespace vm {
 	struct ShadowEntry;
-	struct ShadowPointer;
 
 	template<typename EntryT>
 	class DummyAllocator final: public IAllocator<EntryT> {
@@ -20,8 +19,6 @@ namespace vm {
 			usize   size = 0;
 			if constexpr (std::is_same_v<EntryT, vm::ShadowEntry>) {
 				size = type->getShadowSize();
-			} else if constexpr (std::is_same_v<EntryT, vm::ShadowPointer>) {
-				size = type->getPointerSize();
 			} else {
 				size = type->getSize().asInt();
 			}

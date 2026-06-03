@@ -648,8 +648,6 @@ namespace vm {
 			u64 entry_count = 0;
 			if constexpr (std::is_same_v<EntryT, vm::ShadowEntry>) {
 				entry_count = type->getShadowSize();
-			} else if constexpr (std::is_same_v<EntryT, vm::ShadowPointer>) {
-				entry_count = type->getPointerSize();
 			} else {
 				entry_count = type->getSize().asInt();
 			}

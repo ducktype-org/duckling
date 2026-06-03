@@ -74,12 +74,9 @@ namespace vm::low::opargs {
 	DEFINE_MICRO_ARG_TYPE(PlaceAny, "pany", vm::opargs::Place8, vm::opargs::Place16, vm::opargs::Place32, vm::opargs::Place64, vm::opargs::PlacePtr, vm::opargs::PlaceOpq);
 	/** @brief Stores shadow offset of any local/global variable */
 	DEFINE_MICRO_ARG_TYPE(PlaceShadowAny, "psany", vm::opargs::Place8, vm::opargs::Place16, vm::opargs::Place32, vm::opargs::Place64, vm::opargs::PlacePtr, vm::opargs::PlaceOpq);
-	/** @brief Stores shadow offset of any local/global variable */
-	DEFINE_MICRO_ARG_TYPE(PlaceShadowPointerAny, "pspany", vm::opargs::PlacePtr);
 
 #define VM_MICRO_INSTR_ARG_PLACE_OFFSET_TYPES Place8, Place16, Place32, Place64, PlacePtr, PlaceOpq, PlaceAny
 #define VM_MICRO_INSTR_ARG_SHADOW_PLACE_OFFSET_TYPES PlaceShadowAny
-#define VM_MICRO_INSTR_ARG_SHADOW_POINTER_PLACE_OFFSET_TYPES PlaceShadowPointerAny
 
 	/**
 	 * The PlaceBlock types store the index of the block reference for globals and locals.
@@ -99,15 +96,8 @@ namespace vm::low::opargs {
 	 * or the global blocks buffer. */
 	DEFINE_MICRO_ARG_TYPE(PlaceBlockVariant, "bvnt", vm::opargs::PlaceVnt);
 
-	DEFINE_MICRO_ARG_TYPE(PlaceShadowBlockStructure, "psbste", vm::opargs::PlaceStructure);
-	DEFINE_MICRO_ARG_TYPE(PlaceShadowBlockFSTable, "psbarr", vm::opargs::PlaceFSTable);
-	DEFINE_MICRO_ARG_TYPE(PlaceShadowBlockVariant, "psbvnt", vm::opargs::PlaceVnt);
-
 #define VM_MICRO_INSTR_ARG_BLOCK_PLACE_TYPES \
 	PlaceBlockAny, PlaceBlockStructure, PlaceBlockVariant, PlaceBlockFSTable
-
-#define VM_MICRO_INSTR_ARG_SHADOW_BLOCK_PLACE_TYPES \
-	PlaceShadowBlockStructure, PlaceShadowBlockVariant, PlaceShadowBlockFSTable
 
 	/** @brief Stores TypeCRef (pointer) from type metadata. */
 	DEFINE_MICRO_ARG_TYPE(Type, "type", vm::opargs::Type);
@@ -115,8 +105,6 @@ namespace vm::low::opargs {
 	DEFINE_MICRO_ARG_TYPE(Field, "field", vm::opargs::Field);
 	/** @brief Stores variable offset of a field within its containing type layout. */
 	DEFINE_MICRO_ARG_TYPE(ShadowField, "sfield", vm::opargs::Field);
-	/** @brief Stores variable pointer offset of a field within its containing type layout. */
-	DEFINE_MICRO_ARG_TYPE(ShadowPointerField, "spfield", vm::opargs::Field);
 	/** @brief Stores function ID from LowVMProgram functions map. */
 	DEFINE_MICRO_ARG_TYPE(FunctionID, "func", vm::opargs::FunctionName);
 	/** @brief Stores underlying numeric value of builtins::BuiltinFunctionID. */
@@ -134,14 +122,11 @@ namespace vm::low::opargs {
 	using InstructionArg = std::variant<
 		VM_MICRO_INSTR_ARG_PLACE_OFFSET_TYPES,
 		VM_MICRO_INSTR_ARG_BLOCK_PLACE_TYPES,
-		VM_MICRO_INSTR_ARG_SHADOW_BLOCK_PLACE_TYPES,
-        VM_MICRO_INSTR_ARG_SHADOW_PLACE_OFFSET_TYPES,
-        VM_MICRO_INSTR_ARG_SHADOW_POINTER_PLACE_OFFSET_TYPES,
+		VM_MICRO_INSTR_ARG_SHADOW_PLACE_OFFSET_TYPES,
 		Immediate,
 		Type,
 		Field,
-        ShadowField,
-        ShadowPointerField,
+		ShadowField,
 		FunctionID,
 		BuiltinFunctionID,
 		ExtCFunction,
@@ -149,11 +134,9 @@ namespace vm::low::opargs {
 		Label>;
 	using InstructionArgCRef = base::CRefifyParams<InstructionArg>;
 
-	using InstructionPlaceDataArg  = std::variant<VM_MICRO_INSTR_ARG_PLACE_OFFSET_TYPES>;
-	using InstructionShadowPlaceDataArg  = std::variant<VM_MICRO_INSTR_ARG_SHADOW_PLACE_OFFSET_TYPES>;
-	using InstructionShadowPointerPlaceDataArg  = std::variant<VM_MICRO_INSTR_ARG_SHADOW_POINTER_PLACE_OFFSET_TYPES>;
-	using InstructionPlaceBlockArg = std::variant<VM_MICRO_INSTR_ARG_BLOCK_PLACE_TYPES>;
-	using InstructionShadowPlaceBlockArg = std::variant<VM_MICRO_INSTR_ARG_SHADOW_BLOCK_PLACE_TYPES>;
+	using InstructionPlaceDataArg    = std::variant<VM_MICRO_INSTR_ARG_PLACE_OFFSET_TYPES>;
+	using InstructionShadowPlaceDataArg = std::variant<VM_MICRO_INSTR_ARG_SHADOW_PLACE_OFFSET_TYPES>;
+	using InstructionPlaceBlockArg   = std::variant<VM_MICRO_INSTR_ARG_BLOCK_PLACE_TYPES>;
 
 	using InstructionFunctionArg = std::variant<FunctionID, BuiltinFunctionID, ExtCFunction>;
 
@@ -165,11 +148,7 @@ namespace vm::low::opargs {
 	template<typename T>
 	concept PlaceBlockArgumentType = base::IsVariantMember<T, InstructionPlaceBlockArg>;
 	template<typename T>
-	concept ShadowPlaceBlockArgumentType = base::IsVariantMember<T, InstructionShadowPlaceBlockArg>;
-	template<typename T>
 	concept ShadowPlaceDataArgumentType = base::IsVariantMember<T, InstructionShadowPlaceDataArg>;
-	template<typename T>
-	concept ShadowPointerPlaceDataArgumentType = base::IsVariantMember<T, InstructionShadowPointerPlaceDataArg>;
 }
 
 #undef DEFINE_MICRO_ARG_TYPE

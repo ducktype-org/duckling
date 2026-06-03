@@ -36,8 +36,7 @@ namespace vm::loader::compiler::safe {
 			/**
 			 * @brief Total shadow slot count for all globals compiled so far.
 			 */
-			usize global_shadow_buffer_size  = 0;
-			usize global_pointer_buffer_size = 0;
+			usize global_shadow_buffer_size = 0;
 		};
 	}
 

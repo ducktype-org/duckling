@@ -4,7 +4,6 @@
 #include <base/extend_cpp/strongly_typed_id.hpp>
 #include <base/types/ints.hpp>
 
-#include <vm/core/process/concurrency/fast_track/shadow_pointer.hpp>
 #include <vm/core/process/concurrency/fast_track/shadow_entry.hpp>
 #include <vm/core/safe/memory/allocator/block_data.hpp>
 
@@ -65,15 +64,13 @@ namespace vm {
 		[[nodiscard]] EntryT* getData() { return data.view.getBegin(); }
 		[[nodiscard]] const EntryT* getData() const { return data.view.getBegin(); }
 		[[nodiscard]] bool isDeallocated() const { return deallocated; }
+
+		BasicBlock<ShadowEntry>* ft_shadow_block = nullptr;
 	};
 
 	using Block = BasicBlock<std::byte>;
-    using ShadowBlock = BasicBlock<ShadowEntry>;
-    using ShadowPointerBlock = BasicBlock<ShadowPointer>;
+	using ShadowBlock = BasicBlock<ShadowEntry>;
 	using BlockGeneric = Block;
-
-	inline ShadowEntry* ShadowPointer::dataBase() const { return shadow_block ? shadow_block->getData() : nullptr; }
-	inline ShadowPointer* ShadowPointer::pointerBase() const { return shadow_pointer_block ? shadow_pointer_block->getData() : nullptr; }
 }
 
 ID_STD_HASH(vm::BlockID);
