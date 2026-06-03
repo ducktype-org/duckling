@@ -693,12 +693,14 @@ DEF_MICRO_INSTR(ft_arrayWrite, vm::low::opargs::PlacePtr, vm::low::opargs::Place
 // 5.3: Stack Struct Instrumentation
 DEF_MICRO_INSTR(ft_structRead_pste, vm::low::opargs::PlaceBlockStructure, vm::low::opargs::ShadowField)
 DEF_MICRO_INSTR(ft_structWrite_pste, vm::low::opargs::PlaceBlockStructure, vm::low::opargs::ShadowField)
-DEF_MICRO_INSTR(ft_mov_pste_pste, vm::low::opargs::PlaceBlockStructure, vm::low::opargs::PlaceBlockStructure)
+DEF_MICRO_INSTR(ft_read_pste, vm::low::opargs::PlaceBlockStructure, vm::low::opargs::Type)
+DEF_MICRO_INSTR(ft_write_pste, vm::low::opargs::PlaceBlockStructure, vm::low::opargs::Type)
 
 // 5.4: Stack Fixed-Size Table Instrumentation
 DEF_MICRO_INSTR(ft_arrayRead_pfst, vm::low::opargs::PlaceBlockFSTable, vm::low::opargs::Place64)
 DEF_MICRO_INSTR(ft_arrayWrite_pfst, vm::low::opargs::PlaceBlockFSTable, vm::low::opargs::Place64)
-DEF_MICRO_INSTR(ft_mov_pfst_pfst, vm::low::opargs::PlaceBlockFSTable, vm::low::opargs::PlaceBlockFSTable)
+DEF_MICRO_INSTR(ft_read_pfst, vm::low::opargs::PlaceBlockFSTable, vm::low::opargs::Type)
+DEF_MICRO_INSTR(ft_write_pfst, vm::low::opargs::PlaceBlockFSTable, vm::low::opargs::Type)
 DEF_MICRO_INSTR(ft_dynTableReAlloc, vm::low::opargs::PlacePtr, vm::low::opargs::Type)
 
 // 5.5: Stack & Heap Variant Instrumentation

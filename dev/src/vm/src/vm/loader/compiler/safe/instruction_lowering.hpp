@@ -320,16 +320,16 @@ namespace vm::loader::compiler::safe::detail {
 				addLow<Op_mov_bste_bste>(i.dst, i.src);
 				if (compiler.settings_.enable_fast_track) {
 					auto type = getPlaceType(i.src);
-					addLow<Op_ft_mov_pste_pste>(i.dst, i.src);
-					addLow<Op_ext_type>(opargs::Type{ type->getName() });
+					addLow<Op_ft_read_pste>(i.src, opargs::Type{ type->getName() });
+					addLow<Op_ft_write_pste>(i.dst, opargs::Type{ type->getName() });
 				}
 			}
 			instr_case(high::Op_mov_pfst_pfst, i) {
 				addLow<Op_mov_bfst_bfst>(i.dst, i.src);
 				if (compiler.settings_.enable_fast_track) {
 					auto type = getPlaceType(i.src);
-					addLow<Op_ft_mov_pfst_pfst>(i.dst, i.src);
-					addLow<Op_ext_type>(opargs::Type{ type->getName() });
+					addLow<Op_ft_read_pfst>(i.src, opargs::Type{ type->getName() });
+					addLow<Op_ft_write_pfst>(i.dst, opargs::Type{ type->getName() });
 				}
 			}
 			instr_case(high::Op_add_p64_p64, i) {
