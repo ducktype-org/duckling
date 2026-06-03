@@ -37,8 +37,11 @@ bool vm::IVMThread::isPauseRequested() {
 }
 
 bool vm::IVMThread::isTerminateRequested() {
-	std::unique_lock lock(execution_request_mutex);
-	return execution_request == ExecutionRequest::Stop;
+	{
+		std::unique_lock lock(execution_request_mutex);
+		if (execution_request == ExecutionRequest::Stop) return true;
+	}
+	return std::holds_alternative<api::ExecutionPanicked>(my_process.getStatus());
 }
 
 bool vm::IVMThread::waitForPausedResponse() {

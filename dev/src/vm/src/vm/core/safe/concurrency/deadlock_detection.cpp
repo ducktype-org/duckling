@@ -1,6 +1,6 @@
 #include "deadlock_detection.hpp"
 
-#include <vm/core/process/exceptions.hpp>
+#include <vm/core/safe/exceptions.hpp>
 
 #include <vector>
 

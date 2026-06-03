@@ -563,7 +563,11 @@ namespace vm {
 					executeFunction(start_function, func);
 					process_memory.setGlobalInitialized(block_ref);
 				} catch (const KillProcessException& e) {
-					respondExecutionRequest(api::ExecutionPanicked{ e.what() });
+					auto status = safe_process.getCurrentStatus();
+					if (std::holds_alternative<api::ExecutionPanicked>(status))
+						respondExecutionRequest(status);
+					else
+						respondExecutionRequest(api::ExecutionPanicked{ e.what() });
 					return;
 				}
 			}
@@ -604,7 +608,11 @@ namespace vm {
 			else
 				respondExecutionRequest(api::ExecutionCompleted{ exit_value });
 		} catch (const KillProcessException& e) {
-			respondExecutionRequest(api::ExecutionPanicked{ e.what() });
+			auto status = safe_process.getCurrentStatus();
+			if (std::holds_alternative<api::ExecutionPanicked>(status))
+				respondExecutionRequest(status);
+			else
+				respondExecutionRequest(api::ExecutionPanicked{ e.what() });
 		}
 	}
 
@@ -626,7 +634,11 @@ namespace vm {
 					low::LowFuncData start_function = createStartFunctionFor(func, {});
 					executeFunction(start_function, func);
 				} catch (const KillProcessException& e) {
-					respondExecutionRequest(api::ExecutionPanicked{ e.what() });
+					auto status = safe_process.getCurrentStatus();
+					if (std::holds_alternative<api::ExecutionPanicked>(status))
+						respondExecutionRequest(status);
+					else
+						respondExecutionRequest(api::ExecutionPanicked{ e.what() });
 				}
 			}
 		}

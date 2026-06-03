@@ -104,13 +104,15 @@ namespace vm {
 		 */
 		std::expected<api::Response, api::ApiError> output();
 
-	protected:
+	public:
 		/**
 		 * @brief Gets the status of the process (memory-safe).
 		 *
 		 * @return api::ProcStatus
 		 */
 		api::ProcStatus getStatus();
+
+	protected:
 
 		/**
 		 * @brief Returns exit code of the process - i.e. return value of `main` bytecode function.
