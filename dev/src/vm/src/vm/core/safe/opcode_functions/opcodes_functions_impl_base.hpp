@@ -343,17 +343,26 @@ namespace vm {
 				performFunctionCall(instr, local_stack, frame, thread, func_id);
 			} else {
 				// should be compiled now
+				if constexpr (COMPILE_WITH_CP) {
+					performFunctionCall(instr, local_stack, frame, thread, func_id);
 
-				performFunctionCall(instr, local_stack, frame, thread, func_id);
+					auto compiled = jit::compileCP(func_obj);
+					auto ptr = compiled.intoFunc<jit::CPFunc>();
+					(*ptr)(instr, local_stack, frame, thread);
 
-				auto compiled = jit::compileCP(func_obj);
-				auto ptr = compiled.intoFunc<jit::CPFunc>();
-				(*ptr)(instr, local_stack, frame, thread);
+					// Restore values set by copy&patch
+					frame       = thread.runtime_data.frame_stack_current;
+					instr       = frame->instr;
+					local_stack = frame->local_stack;
+				} else {
+					MRef<jit::JitOpFun> compiled
+						= jit::compileLLVM(func_obj.cfg, func_obj.bc, func_obj.name);
 
-				// Restore values set by copy&patch
-				frame       = thread.runtime_data.frame_stack_current;
-				instr       = frame->instr;
-				local_stack = frame->local_stack;
+					CORE_ASSERT(compiled, "Compiled function pointer shouldn't be nullptr");
+					my_data.func_ptr = compiled;
+
+					run_compiled();
+				}
 			}
 		}
 		FUNCTION_CONT(0);
