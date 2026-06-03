@@ -2,8 +2,78 @@
 # Function f performs ~40 arithmetic instructions sequentially (no branches, no calls)
 # Main reads n from STDIN and calls f n times
 
-function f {} -> { i64 } {
-    add_p64_imm ret0, 21;
+function f {} -> { } {
+    # Declare local variables
+    init_pany_type a, i64;
+    init_pany_type b, i64;
+    init_pany_type c, i64;
+    init_pany_type d, i64;
+    init_pany_type e, i64;
+    
+    # Initialize variables
+    mov_p64_imm a, 100;
+    mov_p64_imm b, 50;
+    mov_p64_imm c, 25;
+    mov_p64_imm d, 10;
+    mov_p64_imm e, 5;
+    
+    # Arithmetic sequence 1: operations on a
+    add_p64_imm a, 15;
+    sub_p64_imm a, 7;
+    mul_p64_imm a, 2;
+    add_p64_imm a, 33;
+    sub_p64_imm a, 11;
+    mul_p64_imm a, 3;
+    add_p64_imm a, 17;
+    sub_p64_imm a, 9;
+    
+    # Arithmetic sequence 2: operations on b
+    add_p64_imm b, 22;
+    sub_p64_imm b, 8;
+    mul_p64_imm b, 2;
+    add_p64_imm b, 14;
+    sub_p64_imm b, 6;
+    mul_p64_imm b, 2;
+    add_p64_imm b, 19;
+    sub_p64_imm b, 3;
+    
+    # Arithmetic sequence 3: operations on c
+    add_p64_imm c, 30;
+    sub_p64_imm c, 12;
+    mul_p64_imm c, 3;
+    add_p64_imm c, 21;
+    sub_p64_imm c, 7;
+    mul_p64_imm c, 2;
+    add_p64_imm c, 13;
+    sub_p64_imm c, 5;
+    
+    # Arithmetic sequence 4: operations on d
+    add_p64_imm d, 45;
+    sub_p64_imm d, 15;
+    mul_p64_imm d, 2;
+    add_p64_imm d, 28;
+    sub_p64_imm d, 10;
+    mul_p64_imm d, 3;
+    add_p64_imm d, 16;
+    sub_p64_imm d, 4;
+    
+    # Arithmetic sequence 5: operations on e
+    add_p64_imm e, 55;
+    sub_p64_imm e, 20;
+    mul_p64_imm e, 2;
+    add_p64_imm e, 35;
+    sub_p64_imm e, 13;
+    mul_p64_imm e, 2;
+    add_p64_imm e, 11;
+    sub_p64_imm e, 2;
+    
+    # Cleanup
+    deinit; # e
+    deinit; # d
+    deinit; # c
+    deinit; # b
+    deinit; # a
+    
     ret;
 }
 
@@ -28,11 +98,7 @@ function main { i64, ptr_argv }-> { i64 } {
     jmpIf_label loop_end;
 
     # Call function f
-    init_pany_type  retval, i64;
-    mov_p64_imm     retval, 0;
     call_func f;
-    output_p64      retval;
-    deinit;       # retval
 
     # Increment counter
     add_p64_imm counter, 1;
