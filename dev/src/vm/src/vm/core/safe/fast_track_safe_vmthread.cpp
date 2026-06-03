@@ -27,4 +27,8 @@ namespace vm {
 	IMemory<ShadowEntry>& FastTrackSafeVMThread::getShadowDataMemory() {
 		return static_cast<FastTrackSafeVMProcess&>(safe_process).getFTGlobals().getShadowDataMemory();
 	}
+
+	FastTrackGlobals& FastTrackSafeVMThread::getFTGlobals() {
+		return static_cast<FastTrackSafeVMProcess&>(safe_process).getFTGlobals();
+	}
 }

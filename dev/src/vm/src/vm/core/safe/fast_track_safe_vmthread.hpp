@@ -9,6 +9,7 @@ namespace vm {
 		class FunctionHandlers;
 	}
 	class FastTrackSafeVMProcess;
+	class FastTrackGlobals;
 
 	/**
 	 * @brief Fast Track-enabled thread. Extends SafeVMThread with shadow stacks and a
@@ -24,7 +25,8 @@ namespace vm {
 		FastTrackThreadData& getFTData() { return ft_data; }
 		const FastTrackThreadData& getFTData() const { return ft_data; }
 
-		IMemory<ShadowEntry>&   getShadowDataMemory();
+		IMemory<ShadowEntry>& getShadowDataMemory();
+		FastTrackGlobals&     getFTGlobals();
 
 		void updateFTGlobalPointers(ShadowEntry* global_data) {
 			ft_data.updateGlobalPointers(global_data);

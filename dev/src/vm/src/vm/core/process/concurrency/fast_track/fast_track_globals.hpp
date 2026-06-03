@@ -24,6 +24,8 @@ namespace vm {
 		std::vector<ShadowEntry>  global_shadow_data;
 		std::vector<ShadowBlock*> global_shadow_blocks;
 
+		std::vector<ShadowBlock*> shadow_by_id;
+
 	public:
 		FastTrackGlobals()  = default;
 		~FastTrackGlobals();
@@ -37,7 +39,7 @@ namespace vm {
 		 */
 		void initialize(CRef<low::ILowVMProgram> program);
 
-		[[nodiscard]] ShadowEntry*   globalShadowDataBase() {
+		[[nodiscard]] ShadowEntry* globalShadowDataBase() {
 			return global_shadow_data.data();
 		}
 
@@ -45,6 +47,25 @@ namespace vm {
 			return { global_shadow_blocks.at(idx) };
 		}
 
-		[[nodiscard]] IMemory<ShadowEntry>&   getShadowDataMemory() { return shadow_data_memory; }
+		[[nodiscard]] IMemory<ShadowEntry>& getShadowDataMemory() { return shadow_data_memory; }
+
+		void registerShadow(BlockID id, ShadowBlock* sb) {
+			auto idx = static_cast<usize>(id);
+			if (shadow_by_id.size() <= idx)
+				shadow_by_id.resize(idx + 1, nullptr);
+			shadow_by_id[idx] = sb;
+		}
+
+		void clearShadow(BlockID id) {
+			auto idx = static_cast<usize>(id);
+			if (idx < shadow_by_id.size())
+				shadow_by_id[idx] = nullptr;
+		}
+
+		[[nodiscard]] ShadowBlock* getShadow(BlockID id) const {
+			auto idx = static_cast<usize>(id);
+			if (idx >= shadow_by_id.size()) return nullptr;
+			return shadow_by_id[idx];
+		}
 	};
 }

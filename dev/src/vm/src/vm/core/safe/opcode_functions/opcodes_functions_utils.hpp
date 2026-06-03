@@ -115,9 +115,10 @@ inline static Ref<vm::ShadowBlock> getShadowBlockRefFromArg(
  * The thread argument is always SafeVMThread& but ft_* opcodes only execute when a
  * FastTrackSafeVMThread is in use, so the downcast is safe.
  */
-#define FT_THREAD (static_cast<vm::FastTrackSafeVMThread&>(thread))
-#define FT_DATA   (FT_THREAD.ft_data)
-#define FT_RT     (FT_DATA.ft_runtime)
+#define FT_THREAD  (static_cast<vm::FastTrackSafeVMThread&>(thread))
+#define FT_DATA    (FT_THREAD.ft_data)
+#define FT_RT      (FT_DATA.ft_runtime)
+#define FT_GLOBALS (FT_THREAD.getFTGlobals())
 
 [[nodiscard]] [[gnu::always_inline]]
 inline static bool isGlobalPlace(u64 place_arg) {

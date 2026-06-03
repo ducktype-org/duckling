@@ -64,8 +64,7 @@ namespace vm {
 		[[nodiscard]] EntryT* getData() { return data.view.getBegin(); }
 		[[nodiscard]] const EntryT* getData() const { return data.view.getBegin(); }
 		[[nodiscard]] bool isDeallocated() const { return deallocated; }
-
-		BasicBlock<ShadowEntry>* ft_shadow_block = nullptr;
+		[[nodiscard]] BlockID getID() const { return id; }
 	};
 
 	using Block = BasicBlock<std::byte>;

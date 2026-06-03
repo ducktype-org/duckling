@@ -1246,7 +1246,7 @@ namespace vm {
 					base[i].last_write      = Epoch(tid, epoch);
 					base[i].last_read_epoch = Epoch(tid, epoch);
 				}
-				ptr.getBlock()->ft_shadow_block = shadow_block.get();
+				FT_GLOBALS.registerShadow(ptr.getBlock()->getID(), shadow_block.get());
 				FT_THREAD.getShadowDataMemory().increaseBlockRefcount(shadow_block);
 			}
 		}
@@ -1257,7 +1257,7 @@ namespace vm {
 		{
 			Pointer ptr = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
 			if (!ptr.isNull()) {
-				ShadowBlock* sb = ptr.getBlock()->ft_shadow_block;
+				ShadowBlock* sb = FT_GLOBALS.getShadow(ptr.getBlock()->getID());
 				if (sb) {
 					auto type  = FT_THREAD.getShadowDataMemory().getBlockType(sb);
 					auto tid   = FT_DATA.thread_id;
@@ -1269,7 +1269,7 @@ namespace vm {
 					}
 					FT_THREAD.getShadowDataMemory().freeBlockData(Ref(sb));
 					FT_THREAD.getShadowDataMemory().decreaseBlockRefcount(Ref(sb));
-					ptr.getBlock()->ft_shadow_block = nullptr;
+					FT_GLOBALS.clearShadow(ptr.getBlock()->getID());
 				}
 			}
 		}
@@ -1283,7 +1283,7 @@ namespace vm {
 			auto    type      = Memory::getBlockType(src_block);
 
 			if (!ptr.isNull()) {
-				ShadowBlock* sb = ptr.getBlock()->ft_shadow_block;
+				ShadowBlock* sb = FT_GLOBALS.getShadow(ptr.getBlock()->getID());
 				if (sb && !sb->isDeallocated()) {
 					u32 shadow_idx  = FT_THREAD.getShadowDataMemory().getBlockType(Ref(sb))->getShadowEntryIndex(ptr.getOffset());
 					u32 shadow_size = type->getShadowSize();
@@ -1304,8 +1304,8 @@ namespace vm {
 			TypeCRef type = READ_FROM_DIRECT_ARG(TypeCRef, instr[1].arg0);
 
 			if (!dst.isNull() && !src.isNull()) {
-				ShadowBlock* dst_sb = dst.getBlock()->ft_shadow_block;
-				ShadowBlock* src_sb = src.getBlock()->ft_shadow_block;
+				ShadowBlock* dst_sb = FT_GLOBALS.getShadow(dst.getBlock()->getID());
+				ShadowBlock* src_sb = FT_GLOBALS.getShadow(src.getBlock()->getID());
 				if (dst_sb && src_sb) {
 					u32 dst_idx    = FT_THREAD.getShadowDataMemory().getBlockType(Ref(dst_sb))->getShadowEntryIndex(dst.getOffset());
 					u32 src_idx    = FT_THREAD.getShadowDataMemory().getBlockType(Ref(src_sb))->getShadowEntryIndex(src.getOffset());
@@ -1338,7 +1338,7 @@ namespace vm {
 				shadow_data_ptr[i].processRead (FT_DATA.thread_id, FT_DATA.getVC()[FT_DATA.thread_id], FT_DATA.getVC());
 			}
 
-			data_block->ft_shadow_block = shadow_block.get();
+			FT_GLOBALS.registerShadow(data_block->getID(), shadow_block.get());
 			sf->local_shadow_data_head += type->getShadowSize();
 		}
 		FUNCTION_CONT(1);
@@ -1348,13 +1348,13 @@ namespace vm {
 		{
 			auto* sf = FT_DATA.getShadowFrame();
 			Block* data_block  = frame->local_block_ref_stack_end[-1];
-			ShadowBlock* sb    = data_block->ft_shadow_block;
+			ShadowBlock* sb    = FT_GLOBALS.getShadow(data_block->getID());
 
 			if (sb) {
 				auto type = FT_THREAD.getShadowDataMemory().getBlockType(sb);
 				FT_THREAD.getShadowDataMemory().freeBlockData(Ref(sb));
 				FT_THREAD.getShadowDataMemory().decreaseBlockRefcount(Ref(sb));
-				data_block->ft_shadow_block = nullptr;
+				FT_GLOBALS.clearShadow(data_block->getID());
 				sf->local_shadow_data_head -= type->getShadowSize();
 			}
 		}
@@ -1396,10 +1396,12 @@ namespace vm {
 
 			for (u64 i = 0; i < to_clean; ++i) {
 				Block* blk = base[i];
-				if (blk && blk->ft_shadow_block) {
-					FT_THREAD.getShadowDataMemory().freeBlockData(Ref(blk->ft_shadow_block));
-					FT_THREAD.getShadowDataMemory().decreaseBlockRefcount(Ref(blk->ft_shadow_block));
-					blk->ft_shadow_block = nullptr;
+				if (!blk) continue;
+				ShadowBlock* sb = FT_GLOBALS.getShadow(blk->getID());
+				if (sb) {
+					FT_THREAD.getShadowDataMemory().freeBlockData(Ref(sb));
+					FT_THREAD.getShadowDataMemory().decreaseBlockRefcount(Ref(sb));
+					FT_GLOBALS.clearShadow(blk->getID());
 				}
 			}
 
@@ -1446,7 +1448,7 @@ namespace vm {
 			Pointer  ptr        = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
 			TypeCRef field_type = READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1);
 			if (!ptr.isNull()) {
-				ShadowBlock* sb = ptr.getBlock()->ft_shadow_block;
+				ShadowBlock* sb = FT_GLOBALS.getShadow(ptr.getBlock()->getID());
 				if (sb) {
 					u32 shadow_idx  = FT_THREAD.getShadowDataMemory().getBlockType(Ref(sb))->getShadowEntryIndex(ptr.getOffset());
 					u32 shadow_size = field_type->getShadowSize();
@@ -1465,7 +1467,7 @@ namespace vm {
 			Pointer  ptr        = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
 			TypeCRef field_type = READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1);
 			if (!ptr.isNull()) {
-				ShadowBlock* sb = ptr.getBlock()->ft_shadow_block;
+				ShadowBlock* sb = FT_GLOBALS.getShadow(ptr.getBlock()->getID());
 				if (sb) {
 					u32 shadow_idx  = FT_THREAD.getShadowDataMemory().getBlockType(Ref(sb))->getShadowEntryIndex(ptr.getOffset());
 					u32 shadow_size = field_type->getShadowSize();
@@ -1485,7 +1487,7 @@ namespace vm {
 			u64      idx       = READ_FROM_PLACE_ARG(u64, instr->arg1);
 			TypeCRef elem_type = READ_FROM_DIRECT_ARG(TypeCRef, instr[1].arg1);
 			if (!ptr.isNull()) {
-				ShadowBlock* sb = ptr.getBlock()->ft_shadow_block;
+				ShadowBlock* sb = FT_GLOBALS.getShadow(ptr.getBlock()->getID());
 				if (sb) {
 					u32 shadow_size = elem_type->getShadowSize();
 					u32 base_shadow = FT_THREAD.getShadowDataMemory().getBlockType(Ref(sb))->getShadowEntryIndex(ptr.getOffset());
@@ -1506,7 +1508,7 @@ namespace vm {
 			u64      idx       = READ_FROM_PLACE_ARG(u64, instr->arg1);
 			TypeCRef elem_type = READ_FROM_DIRECT_ARG(TypeCRef, instr[1].arg1);
 			if (!ptr.isNull()) {
-				ShadowBlock* sb = ptr.getBlock()->ft_shadow_block;
+				ShadowBlock* sb = FT_GLOBALS.getShadow(ptr.getBlock()->getID());
 				if (sb) {
 					u32 shadow_size = elem_type->getShadowSize();
 					u32 base_shadow = FT_THREAD.getShadowDataMemory().getBlockType(Ref(sb))->getShadowEntryIndex(ptr.getOffset());
@@ -1525,7 +1527,7 @@ namespace vm {
 		{
 			auto  data_block  = READ_BLOCK_REF_FROM_ARG(instr->arg0);
 			u32   shadow_fld  = static_cast<u32>(instr->arg1);
-			ShadowBlock* sb   = data_block->ft_shadow_block;
+			ShadowBlock* sb   = FT_GLOBALS.getShadow(data_block->getID());
 			if (sb) {
 				TypeCRef struct_type = FT_THREAD.getShadowDataMemory().getBlockType(sb);
 				u32 size = 1;
@@ -1547,7 +1549,7 @@ namespace vm {
 		{
 			auto  data_block  = READ_BLOCK_REF_FROM_ARG(instr->arg0);
 			u32   shadow_fld  = static_cast<u32>(instr->arg1);
-			ShadowBlock* sb   = data_block->ft_shadow_block;
+			ShadowBlock* sb   = FT_GLOBALS.getShadow(data_block->getID());
 			if (sb) {
 				TypeCRef struct_type = FT_THREAD.getShadowDataMemory().getBlockType(sb);
 				u32 size = 1;
@@ -1569,7 +1571,7 @@ namespace vm {
 		{
 			auto src_block = READ_BLOCK_REF_FROM_ARG(instr->arg0);
 			TypeCRef type  = READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1);
-			ShadowBlock* sb = src_block->ft_shadow_block;
+			ShadowBlock* sb = FT_GLOBALS.getShadow(src_block->getID());
 			if (sb) {
 				auto tid   = FT_DATA.thread_id;
 				auto epoch = FT_DATA.getVC()[tid];
@@ -1584,7 +1586,7 @@ namespace vm {
 		{
 			auto dst_block = READ_BLOCK_REF_FROM_ARG(instr->arg0);
 			TypeCRef type  = READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1);
-			ShadowBlock* sb = dst_block->ft_shadow_block;
+			ShadowBlock* sb = FT_GLOBALS.getShadow(dst_block->getID());
 			if (sb) {
 				auto tid   = FT_DATA.thread_id;
 				auto epoch = FT_DATA.getVC()[tid];
@@ -1600,7 +1602,7 @@ namespace vm {
 			auto  data_block = READ_BLOCK_REF_FROM_ARG(instr->arg0);
 			u64   idx        = READ_FROM_PLACE_ARG(u64, instr->arg1);
 			TypeCRef elem_type = READ_FROM_DIRECT_ARG(TypeCRef, instr[1].arg1);
-			ShadowBlock* sb  = data_block->ft_shadow_block;
+			ShadowBlock* sb  = FT_GLOBALS.getShadow(data_block->getID());
 			if (sb) {
 				u32 shadow_size  = elem_type->getShadowSize();
 				u32 shadow_idx   = static_cast<u32>(idx * shadow_size);
@@ -1618,7 +1620,7 @@ namespace vm {
 			auto  data_block = READ_BLOCK_REF_FROM_ARG(instr->arg0);
 			u64   idx        = READ_FROM_PLACE_ARG(u64, instr->arg1);
 			TypeCRef elem_type = READ_FROM_DIRECT_ARG(TypeCRef, instr[1].arg1);
-			ShadowBlock* sb  = data_block->ft_shadow_block;
+			ShadowBlock* sb  = FT_GLOBALS.getShadow(data_block->getID());
 			if (sb) {
 				u32 shadow_size  = elem_type->getShadowSize();
 				u32 shadow_idx   = static_cast<u32>(idx * shadow_size);
@@ -1635,7 +1637,7 @@ namespace vm {
 		{
 			auto src_block = READ_BLOCK_REF_FROM_ARG(instr->arg0);
 			TypeCRef type  = READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1);
-			ShadowBlock* sb = src_block->ft_shadow_block;
+			ShadowBlock* sb = FT_GLOBALS.getShadow(src_block->getID());
 			if (sb) {
 				auto tid   = FT_DATA.thread_id;
 				auto epoch = FT_DATA.getVC()[tid];
@@ -1650,7 +1652,7 @@ namespace vm {
 		{
 			auto dst_block = READ_BLOCK_REF_FROM_ARG(instr->arg0);
 			TypeCRef type  = READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1);
-			ShadowBlock* sb = dst_block->ft_shadow_block;
+			ShadowBlock* sb = FT_GLOBALS.getShadow(dst_block->getID());
 			if (sb) {
 				auto tid   = FT_DATA.thread_id;
 				auto epoch = FT_DATA.getVC()[tid];
@@ -1669,7 +1671,8 @@ namespace vm {
 
 			if (ptr.isNull()) { FUNCTION_CONT(2); return; }
 
-			ShadowBlock*& sb = ptr.getBlock()->ft_shadow_block;
+			auto         main_id = ptr.getBlock()->getID();
+			ShadowBlock* sb      = FT_GLOBALS.getShadow(main_id);
 
 			if (new_elem_count == 0) {
 				if (sb) {
@@ -1683,7 +1686,7 @@ namespace vm {
 					}
 					FT_THREAD.getShadowDataMemory().freeBlockData(Ref(sb));
 					FT_THREAD.getShadowDataMemory().decreaseBlockRefcount(Ref(sb));
-					sb = nullptr;
+					FT_GLOBALS.clearShadow(main_id);
 				}
 			} else if (sb == nullptr) {
 				auto inner_type = table_type->getInnerType().value();
@@ -1697,7 +1700,7 @@ namespace vm {
 						base[i].last_write      = Epoch(tid, epoch);
 						base[i].last_read_epoch = Epoch(tid, epoch);
 					}
-					sb = shadow_block.get();
+					FT_GLOBALS.registerShadow(main_id, shadow_block.get());
 					FT_THREAD.getShadowDataMemory().increaseBlockRefcount(shadow_block);
 				}
 			} else {
@@ -1726,7 +1729,7 @@ namespace vm {
 			auto  data_block    = READ_BLOCK_REF_FROM_ARG(instr->arg0);
 			TypeCRef wanted_type  = READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1);
 			TypeCRef variant_type = READ_FROM_DIRECT_ARG(TypeCRef, instr[1].arg0);
-			ShadowBlock* sb = data_block->ft_shadow_block;
+			ShadowBlock* sb = FT_GLOBALS.getShadow(data_block->getID());
 			if (sb) {
 				auto tid = FT_DATA.thread_id;
 				auto epoch = FT_DATA.getVC()[tid];
@@ -1745,7 +1748,7 @@ namespace vm {
 			TypeCRef variant_type = READ_FROM_DIRECT_ARG(TypeCRef, instr[1].arg0);
 
 			if (!ptr.isNull()) {
-				ShadowBlock* sb = ptr.getBlock()->ft_shadow_block;
+				ShadowBlock* sb = FT_GLOBALS.getShadow(ptr.getBlock()->getID());
 				if (sb) {
 					u32 tag_idx = FT_THREAD.getShadowDataMemory().getBlockType(Ref(sb))->getShadowEntryIndex(ptr.getOffset());
 					auto tid   = FT_DATA.thread_id;
@@ -1762,7 +1765,7 @@ namespace vm {
 		{
 			Pointer ptr = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
 			if (!ptr.isNull()) {
-				ShadowBlock* sb = ptr.getBlock()->ft_shadow_block;
+				ShadowBlock* sb = FT_GLOBALS.getShadow(ptr.getBlock()->getID());
 				if (sb) {
 					u32 tag_idx = FT_THREAD.getShadowDataMemory().getBlockType(Ref(sb))->getShadowEntryIndex(ptr.getOffset());
 					auto tid   = FT_DATA.thread_id;

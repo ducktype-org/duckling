@@ -35,8 +35,6 @@ namespace vm {
 				);
 				shadow_data_memory.increaseBlockRefcount(block);
 				global_shadow_blocks[block_idx] = block.get();
-				// Set ft_shadow_block on the data block for this global
-				// (The data block itself is managed elsewhere; we just store the shadow here)
 			} else {
 				shadow_data_memory.updateBlockDataView(
 					Ref(global_shadow_blocks[block_idx]),
