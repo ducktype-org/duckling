@@ -343,7 +343,7 @@ namespace vm {
 				performFunctionCall(instr, local_stack, frame, thread, func_id);
 			} else {
 				// should be compiled now
-				// TODO :
+				// TODO #2857: Integrate two compilers		
 				if constexpr (COMPILE_WITH_CP) {
 					performFunctionCall(instr, local_stack, frame, thread, func_id);
 
