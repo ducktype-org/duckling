@@ -44,10 +44,10 @@ private:
 		std::string_view          path_name,
 		const std::vector<int>&   expected_values,
 		const std::vector<usize>& expected_statuses,
-		const std::vector<usize>&   breakpoints = {}
+		const std::vector<usize>& breakpoints = {}
 	) {
-		std::atomic<size_t>     status_counter  = 0;
-		std::atomic<size_t>     ret_val_counter = 0;
+		std::atomic<size_t>     status_counter   = 0;
+		std::atomic<size_t>     ret_val_counter  = 0;
 		std::atomic<size_t>     position_counter = 0;
 		std::mutex              m;
 		std::condition_variable cv;
@@ -77,7 +77,8 @@ private:
 						ASSERT_TRUE(code_pos.has_value());
 						ASSERT_TRUE(position_counter < breakpoints.size());
 						ASSERT_TRUE(code_pos.value().source_position.has_value());
-						auto line = code_pos.value().source_position.value().getStartLineColumn().first;
+						auto line
+							= code_pos.value().source_position.value().getStartLineColumn().first;
 						ASSERT_EQUAL_PRINT(breakpoints[position_counter], line);
 					}
 				}
@@ -92,7 +93,8 @@ private:
 		debugger.attachOnStatusChangedListener(status_listener);
 		debugger.attachOnErrorListener(error_listener);
 		for (u64 breakpoint: breakpoints)
-			ASSERT_TRUE(debugger.setBreakpoint(fs::File(path(std::string(path_name))), breakpoint).has_value());
+			ASSERT_TRUE(debugger.setBreakpoint(fs::File(path(std::string(path_name))), breakpoint)
+			                .has_value());
 		ASSERT_TRUE(debugger.runMain().has_value());
 		std::unique_lock lk(m);
 		// timeout for the test
