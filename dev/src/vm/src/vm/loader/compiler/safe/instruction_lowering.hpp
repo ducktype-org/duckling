@@ -127,7 +127,10 @@ namespace vm::loader::compiler::safe::detail {
 
 		template<typename T, typename... Args>
 		requires AreTranslatableInstructionTagArgs<T, Args...> void addLow(Args&&... args) {
-			if (push_step_gil_on_next_add_low) push_step_gil_on_next_add_low = false;
+			if (push_step_gil_on_next_add_low) {
+				push_step_gil_on_next_add_low = false;
+				addLow<Op_stepGil>();
+			}
 
 			if (is_control_flow) {
 				is_control_flow = false;
