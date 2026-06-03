@@ -38,7 +38,7 @@ namespace vm::jit::cnp {
 	template<usize BinarySize, usize NumFunctions>
 	struct LoadedStencils;
 
-	template<usize BinarySize, usize NumFunctions>
+	template<usize BinarySize = 0, usize NumFunctions = 0>
 	struct Stencils {
 		using LoadedStencilsT = LoadedStencils<BinarySize, NumFunctions>;
 
