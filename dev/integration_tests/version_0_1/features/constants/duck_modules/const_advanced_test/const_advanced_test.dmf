@@ -1,3 +1,5 @@
+import core.builtins.*;
+
 # Test advanced const features
 # Focus: namespace constants, const expressions, hex/binary literals
 

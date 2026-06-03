@@ -1,3 +1,5 @@
+import core.builtins.*;
+
 # This test checks that alignment is properly computed for classes, that is
 # it is taken to be the maximum alignment of its members.
 #

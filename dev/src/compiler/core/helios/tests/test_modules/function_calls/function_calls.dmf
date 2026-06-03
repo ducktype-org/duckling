@@ -12,7 +12,6 @@ fun foo(a: i64, b: i64) -> i64 = {
 }
 
 fun foo1(a: i64, b:i64 = 5) -> i64 ={
-    builtin_output_i64(1234);
     return 0;
 }
 

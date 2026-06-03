@@ -1,3 +1,5 @@
+import core.builtins.*;
+
 var base: i32 = 6;
 
 fun twice_base() = {
