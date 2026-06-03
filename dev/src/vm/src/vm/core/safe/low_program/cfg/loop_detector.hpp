@@ -9,6 +9,8 @@
 #include <limits>
 #include <vector>
 
+#include <iostream>
+
 namespace vm::low::cf {
 	class LoopDetector;
 
@@ -36,6 +38,8 @@ namespace vm::low::cf {
 			ControlFlowGraph cfg(bc);
 			FunctionLoopCFGs segs{};
 
+			std::cout << "Full function CFG:\n" << cfg.toString() << "\n\n";
+
 			// First instruction is JIT entry point for entire function so we add full CFG as the
 			// first segment (to avoid copying, we move it after creating all of the subgraphs,
 			// here we just add an empty placeholder).
@@ -43,7 +47,16 @@ namespace vm::low::cf {
 			segs.start_blocks.push_back(0);
 
 			calcPredecessors(cfg);
+			std::cout << "Predecessors calculated:\n";
+			for (usize i = 0; i < cfg.size(); ++i) {
+				std::cout << "Block " << i << ": ";
+				for (BasicBlockID pred: predecessors[i]) std::cout << pred << " ";
+				std::cout << "\n";
+			}
+			std::cout << "\n";
+
 			calcDominators(cfg);
+			std::cout << "Dominator tree calculated.\n";
 
 			std::vector<u32>          last_visited(cfg.size(), 0);
 			u32                       timestamp = 0;
@@ -51,9 +64,9 @@ namespace vm::low::cf {
 			usize                     stack_ptr = 0;
 
 			for (BasicBlockID bid = 0; bid < cfg.size(); ++bid) {
-				stack.clear();
-				stack_ptr = 0;
-				++timestamp;
+				stack = { bid };
+				stack_ptr = 1;
+				last_visited[bid] = ++timestamp;
 
 				for (BasicBlockID pred: predecessors[bid]) {
 					if (isDominatedBy(pred, bid)) {
@@ -74,15 +87,18 @@ namespace vm::low::cf {
 					}
 				}
 
-				if (!stack.empty()) {
+				if (stack.size() > 1) {
 					CORE_ASSERT(bid != 0, "Entry block cannot be a loop header");
-					segs.cfgs.push_back(cfg.subgraph(std::move(stack)));
+					auto loop_cfg = cfg.subgraph(std::move(stack));
+					std::cout << "CFG of loop starting at block " << bid << ":\n" << loop_cfg.toString() << "\n\n";
+					segs.cfgs.push_back(std::move(loop_cfg));
 					segs.start_blocks.push_back(bid);
 				}
 			}
 
 			// Move full function CFG here to avoid copying it before all the subgraphs are created.
 			segs.cfgs[0] = std::move(cfg);
+			std::cout << "Finished loop detection, total loops found: " << segs.cfgs.size() - 1 << "\n";
 			return segs;
 		}
 
@@ -171,13 +187,22 @@ namespace vm::low::cf {
 		void calcImmediateDominators(const ControlFlowGraph& cfg) {
 			imm_dom.assign(cfg.size(), undefined);
 			calcPostorder(cfg);
+			std::cout << "Postorder numbering:\n";
+			for (usize i = 0; i < cfg.size(); ++i) {
+				std::cout << "Block " << i << ": postorder index = " << postorder[i] << "\n";
+			}
+			std::cout << "\n";
 
 			imm_dom[0]   = 0;  // Entry block dominates itself
 			bool changed = true;
 			while (changed) {
 				changed = false;
-				for (usize i = cfg.size() - 1; i > 0; --i) {
+				// Start from size - 2 to skip the entry block (it has no predecessors)
+				for (int i = (int)cfg.size() - 2; i >= 0; --i) {
 					BasicBlockID b = inv_postorder_map[i];
+					std::cout << "Calculating idom for block " << b << " with predecessors: ";
+					for (BasicBlockID pred: predecessors[b]) std::cout << pred << " ";
+					std::cout << "\n";
 					CORE_ASSERT(
 						!predecessors[b].empty(), "All blocks except entry should have predecessors"
 					);
@@ -193,6 +218,11 @@ namespace vm::low::cf {
 						changed    = true;
 					}
 				}
+				std::cout << "Current immediate dominators:\n";
+				for (usize i = 0; i < imm_dom.size(); ++i) {
+					std::cout << "Block " << i << ": idom = " << imm_dom[i] << "\n";
+				}
+				std::cout << "\n";
 			}
 		}
 
@@ -202,6 +232,7 @@ namespace vm::low::cf {
 		 * @param time Running DFS timestamp.
 		 */
 		void domTreeTimestampDfs(BasicBlockID bid, u32& time) {
+			if (dom_tree_timestamps[bid].first != 0) return;  // Already visited
 			dom_tree_timestamps[bid].first = time++;
 			for (BasicBlockID child_id: dom_tree[bid]) domTreeTimestampDfs(child_id, time);
 			dom_tree_timestamps[bid].second = time++;
@@ -213,6 +244,11 @@ namespace vm::low::cf {
 		 */
 		void calcDominators(const ControlFlowGraph& cfg) {
 			calcImmediateDominators(cfg);
+			std::cout << "Immediate dominators:\n";
+			for (usize i = 0; i < imm_dom.size(); ++i) {
+				std::cout << "Block " << i << ": " << imm_dom[i] << "\n";
+			}
+			std::cout << "\n";
 
 			dom_tree.assign(cfg.size(), std::vector<BasicBlockID>());
 			for (usize block_id = 1; block_id < cfg.size(); ++block_id) {

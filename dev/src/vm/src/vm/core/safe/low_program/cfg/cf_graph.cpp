@@ -6,6 +6,9 @@
 
 #include "cf_analysis.hpp"
 
+#include <sstream>
+#include <string>
+
 namespace vm::low::cf {
 
 	OutEdges::OutEdges(): to{ 0, 0 } {}
@@ -170,9 +173,9 @@ namespace vm::low::cf {
 
 	ControlFlowGraph ControlFlowGraph::subgraph(const std::vector<BasicBlockID>& block_ids) const {
 		ControlFlowGraph subgraph;
-		subgraph.blocks.reserve(block_ids.size());
+		subgraph.blocks.reserve(block_ids.size() + 1);
 
-		auto dummy_block_id = static_cast<BasicBlockID>(subgraph.blocks.size());
+		auto dummy_block_id = static_cast<BasicBlockID>(block_ids.size());
 
 		std::vector<BasicBlockID> old_to_new(blocks.size() + 1, dummy_block_id);
 
@@ -189,7 +192,6 @@ namespace vm::low::cf {
 			subgraph.blocks.emplace_back(new_id, src.start, src.end);
 		}
 		// Add dummy block to redirect edges that go outside the selected subset
-		// PLACEHOLDER: replace with logic which creates a different dummy for each jmp or smth
 		auto ret_instr_pos = blocks.back().end - 1;
 		subgraph.blocks.emplace_back(dummy_block_id, ret_instr_pos, ret_instr_pos + 1);
 
@@ -207,5 +209,44 @@ namespace vm::low::cf {
 		}
 
 		return subgraph;
+	}
+
+	/* Debug string conversions */
+
+	std::string OutEdges::toString() const {
+		std::ostringstream oss;
+		switch (op_type) {
+		case Kind::End:
+			oss << "End{}";
+			break;
+		case Kind::Default:
+			oss << "Default{next -> " << to[0] << "}";
+			break;
+		case Kind::JmpIf:
+			oss << "JmpIf{true -> " << to[0] << ", false -> " << to[1] << "}";
+			break;
+		case Kind::JmpIfNot:
+			oss << "JmpIfNot{true -> " << to[1] << ", false -> " << to[0] << "}";
+			break;
+		}
+		return oss.str();
+	}
+
+	std::string BasicBlock::toString() const {
+		std::ostringstream oss;
+		oss << "Block{bid = " << id << ", range = [" << start << ", " << end << "), edge = "
+		    << succ.toString() << "}";
+		return oss.str();
+	}
+
+	std::string ControlFlowGraph::toString() const {
+		std::ostringstream oss;
+		oss << "ControlFlowGraph{blocks = [\n";
+		for (usize i = 0; i < blocks.size(); ++i) {
+			oss << "  " << blocks[i].toString();
+			if (i + 1 < blocks.size()) oss << ",\n";
+		}
+		oss << "\n]}";
+		return oss.str();
 	}
 }  // namespace vm::low::cf

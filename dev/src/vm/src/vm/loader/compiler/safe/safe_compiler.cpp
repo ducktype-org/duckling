@@ -207,6 +207,7 @@ namespace vm::loader::compiler::safe {
 			}
 
 #ifdef ENABLE_JIT
+			std::cout << "Calling detectLoops for function " << function.name.str.strView() << "\n";
 			low::cf::FunctionLoopCFGs func_cfgs = low::cf::detectLoopsInFunction(bytecode);
 			std::vector<low::cf::ControlFlowGraph> cfgs = func_cfgs.cfgs;
 #endif

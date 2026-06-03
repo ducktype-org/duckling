@@ -10,6 +10,7 @@
 
 #include <array>
 #include <vector>
+#include <string>
 
 namespace vm::low {
 	// Reintroduce the alias to avoid circular dependency with `low_program.hpp`.
@@ -92,6 +93,11 @@ namespace vm::low {
 			 */
 			const BasicBlockID& operator[](usize index) const;
 
+			/**
+			 * @brief Returns a compact string representation for debugging.
+			 */
+			[[nodiscard]] std::string toString() const;
+
 		private:
 			std::array<BasicBlockID, 2> to;
 			usize                       no_edges{ 0 };
@@ -161,6 +167,11 @@ namespace vm::low {
 			 * @brief Returns the number of outgoing edges.
 			 */
 			[[nodiscard]] usize edgeCount() const;
+
+			/**
+			 * @brief Returns a compact string representation for debugging.
+			 */
+			[[nodiscard]] std::string toString() const;
 		};
 
 		/**
@@ -205,6 +216,11 @@ namespace vm::low {
 			 */
 			[[nodiscard]] ControlFlowGraph subgraph(const std::vector<BasicBlockID>& block_ids
 			) const;
+
+			/**
+			 * @brief Returns a multi-line string representation of this CFG for debugging.
+			 */
+			[[nodiscard]] std::string toString() const;
 		};
 	}  // vm::low::cf
 
