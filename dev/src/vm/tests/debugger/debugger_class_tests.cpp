@@ -286,7 +286,9 @@ private:
 
 	void memoryTest() {
 		vm::debugger::Debugger debugger{ fs::File(path("breakpoint_all_types.dbc")) };
-		ASSERT_TRUE(debugger.setBreakpoint(base::StrID("main"), 20).has_value());
+		ASSERT_TRUE(
+			debugger.setBreakpoint(fs::File(path("breakpoint_all_types.dbc")), 74).has_value()
+		);
 		std::mutex m;
 
 		std::condition_variable cv;
