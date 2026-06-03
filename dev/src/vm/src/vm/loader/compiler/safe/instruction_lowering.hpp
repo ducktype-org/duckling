@@ -454,7 +454,7 @@ namespace vm::loader::compiler::safe::detail {
 			instr_case(high::Op_set_threadctx, i) { addLow<Op_set_threadctx>(i.function); }
 			instr_case(high::Op_ret_tailcall_func, i) { addLow<Op_ret_tailcall_func>(i.function); }
 			instr_case(high::Op_ret, i) { addLow<Op_ret>(); }
-			instr_case(high::Op_init_pany_type, i) { addLow<Op_init_bany_type>(i.var, i.type); }
+			instr_case(high::Op_init_pany_type, i) { addLow<Op_init_bany_type>(i.type); }
 			instr_case(high::Op_deinit, i) { addLow<Op_deinit>(); }
 			instr_case(high::Op_input_p64, i) { addLow<Op_input_p64>(i.dst); }
 			instr_case(high::Op_output_p64, i) { addLow<Op_output_p64>(i.src); }
