@@ -12,8 +12,6 @@ namespace vm::jit::cnp {
 // Linter doesn't actually build stencils-nm so it would be unavailable.
 #if __has_include(<stencils-nm>)
 	#include <stencils-nm>
-#else
-	#error "Not found"
 #endif
         }.load();
 		return loaded_stencils;
@@ -28,6 +26,10 @@ namespace vm::jit::cnp {
 	}
 
 	[[nodiscard]] const std::array<StencilData, STENCIL_COUNT>& stencilsData() {
-		return getLoadedStencils().stencilsData();
+		const auto& stencils_data = getLoadedStencils().stencilsData();
+		if constexpr (STENCIL_COUNT == stencils_data.size())
+			return stencils_data;
+		else
+			CORE_UNREACHABLE();
 	}
 }

@@ -40,13 +40,12 @@ def parse_stencil_section(stencil_section: ELFSection) -> Stencil:
     return output
 
 
-def is_stencil_section(section: ELFSection) -> bool:
+def is_stencil_section(section: ELFSection, accept_all_sections: bool) -> bool:
     name = section["Name"]["Name"]
     if not name.startswith(".ltext."):
         return False
 
-    global all_sections
-    return True if all_sections else "stencil" in name
+    return True if accept_all_sections else "stencil" in name
 
 
 def get_stencil_name(section: ELFSection) -> str:
@@ -54,7 +53,9 @@ def get_stencil_name(section: ELFSection) -> str:
     return name[len(".ltext.") :]
 
 
-def split_section_relocations(section: ELFSection, stencils: list[Stencil]) -> list[Stencil]:
+def split_section_relocations(
+    section: ELFSection, stencils: list[Stencil]
+) -> list[Stencil]:
     stencil_offset = lambda stencil: stencil.place
     beginnings = sorted([stencil for stencil in stencils], key=stencil_offset)
     for wrapped_relocation in section["Relocations"]:
@@ -69,7 +70,10 @@ def split_section_relocations(section: ELFSection, stencils: list[Stencil]) -> l
             stencil.holes.append(parse_relocation(relocation, stencil))
     return stencils
 
-def split_shared_relocations(sections: list[ELFSection], stencils: list[Stencil]) -> list[Stencil]:
+
+def split_shared_relocations(
+    sections: list[ELFSection], stencils: list[Stencil]
+) -> list[Stencil]:
     shared_section = next(
         (section for section in sections if section["Name"]["Name"] == ".rela.dyn"),
         None,
@@ -93,12 +97,13 @@ def parse(llvm_readobj: str, binary: str, verbose: bool) -> list[Stencil]:
     readobj_output = run_llvm_tool(llvm_readobj, readobj_args, echo=verbose)
 
     file_info = json.loads(readobj_output)[0]
-    return [
-        section["Section"] for section in file_info["Sections"]
-    ]
+    return [section["Section"] for section in file_info["Sections"]]
+
 
 def order_stencils(stencils: list[Stencil], order) -> list[Stencil]:
-    no_stencil = Stencil(name="NO STENCIL", type=StencilType.NO_STENCIL, place=0, size=0, holes=[])
+    no_stencil = Stencil(
+        name="NO STENCIL", type=StencilType.NO_STENCIL, place=0, size=0, holes=[]
+    )
     array = [no_stencil] * len(order)
     for stencil in stencils:
         if stencil.name.startswith("stencil_special"):
@@ -112,25 +117,36 @@ def order_stencils(stencils: list[Stencil], order) -> list[Stencil]:
 
     return array
 
+
+def validate_stencils(stencils: list[Stencil]):
+    for stencil in stencils:
+        if not stencil.validate():
+            print(f"Stencil: {stencil} failed validation")
+            exit(4)
+
+
 def generate_stencils(
-    llvm_readobj: str, binary, verbose: bool, shared: bool, order
+    llvm_readobj: str,
+    binary,
+    accept_all_sections: bool,
+    verbose: bool,
+    shared: bool,
+    order,
 ) -> list[Stencil]:
     sections = parse(llvm_readobj, binary, verbose)
-    
+
     stencils = [
         parse_stencil_section(section)
         for section in sections
-        if is_stencil_section(section)
+        if is_stencil_section(section, accept_all_sections)
     ]
     if shared:
         stencils = split_shared_relocations(sections, stencils)
     if order:
         stencils = order_stencils(stencils, json.loads(order.read()))
+    if not accept_all_sections:
+        validate_stencils(stencils)
 
-    for stencil in stencils:
-        if not stencil.validate():
-            print(f"Stencil: {stencil} failed validation")
-            exit(4)
     return stencils
 
 
@@ -150,10 +166,14 @@ def generate_stencils(
 def main(
     llvm_readobj, output, binary, verbose, accept_all_sections, shared, order, **kwargs
 ):
-    global all_sections
-    all_sections = accept_all_sections
-    
-    stencils = generate_stencils(llvm_readobj, binary, verbose, shared, order)
+    stencils = generate_stencils(
+        llvm_readobj=llvm_readobj,
+        binary=binary,
+        verbose=verbose,
+        accept_all_sections=accept_all_sections,
+        shared=shared,
+        order=order,
+    )
 
     output.write(stencils_to_c(stencils, binary=binary.read()))
 

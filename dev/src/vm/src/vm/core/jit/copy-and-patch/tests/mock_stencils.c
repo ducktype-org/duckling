@@ -45,20 +45,18 @@ typedef int (*stencil_type)(int, int);
 
 __attribute__((weak)) extern int _continue_fn;
 
-int stencil_add(int a, int b) {
+int mock_add(int a, int b) {
 	a += b;
 
-	stencil_type                     val = &_continue_fn;
+	stencil_type val = (stencil_type) &_continue_fn;
 	return (*val)(a, b);
 }
 
-int stencil_mul(int a, int b) {
+int mock_mul(int a, int b) {
 	a *= b;
 
-	stencil_type                     val = &_continue_fn;
+	stencil_type val = (stencil_type) &_continue_fn;
 	return (*val)(a, b);
 }
 
-int stencil_end(int a, int) {
-	return a;
-}
+int mock_end(int a, int _) { return a; }

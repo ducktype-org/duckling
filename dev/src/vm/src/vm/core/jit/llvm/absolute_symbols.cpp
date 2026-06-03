@@ -24,7 +24,7 @@ void registerAbsoluteJITSymbols(llvm::orc::LLJIT& lljit) {
 			llvm::JITSymbolFlags::Exported | llvm::JITSymbolFlags::Callable
 		);
 	}
-	// NOLINTEND
+	// NOLINTEND(clang-analyzer-optin.core.EnumCastOutOfRange)
 
 	cantFail(jd.define(llvm::orc::absoluteSymbols(std::move(host_symbols))));
 }

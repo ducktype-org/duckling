@@ -123,9 +123,9 @@ private:
 	}
 
 	void testCombining() {
-		auto add_code = FIND_FUNC("stencil_add");
-		auto mul_code = FIND_FUNC("stencil_mul");
-		auto end_code = FIND_FUNC("stencil_end");
+		auto add_code = FIND_FUNC("mock_add");
+		auto mul_code = FIND_FUNC("mock_mul");
+		auto end_code = FIND_FUNC("mock_end");
 
 		auto memory = JitFuncMemory::allocate(add_code.size + mul_code.size + end_code.size);
 

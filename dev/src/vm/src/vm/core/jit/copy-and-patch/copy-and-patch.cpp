@@ -11,7 +11,7 @@ namespace vm::jit {
 	cnp::JitFuncMemory compileCP(const vm::low::LowFuncData& func_data) {
 		using namespace cnp;
 		auto get_opfunc_size
-			= [&](auto opcode) { return stencilsData().at(static_cast<u32>(opcode)).size; };
+			= [&](auto opcode) { return stencilsData().at(std::to_underlying(opcode)).size; };
 		usize size = std::ranges::fold_left(
 						 func_data.bc | std::views::transform(getInstructionOpcode)
 							 | std::views::transform(get_opfunc_size),
