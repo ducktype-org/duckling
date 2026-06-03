@@ -1,27 +1,6 @@
-# This is a main function which writes 1 to a global variable (initially set to 0) and returns 0.
-
-type primitive: i32 4
-type primitive: i64 8
-type primitive: void 1
-
-global_data _Q_M9read_onlyG1a i32 {
-    constructor: _Q_M9read_onlyG1agc,
-};
+global_data _Q_M9read_onlyG1a i32 {};
 
 function main {  } -> { i64 } {
-    init_pany_type             var0,      i64;
-    label                   label_0;
     mov_p32_imm            _Q_M9read_onlyG1a,        1;
-    init_pany_type         cast_src_tmp0,      i32;
-    mov_p32_imm            cast_src_tmp0,        0;
-    sext_p64_p32               var0, cast_src_tmp0;
-    deinit                ;
-    mov_p64_p64                ret0,     var0;
-    ret                   ;
-}
-
-function _Q_M9read_onlyG1agc {  } -> {  } {
-    label                   label_0;
-    mov_p32_imm            _Q_M9read_onlyG1a,        0;
     ret                   ;
 }

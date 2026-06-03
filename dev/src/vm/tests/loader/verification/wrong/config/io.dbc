@@ -1,28 +1,5 @@
-# This is a main function which calls builtin_output_i64(1) and returns 0.
-
-type primitive: i32 4
-type primitive: i64 8
-
-
 function main {  } -> { i64 } {
-    init_pany_type             var0,      i64;
-    init_pany_type             var1,      i64;
-    init_pany_type             var2,      i64;
-    label                   label_0;
-    init_pany_type         cast_src_tmp0,      i32;
-    mov_p32_imm            cast_src_tmp0,        1;
-    sext_p64_p32               var1, cast_src_tmp0;
-    deinit                ;
-    init_pany_type         call_result1,      i64;
-    init_pany_type         call_arg0_2,      i64;
-    mov_p64_p64            call_arg0_2,     var1;
+    init_pany_type         call_arg0,        i64;
     call_builtinfunc       builtin_output_i64;
-    mov_p64_p64                var2, call_result1;
-    deinit                ;
-    init_pany_type         cast_src_tmp3,      i32;
-    mov_p32_imm            cast_src_tmp3,        0;
-    sext_p64_p32               var0, cast_src_tmp3;
-    deinit                ;
-    mov_p64_p64                ret0,     var0;
     ret                   ;
 }
