@@ -59,6 +59,9 @@ function(duck_add_vm_tests suffix)
         duck_add_test_custom(vm ${test_set}_parsing_test loader/assembly/bc_parsing.cpp
                 USES ${libvm} Tester ${vmtester})
 
+        duck_add_test_custom(vm ${test_set}_roundtrip_test loader/roundtrip/serialize_parse_roundtrip.cpp
+                USES ${libvm} Tester ${vmtester})
+
         duck_add_test_custom(vm ${test_set}_verification_test loader/verification/bc_verification.cpp
                 USES ${libvm} Tester ${vmtester})
 

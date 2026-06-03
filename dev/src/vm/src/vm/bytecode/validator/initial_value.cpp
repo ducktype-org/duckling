@@ -23,14 +23,14 @@ namespace {
 		      types(types),
 		      global_name(global_name) {}
 
-		void visitConstantU64(const ConstantU64&) override {
+		void visitConstantImmediate(const ConstantImmediate& value) override {
 			auto type_ref = types.at(type_id);
 
 			if (!type_ref->isKind<valid_type::finalized::Primitive>())
 				throw InitialValueTypeMismatchError(global_name, type_ref->getName());
 
 			const auto& primitive = type_ref->getKindAs<valid_type::finalized::Primitive>();
-			if (primitive->size > Bytes(8))
+			if (primitive->size != value.size)
 				throw InitialValueTypeMismatchError(global_name, type_ref->getName());
 		}
 

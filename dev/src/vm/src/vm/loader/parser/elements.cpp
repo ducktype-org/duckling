@@ -20,6 +20,8 @@
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
 
+#include <cstring>
+#include <iomanip>
 #include <memory>
 
 namespace vm::loader::parser {
@@ -250,6 +252,63 @@ namespace vm::loader::parser {
 			return { T{ 0 }, 0 };
 		}
 
+		std::pair<std::array<std::byte, 8>, Bits> parseHexLiteral(F8ParserState& state) {
+
+			const auto& token = state.tokens().peek();
+
+			if (!token.isNumLiteralGroup()) {
+				state.logInt(makeBox<dia_int::PlaceholderError>(
+					"Expected a hex numeric literal.", token.getPosition()
+				));
+				return { {}, Bits(0) };
+			}
+			state.tokens().next();
+
+			std::string_view raw = token.getValue().strView();
+
+			// -----------------------------
+			// 1. Validate prefix
+			// -----------------------------
+			if (!raw.starts_with("0x") && !raw.starts_with("0X")) {
+				state.logInt(makeBox<dia_int::PlaceholderError>(
+					"Hex literal must start with 0x.", token.getPosition()
+				));
+				return { {}, Bits(0) };
+			}
+
+			raw.remove_prefix(2);
+
+			// -----------------------------
+			// 2. Parse via std::stoull
+			// -----------------------------
+			std::string str(raw);
+			std::size_t pos = 0;
+
+			u64 value = 0;
+
+			try {
+				value = std::stoull(str, &pos, 16);
+
+				if (pos != str.size()) {
+					state.logInt(makeBox<dia_int::PlaceholderError>(
+						"Hex literal not fully consumed.", token.getPosition()
+					));
+					return { {}, Bits(0) };
+				}
+			} catch (...) {
+				state.logInt(
+					makeBox<dia_int::PlaceholderError>("Invalid hex literal.", token.getPosition())
+				);
+				return { {}, Bits(0) };
+			}
+
+			usize                    bit_length = str.size() * 4;
+			std::array<std::byte, 8> bytes{};
+			std::memcpy(bytes.data(), &value, 8);
+
+			return { bytes, Bits(bit_length) };
+		}
+
 		base::StrID parseStr(F8ParserState& state) {
 			tpc::Identifier identifier;
 			state.parse().one(&identifier);
@@ -340,7 +399,7 @@ namespace vm::loader::parser {
 		};
 	}
 
-	#define ERROR_CHECK() \
+#define ERROR_CHECK() \
 	if (state.int_err->hasErrors()) return {};
 #define PARSE_ONE_CHECK(VALUE) \
 	state.parse().one(VALUE);  \
@@ -350,12 +409,13 @@ namespace vm::loader::parser {
 		MBox<code::ConstantBase> parseConstantValue(F8ParserState& state) {
 			using namespace vm::code;
 
-			if (state[0].isNumLiteralGroup()
-			    || (state[0].isOperatorSymbol()
-			        && (state[0].getValue().str() == "-" || state[0].getValue().str() == "+"))) {
-				auto parsed = opargs_parsers::parseNumericLiteral<u64>(state);
+			if (state[0].isNumLiteralGroup()) {
+				auto parsed    = opargs_parsers::parseHexLiteral(state);
 				ERROR_CHECK();
-				return makeBox<ConstantU64>(parsed.first);
+				ConstantImmediate immediate;
+				immediate.size = base::bits2bytes(parsed.second);
+				std::memcpy(immediate.content.data(), &parsed.first, 8);
+				return makeBox<ConstantImmediate>(std::move(immediate));
 			}
 
 			if (state[0].isKeyword()) {
@@ -474,9 +534,7 @@ namespace vm::loader::parser {
 				state.parse().one(lang_def::Keyword::BCInitialValue);
 				state.parse().one(lang_def::NamedOperator::Colon);
 				auto value_opt = parseConstantValue(state);
-				if (value_opt) {
-					out->initial_value = ConstantValue(std::move(value_opt));
-				}
+				if (value_opt) out->initial_value = ConstantValue(std::move(value_opt));
 			}
 
 			if (state.empty()) break;
@@ -1082,7 +1140,11 @@ namespace vm::loader::parser {
 		class DprintConstValueVisitor final: public code::ConstVisitor {
 			std::ostream& out;
 
-			void visitConstantU64(const code::ConstantU64& val) final { out << val.value; }
+			void visitConstantImmediate(const code::ConstantImmediate& val) final {
+				out << "0x";
+				for (size_t i = val.size.asInt(); i-- > 0;)
+					out << std::format("{:02X}", std::to_integer<unsigned>(val.content.at(i)));
+			}
 
 			void visitConstantClass(const code::ConstantClass& val) final {
 				out << lang_def::keywordToStr(lang_def::Keyword::BCClass).strView() << " { ";
@@ -1097,7 +1159,8 @@ namespace vm::loader::parser {
 			}
 
 			void visitConstantFixedSizeTable(const code::ConstantFixedSizeTable& val) final {
-				out << lang_def::keywordToStr(lang_def::Keyword::BCFixedSizeTable).strView() << " [ ";
+				out << lang_def::keywordToStr(lang_def::Keyword::BCFixedSizeTable).strView()
+					<< " [ ";
 				bool first = true;
 				for (const auto& elem: val.elements) {
 					if (!first) out << ", ";
@@ -1116,26 +1179,25 @@ namespace vm::loader::parser {
 		out << lang_def::keywordToStr(lang_def::Keyword::BCGlobalData).strView() << " ";
 		out << name.value.strView() << " " << type.value.strView() << " {";
 		if (is_constant) {
-			out << "\n    "
-				<< lang_def::keywordToStr(lang_def::Keyword::BCIsConstant).strView() << ": "
-				<< lang_def::keywordToStr(lang_def::Keyword::BCTrue).strView() << ",";
+			out << "\n    " << lang_def::keywordToStr(lang_def::Keyword::BCIsConstant).strView()
+				<< ": " << lang_def::keywordToStr(lang_def::Keyword::BCTrue).strView() << ",";
 		}
 		if (initial_value.has_value()) {
-			out << "\n    "
-				<< lang_def::keywordToStr(lang_def::Keyword::BCInitialValue).strView() << ": ";
+			out << "\n    " << lang_def::keywordToStr(lang_def::Keyword::BCInitialValue).strView()
+				<< ": ";
 			DprintConstValueVisitor value_visitor{ out };
 			initial_value->data->acceptVisitor(value_visitor);
 			out << ",";
 		}
 		if (ctor_name.has_value()) {
 			out << "\n    "
-				<< lang_def::keywordToStr(lang_def::Keyword::BCGlobalConstructor).strView()
-				<< ": " << ctor_name->value.strView() << ",";
+				<< lang_def::keywordToStr(lang_def::Keyword::BCGlobalConstructor).strView() << ": "
+				<< ctor_name->value.strView() << ",";
 		}
 		if (dtor_name.has_value()) {
 			out << "\n    "
-				<< lang_def::keywordToStr(lang_def::Keyword::BCGlobalDestructor).strView()
-				<< ": " << dtor_name->value.strView() << ",";
+				<< lang_def::keywordToStr(lang_def::Keyword::BCGlobalDestructor).strView() << ": "
+				<< dtor_name->value.strView() << ",";
 		}
 		out << "\n};";
 	}

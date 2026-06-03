@@ -242,7 +242,14 @@ namespace vm::code {
 		class DataSerializer final: public code::ConstVisitor {
 			std::ostream& out;
 
-			void visitConstantU64(const code::ConstantU64& val) final { out << val.value; }
+			void visitConstantImmediate(const code::ConstantImmediate& val) final {
+				// Output as hex literal: 0x followed by exactly (2*size) hex digits.
+				// This makes the byte count inferable from the serialized form.
+				out << "0x";
+				// We save the number in the big endianness.
+				for (size_t i = val.size.asInt(); i-- > 0;)
+					out << std::format("{:02X}", std::to_integer<unsigned>(val.content.at(i)));
+			}
 
 			void visitConstantClass(const code::ConstantClass& val) final {
 				out << lang_def::keywordToStr(lang_def::Keyword::BCClass).strView() << " { ";
@@ -257,7 +264,8 @@ namespace vm::code {
 			}
 
 			void visitConstantFixedSizeTable(const code::ConstantFixedSizeTable& val) final {
-				out << lang_def::keywordToStr(lang_def::Keyword::BCFixedSizeTable).strView() << " [ ";
+				out << lang_def::keywordToStr(lang_def::Keyword::BCFixedSizeTable).strView()
+					<< " [ ";
 				bool first = true;
 				for (const auto& elem: val.elements) {
 					if (!first) out << ", ";
@@ -279,7 +287,7 @@ namespace vm::code {
 		void display() {
 			out << lang_def::keywordToStr(lang_def::Keyword::BCGlobalData).strView() << ' ';
 			out << global_data.name.str.strView() << " " << global_data.type.str.strView() << " {";
-			bool has_content = false;
+			bool has_content   = false;
 			auto maybe_newline = [&] {
 				if (has_content) out << ",";
 				out << "\n    ";

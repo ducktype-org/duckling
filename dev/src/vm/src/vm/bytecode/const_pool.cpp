@@ -5,7 +5,9 @@
 #include <base/extend_cpp/variant_match.hpp>
 
 namespace vm::code {
-	Box<ConstantBase> ConstantU64::clone() const { return makeBox<ConstantU64>(*this); }
+	Box<ConstantBase> ConstantImmediate::clone() const {
+		return makeBox<ConstantImmediate>(*this);
+	}
 
 	Box<ConstantBase> ConstantClass::clone() const {
 		auto cloned = makeBox<ConstantClass>();
@@ -28,7 +30,9 @@ namespace vm::code {
 		return *this;
 	}
 
-	void ConstantU64::acceptVisitor(ConstVisitor& v) const { v.visitConstantU64(*this); }
+	void ConstantImmediate::acceptVisitor(ConstVisitor& v) const {
+		v.visitConstantImmediate(*this);
+	}
 
 	void ConstantClass::acceptVisitor(ConstVisitor& v) const { v.visitConstantClass(*this); }
 
