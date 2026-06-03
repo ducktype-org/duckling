@@ -49,6 +49,9 @@ namespace vm::jit::cnp {
 #undef HANDLE_MICRO_INSTR
 
 	extern "C" void stencil_special_return(CP_ARGS) {
+		// Since stencils do not take pointers/references it has to store the changed values.
+		// Stencils do not take pointers to reduce the cost, since
+		// it would have to be dereferenced or patched in every single stencil.
 		thread.runtime_data.frame_stack_current = frame;
 		frame->local_stack                      = local_stack;
 		frame->instr                            = instr;
