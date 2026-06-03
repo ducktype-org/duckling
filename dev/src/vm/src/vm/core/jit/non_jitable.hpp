@@ -5,8 +5,6 @@
 
 #include <cstdint>
 
-// TODO: make this not config-dependant
-
 namespace vm::jit {
 	constexpr std::array hard_symbols = {
 		std::pair{ "jmp_label", &vm::OpFuns::op_debug_jmp_label },

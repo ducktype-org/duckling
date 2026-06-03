@@ -21,6 +21,5 @@ namespace vm::jit::cnp {
 
 	constexpr size_t stencil_count = low::microInstrCount() + 1;
 
-	// TODO: use non-jitable.hpp to get the jitable
 	[[nodiscard]] const std::array<StencilData, stencil_count>& stencilsData();
 }
