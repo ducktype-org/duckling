@@ -32,6 +32,10 @@ namespace vm::jit {
 
 		for (auto instr: func_data.bc) {
 			auto opcode = getInstructionOpcode(instr);
+			if (low::isOpcodeNonExecutable(opcode)) {
+				continue;
+			}
+
 			// std::cerr << vm::low::OPCODE_NAMES[std::to_underlying(opcode)] << ": "
 			//		  << std::to_underlying(opcode) << std::endl;
 			patch_stencil(opcode, [&instr, &next](HoleValue value) {
