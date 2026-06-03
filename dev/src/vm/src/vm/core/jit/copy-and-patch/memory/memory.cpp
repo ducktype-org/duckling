@@ -1,6 +1,7 @@
 #include "memory.hpp"
 
 #include <fstream>
+#include <utility>
 
 namespace vm::jit::cnp {
 	void JitFuncMemory::dump(const char* filename) {

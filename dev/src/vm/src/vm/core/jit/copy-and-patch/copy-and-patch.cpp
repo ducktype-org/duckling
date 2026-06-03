@@ -4,6 +4,7 @@
 
 #include <vm/core/safe/low_program/instruction.hpp>
 #include <vm/core/safe/low_program/low_program.hpp>
+#include <base/config/build_type.hpp>
 
 #include <iostream>
 
@@ -52,12 +53,11 @@ namespace vm::jit {
 				}
 			});
 		}
-		memory.dump("dump_normal");
 		patch_stencil(SpecialStencils::ret, [](HoleValue) -> u64 {
 			CORE_PANIC("Special stencil 'ret' has a relocation");
 		});
 
-		memory.dump("dump_finished");
+		IF_BUILD_TYPE_DEV(memory.dump("compiled function"));
 		memory.markExecutable();
 		return memory;
 	}

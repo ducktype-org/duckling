@@ -134,8 +134,6 @@ private:
 		auto end_addr = stencils.relocate(mul_code, mul_addr);
 		stencils.relocate(end_code, end_addr);
 
-		memory.dump("dump1");
-
 		add_code.patch(add_addr, [&](HoleValue hole) {
 			switch (hole) {
 			case HoleValue::CONTINUE_FUNCTION:
@@ -153,8 +151,6 @@ private:
 				CORE_PANIC("unexpected relocation");
 			}
 		});
-
-		memory.dump("dump2");
 
 		memory.markExecutable();
 		auto build_func = memory.intoFunc<int(int, int)>();  // (a + b) * b
