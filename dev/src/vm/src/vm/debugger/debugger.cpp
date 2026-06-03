@@ -148,8 +148,8 @@ namespace vm::debugger {
 	std::expected<void, api::ApiError> Debugger::setBreakpoint(
 		fs::File file, usize line, bool enabled
 	) {
-		api::mapFileLineToCodeCollectionPosition(pid, file, line)
-			.and_then([&](api::response::CodePosition& pos) {
+		return api::mapFileLineToCodeCollectionPosition(pid, file, line)
+		    .and_then([&](const api::response::CodePosition& pos) {
 				return api::setBreakpoint(pid, pos.function_name, pos.instr_number, enabled);
 			});
 	}

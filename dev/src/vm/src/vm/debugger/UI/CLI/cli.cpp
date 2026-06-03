@@ -126,6 +126,22 @@ namespace vm::debugger::cli {
 				position();
 			} else if (stripped_line == "step" || stripped_line == "next" || stripped_line == "n") {
 				debugger.step();
+			} else if (stripped_line.starts_with("breakpoint ") || stripped_line.starts_with("b ")) {
+				std::stringstream stream(stripped_line.substr(stripped_line.find_first_of(" ")));
+				std::string       option;
+				usize             line_number = -1;
+				stream >> option >> line;
+				if (line_number != -1 && loaded_file.has_value()) {
+					debugger
+						.setBreakpoint(
+							loaded_file.value(), line_number, option == "set" || option == "s"
+						)
+						.transform_error([&](const api::ApiError& api_error) {
+							std::lock_guard lk(output_mutex);
+							std::cout << "Modyfing breakpoint failed...\n";
+							return api_error;
+						});
+				}
 			}
 		}
 
@@ -146,6 +162,10 @@ namespace vm::debugger::cli {
 
 					 "  (s)tatus    - write current VM status\n"
 					 "  (pos)ition  - write current position\n"
+
+					 "  (b)reakpoint <option> <line>\n"
+					 "              - options: (s)et, remove\n"
+					 "              - line: line nr in file\n"
 				  << "\n";
 	}
 

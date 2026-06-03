@@ -30,6 +30,7 @@ namespace vm::debugger::cli {
 		Debugger                          debugger;
 		std::mutex                        output_mutex;
 
+		base::Optional<fs::File>           loaded_file;
 		std::expected<void, api::ApiError> load_result = {};
 
 		void help();
