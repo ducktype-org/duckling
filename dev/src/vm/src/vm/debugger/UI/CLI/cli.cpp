@@ -127,7 +127,7 @@ namespace vm::debugger::cli {
 			} else if (stripped_line == "step" || stripped_line == "next" || stripped_line == "n") {
 				debugger.step();
 			} else if (stripped_line.starts_with("breakpoint ") || stripped_line.starts_with("b ")) {
-				std::stringstream stream(stripped_line.substr(stripped_line.find_first_of(" ")));
+				std::stringstream stream(stripped_line.substr(stripped_line.find_first_of(' ')));
 				std::string       option;
 				usize             line_number = -1;
 				stream >> option >> line;
