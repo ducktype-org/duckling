@@ -27,15 +27,15 @@ public:
 		TESTER_ADD_TEST(testDynamicArray);
 		TESTER_ADD_TEST(testVariant);
 
-		// Executing code within a compiled function
-		TESTER_ADD_TEST(testUnconditionalJumps);
-		TESTER_ADD_TEST(testConditionalJumps);
-		TESTER_ADD_TEST(testJumps);
-
 		// Executing code outside of a compiled function
 		TESTER_ADD_TEST(testCalls);
 		TESTER_ADD_TEST(testVirtualCalls);
 		TESTER_ADD_TEST(testRecursiveCalls);
+		
+		// Executing code within a compiled function
+		TESTER_ADD_TEST(testUnconditionalJumps);
+		TESTER_ADD_TEST(testConditionalJumps);
+		TESTER_ADD_TEST(testJumps);
 
 		// Many things combined
 		TESTER_ADD_TEST(testAll);
