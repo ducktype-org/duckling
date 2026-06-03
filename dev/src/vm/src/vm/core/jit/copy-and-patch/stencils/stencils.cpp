@@ -46,6 +46,7 @@ namespace vm::jit::cnp {
 #include <vm/core/safe/low_program/micro_instruction_definitions.hpp>
 #undef HANDLE_MICRO_INSTR
 
+	// NOLINTNEXTLINE(readability-identifier-naming)
 	extern "C" void stencil_special_return(CP_ARGS) {
 		// Since stencils do not take pointers/references it has to store the changed values.
 		// Stencils do not take pointers to reduce the cost, since

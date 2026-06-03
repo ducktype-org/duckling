@@ -5,6 +5,7 @@
 
 #include <cstdint>
 
+#ifdef ENABLE_JIT
 namespace vm::jit {
 	constexpr std::array HARD_SYMBOLS = {
 		std::pair{ "jmp_label", &vm::OpFuns::op_debug_jmp_label },
@@ -24,3 +25,4 @@ namespace vm::jit {
 	constexpr size_t NON_JITABLE_COUNT = HARD_SYMBOLS.size() - HELPER_FUNCTIONS;
 	constexpr size_t JITABLE_COUNT     = low::microInstrCount() - NON_JITABLE_COUNT;
 }
+#endif //ENABLE_JIT
