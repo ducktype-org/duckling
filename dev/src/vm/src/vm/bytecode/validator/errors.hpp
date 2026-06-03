@@ -136,6 +136,10 @@ namespace vm::code {
 		DuplicatedGlobalDataError, code::GlobalData, "Duplicated global data: "
 	);
 
+	DEFINE_DUPLICATED_ELEMENT_ERROR(
+		DuplicatedConstantDataError, code::ConstantData, "Duplicated constant: "
+	);
+
 	DEFINE_DUPLICATED_ELEMENT_ERROR(DuplicatedFunctionError, code::Function, "Duplicated function: ");
 	DEFINE_DUPLICATED_ELEMENT_ERROR(
 		DuplicatedExtCFunctionError, code::ExternalCFunction, "Duplicated external C function: "

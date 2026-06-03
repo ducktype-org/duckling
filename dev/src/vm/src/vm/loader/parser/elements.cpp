@@ -405,6 +405,14 @@ namespace vm::loader::parser {
 		MBox<code::ConstantBase> parseConstantValue(F8ParserState& state) {
 			using namespace vm::code;
 
+			if (state[0].isNumLiteralGroup()
+			    || (state[0].isOperatorSymbol()
+			        && (state[0].getValue().str() == "-" || state[0].getValue().str() == "+"))) {
+				auto parsed = opargs_parsers::parseNumericLiteral<u64>(state);
+				ERROR_CHECK();
+				return makeBox<ConstantU64>(parsed.first);
+			}
+
 			if (state[0].isKeyword()) {
 				auto kw = state[0].asKeyword();
 				state.tokens().next();
@@ -413,7 +421,7 @@ namespace vm::loader::parser {
 				case lang_def::Keyword::BCClass: {
 					if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
 						state.logInt(makeBox<dia_int::PlaceholderError>(
-							"Expected `{` after `structure`.", state.getPosition()
+							"Expected `{` after `class`.", state.getPosition()
 						));
 						return {};
 					}
@@ -440,7 +448,7 @@ namespace vm::loader::parser {
 				case lang_def::Keyword::BCFixedSizeTable: {
 					if (!state[0].isBracketGroup(lexer::Token::BracketType::Square)) {
 						state.logInt(makeBox<dia_int::PlaceholderError>(
-							"Expected `[` after `array`.", state.getPosition()
+							"Expected `[` after `fixed_size_table`.", state.getPosition()
 						));
 						return {};
 					}
@@ -460,10 +468,10 @@ namespace vm::loader::parser {
 					return std::move(array_val);
 				}
 				default:
-					// Default: parse as a numeric literal (u64 raw bits).
-					auto parsed = opargs_parsers::parseNumericLiteral<u64>(state);
-					ERROR_CHECK();
-					return makeBox<ConstantU64>(parsed.first);
+					state.logInt(makeBox<dia_int::PlaceholderError>(
+						"Unexpected keyword in constant value.", state.getPosition()
+					));
+					return {};
 				}
 			}
 			state.logInt(makeBox<dia_int::PlaceholderError>(
@@ -1089,7 +1097,7 @@ namespace vm::loader::parser {
 			void visitConstantU64(const code::ConstantU64& val) final { out << val.value; }
 
 			void visitConstantClass(const code::ConstantClass& val) final {
-				out << "class { ";
+				out << lang_def::keywordToStr(lang_def::Keyword::BCClass).strView() << " { ";
 				bool first = true;
 				for (const auto& [name, field_val]: val.fields) {
 					if (!first) out << ", ";
@@ -1101,7 +1109,7 @@ namespace vm::loader::parser {
 			}
 
 			void visitConstantFixedSizeTable(const code::ConstantFixedSizeTable& val) final {
-				out << "array [ ";
+				out << lang_def::keywordToStr(lang_def::Keyword::BCFixedSizeTable).strView() << " [ ";
 				bool first = true;
 				for (const auto& elem: val.elements) {
 					if (!first) out << ", ";
@@ -1148,6 +1156,11 @@ namespace vm::loader::parser {
 	void ParsedFile::dprint(std::ostream& out) const {
 		for (auto& type: types) {
 			type->dprint(out);
+			out << "\n";
+		}
+
+		for (auto& global: global_data) {
+			global->dprint(out);
 			out << "\n";
 		}
 

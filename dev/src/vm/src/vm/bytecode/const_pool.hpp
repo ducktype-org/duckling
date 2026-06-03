@@ -9,7 +9,7 @@
 #include <utility>
 #include <vector>
 
-MAKE_STRINGIFYABLE_ENUM(vm::code, u64, ConstValueType, 
+MAKE_STRINGIFYABLE_ENUM(vm::code, std::uint8_t, ConstValueType, 
 	U64, Class, FixedSizeTable
 );
 
@@ -23,8 +23,6 @@ namespace vm::code {
 		[[nodiscard]] virtual Box<ConstantBase> clone() const = 0;
 		[[nodiscard]] virtual ConstValueType    type() const  = 0;
 
-		bool operator==(const ConstantBase& other) const = default;
-
 		virtual void acceptVisitor(ConstVisitor&) const = 0;
 	};
 
@@ -36,8 +34,6 @@ namespace vm::code {
 	class ConstantU64: public ConstantBase {
 	public:
 		u64 value{ 0 };
-
-		bool operator==(const ConstantU64& other) const = default;
 
 		[[nodiscard]] Box<ConstantBase> clone() const override;
 
@@ -54,7 +50,6 @@ namespace vm::code {
 	public:
 		std::vector<std::pair<base::StrID, Box<ConstantBase>>> fields;
 
-		bool operator==(const ConstantClass& other) const = default;
 		ConstantClass()                                   = default;
 
 		[[nodiscard]] Box<ConstantBase> clone() const override;
@@ -68,7 +63,6 @@ namespace vm::code {
 	public:
 		std::vector<Box<ConstantBase>> elements;
 
-		bool operator==(const ConstantFixedSizeTable& other) const = default;
 		ConstantFixedSizeTable()                                   = default;
 
 
@@ -100,11 +94,6 @@ namespace vm::code {
 
 		ConstantValue() = default;
 
-		template<typename... Args>
-		static ConstantValue from(Args&&... args) {
-			return { makeBox<ConstantBase>(std::forward<Args>(args)...) };
-		}
-
 		static ConstantValue fromU64(u64 value) { return { makeBox<ConstantU64>(value) }; }
 
 		template<typename DataTypeElement>
@@ -117,7 +106,5 @@ namespace vm::code {
 
 		ConstantValue(const ConstantValue&);
 		ConstantValue& operator=(const ConstantValue&);
-
-		bool operator==(const ConstantValue& other) const = default;
 	};
 }  // namespace vm::code

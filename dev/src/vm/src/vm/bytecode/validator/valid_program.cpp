@@ -22,7 +22,7 @@ vm::code::CodeCollection vm::code::ValidProgram::produceValidCodeCollection() co
 		     .types                = std::ranges::to<std::vector>(type_context.getTodTypes()),
 		     .global_data          = std::ranges::to<std::vector>(globals_map),
 		     .external_c_functions = std::ranges::to<std::vector>(ext_c_function_map),
-		     .constants            = {} };
+		     .constants            = std::ranges::to<std::vector>(constants_map) };
 }
 
 vm::code::ValidProgram vm::code::ValidProgram::tryInsertCode(const code::CodeCollection& collection
@@ -53,6 +53,7 @@ void vm::code::ValidProgram::insertCode(const CodeCollection& collection) {
 	insertTypes(collection.types);
 	insertGlobals(collection.global_data);
 	insertExternalCFunctions(collection.external_c_functions);
+	insertConstants(collection.constants);
 	insertFunctions(collection.functions);
 }
 
@@ -124,4 +125,20 @@ void vm::code::ValidProgram::insertExternalCFunctions(
 
 const vm::ObjIdNameMap<vm::code::ExternalCFunction>& vm::code::ValidProgram::extCFunctions() const {
 	return ext_c_function_map;
+}
+
+const vm::ObjIdNameMap<vm::code::ConstantData>& vm::code::ValidProgram::constants() const {
+	return constants_map;
+}
+
+void vm::code::ValidProgram::insertConstants(
+	const std::vector<ConstantData>& new_constants
+) {
+	for (const auto& constant: new_constants) {
+		if (constants_map.contains(constant.name))
+			throw DuplicatedConstantDataError(constant, *constants_map.at(constant.name));
+		if (!type_context.getCurrentTypes().contains(constant.type))
+			throw UnknownTypeError(opargs::Type(constant.type));
+		constants_map.insert(constant, constant.name);
+	}
 }

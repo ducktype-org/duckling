@@ -108,7 +108,8 @@ std::expected<void, LoaderLogger> Loader::loadAndValidate(const code::CodeCollec
 ) {
 	// Skip if no new code was added.
 	if (code_collection.functions.empty() && code_collection.types.empty()
-	    && code_collection.global_data.empty() && code_collection.external_c_functions.empty()) {
+	    && code_collection.global_data.empty() && code_collection.external_c_functions.empty()
+	    && code_collection.constants.empty()) {
 		return {};
 	}
 

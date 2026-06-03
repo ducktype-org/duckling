@@ -51,10 +51,13 @@ namespace vm::code {
 
 		const ObjIdNameMap<ExternalCFunction>& extCFunctions() const;
 
+		const ObjIdNameMap<ConstantData>& constants() const;
+
 	private:
 		ObjIdNameMap<valid_function::ValidFunction> function_map;
 		ObjIdNameMap<ExternalCFunction>             ext_c_function_map;
 		ObjIdNameMap<GlobalData>                    globals_map;
+		ObjIdNameMap<ConstantData>                  constants_map;
 		TypeContext                                 type_context;
 
 		/**
@@ -99,5 +102,11 @@ namespace vm::code {
 		 * Cannot insert multiple ExternalCFunctions with the same name.
 		 */
 		void insertExternalCFunctions(const std::vector<ExternalCFunction>& new_functions);
+
+		/**
+		 * @brief Inserts constants. May invalidate state.
+		 * Cannot insert multiple constants with the same name.
+		 */
+		void insertConstants(const std::vector<ConstantData>& new_constants);
 	};
 }

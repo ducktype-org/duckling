@@ -289,7 +289,7 @@ namespace vm::code {
 			void visitConstantU64(const code::ConstantU64& val) final { out << val.value; }
 
 			void visitConstantClass(const code::ConstantClass& val) final {
-				out << "class { ";
+				out << lang_def::keywordToStr(lang_def::Keyword::BCClass).strView() << " { ";
 				bool first = true;
 				for (const auto& [name, field_val]: val.fields) {
 					if (!first) out << ", ";
@@ -301,7 +301,7 @@ namespace vm::code {
 			}
 
 			void visitConstantFixedSizeTable(const code::ConstantFixedSizeTable& val) final {
-				out << "fixed_size_table [ ";
+				out << lang_def::keywordToStr(lang_def::Keyword::BCFixedSizeTable).strView() << " [ ";
 				bool first = true;
 				for (const auto& elem: val.elements) {
 					if (!first) out << ", ";
