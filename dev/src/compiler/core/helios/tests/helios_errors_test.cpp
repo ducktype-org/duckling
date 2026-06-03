@@ -466,6 +466,17 @@ private:
 				{ "inconsistent return statements" },
 				1
 			);
+
+			checkForErrorOnCompileModule(
+				R"(
+					fun main() = {
+						var i: i64 = 0;
+						var u: u64 = i;
+					}
+				)",
+				{ "Type `i64` cannot be converted to type `u64`." },
+				1
+			);
 		}
 
 		// ========================== Lexer errors ==========================
@@ -646,7 +657,7 @@ private:
 		{
 			checkForErrorOnCompileModule(
 				R"(
-				fun main(n: u64) = {
+				fun main(n: i64) = {
 					var arr: i32[n];
 				}
 			)",
@@ -658,7 +669,7 @@ private:
 				R"(
 				const ARR_TYPE = i32[10.5];
 			)",
-				{ "Type `f32` cannot be converted to type `const u64`." },
+				{ "Type `f32` cannot be converted to type `const i64`." },
 				1
 			);
 
@@ -666,7 +677,7 @@ private:
 				R"(
 				const ARR_TYPE = i32[-2];
 			)",
-				{ "Value cannot be converted to type `const u64` at compile-time." },
+				{ "Static array size must be a non-negative integral value." },
 				1
 			);
 
