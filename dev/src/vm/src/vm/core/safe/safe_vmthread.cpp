@@ -378,8 +378,8 @@ namespace vm {
 					MAKE_BYTECODE_INSTRUCTION(
 						init_bany_type, argv_ptr_type_arg, 0
 					),                                                        // [56, 72) *argv
-					MAKE_BYTECODE_INSTRUCTION(mov_p64_imm, args.size(), 0),  // argc := args.size()
-					MAKE_BYTECODE_INSTRUCTION(mov_pptr_pptr, 8, 0),  // argv := argv_internal
+					MAKE_BYTECODE_INSTRUCTION(mov_p64_imm, 48, args.size()),  // argc := args.size()
+					MAKE_BYTECODE_INSTRUCTION(mov_pptr_pptr, 56, 8),  // argv := argv_internal
 				}
 			);
 		}
