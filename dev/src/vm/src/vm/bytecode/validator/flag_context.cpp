@@ -7,8 +7,8 @@
 #include <vector>
 
 namespace vm::code {
-	std::set<base::StrID> getNewFunctionNames(const std::vector<Function>& new_functions) {
-		std::set<base::StrID> result;
+	std::unordered_set<base::StrID> getNewFunctionNames(const std::vector<Function>& new_functions) {
+		std::unordered_set<base::StrID> result;
 		for (const auto& func: new_functions) result.insert(func.name);
 		return result;
 	}
@@ -37,6 +37,7 @@ namespace vm::code {
 		return result;
 	}
 
+	/// Creates a new graph with the edges reversed relative to the provided call graph.
 	base::HashMap<base::StrID, std::vector<base::StrID>> transposeCallGraph(
 		const base::HashMap<base::StrID, std::vector<base::StrID>>& call_graph
 	) {
@@ -63,6 +64,30 @@ namespace vm::code {
 		for (const auto& instruction: func.body)
 			result |= getFlagsForInstruction(instruction, globals, ext_c_functions);
 		return result;
+	}
+
+	static void verifyFlagsAgainstConfig(
+		const InstructionFlag flags, api::ExecutionConfig config, const base::StrID func_name
+	) {
+		if (config.no_io.copyValueOr(false)) {
+			if (flags.contains(InstructionFlagOptions::IORead)
+			    || flags.contains(InstructionFlagOptions::IOWrite))
+				throw ExecutionConfigViolationError(
+					func_name, "no_io flag is set, but function performs I/O"
+				);
+		}
+		if (config.read_only.copyValueOr(false)) {
+			if (flags.contains(InstructionFlagOptions::GlobalWrite))
+				throw ExecutionConfigViolationError(
+					func_name, "read_only flag is set, but function modifies global state"
+				);
+		}
+		if (config.single_thread.copyValueOr(false)) {
+			if (flags.contains(InstructionFlagOptions::Multithread))
+				throw ExecutionConfigViolationError(
+					func_name, "single_thread flag is set, but function uses multithreading"
+				);
+		}
 	}
 
 	void FlagContext::insertAndValidate(
@@ -108,7 +133,7 @@ namespace vm::code {
 			const auto flag_option = InstructionFlagOptions(flag_id);
 
 			// Mark starting functions
-			std::set<base::StrID> marked_functions;
+			std::unordered_set<base::StrID> marked_functions;
 			for (const auto& [func, _]: transpose_call_graph)
 				if (direct_flags.at(func).contains(flag_option)) marked_functions.insert(func);
 
@@ -133,25 +158,7 @@ namespace vm::code {
 		for (const auto& [new_func, flags]: flags_in_new_functions) {
 			flags_in_functions.put(new_func, flags);
 
-			if (config.no_io.copyValueOr(false)) {
-				if (flags.contains(InstructionFlagOptions::IORead)
-				    || flags.contains(InstructionFlagOptions::IOWrite))
-					throw ExecutionConfigViolationError(
-						new_func, "no_io flag is set, but function performs I/O"
-					);
-			}
-			if (config.read_only.copyValueOr(false)) {
-				if (flags.contains(InstructionFlagOptions::GlobalWrite))
-					throw ExecutionConfigViolationError(
-						new_func, "read_only flag is set, but function modifies global state"
-					);
-			}
-			if (config.single_thread.copyValueOr(false)) {
-				if (flags.contains(InstructionFlagOptions::Multithread))
-					throw ExecutionConfigViolationError(
-						new_func, "single_thread flag is set, but function uses multithreading"
-					);
-			}
+			verifyFlagsAgainstConfig(flags, config, new_func);
 		}
 	}
 }

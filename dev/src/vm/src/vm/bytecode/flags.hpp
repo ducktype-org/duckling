@@ -507,9 +507,10 @@ namespace vm::code {
 				deref_read();
 			}
 			instr_case(ins::Op_virtual_call_pptr_method, i) {
-				rd(i.object_ptr);
-				deref_read();  // vtable lookup through ptr
-				flags |= Call | InstructionFlag(ControlFlowModifying);
+				(void) i;
+				// Assume the worst of a virtual call
+				flags |= IORead | IOWrite | GlobalRead | GlobalWrite | Call | CallExternal
+				       | Multithread | RequiresGIL | ReleaseGIL | ControlFlowModifying | MayBlock;
 			}
 
 			// ===== Allocation / deref / refs =====
