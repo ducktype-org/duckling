@@ -44,7 +44,7 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::parseFiles(
 		opt_some(parsed_files) {
 			code::CodeCollection new_code;
 
-			for ( auto& parsed_file: parsed_files) {
+			for (const auto& parsed_file: parsed_files) {
 				for (const auto& global: parsed_file.global_data) {
 					code::GlobalData code_global;
 					code_global.name         = global->name;

@@ -6,8 +6,9 @@
 
 #include <lang_definitions/key_spec_op.hpp>
 
-#include <vm/bytecode/const_pool.hpp>
 #include <vm/bytecode/bytecode.hpp>
+#include <vm/bytecode/const_pool.hpp>
+#include <vm/bytecode/const_pool_visitor.hpp>
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/type_of_data.hpp>
@@ -279,35 +280,41 @@ namespace vm::code {
 	}
 
 	class ConstantDataSerializer final {
-		std::ostream&          out;
-		const ConstantData&   constant;
+		std::ostream&       out;
+		const ConstantData& constant;
 
-		static void serializeConstantValue(const ConstantValue& value, std::ostream& out) {
-			variant_match(*value.data) {
-				variant_case(ConstantU64, u64_val) { out << u64_val.value; }
-				variant_case(ConstantClass, class_val) {
-					out << "class { ";
-					bool first = true;
-					for (const auto& [name, field_val]: class_val.fields) {
-						if (!first) out << ", ";
-						out << name.strView() << ": ";
-						serializeConstantValue(field_val, out);
-						first = false;
-					}
-					out << " }";
+		class DataSerializer final: public code::ConstVisitor {
+			std::ostream& out;
+
+			void visitConstantU64(const code::ConstantU64& val) final { out << val.value; }
+
+			void visitConstantClass(const code::ConstantClass& val) final {
+				out << "class { ";
+				bool first = true;
+				for (const auto& [name, field_val]: val.fields) {
+					if (!first) out << ", ";
+					out << name.strView() << ": ";
+					field_val->acceptVisitor(*this);
+					first = false;
 				}
-				variant_case(ConstantFixedSizeTable, fixed_size_table_val) {
-					out << "array [ ";
-					bool first = true;
-					for (const auto& elem: fixed_size_table_val.elements) {
-						if (!first) out << ", ";
-						serializeConstantValue(elem, out);
-						first = false;
-					}
-					out << " ]";
-				}
+				out << " }";
 			}
-		}
+
+			void visitConstantFixedSizeTable(const code::ConstantFixedSizeTable& val) final {
+				out << "fixed_size_table [ ";
+				bool first = true;
+				for (const auto& elem: val.elements) {
+					if (!first) out << ", ";
+					elem->acceptVisitor(*this);
+					first = false;
+				}
+				out << " ]";
+			}
+
+		public:
+			DataSerializer(std::ostream& out): out(out) {}
+		};
+
 
 	public:
 		ConstantDataSerializer(std::ostream& out, const ConstantData& constant):
@@ -317,7 +324,8 @@ namespace vm::code {
 		void display() {
 			out << lang_def::keywordToStr(lang_def::Keyword::BCConstant).strView() << ' ';
 			out << constant.name.str.strView() << " " << constant.type.str.strView() << " ";
-			serializeConstantValue(constant.value, out);
+			DataSerializer data_serializer{ out };
+			constant.value.data->acceptVisitor(data_serializer);
 			out << lang_def::specialToStr(lang_def::Special::Semicolon).strView();
 		}
 	};

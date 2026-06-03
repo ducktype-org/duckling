@@ -1,23 +1,39 @@
 #include "const_pool.hpp"
 
+#include "const_pool_visitor.hpp"
+
 #include <base/extend_cpp/variant_match.hpp>
 
 namespace vm::code {
-	bool ConstantValue::operator==(const ConstantValue& other) const {
-		if (data->index() != other.data->index()) return false;
+	Box<ConstantBase> ConstantU64::clone() const { return makeBox<ConstantU64>(*this); }
 
-		variant_match(*data) {
-			variant_case(ConstantU64, u64_val) {
-				return u64_val == std::get<ConstantU64>(*other.data);
-			}
-			variant_case(ConstantClass, struct_val) {
-				return struct_val == std::get<ConstantClass>(*other.data);
-			}
-			variant_case(ConstantFixedSizeTable, array_val) {
-				return array_val == std::get<ConstantFixedSizeTable>(*other.data);
-			}
-		}
-
-		return false;
+	Box<ConstantBase> ConstantClass::clone() const {
+		auto cloned = makeBox<ConstantClass>();
+		for (const auto& [name, field_val]: fields)
+			cloned->fields.emplace_back(name, field_val->clone());
+		return cloned;
 	}
+
+	Box<ConstantBase> ConstantFixedSizeTable::clone() const {
+		auto cloned = makeBox<ConstantFixedSizeTable>();
+		for (const auto& elem: elements) cloned->elements.push_back(elem->clone());
+		return cloned;
+	}
+
+	ConstantValue::ConstantValue(const ConstantValue& other): data(other.data->clone()) {}
+
+	ConstantValue& ConstantValue::operator=(const ConstantValue& other) {
+		if (this == &other) return *this;
+		data = other.data->clone();
+		return *this;
+	}
+
+	void ConstantU64::acceptVisitor(ConstVisitor& v) const { v.visitConstantU64(*this); }
+
+	void ConstantClass::acceptVisitor(ConstVisitor& v) const { v.visitConstantClass(*this); }
+
+	void ConstantFixedSizeTable::acceptVisitor(ConstVisitor& v) const {
+		v.visitConstantFixedSizeTable(*this);
+	}
+
 }  // namespace vm::code

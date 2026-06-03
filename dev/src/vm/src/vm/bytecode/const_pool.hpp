@@ -1,28 +1,85 @@
 #pragma once
 
+#include "base/extend_cpp/stringifyable_enum.hpp"
 #include <base/pointers/box.hpp>
 #include <base/types/ints.hpp>
 
 #include <string_id/string_id.hpp>
 
 #include <utility>
-#include <variant>
 #include <vector>
 
+MAKE_STRINGIFYABLE_ENUM(vm::code, u64, ConstValueType, 
+	U64, Class, FixedSizeTable
+);
+
 namespace vm::code {
+	class ConstVisitor;
+
+	class ConstantBase {
+	public:
+		virtual ~ConstantBase() = default;
+
+		[[nodiscard]] virtual Box<ConstantBase> clone() const = 0;
+		[[nodiscard]] virtual ConstValueType    type() const  = 0;
+
+		bool operator==(const ConstantBase& other) const = default;
+
+		virtual void acceptVisitor(ConstVisitor&) const = 0;
+	};
+
 	/**
 	 * @brief A primitive constant value stored as raw u64 bits.
 	 * All numerical types (i8, i16, i32, i64, u8, ..., f32, f64, etc.)
 	 * are bit-cast to u64 for storage.
 	 */
-	struct ConstantU64 {
+	class ConstantU64: public ConstantBase {
+	public:
 		u64 value{ 0 };
 
-		bool operator==(const ConstantU64& other) const { return value == other.value; }
+		bool operator==(const ConstantU64& other) const = default;
+
+		[[nodiscard]] Box<ConstantBase> clone() const override;
+
+		[[nodiscard]] ConstValueType type() const override { return ConstValueType::U64; }
+
+		ConstantU64() = default;
+
+		explicit ConstantU64(u64 value): value(value) {}
+
+		void acceptVisitor(ConstVisitor&) const final;
 	};
 
-	struct ConstantClass;
-	struct ConstantFixedSizeTable;
+	class ConstantClass: public ConstantBase {
+	public:
+		std::vector<std::pair<base::StrID, Box<ConstantBase>>> fields;
+
+		bool operator==(const ConstantClass& other) const = default;
+		ConstantClass()                                   = default;
+
+		[[nodiscard]] Box<ConstantBase> clone() const override;
+
+		[[nodiscard]] ConstValueType type() const override { return ConstValueType::Class; }
+
+		void acceptVisitor(ConstVisitor&) const final;
+	};
+
+	class ConstantFixedSizeTable: public ConstantBase {
+	public:
+		std::vector<Box<ConstantBase>> elements;
+
+		bool operator==(const ConstantFixedSizeTable& other) const = default;
+		ConstantFixedSizeTable()                                   = default;
+
+
+		[[nodiscard]] Box<ConstantBase> clone() const override;
+
+		[[nodiscard]] ConstValueType type() const override {
+			return ConstValueType::FixedSizeTable;
+		}
+
+		void acceptVisitor(ConstVisitor&) const final;
+	};
 
 	/**
 	 * @brief Storage for any kind of constant value expression.
@@ -37,15 +94,15 @@ namespace vm::code {
 	 *   <expr> = u64 value  (fallback: numeric literal)
 	 */
 	struct ConstantValue {
-		using DataType = std::variant<ConstantU64, ConstantClass, ConstantFixedSizeTable>;
+		MBox<ConstantBase> data;
 
-		Box<DataType> data;
+		ConstantValue(MBox<ConstantBase> d): data(std::move(d)) {}
 
-		ConstantValue(Box<DataType> d): data(std::move(d)) {}
+		ConstantValue() = default;
 
 		template<typename... Args>
 		static ConstantValue from(Args&&... args) {
-			return { makeBox<DataType>(std::forward<Args>(args)...) };
+			return { makeBox<ConstantBase>(std::forward<Args>(args)...) };
 		}
 
 		static ConstantValue fromU64(u64 value) { return { makeBox<ConstantU64>(value) }; }
@@ -58,18 +115,9 @@ namespace vm::code {
 		ConstantValue(ConstantValue&&)            = default;
 		ConstantValue& operator=(ConstantValue&&) = default;
 
-		bool operator==(const ConstantValue& other) const;
-	};
+		ConstantValue(const ConstantValue&);
+		ConstantValue& operator=(const ConstantValue&);
 
-	struct ConstantClass {
-		std::vector<std::pair<base::StrID, ConstantValue>> fields;
-
-		bool operator==(const ConstantClass& other) const = default;
-	};
-
-	struct ConstantFixedSizeTable {
-		std::vector<ConstantValue> elements;
-
-		bool operator==(const ConstantFixedSizeTable& other) const = default;
+		bool operator==(const ConstantValue& other) const = default;
 	};
 }  // namespace vm::code

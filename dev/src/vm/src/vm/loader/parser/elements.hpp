@@ -12,10 +12,9 @@
 #include <token_parser_core/common_elements.hpp>
 #include <token_parser_core/parser_state.hpp>
 
+#include <vm/bytecode/const_pool.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/type_of_data.hpp>
-
-#include <vm/bytecode/const_pool.hpp>
 
 namespace vm::loader::parser {
 
@@ -60,8 +59,8 @@ namespace vm::loader::parser {
 	struct ConstantData final: AsmElement {
 		using AsmElement::AsmElement;
 
-		tpc::Identifier    name;
-		tpc::Identifier   type;
+		tpc::Identifier     name;
+		tpc::Identifier     type;
 		code::ConstantValue value;
 
 		static MBox<ConstantData> parse(F8ParserState& state);
@@ -112,11 +111,11 @@ namespace vm::loader::parser {
 	};
 
 	struct ParsedFile final {
-		std::vector<Box<Func>>        functions;
-		std::vector<Box<Type>>        types;
-		std::vector<Box<GlobalData>>  global_data;
+		std::vector<Box<Func>>         functions;
+		std::vector<Box<Type>>         types;
+		std::vector<Box<GlobalData>>   global_data;
 		std::vector<Box<ConstantData>> constants;
-		fs::File                      source_file;
+		fs::File                       source_file;
 
 		ParsedFile(fs::File source_file);
 

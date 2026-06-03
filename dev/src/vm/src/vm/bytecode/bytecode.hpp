@@ -83,9 +83,9 @@ namespace vm::code {
 	 * Constants are read-only global data initialized from their value expression.
 	 */
 	struct ConstantData final: ElementBase {
-		Identifier     name;
-		Identifier     type;
-		ConstantValue  value;
+		Identifier    name;
+		Identifier    type;
+		ConstantValue value;
 	};
 
 	/**
@@ -97,7 +97,7 @@ namespace vm::code {
 		std::vector<TypeOfData>        types;
 		std::vector<GlobalData>        global_data;
 		std::vector<ExternalCFunction> external_c_functions;
-		std::vector<ConstantData>     constants;
+		std::vector<ConstantData>      constants;
 
 		/**
 		 * @brief Merges another CodeCollection into this one by appending all its elements.
