@@ -111,7 +111,7 @@ private:
 		auto memory   = JitFuncMemory::allocate(foo_code.size);
 		stencils.relocate(foo_code, memory.addr);
 		foo_code.patch(memory.addr, [](HoleValue value) {
-			if (value == HoleValue::ARG0)
+			if (value == HoleValue::Arg0)
 				return 9;
 			else
 				CORE_PANIC("Unexpected relocation");
@@ -136,7 +136,7 @@ private:
 
 		add_code.patch(add_addr, [&](HoleValue hole) {
 			switch (hole) {
-			case HoleValue::CONTINUE_FUNCTION:
+			case HoleValue::ContinueFunction:
 				return std::bit_cast<intptr_t>(mul_addr);
 			default:
 				CORE_PANIC("unexpected relocation");
@@ -145,7 +145,7 @@ private:
 
 		mul_code.patch(mul_addr, [&](HoleValue hole) {
 			switch (hole) {
-			case HoleValue::CONTINUE_FUNCTION:
+			case HoleValue::ContinueFunction:
 				return std::bit_cast<intptr_t>(end_addr);
 			default:
 				CORE_PANIC("unexpected relocation");

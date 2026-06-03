@@ -18,7 +18,7 @@ void registerAbsoluteJITSymbols(llvm::orc::LLJIT& lljit) {
 	llvm::orc::SymbolMap host_symbols;
 
 	// NOLINTBEGIN(clang-analyzer-optin.core.EnumCastOutOfRange)
-	for (auto [name, address]: vm::jit::hard_symbols) {
+	for (auto [name, address]: vm::jit::HARD_SYMBOLS) {
 		host_symbols[lljit.mangleAndIntern(name)] = llvm::orc::ExecutorSymbolDef(
 			llvm::orc::ExecutorAddr::fromPtr(address),
 			llvm::JITSymbolFlags::Exported | llvm::JITSymbolFlags::Callable

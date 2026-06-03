@@ -343,11 +343,12 @@ namespace vm {
 				performFunctionCall(instr, local_stack, frame, thread, func_id);
 			} else {
 				// should be compiled now
+				// TODO :
 				if constexpr (COMPILE_WITH_CP) {
 					performFunctionCall(instr, local_stack, frame, thread, func_id);
 
 					auto compiled = jit::compileCP(func_obj);
-					auto ptr = compiled.intoFunc<jit::CPFunc>();
+					auto ptr      = compiled.intoFunc<jit::CPFunc>();
 					(*ptr)(instr, local_stack, frame, thread);
 
 					// Restore values set by copy&patch

@@ -7,7 +7,7 @@
 
 namespace vm::jit::cnp {
 	enum class HoleType;
-	enum class HoleValue { ARG0, ARG1, CONTINUE_FUNCTION, JMP_FUNCTION, ZERO };
+	enum class HoleValue { Arg0, Arg1, ContinueFunction, JmpFunction, Zero };
 
 	struct StencilHole {
 		int       offset;

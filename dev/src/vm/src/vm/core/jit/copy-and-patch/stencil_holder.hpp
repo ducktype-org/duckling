@@ -17,9 +17,9 @@ namespace vm::jit::cnp {
 	byte* relocate(const StencilData& stencil_data, byte* new_address);
 	[[nodiscard]] std::span<const byte> stencilsBinary(const StencilData& stencil_data);
 
-	enum class SpecialStencils { ret = low::microInstrCount() };
+	enum class SpecialStencils { Ret = low::microInstrCount() };
 
-	constexpr size_t stencil_count = low::microInstrCount() + 1;
+	constexpr size_t STENCIL_COUNT = low::microInstrCount() + 1;
 
-	[[nodiscard]] const std::array<StencilData, stencil_count>& stencilsData();
+	[[nodiscard]] const std::array<StencilData, STENCIL_COUNT>& stencilsData();
 }

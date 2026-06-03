@@ -6,7 +6,7 @@
 #include <cstdint>
 
 namespace vm::jit {
-	constexpr std::array hard_symbols = {
+	constexpr std::array HARD_SYMBOLS = {
 		std::pair{ "jmp_label", &vm::OpFuns::op_debug_jmp_label },
 		std::pair{ "jmpIfNot_label", &vm::OpFuns::op_debug_jmpIfNot_label },
 		std::pair{ "jmpIf_label", &vm::OpFuns::op_debug_jmpIf_label },
@@ -20,7 +20,7 @@ namespace vm::jit {
 		std::pair{ "trampoline", &vm::jit::helpers::trampoline },
 	};
 
-	constexpr size_t helper_functions  = 1;
-	constexpr size_t non_jitable_count = hard_symbols.size() - helper_functions;
-	constexpr size_t jitable_count     = low::microInstrCount() - non_jitable_count;
+	constexpr size_t HELPER_FUNCTIONS  = 1;
+	constexpr size_t NON_JITABLE_COUNT = HARD_SYMBOLS.size() - HELPER_FUNCTIONS;
+	constexpr size_t JITABLE_COUNT     = low::microInstrCount() - NON_JITABLE_COUNT;
 }
