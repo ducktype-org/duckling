@@ -38,11 +38,6 @@ private:
 			runTestOnVmGetResult("deterministic_deadlock.dbc"),
 			vm::exceptions::VMDeadlockException::ERR_MSG
 		);
-        // Two thread deadlock and main divides by zero
-		//assertExecutionPanickedWith(
-		//	runTestOnVmGetResult("deadlock_then_panic.dbc"),
-		//	vm::exceptions::VMDeadlockException::ERR_MSG
-		//);
     }
     void deadlockWakingFromCv() {
         // One thread sleeps on CV while main and other thread deadlock
