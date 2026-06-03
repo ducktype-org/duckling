@@ -1,5 +1,7 @@
 """
-Author: Wojciech Rzepliński
+Defines stencils, and how they are printed to c++
+
+Authors: Wojciech Rzepliński, Paweł Mieszkowski
 """
 
 import enum
@@ -10,13 +12,11 @@ import _schema
 def list_quote(elements):
     return "{" + ", ".join(elements) + "}"
 
-
 def _signed(value: int) -> int:
     value %= 1 << 64
     if value & (1 << 63):
         value -= 1 << 64
     return value
-
 
 def byte_to_c(byte) -> str:
     return "std::byte{0x" + f"{byte:02x}" + "}"
@@ -111,6 +111,9 @@ class Stencil:
     size: int
     holes: list[Hole]
 
+    def validate(self) -> bool:
+        return self.size != 0 and len(self.holes) 
+
     def to_c(self) -> str:
         return "StencilData " + list_quote(
             [
@@ -121,7 +124,6 @@ class Stencil:
                 ".relocation = {}",
             ]
         )
-
 
 def stencils_to_c(stencils, binary) -> str:
     return ', '.join(

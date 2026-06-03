@@ -1,24 +1,17 @@
 #!/bin/python3
-# Gathers data from the binary stencils used for embeding and patching
+
+"""
+Gathers data from the binary stencils used for embeding and patching.
+"""
 
 import click
-import subprocess
 import json
-import typing
 import bisect
 
 from _stencils import Stencil, Hole, symbol_to_value, stencils_to_c
 from _schema import ELFRelocation, ELFSection
 
-from llvm_tools import llvm_tools_version_options
-
-
-def run_llvm(tool: str, args, echo=False) -> str:
-    if echo:
-        print(tool, *args, sep=" ")
-    result = subprocess.run([tool] + args, check=True, capture_output=True, text=True)
-    return result.stdout
-
+from llvm_tools import llvm_tools_version_options, run_llvm_tool
 
 def parse_relocation(relocation: ELFRelocation, stencil: Stencil) -> Hole:
     return Hole(
@@ -58,7 +51,7 @@ def get_stencil_name(section: ELFSection) -> str:
     return name[len(".ltext.") :]
 
 
-def split_section_relocations(section: ELFSection, stencils: list[Stencil]):
+def split_section_relocations(section: ELFSection, stencils: list[Stencil]) -> list[Stencil]:
     stencil_offset = lambda stencil: stencil.place
     beginnings = sorted([stencil for stencil in stencils], key=stencil_offset)
     for wrapped_relocation in section["Relocations"]:
@@ -71,9 +64,19 @@ def split_section_relocations(section: ELFSection, stencils: list[Stencil]):
         stencil = stencils[idx - 1]
         if rel_offset < stencil.place + stencil.size:
             stencil.holes.append(parse_relocation(relocation, stencil))
+    return stencils
 
+def split_shared_relocations(sections: list[ELFSection], stencils: list[Stencil]) -> list[Stencil]:
+    shared_section = next(
+        (section for section in sections if section["Name"]["Name"] == ".rela.dyn"),
+        None,
+    )
+    if not shared_section:
+        print("No relocations section in a shared object")
+        exit(2)
+    return split_section_relocations(shared_section, stencils)
 
-def parse(llvm_readobj: str, binary: str, verbose: bool, shared: bool) -> list[Stencil]:
+def parse(llvm_readobj: str, binary: str, verbose: bool) -> list[Stencil]:
     readobj_args = [
         "--elf-output-style=JSON",
         "--expand-relocs",
@@ -84,31 +87,14 @@ def parse(llvm_readobj: str, binary: str, verbose: bool, shared: bool) -> list[S
         "--sections",
         f"{binary.name}",
     ]
-    readobj_output = run_llvm(llvm_readobj, readobj_args, echo=verbose)
+    readobj_output = run_llvm_tool(llvm_readobj, readobj_args, echo=verbose)
 
     file_info = json.loads(readobj_output)[0]
-    sections: list[ELFSection] = [
+    return [
         section["Section"] for section in file_info["Sections"]
     ]
 
-    stencils = [
-        parse_stencil_section(section)
-        for section in sections
-        if is_stencil_section(section)
-    ]
-
-    if shared:
-        rel = next(
-            (section for section in sections if section["Name"]["Name"] == ".rela.dyn"),
-            None,
-        )
-        if not rel:
-            print("No relocations section in a shared object")
-            exit(2)
-        split_section_relocations(rel, stencils)
-        return stencils
-
-def order_stencils(stencils: list[Stencil], order):
+def order_stencils(stencils: list[Stencil], order) -> list[Stencil]:
     no_stencil = Stencil(name="NO STENCIL", place=0, size=0, holes=[])
     array = [no_stencil] * len(order)
     for stencil in stencils:
@@ -124,13 +110,20 @@ def order_stencils(stencils: list[Stencil], order):
     return array
 
 def generate_stencils(
-    llvm_readobj: str, binary, output_file, verbose: bool, shared: bool, order
-):
-    stencils = parse(llvm_readobj, binary, verbose, shared)
+    llvm_readobj: str, binary, verbose: bool, shared: bool, order
+) -> list[Stencil]:
+    sections = parse(llvm_readobj, binary, verbose)
+    
+    stencils = [
+        parse_stencil_section(section)
+        for section in sections
+        if is_stencil_section(section)
+    ]
+    if shared:
+        stencils = split_shared_relocations(sections, stencils)
     if order:
         stencils = order_stencils(stencils, json.loads(order.read()))
-        
-    output_file.write(stencils_to_c(stencils, binary=binary.read()))
+    return stencils
 
 
 @click.command()
@@ -151,7 +144,10 @@ def main(
 ):
     global all_sections
     all_sections = accept_all_sections
-    generate_stencils(llvm_readobj, binary, output, verbose, shared, order)
+    
+    stencils = generate_stencils(llvm_readobj, binary, verbose, shared, order)
+
+    output.write(stencils_to_c(stencils, binary=binary.read()))
 
 
 if __name__ == "__main__":
