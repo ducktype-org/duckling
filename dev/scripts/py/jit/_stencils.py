@@ -98,6 +98,12 @@ class Hole:
             ]
         )
 
+@enum.unique
+class StencilType(enum.Enum):
+    NO_STENCIL = enum.auto()
+    SPECIAL = enum.auto()
+    INSTRUCTION = enum.auto()
+
 
 @dataclasses.dataclass
 class Stencil:
@@ -107,12 +113,19 @@ class Stencil:
     """
 
     name: str
+    type: StencilType
     place: int
     size: int
     holes: list[Hole]
 
     def validate(self) -> bool:
-        return self.size != 0 and len(self.holes) 
+        match self.type:
+            case StencilType.NO_STENCIL:
+                return True
+            case StencilType.SPECIAL:
+                return self.size != 0
+            case StencilType.INSTRUCTION:
+                return self.size != 0 and len(self.holes)
 
     def to_c(self) -> str:
         return "StencilData " + list_quote(

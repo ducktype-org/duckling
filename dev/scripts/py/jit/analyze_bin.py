@@ -8,7 +8,7 @@ import click
 import json
 import bisect
 
-from _stencils import Stencil, Hole, symbol_to_value, stencils_to_c
+from _stencils import Stencil, Hole, symbol_to_value, stencils_to_c, StencilType
 from _schema import ELFRelocation, ELFSection
 
 from llvm_tools import llvm_tools_version_options, run_llvm_tool
@@ -27,9 +27,12 @@ def parse_stencil_section(stencil_section: ELFSection) -> Stencil:
     output = Stencil(
         name=get_stencil_name(stencil_section),
         place=stencil_section["Offset"],
+        type=StencilType.INSTRUCTION,
         size=stencil_section["Size"],
         holes=[],
     )
+    if "special" in output.name:
+        output.type = StencilType.SPECIAL
     output.holes = [
         parse_relocation(rel["Relocation"], output)
         for rel in stencil_section["Relocations"]
@@ -95,7 +98,7 @@ def parse(llvm_readobj: str, binary: str, verbose: bool) -> list[Stencil]:
     ]
 
 def order_stencils(stencils: list[Stencil], order) -> list[Stencil]:
-    no_stencil = Stencil(name="NO STENCIL", place=0, size=0, holes=[])
+    no_stencil = Stencil(name="NO STENCIL", type=StencilType.NO_STENCIL, place=0, size=0, holes=[])
     array = [no_stencil] * len(order)
     for stencil in stencils:
         if stencil.name.startswith("stencil_special"):
@@ -123,6 +126,11 @@ def generate_stencils(
         stencils = split_shared_relocations(sections, stencils)
     if order:
         stencils = order_stencils(stencils, json.loads(order.read()))
+
+    for stencil in stencils:
+        if not stencil.validate():
+            print(f"Stencil: {stencil} failed validation")
+            exit(4)
     return stencils
 
 
