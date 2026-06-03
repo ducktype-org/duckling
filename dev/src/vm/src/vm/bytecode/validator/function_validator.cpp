@@ -1600,10 +1600,8 @@ class FunctionValidator {
 
 			instr_match(instructions[index]) {
 				instr_case(Op_init_pany_type, instr) {
-					// this is the only exception from the rule "save stack state before instruction"
-					// it is needed to properly lower the name of the variable for the compilation
-					local_stack.push(instr.var, instr.type);
 					stack_before_instr[index] = local_stack.getStateID();
+					local_stack.push(instr.var, instr.type);
 					index++;
 				}
 				instr_case(Op_deinit, instr) {

@@ -543,7 +543,7 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(init_bany_type)(FUNCTION_ARGS) {
 		{
 			performInit(
-				instr, local_stack, frame, thread, READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1)
+				instr, local_stack, frame, thread, READ_FROM_DIRECT_ARG(TypeCRef, instr->arg0)
 			);
 		}
 		FUNCTION_CONT(1);
