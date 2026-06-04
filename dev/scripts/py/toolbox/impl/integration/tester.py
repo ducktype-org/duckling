@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import time
 from .test_loader import Case, Test, TestNode, load_tests
 from .tui_reporter import IntegrationTuiReporter
 from .utils import (
@@ -27,20 +28,24 @@ DEFAULT_LOG_FILE_PATH = Path("/tmp/dit.log")
 
 
 def tester_impl(
-        clean: bool,
-        dry: bool,
-        filter: str,
-        fail_fast: bool,
-        verbose: bool,
-        log_file: str | Path,
-        build_dir: str,
-        tui: bool = False,
+    clean: bool,
+    dry: bool,
+    filter: str,
+    fail_fast: bool,
+    verbose: bool,
+    log_file: str | Path,
+    build_dir: str,
+    tui: bool = False,
+    rerun_failed: bool = False,
 ):
+        # Debug print for filter_list after it is set
+        # (must be after rerun_failed/filter logic)
     """
     The driver function of Duckling Integration Tests framework.
     """
     log_info("Running integration tests...")
 
+    start_time = time.time()
     log_file = Path(log_file)
     if log_file.exists():
         if log_file.absolute() != DEFAULT_LOG_FILE_PATH and log_file.stat().st_size > 0:
@@ -58,19 +63,72 @@ def tester_impl(
         "dev_dir": str(get_dev_directory()),
     }
 
+
     test_set = load_tests("integration_tests", user_values=user_values)
+
+    # Handle rerun-failed logic
+    last_failed_file = Path("integration_tests/.last_failed")
+    filter_list = None
+    def norm(path):
+        # Always relative to integration_tests/
+        return path[path.find("integration_tests/") + len("integration_tests/"):] if "integration_tests/" in path else path
+
+    if rerun_failed:
+        if last_failed_file.exists():
+            with open(last_failed_file, "r") as f:
+                filter_list = [norm(line.strip()) for line in f if line.strip()]
+            if not filter_list:
+                print("[itest] No failed tests recorded from previous run. Running all tests.")
+                filter_list = None
+        else:
+            print("[itest] No .last_failed file found. Running all tests.")
+    elif filter:
+        filter_list = [norm(f) for f in filter.split(",") if f.strip()]
 
     reporter = IntegrationTuiReporter() if tui else None
     if reporter:
         reporter.on_status("Initializing integration test run")
 
     (succeeded, failed, disabled) = run_tests(
-        test_set, filter, [], clean, dry, fail_fast, verbose, log_file, reporter
+        test_set, filter_list, [], clean, dry, fail_fast, verbose, log_file, reporter
     )
     if reporter:
         reporter.finish()
+        # Print statistics summary at the end (TUI only)
+        elapsed = time.time() - start_time
+        total_cases = len(succeeded) + len(failed) + len(disabled)
+        print("\n==================== Integration Test Summary ====================")
+        print(f"Total test cases run: {total_cases}")
+        print(f"  Passed:   {len(succeeded)}")
+        print(f"  Failed:   {len(failed)}")
+        print(f"  Disabled: {len(disabled)}")
+        # Unique test nodes (by path up to last /)
+        def node_name(path):
+            return path.rsplit("/", 1)[0] if "/" in path else path
+        all_cases = succeeded + failed + disabled
+        unique_nodes = set(node_name(p) for p in all_cases)
+        print(f"Unique test nodes run: {len(unique_nodes)}")
+        print(f"Total elapsed time: {elapsed:.2f} seconds")
+        # List all failed test cases
+        if failed:
+            print("\nFailed test cases:")
+            for case in failed:
+                print(f"  - {case}")
+        print("================================================================\n")
     if dry:
         return
+
+    # Save failed test node paths for rerun (strip to test node, not case)
+    if not clean:
+        failed_test_nodes = set()
+        for path in failed:
+            # path is like 'integration_tests/foo/bar/case', keep 'integration_tests/foo/bar'
+            parts = path.split("/")
+            if len(parts) > 1:
+                failed_test_nodes.add("/".join(parts[:-1]))
+        with open(last_failed_file, "w") as f:
+            for tpath in sorted(failed_test_nodes):
+                f.write(tpath + "\n")
 
     if len(failed):
         exit_with_error(
@@ -79,14 +137,14 @@ def tester_impl(
 
 
 def run_test(
-        test: Test,
-        path: str,
-        filter: str,
-        dry: bool,
-        fail_fast: bool,
-        verbose: bool,
-        log_file: Path,
-        reporter: IntegrationTuiReporter | None = None,
+    test: Test,
+    path: str,
+    filter_list,
+    dry: bool,
+    fail_fast: bool,
+    verbose: bool,
+    log_file: Path,
+    reporter: IntegrationTuiReporter | None = None,
 ) -> TestStatistics:
     """
     Runs a test from `Test` object.
@@ -101,21 +159,19 @@ def run_test(
             verbose=verbose,
         )
     stats = TestStatistics([], [], [])
-    simplified_filter = filter[len(path) + 1:]
-    # Removed noisy test path banner for TUI
-    
     if reporter:
         reporter.on_test_start(path)
-    
+
     for i, case in enumerate(test.cases):
-        if not case.name.startswith(simplified_filter):
-            continue
-        log_info_if_needed(f"Run [{i + 1}/{len(test)}] - {case.name}", dry, verbose)
         case_path = path + "/" + case.name
+        # If filter_list is set, only run cases that match any filter prefix
+        if filter_list is not None:
+            if not any(case_path.startswith(f) or f.startswith(case_path) for f in filter_list):
+                continue
+        log_info_if_needed(f"Run [{i + 1}/{len(test)}] - {case.name}", dry, verbose)
         try:
             match run_case(test, case, dry, verbose, log_file):
                 case Failure(error):
-                    # Removed noisy failure print for TUI
                     if reporter:
                         reporter.on_case_failed(path, case.name, error)
                     stats.failed.append(case_path)
@@ -124,13 +180,11 @@ def run_test(
                         reporter.on_case_passed(path, case.name)
                     if not dry:
                         stats.succeeded.append(case_path)
-                        # Removed noisy success print for TUI
                 case Disabled():
                     if reporter:
                         reporter.on_case_disabled(path, case.name)
                     if not dry:
                         stats.disabled.append(case_path)
-                        # Removed noisy disabled print for TUI
         except BashCommandError as e:
             write_log(
                 f"{test.name}/{case.name} has failed:\n{''.join(e.args)}\n",
@@ -292,15 +346,16 @@ def clean_test(test: Test, path: str, dry: bool, verbose: bool):
 
 
 def run_tests(
-        node: TestNode,
-        filter: str,
-        tree: list[str],
-        clean: bool,
-        dry: bool,
-        fail_fast: bool,
-        verbose: bool,
-        log_file: Path,
-        reporter: IntegrationTuiReporter | None = None,
+    node: TestNode,
+    filter_list,
+    tree: list[str],
+    clean: bool,
+    dry: bool,
+    fail_fast: bool,
+    verbose: bool,
+    log_file: Path,
+    reporter: IntegrationTuiReporter | None = None,
+    filter_set: set[str] | None = None,
 ) -> TestStatistics:
     """
     A recursive function for running all tests.
@@ -314,10 +369,17 @@ def run_tests(
     tree.append(node.name)
     all_stats = TestStatistics([], [], [])
 
-    # Check if the current node is relevant to the filter
-    current_path = "/".join(tree)
-    if not current_path.startswith(filter) and not filter.startswith(current_path):
-        return all_stats
+    # Check if the current node is relevant to the filter or filter_set
+    def norm(path):
+        if path == "integration_tests":
+            return ""
+        return path[path.find("integration_tests/") + len("integration_tests/"):] if "integration_tests/" in path else path
+    current_path = norm("/".join(tree))
+    if filter_list is not None:
+        # Never skip the root node (empty string), only filter non-root nodes
+        if current_path != "":
+            if not any(current_path.startswith(f) or f.startswith(current_path) for f in filter_list):
+                return all_stats
 
     if reporter:
         reporter.on_node_start(current_path)
@@ -336,25 +398,23 @@ def run_tests(
         )
 
     for test in node.tests:
-        path = "/".join(tree + [test.name])
+        path = norm("/".join(tree + [test.name]))
 
-        # This is tricky, as normally it would be enough to check for the prefix
-        # like `pth.startswith(test_path)`, but names of test **cases** are not included
-        # in the tree list of nodes, but can be in `test_path`, so we have to this both ways.
-        if not path.startswith(filter) and not filter.startswith(path):
-            continue
+        if filter_list is not None:
+            if not any(path.startswith(f) or f.startswith(path) for f in filter_list):
+                continue
 
         if clean:
             clean_test(test, path, dry, verbose)
         else:
-            stats = run_test(test, path, filter, dry, fail_fast, verbose, log_file, reporter)
+            stats = run_test(test, path, filter_list, dry, fail_fast, verbose, log_file, reporter)
             all_stats += stats
             if fail_fast and len(stats.failed) > 0:
                 return all_stats
 
     for subtest in node.subtests:
         all_stats += run_tests(
-            subtest, filter, tree.copy(), clean, dry, fail_fast, verbose, log_file, reporter
+            subtest, filter_list, tree.copy(), clean, dry, fail_fast, verbose, log_file, reporter
         )
 
     # Post-node command

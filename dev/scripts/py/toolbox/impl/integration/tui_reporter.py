@@ -41,6 +41,10 @@ class Event:
 
 
 class IntegrationTuiReporter:
+    def _warn_if_no_rich(self):
+        if not HAS_RICH:
+            print("[duckling][itest][WARN] The 'rich' library is not installed. TUI output will be disabled.\nInstall with: pip install rich\n")
+
     def _collect_completed_cases(self):
         """
         Collect all completed cases (passed, failed, disabled) as a set of paths.
@@ -241,6 +245,7 @@ class IntegrationTuiReporter:
         return [(path, status) for path, status, _ in final]
 
     def __init__(self):
+        self._warn_if_no_rich()
         self.console = Console() if HAS_RICH else None
         self.events: list[Event] = []
         self.failures: list[FailureDetail] = []

@@ -50,6 +50,12 @@ from click import command, option
     help="Run tests under the specified path prefix (e.g., 'tests/C++' or 'tests/C++/Case1').",
 )
 @option(
+    "--rerun-failed",
+    is_flag=True,
+    default=False,
+    help="Rerun only the tests that failed in the previous run.",
+)
+@option(
     "--tui",
     is_flag=True,
     default=False,
