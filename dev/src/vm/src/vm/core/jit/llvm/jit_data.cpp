@@ -190,7 +190,7 @@ LlvmData initLlvmJit() {
 }
 
 const LlvmData& llvmData() {
-	// TODO: #2862 Find a suitable place to store LlvmData instead of making it static.
+	// @TODO: #2862 Find a suitable place to store LlvmData instead of making it static.
 	static LlvmData llvm_data = initLlvmJit();
 	return llvm_data;
 }
