@@ -240,9 +240,9 @@ namespace clah {
 		int execute(usize argc, const char* const* argv);
 
 		/**
-		 * @brief Performs the parsing on a string of arguments. Then, if the passed arguments where correct it invokes
-		 * the pre handler function (if specified) and then immediately executes the handler for the
-		 * matched command.
+		 * @brief Performs the parsing on a string of arguments. Then, if the passed arguments where
+		 * correct it invokes the pre handler function (if specified) and then immediately executes
+		 * the handler for the matched command.
 		 *
 		 * @note Program name is expected to NOT exist.
 		 * @note All CLAP exceptions are handled inside the execute function. Nicely formatted
@@ -253,15 +253,15 @@ namespace clah {
 		 * @return A return value of the handler specified for the matched command.
 		 */
 		int execute(const std::string& args);
-		
-		private:
+
+	private:
 		/**
 		 * @brief Adds a standard help flag functionality.
 		 * If flag is passed raises clah::exceptions::HelpException.
 		 * @return A reference to self.
 		 */
 		Clah&& addHelpFlag();
-		
+
 		/**
 		 * @brief Internal and recursive parsing function for parsing subcommands.
 		 * When parsing, if we stumble on a subcommand name we invoke the parse function for the
@@ -270,7 +270,7 @@ namespace clah {
 		 * may be passed deeper into the tree if a next subcommand is met.
 		 */
 		void parse(ParsingState& state) const;
-		
+
 		/**
 		 * Validates the result accordingly to the Clah's specification, invokes
 		 * conditionals' conditions, etc.
@@ -279,14 +279,17 @@ namespace clah {
 		void validateParsing(ParsingResult& result) const;
 
 		/**
-		 * @brief Internal execute function. Performs the parsing. Then, if the passed arguments where correct if invokes
-		 * the pre handler function (if specified) and then immediately executes the handler for the
-		 * matched command.
+		 * @brief Internal execute function. Performs the parsing. Then, if the passed arguments
+		 * where correct if invokes the pre handler function (if specified) and then immediately
+		 * executes the handler for the matched command.
 		 * @note All CLAP exceptions are handled inside the execute function. Nicely formatted
 		 * messages are printed and help messages are generated.
 		 * @return A return value of the handler specified for the matched command.
 		 */
-		int execute(std::function<ParsingResult()> parse);
+		int execute(
+			std::function<ParsingResult()>                                parse,
+			std::function<void(const clah::exceptions::ClahException& e)> on_clah_exception
+		);
 
 
 		std::string                     name;         // Name of the command.
