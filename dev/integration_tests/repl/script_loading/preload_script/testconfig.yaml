@@ -5,63 +5,63 @@ Tests:
   preload-side-effect-output:
     Cases:
       preload-basic-script:
-        Run: "@{duckc_path} repl @{script-basic}"
+        Run: "@{duckc_path} repl @{script-basic} @{disable-bracketed-paste}"
         Input:
           File: "query_loaded_value.rtf"
         Output:
-          String: "13\n@{beginning}\n=> 10\n@{end}"
+          String: "13\n@{welcome_message}\n=> 10\n@{end}"
 
       preload-mixed-script:
-        Run: "@{duckc_path} repl @{script-mixed}"
+        Run: "@{duckc_path} repl @{script-mixed} @{disable-bracketed-paste}"
         Input:
           File: "query_add_two.rtf"
         Output:
-          String: "4\n@{beginning}\n=> 4\n@{end}"
+          String: "4\n@{welcome_message}\n=> 4\n@{end}"
 
       preload-print-burst-script:
-        Run: "@{duckc_path} repl @{script-print-burst}"
+        Run: "@{duckc_path} repl @{script-print-burst} @{disable-bracketed-paste}"
         Input:
           File: "query_math_expr.rtf"
         Output:
-          String: "4\n6\n6\n@{beginning}\n=> 2\n@{end}"
+          String: "4\n6\n6\n@{welcome_message}\n=> 2\n@{end}"
 
       preload-nested-functions-script:
-        Run: "@{duckc_path} repl @{script-nested-functions}"
+        Run: "@{duckc_path} repl @{script-nested-functions} @{disable-bracketed-paste}"
         Input:
           File: "query_nested_g.rtf"
         Output:
-          String: "42\n@{beginning}\n=> 42\n@{end}"
+          String: "42\n@{welcome_message}\n=> 42\n@{end}"
 
   # Category: preloaded scripts with no startup stdout.
   preload-silent-load:
     Cases:
       preload-silent-state-script:
-        Run: "@{duckc_path} repl @{script-silent-state}"
+        Run: "@{duckc_path} repl @{script-silent-state} @{disable-bracketed-paste}"
         Input:
           File: "query_silent_sx.rtf"
         Output:
           String: "@{beginning}\n=> 12\n@{end}"
 
       preload-silent-functions-script:
-        Run: "@{duckc_path} repl @{script-silent-functions}"
+        Run: "@{duckc_path} repl @{script-silent-functions} @{disable-bracketed-paste}"
         Input:
           File: "query_silent_twice_base.rtf"
         Output:
           String: "@{beginning}\n=> 12\n@{end}"
 
       preload-nasty-script:
-        Run: "@{duckc_path} repl @{script-nasty}"
+        Run: "@{duckc_path} repl @{script-nasty} @{disable-bracketed-paste}"
         Input:
           File: "query_nasty_value.rtf"
         Output:
-          String: "3\n@{beginning}\n=> 3\n@{end}"
+          String: "3\n@{welcome_message}\n=> 3\n@{end}"
 
 
   # Category: multiple /load commands issued after startup (with and without preload side effects).
   preload-multi-load:
     Cases:
       multiple-loads-after-preload:
-        Run: "@{duckc_path} repl @{script-basic}"
+        Run: "@{duckc_path} repl @{script-basic} @{disable-bracketed-paste}"
         Input:
           String: |
             /load @{script-if-flow}
@@ -70,10 +70,10 @@ Tests:
             y
             add_two()
         Output:
-          String: "13\n@{beginning}\n14\nScript loaded: @{script-if-flow}\n4\nScript loaded: @{script-mixed}\n=> 10\n=> 10\n=> 4\n@{end}"
+          String: "13\n@{welcome_message}\n14\nScript loaded: @{script-if-flow}\n4\nScript loaded: @{script-mixed}\n=> 10\n=> 10\n=> 4\n@{end}"
 
       multiple-loads-after-silent-preload:
-        Run: "@{duckc_path} repl @{script-silent-state}"
+        Run: "@{duckc_path} repl @{script-silent-state} @{disable-bracketed-paste}"
         Input:
           String: |
             /load @{script-basic}
