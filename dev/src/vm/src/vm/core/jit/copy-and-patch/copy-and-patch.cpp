@@ -10,7 +10,9 @@
 #include <functional>
 
 namespace vm::jit {
-	cnp::JitFuncMemory compileCP(const vm::low::LowFuncData& func_data) {
+	cnp::JitFuncMemory compileCP(
+		const vm::low::cf::ControlFlowGraph& cfg, const vm::low::MicroBytecode& bc
+	) {
 		using namespace cnp;
 		using namespace std::views;
 
@@ -31,14 +33,14 @@ namespace vm::jit {
 
 		auto get_opfunc_size = [&](u64 opcode) -> u64 { return stencilsData().at(opcode).size; };
 
-		u64 size = std::ranges::fold_left(
-					   func_data.bc | transform(getInstructionOpcode)
-						   | filter(std::not_fn(low::isOpcodeNonExecutable))
-						   | transform(transform_opcode) | transform(get_opfunc_size),
-					   0,
-					   std::plus{}
-				   )
-		         + get_opfunc_size(std::to_underlying(SpecialStencils::Ret));
+		u64 size = get_opfunc_size(std::to_underlying(SpecialStencils::Ret));
+		for (const low::cf::BasicBlock& block: cfg.getBlocks()) {
+			for (MicroInstruction instr: block.instructions(bc)) {
+				auto opcode = getInstructionOpcode(instr);
+				if (low::isOpcodeNonExecutable(opcode)) continue;
+				size += get_opfunc_size(transform_opcode((opcode)));
+			}
+		}
 
 		auto  memory = JitFuncMemory::allocate(size);
 		byte* next   = memory.addr;
@@ -50,23 +52,25 @@ namespace vm::jit {
 			stencil_data.patch(previous, func);
 		};
 
-		for (auto instr: func_data.bc) {
-			auto opcode = getInstructionOpcode(instr);
-			if (low::isOpcodeNonExecutable(opcode)) continue;
+		for (const low::cf::BasicBlock& block: cfg.getBlocks()) {
+			for (MicroInstruction instr: block.instructions(bc)) {
+				auto opcode = getInstructionOpcode(instr);
+				if (low::isOpcodeNonExecutable(opcode)) continue;
 
-			patch_stencil(transform_opcode(opcode), [&instr, &next](HoleValue value) {
-				switch (value) {
-				case HoleValue::Arg0:
-					return instr.arg0;
-				case HoleValue::Arg1:
-					return instr.arg1;
-				case HoleValue::ContinueFunction:
-					return std::bit_cast<u64>(next);
-				default:
-					CORE_PANIC("unknown hole value");
-					return 0ul;
-				}
-			});
+				patch_stencil(transform_opcode(opcode), [&instr, &next](HoleValue value) {
+					switch (value) {
+					case HoleValue::Arg0:
+						return instr.arg0;
+					case HoleValue::Arg1:
+						return instr.arg1;
+					case HoleValue::ContinueFunction:
+						return std::bit_cast<u64>(next);
+					default:
+						CORE_PANIC("unknown hole value");
+						return 0ul;
+					}
+				});
+			}
 		}
 		patch_stencil(std::to_underlying(SpecialStencils::Ret), [](HoleValue) -> u64 {
 			CORE_PANIC("Special stencil 'ret' has a relocation");
