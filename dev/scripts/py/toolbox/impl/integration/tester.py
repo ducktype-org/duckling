@@ -115,8 +115,24 @@ def tester_impl(
             for case in failed:
                 print(f"  - {case}")
         print("================================================================\n")
-    if dry:
-        return
+    else:
+        if dry:
+            return
+        total_test_count = len(succeeded) + len(failed) + len(disabled)
+        print(f"Ran test count: {total_test_count}")
+        print(f" - Succeeded: {len(succeeded)}")
+        print(f" - Disabled:  {len(disabled)}")
+        print(f" - Failed:    {len(failed)}")
+        if len(failed):
+            failed_tests = map(lambda x: " - " + x, failed)
+            exit_with_error(
+                f"{'(Fail fast) ' if fail_fast else ''}Failed tests:\n{'\n'.join(failed_tests)}\n"
+                f"{'(Fail fast) ' if fail_fast else ''}Failed tests:\n{'\n'.join(failed_tests)}\n"
+                f"{'(Fail fast) ' if fail_fast else ''}Please see log file '{log_file.absolute()}' for more info."
+            )
+        elif not clean:
+            print_success(f"All tests have run successfully!")
+    
 
     # Save failed test node paths for rerun (strip to test node, not case)
     if not clean:
@@ -161,6 +177,8 @@ def run_test(
     stats = TestStatistics([], [], [])
     if reporter:
         reporter.on_test_start(path)
+    else:
+        log_info(f"===== {path} =====")
 
     for i, case in enumerate(test.cases):
         case_path = path + "/" + case.name
@@ -174,18 +192,31 @@ def run_test(
                 case Failure(error):
                     if reporter:
                         reporter.on_case_failed(path, case.name, error)
+                    else:
+                        print_failure(f"Case `{case.name}` has failed because: {error}")
                     stats.failed.append(case_path)
                 case Success():
                     if reporter:
                         reporter.on_case_passed(path, case.name)
+                    else:
+                        print_success(f"Case `{case.name}` passed")
                     if not dry:
                         stats.succeeded.append(case_path)
                 case Disabled():
                     if reporter:
                         reporter.on_case_disabled(path, case.name)
+                    else:
+                        print_neutral(f"Case `{case.name}` disabled")
                     if not dry:
                         stats.disabled.append(case_path)
         except BashCommandError as e:
+            if not reporter:
+                if e.exit_code == 124:
+                    print_failure(
+                        f"Case `{test.name}/{case.name}` has failed with exit code 124 - likely timed out after {case.timeout} second(s)."
+                    )
+                else:
+                    print_failure(f"Case `{test.name}/{case.name}` has failed.")
             write_log(
                 f"{test.name}/{case.name} has failed:\n{''.join(e.args)}\n",
                 log_file=log_file,
