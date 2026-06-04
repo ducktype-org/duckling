@@ -3,7 +3,7 @@
 #include <vm/bytecode/validator/errors.hpp>
 
 #include <queue>
-#include <set>
+#include <unordered_set>
 #include <vector>
 
 namespace vm::code {
@@ -37,7 +37,10 @@ namespace vm::code {
 		return result;
 	}
 
-	/// Creates a new graph with the edges reversed relative to the provided call graph.
+	/// Creates a new graph with the edges reversed relative to the provided call graph, i.e. an
+	/// edge caller -> callee becomes callee -> caller. This lets flag propagation walk from a
+	/// callee up to every (transitive) caller, so a flag found in a callee is attributed to all
+	/// functions that may reach it.
 	base::HashMap<base::StrID, std::vector<base::StrID>> transposeCallGraph(
 		const base::HashMap<base::StrID, std::vector<base::StrID>>& call_graph
 	) {
@@ -69,20 +72,20 @@ namespace vm::code {
 	static void verifyFlagsAgainstConfig(
 		const InstructionFlag flags, api::ExecutionConfig config, const base::StrID func_name
 	) {
-		if (config.no_io.copyValueOr(false)) {
+		if (config.no_io) {
 			if (flags.contains(InstructionFlagOptions::IORead)
 			    || flags.contains(InstructionFlagOptions::IOWrite))
 				throw ExecutionConfigViolationError(
 					func_name, "no_io flag is set, but function performs I/O"
 				);
 		}
-		if (config.read_only.copyValueOr(false)) {
+		if (config.read_only) {
 			if (flags.contains(InstructionFlagOptions::GlobalWrite))
 				throw ExecutionConfigViolationError(
 					func_name, "read_only flag is set, but function modifies global state"
 				);
 		}
-		if (config.single_thread.copyValueOr(false)) {
+		if (config.single_thread) {
 			if (flags.contains(InstructionFlagOptions::Multithread))
 				throw ExecutionConfigViolationError(
 					func_name, "single_thread flag is set, but function uses multithreading"

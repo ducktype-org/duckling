@@ -1,31 +1,24 @@
 #pragma once
 #include "instructions.hpp"
 
-#include "base/preproc/for_each.hpp"
 #include <base/extend_cpp/flag.hpp>
+#include <base/preproc/for_each.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/core/builtin_functions.hpp>
 
-#define INSTRUCTION_FLAG_OPTIONS \
-	IORead, \
-    IOWrite,\
-    GlobalRead,\
-    GlobalWrite,\
-    Call,\
-    CallExternal,\
-    Multithread,\
-    RequiresGIL, /* Instruction REQUIRES GIL */  \
-    ReleaseGIL, /* Instruction MIGHT release GIL (takes a long time) */  \
-    ControlFlowModifying,/* Modifies control flow, e.g. jmp, branch, call, ret */  \
-    MayBlock  
+#define INSTRUCTION_FLAG_OPTIONS                                                       \
+	IORead, IOWrite, GlobalRead, GlobalWrite, Call, CallExternal, Multithread,         \
+		RequiresGIL,          /* Instruction REQUIRES GIL */                           \
+		ReleaseGIL,           /* Instruction MIGHT release GIL (takes a long time) */  \
+		ControlFlowModifying, /* Modifies control flow, e.g. jmp, branch, call, ret */ \
+		MayBlock
 
 MAKE_FLAG_TYPE(vm::code, InstructionFlagOptions, InstructionFlag,
 	INSTRUCTION_FLAG_OPTIONS	
 )
 
-#define FUNCTION_FLAG_OPTIONS \
-	INSTRUCTION_FLAG_OPTIONS
+#define FUNCTION_FLAG_OPTIONS INSTRUCTION_FLAG_OPTIONS
 
 MAKE_FLAG_TYPE(vm::code, FunctionFlagOptions, FunctionFlag,
 	FUNCTION_FLAG_OPTIONS
@@ -77,7 +70,7 @@ namespace vm::code {
 			using IFO = InstructionFlagOptions;
 			InstructionFlag out;
 #define FUNCTION_TO_INSTRUCTION_FLAG(FLAG) \
-			if (f.contains(FFO::FLAG)) out |= IFO::FLAG;
+	if (f.contains(FFO::FLAG)) out |= IFO::FLAG;
 			FOR_EACH(FUNCTION_TO_INSTRUCTION_FLAG, FUNCTION_FLAG_OPTIONS)
 			return out;
 		}
@@ -112,21 +105,26 @@ namespace vm::code {
 		auto rdwr = [&](const auto& place) {
 			if (is_global(place.var_name)) flags |= InstructionFlag(GlobalRead) | GlobalWrite;
 		};
-		
+
+		// We don't know if pointers are global or not, so we have to assume the worst for any
+		// instruction that dereferences a pointer.
+		auto deref_read  = [&] { flags |= GlobalRead; };
+		auto deref_write = [&] { flags |= GlobalWrite; };
+
 
 		// Per-shape `instr_case` shorthands. Cover the common patterns where the
 		// instruction's name and arg shape uniquely determine the read/write set.
 		// Defined locally so they don't leak to other translation units.
-#define FLAGS_WR(NAME) \
+#define FLAGS_W(NAME) \
 	instr_case(ins::Op_##NAME, i) { wr(i.dst); }
-#define FLAGS_WR_RD(NAME)           \
+#define FLAGS_W_R(NAME)             \
 	instr_case(ins::Op_##NAME, i) { \
 		wr(i.dst);                  \
 		rd(i.src);                  \
 	}
-#define FLAGS_RDWR(NAME) \
+#define FLAGS_RW(NAME) \
 	instr_case(ins::Op_##NAME, i) { rdwr(i.dst); }
-#define FLAGS_RDWR_RD(NAME)         \
+#define FLAGS_RW_R(NAME)            \
 	instr_case(ins::Op_##NAME, i) { \
 		rdwr(i.dst);                \
 		rd(i.src);                  \
@@ -143,134 +141,134 @@ namespace vm::code {
 		UNHANDLED_ENUM
 		instr_match(instruction) {
 			// ===== Pure moves: dst written, src (place) read =====
-			FLAGS_WR(mov_p8_imm)
-			FLAGS_WR(mov_p16_imm)
-			FLAGS_WR(mov_p32_imm)
-			FLAGS_WR(mov_p64_imm)
-			FLAGS_WR(mov_popq_imm)
-			FLAGS_WR(setNull_pptr)
+			FLAGS_W(mov_p8_imm)
+			FLAGS_W(mov_p16_imm)
+			FLAGS_W(mov_p32_imm)
+			FLAGS_W(mov_p64_imm)
+			FLAGS_W(mov_popq_imm)
+			FLAGS_W(setNull_pptr)
 
-			FLAGS_WR_RD(mov_p8_p8)
-			FLAGS_WR_RD(mov_p16_p16)
-			FLAGS_WR_RD(mov_p32_p32)
-			FLAGS_WR_RD(mov_p64_p64)
-			FLAGS_WR_RD(mov_pptr_pptr)
-			FLAGS_WR_RD(mov_pste_pste)
-			FLAGS_WR_RD(mov_pfst_pfst)
-			FLAGS_WR_RD(mov_popq_popq)
+			FLAGS_W_R(mov_p8_p8)
+			FLAGS_W_R(mov_p16_p16)
+			FLAGS_W_R(mov_p32_p32)
+			FLAGS_W_R(mov_p64_p64)
+			FLAGS_W_R(mov_pptr_pptr)
+			FLAGS_W_R(mov_pste_pste)
+			FLAGS_W_R(mov_pfst_pfst)
+			FLAGS_W_R(mov_popq_popq)
 
 			// ===== Conditional moves: dst is read (kept conditionally) and written =====
-			FLAGS_RDWR_RD(cmov_p8_p8)
-			FLAGS_RDWR_RD(cmov_p16_p16)
-			FLAGS_RDWR_RD(cmov_p32_p32)
-			FLAGS_RDWR_RD(cmov_p64_p64)
-			FLAGS_RDWR(cmov_p8_imm)
-			FLAGS_RDWR(cmov_p16_imm)
-			FLAGS_RDWR(cmov_p32_imm)
-			FLAGS_RDWR(cmov_p64_imm)
+			FLAGS_RW_R(cmov_p8_p8)
+			FLAGS_RW_R(cmov_p16_p16)
+			FLAGS_RW_R(cmov_p32_p32)
+			FLAGS_RW_R(cmov_p64_p64)
+			FLAGS_RW(cmov_p8_imm)
+			FLAGS_RW(cmov_p16_imm)
+			FLAGS_RW(cmov_p32_imm)
+			FLAGS_RW(cmov_p64_imm)
 
 			// ===== Binary arithmetic: dst = dst op src =====
-			FLAGS_RDWR_RD(add_p64_p64)
-			FLAGS_RDWR(add_p64_imm)
-			FLAGS_RDWR_RD(add_p32_p32)
-			FLAGS_RDWR(add_p32_imm)
-			FLAGS_RDWR_RD(add_p16_p16)
-			FLAGS_RDWR(add_p16_imm)
-			FLAGS_RDWR_RD(add_p8_p8)
-			FLAGS_RDWR(add_p8_imm)
-			FLAGS_RDWR_RD(sub_p64_p64)
-			FLAGS_RDWR(sub_p64_imm)
-			FLAGS_RDWR_RD(sub_p32_p32)
-			FLAGS_RDWR(sub_p32_imm)
-			FLAGS_RDWR_RD(sub_p16_p16)
-			FLAGS_RDWR(sub_p16_imm)
-			FLAGS_RDWR_RD(sub_p8_p8)
-			FLAGS_RDWR(sub_p8_imm)
-			FLAGS_RDWR_RD(mul_p64_p64)
-			FLAGS_RDWR(mul_p64_imm)
-			FLAGS_RDWR_RD(mul_p32_p32)
-			FLAGS_RDWR(mul_p32_imm)
-			FLAGS_RDWR_RD(mul_p16_p16)
-			FLAGS_RDWR(mul_p16_imm)
-			FLAGS_RDWR_RD(mul_p8_p8)
-			FLAGS_RDWR(mul_p8_imm)
-			FLAGS_RDWR_RD(div_p64_p64)
-			FLAGS_RDWR(div_p64_imm)
-			FLAGS_RDWR_RD(div_p32_p32)
-			FLAGS_RDWR(div_p32_imm)
-			FLAGS_RDWR_RD(div_p16_p16)
-			FLAGS_RDWR(div_p16_imm)
-			FLAGS_RDWR_RD(div_p8_p8)
-			FLAGS_RDWR(div_p8_imm)
-			FLAGS_RDWR_RD(mod_p64_p64)
-			FLAGS_RDWR(mod_p64_imm)
-			FLAGS_RDWR_RD(mod_p32_p32)
-			FLAGS_RDWR(mod_p32_imm)
-			FLAGS_RDWR_RD(mod_p16_p16)
-			FLAGS_RDWR(mod_p16_imm)
-			FLAGS_RDWR_RD(mod_p8_p8)
-			FLAGS_RDWR(mod_p8_imm)
+			FLAGS_RW_R(add_p64_p64)
+			FLAGS_RW(add_p64_imm)
+			FLAGS_RW_R(add_p32_p32)
+			FLAGS_RW(add_p32_imm)
+			FLAGS_RW_R(add_p16_p16)
+			FLAGS_RW(add_p16_imm)
+			FLAGS_RW_R(add_p8_p8)
+			FLAGS_RW(add_p8_imm)
+			FLAGS_RW_R(sub_p64_p64)
+			FLAGS_RW(sub_p64_imm)
+			FLAGS_RW_R(sub_p32_p32)
+			FLAGS_RW(sub_p32_imm)
+			FLAGS_RW_R(sub_p16_p16)
+			FLAGS_RW(sub_p16_imm)
+			FLAGS_RW_R(sub_p8_p8)
+			FLAGS_RW(sub_p8_imm)
+			FLAGS_RW_R(mul_p64_p64)
+			FLAGS_RW(mul_p64_imm)
+			FLAGS_RW_R(mul_p32_p32)
+			FLAGS_RW(mul_p32_imm)
+			FLAGS_RW_R(mul_p16_p16)
+			FLAGS_RW(mul_p16_imm)
+			FLAGS_RW_R(mul_p8_p8)
+			FLAGS_RW(mul_p8_imm)
+			FLAGS_RW_R(div_p64_p64)
+			FLAGS_RW(div_p64_imm)
+			FLAGS_RW_R(div_p32_p32)
+			FLAGS_RW(div_p32_imm)
+			FLAGS_RW_R(div_p16_p16)
+			FLAGS_RW(div_p16_imm)
+			FLAGS_RW_R(div_p8_p8)
+			FLAGS_RW(div_p8_imm)
+			FLAGS_RW_R(mod_p64_p64)
+			FLAGS_RW(mod_p64_imm)
+			FLAGS_RW_R(mod_p32_p32)
+			FLAGS_RW(mod_p32_imm)
+			FLAGS_RW_R(mod_p16_p16)
+			FLAGS_RW(mod_p16_imm)
+			FLAGS_RW_R(mod_p8_p8)
+			FLAGS_RW(mod_p8_imm)
 
 			// Unsigned arith
-			FLAGS_RDWR_RD(umul_p64_p64)
-			FLAGS_RDWR(umul_p64_imm)
-			FLAGS_RDWR_RD(umul_p32_p32)
-			FLAGS_RDWR(umul_p32_imm)
-			FLAGS_RDWR_RD(umul_p16_p16)
-			FLAGS_RDWR(umul_p16_imm)
-			FLAGS_RDWR_RD(umul_p8_p8)
-			FLAGS_RDWR(umul_p8_imm)
-			FLAGS_RDWR_RD(umod_p64_p64)
-			FLAGS_RDWR(umod_p64_imm)
-			FLAGS_RDWR_RD(umod_p32_p32)
-			FLAGS_RDWR(umod_p32_imm)
-			FLAGS_RDWR_RD(umod_p16_p16)
-			FLAGS_RDWR(umod_p16_imm)
-			FLAGS_RDWR_RD(umod_p8_p8)
-			FLAGS_RDWR(umod_p8_imm)
-			FLAGS_RDWR_RD(udiv_p64_p64)
-			FLAGS_RDWR(udiv_p64_imm)
-			FLAGS_RDWR_RD(udiv_p32_p32)
-			FLAGS_RDWR(udiv_p32_imm)
-			FLAGS_RDWR_RD(udiv_p16_p16)
-			FLAGS_RDWR(udiv_p16_imm)
-			FLAGS_RDWR_RD(udiv_p8_p8)
-			FLAGS_RDWR(udiv_p8_imm)
+			FLAGS_RW_R(umul_p64_p64)
+			FLAGS_RW(umul_p64_imm)
+			FLAGS_RW_R(umul_p32_p32)
+			FLAGS_RW(umul_p32_imm)
+			FLAGS_RW_R(umul_p16_p16)
+			FLAGS_RW(umul_p16_imm)
+			FLAGS_RW_R(umul_p8_p8)
+			FLAGS_RW(umul_p8_imm)
+			FLAGS_RW_R(umod_p64_p64)
+			FLAGS_RW(umod_p64_imm)
+			FLAGS_RW_R(umod_p32_p32)
+			FLAGS_RW(umod_p32_imm)
+			FLAGS_RW_R(umod_p16_p16)
+			FLAGS_RW(umod_p16_imm)
+			FLAGS_RW_R(umod_p8_p8)
+			FLAGS_RW(umod_p8_imm)
+			FLAGS_RW_R(udiv_p64_p64)
+			FLAGS_RW(udiv_p64_imm)
+			FLAGS_RW_R(udiv_p32_p32)
+			FLAGS_RW(udiv_p32_imm)
+			FLAGS_RW_R(udiv_p16_p16)
+			FLAGS_RW(udiv_p16_imm)
+			FLAGS_RW_R(udiv_p8_p8)
+			FLAGS_RW(udiv_p8_imm)
 
 			// Floating point
-			FLAGS_RDWR_RD(fadd_p64_p64)
-			FLAGS_RDWR(fadd_p64_imm)
-			FLAGS_RDWR_RD(fadd_p32_p32)
-			FLAGS_RDWR(fadd_p32_imm)
-			FLAGS_RDWR_RD(fsub_p64_p64)
-			FLAGS_RDWR(fsub_p64_imm)
-			FLAGS_RDWR_RD(fsub_p32_p32)
-			FLAGS_RDWR(fsub_p32_imm)
-			FLAGS_RDWR_RD(fmul_p64_p64)
-			FLAGS_RDWR(fmul_p64_imm)
-			FLAGS_RDWR_RD(fmul_p32_p32)
-			FLAGS_RDWR(fmul_p32_imm)
-			FLAGS_RDWR_RD(fdiv_p64_p64)
-			FLAGS_RDWR(fdiv_p64_imm)
-			FLAGS_RDWR_RD(fdiv_p32_p32)
-			FLAGS_RDWR(fdiv_p32_imm)
+			FLAGS_RW_R(fadd_p64_p64)
+			FLAGS_RW(fadd_p64_imm)
+			FLAGS_RW_R(fadd_p32_p32)
+			FLAGS_RW(fadd_p32_imm)
+			FLAGS_RW_R(fsub_p64_p64)
+			FLAGS_RW(fsub_p64_imm)
+			FLAGS_RW_R(fsub_p32_p32)
+			FLAGS_RW(fsub_p32_imm)
+			FLAGS_RW_R(fmul_p64_p64)
+			FLAGS_RW(fmul_p64_imm)
+			FLAGS_RW_R(fmul_p32_p32)
+			FLAGS_RW(fmul_p32_imm)
+			FLAGS_RW_R(fdiv_p64_p64)
+			FLAGS_RW(fdiv_p64_imm)
+			FLAGS_RW_R(fdiv_p32_p32)
+			FLAGS_RW(fdiv_p32_imm)
 
 			// Unary arith / negation / logical-not
-			FLAGS_RDWR(neg_p64)
-			FLAGS_RDWR(neg_p32)
-			FLAGS_RDWR(neg_p16)
-			FLAGS_RDWR(neg_p8)
-			FLAGS_RDWR(fneg_p64)
-			FLAGS_RDWR(fneg_p32)
-			FLAGS_RDWR(log_not_p8)
+			FLAGS_RW(neg_p64)
+			FLAGS_RW(neg_p32)
+			FLAGS_RW(neg_p16)
+			FLAGS_RW(neg_p8)
+			FLAGS_RW(fneg_p64)
+			FLAGS_RW(fneg_p32)
+			FLAGS_RW(log_not_p8)
 
 			// Logical (and/or/xor)
-			FLAGS_RDWR_RD(log_and_p8_p8)
-			FLAGS_RDWR(log_and_p8_imm)
-			FLAGS_RDWR_RD(log_or_p8_p8)
-			FLAGS_RDWR(log_or_p8_imm)
-			FLAGS_RDWR_RD(log_xor_p8_p8)
-			FLAGS_RDWR(log_xor_p8_imm)
+			FLAGS_RW_R(log_and_p8_p8)
+			FLAGS_RW(log_and_p8_imm)
+			FLAGS_RW_R(log_or_p8_p8)
+			FLAGS_RW(log_or_p8_imm)
+			FLAGS_RW_R(log_xor_p8_p8)
+			FLAGS_RW(log_xor_p8_imm)
 
 			// ===== Comparisons: lhs/rhs are read =====
 			FLAGS_CMP(cmpEq_p64_p64)
@@ -386,12 +384,12 @@ namespace vm::code {
 			}
 			instr_case(ins::Op_variantSetInner_pptr_type, i) {
 				rd(i.variant_ptr);
-				
+				deref_write();
 			}
 			instr_case(ins::Op_variantGetInner_pptr_pptr_type, i) {
 				wr(i.dst_ptr);
 				rd(i.variant_ptr);
-				
+				deref_read();
 			}
 
 			// ===== Labels & jumps =====
@@ -467,7 +465,7 @@ namespace vm::code {
 			}
 			instr_case(ins::Op_strOutput_pptr, i) {
 				rd(i.string_ptr);
-				
+				deref_read();
 				flags |= IOWrite | InstructionFlag(RequiresGIL);
 			}
 
@@ -475,11 +473,11 @@ namespace vm::code {
 			// setVTable / resetVTable write the vtable slot through the pointer
 			instr_case(ins::Op_setVTable_pptr_type, i) {
 				rd(i.object_ptr);
-				
+				deref_write();
 			}
 			instr_case(ins::Op_resetVTable_pptr, i) {
 				rd(i.object_ptr);
-				
+				deref_write();
 			}
 			// upcast/downcast operate on the pointer value itself; downcast peeks at the vtable
 			instr_case(ins::Op_upcast_pptr_pptr, i) {
@@ -489,10 +487,11 @@ namespace vm::code {
 			instr_case(ins::Op_downcast_pptr_pptr, i) {
 				wr(i.dst);
 				rd(i.src);
-				
+				deref_read();
 			}
 			instr_case(ins::Op_virtual_call_pptr_method, i) {
 				(void) i;
+
 				// Assume the worst of a virtual call
 				flags |= IORead | IOWrite | GlobalRead | GlobalWrite | Call | CallExternal
 				       | Multithread | RequiresGIL | ReleaseGIL | ControlFlowModifying | MayBlock;
@@ -506,17 +505,17 @@ namespace vm::code {
 			// free modifies the pointed-to memory (deallocation)
 			instr_case(ins::Op_free_pptr, i) {
 				rd(i.ptr);
-				
+				deref_write();
 			}
 			instr_case(ins::Op_store_pptr_pany, i) {
 				rd(i.dst_ptr);
 				rd(i.src);
-				
+				deref_write();
 			}
 			instr_case(ins::Op_load_pany_pptr, i) {
 				wr(i.dst);
 				rd(i.src_ptr);
-				
+				deref_read();
 			}
 			// ref/lea-style ops just compute or take an address — no actual deref
 			instr_case(ins::Op_ref_pptr_pany, i) {
@@ -537,12 +536,12 @@ namespace vm::code {
 			instr_case(ins::Op_structLoad_pany_pptr_field, i) {
 				wr(i.dst);
 				rd(i.src_data_ptr);
-				
+				deref_read();
 			}
 			instr_case(ins::Op_structStore_pptr_pany_field, i) {
 				rd(i.dst_data_ptr);
 				rd(i.src);
-				
+				deref_write();
 			}
 			// pste-based: the struct lives in the named place itself
 			instr_case(ins::Op_structLea_pptr_pste_field, i) {
@@ -569,13 +568,13 @@ namespace vm::code {
 				wr(i.dst);
 				rd(i.src_table_ptr);
 				rd(i.index);
-				
+				deref_read();
 			}
 			instr_case(ins::Op_fixedSizeTableStore_pptr_pany_p64, i) {
 				rd(i.dst_table_ptr);
 				rd(i.src);
 				rd(i.index);
-				
+				deref_write();
 			}
 			// pfst-based (table lives in the place itself)
 			instr_case(ins::Op_fixedSizeTableLea_pptr_pfst_p64, i) {
@@ -603,18 +602,19 @@ namespace vm::code {
 				wr(i.dst);
 				rd(i.src_table_ptr);
 				rd(i.index);
-				
+				deref_read();
 			}
 			instr_case(ins::Op_dynTableStore_pptr_pany_p64, i) {
 				rd(i.dst_table_ptr);
 				rd(i.src);
 				rd(i.index);
-				
+				deref_write();
 			}
 			instr_case(ins::Op_dynTableReAlloc_pptr_type_p64, i) {
 				rd(i.dst_table_ptr);
 				rd(i.new_elem_count);
-				  // realloc rewrites the table memory
+				// realloc rewrites the table memory
+				deref_write();
 				flags |= MayBlock;
 			}
 
@@ -625,62 +625,62 @@ namespace vm::code {
 			instr_case(ins::Op_cast_p64_type, i) { rdwr(i.value); }
 
 			// ===== Sign / zero extension =====
-			FLAGS_WR_RD(sext_p16_p8)
-			FLAGS_WR_RD(sext_p32_p8)
-			FLAGS_WR_RD(sext_p64_p8)
-			FLAGS_WR_RD(sext_p32_p16)
-			FLAGS_WR_RD(sext_p64_p16)
-			FLAGS_WR_RD(sext_p64_p32)
-			FLAGS_WR_RD(zext_p16_p8)
-			FLAGS_WR_RD(zext_p32_p8)
-			FLAGS_WR_RD(zext_p64_p8)
-			FLAGS_WR_RD(zext_p32_p16)
-			FLAGS_WR_RD(zext_p64_p16)
-			FLAGS_WR_RD(zext_p64_p32)
+			FLAGS_W_R(sext_p16_p8)
+			FLAGS_W_R(sext_p32_p8)
+			FLAGS_W_R(sext_p64_p8)
+			FLAGS_W_R(sext_p32_p16)
+			FLAGS_W_R(sext_p64_p16)
+			FLAGS_W_R(sext_p64_p32)
+			FLAGS_W_R(zext_p16_p8)
+			FLAGS_W_R(zext_p32_p8)
+			FLAGS_W_R(zext_p64_p8)
+			FLAGS_W_R(zext_p32_p16)
+			FLAGS_W_R(zext_p64_p16)
+			FLAGS_W_R(zext_p64_p32)
 
 			// ===== Truncation =====
-			FLAGS_WR_RD(trunc_p8_p16)
-			FLAGS_WR_RD(trunc_p8_p32)
-			FLAGS_WR_RD(trunc_p8_p64)
-			FLAGS_WR_RD(trunc_p16_p32)
-			FLAGS_WR_RD(trunc_p16_p64)
-			FLAGS_WR_RD(trunc_p32_p64)
+			FLAGS_W_R(trunc_p8_p16)
+			FLAGS_W_R(trunc_p8_p32)
+			FLAGS_W_R(trunc_p8_p64)
+			FLAGS_W_R(trunc_p16_p32)
+			FLAGS_W_R(trunc_p16_p64)
+			FLAGS_W_R(trunc_p32_p64)
 
 			// ===== Int/Float conversions =====
-			FLAGS_WR_RD(sitofp_p32_p8)
-			FLAGS_WR_RD(sitofp_p64_p8)
-			FLAGS_WR_RD(uitofp_p32_p8)
-			FLAGS_WR_RD(uitofp_p64_p8)
-			FLAGS_WR_RD(sitofp_p32_p16)
-			FLAGS_WR_RD(sitofp_p64_p16)
-			FLAGS_WR_RD(uitofp_p32_p16)
-			FLAGS_WR_RD(uitofp_p64_p16)
-			FLAGS_WR_RD(sitofp_p32_p32)
-			FLAGS_WR_RD(sitofp_p64_p32)
-			FLAGS_WR_RD(uitofp_p32_p32)
-			FLAGS_WR_RD(uitofp_p64_p32)
-			FLAGS_WR_RD(sitofp_p32_p64)
-			FLAGS_WR_RD(sitofp_p64_p64)
-			FLAGS_WR_RD(uitofp_p32_p64)
-			FLAGS_WR_RD(uitofp_p64_p64)
-			FLAGS_WR_RD(fptosi_p8_p32)
-			FLAGS_WR_RD(fptoui_p8_p32)
-			FLAGS_WR_RD(fptosi_p16_p32)
-			FLAGS_WR_RD(fptoui_p16_p32)
-			FLAGS_WR_RD(fptosi_p32_p32)
-			FLAGS_WR_RD(fptoui_p32_p32)
-			FLAGS_WR_RD(fptosi_p64_p32)
-			FLAGS_WR_RD(fptoui_p64_p32)
-			FLAGS_WR_RD(fptosi_p8_p64)
-			FLAGS_WR_RD(fptoui_p8_p64)
-			FLAGS_WR_RD(fptosi_p16_p64)
-			FLAGS_WR_RD(fptoui_p16_p64)
-			FLAGS_WR_RD(fptosi_p32_p64)
-			FLAGS_WR_RD(fptoui_p32_p64)
-			FLAGS_WR_RD(fptosi_p64_p64)
-			FLAGS_WR_RD(fptoui_p64_p64)
-			FLAGS_WR_RD(fptrunc_p32_p64)
-			FLAGS_WR_RD(fpext_p64_p32)
+			FLAGS_W_R(sitofp_p32_p8)
+			FLAGS_W_R(sitofp_p64_p8)
+			FLAGS_W_R(uitofp_p32_p8)
+			FLAGS_W_R(uitofp_p64_p8)
+			FLAGS_W_R(sitofp_p32_p16)
+			FLAGS_W_R(sitofp_p64_p16)
+			FLAGS_W_R(uitofp_p32_p16)
+			FLAGS_W_R(uitofp_p64_p16)
+			FLAGS_W_R(sitofp_p32_p32)
+			FLAGS_W_R(sitofp_p64_p32)
+			FLAGS_W_R(uitofp_p32_p32)
+			FLAGS_W_R(uitofp_p64_p32)
+			FLAGS_W_R(sitofp_p32_p64)
+			FLAGS_W_R(sitofp_p64_p64)
+			FLAGS_W_R(uitofp_p32_p64)
+			FLAGS_W_R(uitofp_p64_p64)
+			FLAGS_W_R(fptosi_p8_p32)
+			FLAGS_W_R(fptoui_p8_p32)
+			FLAGS_W_R(fptosi_p16_p32)
+			FLAGS_W_R(fptoui_p16_p32)
+			FLAGS_W_R(fptosi_p32_p32)
+			FLAGS_W_R(fptoui_p32_p32)
+			FLAGS_W_R(fptosi_p64_p32)
+			FLAGS_W_R(fptoui_p64_p32)
+			FLAGS_W_R(fptosi_p8_p64)
+			FLAGS_W_R(fptoui_p8_p64)
+			FLAGS_W_R(fptosi_p16_p64)
+			FLAGS_W_R(fptoui_p16_p64)
+			FLAGS_W_R(fptosi_p32_p64)
+			FLAGS_W_R(fptoui_p32_p64)
+			FLAGS_W_R(fptosi_p64_p64)
+			FLAGS_W_R(fptoui_p64_p64)
+			FLAGS_W_R(fptrunc_p32_p64)
+			FLAGS_W_R(fpext_p64_p32)
 
 			// ===== Misc =====
 			instr_case(ins::Op_nop, i) { (void) i; }
@@ -694,10 +694,10 @@ namespace vm::code {
 		}
 		POP_DIAGNOSTIC
 
-#undef FLAGS_WR
-#undef FLAGS_WR_RD
-#undef FLAGS_RDWR
-#undef FLAGS_RDWR_RD
+#undef FLAGS_W
+#undef FLAGS_W_R
+#undef FLAGS_RW
+#undef FLAGS_RW_R
 #undef FLAGS_CMP
 #undef FLAGS_CMP_IMM
 
