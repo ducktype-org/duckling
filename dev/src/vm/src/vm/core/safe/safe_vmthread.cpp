@@ -135,6 +135,7 @@ namespace vm {
 
 		low::LowFuncData start_function{
 			.name = base::StrID("vm_start_function"),
+			.id   = START_FUNCTION_ID,
 #ifdef ENABLE_JIT
 			.cfg
 			= low::cf::ControlFlowGraph(),  // This is okay because we never JIT the start function.
@@ -239,6 +240,7 @@ namespace vm {
 
 		low::LowFuncData start_function{
 			.name = base::StrID("vm_start_function"),
+			.id   = START_FUNCTION_ID,
 #ifdef ENABLE_JIT
 			.cfg
 			= low::cf::ControlFlowGraph(),  // This is okay because we never JIT the start function.
@@ -666,6 +668,10 @@ namespace vm {
 	}
 
 	void SafeVMThread::setThreadCtx(std::string str) { thread_ctx = std::move(str); }
+
+	bool SafeVMThread::isCallableFunctionID(usize id) {
+		return id != SafeVMThread::START_FUNCTION_ID;
+	}
 
 	u64 SafeVMThread::getNumberOfCurrentStackFrames() const {
 		// +1 because frame_stack_current points to the current frame, not the next free slot.

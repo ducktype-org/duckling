@@ -308,7 +308,14 @@ namespace vm {
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(call_func)(FUNCTION_ARGS) {
-		{ performFunctionCall(instr, local_stack, frame, thread, instr->arg0); }
+		{
+			auto function_id = static_cast<usize>(instr->arg0);
+			CORE_ASSERT(
+				SafeVMThread::isCallableFunctionID(function_id),
+				"Start function should not be called in the runtime!"
+			);
+			performFunctionCall(instr, local_stack, frame, thread, function_id);
+		}
 		// After acquiring the `executing_code` of the new function we have instruction pointer
 		// (`instr`) pointing at the first instruction of the new function, so moving forward by one
 		// would mean that we skipped the first instruction. That's why we move forward zero
@@ -322,8 +329,7 @@ namespace vm {
 		{
 			auto& jit_data         = thread.jit_data;
 			auto& current_func_obj = *frame->current_function;
-			auto  current_func_id
-				= thread.process_program->getFunctions().idOf(current_func_obj.name).value();
+			auto  current_func_id  = current_func_obj.id;
 
 			// @TODO: #2126 manage the size when inserting new code
 			if (jit_data.size() <= current_func_id) jit_data.resize(2 * current_func_id + 2);
@@ -477,6 +483,11 @@ namespace vm {
 			const usize function_id
 				= *thread.process_program->getFunctions().idOf(implementation_name);
 
+			CORE_ASSERT(
+				SafeVMThread::isCallableFunctionID(function_id),
+				"Start function should not be called in the runtime!"
+			);
+
 			performFunctionCall(instr, local_stack, frame, thread, function_id);
 		}
 		FUNCTION_CONT(0);
@@ -484,7 +495,11 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(ret_tailcall_func)(FUNCTION_ARGS) {
 		{
-			auto  function_id       = static_cast<usize>(instr->arg0);
+			auto function_id = static_cast<usize>(instr->arg0);
+			CORE_ASSERT(
+				SafeVMThread::isCallableFunctionID(function_id),
+				"Start function should not be called in the runtime!"
+			);
 			auto& function          = thread.process_program->getFunctions()[function_id];
 			instr                   = function.bc.data();
 			frame->current_function = &function;
