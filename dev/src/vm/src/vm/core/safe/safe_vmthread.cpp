@@ -567,7 +567,7 @@ namespace vm {
 							} catch (const KillProcessException& e) {
 								respondExecutionRequest(api::ExecutionPanicked{ e.what() });
 								return;
-				}
+							}
 						}
 					}
 					variant_case(low::GlobalInitialValue, value_init) {
