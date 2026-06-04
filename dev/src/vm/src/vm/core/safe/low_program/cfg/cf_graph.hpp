@@ -117,6 +117,10 @@ namespace vm::low {
 
 			BasicBlock() = delete;
 
+			[[nodiscard]] std::ranges::range auto instructions(const vm::low::MicroBytecode& bc) const {
+				return std::span(&bc[start], &bc[end]);
+			}
+
 			/**
 			 * @brief Returns the shape of outgoing edges.
 			 */
@@ -191,6 +195,11 @@ namespace vm::low {
 			 */
 			[[nodiscard]] usize size() const;
 
+			[[nodiscard]] std::ranges::range auto getBlocks() const {
+				return std::views::iota(0zu, size())
+				     | std::views::transform([&](usize id) { return getBlock(id); });
+			}
+
 			/**
 			 * @brief Returns block metadata by identifier.
 			 * @param id Block identifier.
@@ -203,8 +212,7 @@ namespace vm::low {
 			 * @return A remapped CFG subgraph with out-of-subset edges redirected.
 			 * @note Current implementation redirects external edges to a synthetic dummy block.
 			 */
-			[[nodiscard]] ControlFlowGraph subgraph(const std::vector<BasicBlockID>& block_ids
-			) const;
+			[[nodiscard]] ControlFlowGraph subgraph(const std::vector<BasicBlockID>& block_ids) const;
 		};
 	}  // vm::low::cf
 
