@@ -15,10 +15,10 @@
 #include <base/preproc/stringify.hpp>
 #include <base/str/str_utils.hpp>  // IWYU pragma: export
 
+#include <cstring>
 #include <exception>
 #include <string>
 #include <string_view>
-#include <cstring>
 #include <utility>  // IWYU pragma: export
 
 namespace base {

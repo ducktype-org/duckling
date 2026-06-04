@@ -331,7 +331,7 @@ namespace vm {
 			auto& current_func_obj = *frame->current_function;
 			auto  current_func_id  = current_func_obj.id;
 
-			// @TODO: #2126 manage the size when inserting new code
+			// @TODO: #2858 manage the size when inserting new code
 			if (jit_data.size() <= current_func_id) jit_data.resize(2 * current_func_id + 2);
 
 			jit::JitFuncData& my_data = jit_data[current_func_id];
