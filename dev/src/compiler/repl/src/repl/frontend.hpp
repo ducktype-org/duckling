@@ -5,18 +5,24 @@
 
 #pragma once
 
+#include "module_flags/module_flags.hpp"
+
 #include <string>
 #include <string_view>
 
 #ifdef USE_REPLXX
 	#include "frontend_implementations/replxx.hpp"
-using FrontendImplementationType = compiler::repl::FrontendReplxxImplementation;
 #else
 	#include "frontend_implementations/minimal.hpp"
-using FrontendImplementationType = compiler::repl::FrontendMinImplementation;
 #endif
 
 namespace compiler::repl {
+
+#ifdef USE_REPLXX
+	using FrontendImplementationType = FrontendReplxxImplementation;
+#else
+	using FrontendImplementationType = FrontendMinImplementation;
+#endif
 
 	/**
 	 * @brief Frontend interface for REPL session.
@@ -39,7 +45,10 @@ namespace compiler::repl {
 	 */
 	class ReplFrontend final {
 	public:
-		explicit ReplFrontend(bool completions_enabled = true);
+		explicit ReplFrontend(
+			bool completions_enabled     = FRONTEND_DEFAULT_COMPLETIONS_ENABLED,
+			bool bracketed_paste_enabled = FRONTEND_DEFAULT_BRACKETED_PASTE_ENABLED
+		);
 		~ReplFrontend() = default;
 
 		/**

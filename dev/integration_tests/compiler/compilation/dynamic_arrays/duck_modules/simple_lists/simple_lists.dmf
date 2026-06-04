@@ -3,7 +3,7 @@ import core.builtins.*;
 fun printList(list: ref List[i64]) -> () = {
     print("8888888888888888888\n");
     var i = 0;
-    while (i < len list) {
+    while (i < i64(len list)) {
         builtin_output_i64(list[i]);
         i = i + 1;
     }
@@ -14,7 +14,7 @@ fun listByRef(list: ref List[i64]) -> () = {
     printList(list);
 
     var i = 0;
-    while (i < len list) {
+    while (i < i64(len list)) {
         list[i] = list[i] + 1; 
         i = i + 1;
     }
@@ -38,7 +38,7 @@ fun main() -> i32 = {
 
     printList(&arr);
     
-    arr -= 3;
+    arr -= 3u64;
     builtin_output_u64(len arr);
     printList(&arr);
 

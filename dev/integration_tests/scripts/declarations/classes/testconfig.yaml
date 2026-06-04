@@ -1,10 +1,7 @@
 # Tests for declarations of classes in scripts in Duckling.
 
-# @TODO: #2569 Enable the tests after making usage of classes in REPL and scripts possible.
-
 Tests:
   basic_declarations:
-    Enabled: "true"
     folder: "basic_declarations"
     Cases:
       direct:
@@ -21,7 +18,6 @@ Tests:
           String : "42\n25\n"
   
   using_previously_defined_objects:
-    Enabled: "false"
     folder: "interactions"
     Cases:
       direct:

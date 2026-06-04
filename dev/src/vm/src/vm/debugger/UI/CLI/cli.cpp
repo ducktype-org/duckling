@@ -124,6 +124,8 @@ namespace vm::debugger::cli {
 			} else if (stripped_line == "position" || stripped_line == "pos") {
 				auto response = debugger.getCurrentPosition();
 				position();
+			} else if (stripped_line == "step" || stripped_line == "next" || stripped_line == "n") {
+				debugger.step();
 			}
 		}
 
@@ -140,6 +142,7 @@ namespace vm::debugger::cli {
 					 "  (r)un       - run main function\n"
 					 "  (p)ause     - pause running VM\n"
 					 "  (c)ontinue  - resume VM execution\n"
+					 "  (n)ext      - executes one Fat step\n"
 
 					 "  (s)tatus    - write current VM status\n"
 					 "  (pos)ition  - write current position\n"

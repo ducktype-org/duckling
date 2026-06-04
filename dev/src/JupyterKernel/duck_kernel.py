@@ -164,6 +164,8 @@ class MyLanguageKernel(Kernel):
                 continue
             if "End_of_completions" in clean_line:
                 continue
+            if "available" in clean_line:
+                continue
 
             if clean_line not in matches:
                 matches.append(clean_line)

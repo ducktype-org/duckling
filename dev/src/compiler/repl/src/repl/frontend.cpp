@@ -5,7 +5,8 @@
 #include <string>
 
 namespace compiler::repl {
-	ReplFrontend::ReplFrontend(bool completions_enabled): m_impl(completions_enabled) {}
+	ReplFrontend::ReplFrontend(bool completions_enabled, bool bracketed_paste_enabled):
+		  m_impl(completions_enabled, bracketed_paste_enabled) {}
 
 	void ReplFrontend::printWelcome() const { m_impl.printWelcome(); }
 
