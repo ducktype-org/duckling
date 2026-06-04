@@ -1,0 +1,39 @@
+# Multiple threads stay alive while one thread divides by zero.
+#
+# Scenario:
+# - Two worker threads spin in a loop.
+# - Main thread performs a zero division while workers are running.
+#
+# Expected behavior:
+# - The VM must panic with the zero-division exception.
+# - All threads should be terminated when the panic occurs.
+
+function worker {} -> {} {
+	init_pany_type		spin, i64;
+	mov_p64_imm			spin, 1000000000;
+
+	label WorkLoop;
+		sub_p64_imm		spin, 1;
+		cmpGt_p64_imm	spin, 0;
+		jmpIf_label		WorkLoop;
+
+	ret;
+}
+
+function main { i64, ptr_argv } -> { i64 } {
+	init_pany_type		worker1_id, i64;
+	set_threadctx		worker;
+	call_builtinfunc	builtin_start_thread;
+
+	init_pany_type		worker2_id, i64;
+	set_threadctx		worker;
+	call_builtinfunc	builtin_start_thread;
+
+	init_pany_type		a, i32;
+	init_pany_type		b, i32;
+	mov_p32_imm			a, 13;
+	mov_p32_imm			b, 0;
+	div_p32_p32			a, b;
+
+	ret;
+}
