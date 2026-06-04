@@ -67,6 +67,8 @@ duck_add_test(base base tests/base_test.cpp USES Base)
 
 duck_add_test(base shared_box tests/shared_box_test.cpp USES Base)
 
+duck_add_test(base vector_utils tests/vector_utils_test.cpp USES Base)
+
 add_example(anycast_example examples/anycast_example.cpp
         USES Base)
 
