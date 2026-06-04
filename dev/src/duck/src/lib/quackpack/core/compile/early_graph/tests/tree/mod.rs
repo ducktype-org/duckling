@@ -299,6 +299,15 @@ fn removes_inactive_deps1() {
             (fetcher_identity_for("foo"), DependencyNode::new(vec![])),
         ])
     );
+
+    assert_eq!(graph.packages.inner.len(), 2);
+    assert!(graph.packages.inner.contains_key(&identity_for("root")));
+    assert!(
+        graph
+            .packages
+            .inner
+            .contains_key(&fetcher_identity_for("foo"))
+    );
 }
 
 #[test]
@@ -345,6 +354,20 @@ fn removes_inactive_deps2() {
             ),
             (fetcher_identity_for("bar"), DependencyNode::new(vec![])),
         ])
+    );
+    assert_eq!(graph.packages.inner.len(), 3);
+    assert!(graph.packages.inner.contains_key(&identity_for("root")));
+    assert!(
+        graph
+            .packages
+            .inner
+            .contains_key(&fetcher_identity_for("foo"))
+    );
+    assert!(
+        graph
+            .packages
+            .inner
+            .contains_key(&fetcher_identity_for("bar"))
     );
 }
 
@@ -397,6 +420,27 @@ fn removes_inactive_deps3() {
             (fetcher_identity_for("baz"), DependencyNode::new(vec![])),
         ])
     );
+
+    assert_eq!(graph.packages.inner.len(), 4);
+    assert!(graph.packages.inner.contains_key(&identity_for("root")));
+    assert!(
+        graph
+            .packages
+            .inner
+            .contains_key(&fetcher_identity_for("foo"))
+    );
+    assert!(
+        graph
+            .packages
+            .inner
+            .contains_key(&fetcher_identity_for("bar"))
+    );
+    assert!(
+        graph
+            .packages
+            .inner
+            .contains_key(&fetcher_identity_for("baz"))
+    );
 }
 
 #[test]
@@ -447,6 +491,27 @@ fn removes_inactive_deps4() {
             ),
             (fetcher_identity_for("baz"), DependencyNode::new(vec![])),
         ])
+    );
+
+    assert_eq!(graph.packages.inner.len(), 4);
+    assert!(graph.packages.inner.contains_key(&identity_for("root")));
+    assert!(
+        graph
+            .packages
+            .inner
+            .contains_key(&fetcher_identity_for("foo"))
+    );
+    assert!(
+        graph
+            .packages
+            .inner
+            .contains_key(&fetcher_identity_for("bar"))
+    );
+    assert!(
+        graph
+            .packages
+            .inner
+            .contains_key(&fetcher_identity_for("baz"))
     );
 }
 

@@ -305,6 +305,20 @@ fn removes_inactive_deps1() {
             (fetcher_identity_for("bar"), DependencyNode::new(vec![])),
         ])
     );
+    assert_eq!(graph.packages.inner.len(), 3);
+    assert!(graph.packages.inner.contains_key(&identity_for("root")));
+    assert!(
+        graph
+            .packages
+            .inner
+            .contains_key(&fetcher_identity_for("foo"))
+    );
+    assert!(
+        graph
+            .packages
+            .inner
+            .contains_key(&fetcher_identity_for("bar"))
+    );
 }
 
 #[test]
@@ -355,6 +369,27 @@ fn removes_inactive_deps2() {
             (fetcher_identity_for("baz"), DependencyNode::new(vec![])),
         ])
     );
+
+    assert_eq!(graph.packages.inner.len(), 4);
+    assert!(graph.packages.inner.contains_key(&identity_for("root")));
+    assert!(
+        graph
+            .packages
+            .inner
+            .contains_key(&fetcher_identity_for("foo"))
+    );
+    assert!(
+        graph
+            .packages
+            .inner
+            .contains_key(&fetcher_identity_for("bar"))
+    );
+    assert!(
+        graph
+            .packages
+            .inner
+            .contains_key(&fetcher_identity_for("baz"))
+    );
 }
 
 #[test]
@@ -404,6 +439,27 @@ fn removes_inactive_deps3() {
             ),
             (fetcher_identity_for("baz"), DependencyNode::new(vec![])),
         ])
+    );
+
+    assert_eq!(graph.packages.inner.len(), 4);
+    assert!(graph.packages.inner.contains_key(&identity_for("root")));
+    assert!(
+        graph
+            .packages
+            .inner
+            .contains_key(&fetcher_identity_for("foo"))
+    );
+    assert!(
+        graph
+            .packages
+            .inner
+            .contains_key(&fetcher_identity_for("bar"))
+    );
+    assert!(
+        graph
+            .packages
+            .inner
+            .contains_key(&fetcher_identity_for("baz"))
     );
 }
 
@@ -458,6 +514,27 @@ fn removes_inactive_deps4() {
             (fetcher_identity_for("baz"), DependencyNode::new(vec![])),
         ])
     );
+
+    assert_eq!(graph.packages.inner.len(), 4);
+    assert!(graph.packages.inner.contains_key(&identity_for("root")));
+    assert!(
+        graph
+            .packages
+            .inner
+            .contains_key(&fetcher_identity_for("foo"))
+    );
+    assert!(
+        graph
+            .packages
+            .inner
+            .contains_key(&fetcher_identity_for("bar"))
+    );
+    assert!(
+        graph
+            .packages
+            .inner
+            .contains_key(&fetcher_identity_for("baz"))
+    );
 }
 
 #[test]
@@ -508,7 +585,22 @@ fn cycle() {
                 DependencyNode::new(vec![identity_for("root")])
             )
         ])
-    )
+    );
+    assert_eq!(graph.packages.inner.len(), 4);
+    assert!(graph.packages.inner.contains_key(&identity_for("root")));
+    assert!(graph.packages.inner.contains_key(&identity_for("cycle")));
+    assert!(
+        graph
+            .packages
+            .inner
+            .contains_key(&fetcher_identity_for("foo"))
+    );
+    assert!(
+        graph
+            .packages
+            .inner
+            .contains_key(&fetcher_identity_for("bar"))
+    );
 }
 
 #[test]
