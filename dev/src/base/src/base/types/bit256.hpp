@@ -9,6 +9,49 @@
 #include <string>
 
 namespace base {
+
+	struct XXHash64 final {
+		uint64_t state = PRIME5;
+		uint64_t total_len = 0;
+
+		static constexpr uint64_t PRIME1 = 11400714785074694791ULL;
+		static constexpr uint64_t PRIME2 = 14029467366897019727ULL;
+		static constexpr uint64_t PRIME3 =  1609587929392839161ULL;
+		static constexpr uint64_t PRIME4 =  9650029242287828579ULL;
+		static constexpr uint64_t PRIME5 =  2870177450012600261ULL;
+
+		static uint64_t rotl(uint64_t x, int r) {
+			return (x << r) | (x >> (64 - r));
+		}
+
+		// Add one uint64_t value to the hash
+		void add(uint64_t value) {
+			total_len += 8;
+
+			uint64_t k = value;
+			k *= PRIME2;
+			k = rotl(k, 31);
+			k *= PRIME1;
+
+			state ^= k;
+			state = rotl(state, 27) * PRIME1 + PRIME4;
+		}
+
+		// Finalize and return the hash
+		[[nodiscard]]
+		uint64_t finalize() const {
+			uint64_t h = state + total_len;
+
+			h ^= h >> 33;
+			h *= PRIME2;
+			h ^= h >> 29;
+			h *= PRIME3;
+			h ^= h >> 32;
+
+			return h;
+		}
+	};
+
 	/**
 	 * Bit256 is a 256-bit integer type used for example for SHA-256 hash values.
 	 * The value is represented in an array of 4 u64s as a number in base 2^64, with the lowest
@@ -101,10 +144,17 @@ namespace std {
 	template<>
 	struct hash<base::Bit256> {
 		std::size_t operator()(const base::Bit256& bit256) const noexcept {
-			std::size_t hash = 0;
-			for (const auto& value: bit256.data)
-				hash ^= std::hash<u64>{}(value);  // Combine hashes using XOR
-			return hash;
+			// std::size_t hash = 0;
+			// for (const auto& value: bit256.data)
+			// 	hash ^= std::hash<u64>{}(value);  // Combine hashes using XOR
+			// return hash;
+
+			base::XXHash64 hasher;
+			hasher.add(bit256.data[0]);
+			hasher.add(bit256.data[1]);
+			hasher.add(bit256.data[2]);
+			hasher.add(bit256.data[3]);
+			return hasher.finalize();
 		}
 	};
 }
