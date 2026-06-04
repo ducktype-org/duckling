@@ -32,7 +32,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
         with:
-          token: ${{ secrets.READ_DOCS_REPOS_PAT }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           submodules: true
 
       - name: Install dependencies

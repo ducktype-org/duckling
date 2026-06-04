@@ -50,6 +50,7 @@ namespace compiler::repl {
 	}
 
 	const helios::HOUTUnit& getDefinitionHOUTUnit(query::Context& ctx, frontend::ModuleID module_id) {
+		// @TODO: #2246 validate usage of QueryModuleHOUT here after any other changes
 		return ctx.query<helios::QueryModuleHOUT>(module_id)->valueOrThrow();
 	}
 
@@ -111,10 +112,15 @@ namespace compiler::repl {
 				using PayloadT = std::decay_t<decltype(statement_payload)>;
 
 				if constexpr (std::is_same_v<PayloadT, ExpressionSingleStatementInfo>) {
-					auto wrapper      = ctx.query<QueryReplExpressionWrapper>({
-							 .expr_stmt = statement_payload.expr_stmt,
-							 .counter   = counter,
-                    });
+					auto wrapper_result = ctx.query<QueryReplExpressionWrapper>({
+						.expr_stmt = statement_payload.expr_stmt,
+						.counter   = counter,
+					});
+					if (wrapper_result.hasFailed())
+						return std::unexpected(
+							"Failed to build REPL expression wrapper (see diagnostics above)."
+						);
+					auto wrapper      = wrapper_result.valueOrPanic();
 					auto mangled_name = helios::mangler::getSimpleMangledName(
 						ctx, wrapper.declaration->original_symbol
 					);
@@ -123,10 +129,15 @@ namespace compiler::repl {
 						.wrapper_func_name = std::string(mangled_name.strView()),
 					};
 				} else if constexpr (std::is_same_v<PayloadT, InstructionSingleStatementInfo>) {
-					auto wrapper      = ctx.query<QueryReplInstructionWrapper>({
-							 .stmt    = statement_payload.instruction_stmt,
-							 .counter = counter,
-                    });
+					auto wrapper_result = ctx.query<QueryReplInstructionWrapper>({
+						.stmt    = statement_payload.instruction_stmt,
+						.counter = counter,
+					});
+					if (wrapper_result.hasFailed())
+						return std::unexpected(
+							"Failed to build REPL instruction wrapper (see diagnostics above)."
+						);
+					auto wrapper      = wrapper_result.valueOrPanic();
 					auto mangled_name = helios::mangler::getSimpleMangledName(
 						ctx, wrapper.declaration->original_symbol
 					);

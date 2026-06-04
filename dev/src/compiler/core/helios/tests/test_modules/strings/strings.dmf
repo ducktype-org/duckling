@@ -6,4 +6,8 @@ fun main() = {
     let hello = "Hello, ";
     let world = "world!\n";
     let helloWorld = hello ++ world;
+
+    let x = 1;
+    let y = 2;
+    let format = f"Did you know that {x} plus {y} equals ({x + y})?";
 }

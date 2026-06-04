@@ -22,6 +22,7 @@
 #include <helios/hout/hout.hpp>
 #include <helios/queries/queries.hpp>
 #include <linker/link.hpp>
+#include <os_utils/exec_self.hpp>
 #include <repl/session.hpp>
 #include <time_stats/time_stats.hpp>
 
@@ -44,8 +45,61 @@
 
 #include <nlohmann/json.hpp>
 
+#include <cstdio>
 #include <iostream>
 #include <ranges>
+#include <string>
+#include <vector>
+
+namespace {
+	/**
+	 * Global variable storing arguments passed to the program.
+	 */
+	std::vector<std::string> g_argv;
+
+	/**
+	 * @brief Update the stored argv so the REPL can restart with adjusted history options.
+	 *
+	 * Preserves the original executable and subcommand, removes any existing --history-entries and
+	 * --silent arguments, which control reset behavior, and appends the requested
+	 * replay count and silence flag.
+	 *
+	 * @param replay_count Number of history entries to replay after restart.
+	 * @param silent Whether history replay should be silent.
+	 */
+	void setReplRestartArgs(usize replay_count, bool silent) {
+		if (g_argv.empty()) return;
+
+		std::vector<std::string> new_args;
+		new_args.reserve(g_argv.size() + 3);
+		new_args.push_back(g_argv[0]);
+
+		bool seen_repl = false;
+		for (usize i = 1; i < g_argv.size(); ++i) {
+			const auto& arg = g_argv[i];
+			if (!seen_repl) {
+				new_args.push_back(arg);
+				if (arg == "repl") seen_repl = true;
+				continue;
+			}
+
+			if (arg == "-n" || arg == "--history-entries") {
+				if (i + 1 < g_argv.size()) ++i;
+				continue;
+			}
+			if (arg == "--silent") continue;
+
+			new_args.push_back(arg);
+		}
+
+		if (!seen_repl) return;
+		new_args.emplace_back("-n");
+		new_args.push_back(std::to_string(replay_count));
+		if (silent) new_args.emplace_back("--silent");
+
+		g_argv = std::move(new_args);
+	}
+}
 
 clah::Clah getStandardDucklingOptions() {
 	return clah::Clah("duckc", "The Duckling compiler")
@@ -955,8 +1009,22 @@ clah::Clah getClahForMain() {
 	                     .addLongName("no-completions")
 	                     .addShortDesc("Disable REPL autocompletions and hints.")
 	                     .build())
+				.add(clah::ParamBuilder::ofFlag()
+	                     .addLongName("disable-bracketed-paste")
+	                     .addShortDesc("Disable bracketed paste in REPL.")
+	                     .build())
 				.setDefaultValueParser(clah::FileParser::make("script")
 	            )  // for optional script path.
+				.add(clah::ParamBuilder::ofValue(clah::IntParser::make("count"))
+	                     .addShortName('n')
+	                     .addLongName("history-entries")
+	                     .addShortDesc("Replay first N entries from session history.")
+	                     .optional()
+	                     .build())
+				.add(clah::ParamBuilder::ofFlag()
+	                     .addLongName("silent")
+	                     .addShortDesc("Replay history without output (internal).")
+	                     .build())
 				.setHandler([](const clah::ParsingResult& options) -> int {
 					auto init_result = compiler::driver::initializeTheCompiler(
 								   compiler::driver::CompilerModeOfOperationAndOptions::ReplMode{
@@ -970,32 +1038,61 @@ clah::Clah getClahForMain() {
 						compiler::driver::exit();
 						return 1;
 					}
-					compiler::repl::ReplSession session(!options.isFlag("no-completions"));
+					bool completions = compiler::repl::FRONTEND_DEFAULT_COMPLETIONS_ENABLED;
+					if (options.isFlag("no-completions")) completions = false;
 
-					if (options.getExtraParameterCount() > 1) {
-						std::cerr << "Error: repl accepts at most one script path. "
-									 "Usage: duckc repl [script.ds]\n";
-						compiler::driver::exit();
-						return 1;
-					}
+					bool bracketed = compiler::repl::FRONTEND_DEFAULT_BRACKETED_PASTE_ENABLED;
+					if (options.isFlag("disable-bracketed-paste")) bracketed = false;
 
-					if (options.getExtraParameterCount() == 1) {
-						// Preload mode currently treats load failure as fatal: if the
-			            // script fails to load/compile, we print the error and exit
-			            // before entering the interactive REPL loop.
-						auto script_file = options.getExtra<fs::File>(0).value();
-						auto load_result
-							= session.loadScriptFile(script_file.getFilePath().string());
-						if (load_result.status == compiler::repl::ReplResult::Status::Error) {
-							std::cerr << load_result.message << "\n";
+					base::Optional<usize>      reset_replay_count;
+					bool                       reset_replay_silent = false;
+					compiler::repl::ReplResult repl_result = compiler::repl::ReplResult::success();
+					{
+						compiler::repl::ReplSession session(completions, bracketed);
+						auto replay_count_opt = options.getValue<i64>("history-entries");
+						i64  replay_count     = replay_count_opt.copyValueOr(0);
+						bool replay_silent    = options.isFlag("silent");
+						if (replay_count_opt && replay_count < 0) {
+							std::cerr << "Error: history replay count must be non-negative.\n";
 							compiler::driver::exit();
 							return 1;
 						}
-					}
+						if (replay_count > 0)
+							session.replayHistoryEntries(
+								static_cast<usize>(replay_count), replay_silent
+							);
+						if (options.getExtraParameterCount() > 1) {
+							std::cerr << "Error: repl accepts at most one script path. "
+										 "Usage: duckc repl [script.ds]\n";
+							compiler::driver::exit();
+							return 1;
+						}
 
-					int result = session.run();
+						if (options.getExtraParameterCount() == 1) {
+							// Preload mode currently treats load failure as fatal: if the
+				            // script fails to load/compile, we print the error and exit
+				            // before entering the interactive REPL loop.
+							auto script_file = options.getExtra<fs::File>(0).value();
+							auto load_result
+								= session.loadScriptFile(script_file.getFilePath().string());
+							if (load_result.status == compiler::repl::ReplResult::Status::Error) {
+								std::cerr << load_result.message << "\n";
+								compiler::driver::exit();
+								return 1;
+							}
+						}
+						repl_result         = session.run(replay_count_opt.has_value());
+						reset_replay_count  = session.getResetReplayCount();
+						reset_replay_silent = session.getResetReplaySilent();
+					}
 					compiler::driver::exit();
-					return result;
+					if (repl_result.status == compiler::repl::ReplResult::Status::Reset) {
+						setReplRestartArgs(reset_replay_count.copyValueOr(0), reset_replay_silent);
+						auto exec_result = os_utils::execSelf(g_argv);
+						if (exec_result.status == os_utils::ExecSelfStatus::Error) return 1;
+						return exec_result.exit_code;
+					}
+					return 0;
 				})
 		)
 	    .addSubcommand(clah::Clah("dummy", "Dummy command (cli testing command).")
@@ -1012,6 +1109,10 @@ clah::Clah getClahForMain() {
 }
 
 int main(int argc, const char* argv[]) {
+	g_argv.clear();
+	g_argv.reserve(static_cast<usize>(argc));
+	for (int i = 0; i < argc; ++i) g_argv.emplace_back(argv[i]);
+
 	init::InitObject _;
 
 	compiler::driver::initializeGlobalLogger();

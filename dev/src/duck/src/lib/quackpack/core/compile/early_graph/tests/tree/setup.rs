@@ -204,52 +204,6 @@ pub fn freeze() -> VenvFreeze {
     )
 }
 
-pub fn freeze_with_cycle() -> VenvFreeze {
-    VenvFreeze::new(
-        RootPackage::new(
-            "root".into(),
-            Version::new(1, 0, 0),
-            vec!["use_bar".into(), "full".into(), "nonexistent".into()],
-            vec![FreezeDep::new("foo".into(), Version::new(1, 0, 0))],
-        ),
-        vec![
-            FreezePackage::new(
-                "foo".into(),
-                Version::new(1, 0, 0),
-                vec!["use_bar".into(), "use_bar_with_baz".into()],
-                vec![FreezeDep::new("bar".into(), Version::new(1, 0, 0))],
-                ExpandedLocation::Registry {
-                    url: Fetcher::DEFAULT_REGISTRY_URL.parse().unwrap(),
-                    real_name: "foo".into(),
-                }
-                .into(),
-            ),
-            FreezePackage::new(
-                "bar".into(),
-                Version::new(1, 0, 0),
-                vec!["use_baz".into()],
-                vec![FreezeDep::new("foo".into(), Version::new(1, 0, 0))],
-                ExpandedLocation::Registry {
-                    url: Fetcher::DEFAULT_REGISTRY_URL.parse().unwrap(),
-                    real_name: "bar".into(),
-                }
-                .into(),
-            ),
-            FreezePackage::new(
-                "baz".into(),
-                Version::new(1, 0, 0),
-                vec![],
-                vec![],
-                ExpandedLocation::Registry {
-                    url: Fetcher::DEFAULT_REGISTRY_URL.parse().unwrap(),
-                    real_name: "baz".into(),
-                }
-                .into(),
-            ),
-        ],
-    )
-}
-
 pub fn freeze_without_direct_dep() -> VenvFreeze {
     VenvFreeze::new(
         RootPackage::new(
