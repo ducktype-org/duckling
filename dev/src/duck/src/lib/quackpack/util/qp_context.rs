@@ -2,7 +2,8 @@
 use url::Url;
 
 use crate::quackpack::core::fetcher;
-use crate::{DuckContext, QuackResult, QuackResultContext};
+use crate::quackpack::util::to_url::ToUrl;
+use crate::{DuckContext, QuackResult};
 
 /// Trait extension for methods used while parsing manifests.
 pub trait QpContext {
@@ -17,6 +18,6 @@ impl QpContext for DuckContext {
             .yaml_config()
             .get_str("registry.url")?
             .unwrap_or(fetcher::Fetcher::DEFAULT_REGISTRY_URL);
-        Url::parse(url).with_context(|| format!("`{url}` is not a valid URL"))
+        url.to_url()
     }
 }

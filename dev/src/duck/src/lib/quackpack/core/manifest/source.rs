@@ -1,299 +1,138 @@
 //! Dependencies' sources and interning.
-use std::collections::HashSet;
-use std::ops::Deref;
-use std::path::{Path, PathBuf};
-use std::sync::{Mutex, OnceLock};
+use std::path::Path;
 
-use git2::FetchOptions;
 use serde::{Deserialize, Serialize};
-use url::Url;
 
 use crate::quackpack::schemas::registry;
-use crate::util::extract::Extract;
-use crate::{QuackError, StrId, qp_bail};
+use crate::quackpack::util::interned_url::InternedUrl;
+use crate::quackpack::util::is_local_file::IsLocalFile;
+use crate::quackpack::util::to_url::ToUrl;
+use crate::{QuackError, QuackResult, StrId, qp_bail};
 
-static INTERNED_SOURCE_CACHE: OnceLock<Mutex<HashSet<&'static Source>>> = OnceLock::new();
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-/// An interned version of [`Source`].
-pub struct InternedSource {
-    inner: &'static Source,
+#[derive(Debug, Clone, Eq, PartialEq, Hash, Serialize, Deserialize)]
+pub enum SourceKind {
+    Registry,
+    Local,
+    Git(GitReference),
 }
 
-impl InternedSource {
-    /// Create a new [`InternedSource`].
-    pub fn new(source: Source) -> Self {
-        let mut cache = INTERNED_SOURCE_CACHE
-            .get_or_init(Default::default)
-            .lock()
-            .extract();
-        let reference = cache.get(&source).copied().unwrap_or_else(|| {
-            let static_ref = Box::leak(Box::new(source));
-            cache.insert(static_ref);
-            static_ref
-        });
-        Self { inner: reference }
+impl SourceKind {
+    pub fn is_registry(&self) -> bool {
+        matches!(self, SourceKind::Registry)
+    }
+
+    pub fn is_local(&self) -> bool {
+        matches!(self, SourceKind::Local)
+    }
+
+    pub fn is_git(&self) -> bool {
+        matches!(self, SourceKind::Git(..))
+    }
+
+    pub fn maybe_reference(&self) -> Option<GitReference> {
+        if let SourceKind::Git(reference) = self {
+            Some(*reference)
+        } else {
+            None
+        }
     }
 }
 
-impl Serialize for InternedSource {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        self.inner.serialize(serializer)
-    }
-}
-
-impl<'de> Deserialize<'de> for InternedSource {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        let source = Source::deserialize(deserializer)?;
-        Ok(source.into())
-    }
-}
-
-impl From<Source> for InternedSource {
-    fn from(value: Source) -> Self {
-        Self::new(value)
-    }
-}
-
-impl Deref for InternedSource {
-    type Target = Source;
-
-    fn deref(&self) -> &'static Self::Target {
-        self.inner
-    }
-}
-
-impl AsRef<Source> for InternedSource {
-    fn as_ref(&self) -> &'static Source {
-        self.inner
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-/// General dependency source.
-pub enum Source {
-    /// A package from a registry.
-    Registry(Registry),
-    /// A local package on disk.
-    Local(Local),
-    /// A package from a git repository.
-    Git(Git),
+#[derive(Debug, Clone, Eq, PartialEq, Hash, Serialize, Deserialize)]
+pub struct Source {
+    kind: SourceKind,
+    url: InternedUrl,
 }
 
 impl Source {
-    /// Helper around `matches!(self, Source::Git(..))`.
-    pub fn is_git(&self) -> bool {
-        matches!(self, Source::Git(..))
+    fn new(url: InternedUrl, kind: SourceKind) -> Self {
+        // kind = local => url.is_local_file
+        debug_assert!(
+            url.is_local_file() || !kind.is_local(),
+            "kind=`local` should have `file://`; has kind=`{kind:?}` and url=`{url}`"
+        );
+        Self { url, kind }
     }
 
-    /// Helper around `matches!(self, Source::Local(..))`.
-    pub fn is_local(&self) -> bool {
-        matches!(self, Source::Local(..))
+    /// Create a new [`Source`] for a registry.
+    pub fn for_registry(url: impl Into<InternedUrl>) -> Self {
+        Self::new(url.into(), SourceKind::Registry)
     }
 
-    /// Helper around `matches!(self, Source::Registry(..))`.
+    /// Create a new [`Source`] for a git with a commit.
+    pub fn for_git(url: impl Into<InternedUrl>, reference: GitReference) -> Self {
+        Self::new(url.into(), SourceKind::Git(reference))
+    }
+
+    /// Create a new [`Source`] for a git with a reference.
+    pub fn for_local(root: &Path) -> QuackResult<Self> {
+        let url = root.to_url()?;
+        Ok(Self::new(url.into(), SourceKind::Local))
+    }
+
+    /// Get an [`InternedUrl`] of this [`Source`].
+    pub fn url(&self) -> InternedUrl {
+        self.url
+    }
+
+    /// Get a [`SourceKind`] of this [`Source`].
+    pub fn kind(&self) -> &SourceKind {
+        &self.kind
+    }
+
+    /// Helper for `source.kind().is_registry()`.
     pub fn is_registry(&self) -> bool {
-        matches!(self, Source::Registry(..))
+        self.kind.is_registry()
+    }
+
+    /// Helper for `source.kind().is_git()`.
+    pub fn is_git(&self) -> bool {
+        self.kind.is_git()
+    }
+
+    /// Helper for `source.kind().is_local()`.
+    pub fn is_local(&self) -> bool {
+        self.kind.is_local()
+    }
+
+    /// Helper for `source.kind().maybe_reference()`.
+    pub fn maybe_reference(&self) -> Option<GitReference> {
+        self.kind.maybe_reference()
     }
 }
 
-impl From<Registry> for Source {
-    fn from(val: Registry) -> Self {
-        Source::Registry(val)
-    }
-}
-
-impl From<Local> for Source {
-    fn from(val: Local) -> Self {
-        Source::Local(val)
-    }
-}
-
-impl From<Git> for Source {
-    fn from(val: Git) -> Self {
-        Source::Git(val)
-    }
-}
-
-#[derive(Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-/// Represents a source of a package which should be fetched from a registry.
-pub struct Registry {
-    url: Url,
-}
-
-impl std::fmt::Debug for Registry {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Registry")
-            .field("url", &self.url.as_str())
-            .finish()
-    }
-}
-
-impl Registry {
-    /// Create a new [`Registry`] source.
-    pub fn new(url: Url) -> Self {
-        Self { url }
-    }
-
-    /// Get the registry [`Url`].
-    pub fn url(&self) -> &Url {
-        &self.url
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-/// Represents a source of a local dependency, which lives on a disk.
-pub struct Local {
-    absolute: PathBuf,
-    entry_in_manifest: StrId,
-    was_original_entry_relative: bool,
-}
-
-impl Local {
-    /// Create a new [`Local`] source.
-    pub fn new(
-        absolute: PathBuf,
-        entry_in_manifest: StrId,
-        was_original_entry_relative: bool,
-    ) -> Self {
-        Self {
-            absolute,
-            entry_in_manifest,
-            was_original_entry_relative,
-        }
-    }
-
-    /// Get the absolute path to the local package.
-    pub fn absolute(&self) -> &Path {
-        &self.absolute
-    }
-
-    /// Get the entry which was directly specified in the manifest.
-    pub fn entry_in_manifest(&self) -> StrId {
-        self.entry_in_manifest
-    }
-
-    /// Whether [`entry_in_manifest`](Self::entry_in_manifest) was found to be a relative path.
-    pub fn was_original_entry_relative(&self) -> bool {
-        self.was_original_entry_relative
-    }
-}
-
-#[derive(Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-/// Represents a source of a dependency cloned from git.
-pub struct Git {
-    url: Url,
-    branch_or_tag: BranchOrTag,
-    rev: Option<StrId>,
-}
-
-impl std::fmt::Debug for Git {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Git")
-            .field("url", &self.url.as_str())
-            .field("branch_or_tag", &self.branch_or_tag)
-            .field("rev", &self.rev)
-            .finish()
-    }
-}
-
-impl Git {
-    /// Create a new [`Git`] source.
-    pub fn new(url: Url, branch_or_tag: BranchOrTag, rev: Option<StrId>) -> Self {
-        Self {
-            url,
-            branch_or_tag,
-            rev,
-        }
-    }
-
-    /// Get the git repository URL.
-    pub fn url(&self) -> &Url {
-        &self.url
-    }
-
-    /// Get the git branch or tag.
-    pub fn branch_or_tag(&self) -> &BranchOrTag {
-        &self.branch_or_tag
-    }
-
-    /// Get the specific revision (commit hash), if any.
-    pub fn rev(&self) -> Option<StrId> {
-        self.rev
-    }
-
-    /// Check whether we can perform a shallow clone of this dependency.
-    ///
-    /// Due to some git2-rs stuff we can't shallow clone a tag or a local repository.
-    ///
-    /// However, we always disallow shallow clones when commit is specified.
-    pub fn can_shallow_clone(&self) -> bool {
-        let is_local_repository_url = self.url.scheme() == "file";
-        !is_local_repository_url && !self.branch_or_tag().is_tag() && self.rev.is_none()
-    }
-
-    /// Get [`FetchOptions`] for this source.
-    ///
-    /// This if factored out so we can easily make small changes to the
-    /// [`FetchOptions`], such as setting depth to 0 to make a full fetch.
-    pub fn git_fetch_options(&self) -> FetchOptions<'_> {
-        let mut fetch_options = FetchOptions::new();
-        if self.can_shallow_clone() {
-            fetch_options.depth(1);
-        }
-        fetch_options
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
-/// A type-safe approach for specifying a git tag or a branch.
-// We intentionally keep inner values as strings: we don't clone them a lot,
-// and turning them into StrId would only “leak” memory.
-pub enum BranchOrTag {
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+/// A type-safe approach for specifying a git reference.
+pub enum GitReference {
     /// The default branch.
     Default,
     /// A specific tag.
-    Tag(String),
+    Tag(StrId),
     /// A specific branch.
-    Branch(String),
+    Branch(StrId),
+    /// Other.
+    Rev(StrId),
 }
 
-impl BranchOrTag {
-    /// Helper around `matches!(self, BranchOrTag::Default)`.
+impl GitReference {
+    /// Helper around `matches!(self, GitReference::Default)`.
     pub fn is_default(&self) -> bool {
-        matches!(self, BranchOrTag::Default)
+        matches!(self, GitReference::Default)
     }
 
-    /// Helper around `matches!(self, BranchOrTag::Tag(..))`.
+    /// Helper around `matches!(self, GitReference::Tag(..))`.
     pub fn is_tag(&self) -> bool {
-        matches!(self, BranchOrTag::Tag(..))
+        matches!(self, GitReference::Tag(..))
     }
 
-    /// Helper around `matches!(self, BranchOrTag::Branch(..))`.
+    /// Helper around `matches!(self, GitReference::Branch(..))`.
     pub fn is_branch(&self) -> bool {
-        matches!(self, BranchOrTag::Branch(..))
+        matches!(self, GitReference::Branch(..))
     }
-}
 
-impl TryFrom<registry::DependencySource> for InternedSource {
-    type Error = QuackError;
-
-    fn try_from(value: registry::DependencySource) -> Result<Self, Self::Error> {
-        Ok(Self::new(value.try_into()?))
-    }
-}
-
-impl TryFrom<InternedSource> for registry::DependencySource {
-    type Error = QuackError;
-
-    fn try_from(value: InternedSource) -> Result<Self, Self::Error> {
-        value.try_into()
+    /// Helper around `matches!(self, GitReference::Rev(..))`.
+    pub fn is_rev(&self) -> bool {
+        matches!(self, GitReference::Rev(..))
     }
 }
 
@@ -302,39 +141,27 @@ impl TryFrom<registry::DependencySource> for Source {
 
     fn try_from(value: registry::DependencySource) -> Result<Self, Self::Error> {
         let tmp = match value.inner {
-            registry::SourceInner::Registry { registry_url } => Registry {
-                url: registry_url.as_str().try_into()?,
+            registry::SourceInner::Registry { registry_url } => {
+                let url = registry_url.as_str().to_url()?;
+                Self::for_registry(url)
             }
-            .into(),
-            registry::SourceInner::Local {
-                absolute_dir_root,
-                dir_entry_in_manifest,
-            } => Local {
-                absolute: absolute_dir_root.into(),
-                entry_in_manifest: dir_entry_in_manifest.into(),
-                was_original_entry_relative: false,
-            }
-            .into(),
             registry::SourceInner::Git {
                 git_url,
                 commit,
                 tag,
                 branch,
             } => {
-                let branch_or_tag = match (tag, branch) {
-                    (None, None) => BranchOrTag::Default,
-                    (None, Some(branch)) => BranchOrTag::Branch(branch),
-                    (Some(tag), None) => BranchOrTag::Tag(tag),
-                    (Some(_), Some(_)) => {
-                        qp_bail!("git dependency in the registry specifies both `tag` and `branch`")
+                let url = git_url.as_str().to_url()?;
+                let reference = match (tag, branch, commit) {
+                    (None, None, None) => GitReference::Default,
+                    (None, Some(branch), None) => GitReference::Branch(branch.into()),
+                    (Some(tag), None, None) => GitReference::Tag(tag.into()),
+                    (None, None, Some(commit)) => GitReference::Rev(commit.into()),
+                    _ => {
+                        qp_bail!("only one of `branch`, `tag`, or `commit` can be specified")
                     }
                 };
-                Git {
-                    url: git_url.as_str().try_into()?,
-                    branch_or_tag,
-                    rev: commit.map(Into::into),
-                }
-                .into()
+                Self::for_git(url, reference)
             }
         };
         Ok(tmp)
@@ -344,42 +171,23 @@ impl TryFrom<registry::DependencySource> for Source {
 impl TryFrom<Source> for registry::DependencySource {
     type Error = QuackError;
     fn try_from(value: Source) -> Result<Self, Self::Error> {
-        let inner = match value {
-            Source::Registry(registry) => registry::SourceInner::Registry {
-                registry_url: registry.url.into(),
+        let kind = value.kind;
+        let url = value.url;
+        let inner = match kind {
+            SourceKind::Registry => registry::SourceInner::Registry {
+                registry_url: url.to_string(),
             },
-            Source::Local(local) => {
-                let Local {
-                    absolute,
-                    entry_in_manifest,
-                    ..
-                } = local;
-                let absolute_dir_root = match absolute.into_os_string().into_string() {
-                    Ok(absolute) => absolute,
-                    Err(original) => qp_bail!(
-                        "absolute path `{}` is not a utf-8 string",
-                        original.display()
-                    ),
-                };
-                registry::SourceInner::Local {
-                    absolute_dir_root,
-                    dir_entry_in_manifest: entry_in_manifest.into(),
-                }
-            }
-            Source::Git(git) => {
-                let Git {
-                    url,
-                    branch_or_tag,
-                    rev,
-                } = git;
-                let (tag, branch) = match branch_or_tag {
-                    BranchOrTag::Default => (None, None),
-                    BranchOrTag::Tag(tag) => (Some(tag), None),
-                    BranchOrTag::Branch(branch) => (None, Some(branch)),
+            SourceKind::Local => qp_bail!("publishing of local dependencies is not yet supported"),
+            SourceKind::Git(reference) => {
+                let (tag, branch, commit) = match reference {
+                    GitReference::Default => (None, None, None),
+                    GitReference::Tag(tag) => (Some(tag.into()), None, None),
+                    GitReference::Branch(branch) => (None, Some(branch.into()), None),
+                    GitReference::Rev(commit) => (None, None, Some(commit.into())),
                 };
                 registry::SourceInner::Git {
-                    git_url: url.into(),
-                    commit: rev.map(Into::into),
+                    git_url: url.to_string(),
+                    commit,
                     tag,
                     branch,
                 }
