@@ -73,6 +73,16 @@ impl DependencyGraph {
             .get(package)
             .expect(MISSING_DEPENDENCY_IN_GRAPH_MESSAGE)
     }
+
+    /// Get the iterator over all entries in this graph.
+    pub fn iter(&self) -> impl Iterator<Item = (&Identity, &DependencyNode)> {
+        self.graph.iter()
+    }
+
+    /// Get the iterator over all keys in this graph.
+    pub fn keys(&self) -> impl Iterator<Item = &Identity> {
+        self.graph.keys()
+    }
 }
 
 impl DependencyNode {
