@@ -49,9 +49,14 @@ pub fn compile(
     compilation_type: CompilationType,
 ) -> QuackResult<ArtifactsDir> {
     debug!(bcx = ?bcx, "compiling");
-    let mut graph = EarlyGraph::new_early(&bcx)?;
-    graph.populate_features(&bcx.used_features)?;
-    graph.remove_disabled_dependencies();
+    let graph = create_early_graph(&bcx)?;
     let duckc = Duckc::new(bcx.pcx.ctx());
     duckc.compile(&graph, compilation_type, &bcx)
+}
+
+fn create_early_graph(bcx: &BuildContext<'_, '_>) -> QuackResult<EarlyGraph> {
+    let mut graph = EarlyGraph::new_early(bcx)?;
+    graph.populate_features(&bcx.used_features)?;
+    graph.remove_disabled_dependencies();
+    Ok(graph)
 }
