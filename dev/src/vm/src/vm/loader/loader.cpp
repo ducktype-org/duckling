@@ -159,13 +159,11 @@ std::expected<void, LoaderLogger> Loader::loadAndValidate(
 	return std::unexpected(std::move(log));
 }
 
-
 std::expected<void, LoaderLogger> Loader::loadAndValidate(
 	const std::vector<fs::File>& file_paths, api::ExecutionConfig config
 ) {
 	auto opt_code_collection = parseFiles(file_paths);
-	if (opt_code_collection.has_value())
-		return loadAndValidate(*opt_code_collection, config);
+	if (opt_code_collection.has_value()) return loadAndValidate(*opt_code_collection, config);
 	return std::unexpected(std::move(opt_code_collection).error());
 }
 
