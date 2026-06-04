@@ -1,44 +1,40 @@
 #pragma once
 #include "instructions.hpp"
 
+#include "base/preproc/for_each.hpp"
 #include <base/extend_cpp/flag.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/core/builtin_functions.hpp>
 
-MAKE_FLAG_TYPE(vm::code, InstructionFlagOptions, InstructionFlag,
-	IORead,
-	IOWrite,
-	GlobalRead,
-	GlobalWrite,
-	Call,
-	CallExternal,
-	Multithread,
+#define INSTRUCTION_FLAG_OPTIONS \
+	IORead, \
+    IOWrite,\
+    GlobalRead,\
+    GlobalWrite,\
+    Call,\
+    CallExternal,\
+    Multithread,\
+    RequiresGIL, /* Instruction REQUIRES GIL */  \
+    ReleaseGIL, /* Instruction MIGHT release GIL (takes a long time) */  \
+    ControlFlowModifying,/* Modifies control flow, e.g. jmp, branch, call, ret */  \
+    MayBlock  
 
-	RequiresGIL,           // Instruction REQUIRES GIL
-	ReleaseGIL,            // Instruction MIGHT release GIL (takes a long time)
-	ControlFlowModifying,  // Modifies control flow, e.g. jmp, branch, call, ret
-	MayBlock
+MAKE_FLAG_TYPE(vm::code, InstructionFlagOptions, InstructionFlag,
+	INSTRUCTION_FLAG_OPTIONS	
 )
 
-MAKE_FLAG_TYPE(vm::code, FunctionFlagOptions, FunctionFlag,
-	IORead,
-	IOWrite,
-	GlobalRead,
-	GlobalWrite,
-	Call,
-	CallExternal,
-	Multithread,
+#define FUNCTION_FLAG_OPTIONS \
+	INSTRUCTION_FLAG_OPTIONS
 
-	RequiresGIL,           // Instruction REQUIRES GIL
-	ReleaseGIL,            // Instruction MIGHT release GIL (takes a long time)
-	ControlFlowModifying,  // Modifies control flow, e.g. jmp, branch, call, ret
-	MayBlock
+MAKE_FLAG_TYPE(vm::code, FunctionFlagOptions, FunctionFlag,
+	FUNCTION_FLAG_OPTIONS
 )
 
 namespace vm::code {
 	/**
 	 * @brief Returns the flags describing observable effects of a builtin function.
+	 * @TODO: #2716 propably move / remove this
 	 */
 	inline FunctionFlag getFlagsForBuiltinFunction(base::StrID name) {
 		using enum FunctionFlagOptions;
@@ -80,17 +76,9 @@ namespace vm::code {
 			using FFO = FunctionFlagOptions;
 			using IFO = InstructionFlagOptions;
 			InstructionFlag out;
-			if (f.contains(FFO::IORead)) out |= IFO::IORead;
-			if (f.contains(FFO::IOWrite)) out |= IFO::IOWrite;
-			if (f.contains(FFO::GlobalRead)) out |= IFO::GlobalRead;
-			if (f.contains(FFO::GlobalWrite)) out |= IFO::GlobalWrite;
-			if (f.contains(FFO::Call)) out |= IFO::Call;
-			if (f.contains(FFO::CallExternal)) out |= IFO::CallExternal;
-			if (f.contains(FFO::Multithread)) out |= IFO::Multithread;
-			if (f.contains(FFO::RequiresGIL)) out |= IFO::RequiresGIL;
-			if (f.contains(FFO::ReleaseGIL)) out |= IFO::ReleaseGIL;
-			if (f.contains(FFO::ControlFlowModifying)) out |= IFO::ControlFlowModifying;
-			if (f.contains(FFO::MayBlock)) out |= IFO::MayBlock;
+#define FUNCTION_TO_INSTRUCTION_FLAG(FLAG) \
+			if (f.contains(FFO::FLAG)) out |= IFO::FLAG;
+			FOR_EACH(FUNCTION_TO_INSTRUCTION_FLAG, FUNCTION_FLAG_OPTIONS)
 			return out;
 		}
 	}
@@ -124,10 +112,7 @@ namespace vm::code {
 		auto rdwr = [&](const auto& place) {
 			if (is_global(place.var_name)) flags |= InstructionFlag(GlobalRead) | GlobalWrite;
 		};
-
-		// We can't have pointers to global values so do nothing here
-		auto deref_read  = [&] {};
-		auto deref_write = [&] {};
+		
 
 		// Per-shape `instr_case` shorthands. Cover the common patterns where the
 		// instruction's name and arg shape uniquely determine the read/write set.
@@ -401,12 +386,12 @@ namespace vm::code {
 			}
 			instr_case(ins::Op_variantSetInner_pptr_type, i) {
 				rd(i.variant_ptr);
-				deref_write();
+				
 			}
 			instr_case(ins::Op_variantGetInner_pptr_pptr_type, i) {
 				wr(i.dst_ptr);
 				rd(i.variant_ptr);
-				deref_read();
+				
 			}
 
 			// ===== Labels & jumps =====
@@ -482,7 +467,7 @@ namespace vm::code {
 			}
 			instr_case(ins::Op_strOutput_pptr, i) {
 				rd(i.string_ptr);
-				deref_read();
+				
 				flags |= IOWrite | InstructionFlag(RequiresGIL);
 			}
 
@@ -490,11 +475,11 @@ namespace vm::code {
 			// setVTable / resetVTable write the vtable slot through the pointer
 			instr_case(ins::Op_setVTable_pptr_type, i) {
 				rd(i.object_ptr);
-				deref_write();
+				
 			}
 			instr_case(ins::Op_resetVTable_pptr, i) {
 				rd(i.object_ptr);
-				deref_write();
+				
 			}
 			// upcast/downcast operate on the pointer value itself; downcast peeks at the vtable
 			instr_case(ins::Op_upcast_pptr_pptr, i) {
@@ -504,7 +489,7 @@ namespace vm::code {
 			instr_case(ins::Op_downcast_pptr_pptr, i) {
 				wr(i.dst);
 				rd(i.src);
-				deref_read();
+				
 			}
 			instr_case(ins::Op_virtual_call_pptr_method, i) {
 				(void) i;
@@ -521,17 +506,17 @@ namespace vm::code {
 			// free modifies the pointed-to memory (deallocation)
 			instr_case(ins::Op_free_pptr, i) {
 				rd(i.ptr);
-				deref_write();
+				
 			}
 			instr_case(ins::Op_store_pptr_pany, i) {
 				rd(i.dst_ptr);
 				rd(i.src);
-				deref_write();
+				
 			}
 			instr_case(ins::Op_load_pany_pptr, i) {
 				wr(i.dst);
 				rd(i.src_ptr);
-				deref_read();
+				
 			}
 			// ref/lea-style ops just compute or take an address — no actual deref
 			instr_case(ins::Op_ref_pptr_pany, i) {
@@ -552,12 +537,12 @@ namespace vm::code {
 			instr_case(ins::Op_structLoad_pany_pptr_field, i) {
 				wr(i.dst);
 				rd(i.src_data_ptr);
-				deref_read();
+				
 			}
 			instr_case(ins::Op_structStore_pptr_pany_field, i) {
 				rd(i.dst_data_ptr);
 				rd(i.src);
-				deref_write();
+				
 			}
 			// pste-based: the struct lives in the named place itself
 			instr_case(ins::Op_structLea_pptr_pste_field, i) {
@@ -584,13 +569,13 @@ namespace vm::code {
 				wr(i.dst);
 				rd(i.src_table_ptr);
 				rd(i.index);
-				deref_read();
+				
 			}
 			instr_case(ins::Op_fixedSizeTableStore_pptr_pany_p64, i) {
 				rd(i.dst_table_ptr);
 				rd(i.src);
 				rd(i.index);
-				deref_write();
+				
 			}
 			// pfst-based (table lives in the place itself)
 			instr_case(ins::Op_fixedSizeTableLea_pptr_pfst_p64, i) {
@@ -618,18 +603,18 @@ namespace vm::code {
 				wr(i.dst);
 				rd(i.src_table_ptr);
 				rd(i.index);
-				deref_read();
+				
 			}
 			instr_case(ins::Op_dynTableStore_pptr_pany_p64, i) {
 				rd(i.dst_table_ptr);
 				rd(i.src);
 				rd(i.index);
-				deref_write();
+				
 			}
 			instr_case(ins::Op_dynTableReAlloc_pptr_type_p64, i) {
 				rd(i.dst_table_ptr);
 				rd(i.new_elem_count);
-				deref_write();  // realloc rewrites the table memory
+				  // realloc rewrites the table memory
 				flags |= MayBlock;
 			}
 
