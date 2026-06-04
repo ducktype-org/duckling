@@ -16,22 +16,13 @@ env:
   TIDY_VERSION: 19
 
 jobs:
-  determine-runners:
-    if: github.event.pull_request.draft == false
-    uses: ./.github/workflows/determine-runners.yml
-    with:
-      self-hosted-labels: '["ubuntu-24.04", "ubuntu-24.04"]'
-      github-labels: '["ubuntu-24.04", "ubuntu-24.04"]'
-    secrets: inherit
-
   cpp-linter:
     if: github.event.pull_request.draft == false
 
-    needs: determine-runners
-    runs-on: ${{ fromJson(needs.determine-runners.outputs.runners)[0] }}
+    runs-on:
+      labels: ${{ 'ubuntu-24.04' }}
     steps:
       - name: Clean workspace (self-hosted only)
-        if: contains(fromJson(needs.determine-runners.outputs.runners)[0].group, 'SelfHostedRunners')
         run: |
           echo "Cleaning up workspace on self-hosted runner..."
           rm -rf ${{ github.workspace }}
@@ -85,11 +76,10 @@ jobs:
   duck-linter:
     if: github.event.pull_request.draft == false
 
-    needs: determine-runners
-    runs-on: ${{ fromJson(needs.determine-runners.outputs.runners)[1] }}
+    runs-on:
+      labels: ${{ 'ubuntu-24.04' }}
     steps:
       - name: Clean workspace (self-hosted only)
-        if: contains(fromJson(needs.determine-runners.outputs.runners)[1].group, 'SelfHostedRunners')
         run: |
           echo "Cleaning up workspace on self-hosted runner..."
           rm -rf ${{ github.workspace }}
