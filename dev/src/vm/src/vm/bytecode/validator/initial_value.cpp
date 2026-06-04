@@ -10,80 +10,90 @@
 
 namespace vm::code::detail {
 
-namespace {
+	namespace {
 
-	class InitialValueValidator: public ConstVisitor {
-	public:
-		InitialValueValidator(
-			valid_type::ValidTypeID           type_id,
-			const valid_type::ValidTypeMap&   types,
-			base::StrID                       global_name
-		):
-		      type_id(type_id),
-		      types(types),
-		      global_name(global_name) {}
+		class InitialValueValidator: public ConstVisitor {
+		public:
+			InitialValueValidator(
+				valid_type::ValidTypeID         type_id,
+				const valid_type::ValidTypeMap& types,
+				base::StrID                     global_name
+			):
+				  type_id(type_id),
+				  types(types),
+				  global_name(global_name) {}
 
-		void visitConstantImmediate(const ConstantImmediate& value) override {
-			auto type_ref = types.at(type_id);
+			void visitConstantImmediate(const ConstantImmediate& value) override {
+				auto type_ref = types.at(type_id);
 
-			if (!type_ref->isKind<valid_type::finalized::Primitive>())
-				throw InitialValueTypeMismatchError(global_name, type_ref->getName());
-
-			const auto& primitive = type_ref->getKindAs<valid_type::finalized::Primitive>();
-			if (primitive->size != value.size)
-				throw InitialValueTypeMismatchError(global_name, type_ref->getName());
-		}
-
-		void visitConstantClass(const ConstantClass& value) override {
-			auto type_ref = types.at(type_id);
-
-			if (!type_ref->isKind<valid_type::finalized::Structure>())
-				throw InitialValueTypeMismatchError(global_name, type_ref->getName());
-
-			const auto& structure = type_ref->getKindAs<valid_type::finalized::Structure>();
-
-			for (const auto& [field_name, field_value]: value.fields) {
-				auto field_type_opt = structure->fields.atMaybe(field_name);
-				if (!field_type_opt)
+				if (!type_ref->isKind<valid_type::finalized::Primitive>())
 					throw InitialValueTypeMismatchError(global_name, type_ref->getName());
 
-				InitialValueValidator field_validator(field_type_opt.value()->type, types, global_name);
-				field_value->acceptVisitor(field_validator);
+				const auto& primitive = type_ref->getKindAs<valid_type::finalized::Primitive>();
+				if (primitive->size != value.size)
+					throw InitialValueTypeMismatchError(global_name, type_ref->getName(), "Primitive of incorrect size.");
 			}
-		}
 
-		void visitConstantFixedSizeTable(const ConstantFixedSizeTable& value) override {
-			auto type_ref = types.at(type_id);
+			void visitConstantClass(const ConstantClass& value) override {
+				auto type_ref = types.at(type_id);
 
-			if (!type_ref->isKind<valid_type::finalized::FixedSizeTable>())
-				throw InitialValueTypeMismatchError(global_name, type_ref->getName());
+				if (!type_ref->isKind<valid_type::finalized::Structure>())
+					throw InitialValueTypeMismatchError(global_name, type_ref->getName());
 
-			const auto& fst = type_ref->getKindAs<valid_type::finalized::FixedSizeTable>();
-			if (value.elements.size() != fst->element_count)
-				throw InitialValueTypeMismatchError(global_name, type_ref->getName());
+				const auto& structure = type_ref->getKindAs<valid_type::finalized::Structure>();
 
-			for (const auto& element: value.elements) {
-				InitialValueValidator element_validator(fst->inner, types, global_name);
-				element->acceptVisitor(element_validator);
+				if (value.fields.size() != structure->fields.size())
+					throw InitialValueTypeMismatchError(global_name, type_ref->getName(), "Incorrect number of fields.");
+
+				std::unordered_set<base::StrID> visited_names;
+
+				for (const auto& [field_name, field_value]: value.fields) {
+					auto field_type_opt = structure->fields.atMaybe(field_name);
+					if (!field_type_opt)
+						throw InitialValueTypeMismatchError(global_name, type_ref->getName(), "Field does not exist.");
+					if (visited_names.contains(field_name))
+						throw InitialValueTypeMismatchError(global_name, type_ref->getName(), "Field duplicated.");
+					visited_names.insert(field_name);
+
+					InitialValueValidator field_validator(
+						field_type_opt.value()->type, types, global_name
+					);
+					field_value->acceptVisitor(field_validator);
+				}
 			}
-		}
 
-	private:
-		valid_type::ValidTypeID         type_id;
-		const valid_type::ValidTypeMap& types;
-		base::StrID                     global_name;
-	};
+			void visitConstantFixedSizeTable(const ConstantFixedSizeTable& value) override {
+				auto type_ref = types.at(type_id);
 
-} // namespace
+				if (!type_ref->isKind<valid_type::finalized::FixedSizeTable>())
+					throw InitialValueTypeMismatchError(global_name, type_ref->getName());
 
-void validateInitialValue(
-	const ConstantValue&            value,
-	valid_type::ValidTypeID         expected_type_id,
-	const valid_type::ValidTypeMap& types,
-	base::StrID                     global_name
-) {
-	InitialValueValidator validator(expected_type_id, types, global_name);
-	value.data->acceptVisitor(validator);
-}
+				const auto& fst = type_ref->getKindAs<valid_type::finalized::FixedSizeTable>();
+				if (value.elements.size() != fst->element_count)
+					throw InitialValueTypeMismatchError(global_name, type_ref->getName(), "Number of elements differ.");
 
-} // namespace vm::code::detail
+				for (const auto& element: value.elements) {
+					InitialValueValidator element_validator(fst->inner, types, global_name);
+					element->acceptVisitor(element_validator);
+				}
+			}
+
+		private:
+			valid_type::ValidTypeID         type_id;
+			const valid_type::ValidTypeMap& types;
+			base::StrID                     global_name;
+		};
+
+	}  // namespace
+
+	void validateInitialValue(
+		const ConstantValue&            value,
+		valid_type::ValidTypeID         expected_type_id,
+		const valid_type::ValidTypeMap& types,
+		base::StrID                     global_name
+	) {
+		InitialValueValidator validator(expected_type_id, types, global_name);
+		value.data->acceptVisitor(validator);
+	}
+
+}  // namespace vm::code::detail

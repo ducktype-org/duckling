@@ -415,8 +415,8 @@ namespace vm::code {
 		constexpr static std::string_view ERR_MSG
 			= "Initial value type does not match the declared type for global variable: ";
 
-		InitialValueTypeMismatchError(base::StrID global_name, base::StrID expected_type):
-			  ValidationError(base::strConcat(ERR_MSG, global_name, " expected: ", expected_type)),
+		InitialValueTypeMismatchError(base::StrID global_name, base::StrID expected_type, const std::string& additional_context = ""):
+			  ValidationError(base::strConcat(ERR_MSG, global_name, " expected: ", expected_type, ". ", additional_context)),
 			  global_name(global_name),
 			  expected_type(expected_type) {}
 

@@ -549,12 +549,10 @@ namespace vm::loader::parser {
 		}
 		state.goUpAndSkip();
 
-		auto end_position = state.getPosition().getEnd();
+		auto end_position = state.getPosition(-1).getEnd();
 		out->position     = dia::SourcePosition(
             out->position.getLocation(), out->position.getStart(), end_position
         );
-
-		state.parse().one(lang_def::Special::Semicolon);
 		return out;
 	}
 

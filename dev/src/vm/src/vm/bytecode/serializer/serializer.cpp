@@ -317,7 +317,7 @@ namespace vm::code {
 				out << lang_def::keywordToStr(lang_def::Keyword::BCGlobalDestructor).strView()
 					<< ": " << global_data.dtor_name.value().str.strView();
 			}
-			out << "\n}" << lang_def::specialToStr(lang_def::Special::Semicolon).strView();
+			out << "\n}";
 		}
 	};
 

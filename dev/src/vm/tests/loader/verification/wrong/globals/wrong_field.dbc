@@ -1,0 +1,8 @@
+type data: Point {
+    x: i32,
+    y: i32
+}
+
+global_data my_global Point {
+    initial_value: class { x: 0x00000001, z: 0x00000002 }
+}

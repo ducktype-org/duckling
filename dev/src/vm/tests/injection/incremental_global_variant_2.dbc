@@ -1,4 +1,4 @@
-global_data another_global i64 {};
+global_data another_global i64 {}
 
 function read_global_variant_value {} -> {} {
     init_pany_type variant_ptr, ptr_PersistVariant;

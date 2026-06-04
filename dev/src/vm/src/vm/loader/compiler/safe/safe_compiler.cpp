@@ -223,17 +223,19 @@ namespace vm::loader::compiler::safe {
 		for (const auto& global: new_globals) {
 			auto global_init = [&] -> low::GlobalInit {
 				if_opt_some(global.initial_value, initial_value) {
-					// It's a bummer that we have to copy here...
+					// It's a bummer we have to copy here...
 					return low::GlobalInitialValue{ initial_value };
 				}
-				return low::GlobalCtorDtor{ .ctor_name = global.ctor_name->str,
-					                        .dtor_name = global.dtor_name->str };
+				return low::GlobalCtorDtor{
+					.ctor_name = global.ctor_name.map([](auto ident) { return ident.str; }),
+					.dtor_name = global.dtor_name.map([](auto ident) { return ident.str; })
+				};
 			}();
 
 
 			low::LowGlobalData data{
 				.type                 = low_program.types->at(global.type),
-				.init = global_init,
+				.init                 = global_init,
 				.global_buffer_offset = program_ctx.global_buffer_size.asInt(),
 				.global_block_idx     = program_ctx.global_count,
 			};
