@@ -36,4 +36,5 @@ namespace vm::jit::cnp {
 #endif
 	}
 }
+
 #undef UNDER_LINTER
