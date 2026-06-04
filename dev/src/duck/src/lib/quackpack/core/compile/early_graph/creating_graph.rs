@@ -20,7 +20,6 @@ impl DependencyGraph {
     #[tracing::instrument(skip_all)]
     pub fn new(freeze: &VenvFreeze, root_identity: Identity) -> QuackResult<Self> {
         let root = freeze.root();
-        // @TODO: #2789 this is ugly, but with Identities, I think FreezeDep will contain Identity.
         let mut graph = HashMap::new();
         graph.insert(
             root_identity,
