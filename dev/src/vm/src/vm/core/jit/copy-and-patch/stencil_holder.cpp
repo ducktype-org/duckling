@@ -26,10 +26,11 @@ namespace vm::jit::cnp {
 	}
 
 	[[nodiscard]] const std::array<StencilData, STENCIL_COUNT>& stencilsData() {
-		const auto& stencils_data = getLoadedStencils().stencilsData();
-		if constexpr (STENCIL_COUNT == stencils_data.size())
-			return stencils_data;
-		else
-			CORE_UNREACHABLE();
+// Linter doesn't actually build stencils-nm so the array is empty.
+#if __has_include(<stencils-nm>)
+		return getLoadedStencils().stencilsData();
+#else
+		CORE_UNREACHABLE();
+#endif
 	}
 }
