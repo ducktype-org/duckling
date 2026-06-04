@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use super::{ArtifactsType, Unit};
 use crate::quackpack::core::compile::compiler_package::CompilerPackage;
 use crate::quackpack::core::compile::early_graph::{DependencyNode, EarlyGraph};
-use crate::quackpack::core::compile::{BuildContext, missing_dependcy_in_graph_message};
+use crate::quackpack::core::compile::{BuildContext, missing_depenendcy_in_graph_message};
 use crate::quackpack::core::identity::Identity;
 
 #[derive(Debug)]
@@ -45,7 +45,7 @@ pub fn lower_early_graph(graph: EarlyGraph, bcx: &BuildContext<'_, '_>) -> UnitG
     let root_identity = graph.root();
     let root_id = *identity_to_id
         .get(&root_identity)
-        .unwrap_or_else(|| panic!("{}", missing_dependcy_in_graph_message(root_identity)));
+        .unwrap_or_else(|| panic!("{}", missing_depenendcy_in_graph_message(root_identity)));
 
     let mut units_by_ids = HashMap::new();
     for (identity, package) in packages {
@@ -94,12 +94,12 @@ fn create_single_unit(
         .map(|dep| {
             *ids_map
                 .get(dep)
-                .unwrap_or_else(|| panic!("{}", missing_dependcy_in_graph_message(*dep)))
+                .unwrap_or_else(|| panic!("{}", missing_depenendcy_in_graph_message(*dep)))
         })
         .collect();
     let unit_id = *ids_map
         .get(&unit_identity)
-        .unwrap_or_else(|| panic!("{}", missing_dependcy_in_graph_message(unit_identity)));
+        .unwrap_or_else(|| panic!("{}", missing_depenendcy_in_graph_message(unit_identity)));
     Unit::new(
         unit_id,
         package,

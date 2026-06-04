@@ -6,7 +6,7 @@ use tracing::debug;
 
 use super::*;
 use crate::quackpack::core::FeatureName;
-use crate::quackpack::core::compile::missing_dependcy_in_manifest_message;
+use crate::quackpack::core::compile::missing_depenendcy_in_manifest_message;
 use crate::util::extend::QpExtend;
 
 impl DependencyGraph {
@@ -26,7 +26,7 @@ impl DependencyGraph {
                     .unwrap_or_else(|| {
                         panic!(
                             "{}",
-                            missing_dependcy_in_manifest_message(
+                            missing_depenendcy_in_manifest_message(
                                 &this.package().manifest().name(),
                                 &dep.name()
                             )
@@ -87,7 +87,7 @@ impl EarlyGraph {
                         .unwrap_or_else(|| {
                             panic!(
                                 "{}",
-                                missing_dependcy_in_manifest_message(
+                                missing_depenendcy_in_manifest_message(
                                     &this.package().manifest().name(),
                                     &dep.name()
                                 )
@@ -121,7 +121,7 @@ impl EarlyGraph {
     #[tracing::instrument(skip_all)]
     pub(super) fn remove_disabled_dependencies(&mut self) {
         let enabled_deps = self.graph.remove_disabled_dependencies(&self.packages);
-        // Also clear by identity cache.
+        // Also clear identity cache.
         self.packages
             .inner
             .retain(|dep, _| enabled_deps.contains(dep));

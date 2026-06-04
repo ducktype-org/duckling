@@ -5,7 +5,7 @@ use std::collections::{HashMap, HashSet};
 use itertools::Itertools;
 
 use crate::quackpack::core::compile::compiler_package::CompilerPackage;
-use crate::quackpack::core::compile::missing_dependcy_in_graph_message;
+use crate::quackpack::core::compile::missing_depenendcy_in_graph_message;
 use crate::quackpack::core::identity::Identity;
 use crate::{QuackError, QuackResult};
 
@@ -28,14 +28,14 @@ impl PackagesSet {
     pub fn package(&self, name: &Identity) -> &CompilerPackage {
         self.inner
             .get(name)
-            .unwrap_or_else(|| panic!("{}", missing_dependcy_in_graph_message(*name)))
+            .unwrap_or_else(|| panic!("{}", missing_depenendcy_in_graph_message(*name)))
     }
 
     /// Same as [`package`](Self::package), but returns a mutable reference.
     pub fn package_mut(&mut self, name: &Identity) -> &mut CompilerPackage {
         self.inner
             .get_mut(name)
-            .unwrap_or_else(|| panic!("{}", missing_dependcy_in_graph_message(*name)))
+            .unwrap_or_else(|| panic!("{}", missing_depenendcy_in_graph_message(*name)))
     }
 
     /// Get the underlying packages' map.
@@ -76,7 +76,7 @@ impl DependencyGraph {
     pub fn dependencies_for_package(&self, package: &Identity) -> &DependencyNode {
         self.graph
             .get(package)
-            .unwrap_or_else(|| panic!("{}", missing_dependcy_in_graph_message(*package)))
+            .unwrap_or_else(|| panic!("{}", missing_depenendcy_in_graph_message(*package)))
     }
 
     /// Get the iterator over all entries in this graph.

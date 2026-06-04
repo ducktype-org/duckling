@@ -27,12 +27,12 @@ use duckc::*;
 use self::early_graph::creating_graph::create_early_graph_from_bcx;
 
 /// A common message for panicking when a manifest is missing a dependency.
-pub fn missing_dependcy_in_manifest_message(root_name: &str, dep: &str) -> String {
+pub fn missing_depenendcy_in_manifest_message(root_name: &str, dep: &str) -> String {
     format!("malformed manifest of `{root_name}`: missing dependency `{dep}` in the manifest")
 }
 
 /// A common message for panicking when any graph is missing a key.
-pub fn missing_dependcy_in_graph_message(id: Identity) -> String {
+pub fn missing_depenendcy_in_graph_message(id: Identity) -> String {
     format!("missing dependency `{id}` in the graph")
 }
 
