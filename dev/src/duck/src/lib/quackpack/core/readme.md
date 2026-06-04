@@ -4,7 +4,7 @@ As You might have noticed, these three types look very similar, yet, fundamental
 and each has a different responsibility.
 
 Firstly, let's talk why `Source` is different from `Identity` and `FullIdentity`.
-`Source` comes from manifest parsing, thus it holds a lot information acquired there;
+`Source` comes from manifest parsing, thus it holds a lot of information acquired there;
 in particular, it has `GitReference`, a structure telling us, how to clone git repositories.
 
 During solving, gatherer will clone those repositories, and later refer to them only by `Url` + resolved `commit`.
