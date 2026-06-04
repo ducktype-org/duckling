@@ -62,13 +62,14 @@ pub fn lower_early_graph(graph: EarlyGraph, bcx: &BuildContext<'_, '_>) -> UnitG
 /// * [`Unit::new`] takes ID's of all its dependencies,
 /// * we allow cycles, therefore we must obtain all ID's before.
 fn build_ids_map(graph: &EarlyGraph) -> HashMap<Identity, u64> {
-    let mut map = HashMap::new();
     // !TODO: This gives us fairly unstable (even between duck invocations) IDs' order.
     // Do we care?
-    for (next_available_id, dep) in graph.graph().keys().enumerate() {
-        map.insert(*dep, next_available_id as u64);
-    }
-    map
+    graph
+        .graph()
+        .keys()
+        .enumerate()
+        .map(|(unit_id, identity)| (*identity, unit_id as u64))
+        .collect()
 }
 
 /// Lower [`EarlyGraph`] information into a single [`Unit`].
