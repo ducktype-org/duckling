@@ -28,17 +28,13 @@ use regex::Regex;
 use serde::Deserialize;
 use tracing::debug;
 
-use crate::quackpack::core::manifest::parse::manifest::parse_profiles;
-use crate::quackpack::core::{Features, FrontMatterScript, Manifest, PackageMetadata, Version};
+use crate::quackpack::core::FrontMatterScript;
+use crate::quackpack::core::manifest::parse::manifest::{ParseMode, parse};
 use crate::{
-    DuckContext, QuackResult, qp_bail,
-    quackpack::{
-        core::{Scope, manifest::parse::dependency},
-        schemas::manifest::Manifest as ManifestSchema,
-    },
+    DuckContext, QuackResult, qp_bail, quackpack::schemas::manifest::Manifest as ManifestSchema,
     util::path_ops_ext::PathOpsExt,
 };
-use crate::{QuackResultContext, StrId, qp_err};
+use crate::{QuackResultContext, qp_err};
 
 pub static FRONTMATTER_REGEX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^\s*<frontmatter>([\s\S]*)</frontmatter>").unwrap());
@@ -68,7 +64,7 @@ fn try_parse_inner(path: PathBuf, ctx: &DuckContext) -> QuackResult<Option<Front
     let Some(schema) = generate_schema(&path)? else {
         return Ok(None);
     };
-    let frontmatter = parse_schema(&path, &schema, ctx)?;
+    let frontmatter = parse(&schema, &path, ParseMode::FrontMatterScript, ctx)?;
     Ok(Some(FrontMatterScript::new(path, schema, frontmatter)))
 }
 
@@ -159,48 +155,4 @@ fn resolve_import_in_schema(
         return Ok(imported_schema);
     }
     Ok(schema)
-}
-
-/// Helper for [`_try_parse_inner`].
-/// Generates [`Manifest`] from [`ManifestSchema`],
-/// checking that it does not contain any fields disallowed in frontmatters with resolved imports.
-#[tracing::instrument(skip(schema, ctx))]
-fn parse_schema(path: &Path, schema: &ManifestSchema, ctx: &DuckContext) -> QuackResult<Manifest> {
-    let illegal_fields = schema.fields_disallowed_in_expanded_frontmatter();
-    if !illegal_fields.is_empty() {
-        let plural = if illegal_fields.len() > 1 { "s" } else { "" };
-        let mut err = qp_err!(
-            "illegal field{} `{}` in the frontmatter at {}",
-            plural,
-            illegal_fields.join("`, `"),
-            path.display()
-        );
-        err = err.add_hint(
-            "remove all the fields besides `dependencies`, `dev-dependencies` and `profiles`",
-        );
-        qp_bail!(err);
-    }
-
-    let mut scope = Scope::new();
-    let guard = scope.push("dependencies".into());
-    let dependencies = dependency::parse(schema.dependencies.as_ref(), path, ctx, guard)?;
-
-    let guard = scope.push("dev-dependencies".into());
-    let dev_dependencies = dependency::parse(schema.dev_dependencies.as_ref(), path, ctx, guard)?;
-
-    let guard = scope.push("profiles".into());
-    let profiles = parse_profiles(schema.profiles.as_ref(), guard)?;
-
-    let name = StrId::new(path.display().to_string());
-    let version = Version::default();
-    let manifest = Manifest::new(
-        name,
-        version,
-        Features::default(),
-        PackageMetadata::default(),
-        dependencies,
-        dev_dependencies,
-        profiles,
-    );
-    Ok(manifest)
 }

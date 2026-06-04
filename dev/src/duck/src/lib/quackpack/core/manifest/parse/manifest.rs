@@ -6,67 +6,107 @@ use tracing::debug;
 
 use super::{Scope, dependency};
 use crate::quackpack::core::{
-    Features, Manifest, OptLevel, PackageMetadata, Profile, Profiles, ScopeGuard,
+    Features, Manifest, OptLevel, PackageMetadata, Profile, Profiles, ScopeGuard, Version,
 };
 use crate::quackpack::schemas::manifest::{
     Manifest as ManifestSchema, OptLevel as SchemaOptLevel, Profile as ProfileSchema,
 };
-use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail};
+use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail, qp_err};
 
 /// Parse [`Manifest`] from given [`ManifestSchema`].
 #[tracing::instrument(skip_all)]
 pub(crate) fn parse(
     schema: &ManifestSchema,
     root: &Path,
+    mode: ParseMode,
     ctx: &DuckContext,
 ) -> QuackResult<Manifest> {
-    if schema.import.is_some() {
-        qp_bail!("`import` field is prohibited in manifests")
-    }
-    let Some(ref metadata) = schema.metadata else {
-        qp_bail!("missing the obligatory section `metadata`")
-    };
-    let Some(version) = metadata.version else {
-        qp_bail!("missing the obligatory key `metadata.version`")
-    };
-    let Some(ref name) = metadata.name else {
-        qp_bail!("missing the obligatory key `metadata.name`")
-    };
-    debug!("package name is `{name}`, version is `{version}`");
     let mut scope = Scope::new();
     let guard = scope.push("dependencies".into());
     let dependencies = dependency::parse(schema.dependencies.as_ref(), root, ctx, guard)?;
 
     let guard = scope.push("dev-dependencies".into());
-    let dev_deps = dependency::parse(schema.dev_dependencies.as_ref(), root, ctx, guard)?;
-
-    let guard = scope.push("features".into());
-    let features = parse_features(schema.features.as_ref())
-        .with_context(move || guard.make_context_string())?;
+    let dev_dependencies = dependency::parse(schema.dev_dependencies.as_ref(), root, ctx, guard)?;
 
     let guard = scope.push("profiles".into());
     let profiles = parse_profiles(schema.profiles.as_ref(), guard)?;
+    match mode {
+        ParseMode::FrontMatterScript => {
+            let illegal_fields = schema.fields_disallowed_in_expanded_frontmatter();
+            if !illegal_fields.is_empty() {
+                let plural = if illegal_fields.len() > 1 { "s" } else { "" };
+                let mut err = qp_err!(
+                    "illegal field{} `{}` in the frontmatter at {}",
+                    plural,
+                    illegal_fields.join("`, `"),
+                    root.display()
+                );
+                err = err.add_hint(
+                    "remove all the fields besides `dependencies`, `dev-dependencies` and `profiles`",
+                );
+                qp_bail!(err);
+            }
 
-    let authors = metadata
-        .authors
-        .as_ref()
-        .map(|vec| vec.iter().map(<&String>::into).collect())
-        .unwrap_or_default();
-    let package_metadata = PackageMetadata::new(
-        authors,
-        metadata.license.as_ref().map(<&String>::into),
-        metadata.description.as_ref().map(<&String>::into),
-    );
+            let name = StrId::new(root.display().to_string());
+            let version = Version::default();
+            let manifest = Manifest::new(
+                name,
+                version,
+                Features::default(),
+                PackageMetadata::default(),
+                dependencies,
+                dev_dependencies,
+                profiles,
+            );
+            Ok(manifest)
+        }
+        ParseMode::Package => {
+            if schema.import.is_some() {
+                qp_bail!("`import` field is prohibited in manifests")
+            }
+            let Some(ref metadata) = schema.metadata else {
+                qp_bail!("missing the obligatory section `metadata`")
+            };
+            let Some(version) = metadata.version else {
+                qp_bail!("missing the obligatory key `metadata.version`")
+            };
+            let Some(ref name) = metadata.name else {
+                qp_bail!("missing the obligatory key `metadata.name`")
+            };
+            debug!("package name is `{name}`, version is `{version}`");
 
-    Ok(Manifest::new(
-        name.into(),
-        version,
-        features,
-        package_metadata,
-        dependencies,
-        dev_deps,
-        profiles,
-    ))
+            let guard = scope.push("features".into());
+            let features = parse_features(schema.features.as_ref())
+                .with_context(move || guard.make_context_string())?;
+            let authors = metadata
+                .authors
+                .as_ref()
+                .map(|vec| vec.iter().map(<&String>::into).collect())
+                .unwrap_or_default();
+            let package_metadata = PackageMetadata::new(
+                authors,
+                metadata.license.as_ref().map(<&String>::into),
+                metadata.description.as_ref().map(<&String>::into),
+            );
+
+            Ok(Manifest::new(
+                name.into(),
+                version,
+                features,
+                package_metadata,
+                dependencies,
+                dev_dependencies,
+                profiles,
+            ))
+        }
+    }
+}
+
+/// Different utilites in which manifests occur.
+/// Used to perform appropriate checks on presence/absence of certain fields.
+pub enum ParseMode {
+    Package,
+    FrontMatterScript,
 }
 
 /// Parse [`Features`] from the given features map.

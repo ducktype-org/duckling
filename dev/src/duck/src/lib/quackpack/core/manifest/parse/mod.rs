@@ -7,6 +7,7 @@ use serde::Deserialize;
 use tracing::debug;
 
 use crate::quackpack::core::Package;
+use crate::quackpack::core::manifest::parse::manifest::ParseMode;
 use crate::quackpack::schemas::manifest::Manifest as ManifestSchema;
 use crate::util::path_ops_ext::PathOpsExt;
 use crate::{DuckContext, QuackResult, QuackResultContext, qp_internal};
@@ -126,7 +127,7 @@ fn parse_inner(path: &Path, ctx: &DuckContext) -> QuackResult<Package> {
         .ok_or_else(|| qp_internal!("the manifest path has no parent"))?;
     let content = path.read_to_string()?;
     let schema = parse_schema(&content)?;
-    let manifest = manifest::parse(&schema, package_root, ctx)?;
+    let manifest = manifest::parse(&schema, package_root, ParseMode::Package, ctx)?;
     Ok(Package::new(
         content,
         schema,
