@@ -12,7 +12,7 @@
 
 namespace compiler::linker {
 
-	base::OkBad link(
+	base::OkBad linkExecutable(
 		const artifacts::FileArtifact&              output,
 		const std::vector<artifacts::FileArtifact>& inputs,
 		const LinkingOptions&                       options
@@ -32,6 +32,8 @@ namespace compiler::linker {
 
 		command.addArg(options.additional_link_options);
 
+		if_opt_some(options.stdlib_link_options, stdlib_link_options)
+			command.addArg(stdlib_link_options);  // Link the Duckling standard library.
 		if (options.link_c_standard_library) command.addArg("-lc");  // Link the C standard library.
 
 		command.addArg("-o");

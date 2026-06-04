@@ -1,0 +1,26 @@
+import core.builtins.*;
+
+fun main() -> i64 = {
+    while (false) {
+        builtin_output_i64(1);
+    }
+
+    var a: i64 = 10;
+    var b: i64 = 15;
+    var c: i64 = 10;
+
+    while (a < b) {
+        a = a + c;
+        builtin_output_i64(a);
+    }
+    # a = 20
+
+    b = 100000000;
+    c = 3;
+
+    while (a < b) {
+        a = a + c;
+    }
+    builtin_output_i64(a); # a = 10000001
+    return 0i64;
+}

@@ -20,6 +20,7 @@
 #include <helios_private/errors/dia_interactive_elements.hpp>
 #include <helios_private/errors/errors.hpp>
 #include <helios_private/hout_creation/definition_generation/default_constructors.hpp>
+#include <helios_private/hout_creation/desugaring/for.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/pst_layer/stmts_from_aggregate.hpp>
 #include <helios_private/symbols/symbols.hpp>
@@ -92,10 +93,10 @@ namespace compiler::helios {
 		void visitUsing(pst::Access<pst::Using>) override {}
 
 		void handleAssignmentExpr(pst::Access<pst::expr::Assignment> assignment) {
-			auto op = assignment->getAssignmentType();
+			auto op = assignment->getAssignmentType().unlock(ctx)->unwrap();
 			if (op != base::StrID("=") && op != base::StrID("+=") && op != base::StrID("-=")) {
 				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-					base::strConcat("This assignment type: '", op, "'."),
+					base::strConcat("This assignment type: '", op.str(), "'."),
 					assignment->getStablePosition()
 				));
 				query::throwFailed();
@@ -164,7 +165,9 @@ namespace compiler::helios {
 			}
 
 			ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-				base::strConcat("'", op, "' assignment for type: '", location_type.toString(), "'."),
+				base::strConcat(
+					"'", op.str(), "' assignment for type: '", location_type.toString(), "'."
+				),
 				assignment->getStablePosition()
 			));
 			query::throwFailed();
@@ -351,10 +354,18 @@ namespace compiler::helios {
 		}
 
 		void visitFor(pst::Access<pst::For> stmt) override {
-			ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-				"`for` statements are not supported yet.", stmt->getStablePosition()
-			));
-			is_failed = true;
+			auto result = desugaring::desugarFor(
+				ctx,
+				stmt,
+				[&](pst::AccessLocked<pst::CodeBlockOrStmt> body_pst) -> code::CodeBlock {
+					return processBlock(ctx, body_pst, return_type);
+				}
+			);
+			if (!result.has_value()) {
+				is_failed = true;
+				return;
+			}
+			output(std::move(result.value()));
 		}
 
 		void visitFun(pst::Access<pst::Fun> function) override {

@@ -8,6 +8,7 @@
 
 #include <concurrent/base/collections/hash_map.hpp>
 #include <concurrent/worker/worker_manager.hpp>
+#include <frontend/packages/access.hpp>
 
 #include <base/collections/stable_hashmap.hpp>
 #include <base/config/build_type.hpp>
@@ -24,6 +25,7 @@
 #include <ranges>
 #include <regex>
 #include <sstream>
+#include <string_view>
 
 namespace {
 	/**
@@ -38,9 +40,9 @@ namespace {
 	 * @param reject_file_regex The regex to use for rejection.
 	 * @return True if valid, false otherwise.
 	 */
-	bool isFileNameValid(const std::string& filename, const std::regex& reject_file_regex) {
-		std::smatch match;
-		return !std::regex_match(filename, match, reject_file_regex);
+	bool isFileNameValid(base::StrID filename, const std::regex& reject_file_regex) {
+		auto view = filename.strView();
+		return !std::regex_match(view.begin(), view.end(), reject_file_regex);
 	}
 
 	/**
@@ -49,9 +51,9 @@ namespace {
 	 * @param reject_directory_regex The regex to use for rejection.
 	 * @return True if valid, false otherwise.
 	 */
-	bool isDirectoryNameValid(const std::string& dirname, const std::regex& reject_directory_regex) {
-		std::smatch match;
-		return !std::regex_match(dirname, match, reject_directory_regex);
+	bool isDirectoryNameValid(base::StrID dirname, const std::regex& reject_directory_regex) {
+		auto view = dirname.strView();
+		return !std::regex_match(view.begin(), view.end(), reject_directory_regex);
 	}
 }
 
@@ -77,7 +79,7 @@ namespace compiler::frontend {
 
 	Ref<ModuleTree> ModuleTreeBuilder::create(
 		const fs::File&   root,
-		std::string_view  package_id,
+		base::StrID       package_id,
 		const std::regex& file_reject,
 		const std::regex& dir_reject
 	) {
@@ -94,7 +96,7 @@ namespace compiler::frontend {
 	Ref<ModuleTree> ModuleTreeBuilder::createWithRandomPackageID(
 		const fs::File& root, const std::regex& file_reject, const std::regex& dir_reject
 	) {
-		return create(root, base::generateRandomString(32), file_reject, dir_reject);
+		return create(root, base::StrID(base::generateRandomString(32)), file_reject, dir_reject);
 	}
 
 	ModuleTree::ModuleTree(): m_hash_recompute_mutex(base::makeBox<std::mutex>()) {}
@@ -113,19 +115,16 @@ namespace compiler::frontend {
 		return FileAccessLocked(m_main_source_file.value()->getFileID());
 	}
 
-	SourceFilesAccessLocked ModuleTree::getSourceFiles() const {
-		std::vector<FileAccessLocked> files;
-		files.reserve(m_source_files.size());
-		for (const auto& file: m_source_files) files.emplace_back(file->getFileID());
-		return { getModuleID(), std::move(files) };
-	}
-
 	SubmodulesAccessLocked ModuleTree::getSubmodules() const {
 		std::vector<ModuleAccessLocked> submodules;
 		submodules.reserve(m_submodules.size());
 		for (const auto& [name, submodule]: m_submodules)
 			submodules.emplace_back(submodule->getModuleID());
 		return { getModuleID(), std::move(submodules) };
+	}
+
+	packages::PackageAccessLocked ModuleTree::getPackage() const {
+		return packages::PackageAccessLocked(m_package_id);
 	}
 
 	ModuleChildAccessLocked ModuleTree::getSubmoduleByName(base::StrID name) const {
@@ -160,9 +159,6 @@ namespace compiler::frontend {
 		else
 			output << indent << "├> Missing main module file!\n";
 
-		for (const auto& file_ref: getSourceFiles().illegalAccess())
-			output << indent << "├= " << getFileRef(file_ref.illegalAccess().getID())->file.name()
-				   << '\n';
 
 		for (const auto& [ext, files]: getOtherFiles())
 			for (const auto& file: files) output << indent << "├─ " << file.name() << '\n';
@@ -183,8 +179,6 @@ namespace compiler::frontend {
 
 			// assert if children are invalid too
 
-			for (auto& sf: m_source_files)
-				CORE_ASSERT(!sf->component_hash.has_value(), "Child component hash have value!");
 			if (m_main_source_file.has_value())
 				CORE_ASSERT(
 					!m_main_source_file.value()->component_hash.has_value(),
@@ -198,7 +192,6 @@ namespace compiler::frontend {
 		}
 		m_path_component_hash.reset();
 		m_hash.reset();
-		for (auto& sf: m_source_files) sf->invalidateComponentHash();
 		if (m_main_source_file.has_value()) m_main_source_file.value()->invalidateComponentHash();
 		for (auto& [_, submodule]: m_submodules) submodule->invalidateHash();
 	}
@@ -298,7 +291,7 @@ namespace compiler::frontend {
 
 	void ModuleTreeBuilder::buildFromDirectory(
 		const fs::File&   directory,
-		std::string_view  package_id,
+		base::StrID       package_id,
 		const std::regex& file_reject,
 		const std::regex& dir_reject
 	) {
@@ -319,15 +312,14 @@ namespace compiler::frontend {
 
 			if (file.isDirectory()) {
 				// Handle subdirectory
-				if (!isDirectoryNameValid(file.name(), dir_reject)) continue;
+				if (!isDirectoryNameValid(base::StrID(file.name()), dir_reject)) continue;
 
 				// build sub-module from directory
 				base::Box<ModuleTreeBuilder> submodule_builder = ModuleTreeBuilder::create();
 				submodule_builder->buildFromDirectory(file, package_id, file_reject, dir_reject);
 				auto submodule = submodule_builder->finalize();
 				CORE_ASSERT(
-					submodule->getName() == base::StrID(file.name().c_str()),
-					"Submodule name does not match"
+					submodule->getName() == base::StrID(file.name()), "Submodule name does not match"
 				);
 
 				// Discards directories without main module file:
@@ -335,20 +327,20 @@ namespace compiler::frontend {
 				if (submodule->hasMainSourceFile()) addSubmodule(submodule);
 			} else {
 				// Handle regular file
-				if (!isFileNameValid(file.name(), file_reject)) continue;
+				if (!isFileNameValid(base::StrID(file.name()), file_reject)) continue;
 				handleNewFile(file);
 			}
 		}
 	}
 
-	void ModuleTreeBuilder::buildFromSingleFile(const fs::File& file, std::string_view package_id) {
-		std::string stem      = file.stem();
+	void ModuleTreeBuilder::buildFromSingleFile(const fs::File& file, base::StrID package_id) {
+		base::StrID stem      = base::StrID(file.stem());
 		std::string extension = file.extension();
 		CORE_ASSERT(
 			extension == LANG_MODULE_FILE,
 			"Expected a module file, got: " + file.getFilePath().string()
 		);
-		setName(base::StrID(stem.c_str()));
+		setName(stem);
 		setPackageID(package_id);
 		setMainSourceFile(file);
 	}
@@ -361,18 +353,15 @@ namespace compiler::frontend {
 		std::string stem      = file.stem();
 		std::string extension = file.extension();
 
-		if (extension == LANG_SOURCE_FILE) {
-			// Regular source file - store path for later
-			addSourceFile(file);
-		} else if (extension == LANG_MODULE_FILE) {
+		if (extension == LANG_MODULE_FILE) {
 			// Module file
-			base::StrID stem_id(stem.c_str());
+			auto stem_id = base::StrID(stem);
 
 			if (stem_id == m_name) {
 				setMainSourceFile(file);
 			} else {
 				base::Box<ModuleTreeBuilder> submodule_builder = ModuleTreeBuilder::create();
-				submodule_builder->buildFromSingleFile(file, this->m_package_id.strView());
+				submodule_builder->buildFromSingleFile(file, this->m_package_id);
 				auto submodule = submodule_builder->finalize();
 				CORE_ASSERT(submodule->getName() == stem_id, "Submodule name does not match");
 				addSubmodule(base::Ref<ModuleTree>(submodule));
@@ -395,13 +384,8 @@ namespace compiler::frontend {
 
 	base::Box<ModuleTreeBuilder> ModuleTreeBuilder::createWithRandomPackageID() {
 		base::Box<ModuleTreeBuilder> builder = ModuleTreeBuilder::create();
-		builder->setPackageID(base::generateRandomString(32));
+		builder->setPackageID(base::StrID(base::generateRandomString(32)));
 		return builder;
-	}
-
-	void ModuleTreeBuilder::addSourceFile(const fs::File& file) {
-		CORE_ASSERT(!m_finalized, "Builder already finalized");
-		m_source_file_paths.push_back(file);
 	}
 
 	void ModuleTreeBuilder::setMainSourceFile(const fs::File& file) {
@@ -444,10 +428,10 @@ namespace compiler::frontend {
 		m_repl_data = repl_data;
 	}
 
-	void ModuleTreeBuilder::setPackageID(std::string_view package_id) {
+	void ModuleTreeBuilder::setPackageID(base::StrID package_id) {
 		CORE_ASSERT(!m_finalized, "Builder already finalized");
 		CORE_ASSERT(m_package_id.isBad(), "Package ID is already set");
-		m_package_id = base::StrID(std::string(package_id).c_str());
+		m_package_id = package_id;
 	}
 
 	bool ModuleTreeBuilder::isFinalized() const { return m_finalized; }
@@ -484,11 +468,6 @@ namespace compiler::frontend {
 				= SourceFile::create(m_main_source_file_path.value(), mod_id);
 		}
 
-		for (const auto& file_path: m_source_file_paths) {
-			auto source_file = SourceFile::create(file_path, mod_id);
-			module_ref->m_source_files.push_back(source_file);
-		}
-
 		for (const auto& [name, submodule]: m_submodules)
 			ModuleTreeModifier::addSubmodule(module_ref, submodule);
 
@@ -499,34 +478,6 @@ namespace compiler::frontend {
 	 * ModuleTreeModifier Implementation
 	 *********************/
 
-	void ModuleTreeModifier::addSourceFile(base::Ref<ModuleTree> module, const fs::File& file) {
-		module->m_source_files.push_back(SourceFile::create(file, ModuleID(module)));
-	}
-
-	void ModuleTreeModifier::removeSourceFileFromStorage(base::Ref<SourceFile> file) {
-		CORE_ASSERT(
-			use_module_modifier_remove, "Module modifier feature is disabled. See module_flags.hpp"
-		);
-
-		Ref<ModuleTree> module
-			= GetModuleID_Functor::getModRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
-				file->getModule().illegalAccess().getID()
-			);
-
-		auto& source_files = module->m_source_files;
-		auto  it
-			= std::ranges::find_if(source_files, [file](const base::Ref<SourceFile>& source_file) {
-				  return source_file == file;
-			  });
-
-		CORE_ASSERT(it != source_files.end(), "SourceFile not found in module");
-
-		// Remove file from source_files
-		source_files.erase(it);
-
-		// Remove SourceFile from storage. This invalidates the SourceFile instance!
-		SourceFile::removeSourceFileFromStorage(file);
-	}
 
 	void ModuleTreeModifier::setMainSourceFile(base::Ref<ModuleTree> module, const fs::File& file) {
 		CORE_ASSERT(
@@ -698,7 +649,7 @@ namespace compiler::frontend {
 	}
 
 	void ModuleTreeModifier::changePackageID(
-		base::Ref<ModuleTree> module, std::string_view new_package_id
+		base::Ref<ModuleTree> module, base::StrID new_package_id
 	) {
 		CORE_ASSERT(
 			!module->m_parent.has_value(),
@@ -706,20 +657,20 @@ namespace compiler::frontend {
 			module->m_parent.value()->getName().strView()
 		);
 
-		std::function<void(base::Ref<ModuleTree>, std::string_view)> change_package_id =
-			[&](base::Ref<ModuleTree> internal, std::string_view internal_new_package_id) {
-				CORE_ASSERT(
-					internal->m_package_id.isGood(), "Module does not have a valid package ID"
-				);
-				internal->m_package_id = base::StrID(std::string(internal_new_package_id).c_str());
+		std::function<void(base::Ref<ModuleTree>, base::StrID)> change_package_id
+			= [&](base::Ref<ModuleTree> internal, base::StrID internal_new_package_id) {
+				  CORE_ASSERT(
+					  internal->m_package_id.isGood(), "Module does not have a valid package ID"
+				  );
+				  internal->m_package_id = internal_new_package_id;
 
-				// Change the package ID for all submodules recursively
-				for (auto& [_, submodule]: internal->m_submodules)
-					change_package_id(submodule, internal_new_package_id);
+				  // Change the package ID for all submodules recursively
+				  for (auto& [_, submodule]: internal->m_submodules)
+					  change_package_id(submodule, internal_new_package_id);
 
-				// Invalidate component hash for the module and its children as the package ID changed
-				internal->invalidateHash();
-			};
+				  // Invalidate component hash for the module and its children as the package ID changed
+				  internal->invalidateHash();
+			  };
 
 		change_package_id(module, new_package_id);
 	}
@@ -762,10 +713,6 @@ namespace compiler::frontend {
 			submodule->invalidateHash();  // invalidate hash as parent changed
 		}
 
-		// Remove all source files from storage this will invalidate the SourceFile instances!
-		for (auto& source_file: module->m_source_files)
-			SourceFile::removeSourceFileFromStorage(source_file);
-
 		// Remove main source file. This will invalidate the SourceFile instance!
 		if (module->m_main_source_file.has_value())
 			SourceFile::removeSourceFileFromStorage(module->m_main_source_file.value());
@@ -802,8 +749,6 @@ namespace compiler::frontend {
 		auto recursive_delete = [&](auto&& self, base::Ref<ModuleTree> current) -> void {
 			for (auto& [_, child]: current->m_submodules) self(self, child);
 
-			for (auto& source_file: current->m_source_files)
-				SourceFile::removeSourceFileFromStorage(source_file);
 			if (current->m_main_source_file.has_value())
 				SourceFile::removeSourceFileFromStorage(current->m_main_source_file.value());
 
@@ -826,7 +771,7 @@ namespace compiler::frontend {
 		return GetModuleID_Functor::get(module)->prettyPrint();
 	}
 
-	ModuleID createModuleTree(const fs::File& file, std::string_view package_id) {
+	ModuleID createModuleTree(const fs::File& file, base::StrID package_id) {
 		return ModuleTreeBuilder::create(file, package_id)->getModuleID();
 	}
 
@@ -842,8 +787,6 @@ namespace compiler::frontend {
             auto module_tree = GetModuleID_Functor::get(mid);
             if (module_tree->hasMainSourceFile())
                 files_to_parse.push_back(module_tree->getMainSourceFile().illegalAccess().getID());
-            for (const auto& file: module_tree->getSourceFiles().illegalAccess())
-                files_to_parse.push_back(file.illegalAccess().getID());
             for (const auto& submodule: module_tree->getSubmodules().illegalAccess())
                 self(submodule.illegalAccess().getID());
 		};
@@ -855,6 +798,7 @@ namespace compiler::frontend {
 		std::mutex              wait_mtx;
 		std::condition_variable wait_cv;
 		std::atomic<usize>      next_file_id{ 0 };
+		std::atomic<usize>      parsed_files_count{ 0 };
 		bool                    all_files_parsed = false;
 		auto&                   manager          = concurrent::worker::WorkerManager::get();
 
@@ -870,15 +814,20 @@ namespace compiler::frontend {
 							file_id
 						);
 					file_ref->getPST();
+
+					if (parsed_files_count.fetch_add(1, std::memory_order_relaxed) + 1
+					    == files_to_parse.size()) {
+						std::lock_guard<std::mutex> lock(wait_mtx);
+						all_files_parsed = true;
+						wait_cv.notify_one();
+					}
 				});
-			} else if (idx == files_to_parse.size() + concurrent::worker::getWorkerCount() - 1) {
-				std::lock_guard<std::mutex> lock(wait_mtx);
-				all_files_parsed = true;
-				wait_cv.notify_one();
 			}
 		};
 
 		manager.setNoTasksCallback(schedule_next_file_parsing);
+
+		for (auto& worker: manager.getAllWorkers()) schedule_next_file_parsing(worker);
 
 		// Wait until all files are parsed.
 		std::unique_lock lock(wait_mtx);
@@ -893,7 +842,7 @@ namespace compiler::frontend {
 	}
 
 	ModuleID createModuleTreeFromContents(
-		std::string_view contents, base::Optional<std::string_view> package_id
+		std::string_view contents, base::Optional<base::StrID> package_id
 	) {
 		// createModuleTree function expects .dmf extension.
 		auto virtual_file = fs::FileManager::createRandomVirtualFile(contents, ".dmf");
@@ -970,23 +919,6 @@ namespace compiler::frontend {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryMainSourceFile);
-
-	/********************
-	 * QuerySourceFiles *
-	 ********************/
-	struct IMPLEMENT_QUERY(QuerySourceFiles, std::vector<FileID>) {
-		static auto provide(Context& ctx, QKey key) -> PResult {
-			const auto&         module_tree = GetModuleID_Functor::get(key);
-			std::vector<FileID> out;
-			for (const auto& file: module_tree->getSourceFiles().unlock(ctx))
-				out.emplace_back(file.unlock(ctx).getID());
-			return out;
-		}
-
-		QUERY_AUTO_CACHE_CREF
-	};
-
-	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySourceFiles);
 
 	/*******************
 	 * QuerySubmodules *

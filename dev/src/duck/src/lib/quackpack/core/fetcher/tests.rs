@@ -5,6 +5,7 @@ use tempfile::{TempDir, tempdir};
 
 use super::*;
 use crate::quackpack::core::Version;
+use crate::quackpack::util::to_url::ToUrl;
 use crate::util::test_utils::setup_test;
 
 fn setup_duck_ctx() -> (DuckContext, TempDir) {
@@ -78,8 +79,8 @@ fn create_mock_server() -> MockServer {
     let bar_256 = registry::Manifest {
         metadata: registry::Metadata {
             version: Version::new(2, 5, 6),
-            authors: vec!["Patryk Rogalski".into()],
-            license: "GLWTSPL".into(),
+            authors: vec!["Carly Shillingford".into()],
+            license: "MIT".into(),
             name: "bar".into(),
             description: "".into(),
         },
@@ -92,8 +93,8 @@ fn create_mock_server() -> MockServer {
     let foo_123 = registry::Manifest {
         metadata: registry::Metadata {
             version: Version::new(1, 2, 3),
-            authors: vec!["Patryk Rogalski".into()],
-            license: "GLWTSPL".into(),
+            authors: vec!["Carly Shillingford".into()],
+            license: "MIT".into(),
             name: "foo".into(),
             description: "".into(),
         },
@@ -106,8 +107,8 @@ fn create_mock_server() -> MockServer {
     let foo_125 = registry::Manifest {
         metadata: registry::Metadata {
             version: Version::new(1, 2, 5),
-            authors: vec!["Patryk Rogalski".into()],
-            license: "GLWTSPL".into(),
+            authors: vec!["Carly Shillingford".into()],
+            license: "MIT".into(),
             name: "foo".into(),
             description: "".into(),
         },
@@ -178,7 +179,7 @@ fn all_metadata_adds_to_cache() {
     let server = create_mock_server();
     let mut fetcher = Fetcher::new(&ctx).unwrap();
     let response = fetcher
-        .get_package_all_metadata(&server.base_url().parse().unwrap(), "foo".into())
+        .get_package_all_metadata(server.base_url().to_url().unwrap().into(), "foo".into())
         .unwrap();
     let FetcherResponse::Some(response) = response else {
         panic!("Offline response with offline flag not present");

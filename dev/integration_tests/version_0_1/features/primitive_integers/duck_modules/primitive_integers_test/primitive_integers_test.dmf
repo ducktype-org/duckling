@@ -1,0 +1,57 @@
+import core.builtins.*;
+
+fun main() -> i64 = {
+    # Testing various signed integer types
+    var i8_val: i8 = i8(127);
+    var i16_val: i16 = i16(32767);
+    var i32_val: i32 = i32(2147483647);
+    var i64_val: i64 = 100i64;
+
+    # Testing various unsigned integer types
+    var u8_val: u8 = u8(255);
+    var u16_val: u16 = u16(65535);
+    var u32_val: u32 = u32(100);
+    var u64_val: u64 = 200u64;
+
+    # Output test values
+    builtin_output_i64(i64(i8_val));     # 127
+    builtin_output_i64(i64(i16_val));    # 32767
+    builtin_output_i64(i64(i32_val));    # 2147483647
+    builtin_output_i64(i64_val);          # 100
+
+    builtin_output_i64(i64(u8_val));     # 255
+    builtin_output_i64(i64(u16_val));    # 65535
+    builtin_output_i64(i64(u32_val));    # 100
+    builtin_output_i64(i64(u64_val));    # 200
+
+    # Test negative numbers
+    var neg_i8: i8 = i8(-128);
+    var neg_i16: i16 = i16(-32768);
+    var neg_i32: i32 = i32(-100);
+    var neg_i64: i64 = -50i64;
+
+    builtin_output_i64(i64(neg_i8));     # -128
+    builtin_output_i64(i64(neg_i16));    # -32768
+    builtin_output_i64(i64(neg_i32));    # -100
+    builtin_output_i64(neg_i64);          # -50
+
+    # Test literal suffixes
+    var with_suffix_i64 = 42i64;
+    var with_suffix_i32 = 42i32;
+    var with_suffix_u64 = 42u64;
+
+    builtin_output_i64(with_suffix_i64);       # 42
+    builtin_output_i64(i64(with_suffix_i32));  # 42
+    builtin_output_i64(i64(with_suffix_u64));  # 42
+
+    # Test hex, octal, and binary literals
+    var hex_val = 0xA;    # 10
+    var oct_val = 0o12;   # 10
+    var bin_val = 0b1010; # 10
+
+    builtin_output_i64(hex_val);  # 10
+    builtin_output_i64(oct_val);  # 10
+    builtin_output_i64(bin_val);  # 10
+
+    return 0;
+}

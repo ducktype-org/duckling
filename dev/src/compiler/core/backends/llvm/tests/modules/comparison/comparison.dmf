@@ -1,3 +1,5 @@
+fundecl builtin_output_i64(x: i64) -> i64;
+
 fun main() -> i64 = {
     let x: i64 = 1;
     let y: i64 = 1;
@@ -14,8 +16,8 @@ fun main() -> i64 = {
         builtin_output_i64(3); # 3
     }
 
-    let a: u64 = 1;
-    let b: u64 = 2;
+    let a: i64 = 1;
+    let b: i64 = 2;
 
     if (a < b <= b == b != b >= b > a) { 
         builtin_output_i64(4); # not printed

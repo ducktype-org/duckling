@@ -18,31 +18,27 @@ using namespace compiler;
 using namespace vm::code::builders;
 
 void FunctionLoweringContext::pushInstruction(const lir::Instruction& lir_instruction) {
+	pushInitsForInstr(lir_instruction.scope_flags);
+
 	if_opt_some(fun_di_builder_opt, builder) {
 		if_opt_some(lir_instruction.metadata.position, pos) {
 			builder.addInstruction(instructionsCount(), mapDIPosition(pos));
 		}
 	}
 
-	DVMOperation dvm_operation = lirInstrToDVMOperation(*this, lir_instruction);
-	VISIT(dvm_operation, op, InstructionLowerer(this).lower(op));
+	DVMOperation       dvm_operation = lirInstrToDVMOperation(*this, lir_instruction);
+	InstructionLowerer instr_lowerer(this);
+	VISIT(dvm_operation, op, instr_lowerer.lower(op));
 	// Clean all of the temporaries created by `pushTempLocal` while lowering this instruction.
 	cleanUpRegisteredTemps();
+	pushDeinitsForInstr(lir_instruction.scope_flags, instr_lowerer.pushed_deinits_for_instr);
 }
 
 void FunctionLoweringContext::pushTerminator(const lir::Instruction& lir_terminator) {
 	pushInstruction(instructions::Comment(base::StrID(
 		base::strConcat("Terminator: ", base::enumToStr(lir_terminator.operation)).data()
 	)));
-
-	if_opt_some(fun_di_builder_opt, builder) {
-		if_opt_some(lir_terminator.metadata.position, pos) {
-			builder.addInstruction(instructionsCount(), mapDIPosition(pos));
-		}
-	}
-
-	DVMOperation dvm_operation = lirInstrToDVMOperation(*this, lir_terminator);
-	VISIT(dvm_operation, op, InstructionLowerer(this).lower(op));
+	pushInstruction(lir_terminator);
 }
 
 DVMPlace compiler::backend_vm::internal::FunctionLoweringContext::pushTempLocal(

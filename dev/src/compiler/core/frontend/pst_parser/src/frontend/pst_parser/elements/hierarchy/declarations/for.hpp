@@ -2,16 +2,19 @@
 
 #include "preamble.hpp"
 
+#include <base/collections/optional.hpp>
+
 namespace pst {
 	/**
 	 * @brief For declaration
 	 */
 	class For final: public CodeDecl {
-		tpc::OptionalIdentifier optional_name;
-		tpc::Identifier         iterator;
+		NAMED_CHILD_OPT(name, IdentifierWrapper);
+		NAMED_CHILD(iterator, IdentifierWrapper);
 		NAMED_CHILD(type, ForTypeExprHolder);
 		NAMED_CHILD(iterable, CommaExprHolder);
 		NAMED_CHILD(body, CodeBlockOrStmt);
+		base::Optional<bool> is_const;
 
 	protected:
 		HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const override;
@@ -32,13 +35,27 @@ namespace pst {
 
 		[[nodiscard]]
 		DeclKind isDeclaration() const final {
-			return (optional_name.value ? DeclKind::Symbol : DeclKind::None);
+			return (name.has_value() ? DeclKind::Symbol : DeclKind::None);
 		}
 
 		[[nodiscard]]
-		base::Optional<base::StrID> getDeclSymbolName() const final {
-			return optional_name.value;
+		base::Optional<AccessLocked<IdentifierWrapper>> getDeclSymbolIdentifier() const final {
+			return name.map([](const auto& acc) { return acc.give(); });
 		}
+
+		[[nodiscard]] AccessLocked<IdentifierWrapper> getIteratorIdentifier() const {
+			return iterator.give();
+		}
+
+		[[nodiscard]] AccessLocked<ForTypeExprHolder> getIteratorType() const {
+			return type.give();
+		}
+
+		[[nodiscard]] AccessLocked<CommaExprHolder> getIterable() const { return iterable.give(); }
+
+		[[nodiscard]] AccessLocked<CodeBlockOrStmt> getBody() const { return body.give(); }
+
+		[[nodiscard]] base::Optional<bool> getIsConst() const { return is_const; }
 
 		void acceptVisitor(PstVisitor& visitor) const override;
 	};

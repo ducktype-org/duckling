@@ -1,0 +1,12 @@
+import core.builtins.*;
+
+import lib_a;
+import lib_c;
+
+fun b_value() -> i64 = {
+    return lib_a.a_value() + 5;
+}
+
+fun hello() -> i64 = {
+    return 22 + lib_c.c_value();
+}

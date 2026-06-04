@@ -3,7 +3,7 @@ Tests:
     Description: cannot reinitialise a project
     Cases:
       init:
-        test_cmd: init foo
+        test_cmd: duck init foo
         ExitCode: 1
         Err:
           Run: |+

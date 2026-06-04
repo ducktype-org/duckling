@@ -183,21 +183,24 @@ namespace compiler::mir {
 			os << ": Helios Name: " << getName().strView();
 			os << ", Type: " << type.toString();
 			os << ", Lifetime Scope: " << scope.value()->id;
+			os << ", Lifetime Flags: " << lifetime_flags.toString(true);
 			if (parameter_index.has_value()) os << ", Parameter Index: " << parameter_index.value();
 		}
 	}
 
 	void MIRGlobal::debugPrint(std::ostream& os, bool detailed) const {
-		os << "Global(" << name(helios_id).strView() << ")";
 		if (detailed) {
+			os << "[MIR] Global: ";
 			os << ": Helios Name: " << name(helios_id).strView();
 			os << ", Type: " << type.toString();
+			os << "\n";
 		}
+		if (not detailed) os << "Global(" << name(helios_id).strView() << ")";
 	}
 
 	base::StrID MIRLocal::getName() const {
 		if (helios_id.has_value()) return name(helios_id.value());
-		return base::StrID(base::strConcat(id.asInt(), ".tmp").c_str());
+		return base::StrID(base::strConcat(id.asInt(), ".tmp"));
 	}
 
 	void MIRLocal::setLifetimeScope(ScopeRef scope) {
@@ -237,6 +240,8 @@ namespace compiler::mir {
 				return base_type.as<tsh::DynamicArrayAbstractType>().getElementType();
 			case tsh::Kind::StaticArray:
 				return base_type.as<tsh::StaticArrayAbstractType>().getElementType();
+			case tsh::Kind::ManyPointer:
+				return base_type.as<tsh::ManyPointerAbstractType>().getPointee();
 			default:
 				CORE_PANIC("Cannot index into type: ", type.toString());
 			}
@@ -296,9 +301,41 @@ namespace compiler::mir {
 		case Flag::Move:
 			os << "Move";
 			break;
+		case Flag::ScopeStart:
+			os << "ScopeStart";
+			break;
+		case Flag::ScopeEnd:
+			os << "ScopeEnd";
+			break;
 		}
 		os << " ";
 		local->debugPrint(os);
+	}
+
+	void MIRGlobalData::debugPrint(query::Context&, std::ostream& os) const {
+		global.debugPrint(os, true);
+		os << "  Initial Value (CTV or Function): ";
+		variant_match(initial_value) {
+			variant_case(ctv::CompileTimeValue, ctv) { os << ctv.toString(); }
+			variant_case(CRef<mir::Function>, func_ref) {
+				os << "constructor: " << func_ref->name.strView() << "\n";
+				func_ref->debugPrint(os);
+			}
+		}
+	}
+
+	void MIRUnit::debugPrint(query::Context& ctx, std::ostream& os) const {
+		os << "MIRUnit:\n";
+		os << "Globals:\n";
+		for (const auto& global: mir_globals) {
+			global.debugPrint(ctx, os);
+			os << "\n";
+		}
+		os << "Functions:\n";
+		for (const auto& func: mir_functions) {
+			func->debugPrint(os);
+			os << "\n";
+		}
 	}
 
 	base::OkBad Function::validateBlockIDs() const {
@@ -318,5 +355,10 @@ namespace compiler::mir {
 		}
 
 		return base::OK;
+	}
+
+	Instruction& Block::firstInstruction() {
+		if (instructions.empty()) return terminator;
+		return instructions.front();
 	}
 }

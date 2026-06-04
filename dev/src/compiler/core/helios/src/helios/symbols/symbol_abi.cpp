@@ -37,7 +37,7 @@ namespace compiler::helios {
 	) {
 		auto call_arg = arg.unlock(ctx);
 
-		if (call_arg->getArgName().value.has_value())
+		if (call_arg->getArgName())
 			throw base::NotYetImplemented("Naming arguments in extern() is not supported yet.");
 
 		auto expr_holder = call_arg->getArg().unlock(ctx).dynamicCast<pst::ExprHolder>().value();
@@ -101,7 +101,6 @@ namespace compiler::helios {
 
 			// Builtin functions are implemented in C/C++ and use the C ABI.
 			variant_match(sym_ref->other) {
-				variant_case_novalue(builtin::BuiltinFunctionData) { return CAbi{}; }
 				variant_case(defgen::GeneratedSymbolData, gen_data) {
 					variant_match(gen_data.data) {
 						variant_case_novalue(defgen::GeneratedSymbolData::BuiltinOperator) {
@@ -119,7 +118,8 @@ namespace compiler::helios {
 
 			auto specifiers = ctx.query<QuerySpecifiersOfSymbol>(key);
 			for (auto specifier: *specifiers) {
-				if (specifier.unlock(ctx)->getSpecifier() == pst::Keyword::Extern) {
+				if (specifier.unlock(ctx)->getSpecifier().unlock(ctx)->unwrap()
+				    == pst::Keyword::Extern) {
 					match_optional(specifier.unlock(ctx)->getArgs()) {
 						opt_some(args) { return getSymbolABI(ctx, args); }
 						opt_none {

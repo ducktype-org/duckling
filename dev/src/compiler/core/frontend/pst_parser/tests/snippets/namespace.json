@@ -11,7 +11,13 @@
 			},
 			"Namespace": {
 				"name": {
-					"Name": "myspace"
+					"position": {
+						"sourceStart": 10,
+						"sourceEnd": 16
+					},
+					"Identifier Wrapper": {
+						"value": "myspace"
+					}
 				},
 				"block": {
 					"position": {
@@ -43,11 +49,25 @@
 												},
 												"Identifier Expression": {
 													"name": {
-														"Name": "x"
+														"position": {
+															"sourceStart": 21,
+															"sourceEnd": 21
+														},
+														"Identifier Wrapper": {
+															"value": "x"
+														}
 													}
 												}
 											},
-											"operator": "+",
+											"operator": {
+												"position": {
+													"sourceStart": 23,
+													"sourceEnd": 23
+												},
+												"Operator Wrapper": {
+													"value": "+"
+												}
+											},
 											"right_expr": {
 												"position": {
 													"sourceStart": 25,

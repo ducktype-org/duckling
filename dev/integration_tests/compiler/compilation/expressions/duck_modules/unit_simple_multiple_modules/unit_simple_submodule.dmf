@@ -1,3 +1,5 @@
+import core.builtins.*;
+
 const unitType: type = ();
 
 fun foo(u: ()) -> () = {

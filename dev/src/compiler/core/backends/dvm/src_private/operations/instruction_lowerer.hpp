@@ -27,6 +27,8 @@ namespace compiler::backend_vm::internal {
 
 		void lower(const CallOperation& op);
 		void lower(const AddressOfOperation& op);
+		void lower(const BoxAllocOperation& op);
+		void lower(const BoxFreeOperation& op);
 		void lower(const CastOperation& op);
 		void lower(const MetaOperation& op);
 
@@ -34,6 +36,11 @@ namespace compiler::backend_vm::internal {
 		void lower(const JumpOperation& op);
 		void lower(const BranchOperation& op);
 		void lower(const ReturnOperation& op);
+
+		/**
+		 * @brief Makes sure deinits for the current instruction are only pushed once.
+		 */
+		bool pushed_deinits_for_instr{ false };
 
 	private:
 		Ref<FunctionLoweringContext> ctx;

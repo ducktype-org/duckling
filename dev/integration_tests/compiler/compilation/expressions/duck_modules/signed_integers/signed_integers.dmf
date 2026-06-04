@@ -1,3 +1,5 @@
+import core.builtins.*;
+
 fun main() -> i64 = {
     ### I8 ###
     let a_8: i8 = -100i8;

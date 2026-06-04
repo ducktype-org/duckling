@@ -76,55 +76,45 @@
  *	}
  *
  */
-#define match_optional(optional)                                                             \
-	PUSH_DIAGNOSTIC                                                                          \
-	NO_SHADOW                                                                                \
-	if (bool _perform_match = true)                                                          \
-		for (auto&& _internal_optional = (optional); _perform_match; _perform_match = false) \
-	POP_DIAGNOSTIC
+#define match_optional(optional) \
+	PUSH_DIAGNOSTIC              \
+	NO_SHADOW                    \
+	if (auto&& _internal_optional = (optional); true) POP_DIAGNOSTIC
 
-#define opt_some(_value_name)                                                            \
-	PUSH_DIAGNOSTIC                                                                      \
-	NO_SHADOW                                                                            \
-	if (bool _perform_if = _internal_optional.has_value())                               \
-		for (auto&& _value_name = *_internal_optional; _perform_if; _perform_if = false) \
-	POP_DIAGNOSTIC
+#define opt_some(_value_name)           \
+	PUSH_DIAGNOSTIC                     \
+	NO_SHADOW                           \
+	if (_internal_optional.has_value()) \
+		if (auto&& _value_name = *_internal_optional; true) POP_DIAGNOSTIC
 
-#define opt_some_move(_value_name)                                                                  \
-	PUSH_DIAGNOSTIC                                                                                 \
-	NO_SHADOW                                                                                       \
-	if (bool _perform_if = _internal_optional.has_value())                                          \
-		for (auto&& _value_name = *std::move(_internal_optional); _perform_if; _perform_if = false) \
-	POP_DIAGNOSTIC
+#define opt_some_move(_value_name)      \
+	PUSH_DIAGNOSTIC                     \
+	NO_SHADOW                           \
+	if (_internal_optional.has_value()) \
+		if (auto&& _value_name = *std::move(_internal_optional); true) POP_DIAGNOSTIC
 
-#define opt_err(_err_name)                                                                    \
-	PUSH_DIAGNOSTIC                                                                           \
-	NO_SHADOW                                                                                 \
-	if (bool _perform_if = !_internal_optional.has_value())                                   \
-		for (auto&& _err_name = _internal_optional.error(); _perform_if; _perform_if = false) \
-	POP_DIAGNOSTIC
+#define opt_err(_err_name)               \
+	PUSH_DIAGNOSTIC                      \
+	NO_SHADOW                            \
+	if (!_internal_optional.has_value()) \
+		if (auto&& _err_name = _internal_optional.error(); true) POP_DIAGNOSTIC
 
-#define opt_err_move(_err_name)                                                     \
-	PUSH_DIAGNOSTIC                                                                 \
-	NO_SHADOW                                                                       \
-	if (bool _perform_if = !_internal_optional.has_value())                         \
-		for (auto&& _err_name = std::move(_internal_optional).error(); _perform_if; \
-		     _perform_if      = false)                                              \
-	POP_DIAGNOSTIC
+#define opt_err_move(_err_name)          \
+	PUSH_DIAGNOSTIC                      \
+	NO_SHADOW                            \
+	if (!_internal_optional.has_value()) \
+		if (auto&& _err_name = std::move(_internal_optional).error(); true) POP_DIAGNOSTIC
 
 #define opt_none    \
 	PUSH_DIAGNOSTIC \
 	NO_SHADOW       \
 	if (!_internal_optional.has_value()) POP_DIAGNOSTIC
 
-#define if_opt_some(optional, _value_name)                                    \
-	PUSH_DIAGNOSTIC                                                           \
-	NO_SHADOW                                                                 \
-	if (auto&& _internal_optional = (optional))                               \
-		if (bool _if_opt_some_stop = true)                                    \
-			for (auto&& _value_name = *_internal_optional; _if_opt_some_stop; \
-			     _if_opt_some_stop  = false)                                  \
-	POP_DIAGNOSTIC
+#define if_opt_some(optional, _value_name)      \
+	PUSH_DIAGNOSTIC                             \
+	NO_SHADOW                                   \
+	if (auto&& _internal_optional = (optional)) \
+		if (auto&& _value_name = *_internal_optional; true) POP_DIAGNOSTIC
 
 
 #define if_opt_none(optional) \

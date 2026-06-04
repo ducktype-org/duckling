@@ -3,6 +3,7 @@
 #include "mir_builders.hpp"
 
 #include <helios/hout/elements/stmt.hpp>
+#include <mir/mir_structure/mir_local_ref.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 
 namespace compiler::mir {

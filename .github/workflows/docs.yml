@@ -1,9 +1,9 @@
 name: docs
 
 concurrency:
-  # This worflow runs only on main branch, so no need to distinguish between PRs.
-  # github.workflow reffers to the name of the workflow. "docs" in this case.
-  # new run of the worflow from the same group will cancel the previous ones
+  # This workflow runs only on main branch, so no need to distinguish between PRs.
+  # github.workflow refers to the name of the workflow. "docs" in this case.
+  # new run of the workflow from the same group will cancel the previous ones
   group: ${{ github.workflow }}
   cancel-in-progress: true
 
@@ -32,7 +32,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
         with:
-          token: ${{ secrets.READ_DOCS_REPOS_PAT }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           submodules: true
 
       - name: Install dependencies

@@ -106,6 +106,15 @@ namespace compiler::backend_vm::internal {
 		base::Optional<DVMPlace> dest;
 	};
 
+	struct BoxAllocOperation {
+		DVMValue                 src;
+		base::Optional<DVMPlace> dest;
+	};
+
+	struct BoxFreeOperation {
+		DVMValue src;
+	};
+
 	/**
 	 * @brief Represents a meta-type operations that require special handling.
 	 * These operations don't map directly to DVM opcodes but are lowered
@@ -133,6 +142,8 @@ namespace compiler::backend_vm::internal {
 	 */
 	struct JumpOperation {
 		DVMLabel target;
+
+		std::vector<lir::ScopeFlag> scope_flags;
 	};
 
 	/**
@@ -142,6 +153,8 @@ namespace compiler::backend_vm::internal {
 		DVMValue condition;
 		DVMLabel true_target;
 		DVMLabel false_target;
+
+		std::vector<lir::ScopeFlag> scope_flags;
 	};
 
 	/**
@@ -149,6 +162,8 @@ namespace compiler::backend_vm::internal {
 	 */
 	struct ReturnOperation {
 		base::Optional<DVMValue> value;  ///< Empty optional on void returns.
+
+		std::vector<lir::ScopeFlag> scope_flags;
 	};
 
 	/**
@@ -165,6 +180,8 @@ namespace compiler::backend_vm::internal {
 		ComparisonOperation,
 		CallOperation,
 		AddressOfOperation,
+		BoxAllocOperation,
+		BoxFreeOperation,
 		CastOperation,
 		MetaOperation,
 		JumpOperation,

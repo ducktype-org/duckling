@@ -223,4 +223,29 @@ namespace vm::api {
 		    .doRequest(SupervisorRequest(pid, request::AttachStatusListener{ .listener = listener }))
 		    .transform(ignoreResponse);
 	}
+
+	std::expected<void, ApiError> setBreakpoint(
+		PID pid, base::StrID function_name, u64 instruction_index, bool enable
+	) {
+		return Supervisor::get()
+		    .doRequest(SupervisorRequest(
+				pid,
+				request::SetBreakpoint{ .function_name     = function_name,
+		                                .instruction_index = instruction_index,
+		                                .enable            = enable }
+			))
+		    .transform(ignoreResponse);
+	}
+
+	std::expected<response::CodePosition, ApiError> mapFileLineToCodeCollectionPosition(
+		PID pid, fs::File file, usize line_number
+	) {
+		return Supervisor::get()
+		    .doRequest(SupervisorRequest(
+				pid,
+				request::MapFileLineToCodeCollectionPosition{ .file        = std::move(file),
+		                                                      .line_number = line_number }
+			))
+		    .and_then(mapOrWrongResponse<response::CodePosition>);
+	}
 }

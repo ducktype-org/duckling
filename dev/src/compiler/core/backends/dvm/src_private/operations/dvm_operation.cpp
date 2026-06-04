@@ -308,7 +308,8 @@ namespace compiler::backend_vm::internal {
 				instr.arguments.size()
 			);
 			return JumpOperation{
-				.target = lower_arg(instr.arguments[0]).get<DVMLabel>(),
+				.target      = lower_arg(instr.arguments[0]).get<DVMLabel>(),
+				.scope_flags = instr.scope_flags,
 			};
 		}
 		case Branch: {
@@ -321,6 +322,7 @@ namespace compiler::backend_vm::internal {
 				.condition    = lower_arg(instr.arguments[0]),
 				.true_target  = lower_arg(instr.arguments[1]).get<DVMLabel>(),
 				.false_target = lower_arg(instr.arguments[2]).get<DVMLabel>(),
+				.scope_flags  = instr.scope_flags,
 			};
 		}
 		case ReturnValue:
@@ -332,9 +334,35 @@ namespace compiler::backend_vm::internal {
 			);
 
 			return ReturnOperation{
-				.value = instr.arguments.size() == 1 ? lower_arg(instr.arguments[0])
-				                                     : base::Optional<DVMValue>(),
+				.value       = instr.arguments.size() == 1 ? lower_arg(instr.arguments[0])
+				                                           : base::Optional<DVMValue>(),
+				.scope_flags = instr.scope_flags,
 			};
+		}
+		case BoxAlloc: {
+			CORE_ASSERT(
+				instr.arguments.size() == 1,
+				"BoxAlloc operation expects 1 argument, got: ",
+				instr.arguments.size()
+			);
+			return BoxAllocOperation{
+				.src  = lower_arg(instr.arguments[0]),
+				.dest = lower_opt_dest(),
+			};
+		}
+		case BoxFree: {
+			CORE_ASSERT(
+				instr.arguments.size() == 1,
+				"BoxAlloc operation expects 1 argument, got: ",
+				instr.arguments.size()
+			);
+			return BoxFreeOperation{
+				.src = lower_arg(instr.arguments[0]),
+			};
+		}
+		case Nop: {
+			// No instruction to generate, just skip.
+			return NoOperation{};
 		}
 		default:
 			CORE_PANIC("Invalid operation: ", base::enumToStr(operation));

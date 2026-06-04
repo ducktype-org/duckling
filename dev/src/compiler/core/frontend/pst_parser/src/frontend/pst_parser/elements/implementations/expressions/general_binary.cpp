@@ -44,7 +44,7 @@ namespace pst::expr {
 			auto out = makeBox<GeneralBinary>(state, op->type);
 
 			PARSE().with(&out->left, parseRecursive, op->lhs);
-			PARSE().one(op->type);
+			PARSE().one(&out->op);
 			PARSE().with(&out->right, parseRecursive, op->rhs);
 
 			PST_RETURN out;

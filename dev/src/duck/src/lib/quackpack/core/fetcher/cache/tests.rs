@@ -6,6 +6,7 @@ use super::*;
 use crate::quackpack::core::Version;
 use crate::quackpack::core::fetcher::types::PackageWithUrl;
 use crate::quackpack::schemas::registry;
+use crate::quackpack::util::to_url::ToUrl;
 
 fn create_sample_metadata() -> registry::Manifest {
     const JSON: &str = r#"{
@@ -45,7 +46,7 @@ fn create_example_package() -> PackageWithUrl {
     PackageWithUrl {
         id: "quackpack".into(),
         version: Version::new(1, 2, 3),
-        url: Url::parse("https://localhost:9001").unwrap(),
+        url: "https://localhost:9001".to_url().unwrap().into(),
     }
 }
 

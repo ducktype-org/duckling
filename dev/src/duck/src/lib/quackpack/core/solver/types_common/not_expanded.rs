@@ -1,20 +1,18 @@
 use std::collections::{HashMap, HashSet};
+use std::hash::Hash;
 use std::ops::Deref;
-use std::path::PathBuf;
 use std::sync::{Mutex, OnceLock};
 
-use url::Url;
-
-use crate::quackpack::core::solver::types_common::expanded::InternedExpandedLocation;
 use crate::quackpack::core::solver::types_common::{ExpandedLocation, ExpandedPackage};
 use crate::quackpack::core::version::CompatibilityCheck;
-use crate::quackpack::core::{BranchOrTag, Dependency, Source, Version};
+use crate::quackpack::core::{Dependency, GitReference, SourceKind, Version};
+use crate::quackpack::util::interned_url::InternedUrl;
 use crate::util::extract::Extract;
 use crate::{QuackResult, StrId, qp_bail_internal};
 
 static INTERNED_LOCATION_CACHE: OnceLock<Mutex<HashSet<&'static Location>>> = OnceLock::new();
 
-#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy)]
 /// Interned version of [`Location`].
 pub struct InternedLocation {
     inner: &'static Location,
@@ -55,59 +53,51 @@ impl AsRef<Location> for InternedLocation {
     }
 }
 
-#[derive(Clone, Eq, Hash, PartialEq)]
+impl PartialEq for InternedLocation {
+    fn eq(&self, other: &Self) -> bool {
+        // If we have two equal InternedLocations, their underlying &Location is equal.
+        // That &Location is stored exactly once in INTERNED_LOCATION_CACHE, so we can compare by comparing pointers,
+        // which is faster.
+        std::ptr::eq(self.inner, other.inner)
+    }
+}
+
+impl Eq for InternedLocation {}
+
+impl Hash for InternedLocation {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        std::ptr::hash(self.inner, state);
+    }
+}
+
+#[derive(Debug, Clone, Eq, Hash, PartialEq)]
 pub enum Location {
     Registry {
-        url: Url,
+        url: InternedUrl,
         real_name: StrId,
     },
     Git {
-        url: Url,
-        branch_or_tag: BranchOrTag,
-        rev: Option<StrId>,
+        url: InternedUrl,
+        reference: GitReference,
     },
     Local {
-        path: PathBuf,
+        path: InternedUrl,
     },
-}
-
-impl std::fmt::Debug for Location {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Registry { url, real_name } => f
-                .debug_struct("Registry")
-                .field("url", &url.as_str())
-                .field("real_name", real_name)
-                .finish(),
-            Self::Git {
-                url,
-                branch_or_tag,
-                rev,
-            } => f
-                .debug_struct("Git")
-                .field("url", &url.as_str())
-                .field("branch_or_tag", branch_or_tag)
-                .field("rev", rev)
-                .finish(),
-            Self::Local { path } => f.debug_struct("Local").field("path", path).finish(),
-        }
-    }
 }
 
 impl From<&Dependency> for Location {
     fn from(dependency: &Dependency) -> Self {
-        match &dependency.source().as_ref() {
-            Source::Registry(registry) => Self::Registry {
-                url: registry.url().clone(),
+        let source = dependency.source();
+        let url = source.url();
+        match source.kind() {
+            SourceKind::Registry => Self::Registry {
+                url,
                 real_name: dependency.name(),
             },
-            Source::Local(local) => Self::Local {
-                path: local.absolute().to_path_buf(),
-            },
-            Source::Git(git) => Self::Git {
-                url: git.url().clone(),
-                branch_or_tag: git.branch_or_tag().clone(),
-                rev: git.rev(),
+            SourceKind::Local => Self::Local { path: url },
+            SourceKind::Git(reference) => Self::Git {
+                url,
+                reference: *reference,
             },
         }
     }
@@ -129,16 +119,15 @@ impl Location {
     pub fn canonical_unexpansion(expanded_loc: &ExpandedLocation) -> Self {
         match expanded_loc {
             ExpandedLocation::Registry { url, real_name } => Self::Registry {
-                url: url.clone(),
+                url: *url,
                 real_name: *real_name,
             },
             ExpandedLocation::Git { url, commit } => Self::Git {
-                url: url.clone(),
-                branch_or_tag: BranchOrTag::Default,
-                rev: Some(*commit),
+                url: *url,
+                reference: GitReference::Rev(commit.as_str().into()),
             },
             ExpandedLocation::Local { absolute_path } => Self::Local {
-                path: absolute_path.clone(),
+                path: *absolute_path,
             },
         }
     }
@@ -183,7 +172,7 @@ impl Package {
     /// Create the appropriate [`ExpandedPackage`] from this [`Package`].
     pub fn resolve(
         self,
-        location_resolver: &HashMap<InternedLocation, InternedExpandedLocation>,
+        location_resolver: &HashMap<InternedLocation, ExpandedLocation>,
     ) -> Option<ExpandedPackage> {
         location_resolver
             .get(&self.location)

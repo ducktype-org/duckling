@@ -304,13 +304,16 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		const Ref<dia_int::Logger> getLogger() const {
+		CRef<dia_int::Logger> getLogger() const {
 			return file->getIntLogger();
 		}
 
-		[[nodiscard]] bool hasErrors() const {
-			return file->getLogger()->bad() || file->getIntLogger()->hasErrors();
+		[[nodiscard]]
+		Ref<dia_int::Logger> getLoggerMut() {
+			return file->getIntLogger();
 		}
+
+		[[nodiscard]] bool hasErrors() const { return file->getIntLogger()->hasErrors(); }
 
 		[[nodiscard]]
 		Ref<tokenizer::TokenSource> getFile() const {

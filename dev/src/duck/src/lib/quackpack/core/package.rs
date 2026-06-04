@@ -3,10 +3,11 @@ use std::fmt;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
+use crate::QuackResult;
 use crate::quackpack::core::Manifest;
-use crate::quackpack::core::storage::freeze::FreezeDep;
+use crate::quackpack::core::compile::artifacts_layout::ArtifactsLayout;
+use crate::quackpack::core::identity::{Identity, Origin};
 use crate::quackpack::schemas::manifest::Manifest as ManifestSchema;
-use crate::util::file_locks::FileLockManager;
 
 #[derive(Clone)]
 /// High-level abstraction over a package we are currently working on.
@@ -29,7 +30,7 @@ impl Package {
         root: PathBuf,
         manifest_path: PathBuf,
     ) -> Self {
-        let artifacts_dir = FileLockManager::new(root.join(".duck_build"));
+        let artifacts_dir = ArtifactsLayout::new(root.join(".duck_build"));
         let source_directory = root.join("src");
         Self {
             inner: Arc::new(PackageInner {
@@ -75,13 +76,15 @@ impl Package {
     }
 
     /// Get the path to the artifacts directory.
-    pub fn artifacts_directory(&self) -> &FileLockManager {
+    pub fn artifacts_directory(&self) -> &ArtifactsLayout {
         &self.inner.artifacts_dir
     }
 
-    /// Convert this package to a [`FreezeDep`].
-    pub fn as_freeze_dep(&self) -> FreezeDep {
-        FreezeDep::new(self.manifest().name(), self.manifest().version())
+    /// Convert this package to a [`Identity`].
+    /// This will always (try to) return an [`Identity`] with [`Origin::for_local`] origin.
+    pub fn as_a_local_identity(&self) -> QuackResult<Identity> {
+        let origin = Origin::for_local(self.root_directory())?;
+        Ok(Identity::new(self.manifest().name(), origin))
     }
 
     /// Is this the global package.
@@ -96,7 +99,7 @@ struct PackageInner {
     manifest: Manifest,
     root: PathBuf,
     manifest_path: PathBuf,
-    artifacts_dir: FileLockManager,
+    artifacts_dir: ArtifactsLayout,
     source_dir: PathBuf,
 }
 
@@ -106,7 +109,7 @@ impl fmt::Debug for PackageInner {
             .field("manifest", &self.manifest)
             .field("root", &self.root)
             .field("manifest_path", &self.manifest_path)
-            .field("artifacts_dir", &self.artifacts_dir)
+            .field("artifacts_dir", &self.artifacts_dir.root_directory())
             .field("source_dir", &self.source_dir)
             .finish_non_exhaustive()
     }

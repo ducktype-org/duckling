@@ -335,7 +335,8 @@ namespace compiler::helios::code {
 
 			switch (call_expr->getType()) {
 			case lexer::Token::Round: {
-				const auto lookup_qresult = h_interface.lookup(query_ctx, ident->getName().value);
+				const auto lookup_qresult
+					= h_interface.lookup(query_ctx, ident->getName().unlock(query_ctx)->unwrap());
 				UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup_qresult);
 				// @TODO: #1412 fix dealias
 				const auto callees_q_result = getCallableCandidates(lookup_result->leaves);
@@ -347,7 +348,9 @@ namespace compiler::helios::code {
 			}
 			case lexer::Token::Square: {
 				const auto lookup_result = h_interface.lookupExpectUnique(
-					ident->getStablePosition(), query_ctx, ident->getName().value
+					ident->getStablePosition(),
+					query_ctx,
+					ident->getName().unlock(query_ctx)->unwrap()
 				);
 				UNPACK_QRESULT_MOVE(const auto& sym_list =, lookup_result);
 
@@ -457,7 +460,7 @@ namespace compiler::helios::code {
 			// identifier it will return ChainContext with namespace or expr.
 			auto        scope         = query_ctx.query<QueryPrimaryCodeScopeFor>({ ident });
 			const auto& lookup_result = HInterface::ofScopeWithParents(scope).lookupExpectUnique(
-				ident->getStablePosition(), query_ctx, ident->getName().value
+				ident->getStablePosition(), query_ctx, ident->getName().unlock(query_ctx)->unwrap()
 			);
 			// @TODO: #1412 handle dealias expressions:
 			UNPACK_QRESULT_MOVE(const auto& sym_list =, lookup_result);
@@ -541,8 +544,9 @@ namespace compiler::helios::code {
 		auto processPSTExpr(base::Box<Expr> current_expr, pst::Access<pst::expr::Access> expr_access)
 			-> query::QResult<ChainState> {
 			auto current_expr_type = current_expr->expression_type.getType();
-			auto lookup_qresult    = HInterface::ofTypeInstance(current_expr_type)
-			                          .lookup(query_ctx, expr_access->getName().value);
+			auto lookup_qresult
+				= HInterface::ofTypeInstance(current_expr_type)
+			          .lookup(query_ctx, expr_access->getName().unlock(query_ctx)->unwrap());
 			UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup_qresult);
 			const auto& looked_up_symbols_result = lookup_result->getAsSingle();
 			// Note that if multiple symbols were found, it results in an error and enters
@@ -588,14 +592,19 @@ namespace compiler::helios::code {
 							"Unsupported symbol kind in type lookup for symbol: ",
 							prettyDebugPrint(sym, query_ctx)
 						),
-						expr_access->getName().position
+						expr_access->getName().unlock(query_ctx)->getSourcePosition().unlock(
+							query_ctx
+						)
 					));
 					// @TODO: #1412 Support lookup of other kinds of symbols in classes.
 					return query::Failed();
 				}
 				variant_case_novalue(errors::Ambiguity) {
 					query_ctx.logInt(makeBox<dia_int::PlaceholderError>(
-						"Accessed value is ambiguous.", expr_access->getName().position
+						"Accessed value is ambiguous.",
+						expr_access->getName().unlock(query_ctx)->getSourcePosition().unlock(
+							query_ctx
+						)
 					));
 					return query::Failed();
 				}
@@ -606,7 +615,10 @@ namespace compiler::helios::code {
 					// https://www.scala-lang.org/api/current/scala/Dynamic.html
 
 					query_ctx.logInt(makeBox<dia_int::PlaceholderError>(
-						"Accessed value not found.", expr_access->getName().position
+						"Accessed value not found.",
+						expr_access->getName().unlock(query_ctx)->getSourcePosition().unlock(
+							query_ctx
+						)
 					));
 					return query::Failed();
 				}
@@ -622,11 +634,12 @@ namespace compiler::helios::code {
 		 */
 		auto processPSTExpr(SymID namespace_like_symbol, pst::Access<pst::expr::Access> expr_access)
 			-> query::QResult<ChainState> {
-			const auto& lookup_result
-				= HInterface::ofSymbol(namespace_like_symbol)
-			          .lookupExpectUnique(
-						  expr_access->getStablePosition(), query_ctx, expr_access->getName().value
-					  );
+			const auto& lookup_result = HInterface::ofSymbol(namespace_like_symbol)
+			                                .lookupExpectUnique(
+												expr_access->getStablePosition(),
+												query_ctx,
+												expr_access->getName().unlock(query_ctx)->unwrap()
+											);
 			// @TODO: #1412 handle dealias expressions:
 			UNPACK_QRESULT_MOVE(const auto& sym_list =, lookup_result);
 			auto whole_expr_origin
@@ -649,20 +662,27 @@ namespace compiler::helios::code {
 			switch (call_expr->getType()) {
 			case lexer::Token::Round: {
 				auto current_expr_type = current_expr->expression_type.getType();
-				auto lookup_qresult    = HInterface::ofTypeInstance(current_expr_type)
-				                          .lookup(query_ctx, expr_access->getName().value);
+				auto lookup_qresult
+					= HInterface::ofTypeInstance(current_expr_type)
+				          .lookup(query_ctx, expr_access->getName().unlock(query_ctx)->unwrap());
 				UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup_qresult);
 
 				// @TODO: #1412 fix dealias
 				const auto callees_q_result = getCallableCandidates(lookup_result->leaves);
 				UNPACK_QRESULT_MOVE(const auto& callees =, callees_q_result);
 
-				auto self_expr_ref = makeBox<RefOfExpr>(
-					query_ctx, current_expr->origin.generatedFrom(), std::move(current_expr)
-				);
+				// The self expression may be passed by copy or by reference,
+				// depending on whether the type is simple or composite, respectively.
+				auto self_expr = current_expr->expression_type.getType().isSimple()
+				                   ? std::move(current_expr)
+				                   : Box<Expr>(makeBox<RefOfExpr>(
+										 query_ctx,
+										 current_expr->origin.generatedFrom(),
+										 std::move(current_expr)
+									 ));
 
 				auto res = processMethodCall(
-					query_ctx, callees, expr_access, call_expr, std::move(self_expr_ref)
+					query_ctx, callees, expr_access, call_expr, std::move(self_expr)
 				);
 				UNPACK_QRESULT_MOVE(base::Box<Expr> expr =, res);
 				return ChainState::ofExpr(std::move(expr));
@@ -705,8 +725,9 @@ namespace compiler::helios::code {
 		) -> query::QResult<ChainState> {
 			switch (call_expr->getType()) {
 			case lexer::Token::Round: {
-				auto lookup_qresult = HInterface::ofSymbol(namespace_like_symbol)
-				                          .lookup(query_ctx, expr_access->getName().value);
+				auto lookup_qresult
+					= HInterface::ofSymbol(namespace_like_symbol)
+				          .lookup(query_ctx, expr_access->getName().unlock(query_ctx)->unwrap());
 				UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup_qresult);
 				// @TODO: #1412 fix dealias
 				auto callees_q_result = getCallableCandidates(lookup_result->leaves);
@@ -722,7 +743,7 @@ namespace compiler::helios::code {
 				                         .lookupExpectUnique(
 											 expr_access->getStablePosition(),
 											 query_ctx,
-											 expr_access->getName().value
+											 expr_access->getName().unlock(query_ctx)->unwrap()
 										 );
 				UNPACK_QRESULT_MOVE(const auto& sym_list =, lookup_result);
 

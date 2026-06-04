@@ -3,6 +3,7 @@
  */
 
 #include <ctv/ctv.hpp>
+#include <helios/queries/function_queries.hpp>
 #include <helios/queries/queries.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
@@ -29,7 +30,6 @@ public:
 		TESTER_ADD_TEST(simpleTest);
 		TESTER_ADD_TEST(simpleVarTest);
 		TESTER_ADD_TEST(testTerminatorSuccessors);
-		TESTER_ADD_TEST(mockLifetimeAnalysisTest);
 		TESTER_ADD_TEST(simpleBools);
 		TESTER_ADD_TEST(simpleFunctionCalls);
 		TESTER_ADD_TEST(numericLiteralsTest);
@@ -40,7 +40,7 @@ public:
 		TESTER_ADD_TEST(boxesTest);
 		TESTER_ADD_TEST(staticArraysTest);
 		TESTER_ADD_TEST(dynamicArraysTest);
-		TESTER_ADD_TEST(moveValidation);
+		TESTER_ADD_TEST(tupleTest);
 	}
 
 private:
@@ -202,15 +202,16 @@ private:
 		withContextDo([&](query::Context& ctx) {
 			auto& unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
 			auto& functions = unit.functions;
-			ASSERT_EQUAL(3, functions.size());
-			ASSERT_EQUAL(base::StrID("foo"), functions.at(0)->declaration->original_name);
+			ASSERT_EQUAL_PRINT(3, functions.size());
+			ASSERT_EQUAL_PRINT(base::StrID("foo"), functions.at(0)->declaration->original_name);
 
 			auto& foo_mir
 				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(0) })->valueOrThrow();
 
-			ASSERT_EQUAL(foo_mir.name, base::StrID("foo"));
-			ASSERT_EQUAL(foo_mir.block_order.size(), 7);
-			ASSERT_EQUAL(foo_mir.local_list.size(), 5);
+
+			ASSERT_EQUAL_PRINT(foo_mir.name, base::StrID("foo"));
+			ASSERT_EQUAL_PRINT(foo_mir.block_order.size(), 7);
+			ASSERT_EQUAL_PRINT(foo_mir.local_list.size(), 5);
 
 			auto get_block_terminator
 				= [&](u64 block_id) { return foo_mir.blocks[BlockID(block_id)].terminator; };
@@ -233,28 +234,6 @@ private:
 
 			ASSERT_EQUAL(get_block_successors(6), BlockList{ BlockID{ 5 } });
 			ASSERT_EQUAL(get_block_successors(7), BlockList{ BlockID{ 5 } });
-		});
-	}
-
-	void mockLifetimeAnalysisTest() {
-		// since lifetime analysis is a mock implementation, we don't
-		// yet test them with much effort.
-		// @TODO: add better tests once proper lifetimes implementation is in place
-		// But we do want to make sure, that it compiles and does not throw:
-
-		auto [module, scope] = getModule(fs::File(path("modules/mir_var_test")));
-
-		withContextDo([&](query::Context& ctx) {
-			auto& unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
-			auto& functions = unit.functions;
-			ASSERT_EQUAL(3, functions.size());
-			ASSERT_EQUAL(base::StrID("foo"), functions.at(0)->declaration->original_name);
-
-			auto& foo_mir
-				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(0) })->valueOrThrow();
-
-			ASSERT_EQUAL(foo_mir.name, base::StrID("foo"));
-			ASSERT_EQUAL(foo_mir.local_list.size(), 5);
 		});
 	}
 
@@ -461,7 +440,7 @@ private:
 
 			auto& should_add_retvoid_fun
 				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(1) })->valueOrThrow();
-			should_add_retvoid_fun.validateBlockIDs();
+			ASSERT_TRUE(should_add_retvoid_fun.validateBlockIDs().isOk());
 			std::stringstream foo_str;
 			should_add_retvoid_fun.debugPrint(foo_str);
 
@@ -472,7 +451,7 @@ private:
 
 			auto& unreachable_end_fun
 				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(2) })->valueOrThrow();
-			unreachable_end_fun.validateBlockIDs();
+			ASSERT_TRUE(unreachable_end_fun.validateBlockIDs().isOk());
 			unreachable_end_fun.debugPrint(foo_str);
 			ASSERT_EQUAL(unreachable_end_fun.block_order.size(), 7);
 
@@ -898,125 +877,39 @@ private:
 		});
 	}
 
-	void moveValidation() {
-		// @note This test is very fragile and may require hotfixes even after unrelated changes.
-		// Proper tests can be written once 'move' is implemented. It should contain usage of 'if',
-		// 'else', 'break', 'continue', 'switch' etc..
-		auto [module, scope] = getModule(fs::File(path("modules/move_validation")));
+	void tupleTest() {
+		auto [module, scope] = getModule(fs::File(path("modules/tuples")));
 
 		withContextDo([&](query::Context& ctx) {
 			auto& unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
-			auto& functions = unit.functions;
+			auto& hout_func = unit.functions.at(0);
 
-			for (CRef<compiler::helios::HOUTFunction> fun: functions) {
-				if (fun->declaration->original_name.str() == "good1") {
-					auto& mir_rep_good1 = (compiler::mir::Function&) ctx
-					                          .query<compiler::mir::LowerToMIRFunction>({ fun })
-					                          ->valueOrThrow();
+			auto& mir_func = (compiler::mir::Function&) ctx
+			                     .query<compiler::mir::LowerToMIRFunction>({ hout_func })
+			                     ->valueOrThrow();
 
+			bool found_tuple_ctor_call = false;
 
-					CRef<compiler::mir::MIRLocal> tmp(mir_rep_good1.local_list[2]);
+			using namespace compiler::mir;
 
-					mir_rep_good1.blocks[mir_rep_good1.block_order[0]]
-						.instructions[4]
-						.flags.emplace_back(compiler::mir::OperationFlag::Flag::Move, tmp);
-
-					ASSERT_TRUE(validateFunction(ctx, mir_rep_good1).isOk());
-				}
-
-				if (fun->declaration->original_name.str() == "good2") {
-					auto& mir_rep_good2 = (compiler::mir::Function&) ctx
-					                          .query<compiler::mir::LowerToMIRFunction>({ fun })
-					                          ->valueOrThrow();
-
-					CRef<compiler::mir::MIRLocal> b_var(mir_rep_good2.local_list[2]);
-					compiler::mir::Instruction&   assignment
-						= mir_rep_good2.blocks[mir_rep_good2.block_order[1]].instructions[0];
-
-					// If this test fails use the following to find the correct Instruction.
-					// mir_rep_good2.debugPrint(std::cerr);
-					// assignment.debugPrint(std::cerr);
-					assertEqual(
-						compiler::mir::Operation::Assign,
-						assignment.operation,
-						"Fragile test, please fix (good2, assignment)"
-					);
-					assertTrue(
-						assignment.arguments[0].isLocal(), "Fragile test, please fix (good2, local)"
-					);
-					assignment.flags.emplace_back(compiler::mir::OperationFlag::Flag::Move, b_var);
-
-					ASSERT_TRUE(validateFunction(ctx, mir_rep_good2).isOk());
-				}
-
-				if (fun->declaration->original_name.str() == "good3") {
-					auto& mir_rep_good3 = (compiler::mir::Function&) ctx
-					                          .query<compiler::mir::LowerToMIRFunction>({ fun })
-					                          ->valueOrThrow();
-
-					CRef<compiler::mir::MIRLocal> tmp(mir_rep_good3.local_list[2]);
-
-					mir_rep_good3.blocks[mir_rep_good3.block_order[2]]
-						.instructions[2]
-						.flags.emplace_back(compiler::mir::OperationFlag::Flag::Move, tmp);
-
-					ASSERT_TRUE(validateFunction(ctx, mir_rep_good3).isOk());
-				}
-
-				if (fun->declaration->original_name.str() == "good4") {
-					auto& mir_rep_good4 = (compiler::mir::Function&) ctx
-					                          .query<compiler::mir::LowerToMIRFunction>({ fun })
-					                          ->valueOrThrow();
-
-					CRef<compiler::mir::MIRLocal> tmp(mir_rep_good4.local_list[2]);
-
-					mir_rep_good4.blocks[mir_rep_good4.block_order[1]]
-						.instructions[2]
-						.flags.emplace_back(compiler::mir::OperationFlag::Flag::Move, tmp);
-
-					ASSERT_TRUE(validateFunction(ctx, mir_rep_good4).isOk());
-				}
-
-				if (fun->declaration->original_name.str() == "bad1") {
-					auto& mir_rep_bad1 = (compiler::mir::Function&) ctx
-					                         .query<compiler::mir::LowerToMIRFunction>({ fun })
-					                         ->valueOrThrow();
-
-					CRef<compiler::mir::MIRLocal> tmp(mir_rep_bad1.local_list[2]);
-
-					mir_rep_bad1.blocks[mir_rep_bad1.block_order[0]]
-						.instructions[2]
-						.flags.emplace_back(compiler::mir::OperationFlag::Flag::Move, tmp);
-
-					ASSERT_TRUE(validateFunction(ctx, mir_rep_bad1).isBad());
-				}
-
-				if (fun->declaration->original_name.str() == "bad2") {
-					auto& mir_rep_bad2 = (compiler::mir::Function&) ctx
-					                         .query<compiler::mir::LowerToMIRFunction>({ fun })
-					                         ->valueOrThrow();
-
-					CRef<compiler::mir::MIRLocal> tmp(mir_rep_bad2.local_list[2]);
-					mir_rep_bad2.blocks[mir_rep_bad2.block_order[1]]
-						.instructions[0]
-						.flags.emplace_back(compiler::mir::OperationFlag::Flag::Move, tmp);
-
-					ASSERT_TRUE(validateFunction(ctx, mir_rep_bad2).isBad());
-				}
-
-				if (fun->declaration->original_name.str() == "bad3") {
-					auto& mir_rep_bad3 = (compiler::mir::Function&) ctx
-					                         .query<compiler::mir::LowerToMIRFunction>({ fun })
-					                         ->valueOrThrow();
-
-					CRef<compiler::mir::MIRLocal> tmp(mir_rep_bad3.local_list[2]);
-					mir_rep_bad3.blocks[mir_rep_bad3.block_order[1]]
-						.instructions[0]
-						.flags.emplace_back(compiler::mir::OperationFlag::Flag::Move, tmp);
-
-					ASSERT_TRUE(validateFunction(ctx, mir_rep_bad3).isBad());
+			for (const auto& block_id: mir_func.block_order) {
+				for (const auto& instr: mir_func.blocks[block_id].instructions) {
+					switch (instr.operation) {
+					case Operation::Call: {
+						auto  ctor_id = instr.arguments.at(0).get<MIRFunctionLiteral>().helios_id;
+						auto& fun_decl
+							= ctx.query<compiler::helios::QueryDeclOfFun>(ctor_id)->valueOrThrow();
+						if (fun_decl.return_type.getType().getKind() == compiler::tsh::Kind::Tuple)
+							found_tuple_ctor_call = true;
+						break;
+					}
+					default:
+						break;
+					}
 				}
 			}
+
+			ASSERT_TRUE(found_tuple_ctor_call);
 		});
 	}
 };

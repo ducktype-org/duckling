@@ -6,9 +6,10 @@
 
 #pragma once
 
-#include "../backend_type.hpp"
-
+#include <archiver/archive.hpp>
 #include <debug_info/debug_info.hpp>
+#include <driver/backend_type.hpp>
+#include <driver/task/task.hpp>
 #include <frontend/module_tree/module_id.hpp>
 #include <global_state/packages.hpp>
 #include <linker/link.hpp>
@@ -17,22 +18,44 @@
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_result.hpp>
 
+#include <string>
+#include <vector>
+
 namespace compiler::driver {
 
 	/**
-	 * Temporary interface for compiling the entire package into a single binary.
-	 * It compiler every module into the .o/.dbc files (via queries),
-	 * and also for LLVM backend it links them into a single binary.
+	 * Interface for compiling the packages defined in global_state::packages.
+	 * Each package is compiled according to its compilation strategy defined in the
+	 * PackageCompilationTask:
+	 * - DVM strategy: compiles each module into .dbc files, no linking step.
+	 * - Native strategy: compiles each module into .o files, then links them into a final
+	 * executable using the specified linking options.
+	 * - Lib strategy: compiles each module into .o files, then archives them into a final static
+	 * library.
+	 * - LLVM strategy: compiles each module into .o files only
 	 *
-	 * @brief The final link step for creating the package executable.
+	 * @brief The final link/archive step for producing the package artifact.
 	 * \parallel Must be serialized or guarded to avoid overwriting/colliding outputs when packaging
 	 * concurrently.
 	 */
-	base::OkBad compileEntirePackage(
-		const global_state::PackageInfo& package_info,
-		BackendType                      backend,
-		const linker::LinkingOptions&    linking_options
-	);
+	base::OkBad compilePackages(const std::vector<PackageCompilationTask>& tasks);
+
+	/**
+	 * @brief Compile a single package.
+	 * In normal compilation mode, compilePackages should be used
+	 * This function is only for testing purpose
+	 */
+	inline base::OkBad compileEntirePackage(
+		const compiler::frontend::packages::PackageInfo& package_info,
+		const BuildTarget&                               build_target
+	) {
+		return compilePackages({
+			PackageCompilationTask{
+				.root_module  = package_info.getRootModule().illegalAccess().getID(),
+				.build_target = build_target,
+			},
+		});
+	}
 
 	struct RunOutput final {
 		int exit_code;
@@ -82,7 +105,7 @@ namespace compiler::driver {
 		base::Bit256 queryStablePerfectHash() const;
 	};
 
-	struct CompileModuleResult {
+	struct CompileModuleResult final {
 		artifacts::FileArtifact               object_art;
 		base::Optional<debug_info::DebugInfo> debug_info;
 	};

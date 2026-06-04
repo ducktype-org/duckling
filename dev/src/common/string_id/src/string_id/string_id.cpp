@@ -122,9 +122,9 @@ namespace base {
 
 	StrID::StrID(const char* data): StrID(base::RawView(data)) {}
 
-	StrID::StrID(const std::string& data): StrID(data.c_str()) {}
-
 	StrID::StrID(char character): StrID(std::string(1, character).c_str()) {}
+
+	StrID::StrID(std::string_view data): StrID(base::RawView{ std::as_bytes(std::span{ data }) }) {}
 
 	base::RawView StrID::view() const {
 		CORE_ASSERT(id.isGood(), "StrID is bad");

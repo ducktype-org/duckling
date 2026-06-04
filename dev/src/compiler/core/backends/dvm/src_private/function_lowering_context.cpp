@@ -141,7 +141,11 @@ DVMPlace FunctionLoweringContext::forceToPlace(
 
 	if (value.is<DVMImmediate>()) {
 		DVMPlace temp = pushTempLocal(value.getType(), name_hint);
-		pushInstruction({ vm::code::builders::OpKind::mov, temp.asArgument(), value.asArgument() });
+		pushInstruction({
+			vm::code::builders::OpKind::mov,
+			temp.asArgument(),
+			value.asArgument(),
+		});
 		return temp;
 	}
 	CORE_UNREACHABLE();
@@ -153,6 +157,10 @@ void FunctionLoweringContext::maybeStoreResult(
 	// Do nothing, if the dest_place is empty.
 	if_opt_none(maybe_dest_place) return;
 	const DVMPlace& dest_place = maybe_dest_place.value();
+
+	// If the source value is already in the destination place, we don't need to do anything.
+	if (DVMValue{ dest_place } == src_value) return;
+
 
 	// If a place is direct we just move the value into it.
 	if (dest_place.isDirect()) {
@@ -168,11 +176,59 @@ void FunctionLoweringContext::maybeStoreResult(
 		                     ? DVMValue{ forceToPlace(src_value, "store_tmp") }
 		                     : src_value;
 
-		// Store the value in memory.
-		pushInstruction(
-			{ vm::code::builders::OpKind::store, dest_place.asArgument(), src_arg.asAnyArgument() }
-		);
+		switch (dest_place.getAccessKind()) {
+		case DVMPlace::AccessKind::Pointer:
+			// Store the value in memory.
+			pushInstruction({ vm::code::builders::OpKind::store,
+			                  dest_place.asArgument(),
+			                  src_arg.asAnyArgument() });
+			break;
+		case DVMPlace::AccessKind::DynTablePointer: {
+			// For dynamic table pointer we need to use the extended store with index 0, as the
+			// pointer points to the first element of the table.
+			auto     u64_zero = DVMImmediate::u64(0);
+			DVMPlace idx_temp = pushTempLocal(u64_zero.type, "index_tmp");
+			pushInstruction({ vm::code::builders::OpKind::mov, idx_temp, u64_zero });
+			pushInstruction({ vm::code::builders::OpKind::dynTableStore,
+			                  dest_place.asArgument(),
+			                  src_arg.asAnyArgument(),
+			                  idx_temp });
+			break;
+		}
+		case DVMPlace::AccessKind::CPointer:
+			// @TODO: #2745 fix this
+			CORE_PANIC("Storing to CPointer is not supported yet");
+			break;
+		default:
+			break;
+		}
 	}
+}
+
+DVMPlace FunctionLoweringContext::loadFromPlace(
+	const DVMPlace& place, const vm::code::TypeOfData& pointee_type
+) {
+	DVMPlace temp = pushTempLocal(pointee_type, "deref_tmp");
+	switch (place.getAccessKind()) {
+	case DVMPlace::AccessKind::Pointer:
+		pushInstruction({ vm::code::builders::OpKind::load, temp.asAnyArgument(), place });
+		break;
+	case DVMPlace::AccessKind::DynTablePointer: {
+		auto     u64_value = DVMImmediate::u64(0);
+		DVMPlace idx_temp  = pushTempLocal(u64_value.type, "index_tmp");
+		pushInstruction({ vm::code::builders::OpKind::mov, idx_temp, u64_value });
+		pushInstruction(
+			{ vm::code::builders::OpKind::dynTableLoad, temp.asAnyArgument(), place, idx_temp }
+		);
+		break;
+	}
+	case DVMPlace::AccessKind::CPointer:
+		// @TODO: #2745 fix this
+		CORE_PANIC("Dereferencing CPointer is not supported yet");
+	default:
+		CORE_PANIC("loadFromPlace called on a place with non-pointer access kind");
+	}
+	return temp;
 }
 
 DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
@@ -205,27 +261,36 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 					= std::get<tsl::PointerTypeLayout>(current_layout->getVariant());
 				auto pointee_layout = current_pointer_layout.getPointee();
 
+				auto access_for_layout = [](const tsl::PointerTypeLayout& pointer_layout) {
+					switch (pointer_layout.getPointerKind()) {
+					case tsl::PointerTypeLayout::PointerKind::SinglePointer:
+						return DVMPlace::AccessKind::Pointer;
+					case tsl::PointerTypeLayout::PointerKind::ManyPointer:
+						return DVMPlace::AccessKind::DynTablePointer;
+					case tsl::PointerTypeLayout::PointerKind::CPointer:
+						return DVMPlace::AccessKind::CPointer;
+					default:
+						return DVMPlace::AccessKind::Direct;
+					}
+				};
 
 				if (current_place.isDirect()) {
 					// In this case we have a direct stack variable which stores a pointer.
 					// Dereferencing means we now treat the local as a pointer.
-					current_place = current_place.withAccessKind(DVMPlace::AccessKind::Pointer);
+					current_place
+						= current_place.withAccessKind(access_for_layout(current_pointer_layout));
+					current_layout = pointee_layout;
 				} else {
 					vm::code::TypeOfData vm_loaded_type
 						= **program_context.lowerAndKeepTslType(current_layout);
 
-					DVMPlace loaded_val_tmp = pushTempLocal(vm_loaded_type, "deref_tmp");
-
-					// Emit the load instruction.
-					pushInstruction({ vm::code::builders::OpKind::load,
-					                  loaded_val_tmp.asAnyArgument(),
-					                  current_place });
+					DVMPlace loaded_val_tmp = loadFromPlace(current_place, vm_loaded_type);
 
 					// Update types after the projection has been applied.
-					current_place = loaded_val_tmp.withAccessKind(DVMPlace::AccessKind::Pointer);
+					current_place
+						= loaded_val_tmp.withAccessKind(access_for_layout(current_pointer_layout));
+					current_layout = pointee_layout;
 				}
-
-				current_layout = pointee_layout;
 			}
 			variant_case(lir::LIRPlace::FieldProjection, field) {
 				CORE_ASSERT(
@@ -269,17 +334,30 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 			}
 			variant_case(lir::LIRPlace::IndexProjection, index) {
 				CORE_ASSERT(
-					current_layout->is<tsl::StaticArrayTypeLayout>(),
+					current_layout->is<tsl::StaticArrayTypeLayout>()
+						or current_layout->is<tsl::PointerTypeLayout>(),
 					"IndexProjection on non-array layout"
 				);
-				// Prepare the array type.
-				const auto& array_layout
-					= std::get<tsl::StaticArrayTypeLayout>(current_layout->getVariant());
+
+				// Resolve element layout + opcode in one place
+				auto [element_layout, op_kind]
+					= [&]() -> std::pair<CRef<tsl::TypeLayout>, vm::code::builders::OpKind> {
+					if (current_layout->is<tsl::StaticArrayTypeLayout>()) {
+						const auto& array_layout
+							= std::get<tsl::StaticArrayTypeLayout>(current_layout->getVariant());
+						return { array_layout.getElementLayout(),
+							     vm::code::builders::OpKind::fixedSizeTableLea };
+					}
+
+					const auto& pointer_layout
+						= std::get<tsl::PointerTypeLayout>(current_layout->getVariant());
+
+					return { pointer_layout.getPointee(), vm::code::builders::OpKind::dynTableLea };
+				}();
 
 				DVMValue index_val = lowerLirValue(*index.index);
 
-				// Prepare the pointer to field type.
-				CRef<tsl::TypeLayout>       element_layout = array_layout.getElementLayout();
+				// Prepare VM types
 				const vm::code::TypeOfData& vm_element_type
 					= **program_context.lowerAndKeepTslType(element_layout);
 				const vm::code::TypeOfData& ptr_to_element_type
@@ -288,10 +366,8 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 				// Create a temporary to the element
 				DVMPlace element_ptr_tmp = pushTempLocal(ptr_to_element_type, "index_addr");
 
-				pushInstruction({ vm::code::builders::OpKind::fixedSizeTableLea,
-				                  element_ptr_tmp,
-				                  current_place,
-				                  index_val.asArgument() });
+				// Emit instruction (now unified)
+				pushInstruction({ op_kind, element_ptr_tmp, current_place, index_val.asArgument() });
 
 				current_place  = element_ptr_tmp.withAccessKind(DVMPlace::AccessKind::Pointer);
 				current_layout = element_layout;
@@ -318,10 +394,7 @@ DVMValue FunctionLoweringContext::lowerLirValue(const lir::LIRValue& lir_value) 
 				// Otherwise it's indirect. We have to load it from memory into a stack variable.
 				const vm::code::TypeOfData& val_type
 					= **program_context.lowerAndKeepTslType(place.layout);
-				DVMPlace tmp = pushTempLocal(val_type, "deref_load");
-				pushInstruction(
-					{ vm::code::builders::OpKind::load, tmp.asAnyArgument(), resolved.asArgument() }
-				);
+				auto tmp = loadFromPlace(resolved, val_type);
 				// Now mark the place as direct as the value was loaded from the pointer.
 				return { tmp };
 			}
@@ -335,26 +408,28 @@ DVMValue FunctionLoweringContext::lowerLirValue(const lir::LIRValue& lir_value) 
 	CORE_UNREACHABLE();
 }
 
-const DVMPlace& FunctionLoweringContext::insertLirLocal(lir::LIRLocalRef local) {
-	if (!lir_local_to_dvm.contains(local)) auto new_local = createLirLocalToDVMMapping(local);
+const DVMPlace& FunctionLoweringContext::getOrInsertLirLocal(lir::LIRLocalRef local) {
+	if (!lir_local_to_dvm.contains(local)) return createLirLocalToDVMMapping(local);
 	return lir_local_to_dvm.at(local);
 }
 
 const DVMPlace& FunctionLoweringContext::createLirLocalToDVMMapping(lir::LIRLocalRef lir_local) {
-	auto var_name = [&] {
-		match_optional(lir_local->parameter_index) {
-			opt_some(index) return base::strConcat("arg", index);
-			opt_none return base::strConcat("var", lir_local_to_dvm.size());
+	DVMPlace result = [&]() -> DVMPlace {
+		if_opt_some(lir_local->parameter_index, index) {
+			auto var_name = base::StrID(base::strConcat("arg", index));
+			auto var_type = program_context.lowerAndKeepTslType(lir_local->layout);
+			return { var_name, **var_type, DVMPlace::AccessKind::Direct };
 		}
-		CORE_UNREACHABLE();
+
+		if (lir_local->special_kind == lir::LIRLocalSpecialKind::ReturnValue)
+			return getFunctionReturnValueLocal();
+
+		auto var_name = base::StrID(base::strConcat("var", lir_local_to_dvm.size()));
+		auto var_type = **program_context.lowerAndKeepTslType(lir_local->layout);
+		return { var_name, var_type, DVMPlace::AccessKind::Direct };
 	}();
 
-	auto var_name_str_id = base::StrID(var_name.data());
-
-	auto var_type = **program_context.lowerAndKeepTslType(lir_local->layout);
-	lir_local_to_dvm.put(
-		lir_local, DVMPlace(var_name_str_id, var_type, DVMPlace::AccessKind::Direct)
-	);
+	lir_local_to_dvm.put(lir_local, result);
 	return lir_local_to_dvm.at(lir_local);
 }
 
@@ -371,6 +446,12 @@ void compiler::backend_vm::internal::FunctionLoweringContext::registerFunctionPa
 			);
 		}
 	}
+}
+
+void compiler::backend_vm::internal::FunctionLoweringContext::registerFunctionLocal(
+	lir::LIRLocalRef lir_local
+) {
+	createLirLocalToDVMMapping(lir_local);
 }
 
 void compiler::backend_vm::internal::FunctionLoweringContext::beginBlock(lir::BlockRef block) {
@@ -419,7 +500,10 @@ DVMPlace FunctionLoweringContext::getFunctionReturnValueLocal() {
 			"Main function must have i64 return type"
 		);
 	}
-	return { base::StrID("ret0"), ret_type, DVMPlace::AccessKind::Pointer };
+	return { base::StrID("ret0"),
+		     ret_type,
+		     DVMPlace::AccessKind::Direct,
+		     DVMPlace::SpecialKind::ReturnValue };
 }
 
 [[nodiscard]] const compiler::backend_vm::internal::DVMPlace& compiler::backend_vm::internal::
@@ -437,7 +521,7 @@ void compiler::backend_vm::internal::FunctionLoweringContext::pushInit(lir::LIRL
 		}
 	}
 
-	DVMPlace dvm_local = insertLirLocal(lir_local);
+	DVMPlace dvm_local = getOrInsertLirLocal(lir_local);
 	pushInstruction({
 		vm::code::builders::OpKind::init,
 		dvm_local.asAnyArgument(),
@@ -445,6 +529,35 @@ void compiler::backend_vm::internal::FunctionLoweringContext::pushInit(lir::LIRL
 	});
 }
 
+void compiler::backend_vm::internal::FunctionLoweringContext::pushDeinit(lir::LIRLocalRef) {
+	pushInstruction({ vm::code::builders::OpKind::deinit });
+}
+
 usize compiler::backend_vm::internal::FunctionLoweringContext::instructionsCount() const {
 	return function_body.size();
+}
+
+void compiler::backend_vm::internal::FunctionLoweringContext::pushInitsForInstr(
+	const std::vector<lir::ScopeFlag>& scope_flags
+) {
+	for (const auto& lifetime_flag: scope_flags) {
+		if (lifetime_flag.local->parameter_index.has_value())
+			continue;  // Parameters are not inited
+
+		if (lifetime_flag.flag == lir::ScopeFlag::Flag::ScopeStart) pushInit(lifetime_flag.local);
+	}
+}
+
+void compiler::backend_vm::internal::FunctionLoweringContext::pushDeinitsForInstr(
+	const std::vector<lir::ScopeFlag>& scope_flags, bool& deinits_pushed
+) {
+	if (deinits_pushed) return;
+
+	for (const auto& lifetime_flag: scope_flags) {
+		if (lifetime_flag.local->parameter_index.has_value())
+			continue;  // Parameters are deinited automatically.
+
+		if (lifetime_flag.flag == lir::ScopeFlag::Flag::ScopeEnd) pushDeinit(lifetime_flag.local);
+	}
+	deinits_pushed = true;
 }

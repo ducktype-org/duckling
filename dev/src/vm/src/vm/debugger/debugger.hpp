@@ -1,3 +1,5 @@
+#pragma once
+
 #include <events/emitter.hpp>
 
 #include <vm/api/vm.hpp>
@@ -13,32 +15,25 @@ namespace vm::debugger {
 	 * It is the middleman between the VM and any user interfaces
 	 * (e.g., command-line interface, graphical debugger, Debug Adapter).
 	 *
-	 * @TODO: #2454 Implement CLI
 	 */
 	class Debugger final {
 	private:
-		vm::PID                  pid;
+		PID                      pid;
 		std::vector<std::string> main_args;
 
-		events::Listener<vm::api::ProcStatus> updater;
+		events::Listener<api::ProcStatus> updater;
 
 		// Event handlers for the debugger:
 
 		/**
 		 * @brief Emits current VM status when VM changes status
 		 */
-		events::Emitter<vm::api::ProcStatus> on_vm_changes_status;
-
-		/**
-		 * @brief Emits exit value as VMValue when VM completes execution
-		 */
-		events::Emitter<vm::api::ExitValue> on_vm_completes_execution;
+		events::Emitter<api::ProcStatus> on_status_changed;
 
 		/**
 		 * @brief Emits error message in human readable format on any error
 		 */
 		events::Emitter<std::string> on_error;
-
 
 	public:
 		Debugger(const std::vector<std::string>& main_args = {});
@@ -54,12 +49,7 @@ namespace vm::debugger {
 		/**
 		 * @brief Attach Listener to Emitter that emits current VM status when VM changes status
 		 */
-		void attachOnVMChangesStatusListener(events::Listener<vm::api::ProcStatus>& listener);
-
-		/**
-		 * @brief Attach Listener to Emitter that emits return value when VM completes execution
-		 */
-		void attachOnVMCompletesExecutionListener(events::Listener<vm::api::ExitValue>& listener);
+		void attachOnStatusChangedListener(events::Listener<api::ProcStatus>& listener);
 
 		/**
 		 * @brief Attach Listener to Emitter that emits error message when any error raises
@@ -71,27 +61,56 @@ namespace vm::debugger {
 		/**
 		 * @brief Runs the main function.
 		 */
-		void runMain();
+		std::expected<void, api::ApiError> runMain();
 
 		/**
 		 * @brief Gets the current status of the VM.
 		 * @return The current status of the VM.
 		 */
-		[[nodiscard]] vm::api::ProcStatus getStatus();
+		[[nodiscard]] api::ProcStatus getStatus();
 
 		/**
 		 * @brief Loads the file
 		 */
-		void loadFile(const fs::File& filepath);
+		std::expected<void, api::ApiError> loadFile(const fs::File& filepath);
+
+		/**
+		 * @brief Returns number of stack frames
+		 */
+		std::expected<u64, api::ApiError> getNumberOfStackFrames(api::ThreadID thread_id);
+
+		/**
+		 * @brief Returns variables of stack frame
+		 */
+		std::expected<api::response::StackFrameData, api::ApiError> getStackFrameData(
+			api::ThreadID thread_id, u64 frame_index
+		);
 
 		/**
 		 * @brief Pauses the VM
 		 */
-		void pause();
+		std::expected<api::response::CodePosition, api::ApiError> pause();
 
 		/**
 		 * @brief Resumes the VM
 		 */
-		void resume();
+		std::expected<void, api::ApiError> resume();
+
+		/**
+		 * @brief Returns current position
+		 */
+		std::expected<api::response::CodePosition, api::ApiError> getCurrentPosition();
+
+		/**
+		 * @brief Sets breakpoint
+		 */
+		std::expected<void, api::ApiError> setBreakpoint(
+			base::StrID function_name, u64 instr_number, bool enabled = true
+		);
+
+		/**
+		 * @brief Execute one FatByteCode step in the VM
+		 */
+		std::expected<void, api::ApiError> step();
 	};
 }

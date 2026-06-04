@@ -13,6 +13,7 @@
 #include <vm/core/safe/concurrency/synchronization_primitives.hpp>
 #include <vm/core/safe/low_program/low_program.hpp>
 #include <vm/core/safe/safe_vmthread.hpp>
+#include <vm/loader/compiler/safe/safe_compiler.hpp>
 #include <vm/loader/loader.hpp>
 
 #include <expected>
@@ -34,12 +35,15 @@ namespace vm {
 
 	private:
 		std::shared_mutex rw_global;
+
 		/**
 		 * @brief A loader instance for this SafeVMProcess. Stores the high level and low level
 		 * representation of the currently executed program. `loaded_program` references the low
 		 * representation which exists in this class.
 		 */
-		loader::Loader loader{};
+		loader::Loader                       loader{};
+		loader::compiler::safe::SafeCompiler compiler{ *loader.getHighProgram() };
+
 		/**
 		 * @brief The program being executed by this process.
 		 * Holds a constant and stable reference.
@@ -141,6 +145,15 @@ namespace vm {
 
 		std::vector<api::ThreadID> getAllThreadIDs() override;
 
+		void onTerminalStatus(const api::ProcStatus& status) noexcept override;
+		std::expected<api::Response, api::ApiError> setBreakpoint(
+			base::StrID function_name, usize instruction_index, bool enable
+		) override;
+
+		std::expected<api::Response, api::ApiError> mapFileLineToCodeCollectionPosition(
+			const fs::File& file, usize line_number
+		) override;
+
 		/**
 		 * @brief Updates the memory for globals of this process after loading a program with new
 		 * globals. Works in incremental way. Only supports adding new globals, not removing or
@@ -155,6 +168,8 @@ namespace vm {
 		SafeVMProcess(PID my_pid);
 
 		Memory& getMemory();
+
+		[[nodiscard]] api::ProcStatus getCurrentStatus() { return getStatus(); }
 
 		Ref<VmValue> createVmValue(TypeCRef type) override;
 

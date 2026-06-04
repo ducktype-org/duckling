@@ -9,11 +9,13 @@ use crate::quackpack::core::solver::gathering::fetch_types::{
     NotPinnedRequest, NotPinnedSuccess, PinnedFailure, PinnedRequest, PinnedSuccess,
 };
 use crate::quackpack::core::solver::types_common::{
-    ExpandedPackage, InternedExpandedLocation, InternedLocation, Location, Package,
+    ExpandedLocation, ExpandedPackage, InternedLocation, Location, Package,
 };
 use crate::quackpack::core::version::CompatibilityCheck;
 use crate::quackpack::core::{FeatureName, Manifest, Version};
+use crate::quackpack::util::str_id::QpJoin;
 use crate::util::error::MessageError;
+use crate::util::extend::QpExtend;
 use crate::{
     QuackError, QuackResult, QuackResultContext, qp_bail, qp_bail_internal, qp_err, qp_internal,
 };
@@ -117,8 +119,8 @@ pub struct GathererState {
     pinned_fetches: HashMap<Package, QueryState>,
 
     pkgs_data: HashMap<ExpandedPackage, PackageData>,
-    versions_for_location: HashMap<InternedExpandedLocation, HashSet<Option<Version>>>,
-    location_resolver: HashMap<InternedLocation, InternedExpandedLocation>,
+    versions_for_location: HashMap<ExpandedLocation, HashSet<Option<Version>>>,
+    location_resolver: HashMap<InternedLocation, ExpandedLocation>,
 }
 
 impl GathererState {
@@ -362,7 +364,7 @@ impl GathererState {
         let requests = requests.clone();
         *state = QueryState::Done;
 
-        let expanded_locs: HashSet<InternedExpandedLocation> = not_pinned_response
+        let expanded_locs: HashSet<ExpandedLocation> = not_pinned_response
             .fetched_manifests
             .keys()
             .map(|pkg| pkg.location)
@@ -563,8 +565,8 @@ where {
         Ok(result)
     }
 
-    /// Updates what new features of a package were potentially requested if any new feature has been added,
-    /// returns requests for package's dependencies.
+    /// Updates what new features of a package were potentially requested.
+    /// If any new feature has been added, returns requests for package's dependencies.
     fn update_features(
         &mut self,
         pkg: ExpandedPackage,
@@ -594,9 +596,15 @@ where {
                 "package {package} does not have feature{plural} `{missing_features}`"
             )));
         }
-        if !requested_features.is_empty() || !pkg_data.referenced_by_requests {
+        let manifest = &pkg_data.manifest;
+        let requested_features = manifest.features().expand_features(requested_features)?;
+        if pkg_data
+            .requested_features
+            .extend_and_get_diff_size(requested_features)
+            > 0
+            || !pkg_data.referenced_by_requests
+        {
             pkg_data.referenced_by_requests = true;
-            pkg_data.requested_features.extend(requested_features);
             pkg_data.dep_requests()
         } else {
             Ok(GathererComputation::empty())
@@ -612,9 +620,9 @@ pub struct GatheredInfo {
     /// The intersection of the manifest defined features and features referenced in the requests.
     pub possible_features: HashMap<ExpandedPackage, HashSet<FeatureName>>,
     /// The set of the possible versions of the packages satisfying a given location.
-    pub versions_for_location: HashMap<InternedExpandedLocation, HashSet<Option<Version>>>,
-    /// The translation from [`InternedLocation`] to [`InternedExpandedLocation`].
-    pub location_resolver: HashMap<InternedLocation, InternedExpandedLocation>,
+    pub versions_for_location: HashMap<ExpandedLocation, HashSet<Option<Version>>>,
+    /// The translation from [`InternedLocation`] to [`ExpandedLocation`].
+    pub location_resolver: HashMap<InternedLocation, ExpandedLocation>,
 }
 
 impl TryFrom<GathererState> for GatheredInfo {

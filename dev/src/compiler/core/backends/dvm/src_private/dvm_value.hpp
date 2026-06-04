@@ -82,24 +82,50 @@ namespace compiler::backend_vm::internal {
 	 * If the access kind is set to `Direct`, a load into the place will be performed by `mov_X_X`.
 	 * If the access kind is set to `Pointer`, a load into the place will be performed by
 	 * `store_pptr_pany`.
+	 * If the access kind is set to `DynTablePointer`, a load into the place will be performed by
+	 * `dynTableStore_pptr_pany_p64`.
+	 * If the access kind is set to `CPointer`, a load into the place will be performed by
+	 * new instruction that is not yet added @TODO: #2745 finish here.
 	 */
 	class DVMPlace {
 	public:
-		enum class AccessKind : uint8_t { Direct, Pointer };
+		enum class AccessKind : uint8_t { Direct, Pointer, DynTablePointer, CPointer };
 
-		DVMPlace(base::StrID name, vm::code::TypeOfData type, AccessKind access_kind):
+		/**
+		 * Some places have special meaning, like ReturnValue, knowing this allows for
+		 * better codegen (for example in return instruction).
+		 *
+		 * The `ConditionTmp` kind is not currently used.
+		 */
+		enum class SpecialKind : uint8_t { ReturnValue, ConditionTmp, Normal };
+
+		DVMPlace(
+			base::StrID          name,
+			vm::code::TypeOfData type,
+			AccessKind           access_kind,
+			SpecialKind          special_kind = SpecialKind::Normal
+		):
 			  name(name),
 			  type(std::move(type)),
-			  access_kind(access_kind) {}
+			  access_kind(access_kind),
+			  special_kind(special_kind) {}
 
 		bool operator==(const DVMPlace& other) const = default;
 		operator vm::opargs::OpCodeArg() const;
 
 		[[nodiscard]] bool isDirect() const { return access_kind == AccessKind::Direct; }
 
+		[[nodiscard]] AccessKind getAccessKind() const { return access_kind; }
+
 		[[nodiscard]] const vm::code::TypeOfData& getType() const;
 
 		DVMPlace withAccessKind(AccessKind kind) { return { name, type, kind }; }
+
+		DVMPlace withSpecialKind(SpecialKind special) {
+			return { name, type, access_kind, special };
+		}
+
+		[[nodiscard]] SpecialKind getSpecialKind() const { return special_kind; }
 
 		[[nodiscard]] vm::opargs::OpCodeArg asArgument() const;
 		[[nodiscard]] vm::opargs::OpCodeArg asAnyArgument() const;
@@ -108,6 +134,7 @@ namespace compiler::backend_vm::internal {
 		base::StrID          name;
 		vm::code::TypeOfData type;
 		AccessKind           access_kind;
+		SpecialKind          special_kind;
 	};
 
 	class DVMValue {

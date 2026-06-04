@@ -1,0 +1,42 @@
+import core.builtins.*;
+
+fun main() -> i64 = {
+    # Test type deduction for integers
+    var a = 42;           # deduced as default int
+    var b = 42i64;        # explicit i64 literal
+    var c = 42i32;        # explicit i32 literal
+    var d = 100u64;       # explicit u64 literal
+
+    builtin_output_i64(a);              # 42
+    builtin_output_i64(b);              # 42
+    builtin_output_i64(i64(c));         # 42
+    builtin_output_i64(i64(d));         # 100
+
+    # Test type deduction for booleans
+    var t = true;
+    var f = false;
+    if (t and not f) {
+        builtin_output_i64(1);          # 1
+    }
+
+    # Test type deduction for expressions
+    var sum = a + b;       # deduced from operands
+    builtin_output_i64(sum);            # 84
+
+    # Test type deduction with let
+    let x = 100;
+    let y = x * 2;
+    builtin_output_i64(y);              # 200
+
+    # Test type deduction from function return
+    let result = computeValue();
+    builtin_output_i64(result);         # 99
+
+    # Test type deduction with unary operators
+    var neg = -50;
+    builtin_output_i64(neg);            # -50
+
+    return 0;
+}
+
+fun computeValue() = 99;

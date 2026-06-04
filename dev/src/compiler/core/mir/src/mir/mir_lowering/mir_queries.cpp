@@ -49,6 +49,8 @@ namespace compiler::mir {
 		 * variables.
 		 */
 		void goOverCodeBlock(const hc::CodeBlock& code_block) {
+			// This order is important for the correct order of the destructors and
+			// scoping flags.
 			for (const auto& stmt: code_block.statements) stmt->acceptVisitor(*this);
 		}
 
@@ -212,7 +214,10 @@ namespace compiler::mir {
 	struct IMPLEMENT_QUERY(LowerGlobalDataToMIRCtor, LowerGlobalDataToMIRFunctionResult) {
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
 			if (std::holds_alternative<helios::HOUTGlobalConst>(key.global_data->value))
-				CORE_PANIC("Creating ctors for constant variables are not implemented yet.");
+				CORE_PANIC(
+					"Creating ctors for constant variables does not work, they should use CTVs "
+					"instead."
+				);
 
 			auto global_init_expr
 				= std::get<helios::HOUTGlobalVariable>(key.global_data->value).initial_value.ref();
@@ -251,8 +256,15 @@ namespace compiler::mir {
 
 			assign_instr.fill(Instruction{
 				Operation::Assign,
-				{ MIRGlobal({ key.global_data->helios_symbol, key.global_data->type }) },
-				{ lowerexpr_res.getResult(function_builder) },
+				// Note: we know its a variable here, since this query only works for variables,
+				{
+					MIRGlobal({ key.global_data->helios_symbol,
+			                    key.global_data->type,
+			                    MIRGlobal::Kind::Variable }),
+				},
+				{
+					lowerexpr_res.getResult(function_builder),
+				},
 				{},
 				function_builder.getTopLevelScope(),
 			});
@@ -262,7 +274,8 @@ namespace compiler::mir {
 			auto function_no_lifetime = function_builder.build();
 
 			// second step: lifetime stuff
-			auto function_with_destructors = addDestructors(ctx, std::move(function_no_lifetime));
+			auto function_with_destructors
+				= runAllLifetimePasses(ctx, std::move(function_no_lifetime));
 
 			// eliminating unreachable blocks
 			auto function_reachable = eliminateUnreachable(std::move(function_with_destructors));
@@ -283,7 +296,8 @@ namespace compiler::mir {
 			auto function_no_lifetime = lowerToPreMIRFunction(ctx, key.function);
 
 			// second step: lifetime stuff
-			auto function_with_destructors = addDestructors(ctx, std::move(function_no_lifetime));
+			auto function_with_destructors
+				= runAllLifetimePasses(ctx, std::move(function_no_lifetime));
 
 			// eliminating unreachable blocks
 			auto function_reachable = eliminateUnreachable(std::move(function_with_destructors));

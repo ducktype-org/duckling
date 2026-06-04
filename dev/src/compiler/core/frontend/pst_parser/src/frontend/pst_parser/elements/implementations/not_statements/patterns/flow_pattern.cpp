@@ -8,10 +8,9 @@ namespace pst {
 
 		PARSE().one(&out->pattern);
 
-		if (PARSE().tryEat(Keyword::As)) {
-			tpc::Identifier temp_ident;
-			PARSE().one(&temp_ident);
-			out->as_identifier = temp_ident;
+		if (PARSE().tryEat(NamedOperator::As)) {
+			out->as_identifier.emplace();
+			PARSE().one(&out->as_identifier.value());
 		}
 
 		if (PARSE().tryEat(NamedOperator::Colon)) PARSE().one(&out->type_constraint);
@@ -43,7 +42,6 @@ namespace pst {
 
 	HashAlg& FlowPattern::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, as_identifier.has_value());
-		if (as_identifier.has_value()) addToHash(partial_hash, as_identifier.value());
 		addToHash(partial_hash, type_constraint.has_value());
 		return partial_hash;
 	}

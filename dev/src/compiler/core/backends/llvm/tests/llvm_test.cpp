@@ -1,11 +1,11 @@
 #include <backends/llvm/llvm_backend.hpp>
+#include <diagnostic_interactive/module_flags/module_flags.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <global_state/backend_options.hpp>
-#include <helios/mangler/mangler.hpp>
 #include <helios/queries/queries.hpp>
-#include <lir/lir_lowering/lir_lowering.hpp>
-#include <mir/mir_lowering/mir_queries.hpp>
+#include <lir/lir_lowering/lir_unit.hpp>
+#include <mir/mir_lowering/mir_unit.hpp>
 
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
@@ -43,6 +43,8 @@ public:
 		TESTER_ADD_TEST(classTest);
 		TESTER_ADD_TEST(stringsTest);
 		TESTER_ADD_TEST(ffiTest);
+		TESTER_ADD_TEST(tuplesTest);
+		TESTER_ADD_TEST(pointersTest);
 	}
 
 protected:
@@ -50,96 +52,47 @@ protected:
 		global_state::setters::setBackendOptions({
 			.llvm_backend = { global_state::BackendOptions::LLVMBackend{} },
 		});
+		dia_int::configureImmediatePrint(&std::cerr);
 	}
 
 private:
-	auto getLLVMModuleFromPath(std::string module_path) {
+	compiler::backend_llvm::Module getLLVMModuleFromPath(std::string module_path) {
 		using namespace compiler;
 
-		backend_llvm::Module             llvm_module(base::StrID("test_module"));
-		std::vector<CRef<lir::Function>> ctors;
+		base::Optional<backend_llvm::Module> llvm_module_opt;
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto module
 				= frontend::createModuleTreeWithRandomPackageID(fs::File(path(module_path)));
 			auto& module_hout = ctx.query<helios::QueryModuleHOUT>(module)->valueOrPanic();
 
-			for (auto& hout_glob: module_hout.glob_data) {
-				if (!hout_glob->type.getType().carriesInformation(ctx)) continue;
-				lir::LIRGlobal lir_glob = lir::LIRGlobal::fromHOUT(ctx, *hout_glob);
-				llvm_module.addGlobalToModule(lir_glob);
-				variant_match(hout_glob->value) {
-					variant_case(helios::HOUTGlobalVariable, var) {
-						CRef mir_func = &ctx.query<mir::LowerGlobalDataToMIRCtor>({ hout_glob })
-						                     ->valueOrThrow();
-						mir_func->debugPrint(std::cerr);
-						std::cerr << "\n\n\n";
-						auto lir_func = ctx.query<lir::LowerToLIRFunction>({ mir_func });
-						lir_func->debugPrint(ctx, std::cerr);
-						std::cerr << "\n\n\n";
-						ctors.push_back(lir_func);
-						llvm_module.addFunctionToModule(ctx, lir_func);
-					}
-					variant_case(helios::HOUTGlobalConst, cnst) {
-						// @future #1554 -- const ctors will probably be added here
-					}
-					variant_default {
-						fail(base::strConcat(
-							"Unexpected global data type of: ", hout_glob->original_name
-						));
-					}
-				}
-			}
+			auto mir_result = mir::lowerToMIRUnit(ctx, &module_hout).valueOrPanic();
+			auto lir_result = lir::lowerToLIRUnit(ctx, mir_result);
 
-			if (!ctors.empty()) {
-				// Add module ctors
-				auto module_ctor = lir::createFunctionInvoker(
-					ctx,
-					ctors,
-					compiler::helios::mangler::getSpecialMangledName<
-						compiler::helios::mangler::ManglingSymbolKind::ModuleConstructor>(
-						ctx,
-						compiler::helios::mangler::special_symbol_keys::LIRModuleID{
-							frontend::moduleName(module) }
-					)
-				);
-				llvm_module.addFunctionToModuleCtors(ctx, CRef<lir::Function>(&module_ctor));
-
-				// Add module dtors (for now empty)
-				// @TODO: add a legit dtors
-				auto module_dtor = lir::createFunctionInvoker(
-					ctx,
-					{},
-					compiler::helios::mangler::getSpecialMangledName<
-						compiler::helios::mangler::ManglingSymbolKind::ModuleDestructor>(
-						ctx,
-						compiler::helios::mangler::special_symbol_keys::LIRModuleID{
-							frontend::moduleName(module) }
-					)
-				);
-				llvm_module.addFunctionToModuleDtors(ctx, CRef<lir::Function>(&module_dtor));
-			}
-
-			for (auto& fun: module_hout.functions) {
-				CRef mir_fun
-					= &ctx.query<compiler::mir::LowerToMIRFunction>({ fun })->valueOrThrow();
-				auto lir_fun = ctx.query<compiler::lir::LowerToLIRFunction>({ mir_fun });
-				llvm_module.addFunctionToModule(ctx, lir_fun);
-			}
+			llvm_module_opt.emplace(
+				backend_llvm::Module::fromLIRUnit(ctx, lir_result, base::StrID("test_module"))
+			);
 		});
 
 		// debug print for coverage only:
-		llvm_module.debugPrint();
+		llvm_module_opt->debugPrint();
 
 		// verify integrity, then return for further checks.
-		assertTrue(llvm_module.verify().isOk(), "LLVM module verification failed");
-		return llvm_module;
+		assertTrue(
+			llvm_module_opt->verify().isOk(),
+			"LLVM module verification failed (enable Backend dev logs to see details)"
+		);
+		return std::move(llvm_module_opt.value());
 	}
 
 	void runTestForModule(
 		std::string module_path, i32 expected_function_count = 1, i32 expected_prototype_count = -1
 	) {
 		if (expected_prototype_count == -1) expected_prototype_count = expected_function_count;
+		// @TODO: #2694 These numbers are inflated by toString methods for simple types
+		// There are 14 toString methods, and an additional 5 builtin_stringify_<type> prototypes.
+		expected_function_count += 14;
+		expected_prototype_count += 14 + 5;
 		auto llvm_module = getLLVMModuleFromPath(std::move(module_path));
 		ASSERT_EQUAL_PRINT(llvm_module.getFunctionCount(false), expected_function_count);
 		ASSERT_EQUAL_PRINT(llvm_module.getFunctionCount(), expected_prototype_count);
@@ -162,7 +115,7 @@ private:
 
 	void functionCalls() {
 		runTestForModule("modules/calls_simple", 3);
-		runTestForModule("modules/calls", 3, 5);
+		runTestForModule("modules/calls", 3, 4);
 	}
 
 	void parseFromIRCodeTest() {
@@ -191,23 +144,23 @@ private:
 		);
 	}
 
-	void globalVariablesTest() { runTestForModule("modules/global-variables", 5, 5); }
+	void globalVariablesTest() { runTestForModule("modules/global-variables", 4, 4); }
 
 	void unitsTest() {
 		runTestForModule("modules/units/unit1", 2, 2);
 		runTestForModule("modules/units/unit2", 2, 2);
 		runTestForModule("modules/units/unit3", 1, 1);
 		runTestForModule("modules/units/unit4", 1, 2);
-		runTestForModule("modules/units/unit_simple", 2, 3);
-		runTestForModule("modules/units/unit_class", 3, 4);
+		runTestForModule("modules/units/unit_simple", 2, 2);
+		runTestForModule("modules/units/unit_class", 3, 3);
 		runTestForModule("modules/units/unit_simple_multiple_modules", 1, 2);
 	}
 
-	void classTest() { runTestForModule("modules/classes/records", 10, 11); }
+	void classTest() { runTestForModule("modules/classes/records", 13, 15); }
 
-	void stringsTest() { runTestForModule("modules/strings", 1, 3); }
+	void stringsTest() { runTestForModule("modules/strings", 2, 2); }
 
-	void ffiTest() { runTestForModule("modules/ffi", 1, 2); }
+	void ffiTest() { runTestForModule("modules/ffi", 1, 1); }
 
 	void referencesTest() {
 		auto        llvm_module = getLLVMModuleFromPath("modules/references");
@@ -222,7 +175,7 @@ private:
 			ptr_loads++;
 			search_range = matches.suffix();
 		}
-		assertTrue(ptr_loads == 17, "Too few pointer loads");
+		assertTrue(ptr_loads == 18, "Too few pointer loads");
 	}
 
 	void boxesTest() {
@@ -274,7 +227,7 @@ private:
 		// arr[3]
 		assertTrue(
 			std::regex_search(
-				ir, std::regex{ R"(getelementptr.*\[10\s+x\s+i32\].*i32\s+0,\s+i64\s+3)" }
+				ir, std::regex{ R"(getelementptr.*\[10\s+x\s+i32\].*i32\s+0,\s+i64\s+%)" }
 			),
 			"Expected GEP instruction for array indexing arr[3]"
 		);
@@ -289,7 +242,7 @@ private:
 			std::regex_search(
 				ir,
 				std::regex{
-					R"(getelementptr.*\[2\s+x\s+\[3\s+x\s+i32\].*i32\s+0,\s+i64\s+1,\s+i64\s+2)" }
+					R"(getelementptr.*\[2\s+x\s+\[3\s+x\s+i32\].*i32\s+0,\s+i64\s+%0,\s+i64\s+%1)" }
 			),
 			"Expected big GEP for nested array access matrix[1][2]"
 		);
@@ -297,7 +250,7 @@ private:
 		// points[1].y
 		// GEP: 0 (ptr), 1 (array index), 1 (field index)
 		assertTrue(
-			std::regex_search(ir, std::regex{ R"(getelementptr.*i32\s+0,\s+i64\s+1,\s+i32\s+1)" }),
+			std::regex_search(ir, std::regex{ R"(getelementptr.*i32\s+0,\s+i64\s+%0,\s+i32\s+1)" }),
 			"Expected GEP for struct field access in array: points[1].y"
 		);
 	}
@@ -488,6 +441,21 @@ private:
 		bool has_i16_to_i64
 			= std::regex_search(ir, std::regex{ R"((sext|zext)\s+i16\s+%\S+\s+to\s+i64)" });
 		assertTrue(has_i16_to_i64, "Expected sext/zext i16-> i64 in IR");
+	}
+
+	void tuplesTest() {
+		auto        llvm_module = getLLVMModuleFromPath("modules/tuples");
+		std::string ir          = llvm_module.dumpLLVMToString();
+
+		// Ckeck if tuple types are present
+		assertTrue(
+			std::regex_search(ir, std::regex{ R"(%T.*E)" }), "Expected tuple struct definition"
+		);
+	}
+
+	void pointersTest() {
+		auto        llvm_module = getLLVMModuleFromPath("modules/pointers");
+		std::string ir          = llvm_module.dumpLLVMToString();
 	}
 };
 

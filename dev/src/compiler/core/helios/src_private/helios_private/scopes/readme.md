@@ -14,7 +14,8 @@ Note: This is mostly to list operations, see docs for details.
 * `LookupInScope` -- Lookups in given scope. Implements main scope-lookup logic.
   Uses `QuerySymbolsInScope`.
 
-* `QueryLookupInScopeAndParents` -- As above, but with parents.
+* `QueryLookupInScopeAndParents` -- Special REPL handling: at root scope, checks if module is a REPL module with a parent.
+  If yes, continues lookup in parent module's root scope, enabling symbol visibility across REPL statement history.
 
 # HELIOS Internal scope operations
 
@@ -26,6 +27,7 @@ Note: This is mostly to list operations, see docs for details.
 
   HELIOS uses it as an auxiliary query, in lookup implementation. 
   Note: this query will likely be deleted in the future, after the Scope Refactor.
+
 
 # Future todos
 
@@ -44,4 +46,7 @@ Cool thing is that since move is a zero-cost operation (most of the times), we c
 todo: semantic of QueryPrimaryCodeScopeFor vs scope(SymOf(pst))
 
 This will be set, with follow ups PRs
+
+## Related Documentation
+- [REPL Module](../../../../../repl/readme.md)
 

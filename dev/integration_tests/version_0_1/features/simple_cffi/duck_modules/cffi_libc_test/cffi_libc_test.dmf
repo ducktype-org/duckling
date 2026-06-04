@@ -1,0 +1,46 @@
+import core.builtins.*;
+
+# Test C FFI with a builtin function
+
+extern("C") fundecl abs(x: i32) -> i32;
+
+fun main() -> i64 = {
+    # Test abs in expression context
+    var diff: i32 = abs(i32(5 - 10));
+    builtin_output_i64(i64(diff));      # 5
+
+    # Test abs in arithmetic expression
+    var a: i32 = abs(i32(-3)) + abs(i32(-4));
+    builtin_output_i64(i64(a));         # 7
+
+    # Test abs in comparison
+    if (abs(i32(-5)) > abs(i32(-3))) {
+        builtin_output_i64(1);          # 1
+    }
+
+    # Test abs in loop
+    var sum: i64 = 0;
+    var i: i32 = i32(-3);
+    while (i <= i32(0)) {
+        sum = sum + i64(abs(i));
+        i = i + i32(1);
+    }
+    builtin_output_i64(sum);            # 6 (3+2+1+0)
+
+    # Test chained abs calls (redundant but tests nesting)
+    var nested: i32 = abs(abs(i32(-42)));
+    builtin_output_i64(i64(nested));    # 42
+
+    # Test abs with function result
+    var computed: i32 = abs(computeNegValue());
+    builtin_output_i64(i64(computed));  # 100
+
+    # Test abs in ternary-like pattern
+    var val: i32 = i32(-7);
+    var absResult = if val < i32(0) then abs(val) else val;
+    builtin_output_i64(i64(absResult)); # 7
+
+    return 0;
+}
+
+fun computeNegValue() -> i32 = i32(-100);

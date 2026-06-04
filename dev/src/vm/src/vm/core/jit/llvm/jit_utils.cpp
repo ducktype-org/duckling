@@ -2,7 +2,7 @@
 
 #include <llvm_helpers/llvm_helpers.hpp>
 
-#include <memory>
+#include <functional>
 
 LLVM_INCLUDE_BEGIN()
 

@@ -106,6 +106,17 @@ namespace vm::api {
 		struct SetExecutionConfig {
 			api::ExecutionConfig config;
 		};
+
+		struct SetBreakpoint {
+			base::StrID function_name;
+			u64         instruction_index;
+			bool        enable;
+		};
+
+		struct MapFileLineToCodeCollectionPosition {
+			fs::File file;
+			u64      line_number;
+		};
 	}
 
 	using RequestVariant = std::variant<
@@ -133,7 +144,9 @@ namespace vm::api {
 		request::ExitCodeRequest,
 		request::DeinitAndValidate,
 		request::AttachStatusListener,
-		request::SetExecutionConfig>;
+		request::SetExecutionConfig,
+		request::SetBreakpoint,
+		request::MapFileLineToCodeCollectionPosition>;
 
 	struct SupervisorRequest {
 		PID            pid;

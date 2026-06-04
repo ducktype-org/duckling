@@ -12,6 +12,7 @@
 #include <frontend/pst_parser/pst_visitor.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/hout/hout.hpp>
+#include <helios/mangler/mangler.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
@@ -29,6 +30,7 @@
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
+#include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
@@ -141,6 +143,8 @@ namespace compiler::helios {
 			}
 
 			void visitWhile(pst::Access<pst::While> stmt) final { visitRecursion(stmt->getBody()); }
+
+			void visitFor(pst::Access<pst::For> stmt) final { visitRecursion(stmt->getBody()); }
 		};
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
@@ -299,26 +303,37 @@ namespace compiler::helios {
 			using std::ranges::to;
 			using std::views::transform;
 
-			// Get class data
-			const auto class_type = ctx.query<QueryTypeFromDefinition>({ ctor_data.class_symbol })
-			                            ->valueOrThrow()
-			                            .getType()
-			                            .as<tsh::ClassAbstractType>();
-
-			const SymID class_symbol    = class_type.getSymbol();
-			auto        class_interface = class_type.getInterface(ctx);
+			// Get type data
+			const auto target_type = ctor_data.target_type;
+			auto       interface   = target_type.getInterface(ctx);
 
 			const std::vector<tsh::InterfaceElement> fields
-				= class_interface->getFieldsView() | to<std::vector>();
+				= interface->getFieldsView() | to<std::vector>();
 			const u64 num_fields = fields.size();
+
+			base::StrID ctor_name;
+			switch (target_type.getKind()) {
+			case tsh::Kind::Class:
+				ctor_name = name(target_type.as<tsh::ClassAbstractType>().getSymbol());
+				break;
+			case tsh::Kind::Tuple:
+				ctor_name = ctx
+				                .query<mangler::QueryMangledType>(tsh::SymbolType<>::withDefaults(
+									target_type.as<tsh::TupleAbstractType>()
+								))
+				                ->valueOrThrow();
+				break;
+			default:
+				CORE_PANIC("Implicit ctor of type kind", target_type.getKind(), " is not handled.");
+			}
 
 			// Prepare the necessary symbols (of the constructor and its parameters).
 			const SymID ctor_symbol        = ctx.query<defgen::QueryGeneratedSymbol>({
-					   .name                  = name(class_type.getSymbol()),
-					   .generated_symbol_data = GeneratedSymbolData{ ImplicitConstructor{ class_symbol } },
+					   .name                  = ctor_name,
+					   .generated_symbol_data = GeneratedSymbolData{ ImplicitConstructor{ target_type } },
             });
 			const auto  result_symbol_type = tsh::SymbolType<>{
-                class_type,
+                target_type,
                 tsh::ReferenceKind::Direct,
                 tsh::Mutability::Mutable,
 			};
@@ -334,25 +349,31 @@ namespace compiler::helios {
 					.generated_symbol_data
 					= GeneratedSymbolData{ Parameter{ ctor_symbol, argument_index } },
 				});
-				// Get the initial value for the field from the PST.
-				const auto field_pst_data = symbolPst(field.getSymbol())
-				                                .value()
-				                                .unlock(ctx)
-				                                .dynamicCast<pst::Field>()
-				                                .value();
-				auto init_expr_opt         = field_pst_data->getInit();
-				auto init_expr_coerced_opt = init_expr_opt.map(
-					[&](pst::AccessLocked<pst::ExprHolder> expr_holder) -> BoxOrCRef<code::Expr> {
-						const auto field_type = field.getType(ctx);
-						auto       expr
-							= getHoutOfExprWithExpectedType(
-								  ctx, expr_holder.unlock(ctx)->getExpr().unlock(ctx), field_type
-							)
-					              .valueOrThrow();
-						return expr;
-					}
-				);
 
+				base::Optional<BoxOrCRef<code::Expr>> init_expr_coerced_opt = std::nullopt;
+				code::ElementOrigin                   field_origin = code::generatedOrigin();
+				if (maybeSymbolPst(field.getSymbol()).has_value()) {
+					// Get the initial value for the field from the PST.
+					const auto field_pst_data = maybeSymbolPst(field.getSymbol())
+					                                .value()
+					                                .unlock(ctx)
+					                                .dynamicCast<pst::Field>()
+					                                .value();
+					field_origin          = code::pstOrigin(field_pst_data).generatedFrom();
+					auto init_expr_opt    = field_pst_data->getInit();
+					init_expr_coerced_opt = init_expr_opt.map(
+						[&](pst::AccessLocked<pst::ExprHolder> expr_holder
+					    ) -> BoxOrCRef<code::Expr> {
+							const auto field_type = field.getType(ctx);
+							auto       expr
+								= getHoutOfExprWithExpectedType(
+									  ctx, expr_holder.unlock(ctx)->getExpr().unlock(ctx), field_type
+								)
+						              .valueOrThrow();
+							return expr;
+						}
+					);
+				}
 				// @TODO: #1328 Properly handle value categories / types (cont ref / ... / ...)
 				// in class constructors.
 				parameters.emplace_back(
@@ -360,7 +381,7 @@ namespace compiler::helios {
 					field.getType(ctx),
 					std::move(init_expr_coerced_opt),
 					argument_symbol,
-					code::pstOrigin(field_pst_data).generatedFrom()
+					field_origin
 				);
 				argument_index++;
 			}
@@ -471,23 +492,74 @@ namespace compiler::helios {
 									key, return_type, {}, code::generatedOrigin()
 								};
 							}
+							variant_case(
+								defgen::GeneratedSymbolData::ToStringMethod, to_string_data
+							) {
+								const auto self_param = ctx.query<defgen::QueryGeneratedSymbol>(
+									{ .name = base::StrID("self"),
+								      .generated_symbol_data
+								      = defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::Parameter{
+										  .function_symbol = key,
+										  .parameter_index = 0,
+									  } } }
+								);
+
+								const auto method_type = ctx.query<QueryTypeOfSymbol>(key)
+								                             ->valueOrThrow()
+								                             .getType()
+								                             .as<tsh::FunctionAbstractType>();
+								const auto self_type   = method_type.getParameterTypes().at(0);
+								const auto return_type = method_type.getResultType();
+
+								std::vector<code::Parameter> parameters;
+								parameters.emplace_back(
+									base::StrID("self"),
+									self_type,
+									std::nullopt,
+									self_param,
+									code::generatedOrigin()
+								);
+
+								return HOUTFunctionDeclaration{
+									key, return_type, std::move(parameters), code::generatedOrigin()
+								};
+							}
+							variant_case(defgen::GeneratedSymbolData::DefaultDestructor, dtor_data) {
+								const auto self_param = ctx.query<defgen::QueryGeneratedSymbol>(
+									{ .name = base::StrID("self"),
+								      .generated_symbol_data
+								      = defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::Parameter{
+										  .function_symbol = key,
+										  .parameter_index = 0,
+									  } } }
+								);
+
+								const auto method_type = ctx.query<QueryTypeOfSymbol>(key)
+								                             ->valueOrThrow()
+								                             .getType()
+								                             .as<tsh::FunctionAbstractType>();
+								const auto self_type   = method_type.getParameterTypes().at(0);
+								const auto return_type = method_type.getResultType();
+
+								std::vector<code::Parameter> parameters;
+								parameters.emplace_back(
+									base::StrID("self"),
+									self_type,
+									std::nullopt,
+									self_param,
+									code::generatedOrigin()
+								);
+
+								return HOUTFunctionDeclaration{
+									key, return_type, std::move(parameters), code::generatedOrigin()
+								};
+							}
 							variant_case_novalue(defgen::GeneratedSymbolData::BuiltinOperator) {
 								return getBuiltinDecl(ctx, key);
 							}
-							variant_case_novalue(defgen::GeneratedSymbolData::ReplExpressionWrapper
-							) {
-								auto function_type = ctx.query<QueryTypeOfSymbol>({ key })
-								                         ->valueOrThrow()
-								                         .getType()
-								                         .as<tsh::FunctionAbstractType>();
-								return HOUTFunctionDeclaration{
-									key,
-									function_type.getResultType(),
-									{},
-									code::generatedOrigin(),
-								};
-							}
-							variant_case_novalue(defgen::GeneratedSymbolData::ReplInstructionWrapper
+							variant_case_novalue(
+								defgen::GeneratedSymbolData::ReplExpressionWrapper,
+								defgen::GeneratedSymbolData::ReplInstructionWrapper
 							) {
 								auto function_type = ctx.query<QueryTypeOfSymbol>({ key })
 								                         ->valueOrThrow()
@@ -520,9 +592,6 @@ namespace compiler::helios {
 								CORE_UNREACHABLE();
 							}
 						}
-					}
-					variant_case(builtin::BuiltinFunctionData, builtin) {
-						return getBuiltinDecl(ctx, key);
 					}
 					variant_default { CORE_UNREACHABLE(); }
 				}
