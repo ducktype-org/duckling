@@ -291,10 +291,10 @@ namespace vm {
 					init_bany_type, argv_ptr_type_arg, 0
 				),  // stack [8, 24) block idx 1 *argv_internal
 				MAKE_BYTECODE_INSTRUCTION(
-					init_bany_type,  i64_type_arg, 0
+					init_bany_type, i64_type_arg, 0
 				),  // stack  [24, 32) block idx 2 argc_internal
 				MAKE_BYTECODE_INSTRUCTION(
-					init_bany_type,  i64_type_arg, 0
+					init_bany_type, i64_type_arg, 0
 				),  // stack [32, 40) block idx 3 ix
 				MAKE_BYTECODE_INSTRUCTION(
 					mov_p64_imm, 24, args.size()
