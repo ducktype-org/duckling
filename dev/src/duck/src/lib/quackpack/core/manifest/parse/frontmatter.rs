@@ -1,3 +1,26 @@
+//! Parsing of the frontmatter from its schema.
+//! A frontmatter is a fragment of yaml code similiar to a manifest, at the beginning of a Duckling script.
+//! It can specify script's dependencies, allowing the script to be run without any venv.
+//! Only fields allowed inside the frontmatter are `dependencies`, `dev-dependencies` and `profiles`.
+//! A frontmatter can also be a singular `import` field, with a path to a yaml file, which contains the real frontmatter contents.
+//! If the path is relative it is resolved from the folder in which the script is.
+//!
+//! # Example
+//! ```text
+//! <frontmatter>
+//! dependencies:
+//!   xd:
+//!     version: '2.0.0'
+//! dev-depedencies:
+//!   xdd:
+//!     version: '3.4.5'
+//! profiles:
+//!   my-profile:
+//!     opt-level: O3
+//! </frontmatter>
+//!
+//! builtin_output_i64(0)
+//! ```
 use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
 
