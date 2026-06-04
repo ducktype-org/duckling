@@ -8,6 +8,7 @@
 
 #pragma once
 
+#include "exceptions.hpp"
 #include "parameter.hpp"
 #include "parsing_result.hpp"
 #include "parsing_state.hpp"
@@ -287,8 +288,8 @@ namespace clah {
 		 * @return A return value of the handler specified for the matched command.
 		 */
 		int execute(
-			std::function<ParsingResult()>                                parse,
-			std::function<void(const clah::exceptions::ClahException& e)> on_clah_exception
+			std::function<ParsingResult()>                          parse,
+			std::function<void(const exceptions::ClahException& e)> on_clah_exception
 		);
 
 

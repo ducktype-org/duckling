@@ -197,7 +197,7 @@ namespace clah {
 	int Clah::execute(usize argc, const char* const* argv) {
 		return execute(
 			[&] { return parse(argc, argv); },
-			[&](const auto& e) {
+			[&](const clah::exceptions::ClahException& e) {
 				printer::StreamPrinter::print({
 					{ "[Clah error]: ", printer::Color::Red },
 					{ e.what(), printer::Color::Default },
@@ -213,7 +213,7 @@ namespace clah {
 	int Clah::execute(const std::string& args) {
 		return execute(
 			[&] { return parseArgs(args); },
-			[](const auto& e) {
+			[](const clah::exceptions::ClahException& e) {
 				printer::StreamPrinter::print({
 					{ "[Clah error]: ", printer::Color::Red },
 					{ e.what(), printer::Color::Default },
@@ -225,8 +225,8 @@ namespace clah {
 	}
 
 	int Clah::execute(
-		std::function<ParsingResult()>                                parse,
-		std::function<void(const clah::exceptions::ClahException& e)> on_clah_exception
+		std::function<ParsingResult()>                          parse,
+		std::function<void(const exceptions::ClahException& e)> on_clah_exception
 	) {
 		try {
 			auto parsing_result = parse();
