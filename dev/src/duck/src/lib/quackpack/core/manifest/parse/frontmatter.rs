@@ -75,6 +75,9 @@ fn try_parse_inner(path: PathBuf, ctx: &DuckContext) -> QuackResult<Option<Front
 /// If the script does not contain a frontmatter, returns `Ok(None)`.
 fn generate_schema(path: &Path) -> QuackResult<Option<ManifestSchema>> {
     let content = path.read_to_string()?;
+    // @TODO: #2860 Finalize frontmatters syntax
+    // This has a bug when `</frontmatter>` is in a yaml comment (maybe don't care / make it a feature).
+    // Moreover the syntax is not yet finalized.
     let Some(captures) = FRONTMATTER_REGEX.captures(&content) else {
         if UNCLOSED_FRONTMATTER_REGEX.captures(&content).is_some() {
             qp_bail!("frontmatter begins but does not end")
