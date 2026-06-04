@@ -689,9 +689,10 @@ private:
 		auto module = getLIROfModule(path("modules/meta_functions"));
 
 		withContextDo([&](query::Context& ctx) {
-			auto                  meta_type_entity = tsh::getMetaType();
-			CRef<tsl::TypeLayout> meta_layout
-				= ctx.query<tsl::QueryAbstractTypeLayout>(meta_type_entity);
+			auto meta_type_entity = tsh::getMetaType();
+			auto meta_layout      = CRef<tsl::TypeLayout>(
+                &ctx.query<tsl::QueryAbstractTypeLayout>(meta_type_entity)->valueOrThrow()
+            );
 
 			auto assert_is_meta_local
 				= [&](const lir::LIRLocal& local) { ASSERT_EQUAL(*local.layout, *meta_layout); };
@@ -768,11 +769,19 @@ private:
 			bool found_result_f32 = false;
 			bool found_some_i16   = false;
 
-			auto bool_layout = ctx.query<tsl::QueryAbstractTypeLayout>(tsh::getBoolType());
-			auto f32_layout  = ctx.query<tsl::QueryAbstractTypeLayout>(getFloatType(ctx, 32));
-			auto i16_layout  = ctx.query<tsl::QueryAbstractTypeLayout>(
-                getIntegralType(ctx, 16, compiler::tsh::IntegralAbstractType::Signedness::Signed)
-            );
+			auto bool_layout = CRef<tsl::TypeLayout>(
+				&ctx.query<tsl::QueryAbstractTypeLayout>(tsh::getBoolType())->valueOrThrow()
+			);
+			auto f32_layout = CRef<tsl::TypeLayout>(
+				&ctx.query<tsl::QueryAbstractTypeLayout>(getFloatType(ctx, 32))->valueOrThrow()
+			);
+			auto i16_layout = CRef<tsl::TypeLayout>(
+				&ctx
+					 .query<tsl::QueryAbstractTypeLayout>(getIntegralType(
+						 ctx, 16, compiler::tsh::IntegralAbstractType::Signedness::Signed
+					 ))
+					 ->valueOrThrow()
+			);
 
 			for (const auto& local: proc_data_lir->local_list) {
 				if (!local.helios_id.has_value()) continue;

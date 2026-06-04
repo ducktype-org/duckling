@@ -16,7 +16,7 @@ namespace abi::layout {
 		Bytes roundUpToAlignment(Bytes offset, Bytes alignment) {
 			const auto off = usize(offset);
 			const auto al  = usize(alignment);
-			CORE_ASSERT_STRONG(al > 0, "alignment must be positive");
+			CORE_ASSERT(al > 0, "alignment must be positive");
 			const usize remainder = off % al;
 			if (remainder == 0) return offset;
 			return Bytes(off + (al - remainder));
@@ -28,7 +28,7 @@ namespace abi::layout {
 
 		variant_match(t.value) {
 			variant_case(type_system::IntType, i) {
-				CORE_ASSERT_STRONG(
+				CORE_ASSERT(
 					usize(i.width_bits) % 8 == 0, "integer width must be a multiple of 8 bits"
 				);
 				out.size      = Bytes(usize(i.width_bits) / 8);
@@ -39,7 +39,7 @@ namespace abi::layout {
 				out.alignment = target.data_layout.pointer_alignment;
 			}
 			variant_case(type_system::ArrayType, a) {
-				CORE_ASSERT_STRONG(
+				CORE_ASSERT(
 					a.count > 0, "zero-length arrays are not legal in C ABI; filter on caller side"
 				);
 				SizeAlign element = sizeAlignOf(target, *a.element);
@@ -47,7 +47,7 @@ namespace abi::layout {
 				out.alignment     = element.alignment;
 			}
 			variant_case(type_system::StructType, s) {
-				CORE_ASSERT_STRONG(
+				CORE_ASSERT(
 					!s.fields.empty(), "empty structs are not legal in C ABI; filter on caller side"
 				);
 				ComputedLayout sub = computeCLayout(target, s.fields);
@@ -56,9 +56,7 @@ namespace abi::layout {
 			}
 		}
 
-		CORE_ASSERT_STRONG(
-			usize(out.size) > 0, "zero-sized field in C layout; filter on caller side"
-		);
+		CORE_ASSERT(usize(out.size) > 0, "zero-sized field in C layout; filter on caller side");
 
 		return out;
 	}
@@ -66,9 +64,7 @@ namespace abi::layout {
 	ComputedLayout computeCLayout(
 		const TargetABI& target, const std::vector<type_system::Field>& fields
 	) {
-		CORE_ASSERT_STRONG(
-			!fields.empty(), "empty structs are not legal in C ABI; filter on caller side"
-		);
+		CORE_ASSERT(!fields.empty(), "empty structs are not legal in C ABI; filter on caller side");
 
 		ComputedLayout out;
 		out.field_offsets.reserve(fields.size());

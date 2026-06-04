@@ -1,0 +1,11 @@
+# Compilation should fail: f32 is not representable in C ABI.
+
+extern("C") class Bad {
+    x: i32 = 0i32;
+    y: ();
+}
+
+fun main() -> i64 = {
+    var b = Bad(0i32, ());
+    return 0i64;
+}

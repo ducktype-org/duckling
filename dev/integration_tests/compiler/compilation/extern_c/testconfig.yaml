@@ -19,3 +19,9 @@ Tests:
         backend: all
         Output:
           String: "3\n17\n11\n22\n"
+
+  extern_c_invalid_field_rejected:
+    Cases:
+      all:
+        backend: all
+        ExitCode: 1

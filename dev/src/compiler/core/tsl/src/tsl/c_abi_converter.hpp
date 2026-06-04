@@ -1,14 +1,18 @@
 /**
  * @file c_abi_converter.hpp
  *
- * @brief Converts Duckling field types into the minimal `abi::type_system::AbiType`
- * representation used by `abi::layout::computeCLayout`. Rejects every type
- * that has no representation in the C ABI.
+ * @brief Query that converts Duckling field types into the minimal
+ * `abi::type_system::AbiType` representation used by
+ * `abi::layout::computeCLayout`. Rejects every type that has no
+ * representation in the C ABI.
  *
- * The converter does not emit diagnostics: it returns an `Optional` together
- * with a human-readable reason. The caller (typically the class-layout
- * helper) is responsible for reporting diagnostics with the proper field
- * name and source position.
+ * The query does not emit diagnostics: it returns a `CAbiConversionResult`
+ * with an `Optional` and a human-readable reason. The caller (typically the
+ * class-layout helper) is responsible for reporting diagnostics with the
+ * proper field name and source position.
+ *
+ * Being a query, the result is cached and cycle detection is enabled
+ * (`uses_qresult=true, allow_cycles=true`).
  */
 #pragma once
 
@@ -17,7 +21,8 @@
 
 #include <base/collections/optional.hpp>
 
-#include <query_framework/context/context_fd.hpp>
+#include <query_framework/query_int.hpp>
+#include <query_framework/query_result.hpp>
 
 #include <string>
 
@@ -35,15 +40,11 @@ namespace compiler::tsl {
 	};
 
 	/**
-	 * @brief Tries to map a Duckling field type to its C-ABI representation.
-	 *
-	 * Accepts integers of widths 8/16/32/64, the Byte type, raw pointers,
-	 * fixed-size arrays of accepted types and nested classes that themselves
-	 * have `CAbi`. Everything else (references, typed pointers, floats,
-	 * tuples, variants, dynamic arrays, functions, units, ...) is rejected.
+	 * @brief Cached query that converts a Duckling field type to its C-ABI
+	 * representation. Returns `Failed` on query cycles (e.g. mutually
+	 * recursive value-type classes).
 	 */
-	CAbiConversionResult tryConvertToCAbiType(
-		compiler::tsh::SymbolType<> field_type, query::Context& ctx
-	);
-
+	DECLARE_QUERY(
+		QueryCAbiTypeOf, tsh::SymbolType<>, CRef<query::QResult<CAbiConversionResult>>, ({})
+	)
 }

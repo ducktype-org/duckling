@@ -19,6 +19,7 @@
 #include <base/pointers/box.hpp>
 
 #include <query_framework/context/context.hpp>
+#include <query_framework/query_errors.hpp>
 
 #include <sstream>
 
@@ -37,7 +38,8 @@ namespace compiler::tsl {
 		) {
 			std::vector<CRef<TypeLayout>> layouts;
 			layouts.reserve(types.size());
-			for (const auto& type: types) layouts.push_back(ctx.query<QuerySymbolTypeLayout>(type));
+			for (const auto& type: types)
+				layouts.emplace_back(&ctx.query<QuerySymbolTypeLayout>(type)->valueOrThrow());
 			return layouts;
 		}
 
@@ -258,7 +260,9 @@ namespace compiler::tsl {
 			bool any_failed = false;
 
 			for (const auto& element: field_elements) {
-				CAbiConversionResult conversion = tryConvertToCAbiType(element.getType(ctx), ctx);
+				const auto& conversion
+					= ctx.query<QueryCAbiTypeOf>(element.getType(ctx))->valueOrThrow();
+
 				if (!conversion.abi_type.has_value()) {
 					any_failed = true;
 					ctx.logInt(makeBox<compiler::helios::FieldNotCCompatibleError>(
@@ -266,17 +270,16 @@ namespace compiler::tsl {
 						fieldDiagnosticPosition(element.getSymbol(), class_type.getSymbol(), ctx),
 						std::string(compiler::helios::name(element.getSymbol()).strView()),
 						element.getType(ctx),
-						std::move(conversion.reason)
+						conversion.reason
 					));
 					continue;
 				}
-				abi_fields.push_back(abi::type_system::field(
-					base::Optional<std::string>{}, std::move(*conversion.abi_type)
-				));
+				abi_fields.push_back(
+					abi::type_system::field(base::Optional<std::string>{}, *conversion.abi_type)
+				);
 			}
 
-			if (any_failed) return ducklingPickedLayout(field_layouts);
-			if (abi_fields.empty()) return ducklingPickedLayout(field_layouts);
+			if (any_failed) query::throwFailed();
 
 			const abi::layout::ComputedLayout computed
 				= abi::layout::computeCLayout(compilerTargetABI(), abi_fields);
@@ -319,7 +322,9 @@ namespace compiler::tsl {
 			  tsh::SymbolType<>::withDefaults(dynamic_array_type),
 			  ctx
 		  ),
-		  element_layout(ctx.query<QuerySymbolTypeLayout>(dynamic_array_type.getElementType())) {}
+		  element_layout(CRef<TypeLayout>(
+			  &ctx.query<QuerySymbolTypeLayout>(dynamic_array_type.getElementType())->valueOrThrow()
+		  )) {}
 
 	std::string DynamicArrayTypeLayout::toStringDefinition(
 		query::Context& ctx, bool recursive, const u32 indent
@@ -342,13 +347,19 @@ namespace compiler::tsl {
 		const tsh::StaticArrayAbstractType static_array_type, query::Context& ctx
 	):
 		  TypeLayoutABC(
-			  ctx.query<QuerySymbolTypeLayout>(static_array_type.getElementType())->getSize()
+			  CRef<TypeLayout>(&ctx.query<QuerySymbolTypeLayout>(static_array_type.getElementType())
+	                                ->valueOrThrow())
+					  ->getSize()
 				  * static_array_type.getSize(),
-			  ctx.query<QuerySymbolTypeLayout>(static_array_type.getElementType())->getAlignment(),
+			  CRef<TypeLayout>(&ctx.query<QuerySymbolTypeLayout>(static_array_type.getElementType())
+	                                ->valueOrThrow())
+				  ->getAlignment(),
 			  tsh::SymbolType<>::withDefaults(static_array_type),
 			  ctx
 		  ),
-		  element_layout(ctx.query<QuerySymbolTypeLayout>(static_array_type.getElementType())),
+		  element_layout(CRef<TypeLayout>(
+			  &ctx.query<QuerySymbolTypeLayout>(static_array_type.getElementType())->valueOrThrow()
+		  )),
 		  element_count(static_array_type.getSize()) {}
 
 	std::string StaticArrayTypeLayout::toStringDefinition(
@@ -399,7 +410,7 @@ namespace compiler::tsl {
 		u32 i = 0;
 		for (auto type: helper.variant_type.getUnderlyingTypes()) {
 			type_to_index.put(type, i);
-			index_to_layout.push_back(ctx.query<QuerySymbolTypeLayout>(type));
+			index_to_layout.emplace_back(&ctx.query<QuerySymbolTypeLayout>(type)->valueOrThrow());
 			i++;
 		}
 	}
@@ -567,7 +578,8 @@ namespace compiler::tsl {
 			const base::Optional<Bytes> field_offset = getOffsetOfFieldSymbol(field_sym_id);
 			const tsh::SymbolType<>     field_type
 				= ctx.query<helios::QueryTypeOfSymbol>(field_sym_id)->valueOrThrow();
-			const auto field_layout = ctx.query<QuerySymbolTypeLayout>(field_type);
+			const auto field_layout
+				= CRef<TypeLayout>(&ctx.query<QuerySymbolTypeLayout>(field_type)->valueOrThrow());
 			if (recursive)
 				ss << field_layout->toStringDefinition(ctx, recursive, indent + 1);
 			else
@@ -587,11 +599,15 @@ namespace compiler::tsl {
 		const tsh::PointerAbstractType pointer_type, query::Context& ctx
 	):
 		  TypeLayoutABC(POINTER_SIZE, tsh::SymbolType<>::withDefaults(pointer_type), ctx),
-		  pointee(ctx.query<QueryAbstractTypeLayout>(pointer_type.getUnderlyingType())) {}
+		  pointee(CRef<TypeLayout>(
+			  &ctx.query<QueryAbstractTypeLayout>(pointer_type.getUnderlyingType())->valueOrThrow()
+		  )) {}
 
 	PointerTypeLayout::PointerTypeLayout(const tsh::SymbolType<> symbol_type, query::Context& ctx):
 		  TypeLayoutABC(POINTER_SIZE, symbol_type, ctx),
-		  pointee(ctx.query<QueryAbstractTypeLayout>(symbol_type.getType())) {
+		  pointee(CRef<TypeLayout>(
+			  &ctx.query<QueryAbstractTypeLayout>(symbol_type.getType())->valueOrThrow()
+		  )) {
 		CORE_ASSERT(
 			symbol_type.getRefKind() != tsh::ReferenceKind::Direct,
 			"Construction of pointer layout from symbol type "

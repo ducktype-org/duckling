@@ -14,6 +14,7 @@ public:
 		TESTER_ADD_TEST(pointerTypeIsEmptyTest);
 		TESTER_ADD_TEST(arrayAndStructHelpersTest);
 		TESTER_ADD_TEST(nestedStructTest);
+		TESTER_ADD_TEST(opaqueTypeConstructionTest);
 	}
 
 private:
@@ -76,6 +77,16 @@ private:
 		assertTrue(sv.fields.size() == 2, "outer should have two fields");
 		const auto& inner = std::get<StructType>(sv.fields[1].type->value);
 		assertTrue(inner.fields.size() == 2, "inner should have two fields");
+	}
+
+	void opaqueTypeConstructionTest() {
+		using namespace abi::type_system;
+
+		AbiType o = opaqueType(Bytes(16), Bytes(8));
+		assertTrue(std::holds_alternative<OpaqueType>(o.value), "should be OpaqueType");
+		const auto& op = std::get<OpaqueType>(o.value);
+		assertTrue(usize(op.size) == 16, "size should be 16");
+		assertTrue(usize(op.alignment) == 8, "alignment should be 8");
 	}
 };
 

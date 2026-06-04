@@ -2,17 +2,23 @@
 #include <helios/tsh/type_interface.hpp>
 #include <helios/tsh/types.hpp>
 #include <tsl/c_abi_converter.hpp>
+#include <tsl/queries.hpp>
 
 #include <base/except/exceptions.hpp>
+#include <base/extend_cpp/variant_match.hpp>
+#include <base/types/bits_and_bytes.hpp>
 
 #include <query_framework/context/context.hpp>
+#include <query_framework/standard_query/query_cache_macros.hpp>
+#include <query_framework/standard_query/query_impl.hpp>
 
 #include <variant>
 
 namespace compiler::tsl {
 
+	namespace ats = abi::type_system;
+
 	namespace {
-		namespace ats = abi::type_system;
 
 		CAbiConversionResult fail(std::string reason) {
 			return CAbiConversionResult{ .abi_type = {}, .reason = std::move(reason) };
@@ -22,67 +28,49 @@ namespace compiler::tsl {
 			return CAbiConversionResult{ .abi_type = std::move(type), .reason = {} };
 		}
 
-		/** @brief Forward declaration so helpers below can recurse on field types. */
-		CAbiConversionResult convert(compiler::tsh::SymbolType<> field_type, query::Context& ctx);
-
-		CAbiConversionResult convertIntegral(compiler::tsh::IntegralAbstractType integral) {
+		CAbiConversionResult convertIntegral(tsh::IntegralAbstractType integral) {
 			const usize width = usize(integral.getSize());
 			if (width != 8 && width != 16 && width != 32 && width != 64)
 				return fail(
 					base::strConcat("unsupported integer width ", std::to_string(width), " bits")
 				);
-			const bool is_signed = integral.getSignedness()
-			                    == compiler::tsh::IntegralAbstractType::Signedness::Signed;
+			const bool is_signed
+				= integral.getSignedness() == tsh::IntegralAbstractType::Signedness::Signed;
 			return ok(ats::intType(u8(width), is_signed));
 		}
 
 		CAbiConversionResult convertStaticArray(
-			compiler::tsh::StaticArrayAbstractType array, query::Context& ctx
+			tsh::StaticArrayAbstractType array, query::Context& ctx
 		) {
 			const usize count = array.getSize();
 			if (count == 0) return fail("zero-length array");
 
-			CAbiConversionResult element = convert(array.getElementType(), ctx);
-			if (!element.abi_type.has_value())
-				return fail(base::strConcat("array element rejected: ", element.reason));
+			const auto& element_conv
+				= ctx.query<QueryCAbiTypeOf>(array.getElementType())->valueOrThrow();
+			if (!element_conv.abi_type.has_value())
+				return fail(base::strConcat("array element rejected: ", element_conv.reason));
 
-			return ok(ats::arrayType(std::move(*element.abi_type), count));
+			return ok(ats::arrayType(cloneAbiType(*element_conv.abi_type), count));
 		}
 
-		CAbiConversionResult convertClass(
-			compiler::tsh::ClassAbstractType class_type, query::Context& ctx
-		) {
-			const compiler::helios::SymbolABI abi = class_type.getABI(ctx);
-			if (!std::holds_alternative<compiler::helios::CAbi>(abi))
+		CAbiConversionResult convertClass(tsh::ClassAbstractType class_type, query::Context& ctx) {
+			const helios::SymbolABI abi = class_type.getABI(ctx);
+			if (!std::holds_alternative<helios::CAbi>(abi))
 				return fail("nested non-extern(\"C\") class");
 
-			const CRef<compiler::tsh::TypeInterface> iface = class_type.getInterface(ctx);
-
-			std::vector<ats::Field> abi_fields;
-			usize                   field_index = 0;
-			for (const auto& element: iface->getElements()) {
-				if (!element.isField()) continue;
-				CAbiConversionResult sub = convert(element.getType(ctx), ctx);
-				if (!sub.abi_type.has_value())
-					return fail(base::strConcat(
-						"nested class field #", std::to_string(field_index), " rejected: ", sub.reason
-					));
-				abi_fields.push_back(
-					ats::field(base::Optional<std::string>{}, std::move(*sub.abi_type))
-				);
-				++field_index;
-			}
-
-			if (abi_fields.empty()) return fail("class has no fields (zero size in C ABI)");
-
-			return ok(ats::structType(std::move(abi_fields)));
+			const auto& layout = ctx.query<QueryAbstractTypeLayout>(class_type)->valueOrThrow();
+			return ok(
+				ats::opaqueType(base::bits2bytesRoundUp(layout.getSize()), layout.getAlignment())
+			);
 		}
+	}
 
-		CAbiConversionResult convert(compiler::tsh::SymbolType<> field_type, query::Context& ctx) {
-			using compiler::tsh::Kind;
-			using compiler::tsh::ReferenceKind;
+	struct IMPLEMENT_QUERY(QueryCAbiTypeOf, query::QResult<CAbiConversionResult>) {
+		static auto provide(Context& ctx, const QKey& key) -> PResult {
+			using tsh::Kind;
+			using tsh::ReferenceKind;
 
-			switch (field_type.getRefKind()) {
+			switch (key.getRefKind()) {
 			case ReferenceKind::Box:
 				return fail("owning reference (Box)");
 			case ReferenceKind::Ref:
@@ -91,18 +79,18 @@ namespace compiler::tsl {
 				break;
 			}
 
-			const compiler::tsh::AbstractType abstract = field_type.getType();
+			const tsh::AbstractType abstract = key.getType();
 			switch (abstract.getKind()) {
 			case Kind::Integral:
-				return convertIntegral(compiler::tsh::IntegralAbstractType(abstract));
+				return convertIntegral(tsh::IntegralAbstractType(abstract));
 			case Kind::Byte:
 				return ok(ats::intType(u8(8), false));
 			case Kind::RawPointer:
 				return ok(ats::pointerType());
 			case Kind::StaticArray:
-				return convertStaticArray(compiler::tsh::StaticArrayAbstractType(abstract), ctx);
+				return convertStaticArray(tsh::StaticArrayAbstractType(abstract), ctx);
 			case Kind::Class:
-				return convertClass(compiler::tsh::ClassAbstractType(abstract), ctx);
+				return convertClass(tsh::ClassAbstractType(abstract), ctx);
 			case Kind::Pointer:
 				return fail("typed pointer is not C-compatible; use `cptr T`");
 			case Kind::Tuple:
@@ -137,12 +125,10 @@ namespace compiler::tsl {
 			}
 			CORE_UNREACHABLE();
 		}
-	}
 
-	CAbiConversionResult tryConvertToCAbiType(
-		compiler::tsh::SymbolType<> field_type, query::Context& ctx
-	) {
-		return convert(field_type, ctx);
-	}
+		QUERY_AUTO_CACHE_CREF
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryCAbiTypeOf)
 
 }

@@ -4,4 +4,4 @@ add_library(AbiTypeSystem
 
 make_module(AbiTypeSystem USES Base)
 
-duck_add_test(common abi_type_system tests/abi_type_system_test.cpp USES AbiTypeSystem)
+duck_add_test(common abi_type_system tests/abi_type_system_test.cpp USES AbiTypeSystem Concurrent)

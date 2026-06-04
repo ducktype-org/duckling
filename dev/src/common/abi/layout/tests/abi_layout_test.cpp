@@ -46,9 +46,12 @@ public:
 		TESTER_ADD_TEST(nestedStructTest);
 		TESTER_ADD_TEST(threePointersTest);
 		TESTER_ADD_TEST(aarch64MatchesX86Test);
+		TESTER_ADD_TEST(opaqueFieldTest);
+		TESTER_ADD_TEST(opaqueWithI8Test);
 		TESTER_ADD_TEST(rejectsZeroLengthArrayTest);
 		TESTER_ADD_TEST(rejectsEmptyStructTest);
 		TESTER_ADD_TEST(rejectsEmptyFieldListTest);
+		TESTER_ADD_TEST(rejectsZeroSizedOpaqueTest);
 	}
 
 private:
@@ -197,6 +200,33 @@ private:
 		assertThrows<base::Panic>(
 			[]() { (void) al::computeCLayout(al::x86_64Linux(), {}); },
 			"empty top-level field list should panic"
+		);
+	}
+
+	void opaqueFieldTest() {
+		// OpaqueType{8B, 8B} behaves like an i64 for layout purposes.
+		auto layout
+			= al::computeCLayout(al::x86_64Linux(), fieldsOf(at::opaqueType(Bytes(8), Bytes(8))));
+		expectLayout(std::move(layout), 8, 8, { 0 });
+	}
+
+	void opaqueWithI8Test() {
+		// i8 + OpaqueType{16B, 8B}: i8@0, pad 1..8, opaque@8..24 → total 24, align 8.
+		auto layout = al::computeCLayout(
+			al::x86_64Linux(),
+			fieldsOf(at::intType(u8(8), true), at::opaqueType(Bytes(16), Bytes(8)))
+		);
+		expectLayout(std::move(layout), 24, 8, { 0, 8 });
+	}
+
+	void rejectsZeroSizedOpaqueTest() {
+		assertThrows<base::Panic>(
+			[]() {
+				(void) al::computeCLayout(
+					al::x86_64Linux(), fieldsOf(at::opaqueType(Bytes(0), Bytes(1)))
+				);
+			},
+			"zero-sized opaque should panic"
 		);
 	}
 };

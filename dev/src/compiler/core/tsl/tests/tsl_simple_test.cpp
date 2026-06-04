@@ -13,6 +13,16 @@ using namespace compiler::tsl;
 using namespace compiler::tsh;
 using query::utils::withContextDo;
 
+namespace {
+	CRef<TypeLayout> queryLayout(query::Context& ctx, AbstractType type) {
+		return { &ctx.query<QueryAbstractTypeLayout>(type)->valueOrThrow() };
+	}
+
+	CRef<TypeLayout> querySymbolLayout(query::Context& ctx, SymbolType<> type) {
+		return { &ctx.query<QuerySymbolTypeLayout>(type)->valueOrThrow() };
+	}
+}
+
 class LowerTypeSystemSimpleTest final: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS LowerTypeSystemSimpleTest
@@ -52,7 +62,7 @@ private:
 	void basicTypesTest() {
 		withContextDo([&](query::Context& ctx) -> void {
 			const UnitAbstractType unit_type   = getUnitType();
-			auto                   unit_layout = ctx.query<QueryAbstractTypeLayout>(unit_type);
+			auto                   unit_layout = queryLayout(ctx, unit_type);
 
 			assertTrue(unit_layout->getSize() == Bits(0), "Empty layout should have size zero.");
 			assertTrue(
@@ -71,7 +81,7 @@ private:
 				{ getCharType(), CHAR_SIZE },
 			} };
 			for (auto [small_type, expected_small_size]: small_types) {
-				auto small_layout = ctx.query<QueryAbstractTypeLayout>(small_type);
+				auto small_layout = queryLayout(ctx, small_type);
 				assertTrue(
 					small_layout->getSize() == expected_small_size,
 					"Integral layout should have size equal to that of the source type."
@@ -92,7 +102,7 @@ private:
 				IntegralAbstractType int_type = getIntegralType(
 					ctx, size, compiler::tsh::IntegralAbstractType::Signedness::Signed
 				);
-				auto int_layout = ctx.query<QueryAbstractTypeLayout>(int_type);
+				auto int_layout = queryLayout(ctx, int_type);
 
 				assertTrue(
 					int_layout->getSize() == Bits(size),
@@ -113,7 +123,7 @@ private:
 			     usize                          size: float_sizes) {
 				FloatAbstractType float_type = getFloatType(ctx, size);
 
-				auto float_layout = ctx.query<QueryAbstractTypeLayout>(float_type);
+				auto float_layout = queryLayout(ctx, float_type);
 				assertTrue(
 					float_layout->getSize() == Bits(size),
 					"Float layout should have size equal to that of the source type."
@@ -131,7 +141,7 @@ private:
 
 			const FunctionAbstractType function_type
 				= ctx.query<QueryFunctionType>({ {}, st(unit_type) });
-			auto functional_layout = ctx.query<QueryAbstractTypeLayout>(function_type);
+			auto functional_layout = queryLayout(ctx, function_type);
 			assertTrue(
 				functional_layout->getSize() == POINTER_SIZE,
 				"Functional layout should have size equal to the size of a pointer."
@@ -148,7 +158,7 @@ private:
 
 			const RawPointerAbstractType raw_pointer_type = getRawPointerType(false);
 
-			auto raw_pointer_layout = ctx.query<QueryAbstractTypeLayout>(raw_pointer_type);
+			auto raw_pointer_layout = queryLayout(ctx, raw_pointer_type);
 			assertTrue(
 				raw_pointer_layout->getSize() == POINTER_SIZE,
 				"Raw pointer layout should have size equal to the size of a pointer."
@@ -167,7 +177,7 @@ private:
 
 			const PointerAbstractType unit_pointer_type
 				= ctx.query<QueryPointerType>({ st(unit_type) });
-			auto unit_pointer_layout = ctx.query<QueryAbstractTypeLayout>(unit_pointer_type);
+			auto unit_pointer_layout = queryLayout(ctx, unit_pointer_type);
 			assertTrue(
 				unit_pointer_layout->getSize() == POINTER_SIZE,
 				"Typed pointer layout should have size equal to the size of a pointer."
@@ -192,8 +202,8 @@ private:
 
 	void stringTest() {
 		withContextDo([&](query::Context& ctx) -> void {
-			const StringAbstractType string_type = getStringType();
-			auto string_layout                   = ctx.query<QueryAbstractTypeLayout>(string_type);
+			const StringAbstractType string_type   = getStringType();
+			auto                     string_layout = queryLayout(ctx, string_type);
 
 			assertTrue(
 				string_layout->getSourceType().getType() == string_type,
@@ -210,12 +220,11 @@ private:
 	void dynamicArrayTest() {
 		withContextDo([&](query::Context& ctx) -> void {
 			const UnitAbstractType unit_type   = getUnitType();
-			const auto             unit_layout = ctx.query<QueryAbstractTypeLayout>(unit_type);
+			const auto             unit_layout = queryLayout(ctx, unit_type);
 
 			const DynamicArrayAbstractType dynamic_array_type
 				= ctx.query<QueryDynamicArrayType>(st(unit_type));
-			const auto dynamic_array_layout
-				= ctx.query<QueryAbstractTypeLayout>(dynamic_array_type);
+			const auto dynamic_array_layout = queryLayout(ctx, dynamic_array_type);
 
 			assertEqual(
 				dynamic_array_layout->getSourceType().getType(),
@@ -243,13 +252,13 @@ private:
 		withContextDo([&](query::Context& ctx) -> void {
 			const IntegralAbstractType i32_type
 				= getIntegralType(ctx, 32, compiler::tsh::IntegralAbstractType::Signedness::Signed);
-			const auto  i32_layout = ctx.query<QueryAbstractTypeLayout>(i32_type);
+			const auto  i32_layout = queryLayout(ctx, i32_type);
 			const usize count      = 10;
 
 			const StaticArrayAbstractType static_array_type
 				= ctx.query<QueryStaticArrayType>({ st(i32_type), count });
 
-			const auto static_array_layout = ctx.query<QueryAbstractTypeLayout>(static_array_type);
+			const auto static_array_layout = queryLayout(ctx, static_array_type);
 
 			assertEqual(
 				static_array_layout->getSize(),
@@ -299,7 +308,7 @@ private:
 
 			const VariantAbstractType variant_type
 				= ctx.query<QueryVariantType>({ { i8_type, f16_type } });
-			auto variant_layout = ctx.query<QueryAbstractTypeLayout>(variant_type);
+			auto variant_layout = queryLayout(ctx, variant_type);
 
 			assertTrue(
 				variant_layout->getSize() == BYTE_SIZE * 2 + Bits(16),
@@ -349,7 +358,7 @@ private:
 			const TupleAbstractType tuple_type   = ctx.query<QueryTupleType>({
                 { i8_type, f16_type, f64_type, f16_ref, f16_box },
             });
-			auto                    tuple_layout = ctx.query<QueryAbstractTypeLayout>(tuple_type);
+			auto                    tuple_layout = queryLayout(ctx, tuple_type);
 
 			assertTrue(
 				tuple_layout->getSize() == BYTE_SIZE * 16 + POINTER_SIZE * 2,
@@ -441,7 +450,7 @@ private:
 				return matching.at(0).getSymbol();
 			}();
 
-			auto my_class_layout = ctx.query<QueryAbstractTypeLayout>(my_class_type);
+			auto my_class_layout = queryLayout(ctx, my_class_type);
 			assertTrue(
 				// (1 + padding 1) + (2 + padding 2) + 8 + 8 + 8
 				my_class_layout->getSize() == BYTE_SIZE * 32,
@@ -500,7 +509,7 @@ private:
 			const SymID element3_symbol = get_element_symbol("element3");
 			const SymID elements_symbol = get_element_symbol("elements");
 
-			const auto class_layout = ctx.query<QueryAbstractTypeLayout>(class_type);
+			const auto class_layout = queryLayout(ctx, class_type);
 
 			// element1(4) + element2(4) + element3(4) + elements(8) = 20 bytes.
 			// No padding needed because all fields are 4-byte aligned.
@@ -536,8 +545,8 @@ private:
 				getIntegralType(ctx, 64, compiler::tsh::IntegralAbstractType::Signedness::Signed)
 			);
 			auto const_int_symbol_type = int_symbol_type.withMutability(Immutable);
-			auto int_layout            = ctx.query<QuerySymbolTypeLayout>(int_symbol_type);
-			auto const_int_layout      = ctx.query<QuerySymbolTypeLayout>(const_int_symbol_type);
+			auto int_layout            = querySymbolLayout(ctx, int_symbol_type);
+			auto const_int_layout      = querySymbolLayout(ctx, const_int_symbol_type);
 			assertTrue(
 				int_layout == const_int_layout, "Symbol mutability should not affect type layout"
 			);
@@ -555,9 +564,9 @@ private:
 			auto ref_i64 = i64.withReferenceKind(ReferenceKind::Ref);
 			auto box_i64 = i64.withReferenceKind(ReferenceKind::Box);
 
-			auto i64_layout     = ctx.query<QuerySymbolTypeLayout>(i64);
-			auto ref_i64_layout = ctx.query<QuerySymbolTypeLayout>(ref_i64);
-			auto box_i64_layout = ctx.query<QuerySymbolTypeLayout>(box_i64);
+			auto i64_layout     = querySymbolLayout(ctx, i64);
+			auto ref_i64_layout = querySymbolLayout(ctx, ref_i64);
+			auto box_i64_layout = querySymbolLayout(ctx, box_i64);
 
 			auto i64_name     = i64_layout->getMangledName();
 			auto ref_i64_name = ref_i64_layout->getMangledName();

@@ -342,8 +342,8 @@ namespace compiler::driver {
 			u64                                statement_counter = 0;
 
 			if (split_result->empty()) {
-				// Empty input should still produce a valid synthetic script main wrapper with no
-				// statement calls.
+				// Empty input should still produce a valid synthetic script main wrapper with
+				// no statement calls.
 				auto empty_script_module
 					= repl::createEphemeralChainedStatementModule("", {}, 0, "script_");
 				parent_module_id = empty_script_module->getModuleID();
@@ -751,10 +751,11 @@ namespace compiler::driver {
 		}
 
 		// Sort + dedup: a single (module_id, backend, build_debug_info, root_module) should be
-		// compiled at most once even if multiple tasks reference it. The sort key is the module's
-		// content hash, which is effectively random across modules — that gives us deterministic
-		// output *and* spreads sibling modules across the worker queue (better load balancing
-		// than feeding workers a depth-first traversal), so no separate shuffle is needed.
+		// compiled at most once even if multiple tasks reference it. The sort key is the
+		// module's content hash, which is effectively random across modules — that gives us
+		// deterministic output *and* spreads sibling modules across the worker queue (better
+		// load balancing than feeding workers a depth-first traversal), so no separate shuffle
+		// is needed.
 		std::ranges::sort(modules_to_compile, lessModuleToCompile);
 		modules_to_compile.erase(
 			std::ranges::unique(modules_to_compile).begin(), modules_to_compile.end()
@@ -896,6 +897,10 @@ namespace compiler::driver {
 			}
 		}
 
+		auto query_logger = query::Context::dumpToOneLoggerAndClear();
+		if (query_logger->hasErrors()) result = base::BAD;
+		if (global_state::hasGlobalLogger() && global_state::getGlobalLogger()->hasErrors())
+			result = base::BAD;
 		return result;
 	}
 

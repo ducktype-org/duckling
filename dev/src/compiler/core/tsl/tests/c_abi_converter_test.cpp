@@ -11,6 +11,7 @@
 #include <variant>
 
 using namespace compiler::tsh;
+using namespace compiler::tsl;
 using query::utils::withContextDo;
 namespace ats = abi::type_system;
 
@@ -26,6 +27,12 @@ namespace {
 
 	SymbolType<> boxOf(AbstractType abstract_type) {
 		return SymbolType{ abstract_type, ReferenceKind::Box, Mutability::Immutable };
+	}
+
+	const CAbiConversionResult& queryConv(query::Context& ctx, SymbolType<> st) {
+		auto qr = ctx.query<QueryCAbiTypeOf>(st);
+		CORE_ASSERT(!qr->hasFailed(), "QueryCAbiTypeOf returned Failed unexpectedly");
+		return qr->valueOrThrow();
 	}
 
 }
@@ -74,7 +81,7 @@ private:
 			for (usize width: { usize(8), usize(16), usize(32), usize(64) }) {
 				const auto t
 					= getIntegralType(ctx, width, IntegralAbstractType::Signedness::Signed);
-				auto r = compiler::tsl::tryConvertToCAbiType(directOf(t), ctx);
+				const auto& r = queryConv(ctx, directOf(t));
 				ASSERT_TRUE(r.abi_type.has_value());
 				expectInt(*r.abi_type, width, true);
 			}
@@ -85,7 +92,7 @@ private:
 		withContextDo([&](query::Context& ctx) -> void {
 			const auto u32_type
 				= getIntegralType(ctx, 32, IntegralAbstractType::Signedness::Unsigned);
-			auto r = compiler::tsl::tryConvertToCAbiType(directOf(u32_type), ctx);
+			const auto& r = queryConv(ctx, directOf(u32_type));
 			ASSERT_TRUE(r.abi_type.has_value());
 			expectInt(*r.abi_type, 32, false);
 		});
@@ -95,7 +102,7 @@ private:
 		withContextDo([&](query::Context& ctx) -> void {
 			const auto i128_type
 				= getIntegralType(ctx, 128, IntegralAbstractType::Signedness::Signed);
-			auto r = compiler::tsl::tryConvertToCAbiType(directOf(i128_type), ctx);
+			const auto& r = queryConv(ctx, directOf(i128_type));
 			assertFalse(r.abi_type.has_value(), "i128 should be rejected");
 			assertTrue(r.reason.find("128") != std::string::npos, "reason should mention width");
 		});
@@ -103,7 +110,7 @@ private:
 
 	void byteTest() {
 		withContextDo([&](query::Context& ctx) -> void {
-			auto r = compiler::tsl::tryConvertToCAbiType(directOf(getByteType()), ctx);
+			const auto& r = queryConv(ctx, directOf(getByteType()));
 			ASSERT_TRUE(r.abi_type.has_value());
 			expectInt(*r.abi_type, 8, false);
 		});
@@ -111,7 +118,7 @@ private:
 
 	void rawPointerTest() {
 		withContextDo([&](query::Context& ctx) -> void {
-			auto r = compiler::tsl::tryConvertToCAbiType(directOf(getRawPointerType(false)), ctx);
+			const auto& r = queryConv(ctx, directOf(getRawPointerType(false)));
 			ASSERT_TRUE(r.abi_type.has_value());
 			expectPointer(*r.abi_type);
 		});
@@ -123,7 +130,7 @@ private:
 				= getIntegralType(ctx, 32, IntegralAbstractType::Signedness::Signed);
 			const PointerAbstractType typed_pointer
 				= ctx.query<QueryPointerType>({ directOf(i32_type) });
-			auto r = compiler::tsl::tryConvertToCAbiType(directOf(typed_pointer), ctx);
+			const auto& r = queryConv(ctx, directOf(typed_pointer));
 			assertFalse(r.abi_type.has_value(), "typed pointer should be rejected");
 		});
 	}
@@ -134,7 +141,7 @@ private:
 				= getIntegralType(ctx, 32, IntegralAbstractType::Signedness::Signed);
 			const StaticArrayAbstractType arr_type
 				= ctx.query<QueryStaticArrayType>({ directOf(i32_type), 4 });
-			auto r = compiler::tsl::tryConvertToCAbiType(directOf(arr_type), ctx);
+			const auto& r = queryConv(ctx, directOf(arr_type));
 			ASSERT_TRUE(r.abi_type.has_value());
 			ASSERT_TRUE(std::holds_alternative<ats::ArrayType>(r.abi_type->value));
 			const auto& a = std::get<ats::ArrayType>(r.abi_type->value);
@@ -149,7 +156,7 @@ private:
 				= getIntegralType(ctx, 32, IntegralAbstractType::Signedness::Signed);
 			const StaticArrayAbstractType arr_type
 				= ctx.query<QueryStaticArrayType>({ directOf(i32_type), 0 });
-			auto r = compiler::tsl::tryConvertToCAbiType(directOf(arr_type), ctx);
+			const auto& r = queryConv(ctx, directOf(arr_type));
 			assertFalse(r.abi_type.has_value(), "zero-length array should be rejected");
 		});
 	}
@@ -160,7 +167,7 @@ private:
 				= getIntegralType(ctx, 32, IntegralAbstractType::Signedness::Signed);
 			const StaticArrayAbstractType arr_type
 				= ctx.query<QueryStaticArrayType>({ refOf(i32_type), 4 });
-			auto r = compiler::tsl::tryConvertToCAbiType(directOf(arr_type), ctx);
+			const auto& r = queryConv(ctx, directOf(arr_type));
 			assertFalse(r.abi_type.has_value(), "array of ref should be rejected");
 		});
 	}
@@ -169,7 +176,7 @@ private:
 		withContextDo([&](query::Context& ctx) -> void {
 			const auto i64_type
 				= getIntegralType(ctx, 64, IntegralAbstractType::Signedness::Signed);
-			auto r = compiler::tsl::tryConvertToCAbiType(refOf(i64_type), ctx);
+			const auto& r = queryConv(ctx, refOf(i64_type));
 			assertFalse(r.abi_type.has_value(), "ref should be rejected");
 			assertTrue(
 				r.reason.find("reference") != std::string::npos, "reason should mention reference"
@@ -181,43 +188,43 @@ private:
 		withContextDo([&](query::Context& ctx) -> void {
 			const auto i64_type
 				= getIntegralType(ctx, 64, IntegralAbstractType::Signedness::Signed);
-			auto r = compiler::tsl::tryConvertToCAbiType(boxOf(i64_type), ctx);
+			const auto& r = queryConv(ctx, boxOf(i64_type));
 			assertFalse(r.abi_type.has_value(), "box should be rejected");
 		});
 	}
 
 	void floatRejectedTest() {
 		withContextDo([&](query::Context& ctx) -> void {
-			const auto f32_type = getFloatType(ctx, 32);
-			auto       r        = compiler::tsl::tryConvertToCAbiType(directOf(f32_type), ctx);
+			const auto  f32_type = getFloatType(ctx, 32);
+			const auto& r        = queryConv(ctx, directOf(f32_type));
 			assertFalse(r.abi_type.has_value(), "float should be rejected");
 		});
 	}
 
 	void boolRejectedTest() {
 		withContextDo([&](query::Context& ctx) -> void {
-			auto r = compiler::tsl::tryConvertToCAbiType(directOf(getBoolType()), ctx);
+			const auto& r = queryConv(ctx, directOf(getBoolType()));
 			assertFalse(r.abi_type.has_value(), "bool should be rejected");
 		});
 	}
 
 	void charRejectedTest() {
 		withContextDo([&](query::Context& ctx) -> void {
-			auto r = compiler::tsl::tryConvertToCAbiType(directOf(getCharType()), ctx);
+			const auto& r = queryConv(ctx, directOf(getCharType()));
 			assertFalse(r.abi_type.has_value(), "char should be rejected");
 		});
 	}
 
 	void stringRejectedTest() {
 		withContextDo([&](query::Context& ctx) -> void {
-			auto r = compiler::tsl::tryConvertToCAbiType(directOf(getStringType()), ctx);
+			const auto& r = queryConv(ctx, directOf(getStringType()));
 			assertFalse(r.abi_type.has_value(), "string should be rejected");
 		});
 	}
 
 	void unitRejectedTest() {
 		withContextDo([&](query::Context& ctx) -> void {
-			auto r = compiler::tsl::tryConvertToCAbiType(directOf(getUnitType()), ctx);
+			const auto& r = queryConv(ctx, directOf(getUnitType()));
 			assertFalse(r.abi_type.has_value(), "unit should be rejected");
 			assertTrue(
 				r.reason.find("zero") != std::string::npos, "reason should mention zero size"
@@ -231,7 +238,7 @@ private:
 				= getIntegralType(ctx, 32, IntegralAbstractType::Signedness::Signed);
 			const DynamicArrayAbstractType dyn
 				= ctx.query<QueryDynamicArrayType>(directOf(i32_type));
-			auto r = compiler::tsl::tryConvertToCAbiType(directOf(dyn), ctx);
+			const auto& r = queryConv(ctx, directOf(dyn));
 			assertFalse(r.abi_type.has_value(), "dynamic array should be rejected");
 		});
 	}
@@ -242,7 +249,7 @@ private:
 				= getIntegralType(ctx, 32, IntegralAbstractType::Signedness::Signed);
 			const TupleAbstractType tup
 				= ctx.query<QueryTupleType>({ { directOf(i32_type), directOf(i32_type) } });
-			auto r = compiler::tsl::tryConvertToCAbiType(directOf(tup), ctx);
+			const auto& r = queryConv(ctx, directOf(tup));
 			assertFalse(r.abi_type.has_value(), "tuple should be rejected");
 		});
 	}
@@ -251,7 +258,7 @@ private:
 		withContextDo([&](query::Context& ctx) -> void {
 			const FunctionAbstractType fun
 				= ctx.query<QueryFunctionType>({ {}, directOf(getUnitType()) });
-			auto r = compiler::tsl::tryConvertToCAbiType(directOf(fun), ctx);
+			const auto& r = queryConv(ctx, directOf(fun));
 			assertFalse(r.abi_type.has_value(), "function should be rejected");
 		});
 	}

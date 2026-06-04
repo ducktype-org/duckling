@@ -17,10 +17,14 @@
 #pragma once
 
 #include <base/collections/optional.hpp>
-#include <base/pointers/box.hpp>
+#include <base/except/exceptions.hpp>
+#include <base/types/bits_and_bytes.hpp>
 #include <base/types/ints.hpp>
 
+#include <memory>
 #include <string>
+#include <type_traits>
+#include <utility>
 #include <variant>
 #include <vector>
 
@@ -43,26 +47,24 @@ namespace abi::type_system {
 	struct PointerType final {};
 
 	struct AbiType;
+	using AbiTypePtr = std::shared_ptr<AbiType>;
 
 	/**
 	 * @brief A fixed-size C array. `count` must be strictly positive;
 	 * zero-length arrays are rejected.
 	 */
 	struct ArrayType final {
-		base::Box<AbiType> element;
-		usize              count;
+		AbiTypePtr element;
+		usize      count;
 	};
-
-	struct StructType;
 
 	/**
 	 * @brief One field inside a struct. The name is optional and is only used
-	 * for diagnostics / pretty-printing in tests; the layout algorithm does
-	 * not depend on it.
+	 * for diagnostics; the layout algorithm does not depend on it.
 	 */
 	struct Field final {
 		base::Optional<std::string> name;
-		base::Box<AbiType>          type;
+		AbiTypePtr                  type;
 	};
 
 	/**
@@ -75,47 +77,77 @@ namespace abi::type_system {
 	};
 
 	/**
+	 * @brief A pre-computed blob with known size and alignment. Represents a
+	 * nested type whose internal layout has already been determined.
+	 */
+	struct OpaqueType final {
+		Bytes size;
+		Bytes alignment;
+	};
+
+	/**
 	 * @brief Tagged union of every C-representable type the library
 	 * understands.
 	 */
 	struct AbiType final {
-		std::variant<IntType, PointerType, ArrayType, StructType> value;
+		std::variant<IntType, PointerType, ArrayType, StructType, OpaqueType> value;
 	};
 
-	// The helpers below construct Boxes through aggregate initialisation; the
-	// clang static analyser cannot prove that ownership is transferred into the
-	// returned aggregate and reports a false positive NewDeleteLeaks. Box owns
-	// the allocation and frees it in its destructor.
-	// NOLINTBEGIN(clang-analyzer-cplusplus.NewDeleteLeaks)
-
-	/** @brief Convenience helper: wraps an `AbiType` value in a fresh Box. */
-	inline base::Box<AbiType> makeAbiType(AbiType type) {
-		return base::makeBox<AbiType>(std::move(type));
+	/** @brief Wraps an AbiType value in a shared pointer. */
+	inline AbiTypePtr makeAbiType(AbiType type) {
+		return std::make_shared<AbiType>(std::move(type));
 	}
 
-	/** @brief Convenience helper: builds an `AbiType` from an `IntType`. */
+	/** @brief Builds an AbiType from an IntType. */
 	inline AbiType intType(u8 width_bits, bool is_signed) {
 		return AbiType{ IntType{ .width_bits = width_bits, .is_signed = is_signed } };
 	}
 
-	/** @brief Convenience helper: builds an opaque pointer `AbiType`. */
+	/** @brief Builds an opaque pointer AbiType. */
 	inline AbiType pointerType() { return AbiType{ PointerType{} }; }
 
-	/** @brief Convenience helper: builds a fixed-size array `AbiType`. */
+	/** @brief Builds a fixed-size array AbiType. */
 	inline AbiType arrayType(AbiType element, usize count) {
 		return AbiType{ ArrayType{ .element = makeAbiType(std::move(element)), .count = count } };
 	}
 
-	/** @brief Convenience helper: builds a struct `AbiType` from a list of fields. */
+	/** @brief Builds a struct AbiType from a list of fields. */
 	inline AbiType structType(std::vector<Field> fields) {
 		return AbiType{ StructType{ .fields = std::move(fields) } };
 	}
 
-	/** @brief Convenience helper: builds a `Field` with an optional name. */
+	/** @brief Builds an opaque blob AbiType with known size and alignment. */
+	inline AbiType opaqueType(Bytes size, Bytes alignment) {
+		return AbiType{ OpaqueType{ .size = size, .alignment = alignment } };
+	}
+
+	/** @brief Builds a Field with an optional name. */
 	inline Field field(base::Optional<std::string> name, AbiType type) {
 		return Field{ .name = std::move(name), .type = makeAbiType(std::move(type)) };
 	}
 
-	// NOLINTEND(clang-analyzer-cplusplus.NewDeleteLeaks)
-
+	/** @brief Deep-clones an AbiType tree into newly allocated shared nodes. */
+	inline AbiType cloneAbiType(const AbiType& type) {
+		return std::visit(
+			[&](const auto& value) -> AbiType {
+				using T = std::decay_t<decltype(value)>;
+				if constexpr (std::is_same_v<T, IntType> || std::is_same_v<T, PointerType>
+			                  || std::is_same_v<T, OpaqueType>) {
+					return AbiType{ value };
+				} else if constexpr (std::is_same_v<T, ArrayType>) {
+					return arrayType(cloneAbiType(*value.element), value.count);
+				} else if constexpr (std::is_same_v<T, StructType>) {
+					std::vector<Field> cloned_fields;
+					cloned_fields.reserve(value.fields.size());
+					for (const auto& f: value.fields) {
+						cloned_fields.push_back(Field{
+							.name = f.name, .type = makeAbiType(cloneAbiType(*f.type)) });
+					}
+					return structType(std::move(cloned_fields));
+				}
+				CORE_UNREACHABLE();
+			},
+			type.value
+		);
+	}
 }
