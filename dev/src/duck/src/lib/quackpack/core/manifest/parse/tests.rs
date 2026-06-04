@@ -1084,11 +1084,7 @@ dependencies:
     let frontmatter = _try_parse_frontmatter(frontmatter_path, &ctx)
         .unwrap()
         .unwrap();
-    let _ = frontmatter
-        .dependencies()
-        .get_by_name(StrId::new("a"))
-        .unwrap()
-        .clone();
+    assert!(frontmatter.dependencies().has_by_name(StrId::new("a")));
     assert_eq!(frontmatter.dependencies().all_dependencies().len(), 1);
     assert_eq!(frontmatter.dev_dependencies().all_dependencies().len(), 0);
     assert_eq!(frontmatter.profiles().get_profiles().len(), 0);
@@ -1149,11 +1145,7 @@ dependencies:
         .unwrap();
     let ctx = DuckContext::default();
     let frontmatter = _try_parse_frontmatter(importing, &ctx).unwrap().unwrap();
-    let _ = frontmatter
-        .dependencies()
-        .get_by_name(StrId::new("a"))
-        .unwrap()
-        .clone();
+    assert!(frontmatter.dependencies().has_by_name(StrId::new("a")));
     assert_eq!(frontmatter.dependencies().all_dependencies().len(), 1);
     assert_eq!(frontmatter.dev_dependencies().all_dependencies().len(), 0);
     assert_eq!(frontmatter.profiles().get_profiles().len(), 0);
@@ -1223,5 +1215,34 @@ import: y
     assert_eq!(
         err.to_string(),
         make_errors_message_frontmatter(&dir, ["frontmatter begins but does not end"])
+    );
+}
+
+#[test]
+fn fail_frontmatter_with_illegal_fields() {
+    let (dir, frontmatter_path) = prepare_frontmatter(
+        r#"
+metadata:
+  description: "Bad frontmatter"
+features: {}
+dependencies:
+  a:
+    version: '1'
+"#,
+    );
+    let ctx = DuckContext::default();
+    let err = _try_parse_frontmatter(frontmatter_path.clone(), &ctx).unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        make_errors_message_frontmatter(
+            &dir,
+            [
+                "remove all the fields besides `dependencies`, `dev-dependencies` and `profiles`",
+                &format!(
+                    "illegal fields `metadata`, `features` in the frontmatter at {}",
+                    frontmatter_path.display()
+                ),
+            ]
+        )
     );
 }

@@ -83,10 +83,9 @@ fn _generate_schema_from_content(
     let schema = ManifestSchema::deserialize(deserializer)?;
     if resolve_imports {
         _resolve_import_in_schema(path, schema)
+    } else if schema.import.is_some() {
+        qp_bail!("imported frontmatter cannot have `import` field itself")
     } else {
-        if schema.import.is_some() {
-            qp_bail!("imported frontmatter cannot have `import` field itself")
-        }
         Ok(schema)
     }
 }
@@ -143,8 +142,15 @@ fn _resolve_import_in_schema(
 /// checking that it does not contain any fields disallowed in frontmatters with resolved imports.
 #[tracing::instrument(skip(schema, ctx))]
 fn _parse_schema(path: &Path, schema: &ManifestSchema, ctx: &DuckContext) -> QuackResult<Manifest> {
-    if !schema.can_be_expanded_frontmatter() {
-        let mut err = qp_err!("illegal field in the frontmatter");
+    let illegal_fields = schema.fields_disallowed_in_expanded_frontmatter();
+    if !illegal_fields.is_empty() {
+        let plural = if illegal_fields.len() > 1 { "s" } else { "" };
+        let mut err = qp_err!(
+            "illegal field{} `{}` in the frontmatter at {}",
+            plural,
+            illegal_fields.join("`, `"),
+            path.display()
+        );
         err = err.add_hint(
             "remove all the fields besides `dependencies`, `dev-dependencies` and `profiles`",
         );
