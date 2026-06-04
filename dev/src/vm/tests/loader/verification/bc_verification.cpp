@@ -346,6 +346,7 @@ private:
 			}
 		);
 	}
+
 	void wrongGlobalInitializationMethod() {
 		loadInvalidDbc(
 			"wrong/globals/invalid_init.dbc",
@@ -354,6 +355,7 @@ private:
 			}
 		);
 	}
+
 	void wrongGlobalImmSize() {
 		loadInvalidDbc(
 			"wrong/globals/wrong_imm_size.dbc",
@@ -362,6 +364,7 @@ private:
 			}
 		);
 	}
+
 	void wrongGlobalField() {
 		loadInvalidDbc(
 			"wrong/globals/wrong_field.dbc",
@@ -370,6 +373,7 @@ private:
 			}
 		);
 	}
+
 	void wrongGlobalTblSize() {
 		loadInvalidDbc(
 			"wrong/globals/wrong_table_size.dbc",

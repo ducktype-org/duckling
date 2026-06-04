@@ -25,7 +25,10 @@ class SerializeParseRoundtripTest: public VmTestSuite {
 #define TESTER_CLASS SerializeParseRoundtripTest
 
 public:
-	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(roundtripMinimalProgram); TESTER_ADD_TEST(roundtripFromString);}
+	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+		TESTER_ADD_TEST(roundtripMinimalProgram);
+		TESTER_ADD_TEST(roundtripFromString);
+	}
 
 private:
 	/**

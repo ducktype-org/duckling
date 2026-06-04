@@ -66,8 +66,7 @@ void vm::code::ValidProgram::insertGlobals(const std::vector<GlobalData>& new_gl
 	for (const auto& global: new_globals) {
 		if (globals_map.contains(global.name))
 			throw DuplicatedGlobalDataError(global, *globals_map.at(global.name));
-		if (!types.contains(global.type))
-			throw UnknownTypeError(opargs::Type(global.type));
+		if (!types.contains(global.type)) throw UnknownTypeError(opargs::Type(global.type));
 		if (global.ctor_name.has_value() && global.initial_value.has_value())
 			throw GlobalCtorAndInitialValueConflictError(global.name);
 		if (global.ctor_name.has_value() && !function_signatures.contains(global.ctor_name.value()))

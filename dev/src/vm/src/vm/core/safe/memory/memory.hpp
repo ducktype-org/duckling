@@ -12,9 +12,9 @@
 #include <base/pointers/ref.hpp>
 #include <base/types/ints.hpp>
 
+#include <vm/bytecode/constant_value_fd.hpp>
 #include <vm/core/safe/exceptions.hpp>
 #include <vm/core/safe/type_metadata/definitions.hpp>
-#include <vm/bytecode/constant_value_fd.hpp>
 
 #include <deque>
 

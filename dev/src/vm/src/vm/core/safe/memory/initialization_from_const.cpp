@@ -1,9 +1,9 @@
 
 #include "memory.hpp"
 
-#include "vm/bytecode/const_pool.hpp"
-#include "vm/bytecode/const_pool_visitor.hpp"
-#include "vm/core/safe/type_metadata/definitions.hpp"
+#include <vm/bytecode/const_pool.hpp>
+#include <vm/bytecode/const_pool_visitor.hpp>
+#include <vm/core/safe/type_metadata/definitions.hpp>
 
 namespace vm {
 
@@ -46,7 +46,6 @@ namespace vm {
 			  current_type(current_type),
 			  current_offset(current_offset),
 			  data(data) {}
-
 	};
 
 	void Memory::intializeBlockFromConstValue(

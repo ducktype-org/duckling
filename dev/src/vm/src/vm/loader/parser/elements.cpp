@@ -253,7 +253,6 @@ namespace vm::loader::parser {
 		}
 
 		std::pair<std::array<std::byte, 8>, Bits> parseHexLiteral(F8ParserState& state) {
-
 			const auto& token = state.tokens().peek();
 
 			if (!token.isNumLiteralGroup()) {
@@ -410,7 +409,7 @@ namespace vm::loader::parser {
 			using namespace vm::code;
 
 			if (state[0].isNumLiteralGroup()) {
-				auto parsed    = opargs_parsers::parseHexLiteral(state);
+				auto parsed = opargs_parsers::parseHexLiteral(state);
 				ERROR_CHECK();
 				ConstantImmediate immediate;
 				immediate.size = base::bits2bytes(parsed.second);

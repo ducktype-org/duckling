@@ -46,11 +46,11 @@ namespace vm::loader::parser {
 	struct GlobalData final: AsmElement {
 		using AsmElement::AsmElement;
 
-		tpc::Identifier                 name;
-		tpc::Identifier                 type;
-		base::Optional<tpc::Identifier> ctor_name;
-		base::Optional<tpc::Identifier> dtor_name;
-		bool                            is_constant{ false };
+		tpc::Identifier                     name;
+		tpc::Identifier                     type;
+		base::Optional<tpc::Identifier>     ctor_name;
+		base::Optional<tpc::Identifier>     dtor_name;
+		bool                                is_constant{ false };
 		base::Optional<code::ConstantValue> initial_value;
 
 		static Box<GlobalData> parse(F8ParserState& state);

@@ -559,8 +559,9 @@ namespace vm {
 					variant_case(low::GlobalCtorDtor, ctor_dtor) {
 						if (ctor_dtor.ctor_name.has_value()) {
 							try {
-								const auto& func
-									= *process_program->getFunctions().atMaybe(ctor_dtor.ctor_name.value()).value();
+								const auto& func = *process_program->getFunctions()
+								                        .atMaybe(ctor_dtor.ctor_name.value())
+								                        .value();
 								low::LowFuncData start_function = createStartFunctionFor(func, {});
 								executeFunction(start_function, func);
 							} catch (const KillProcessException& e) {

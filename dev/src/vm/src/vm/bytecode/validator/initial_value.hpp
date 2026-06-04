@@ -13,9 +13,9 @@ namespace vm::code::detail {
 	 * @param global_name The name of the global variable (for error messages).
 	 */
 	void validateInitialValue(
-		const ConstantValue&              value,
-		valid_type::ValidTypeID           expected_type_id,
-		const valid_type::ValidTypeMap&   types,
-		base::StrID                       global_name
+		const ConstantValue&            value,
+		valid_type::ValidTypeID         expected_type_id,
+		const valid_type::ValidTypeMap& types,
+		base::StrID                     global_name
 	);
 }

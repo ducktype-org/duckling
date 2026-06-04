@@ -31,7 +31,9 @@ namespace vm::code::detail {
 
 				const auto& primitive = type_ref->getKindAs<valid_type::finalized::Primitive>();
 				if (primitive->size != value.size)
-					throw InitialValueTypeMismatchError(global_name, type_ref->getName(), "Primitive of incorrect size.");
+					throw InitialValueTypeMismatchError(
+						global_name, type_ref->getName(), "Primitive of incorrect size."
+					);
 			}
 
 			void visitConstantClass(const ConstantClass& value) override {
@@ -43,16 +45,22 @@ namespace vm::code::detail {
 				const auto& structure = type_ref->getKindAs<valid_type::finalized::Structure>();
 
 				if (value.fields.size() != structure->fields.size())
-					throw InitialValueTypeMismatchError(global_name, type_ref->getName(), "Incorrect number of fields.");
+					throw InitialValueTypeMismatchError(
+						global_name, type_ref->getName(), "Incorrect number of fields."
+					);
 
 				std::unordered_set<base::StrID> visited_names;
 
 				for (const auto& [field_name, field_value]: value.fields) {
 					auto field_type_opt = structure->fields.atMaybe(field_name);
 					if (!field_type_opt)
-						throw InitialValueTypeMismatchError(global_name, type_ref->getName(), "Field does not exist.");
+						throw InitialValueTypeMismatchError(
+							global_name, type_ref->getName(), "Field does not exist."
+						);
 					if (visited_names.contains(field_name))
-						throw InitialValueTypeMismatchError(global_name, type_ref->getName(), "Field duplicated.");
+						throw InitialValueTypeMismatchError(
+							global_name, type_ref->getName(), "Field duplicated."
+						);
 					visited_names.insert(field_name);
 
 					InitialValueValidator field_validator(
@@ -70,7 +78,9 @@ namespace vm::code::detail {
 
 				const auto& fst = type_ref->getKindAs<valid_type::finalized::FixedSizeTable>();
 				if (value.elements.size() != fst->element_count)
-					throw InitialValueTypeMismatchError(global_name, type_ref->getName(), "Number of elements differ.");
+					throw InitialValueTypeMismatchError(
+						global_name, type_ref->getName(), "Number of elements differ."
+					);
 
 				for (const auto& element: value.elements) {
 					InitialValueValidator element_validator(fst->inner, types, global_name);

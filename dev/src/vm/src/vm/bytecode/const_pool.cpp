@@ -5,9 +5,7 @@
 #include <base/extend_cpp/variant_match.hpp>
 
 namespace vm::code {
-	Box<ConstantBase> ConstantImmediate::clone() const {
-		return makeBox<ConstantImmediate>(*this);
-	}
+	Box<ConstantBase> ConstantImmediate::clone() const { return makeBox<ConstantImmediate>(*this); }
 
 	Box<ConstantBase> ConstantClass::clone() const {
 		auto cloned = makeBox<ConstantClass>();

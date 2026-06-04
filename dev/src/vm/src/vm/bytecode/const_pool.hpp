@@ -1,6 +1,6 @@
 #pragma once
 
-#include "base/extend_cpp/stringifyable_enum.hpp"
+#include <base/extend_cpp/stringifyable_enum.hpp>
 #include <base/pointers/box.hpp>
 #include <base/types/bits_and_bytes.hpp>
 #include <base/types/ints.hpp>
