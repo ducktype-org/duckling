@@ -10,9 +10,10 @@
 
 #include <base/collections/maps.hpp>
 #include <base/extend_cpp/variant_match.hpp>
+#include <base/extend_cpp/vector_utils.hpp>
 
 #include <iomanip>
-#include <set>
+#include <unordered_set>
 
 namespace compiler::lir {
 	LIRLocal LIRLocal::fromMIR(
@@ -44,9 +45,16 @@ namespace compiler::lir {
 	LIRGlobal LIRGlobal::fromMIR(query::Context& ctx, mir::MIRGlobal mir_global) {
 		auto type_layout = ctx.query<tsl::QuerySymbolTypeLayout>(mir_global.type);
 
-		auto mangled_name = helios::mangler::getSimpleMangledName(ctx, mir_global.helios_id);
+		auto mangled_name  = helios::mangler::getSimpleMangledName(ctx, mir_global.helios_id);
+		LIRGlobalType type = mir_global.kind == mir::MIRGlobal::Kind::Constant
+		                       ? LIRGlobalType::Constant
+		                       : LIRGlobalType::Variable;
 
-		return LIRGlobal{ mir_global.helios_id, type_layout, mangled_name };
+		return LIRGlobal{
+			type_layout,
+			mangled_name,
+			type,
+		};
 	}
 
 	LIRGlobal LIRGlobal::fromHOUT(query::Context& ctx, const helios::HOUTGlobalData& hout_global) {
@@ -57,14 +65,13 @@ namespace compiler::lir {
 		variant_match(hout_global.value) {
 			variant_case(helios::HOUTGlobalConst, name) {
 				return LIRGlobal{
-					hout_global.helios_symbol, type_layout, mangled_name,
-					LIRGlobalType::Constant,   name.value,
+					type_layout,
+					mangled_name,
+					LIRGlobalType::Constant,
 				};
 			}
 			variant_case(helios::HOUTGlobalVariable, name) {
-				return LIRGlobal{
-					hout_global.helios_symbol, type_layout, mangled_name, LIRGlobalType::Variable
-				};
+				return LIRGlobal{ type_layout, mangled_name, LIRGlobalType::Variable };
 			}
 			variant_default {
 				CORE_PANIC(
@@ -78,7 +85,7 @@ namespace compiler::lir {
 	}
 
 	LIRPlace::LIRPlace(BaseVariant base, std::vector<Projection> projection_chain):
-		  base(std::move(base)),
+		  base(base),
 		  layout([&]() -> CRef<tsl::TypeLayout> {
 			  // Calculate the end layout of LIRPlace. Start with the root layout and go through the
 		      // projections.
@@ -361,7 +368,54 @@ namespace compiler::lir {
 		os << (type == LIRGlobalType::Constant ? "constant" : "variable") << ": ";
 		os << mangled_name.strView() << "\n";
 		os << "Type: " << layout->toStringDefinition(ctx) << "\n";
-		if (initial_value.has_value()) os << "Initial value: " << initial_value->toString() << "\n";
+	}
+
+	void LIRGlobalData::debugPrint(query::Context& ctx, std::ostream& os) const {
+		global.debugPrint(ctx, os);
+		os << "  Data Initialization: ";
+		variant_match(data_initialization) {
+			variant_case(ctv::CompileTimeValue, ctv) { os << ctv.toString(); }
+			variant_case(CTorDtorPair, ctor_dtor_pair) {
+				if_opt_some(ctor_dtor_pair.global_ctor, ctor) {
+					os << "  Global constructor:\n";
+					ctor->debugPrint(ctx, os);
+				}
+				if_opt_some(ctor_dtor_pair.global_dtor, dtor) {
+					os << "  Global destructor:\n";
+					dtor->debugPrint(ctx, os);
+				}
+			}
+		}
+	}
+
+	void LIRUnit::debugPrint(query::Context& ctx, std::ostream& os) const {
+		os << "LIRUnit: \n";
+		os << "Globals:\n";
+		for (const auto& global: lir_globals) {
+			global.debugPrint(ctx, os);
+			os << "\n";
+		}
+		os << "Functions:\n";
+		for (const auto& func: lir_functions) {
+			func->debugPrint(ctx, os);
+			os << "\n";
+		}
+	}
+
+	void LIRUnit::deduplicateSymbols() {
+		std::unordered_set<base::StrID> seen_globals;
+		base::filterVectorInPlace(lir_globals, [&seen_globals](const LIRGlobalData& global_data) {
+			if (seen_globals.contains(global_data.global.mangled_name)) return false;
+			seen_globals.insert(global_data.global.mangled_name);
+			return true;
+		});
+
+		std::unordered_set<base::StrID> seen_functions;
+		base::filterVectorInPlace(lir_functions, [&seen_functions](const CRef<Function>& func) {
+			if (seen_functions.contains(func->mangled_name)) return false;
+			seen_functions.insert(func->mangled_name);
+			return true;
+		});
 	}
 
 	LIRLocalSpecialKind specialKindFromMIR(const mir::MIRLocal& mir_local) {

@@ -4,19 +4,19 @@ class Point {
 }
 
 fun array_test() -> i32 = {
-    var arr: i32[10u64];
-    arr[3i64] = 42;
-    return arr[3i64];
+    var arr: i32[10];
+    arr[3] = 42;
+    return arr[3];
 }
 
 fun nested_test() -> i32 = {
-    var matrix: i32[2u64][3u64];
-    matrix[1i64][2i64] = 7;
-    return matrix[1i64][2i64];
+    var matrix: i32[2][3];
+    matrix[1][2] = 7;
+    return matrix[1][2];
 }
 
 fun struct_array_test() -> i32 = {
-    var points: Point[5u64];
-    points[1i64].y = 50;
-    return points[1i64].y;
+    var points: Point[5];
+    points[1].y = 50;
+    return points[1].y;
 }

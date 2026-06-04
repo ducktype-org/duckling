@@ -6,6 +6,7 @@
 
 #include <base/pointers/ref.hpp>
 
+#include <ostream>
 #include <string>
 #include <utility>
 
@@ -44,7 +45,7 @@ namespace compiler::repl {
 	 * Contains the status of the operation and an optional message.
 	 */
 	struct ReplResult final {
-		enum class Status { Success, Error, Exit, IncompleteInput };
+		enum class Status { Success, Error, Exit, Reset, IncompleteInput };
 
 		Status      status;
 		std::string message;
@@ -61,8 +62,20 @@ namespace compiler::repl {
 			return ReplResult{ .status = Status::Exit, .message = "Goodbye!" };
 		}
 
+		static ReplResult reset(std::string msg = "Restarting REPL...") {
+			return ReplResult{ .status = Status::Reset, .message = std::move(msg) };
+		}
+
 		static ReplResult incomplete() {
 			return ReplResult{ .status = Status::IncompleteInput, .message = "" };
 		}
 	};
+
+	/**
+	 * @brief Print shared REPL commands help section.
+	 *
+	 * This section is frontend-agnostic and should remain identical between
+	 * minimal and replxx implementations.
+	 */
+	void printReplCommandsHelp(std::ostream& out);
 }  // namespace compiler::repl

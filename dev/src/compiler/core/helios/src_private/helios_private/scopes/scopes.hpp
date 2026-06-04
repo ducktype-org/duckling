@@ -26,7 +26,6 @@
 
 #include <base/types/bit256.hpp>
 
-#include <diagnostic/logger.hpp>
 #include <query_framework/query_int.hpp>
 #include <string_id/string_id.hpp>
 

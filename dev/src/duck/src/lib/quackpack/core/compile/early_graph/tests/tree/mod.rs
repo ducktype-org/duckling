@@ -5,7 +5,7 @@ use setup::*;
 
 use crate::quackpack::core::PackageLoader;
 use crate::quackpack::core::compile::BuildContext;
-use crate::quackpack::core::compile::early_dag::{DependencyNode, EarlyDag};
+use crate::quackpack::core::compile::early_graph::{DependencyNode, EarlyGraph};
 use crate::quackpack::core::compile::profiles::Profile;
 use crate::quackpack::core::fetcher::Fetcher;
 use crate::quackpack::core::identity::{Identity, Origin};
@@ -39,10 +39,10 @@ fn creates_valid_initial_graph() {
         profile,
         script_path: None,
     };
-    let graph = EarlyDag::new_early(&bcx).unwrap();
-    assert_eq!(graph.dag.root, identity_for("root"));
+    let graph = EarlyGraph::new_early(&bcx).unwrap();
+    assert_eq!(graph.graph.root, identity_for("root"));
     assert_eq!(
-        graph.dag.dag,
+        graph.graph.graph,
         HashMap::from_iter([
             (
                 identity_for("root"),
@@ -88,7 +88,7 @@ fn expands_valid_features1() {
         profile,
         script_path: None,
     };
-    let mut graph = EarlyDag::new_early(&bcx).unwrap();
+    let mut graph = EarlyGraph::new_early(&bcx).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
     let root_features = graph
         .package(&identity_for("root"))
@@ -142,7 +142,7 @@ fn expands_valid_features2() {
         profile,
         script_path: None,
     };
-    let mut graph = EarlyDag::new_early(&bcx).unwrap();
+    let mut graph = EarlyGraph::new_early(&bcx).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
     let root_features = graph
         .package(&identity_for("root"))
@@ -202,7 +202,7 @@ fn expands_valid_features3() {
         profile,
         script_path: None,
     };
-    let mut graph = EarlyDag::new_early(&bcx).unwrap();
+    let mut graph = EarlyGraph::new_early(&bcx).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
     let root_features = graph
         .package(&identity_for("root"))
@@ -249,7 +249,7 @@ fn errors_with_nonexistent_features() {
         profile,
         script_path: None,
     };
-    let mut graph = EarlyDag::new_early(&bcx).unwrap();
+    let mut graph = EarlyGraph::new_early(&bcx).unwrap();
     let err = graph.populate_features(&bcx.used_features).unwrap_err();
     assert_eq!(
         err.to_string(),
@@ -285,20 +285,18 @@ fn removes_inactive_deps1() {
         profile,
         script_path: None,
     };
-    let mut graph = EarlyDag::new_early(&bcx).unwrap();
+    let mut graph = EarlyGraph::new_early(&bcx).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
     graph.remove_disabled_dependencies();
-    assert_eq!(graph.dag.root, identity_for("root"));
+    assert_eq!(graph.graph.root, identity_for("root"));
     assert_eq!(
-        graph.dag.dag,
+        graph.graph.graph,
         HashMap::from_iter([
             (
                 identity_for("root"),
                 DependencyNode::new(vec![fetcher_identity_for("foo")])
             ),
             (fetcher_identity_for("foo"), DependencyNode::new(vec![])),
-            (fetcher_identity_for("bar"), DependencyNode::new(vec![])),
-            (fetcher_identity_for("baz"), DependencyNode::new(vec![])),
         ])
     );
 }
@@ -330,12 +328,12 @@ fn removes_inactive_deps2() {
         profile,
         script_path: None,
     };
-    let mut graph = EarlyDag::new_early(&bcx).unwrap();
+    let mut graph = EarlyGraph::new_early(&bcx).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
     graph.remove_disabled_dependencies();
-    assert_eq!(graph.dag.root, identity_for("root"));
+    assert_eq!(graph.graph.root, identity_for("root"));
     assert_eq!(
-        graph.dag.dag,
+        graph.graph.graph,
         HashMap::from_iter([
             (
                 identity_for("root"),
@@ -346,7 +344,6 @@ fn removes_inactive_deps2() {
                 DependencyNode::new(vec![fetcher_identity_for("bar")])
             ),
             (fetcher_identity_for("bar"), DependencyNode::new(vec![])),
-            (fetcher_identity_for("baz"), DependencyNode::new(vec![])),
         ])
     );
 }
@@ -378,12 +375,12 @@ fn removes_inactive_deps3() {
         profile,
         script_path: None,
     };
-    let mut graph = EarlyDag::new_early(&bcx).unwrap();
+    let mut graph = EarlyGraph::new_early(&bcx).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
     graph.remove_disabled_dependencies();
-    assert_eq!(graph.dag.root, identity_for("root"));
+    assert_eq!(graph.graph.root, identity_for("root"));
     assert_eq!(
-        graph.dag.dag,
+        graph.graph.graph,
         HashMap::from_iter([
             (
                 identity_for("root"),
@@ -429,12 +426,12 @@ fn removes_inactive_deps4() {
         profile,
         script_path: None,
     };
-    let mut graph = EarlyDag::new_early(&bcx).unwrap();
+    let mut graph = EarlyGraph::new_early(&bcx).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
     graph.remove_disabled_dependencies();
-    assert_eq!(graph.dag.root, identity_for("root"));
+    assert_eq!(graph.graph.root, identity_for("root"));
     assert_eq!(
-        graph.dag.dag,
+        graph.graph.graph,
         HashMap::from_iter([
             (
                 identity_for("root"),
@@ -450,46 +447,6 @@ fn removes_inactive_deps4() {
             ),
             (fetcher_identity_for("baz"), DependencyNode::new(vec![])),
         ])
-    );
-}
-
-#[test]
-fn cycle_in_freeze() {
-    let (ctx, root) = setup_mock_storage();
-    let identity_for = |name: &str| {
-        let path = root.path().join(name);
-        let origin = Origin::for_local(&path).unwrap();
-        Identity::new(name.into(), origin)
-    };
-
-    let fetcher_identity_for = |name: &str| {
-        let origin = Origin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
-        Identity::new(name.into(), origin)
-    };
-    let package = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
-    let profile =
-        Profile::construct_profile("dev".into(), package.package().manifest().profiles()).unwrap();
-    let root_origin = Origin::for_local(&root.path().join("root")).unwrap();
-    let root_identity = Identity::new("root".into(), root_origin);
-    let bcx = BuildContext {
-        pcx: &package,
-        root_identity,
-        freeze: freeze_with_cycle(),
-        storage: Storage::new(ctx.default_storage_root().into_not_locked_path()),
-        used_features: vec![],
-        profile,
-        script_path: None,
-    };
-    let err = EarlyDag::new_early(&bcx).unwrap_err();
-    assert_eq!(
-        err.to_string(),
-        format!(
-            "malformed freezefile: cycle `{}` -> `{}` -> `{}` -> `{}`",
-            identity_for("root"),
-            fetcher_identity_for("foo"),
-            fetcher_identity_for("bar"),
-            fetcher_identity_for("foo")
-        )
     );
 }
 
@@ -514,7 +471,7 @@ fn missing_direct_dep_in_freeze() {
         profile,
         script_path: None,
     };
-    let err = EarlyDag::new_early(&bcx).unwrap_err();
+    let err = EarlyGraph::new_early(&bcx).unwrap_err();
     assert_eq!(
         err.to_string(),
         format!(
@@ -545,7 +502,7 @@ fn missing_transitive_dep_in_freeze() {
         profile,
         script_path: None,
     };
-    let err = EarlyDag::new_early(&bcx).unwrap_err();
+    let err = EarlyGraph::new_early(&bcx).unwrap_err();
     assert_eq!(
         err.to_string(),
         format!(

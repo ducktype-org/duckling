@@ -1,6 +1,6 @@
 #pragma once
 
-#include <driver_private/lir_module_data.hpp>
+#include <driver_private/lir_unit_with_name.hpp>
 
 #include <filesystem/file.hpp>
 
@@ -19,6 +19,8 @@ namespace compiler::repl {
 	 * Script compilation lowers each statement into a chunk and then merges those
 	 * chunks into a single synthetic module. This helper performs that merge step.
 	 */
-	void appendScriptLIRModuleData(driver::LIRModuleData& merged, const driver::LIRModuleData& chunk);
+	void appendScriptLIRModuleData(
+		driver::LIRUnitWithBackendName& merged, const driver::LIRUnitWithBackendName& chunk
+	);
 
 }  // namespace compiler::repl

@@ -60,12 +60,10 @@ pub fn setup_mock_packages(root: &Path) {
 ///
 /// ```no_run
 ///     foo
-///    / with feature `use_baz`
-///  baz
-///
-///     bar
-///    / with feature `use_baz`
-///  baz
+///    / with feature `use_bar`
+///   bar
+///  / with feature `use_baz`; enabled by `use_bar_with_baz` in foo
+/// baz
 /// ```
 /// Should be use with [`freeze`] freeze.
 fn packages_names_and_manifests() -> &'static [(&'static str, &'static str)] {
@@ -78,12 +76,16 @@ metadata:
   version: 1.0.0
 
 dependencies:
-  baz:
+  bar:
     version: 1.0.0
     conditions:
-      package-features: [use_baz]
+      package-features: [use_bar]
+    features:
+      - use_baz:
+          package-features: [use_bar_with_baz]
 features:
-  use_baz: []
+  use_bar: []
+  use_bar_with_baz: [use_bar]
 ",
         ),
         (
@@ -117,9 +119,10 @@ metadata:
 ///
 /// ```no_run
 ///     root
-///    /    \
-///   foo   bar + use_baz, if root has use_bar_with_baz
-///   + use_baz, if root has use_foo_with_baz
+///    /
+///   foo + use_bar, if root has use_bar
+///       + use_bar_with_baz + use_bar, if root has full
+///       + use_bar_with_baz, if root has baz_without_bar
 /// ```
 ///
 /// There's also an extra feature `nonexistent`.
@@ -136,19 +139,16 @@ dependencies:
   foo:
     version: 1.0.0
     features:
-      - use_baz:
-          package-features: [use_foo_with_baz]
+      - use_bar:
+          package-features: [use_bar]
+      - use_bar_with_baz:
+          package-features: [full, baz_without_bar]
       - nonexistent:
           package-features: [nonexistent]
-  bar:
-    version: 1.0.0
-    features:
-      - use_baz:
-          package-features: [use_bar_with_baz]
 features:
-  use_bar_with_baz: []
-  use_foo_with_baz: []
-  full: [use_foo_with_baz, use_bar_with_baz]
+  use_bar: []
+  full: [use_bar]
+  baz_without_bar: []
   nonexistent: []
         ",
         )
@@ -161,124 +161,71 @@ features:
 /// This function should be generally used in order to create
 /// [`BuildContext`](super::BuildContext).
 pub fn freeze() -> VenvFreeze {
-    let origin = FullOrigin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
-    let simple_origin = Origin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
-    let mock_simple_identity = |name: &str| Identity::new(name.into(), simple_origin);
-    let mock_identity = |name: &str| FullIdentity::new(name.into(), origin);
+    let full_origin = FullOrigin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
+    let origin = Origin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
+    let mock_identity = |name: &str| Identity::new(name.into(), origin);
+    let mock_full_identity = |name: &str| FullIdentity::new(name.into(), full_origin);
     VenvFreeze::new(
         RootPackage::new(
             "root".into(),
             Version::new(1, 0, 0),
-            vec![
-                "use_bar_with_baz".into(),
-                "full".into(),
-                "nonexistent".into(),
-                "use_foo_with_baz".into(),
-            ],
-            vec![mock_simple_identity("foo"), mock_simple_identity("bar")],
+            vec!["use_bar".into(), "full".into(), "nonexistent".into()],
+            vec![mock_identity("foo")],
         ),
         vec![
             FreezePackage::new(
-                mock_identity("foo"),
+                mock_full_identity("foo"),
                 Version::new(1, 0, 0),
-                vec!["use_baz".into()],
-                vec![mock_simple_identity("baz")],
+                vec!["use_bar".into(), "use_bar_with_baz".into()],
+                vec![mock_identity("bar")],
             ),
             FreezePackage::new(
-                mock_identity("bar"),
+                mock_full_identity("bar"),
                 Version::new(1, 0, 0),
                 vec!["use_baz".into()],
-                vec![mock_simple_identity("baz")],
-            ),
-            FreezePackage::new(mock_identity("baz"), Version::new(1, 0, 0), vec![], vec![]),
-        ],
-    )
-}
-
-pub fn freeze_with_cycle() -> VenvFreeze {
-    let origin = FullOrigin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
-    let simple_origin = Origin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
-    let mock_simple_identity = |name: &str| Identity::new(name.into(), simple_origin);
-    let mock_identity = |name: &str| FullIdentity::new(name.into(), origin);
-    VenvFreeze::new(
-        RootPackage::new(
-            "root".into(),
-            Version::new(1, 0, 0),
-            vec![
-                "use_bar_with_baz".into(),
-                "full".into(),
-                "nonexistent".into(),
-                "use_foo_with_baz".into(),
-            ],
-            vec![mock_simple_identity("foo"), mock_simple_identity("bar")],
-        ),
-        vec![
-            FreezePackage::new(
-                mock_identity("foo"),
-                Version::new(1, 0, 0),
-                vec!["use_baz".into()],
-                vec![mock_simple_identity("bar")],
+                vec![mock_identity("baz")],
             ),
             FreezePackage::new(
-                mock_identity("bar"),
+                mock_full_identity("baz"),
                 Version::new(1, 0, 0),
-                vec!["use_baz".into()],
-                vec![mock_simple_identity("foo")],
+                vec![],
+                vec![],
             ),
-            FreezePackage::new(mock_identity("baz"), Version::new(1, 0, 0), vec![], vec![]),
         ],
     )
 }
 
 pub fn freeze_without_direct_dep() -> VenvFreeze {
-    let simple_origin = Origin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
-    let mock_simple_identity = |name: &str| Identity::new(name.into(), simple_origin);
+    let origin = Origin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
+    let mock_identity = |name: &str| Identity::new(name.into(), origin);
     VenvFreeze::new(
         RootPackage::new(
             "root".into(),
             Version::new(1, 0, 0),
-            vec![
-                "use_bar_with_baz".into(),
-                "full".into(),
-                "nonexistent".into(),
-                "use_foo_with_baz".into(),
-            ],
-            vec![mock_simple_identity("foo"), mock_simple_identity("bar")],
+            vec!["use_bar".into(), "full".into(), "nonexistent".into()],
+            vec![mock_identity("foo")],
         ),
         vec![],
     )
 }
 
 pub fn freeze_without_transitive_dep() -> VenvFreeze {
-    let origin = FullOrigin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
-    let simple_origin = Origin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
-    let mock_simple_identity = |name: &str| Identity::new(name.into(), simple_origin);
-    let mock_identity = |name: &str| FullIdentity::new(name.into(), origin);
+    let full_origin = FullOrigin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
+    let origin = Origin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
+    let mock_identity = |name: &str| Identity::new(name.into(), origin);
+    let mock_full_identity = |name: &str| FullIdentity::new(name.into(), full_origin);
     VenvFreeze::new(
         RootPackage::new(
             "root".into(),
             Version::new(1, 0, 0),
-            vec![
-                "use_bar_with_baz".into(),
-                "full".into(),
-                "nonexistent".into(),
-                "use_foo_with_baz".into(),
-            ],
-            vec![mock_simple_identity("foo"), mock_simple_identity("bar")],
+            vec!["use_bar".into(), "full".into(), "nonexistent".into()],
+            vec![mock_identity("foo")],
         ),
-        vec![
-            FreezePackage::new(
-                mock_identity("foo"),
-                Version::new(1, 0, 0),
-                vec!["use_baz".into()],
-                vec![mock_simple_identity("baz")],
-            ),
-            FreezePackage::new(
-                mock_identity("bar"),
-                Version::new(1, 0, 0),
-                vec!["use_baz".into()],
-                vec![mock_simple_identity("foo")],
-            ),
-        ],
+        vec![FreezePackage::new(
+            mock_full_identity("foo"),
+            Version::new(1, 0, 0),
+            vec!["use_bar".into(), "use_bar_with_baz".into()],
+            vec![mock_identity("bar")],
+        )],
     )
 }
