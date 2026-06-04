@@ -88,7 +88,6 @@ private:
 		std::ostringstream oss;
 		serializeCode(original, oss);
 		std::string serialized = oss.str();
-		std::cerr << serialized;
 
 		// Write to virtual file and parse back
 		fs::File vfile  = fs::FileManager::createRandomVirtualFile(serialized, ".dbc");
@@ -158,7 +157,7 @@ type fixed_size_table: point_arr Point 2
 global_data answers point_arr {
     is_constant: true,
     initial_value: fixed_size_table [ class { x: 0x12345678, y: 0x87654321, is_ok: 0xFF }, class { x: 0x00000001, y: 0xFFFFFFFF, is_ok: 0x0A } ]
-};
+}
 
 function main { i64, ptr_argv } -> { i64 } {
     mov_p64_imm                ret0,        0;
