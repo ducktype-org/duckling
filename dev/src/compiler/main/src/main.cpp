@@ -1002,6 +1002,10 @@ clah::Clah getClahForMain() {
 	                     .addLongName("no-completions")
 	                     .addShortDesc("Disable REPL autocompletions and hints.")
 	                     .build())
+				.add(clah::ParamBuilder::ofFlag()
+	                     .addLongName("disable-bracketed-paste")
+	                     .addShortDesc("Disable bracketed paste in REPL.")
+	                     .build())
 				.setDefaultValueParser(clah::FileParser::make("script")
 	            )  // for optional script path.
 				.add(clah::ParamBuilder::ofValue(clah::IntParser::make("count"))
@@ -1027,11 +1031,17 @@ clah::Clah getClahForMain() {
 						compiler::driver::exit();
 						return 1;
 					}
+					bool completions = compiler::repl::FRONTEND_DEFAULT_COMPLETIONS_ENABLED;
+					if (options.isFlag("no-completions")) completions = false;
+
+					bool bracketed = compiler::repl::FRONTEND_DEFAULT_BRACKETED_PASTE_ENABLED;
+					if (options.isFlag("disable-bracketed-paste")) bracketed = false;
+
 					base::Optional<usize>      reset_replay_count;
 					bool                       reset_replay_silent = false;
 					compiler::repl::ReplResult repl_result = compiler::repl::ReplResult::success();
 					{
-						compiler::repl::ReplSession session(!options.isFlag("no-completions"));
+						compiler::repl::ReplSession session(completions, bracketed);
 						auto replay_count_opt = options.getValue<i64>("history-entries");
 						i64  replay_count     = replay_count_opt.copyValueOr(0);
 						bool replay_silent    = options.isFlag("silent");
