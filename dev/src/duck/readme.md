@@ -12,6 +12,7 @@ More detailed descriptions of various parts of duck and/or quackpack can be foun
 - `libssl2`,
 - `libsqlite3`,
 - `pkg-config` on Linux, for finding OpenSSL installation.
+- `rust` [available under this link](https://rust-lang.org/tools/install/), cargo should be added to `PATH` (default installation has this option)
 
 Most of them could be avoided by passing appropriate `bundled-*` feature flag, or `bundled-all`, to bundle everything.
 
