@@ -4,11 +4,25 @@
 #include "link_time.hpp"
 
 #include <vm/core/jit/jit_compiler.hpp>
+#include <vm/core/jit/jit_helper.hpp>
 #include <vm/core/safe/opcode_functions/opcodes_functions.hpp>
 
 // For situations when [[assume(...)]] gets ignored and it can't be.
 #define FORCE_ASSUME(...) \
 	if (!(__VA_ARGS__)) CORE_UNREACHABLE()
+
+#define JUMP_STENCIL(name)                                                            \
+	return std::invoke(                                                               \
+		GET_LINK_VARIABLE(                                                            \
+			name, void (*)(const MicroInstruction*, byte*, Frame*, SafeVMThread&), 64 \
+		),                                                                            \
+		instr,                                                                        \
+		local_stack,                                                                  \
+		frame,                                                                        \
+		thread                                                                        \
+	)
+
+#define CONTINUE_STENCIL JUMP_STENCIL(continue_fn)
 
 namespace vm::jit::cnp {
 	DECLARE_LINK_VARIABLE(continue_fn);
@@ -26,12 +40,7 @@ namespace vm::jit::cnp {
 		FORCE_ASSUME(instr->arg0 == GET_LINK_VARIABLE(arg0, u64, 64));
 		FORCE_ASSUME(instr->arg1 == GET_LINK_VARIABLE(arg1, u64, 64));
 		InstructionImplementation(instr, local_stack, frame, thread);
-
-
-		auto continue_fn = GET_LINK_VARIABLE(
-			continue_fn, void (*)(const MicroInstruction*, byte*, Frame*, SafeVMThread&), 64
-		);
-		return (*continue_fn)(instr, local_stack, frame, thread);
+		CONTINUE_STENCIL;
 	}
 
 // for now only a single(ext-less) instruction
@@ -52,5 +61,21 @@ namespace vm::jit::cnp {
 		// Stencils do not take pointers to reduce the cost, since
 		// it would have to be dereferenced or patched in every single stencil.
 		return vm::OpFuns::save_execution_state(instr, local_stack, frame, thread);
+	}
+
+	// NOLINTNEXTLINE(readability-identifier-naming)
+	extern "C" void stencil_special_trampoline(CP_ARGS) {
+		vm::jit::helpers::trampoline(instr, local_stack, frame, thread);
+		CONTINUE_STENCIL;
+	}
+
+	DECLARE_LINK_VARIABLE(jmp_function);
+
+	// NOLINTNEXTLINE(readability-identifier-naming)
+	extern "C" void stencil_special_jump(CP_ARGS) {
+		if (frame->flags.flag)
+			JUMP_STENCIL(jmp_function);
+		else
+			CONTINUE_STENCIL;
 	}
 }
