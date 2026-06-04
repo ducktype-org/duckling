@@ -25,7 +25,7 @@ pub mod unit;
 use duckc::*;
 use early_graph::*;
 
-const MISSING_DEPENDENCY_IN_DAG_MESSAGE: &str = "missing dependency in the map";
+const MISSING_DEPENDENCY_IN_GRAPH_MESSAGE: &str = "missing dependency in the map";
 const MISSING_DEPENDENCY_IN_MANIFEST_MESSAGE: &str =
     "malformed manifest: missing dependency in the manifest";
 

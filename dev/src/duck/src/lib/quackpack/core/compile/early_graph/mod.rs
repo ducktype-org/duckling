@@ -4,7 +4,7 @@ use std::collections::{HashMap, HashSet};
 
 use itertools::Itertools;
 
-use crate::quackpack::core::compile::MISSING_DEPENDENCY_IN_DAG_MESSAGE;
+use crate::quackpack::core::compile::MISSING_DEPENDENCY_IN_GRAPH_MESSAGE;
 use crate::quackpack::core::compile::compiler_package::CompilerPackage;
 use crate::quackpack::core::identity::Identity;
 use crate::{QuackError, QuackResult};
@@ -28,14 +28,14 @@ impl PackagesSet {
     pub fn package(&self, name: &Identity) -> &CompilerPackage {
         self.inner
             .get(name)
-            .expect(MISSING_DEPENDENCY_IN_DAG_MESSAGE)
+            .expect(MISSING_DEPENDENCY_IN_GRAPH_MESSAGE)
     }
 
     /// Same as [`package`](Self::package), but returns a mutable reference.
     pub fn package_mut(&mut self, name: &Identity) -> &mut CompilerPackage {
         self.inner
             .get_mut(name)
-            .expect(MISSING_DEPENDENCY_IN_DAG_MESSAGE)
+            .expect(MISSING_DEPENDENCY_IN_GRAPH_MESSAGE)
     }
 }
 
@@ -71,7 +71,7 @@ impl DependencyGraph {
     pub fn dependencies_for_package(&self, package: &Identity) -> &DependencyNode {
         self.graph
             .get(package)
-            .expect(MISSING_DEPENDENCY_IN_DAG_MESSAGE)
+            .expect(MISSING_DEPENDENCY_IN_GRAPH_MESSAGE)
     }
 }
 
