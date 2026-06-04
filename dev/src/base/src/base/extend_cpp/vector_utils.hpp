@@ -28,8 +28,9 @@ namespace base {
 	 */
 	template<typename T, typename Predicate>
 	void filterVectorInPlace(std::vector<T>& vec, const Predicate& predicate) {
-		vec.erase(std::remove_if(vec.begin(), vec.end(), [&vec, &predicate](const T& item) {
+		auto new_end = std::remove_if(vec.begin(), vec.end(), [&](const T& item) {
 			return !predicate(item);
-		}));
+		});
+		vec.erase(new_end, vec.end());
 	}
 }
