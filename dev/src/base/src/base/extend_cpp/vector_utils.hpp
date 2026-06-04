@@ -1,6 +1,5 @@
 #pragma once
 
-#include <algorithm>
 #include <vector>
 
 // @TODO: #1619 extend this header, and use it across the codebase
@@ -28,9 +27,6 @@ namespace base {
 	 */
 	template<typename T, typename Predicate>
 	void filterVectorInPlace(std::vector<T>& vec, const Predicate& predicate) {
-		auto new_end = std::remove_if(vec.begin(), vec.end(), [&](const T& item) {
-			return !predicate(item);
-		});
-		vec.erase(new_end, vec.end());
+		std::erase_if(vec, [&predicate](const T& item) { return !predicate(item); });
 	}
 }
