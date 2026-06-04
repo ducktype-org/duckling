@@ -195,8 +195,16 @@ namespace clah {
 	}
 
 	int Clah::execute(usize argc, const char* const* argv) {
+		return execute([&]{ return parse(argc, argv); });
+	}
+
+	int Clah::execute(const std::string& args) {
+		return execute([&]{ return parseArgs(args); });
+	}
+
+	int Clah::execute(std::function<ParsingResult()> parse) {
 		try {
-			auto parsing_result = parse(argc, argv);
+			auto parsing_result = parse();
 
 			if (pre_handler) pre_handler(parsing_result);
 
