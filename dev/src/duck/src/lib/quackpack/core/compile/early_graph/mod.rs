@@ -4,8 +4,8 @@ use std::collections::{HashMap, HashSet};
 
 use itertools::Itertools;
 
-use crate::quackpack::core::compile::MISSING_DEPENDENCY_IN_GRAPH_MESSAGE;
 use crate::quackpack::core::compile::compiler_package::CompilerPackage;
+use crate::quackpack::core::compile::missing_dependcy_in_graph_message;
 use crate::quackpack::core::identity::Identity;
 use crate::{QuackError, QuackResult};
 
@@ -13,7 +13,7 @@ pub mod creating_graph;
 pub mod modifying_graph;
 
 #[cfg(test)]
-mod tests;
+pub mod tests;
 
 #[derive(Debug)]
 /// Dictionary [`Identity`] -> [`CompilerPackage`].
@@ -28,14 +28,19 @@ impl PackagesSet {
     pub fn package(&self, name: &Identity) -> &CompilerPackage {
         self.inner
             .get(name)
-            .expect(MISSING_DEPENDENCY_IN_GRAPH_MESSAGE)
+            .unwrap_or_else(|| panic!("{}", missing_dependcy_in_graph_message(*name)))
     }
 
     /// Same as [`package`](Self::package), but returns a mutable reference.
     pub fn package_mut(&mut self, name: &Identity) -> &mut CompilerPackage {
         self.inner
             .get_mut(name)
-            .expect(MISSING_DEPENDENCY_IN_GRAPH_MESSAGE)
+            .unwrap_or_else(|| panic!("{}", missing_dependcy_in_graph_message(*name)))
+    }
+
+    /// Get the underlying packages' map.
+    pub fn into_inner(self) -> HashMap<Identity, CompilerPackage> {
+        self.inner
     }
 }
 
@@ -71,7 +76,7 @@ impl DependencyGraph {
     pub fn dependencies_for_package(&self, package: &Identity) -> &DependencyNode {
         self.graph
             .get(package)
-            .expect(MISSING_DEPENDENCY_IN_GRAPH_MESSAGE)
+            .unwrap_or_else(|| panic!("{}", missing_dependcy_in_graph_message(*package)))
     }
 
     /// Get the iterator over all entries in this graph.
@@ -111,5 +116,10 @@ impl EarlyGraph {
     /// Get the underlying [`DependencyGraph`].
     pub fn graph(&self) -> &DependencyGraph {
         &self.graph
+    }
+
+    /// Decompose this [`EarlyGraph`].
+    pub(super) fn into_inner(self) -> (PackagesSet, DependencyGraph) {
+        (self.packages, self.graph)
     }
 }

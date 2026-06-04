@@ -23,11 +23,18 @@ pub mod profiles;
 pub mod unit;
 
 use duckc::*;
-use early_graph::*;
 
-const MISSING_DEPENDENCY_IN_GRAPH_MESSAGE: &str = "missing dependency in the map";
-const MISSING_DEPENDENCY_IN_MANIFEST_MESSAGE: &str =
-    "malformed manifest: missing dependency in the manifest";
+use self::early_graph::creating_graph::create_early_graph_from_bcx;
+
+/// A common message for panicking when a manifest is missing a dependency.
+pub fn missing_dependcy_in_manifest_message(root_name: &str, dep: &str) -> String {
+    format!("malformed manifest of `{root_name}`: missing dependency `{dep}` in the manifest")
+}
+
+/// A common message for panicking when any graph is missing a key.
+pub fn missing_dependcy_in_graph_message(id: Identity) -> String {
+    format!("missing dependency `{id}` in the graph")
+}
 
 #[derive(Debug)]
 /// All informations required to compile a project.
@@ -49,14 +56,7 @@ pub fn compile(
     compilation_type: CompilationType,
 ) -> QuackResult<ArtifactsDir> {
     debug!(bcx = ?bcx, "compiling");
-    let graph = create_early_graph(&bcx)?;
+    let graph = create_early_graph_from_bcx(&bcx)?;
     let duckc = Duckc::new(bcx.pcx.ctx());
     duckc.compile(&graph, compilation_type, &bcx)
-}
-
-fn create_early_graph(bcx: &BuildContext<'_, '_>) -> QuackResult<EarlyGraph> {
-    let mut graph = EarlyGraph::new_early(bcx)?;
-    graph.populate_features(&bcx.used_features)?;
-    graph.remove_disabled_dependencies();
-    Ok(graph)
 }
