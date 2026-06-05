@@ -7,7 +7,6 @@ use serde::Deserialize;
 use tracing::debug;
 
 use crate::quackpack::core::Package;
-use crate::quackpack::core::manifest::parse::manifest::ParseMode;
 use crate::quackpack::schemas::manifest::Manifest as ManifestSchema;
 use crate::util::path_ops_ext::PathOpsExt;
 use crate::{DuckContext, QuackResult, QuackResultContext, qp_internal};
@@ -37,6 +36,13 @@ pub fn parse_manifest(path: &Path, ctx: &DuckContext) -> QuackResult<Package> {
             path.display()
         )
     })
+}
+
+/// Different utilites in which manifests occur.
+/// Used to perform appropriate checks on presence/absence of certain fields.
+pub enum ParseMode {
+    Package,
+    FrontMatterScript,
 }
 
 #[derive(Debug)]

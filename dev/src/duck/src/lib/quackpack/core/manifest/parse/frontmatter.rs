@@ -28,8 +28,8 @@ use regex::Regex;
 use serde::Deserialize;
 use tracing::debug;
 
-use crate::quackpack::core::FrontMatterScript;
-use crate::quackpack::core::manifest::parse::manifest::{ParseMode, parse};
+use crate::quackpack::core::manifest::parse::manifest::parse;
+use crate::quackpack::core::{FrontMatterScript, ParseMode};
 use crate::{
     DuckContext, QuackResult, qp_bail, quackpack::schemas::manifest::Manifest as ManifestSchema,
     util::path_ops_ext::PathOpsExt,

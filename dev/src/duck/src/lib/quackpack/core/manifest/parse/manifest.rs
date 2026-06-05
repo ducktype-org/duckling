@@ -6,7 +6,8 @@ use tracing::debug;
 
 use super::{Scope, dependency};
 use crate::quackpack::core::{
-    Features, Manifest, OptLevel, PackageMetadata, Profile, Profiles, ScopeGuard, Version,
+    Features, Manifest, OptLevel, PackageMetadata, ParseMode, Profile, Profiles, ScopeGuard,
+    Version,
 };
 use crate::quackpack::schemas::manifest::{
     Manifest as ManifestSchema, OptLevel as SchemaOptLevel, Profile as ProfileSchema,
@@ -47,7 +48,7 @@ pub(crate) fn parse(
                 qp_bail!(err);
             }
 
-            let name = StrId::new(root.display().to_string());
+            let name = StrId::from(root);
             let version = Version::default();
             let manifest = Manifest::new(
                 name,
@@ -102,13 +103,6 @@ pub(crate) fn parse(
     }
 }
 
-/// Different utilites in which manifests occur.
-/// Used to perform appropriate checks on presence/absence of certain fields.
-pub enum ParseMode {
-    Package,
-    FrontMatterScript,
-}
-
 /// Parse [`Features`] from the given features map.
 fn parse_features(features: Option<&HashMap<String, Vec<String>>>) -> QuackResult<Features> {
     let Some(features) = features else {
@@ -122,7 +116,7 @@ fn parse_features(features: Option<&HashMap<String, Vec<String>>>) -> QuackResul
 }
 
 /// Parse [`Profiles`] from the given compiler flags mapping.
-pub fn parse_profiles(
+fn parse_profiles(
     input: Option<&HashMap<String, ProfileSchema>>,
     mut scope: ScopeGuard<'_>,
 ) -> QuackResult<Profiles> {

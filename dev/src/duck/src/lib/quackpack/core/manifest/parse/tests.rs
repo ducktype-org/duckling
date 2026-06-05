@@ -1160,6 +1160,7 @@ import: y
     );
     let ctx = DuckContext::default();
     let err = try_parse_frontmatter(frontmatter_path.clone(), &ctx).unwrap_err();
+    let no_file_err = std::io::Error::from_raw_os_error(libc::ENOENT);
     assert_eq!(
         err.to_string(),
         make_errors_message_frontmatter(
@@ -1171,7 +1172,7 @@ import: y
                     dir.path().join("y").display(),
                 ),
                 &format!("failed to read `{}`", dir.path().join("y").display()),
-                "No such file or directory (os error 2)",
+                &format!("{}", no_file_err),
             ]
         )
     );
