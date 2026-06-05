@@ -225,7 +225,7 @@ namespace clah {
 		ParsingResult parseArgs(const std::string& args);
 
 		/**
-		 * @brief Performs the parsing. Then, if the passed arguments where correct it invokes
+		 * @brief Performs the parsing. Then, if the passed arguments were correct it invokes
 		 * the pre handler function (if specified) and then immediately executes the handler for the
 		 * matched command.
 		 *
