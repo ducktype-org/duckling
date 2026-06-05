@@ -1340,7 +1340,7 @@ import: y
                     dir.path().join("y").display(),
                 ),
                 &format!("failed to read `{}`", dir.path().join("y").display()),
-                &format!("{}", no_file_err),
+                &no_file_err.to_string(),
             ]
         )
     );
