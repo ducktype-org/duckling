@@ -2,6 +2,7 @@
 #include <program_lowering_context.hpp>
 
 #include <base/pointers/box.hpp>
+#include <logger/logger.hpp>
 
 namespace compiler::backend_vm {
 	/**
@@ -30,16 +31,27 @@ namespace compiler::backend_vm {
 	}
 
 	vm::code::CodeCollection ReplDVMCodeBuilder::insertLIRUnitAndCollectNewlyLoweredCode(const lir::LIRUnit& lir_unit) {
-		// DEAL WITH THIS PR
 
 		// @TODO: #2246 check if we can avoid repeating the logic from compileLirToModuleData.
 		// This is strictly connected to the loading dvm context.
 		// We mimic the same idea as in compiling a single module,
 		// but this time we append the new functions to the lowering context.
-
 		
 		
 		auto snapshot = m_context->captureLoweredEntitiesSnapshot();
+
+		CORE_DEV_LOG(
+			REPL,
+			"Lowering context snapshot: types=",
+			snapshot.loweredTypeCount(),
+			", globals=",
+			snapshot.loweredGlobalCount(),
+			", functions=",
+			snapshot.loweredFunctionCount(),
+			", helper_functions=",
+			snapshot.extraBytecodeFunctionCount(),
+			"\n"
+		);
 
 		for (const auto& global: lir_unit.lir_globals)
 			(void) m_context->lowerAndKeepLirGlobal(global);

@@ -1,9 +1,7 @@
 #pragma once
 
 #include <backends/dvm/dvm_internal_fwd.hpp>
-// #include <backends/dvm/repl_lowering_snapshot.hpp>
 #include <lir/lir_structure/lir_structure_fd.hpp>
-// #include <tsl/type_layout.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/pointers/box.hpp>

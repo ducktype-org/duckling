@@ -62,19 +62,6 @@ namespace compiler::repl {
 		auto module_unique_name = base::StrID(std::string(module_name.data(), module_name.size()));
 		CORE_DEV_LOG(REPL, "Using module name: ", module_unique_name.strView(), "\n");
 
-		// CORE_DEV_LOG(
-		// 	REPL,
-		// 	"Lowering context snapshot: types=",
-		// 	snapshot.loweredTypeCount(),
-		// 	", globals=",
-		// 	snapshot.loweredGlobalCount(),
-		// 	", functions=",
-		// 	snapshot.loweredFunctionCount(),
-		// 	", helper_functions=",
-		// 	snapshot.extraBytecodeFunctionCount(),
-		// 	"\n"
-		// );
-
 		CRef lir_data
 			= &ctx.query<driver::CompileHOUTUnitToLIRModuleData>({ &hout_unit, module_unique_name })
 		           ->valueOrPanic();
