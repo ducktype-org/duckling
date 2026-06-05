@@ -6,6 +6,7 @@
 
 #include <vm/core/safe/low_program/instruction.hpp>
 #include <vm/core/safe/low_program/low_program.hpp>
+#include <vm/core/safe/opcode_functions/opcodes_functions.hpp>
 
 #include <functional>
 
@@ -26,8 +27,17 @@ namespace vm::jit {
 				return std::to_underlying(SpecialStencils::Trampoline);
 			}
 			default: {
-				return std::to_underlying(opcode);
 			}
+			}
+
+			switch (opcode) {
+#define HANDLE_NONJITABLE_INSTR(instr) \
+	case low::MicroOpcode::instr:      \
+		return std::to_underlying(SpecialStencils::CallAddr);
+#include "../non_jitable_def.hpp"
+#undef HANDLE_NONJITABLE_INSTR
+			default:
+				return std::to_underlying(opcode);
 			}
 		};
 
@@ -49,8 +59,9 @@ namespace vm::jit {
 
 		std::vector<usize> block_offsets;
 		block_offsets.reserve(cfg.size() + 1);
-		block_offsets[0] = 0;
+		block_offsets.push_back(0);
 		for (const low::cf::BasicBlock& block: cfg.getBlocks()) {
+			std::cerr << block_offsets.back() << ", ";
 			block_offsets.push_back(block_offsets.back());
 			usize& current_offset = block_offsets.back();
 			for (MicroInstruction instr: block.instructions(bc)) {
@@ -62,6 +73,12 @@ namespace vm::jit {
 				opt_some(stencil) current_offset += get_opfunc_size(std::to_underlying(stencil));
 			}
 		}
+		std::cerr << std::endl;
+		for (auto v : block_offsets) {
+			std::cerr << v << ", ";
+		}
+		std::cerr << std::endl;
+
 
 		auto  memory = JitFuncMemory::allocate(block_offsets.back());
 		byte* next   = memory.addr;
@@ -73,20 +90,25 @@ namespace vm::jit {
 			stencil_data.patch(previous, func);
 		};
 
-		for (const low::cf::BasicBlock& block: cfg.getBlocks()) {
+		for (auto [idx, block]: std::views::enumerate(cfg.getBlocks())) {
+			CORE_ASSERT(next == memory.addr + block_offsets[idx], "idx: ", idx, " next: ", next - memory.addr, " expected: ", block_offsets[idx]);
 			for (MicroInstruction instr: block.instructions(bc)) {
 				auto opcode = getInstructionOpcode(instr);
 				if (low::isOpcodeNonExecutable(opcode)) continue;
 
-				patch_stencil(transform_opcode(opcode), [&instr, &next](HoleValue value) {
+				patch_stencil(transform_opcode(opcode), [&instr, &next, &opcode](HoleValue value) {
 					switch (value) {
 					case HoleValue::Arg0:
 						return instr.arg0;
 					case HoleValue::Arg1:
 						return instr.arg1;
-					case HoleValue::ContinueFunction:
+					case HoleValue::ContinueFn:
 						return std::bit_cast<u64>(next);
-					case HoleValue::JmpFunction:
+					case HoleValue::CallFn:
+						return std::bit_cast<u64>(
+							vm::OpFuns::DEBUG_OPFUNS[std::to_underlying(opcode)]
+						);
+					case HoleValue::JmpFn:
 						CORE_PANIC("jumping inside a basic block");
 					case HoleValue::Zero:
 						CORE_PANIC("zero left as a hole");
@@ -101,10 +123,12 @@ namespace vm::jit {
 							CORE_PANIC("arg0 passed to stencil jump");
 						case HoleValue::Arg1:
 							CORE_PANIC("arg1 passed to stencil jump");
-						case HoleValue::ContinueFunction:
-							return std::bit_cast<u64>(memory.addr + block_offsets[block.edge(0)]);
-						case HoleValue::JmpFunction:
-							return std::bit_cast<u64>(memory.addr + block_offsets[block.edge(1)]);
+						case HoleValue::ContinueFn:
+							return std::bit_cast<u64>(memory.addr + block_offsets.at(block.edge(0)));
+						case HoleValue::CallFn:
+							CORE_PANIC("call function passed to stencil jump");
+						case HoleValue::JmpFn:
+							return std::bit_cast<u64>(memory.addr + block_offsets.at(block.edge(1)));
 						case HoleValue::Zero:
 							CORE_PANIC("zero left as a hole");
 						}

@@ -11,8 +11,8 @@
 #define FORCE_ASSUME(...) \
 	if (!(__VA_ARGS__)) CORE_UNREACHABLE()
 
-#define JUMP_STENCIL(name)                                                            \
-	return std::invoke(                                                               \
+#define CALL_STENCIL(name)                                                            \
+	std::invoke(                                                                      \
 		GET_LINK_VARIABLE(                                                            \
 			name, void (*)(const MicroInstruction*, byte*, Frame*, SafeVMThread&), 64 \
 		),                                                                            \
@@ -21,6 +21,8 @@
 		frame,                                                                        \
 		thread                                                                        \
 	)
+
+#define JUMP_STENCIL(name) return CALL_STENCIL(name)
 
 #define CONTINUE_STENCIL JUMP_STENCIL(continue_fn)
 
@@ -31,6 +33,16 @@ namespace vm::jit::cnp {
 
 	template<OpFun* InstructionImplementation, low::MicroOpcode OpCode>
 	__always_inline void base_stencil(CP_ARGS) {
+		std::cerr << "Executing: ";
+		switch (OpCode) {
+#define HANDLE_MICRO_INSTR(opcode)                   \
+	case low::MicroOpcode::opcode:                   \
+		std::cerr << "Begun executing: " << #opcode; \
+		break;
+#include <vm/core/safe/low_program/micro_instruction_definitions.hpp>
+#undef HANDLE_MICRO_INSTR
+		}
+
 		CORE_ASSERT(
 			OpCode == low::MicroOpcode::exit || getInstructionOpcode(*instr) == OpCode,
 			"Expected a different opcode",
@@ -40,6 +52,7 @@ namespace vm::jit::cnp {
 		FORCE_ASSUME(instr->arg0 == GET_LINK_VARIABLE(arg0, u64, 64));
 		FORCE_ASSUME(instr->arg1 == GET_LINK_VARIABLE(arg1, u64, 64));
 		InstructionImplementation(instr, local_stack, frame, thread);
+		std::cerr << " coninuing..." << std::endl;
 		CONTINUE_STENCIL;
 	}
 
@@ -69,24 +82,37 @@ namespace vm::jit::cnp {
 		CONTINUE_STENCIL;
 	}
 
-	DECLARE_LINK_VARIABLE(jmp_function);
+	DECLARE_LINK_VARIABLE(jmp_fn);
 
 	// NOLINTNEXTLINE(readability-identifier-naming)
 	extern "C" void stencil_special_jump_if(CP_ARGS) {
+		std::cerr << "Special stencil jump_if\n";
 		if (frame->flags.flag)
-			JUMP_STENCIL(jmp_function);
+			JUMP_STENCIL(jmp_fn);
 		else
 			CONTINUE_STENCIL;
 	}
 
 	// NOLINTNEXTLINE(readability-identifier-naming)
 	extern "C" void stencil_special_jump_if_not(CP_ARGS) {
+		std::cerr << "Special stencil jump_if_not\n";
 		if (not frame->flags.flag)
-			JUMP_STENCIL(jmp_function);
+			JUMP_STENCIL(jmp_fn);
 		else
 			CONTINUE_STENCIL;
 	}
 
 	// NOLINTNEXTLINE(readability-identifier-naming)
-	extern "C" void stencil_special_jump(CP_ARGS) { JUMP_STENCIL(jmp_function); }
+	extern "C" void stencil_special_jump(CP_ARGS) {
+		std::cerr << "Special stencil jump_\n";
+		JUMP_STENCIL(jmp_fn);
+	}
+
+	DECLARE_LINK_VARIABLE(call_fn);
+
+	// NOLINTNEXTLINE(readability-identifier-naming)
+	extern "C" void stencil_special_call_addr(CP_ARGS) {
+		CALL_STENCIL(call_fn);
+		CONTINUE_STENCIL;
+	}
 }

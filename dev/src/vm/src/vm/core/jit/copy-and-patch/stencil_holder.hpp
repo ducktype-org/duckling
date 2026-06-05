@@ -23,7 +23,9 @@ namespace vm::jit::cnp {
 		JumpIf,
 		JumpIfNot,
 		Jump,
-		StencilsCount
+		CallAddr,
+
+		StencilsCount,
 	};
 
 	constexpr size_t STENCIL_COUNT = std::to_underlying(SpecialStencils::StencilsCount);

@@ -127,9 +127,13 @@ process_to_binary(
 add_files(
     memory/memory.cpp
     stencils/dynamic_library.cpp
-    copy-and-patch.cpp
 )
 set(vm_common_sources ${vm_common_sources} ${files} PARENT_SCOPE)
+
+add_files(
+    copy-and-patch.cpp
+)
+set(vm_config_dependent_sources ${vm_config_dependent_sources} ${files} PARENT_SCOPE)
 
 add_files(
     stencil_holder.cpp
