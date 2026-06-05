@@ -1,9 +1,9 @@
 #pragma once
 
 #include <backends/dvm/dvm_internal_fwd.hpp>
-#include <backends/dvm/repl_lowering_snapshot.hpp>
-#include <lir/lir_structure/lir_structure.hpp>
-#include <tsl/type_layout.hpp>
+// #include <backends/dvm/repl_lowering_snapshot.hpp>
+#include <lir/lir_structure/lir_structure_fd.hpp>
+// #include <tsl/type_layout.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/pointers/box.hpp>
@@ -17,18 +17,22 @@
 namespace compiler::backend_vm {
 	/**
 	 * @brief A statefull collection of code lowered into VM bytecode dedicated for REPL/scripts compilation use.
+	 * It exposes an interface for incremental DVM code emission, allowing REPL statements to be compiled and loaded one at a time.
+	 * 
+	 * @note underneath it uses ProgramLoweringContext snapshot api that was added specifically for this use case.
+	 *
 	 * @note If used improperly, query_ctx might become a dangling reference.
 	 *
 	 * This class provides a stable public interface to the DVM backend's internal lowering context,
 	 * preventing REPL and other clients from directly depending on `src_private` implementation
-	 * details. It delegates all actual lowering logic to `ProgramLoweringContext` while
+	 * details. It delegates the actual lowering logic to `ProgramLoweringContext` while
 	 * encapsulating incremental code emission for REPL use cases.
 	 *
 	 * The wrapper maintains a persistent lowering context across REPL statements, allowing
 	 * later statements to reference symbols (functions, globals, types) from earlier ones.
 	 * It exposes snapshot/collection semantics to enable incremental bytecode loading without
 	 * recompiling the entire module.
-
+	 * 
 	 * PR: ADD a TODO here about moving logic up from ProgramLoweringContext 
 	 */
 	class ReplDVMCodeBuilder final {
@@ -65,22 +69,9 @@ namespace compiler::backend_vm {
 		 */
 		[[nodiscard]] base::Optional<Ref<query::Context>> getActiveContext() const;
 
-	
 		vm::code::CodeCollection insertLIRUnitAndCollectNewlyLoweredCode(const lir::LIRUnit& lir_unit);
 
 	private:
-		/**
-		 * @brief Capture current state of lowered entities.
-		 */
-		[[nodiscard]] LoweredEntitiesSnapshot captureLoweredEntitiesSnapshot() const;
-
-
-		/**
-		 * @brief Collect newly lowered types/functions/extra functions since a snapshot.
-		 */
-		[[nodiscard]] vm::code::CodeCollection collectNewCodeSince(
-			const LoweredEntitiesSnapshot& snapshot
-		) const;
 
 		// Pimpl: store pointer to complete type, with details in CPP
 		base::Box<internal::ProgramLoweringContext> m_context;

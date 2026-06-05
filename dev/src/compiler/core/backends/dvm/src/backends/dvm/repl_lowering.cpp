@@ -29,18 +29,6 @@ namespace compiler::backend_vm {
 		return m_context->getActiveContext();
 	}
 
-	// const vm::code::Function& ReplDVMCodeBuilder::lowerAndKeepLirFunction(
-	// 	CRef<lir::Function> lir_function
-	// ) {
-	// 	return m_context->lowerAndKeepLirFunction(lir_function);
-	// }
-
-	// const vm::code::GlobalData& ReplDVMCodeBuilder::lowerAndKeepLirGlobal(
-	// 	const lir::LIRGlobalData& lir_global
-	// ) {
-	// 	return m_context->lowerAndKeepLirGlobal(lir_global);
-	// }
-
 	vm::code::CodeCollection ReplDVMCodeBuilder::insertLIRUnitAndCollectNewlyLoweredCode(const lir::LIRUnit& lir_unit) {
 		// DEAL WITH THIS PR
 
@@ -78,13 +66,4 @@ namespace compiler::backend_vm {
 	}
 
 
-	LoweredEntitiesSnapshot ReplDVMCodeBuilder::captureLoweredEntitiesSnapshot() const {
-		return m_context->captureLoweredEntitiesSnapshot();
-	}
-
-	vm::code::CodeCollection ReplDVMCodeBuilder::collectNewCodeSince(
-		const LoweredEntitiesSnapshot& snapshot
-	) const {
-		return m_context->collectNewCodeSince(snapshot);
-	}
 }
