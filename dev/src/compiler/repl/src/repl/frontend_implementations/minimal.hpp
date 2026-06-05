@@ -9,6 +9,7 @@
 #include <base/types/ints.hpp>
 
 #include <string>
+#include <string_view>
 #include <vector>
 
 /**
@@ -37,12 +38,15 @@ namespace {
 namespace compiler::repl {
 	class FrontendMinImplementation final {
 	public:
-		explicit FrontendMinImplementation(bool completions_enabled = true);
+		explicit FrontendMinImplementation(
+			bool completions_enabled = false, bool bracketed_paste_enabled = false
+		);
 		~FrontendMinImplementation() = default;
 
 		void        printWelcome() const;
 		std::string readLine();
 		void        printHistory() const;
+		void        addHistoryEntry(std::string_view entry);
 		void        clearHistory();
 		void        clearScreen();
 		void        printHelp() const;
@@ -99,5 +103,7 @@ namespace compiler::repl {
 		EditorState              m_editor_state;
 		EditorState              m_stashed_editor_state;
 		const std::string        m_sequence_to_align_cursor_to_multiline_start;
+		bool                     m_bracketed_paste_enabled;
+		bool                     m_in_bracketed_paste = false;
 	};
 }

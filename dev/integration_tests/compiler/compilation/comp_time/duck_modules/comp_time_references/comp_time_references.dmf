@@ -1,3 +1,5 @@
+import core.builtins.*;
+
 fun foo(condition: i64) -> i64 = {
     var a: i64 = 123;
     var ref_a = &a;

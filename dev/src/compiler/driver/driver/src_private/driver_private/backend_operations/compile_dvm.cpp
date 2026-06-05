@@ -8,18 +8,19 @@
 #include <backends/dvm/dvm_backend.hpp>
 #include <time_stats/time_stats.hpp>
 
+#include <logger/logger.hpp>
+
 namespace compiler::driver {
+
+
 	DVMModuleData compileLIRModuleToDVM(
-		CRef<LIRModuleData> data, query::Context& query_ctx, bool build_debug_info
+		CRef<LIRUnitWithBackendName> data, query::Context& query_ctx, bool build_debug_info
 	) {
 		time_stats::TrackCategoryTime _(time_stats::TimeCategories::BackendCompilation);
 
 		backend_vm::DVMCodeBuilder module(query_ctx, build_debug_info, false);
 
-		for (const auto& global: data->globals)
-			module.insertLirGlobal(global.lir_global, global.global_ctor, global.global_dtor);
-
-		for (const auto& lir_function: data->functions) module.insertLirFunction(lir_function);
+		module.insertLIRUnit(data->lir_unit);
 
 		auto code_collection = module.build();
 

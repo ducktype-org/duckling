@@ -6,10 +6,6 @@
 #include <frontend/pst_parser/elements/hierarchy/statements/expr_stmt.hpp>
 #include <frontend/pst_parser/elements/includes/basic.hpp>
 
-#include <diagnostic/diagnostic_converters.hpp>
-#include <diagnostic/message.hpp>
-#include <printer/stream_printer.hpp>
-
 namespace pst {
 	base::Optional<AccessLocked<Stmt>> extractSingleStatement(
 		query::Context& ctx, const AccessLocked<LangElement>& root
@@ -67,15 +63,5 @@ namespace pst {
 		if (stmt_opt.value().unlock(ctx)->isDeclaration() == DeclKind::None) return {};
 
 		return stmt_opt.value();
-	}
-}
-
-namespace pst::internal {
-	void printHighlight(dia::SourcePosition pos, const std::string& message) {
-		auto note = makeBox<dia::PlaceholderMessage<dia::Hint, dia::Message::Domain::Parser>>(
-			pos, message
-		);
-		auto content = dia::DiagnosticToUserConverter::toPrinterContents(note.ref(), true);
-		printer::StreamPrinter::printNL(content, std::cerr);
 	}
 }

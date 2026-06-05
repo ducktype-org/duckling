@@ -10,28 +10,180 @@
 #include <frontend/pst_parser/utility.hpp>
 #include <helios/queries/function_queries.hpp>
 #include <helios/queries/queries.hpp>
-// @TODO: #1824 Move platform dependent includes to a separate file.
-#include <sys/ioctl.h>
-#include <termios.h>
-#include <unistd.h>
 
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/defer.hpp>
 #include <base/str/str_utils.hpp>
+#include <base/types/ints.hpp>
 
 #include <filesystem/file.hpp>
 #include <logger/logger.hpp>
 #include <query_framework/entry/query_entry_point.hpp>
 #include <query_framework/entry/with_context_do.hpp>
+#include <query_framework/utils/query_failed_try.hpp>
 
 #include <vm/api/vm.hpp>
 
+#include <algorithm>
+#include <cstdlib>
 #include <cstring>
+#include <filesystem>
+#include <fstream>
 #include <iostream>
+#include <sstream>
 #include <string>
 #include <string_view>
 
 namespace compiler::repl {
+	namespace {
+		constexpr std::string_view K_RESET_COMMAND = "/reset";
+		constexpr std::string_view K_RESET_ERROR_MSG
+			= "Usage: /reset [<count>|-<relative_count>] [--silent]";
+		constexpr std::string_view K_RESET_SILENT_FLAG = "--silent";
+		constexpr std::string_view K_REPL_WHITESPACE   = " \t\r\n\f\v";
+
+		std::string getSessionHistoryFilePath() { return ".duckling_repl_session_history"; }
+
+		std::string_view takeToken(std::string_view& text) {
+			text     = base::strTrimLeft(text, K_REPL_WHITESPACE);
+			auto pos = text.find_first_of(K_REPL_WHITESPACE);
+			if (pos == std::string_view::npos) pos = text.size();
+			std::string_view token = text.substr(0, pos);
+			text.remove_prefix(pos);
+			return token;
+		}
+
+		bool parseResetReplayCount(
+			std::string_view line,
+			usize&           replay_count,
+			bool&            has_replay_count,
+			bool&            is_relative,
+			bool&            replay_silent,
+			std::string&     error_message
+		) {
+			replay_count     = 0;
+			has_replay_count = false;
+			is_relative      = false;
+			replay_silent    = false;
+			if (!line.starts_with(K_RESET_COMMAND)) return false;
+
+			std::string_view rest = line;
+			rest.remove_prefix(K_RESET_COMMAND.size());
+			rest = base::strTrim(rest, K_REPL_WHITESPACE);
+			if (rest.empty()) return true;
+
+			std::string_view value;
+			while (true) {
+				value = takeToken(rest);
+				if (value.empty()) break;
+				if (value == K_RESET_SILENT_FLAG) {
+					replay_silent = true;
+					rest          = base::strTrim(rest, K_REPL_WHITESPACE);
+					continue;
+				}
+				if (has_replay_count) {
+					error_message = std::string(K_RESET_ERROR_MSG);
+					return false;
+				}
+
+				rest                       = base::strTrim(rest, K_REPL_WHITESPACE);
+				usize number_abs_val_start = 0;
+				if (value.front() == '-') {
+					is_relative          = true;
+					number_abs_val_start = 1;
+					if (value.size() == 1) {
+						error_message = std::string(K_RESET_ERROR_MSG);
+						return false;
+					}
+				}
+
+				for (usize i = number_abs_val_start; i < value.size(); ++i) {
+					const char ch = value[i];
+					if (ch < '0' || ch > '9') {
+						error_message = std::string(K_RESET_ERROR_MSG);
+						return false;
+					}
+				}
+
+				replay_count
+					= static_cast<usize>(std::stoul(std::string(value.substr(number_abs_val_start)))
+				    );
+				has_replay_count = true;
+			}
+
+			rest = base::strTrim(rest, K_REPL_WHITESPACE);
+			if (!rest.empty()) {
+				error_message = std::string(K_RESET_ERROR_MSG);
+				return false;
+			}
+
+			return true;
+		}
+
+		bool parseHistoryHeader(const std::string& line, usize& entry_index) {
+			if (line.size() < 3 || line.front() != '[' || line.back() != ']') return false;
+			const std::string number = line.substr(1, line.size() - 2);
+			if (number.empty()) return false;
+			for (char ch: number)
+				if (ch < '0' || ch > '9') return false;
+			entry_index = static_cast<usize>(std::stoul(number));
+			return true;
+		}
+
+		std::vector<std::string> loadSessionHistoryEntries(usize max_entries) {
+			std::vector<std::string> entries;
+			if (max_entries == 0) return entries;
+
+			std::ifstream in(getSessionHistoryFilePath());
+			if (!in) return entries;
+
+			std::string current;
+			bool        in_entries = false;
+			std::string line;
+			while (std::getline(in, line)) {
+				usize entry_index = 0;
+				if (parseHistoryHeader(line, entry_index)) {
+					if (in_entries && !current.empty()) {
+						if (!current.empty() && current.back() == '\n') current.pop_back();
+						entries.push_back(std::move(current));
+						current.clear();
+						if (entries.size() >= max_entries) break;
+					}
+					in_entries = true;
+					continue;
+				}
+
+				if (!in_entries) continue;
+				current += line;
+				current += '\n';
+			}
+
+			if (in_entries && !current.empty() && entries.size() < max_entries) {
+				if (!current.empty() && current.back() == '\n') current.pop_back();
+				entries.push_back(std::move(current));
+			}
+
+			return entries;
+		}
+	}
+
+	ReplResult ReplSession::failWithMessage(std::string_view message) {
+		return ReplResult::error(std::string(message));
+	}
+
+	void ReplSession::runWithContextErrorHandling(
+		std::string_view                            std_exception_prefix,
+		const std::function<void(query::Context&)>& action,
+		std::string&                                out_error
+	) {
+		query::utils::withContextDo([&](query::Context& ctx) {
+			auto ok = query::runFuncWithQueryFailedHandling([&] { action(ctx); });
+			if (ok.status().isBad()) {
+				out_error
+					= base::strConcat(std_exception_prefix, "Query failed (see diagnostics above).");
+			}
+		});
+	}
 
 	void ReplSession::initDVM() {
 		auto spawn_result = vm::api::spawn();
@@ -47,11 +199,53 @@ namespace compiler::repl {
 		CORE_DEV_LOG(REPL, "DVM initialized with PID ", m_dvm_pid, "\n");
 	}
 
-	ReplSession::ReplSession(bool completions_enabled):
+	void ReplSession::saveSessionHistoryToFile() const {
+		const auto    history_path = getSessionHistoryFilePath();
+		std::ofstream out(history_path, std::ios::trunc);
+		if (!out) {
+			std::cerr << "Warning: failed to save REPL session history to " << history_path << "\n";
+			return;
+		}
+
+		out << "Duckling REPL session history\n";
+		out << "Entries: " << m_session_history.size() << "\n\n";
+
+		for (usize i = 0; i < m_session_history.size(); ++i) {
+			out << "[" << (i + 1) << "]\n";
+			std::istringstream lines(m_session_history[i].source_code);
+			std::string        line;
+			while (std::getline(lines, line)) out << line << "\n";
+			out << "\n";
+		}
+	}
+
+	void ReplSession::printSessionHistory() const {
+		if (m_session_history.empty()) {
+			std::cout << "No history yet.\n";
+			return;
+		}
+
+		std::cout << "\n=== REPL Session History (" << m_session_history.size()
+				  << (m_session_history.size() == 1 ? " entry" : " entries") << ") ===\n";
+		for (usize i = 0; i < m_session_history.size(); ++i) {
+			std::istringstream lines(m_session_history[i].source_code);
+			std::string        line;
+			bool               first_line = true;
+			std::cout << "[" << (i + 1) << "] ";
+			while (std::getline(lines, line)) {
+				if (!first_line) std::cout << ReplConfig::HISTORY_MULTILINE_CONTINUATION;
+				std::cout << line << "\n";
+				first_line = false;
+			}
+		}
+		std::cout << "\n";
+	}
+
+	ReplSession::ReplSession(bool completions_enabled, bool bracketed_paste_enabled):
 		  m_should_exit(false),
 		  m_line_counter(0),
 		  m_dvm_pid(0),
-		  m_frontend(completions_enabled),
+		  m_frontend(completions_enabled, bracketed_paste_enabled),
 		  m_lowering_context() {
 		initDVM();
 	}
@@ -62,8 +256,8 @@ namespace compiler::repl {
 			return ReplResult::error("Missing script path. Usage: /load <path-to-script.ds>");
 
 		try {
-			m_suppress_repl_feedback_during_script_load = true;
-			defer(m_suppress_repl_feedback_during_script_load = false);
+			m_suppress_repl = true;
+			defer(m_suppress_repl = false);
 			const fs::FilePath script_path{ std::string(trimmed_path) };
 			fs::File           script_file{ script_path };
 			auto               source = script_file.getContent().view().stdString();
@@ -76,13 +270,52 @@ namespace compiler::repl {
 		}
 	}
 
+	void ReplSession::replayHistoryEntries(usize count, bool silent) {
+		if (count == 0) return;
+
+		const auto      entries = loadSessionHistoryEntries(count);
+		std::error_code remove_error;
+		std::filesystem::remove(getSessionHistoryFilePath(), remove_error);
+		if (entries.empty()) {
+			if (!silent) std::cerr << "Warning: no REPL session history entries found to replay.\n";
+			return;
+		}
+
+		const usize replay_count = std::min(count, entries.size());
+		if (silent) m_suppress_repl = true;
+		defer(m_suppress_repl = false);
+		for (usize i = 0; i < replay_count; ++i) {
+			if (!silent) {
+				std::istringstream lines(entries[i]);
+				std::string        line;
+				bool               first_line = true;
+				while (std::getline(lines, line)) {
+					if (first_line)
+						std::cout << ">> " << line << "\n";
+					else
+						std::cout << ReplConfig::HISTORY_MULTILINE_CONTINUATION << line << "\n";
+					first_line = false;
+				}
+			}
+			auto result = executeInput(entries[i]);
+			if (result.status == ReplResult::Status::Error) {
+				if (!silent) {
+					if (!result.message.empty()) std::cerr << result.message << "\n";
+					std::cerr << "Warning: stopping history replay after entry " << (i + 1)
+							  << " due to error.\n";
+				}
+				break;
+			}
+		}
+	}
+
 	bool ReplSession::isCommand(std::string_view line) const {
 		return !line.empty() && line[0] == '/';
 	}
 
 	frontend::ModuleID ReplSession::getCurrentModuleID() const {
-		CORE_ASSERT(!m_history.empty(), "No current REPL module available");
-		return m_history.back().module_id;
+		CORE_ASSERT(!m_session_history.empty(), "No current REPL module available");
+		return m_session_history.back().module_id;
 	}
 
 	ReplResult ReplSession::executeSingleStatement(frontend::ModuleID module_id) {
@@ -128,13 +361,54 @@ namespace compiler::repl {
 			return true;
 		}
 
+		if (line.starts_with(K_RESET_COMMAND)) {
+			usize       replay_count     = 0;
+			bool        has_replay_count = false;
+			bool        is_relative      = false;
+			bool        replay_silent    = false;
+			std::string parse_error;
+			if (!parseResetReplayCount(
+					line, replay_count, has_replay_count, is_relative, replay_silent, parse_error
+				)) {
+				std::cerr << parse_error << "\n";
+				return true;
+			}
+
+			saveSessionHistoryToFile();
+			if (has_replay_count) {
+				if (replay_count >= m_session_history.size()) {
+					std::cerr
+						<< "Error: value for reset should be smaller than session history size ("
+						<< m_session_history.size() << ")\n";
+					return true;
+				}
+
+				if (is_relative) replay_count = m_session_history.size() - replay_count;
+				m_reset_state.replay_count = replay_count;
+			}
+			m_reset_state.replay_silent = replay_silent;
+			m_reset_state.should_reset  = true;
+			return true;
+		}
+
 		if (line == "/help" || line == "/?" || line == "/h") {
 			m_frontend.printHelp();
 			return true;
 		}
 
 		if (line == "/history" || line == "/hist") {
+			printSessionHistory();
+			return true;
+		}
+
+		if (line == "/commands" || line == "/cmds") {
 			m_frontend.printHistory();
+			return true;
+		}
+
+		if (line == "/commands-reset" || line == "/cmds-reset") {
+			m_frontend.clearHistory();
+			std::cout << "Command history cleared.\n";
 			return true;
 		}
 
@@ -158,15 +432,10 @@ namespace compiler::repl {
 		return false;
 	}
 
-	void ReplSession::clearHistory() {
-		m_frontend.clearHistory();
-		m_history.clear();
-		m_line_counter = 0;
-	}
-
 	ReplResult ReplSession::processLine(std::string_view line) {
 		if (isCommand(line)) {
 			handleCommand(line);
+			if (m_reset_state.should_reset) return ReplResult::reset();
 			if (m_should_exit) return ReplResult::exit();
 			return ReplResult::success();
 		}
@@ -177,15 +446,15 @@ namespace compiler::repl {
 	ReplResult ReplSession::handleExpression(const pst::AccessLocked<pst::ExprStmt>& expr_stmt) {
 		std::string output_message;
 		std::string error_message;
-		bool        had_error = false;
 
 		base::Optional<helios::HOUTFunction> expr_wrapper;
 		std::string                          wrapper_func_name;
 
 		CORE_DEV_LOG(REPL, "Starting handleExpression\n");
 
-		query::utils::withContextDo([&](query::Context& ctx) {
-			try {
+		runWithContextErrorHandling(
+			"Unexpected error during expression evaluation: ",
+			[&](query::Context& ctx) {
 				auto build_result = buildStatementWrapper(
 					ctx,
 					SingleStatementInfo{ ExpressionSingleStatementInfo{ .expr_stmt = expr_stmt } },
@@ -193,37 +462,31 @@ namespace compiler::repl {
 				);
 				if (!build_result.has_value()) {
 					error_message = build_result.error();
-					had_error     = true;
 					return;
 				}
 
 				expr_wrapper      = std::move(build_result->wrapper_function);
 				wrapper_func_name = std::move(build_result->wrapper_func_name);
 				CORE_DEV_LOG(REPL, "Wrapper function name: ", wrapper_func_name, "\n");
-			} catch (const base::Panic& e) {
-				error_message = "Expression evaluation failed: " + std::string(e.what());
-				had_error     = true;
-			} catch (const std::exception& e) {
-				error_message
-					= "Unexpected error during expression evaluation: " + std::string(e.what());
-				had_error = true;
-			}
-		});
+			},
+			error_message
+		);
 
-		if (had_error) return ReplResult::error(error_message);
+		if (!error_message.empty()) return failWithMessage(error_message);
 
 		CORE_DEV_LOG(REPL, "Creating HOUT unit\n");
 		auto hout_unit = makeExecutableHOUTUnit(expr_wrapper.value());
 
-		query::utils::withContextDo([&](query::Context& ctx) {
-			// Initialize context on first use or update it for this scope
-			if (!m_lowering_context.has_value()) m_lowering_context.emplace(ctx);
-			m_lowering_context->setContext(ctx);  // Update context for this scope
+		runWithContextErrorHandling(
+			"Unexpected error: ",
+			[&](query::Context& ctx) {
+				// Initialize context on first use or update it for this scope
+				if (!m_lowering_context.has_value()) m_lowering_context.emplace(ctx);
+				m_lowering_context->setContext(ctx);  // Update context for this scope
 
-			// Defer: invalidate when exiting this scope, even on early return
-			defer(m_lowering_context->invalidateContext());
+				// Defer: invalidate when exiting this scope, even on early return
+				defer(m_lowering_context->invalidateContext());
 
-			try {
 				std::stringstream ss;
 				hout_unit.debugPrint(ctx, ss);
 				CORE_DEV_LOG(REPL, "HOUT unit:\n", ss.str(), "\n");
@@ -236,7 +499,6 @@ namespace compiler::repl {
                 );
 				if (!load_result.has_value()) {
 					error_message = "DVM load error: " + load_result.error();
-					had_error     = true;
 					return;
 				}
 
@@ -246,7 +508,7 @@ namespace compiler::repl {
 				auto run_result
 					= executeFunctionAndCaptureResult(m_dvm_pid, wrapper_func_name, return_type);
 				if (run_result.has_value()) {
-					if (!m_suppress_repl_feedback_during_script_load) {
+					if (!m_suppress_repl) {
 						if (return_type.toString() == "()")
 							std::cout << "Function executed.\n";
 						else
@@ -254,19 +516,13 @@ namespace compiler::repl {
 					}
 				} else {
 					error_message = "Runtime error: " + run_result.error();
-					had_error     = true;
 					return;
 				}
-			} catch (const base::Panic& e) {
-				error_message = "Compilation/execution error: " + std::string(e.what());
-				had_error     = true;
-			} catch (const std::exception& e) {
-				error_message = "Unexpected error: " + std::string(e.what());
-				had_error     = true;
-			}
-		});
+			},
+			error_message
+		);
 
-		if (had_error) return ReplResult::error(error_message);
+		if (!error_message.empty()) return failWithMessage(error_message);
 
 		return ReplResult::success(output_message);
 	}
@@ -274,15 +530,15 @@ namespace compiler::repl {
 	ReplResult ReplSession::handleInstruction(const pst::AccessLocked<pst::Stmt>& stmt) {
 		std::string output_message;
 		std::string error_message;
-		bool        had_error = false;
 
 		base::Optional<helios::HOUTFunction> instr_wrapper;
 		std::string                          wrapper_func_name;
 
 		CORE_DEV_LOG(REPL, "Starting handleInstruction\n");
 
-		query::utils::withContextDo([&](query::Context& ctx) {
-			try {
+		runWithContextErrorHandling(
+			"Unexpected error during instruction evaluation: ",
+			[&](query::Context& ctx) {
 				auto build_result = buildStatementWrapper(
 					ctx,
 					SingleStatementInfo{
@@ -291,41 +547,34 @@ namespace compiler::repl {
 				);
 				if (!build_result.has_value()) {
 					error_message = build_result.error();
-					had_error     = true;
 					return;
 				}
 
 				instr_wrapper     = std::move(build_result->wrapper_function);
 				wrapper_func_name = std::move(build_result->wrapper_func_name);
 				CORE_DEV_LOG(REPL, "Wrapper function name: ", wrapper_func_name, "\n");
-			} catch (const base::Panic& e) {
-				error_message = "Instruction evaluation failed: " + std::string(e.what());
-				had_error     = true;
-			} catch (const std::exception& e) {
-				error_message
-					= "Unexpected error during instruction evaluation: " + std::string(e.what());
-				had_error = true;
-			}
-		});
+			},
+			error_message
+		);
 
-		if (had_error) return ReplResult::error(error_message);
+		if (!error_message.empty()) return failWithMessage(error_message);
 
 		CORE_DEV_LOG(REPL, "Creating HOUT unit\n");
 		auto hout_unit = makeExecutableHOUTUnit(instr_wrapper.value());
 
-		query::utils::withContextDo([&](query::Context& ctx) {
-			// Initialize context on first use or update it for this scope
-			if (!m_lowering_context.has_value()) m_lowering_context.emplace(ctx);
-			m_lowering_context->setContext(ctx);  // Update context for this scope
+		runWithContextErrorHandling(
+			"Unexpected error: ",
+			[&](query::Context& ctx) {
+				// Initialize context on first use or update it for this scope
+				if (!m_lowering_context.has_value()) m_lowering_context.emplace(ctx);
+				m_lowering_context->setContext(ctx);  // Update context for this scope
 
-			// Defer: invalidate when exiting this scope, even on early return
-			defer(m_lowering_context->invalidateContext());
+				// Defer: invalidate when exiting this scope, even on early return
+				defer(m_lowering_context->invalidateContext());
 
-			try {
 				std::stringstream ss;
 				hout_unit.debugPrint(ctx, ss);
 				CORE_DEV_LOG(REPL, "HOUT unit:\n", ss.str(), "\n");
-
 				CORE_DEV_LOG(REPL, "Compiling and loading to DVM\n");
 				auto eval_module_id = getCurrentModuleID();
 				auto module_name    = getStatementModuleName(eval_module_id);
@@ -334,7 +583,6 @@ namespace compiler::repl {
                 );
 				if (!load_result.has_value()) {
 					error_message = "DVM load error: " + load_result.error();
-					had_error     = true;
 					return;
 				}
 
@@ -342,25 +590,17 @@ namespace compiler::repl {
 
 				// Instructions always return unit — run and join without reading an exit value.
 				auto run_result = vm::api::runFunction(m_dvm_pid, wrapper_func_name, {})
-				                      .and_then([&](auto) { return vm::api::join(m_dvm_pid); })
-				                      .transform_error(vm::api::errorToString);
+			                          .and_then([&](auto) { return vm::api::join(m_dvm_pid); })
+			                          .transform_error(vm::api::errorToString);
 				if (!run_result.has_value()) {
 					error_message = "Runtime error: " + run_result.error();
-					had_error     = true;
 					return;
 				}
+			},
+			error_message
+		);
 
-				CORE_DEV_LOG(REPL, "Instruction executed.\n");
-			} catch (const base::Panic& e) {
-				error_message = "Compilation/execution error: " + std::string(e.what());
-				had_error     = true;
-			} catch (const std::exception& e) {
-				error_message = "Unexpected error: " + std::string(e.what());
-				had_error     = true;
-			}
-		});
-
-		if (had_error) return ReplResult::error(error_message);
+		if (!error_message.empty()) return failWithMessage(error_message);
 
 		return ReplResult::success(output_message);
 	}
@@ -368,22 +608,23 @@ namespace compiler::repl {
 	ReplResult ReplSession::handleDefinition(const pst::AccessLocked<pst::Stmt>& stmt) {
 		std::string output_message;
 		std::string error_message;
-		bool        had_error = false;
 		auto        module_id = getCurrentModuleID();
 
-		query::utils::withContextDo([&](query::Context& ctx) {
-			// Initialize context on first use or update it for this scope
-			if (!m_lowering_context.has_value()) m_lowering_context.emplace(ctx);
-			m_lowering_context->setContext(ctx);  // Update context for this scope
+		runWithContextErrorHandling(
+			"Unexpected error: ",
+			[&](query::Context& ctx) {
+				// Initialize context on first use or update it for this scope
+				if (!m_lowering_context.has_value()) m_lowering_context.emplace(ctx);
+				m_lowering_context->setContext(ctx);  // Update context for this scope
 
-			// Defer: invalidate when exiting this scope, even on early return
-			defer(m_lowering_context->invalidateContext());
+				// Defer: invalidate when exiting this scope, even on early return
+				defer(m_lowering_context->invalidateContext());
 
-			try {
-				const auto& hout_unit = getDefinitionHOUTUnit(ctx, module_id);
-				// The stmt parameter is used only here, for logging. It's not needed for the actual
-				// query since QueryModuleHOUT already compiles the entire module containing the
-				// statement.
+				const auto& hout_unit
+					= ctx.query<helios::QueryModuleHOUT>(module_id)->valueOrThrow();
+				// The stmt parameter is used only here, for logging. It's not needed for
+			    // the actual query since QueryModuleHOUT already compiles the entire module
+			    // containing the statement.
 				auto stmt_kind = stmt.unlock(ctx)->getElementKind();
 				CORE_DEV_LOG(REPL, "Definition statement kind: ", static_cast<u32>(stmt_kind), "\n");
 				std::stringstream ss;
@@ -396,21 +637,15 @@ namespace compiler::repl {
 				);
 				if (!load_result.has_value()) {
 					error_message = "DVM load error: " + load_result.error();
-					had_error     = true;
 					return;
 				}
 
 				CORE_DEV_LOG(REPL, "Definitions loaded.\n");
-			} catch (const base::Panic& e) {
-				error_message = "Definition compilation error: " + std::string(e.what());
-				had_error     = true;
-			} catch (const std::exception& e) {
-				error_message = "Unexpected error: " + std::string(e.what());
-				had_error     = true;
-			}
-		});
+			},
+			error_message
+		);
 
-		if (had_error) return ReplResult::error(error_message);
+		if (!error_message.empty()) return failWithMessage(error_message);
 
 		return ReplResult::success(output_message);
 	}
@@ -418,87 +653,77 @@ namespace compiler::repl {
 	ReplResult ReplSession::executeInput(std::string_view input) {
 		if (input.empty()) return ReplResult::success();
 
-		try {
-			CORE_DEV_LOG(REPL, "Starting executeInput\n");
+		CORE_DEV_LOG(REPL, "Starting executeInput\n");
 
-			CORE_DEV_LOG(REPL, "Parsing input for statement extraction\n");
+		CORE_DEV_LOG(REPL, "Parsing input for statement extraction\n");
 
-			match_optional(splitInputIntoStatements(input)) {
-				opt_some(statement_sources) {
-					if (statement_sources.empty()) return ReplResult::success();
+		match_optional(splitInputIntoStatements(input)) {
+			opt_some(statement_sources) {
+				if (statement_sources.empty()) return ReplResult::success();
 
-					CORE_DEV_LOG(
-						REPL, "Input divided into ", statement_sources.size(), " statement(s):\n"
-					);
-					for (usize i = 0; i < statement_sources.size(); ++i)
-						CORE_DEV_LOG(REPL, "  [", i + 1, "] \"", statement_sources[i], "\"\n");
+				CORE_DEV_LOG(
+					REPL, "Input divided into ", statement_sources.size(), " statement(s):\n"
+				);
+				for (usize i = 0; i < statement_sources.size(); ++i)
+					CORE_DEV_LOG(REPL, "  [", i + 1, "] \"", statement_sources[i], "\"\n");
 
-					CORE_DEV_LOG(REPL, "Executing ", statement_sources.size(), " statement(s)\n");
+				CORE_DEV_LOG(REPL, "Executing ", statement_sources.size(), " statement(s)\n");
 
-					ReplResult last_result = ReplResult::success();
-					for (const auto& stmt_source: statement_sources) {
-						CORE_DEV_LOG(REPL, "Executing statement: \"", stmt_source, "\"\n");
-						base::Optional<frontend::ModuleID> parent_module_id;
-						if (!m_history.empty()) {
-							parent_module_id = m_history.back().module_id;
-							CORE_DEV_LOG(
-								REPL,
-								"Setting REPL parent to module #",
-								m_history.back().module_id.queryUnstablePerfectHash(),
-								"\n"
-							);
-						} else {
-							CORE_DEV_LOG(REPL, "First REPL module, no parent\n");
-						}
-
-						auto module_ref = createEphemeralChainedStatementModule(
-							stmt_source, parent_module_id, m_line_counter, "repl_"
-						);
-						auto module_id = module_ref->getModuleID();
-
-						CORE_DEV_LOG(REPL, "Creating module\n");
+				ReplResult last_result = ReplResult::success();
+				for (const auto& stmt_source: statement_sources) {
+					CORE_DEV_LOG(REPL, "Executing statement: \"", stmt_source, "\"\n");
+					base::Optional<frontend::ModuleID> parent_module_id;
+					if (!m_session_history.empty()) {
+						parent_module_id = m_session_history.back().module_id;
 						CORE_DEV_LOG(
 							REPL,
-							"Module created: #",
-							module_id.queryUnstablePerfectHash(),
-							", isRepl=",
-							module_ref->isReplModule(),
-							", hasParent=",
-							module_ref->getReplModuleParent().has_value(),
+							"Setting REPL parent to module #",
+							m_session_history.back().module_id.queryUnstablePerfectHash(),
 							"\n"
 						);
-						m_history.emplace_back(stmt_source, module_id);
-						++m_line_counter;
-						last_result = executeSingleStatement(module_id);
-						if (last_result.status == ReplResult::Status::Error) return last_result;
+					} else {
+						CORE_DEV_LOG(REPL, "First REPL module, no parent\n");
 					}
-					return last_result;
-				}
-				opt_err(err) return ReplResult::error(err);
-			}
-			CORE_UNREACHABLE();
 
-		} catch (const std::out_of_range& e) {
-			std::string error_msg = std::string("REPL map::at error (out_of_range): ") + e.what();
-			CORE_DEV_LOG(REPL, "This typically means a lookup in a map/vector failed\n");
-			return ReplResult::error(error_msg);
-		} catch (const std::exception& e) {
-			std::string error_msg = std::string("Error: ") + e.what();
-			return ReplResult::error(error_msg);
-		} catch (...) {
-			std::string error_msg = "Unknown error occurred";
-			return ReplResult::error(error_msg);
+					auto module_ref = createEphemeralChainedStatementModule(
+						stmt_source, parent_module_id, m_line_counter, "repl_"
+					);
+					auto module_id = module_ref->getModuleID();
+
+					CORE_DEV_LOG(REPL, "Creating module\n");
+					CORE_DEV_LOG(
+						REPL,
+						"Module created: #",
+						module_id.queryUnstablePerfectHash(),
+						", isRepl=",
+						module_ref->isReplModule(),
+						", hasParent=",
+						module_ref->getReplModuleParent().has_value(),
+						"\n"
+					);
+					m_session_history.emplace_back(stmt_source, module_id);
+					++m_line_counter;
+					last_result = executeSingleStatement(module_id);
+					if (last_result.status == ReplResult::Status::Error) {
+						m_session_history.pop_back();
+						return last_result;
+					}
+				}
+				return last_result;
+			}
+			opt_err(err) { return ReplResult::error(err); }
 		}
+		CORE_UNREACHABLE();
 	}
 
-	int ReplSession::run() {
-		m_frontend.printWelcome();
+	ReplResult ReplSession::run(bool is_reset) {
+		if (!is_reset) m_frontend.printWelcome();
 		while (!m_should_exit) {
 			std::string line = m_frontend.readLine();
 
 			if (line.empty() && std::cin.eof()) {
 				std::cout << "\nGoodbye!\n";
-				break;
+				return ReplResult::exit();
 			}
 
 			auto result = processLine(line);
@@ -510,13 +735,18 @@ namespace compiler::repl {
 			if (result.status == ReplResult::Status::Success && !result.message.empty())
 				std::cout << result.message << "\n";
 
+			if (result.status == ReplResult::Status::Reset) {
+				if (!result.message.empty()) std::cout << result.message << "\n";
+				return result;
+			}
+
 			if (result.status == ReplResult::Status::Exit) {
 				std::cout << result.message << "\n";
-				break;
+				return result;
 			}
 		}
 
-		return 0;
+		return ReplResult::success();
 	}
 
 }  // namespace compiler::repl

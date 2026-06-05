@@ -1,8 +1,9 @@
+#pragma once
 
 #include "dvm_internal_fwd.hpp"
 
 #include <debug_info/debug_info.hpp>
-#include <lir/lir_structure/lir_structure.hpp>
+#include <lir/lir_structure/lir_structure_fd.hpp>
 
 #include <base/pointers/ref.hpp>
 
@@ -28,6 +29,13 @@ namespace compiler::backend_vm {
 		DVMCodeBuilder(query::Context& query_ctx, bool build_debug_info, bool is_comp_time_lowering);
 
 		/**
+		 * @brief Inserts a LIR unit into the module.
+		 * This acts as a main entry point and a source of truth for lowering LIR to DVM,
+		 * and should be preferred over using the other insert functions.
+		 */
+		void insertLIRUnit(const lir::LIRUnit& lir_unit);
+
+		/**
 		 * @brief Inserts a LIR function into the module.
 		 */
 		void insertLirFunction(CRef<lir::Function> lir_function);
@@ -40,11 +48,7 @@ namespace compiler::backend_vm {
 		/**
 		 * @brief Inserts a LIR global into the module.
 		 */
-		void insertLirGlobal(
-			const lir::LIRGlobal&               lir_global,
-			base::Optional<CRef<lir::Function>> global_ctor,
-			base::Optional<CRef<lir::Function>> global_dtor
-		);
+		void insertLirGlobal(const lir::LIRGlobalData& lir_global);
 
 		/**
 		 * @brief Insert raw bytecode into a module.

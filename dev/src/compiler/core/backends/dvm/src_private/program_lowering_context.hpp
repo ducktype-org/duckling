@@ -64,11 +64,7 @@ namespace compiler::backend_vm::internal {
 		 */
 		const vm::code::Function& lowerAndKeepLirFunction(CRef<lir::Function> lir_function);
 
-		const vm::code::GlobalData& lowerAndKeepLirGlobal(
-			const lir::LIRGlobal&               lir_global,
-			base::Optional<CRef<lir::Function>> global_ctor,
-			base::Optional<CRef<lir::Function>> global_dtor
-		);
+		const vm::code::GlobalData& lowerAndKeepLirGlobal(const lir::LIRGlobalData& lir_global);
 
 		/**
 		 * @brief Lowers a LIR type layout into VM bytecode type representation.
@@ -78,6 +74,13 @@ namespace compiler::backend_vm::internal {
 		 * have a DVM counterpart.
 		 */
 		base::Optional<CRef<vm::code::TypeOfData>> lowerAndKeepTslType(CRef<tsl::TypeLayout> layout);
+
+		/**
+		 * @brief Inserts a manually created DVM type into the program context and returns a
+		 * reference to it. Used when want to register a type and use it by its name.
+		 * @return CRef<vm::code::TypeOfData>
+		 */
+		CRef<vm::code::TypeOfData> keepVMType(vm::code::TypeOfData dvm_type);
 
 		/**
 		 * @brief Creates and inserts a pointer type into the program lowering context.

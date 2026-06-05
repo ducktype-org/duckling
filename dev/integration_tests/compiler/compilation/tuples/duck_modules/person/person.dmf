@@ -1,3 +1,5 @@
+import core.builtins.*;
+
 const Person: type = (str, str, i64); # name, surname, age
 
 fun makePerson(name: str, surname: str, age: i64) -> Person = {
@@ -22,16 +24,16 @@ fun main() = {
     var surname = getSurname(p);
     var age = getAge(p);
 
-    builtin_output_string(name);
-    builtin_output_string(surname);
+    print(name);
+    print(surname);
     builtin_output_i64(age);
 
     p._1 = "Jane";
     p._2 = "Smith";
     p._3 = 18 + 5;
 
-    builtin_output_string(p._1);
-    builtin_output_string(p._2);
+    print(p._1);
+    print(p._2);
     builtin_output_i64(p._3);
 
     return 0;
