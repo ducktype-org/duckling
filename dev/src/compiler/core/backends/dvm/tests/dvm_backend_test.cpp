@@ -78,7 +78,6 @@ protected:
 			subpath_package("inits_deinits"),  subpath_package("pointers")
 		};
 
-
 		auto init_result = compiler::driver::initializeTheCompiler(
 			compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
 				.packages_info = std::move(packages),
