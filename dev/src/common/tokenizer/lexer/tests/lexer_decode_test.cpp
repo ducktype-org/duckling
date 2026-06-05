@@ -105,7 +105,7 @@ private:
 		auto        path = fs::FileManager::createRandomTempFile(content);
 		auto        file = tokenizer::makeTokenSource(path);
 		file->decode<fs::Encoding::UsAscii>();
-		assertTrue(file->getLogger()->good(), "Valid Ascii not accepted");
+		assertTrue(file->getIntLogger()->good(), "Valid Ascii not accepted");
 	}
 };
 

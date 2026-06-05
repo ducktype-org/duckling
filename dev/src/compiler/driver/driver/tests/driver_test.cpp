@@ -77,6 +77,7 @@ protected:
 				.debug_options         = { },
 				.incremental           = { },
 				.execution_options     = { .worker_count = 1 },
+				.stdlib_options		= { },
 			}
 		);
 		ASSERT_TRUE(init_result.status().isOk());
