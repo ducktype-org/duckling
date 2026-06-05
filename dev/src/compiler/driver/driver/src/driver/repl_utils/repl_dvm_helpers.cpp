@@ -51,7 +51,7 @@ namespace compiler::repl {
 		CORE_DEV_LOG(REPL, "Using module name: ", module_unique_name.strView(), "\n");
 
 		auto lir_data_qr
-			= driver::compileHOUTUnitToLIRModuleData(ctx, hout_unit, module_unique_name );
+			= driver::compileHOUTUnitToLIRModuleData(ctx, hout_unit, module_unique_name);
 		if (lir_data_qr.hasFailed())
 			return std::unexpected("Failed to compile HOUTUnit to LIRModuleData");
 		auto lir_data = std::move(lir_data_qr.valueOrPanic());

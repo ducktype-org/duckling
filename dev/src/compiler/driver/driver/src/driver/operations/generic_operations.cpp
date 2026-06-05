@@ -378,8 +378,9 @@ namespace compiler::driver {
 						statement_info_result.value()
 					)) {
 					CORE_DEV_LOG(REPL, "compile_script: classified as definition\n");
-					const auto& hout_unit  = repl::getDefinitionHOUTUnit(ctx, module_id);
-					auto        lir_result = compileHOUTUnitToLIRModuleData(ctx, hout_unit, module_name_id);
+					const auto& hout_unit = repl::getDefinitionHOUTUnit(ctx, module_id);
+					auto        lir_result
+						= compileHOUTUnitToLIRModuleData(ctx, hout_unit, module_name_id);
 					if (lir_result.hasFailed())
 						return std::unexpected("Failed to compile definition statement to LIR");
 					repl::appendScriptLIRModuleData(merged, lir_result.valueOrPanic());
@@ -397,7 +398,8 @@ namespace compiler::driver {
 					);
 
 					auto hout_unit = repl::makeExecutableHOUTUnit(wrapper_result->wrapper_function);
-					auto lir_result = compileHOUTUnitToLIRModuleData(ctx, hout_unit, module_name_id);
+					auto lir_result
+						= compileHOUTUnitToLIRModuleData(ctx, hout_unit, module_name_id);
 					if (lir_result.hasFailed())
 						return std::unexpected("Failed to compile executable statement to LIR");
 					repl::appendScriptLIRModuleData(merged, lir_result.valueOrPanic());
@@ -417,11 +419,7 @@ namespace compiler::driver {
 				= repl::buildScriptMainWrapper(ctx, merged.module_id, main_scope, wrapper_symbols);
 			helios::HOUTUnit main_unit;
 			main_unit.functions.emplace_back(&main_fun);
-			auto main_lir = compileHOUTUnitToLIRModuleData(
-				ctx,
-				main_unit,
-				merged.module_id
-			);
+			auto main_lir = compileHOUTUnitToLIRModuleData(ctx, main_unit, merged.module_id);
 			if (main_lir.hasFailed())
 				return std::unexpected("Failed to compile script main to LIR");
 			repl::appendScriptLIRModuleData(merged, main_lir.valueOrPanic());
