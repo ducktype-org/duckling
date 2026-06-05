@@ -32,7 +32,7 @@ namespace compiler::backend_vm {
 
 	vm::code::CodeCollection ReplDVMCodeBuilder::insertLIRUnitAndCollectNewlyLoweredCode(const lir::LIRUnit& lir_unit) {
 
-		// @TODO: #2246 check if we can avoid repeating the logic from compileLirToModuleData.
+		// @TODO: #2246 check if we can avoid repeating the logic from DVMCodeBuilder::insertLIRUnit.
 		// This is strictly connected to the loading dvm context.
 		// We mimic the same idea as in compiling a single module,
 		// but this time we append the new functions to the lowering context.

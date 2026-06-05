@@ -56,19 +56,15 @@ private:
 		helios::ScopeID    scope;
 		base::Map<
 			base::StrID,
-			std::tuple<CRef<helios::HOUTFunction>, CRef<mir::Function>, CRef<lir::Function>>>
+			std::tuple<CRef<helios::HOUTFunction>, CRef<lir::Function>>>
 			funcs{};
 		base::Map<
 			base::StrID,
-			std::tuple<CRef<helios::HOUTGlobalData>, CRef<mir::Function>, CRef<lir::Function>>>
+			std::tuple<CRef<helios::HOUTGlobalData>, CRef<lir::Function>>>
 			ctors{};
 
 		[[nodiscard]] CRef<helios::HOUTFunction> houtFunc(std::string_view name) const {
 			return std::get<CRef<helios::HOUTFunction>>(funcs.at(base::StrID(name.data())));
-		}
-
-		[[nodiscard]] CRef<mir::Function> mirFunc(std::string_view name) const {
-			return std::get<CRef<mir::Function>>(funcs.at(base::StrID(name.data())));
 		}
 
 		[[nodiscard]] CRef<lir::Function> lirFunc(std::string_view name) const {
@@ -77,10 +73,6 @@ private:
 
 		[[nodiscard]] CRef<helios::HOUTGlobalData> houtGlobal(std::string_view name) const {
 			return std::get<CRef<helios::HOUTGlobalData>>(ctors.at(base::StrID(name.data())));
-		}
-
-		[[nodiscard]] CRef<mir::Function> mirGlobalCtor(std::string_view name) const {
-			return std::get<CRef<mir::Function>>(ctors.at(base::StrID(name.data())));
 		}
 
 		[[nodiscard]] CRef<lir::Function> lirGlobalCtor(std::string_view name) const {
@@ -112,7 +104,7 @@ private:
 				);
 				result.funcs.put(
 					hout_func->declaration->original_name,
-					std::make_tuple(hout_func, mir_func, lir_func)
+					std::make_tuple(hout_func, lir_func)
 				);
 			}
 			for (const auto& hout_glob: unit.glob_data) {
@@ -122,7 +114,7 @@ private:
 						                     ->valueOrThrow();
 						auto lir_func = ctx.query<lir::LowerToLIRFunction>({ mir_func });
 						result.ctors.put(
-							hout_glob->original_name, std::make_tuple(hout_glob, mir_func, lir_func)
+							hout_glob->original_name, std::make_tuple(hout_glob, lir_func)
 						);
 					}
 					variant_case(helios::HOUTGlobalConst, cnst) {
@@ -198,10 +190,10 @@ private:
 	void functionCallTest() {
 		auto module  = getLIROfModule(path("modules/function_calls"));
 		auto foo_lir = module.lirFunc("foo");
-		auto foo_mir = module.mirFunc("foo");
+		// auto foo_mir = module.mirFunc("foo");
 		withContextDo([&](query::Context& ctx) {
 			foo_lir->debugPrint(ctx, std::cerr);
-			foo_mir->debugPrint(std::cerr);
+			// foo_mir->debugPrint(std::cerr);
 		});
 	}
 
