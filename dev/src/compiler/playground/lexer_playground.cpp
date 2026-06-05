@@ -25,5 +25,5 @@ int main(int argc, char** argv) {
 	File path(argv[1]);
 	auto source = tokenizer::makeTokenSource(path);
 	source->tokenize();
-	if (source->getLogger()->bad()) source->getLogger()->dumpLog(true);
+	if (source->getIntLogger()->bad()) source->getIntLogger()->dumpLog(true, std::cerr);
 }
