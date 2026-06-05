@@ -1,0 +1,10 @@
+#ifndef HANDLE_NONJITABLE_INSTR
+	#define HANDLE_NONJITABLE_INSTR(instr)
+#endif
+
+HANDLE_NONJITABLE_INSTR(jit_call_entrypoint)
+HANDLE_NONJITABLE_INSTR(call_func)
+HANDLE_NONJITABLE_INSTR(call_builtinfunc)
+HANDLE_NONJITABLE_INSTR(virtual_call_pptr_method)
+HANDLE_NONJITABLE_INSTR(ret_tailcall_func)
+HANDLE_NONJITABLE_INSTR(breakpoint)

@@ -8,16 +8,9 @@
 #ifdef ENABLE_JIT
 namespace vm::jit {
 	constexpr std::array HARD_SYMBOLS = {
-		std::pair{ "jmp_label", &vm::OpFuns::op_debug_jmp_label },
-		std::pair{ "jmpIfNot_label", &vm::OpFuns::op_debug_jmpIfNot_label },
-		std::pair{ "jmpIf_label", &vm::OpFuns::op_debug_jmpIf_label },
-		std::pair{ "jit_call_entrypoint", &vm::OpFuns::op_debug_jit_call_entrypoint },
-		std::pair{ "call_func", &vm::OpFuns::op_debug_call_func },
-		std::pair{ "call_builtinfunc", &vm::OpFuns::op_debug_call_builtinfunc },
-		std::pair{ "virtual_call_pptr_method", &vm::OpFuns::op_debug_virtual_call_pptr_method },
-		std::pair{ "ret_tailcall_func", &vm::OpFuns::op_debug_ret_tailcall_func },
-		std::pair{ "breakpoint", &vm::OpFuns::op_debug_breakpoint },
-		std::pair{ "ret", &vm::OpFuns::op_debug_ret },
+	#define HANDLE_NONJITABLE_INSTR(instr) std::pair{ #instr, &vm::OpFuns::op_debug_##instr },
+	#include "non_jitable_def.hpp"
+	#undef HANDLE_NONJITABLE_INSTR
 		std::pair{ "trampoline", &vm::jit::helpers::trampoline },
 	};
 
