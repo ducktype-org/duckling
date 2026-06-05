@@ -57,7 +57,6 @@ protected:
 	 * Treats the `modules` directory as a single package with each test module as a submodule.
 	 */
 	void beforeAll() override {
-
 		// To see diagnostics
 		compiler::driver::initializeGlobalLogger();
 

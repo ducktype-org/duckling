@@ -3,6 +3,7 @@
 
 #include <base/except/exceptions.hpp>
 #include <base/pointers/box.hpp>
+
 #include <logger/logger.hpp>
 
 namespace compiler::backend_vm {
@@ -25,7 +26,6 @@ namespace compiler::backend_vm {
 	}
 
 	void DVMCodeBuilder::insertLIRUnit(const lir::LIRUnit& lir_unit) {
-
 		auto lir_function_deals_with_strings = [](const CRef<lir::Function> lir_function) {
 			auto is_string_layout = [](const CRef<tsl::TypeLayout> layout) -> bool {
 				return layout->getSourceType().getType().getKind() == tsh::Kind::String;

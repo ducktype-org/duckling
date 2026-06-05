@@ -11,7 +11,7 @@
 #include <logger/logger.hpp>
 
 namespace compiler::driver {
-	
+
 
 	DVMModuleData compileLIRModuleToDVM(
 		CRef<LIRUnitWithBackendName> data, query::Context& query_ctx, bool build_debug_info

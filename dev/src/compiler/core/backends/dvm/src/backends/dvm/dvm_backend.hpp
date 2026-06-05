@@ -29,7 +29,7 @@ namespace compiler::backend_vm {
 
 		/**
 		 * @brief Inserts a LIR unit into the module.
-		 * This acts as a main entry point for lowering LIR to DVM, 
+		 * This acts as a main entry point for lowering LIR to DVM,
 		 * and should be preferred over using the other insert functions.
 		 */
 		void insertLIRUnit(const lir::LIRUnit& lir_unit);
