@@ -5,8 +5,6 @@
 #include <diagnostic_interactive/logger_fwd.hpp>
 #include <diagnostic_interactive/message.hpp>
 
-#include <diagnostic/logger.hpp>
-#include <diagnostic/message.hpp>
 #include <diagnostic/source_position.hpp>
 
 namespace tpc {
