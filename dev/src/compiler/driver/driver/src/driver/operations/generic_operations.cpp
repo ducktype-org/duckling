@@ -773,7 +773,7 @@ namespace compiler::driver {
 
 		// Schedule compilation of every module up front so worker threads can run
 		// them concurrently, then collect the results in a second pass.
-		struct ScheduledModule {
+		struct ScheduledModule final {
 			ModuleToCompile        module;
 			query::EntryTaskHandle handle;
 		};
