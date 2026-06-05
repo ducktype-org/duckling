@@ -16,8 +16,8 @@ fun main() -> i64 = {
         builtin_output_i64(3); # 3
     }
 
-    let a: u64 = 1;
-    let b: u64 = 2;
+    let a: i64 = 1;
+    let b: i64 = 2;
 
     if (a < b <= b == b != b >= b > a) { 
         builtin_output_i64(4); # not printed

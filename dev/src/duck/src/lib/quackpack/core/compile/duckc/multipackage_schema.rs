@@ -2,7 +2,7 @@
 //!
 //! There are a few nuances we have to remember about:
 //! * when compiling a package, we need to pass its __entire__ subtree to duckc,
-//! * only ids specified in [`tasks`](DuckcMultiPackage::tasks) will be compiled; this effectively
+//! * only ids specified in [`tasks`](MultiPackage::tasks) will be compiled; this effectively
 //!   allows us to compile a single package, entire graph, or a chosen subset.
 
 use std::path::PathBuf;
@@ -23,8 +23,9 @@ pub struct MultiPackage {
 #[derive(Default, Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub struct Package {
     #[serde(rename = "id")]
-    /// Unique identifier for this package. Referenced by dependencies and tasks.
-    /// Must be unique within the manifest.
+    /// ID of a package to compile. Note, that it doesn't have to be a package's name, it can be a
+    /// unique id.
+    /// Has to be unique in terms of the entire [`packages`](MultiPackage::packages) vector.
     pub id: StrId,
     #[serde(rename = "name")]
     /// Import name of the package (used when resolving imports in source code).
@@ -45,7 +46,7 @@ pub struct Package {
 /// A single package's dependency, in a duckc-friendly format.
 pub struct Dependency {
     #[serde(rename = "id")]
-    /// ID of the dependency. Must match a package `id` declared in [`packages`](MultiPackage::packages).
+    /// ID of the dependency. Note, that there must a package with `id = self.id` in a [`packages`](MultiPackage::packages) vector.
     pub id: StrId,
     #[serde(skip_serializing_if = "Option::is_none")]
     /// How should this dependency be named when resolving imports. Defaults to the target package's `name`.

@@ -50,6 +50,7 @@ namespace compiler::helios::code {
 				);
 
 			// @TODO: #1532 This i64 coercion should be handled by the `[]` operator.
+			// @TODO: #2754 Possibly adjust the type based on the actual type of the index expression.
 			auto i64_type = tsh::SymbolType<>{
 				tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed),
 				tsh::ReferenceKind::Direct,
@@ -98,8 +99,11 @@ namespace compiler::helios::code {
 						};
 					}
 				}
+
 				return tsh::SymbolType<>{
-					tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned),
+					// @TODO: #2754 Possibly adjust the type based on the actual type of the index
+					// expression.
+					tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed),
 					tsh::ReferenceKind::Direct,
 					tsh::Mutability::Immutable
 				};
