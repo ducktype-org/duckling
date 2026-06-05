@@ -80,7 +80,7 @@ private:
 			funcs{};
 		base::Map<
 			base::StrID,
-			std::tuple<CRef<helios::HOUTGlobalData>, CRef<lir::LIRGlobalData>>>
+			std::tuple<CRef<helios::HOUTGlobalData>, lir::LIRGlobalData>>
 			globals{};
 
 
@@ -100,8 +100,8 @@ private:
 			return std::get<CRef<helios::HOUTGlobalData>>(globals.at(base::StrID(name.data())));
 		}
 
-		[[nodiscard]] CRef<lir::LIRGlobalData> lirGlobalData(std::string_view name) const {
-			return std::get<CRef<lir::LIRGlobalData>>(globals.at(base::StrID(name.data())));
+		[[nodiscard]] lir::LIRGlobalData lirGlobalData(std::string_view name) const {
+			return std::get<lir::LIRGlobalData>(globals.at(base::StrID(name.data())));
 		}
 	};
 
@@ -398,7 +398,7 @@ private:
 		auto module = getLIROfModule(path("modules/globals"));
 		ASSERT_EQUAL(1, module.funcs.size());
 		auto foo_lir = module.lirFunc("foo");
-		auto g_ctor  = module.lirGlobalData("g")->getCtorDtorPair().global_ctor.value();
+		auto g_ctor  = module.lirGlobalData("g").getCtorDtorPair().global_ctor.value();
 
 		withContextDo([&](query::Context& ctx) {
 			// This might change in the future:
@@ -451,9 +451,9 @@ private:
 
 	void testFromFunctionLiterals() {
 		auto module            = getLIROfModule(path("modules/globals"));
-		auto g_ctor            = module.lirGlobalData("g")->getCtorDtorPair().global_ctor.value();
-		auto some_global_ctor  = module.lirGlobalData("some_global")->getCtorDtorPair().global_ctor.value();
-		auto global_tuple_ctor = module.lirGlobalData("global_tuple")->getCtorDtorPair().global_ctor.value();
+		auto g_ctor            = module.lirGlobalData("g").getCtorDtorPair().global_ctor.value();
+		auto some_global_ctor  = module.lirGlobalData("some_global").getCtorDtorPair().global_ctor.value();
+		auto global_tuple_ctor = module.lirGlobalData("global_tuple").getCtorDtorPair().global_ctor.value();
 
 		withContextDo([&](query::Context& ctx) {
 			std::stringstream foo_str;
@@ -467,25 +467,20 @@ private:
 	}
 
 	void testLIRGlobal() {
-		// @TODO: #2246 update this tests, to operate on full global data, after
-		// the getLIROfModule update
-
 		auto module       = getLIROfModule(path("modules/globals"));
-		auto g            = module.houtGlobal("g");
-		auto some_global  = module.houtGlobal("some_global");
-		auto global_tuple = module.houtGlobal("global_tuple");
 
-		withContextDo([&](query::Context& ctx) {
-			auto g_lir            = lir::LIRGlobal::fromHOUT(ctx, *g);
-			auto some_global_lir  = lir::LIRGlobal::fromHOUT(ctx, *some_global);
-			auto global_tuple_lir = lir::LIRGlobal::fromHOUT(ctx, *global_tuple);
-			ASSERT_EQUAL(lir::LIRGlobalType::Variable, global_tuple_lir.type);
-			ASSERT_EQUAL(lir::LIRGlobalType::Variable, some_global_lir.type);
-			ASSERT_EQUAL(lir::LIRGlobalType::Variable, g_lir.type);
+		auto g            = module.lirGlobalData("g");
+		auto some_global  = module.lirGlobalData("some_global");
+		auto global_tuple = module.lirGlobalData("global_tuple");
 
-			// @TODO: #2246 bring back this check in some form
-			// ASSERT_EQUAL(false, g_lir.initial_value.has_value());
-		});
+		ASSERT_EQUAL(lir::LIRGlobalType::Variable, global_tuple.global.type);
+		ASSERT_EQUAL(lir::LIRGlobalType::Variable, some_global.global.type);
+		ASSERT_EQUAL(lir::LIRGlobalType::Variable, g.global.type);
+
+		// Adjust those checks if we will have CTV initializers for globals in the future.
+		ASSERT_TRUE(g.getCtorDtorPair().global_ctor.has_value());
+		ASSERT_TRUE(some_global.getCtorDtorPair().global_ctor.has_value());
+		ASSERT_TRUE(global_tuple.getCtorDtorPair().global_ctor.has_value());
 	}
 
 	void testLifetimeFlags() {
@@ -506,9 +501,6 @@ private:
 	}
 
 	void simpleConstant() {
-		// @TODO: #2246 update this tests, to operate on full global data, after
-		// the getLIROfModule update
-
 		auto [module, scope] = getModule(fs::File(path("modules/constants")));
 		const auto& hout_unit
 			= query::entryPoint<compiler::helios::QueryModuleHOUT>(module)->valueOrPanic();
