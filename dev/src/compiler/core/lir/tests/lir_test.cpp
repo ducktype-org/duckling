@@ -9,8 +9,9 @@
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <helios/tsh/queries/types.hpp>
-#include <lir/lir_lowering/lir_lowering.hpp>
-#include <mir/mir_lowering/mir_queries.hpp>
+#include <helios/mangler/mangler.hpp>
+#include <lir/lir_lowering/lir_unit.hpp>
+#include <mir/mir_lowering/mir_unit.hpp>
 #include <tsl/queries.hpp>
 
 #include <base/extend_cpp/variant_match.hpp>
@@ -52,8 +53,25 @@ private:
 	 * @brief Collection of functions compiles to LIR, and their HOUT and MIR counterparts.
 	 */
 	struct LIRModuleResult final {
+		
+		/* * * * * * * * * * *\
+		|  HELIOS level data: |
+		\* * * * * * * * * * */
+
 		frontend::ModuleID module;
 		helios::ScopeID    scope;
+
+
+		/* * * * * * * * * * *\
+		|  LIR level data:    |
+		\* * * * * * * * * * */
+
+		lir::LIRUnit lir_unit;
+
+		/* * * * * * * * * * *\
+		|  Mapping data:      |
+		\* * * * * * * * * * */
+		
 		base::Map<
 			base::StrID,
 			std::tuple<CRef<helios::HOUTFunction>, CRef<lir::Function>>>
@@ -62,6 +80,13 @@ private:
 			base::StrID,
 			std::tuple<CRef<helios::HOUTGlobalData>, CRef<lir::Function>>>
 			ctors{};
+
+
+		/* * * * * * * * * * *\
+		|  Easy api:          |
+		\* * * * * * * * * * */
+
+		// @TODO: #2246 refactor this api to better reflect the lir unit structure
 
 		[[nodiscard]] CRef<helios::HOUTFunction> houtFunc(std::string_view name) const {
 			return std::get<CRef<helios::HOUTFunction>>(funcs.at(base::StrID(name.data())));
@@ -91,45 +116,72 @@ private:
 	 */
 	LIRModuleResult getLIROfModule(std::string_view module_path) {
 		auto [module, scope] = getModule(fs::File(module_path));
-		LIRModuleResult result{ .module = module, .scope = scope };
+		
+		base::Optional<LIRModuleResult> result;
 
 		withContextDo([&](query::Context& ctx) {
 			auto& unit = ctx.query<helios::QueryTopLevelEntities>(module)->valueOrPanic();
+
+			auto mir_unit = mir::lowerToMIRUnit(ctx, &unit);
+			assertTrue(mir_unit.hasValue(), "MIR lowering failed!");
+
+			auto lir_unit = lir::lowerToLIRUnit(ctx, mir_unit.valueOrPanic());
+
+			result.emplace(LIRModuleResult{ .module = module, .scope = scope, .lir_unit = lir_unit });
+
+			// Now we additionally to the lowering also create a mapping from HOUT functions/globals to their LIR counterparts, to
+			// easily navigate between those levels in tests.
+			// We do it based on mangled names. This should be stable, but beware that if mangling logic or usage changes
+			// this might break and require adjustments.
+
 			for (const auto& hout_func: unit.functions) {
-				CRef mir_func = &ctx.query<mir::LowerToMIRFunction>({ hout_func })->valueOrPanic();
-				auto lir_func = ctx.query<lir::LowerToLIRFunction>({ mir_func });
+				auto mangled_name = helios::mangler::getSimpleMangledName(ctx, hout_func->declaration->original_symbol);
+
+				// This is O(n^2), but it should be fine in unit tests with small modules.
+				for (const auto& lir_func: lir_unit.lir_functions) {
+					if (lir_func->mangled_name == mangled_name) {
+						result->funcs.put(
+							hout_func->declaration->original_name,
+							std::make_tuple(hout_func, lir_func)
+						);
+						break;
+					}
+
+				}
 				assertTrue(
-					lir_func->validateBlockOrder().isOk(),
-					base::strConcat("Could not validate LIR function ", lir_func->mangled_name)
-				);
-				result.funcs.put(
-					hout_func->declaration->original_name,
-					std::make_tuple(hout_func, lir_func)
+					result->funcs.contains(base::StrID(hout_func->declaration->original_name)),
+					base::strConcat(
+						"Failed to find LIR function for HOUT function: ", hout_func->declaration->original_name.strView()
+					)
 				);
 			}
 			for (const auto& hout_glob: unit.glob_data) {
-				variant_match(hout_glob->value) {
-					variant_case(helios::HOUTGlobalVariable, var) {
-						CRef mir_func = &ctx.query<mir::LowerGlobalDataToMIRCtor>({ hout_glob })
-						                     ->valueOrThrow();
-						auto lir_func = ctx.query<lir::LowerToLIRFunction>({ mir_func });
-						result.ctors.put(
-							hout_glob->original_name, std::make_tuple(hout_glob, lir_func)
+				auto mangled_name = helios::mangler::getSimpleMangledName(ctx, hout_glob->helios_symbol);
+				for (const auto& lir_global: lir_unit.lir_globals) {
+					if (lir_global.global.mangled_name == mangled_name) {
+
+						variant_match (lir_global.data_initialization) {
+							variant_case(lir::LIRGlobalData::CTorDtorPair, ctor_dtor_pair) {
+								result->ctors.put(
+									hout_glob->original_name, std::make_tuple(hout_glob, ctor_dtor_pair.global_ctor)
+								);
+							}
+							variant_case(ctv::CompileTimeValue, ctv_initial_value) {
+								// @future #1554 -- handle this case when (if) const ctors are added
+							}
+							variant_default { CORE_UNREACHABLE(); }
+						}
+						result->ctors.put(
+							hout_glob->original_name,
+							std::make_tuple(hout_glob, lir_global)
 						);
+						break;
 					}
-					variant_case(helios::HOUTGlobalConst, cnst) {
-						// @future #1554 -- const ctors will probably be added here
-					}
-					variant_default {
-						fail(base::strConcat(
-							"Unexpected global data type in module: ",
-							hout_glob->original_name.strView()
-						));
-					}
+
 				}
 			}
 		});
-		return result;
+		return result.value();
 	}
 
 	void noTest() {
