@@ -225,8 +225,8 @@ namespace clah {
 	}
 
 	int Clah::execute(
-		std::function<ParsingResult()>                          parse,
-		std::function<void(const exceptions::ClahException& e)> on_clah_exception
+		const std::function<ParsingResult()>&                          parse,
+		const std::function<void(const exceptions::ClahException& e)>& on_clah_exception
 	) {
 		try {
 			auto parsing_result = parse();
