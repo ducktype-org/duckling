@@ -397,6 +397,15 @@ namespace compiler::lir {
 		return std::get<LIRGlobalData::CTorDtorPair>(data_initialization);
 	}
 
+	ctv::CompileTimeValue LIRGlobalData::getConstValue() const {
+		CORE_ASSERT(
+			std::holds_alternative<ctv::CompileTimeValue>(data_initialization),
+			"Global does not have constant initialization: ",
+			global.mangled_name.strView()
+		);
+		return std::get<ctv::CompileTimeValue>(data_initialization);
+	}
+
 	void LIRUnit::debugPrint(query::Context& ctx, std::ostream& os) const {
 		os << "LIRUnit: \n";
 		os << "Globals:\n";

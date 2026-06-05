@@ -516,33 +516,24 @@ private:
 	}
 
 	void simpleConstant() {
-		auto [module, scope] = getModule(fs::File(path("modules/constants")));
-		const auto& hout_unit
-			= query::entryPoint<compiler::helios::QueryModuleHOUT>(module)->valueOrPanic();
+		auto module = getLIROfModule(path("modules/constants"));
 
-		assertTrue(hout_unit.glob_data.size() == 1, "Expected one global data FIB_10");
+		assertTrue(module.globals.size() == 1, "Expected one global data FIB_10");
 
-		auto fib_const_global_data = hout_unit.glob_data.at(0);
-		ASSERT_EQUAL(fib_const_global_data->original_name, base::StrID("FIB_10"));
+		auto lir_global = module.lirGlobalData("FIB_10");
 
-		withContextDo([&](query::Context& ctx) {
-			// @TODO: #2246 bring back commented checks in some form, after the getLIROfModule update
-
-			auto lir_global = lir::LIRGlobal::fromHOUT(ctx, *fib_const_global_data);
-			// ASSERT_EQUAL(helios::name(lir_global.helios_id), base::StrID("FIB_10"));
-
-			// the main assertions of FIB_10 checks:
-			assertTrue(
-				lir_global.type == lir::LIRGlobalType::Constant, "Expected FIB_10 to be a constant"
-			);
-			// assertTrue(
-			// 	lir_global.initial_value.has_value(), "Expected FIB_10 to have an initial value"
-			// );
-			// auto const_numeric
-			// 	= lir_global.initial_value.value().get<numeric_value::NumericValue>();
-			// auto const_value = const_numeric->get<i64>();
-			// ASSERT_EQUAL(const_value, 55);
-		});
+		// the main assertions of FIB_10 checks:
+		assertTrue(
+			lir_global.global.type == lir::LIRGlobalType::Constant,
+			"Expected FIB_10 to be a constant"
+		);
+		assertTrue(
+			std::holds_alternative<ctv::CompileTimeValue>(lir_global.data_initialization),
+			"Expected FIB_10 to have a CTV initial value"
+		);
+		auto const_numeric = lir_global.getConstValue().get<numeric_value::NumericValue>();
+		auto const_value   = const_numeric->get<i64>();
+		ASSERT_EQUAL(const_value, 55);
 	}
 
 	void referencesTest() {

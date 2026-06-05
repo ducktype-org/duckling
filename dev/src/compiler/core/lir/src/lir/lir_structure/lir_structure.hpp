@@ -664,6 +664,17 @@ namespace compiler::lir {
 		[[nodiscard]]
 		CTorDtorPair getCtorDtorPair() const;
 
+		/**
+		 * @brief Returns the constant value for the global.
+		 * Panics if the global does not have a constant initialization.
+		 * Use only when you are sure that the global has a constant initialization (or
+		 * in tests).
+		 *
+		 * @return ctv::CompileTimeValue
+		 */
+		[[nodiscard]]
+		ctv::CompileTimeValue getConstValue() const;
+
 		void debugPrint(query::Context& ctx, std::ostream& out) const;
 	};
 
