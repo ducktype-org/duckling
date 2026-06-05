@@ -103,10 +103,22 @@ namespace vm::debugger {
 
 		/**
 		 * @brief Sets breakpoint
+		 * @param function_name Name of a function to set breakpoint in.
+		 * @param instr_number Index of instruction in function on which to set the beakpint.
+		 * @param enabled Decides whether the brakpoint should be enabled (inserted) or disabled
+		 * (removed).
 		 */
 		std::expected<void, api::ApiError> setBreakpoint(
 			base::StrID function_name, u64 instr_number, bool enabled = true
 		);
+
+		/**
+		 * @brief Sets breakpoint
+		 * @param file File to set breakpoint in.
+		 * @param line Number of line in file on which to set the beakpint.
+		 * @param enabled Decides whether the brakpoint should be enabled (inserted) or disabled
+		 * (removed).
+		 */
 		std::expected<void, api::ApiError> setBreakpoint(
 			fs::File file, usize line, bool enabled = true
 		);
