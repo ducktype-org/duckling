@@ -13,6 +13,7 @@ public:
 	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(multithreadingTest);
 		TESTER_ADD_TEST(mutexTest);
+		TESTER_ADD_TEST(multithreadZeroDiv);
 		TESTER_ADD_TEST(cvTest);
 		TESTER_ADD_TEST(reuseThreadTest);
 	}
@@ -22,6 +23,35 @@ private:
 		// We don't check result here - only if it finished sucessfully
 		// That's because this code is purposefully not deterministic - it has data race
 		runTestOnVm("multithreading.dbc", "", {}, {});
+	}
+
+	void multithreadZeroDiv() {
+		// Spawn a thread that performs division by zero on i32 and verify VM panicked
+		assertExecutionPanickedWith(
+			runTestOnVmGetResult("multithread_zero_div.dbc"),
+			vm::exceptions::VMZeroDivisionException::ERR_MSG
+		);
+		// Spawn a thread that performs division by zero on i64 and verify VM panicked
+		assertExecutionPanickedWith(
+			runTestOnVmGetResult("multithread_zero_div_i64.dbc"),
+			vm::exceptions::VMZeroDivisionException::ERR_MSG
+		);
+		// Start a worker thread, let it run, then verify the main thread panics.
+		assertExecutionPanickedWith(
+			runTestOnVmGetResult("main_thread_zero_div.dbc"),
+			vm::exceptions::VMZeroDivisionException::ERR_MSG
+		);
+		// Two threads in active zero-division with workers still alive
+		assertExecutionPanickedWith(
+			runTestOnVmGetResult("kill_threads_zero_division.dbc"),
+			vm::exceptions::VMZeroDivisionException::ERR_MSG
+		);
+		// Two threads deadlock and main divides by zero. To be removed after introducing
+		// deadlock detection.
+		assertExecutionPanickedWith(
+			runTestOnVmGetResult("deadlock_then_panic.dbc"),
+			vm::exceptions::VMZeroDivisionException::ERR_MSG
+		);
 	}
 
 	void mutexTest() {

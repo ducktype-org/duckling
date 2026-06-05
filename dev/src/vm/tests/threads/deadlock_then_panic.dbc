@@ -1,0 +1,106 @@
+# Test: Two threads deadlock on circular lock dependency, main divides by zero.
+#
+# Scenario:
+# - Thread 1 acquires mutex_a, then tries to acquire mutex_b (will block).
+# - Thread 2 acquires mutex_b, then tries to acquire mutex_a (will block).
+# - Both threads are now in deadlock.
+# - Main waits a bit, then performs zero division.
+#
+# Expected behavior:
+# - The VM panics with zero-division exception.
+# - The auto-stop logic from terminal status kills both deadlocked threads.
+# - No hang or resource leak.
+
+global_data mutex_a mutex {};
+global_data mutex_b mutex {};
+
+function thread1 {} -> {} {
+	init_pany_type		lock_a, mutex;
+	mov_popq_popq		lock_a, mutex_a;
+	call_builtinfunc	builtin_lock_mutex;
+
+	# Small spin to let thread2 also acquire its lock before we try to acquire mutex_b
+	init_pany_type		spin1, i64;
+	mov_p64_imm			spin1, 10000;
+	label SpinLoop1;
+		sub_p64_imm		spin1, 1;
+		cmpGt_p64_imm	spin1, 0;
+		jmpIf_label		SpinLoop1;
+
+	# Now try to acquire mutex_b (will block - deadlock)
+	init_pany_type		lock_b, mutex;
+	mov_popq_popq		lock_b, mutex_b;
+	call_builtinfunc	builtin_lock_mutex;
+
+	# Unlock (never reached due to deadlock, but structure is here for symmetry)
+	init_pany_type		unlock_a, mutex;
+	mov_popq_popq		unlock_a, mutex_a;
+	call_builtinfunc	builtin_unlock_mutex;
+
+	ret;
+}
+
+function thread2 {} -> {} {
+	init_pany_type		lock_b, mutex;
+	mov_popq_popq		lock_b, mutex_b;
+	call_builtinfunc	builtin_lock_mutex;
+
+	# Small spin to let thread1 also acquire its lock before we try to acquire mutex_a
+	init_pany_type		spin2, i64;
+	mov_p64_imm			spin2, 10000;
+	label SpinLoop2;
+		sub_p64_imm		spin2, 1;
+		cmpGt_p64_imm	spin2, 0;
+		jmpIf_label		SpinLoop2;
+
+	# Now try to acquire mutex_a (will block - deadlock)
+	init_pany_type		lock_a, mutex;
+	mov_popq_popq		lock_a, mutex_a;
+	call_builtinfunc	builtin_lock_mutex;
+
+	# Unlock (never reached due to deadlock)
+	init_pany_type		unlock_b, mutex;
+	mov_popq_popq		unlock_b, mutex_b;
+	call_builtinfunc	builtin_unlock_mutex;
+
+	ret;
+}
+
+function main { i64, ptr_argv } -> { i64 } {
+	# Create and initialize mutexes
+	init_pany_type		init_a, mutex;
+	call_builtinfunc	builtin_create_mutex;
+	mov_popq_popq		mutex_a, init_a;
+
+	init_pany_type		init_b, mutex;
+	call_builtinfunc	builtin_create_mutex;
+	mov_popq_popq		mutex_b, init_b;
+
+	# Spawn thread1
+	init_pany_type		t1_id, i64;
+	set_threadctx		thread1;
+	call_builtinfunc	builtin_start_thread;
+
+	# Spawn thread2
+	init_pany_type		t2_id, i64;
+	set_threadctx		thread2;
+	call_builtinfunc	builtin_start_thread;
+
+	# Wait to allow threads to deadlock
+	init_pany_type		wait_spin, i64;
+	mov_p64_imm			wait_spin, 50000;
+	label WaitDeadlock;
+		sub_p64_imm		wait_spin, 1;
+		cmpGt_p64_imm	wait_spin, 0;
+		jmpIf_label		WaitDeadlock;
+
+	# Now divide by zero while threads are deadlocked
+	# This should trigger terminal status, which should kill the deadlocked threads
+	init_pany_type		a, i32;
+	init_pany_type		b, i32;
+	mov_p32_imm			a, 13;
+	mov_p32_imm			b, 0;
+	div_p32_p32			a, b;
+
+	ret;
+}
