@@ -66,19 +66,6 @@ namespace compiler::backend_vm::internal {
 
 		const vm::code::GlobalData& lowerAndKeepLirGlobal(const lir::LIRGlobalData& lir_global);
 
-		// /**
-		//  * @brief Lowers content of a LIR unit into DVM bytecode.
-		//  * 
-		//  * @TODO: #2246 I would prefer for this function to not exist, and for the logic to be placed in the
-		//  * DVMCodeBuilder. This would howe
-		 
-		//  we could remove collectNewCodeSince and related machinery
-		//  * by making this return the CodeCollection of newly lowered code directly.
-		//  * Not sure if this should work this way though, because this would not contain
-		//  * any entities that were lowered outside of this function, but are still part of the module (e.g. types).
-		//  */
-		// void lowerAndKeepLirUnit(const lir::LIRUnit& lir_unit);
-
 		/**
 		 * @brief Lowers a LIR type layout into VM bytecode type representation.
 		 * It caches the result, so inserts the type into the program only if needed.
