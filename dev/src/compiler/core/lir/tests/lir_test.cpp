@@ -17,6 +17,7 @@
 #include <tsl/queries.hpp>
 
 #include <base/extend_cpp/variant_match.hpp>
+#include <base/extend_cpp/vector_utils.hpp>
 
 #include <query_framework/context/context.hpp>
 #include <query_framework/entry/query_entry_point.hpp>
@@ -120,8 +121,18 @@ private:
 		base::Optional<LIRModuleResult> result;
 
 		withContextDo([&](query::Context& ctx) {
-			auto& unit = ctx.query<helios::QueryTopLevelEntities>(module)->valueOrPanic();
+			helios::HOUTUnit unit = ctx.query<helios::QueryModuleHOUT>(module)->valueOrPanic();
 
+			// We fillter out toString methods here for test purposes
+			// @TODO: #2694 remove this filtering
+			// #2483 -- deal with this if needed
+			base::filterVectorInPlace(
+				unit.functions,
+				[](const CRef<helios::HOUTFunction>& func) {
+					return func->declaration->original_name != base::StrID("toString");
+				}
+			);
+			
 			auto mir_unit = mir::lowerToMIRUnit(ctx, &unit);
 			assertTrue(mir_unit.hasValue(), "MIR lowering failed!");
 
@@ -182,12 +193,14 @@ private:
 
 	void noTest() {
 		auto module = getLIROfModule(path("modules/simple"));
-		ASSERT_EQUAL(1, module.funcs.size());
+	
+		ASSERT_EQUAL_PRINT(1, module.funcs.size());
 		auto foo_lir = module.lirFunc("foo");
 
 		withContextDo([&](query::Context& ctx) {
 			// this might change in the future:
-			ASSERT_EQUAL(foo_lir->local_list.size(), 3);
+
+			ASSERT_EQUAL_PRINT(foo_lir->local_list.size(), 3);
 
 			for (auto& local: foo_lir->local_list) {
 				if (local.helios_id.has_value() and helios::name(local.helios_id.value()) == "a") {
@@ -396,7 +409,12 @@ private:
 
 	void testGlobals() {
 		auto module = getLIROfModule(path("modules/globals"));
-		ASSERT_EQUAL(1, module.funcs.size());
+		
+		// 2 functions:
+		// We don't count global ctors here,
+		// but LIRUnit has also inserted tuple constructors for global_tuple, so we have 2 functions in total.
+		ASSERT_EQUAL_PRINT(2, module.funcs.size());
+		
 		auto foo_lir = module.lirFunc("foo");
 		auto g_ctor  = module.lirGlobalData("g").getCtorDtorPair().global_ctor.value();
 

@@ -189,8 +189,6 @@ namespace compiler::helios {
 		void debugPrint(query::Context& ctx, std::ostream& out) const;
 	};
 
-	STRONG_TYPEDEF_ID(HOUTUnitID);
-
 	/**
 	 * @brief Structure representing single HOUTUnit.
 	 *
@@ -207,8 +205,7 @@ namespace compiler::helios {
 		// * defined templates
 		// * vector/references to hout of submodules? -- not necessarily needed
 		// * what else?
-		HOUTUnitID id = HOUTUnitID::next();
-
+		
 		std::vector<CRef<HOUTGlobalData>> glob_data;
 
 		std::vector<CRef<HOUTFunction>> functions;
@@ -216,8 +213,8 @@ namespace compiler::helios {
 		void debugPrint(query::Context& ctx, std::ostream& out) const;
 
 		HOUTUnit()                          = default;
-		HOUTUnit(const HOUTUnit&)           = delete;
-		HOUTUnit operator=(const HOUTUnit&) = delete;
+		HOUTUnit(const HOUTUnit&)           = default;
+		HOUTUnit& operator=(const HOUTUnit&) = default;
 		HOUTUnit(HOUTUnit&&)                = default;
 		HOUTUnit& operator=(HOUTUnit&&)     = default;
 	};
