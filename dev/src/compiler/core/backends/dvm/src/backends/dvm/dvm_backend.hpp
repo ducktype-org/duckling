@@ -1,3 +1,4 @@
+#pragma once
 
 #include "dvm_internal_fwd.hpp"
 
