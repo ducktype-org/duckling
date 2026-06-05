@@ -653,6 +653,16 @@ namespace compiler::lir {
 		LIRGlobal                                         global;
 		std::variant<ctv::CompileTimeValue, CTorDtorPair> data_initialization;
 
+		/**
+		 * @brief Returns the constructor and destructor pair for the global.
+		 * Panics if the global does not have a constructor+destructor initialization.
+		 * Use only when you are sure that the global has constructor+destructor initialization (or in tests).
+		 *
+		 * @return CTorDtorPair
+		 */
+		[[nodiscard]]
+		CTorDtorPair getCtorDtorPair() const;
+
 		void debugPrint(query::Context& ctx, std::ostream& out) const;
 	};
 

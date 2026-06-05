@@ -189,7 +189,7 @@ namespace compiler::lir {
 	 *
 	 * @note It should be used only used in lir::Function::debugPrint method
 	 */
-	struct LIRPrinter {
+	struct LIRPrinter final {
 		query::Context& ctx;
 		std::ostream&   output;
 
@@ -386,6 +386,15 @@ namespace compiler::lir {
 				}
 			}
 		}
+	}
+
+	LIRGlobalData::CTorDtorPair LIRGlobalData::getCtorDtorPair() const {
+		CORE_ASSERT(
+			std::holds_alternative<LIRGlobalData::CTorDtorPair>(data_initialization),
+			"Global does not have constructor/destructor initialization: ",
+			global.mangled_name.strView()
+		);
+		return std::get<LIRGlobalData::CTorDtorPair>(data_initialization);
 	}
 
 	void LIRUnit::debugPrint(query::Context& ctx, std::ostream& os) const {

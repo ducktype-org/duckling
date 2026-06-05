@@ -10,7 +10,9 @@
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/mangler/mangler.hpp>
+#include <lir/lir_structure/lir_structure.hpp>
 #include <lir/lir_lowering/lir_unit.hpp>
+#include <lir/lir_lowering/lir_lowering.hpp>
 #include <mir/mir_lowering/mir_unit.hpp>
 #include <tsl/queries.hpp>
 
@@ -78,15 +80,13 @@ private:
 			funcs{};
 		base::Map<
 			base::StrID,
-			std::tuple<CRef<helios::HOUTGlobalData>, CRef<lir::Function>>>
-			ctors{};
+			std::tuple<CRef<helios::HOUTGlobalData>, CRef<lir::LIRGlobalData>>>
+			globals{};
 
 
 		/* * * * * * * * * * *\
 		|  Easy api:          |
 		\* * * * * * * * * * */
-
-		// @TODO: #2246 refactor this api to better reflect the lir unit structure
 
 		[[nodiscard]] CRef<helios::HOUTFunction> houtFunc(std::string_view name) const {
 			return std::get<CRef<helios::HOUTFunction>>(funcs.at(base::StrID(name.data())));
@@ -97,11 +97,11 @@ private:
 		}
 
 		[[nodiscard]] CRef<helios::HOUTGlobalData> houtGlobal(std::string_view name) const {
-			return std::get<CRef<helios::HOUTGlobalData>>(ctors.at(base::StrID(name.data())));
+			return std::get<CRef<helios::HOUTGlobalData>>(globals.at(base::StrID(name.data())));
 		}
 
-		[[nodiscard]] CRef<lir::Function> lirGlobalCtor(std::string_view name) const {
-			return std::get<CRef<lir::Function>>(ctors.at(base::StrID(name.data())));
+		[[nodiscard]] CRef<lir::LIRGlobalData> lirGlobalData(std::string_view name) const {
+			return std::get<CRef<lir::LIRGlobalData>>(globals.at(base::StrID(name.data())));
 		}
 	};
 
@@ -155,30 +155,26 @@ private:
 					)
 				);
 			}
+
 			for (const auto& hout_glob: unit.glob_data) {
 				auto mangled_name = helios::mangler::getSimpleMangledName(ctx, hout_glob->helios_symbol);
+				
+				// This is O(n^2), but it should be fine in unit tests with small modules.
 				for (const auto& lir_global: lir_unit.lir_globals) {
 					if (lir_global.global.mangled_name == mangled_name) {
-
-						variant_match (lir_global.data_initialization) {
-							variant_case(lir::LIRGlobalData::CTorDtorPair, ctor_dtor_pair) {
-								result->ctors.put(
-									hout_glob->original_name, std::make_tuple(hout_glob, ctor_dtor_pair.global_ctor)
-								);
-							}
-							variant_case(ctv::CompileTimeValue, ctv_initial_value) {
-								// @future #1554 -- handle this case when (if) const ctors are added
-							}
-							variant_default { CORE_UNREACHABLE(); }
-						}
-						result->ctors.put(
+						result->globals.put(
 							hout_glob->original_name,
 							std::make_tuple(hout_glob, lir_global)
 						);
 						break;
 					}
-
 				}
+				assertTrue(
+					result->globals.contains(base::StrID(hout_glob->original_name)),
+					base::strConcat(
+						"Failed to find LIR global for HOUT global: ", hout_glob->original_name.strView()
+					)
+				);
 			}
 		});
 		return result.value();
@@ -402,7 +398,7 @@ private:
 		auto module = getLIROfModule(path("modules/globals"));
 		ASSERT_EQUAL(1, module.funcs.size());
 		auto foo_lir = module.lirFunc("foo");
-		auto g_ctor  = module.lirGlobalCtor("g");
+		auto g_ctor  = module.lirGlobalData("g")->getCtorDtorPair().global_ctor.value();
 
 		withContextDo([&](query::Context& ctx) {
 			// This might change in the future:
@@ -455,9 +451,9 @@ private:
 
 	void testFromFunctionLiterals() {
 		auto module            = getLIROfModule(path("modules/globals"));
-		auto g_ctor            = module.lirGlobalCtor("g");
-		auto some_global_ctor  = module.lirGlobalCtor("some_global");
-		auto global_tuple_ctor = module.lirGlobalCtor("global_tuple");
+		auto g_ctor            = module.lirGlobalData("g")->getCtorDtorPair().global_ctor.value();
+		auto some_global_ctor  = module.lirGlobalData("some_global")->getCtorDtorPair().global_ctor.value();
+		auto global_tuple_ctor = module.lirGlobalData("global_tuple")->getCtorDtorPair().global_ctor.value();
 
 		withContextDo([&](query::Context& ctx) {
 			std::stringstream foo_str;
@@ -496,7 +492,8 @@ private:
 		// @TODO #1262: this test doesn't make much sense yet, add proper tests when classes and
 		// composite types such as variants are fully added.
 		auto module = getLIROfModule(path("modules/lifetime_flags"));
-		ASSERT_EQUAL(3, module.ctors.size());
+		ASSERT_EQUAL(3, module.globals.size());
+		ASSERT_EQUAL(3, module.lir_unit.lir_globals.size());
 
 		auto my_int = module.houtGlobal("my_int");
 		ASSERT_TRUE(my_int->type.hasNoOpDestructor());

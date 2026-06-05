@@ -67,6 +67,12 @@ namespace compiler::backend_vm {
 		 */
 		[[nodiscard]] base::Optional<Ref<query::Context>> getActiveContext() const;
 
+		/**
+		 * Lowers a LIR unit into DVM bytecode and collects the newly lowered code.
+		 *
+		 * @note The newly lowered code might not include all entities from the LIR unit,
+		 * as some of them might have been lowered in previous statements and are already present in the context.
+		 */
 		vm::code::CodeCollection insertLIRUnitAndCollectNewlyLoweredCode(const lir::LIRUnit& lir_unit);
 
 	private:
