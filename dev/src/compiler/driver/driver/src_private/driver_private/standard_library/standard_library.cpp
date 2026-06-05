@@ -6,6 +6,8 @@
 
 #include <base/extend_cpp/variant_match.hpp>
 
+#include "string_id/string_id.hpp"
+
 #include <algorithm>
 
 namespace compiler::driver {
@@ -58,12 +60,15 @@ namespace compiler::driver {
 	}
 
 	namespace {
-		bool hasDependency(
+
+		bool hasDependencyOrAlias(
 			const std::vector<compiler::frontend::packages::RawDependencyInfo>& dependencies,
+			base::StrID                                                         target_package_name,
 			base::StrID                                                         target_package_id
 		) {
 			return std::ranges::any_of(dependencies, [&](const auto& dep) {
-				return dep.package_id == target_package_id;
+				return dep.package_id == target_package_id
+				    or (dep.alias.has_value() && *dep.alias == target_package_name);
 			});
 		}
 
@@ -80,7 +85,7 @@ namespace compiler::driver {
 			);
 		}
 
-		base::OkBad addDepdendenciesOnStandardLibraryForPackage(
+		base::OkBad addDependenciesOnStandardLibraryForPackage(
 			compiler::frontend::packages::RawPackageInfo& package_info,
 			frontend::packages::DiagnosticReporter&       report
 		) {
@@ -93,83 +98,110 @@ namespace compiler::driver {
 
 			// Otherwise, we add dependencies on all standard library packages
 			for (auto& config: STD_PACKAGES_CONFIG) {
-				if (hasDependency(package_info.dependencies, base::StrID(config.name))) {
+				auto std_name = base::StrID(config.name);
+				auto std_id   = base::StrID(config.name);
+				if (hasDependencyOrAlias(package_info.dependencies, std_name, std_id)) {
 					report(
 						"Standard library package name is already used as an external dependency.",
 						base::strConcat(
-							"Package '", package_info.package_name, "' depends on '", config.name
+							"Package '", package_info.package_name, "' depends on '", std_name
 						),
 						true
 					);
 					return base::BAD;
 				}
 				package_info.dependencies.push_back(compiler::frontend::packages::RawDependencyInfo{
-					.package_id = base::StrID(config.name),
+					.package_id = std_id,
 					.alias      = {},
 				});
 			}
 			return base::OK;
 		}
+
+		/**
+		 * @brief To the `packages_info` vector, to each `RawPackageInfo` in it
+		 * adds the dependency on all standard library packages. This way this dependency
+		 * doesn't have to be provided by the user in the manifest and is added by the compiler.
+		 */
+		base::OkBad addDependenciesOnStandardLibrary(
+			std::vector<compiler::frontend::packages::RawPackageInfo>& packages_info,
+			frontend::packages::DiagnosticReporter&                    report
+
+		) {
+			for (auto& package_info: packages_info)
+				if (addDependenciesOnStandardLibraryForPackage(package_info, report).isBad())
+					return base::BAD;
+			return base::OK;
+		}
+
+		/**
+		 * @brief Creates packages for the standard library and adds them to the provided vector.
+		 * @param packages_info[out] The std lib packages will be added here as dependencies.
+		 * @param std_path Path to the standard library.
+		 * @param report Diagnostic reporter to report any issues with the standard library packages
+		 * (like a missing package).
+		 */
+		base::OkBad appendStandardLibraryPackages(
+			std::vector<compiler::frontend::packages::RawPackageInfo>& packages_info,
+			const fs::FilePath&                                        std_path,
+			frontend::packages::DiagnosticReporter&                    report
+		) {
+			using compiler::frontend::packages::RawDependencyInfo;
+			using compiler::frontend::packages::RawPackageInfo;
+
+			for (auto& config: STD_PACKAGES_CONFIG) {
+				if (hasPackageNameOrID(
+						packages_info, base::StrID(config.name), base::StrID(config.name)
+					)) {
+					report(
+						base::strConcat("Package with name `", config.name, "` already exist."),
+						"",
+						true
+					);
+					return base::BAD;
+				}
+			}
+
+			for (auto& config: STD_PACKAGES_CONFIG) {
+				auto package_path = std_path.join(fs::FilePath(config.subpath));
+				if (not package_path.exists()) {
+					report(
+						"Standard library package path does not exist.",
+						base::strConcat(
+							"Expected standard library package at: ", package_path.string()
+						),
+						true
+					);
+					return base::BAD;
+				}
+				RawPackageInfo raw_package_info{
+					.package_id   = base::StrID(config.name),
+					.package_name = base::StrID(config.name),
+					.version      = base::StrID("not_supported"),
+					.package_path = package_path,
+					.features     = {},
+					.dependencies = {},
+				};
+
+				for (const auto& dep_name: config.dependencies) {
+					raw_package_info.dependencies.push_back(RawDependencyInfo{
+						.package_id = base::StrID(dep_name),
+						.alias      = {},
+					});
+				}
+				packages_info.push_back(std::move(raw_package_info));
+			}
+			return base::OK;
+		}
 	}
 
-	base::OkBad addDepdendenciesOnStandardLibrary(
-		std::vector<compiler::frontend::packages::RawPackageInfo>& packages_info,
-		frontend::packages::DiagnosticReporter&                    report
-
-	) {
-		for (auto& package_info: packages_info)
-			if (addDepdendenciesOnStandardLibraryForPackage(package_info, report).isBad())
-				return base::BAD;
-		return base::OK;
-	}
-
-	base::OkBad appendStandardLibraryPackages(
+	base::OkBad addStandardLibraryPackages(
 		std::vector<compiler::frontend::packages::RawPackageInfo>& packages_info,
 		const fs::FilePath&                                        std_path,
 		frontend::packages::DiagnosticReporter&                    report
 	) {
-		using compiler::frontend::packages::RawDependencyInfo;
-		using compiler::frontend::packages::RawPackageInfo;
-
-		for (auto& config: STD_PACKAGES_CONFIG) {
-			if (hasPackageNameOrID(
-					packages_info, base::StrID(config.name), base::StrID(config.name)
-				)) {
-				report(
-					base::strConcat("Package with name `", config.name, "` already exist."), "", true
-				);
-				return base::BAD;
-			}
-		}
-
-		for (auto& config: STD_PACKAGES_CONFIG) {
-			auto package_path = std_path.join(fs::FilePath(config.subpath));
-			if (not package_path.exists()) {
-				report(
-					"Standard library package path does not exist.",
-					base::strConcat("Expected standard library package at: ", package_path.string()),
-					true
-				);
-				return base::BAD;
-			}
-			RawPackageInfo raw_package_info{
-				.package_id   = base::StrID(config.name),
-				.package_name = base::StrID(config.name),
-				.version      = base::StrID("not_supported"),
-				.package_path = package_path,
-				.features     = {},
-				.dependencies = {},
-			};
-
-			for (const auto& dep_name: config.dependencies) {
-				raw_package_info.dependencies.push_back(RawDependencyInfo{
-					.package_id = base::StrID(dep_name),
-					.alias      = {},
-				});
-			}
-			packages_info.push_back(std::move(raw_package_info));
-		}
-		return base::OK;
+		if (addDependenciesOnStandardLibrary(packages_info, report).isBad()) return base::BAD;
+		return appendStandardLibraryPackages(packages_info, std_path, report);
 	}
 
 	std::vector<PackageCompilationTask> getStandardLibraryCompilationTasks() {

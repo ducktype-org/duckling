@@ -89,9 +89,7 @@ namespace compiler::driver {
 
 			// Adding standard library packages
 			if (auto path = resolveStdPath(stdlib_options)) {
-				if (addDepdendenciesOnStandardLibrary(packages_info, report).isBad())
-					return base::BAD;
-				if (appendStandardLibraryPackages(packages_info, *path, report).isBad())
+				if (addStandardLibraryPackages(packages_info, *path, report).isBad())
 					return base::BAD;
 			}
 
