@@ -21,7 +21,7 @@ namespace vm::jit::cnp::internal {
 	}
 }
 
-#define LINK_VARIABLE_NAME(name) _##name
+#define LINK_VARIABLE_NAME(name) _value_to_patch_##name
 
 // Those variables are also implicitly extern:
 // https://en.cppreference.com/cpp/language/language_linkage#Notes
