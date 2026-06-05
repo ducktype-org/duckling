@@ -50,18 +50,20 @@ namespace compiler::repl {
 		auto module_unique_name = base::StrID(std::string(module_name.data(), module_name.size()));
 		CORE_DEV_LOG(REPL, "Using module name: ", module_unique_name.strView(), "\n");
 
-		CRef lir_data
-			= &ctx.query<driver::CompileHOUTUnitToLIRModuleData>({ &hout_unit, module_unique_name })
-		           ->valueOrPanic();
+		auto lir_data_qr
+			= driver::compileHOUTUnitToLIRModuleData(ctx, hout_unit, module_unique_name );
+		if (lir_data_qr.hasFailed())
+			return std::unexpected("Failed to compile HOUTUnit to LIRModuleData");
+		auto lir_data = std::move(lir_data_qr.valueOrPanic());
 
 		if (logger::isCategoryEnabled(logger::DevLogCategories::REPL)) {
 			std::stringstream lir_unit_print;
-			lir_data->lir_unit.debugPrint(ctx, lir_unit_print);
+			lir_data.lir_unit.debugPrint(ctx, lir_unit_print);
 			CORE_DEV_LOG(REPL, "LIR unit:\n", lir_unit_print.str());
 		}
 
 		vm::code::CodeCollection new_code
-			= lowering_context.insertLIRUnitAndCollectNewlyLoweredCode(lir_data->lir_unit);
+			= lowering_context.insertLIRUnitAndCollectNewlyLoweredCode(lir_data.lir_unit);
 
 		for (const auto& func: new_code.functions)
 			CORE_DEV_LOG(REPL, "Adding lowered function: ", func.name.str, "\n");

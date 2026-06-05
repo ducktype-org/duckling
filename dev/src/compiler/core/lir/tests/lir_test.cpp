@@ -100,13 +100,12 @@ private:
 	};
 
 	/**
-	 * Compiles the module at given path to LIR, returning also HOUT and MIR counterparts of
-	 * functions. Note that it does not include globals/constants in the result (only functions).
+	 * Compiles the module at given path to LIR, returning also HOUT counterparts of
+	 * functions and globals for easier testing.
 	 *
-	 * #2246 getLIROfModule uses custom pipeline logic,
-	 * try to unify it. It will be tricky, as we also create custom mapping here from HOUT to MIR
-	 * and LIR functions, but maybe we can hack-in this mapping around the existing pipeline entry
-	 * points in some way.
+	 * Note that the function don't include any global constructors/destructors that might be
+	 * generated for global variables, but they are included in the LIRGlobalData for the global
+	 * variables, so they can be accessed in tests if needed.
 	 */
 	LIRModuleResult getLIROfModule(std::string_view module_path) {
 		auto [module, scope] = getModule(fs::File(module_path));
@@ -245,11 +244,7 @@ private:
 	void functionCallTest() {
 		auto module  = getLIROfModule(path("modules/function_calls"));
 		auto foo_lir = module.lirFunc("foo");
-		// auto foo_mir = module.mirFunc("foo");
-		withContextDo([&](query::Context& ctx) {
-			foo_lir->debugPrint(ctx, std::cerr);
-			// foo_mir->debugPrint(std::cerr);
-		});
+		withContextDo([&](query::Context& ctx) { foo_lir->debugPrint(ctx, std::cerr); });
 	}
 
 /**
@@ -404,10 +399,10 @@ private:
 	void testGlobals() {
 		auto module = getLIROfModule(path("modules/globals"));
 
-		// 2 functions:
-		// We don't count global ctors here,
-		// but LIRUnit has also inserted tuple constructors for global_tuple, so we have 2 functions
-		// in total.
+		// We have 2 lir functions here:
+		// We don't count global ctors,
+		// but the LIRUnit, apart from the `foo` function also has inserted tuple constructors for
+		// global_tuple, so we have 2 functions in total.
 		ASSERT_EQUAL_PRINT(2, module.funcs.size());
 
 		auto foo_lir = module.lirFunc("foo");
@@ -483,6 +478,8 @@ private:
 
 	void testLIRGlobal() {
 		auto module = getLIROfModule(path("modules/globals"));
+
+		ASSERT_EQUAL(3, module.globals.size());
 
 		auto g            = module.lirGlobalData("g");
 		auto some_global  = module.lirGlobalData("some_global");
