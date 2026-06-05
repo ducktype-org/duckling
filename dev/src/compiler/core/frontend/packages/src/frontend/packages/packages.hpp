@@ -14,6 +14,7 @@
 
 #include <json/diagnostics.hpp>
 #include <nlohmann/json_fwd.hpp>
+
 #include <vector>
 
 namespace compiler::frontend::packages {
