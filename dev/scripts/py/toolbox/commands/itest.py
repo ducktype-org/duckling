@@ -42,10 +42,10 @@ from click import command, option
     help="Path to a log file. A log file contains e.g. dumps of program incorrect IO",
 )
 @option(
-    "--no-determinism-check",
+    "--determinism-check/--no-determinism-check",
     is_flag=True,
-    default=False,
-    help="Disable concurrent deterministic compilation checks for all tests.",
+    default=None,
+    help="Enable or disable concurrent deterministic compilation checks for all tests.",
 )
 @option(
     "-t",
@@ -53,6 +53,12 @@ from click import command, option
     type=str,
     default="",
     help="Run tests under the specified path prefix (e.g., 'tests/C++' or 'tests/C++/Case1').",
+)
+@option(
+    "--override-values",
+    type=str,
+    default="",
+    help="A json dict with configuration values that will override the test defaults."
 )
 @verbose(help="Prints some debug information about test cases")
 def itest(*args, **kwargs):
