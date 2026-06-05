@@ -37,6 +37,16 @@ namespace compiler::backend_vm {
 		// We mimic the same idea as in compiling a single module,
 		// but this time we append the new functions to the lowering context.
 		
+		auto lir_function_deals_with_strings = [](const CRef<lir::Function> lir_function) {
+			auto is_string_layout = [](const CRef<tsl::TypeLayout> layout) -> bool {
+				return layout->getSourceType().getType().getKind() == tsh::Kind::String;
+			};
+			if (is_string_layout(lir_function->return_type_layout)) return true;
+			for (const auto& param_layout: lir_function->parameter_layouts)
+				if (is_string_layout(param_layout)) return true;
+			return false;
+		};
+
 		
 		auto snapshot = m_context->captureLoweredEntitiesSnapshot();
 
@@ -59,9 +69,8 @@ namespace compiler::backend_vm {
 		// Lower all functions
 		for (const auto& lir_function: lir_unit.lir_functions) {
 			CORE_DEV_LOG(REPL, "Lowering function: ", lir_function->mangled_name.strView(), "\n");
-			// PR #2246 
 			// @TODO: #2483 Remove this filter (and the helper function) when strings work in DVM.
-			if (lirFunctionDealsWithStrings(lir_function)) {
+			if (lir_function_deals_with_strings(lir_function)) {
 				CORE_DEV_LOG(
 					REPL,
 					"Lowering function that deals with strings skipped: ",
@@ -76,6 +85,4 @@ namespace compiler::backend_vm {
 		vm::code::CodeCollection new_code = m_context->collectNewCodeSince(snapshot);
 		return new_code;
 	}
-
-
 }

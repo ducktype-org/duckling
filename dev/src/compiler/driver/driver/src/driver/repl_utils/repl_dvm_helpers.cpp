@@ -23,23 +23,12 @@ namespace compiler::repl {
 	// float and double sizes are already validated in base/types/floats.hpp.
 	static_assert(sizeof(bool) == 1, "bool must be 1 byte for DVM compatibility");
 
-	static bool lirFunctionDealsWithStrings(const CRef<lir::Function> lir_function) {
-		auto is_string_layout = [](const CRef<tsl::TypeLayout> layout) -> bool {
-			return layout->getSourceType().getType().getKind() == tsh::Kind::String;
-		};
-		if (is_string_layout(lir_function->return_type_layout)) return true;
-		for (const auto& param_layout: lir_function->parameter_layouts)
-			if (is_string_layout(param_layout)) return true;
-		return false;
-	}
-
 	std::expected<vm::code::CodeCollection, std::string> compileHOUTUnitToDVMCode(
 		query::Context&                  ctx,
 		const helios::HOUTUnit&          hout_unit,
 		std::string_view                 module_name,
 		backend_vm::ReplDVMCodeBuilder& lowering_context
 	) {
-		// @TODO: #2246 we duplicate some pipeline logic here, unify it
 
 		auto active_ctx = lowering_context.getActiveContext();
 		CORE_ASSERT(
