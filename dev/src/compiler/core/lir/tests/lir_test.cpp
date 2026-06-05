@@ -5,14 +5,14 @@
  */
 
 
+#include <helios/mangler/mangler.hpp>
 #include <helios/queries/queries.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <helios/tsh/queries/types.hpp>
-#include <helios/mangler/mangler.hpp>
-#include <lir/lir_structure/lir_structure.hpp>
-#include <lir/lir_lowering/lir_unit.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
+#include <lir/lir_lowering/lir_unit.hpp>
+#include <lir/lir_structure/lir_structure.hpp>
 #include <mir/mir_lowering/mir_unit.hpp>
 #include <tsl/queries.hpp>
 
@@ -56,7 +56,6 @@ private:
 	 * @brief Collection of functions compiles to LIR, and their HOUT and MIR counterparts.
 	 */
 	struct LIRModuleResult final {
-		
 		/* * * * * * * * * * *\
 		|  HELIOS level data: |
 		\* * * * * * * * * * */
@@ -74,16 +73,10 @@ private:
 		/* * * * * * * * * * *\
 		|  Mapping data:      |
 		\* * * * * * * * * * */
-		
-		base::Map<
-			base::StrID,
-			std::tuple<CRef<helios::HOUTFunction>, CRef<lir::Function>>>
-			funcs{};
-		base::Map<
-			base::StrID,
-			std::tuple<CRef<helios::HOUTGlobalData>, lir::LIRGlobalData>>
-			globals{};
 
+		base::Map<base::StrID, std::tuple<CRef<helios::HOUTFunction>, CRef<lir::Function>>> funcs{};
+		base::Map<base::StrID, std::tuple<CRef<helios::HOUTGlobalData>, lir::LIRGlobalData>>
+			globals{};
 
 		/* * * * * * * * * * *\
 		|  Easy api:          |
@@ -117,7 +110,7 @@ private:
 	 */
 	LIRModuleResult getLIROfModule(std::string_view module_path) {
 		auto [module, scope] = getModule(fs::File(module_path));
-		
+
 		base::Optional<LIRModuleResult> result;
 
 		withContextDo([&](query::Context& ctx) {
@@ -126,27 +119,27 @@ private:
 			// We fillter out toString methods here for test purposes
 			// @TODO: #2694 remove this filtering
 			// #2483 -- deal with this if needed
-			base::filterVectorInPlace(
-				unit.functions,
-				[](const CRef<helios::HOUTFunction>& func) {
-					return func->declaration->original_name != base::StrID("toString");
-				}
-			);
-			
+			base::filterVectorInPlace(unit.functions, [](const CRef<helios::HOUTFunction>& func) {
+				return func->declaration->original_name != base::StrID("toString");
+			});
+
 			auto mir_unit = mir::lowerToMIRUnit(ctx, &unit);
 			assertTrue(mir_unit.hasValue(), "MIR lowering failed!");
 
 			auto lir_unit = lir::lowerToLIRUnit(ctx, mir_unit.valueOrPanic());
 
-			result.emplace(LIRModuleResult{ .module = module, .scope = scope, .lir_unit = lir_unit });
+			result.emplace(LIRModuleResult{ .module = module, .scope = scope, .lir_unit = lir_unit }
+			);
 
-			// Now we additionally to the lowering also create a mapping from HOUT functions/globals to their LIR counterparts, to
-			// easily navigate between those levels in tests.
-			// We do it based on mangled names. This should be stable, but beware that if mangling logic or usage changes
-			// this might break and require adjustments.
+			// Now we additionally to the lowering also create a mapping from HOUT functions/globals
+			// to their LIR counterparts, to easily navigate between those levels in tests. We do it
+			// based on mangled names. This should be stable, but beware that if mangling logic or
+			// usage changes this might break and require adjustments.
 
 			for (const auto& hout_func: unit.functions) {
-				auto mangled_name = helios::mangler::getSimpleMangledName(ctx, hout_func->declaration->original_symbol);
+				auto mangled_name = helios::mangler::getSimpleMangledName(
+					ctx, hout_func->declaration->original_symbol
+				);
 
 				// This is O(n^2), but it should be fine in unit tests with small modules.
 				for (const auto& lir_func: lir_unit.lir_functions) {
@@ -157,25 +150,25 @@ private:
 						);
 						break;
 					}
-
 				}
 				assertTrue(
 					result->funcs.contains(base::StrID(hout_func->declaration->original_name)),
 					base::strConcat(
-						"Failed to find LIR function for HOUT function: ", hout_func->declaration->original_name.strView()
+						"Failed to find LIR function for HOUT function: ",
+						hout_func->declaration->original_name.strView()
 					)
 				);
 			}
 
 			for (const auto& hout_glob: unit.glob_data) {
-				auto mangled_name = helios::mangler::getSimpleMangledName(ctx, hout_glob->helios_symbol);
-				
+				auto mangled_name
+					= helios::mangler::getSimpleMangledName(ctx, hout_glob->helios_symbol);
+
 				// This is O(n^2), but it should be fine in unit tests with small modules.
 				for (const auto& lir_global: lir_unit.lir_globals) {
 					if (lir_global.global.mangled_name == mangled_name) {
 						result->globals.put(
-							hout_glob->original_name,
-							std::make_tuple(hout_glob, lir_global)
+							hout_glob->original_name, std::make_tuple(hout_glob, lir_global)
 						);
 						break;
 					}
@@ -183,7 +176,8 @@ private:
 				assertTrue(
 					result->globals.contains(base::StrID(hout_glob->original_name)),
 					base::strConcat(
-						"Failed to find LIR global for HOUT global: ", hout_glob->original_name.strView()
+						"Failed to find LIR global for HOUT global: ",
+						hout_glob->original_name.strView()
 					)
 				);
 			}
@@ -193,7 +187,7 @@ private:
 
 	void noTest() {
 		auto module = getLIROfModule(path("modules/simple"));
-	
+
 		ASSERT_EQUAL_PRINT(1, module.funcs.size());
 		auto foo_lir = module.lirFunc("foo");
 
@@ -409,12 +403,13 @@ private:
 
 	void testGlobals() {
 		auto module = getLIROfModule(path("modules/globals"));
-		
+
 		// 2 functions:
 		// We don't count global ctors here,
-		// but LIRUnit has also inserted tuple constructors for global_tuple, so we have 2 functions in total.
+		// but LIRUnit has also inserted tuple constructors for global_tuple, so we have 2 functions
+		// in total.
 		ASSERT_EQUAL_PRINT(2, module.funcs.size());
-		
+
 		auto foo_lir = module.lirFunc("foo");
 		auto g_ctor  = module.lirGlobalData("g").getCtorDtorPair().global_ctor.value();
 
@@ -468,10 +463,12 @@ private:
 	}
 
 	void testFromFunctionLiterals() {
-		auto module            = getLIROfModule(path("modules/globals"));
-		auto g_ctor            = module.lirGlobalData("g").getCtorDtorPair().global_ctor.value();
-		auto some_global_ctor  = module.lirGlobalData("some_global").getCtorDtorPair().global_ctor.value();
-		auto global_tuple_ctor = module.lirGlobalData("global_tuple").getCtorDtorPair().global_ctor.value();
+		auto module = getLIROfModule(path("modules/globals"));
+		auto g_ctor = module.lirGlobalData("g").getCtorDtorPair().global_ctor.value();
+		auto some_global_ctor
+			= module.lirGlobalData("some_global").getCtorDtorPair().global_ctor.value();
+		auto global_tuple_ctor
+			= module.lirGlobalData("global_tuple").getCtorDtorPair().global_ctor.value();
 
 		withContextDo([&](query::Context& ctx) {
 			std::stringstream foo_str;
@@ -485,7 +482,7 @@ private:
 	}
 
 	void testLIRGlobal() {
-		auto module       = getLIROfModule(path("modules/globals"));
+		auto module = getLIROfModule(path("modules/globals"));
 
 		auto g            = module.lirGlobalData("g");
 		auto some_global  = module.lirGlobalData("some_global");

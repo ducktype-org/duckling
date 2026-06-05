@@ -14,10 +14,12 @@
 
 namespace compiler::backend_vm {
 	/**
-	 * @brief A statefull collection of code lowered into VM bytecode dedicated for REPL/scripts compilation use.
-	 * It exposes an interface for incremental DVM code emission, allowing REPL statements to be compiled and loaded one at a time.
-	 * 
-	 * @note underneath it uses ProgramLoweringContext snapshot api that was added specifically for this use case.
+	 * @brief A statefull collection of code lowered into VM bytecode dedicated for REPL/scripts
+	 * compilation use. It exposes an interface for incremental DVM code emission, allowing REPL
+	 * statements to be compiled and loaded one at a time.
+	 *
+	 * @note underneath it uses ProgramLoweringContext snapshot api that was added specifically for
+	 * this use case.
 	 *
 	 * @note If used improperly, query_ctx might become a dangling reference.
 	 *
@@ -30,8 +32,8 @@ namespace compiler::backend_vm {
 	 * later statements to reference symbols (functions, globals, types) from earlier ones.
 	 * It exposes snapshot/collection semantics to enable incremental bytecode loading without
 	 * recompiling the entire module.
-	 * 
-	 * PR: ADD a TODO here about moving logic up from ProgramLoweringContext 
+	 *
+	 * PR: ADD a TODO here about moving logic up from ProgramLoweringContext
 	 */
 	class ReplDVMCodeBuilder final {
 	public:
@@ -71,12 +73,13 @@ namespace compiler::backend_vm {
 		 * Lowers a LIR unit into DVM bytecode and collects the newly lowered code.
 		 *
 		 * @note The newly lowered code might not include all entities from the LIR unit,
-		 * as some of them might have been lowered in previous statements and are already present in the context.
+		 * as some of them might have been lowered in previous statements and are already present in
+		 * the context.
 		 */
-		vm::code::CodeCollection insertLIRUnitAndCollectNewlyLoweredCode(const lir::LIRUnit& lir_unit);
+		vm::code::CodeCollection insertLIRUnitAndCollectNewlyLoweredCode(const lir::LIRUnit& lir_unit
+		);
 
 	private:
-
 		// Pimpl: store pointer to complete type, with details in CPP
 		base::Box<internal::ProgramLoweringContext> m_context;
 	};

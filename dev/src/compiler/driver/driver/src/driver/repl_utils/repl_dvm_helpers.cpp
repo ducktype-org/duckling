@@ -24,12 +24,11 @@ namespace compiler::repl {
 	static_assert(sizeof(bool) == 1, "bool must be 1 byte for DVM compatibility");
 
 	std::expected<vm::code::CodeCollection, std::string> compileHOUTUnitToDVMCode(
-		query::Context&                  ctx,
-		const helios::HOUTUnit&          hout_unit,
-		std::string_view                 module_name,
+		query::Context&                 ctx,
+		const helios::HOUTUnit&         hout_unit,
+		std::string_view                module_name,
 		backend_vm::ReplDVMCodeBuilder& lowering_context
 	) {
-
 		auto active_ctx = lowering_context.getActiveContext();
 		CORE_ASSERT(
 			active_ctx.has_value() && active_ctx.value().get() == &ctx,
@@ -61,7 +60,8 @@ namespace compiler::repl {
 			CORE_DEV_LOG(REPL, "LIR unit:\n", lir_unit_print.str());
 		}
 
-		vm::code::CodeCollection new_code = lowering_context.insertLIRUnitAndCollectNewlyLoweredCode(lir_data->lir_unit);
+		vm::code::CodeCollection new_code
+			= lowering_context.insertLIRUnitAndCollectNewlyLoweredCode(lir_data->lir_unit);
 
 		for (const auto& func: new_code.functions)
 			CORE_DEV_LOG(REPL, "Adding lowered function: ", func.name.str, "\n");
@@ -103,10 +103,10 @@ namespace compiler::repl {
 	}
 
 	std::expected<void, std::string> compileAndLoad(
-		query::Context&                  ctx,
-		const helios::HOUTUnit&          hout_unit,
-		std::string_view                 module_name,
-		vm::PID                          pid,
+		query::Context&                 ctx,
+		const helios::HOUTUnit&         hout_unit,
+		std::string_view                module_name,
+		vm::PID                         pid,
 		backend_vm::ReplDVMCodeBuilder& lowering_context
 	) {
 		return compileHOUTUnitToDVMCode(ctx, hout_unit, module_name, lowering_context)

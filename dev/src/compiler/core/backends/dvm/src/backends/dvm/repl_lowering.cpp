@@ -2,6 +2,7 @@
 #include <program_lowering_context.hpp>
 
 #include <base/pointers/box.hpp>
+
 #include <logger/logger.hpp>
 
 namespace compiler::backend_vm {
@@ -16,7 +17,7 @@ namespace compiler::backend_vm {
 	ReplDVMCodeBuilder::ReplDVMCodeBuilder(query::Context& query_ctx):
 		  m_context(createReplLoweringContext(query_ctx)) {}
 
-	ReplDVMCodeBuilder::~ReplDVMCodeBuilder()                                         = default;
+	ReplDVMCodeBuilder::~ReplDVMCodeBuilder()                                        = default;
 	ReplDVMCodeBuilder::ReplDVMCodeBuilder(ReplDVMCodeBuilder&&) noexcept            = default;
 	ReplDVMCodeBuilder& ReplDVMCodeBuilder::operator=(ReplDVMCodeBuilder&&) noexcept = default;
 
@@ -30,13 +31,14 @@ namespace compiler::backend_vm {
 		return m_context->getActiveContext();
 	}
 
-	vm::code::CodeCollection ReplDVMCodeBuilder::insertLIRUnitAndCollectNewlyLoweredCode(const lir::LIRUnit& lir_unit) {
-
+	vm::code::CodeCollection ReplDVMCodeBuilder::insertLIRUnitAndCollectNewlyLoweredCode(
+		const lir::LIRUnit& lir_unit
+	) {
 		// @TODO: #2246 check if we can avoid repeating the logic from DVMCodeBuilder::insertLIRUnit.
 		// This is strictly connected to the loading dvm context.
 		// We mimic the same idea as in compiling a single module,
 		// but this time we append the new functions to the lowering context.
-		
+
 		auto lir_function_deals_with_strings = [](const CRef<lir::Function> lir_function) {
 			auto is_string_layout = [](const CRef<tsl::TypeLayout> layout) -> bool {
 				return layout->getSourceType().getType().getKind() == tsh::Kind::String;
@@ -47,7 +49,7 @@ namespace compiler::backend_vm {
 			return false;
 		};
 
-		
+
 		auto snapshot = m_context->captureLoweredEntitiesSnapshot();
 
 		CORE_DEV_LOG(

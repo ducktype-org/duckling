@@ -205,17 +205,17 @@ namespace compiler::helios {
 		// * defined templates
 		// * vector/references to hout of submodules? -- not necessarily needed
 		// * what else?
-		
+
 		std::vector<CRef<HOUTGlobalData>> glob_data;
 
 		std::vector<CRef<HOUTFunction>> functions;
 
 		void debugPrint(query::Context& ctx, std::ostream& out) const;
 
-		HOUTUnit()                          = default;
-		HOUTUnit(const HOUTUnit&)           = default;
+		HOUTUnit()                           = default;
+		HOUTUnit(const HOUTUnit&)            = default;
 		HOUTUnit& operator=(const HOUTUnit&) = default;
-		HOUTUnit(HOUTUnit&&)                = default;
-		HOUTUnit& operator=(HOUTUnit&&)     = default;
+		HOUTUnit(HOUTUnit&&)                 = default;
+		HOUTUnit& operator=(HOUTUnit&&)      = default;
 	};
 }

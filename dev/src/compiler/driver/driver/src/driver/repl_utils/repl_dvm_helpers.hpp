@@ -20,9 +20,9 @@ namespace compiler::repl {
 	 * the code to a running VM process.
 	 */
 	std::expected<vm::code::CodeCollection, std::string> compileHOUTUnitToDVMCode(
-		query::Context&                  ctx,
-		const helios::HOUTUnit&          hout_unit,
-		std::string_view                 module_name,
+		query::Context&                 ctx,
+		const helios::HOUTUnit&         hout_unit,
+		std::string_view                module_name,
 		backend_vm::ReplDVMCodeBuilder& lowering_context
 	);
 
@@ -46,10 +46,10 @@ namespace compiler::repl {
 	 * @return Success or error message on failure.
 	 */
 	std::expected<void, std::string> compileAndLoad(
-		query::Context&                  ctx,
-		const helios::HOUTUnit&          hout_unit,
-		std::string_view                 module_name,
-		vm::PID                          pid,
+		query::Context&                 ctx,
+		const helios::HOUTUnit&         hout_unit,
+		std::string_view                module_name,
+		vm::PID                         pid,
 		backend_vm::ReplDVMCodeBuilder& lowering_context
 	);
 

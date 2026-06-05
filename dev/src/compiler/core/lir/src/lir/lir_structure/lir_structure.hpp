@@ -656,7 +656,8 @@ namespace compiler::lir {
 		/**
 		 * @brief Returns the constructor and destructor pair for the global.
 		 * Panics if the global does not have a constructor+destructor initialization.
-		 * Use only when you are sure that the global has constructor+destructor initialization (or in tests).
+		 * Use only when you are sure that the global has constructor+destructor initialization (or
+		 * in tests).
 		 *
 		 * @return CTorDtorPair
 		 */
