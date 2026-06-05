@@ -13,11 +13,12 @@ on:
 
 env:
   CARGO_DIR: ~/.cargo
+  BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
 
 jobs:
   determine-runners:
     if: github.event.pull_request.draft == false
-    
+
     uses: ./.github/workflows/determine-runners.yml
     with:
       self-hosted-labels: '["ubuntu-24.04"]'
@@ -37,7 +38,7 @@ jobs:
             path: dev/src/duck/
       fail-fast: false
 
-    timeout-minutes: 15
+    timeout-minutes: 10
 
     steps:
       - name: Clean workspace (self-hosted only)
@@ -54,12 +55,29 @@ jobs:
       - name: Add Rust components to PATH
         run: echo "${{ env.CARGO_DIR }}/bin" >> $GITHUB_PATH
 
+      # This has to be before restoring cache, so the env is set.
       - name: Setup duck dependencies
         uses: ./.github/actions/setup-duck-dependencies/
+
+      - name: Restore sccache cache
+        uses: actions/cache/restore@v5
+        with:
+          path: |
+            ${{ env.SCCACHE_DIR }}
+          key: ${{ runner.os }}-sccache-${{ env.BRANCH_NAME }}-${{ steps.cache-timestamp.outputs.timestamp }}
+          restore-keys: |
+            ${{ runner.os }}-sccache-${{ env.BRANCH_NAME }}-
+            ${{ runner.os }}-sccache-main-
+            ${{ runner.os }}-sccache-
 
       - name: Run cargo clippy
         working-directory: ${{ matrix.project.path }}
         run: cargo clippy --no-deps --locked -- -D warnings
+
+      - name: Remove sccache on main
+        if: ${{ env.BRANCH_NAME == 'main' }}
+        id: sccache-main-rm
+        run: rm -rf ${{ env.SCCACHE_DIR }}
 
   rustfmt:
     if: github.event.pull_request.draft == false
@@ -74,7 +92,7 @@ jobs:
             path: dev/src/duck/
       fail-fast: false
 
-    timeout-minutes: 15
+    timeout-minutes: 10
 
     steps:
       - name: Clean workspace (self-hosted only)
@@ -108,7 +126,7 @@ jobs:
             path: dev/src/duck/
       fail-fast: false
 
-    timeout-minutes: 15
+    timeout-minutes: 10
 
     steps:
       - name: Clean workspace (self-hosted only)
@@ -125,9 +143,26 @@ jobs:
       - name: Add Rust components to PATH
         run: echo "${{ env.CARGO_DIR }}/bin" >> $GITHUB_PATH
 
+      # This has to be before restoring cache, so the env is set.
       - name: Setup duck dependencies
         uses: ./.github/actions/setup-duck-dependencies/
+
+      - name: Restore sccache cache
+        uses: actions/cache/restore@v5
+        with:
+          path: |
+            ${{ env.SCCACHE_DIR }}
+          key: ${{ runner.os }}-sccache-${{ env.BRANCH_NAME }}-${{ steps.cache-timestamp.outputs.timestamp }}
+          restore-keys: |
+            ${{ runner.os }}-sccache-${{ env.BRANCH_NAME }}-
+            ${{ runner.os }}-sccache-main-
+            ${{ runner.os }}-sccache-
 
       - name: Run cargo test
         working-directory: ${{ matrix.project.path }}
         run: cargo --locked test
+
+      - name: Remove sccache on main
+        if: ${{ env.BRANCH_NAME == 'main' }}
+        id: sccache-main-rm
+        run: rm -rf ${{ env.SCCACHE_DIR }}

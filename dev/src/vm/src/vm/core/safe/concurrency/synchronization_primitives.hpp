@@ -15,7 +15,7 @@ namespace vm {
 		/**
 		 * @brief Pool for mutexes used in the process.
 		 */
-		base::StableObjectPool<std::mutex, u64, false> mutex_pool;
+		base::StableObjectPool<std::timed_mutex, u64, false> mutex_pool;
 
 		/**
 		 * @brief Pool for condition variables used in the process.
@@ -27,7 +27,7 @@ namespace vm {
 		/**
 		 * @brief Getter for mutexes in the pool.
 		 */
-		Ref<std::mutex> getMutex(usize mutex_id);
+		Ref<std::timed_mutex> getMutex(usize mutex_id);
 
 		/**
 		 * @brief Adds new mutex into pool.
