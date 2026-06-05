@@ -23,7 +23,7 @@ namespace compiler::repl {
 		query::Context&                  ctx,
 		const helios::HOUTUnit&          hout_unit,
 		std::string_view                 module_name,
-		backend_vm::ReplLoweringContext& lowering_context
+		backend_vm::ReplDVMCodeBuilder& lowering_context
 	);
 
 	/**
@@ -50,7 +50,7 @@ namespace compiler::repl {
 		const helios::HOUTUnit&          hout_unit,
 		std::string_view                 module_name,
 		vm::PID                          pid,
-		backend_vm::ReplLoweringContext& lowering_context
+		backend_vm::ReplDVMCodeBuilder& lowering_context
 	);
 
 	/**

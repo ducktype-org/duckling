@@ -16,8 +16,8 @@
 
 namespace compiler::backend_vm {
 	/**
-	 * @brief Public API wrapper for REPL that exposes `ProgramLoweringContext` from DVM's
-	 * `src_private`.
+	 * @brief A statefull collection of code lowered into VM bytecode dedicated for REPL/scripts compilation use.
+	 * @note If used improperly, query_ctx might become a dangling reference.
 	 *
 	 * This class provides a stable public interface to the DVM backend's internal lowering context,
 	 * preventing REPL and other clients from directly depending on `src_private` implementation
@@ -28,22 +28,19 @@ namespace compiler::backend_vm {
 	 * later statements to reference symbols (functions, globals, types) from earlier ones.
 	 * It exposes snapshot/collection semantics to enable incremental bytecode loading without
 	 * recompiling the entire module.
-	 *
-	 * @note This is purely an encapsulation layer it adds no logic of its own.
-	 *
-	 * @note Feel Free to refactor this class if a better way of managing
-	 * the REPL context is found.
+
+	 * PR: ADD a TODO here about moving logic up from ProgramLoweringContext 
 	 */
-	class ReplLoweringContext final {
+	class ReplDVMCodeBuilder final {
 	public:
-		explicit ReplLoweringContext(query::Context& query_ctx);
-		~ReplLoweringContext();
+		explicit ReplDVMCodeBuilder(query::Context& query_ctx);
+		~ReplDVMCodeBuilder();
 
 		// Non-copyable, movable
-		ReplLoweringContext(const ReplLoweringContext&)            = delete;
-		ReplLoweringContext& operator=(const ReplLoweringContext&) = delete;
-		ReplLoweringContext(ReplLoweringContext&&) noexcept;
-		ReplLoweringContext& operator=(ReplLoweringContext&&) noexcept;
+		ReplDVMCodeBuilder(const ReplDVMCodeBuilder&)            = delete;
+		ReplDVMCodeBuilder& operator=(const ReplDVMCodeBuilder&) = delete;
+		ReplDVMCodeBuilder(ReplDVMCodeBuilder&&) noexcept;
+		ReplDVMCodeBuilder& operator=(ReplDVMCodeBuilder&&) noexcept;
 
 
 		/**
@@ -68,18 +65,10 @@ namespace compiler::backend_vm {
 		 */
 		[[nodiscard]] base::Optional<Ref<query::Context>> getActiveContext() const;
 
-		/**
-		 * @brief Lower a LIR function into DVM bytecode function.
-		 * @note If the function was already lowered, this is a no-op.
-		 */
-		const vm::code::Function& lowerAndKeepLirFunction(base::CRef<lir::Function> lir_function);
+	
+		vm::code::CodeCollection insertLIRUnitAndCollectNewlyLoweredCode(const lir::LIRUnit& lir_unit);
 
-		/**
-		 * @brief Lower a LIR global with its constructor and destructor.
-		 */
-		const vm::code::GlobalData& lowerAndKeepLirGlobal(const lir::LIRGlobalData& lir_global);
-
-
+	private:
 		/**
 		 * @brief Capture current state of lowered entities.
 		 */
@@ -93,8 +82,6 @@ namespace compiler::backend_vm {
 			const LoweredEntitiesSnapshot& snapshot
 		) const;
 
-
-	private:
 		// Pimpl: store pointer to complete type, with details in CPP
 		base::Box<internal::ProgramLoweringContext> m_context;
 	};

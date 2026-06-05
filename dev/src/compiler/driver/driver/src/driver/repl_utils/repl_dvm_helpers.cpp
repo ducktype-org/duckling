@@ -37,14 +37,14 @@ namespace compiler::repl {
 		query::Context&                  ctx,
 		const helios::HOUTUnit&          hout_unit,
 		std::string_view                 module_name,
-		backend_vm::ReplLoweringContext& lowering_context
+		backend_vm::ReplDVMCodeBuilder& lowering_context
 	) {
 		// @TODO: #2246 we duplicate some pipeline logic here, unify it
 
 		auto active_ctx = lowering_context.getActiveContext();
 		CORE_ASSERT(
 			active_ctx.has_value() && active_ctx.value().get() == &ctx,
-			"ReplLoweringContext's active query context must match the ctx parameter passed to "
+			"ReplDVMCodeBuilder's active query context must match the ctx parameter passed to "
 			"compileHOUTUnitToDVMCode()"
 		);
 
@@ -62,79 +62,30 @@ namespace compiler::repl {
 		auto module_unique_name = base::StrID(std::string(module_name.data(), module_name.size()));
 		CORE_DEV_LOG(REPL, "Using module name: ", module_unique_name.strView(), "\n");
 
-		const auto snapshot = lowering_context.captureLoweredEntitiesSnapshot();
-		CORE_DEV_LOG(
-			REPL,
-			"Lowering context snapshot: types=",
-			snapshot.loweredTypeCount(),
-			", globals=",
-			snapshot.loweredGlobalCount(),
-			", functions=",
-			snapshot.loweredFunctionCount(),
-			", helper_functions=",
-			snapshot.extraBytecodeFunctionCount(),
-			"\n"
-		);
+		// CORE_DEV_LOG(
+		// 	REPL,
+		// 	"Lowering context snapshot: types=",
+		// 	snapshot.loweredTypeCount(),
+		// 	", globals=",
+		// 	snapshot.loweredGlobalCount(),
+		// 	", functions=",
+		// 	snapshot.loweredFunctionCount(),
+		// 	", helper_functions=",
+		// 	snapshot.extraBytecodeFunctionCount(),
+		// 	"\n"
+		// );
 
 		CRef lir_data
 			= &ctx.query<driver::CompileHOUTUnitToLIRModuleData>({ &hout_unit, module_unique_name })
 		           ->valueOrPanic();
 
-		CORE_DEV_LOG(
-			REPL,
-			"LIR data contains ",
-			lir_data->lir_unit.lir_functions.size(),
-			" functions and ",
-			lir_data->lir_unit.lir_globals.size(),
-			" globals\n"
-		);
-		for (const auto& global: lir_data->lir_unit.lir_globals) {
-			CORE_DEV_LOG(REPL, "Global: ", global.global.mangled_name.strView());
-			if (std::holds_alternative<lir::LIRGlobalData::CTorDtorPair>(global.data_initialization
-			    )) {
-				auto& ctor_dtor_pair
-					= std::get<lir::LIRGlobalData::CTorDtorPair>(global.data_initialization);
-				if (ctor_dtor_pair.global_ctor.has_value())
-					CORE_DEV_LOG(
-						REPL,
-						"  Has ctor: ",
-						ctor_dtor_pair.global_ctor.value()->mangled_name.strView()
-					);
-				if (ctor_dtor_pair.global_dtor.has_value())
-					CORE_DEV_LOG(
-						REPL,
-						"  Has dtor: ",
-						ctor_dtor_pair.global_dtor.value()->mangled_name.strView()
-					);
-			}
-		}
-		for (const auto& func: lir_data->lir_unit.lir_functions)
-			CORE_DEV_LOG(REPL, "Function: ", func->mangled_name.strView());
-
-		// @TODO: #2246 check if we can avoid repeating the logic from compileLirToModuleData.
-		// This is strictly connected to the loading dvm context.
-		// We mimic the same idea as in compiling a single module,
-		// but this time we append the new functions to the lowering context.
-		for (const auto& global: lir_data->lir_unit.lir_globals)
-			(void) lowering_context.lowerAndKeepLirGlobal(global);
-
-		// Lower all functions
-		for (const auto& lir_function: lir_data->lir_unit.lir_functions) {
-			CORE_DEV_LOG(REPL, "Lowering function: ", lir_function->mangled_name.strView(), "\n");
-			// @TODO: #2483 Remove this filter (and the helper function) when strings work in DVM.
-			if (lirFunctionDealsWithStrings(lir_function)) {
-				CORE_DEV_LOG(
-					REPL,
-					"Lowering function that deals with strings skipped: ",
-					lir_function->mangled_name,
-					"\n"
-				);
-				continue;
-			}
-			(void) lowering_context.lowerAndKeepLirFunction(lir_function);
+		if (logger::isCategoryEnabled(logger::DevLogCategories::REPL)) {
+			std::stringstream lir_unit_print;
+			lir_data->lir_unit.debugPrint(ctx, lir_unit_print);
+			CORE_DEV_LOG(REPL, "LIR unit:\n", lir_unit_print.str());
 		}
 
-		vm::code::CodeCollection new_code = lowering_context.collectNewCodeSince(snapshot);
+		vm::code::CodeCollection new_code = lowering_context.insertLIRUnitAndCollectNewlyLoweredCode(lir_data->lir_unit);
 
 		for (const auto& func: new_code.functions)
 			CORE_DEV_LOG(REPL, "Adding lowered function: ", func.name.str, "\n");
@@ -180,7 +131,7 @@ namespace compiler::repl {
 		const helios::HOUTUnit&          hout_unit,
 		std::string_view                 module_name,
 		vm::PID                          pid,
-		backend_vm::ReplLoweringContext& lowering_context
+		backend_vm::ReplDVMCodeBuilder& lowering_context
 	) {
 		return compileHOUTUnitToDVMCode(ctx, hout_unit, module_name, lowering_context)
 		    .and_then([&](const vm::code::CodeCollection& code) {

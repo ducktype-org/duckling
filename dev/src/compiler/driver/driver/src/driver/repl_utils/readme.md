@@ -16,7 +16,7 @@ The primary components in this flow are:
 - Statement splitting uses a probe REPL module configured for script-style top-level parsing order.
 - Statement classification routes assignments as instructions (not expressions) because assignment lowering currently lives in the instruction compilation path.
 - Definition statements do not use executable wrappers; they are loaded from module HOUT.
-- DVM loading uses persistent `ReplLoweringContext` owned by caller; helpers require active context consistency.
+- DVM loading uses persistent `ReplDVMCodeBuilder` owned by caller; helpers require active context consistency.
 - The lowering path snapshots the context and loads only newly-lowered types/functions/globals
 	via `captureLoweredEntitiesSnapshot()` + `collectNewCodeSince(snapshot)`.
 - Callers must pair `setContext()` and `invalidateContext()` around `compileAndLoad()` so the
