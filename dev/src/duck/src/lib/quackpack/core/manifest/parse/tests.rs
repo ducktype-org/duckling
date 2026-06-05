@@ -1170,7 +1170,7 @@ import: y
                     frontmatter_path.display(),
                     dir.path().join("y").display(),
                 ),
-                &format!("failed to read `{}`", dir.path().join("y").display(),),
+                &format!("failed to read `{}`", dir.path().join("y").display()),
                 "No such file or directory (os error 2)",
             ]
         )
