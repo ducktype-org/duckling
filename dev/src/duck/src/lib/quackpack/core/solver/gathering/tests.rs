@@ -4,7 +4,6 @@ use std::time::Duration;
 
 use httpmock::prelude::*;
 use tempfile::{TempDir, tempdir};
-use url::Url;
 
 use crate::DuckContext;
 use crate::quackpack::core::fetcher::{Fetcher, types};
@@ -17,22 +16,24 @@ use crate::quackpack::core::solver::types_common::{
 use crate::quackpack::core::{Version, parse_manifest};
 use crate::quackpack::schemas::OneEntryMap;
 use crate::quackpack::schemas::registry::{self, DependencyCondition, DependencyFeature};
+use crate::quackpack::util::interned_url::InternedUrl;
+use crate::quackpack::util::to_url::ToUrl;
 use crate::util::path_ops_ext::PathOpsExt;
 use crate::util::test_utils::setup_test;
 
 struct MockGitAccess();
 impl GitAccess for MockGitAccess {
-    fn git_path(&self, _url: url::Url, _commit: &str) -> PathBuf {
+    fn git_path(&self, _url: InternedUrl, _commit: &str) -> PathBuf {
         unimplemented!()
     }
 
-    fn is_stored(&self, _url: url::Url, _commit: &str) -> bool {
+    fn is_stored(&self, _url: InternedUrl, _commit: &str) -> bool {
         unimplemented!()
     }
 
     fn store(
         &mut self,
-        _url: url::Url,
+        _url: InternedUrl,
         _commit: &str,
         _source_path: &std::path::Path,
     ) -> crate::QuackResult<()> {
@@ -504,7 +505,7 @@ fn create_mock_server() -> MockServer {
 fn not_pinned_registry() {
     let (ctx, _root) = setup_duck_ctx();
     let server = create_mock_server();
-    let url: Url = server.base_url().parse().unwrap();
+    let url = server.base_url().to_url().unwrap().into();
     let mut fetcher = Fetcher::new(&ctx).unwrap();
     let (_dir, root_path) = prepare_manifest(&format!(
         r#"
@@ -520,6 +521,7 @@ dependencies:
 "#,
         &url
     ));
+    let root_url = root_path.to_url().unwrap().into();
     let root_manifest = parse_manifest(&root_path, &ctx).unwrap();
     let mut git_access = MockGitAccess();
     let mut gatherer = Gatherer::new(&mut fetcher, &mut git_access);
@@ -532,19 +534,16 @@ dependencies:
         )
         .unwrap();
     let loc_root = ExpandedLocation::Local {
-        absolute_path: root_path.clone(),
-    }
-    .into();
+        absolute_path: root_url,
+    };
     let loc_foo = ExpandedLocation::Registry {
-        url: url.clone(),
+        url,
         real_name: "foo".into(),
-    }
-    .into();
+    };
     let loc_bar = ExpandedLocation::Registry {
-        url: url.clone(),
+        url,
         real_name: "bar".into(),
-    }
-    .into();
+    };
     assert_eq!(
         gathered_info.versions_for_location,
         HashMap::from([
@@ -604,19 +603,19 @@ dependencies:
         gathered_info.location_resolver,
         HashMap::from([
             (
-                InternedLocation::new(Location::Local { path: root_path }),
+                InternedLocation::new(Location::Local { path: root_url }),
                 loc_root
             ),
             (
                 InternedLocation::new(Location::Registry {
-                    url: url.clone(),
+                    url,
                     real_name: "foo".into()
                 }),
                 loc_foo
             ),
             (
                 InternedLocation::new(Location::Registry {
-                    url: url.clone(),
+                    url,
                     real_name: "bar".into()
                 }),
                 loc_bar
@@ -635,7 +634,7 @@ fn pinned_registry() {
     let (ctx, _root) = setup_duck_ctx();
     let server = create_mock_server();
 
-    let url: Url = server.base_url().parse().unwrap();
+    let url = server.base_url().to_url().unwrap().into();
     let mut fetcher = Fetcher::new(&ctx).unwrap();
     let (_dir, root_path) = prepare_manifest(&format!(
         r#"
@@ -657,6 +656,7 @@ dependencies:
 "#,
         &url, &url,
     ));
+    let root_url = root_path.to_url().unwrap().into();
     let root_manifest = parse_manifest(&root_path, &ctx).unwrap();
     let mut git_access = MockGitAccess();
     let mut gatherer = Gatherer::new(&mut fetcher, &mut git_access);
@@ -669,19 +669,16 @@ dependencies:
         )
         .unwrap();
     let loc_root = ExpandedLocation::Local {
-        absolute_path: root_path.clone(),
-    }
-    .into();
+        absolute_path: root_url,
+    };
     let loc_xd = ExpandedLocation::Registry {
-        url: url.clone(),
+        url,
         real_name: "xd".into(),
-    }
-    .into();
+    };
     let loc_dx = ExpandedLocation::Registry {
-        url: url.clone(),
+        url,
         real_name: "dx".into(),
-    }
-    .into();
+    };
     assert_eq!(
         gathered_info.versions_for_location,
         HashMap::from([
@@ -702,7 +699,7 @@ fn features() {
     let (ctx, _root) = setup_duck_ctx();
     let server = create_mock_server();
 
-    let url: Url = server.base_url().parse().unwrap();
+    let url = server.base_url().to_url().unwrap().into();
     let mut fetcher = Fetcher::new(&ctx).unwrap();
     let (_dir, root_path) = prepare_manifest(&format!(
         r#"
@@ -721,7 +718,7 @@ dependencies:
       registry-url: {}
     features:
     - root:
-        package-features: [my_feature] 
+        package-features: [my_feature]
     version: '2'
     pinned: true
 
@@ -730,6 +727,7 @@ features:
 "#,
         &url, &url,
     ));
+    let root_url = root_path.to_url().unwrap().into();
     let root_manifest = parse_manifest(&root_path, &ctx).unwrap();
     let mut git_access = MockGitAccess();
     let mut gatherer = Gatherer::new(&mut fetcher, &mut git_access);
@@ -742,19 +740,16 @@ features:
         )
         .unwrap();
     let loc_root = ExpandedLocation::Local {
-        absolute_path: root_path.clone(),
-    }
-    .into();
+        absolute_path: root_url,
+    };
     let loc_xd = ExpandedLocation::Registry {
-        url: url.clone(),
+        url,
         real_name: "xd".into(),
-    }
-    .into();
+    };
     let loc_dx = ExpandedLocation::Registry {
-        url: url.clone(),
+        url,
         real_name: "dx".into(),
-    }
-    .into();
+    };
     assert_eq!(
         gathered_info.possible_features,
         HashMap::from([
@@ -802,7 +797,7 @@ fn pinned_request_while_pending_not_pinned() {
     let (ctx, _root) = setup_duck_ctx();
     let server = create_mock_server();
 
-    let url: Url = server.base_url().parse().unwrap();
+    let url = server.base_url().to_url().unwrap().into();
     let mut fetcher = Fetcher::new(&ctx).unwrap();
     let (_dir, root_path) = prepare_manifest(&format!(
         r#"
@@ -822,6 +817,7 @@ dependencies:
 "#,
         &url, &url,
     ));
+    let root_url = root_path.to_url().unwrap().into();
     let root_manifest = parse_manifest(&root_path, &ctx).unwrap();
     let mut git_access = MockGitAccess();
     let mut gatherer = Gatherer::new(&mut fetcher, &mut git_access);
@@ -834,24 +830,20 @@ dependencies:
         )
         .unwrap();
     let loc_root = ExpandedLocation::Local {
-        absolute_path: root_path.clone(),
-    }
-    .into();
+        absolute_path: root_url,
+    };
     let loc_a = ExpandedLocation::Registry {
-        url: url.clone(),
+        url,
         real_name: "a".into(),
-    }
-    .into();
+    };
     let loc_b = ExpandedLocation::Registry {
-        url: url.clone(),
+        url,
         real_name: "b".into(),
-    }
-    .into();
+    };
     let loc_c = ExpandedLocation::Registry {
-        url: url.clone(),
+        url,
         real_name: "c".into(),
-    }
-    .into();
+    };
     assert_eq!(
         gathered_info.versions_for_location,
         HashMap::from([
@@ -916,7 +908,7 @@ fn cycle() {
     let (ctx, _root) = setup_duck_ctx();
     let server = create_mock_server();
 
-    let url: Url = server.base_url().parse().unwrap();
+    let url = server.base_url().to_url().unwrap().into();
     let mut fetcher = Fetcher::new(&ctx).unwrap();
     let (_dir, root_path) = prepare_manifest(&format!(
         r#"
@@ -933,6 +925,7 @@ dependencies:
 "#,
         &url
     ));
+    let root_url = root_path.to_url().unwrap().into();
     let root_manifest = parse_manifest(&root_path, &ctx).unwrap();
     let mut git_access = MockGitAccess();
     let mut gatherer = Gatherer::new(&mut fetcher, &mut git_access);
@@ -945,19 +938,16 @@ dependencies:
         )
         .unwrap();
     let loc_root = ExpandedLocation::Local {
-        absolute_path: root_path.clone(),
-    }
-    .into();
+        absolute_path: root_url,
+    };
     let loc_u = ExpandedLocation::Registry {
-        url: url.clone(),
+        url,
         real_name: "u".into(),
-    }
-    .into();
+    };
     let loc_v = ExpandedLocation::Registry {
-        url: url.clone(),
+        url,
         real_name: "v".into(),
-    }
-    .into();
+    };
     assert_eq!(
         gathered_info.versions_for_location,
         HashMap::from([
@@ -1003,7 +993,7 @@ fn features_expansion() {
     let (ctx, _root) = setup_duck_ctx();
     let server = create_mock_server();
 
-    let url: Url = server.base_url().parse().unwrap();
+    let url = server.base_url().to_url().unwrap().into();
     let mut fetcher = Fetcher::new(&ctx).unwrap();
     let (_dir, root_path) = prepare_manifest(&format!(
         r#"
@@ -1021,6 +1011,7 @@ dependencies:
 "#,
         &url
     ));
+    let root_url = root_path.to_url().unwrap().into();
     let root_manifest = parse_manifest(&root_path, &ctx).unwrap();
     let mut git_access = MockGitAccess();
     let mut gatherer = Gatherer::new(&mut fetcher, &mut git_access);
@@ -1033,19 +1024,16 @@ dependencies:
         )
         .unwrap();
     let loc_root = ExpandedLocation::Local {
-        absolute_path: root_path.clone(),
-    }
-    .into();
+        absolute_path: root_url,
+    };
     let loc_n = ExpandedLocation::Registry {
-        url: url.clone(),
+        url,
         real_name: "n".into(),
-    }
-    .into();
+    };
     let loc_m = ExpandedLocation::Registry {
-        url: url.clone(),
+        url,
         real_name: "m".into(),
-    }
-    .into();
+    };
     assert_eq!(
         gathered_info.versions_for_location,
         HashMap::from([

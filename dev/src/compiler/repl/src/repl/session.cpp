@@ -420,6 +420,7 @@ namespace compiler::repl {
 		if (command == "/complete") {
 			auto prefix = base::strTrim(args);
 			m_frontend.printCompletions(prefix);
+			return true;
 		}
 
 		if (command == "/load") {

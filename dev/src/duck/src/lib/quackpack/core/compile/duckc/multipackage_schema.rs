@@ -2,7 +2,7 @@
 //!
 //! There are a few nuances we have to remember about:
 //! * when compiling a package, we need to pass its __entire__ subtree to duckc,
-//! * only ids specified in [`tasks`](DuckcMultiPackage::tasks) will be compiled; this effectively
+//! * only ids specified in [`tasks`](MultiPackage::tasks) will be compiled; this effectively
 //!   allows us to compile a single package, entire graph, or a chosen subset.
 
 use std::path::PathBuf;
@@ -25,7 +25,7 @@ pub struct Package {
     #[serde(rename = "name")]
     /// ID of a package to compile. Note, that it doesn't have to be a package's name, it can be a
     /// unique id.
-    /// Has to be unique in terms of the entire [`packages`](DuckcMultiPackage::packages) vector.
+    /// Has to be unique in terms of the entire [`packages`](MultiPackage::packages) vector.
     pub id: StrId,
     /// Version of the package we're currently compiling.
     pub version: Version,
@@ -42,7 +42,7 @@ pub struct Package {
 /// A single package's dependency, in a duckc-friendly format.
 pub struct Dependency {
     #[serde(rename = "name")]
-    /// ID of the dependency. Note, that there must a package with `id = self.id` in a [`packages`](DuckcMultiPackage::packages) vector.
+    /// ID of the dependency. Note, that there must a package with `id = self.id` in a [`packages`](MultiPackage::packages) vector.
     pub id: StrId,
     #[serde(skip_serializing_if = "Option::is_none")]
     /// How should this dependency be named, when resolving imports.
