@@ -130,7 +130,7 @@ namespace vm::debugger::cli {
 				std::stringstream stream(stripped_line.substr(stripped_line.find_first_of(' ')));
 				std::string       option;
 				usize             line_number = -1;
-				stream >> option >> line;
+				stream >> option >> line_number;
 				if (line_number != -1 && loaded_file.has_value()) {
 					debugger
 						.setBreakpoint(
