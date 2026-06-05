@@ -29,7 +29,6 @@
 #include <query_framework/module_flags/module_flags.hpp>
 
 #include <iostream>
-#include <unordered_map>
 
 namespace compiler::driver {
 
@@ -90,8 +89,8 @@ namespace compiler::driver {
 
 			// Adding standard library packages
 			if (auto path = resolveStdPath(stdlib_options)) {
-				if (addStandardLibraryDependencies(packages_info, report).isBad()) return base::BAD;
-				if (getStandardLibraryPackages(packages_info, *path, report).isBad())
+				if (addDepdendenciesOnStandardLibrary(packages_info, report).isBad()) return base::BAD;
+				if (appendStandardLibraryPackages(packages_info, *path, report).isBad())
 					return base::BAD;
 			}
 

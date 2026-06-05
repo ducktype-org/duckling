@@ -25,7 +25,7 @@ namespace compiler::driver {
 				report(
 					base::strConcat(
 						"Package name provided in a compilation task was not found in the provided "
-						"package list. Package name: \"",
+						"package list. Package id: \"",
 						package_id.strView(),
 						"\""
 					),
@@ -62,7 +62,7 @@ namespace compiler::driver {
 
 		bool had_error = false;
 
-		auto package_id = js::getString(json, "package", "Task requires a package name!", report);
+		auto package_id = js::getString(json, "package", "Task requires a package id!", report);
 		if (!package_id) had_error = true;
 
 		auto strategy = js::getString(json, "strategy", "Task requires a strategy!", report);

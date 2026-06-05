@@ -219,17 +219,7 @@ namespace compiler::frontend::packages {
 				return pkg.package_id == dependency.package_id;
 			});
 			if (target_package == all_packages.end()) {
-				report(
-					base::strConcat(
-						"Package dependency not found and should be filtered before this "
-						"function: ",
-						dependency.package_id.strView(),
-						"."
-					),
-					std::string{},
-					true
-				);
-				continue;
+				CORE_PANIC("Unfiltered invalid dependency");
 			}
 			package_dependencies.push_back(PackageDependencyInfo{
 				.package_id = dependency.package_id,

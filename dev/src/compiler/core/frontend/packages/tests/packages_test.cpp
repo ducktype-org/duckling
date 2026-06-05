@@ -11,8 +11,6 @@
 
 #include <json/json.hpp>
 
-#include <unordered_map>
-
 using namespace compiler::frontend::packages;
 
 namespace {
@@ -37,15 +35,15 @@ class PackagesTest final: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		// TESTER_ADD_TEST(parseDependencySuccess);
-		// TESTER_ADD_TEST(parseDependencyMissingNameFails);
-		// TESTER_ADD_TEST(parseDependencyAliasWrongTypeFails);
-		// TESTER_ADD_TEST(parsePackageSuccess);
-		// TESTER_ADD_TEST(parsePackageUnknownFieldsWarn);
-		// TESTER_ADD_TEST(parsePackageBadFeaturesFails);
-		// TESTER_ADD_TEST(parsePackageVersionWrongTypeFails);
-		// TESTER_ADD_TEST(parsePackageDependenciesNotArrayFails);
-		// TESTER_ADD_TEST(packageSideInputKeysRoundTrip);
+		TESTER_ADD_TEST(parseDependencySuccess);
+		TESTER_ADD_TEST(parseDependencyMissingNameFails);
+		TESTER_ADD_TEST(parseDependencyAliasWrongTypeFails);
+		TESTER_ADD_TEST(parsePackageSuccess);
+		TESTER_ADD_TEST(parsePackageUnknownFieldsWarn);
+		TESTER_ADD_TEST(parsePackageBadFeaturesFails);
+		TESTER_ADD_TEST(parsePackageVersionWrongTypeFails);
+		TESTER_ADD_TEST(parsePackageDependenciesNotArrayFails);
+		TESTER_ADD_TEST(packageSideInputKeysRoundTrip);
 		TESTER_ADD_TEST(packageDependenciesAccessUnlock);
 		TESTER_ADD_TEST(filterUndeclaredDependenciesDropsMissing);
 		TESTER_ADD_TEST(createPackageInfoSuccess);

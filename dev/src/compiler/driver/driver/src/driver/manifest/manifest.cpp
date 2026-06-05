@@ -7,7 +7,6 @@
 #include <json/diagnostics.hpp>
 #include <nlohmann/json.hpp>
 
-#include <unordered_map>
 #include <unordered_set>
 #include <utility>
 

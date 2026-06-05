@@ -42,19 +42,19 @@ namespace compiler::driver {
 	 * adds the dependency on all standard library packages. This way this dependency
 	 * doesn't have to be provided by the user in the manifest and is added by the compiler.
 	 */
-	base::OkBad addStandardLibraryDependencies(
+	base::OkBad addDepdendenciesOnStandardLibrary(
 		std::vector<compiler::frontend::packages::RawPackageInfo>& packages_info,
 		frontend::packages::DiagnosticReporter&                    report
 	);
 
 	/**
-	 * @brief Creates packages for the standard library and adds them to the global state.
+	 * @brief Creates packages for the standard library and adds them to the provided vector.
 	 * @param packages_info[out] The std lib packages will be added here as dependencies.
 	 * @param std_path Path to the standard library.
 	 * @param report Diagnostic reporter to report any issues with the standard library packages
 	 * (like a missing package).
 	 */
-	base::OkBad getStandardLibraryPackages(
+	base::OkBad appendStandardLibraryPackages(
 		std::vector<compiler::frontend::packages::RawPackageInfo>& packages_info,
 		const fs::FilePath&                                        std_path,
 		frontend::packages::DiagnosticReporter&                    report

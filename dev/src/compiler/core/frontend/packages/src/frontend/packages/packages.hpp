@@ -14,8 +14,6 @@
 
 #include <json/diagnostics.hpp>
 #include <nlohmann/json_fwd.hpp>
-
-#include <unordered_map>
 #include <vector>
 
 namespace compiler::frontend::packages {
