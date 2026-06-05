@@ -278,16 +278,6 @@ namespace compiler::lir {
 		 */
 		static LIRGlobal fromMIR(query::Context& ctx, mir::MIRGlobal mir_global);
 
-		/**
-		 * @note Do not use this function outside of LIR lowering / driver.
-		 * This handles both global variables and constants. For constants, it also sets CTV initial
-		 * value of the global.
-		 *
-		 * @TODO: #2246 remove this, it is only used in tests now (and update the tests)
-		 */
-		static LIRGlobal fromHOUT(query::Context& ctx, const helios::HOUTGlobalData& helios_id);
-
-
 		void debugPrint(query::Context& ctx, std::ostream& os) const;
 	};
 

@@ -57,33 +57,6 @@ namespace compiler::lir {
 		};
 	}
 
-	LIRGlobal LIRGlobal::fromHOUT(query::Context& ctx, const helios::HOUTGlobalData& hout_global) {
-		auto type_layout = ctx.query<tsl::QuerySymbolTypeLayout>(hout_global.type);
-
-		auto mangled_name = helios::mangler::getSimpleMangledName(ctx, hout_global.helios_symbol);
-
-		variant_match(hout_global.value) {
-			variant_case(helios::HOUTGlobalConst, name) {
-				return LIRGlobal{
-					type_layout,
-					mangled_name,
-					LIRGlobalType::Constant,
-				};
-			}
-			variant_case(helios::HOUTGlobalVariable, name) {
-				return LIRGlobal{ type_layout, mangled_name, LIRGlobalType::Variable };
-			}
-			variant_default {
-				CORE_PANIC(
-					"Unhandled HOUTGlobalData type in LIRGlobal::fromHOUT: ",
-					hout_global.original_name.strView()
-				);
-			}
-		}
-
-		CORE_UNREACHABLE();
-	}
-
 	LIRPlace::LIRPlace(BaseVariant base, std::vector<Projection> projection_chain):
 		  base(base),
 		  layout([&]() -> CRef<tsl::TypeLayout> {
