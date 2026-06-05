@@ -196,8 +196,7 @@ namespace vm::low {
 			[[nodiscard]] usize size() const;
 
 			[[nodiscard]] std::ranges::range auto getBlocks() const {
-				return std::views::iota(0zu, size())
-				     | std::views::transform([&](usize id) { return getBlock(id); });
+				return std::span(blocks);
 			}
 
 			/**

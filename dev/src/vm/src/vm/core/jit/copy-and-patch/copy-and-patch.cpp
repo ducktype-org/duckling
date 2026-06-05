@@ -31,18 +31,39 @@ namespace vm::jit {
 			}
 		};
 
+		auto choose_edge = [](auto block) -> base::Optional<SpecialStencils> {
+			switch (block.edgeKind()) {
+			case vm::low::cf::OutEdges::Kind::JmpIf:
+				return SpecialStencils::JumpIf;
+			case vm::low::cf::OutEdges::Kind::JmpIfNot:
+				return SpecialStencils::JumpIfNot;
+			case vm::low::cf::OutEdges::Kind::End:
+				return SpecialStencils::Ret;
+			case vm::low::cf::OutEdges::Kind::Default:
+				// TODO: handle jumps
+				return std::nullopt;
+			}
+		};
+
 		auto get_opfunc_size = [&](u64 opcode) -> u64 { return stencilsData().at(opcode).size; };
 
-		u64 size = get_opfunc_size(std::to_underlying(SpecialStencils::Ret));
+		std::vector<usize> block_offsets;
+		block_offsets.reserve(cfg.size() + 1);
+		block_offsets[0] = 0;
 		for (const low::cf::BasicBlock& block: cfg.getBlocks()) {
+			block_offsets.push_back(block_offsets.back());
+			usize& current_offset = block_offsets.back();
 			for (MicroInstruction instr: block.instructions(bc)) {
 				auto opcode = getInstructionOpcode(instr);
 				if (low::isOpcodeNonExecutable(opcode)) continue;
-				size += get_opfunc_size(transform_opcode((opcode)));
+				current_offset += get_opfunc_size(transform_opcode((opcode)));
+			}
+			match_optional(choose_edge(block)) {
+				opt_some(stencil) current_offset += get_opfunc_size(std::to_underlying(stencil));
 			}
 		}
 
-		auto  memory = JitFuncMemory::allocate(size);
+		auto  memory = JitFuncMemory::allocate(block_offsets.back());
 		byte* next   = memory.addr;
 
 		auto patch_stencil = [&](u64 opcode, auto func) {
@@ -65,16 +86,32 @@ namespace vm::jit {
 						return instr.arg1;
 					case HoleValue::ContinueFunction:
 						return std::bit_cast<u64>(next);
-					default:
-						CORE_PANIC("unknown hole value");
-						return 0ul;
+					case HoleValue::JmpFunction:
+						CORE_PANIC("jumping inside a basic block");
+					case HoleValue::Zero:
+						CORE_PANIC("zero left as a hole");
 					}
 				});
 			}
+			match_optional(choose_edge(block)) {
+				opt_some(stencil) {
+					patch_stencil(std::to_underlying(stencil), [&](HoleValue value) {
+						switch (value) {
+						case HoleValue::Arg0:
+							CORE_PANIC("arg0 passed to stencil jump");
+						case HoleValue::Arg1:
+							CORE_PANIC("arg1 passed to stencil jump");
+						case HoleValue::ContinueFunction:
+							return std::bit_cast<u64>(memory.addr + block_offsets[block.edge(0)]);
+						case HoleValue::JmpFunction:
+							return std::bit_cast<u64>(memory.addr + block_offsets[block.edge(1)]);
+						case HoleValue::Zero:
+							CORE_PANIC("zero left as a hole");
+						}
+					});
+				}
+			}
 		}
-		patch_stencil(std::to_underlying(SpecialStencils::Ret), [](HoleValue) -> u64 {
-			CORE_PANIC("Special stencil 'ret' has a relocation");
-		});
 
 		IF_BUILD_TYPE_DEV(memory.dump("compiled function"));
 		memory.markExecutable();

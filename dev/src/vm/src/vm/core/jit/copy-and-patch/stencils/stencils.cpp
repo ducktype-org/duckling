@@ -72,10 +72,21 @@ namespace vm::jit::cnp {
 	DECLARE_LINK_VARIABLE(jmp_function);
 
 	// NOLINTNEXTLINE(readability-identifier-naming)
-	extern "C" void stencil_special_jump(CP_ARGS) {
+	extern "C" void stencil_special_jump_if(CP_ARGS) {
 		if (frame->flags.flag)
 			JUMP_STENCIL(jmp_function);
 		else
 			CONTINUE_STENCIL;
 	}
+
+	// NOLINTNEXTLINE(readability-identifier-naming)
+	extern "C" void stencil_special_jump_if_not(CP_ARGS) {
+		if (not frame->flags.flag)
+			JUMP_STENCIL(jmp_function);
+		else
+			CONTINUE_STENCIL;
+	}
+
+	// NOLINTNEXTLINE(readability-identifier-naming)
+	extern "C" void stencil_special_jump(CP_ARGS) { JUMP_STENCIL(jmp_function); }
 }
