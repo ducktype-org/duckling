@@ -30,7 +30,8 @@ void registerAbsoluteJITSymbols(llvm::orc::LLJIT& lljit) {
 		std::pair{ "ret_tailcall_func", &vm::OpFuns::op_debug_ret_tailcall_func },
 		std::pair{ "breakpoint", &vm::OpFuns::op_debug_breakpoint },
 		std::pair{ "ret", &vm::OpFuns::op_debug_ret },
-		std::pair{ "trampoline", &vm::jit::helpers::trampoline },
+		std::pair{ "trampoline<0>", &vm::jit::helpers::trampoline<0> },
+		std::pair{ "trampoline<1>", &vm::jit::helpers::trampoline<1> },
 	};
 
 	// NOLINTBEGIN(clang-analyzer-optin.core.EnumCastOutOfRange)

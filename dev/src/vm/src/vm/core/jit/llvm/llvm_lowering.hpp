@@ -93,9 +93,9 @@ namespace vm::jit {
 		 */
 		size_t argumentsUsedByOpcodeCnt(const low::LowFuncData& function_to_compile, usize idx) {
 			size_t res = 1;
-			while (idx + res < function_to_compile.bc.size()
-			       and isOpcodeNonExecutable(getInstructionOpcode(function_to_compile.bc[idx + res])
-			       )) {
+			while (
+				idx + res < function_to_compile.bc.size()
+				and isOpcodeNonExecutable(getInstructionOpcode(function_to_compile.bc[idx + res]))) {
 				++res;
 			}
 			return res;
@@ -123,19 +123,24 @@ namespace vm::jit {
 				std::vector<llvm::Constant*> fields;
 
 				if constexpr (switch_case_instr) {
-					fields.push_back(llvm::ConstantInt::get(llvm::Type::getInt64Ty(llvm_ctx), opcode)
+					fields.push_back(
+						llvm::ConstantInt::get(llvm::Type::getInt64Ty(llvm_ctx), opcode)
 					);
 				} else {
-					fields.push_back(llvm::ConstantInt::get(
-						llvm::Type::getInt64Ty(llvm_ctx),
-						reinterpret_cast<u64>(OpFuns::OPFUNS.at(opcode))
-					));
+					fields.push_back(
+						llvm::ConstantInt::get(
+							llvm::Type::getInt64Ty(llvm_ctx),
+							reinterpret_cast<u64>(OpFuns::OPFUNS.at(opcode))
+						)
+					);
 				}
 
-				fields.push_back(llvm::ConstantInt::get(llvm::Type::getInt64Ty(llvm_ctx), inst.arg0)
+				fields.push_back(
+					llvm::ConstantInt::get(llvm::Type::getInt64Ty(llvm_ctx), inst.arg0)
 				);
 
-				fields.push_back(llvm::ConstantInt::get(llvm::Type::getInt64Ty(llvm_ctx), inst.arg1)
+				fields.push_back(
+					llvm::ConstantInt::get(llvm::Type::getInt64Ty(llvm_ctx), inst.arg1)
 				);
 
 				llvm::Constant* c
@@ -179,17 +184,29 @@ namespace vm::jit {
 				auto                        opcode = vm::getInstructionOpcode(mi);
 				switch (opcode) {
 				case vm::low::MicroOpcode::jitCallEntrypoint_cc_func:
-				case vm::low::MicroOpcode::call_cc_func:
-				case vm::low::MicroOpcode::virtual_call_pptr_method: {
+				case vm::low::MicroOpcode::call_cc_func: {
 					// Trampoline uses VM functions, instructions have to have correct type.
 #ifdef USE_SWITCH_CASE
-					setInstructionPtr<true>(function_to_compile, ir_builder, instr_idx);
+					// setInstructionPtr<true>(function_to_compile, ir_builder, instr_idx);
 #else
-					setInstructionPtr<false>(function_to_compile, ir_builder, instr_idx);
+					// setInstructionPtr<false>(function_to_compile, ir_builder, instr_idx);
 #endif
 					ir_builder.CreateCall(
 						llvm_data.types.opfun.get(),
-						getOrCreateOpcodeFunction("trampoline"),
+						getOrCreateOpcodeFunction("trampoline<0>"),
+						{ instr_arg, locals_arg, frame_arg, thread_arg }
+					);
+				} break;
+				case vm::low::MicroOpcode::virtual_call_pptr_method: {
+					// Trampoline uses VM functions, instructions have to have correct type.
+#ifdef USE_SWITCH_CASE
+					// setInstructionPtr<true>(function_to_compile, ir_builder, instr_idx);
+#else
+					// setInstructionPtr<false>(function_to_compile, ir_builder, instr_idx);
+#endif
+					ir_builder.CreateCall(
+						llvm_data.types.opfun.get(),
+						getOrCreateOpcodeFunction("trampoline<1>"),
 						{ instr_arg, locals_arg, frame_arg, thread_arg }
 					);
 				} break;
@@ -205,8 +222,9 @@ namespace vm::jit {
 					}
 
 					// Here we are calling instruction originating from bc file or debug
-					// instruction. Make instruction* point to switch case version of microinstruction.
-					setInstructionPtr<true>(function_to_compile, ir_builder, instr_idx);
+					// instruction. Make instruction* point to switch case version of
+					// microinstruction.
+					// setInstructionPtr<true>(function_to_compile, ir_builder, instr_idx);
 					ir_builder.CreateCall(
 						llvm_data.types.opfun.get(),
 						getOrCreateOpcodeFunction(opfun_name),

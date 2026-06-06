@@ -89,7 +89,7 @@ namespace vm::jit {
 
 		LLVMBuilder(new_module.get(), ctx).lowerFunction(function_to_compile);
 
-		optimizeModule(*new_module);
+		//optimizeModule(*new_module);
 		new_module->print(llvm::outs(), nullptr);
 		auto&                       lljit = *llvm_data.lljit_instance;
 		llvm::orc::ThreadSafeModule tsm(std::move(new_module), tsctx);
