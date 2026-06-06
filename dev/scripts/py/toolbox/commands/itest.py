@@ -57,7 +57,7 @@ from click import command, option
 @option(
     "--override-values",
     type=str,
-    default="",
+    default="{}",
     help="A json dict with configuration values that will override the test defaults."
 )
 @verbose(help="Prints some debug information about test cases")
