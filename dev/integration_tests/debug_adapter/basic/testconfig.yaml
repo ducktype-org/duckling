@@ -1,6 +1,6 @@
 Tests:
   debug_adapter_lifecycle:
-    Run: "python3 dap_runner.py @{build_dir}"
+    Run: "PYTHONPATH=../helpers python3 dap_runner.py @{build_dir}"
     TimeOut: 5 
     Cases:
       initialize_launch_disconnect:

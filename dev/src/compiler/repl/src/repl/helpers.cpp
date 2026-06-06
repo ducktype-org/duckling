@@ -7,7 +7,7 @@ namespace compiler::repl {
 		out << "  /exit, /quit, /q                - Exit the REPL\n";
 		out << "  /reset [n|-n]                   - Restart the REPL process to the state number "
 			   "n|to the state n entries ago(for this option, need to provide - before n). Without "
-			   "providing any number, it will reset to the clean starting state.";
+			   "providing any number, it will reset to the clean starting state.\n";
 		out << "  /history, /hist                 - Show session history (all statements executed "
 			   "in this repl session)\n";
 		out << "  /commands, /cmds                - Show all input history (editor history)\n";
