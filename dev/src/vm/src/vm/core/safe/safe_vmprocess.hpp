@@ -163,7 +163,7 @@ namespace vm {
 		void updateGlobalDataMemory(CRef<low::ILowVMProgram> program);
 
 	public:
-		SafeVMProcess(PID my_pid);
+		SafeVMProcess(PID my_pid, bool enable_deadlock_detection = false);
 
 		DeadlockDetector& getDeadlockDetector() { return deadlock_detector; }
 

@@ -14,10 +14,13 @@
 namespace vm::api {
 	/**
 	 * @brief Create new process in DVM.
+	 * @param enable_deadlock_detection When true (default), the process will detect circular mutex
+	 * wait chains at runtime and throw VMDeadlockException. When false, deadlock detection is
+	 * skipped and circular waits will block indefinitely until the process is stopped.
 	 * @return The response containing the PID of the newly created process or an API error if the
 	 * process wasn't created.
 	 */
-	std::expected<ProcessInfo, ApiError> spawn();
+	std::expected<ProcessInfo, ApiError> spawn(bool enable_deadlock_detection = false);
 
 	/**
 	 * @brief Get the execution status of the process run on DVM.

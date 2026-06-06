@@ -10,7 +10,7 @@ namespace vm {
 		// 1. Check if the acquisition would cause a deadlock
 		// 2. Mark thread as waiting (before actually acquiring the OS-level mutex)
 		// If a deadlock is detected, an exception is thrown and the thread is NOT marked as waiting.
-		checkForDeadlock(thread_id, mutex_id);
+		if (detection_enabled) checkForDeadlock(thread_id, mutex_id);
 		markThreadWaitingForMutex(thread_id, mutex_id);
 	}
 

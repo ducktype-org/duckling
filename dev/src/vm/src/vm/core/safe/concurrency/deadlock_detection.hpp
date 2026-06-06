@@ -32,7 +32,8 @@ namespace vm {
 		 * caller's responsibility to hold the process Global Interpreter Lock (GIL) during
 		 * bytecode execution. See VMProcess::getGIL().
 		 *
-		 * @throws VMDeadlockException if the mutex acquisition would cause a deadlock.
+		 * @throws VMDeadlockException if the mutex acquisition would cause a deadlock and
+		 * detection is enabled.
 		 */
 		void beginWaitForMutexOrThrow(api::ThreadID thread_id, usize mutex_id);
 
@@ -54,7 +55,12 @@ namespace vm {
 		 */
 		void clearMutexState(usize mutex_id);
 
+		void setEnabled(bool enabled) { detection_enabled = enabled; }
+		bool isEnabled() const { return detection_enabled; }
+
 	private:
+		bool detection_enabled = true;
+
 		// thread_id -> mutex_id (Thread is waiting for Mutex)
 		std::map<api::ThreadID, usize> thread_waiting_for_mutex;
 
