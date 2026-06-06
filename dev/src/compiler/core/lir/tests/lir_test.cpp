@@ -83,11 +83,11 @@ private:
 		\* * * * * * * * * * */
 
 		[[nodiscard]] CRef<helios::HOUTFunction> houtFunc(std::string_view name) const {
-			return std::get<CRef<helios::HOUTFunction>>(funcs.at(base::StrID(name.data())));
+			return std::get<CRef<helios::HOUTFunction>>(funcs.at(base::StrID(name)));
 		}
 
 		[[nodiscard]] CRef<lir::Function> lirFunc(std::string_view name) const {
-			return std::get<CRef<lir::Function>>(funcs.at(base::StrID(name.data())));
+			return std::get<CRef<lir::Function>>(funcs.at(base::StrID(name)));
 		}
 
 		[[nodiscard]] CRef<helios::HOUTGlobalData> houtGlobal(std::string_view name) const {
@@ -103,9 +103,9 @@ private:
 	 * Compiles the module at given path to LIR, returning also HOUT counterparts of
 	 * functions and globals for easier testing.
 	 *
-	 * Note that the function don't include any global constructors/destructors that might be
-	 * generated for global variables, but they are included in the LIRGlobalData for the global
-	 * variables, so they can be accessed in tests if needed.
+		 * Note that the functions don't include any global constructors/destructors that might be
+		 * generated for global variables, but they are included in the LIRGlobalData for the global
+		 * variables, so they can be accessed in tests if needed.
 	 */
 	LIRModuleResult getLIROfModule(std::string_view module_path) {
 		auto [module, scope] = getModule(fs::File(module_path));
@@ -115,7 +115,7 @@ private:
 		withContextDo([&](query::Context& ctx) {
 			helios::HOUTUnit unit = ctx.query<helios::QueryModuleHOUT>(module)->valueOrPanic();
 
-			// We fillter out toString methods here for test purposes
+			// We filter out toString methods here for test purposes
 			// @TODO: #2694 remove this filtering
 			// #2483 -- deal with this if needed
 			base::filterVectorInPlace(unit.functions, [](const CRef<helios::HOUTFunction>& func) {

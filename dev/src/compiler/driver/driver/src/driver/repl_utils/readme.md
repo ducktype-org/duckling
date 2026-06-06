@@ -17,8 +17,8 @@ The primary components in this flow are:
 - Statement classification routes assignments as instructions (not expressions) because assignment lowering currently lives in the instruction compilation path.
 - Definition statements do not use executable wrappers; they are loaded from module HOUT.
 - DVM loading uses persistent `ReplDVMCodeBuilder` owned by caller; helpers require active context consistency.
-- The lowering path snapshots the context and loads only newly-lowered types/functions/globals
-	via `captureLoweredEntitiesSnapshot()` + `collectNewCodeSince(snapshot)`.
+- The lowering path inserts a new `lir::LIRUnit` into the builder and loads only newly-lowered code
+	via `insertLIRUnitAndCollectNewlyLoweredCode(lir_unit)`.
 - Callers must pair `setContext()` and `invalidateContext()` around `compileAndLoad()` so the
   lowering context never keeps stale query references.
 
