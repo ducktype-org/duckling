@@ -97,7 +97,7 @@ while True:
         break
 
 # Step is checked in debugger core but to be certain
-# TODO: #2558 Add check if the step was really done by stackTrace request
+# @TODO: #2558 Add check if the step was really done by stackTrace request
 # implemented when handling DAP memory requests
 
 vm_process.terminate()
