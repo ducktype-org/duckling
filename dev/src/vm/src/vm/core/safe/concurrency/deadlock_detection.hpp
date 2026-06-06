@@ -56,6 +56,7 @@ namespace vm {
 		void clearMutexState(usize mutex_id);
 
 		void setEnabled(bool enabled) { detection_enabled = enabled; }
+
 		bool isEnabled() const { return detection_enabled; }
 
 	private:

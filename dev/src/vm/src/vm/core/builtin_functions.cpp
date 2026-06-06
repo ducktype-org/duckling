@@ -140,7 +140,7 @@ namespace vm::builtins {
 	void FunctionHandlers::builtinLockMutex(SafeVMThread& thread, u64 mutex_id) {
 		auto mutex     = thread.safe_process.getSynchronizationPrimitives().getMutex(mutex_id);
 		auto thread_id = thread.getThreadID();
-		
+
 		auto& deadlock_detector = thread.safe_process.getDeadlockDetector();
 		deadlock_detector.beginWaitForMutexOrThrow(thread_id, mutex_id);
 		thread.releaseGil();

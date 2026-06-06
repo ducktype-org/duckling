@@ -25,44 +25,43 @@ private:
 	}
 
 	void deadlockTest() {
-        // Two threads wait on a barrier and when released they deadlock. Main waits for them by joining.
+		// Two threads wait on a barrier and when released they deadlock. Main waits for them by joining.
 		assertExecutionPanickedWith(
 			runWithDetection("deterministic_deadlock.dbc"),
 			vm::exceptions::VMDeadlockException::ERR_MSG
 		);
-        assertExecutionPanickedWith(
-			runWithDetection("deterministic_deadlock.dbc"),
-			vm::exceptions::VMDeadlockException::ERR_MSG
-		);
-        assertExecutionPanickedWith(
-			runWithDetection("deterministic_deadlock.dbc"),
-			vm::exceptions::VMDeadlockException::ERR_MSG
-		);
-        assertExecutionPanickedWith(
-			runWithDetection("deterministic_deadlock.dbc"),
-			vm::exceptions::VMDeadlockException::ERR_MSG
-		);
-        assertExecutionPanickedWith(
-			runWithDetection("deterministic_deadlock.dbc"),
-			vm::exceptions::VMDeadlockException::ERR_MSG
-		);
-    }
-
-    void deadlockWakingFromCv() {
-        // One thread sleeps on CV while main and other thread deadlock
 		assertExecutionPanickedWith(
-			runWithDetection("cv_deadlock.dbc"),
+			runWithDetection("deterministic_deadlock.dbc"),
 			vm::exceptions::VMDeadlockException::ERR_MSG
 		);
-		// Two threads deadlock and wake main that will finish execution
 		assertExecutionPanickedWith(
-			runWithDetection("cv_main_deadlock.dbc"),
+			runWithDetection("deterministic_deadlock.dbc"),
+			vm::exceptions::VMDeadlockException::ERR_MSG
+		);
+		assertExecutionPanickedWith(
+			runWithDetection("deterministic_deadlock.dbc"),
+			vm::exceptions::VMDeadlockException::ERR_MSG
+		);
+		assertExecutionPanickedWith(
+			runWithDetection("deterministic_deadlock.dbc"),
 			vm::exceptions::VMDeadlockException::ERR_MSG
 		);
 	}
 
+	void deadlockWakingFromCv() {
+		// One thread sleeps on CV while main and other thread deadlock
+		assertExecutionPanickedWith(
+			runWithDetection("cv_deadlock.dbc"), vm::exceptions::VMDeadlockException::ERR_MSG
+		);
+		// Two threads deadlock and wake main that will finish execution
+		assertExecutionPanickedWith(
+			runWithDetection("cv_main_deadlock.dbc"), vm::exceptions::VMDeadlockException::ERR_MSG
+		);
+	}
+
 	void detectionDisabledAllowsNormalMutexUse() {
-		// Spawn a process with deadlock detection disabled (the default) and verify normal mutex usage still works.
+		// Spawn a process with deadlock detection disabled (the default) and verify normal mutex
+		// usage still works.
 		auto pid  = initProcess(false);
 		auto file = fs::File(path("safe_mutex.dbc"));
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file }).has_value());

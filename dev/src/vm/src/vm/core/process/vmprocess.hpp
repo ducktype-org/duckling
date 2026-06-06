@@ -113,7 +113,6 @@ namespace vm {
 		api::ProcStatus getStatus();
 
 	protected:
-
 		/**
 		 * @brief Returns exit code of the process - i.e. return value of `main` bytecode function.
 		 *

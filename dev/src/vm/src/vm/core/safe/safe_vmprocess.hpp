@@ -55,7 +55,7 @@ namespace vm {
 
 		Memory memory;
 
-		DeadlockDetector deadlock_detector;
+		DeadlockDetector          deadlock_detector;
 		GIL                       gil;
 		SynchronizationPrimitives synchronization_primitives;
 
