@@ -12,6 +12,7 @@ use crate::util::path_ops_ext::PathOpsExt;
 use crate::{DuckContext, QuackResult, QuackResultContext, qp_internal};
 
 mod dependency;
+mod frontmatter;
 mod manifest;
 mod source;
 
@@ -35,6 +36,13 @@ pub fn parse_manifest(path: &Path, ctx: &DuckContext) -> QuackResult<Package> {
             path.display()
         )
     })
+}
+
+/// Different utilites in which manifests occur.
+/// Used to perform appropriate checks on presence/absence of certain fields.
+pub enum ParseMode {
+    Package,
+    FrontMatterScript,
 }
 
 #[derive(Debug)]
@@ -125,7 +133,7 @@ fn parse_inner(path: &Path, ctx: &DuckContext) -> QuackResult<Package> {
         .ok_or_else(|| qp_internal!("the manifest path has no parent"))?;
     let content = path.read_to_string()?;
     let schema = parse_schema(&content)?;
-    let manifest = manifest::parse(&schema, package_root, ctx)?;
+    let manifest = manifest::parse(&schema, package_root, ParseMode::Package, ctx)?;
     Ok(Package::new(
         content,
         schema,
