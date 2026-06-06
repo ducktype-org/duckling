@@ -57,7 +57,7 @@ namespace vm {
 
 		void setEnabled(bool enabled) { detection_enabled = enabled; }
 
-		bool isEnabled() const { return detection_enabled; }
+		[[nodiscard]] bool isEnabled() const { return detection_enabled; }
 
 	private:
 		bool detection_enabled = true;
