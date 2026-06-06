@@ -106,15 +106,8 @@ def order_stencils(stencils: list[Stencil], order) -> list[Stencil]:
     )
     array = [no_stencil] * len(order)
     for stencil in stencils:
-        if stencil.name.startswith("stencil_special"):
-            continue
         idx = order[stencil.name[len("stencil_") :]]
         array[idx] = stencil
-
-    for stencil in stencils:
-        if stencil.name.startswith("stencil_special"):
-            array.append(stencil)
-
     return array
 
 
