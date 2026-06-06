@@ -30,7 +30,7 @@ public:
 		// Executing code outside of a compiled function
 		TESTER_ADD_TEST(testCalls);
 		TESTER_ADD_TEST(testVirtualCalls);
-		
+
 		// Executing code within a compiled function
 		TESTER_ADD_TEST(testUnconditionalJumps);
 		TESTER_ADD_TEST(testConditionalJumps);
