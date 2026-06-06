@@ -41,17 +41,16 @@ namespace vm::jit {
 			}
 		};
 
-		auto choose_edge = [](auto block) -> base::Optional<SpecialStencils> {
+		auto choose_edge = [](auto block) -> SpecialStencils {
 			switch (block.edgeKind()) {
 			case vm::low::cf::OutEdges::Kind::JmpIf:
 				return SpecialStencils::JumpIf;
 			case vm::low::cf::OutEdges::Kind::JmpIfNot:
 				return SpecialStencils::JumpIfNot;
 			case vm::low::cf::OutEdges::Kind::End:
-				return SpecialStencils::Ret;
+				return SpecialStencils::Return;
 			case vm::low::cf::OutEdges::Kind::Default:
-				// TODO: handle jumps
-				return std::nullopt;
+				return SpecialStencils::Jump;
 			}
 		};
 
@@ -69,15 +68,9 @@ namespace vm::jit {
 				if (low::isOpcodeNonExecutable(opcode)) continue;
 				current_offset += get_opfunc_size(transform_opcode((opcode)));
 			}
-			match_optional(choose_edge(block)) {
-				opt_some(stencil) current_offset += get_opfunc_size(std::to_underlying(stencil));
-			}
+			auto stencil = std::to_underlying(choose_edge(block));
+			current_offset += get_opfunc_size(stencil);
 		}
-		std::cerr << std::endl;
-		for (auto v : block_offsets) {
-			std::cerr << v << ", ";
-		}
-		std::cerr << std::endl;
 
 
 		auto  memory = JitFuncMemory::allocate(block_offsets.back());
@@ -115,26 +108,23 @@ namespace vm::jit {
 					}
 				});
 			}
-			match_optional(choose_edge(block)) {
-				opt_some(stencil) {
-					patch_stencil(std::to_underlying(stencil), [&](HoleValue value) {
-						switch (value) {
-						case HoleValue::Arg0:
-							CORE_PANIC("arg0 passed to stencil jump");
-						case HoleValue::Arg1:
-							CORE_PANIC("arg1 passed to stencil jump");
-						case HoleValue::ContinueFn:
-							return std::bit_cast<u64>(memory.addr + block_offsets.at(block.edge(0)));
-						case HoleValue::CallFn:
-							CORE_PANIC("call function passed to stencil jump");
-						case HoleValue::JmpFn:
-							return std::bit_cast<u64>(memory.addr + block_offsets.at(block.edge(1)));
-						case HoleValue::Zero:
-							CORE_PANIC("zero left as a hole");
-						}
-					});
+			auto stencil = std::to_underlying(choose_edge(block));
+			patch_stencil(stencil, [&](HoleValue value) {
+				switch (value) {
+				case HoleValue::Arg0:
+					CORE_PANIC("arg0 passed to stencil jump");
+				case HoleValue::Arg1:
+					CORE_PANIC("arg1 passed to stencil jump");
+				case HoleValue::ContinueFn:
+					return std::bit_cast<u64>(memory.addr + block_offsets.at(block.edge(1)));
+				case HoleValue::CallFn:
+					CORE_PANIC("call function passed to stencil jump");
+				case HoleValue::JmpFn:
+					return std::bit_cast<u64>(memory.addr + block_offsets.at(block.edge(0)));
+				case HoleValue::Zero:
+					CORE_PANIC("zero left as a hole");
 				}
-			}
+			});
 		}
 
 		IF_BUILD_TYPE_DEV(memory.dump("compiled function"));
