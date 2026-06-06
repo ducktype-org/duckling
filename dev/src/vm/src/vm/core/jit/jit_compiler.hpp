@@ -15,7 +15,7 @@
 constexpr inline uint COMPILATION_THRESHOLD = 10;
 #else
 // During testing compile always to check properly that jit integration works.
-constexpr inline uint COMPILATION_THRESHOLD = 1;
+constexpr inline uint COMPILATION_THRESHOLD = 0;
 #endif
 
 namespace vm::jit {
