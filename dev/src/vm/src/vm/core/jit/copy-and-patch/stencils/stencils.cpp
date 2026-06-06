@@ -111,8 +111,10 @@ namespace vm::jit::cnp {
 	DECLARE_LINK_VARIABLE(call_fn);
 
 	// NOLINTNEXTLINE(readability-identifier-naming)
-	extern "C" void stencil_special_call_addr(CP_ARGS) {
-		CALL_STENCIL(call_fn);
+	extern "C" void stencil_special_call_non_jitable(CP_ARGS) {
+		std::invoke(
+			GET_LINK_VARIABLE(call_fn, vm::DebugOpFun*, 64), instr, local_stack, frame, thread
+		);
 		CONTINUE_STENCIL;
 	}
 }
