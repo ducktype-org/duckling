@@ -83,14 +83,6 @@ pub enum SourceInner {
         /// ...from this url.
         registry_url: String,
     },
-    /// A local dependency.
-    #[serde(rename_all = "kebab-case")]
-    Local {
-        /// Absolute path to the dependency.
-        absolute_dir_root: String,
-        /// Path specified in the manifest.
-        dir_entry_in_manifest: String,
-    },
     /// A git dependency.
     #[serde(rename_all = "kebab-case")]
     Git {

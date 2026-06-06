@@ -334,7 +334,9 @@ jobs:
           echo "Deleting caches..."
           for cacheKey in $cacheKeysForPR
           do
-            if [[ $cacheKey == ${{ runner.os }}-${{ matrix.compiler.cache-prefix }}-${{ matrix.build-type }}-${{ env.BRANCH_NAME }}* ]]; then
+            if [[ $cacheKey == ${{ runner.os }}-${{ matrix.compiler.cache-prefix }}-${{ matrix.build-type }}-${{ env.BRANCH_NAME }}* ||
+                  $cacheKey == ${{ runner.os }}-sccache-${{ env.BRANCH_NAME }}* ]]; then
+              echo "Deleting cache $cacheKey..."
               gh actions-cache delete $cacheKey -R $REPO --confirm
             fi
           done
