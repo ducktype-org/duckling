@@ -60,7 +60,6 @@ namespace vm::jit {
 		block_offsets.reserve(cfg.size() + 1);
 		block_offsets.push_back(0);
 		for (const low::cf::BasicBlock& block: cfg.getBlocks()) {
-			std::cerr << block_offsets.back() << ", ";
 			block_offsets.push_back(block_offsets.back());
 			usize& current_offset = block_offsets.back();
 			for (MicroInstruction instr: block.instructions(bc)) {

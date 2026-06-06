@@ -33,16 +33,6 @@ namespace vm::jit::cnp {
 
 	template<OpFun* InstructionImplementation, low::MicroOpcode OpCode>
 	__always_inline void base_stencil(CP_ARGS) {
-		std::cerr << "Executing: ";
-		switch (OpCode) {
-#define HANDLE_MICRO_INSTR(opcode)                   \
-	case low::MicroOpcode::opcode:                   \
-		std::cerr << "Begun executing: " << #opcode; \
-		break;
-#include <vm/core/safe/low_program/micro_instruction_definitions.hpp>
-#undef HANDLE_MICRO_INSTR
-		}
-
 		CORE_ASSERT(
 			OpCode == low::MicroOpcode::exit || getInstructionOpcode(*instr) == OpCode,
 			"Expected a different opcode",
@@ -52,7 +42,6 @@ namespace vm::jit::cnp {
 		FORCE_ASSUME(instr->arg0 == GET_LINK_VARIABLE(arg0, u64, 64));
 		FORCE_ASSUME(instr->arg1 == GET_LINK_VARIABLE(arg1, u64, 64));
 		InstructionImplementation(instr, local_stack, frame, thread);
-		std::cerr << " coninuing..." << std::endl;
 		CONTINUE_STENCIL;
 	}
 
@@ -86,7 +75,6 @@ namespace vm::jit::cnp {
 
 	// NOLINTNEXTLINE(readability-identifier-naming)
 	extern "C" void stencil_special_jump_if(CP_ARGS) {
-		std::cerr << "Special stencil jump_if\n";
 		if (frame->flags.flag)
 			JUMP_STENCIL(jmp_fn);
 		else
@@ -95,7 +83,6 @@ namespace vm::jit::cnp {
 
 	// NOLINTNEXTLINE(readability-identifier-naming)
 	extern "C" void stencil_special_jump_if_not(CP_ARGS) {
-		std::cerr << "Special stencil jump_if_not\n";
 		if (not frame->flags.flag)
 			JUMP_STENCIL(jmp_fn);
 		else
@@ -103,10 +90,7 @@ namespace vm::jit::cnp {
 	}
 
 	// NOLINTNEXTLINE(readability-identifier-naming)
-	extern "C" void stencil_special_jump(CP_ARGS) {
-		std::cerr << "Special stencil jump_\n";
-		JUMP_STENCIL(jmp_fn);
-	}
+	extern "C" void stencil_special_jump(CP_ARGS) { JUMP_STENCIL(jmp_fn); }
 
 	DECLARE_LINK_VARIABLE(call_fn);
 
