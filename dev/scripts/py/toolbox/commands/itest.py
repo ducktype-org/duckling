@@ -58,7 +58,8 @@ from click import command, option
     "--override-values",
     type=str,
     default="{}",
-    help="A json dict with configuration values that will override the test defaults."
+    help="A json dict with configuration values that will override the test defaults. "
+    "Note that boolean values should be of a string type, like \"true\" or \"false\"."
 )
 @verbose(help="Prints some debug information about test cases")
 def itest(*args, **kwargs):
