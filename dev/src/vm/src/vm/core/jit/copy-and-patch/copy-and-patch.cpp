@@ -84,7 +84,15 @@ namespace vm::jit {
 		};
 
 		for (auto [idx, block]: std::views::enumerate(cfg.getBlocks())) {
-			CORE_ASSERT(next == memory.addr + block_offsets[idx], "idx: ", idx, " next: ", next - memory.addr, " expected: ", block_offsets[idx]);
+			CORE_ASSERT(
+				next == memory.addr + block_offsets[idx],
+				"idx: ",
+				idx,
+				" next: ",
+				next - memory.addr,
+				" expected: ",
+				block_offsets[idx]
+			);
 			for (MicroInstruction instr: block.instructions(bc)) {
 				auto opcode = getInstructionOpcode(instr);
 				if (low::isOpcodeNonExecutable(opcode)) continue;

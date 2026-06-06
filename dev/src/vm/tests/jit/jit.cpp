@@ -30,13 +30,13 @@ public:
 		// Executing code outside of a compiled function
 		TESTER_ADD_TEST(testCalls);
 		TESTER_ADD_TEST(testVirtualCalls);
-		TESTER_ADD_TEST(testRecursiveCalls);
 		
 		// Executing code within a compiled function
 		TESTER_ADD_TEST(testUnconditionalJumps);
 		TESTER_ADD_TEST(testConditionalJumps);
 		TESTER_ADD_TEST(testJumps);
 
+		TESTER_ADD_TEST(testRecursiveCalls);
 		// Many things combined
 		TESTER_ADD_TEST(testAll);
 	}
