@@ -136,7 +136,7 @@ private:
 
 		add_code.patch(add_addr, [&](HoleValue hole) {
 			switch (hole) {
-			case HoleValue::ContinueFunction:
+			case HoleValue::ContinueFn:
 				return std::bit_cast<intptr_t>(mul_addr);
 			default:
 				CORE_PANIC("unexpected relocation");
@@ -145,7 +145,7 @@ private:
 
 		mul_code.patch(mul_addr, [&](HoleValue hole) {
 			switch (hole) {
-			case HoleValue::ContinueFunction:
+			case HoleValue::ContinueFn:
 				return std::bit_cast<intptr_t>(end_addr);
 			default:
 				CORE_PANIC("unexpected relocation");
