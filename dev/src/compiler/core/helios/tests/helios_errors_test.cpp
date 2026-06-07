@@ -14,7 +14,6 @@
 #include <base/except/exceptions.hpp>
 #include <base/pointers/box.hpp>
 
-#include <diagnostic/highlight_positions.hpp>
 #include <filesystem/file.hpp>
 #include <query_framework/context/context.hpp>
 #include <query_framework/entry/query_entry_point.hpp>
@@ -65,6 +64,7 @@ private:
 		const std::vector<std::string_view>& present_phrases,
 		u64                                  logged_msg_count
 	) {
+		// @TODO: #2246 make sure this is ok
 		frontend::ModuleID module_id
 			= frontend::createModuleTreeFromContents(module_content, "test_package");
 
@@ -465,6 +465,17 @@ private:
 				{ "inconsistent return statements" },
 				1
 			);
+
+			checkForErrorOnCompileModule(
+				R"(
+					fun main() = {
+						var i: i64 = 0;
+						var u: u64 = i;
+					}
+				)",
+				{ "Type `i64` cannot be converted to type `u64`." },
+				1
+			);
 		}
 
 		// ========================== Lexer errors ==========================
@@ -645,7 +656,7 @@ private:
 		{
 			checkForErrorOnCompileModule(
 				R"(
-				fun main(n: u64) = {
+				fun main(n: i64) = {
 					var arr: i32[n];
 				}
 			)",
@@ -657,7 +668,7 @@ private:
 				R"(
 				const ARR_TYPE = i32[10.5];
 			)",
-				{ "Type `f32` cannot be converted to type `const u64`." },
+				{ "Type `f32` cannot be converted to type `const i64`." },
 				1
 			);
 
@@ -665,7 +676,7 @@ private:
 				R"(
 				const ARR_TYPE = i32[-2];
 			)",
-				{ "Value cannot be converted to type `const u64` at compile-time." },
+				{ "Static array size must be a non-negative integral value." },
 				1
 			);
 
@@ -1027,8 +1038,30 @@ private:
 					return 0;
 				}
 			)",
-				{ "unknown escape sequence" },
+				{ "Escape sequence `\\c` is not recognised." },
 				1
+			);
+			checkForErrorOnCompileModule(
+				R"(
+				fun main() -> i64 = {
+					let formatString = f"This is an unknown escape sequence: \c";
+					return 0;
+				}
+			)",
+				{ "Escape sequence `\\c` is not recognised." },
+				1
+			);
+			checkForErrorOnCompileModule(
+				R"(
+				fun main() -> i64 = {
+					let x = 1;
+					let formatString = f"This is one: {notX}.\c";
+					return 0;
+				}
+			)",
+				// @TODO: #2817 Enable errors once they are all reported.
+				{ "Symbol 'notX' not found" /*, "Escape sequence `\\c` is not recognised."*/ },
+				1 /*2*/
 			);
 
 			checkForErrorOnCompileModule(

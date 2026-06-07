@@ -12,7 +12,7 @@ const another_i64 = i64;
 class A {
 	var a: i64;
 	fun foo() = {
-		builtin_output_string("A");
+		print("A");
 		builtin_output_i64(a);
 	}
 }
@@ -20,7 +20,7 @@ class A {
 class B {
 	var b: i64 = 1;
 	fun foo() = {
-		builtin_output_string("B");
+		print("B");
 		builtin_output_i64(b);
 	}
 }
@@ -28,7 +28,7 @@ class B {
 class C {
 	var c: i64;
 	fun foo() = {
-		builtin_output_string("C");
+		print("C");
 		builtin_output_i64(c);
 	}
 }
@@ -62,7 +62,7 @@ fun main() -> i64 = {
 	z.foo();  # C8
 
 	var tup: make_reverse_tuple(i64, bool) = (true, 42);
-	builtin_output_string(tup.toString());  # (true, 42);
+	print(tup.toString());  # (true, 42);
 
     return 0;
 }

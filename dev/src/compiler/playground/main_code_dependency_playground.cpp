@@ -15,11 +15,7 @@
 #include <iostream>
 
 void printContextErrors() {
-	auto logger = query::Context::dumpToOneLoggerAndClear();
-	if (logger->messageCount() > 0) {
-		std::cerr << "Compilation errors logged in context: \n";
-		logger->dumpLog(true, std::cerr);
-	}
+	// Context errors are now handled via the interactive logger.
 }
 
 void printQueryDeps(const std::vector<query::internal::NodeID>& deps) {

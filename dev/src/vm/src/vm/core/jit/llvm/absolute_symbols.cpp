@@ -20,7 +20,7 @@ void registerAbsoluteJITSymbols(llvm::orc::LLJIT& lljit) {
 	llvm::orc::SymbolMap host_symbols;
 
 	std::array hard_symbols = {
-		std::pair{ "jit_entrypoint", &vm::OpFuns::op_debug_jit_entrypoint },
+		std::pair{ "jitEntrypoint", &vm::OpFuns::op_debug_jitEntrypoint },
 		std::pair{ "call_func", &vm::OpFuns::op_debug_call_func },
 		std::pair{ "call_builtinfunc", &vm::OpFuns::op_debug_call_builtinfunc },
 		std::pair{ "virtual_call_pptr_method", &vm::OpFuns::op_debug_virtual_call_pptr_method },

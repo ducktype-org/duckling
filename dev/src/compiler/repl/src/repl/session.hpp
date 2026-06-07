@@ -9,7 +9,7 @@
 #pragma once
 
 #include "frontend.hpp"
-#include "helper_structs.hpp"
+#include "helpers.hpp"
 
 #include <backends/dvm/repl_lowering.hpp>
 #include <frontend/module_tree/module_tree.hpp>
@@ -24,6 +24,7 @@
 
 #include <vm/core/process/interface_types.hpp>
 
+#include <functional>
 #include <string_view>
 #include <vector>
 
@@ -36,7 +37,10 @@ namespace compiler::repl {
 	 */
 	class ReplSession final {
 	public:
-		explicit ReplSession(bool completions_enabled = true);
+		explicit ReplSession(
+			bool completions_enabled     = FRONTEND_DEFAULT_COMPLETIONS_ENABLED,
+			bool bracketed_paste_enabled = FRONTEND_DEFAULT_BRACKETED_PASTE_ENABLED
+		);
 
 		/**
 		 * @brief Load a script file and execute its statements in the current REPL session.
@@ -58,9 +62,29 @@ namespace compiler::repl {
 
 		/**
 		 * Run the main REPL loop (blocking).
-		 * @return Exit code (0 for normal exit)
+		 * @param is_reset Flag whether this started as an effect of reset(then it doesn't print
+		 * welcome message).
+		 * @return Result describing how the session ended
 		 */
-		int run();
+		ReplResult run(bool is_reset);
+
+		/**
+		 * @brief Replay the first N entries from the session history file.
+		 * @param silent Suppress replay output when true.
+		 */
+		void replayHistoryEntries(usize count, bool silent);
+
+		/**
+		 * @brief Return replay count requested via /reset -n.
+		 */
+		[[nodiscard]] base::Optional<usize> getResetReplayCount() const {
+			return m_reset_state.replay_count;
+		}
+
+		/**
+		 * @brief Return whether reset replay should be silent.
+		 */
+		[[nodiscard]] bool getResetReplaySilent() const { return m_reset_state.replay_silent; }
 
 	private:
 		/**
@@ -111,15 +135,6 @@ namespace compiler::repl {
 		bool shouldExit() const {
 			return m_should_exit;
 		}
-
-		/**
-		 * @brief Clear the REPL session history.
-		 *
-		 * Removes all previously entered statements from the session history
-		 * and resets the line counter.
-		 */
-		void clearHistory();
-
 
 		/**
 		 * @brief Determine if a line of input is a REPL command.
@@ -209,8 +224,45 @@ namespace compiler::repl {
 		 */
 		void initDVM();
 
-		bool                       m_should_exit;  ///< Flag to terminate the REPL loop
-		std::vector<ReplStatement> m_history;      ///< All statements entered in this session
+		/**
+		 * @brief Return a simple error result.
+		 */
+		ReplResult failWithMessage(std::string_view message);
+
+		/**
+		 * @brief Execute a query-context action and map QueryFailed to a REPL error message.
+		 */
+		void runWithContextErrorHandling(
+			std::string_view                            std_exception_prefix,
+			const std::function<void(query::Context&)>& action,
+			std::string&                                out_error
+		);
+
+		/**
+		 * @brief Save session history to a human-readable file.
+		 */
+		void saveSessionHistoryToFile() const;
+
+		/**
+		 * @brief Print session history (executed statements).
+		 */
+		void printSessionHistory() const;
+
+		/**
+		 * @brief Keeps data necessary to control resets in one place.
+		 */
+		struct ResetState final {
+			bool should_reset
+				= false;  ///< Flag used to indicate to the main run loop that reset should be done
+			base::Optional<usize> replay_count;  ///< Indicates how many entries from the start of
+			                                     ///< session history should be replayed.
+			bool replay_silent = false;          ///< Flag to suppress output during reset.
+		};
+
+		bool m_should_exit;  ///< Flag to terminate the REPL loop. It is set by /exit command. And
+		                     ///< then it is checked by the main run loop.
+		std::vector<ReplStatement> m_session_history;  ///< All statements entered in this session
+		ResetState                 m_reset_state;      ///< Struct to control reset.
 		u64          m_line_counter;  ///< Counter for generating unique wrapper function names
 		vm::PID      m_dvm_pid;       ///< Process ID of the running DVM instance
 		ReplFrontend m_frontend;      ///< Frontend for user interaction
@@ -223,16 +275,17 @@ namespace compiler::repl {
 		 */
 		base::Optional<backend_vm::ReplLoweringContext> m_lowering_context;
 		/**
-		 * Suppress per-statement REPL feedback while ingesting a script into session state.
+		 * Suppress per-statement REPL feedback. This can be useful either when loading scripts
+		 * or when resetting state of the REPL.
 		 *
 		 * When true, REPL bookkeeping messages like expression results are hidden for
-		 * statements executed by `loadScriptFile`.
+		 * executed statements.
 		 *
 		 * @note This flag is only enabled inside script-loading flow (`/load` and
-		 *       `duckc repl <script>` preload). Standard interactive REPL input keeps
-		 *       normal feedback.
+		 *       `duckc repl <script>` preload) or during state reset (`/reset`).
+		 *		 Standard interactive REPL input keeps normal feedback.
 		 */
-		bool m_suppress_repl_feedback_during_script_load = false;
+		bool m_suppress_repl = false;
 	};
 
 }  // namespace compiler::repl

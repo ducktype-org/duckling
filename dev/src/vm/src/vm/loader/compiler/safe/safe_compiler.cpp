@@ -211,8 +211,9 @@ namespace vm::loader::compiler::safe {
 			low::cf::FunctionLoopCFGs func_cfgs = low::cf::detectLoopsInFunction(bytecode);
 			std::vector<low::cf::ControlFlowGraph> cfgs = func_cfgs.cfgs;
 #endif
-			low_program.functions.insert(
+			usize new_func_id = low_program.functions.insert(
 				low::LowFuncData{ .name = function.name,
+			                      .id   = 0,  // placeholder, replaced immediately
 #ifdef ENABLE_JIT
 			                      .cfgs = cfgs,
 #endif
@@ -226,6 +227,9 @@ namespace vm::loader::compiler::safe {
 			                      .instruction_mapping = std::move(instruction_mapping) },
 				function.name
 			);
+			// This may look awkward, but it allows `LowFuncData` to know its own stable ID in the
+			// map, which makes it possible to avoid hashmap lookups on function calls with JIT.
+			low_program.functions[new_func_id].id = new_func_id;
 		}
 	}
 

@@ -30,6 +30,7 @@ namespace vm::low {
 	 */
 	struct LowFuncData {
 		base::StrID name;
+		usize       id;
 #ifdef ENABLE_JIT
 		std::vector<cf::ControlFlowGraph> cfgs;
 #endif

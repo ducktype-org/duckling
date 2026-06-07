@@ -36,11 +36,9 @@ namespace compiler::backend_vm {
 	}
 
 	const vm::code::GlobalData& ReplLoweringContext::lowerAndKeepLirGlobal(
-		const lir::LIRGlobal&               lir_global,
-		base::Optional<CRef<lir::Function>> global_ctor,
-		base::Optional<CRef<lir::Function>> global_dtor
+		const lir::LIRGlobalData& lir_global
 	) {
-		return m_context->lowerAndKeepLirGlobal(lir_global, global_ctor, global_dtor);
+		return m_context->lowerAndKeepLirGlobal(lir_global);
 	}
 
 	LoweredEntitiesSnapshot ReplLoweringContext::captureLoweredEntitiesSnapshot() const {

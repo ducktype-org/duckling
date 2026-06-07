@@ -1,0 +1,108 @@
+//! Helpers for modifying an existing [`EarlyGraph`] (and its members).
+
+use std::collections::VecDeque;
+
+use tracing::debug;
+
+use super::*;
+use crate::quackpack::core::FeatureName;
+use crate::quackpack::core::compile::MISSING_DEPENDENCY_IN_MANIFEST_MESSAGE;
+use crate::util::extend::QpExtend;
+
+impl DependencyGraph {
+    /// Same as [`EarlyGraph::remove_disabled_dependencies`].
+    #[tracing::instrument(skip_all)]
+    pub fn remove_disabled_dependencies(&mut self, packages: &PackagesSet) {
+        let mut enabled_deps = HashSet::from([self.root]);
+        for (k, v) in self.graph.iter_mut() {
+            let mut to_remove = HashSet::new();
+            let this = packages.package(k);
+            for dep in &v.dependencies {
+                let is_enabled = this
+                    .package()
+                    .manifest()
+                    .dependencies()
+                    .get_by_name(dep.name())
+                    .expect(MISSING_DEPENDENCY_IN_MANIFEST_MESSAGE)
+                    .is_enabled_for(this.enabled_features().iter().copied());
+                debug!(
+                    "package `{k}` has features `{}` and dependency `{dep}` is {}",
+                    this.enabled_features().iter().join(" "),
+                    if is_enabled { "enabled" } else { "not enabled" }
+                );
+                if !is_enabled {
+                    to_remove.insert(*dep);
+                } else {
+                    enabled_deps.insert(*dep);
+                }
+            }
+            v.dependencies.retain(|dep| !to_remove.contains(dep));
+        }
+        self.graph.retain(|dep, _| enabled_deps.contains(dep));
+    }
+}
+
+impl EarlyGraph {
+    /// Recursively populate enabled features, starting from the root of the graph.
+    #[tracing::instrument(skip_all)]
+    pub fn populate_features(&mut self, root_features: &[FeatureName]) -> QuackResult<()> {
+        let root_package = self.package_mut(&self.graph.root());
+        let root_features =
+            root_package.features_that_would_be_added(root_features.iter().copied())?;
+        debug!(
+            "starting features of root are: `{}`",
+            root_features.iter().join(" ")
+        );
+        let mut added_features = HashMap::from([(self.graph.root, root_features)]);
+        let mut stack = VecDeque::from([self.graph().root]);
+
+        // This is an iterative DFS.
+        // For a given current package `current`, we iterate over its dependencies.
+        // For each one we check whether the current features of `current` force some new features.
+        // If so, we add that dependency to the stack.
+        while let Some(current) = stack.pop_back() {
+            let this = self.packages.package(&current);
+            let node = self
+                .graph
+                .graph
+                .get(&current)
+                .expect("we've verified that there are dependencies");
+            for dep in &node.dependencies {
+                let this_features = added_features.entry(current).or_default();
+                let enabled_features = {
+                    let entry_in_dep_manifest = this
+                        .package()
+                        .manifest()
+                        .dependencies()
+                        .get_by_name(dep.name())
+                        .expect(MISSING_DEPENDENCY_IN_MANIFEST_MESSAGE);
+                    entry_in_dep_manifest.enabled_features(this_features.iter().copied())
+                };
+                debug!(node = %dep, features = ?enabled_features, "adding features to node");
+                let entry = self.packages.package(dep);
+                let expanded_features = entry.features_that_would_be_added(enabled_features)?;
+                let dep_features = added_features.entry(*dep).or_default();
+                if dep_features.extend_and_get_diff_size(expanded_features) > 0 {
+                    stack.push_back(*dep);
+                }
+            }
+        }
+
+        for (id, pkg) in self.packages.inner.iter_mut() {
+            let features = added_features.entry(*id).or_default();
+            pkg.add_new_features(features.iter().copied())?;
+        }
+        Ok(())
+    }
+
+    /// Removes disabled dependency from the graph.
+    ///
+    /// Note that currently they stay as keys in [`DependencyDag`], although no [`DependencyNode`]
+    /// should point at them.
+    ///
+    /// This method should be called __after__ [`populate_features`](Self::populate_features).
+    #[tracing::instrument(skip_all)]
+    pub fn remove_disabled_dependencies(&mut self) {
+        self.graph.remove_disabled_dependencies(&self.packages)
+    }
+}
