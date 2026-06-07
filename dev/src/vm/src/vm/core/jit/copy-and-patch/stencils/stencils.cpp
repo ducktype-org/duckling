@@ -11,18 +11,13 @@
 #define FORCE_ASSUME(...) \
 	if (!(__VA_ARGS__)) CORE_UNREACHABLE()
 
-#define CALL_STENCIL(name)                                                            \
-	std::invoke(                                                                      \
-		GET_LINK_VARIABLE(                                                            \
-			name, void (*)(const MicroInstruction*, byte*, Frame*, SafeVMThread&), 64 \
-		),                                                                            \
-		instr,                                                                        \
-		local_stack,                                                                  \
-		frame,                                                                        \
-		thread                                                                        \
+#define CALL_STENCIL(name)                                                                        \
+	GET_LINK_VARIABLE(name, void (*)(const MicroInstruction*, byte*, Frame*, SafeVMThread&), 64)( \
+		instr, local_stack, frame, thread                                                         \
 	)
 
-#define JUMP_STENCIL(name) return CALL_STENCIL(name)
+
+#define JUMP_STENCIL(name) MUST_TAIL return CALL_STENCIL(name)
 
 #define CONTINUE_STENCIL JUMP_STENCIL(continue_fn)
 
