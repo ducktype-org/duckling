@@ -157,7 +157,7 @@ For each statement:
 3. The statement is classified as expression, instruction, or definition.
 4. Expression/instruction paths generate wrapper functions; definition path loads module HOUT.
 5. HOUT is lowered to LIR and compiled to DVM bytecode.
-6. Lowering uses `ReplLoweringContext` to emit only newly-lowered entities
+6. Lowering uses `ReplDVMCodeBuilder` to emit only newly-lowered entities
   (see `core/backends/dvm/README.md`).
 7. New code is loaded into current DVM process.
 8. Wrapper executes (for executable statements) and result is printed when supported.

@@ -63,35 +63,6 @@ namespace compiler::lir {
 		};
 	}
 
-	LIRGlobal LIRGlobal::fromHOUT(query::Context& ctx, const helios::HOUTGlobalData& hout_global) {
-		auto type_layout
-			= CRef<tsl::TypeLayout>(&ctx.query<tsl::QuerySymbolTypeLayout>(hout_global.type)
-		                                 ->valueOrPanicMsg("layout query failed at LIR stage"));
-
-		auto mangled_name = helios::mangler::getSimpleMangledName(ctx, hout_global.helios_symbol);
-
-		variant_match(hout_global.value) {
-			variant_case(helios::HOUTGlobalConst, name) {
-				return LIRGlobal{
-					type_layout,
-					mangled_name,
-					LIRGlobalType::Constant,
-				};
-			}
-			variant_case(helios::HOUTGlobalVariable, name) {
-				return LIRGlobal{ type_layout, mangled_name, LIRGlobalType::Variable };
-			}
-			variant_default {
-				CORE_PANIC(
-					"Unhandled HOUTGlobalData type in LIRGlobal::fromHOUT: ",
-					hout_global.original_name.strView()
-				);
-			}
-		}
-
-		CORE_UNREACHABLE();
-	}
-
 	LIRPlace::LIRPlace(BaseVariant base, std::vector<Projection> projection_chain):
 		  base(base),
 		  layout([&]() -> CRef<tsl::TypeLayout> {
@@ -197,7 +168,7 @@ namespace compiler::lir {
 	 *
 	 * @note It should be used only used in lir::Function::debugPrint method
 	 */
-	struct LIRPrinter {
+	struct LIRPrinter final {
 		query::Context& ctx;
 		std::ostream&   output;
 
@@ -394,6 +365,24 @@ namespace compiler::lir {
 				}
 			}
 		}
+	}
+
+	LIRGlobalData::CTorDtorPair LIRGlobalData::getCtorDtorPair() const {
+		CORE_ASSERT(
+			std::holds_alternative<LIRGlobalData::CTorDtorPair>(data_initialization),
+			"Global does not have constructor/destructor initialization: ",
+			global.mangled_name.strView()
+		);
+		return std::get<LIRGlobalData::CTorDtorPair>(data_initialization);
+	}
+
+	ctv::CompileTimeValue LIRGlobalData::getConstValue() const {
+		CORE_ASSERT(
+			std::holds_alternative<ctv::CompileTimeValue>(data_initialization),
+			"Global does not have constant initialization: ",
+			global.mangled_name.strView()
+		);
+		return std::get<ctv::CompileTimeValue>(data_initialization);
 	}
 
 	void LIRUnit::debugPrint(query::Context& ctx, std::ostream& os) const {
