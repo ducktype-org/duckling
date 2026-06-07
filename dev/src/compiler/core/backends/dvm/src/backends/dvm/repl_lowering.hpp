@@ -14,7 +14,7 @@
 
 namespace compiler::backend_vm {
 	/**
-	 * @brief A statefull collection of code lowered into VM bytecode dedicated for REPL/scripts
+	 * @brief A stateful collection of code lowered into VM bytecode dedicated for REPL/scripts
 	 * compilation use. It exposes an interface for incremental DVM code emission, allowing REPL
 	 * statements to be compiled and loaded one at a time.
 	 *

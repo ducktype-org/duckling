@@ -91,11 +91,11 @@ private:
 		}
 
 		[[nodiscard]] CRef<helios::HOUTGlobalData> houtGlobal(std::string_view name) const {
-			return std::get<CRef<helios::HOUTGlobalData>>(globals.at(base::StrID(name.data())));
+			return std::get<CRef<helios::HOUTGlobalData>>(globals.at(base::StrID(name)));
 		}
 
 		[[nodiscard]] lir::LIRGlobalData lirGlobalData(std::string_view name) const {
-			return std::get<lir::LIRGlobalData>(globals.at(base::StrID(name.data())));
+			return std::get<lir::LIRGlobalData>(globals.at(base::StrID(name)));
 		}
 	};
 
