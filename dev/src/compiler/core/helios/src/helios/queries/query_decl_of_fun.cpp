@@ -128,11 +128,13 @@ namespace compiler::helios {
 					output(expr->expression_type.getSymbolType());
 				} else {
 					// "void" return should actually deduce to unit type:
-					output(tsh::SymbolType<>{
-						tsh::getUnitType(),
-						tsh::ReferenceKind::Direct,
-						tsh::Mutability::Mutable,
-					});
+					output(
+						tsh::SymbolType<>{
+							tsh::getUnitType(),
+							tsh::ReferenceKind::Direct,
+							tsh::Mutability::Mutable,
+						}
+					);
 				}
 			}
 
@@ -165,11 +167,13 @@ namespace compiler::helios {
 				return *return_collector.out.begin();
 			default:
 				// there are multiple candidates and return type deduction is inconclusive
-				ctx.logInt(makeBox<dia_int::PlaceholderError>(
-					"Function declared with no explicit return type and inconsistent return "
-					"statements.",
-					fun->getStablePosition()
-				));
+				ctx.logInt(
+					makeBox<dia_int::PlaceholderError>(
+						"Function declared with no explicit return type and inconsistent return "
+						"statements.",
+						fun->getStablePosition()
+					)
+				);
 				return query::Failed();
 			}
 		}
@@ -207,8 +211,9 @@ namespace compiler::helios {
 					const auto ret_type_ctv
 						= getTypeCTVFromPST(ctx, ret.value().unlock(ctx)->getExpr()).valueOrThrow();
 					ret_type = ret_type_ctv.get<tsh::SymbolType<>>().value();
-					origin   = code::multiplePstOriginOrdered({ param_list.unlock(ctx),
-					                                            ret.value().unlock(ctx) });
+					origin   = code::multiplePstOriginOrdered(
+                        { param_list.unlock(ctx), ret.value().unlock(ctx) }
+                    );
 				}
 				// Deduce return type if not provided.
 				else {
@@ -362,8 +367,7 @@ namespace compiler::helios {
 					field_origin          = code::pstOrigin(field_pst_data).generatedFrom();
 					auto init_expr_opt    = field_pst_data->getInit();
 					init_expr_coerced_opt = init_expr_opt.map(
-						[&](pst::AccessLocked<pst::ExprHolder> expr_holder
-					    ) -> BoxOrCRef<code::Expr> {
+						[&](pst::AccessLocked<pst::ExprHolder> expr_holder) -> BoxOrCRef<code::Expr> {
 							const auto field_type = field.getType(ctx);
 							auto       expr
 								= getHoutOfExprWithExpectedType(
@@ -496,12 +500,12 @@ namespace compiler::helios {
 								defgen::GeneratedSymbolData::ToStringMethod, to_string_data
 							) {
 								const auto self_param = ctx.query<defgen::QueryGeneratedSymbol>(
-									{ .name = base::StrID("self"),
-								      .generated_symbol_data
-								      = defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::Parameter{
-										  .function_symbol = key,
-										  .parameter_index = 0,
-									  } } }
+									{ .name                  = base::StrID("self"),
+								      .generated_symbol_data = defgen::GeneratedSymbolData{
+										  defgen::GeneratedSymbolData::Parameter{
+											  .function_symbol = key,
+											  .parameter_index = 0,
+										  } } }
 								);
 
 								const auto method_type = ctx.query<QueryTypeOfSymbol>(key)
@@ -526,12 +530,12 @@ namespace compiler::helios {
 							}
 							variant_case(defgen::GeneratedSymbolData::DefaultDestructor, dtor_data) {
 								const auto self_param = ctx.query<defgen::QueryGeneratedSymbol>(
-									{ .name = base::StrID("self"),
-								      .generated_symbol_data
-								      = defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::Parameter{
-										  .function_symbol = key,
-										  .parameter_index = 0,
-									  } } }
+									{ .name                  = base::StrID("self"),
+								      .generated_symbol_data = defgen::GeneratedSymbolData{
+										  defgen::GeneratedSymbolData::Parameter{
+											  .function_symbol = key,
+											  .parameter_index = 0,
+										  } } }
 								);
 
 								const auto method_type = ctx.query<QueryTypeOfSymbol>(key)

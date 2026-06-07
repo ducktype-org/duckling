@@ -54,6 +54,17 @@ namespace compiler::helios {
 	 * @brief Storage of information coming from function declaration without processing its body.
 	 */
 	struct HOUTFunctionDeclaration final {
+		/**
+		 * @brief Classifies functions by what kind of operator they are (infix, prefix, suffix), or
+		 * if they are not an operator (none).
+		 *
+		 * This information is useful during overload resolution, when lookup by name returns multiple
+		 * candidates, some being of incorrect operatoriness in the given context. For example, if
+		 * the user defines both a prefix and suffix `++` operator, lookup will return both, but
+		 * the expression can only ever consider at most one of these candidates for resolution.
+		 */
+		enum class Operatoriness { None, Infix, Prefix, Suffix };
+
 		// @TODO: decide if HOUT functions declarations should contain its HELIOS SymID
 		// - flags like "pure", "thread safe", "shared-thread-function", etc
 
@@ -72,6 +83,8 @@ namespace compiler::helios {
 
 		base::StrID original_name;
 
+		Operatoriness operatoriness;
+
 		tsh::SymbolType<> return_type;
 
 		std::vector<code::Parameter> parameters;
@@ -86,6 +99,7 @@ namespace compiler::helios {
 	private:
 		HOUTFunctionDeclaration(
 			SymID                        symbol,
+			Operatoriness                operatoriness,
 			tsh::SymbolType<>            ret_type,
 			std::vector<code::Parameter> parameters,
 			code::ElementOrigin          origin
