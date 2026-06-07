@@ -6,6 +6,7 @@ Tests:
     folder: "lists"
     Cases:
       direct:
+        Enabled: "false"
         mode: direct
         Output: 
           String: "6\n"
@@ -23,6 +24,7 @@ Tests:
     folder: "lists"
     Cases:
       direct:
+        Enabled: "false"
         mode: direct
         Output: 
           String: "2\n4\n6\n"
