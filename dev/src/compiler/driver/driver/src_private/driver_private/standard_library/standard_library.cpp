@@ -6,8 +6,6 @@
 
 #include <base/extend_cpp/variant_match.hpp>
 
-#include "string_id/string_id.hpp"
-
 #include <algorithm>
 
 namespace compiler::driver {
