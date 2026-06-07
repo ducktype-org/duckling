@@ -103,9 +103,9 @@ private:
 	 * Compiles the module at given path to LIR, returning also HOUT counterparts of
 	 * functions and globals for easier testing.
 	 *
-		 * Note that the functions don't include any global constructors/destructors that might be
-		 * generated for global variables, but they are included in the LIRGlobalData for the global
-		 * variables, so they can be accessed in tests if needed.
+	 * Note that the functions don't include any global constructors/destructors that might be
+	 * generated for global variables, but they are included in the LIRGlobalData for the global
+	 * variables, so they can be accessed in tests if needed.
 	 */
 	LIRModuleResult getLIROfModule(std::string_view module_path) {
 		auto [module, scope] = getModule(fs::File(module_path));
