@@ -1401,11 +1401,16 @@ namespace vm::loader::compiler::safe::detail {
 			}
 			instr_case(high::Op_store_pptr_pany, i) {
 				if (compiler.settings_.enable_fast_track) {
-					addLow<Op_ft_store_pptr_bany>(i.dst_ptr, i.src);
+					auto type_name = getPlaceType(i.dst_ptr)->getInnerType().value()->getName();
+					addLow<Op_ft_structWrite>(i.dst_ptr, opargs::Type{ type_name });
 				}
 				addLow<Op_store_pptr_bany>(i.dst_ptr, i.src);
 			}
 			instr_case(high::Op_load_pany_pptr, i) {
+				if (compiler.settings_.enable_fast_track) {
+					auto type_name = getPlaceType(i.src_ptr)->getInnerType().value()->getName();
+					addLow<Op_ft_structRead>(i.src_ptr, opargs::Type{ type_name });
+				}
 				addLow<Op_load_bany_pptr>(i.dst, i.src_ptr);
 			}
 			instr_case(high::Op_ref_pptr_pany, i) {

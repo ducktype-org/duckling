@@ -1276,27 +1276,6 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(ft_store_pptr_bany)(FUNCTION_ARGS) {
-		{
-			Pointer ptr       = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
-			auto    src_block = READ_BLOCK_REF_FROM_ARG(instr->arg1);
-			auto    type      = Memory::getBlockType(src_block);
-
-			if (!ptr.isNull()) {
-				ShadowBlock* sb = FT_GLOBALS.getShadow(ptr.getBlock()->getID());
-				if (sb && !sb->isDeallocated()) {
-					u32 shadow_idx  = FT_THREAD.getShadowDataMemory().getBlockType(Ref(sb))->getShadowEntryIndex(ptr.getOffset());
-					u32 shadow_size = type->getShadowSize();
-					auto tid   = FT_DATA.thread_id;
-					auto epoch = FT_DATA.getVC()[tid];
-					for (u32 i = 0; i < shadow_size; ++i)
-						sb->getData()[shadow_idx + i].processWrite(tid, epoch, FT_DATA.getVC());
-				}
-			}
-		}
-		FUNCTION_CONT(1);
-	}
-
 	RETURN_TYPE OpFuns::OPCODE_NAME(ft_memCopy)(FUNCTION_ARGS) {
 		{
 			Pointer  dst  = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
@@ -1392,9 +1371,7 @@ namespace vm {
 			Block** base  = frame->local_block_ref_stack_base;
 			Block** end   = frame->local_block_ref_stack_end;
 			u64 total     = static_cast<u64>(end - base);
-			u64 to_clean  = (total > ret_count) ? (total - ret_count) : 0;
-
-			for (u64 i = 0; i < to_clean; ++i) {
+			for (u64 i = ret_count; i < total; ++i) {
 				Block* blk = base[i];
 				if (!blk) continue;
 				ShadowBlock* sb = FT_GLOBALS.getShadow(blk->getID());

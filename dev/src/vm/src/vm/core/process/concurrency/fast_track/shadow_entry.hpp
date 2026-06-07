@@ -142,8 +142,17 @@ namespace vm {
 		}
 
 	private:
-		void reportRace(const char*, Epoch, Epoch) {
-			throw exceptions::VMDataRaceException();
+		void reportRace(const char* race_type, Epoch epoch_a, Epoch epoch_b) {
+			std::string detail = race_type;
+			detail += " — t";
+			detail += std::to_string(epoch_a.tid().asInt());
+			detail += "@";
+			detail += std::to_string(epoch_a.clock());
+			detail += " vs t";
+			detail += std::to_string(epoch_b.tid().asInt());
+			detail += "@";
+			detail += std::to_string(epoch_b.clock());
+			throw exceptions::VMDataRaceException(std::move(detail));
 		}
 	};
 

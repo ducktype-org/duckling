@@ -667,7 +667,6 @@ DEF_MICRO_INSTR(ext_type_type, vm::low::opargs::Type, vm::low::opargs::Type)
 // ========= Fast Track Definitions ========
 
 // 4.3: Data Movement
-DEF_MICRO_INSTR(ft_store_pptr_bany, vm::low::opargs::PlacePtr, vm::low::opargs::PlaceBlockAny)
 DEF_MICRO_INSTR(ft_memCopy, vm::low::opargs::PlacePtr, vm::low::opargs::PlacePtr)
 
 // 4.4: Allocation & Initialization
