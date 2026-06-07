@@ -1,7 +1,8 @@
 #include "queries.hpp"
-#include <utility>
 
 #include <query_framework/standard_query/query_impl.hpp>
+
+#include <utility>
 
 namespace compiler::tsl {
 	struct IMPLEMENT_QUERY(QueryAbstractTypeLayout, query::QResult<TypeLayout>) {
@@ -56,8 +57,8 @@ namespace compiler::tsl {
 
 	struct IMPLEMENT_QUERY(QuerySymbolTypeLayout, query::QResult<TypeLayout>) {
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
-			if (key.getRefKind() == tsh::ReferenceKind::Direct){
-			    auto copy = ctx.query<QueryAbstractTypeLayout>(key.getType())->valueOrThrow();
+			if (key.getRefKind() == tsh::ReferenceKind::Direct) {
+				auto copy = ctx.query<QueryAbstractTypeLayout>(key.getType())->valueOrThrow();
 				return std::move(copy);
 			}
 			return PointerTypeLayout(key, ctx);

@@ -10,6 +10,10 @@
  * translate its own type representation into `AbiType` and to report a
  * diagnostic for any type that cannot be translated.
  *
+ * Recursive nodes (array element, struct field) are owned through `base::Box`,
+ * so the tree is value-owned with no sharing; copying an `AbiType` therefore
+ * means a deep copy via `cloneAbiType`.
+ *
  * Zero-sized types are intentionally not representable here: C has no zero
  * sized struct members, and the layout algorithm panics if it ever encounters
  * one. Callers must filter such fields out before calling into the library.
@@ -18,10 +22,10 @@
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
+#include <base/pointers/box.hpp>
 #include <base/types/bits_and_bytes.hpp>
 #include <base/types/ints.hpp>
 
-#include <memory>
 #include <string>
 #include <type_traits>
 #include <utility>
@@ -47,7 +51,7 @@ namespace abi::type_system {
 	struct PointerType final {};
 
 	struct AbiType;
-	using AbiTypePtr = std::shared_ptr<AbiType>;
+	using AbiTypePtr = base::Box<AbiType>;
 
 	/**
 	 * @brief A fixed-size C array. `count` must be strictly positive;
@@ -93,10 +97,8 @@ namespace abi::type_system {
 		std::variant<IntType, PointerType, ArrayType, StructType, OpaqueType> value;
 	};
 
-	/** @brief Wraps an AbiType value in a shared pointer. */
-	inline AbiTypePtr makeAbiType(AbiType type) {
-		return std::make_shared<AbiType>(std::move(type));
-	}
+	/** @brief Wraps an AbiType value in an owning box. */
+	inline AbiTypePtr makeAbiType(AbiType type) { return base::makeBox<AbiType>(std::move(type)); }
 
 	/** @brief Builds an AbiType from an IntType. */
 	inline AbiType intType(u8 width_bits, bool is_signed) {
@@ -126,7 +128,7 @@ namespace abi::type_system {
 		return Field{ .name = std::move(name), .type = makeAbiType(std::move(type)) };
 	}
 
-	/** @brief Deep-clones an AbiType tree into newly allocated shared nodes. */
+	/** @brief Deep-clones an AbiType tree into newly allocated owning nodes. */
 	inline AbiType cloneAbiType(const AbiType& type) {
 		return std::visit(
 			[&](const auto& value) -> AbiType {

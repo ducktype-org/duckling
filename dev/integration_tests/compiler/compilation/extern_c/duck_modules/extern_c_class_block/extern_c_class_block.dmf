@@ -1,6 +1,8 @@
 # Verifies that classes declared inside an `extern("C") { ... }` block
 # compile and behave like classes declared with the prefix form.
 
+import core.builtins.*;
+
 extern("C") {
     class A {
         x: i8 = i8(0);

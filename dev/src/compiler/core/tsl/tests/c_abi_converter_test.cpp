@@ -143,10 +143,10 @@ private:
 				= ctx.query<QueryStaticArrayType>({ directOf(i32_type), 4 });
 			const auto& r = queryConv(ctx, directOf(arr_type));
 			ASSERT_TRUE(r.abi_type.has_value());
-			ASSERT_TRUE(std::holds_alternative<ats::ArrayType>(r.abi_type->value));
-			const auto& a = std::get<ats::ArrayType>(r.abi_type->value);
-			assertTrue(a.count == 4, "count mismatch");
-			expectInt(*a.element, 32, true);
+			ASSERT_TRUE(std::holds_alternative<ats::OpaqueType>(r.abi_type->value));
+			const auto& o = std::get<ats::OpaqueType>(r.abi_type->value);
+			assertTrue(usize(o.size) == 16, "array of 4 i32 should be 16 bytes");
+			assertTrue(usize(o.alignment) == 4, "array of i32 should have align 4");
 		});
 	}
 

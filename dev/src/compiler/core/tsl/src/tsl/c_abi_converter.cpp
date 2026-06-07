@@ -42,15 +42,19 @@ namespace compiler::tsl {
 		CAbiConversionResult convertStaticArray(
 			tsh::StaticArrayAbstractType array, query::Context& ctx
 		) {
-			const usize count = array.getSize();
-			if (count == 0) return fail("zero-length array");
+			if (array.getSize() == 0) return fail("zero-length array");
 
+			// Validate the element type; a non-C-compatible element rejects the array.
 			const auto& element_conv
 				= ctx.query<QueryCAbiTypeOf>(array.getElementType())->valueOrThrow();
 			if (!element_conv.abi_type.has_value())
 				return fail(base::strConcat("array element rejected: ", element_conv.reason));
 
-			return ok(ats::arrayType(cloneAbiType(*element_conv.abi_type), count));
+			// Represent the whole array as an opaque blob carrying its computed layout.
+			const auto& layout = ctx.query<QueryAbstractTypeLayout>(array)->valueOrThrow();
+			return ok(
+				ats::opaqueType(base::bits2bytesRoundUp(layout.getSize()), layout.getAlignment())
+			);
 		}
 
 		CAbiConversionResult convertClass(tsh::ClassAbstractType class_type, query::Context& ctx) {

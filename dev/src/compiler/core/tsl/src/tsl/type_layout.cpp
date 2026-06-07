@@ -210,9 +210,10 @@ namespace compiler::tsl {
 		dia_int::StablePosition fieldDiagnosticPosition(
 			compiler::helios::SymID field_sym, compiler::helios::SymID class_sym, query::Context& ctx
 		) {
-			auto field_pst = compiler::helios::symbolPst(field_sym);
+			auto field_pst = compiler::helios::maybeSymbolPst(field_sym);
 			if (field_pst.has_value()) return field_pst.value().unlock(ctx)->getStablePosition();
-			return compiler::helios::symbolPst(class_sym).value().unlock(ctx)->getStablePosition();
+			return compiler::helios::maybeSymbolPst(class_sym).value().unlock(ctx)->getStablePosition(
+			);
 		}
 
 		/**
@@ -242,8 +243,8 @@ namespace compiler::tsl {
 		 * layout used everywhere else.
 		 *
 		 * On any conversion failure the function reports a diagnostic per
-		 * offending field and falls back to the natural-alignment layout so
-		 * compilation can keep going.
+		 * offending field and fails the layout query, which aborts compilation
+		 * of the offending module.
 		 */
 		PickedClassLayout pickClassLayout(
 			tsh::ClassAbstractType                    class_type,
@@ -274,9 +275,10 @@ namespace compiler::tsl {
 					));
 					continue;
 				}
-				abi_fields.push_back(
-					abi::type_system::field(base::Optional<std::string>{}, *conversion.abi_type)
-				);
+				abi_fields.push_back(abi::type_system::field(
+					base::Optional<std::string>{},
+					abi::type_system::cloneAbiType(*conversion.abi_type)
+				));
 			}
 
 			if (any_failed) query::throwFailed();
@@ -626,7 +628,8 @@ namespace compiler::tsl {
 		  TypeLayoutABC(POINTER_SIZE, symbol_type, ctx),
 		  pointee(CRef<TypeLayout>(
 			  &ctx.query<QueryAbstractTypeLayout>(symbol_type.getType())->valueOrThrow()
-		  )) {
+		  )),
+		  pointer_kind(PointerKind::SinglePointer) {
 		CORE_ASSERT(
 			symbol_type.getRefKind() != tsh::ReferenceKind::Direct,
 			"Construction of pointer layout from symbol type "

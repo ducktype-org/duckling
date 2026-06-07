@@ -54,6 +54,10 @@ namespace abi::layout {
 				out.size           = sub.size;
 				out.alignment      = sub.alignment;
 			}
+			variant_case(type_system::OpaqueType, o) {
+				out.size      = o.size;
+				out.alignment = o.alignment;
+			}
 		}
 
 		CORE_ASSERT(usize(out.size) > 0, "zero-sized field in C layout; filter on caller side");
