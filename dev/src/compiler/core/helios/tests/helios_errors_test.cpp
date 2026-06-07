@@ -65,14 +65,13 @@ private:
 		u64                                  logged_msg_count
 	) {
 		// @TODO: #2246 make sure this is ok
+		// why not randomize package id?? --- does it work now?
+
 		frontend::ModuleID module_id
 			= frontend::createModuleTreeFromContents(module_content, "test_package");
 
-		auto result = base::anyCast<CRef<query::QResult<helios::HOUTUnit>>>(
-			query::utils::withContextCompute([&](query::Context& ctx) {
-				return ctx.query<helios::QueryModuleHOUT>(module_id);
-			})
-		);
+		auto result = query::entryPoint<helios::QueryModuleHOUT>(module_id);
+		
 		assertTrue(result->hasFailed(), "Expected HOUT query to fail for module content.");
 		auto logger = query::Context::dumpToOneLoggerAndClear();
 

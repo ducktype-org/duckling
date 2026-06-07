@@ -44,6 +44,7 @@ private:
 			= frontend::createModuleTreeFromContents(module_content, "test_package");
 
 		// @TODO: #2246 see if we want to change anything else here
+		// should be ok
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto hout_result = ctx.query<helios::QueryModuleHOUT>(module_id);

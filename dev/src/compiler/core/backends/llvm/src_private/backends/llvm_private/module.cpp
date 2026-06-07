@@ -52,6 +52,9 @@ namespace compiler::backend_llvm {
 					// @TODO: #2246 this is a little random, think about it more.
 					// Maybe we will be able to keep all initialization logic for LLVM in one place
 
+
+					// make setInitializer call an module api call here!
+
 					// NOTE: This case is handled inside addGlobalToModule
 				}
 				variant_default { CORE_UNREACHABLE(); }

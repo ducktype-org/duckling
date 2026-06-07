@@ -51,6 +51,7 @@ namespace compiler::repl {
 
 	const helios::HOUTUnit& getDefinitionHOUTUnit(query::Context& ctx, frontend::ModuleID module_id) {
 		// @TODO: #2246 validate usage of QueryModuleHOUT here after any other changes
+		// should be ok
 		return ctx.query<helios::QueryModuleHOUT>(module_id)->valueOrThrow();
 	}
 

@@ -39,6 +39,7 @@ namespace compiler::backend_vm {
 		// We mimic the same idea as in compiling a single module,
 		// but this time we append the new functions to the lowering context.
 
+		// PR: move lir_function_deals_with_strings (or better DVM filtering) filtering to lir structure
 		auto lir_function_deals_with_strings = [](const CRef<lir::Function> lir_function) {
 			auto is_string_layout = [](const CRef<tsl::TypeLayout> layout) -> bool {
 				return layout->getSourceType().getType().getKind() == tsh::Kind::String;
