@@ -273,7 +273,7 @@ namespace compiler::repl {
 		 * globals, and types from previous statements to be referenced in new statements.
 		 * Similar to DVMBuilder but with incremental loading semantics for interactive sessions.
 		 */
-		base::Optional<backend_vm::ReplLoweringContext> m_lowering_context;
+		base::Optional<backend_vm::ReplDVMCodeBuilder> m_lowering_context;
 		/**
 		 * Suppress per-statement REPL feedback. This can be useful either when loading scripts
 		 * or when resetting state of the REPL.
