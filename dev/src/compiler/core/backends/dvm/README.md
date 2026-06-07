@@ -22,7 +22,7 @@ The REPL uses `ReplDVMCodeBuilder` (DVM backend) to keep a persistent lowering s
 statements. The context wraps `ProgramLoweringContext` and exposes an incremental API:
 
 - `captureLoweredEntitiesSnapshot()` records how many types/globals/functions have been lowered.
-- `collectNewCodeSince(snapshot)` returns only the newly-lowered entities for the current batch.
+- `insertLIRUnitAndCollectNewlyLoweredCode(lir_unit)`
 
 This allows REPL/script execution to load only new code into the VM instead of rebuilding the
 entire bytecode program on each statement.
