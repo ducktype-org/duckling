@@ -138,9 +138,9 @@ namespace vm::builtins {
 	}
 
 	void FunctionHandlers::builtinLockMutex(SafeVMThread& thread, u64 mutex_id) {
-		auto mutex     = thread.safe_process.getSynchronizationPrimitives().getMutex(mutex_id);
-		auto thread_id = thread.getThreadID();
-		auto& detector = thread.safe_process.getDeadlockDetector();
+		auto mutex	= thread.safe_process.getSynchronizationPrimitives().getMutex(mutex_id);
+		auto thread_id	= thread.getThreadID();
+		auto& detector	= thread.safe_process.getDeadlockDetector();
 
 		// Deadlock check must happen before any acquisition attempt. When disabled this is a
 		// no-op. When enabled and the mutex is free, checkForDeadlock returns immediately

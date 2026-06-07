@@ -1,0 +1,94 @@
+# Definicja tablicy o stałym rozmiarze n= 10 do przechowywania ID wątków
+type fixed_size_table: tablei64 i64 10  
+type pointer: ptr_tablei64 tablei64
+
+function inc {} -> {} {
+    init_pany_type          temp, i64;
+    init_pany_type          i, i64;
+    mov_p64_imm             i, 10000000;
+    div_p64_imm             i, 10 ;
+    
+    # while(i > 0)
+    label Loop1;
+        # i--
+        sub_p64_imm         i, 1;
+
+        add_p64_imm         temp, 1;
+
+        # if i > 0 goto Loop1
+        cmpGt_p64_imm       i, 0;
+        jmpIf_label         Loop1;
+
+    init_pany_type          output_var, i64;
+    mov_p64_p64             output_var, temp;
+    output_p64              output_var;
+
+    ret;
+}
+
+function main { i64, ptr_argv } -> {i64} {
+    # Inicjalizacja zmiennych bazowych
+    init_pany_type          n, i64;
+    init_pany_type          i, i64;
+    init_pany_type          t_ids, ptr_tablei64;
+
+    # n = 10 (liczba wątków)
+    mov_p64_imm             n, 10 ;
+    
+    # Alokacja tablicy na ID wątków
+    alloc_pptr_type         t_ids, tablei64;
+
+    # Ustawienie licznika i = 10 
+    mov_p64_imm             i, 10 ;
+
+    # --- PĘTLA URUCHAMIAJĄCA WĄTKI ---
+    label StartThreadsLoop;
+        # i--
+        sub_p64_imm         i, 1;
+
+        # Deklaracja zmiennej na ID tworzonego wątku
+        init_pany_type      curr_thread_id, i64;
+        set_threadctx       inc;
+        call_builtinfunc    builtin_start_thread;
+
+        # Zapisz ID utworzonego wątku w tablicy
+        fixedSizeTableStore_pptr_pany_p64  t_ids, curr_thread_id, i;
+
+        # (Brak deinit - curr_thread_id zostaje na stosie w każdej iteracji)
+        deinit;
+
+        # if i > 0 goto StartThreadsLoop
+        cmpGt_p64_imm       i, 0;
+        jmpIf_label         StartThreadsLoop;
+
+
+    # Reset licznika do joinowania
+    mov_p64_imm             i, 10 ;
+
+    # --- PĘTLA DOŁĄCZAJĄCA (JOIN) WĄTKI ---
+    label JoinThreadsLoop;
+        # i--
+        sub_p64_imm         i, 1;
+
+        # Zmienne wymagane przez builtin_join_thread
+        init_pany_type      join_ret, i64;
+        init_pany_type      join_id, i64;
+
+        # Wczytaj ID wątku z tablicy
+        fixedSizeTableLoad_pany_pptr_p64   join_id, t_ids, i;
+
+        call_builtinfunc    builtin_join_thread;
+
+        # (Brak deinit - zmienne join_id i join_ret zostają na stosie)
+        deinit;
+
+        # if i > 0 goto JoinThreadsLoop
+        cmpGt_p64_imm       i, 0;
+        jmpIf_label         JoinThreadsLoop;
+
+    # (Brak free_pptr t_ids)
+    free_pptr               t_ids;
+    # (Brak deinit dla zmiennych main)
+
+    ret;
+}
