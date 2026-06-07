@@ -21,7 +21,6 @@ DVM backend translation layer currently does **not** support:
 The REPL uses `ReplDVMCodeBuilder` (DVM backend) to keep a persistent lowering state across
 statements. The context wraps `ProgramLoweringContext` and exposes an incremental API:
 
-- `captureLoweredEntitiesSnapshot()` records how many types/globals/functions have been lowered.
 - `insertLIRUnitAndCollectNewlyLoweredCode(lir_unit)`
 
 This allows REPL/script execution to load only new code into the VM instead of rebuilding the
