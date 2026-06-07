@@ -140,9 +140,24 @@ namespace vm::builtins {
 	void FunctionHandlers::builtinLockMutex(SafeVMThread& thread, u64 mutex_id) {
 		auto mutex     = thread.safe_process.getSynchronizationPrimitives().getMutex(mutex_id);
 		auto thread_id = thread.getThreadID();
+		auto& detector = thread.safe_process.getDeadlockDetector();
 
-		auto& deadlock_detector = thread.safe_process.getDeadlockDetector();
-		deadlock_detector.beginWaitForMutexOrThrow(thread_id, mutex_id);
+		// Deadlock check must happen before any acquisition attempt. When disabled this is a
+		// no-op. When enabled and the mutex is free, checkForDeadlock returns immediately
+		// (no owner → no cycle possible), so there is no cost on the fast path.
+		detector.checkForDeadlock(thread_id, mutex_id);
+
+		// Fast path: mutex is free — grab it with a non-blocking CAS while still holding the
+		// GIL. Skips the GIL release/acquire pair and the expensive timed syscall. We also
+		// skip the intermediate "waiting" state in the detector because we never waited.
+		if (mutex->try_lock()) {
+			detector.markThreadAcquiredMutex(thread_id, mutex_id);
+			return;
+		}
+
+		// Slow path: mutex is contended. Mark ourselves as waiting, then release the GIL so
+		// other DVM threads can run while we block.
+		detector.markThreadWaitingForMutex(thread_id, mutex_id);
 		thread.releaseGil();
 		while (!mutex->try_lock_for(std::chrono::milliseconds{ 500 })) {
 			if (thread.isTerminateRequested()) {
@@ -154,7 +169,7 @@ namespace vm::builtins {
 		}
 		// Acquire GIL after blocking: bytecode execution requires holding the GIL.
 		thread.acquireGil();
-		deadlock_detector.markThreadAcquiredMutex(thread_id, mutex_id);
+		detector.markThreadAcquiredMutex(thread_id, mutex_id);
 	}
 
 	void FunctionHandlers::builtinUnlockMutex(SafeVMThread& thread, u64 mutex_id) {
