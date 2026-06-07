@@ -5,12 +5,13 @@
 namespace vm {
 
 	void DeadlockDetector::beginWaitForMutexOrThrow(api::ThreadID thread_id, usize mutex_id) {
+		if (!detection_enabled) return;
 		// This method's thread-safety relies on caller holding the process GIL.
 		// The two operations below form a logical atomic unit within bytecode execution:
 		// 1. Check if the acquisition would cause a deadlock
 		// 2. Mark thread as waiting (before actually acquiring the OS-level mutex)
 		// If a deadlock is detected, an exception is thrown and the thread is NOT marked as waiting.
-		if (detection_enabled) checkForDeadlock(thread_id, mutex_id);
+		checkForDeadlock(thread_id, mutex_id);
 		markThreadWaitingForMutex(thread_id, mutex_id);
 	}
 
@@ -45,27 +46,28 @@ namespace vm {
 	}
 
 	void DeadlockDetector::markThreadWaitingForMutex(api::ThreadID thread_id, usize mutex_id) {
+		if (!detection_enabled) return;
 		thread_waiting_for_mutex[thread_id] = mutex_id;
 	}
 
 	void DeadlockDetector::markThreadAcquiredMutex(api::ThreadID thread_id, usize mutex_id) {
+		if (!detection_enabled) return;
 		thread_waiting_for_mutex.erase(thread_id);
 		mutex_owners[mutex_id] = thread_id;
 	}
 
 	void DeadlockDetector::markThreadReleasedMutex(api::ThreadID thread_id, usize mutex_id) {
+		if (!detection_enabled) return;
 		auto it = mutex_owners.find(mutex_id);
 		if (it != mutex_owners.end() && it->second == thread_id) mutex_owners.erase(it);
 	}
 
 	void DeadlockDetector::clearMutexState(usize mutex_id) {
+		if (!detection_enabled) return;
+		// A mutex being destroyed cannot be simultaneously awaited by any thread:
+		// a thread can only wait for an owned mutex, and an owned mutex cannot be
+		// destroyed (the owner holds it). So no scan of thread_waiting_for_mutex needed.
 		mutex_owners.erase(mutex_id);
-
-		for (auto it = thread_waiting_for_mutex.begin(); it != thread_waiting_for_mutex.end();)
-			if (it->second == mutex_id)
-				it = thread_waiting_for_mutex.erase(it);
-			else
-				++it;
 	}
 
 }

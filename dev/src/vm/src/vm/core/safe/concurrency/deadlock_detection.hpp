@@ -5,7 +5,7 @@
 
 #include <vm/api/data/thread_id.hpp>
 
-#include <map>
+#include <unordered_map>
 
 namespace vm {
 
@@ -63,9 +63,9 @@ namespace vm {
 		bool detection_enabled = true;
 
 		// thread_id -> mutex_id (Thread is waiting for Mutex)
-		std::map<api::ThreadID, usize> thread_waiting_for_mutex;
+		std::unordered_map<api::ThreadID, usize> thread_waiting_for_mutex;
 
 		// mutex_id -> thread_id (Mutex is held by Thread)
-		std::map<usize, api::ThreadID> mutex_owners;
+		std::unordered_map<usize, api::ThreadID> mutex_owners;
 	};
 }
