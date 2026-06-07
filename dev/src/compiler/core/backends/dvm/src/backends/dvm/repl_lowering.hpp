@@ -33,7 +33,8 @@ namespace compiler::backend_vm {
 	 * It exposes snapshot/collection semantics to enable incremental bytecode loading without
 	 * recompiling the entire module.
 	 *
-	 * PR: ADD a TODO here about moving logic up from ProgramLoweringContext
+	 * @TODO: #2872 Move repl specific logic from ProgramLoweringContext into this wrapper, so that ProgramLoweringContext can
+	 * be used for other purposes without carrying unnecessary REPL-specific state, logic and API.
 	 */
 	class ReplDVMCodeBuilder final {
 	public:
