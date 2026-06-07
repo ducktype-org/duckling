@@ -154,7 +154,7 @@ def generate_stencils(
 @click.option("-v", "--verbose", is_flag=True)
 @click.option("-s", "--shared", is_flag=True)
 @click.option("--order", type=click.File("r"))
-@click.argument("binary", type=click.File("rb"))  # rb = read binary
+@click.argument("binary", type=click.File("r"))
 @llvm_tools_version_options
 def main(
     llvm_readobj, output, binary, verbose, accept_all_sections, shared, order, **kwargs
@@ -168,7 +168,7 @@ def main(
         order=order,
     )
 
-    output.write(stencils_to_c(stencils, binary=binary.read()))
+    output.write(stencils_to_c(stencils))
 
 
 if __name__ == "__main__":

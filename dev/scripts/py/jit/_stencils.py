@@ -18,9 +18,6 @@ def _signed(value: int) -> int:
         value -= 1 << 64
     return value
 
-def byte_to_c(byte) -> str:
-    return "std::byte{0x" + f"{byte:02x}" + "}"
-
 
 @enum.unique
 class HoleValue(enum.Enum):
@@ -115,13 +112,5 @@ class Stencil:
             ]
         )
 
-def stencils_to_c(stencils, binary) -> str:
-    return ', '.join(
-        [
-            f".stencils_binary = std::array<std::byte, {len(binary)}>"
-            + list_quote([byte_to_c(byte) for byte in binary]),
-            ".stencils_data = std::to_array<StencilData>("
-            + list_quote([stencil.to_c() for stencil in stencils])
-            + ")",
-        ]
-    )
+def stencils_to_c(stencils) -> str:
+    return f"std::array<StencilData, {len(stencils)}>" + list_quote([stencil.to_c() for stencil in stencils])

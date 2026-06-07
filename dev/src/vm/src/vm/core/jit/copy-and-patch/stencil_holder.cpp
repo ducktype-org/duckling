@@ -10,12 +10,20 @@
 
 namespace vm::jit::cnp {
 	[[nodiscard]] auto& getLoadedStencils() {
-		static auto loaded_stencils = Stencils{
+		static constexpr char binary[] = {
+#embed "stencils-so"
+		};
+
+		static auto stencils = Stencils{
 // Linter doesn't actually build stencils-nm so it would be unavailable.
 #if UNDER_LINTER
+			.stencils_binary = std::bit_cast<std::array<std::byte, sizeof(binary)>>(binary),
+			.stencils_data =
 	#include <stencils-nm>
 #endif
-        }.load();
+		};
+
+		static auto loaded_stencils = std::move(stencils).load();
 		return loaded_stencils;
 	}
 
