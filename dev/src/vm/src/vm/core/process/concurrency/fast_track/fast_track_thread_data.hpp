@@ -72,8 +72,8 @@ namespace vm {
 		void onAcquire(const VectorClock& lock_vc) { vc |= lock_vc; }
 
 		void onRelease(VectorClock& lock_vc) {
-			lock_vc       = vc;
-			vc[thread_id] = vc[thread_id] + 1;
+			lock_vc = vc;
+			vc.increment(thread_id);
 		}
 
 		void joinVC(const VectorClock& other_vc) { vc |= other_vc; }

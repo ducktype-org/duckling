@@ -47,6 +47,8 @@ namespace vm {
 		return true;
 	}
 
+	void VectorClock::increment(api::ThreadID thread_id) { ++(*this)[thread_id]; }
+
 	bool VectorClock::operator==(const VectorClock& other) const {
 		usize max_size = std::max(clocks.size(), other.clocks.size());
 		for (usize i = 0; i < max_size; ++i) {
@@ -57,9 +59,4 @@ namespace vm {
 		return true;
 	}
 
-	bool VectorClock::operator<(const VectorClock& other) const {
-		return *this <= other && !(*this == other);
-	}
-
-	bool VectorClock::operator!=(const VectorClock& other) const { return !(*this == other); }
 }

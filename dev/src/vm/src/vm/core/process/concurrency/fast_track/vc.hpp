@@ -83,13 +83,9 @@ namespace vm {
 		bool operator==(const VectorClock& other) const;
 
 		/**
-		 * @brief Strict partial order: VC_1 < VC_2 <=> VC_1 <= VC_2 \land VC_1 != VC_2.
+		 * @brief Increment clock for thread t: VC(t) += 1.
 		 */
-		bool operator<(const VectorClock& other) const;
+		void increment(api::ThreadID thread_id);
 
-		/**
-		 * @brief Inequality: VC_1 != VC_2.
-		 */
-		bool operator!=(const VectorClock& other) const;
 	};
 }

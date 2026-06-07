@@ -44,7 +44,7 @@ namespace vm {
 		/**
 		 * @brief Successor: c@t -> (c+1)@t.
 		 */
-		void increment();
+		[[maybe_unused]] void increment() { ++clock_value; }
 
 		/**
 		 * @brief Epoch comparison with VC: c@t <= VC <=> c <= VC(t).

@@ -95,21 +95,6 @@ inline static void writeToPlace(
 	)
 #define READ_FROM_DIRECT_ARG(TYPE, ARG) safeReadObjectBytes<TYPE>(ARG)
 
-[[nodiscard]] [[gnu::always_inline]]
-inline static Ref<vm::ShadowBlock> getShadowBlockRefFromArg(
-	vm::FastTrackSafeVMThread& ft_thread, vm::ShadowBlock** local_stack_blocks, u64 arg
-) {
-	bool is_global = (arg >> 63) != 0;
-	u64  offset    = arg & ~(1ULL << 63);
-	if (is_global) {
-		return static_cast<vm::FastTrackSafeVMProcess&>(ft_thread.getProcess())
-		    .getFTGlobals()
-		    .getGlobalShadowBlock(offset);
-	} else {
-		return { local_stack_blocks[offset] };
-	}
-}
-
 /**
  * @brief Convenience macros for accessing FastTrack data from ft_* opcode functions.
  * The thread argument is always SafeVMThread& but ft_* opcodes only execute when a
