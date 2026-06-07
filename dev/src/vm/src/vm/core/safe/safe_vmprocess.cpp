@@ -23,6 +23,7 @@
 #include <mutex>
 #include <shared_mutex>
 #include <sstream>
+#include <thread>
 #include <variant>
 #include <iostream>
 
@@ -135,6 +136,38 @@ namespace vm {
 				result = std::unexpected(api::OtherError{ "unexpected status response" });
 		});
 		return result;
+	}
+
+	void SafeVMProcess::onTerminalStatus(const api::ProcStatus& status) noexcept {
+		if (!api::isStatusTerminal(status)) return;
+
+		const auto current_thread_id = std::this_thread::get_id();
+
+		// Find which thread is currently executing (calling this hook)
+		api::ThreadID executing_thread_id = api::ThreadID{ ~0ULL };
+		for (auto& thread: vm_threads) {
+			if (thread.exec_thread && thread.exec_thread->get_id() == current_thread_id) {
+				executing_thread_id = thread.getThreadID();
+				break;
+			}
+		}
+
+		// Only auto-stop child threads if the main thread (id=0) triggered the terminal status.
+		// If a child thread panicked, the main thread may be blocked in join() waiting for that
+		// child, so trying to stop the main thread would cause deadlock. In that case, let the
+		// panic propagate and rely on explicit cleanup.
+		if (executing_thread_id.asInt() != 0) return;
+
+		// Main thread became terminal: stop all active child threads
+		for (auto& thread: vm_threads) {
+			if (!thread.hasActiveThread()) continue;
+			if (thread.getThreadID().asInt() == 0) continue;  // Skip main thread
+
+			const bool stop_requested = thread.stop();
+			if (!stop_requested) continue;
+
+			thread.joinExecutionThread();
+		}
 	}
 
 	base::Optional<api::ApiError> SafeVMProcess::assertProcessCanRespond() {

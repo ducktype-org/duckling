@@ -67,10 +67,7 @@ void vm::IVMThread::respondExecutionRequest(const api::ProcStatus& response) {
 
 void vm::IVMThread::setProcessStatus(const vm::api::ProcStatus& new_status) {
 	setThreadStatus(new_status);
-	if (std::holds_alternative<api::ExecutionPanicked>(my_process.getStatus())) {
-		return;
-	}
-	my_process.setStatus(new_status);
+	my_process.setStatus(new_status, thread_id);
 }
 
 bool vm::IVMThread::joinExecutionThread() {

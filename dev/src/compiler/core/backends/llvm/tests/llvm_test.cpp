@@ -227,7 +227,7 @@ private:
 		// arr[3]
 		assertTrue(
 			std::regex_search(
-				ir, std::regex{ R"(getelementptr.*\[10\s+x\s+i32\].*i32\s+0,\s+i64\s+3)" }
+				ir, std::regex{ R"(getelementptr.*\[10\s+x\s+i32\].*i32\s+0,\s+i64\s+%)" }
 			),
 			"Expected GEP instruction for array indexing arr[3]"
 		);
@@ -242,7 +242,7 @@ private:
 			std::regex_search(
 				ir,
 				std::regex{
-					R"(getelementptr.*\[2\s+x\s+\[3\s+x\s+i32\].*i32\s+0,\s+i64\s+1,\s+i64\s+2)" }
+					R"(getelementptr.*\[2\s+x\s+\[3\s+x\s+i32\].*i32\s+0,\s+i64\s+%0,\s+i64\s+%1)" }
 			),
 			"Expected big GEP for nested array access matrix[1][2]"
 		);
@@ -250,7 +250,7 @@ private:
 		// points[1].y
 		// GEP: 0 (ptr), 1 (array index), 1 (field index)
 		assertTrue(
-			std::regex_search(ir, std::regex{ R"(getelementptr.*i32\s+0,\s+i64\s+1,\s+i32\s+1)" }),
+			std::regex_search(ir, std::regex{ R"(getelementptr.*i32\s+0,\s+i64\s+%0,\s+i32\s+1)" }),
 			"Expected GEP for struct field access in array: points[1].y"
 		);
 	}

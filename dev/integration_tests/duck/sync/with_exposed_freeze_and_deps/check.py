@@ -39,18 +39,15 @@ bar = {
     "version": "1.0.0",
     "features": ["b"],
     "dependencies": [],
-    "source": {
-        "Local": {
-            "absolute_path": str(Path.cwd() / "bar")
-        },
-    }
+    "source": f"local+file://{str(Path.cwd() / "bar")}"
 }
 
 exposed_freeze = get_exposed_freeze(expected_last_location)
 
+bar_loc = f"bar local+file://{str(Path.cwd() / "bar")}"
 assert_eq(freeze["root"]["name"], "foo")
 assert_eq(freeze["root"]["version"], "1.0.0")
 assert_eq(freeze["root"]["features"], ["f"])
-assert_eq(freeze["root"]["dependencies"], ["bar 1.0.0"])
+assert_eq(freeze["root"]["dependencies"], [bar_loc])
 assert_eq(freeze["dependencies"], [bar])
 assert_eq(freeze, exposed_freeze)

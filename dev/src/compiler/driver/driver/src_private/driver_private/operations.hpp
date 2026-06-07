@@ -7,26 +7,14 @@
 
 namespace compiler::driver {
 
-	struct CompileHOUTUnitToLIRModuleDataKey final {
-		CRef<helios::HOUTUnit> hout_unit;
-		base::StrID            module_name;
-
-		auto operator<=>(const CompileHOUTUnitToLIRModuleDataKey&) const = default;
-
-		[[nodiscard]] base::Bit256 queryUnstablePerfectHash() const;
-	};
 
 	/**
-	 * @brief Query that converts HOUTUnit to LIRUnitWithBackendName.
-	 * @TODO: #2246 Consider removing this query and moving logic from it elsewhere
-	 * or changing it into function (it only call unit lowering and generates IR debug artifacts).
+	 * @brief Converts HOUTUnit to LIRUnitWithBackendName.
+	 * @note It also prints and/or saves in artifacts IR representations if requested by options.
 	 */
-	DECLARE_QUERY(
-		CompileHOUTUnitToLIRModuleData,
-		CompileHOUTUnitToLIRModuleDataKey,
-		CRef<query::QResult<LIRUnitWithBackendName>>,
-		({})
-	)
+	query::QResult<LIRUnitWithBackendName> compileHOUTUnitToLIRModuleData(
+		query::Context& ctx, const helios::HOUTUnit& hout_unit, base::StrID module_name
+	);
 
 	/**
 	 * @brief Query that produces LIRUnitWithBackendName for given Duckling module.

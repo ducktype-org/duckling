@@ -119,6 +119,7 @@ pub fn run_script<'duck>(rs_options: RunScriptOptions<'duck>) -> QuackResult<()>
             }
         }
     };
+    let root_identity = package.package().as_a_local_identity()?;
     let (lock, venv, storage) = sync(
         &package,
         StorageSyncOptions {
@@ -131,6 +132,7 @@ pub fn run_script<'duck>(rs_options: RunScriptOptions<'duck>) -> QuackResult<()>
     let profile = Profile::construct_profile(profile, package.package().manifest().profiles())?;
     let bcx = BuildContext {
         pcx: &package,
+        root_identity,
         freeze: venv.into(),
         storage,
         used_features: vec![],

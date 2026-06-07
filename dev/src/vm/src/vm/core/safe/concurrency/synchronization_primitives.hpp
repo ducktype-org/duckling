@@ -12,8 +12,8 @@
 
 namespace vm {
 	struct Mutex {
-		std::mutex  m;
-		VectorClock vc;
+		std::timed_mutex m;
+		VectorClock      vc;
 	};
 
 	class SynchronizationPrimitives final {
