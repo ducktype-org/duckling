@@ -15,6 +15,8 @@
 #include <driver/operations/generic_operations.hpp>
 #include <driver/standard_library/standard_library.hpp>
 #include <driver/task/task.hpp>
+#include <formatter/config.hpp>
+#include <formatter/formatter.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/pst.hpp>
@@ -408,6 +410,101 @@ clah::Clah getClahForMain() {
 					std::cout << "\n";
 
 					return exit_code;
+				})
+		)
+	    .addSubcommand(
+			clah::Clah(
+				"format", "Formats a single Duckling source file and prints the result to cout."
+			)
+				.addPositional(clah::FileParser::make("file"))
+				.add(clah::ParamBuilder::ofValue(clah::StringParser::make("config"))
+	                     .addShortName('c')
+	                     .addLongName("config")
+	                     .addShortDesc("Path to a JSON formatter configuration file.")
+	                     .optional()
+	                     .build())
+				.add(clah::ParamBuilder::ofFlag()
+	                     .addShortName('i')
+	                     .addLongName("in-place")
+	                     .addShortDesc("Write the result back to the file instead of stdout.")
+	                     .build())
+				.add(clah::ParamBuilder::ofFlag()
+	                     .addShortName('k')
+	                     .addLongName("check")
+	                     .addShortDesc(
+							 "Do not write output; exit non-zero if the file is not already "
+							 "formatted."
+						 )
+	                     .build())
+				.setHandler([](const clah::ParsingResult& options) -> int {
+					auto init_result = compiler::driver::initializeTheCompiler(
+						compiler::driver::CompilerModeOfOperationAndOptions::BareMode{
+							.debug_options = debug_options::getDebugOptionsFromClah(options),
+						}
+					);
+
+					if (init_result.status().isBad()) {
+						compiler::driver::exit();
+						return 1;
+					}
+
+					auto file_to_format = options.getPositional<fs::File>(0);
+
+					formatter::FormatConfig format_config = formatter::FormatConfig::defaults();
+					auto config_path = options.getValue<std::string>("config").copyValueOr("");
+					if (not config_path.empty()) {
+						// fs::File's constructor panics on a missing path, so validate first.
+						fs::FilePath config_file_path(config_path);
+						if (not config_file_path.exists()) {
+							CORE_USER_LOG(base::strConcat(
+								"Error: formatter config file does not exist: ", config_path, "\n"
+							));
+							compiler::driver::exit();
+							return 1;
+						}
+						auto config_content = fs::File(config_file_path).getContent();
+						auto content_view   = config_content.view();
+						try {
+							auto config_json = nlohmann::json::parse(
+								content_view.getBegin(),
+								content_view.getBegin() + content_view.size()
+							);
+							format_config = formatter::FormatConfig::fromJson(config_json);
+						} catch (const nlohmann::json::exception& e) {
+							CORE_USER_LOG(base::strConcat(
+								"Error: failed to parse formatter config JSON: ", e.what(), "\n"
+							));
+							compiler::driver::exit();
+							return 1;
+						}
+					}
+
+					auto source_content = file_to_format.getContent();
+					auto source_view    = source_content.view().stringView();
+
+					auto token_file = tokenizer::makeTokenSource(file_to_format);
+
+					if (not token_file->tokenize()) {
+						std::cout << "Tokenization errors.\n";
+						return 1;
+					}
+
+					auto formatted = formatter::formatTokens(
+						token_file->getTokenData(), format_config, source_view
+					);
+
+					if (options.isFlag("check")) {
+						if (formatted == source_view) return 0;
+						std::cout << file_to_format.getFilePath().strView() << ": not formatted\n";
+						return 1;
+					}
+
+					if (options.isFlag("in-place"))
+						file_to_format.writeToFile(formatted);
+					else
+						std::cout << formatted;
+
+					return 0;
 				})
 		)
 	    .addSubcommand(

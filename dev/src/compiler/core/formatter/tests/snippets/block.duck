@@ -1,0 +1,9 @@
+block {}
+
+block B {}
+
+block B {
+	a++;
+}
+
+
