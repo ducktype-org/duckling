@@ -218,7 +218,7 @@ namespace vm::api {
 		    .transform(ignoreResponse);
 	}
 
-	std::expected<void, ApiError> attachStatusListener(
+	std::expected<void, ApiError> attachOutputListener(
 		PID pid, Ref<events::Listener<std::string>> listener
 	) {
 		return Supervisor::get()
