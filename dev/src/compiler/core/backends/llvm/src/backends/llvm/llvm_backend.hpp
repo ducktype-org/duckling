@@ -3,6 +3,7 @@
 #include "module_impl_fd.hpp"
 
 #include <lir/lir_structure/lir_structure_fd.hpp>
+#include <ctv/ctv_fd.hpp>
 
 #include <base/pointers/box.hpp>
 #include <base/types/ok_bad.hpp>
@@ -62,16 +63,16 @@ namespace compiler::backend_llvm {
 
 		/**
 		 * @brief Adds a global variable declaration to the LLVM module.
-		 *
-		 * Note:
-		 * * If the global is a constant, it will be initialized within this function with the
-		 * initial CTV value.
-		 * * If the global is a variable, it will be zero-initialized by default, and the initial
-		 * value will be ignored (i.e. this does not add any constructors for the global variables).
+		 * @note It only adds the declaration of the global variable, and does not handle any initialization logic.
 		 *
 		 * @param lir_global The global variable to be added to the module.
 		 */
-		void addGlobalToModule(const lir::LIRGlobalData& lir_global);
+		void addGlobalDeclarationToModule(const lir::LIRGlobalData& lir_global);
+
+		/**
+		 * @brief Sets the initializer of a global variable to a constant value.
+		 */
+		void setGlobalConstantInitializer(base::StrID global_name, const ctv::CompileTimeValue& constant_value);
 
 		/**
 		 * @brief Adds a function to the LLVM module's list of global constructors.
