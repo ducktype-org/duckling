@@ -53,8 +53,9 @@ namespace vm {
 				auto              lck = lock();
 				std::stringstream sstr;
 				sstr << v;
-				output_stream << sstr.str();
-				output_emitter.emitEvent(sstr.str());
+				std::string str = std::move(sstr).str();
+				output_stream << str;
+				output_emitter.emitEvent(str);
 			}
 			output_empty_cv.notify_all();
 		}
