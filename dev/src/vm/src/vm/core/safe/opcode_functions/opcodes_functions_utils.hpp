@@ -100,10 +100,12 @@ inline static void writeToPlace(
  * The thread argument is always SafeVMThread& but ft_* opcodes only execute when a
  * FastTrackSafeVMThread is in use, so the downcast is safe.
  */
-#define FT_THREAD  (static_cast<vm::FastTrackSafeVMThread&>(thread))
-#define FT_DATA    (FT_THREAD.ft_data)
-#define FT_RT      (FT_DATA.ft_runtime)
-#define FT_GLOBALS (FT_THREAD.getFTGlobals())
+#define FT_THREAD      (static_cast<vm::FastTrackSafeVMThread&>(thread))
+#define FT_DATA        (FT_THREAD.ft_data)
+#define FT_RT          (FT_DATA.ft_runtime)
+#define FT_GLOBALS     (FT_THREAD.getFTGlobals())
+// Expands to the three args every processRead/processWrite call needs.
+#define FT_EPOCH_ARGS  FT_DATA.thread_id, FT_DATA.getVC()[FT_DATA.thread_id], FT_DATA.getVC()
 
 [[nodiscard]] [[gnu::always_inline]]
 inline static bool isGlobalPlace(u64 place_arg) {

@@ -12,10 +12,11 @@
 namespace vm::kind {
 
 	struct FieldDesc {
-		Offset  offset;
-        ShadowOffset shadow_offset;
-        PointerOffset pointer_offset;
-		TypeRef type;
+		Offset        offset;
+		ShadowOffset  shadow_offset;
+		ShadowSize    shadow_size;
+		PointerOffset pointer_offset;
+		TypeRef       type;
 	};
 
 	struct Data {

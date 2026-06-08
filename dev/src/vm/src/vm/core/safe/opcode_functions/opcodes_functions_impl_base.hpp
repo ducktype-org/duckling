@@ -1315,8 +1315,8 @@ namespace vm {
 
 			u64 n = type->getShadowSize();
 			for (u64 i = 0; i < n; ++i) {
-				shadow_data_ptr[i].processWrite(FT_DATA.thread_id, FT_DATA.getVC()[FT_DATA.thread_id], FT_DATA.getVC());
-				shadow_data_ptr[i].processRead (FT_DATA.thread_id, FT_DATA.getVC()[FT_DATA.thread_id], FT_DATA.getVC());
+				shadow_data_ptr[i].processWrite(FT_EPOCH_ARGS);
+				shadow_data_ptr[i].processRead (FT_EPOCH_ARGS);
 			}
 
 			FT_GLOBALS.registerShadow(data_block->getID(), shadow_block.get());
@@ -1395,7 +1395,7 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(ft_placeRead)(FUNCTION_ARGS) {
 		{
 			ShadowEntry* entry = getShadowEntryPtr(frame, FT_THREAD, instr->arg0);
-			entry->processRead(FT_DATA.thread_id, FT_DATA.getVC()[FT_DATA.thread_id], FT_DATA.getVC());
+			entry->processRead(FT_EPOCH_ARGS);
 		}
 		FUNCTION_CONT(1);
 	}
@@ -1403,7 +1403,7 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(ft_placeWrite)(FUNCTION_ARGS) {
 		{
 			ShadowEntry* entry = getShadowEntryPtr(frame, FT_THREAD, instr->arg0);
-			entry->processWrite(FT_DATA.thread_id, FT_DATA.getVC()[FT_DATA.thread_id], FT_DATA.getVC());
+			entry->processWrite(FT_EPOCH_ARGS);
 		}
 		FUNCTION_CONT(1);
 	}
@@ -1411,7 +1411,7 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(ft_placeCRead)(FUNCTION_ARGS) {
 		if (frame->flags.flag) {
 			ShadowEntry* entry = getShadowEntryPtr(frame, FT_THREAD, instr->arg0);
-			entry->processRead(FT_DATA.thread_id, FT_DATA.getVC()[FT_DATA.thread_id], FT_DATA.getVC());
+			entry->processRead(FT_EPOCH_ARGS);
 		}
 		FUNCTION_CONT(1);
 	}
@@ -1419,7 +1419,7 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(ft_placeCWrite)(FUNCTION_ARGS) {
 		if (frame->flags.flag) {
 			ShadowEntry* entry = getShadowEntryPtr(frame, FT_THREAD, instr->arg0);
-			entry->processWrite(FT_DATA.thread_id, FT_DATA.getVC()[FT_DATA.thread_id], FT_DATA.getVC());
+			entry->processWrite(FT_EPOCH_ARGS);
 		}
 		FUNCTION_CONT(1);
 	}
@@ -1514,7 +1514,7 @@ namespace vm {
 				u32 size = 1;
 				if_opt_some(struct_type->getFields(), fields) {
 					for (const auto& field : *fields) {
-						if (field.shadow_offset == shadow_fld) { size = field.type->getShadowSize(); break; }
+						if (field.shadow_offset == shadow_fld) { size = field.shadow_size; break; }
 					}
 				}
 				auto tid = FT_DATA.thread_id;
@@ -1536,7 +1536,7 @@ namespace vm {
 				u32 size = 1;
 				if_opt_some(struct_type->getFields(), fields) {
 					for (const auto& field : *fields) {
-						if (field.shadow_offset == shadow_fld) { size = field.type->getShadowSize(); break; }
+						if (field.shadow_offset == shadow_fld) { size = field.shadow_size; break; }
 					}
 				}
 				auto tid = FT_DATA.thread_id;

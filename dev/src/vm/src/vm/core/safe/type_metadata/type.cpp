@@ -130,6 +130,7 @@ namespace vm {
 			// byte offset is set during finalization; shadow/pointer offsets come from ValidType
 			data.fields.emplace_back(kind::FieldDesc{ .offset         = Offset(0),
 				.shadow_offset  = field_def.shadow_offset,
+				.shadow_size    = field_def.type->getShadowSize(),
 				.pointer_offset = field_def.pointer_offset,
 				.type           = field_def.type });
 		}

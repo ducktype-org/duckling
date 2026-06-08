@@ -9,11 +9,12 @@
 #include <base/types/ints.hpp>
 
 #include <mutex>
+#include <optional>
 
 namespace vm {
 	struct Mutex {
-		std::timed_mutex m;
-		VectorClock      vc;
+		std::timed_mutex         m;
+		std::optional<VectorClock> vc;  // only populated when FastTrack is enabled
 	};
 
 	class SynchronizationPrimitives final {

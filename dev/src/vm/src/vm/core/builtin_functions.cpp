@@ -166,7 +166,10 @@ namespace vm::builtins {
 	}
 
 	u64 FunctionHandlers::builtinCreateMutex(SafeVMThread& thread) {
-		return thread.safe_process.getSynchronizationPrimitives().addMutex();
+		auto id = thread.safe_process.getSynchronizationPrimitives().addMutex();
+		if (thread.safe_process.getSettings().enable_fast_track)
+			thread.safe_process.getSynchronizationPrimitives().getMutex(id)->vc.emplace();
+		return id;
 	}
 
 	void FunctionHandlers::builtinLockMutex(SafeVMThread& thread, u64 mutex_id) {
@@ -184,13 +187,13 @@ namespace vm::builtins {
 		// Acquire GIL after blocking: bytecode execution requires holding the GIL.
 		thread.acquireGil();
 		if (thread.safe_process.getSettings().enable_fast_track)
-			static_cast<FastTrackSafeVMThread&>(thread).getFTData().onAcquire(mutex->vc);
+			static_cast<FastTrackSafeVMThread&>(thread).getFTData().onAcquire(*mutex->vc);
 	}
 
 	void FunctionHandlers::builtinUnlockMutex(SafeVMThread& thread, u64 mutex_id) {
 		auto mutex = thread.safe_process.getSynchronizationPrimitives().getMutex(mutex_id);
 		if (thread.safe_process.getSettings().enable_fast_track)
-			static_cast<FastTrackSafeVMThread&>(thread).getFTData().onRelease(mutex->vc);
+			static_cast<FastTrackSafeVMThread&>(thread).getFTData().onRelease(*mutex->vc);
 		mutex->m.unlock();
 	}
 
@@ -210,11 +213,11 @@ namespace vm::builtins {
 		thread.releaseGil();
 		try {
 			if (ft_enabled)
-				static_cast<FastTrackSafeVMThread&>(thread).getFTData().onRelease(mutex->vc);
+				static_cast<FastTrackSafeVMThread&>(thread).getFTData().onRelease(*mutex->vc);
 			const bool interrupted
 				= cv->wait(mutex->m, [&thread] { return thread.isTerminateRequested(); });
 			if (ft_enabled)
-				static_cast<FastTrackSafeVMThread&>(thread).getFTData().onAcquire(mutex->vc);
+				static_cast<FastTrackSafeVMThread&>(thread).getFTData().onAcquire(*mutex->vc);
 			if (interrupted) throw vm::KillProcessException{};
 		} catch (const vm::exceptions::VMRuntimeException&) {
 			// Acquire GIL: exception handlers and destructors need exclusive access to process
