@@ -70,7 +70,14 @@ namespace compiler::backend_vm {
 		[[nodiscard]] base::Optional<debug_info::DebugInfo> buildDebugInfo();
 
 	private:
-		// A Boxed pointer to allow forward declaration in order to hide implementation details.
+		/**
+		 * We friend ReplDVMCodeBuilder, so it can access program_context directly.
+		 */
+		friend class ReplDVMCodeBuilder;
+
+		/** 
+		 * A Boxed pointer to allow forward declaration in order to hide implementation details.
+		 */
 		Box<internal::ProgramLoweringContext> program_context;
 
 		bool build_debug_info;

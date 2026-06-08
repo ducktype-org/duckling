@@ -6,52 +6,28 @@
 #include <logger/logger.hpp>
 
 namespace compiler::backend_vm {
-	/**
-	 * @brief Factory function: Create a new persistent lowering context for REPL.
-	 *
-	 */
-	Box<internal::ProgramLoweringContext> createReplLoweringContext(query::Context& query_ctx) {
-		return makeBox<internal::ProgramLoweringContext>(query_ctx, false, false);
-	}
 
 	ReplDVMCodeBuilder::ReplDVMCodeBuilder(query::Context& query_ctx):
-		  m_context(createReplLoweringContext(query_ctx)) {}
+		  code_builder(query_ctx, false, false) {}
 
 	ReplDVMCodeBuilder::~ReplDVMCodeBuilder()                                        = default;
 	ReplDVMCodeBuilder::ReplDVMCodeBuilder(ReplDVMCodeBuilder&&) noexcept            = default;
 	ReplDVMCodeBuilder& ReplDVMCodeBuilder::operator=(ReplDVMCodeBuilder&&) noexcept = default;
 
 	void ReplDVMCodeBuilder::setContext(query::Context& query_ctx) {
-		m_context->setContext(query_ctx);
+		code_builder.program_context->setContext(query_ctx);
 	}
 
-	void ReplDVMCodeBuilder::invalidateContext() { m_context->invalidateContext(); }
+	void ReplDVMCodeBuilder::invalidateContext() { code_builder.program_context->invalidateContext(); }
 
 	base::Optional<base::Ref<query::Context>> ReplDVMCodeBuilder::getActiveContext() const {
-		return m_context->getActiveContext();
+		return code_builder.program_context->getActiveContext();
 	}
 
 	vm::code::CodeCollection ReplDVMCodeBuilder::insertLIRUnitAndCollectNewlyLoweredCode(
 		const lir::LIRUnit& lir_unit
 	) {
-		// @TODO: #2246 check if we can avoid repeating the logic from DVMCodeBuilder::insertLIRUnit.
-		// This is strictly connected to the loading dvm context.
-		// We mimic the same idea as in compiling a single module,
-		// but this time we append the new functions to the lowering context.
-
-		// PR: move lir_function_deals_with_strings (or better DVM filtering) filtering to lir structure
-		auto lir_function_deals_with_strings = [](const CRef<lir::Function> lir_function) {
-			auto is_string_layout = [](const CRef<tsl::TypeLayout> layout) -> bool {
-				return layout->getSourceType().getType().getKind() == tsh::Kind::String;
-			};
-			if (is_string_layout(lir_function->return_type_layout)) return true;
-			for (const auto& param_layout: lir_function->parameter_layouts)
-				if (is_string_layout(param_layout)) return true;
-			return false;
-		};
-
-
-		auto snapshot = m_context->captureLoweredEntitiesSnapshot();
+		auto snapshot = code_builder.program_context->captureLoweredEntitiesSnapshot();
 
 		CORE_DEV_LOG(
 			REPL,
@@ -66,26 +42,9 @@ namespace compiler::backend_vm {
 			"\n"
 		);
 
-		for (const auto& global: lir_unit.lir_globals)
-			(void) m_context->lowerAndKeepLirGlobal(global);
+		code_builder.insertLIRUnit(lir_unit);
 
-		// Lower all functions
-		for (const auto& lir_function: lir_unit.lir_functions) {
-			CORE_DEV_LOG(REPL, "Lowering function: ", lir_function->mangled_name.strView(), "\n");
-			// @TODO: #2483 Remove this filter (and the helper function) when strings work in DVM.
-			if (lir_function_deals_with_strings(lir_function)) {
-				CORE_DEV_LOG(
-					REPL,
-					"Lowering function that deals with strings skipped: ",
-					lir_function->mangled_name,
-					"\n"
-				);
-				continue;
-			}
-			(void) m_context->lowerAndKeepLirFunction(lir_function);
-		}
-
-		vm::code::CodeCollection new_code = m_context->collectNewCodeSince(snapshot);
+		vm::code::CodeCollection new_code = code_builder.program_context->collectNewCodeSince(snapshot);
 		return new_code;
 	}
 }

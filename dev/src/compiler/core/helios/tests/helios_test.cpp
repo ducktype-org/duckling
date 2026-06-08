@@ -828,11 +828,9 @@ private:
 		auto [module, _] = getModule(fs::File(path("test_modules/hout_simple_test")));
 
 		auto& hout
-			= query::entryPoint<compiler::helios::QueryModuleHOUT>(module)->valueOrPanic();
+			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
 
-		// @TODO: #2694 These numbers are inflated by toString methods for simple types
-		// There are 14 toString methods, remove the `+14` when possible.
-		ASSERT_EQUAL_PRINT(hout.functions.size(), 3 + 14);
+		ASSERT_EQUAL_PRINT(hout.functions.size(), 3);
 		ASSERT_EQUAL_PRINT(hout.glob_data.size(), 3);
 
 		// just for cov and to see if it does not throw:
