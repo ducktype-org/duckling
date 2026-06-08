@@ -225,14 +225,9 @@ namespace vm::jit {
 					}
 
 					// Here we are calling instruction originating from bc file or debug
-<<<<<<< HEAD
 					// instruction. Make instruction* point to switch case version of
 					// microinstruction.
-					// setInstructionPtr<true>(function_to_compile, ir_builder, instr_idx);
-=======
-					// instruction. Make instruction* point to switch case version of microinstruction.
 					setInstructionPtr<true>(bc, ir_builder, instr_idx, func_or_loop_name);
->>>>>>> jit-main
 					ir_builder.CreateCall(
 						llvm_data.types.opfun.get(),
 						getOrCreateOpcodeFunction(opfun_name),
