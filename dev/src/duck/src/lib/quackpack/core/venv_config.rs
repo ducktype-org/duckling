@@ -19,6 +19,12 @@ impl VenvConfig {
         })
     }
 
+    pub fn for_frontmatter(path: PathBuf) -> QuackResult<Self> {
+        let mut this = Self::new(path)?;
+        this.set_ephemeral(true)?;
+        Ok(this)
+    }
+
     /// Is this venv ephemeral (temporary).
     pub fn is_ephemeral(&self) -> QuackResult<bool> {
         Ok(self.config.get_bool("ephemeral")?.unwrap_or(false))

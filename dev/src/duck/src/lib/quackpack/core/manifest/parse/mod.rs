@@ -16,6 +16,8 @@ mod frontmatter;
 mod manifest;
 mod source;
 
+pub use frontmatter::try_parse_frontmatter;
+
 #[cfg(test)]
 mod tests;
 

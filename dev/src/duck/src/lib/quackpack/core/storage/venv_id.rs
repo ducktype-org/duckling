@@ -6,7 +6,7 @@ use std::sync::Arc;
 
 use crate::StrId;
 use crate::duck::util::duck_home::DuckHome;
-use crate::quackpack::core::{Manifest, Package, PackageContext};
+use crate::quackpack::core::{Manifest, PackageContext};
 
 /// A unique venv's identifier.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -109,13 +109,7 @@ impl ToVenvId for StrId {
 
 impl ToVenvId for PackageContext<'_> {
     fn to_venv_id(&self) -> VenvId {
-        self.package().to_venv_id()
-    }
-}
-
-impl ToVenvId for Package {
-    fn to_venv_id(&self) -> VenvId {
-        self.manifest().to_venv_id()
+        self.package().manifest().to_venv_id()
     }
 }
 

@@ -1,16 +1,17 @@
 //! A context of a package  parsed from the disk.
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use crate::duck::util::duck_home::DuckHome;
 use crate::quackpack::core::package_loader::PackageLoader;
 use crate::quackpack::core::venv_config::VenvConfig;
-use crate::quackpack::core::{self, Package};
-use crate::{DuckContext, QuackResult, qp_bail};
+use crate::quackpack::core::{self, AsPackage};
+use crate::{DuckContext, QuackResult, qp_bail, qp_bail_internal};
 
 #[derive(Debug)]
 /// A context of a package  parsed from the disk.
 pub struct PackageContext<'duck> {
-    package: Package,
+    package: Arc<dyn AsPackage>,
     venv_config: VenvConfig,
     ctx: &'duck DuckContext,
 }
@@ -23,7 +24,7 @@ impl<'duck> PackageContext<'duck> {
         let venv_config_path = project_root.join(PackageLoader::VENV_CONFIG_NAME);
         let venv_config = VenvConfig::new(venv_config_path)?;
         Ok(Self {
-            package,
+            package: Arc::new(package),
             venv_config,
             ctx,
         })
@@ -41,14 +42,47 @@ impl<'duck> PackageContext<'duck> {
         Ok(pcx)
     }
 
-    /// Get underlying [`Package`]
-    pub fn package(&self) -> &Package {
-        &self.package
+    #[tracing::instrument(skip_all)]
+    pub fn try_new_from_frontmatter(
+        path: PathBuf,
+        ctx: &'duck DuckContext,
+    ) -> QuackResult<Option<Self>> {
+        let Some(package) = core::try_parse_frontmatter(path.clone(), ctx)? else {
+            return Ok(None);
+        };
+        let venv_config = VenvConfig::for_frontmatter(path)?;
+        Ok(Some(Self {
+            package: Arc::new(package),
+            venv_config,
+            ctx,
+        }))
     }
 
-    /// Consume self, returning the underlying package.
-    pub fn into_package(self) -> Package {
-        self.package
+    #[tracing::instrument(skip_all)]
+    pub fn new_from_frontmatter(
+        path: PathBuf,
+        ctx: &'duck DuckContext,
+    ) -> QuackResult<Option<Self>> {
+        let Some(package) = core::try_parse_frontmatter(path.clone(), ctx)? else {
+            qp_bail_internal!(
+                "tried to construct a frontmatter package context for something that is not a frontmatter"
+            )
+        };
+        let venv_config = VenvConfig::for_frontmatter(path)?;
+        Ok(Some(Self {
+            package: Arc::new(package),
+            venv_config,
+            ctx,
+        }))
+    }
+
+    /// Get underlying [`Package`]
+    pub fn package(&self) -> &dyn AsPackage {
+        self.package.as_ref()
+    }
+
+    pub fn package_arc(&self) -> Arc<dyn AsPackage> {
+        self.package.clone()
     }
 
     /// Get [`VenvConfig`] of this [`PackageContext`]
@@ -64,11 +98,5 @@ impl<'duck> PackageContext<'duck> {
     /// Is this the global package.
     pub fn is_global(&self) -> bool {
         self.package.is_global()
-    }
-}
-
-impl From<PackageContext<'_>> for Package {
-    fn from(value: PackageContext<'_>) -> Self {
-        value.package
     }
 }

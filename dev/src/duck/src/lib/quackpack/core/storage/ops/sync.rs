@@ -48,7 +48,7 @@ pub fn sync(
     pcx: &PackageContext<'_>,
     options: StorageSyncOptions,
 ) -> QuackResult<(TrySyncLock, Venv, Storage)> {
-    debug!(root = %pcx.package().root_directory().display(), ?options);
+    debug!(root = %pcx.package().root().display(), ?options);
     let venv_config = pcx.venv_config();
     let storage_localization = venv_config
         .storage_path()?
@@ -101,13 +101,13 @@ pub fn sync(
         let data = venv.data_mut();
         data.set_last_modification(now);
         data.set_freeze(new_freeze);
-        data.set_last_known_directory(pcx.package().root_directory().to_path_buf());
+        data.set_last_known_directory(pcx.package().root().to_path_buf());
         venv
     } else {
         let data = VenvData::new(
             new_freeze,
             venv_config.is_ephemeral()?,
-            pcx.package().root_directory().to_path_buf(),
+            pcx.package().root().to_path_buf(),
             now,
             now,
         );
@@ -117,7 +117,12 @@ pub fn sync(
 
     if expose_freezefile && !options.frozen {
         let json = serde_json::to_string_pretty(venv.data().freeze())?;
-        freeze_name(pcx.package()).write(json)?;
+        freeze_name(
+            pcx.package()
+                .get_package()
+                .context_internal("expose_freezefile set on frontmatter pseudo package")?,
+        )
+        .write(json)?;
     }
     pcx.ctx()
         .console()
@@ -135,7 +140,7 @@ fn check_if_overwrites(
     id: VenvId,
 ) -> QuackResult<()> {
     let Some(venv) = venv else { return Ok(()) };
-    if pcx.package().root_directory() == venv.data().last_known_directory()
+    if pcx.package().root() == venv.data().last_known_directory()
         || !venv.data().last_known_directory().exists()
     {
         return Ok(());
@@ -148,7 +153,7 @@ fn check_if_overwrites(
             let context = if replaces {
                 Some(format!(
                     "synchronizing the package at `{}` would overwrite the venv of the package at `{}`",
-                    pcx.package().root_directory().display(),
+                    pcx.package().root().display(),
                     dir.display()
                 ))
             } else {
@@ -205,7 +210,11 @@ fn load_external_freezefile(
     if !is_exposed {
         return Ok(None);
     }
-    let freeze_path = freeze_name(pcx.package());
+    let freeze_path = freeze_name(
+        pcx.package()
+            .get_package()
+            .context_internal("expose_freezefile set on frontmatter pseudo package")?,
+    );
     if !freeze_path.is_file() {
         return Ok(None);
     }
@@ -229,7 +238,7 @@ fn get_solver_answer(
     debug!(?mode);
     let root_pkg = ExpandedPackage {
         location: ExpandedLocation::Local {
-            absolute_path: pcx.package().root_directory().to_url()?.into(),
+            absolute_path: pcx.package().root().to_url()?.into(),
         },
         version: None,
     };

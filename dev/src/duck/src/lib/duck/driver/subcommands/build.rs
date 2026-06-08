@@ -42,7 +42,7 @@ pub fn execute(ctx: &DuckContext, matches: &ArgMatches) -> QuackResult<()> {
     // We do not allow to build the global package.
     // It has no src folder and is purely for running scripts.
     let pcx = PackageLoader::find_from_cwd(ctx, AllowGlobalPackage::No)?;
-    let features = features_from_matches(matches, pcx.package());
+    let features = features_from_matches(matches, pcx.package().unwrap_package());
     let profile = profile_from_matches(matches);
     let opts = BuildOptions {
         pcx,
