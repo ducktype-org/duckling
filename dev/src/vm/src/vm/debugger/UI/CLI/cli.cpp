@@ -189,15 +189,13 @@ namespace vm::debugger::cli {
 	}
 
 	void CLIDebugger::print(const printer::PrinterOStream& content) {
-		std::lock_guard        lk(output_mutex);
-		printer::StreamPrinter p;
-		p.print(content.getContents(), std::cout);
+		std::lock_guard lk(output_mutex);
+		printer::StreamPrinter::print(content.getContents(), std::cout);
 	}
 
 	void CLIDebugger::printNL(const printer::PrinterOStream& content) {
-		std::lock_guard        lk(output_mutex);
-		printer::StreamPrinter p;
-		p.print(content.getContents(), std::cout);
-		std::cout << "\n";
+		std::lock_guard lk(output_mutex);
+		printer::StreamPrinter::print(content.getContents(), std::cout);
+		printer::StreamPrinter::newline(1, std::cout);
 	}
 }
