@@ -16,6 +16,7 @@
 #include <vm/api/data/status.hpp>
 #include <vm/core/safe/concurrency/gil.hpp>
 #include <vm/core/safe/exceptions.hpp>
+#include <vm/core/safe/low_program/cfg/cf_graph.hpp>
 #include <vm/core/safe/low_program/low_program.hpp>
 #include <vm/core/safe/low_program/opcodes.hpp>
 #include <vm/core/safe/memory/pointer.hpp>
@@ -145,16 +146,21 @@ namespace vm {
 			));
 		}
 
-		low::LowFuncData start_function{ .name             = base::StrID("vm_start_function"),
-			                             .bc               = {},
-			                             .local_stack_size = 0,
-			                             .local_block_count
-			                             = func.result_types.size() + func.parameters.size(),
-			                             .arg_size            = 0,
-			                             .ret_size            = func.ret_size,
-			                             .parameters          = {},
-			                             .result_types        = func.result_types,
-			                             .instruction_mapping = {} };
+		low::LowFuncData start_function{
+			.name = base::StrID("vm_start_function"),
+#ifdef ENABLE_JIT
+			.cfg
+			= low::cf::ControlFlowGraph(),  // This is okay because we never JIT the start function.
+#endif
+			.bc                  = {},
+			.local_stack_size    = 0,
+			.local_block_count   = func.result_types.size() + func.parameters.size(),
+			.arg_size            = 0,
+			.ret_size            = func.ret_size,
+			.parameters          = {},
+			.result_types        = func.result_types,
+			.instruction_mapping = {}
+		};
 
 		const u64 called_function_id = process_program->getFunctions().idOf(func.name).value();
 
@@ -249,15 +255,21 @@ namespace vm {
 		auto        str_ptr_type     = types.at(base::StrID("ptr_string"));
 		auto        byte_type        = types.at(base::StrID("byte"));
 
-		low::LowFuncData start_function{ .name                = base::StrID("vm_start_function"),
-			                             .bc                  = {},
-			                             .local_stack_size    = 72,
-			                             .local_block_count   = 7,
-			                             .arg_size            = 0,
-			                             .ret_size            = func.ret_size,
-			                             .parameters          = {},
-			                             .result_types        = func.result_types,
-			                             .instruction_mapping = {} };
+		low::LowFuncData start_function{
+			.name = base::StrID("vm_start_function"),
+#ifdef ENABLE_JIT
+			.cfg
+			= low::cf::ControlFlowGraph(),  // This is okay because we never JIT the start function.
+#endif
+			.bc                  = {},
+			.local_stack_size    = 72,
+			.local_block_count   = 7,
+			.arg_size            = 0,
+			.ret_size            = func.ret_size,
+			.parameters          = {},
+			.result_types        = func.result_types,
+			.instruction_mapping = {}
+		};
 
 		// TypeIDs to pass to opcodes.
 		u64 argv_type_arg     = safeReadObjectBytes<u64>(argv_type);

@@ -484,15 +484,20 @@ namespace vm::loader::compiler {
 				result_types.emplace_back(low_program.types->at(ret));
 
 			low_program.functions.insert(
-				low::LowFuncData{ .name              = function.name,
-			                      .bc                = std::move(bytecode),
-			                      .local_stack_size  = ctx.local_stack_size,
-			                      .local_block_count = ctx.local_block_count,
-			                      .arg_size     = ctx.shared_stack_size - ctx.return_stack_size,
-			                      .ret_size     = ctx.return_stack_size,
-			                      .parameters   = std::move(parameters),
-			                      .result_types = std::move(result_types),
-			                      .instruction_mapping = std::move(ctx.instruction_mapping) },
+				low::LowFuncData{
+					.name = function.name,
+#ifdef ENABLE_JIT
+					.cfg = vm::low::cf::ControlFlowGraph(bytecode),
+#endif
+					.bc                  = std::move(bytecode),
+					.local_stack_size    = ctx.local_stack_size,
+					.local_block_count   = ctx.local_block_count,
+			        .arg_size     = ctx.shared_stack_size - ctx.return_stack_size,
+			        .ret_size     = ctx.return_stack_size,
+					.parameters          = std::move(parameters),
+					.result_types        = std::move(result_types),
+					.instruction_mapping = std::move(ctx.instruction_mapping),
+				},
 				function.name
 			);
 		}

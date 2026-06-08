@@ -1,4 +1,3 @@
-#include "../cf_analysis.hpp"
 #include "../jit_compiler.hpp"
 #include "jit_data.hpp"
 #include "jit_utils.hpp"
@@ -6,6 +5,7 @@
 
 #include <llvm_helpers/llvm_helpers.hpp>
 
+#include <vm/core/safe/low_program/cfg/cf_analysis.hpp>
 #include <vm/core/safe/low_program/instruction.hpp>
 
 LLVM_INCLUDE_BEGIN()
@@ -71,7 +71,9 @@ namespace vm::jit {
 		mpm.run(m, mam);
 	}
 
-	MRef<JitOpFun> compileLLVM(const low::LowFuncData& function_to_compile) {
+	MRef<JitOpFun> compileLLVM(
+		const low::cf::ControlFlowGraph& cfg, const low::MicroBytecode& bc, const base::StrID& name
+	) {
 		auto&                         llvm_data = llvmData();
 		llvm::orc::ThreadSafeContext& tsctx     = *llvm_data.g_context;
 
@@ -79,15 +81,14 @@ namespace vm::jit {
 		// This is necessary to avoid duplicate definitions.
 		static u64 compile_serial = 0;
 
-		const std::string symbol_name
-			= function_to_compile.name.str() + "." + std::to_string(compile_serial++);
+		const std::string symbol_name = name.str() + "." + std::to_string(compile_serial++);
 		std::unique_ptr<llvm::Module> new_module;
 
 		llvm::LLVMContext& ctx = *tsctx.getContext();
 
 		new_module = setupModule(symbol_name, ctx);
 
-		LLVMBuilder(new_module.get(), ctx).lowerFunction(function_to_compile);
+		LLVMBuilder(new_module.get(), ctx).lowerCFG(cfg, bc, name);
 
 		//optimizeModule(*new_module);
 		new_module->print(llvm::outs(), nullptr);
