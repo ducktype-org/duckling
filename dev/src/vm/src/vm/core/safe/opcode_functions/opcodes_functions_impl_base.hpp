@@ -329,7 +329,11 @@ namespace vm {
 		{
 			auto& jit_data         = thread.jit_data;
 			auto& current_func_obj = *frame->current_function;
+
 			auto  current_func_id  = current_func_obj.id;
+			auto  current_func_entrypoint = current_func_obj.
+			auto  instr_offset     = instr - current_func_obj.bc.data();
+			std::cout << "jitEntrypoint at offset " << instr_offset << " in function " << current_func_obj.name.strView() << "\n";
 
 			// @TODO: #2858 manage the size when inserting new code
 			if (jit_data.size() <= current_func_id) jit_data.resize(2 * current_func_id + 2);
@@ -339,6 +343,7 @@ namespace vm {
 			if (my_data.func_ptr) {
 				// is already compiled
 				(*my_data.func_ptr)(&instr, &local_stack, &frame, &thread);
+				if (instr_offset != current_func_entrypoint) thread.executeOneStep();
 			} else if (0 < my_data.until_compilation) {
 				// should be compiled later
 				--my_data.until_compilation;
