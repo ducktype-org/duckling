@@ -90,8 +90,8 @@ namespace vm::jit {
 
 		LLVMBuilder(new_module.get(), ctx).lowerCFG(cfg, bc, name);
 
-		//optimizeModule(*new_module);
-		new_module->print(llvm::outs(), nullptr);
+		optimizeModule(*new_module);
+		// std::error_code ec; llvm::raw_fd_ostream("llvm-dump.ll", ec) << *new_module;
 		auto&                       lljit = *llvm_data.lljit_instance;
 		llvm::orc::ThreadSafeModule tsm(std::move(new_module), tsctx);
 		if (auto err = lljit.addIRModule(std::move(tsm)))
