@@ -278,16 +278,6 @@ namespace compiler::lir {
 		 */
 		static LIRGlobal fromMIR(query::Context& ctx, mir::MIRGlobal mir_global);
 
-		/**
-		 * @note Do not use this function outside of LIR lowering / driver.
-		 * This handles both global variables and constants. For constants, it also sets CTV initial
-		 * value of the global.
-		 *
-		 * @TODO: #2246 remove this, it is only used in tests now (and update the tests)
-		 */
-		static LIRGlobal fromHOUT(query::Context& ctx, const helios::HOUTGlobalData& helios_id);
-
-
 		void debugPrint(query::Context& ctx, std::ostream& os) const;
 	};
 
@@ -652,6 +642,28 @@ namespace compiler::lir {
 
 		LIRGlobal                                         global;
 		std::variant<ctv::CompileTimeValue, CTorDtorPair> data_initialization;
+
+		/**
+		 * @brief Returns the constructor and destructor pair for the global.
+		 * Panics if the global does not have a constructor+destructor initialization.
+		 * Use only when you are sure that the global has constructor+destructor initialization (or
+		 * in tests).
+		 *
+		 * @return CTorDtorPair
+		 */
+		[[nodiscard]]
+		CTorDtorPair getCtorDtorPair() const;
+
+		/**
+		 * @brief Returns the constant value for the global.
+		 * Panics if the global does not have a constant initialization.
+		 * Use only when you are sure that the global has a constant initialization (or
+		 * in tests).
+		 *
+		 * @return ctv::CompileTimeValue
+		 */
+		[[nodiscard]]
+		ctv::CompileTimeValue getConstValue() const;
 
 		void debugPrint(query::Context& ctx, std::ostream& out) const;
 	};

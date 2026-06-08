@@ -378,14 +378,12 @@ namespace compiler::driver {
 						statement_info_result.value()
 					)) {
 					CORE_DEV_LOG(REPL, "compile_script: classified as definition\n");
-					const auto& hout_unit  = repl::getDefinitionHOUTUnit(ctx, module_id);
-					auto        lir_result = ctx.query<CompileHOUTUnitToLIRModuleData>({
-                        &hout_unit,
-                        module_name_id,
-                    });
-					if (lir_result->hasFailed())
+					const auto& hout_unit = repl::getDefinitionHOUTUnit(ctx, module_id);
+					auto        lir_result
+						= compileHOUTUnitToLIRModuleData(ctx, hout_unit, module_name_id);
+					if (lir_result.hasFailed())
 						return std::unexpected("Failed to compile definition statement to LIR");
-					repl::appendScriptLIRModuleData(merged, lir_result->valueOrPanic());
+					repl::appendScriptLIRModuleData(merged, lir_result.valueOrPanic());
 				} else {
 					// Executable statements are wrapped into functions so we can sequence them
 					// under a synthetic main while still lowering via the normal pipeline.
@@ -400,13 +398,11 @@ namespace compiler::driver {
 					);
 
 					auto hout_unit = repl::makeExecutableHOUTUnit(wrapper_result->wrapper_function);
-					auto lir_result = ctx.query<CompileHOUTUnitToLIRModuleData>({
-						&hout_unit,
-						module_name_id,
-					});
-					if (lir_result->hasFailed())
+					auto lir_result
+						= compileHOUTUnitToLIRModuleData(ctx, hout_unit, module_name_id);
+					if (lir_result.hasFailed())
 						return std::unexpected("Failed to compile executable statement to LIR");
-					repl::appendScriptLIRModuleData(merged, lir_result->valueOrPanic());
+					repl::appendScriptLIRModuleData(merged, lir_result.valueOrPanic());
 				}
 
 				++statement_counter;
@@ -423,13 +419,10 @@ namespace compiler::driver {
 				= repl::buildScriptMainWrapper(ctx, merged.module_id, main_scope, wrapper_symbols);
 			helios::HOUTUnit main_unit;
 			main_unit.functions.emplace_back(&main_fun);
-			auto main_lir = ctx.query<CompileHOUTUnitToLIRModuleData>({
-				&main_unit,
-				merged.module_id,
-			});
-			if (main_lir->hasFailed())
+			auto main_lir = compileHOUTUnitToLIRModuleData(ctx, main_unit, merged.module_id);
+			if (main_lir.hasFailed())
 				return std::unexpected("Failed to compile script main to LIR");
-			repl::appendScriptLIRModuleData(merged, main_lir->valueOrPanic());
+			repl::appendScriptLIRModuleData(merged, main_lir.valueOrPanic());
 
 			// @TODO: #2694 #2424 come back to this, and maybe remove or adapt this call
 			// accordingly. Currently we need it, to deduplicate toString methods that are emmitted
@@ -773,7 +766,7 @@ namespace compiler::driver {
 
 		// Schedule compilation of every module up front so worker threads can run
 		// them concurrently, then collect the results in a second pass.
-		struct ScheduledModule {
+		struct ScheduledModule final {
 			ModuleToCompile        module;
 			query::EntryTaskHandle handle;
 		};

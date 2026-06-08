@@ -20,13 +20,13 @@ namespace compiler::driver {
 	namespace task {
 		namespace {
 			void reportMissingPackageInTask(
-				base::StrID package_name, const DiagnosticReporter& report
+				base::StrID package_id, const DiagnosticReporter& report
 			) {
 				report(
 					base::strConcat(
 						"Package name provided in a compilation task was not found in the provided "
-						"package list. Package name: \"",
-						package_name.strView(),
+						"package list. Package id: \"",
+						package_id.strView(),
 						"\""
 					),
 					std::string{},
@@ -35,14 +35,14 @@ namespace compiler::driver {
 			}
 		}
 
-		base::Optional<compiler::frontend::ModuleID> getRootModuleIDForRawPackageName(
-			base::StrID package_name, const DiagnosticReporter& report
+		base::Optional<compiler::frontend::ModuleID> getRootModuleIDForRawPackageId(
+			base::StrID package_id, const DiagnosticReporter& report
 		) {
 			for (const auto& global_package_info: global_state::getPackages())
-				if (global_package_info.getPackageID() == package_name)
+				if (global_package_info.getPackageID() == package_id)
 					return global_package_info.getRootModule().illegalAccess().getID();
 
-			reportMissingPackageInTask(package_name, report);
+			reportMissingPackageInTask(package_id, report);
 			return {};
 		}
 	}  // namespace task
@@ -62,8 +62,8 @@ namespace compiler::driver {
 
 		bool had_error = false;
 
-		auto package_name = js::getString(json, "package", "Task requires a package name!", report);
-		if (!package_name) had_error = true;
+		auto package_id = js::getString(json, "package", "Task requires a package id!", report);
+		if (!package_id) had_error = true;
 
 		auto strategy = js::getString(json, "strategy", "Task requires a strategy!", report);
 		if (!strategy) had_error = true;
@@ -229,7 +229,7 @@ namespace compiler::driver {
 		if (had_error) return {};
 
 		return RawPackageCompilationTask{
-			.package_name = *package_name,
+			.package_id   = *package_id,
 			.build_target = std::move(build_target),
 		};
 	}
@@ -273,7 +273,7 @@ namespace compiler::driver {
 		variant_match(raw_task.task_data) {
 			variant_case(RawPackageCompilationTask, raw_package_task) {
 				auto root_module_opt
-					= task::getRootModuleIDForRawPackageName(raw_package_task.package_name, report);
+					= task::getRootModuleIDForRawPackageId(raw_package_task.package_id, report);
 
 				if (!root_module_opt.has_value()) return {};
 

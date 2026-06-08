@@ -61,7 +61,8 @@ protected:
 			compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
 				.packages_info = {
 					{
-						.package_name = base::StrID(package_name),
+.package_id   = base::StrID(package_name),
+				.package_name = base::StrID(package_name),
 						.version      = base::StrID("not_supported"),
 						.package_path  = fs::FilePath(path("modules/functions_1")),
 						.features     = {},
@@ -214,6 +215,7 @@ private:
 				frontend::createModuleTree(
 					fs::File(path(info.module_path)), base::StrID(package_id.c_str())
 				),
+				base::StrID(package_id.c_str()),
 				base::StrID("not_supported"),
 				{},
 				{}
@@ -223,11 +225,10 @@ private:
 				package_info,
 				driver::BuildTargetLLVMExecutable{
 					.output_file_stem = base::StrID("package_llvm"),
-					.linking_options  = linker::LinkingOptions{
-						.linker_path = {},
-						.additional_link_options = {},
-						.link_c_standard_library = true,
-					},
+					.linking_options  = linker::LinkingOptions{ .linker_path             = {},
+			                                                    .additional_link_options = {},
+			                                                    .link_c_standard_library = true,
+			                                                    .stdlib_link_options     = {} },
 				}
 			);
 		}
@@ -541,6 +542,7 @@ private:
 			frontend::createModuleTree(
 				fs::File(path("modules/functions_5")), base::StrID(package_name)
 			),
+			base::StrID(package_name),
 			base::StrID("not_supported"),
 			{},
 			{}
@@ -550,11 +552,10 @@ private:
 			package_info,
 			driver::BuildTargetLLVMExecutable{
 				.output_file_stem = base::StrID("package_llvm"),
-				.linking_options  = linker::LinkingOptions{
-					.linker_path = {},
-					.additional_link_options = {},
-					.link_c_standard_library = true,
-				},
+				.linking_options  = linker::LinkingOptions{ .linker_path             = {},
+		                                                    .additional_link_options = {},
+		                                                    .link_c_standard_library = true,
+		                                                    .stdlib_link_options     = {} },
 			}
 		);
 
@@ -664,6 +665,7 @@ private:
 			frontend::createModuleTree(
 				fs::File(path("modules/import_simple")), base::StrID("import_simple")
 			),
+			base::StrID("import_simple"),
 			base::StrID("not_supported"),
 			{},
 			{}
@@ -673,11 +675,10 @@ private:
 			package_info,
 			driver::BuildTargetLLVMExecutable{
 				.output_file_stem = base::StrID("package_llvm"),
-				.linking_options  = linker::LinkingOptions{
-					.linker_path = {},
-					.additional_link_options = {},
-					.link_c_standard_library = true,
-				},
+				.linking_options  = linker::LinkingOptions{ .linker_path             = {},
+		                                                    .additional_link_options = {},
+		                                                    .link_c_standard_library = true,
+		                                                    .stdlib_link_options     = {} },
 			}
 		);
 
@@ -789,6 +790,7 @@ private:
 				fs::File(path("modules/imports_complicated")),
 				base::StrID("imports_complicated_test")
 			),
+			base::StrID("imports_complicated_test"),
 			base::StrID("not_supported"),
 			{},
 			{}
@@ -798,11 +800,10 @@ private:
 			package_info,
 			driver::BuildTargetLLVMExecutable{
 				.output_file_stem = base::StrID("package_llvm"),
-				.linking_options  = linker::LinkingOptions{
-					.linker_path = {},
-					.additional_link_options = {},
-					.link_c_standard_library = true,
-				},
+				.linking_options  = linker::LinkingOptions{ .linker_path             = {},
+		                                                    .additional_link_options = {},
+		                                                    .link_c_standard_library = true,
+		                                                    .stdlib_link_options     = {} },
 			}
 		);
 
@@ -1029,6 +1030,7 @@ private:
 			frontend::createModuleTree(
 				fs::File(path("modules/functions_2")), base::StrID("src_pos_dvm")
 			),
+			base::StrID("src_pos_dvm"),
 			base::StrID("not_supported"),
 			{},
 			{}
