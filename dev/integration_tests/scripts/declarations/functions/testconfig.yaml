@@ -1,0 +1,35 @@
+# Tests for declaration of functions in scripts in Duckling.
+
+Tests:
+  nested_calls:
+    folder: "interactions"
+    Cases:
+      direct:
+        mode: direct
+        Output:
+          String: "42\n"
+      vm:
+        mode: vm
+        Output:
+          String: "42\n"
+      exe:
+        mode: exe
+        Output:
+          String: "42\n"
+
+  resilience:
+    Enabled: "false"
+    folder: "interactions"
+    Cases:
+      direct:
+        mode: direct
+        Output:
+          String: "4\n4\n"
+      vm:
+        mode: vm
+        Output:
+          String: "4\n4\n"
+      exe:
+        mode: exe
+        Output:
+          String: "4\n4\n"

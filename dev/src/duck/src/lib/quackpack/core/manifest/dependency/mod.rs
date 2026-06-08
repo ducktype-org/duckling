@@ -1,5 +1,5 @@
 //! Managing a single dependency abstraction.
-use crate::quackpack::core::{FeatureName, InternedSource, Source, Version};
+use crate::quackpack::core::{FeatureName, Source, Version};
 use crate::{QuackError, QuackResult, StrId, qp_bail};
 
 mod conditions;
@@ -27,7 +27,7 @@ pub struct Dependency {
     /// All versions of this dependency.
     versions: Vec<Version>,
     /// Source of this dependency.
-    source: InternedSource,
+    source: Source,
 }
 
 impl Dependency {
@@ -66,7 +66,7 @@ impl Dependency {
             name,
             alias,
             versions,
-            source: source.into(),
+            source,
         })
     }
 
@@ -139,8 +139,8 @@ impl Dependency {
     }
 
     /// Get the source of this package.
-    pub fn source(&self) -> InternedSource {
-        self.source
+    pub fn source(&self) -> &Source {
+        &self.source
     }
 
     /// Get the effective name of this dependency.

@@ -2,7 +2,6 @@
 use std::path::Path;
 
 use tracing::debug;
-use url::Url;
 
 use super::types;
 use crate::quackpack::schemas::registry;
@@ -10,6 +9,7 @@ use crate::quackpack::schemas::registry;
 #[cfg(test)]
 mod tests;
 
+use crate::quackpack::util::interned_url::InternedUrl;
 use crate::{QuackResult, QuackResultContext};
 
 const SQL_ERROR_MESSAGE: &str = "failed to execute an SQL query";
@@ -197,7 +197,7 @@ impl ManifestCache {
     #[tracing::instrument(skip(self))]
     pub fn add_or_replace_multiple_manifests(
         &mut self,
-        registry_url: Url,
+        registry_url: InternedUrl,
         multi_manifest: Vec<registry::Manifest>,
     ) -> QuackResult<()> {
         let package_manifest_pairs = multi_manifest
@@ -208,7 +208,7 @@ impl ManifestCache {
                 let package = types::PackageWithUrl {
                     id: manifest.metadata.name.into(),
                     version: manifest.metadata.version,
-                    url: registry_url.clone(),
+                    url: registry_url,
                 };
                 Ok((package, json))
             })

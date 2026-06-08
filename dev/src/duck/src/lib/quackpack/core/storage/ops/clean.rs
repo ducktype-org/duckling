@@ -162,7 +162,7 @@ fn clean_venv_from_storage(
         venv.save_to(storage, ctx)?;
     }
     all_deps.extend(data.freeze().dependencies().iter().filter_map(|dep| {
-        if dep.source().is_local() {
+        if dep.identity().origin().kind().is_local() {
             None
         } else {
             Some(dep.to_package_id().storage_name())

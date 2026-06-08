@@ -1,10 +1,8 @@
-use std::path::{Path, PathBuf};
-
 use serde::{Deserialize, Serialize};
-use url::Url;
 
 use crate::StrId;
 use crate::quackpack::core::Version;
+use crate::quackpack::util::interned_url::InternedUrl;
 use crate::util::hash::sha256_string;
 
 #[derive(Debug, Deserialize, Serialize, Clone, Hash, PartialEq, Eq)]
@@ -67,12 +65,12 @@ impl From<LocalId> for PackageId {
 pub struct RegistryId {
     id: StrId,
     version: Version,
-    url: Url,
+    url: InternedUrl,
 }
 
 impl RegistryId {
     /// Create a new [`RegistryId`].
-    pub fn new(id: StrId, version: Version, url: Url) -> Self {
+    pub fn new(id: StrId, version: Version, url: InternedUrl) -> Self {
         Self { id, version, url }
     }
 
@@ -111,17 +109,11 @@ impl RegistryId {
     }
 
     /// Get the registry url of this package.
-    pub fn url(&self) -> &Url {
-        &self.url
+    pub fn url(&self) -> InternedUrl {
+        self.url
     }
-
-    /// A mutable counterpart to the [`url`](Self::url).
-    pub fn url_mut(&mut self) -> &mut Url {
-        &mut self.url
-    }
-
     /// Set the url of this package.
-    pub fn set_url(&mut self, url: Url) {
+    pub fn set_url(&mut self, url: InternedUrl) {
         self.url = url;
     }
 }
@@ -129,13 +121,13 @@ impl RegistryId {
 #[derive(Deserialize, Debug, Serialize, Clone, Hash, PartialEq, Eq)]
 /// An ID of a stored git package.
 pub struct GitId {
-    url: Url,
+    url: InternedUrl,
     commit: StrId,
 }
 
 impl GitId {
     /// Create a new [`GitId`].
-    pub fn new(url: Url, commit: StrId) -> Self {
+    pub fn new(url: InternedUrl, commit: StrId) -> Self {
         Self { url, commit }
     }
 
@@ -153,17 +145,12 @@ impl GitId {
     }
 
     /// Get the repository url of this package.
-    pub fn url(&self) -> &Url {
-        &self.url
-    }
-
-    /// A mutable counterpart to the [`url`](Self::url).
-    pub fn url_mut(&mut self) -> &mut Url {
-        &mut self.url
+    pub fn url(&self) -> InternedUrl {
+        self.url
     }
 
     /// Set the url of this package.
-    pub fn set_url(&mut self, url: Url) {
+    pub fn set_url(&mut self, url: InternedUrl) {
         self.url = url;
     }
 
@@ -181,12 +168,12 @@ impl GitId {
 #[derive(Deserialize, Debug, Serialize, Clone, Hash, PartialEq, Eq)]
 /// An ID of a local package.
 pub struct LocalId {
-    path: PathBuf,
+    path: InternedUrl,
 }
 
 impl LocalId {
     /// Create a new [`LocalId`].
-    pub fn new(path: PathBuf) -> Self {
+    pub fn new(path: InternedUrl) -> Self {
         Self { path }
     }
 
@@ -195,25 +182,16 @@ impl LocalId {
 
     /// Get the directory name for storing this package.
     pub fn storage_name(&self) -> String {
-        format!(
-            "{}-{}",
-            Self::TYPE,
-            sha256_string(self.path.as_os_str().as_encoded_bytes())
-        )
+        format!("{}-{}", Self::TYPE, sha256_string(self.path.as_str()),)
     }
 
     /// Get the path to the stored package.
-    pub fn path(&self) -> &Path {
-        self.path.as_path()
+    pub fn path(&self) -> InternedUrl {
+        self.path
     }
 
     /// Set the path to the stored package.
-    pub fn set_path(&mut self, path: PathBuf) {
+    pub fn set_path(&mut self, path: InternedUrl) {
         self.path = path;
-    }
-
-    /// A mutable counterpart to the [`path`](Self::path).
-    pub fn path_mut(&mut self) -> &mut PathBuf {
-        &mut self.path
     }
 }

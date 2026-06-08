@@ -47,7 +47,7 @@ fun main() -> i64 = {
     printSeparator(); 
     for (x in dyn_ref_arr) {
         builtin_output_i64(x);  # 21, 21, 21, 21
-        dyn_ref_arr -= 3;       # This works by accident, since our lists don't shrink.
+        dyn_ref_arr -= 3u64;       # This works by accident, since our lists don't shrink.
     }
 
     printSeparator(); 

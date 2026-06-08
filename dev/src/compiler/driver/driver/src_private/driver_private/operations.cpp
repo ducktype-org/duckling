@@ -22,10 +22,6 @@
 
 namespace compiler::driver {
 
-	base::Bit256 CompileHOUTUnitToLIRModuleDataKey::queryUnstablePerfectHash() const {
-		return hashing::justHash<hashing::SHA256>(module_name.str(), hout_unit->id.asInt());
-	}
-
 	void LIRUnitWithBackendName::debugPrint(query::Context& ctx, std::ostream& os) const {
 		os << "LIRUnitWithBackendName for module: " << module_id.strView() << "\n";
 		lir_unit.debugPrint(ctx, os);
@@ -41,49 +37,41 @@ namespace compiler::driver {
 		return output_file;
 	}
 
-	struct IMPLEMENT_QUERY(CompileHOUTUnitToLIRModuleData, query::QResult<LIRUnitWithBackendName>) {
-		static auto provide(query::Context& ctx, CompileHOUTUnitToLIRModuleDataKey key) -> PResult {
-			const auto& hout_unit   = *key.hout_unit.get();
-			auto        module_name = key.module_name;
-
-			if (driver::print_ir_options.print_hir) hout_unit.debugPrint(ctx, std::cout);
-			if (driver::dump_ir_options.dump_hir) {
-				auto ofstream = getDebugDumpArtifact(
-					base::StrID(base::strConcat(module_name.strView(), ".hir"))
-				);
-				hout_unit.debugPrint(ctx, ofstream);
-			}
-
-			mir::MIRUnit mir_unit = mir::lowerToMIRUnit(ctx, &hout_unit).valueOrThrow();
-
-			if (driver::print_ir_options.print_mir) mir_unit.debugPrint(ctx, std::cout);
-			if (driver::dump_ir_options.dump_mir) {
-				auto ofstream = getDebugDumpArtifact(
-					base::StrID(base::strConcat(module_name.strView(), ".mir"))
-				);
-				mir_unit.debugPrint(ctx, ofstream);
-			}
-
-			auto lir_module = LIRUnitWithBackendName{
-				.module_id = module_name,
-				.lir_unit  = lir::lowerToLIRUnit(ctx, mir_unit),
-			};
-
-			if (driver::print_ir_options.print_lir) lir_module.debugPrint(ctx, std::cout);
-			if (driver::dump_ir_options.dump_lir) {
-				auto ofstream = getDebugDumpArtifact(
-					base::StrID(base::strConcat(module_name.strView(), ".lir"))
-				);
-				lir_module.debugPrint(ctx, ofstream);
-			}
-
-			return lir_module;
+	query::QResult<LIRUnitWithBackendName> compileHOUTUnitToLIRModuleData(
+		query::Context& ctx, const helios::HOUTUnit& hout_unit, base::StrID module_name
+	) {
+		if (driver::print_ir_options.print_hir) hout_unit.debugPrint(ctx, std::cout);
+		if (driver::dump_ir_options.dump_hir) {
+			auto ofstream
+				= getDebugDumpArtifact(base::StrID(base::strConcat(module_name.strView(), ".hir")));
+			hout_unit.debugPrint(ctx, ofstream);
 		}
 
-		QUERY_AUTO_CACHE_CREF
-	};
+		auto mir_unit_qr = mir::lowerToMIRUnit(ctx, &hout_unit);
+		if (mir_unit_qr.hasFailed()) return query::Failed();
+		const auto& mir_unit = mir_unit_qr.valueOrPanic();
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(CompileHOUTUnitToLIRModuleData);
+		if (driver::print_ir_options.print_mir) mir_unit.debugPrint(ctx, std::cout);
+		if (driver::dump_ir_options.dump_mir) {
+			auto ofstream
+				= getDebugDumpArtifact(base::StrID(base::strConcat(module_name.strView(), ".mir")));
+			mir_unit.debugPrint(ctx, ofstream);
+		}
+
+		auto lir_module = LIRUnitWithBackendName{
+			.module_id = module_name,
+			.lir_unit  = lir::lowerToLIRUnit(ctx, mir_unit),
+		};
+
+		if (driver::print_ir_options.print_lir) lir_module.debugPrint(ctx, std::cout);
+		if (driver::dump_ir_options.dump_lir) {
+			auto ofstream
+				= getDebugDumpArtifact(base::StrID(base::strConcat(module_name.strView(), ".lir")));
+			lir_module.debugPrint(ctx, ofstream);
+		}
+
+		return lir_module;
+	}
 
 	struct IMPLEMENT_QUERY(CompileToLIRModuleData, query::QResult<LIRUnitWithBackendName>) {
 		QUERY_AUTO_CACHE_CREF
@@ -98,7 +86,7 @@ namespace compiler::driver {
 
 			// we intentially make copy here, to keep the data in the
 			// cache of this query
-			return *ctx.query<CompileHOUTUnitToLIRModuleData>({ &hout_unit, module_name });
+			return compileHOUTUnitToLIRModuleData(ctx, hout_unit, module_name);
 		}
 	};
 

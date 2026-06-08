@@ -33,6 +33,7 @@ pub fn compile(options: BuildOptions<'_>) -> QuackResult<()> {
         frozen,
         strict_errors,
     } = options;
+    let root_identity = pcx.package().as_a_local_identity()?;
     let (lock, venv, storage) = sync(
         &pcx,
         StorageSyncOptions {
@@ -45,6 +46,7 @@ pub fn compile(options: BuildOptions<'_>) -> QuackResult<()> {
     let profile = Profile::construct_profile(profile, pcx.package().manifest().profiles())?;
     let bcx = BuildContext {
         pcx: &pcx,
+        root_identity,
         freeze: venv.into(),
         storage,
         used_features,
