@@ -64,11 +64,10 @@ private:
 		const std::vector<std::string_view>& present_phrases,
 		u64                                  logged_msg_count
 	) {
-		frontend::ModuleID module_id
-			= frontend::createModuleTreeFromContents(module_content);
+		frontend::ModuleID module_id = frontend::createModuleTreeFromContents(module_content);
 
 		auto result = query::entryPoint<helios::QueryModuleHOUT>(module_id);
-		
+
 		assertTrue(result->hasFailed(), "Expected HOUT query to fail for module content.");
 		auto logger = query::Context::dumpToOneLoggerAndClear();
 

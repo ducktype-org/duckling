@@ -40,7 +40,8 @@ namespace compiler::backend_llvm {
 				variant_case(lir::LIRGlobalData::CTorDtorPair, ctor_dtor_pair) {
 					CORE_ASSERT(
 						global.global.type == lir::LIRGlobalType::Variable,
-						"Only variable globals can have ctor/dtor pair as initial value (constants should always have CTV initial value)"
+						"Only variable globals can have ctor/dtor pair as initial value (constants "
+					    "should always have CTV initial value)"
 					);
 
 					// Add global constructors and destructors if they exist
@@ -105,7 +106,9 @@ namespace compiler::backend_llvm {
 		addGlobalDeclarationToModuleImpl(impl.refMut(), lir_global);
 	}
 
-	void Module::setGlobalConstantInitializer(base::StrID global_name, const ctv::CompileTimeValue& constant_value) {
+	void Module::setGlobalConstantInitializer(
+		base::StrID global_name, const ctv::CompileTimeValue& constant_value
+	) {
 		setGlobalConstantInitializerImpl(impl.refMut(), global_name, constant_value);
 	}
 

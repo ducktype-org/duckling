@@ -543,7 +543,8 @@ namespace compiler::backend_llvm {
 		global->setLinkage(llvm::GlobalValue::ExternalLinkage);
 		global->setConstant(lir_global.global.type == lir::LIRGlobalType::Constant);
 
-		// We set null initialization for all globals by default to keep potential uninitialized memory issues easier to track.
+		// We set null initialization for all globals by default to keep potential uninitialized
+		// memory issues easier to track.
 		global->setInitializer(llvm::Constant::getNullValue(global->getValueType()));
 
 		return global;
@@ -1515,7 +1516,9 @@ namespace compiler::backend_llvm {
 		llvm::appendToGlobalDtors(*module->module.refMut(), fun, 65'535);
 	}
 
-	void addGlobalDeclarationToModuleImpl(const Ref<ModuleImpl> module, const lir::LIRGlobalData& lir_global) {
+	void addGlobalDeclarationToModuleImpl(
+		const Ref<ModuleImpl> module, const lir::LIRGlobalData& lir_global
+	) {
 		addGlobalVariable(module->module.refMut(), lir_global);
 	}
 
@@ -1525,10 +1528,8 @@ namespace compiler::backend_llvm {
 		const Ref<llvm::GlobalVariable> global
 			= module->module->getNamedGlobal(mangled_name.strView());
 
-		global->setInitializer(ctvToLLVMConstant(
-			constant_value,
-			global->getValueType(),
-			module->module.refMut()
-		));
+		global->setInitializer(
+			ctvToLLVMConstant(constant_value, global->getValueType(), module->module.refMut())
+		);
 	}
 }
