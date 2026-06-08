@@ -551,10 +551,12 @@ private:
 			package_info,
 			driver::BuildTargetLLVMExecutable{
 				.output_file_stem = base::StrID("package_llvm"),
-				.linking_options  = linker::LinkingOptions{ .linker_path             = {},
-		                                                    .additional_link_options = {},
-		                                                    .link_c_standard_library = true,
-		                                                    .stdlib_link_options     = {}, },
+				.linking_options  = linker::LinkingOptions{ 
+					.linker_path             = {},
+					.additional_link_options = {},
+					.link_c_standard_library = true,
+					.stdlib_link_options     = {},
+				},
 			}
 		);
 
@@ -673,10 +675,12 @@ private:
 			package_info,
 			driver::BuildTargetLLVMExecutable{
 				.output_file_stem = base::StrID("package_llvm"),
-				.linking_options  = linker::LinkingOptions{ .linker_path             = {},
-		                                                    .additional_link_options = {},
-		                                                    .link_c_standard_library = true,
-		                                                    .stdlib_link_options     = {}, },
+				.linking_options  = linker::LinkingOptions{
+					.linker_path             = {},
+					.additional_link_options = {},
+		            .link_c_standard_library = true,
+		            .stdlib_link_options     = {},
+				},
 			}
 		);
 
@@ -797,10 +801,12 @@ private:
 			package_info,
 			driver::BuildTargetLLVMExecutable{
 				.output_file_stem = base::StrID("package_llvm"),
-				.linking_options  = linker::LinkingOptions{ .linker_path             = {},
-		                                                    .additional_link_options = {},
-		                                                    .link_c_standard_library = true,
-		                                                    .stdlib_link_options     = {}, },
+				.linking_options  = linker::LinkingOptions{
+					.linker_path             = {},
+		            .additional_link_options = {},
+		            .link_c_standard_library = true,
+		            .stdlib_link_options     = {},
+				},
 			}
 		);
 
