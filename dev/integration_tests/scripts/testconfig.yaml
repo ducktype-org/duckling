@@ -1,9 +1,9 @@
 # Integration tests for scripts in Duckling.
 
-# As described in PR #2352, scripts can be run in two ways: directly with duckc or compiled to DVM bytecode and executed on the DVM.
-# The tests in this folder are run in both modes. Bytecode files are stored in dedicated duck_build folders, created separately for each test.
-# The tests are run in direct mode by default, but one can switch to VM mode by setting the "mode" variable to "vm". Variable "folder" make 
-# executing tests in different folders simply more cenvenient.
+# As described in PR #2352, scripts can be run in three ways: directly with duckc, compiled to DVM bytecode and executed on the DVM (vm mode) or compiled
+# to native executable and run directly (exe mode). The tests in this folder are meant to be run in all those modes. Bytecode files are stored in dedicated 
+# duck_build folders, created separately for each test. The tests are run in direct mode by default, but one can switch to VM or exe mode by setting
+# the "mode" variable to "vm" or "exe". Variable "folder" make executing tests in different folders simply more convenient.
 mode: "direct"
 folder: "."
 
@@ -15,11 +15,15 @@ PreCase: "
   @{clean_cmd};
   if [ '@{mode}' = 'vm' ]; then
     cd @{folder} && @{duckc_path} compile_script @{Name}.ds --dvm-backend;
+  elif [ '@{mode}' = 'exe' ]; then
+    cd @{folder} && @{duckc_path} compile_script @{Name}.ds;
   fi"
 
 Run: "
   if [ '@{mode}' = 'vm' ]; then
     @{dvm_path} run @{folder}/duck_build/@{Name}.dbc;
+  elif [ '@{mode}' = 'exe' ]; then
+    @{folder}/duck_build/@{Name}.exe;
   else
     @{duckc_path} run @{folder}/@{Name}.ds;
   fi"
@@ -29,3 +33,5 @@ PostTest: "
 
 SubDirs:
   - basic_tests
+  - declarations
+  - lists_and_arrays

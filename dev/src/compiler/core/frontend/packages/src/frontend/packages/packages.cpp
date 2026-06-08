@@ -30,11 +30,13 @@ namespace compiler::frontend::packages {
 
 	PackageInfo::PackageInfo(
 		compiler::frontend::ModuleID       root_module,
+		base::StrID                        name,
 		base::StrID                        version,
 		std::vector<base::StrID>           features,
 		std::vector<PackageDependencyInfo> dependencies
 	):
 		  m_root_module(root_module),
+		  m_name(name),
 		  m_version(version),
 		  m_features(std::move(features)),
 		  m_dependencies(std::move(dependencies)),
@@ -43,6 +45,8 @@ namespace compiler::frontend::packages {
 	base::StrID PackageInfo::getPackageID() const {
 		return getModuleRef(m_root_module)->getPackage().illegalAccess().getID();
 	}
+
+	base::StrID PackageInfo::getName() const { return m_name; }
 
 	const hashing::ComponentHash::HashType& PackageInfo::getPackageHash() const { return m_hash; }
 
@@ -79,12 +83,12 @@ namespace compiler::frontend::packages {
 	) {
 		if (!js::checkIsObject(json, "dependency", report)) return {};
 
-		js::checkForUnknownFields(json, { "name" }, { "alias" }, "dependency", report);
+		js::checkForUnknownFields(json, { "id" }, { "alias" }, "dependency", report);
 
 		bool had_error = false;
 
-		auto name = js::getString(json, "name", "Dependency requires a package name!", report);
-		if (!name) had_error = true;
+		auto id = js::getString(json, "id", "Dependency requires a package id!", report);
+		if (!id) had_error = true;
 
 		base::Optional<base::StrID> alias;
 		if (auto alias_result = js::extractString(json, "alias"); alias_result.has_value()) {
@@ -97,8 +101,8 @@ namespace compiler::frontend::packages {
 		if (had_error) return {};
 
 		return RawDependencyInfo{
-			.package_name = *name,
-			.alias        = alias,
+			.package_id = *id,
+			.alias      = alias,
 		};
 	}
 
@@ -108,10 +112,17 @@ namespace compiler::frontend::packages {
 		if (!js::checkIsObject(json, "package", report)) return {};
 
 		js::checkForUnknownFields(
-			json, { "name", "path" }, { "version", "features", "dependencies" }, "package", report
+			json,
+			{ "id", "name", "path" },
+			{ "version", "features", "dependencies" },
+			"package",
+			report
 		);
 
 		bool had_error = false;
+
+		auto id = js::getString(json, "id", "Package requires an id!", report);
+		if (!id) had_error = true;
 
 		auto name = js::getString(json, "name", "Package requires a name!", report);
 		if (!name) had_error = true;
@@ -167,6 +178,7 @@ namespace compiler::frontend::packages {
 		if (had_error) return {};
 
 		return RawPackageInfo{
+			.package_id   = *id,
 			.package_name = *name,
 			.version      = version_opt.has_value() ? *version_opt : base::StrID(),
 			.package_path = fs::FilePath(path->str()),
@@ -176,10 +188,12 @@ namespace compiler::frontend::packages {
 	}
 
 	base::Optional<PackageInfo> createPackageInfo(
-		const RawPackageInfo& package_info, const DiagnosticReporter& report
+		const RawPackageInfo&              package_info,
+		const std::vector<RawPackageInfo>& all_packages,
+		const DiagnosticReporter&          report
 	) {
 		auto root_module = compiler::frontend::createModuleTree(
-			package_info.package_path, package_info.package_name
+			package_info.package_path, package_info.package_id
 		);
 
 		if (!getModuleRef(root_module)->hasMainSourceFile()) {
@@ -201,35 +215,42 @@ namespace compiler::frontend::packages {
 		std::vector<PackageDependencyInfo> package_dependencies;
 		package_dependencies.reserve(package_info.dependencies.size());
 		for (const auto& dependency: package_info.dependencies) {
+			auto target_package = std::ranges::find_if(all_packages, [&](const auto& pkg) {
+				return pkg.package_id == dependency.package_id;
+			});
+			if (target_package == all_packages.end()) CORE_PANIC("Unfiltered invalid dependency");
 			package_dependencies.push_back(PackageDependencyInfo{
-				.package_id = dependency.package_name,
-				.alias      = dependency.alias.copyValueOr(dependency.package_name),
+				.package_id = dependency.package_id,
+				.alias      = dependency.alias.copyValueOr(target_package->package_name),
 			});
 		}
 
 		return PackageInfo(
-			root_module, package_info.version, package_info.features, std::move(package_dependencies)
+			root_module,
+			package_info.package_name,
+			package_info.version,
+			package_info.features,
+			std::move(package_dependencies)
 		);
 	}
 
 	void filterUndeclaredDependencies(
 		std::vector<RawPackageInfo>& packages_info, const DiagnosticReporter& report
 	) {
-		std::unordered_set<base::StrID> declared_packages;
-		declared_packages.reserve(packages_info.size());
-		for (const auto& package_info: packages_info)
-			declared_packages.insert(package_info.package_name);
+		std::unordered_set<base::StrID> declared_ids;
+		declared_ids.reserve(packages_info.size());
+		for (const auto& package_info: packages_info) declared_ids.insert(package_info.package_id);
 
 		for (auto& package_info: packages_info)
 			std::erase_if(package_info.dependencies, [&](const RawDependencyInfo& dep) {
-				if (declared_packages.contains(dep.package_name)) return false;
+				if (declared_ids.contains(dep.package_id)) return false;
 				report(
 					base::strConcat(
 						"Dropping dependency \"",
-						dep.package_name.strView(),
+						dep.package_id.strView(),
 						"\" of package \"",
-						package_info.package_name.strView(),
-						"\": no such package is declared in the manifest."
+						package_info.package_id.strView(),
+						"\": no such package id is declared in the manifest."
 					),
 					std::string{},
 					true

@@ -1,21 +1,11 @@
 # Frontend Packages
 
 Resolved package metadata used by the rest of the frontend: package id,
-version, feature flags and the list of direct dependencies (with their
-aliases). Built from manifest input (`RawPackageInfo`) and stored in
-global compiler state, then accessed from queries through `*AccessLocked`
-wrappers that participate in the incremental query framework.
-
-## Type layout
-
-- **`RawPackageInfo` / `RawDependencyInfo`** — plain manifest data
-  (`name`, `path`, `version`, `features`, `dependencies`). Produced by
-  `fromJson`. Consumed by `createPackageInfo` to build a `PackageInfo`.
-- **`PackageInfo`** — resolved package: keeps the root `ModuleID`,
-  `version`, `features`, dependency list, and a stable hash derived from
-  the package id. Lives in global state.
-- **`PackageDependencyInfo`** — `(package_id, alias)` pair. The `alias`
-  defaults to `package_id` when none is set in the manifest.
+import name, version, feature flags and the list of direct dependencies
+(with their aliases). Built from manifest input (`RawPackageInfo`) and
+stored in global compiler state, then accessed from queries through
+`*AccessLocked` wrappers that participate in the incremental query
+framework.
 
 ## Why locks (`*AccessLocked`)
 
@@ -52,7 +42,7 @@ correctly invalidates dependents.
 1. Driver reads the manifest JSON.
 2. `RawPackageInfo::fromJson` produces a `RawPackageInfo` (validates the
    shape, reports diagnostics).
-3. `createPackageInfo(raw, report)` loads the module tree under
+3. `createPackageInfo(raw, all_package, report)` loads the module tree under
    `package_path` and constructs a `PackageInfo`.
 4. The `PackageInfo` is stored in global state and looked up by id from
    queries via `PackageAccessLocked`.
