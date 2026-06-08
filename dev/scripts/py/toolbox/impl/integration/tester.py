@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 from .test_loader import Case, Test, TestNode, load_tests
@@ -33,6 +34,8 @@ def tester_impl(
         verbose: bool,
         log_file: str | Path,
         build_dir: str,
+        determinism_check: bool,
+        custom_values: str
 ):
     """
     The driver function of Duckling Integration Tests framework.
@@ -51,10 +54,12 @@ def tester_impl(
         log_file.unlink()
         log_file = Path(log_file)
 
-    user_values = {
-        "build_dir": str(Path(build_dir).absolute()),
-        "dev_dir": str(get_dev_directory()),
-    }
+    user_values = json.loads(custom_values)
+
+    user_values["build_dir"] = str(Path(build_dir).absolute())
+    user_values["dev_dir"] = str(get_dev_directory())
+    if determinism_check is not None:
+        user_values["enable_conc_deterministic_tests"] = str(determinism_check).lower()
 
     test_set = load_tests("integration_tests", user_values=user_values)
 
