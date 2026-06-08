@@ -1237,8 +1237,8 @@ namespace vm {
 			auto type = READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1);
 			Pointer ptr = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
 
+			FT_GLOBALS.removeZombie(ptr.getBlock()->getID());
 			if (type->getShadowSize() > 0) {
-				FT_GLOBALS.removeZombie(ptr.getBlock()->getID());
 				auto shadow_block = FT_THREAD.getShadowDataMemory().allocateHeap(type);
 				auto tid   = FT_DATA.thread_id;
 				auto epoch = FT_DATA.getVC()[tid];
@@ -1466,10 +1466,10 @@ namespace vm {
 						auto tid   = FT_DATA.thread_id;
 						auto epoch = FT_DATA.getVC()[tid];
 						throw exceptions::VMDataRaceException(
-							std::string("Write-Free — t") + std::to_string(zombie.tid().asInt()) +
-							"@" + std::to_string(zombie.clock()) +
-							" vs t" + std::to_string(tid.asInt()) +
-							"@" + std::to_string(epoch));
+							std::string("Free-Write") + " — t" + std::to_string(zombie.tid().asInt())
+							+ "@" + std::to_string(zombie.clock()) + " vs t"
+							+ std::to_string(tid.asInt()) + "@" + std::to_string(epoch)
+						);
 					}
 				}
 			}

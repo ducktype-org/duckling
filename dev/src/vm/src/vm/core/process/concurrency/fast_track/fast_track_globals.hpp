@@ -1,10 +1,10 @@
 #pragma once
 
+#include <base/pointers/ref.hpp>
+
 #include <vm/core/process/concurrency/fast_track/epoch.hpp>
 #include <vm/core/process/concurrency/fast_track/shadow_entry.hpp>
 #include <vm/core/safe/memory/memory.hpp>
-
-#include <base/pointers/ref.hpp>
 
 #include <vector>
 
@@ -20,7 +20,7 @@ namespace vm {
 	 * SafeVMProcess carries no Fast Track overhead.
 	 */
 	class FastTrackGlobals {
-		IMemory<ShadowEntry>      shadow_data_memory;
+		IMemory<ShadowEntry> shadow_data_memory;
 
 		std::vector<ShadowEntry>  global_shadow_data;
 		std::vector<ShadowBlock*> global_shadow_blocks;
@@ -33,7 +33,7 @@ namespace vm {
 		std::vector<Epoch> zombie_by_id;
 
 	public:
-		FastTrackGlobals()  = default;
+		FastTrackGlobals() = default;
 		~FastTrackGlobals();
 
 		FastTrackGlobals(const FastTrackGlobals&)            = delete;
@@ -45,9 +45,7 @@ namespace vm {
 		 */
 		void initialize(CRef<low::ILowVMProgram> program);
 
-		[[nodiscard]] ShadowEntry* globalShadowDataBase() {
-			return global_shadow_data.data();
-		}
+		[[nodiscard]] ShadowEntry* globalShadowDataBase() { return global_shadow_data.data(); }
 
 		[[nodiscard]] Ref<ShadowBlock> getGlobalShadowBlock(u64 idx) {
 			return { global_shadow_blocks.at(idx) };
@@ -57,15 +55,13 @@ namespace vm {
 
 		void registerShadow(BlockID id, ShadowBlock* sb) {
 			auto idx = static_cast<usize>(id);
-			if (shadow_by_id.size() <= idx)
-				shadow_by_id.resize(idx + 1, nullptr);
+			if (shadow_by_id.size() <= idx) shadow_by_id.resize(idx + 1, nullptr);
 			shadow_by_id[idx] = sb;
 		}
 
 		void clearShadow(BlockID id) {
 			auto idx = static_cast<usize>(id);
-			if (idx < shadow_by_id.size())
-				shadow_by_id[idx] = nullptr;
+			if (idx < shadow_by_id.size()) shadow_by_id[idx] = nullptr;
 		}
 
 		[[nodiscard]] ShadowBlock* getShadow(BlockID id) const {
@@ -74,17 +70,15 @@ namespace vm {
 			return shadow_by_id[idx];
 		}
 
-		void addZombie(BlockID id, Epoch e) {
+		void addZombie(BlockID id, Epoch epoch) {
 			auto idx = static_cast<usize>(id);
-			if (zombie_by_id.size() <= idx)
-				zombie_by_id.resize(idx + 1, Epoch{});
-			zombie_by_id[idx] = e;
+			if (zombie_by_id.size() <= idx) zombie_by_id.resize(idx + 1, Epoch{});
+			zombie_by_id[idx] = epoch;
 		}
 
 		void removeZombie(BlockID id) {
 			auto idx = static_cast<usize>(id);
-			if (idx < zombie_by_id.size())
-				zombie_by_id[idx] = Epoch{};
+			if (idx < zombie_by_id.size()) zombie_by_id[idx] = Epoch{};
 		}
 
 		[[nodiscard]] Epoch getZombie(BlockID id) const {
