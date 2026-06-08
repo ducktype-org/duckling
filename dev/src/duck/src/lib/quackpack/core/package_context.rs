@@ -42,6 +42,8 @@ impl<'duck> PackageContext<'duck> {
         Ok(pcx)
     }
 
+    /// Try create new [`PackageContext`] from a script with a frontmatter at `path`.
+    /// If the script does not contain a frontmatter, returns `Ok(None)`.
     #[tracing::instrument(skip_all)]
     pub fn try_new_from_frontmatter(
         path: PathBuf,
@@ -58,6 +60,7 @@ impl<'duck> PackageContext<'duck> {
         }))
     }
 
+    /// As [`Self::try_new_from_frontmatter`], but bails internally when no frontmatter at `path`.
     #[tracing::instrument(skip_all)]
     pub fn new_from_frontmatter(
         path: PathBuf,

@@ -8,27 +8,34 @@ use crate::quackpack::core::identity::{Identity, Origin};
 use crate::quackpack::core::{Dependencies, Manifest, Profiles};
 use crate::quackpack::schemas::manifest::Manifest as ManifestSchema;
 
+/// Entities which can be treated as a package by implementing [`AsPackage`] trait.
 pub enum PackageType {
     Package,
     Frontmatter,
 }
 
 pub trait AsPackage: fmt::Debug + Send + Sync {
+    /// Get the high-level abstraction over the manifest.
     fn manifest(&self) -> &Manifest;
+    /// Get the root directory of the package / path of the script.
     fn root(&self) -> &Path;
+    /// Check if this is the global package.
     fn is_global(&self) -> bool;
+    /// Get the type of this a la Package.
     fn kind(&self) -> PackageType;
+    /// Try to cast `&self` into `&Package`.
     fn get_package(&self) -> Option<&Package>;
+    /// Try to cast `&self` into `&FrontMatterScript`
     fn get_frontmatter(&self) -> Option<&FrontMatterScript>;
-
+    /// As [`AsPackage::get_package`] but panics on failure.
     fn unwrap_package(&self) -> &Package {
         self.get_package().unwrap()
     }
-
+    /// As [`AsPackage::get_frontmatter`] but panics on failure.
     fn unwrap_frontmatter(&self) -> &FrontMatterScript {
         self.get_frontmatter().unwrap()
     }
-
+    /// Convert `self` to an [`Identity`].
     fn as_a_local_identity(&self) -> QuackResult<Identity>;
 }
 
@@ -101,7 +108,7 @@ impl Package {
         &self.artifacts_dir
     }
 
-    /// Convert this package to a [`Identity`].
+    /// Convert this package to an [`Identity`].
     /// This will always (try to) return an [`Identity`] with [`Origin::for_local`] origin.
     pub fn as_a_local_identity(&self) -> QuackResult<Identity> {
         let origin = Origin::for_local(self.root_directory())?;
@@ -191,7 +198,7 @@ impl FrontMatterScript {
         self.manifest().profiles()
     }
 
-    /// Convert this package to a [`Identity`].
+    /// Convert this package to an [`Identity`].
     /// This will always (try to) return an [`Identity`] with [`Origin::for_local`] origin.
     pub fn as_a_local_identity(&self) -> QuackResult<Identity> {
         let origin = Origin::for_local(self.script_file())?;
