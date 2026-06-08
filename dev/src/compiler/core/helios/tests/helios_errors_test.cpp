@@ -64,11 +64,8 @@ private:
 		const std::vector<std::string_view>& present_phrases,
 		u64                                  logged_msg_count
 	) {
-		// @TODO: #2246 make sure this is ok
-		// why not randomize package id?? --- does it work now?
-
 		frontend::ModuleID module_id
-			= frontend::createModuleTreeFromContents(module_content, "test_package");
+			= frontend::createModuleTreeFromContents(module_content);
 
 		auto result = query::entryPoint<helios::QueryModuleHOUT>(module_id);
 		
