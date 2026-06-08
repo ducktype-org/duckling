@@ -17,7 +17,7 @@ namespace compiler::driver {
 	 */
 	struct LIRUnitWithBackendName final {
 		/**
-		 * @brief The module ID is more or a lass a module name, that will be use by the backend.
+		 * @brief The module ID is more or a less a module name, that will be use by the backend.
 		 */
 		base::StrID  module_id;
 		lir::LIRUnit lir_unit;

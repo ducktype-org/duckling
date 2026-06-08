@@ -554,7 +554,7 @@ private:
 				.linking_options  = linker::LinkingOptions{ .linker_path             = {},
 		                                                    .additional_link_options = {},
 		                                                    .link_c_standard_library = true,
-		                                                    .stdlib_link_options     = {} },
+		                                                    .stdlib_link_options     = {}, },
 			}
 		);
 
@@ -676,7 +676,7 @@ private:
 				.linking_options  = linker::LinkingOptions{ .linker_path             = {},
 		                                                    .additional_link_options = {},
 		                                                    .link_c_standard_library = true,
-		                                                    .stdlib_link_options     = {} },
+		                                                    .stdlib_link_options     = {}, },
 			}
 		);
 
@@ -800,7 +800,7 @@ private:
 				.linking_options  = linker::LinkingOptions{ .linker_path             = {},
 		                                                    .additional_link_options = {},
 		                                                    .link_c_standard_library = true,
-		                                                    .stdlib_link_options     = {} },
+		                                                    .stdlib_link_options     = {}, },
 			}
 		);
 
