@@ -96,45 +96,43 @@ namespace {
 		for (const auto& type_id: new_types) {
 			const auto& type             = types_ctx.at(type_id);
 			const auto& type_at_metadata = type_metadata->at(type->getName());
-			const auto  vt_shadow_size   = static_cast<vm::ShadowSize>(type->getShadowSize());
-			const auto  vt_pointer_size  = static_cast<vm::PointerSize>(type->getPointerSize());
+			const auto vt_shadow_size = static_cast<vm::ShadowSize>(type->getShadowSize());
 			variant_match(type->getKind()) {
 				variant_case(vm::code::valid_type::finalized::Primitive, data) {
-					type_at_metadata->definePrimitive(data.size, vt_shadow_size, vt_pointer_size);
+					type_at_metadata->definePrimitive(data.size, vt_shadow_size);
 				}
 				variant_case(vm::code::valid_type::finalized::Pointer, data) {
 					// Note the interesting cast from valid_type::ValidTypeID to vm::TypeID.
 					// This is by convention, they have to be the same.
 					type_at_metadata->definePointer(
 						type_metadata->at(vm::TypeID(data.inner.asInt())),
-						vt_shadow_size, vt_pointer_size
+						vt_shadow_size
 					);
 				}
 				variant_case(vm::code::valid_type::finalized::FixedSizeTable, data) {
 					type_at_metadata->defineFixedSizeTable(
 						type_metadata->at(vm::TypeID(data.inner.asInt())), data.element_count,
-						vt_shadow_size, vt_pointer_size
+						vt_shadow_size
 					);
 				}
 				variant_case(vm::code::valid_type::finalized::DynamicTable, data) {
 					type_at_metadata->defineDynamicTable(
 						type_metadata->at(vm::TypeID(data.inner.asInt())),
-						vt_shadow_size, vt_pointer_size
+						vt_shadow_size
 					);
 				}
 				variant_case(vm::code::valid_type::finalized::Structure, data) {
 					std::vector<vm::Type::FieldDefinition> fields
 						= data.fields
 					    | transform([&](auto& field) -> vm::Type::FieldDefinition {
-							  return { .name           = field.name,
-							           .type           = type_metadata->at(vm::TypeID(field.type.asInt())),
-							           .shadow_offset  = static_cast<vm::ShadowOffset>(field.shadow_offset),
-							           .pointer_offset = static_cast<vm::PointerOffset>(field.pointer_offset) };
+							  return { .name          = field.name,
+							           .type          = type_metadata->at(vm::TypeID(field.type.asInt())),
+							           .shadow_offset = static_cast<vm::ShadowOffset>(field.shadow_offset) };
 						  })
 					    | to<std::vector>();
 					base::Optional<vm::InheritanceMetadata> inh_metadata
 						= buildInheritanceMetadata(*type_metadata, *type, data);
-					type_at_metadata->defineData(fields, inh_metadata, vt_shadow_size, vt_pointer_size);
+					type_at_metadata->defineData(fields, inh_metadata, vt_shadow_size);
 				type_at_metadata->setByteToShadow(data.byte_to_shadow);
 				}
 				variant_case(vm::code::valid_type::finalized::Variant, data) {
@@ -143,7 +141,7 @@ namespace {
 							  return type_metadata->at(vm::TypeID(variant.asInt()));
 						  })
 					    | to<std::vector>();
-					type_at_metadata->defineVariant(data.type_tag_size, variants, vt_shadow_size, vt_pointer_size);
+					type_at_metadata->defineVariant(data.type_tag_size, variants, vt_shadow_size);
 				}
 				variant_case(vm::code::valid_type::finalized::Function, data) {
 					std::vector<vm::TypeCRef> parameters
@@ -156,10 +154,10 @@ namespace {
 							  return type_metadata->at(vm::TypeID(res.asInt()));
 						  })
 					    | to<std::vector>();
-					type_at_metadata->defineFunction(parameters, result_types, vt_shadow_size, vt_pointer_size);
+					type_at_metadata->defineFunction(parameters, result_types, vt_shadow_size);
 				}
 				variant_case(vm::code::valid_type::finalized::Opaque, opaque) {
-					type_at_metadata->defineOpaque(opaque.size, vt_shadow_size, vt_pointer_size);
+					type_at_metadata->defineOpaque(opaque.size, vt_shadow_size);
 				}
 				variant_default { CORE_PANIC("Unhandled type during type building"); }
 			}

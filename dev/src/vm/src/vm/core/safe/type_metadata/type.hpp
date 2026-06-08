@@ -38,10 +38,9 @@ namespace vm {
 		State state = State::Declared;
 
 		base::StrID name;
-		TypeSize    size      = TypeSize(-1);
+		TypeSize    size        = TypeSize(-1);
 		ShadowSize  shadow_size = ShadowSize(-1);
-		PointerSize pointer_size = PointerSize(-1);
-		Kind        kind_type = Kind::None;
+		Kind        kind_type   = Kind::None;
 		TypeID      id{};
 		bool        am_i_instantiable = true;
 
@@ -82,26 +81,24 @@ namespace vm {
 		static Type declareType(base::StrID name);
 
 		struct FieldDefinition {
-			base::StrID   name;
-			TypeRef       type;
-			ShadowOffset  shadow_offset;
-			PointerOffset pointer_offset;
+			base::StrID  name;
+			TypeRef      type;
+			ShadowOffset shadow_offset;
 		};
 
 		// Type definition:
-		void definePrimitive(TypeSize size, ShadowSize shadow_size, PointerSize pointer_size);
-		void definePointer(TypeCRef inner, ShadowSize shadow_size, PointerSize pointer_size);
-		void defineFixedSizeTable(TypeRef inner, u64 table_size, ShadowSize shadow_size, PointerSize pointer_size);
-		void defineDynamicTable(TypeRef inner, ShadowSize shadow_size, PointerSize pointer_size);
+		void definePrimitive(TypeSize size, ShadowSize shadow_size);
+		void definePointer(TypeCRef inner, ShadowSize shadow_size);
+		void defineFixedSizeTable(TypeRef inner, u64 table_size, ShadowSize shadow_size);
+		void defineDynamicTable(TypeRef inner, ShadowSize shadow_size);
 		void defineData(
 			const std::vector<FieldDefinition>&  fields_definitions,
 			base::Optional<InheritanceMetadata>  inheritance_metadata,
-			ShadowSize                           shadow_size,
-			PointerSize                          pointer_size
+			ShadowSize                           shadow_size
 		);
-		void defineVariant(Bytes type_tag_size, const std::vector<TypeRef>& variants_definitions, ShadowSize shadow_size, PointerSize pointer_size);
-		void defineFunction(std::vector<TypeCRef> parameters, std::vector<TypeCRef> result, ShadowSize shadow_size, PointerSize pointer_size);
-		void defineOpaque(TypeSize size, ShadowSize shadow_size, PointerSize pointer_size);
+		void defineVariant(Bytes type_tag_size, const std::vector<TypeRef>& variants_definitions, ShadowSize shadow_size);
+		void defineFunction(std::vector<TypeCRef> parameters, std::vector<TypeCRef> result, ShadowSize shadow_size);
+		void defineOpaque(TypeSize size, ShadowSize shadow_size);
 
 		// Type finalization:
 		void finalize();
@@ -127,12 +124,6 @@ namespace vm {
 		ShadowSize getShadowSize() const {
 			CORE_ASSERT(shadow_size != ShadowSize(-1), "getShadowSize called before type finalization");
 			return shadow_size;
-		}
-
-		[[nodiscard]]
-		PointerSize getPointerSize() const {
-			CORE_ASSERT(pointer_size != PointerSize(-1), "getPointerSize called before type finalization");
-			return pointer_size;
 		}
 
 		template<class T>
@@ -169,8 +160,6 @@ namespace vm {
 		base::Optional<Offset> getFieldOffsetByName(base::StrID field_name) const;
         [[nodiscard]]
         base::Optional<ShadowOffset> getFieldShadowOffsetByName(base::StrID field_name) const;
-		[[nodiscard]]
-		base::Optional<PointerOffset> getFieldPointerOffsetByName(base::StrID field_name) const;
 		[[nodiscard]]
 		base::Optional<CRef<std::vector<kind::FieldDesc>>> getFields() const;
 
