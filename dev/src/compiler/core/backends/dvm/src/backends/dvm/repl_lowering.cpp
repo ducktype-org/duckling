@@ -18,7 +18,9 @@ namespace compiler::backend_vm {
 		code_builder.program_context->setContext(query_ctx);
 	}
 
-	void ReplDVMCodeBuilder::invalidateContext() { code_builder.program_context->invalidateContext(); }
+	void ReplDVMCodeBuilder::invalidateContext() {
+		code_builder.program_context->invalidateContext();
+	}
 
 	base::Optional<base::Ref<query::Context>> ReplDVMCodeBuilder::getActiveContext() const {
 		return code_builder.program_context->getActiveContext();
@@ -44,7 +46,8 @@ namespace compiler::backend_vm {
 
 		code_builder.insertLIRUnit(lir_unit);
 
-		vm::code::CodeCollection new_code = code_builder.program_context->collectNewCodeSince(snapshot);
+		vm::code::CodeCollection new_code
+			= code_builder.program_context->collectNewCodeSince(snapshot);
 		return new_code;
 	}
 }

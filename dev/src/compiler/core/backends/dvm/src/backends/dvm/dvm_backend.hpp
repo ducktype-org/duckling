@@ -75,7 +75,7 @@ namespace compiler::backend_vm {
 		 */
 		friend class ReplDVMCodeBuilder;
 
-		/** 
+		/**
 		 * A Boxed pointer to allow forward declaration in order to hide implementation details.
 		 */
 		Box<internal::ProgramLoweringContext> program_context;

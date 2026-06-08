@@ -41,7 +41,7 @@ namespace compiler::backend_llvm {
 					CORE_ASSERT(
 						global.global.type == lir::LIRGlobalType::Variable,
 						"Only variable globals can have ctor/dtor pair as initial value (constants "
-					    "should always have CTV initial value)"
+						"should always have CTV initial value)"
 					);
 
 					// Add global constructors and destructors if they exist

@@ -1,7 +1,7 @@
 #pragma once
 
-#include <backends/dvm/dvm_internal_fwd.hpp>
 #include <backends/dvm/dvm_backend.hpp>
+#include <backends/dvm/dvm_internal_fwd.hpp>
 #include <lir/lir_structure/lir_structure_fd.hpp>
 
 #include <base/collections/optional.hpp>
@@ -21,7 +21,7 @@ namespace compiler::backend_vm {
 	 *
 	 * @note Underneath it uses ProgramLoweringContext snapshot api that was added specifically for
 	 * this use case, and DVMCodeBuilder lowering api.
-	 * 
+	 *
 	 * @importnat: It relies, to an extend, on the private implementation details of DVMCodeBuilder.
 	 *
 	 * @note If used improperly, query_ctx might become a dangling reference.
@@ -31,7 +31,8 @@ namespace compiler::backend_vm {
 	 *
 	 * @TODO: #2872 Move repl specific logic from ProgramLoweringContext into this wrapper, so that
 	 * ProgramLoweringContext can be used for other purposes without carrying unnecessary
-	 * REPL-specific state, logic and API. Maybe think a little bit more generally about implementation of this wrapper and its relation to ProgramLoweringContext and DVMCodeBuilder.
+	 * REPL-specific state, logic and API. Maybe think a little bit more generally about
+	 * implementation of this wrapper and its relation to ProgramLoweringContext and DVMCodeBuilder.
 	 * One idea is to just remove ReplDVMCodeBuilder and add snapshotting api to DVMCodeBuilder.
 	 */
 	class ReplDVMCodeBuilder final {
@@ -81,7 +82,8 @@ namespace compiler::backend_vm {
 	private:
 		/**
 		 * The DVMCodeBuilder instance used for lowering LIR units into DVM bytecode.
-		 * @note DVMCodeBuilder friends ReplDVMCodeBuilder, so it can access program_context directly, which is necessary for the snapshotting logic.
+		 * @note DVMCodeBuilder friends ReplDVMCodeBuilder, so it can access program_context
+		 * directly, which is necessary for the snapshotting logic.
 		 */
 		DVMCodeBuilder code_builder;
 	};
