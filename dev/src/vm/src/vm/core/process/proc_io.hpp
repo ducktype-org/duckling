@@ -1,5 +1,7 @@
 #pragma once
 
+#include <events/emitter.hpp>
+
 #include <vm/core/thread/ivmthread.hpp>
 
 #include <condition_variable>
@@ -48,8 +50,11 @@ namespace vm {
 		template<class T>
 		void writeOutput(const T& v) {
 			{
-				auto lck = lock();
-				output_stream << v;
+				auto              lck = lock();
+				std::stringstream sstr;
+				sstr << v;
+				output_stream << sstr.str();
+				output_emitter.emitEvent(sstr.str());
 			}
 			output_empty_cv.notify_all();
 		}
@@ -60,6 +65,10 @@ namespace vm {
 
 		ProcIORedirecter attach(std::istream& input_source, std::ostream& output_dst);
 
+		void attachOutputListener(Ref<events::Listener<std::string>> listener) {
+			output_emitter.attachListener(listener);
+		}
+
 		std::condition_variable output_empty_cv;
 
 	private:
@@ -69,6 +78,8 @@ namespace vm {
 
 		std::stringstream input_stream;
 		std::stringstream output_stream;
+
+		events::Emitter<std::string> output_emitter;
 	};
 
 	/**
