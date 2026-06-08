@@ -9,6 +9,20 @@ use crate::quackpack::core::identity::{Identity, Origin};
 use crate::quackpack::core::{Dependencies, Manifest, Profiles};
 use crate::quackpack::schemas::manifest::Manifest as ManifestSchema;
 
+pub enum PackageType {
+    Package,
+    Frontmatter,
+}
+
+pub trait AsPackage {
+    fn manifest(&self) -> &Manifest;
+    fn root(&self) -> &Path;
+    fn is_global(&self) -> bool;
+    fn kind(&self) -> PackageType;
+    fn get_package(&self) -> Option<&Package>;
+    fn get_frontmatter(&self) -> Option<&FrontMatterScript>;
+}
+
 #[derive(Clone)]
 /// High-level abstraction over a package we are currently working on.
 pub struct Package {
@@ -93,6 +107,32 @@ impl Package {
     }
 }
 
+impl AsPackage for Package {
+    fn manifest(&self) -> &Manifest {
+        self.manifest()
+    }
+
+    fn root(&self) -> &Path {
+        self.root_directory()
+    }
+
+    fn is_global(&self) -> bool {
+        self.is_global()
+    }
+
+    fn kind(&self) -> PackageType {
+        PackageType::Package
+    }
+
+    fn get_package(&self) -> Option<&Package> {
+        Some(self)
+    }
+
+    fn get_frontmatter(&self) -> Option<&FrontMatterScript> {
+        None
+    }
+}
+
 struct PackageInner {
     original_content: String,
     original_schema: ManifestSchema,
@@ -160,6 +200,32 @@ impl FrontMatterScript {
     /// Get the profiles specified in the frontmatter.
     pub fn profiles(&self) -> &Profiles {
         self.manifest().profiles()
+    }
+}
+
+impl AsPackage for FrontMatterScript {
+    fn manifest(&self) -> &Manifest {
+        self.manifest()
+    }
+
+    fn root(&self) -> &Path {
+        self.script_file()
+    }
+
+    fn is_global(&self) -> bool {
+        false
+    }
+
+    fn kind(&self) -> PackageType {
+        PackageType::Frontmatter
+    }
+
+    fn get_package(&self) -> Option<&Package> {
+        None
+    }
+
+    fn get_frontmatter(&self) -> Option<&FrontMatterScript> {
+        Some(self)
     }
 }
 
