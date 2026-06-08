@@ -17,8 +17,8 @@ use crate::{DuckContext, QuackResult};
 pub fn list_venvs(storage_root: &Path, ctx: &DuckContext) -> QuackResult<HashMap<VenvId, Venv>> {
     let storage = paths::Storage::new(storage_root);
     let mut metadata = HashMap::new();
-    let vevns = storage.iter_venvs()?.collect::<Result<Vec<_>, _>>()?;
-    for venv in vevns {
+    let venvs = storage.iter_venvs()?.collect::<Result<Vec<_>, _>>()?;
+    for venv in venvs {
         if !venv.path().is_dir() {
             continue;
         }
