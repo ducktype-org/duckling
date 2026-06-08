@@ -1716,7 +1716,7 @@ namespace vm {
 				auto epoch = FT_DATA.getVC()[tid];
 				ShadowEntry* tag_entry = sb->getData();
 				tag_entry->processWrite(tid, epoch, FT_DATA.getVC());
-				FT_THREAD.getShadowDataMemory().setNestedViewBlock({ sb, 1 }, wanted_type);
+				FT_THREAD.getShadowDataMemory().setNestedViewBlock(Ref(sb), 1, wanted_type);
 			}
 		}
 		FUNCTION_CONT(2);
@@ -1735,7 +1735,7 @@ namespace vm {
 					auto tid   = FT_DATA.thread_id;
 					auto epoch = FT_DATA.getVC()[tid];
 					sb->getData()[tag_idx].processWrite(tid, epoch, FT_DATA.getVC());
-					FT_THREAD.getShadowDataMemory().setNestedViewBlock({ sb, tag_idx + 1 }, wanted_type);
+					FT_THREAD.getShadowDataMemory().setNestedViewBlock(Ref(sb), tag_idx + 1, wanted_type);
 				}
 			}
 		}

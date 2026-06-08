@@ -12,6 +12,8 @@ namespace vm {
 	template<typename EntryT>
 	class BasicBlock;
 
+	using Block = BasicBlock<std::byte>;
+
 	template<typename EntryT, typename BlockT>
 	class IMemory;
 
@@ -23,20 +25,18 @@ namespace vm {
 	 * to avoid circular dependencies and because it requires nontrivial logic.
 	 * It's good to think that the Memory class governs the pointers.
 	 */
-	template<typename EntryT>
-	class BasicPointer final {
+	class Pointer final {
 	private:
-		MRef<BasicBlock<EntryT>> block;
-		u64                      offset;
+		MRef<Block> block;
+		u64         offset;
 
-		constexpr BasicPointer(): block(nullptr), offset(0) {}
+		constexpr Pointer(): block(nullptr), offset(0) {}
 
 		template<typename E, typename B>
 		friend class IMemory;
 
 	public:
-		constexpr BasicPointer(Ref<BasicBlock<EntryT>> block, u64 offset):
-			  block(block.get()), offset(offset) {}
+		constexpr Pointer(Ref<Block> block, u64 offset): block(block.get()), offset(offset) {}
 
 		void movePointer(u64 move_by) {
 			if (block == nullptr) throw exceptions::VMNullPointerAccessException();
@@ -44,14 +44,14 @@ namespace vm {
 		}
 
 		[[nodiscard]]
-		BasicPointer movedPointer(u64 move_by) const {
-			BasicPointer cpy(*this);
+		Pointer movedPointer(u64 move_by) const {
+			Pointer cpy(*this);
 			cpy.movePointer(move_by);
 			return cpy;
 		}
 
 		[[nodiscard]]
-		auto getBlock() const -> Ref<BasicBlock<EntryT>> {
+		auto getBlock() const -> Ref<Block> {
 			if (block == nullptr) throw exceptions::VMNullPointerAccessException();
 			return &*block;
 		}
@@ -68,12 +68,10 @@ namespace vm {
 
 		operator bool() const { return !isNull(); }
 
-		static constexpr BasicPointer null() { return {}; }
+		static constexpr Pointer null() { return {}; }
 
-		constexpr bool operator==(const BasicPointer&) const = default;
+		constexpr bool operator==(const Pointer&) const = default;
 	};
-
-	using Pointer = BasicPointer<std::byte>;
 
 	static_assert(sizeof(Pointer) == 16);
 }

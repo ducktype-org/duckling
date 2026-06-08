@@ -97,11 +97,8 @@ namespace vm {
 		void copyBlocksRecursively(Ref<BlockT> block_dst, Ref<BlockT> block_src) {
 			runDataCopyConstructors(block_dst);
 			for (auto nested: block_src->children_blocks) {
-				BasicPointer<EntryT> new_pointer{ block_dst, nested.first };
-				setNestedViewBlock(new_pointer, nested.second->data.element_type);
-				copyBlocksRecursively(
-					new_pointer.getBlock()->children_blocks[nested.first], nested.second
-				);
+				setNestedViewBlock(block_dst, nested.first, nested.second->data.element_type);
+				copyBlocksRecursively(block_dst->children_blocks[nested.first], nested.second);
 			}
 		}
 
@@ -112,11 +109,8 @@ namespace vm {
 		 */
 		void moveBlocksRecursively(Ref<BlockT> block_dst, Ref<BlockT> block_src) {
 			for (auto nested: block_src->children_blocks) {
-				BasicPointer<EntryT> new_pointer{ block_dst, nested.first };
-				setNestedViewBlock(new_pointer, nested.second->data.element_type);
-				moveBlocksRecursively(
-					new_pointer.getBlock()->children_blocks[nested.first], nested.second
-				);
+				setNestedViewBlock(block_dst, nested.first, nested.second->data.element_type);
+				moveBlocksRecursively(block_dst->children_blocks[nested.first], nested.second);
 			}
 		}
 
@@ -141,10 +135,9 @@ namespace vm {
 			for (auto iter = src_child_blocks.lower_bound(0);
 				 iter != src_child_blocks.end() && iter->first < entry_count;
 				 ++iter) {
-				auto                 offset = iter->first;
-				BasicPointer<EntryT> new_pointer{ dst, offset };
-				setNestedViewBlock(new_pointer, iter->second->data.element_type);
-				moveBlocksRecursively(new_pointer.getBlock()->children_blocks[offset], iter->second);
+				auto offset = iter->first;
+				setNestedViewBlock(dst, offset, iter->second->data.element_type);
+				moveBlocksRecursively(dst->children_blocks[offset], iter->second);
 			}
 
 			// Copy the data itself.
@@ -319,7 +312,7 @@ namespace vm {
 			if constexpr (std::is_same_v<EntryT, std::byte>) {
 				switch (type->getKind()) {
 				case Type::Kind::Pointer: {
-					const auto ptr = safeReadPointerBytes<BasicPointer<EntryT>>(data.getBegin());
+					const auto ptr = safeReadPointerBytes<Pointer>(data.getBegin());
 					destroyBlockReference(ptr);
 					break;
 				}
@@ -351,7 +344,7 @@ namespace vm {
 			if constexpr (std::is_same_v<EntryT, std::byte>) {
 				switch (type->getKind()) {
 				case Type::Kind::Pointer: {
-					const auto ptr = safeReadPointerBytes<BasicPointer<EntryT>>(data.getBegin());
+					const auto ptr = safeReadPointerBytes<Pointer>(data.getBegin());
 					if_opt_some(ptr.block.toOpt(), block) increaseBlockRefcount(block);
 					break;
 				}
@@ -625,11 +618,8 @@ namespace vm {
 		 * @note Parent pointer also stores offset within the parent block where to take the
 		 * nested view block from.
 		 */
-		static MRef<BlockT> getNestedViewBlock(BasicPointer<EntryT> parent_pointer, TypeCRef type) {
-			if (parent_pointer.isNull()) throw exceptions::VMNullPointerAccessException();
-			if_opt_some(
-				parent_pointer.block->children_blocks.atMaybe(parent_pointer.offset), nested
-			) {
+		static MRef<BlockT> getNestedViewBlock(Ref<BlockT> parent_block, u64 offset, TypeCRef type) {
+			if_opt_some(parent_block->children_blocks.atMaybe(offset), nested) {
 				if ((*nested)->data.element_type == type) return *nested;
 			}
 			return nullptr;
@@ -640,28 +630,30 @@ namespace vm {
 		 * @note Parent pointer also stores offset within the parent block where to create the new
 		 * nested view block.
 		 */
-		void setNestedViewBlock(BasicPointer<EntryT> parent_pointer, TypeCRef type) {
-			if (parent_pointer.isNull()) throw exceptions::VMNullPointerAccessException();
-			auto& children = parent_pointer.block->children_blocks;
-			if_opt_some(children.atMaybe(parent_pointer.offset), nested) {
+		void setNestedViewBlock(Ref<BlockT> parent_block, u64 offset, TypeCRef type) {
+			auto& children = parent_block->children_blocks;
+			if_opt_some(children.atMaybe(offset), nested) {
 				freeBlockData(*nested);
-				children.erase(parent_pointer.offset);
+				children.erase(offset);
 			}
 
-			auto block_data         = parent_pointer.block->data;
+			auto block_data         = parent_block->data;
 			block_data.element_type = type;
-			u64 entry_count = 0;
+			u64 entry_count;
 			if constexpr (std::is_same_v<EntryT, vm::ShadowEntry>) {
 				entry_count = type->getShadowSize();
 			} else {
 				entry_count = type->getSize().asInt();
 			}
-			block_data.view         = getPointerData(parent_pointer, entry_count);
+			if (parent_block->deallocated) throw exceptions::VMUseAfterFreeException();
+			if (offset + entry_count > parent_block->data.view.size())
+				throw exceptions::VMOutOfBlockBoundsException();
+			block_data.view = { parent_block->data.view.getBegin() + offset, entry_count };
 
 			auto new_block    = createBlock(block_data);  // @note createBlock nulls them bytes
-			new_block->parent = parent_pointer.getBlock();
+			new_block->parent = parent_block;
 			increaseBlockRefcount(new_block);  // so that the block does not disappear accidentally
-			children.put(parent_pointer.offset, new_block);
+			children.put(offset, new_block);
 		}
 
 		// =================== Block operations ===================
@@ -683,16 +675,19 @@ namespace vm {
 		}
 
 		[[nodiscard]]
-		static auto newBlockReference(Ref<BlockT> block, u64 offset) -> BasicPointer<EntryT> {
+		static auto newBlockReference(Ref<Block> block, u64 offset) -> Pointer
+			requires std::is_same_v<EntryT, std::byte>
+		{
 			increaseBlockRefcount(block);
 			return { block, offset };
 		}
 
 		[[nodiscard]]
-		static constexpr
-			__attribute__((always_inline)) auto getPointerData(
-				BasicPointer<EntryT> pointer, u64 entry_count
-			) -> base::TypedModRawView<EntryT> {
+		static constexpr __attribute__((always_inline)) auto getPointerData(
+			Pointer pointer, u64 entry_count
+		) -> base::TypedModRawView<std::byte>
+			requires std::is_same_v<EntryT, std::byte>
+		{
 			if (pointer.block == nullptr) throw exceptions::VMNullPointerAccessException();
 			if (pointer.block->deallocated) throw exceptions::VMUseAfterFreeException();
 			if (pointer.offset + entry_count > pointer.block->data.view.size())
@@ -705,20 +700,12 @@ namespace vm {
 		 * @note Assumes that the size of `type` is known at compile time and (implicitly)
 		 * that it is the type of the blocks pointed-to by `dst` and `src`.
 		 */
-		auto copyPointedData(
-			BasicPointer<EntryT> dst, BasicPointer<EntryT> src, TypeCRef type
-		) -> void {
-			// When copying with this or any other function we need to first free the previous
-			// data and call the data destructors, then run copy constructors only on the copied
-			// data parts.
-
+		auto copyPointedData(Pointer dst, Pointer src, TypeCRef type) -> void
+			requires std::is_same_v<EntryT, std::byte>
+		{
 			if (dst.isNull() || src.isNull()) throw exceptions::VMNullPointerCopyException();
 
-			usize entry_count;
-			if constexpr (std::is_same_v<EntryT, vm::ShadowEntry>)
-				entry_count = type->getShadowSize();
-			else
-				entry_count = type->getSize().asInt();
+			const usize entry_count = type->getSize().asInt();
 
 			// Free child blocks.
 			auto& dst_child_blocks = dst.getBlock()->children_blocks;
@@ -737,36 +724,26 @@ namespace vm {
 			for (auto iter = src_child_blocks.lower_bound(src.offset);
 				 iter != src_child_blocks.end() && iter->first < src.offset + entry_count;
 				 ++iter) {
-				auto                 offset      = dst.offset + iter->first - src.offset;
-				BasicPointer<EntryT> new_pointer = BasicPointer<EntryT>(dst.getBlock(), offset);
-				setNestedViewBlock(new_pointer, iter->second->data.element_type);
-				copyBlocksRecursively(new_pointer.getBlock()->children_blocks[offset], iter->second);
+				auto offset = dst.offset + iter->first - src.offset;
+				setNestedViewBlock(dst.getBlock(), offset, iter->second->data.element_type);
+				copyBlocksRecursively(dst.getBlock()->children_blocks[offset], iter->second);
 			}
 
 			// Copy the data itself
-			if constexpr (std::is_trivially_copyable_v<EntryT>) {
-				std::memcpy(
-					dst_view.getBegin(), src_view.getBegin(), entry_count * sizeof(EntryT)
-				);
-			} else {
-				std::copy(
-					src_view.getBegin(),
-					src_view.getBegin() + entry_count,
-					dst_view.getBegin()
-				);
-			}
+			std::memcpy(dst_view.getBegin(), src_view.getBegin(), entry_count);
 			runDataCopyConstructors(dst_view, type);
 		}
 
-		auto destroyBlockReference(BasicPointer<EntryT> pointer) -> void {
+		auto destroyBlockReference(Pointer pointer) -> void
+			requires std::is_same_v<EntryT, std::byte>
+		{
 			if_opt_some(pointer.block.toOpt(), block) { decreaseBlockRefcount(block); }
 		}
 
-		auto updatePointerAssignment(
-			BasicPointer<EntryT> dst, BasicPointer<EntryT> src
-		) -> BasicPointer<EntryT> {
+		auto updatePointerAssignment(Pointer dst, Pointer src) -> Pointer
+			requires std::is_same_v<EntryT, std::byte>
+		{
 			if (dst.block != src.block) {
-				// Decrease the dst block's refcount before assigning the new block
 				destroyBlockReference(dst);
 				if_opt_some(src.block.toOpt(), block) { increaseBlockRefcount(block); }
 			}

@@ -234,7 +234,9 @@ namespace vm {
 			// Set the view block
 			auto nested_data_ptr = variant_pointer;
 			nested_data_ptr.movePointer(variant_type_tag_size.asInt());
-			thread.process_memory.setNestedViewBlock(nested_data_ptr, wanted_type);
+			thread.process_memory.setNestedViewBlock(
+				nested_data_ptr.getBlock(), nested_data_ptr.getOffset(), wanted_type
+			);
 
 			// Find type index
 			auto  alternatives      = variant_type->getVariantAlternatives().value();
@@ -282,7 +284,8 @@ namespace vm {
 			) {
 
 			auto view_block_ref = thread.process_memory.getNestedViewBlock(
-				variant_pointer.movedPointer(variant_type->getTypeTagSizeBytes()->asInt()),
+				variant_pointer.getBlock(),
+				variant_pointer.getOffset() + variant_type->getTypeTagSizeBytes()->asInt(),
 				wanted_type
 			);
 
