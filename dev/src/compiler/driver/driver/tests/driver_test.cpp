@@ -227,6 +227,7 @@ private:
 						.linker_path = {},
 						.additional_link_options = {},
 						.link_c_standard_library = true,
+						.stdlib_link_options = {},
 					},
 				}
 			);
@@ -554,6 +555,7 @@ private:
 					.linker_path = {},
 					.additional_link_options = {},
 					.link_c_standard_library = true,
+					.stdlib_link_options = {}
 				},
 			}
 		);
@@ -677,6 +679,7 @@ private:
 					.linker_path = {},
 					.additional_link_options = {},
 					.link_c_standard_library = true,
+					.stdlib_link_options = {}
 				},
 			}
 		);
@@ -802,6 +805,7 @@ private:
 					.linker_path = {},
 					.additional_link_options = {},
 					.link_c_standard_library = true,
+					.stdlib_link_options = {}
 				},
 			}
 		);
