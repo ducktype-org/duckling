@@ -125,24 +125,19 @@ namespace vm::jit {
 				std::vector<llvm::Constant*> fields;
 
 				if constexpr (switch_case_instr) {
-					fields.push_back(
-						llvm::ConstantInt::get(llvm::Type::getInt64Ty(llvm_ctx), opcode)
+					fields.push_back(llvm::ConstantInt::get(llvm::Type::getInt64Ty(llvm_ctx), opcode)
 					);
 				} else {
-					fields.push_back(
-						llvm::ConstantInt::get(
-							llvm::Type::getInt64Ty(llvm_ctx),
-							reinterpret_cast<u64>(OpFuns::OPFUNS.at(opcode))
-						)
-					);
+					fields.push_back(llvm::ConstantInt::get(
+						llvm::Type::getInt64Ty(llvm_ctx),
+						reinterpret_cast<u64>(OpFuns::OPFUNS.at(opcode))
+					));
 				}
 
-				fields.push_back(
-					llvm::ConstantInt::get(llvm::Type::getInt64Ty(llvm_ctx), inst.arg0)
+				fields.push_back(llvm::ConstantInt::get(llvm::Type::getInt64Ty(llvm_ctx), inst.arg0)
 				);
 
-				fields.push_back(
-					llvm::ConstantInt::get(llvm::Type::getInt64Ty(llvm_ctx), inst.arg1)
+				fields.push_back(llvm::ConstantInt::get(llvm::Type::getInt64Ty(llvm_ctx), inst.arg1)
 				);
 
 				llvm::Constant* c

@@ -43,10 +43,10 @@ namespace vm {
 		// was created using placement new. That means dereferenced value is of type T.
 		// T is type accesible to T - new pointer satisfies necessery condition to be dereferenced.
 		// https://cppreference.com/cpp/language/reinterpret_cast point 5.
-		// std::launder is necessery to follow strict aliasing rule, as described in 
+		// std::launder is necessery to follow strict aliasing rule, as described in
 		// https://en.cppreference.com/cpp/utility/launder	:
 		// typical use of std::launder:
-		// Obtaining a pointer to an object created by placement new from a pointer to an 
+		// Obtaining a pointer to an object created by placement new from a pointer to an
 		// object providing storage for that object.
 		return *std::launder(reinterpret_cast<const T*>(ptr + offset));
 	}
