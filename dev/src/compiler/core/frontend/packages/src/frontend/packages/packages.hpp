@@ -31,7 +31,7 @@ namespace compiler::frontend::packages {
 		base::StrID package_id;
 		/**
 		 * @brief Name used in importing code.
-		 * Defaults to the package ID when no explicit alias is set.
+		 * Defaults to the dependency package's name when no explicit alias is set.
 		 */
 		base::StrID alias;
 	};
@@ -48,6 +48,7 @@ namespace compiler::frontend::packages {
 	public:
 		PackageInfo(
 			compiler::frontend::ModuleID       root_module,
+			base::StrID                        name,
 			base::StrID                        version,
 			std::vector<base::StrID>           features,
 			std::vector<PackageDependencyInfo> dependencies
@@ -55,6 +56,9 @@ namespace compiler::frontend::packages {
 
 		/** @brief Package ID */
 		[[nodiscard]] base::StrID getPackageID() const;
+
+		/** @brief Package name — the default import name for this package. */
+		[[nodiscard]] base::StrID getName() const;
 
 		/** @brief Stable hash of the package, used as side-input key. */
 		[[nodiscard]] const hashing::ComponentHash::HashType& getPackageHash() const;
@@ -99,6 +103,7 @@ namespace compiler::frontend::packages {
 		[[nodiscard]] static hashing::ComponentHash::HashType computeHash(base::StrID package_id);
 
 		compiler::frontend::ModuleID       m_root_module;
+		base::StrID                        m_name;
 		base::StrID                        m_version;
 		std::vector<base::StrID>           m_features;
 		std::vector<PackageDependencyInfo> m_dependencies;
@@ -109,11 +114,11 @@ namespace compiler::frontend::packages {
 	 * @brief Describes a single external dependency parsed from manifest input.
 	 */
 	struct RawDependencyInfo final {
-		/** @brief The name of the dependency package. Used as @c package_id later. */
-		base::StrID package_name;
+		/** @brief The id of the dependency package. Must match a package id in the manifest. */
+		base::StrID package_id;
 
 		/** @brief Alias of the dependency used in importing code. Empty if no explicit alias was
-		 * provided (defaults to @c package_name). */
+		 * provided (defaults to the dependency package's @c name). */
 		base::Optional<base::StrID> alias;
 
 		/**
@@ -130,7 +135,11 @@ namespace compiler::frontend::packages {
 	 * @brief Describes a single package parsed from manifest input.
 	 */
 	struct RawPackageInfo final {
-		/** @brief The name of the package. Used as @c package_id later. */
+		/** @brief Unique identifier of the package. Referenced by dependencies and tasks. */
+		base::StrID package_id;
+
+		/** @brief Import name of the package. Used as the default alias when depending on this
+		 * package without an explicit alias. */
 		base::StrID package_name;
 
 		/** @brief Version of the package. */
@@ -158,10 +167,13 @@ namespace compiler::frontend::packages {
 	/**
 	 * @brief Resolve a RawPackageInfo into a PackageInfo by loading its module tree.
 	 * Pure — does not log; routes errors via @p report.
+	 * @param all_packages Vector of all available package infos, used to resolve dependencies.
 	 * @return The loaded PackageInfo or empty if an error was reported.
 	 */
 	base::Optional<PackageInfo> createPackageInfo(
-		const RawPackageInfo& package_info, const DiagnosticReporter& report
+		const RawPackageInfo&              package_info,
+		const std::vector<RawPackageInfo>& all_packages,
+		const DiagnosticReporter&          report
 	);
 
 	/**
