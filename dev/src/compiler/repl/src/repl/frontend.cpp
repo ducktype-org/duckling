@@ -22,4 +22,8 @@ namespace compiler::repl {
 
 	void ReplFrontend::printHelp() const { m_impl.printHelp(); }
 
+	void ReplFrontend::printCompletions(std::string_view prefix) const {
+		m_impl.printCompletions(prefix);
+	}
+
 }  // namespace compiler::repl
