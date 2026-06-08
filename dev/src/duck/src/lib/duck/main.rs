@@ -54,7 +54,7 @@ fn print_error_and_exit(error: QuackError, stdout: &Terminal, stderr: &Terminal)
 
 /// Print [`QuackError`] as a message.
 fn print_message(msgs: &QuackError, term: &Terminal) -> QuackResult<()> {
-    // NOTE: We intentionaly ignore any printing errors here.
+    // NOTE: We intentionally ignore any printing errors here.
     for (i, error) in msgs.sources().enumerate() {
         if i > 0 {
             let _ = term.print("");

@@ -197,7 +197,7 @@ private:
 
 	void taskMissingPackageFails() {
 		driver::RawPackageCompilationTask raw_task{
-			.package_name = base::StrID("missing_package"),
+			.package_id   = base::StrID("missing_package"),
 			.build_target = driver::BuildTargetLLVM{},
 		};
 		driver::RawTask raw{

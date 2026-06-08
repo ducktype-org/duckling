@@ -39,6 +39,21 @@ namespace {
 	inline constexpr char             PRINTABLE_MAX           = 0x7e;  // ~
 	inline constexpr std::string_view CLEAR_ENTIRE_SCREEN_SEQ = "\033c\033[H\033[2J\033[0m";
 
+	// ANSI escape sequences for bracketed paste mode (https://en.wikipedia.org/wiki/Bracketed-paste)
+	inline constexpr std::string_view ENABLE_BRACKETED_PASTE_SEQ  = ESC "[?2004h";
+	inline constexpr std::string_view DISABLE_BRACKETED_PASTE_SEQ = ESC "[?2004l";
+	inline constexpr char             BRACKETED_PASTE_PREFIX1     = '2';
+	inline constexpr char             BRACKETED_PASTE_PREFIX2     = '0';
+	inline constexpr char             BRACKETED_PASTE_START_CODE  = '0';
+	inline constexpr char             BRACKETED_PASTE_END_CODE    = '1';
+	inline constexpr char             BRACKETED_PASTE_SUFFIX      = '~';
+
+	// ANSI escape sequences for modified keys (e.g. Ctrl/Alt + Arrow Keys)
+	inline constexpr char EXTENDED_KEY_PREFIX    = '1';
+	inline constexpr char EXTENDED_KEY_SEPARATOR = ';';
+	inline constexpr char MODIFIER_CTRL          = '5';
+	inline constexpr char MODIFIER_ALT           = '3';
+
 #ifndef _WIN32
 	void writeStr(std::string_view str) { ::write(STDOUT_FILENO, str.data(), str.size()); }
 
@@ -185,11 +200,14 @@ namespace compiler::repl {
 		return *this;
 	}
 
-	FrontendMinImplementation::FrontendMinImplementation(bool completions_enabled):
+	FrontendMinImplementation::FrontendMinImplementation(
+		bool completions_enabled, bool bracketed_paste_enabled
+	):
 		  m_hist_idx(0),
 		  m_sequence_to_align_cursor_to_multiline_start(
 			  std::format("{}[{}C", ESC, ReplConfig::CONTINUATION.size())
-		  ) {
+		  ),
+		  m_bracketed_paste_enabled(bracketed_paste_enabled) {
 		if (completions_enabled)
 			std::cerr << "Warning: minimal REPL frontend does not support completions.\n";
 	}
@@ -201,9 +219,14 @@ namespace compiler::repl {
 
 	std::string FrontendMinImplementation::readLine() {
 		std::cout << ReplConfig::PROMPT;
+		std::cout.flush();
+
+		if (m_bracketed_paste_enabled) writeStr(ENABLE_BRACKETED_PASTE_SEQ);
 
 		RawTerminalMode terminal_guard;
 		auto            line = internalReadLine();
+
+		if (m_bracketed_paste_enabled) writeStr(DISABLE_BRACKETED_PASTE_SEQ);
 
 		return line;
 	}
@@ -277,16 +300,23 @@ namespace compiler::repl {
 		while (true) {
 			char c = 0;
 			if (!readChar(c)) break;
-			if (c == NEWLINE_CHAR || c == CARRIAGE_RETURN_CHAR)  // Commit.
-				break;
-			else if (c == BACKSPACE_CHAR)
-				onBackspace();
-			else if (c == ESC_CHAR)
+			if (c == ESC_CHAR) {
 				onEscapeSequence();
-			else if (c >= PRINTABLE_MIN && c <= PRINTABLE_MAX)
-				onPrintableChar(c);
+			} else if (m_in_bracketed_paste) {
+				if (c == NEWLINE_CHAR || c == CARRIAGE_RETURN_CHAR)
+					onNewLine();
+				else if (c >= PRINTABLE_MIN && c <= PRINTABLE_MAX)
+					onPrintableChar(c);
+			} else {
+				if (c == NEWLINE_CHAR || c == CARRIAGE_RETURN_CHAR)  // Commit.
+					break;
+				else if (c == BACKSPACE_CHAR)
+					onBackspace();
+				else if (c >= PRINTABLE_MIN && c <= PRINTABLE_MAX)
+					onPrintableChar(c);
+			}
 
-			refreshScreen();
+			if (!m_in_bracketed_paste) refreshScreen();
 		}
 
 		saveToHistory();
@@ -349,13 +379,27 @@ namespace compiler::repl {
 				onArrowLeft();
 			else if (seq2 == ARROW_RIGHT_CODE)
 				onArrowRight();
-			else if (seq2 == '1') {
+			else if (seq2 == BRACKETED_PASTE_PREFIX1) {
 				char seq3 = 0, seq4 = 0, seq5 = 0;
 				if (!readChar(seq3)) return;
-				if (seq3 == ';') {
+				if (seq3 == BRACKETED_PASTE_PREFIX2) {
+					if (!readChar(seq4)) return;
+					if (seq4 == BRACKETED_PASTE_START_CODE) {
+						if (!readChar(seq5)) return;
+						if (seq5 == BRACKETED_PASTE_SUFFIX) m_in_bracketed_paste = true;
+					} else if (seq4 == BRACKETED_PASTE_END_CODE) {
+						if (!readChar(seq5)) return;
+						if (seq5 == BRACKETED_PASTE_SUFFIX) m_in_bracketed_paste = false;
+					}
+				}
+			} else if (seq2 == EXTENDED_KEY_PREFIX) {
+				char seq3 = 0, seq4 = 0, seq5 = 0;
+				if (!readChar(seq3)) return;
+				if (seq3 == EXTENDED_KEY_SEPARATOR) {
 					if (!readChar(seq4)) return;
 					if (!readChar(seq5)) return;
-					if (seq4 == '5' || seq4 == '3') {  // Alt or Ctrl - depends on the terminal.
+					if (seq4 == MODIFIER_CTRL
+					    || seq4 == MODIFIER_ALT) {  // Alt or Ctrl - depends on the terminal.
 						if (seq5 == ARROW_UP_CODE)
 							historyScrollUp();
 						else if (seq5 == ARROW_DOWN_CODE)

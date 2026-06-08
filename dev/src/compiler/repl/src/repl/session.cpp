@@ -241,11 +241,11 @@ namespace compiler::repl {
 		std::cout << "\n";
 	}
 
-	ReplSession::ReplSession(bool completions_enabled):
+	ReplSession::ReplSession(bool completions_enabled, bool bracketed_paste_enabled):
 		  m_should_exit(false),
 		  m_line_counter(0),
 		  m_dvm_pid(0),
-		  m_frontend(completions_enabled),
+		  m_frontend(completions_enabled, bracketed_paste_enabled),
 		  m_lowering_context() {
 		initDVM();
 	}
@@ -414,6 +414,12 @@ namespace compiler::repl {
 
 		if (line == "/clear" || line == "/c") {
 			m_frontend.clearScreen();
+			return true;
+		}
+
+		if (command == "/complete") {
+			auto prefix = base::strTrim(args);
+			m_frontend.printCompletions(prefix);
 			return true;
 		}
 

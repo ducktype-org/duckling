@@ -7,6 +7,7 @@
  */
 
 #include <archiver/archive.hpp>
+#include <diagnostic_interactive/logger.hpp>
 #include <driver/diagnostics/log_helpers.hpp>
 #include <driver/exit.hpp>
 #include <driver/initialize.hpp>
@@ -33,7 +34,6 @@
 #include <base/types/ok_bad.hpp>
 
 #include <clah/clah.hpp>
-#include <diagnostic/logger.hpp>
 #include <filesystem/file.hpp>
 #include <filesystem/file_path.hpp>
 #include <init/init.hpp>
@@ -352,9 +352,7 @@ clah::Clah getClahForMain() {
 					bool tokenize_ok = token_file->tokenize();
 
 					if (not tokenize_ok) {
-						std::cout << "Tokenization errors: ";
-						token_file->getLogger()->dumpLog(true, std::cout);
-						std::cout << "\n";
+						std::cout << "Tokenization errors.\n";
 						return 1;
 					} else {
 						std::cout << "This prints only top-level tokens (will not print tokens "
@@ -403,12 +401,7 @@ clah::Clah getClahForMain() {
 
 					int exit_code = 0;
 
-					if (pst.getLogger()->messageCount() != 0) {
-						std::cout << "Errors and messages: \n";
-						pst.getLogger()->dumpLog(true, std::cout);
-						std::cout << "\n\n";
-						exit_code = 1;
-					}
+					if (pst.hasErrors()) exit_code = 1;
 
 					std::cout << "Parsed tree:\n";
 					pst.dprint(std::cout);
@@ -450,6 +443,7 @@ clah::Clah getClahForMain() {
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
 							.packages_info = {
 								compiler::frontend::packages::RawPackageInfo{
+									.package_id   = base::StrID(package_name),
 									.package_name = base::StrID(package_name),
 									.version      = base::StrID("not_supported"),
 									.package_path = fs::FilePath(path_to_compile.getFilePath()),
@@ -483,7 +477,8 @@ clah::Clah getClahForMain() {
 
 					CORE_ASSERT(!global_state::getPackages().empty(), "No packages registered");
 					auto root
-						= global_state::getPackages().back().getRootModule().illegalAccess().getID();
+						= global_state::getPackages().front().getRootModule().illegalAccess().getID(
+						);
 
 					(void) query::entryPoint<driver::CompileModule>({ root, backend_type, false });
 
@@ -583,6 +578,7 @@ clah::Clah getClahForMain() {
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
 							.packages_info = {
 								compiler::frontend::packages::RawPackageInfo{
+									.package_id   = base::StrID(package_name),
 									.package_name = base::StrID(package_name),
 									.version      = base::StrID("not_supported"),
 									.package_path = path_to_compile.getFilePath(),
@@ -655,7 +651,7 @@ clah::Clah getClahForMain() {
 					base::OkBad result = compiler::driver::compilePackages({
 						compiler::driver::PackageCompilationTask{
 							.root_module
-							= global_state::getPackages().back().getRootModule().illegalAccess().getID(
+							= global_state::getPackages().front().getRootModule().illegalAccess().getID(
 							),
 							.build_target = build_target,
 						},
@@ -849,6 +845,7 @@ clah::Clah getClahForMain() {
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
 									.packages_info = {
 										compiler::frontend::packages::RawPackageInfo{
+											.package_id   = base::StrID(package_name),
 											.package_name = base::StrID(package_name),
 											.version      = base::StrID("not_supported"),
 											.package_path = path_to_compile.getFilePath(),
@@ -1009,6 +1006,10 @@ clah::Clah getClahForMain() {
 	                     .addLongName("no-completions")
 	                     .addShortDesc("Disable REPL autocompletions and hints.")
 	                     .build())
+				.add(clah::ParamBuilder::ofFlag()
+	                     .addLongName("disable-bracketed-paste")
+	                     .addShortDesc("Disable bracketed paste in REPL.")
+	                     .build())
 				.setDefaultValueParser(clah::FileParser::make("script")
 	            )  // for optional script path.
 				.add(clah::ParamBuilder::ofValue(clah::IntParser::make("count"))
@@ -1034,11 +1035,17 @@ clah::Clah getClahForMain() {
 						compiler::driver::exit();
 						return 1;
 					}
+					bool completions = compiler::repl::FRONTEND_DEFAULT_COMPLETIONS_ENABLED;
+					if (options.isFlag("no-completions")) completions = false;
+
+					bool bracketed = compiler::repl::FRONTEND_DEFAULT_BRACKETED_PASTE_ENABLED;
+					if (options.isFlag("disable-bracketed-paste")) bracketed = false;
+
 					base::Optional<usize>      reset_replay_count;
 					bool                       reset_replay_silent = false;
 					compiler::repl::ReplResult repl_result = compiler::repl::ReplResult::success();
 					{
-						compiler::repl::ReplSession session(!options.isFlag("no-completions"));
+						compiler::repl::ReplSession session(completions, bracketed);
 						auto replay_count_opt = options.getValue<i64>("history-entries");
 						i64  replay_count     = replay_count_opt.copyValueOr(0);
 						bool replay_silent    = options.isFlag("silent");

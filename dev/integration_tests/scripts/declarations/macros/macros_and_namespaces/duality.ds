@@ -1,0 +1,6 @@
+import core.builtins.*;
+
+namespace N { expand "fun f() -> i64 = 10 + 2";}
+expand "fun f() -> i64 = 10";
+builtin_output_i64(f())
+builtin_output_i64(N.f())
