@@ -55,7 +55,7 @@ from click import command, option
     help="Run tests under the specified path prefix (e.g., 'tests/C++' or 'tests/C++/Case1').",
 )
 @option(
-    "--override-values",
+    "--custom-values",
     type=str,
     default="{}",
     help="A json dict with configuration values that will override the test defaults. "

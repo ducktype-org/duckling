@@ -35,7 +35,7 @@ def tester_impl(
         log_file: str | Path,
         build_dir: str,
         determinism_check: bool,
-        override_values: str
+        custom_values: str
 ):
     """
     The driver function of Duckling Integration Tests framework.
@@ -54,7 +54,7 @@ def tester_impl(
         log_file.unlink()
         log_file = Path(log_file)
 
-    user_values = json.loads(override_values)
+    user_values = json.loads(custom_values)
 
     user_values["build_dir"] = str(Path(build_dir).absolute())
     user_values["dev_dir"] = str(get_dev_directory())
