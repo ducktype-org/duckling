@@ -154,12 +154,12 @@ impl GitId {
         self.url = url;
     }
 
-    /// Get the checkouted commit of this repository.
+    /// Get the checkout'd commit of this repository.
     pub fn commit(&self) -> StrId {
         self.commit
     }
 
-    /// Set the checkouted commit of this repository.
+    /// Set the checkout'd commit of this repository.
     pub fn set_commit(&mut self, commit: StrId) {
         self.commit = commit;
     }

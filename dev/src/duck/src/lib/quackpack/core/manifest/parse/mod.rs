@@ -92,7 +92,7 @@ impl<'scope> ScopeGuard<'scope> {
     }
 
     /// Disarm this guard.
-    /// Droping it will have no effect.
+    /// Dropping it will have no effect.
     pub fn disarm(&mut self) {
         self.armed = false;
     }
