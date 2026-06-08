@@ -252,4 +252,12 @@ namespace vm::low::cf {
 		LoopDetector detector;
 		return detector.findLoops(bc);
 	}
+
+	inline usize functionEntrypointOffset(const MicroBytecode& bc) {
+		for (usize i = 0; i < bc.size(); ++i) {
+			if (getInstructionOpcode(bc[i]) == MicroOpcode::jitEntrypoint)
+				return i;
+		}
+		CORE_ASSERT(false, "Function entrypoint (JitEntrypoint opcode) not found in bytecode");
+	}
 }  // namespace vm::low::cf

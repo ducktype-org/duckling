@@ -33,6 +33,7 @@ namespace vm::low {
 		usize       id;
 #ifdef ENABLE_JIT
 		std::vector<cf::ControlFlowGraph> cfgs;
+		usize jit_entrypoint_offset;
 #endif
 		MicroBytecode bc;
 

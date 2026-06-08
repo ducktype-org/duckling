@@ -210,12 +210,15 @@ namespace vm::loader::compiler::safe {
 			std::cout << "Calling detectLoops for function " << function.name.str.strView() << "\n";
 			low::cf::FunctionLoopCFGs func_cfgs = low::cf::detectLoopsInFunction(bytecode);
 			std::vector<low::cf::ControlFlowGraph> cfgs = func_cfgs.cfgs;
+			usize function_entrypoint = low::cf::functionEntrypointOffset(bytecode);
+			std::cout << "Function entrypoint offset: " << function_entrypoint << "\n";
 #endif
 			usize new_func_id = low_program.functions.insert(
 				low::LowFuncData{ .name = function.name,
 			                      .id   = 0,  // placeholder, replaced immediately
 #ifdef ENABLE_JIT
 			                      .cfgs = cfgs,
+								  .jit_entrypoint_offset = function_entrypoint,
 #endif
 			                      .bc                  = std::move(bytecode),
 			                      .local_stack_size    = getIntTypeSize(ctx.local_stack_size),
