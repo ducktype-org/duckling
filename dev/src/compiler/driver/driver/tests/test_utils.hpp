@@ -18,6 +18,7 @@ namespace driver_test_utils {
 		std::string_view name, std::string_view path
 	) {
 		return compiler::frontend::packages::RawPackageInfo{
+			.package_id   = base::StrID(std::string(name)),
 			.package_name = base::StrID(std::string(name)),
 			.version      = base::StrID("not_supported"),
 			.package_path = fs::FilePath(std::string(path)),

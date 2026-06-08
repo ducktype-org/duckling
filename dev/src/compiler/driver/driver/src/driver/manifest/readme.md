@@ -19,7 +19,8 @@ Both fields are **required**. Unknown fields produce a diagnostic.
 
 | field          | type     | required | description |
 |----------------|----------|----------|-------------|
-| `name`         | string   | yes      | Package ID (must be unique within the manifest). |
+| `id`           | string   | yes      | Package ID — unique identifier within the manifest (used by dependencies and tasks). |
+| `name`         | string   | yes      | Import name of the package (used when resolving imports in source code). |
 | `path`         | string   | yes      | Path to the package's source root (root module). |
 | `version`      | string   | no       | version string. |
 | `features`     | string[] | no       | Feature flags |
@@ -29,14 +30,15 @@ Each dependency (`RawDependencyInfo`):
 
 | field   | type   | required | description |
 |---------|--------|----------|-------------|
-| `name`  | string | yes      | Name of the dependency package. **Must have its own entry in `packages[]`**. |
-| `alias` | string | no       | Name used to import the package in code. Defaults to `name`. |
+| `id`    | string | yes      | ID of the dependency package. **Must match a package `id` declared in `packages[]`**. |
+| `alias` | string | no       | Name used to import the package in code. Defaults to the target package's `name`. |
 
 Validation rules (`verify`):
 - `packages` must not be empty.
-- Package names must be unique.
-- Every `dependency.name` must exist in `packages[]`.
-- Within a single package: no duplicate `dependency.name` and no duplicate aliases.
+- Package `id`s must be unique.
+- Package `name`s must also be unique.
+- Every `dependency.id` must exist in `packages[]`.
+- Within a single package: no duplicate `dependency.id` and no duplicate effective aliases.
 
 ## `tasks[]` — compilation tasks (`RawTask`)
 
@@ -44,7 +46,7 @@ Currently a single task type: package compilation. Common fields:
 
 | field      | type   | required | description |
 |------------|--------|----------|-------------|
-| `package`  | string | yes      | Name of a package from `packages[]` to build. |
+| `package`  | string | yes      | ID of a package from `packages[]` to build. |
 | `strategy` | string | yes      | `"dvm"` \| `"native"` \| `"obj"` \| `"lib"`. |
 
 Remaining fields depend on `strategy`:
@@ -93,7 +95,7 @@ This strategy takes **no extra fields** (`output_file`, `linking_options`,
 ```json
 {
   "packages": [
-    { "name": "app", "path": "src/app" }
+    { "id": "app", "name": "app", "path": "src/app" }
   ],
   "tasks": [
     { "package": "app", "strategy": "dvm", "output_file": "app" }
@@ -110,15 +112,17 @@ that links the resulting `.a` file.
 {
   "packages": [
     {
+      "id": "mathlib",
       "name": "mathlib",
       "path": "libs/mathlib",
       "version": "0.1.0"
     },
     {
+      "id": "app",
       "name": "app",
       "path": "src/app",
       "dependencies": [
-        { "name": "mathlib", "alias": "math" }
+        { "id": "mathlib", "alias": "math" }
       ]
     }
   ],
@@ -155,4 +159,3 @@ When only raw linker flags are needed:
   "linking_options": "/abs/path/to/libfoo.a /abs/path/to/libbar.a -lpthread"
 }
 ```
-
