@@ -1308,6 +1308,8 @@ namespace vm {
 			auto  data_block = READ_BLOCK_REF_FROM_ARG(instr->arg0);
 
 			auto shadow_data_ptr = sf->local_shadow_data_stack + sf->local_shadow_data_head;
+			if (shadow_data_ptr + type->getShadowSize() > FT_RT.shadow_data_stack_end)
+				throw exceptions::VMStackOverflowException();
 			auto shadow_block    = FT_THREAD.getShadowDataMemory().allocateDummy(type, shadow_data_ptr);
 			FT_THREAD.getShadowDataMemory().increaseBlockRefcount(shadow_block);
 
@@ -1384,6 +1386,8 @@ namespace vm {
 
 			*callee_sf = ShadowFrame();
 			FT_RT.shadow_frame_stack_current--;
+			FT_RT.shadow_frame_stack_current->local_shadow_data_head
+				+= base::safeIntConv<u32>(frame->current_function->ret_shadow_size);
 		}
 		FUNCTION_CONT(1);
 	}

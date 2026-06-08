@@ -172,8 +172,13 @@ namespace vm {
 		 */
 	public:
 		void updateBlockDataView(Ref<BlockT> block, base::TypedModRawView<EntryT> new_view) {
+			usize expected_size;
+			if constexpr (std::is_same_v<EntryT, vm::ShadowEntry>)
+				expected_size = block->data.element_type->getShadowSize();
+			else
+				expected_size = block->data.element_type->getSize().asInt();
 			CORE_ASSERT(
-				block->data.element_type->getSize().asInt() == new_view.size(),
+				expected_size == new_view.size(),
 				"New view size must match the block's type size"
 			);
 			base::TypedModRawView<EntryT> old_root_view = block->data.view;
@@ -709,22 +714,28 @@ namespace vm {
 
 			if (dst.isNull() || src.isNull()) throw exceptions::VMNullPointerCopyException();
 
+			usize entry_count;
+			if constexpr (std::is_same_v<EntryT, vm::ShadowEntry>)
+				entry_count = type->getShadowSize();
+			else
+				entry_count = type->getSize().asInt();
+
 			// Free child blocks.
 			auto& dst_child_blocks = dst.getBlock()->children_blocks;
 			for (auto iter = dst_child_blocks.lower_bound(dst.offset);
-				 iter != dst_child_blocks.end() && iter->first < dst.offset + type->getSize().asInt();
+				 iter != dst_child_blocks.end() && iter->first < dst.offset + entry_count;
 				 iter = dst_child_blocks.erase(iter)) {
 				freeBlockData(iter->second);
 			}
 
-			const auto dst_view = getPointerData(dst, type->getSize().asInt());
-			const auto src_view = getPointerData(src, type->getSize().asInt());
+			const auto dst_view = getPointerData(dst, entry_count);
+			const auto src_view = getPointerData(src, entry_count);
 			runDataDestructors(dst_view, type);
 
 			// Copy the child blocks
 			auto& src_child_blocks = src.getBlock()->children_blocks;
 			for (auto iter = src_child_blocks.lower_bound(src.offset);
-				 iter != src_child_blocks.end() && iter->first < src.offset + type->getSize().asInt();
+				 iter != src_child_blocks.end() && iter->first < src.offset + entry_count;
 				 ++iter) {
 				auto                 offset      = dst.offset + iter->first - src.offset;
 				BasicPointer<EntryT> new_pointer = BasicPointer<EntryT>(dst.getBlock(), offset);
@@ -735,12 +746,12 @@ namespace vm {
 			// Copy the data itself
 			if constexpr (std::is_trivially_copyable_v<EntryT>) {
 				std::memcpy(
-					dst_view.getBegin(), src_view.getBegin(), type->getSize().asInt() * sizeof(EntryT)
+					dst_view.getBegin(), src_view.getBegin(), entry_count * sizeof(EntryT)
 				);
 			} else {
 				std::copy(
 					src_view.getBegin(),
-					src_view.getBegin() + type->getSize().asInt(),
+					src_view.getBegin() + entry_count,
 					dst_view.getBegin()
 				);
 			}

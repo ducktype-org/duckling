@@ -18,6 +18,7 @@ namespace vm {
 	 */
 	struct FastTrackRuntimeData {
 		ShadowEntry* shadow_data_stack_base         = nullptr;
+		ShadowEntry* shadow_data_stack_end          = nullptr;
 		ShadowFrame* shadow_frame_stack_base        = nullptr;
 		ShadowFrame* shadow_frame_stack_end         = nullptr;
 		ShadowFrame* shadow_frame_stack_current     = nullptr;
@@ -27,6 +28,9 @@ namespace vm {
 
 		FastTrackRuntimeData(Ref<FastTrackThreadStack> stack, ShadowEntry* global_data):
 			  shadow_data_stack_base(stack->getShadowDataStack()->data()),
+			  shadow_data_stack_end(
+				  stack->getShadowDataStack()->data() + stack->getShadowDataStack()->size()
+			  ),
 			  shadow_frame_stack_base(stack->getShadowFrameStack()->data()),
 			  shadow_frame_stack_end(
 				  stack->getShadowFrameStack()->data() + stack->getShadowFrameStack()->size()
@@ -81,7 +85,7 @@ namespace vm {
 		void forkVC(const VectorClock& parent_vc, api::ThreadID my_tid) {
 			thread_id  = my_tid;
 			vc         = parent_vc;
-			vc[my_tid] = 1;
+			vc[my_tid] = parent_vc[my_tid] > 1 ? parent_vc[my_tid] : 1;
 		}
 
 		[[nodiscard]] const VectorClock& getVC() const { return vc; }

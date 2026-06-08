@@ -18,6 +18,7 @@
 #include <vm/core/vmvalue/vmvalue.hpp>
 
 #include <chrono>
+#include <optional>
 
 namespace vm::builtins {
 
@@ -131,7 +132,7 @@ namespace vm::builtins {
 
 		if (result.has_value() && thread.safe_process.getSettings().enable_fast_track) {
 			auto& ft = static_cast<FastTrackSafeVMThread&>(thread);
-			ft.getFTData().onRelease(ft.getFTData().vc);
+			ft.getFTData().vc.increment(ft.getFTData().thread_id);
 		}
 
 		thread.acquireGil();
@@ -140,20 +141,26 @@ namespace vm::builtins {
 	}
 
 	i64 FunctionHandlers::builtinJoinThread(SafeVMThread& thread, u64 thread_id) {
-		thread.releaseGil();
-
-		auto target_thread_opt = thread.safe_process.getVMThreadByID(api::ThreadID{ thread_id });
-
-		auto result = vm::api::join(thread.safe_process.getPID(), api::ThreadID{ thread_id });
-
-		if (result.has_value() && target_thread_opt
-		    && thread.safe_process.getSettings().enable_fast_track) {
-			auto& ft_joiner = static_cast<FastTrackSafeVMThread&>(thread);
-			auto& ft_joinee = static_cast<FastTrackSafeVMThread&>(*target_thread_opt.value());
-			ft_joiner.getFTData().joinVC(ft_joinee.getFTData().getVC());
+		// Snapshot the joinee's VC while the GIL is still held so the slot
+		// cannot be recycled by a concurrent runFunction between join() and the read.
+		std::optional<VectorClock> joinee_vc_snapshot;
+		if (thread.safe_process.getSettings().enable_fast_track) {
+			auto target = thread.safe_process.getVMThreadByID(api::ThreadID{ thread_id });
+			if (target) {
+				auto& ft_joinee = static_cast<FastTrackSafeVMThread&>(*target.value());
+				joinee_vc_snapshot = ft_joinee.getFTData().getVC();
+			}
 		}
 
+		thread.releaseGil();
+		auto result = vm::api::join(thread.safe_process.getPID(), api::ThreadID{ thread_id });
 		thread.acquireGil();
+
+		if (result.has_value() && joinee_vc_snapshot) {
+			auto& ft_joiner = static_cast<FastTrackSafeVMThread&>(thread);
+			ft_joiner.getFTData().joinVC(*joinee_vc_snapshot);
+		}
+
 		if (!result.has_value()) return -vm::api::errorToErrno(result.error());
 		return 0;  // success
 	}
