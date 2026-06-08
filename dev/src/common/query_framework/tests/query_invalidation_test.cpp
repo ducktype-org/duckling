@@ -352,7 +352,7 @@ private:
 		query::entryPoint<DummyQuery1>({ 2 });
 		std::unordered_map<query::internal::NodeID, std::string> stringified;
 
-		auto make_node = [&]<typename QueryType>(u64 key, std::string name) {
+		auto make_node = [&]<typename QueryType>(u64 key, const std::string& name) {
 			auto node = query::internal::makeNodeID<QueryType>(query::U64Key{ key });
 			stringified.emplace(node, name);
 			return node;
