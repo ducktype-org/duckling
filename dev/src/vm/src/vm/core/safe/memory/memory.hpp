@@ -273,7 +273,7 @@ namespace vm {
 			}
 			case Type::Kind::Data: {
 				// Iterate over data's fields
-				for (const auto& fields = **type->getFields(); auto [offset, shadowOffset, shadowSz, tp]: fields)
+				for (const auto& fields = **type->getFields(); auto [offset, shadowOffset, tp]: fields)
 					(this->*callback)(
 						base::TypedModRawView<EntryT>{ data.getBegin() + offset.asInt(),
 													   tp->getSize().asInt() },

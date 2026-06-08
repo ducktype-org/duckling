@@ -124,7 +124,6 @@ namespace vm {
 			// byte offset is set during finalization; shadow offset comes from ValidType
 			data.fields.emplace_back(kind::FieldDesc{ .offset        = Offset(0),
 				.shadow_offset = field_def.shadow_offset,
-				.shadow_size   = field_def.type->getShadowSize(),
 				.type          = field_def.type });
 		}
 		data.inheritance_metadata = std::move(inheritance_metadata);

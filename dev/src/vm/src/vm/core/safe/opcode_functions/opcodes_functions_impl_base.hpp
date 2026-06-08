@@ -1514,7 +1514,7 @@ namespace vm {
 				u32 size = 1;
 				if_opt_some(struct_type->getFields(), fields) {
 					for (const auto& field : *fields) {
-						if (field.shadow_offset == shadow_fld) { size = field.shadow_size; break; }
+						if (field.shadow_offset == shadow_fld) { size = field.type->getShadowSize(); break; }
 					}
 				}
 				auto tid = FT_DATA.thread_id;
@@ -1536,7 +1536,7 @@ namespace vm {
 				u32 size = 1;
 				if_opt_some(struct_type->getFields(), fields) {
 					for (const auto& field : *fields) {
-						if (field.shadow_offset == shadow_fld) { size = field.shadow_size; break; }
+						if (field.shadow_offset == shadow_fld) { size = field.type->getShadowSize(); break; }
 					}
 				}
 				auto tid = FT_DATA.thread_id;
