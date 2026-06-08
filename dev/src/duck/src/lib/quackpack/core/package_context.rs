@@ -50,7 +50,7 @@ impl<'duck> PackageContext<'duck> {
         let Some(package) = core::try_parse_frontmatter(path.clone(), ctx)? else {
             return Ok(None);
         };
-        let venv_config = VenvConfig::for_frontmatter(path)?;
+        let venv_config = VenvConfig::for_frontmatter()?;
         Ok(Some(Self {
             package: Arc::new(package),
             venv_config,
@@ -68,7 +68,7 @@ impl<'duck> PackageContext<'duck> {
                 "tried to construct a frontmatter package context for something that is not a frontmatter"
             )
         };
-        let venv_config = VenvConfig::for_frontmatter(path)?;
+        let venv_config = VenvConfig::for_frontmatter()?;
         Ok(Some(Self {
             package: Arc::new(package),
             venv_config,

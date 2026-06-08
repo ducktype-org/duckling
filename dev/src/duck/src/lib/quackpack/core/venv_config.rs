@@ -19,8 +19,9 @@ impl VenvConfig {
         })
     }
 
-    pub fn for_frontmatter(path: PathBuf) -> QuackResult<Self> {
-        let mut this = Self::new(path)?;
+    pub fn for_frontmatter() -> QuackResult<Self> {
+        let config = YamlConfig::default();
+        let mut this = VenvConfig { config };
         this.set_ephemeral(true)?;
         Ok(this)
     }
