@@ -357,31 +357,35 @@ namespace query::internal {
 			"Reverse graph tracking must be enabled to erase nodes based on dependencies."
 		);
 
-		using State = int;
-		std::vector<std::pair<NodeID, State>> queue;
-		queue.reserve(start_nodes.size());
-		for (auto& start_node: start_nodes) queue.emplace_back(start_node, 0);
+		enum class State {
+			PreVisit,
+			PostVisit,
+		};
+		std::vector<std::pair<NodeID, State>> stack;
+		stack.reserve(start_nodes.size());
+		for (auto& start_node: start_nodes) stack.emplace_back(start_node, State::PreVisit);
 
 		std::unordered_set<NodeID> visited;
 		std::vector<NodeID>        result;
 
-		while (not queue.empty()) {
-			auto [node, state] = queue.back();
-			queue.pop_back();
+		while (not stack.empty()) {
+			auto [node, state] = stack.back();
+			stack.pop_back();
 
 			switch (state) {
-			case 0: {
+			case State::PreVisit: {
 				if (visited.contains(node)) continue;
 				visited.insert(node);
 
-				queue.emplace_back(node, 1);
+				stack.emplace_back(node, State::PostVisit);
 
 				if_opt_some(node_reverse_deps->atMaybe(node), its_reverse_deps) {
-					for (auto& new_node: *its_reverse_deps) queue.emplace_back(new_node, 0);
+					for (auto& new_node: *its_reverse_deps)
+						stack.emplace_back(new_node, State::PreVisit);
 				}
 				break;
 			}
-			case 1: {
+			case State::PostVisit: {
 				result.push_back(node);
 				break;
 			}
