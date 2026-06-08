@@ -114,6 +114,7 @@ public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		query::setTrackReverseGraph(true);
 		TESTER_ADD_TEST(testInvalidation);
+		TESTER_ADD_TEST(testInvalidationOrder);
 	}
 
 private:
@@ -335,6 +336,44 @@ private:
 		ASSERT_EQUAL(ImplementationOf_DummyQuery1::cache.size(), 2);
 		ASSERT_EQUAL(ImplementationOf_DummyQuery2::cache.size(), 3);
 		ASSERT_EQUAL(ImplementationOf_DummyQuery3::cache.size(), 4);
+
+		// No new inputs, meaning invalidate all queries.
+		query::external::invalidateQueries({});
+	}
+
+	/* Here we test the topological order of the invalidation.
+	 *    1_2  (entry query)
+	 *   /   \
+	 * 2_2   2_3
+	 *   \  /
+	 *   3_3
+	 */
+	void testInvalidationOrder() {
+		query::entryPoint<DummyQuery1>({ 2 });
+		std::unordered_map<query::internal::NodeID, std::string> stringified;
+
+		auto make_node = [&]<typename QueryType>(u64 key, std::string name) {
+			auto node = query::internal::makeNodeID<QueryType>(query::U64Key{ key });
+			stringified.emplace(node, name);
+			return node;
+		};
+		auto node_1_2 = make_node.operator()<DummyQuery1>(2, "1_2");
+		auto node_2_2 = make_node.operator()<DummyQuery2>(2, "2_2");
+		auto node_2_3 = make_node.operator()<DummyQuery2>(3, "2_3");
+		auto node_3_3 = make_node.operator()<DummyQuery3>(3, "3_3");
+
+		auto& state      = query::Context::getState();
+		auto& graph      = state.getGraph();
+		auto  dependents = graph.getDependentNodes({ node_3_3 }).dependents_recursive;
+		ASSERT_EQUAL_PRINT(dependents.size(), 4);
+		std::cerr << stringified.at(dependents[0]) << '\n';
+		std::cerr << stringified.at(dependents[1]) << '\n';
+		std::cerr << stringified.at(dependents[2]) << '\n';
+		std::cerr << stringified.at(dependents[3]) << '\n';
+		ASSERT_EQUAL(dependents[0], node_1_2);
+		ASSERT_EQUAL(dependents[1], node_2_3);
+		ASSERT_EQUAL(dependents[2], node_2_2);
+		ASSERT_EQUAL(dependents[3], node_3_3);
 	}
 };
 

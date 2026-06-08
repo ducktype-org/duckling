@@ -357,22 +357,38 @@ namespace query::internal {
 			"Reverse graph tracking must be enabled to erase nodes based on dependencies."
 		);
 
-		std::vector<NodeID>        queue{ start_nodes.begin(), start_nodes.end() };
+		using State = int;
+		std::vector<std::pair<NodeID, State>> queue;
+		queue.reserve(start_nodes.size());
+		for (auto& start_node: start_nodes) queue.emplace_back(start_node, 0);
+
 		std::unordered_set<NodeID> visited;
+		std::vector<NodeID>        result;
 
 		while (not queue.empty()) {
-			auto node = queue.back();
+			auto [node, state] = queue.back();
 			queue.pop_back();
 
-			if (visited.contains(node)) continue;
-			visited.insert(node);
+			switch (state) {
+			case 0: {
+				if (visited.contains(node)) continue;
+				visited.insert(node);
 
-			if_opt_some(node_reverse_deps->atMaybe(node), its_reverse_deps) {
-				for (auto& new_node: *its_reverse_deps) queue.push_back(new_node);
+				queue.emplace_back(node, 1);
+
+				if_opt_some(node_reverse_deps->atMaybe(node), its_reverse_deps) {
+					for (auto& new_node: *its_reverse_deps) queue.emplace_back(new_node, 0);
+				}
+				break;
+			}
+			case 1: {
+				result.push_back(node);
+				break;
+			}
 			}
 		}
 
-		return QueryGraph::Dependents{ .dependents_recursive = { visited.begin(), visited.end() } };
+		return QueryGraph::Dependents{ .dependents_recursive = std::move(result) };
 	}
 
 	void QueryGraph::eraseNodes(const QueryGraph::Dependents& nodes_to_erase) {
