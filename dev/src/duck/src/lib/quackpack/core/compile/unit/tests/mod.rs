@@ -18,6 +18,9 @@ use crate::quackpack::util::to_url::ToUrl;
 //   which can be compared against u64, and rustc complains about not-infering the type.
 // * since ID's are random, firstly we collect them by name.
 
+// **NOTE**
+// To de-duplicate some code, we reuse setup from early_graph/ tests.
+
 #[test]
 fn lowers_early_graph() {
     let (ctx, root) = setup_mock_storage();

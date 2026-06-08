@@ -300,6 +300,7 @@ fn removes_inactive_deps1() {
         ])
     );
 
+    // Check that graph is in sync with `PackagesSet`.
     assert_eq!(graph.packages.inner.len(), 2);
     assert!(graph.packages.inner.contains_key(&identity_for("root")));
     assert!(
@@ -355,6 +356,8 @@ fn removes_inactive_deps2() {
             (fetcher_identity_for("bar"), DependencyNode::new(vec![])),
         ])
     );
+
+    // Check that graph is in sync with `PackagesSet`.
     assert_eq!(graph.packages.inner.len(), 3);
     assert!(graph.packages.inner.contains_key(&identity_for("root")));
     assert!(
@@ -421,6 +424,7 @@ fn removes_inactive_deps3() {
         ])
     );
 
+    // Check that graph is in sync with `PackagesSet`.
     assert_eq!(graph.packages.inner.len(), 4);
     assert!(graph.packages.inner.contains_key(&identity_for("root")));
     assert!(
@@ -493,6 +497,7 @@ fn removes_inactive_deps4() {
         ])
     );
 
+    // Check that graph is in sync with `PackagesSet`.
     assert_eq!(graph.packages.inner.len(), 4);
     assert!(graph.packages.inner.contains_key(&identity_for("root")));
     assert!(
