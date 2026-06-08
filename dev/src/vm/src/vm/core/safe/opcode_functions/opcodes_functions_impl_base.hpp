@@ -1238,6 +1238,7 @@ namespace vm {
 			Pointer ptr = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
 
 			if (type->getShadowSize() > 0) {
+				FT_GLOBALS.removeZombie(ptr.getBlock()->getID());
 				auto shadow_block = FT_THREAD.getShadowDataMemory().allocateHeap(type);
 				auto tid   = FT_DATA.thread_id;
 				auto epoch = FT_DATA.getVC()[tid];
@@ -1267,6 +1268,9 @@ namespace vm {
 						base[i].processWrite(tid, epoch, FT_DATA.getVC());
 						base[i].reset();
 					}
+					// Record a zombie so concurrent threads can detect the free-vs-write race
+					// even after the shadow is torn down.
+					FT_GLOBALS.addZombie(ptr.getBlock()->getID(), Epoch(tid, epoch));
 					FT_THREAD.getShadowDataMemory().freeBlockData(Ref(sb));
 					FT_THREAD.getShadowDataMemory().decreaseBlockRefcount(Ref(sb));
 					FT_GLOBALS.clearShadow(ptr.getBlock()->getID());
@@ -1456,6 +1460,17 @@ namespace vm {
 					auto epoch = FT_DATA.getVC()[tid];
 					for (u32 i = 0; i < shadow_size; ++i)
 						sb->getData()[shadow_idx + i].processWrite(tid, epoch, FT_DATA.getVC());
+				} else {
+					Epoch zombie = FT_GLOBALS.getZombie(ptr.getBlock()->getID());
+					if (zombie != Epoch{} && !(zombie <= FT_DATA.getVC())) {
+						auto tid   = FT_DATA.thread_id;
+						auto epoch = FT_DATA.getVC()[tid];
+						throw exceptions::VMDataRaceException(
+							std::string("Write-Free — t") + std::to_string(zombie.tid().asInt()) +
+							"@" + std::to_string(zombie.clock()) +
+							" vs t" + std::to_string(tid.asInt()) +
+							"@" + std::to_string(epoch));
+					}
 				}
 			}
 		}

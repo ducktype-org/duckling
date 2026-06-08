@@ -1,5 +1,6 @@
 #pragma once
 
+#include <vm/core/process/concurrency/fast_track/epoch.hpp>
 #include <vm/core/process/concurrency/fast_track/shadow_entry.hpp>
 #include <vm/core/safe/memory/memory.hpp>
 
@@ -25,6 +26,11 @@ namespace vm {
 		std::vector<ShadowBlock*> global_shadow_blocks;
 
 		std::vector<ShadowBlock*> shadow_by_id;
+
+		// Stores the freeing epoch for heap blocks whose shadow has been torn down but whose
+		// block ID may still be held by a concurrent thread (e.g. child running after join).
+		// Sentinel: Epoch() (tid == ThreadID::bad()) means "no zombie".
+		std::vector<Epoch> zombie_by_id;
 
 	public:
 		FastTrackGlobals()  = default;
@@ -66,6 +72,25 @@ namespace vm {
 			auto idx = static_cast<usize>(id);
 			if (idx >= shadow_by_id.size()) return nullptr;
 			return shadow_by_id[idx];
+		}
+
+		void addZombie(BlockID id, Epoch e) {
+			auto idx = static_cast<usize>(id);
+			if (zombie_by_id.size() <= idx)
+				zombie_by_id.resize(idx + 1, Epoch{});
+			zombie_by_id[idx] = e;
+		}
+
+		void removeZombie(BlockID id) {
+			auto idx = static_cast<usize>(id);
+			if (idx < zombie_by_id.size())
+				zombie_by_id[idx] = Epoch{};
+		}
+
+		[[nodiscard]] Epoch getZombie(BlockID id) const {
+			auto idx = static_cast<usize>(id);
+			if (idx >= zombie_by_id.size()) return Epoch{};
+			return zombie_by_id[idx];
 		}
 	};
 }
